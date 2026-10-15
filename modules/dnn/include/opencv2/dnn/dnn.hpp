@@ -1415,6 +1415,9 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param pBlob points in blob coordinates.
          *  @param pImg result points in image coordinates.
          *  @param size original input image size.
+         *  @note If the `size` member is empty, the @p size argument is used as the blob size, as in
+         *  @ref blobFromImagesWithParams. For a batch created with an empty `size` member, the blob size is the size
+         *  of the first image, so set the member to that size before mapping points of the other images.
          */
         CV_WRAP void blobPointsToImagePoints(const std::vector<Point2f> &pBlob, CV_OUT std::vector<Point2f>& pImg, const Size& size);
     };
@@ -1546,20 +1549,74 @@ CV__DNN_INLINE_NS_BEGIN
 
 
     /**
-     * @brief Enum of anchor-free detection head layouts.
-     * A row is either [cx, cy, w, h] followed by one score per class, or
-     * [x1, y1, x2, y2, score, classIndex] as produced by an export that folds in NMS.
-     * Coordinates are blob pixels unless the name says normalized.
-     * The output is 3D, [B, C, N] or [B, N, C], and the anchor axis must be the longer one.
-     * @see Model::setOutputFormat
+     * @brief How a detection row encodes its box.
+     * @see DetectionOutputParams
      */
-    enum DetectionOutputFormat
+    enum BoxForm
     {
-        DNN_DFMT_AUTO = 0,        // !< Default. Infer the layout from the output values.
-        DNN_DFMT_CENTER = 1,      // !< cx, cy, w, h then one score per class, in blob pixels.
-        DNN_DFMT_CENTER_NORM = 2, // !< As DNN_DFMT_CENTER, coordinates as fractions of the blob.
-        DNN_DFMT_CORNER = 3,      // !< x1, y1, x2, y2, score, class index, in blob pixels.
-        DNN_DFMT_CORNER_NORM = 4, // !< As DNN_DFMT_CORNER, coordinates as fractions of the blob.
+        DNN_BOX_AUTO = 0,   //!< Default. Infer from the values.
+        DNN_BOX_CENTER = 1, //!< cx, cy, w, h.
+        DNN_BOX_CORNER = 2, //!< x1, y1, x2, y2.
+    };
+
+    /**
+     * @brief How a detection row encodes its class.
+     * @see DetectionOutputParams
+     */
+    enum ClassForm
+    {
+        DNN_CLS_AUTO = 0,   //!< Default. Infer from the values.
+        DNN_CLS_SCORES = 1, //!< One score per class; the winner is the argmax.
+        DNN_CLS_INDEX = 2,  //!< One score followed by one class index.
+    };
+
+    /**
+     * @brief The space box coordinates are written in.
+     * @see DetectionOutputParams
+     */
+    enum CoordSpace
+    {
+        DNN_COORD_AUTO = 0,       //!< Default. Infer from the values.
+        DNN_COORD_PIXELS = 1,     //!< Pixels of the network input blob.
+        DNN_COORD_NORMALIZED = 2, //!< Fractions of the network input blob.
+    };
+
+    /**
+     * @brief Whether class scores still need an activation.
+     * @see DetectionOutputParams
+     */
+    enum ScoreActivation
+    {
+        DNN_ACT_AUTO = 0,    //!< Default. Infer from the values.
+        DNN_ACT_NONE = 1,    //!< Scores are already in [0, 1].
+        DNN_ACT_SIGMOID = 2, //!< Scores are logits. Applies to split outputs only.
+    };
+
+    /** @brief How a detection network writes one row of its output.
+     *
+     * Each field is an independent property of the export, and each defaults to inferring itself
+     * from the values. Declare only the ones you know. The output is 3D, [B, C, N] or [B, N, C],
+     * and the anchor axis must be the longer one.
+     *
+     * A split head gives boxes and class scores as two outputs. The 4-wide one is the boxes; if
+     * both are 4 wide, as in a four-class detector, the first is the boxes and
+     * @ref Model::setOutputNames fixes that order. Its scores are taken for logits and passed
+     * through sigmoid when a value falls outside [0, 1]; declare @ref ScoreActivation for
+     * logits that stay inside it.
+     *
+     * @see Model::setOutputParams
+     */
+    struct CV_EXPORTS_W_SIMPLE DetectionOutputParams
+    {
+        CV_WRAP DetectionOutputParams();
+        CV_WRAP DetectionOutputParams(BoxForm boxForm, ClassForm classForm = DNN_CLS_AUTO,
+                                      CoordSpace coordSpace = DNN_COORD_AUTO,
+                                      ScoreActivation activation = DNN_ACT_AUTO);
+
+        CV_PROP_RW BoxForm boxForm;             //!< Box encoding. @see BoxForm
+        CV_PROP_RW ClassForm classForm;         //!< Class encoding. @see ClassForm
+        CV_PROP_RW CoordSpace coordSpace;       //!< Coordinate space. @see CoordSpace
+        CV_PROP_RW ScoreActivation activation;  //!< Score activation. @see ScoreActivation
     };
 
      /** @brief This class is presented high-level API for neural networks.
@@ -1634,12 +1691,11 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP Model& setPaddingMode(ImagePaddingMode mode);
 
          /** @brief Declare how the network writes a detection row, instead of inferring it.
-          *  @param[in] format Output format, @see DetectionOutputFormat. Defaults to DNN_DFMT_AUTO.
-          *  @note Applies to detect(), estimatePoses() and segmentInstances(). Box form and
-          *  coordinate space are properties of the export, so declaring them is exact where
-          *  DNN_DFMT_AUTO reads them back from the values and can only guess on an empty output.
+          *  @param[in] params Output encoding, @see DetectionOutputParams. Fields left at their
+          *  AUTO default are still inferred from the values.
+          *  @note Applies to detect(), estimatePoses() and segmentInstances().
          */
-         CV_WRAP Model& setOutputFormat(DetectionOutputFormat format);
+         CV_WRAP Model& setOutputParams(const DetectionOutputParams& params);
 
          /** @brief Set output names for frame.
           *  @param[in] outNames Names for output layers.
@@ -1809,10 +1865,9 @@ CV__DNN_INLINE_NS_BEGIN
          /** @brief Given the @p input frame, create input blob, run net and return multi-person
           *  pose estimation results (YOLOv8-pose-style decoding).
           *
-          *  Requires a network with a single output shaped `[1, 4+1+3*numKeypoints, N]` (or
-          *  `[1, N, 4+1+3*numKeypoints]`): box, one "person" class score, then `numKeypoints`
-          *  `(x, y, visibility)` triples per anchor, matching the standard Ultralytics
-          *  YOLOv8-pose export contract.
+          *  Requires a network with a single output whose rows end with `numKeypoints`
+          *  `(x, y, visibility)` triples. @ref DetectionOutputParams covers how the rest of a
+          *  row is read.
           *
           *  @param[in]  frame  The input image.
           *  @param[out] keypoints One entry per detected person, each holding `numKeypoints`
@@ -1885,9 +1940,9 @@ CV__DNN_INLINE_NS_BEGIN
          /** @brief Given the @p input frame, create input blob, run net and return per-instance
           *  segmentation results (YOLOv8-seg-style mask-prototype decoding).
           *
-          *  Requires a network with two outputs: a detect head shaped `[1, 4+numClasses+nm, N]`
-          *  (or `[1, N, 4+numClasses+nm]`) and mask prototypes shaped `[1, nm, maskH, maskW]`,
-          *  matching the standard Ultralytics YOLOv8-seg export contract.
+          *  Requires a network with two outputs: a detect head whose rows end with `nm` mask
+          *  coefficients, and mask prototypes shaped `[B, nm, maskH, maskW]`.
+          *  @ref DetectionOutputParams covers how the rest of a row is read.
           *
           *  @param[in]  frame  The input image.
           *  @param[out] masks A set of per-detection binary masks (CV_8U, 0 or 255), each sized
@@ -1930,18 +1985,15 @@ CV__DNN_INLINE_NS_BEGIN
       * DetectionModel allows to set params for preprocessing input image.
       * DetectionModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return result detections.
-      * For DetectionModel SSD, Faster R-CNN, YOLOv2-v4 (Region layer) topologies are supported,
-      * as well as anchor-free heads (YOLOv8/v9/v10/v11 detect head, and RT-DETR exported through
-      * the same Ultralytics contract) that produce a single output tensor shaped
-      * `[1, 4+numClasses, N]` or `[1, N, 4+numClasses]`, with box coordinates in blob-pixel
-      * space and class scores already passed through sigmoid.
-      * @note The anchor-free path does not support YOLOv5-style heads with a separate
-      * objectness channel, or the two-tensor DETR/RT-DETR contract (separate pred_boxes and
-      * pred_logits tensors). It also should not be used on YOLOv8-seg/-pose model outputs --
-      * see SegmentationModel::segmentInstances() and KeypointsModel::estimatePoses() instead.
-      * @note For models trained with aspect-ratio-preserving letterbox preprocessing (the usual
-      * case for the YOLO family), call Model::setPaddingMode(DNN_PMODE_LETTERBOX) so detected
-      * boxes are mapped back to the input frame correctly.
+      * For DetectionModel SSD, Faster R-CNN and YOLOv2-v4 (Region layer) topologies are
+      * supported, as well as anchor-free heads, given either as one 3D tensor or as a split
+      * pair of boxes `[B, N, 4]` and class scores `[B, N, numClasses]`.
+      * @ref DetectionOutputParams covers how a row is read.
+      * @note Not for YOLOv5-style heads with a separate objectness channel, or for
+      * YOLOv8-seg/-pose outputs -- see SegmentationModel::segmentInstances() and
+      * KeypointsModel::estimatePoses().
+      * @note Call Model::setPaddingMode(DNN_PMODE_LETTERBOX) for models trained with letterbox
+      * preprocessing, so boxes map back to the input frame correctly.
       */
      class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
      {
@@ -2000,7 +2052,10 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] frameIds Index into @p frames of the image each detection came from,
           *  parallel to @p classIds and non-decreasing.
           *  @param[in]  confThreshold A threshold used to filter boxes by confidences.
-          *  @param[in]  nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          *  @param[in]  nmsThreshold A threshold used in non maximum suppression. Zero disables
+          *  it. This overload defaults to 0.45 rather than to the zero the single-image one
+          *  keeps for SSD, because only anchor-free heads reach it and they emit one box per
+          *  grid cell.
           *
           *  Only anchor-free heads are supported; SSD and Darknet outputs have no batched form.
           */

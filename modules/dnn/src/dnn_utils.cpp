@@ -328,7 +328,10 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
                 int bottom = size.height - top - rh;
                 int left = (size.width - rw)/2;
                 int right = size.width - left - rw;
-                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT, param.borderValue);
+                // Not in place: copyMakeBorder() cannot read and reallocate the same buffer.
+                Tmat padded;
+                copyMakeBorder(images[i], padded, top, bottom, left, right, BORDER_CONSTANT, param.borderValue);
+                images[i] = padded;
             }
             else
             {
@@ -575,6 +578,26 @@ static void getBlobToImageMapping(ImagePaddingMode paddingmode, const Size& size
     }
 }
 
+Rect imageRectToBlobRect(const Image2BlobParams& param, const Rect& r, const Size& oriImage)
+{
+    CV_Assert(!oriImage.empty());
+    // An empty size member means the image size, as in blobFromImagesWithParams().
+    const Size size = param.size == Size() ? oriImage : param.size;
+    if (size == oriImage)
+        return r;
+
+    if (param.paddingmode == DNN_PMODE_NULL)
+        return Rect(cvFloor(r.x * size.width / (float)oriImage.width),
+                    cvFloor(r.y * size.height / (float)oriImage.height),
+                    cvFloor(r.width * size.width / (float)oriImage.width),
+                    cvFloor(r.height * size.height / (float)oriImage.height));
+
+    float resizeFactor, offsetX, offsetY;
+    getBlobToImageMapping(param.paddingmode, size, oriImage, resizeFactor, offsetX, offsetY);
+    return Rect(cvFloor(r.x * resizeFactor + offsetX), cvFloor(r.y * resizeFactor + offsetY),
+                cvFloor(r.width * resizeFactor), cvFloor(r.height * resizeFactor));
+}
+
 Rect Image2BlobParams::blobRectToImageRect(const Rect &r, const Size &oriImage)
 {
     CV_Assert(!oriImage.empty());
@@ -618,13 +641,16 @@ void Image2BlobParams::blobRectsToImageRects(const std::vector<Rect> &rBlob, std
     }
     else
     {
-        rImg.assign(rBlob.begin(), rBlob.end());
+        // blobFromImagesWithParams() does not resize, crop or pad the image in this case
+        rImg = rBlob;
     }
 }
 
 void Image2BlobParams::blobPointsToImagePoints(const std::vector<Point2f> &pBlob, std::vector<Point2f>& pImg, const Size& imgSize)
 {
     Size size = this->size;
+    if (size == Size())
+        size = imgSize;
     pImg.resize(pBlob.size());
     if (size != imgSize)
     {
@@ -650,11 +676,6 @@ void Image2BlobParams::blobPointsToImagePoints(const std::vector<Point2f> &pBlob
     else
     {
         pImg.assign(pBlob.begin(), pBlob.end());
-    }
-    else
-    {
-        // blobFromImagesWithParams() does not resize, crop or pad the image in this case
-        rImg = rBlob;
     }
 }
 
