@@ -481,6 +481,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
         g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
         g_hwFeatureNames[CPU_SVE] = "SVE";
+        g_hwFeatureNames[CPU_SME] = "SME";
+        g_hwFeatureNames[CPU_SME2] = "SME2";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -656,6 +658,8 @@ struct HWFeatures
                 else if (auxv.a_type == AT_HWCAP2)
                 {
                     have[CV_CPU_NEON_BF16] = (auxv.a_un.a_val & (1 << 14)) != 0; // HWCAP2_BF16
+                    have[CV_CPU_SME] = (auxv.a_un.a_val & (1ULL << 23)) != 0; // HWCAP2_SME
+                    have[CV_CPU_SME2] = (auxv.a_un.a_val & (1ULL << 37)) != 0; // HWCAP2_SME2
                 }
 #endif
             }
@@ -726,6 +730,19 @@ struct HWFeatures
     sysctlbyname("hw.optional.arm.FEAT_BF16", &has_feat_bf16, &has_feat_bf16_size, NULL, 0);
     if (has_feat_bf16) {
         have[CV_CPU_NEON_BF16] = true;
+    }
+    // SME/SME2 (Apple M4 and later), used by the KleidiAI kernels in dnn.
+    int has_feat_sme = 0;
+    size_t has_feat_sme_size = sizeof(has_feat_sme);
+    sysctlbyname("hw.optional.arm.FEAT_SME", &has_feat_sme, &has_feat_sme_size, NULL, 0);
+    if (has_feat_sme) {
+        have[CV_CPU_SME] = true;
+    }
+    int has_feat_sme2 = 0;
+    size_t has_feat_sme2_size = sizeof(has_feat_sme2);
+    sysctlbyname("hw.optional.arm.FEAT_SME2", &has_feat_sme2, &has_feat_sme2_size, NULL, 0);
+    if (has_feat_sme2) {
+        have[CV_CPU_SME2] = true;
     }
     #elif (defined __clang__)
     #if defined __ARM_NEON

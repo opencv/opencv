@@ -204,6 +204,15 @@ class MLASCPUIDInfo
 
     bool HasArmNeon_BF16() const { return has_arm_neon_bf16_; }
 
+#if defined(MLAS_OPENCV_CPUINFO)
+    // OpenCV: SME checks needed by the KleidiAI code.
+    bool HasArm_SME() const { return has_arm_sme_; }
+
+    bool HasArm_SME2() const { return has_arm_sme2_; }
+
+    const std::string& GetCPUVendor() const { return vendor_; }
+#endif
+
    private:
     MLASCPUIDInfo();
 
@@ -213,6 +222,11 @@ class MLASCPUIDInfo
     bool has_arm_sve_{false};
     bool has_arm_sve_i8mm_{false};
     bool has_arm_neon_bf16_{false};
+#if defined(MLAS_OPENCV_CPUINFO)
+    bool has_arm_sme_{false};
+    bool has_arm_sme2_{false};
+    std::string vendor_;
+#endif
 };
 using MLAS_CPUIDINFO = MLASCPUIDInfo;
 

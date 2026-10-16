@@ -392,6 +392,20 @@ if(NOT OPENCV_SKIP_LINK_NO_UNDEFINED)
   endif()
 endif()
 
+# Xcode 15+ linker warns when a static library is listed twice (CMake does that for static deps).
+if(APPLE AND NOT OPENCV_SKIP_LINK_NO_WARN_DUPLICATE_LIBRARIES)
+  set(_option "-Wl,-no_warn_duplicate_libraries")
+  set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")
+  ocv_check_compiler_flag(CXX "" HAVE_LINK_NO_WARN_DUPLICATE_LIBRARIES)
+  set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+  if(HAVE_LINK_NO_WARN_DUPLICATE_LIBRARIES)
+    set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+    set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+    set(OPENCV_EXTRA_MODULE_LINKER_FLAGS "${OPENCV_EXTRA_MODULE_LINKER_FLAGS} ${_option}")
+  endif()
+endif()
+
 # For 16k pages support with NDK prior 27
 # Details: https://developer.android.com/guide/practices/page-sizes?hl=en
 if(ANDROID AND ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES AND (ANDROID_ABI STREQUAL arm64-v8a OR ANDROID_ABI STREQUAL x86_64))

@@ -8,6 +8,7 @@
 #include "layers_common.hpp"
 #include "conv2_common.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/mlas_conv.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <algorithm>
 #include <cstring>
@@ -134,6 +135,8 @@ public:
         if (!plain.empty() &&
             !mlasSgemmPackB(false, true, K, Cg, plain.ptr<float>(), Cg, mlas_packed_B_.data))
             mlas_packed_B_.release();
+        // Weights changed, so the KleidiAI copy is repacked on next use.
+        mlas_conv_packed_.release();
 
         // The CUDA path reads this plain copy instead of the packed one.
         if (!origWeights.empty() && origWeights.type() == CV_32F) {
@@ -262,12 +265,15 @@ public:
             bias_.convertTo(bias, CV_32F);
         }
 
+        mlas_conv_packed_.release();
+        mlas_conv_failed_ = false;
+
         // Pre-pack for MLAS 1x1 SGEMM (1x1 dense, stride-1, FP32, Cout*Cin
-        // >= 256*256 so the reorder cost is amortized).
+        // >= 256*256 so the reorder cost is amortized). Skipped when the im2col + SGEMM path below is on.
         mlas_packed_B_.release();
         mlas_packed_M_ = mlas_packed_K_ = 0;
         if (!depthwise && ngroups == 1 && weights_.type() == CV_32F &&
-            wtype == CV_32F && mlasAvailable())
+            wtype == CV_32F && mlasAvailable() && mlasConvGemmMode() == MLAS_CONV_GEMM_OFF)
         {
             bool ksize_all_one = wshape0.dims >= 3;
             for (int k = 2; k < wshape0.dims; k++)
@@ -784,6 +790,26 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
+#ifdef HAVE_MLAS
+        // On SME CPUs: im2col + KleidiAI SGEMM.
+        if (mlasConvGemmEligible(inptype, C0, inpshape)) {
+            if (mlas_conv_packed_.empty() &&
+                !mlasConvGemmPackWeights(weights, wshape0, packC0, mlas_conv_packed_))
+                mlas_conv_failed_ = true;
+            if (!mlas_conv_failed_) {
+                mlasConvGemmForward(inp, out, (const float*)resptr, cs, mlas_conv_packed_,
+                                    wshape0[0], wshape0[1], scale_data, bias_data,
+                                    scratch_A_, scratch_C_);
+                if (uouts) out.copyTo(uouts->at(0));
+                if (dynamicWeights) {
+                    weights.release();
+                    mlas_conv_packed_.release();
+                }
+                return;
+            }
+        }
+#endif
+
         // MLAS 1x1 SGEMM path. Skipped for small spatial: the gather/scatter
         // tax exceeds MLAS's SGEMM speedup over the in-place NCHWc8 kernel.
         if (mlas1x1Enabled() && inptype == CV_32F &&
@@ -815,6 +841,18 @@ public:
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
         }
+    }
+
+    // im2col + SGEMM conv path: FP32, 2D, not grouped, block size 8 (see mlasConvGemmMode()).
+    bool mlasConvGemmEligible(int inptype, int C0, const MatShape& inpshape) const {
+        const MlasConvGemmMode mode = mlasConvGemmMode();
+        if (mode == MLAS_CONV_GEMM_OFF || mlas_conv_failed_)
+            return false;
+        // The size rule only applies by default; forced mode takes every conv so tests cover small ones.
+        if (mode == MLAS_CONV_GEMM_AUTO && wshape0.dims == 4 && wshape0[0] < 8)
+            return false;
+        return inptype == CV_32F && C0 == 8 && inpshape.dims == 5 && !cs.depthwise && ngroups == 1 &&
+               wshape0.dims == 4 && weights.type() == CV_32F && packC0 == 8;
     }
 
     // True iff setWeights() armed the MLAS 1x1 SGEMM path for this conv.
@@ -1125,6 +1163,10 @@ public:
     Mat scratch_C_;
     int mlas_packed_M_ = 0;   // == Cout
     int mlas_packed_K_ = 0;   // == Cin
+
+    // KleidiAI conv path: weights packed on first use.
+    Mat mlas_conv_packed_;
+    bool mlas_conv_failed_ = false;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

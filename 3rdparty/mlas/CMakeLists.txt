@@ -177,6 +177,54 @@ if(MLAS_ARM64)
   )
 endif()
 
+# Arm KleidiAI (ARM64): build only the FP32 SME/SME2 kernels we use.
+# They run only on CPUs with SME; otherwise the NEON kernels above are used.
+set(MLAS_USE_KLEIDIAI FALSE CACHE INTERNAL "" FORCE)
+set(mlas_kleidiai_srcs)
+if(MLAS_ARM64 AND HAVE_KLEIDIAI AND MLAS_HAS_ASM
+    AND EXISTS "${KLEIDIAI_SOURCE_PATH}/kai/kai_common.h")
+  include(CheckCCompilerFlag)
+  check_c_compiler_flag("-march=armv8.2-a+sve+sve2" MLAS_KLEIDIAI_SME_FLAGS_OK)
+  if(MLAS_KLEIDIAI_SME_FLAGS_OK)
+    set(_kai_ukernels
+      # GEMM
+      matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1b_2vlx2vl_sme_mopa
+      matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa
+      # GEMV (M == 1 or N == 1)
+      matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p2vlx1b_1x8vl_sme_mla
+      matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p2vlx1b_1x16vl_sme2_mla
+      # indirect GEMM for convolution
+      matmul/imatmul_clamp_f32_f32p_f32p/kai_imatmul_clamp_f32_f32p2vlx1_f32p2vlx1b_2vlx2vl_sme_mopa
+      matmul/imatmul_clamp_f32_f32p_f32p/kai_imatmul_clamp_f32_f32p2vlx1_f32p2vlx1b_2vlx2vl_sme2_mopa
+      # packing
+      matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme
+      matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme
+      matmul/pack/kai_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme
+      matmul/pack/kai_lhs_imatmul_pack_x32p2vlx1_x32p_sme
+      matmul/pack/kai_rhs_imatmul_pack_kxn_x32p2vlx1b_x32_x32_sme
+    )
+    # common SME helpers
+    set(mlas_kleidiai_srcs "${KLEIDIAI_SOURCE_PATH}/kai/kai_common_sme_asm.S")
+    foreach(_k ${_kai_ukernels})
+      list(APPEND mlas_kleidiai_srcs
+        "${KLEIDIAI_SOURCE_PATH}/kai/ukernels/${_k}.c"
+        "${KLEIDIAI_SOURCE_PATH}/kai/ukernels/${_k}_asm.S")
+    endforeach()
+    set_source_files_properties(${mlas_kleidiai_srcs} PROPERTIES
+      COMPILE_OPTIONS "-fno-tree-vectorize;-march=armv8.2-a+sve+sve2;-w")
+    list(APPEND mlas_kleidiai_srcs
+      ${MLAS_SRC_DIR}/kai_ukernel_interface.cpp
+      ${MLAS_SRC_DIR}/kleidiai/sgemm_kleidiai.cpp
+    )
+    file(STRINGS "${KLEIDIAI_SOURCE_PATH}/CMakeLists.txt" _kai_ver REGEX "^[ \t]*VERSION[ \t]+[0-9.]+")
+    string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" _kai_ver "${_kai_ver}")
+    set(KLEIDIAI_VERSION "${_kai_ver}" CACHE INTERNAL "" FORCE)
+    set(MLAS_USE_KLEIDIAI TRUE CACHE INTERNAL "" FORCE)
+  else()
+    message(STATUS "MLAS: compiler does not accept -march=armv8.2-a+sve+sve2; KleidiAI disabled")
+  endif()
+endif()
+
 # POWER (ppc64le / AIX). Always compile the base SgemmKernelPower; opt-in
 # POWER10 if the compiler supports -mcpu=power10.
 if(MLAS_POWER)
@@ -254,7 +302,7 @@ if(MLAS_WASM OR NOT (MLAS_X86 OR MLAS_X86_64 OR MLAS_ARM OR MLAS_ARM64
   list(APPEND mlas_platform_srcs ${MLAS_SRC_DIR}/scalar/SgemmKernelScalar.cpp)
 endif()
 
-add_library(opencv_dnn_mlas OBJECT ${mlas_common_srcs} ${mlas_platform_srcs})
+add_library(opencv_dnn_mlas OBJECT ${mlas_common_srcs} ${mlas_platform_srcs} ${mlas_kleidiai_srcs})
 set_target_properties(opencv_dnn_mlas PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(opencv_dnn_mlas PUBLIC  ${MLAS_INC_DIR})
 target_include_directories(opencv_dnn_mlas PRIVATE ${MLAS_SRC_DIR})
@@ -263,8 +311,13 @@ target_include_directories(opencv_dnn_mlas PRIVATE ${CMAKE_SOURCE_DIR}/modules/c
 target_compile_definitions(opencv_dnn_mlas PRIVATE
   BUILD_MLAS_NO_ONNXRUNTIME=1
   MLAS_OPENCV_THREADING=1
+  MLAS_OPENCV_CPUINFO=1
   MLAS_GEMM_ONLY=1
 )
+if(MLAS_USE_KLEIDIAI)
+  target_include_directories(opencv_dnn_mlas PRIVATE "${KLEIDIAI_SOURCE_PATH}")
+  target_compile_definitions(opencv_dnn_mlas PRIVATE USE_KLEIDIAI=1)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(opencv_dnn_mlas PRIVATE

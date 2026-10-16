@@ -52,9 +52,12 @@
 namespace ArmKleidiAI {
 
 // By default we should try for SME2 first before falling back to SME.
+// OpenCV: not used by the vendored subset; left out so nothing reads CPU info during static init.
+#if !defined(MLAS_OPENCV_CPUINFO)
 inline const bool UseSME2 = MLAS_CPUIDINFO::GetCPUIDInfo().HasArm_SME2();
 inline const bool UseSME = MLAS_CPUIDINFO::GetCPUIDInfo().HasArm_SME();
 inline const std::string_view vendor_name = MLAS_CPUIDINFO::GetCPUIDInfo().GetCPUVendor();
+#endif
 
 // Buffer packing routines.
 //
