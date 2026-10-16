@@ -499,6 +499,15 @@ struct EwAbsdiffS {
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
+    // 64-bit signed has no wider work type to widen into, and |INT64_MIN - b| does not fit in
+    // int64_t, so the difference is taken in uint64 - exact for every pair - and then clamped.
+    // The narrower widths reach this overload only through their int64 work type, where |a - b|
+    // is at most 2^32 and the clamp is a no-op.
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        const uint64_t d = (a > b) ? (uint64_t)a - (uint64_t)b : (uint64_t)b - (uint64_t)a;
+        return (int64_t)std::min<uint64_t>(d, (uint64_t)INT64_MAX);
+    }
 };
 
 // compare: T x T -> u8 mask. cmp(a,b) is the scalar relation over a work type W (integers compare
@@ -1319,7 +1328,8 @@ TKernel getAbsdiffFunc_(int T, int R)
     case CV_16BF: fptr = R == CV_16BF ? vecBinaryKernel<bfloat, bfloat, v_float32, float, EwAbsdiff, float> : nullptr; break;
     case CV_32F:  fptr = R == CV_32F  ? vecBinaryKernel<float,  float,  v_float32, float, EwAbsdiff, float> : nullptr; break;
     case CV_64U:  fptr = R == CV_64U  ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwAbsdiff> : nullptr; break;
-    case CV_64S:  fptr = R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
+    case CV_64S:  fptr = R == CV_64S  ? scalarBinaryKernel<int64_t,  int64_t,  int64_t,  EwAbsdiffS> :
+                         R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
     #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  fptr = R == CV_64F  ? vecBinaryKernel<double, double, v_float64, double, EwAbsdiff, double> : nullptr; break;
     #else

@@ -3412,6 +3412,53 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom64U,
         testing::Values(CV_64S, CV_64F, CV_32F, CV_16F, CV_16BF),
         testing::Values(1, 7, 8, 127)));
 
+// absdiff keeps the signed depth, so the result has to be the magnitude clamped into that depth:
+// never negative, and saturating at the depth's maximum when |a - b| does not fit. Checked across
+// the signed depths, at lengths straddling the vector width.
+typedef testing::TestWithParam< tuple<int, int> > Core_AbsdiffSigned;
+
+TEST_P(Core_AbsdiffSigned, saturates_and_is_non_negative)
+{
+    const int depth = get<0>(GetParam());
+    const int len   = get<1>(GetParam());
+
+    // the two extremes of the depth, whose difference overflows it
+    double lo = 0, hi = 0;
+    switch (depth)
+    {
+    case CV_8S:  lo = SCHAR_MIN; hi = SCHAR_MAX; break;
+    case CV_16S: lo = SHRT_MIN;  hi = SHRT_MAX;  break;
+    case CV_32S: lo = INT_MIN;   hi = INT_MAX;   break;
+    case CV_64S: lo = (double)LLONG_MIN; hi = (double)LLONG_MAX; break;
+    default: FAIL() << "unhandled depth";
+    }
+
+    const std::pair<double, double> pairs[] = { {lo, hi}, {lo, 0}, {hi, lo}, {-1, hi} };
+    for (auto pr : pairs)
+    {
+        Mat a(1, len, depth, Scalar(pr.first)), b(1, len, depth, Scalar(pr.second));
+        Mat d; cv::absdiff(a, b, d);
+        ASSERT_EQ(depth, d.depth()) << "absdiff keeps the input depth";
+
+        for (int i = 0; i < len; i++)
+        {
+            SCOPED_TRACE(cv::format("depth=%d a=%.17g b=%.17g len=%d i=%d",
+                                    depth, pr.first, pr.second, len, i));
+            const double got = (depth == CV_64S) ? (double)d.ptr<int64_t>(0)[i]
+                             : (depth == CV_32S) ? (double)d.ptr<int>(0)[i]
+                             : (depth == CV_16S) ? (double)d.ptr<short>(0)[i]
+                                                 : (double)d.ptr<schar>(0)[i];
+            EXPECT_GE(got, 0.0) << "an absolute difference cannot be negative";
+            EXPECT_EQ(hi, got) << "|a - b| exceeds the depth, so it must saturate at its maximum";
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_AbsdiffSigned,
+    testing::Combine(
+        testing::Values(CV_8S, CV_16S, CV_32S, CV_64S),
+        testing::Values(1, 7, 8, 127)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
