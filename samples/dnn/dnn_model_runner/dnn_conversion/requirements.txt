@@ -5,8 +5,6 @@ numpy>=1.19.1
 torch>=1.5.1
 torchvision>=0.6.1
 
-tensorflow>=2.1.0
-tensorflow-gpu>=2.1.0
 
 paddlepaddle>=2.0.0
 paddlepaddle-gpu>=2.0.0
