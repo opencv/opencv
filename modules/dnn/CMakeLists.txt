@@ -500,6 +500,7 @@ endif()
 # CPU SGEMM accelerator (asm/intrinsic kernels) and the wasm scalar fallback
 # offers no benefit for the JS bindings build that produces opencv.js.
 set(HAVE_MLAS 0)
+set(MLAS_EXTERNAL_OBJECTS "")
 # Reset status flags + arch booleans
 foreach(_v OPENCV_DNN_MLAS_ENABLED OPENCV_DNN_MLAS_SKIP_REASON
            MLAS_X86_64 MLAS_X86 MLAS_ARM MLAS_ARM64 MLAS_POWER
@@ -511,6 +512,10 @@ if(NOT EMSCRIPTEN)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
 endif()
 if(HAVE_MLAS)
+  if(MLAS_EXTERNAL_OBJECTS)
+    # Older CMake versions do not propagate GENERATED from the MLAS directory.
+    set_source_files_properties(${MLAS_EXTERNAL_OBJECTS} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
+  endif()
   add_definitions(-DHAVE_MLAS=1)
   list(APPEND include_dirs ${MLAS_INCLUDE_DIRS})
   message(STATUS "DNN: MLAS (vendored) enabled.")

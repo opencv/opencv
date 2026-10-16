@@ -87,6 +87,90 @@ void testReshape(const MatShape& inputShape, const MatShape& targetShape,
     EXPECT_EQ(shape, targetShape);
 }
 
+typedef testing::TestWithParam<tuple<int, int, int, bool, bool> > Layer_Gemm_Kernels;
+
+TEST_P(Layer_Gemm_Kernels, Accuracy)
+{
+    const int M = get<0>(GetParam()), N = get<1>(GetParam()), K = get<2>(GetParam());
+    const bool transA = get<3>(GetParam()), transB = get<4>(GetParam());
+    Mat a(transA ? K : M, transA ? M : K, CV_32F);
+    Mat b(transB ? N : K, transB ? K : N, CV_32F);
+    Mat c(M, N, CV_32F);
+    RNG rng(0);
+    rng.fill(a, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(b, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(c, RNG::UNIFORM, -1.f, 1.f);
+
+    for (float alpha : {1.f, 0.75f})
+    {
+        for (float beta : {0.f, 1.f})
+        {
+            SCOPED_TRACE(format("alpha=%g beta=%g", alpha, beta));
+            LayerParams params;
+            params.set("transA", transA);
+            params.set("transB", transB);
+            params.set("alpha", alpha);
+            params.set("beta", beta);
+            params.set("have_bias", true);
+            Ptr<Layer> layer = GemmLayer::create(params);
+            std::vector<Mat> inputs{a, b, c}, outputs;
+            runLayer(layer, inputs, outputs);
+
+            Mat expected;
+            cv::gemm(a, b, alpha, c, beta, expected,
+                     (transA ? GEMM_1_T : 0) | (transB ? GEMM_2_T : 0));
+            ASSERT_EQ(1u, outputs.size());
+            ASSERT_EQ(expected.size(), outputs[0].size());
+            EXPECT_LE(cv::norm(expected, outputs[0], NORM_INF), 1e-4);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Gemm_Kernels, testing::Combine(
+    testing::Values(1, 5), testing::Values(1, 7, 17, 65),
+    testing::Values(1, 5, 19), testing::Bool(), testing::Bool()));
+
+typedef testing::TestWithParam<tuple<int, int, int> > Layer_SDPA_Kernels;
+
+TEST_P(Layer_SDPA_Kernels, Accuracy)
+{
+    const int M = get<0>(GetParam()), K = get<1>(GetParam()), N = get<2>(GetParam());
+    const int D = 19;
+    const int qShape[] = {1, 1, M, D}, ktShape[] = {1, 1, D, K}, vShape[] = {1, 1, K, N};
+    Mat q(4, qShape, CV_32F), kt(4, ktShape, CV_32F), v(4, vShape, CV_32F);
+    RNG rng(0);
+    rng.fill(q, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(kt, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(v, RNG::UNIFORM, -1.f, 1.f);
+    LayerParams params;
+    params.set("scale", 2.f);
+    Ptr<Layer> layer = SDPALayer::create(params);
+    std::vector<Mat> inputs{q, kt, v}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat scores;
+    cv::gemm(q.reshape(1, M), kt.reshape(1, D), 0.5, Mat(), 0., scores);
+    for (int i = 0; i < M; ++i)
+    {
+        Mat row = scores.row(i);
+        double maximum;
+        minMaxLoc(row, nullptr, &maximum);
+        row -= maximum;
+        cv::exp(row, row);
+        row /= cv::sum(row)[0];
+    }
+    Mat expected;
+    cv::gemm(scores, v.reshape(1, K), 1., Mat(), 0., expected);
+    ASSERT_EQ(1u, outputs.size());
+    ASSERT_EQ(MatShape({1, M, N}), shape(outputs[0]));
+    EXPECT_LE(cv::norm(expected, outputs[0].reshape(1, M), NORM_INF), 1e-4);
+}
+
+// M=1 enters MLAS's SGEMV fast path; K=259 crosses the FlashAttention block
+// boundary, exercising both zero and accumulate modes with odd-sized tails.
+INSTANTIATE_TEST_CASE_P(/**/, Layer_SDPA_Kernels, testing::Combine(
+    testing::Values(1, 5), testing::Values(1, 7, 259), testing::Values(1, 17, 65)));
+
 TEST(Layer_Test_Reshape, Accuracy)
 {
     {
