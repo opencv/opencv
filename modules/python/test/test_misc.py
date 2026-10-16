@@ -235,6 +235,9 @@ class Bindings(NewOpenCVTests):
             cv.CV_32SC1: [cv.CV_32S, 1, cv.CV_32SC],
             cv.CV_16FC3: [cv.CV_16F, 3, cv.CV_16FC],
             cv.CV_BoolC1: [cv.CV_Bool, 1, cv.CV_BoolC],
+            cv.CV_16BFC2: [cv.CV_16BF, 2, cv.CV_16BFC],
+            cv.CV_8F_E4M3FNC3: [cv.CV_8F_E4M3FN, 3, cv.CV_8F_E4M3FNC],
+            cv.CV_8F_E4M3FNUZC4: [cv.CV_8F_E4M3FNUZ, 4, cv.CV_8F_E4M3FNUZC],
         }
         for ref, (depth, channels, func) in data.items():
             self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))

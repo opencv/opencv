@@ -1,3 +1,6 @@
+#define NO_IMPORT_ARRAY  // the numpy C-API table is imported once, in cv2.cpp
+#define PY_ARRAY_UNIQUE_SYMBOL opencv_ARRAY_API
+
 #include "cv2_util.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
@@ -21,13 +24,108 @@ int cvDepthToNumpyType(int depth)
     case CV_32F:  return NPY_FLOAT;
     case CV_64F:  return NPY_DOUBLE;
     case CV_16F:  return NPY_HALF;
-    // NumPy has no bfloat16 dtype; pyopencv_from() converts the values to float32.
+    // NumPy has no native bfloat16; pyopencv_from() widens it to float32 unless allowed.
     case CV_16BF: return NPY_FLOAT;
     case CV_Bool: return NPY_BOOL;
     default:
         CV_Error(cv::Error::StsNotImplemented,
                  cv::format("Mat depth %d has no corresponding NumPy dtype", depth));
     }
+}
+
+namespace {
+
+// Dtypes registered by ml_dtypes on import. Their type numbers depend on registration order,
+// so they are resolved by name; OpenCV never imports ml_dtypes itself.
+struct NonConventionalDtype
+{
+    int depth;
+    const char* name;
+    int itemsize;
+};
+
+const NonConventionalDtype kNonConventionalDtypes[] = {
+    { CV_16BF,         "bfloat16",        2 },
+    { CV_8F_E4M3FN,    "float8_e4m3fn",   1 },
+    { CV_8F_E4M3FNUZ,  "float8_e4m3fnuz", 1 },
+};
+const int kNumNonConventionalDtypes = sizeof(kNonConventionalDtypes) / sizeof(kNonConventionalDtypes[0]);
+
+bool g_allowNonConventionalDataTypes = false;
+
+// Process-lifetime cache, accessed under the GIL. Misses are not cached, so a later
+// `import ml_dtypes` still takes effect.
+PyArray_Descr* g_nonConventionalDescrs[kNumNonConventionalDtypes] = {};
+
+PyArray_Descr* nonConventionalDescr(int idx)
+{
+    if (!g_nonConventionalDescrs[idx])
+    {
+        const NonConventionalDtype& t = kNonConventionalDtypes[idx];
+        PyObject* name = PyUnicode_FromString(t.name);
+        PyArray_Descr* descr = nullptr;
+        if (!name || !PyArray_DescrConverter(name, &descr))
+            descr = nullptr;
+        Py_XDECREF(name);
+        PyErr_Clear();
+        // Reject a same-named dtype with another layout; itemsize is read via Python because
+        // the descriptor struct differs between NumPy 1.x and 2.x.
+        long itemsize = -1;
+        if (descr)
+        {
+            PyObject* size = PyObject_GetAttrString((PyObject*)descr, "itemsize");
+            itemsize = size ? PyLong_AsLong(size) : -1;
+            Py_XDECREF(size);
+            PyErr_Clear();
+        }
+        if (descr && (descr->type_num < NPY_USERDEF || itemsize != t.itemsize))
+        {
+            Py_DECREF(descr);
+            descr = nullptr;
+        }
+        g_nonConventionalDescrs[idx] = descr;
+    }
+    return g_nonConventionalDescrs[idx];
+}
+
+}  // namespace
+
+void setAllowNonConventionalDataTypes(bool allow)
+{
+    g_allowNonConventionalDataTypes = allow;
+}
+
+bool getAllowNonConventionalDataTypes()
+{
+    return g_allowNonConventionalDataTypes;
+}
+
+bool isNonConventionalDepth(int depth)
+{
+    return depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+}
+
+PyArray_Descr* nonConventionalDescrForCvDepth(int depth)
+{
+    if (!g_allowNonConventionalDataTypes)
+        return nullptr;
+    for (int i = 0; i < kNumNonConventionalDtypes; i++)
+        if (kNonConventionalDtypes[i].depth == depth)
+            return nonConventionalDescr(i);
+    return nullptr;
+}
+
+int nonConventionalTypeToCvDepth(int typenum)
+{
+    if (!g_allowNonConventionalDataTypes || typenum < NPY_USERDEF)
+        return -1;
+    for (int i = 0; i < kNumNonConventionalDtypes; i++)
+    {
+        PyArray_Descr* descr = nonConventionalDescr(i);
+        if (descr && descr->type_num == typenum)
+            return kNonConventionalDtypes[i].depth;
+    }
+    return -1;
 }
 
 int numpyTypeToCvDepth(int typenum)

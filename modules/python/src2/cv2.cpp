@@ -118,9 +118,28 @@ static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
     Py_RETURN_NONE;
 }
 
+static PyObject* pycvSetAllowNonConventionalDataTypes(PyObject*, PyObject* value)
+{
+    int allow = PyObject_IsTrue(value);
+    if (allow < 0)
+        return NULL;
+    setAllowNonConventionalDataTypes(allow != 0);
+    Py_RETURN_NONE;
+}
+
+static PyObject* pycvGetAllowNonConventionalDataTypes(PyObject*, PyObject*)
+{
+    return PyBool_FromLong(getAllowNonConventionalDataTypes());
+}
+
 static PyMethodDef special_methods[] = {
   {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
+  {"setAllowNonConventionalDataTypes", (PyCFunction)(pycvSetAllowNonConventionalDataTypes), METH_O,
+   "setAllowNonConventionalDataTypes(allow) -> None\n. Keep bfloat16 / float8 arrays at their exact dtype "
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default."},
+  {"getAllowNonConventionalDataTypes", (PyCFunction)(pycvGetAllowNonConventionalDataTypes), METH_NOARGS,
+   "getAllowNonConventionalDataTypes() -> retval"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
@@ -594,6 +613,21 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_BoolC2);
     PUBLISH(CV_BoolC3);
     PUBLISH(CV_BoolC4);
+    PUBLISH(CV_16BF);
+    PUBLISH(CV_16BFC1);
+    PUBLISH(CV_16BFC2);
+    PUBLISH(CV_16BFC3);
+    PUBLISH(CV_16BFC4);
+    PUBLISH(CV_8F_E4M3FN);
+    PUBLISH(CV_8F_E4M3FNC1);
+    PUBLISH_(CV_8F_E4M3FNC(2), "CV_8F_E4M3FNC2", CV_8F_E4M3FNC2_obj);
+    PUBLISH_(CV_8F_E4M3FNC(3), "CV_8F_E4M3FNC3", CV_8F_E4M3FNC3_obj);
+    PUBLISH_(CV_8F_E4M3FNC(4), "CV_8F_E4M3FNC4", CV_8F_E4M3FNC4_obj);
+    PUBLISH(CV_8F_E4M3FNUZ);
+    PUBLISH(CV_8F_E4M3FNUZC1);
+    PUBLISH_(CV_8F_E4M3FNUZC(2), "CV_8F_E4M3FNUZC2", CV_8F_E4M3FNUZC2_obj);
+    PUBLISH_(CV_8F_E4M3FNUZC(3), "CV_8F_E4M3FNUZC3", CV_8F_E4M3FNUZC3_obj);
+    PUBLISH_(CV_8F_E4M3FNUZC(4), "CV_8F_E4M3FNUZC4", CV_8F_E4M3FNUZC4_obj);
 #undef PUBLISH_
 #undef PUBLISH
 
