@@ -1472,4 +1472,23 @@ TEST(UMat, copy_scalar)
     EXPECT_EQ(5.f, m2.at<float>(0));
 }
 
+// a host UMat copied into a UMat of another allocator is uploaded into it
+TEST(UMat, copyTo_across_allocators)
+{
+    Mat src(20, 30, CV_32FC3);
+    randu(src, 0, 10);
+
+    UMat host;
+    host.allocator = Mat::getDefaultAllocator();
+    src.copyTo(host);
+
+    UMat dev;
+    dev.fitSameSize(host, host.type());
+    host.copyTo(dev);
+
+    Mat back;
+    dev.copyTo(back);
+    EXPECT_EQ(0, cvtest::norm(src, back, NORM_INF));
+}
+
 } } // namespace opencv_test::ocl

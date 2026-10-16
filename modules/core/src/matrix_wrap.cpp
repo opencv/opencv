@@ -1941,6 +1941,47 @@ void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
     create(arr.shape(), mtype);
 }
 
+void _OutputArray::fit(Size _sz, int mtype, int i,
+                       bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+{
+    int sizes[] = {_sz.height, _sz.width};
+    fit(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
+}
+
+void _OutputArray::fit(int rows, int cols, int mtype, int i,
+                       bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+{
+    int sizes[] = {rows, cols};
+    fit(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
+}
+
+void _OutputArray::fit(const MatShape& shape, int mtype, int i,
+                       bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+{
+    if (shape.dims < 0) {
+        release();
+        return;
+    }
+    fit(shape.dims, shape.p, mtype, i, allowTransposed, fixedDepthMask);
+
+    // fit(dims, sizes) resets the layout, so carry it over the same way Mat::fit(const MatShape&) does
+    _InputArray::KindFlag k = kind();
+    if ((k == MAT && i < 0) || (k == STD_VECTOR_MAT && i >= 0)) {
+        MatSize& msize = getMatRef(i).size;
+        msize.layout = shape.layout;
+        msize.C = shape.C;
+    } else if ((k == UMAT && i < 0) || (k == STD_VECTOR_UMAT && i >= 0)) {
+        MatSize& msize = getUMatRef(i).size;
+        msize.layout = shape.layout;
+        msize.C = shape.C;
+    }
+}
+
+void _OutputArray::fitSameSize(const _InputArray& arr, int mtype) const
+{
+    fit(arr.shape(), mtype);
+}
+
 void _OutputArray::fit(int d, const int* sizes, int mtype, int i,
                        bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {

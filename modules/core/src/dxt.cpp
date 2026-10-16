@@ -2612,6 +2612,8 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     }
 
     UMat src = _src.getUMat(), dst = _dst.getUMat();
+    if (!ocl::internal::isCLBuffer(src) || !ocl::internal::isCLBuffer(dst))
+        return false;
     bool inplace = src.u == dst.u;
 
     clfftPlanHandle plHandle = PlanCache::getInstance().
