@@ -133,6 +133,11 @@ PERF_TEST_P_(DNNTestNetwork, ResNet50_QDQ_ONNX)
     processNet("dnn/onnx/models/resnet50-v1-12-qdq.onnx", "", cv::Size(224, 224));
 }
 
+PERF_TEST_P_(DNNTestNetwork, ConvInteger_dynamic_ONNX)
+{
+    processNet("dnn/onnx/models/convinteger_dynamic_block.onnx", "", cv::Size(256, 256));
+}
+
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
     processNet("dnn/onnx/models/squeezenet.onnx", "", cv::Size(227, 227));

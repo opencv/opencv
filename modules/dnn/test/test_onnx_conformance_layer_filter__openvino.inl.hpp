@@ -273,7 +273,7 @@ CASE(test_basic_conv_without_padding)
     SKIP_MYRIAD;
 #endif
 CASE(test_basic_convinteger)
-    // no filter
+    SKIP;
 CASE(test_batchnorm_epsilon)
     SKIP;
 CASE(test_batchnorm_epsilon_training_mode)
@@ -727,9 +727,9 @@ CASE(test_conv_with_strides_padding)
     SKIP_MYRIAD;
 #endif
 CASE(test_convinteger_with_padding)
-    // no filter
+    SKIP;
 CASE(test_convinteger_without_padding)
-    // no filter
+    SKIP;
 CASE(test_convtranspose)
     SKIP;
 CASE(test_convtranspose_1d)

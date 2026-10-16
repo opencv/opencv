@@ -420,6 +420,7 @@ CV__DNN_INLINE_NS_BEGIN
         float input_sc, output_sc;
         bool per_channel;
         bool float_input = false;
+        bool int32_output = false; // ONNX ConvInteger: int32 sums, zero points are inputs
 
         std::vector<int> strides, dilations, pads;
         int ngroups;

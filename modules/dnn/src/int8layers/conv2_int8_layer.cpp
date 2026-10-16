@@ -184,6 +184,94 @@ static void repackWeightsForVNNI(const Mat& wpack, int ngroups, int Kg, int Cg,
     });
 }
 
+// w - w_zero_point as int32 [K, Cg*ksize]; false when a value does not fit int8
+template<typename T>
+static bool shiftConvWeights(const Mat& w, const Mat& wzp, Mat& dst)
+{
+    int K = w.size[0];
+    int len = (int)(w.total() / K);
+    dst.create(K, len, CV_32S);
+    parallel_for_(Range(0, K), [&](const Range& range) {
+        for (int k = range.start; k < range.end; k++) {
+            int zp = wzp.empty() ? 0 : (int)wzp.ptr<T>()[wzp.total() == 1 ? 0 : k];
+            const T* s = w.ptr<T>() + (size_t)k * len;
+            int* d = dst.ptr<int>(k);
+            for (int i = 0; i < len; i++)
+                d[i] = (int)s[i] - zp;
+        }
+    });
+    double minVal = 0, maxVal = 0;
+    minMaxIdx(dst, &minVal, &maxVal);
+    return minVal >= -128 && maxVal <= 127;
+}
+
+// ConvInteger on block layout for the weights or groups the int8 kernels cannot take
+template<typename T>
+static void convIntegerScalar(const Mat& inp, const Mat& wshift, int x_zp,
+                              const ConvState& cs, Mat& out)
+{
+    const MatShape& ishape = cs.inpshape;
+    const MatShape& oshape = cs.outshape;
+    int ndims = oshape.dims;
+    int N = oshape[0], K = oshape.channels(), C = ishape.channels();
+    int C0 = ishape.back(), K0 = oshape.back();
+    int K1 = (K + K0 - 1) / K0, C1 = (C + C0 - 1) / C0;
+    int D = ndims >= 6 ? oshape[ndims-4] : 1, H = ndims >= 5 ? oshape[ndims-3] : 1;
+    int W = oshape[ndims-2];
+    int Di = ndims >= 6 ? ishape[ndims-4] : 1, Hi = ndims >= 5 ? ishape[ndims-3] : 1;
+    int Wi = ishape[ndims-2];
+    int Kg = K / cs.ngroups, Cg = C / cs.ngroups;
+    int kD = cs.kshape[0], kH = cs.kshape[1], kW = cs.kshape[2];
+    int sD = cs.strides[0], sH = cs.strides[1], sW = cs.strides[2];
+    int dD = cs.dilations[0], dH = cs.dilations[1], dW = cs.dilations[2];
+    int padZ = cs.pads[0], padY = cs.pads[1], padX = cs.pads[2];
+    size_t iplane = (size_t)Di * Hi * Wi * C0, oplane = (size_t)D * H * W * K0;
+    const T* src = inp.ptr<T>();
+    int32_t* dst = out.ptr<int32_t>();
+    if (K % K0 != 0)
+        out.setTo(Scalar::all(0));
+
+    parallel_for_(Range(0, N * K * D * H), [&](const Range& range) {
+        AutoBuffer<int> accbuf(W);
+        int* acc = accbuf.data();
+        for (int row = range.start; row < range.end; row++) {
+            int oy = row % H, t = row / H;
+            int oz = t % D;
+            t /= D;
+            int k = t % K, n = t / K, g = k / Kg;
+            std::fill(acc, acc + W, 0);
+            const int* wk = wshift.ptr<int>(k);
+            for (int c = 0; c < Cg; c++) {
+                int ci = g * Cg + c;
+                const T* sc = src + (n * C1 + ci / C0) * iplane + ci % C0;
+                for (int kz = 0; kz < kD; kz++) {
+                    int iz = oz * sD - padZ + kz * dD;
+                    if ((unsigned)iz >= (unsigned)Di)
+                        continue;
+                    for (int ky = 0; ky < kH; ky++) {
+                        int iy = oy * sH - padY + ky * dH;
+                        if ((unsigned)iy >= (unsigned)Hi)
+                            continue;
+                        const T* srow = sc + ((size_t)iz * Hi + iy) * Wi * C0;
+                        for (int kx = 0; kx < kW; kx++) {
+                            int wv = wk[((c * kD + kz) * kH + ky) * kW + kx];
+                            int x0 = kx * dW - padX;
+                            int ox0 = x0 < 0 ? (sW - 1 - x0) / sW : 0;
+                            int ox1 = Wi - 1 - x0 < 0 ? 0 : std::min(W, (Wi - 1 - x0) / sW + 1);
+                            for (int ox = ox0; ox < ox1; ox++)
+                                acc[ox] += ((int)srow[(ox * sW + x0) * C0] - x_zp) * wv;
+                        }
+                    }
+                }
+            }
+            int32_t* drow = dst + (n * K1 + k / K0) * oplane +
+                            ((size_t)oz * H + oy) * W * K0 + k % K0;
+            for (int ox = 0; ox < W; ox++)
+                drow[ox * K0] = acc[ox];
+        }
+    });
+}
+
 class Conv2Int8LayerImpl CV_FINAL : public Conv2Int8Layer
 {
 public:
@@ -212,6 +300,11 @@ public:
     bool addResidual;
     bool inputIsU8;
 
+    Mat wsum;   // int32 mode: per-channel sum of the folded int8 weights
+    Mat wshift; // int32 mode: w - w_zp as int32 when the int8 kernels cannot take it
+    Mat biasDynVNNI, biasDynBase, unitMultiplier;
+    MatShape prevWshape;
+
     Conv2Int8LayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
@@ -228,6 +321,7 @@ public:
         output_zp = params.get<int>("zeropoints", 0);
         per_channel = params.get<bool>("per_channel", true);
         inputIsU8 = params.get<bool>("input_is_u8", false);
+        int32_output = params.get<bool>("int32_output", false);
 
         addResidual = false;
 
@@ -272,7 +366,14 @@ public:
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
         int outtype;
-        if (float_input)
+        if (int32_output) {
+            CV_CheckGE(inputs.size(), (size_t)2, "DNN/ConvInteger: x and w are required");
+            CV_CheckType(inputs[0], inputs[0] == CV_8U || inputs[0] == CV_8S,
+                         "DNN/ConvInteger: x must be uint8 or int8");
+            CV_CheckType(inputs[1], inputs[1] == CV_8U || inputs[1] == CV_8S,
+                         "DNN/ConvInteger: w must be uint8 or int8");
+            outtype = CV_32S;
+        } else if (float_input)
             outtype = inputIsU8 ? CV_8UC1 : CV_8SC1;
         else
             outtype = !inputs.empty() ? inputs[0] : CV_8SC1;
@@ -296,7 +397,9 @@ public:
             int C0 = getNetImpl(this)->defaultC0;
             inpshape = inpshape.toLayout(DATA_LAYOUT_BLOCK, C0);
         }
-        outshapes.assign(1, convInferShape(inpshape, wshape0, emptyKernelShape,
+        CV_Assert(!int32_output || ninputs >= 2);
+        const MatShape& wshape = int32_output ? inpshapes[1] : wshape0;
+        outshapes.assign(1, convInferShape(inpshape, wshape, emptyKernelShape,
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode));
         tempshapes.clear();
@@ -336,6 +439,8 @@ public:
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        if (int32_output)
+            return false;
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
         if (!activ_int8.empty()) {
             activ = activ_int8;
@@ -521,10 +626,139 @@ public:
         });
     }
 
+    void setWeightsInteger(const Mat& w, const Mat& wzp, int C0)
+    {
+        CV_CheckType(w.type(), w.type() == CV_8UC1 || w.type() == CV_8SC1,
+                     "DNN/ConvInteger: w must be uint8 or int8");
+        CV_Assert(w.isContinuous() && w.dims >= 3);
+        int K = w.size[0];
+        if (!wzp.empty()) {
+            CV_CheckTypeEQ(wzp.type(), w.type(),
+                           "DNN/ConvInteger: w_zero_point must have the type of w");
+            CV_Check(wzp.total(), wzp.total() == 1 || wzp.total() == (size_t)K,
+                     "DNN/ConvInteger: w_zero_point must be scalar or per output channel");
+        }
+        wshape0 = w.shape();
+        Mat shifted;
+        bool fits = w.type() == CV_8UC1 ? shiftConvWeights<uint8_t>(w, wzp, shifted)
+                                        : shiftConvWeights<int8_t>(w, wzp, shifted);
+        int Kg = K / ngroups, Cg = wshape0[1];
+        if (!fits || !(ngroups == 1 || Kg % C0 == 0 || (Kg == 1 && Cg == 1))) {
+            wshift = shifted;
+            weights.release();
+            weightsVNNI.release();
+            return;
+        }
+        wshift.release();
+        Mat w8;
+        shifted.reshape(1, wshape0).convertTo(w8, CV_8S);
+        repackConvWeightsInt8(w8, weights, ngroups, C0);
+        repackWeightsForVNNI(weights, ngroups, Kg, Cg, Mat::zeros(1, K, CV_32S),
+                             weightsVNNI, biasVNNI);
+
+        // the kernels load 8 channels at a time
+        int Kpad = alignSize(K, C0);
+        wsum = Mat::zeros(1, Kpad, CV_32S);
+        biasDynVNNI = Mat::zeros(1, Kpad, CV_32S);
+        biasDynBase = Mat::zeros(1, Kpad, CV_32S);
+        unitMultiplier = Mat::ones(1, Kpad, CV_32F);
+        for (int k = 0; k < K; k++)
+            wsum.at<int>(k) = -biasVNNI.at<int>(k) / 128;
+    }
+
+    // ONNX ConvInteger: https://onnx.ai/onnx/operators/onnx__ConvInteger.html, opset 10 (its only
+    // version); x_zero_point is a scalar, w_zero_point a scalar or one value per output channel
+    void forwardInt32(InputArrayOfArrays input_arrs, OutputArrayOfArrays output_arrs)
+    {
+        auto* netimpl_ = getNetImpl(this);
+        int ninputs = (int)input_arrs.total();
+        CV_Assert(ninputs >= 2 && !float_input && !addResidual);
+
+        const Mat& inp = input_arrs.getMat(0);
+        MatShape inpshape = inp.shape();
+        CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
+        CV_CheckType(inp.type(), inp.type() == CV_8UC1 || inp.type() == CV_8SC1,
+                     "DNN/ConvInteger: x must be uint8 or int8");
+        const bool isU8 = inp.type() == CV_8UC1;
+        int C0 = inpshape.back();
+
+        int zp = 0;
+        Mat zpm = ninputs > 2 ? input_arrs.getMat(2) : Mat();
+        if (!zpm.empty()) {
+            CV_CheckEQ(zpm.total(), (size_t)1, "DNN/ConvInteger: x_zero_point must be a scalar");
+            CV_CheckTypeEQ(zpm.type(), inp.type(),
+                           "DNN/ConvInteger: x_zero_point must have the type of x");
+            zp = isU8 ? (int)zpm.ptr<uchar>()[0] : (int)zpm.ptr<schar>()[0];
+        }
+
+        bool dynamicWeights = !netimpl_->isConstArg(inputs[1]) ||
+                              (ninputs > 3 && !netimpl_->isConstArg(inputs[3]));
+        if (dynamicWeights || (weights.empty() && wshift.empty()))
+            setWeightsInteger(input_arrs.getMat(1), ninputs > 3 ? input_arrs.getMat(3) : Mat(), C0);
+
+        std::vector<int> emptyKernelShape;
+        MatShape outshape = convInferShape(inpshape, wshape0, emptyKernelShape,
+                                           ngroups, strides, dilations,
+                                           pads, auto_pad, ceil_mode);
+        int outkind = output_arrs.kind();
+        Mat out;
+        if (outkind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = output_arrs.getMatVecRef();
+            outs.resize(1);
+            outs[0].fit(outshape, CV_32S);
+            out = outs[0];
+        } else {
+            std::vector<UMat>& outs = output_arrs.getUMatVecRef();
+            outs.resize(1);
+            outs[0].fit(outshape, CV_32S);
+            out.fit(outshape, CV_32S);
+        }
+
+        if (inpshape != prevInpshape || wshape0 != prevWshape) {
+            cs.initConv(inpshape, wshape0, outshape, ngroups,
+                        strides, dilations, pads, auto_pad, ceil_mode,
+                        FAST_ACTIV_NONE, nullptr, {});
+            if (cs.depthwise)
+                cs.wshape = getWpackShapeInt8(wshape0, ngroups, C0);
+            prevInpshape = inpshape;
+            prevWshape = wshape0;
+        }
+
+        if (!weights.empty()) {
+            // the VNNI and depthwise kernels read s8 as x+128, the others read u8 as x-128
+            const int zpVNNI = isU8 ? zp : zp + 128, zpBase = isU8 ? zp - 128 : zp;
+            const int* ws = wsum.ptr<int>();
+            int* bV = biasDynVNNI.ptr<int>();
+            int* bB = biasDynBase.ptr<int>();
+            for (int k = 0; k < wshape0[0]; k++) {
+                bV[k] = -zpVNNI * ws[k];
+                bB[k] = -zpBase * ws[k];
+            }
+            convInt8Block(inp.data, nullptr, out.data, cs, weights.data, weightsVNNI.data,
+                          bB, bV, unitMultiplier.ptr<float>(), zp, 0, nullptr, isU8, true);
+        } else if (isU8) {
+            convIntegerScalar<uint8_t>(inp, wshift, zp, cs, out);
+        } else {
+            convIntegerScalar<int8_t>(inp, wshift, zp, cs, out);
+        }
+
+        if (dynamicWeights) {
+            weights.release();
+            weightsVNNI.release();
+            wshift.release();
+        }
+        if (outkind == _InputArray::STD_VECTOR_UMAT)
+            out.copyTo(output_arrs.getUMatVecRef()[0]);
+    }
+
     void forward(InputArrayOfArrays input_arrs,
                  OutputArrayOfArrays output_arrs,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
+        if (int32_output) {
+            forwardInt32(input_arrs, output_arrs);
+            return;
+        }
         int ninputs = (int)input_arrs.total();
         CV_Assert(ninputs >= 1);
 
