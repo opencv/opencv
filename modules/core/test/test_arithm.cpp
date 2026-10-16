@@ -4710,6 +4710,27 @@ TEST(Core_Arithm, inRange_unsupported_depth_30153)
     }
 }
 
+TEST(Core_Arithm, sum_unsupported_depth)
+{
+    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        for (int cn : {1, 3})
+        {
+            if (depth == CV_Bool && cn == 1)
+                continue; // single-channel CV_Bool is supported by cv::sum
+            cv::Mat src(4, 4, CV_MAKETYPE(depth, cn), cv::Scalar::all(0));
+            try
+            {
+                cv::sum(src);
+                ADD_FAILURE() << "cv::sum did not throw for " << cv::typeToString(src.type());
+            }
+            catch (const cv::Exception& e)
+            {
+                EXPECT_NE(std::string::npos, e.err.find(cv::typeToString(src.type()))) << e.err;
+            }
+        }
+    }
+}
 
 TEST(Core_Arithm, min_empty)
 {

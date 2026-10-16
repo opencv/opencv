@@ -139,7 +139,8 @@ static Scalar sum_(const Mat& src)
     if (func == nullptr) {
         if (depth == CV_Bool && cn == 1)
             return Scalar((double)countNonZero(src));
-        CV_Error(Error::StsNotImplemented, "");
+        CV_Error_(Error::StsNotImplemented, ("sum: %s input is not supported, convert the input to another type (e.g. CV_32F) first",
+                                            typeToString(src.type()).c_str()));
     }
 
     const Mat* arrays[] = {&src, 0};
