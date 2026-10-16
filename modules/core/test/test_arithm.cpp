@@ -3339,6 +3339,63 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom32U,
         testing::Values(1, 7, 8, 127),
         testing::Bool()));
 
+// Converting from CV_64U must hold, for every value and every array length:
+//   - the result is never negative, because the source is unsigned;
+//   - an integer destination saturates at its own maximum rather than wrapping.
+// CV_64U is the only unsigned depth whose whole range does not fit in the signed type of the same
+// width, so it is the one where treating the bit pattern as signed goes unnoticed until the top bit
+// is set. Lengths straddle the vector width so the body, the tail and the two together are covered.
+typedef testing::TestWithParam< tuple<int, int> > Core_ConvertFrom64U;
+
+TEST_P(Core_ConvertFrom64U, exact_and_unsigned)
+{
+    const int dstDepth = get<0>(GetParam());
+    const int len      = get<1>(GetParam());
+    const uint64_t vals[] = { 0ull, 1ull, (1ull << 62), (1ull << 63), (1ull << 63) + 1,
+                              (1ull << 63) + 1025,   // rounds differently if the conversion rounds twice
+                              0xFFFFFFFFFFFFFFFFull };
+
+    for (uint64_t v : vals)
+    {
+        Mat src(1, len, CV_64U);
+        for (int i = 0; i < len; i++)
+            src.ptr<uint64_t>(0)[i] = v;
+        Mat dst; src.convertTo(dst, dstDepth);
+
+        for (int i = 0; i < len; i++)
+        {
+            SCOPED_TRACE(cv::format("dstDepth=%d value=%llu len=%d i=%d",
+                                    dstDepth, (unsigned long long)v, len, i));
+            switch (dstDepth)
+            {
+            case CV_64S:
+                EXPECT_EQ(saturate_cast<int64_t>(v), dst.ptr<int64_t>(0)[i]);
+                break;
+            case CV_64F:
+                EXPECT_EQ((double)v, dst.ptr<double>(0)[i]);
+                break;
+            case CV_32F:
+                EXPECT_GE(dst.ptr<float>(0)[i], 0.0f);
+                EXPECT_EQ((float)v, dst.ptr<float>(0)[i]);
+                break;
+            case CV_16F:
+                EXPECT_GE((float)dst.ptr<hfloat>(0)[i], 0.0f);
+                break;
+            case CV_16BF:
+                EXPECT_GE((float)dst.ptr<bfloat>(0)[i], 0.0f);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom64U,
+    testing::Combine(
+        testing::Values(CV_64S, CV_64F, CV_32F, CV_16F, CV_16BF),
+        testing::Values(1, 7, 8, 127)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
