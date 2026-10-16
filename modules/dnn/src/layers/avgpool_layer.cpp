@@ -14,9 +14,109 @@ namespace cv
 namespace dnn
 {
 
+// NCHW input; tasks are output rows, so a single large plane still uses all threads
+static void avgPool32fPlain(const float* inp, float* out,
+                            const ConvState& cs, bool count_include_pad)
+{
+    constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
+
+    CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
+
+    int sdims = cs.nspatialdims;
+    int NC = cs.inpshape[0]*cs.inpshape[1];
+    int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+    int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+    int Wi = cs.inpshape[sdims + 1];
+    int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+    int H = sdims > 1 ? cs.outshape[sdims] : 1;
+    int W = cs.outshape[sdims + 1];
+    int nrows = NC*D*H;
+    double nstripes = (double)nrows*W*cs.ofstab.size()*(1./(1 << 14));
+
+    parallel_for_(Range(0, nrows), [&](const Range& r) {
+        int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+        int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int padZ1 = cs.pads[MAX_POOL_DIMS], padY1 = cs.pads[MAX_POOL_DIMS+1];
+        int padX1 = cs.pads[MAX_POOL_DIMS+2];
+        int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
+        int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
+        int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
+        int ksize = (int)cs.ofstab.size();
+        const int* zyxtab = cs.coordtab.data();
+        const int* ofstab = cs.ofstab.data();
+        float iksize = 1.f/ksize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int nlanes = VTraits<v_float32>::vlanes();
+        v_float32 vscale = vx_setall_f32(iksize);
+#endif
+
+        for (int row = r.start; row < r.end; row++) {
+            int nc = row/(D*H), zy = row - nc*(D*H);
+            int z0 = zy/H, y0 = zy - z0*H;
+            int zi_ = z0*SZ - padZ0, yi_ = y0*SY - padY0;
+            const float* inp_nc = inp + (size_t)nc*Di*Hi*Wi;
+            float* out_row = out + (size_t)row*W;
+            int x0 = 0;
+            int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
+                y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
+
+            for(;;) {
+                for (; x0 < x1; x0++) {
+                    int xi_ = x0*SX - padX0;
+                    float s = 0.f;
+                    int nitems = 0, npadded = 0;
+                    for (int k = 0; k < ksize; k++) {
+                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                        npadded += (zi >= -padZ0 && zi < Di + padZ1 &&
+                                    yi >= -padY0 && yi < Hi + padY1 &&
+                                    xi >= -padX0 && xi < Wi + padX1);
+                        if ((unsigned)zi >= (unsigned)Di ||
+                            (unsigned)yi >= (unsigned)Hi ||
+                            (unsigned)xi >= (unsigned)Wi)
+                            continue;
+                        s += inp_nc[(zi*Hi + yi)*Wi + xi];
+                        nitems++;
+                    }
+                    out_row[x0] = s*(1.f/(count_include_pad ? npadded : nitems));
+                }
+                if (x0 == W)
+                    break;
+                x1 = inner_x1;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                if (SX == 1) {
+                    for (; x0 <= x1 - nlanes; x0 += nlanes) {
+                        const float* inp_xi = inp_nc + (zi_*Hi + yi_)*Wi + x0 - padX0;
+                        v_float32 s = vx_load(inp_xi + ofstab[0]);
+                        for (int k = 1; k < ksize; k++)
+                            s = v_add(s, vx_load(inp_xi + ofstab[k]));
+                        v_store(out_row + x0, v_mul(s, vscale));
+                    }
+                }
+#endif
+                for (; x0 < x1; x0++) {
+                    const float* inp_xi = inp_nc + (zi_*Hi + yi_)*Wi + x0*SX - padX0;
+                    float s = inp_xi[ofstab[0]];
+                    for (int k = 1; k < ksize; k++)
+                        s += inp_xi[ofstab[k]];
+                    out_row[x0] = s*iksize;
+                }
+                x1 = W;
+            }
+        }
+    }, nstripes);
+}
+
 static void avgPool32f(const void* inp_, void* out_,
                        const ConvState& cs, bool count_include_pad_)
 {
+    if (cs.inpshape.layout != DATA_LAYOUT_BLOCK) {
+        avgPool32fPlain((const float*)inp_, (float*)out_, cs, count_include_pad_);
+        return;
+    }
+
     int NC1 = cs.inpshape[0]*cs.inpshape[1];
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
@@ -448,6 +548,12 @@ static void avgPool16bf(const void* inp_, void* out_,
 typedef void (*AvgPoolFunc)(const void* inp, void* out,
                             const ConvState& cs, bool countIncludePadding);
 
+static bool haveAvgPoolHal()
+{
+    decltype(&hal_ni_dnn_avgpool3d32f) hal = cv_hal_dnn_avgpool3d32f;
+    return hal != hal_ni_dnn_avgpool3d32f;
+}
+
 class AveragePoolLayerImpl : public AveragePoolLayer
 {
 public:
@@ -535,9 +641,15 @@ public:
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
     {
         CV_Assert(actualInputs.size() == 1u);
-        desiredInputs.assign(1, DATA_LAYOUT_BLOCK);
-        outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
-        return getNetImpl(this)->defaultC0;
+        // plain input stays plain: converting it costs a pass and pads few channels up to C0;
+        // a registered HAL hook takes block input only, so it keeps getting it
+        Net::Impl* netimpl_ = getNetImpl(this);
+        bool block = actualInputs[0] == DATA_LAYOUT_BLOCK ||
+                     netimpl_->originalLayout != DATA_LAYOUT_NCHW || haveAvgPoolHal();
+        DataLayout layout = block ? DATA_LAYOUT_BLOCK : actualInputs[0];
+        desiredInputs.assign(1, layout);
+        outputs.assign(requiredOutputs, layout);
+        return block ? netimpl_->defaultC0 : 0;
     }
 
     void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE

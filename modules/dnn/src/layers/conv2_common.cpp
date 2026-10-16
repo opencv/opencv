@@ -315,10 +315,10 @@ void ConvState::initPooling(const MatShape& inpshape_,
     CV_Assert(strides_.empty() || (strides_.size() == size_t(nspatialdims)));
     CV_Assert(dilations_.empty() || (dilations_.size() == size_t(nspatialdims)));
     CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
-    CV_Assert(inpshape_.layout == DATA_LAYOUT_BLOCK);
-    CV_Assert(inpshape_.dims == nspatialdims + 3);
+    bool block = inpshape_.layout == DATA_LAYOUT_BLOCK;
+    CV_Assert(inpshape_.dims == nspatialdims + 2 + int(block));
 
-    int C = inpshape_.C;
+    int C = block ? inpshape_.C : inpshape_[1];
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = C;
@@ -549,7 +549,7 @@ void ConvState::initOfs()
     int Hi = sdims > 1 ? inpshape[sdims] : 1;
     int Wi = inpshape[sdims + 1];
     int ksize = KD*KH*KW;
-    int C0 = inpshape.back();
+    int C0 = inpshape.layout == DATA_LAYOUT_BLOCK ? inpshape.back() : 1;
     coordtab.resize(ksize*MAX_CONV_DIMS);
     ofstab.resize(ksize);
     for (int z = 0, k = 0; z < KD; z++) {
