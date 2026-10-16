@@ -1721,7 +1721,7 @@ CASE(test_matmul_3d)
 CASE(test_matmul_4d)
     // no filter
 CASE(test_matmulinteger)
-    // no filter
+    SKIP;
 CASE(test_max_example)
     SKIP;
 CASE(test_max_float16)

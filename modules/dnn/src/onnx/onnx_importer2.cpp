@@ -296,6 +296,7 @@ protected:
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConvInteger          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMatMulInteger        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2520,6 +2521,16 @@ void ONNXImporter2::parseConvInteger(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto, n_inputs);
 }
 
+// ONNX MatMulInteger (opset 10) is MatMulInt8 in int32-output mode; B and zero points stay inputs
+void ONNXImporter2::parseMatMulInteger(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int n_inputs = node_proto.input_size();
+    CV_Assert(2 <= n_inputs && n_inputs <= 4);
+    layerParams.type = "MatMulInt8";
+    layerParams.set("int32_output", true);
+    addLayer(layerParams, node_proto, n_inputs);
+}
+
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "RMSNormalization";
@@ -3519,6 +3530,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["QuantizeLinear"] = &ONNXImporter2::parseQuantizeLinear;
     dispatch["DynamicQuantizeLinear"] = &ONNXImporter2::parseDynamicQuantizeLinear;
     dispatch["ConvInteger"] = &ONNXImporter2::parseConvInteger;
+    dispatch["MatMulInteger"] = &ONNXImporter2::parseMatMulInteger;
     dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
     dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 

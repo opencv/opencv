@@ -138,6 +138,14 @@ PERF_TEST_P_(DNNTestNetwork, ConvInteger_dynamic_ONNX)
     processNet("dnn/onnx/models/convinteger_dynamic_block.onnx", "", cv::Size(256, 256));
 }
 
+PERF_TEST_P_(DNNTestNetwork, MatMulInteger_dynamic_ONNX)
+{
+    int sz[] = {1, 256, 256};
+    Mat input(3, sz, CV_32F);
+    randu(input, -1.0f, 1.0f);
+    processNet("dnn/onnx/models/matmulinteger_dynamic_block.onnx", "", input);
+}
+
 PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 {
     processNet("dnn/onnx/models/squeezenet.onnx", "", cv::Size(227, 227));

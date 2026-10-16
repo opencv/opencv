@@ -1925,6 +1925,15 @@ CV__DNN_INLINE_NS_BEGIN
         float input_sc, output_sc;
         int output_type;
         bool per_channel;
+        //! ONNX MatMulInteger (opset 10) mode: int32 output, B and both zero points are inputs
+        bool int32_output = false;
+
+        /** @brief Creates the ONNX MatMulInteger form of the layer.
+         * @param params layer parameters; "int32_output" must be true, because the requantizing
+         *        int8 form is built only from MatMulInt8Params, by the QDQ fusion
+         * @return the MatMulInteger layer: Y = (A - a_zero_point) * (B - b_zero_point) in int32
+         */
+        static Ptr<MatMulInt8Layer> create(const LayerParams& params);
         static Ptr<MatMulInt8Layer> create(const MatMulInt8Params& params);
     };
 

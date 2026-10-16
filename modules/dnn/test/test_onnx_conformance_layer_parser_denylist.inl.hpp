@@ -94,7 +94,6 @@
 "test_if_seq",  // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
