@@ -6,6 +6,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "adjacency_graph.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -114,6 +115,305 @@ struct ModelFusionQDQ
         return mid_layer != 0;
     }
 
+    static bool isInt8Type(int type) { return type == CV_8S || type == CV_8U; }
+
+    //! Q/DQ quantized type, read from the zero point: an intermediate's ArgData has no type at
+    //! fuse time. -1 without a constant zero point.
+    int quantTypeOf(const std::vector<Arg>& qdqInputs) const
+    {
+        if (qdqInputs.size() < 3 || !netimpl->isConstArg(qdqInputs[2]))
+            return -1;
+        const Mat& zp = netimpl->argTensor(qdqInputs[2]);
+        return zp.empty() ? -1 : zp.depth();
+    }
+
+    bool perTensorQuantParams(const std::vector<Arg>& qdqInputs, float& sc, int& zp) const
+    {
+        if (qdqInputs.size() < 3 || !netimpl->isConstArg(qdqInputs[1]) ||
+            !netimpl->isConstArg(qdqInputs[2]))
+            return false;
+        const Mat& scm = netimpl->argTensor(qdqInputs[1]);
+        const Mat& zpm = netimpl->argTensor(qdqInputs[2]);
+        if (scm.total() != 1 || scm.depth() != CV_32F || zpm.total() != 1 || !isInt8Type(zpm.depth()))
+            return false;
+        sc = scm.ptr<float>()[0];
+        zp = zpm.depth() == CV_8U ? (int)zpm.ptr<uint8_t>()[0] : (int)zpm.ptr<int8_t>()[0];
+        return sc > 0.f;
+    }
+
+    //! The one input of @p L that is not a constant, or Arg() if there is not exactly one.
+    Arg flowingInput(const Ptr<LayerInfo>& L) const
+    {
+        Arg flow;
+        int nflow = 0;
+        for (Arg a : L->inputs) {
+            if (a.idx > 0 && !netimpl->isConstArg(a)) {
+                flow = a;
+                nflow++;
+            }
+        }
+        return nflow == 1 ? flow : Arg();
+    }
+
+    //! An elementwise layer as a scalar function: its expression, else its kernel.
+    struct ScalarStep
+    {
+        Ptr<AdjacencyGraph> expr;
+        FusionKernel kernel;
+
+        float operator()(float x) const
+        {
+            if (expr) {
+                static const std::vector<const float*> noBuffers;
+                return fusion::evalElement(*expr, x, noBuffers, 0);
+            }
+            float y = 0.f;
+            kernel.fn(&x, &y, 1, kernel.params);
+            return y;
+        }
+    };
+
+    //! Unfolds @p L if every input besides @p flow is a scalar constant; per-channel data would
+    //! need a table per channel.
+    bool unfoldScalarStep(const Ptr<LayerInfo>& L, Arg flow, ScalarStep& step) const
+    {
+        Layer* l = dynamic_cast<Layer*>(L.get());
+        const FusionOps* ops = l ? fusionOpsFor(l) : nullptr;
+        if (!ops || !ops->unfold || ops->ownedBuffers || L->outputs.size() != 1 || L->subgraphs())
+            return false;
+
+        ConstOperand side;
+        side.flowIsFirstInput = !L->inputs.empty() && L->inputs[0].idx == flow.idx;
+        for (Arg a : L->inputs) {
+            if (a.idx == 0 || a.idx == flow.idx)
+                continue;
+            if (side.count >= ConstOperand::MAX_CONSTS || !netimpl->isConstArg(a))
+                return false;
+            const Mat& t = netimpl->argTensor(a);
+            if (t.total() != 1)
+                return false;
+            if (t.depth() == CV_32F)
+                side.consts[side.count++].value = t.ptr<float>()[0];
+            else if (t.depth() == CV_64F)
+                side.consts[side.count++].value = (float)t.ptr<double>()[0];
+            else
+                return false;
+        }
+
+        LayerMath r;
+        if (!ops->unfold(l, r, side))
+            return false;
+        step = ScalarStep();
+        if (r.nodeCount() > 0) {
+            AdjacencyGraphBuilder b;
+            const int root = fusion::instantiate(b, b.internNode(FusionEltwiseOp::INPUT, {}), r);
+            if (root >= 0)
+                step.expr = fusion::extract(b.graph(), root, std::vector<Mat>());
+            if (step.expr)
+                return true;
+        }
+        step.kernel = r.kernel;
+        return step.kernel.fn != nullptr;
+    }
+
+    //! True if @p step is clamp(x, lo, hi): a MAX/MIN/CLAMP chain with constant operands, as in
+    //! ReLU, ReLU6 and Clip.
+    static bool isClamp(const ScalarStep& step, float& lo, float& hi)
+    {
+        if (!step.expr)
+            return false;
+        const std::vector<FusionNode>& nodes = step.expr->nodes();
+        for (const FusionNode& n : nodes) {
+            switch (n.op) {
+            case FusionEltwiseOp::INPUT:
+            case FusionEltwiseOp::CONST:
+            case FusionEltwiseOp::CLAMP:
+                break;
+            case FusionEltwiseOp::MAX:
+            case FusionEltwiseOp::MIN:
+                if (nodes[n.inputs[0]].op != FusionEltwiseOp::CONST &&
+                    nodes[n.inputs[1]].op != FusionEltwiseOp::CONST)
+                    return false;
+                break;
+            default:
+                return false;
+            }
+        }
+        lo = step(-FLT_MAX);
+        hi = step(FLT_MAX);
+        return lo <= hi;
+    }
+
+    //! Table of q -> Q(f(DQ(q))), indexed by byte value for uint8 and by q + 128 for int8.
+    static Mat buildLut(const std::vector<ScalarStep>& steps, bool isU8,
+                        float inSc, int inZp, float outSc, int outZp)
+    {
+        Mat lut(1, 256, isU8 ? CV_8U : CV_8S);
+        for (int t = 0; t < 256; t++) {
+            const int q = isU8 ? t : t - 128;
+            float x = inSc * (float)(q - inZp);
+            for (const ScalarStep& step : steps)
+                x = step(x);
+            const int y = cvIsNaN(x) ? outZp
+                        : outZp + cvRound(std::max(-1e6f, std::min(1e6f, x / outSc)));
+            if (isU8)
+                lut.ptr<uint8_t>()[t] = saturate_cast<uint8_t>(y);
+            else
+                lut.ptr<int8_t>()[t] = saturate_cast<int8_t>(y);
+        }
+        return lut;
+    }
+
+    Ptr<ActivationLayerInt8> makeLutLayer(const String& name, const String& type, const Mat& lut,
+                                          float inSc, int inZp, float outSc, int outZp) const
+    {
+        ActivationInt8Params ap;
+        ap.name = name;
+        ap.activationType = type;
+        ap.input_sc = inSc;
+        ap.input_zp = inZp;
+        ap.output_sc = outSc;
+        ap.output_zp = outZp;
+        ap.activationLUT = lut;
+        Ptr<ActivationLayerInt8> act = ActivationLayerInt8::create(ap);
+        act->netimpl = netimpl;
+        return act;
+    }
+
+    //! DQ -> single-use elementwise ops with scalar constants -> Q becomes one exact 256-entry
+    //! table; each op's parameters (LeakyRelu slope, Clip bounds) come from its own unfold.
+    bool fuseLutIsland(const std::vector<Arg>& qinputs, const std::vector<int>& producer_of,
+                       std::vector<Ptr<LayerInfo> >& newprog, int& fused_layer_idx,
+                       std::vector<Arg>& fused_inputs, std::vector<Arg>& removed_args)
+    {
+        enum { MAX_ISLAND_OPS = 8 };
+        float outSc = 0.f, inSc = 0.f;
+        int outZp = 0, inZp = 0;
+        if (qinputs.size() != 3 || !perTensorQuantParams(qinputs, outSc, outZp))
+            return false;
+
+        std::vector<int> chain;     // newprog indices, nearest the Q first
+        std::vector<Arg> flows;     // the input each of them reads
+        Arg cur = qinputs[0];
+        int dq_idx = -1;
+        for (;;) {
+            if (cur.idx <= 0 || usecounts.at(cur.idx) != 1)
+                return false;
+            const int idx = producer_of.at(cur.idx);
+            if (idx < 0 || !newprog[idx])
+                return false;
+            if (getLayer<DequantizeLinearLayer>(newprog, idx)) {
+                dq_idx = idx;
+                break;
+            }
+            const Arg flow = flowingInput(newprog[idx]);
+            if (chain.size() >= (size_t)MAX_ISLAND_OPS || flow.idx <= 0)
+                return false;
+            chain.push_back(idx);
+            flows.push_back(flow);
+            cur = flow;
+        }
+        if (chain.empty())
+            return false;
+
+        DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
+        const int type = quantTypeOf(dq->inputs);
+        if (!isInt8Type(type) || type != quantTypeOf(qinputs) ||
+            !perTensorQuantParams(dq->inputs, inSc, inZp))
+            return false;
+
+        std::vector<ScalarStep> steps(chain.size());
+        for (size_t k = 0; k < chain.size(); k++) {
+            const size_t j = chain.size() - 1 - k;   // run them from the DQ side
+            if (!unfoldScalarStep(newprog[chain[j]], flows[j], steps[k]))
+                return false;
+        }
+
+        const Ptr<LayerInfo>& last = newprog[chain[0]];
+        const String actType = chain.size() == 1 ? last->type + "Int8" : String("LUTInt8");
+        Mat lut = buildLut(steps, type == CV_8U, inSc, inZp, outSc, outZp);
+        Ptr<ActivationLayerInt8> act = makeLutLayer(last->name, actType, lut, inSc, inZp, outSc, outZp);
+
+        fused_layer_idx = chain[0];
+        fused_inputs.assign(1, dq->inputs[0]);
+        removed_args.push_back(qinputs[0]);
+        for (size_t k = 0; k < chain.size(); k++) {
+            removed_args.push_back(flows[k]);
+            if (k > 0)
+                newprog[chain[k]] = Ptr<LayerInfo>();
+        }
+        newprog[chain[0]] = act;
+        newprog[dq_idx] = Ptr<LayerInfo>();
+        return true;
+    }
+
+    //! Q is monotonic, so Q(clamp(x)) == clamp(Q(x)): moving a ReLU/Clip behind its Q as a table
+    //! lets the producer fuse with the Q. Rewrites @p q; returns the table to append, or null.
+    Ptr<LayerInfo> hoistClampBehindQ(const Ptr<LayerInfo>& q, std::vector<int>& producer_of,
+                                     std::vector<Ptr<LayerInfo> >& newprog)
+    {
+        float sc = 0.f;
+        int zp = 0;
+        const int type = quantTypeOf(q->inputs);
+        if (q->outputs.size() != 1 || !isInt8Type(type) || !perTensorQuantParams(q->inputs, sc, zp))
+            return Ptr<LayerInfo>();
+
+        const Arg clampOut = q->inputs[0];
+        if (clampOut.idx <= 0 || usecounts.at(clampOut.idx) != 1)
+            return Ptr<LayerInfo>();
+        const int cidx = producer_of.at(clampOut.idx);
+        if (cidx < 0 || !newprog[cidx])
+            return Ptr<LayerInfo>();
+        const Ptr<LayerInfo> clampLayer = newprog[cidx];
+        const Arg flow = flowingInput(clampLayer);
+        if (flow.idx <= 0)
+            return Ptr<LayerInfo>();
+
+        // DQ -> clamp -> Q belongs to fuseLutIsland; Add -> ReLU -> Q clamps inside Eltwise2Int8.
+        const int pidx = producer_of.at(flow.idx);
+        if (pidx < 0 || !newprog[pidx] ||
+            getLayer<DequantizeLinearLayer>(newprog, pidx) || getLayer<NaryEltwiseLayer>(newprog, pidx))
+            return Ptr<LayerInfo>();
+
+        ScalarStep step;
+        float lo = 0.f, hi = 0.f;
+        if (!unfoldScalarStep(clampLayer, flow, step) || !isClamp(step, lo, hi))
+            return Ptr<LayerInfo>();
+
+        // fuseLutIsland folds an elementwise producer and the clamp into one table; don't split them.
+        ScalarStep producerStep;
+        const Ptr<LayerInfo>& producer = newprog[pidx];
+        const Arg producerFlow = flowingInput(producer);
+        if (producerFlow.idx > 0 && unfoldScalarStep(producer, producerFlow, producerStep))
+            return Ptr<LayerInfo>();
+
+        Mat lut = buildLut(std::vector<ScalarStep>(1, step), type == CV_8U, sc, zp, sc, zp);
+        Ptr<ActivationLayerInt8> act = makeLutLayer(clampLayer->name, clampLayer->type + "Int8",
+                                                    lut, sc, zp, sc, zp);
+
+        const Arg mid = netimpl->newArg(uniqueArgName(clampLayer->name + "/quantized"), DNN_ARG_TEMP);
+        usecounts.resize(netimpl->args.size(), 0);
+        producer_of.resize(netimpl->args.size(), -1);
+
+        act->inputs.assign(1, mid);
+        act->outputs = q->outputs;
+        q->inputs[0] = flow;
+        q->outputs.assign(1, mid);
+        usecounts.at(mid.idx) = 1;
+        usecounts.at(clampOut.idx) = 0;
+        producer_of.at(clampOut.idx) = -1;
+        newprog[cidx] = Ptr<LayerInfo>();
+        return act;
+    }
+
+    std::string uniqueArgName(const std::string& base) const
+    {
+        std::string name = base;
+        for (int k = 1; netimpl->argnames.count(name); k++)
+            name = format("%s_%d", base.c_str(), k);
+        return name;
+    }
+
     bool fuseGraph(Ptr<Graph>& graph)
     {
         vector<Arg> removed_args;
@@ -139,6 +439,10 @@ struct ModelFusionQDQ
                         modified = true;
                 }
             }
+            Ptr<LayerInfo> hoistedClamp;
+            if (dynamic_cast<QuantizeLinearLayer*>(layer_ptr))
+                hoistedClamp = hoistClampBehindQ(layer, producer_of, newprog);
+
             const std::vector<Arg>& inputs = layer->inputs;
             const std::vector<Arg>& outputs = layer->outputs;
             size_t ninputs = inputs.size();
@@ -225,150 +529,10 @@ struct ModelFusionQDQ
                         }
                     }
 
-                int relu_layer_idx = -1;
-                ReLULayer* relu = 0;
-                if (getQdqPatternContext<ReLULayer>(layer_ptr, ninputs, inputs, producer_of,
-                                                    newprog, q_data_in, out_scale, out_zp,
-                                                    relu_layer_idx, relu) && relu->inputs.size() == 1) {
-                    Arg relu_in = relu->inputs[0];
-                    int dq_idx = producer_of.at(relu_in.idx);
-                    DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
-
-                    const int relu_out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
-                    const bool relu_out_int8 = (relu_out_type == CV_8S || relu_out_type == CV_8U);
-                    const int relu_in_type = (dq && !dq->inputs.empty()) ? netimpl->argData(dq->inputs[0]).type : -1;
-                    const bool relu_in_int8 = (relu_in_type == CV_8S || relu_in_type == CV_8U);
-                    if (dq && dq->inputs.size() >= 3 &&
-                        areDqArgsConst(dq) &&
-                        relu_in_int8 && relu_out_int8 &&
-                        usecounts.at(relu_in.idx) == 1) {
-                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                        const Mat& relu_zp_m = netimpl->argTensor(dq->inputs[2]);
-                        const int inp_zp = relu_zp_m.depth() == CV_8U
-                            ? (int)relu_zp_m.at<uint8_t>(0)
-                            : (int)relu_zp_m.at<int8_t>(0);
-                        const float out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                        const Mat& out_zp_relu_m = netimpl->argTensor(out_zp);
-                        const int out_zp_i = out_zp_relu_m.depth() == CV_8U
-                            ? (int)out_zp_relu_m.at<uint8_t>(0)
-                            : (int)out_zp_relu_m.at<int8_t>(0);
-
-                        if (inp_sc > 0.f && out_sc > 0.f) {
-                            const bool isU8 = (relu_in_type == CV_8U);
-                            Mat lookUpTable(1, 256, isU8 ? CV_8U : CV_8S);
-                            if (isU8) {
-                                uint8_t* table = lookUpTable.ptr<uint8_t>();
-                                for (int t = 0; t < 256; t++) {
-                                    float x = inp_sc * (t - inp_zp);
-                                    float y = std::max(0.0f, x);
-                                    int quantized = out_zp_i + cvRound(y / out_sc);
-                                    table[t] = saturate_cast<uint8_t>(quantized);
-                                }
-                            } else {
-                                int8_t* table = lookUpTable.ptr<int8_t>();
-                                for (int t = -128; t < 128; t++) {
-                                    float x = inp_sc * (t - inp_zp);
-                                    float y = std::max(0.0f, x);
-                                    int quantized = out_zp_i + cvRound(y / out_sc);
-                                    table[t + 128] = saturate_cast<int8_t>(quantized);
-                                }
-                            }
-
-                            ActivationInt8Params ap;
-                            ap.name = relu->name;
-                            ap.activationType = "ReLUInt8";
-                            ap.input_sc = inp_sc;
-                            ap.input_zp = inp_zp;
-                            ap.output_sc = out_sc;
-                            ap.output_zp = out_zp_i;
-                            ap.activationLUT = lookUpTable;
-                            Ptr<ActivationLayerInt8> reluInt8 = ActivationLayerInt8::create(ap);
-                            reluInt8->netimpl = netimpl;
-                            fused_layer_idx = relu_layer_idx;
-                            newprog[relu_layer_idx] = reluInt8;
-                            fused_inputs.assign(1, dq->inputs[0]);
-                            removed_args.push_back(q_data_in);
-                            removed_args.push_back(relu_in);
-                            newprog[dq_idx] = Ptr<LayerInfo>();
-                            break;
-                        }
-                    }
-                }
-
-                {
-                int sig_layer_idx = -1;
-                SigmoidLayer* sigmoid_layer = 0;
-                if (getQdqPatternContext<SigmoidLayer>(layer_ptr, ninputs, inputs, producer_of,
-                                                       newprog, q_data_in, out_scale, out_zp,
-                                                       sig_layer_idx, sigmoid_layer) &&
-                    sigmoid_layer->inputs.size() == 1) {
-                    Arg sig_in = sigmoid_layer->inputs[0];
-                    int dq_idx = producer_of.at(sig_in.idx);
-                    DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
-
-                    const int sig_out_zp_type = netimpl->argData(out_zp).type;
-                    const bool sig_out_int8 = (sig_out_zp_type == CV_8S || sig_out_zp_type == CV_8U);
-                    const int sig_in_zp_type = (dq && dq->inputs.size() >= 3 && netimpl->isConstArg(dq->inputs[2]))
-                        ? netimpl->argData(dq->inputs[2]).type : -1;
-                    const bool sig_in_int8 = (sig_in_zp_type == CV_8S || sig_in_zp_type == CV_8U);
-
-                    if (dq && dq->inputs.size() >= 3 &&
-                        areDqArgsConst(dq) &&
-                        sig_in_int8 && sig_out_int8 &&
-                        usecounts.at(sig_in.idx) == 1) {
-                        const float inp_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                        const Mat& sig_in_zp_m = netimpl->argTensor(dq->inputs[2]);
-                        const int inp_zp = sig_in_zp_m.depth() == CV_8U
-                            ? (int)sig_in_zp_m.at<uint8_t>(0)
-                            : (int)sig_in_zp_m.at<int8_t>(0);
-                        const float out_sc = netimpl->argTensor(out_scale).at<float>(0);
-                        const Mat& sig_out_zp_m = netimpl->argTensor(out_zp);
-                        const int out_zp_i = sig_out_zp_m.depth() == CV_8U
-                            ? (int)sig_out_zp_m.at<uint8_t>(0)
-                            : (int)sig_out_zp_m.at<int8_t>(0);
-
-                        if (inp_sc > 0.f && out_sc > 0.f) {
-                            const bool isU8 = (sig_in_zp_type == CV_8U);
-                            Mat lookUpTable(1, 256, isU8 ? CV_8U : CV_8S);
-                            if (isU8) {
-                                uint8_t* table = lookUpTable.ptr<uint8_t>();
-                                for (int t = 0; t < 256; t++) {
-                                    float x = inp_sc * (t - inp_zp);
-                                    float y = 1.f / (1.f + std::exp(-x));
-                                    int q = out_zp_i + cvRound(y / out_sc);
-                                    table[t] = saturate_cast<uint8_t>(q);
-                                }
-                            } else {
-                                int8_t* table = lookUpTable.ptr<int8_t>();
-                                for (int t = -128; t < 128; t++) {
-                                    float x = inp_sc * (t - inp_zp);
-                                    float y = 1.f / (1.f + std::exp(-x));
-                                    int q = out_zp_i + cvRound(y / out_sc);
-                                    table[t + 128] = saturate_cast<int8_t>(q);
-                                }
-                            }
-
-                            ActivationInt8Params ap;
-                            ap.name = sigmoid_layer->name;
-                            ap.activationType = "SigmoidInt8";
-                            ap.input_sc = inp_sc;
-                            ap.input_zp = inp_zp;
-                            ap.output_sc = out_sc;
-                            ap.output_zp = out_zp_i;
-                            ap.activationLUT = lookUpTable;
-                            Ptr<ActivationLayerInt8> sigmoidInt8 = ActivationLayerInt8::create(ap);
-                            sigmoidInt8->netimpl = netimpl;
-                            fused_layer_idx = sig_layer_idx;
-                            newprog[sig_layer_idx] = sigmoidInt8;
-                            fused_inputs.assign(1, dq->inputs[0]);
-                            removed_args.push_back(q_data_in);
-                            removed_args.push_back(sig_in);
-                            newprog[dq_idx] = Ptr<LayerInfo>();
-                            break;
-                        }
-                    }
-                }
-                }
+                if (dynamic_cast<QuantizeLinearLayer*>(layer_ptr) &&
+                    fuseLutIsland(inputs, producer_of, newprog, fused_layer_idx,
+                                  fused_inputs, removed_args))
+                    break;
 
                 QuantizeLinearLayer* ql_compound = dynamic_cast<QuantizeLinearLayer*>(layer_ptr);
                 if (ql_compound && ninputs == 3) {
@@ -376,7 +540,8 @@ struct ModelFusionQDQ
                     int relu_layer_idx2 = (q_inp.idx < (int)producer_of.size()) ? producer_of.at(q_inp.idx) : -1;
                     ReLULayer* relu2 = getLayer<ReLULayer>(newprog, relu_layer_idx2);
                     (void)relu_layer_idx2;
-                    if (relu2 && relu2->inputs.size() == 1) {
+                    // Eltwise2Int8 clamps at zero, so a LeakyRelu cannot fuse here.
+                    if (relu2 && relu2->inputs.size() == 1 && relu2->negativeSlope == 0.f) {
                         Arg relu_in2 = relu2->inputs[0];
                         int add_idx2 = producer_of.at(relu_in2.idx);
                         NaryEltwiseLayer* add2 = getLayer<NaryEltwiseLayer>(newprog, add_idx2);
@@ -1103,8 +1268,6 @@ struct ModelFusionQDQ
                     QuantizeLinearLayer* ql_shuffle = dynamic_cast<QuantizeLinearLayer*>(layer_ptr);
                     if (ql_shuffle && ninputs == 3 && usecounts.at(inputs[0].idx) == 1) {
                         Arg ql_data = inputs[0];
-                        Arg ql_scale = inputs[1];
-                        Arg ql_zp = inputs[2];
                         int shuffle_idx = producer_of.at(ql_data.idx);
                         Layer* shuffle_layer = (shuffle_idx >= 0 && !newprog[shuffle_idx].empty())
                             ? (Layer*)newprog[shuffle_idx].get() : nullptr;
@@ -1117,24 +1280,14 @@ struct ModelFusionQDQ
                             int dq_idx = producer_of.at(shuffle_inp.idx);
                             DequantizeLinearLayer* dq = getLayer<DequantizeLinearLayer>(newprog, dq_idx);
 
-                            if (dq && dq->inputs.size() >= 3 &&
-                                usecounts.at(shuffle_inp.idx) == 1) {
-                                float dq_sc = netimpl->argTensor(dq->inputs[1]).at<float>(0);
-                                float q_sc = netimpl->argTensor(ql_scale).at<float>(0);
-                                const Mat& dq_zp_m = netimpl->argTensor(dq->inputs[2]);
-                                const Mat& q_zp_m = netimpl->argTensor(ql_zp);
+                            float dq_sc = 0.f, q_sc = 0.f;
+                            int dq_zp = 0, q_zp = 0;
+                            if (dq && usecounts.at(shuffle_inp.idx) == 1 &&
+                                perTensorQuantParams(dq->inputs, dq_sc, dq_zp) &&
+                                perTensorQuantParams(inputs, q_sc, q_zp)) {
+                                const int in_type = quantTypeOf(dq->inputs);
 
-                                int dq_zp = dq_zp_m.depth() == CV_8U
-                                    ? (int)dq_zp_m.at<uint8_t>(0) : (int)dq_zp_m.at<int8_t>(0);
-                                int q_zp = q_zp_m.depth() == CV_8U
-                                    ? (int)q_zp_m.at<uint8_t>(0) : (int)q_zp_m.at<int8_t>(0);
-
-                                int in_type = netimpl->argData(dq->inputs[0]).type;
-                                int out_type = !outputs.empty() ? netimpl->argData(outputs[0]).type : -1;
-                                bool in_int8 = (in_type == CV_8S || in_type == CV_8U);
-                                bool out_int8 = (out_type == CV_8S || out_type == CV_8U);
-
-                                if (in_int8 && out_int8 &&
+                                if (isInt8Type(in_type) && in_type == quantTypeOf(inputs) &&
                                     std::abs(dq_sc - q_sc) < 1e-6f && dq_zp == q_zp) {
                                     fused_layer_idx = shuffle_idx;
                                     fused_inputs.assign(1, dq->inputs[0]);
@@ -1195,6 +1348,13 @@ struct ModelFusionQDQ
                 for (auto out: outputs)
                     producer_of[out.idx] = (int)newprog.size();
                 newprog.push_back(layer);
+            }
+
+            if (hoistedClamp) {
+                modified = true;
+                for (const Arg& out : hoistedClamp->outputs)
+                    producer_of[out.idx] = (int)newprog.size();
+                newprog.push_back(hoistedClamp);
             }
         }
 
@@ -1309,6 +1469,7 @@ struct ModelFusionQDQ
         }
 
         if (modified) {
+            nargs = netimpl->args.size();
             std::vector<int> uc(nargs, 0);
             for (const auto& layer : newprog) {
                 if (layer.empty()) continue;

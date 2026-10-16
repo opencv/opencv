@@ -12,6 +12,43 @@
 namespace cv {
 namespace dnn {
 
+#if CV_SIMD128
+template<typename T> struct PoolVecInt8;
+template<> struct PoolVecInt8<uint8_t> { typedef v_uint8x16 V; };
+template<> struct PoolVecInt8<int8_t>  { typedef v_int8x16 V; };
+
+// Widens 8 bytes to int32, as uint8 or int8.
+static inline void loadExpand8(const uint8_t* p, bool isU8, v_int32x4& lo, v_int32x4& hi)
+{
+    if (isU8) {
+        v_uint32x4 a, b;
+        v_expand(v_load_expand(p), a, b);
+        lo = v_reinterpret_as_s32(a);
+        hi = v_reinterpret_as_s32(b);
+    } else {
+        v_expand(v_load_expand((const schar*)p), lo, hi);
+    }
+}
+
+// Stores saturated round(acc * m0 * m1 + zp), or acc / m0 with divide, for 8 channels. The op
+// order matches the scalar paths so both round the same way.
+static inline void storeRequant8(uint8_t* p, const v_int32x4& lo, const v_int32x4& hi,
+                                 float m0, float m1, float zp, bool isU8, bool divide = false)
+{
+    const v_float32x4 vm0 = v_setall_f32(m0), vm1 = v_setall_f32(m1), vzp = v_setall_f32(zp);
+    v_float32x4 fa = v_cvt_f32(lo), fb = v_cvt_f32(hi);
+    fa = divide ? v_div(fa, vm0) : v_mul(fa, vm0);
+    fb = divide ? v_div(fb, vm0) : v_mul(fb, vm0);
+    v_int32x4 a = v_round(v_add(v_mul(fa, vm1), vzp));
+    v_int32x4 b = v_round(v_add(v_mul(fb, vm1), vzp));
+    v_int16x8 w = v_pack(a, b);
+    if (isU8)
+        v_pack_u_store(p, w);
+    else
+        v_pack_store((schar*)p, w);
+}
+#endif
+
 template <typename T>
 static void maxPoolImpl(const void* inp_, void* out_, const ConvState& cs)
 {
@@ -73,8 +110,16 @@ static void maxPoolImpl(const void* inp_, void* out_, const ConvState& cs)
                                     (unsigned)xi >= (unsigned)Wi)
                                     continue;
                                 const T* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
-                                for (int c = 0; c < C0; c++)
-                                    out[x0 * C0 + c] = std::max(out[x0 * C0 + c], inptr[c]);
+                                T* optr = out + x0 * C0;
+                                int c = 0;
+#if CV_SIMD128
+                                for (; c <= C0 - 16; c += 16)
+                                    v_store(optr + c, v_max(v_load(optr + c), v_load(inptr + c)));
+                                for (; c <= C0 - 8; c += 8)
+                                    v_store_low(optr + c, v_max(v_load_low(optr + c), v_load_low(inptr + c)));
+#endif
+                                for (; c < C0; c++)
+                                    optr[c] = std::max(optr[c], inptr[c]);
                             }
                         }
 
@@ -82,15 +127,45 @@ static void maxPoolImpl(const void* inp_, void* out_, const ConvState& cs)
                             break;
                         x1 = inner_x1;
 
+#if CV_SIMD128
+                        typedef typename PoolVecInt8<T>::V V;
+                        // With 8-channel blocks two neighbouring outputs fill one register.
+                        if (C0 == 8) {
+                            const int xstep = SX * C0;
+                            for (; x0 + 1 < x1; x0 += 2) {
+                                int xi_ = x0 * SX - padX0;
+                                const T* inp_xi = inp + ((Hi * zi_ + yi_) * Wi + xi_) * C0;
+                                V s = v_load_halves(inp_xi + ofstab[0], inp_xi + ofstab[0] + xstep);
+                                for (int k = 1; k < ksize; k++)
+                                    s = v_max(s, v_load_halves(inp_xi + ofstab[k], inp_xi + ofstab[k] + xstep));
+                                v_store(out + x0 * C0, s);
+                            }
+                        }
+#endif
                         for (; x0 < x1; x0++) {
                             int xi_ = x0 * SX - padX0;
                             const T* inp_xi = inp + ((Hi * zi_ + yi_) * Wi + xi_) * C0;
-
-                            for (int c = 0; c < C0; c++) {
+                            T* optr = out + x0 * C0;
+                            int c = 0;
+#if CV_SIMD128
+                            for (; c <= C0 - 16; c += 16) {
+                                V s = v_load(inp_xi + ofstab[0] + c);
+                                for (int k = 1; k < ksize; k++)
+                                    s = v_max(s, v_load(inp_xi + ofstab[k] + c));
+                                v_store(optr + c, s);
+                            }
+                            for (; c <= C0 - 8; c += 8) {
+                                V s = v_load_low(inp_xi + ofstab[0] + c);
+                                for (int k = 1; k < ksize; k++)
+                                    s = v_max(s, v_load_low(inp_xi + ofstab[k] + c));
+                                v_store_low(optr + c, s);
+                            }
+#endif
+                            for (; c < C0; c++) {
                                 T s = inp_xi[ofstab[0] + c];
                                 for (int k = 1; k < ksize; k++)
                                     s = std::max(s, inp_xi[ofstab[k] + c]);
-                                out[x0 * C0 + c] = s;
+                                optr[c] = s;
                             }
                         }
 
@@ -157,10 +232,39 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                     for (int x0 = 0; x0 < W; x0++) {
                         int xi_ = x0 * SX - padX0;
 
+#if CV_SIMD128
+                        // Default 8-channel block: the sums stay in registers.
+                        if (C0 == 8) {
+                            v_int32x4 s0 = v_setzero_s32(), s1 = v_setzero_s32();
+                            int count = 0, nvalid = 0;
+                            for (int k = 0; k < ksize_total; k++) {
+                                int zi = zi_ + zyxtab[k * MAX_POOL_DIMS];
+                                int yi = yi_ + zyxtab[k * MAX_POOL_DIMS + 1];
+                                int xi = xi_ + zyxtab[k * MAX_POOL_DIMS + 2];
+                                if ((unsigned)zi >= (unsigned)Di ||
+                                    (unsigned)yi >= (unsigned)Hi ||
+                                    (unsigned)xi >= (unsigned)Wi) {
+                                    count += count_include_pad;
+                                    continue;
+                                }
+                                count++;
+                                nvalid++;
+                                v_int32x4 lo, hi;
+                                loadExpand8(inp + ((zi * Hi + yi) * Wi + xi) * C0, isU8, lo, hi);
+                                s0 = v_add(s0, lo);
+                                s1 = v_add(s1, hi);
+                            }
+                            const v_int32x4 vzp = v_setall_s32(nvalid * inp_zp);
+                            storeRequant8(out + x0 * C0, v_sub(s0, vzp), v_sub(s1, vzp),
+                                          1.f / std::max(count, 1), scale_ratio, (float)out_zp, isU8);
+                            continue;
+                        }
+#endif
+
                         for (int c = 0; c < C0; c++)
                             accum[c] = 0;
 
-                        int count = 0;
+                        int count = 0, nvalid = 0;
                         for (int k = 0; k < ksize_total; k++) {
                             int zi = zi_ + zyxtab[k * MAX_POOL_DIMS];
                             int yi = yi_ + zyxtab[k * MAX_POOL_DIMS + 1];
@@ -175,18 +279,35 @@ static void avgPoolInt8(const void* inp_, void* out_, const ConvState& cs,
                             }
 
                             count++;
+                            nvalid++;
                             const uint8_t* inptr = inp + ((zi * Hi + yi) * Wi + xi) * C0;
-                            for (int c = 0; c < C0; c++) {
-                                int v = isU8 ? (int)inptr[c]
-                                             : (int)(int8_t)inptr[c];
-                                accum[c] += v - inp_zp;
+                            int c = 0;
+#if CV_SIMD128
+                            for (; c <= C0 - 8; c += 8) {
+                                v_int32x4 lo, hi;
+                                loadExpand8(inptr + c, isU8, lo, hi);
+                                v_store(&accum[c], v_add(v_load(&accum[c]), lo));
+                                v_store(&accum[c + 4], v_add(v_load(&accum[c + 4]), hi));
                             }
+#endif
+                            for (; c < C0; c++)
+                                accum[c] += isU8 ? (int)inptr[c] : (int)(int8_t)inptr[c];
                         }
 
                         if (count == 0) count = 1;
                         float inv_count = 1.f / count;
 
-                        for (int c = 0; c < C0; c++) {
+                        // The taps were summed raw; take the zero point off once per real tap.
+                        for (int c = 0; c < C0; c++)
+                            accum[c] -= nvalid * inp_zp;
+
+                        int c = 0;
+#if CV_SIMD128
+                        for (; c <= C0 - 8; c += 8)
+                            storeRequant8(out + x0 * C0 + c, v_load(&accum[c]), v_load(&accum[c + 4]),
+                                          inv_count, scale_ratio, (float)out_zp, isU8);
+#endif
+                        for (; c < C0; c++) {
                             float val = (float)accum[c] * inv_count * scale_ratio + (float)out_zp;
                             int ival = cvRound(val);
                             if (isU8)
@@ -214,7 +335,22 @@ static void globalAvgPoolInt8(const void* inp_, void* out_,
             const uint8_t* inptr = (const uint8_t*)inp_ + (size_t)nc * spatialSize * C0;
             uint8_t* outptr = (uint8_t*)out_ + (size_t)nc * C0;
 
-            for (int c = 0; c < C0; c++) {
+            int c = 0;
+#if CV_SIMD128
+            const v_int32x4 vzp = v_setall_s32(spatialSize * inp_zp);
+            for (; c <= C0 - 8; c += 8) {
+                v_int32x4 s0 = v_setzero_s32(), s1 = v_setzero_s32();
+                for (int s = 0; s < spatialSize; s++) {
+                    v_int32x4 lo, hi;
+                    loadExpand8(inptr + s * C0 + c, isU8, lo, hi);
+                    s0 = v_add(s0, lo);
+                    s1 = v_add(s1, hi);
+                }
+                storeRequant8(outptr + c, v_sub(s0, vzp), v_sub(s1, vzp),
+                              (float)spatialSize, scale_ratio, (float)out_zp, isU8, true);
+            }
+#endif
+            for (; c < C0; c++) {
                 int sum = 0;
                 for (int s = 0; s < spatialSize; s++) {
                     int v = isU8 ? (int)inptr[s * C0 + c]

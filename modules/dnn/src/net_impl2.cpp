@@ -587,10 +587,13 @@ void Net::Impl::prepareForInference()
 
     if (!prepared) {
         widenHalfConstants();
-        fuseQDQ();
+        // enableFusion(false) keeps the graph as imported: QDQ models then run Q/DQ in float.
+        if (fusion)
+            fuseQDQ();
         constFold();
         constArgs();
-        fuseChains();
+        if (fusion)
+            fuseChains();
         totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
     }
@@ -754,7 +757,8 @@ void Net::Impl::finalize()
     useBlockLayout();
     // TransformLayout nodes only exist from here on; fuse residual Adds into
     // them, and leave every layer already fused before the snapshot alone.
-    fuseTransformLayoutChains();
+    if (fusion)
+        fuseTransformLayoutChains();
     assignBuffers();
     totalLayers = updateGraphOfs(mainGraph, 0, true);
 

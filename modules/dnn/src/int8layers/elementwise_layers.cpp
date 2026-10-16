@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "int8_eltwise_kernels.hpp"
 #include "../op_timvx.hpp"
 #include "../ie_ngraph.hpp"
 
@@ -76,76 +77,6 @@ public:
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return true;
     }
-
-    class Activation : public cv::ParallelLoopBody
-    {
-    public:
-        const Mat* src;
-        const Mat* lut;
-        Mat* dst;
-        int nstripes;
-
-        Activation() : src(0), lut(0), dst(0), nstripes(0){}
-
-        static void run(const Mat& src, const Mat& lut, Mat& dst, int nstripes)
-        {
-            Activation p;
-
-            p.src = &src;
-            p.lut = &lut;
-            p.dst = &dst;
-            p.nstripes = nstripes;
-
-            parallel_for_(Range(0, nstripes), p, nstripes);
-        }
-
-        void operator()(const Range &r) const CV_OVERRIDE
-        {
-            const int8_t* table = lut->ptr<int8_t>();
-            int nsamples = 1, outCn = 1;
-            size_t planeSize = 1;
-
-            if (src->dims > 1)
-            {
-                nsamples = src->size[0];
-                outCn = src->size[1];
-            }
-            else
-                outCn = src->size[0];
-
-            for (int i = 2; i < src->dims; ++i)
-                planeSize *= src->size[i];
-
-            size_t stripeSize = (planeSize + nstripes - 1)/nstripes;
-            size_t stripeStart = r.start*stripeSize;
-            size_t stripeEnd = std::min(r.end*stripeSize, planeSize);
-            int len = (int)(stripeEnd - stripeStart);
-
-            for( int i = 0; i < nsamples; i++ )
-            {
-                const int8_t* srcptr = src->ptr<int8_t>(i) + stripeStart;
-                int8_t* dstptr = dst->ptr<int8_t>(i) + stripeStart;
-                for( int cn = 0; cn < outCn; cn++, srcptr += planeSize, dstptr += planeSize )
-                {
-                    int i = 0;
-#if CV_SIMD128
-                    for( ; i <= len - 16; i += 16 )
-                    {
-                        v_int8x16 out(table[srcptr[i] + 128], table[srcptr[i+1] + 128], table[srcptr[i+2] + 128], table[srcptr[i+3] + 128],
-                                      table[srcptr[i+4] + 128], table[srcptr[i+5] + 128], table[srcptr[i+6] + 128], table[srcptr[i+7] + 128],
-                                      table[srcptr[i+8] + 128], table[srcptr[i+9] + 128], table[srcptr[i+10] + 128], table[srcptr[i+11] + 128],
-                                      table[srcptr[i+12] + 128], table[srcptr[i+13] + 128], table[srcptr[i+14] + 128], table[srcptr[i+15] + 128]);
-                        v_store(dstptr + i, out);
-                    }
-#endif
-                    for( ; i < len; i++ )
-                    {
-                        dstptr[i] = table[srcptr[i] + 128];
-                    }
-                }
-            }
-        }
-    };
 
     virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
                                        const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
@@ -310,20 +241,17 @@ public:
                           src.isContinuous() && dst.isContinuous() &&
                           (src.type() == CV_8S || src.type() == CV_8U));
 
-                if (src.type() == CV_8S) {
-                    Activation::run(src, activationLUT, dst, nstripes);
-                } else {
-                    const uint8_t* table = activationLUT.ptr<uint8_t>();
-                    const uint8_t* srcptr = src.ptr<uint8_t>();
-                    uint8_t* dstptr = dst.ptr<uint8_t>();
-                    int total = (int)src.total();
-                    parallel_for_(Range(0, nstripes), [&](const Range& r) {
-                        int start = (int)((size_t)r.start * total / nstripes);
-                        int end   = (int)((size_t)r.end   * total / nstripes);
-                        for (int j = start; j < end; j++)
-                            dstptr[j] = table[srcptr[j]];
-                    }, nstripes);
-                }
+                CV_Assert(activationLUT.total() == 256 && activationLUT.isContinuous());
+                const uchar* table = activationLUT.ptr<uchar>();
+                const uchar* srcptr = src.ptr<uchar>();
+                uchar* dstptr = dst.ptr<uchar>();
+                const bool isU8 = src.type() == CV_8U;
+                const int total = (int)src.total();
+                parallel_for_(Range(0, nstripes), [&](const Range& r) {
+                    const int start = (int)((int64_t)r.start * total / nstripes);
+                    const int end   = (int)((int64_t)r.end   * total / nstripes);
+                    lutInt8(srcptr + start, dstptr + start, end - start, isU8, table);
+                }, nstripes);
             }
             else
             {
