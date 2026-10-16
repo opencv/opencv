@@ -45,7 +45,6 @@
 //
 // */
 
-#include <queue>
 #include <type_traits>
 
 #include "precomp.hpp"
@@ -84,7 +83,7 @@ static inline int inpaintSkipBlocksBelow(const uchar* p, int j, int n, uchar t)
 {
 #if CV_SIMD128
     const int nlanes = VTraits<v_uint8>::vlanes();
-    for (; j <= n - nlanes && v_reduce_max(v_load(p + j)) < t; j += nlanes) {}
+    for (; j <= n - nlanes && v_reduce_max(vx_load(p + j)) < t; j += nlanes) {}
 #else
     CV_UNUSED(p); CV_UNUSED(n); CV_UNUSED(t);
 #endif
@@ -339,7 +338,7 @@ icvCalcFMM(Mat &f, Mat &t, CvPriorityQueueFloat *Heap, bool negate) {
    }
 }
 
-#if CV_SIMD128_64F
+#if CV_SIMD128
 
 static inline v_int32x4 inpaintLoadPixel3(const uchar* p, const uchar* pixelLoadEnd)
 {
@@ -414,14 +413,24 @@ static void inpaintTeleaRowWeights(const float* tRow, float tij, const float* ds
     const v_float32x4 vtij = v_setall_f32(tij), vone = v_setall_f32(1.f);
     const v_float32x4 vRyGy = v_mul(v_setall_f32(ry), v_setall_f32(gradT.y));
     const v_float32x4 vgx = v_setall_f32(gradT.x), vthr = v_setall_f32(dirThreshold), vsmall = v_setall_f32(0.000001f);
+#if CV_SIMD128_64F
     const v_float64x2 vone64 = v_setall_f64(1.);
+#endif
     const int nlanes = VTraits<v_float32x4>::vlanes();
     int l = lbeg;
     for (; l <= lend - nlanes + 1; l += nlanes)
     {
         v_float32x4 rx = v_cvt_f32(v_sub(v_setall_s32(j - l), laneIdx));
         v_float32x4 b = v_add(v_abs(v_sub(v_load(tRow + l), vtij)), vone);
+#if CV_SIMD128_64F
         v_float32x4 lev = v_cvt_f32(v_div(vone64, v_cvt_f64(b)), v_div(vone64, v_cvt_f64_high(b)));
+#else
+        float bArr[4], levArr[4];
+        v_store(bArr, b);
+        for (int lane = 0; lane < 4; lane++)
+            levArr[lane] = (float)(1./(double)bArr[lane]);
+        v_float32x4 lev = v_load(levArr);
+#endif
         v_float32x4 dir = v_add(v_mul(rx, vgx), vRyGy);
         dir = v_select(v_le(v_abs(dir), vthr), vsmall, dir);
         v_float32x4 dst = v_load(dstRow + (l - j));
@@ -476,7 +485,14 @@ icvTeleaInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloa
          if ((i<=0)||(j<=0)||(i>t.rows-1)||(j>t.cols-1)) continue;
 
          if (f.at<uchar>(i,j)==INSIDE) {
+#if CV_SIMD128_64F
             dist = inpaintFastMarchingMin4(f, t, i, j);
+#else
+            dist = min4(FastMarching_solve(i-1,j,i,j-1,f,t),
+                        FastMarching_solve(i+1,j,i,j-1,f,t),
+                        FastMarching_solve(i-1,j,i,j+1,f,t),
+                        FastMarching_solve(i+1,j,i,j+1,f,t));
+#endif
             t.at<float>(i,j) = dist;
 
             const cv::Point2f gradT = inpaintGradientT(f, t, i, j);
@@ -709,7 +725,14 @@ icvNSInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *
          if ((i<=0)||(j<=0)||(i>t.rows-1)||(j>t.cols-1)) continue;
 
          if (f.at<uchar>(i,j)==INSIDE) {
+#if CV_SIMD128_64F
             dist = inpaintFastMarchingMin4(f, t, i, j);
+#else
+            dist = min4(FastMarching_solve(i-1,j,i,j-1,f,t),
+                        FastMarching_solve(i+1,j,i,j-1,f,t),
+                        FastMarching_solve(i-1,j,i,j+1,f,t),
+                        FastMarching_solve(i+1,j,i,j+1,f,t));
+#endif
             t.at<float>(i,j) = dist;
 
             const int kbeg = std::max(i-range, 1), kend = std::min(i+range, t.rows-2);
@@ -883,7 +906,7 @@ icvNSInpaintFMM_simd(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *
 template <typename data_type>
 static void
 icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *Heap ) {
-#if CV_SIMD128_64F
+#if CV_SIMD128
    icvTeleaInpaintFMM_simd<data_type>(f, t, out, range, Heap);
 #else
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
@@ -1126,7 +1149,7 @@ icvTeleaInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *He
 template <typename data_type>
 static void
 icvNSInpaintFMM(Mat &f, Mat &t, Mat &out, int range, CvPriorityQueueFloat *Heap) {
-#if CV_SIMD128_64F
+#if CV_SIMD128
    icvNSInpaintFMM_simd<data_type>(f, t, out, range, Heap);
 #else
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
