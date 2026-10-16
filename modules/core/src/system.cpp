@@ -759,14 +759,16 @@ struct HWFeatures
             }
         }
     #elif (defined __ppc64__ || defined __PPC64__) && defined HAVE_ELF_AUX_INFO
-        unsigned long hwcap = 0;
-        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        unsigned long hwcap = 0, hwcap2 = 0;
+        if (elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap)) != 0)
+            hwcap = 0;
         if (hwcap & PPC_FEATURE_HAS_VSX) {
-            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
-            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+            if (elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2)) != 0)
+                hwcap2 = 0;
+            if (hwcap2 & PPC_FEATURE2_ARCH_3_00) {
                 have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
             } else {
-                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+                have[CV_CPU_VSX] = (hwcap2 & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
     #else
