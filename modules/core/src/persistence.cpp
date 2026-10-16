@@ -468,6 +468,9 @@ void FileStorage::Impl::release(String *out) {
         if (out)
             out->clear();
         if (write_mode) {
+            // the loop below stops at the root entry; finish a delayed Base64 sequence or writer here
+            if (!write_stack.empty())
+                workaround();
             while (write_stack.size() > 1) {
                 endWriteStruct();
             }
@@ -1960,8 +1963,7 @@ bool FileStorage::open(const String& filename, int flags, const String& encoding
     try
     {
         bool ok = p->open(filename.c_str(), flags, encoding.c_str());
-        if(ok)
-            state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        state = ok ? FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP : FileStorage::UNDEFINED;
         return ok;
     }
     catch (...)
@@ -1976,6 +1978,7 @@ bool FileStorage::isOpened() const { return p->is_opened; }
 void FileStorage::release()
 {
     p->release();
+    state = FileStorage::UNDEFINED;
 }
 
 FileNode FileStorage::root(int i) const
@@ -2059,6 +2062,7 @@ String FileStorage::releaseAndGetString()
 {
     String buf;
     p->release(&buf);
+    state = FileStorage::UNDEFINED;
     return buf;
 }
 

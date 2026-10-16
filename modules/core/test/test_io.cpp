@@ -1009,6 +1009,43 @@ TEST(Core_InputOutput, filestorage_yml_vec2i)
     remove(file_name.c_str());
 }
 
+TEST(Core_InputOutput, filestorage_release_delayed_base64_sequence)
+{
+    cv::FileStorage fs("out.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY | cv::FileStorage::BASE64);
+    fs.write("a", 1);
+    fs.startWriteStruct("s", cv::FileNode::SEQ);  // delayed until the content type is known
+    const std::string content = fs.releaseAndGetString();
+
+    EXPECT_NE(std::string::npos, content.find("s:")) << content;
+}
+
+TEST(Core_InputOutput, filestorage_release_active_base64_writer)
+{
+    cv::FileStorage fs("out.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY | cv::FileStorage::BASE64);
+    const uchar data[3] = { 1, 2, 3 };
+    fs.writeRaw("3u", data, sizeof(data));
+    const std::string content = fs.releaseAndGetString();
+
+    EXPECT_NE(std::string::npos, content.find("AQID")) << content;
+}
+
+TEST(Core_InputOutput, filestorage_state_after_release)
+{
+    const std::string missing = "missing_dir/in.yml";
+
+    cv::FileStorage fs("out.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    fs.startWriteStruct("m", cv::FileNode::MAP);
+    fs.release();
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs.state);
+    EXPECT_FALSE(fs.open(missing, cv::FileStorage::READ));
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs.state);
+
+    cv::FileStorage fs2("out.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    fs2.startWriteStruct("m", cv::FileNode::MAP);
+    EXPECT_FALSE(fs2.open(missing, cv::FileStorage::READ));
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs2.state);
+}
+
 TEST(Core_InputOutput, filestorage_json_comment)
 {
     String mem_str =
