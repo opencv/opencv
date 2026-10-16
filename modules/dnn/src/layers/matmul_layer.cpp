@@ -234,7 +234,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             B_mat = &promoted_B;
         }
 
-        if (B_mat && B_mat->data != last_packed_input_B_data) {
+        if (B_mat && helper.N > 0 && helper.K > 0 && B_mat->data != last_packed_input_B_data) {
             packed_input_B.clear();
             packed_input_B.shrink_to_fit();
             thin_packed_B.clear();
@@ -264,8 +264,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 auto *broadcast_bias_ptr = broadcast_bias.ptr<float>();
 
                 const auto *bias = bias_mat.ptr<const float>();
+                // Stored unscaled: forward() applies beta once (gemm beta or explicitly), and the
+                // OpenCL/nGraph/CUDA paths add scaledBroadcastBias() instead.
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
-                    float b = (*bias) * beta;
+                    float b = *bias;
                     for (size_t i = 0; i < broadcast_bias.total(); i++) {
                         broadcast_bias_ptr[i] = b;
                     }
@@ -275,7 +277,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                     for (size_t i = 0; i < loops; i++) {
                         size_t step = i * inner_size;
                         for (size_t j = 0; j < inner_size; j++) {
-                            broadcast_bias_ptr[step + j] = beta * bias[j];
+                            broadcast_bias_ptr[step + j] = bias[j];
                         }
                     }
                 } else {
@@ -340,14 +342,19 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         const auto *a = A.ptr<const float>();
         auto *y = Y.ptr<float>();
+        // Without a bias the gemm overwrites Y (beta = 0), so Y needs no zero-fill.
+        const bool has_bias = (inputs.size() + blobs.size()) >= 3;
+        const float gemm_beta = has_bias ? beta : 0.f;
         // add bias if existed
-        if ((inputs.size() + blobs.size()) >= 3) {
+        if (has_bias) {
             const auto &shape_Y = shape(Y);
+            // Stored unscaled here; beta is applied exactly once below, either by the gemm's
+            // own beta (M, N, K all > 0) or explicitly when the gemm is skipped.
             if (blobs.empty()) { // bias from input
                 const auto &bias_mat = inputs.back();
                 const auto *bias = bias_mat.ptr<const float>();
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
-                    float b = (*bias) * beta;
+                    float b = *bias;
                     for (size_t i = 0; i < Y.total(); i++) {
                         y[i] = b;
                     }
@@ -358,7 +365,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                         for (int i = r.start; i < r.end; i++) {
                             const size_t output_offset = i * inner_size;
                             for (size_t j = 0; j < inner_size; j++) {
-                                y[output_offset + j] = beta * bias[j];
+                                y[output_offset + j] = bias[j];
                             }
                         }
                     }, double(batches * inner_size * (1 / 1024.0)));
@@ -369,8 +376,18 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 const auto *bias = broadcast_bias.ptr<const float>();
                 std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
-        } else {
-            std::memset(y, 0, Y.total() * sizeof(float));
+        }
+        // Any of M, N, K == 0 means the product contributes nothing, and finalize()
+        // skips packing B whenever N or K is 0 - never reach the gemm dispatch (and its own
+        // beta) below, so apply beta to the bias prefill here instead.
+        if (helper.M == 0 || helper.N == 0 || helper.K == 0) {
+            if (!has_bias)
+                std::memset(y, 0, Y.total() * sizeof(float));
+            else if (beta != 1.f)
+                for (size_t i = 0; i < Y.total(); i++)
+                    y[i] *= beta;
+            fusion.run(Y);
+            return;
         }
 
         if (blobs.empty()) {
@@ -385,29 +402,29 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 done = mlasSgemmBatch(helper.batch,
                                       helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                                       trans_a, trans_b, helper.M, helper.N, helper.K,
-                                      alpha, a, lda_mem, b, ldb_mem, beta, y, helper.ldc);
+                                      alpha, a, lda_mem, b, ldb_mem, gemm_beta, y, helper.ldc);
             }
             if (!done) {
                 fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                               helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                              b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+                              b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
             }
         } else if (!thin_packed_B.empty()) {
             fastGemmThin(helper.M, helper.N, helper.K, alpha,
                          a, helper.lda0, helper.lda1,
-                         thin_packed_B.data(), beta,
+                         thin_packed_B.data(), gemm_beta,
                          y, helper.ldc, opt.multi_thread);
         } else if (!packed_input_B.empty()) {
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                          packed_input_B.data(), beta, y, helper.ldc, opt);
+                          packed_input_B.data(), gemm_beta, y, helper.ldc, opt);
         } else {
             // truly dynamic B (changes every call — no packing cache available)
             const auto &B = inputs[1];
             const auto *b = B.ptr<const float>();
             fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
-                          b, helper.ldb0, helper.ldb1, beta, y, helper.ldc, opt);
+                          b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
         }
         fusion.run(Y);
     }
@@ -540,6 +557,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (inputs.size() >= 3) {
             return false;
         }
+        // batch_A/batch_B below divide by M*K and N*K; the CPU path handles empty dims
+        if (helper.M == 0 || helper.N == 0 || helper.K == 0) {
+            return false;
+        }
 
         const auto &input_A = inputs[0];
         auto &output = outputs[0];
@@ -556,7 +577,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
             if ((inputs.size() + blobs.size() >= 3)) {
                 if (bias_umat.empty()) {
-                    broadcast_bias.copyTo(bias_umat);
+                    scaledBroadcastBias().copyTo(bias_umat);
                 }
             } else {
                 if (bias_umat.empty()) {
@@ -636,8 +657,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             auto input_B_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, input_B_shape, blobs[0].data);
             result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
             if ((nodes.size() + blobs.size()) >= 3) {
-                const auto bias_shape = shape(broadcast_bias);
-                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), broadcast_bias.data);
+                const Mat bias_mat = scaledBroadcastBias();
+                const auto bias_shape = shape(bias_mat);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
                 result = std::make_shared<ov::op::v1::Add>(result, bias);
             }
         }
@@ -678,7 +700,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (!blobs.empty()) {
             input_B = blobs.front();
             if (blobs.size() >= 2) {
-                bias = broadcast_bias;
+                bias = scaledBroadcastBias();
             }
         }
 
@@ -748,6 +770,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #endif // HAVE_CANN
 
  private:
+    Mat scaledBroadcastBias() const {
+        if (beta == 1.f)
+            return broadcast_bias;
+        Mat scaled;
+        broadcast_bias.convertTo(scaled, -1, beta);
+        return scaled;
+    }
+
     int real_ndims_C;
 
     std::vector<float> packed_input_B;

@@ -3603,4 +3603,152 @@ TEST(Test_MatMul, PackedBroadcastMultipleSlices)
     normAssert(outputs[0], expected, "MatMul packed broadcast multi-slice mismatch", 1e-4, 1e-4);
 }
 
+// M, N or K == 0 used to divide by zero or read out of bounds.
+TEST(Test_MatMul, EmptyDimsDoNotCrash)
+{
+    const int dims[][3] = {  // {M, K, N}
+        {0, 4, 5},  // empty A (no rows)
+        {3, 4, 0},  // empty B (no columns)
+        {3, 0, 4},  // empty contraction dim
+    };
+    for (const auto &d : dims)
+    {
+        const int M = d[0], K = d[1], N = d[2];
+        for (bool constB : {false, true})
+        {
+            Mat A(M, K, CV_32F);
+            Mat B(K, N, CV_32F);
+
+            LayerParams lp;
+            lp.type = "MatMul";
+            lp.name = "matmul_empty_dims";
+            if (constB)
+                lp.blobs.push_back(B);
+
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            ASSERT_TRUE(layer);
+            std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B};
+            std::vector<Mat> outputs;
+            runLayer(layer, inputs, outputs);
+            ASSERT_EQ(outputs.size(), (size_t)1);
+            ASSERT_EQ(shape(outputs[0]), MatShape({M, N}));
+
+            Mat expected = Mat::zeros(M, N, CV_32F);
+            normAssert(outputs[0], expected, "MatMul empty-dims output mismatch", 1e-4, 1e-4);
+        }
+    }
+}
+
+// K == 0 skips the gemm entirely, so beta must be applied to the bias explicitly instead of
+// relying on the (never-called) gemm's own beta. Rank-2 bias, both as a constant blob
+// (finalize()'s broadcast_bias path) and as a dynamic input (forward()'s own broadcast path).
+TEST(Test_MatMul, EmptyKDimAppliesBetaToBias)
+{
+    const int M = 3, N = 4;
+    Mat bias(M, N, CV_32F);
+    randu(bias, -1.f, 1.f);
+    const float beta = 2.0f;
+
+    for (bool constB : {false, true})
+    {
+        Mat A(M, 0, CV_32F), B(0, N, CV_32F);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_empty_k_bias";
+        lp.set("beta", beta);
+        lp.set("real_ndims_C", 2);
+        if (constB) {
+            lp.blobs.push_back(B);
+            lp.blobs.push_back(bias);
+        }
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B, bias};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+
+        Mat expected = beta * bias;
+        normAssert(outputs[0], expected, "MatMul empty-K bias/beta mismatch", 1e-4, 1e-4);
+    }
+}
+
+// Backends add the constant bias themselves, so each must apply beta for every bias rank.
+typedef DNNTestLayer Test_MatMul_BiasBeta;
+TEST_P(Test_MatMul_BiasBeta, Accuracy)
+{
+    const int M = 4, K = 8, N = 6;
+    const float beta = 2.f;
+    Mat A(M, K, CV_32F), B(K, N, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    Mat biasScalar(1, 1, CV_32F, Scalar(0.75f));
+    Mat biasRow(1, N, CV_32F), biasFull(M, N, CV_32F);
+    randu(biasRow, -1.f, 1.f);
+    randu(biasFull, -1.f, 1.f);
+
+    struct BiasCase { Mat bias, broadcasted; int ndimsC; };
+    const BiasCase cases[] = {
+        { biasScalar, Mat(M, N, CV_32F, Scalar(0.75f)), 2 },
+        { biasRow.reshape(1, std::vector<int>{N}), repeat(biasRow, M, 1), 1 },
+        { biasFull, biasFull, 2 },
+    };
+    for (const BiasCase& c : cases)
+    {
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_bias_beta";
+        lp.set("beta", beta);
+        lp.set("real_ndims_C", c.ndimsC);
+        lp.blobs.push_back(B);
+        lp.blobs.push_back(c.bias);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(A);
+        Mat out = net.forward();
+
+        Mat ref = A * B + beta * c.broadcasted;
+        normAssert(out.reshape(1, M), ref, "", default_l1, default_lInf);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_MatMul_BiasBeta, dnnBackendsAndTargets());
+
+// Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
+// M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
+// B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.
+TEST(Test_MatMul, NoBiasIgnoresOutputContents)
+{
+    const int K = 53, N = 67;
+    for (int M : {2, 37})
+    for (bool constB : {false, true})
+    {
+        Mat A(M, K, CV_32F), B(K, N, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(B, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_no_bias";
+        if (constB)
+            lp.blobs.push_back(B);
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs = constB ? std::vector<Mat>{A} : std::vector<Mat>{A, B};
+        std::vector<Mat> outputs(1, Mat(M, N, CV_32F, Scalar(std::numeric_limits<float>::quiet_NaN())));
+        std::vector<Mat> internals;
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, internals);
+
+        Mat expected;
+        gemm(A, B, 1., noArray(), 0., expected);
+        normAssert(outputs[0], expected, "MatMul no-bias output mismatch", 1e-4, 1e-4);
+    }
+}
+
 }} // namespace
