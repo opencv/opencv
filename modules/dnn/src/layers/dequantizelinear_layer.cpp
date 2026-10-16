@@ -26,30 +26,31 @@ namespace dnn
 */
 
 #if defined(__x86_64__) || defined(_M_X64)
+template <typename _InpTp>
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((target("avx2")))
 #endif
-static void dequantizeLinearChunk_u8_f32_avx2(const uint8_t* src, float* dst,
-                                               float scale, int zp, int64_t len)
+static void dequantizeLinearChunk_f32_avx2(const _InpTp* src, float* dst,
+                                           float scale, int zp, int64_t len)
 {
     __m256 vscale = _mm256_set1_ps(scale);
     __m256i vzp = _mm256_set1_epi32(zp);
     int64_t j = 0;
     for (; j <= len - 8; j += 8) {
-        __m128i raw = _mm_loadl_epi64((__m128i*)(src + j));
-        __m256i vi = _mm256_cvtepu8_epi32(raw);
-        vi = _mm256_sub_epi32(vi, vzp);
-        __m256 vf = _mm256_cvtepi32_ps(vi);
-        vf = _mm256_mul_ps(vf, vscale);
-        _mm256_storeu_ps(dst + j, vf);
+        __m128i raw = _mm_loadl_epi64((const __m128i*)(src + j));
+        // Signed input must sign-extend, not zero-extend.
+        __m256i vi = std::is_signed<_InpTp>::value ? _mm256_cvtepi8_epi32(raw)
+                                                   : _mm256_cvtepu8_epi32(raw);
+        __m256 vf = _mm256_cvtepi32_ps(_mm256_sub_epi32(vi, vzp));
+        _mm256_storeu_ps(dst + j, _mm256_mul_ps(vf, vscale));
     }
     for (; j < len; j++)
-        dst[j] = (float)(src[j] - zp) * scale;
+        dst[j] = (float)((int)src[j] - zp) * scale;
 }
 
-static void dequantizeLinearFast_u8_f32_avx2(const uint8_t* inp, float* out,
-                                              float scale, int zp,
-                                              int64_t total)
+template <typename _InpTp>
+static void dequantizeLinearFast_f32_avx2(const _InpTp* inp, float* out,
+                                          float scale, int zp, int64_t total)
 {
     const int64_t block = 1024;
     int64_t nblocks = (total + block - 1) / block;
@@ -58,7 +59,7 @@ static void dequantizeLinearFast_u8_f32_avx2(const uint8_t* inp, float* out,
         for (int i = r.start; i < r.end; i++) {
             int64_t ofs = i * block;
             int64_t len = std::min(block, total - ofs);
-            dequantizeLinearChunk_u8_f32_avx2(inp + ofs, out + ofs, scale, zp, len);
+            dequantizeLinearChunk_f32_avx2(inp + ofs, out + ofs, scale, zp, len);
         }
     });
 }
@@ -290,14 +291,19 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp_,
 
     // Fast path: per-tensor dequantization uint8→float with AVX2 + proper parallelism
 #if defined(__x86_64__) || defined(_M_X64)
-    if (block_size == 0 && sz_a == 1 && inptype == CV_8U && outtype == CV_32F && sctype == CV_32F
-        && checkHardwareSupport(CV_CPU_AVX2)) {
+    if (block_size == 0 && sz_a == 1 && outtype == CV_32F && sctype == CV_32F
+        && (inptype == CV_8U || inptype == CV_8S) && checkHardwareSupport(CV_CPU_AVX2)) {
         float sc = reinterpret_cast<const float*>(scale.data)[0];
-        int zpval = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
         int64_t total = nslices * slice_size;
-        dequantizeLinearFast_u8_f32_avx2(reinterpret_cast<const uint8_t*>(inp.data),
-                                          reinterpret_cast<float*>(out.data),
-                                          sc, zpval, total);
+        if (inptype == CV_8U) {
+            int zpval = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
+            dequantizeLinearFast_f32_avx2(reinterpret_cast<const uint8_t*>(inp.data),
+                                          reinterpret_cast<float*>(out.data), sc, zpval, total);
+        } else {
+            int zpval = zp.empty() ? 0 : (int)reinterpret_cast<const int8_t*>(zp.data)[0];
+            dequantizeLinearFast_f32_avx2(reinterpret_cast<const int8_t*>(inp.data),
+                                          reinterpret_cast<float*>(out.data), sc, zpval, total);
+        }
         return;
     }
 #endif
@@ -445,6 +451,31 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    // Block layout reorders channels, so only a scalar scale survives it unchanged;
+    // a per-channel or blocked one would be indexed against the wrong axis.
+    bool isPerTensor() const
+    {
+        if (block_size != 0 || this->inputs.size() < 2)
+            return false;
+        Net::Impl* netimpl_ = getNetImpl(this);
+        return netimpl_ && netimpl_->isConstArg(this->inputs[1]) &&
+               netimpl_->argTensor(this->inputs[1]).total() == 1;
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        size_t ninputs = actualInputs.size();
+        CV_Assert(ninputs >= 1u);
+        desiredInputs.assign(ninputs, DATA_LAYOUT_UNKNOWN);
+        const DataLayout keep = isPerTensor() ? actualInputs[0] : DATA_LAYOUT_UNKNOWN;
+        desiredInputs[0] = keep;
+        outputs.assign(requiredOutputs, keep);
+        return 0;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

@@ -2387,6 +2387,11 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise_Broadcast)
     testONNXModels("quantized_eltwise_broadcast");
 }
 
+TEST_P(Test_ONNX_layers, Quantized_BatchNorm_Mul_Add)
+{
+    testONNXModels("quantized_bn_mul_add");
+}
+
 TEST_P(Test_ONNX_layers, Quantized_LeakyReLU)
 {
     testONNXModels("quantized_leaky_relu");
