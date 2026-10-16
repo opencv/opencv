@@ -642,7 +642,7 @@ public:
                       effectiveBiasVNNI,
                       outMultiplier.ptr<float>(),
                       input_zp, output_zp,
-                      lutptr, inputIsU8);
+                      lutptr, inputIsU8, false);
 
         if (outkind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = output_arrs.getUMatVecRef();
