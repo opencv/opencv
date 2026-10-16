@@ -4,6 +4,10 @@
 
 #include "test_precomp.hpp"
 
+#ifdef HAVE_OPENCV_DNN
+#include <opencv2/dnn.hpp>
+#endif
+
 //#define DEBUG_TEST
 #ifdef DEBUG_TEST
 #include <opencv2/highgui.hpp>
@@ -160,5 +164,65 @@ TEST(vittrack, accuracy_vittrack)
     cv::Ptr<Tracker> tracker = TrackerVit::create(params);
     checkTrackingAccuracy(tracker, 0.64);
 }
+
+#ifdef HAVE_OPENCV_DNN
+// The tracker normalizes with (img/255 - mean) / std, so scalefactor has to be 1/(255*std);
+// the old `1.0 / Scalar` was Scalar's quaternion inverse, which negated the last channels.
+// Pin that by comparing the network the tracker feeds against the documented normalization.
+TEST(vittrack, preprocessing_matches_documented_normalization)
+{
+    const std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    const Scalar meanValue(0.485, 0.456, 0.406);
+    const Scalar stdValue(0.229, 0.224, 0.225);
+    const Rect roi(325, 164, 100, 100);
+
+    Mat img = imread(findDataFile("tracking/bag/00000001.jpg"), IMREAD_COLOR);
+    ASSERT_FALSE(img.empty()) << "Can't load the tracking test image";
+
+    // crop_image() with factor 2 crops a square of side ceil(sqrt(w*h)*2) around the ROI.
+    // This frame is large enough for that square to stay inside it, so no border is added.
+    const int cropSide = cvCeil(std::sqrt((double)roi.width * roi.height) * 2);
+    const Rect cropRect(roi.x + (roi.width - cropSide) / 2, roi.y + (roi.height - cropSide) / 2,
+                        cropSide, cropSide);
+    ASSERT_GE(cropRect.x, 0);
+    ASSERT_GE(cropRect.y, 0);
+    ASSERT_LE(cropRect.br().x, img.cols);
+    ASSERT_LE(cropRect.br().y, img.rows);
+
+    dnn::Image2BlobParams params;
+    params.mean = meanValue * 255.0;
+    params.scalefactor = Scalar(1.0 / (255.0 * stdValue[0]),
+                                1.0 / (255.0 * stdValue[1]),
+                                1.0 / (255.0 * stdValue[2]));
+
+    Mat templateCrop, searchCrop;
+    resize(img(cropRect), templateCrop, Size(128, 128));
+    resize(img, searchCrop, Size(256, 256));
+    Mat expectedTemplate = dnn::blobFromImageWithParams(templateCrop, params);
+    Mat search = dnn::blobFromImageWithParams(searchCrop, params);
+
+    // Net is a handle to a shared implementation, so the template blob the tracker builds in
+    // init() ends up in the net that was passed in and can be forwarded from here.
+    dnn::Net trackerNet = dnn::readNet(model);
+    dnn::Net referenceNet = dnn::readNet(model);
+    Ptr<Tracker> tracker = TrackerVit::create(trackerNet, meanValue, stdValue, 0.20f);
+    tracker->init(img, roi);
+
+    const std::vector<String> outNames = {"output1", "output2", "output3"};
+    std::vector<Mat> trackerOut;
+    trackerNet.setInput(search, "search");
+    trackerNet.forward(trackerOut, outNames);
+
+    std::vector<Mat> referenceOut;
+    referenceNet.setInput(expectedTemplate, "template");
+    referenceNet.setInput(search, "search");
+    referenceNet.forward(referenceOut, outNames);
+
+    ASSERT_EQ(referenceOut.size(), trackerOut.size());
+    for (size_t i = 0; i < trackerOut.size(); i++)
+        EXPECT_LE(cv::norm(trackerOut[i], referenceOut[i], NORM_INF), 1e-5f)
+            << "network output " << i << " does not match the documented normalization";
+}
+#endif
 
 }}  // namespace opencv_test::
