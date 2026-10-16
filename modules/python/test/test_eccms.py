@@ -16,10 +16,12 @@ from tests_common import NewOpenCVTests
 
 class eccms_test(NewOpenCVTests):
     def test_eccms(self):
+        # Same pair, masks and expected matrix as Video_ECC_BigMS_Mask in
+        # modules/video/test/test_ecc.cpp; keep the two in step.
         expected_res = np.array([
-            [1.0225, 0.0606, -28.6452],
-            [-0.0475, 1.0314, 11.819],
-            [8.21e-06, -3.65e-07, 1.0]
+            [1.0229, 0.0608, -28.795],
+            [-0.0476, 1.032, 11.7229],
+            [8.32e-06, 2.67e-08, 1.0]
         ], dtype=np.float32)
 
         largeGray0 = self.get_sample('cv/shared/halmosh0.jpg', cv.IMREAD_GRAYSCALE)
@@ -36,8 +38,9 @@ class eccms_test(NewOpenCVTests):
         params = cv.ECCParameters()
         params.criteria = (cv.TERM_CRITERIA_COUNT + cv.TERM_CRITERIA_EPS, n_iters, termination_eps)
         params.motionType = cv.MOTION_HOMOGRAPHY
-        params.nlevels = 5
-        params.itersPerLevel = [5, 10, 300, 300, 1000]
+        params.nlevels = 4
+        params.interpolation = cv.INTER_LINEAR  # the path under test
+        params.itersPerLevel = [10, 300, 300, 1000]
 
         _, found = cv.findTransformECCMultiScale(largeGray0,largeGray1, found, params, roiMask0, roiMask1)
 
