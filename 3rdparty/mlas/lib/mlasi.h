@@ -1679,9 +1679,9 @@ MlasTryBatchParallel(
 
 
 #if defined(MLAS_OPENCV_THREADING)
-// Defined in 3rdparty/mlas/threading_opencv.cpp. Returns
-// cv::getNumThreads(). Hidden behind a free function so this header doesn't
-// need to pull <opencv2/core/utility.hpp> into every MLAS translation unit.
+// Defined in modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp: cv::getNumThreads() * 4.
+// Hidden behind a free function so this header doesn't need to pull
+// <opencv2/core/utility.hpp> into every MLAS translation unit.
 extern "C" int opencv_dnn_mlas_max_threads();
 #endif
 

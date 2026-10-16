@@ -823,6 +823,126 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_Attention, rank4_input_matches_rank3)
+{
+    const int B0 = 2, B1 = 3, S = 17, C = 64, NH = 4;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(std::vector<int>{C, 3 * C}, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    randu(W, -1.f, 1.f);
+    randu(bias, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+
+    Mat x4(std::vector<int>{B0, B1, S, C}, CV_32F);
+    randu(x4, -1.f, 1.f);
+    Mat x3 = x4.reshape(1, std::vector<int>{B0 * B1, S, C});
+    std::vector<Mat> in4(1, x4), in3(1, x3), out4, out3;
+    // As recorded by the fusion for a QKV reshape to [B0 * B1, S, H, D].
+    LayerParams lp4 = lp;
+    int batch_dims[] = {1, 0, 1}, inferred[] = {-1};
+    lp4.set("qkv_batch", DictValue::arrayInt(batch_dims, 3));
+    lp4.set("qkv_seq", DictValue::arrayInt(inferred, 1));
+    runLayer(AttentionLayer::create(lp4), in4, out4);
+    runLayer(AttentionLayer::create(lp), in3, out3);
+
+    EXPECT_EQ(shape(out4[0]), shape(x4));
+    normAssert(out3[0].reshape(1, std::vector<int>{B0, B1, S, C}), out4[0]);
+}
+
+// The fusion records how the replaced QKV reshape grouped the tokens, as {factor, input dims...} or
+// {-1} for inferred. Any grouping is a view of the same tokens; without a record the input is 3D.
+TEST(Layer_Attention, groups_tokens_like_the_qkv_reshape)
+{
+    // C divides the 48 tokens, so a grouping by the hidden dim is not caught by the count alone.
+    const int B0 = 2, B1 = 3, S = 8, C = 16, NH = 4;
+    std::vector<int> qkv_hidden_sizes = { C, C, C };
+    Mat W(std::vector<int>{C, 3 * C}, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    randu(W, -1.f, 1.f);
+    randu(bias, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+
+    auto grouped = [&](std::vector<int> batch, std::vector<int> seq) {
+        LayerParams p = lp;
+        p.set("qkv_batch", DictValue::arrayInt(batch.data(), (int)batch.size()));
+        p.set("qkv_seq", DictValue::arrayInt(seq.data(), (int)seq.size()));
+        return p;
+    };
+    auto run = [](const LayerParams& p, const Mat& x) {
+        std::vector<Mat> in(1, x), out;
+        runLayer(AttentionLayer::create(p), in, out);
+        return out[0];
+    };
+    auto rejects = [](const LayerParams& p, const MatShape& inp) {
+        std::vector<MatShape> outs, internals;
+        EXPECT_ANY_THROW(AttentionLayer::create(p)->getMemoryShapes({inp}, 1, outs, internals));
+    };
+
+    Mat x4(std::vector<int>{B0, B1, S, C}, CV_32F);
+    randu(x4, -1.f, 1.f);
+    // A QKV reshape to [B0, B1 * S, H, D]: each B0 item attends over all of its B1 * S tokens.
+    Mat ref = run(lp, x4.reshape(1, std::vector<int>{B0, B1 * S, C}));
+    ref = ref.reshape(1, std::vector<int>{B0, B1, S, C});
+    normAssert(ref, run(grouped({1, 0}, {1, 1, 2}), x4));
+    normAssert(ref, run(grouped({B0}, {-1}), x4));
+    normAssert(ref, run(grouped({-1}, {1, 1, 2}), x4));
+    normAssert(ref, run(grouped({1, -4}, {1, -3, -2}), x4));
+
+    rejects(lp, shape(x4));
+    rejects(grouped({5}, {-1}), shape(x4));
+    rejects(grouped({1, 3}, {-1}), shape(x4));
+}
+
+typedef testing::TestWithParam<tuple<int, int> > Layer_Attention_v_hidden;
+TEST_P(Layer_Attention_v_hidden, qk_v_head_sizes_differ)
+{
+    // The output width is Hv, which may be smaller or larger than the input width C.
+    const int Hv = get<0>(GetParam()), output_ndims = get<1>(GetParam());
+    const int B = 2, S = 9, C = 32, NH = 2, Hqk = C / 2, N = 2 * Hqk + Hv;
+    const int dqk = Hqk / NH, dv = Hv / NH;
+    std::vector<int> qkv_hidden_sizes = { Hqk, Hqk, Hv };
+    Mat W(C, N, CV_32F), bias(std::vector<int>{N}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
+    randu(W, -1.f, 1.f); randu(bias, -1.f, 1.f); randu(x, -1.f, 1.f);
+    LayerParams lp;
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+    lp.set("num_heads", NH);
+    lp.set("qkv_hidden_sizes", DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size()));
+    lp.set("output_ndims", output_ndims);
+    std::vector<Mat> in(1, x), out;
+    runLayer(AttentionLayer::create(lp), in, out);
+
+    Mat P = x.reshape(1, B * S) * W + repeat(Mat(1, N, CV_32F, bias.ptr<float>()), B * S, 1);
+    Mat ref(B * S, Hv, CV_32F);
+    for (int b = 0; b < B; b++)
+        for (int h = 0; h < NH; h++) {
+            Mat rows = P.rowRange(b * S, (b + 1) * S);
+            Mat q = rows.colRange(h * dqk, (h + 1) * dqk);
+            Mat k = rows.colRange(Hqk + h * dqk, Hqk + (h + 1) * dqk);
+            Mat v = rows.colRange(2 * Hqk + h * dv, 2 * Hqk + (h + 1) * dv);
+            Mat s = q * k.t() * (1.0 / std::sqrt((double)dqk));
+            for (int r = 0; r < S; r++) {
+                double mx; minMaxLoc(s.row(r), nullptr, &mx);
+                Mat e; exp(s.row(r) - mx, e);
+                Mat(e / sum(e)[0]).copyTo(s.row(r));
+            }
+            Mat(s * v).copyTo(ref(Range(b * S, (b + 1) * S), Range(h * dv, (h + 1) * dv)));
+        }
+    std::vector<int> ref_shape = output_ndims == 3 ? std::vector<int>{B, S, Hv} : std::vector<int>{B * S, Hv};
+    ASSERT_EQ(MatShape(ref_shape), out[0].shape());
+    normAssert(ref.reshape(1, ref_shape), out[0]);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention_v_hidden, Combine(
+    Values(16, 32, 48),  // Hv < C, Hv == C, Hv > C
+    Values(3, 2)         // output_ndims
+));
+
 typedef testing::TestWithParam<tuple<Vec4i, Vec2i, bool> > Scale_untrainable;
 TEST_P(Scale_untrainable, Accuracy)
 {
