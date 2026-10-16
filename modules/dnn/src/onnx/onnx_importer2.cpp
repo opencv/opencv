@@ -80,9 +80,10 @@ static std::string dataType2str(int dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto,
+                             const std::string base_path="", ExternalDataCache* cache=nullptr)
 {
-    Mat m = getMatFromTensor(tensor_proto, false, base_path);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path, cache);
     m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -92,7 +93,7 @@ class ONNXImporter2
 public:
     ONNXImporter2();
 
-    Net parseFile(const char *onnxFile);
+    Net parseFile(const char *onnxFile, bool mapExternalData = true);
     Net parseBuffer(const void* buffer, size_t sizeBuffer);
 
 protected:
@@ -149,6 +150,7 @@ protected:
     Net::Impl* netimpl;
     std::string onnxFilename;
     std::string onnxBasePath;
+    ExternalDataCache externalData;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     // resolveConstThroughIdentity producer map, cached per graph (curr_graph_proto swaps per subgraph).
@@ -335,10 +337,20 @@ ONNXImporter2::ONNXImporter2() :
     netimpl = net.getImpl();
 }
 
-Net ONNXImporter2::parseFile(const char *onnxFilename_)
+// The caller asks for mapping; OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA=0 forces it off for every
+// model, the way OPENCV_FORCE_DNN_ENGINE overrides the engine argument. Read once.
+static bool resolveExternalDataMapping(bool requested)
+{
+    static const bool allowed =
+        utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true);
+    return allowed && requested;
+}
+
+Net ONNXImporter2::parseFile(const char *onnxFilename_, bool mapExternalData)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+    externalData.mappingEnabled = resolveExternalDataMapping(mapExternalData);
 
     onnxBasePath = utils::fs::getParent(onnxFilename_);
 
@@ -807,7 +819,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto, onnxBasePath);
+    return getMatFromTensor2(tensor_proto, onnxBasePath, &externalData);
 }
 
 std::string ONNXImporter2::remap(const std::string& name) const
@@ -895,6 +907,7 @@ void ONNXImporter2::popRenames(const std::vector<RenameUndo>& undos)
             rename_map.erase(it->key);
     }
 }
+
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
 {
@@ -3379,10 +3392,10 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 }
 
 
-Net readNetFromONNX2(const String& onnxFile)
+Net readNetFromONNX2(const String& onnxFile, bool mapExternalData)
 {
     ONNXImporter2 importer;
-    Net net = importer.parseFile(onnxFile.c_str());
+    Net net = importer.parseFile(onnxFile.c_str(), mapExternalData);
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
         //net.setTracingMode(DNN_TRACE_ALL);

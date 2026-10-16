@@ -1260,6 +1260,21 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
 
+    /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>, mapping the weights
+     *  that are held in external data files.
+     *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @param engine select DNN engine to be used, as in the overload above.
+     *  @param mapExternalData true maps those files instead of copying them, which saves the copy
+     *  but requires them to stay in place and unmodified for as long as the Net is alive. The
+     *  overload above copies, so only a caller that passes true here takes on that requirement.
+     *  OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA, an environment variable read once when the first model
+     *  is loaded, forces copying for every model when set to 0. A platform or a file that cannot
+     *  supply a mapping falls back to copying as well, and says so in the log.
+     *  @returns Network object that ready to do forward, throw an exception in failure cases.
+     */
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine,
+                                     bool mapExternalData);
+
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.
