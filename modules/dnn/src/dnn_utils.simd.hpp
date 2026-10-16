@@ -57,6 +57,18 @@ void blobFromImage32F_(const float* src, size_t srcstep, float* const dst[4],
                        const float mean[4], const float scale[4], bool normalize)
 {
     CV_DbgAssert(nch == 1 || nch == 3 || nch == 4);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // Scalable RVV types are sizeless and cannot be array elements.
+    const int lanes = VTraits<v_float32>::vlanes();
+    const v_float32 vmean0 = vx_setall_f32(mean[0]);
+    const v_float32 vmean1 = vx_setall_f32(mean[1]);
+    const v_float32 vmean2 = vx_setall_f32(mean[2]);
+    const v_float32 vmean3 = vx_setall_f32(mean[3]);
+    const v_float32 vscale0 = vx_setall_f32(scale[0]);
+    const v_float32 vscale1 = vx_setall_f32(scale[1]);
+    const v_float32 vscale2 = vx_setall_f32(scale[2]);
+    const v_float32 vscale3 = vx_setall_f32(scale[3]);
+#endif
     for (int row = 0; row < rows; ++row)
     {
         const float* srcRow = src + row * srcstep;
@@ -68,17 +80,10 @@ void blobFromImage32F_(const float* src, size_t srcstep, float* const dst[4],
         };
         int x = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int lanes = VTraits<v_float32>::vlanes();
-        v_float32 vmean[4], vscale[4];
-        for (int c = 0; c < nch; ++c)
-        {
-            vmean[c] = vx_setall_f32(mean[c]);
-            vscale[c] = vx_setall_f32(scale[c]);
-        }
         if (nch == 1)
         {
             for (; x <= cols - lanes; x += lanes)
-                vx_store(dstRow[0] + x, normalizeBlobVector(vx_load(srcRow + x), vmean[0], vscale[0], normalize));
+                vx_store(dstRow[0] + x, normalizeBlobVector(vx_load(srcRow + x), vmean0, vscale0, normalize));
         }
         else if (nch == 3)
         {
@@ -86,9 +91,9 @@ void blobFromImage32F_(const float* src, size_t srcstep, float* const dst[4],
             {
                 v_float32 c0, c1, c2;
                 v_load_deinterleave(srcRow + x * 3, c0, c1, c2);
-                vx_store(dstRow[0] + x, normalizeBlobVector(c0, vmean[0], vscale[0], normalize));
-                vx_store(dstRow[1] + x, normalizeBlobVector(c1, vmean[1], vscale[1], normalize));
-                vx_store(dstRow[2] + x, normalizeBlobVector(c2, vmean[2], vscale[2], normalize));
+                vx_store(dstRow[0] + x, normalizeBlobVector(c0, vmean0, vscale0, normalize));
+                vx_store(dstRow[1] + x, normalizeBlobVector(c1, vmean1, vscale1, normalize));
+                vx_store(dstRow[2] + x, normalizeBlobVector(c2, vmean2, vscale2, normalize));
             }
         }
         else
@@ -97,10 +102,10 @@ void blobFromImage32F_(const float* src, size_t srcstep, float* const dst[4],
             {
                 v_float32 c0, c1, c2, c3;
                 v_load_deinterleave(srcRow + x * 4, c0, c1, c2, c3);
-                vx_store(dstRow[0] + x, normalizeBlobVector(c0, vmean[0], vscale[0], normalize));
-                vx_store(dstRow[1] + x, normalizeBlobVector(c1, vmean[1], vscale[1], normalize));
-                vx_store(dstRow[2] + x, normalizeBlobVector(c2, vmean[2], vscale[2], normalize));
-                vx_store(dstRow[3] + x, normalizeBlobVector(c3, vmean[3], vscale[3], normalize));
+                vx_store(dstRow[0] + x, normalizeBlobVector(c0, vmean0, vscale0, normalize));
+                vx_store(dstRow[1] + x, normalizeBlobVector(c1, vmean1, vscale1, normalize));
+                vx_store(dstRow[2] + x, normalizeBlobVector(c2, vmean2, vscale2, normalize));
+                vx_store(dstRow[3] + x, normalizeBlobVector(c3, vmean3, vscale3, normalize));
             }
         }
 #endif
@@ -117,6 +122,18 @@ void blobFromImage8U32F_(const uchar* src, size_t srcstep, float* const dst[4],
                          const float mean[4], const float scale[4], bool normalize)
 {
     CV_DbgAssert(nch == 1 || nch == 3 || nch == 4);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    // Scalable RVV types are sizeless and cannot be array elements.
+    const int lanes8 = VTraits<v_uint8>::vlanes();
+    const v_float32 vmean0 = vx_setall_f32(mean[0]);
+    const v_float32 vmean1 = vx_setall_f32(mean[1]);
+    const v_float32 vmean2 = vx_setall_f32(mean[2]);
+    const v_float32 vmean3 = vx_setall_f32(mean[3]);
+    const v_float32 vscale0 = vx_setall_f32(scale[0]);
+    const v_float32 vscale1 = vx_setall_f32(scale[1]);
+    const v_float32 vscale2 = vx_setall_f32(scale[2]);
+    const v_float32 vscale3 = vx_setall_f32(scale[3]);
+#endif
     for (int row = 0; row < rows; ++row)
     {
         const uchar* srcRow = src + row * srcstep;
@@ -128,17 +145,10 @@ void blobFromImage8U32F_(const uchar* src, size_t srcstep, float* const dst[4],
         };
         int x = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int lanes8 = VTraits<v_uint8>::vlanes();
-        v_float32 vmean[4], vscale[4];
-        for (int c = 0; c < nch; ++c)
-        {
-            vmean[c] = vx_setall_f32(mean[c]);
-            vscale[c] = vx_setall_f32(scale[c]);
-        }
         if (nch == 1)
         {
             for (; x <= cols - lanes8; x += lanes8)
-                storeBlob8UAs32F(vx_load(srcRow + x), dstRow[0] + x, vmean[0], vscale[0], normalize);
+                storeBlob8UAs32F(vx_load(srcRow + x), dstRow[0] + x, vmean0, vscale0, normalize);
         }
         else if (nch == 3)
         {
@@ -146,9 +156,9 @@ void blobFromImage8U32F_(const uchar* src, size_t srcstep, float* const dst[4],
             {
                 v_uint8 c0, c1, c2;
                 v_load_deinterleave(srcRow + x * 3, c0, c1, c2);
-                storeBlob8UAs32F(c0, dstRow[0] + x, vmean[0], vscale[0], normalize);
-                storeBlob8UAs32F(c1, dstRow[1] + x, vmean[1], vscale[1], normalize);
-                storeBlob8UAs32F(c2, dstRow[2] + x, vmean[2], vscale[2], normalize);
+                storeBlob8UAs32F(c0, dstRow[0] + x, vmean0, vscale0, normalize);
+                storeBlob8UAs32F(c1, dstRow[1] + x, vmean1, vscale1, normalize);
+                storeBlob8UAs32F(c2, dstRow[2] + x, vmean2, vscale2, normalize);
             }
         }
         else
@@ -157,10 +167,10 @@ void blobFromImage8U32F_(const uchar* src, size_t srcstep, float* const dst[4],
             {
                 v_uint8 c0, c1, c2, c3;
                 v_load_deinterleave(srcRow + x * 4, c0, c1, c2, c3);
-                storeBlob8UAs32F(c0, dstRow[0] + x, vmean[0], vscale[0], normalize);
-                storeBlob8UAs32F(c1, dstRow[1] + x, vmean[1], vscale[1], normalize);
-                storeBlob8UAs32F(c2, dstRow[2] + x, vmean[2], vscale[2], normalize);
-                storeBlob8UAs32F(c3, dstRow[3] + x, vmean[3], vscale[3], normalize);
+                storeBlob8UAs32F(c0, dstRow[0] + x, vmean0, vscale0, normalize);
+                storeBlob8UAs32F(c1, dstRow[1] + x, vmean1, vscale1, normalize);
+                storeBlob8UAs32F(c2, dstRow[2] + x, vmean2, vscale2, normalize);
+                storeBlob8UAs32F(c3, dstRow[3] + x, vmean3, vscale3, normalize);
             }
         }
 #endif
