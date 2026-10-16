@@ -182,4 +182,57 @@ TEST(GroupQueryAttentionLayer, Guard_RejectsSeqlensSmallerThanQuery)
     EXPECT_ANY_THROW(net.forward());
 }
 
+// ---- guard on the shared attn_mask broadcast check (AttentionOnnxAi::getMemoryShapes) ----
+// Same pattern as the GQA guards above: this check is shared by every AttentionOnnxAi caller
+// (ONNX Attention, GroupQueryAttention, MultiHeadAttention), so it's tested directly rather
+// than only through one importer's models.
+
+static const int ATTN_NUM_HEADS = 2, ATTN_HEAD_SIZE = 8;
+
+static Net makeMaskedAttentionNet()
+{
+    LayerParams lp;
+    lp.type = "AttentionOnnxAi";
+    lp.name = "attn";
+    lp.set("q_num_heads", ATTN_NUM_HEADS);
+    lp.set("kv_num_heads", ATTN_NUM_HEADS);
+    lp.set("has_attn_mask", 1);
+    lp.set("has_past", 0);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    for (int i = 0; i < 4; ++i)
+        net.connect(0, i, id, i);
+    net.setInputsNames(std::vector<String>{"query", "key", "value", "attn_mask"});
+    return net;
+}
+
+static void feedMaskedAttentionNet(Net& net, int S, const std::vector<int>& maskShape)
+{
+    const int B = 1, D = ATTN_HEAD_SIZE;
+    net.setInput(Mat(std::vector<int>{B, S, ATTN_NUM_HEADS * D}, CV_32F, Scalar(0.1f)), "query");
+    net.setInput(Mat(std::vector<int>{B, S, ATTN_NUM_HEADS * D}, CV_32F, Scalar(0.1f)), "key");
+    net.setInput(Mat(std::vector<int>{B, S, ATTN_NUM_HEADS * D}, CV_32F, Scalar(0.1f)), "value");
+    net.setInput(Mat(maskShape, CV_32F, Scalar(0.f)), "attn_mask");
+}
+
+// Control: an over-strict guard would fail here rather than in the rejection test below.
+TEST(AttentionOnnxAiLayer, Guard_AcceptsBroadcastableMask)
+{
+    const int S = 4, B = 1;
+    Net net = makeMaskedAttentionNet();
+    feedMaskedAttentionNet(net, S, {B, 1, 1, S});
+    EXPECT_NO_THROW(net.forward());
+}
+
+// A last dim that's neither 1 nor total_kv_seq is a legal-but-unsupported ONNX form (a
+// last dim shorter than total_kv_seq, meant to be -inf padded) - see attention_onnxai_layer.cpp.
+TEST(AttentionOnnxAiLayer, Guard_RejectsNonBroadcastableMask)
+{
+    const int S = 4, B = 1;
+    Net net = makeMaskedAttentionNet();
+    feedMaskedAttentionNet(net, S, {B, 1, 1, S - 1});
+    EXPECT_ANY_THROW(net.forward());
+}
+
 }} // namespace opencv_test::(anonymous)
