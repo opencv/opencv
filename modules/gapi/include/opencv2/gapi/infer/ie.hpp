@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <string>
 #include <array>
+#include <iterator>
 #include <tuple> // tuple, tuple_size
 #include <map>
 
