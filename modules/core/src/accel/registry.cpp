@@ -15,6 +15,8 @@
 #include <opencv2/core/utils/tls.hpp>
 #include <opencv2/core/utils/plugin_loader.private.hpp>
 
+#include <chrono>
+
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -109,23 +111,56 @@ StreamHolder::~StreamHolder()
     }
 }
 
-FenceRef::FenceRef(const FenceRef& o) : b_(o.b_), f_(o.f_), streamUid_(o.streamUid_), device_(o.device_)
+FenceRef FenceRef::unknown(Backend* b, int device) CV_NOEXCEPT
 {
-    if (f_)
-        b_->fn().fence_retain(f_);
+    FenceRef r;
+    r.b_ = b;
+    r.device_ = device;
+    r.syncTicket_ = b->nextSyncTicket(device);  // a synchronization that starts from now on covers the work
+    return r;
+}
+
+//! takes a reference to @p f for a copy; when the backend refuses one, the copy tracks the work as unknown
+static void retainOrForget(Backend* b, cvAccelFence f, int device, cvAccelFence& outFence, uint64& outTicket) CV_NOEXCEPT
+{
+    outFence = 0;
+    outTicket = 0;
+    if (b->fn().fence_retain(f) == CV_ACCEL_OK)
+    {
+        outFence = f;
+        return;
+    }
+    // holding the pointer without a reference would release it twice later
+    outTicket = b->nextSyncTicket(device);
+    try
+    {
+        CV_LOG_ERROR(NULL, "accel(" << b->name() << "): fence_retain failed: " << b->fn().get_last_error()
+                     << "; the work is tracked by synchronizing device " << device);
+    }
+    catch (...) {}
+}
+
+FenceRef::FenceRef(const FenceRef& o)
+    : b_(o.b_), f_(0), streamUid_(o.streamUid_), device_(o.device_), syncTicket_(o.syncTicket_)
+{
+    if (o.f_)
+        retainOrForget(b_, o.f_, device_, f_, syncTicket_);
 }
 
 FenceRef& FenceRef::operator=(const FenceRef& o)
 {
     if (this != &o)
     {
+        cvAccelFence f = 0;
+        uint64 ticket = o.syncTicket_;
         if (o.f_)
-            o.b_->fn().fence_retain(o.f_);
+            retainOrForget(o.b_, o.f_, o.device_, f, ticket);
         reset();
         b_ = o.b_;
-        f_ = o.f_;
+        f_ = f;
         streamUid_ = o.streamUid_;
         device_ = o.device_;
+        syncTicket_ = ticket;
     }
     return *this;
 }
@@ -138,10 +173,13 @@ void FenceRef::reset()
     f_ = 0;
     streamUid_ = 0;
     device_ = -1;
+    syncTicket_ = 0;
 }
 
 bool FenceRef::isComplete() const
 {
+    if (syncTicket_)
+        return poll() == DONE;
     if (!f_)
         return true;
     cvAccelStatus st = b_->fn().fence_wait(f_, 0);
@@ -160,8 +198,47 @@ static std::atomic<uint64_t>& waitTimeoutNs()
     return ns;
 }
 
+void FenceRef::waitUnknown(bool bounded) const
+{
+    // Nothing tells when the work ends but a synchronization of the whole device. Memory that
+    // goes back to its owner is never handed back on a guess: retry until the device is idle or
+    // reports that it stopped, however long that takes.
+    unsigned sleepMs = 1;
+    bool logged = false;
+    for (;;)
+    {
+        if (poll() == DONE)
+            return;
+        const cvAccelStatus st = b_->synchronize(device_);
+        if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
+            return;     // idle, or stopped (backend rule 8)
+        if (bounded)
+        {
+            b_->markLost(device_);
+            CV_Error_(Error::StsError, ("accel(%s): device %d failed and could not be synchronized (status %d): %s; "
+                                        "the device is considered lost", b_->name().c_str(), device_, (int)st,
+                                        b_->fn().get_last_error()));
+        }
+        if (!logged)
+        {
+            CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): device " << device_ << " failed and cannot be synchronized "
+                         "(status " << (int)st << "): " << b_->fn().get_last_error() << "; memory that goes back "
+                         "to its owner waits until the device is idle or stopped");
+            logged = true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+        sleepMs = std::min(sleepMs * 2, 1000u);
+    }
+}
+
 void FenceRef::wait(bool bounded) const
 {
+    if (syncTicket_)
+    {
+        counters().hostWaits++;
+        waitUnknown(bounded);
+        return;
+    }
     if (!f_)
         return;
     counters().hostWaits++;
@@ -177,8 +254,10 @@ void FenceRef::wait(bool bounded) const
     b_->check(st, "fence_wait", device_);
 }
 
-FenceRef::Poll FenceRef::poll() const CV_NOEXCEPT
+FenceRef::Poll FenceRef::poll(bool logFailure) const CV_NOEXCEPT
 {
+    if (syncTicket_)
+        return b_->isStopped(device_) || b_->syncedSince(device_, syncTicket_) ? DONE : PENDING;
     if (!f_)
         return DONE;
     const cvAccelStatus st = b_->fn().fence_wait(f_, 0);
@@ -188,7 +267,9 @@ FenceRef::Poll FenceRef::poll() const CV_NOEXCEPT
         return PENDING;
     // the work behind the fence failed and is no longer running (see fence_wait)
     if (st == CV_ACCEL_DEVICE_LOST)
-        b_->markLost(device_);
+        b_->markStopped(device_);
+    if (!logFailure)
+        return FAILED;
     try
     {
         CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): device " << device_ << " failed (status " << (int)st
@@ -219,9 +300,20 @@ FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
     cvAccelFence f = 0;
     if (b->fn().stream_record_fence(s->handle, &f) == CV_ACCEL_OK && f)
         return FenceRef(b, f, s->uid, s->device);
-    if (b->fn().device_synchronize(s->device) != CV_ACCEL_OK)
-        b->markLost(s->device);     // nothing more can be known about what still runs there
-    return FenceRef();
+    const cvAccelStatus st = b->synchronize(s->device);
+    if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
+        return FenceRef();      // idle, or stopped (backend rule 8): nothing of the work runs any more
+    // Marking the device lost does not stop its DMA: the work counts as running until a later
+    // synchronization succeeds, and nothing it may touch is freed or handed back before that.
+    b->markLost(s->device);
+    try
+    {
+        CV_LOG_ERROR(NULL, "accel(" << b->name() << "): device " << s->device << " failed and could not be "
+                     "synchronized (status " << (int)st << "): " << b->fn().get_last_error()
+                     << "; the device is considered lost and the memory of the failed work is kept");
+    }
+    catch (...) {}
+    return FenceRef::unknown(b, s->device);
 }
 
 std::string currentExceptionMessage()
@@ -253,6 +345,11 @@ FenceRef recordFence(const StreamPtr& s)
 
 void streamWait(const StreamPtr& s, const FenceRef& f)
 {
+    if (f.isUnknown())
+    {
+        f.wait();   // no device-side handle: only a synchronization of its device orders it
+        return;
+    }
     if (f.empty() || f.streamUid() == s->uid)
         return;     // in-order stream: earlier work is already ordered
     if (f.backend() == s->backend)
@@ -280,7 +377,7 @@ void streamWait(const StreamPtr& s, const FenceRef& f)
 Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin)
     : id_(id), api_(api), priority_(priority),
       name_(api->v0.backend_name ? api->v0.backend_name : "unnamed"), origin_(origin),
-      enumerated_(false), lost_(false), pinnedCacheBytes_(0)
+      enumerated_(false), lost_(false), stopped_(false), pinnedCacheBytes_(0)
 {
     // a backend built against an older header has a shorter table: what it lacks reads as NULL
     memset(&fn_, 0, sizeof(fn_));
@@ -289,8 +386,32 @@ Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const s
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
     {
         lostDevices_[i].store(false);
+        stoppedDevices_[i].store(false);
         noPinnedShadow_[i].store(false);
     }
+    for (int i = 0; i <= MAX_TRACKED_DEVICES; i++)
+    {
+        syncIssued_[i].store(0);
+        syncDone_[i].store(0);
+    }
+}
+
+cvAccelStatus Backend::synchronize(int device) CV_NOEXCEPT
+{
+    const int k = slot(device);
+    const uint64 ticket = ++syncIssued_[k];
+    const cvAccelStatus st = fn().device_synchronize(device);
+    if (st == CV_ACCEL_OK)
+    {
+        // everything queued before this call has finished: so has the work of every unknown
+        // fence created before the ticket was taken
+        uint64 done = syncDone_[k].load();
+        while (done < ticket && !syncDone_[k].compare_exchange_weak(done, ticket))
+            ;
+    }
+    else if (st == CV_ACCEL_DEVICE_LOST)
+        markStopped(device);
+    return st;
 }
 
 static uint64_t pinnedCacheLimit()
@@ -378,7 +499,7 @@ void Backend::check(cvAccelStatus st, const char* what, int device) const
     if (st == CV_ACCEL_OK)
         return;
     if (st == CV_ACCEL_DEVICE_LOST)
-        const_cast<Backend*>(this)->markLost(device);
+        const_cast<Backend*>(this)->markStopped(device);     // backend rule 8
     const char* msg = fn().get_last_error ? fn().get_last_error() : "";
     const Error::Code code = st == CV_ACCEL_NOT_IMPLEMENTED ? Error::StsNotImplemented :
                              st == CV_ACCEL_OUT_OF_MEMORY ? Error::StsNoMem : Error::StsError;
@@ -399,83 +520,6 @@ const void* Backend::opTable(const char* module, uint32_t version)
         table = 0;  // malformed
     opTables_[key] = table;
     return table;
-}
-
-//! takes one more reference unless the count already dropped to zero (the owner is releasing)
-static bool addRefIfAlive(int* counter)
-{
-#if defined(_MSC_VER)
-    long cur = *(volatile long*)counter;
-    while (cur > 0)
-    {
-        const long prev = _InterlockedCompareExchange((volatile long*)counter, cur + 1, cur);
-        if (prev == cur)
-            return true;
-        cur = prev;
-    }
-    return false;
-#else
-    int cur = __atomic_load_n(counter, __ATOMIC_ACQUIRE);
-    while (cur > 0)
-        if (__atomic_compare_exchange_n(counter, &cur, cur + 1, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
-            return true;
-    return false;
-#endif
-}
-
-void Backend::registerBacking(BufferState* st, UMatData* u)
-{
-    if (!st->alloc.backing_id)
-        return;
-    BackingEntry e;
-    e.st = st;
-    e.u = u;
-    e.offset = st->alloc.backing_offset;
-    e.size = u->size;
-    std::lock_guard<std::mutex> lk(backingsMutex_);
-    backings_.insert(std::make_pair(st->alloc.backing_id, e));
-}
-
-void Backend::unregisterBacking(const BufferState* st)
-{
-    if (!st->alloc.backing_id)
-        return;
-    std::lock_guard<std::mutex> lk(backingsMutex_);
-    std::pair<std::multimap<uint64_t, BackingEntry>::iterator, std::multimap<uint64_t, BackingEntry>::iterator> r =
-            backings_.equal_range(st->alloc.backing_id);
-    for (std::multimap<uint64_t, BackingEntry>::iterator it = r.first; it != r.second; ++it)
-    {
-        if (it->second.st == st)
-        {
-            backings_.erase(it);
-            return;
-        }
-    }
-}
-
-UMatData* Backend::findBacking(uint64_t id, uint64_t offset, uint64_t size, uint32_t requiredFlags, bool reference,
-                               size_t& viewOffset)
-{
-    std::lock_guard<std::mutex> lk(backingsMutex_);
-    std::pair<std::multimap<uint64_t, BackingEntry>::iterator, std::multimap<uint64_t, BackingEntry>::iterator> r =
-            backings_.equal_range(id);
-    for (std::multimap<uint64_t, BackingEntry>::iterator it = r.first; it != r.second; ++it)
-    {
-        const BackingEntry& e = it->second;
-        if (offset + size <= e.offset || e.offset + e.size <= offset)
-            continue;   // another part of the same memory
-        if (offset < e.offset || offset + size > e.offset + e.size)
-            CV_Error_(Error::StsBadArg, ("accel(%s): this memory overlaps a buffer that is already held, but is "
-                                         "not inside it; wrap the whole memory once and take views of it", name_.c_str()));
-        if ((e.st->alloc.desc.flags & requiredFlags) != requiredFlags)
-            CV_Error_(Error::StsBadArg, ("accel(%s): this memory is already held as a writable or unprotected "
-                                         "buffer; it cannot also be wrapped read-only or protected", name_.c_str()));
-        if (reference ? !addRefIfAlive(&e.u->urefcount) : e.u->urefcount <= 0)
-            continue;   // being released right now: a new buffer for it is fine
-        viewOffset = (size_t)(offset - e.offset);
-        return e.u;
-    }
-    return NULL;
 }
 
 bool Backend::canAccess(int device, const cvAccelMemoryDesc& desc)
@@ -600,53 +644,6 @@ void Backend::releaseHostImport(int device, const void* ptr)
     const uintptr_t begin = (uintptr_t)ptr & ~(page - 1);
     std::lock_guard<std::mutex> lk(mutex_);
     hostImports_.erase(std::make_pair(device, begin));
-}
-
-void Backend::deferRelease(BufferState* st)
-{
-    std::lock_guard<std::mutex> lk(mutex_);
-    deferred_.push_back(st);
-}
-
-void Backend::collectDeferred(bool waitAll)
-{
-    std::vector<BufferState*> pending;
-    {
-        std::lock_guard<std::mutex> lk(mutex_);
-        if (deferred_.empty())
-            return;
-        pending.swap(deferred_);
-    }
-    // No UMat refers to these buffers any more, so no other thread touches them. This runs
-    // at the end of every release, from destructors: it must not throw, and a failed device
-    // counts as done (nothing will run there any more; host-side state is freed regardless).
-    std::vector<BufferState*> keep;
-    for (size_t i = 0; i < pending.size(); i++)
-    {
-        BufferState* st = pending[i];
-        if (waitAll)
-        {
-            st->writeFence.waitNoThrow();
-            for (size_t j = 0; j < st->readFences.size(); j++)
-                st->readFences[j].waitNoThrow();
-        }
-        bool done = st->writeFence.poll() != FenceRef::PENDING;
-        for (size_t j = 0; done && j < st->readFences.size(); j++)
-            done = st->readFences[j].poll() != FenceRef::PENDING;
-        if (done)
-        {
-            st->writeFence.reset();
-            st->readFences.clear();
-            destroyBufferState(st);
-        }
-        else
-            keep.push_back(st);
-    }
-    if (!keep.empty())
-    {
-        std::lock_guard<std::mutex> lk(mutex_);
-        deferred_.insert(deferred_.end(), keep.begin(), keep.end());
-    }
 }
 
 //////////////////////////////////// Registry ////////////////////////////////////
@@ -1111,25 +1108,24 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     }
     CV_Assert(memory.size == 0 || total <= memory.size);
 
-    cvAccelExternalMemory ext;
-    memset(&ext, 0, sizeof(ext));
-    ext.struct_size = (uint32_t)sizeof(ext);
-    ext.type = (uint32_t)memory.type;
-    ext.handle = (int64_t)memory.handle;
-    ext.offset = memory.offset;
-    ext.size = memory.size ? memory.size : total;
-    ext.flags = (memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (memory.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
-    ext.layout_modifier = memory.layoutModifier;
-    ext.fourcc = memory.fourcc;
+    WrapRequest req;
+    req.ext.type = (uint32_t)memory.type;
+    req.ext.handle = (int64_t)memory.handle;
+    req.ext.offset = memory.offset;
+    req.ext.size = total;
+    req.ext.flags = (memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (memory.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
+    req.ext.layout_modifier = memory.layoutModifier;
+    req.ext.fourcc = memory.fourcc;
+    req.readOnly = memory.readOnly;
+    req.protectedRequired = memory.protectedContent;
+    req.allowExistingView = true;
     size_t viewOffset = 0;
-    m.u = a->wrap(ext, total, &viewOffset);
-    const bool shared = viewOffset != (size_t)-1;   // a view of a buffer core already holds (referenced)
-    if (!shared && memory.readOnly)
-        m.u->accelState->alloc.desc.flags |= CV_ACCEL_MEMF_READ_ONLY;   // a restriction the caller sets on itself
-    m.offset = shared ? viewOffset : 0;
+    bool referenced = false;
+    m.u = a->wrap(req, viewOffset, referenced);
+    m.offset = viewOffset;
     finalizeHdr(m);
-    if (!shared)
-        m.addref();
+    if (!referenced)
+        m.addref();     // a new view; an existing one was referenced by wrap
     return m;
 }
 
@@ -1202,14 +1198,16 @@ DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag acces
     CV_Assert(m.u && m.u->accelState && "accel: DeviceAccess needs a UMat allocated on a device");
     CV_Assert(!stream.empty());
     // the caller's work runs on that stream with this memory's handle
-    const BufferState* st = m.u->accelState;
+    const BufferState* v = m.u->accelState;
     const StreamPtr& sp = stream.impl->s;
-    if (sp->backend != st->backend)
+    if (sp->backend != v->backend())
         CV_Error_(Error::StsBadArg, ("accel: DeviceAccess: the stream belongs to backend '%s', the UMat to '%s'",
-                                     sp->backend->name().c_str(), st->backend->name().c_str()));
-    if (sp->device != st->device && !sp->backend->canAccess(sp->device, st->alloc.desc))
+                                     sp->backend->name().c_str(), v->backend()->name().c_str()));
+    cvAccelMemoryDesc desc;
+    CV_Assert(queryMemoryDesc(m.u, desc));
+    if (sp->device != v->device() && !sp->backend->canAccess(sp->device, desc))
         CV_Error_(Error::StsBadArg, ("accel: DeviceAccess: device %d cannot reach the UMat's memory on device %d",
-                                     sp->device, st->device));
+                                     sp->device, v->device()));
     std::unique_ptr<Impl> impl_(new Impl());
     impl_->m = m;
     impl_->s = stream.impl->s;
@@ -1265,12 +1263,13 @@ void reviveDevices()
 
 uint64 DeviceAccess::handle() const
 {
-    return p->m.u->accelState->alloc.handle;
+    return p->m.u->accelState->imp->alloc.handle;
 }
 
 size_t DeviceAccess::offset() const
 {
-    return p->m.offset;
+    // the UMat's data is a view of a range of the import that handle() refers to
+    return (size_t)(p->m.u->accelState->start + p->m.offset);
 }
 
 } // namespace accel

@@ -92,13 +92,38 @@ size_t extentBytes(int dims, const int* sizes, const size_t* steps, int type)
     return e;
 }
 
+//! the two arrays share bytes: in one buffer, or in two views of one physical memory (aliases, planes)
 bool overlaps(const UMat& a, const UMat& b)
 {
-    if (!a.u || a.u != b.u)
+    if (!a.u || !b.u)
         return false;
-    const size_t ea = extentBytes(a.dims, a.size.p, a.step.p, a.type());
-    const size_t eb = extentBytes(b.dims, b.size.p, b.step.p, b.type());
-    return a.offset < b.offset + eb && b.offset < a.offset + ea;
+    uint64_t sa = a.offset, sb = b.offset;
+    if (a.u != b.u)
+    {
+        const BufferState* va = a.u->accelState;
+        const BufferState* vb = b.u->accelState;
+        if (!va || !vb || va->backing != vb->backing)
+            return false;
+        sa += va->start;
+        sb += vb->start;
+    }
+    const uint64_t ea = extentBytes(a.dims, a.size.p, a.step.p, a.type());
+    const uint64_t eb = extentBytes(b.dims, b.size.p, b.step.p, b.type());
+    return rangesOverlap(sa, ea, sb, eb);
+}
+
+//! the bytes of @p v lie inside the range [start, start + size) of its allocation that the argument may use
+bool viewFitsRange(const cvAccelView& v, uint64_t start, uint64_t size)
+{
+    if (v.offset < start)
+        return false;
+    cvAccelAllocation range;
+    memset(&range, 0, sizeof(range));
+    range.size = size;
+    cvAccelView rel = v;
+    rel.alloc = &range;
+    rel.offset = v.offset - start;
+    return viewFitsAllocation(rel);
 }
 
 bool coversAllocation(const UMat& m)
@@ -412,10 +437,13 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         case PLAN_IN_PLACE:
             if (a.isUMat)
             {
+                // device memory: a range of its import, described without handles
+                const BufferState* bv = a.um.u->accelState;
                 memset(&a.viewAlloc, 0, sizeof(a.viewAlloc));
-                a.viewAlloc.size = a.um.u->size;
+                a.viewAlloc.size = bv ? bv->imp->alloc.size : a.um.u->size;
                 a.viewAlloc.desc = a.desc;
-                fillView(v, &a.viewAlloc, a.um.offset, a.um.type(), a.um.dims, a.um.size.p, a.um.step.p);
+                fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + a.um.offset, a.um.type(), a.um.dims,
+                         a.um.size.p, a.um.step.p);
             }
             else if (!a.mat.empty())
             {
@@ -616,7 +644,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 continue;
             a.mode = a.isOutput ? (DEV_WRITE | (a.fullOverwrite && coversAllocation(target) ? DEV_DISCARD : 0)) : DEV_READ;
             acq.add(target.u, a.mode);
-            if (target.u->accelState->imported)
+            if (target.u->accelState->backing->borrowed)
                 needSync = borrowed = true;     // user memory: the owner may touch it once we return
         }
         std::vector<FenceRef> waits;
@@ -643,8 +671,13 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                     continue;
                 if (target.u && target.u->accelState)
                 {
-                    a.viewAlloc = target.u->accelState->alloc;
-                    fillView(v, &a.viewAlloc, target.offset, target.type(), target.dims, target.size.p, target.step.p);
+                    // a range of the import of its memory: never past the bytes the UMatData views
+                    const BufferState* bv = target.u->accelState;
+                    a.viewAlloc = bv->imp->alloc;
+                    fillView(v, &a.viewAlloc, bv->start + target.offset, target.type(), target.dims,
+                             target.size.p, target.step.p);
+                    if (!viewFitsRange(v, bv->start, bv->size))
+                        CV_Error_(Error::StsInternal, ("accel: %s: argument %d does not fit its buffer", name, (int)i));
                 }
                 else
                 {
@@ -661,7 +694,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             if (status == CV_ACCEL_OUT_OF_MEMORY)
             {
                 // nothing was queued (backend rule 9): free what finished work left behind, retry once
-                b->collectDeferred(true);
+                collectRetired(true);
                 status = fn(table, &call, views.data(), userdata);
             }
             if (status == CV_ACCEL_NOT_IMPLEMENTED)

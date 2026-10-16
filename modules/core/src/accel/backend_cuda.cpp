@@ -65,6 +65,12 @@ bool isStickyError(cudaError_t e)
     }
 }
 
+cvAccelStatus fail(cvAccelStatus st, const char* msg)
+{
+    lastErrorTLS().getRef() = msg;
+    return st;
+}
+
 cvAccelStatus status(cudaError_t e, const char* what)
 {
     if (e == cudaSuccess)
@@ -74,7 +80,7 @@ cvAccelStatus status(cudaError_t e, const char* what)
     if (e == cudaErrorMemoryAllocation)
         return CV_ACCEL_OUT_OF_MEMORY;
     if (isStickyError(e))
-        return CV_ACCEL_DEVICE_LOST;
+        return CV_ACCEL_DEVICE_LOST;    // the driver has torn down the context's work: nothing of it runs (rule 8)
     if (e == cudaErrorNotReady)
         return CV_ACCEL_TIMEOUT;
     return CV_ACCEL_INTERNAL_ERROR;
@@ -397,6 +403,7 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     out->size = size;
     out->backend_data = a;
     out->backing_id = out->handle;  // its own base address: a later wrap of it is found (see backing_id)
+    out->backing_size = size;
     return CV_ACCEL_OK;
 }
 
@@ -445,7 +452,12 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         }
         if (e != cudaSuccess)
             return status(e, "cudaHostRegister");
-        CudaAlloc* a = new CudaAlloc();
+        CudaAlloc* a = new (std::nothrow) CudaAlloc();
+        if (!a)
+        {
+            cudaHostUnregister(ptr);
+            return CV_ACCEL_OUT_OF_MEMORY;
+        }
         memset(a, 0, sizeof(*a));
         a->device = device;
         a->kind = CV_ACCEL_MEM_HOST_PINNED;
@@ -472,8 +484,20 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         if (e != cudaSuccess)
             return status(e, "cudaPointerGetAttributes");
         if (attr.type != cudaMemoryTypeDevice || attr.device != device)
-            return CV_ACCEL_INVALID_ARGUMENT;
-        CudaAlloc* a = new CudaAlloc();
+            return fail(CV_ACCEL_INVALID_ARGUMENT, "not device memory of this GPU");
+        // the allocation it lies in: the whole range must be inside it, and a wrap of a UMat's
+        // own memory becomes a view of that UMat's memory
+        Driver& drv = driver();
+        CUdeviceptr base = 0;
+        size_t range = 0;
+        if (!drv.ok || !drv.addressRange || drv.addressRange(&base, &range, (CUdeviceptr)(uintptr_t)ptr) != CUDA_SUCCESS)
+            return fail(CV_ACCEL_NOT_IMPLEMENTED, "cuMemGetAddressRange is not available: the range cannot be checked");
+        const uint64_t offset = (uint64_t)((uintptr_t)ptr - (uintptr_t)base);
+        if (offset > range || ext->size > range - offset)
+            return fail(CV_ACCEL_INVALID_ARGUMENT, "the range runs past the end of the allocation it starts in");
+        CudaAlloc* a = new (std::nothrow) CudaAlloc();
+        if (!a)
+            return CV_ACCEL_OUT_OF_MEMORY;
         memset(a, 0, sizeof(*a));
         a->device = device;
         a->kind = CV_ACCEL_MEM_DEVICE;
@@ -484,15 +508,9 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
         out->handle = (uint64_t)(uintptr_t)ptr;
         out->backend_data = a;
-        // the allocation it lies in: a wrap of a UMat's own memory becomes a view of that UMat
-        Driver& drv = driver();
-        CUdeviceptr base = 0;
-        size_t range = 0;
-        if (drv.ok && drv.addressRange && drv.addressRange(&base, &range, (CUdeviceptr)(uintptr_t)ptr) == CUDA_SUCCESS)
-        {
-            out->backing_id = (uint64_t)base;
-            out->backing_offset = (uint64_t)((uintptr_t)ptr - (uintptr_t)base);
-        }
+        out->backing_id = (uint64_t)base;
+        out->backing_offset = offset;
+        out->backing_size = range;
     }
     else
         return CV_ACCEL_NOT_IMPLEMENTED;    // TODO: cudaImportExternalMemory for dma-buf / opaque fds
