@@ -1394,7 +1394,7 @@ static LayerParams sharedBuffersLayer(const std::string& name, const std::string
     return lp;
 }
 
-static LayerParams sharedBuffersConv(const std::string& name, int inC, int outC, int kernel, int pad, RNG& rng)
+static LayerParams sharedBuffersConv(const std::string& name, int inC, int outC, int kernel, int pad)
 {
     LayerParams lp = sharedBuffersLayer(name, "Convolution");
     lp.set("kernel_size", kernel);
@@ -1402,9 +1402,9 @@ static LayerParams sharedBuffersConv(const std::string& name, int inC, int outC,
     lp.set("pad", pad);
     lp.set("bias_term", true);
     Mat weights({outC, inC, kernel, kernel}, CV_32F);
-    rng.fill(weights, RNG::UNIFORM, -0.2f, 0.2f);
+    theRNG().fill(weights, RNG::UNIFORM, -0.2f, 0.2f);
     Mat bias(1, outC, CV_32F);
-    rng.fill(bias, RNG::UNIFORM, -0.1f, 0.1f);
+    theRNG().fill(bias, RNG::UNIFORM, -0.1f, 0.1f);
     lp.blobs.push_back(weights);
     lp.blobs.push_back(bias);
     return lp;
@@ -1423,22 +1423,21 @@ static Mat runSharedBuffersNet(std::vector<LayerParams> layers, const Mat& input
 
 TEST_P(Layer_Test_SharedBuffers, reused_buffer_with_new_shape)
 {
-    RNG rng(12345);
     std::vector<LayerParams> layers;
-    layers.push_back(sharedBuffersConv("conv1", 3, 16, 3, 1, rng));
+    layers.push_back(sharedBuffersConv("conv1", 3, 16, 3, 1));
     layers.push_back(sharedBuffersLayer("relu1", "ReLU"));
-    layers.push_back(sharedBuffersConv("conv2", 16, 8, 3, 1, rng));
+    layers.push_back(sharedBuffersConv("conv2", 16, 8, 3, 1));
     LayerParams pool = sharedBuffersLayer("pool1", "Pooling");
     pool.set("pool", "max");
     pool.set("kernel_size", 2);
     pool.set("stride", 2);
     layers.push_back(pool);
-    layers.push_back(sharedBuffersConv("conv3", 8, 32, 1, 0, rng));
+    layers.push_back(sharedBuffersConv("conv3", 8, 32, 1, 0));
     layers.push_back(sharedBuffersLayer("relu2", "ReLU"));
-    layers.push_back(sharedBuffersConv("conv4", 32, 4, 3, 1, rng));
+    layers.push_back(sharedBuffersConv("conv4", 32, 4, 3, 1));
 
     Mat input({2, 3, 32, 32}, CV_32F);
-    rng.fill(input, RNG::UNIFORM, 0.f, 1.f);
+    theRNG().fill(input, RNG::UNIFORM, 0.f, 1.f);
 
     Mat ref = runSharedBuffersNet(layers, input, DNN_BACKEND_OPENCV, DNN_TARGET_CPU);
     Mat out = runSharedBuffersNet(layers, input, backend, target);
@@ -1447,16 +1446,15 @@ TEST_P(Layer_Test_SharedBuffers, reused_buffer_with_new_shape)
 
 TEST_P(Layer_Test_SharedBuffers, inplace_flatten_then_softmax)
 {
-    RNG rng(777);
     std::vector<LayerParams> layers;
-    layers.push_back(sharedBuffersConv("conv1", 3, 6, 3, 1, rng));
+    layers.push_back(sharedBuffersConv("conv1", 3, 6, 3, 1));
     layers.push_back(sharedBuffersLayer("flatten", "Flatten"));
     LayerParams softmax = sharedBuffersLayer("softmax", "Softmax");
     softmax.set("axis", 1);
     layers.push_back(softmax);
 
     Mat input({2, 3, 8, 8}, CV_32F);
-    rng.fill(input, RNG::UNIFORM, 0.f, 1.f);
+    theRNG().fill(input, RNG::UNIFORM, 0.f, 1.f);
 
     Mat ref = runSharedBuffersNet(layers, input, DNN_BACKEND_OPENCV, DNN_TARGET_CPU);
     Mat out = runSharedBuffersNet(layers, input, backend, target);
