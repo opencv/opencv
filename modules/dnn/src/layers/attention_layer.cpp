@@ -6,6 +6,7 @@
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/flash_attention.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -506,7 +507,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
         }
 
-        if (useFlashAttention(inputs.size(), (int)batch_size, (int)seq_len, (int)qkv_head_sizes[2]))
+        if (mlasAvailable() && useFlashAttention(inputs.size(), (int)batch_size, (int)seq_len, (int)qkv_head_sizes[2]))
         {
             const int B   = (int)batch_size;
             const int H   = (int)num_heads;
@@ -530,6 +531,14 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             {
                 return;  // fast path done; outputs[0] is fully written
             }
+        }
+
+        if (useFlashAttention(inputs.size(), (int)batch_size, (int)seq_len, (int)qkv_head_sizes[2]))
+        {
+            flashAttention(Q, K, V, outputs[0].ptr<float>(),
+                           (int)batch_size, (int)num_heads, (int)seq_len, (int)seq_len,
+                           (int)qkv_head_sizes[0], (int)qkv_head_sizes[2], scale);
+            return;
         }
 
         // Compute Softmax(scale * MatMul(Q, K))
@@ -682,7 +691,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     {
         const bool hasMask = (!blobs.empty() && inputCount >= 2) ||
                              (blobs.empty() && inputCount >= 4);
-        return mlasAvailable() && !hasMask && batch > 0 && num_heads > 0 && sequence > 0 &&
+        return !hasMask && batch > 0 && num_heads > 0 && sequence > 0 &&
                qkv_head_sizes[0] > 0 && valueHeadSize > 0;
     }
 
