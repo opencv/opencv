@@ -88,6 +88,7 @@ else()
 endif()
 
 set(mlas_platform_srcs)
+set(mlas_platform_objects)
 
 # State flags consumed by the top-level config summary's PNG-style chain:
 #   OPENCV_DNN_MLAS_ENABLED      — 1 if MLAS compiled in, 0 if skipped/unavailable
@@ -97,7 +98,11 @@ set(mlas_platform_srcs)
 set(OPENCV_DNN_MLAS_ENABLED     0  CACHE INTERNAL "" FORCE)
 set(OPENCV_DNN_MLAS_SKIP_REASON "" CACHE INTERNAL "" FORCE)
 
-if(WIN32)
+if(WIN32 AND NOT (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"
+                 AND _mlas_processor STREQUAL "arm64"))
+  set(OPENCV_DNN_MLAS_SKIP_REASON
+    "Windows kernels are only available for MSVC ARM64"
+    CACHE INTERNAL "" FORCE)
   return()
 endif()
 
@@ -116,15 +121,25 @@ endif()
 
 include(CheckLanguage)
 set(MLAS_HAS_ASM FALSE CACHE INTERNAL "" FORCE)
-check_language(ASM)
-if(CMAKE_ASM_COMPILER)
-  enable_language(ASM)
-  set(MLAS_HAS_ASM TRUE CACHE INTERNAL "" FORCE)
-elseif(_MLAS_REQUIRES_ASM)
+if(MSVC AND MLAS_ARM64)
+  get_filename_component(_mlas_compiler_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  find_program(MLAS_ARMASM64 armasm64 HINTS "${_mlas_compiler_dir}")
+  mark_as_advanced(MLAS_ARMASM64)
+  if(MLAS_ARMASM64)
+    set(MLAS_HAS_ASM TRUE CACHE INTERNAL "" FORCE)
+  endif()
+else()
+  check_language(ASM)
+  if(CMAKE_ASM_COMPILER)
+    enable_language(ASM)
+    set(MLAS_HAS_ASM TRUE CACHE INTERNAL "" FORCE)
+  endif()
+endif()
+if(_MLAS_REQUIRES_ASM AND NOT MLAS_HAS_ASM)
   set(OPENCV_DNN_MLAS_SKIP_REASON
-    "no ASM compiler available for ${CMAKE_SYSTEM_PROCESSOR}"
+    "no ASM compiler available for ${_mlas_processor}"
     CACHE INTERNAL "" FORCE)
-  message(WARNING "MLAS: ASM language unavailable on ${CMAKE_SYSTEM_PROCESSOR}; "
+  message(WARNING "MLAS: ASM language unavailable on ${_mlas_processor}; "
                   "MLAS disabled (DNN will use its built-in SGEMM)")
   return()
 endif()
@@ -177,10 +192,32 @@ endif()
 
 # ARM64 / AArch64.
 if(MLAS_ARM64)
-  list(APPEND mlas_platform_srcs
-    ${MLAS_SRC_DIR}/aarch64/SgemmKernelNeon.S
-    ${MLAS_SRC_DIR}/aarch64/SgemvKernelNeon.S
-  )
+  if(MSVC)
+    # Windows SDK's kxarm64.h must be preprocessed before armasm64 runs.
+    # Custom commands also support CMake versions predating ASM_MARMASM.
+    set(_mlas_asm_dir "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
+    foreach(_kernel SgemmKernelNeon SgemvKernelNeon)
+      set(_asm "${MLAS_SRC_DIR}/arm64/${_kernel}.asm")
+      set(_preprocessed "${_mlas_asm_dir}/${_kernel}.i")
+      set(_object "${_mlas_asm_dir}/${_kernel}.obj")
+      add_custom_command(
+        OUTPUT "${_object}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${_mlas_asm_dir}"
+        COMMAND "${CMAKE_CXX_COMPILER}" /nologo /P "${_asm}" "/Fi${_preprocessed}"
+        COMMAND "${MLAS_ARMASM64}" "${_preprocessed}" "${_object}"
+        DEPENDS "${_asm}"
+        BYPRODUCTS "${_preprocessed}"
+        VERBATIM
+      )
+      list(APPEND mlas_platform_objects "${_object}")
+    endforeach()
+    list(APPEND mlas_platform_srcs ${mlas_platform_objects})
+  else()
+    list(APPEND mlas_platform_srcs
+      ${MLAS_SRC_DIR}/aarch64/SgemmKernelNeon.S
+      ${MLAS_SRC_DIR}/aarch64/SgemvKernelNeon.S
+    )
+  endif()
 endif()
 
 # POWER (ppc64le / AIX). Always compile the base SgemmKernelPower; opt-in
@@ -293,6 +330,8 @@ if((MLAS_X86_64 OR MLAS_X86) AND NOT WIN32)
 endif()
 
 set(HAVE_MLAS 1 PARENT_SCOPE)
-set(MLAS_OBJECTS $<TARGET_OBJECTS:opencv_dnn_mlas> PARENT_SCOPE)
+# TARGET_OBJECTS does not include externally assembled object files.
+set(MLAS_OBJECTS $<TARGET_OBJECTS:opencv_dnn_mlas> ${mlas_platform_objects} PARENT_SCOPE)
+set(MLAS_EXTERNAL_OBJECTS ${mlas_platform_objects} PARENT_SCOPE)
 set(MLAS_INCLUDE_DIRS ${MLAS_INC_DIR} PARENT_SCOPE)
 set(OPENCV_DNN_MLAS_ENABLED 1 CACHE INTERNAL "" FORCE)
