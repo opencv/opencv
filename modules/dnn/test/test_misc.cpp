@@ -671,12 +671,15 @@ TEST_P(Net_ForwardOutputsArePrivate, Accuracy)
 {
     testForwardOutputsArePrivate(GetParam());
 }
-INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::Values(
-    ENGINE_OPENCV
+static std::vector<EngineType> forwardOutputsEngines()
+{
+    std::vector<EngineType> engines = {ENGINE_OPENCV};
 #ifdef HAVE_ONNXRUNTIME
-    , ENGINE_ORT
+    engines.push_back(ENGINE_ORT);
 #endif
-));
+    return engines;
+}
+INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::ValuesIn(forwardOutputsEngines()));
 
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);
