@@ -468,6 +468,7 @@ void FileStorage::Impl::release(String *out) {
         if (out)
             out->clear();
         if (write_mode) {
+            workaround();
             while (write_stack.size() > 1) {
                 endWriteStruct();
             }
@@ -1007,7 +1008,7 @@ void FileStorage::Impl::endWriteStruct() {
     if (state_of_writing_base64 != FileStorage_API::Uncertain)
         switch_to_Base64_state(FileStorage_API::Uncertain);
 
-    CV_Assert(!write_stack.empty());
+    CV_Assert(write_stack.size() > 1);
 
     FStructData &current_struct = write_stack.back();
     if (fmt == FileStorage::FORMAT_JSON && !FileNode::isFlow(current_struct.flags) && write_stack.size() > 1)
@@ -1090,12 +1091,12 @@ void FileStorage::Impl::writeComment(const char *comment, bool eol_comment) {
 void FileStorage::Impl::startNextStream() {
     CV_Assert(write_mode);
     if (!empty_stream) {
-        while (!write_stack.empty())
+        while (write_stack.size() > 1)
             endWriteStruct();
         flush();
         getEmitter().startNextStream();
         empty_stream = true;
-        write_stack.push_back(FStructData("", FileNode::EMPTY, 0));
+        write_stack.back() = FStructData("", FileNode::EMPTY, 0);
         bufofs = 0;
     }
 }
@@ -1357,6 +1358,10 @@ void FileStorage::Impl::writeRawDataBase64(const void *_data, size_t len, const 
     CV_Assert(write_mode);
 
     check_if_write_struct_is_delayed(true);
+
+    // raw data has no key, so the emitters reject it in a map; do the same before a Base64 writer is opened
+    if (write_stack.size() <= 1 || FileNode::isMap(write_stack.back().flags))
+        CV_Error(cv::Error::StsBadArg, "An attempt to add element without a key to a map, or add element with key to sequence");
 
     if (state_of_writing_base64 == FileStorage_API::Base64State::Uncertain) {
         switch_to_Base64_state(FileStorage_API::Base64State::InUse);
@@ -1960,8 +1965,7 @@ bool FileStorage::open(const String& filename, int flags, const String& encoding
     try
     {
         bool ok = p->open(filename.c_str(), flags, encoding.c_str());
-        if(ok)
-            state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
+        state = ok ? FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP : FileStorage::UNDEFINED;
         return ok;
     }
     catch (...)
@@ -1976,6 +1980,7 @@ bool FileStorage::isOpened() const { return p->is_opened; }
 void FileStorage::release()
 {
     p->release();
+    state = FileStorage::UNDEFINED;
 }
 
 FileNode FileStorage::root(int i) const
@@ -2059,6 +2064,7 @@ String FileStorage::releaseAndGetString()
 {
     String buf;
     p->release(&buf);
+    state = FileStorage::UNDEFINED;
     return buf;
 }
 
@@ -2142,10 +2148,10 @@ FileStorage& operator << (FileStorage& fs, const String& str)
 
     if( c == '}' || c == ']' )
     {
-        if( fs_impl->write_stack.empty() )
-            CV_Error_( cv::Error::StsError, ("Extra closing '%c'", *_str) );
-
         fs_impl->workaround();
+
+        if( fs_impl->write_stack.size() <= 1 )
+            CV_Error_( cv::Error::StsError, ("Extra closing '%c'", *_str) );
 
         int struct_flags = fs_impl->write_stack.back().flags;
         char expected_bracket = FileNode::isMap(struct_flags) ? '}' : ']';

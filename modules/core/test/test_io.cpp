@@ -540,6 +540,94 @@ TEST(Core_InputOutput, FileStorageSpaces)
     EXPECT_EQ(0, remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_state_after_release)
+{
+    cv::FileStorage fs("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    fs.startWriteStruct("m", cv::FileNode::MAP);
+    ASSERT_NE(cv::FileStorage::UNDEFINED, fs.state);
+    fs.release();
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs.state);
+
+    ASSERT_TRUE(fs.open("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY));
+    fs.startWriteStruct("m", cv::FileNode::MAP);
+    fs.releaseAndGetString();
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs.state);
+
+    ASSERT_TRUE(fs.open("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY));
+    ASSERT_NE(cv::FileStorage::UNDEFINED, fs.state);
+    std::string missing = cv::tempfile(".yml");
+    remove(missing.c_str());
+    EXPECT_FALSE(fs.open(missing, cv::FileStorage::READ));
+    EXPECT_EQ(cv::FileStorage::UNDEFINED, fs.state);
+}
+
+TEST(Core_InputOutput, FileStorage_release_with_delayed_base64_sequence)
+{
+    const int flags = cv::FileStorage::WRITE | cv::FileStorage::MEMORY | cv::FileStorage::BASE64;
+    cv::FileStorage fs("dummy.yml", flags);
+    fs.write("a", 1);
+    fs.startWriteStruct("s", cv::FileNode::SEQ);  // delayed: Base64 or not is decided by the next write
+    cv::FileStorage reader(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    EXPECT_EQ(1, (int)reader["a"]);
+    ASSERT_TRUE(reader["s"].isSeq());
+    EXPECT_EQ((size_t)0, reader["s"].size());
+
+    // the storage is reusable, and a delayed sequence closed by hand is written as an empty sequence
+    ASSERT_TRUE(fs.open("dummy.yml", flags));
+    fs.startWriteStruct("t", cv::FileNode::SEQ);
+    EXPECT_NO_THROW(fs.endWriteStruct());
+    EXPECT_NO_THROW(fs << "u" << "[" << "]");
+    fs.write("b", 2);
+    ASSERT_TRUE(reader.open(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY));
+    ASSERT_TRUE(reader["t"].isSeq());
+    EXPECT_EQ((size_t)0, reader["t"].size());
+    ASSERT_TRUE(reader["u"].isSeq());
+    EXPECT_EQ((size_t)0, reader["u"].size());
+    EXPECT_EQ(2, (int)reader["b"]);
+}
+
+TEST(Core_InputOutput, FileStorage_base64_raw_write_into_map)
+{
+    // raw data has no key, so a map rejects it, as without BASE64
+    const int data[3] = {1, 2, 3};
+    cv::FileStorage fs("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY | cv::FileStorage::BASE64);
+    EXPECT_THROW(fs.writeRaw("i", data, sizeof(data)), cv::Exception);
+    fs.startWriteStruct("m", cv::FileNode::MAP);
+    fs.startWriteStruct("e", cv::FileNode::MAP);
+    fs.endWriteStruct();
+    EXPECT_THROW(fs.writeRaw("i", data, sizeof(data)), cv::Exception);
+    fs.write("k", 1);
+    fs.endWriteStruct();
+    EXPECT_THROW(fs.writeRaw("i", data, sizeof(data)), cv::Exception);
+    fs.write("b", 2);
+    cv::FileStorage reader(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    EXPECT_EQ(1, (int)reader["m"]["k"]);
+    EXPECT_EQ(2, (int)reader["b"]);
+}
+
+TEST(Core_InputOutput, FileStorage_unbalanced_endWriteStruct)
+{
+    cv::FileStorage fs("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_THROW(fs.endWriteStruct(), cv::Exception);
+
+    // the failed call leaves the storage usable
+    fs.startWriteStruct("m", cv::FileNode::MAP);
+    fs.write("k", 1);
+    fs.endWriteStruct();
+    EXPECT_THROW(fs.endWriteStruct(), cv::Exception);
+    try
+    {
+        fs << "}";
+        ADD_FAILURE() << "an extra closing bracket was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(cv::Error::StsError, e.code);  // the "Extra closing" check, not the assertion in endWriteStruct()
+    }
+    cv::FileStorage reader(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    EXPECT_EQ(1, (int)reader["m"]["k"]);
+}
+
 struct data_t
 {
     typedef uchar  u;
