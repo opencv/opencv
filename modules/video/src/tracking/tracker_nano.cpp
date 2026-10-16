@@ -242,13 +242,13 @@ void TrackerNanoImpl::getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, in
 bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
 {
     image = image_.getMat().clone();
-    int targetSzSum = (int)(targetSz[0] + targetSz[1]);
+    float targetSzSum = targetSz[0] + targetSz[1];
 
     float wc = targetSz[0] + trackState.contextAmount * targetSzSum;
     float hc = targetSz[1] + trackState.contextAmount * targetSzSum;
     float sz = cv::sqrt(wc * hc);
     float scale_z = exemplarSize / sz;
-    float sx = sz * (instanceSize / exemplarSize);
+    float sx = sz * (float(instanceSize) / exemplarSize);
     targetSz[0] *= scale_z;
     targetSz[1] *= scale_z;
 
@@ -284,7 +284,7 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
 
     // size penalty
     // scale penalty
-    Mat sc = sizeCal(predX2 - predX1, predY2 - predY1)/sizeCal(targetPos[0], targetPos[1]);
+    Mat sc = sizeCal(predX2 - predX1, predY2 - predY1)/sizeCal(targetSz[0], targetSz[1]);
     elementReciprocalMax(sc);
 
     // ratio penalty
