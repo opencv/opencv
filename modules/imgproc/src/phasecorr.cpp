@@ -351,11 +351,15 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
             copyMakeBorder(window, paddedWin, 0, M - window.rows, 0, N - window.cols, BORDER_CONSTANT, Scalar::all(0));
         }
     }
-    else
+    else if(window.empty())
     {
         padded1 = src1;
         padded2 = src2;
-        paddedWin = window;
+    }
+    else
+    {
+        multiply(window, src1, padded1);
+        multiply(window, src2, padded2);
     }
 
     Mat FFT1, FFT2, P, Pm, C;

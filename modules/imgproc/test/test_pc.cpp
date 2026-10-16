@@ -122,6 +122,68 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+typedef testing::TestWithParam<tuple<int, int, int> > Imgproc_PhaseCorrelatorTest_Inputs;
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
+{
+    const int type = get<0>(GetParam());
+    const int n = get<1>(GetParam());
+    const int layout = get<2>(GetParam());
+    ASSERT_EQ(32, getOptimalDFTSize(n));
+    const bool roi = layout == 1;
+    const bool sameSource = layout == 2;
+
+    const Size parentSize(n + (roi ? 4 : 0), n + (roi ? 4 : 0));
+    const Rect rect(roi ? 1 : 0, roi ? 1 : 0, n, n);
+    Mat parent1(parentSize, type, Scalar::all(-1));
+    Mat parent2(parentSize, type, Scalar::all(-2));
+    Mat windowParent(parentSize, type, Scalar::all(-3));
+    Mat src1 = parent1(rect);
+    Mat src2 = sameSource ? src1 : parent2(rect);
+    Mat window = windowParent(rect);
+    RNG& rng = theRNG();
+    rng.fill(src1, RNG::UNIFORM, 0.0, 1.0);
+    if (!sameSource)
+        warpAffine(src1, src2, Matx23d(1, 0, 3, 0, 1, -2), src1.size(),
+                   INTER_NEAREST, BORDER_WRAP);
+    createHanningWindow(window, src1.size(), type);
+
+    const Mat src1Before = src1.clone(), src2Before = src2.clone();
+    const Mat parent1Before = parent1.clone(), parent2Before = parent2.clone();
+    const Mat windowBefore = windowParent.clone();
+
+    phaseCorrelate(src1, src2);
+    EXPECT_EQ(0, cv::norm(parent1Before, parent1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent2Before, parent2, NORM_INF));
+
+    Mat windowed1, windowed2;
+    cv::multiply(window, src1Before, windowed1);
+    cv::multiply(window, src2Before, windowed2);
+    double referenceResponse = 0, response = 0;
+    const Point2d reference = phaseCorrelate(windowed1, windowed2, noArray(),
+                                            &referenceResponse);
+    const Point2d shift = phaseCorrelate(src1, src2, window, &response);
+
+    EXPECT_EQ(0, cv::norm(src1Before, src1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(src2Before, src2, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent1Before, parent1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent2Before, parent2, NORM_INF));
+    EXPECT_EQ(0, cv::norm(windowBefore, windowParent, NORM_INF));
+    EXPECT_NEAR(reference.x, shift.x, 1e-5);
+    EXPECT_NEAR(reference.y, shift.y, 1e-5);
+    EXPECT_NEAR(referenceResponse, response, 1e-5);
+    EXPECT_NEAR(sameSource ? 0.0 : 3.0, shift.x, 1.0);
+    EXPECT_NEAR(sameSource ? 0.0 : -2.0, shift.y, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(FullImage, Imgproc_PhaseCorrelatorTest_Inputs,
+    testing::Combine(testing::Values(CV_32F, CV_64F), testing::Values(32, 31),
+                     testing::Values(0, 2)));
+
+INSTANTIATE_TEST_CASE_P(ROI, Imgproc_PhaseCorrelatorTest_Inputs,
+    testing::Combine(testing::Values(CV_32F, CV_64F), testing::Values(32),
+                     testing::Values(1)));
+
 TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
     // load
     Mat im = imread(cvtest::TS::ptr()->get_data_path() + "shared/baboon.png", IMREAD_GRAYSCALE);
