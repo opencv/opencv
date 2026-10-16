@@ -50,6 +50,10 @@ static void avgPool32fPlain(const float* inp, float* out,
         const int* zyxtab = cs.coordtab.data();
         const int* ofstab = cs.ofstab.data();
         float iksize = 1.f/ksize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int nlanes = VTraits<v_float32>::vlanes();
+        v_float32 vscale = vx_setall_f32(iksize);
+#endif
 
         for (int row = r.start; row < r.end; row++) {
             int nc = row/(D*H), zy = row - nc*(D*H);
@@ -85,6 +89,17 @@ static void avgPool32fPlain(const float* inp, float* out,
                 if (x0 == W)
                     break;
                 x1 = inner_x1;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                if (SX == 1) {
+                    for (; x0 <= x1 - nlanes; x0 += nlanes) {
+                        const float* inp_xi = inp_nc + (zi_*Hi + yi_)*Wi + x0 - padX0;
+                        v_float32 s = vx_load(inp_xi + ofstab[0]);
+                        for (int k = 1; k < ksize; k++)
+                            s = v_add(s, vx_load(inp_xi + ofstab[k]));
+                        v_store(out_row + x0, v_mul(s, vscale));
+                    }
+                }
+#endif
                 for (; x0 < x1; x0++) {
                     const float* inp_xi = inp_nc + (zi_*Hi + yi_)*Wi + x0*SX - padX0;
                     float s = inp_xi[ofstab[0]];

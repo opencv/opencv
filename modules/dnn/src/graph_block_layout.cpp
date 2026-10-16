@@ -249,13 +249,28 @@ struct BlockLayoutTransformer
         return flow;
     }
 
+    //! The conversion later absorbs an Add of a live tensor right after it, which an op moved
+    //! in between would prevent.
+    bool feedsResidualAdd(const vector<PLayer>& prog, const vector<int>& consumer, Arg z) const
+    {
+        int c = usecounts[z.idx] == 1 ? consumer[z.idx] : -1;
+        const NaryEltwiseLayer* add =
+            c >= 0 ? dynamic_cast<const NaryEltwiseLayer*>(prog[c].get()) : nullptr;
+        if (!add || add->inputs.size() != 2 ||
+            (add->op != NaryEltwiseLayer::OPERATION::ADD &&
+             add->op != NaryEltwiseLayer::OPERATION::SUM))
+            return false;
+        int k = add->inputs[0].idx == z.idx ? 1 : add->inputs[1].idx == z.idx ? 0 : -1;
+        return k >= 0 && !netimpl->isConstArg(add->inputs[k]);
+    }
+
     // An elementwise op feeding only a conversion to plain runs after it instead: the same copy,
     // but the op then works on C channels rather than on padded C0 lanes.
     void hoistConversions(PGraph& g)
     {
         vector<PLayer> prog = g->prog();
         size_t nops = prog.size();
-        vector<int> producer(netimpl->args.size(), -1);
+        vector<int> producer(netimpl->args.size(), -1), consumer(netimpl->args.size(), -1);
         for (size_t i = 0; i < nops; i++) {
             vector<PGraph>* subgraphs = prog[i]->subgraphs();
             if (subgraphs) {
@@ -264,18 +279,21 @@ struct BlockLayoutTransformer
             }
             for (Arg out: prog[i]->outputs)
                 producer[out.idx] = (int)i;
+            for (Arg inp: prog[i]->inputs)
+                consumer[inp.idx] = (int)i;
         }
 
         bool changed = false;
         for (size_t i = 0; i < nops; i++) {
             TransformLayoutLayer* tr = dynamic_cast<TransformLayoutLayer*>(prog[i].get());
-            if (!tr || tr->layout == DATA_LAYOUT_BLOCK)
+            if (!tr || tr->layout == DATA_LAYOUT_BLOCK ||
+                feedsResidualAdd(prog, consumer, tr->outputs[0]))
                 continue;
             int tidx = (int)i;
             for (;;) {
                 Arg y = prog[tidx]->inputs[0];
                 int pidx = producer[y.idx];
-                if (pidx < 0 || usecounts[y.idx] != 1 || g->opBackend(pidx) != DNN_BACKEND_OPENCV)
+                if (pidx < 0 || usecounts[y.idx] != 1)
                     break;
                 const PLayer& op = prog[pidx];
                 int flow = flowInput(op);
