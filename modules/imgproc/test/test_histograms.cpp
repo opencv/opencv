@@ -1034,7 +1034,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             if( fabs(v0) > DBL_EPSILON )
                 result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
             if( fabs(v0 + v1) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+                result0[CV_COMP_CHISQR_ALT] += v0*v1/(v0 + v1);
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
@@ -1056,7 +1056,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         }
     }
 
-    result0[CV_COMP_CHISQR_ALT] *= 2;
+    if( hist_type == CV_HIST_ARRAY )
+        result0[CV_COMP_CHISQR_ALT] *= 2;
+    else
+        // Generated counts are nonnegative; tiny denominators are tested separately below.
+        // (a-b)^2/(a+b) = a+b - 4ab/(a+b), including bins missing from either histogram.
+        result0[CV_COMP_CHISQR_ALT] = 2*(s0 + s1) - 8*result0[CV_COMP_CHISQR_ALT];
 
     t = (sq0 - s0*s0/total_size)*(sq1 - s1*s1/total_size);
     result0[CV_COMP_CORREL] = fabs(t) > DBL_EPSILON ?
@@ -2110,6 +2115,75 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
 
     EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
+
+typedef testing::TestWithParam<std::tuple<int, bool> > Imgproc_Hist_CompareSparseChiSquare;
+
+TEST_P(Imgproc_Hist_CompareSparseChiSquare, accuracy)
+{
+    const int dims = std::get<0>(GetParam());
+    const bool explicitZeros = std::get<1>(GetParam());
+    int sizes[] = {2, 2, 2};
+    const float histograms[][2][4] = {
+        {{1, 0, 0, 0}, {1, 2, 0, 0}}, // second histogram has an additional bin
+        {{1, 0, 0, 0}, {0, 3, 0, 0}}, // disjoint support
+        {{1, 2, 0, 0}, {3, 0, 4, 0}}, // partially overlapping support
+        {{0, 0, 0, 0}, {1, 3, 0, 0}}, // empty first histogram
+        {{0, 0, 0, 0}, {0, 0, 0, 0}}, // both empty
+        {{1, 2, 0, 0}, {1, 2, 0, 0}}, // identical histograms
+        {{0, 0, 0, 0}, {1e-20f, 0, 0, 0}} // denominator below the comparison threshold
+    };
+    const double expected[] = {4, 8, 14, 8, 0, 0, 0};
+
+    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); ++i)
+    {
+        SCOPED_TRACE(i);
+        Mat dense1(dims, sizes, CV_32F, Scalar(0));
+        Mat dense2(dims, sizes, CV_32F, Scalar(0));
+        for (int j = 0; j < 4; ++j)
+        {
+            dense1.ptr<float>()[j] = histograms[i][0][j];
+            dense2.ptr<float>()[j] = histograms[i][1][j];
+        }
+        SparseMat sparse1(dense1), sparse2(dense2);
+        CvHistogram* legacy1 = cvCreateHist(dims, sizes, CV_HIST_SPARSE);
+        CvHistogram* legacy2 = cvCreateHist(dims, sizes, CV_HIST_SPARSE);
+        for (int j = 0; j < 4; ++j)
+        {
+            const int idx[] = {0, j / 2, j % 2};
+            if (explicitZeros || histograms[i][0][j] != 0)
+                cvSetRealND(legacy1->bins, idx + (3 - dims), histograms[i][0][j]);
+            if (explicitZeros || histograms[i][1][j] != 0)
+                cvSetRealND(legacy2->bins, idx + (3 - dims), histograms[i][1][j]);
+        }
+        if (explicitZeros)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                const int idx[] = {0, j / 2, j % 2};
+                sparse1.ref<float>(idx + (3 - dims)) = histograms[i][0][j];
+                sparse2.ref<float>(idx + (3 - dims)) = histograms[i][1][j];
+            }
+        }
+        const size_t count1 = sparse1.nzcount(), count2 = sparse2.nzcount();
+
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(dense1, dense2, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(sparse1, sparse2, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(sparse2, sparse1, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], cvCompareHist(legacy1, legacy2, CV_COMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], cvCompareHist(legacy2, legacy1, CV_COMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(compareHist(dense1, dense2, HISTCMP_CHISQR),
+                         compareHist(sparse1, sparse2, HISTCMP_CHISQR));
+        EXPECT_DOUBLE_EQ(compareHist(dense2, dense1, HISTCMP_CHISQR),
+                         compareHist(sparse2, sparse1, HISTCMP_CHISQR));
+        EXPECT_EQ(count1, sparse1.nzcount());
+        EXPECT_EQ(count2, sparse2.nzcount());
+        cvReleaseHist(&legacy1);
+        cvReleaseHist(&legacy2);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Hist_CompareSparseChiSquare,
+                       testing::Combine(testing::Values(2, 3), testing::Bool()));
 
 }} // namespace
 /* End Of File */
