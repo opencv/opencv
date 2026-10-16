@@ -6,6 +6,34 @@ using namespace perf;
 
 namespace {
 
+typedef perf::TestBaseWithParam<std::tuple<Size, MatType, double>> FractionalPow;
+
+PERF_TEST_P(FractionalPow, positive,
+    testing::Combine(testing::Values(Size(160, 128), Size(1024, 768)),
+        testing::Values(CV_16FC1, CV_16FC3, CV_16FC(9), CV_32FC1, CV_32FC3, CV_32FC(9),
+            CV_64FC1, CV_64FC3, CV_64FC(9)), testing::Values(1.25, 1.5)))
+{
+    const Size size = std::get<0>(GetParam());
+    const int type = std::get<1>(GetParam());
+    const double exponent = std::get<2>(GetParam());
+    Mat source, destination(size, type);
+    {
+        // Shared half-representable inputs keep the dtype comparisons equivalent.
+        Mat raw(size, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), half;
+        RNG rng(137);
+        Mat flat = raw.reshape(1);
+        rng.fill(flat, RNG::UNIFORM, Scalar::all(0.0625), Scalar::all(0.875));
+        raw.convertTo(half, CV_16F);
+        half.convertTo(source, type);
+    }
+    declare.in(source).out(destination);
+
+    TEST_CYCLE() cv::pow(source, exponent, destination);
+
+    const double tolerance = CV_MAT_DEPTH(type) == CV_16F ? 2e-3 : 1e-5;
+    SANITY_CHECK(destination, tolerance, ERROR_RELATIVE);
+}
+
 typedef perf::TestBaseWithParam<size_t> VectorLength;
 
 PERF_TEST_P(VectorLength, phase32f, testing::Values(128, 1000, 128*1024, 512*1024, 1024*1024))

@@ -372,14 +372,18 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                         if (x + VECSZ*2 > width) { if (!tail_trick || x == 0) break; x = width - VECSZ*2; }
                         Wvec a0, a1;
                         vx_load_pair_as(src0 + x, a0, a1);
-                        if (v_check_any(v_le(a0, z)) || v_check_any(v_le(a1, z)))
+                        if (v_check_any(v_or(v_le(a0, z), v_le(a1, z))))
                         {                               // exact std::pow for x <= 0 lanes
                             for (int i = 0; i < VECSZ*2; i++)
                                 dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], p));
                             continue;
                         }
-                        a0 = v_exp(v_mul(vp, v_log(a0)));
-                        a1 = v_exp(v_mul(vp, v_log(a1)));
+                        a0 = v_log(a0);
+                        a1 = v_log(a1);
+                        a0 = v_mul(vp, a0);
+                        a1 = v_mul(vp, a1);
+                        a0 = v_exp(a0);
+                        a1 = v_exp(a1);
                         v_store_pair_as(dst + x, a0, a1);
                     }
                 }
@@ -401,14 +405,18 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                 Wvec a0, a1, b0, b1;
                 vx_load_pair_as(src0 + x, a0, a1);
                 vx_load_pair_as(src1 + x, b0, b1);
-                if (v_check_any(v_le(a0, z)) || v_check_any(v_le(a1, z)))
+                if (v_check_any(v_or(v_le(a0, z), v_le(a1, z))))
                 {
                     for (int i = 0; i < VECSZ*2; i++)
                         dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], (WT)src1[x + i]));
                     continue;
                 }
-                a0 = v_exp(v_mul(b0, v_log(a0)));
-                a1 = v_exp(v_mul(b1, v_log(a1)));
+                a0 = v_log(a0);
+                a1 = v_log(a1);
+                a0 = v_mul(b0, a0);
+                a1 = v_mul(b1, a1);
+                a0 = v_exp(a0);
+                a1 = v_exp(a1);
                 v_store_pair_as(dst + x, a0, a1);
             }
         }

@@ -241,6 +241,64 @@ TEST(Core_EW_Slice, pow_f32_scalar_exp)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
+TEST(Core_EW_Slice, pow_fractional_simd_boundaries)
+{
+    const double positive[] = { 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0 };
+    const double mixed[] = { 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0,
+        -4.0, -1.0, -0.0, 0.0, std::numeric_limits<double>::quiet_NaN(),
+        -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), 16.0 };
+    const double powers[] = { -1.5, 0.5, 1.5, 2.5 };
+    for (int depth : { CV_16F, CV_16BF, CV_32F, CV_64F })
+        for (int length : { 1, 3, 7, 8, 9, 15, 16, 17, 31, 32, 33, 257 })
+            for (bool special : { false, true })
+                for (bool arrayExponent : { false, true })
+                    for (bool alias : { false, true })
+                    {
+                        SCOPED_TRACE(cv::format("depth=%d length=%d special=%d field=%d alias=%d",
+                            depth, length, special, arrayExponent, alias));
+                        Mat source64(1, length, CV_64F), powers64(1, length, CV_64F);
+                        for (int x = 0; x < length; x++)
+                        {
+                            source64.at<double>(x) = special ? mixed[x % 16] : positive[x % 8];
+                            powers64.at<double>(x) = arrayExponent ? powers[x % 4] : 1.5;
+                        }
+                        Mat image, exponents;
+                        source64.convertTo(image, depth);
+                        powers64.convertTo(exponents, depth);
+                        Mat result = alias ? image : Mat();
+                        if (arrayExponent)
+                        {
+                            TExpr program;
+                            makeBinaryArithProgram(program, OP_POW, depth, depth, depth);
+                            Mat inputs[] = { image, exponents };
+                            program.exec(inputs, &result);
+                        }
+                        else
+                            cv::pow(image, 1.5, result);
+                        ASSERT_EQ(result.type(), image.type());
+                        ASSERT_EQ(result.size(), image.size());
+                        if (alias)
+                            EXPECT_EQ(result.data, image.data);
+                        Mat actual;
+                        result.convertTo(actual, CV_64F);
+                        const double tolerance = depth == CV_16F ? 1e-3 :
+                            depth == CV_16BF ? 1e-2 : depth == CV_32F ? 2e-6 : 1e-12;
+                        for (int x = 0; x < length; x++)
+                        {
+                            const double expected = std::pow(source64.at<double>(x),
+                                powers64.at<double>(x));
+                            const double value = actual.at<double>(x);
+                            if (std::isnan(expected))
+                                EXPECT_TRUE(std::isnan(value)) << "x=" << x;
+                            else if (std::isinf(expected))
+                                EXPECT_EQ(value, expected) << "x=" << x;
+                            else
+                                EXPECT_NEAR(value, expected, tolerance * std::abs(expected))
+                                    << "x=" << x;
+                        }
+                    }
+}
+
 // Row / column broadcasting (single channel) checked against repeat()+cv::add.
 TEST(Core_EW_Slice, broadcast_row_col)
 {
