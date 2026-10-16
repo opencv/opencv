@@ -10,6 +10,8 @@
 #include "opencv2/ptcloud/slam.hpp"
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/private.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features.hpp"
