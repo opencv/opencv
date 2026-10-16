@@ -209,7 +209,12 @@ struct CV_EXPORTS TransferStats
 CV_EXPORTS TransferStats getTransferStats();
 CV_EXPORTS void resetTransferStats();
 
-/** @brief Memory owned outside of OpenCV, to wrap into a UMat without copying. */
+/** @brief Memory owned outside of OpenCV, to wrap into a UMat without copying.
+
+The handle is borrowed: OpenCV never closes or frees it, and the caller may close a file
+descriptor or an NT handle as soon as the wrap returns (the backend keeps its own reference
+where it needs one). The memory itself must stay valid, and must not be given to anyone else
+for writing, while UMats on it exist; releasing the last one waits for OpenCV's work on it. */
 struct CV_EXPORTS ExternalMemory
 {
     enum Type
@@ -232,33 +237,123 @@ struct CV_EXPORTS ExternalMemory
         refused unless the backend attests it. Protection itself always comes from the backend. */
     bool protectedContent;
     /** DRM format modifier: 0 for linear memory; a tiled or compressed layout (GPU tiling, DCC,
-        AFBC, ...) has no CPU view, and only operations of a device that knows the layout use it. */
+        AFBC, ...) has no CPU view, and only operations of a device that knows the layout use it.
+        Its size cannot be computed from a shape: size must be given. */
     uint64 layoutModifier;
     unsigned fourcc;        //!< DRM fourcc of the image the memory holds (NV12, P010, ...), 0 if none
+};
+
+//! YCbCr matrix of an image (values match cvAccelColorModel)
+enum ColorModel
+{
+    COLOR_MODEL_UNKNOWN = 0,
+    COLOR_MODEL_RGB = 1,        //!< no YCbCr matrix: RGB or grey data
+    COLOR_MODEL_BT601 = 2,
+    COLOR_MODEL_BT709 = 3,
+    COLOR_MODEL_BT2020 = 4      //!< non-constant luminance
+};
+
+//! range of the coded values (values match cvAccelColorRange)
+enum ColorRange
+{
+    COLOR_RANGE_UNKNOWN = 0,
+    COLOR_RANGE_LIMITED = 1,    //!< 16..235 for 8-bit luma
+    COLOR_RANGE_FULL = 2        //!< 0..255 for 8-bit luma
+};
+
+//! colour primaries (values match cvAccelColorPrimaries)
+enum ColorPrimaries
+{
+    PRIMARIES_UNKNOWN = 0,
+    PRIMARIES_BT709 = 1,        //!< also sRGB
+    PRIMARIES_BT601_625 = 2,
+    PRIMARIES_BT601_525 = 3,
+    PRIMARIES_BT2020 = 4,
+    PRIMARIES_DCI_P3 = 5,
+    PRIMARIES_DISPLAY_P3 = 6
+};
+
+//! transfer function (values match cvAccelTransfer)
+enum TransferFunction
+{
+    TRANSFER_UNKNOWN = 0,
+    TRANSFER_LINEAR = 1,
+    TRANSFER_SRGB = 2,
+    TRANSFER_BT709 = 3,         //!< also BT.601 and BT.2020 for SDR
+    TRANSFER_PQ = 4,            //!< SMPTE ST 2084
+    TRANSFER_HLG = 5
+};
+
+//! where chroma samples sit relative to luma (values match cvAccelChromaSiting)
+enum ChromaSiting
+{
+    CHROMA_SITING_UNKNOWN = 0,
+    CHROMA_SITING_COSITED = 1,  //!< on the first luma sample of their block
+    CHROMA_SITING_MIDPOINT = 2  //!< halfway between the luma samples of their block
+};
+
+//! how the values of an image map to colours
+struct CV_EXPORTS ColorInfo
+{
+    ColorInfo() : model(COLOR_MODEL_UNKNOWN), range(COLOR_RANGE_UNKNOWN), primaries(PRIMARIES_UNKNOWN),
+                  transfer(TRANSFER_UNKNOWN), chromaSitingX(CHROMA_SITING_UNKNOWN),
+                  chromaSitingY(CHROMA_SITING_UNKNOWN) {}
+    ColorModel model;
+    ColorRange range;
+    ColorPrimaries primaries;
+    TransferFunction transfer;
+    ChromaSiting chromaSitingX, chromaSitingY;
 };
 
 //! one plane of an external image: its buffer and where the plane lies in it
 struct CV_EXPORTS ExternalPlane
 {
-    ExternalPlane() : handle(0), offset(0), pitch(0), rows(0), cols(0), type(-1) {}
+    //! layoutModifier: the image's (ExternalImage::layoutModifier)
+    static constexpr uint64 SAME_AS_IMAGE = ~(uint64)0;
+    ExternalPlane() : handle(0), offset(0), pitch(0), size(0), layoutModifier(SAME_AS_IMAGE), rows(0), cols(0),
+                      type(-1) {}
     int64 handle;           //!< the plane's buffer (dma-buf fd, device pointer, ...); planes may share one
     size_t offset;          //!< bytes from the start of the buffer to the plane
-    size_t pitch;           //!< bytes from one row of the plane to the next
+    size_t pitch;           //!< bytes from one row of the plane to the next (0: packed rows)
+    /** bytes the plane covers in its buffer; required for a non-linear layout, whose size does
+        not follow from the pitch (0: pitch times rows, for linear planes) */
+    size_t size;
+    uint64 layoutModifier;  //!< DRM format modifier of this plane (SAME_AS_IMAGE: the image's)
     int rows, cols, type;   //!< the plane as a matrix: NV12 is 8UC1 luma and 8UC2 chroma at half size
 };
 
-//! a multi-plane image in external memory (a decoder's NV12 or P010 frame, a camera buffer)
+/** @brief A multi-plane image in external memory (a decoder's NV12 or P010 frame, a camera
+buffer). Planes may share one buffer or have one each. */
 struct CV_EXPORTS ExternalImage
 {
     ExternalImage() : type(ExternalMemory::DMABUF_FD), layoutModifier(0), fourcc(0), readOnly(false),
                       protectedContent(false) {}
     ExternalMemory::Type type;
     std::vector<ExternalPlane> planes;
-    uint64 layoutModifier;  //!< see ExternalMemory::layoutModifier
-    unsigned fourcc;        //!< DRM fourcc, informational
+    uint64 layoutModifier;  //!< see ExternalMemory::layoutModifier; planes may override it
+    /** DRM fourcc of the image (NV12, P010, I420, YUYV, XRGB8888, ...), 0 if none. When OpenCV
+        knows it, the planes are checked against it (count, types, subsampled sizes); backends
+        see it with every plane they get. */
+    unsigned fourcc;
+    ColorInfo color;
     bool readOnly;
     bool protectedContent;
 };
+
+//! the image a UMat is a plane of (see wrapExternalImage)
+struct CV_EXPORTS ImagePlaneInfo
+{
+    ImagePlaneInfo() : imageId(0), plane(-1), planeCount(0), fourcc(0), layoutModifier(0) {}
+    uint64 imageId;         //!< the same for every plane of one wrapped image; 0 when the UMat is not a plane
+    int plane;              //!< index of the plane
+    int planeCount;
+    unsigned fourcc;
+    uint64 layoutModifier;  //!< of this plane
+    ColorInfo color;
+};
+
+//! the image @p m is a plane of; imageId is 0 when it is not one
+CV_EXPORTS ImagePlaneInfo describePlane(const UMat& m);
 
 /** @brief Wraps external memory into a UMat without copying.
 The memory must stay valid while the UMat (and every UMat or Mat derived from it) is alive;
@@ -269,7 +364,11 @@ CV_EXPORTS UMat wrapExternalMemory(const Device& device, const ExternalMemory& m
 
 /** @brief Wraps each plane of an external image into a UMat, in the order of the planes, with
 the plane's pitch as its row step. Planes in one buffer and planes in separate buffers (one fd
-each) both work; every plane keeps the synchronization of the buffer it lies in. */
+each) both work. The planes stay one image: operations on them see the image (format, plane
+index, layout of each plane, colour encoding, see cvAccelView::image), describePlane() tells
+it, and planes of one buffer share the synchronization of that buffer. The planes are checked:
+sizes with overflow-safe arithmetic, no overlap within one buffer, and the geometry the fourcc
+requires when OpenCV knows it. */
 CV_EXPORTS std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& image);
 
 /** @brief Explicit device access for the user's own kernels.

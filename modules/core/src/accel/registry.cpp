@@ -16,6 +16,7 @@
 #include <opencv2/core/utils/plugin_loader.private.hpp>
 
 #include <chrono>
+#include <limits>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -892,6 +893,15 @@ int registerEmulatorBackend()
     return r.add(impl::emulatorBackendApi(), -100, "built-in (test)");
 }
 
+int registerLegacyEmulatorBackend()
+{
+    registerEmulatorBackend();
+    impl::Registry& r = impl::Registry::getInstance();
+    if (impl::Backend* b = r.find("emulator-v1"))
+        return b->id();
+    return r.add(impl::emulatorBackendApiV1(), -101, "built-in (test, API version 1)");
+}
+
 }} // namespace accel::detail
 
 //////////////////////////////////// public API ////////////////////////////////////
@@ -1088,6 +1098,47 @@ void resetTransferStats()
     c.implicitTransfers = 0; c.deviceOps = 0; c.cpuFallbacks = 0; c.hostWaits = 0;
 }
 
+//! a * b, false when it does not fit in 64 bits
+static bool mulFits(uint64_t a, uint64_t b, uint64_t& r)
+{
+    if (b != 0 && a > UINT64_MAX / b)
+        return false;
+    r = a * b;
+    return true;
+}
+
+/** Steps and extent (bytes from the first element to the end of the last) of an array of
+    @p shape and @p type over external memory: the caller's steps, or packed ones. Every
+    product and sum is checked, so that no shape can wrap around and look small. */
+static uint64_t externalExtent(const MatShape& shape, int type, const size_t* steps, size_t* outSteps)
+{
+    const uint64_t esz = (uint64_t)CV_ELEM_SIZE(type);
+    const int dims = shape.dims;
+    if (steps && steps[dims - 1] != esz)
+        CV_Error(Error::StsBadArg, "accel: the last step of a wrapped array must be its element size");
+    uint64_t st[CV_ACCEL_MAX_DIMS];
+    st[dims - 1] = esz;
+    for (int i = dims - 1; i >= 0; i--)
+    {
+        if (shape.p[i] <= 0)
+            CV_Error(Error::StsBadArg, "accel: a wrapped array has no empty dimension");
+        if (i < dims - 1 && !(steps ? (st[i] = steps[i], true) : mulFits(st[i + 1], (uint64_t)shape.p[i + 1], st[i])))
+            CV_Error(Error::StsBadArg, "accel: the wrapped array does not fit in the address space");
+    }
+    uint64_t extent = esz;
+    for (int i = 0; i < dims; i++)
+    {
+        uint64_t span = 0;
+        if (!mulFits((uint64_t)(shape.p[i] - 1), st[i], span) || !rangeEnd(extent, span, extent))
+            CV_Error(Error::StsBadArg, "accel: the wrapped array does not fit in the address space");
+    }
+    if (extent > (uint64_t)std::numeric_limits<size_t>::max())
+        CV_Error(Error::StsBadArg, "accel: the wrapped array does not fit in the address space");
+    for (int i = 0; i < dims; i++)
+        outSteps[i] = (size_t)st[i];
+    return extent;
+}
+
 UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
                         const MatShape& shape, int type, const size_t* steps)
 {
@@ -1096,23 +1147,29 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     Backend* b = backendOf(device);
     DeviceAllocator* a = static_cast<DeviceAllocator*>(b->allocator(device.index(), (int)b->deviceInfo(device.index()).preferred_kind));
 
-    UMat m;
-    m.flags = UMat::MAGIC_VAL | CV_MAT_TYPE(type);
-    setSize(m, shape.dims, shape.p, steps, steps == 0);
-    // bytes covered by the view, with the steps the caller gave
-    size_t total = CV_ELEM_SIZE(type);
-    for (int i = 0; i < shape.dims; i++)
+    type = CV_MAT_TYPE(type);
+    size_t st[CV_ACCEL_MAX_DIMS];
+    const uint64_t extent = externalExtent(shape, type, steps, st);
+    uint64_t bytes = extent;
+    if (memory.layoutModifier != 0)
     {
-        CV_Assert(shape.p[i] > 0);
-        total += (size_t)(shape.p[i] - 1) * m.step.p[i];
+        // a tiled or compressed layout: its size cannot be computed from a shape and steps
+        if (memory.size == 0)
+            CV_Error(Error::StsBadArg, "accel: memory with a non-linear layout needs its size (ExternalMemory::size)");
+        bytes = memory.size;
     }
-    CV_Assert(memory.size == 0 || total <= memory.size);
+    else if (memory.size != 0 && extent > memory.size)
+        CV_Error(Error::StsBadArg, "accel: the array does not fit in the external memory");
+
+    UMat m;
+    m.flags = UMat::MAGIC_VAL | type;
+    setSize(m, shape.dims, shape.p, st, false);
 
     WrapRequest req;
     req.ext.type = (uint32_t)memory.type;
     req.ext.handle = (int64_t)memory.handle;
     req.ext.offset = memory.offset;
-    req.ext.size = total;
+    req.ext.size = bytes;
     req.ext.flags = (memory.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (memory.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
     req.ext.layout_modifier = memory.layoutModifier;
     req.ext.fourcc = memory.fourcc;
@@ -1129,30 +1186,223 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     return m;
 }
 
+namespace {
+
+#define CV_ACCEL_FOURCC(a, b, c, d) ((uint32_t)(a) | ((uint32_t)(b) << 8) | ((uint32_t)(c) << 16) | ((uint32_t)(d) << 24))
+
+//! what a known format requires of one plane: its type, and its size relative to plane 0
+struct FormatPlane
+{
+    int type;
+    int hsub, vsub;     //!< plane 0's width and height are divided by these (rounded up)
+};
+
+struct Format
+{
+    uint32_t fourcc;
+    int planes;
+    FormatPlane p[CV_ACCEL_MAX_PLANES];
+};
+
+//! DRM formats OpenCV checks images against (planes as matrices: plane 0 has the image's size in pixels)
+const Format* findFormat(uint32_t fourcc)
+{
+    static const Format formats[] = {
+        { CV_ACCEL_FOURCC('N', 'V', '1', '2'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 2, 2 } } },
+        { CV_ACCEL_FOURCC('N', 'V', '2', '1'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 2, 2 } } },
+        { CV_ACCEL_FOURCC('N', 'V', '1', '6'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 2, 1 } } },
+        { CV_ACCEL_FOURCC('N', 'V', '6', '1'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 2, 1 } } },
+        { CV_ACCEL_FOURCC('N', 'V', '2', '4'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('N', 'V', '4', '2'), 2, { { CV_8UC1, 1, 1 }, { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('P', '0', '1', '0'), 2, { { CV_16UC1, 1, 1 }, { CV_16UC2, 2, 2 } } },
+        { CV_ACCEL_FOURCC('P', '0', '1', '2'), 2, { { CV_16UC1, 1, 1 }, { CV_16UC2, 2, 2 } } },
+        { CV_ACCEL_FOURCC('P', '0', '1', '6'), 2, { { CV_16UC1, 1, 1 }, { CV_16UC2, 2, 2 } } },
+        { CV_ACCEL_FOURCC('P', '2', '1', '0'), 2, { { CV_16UC1, 1, 1 }, { CV_16UC2, 2, 1 } } },
+        { CV_ACCEL_FOURCC('Y', 'U', '1', '2'), 3, { { CV_8UC1, 1, 1 }, { CV_8UC1, 2, 2 }, { CV_8UC1, 2, 2 } } },
+        { CV_ACCEL_FOURCC('Y', 'V', '1', '2'), 3, { { CV_8UC1, 1, 1 }, { CV_8UC1, 2, 2 }, { CV_8UC1, 2, 2 } } },
+        { CV_ACCEL_FOURCC('Y', 'U', '1', '6'), 3, { { CV_8UC1, 1, 1 }, { CV_8UC1, 2, 1 }, { CV_8UC1, 2, 1 } } },
+        { CV_ACCEL_FOURCC('Y', 'V', '1', '6'), 3, { { CV_8UC1, 1, 1 }, { CV_8UC1, 2, 1 }, { CV_8UC1, 2, 1 } } },
+        { CV_ACCEL_FOURCC('Y', 'U', '2', '4'), 3, { { CV_8UC1, 1, 1 }, { CV_8UC1, 1, 1 }, { CV_8UC1, 1, 1 } } },
+        { CV_ACCEL_FOURCC('Y', 'U', 'Y', 'V'), 1, { { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('Y', 'V', 'Y', 'U'), 1, { { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('U', 'Y', 'V', 'Y'), 1, { { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('V', 'Y', 'U', 'Y'), 1, { { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('R', '8', ' ', ' '), 1, { { CV_8UC1, 1, 1 } } },
+        { CV_ACCEL_FOURCC('R', '1', '6', ' '), 1, { { CV_16UC1, 1, 1 } } },
+        { CV_ACCEL_FOURCC('G', 'R', '8', '8'), 1, { { CV_8UC2, 1, 1 } } },
+        { CV_ACCEL_FOURCC('R', 'G', '1', '6'), 1, { { CV_8UC2, 1, 1 } } },      // RGB565, as cvtColor takes it
+        { CV_ACCEL_FOURCC('R', 'G', '2', '4'), 1, { { CV_8UC3, 1, 1 } } },
+        { CV_ACCEL_FOURCC('B', 'G', '2', '4'), 1, { { CV_8UC3, 1, 1 } } },
+        { CV_ACCEL_FOURCC('X', 'R', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('X', 'B', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('A', 'R', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('A', 'B', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('R', 'X', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('B', 'X', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('R', 'A', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+        { CV_ACCEL_FOURCC('B', 'A', '2', '4'), 1, { { CV_8UC4, 1, 1 } } },
+    };
+    for (size_t i = 0; i < sizeof(formats) / sizeof(formats[0]); i++)
+        if (formats[i].fourcc == fourcc)
+            return &formats[i];
+    return NULL;
+}
+
+std::string fourccName(uint32_t f)
+{
+    char s[5] = { (char)(f & 0xff), (char)((f >> 8) & 0xff), (char)((f >> 16) & 0xff), (char)(f >> 24), 0 };
+    return s;
+}
+
+std::atomic<uint64>& imageIds()
+{
+    static std::atomic<uint64>* c = new std::atomic<uint64>(0);
+    return *c;
+}
+
+} // namespace
+
 std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& image)
 {
-    CV_Assert(!image.planes.empty());
-    std::vector<UMat> planes;
-    for (size_t i = 0; i < image.planes.size(); i++)
+    CV_Assert(!device.empty() && "accel: external memory needs a device that imports it");
+    const size_t n = image.planes.size();
+    if (n < 1 || n > CV_ACCEL_MAX_PLANES)
+        CV_Error(Error::StsBadArg, "accel: an image has 1 to 4 planes");
+    Backend* b = backendOf(device);
+    DeviceAllocator* a = static_cast<DeviceAllocator*>(b->allocator(device.index(), (int)b->deviceInfo(device.index()).preferred_kind));
+
+    // 1. the planes, each with checked arithmetic: where it lies, how large it is, which buffer
+    std::shared_ptr<ImageRecord> rec = std::make_shared<ImageRecord>();
+    cvAccelImageDesc& d = rec->desc;
+    memset(&d, 0, sizeof(d));
+    d.struct_size = (uint32_t)sizeof(d);
+    d.fourcc = image.fourcc;
+    d.id = ++imageIds();
+    d.plane_count = (uint32_t)n;
+    d.color_model = (uint32_t)image.color.model;
+    d.color_range = (uint32_t)image.color.range;
+    d.color_primaries = (uint32_t)image.color.primaries;
+    d.transfer = (uint32_t)image.color.transfer;
+    d.chroma_siting_x = (uint32_t)image.color.chromaSitingX;
+    d.chroma_siting_y = (uint32_t)image.color.chromaSitingY;
+    for (size_t i = 0; i < n; i++)
     {
         const ExternalPlane& p = image.planes[i];
-        CV_Assert(p.rows > 0 && p.cols > 0 && p.type >= 0);
-        const size_t rowBytes = (size_t)p.cols * CV_ELEM_SIZE(p.type);
-        const size_t pitch = p.pitch ? p.pitch : rowBytes;
-        CV_Assert(pitch >= rowBytes && "accel: a plane's pitch is shorter than its rows");
-        ExternalMemory mem;
-        mem.type = image.type;
-        mem.handle = p.handle;
-        mem.offset = p.offset;
-        mem.size = pitch * (size_t)(p.rows - 1) + rowBytes;
-        mem.readOnly = image.readOnly;
-        mem.protectedContent = image.protectedContent;
-        mem.layoutModifier = image.layoutModifier;
-        mem.fourcc = image.fourcc;
-        const size_t steps[2] = { pitch, (size_t)CV_ELEM_SIZE(p.type) };
-        planes.push_back(wrapExternalMemory(device, mem, MatShape({p.rows, p.cols}), p.type, steps));
+        cvAccelImagePlane& q = d.planes[i];
+        if (p.rows <= 0 || p.cols <= 0 || p.type < 0 || p.type != CV_MAT_TYPE(p.type))
+            CV_Error_(Error::StsBadArg, ("accel: plane %d has no valid shape or type", (int)i));
+        q.rows = p.rows;
+        q.cols = p.cols;
+        q.type = p.type;
+        q.layout_modifier = p.layoutModifier == ExternalPlane::SAME_AS_IMAGE ? image.layoutModifier : p.layoutModifier;
+        q.offset = p.offset;
+        uint64_t rowBytes = 0;
+        if (!mulFits((uint64_t)p.cols, (uint64_t)CV_ELEM_SIZE(p.type), rowBytes))
+            CV_Error_(Error::StsBadArg, ("accel: plane %d is larger than the address space", (int)i));
+        q.pitch = p.pitch ? (uint64_t)p.pitch : rowBytes;
+        if (q.layout_modifier == 0)
+        {
+            uint64_t span = 0, linear = 0;
+            if (q.pitch < rowBytes)
+                CV_Error_(Error::StsBadArg, ("accel: the pitch of plane %d is shorter than its rows", (int)i));
+            if (!mulFits(q.pitch, (uint64_t)(p.rows - 1), span) || !rangeEnd(span, rowBytes, linear))
+                CV_Error_(Error::StsBadArg, ("accel: plane %d is larger than the address space", (int)i));
+            if (p.size && p.size < linear)
+                CV_Error_(Error::StsBadArg, ("accel: plane %d is smaller than its rows and pitch say", (int)i));
+            q.size = p.size ? (uint64_t)p.size : linear;
+        }
+        else
+        {
+            // tiled or compressed: only the producer knows how many bytes the plane takes
+            if (p.size == 0)
+                CV_Error_(Error::StsBadArg, ("accel: plane %d has a non-linear layout: its size must be given", (int)i));
+            q.size = p.size;
+        }
+        uint64_t end = 0;
+        if (!rangeEnd(q.offset, q.size, end) || q.size > (uint64_t)std::numeric_limits<size_t>::max())
+            CV_Error_(Error::StsBadArg, ("accel: plane %d lies outside of the address space", (int)i));
+        // planes with one handle lie in one buffer, and never share a byte
+        q.buffer = (uint32_t)i;
+        for (size_t j = 0; j < i; j++)
+        {
+            if (image.planes[j].handle != p.handle)
+                continue;
+            q.buffer = d.planes[j].buffer;
+            if (rangesOverlap(d.planes[j].offset, d.planes[j].size, q.offset, q.size))
+                CV_Error_(Error::StsBadArg, ("accel: planes %d and %d overlap in their buffer", (int)j, (int)i));
+        }
+    }
+
+    // 2. the format, when OpenCV knows it: plane count, types, subsampled sizes
+    if (const Format* f = findFormat(image.fourcc))
+    {
+        if ((int)n != f->planes)
+            CV_Error_(Error::StsBadArg, ("accel: %s has %d planes, not %d", fourccName(image.fourcc).c_str(), f->planes, (int)n));
+        const int width = d.planes[0].cols, height = d.planes[0].rows;
+        for (int i = 0; i < f->planes; i++)
+        {
+            const FormatPlane& fp = f->p[i];
+            const int cols = (width + fp.hsub - 1) / fp.hsub, rows = (height + fp.vsub - 1) / fp.vsub;
+            if (d.planes[i].type != fp.type || d.planes[i].cols != cols || d.planes[i].rows != rows)
+                CV_Error_(Error::StsBadArg, ("accel: plane %d of a %dx%d %s image must be %dx%d of type %s",
+                                             i, width, height, fourccName(image.fourcc).c_str(), cols, rows,
+                                             typeToString(fp.type).c_str()));
+        }
+    }
+
+    // 3. one view per plane, each carrying the image
+    std::vector<UMat> planes;
+    for (size_t i = 0; i < n; i++)
+    {
+        const ExternalPlane& p = image.planes[i];
+        const cvAccelImagePlane& q = d.planes[i];
+        WrapRequest req;
+        req.ext.type = (uint32_t)image.type;
+        req.ext.handle = (int64_t)p.handle;
+        req.ext.offset = q.offset;
+        req.ext.size = q.size;
+        req.ext.flags = (image.readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (image.protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0);
+        req.ext.layout_modifier = q.layout_modifier;
+        req.ext.fourcc = image.fourcc;
+        req.readOnly = image.readOnly;
+        req.protectedRequired = image.protectedContent;
+        req.image = rec;
+        req.plane = (int)i;
+        size_t viewOffset = 0;
+        bool referenced = false;
+        UMat m;
+        m.flags = UMat::MAGIC_VAL | p.type;
+        const int sz[2] = { p.rows, p.cols };
+        const size_t steps[2] = { (size_t)q.pitch, (size_t)CV_ELEM_SIZE(p.type) };
+        setSize(m, 2, sz, steps, false);
+        m.u = a->wrap(req, viewOffset, referenced);
+        CV_Assert(!referenced && viewOffset == 0);  // a plane always gets a view of its own
+        finalizeHdr(m);
+        m.addref();
+        planes.push_back(m);
     }
     return planes;
+}
+
+ImagePlaneInfo describePlane(const UMat& m)
+{
+    ImagePlaneInfo info;
+    const BufferState* v = m.u ? m.u->accelState : NULL;
+    if (!v || !v->image)
+        return info;
+    const cvAccelImageDesc& d = v->image->desc;
+    info.imageId = d.id;
+    info.plane = v->plane;
+    info.planeCount = (int)d.plane_count;
+    info.fourcc = d.fourcc;
+    info.layoutModifier = d.planes[v->plane].layout_modifier;
+    info.color.model = (ColorModel)d.color_model;
+    info.color.range = (ColorRange)d.color_range;
+    info.color.primaries = (ColorPrimaries)d.color_primaries;
+    info.color.transfer = (TransferFunction)d.transfer;
+    info.color.chromaSitingX = (ChromaSiting)d.chroma_siting_x;
+    info.color.chromaSitingY = (ChromaSiting)d.chroma_siting_y;
+    return info;
 }
 
 struct DeviceAccess::Impl

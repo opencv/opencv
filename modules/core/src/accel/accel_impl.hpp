@@ -382,14 +382,16 @@ struct BackingKey
 };
 
 /** One backend's import of a whole backing, or the allocation that a backing is. Byte 0 of
-    alloc is byte 0 of the backing. A backing has one import per backend, device and layout;
-    views of the backing use ranges of it. Imports live as long as their backing. */
+    alloc is byte 0 of the backing. A backing has one import per backend, device, layout and
+    access (read-only or not); views of the backing use ranges of it. Imports live as long as
+    their backing. */
 struct Import
 {
     Import();
     Backend* backend;
     int device;
     uint64_t modifier;              //!< the layout it was imported with
+    bool readOnly;                  //!< imported for reading only (CV_ACCEL_MEMF_READ_ONLY asked for)
     cvAccelAllocation alloc;        //!< desc.backend_id and desc.device_index are set by core
     const void* hostReservation;    //!< host pages reserved with Backend::reserveHostImport, or NULL
 };
@@ -472,6 +474,16 @@ struct PhysicalBacking
     std::vector<int> cpuLevels;         //!< access of each open begin_cpu_access level, outermost first
     uchar* cpuBase;                     //!< CPU address of byte 0 while levels are open
     IdleGate* idleGateHeld;             //!< DEVICE_IDLE memory: the gate the open mapping holds
+    /** end_cpu_access calls that failed: the CPU access counts as open until a retry succeeds
+        (backend rule 4), so no device work may use the memory meanwhile, and the device gate of
+        DEVICE_IDLE memory stays held */
+    std::vector<std::pair<Import*, int> > failedCpuEnds;
+};
+
+//! an image wrapped by wrapExternalImage: what operations see of its planes (cvAccelView::image)
+struct ImageRecord
+{
+    cvAccelImageDesc desc;
 };
 
 //! host copy kinds (BufferState::shadowKind)
@@ -508,6 +520,8 @@ struct BufferState
     uint64_t size;                  //!< bytes, UMatData::size
     bool readOnly;                  //!< writes refused: read-only memory, or the wrap asked for it
     bool fromMat;                   //!< created by Mat::getUMat: the content goes back to the Mat
+    std::shared_ptr<const ImageRecord> image;   //!< the image the view is a plane of (wrapExternalImage), or none
+    int plane;                      //!< index of that plane
 
     Backend* backend() const { return imp->backend; }
     int device() const { return imp->device; }
@@ -521,10 +535,14 @@ struct BufferState
 
     bool hostMapped;                //!< Mat views may exist (UMatData::refcount was > 0)
     int hostAccess;                 //!< union of AccessFlag over the current mapping
+    /** The current mapping shows a copy of the content in pages core maps read-only, so that a
+        write through it faults: a read-only view of memory without a read-only CPU mapping, and
+        every view opened for reading under OPENCV_ACCEL_VALIDATE. */
+    uchar* cpuCopy;
+    size_t cpuCopyPages;
+    bool cpuCopyWriteBack;          //!< the mapping was opened for writing since: the copy goes back at its end
     bool dying;                     //!< no UMat refers to the view any more: it is being released
     uint64 matGeneration;           //!< fromMat: the backing generation of the content copied from the Mat
-    uint64 viewHash;                //!< OPENCV_ACCEL_VALIDATE: checksum of a read-only view when it opened
-    bool viewHashed;
 };
 
 //! UMat::getMat() for buffers with accelState
@@ -601,7 +619,7 @@ private:
 //! what a wrap of external memory asks for (DeviceAllocator::wrap)
 struct WrapRequest
 {
-    WrapRequest() : readOnly(false), protectedRequired(false), allowExistingView(false)
+    WrapRequest() : readOnly(false), protectedRequired(false), allowExistingView(false), plane(-1)
     {
         memset(&ext, 0, sizeof(ext));
         ext.struct_size = (uint32_t)sizeof(ext);
@@ -612,6 +630,8 @@ struct WrapRequest
     /** the result may be a UMat over a view that already covers the bytes with a host copy
         (otherwise such a wrap is refused, see BufferState) */
     bool allowExistingView;
+    std::shared_ptr<const ImageRecord> image;   //!< the view is plane @p plane of this image
+    int plane;
 };
 
 /** The allocator for one (backend, device, memory kind). It owns no state of its own: the
@@ -685,6 +705,9 @@ void pruneRetiredLocked(PhysicalBacking* b) CV_NOEXCEPT;
 //! frees one host copy (fences complete, or the device stopped)
 void freeHostCopy(RetiredHostCopy& c) CV_NOEXCEPT;
 
+//! calls the failed end_cpu_access of @p b again; true when none is left (backing mutex held)
+bool retryFailedCpuEndsLocked(PhysicalBacking* b) CV_NOEXCEPT;
+
 //! poisoned bytes of @p b overlapping [begin, begin + size), NULL when there are none (backing mutex held)
 const PoisonRange* findPoison(const PhysicalBacking* b, uint64_t begin, uint64_t size);
 //! marks [begin, begin + size) of @p b as written by failed work (backing mutex held)
@@ -741,6 +764,8 @@ void onImplicitTransfer(const char* what, const char* opName);
 ///////////////////////////////////// built-in backends /////////////////////////////////////
 
 const OpenCV_Core_Accel_API* emulatorBackendApi();
+//! the emulator as a backend of API version 1 (no begin_device_access / end_device_access), for tests
+const OpenCV_Core_Accel_API* emulatorBackendApiV1();
 #ifdef HAVE_CUDA
 const OpenCV_Core_Accel_API* cudaBackendApi();
 #endif

@@ -40,14 +40,14 @@ enum Plan
 
 struct Arg
 {
-    Arg() : isOutput(false), arr(0), type(-1), fullOverwrite(true), isUMat(false), isHost(false),
+    Arg() : isOutput(false), type(-1), fullOverwrite(true), isUMat(false), isHost(false),
             onDevice(false), plan(PLAN_UNDECIDED), mode(0)
     {
         memset(&desc, 0, sizeof(desc));
         memset(&viewAlloc, 0, sizeof(viewAlloc));
     }
     bool isOutput;
-    const _OutputArray* arr;    //!< outputs (inputs are kept as UMat / Mat below)
+    _OutputArray arr;           //!< outputs, a copy: the caller's may be a temporary (inputs are kept as UMat / Mat below)
     MatShape shape;
     int type;
     bool fullOverwrite;
@@ -110,6 +110,16 @@ bool overlaps(const UMat& a, const UMat& b)
     const uint64_t ea = extentBytes(a.dims, a.size.p, a.step.p, a.type());
     const uint64_t eb = extentBytes(b.dims, b.size.p, b.step.p, b.type());
     return rangesOverlap(sa, ea, sb, eb);
+}
+
+//! the image the argument is a plane of, for the backend (cvAccelView::image)
+void setImage(cvAccelView& v, const BufferState* bv)
+{
+    if (bv && bv->image)
+    {
+        v.image = &bv->image->desc;
+        v.plane = (uint32_t)bv->plane;
+    }
 }
 
 //! the bytes of @p v lie inside the range [start, start + size) of its allocation that the argument may use
@@ -297,7 +307,7 @@ void OpCall::output(OutputArray arr, const MatShape& shape, int type, bool fullO
 {
     Arg a;
     a.isOutput = true;
-    a.arr = &arr;
+    a.arr = arr;
     a.shape = shape;
     a.type = CV_MAT_TYPE(type);
     a.fullOverwrite = fullOverwrite;
@@ -344,7 +354,7 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
             exists = !a.um.empty() && sameShape(a.um, a.shape) && a.um.type() == a.type;
         else
         {
-            hostOut = a.arr->getMat();
+            hostOut = a.arr.getMat();
             exists = !hostOut.empty() && hostOut.shape() == a.shape && hostOut.type() == a.type;
             if (!exists)
                 hostOut.release();
@@ -381,12 +391,12 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
 
 void OpCall::Impl::createOutput(Arg& a, Backend* b, int device)
 {
-    UMat& d = a.arr->getUMatRef();
+    UMat& d = a.arr.getUMatRef();
     MatAllocator* saved = d.allocator;
     d.allocator = b->allocator(device, (int)b->deviceInfo(device).preferred_kind, protectedIn);
     try
     {
-        a.arr->create(a.shape, a.type);
+        a.arr.create(a.shape, a.type);
     }
     catch (...)
     {
@@ -444,6 +454,7 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
                 a.viewAlloc.desc = a.desc;
                 fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + a.um.offset, a.um.type(), a.um.dims,
                          a.um.size.p, a.um.step.p);
+                setImage(v, bv);
             }
             else if (!a.mat.empty())
             {
@@ -602,7 +613,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                     a.um.copyTo(a.temp);    // a UMat output to copy back always exists (see planArgs)
                 else
                 {
-                    Mat current = a.arr->getMat();
+                    Mat current = a.arr.getMat();
                     if (!current.empty() && current.type() == a.type && current.shape() == a.shape)
                         current.copyTo(a.temp);
                 }
@@ -613,8 +624,8 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             // plain host memory used in place by a device that can address it
             if (a.isOutput && !a.isUMat)
             {
-                a.arr->create(a.shape, a.type);     // the caller's Mat (nothing to do when it fits)
-                a.mat = a.arr->getMat();
+                a.arr.create(a.shape, a.type);     // the caller's Mat (nothing to do when it fits)
+                a.mat = a.arr.getMat();
             }
             else if (a.isUMat)
                 a.mat = a.um.getMat(a.isOutput ? ACCESS_WRITE : ACCESS_READ);  // host allocator: no copy
@@ -644,8 +655,11 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 continue;
             a.mode = a.isOutput ? (DEV_WRITE | (a.fullOverwrite && coversAllocation(target) ? DEV_DISCARD : 0)) : DEV_READ;
             acq.add(target.u, a.mode);
-            if (target.u->accelState->backing->borrowed)
-                needSync = borrowed = true;     // user memory: the owner may touch it once we return
+            // User memory: the owner may touch it once we return. Memory shared through implicit
+            // fences (a dma-buf) is not: its other users wait for the fence of this work.
+            const PhysicalBacking* bk = target.u->accelState->backing;
+            if (bk->borrowed && !(bk->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC))
+                needSync = borrowed = true;
         }
         std::vector<FenceRef> waits;
         if (!acq.acquire(stream, waits))
@@ -676,6 +690,20 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                     a.viewAlloc = bv->imp->alloc;
                     fillView(v, &a.viewAlloc, bv->start + target.offset, target.type(), target.dims,
                              target.size.p, target.step.p);
+                    setImage(v, bv);
+                    if (a.viewAlloc.desc.layout_modifier != 0)
+                    {
+                        // a tiled or compressed layout: steps say nothing about where bytes lie, so the
+                        // argument is its whole view, as large as its producer said
+                        if (target.offset != 0 || (target.u->size != bv->size) ||
+                            (bv->image && (target.rows != bv->image->desc.planes[bv->plane].rows ||
+                                           target.cols != bv->image->desc.planes[bv->plane].cols)))
+                            CV_Error_(Error::StsNotImplemented, ("accel: %s: argument %d is a part of memory with a "
+                                                                 "non-linear layout", name, (int)i));
+                        if (!rangeInside(0, a.viewAlloc.size, bv->start, bv->size))
+                            CV_Error_(Error::StsInternal, ("accel: %s: argument %d does not fit its allocation", name, (int)i));
+                        continue;
+                    }
                     if (!viewFitsRange(v, bv->start, bv->size))
                         CV_Error_(Error::StsInternal, ("accel: %s: argument %d does not fit its buffer", name, (int)i));
                 }
@@ -730,7 +758,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     {
         Arg& a = args[i];
         if (a.isOutput && a.plan == PLAN_COPY_BACK)
-            a.temp.copyTo(*a.arr);
+            a.temp.copyTo(a.arr);
     }
     if (needSync)
         done.wait(!borrowed);

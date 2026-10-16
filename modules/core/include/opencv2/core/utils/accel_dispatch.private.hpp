@@ -68,8 +68,20 @@ CV_EXPORTS int registerEmulatorBackend();
 //! number of emulator allocations alive right now, on one device or (-1) on all (tests of release)
 CV_EXPORTS int64 emulatorLiveAllocations(int device = -1);
 
-//! times device work and CPU access overlapped on "emulator:4" (a fault on real hardware)
-CV_EXPORTS int64 emulatorViolations();
+//! the same devices through a backend table of API version 1, without begin/end_device_access ("emulator-v1")
+CV_EXPORTS int registerLegacyEmulatorBackend();
+
+//! protocol violations the emulator detects (flags)
+enum EmulatorViolation
+{
+    EMU_VIOLATION_MANAGED = 1,      //!< device work and CPU access overlapped on "emulator:4" (a fault on real hardware)
+    EMU_VIOLATION_CPU_ACCESS = 2,   //!< begin/end_cpu_access not balanced, ended with another access, or never ended
+    EMU_VIOLATION_STREAM = 4,       //!< one stream used by two threads at once where streams are not thread-safe
+    EMU_VIOLATION_FENCE = 8         //!< a fence of another device waited for where that is not supported
+};
+
+//! violations of the kinds in @p kinds (EmulatorViolation flags) seen so far
+CV_EXPORTS int64 emulatorViolations(int kinds = EMU_VIOLATION_MANAGED);
 
 //! where emulatorInjectFailure makes "emulator:5" fail (flags)
 enum EmulatorFailurePoint
@@ -101,13 +113,19 @@ CV_EXPORTS void emulatorDisableOps(int device, bool disable);
 
 //! makes the next end_cpu_access after a CPU write fail (on any emulator device), once
 CV_EXPORTS void emulatorFailNextCpuFlush();
+//! makes the next @p count end_cpu_access calls fail, whatever their access (the CPU access stays open)
+CV_EXPORTS void emulatorFailNextCpuEnds(int count);
+//! makes the next end_device_access fail: the fence is not attached to the dma-buf
+CV_EXPORTS void emulatorFailNextDeviceAccessEnd();
 
 //! sets the OPENCV_ACCEL_WAIT_TIMEOUT_MS limit at run time (0: wait forever); tests and diagnostics
 CV_EXPORTS void setWaitTimeout(uint64 ms);
 //! tests only: forgets that devices were lost (a lost device otherwise stays lost for the process)
 CV_EXPORTS void reviveDevices();
-//! turns OPENCV_ACCEL_VALIDATE on or off at run time (read-only Mat views are checksummed)
+//! turns OPENCV_ACCEL_VALIDATE on or off at run time (every Mat view opened for reading is mapped read-only)
 CV_EXPORTS void setValidation(bool on);
+//! tests: the page protection call after @p after successful ones fails, once (-1: none)
+CV_EXPORTS void injectPageProtectionFailure(int after);
 
 /** @brief Device memory of "another library" (not held by OpenCV), filled with @p value; returns
 its device pointer for ExternalMemory::DEVICE_POINTER. With @p protectedContent the emulator

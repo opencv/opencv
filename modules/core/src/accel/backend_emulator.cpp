@@ -75,7 +75,21 @@ void countAllocation(int device, int delta)
 // EMU_MANAGED: what would fault on real hardware
 std::atomic<int> g_managedCpuAccess(0);
 std::atomic<int> g_managedDeviceWork(0);
-std::atomic<long long> g_violations(0);
+
+//! protocol violations seen, by kind (detail::EmulatorViolation bits)
+std::atomic<long long> g_violations[8];
+
+void violation(int kind)
+{
+    for (int i = 0; i < 8; i++)
+        if (kind & (1 << i))
+            g_violations[i]++;
+}
+
+//! end_cpu_access calls that fail from now on, whatever their access (emulatorFailNextCpuEnds)
+std::atomic<int> g_failCpuEnds(0);
+//! the next end_device_access fails (emulatorFailNextDeviceAccessEnd)
+std::atomic<bool> g_failDeviceEnd(false);
 
 //! devices whose kernels report NOT_IMPLEMENTED (emulatorDisableOps): a device without the operation
 std::atomic<bool> g_opsDisabled[EMU_DEVICES];
@@ -138,7 +152,7 @@ struct EmuAlloc
     uchar* cpuView;     //!< what the CPU sees: a stand-in for CPU caches on the noncoherent device
     bool owned;         //!< false for imported user memory
     bool scrambled;     //!< bytes are stored XOR SCRAMBLE
-    bool cpuOpen;       //!< between begin_cpu_access and end_cpu_access
+    std::vector<uint32_t> cpuLevels;    //!< access of each open begin_cpu_access, outermost first
     FakeDmaBuf* dmabuf; //!< an imported simulated dma-buf, NULL otherwise
     bool protectedMem;  //!< protected content (allocated with CV_ACCEL_MEMF_PROTECTED, or on emulator:3)
 };
@@ -229,33 +243,61 @@ struct EmuFence
     writer, a simulated camera or OpenCV, leaves an implicit fence that the next user waits for. */
 struct FakeDmaBuf
 {
-    FakeDmaBuf() : size(0), mem(0), fence(0), attached(0) {}
+    FakeDmaBuf() : size(0), mem(0), ro(0), fence(0), attached(0) {}
     size_t size;
     uchar* mem;         //!< mapping of the whole buffer, shared with the "other drivers"
+    uchar* ro;          //!< a second mapping of it, PROT_READ: what read-only imports give the CPU
+    // the reservation of the buffer, as dma_resv: one exclusive write fence and shared read fences
     std::mutex m;
-    EmuFence* fence;    //!< last write, one reference held here; NULL if none
+    EmuFence* fence;                //!< last write, one reference held here; NULL if none
+    std::vector<EmuFence*> reads;   //!< reads since that write, one reference each
     int attached;       //!< fences attached by end_device_access
 
-    //! the current fence with a reference for the caller, or NULL
-    EmuFence* current()
+    /** The fences a user of the buffer waits for, with a reference each: a reader waits for the
+        last write, a writer also for every read since. */
+    std::vector<EmuFence*> waitList(bool write)
     {
         std::lock_guard<std::mutex> lk(m);
+        std::vector<EmuFence*> r;
         if (fence)
-            fence->refs++;
-        return fence;
+            r.push_back(fence);
+        if (write)
+            r.insert(r.end(), reads.begin(), reads.end());
+        for (size_t i = 0; i < r.size(); i++)
+            r[i]->refs++;
+        return r;
     }
-    void replace(EmuFence* f)   //!< adopts one reference of @p f
+    //! a new write: it waited for every earlier use, so it replaces them all (adopts one reference)
+    void attachWrite(EmuFence* f)
     {
-        EmuFence* old = 0;
+        std::vector<EmuFence*> old;
         {
             std::lock_guard<std::mutex> lk(m);
-            old = fence;
+            old.swap(reads);
+            if (fence)
+                old.push_back(fence);
             fence = f;
         }
-        if (old)
-            old->release();
+        for (size_t i = 0; i < old.size(); i++)
+            old[i]->release();
+    }
+    //! one more reader (adopts one reference)
+    void attachRead(EmuFence* f)
+    {
+        std::lock_guard<std::mutex> lk(m);
+        reads.push_back(f);
     }
 };
+
+//! waits for every fence of @p list and releases them
+void waitAndRelease(const std::vector<EmuFence*>& list)
+{
+    for (size_t i = 0; i < list.size(); i++)
+    {
+        list[i]->wait(CV_ACCEL_INFINITE);
+        list[i]->release();
+    }
+}
 
 std::mutex& dmaBufsMutex()
 {
@@ -356,7 +398,7 @@ struct EmuStream
             {
                 g_managedDeviceWork++;
                 if (g_managedCpuAccess.load() > 0)
-                    g_violations++;     // the CPU is inside managed memory while the device runs
+                    violation(detail::EMU_VIOLATION_MANAGED);   // the CPU is inside managed memory while the device runs
             }
             try
             {
@@ -566,7 +608,6 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
         a->owned = true;
         a->mem = (uchar*)fastMalloc(a->size ? a->size : 1);
         a->cpuView = a->mem;
-        a->cpuOpen = false;
         cvAccelMemoryDesc& d = out->desc;
         d = desc;
         a->kind = d.kind;
@@ -604,8 +645,14 @@ cvAccelStatus CV_API_CALL emu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEX
     if (!alloc || !alloc->backend_data)
         return CV_ACCEL_OK;
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
-    if (a->cpuView != a->mem)
-        fastFree(a->cpuView);
+    if (!a->cpuLevels.empty())
+    {
+        violation(detail::EMU_VIOLATION_CPU_ACCESS);    // a CPU access that never ended
+        if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED)
+            g_managedCpuAccess--;
+    }
+    if (a->cpuView != a->mem && !a->dmabuf)
+        fastFree(a->cpuView);   // the stand-in for CPU caches of non-coherent memory
     if (a->owned)
     {
         {
@@ -639,7 +686,10 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             a->device = device;
             a->kind = CV_ACCEL_MEM_SHARED;
             a->size = (size_t)ext->size;
-            a->mem = a->cpuView = buf->mem + ext->offset;
+            // a read-only import maps the buffer read-only for the CPU, like a dma-buf mmap'ed PROT_READ
+            const bool readOnly = (ext->flags & CV_ACCEL_MEMF_READ_ONLY) != 0;
+            a->mem = buf->mem + ext->offset;
+            a->cpuView = (readOnly ? buf->ro : buf->mem) + ext->offset;
             a->dmabuf = buf;
             // a tiled or compressed layout has no linear CPU view
             const uint64_t modifier = ext->struct_size >= offsetof(cvAccelExternalMemory, layout_modifier) + sizeof(uint64_t)
@@ -650,7 +700,8 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             out->desc.handle_kind = CV_ACCEL_HANDLE_DEVICE_POINTER;
             out->desc.layout_modifier = modifier;
             // dma-bufs are coherent here (an I/O-coherent NPU on emulator:2)
-            out->desc.flags = CV_ACCEL_MEMF_IMPORTED | CV_ACCEL_MEMF_EXTERNAL_SYNC | (ext->flags & CV_ACCEL_MEMF_READ_ONLY);
+            out->desc.flags = CV_ACCEL_MEMF_IMPORTED | CV_ACCEL_MEMF_EXTERNAL_SYNC |
+                              (readOnly ? CV_ACCEL_MEMF_READ_ONLY | CV_ACCEL_MEMF_CPU_MAPPING_READ_ONLY : 0);
             out->handle = (uint64_t)(uintptr_t)a->mem;
             out->size = ext->size;
             out->backend_data = a;
@@ -677,7 +728,6 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             a->mem = a->cpuView = (uchar*)(intptr_t)ext->handle + ext->offset;
             a->owned = false;
             a->scrambled = true;
-            a->cpuOpen = false;
             // The whole range must lie in the allocation it starts in, and the backend, not the
             // caller, attests protection: memory of a protected allocation (a secure decoder's
             // frame, say) is protected, whatever the caller asked for.
@@ -724,7 +774,6 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
         a->mem = a->cpuView = (uchar*)(intptr_t)ext->handle + ext->offset;
         a->owned = false;
         a->scrambled = false;
-        a->cpuOpen = false;
         out->desc.device_index = (uint32_t)device;
         out->desc.kind = CV_ACCEL_MEM_SHARED;
         out->desc.host_access = CV_ACCEL_HOST_ACCESS_COHERENT;
@@ -756,62 +805,83 @@ cvAccelStatus CV_API_CALL emu_can_access(int device, const cvAccelMemoryDesc* de
 }
 
 cvAccelStatus CV_API_CALL emu_begin_cpu_access(const cvAccelAllocation* alloc, uint64_t offset, uint64_t size,
-                                               uint32_t /*access*/, void** host_ptr) CV_ACCEL_NOEXCEPT
+                                               uint32_t access, void** host_ptr) CV_ACCEL_NOEXCEPT
 {
-    if (!alloc || !alloc->backend_data || !host_ptr || offset + size > alloc->size)
+    if (!alloc || !alloc->backend_data || !host_ptr || offset > alloc->size || size > alloc->size - offset)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
     if (deviceLost(a->device))
         return lostError();
+    uchar* p = 0;
     if (a->dmabuf)
     {
-        // like DMA_BUF_IOCTL_SYNC: the CPU waits for the other drivers' fence first
-        if (EmuFence* f = a->dmabuf->current())
+        // like DMA_BUF_IOCTL_SYNC: the CPU waits for the other drivers' fences first, a write for every use
+        try
         {
-            f->wait(CV_ACCEL_INFINITE);
-            f->release();
+            waitAndRelease(a->dmabuf->waitList((access & (uint32_t)ACCESS_WRITE) != 0));
         }
+        catch (const std::exception& e)
+        {
+            return fail(CV_ACCEL_OUT_OF_MEMORY, e.what());
+        }
+        p = a->cpuView;     // the buffer's CPU mapping (read-only for read-only imports)
     }
-    if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED)
+    else if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED)
+        p = a->mem;
+    else if (a->kind == CV_ACCEL_MEM_HOST_PINNED || !a->owned || a->device == EMU_COHERENT)
+        p = a->mem;
+    else if (a->device == EMU_NONCOHERENT)
     {
-        if (!a->cpuOpen)
-        {
-            a->cpuOpen = true;
-            g_managedCpuAccess++;
-        }
+        // a nested level reads through the same "cache lines": only the outermost one invalidates
+        if (a->cpuLevels.empty())
+            memcpy(a->cpuView + offset, a->mem + offset, (size_t)size);     // invalidate: the CPU sees what the device wrote
+        p = a->cpuView;
+    }
+    else
+        return fail(CV_ACCEL_NOT_IMPLEMENTED, "this memory has no CPU mapping");
+    if (!a->cpuLevels.empty() && access != (uint32_t)ACCESS_READ && access != (uint32_t)ACCESS_RW)
+        violation(detail::EMU_VIOLATION_CPU_ACCESS);    // core never asks for a write alone
+    try
+    {
+        a->cpuLevels.push_back(access);
+    }
+    catch (...)
+    {
+        return fail(CV_ACCEL_OUT_OF_MEMORY, "out of memory");
+    }
+    if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED && a->cpuLevels.size() == 1)
+    {
+        g_managedCpuAccess++;
         if (g_managedDeviceWork.load() > 0)
-            g_violations++;     // real hardware would fault here
-        *host_ptr = a->mem;
-        return CV_ACCEL_OK;
+            violation(detail::EMU_VIOLATION_MANAGED);   // real hardware would fault here
     }
-    if (a->kind == CV_ACCEL_MEM_HOST_PINNED || !a->owned || a->device == EMU_COHERENT)
-    {
-        *host_ptr = a->mem;
-        return CV_ACCEL_OK;
-    }
-    if (a->device == EMU_NONCOHERENT)
-    {
-        // invalidate: drop stale CPU lines, the CPU now sees what the device wrote
-        memcpy(a->cpuView + offset, a->mem + offset, (size_t)size);
-        *host_ptr = a->cpuView;
-        return CV_ACCEL_OK;
-    }
-    return fail(CV_ACCEL_NOT_IMPLEMENTED, "this memory has no CPU mapping");
+    *host_ptr = p;
+    return CV_ACCEL_OK;
 }
 
 cvAccelStatus CV_API_CALL emu_end_cpu_access(const cvAccelAllocation* alloc, uint64_t offset, uint64_t size,
                                              uint32_t access) CV_ACCEL_NOEXCEPT
 {
-    if (!alloc || !alloc->backend_data || offset + size > alloc->size)
+    if (!alloc || !alloc->backend_data || offset > alloc->size || size > alloc->size - offset)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
+    // injected failures leave the level open, as a failed system call would
     if ((access & (uint32_t)ACCESS_WRITE) && g_failNextFlush.exchange(false))
         return fail(CV_ACCEL_INTERNAL_ERROR, "emulated cache flush failure");   // nothing was written back
-    if (a->device == EMU_MANAGED && a->cpuOpen)
+    for (int n = g_failCpuEnds.load(); n > 0; n = g_failCpuEnds.load())
+        if (g_failCpuEnds.compare_exchange_weak(n, n - 1))
+            return fail(CV_ACCEL_INTERNAL_ERROR, "emulated end_cpu_access failure");
+    // levels end innermost first, each with the access it began with (backend rule 4)
+    if (a->cpuLevels.empty())
     {
-        a->cpuOpen = false;
-        g_managedCpuAccess--;
+        violation(detail::EMU_VIOLATION_CPU_ACCESS);
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "end_cpu_access without begin_cpu_access");
     }
+    if (a->cpuLevels.back() != access)
+        violation(detail::EMU_VIOLATION_CPU_ACCESS);
+    a->cpuLevels.pop_back();
+    if (a->device == EMU_MANAGED && a->kind == CV_ACCEL_MEM_MANAGED && a->cpuLevels.empty())
+        g_managedCpuAccess--;
     if (a->device == EMU_NONCOHERENT && a->owned && a->kind != CV_ACCEL_MEM_HOST_PINNED && (access & (uint32_t)ACCESS_WRITE))
     {
         // clean: write CPU lines back so that the device sees them
@@ -1027,25 +1097,27 @@ cvAccelStatus CV_API_CALL emu_device_synchronize(int device) CV_ACCEL_NOEXCEPT
 }
 
 cvAccelStatus CV_API_CALL emu_begin_device_access(const cvAccelAllocation* alloc, cvAccelStream stream,
-                                                  uint32_t /*access*/) CV_ACCEL_NOEXCEPT
+                                                  uint32_t access) CV_ACCEL_NOEXCEPT
 {
     if (!alloc || !alloc->backend_data || !stream)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     FakeDmaBuf* buf = ((EmuAlloc*)alloc->backend_data)->dmabuf;
     if (!buf)
         return CV_ACCEL_OK;
-    EmuFence* f = buf->current();
-    if (!f)
-        return CV_ACCEL_OK;
+    std::vector<EmuFence*> list;
     try
     {
-        // later work on the stream waits for the last writer (a single fence models the dma-buf's reservation)
-        ((EmuStream*)stream)->push([f]() { f->wait(CV_ACCEL_INFINITE); f->release(); });
+        // later work on the stream waits for the last writer, and a write also for every reader
+        list = buf->waitList((access & (uint32_t)ACCESS_WRITE) != 0);
+        if (list.empty())
+            return CV_ACCEL_OK;
+        ((EmuStream*)stream)->push([list]() { waitAndRelease(list); });
         return CV_ACCEL_OK;
     }
     catch (const std::exception& e)
     {
-        f->release();
+        for (size_t i = 0; i < list.size(); i++)
+            list[i]->release();
         return fail(CV_ACCEL_INTERNAL_ERROR, e.what());
     }
 }
@@ -1058,15 +1130,24 @@ cvAccelStatus CV_API_CALL emu_end_device_access(const cvAccelAllocation* alloc, 
     FakeDmaBuf* buf = ((EmuAlloc*)alloc->backend_data)->dmabuf;
     if (!buf)
         return CV_ACCEL_OK;
+    if (g_failDeviceEnd.exchange(false))
+        return fail(CV_ACCEL_INTERNAL_ERROR, "emulated end_device_access failure");     // nothing attached
+    try
     {
         std::lock_guard<std::mutex> lk(buf->m);
         buf->attached++;
+        if (!(access & (uint32_t)ACCESS_WRITE))
+            buf->reads.reserve(buf->reads.size() + 1);
     }
-    if (access & (uint32_t)ACCESS_WRITE)
+    catch (const std::exception& e)
     {
-        ((EmuFence*)fence)->refs++;
-        buf->replace((EmuFence*)fence);     // the next driver waits for this write
+        return fail(CV_ACCEL_OUT_OF_MEMORY, e.what());
     }
+    ((EmuFence*)fence)->refs++;
+    if (access & (uint32_t)ACCESS_WRITE)
+        buf->attachWrite((EmuFence*)fence);     // the next user waits for this write
+    else
+        buf->attachRead((EmuFence*)fence);      // a writer waits for this read (capacity is reserved)
     return CV_ACCEL_OK;
 }
 
@@ -1206,11 +1287,30 @@ const OpenCV_Core_Accel_API g_emulatorApi = {
     }
 };
 
+//! the same backend as a plugin built against API version 1 would export it: no begin/end_device_access
+OpenCV_Core_Accel_API makeEmulatorApiV1()
+{
+    OpenCV_Core_Accel_API api = g_emulatorApi;
+    api.api_header.valid_size = offsetof(OpenCV_Core_Accel_API_v0, v0) +
+                                offsetof(OpenCV_Core_Accel_API_v0_0_api_entries, begin_device_access);
+    api.api_header.api_version = 1;
+    api.v0.backend_name = "emulator-v1";
+    api.v0.begin_device_access = NULL;
+    api.v0.end_device_access = NULL;
+    return api;
+}
+
 } // namespace
 
 const OpenCV_Core_Accel_API* emulatorBackendApi()
 {
     return &g_emulatorApi;
+}
+
+const OpenCV_Core_Accel_API* emulatorBackendApiV1()
+{
+    static const OpenCV_Core_Accel_API api = makeEmulatorApiV1();
+    return &api;
 }
 
 }} // namespace accel::impl
@@ -1224,9 +1324,13 @@ int64 emulatorLiveAllocations(int device)
     return (int64)impl::g_liveByDevice[device].load();
 }
 
-int64 emulatorViolations()
+int64 emulatorViolations(int kinds)
 {
-    return (int64)impl::g_violations.load();
+    int64 n = 0;
+    for (int i = 0; i < 8; i++)
+        if (kinds & (1 << i))
+            n += (int64)impl::g_violations[i].load();
+    return n;
 }
 
 int64 emulatorAllocateExternal(int device, size_t size, int value, bool protectedContent)
@@ -1249,11 +1353,14 @@ int64 emulatorCreateDmaBuf(size_t size)
     CV_Assert(ftruncate(fd, (off_t)size) == 0);
     void* p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     CV_Assert(p != MAP_FAILED);
+    void* ro = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+    CV_Assert(ro != MAP_FAILED);
     std::pair<uint64_t, uint64_t> id;
     CV_Assert(impl::fileIdentity(fd, id));
     impl::FakeDmaBuf* buf = new impl::FakeDmaBuf();
     buf->size = size;
     buf->mem = (uchar*)p;
+    buf->ro = (uchar*)ro;
     std::lock_guard<std::mutex> lk(impl::dmaBufsMutex());
     impl::dmaBufs()[id] = buf;
     return fd;  // like a buffer from a camera: never freed (test hooks only)
@@ -1267,15 +1374,28 @@ void emulatorDmaBufProduce(int64 fd, int value, int delayUs)
 {
     impl::FakeDmaBuf* buf = impl::findDmaBuf(fd);
     CV_Assert(buf);
+    // another driver writes the buffer: it waits for every earlier use, OpenCV's reads included
+    std::vector<impl::EmuFence*> before = buf->waitList(true);
     impl::EmuFence* f = new impl::EmuFence(-1);
     f->refs++;                          // one for the producer
-    buf->replace(f);                    // the other one: from now on users wait for this write
-    std::thread([buf, f, value, delayUs]() {
+    buf->attachWrite(f);                // the other one: from now on users wait for this write
+    std::thread([buf, f, value, delayUs, before]() {
         std::this_thread::sleep_for(std::chrono::microseconds(delayUs));
+        impl::waitAndRelease(before);
         memset(buf->mem, value, buf->size);
         f->signal();
         f->release();
     }).detach();
+}
+
+void emulatorFailNextCpuEnds(int count)
+{
+    impl::g_failCpuEnds.store(count);
+}
+
+void emulatorFailNextDeviceAccessEnd()
+{
+    impl::g_failDeviceEnd.store(true);
 }
 
 int emulatorDmaBufAttachedFences(int64 fd)
