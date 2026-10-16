@@ -2678,6 +2678,24 @@ void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_on
     addLayer(layerParams, node_proto);
 }
 
+// Both folded Concat paths reshape every constant to the largest input rank.
+// The selected axis must also exist in each source before its dimension is read.
+static void reshapeFoldedConcatInputs(std::vector<Mat>& inputs, const MatShape& inputShape, int axis)
+{
+    const int inputDims = static_cast<int>(inputShape.size());
+    CV_Check(axis, axis >= -inputDims && axis < inputDims, "DNN/ONNX: Concat axis is outside input rank");
+    axis = normalize_axis(axis, inputDims);
+    for (size_t i = 0; i < inputs.size(); ++i)
+    {
+        const MatShape sourceShape = shape(inputs[i]);
+        CV_CheckLT(axis, static_cast<int>(sourceShape.size()), "DNN/ONNX: Concat axis exceeds an input rank");
+        MatShape targetShape = inputShape;
+        targetShape[axis] = sourceShape[axis];
+        CV_CheckEQ(total(targetShape), total(sourceShape), "");
+        inputs[i] = inputs[i].reshape(0, targetShape);
+    }
+}
+
 void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool hasVariableInps = false;
@@ -2710,15 +2728,7 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
         }
 
         // Concat-1 has default value for axis is 1: https://github.com/onnx/onnx/blob/master/docs/Changelog.md#Concat-1
-        int axis = layerParams.get<int>("axis", 1);
-        axis = normalize_axis(axis, inputShape.size());
-        for (size_t i = 0; i < inputs.size(); ++i)
-        {
-            MatShape targetShape = inputShape;
-            targetShape[axis] = shape(inputs[i])[axis];
-            CV_CheckEQ(total(targetShape), total(shape(inputs[i])), "");
-            inputs[i] = inputs[i].reshape(0, targetShape);
-        }
+        reshapeFoldedConcatInputs(inputs, inputShape, layerParams.get<int>("axis", 1));
         runLayer(layerParams, inputs, concatenated);
 
         CV_Assert(concatenated.size() == 1);
@@ -3920,14 +3930,7 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
             inputs.push_back(blob);
         }
 
-        int axis = layerParams.get<int>("axis", 1);
-        for (size_t i = 0; i < inputs.size(); ++i)
-        {
-            MatShape targetShape = inputShape;
-            targetShape[axis] = shape(inputs[i])[axis];
-            CV_CheckEQ(total(targetShape), total(shape(inputs[i])), "");
-            inputs[i] = inputs[i].reshape(0, targetShape);
-        }
+        reshapeFoldedConcatInputs(inputs, inputShape, layerParams.get<int>("axis", 1));
         runLayer(layerParams, inputs, concatenated);
         CV_Assert(concatenated.size() == 1);
         addConstant(layerParams.name, concatenated[0]);

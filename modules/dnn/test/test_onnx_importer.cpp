@@ -3466,6 +3466,49 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
     EXPECT_EQ(countNonZero(out != out2), 0);
 }
 
+// OpenCV 5.x imports these nodes through ONNXImporter2, which has a separate
+// Concat implementation. Keep these focused tests on the 4.x folded path.
+#if CV_VERSION_MAJOR < 5
+static std::string concatAxisModel(const char* name)
+{
+    return _tf(std::string("models/concat_axis_") + name);
+}
+
+static void expectConcatImportRejected(const char* name, const char* reason)
+{
+    try
+    {
+        (void)readNetFromONNX(concatAxisModel(name));
+        FAIL() << "Invalid Concat model was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos);
+    }
+}
+
+TEST(Test_ONNX_Importer, QLinearConcatAxisBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("control-mixed-rank.onnx")));
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("control-negative-axis.onnx")));
+    expectConcatImportRejected("invalid-source-rank.onnx", "Concat axis exceeds an input rank");
+    expectConcatImportRejected("invalid-axis-range.onnx", "Concat axis is outside input rank");
+}
+
+TEST(Test_ONNX_Importer, ConcatAxisBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("plain-control-mixed-rank-axis0.onnx")));
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("plain-control-same-rank-axis15.onnx")));
+    expectConcatImportRejected("plain-invalid-mixed-rank-axis15.onnx", "Concat axis exceeds an input rank");
+}
+
+TEST(Test_ONNX_Importer, ConcatPaddingRankBounds)
+{
+    EXPECT_NO_THROW(readNetFromONNX(concatAxisModel("padding-control-same-rank.onnx")));
+    expectConcatImportRejected("padding-crafted-mixed-rank.onnx", "curShape.size() == outputs[0].size()");
+}
+#endif
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
