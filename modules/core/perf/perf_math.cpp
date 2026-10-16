@@ -31,6 +31,8 @@ PERF_TEST_P(FractionalPow, positive,
     TEST_CYCLE() cv::pow(source, exponent, destination);
 
     const double tolerance = CV_MAT_DEPTH(type) == CV_16F ? 2e-3 : 1e-5;
+    if (CV_MAT_DEPTH(type) == CV_16F)
+        destination.convertTo(destination, CV_32F);
     SANITY_CHECK(destination, tolerance, ERROR_RELATIVE);
 }
 
