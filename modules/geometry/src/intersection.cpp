@@ -65,13 +65,15 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     rect1.points(pts1);
     rect2.points(pts2);
 
-    // L2 metric
-    float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
-    samePointEps = std::min(samePointEps, rect1.size.width);
-    samePointEps = std::min(samePointEps, rect1.size.height);
-    samePointEps = std::min(samePointEps, rect2.size.width);
-    samePointEps = std::min(samePointEps, rect2.size.height);
-    samePointEps = std::max(1e-16f, samePointEps);
+    // Use a small absolute tolerance for comparing coordinates. The duplicate-point
+    // threshold below is a squared distance and therefore must remain separate.
+    const float samePointEps = 1e-6f;
+    float samePointEps2 = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
+    samePointEps2 = std::min(samePointEps2, rect1.size.width * rect1.size.width);
+    samePointEps2 = std::min(samePointEps2, rect1.size.height * rect1.size.height);
+    samePointEps2 = std::min(samePointEps2, rect2.size.width * rect2.size.width);
+    samePointEps2 = std::min(samePointEps2, rect2.size.height * rect2.size.height);
+    samePointEps2 = std::max(1e-16f, samePointEps2);
 
     int ret = INTERSECT_FULL;
 
@@ -112,13 +114,13 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         vec2[i].y = pts2[(i+1)%4].y - pts2[i].y;
     }
 
-    //we adapt the epsilon to the smallest dimension of the rects
+    // Adapt the duplicate-point threshold to the smallest dimension of the rects.
     for( int i = 0; i < 4; i++ )
     {
-        samePointEps = std::min(samePointEps, std::sqrt(vec1[i].x*vec1[i].x+vec1[i].y*vec1[i].y));
-        samePointEps = std::min(samePointEps, std::sqrt(vec2[i].x*vec2[i].x+vec2[i].y*vec2[i].y));
+        samePointEps2 = std::min(samePointEps2, vec1[i].x*vec1[i].x + vec1[i].y*vec1[i].y);
+        samePointEps2 = std::min(samePointEps2, vec2[i].x*vec2[i].x + vec2[i].y*vec2[i].y);
     }
-    samePointEps = std::max(1e-16f, samePointEps);
+    samePointEps2 = std::max(1e-16f, samePointEps2);
 
     // Line test - test all line combos for intersection
     for( int i = 0; i < 4; i++ )
@@ -256,7 +258,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             const Point2f pt1 = intersection[j];
             const float d2 = normL2Sqr<float>(pt1 - pt0);
-            if(d2 <= samePointEps)
+            if(d2 <= samePointEps2)
             {
                 if (j < N - 1)
                     intersection[j] =  intersection[N - 1];
@@ -267,7 +269,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             ++j;
         }
     }
-    while (N > 8) // we still have duplicate points after samePointEps threshold (eliminate closest points)
+    while (N > 8) // we still have duplicate points after samePointEps2 threshold (eliminate closest points)
     {
         int minI = 0;
         int minJ = 1;
