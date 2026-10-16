@@ -515,6 +515,35 @@ OCL_TEST_P(CLAHETest, Accuracy)
     }
 }
 
+OCL_TEST_P(CLAHETest, ReflectedBorder)
+{
+    const Size sizes[] = {
+        Size(gridSize.width * 5, gridSize.height * 5 + 1),
+        Size(gridSize.width * 5 + 1, gridSize.height * 5)
+    };
+    for (size_t i = 0; i < 2; ++i)
+    {
+        const Size size = sizes[i];
+        Mat image(size, CV_8UC1);
+        RNG dataRng(0x12345678);
+        dataRng.fill(image, RNG::UNIFORM, 0, 256);
+        const int bottom = (gridSize.height - size.height % gridSize.height) % gridSize.height;
+        const int right = (gridSize.width - size.width % gridSize.width) % gridSize.width;
+        Mat padded;
+        cv::copyMakeBorder(image, padded, 0, bottom, 0, right, BORDER_REFLECT_101);
+
+        UMat storage(size.height + 2, size.width + 3, CV_8UC1);
+        UMat uimage = useRoi ? storage(Rect(3, 2, size.width, size.height)) : UMat();
+        UMat upadded, expected, actual;
+        image.copyTo(uimage);
+        padded.copyTo(upadded);
+        Ptr<CLAHE> clahe = cv::createCLAHE(clipLimit, gridSize);
+        OCL_ON(clahe->apply(upadded, expected));
+        OCL_ON(clahe->apply(uimage, actual));
+        EXPECT_MAT_NEAR(expected(Rect(Point(), size)), actual, 0);
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, EqualizeHist, Combine(
