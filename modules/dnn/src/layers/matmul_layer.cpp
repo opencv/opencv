@@ -264,8 +264,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 auto *broadcast_bias_ptr = broadcast_bias.ptr<float>();
 
                 const auto *bias = bias_mat.ptr<const float>();
-                // Stored unscaled, same as the dynamic-bias path in forward(): beta is applied
-                // exactly once there, either by the gemm's own beta or explicitly if skipped.
+                // Stored unscaled: forward() applies beta once (gemm beta or explicitly), and the
+                // OpenCL/nGraph/CUDA paths add scaledBroadcastBias() instead.
                 if (bias_mat.total() == 1) { // [], [1], [1, ...]
                     float b = *bias;
                     for (size_t i = 0; i < broadcast_bias.total(); i++) {
@@ -577,7 +577,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             }
             if ((inputs.size() + blobs.size() >= 3)) {
                 if (bias_umat.empty()) {
-                    broadcast_bias.copyTo(bias_umat);
+                    scaledBroadcastBias().copyTo(bias_umat);
                 }
             } else {
                 if (bias_umat.empty()) {
@@ -657,8 +657,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             auto input_B_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, input_B_shape, blobs[0].data);
             result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
             if ((nodes.size() + blobs.size()) >= 3) {
-                const auto bias_shape = shape(broadcast_bias);
-                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), broadcast_bias.data);
+                const Mat bias_mat = scaledBroadcastBias();
+                const auto bias_shape = shape(bias_mat);
+                bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, std::vector<size_t>(bias_shape.begin(), bias_shape.end()), bias_mat.data);
                 result = std::make_shared<ov::op::v1::Add>(result, bias);
             }
         }
@@ -699,7 +700,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         if (!blobs.empty()) {
             input_B = blobs.front();
             if (blobs.size() >= 2) {
-                bias = broadcast_bias;
+                bias = scaledBroadcastBias();
             }
         }
 
@@ -769,6 +770,14 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 #endif // HAVE_CANN
 
  private:
+    Mat scaledBroadcastBias() const {
+        if (beta == 1.f)
+            return broadcast_bias;
+        Mat scaled;
+        broadcast_bias.convertTo(scaled, -1, beta);
+        return scaled;
+    }
+
     int real_ndims_C;
 
     std::vector<float> packed_input_B;

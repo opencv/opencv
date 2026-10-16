@@ -3674,6 +3674,50 @@ TEST(Test_MatMul, EmptyKDimAppliesBetaToBias)
     }
 }
 
+// Backends add the constant bias themselves, so each must apply beta for every bias rank.
+typedef DNNTestLayer Test_MatMul_BiasBeta;
+TEST_P(Test_MatMul_BiasBeta, Accuracy)
+{
+    const int M = 4, K = 8, N = 6;
+    const float beta = 2.f;
+    Mat A(M, K, CV_32F), B(K, N, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    Mat biasScalar(1, 1, CV_32F, Scalar(0.75f));
+    Mat biasRow(1, N, CV_32F), biasFull(M, N, CV_32F);
+    randu(biasRow, -1.f, 1.f);
+    randu(biasFull, -1.f, 1.f);
+
+    struct BiasCase { Mat bias, broadcasted; int ndimsC; };
+    const BiasCase cases[] = {
+        { biasScalar, Mat(M, N, CV_32F, Scalar(0.75f)), 2 },
+        { biasRow.reshape(1, std::vector<int>{N}), repeat(biasRow, M, 1), 1 },
+        { biasFull, biasFull, 2 },
+    };
+    for (const BiasCase& c : cases)
+    {
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_bias_beta";
+        lp.set("beta", beta);
+        lp.set("real_ndims_C", c.ndimsC);
+        lp.blobs.push_back(B);
+        lp.blobs.push_back(c.bias);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(A);
+        Mat out = net.forward();
+
+        Mat ref = A * B + beta * c.broadcasted;
+        normAssert(out.reshape(1, M), ref, "", default_l1, default_lInf);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Test_MatMul_BiasBeta, dnnBackendsAndTargets());
+
 // Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
 // M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
 // B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.
