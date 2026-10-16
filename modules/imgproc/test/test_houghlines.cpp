@@ -476,15 +476,19 @@ TEST(Imgproc_HoughLines, invalid_parameters)
     std::vector<Vec2f> lines;
     EXPECT_THROW(cv::HoughLines(img, lines, 0, CV_PI/180, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLines(img, lines, -1, CV_PI/180, 1), cv::Exception);
+    EXPECT_THROW(cv::HoughLines(img, lines, DBL_MAX, CV_PI/180, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLines(img, lines, 1, 0, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLines(img, lines, 1, -CV_PI/180, 1), cv::Exception);
+    EXPECT_THROW(cv::HoughLines(img, lines, 1, DBL_MAX, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLines(img, lines, 1, CV_PI/180, 0), cv::Exception);
 
     std::vector<Vec4i> linesP;
     EXPECT_THROW(cv::HoughLinesP(img, linesP, 0, CV_PI/180, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLinesP(img, linesP, -1, CV_PI/180, 1), cv::Exception);
+    EXPECT_THROW(cv::HoughLinesP(img, linesP, DBL_MAX, CV_PI/180, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLinesP(img, linesP, 1, 0, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLinesP(img, linesP, 1, -CV_PI/180, 1), cv::Exception);
+    EXPECT_THROW(cv::HoughLinesP(img, linesP, 1, DBL_MAX, 1), cv::Exception);
     EXPECT_THROW(cv::HoughLinesP(img, linesP, 1, CV_PI/180, 0), cv::Exception);
 }
 
