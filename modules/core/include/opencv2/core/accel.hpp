@@ -383,8 +383,10 @@ public:
     DeviceAccess(const UMat& m, const Stream& stream, AccessFlag access);
     ~DeviceAccess();
 
-    uint64 handle() const;      //!< native handle (device pointer for CUDA / HIP)
-    size_t offset() const;      //!< byte offset of the first element of the UMat
+    /** native handle: the device address kernels of the stream's device use (for mapped host
+        memory not necessarily its CPU address), or the native object (cl_mem, VkBuffer, ...) */
+    uint64 handle() const;
+    size_t offset() const;      //!< byte offset of the first element of the UMat from handle()
 
     //! @cond IGNORED
     struct Impl;

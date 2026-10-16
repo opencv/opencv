@@ -33,7 +33,9 @@ other memory it uses the identity a backend reports (cvAccelAllocation::backing_
 Compatibility rules:
 - structs with a struct_size field grow at their end only. The side that fills one writes
   at most struct_size bytes of it, and the side that reads one reads only the fields that
-  lie within struct_size (the others count as zero);
+  lie within struct_size (the others count as zero). A struct_size that does not cover the
+  fields of version 0 of the struct is an error (CV_ACCEL_INVALID_ARGUMENT, nothing written);
+  CV_ACCEL_HAS_FIELD tells whether a later field is there;
 - structs without one (cvAccelMemoryDesc, cvAccelAllocation, cvAccelView,
   cvAccelCopyEndpoint) keep their size, since they are embedded or passed in arrays: new
   fields take their reserved space, which the side that creates them sets to zero;
@@ -89,6 +91,10 @@ Rules a backend must follow, because core relies on them for correctness:
    through a copy in pages it maps read-only itself (host copies of such memory are such
    pages), and refuses CPU access when it cannot protect them: a write through a Mat view of
    read-only memory always faults.
+11. Unless the device has CV_ACCEL_CAP_STREAMS_THREAD_SAFE, core never calls the backend with
+   one stream from two threads at once. Unless it has CV_ACCEL_CAP_CROSS_DEVICE_FENCES,
+   stream_wait_fence only gets fences recorded on the stream's own device; core waits for the
+   others on the CPU (peer access to memory does not imply that events cross devices).
 
 @note Preview only (no backward compatibility until ABI version 1).
 */
@@ -111,8 +117,8 @@ extern "C" {
 
 #define CV_ACCEL_ABI_VERSION 0
 /** 1: describe_allocation; 2: begin_device_access / end_device_access; 3: cvAccelAllocation
-    reports the size of the memory it lies in and has reserved space, views carry the image
-    they are a plane of */
+    reports the size of the memory it lies in and its device address, and has reserved space;
+    views carry the image they are a plane of */
 #define CV_ACCEL_API_VERSION 3
 
 //! same as cv::MatShape::MAX_DIMS
@@ -123,6 +129,12 @@ extern "C" {
 
 //! timeout value meaning "wait forever"
 #define CV_ACCEL_INFINITE ((uint64_t)-1)
+
+/** @brief True when the struct at @p ptr (of type @p T, with a struct_size field) is long enough
+    to contain @p field. Whoever reads a struct with a struct_size checks this for every field
+    added after version 0 of the struct. */
+#define CV_ACCEL_HAS_FIELD(T, ptr, field) \
+    ((ptr) != NULL && offsetof(T, field) + sizeof(((T*)0)->field) <= (size_t)(ptr)->struct_size)
 
 /** @brief Flags of stream_create. */
 typedef enum cvAccelStreamFlags
@@ -248,7 +260,11 @@ typedef struct cvAccelAllocation
     uint64_t backing_id;
     uint64_t backing_offset;    //!< where byte 0 of this allocation lies in that memory
     uint64_t backing_size;      //!< size of that memory (cuMemGetAddressRange, ...), 0 when not known
-    uint64_t reserved[5];       //!< zero; room for new fields (the size stays)
+    /** the flat address kernels of the owning device use for byte 0, which for mapped host
+        memory may differ from its CPU address (cudaHostGetDevicePointer); 0 when the memory
+        has no flat device address (an opaque handle). DeviceAccess::handle() returns it. */
+    uint64_t device_address;
+    uint64_t reserved[4];       //!< zero; room for new fields (the size stays)
 } cvAccelAllocation;
 
 /** @brief Colour interpretation of an image (cvAccelImageDesc, cv::accel::ColorInfo). 0 is "unknown". */
@@ -447,10 +463,12 @@ enum
     CV_ACCEL_CAP_EXPORT_DMABUF = 1 << 6,
     CV_ACCEL_CAP_EXTERNAL_FENCE = 1 << 7,   //!< fence_export / stream_wait_external
     CV_ACCEL_CAP_PEER_ACCESS = 1 << 8,      //!< kernels reach memory of another device of this backend (can_access tells which)
-    CV_ACCEL_CAP_STREAMS_THREAD_SAFE = 1 << 9, //!< one stream may be used from several threads at once
+    CV_ACCEL_CAP_STREAMS_THREAD_SAFE = 1 << 9, //!< one stream may be used from several threads at once (rule 11)
     /** may hand out memory that the CPU may touch only while the device is idle
         (CV_ACCEL_HOST_ACCESS_DEVICE_IDLE); core then gates every submission from the start */
-    CV_ACCEL_CAP_DEVICE_IDLE_MEMORY = 1 << 10
+    CV_ACCEL_CAP_DEVICE_IDLE_MEMORY = 1 << 10,
+    //! stream_wait_fence on this device accepts fences recorded on other devices of the backend (rule 11)
+    CV_ACCEL_CAP_CROSS_DEVICE_FENCES = 1 << 11
 };
 
 typedef struct cvAccelDeviceInfo
@@ -474,6 +492,8 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     //! @name Devices
     //! @{
     cvAccelStatus (CV_API_CALL *get_device_count)(int* count) CV_ACCEL_NOEXCEPT;
+    /** Fills @p info, writing at most info->struct_size bytes of it; a struct_size below that of
+        version 0 is CV_ACCEL_INVALID_ARGUMENT, with nothing written. */
     cvAccelStatus (CV_API_CALL *get_device_info)(int device, cvAccelDeviceInfo* info) CV_ACCEL_NOEXCEPT;
     //! @}
 
@@ -532,7 +552,8 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     cvAccelStatus (CV_API_CALL *stream_destroy)(cvAccelStream stream) CV_ACCEL_NOEXCEPT;
     //! new fence (reference count 1) that completes when all work enqueued so far completes
     cvAccelStatus (CV_API_CALL *stream_record_fence)(cvAccelStream stream, cvAccelFence* out) CV_ACCEL_NOEXCEPT;
-    //! device-side wait: later work on @p stream starts after @p fence completes
+    /** device-side wait: later work on @p stream starts after @p fence completes. The fence was
+        recorded on the stream's device, unless the device has CV_ACCEL_CAP_CROSS_DEVICE_FENCES. */
     cvAccelStatus (CV_API_CALL *stream_wait_fence)(cvAccelStream stream, cvAccelFence fence) CV_ACCEL_NOEXCEPT;
     /** CPU wait; timeout 0 polls (CV_ACCEL_TIMEOUT while pending). Any status other than OK
         and TIMEOUT means the work behind the fence failed and is no longer running: core then

@@ -100,7 +100,7 @@ static std::atomic<uint64>& streamUids()
 }
 
 StreamHolder::StreamHolder(Backend* b, int device_, cvAccelStream handle_)
-    : backend(b), device(device_), handle(handle_), uid(++streamUids())
+    : backend(b), device(device_), handle(handle_), uid(++streamUids()), caps(b->deviceInfo(device_).caps)
 {}
 
 StreamHolder::~StreamHolder()
@@ -299,7 +299,14 @@ FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
 {
     Backend* b = s->backend;
     cvAccelFence f = 0;
-    if (b->fn().stream_record_fence(s->handle, &f) == CV_ACCEL_OK && f)
+    cvAccelStatus recorded = CV_ACCEL_INTERNAL_ERROR;
+    try
+    {
+        StreamCall one(s);
+        recorded = b->fn().stream_record_fence(s->handle, &f);
+    }
+    catch (...) {}
+    if (recorded == CV_ACCEL_OK && f)
         return FenceRef(b, f, s->uid, s->device);
     const cvAccelStatus st = b->synchronize(s->device);
     if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
@@ -340,7 +347,12 @@ std::string currentExceptionMessage()
 FenceRef recordFence(const StreamPtr& s)
 {
     cvAccelFence f = 0;
-    s->backend->check(s->backend->fn().stream_record_fence(s->handle, &f), "stream_record_fence", s->device);
+    cvAccelStatus st;
+    {
+        StreamCall one(s);
+        st = s->backend->fn().stream_record_fence(s->handle, &f);
+    }
+    s->backend->check(st, "stream_record_fence", s->device);
     return FenceRef(s->backend, f, s->uid, s->device);
 }
 
@@ -353,22 +365,33 @@ void streamWait(const StreamPtr& s, const FenceRef& f)
     }
     if (f.empty() || f.streamUid() == s->uid)
         return;     // in-order stream: earlier work is already ordered
-    if (f.backend() == s->backend)
+    // a device-side wait where the stream's device takes the fence: its own, or any device of the
+    // backend with CV_ACCEL_CAP_CROSS_DEVICE_FENCES (peer access does not imply it, rule 11)
+    if (f.backend() == s->backend && (f.device() == s->device || (s->caps & CV_ACCEL_CAP_CROSS_DEVICE_FENCES)))
     {
-        s->backend->check(s->backend->fn().stream_wait_fence(s->handle, f.get()), "stream_wait_fence", s->device);
+        cvAccelStatus st;
+        {
+            StreamCall one(s);
+            st = s->backend->fn().stream_wait_fence(s->handle, f.get());
+        }
+        s->backend->check(st, "stream_wait_fence", s->device);
         return;
     }
     if (f.isComplete())
         return;
-    // two backends: pass the fence as a sync_file when both can, otherwise wait on the CPU
+    // pass the fence as a sync_file when both sides can, otherwise wait on the CPU
     Backend* fb = f.backend();
     Backend* sb = s->backend;
     if (fb->fn().fence_export && sb->fn().stream_wait_external)
     {
         int64_t h = -1;
-        if (fb->fn().fence_export(f.get(), CV_ACCEL_EXTFENCE_SYNC_FD, &h) == CV_ACCEL_OK &&
-            sb->fn().stream_wait_external(s->handle, CV_ACCEL_EXTFENCE_SYNC_FD, h) == CV_ACCEL_OK)
-            return;
+        if (fb->fn().fence_export(f.get(), CV_ACCEL_EXTFENCE_SYNC_FD, &h) == CV_ACCEL_OK)
+        {
+            StreamCall one(s);
+            // takes ownership of h whatever it returns
+            if (sb->fn().stream_wait_external(s->handle, CV_ACCEL_EXTFENCE_SYNC_FD, h) == CV_ACCEL_OK)
+                return;
+        }
     }
     f.wait();
 }
@@ -844,11 +867,101 @@ MatAllocator* scopeAllocator()
 void noteBufferCreated() { activity()++; }
 void noteBufferDestroyed() { activity()--; }
 
+//////////////////////////////////// device arguments of the current calls ////////////////////////////////////
+
+namespace {
+
+struct DeviceArgument
+{
+    const void* array;
+    int backendId;
+    int device;
+};
+
+struct ArgumentFrame
+{
+    std::vector<DeviceArgument> args;   //!< in the order they were made; they go in reverse order
+};
+
+TLSData<ArgumentFrame>& argumentFrames()
+{
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<ArgumentFrame>, new TLSData<ArgumentFrame>())
+}
+
+//! device arguments alive on all threads: while zero, nothing is looked up
+std::atomic<int>& liveArguments()
+{
+    static std::atomic<int>* c = new std::atomic<int>(0);
+    return *c;
+}
+
+} // namespace
+
+static MatAllocator* argumentPlacement()
+{
+    if (liveArguments().load(std::memory_order_relaxed) == 0)
+        return NULL;
+    const std::vector<DeviceArgument>& args = argumentFrames().getRef().args;
+    if (args.empty())
+        return NULL;
+    // the arguments of the calls running on this thread agree on a device: new data goes there;
+    // with arguments on several devices there is no single answer, and the default applies
+    for (size_t i = 1; i < args.size(); i++)
+        if (args[i].backendId != args[0].backendId || args[i].device != args[0].device)
+            return NULL;
+    Backend* b = Registry::getInstance().get(args[0].backendId);
+    if (!b || b->isLost(args[0].device))
+        return NULL;
+    return b->allocator(args[0].device, (int)b->deviceInfo(args[0].device).preferred_kind);
+}
+
+const MatAllocator* placementFor(const UMatData* previous)
+{
+    if (currentScope())
+        return NULL;    // the ExecutionScope decides (UMat::getStdAllocator)
+    if (previous && previous->accelState && isDeviceAllocator(previous->currAllocator))
+        return previous->currAllocator;     // a reallocation keeps the data where it was
+    return argumentPlacement();
+}
+
 }} // namespace accel::impl
 
 //////////////////////////////////// detail ////////////////////////////////////
 
 namespace accel { namespace detail {
+
+void enterDeviceArgument(const void* array, const UMat& m)
+{
+    const impl::BufferState* v = m.u->accelState;
+    try
+    {
+        impl::DeviceArgument a;
+        a.array = array;
+        a.backendId = v->backend()->id();
+        a.device = v->device();
+        impl::argumentFrames().getRef().args.push_back(a);
+        impl::liveArguments()++;
+    }
+    catch (...) {}  // no placement hint: new data goes where it would without one
+}
+
+void leaveDeviceArgument(const void* array) CV_NOEXCEPT
+{
+    try
+    {
+        std::vector<impl::DeviceArgument>& args = impl::argumentFrames().getRef().args;
+        for (size_t i = args.size(); i-- > 0; )
+        {
+            if (args[i].array == array)
+            {
+                args.erase(args.begin() + i);
+                impl::liveArguments()--;
+                return;
+            }
+        }
+    }
+    catch (...) {}
+}
 
 bool isActive()
 {
@@ -1407,7 +1520,7 @@ ImagePlaneInfo describePlane(const UMat& m)
 
 struct DeviceAccess::Impl
 {
-    Impl() : gate(0), acq(true) {}
+    Impl() : handle(0), gate(0), acq(true) {}
     ~Impl()
     {
         if (gate)
@@ -1437,6 +1550,7 @@ struct DeviceAccess::Impl
     }
     UMat m;
     StreamPtr s;
+    uint64 handle;                          //!< what the caller's kernels use (see DeviceAccess::handle)
     std::unique_ptr<SubmitWindow> window;   //!< open for the whole access, closed last
     IdleGate* gate;                         //!< set while registered in gate->holders
     std::thread::id holder;
@@ -1461,6 +1575,17 @@ DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag acces
     std::unique_ptr<Impl> impl_(new Impl());
     impl_->m = m;
     impl_->s = stream.impl->s;
+    // the address kernels use: for mapped host memory not necessarily the CPU address
+    const cvAccelAllocation& alloc = v->imp->alloc;
+    if (alloc.desc.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER || alloc.desc.handle_kind == CV_ACCEL_HANDLE_DEVICE_POINTER)
+    {
+        if (!alloc.device_address && alloc.desc.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER)
+            CV_Error_(Error::StsNotImplemented, ("accel(%s): DeviceAccess: the backend does not tell the device address "
+                                                 "of this host memory", v->backend()->name().c_str()));
+        impl_->handle = alloc.device_address ? alloc.device_address : alloc.handle;
+    }
+    else
+        impl_->handle = alloc.handle;   // a native object (cl_mem, VkBuffer, ...): offset() says where in it
     impl_->enterGate();
     int mode = ((access & ACCESS_READ) ? DEV_READ : 0) | ((access & ACCESS_WRITE) ? DEV_WRITE : 0);
     impl_->acq.add(m.u, mode ? mode : DEV_READ);
@@ -1513,7 +1638,7 @@ void reviveDevices()
 
 uint64 DeviceAccess::handle() const
 {
-    return p->m.u->accelState->imp->alloc.handle;
+    return p->handle;
 }
 
 size_t DeviceAccess::offset() const

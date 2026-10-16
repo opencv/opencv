@@ -144,6 +144,13 @@ struct BusyScope
     std::unique_lock<std::mutex>& lk;
 };
 
+//! the backend's copy on @p s, one thread at a time where its streams need that
+cvAccelStatus copyOn(Backend* b, int device, const StreamPtr& s, const cvAccelCopyRegion& r)
+{
+    StreamCall one(s);
+    return b->fn().copy(device, s->handle, &r);
+}
+
 int accessOfMode(int mode)
 {
     return ((mode & DEV_READ) ? ACCESS_READ : 0) | ((mode & DEV_WRITE) ? ACCESS_WRITE : 0);
@@ -175,7 +182,12 @@ void beginExternal(const BufferState* v, const StreamPtr& s, int access)
     if (!b->fn().begin_device_access || !b->fn().end_device_access)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): this memory carries implicit fences of other drivers that the "
                                              "backend cannot handle", b->name().c_str()));
-    b->check(b->fn().begin_device_access(&v->imp->alloc, s->handle, (uint32_t)access), "begin_device_access", v->device());
+    cvAccelStatus st;
+    {
+        StreamCall one(s);
+        st = b->fn().begin_device_access(&v->imp->alloc, s->handle, (uint32_t)access);
+    }
+    b->check(st, "begin_device_access", v->device());
 }
 
 /** Never throws: runs when the work is already queued. When the work's fence cannot be handed
@@ -466,7 +478,7 @@ void downloadWhole(BufferState* v)
     try
     {
         beginExternal(v, s, ACCESS_READ);
-        b->check(b->fn().copy(v->device(), s->handle, &r), "copy (device to host)", v->device());
+        b->check(copyOn(b, v->device(), s, r), "copy (device to host)", v->device());
         f = recordFence(s);
         endExternal(v, f, ACCESS_READ);
         f.wait(false);  // the host copy may be a Mat's memory, and this fence is not kept
@@ -502,7 +514,7 @@ void uploadWhole(BufferState* v, const StreamPtr& s)
     r.dst.offset = v->start;
     if (v->shadowKind == SHADOW_BACKEND)
         r.flags |= CV_ACCEL_COPY_HOST_PINNED;
-    b->check(b->fn().copy(v->device(), s->handle, &r), "copy (host to device)", v->device());
+    b->check(copyOn(b, v->device(), s, r), "copy (host to device)", v->device());
     Counters& c = counters();
     c.bytesH2D += v->size;
     c.transfers++;
@@ -1119,9 +1131,11 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
         u->markDeviceCopyObsolete(false);
         b->generation++;
     }
-    const uint32_t kind = v->imp->alloc.desc.handle_kind;
+    // the address kernels use: for mapped host memory not necessarily the CPU address
+    const cvAccelAllocation& a = v->imp->alloc;
+    const uint32_t kind = a.desc.handle_kind;
     if (kind == CV_ACCEL_HANDLE_DEVICE_POINTER || kind == CV_ACCEL_HANDLE_HOST_POINTER)
-        return (void*)(uintptr_t)(v->imp->alloc.handle + v->start);
+        return (void*)(uintptr_t)((a.device_address ? a.device_address : a.handle) + v->start);
     if (v->start != 0)
         CV_Error(Error::StsNotImplemented, "UMat::handle(): this memory has no flat address and the UMat starts inside "
                                            "it; use cv::accel::DeviceAccess, which gives the offset");
@@ -1705,7 +1719,7 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
         try
         {
             beginExternal(v, s, ACCESS_READ);
-            b_->check(b_->fn().copy(device_, s->handle, &r), "copy (device to host)", device_);
+            b_->check(copyOn(b_, device_, s, r), "copy (device to host)", device_);
             f = recordFence(s);
             endExternal(v, f, ACCESS_READ);
             f.wait(false);  // the destination is user memory: no time limit
@@ -1783,7 +1797,7 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         try
         {
             beginExternal(v, s, ACCESS_WRITE);
-            b_->check(b_->fn().copy(device_, s->handle, &r), "copy (host to device)", device_);
+            b_->check(copyOn(b_, device_, s, r), "copy (host to device)", device_);
             f = recordFence(s);
             endExternal(v, f, ACCESS_WRITE);
             lk.unlock();
@@ -1906,7 +1920,7 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
     r.src.offset = sv->start + srcOffset;
     r.dst.alloc = &dv->imp->alloc;
     r.dst.offset = dv->start + dstOffset;
-    const cvAccelStatus status = b_->fn().copy(device_, s->handle, &r);
+    const cvAccelStatus status = copyOn(b_, device_, s, r);
     if (status == CV_ACCEL_NOT_IMPLEMENTED || status == CV_ACCEL_OUT_OF_MEMORY)
         b_->check(status, "copy (device to device)", device_);     // nothing was queued: the acquisition is abandoned
     FenceRef done;

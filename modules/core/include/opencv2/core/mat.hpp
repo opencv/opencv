@@ -63,7 +63,17 @@ struct cvAccelMemoryDesc;
 namespace cv
 {
 
-namespace accel { namespace impl { struct BufferState; } }
+namespace accel {
+namespace impl { struct BufferState; }
+namespace detail {
+/** A UMat on an accelerator passed to a cv:: call (as _InputArray, _OutputArray or
+_InputOutputArray) for as long as the argument exists: new UMat data the call creates without an
+allocator of its own goes to that device (see UMat::create), so that the call's results stay
+where its data is whether the function has an accelerator hook or not. */
+CV_EXPORTS void enterDeviceArgument(const void* array, const UMat& m);
+CV_EXPORTS void leaveDeviceArgument(const void* array) CV_NOEXCEPT;
+} // namespace detail
+} // namespace accel
 
 //! @addtogroup core_basic
 //! @{
@@ -388,6 +398,9 @@ public:
     bool isGpuMatVector() const;
     bool isGpuMatND() const;
     ~_InputArray();
+    //! copies refer to the same array, but only the original counts as an argument on a device
+    _InputArray(const _InputArray& other);
+    _InputArray& operator = (const _InputArray& other);
 
 protected:
     int flags;
@@ -396,6 +409,11 @@ protected:
 
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
+
+    //! flags: the array is a UMat on an accelerator, registered as an argument of the call
+    enum { DEVICE_ARGUMENT = 1 << 23 };
+    //! registers @p m when its data is on an accelerator (see accel::detail::enterDeviceArgument)
+    void noteDeviceArgument(const UMat& m);
 
 private:
     int dims_(int i=-1) const;

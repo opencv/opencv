@@ -56,12 +56,15 @@ The emulator runs on the CPU but behaves like six devices with different memory 
 "emulator:0" discrete (host access only through copies), "emulator:1" coherent shared
 memory, "emulator:2" shared memory without cache coherence (it keeps a separate CPU view
 that only begin/end_cpu_access synchronize, so a missing cache operation shows up as
-wrong data; dma-bufs it imports are coherent), "emulator:3" protected memory (no CPU
-access), "emulator:4" managed memory that the CPU may only touch while the device is idle,
-and "emulator:5", a discrete device that fails on request (emulatorInjectFailure) and, like
-a backend that predates protected memory, never attests protection of memory it imports.
-Work runs asynchronously on worker threads; OPENCV_ACCEL_EMULATOR_DELAY_US delays every task
-to expose missing waits.
+wrong data; dma-bufs it imports are coherent; its streams are not thread-safe), "emulator:3"
+protected memory (no CPU access), "emulator:4" managed memory that the CPU may only touch
+while the device is idle, "emulator:5", a discrete device that fails on request
+(emulatorInjectFailure) and, like a backend that predates protected memory, never attests
+protection of memory it imports, and "emulator:6", a second discrete GPU with peer access to
+emulator:0; neither of those two waits for fences of other devices on the device. Host
+memory has another device address than its CPU address, as without unified addressing. Work
+runs asynchronously on worker threads; OPENCV_ACCEL_EMULATOR_DELAY_US delays every task to
+expose missing waits.
 @return the backend id */
 CV_EXPORTS int registerEmulatorBackend();
 
@@ -104,6 +107,9 @@ CV_EXPORTS void emulatorInjectFailure(int status, int points = EMU_FAIL_FENCES);
 
 //! number of emulator fences alive right now (no reference released twice, none leaked)
 CV_EXPORTS int64 emulatorLiveFences();
+
+//! the emulator's table of entry points, to call them the way a careless core would (tests of the ABI rules)
+CV_EXPORTS const OpenCV_Core_Accel_API* emulatorBackendTable();
 
 //! tests: an id of the physical memory behind @p m, the same for every UMat that reaches it (0: host memory)
 CV_EXPORTS uint64 backingId(const UMat& m);

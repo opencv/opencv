@@ -112,6 +112,23 @@ bool overlaps(const UMat& a, const UMat& b)
     return rangesOverlap(sa, ea, sb, eb);
 }
 
+/** Bytes the memory of @p m needs moved before the device uses it: in place (@p inPlace), a
+    host copy newer than the device memory is uploaded first; uploaded elsewhere, a stale host
+    copy is downloaded first. */
+uint64_t pendingTransferBytes(const UMat& m, bool inPlace)
+{
+    const BufferState* v = m.u ? m.u->accelState : NULL;
+    if (!v)
+        return 0;
+    const uint32_t c = v->imp->alloc.desc.host_access;
+    if (c != CV_ACCEL_HOST_ACCESS_COPY && c != CV_ACCEL_HOST_ACCESS_UNCACHED)
+        return 0;   // one physical copy: nothing to move
+    std::lock_guard<std::mutex> lk(v->backing->mutex);
+    const bool hostNewer = m.u->deviceCopyObsolete() && !m.u->hostCopyObsolete();
+    const bool hostStale = m.u->hostCopyObsolete() && !m.u->deviceCopyObsolete();
+    return (inPlace ? hostNewer : hostStale) ? v->size : 0;
+}
+
 //! the image the argument is a plane of, for the backend (cvAccelView::image)
 void setImage(cvAccelView& v, const BufferState* bv)
 {
@@ -420,6 +437,8 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
     for (size_t i = 0; i < args.size(); i++)
         if (!args[i].isOutput && args[i].plan != PLAN_ABSENT && (args[i].desc.flags & CV_ACCEL_MEMF_PROTECTED))
             protectedIn = true;
+    // bytes the plan moves: temporaries filled or copied back, and what the arguments' own
+    // memory needs first (a newer host copy uploaded, a stale one downloaded before an upload)
     cost = 0;
     for (size_t i = 0; i < args.size(); i++)
     {
@@ -429,6 +448,8 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
             protectedRefused = true;
         if (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK)
             cost += planBytes(a.shape, a.type) * (a.plan == PLAN_COPY_BACK && !a.fullOverwrite ? 2 : 1);
+        if (a.isUMat && a.onDevice && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_UPLOAD))
+            cost += pendingTransferBytes(a.um, a.plan == PLAN_IN_PLACE);
     }
     if (protectedRefused || !fn)
         return CV_ACCEL_NOT_IMPLEMENTED;
@@ -544,7 +565,10 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         if (protectedRefused)
             CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
                                         "protected memory (pass an empty output to get some)", name));
-        if (!anyOnDevice)
+        // nothing on a device and no scope: the call continues as before (OpenCL, CPU). A device
+        // scope decides even when its device declines: the CPU runs the call, counted as a
+        // fallback, with the outputs on the scope's device and OpenCL kept away from them.
+        if (!anyOnDevice && !scope)
             return NOT_HANDLED;
         Backend* fb = Registry::getInstance().get(candidates[0].first);
         if (!fb || fb->isLost(candidates[0].second))
@@ -718,11 +742,15 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
 
             call.mode = CV_ACCEL_EXECUTE;
             call.stream = stream->handle;
-            status = fn(table, &call, views.data(), userdata);
+            {
+                StreamCall one(stream);
+                status = fn(table, &call, views.data(), userdata);
+            }
             if (status == CV_ACCEL_OUT_OF_MEMORY)
             {
                 // nothing was queued (backend rule 9): free what finished work left behind, retry once
                 collectRetired(true);
+                StreamCall one(stream);
                 status = fn(table, &call, views.data(), userdata);
             }
             if (status == CV_ACCEL_NOT_IMPLEMENTED)

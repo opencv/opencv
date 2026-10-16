@@ -160,20 +160,44 @@ Driver& driver()
     MB of its memory), and a driver-API context would be replaced by a primary one. */
 struct DeviceGuard
 {
-    explicit DeviceGuard(int device) : pushed(false), prev(-1)
+    explicit DeviceGuard(int device) : pushed(false), prev(-1), ok(false)
     {
         Driver& d = driver();
-        CUcontext ctx = d.ok ? d.primary(device) : NULL;
-        CUcontext cur = NULL;
-        if (ctx && d.ctxGet(&cur) == CUDA_SUCCESS)
+        if (d.ok)
         {
-            if (cur != ctx)
-                pushed = d.ctxPush(ctx) == CUDA_SUCCESS;
+            // the device's primary context, or nothing: running in whatever context the caller
+            // has current would put the work on another GPU, or into the caller's own context
+            CUcontext ctx = d.primary(device);
+            CUcontext cur = NULL;
+            if (!ctx || d.ctxGet(&cur) != CUDA_SUCCESS)
+                return;
+            if (cur == ctx)
+            {
+                ok = true;
+                return;
+            }
+            pushed = ok = d.ctxPush(ctx) == CUDA_SUCCESS;
             return;
         }
         // no driver API: the runtime's current device, with the caveat above
-        if (cudaGetDevice(&prev) != cudaSuccess || prev == device || cudaSetDevice(device) != cudaSuccess)
-            prev = -1;
+        int cur = -1;
+        if (cudaGetDevice(&cur) != cudaSuccess)
+        {
+            cudaGetLastError();
+            return;
+        }
+        if (cur == device)
+        {
+            ok = true;
+            return;
+        }
+        if (cudaSetDevice(device) != cudaSuccess)
+        {
+            cudaGetLastError();
+            return;
+        }
+        prev = cur;
+        ok = true;
     }
     ~DeviceGuard()
     {
@@ -187,7 +211,14 @@ struct DeviceGuard
     }
     bool pushed;
     int prev;
+    bool ok;    //!< the device is current: only then may the call go on
 };
+
+//! makes @p device current for the rest of the entry point, or returns an error from it
+#define CV_CUDA_GUARD(device) \
+    DeviceGuard guard(device); \
+    if (!guard.ok) \
+        return fail(CV_ACCEL_INTERNAL_ERROR, "the GPU's context cannot be made current")
 
 struct DeviceProps
 {
@@ -239,6 +270,8 @@ std::vector<DeviceProps>& devices()
                     if (i == j || cudaDeviceCanAccessPeer(&can, i, j) != cudaSuccess || !can)
                         continue;
                     DeviceGuard guard(i);
+                    if (!guard.ok)
+                        continue;   // peer access stays off: copies between the GPUs go through the host
                     const cudaError_t e = cudaDeviceEnablePeerAccess(j, 0);
                     if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled)
                         (*d)[i].peerEnabled |= (uint64_t)1 << j;
@@ -275,6 +308,8 @@ struct CudaFence
 
 cvAccelStatus CV_API_CALL cu_get_device_count(int* count) CV_ACCEL_NOEXCEPT
 {
+    if (!count)
+        return CV_ACCEL_INVALID_ARGUMENT;
     *count = (int)devices().size();
     return CV_ACCEL_OK;
 }
@@ -282,7 +317,10 @@ cvAccelStatus CV_API_CALL cu_get_device_count(int* count) CV_ACCEL_NOEXCEPT
 cvAccelStatus CV_API_CALL cu_get_device_info(int device, cvAccelDeviceInfo* info) CV_ACCEL_NOEXCEPT
 {
     if (!info || device < 0 || device >= (int)devices().size())
-        return CV_ACCEL_INVALID_ARGUMENT;
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad device");
+    // every field is from version 0 of the struct: a shorter one cannot take them
+    if (info->struct_size < sizeof(cvAccelDeviceInfo))
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "cvAccelDeviceInfo::struct_size is too small");
     const DeviceProps& p = devices()[device];
     cvAccelDeviceInfo d;
     memset(&d, 0, sizeof(d));
@@ -290,8 +328,9 @@ cvAccelStatus CV_API_CALL cu_get_device_info(int device, cvAccelDeviceInfo* info
     strncpy(d.name, p.prop.name, sizeof(d.name) - 1);
     d.vendor_id = 0x10de;
     d.total_memory = p.prop.totalGlobalMem;
+    // CUDA streams take calls from any thread, and cudaStreamWaitEvent takes events of other GPUs
     d.caps = CV_ACCEL_CAP_ASYNC | CV_ACCEL_CAP_HOST_PINNED | CV_ACCEL_CAP_MANAGED |
-             CV_ACCEL_CAP_STREAMS_THREAD_SAFE;
+             CV_ACCEL_CAP_STREAMS_THREAD_SAFE | CV_ACCEL_CAP_CROSS_DEVICE_FENCES;
     if (p.peerEnabled)
         d.caps |= CV_ACCEL_CAP_PEER_ACCESS;
     if (p.prop.integrated)
@@ -306,10 +345,9 @@ cvAccelStatus CV_API_CALL cu_get_device_info(int device, cvAccelDeviceInfo* info
         d.host_import_alignment = 0;
     }
     d.preferred_kind = p.prop.integrated ? CV_ACCEL_MEM_SHARED : CV_ACCEL_MEM_DEVICE;
-    // the caller's struct may be older (smaller) than ours: write what it has room for
-    const uint32_t size = info->struct_size;
-    memcpy(info, &d, std::min<size_t>(size, sizeof(d)));
-    info->struct_size = size;
+    // a newer caller's struct may be longer than ours: what lies past ours is left alone
+    d.struct_size = info->struct_size;
+    memcpy(info, &d, sizeof(d));
     return CV_ACCEL_OK;
 }
 
@@ -363,7 +401,7 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     if (flags & CV_ACCEL_MEMF_PROTECTED)
         return CV_ACCEL_NOT_IMPLEMENTED;    // CUDA has no protected memory
     const DeviceProps& p = devices()[device];
-    DeviceGuard guard(device);
+    CV_CUDA_GUARD(device);
     memset(out, 0, sizeof(*out));
     CudaAlloc* a = new (std::nothrow) CudaAlloc();
     if (!a)
@@ -404,6 +442,7 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     out->backend_data = a;
     out->backing_id = out->handle;  // its own base address: a later wrap of it is found (see backing_id)
     out->backing_size = size;
+    out->device_address = (uint64_t)(uintptr_t)a->devPtr;  // mapped host memory: not necessarily its CPU address
     return CV_ACCEL_OK;
 }
 
@@ -412,7 +451,7 @@ cvAccelStatus CV_API_CALL cu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEXC
     CudaAlloc* a = alloc ? (CudaAlloc*)alloc->backend_data : 0;
     if (!a)
         return CV_ACCEL_OK;
-    DeviceGuard guard(a->device);
+    CV_CUDA_GUARD(a->device);
     cudaError_t e = cudaSuccess;
     if (a->registered)
         e = cudaHostUnregister(a->hostPtr);
@@ -432,9 +471,11 @@ cvAccelStatus CV_API_CALL cu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEXC
 cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemory* ext,
                                            cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
 {
-    if (device < 0 || device >= (int)devices().size() || !ext || !out)
-        return CV_ACCEL_INVALID_ARGUMENT;
-    DeviceGuard guard(device);
+    // version 0 of the struct ends with flags; later fields are read where present
+    if (device < 0 || device >= (int)devices().size() || !ext || !out ||
+        ext->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(ext->flags))
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    CV_CUDA_GUARD(device);
     memset(out, 0, sizeof(*out));
     void* ptr = (uchar*)(intptr_t)ext->handle + ext->offset;
     if (ext->type == CV_ACCEL_EXTMEM_HOST_POINTER)
@@ -474,6 +515,7 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         out->desc.host_access = devices()[device].sharedHostAccess;
         out->desc.handle_kind = CV_ACCEL_HANDLE_HOST_POINTER;
         out->handle = (uint64_t)(uintptr_t)ptr;
+        out->device_address = (uint64_t)(uintptr_t)a->devPtr;
         out->backend_data = a;
     }
     else if (ext->type == CV_ACCEL_EXTMEM_DEVICE_POINTER)
@@ -511,6 +553,7 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
         out->backing_id = (uint64_t)base;
         out->backing_offset = offset;
         out->backing_size = range;
+        out->device_address = (uint64_t)(uintptr_t)ptr;
     }
     else
         return CV_ACCEL_NOT_IMPLEMENTED;    // TODO: cudaImportExternalMemory for dma-buf / opaque fds
@@ -589,9 +632,9 @@ cvAccelStatus copyRecursive(uchar* dst, const uint64_t* dststep, const uchar* sr
 
 cvAccelStatus CV_API_CALL cu_copy(int device, cvAccelStream stream, const cvAccelCopyRegion* r) CV_ACCEL_NOEXCEPT
 {
-    if (!stream || !r || r->dims <= 0 || r->dims > CV_ACCEL_MAX_DIMS)
-        return CV_ACCEL_INVALID_ARGUMENT;
-    DeviceGuard guard(device);
+    if (!stream || !r || r->struct_size < sizeof(cvAccelCopyRegion) || r->dims <= 0 || r->dims > CV_ACCEL_MAX_DIMS)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    CV_CUDA_GUARD(device);
     // pageable host memory makes cudaMemcpyAsync stage through a driver buffer and block;
     // core keeps its host copies pinned (CV_ACCEL_COPY_HOST_PINNED) to get one async DMA
     return copyRecursive((uchar*)endpointPtr(r->dst), r->dst.step, (const uchar*)endpointPtr(r->src), r->src.step,
@@ -600,7 +643,9 @@ cvAccelStatus CV_API_CALL cu_copy(int device, cvAccelStream stream, const cvAcce
 
 cvAccelStatus CV_API_CALL cu_stream_create(int device, uint32_t flags, cvAccelStream* out) CV_ACCEL_NOEXCEPT
 {
-    DeviceGuard guard(device);
+    if (device < 0 || device >= (int)devices().size() || !out)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    CV_CUDA_GUARD(device);
     CudaStream* s = new (std::nothrow) CudaStream();
     if (!s)
         return CV_ACCEL_OUT_OF_MEMORY;
@@ -623,7 +668,7 @@ cvAccelStatus CV_API_CALL cu_stream_destroy(cvAccelStream stream) CV_ACCEL_NOEXC
     CudaStream* s = (CudaStream*)stream;
     if (!s)
         return CV_ACCEL_OK;
-    DeviceGuard guard(s->device);
+    CV_CUDA_GUARD(s->device);
     cudaError_t e = cudaStreamDestroy(s->s);   // returns at once; pending work still completes
     delete s;
     return status(e, "cudaStreamDestroy");
@@ -632,7 +677,9 @@ cvAccelStatus CV_API_CALL cu_stream_destroy(cvAccelStream stream) CV_ACCEL_NOEXC
 cvAccelStatus CV_API_CALL cu_stream_record_fence(cvAccelStream stream, cvAccelFence* out) CV_ACCEL_NOEXCEPT
 {
     CudaStream* s = (CudaStream*)stream;
-    DeviceGuard guard(s->device);
+    if (!s || !out)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    CV_CUDA_GUARD(s->device);
     CudaFence* f = new (std::nothrow) CudaFence();
     if (!f)
         return CV_ACCEL_OUT_OF_MEMORY;
@@ -653,7 +700,10 @@ cvAccelStatus CV_API_CALL cu_stream_record_fence(cvAccelStream stream, cvAccelFe
 cvAccelStatus CV_API_CALL cu_stream_wait_fence(cvAccelStream stream, cvAccelFence fence) CV_ACCEL_NOEXCEPT
 {
     CudaStream* s = (CudaStream*)stream;
-    DeviceGuard guard(s->device);
+    if (!s || !fence)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    CV_CUDA_GUARD(s->device);
+    // events of other GPUs are fine here (CV_ACCEL_CAP_CROSS_DEVICE_FENCES)
     return status(cudaStreamWaitEvent(s->s, ((CudaFence*)fence)->e, 0), "cudaStreamWaitEvent");
 }
 
@@ -690,15 +740,20 @@ cvAccelStatus CV_API_CALL cu_fence_release(cvAccelFence fence) CV_ACCEL_NOEXCEPT
     if (f && --f->refs == 0)
     {
         DeviceGuard guard(f->device);
-        cudaEventDestroy(f->e);
+        if (guard.ok)
+            cudaEventDestroy(f->e);     // without its context the event is leaked rather than destroyed elsewhere
         delete f;
+        if (!guard.ok)
+            return fail(CV_ACCEL_INTERNAL_ERROR, "the GPU's context cannot be made current");
     }
     return CV_ACCEL_OK;
 }
 
 cvAccelStatus CV_API_CALL cu_device_synchronize(int device) CV_ACCEL_NOEXCEPT
 {
-    DeviceGuard guard(device);
+    if (device < 0 || device >= (int)devices().size())
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad device");
+    CV_CUDA_GUARD(device);
     return status(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
 }
 
@@ -749,7 +804,9 @@ const OpenCV_Core_Accel_API g_cudaApi = {
         cu_device_synchronize,
         cu_get_op_table,
         cu_get_last_error,
-        cu_describe_allocation
+        cu_describe_allocation,
+        NULL,               // begin_device_access: no dma-buf imports yet (refused by core without these)
+        NULL                // end_device_access
     }
 };
 

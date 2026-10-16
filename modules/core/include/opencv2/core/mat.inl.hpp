@@ -168,7 +168,7 @@ inline _InputArray::_InputArray() { init(0 + NONE, 0); }
 inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(+MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_READ, &vec); }
-inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); }
+inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); noteDeviceArgument(m); }
 inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
@@ -250,7 +250,37 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
     return v;
 }
 
-inline _InputArray::~_InputArray() {}
+inline void _InputArray::noteDeviceArgument(const UMat& m)
+{
+    if (m.u && m.u->accelState)
+    {
+        accel::detail::enterDeviceArgument(this, m);
+        flags |= DEVICE_ARGUMENT;
+    }
+}
+
+inline _InputArray::~_InputArray()
+{
+    if (flags & DEVICE_ARGUMENT)
+        accel::detail::leaveDeviceArgument(this);
+}
+
+inline _InputArray::_InputArray(const _InputArray& other)
+    : flags(other.flags & ~DEVICE_ARGUMENT), obj(other.obj), sz(other.sz)
+{}
+
+inline _InputArray& _InputArray::operator = (const _InputArray& other)
+{
+    if (this != &other)
+    {
+        if (flags & DEVICE_ARGUMENT)
+            accel::detail::leaveDeviceArgument(this);
+        flags = other.flags & ~DEVICE_ARGUMENT;
+        obj = other.obj;
+        sz = other.sz;
+    }
+    return *this;
+}
 
 #if defined(__GNUC__) || defined(__clang__)
 #  define CV_IS_COMPILE_TIME_CONSTANT(x) __builtin_constant_p(x)
@@ -359,7 +389,7 @@ inline _OutputArray::_OutputArray() { init(+NONE + ACCESS_WRITE, 0); }
 inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS_WRITE, _obj); }
 inline _OutputArray::_OutputArray(Mat& m) { init(+MAT+ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
-inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); noteDeviceArgument(m); }
 inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
@@ -451,7 +481,7 @@ inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 
 inline _OutputArray::_OutputArray(const UMat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_WRITE, &m); }
+{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_WRITE, &m); noteDeviceArgument(m); }
 
 inline _OutputArray::_OutputArray(const std::vector<UMat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
@@ -546,7 +576,7 @@ inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
 inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags+ACCESS_RW, _obj); }
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(+MAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_RW, &vec); }
-inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); }
+inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); noteDeviceArgument(m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
@@ -638,7 +668,7 @@ inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
 
 inline _InputOutputArray::_InputOutputArray(const UMat& m)
-{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); }
+{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); noteDeviceArgument(m); }
 
 inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); }

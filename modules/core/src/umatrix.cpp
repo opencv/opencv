@@ -643,6 +643,9 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         _sizes = _sizes_backup;
     }
 
+    // without an allocator of its own, data on an accelerator stays there when it is reallocated,
+    // and new data follows the device arguments of the calls running on this thread
+    const MatAllocator* placed = allocator ? NULL : accel::impl::placementFor(u);
     release();
     usageFlags = _usageFlags;
     if( d == 0 )
@@ -656,7 +659,7 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if (!a)
         {
-            a = a0;
+            a = placed ? const_cast<MatAllocator*>(placed) : a0;
             a0 = Mat::getDefaultAllocator();
         }
         try

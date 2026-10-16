@@ -54,11 +54,11 @@ Checked against 5.x at e13b74e9a7 (15 October 2026) with PR #30259 applied.
 3. **Correct first, then zero-copy.** The protocol decides when to wait, flush, invalidate
    or copy. When memory is shared, the copy steps disappear and the rest stays.
 4. **Where data lives does not depend on op coverage.** A cv:: call on device data produces
-   its output on that device whether the backend implemented the call or not. Functions with
-   an accelerator hook always do. Without a hook, every output created after the shape of an
-   input (`createSameSize`, as the element-wise operations do) follows that input's device,
-   and other new outputs go where `UMat::create` puts them: the `ExecutionScope`'s device
-   inside a scope, host memory outside one, until the function gets its hook.
+   its output on that device whether the backend implemented the call or not. A UMat argument
+   on a device registers itself for the duration of the call (its `_InputArray`), and every
+   UMat the call creates without an allocator of its own goes to the device those arguments
+   agree on; a UMat that already held device data keeps its device when it is reallocated.
+   This covers functions without a hook, `cv::resize` and `cv::repeat` as much as `cv::add`.
 5. **No hidden copies.** Every transfer is visible in `cv::accel::TransferStats`, and
    `TRANSFER_FORBID` turns implicit ones into errors.
 6. **A stable C boundary.** Backends can ship inside OpenCV or as plugins, written in C or
@@ -75,7 +75,7 @@ Checked against 5.x at e13b74e9a7 (15 October 2026) with PR #30259 applied.
       |-------------------------------------------.
       v                                           v
   coherence protocol (core)               op tables per module ("core", "imgproc", ...)
-  UMatData flags + BufferState                    |
+  PhysicalBacking + views (UMatData)              |
       |                                           |
   ======================== llapi/accel_hal.h (C, versioned) ========================
       |                                           |
@@ -144,6 +144,55 @@ One-way I/O coherence (the device snoops CPU caches, as on Jetson Xavier and Ori
 as `COHERENT`, because a backend has to guarantee that a completed fence makes its writes
 visible to the CPU (backend rule 2 below).
 
+### Physical memory, imports and views
+
+The same bytes can reach OpenCV in many ways: two planes of one decoded frame, one dma-buf
+imported by a GPU backend and by an NPU backend, a UMat's own memory wrapped again through its
+device pointer, a frame wrapped while the previous wrap of it is still being released. All of
+them have to share one record of who uses the memory, or two records will disagree about it.
+So the state is kept per piece of physical memory (`PhysicalBacking`, `src/accel/backing.cpp`),
+not per `UMatData`:
+
+- **Identity.** Core identifies host memory by its addresses and dma-bufs by their inode
+  (`fstat`), so imports through different backends meet. Other memory is identified by the
+  backend that reaches it (`cvAccelAllocation::backing_id`, the base of the allocation a
+  device pointer points into, with its size from `cuMemGetAddressRange`). Backings live in one
+  process-wide registry; a wrap that overlaps a backing without lying inside it is refused.
+- **Imports.** Every backend, device, layout and access that reaches a backing has one import
+  of all of it. A `UMatData` is a view: a range of one import. Views of memory that the CPU
+  addresses directly may overlap freely; views with a host copy (`COPY`, `UNCACHED`) never do,
+  so that no byte has two host copies (a wrap of bytes such a view covers becomes a UMat over
+  that view).
+- **Ordering.** Fences, device operations between acquire and record, and `DeviceAccess`
+  holds are per backing. Device work on one plane waits for conflicting work on another plane
+  of the same buffer, as the implicit fences of a dma-buf do.
+- **Failures.** Bytes that failed device work may have written are recorded as ranges of the
+  backing: a failure in the chroma plane does not make the luma plane unreadable, and an alias
+  of the chroma plane sees the failure.
+- **Lifetime.** A backing lives while views refer to it. When the last one goes, memory that
+  belongs to someone else is drained right there, without a time limit; core's own memory is
+  freed once its fences complete. Until the backing is gone it stays in the registry, and a
+  wrap of the same memory revives it, fences included, instead of creating a second state for
+  bytes the first one still orders. Lookups wait while a backing is being freed.
+
+### Images in external memory
+
+`wrapExternalImage` returns one UMat per plane, and the planes stay one image. Every plane's
+view refers to an image record (`cvAccelImageDesc`) that operations get with each plane they
+are passed (`cvAccelView::image`, `plane`): the image id, the DRM fourcc, every plane's offset,
+size, pitch and layout modifier, which planes share a buffer, and the colour encoding (YCbCr
+matrix, range, primaries, transfer function, chroma siting). A backend can tell from the views
+alone that two arguments are the luma and chroma planes of one NV12 frame, and convert it
+correctly. `describePlane()` gives the same to the caller.
+
+Before anything is imported, core checks the planes: every size with overflow-safe arithmetic,
+no overlap between planes of one buffer, and, for the fourccs it knows (NV12/21, NV16/61,
+NV24/42, P010/012/016/210, I420/YV12/YU16/YV16/YU24, YUYV and its orderings, the 8-bit RGB and
+grey formats), the plane count, types and subsampled sizes the format requires. Planes may have
+layout modifiers of their own. The size of a tiled or compressed plane cannot be computed from
+its pitch and rows, so it must be given (`ExternalPlane::size`), and such a plane is only ever
+passed whole: its steps say nothing about where bytes lie.
+
 ## The coherence protocol
 
 The code is `modules/core/src/accel/buffer_protocol.cpp`.
@@ -156,17 +205,20 @@ stale). Both set means the content is uninitialized, and no transfer is ever nee
 For memory with a single physical copy, `HOST_COPY_OBSOLETE` means "the CPU has to wait and
 invalidate before reading".
 
-Everything else lives in `BufferState`, created by the device allocator and reached
-through the new `UMatData::accelState` pointer (NULL for host and OpenCL memory):
+The view (`BufferState`, reached through `UMatData::accelState`, NULL for host and OpenCL
+memory) holds what belongs to one range: its import and range, its host copy for `COPY`
+memory, the current Mat mapping, and the image it is a plane of. Everything that is about the
+memory itself lives in its `PhysicalBacking`, under one lock:
 
-- the allocation and its description, and the pinned host copy for `COPY` memory;
-- `writeFence`, the last device write, and `readFences`, the device reads since then (one
-  per stream; a newer fence on an in-order stream covers the older one);
-- `pendingReaders` and `pendingWriters`, device operations between acquire and record;
-- `hostMapped` and `hostAccess`, the current CPU mapping and the union of its access flags;
-- `busy`, set while a CPU-side transition waits outside of the buffer lock;
-- `poisoned`, set when the device work that produced the content failed (asynchronously, or
-  after queuing part of its work); readers get the original error until the buffer is
+- `writeFence`, the last device write and the ranges it covered, and `readFences`, the device
+  reads since then (one per stream; a newer fence on an in-order stream covers the older one);
+- `pendingReaders` and `pendingWriters`, device operations between acquire and record, and the
+  `DeviceAccess` objects that hold the memory;
+- `busy`, set while a CPU-side transition waits outside of the lock;
+- the CPU access to the memory: how many views have a Mat mapping, and the nested
+  `begin_cpu_access` levels open on every import that has a CPU view;
+- the poisoned ranges: bytes that failed device work may have written (asynchronously, or after
+  queuing part of its work); readers of those bytes get the original error until they are
   written whole.
 
 ### CPU access: `UMat::getMat`, `copyTo` into a Mat, `UMat::handle`
@@ -175,12 +227,19 @@ through the new `UMatData::accelState` pointer (NULL for host and OpenCL memory)
 2. Wait on the CPU for conflicting device work: reading waits for the last write, writing
    also waits for every read (write-after-read). The lock is released during the wait.
 3. Per class: for `COPY` memory, download into the host copy only if it is stale and the
-   content was ever written; for memory with a CPU view, call `begin_cpu_access`, which
-   invalidates CPU caches on non-coherent memory.
+   content was ever written; for memory with a CPU view, open the backing for the CPU.
 4. When the last Mat view goes away: for `COPY` memory a write marks the device copy stale
-   (it is uploaded when the device needs it, not now); for memory with a CPU view
-   `end_cpu_access` cleans CPU caches, so no dirty line can later be evicted over data the
-   device wrote.
+   (it is uploaded when the device needs it, not now); for memory with a CPU view, once the
+   last view of the whole backing is gone, every level is ended, which cleans CPU caches, so no
+   dirty line can later be evicted over data the device wrote.
+
+The CPU opens a backing once for all of its views: `begin_cpu_access` on every import that has
+a CPU view, so each backend does the cache maintenance its device needs. Views that come later
+join what is open; a view that needs more (a write where only reads are open, or a read view
+opened for writing too) nests one more level, which is ended, innermost first and with the
+access it began with, when the backing closes. A write is always opened together with a read.
+This matters for dma-bufs, whose cache syncs cover the whole buffer: a sync started for the
+chroma plane while the luma plane has unflushed writes would drop them.
 
 `ACCESS_READ` is honoured: a read-only view never writes back. `ACCESS_WRITE` is never
 taken as "the old content may be discarded", because `OutputArray::getMat()` uses it for
@@ -188,17 +247,20 @@ partial writes (masked copies, ROIs).
 
 ### Device access: inside `OpCall`
 
-1. **Acquire** each argument for the operation's stream. If a Mat view is alive, the device
-   may read when no view was requested for writing, and may never write: a conflicting
-   operation runs on the CPU instead of racing with the views.
+1. **Acquire** each argument for the operation's stream, all views of one backing together. If
+   a Mat view of the memory is alive, the device may read when nothing was opened for writing,
+   and may never write: a conflicting operation runs on the CPU instead of racing with the
+   views. A CPU access whose `end_cpu_access` failed counts as still open.
 2. If the host copy is newer and the operation reads the buffer or writes only part of it,
    upload the host copy first, as a device write that waits for everyone still using the
    old device content.
 3. Collect the fences the operation must wait for: the last write if it came from another
-   stream, and for writes also the reads from other streams. Same backend: a device-side
-   wait. Different backends: a sync_file when both support it, otherwise a CPU wait.
-4. **Record** one fence for the operation and store it as the new write fence of the
-   outputs and as a read fence of the inputs.
+   stream, and for writes also the reads from other streams. A device-side wait when the
+   stream's device takes the fence (its own, or any device of a backend with
+   `CV_ACCEL_CAP_CROSS_DEVICE_FENCES`), a sync_file between backends that support it, a CPU
+   wait otherwise.
+4. **Record** one fence for the operation and store it as the new write fence of the backings
+   it wrote and as a read fence of the ones it read.
 
 ### Transitions at a glance
 
@@ -238,29 +300,45 @@ see the same DRAM:
    counts as a submission for as long as it exists, since the caller's own work may run at
    any time.
 6. **Bounds.** Before every EXECUTE call, core checks that each view lies inside its
-   allocation (overflow-safe). On SoCs where the NPU has no IOMMU, a wrong stride is not an
-   error but memory corruption.
-7. **Lifetime.** A released buffer is freed only when its fences complete, so no DMA engine
-   writes into memory that was reused. Imported memory goes back to its owner only after the
-   device is done.
+   allocation and inside the range of it that its UMat views (overflow-safe). Extents of
+   wrapped arrays and image planes are computed with checked arithmetic, and backends check
+   imports against the allocation they point into (`cuMemGetAddressRange` for CUDA). On SoCs
+   where the NPU has no IOMMU, a wrong stride is not an error but memory corruption.
+7. **Lifetime.** Released memory is freed only when its fences complete, so no DMA engine
+   writes into memory that was reused, and memory that belongs to someone else goes back only
+   after the device is done. After a failure the device's progress may be unknown: the work
+   left no fence, and `device_synchronize` failed as well. Then nothing the work may touch is
+   freed, and borrowed memory waits until a synchronization succeeds or the backend reports the
+   device lost, which by backend rule 8 means stopped. Marking a device lost does not stop its
+   DMA.
 8. **Protected memory.** Data can be uploaded into it and processed on the device, but it
    never reaches the CPU: `getMat`, downloads and CPU fallbacks throw. Whatever is computed
    from it stays protected: outputs and temporaries of the call are allocated protected
    (`CV_ACCEL_MEMF_PROTECTED` in `allocate`), and an ordinary output, a Mat output or a
-   device copy into ordinary memory is refused. Protection is attested by the backend that
-   owns the memory: `ExternalMemory::protectedContent` only makes a wrap fail when the backend
-   does not attest it.
+   device copy into ordinary memory is refused. Protection is attested by the backends that
+   import the memory, and all of them must agree: `ExternalMemory::protectedContent` only makes
+   a wrap fail when no backend attests it.
 9. **Imported dma-bufs.** Buffers from cameras, decoders or displays may carry implicit
-   fences. Core brackets every device use of them, its own operations and copies as well as
-   the caller's work under a `DeviceAccess`, with `begin_device_access` (the stream waits for
-   the other drivers' fences) and `end_device_access` (they get the work's fence), and CPU
-   access waits for them as `DMA_BUF_IOCTL_SYNC` does.
-10. **Read-only memory.** A CPU view of read-only memory cannot be written: its host copy is
-   core's own pages, mapped read-only except while a download fills them, and backends map
-   dma-bufs read-only. With `OPENCV_ACCEL_VALIDATE`, every view opened with `ACCESS_READ` is
-   checksummed, and a buffer whose view came back changed is marked failed (this also covers
-   memory the CPU addresses directly, which core cannot protect without touching its
-   neighbours on the same pages).
+   fences, and core treats every dma-buf as if it did. Core brackets every device use of them,
+   its own operations and copies as well as the caller's work under a `DeviceAccess`, with
+   `begin_device_access` (the stream waits for the other drivers' last write, and a write also
+   for their reads) and `end_device_access` (OpenCV's write becomes the exclusive fence,
+   OpenCV's read one more shared fence, so a camera writing the next frame waits for both).
+   CPU access waits for them as `DMA_BUF_IOCTL_SYNC` does. A backend without these two entries
+   cannot import such memory. When a fence cannot be attached, the call that queued the work
+   waits for it before returning; otherwise calls on dma-bufs do not wait, since the fences
+   order the other users.
+10. **Read-only memory.** A write through a CPU view of read-only memory faults. Its host copy
+   is core's own pages, mapped read-only except while a download fills them. Memory the CPU
+   addresses directly is shown through the backend's read-only mapping when the backend
+   attests one (`CV_ACCEL_MEMF_CPU_MAPPING_READ_ONLY`, a dma-buf mapped `PROT_READ`), and
+   through a copy in protected pages otherwise. When pages cannot be protected, or protected
+   again after a download, the CPU access is refused: nothing falls back to writable memory.
+   With `OPENCV_ACCEL_VALIDATE`, every view opened with `ACCESS_READ`, of any memory, is mapped
+   read-only the same way, so a write through one faults at once instead of being found later.
+11. **CPU access that would not end.** A failed `end_cpu_access` leaves the CPU access open,
+   after a read as after a write: no device work may use the memory, and device-idle memory
+   keeps its device gate, until a retry of the end succeeds. Core retries before the next use.
 
 ### Discrete GPUs without extra copies
 
@@ -328,6 +406,10 @@ can access it), upload it into a temporary, create the output on the device, or 
 output in a temporary and copy it to where the caller keeps it (a Mat, a UMat on another
 device, or an output that overlaps an input).
 
+Bytes moved count everything the plan implies: temporaries filled and copied back, and a host
+copy that must be uploaded before the device can use an argument in place (or downloaded before
+it is copied elsewhere).
+
 A pre-allocated output that lives elsewhere is never moved: the result is copied into it.
 
 ### When the backend declines
@@ -335,7 +417,9 @@ A pre-allocated output that lives elsewhere is never moved: the result is copied
 The outputs are still created on the device, then the call runs on the CPU through the
 protocol, and the OpenCL path is skipped for the rest of the call (it cannot use the memory
 and would only allocate outputs in the wrong place). So adding an operation to a backend
-changes speed, never where data ends up.
+changes speed, never where data ends up. The same holds inside a device `ExecutionScope` when
+no argument is on a device yet: the scope decides, the CPU runs the call, it counts as a
+fallback, and the outputs go to the scope's device.
 
 ### Implicit transfers
 
@@ -359,7 +443,12 @@ live one), and are created on the stream's device.
 
 For the user's own kernels, `cv::accel::DeviceAccess(umat, stream, flags)` makes the device
 copy current, makes the stream wait for conflicting OpenCV work, and records the stream's
-position when it goes away, so later OpenCV calls wait for the user's work.
+position when it goes away, so later OpenCV calls wait for the user's work. Its `handle()` is
+the address kernels use, which for mapped host memory need not be the CPU address
+(`cvAccelAllocation::device_address`), and `offset()` says where the UMat starts from there.
+
+A stream shared by threads (one explicit `Stream` in several `ExecutionScope`s) is used by one
+thread at a time on devices whose streams are not thread-safe.
 
 ## The backend interface
 
@@ -368,18 +457,34 @@ parallel-backend plugins (`llapi.h`): an `OpenCV_API_Header` with ABI and API ve
 entry points. Plugins export `opencv_core_accel_plugin_init_v0` and are loaded from
 `OPENCV_ACCEL_PLUGINS`. Built-in backends register the same table.
 
-A backend must follow seven rules, listed in the header, because core relies on them:
+A backend must follow eleven rules, listed in the header, because core relies on them:
 
 1. Report the true host-access class; never copy behind core's back.
 2. A completed fence makes device writes visible to the CPU (system-scope release).
 3. Non-coherent allocations are aligned and padded to `coherence_granule`.
-4. Cache operations may widen the range and must retry interrupted system calls.
-5. Imported dma-bufs: wait for implicit fences, attach your own after writing.
+4. Cache operations may widen the range and must retry interrupted system calls. CPU access
+   nests: every successful `begin_cpu_access` gets its own `end_cpu_access`, innermost first,
+   and a failed end counts as still open.
+5. Memory with implicit fences (every dma-buf) needs `begin_device_access` and
+   `end_device_access`; core refuses imports through backends without them.
 6. Without `CV_ACCEL_CAP_ASYNC`, work runs during the call and fences are already complete.
-7. Imported host memory is never freed by the backend; overlapping imports are refused by core.
+7. Imports are borrowed: the backend never frees the memory, and never closes or keeps the
+   handle it was given (it duplicates or references what it needs to keep, and gives that up in
+   `deallocate`). Overlapping host imports are refused by core.
+8. `CV_ACCEL_DEVICE_LOST` means the device has stopped: nothing of it runs or touches memory.
+   `device_synchronize` returns OK once earlier work has finished, failed or not.
+9. `NOT_IMPLEMENTED` and `OUT_OF_MEMORY` queue nothing; after other errors core assumes part of
+   the work was queued.
+10. Read-only memory is mapped read-only for the CPU where the platform allows it, and the
+   backend says so (`CV_ACCEL_MEMF_CPU_MAPPING_READ_ONLY`).
+11. Streams of a device without `CV_ACCEL_CAP_STREAMS_THREAD_SAFE` are used by one thread at a
+   time, and `stream_wait_fence` gets fences of other devices only with
+   `CV_ACCEL_CAP_CROSS_DEVICE_FENCES`.
 
 Exceptions never cross the boundary (`noexcept` entry points, status codes, a per-thread
-error message). A plugin built against an older table simply has fewer entries.
+error message). A plugin built against an older table simply has fewer entries, and structs
+with a `struct_size` too short for their version-0 fields are refused before anything is
+written.
 
 ## NPUs and DNN
 
@@ -402,62 +507,78 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 
 | situation | handling | where |
 |---|---|---|
-| ROI write on a buffer whose host copy is newer | the rest is uploaded before the device writes | `acquireForDevice` |
-| output covers the whole allocation | old content is not uploaded | `DEV_DISCARD` |
+| ROI write on a buffer whose host copy is newer | the rest is uploaded before the device writes | `DeviceAcquisition::acquire` |
+| output covers the whole view | old content is not uploaded | `DEV_DISCARD` |
 | fresh allocation | never transferred | both flags obsolete |
-| read-only Mat view | no write-back; writing through it is undefined | `getHostView` |
+| read-only Mat view | no write-back; under `OPENCV_ACCEL_VALIDATE` a write through it faults | `getHostView` |
 | `OutputArray::getMat` (ACCESS_WRITE) on a partial output | never treated as discard | `beginHostAccessLocked` |
-| a read view is upgraded to write | waits for device readers first | `upgradeHostAccessLocked` |
-| live writable Mat view during a device call | the call runs on the CPU | `acquireForDevice` |
-| last view released while another thread opens one | refcount re-checked under the buffer lock | `endHostView` |
+| a read view is upgraded to write | waits for device readers first; a nested CPU access level, ended on its own | `upgradeHostAccessLocked` |
+| live writable Mat view during a device call | the call runs on the CPU | `DeviceAcquisition::acquire` |
+| last view released while another thread opens one | refcount re-checked under the backing lock | `endHostView` |
 | CPU access while device work is queued | waits for the conflicting fences | `waitDeviceWork` |
 | work on two streams of one device | device-side waits | `streamWait` |
+| fence of another device of the same backend | device-side wait only with `CV_ACCEL_CAP_CROSS_DEVICE_FENCES`, a CPU wait otherwise | `streamWait` |
 | work on two backends | sync_file if both can, else CPU wait | `streamWait` |
-| release while device work is queued | freed after all fences | `Backend::deferRelease` |
-| user memory (imported, `Mat::getUMat`) | release and calls on it wait for the device | `DeviceAllocator::deallocate` |
-| non-coherent memory | invalidate / clean around every CPU access | `beginCpuAccess` |
+| one explicit stream used by several threads | one thread at a time on devices whose streams are not thread-safe | `StreamCall` |
+| release while device work is queued | freed after all fences; the backing stays findable until then | `releaseBacking`, `collectRetired` |
+| a wrap of memory that is being released | revives its backing, fences included; waits while it is being freed | `findBacking` |
+| user memory (imported, `Mat::getUMat`) | release and calls on it wait for the device; CPU writes in a host copy reach it first | `DeviceAllocator::deallocate` |
+| failed work that left no fence, and a failed device sync | nothing it may touch is freed; borrowed memory waits until the device syncs or stops | `FenceRef::unknown` |
+| `fence_retain` fails | the copy tracks the work by device synchronization, never holds an unreferenced fence | `FenceRef` |
+| non-coherent memory | invalidate / clean around every CPU access, for all views of the memory at once | `openCpuLevel` |
+| `end_cpu_access` fails | the CPU access stays open: devices stay away (and device-idle memory keeps its gate) until a retry succeeds | `retryFailedCpuEndsLocked` |
 | two buffers in one cache line | forbidden for non-coherent allocations | backend rule 3 |
-| dma-buf implicit fences | bridged by the backend | backend rule 5 |
+| dma-buf implicit fences | write and read fences both ways; backends without the entries are refused | backend rule 5 |
+| dma-buf fence that cannot be attached | the call waits for the work before returning | `endExternal` |
 | managed memory without concurrent access | device gate | `IdleGate`, `SubmitWindow` |
 | uncached or write-combined memory | CPU kernels work on a cached copy | `usesShadow` |
 | protected memory, tiled layouts | CPU access and CPU fallback throw | `checkHostAccessAllowed` |
-| read-only imported memory | device writes refused, CPU write views throw | `acquireForDevice` |
+| read-only imported memory | device writes refused; CPU views fault on writes, or are refused when pages cannot be protected | `beginHostAccessLocked`, `ensureShadow` |
 | pageable memory in a DMA | host copies are pinned; user Mats are not pinned implicitly | `ensureShadow` |
-| overlapping host imports | refused, the caller copies | `Backend::reserveHostImport` |
-| multi-plane images (NV12, P010), one fd or one per plane | one UMat per plane with its own pitch | `wrapExternalImage` |
-| tiled or compressed layouts (DRM modifiers) | no CPU view; refused by backends that do not report the layout back | `ExternalMemory::layoutModifier` |
-| the same device memory or dma-buf wrapped twice, or a UMat's own memory wrapped | a view of the buffer core already holds, so one synchronization state; a range that only partly overlaps it is refused | `Backend::findBacking`, `cvAccelAllocation::backing_id` |
-| misaligned host imports (device alignment; cache-line granule for non-coherent memory) | refused, the caller copies | `DeviceAllocator::wrap` |
+| host memory sharing pages with an import | refused, the caller copies (pinning works on whole pages) | `Backend::reserveHostImport` |
+| multi-plane images (NV12, P010), one fd or one per plane | one UMat per plane; operations see the image, its format, layouts and colours; planes are checked against the format | `wrapExternalImage`, `cvAccelView::image` |
+| planes of one dma-buf, or one dma-buf imported by several backends | one backing: one ordering, one CPU access, one record of failures | `PhysicalBacking` |
+| tiled or compressed layouts (DRM modifiers), per plane | no CPU view; size given by the caller; passed whole; refused by backends that do not report the layout back | `ExternalPlane::layoutModifier` |
+| the same memory wrapped twice, or a UMat's own memory wrapped | the same backing; a UMat over the view that holds a host copy of those bytes; a range that only partly overlaps a backing is refused | `findBacking`, `cvAccelAllocation::backing_id` |
+| a range past the end of the allocation it starts in, or one that overflows | refused | `importChecked`, backend `import_memory` |
+| misaligned host imports (device alignment; cache-line granule for non-coherent memory) | refused, the caller copies | `importChecked` |
 | two devices of one backend | peer access where it is enabled (CUDA: `OPENCV_ACCEL_CUDA_PEER_ACCESS`, at enumeration), else a staged copy | `can_access` |
 | two backends | staged copy, counted as a transfer | `UMat::copyTo` |
+| a copy between overlapping views of one memory | through a temporary (none when the bytes are the same) | `DeviceAllocator::copy` |
 | legacy and user allocators | describe themselves or keep their old behaviour | `getMemoryDesc` |
 | OpenCL path on accelerator data | skipped for the rest of the call | `OpenCLSuppressor` |
-| output placement | independent of what the backend implements | `OpCall::run` |
+| output placement, with or without a hook | the device of the call's device arguments; a reallocation keeps its device | `OpCall::run`, `placementFor` |
+| a device scope whose device declines a call with host arguments | the CPU runs it, counted, outputs on the scope's device | `OpCall::run` |
 | pre-allocated output on another device | result copied into it, never moved | `PLAN_COPY_BACK` |
-| in-place call, overlapping ROIs | temporary output and a device copy | `planArgs` |
+| in-place call, overlapping ROIs or aliases | temporary output and a device copy | `planArgs` |
 | Mat output, device inputs | runs on the device, one download | `PLAN_COPY_BACK` |
 | Mat input, device that can address host memory | used in place, call completes before returning | `PLAN_IN_PLACE` |
-| out of device memory | deferred frees collected, one retry, then an error | `DeviceAllocator::allocate` |
+| out of device memory | retired memory collected, one retry, then an error | `DeviceAllocator::allocateMemory` |
 | allocation on a device fails | no silent fallback to host memory | `UMat::create` |
-| asynchronous device error | buffer poisoned, readers get the original error | `waitDeviceWork` |
+| asynchronous device error | the bytes the work wrote are poisoned, readers get the original error | `waitDeviceWork` |
 | call fails after queuing part of its work | its buffers wait for the queued part (a fence, or a device sync); what it writes is poisoned until written whole | `DeviceAcquisition::fail` |
-| device lost | that device marked lost (other devices keep working), its calls fall back, its allocations are leaked rather than freed | `Backend::markLost` |
-| device error while a UMat is destroyed | logged, never thrown; host-side state is still freed | `drainForRelease` |
-| device that never finishes | optional limit on CPU waits (`OPENCV_ACCEL_WAIT_TIMEOUT_MS`), then the device is lost; waits that guard memory going back to its owner (user buffers, imported memory, a Mat's memory) have no limit | `FenceRef::wait` |
-| a view outside its allocation | rejected before every EXECUTE | `viewFitsAllocation` |
+| device lost | that device marked lost (other devices keep working), its calls fall back, its allocations are leaked rather than freed | `Backend::markStopped` |
+| device error while a UMat is destroyed | logged, never thrown; host-side state is still freed | `releaseView` |
+| device that never finishes | optional limit on CPU waits (`OPENCV_ACCEL_WAIT_TIMEOUT_MS`), then the device is lost and what it may touch is kept; waits that guard memory going back to its owner have no limit | `FenceRef::wait` |
+| a view outside its allocation or its UMat's range | rejected before every EXECUTE | `viewFitsAllocation`, `viewFitsRange` |
 | exception inside a backend | cannot cross the C boundary | `CV_ACCEL_NOEXCEPT` |
 | plugin built against an older table | missing entries read as NULL | `CV_ACCEL_OP_PRESENT` |
+| `struct_size` too short for version-0 fields | refused, nothing written | `CV_ACCEL_HAS_FIELD` |
 | stream destroyed and its handle reused | streams carry a unique id | `StreamHolder::uid` |
-| CUDA "current device" is user state | backends save and restore it | `DeviceGuard` |
+| CUDA "current device" is user state | primary contexts pushed and popped; a call fails when the GPU cannot be made current | `DeviceGuard` |
+| mapped host memory whose device address differs from its CPU address | `DeviceAccess::handle()` and `UMat::handle()` give the device address | `cvAccelAllocation::device_address` |
 | 64-bit device addresses on a 32-bit host | handles are `uint64_t` | `cvAccelAllocation` |
 | synchronous backends (RKNN) | fences are already complete | backend rule 6 |
-| process exit | registry and allocators are never destroyed | `Registry::getInstance` |
+| process exit | registries and allocators are never destroyed | `Registry::getInstance` |
 
-Known gaps, deliberately left for later: validity is tracked per buffer, not per region
-(two tensors in one DNN arena share a fence record, which serializes but stays correct);
-`fork()` after a device was used is not handled (backends should refuse in the child);
-a UMat released on one thread while a Mat view is released on another is undefined, as it
-is today for every allocator.
+Known gaps, deliberately left for later: ordering is per backing, not per range, so device
+work on one plane of a frame waits for conflicting work on another plane, and two tensors in
+one DNN arena are serialized (correct, not always fast); host copies are per view, so one
+memory imported with host copies through two backends is refused, and so is one memory that
+two backends reach with different host-access classes; device-idle memory cannot be imported
+by a second device; `fork()` after a device was used is not handled (backends should refuse in
+the child); a UMat released on one thread while a Mat view is released on another is
+undefined, as it is today for every allocator.
 
 ## How this relates to existing work
 
@@ -483,12 +604,12 @@ is today for every allocator.
 
 | part | state |
 |---|---|
-| `llapi/accel_hal.h`: C interface, rules for backends | complete for version 0 |
-| `accel.hpp`: Device, Stream, ExecutionScope, describe, policy, stats, external memory, DeviceAccess | complete |
-| coherence protocol, generic device allocator, deferred release, device gate, import registry | complete |
-| dispatcher (`OpCall`), hook macro, OpenCL suppression | complete |
+| `llapi/accel_hal.h`: C interface (API version 3), rules for backends | complete for version 0 |
+| `accel.hpp`: Device, Stream, ExecutionScope, describe, policy, stats, external memory and images, DeviceAccess | complete |
+| physical memory (backings, imports, views, registry, retirement), coherence protocol, generic device allocator, device gate | complete |
+| dispatcher (`OpCall`), hook macro, OpenCL suppression, placement of new UMats by call | complete |
 | hooks | `cv::flip`, `cv::transpose` |
-| emulator backend: discrete, coherent, non-coherent, protected, managed | complete, for tests |
+| emulator backend: seven devices (discrete, coherent, non-coherent, protected, managed, failing, peer), dma-bufs with read and write fences, failure injection, protocol checks | complete, for tests |
 | CUDA backend | memory, streams, fences; no kernels yet |
 | plugin loading | explicit list (`OPENCV_ACCEL_PLUGINS`) |
 | HIP, Level Zero, Vulkan, NPU backends, imgproc table, DLPack | not started |
@@ -504,32 +625,43 @@ The emulator makes every rule testable without hardware: device memory of its di
 device is stored scrambled (a missing download shows as garbage), its non-coherent device
 keeps a separate CPU view that only the cache operations synchronize (a missing invalidate
 or clean shows as stale data), its managed device counts device work that overlaps CPU
-access, and a sixth device fails on request (asynchronous errors, device loss) to check that
-no error escapes a destructor. `OPENCV_ACCEL_EMULATOR_DELAY_US` delays every queued task to
-expose missing waits.
+access, a sixth device fails on request at chosen points (fences, calls, fence recording,
+device synchronization, `fence_retain`, device loss), and a seventh is a peer of the first
+whose fences do not cross devices. Its dma-bufs are memfds with an exclusive write fence and
+shared read fences, and read-only imports get a `PROT_READ` mapping. It counts protocol
+violations: unbalanced or mismatched CPU access levels, a non-thread-safe stream used by two
+threads, a fence of another device waited for on the device. `OPENCV_ACCEL_EMULATOR_DELAY_US`
+delays every queued task to expose missing waits.
 
 ## Evidence so far
 
 Measured on an Intel Core i9-14900KS with an NVIDIA GeForce RTX 5090 (CUDA 12.0, driver 570),
 GCC 13.3, Release builds:
 
-- `opencv_test_core --gtest_filter='Core_Accel*'`: the emulator tests (protocol, failure
-  injection, device loss, dma-buf fences, multi-plane images, aliasing, read-only and
-  protected memory, wait limits, device choice) pass, also repeated, in separate processes
-  and with every device task delayed (`OPENCV_ACCEL_EMULATOR_DELAY_US`).
-- The six `Core_Accel_CUDA` tests pass on the RTX 5090: transfer accounting of a host round
-  trip, device-to-device copies, placement after CPU fallbacks, backing identity through
-  `cuMemGetAddressRange`, ordering against a kernel the caller launches on the legacy default
-  stream, and copy-back of Mat-backed UMats. The whole `opencv_test_core` passes with and
-  without CUDA.
-- ThreadSanitizer (`-fsanitize=thread`, pthreads backend): no data race in the accelerator
-  tests, over repeated runs and with delayed device tasks.
-- Cost, 4x4 flip: 0.14 us on a Mat, 0.6 us on a host UMat with a backend registered, 2.4 us
-  dispatched to the emulator (8 to 9 us including the wait for its worker thread).
-- CUDA, 4K BGR frame (24.9 MB): upload 9 to 12 GB/s (GpuMat::upload 8 to 10); `getMat` into the
-  pinned host copy 20 to 25 GB/s, against 5.5 to 7 GB/s into pageable memory (GpuMat::download
-  7); device copy 810 GB/s. A chain flip, flip, add, `getMat` on GPU data without CUDA kernels
-  moves the frame across the bus once.
+- `opencv_test_core --gtest_filter='Core_Accel*'`: the 73 emulator tests pass, also repeated,
+  in separate processes and with every device task delayed (`OPENCV_ACCEL_EMULATOR_DELAY_US`).
+  They cover the protocol, failures at every point (including work that cannot be proven
+  stopped and refused fence references), device loss, dma-buf read and write fences, a
+  dma-buf shared by two devices, planes of one buffer, images and their formats, aliases and
+  memory revived during its release, read-only and protected memory failing closed, failed
+  CPU access ends, nested CPU access levels, placement without hooks, device choice, shared
+  streams, cross-device fences, and short `struct_size`s. The stream and fence tests were
+  checked to fail with their protection removed.
+- The eight `Core_Accel_CUDA` tests pass on the RTX 5090: transfer accounting of a host round
+  trip, device-to-device copies, placement after CPU fallbacks, backing identity and range
+  checks through `cuMemGetAddressRange`, the device address of mapped pinned memory used by a
+  kernel, ordering against a kernel the caller launches on the legacy default stream, and
+  copy-back of Mat-backed UMats. The whole `opencv_test_core` passes with CUDA (25,336 tests)
+  and without (24,865), and the whole tree builds.
+- ThreadSanitizer (`-fsanitize=thread`, pthreads backend): no report from the accelerator code
+  over repeated runs and with delayed device tasks. The one report left is in the pthreads
+  `ThreadPool` (`parallel_impl.cpp`), which a plain `cv::reduce` test gives as well.
+- Cost, 4x4 flip: 0.14 us on a Mat, 0.7 us on a host UMat with a backend registered, 2.8 to
+  3.1 us dispatched to the emulator (8.6 to 8.8 us including the wait for its worker thread).
+- CUDA, 4K BGR frame (24.9 MB): upload 14 to 15 GB/s (GpuMat::upload 16); `getMat` into the
+  pinned host copy 23.5 to 25 GB/s, against 7.1 GB/s into pageable memory (GpuMat::download
+  7.1); device copy 740 to 800 GB/s. A chain flip, flip, add, `getMat` on GPU data without CUDA
+  kernels moves the frame across the bus once.
 
 Not covered yet: NPU hardware (the emulator's non-coherent and device-idle devices stand in),
 HIP, multiple GPUs (peer access, contexts on other devices), and performance of real kernels.
