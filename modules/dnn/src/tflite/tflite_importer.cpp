@@ -14,6 +14,8 @@
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
 
+#include <limits>
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -95,12 +97,16 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
         shape.assign(tensor_shape->begin(), tensor_shape->end());
     else
         shape.resize(1, 1);
-    int bufferIdx = tensor.buffer();
+    const uint32_t bufferIdx = tensor.buffer();
     CV_Assert(bufferIdx != 0);  // 0th buffer is a no-data buffer
+    CV_CheckLT((size_t)bufferIdx, (size_t)model->buffers()->size(),
+               "DNN/TFLite: tensor buffer index is out of range");
     const Buffer* buffer = model->buffers()->Get(bufferIdx);
     CV_Assert(buffer);
     const auto buffer_data = buffer->data();
-    if (!buffer_data)
+    if (tensor.sparsity())
+        CV_Error(Error::StsNotImplemented, "DNN/TFLite: sparse tensors are not supported");
+    if (!buffer_data || buffer_data->size() == 0)
         return Mat();
 
     const void* data = buffer_data->data();
@@ -121,6 +127,31 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
         break;
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
+    }
+
+    size_t requiredBytes = CV_ELEM_SIZE(dtype);
+    bool hasZeroDimension = false;
+    for (size_t i = 0; i < shape.size(); ++i)
+    {
+        if (shape[i] < 0)
+            CV_Error(Error::StsBadSize, "DNN/TFLite: tensor shape contains a negative dimension");
+        const size_t dimension = static_cast<size_t>(shape[i]);
+        if (dimension == 0)
+        {
+            hasZeroDimension = true;
+            continue;
+        }
+        if (requiredBytes > std::numeric_limits<size_t>::max() / dimension)
+            CV_Error(Error::StsOutOfRange, "DNN/TFLite: tensor byte size overflows size_t");
+        requiredBytes *= dimension;
+    }
+    if (hasZeroDimension)
+        requiredBytes = 0;
+    if (requiredBytes > static_cast<size_t>(buffer_data->size()))
+    {
+        CV_Error(Error::StsBadSize,
+                 format("DNN/TFLite: tensor requires %zu bytes but its buffer has %zu bytes",
+                        requiredBytes, static_cast<size_t>(buffer_data->size())));
     }
     Mat res = Mat(shape, dtype, const_cast<void*>(data));
     // workaround for scalars support
