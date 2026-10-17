@@ -1507,7 +1507,9 @@ class PythonWrapperGenerator(object):
 
         # All symbols are collected and AST is reconstructed, generating
         # typing stubs...
-        self.typing_stubs_generator.generate(output_path)
+        self.typing_stubs_generator.generate(
+            output_path, self.parser.preprocessor_definitions
+        )
 
         # That's it. Now save all the files
         self.save(output_path, "pyopencv_generated_include.h", self.code_include)
