@@ -151,6 +151,19 @@ public:
             });
         }
 
+        // forwardMlasIm2col() reads this copy; it exists only for ngroups == 1.
+        if (!im2colWeights_.empty()) {
+            const int inner = im2colWeights_.cols / Cg;
+            parallel_for_(Range(0, K), [&](const Range& r) {
+                for (int k = r.start; k < r.end; k++) {
+                    float* row = im2colWeights_.ptr<float>(k);
+                    for (int c = 0; c < Cg; c++)
+                        for (int i = 0; i < inner; i++)
+                            row[c*inner + i] *= sc[c];
+                }
+            });
+        }
+
         if (bias.empty()) {
             bias.fit(1, &K, CV_32F);
             bias.setTo(0.f);
@@ -296,6 +309,43 @@ public:
                 }
             }
         }
+
+        // Weights as a (Cout, Cin*kh*kw) matrix for forwardMlasIm2col().
+        im2colWeights_.release();
+        if (!depthwise && ngroups == 1 && wshape0[1] <= SMALL_CIN_MAX && isPatchEmbedding() &&
+            weights_.type() == CV_32F && wtype == CV_32F && weights_.isContinuous() &&
+            mlasAvailable())
+        {
+            im2colWeights_ = weights_.reshape(1, wshape0[0]).clone();
+        }
+    }
+
+    // A ViT patch embedding with few input channels skips block layout: padding 3 channels to 8
+    // would cost an extra layout conversion and 8/3 of the work.
+    static constexpr int SMALL_CIN_MAX = 4;
+
+    // Kernel equal to stride, no padding or dilation: patches do not overlap or leave the image.
+    // Other small convs keep the blocked kernel, so their results stay the same.
+    bool isPatchEmbedding() const
+    {
+        if (wshape0.dims != 4 || wshape0[2]*wshape0[3] <= 1 || strides.size() != 2 || ceil_mode ||
+            (auto_pad != AUTO_PAD_NONE && auto_pad != AUTO_PAD_VALID))
+            return false;
+        for (int i = 0; i < 2; i++)
+            if (strides[i] != wshape0[i + 2] || (!dilations.empty() && dilations[i] != 1))
+                return false;
+        for (int p : pads)
+            if (p != 0)
+                return false;
+        return true;
+    }
+
+    // Only with one input: constant weights taken by constArgs(), no residual. Runtime weights
+    // are re-set in forward() on the block path, so a copy of them here could go stale.
+    bool mlasIm2colEnabled() const
+    {
+        return inputs.size() == 1 && !im2colWeights_.empty() &&
+               getNetImpl(this)->originalLayout == DATA_LAYOUT_NCHW;
     }
 
     virtual bool fuseAddBias(InputArray arr) CV_OVERRIDE
@@ -682,9 +732,13 @@ public:
         size_t ninputs = actualInputs.size();
         CV_Assert(ninputs >= 1u && requiredOutputs == 1u);
         desiredInputs = actualInputs;
-        desiredInputs[0] = DATA_LAYOUT_BLOCK;
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
+        if (actualInputs[0] != DATA_LAYOUT_BLOCK && mlasIm2colEnabled()) {
+            outputs.assign(requiredOutputs, actualInputs[0]);
+            return getNetImpl(this)->defaultC0;
+        }
+        desiredInputs[0] = DATA_LAYOUT_BLOCK;
         if (addResidual && ninputs > 1)
             desiredInputs[ninputs - 1] = DATA_LAYOUT_BLOCK;
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
@@ -709,8 +763,13 @@ public:
         const void* resptr = nullptr;
         int inptype = inp.type();
         MatShape inpshape = inp.shape();
-        CV_Assert(inpshape.layout == DATA_LAYOUT_BLOCK);
         CV_Assert(inp.isContinuous());
+        if (inpshape.layout != DATA_LAYOUT_BLOCK) {
+            // getLayouts() leaves the input in plain layout only for this path
+            CV_Assert(mlasIm2colEnabled());
+            forwardMlasIm2col(inp, output_arrs);
+            return;
+        }
 
         if (addResidual) {
             residual = input_arrs.getMat(ninputs-1);
@@ -814,6 +873,126 @@ public:
             // very rare situation of dynamic convolution weights,
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
+        }
+    }
+
+    // Patch embedding on the plain NCHW tensor: for a few output rows at a time, gather the
+    // input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
+    void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs)
+    {
+        const MatShape inpshape = inp0.shape();
+        CV_Assert(inpshape.dims == 4);
+        const MatShape outshape = convInferShape(inpshape, wshape0, emptyKernelShape,
+                                                 ngroups, strides, dilations,
+                                                 pads, auto_pad, ceil_mode);
+        const int outtype = inferType(inp0.type());
+        if (inpshape != prevInpshape) {
+            // The input may be tagged with an unknown layout; on this path it is always NCHW.
+            MatShape inpNCHW = inpshape, outNCHW = outshape;
+            inpNCHW.layout = outNCHW.layout = DATA_LAYOUT_NCHW;
+            cs.initConv(inpNCHW, wshape0, outNCHW, ngroups,
+                        strides, dilations, pads, auto_pad, ceil_mode,
+                        fastActivation, activationFunc, activParams);
+            prevInpshape = inpshape;
+        }
+
+        Mat inp = inp0, out;
+        if (inp.type() != CV_32F)
+            inp0.convertTo(inp, CV_32F);
+        const int outkind = output_arrs.kind();
+        if (outkind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = output_arrs.getMatVecRef();
+            outs.resize(1);
+            outs[0].fit(outshape, outtype);
+            if (outtype == CV_32F)
+                out = outs[0];
+        } else {
+            CV_Assert(outkind == _InputArray::STD_VECTOR_UMAT);
+            output_arrs.getUMatVecRef().resize(1);
+            output_arrs.getUMatVecRef()[0].fit(outshape, outtype);
+        }
+        if (out.empty())
+            out.fit(outshape, CV_32F);
+
+        const int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
+        const int K = outshape[1], OH = outshape[2], OW = outshape[3];
+        const int kh = cs.kshape[1], kw = cs.kshape[2];  // also the strides
+        const int KD = C*kh*kw;
+        const size_t P = (size_t)OH*OW;
+        CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
+        CV_Assert(OH*kh <= H && OW*kw <= W);
+
+        const int rowsPerTask = std::max(1, 32 / std::max(OW, 1));
+        const int tasksPerImage = (OH + rowsPerTask - 1) / rowsPerTask;
+        const float* wptr = im2colWeights_.ptr<float>();
+        const float* scale = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
+        const float* shift = fusedBatchNorm ? fusedBias.ptr<float>() :
+                             bias.empty() ? nullptr : bias.ptr<float>();
+        const float* prm = activParams.empty() ? nullptr : activParams.data();
+        const FastActivation act = fastActivation;
+        const float* inpdata = inp.ptr<float>();
+        float* outdata = out.ptr<float>();
+
+        parallel_for_(Range(0, N*tasksPerImage), [&](const Range& r) {
+            AutoBuffer<float> colbuf((size_t)KD*rowsPerTask*OW);
+            for (int task = r.start; task < r.end; task++) {
+                const int n = task / tasksPerImage;
+                const int oy0 = (task % tasksPerImage)*rowsPerTask;
+                const int nrows = std::min(rowsPerTask, OH - oy0);
+                const int np = nrows*OW;
+                const float* x = inpdata + (size_t)n*C*H*W;
+                float* col = colbuf.data();
+
+                // im2col: row (c, ky, kx) of col holds that input value for every output pixel here.
+                // Patches do not overlap or leave the image, so every read is inside the input.
+                for (int c = 0; c < C; c++)
+                for (int ky = 0; ky < kh; ky++)
+                for (int kx = 0; kx < kw; kx++) {
+                    float* row = col + (size_t)((c*kh + ky)*kw + kx)*np;
+                    for (int i = 0; i < nrows; i++, row += OW) {
+                        const float* src = x + ((size_t)c*H + (oy0 + i)*kh + ky)*W + kx;
+                        for (int ox = 0; ox < OW; ox++)
+                            row[ox] = src[(size_t)ox*kw];
+                    }
+                }
+
+                // weights x col, written straight into the NCHW output (channel planes are P apart).
+                // Single-threaded on purpose: we are already inside parallel_for_.
+                float* y = outdata + (size_t)n*K*P + (size_t)oy0*OW;
+                bool ok = mlasSgemm(false, false, K, np, KD, 1.f, wptr, KD, col, np, 0.f, y, (int)P);
+                CV_Assert(ok);
+
+                for (int k = 0; k < K; k++) {
+                    float* yk = y + (size_t)k*P;
+                    const float s = scale ? scale[k] : 1.f, b = shift ? shift[k] : 0.f;
+                    if (scale || shift)
+                        for (int j = 0; j < np; j++)
+                            yk[j] = yk[j]*s + b;
+                    if (act == FAST_ACTIV_RELU) {
+                        for (int j = 0; j < np; j++)
+                            yk[j] = std::max(yk[j], 0.f);
+                    } else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU) {
+                        // PReLU has one slope per channel, LeakyReLU a single slope.
+                        const float alpha = act == FAST_ACTIV_PRELU ? activParams[k] : activParams[0];
+                        for (int j = 0; j < np; j++)
+                            yk[j] = yk[j] >= 0.f ? yk[j] : yk[j]*alpha;
+                    } else if (act == FAST_ACTIV_CLIP) {
+                        const float lo = activParams[0], hi = activParams[1];
+                        for (int j = 0; j < np; j++)
+                            yk[j] = std::min(std::max(yk[j], lo), hi);
+                    }
+                    if (activationFunc)
+                        activationFunc(yk, yk, (size_t)np, prm);
+                }
+            }
+        });
+
+        if (outkind == _InputArray::STD_VECTOR_MAT) {
+            Mat& dst = output_arrs.getMatVecRef()[0];
+            if (dst.data != out.data)
+                out.convertTo(dst, outtype);
+        } else {
+            out.convertTo(output_arrs.getUMatVecRef()[0], outtype);
         }
     }
 
@@ -1125,6 +1304,9 @@ public:
     Mat scratch_C_;
     int mlas_packed_M_ = 0;   // == Cout
     int mlas_packed_K_ = 0;   // == Cin
+
+    // Weights for forwardMlasIm2col(), (Cout, Cin*kh*kw); empty when the path is not used.
+    Mat im2colWeights_;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)

@@ -155,6 +155,10 @@ inline int onnxDataTypeToCV(OnnxDataType dt)
 void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape);
+
+// Copies a block-layout tensor to its parts along axis 1 (split) or back (concat), in 64 KB
+// pieces so that tensors below core's 1 MB parallel threshold still use all threads.
+void copyChannelBlocks(const Mat& whole, const std::vector<Mat>& parts, bool split);
 }
 }
 
