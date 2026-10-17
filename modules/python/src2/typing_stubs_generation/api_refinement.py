@@ -437,7 +437,21 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
     return _make_matlike_or_scalar_arg
 
 
+def refine_umat_constructor(root_node: NamespaceNode,
+                            function_symbol_name: SymbolName) -> None:
+    # shadow_umat.hpp maps Mat inputs even though C++ constructors declare UMat.
+    constructor = find_function_node(root_node, function_symbol_name)
+    for overload in constructor.overloads:
+        index = _find_argument_index(overload.arguments, "m")
+        if index is not None:
+            argument = overload.arguments[index]
+            argument.type_node = UnionTypeNode(
+                "umat_input", (cast(TypeNode, argument.type_node), AliasRefTypeNode("MatLike"))
+            )
+
+
 NODES_TO_REFINE = {
+    SymbolName(("cv", ), ("UMat", ), "UMat"): refine_umat_constructor,
     SymbolName(("cv", ), (), "add"): make_matlike_or_scalar_arg("src2"),
     SymbolName(("cv", ), (), "multiply"): make_matlike_or_scalar_arg("src2"),
     SymbolName(("cv", ), (), "remap"): make_optional_arg("map2"),
