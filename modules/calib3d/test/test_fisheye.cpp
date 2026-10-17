@@ -936,6 +936,73 @@ TEST_F(fisheyeTest, Homography)
     EXPECT_MAT_NEAR(std_err, correct_std_err, 1e-12);
 }
 
+TEST_F(fisheyeTest, HomographyWithFourPoints)
+{
+    constexpr double projectionTolerance = 1e-12;
+    const Mat objectPoints = (Mat_<double>(2, 4) <<
+        -1.0, 1.0, 1.0, -1.0,
+        -1.0, -1.0, 1.0, 1.0);
+    const Mat expectedHomography = (Mat_<double>(3, 3) <<
+        1.2, 0.1, 0.3,
+        -0.05, 0.9, -0.2,
+        0.001, -0.002, 1.0);
+    Mat homogeneousPoints;
+    vconcat(objectPoints, Mat::ones(1, objectPoints.cols, CV_64F), homogeneousPoints);
+    Mat imagePoints = expectedHomography * homogeneousPoints;
+    cv::divide(imagePoints, Mat::ones(3, 1, CV_64F) * imagePoints.row(2), imagePoints);
+
+    const Mat estimatedHomography = cv::internal::ComputeHomography(
+        imagePoints.rowRange(0, 2), objectPoints);
+    EXPECT_NEAR(cv::norm(estimatedHomography, expectedHomography, NORM_INF),
+                0.0, projectionTolerance);
+}
+
+TEST_F(fisheyeTest, HomographyWithIllConditionedPoints)
+{
+    constexpr int pointCount = 8;
+    constexpr double narrowWidth = 1e-8;
+    constexpr double imageNoise = 1e-15;
+    constexpr double homographyTolerance = 1e-6;
+    const Matx33d expectedHomography(1.2, 0.1, 0.3,
+                                     -0.05, 0.9, -0.2,
+                                     0.001, -0.002, 1.0);
+    Mat objectPoints = Mat::ones(3, pointCount, CV_64F);
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double coordinate = -1.0 + 2.0 * point / (pointCount - 1);
+        const double offset = (point % 2 == 0) ? -narrowWidth : narrowWidth;
+        objectPoints.at<double>(0, point) = coordinate;
+        objectPoints.at<double>(1, point) = offset;
+    }
+
+    Mat imagePoints = Mat(expectedHomography) * objectPoints;
+    cv::divide(imagePoints, Mat::ones(3, 1, CV_64F) * imagePoints.row(2), imagePoints);
+    for (int point = 0; point < pointCount; ++point)
+    {
+        imagePoints.at<double>(0, point) += imageNoise * (point % 3 - 1);
+        imagePoints.at<double>(1, point) += imageNoise * (2.0 * (point % 2) - 1.0);
+    }
+    Mat estimatedHomography = cv::internal::ComputeHomography(
+        imagePoints.rowRange(0, 2), objectPoints.rowRange(0, 2));
+    Mat reprojected = estimatedHomography * objectPoints;
+    cv::divide(reprojected, Mat::ones(3, 1, CV_64F) * reprojected.row(2), reprojected);
+
+    EXPECT_NEAR(cv::norm(imagePoints.rowRange(0, 2), reprojected.rowRange(0, 2), NORM_INF),
+                0.0, homographyTolerance);
+
+    const Mat validationPoint = (Mat_<double>(3, 1) << 0.0, 0.5, 1.0);
+    Mat expectedProjection = Mat(expectedHomography) * validationPoint;
+    Mat estimatedProjection = estimatedHomography * validationPoint;
+    expectedProjection /= expectedProjection.at<double>(2, 0);
+    estimatedProjection /= estimatedProjection.at<double>(2, 0);
+    EXPECT_NEAR(cv::norm(expectedProjection.rowRange(0, 2),
+                         estimatedProjection.rowRange(0, 2), NORM_INF),
+                0.0, homographyTolerance);
+    RecordProperty("held_out_projection_error", cv::format("%.17g",
+        cv::norm(expectedProjection.rowRange(0, 2), estimatedProjection.rowRange(0, 2), NORM_INF)));
+}
+
 TEST_F(fisheyeTest, EstimateUncertainties)
 {
     const int n_images = 34;

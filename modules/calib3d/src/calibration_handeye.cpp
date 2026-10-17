@@ -406,15 +406,14 @@ static void calibrateHandEyePark(const std::vector<Mat>& Hg, const std::vector<M
         }
     }
 
-    Mat eigenvalues, eigenvectors;
-    eigen(M.t()*M, eigenvalues, eigenvectors);
+    Mat singularValues;
+    Mat leftSingularVectors;
+    Mat rightSingularVectors;
+    SVD::compute(M, singularValues, leftSingularVectors,
+                 rightSingularVectors, SVD::MODIFY_A | SVD::FULL_UV);
 
-    Mat v = Mat::zeros(3, 3, CV_64FC1);
-    for (int i = 0; i < 3; i++) {
-        v.at<double>(i,i) = 1.0 / sqrt(eigenvalues.at<double>(i,0));
-    }
-
-    Mat R = eigenvectors.t() * v * eigenvectors * M.t();
+    Mat Rt = leftSingularVectors * rightSingularVectors;
+    Mat R = Rt.t();
     R_cam2gripper = R;
 
     int K = static_cast<int>((Hg.size()*Hg.size() - Hg.size()) / 2.0);

@@ -704,6 +704,39 @@ TEST(Calib3d_Homography, minPoints)
     EXPECT_THROW(findHomography(p1, p2, RANSAC, 0.01, mask), cv::Exception);
 }
 
+TEST(Calib3d_Homography, illConditionedLinearSystem)
+{
+    constexpr int pointCount = 4;
+    constexpr double translation = 0.2;
+    constexpr double slope = 1.5;
+    constexpr double narrowWidth = 2e-4;
+    constexpr double pointNoise = 1e-12;
+    constexpr double homographyTolerance = 0.25;
+    const Matx33d expectedHomography(1.0, 0.0, translation,
+                                    0.0, 1.0, 0.0,
+                                    0.0, 0.0, 1.0);
+    std::vector<Point2d> points1;
+    std::vector<Point2d> points2;
+
+    for (int point = 0; point < pointCount; ++point)
+    {
+        const double x = -1.0 + 2.0 * point / (pointCount - 1);
+        const double ySign = 2.0 * (point % 2) - 1.0;
+        const double y = slope * x + std::copysign(narrowWidth, ySign);
+        const double noiseX = pointNoise * (point % 3 - 1);
+        const double noiseY = pointNoise * (2.0 * (point % 2) - 1.0);
+        points1.emplace_back(x + noiseX, y + noiseY);
+        points2.emplace_back(x + translation - noiseX, y - noiseY);
+    }
+
+    const Mat estimatedHomography = findHomography(points1, points2, 0);
+    ASSERT_FALSE(estimatedHomography.empty());
+    RecordProperty("matrix_error", cv::format("%.17g",
+        cv::norm(estimatedHomography - Mat(expectedHomography), NORM_INF)));
+    EXPECT_NEAR(cv::norm(estimatedHomography - Mat(expectedHomography), NORM_INF),
+                0.0, homographyTolerance);
+}
+
 TEST(Calib3d_Homography, not_normalized)
 {
     Mat_<double> p1({5, 2}, {-1, -1, -2, -2, -1, 1, -2, 2, -1, 0});
