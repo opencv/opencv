@@ -19,6 +19,13 @@ int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, 
 {
     CV_HAL_CHECK_USE_IPP();
 
+    // ippiCopySubpixIntersect replicates the border incorrectly and may read outside of the image
+    // (https://github.com/opencv/opencv/issues/30301), so use it for windows totally inside the image only
+    int ipx = cvFloor((float)center_x - (patch_width - 1) * 0.5f);
+    int ipy = cvFloor((float)center_y - (patch_height - 1) * 0.5f);
+    if( ipx < 0 || ipx >= src_width - patch_width || ipy < 0 || ipy >= src_height - patch_height )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     int ddepth = CV_MAT_DEPTH(patch_type);
 
     typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,

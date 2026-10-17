@@ -1430,6 +1430,43 @@ TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }
 TEST(Imgproc_GetRectSubPix, accuracy) { CV_GetRectSubPixTest test; test.safe_run(); }
 TEST(Imgproc_GetQuadSubPix, accuracy) { CV_GetQuadSubPixTest test; test.safe_run(); }
 
+// https://github.com/opencv/opencv/issues/30301
+TEST(Imgproc_GetRectSubPix, regression_30301)
+{
+    // The images are ROIs of a buffer filled with 250, so reads outside of them show up in the result
+    const Rect rampRoi(8, 8, 4, 4), columnRoi(2, 2, 1, 4);
+    Mat buf8u(20, 20, CV_8UC1, Scalar(250)), buf32f;
+    for (int r = 0; r < 4; r++)
+    {
+        for (int c = 0; c < 4; c++)
+            buf8u(rampRoi).at<uchar>(r, c) = (uchar)(r * 40 + c * 8);
+        buf8u(columnRoi).at<uchar>(r, 0) = (uchar)(10 + r * 10);
+    }
+    buf8u.convertTo(buf32f, CV_32F);
+
+    const struct { Rect roi; Size size; Point2f center; std::vector<float> expected; } cases[] = {
+        // the window crosses the top and the right edges
+        { rampRoi, Size(3, 3), Point2f(3.f, 0.f), { 16, 24, 24, 16, 24, 24, 56, 64, 64 } },
+        { columnRoi, Size(3, 3), Point2f(0.f, 0.f), { 10, 10, 10, 10, 10, 10, 20, 20, 20 } },
+        // the window is to the left of the image
+        { rampRoi, Size(1, 1), Point2f(-2.75f, 3.f), { 120 } },
+    };
+    const int types[][2] = { { CV_8U, CV_8U }, { CV_8U, CV_32F }, { CV_32F, CV_32F } };
+    for (const auto& t : types)
+    {
+        for (const auto& tc : cases)
+        {
+            SCOPED_TRACE(cv::format("depth=%d ddepth=%d image=%dx%d center=(%g, %g)", t[0], t[1],
+                                    tc.roi.width, tc.roi.height, tc.center.x, tc.center.y));
+            Mat src = (t[0] == CV_8U ? buf8u : buf32f)(tc.roi), patch, patch32f;
+            getRectSubPix(src, tc.size, tc.center, patch, t[1]);
+            patch.convertTo(patch32f, CV_32F);
+            Mat expected = Mat(tc.expected).reshape(1, tc.size.height);
+            EXPECT_LE(cvtest::norm(patch32f, expected, NORM_INF), 1e-3) << patch32f;
+        }
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename WT>
