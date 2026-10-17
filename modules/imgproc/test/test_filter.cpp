@@ -2932,6 +2932,64 @@ INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableFilter,
     )
 );
 
+typedef tuple<Size, tuple<int, int>, int, Point> ParallelSeparableConversionParams;
+typedef TestWithParam<ParallelSeparableConversionParams> ImgProc_ParallelSeparableConversion;
+
+TEST_P(ImgProc_ParallelSeparableConversion, depth_and_extreme_anchors)
+{
+    const Size size = get<0>(GetParam());
+    const int srcType = get<0>(get<1>(GetParam()));
+    const int dstDepth = get<1>(get<1>(GetParam()));
+    const int border = get<2>(GetParam());
+    const Point anchor = get<3>(GetParam());
+    // The narrow case uses stripes; the other sizes exercise tiled filtering
+    // with a final one-pixel column or row, including after depth conversion.
+    const Rect srcROI(1, 1, size.width, size.height);
+    const Rect dstROI(2, 3, size.width, size.height);
+    Mat parent(size.height + 2, size.width + 3, srcType);
+    randu(parent, parent.depth() >= CV_16S ? -128 : 0, 128);
+    const Mat original = parent.clone();
+    const Mat src = parent(srcROI);
+    const Mat kx = (Mat_<float>(1, 3) << 0.25f, -0.5f, 0.75f);
+    const Mat ky = (Mat_<float>(9, 1) << 0.125f, -0.25f, 0.375f, -0.125f,
+                    0.5f, 0.125f, -0.375f, 0.25f, 0.5f);
+    const int dstType = CV_MAKETYPE(dstDepth, src.channels());
+    Mat referenceParent(size.height + 6, size.width + 5, dstType, Scalar::all(91));
+    Mat parallelParent = referenceParent.clone();
+    const Mat expectedGuards = referenceParent.clone();
+    Mat reference = referenceParent(dstROI), parallel = parallelParent(dstROI);
+    ScopedThreadsGuard threadsGuard;
+
+    threadsGuard.set(1);
+    sepFilter2D(src, reference, dstDepth, kx, ky, anchor, 3.25, border);
+    threadsGuard.set(8);
+    sepFilter2D(src, parallel, dstDepth, kx, ky, anchor, 3.25, border);
+
+    const double tolerance = dstDepth == CV_32F ? 1e-4 : dstDepth == CV_64F ? 1e-10 : 0;
+    EXPECT_LE(cv::norm(reference, parallel, NORM_INF), tolerance);
+    EXPECT_LE(cv::norm(referenceParent, parallelParent, NORM_INF), tolerance);
+    // Check the guards independently: matching writes outside both ROIs must
+    // not pass just because the sequential and parallel results agree.
+    Mat guards(parallelParent.size(), CV_8U, Scalar::all(255));
+    guards(dstROI).setTo(0);
+    EXPECT_EQ(0, cv::norm(referenceParent, expectedGuards, NORM_INF, guards));
+    EXPECT_EQ(0, cv::norm(parallelParent, expectedGuards, NORM_INF, guards));
+    EXPECT_EQ(0, cv::norm(parent, original, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableConversion,
+    Combine(
+        Values(Size(63, 16651), Size(257, 4091), Size(4091, 257)),
+        Values(make_tuple(CV_8UC1, CV_32F), make_tuple(CV_8UC3, CV_16S),
+               make_tuple(CV_16SC1, CV_32F), make_tuple(CV_32FC1, CV_64F)),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+               BORDER_CONSTANT | BORDER_ISOLATED, BORDER_REPLICATE | BORDER_ISOLATED,
+               BORDER_REFLECT | BORDER_ISOLATED,
+               BORDER_REFLECT_101 | BORDER_ISOLATED),
+        Values(Point(0, 0), Point(2, 8))
+    )
+);
+
 // Regression test for ndsrvp HAL filter padding robustness:
 // Exercises extreme-but-valid anchor positions with small images and large kernels
 // to ensure HAL implementations handle boundary-dominated padding correctly.
