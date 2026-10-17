@@ -2321,6 +2321,21 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
+        if( method == cv::HISTCMP_CHISQR_ALT )
+        {
+            // Include bins present only in H2; bins stored in H1 were counted above.
+            it = PH2->begin();
+            for( i = 0; i < N2; i++, ++it )
+            {
+                const SparseMat::Node* node = it.node();
+                if( !PH1->find<float>(node->idx, (size_t*)&node->hashval) )
+                {
+                    double v2 = it.value<float>();
+                    if( fabs(v2) > DBL_EPSILON )
+                        result += v2;
+                }
+            }
+        }
     }
     else if( method == cv::HISTCMP_CORREL )
     {
