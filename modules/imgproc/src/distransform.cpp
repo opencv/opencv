@@ -959,6 +959,12 @@ static void distanceTransform_L1_8U(InputArray _src, OutputArray _dst)
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
 
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
+
     _dst.create( src.size(), CV_8UC1);
     Mat dst = _dst.getMat();
 
@@ -979,6 +985,13 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     bool need_labels = _labels.needed();
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_BoolC1);
+
+    if( src.empty() )
+    {
+        _dst.release();
+        if( need_labels ) _labels.release();
+        return;
+    }
 
     _dst.create( src.size(), CV_32F);
     Mat dst = _dst.getMat();

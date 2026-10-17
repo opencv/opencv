@@ -422,7 +422,7 @@ static const char* g_hwFeatureNames[CV_HARDWARE_MAX_FEATURE] = { NULL };
 
 static const char* getHWFeatureName(int id)
 {
-    return (id < CV_HARDWARE_MAX_FEATURE) ? g_hwFeatureNames[id] : NULL;
+    return (0 <= id && id < CV_HARDWARE_MAX_FEATURE) ? g_hwFeatureNames[id] : NULL;
 }
 static const char* getHWFeatureNameSafe(int id)
 {
@@ -926,7 +926,8 @@ static HWFeatures* currentFeatures = &featuresEnabled;
 
 bool checkHardwareSupport(int feature)
 {
-    CV_DbgAssert( 0 <= feature && feature <= CV_HARDWARE_MAX_FEATURE );
+    if (feature < 0 || feature >= CV_HARDWARE_MAX_FEATURE)
+        return false;
     return currentFeatures->have[feature];
 }
 

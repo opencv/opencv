@@ -1262,6 +1262,14 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
         for (int s = 1; ok && s < nslots; s++)
             if (arginfo[s].kind == OUTPUT) ok = ok && outputs[arginfo[s].index].isContinuous();
         const size_t total = ok ? r.total() * rcn : 0;
+        if (ok && total == 0)
+        {
+            const MatShape rshape = r.size;
+            for (int s = 1; s < nslots; s++)
+                if (arginfo[s].kind == OUTPUT)
+                    outputs[arginfo[s].index].create(rshape, CV_MAKETYPE(arginfo[s].depth, rcn));
+            return;
+        }
         if (ok && total <= EW_FASTPATH_MAX)
         {
             const MatShape rshape = r.size;   // spatial dims (channels separate), as a MatShape
@@ -1422,6 +1430,8 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
     // ---- 4. parallel work hint: total output scalars x summed per-element op cost / budget. ----
     long long otot = (long long)rchannels;
     for (int d = 0; d < (int)spatial.size(); d++) otot *= spatial[d];
+    if (otot == 0)
+        return;
     // One stripe per 2^16 cost units. The unit is ~1/4 cycle of the VECTORIZED kernel, but
     // element-wise work is memory-bound, so a stripe costs several times what that model says -
     // a coarser budget leaves a 32-core box running 2 stripes on DNN-sized tensors (1-4 MB).
@@ -1945,6 +1955,8 @@ void texpr(const std::string& expr, InputArrayOfArrays _inputs, OutputArrayOfArr
     CV_Assert(_inputs.kind() == _InputArray::STD_VECTOR_MAT);
     const std::vector<Mat>& inps = *(const std::vector<Mat>*)_inputs.getObj();
     const int ninputs = (int)inps.size();
+    for (int i = 0; i < ninputs; i++)
+        CV_Assert(!inps[i].empty());
 
     // Input depths are known now, so build a fully-typed program straight away: one INPUT slot per
     // input (slot index i carries input i's depth), then parse the expression into instructions.

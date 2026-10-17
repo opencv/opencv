@@ -559,6 +559,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                               const void*, size_t, size_t, void* dst_, size_t dsty,
                               int width, int height, const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -593,6 +594,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
 template<typename T, typename WT>
 static void expandScalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
 {
+    if (n0 <= 0 || n <= 0) return;
     int i = 0;
     for (; i < n0; i++) scbuf[i] = (WT)sc[i*sx];
     for (; i < n; i++) scbuf[i] = scbuf[i - n0];
@@ -899,6 +901,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                          void* dst_, size_t dsty, int width, int height,
                          const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -1394,6 +1397,7 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
                      void* dst_, size_t dsty, int width, int height,
                      const double*, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     dsty /= sizeof(T);
     CV_Assert(s0x == 1u || width == 1);
@@ -1471,6 +1475,7 @@ static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
                              void* dst_, size_t dsty, int width, int height,
                              const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T); s1y /= sizeof(T); dsty /= sizeof(Tr);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
     const T* src0 = (const T*)src0_;

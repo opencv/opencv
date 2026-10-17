@@ -109,5 +109,13 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 
 TEST(Calib3d_ChessboardDetector, badarg) { CV_ChessboardDetectorBadArgTest test; test.safe_run(); }
 
+TEST(Calib3d_ChessboardDetector, drawChessboardCorners_badarg)
+{
+    Mat img(100, 100, CV_8UC3, Scalar::all(0));
+    std::vector<Point2f> corners(4);
+    EXPECT_THROW(cv::drawChessboardCorners(img, Size(5, 5), corners, true), cv::Exception);
+    EXPECT_THROW(cv::drawChessboardCorners(img, Size(-1, 5), corners, true), cv::Exception);
+}
+
 }} // namespace
 /* End of file. */

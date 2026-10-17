@@ -319,6 +319,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+    CV_Assert( mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) && src.size == mask.size) );
+    if( src.empty() )
+        return 0.0;
     int depth = src.depth(), cn = src.channels();
     if( src.dims <= 2 )
     {
@@ -552,6 +555,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 #endif
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    CV_Assert( mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) && src1.size == mask.size) );
+    if( src1.empty() || src2.empty() )
+        return 0.0;
     int depth = src1.depth(), cn = src1.channels();
     if( src1.dims <= 2 )
     {

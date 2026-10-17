@@ -29,6 +29,14 @@ TEST(Core_TExpr, add)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
+TEST(Core_TExpr, empty_inputs)
+{
+    Mat emptyA(0, 0, CV_32F), emptyB(0, 0, CV_32F);
+    std::vector<Mat> out;
+    EXPECT_THROW(cv::texpr("{0} + {1}", std::vector<Mat>{ emptyA, emptyB }, out), cv::Exception);
+    EXPECT_THROW(cv::texpr("0 - 0", std::vector<Mat>{ emptyA }, out), cv::Exception);
+}
+
 // Built-in binary functions min/max/absdiff parsed and dispatched through emitBinary.
 TEST(Core_TExpr, minmax_absdiff)
 {

@@ -531,6 +531,7 @@ void transpose(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 
     Mat inp = src_.getMat();
     const int ndims = inp.dims;
+    CV_Assert(!(ndims == 0 && inp.empty()));
     CV_CheckEQ(order.size(), static_cast<size_t>(ndims), "Number of dimensions shouldn't change");
 
     bool used[CV_MAX_DIM] = {false};
@@ -553,6 +554,8 @@ void transpose(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 
     dst_.create(ndims, newShape, inp.type());
     Mat out = dst_.getMat();
+    if (out.total() == 0)
+        return;
     nd::copy(nd::permute(nd::viewOf(inp), order.data()), nd::viewOf(out));
 }
 
@@ -1195,6 +1198,7 @@ void repeat(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
 
     Mat src = _src.getMat();
     const int ndims = src.dims;
+    CV_Assert(!(ndims == 0 && src.empty()));
     CV_CheckEQ(repeats.size(), (size_t)ndims, "repeat: the number of repeats must match the number of dimensions");
 
     int outShape[CV_MAX_DIM];
@@ -1208,7 +1212,7 @@ void repeat(InputArray _src, const std::vector<int>& repeats, OutputArray _dst)
 
     _dst.create(ndims, outShape, src.type());
     Mat dst = _dst.getMat();
-    if (dst.total() == 0)
+    if (dst.total() == 0 || src.empty())
         return;
 
     // Each repeated output axis is split into (repeat index, position), the former
@@ -1249,6 +1253,7 @@ void slice(InputArray _src, const std::vector<int>& starts, const std::vector<in
 
     Mat src = _src.getMat();
     const int ndims = src.dims, nslices = (int)starts.size();
+    CV_Assert(!(ndims == 0 && src.empty()));
     CV_CheckLE(nslices, ndims, "slice: too many starts");
     CV_CheckEQ(ends.size(), starts.size(), "slice: starts and ends must have the same size");
     CV_Check(steps.size(), steps.empty() || steps.size() == starts.size(),
@@ -1283,6 +1288,8 @@ void slice(InputArray _src, const std::vector<int>& starts, const std::vector<in
 
     _dst.create(ndims, outShape, src.type());
     Mat dst = _dst.getMat();
+    if (dst.total() == 0 || src.empty())
+        return;
     nd::copy(sv, nd::viewOf(dst));
 }
 

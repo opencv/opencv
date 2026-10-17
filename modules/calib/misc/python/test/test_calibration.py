@@ -140,8 +140,8 @@ class calibration_test(NewOpenCVTests):
         self.assertTrue(jacobian is not None)
 
     def test_sampsonDistance_valid2D(self):
-        pt1 = (np.random.rand(3, 10) * 256).astype(np.float64)
-        pt2 = (np.random.rand(3, 10) * 256).astype(np.float64)
+        pt1 = (np.random.rand(1, 1, 3) * 256).astype(np.float64)
+        pt2 = (np.random.rand(1, 1, 3) * 256).astype(np.float64)
         F = (np.random.rand(3, 3) * 256).astype(np.float64)
         dist = cv.sampsonDistance(pt1, pt2, F)
         self.assertTrue(isinstance(dist, (float, np.floating)))

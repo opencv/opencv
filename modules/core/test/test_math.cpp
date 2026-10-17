@@ -2009,6 +2009,11 @@ TEST(Core_SolvePoly, degree_2_polynomials)
             for (float c2 = -20; c2 <= 20; c2++)
             {
                 coefs.at<float>(2) = c2;
+                if (c1 == 0 && c2 == 0)
+                {
+                    EXPECT_THROW(cv::solvePoly(coefs, r), cv::Exception);
+                    continue;
+                }
                 prec = cv::solvePoly(coefs, r);
                 EXPECT_LE(prec, 1e-6);
             }
@@ -2038,6 +2043,11 @@ TEST(Core_SolvePoly, degree_4_polynomials)
                     for (float c4 = -10; c4 <= 10; c4++)
                     {
                         coefs.at<float>(4) = c4;
+                        if (c1 == 0 && c2 == 0 && c3 == 0 && c4 == 0)
+                        {
+                            EXPECT_THROW(cv::solvePoly(coefs, r), cv::Exception);
+                            continue;
+                        }
                         prec = cv::solvePoly(coefs, r);
                         EXPECT_LE(prec, 1e-3);
                     }
@@ -2066,6 +2076,19 @@ TEST(Core_SolvePoly, different_magnitudes_polynomials)
             }
         }
     }
+}
+
+TEST(Core_SolvePoly, invalid_inputs)
+{
+    Mat r;
+    Mat empty;
+    EXPECT_THROW(cv::solvePoly(empty, r), cv::Exception);
+
+    Mat single(1, 1, CV_64F, Scalar(5.0));
+    EXPECT_THROW(cv::solvePoly(single, r), cv::Exception);
+
+    Mat zeroPoly(3, 1, CV_64F, Scalar(0.0));
+    EXPECT_THROW(cv::solvePoly(zeroPoly, r), cv::Exception);
 }
 
 class Core_PhaseTest : public cvtest::BaseTest

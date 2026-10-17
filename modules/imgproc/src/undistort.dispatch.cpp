@@ -66,6 +66,7 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
                               InputArray _matR, InputArray _newCameraMatrix,
                               Size size, int m1type, OutputArray _map1, OutputArray _map2 )
 {
+    CV_Assert( size.width > 0 && size.height > 0 );
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
 
@@ -150,6 +151,7 @@ void initInverseRectificationMap( InputArray _cameraMatrix, InputArray _distCoef
                               InputArray _matR, InputArray _newCameraMatrix,
                               const Size& size, int m1type, OutputArray _map1, OutputArray _map2 )
 {
+    CV_Assert( size.width > 0 && size.height > 0 );
     // Parameters
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
     Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
@@ -273,6 +275,15 @@ void undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
 
     Mat src = _src.getMat(), cameraMatrix = _cameraMatrix.getMat();
     Mat distCoeffs = _distCoeffs.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
+
+    CV_Assert( cameraMatrix.size() == Size(3, 3) );
+    CV_Assert( newCameraMatrix.empty() || newCameraMatrix.size() == Size(3, 3) );
+
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
 
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
