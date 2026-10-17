@@ -135,7 +135,11 @@ public:
             }
 
             // fix the curve by setting its middle value to 0
-            A.at<float>(k, LDR_SIZE / 2) = 1;
+            // (g is defined only up to an additive constant). Weight this equation
+            // like the data equations: with weight 1 it is tiny next to the rows
+            // weighted by w and lambda * w, so the offset is weakly constrained and
+            // float32 rounding in the solver shifts the curve differently across builds.
+            A.at<float>(k, LDR_SIZE / 2) = w.at<float>(LDR_SIZE / 2);
             k++;
 
             // include the smoothness equations
