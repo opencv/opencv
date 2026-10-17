@@ -43,6 +43,24 @@ class input_array_typing_test(NewOpenCVTests):
                     self.assertIsInstance(result, cv.UMat)
                     np.testing.assert_array_equal(result.get(), expected)
 
+    def test_umat_numpy_constructors(self):
+        for flat in (np.arange(45, dtype=np.uint8), np.arange(45, dtype=np.float32)):
+            for channels in (1, 3):
+                shape = (3, 5) if channels == 1 else (3, 5, channels)
+                image = flat[:15 * channels].reshape(shape)
+                original = image.copy()
+                for actual, expected in (
+                    (cv.UMat(image), original),
+                    (cv.UMat(m=image), original),
+                    (cv.UMat(image, (0, 2), (0, 3)), original[:2, :3]),
+                    (cv.UMat(image, (1, 1, 3, 2)), original[1:3, 1:4]),
+                    (cv.UMat(image, [(0, 2), (0, 3)]), original[:2, :3]),
+                ):
+                    result = actual.get()
+                    np.testing.assert_array_equal(result, expected)
+                    self.assertEqual(result.dtype, original.dtype)
+                np.testing.assert_array_equal(image, original)
+
     def test_empty_second_remap_map(self):
         image = np.arange(15, dtype=np.uint8).reshape(3, 5)
         x, y = np.meshgrid(np.arange(5, dtype=np.float32), np.arange(3, dtype=np.float32))
