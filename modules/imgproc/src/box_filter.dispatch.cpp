@@ -356,7 +356,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
+    if((sdepth == CV_32F || sdepth == CV_64F) && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
     {
         CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);

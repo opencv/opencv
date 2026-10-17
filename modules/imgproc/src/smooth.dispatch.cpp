@@ -294,11 +294,12 @@ static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F), kx );
+    const int kernelDepth = depth == CV_64F ? CV_64F : CV_32F;
+    getGaussianKernel( ksize.width, sigma1, kernelDepth, kx );
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
-        getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F), ky );
+        getGaussianKernel( ksize.height, sigma2, kernelDepth, ky );
 }
 
 Ptr<FilterEngine> createGaussianFilter( int type, Size ksize,
