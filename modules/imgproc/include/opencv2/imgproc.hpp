@@ -2007,7 +2007,7 @@ The function supports the in-place mode. Erosion can be applied several ( iterat
 case of multi-channel images, each channel is processed independently.
 
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_16F, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
 @param kernel structuring element used for erosion; if `kernel=Mat()`, a `3 x 3` rectangular
 structuring element is used. Kernel can be created using #getStructuringElement.
@@ -2039,7 +2039,7 @@ The function supports the in-place mode. Dilation can be applied several ( itera
 case of multi-channel images, each channel is processed independently.
 
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_16F, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
 @param kernel structuring element used for dilation; if `kernel=Mat()`, a `3 x 3` rectangular
 structuring element is used. Kernel can be created using #getStructuringElement
@@ -2064,7 +2064,7 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 processed independently.
 
 @param src Source image. The number of channels can be arbitrary. The depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_16F, CV_32F or CV_64F.
 @param dst Destination image of the same size and type as source image.
 @param op Type of a morphological operation, see #MorphTypes
 @param kernel Structuring element. It can be created using #getStructuringElement.
