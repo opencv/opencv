@@ -6984,7 +6984,7 @@ void getPlatfomsInfo(std::vector<PlatformInfo>& platformsInfo)
 
 const char* typeToStr(int type)
 {
-    static const char* tab[]=
+    static const char* tab[CV_DEPTH_MAX*16]=
     {
         "uchar", "uchar2", "uchar3", "uchar4", 0, 0, 0, "uchar8", 0, 0, 0, 0, 0, 0, 0, "uchar16",
         "char", "char2", "char3", "char4", 0, 0, 0, "char8", 0, 0, 0, 0, 0, 0, 0, "char16",
@@ -7008,7 +7008,7 @@ const char* typeToStr(int type)
 
 const char* memopTypeToStr(int type)
 {
-    static const char* tab[] =
+    static const char* tab[CV_DEPTH_MAX*16] =
     {
         "uchar", "uchar2", "uchar3", "uchar4", 0, 0, 0, "uchar8", 0, 0, 0, 0, 0, 0, 0, "uchar16",
         "char", "char2", "char3", "char4", 0, 0, 0, "char8", 0, 0, 0, 0, 0, 0, 0, "char16",
@@ -7028,7 +7028,7 @@ const char* memopTypeToStr(int type)
 
 const char* vecopTypeToStr(int type)
 {
-    static const char* tab[] =
+    static const char* tab[CV_DEPTH_MAX*16] =
     {
         "uchar", "short", "uchar3", "int", 0, 0, 0, "int2", 0, 0, 0, 0, 0, 0, 0, "int4",
         "char", "short", "char3", "int", 0, 0, 0, "int2", 0, 0, 0, 0, 0, 0, 0, "int4",
