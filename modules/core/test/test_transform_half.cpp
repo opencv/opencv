@@ -81,10 +81,10 @@ TEST(Core_HalfTransform, nonfinite_and_subnormal)
 {
     const float inf = std::numeric_limits<float>::infinity();
     const float nan = std::numeric_limits<float>::quiet_NaN();
-    Mat src = Mat_<Vec3f>({4, 1}, {Vec3f(0, -0.f, 1.f / 16777216), Vec3f(65504, -65504, 1),
+    Mat src = Mat_<Vec3f>({1, 4}, {Vec3f(0, -0.f, 1.f / 16777216), Vec3f(65504, -65504, 1),
         Vec3f(inf, -inf, 0), Vec3f(nan, nan, nan)});
     src.convertTo(src, CV_16F);
-    Mat matrix = Mat_<float>({4, 3}, {1, 0, 0, 0, 0, 2, 0, 0, 0, 0, -1, 0});
+    Mat matrix = Mat_<float>({3, 4}, {1, 0, 0, 0, 0, 2, 0, 0, 0, 0, -1, 0});
     Mat represented, expected, actual;
     src.convertTo(represented, CV_32F);
     transform(represented, expected, matrix);

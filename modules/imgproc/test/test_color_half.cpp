@@ -127,7 +127,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_HalfColor,
 
 TEST(Imgproc_HalfColor, primaries_and_hue_sectors)
 {
-    Mat rgb = Mat_<Vec3f>({8, 1}, {Vec3f(0, 0, 0), Vec3f(1, 1, 1), Vec3f(1, 0, 0),
+    Mat rgb = Mat_<Vec3f>({1, 8}, {Vec3f(0, 0, 0), Vec3f(1, 1, 1), Vec3f(1, 0, 0),
         Vec3f(1, 1, 0), Vec3f(0, 1, 0), Vec3f(0, 1, 1), Vec3f(0, 0, 1), Vec3f(1, 0, 1)});
     rgb.convertTo(rgb, CV_16F);
     for (int code : {COLOR_RGB2HSV, COLOR_RGB2HLS})
