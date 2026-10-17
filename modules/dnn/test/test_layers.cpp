@@ -289,6 +289,141 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+// Reference LSTM from the ONNX definition (gates [i; o; f; c]); Y is [T, D, N, H], Y_h and Y_c are [D, N, H].
+static void lstmReference(const Mat& X, const Mat& W, const Mat& R, const Mat& B,
+                          const Mat& h0, const Mat& c0, bool reverse,
+                          Mat& expectedY, Mat& expectedYh, Mat& expectedYc)
+{
+    const int T = X.size[0], N = X.size[1], I = X.size[2];
+    const int D = W.size[0], H = W.size[1] / 4;
+    const auto sigmoid = [](double v) { return 1. / (1. + std::exp(-v)); };
+
+    expectedY.create(shape(T, D, N, H), CV_32F);
+    expectedYh.create(shape(D, N, H), CV_32F);
+    expectedYc.create(shape(D, N, H), CV_32F);
+
+    std::vector<double> h(H), c(H), gates(4 * H);
+    for (int d = 0; d < D; d++)
+    {
+        const float* wData = W.ptr<float>(d);
+        const float* rData = R.ptr<float>(d);
+        const float* bData = B.ptr<float>(d);
+        const bool rev = reverse || d == 1;
+        for (int s = 0; s < N; s++)
+        {
+            for (int j = 0; j < H; j++)
+            {
+                h[j] = h0.ptr<float>(d, s)[j];
+                c[j] = c0.ptr<float>(d, s)[j];
+            }
+            for (int step = 0; step < T; step++)
+            {
+                const int t = rev ? (T - 1 - step) : step;
+                const float* x = X.ptr<float>(t, s);
+                for (int g = 0; g < 4 * H; g++)
+                {
+                    double p = bData[g] + bData[4 * H + g];
+                    for (int i = 0; i < I; i++)
+                        p += x[i] * wData[g * I + i];
+                    for (int k = 0; k < H; k++)
+                        p += h[k] * rData[g * H + k];
+                    gates[g] = p;
+                }
+                float* y = expectedY.ptr<float>(t, d, s);
+                for (int j = 0; j < H; j++)
+                {
+                    const double ig = sigmoid(gates[j]), og = sigmoid(gates[H + j]);
+                    const double fg = sigmoid(gates[2 * H + j]), cg = std::tanh(gates[3 * H + j]);
+                    c[j] = fg * c[j] + ig * cg;
+                    h[j] = og * std::tanh(c[j]);
+                    y[j] = (float)h[j];
+                }
+            }
+            for (int j = 0; j < H; j++)
+            {
+                expectedYh.ptr<float>(d, s)[j] = (float)h[j];
+                expectedYc.ptr<float>(d, s)[j] = (float)c[j];
+            }
+        }
+    }
+}
+
+// Batch 1 with hidden_size >= 128 splits each direction's hidden units across threads at every timestep.
+static void testLSTM2BatchOneParallel(bool bidirectional, bool reverse, int H)
+{
+    const int T = 5, N = 1, I = 16, D = bidirectional ? 2 : 1;
+    const float k = 1.f / std::sqrt((float)H);   // PyTorch-style init keeps the gates out of saturation
+
+    Mat X({T, N, I}, CV_32F);
+    Mat W({D, 4 * H, I}, CV_32F);   // ONNX W: [Wi; Wo; Wf; Wc]
+    Mat R({D, 4 * H, H}, CV_32F);   // ONNX R: [Ri; Ro; Rf; Rc]
+    Mat B({D, 8 * H}, CV_32F);      // ONNX B: [Wb; Rb]
+    Mat h0({D, N, H}, CV_32F), c0({D, N, H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -k, k);
+    randu(R, -k, k);
+    randu(B, -k, k);
+    randu(h0, -1.f, 1.f);
+    randu(c0, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_batch1";
+    lp.set("hidden_size", H);
+    lp.set("bidirectional", bidirectional);
+    lp.set("reverse", reverse);
+    lp.set("produce_output_yh", true);
+    lp.set("produce_cell_output", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    // ONNX input order X, W, R, B, sequence_lens, initial_h, initial_c; sequence_lens stays empty
+    std::vector<Mat> inputs = {X, W, R, B, Mat(), h0, c0};
+
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    layer->getMemoryShapes(inShapes, 3, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)3);
+    EXPECT_EQ(outShapes[0], shape(T, D, N, H));
+    layer->getTypes(inTypes, 3, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+
+    // 4 threads give every direction at least two hidden-unit chunks
+    const int prevThreads = getNumThreads();
+    setNumThreads(4);
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+    setNumThreads(prevThreads);
+
+    Mat expectedY, expectedYh, expectedYc;
+    lstmReference(X, W, R, B, h0, c0, reverse, expectedY, expectedYh, expectedYc);
+
+    normAssert(outputs[0], expectedY, "LSTM2 Y", 1e-4, 1e-4);
+    normAssert(outputs[1], expectedYh, "LSTM2 Y_h", 1e-4, 1e-4);
+    normAssert(outputs[2], expectedYc, "LSTM2 Y_c", 1e-4, 1e-4);
+}
+
+// With 2 chunks per direction, 136 rounds up to 72-unit chunks, so the second chunk is partial.
+TEST(Layer_LSTM2_Test_Accuracy_, BatchOneBidirectionalParallel)
+{
+    testLSTM2BatchOneParallel(true, false, 136);
+}
+
+TEST(Layer_LSTM2_Test_Accuracy_, BatchOneReverseParallel)
+{
+    testLSTM2BatchOneParallel(false, true, 128);
+}
+
 TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
 {
     Mat Wx = blobFromNPY(_tf("gru.W.npy"));
