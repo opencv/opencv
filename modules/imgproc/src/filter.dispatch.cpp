@@ -336,7 +336,7 @@ Ptr<FilterEngine> createSeparableLinearFilter(
     Mat rowKernel, columnKernel;
 
     bool isBitExactMode = false;
-    int bdepth = std::max(CV_32F,std::max(sdepth, ddepth));
+    int bdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     int bits = 0;
 
     if( sdepth == CV_8U &&
@@ -1241,6 +1241,8 @@ static bool dftFilter2D(int stype, int dtype, int kernel_type,
     {
         int sdepth = CV_MAT_DEPTH(stype);
         int ddepth = CV_MAT_DEPTH(dtype);
+        if (sdepth == CV_16F)
+            return false;
         int dft_filter_size = checkHardwareSupport(CV_CPU_SSE3) && ((sdepth == CV_8U && (ddepth == CV_8U || ddepth == CV_16S)) || (sdepth == CV_32F && ddepth == CV_32F)) ? 130 : 50;
         if (kernel_width * kernel_height < dft_filter_size)
             return false;
