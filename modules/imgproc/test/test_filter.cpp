@@ -1504,4 +1504,87 @@ TEST_F(FastFilterEngineTest, FullImage) {
 }
 
 
+static void expectMorphologyHalfEqual(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+    for (int row = 0; row < expected.rows; ++row)
+        EXPECT_EQ(0, memcmp(expected.ptr(row), actual.ptr(row), expected.cols * expected.elemSize())) << row;
+}
+
+
+TEST(Imgproc_Morphology16f, constant_extrema)
+{
+    const ushort patterns[] = {0, 0x8000, 1, 0x8001, 0x7bff, 0xfbff, 0x7c00, 0xfc00};
+    for (ushort bits : patterns)
+        for (int op : {MORPH_ERODE, MORPH_DILATE})
+            for (int shape : {MORPH_RECT, MORPH_ELLIPSE})
+            {
+                SCOPED_TRACE(cv::format("bits=%04x op=%d shape=%d", (unsigned)bits, op, shape));
+                Mat source(7, 9, CV_16F);
+                for (int row = 0; row < source.rows; ++row)
+                    for (int col = 0; col < source.cols; ++col)
+                        source.at<hfloat>(row, col) = hfloatFromBits(bits);
+                Mat wide, expected32f, expected, actual;
+                source.convertTo(wide, CV_32F);
+                const Mat kernel = getStructuringElement(shape, Size(3, 3));
+                morphologyEx(wide, expected32f, op, kernel);
+                expected32f.convertTo(expected, CV_16F);
+                morphologyEx(source, actual, op, kernel);
+                expectMorphologyHalfEqual(expected, actual);
+            }
+}
+
+typedef testing::TestWithParam<tuple<int, int, int, int> > Imgproc_Morphology16f;
+
+TEST_P(Imgproc_Morphology16f, accuracy)
+{
+    const int op = get<0>(GetParam()), shape = get<1>(GetParam());
+    const int cn = get<2>(GetParam()), border = get<3>(GetParam());
+    const Rect roi(2, 2, 17, 13);
+    Mat values(roi.height + 4, roi.width + 4, CV_MAKETYPE(CV_32F, cn));
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, -100.f, 100.f);
+    Mat storage, wide;
+    values.convertTo(storage, CV_16F);
+    storage.convertTo(wide, CV_32F);
+    const Mat original = storage.clone();
+    const Mat kernel = getStructuringElement(shape, Size(3, 5));
+    Mat expected32f, expected, actual;
+    morphologyEx(wide(roi), expected32f, op, kernel, Point(-1, -1), 2, border);
+    expected32f.convertTo(expected, CV_16F);
+
+    Mat src = storage(roi);
+    morphologyEx(src, actual, op, kernel, Point(-1, -1), 2, border);
+    expectMorphologyHalfEqual(expected, actual);
+    expectMorphologyHalfEqual(original, storage);
+
+    Mat destination(storage.size(), storage.type());
+    destination.reshape(1).setTo(Scalar::all(-123));
+    Mat wideDestination(storage.size(), wide.type()), expectedStorage;
+    wideDestination.reshape(1).setTo(Scalar::all(-123));
+    Mat wideDestinationROI = wideDestination(roi);
+    morphologyEx(wide(roi), wideDestinationROI, op, kernel, Point(-1, -1), 2, border);
+    wideDestination.convertTo(expectedStorage, CV_16F);
+    actual = destination(roi);
+    morphologyEx(src, actual, op, kernel, Point(-1, -1), 2, border);
+    ASSERT_EQ(destination(roi).data, actual.data);
+    expectMorphologyHalfEqual(expectedStorage, destination);
+    expectMorphologyHalfEqual(original, storage);
+
+    Mat wideInPlace = wide.clone(), wideInPlaceROI = wideInPlace(roi);
+    morphologyEx(wideInPlaceROI, wideInPlaceROI, op, kernel, Point(-1, -1), 2, border);
+    wideInPlace.convertTo(expectedStorage, CV_16F);
+    morphologyEx(src, src, op, kernel, Point(-1, -1), 2, border);
+    expectMorphologyHalfEqual(expectedStorage, storage);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Morphology16f, testing::Combine(
+    testing::Values(MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE,
+                    MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT),
+    testing::Values(MORPH_RECT, MORPH_ELLIPSE),
+    testing::Values(1, 3, 5),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
+
+
 }} // namespace

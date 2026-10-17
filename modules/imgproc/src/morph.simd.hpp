@@ -733,6 +733,8 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
         if( depth == CV_16S )
             return makePtr<MorphRowFilter<MinOp<short>,
                                       ErodeRowVec16s> >(ksize, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphRowFilter<MinOp<hfloat>, MorphRowNoVec> >(ksize, anchor);
         if( depth == CV_32F )
             return makePtr<MorphRowFilter<MinOp<float>,
                                       ErodeRowVec32f> >(ksize, anchor);
@@ -751,6 +753,8 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
         if( depth == CV_16S )
             return makePtr<MorphRowFilter<MaxOp<short>,
                                       DilateRowVec16s> >(ksize, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphRowFilter<MaxOp<hfloat>, MorphRowNoVec> >(ksize, anchor);
         if( depth == CV_32F )
             return makePtr<MorphRowFilter<MaxOp<float>,
                                       DilateRowVec32f> >(ksize, anchor);
@@ -781,6 +785,8 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
         if( depth == CV_16S )
             return makePtr<MorphColumnFilter<MinOp<short>,
                                          ErodeColumnVec16s> >(ksize, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphColumnFilter<MinOp<hfloat>, MorphColumnNoVec> >(ksize, anchor);
         if( depth == CV_32F )
             return makePtr<MorphColumnFilter<MinOp<float>,
                                          ErodeColumnVec32f> >(ksize, anchor);
@@ -799,6 +805,8 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
         if( depth == CV_16S )
             return makePtr<MorphColumnFilter<MaxOp<short>,
                                          DilateColumnVec16s> >(ksize, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphColumnFilter<MaxOp<hfloat>, MorphColumnNoVec> >(ksize, anchor);
         if( depth == CV_32F )
             return makePtr<MorphColumnFilter<MaxOp<float>,
                                          DilateColumnVec32f> >(ksize, anchor);
@@ -825,6 +833,8 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
             return makePtr<MorphFilter<MinOp<ushort>, ErodeVec16u> >(kernel, anchor);
         if( depth == CV_16S )
             return makePtr<MorphFilter<MinOp<short>, ErodeVec16s> >(kernel, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphFilter<MinOp<hfloat>, MorphNoVec> >(kernel, anchor);
         if( depth == CV_32F )
             return makePtr<MorphFilter<MinOp<float>, ErodeVec32f> >(kernel, anchor);
         if( depth == CV_64F )
@@ -838,6 +848,8 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
             return makePtr<MorphFilter<MaxOp<ushort>, DilateVec16u> >(kernel, anchor);
         if( depth == CV_16S )
             return makePtr<MorphFilter<MaxOp<short>, DilateVec16s> >(kernel, anchor);
+        if( depth == CV_16F )
+            return makePtr<MorphFilter<MaxOp<hfloat>, MorphNoVec> >(kernel, anchor);
         if( depth == CV_32F )
             return makePtr<MorphFilter<MaxOp<float>, DilateVec32f> >(kernel, anchor);
         if( depth == CV_64F )
