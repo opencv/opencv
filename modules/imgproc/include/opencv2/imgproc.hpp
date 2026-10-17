@@ -78,6 +78,7 @@ This module offers a comprehensive suite of image processing functions, enabling
     --------------------------|----------------------
     CV_8U                     | -1/CV_16S/CV_32F/CV_64F
     CV_16U/CV_16S             | -1/CV_32F/CV_64F
+    CV_16F                    | -1/CV_32F/CV_64F (filter2D, sepFilter2D, boxFilter)
     CV_32F                    | -1/CV_32F
     CV_64F                    | -1/CV_64F
 
@@ -1289,7 +1290,7 @@ The function convolves the source image with the specified Gaussian kernel. In-p
 supported.
 
 @param src input image; the image can have any number of channels, which are processed
-independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_16F, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
 @param ksize Gaussian kernel size. ksize.width and ksize.height can differ but they both must be
 positive and odd. Or, they can be zero's and then they are computed from sigma.
@@ -1403,7 +1404,7 @@ The call `blur(src, dst, ksize, anchor, borderType)` is equivalent to `boxFilter
 anchor, true, borderType)`.
 
 @param src input image; it can have any number of channels, which are processed independently, but
-the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+the depth should be CV_8U, CV_16U, CV_16S, CV_16F, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
 @param ksize blurring kernel size.
 @param anchor anchor point; default value Point(-1,-1) means that the anchor is at the kernel
@@ -1447,7 +1448,7 @@ the kernel using #flip and set the new anchor to `(kernel.cols - anchor.x - 1, k
 anchor.y - 1)`.
 
 The function uses the DFT-based algorithm in case of sufficiently large kernels (~`11 x 11` or
-larger) and the direct algorithm for small kernels.
+larger) and the direct algorithm for small kernels. CV_16F inputs use the direct algorithm.
 
 @param src input image.
 @param dst output image of the same size and the same number of channels as src.
