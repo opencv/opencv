@@ -1504,4 +1504,36 @@ TEST_F(FastFilterEngineTest, FullImage) {
 }
 
 
+typedef testing::TestWithParam<tuple<int, int, int> > Imgproc_BoxFilterInplaceROI;
+
+TEST_P(Imgproc_BoxFilterInplaceROI, accuracy)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam()), border = get<2>(GetParam());
+    Mat original(27, 29, CV_MAKETYPE(depth, cn));
+    RNG(137).fill(original, RNG::UNIFORM, -2., 2.);
+    const Rect regions[] = {Rect(3, 4, 19, 17), Rect(10, 4, 19, 17),
+                            Rect(3, 10, 19, 17), Rect(10, 10, 19, 17), Rect(0, 0, 29, 27)};
+    const Size kernels[] = {Size(3, 5), Size(5, 3)};
+    const Point anchors[] = {Point(-1, -1), Point(0, 1)};
+    for (const Rect& region : regions)
+        for (const Size& kernel : kernels)
+            for (const Point& anchor : anchors)
+                for (int normalize = 0; normalize < 2; ++normalize)
+                {
+                    SCOPED_TRACE(testing::Message() << region << " kernel=" << kernel
+                                 << " anchor=" << anchor << " normalize=" << normalize);
+                    Mat reference, expected = original.clone(), actual = original.clone();
+                    cv::boxFilter(original(region), reference, -1, kernel, anchor, normalize != 0, border);
+                    reference.copyTo(expected(region));
+                    Mat roi = actual(region);
+                    cv::boxFilter(roi, roi, -1, kernel, anchor, normalize != 0, border);
+                    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), depth == CV_32F ? 1e-6 : 1e-12);
+                }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_BoxFilterInplaceROI, testing::Combine(
+    testing::Values(CV_32F, CV_64F), testing::Values(1, 3, 5),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
+
+
 }} // namespace
