@@ -171,6 +171,15 @@ static void updateLastRect(float cx, float cy, float w, float h, int crop_size, 
     rect_last.height = cvFloor(h * crop_size);
 }
 
+static void clipRect(Rect &rect, Size imgSize, int margin)
+{
+    int x1 = std::min(std::max(0, rect.x), imgSize.width - margin);
+    int y1 = std::min(std::max(0, rect.y), imgSize.height - margin);
+    int x2 = std::min(std::max(margin, rect.x + rect.width), imgSize.width);
+    int y2 = std::min(std::max(margin, rect.y + rect.height), imgSize.height);
+    rect = Rect(x1, y1, std::max(margin, x2 - x1), std::max(margin, y2 - y1));
+}
+
 void TrackerVitImpl::init(InputArray image_, const Rect &boundingBox_)
 {
     Mat image = image_.getMat();
@@ -215,6 +224,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
         float h = size_map.at<float>(1, maxLoc.y, maxLoc.x);
 
         updateLastRect(cx, cy, w, h, crop_size, rect_last);
+        clipRect(rect_last, image.size(), 10);
         boundingBoxRes = rect_last;
         return true;
     } else {
