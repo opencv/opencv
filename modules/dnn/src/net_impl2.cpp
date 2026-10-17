@@ -8,10 +8,6 @@
 
 #include <limits>
 
-#ifdef HAVE_CUDA
-#include <opencv2/core/cuda_stream_accessor.hpp>
-#endif
-
 #ifdef HAVE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
 #endif
@@ -618,6 +614,7 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
             if (!op)
                 continue;
             if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
+            if (op->dynamicOutputShapes()) { graphOnCuda = false; break; }
             Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
             if (!e) { graphOnCuda = false; break; }
             cudaExecs[i] = e;
@@ -628,6 +625,8 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
                                          "running the whole graph on CPU", graph->name().c_str()));
         }
     }
+    if (graph == mainGraph)
+        cudaPoolTemps = graphOnCuda;
 #endif
 
     for (i = 0; i < nops; i++) {
@@ -658,6 +657,8 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
             backend = DNN_BACKEND_OPENCV;
         }
         CV_Assert(exec);
+        if (useCUDA && backend == DNN_BACKEND_OPENCV)
+            exec->preferableTarget = DNN_TARGET_CPU;
         // Re-finalize can hand back the same object, so reset state for the new backend.
         exec->packedWeightEpoch = 0;
         exec->finalizedOnce = false;
@@ -733,6 +734,8 @@ void Net::Impl::finalize()
     cudaArgBuffers.clear();
     cudaArgHostDirty.clear();
     cudaArgDeviceDirty.clear();
+    cudaTempBuffers.clear();
+    cudaPoolTemps = false;
     if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
         useCUDA = true;
         if (!cudaInfo) {
@@ -740,8 +743,7 @@ void Net::Impl::finalize()
             context.stream = cuda4dnn::csl::Stream(true);
             context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
             context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
-            auto d2h_stream = cuda4dnn::csl::Stream(true);
-            cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
+            cudaInfo = std::make_unique<CudaInfo_t>(std::move(context));
         }
     }
 #endif
@@ -951,10 +953,18 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 
             Arg targetArg((int)it->second);
 
+            const std::vector<Arg>& gr_outputs = mainGraph->outputs();
+            bool isGraphOutput = false;
+            for (const Arg& o : gr_outputs)
+                if (o.idx == targetArg.idx) { isGraphOutput = true; break; }
+            std::vector<Arg> neededPins;
+            if (!isGraphOutput && targetArg.idx > 0 && args.at(targetArg.idx).kind == DNN_ARG_TEMP)
+                neededPins.push_back(targetArg);
+            pinInteriorArgs(neededPins);
+
             std::vector<Mat> inps, outs;
             forwardMainGraph(inps, outs);
 
-            const std::vector<Arg>& gr_outputs = mainGraph->outputs();
             for (size_t i = 0; i < gr_outputs.size(); i++) {
                 if (gr_outputs[i].idx == targetArg.idx) {
                     assignSingleOutput(outputBlobs, outs[i]);
@@ -962,6 +972,9 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
                 }
             }
 
+#ifdef HAVE_CUDA
+            cudaDownloadArg(targetArg, argTensor(targetArg));
+#endif
             const ArgData& adata = args.at(targetArg.idx);
             Mat result;
             if (adata.kind == DNN_ARG_TEMP) {
@@ -1111,6 +1124,20 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     }
 }
 
+void Net::Impl::pinInteriorArgs(const std::vector<Arg>& neededPins)
+{
+    // Re-plan buffers only when the set of pinned interior tensors actually changes.
+    std::vector<int> want, have;
+    for (const Arg& a : neededPins) want.push_back(a.idx);
+    for (const Arg& a : pinnedArgs) have.push_back(a.idx);
+    std::sort(want.begin(), want.end());
+    std::sort(have.begin(), have.end());
+    if (want != have) {
+        pinnedArgs = neededPins;
+        assignBuffers();
+    }
+}
+
 void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> >& outputBlobs,
                                                    const std::vector<std::string>& outBlobNames)
 {
@@ -1158,16 +1185,7 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
         }
     }
 
-    // Re-plan buffers only when the set of pinned interior tensors actually changes.
-    std::vector<int> want, have;
-    for (const Arg& a : neededPins) want.push_back(a.idx);
-    for (const Arg& a : pinnedArgs) have.push_back(a.idx);
-    std::sort(want.begin(), want.end());
-    std::sort(have.begin(), have.end());
-    if (want != have) {
-        pinnedArgs = neededPins;
-        assignBuffers();
-    }
+    pinInteriorArgs(neededPins);
 
     std::vector<Mat> inps, outs;
     forwardMainGraph(inps, outs);
@@ -1183,6 +1201,9 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
                 if (gr_outputs[k].idx == idx) { result = outs[k]; got = true; break; }
             }
             if (!got) {
+#ifdef HAVE_CUDA
+                cudaDownloadArg(Arg(idx), argTensor(Arg(idx)));
+#endif
                 const ArgData& adata = args.at(idx);
                 if (adata.kind == DNN_ARG_TEMP) {
                     int bufidx = bufidxs.at(idx);
@@ -1233,6 +1254,9 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     const int PPRINT_CONTEXT = 3;
     const int PPRINT_CONST_THRESHOLD = 16;
     const int PPRINT_ALL_THRESHOLD = 100;
+#ifdef HAVE_CUDA
+    cudaDownloadArg(arg, argTensor(arg));
+#endif
     const Mat& m = argTensor(arg);
     const ArgData& adata = args.at(arg.idx);
     bool constArg = adata.kind == DNN_ARG_CONST;
@@ -1427,14 +1451,6 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
 }
 
 #ifdef HAVE_CUDA
-// cv::cuda::Stream view over the (non-owning) cuda4dnn inference stream, so GpuMatND transfers
-// are ordered against the op compute that runs on the same cudaStream_t.
-static inline cuda::Stream wrapCudaStream(cuda4dnn::csl::Stream& s)
-{
-    return cuda::StreamAccessor::wrapStream(s.get());
-}
-
-// GpuMatND upload/download require at least one dimension (rank-0 shapes trip GpuMatND::setFields).
 // View a rank-0 scalar as a 1-element 1D header over the same data; higher-rank Mats pass through.
 static inline Mat asAtLeast1D(const Mat& m)
 {
@@ -1454,21 +1470,37 @@ int Net::Impl::cudaDeviceType(const Mat& hostMat) const
     return hostMat.type();
 }
 
-cuda::GpuMatND& Net::Impl::getCudaArgBuffer(Arg arg, const Mat& hostMat)
+UMat& Net::Impl::cudaDeviceBuffer(Arg arg)
 {
-    int idx = arg.idx;
+    if (cudaPoolTemps && argKind(arg) == DNN_ARG_TEMP) {
+        int bufidx = bufidxs.at(arg.idx);
+        CV_Assert(bufidx >= 0);
+        if (cudaTempBuffers.size() != buffers.size())
+            cudaTempBuffers.resize(buffers.size());
+        return cudaTempBuffers[bufidx];
+    }
+    return cudaArgBuffers[arg.idx];
+}
+
+UMat& Net::Impl::getCudaArgBuffer(Arg arg, const Mat& hostMat)
+{
     if ((int)cudaArgBuffers.size() != (int)args.size()) {
-        cudaArgBuffers.assign(args.size(), cuda::GpuMatND());
+        cudaArgBuffers.assign(args.size(), UMat());
         cudaArgHostDirty.assign(args.size(), 1);
         cudaArgDeviceDirty.assign(args.size(), 0);
+        cudaTempBuffers.clear();
     }
-    // GpuMatND (and cuda4dnn tensors) require at least one dimension; represent a rank-0 scalar
+    // cuda4dnn tensors require at least one dimension; represent a rank-0 scalar
     // tensor as a 1-element 1D tensor so element-wise ops still see the single value.
     MatShape shape = hostMat.shape();
     if (shape.dims == 0)
         shape = MatShape({1});
-    cudaArgBuffers[idx].fit(shape, cudaDeviceType(hostMat));
-    return cudaArgBuffers[idx];
+    UMat& g = cudaDeviceBuffer(arg);
+    g.allocator = cuda::getCudaAllocator();
+    g.fit(shape, cudaDeviceType(hostMat));
+    if (g.u && g.u->currAllocator != g.allocator)
+        CV_Error(Error::GpuApiCallError, "DNN/CUDA: cannot allocate a device tensor");
+    return g;
 }
 
 void Net::Impl::cudaSetHostDirty(Arg arg)
@@ -1484,16 +1516,19 @@ void Net::Impl::cudaUploadArg(Arg arg, const Mat& hostMat)
 {
     int idx = arg.idx;
     Mat src = asAtLeast1D(hostMat);
-    cuda::GpuMatND& g = getCudaArgBuffer(arg, src);
+    UMat& g = getCudaArgBuffer(arg, src);
     if (cudaArgHostDirty[idx]) {
-        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
-        if (g.type() == src.type()) {
-            g.upload(src, s);
-        } else {
-            // FP32 -> FP16 (device stores half): convert on host, then copy up.
-            Mat tmp;
-            src.convertTo(tmp, CV_MAT_DEPTH(g.type()));
-            g.upload(tmp, s);
+        Mat converted;
+        if (g.type() != src.type())
+            src.convertTo(converted, CV_MAT_DEPTH(g.type()));
+        const Mat& staged = converted.empty() ? src : converted;
+        CV_Assert(staged.isContinuous() && g.isContinuous());
+        CV_Assert(staged.total() == g.total() && staged.elemSize() == g.elemSize());
+        std::size_t nbytes = staged.total() * staged.elemSize();
+        if (nbytes > 0) {
+            uchar* dst = static_cast<uchar*>(g.u->handle) + g.offset;
+            CUDA4DNN_CHECK_CUDA(cudaMemcpyAsync(dst, staged.data, nbytes, cudaMemcpyHostToDevice,
+                                                cudaInfo->context.stream.get()));
         }
         cudaArgHostDirty[idx] = 0;
         cudaArgDeviceDirty[idx] = 0;
@@ -1506,17 +1541,16 @@ void Net::Impl::cudaDownloadArg(Arg arg, Mat& hostMat)
     if (idx < 0 || idx >= (int)cudaArgDeviceDirty.size())
         return;
     if (cudaArgDeviceDirty[idx]) {
-        cuda::GpuMatND& g = cudaArgBuffers[idx];
-        cuda::Stream s = wrapCudaStream(cudaInfo->context.stream);
+        const UMat& g = cudaDeviceBuffer(arg);
         Mat dst = asAtLeast1D(hostMat);   // fill the scalar's storage through a 1D header
+        cudaInfo->context.stream.synchronize();
         if (g.type() == dst.type()) {
-            g.download(dst, s);
-            cudaInfo->context.stream.synchronize();  // host read follows immediately
+            dst.fitSameSize(g, g.type());
+            g.copyTo(dst);
         } else {
             // device stores half: copy down, then convert up to the host FP32 tensor.
             Mat tmp;
-            g.download(tmp, s);
-            cudaInfo->context.stream.synchronize();
+            g.copyTo(tmp);
             tmp.convertTo(dst, dst.type());
         }
         cudaArgDeviceDirty[idx] = 0;
@@ -1530,10 +1564,19 @@ static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
 {
     Ptr<Layer> exec = gimpl->exec_[opidx];
     CV_Assert(exec && netimpl->cudaInfo);
-    std::vector<cuda::GpuMatND> inpG(inputs.size()), outG(outputs.size());
+    for (size_t i = 0; i < outputs.size(); i++) {
+        if (outMats[i].total() == 0) {
+            for (size_t k = 0; k < outputs.size(); k++)
+                netimpl->cudaSetHostDirty(outputs[k]);
+            return;
+        }
+    }
+    std::vector<UMat> inpG(inputs.size()), outG(outputs.size());
     for (size_t i = 0; i < inputs.size(); i++) {
+        if (inpMats[i].empty())
+            continue;
         netimpl->cudaUploadArg(inputs[i], inpMats[i]);   // H2D only if host-authoritative
-        inpG[i] = netimpl->cudaArgBuffers[inputs[i].idx];
+        inpG[i] = netimpl->cudaDeviceBuffer(inputs[i]);
     }
     for (size_t i = 0; i < outputs.size(); i++) {
         outG[i] = netimpl->getCudaArgBuffer(outputs[i], outMats[i]);

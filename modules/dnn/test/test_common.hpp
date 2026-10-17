@@ -11,6 +11,10 @@
 #ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
 #endif
+#include "opencv2/core/utils/configuration.private.hpp"
+#ifdef HAVE_CUDA
+#include "opencv2/core/cuda.hpp"
+#endif
 
 // src/op_inf_engine.hpp
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -163,9 +167,22 @@ public:
         getDefaultThresholds(backend, target, &default_l1, &default_lInf);
     }
 
+    static bool cudaTF32Enabled()
+    {
+#ifdef HAVE_CUDA
+        static const bool enabled = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true) &&
+                                    cv::cuda::getCudaEnabledDeviceCount() > 0 &&
+                                    cv::cuda::DeviceInfo().majorVersion() >= 8;
+        return enabled;
+#else
+        return false;
+#endif
+    }
+
     static void getDefaultThresholds(int backend, int target, double* l1, double* lInf)
     {
-        if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+            (target == DNN_TARGET_CUDA && cudaTF32Enabled()))
         {
             *l1 = 4e-3;
             *lInf = 2e-2;
