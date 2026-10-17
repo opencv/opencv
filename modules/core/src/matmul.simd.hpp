@@ -2881,7 +2881,8 @@ TransformFunc getTransformFunc(int depth)
     {
         transformWrap<uchar, float, transform_8u>, transformWrap<schar, float, transform_8s>, transformWrap<ushort, float, transform_16u>,
         transformWrap<short, float, transform_16s>, transformWrap<int, double, transform_32s>, transformWrap<float, float, transform_32f>,
-        transformWrap<double, double, transform_64f>, 0
+        transformWrap<double, double, transform_64f>,
+        transformWrap<hfloat, float, transform_<hfloat, float>>
     };
 
     return transformTab[depth];
@@ -2893,7 +2894,8 @@ TransformFunc getDiagTransformFunc(int depth)
     {
         transformWrap<uchar, float, diagtransform_8u>, transformWrap<schar, float, diagtransform_8s>, transformWrap<ushort, float, diagtransform_16u>,
         transformWrap<short, float, diagtransform_16s>, transformWrap<int, double, diagtransform_32s>, transformWrap<float, float, diagtransform_32f>,
-        transformWrap<double, double, diagtransform_64f>, 0
+        transformWrap<double, double, diagtransform_64f>,
+        transformWrap<hfloat, float, diagtransform_<hfloat, float>>
     };
 
     return diagTransformTab[depth];

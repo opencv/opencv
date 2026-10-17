@@ -18,7 +18,7 @@ namespace cv {
 
 namespace hal {
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -60,7 +60,7 @@ void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtBGRtoGray(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
@@ -74,7 +74,7 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtGraytoBGR(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
@@ -274,7 +274,7 @@ bool oclCvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
 
 void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb)
 {
-    CvtHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F, CV_16F> > h(_src, _dst, dcn);
 
     hal::cvtBGRtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, dcn, swapb);
@@ -299,7 +299,7 @@ void cvtColor5x52BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, in
 
 void cvtColorBGR2Gray( InputArray _src, OutputArray _dst, bool swapb)
 {
-    CvtHelper< Set<3, 4>, Set<1>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 1);
+    CvtHelper< Set<3, 4>, Set<1>, Set<CV_8U, CV_16U, CV_32F, CV_16F> > h(_src, _dst, 1);
 
     hal::cvtBGRtoGray(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                       h.depth, h.scn, swapb);
@@ -308,7 +308,7 @@ void cvtColorBGR2Gray( InputArray _src, OutputArray _dst, bool swapb)
 void cvtColorGray2BGR( InputArray _src, OutputArray _dst, int dcn)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F, CV_16F> > h(_src, _dst, dcn);
 
     hal::cvtGraytoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows, h.depth, dcn);
 }
