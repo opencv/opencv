@@ -382,11 +382,24 @@ TEST(Photo_CalibrateDebevec, regression)
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
-    ASSERT_LT(max, 0.25);
-#else
     ASSERT_LT(max, 0.15);
-#endif
+}
+
+TEST(Photo_CalibrateDebevec, middle_value_is_fixed)
+{
+    // the response is normalized by g(LDR_SIZE / 2) = 0, i.e. response(128) == 1
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images;
+    vector<float> times;
+    Mat response;
+    loadExposureSeq(test_path + "exposures/", images, times);
+    Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
+    calibrate->process(images, response, times);
+    Vec3f middle = response.at<Vec3f>(128);
+    for(int c = 0; c < 3; c++) {
+        EXPECT_NEAR(1.0f, middle[c], 1e-3f) << "channel=" << c;
+    }
 }
 
 TEST(Photo_CalibrateRobertson, regression)
