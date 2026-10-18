@@ -2340,11 +2340,14 @@ void test_v_round_float32()
 {
     static const float inputValues[] = {
         -2.5f, -3.5f, -2.6f, -2.4f, 2.5f, 3.5f, 2.6f, 2.4f,
+        -0.5f, 0.5f, -1.5f, 1.5f,
         -2147483648.0f, 2147483520.0f,
         -1.0f, -1.7f, 0.49999997f, 8388609.0f
     };
     static const int expectedValues[] = {
-        -2, -4, -3, -2, 2, 4, 3, 2, (-2147483647 - 1), 2147483520,
+        -2, -4, -3, -2, 2, 4, 3, 2,
+        0, 0, -2, 2,
+        (-2147483647 - 1), 2147483520,
         -1, -2, 0, 8388609
     };
     const int valueCount = sizeof(inputValues) / sizeof(inputValues[0]);
