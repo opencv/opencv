@@ -34,8 +34,13 @@
 
 /** Authors: Ethan Rublee, Vincent Rabaud, Gary Bradski */
 
-#include "precomp.hpp"
-#include "opencl_kernels_features.hpp"
+//此处更改了Include的path，原本是#include "precomp.hpp"
+#include "modules/features/src/precomp.hpp"
+//此处更改了Include的path：这个头文件是 CMake 在 build 目录下自动生成的，
+//原文件能直接写 #include "opencl_kernels_features.hpp"，是因为编译时加了
+//-I build/modules/features；这里我们从工作区根目录出发写完整相对路径。
+#include "modules/features/opencl_kernels_features.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include <iterator>
 
 #ifndef CV_IMPL_ADD
@@ -176,37 +181,112 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+//===============================================================================================
+//（1）一号向量化函数：对中心行进行向量化，计算矩
+static inline int icAnglesWeightedRowSum(const uchar* pixels, int u0, int count,
+                                         const int* column_weights)
+{
+    int weighted_total = 0;
+    int offset = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int lane_count = VTraits<v_int32>::vlanes();
+    for (; offset + lane_count <= count; offset += lane_count)
+    {
+        v_int32 pixel_values = v_reinterpret_as_s32(vx_load_expand_q(pixels + offset));
+        v_int32 weight_values = vx_load(column_weights + u0 + offset);
+        weighted_total += v_reduce_sum(v_mul(weight_values, pixel_values));
+    }
+#endif
+
+    for (; offset < count; ++offset)
+        weighted_total += column_weights[u0 + offset] * pixels[offset];
+
+    return weighted_total;
+}
+
+//（2）二号：对上下对称的两行，同时向量化，计算水平矩和垂直矩
+static inline void icAnglesRowPairMoments(const uchar* plus_row, const uchar* minus_row,
+                                          int u0, int count, const int* column_weights,
+                                          int& difference_total, int& weighted_total)
+{
+    difference_total = 0;
+    weighted_total = 0;
+    int offset = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int lane_count = VTraits<v_int32>::vlanes();
+    if (count >= lane_count)
+    {
+        v_int32 difference_accumulator = vx_setzero_s32();
+        v_int32 weighted_accumulator = vx_setzero_s32();
+        for (; offset + lane_count <= count; offset += lane_count)
+        {
+            v_int32 plus_values = v_reinterpret_as_s32(vx_load_expand_q(plus_row + offset));
+            v_int32 minus_values = v_reinterpret_as_s32(vx_load_expand_q(minus_row + offset));
+
+            difference_accumulator = v_add(difference_accumulator, v_sub(plus_values, minus_values));
+
+            v_int32 weight_values = vx_load(column_weights + u0 + offset);
+            weighted_accumulator = v_add(weighted_accumulator,
+                                         v_mul(weight_values, v_add(plus_values, minus_values)));
+        }
+        difference_total += v_reduce_sum(difference_accumulator);
+        weighted_total += v_reduce_sum(weighted_accumulator);
+    }
+#endif
+
+    for (; offset < count; ++offset)
+    {
+        int plus_value = plus_row[offset];
+        int minus_value = minus_row[offset];
+        difference_total += plus_value - minus_value;
+        weighted_total += column_weights[u0 + offset] * (plus_value + minus_value);
+    }
+}
+
+//（3）原本负责灰度质心法的函数
 static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
                      std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
 {
+
     int step = (int)img.step1();
     size_t ptidx, ptsize = pts.size();
+
+
+    AutoBuffer<int> column_weights_buffer(2 * half_k + 1);
+    int* column_weights = column_weights_buffer.data() + half_k;
+    for (int u = -half_k; u <= half_k; ++u)
+        column_weights[u] = u;
+        
 
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
         const Rect& layer = layerinfo[pts[ptidx].octave];
+
         const uchar* center = &img.at<uchar>(cvRound(pts[ptidx].pt.y) + layer.y, cvRound(pts[ptidx].pt.x) + layer.x);
 
         int m_01 = 0, m_10 = 0;
 
-        // Treat the center line differently, v=0
-        for (int u = -half_k; u <= half_k; ++u)
-            m_10 += u * center[u];
+        //处理中心行
+        m_10 += icAnglesWeightedRowSum(center - half_k, -half_k, 2 * half_k + 1, column_weights);
 
-        // Go line by line in the circular patch
         for (int v = 1; v <= half_k; ++v)
         {
-            // Proceed over the two lines
+            // 一次循环内，选择两条line上的像素点来求矩
             int v_sum = 0;
+            int weighted_sum = 0;
             int d = u_max[v];
-            for (int u = -d; u <= d; ++u)
-            {
-                int val_plus = center[u + v*step], val_minus = center[u - v*step];
-                v_sum += (val_plus - val_minus);
-                m_10 += u * (val_plus + val_minus);
-            }
+
+            //plus是特征点上面的line的灰度值，minus是下面的line的灰度值
+            //所以v_sum储存，遍历完两行之后的灰度值的上下差值，然后计算垂直矩
+            icAnglesRowPairMoments(center + v * step - d, center - v * step - d,
+                                   -d, 2 * d + 1, column_weights,
+                                   v_sum, weighted_sum);
+
+            m_10 += weighted_sum;
             m_01 += v * v_sum;
         }
 
