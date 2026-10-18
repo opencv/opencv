@@ -41,9 +41,6 @@
 //M*/
 
 #include "modules/video/src/precomp.hpp"
-//此处更改了Include的path：这个头文件是 CMake 在 build 目录下自动生成的，
-//原文件能直接写 #include "opencl_kernels_video.hpp"，是因为编译时加了 -I build/modules/video；
-//这里从工作区根目录出发写完整相对路径（build 已在 .vscode/c_cpp_properties.json 的 includePath 里）。
 #include "modules/video/opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
@@ -461,7 +458,6 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         x = 0;
 
 #if CV_SIMD_SCALABLE
-        // RVV按运行时lane数处理连续元素，广播单个系数，不使用定宽系数表。
         const int lanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - lanes; x += lanes)
         {
@@ -539,7 +535,6 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         // horizontal blur
         x = 0;
 #if CV_SIMD_SCALABLE
-        // RVV按运行时lane数处理连续元素，广播单个系数，不使用定宽系数表。
         const int hlanes = VTraits<v_float32>::vlanes();
         for (; x <= width*5 - hlanes; x += hlanes)
         {
