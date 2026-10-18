@@ -2148,6 +2148,39 @@ OCL_TEST(Arithm, predictOptimalVectorWidth_all_depths)
     }
 }
 
+// UMat arithmetic on a depth with no OpenCL type must fall back to the CPU path
+OCL_TEST(Arithm, bf16_falls_back_to_cpu)
+{
+    Mat a32(11, 13, CV_32FC1), b32(11, 13, CV_32FC1);
+    randu(a32, -10, 10);
+    randu(b32, 1, 10);
+
+    Mat a, b;
+    a32.convertTo(a, CV_16BF);
+    b32.convertTo(b, CV_16BF);
+
+    UMat ua = a.getUMat(ACCESS_READ), ub = b.getUMat(ACCESS_READ);
+
+    auto expectSame = [](const char* name, const Mat& dst, const UMat& udst)
+    {
+        Mat d32, u32;
+        dst.convertTo(d32, CV_32F);
+        udst.getMat(ACCESS_READ).convertTo(u32, CV_32F);
+        EXPECT_EQ(0, cvtest::norm(d32, u32, NORM_INF)) << name;
+    };
+
+    Mat dst; UMat udst;
+    cv::add(a, b, dst);                      cv::add(ua, ub, udst);                      expectSame("add", dst, udst);
+    cv::subtract(a, b, dst);                 cv::subtract(ua, ub, udst);                 expectSame("subtract", dst, udst);
+    cv::multiply(a, b, dst);                 cv::multiply(ua, ub, udst);                 expectSame("multiply", dst, udst);
+    cv::divide(a, b, dst);                   cv::divide(ua, ub, udst);                   expectSame("divide", dst, udst);
+    cv::absdiff(a, b, dst);                  cv::absdiff(ua, ub, udst);                  expectSame("absdiff", dst, udst);
+    cv::min(a, b, dst);                      cv::min(ua, ub, udst);                      expectSame("min", dst, udst);
+    cv::max(a, b, dst);                      cv::max(ua, ub, udst);                      expectSame("max", dst, udst);
+    cv::addWeighted(a, 0.5, b, 0.5, 1, dst); cv::addWeighted(ua, 0.5, ub, 0.5, 1, udst); expectSame("addWeighted", dst, udst);
+    cv::add(a, Scalar(2), dst);              cv::add(ua, Scalar(2), udst);              expectSame("add scalar", dst, udst);
+}
+
 } } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL
