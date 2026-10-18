@@ -219,6 +219,35 @@ OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
                                 OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 
+// UMat::convertTo must saturate and round like Mat::convertTo for the 5.x integer depths
+OCL_TEST(ConvertTo, saturate_new_int_depths)
+{
+    double vals[] = { -5, -1.5, 0, 2.5, 3e9, 1e20 };
+    Mat src64f(1, 6, CV_64F, vals);
+
+    for (int sdepth : { CV_8S, CV_16S, CV_32S, CV_64S, CV_32F })
+        for (int ddepth : { CV_32U, CV_64U, CV_64S })
+        {
+            if (sdepth == ddepth)
+                continue;
+
+            Mat src;
+            src64f.convertTo(src, sdepth);
+            UMat usrc = src.getUMat(ACCESS_READ);
+
+            Mat dst;
+            UMat udst;
+            src.convertTo(dst, ddepth);
+            usrc.convertTo(udst, ddepth);
+
+            Mat dst64f, udst64f;
+            dst.convertTo(dst64f, CV_64F);
+            udst.getMat(ACCESS_READ).convertTo(udst64f, CV_64F);
+            EXPECT_EQ(0, cvtest::norm(dst64f, udst64f, NORM_INF))
+                << depthToString(sdepth) << " -> " << depthToString(ddepth);
+        }
+}
+
 } } // namespace opencv_test::ocl
 
 #endif
