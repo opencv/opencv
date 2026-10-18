@@ -39,8 +39,11 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include "opencl_kernels_imgproc.hpp"
+#include "modules/imgproc/src/precomp.hpp"
+//此处更改了Include的path：这个头文件是 CMake 在 build 目录下自动生成的，
+//原文件能直接写 #include "opencl_kernels_imgproc.hpp"，是因为编译时加了 -I build/modules/imgproc；
+//这里从工作区根目录出发写完整相对路径（build 已在 .vscode/c_cpp_properties.json 的 includePath 里）。
+#include "modules/imgproc/opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #include "opencv2/core/utils/tls.hpp"
@@ -1519,7 +1522,15 @@ calcBackProj_8u( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
         {
             if( d0 == 1 )
             {
-                for( x = 0; x <= imsize.width - 4; x += 4 )
+                x = 0;
+#if CV_RVV && CV_SIMD_SCALABLE
+                // 256项表使用内存indexed load；每次连续读取/写入一组字节。
+                const int lanes = VTraits<v_uint8>::vlanes();
+                // 每组取完整向量；不足一组的尾部仍走原标量展开。
+                for (; x <= imsize.width - lanes; x += lanes)
+                    v_store(bproj + x, v_lut(matH, vx_load(p0 + x)));
+#endif
+                for( ; x <= imsize.width - 4; x += 4 )
                 {
                     uchar t0 = matH[p0[x]], t1 = matH[p0[x+1]];
                     bproj[x] = t0; bproj[x+1] = t1;
