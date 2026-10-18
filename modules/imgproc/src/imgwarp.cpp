@@ -1934,7 +1934,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     for( y = 0; y < size.height; y++ )
     {
         const float* src1f = m1->ptr<float>(y);
-        const float* src2f = m2->ptr<float>(y);
+        const float* src2f = m2->empty() ? NULL : m2->ptr<float>(y);
         const short* src1 = (const short*)src1f;
         const ushort* src2 = (const ushort*)src2f;
 
