@@ -40,8 +40,11 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include "opencl_kernels_video.hpp"
+#include "modules/video/src/precomp.hpp"
+//此处更改了Include的path：这个头文件是 CMake 在 build 目录下自动生成的，
+//原文件能直接写 #include "opencl_kernels_video.hpp"，是因为编译时加了 -I build/modules/video；
+//这里从工作区根目录出发写完整相对路径（build 已在 .vscode/c_cpp_properties.json 的 includePath 里）。
+#include "modules/video/opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #if defined __APPLE__ || defined __ANDROID__
@@ -456,7 +459,18 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         }
 
         x = 0;
-#if CV_SIMD128
+
+#if CV_SIMD_SCALABLE
+        // RVV按运行时lane数处理连续元素，广播单个系数，不使用定宽系数表。
+        const int lanes = VTraits<v_float32>::vlanes();
+        for (; x <= width*5 - lanes; x += lanes)
+        {
+            v_float32 acc = v_mul(vx_load(srow[m] + x), vx_setall_f32(kernel[0]));
+            for (i = 1; i <= m; ++i)
+                acc = v_add(acc, v_mul(v_add(vx_load(srow[m-i] + x), vx_load(srow[m+i] + x)), vx_setall_f32(kernel[i])));
+            v_store(vsum + x, acc);
+        }
+#elif CV_SIMD128
         {
             for( ; x <= width*5 - 16; x += 16 )
             {
@@ -506,6 +520,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
             }
         }
 #endif
+
         for( ; x < width*5; x++ )
         {
             float s0 = srow[m][x]*kernel[0];
@@ -523,7 +538,17 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_SIMD128
+#if CV_SIMD_SCALABLE
+        // RVV按运行时lane数处理连续元素，广播单个系数，不使用定宽系数表。
+        const int hlanes = VTraits<v_float32>::vlanes();
+        for (; x <= width*5 - hlanes; x += hlanes)
+        {
+            v_float32 acc = v_mul(vx_load(vsum + x), vx_setall_f32(kernel[0]));
+            for (i = 1; i <= m; ++i)
+                acc = v_add(acc, v_mul(v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5)), vx_setall_f32(kernel[i])));
+            v_store(hsum + x, acc);
+        }
+#elif CV_SIMD128
         {
             for( ; x <= width*5 - 8; x += 8 )
             {
@@ -545,6 +570,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
             }
         }
 #endif
+
         for( ; x < width*5; x++ )
         {
             float sum = vsum[x]*kernel[0];
