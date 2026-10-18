@@ -34,11 +34,7 @@
 
 /** Authors: Ethan Rublee, Vincent Rabaud, Gary Bradski */
 
-//此处更改了Include的path，原本是#include "precomp.hpp"
 #include "modules/features/src/precomp.hpp"
-//此处更改了Include的path：这个头文件是 CMake 在 build 目录下自动生成的，
-//原文件能直接写 #include "opencl_kernels_features.hpp"，是因为编译时加了
-//-I build/modules/features；这里我们从工作区根目录出发写完整相对路径。
 #include "modules/features/opencl_kernels_features.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <iterator>
@@ -182,9 +178,6 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
 }
 
 
-
-//===============================================================================================
-//（1）一号向量化函数：对中心行进行向量化，计算矩
 static inline int icAnglesWeightedRowSum(const uchar* pixels, int u0, int count,
                                          const int* column_weights)
 {
@@ -207,7 +200,6 @@ static inline int icAnglesWeightedRowSum(const uchar* pixels, int u0, int count,
     return weighted_total;
 }
 
-//（2）二号：对上下对称的两行，同时向量化，计算水平矩和垂直矩
 static inline void icAnglesRowPairMoments(const uchar* plus_row, const uchar* minus_row,
                                           int u0, int count, const int* column_weights,
                                           int& difference_total, int& weighted_total)
@@ -247,7 +239,6 @@ static inline void icAnglesRowPairMoments(const uchar* plus_row, const uchar* mi
     }
 }
 
-//（3）原本负责灰度质心法的函数
 static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
                      std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
 {
@@ -270,18 +261,14 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 
         int m_01 = 0, m_10 = 0;
 
-        //处理中心行
         m_10 += icAnglesWeightedRowSum(center - half_k, -half_k, 2 * half_k + 1, column_weights);
 
         for (int v = 1; v <= half_k; ++v)
         {
-            // 一次循环内，选择两条line上的像素点来求矩
             int v_sum = 0;
             int weighted_sum = 0;
             int d = u_max[v];
 
-            //plus是特征点上面的line的灰度值，minus是下面的line的灰度值
-            //所以v_sum储存，遍历完两行之后的灰度值的上下差值，然后计算垂直矩
             icAnglesRowPairMoments(center + v * step - d, center - v * step - d,
                                    -d, 2 * d + 1, column_weights,
                                    v_sum, weighted_sum);
