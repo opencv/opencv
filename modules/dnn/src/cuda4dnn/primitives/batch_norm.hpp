@@ -19,8 +19,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class BatchNormOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         BatchNormOp(csl::Stream stream_, const cv::Mat& weights, const cv::Mat& bias)
             : stream(std::move(stream_))
         {
@@ -32,8 +30,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cuda::GpuMatND>& inputs,
-            const std::vector<cuda::GpuMatND>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(inputs.size() == 1 && outputs.size() == 1);
