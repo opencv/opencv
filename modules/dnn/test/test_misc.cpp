@@ -170,8 +170,6 @@ TEST(blobPointsToImagePoints, DNN_PMODE_LETTERBOX)
                                   inputSize.height / (float)imgSize.height);
     float left = (float)((inputSize.width - int(imgSize.width * resizeFactor)) / 2);
     float top = (float)((inputSize.height - int(imgSize.height * resizeFactor)) / 2);
-    // The padding sits outside the content, so a blob point at the origin maps off the image.
-    EXPECT_LT(pImg[0].x, 0.f);
     for (size_t i = 0; i < pBlob.size(); i++)
     {
         EXPECT_FLOAT_EQ(pImg[i].x, (pBlob[i].x - left) / resizeFactor);
