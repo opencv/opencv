@@ -434,6 +434,11 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     // out_channels == C0, so NK1 == 1: exercises computeSpatChunks()'s spatial
     // split in conv2_deconv.cpp regardless of thread count.
     testONNXModels("deconv_spatial_narrow", npy, 0, 0, false, false);
+    // GEMM + col2im paths: one tap per output pixel, overlapping taps split into channel chunks,
+    // and a second group that starts inside a channel block.
+    testONNXModels("deconv_k2s2", npy, 0, 0, false, false);
+    testONNXModels("deconv_overlap_chunks", npy, 0, 0, false, false);
+    testONNXModels("deconv_overlap_groups", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D)
