@@ -4,11 +4,9 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: CUDA backend, memory and synchronization primitives.
-//
-// Kernels are not wired yet (get_op_table reports none), so every operation falls back to
-// the CPU; the memory side is complete, which already gives the transfer behaviour of the
-// protocol: a pinned host copy so each transfer is a single DMA, no write-back after
+// Non-CPU HAL: CUDA backend, memory and synchronization primitives, and the core operations
+// (flip, transpose: src/cuda/accel_kernels.cu). The memory side gives the transfer behaviour of
+// the protocol: a pinned host copy so each transfer is a single DMA, no write-back after
 // read-only CPU access, uploads only when the device needs the data, events as fences.
 //
 // This replaces the state machine of cv::cuda::getCudaAllocator() (cuda_umat.cpp, #29451);
@@ -22,6 +20,7 @@
 
 #include <cuda_runtime.h>
 #include <cuda.h>   // driver API types only: libcuda is loaded at run time (see Driver)
+#include "../cuda/accel_kernels.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/tls.hpp>
@@ -765,10 +764,81 @@ cvAccelStatus CV_API_CALL cu_device_synchronize(int device) CV_ACCEL_NOEXCEPT
     return status(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
 }
 
-cvAccelStatus CV_API_CALL cu_get_op_table(const char*, uint32_t, const void** table) CV_ACCEL_NOEXCEPT
+//! a linear 2-D view with whole elements that the kernels address through a flat pointer
+bool kernelView(const cvAccelView* v)
 {
-    // TODO: kernels (own .cu files, or NPP) for the core and imgproc tables
+    if (!v || !v->alloc || v->dims != 2 || v->alloc->desc.layout_modifier != 0)
+        return false;
+    const uint32_t kind = v->alloc->desc.handle_kind;
+    const int esz = CV_ELEM_SIZE(v->type);
+    return (kind == CV_ACCEL_HANDLE_DEVICE_POINTER || kind == CV_ACCEL_HANDLE_HOST_POINTER) &&
+           cuda_kernels::supportedElementSize(esz) && v->step[1] == (uint64_t)esz;
+}
+
+//! the address the kernels use: core sets device_address to the one this GPU reaches the memory at
+unsigned char* viewAddress(const cvAccelView* v)
+{
+    const uint64_t base = v->alloc->device_address ? v->alloc->device_address : v->alloc->handle;
+    return (unsigned char*)(uintptr_t)(base + v->offset);
+}
+
+cvAccelStatus checkCall(const cvAccelCall* call)
+{
+    if (!call || call->struct_size < sizeof(cvAccelCall))
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (call->mode == CV_ACCEL_EXECUTE && (!call->stream || call->device < 0 || call->device >= (int)devices().size()))
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad stream or device");
+    return CV_ACCEL_OK;
+}
+
+cvAccelStatus CV_API_CALL cu_flip(const cvAccelCall* call, const cvAccelView* src, const cvAccelView* dst,
+                                  int flipMode) CV_ACCEL_NOEXCEPT
+{
+    const cvAccelStatus st = checkCall(call);
+    if (st != CV_ACCEL_OK || !src || !dst)
+        return st != CV_ACCEL_OK ? st : fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (!kernelView(src) || !kernelView(dst) || src->type != dst->type)
+        return CV_ACCEL_NOT_IMPLEMENTED;
+    if (src->size[0] != dst->size[0] || src->size[1] != dst->size[1])
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "flip: size mismatch");
+    if (call->mode == CV_ACCEL_QUERY)
+        return CV_ACCEL_OK;
+    CV_CUDA_GUARD(call->device);
+    const CudaStream* s = (const CudaStream*)call->stream;
+    return status(cuda_kernels::flip(viewAddress(src), (size_t)src->step[0], viewAddress(dst), (size_t)dst->step[0],
+                                     src->size[0], src->size[1], CV_ELEM_SIZE(src->type), flipMode, s->s), "flip");
+}
+
+cvAccelStatus CV_API_CALL cu_transpose(const cvAccelCall* call, const cvAccelView* src,
+                                       const cvAccelView* dst) CV_ACCEL_NOEXCEPT
+{
+    const cvAccelStatus st = checkCall(call);
+    if (st != CV_ACCEL_OK || !src || !dst)
+        return st != CV_ACCEL_OK ? st : fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (!kernelView(src) || !kernelView(dst) || src->type != dst->type)
+        return CV_ACCEL_NOT_IMPLEMENTED;
+    if (src->size[0] != dst->size[1] || src->size[1] != dst->size[0])
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "transpose: size mismatch");
+    if (call->mode == CV_ACCEL_QUERY)
+        return CV_ACCEL_OK;
+    CV_CUDA_GUARD(call->device);
+    const CudaStream* s = (const CudaStream*)call->stream;
+    return status(cuda_kernels::transpose(viewAddress(src), (size_t)src->step[0], viewAddress(dst), (size_t)dst->step[0],
+                                          src->size[0], src->size[1], CV_ELEM_SIZE(src->type), s->s), "transpose");
+}
+
+const cvAccelOpsCore_v0 g_coreOps = { sizeof(cvAccelOpsCore_v0), cu_flip, cu_transpose };
+
+cvAccelStatus CV_API_CALL cu_get_op_table(const char* module, uint32_t version, const void** table) CV_ACCEL_NOEXCEPT
+{
+    if (!table)
+        return CV_ACCEL_INVALID_ARGUMENT;
     *table = 0;
+    if (module && strcmp(module, CV_ACCEL_OPS_CORE) == 0 && version == CV_ACCEL_OPS_CORE_VERSION)
+    {
+        *table = &g_coreOps;
+        return CV_ACCEL_OK;
+    }
     return CV_ACCEL_NOT_IMPLEMENTED;
 }
 

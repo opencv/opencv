@@ -2536,19 +2536,43 @@ TEST(Core_Accel_CUDA, device_copies_stay_on_the_device)
     EXPECT_EQ(0, maxDiff(src, c.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel_CUDA, calls_without_kernels_keep_their_results_on_the_gpu)
+TEST(Core_Accel_CUDA, flip_and_transpose_run_on_the_gpu)
 {
+    // the kernels of the CUDA backend, for elements of every size and every flip, on parts of
+    // buffers too; results stay on the GPU
     accel::Device d = cudaDevice();
-    Mat src(64, 48, CV_8UC1), ref;
-    randu(src, 0, 255);
-    cv::flip(src, ref, 0);
-    UMat u = makeOn(d, src), out, sum;
-    accel::resetTransferStats();
-    cv::flip(u, out, 0);                    // a hook, but no CUDA kernel yet
-    EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
-    EXPECT_TRUE(d == accel::describe(out).device);
-    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
-    cv::add(u, u, sum);                     // no hook at all
+    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC2, CV_32FC1, CV_32FC3, CV_64FC2, CV_64FC4 };
+    for (int type : types)
+    {
+        Mat src(37, 53, type);
+        randu(src, 0, 100);
+        UMat u = makeOn(d, src);
+        for (int mode : { 0, 1, -1 })
+        {
+            Mat ref;
+            cv::flip(src, ref, mode);
+            UMat out;
+            accel::resetTransferStats();
+            cv::flip(u, out, mode);
+            EXPECT_EQ(1u, accel::getTransferStats().deviceOps) << typeToString(type) << " mode " << mode;
+            EXPECT_EQ(0u, accel::getTransferStats().cpuFallbacks);
+            EXPECT_TRUE(d == accel::describe(out).device);
+            EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ))) << typeToString(type) << " mode " << mode;
+        }
+        Mat ref;
+        cv::transpose(src, ref);
+        UMat out;
+        cv::transpose(u, out);
+        EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ))) << typeToString(type);
+        Mat roiRef;
+        cv::flip(src(Rect(3, 5, 20, 11)), roiRef, -1);
+        UMat roiOut;
+        cv::flip(u(Rect(3, 5, 20, 11)), roiOut, -1);
+        EXPECT_EQ(0, maxDiff(roiRef, roiOut.getMat(ACCESS_READ))) << typeToString(type);
+    }
+    // a function without a hook keeps its result on the GPU as well
+    UMat u = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(1))), sum;
+    cv::add(u, u, sum);
     EXPECT_TRUE(d == accel::describe(sum).device);
 }
 

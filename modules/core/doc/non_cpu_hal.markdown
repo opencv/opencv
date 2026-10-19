@@ -690,7 +690,7 @@ delays every queued task to expose missing waits.
 Measured on an Intel Core i9-14900KS with an NVIDIA GeForce RTX 5090 (CUDA 12.0, driver 570),
 GCC 13.3, Release builds:
 
-- `opencv_test_core --gtest_filter='Core_Accel*'`: the 87 emulator tests pass, also repeated,
+- `opencv_test_core --gtest_filter='Core_Accel*'`: the 99 emulator tests pass, also repeated,
   in separate processes and with every device task delayed (`OPENCV_ACCEL_EMULATOR_DELAY_US`).
   They cover the protocol, failures at every point (including work that cannot be proven
   stopped and fences the backend refuses to share), device loss, dma-buf read and write
@@ -701,10 +701,16 @@ GCC 13.3, Release builds:
   failed CPU access begins and ends, nested CPU access levels, placement without hooks and in
   nested calls, outputs placed by their allocator, device choice, plans that cannot move their
   data, shared streams, cross-device fences, peer addresses, a backend with 70 devices, and
-  `struct_size`s and API versions. Each test of the fourth review was checked to fail on the
-  code before its fix.
-- The eight `Core_Accel_CUDA` tests pass on the RTX 5090: transfer accounting of a host round
-  trip, device-to-device copies, placement after CPU fallbacks, backing identity and range
+  `struct_size`s and API and ABI versions; after the fifth review also exports (layouts, images,
+  settled snapshots), memory exported outside OpenCV met through another backend, failures of
+  writes replaced on one stream, device-access brackets that cannot all begin, protected memory
+  shared between devices, host pages of an import that is not released, QUERY that imports
+  nothing, host scopes, copies back between devices in the device choice, and copied image
+  planes. Each test of the fourth and fifth reviews was checked to fail on the code before its
+  fix.
+- The eight `Core_Accel_CUDA` tests pass on the RTX 5090: flip and transpose on the GPU with the
+  backend's own kernels (every flip, seven element types, parts of buffers), transfer accounting
+  of a host round trip, device-to-device copies, backing identity and range
   checks through `cuMemGetAddressRange`, the device address of mapped pinned memory used by a
   kernel, ordering against a kernel the caller launches on the legacy default stream, and
   copy-back of Mat-backed UMats. The whole `opencv_test_core` passes without CUDA (24,879
@@ -729,8 +735,13 @@ Known limits:
   without one counts as its caller. An inner call whose only data are Mats (which are not
   registered, to keep Mat calls free of cost) and which creates UMat outputs follows the
   devices of the call around it.
-- The CUDA backend neither exports nor imports dma-bufs yet (no begin/end_device_access), so
-  memory moves between CUDA and other backends by copy.
+- The CUDA backend neither exports nor imports dma-bufs, so memory moves between CUDA and other
+  backends by copy. Desktop CUDA imports no dma-buf, and on the RTX 5090 used here the driver
+  reports no dma-buf export either (`CU_DEVICE_ATTRIBUTE_DMA_BUF_SUPPORTED` is 0 and
+  `cuMemGetHandleForAddressRange` returns `CUDA_ERROR_NOT_SUPPORTED`); it exchanges no
+  sync_files, so a CUDA bracket of implicit fences could only wait on the CPU. The export path
+  is written against the emulator until a system that supports it (Jetson, a driver with
+  dma-buf support) can test it. Its only kernels are flip and transpose.
 - Paths that run out of memory are covered by construction (room is made before work is
   queued; the outcome is recorded without allocating), not by tests: there is no allocation
   failure injection. The plugin loader's ownership of its library has no test either; it needs
