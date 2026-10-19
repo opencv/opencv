@@ -3674,7 +3674,8 @@ TEST(Test_MatMul, EmptyKDimAppliesBetaToBias)
     }
 }
 
-// Backends add the constant bias themselves, so each must apply beta for every bias rank.
+// Backends add the bias themselves, so each must apply beta for every bias rank, both when
+// B and the bias are constant blobs and when they are network inputs.
 typedef DNNTestLayer Test_MatMul_BiasBeta;
 TEST_P(Test_MatMul_BiasBeta, Accuracy)
 {
@@ -3695,6 +3696,7 @@ TEST_P(Test_MatMul_BiasBeta, Accuracy)
         { biasRow.reshape(1, std::vector<int>{N}), repeat(biasRow, M, 1), 1 },
         { biasFull, biasFull, 2 },
     };
+    for (bool constInputs : {true, false})
     for (const BiasCase& c : cases)
     {
         LayerParams lp;
@@ -3702,18 +3704,32 @@ TEST_P(Test_MatMul_BiasBeta, Accuracy)
         lp.name = "matmul_bias_beta";
         lp.set("beta", beta);
         lp.set("real_ndims_C", c.ndimsC);
-        lp.blobs.push_back(B);
-        lp.blobs.push_back(c.bias);
 
         Net net;
-        net.addLayerToPrev(lp.name, lp.type, lp);
+        if (constInputs)
+        {
+            lp.blobs.push_back(B);
+            lp.blobs.push_back(c.bias);
+            net.addLayerToPrev(lp.name, lp.type, lp);
+            net.setInput(A);
+        }
+        else
+        {
+            int id = net.addLayerToPrev(lp.name, lp.type, lp);
+            net.connect(0, 1, id, 1);
+            net.connect(0, 2, id, 2);
+            net.setInputsNames({"A", "B", "bias"});
+            net.setInput(A, "A");
+            net.setInput(B, "B");
+            net.setInput(c.bias, "bias");
+        }
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        net.setInput(A);
         Mat out = net.forward();
 
         Mat ref = A * B + beta * c.broadcasted;
-        normAssert(out.reshape(1, M), ref, "", default_l1, default_lInf);
+        normAssert(out.reshape(1, M), ref, constInputs ? "constant B and bias" : "B and bias as inputs",
+                   default_l1, default_lInf);
     }
 }
 INSTANTIATE_TEST_CASE_P(/**/, Test_MatMul_BiasBeta, dnnBackendsAndTargets());

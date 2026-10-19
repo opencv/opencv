@@ -650,6 +650,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             result = std::make_shared<ov::op::v0::MatMul>(input_A_node, input_B_node, trans_a, trans_b);
             if (nodes.size() >= 3) {
                 bias = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+                if (beta != 1.f) {
+                    auto coeff = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{}, &beta);
+                    bias = std::make_shared<ov::op::v1::Multiply>(bias, coeff, ov::op::AutoBroadcastType::NUMPY);
+                }
                 result = std::make_shared<ov::op::v1::Add>(result, bias);
             }
         } else {
@@ -706,7 +710,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         CV_CheckFalse(helper.empty(), "DNN/MatMul/CUDA: MatMulHelper is not initialized");
 
-        return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, bias, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
+        return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, bias, beta, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
     }
 #endif // HAVE_CUDA
 
