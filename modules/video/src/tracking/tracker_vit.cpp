@@ -164,11 +164,13 @@ static void updateLastRect(float cx, float cy, float w, float h, int crop_size, 
 
 static void clipRect(Rect &rect, Size imgSize, int margin)
 {
-    int x1 = std::min(std::max(0, rect.x), imgSize.width - margin);
-    int y1 = std::min(std::max(0, rect.y), imgSize.height - margin);
-    int x2 = std::min(std::max(margin, rect.x + rect.width), imgSize.width);
-    int y2 = std::min(std::max(margin, rect.y + rect.height), imgSize.height);
-    rect = Rect(x1, y1, std::max(margin, x2 - x1), std::max(margin, y2 - y1));
+    int mx = std::min(margin, imgSize.width);
+    int my = std::min(margin, imgSize.height);
+    int x1 = std::min(std::max(0, rect.x), imgSize.width - mx);
+    int y1 = std::min(std::max(0, rect.y), imgSize.height - my);
+    int x2 = std::min(std::max(mx, rect.x + rect.width), imgSize.width);
+    int y2 = std::min(std::max(my, rect.y + rect.height), imgSize.height);
+    rect = Rect(x1, y1, std::max(mx, x2 - x1), std::max(my, y2 - y1));
 }
 
 void TrackerVitImpl::init(InputArray image_, const Rect &boundingBox_)
