@@ -65,9 +65,22 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     rect1.points(pts1);
     rect2.points(pts2);
 
-    // Use a small absolute tolerance for comparing coordinates. The duplicate-point
+    // Scale the coordinate comparison tolerance with the inputs. The duplicate-point
     // threshold below is a squared distance and therefore must remain separate.
-    const float samePointEps = 1e-6f;
+    float coordinateScale = 0.f;
+    for( int i = 0; i < 4; i++ )
+    {
+        coordinateScale = std::max(coordinateScale, std::abs(pts1[i].x));
+        coordinateScale = std::max(coordinateScale, std::abs(pts1[i].y));
+        coordinateScale = std::max(coordinateScale, std::abs(pts2[i].x));
+        coordinateScale = std::max(coordinateScale, std::abs(pts2[i].y));
+    }
+    coordinateScale = std::max(coordinateScale, std::abs(rect1.size.width));
+    coordinateScale = std::max(coordinateScale, std::abs(rect1.size.height));
+    coordinateScale = std::max(coordinateScale, std::abs(rect2.size.width));
+    coordinateScale = std::max(coordinateScale, std::abs(rect2.size.height));
+    const float machineEps = std::numeric_limits<float>::epsilon();
+    const float samePointEps = std::max(machineEps, machineEps * coordinateScale);
     float samePointEps2 = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
     samePointEps2 = std::min(samePointEps2, rect1.size.width * rect1.size.width);
     samePointEps2 = std::min(samePointEps2, rect1.size.height * rect1.size.height);
