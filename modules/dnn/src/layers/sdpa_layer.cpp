@@ -6,6 +6,7 @@
 
 #include "../precomp.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/flash_attention.hpp"
 
 namespace cv { namespace dnn {
 
@@ -44,8 +45,10 @@ public:
         CV_CheckEQ(v[1], H,     "DNN/SDPA: V heads");
 
         outputs.assign(1, MatShape{B, S_q, H * D_v});
-        // Scratch for K^T re-transposed to (B, H, S_kv, D).
-        internals.assign(1, MatShape{B * H * S_kv * D});
+        // Scratch for K^T re-transposed to (B, H, S_kv, D); the engine flash attention reads K^T as it is.
+        internals.clear();
+        if (!flashAttentionEnabled())
+            internals.assign(1, MatShape{B * H * S_kv * D});
         return false;
     }
 
@@ -88,8 +91,16 @@ public:
         const int S_kv = V.size[2];
         const int D_v  = V.size[3];
 
+        // Arm: engine flash attention reads K^T as it is, so K needs no re-transpose.
+        if (flashAttentionEnabled()) {
+            const float effective_scale = (scale > 0.f) ? (1.f / scale) : 1.f;
+            flashAttention(Q.ptr<float>(), KT.ptr<float>(), V.ptr<float>(), Y.ptr<float>(),
+                           B, H, S_q, S_kv, D, D_v, effective_scale, true);
+            return;
+        }
+
         // Re-transpose K^T (B,H,D,S_kv) -> K (B,H,S_kv,D) for MlasFlashAttention.
-        Mat &K = internals[0];
+        Mat K = internals.empty() ? Mat(1, B * H * S_kv * D, CV_32F) : internals[0];
         const float* kT_data = KT.ptr<const float>();
         float*       k_data  = K.ptr<float>();
         const size_t kT_bhd_stride = (size_t)D * S_kv;

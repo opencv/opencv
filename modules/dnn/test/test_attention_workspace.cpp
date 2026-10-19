@@ -24,6 +24,12 @@ static LayerParams attentionWorkspaceParams(int valueHidden, bool rotary, Mat& w
     return params;
 }
 
+// Without a mask the layer streams the scores (flash attention): through MLAS, or on AArch64
+// through the built-in kernel when MLAS is off. Otherwise it keeps the full score matrix.
+#if defined(HAVE_MLAS) || defined(__aarch64__) || defined(_M_ARM64)
+#define ATTENTION_FLASH_WORKSPACE 1
+#endif
+
 typedef testing::TestWithParam<tuple<bool, bool, bool> > Layer_AttentionWorkspace;
 
 TEST_P(Layer_AttentionWorkspace, memoryPlan)
@@ -34,7 +40,7 @@ TEST_P(Layer_AttentionWorkspace, memoryPlan)
     if (!dynamicWeights)
         params.blobs = {weights, bias};
     Ptr<Layer> layer = AttentionLayer::create(params);
-#ifdef HAVE_MLAS
+#ifdef ATTENTION_FLASH_WORKSPACE
     size_t previous = 0;
 #endif
     for (int seq : {1024, 2048})
@@ -52,7 +58,7 @@ TEST_P(Layer_AttentionWorkspace, memoryPlan)
         size_t elements = 0;
         for (const MatShape& shape : internals)
             elements += total(shape);
-#ifdef HAVE_MLAS
+#ifdef ATTENTION_FLASH_WORKSPACE
         if (!hasMask)
         {
             // Linear workspace growth, including QKV and optional RoPE.
