@@ -1655,6 +1655,22 @@ TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
     );
 }
 
+TEST(Imgproc_ConvertMaps, regression_22763)
+{
+    Mat base(16, 16, CV_32FC2, Scalar(0.0f, 0.0f));
+    Mat src1 = base(Rect(1, 2, 3, 4));
+    Mat src2, dst1, dst2;
+
+    ASSERT_FALSE(src1.isContinuous());
+    ASSERT_TRUE(src2.empty());
+
+    convertMaps(src1, src2, dst1, dst2, CV_16SC2, false);
+
+    EXPECT_EQ(src1.size(), dst1.size());
+    EXPECT_EQ(CV_16SC2, dst1.type());
+    EXPECT_EQ(src1.size(), dst2.size());
+    EXPECT_EQ(CV_16UC1, dst2.type());
+}
 
 TEST(Imgproc_Warp, regression_28554)
 {
