@@ -48,6 +48,13 @@ static std::atomic<int>& scopeCount()
     return *c;
 }
 
+//! live host ExecutionScopes, over all threads: while zero, isOpenCLSuppressed() does not look at the thread's scopes
+static std::atomic<int>& hostScopeCount()
+{
+    static std::atomic<int>* c = new std::atomic<int>(0);
+    return *c;
+}
+
 static std::atomic<int>& oclSuppressCount()
 {
     static std::atomic<int>* c = new std::atomic<int>(0);
@@ -913,8 +920,10 @@ const ScopeEntry* currentScope()
 MatAllocator* scopeAllocator()
 {
     const ScopeEntry* s = currentScope();
-    if (!s || s->backendId == 0)
+    if (!s)
         return NULL;
+    if (s->backendId == 0)
+        return Mat::getDefaultAllocator();  // the host: not OpenCL either
     Backend* b = Registry::getInstance().get(s->backendId);
     if (!b)
         return NULL;
@@ -1089,9 +1098,12 @@ void leaveCall() CV_NOEXCEPT
 
 bool isOpenCLSuppressed()
 {
-    if (impl::oclSuppressCount().load(std::memory_order_relaxed) == 0)
+    if (impl::oclSuppressCount().load(std::memory_order_relaxed) == 0 &&
+        impl::hostScopeCount().load(std::memory_order_relaxed) == 0)
         return false;
-    return impl::threadScopes().getRef().oclSuppressed > 0;
+    const impl::ThreadScopes& t = impl::threadScopes().getRef();
+    // inside a host ExecutionScope nothing goes to OpenCL either
+    return t.oclSuppressed > 0 || (!t.stack.empty() && t.stack.back().backendId == 0);
 }
 
 void OpenCLSuppressor::suppress()
@@ -1286,6 +1298,8 @@ ExecutionScope::ExecutionScope(const Device& device)
     threadScopes().getRef().stack.push_back(e);
     scopeCount()++;
     activity()++;
+    if (e.backendId == 0)
+        hostScopeCount()++;
 }
 
 ExecutionScope::ExecutionScope(const Stream& stream)
@@ -1305,7 +1319,11 @@ ExecutionScope::~ExecutionScope()
     std::vector<ScopeEntry>& stack = threadScopes().getRef().stack;
     CV_DbgAssert(!stack.empty());
     if (!stack.empty())
+    {
+        if (stack.back().backendId == 0)
+            hostScopeCount()--;
         stack.pop_back();
+    }
     scopeCount()--;
     activity()--;
 }

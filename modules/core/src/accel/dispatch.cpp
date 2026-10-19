@@ -482,9 +482,10 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
 }
 
 /** A plane of an image copied into a temporary (uploaded, or produced and copied back) is still
-    that plane: its view gets the image, as this call sees it. All views of such an image point
-    to one copy of its record in which the moved planes say where their temporaries are (each a
-    buffer of its own); format, colours and id stay. */
+    that plane, or the part of it the argument is: its view gets a record of the image of its
+    own, in which that plane says where the copy lies and how large it is (a buffer of its own);
+    format, colours and id stay. Two copies of one plane get two records. Planes used where they
+    are keep the image's record itself. */
 void OpCall::Impl::describeImages(std::vector<cvAccelView>& views)
 {
     images.clear();
@@ -495,40 +496,19 @@ void OpCall::Impl::describeImages(std::vector<cvAccelView>& views)
         const BufferState* src = a.isUMat && a.um.u ? a.um.u->accelState : NULL;
         if (!src || !src->image || (a.plan != PLAN_UPLOAD && a.plan != PLAN_COPY_BACK))
             continue;
-        const cvAccelImageDesc& orig = src->image->desc;
-        cvAccelImageDesc* d = NULL;
-        for (size_t k = 0; k < images.size() && !d; k++)
-            if (images[k].id == orig.id)
-                d = &images[k];
-        if (!d)
-        {
-            images.push_back(orig);
-            d = &images.back();
-        }
+        images.push_back(src->image->desc);
+        cvAccelImageDesc& d = images.back();
+        cvAccelImagePlane& p = d.planes[src->plane];
         const cvAccelView& v = views[i];
-        cvAccelImagePlane& p = d->planes[src->plane];
         p.offset = v.offset;
         p.pitch = v.dims > 0 ? v.step[0] : 0;
         p.size = planBytes(a.shape, a.type);
         p.layout_modifier = 0;
-        p.buffer = d->plane_count + (uint32_t)i;    // a temporary is a buffer of its own
-    }
-    if (images.empty())
-        return;
-    for (size_t i = 0; i < args.size(); i++)
-    {
-        const Arg& a = args[i];
-        const BufferState* src = a.isUMat && a.um.u ? a.um.u->accelState : NULL;
-        if (!src || !src->image)
-            continue;
-        for (size_t k = 0; k < images.size(); k++)
-        {
-            if (images[k].id == src->image->desc.id)
-            {
-                views[i].image = &images[k];
-                views[i].plane = (uint32_t)src->plane;
-            }
-        }
+        p.rows = v.dims > 0 ? v.size[0] : 1;
+        p.cols = v.dims > 1 ? v.size[1] : 1;
+        p.buffer = d.plane_count + (uint32_t)i;     // a temporary is a buffer of its own
+        views[i].image = &d;
+        views[i].plane = (uint32_t)src->plane;
     }
 }
 
@@ -563,29 +543,6 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
 {
     planArgs(b, device);
     const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
-    // Shared memory: this device's import of it, made now (imports stay with the memory, so a
-    // losing candidate leaves nothing behind that matters). Planning alone shares nothing.
-    for (size_t i = 0; i < args.size(); i++)
-    {
-        Arg& a = args[i];
-        if (a.plan != PLAN_SHARE)
-            continue;
-        if (fn)
-        {
-            try
-            {
-                a.temp = shareOn(a.um, b, device);
-                continue;
-            }
-            catch (const cv::Exception& e)
-            {
-                CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << ": argument " << i << " is copied instead of "
-                             "shared: " << e.err);
-            }
-        }
-        a.temp.release();
-        a.plan = a.isOutput ? PLAN_COPY_BACK : PLAN_UPLOAD;
-    }
     // Protected content (secure video) never reaches the CPU, and nothing computed from it may
     // land in ordinary memory: outputs and temporaries are protected too.
     protectedIn = false;
@@ -624,8 +581,23 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         if (protectedIn && a.isOutput && a.plan == PLAN_CREATE && a.explicitAlloc &&
             !(deviceAllocatorOf(a.explicitAlloc) && deviceAllocatorOf(a.explicitAlloc)->isProtected()))
             protectedRefused = true;    // its own allocator gives ordinary memory
-        if (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK)
-            cost += planBytes(a.shape, a.type) * (a.plan == PLAN_COPY_BACK && !a.fullOverwrite ? 2 : 1);
+        // an upload copies the bytes once (a stale host copy of device memory is downloaded
+        // first: pendingTransferBytes below)
+        if (a.plan == PLAN_UPLOAD)
+            cost += planBytes(a.shape, a.type);
+        if (a.plan == PLAN_COPY_BACK)
+        {
+            // into memory of another device the result goes through the CPU: a temporary that the
+            // CPU reaches only through a copy is downloaded first, then uploaded (UMat::copyTo)
+            const bool here = a.onDevice && a.desc.backend_id == (uint32_t)b->id() && (int)a.desc.device_index == device;
+            const DeviceAllocator* made = a.exists ? NULL : deviceAllocatorOf(a.explicitAlloc);
+            const bool elsewhere = (a.onDevice && !here) ||
+                                   (made && (made->backend() != b || made->device() != device));
+            const cvAccelMemoryDesc temp = plannedDesc(b, device, plannedKind, planBytes(a.shape, a.type), plannedFlags);
+            const bool download = temp.host_access == CV_ACCEL_HOST_ACCESS_COPY || temp.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED;
+            // the old content first when the operation leaves some of it alone
+            cost += planBytes(a.shape, a.type) * (elsewhere && download ? 2 : 1) * (a.fullOverwrite ? 1 : 2);
+        }
         if (a.isUMat && a.onDevice && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_UPLOAD))
             cost += pendingTransferBytes(a.um, a.plan == PLAN_IN_PLACE);
     }
@@ -643,18 +615,31 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         {
         case PLAN_ABSENT:
             break;
-        case PLAN_IN_PLACE:
         case PLAN_SHARE:
+        {
+            // memory this device will import as a dma-buf: nothing is imported for a QUERY, so it
+            // is described as its owner describes it, as an import of all of it on this device
+            const BufferState* bv = a.um.u->accelState;
+            clearAllocation(a.viewAlloc);
+            a.viewAlloc.size = bv->backing->size;
+            a.viewAlloc.desc = a.desc;
+            a.viewAlloc.desc.backend_id = (uint32_t)b->id();
+            a.viewAlloc.desc.device_index = (uint32_t)device;
+            a.viewAlloc.desc.flags |= CV_ACCEL_MEMF_IMPORTED | CV_ACCEL_MEMF_EXTERNAL_SYNC;
+            fillView(v, &a.viewAlloc, bv->start + a.um.offset, a.um.type(), a.um.dims, a.um.size.p, a.um.step.p);
+            setImage(v, bv);
+            break;
+        }
+        case PLAN_IN_PLACE:
             if (a.isUMat)
             {
-                // device memory: a range of its import (this device's, when shared), described without handles
-                const UMat& m = a.plan == PLAN_SHARE ? a.temp : a.um;
-                const BufferState* bv = m.u->accelState;
+                // device memory: a range of its import, described without handles
+                const BufferState* bv = a.um.u->accelState;
                 clearAllocation(a.viewAlloc);
-                a.viewAlloc.size = bv ? bv->imp->alloc.size : m.u->size;
-                if (!queryMemoryDesc(m.u, a.viewAlloc.desc))
-                    a.viewAlloc.desc = a.desc;
-                fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + m.offset, m.type(), m.dims, m.size.p, m.step.p);
+                a.viewAlloc.size = bv ? bv->imp->alloc.size : a.um.u->size;
+                a.viewAlloc.desc = a.desc;
+                fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + a.um.offset, a.um.type(), a.um.dims,
+                         a.um.size.p, a.um.step.p);
                 setImage(v, bv);
             }
             else if (!a.mat.empty())
@@ -733,68 +718,97 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     std::vector<cvAccelView> views(args.size());
     cvAccelCall call;
     const void* table = NULL;
-    int best = -1;
-    uint64_t bestCost = 0;
-    bool protectedRefused = false;
-    for (size_t c = 0; c < candidates.size() && !mapped; c++)
+    Backend* b = NULL;
+    int device = -1;
+    for (;;)
     {
-        Backend* cb = Registry::getInstance().get(candidates[c].first);
-        if (!cb || cb->isLost(candidates[c].second))
-            continue;
-        uint64_t cost = 0;
-        bool refused = false;
-        const cvAccelStatus st = evaluate(cb, candidates[c].second, fn, userdata, views, call, table, cost, refused);
-        if (refused)
-            protectedRefused = true;
-        else if (st == CV_ACCEL_OK && (best < 0 || cost < bestCost))
+        int best = -1;
+        uint64_t bestCost = 0;
+        bool protectedRefused = false;
+        for (size_t c = 0; c < candidates.size() && !mapped; c++)
         {
-            best = (int)c;
-            bestCost = cost;
+            Backend* cb = Registry::getInstance().get(candidates[c].first);
+            if (!cb || cb->isLost(candidates[c].second))
+                continue;
+            uint64_t cost = 0;
+            bool refused = false;
+            const cvAccelStatus st = evaluate(cb, candidates[c].second, fn, userdata, views, call, table, cost, refused);
+            if (refused)
+                protectedRefused = true;
+            else if (st == CV_ACCEL_OK && (best < 0 || cost < bestCost))
+            {
+                best = (int)c;
+                bestCost = cost;
+            }
+            else if (st != CV_ACCEL_OK && st != CV_ACCEL_NOT_IMPLEMENTED)
+                cb->check(st, name, candidates[c].second);
         }
-        else if (st != CV_ACCEL_OK && st != CV_ACCEL_NOT_IMPLEMENTED)
-            cb->check(st, name, candidates[c].second);
-    }
 
-    if (best < 0)
-    {
-        if (protectedRefused)
-            CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
-                                        "protected memory (pass an empty output to get some)", name));
-        // nothing on a device and no scope: the call continues as before (OpenCL, CPU). A device
-        // scope decides even when its device declines: the CPU runs the call, counted as a
-        // fallback, with the outputs on the scope's device and OpenCL kept away from them.
-        if (!anyOnDevice && !scope)
-            return NOT_HANDLED;
-        counters().cpuFallbacks++;
-        Backend* fb = Registry::getInstance().get(candidates[0].first);
-        if (!fb || fb->isLost(candidates[0].second))
+        if (best < 0)
+        {
+            if (protectedRefused)
+                CV_Error_(Error::StsError, ("accel: %s: the result of an operation on protected content can only go to "
+                                            "protected memory (pass an empty output to get some)", name));
+            // nothing on a device and no scope: the call continues as before (OpenCL, CPU). A device
+            // scope decides even when its device declines: the CPU runs the call, counted as a
+            // fallback, with the outputs on the scope's device and OpenCL kept away from them.
+            if (!anyOnDevice && !scope)
+                return NOT_HANDLED;
+            counters().cpuFallbacks++;
+            Backend* fb = Registry::getInstance().get(candidates[0].first);
+            if (!fb || fb->isLost(candidates[0].second))
+                return CPU_ONLY;
+            const int fdevice = candidates[0].second;
+            uint64_t cost = 0;
+            bool refused = false;
+            evaluate(fb, fdevice, NULL, NULL, views, call, table, cost, refused);  // plans only: where outputs belong
+            if (protectedIn)
+                CV_Error_(Error::StsNotImplemented, ("accel(%s): %s is not implemented for these arguments, and the "
+                                                     "CPU cannot read protected content", fb->name().c_str(), name));
+            CV_LOG_DEBUG(NULL, "accel(" << fb->name() << "): " << name << " runs on the CPU ("
+                         << (mapped ? "a Mat view of accelerator memory is an argument" : "not implemented for these arguments") << ")");
+            if (shadowOnDevice)
+                onImplicitTransfer("runs on the CPU, so device data is copied to the host", name);
+            // results go where they would have gone if the backend had run the operation
+            for (size_t i = 0; i < args.size(); i++)
+                if (args[i].isOutput && args[i].plan == PLAN_CREATE)
+                    createOutput(args[i], fb, fdevice);
             return CPU_ONLY;
-        const int fdevice = candidates[0].second;
-        uint64_t cost = 0;
-        bool refused = false;
-        evaluate(fb, fdevice, NULL, NULL, views, call, table, cost, refused);  // plans only: where outputs belong
-        if (protectedIn)
-            CV_Error_(Error::StsNotImplemented, ("accel(%s): %s is not implemented for these arguments, and the "
-                                                 "CPU cannot read protected content", fb->name().c_str(), name));
-        CV_LOG_DEBUG(NULL, "accel(" << fb->name() << "): " << name << " runs on the CPU ("
-                     << (mapped ? "a Mat view of accelerator memory is an argument" : "not implemented for these arguments") << ")");
-        if (shadowOnDevice)
-            onImplicitTransfer("runs on the CPU, so device data is copied to the host", name);
-        // results go where they would have gone if the backend had run the operation
-        for (size_t i = 0; i < args.size(); i++)
-            if (args[i].isOutput && args[i].plan == PLAN_CREATE)
-                createOutput(args[i], fb, fdevice);
-        return CPU_ONLY;
-    }
+        }
 
-    Backend* b = Registry::getInstance().get(candidates[best].first);
-    const int device = candidates[best].second;
-    if (candidates.size() > 1)
-    {
-        uint64_t cost = 0;
-        bool refused = false;
-        const cvAccelStatus status = evaluate(b, device, fn, userdata, views, call, table, cost, refused);   // the winner's plan
-        CV_Assert(status == CV_ACCEL_OK && !refused);
+        b = Registry::getInstance().get(candidates[best].first);
+        device = candidates[best].second;
+        if (candidates.size() > 1)
+        {
+            uint64_t cost = 0;
+            bool refused = false;
+            const cvAccelStatus status = evaluate(b, device, fn, userdata, views, call, table, cost, refused);   // the winner's plan
+            CV_Assert(status == CV_ACCEL_OK && !refused);
+        }
+
+        // 3. memory the chosen device shares: its import of it, made now that the device is chosen
+        //    (planning and QUERY import nothing). A device that refuses the import is remembered
+        //    for that memory, and the device is chosen again.
+        bool refusedShare = false;
+        for (size_t i = 0; i < args.size(); i++)
+        {
+            Arg& a = args[i];
+            if (a.plan != PLAN_SHARE)
+                continue;
+            try
+            {
+                a.temp = shareOn(a.um, b, device);
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << ": argument " << i << " is copied instead of "
+                             "shared: " << e.err);
+                refuseShare(a.um, b, device);
+                refusedShare = true;
+            }
+        }
+        if (!refusedShare)
+            break;
     }
     const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
     cvAccelStatus status = CV_ACCEL_OK;

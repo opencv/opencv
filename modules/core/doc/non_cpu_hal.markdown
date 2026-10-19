@@ -421,7 +421,10 @@ falls back to the copy. `exportExternalMemory` hands the same dma-buf to other A
 
 Bytes moved count everything the plan implies: temporaries filled and copied back, and a host
 copy that must be uploaded before the device can use an argument in place (or downloaded before
-it is copied elsewhere).
+it is copied elsewhere). Moves between devices go through the CPU: an upload reads a host view
+of the source (its mapping, or its host copy, downloaded first only when stale), and a result
+copied back into another device's memory from a temporary the CPU reaches only through a copy
+counts twice (down, then up).
 
 A pre-allocated output that lives elsewhere is never moved: the result is copied into it.
 
@@ -556,11 +559,12 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | a dma-buf one backend's allocation was exported as, outside OpenCV, imported through another backend | core asks every backend whether the memory is one of its allocations (`identify_memory`, API version 6): the import meets the allocation's state | `allBackendNames` |
 | planes of one image through different handles of one buffer | grouped by the memory they lie in after wrapping; overlap refused | `wrapExternalImage` |
 | protected memory needed on another device | shared as protected memory: the import asks for protection and the backend attests it again; results go to protected memory there | `shareOn` |
-| an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise | `canShare`, `shareOn` |
+| an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise. Planning and QUERY import nothing (the view describes the memory as its owner does); the chosen device imports it, and one that refuses is remembered for that memory and the device is chosen again | `canShare`, `shareOn`, `refuseShare` |
 | a Mat over host memory that a UMat wraps (a wrapped pointer) | both compared by host address: an output that overlaps an input is produced in a temporary | `PhysicalBacking::hostBase`, `overlaps` |
 | a peer device that reaches memory through its own mapping (no unified addressing, an IOMMU window) | its kernels get that device's address of the memory in the view (`get_device_address`, API version 4), and so does `DeviceAccess` on its streams; without the entry one address serves every device | `Backend::deviceAddress` |
+| a host `ExecutionScope` | the CPU: new UMat data is ordinary host memory (not OpenCL's) and OpenCL is off inside it, also in functions without a hook | `scopeAllocator`, `isOpenCLSuppressed` |
 | nested calls (a cv:: function that calls others) | the arguments of the innermost call that has any decide where new data goes: calls are counted by the trace region every cv:: function opens, a host UMat marks a call as one with data of its own, and a call that only forwards its InputArrays follows its caller; elements of a `vector<UMat>` count too | `argumentPlacement`, `enterCall` |
-| a plane of an image copied into a temporary for another device | its view still names the image and the plane; all views of that image in the call share one record in which the moved planes say where their temporaries are | `describeImages` |
+| a plane of an image copied into a temporary for another device | its view still names the image (same id) and the plane, through a record of its own in which that plane says where the copy lies and how large it is: a part of a plane, or a plane copied twice, is described right; planes used in place keep the image's record | `describeImages` |
 | no memory after the work was queued | room for its fence, the ranges it writes and its failure is made before it is queued, and the list of dma-buf brackets to end is built then too: recording the outcome never allocates; a failure that still finds no room marks all of the memory | `DeviceAcquisition::acquire`, `addPoison` |
 | no memory while a `DeviceAccess` takes a buffer | the hold is recorded before the buffer counts as taken, so nothing is left half acquired | `DeviceAcquisition::acquire` |
 | the last UMat of memory whose `end_cpu_access` keeps failing | the memory is leaked, never freed under the open CPU access; device-idle memory keeps its gate | `destroyBacking` |

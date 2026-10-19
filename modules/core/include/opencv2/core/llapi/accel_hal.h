@@ -398,8 +398,10 @@ typedef struct cvAccelView
     int32_t size[CV_ACCEL_MAX_DIMS];
     uint64_t step[CV_ACCEL_MAX_DIMS];   //!< bytes; step[dims-1] is the element size
     /** the image this view is a plane (or a part of a plane) of, NULL otherwise. Valid during
-        the call; the same pointer for every plane of one image. offset and size still say
-        which bytes the argument is. */
+        the call. Every plane of one image has the same id; planes used where they are share the
+        image's record, and a plane core copied into a temporary for the call has a record of
+        its own, in which that plane says where the copy lies and how large it is. offset and
+        size still say which bytes the argument is. */
     const cvAccelImageDesc* image;
     uint32_t plane;                     //!< index of this view's plane in image->planes
 } cvAccelView;

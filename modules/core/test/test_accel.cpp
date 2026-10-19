@@ -1349,7 +1349,8 @@ TEST(Core_Accel, image_planes_carry_their_image_to_the_backend)
 TEST(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image)
 {
     // a frame of the coherent device used on the discrete one: its planes are uploaded into
-    // temporaries, and the views still say which image, which plane and where it now lies
+    // temporaries, and each view still says which image and which plane it is, and where its
+    // copy lies (also for a part of a plane, and for one plane copied twice)
     const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
     accel::detail::emulatorDmaBufProduce(fd, 5, 0);
     accel::ExternalImage img = nv12Image(fd, 256);
@@ -1363,16 +1364,21 @@ TEST(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image
     accel::detail::OpCall call("test.nv12_luma", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
     call.input(planes[0]);
     call.input(planes[1]);
+    call.input(planes[0].rowRange(0, 8));
     call.output(out, planes[0].shape(), CV_8UC1);
     EXPECT_EQ(accel::detail::HANDLED, call.run([&](const void* t, const cvAccelCall* c, const cvAccelView* v) {
         calls++;
-        const cvAccelImageDesc* im = v[0].image;
-        seen = seen && im && im == v[1].image && v[0].plane == 0 && v[1].plane == 1 && im->id == id &&
-               im->fourcc == FOURCC_NV12 && im->color_model == CV_ACCEL_COLOR_MODEL_BT709 &&
-               im->planes[0].pitch == v[0].step[0] && im->planes[1].pitch == v[1].step[0] &&
-               im->planes[0].offset == v[0].offset && im->planes[0].buffer != im->planes[1].buffer &&
-               v[2].image == NULL;
-        return ((const cvAccelOpsCore_v0*)t)->flip(c, &v[0], &v[2], 1);
+        for (int i = 0; i < 3; i++)
+        {
+            const cvAccelImageDesc* im = v[i].image;
+            const int k = i == 1 ? 1 : 0;
+            seen = seen && im && im->id == id && (int)v[i].plane == k && im->fourcc == FOURCC_NV12 &&
+                   im->color_model == CV_ACCEL_COLOR_MODEL_BT709 && im->planes[k].offset == v[i].offset &&
+                   im->planes[k].pitch == v[i].step[0] && im->planes[k].rows == v[i].size[0];
+        }
+        seen = seen && v[0].image != v[2].image && v[0].image->planes[0].buffer != v[2].image->planes[0].buffer &&
+               v[2].image->planes[0].rows == 8 && v[3].image == NULL;
+        return ((const cvAccelOpsCore_v0*)t)->flip(c, &v[0], &v[3], 1);
     }));
     EXPECT_EQ(2, calls);
     EXPECT_TRUE(seen);
@@ -1595,6 +1601,25 @@ TEST(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
 #endif
 }
 
+TEST(Core_Accel, asking_a_device_imports_nothing)
+{
+#ifdef __linux__
+    // the NPU is asked whether it runs the call on memory it would import (QUERY), and declines:
+    // nothing was imported for the question, and the call runs on the CPU
+    UMat x = makeOn(emulator(COHERENT), Mat(8, 8, CV_8UC1, Scalar(3)));
+    accel::detail::emulatorDisableOps(NONCOHERENT, true);
+    {
+        accel::ExecutionScope scope(emulator(NONCOHERENT));
+        UMat out;
+        accel::resetTransferStats();
+        cv::flip(x, out, 1);
+        EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
+        EXPECT_EQ(1, accel::detail::backingImports(x));
+    }
+    accel::detail::emulatorDisableOps(NONCOHERENT, false);
+#endif
+}
+
 TEST(Core_Accel, memory_given_out_by_handle_is_never_shared_as_a_dma_buf)
 {
 #ifdef __linux__
@@ -1768,6 +1793,19 @@ TEST(Core_Accel, placement_by_call_looks_at_the_innermost_call)
     EXPECT_EQ(Vec2b(1, 2), merged.getMat(ACCESS_READ).at<Vec2b>(3, 5));
 }
 
+TEST(Core_Accel, a_host_scope_keeps_data_and_work_on_the_host)
+{
+    // the host scope is the CPU: new UMat data is host memory, not OpenCL's, and no OpenCL kernel runs
+    accel::detail::registerEmulatorBackend();
+    accel::ExecutionScope scope{accel::Device()};
+    EXPECT_FALSE(cv::ocl::useOpenCL());
+    UMat a(8, 8, CV_8UC1, Scalar(1)), out;
+    EXPECT_EQ(Mat::getDefaultAllocator(), a.u->currAllocator);
+    cv::repeat(a, 2, 2, out);
+    EXPECT_EQ(Mat::getDefaultAllocator(), out.u->currAllocator);
+    EXPECT_EQ(1, out.getMat(ACCESS_READ).at<uchar>(15, 15));
+}
+
 TEST(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
 {
     accel::Device d = emulator(COHERENT);
@@ -1785,6 +1823,29 @@ TEST(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
         EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
     }
     accel::detail::emulatorDisableOps(COHERENT, false);
+}
+
+TEST(Core_Accel, device_choice_counts_copies_back_to_another_device_twice)
+{
+    // 64 bytes on the discrete device, 40 host bytes, a 64-byte output on the coherent device.
+    // On the discrete device the result goes to the output through the CPU: downloaded from the
+    // temporary, then uploaded (128 bytes, plus 40 uploaded). The coherent device gets the
+    // discrete device's bytes (downloaded once, uploaded once: 128) and reads the host bytes in
+    // place. The coherent device moves less.
+    UMat d = makeOn(emulator(DISCRETE), Mat(8, 8, CV_8UC1, Scalar(1)));
+    Mat h(5, 8, CV_8UC1, Scalar(3));
+    UMat out = makeOn(emulator(COHERENT), Mat::zeros(8, 8, CV_8UC1));
+    int ran = -1;
+    accel::detail::OpCall call("test.cost", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
+    call.input(d);
+    call.input(h);
+    call.output(out, d.shape(), CV_8UC1);
+    EXPECT_EQ(accel::detail::HANDLED, call.run([&](const void*, const cvAccelCall* c, const cvAccelView*) {
+        if (c->mode == CV_ACCEL_EXECUTE)
+            ran = c->device;
+        return CV_ACCEL_OK;
+    }));
+    EXPECT_EQ(COHERENT, ran);
 }
 
 TEST(Core_Accel, device_choice_counts_host_copies_that_must_move)

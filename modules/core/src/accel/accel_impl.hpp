@@ -555,6 +555,7 @@ struct PhysicalBacking
         with the device's default stream: the memory never takes implicit fences after that (no
         export, no import as a dma-buf), or that code would bypass them (under mutex) */
     bool rawHandle;
+    std::vector<std::pair<const Backend*, int> > shareRefused;  //!< devices that refused to import it (under mutex)
     /** host memory known by its address (a BACKING_HOST name): the CPU address of byte 0, so
         that a Mat over the same bytes is seen to overlap its views; 0 otherwise */
     std::atomic<uint64_t> hostBase;
@@ -871,6 +872,8 @@ int backingFile(BufferState* v, uint64_t& start);
 
 //! the memory of @p m can be imported on (b, device) through a dma-buf of it, without copying (no side effects)
 bool canShare(const UMat& m, Backend* b, int device);
+//! (b, device) refused to import the memory of @p m: canShare says no from now on
+void refuseShare(const UMat& m, Backend* b, int device) CV_NOEXCEPT;
 
 /** A UMat of the same bytes as @p m, reached through an import of the same memory on
     (b, device): no copy, and ordered with every other view of the memory. Throws when the

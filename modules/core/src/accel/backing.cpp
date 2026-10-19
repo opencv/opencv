@@ -1532,6 +1532,9 @@ bool canShare(const UMat& m, Backend* b, int device)
     std::lock_guard<std::mutex> lk(bk->mutex);
     if (!bk->cpuLevels.empty() || bk->rawHandle)
         return false;   // no new import while the CPU has the memory open, nor implicit fences after handle()
+    if (std::find(bk->shareRefused.begin(), bk->shareRefused.end(), std::make_pair((const Backend*)b, device)) !=
+        bk->shareRefused.end())
+        return false;   // tried and refused
     bool exportable = bk->file >= 0;
     for (size_t i = 0; i < bk->imports.size(); i++)
     {
@@ -1547,6 +1550,17 @@ bool canShare(const UMat& m, Backend* b, int device)
     CV_UNUSED(m); CV_UNUSED(b); CV_UNUSED(device);
     return false;
 #endif
+}
+
+void refuseShare(const UMat& m, Backend* b, int device) CV_NOEXCEPT
+{
+    PhysicalBacking* bk = m.u->accelState->backing;
+    std::lock_guard<std::mutex> lk(bk->mutex);
+    try
+    {
+        bk->shareRefused.push_back(std::make_pair((const Backend*)b, device));
+    }
+    catch (...) {}  // no memory to remember it: the next call tries again
 }
 
 }}} // namespace cv::accel::impl

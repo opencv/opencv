@@ -1329,12 +1329,16 @@ void UMat::copyTo(OutputArray _dst) const
             return;
         }
 
-        // different allocators: never map a device destination, upload into it instead
-        // (through a host Mat when both sides are device memory)
+        // different allocators: never map a device destination, upload into it instead. From
+        // device memory the upload reads a host view of the source (its mapping, or its host
+        // copy, downloaded only when stale): one copy. Two views of one memory go through a
+        // temporary, since a mapping of the source must not be open while its memory is written.
         MatAllocator* hostAllocator = Mat::getDefaultAllocator();
         if (dst.u->currAllocator != hostAllocator)
         {
-            if (u->currAllocator == hostAllocator)
+            const bool oneMemory = u->accelState && dst.u->accelState &&
+                                   u->accelState->backing == dst.u->accelState->backing;
+            if (u->currAllocator == hostAllocator || (u->accelState && !oneMemory))
                 getMat(ACCESS_READ).copyTo(_dst);
             else
             {
