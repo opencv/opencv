@@ -2181,6 +2181,44 @@ OCL_TEST(Arithm, bf16_falls_back_to_cpu)
     cv::add(a, Scalar(2), dst);              cv::add(ua, Scalar(2), udst);              expectSame("add scalar", dst, udst);
 }
 
+// UMat bitwise ops on depths with no OpenCL type name must match Mat (bit-exact)
+PARAM_TEST_CASE(BitwiseNoOclType, MatDepth)
+{
+};
+
+OCL_TEST_P(BitwiseNoOclType, Accuracy)
+{
+    const int depth = GET_PARAM(0);
+
+    Mat a(11, 13, depth), b(11, 13, depth), mask(11, 13, CV_8UC1);
+    // fill the raw bytes; CV_Bool elements must stay 0 or 1
+    const int maxByte = depth == CV_Bool ? 2 : 256;
+    randu(Mat(a.rows, a.cols * (int)a.elemSize(), CV_8UC1, a.data), 0, maxByte);
+    randu(Mat(b.rows, b.cols * (int)b.elemSize(), CV_8UC1, b.data), 0, maxByte);
+    randu(mask, 0, 2);
+    UMat ua = a.getUMat(ACCESS_READ), ub = b.getUMat(ACCESS_READ), umask = mask.getUMat(ACCESS_READ);
+
+    auto expectSameBits = [](const char* name, const Mat& dst, const UMat& udst)
+    {
+        Mat u = udst.getMat(ACCESS_READ);
+        ASSERT_EQ(dst.type(), u.type()) << name;
+        ASSERT_EQ(dst.size(), u.size()) << name;
+        EXPECT_EQ(0, memcmp(dst.data, u.data, dst.total() * dst.elemSize())) << name;
+    };
+
+    Mat dst; UMat udst;
+    cv::bitwise_and(a, b, dst);  cv::bitwise_and(ua, ub, udst);  expectSameBits("and", dst, udst);
+    cv::bitwise_or(a, b, dst);   cv::bitwise_or(ua, ub, udst);   expectSameBits("or", dst, udst);
+    cv::bitwise_xor(a, b, dst);  cv::bitwise_xor(ua, ub, udst);  expectSameBits("xor", dst, udst);
+    cv::bitwise_not(a, dst);     cv::bitwise_not(ua, udst);      expectSameBits("not", dst, udst);
+
+    dst = Mat::zeros(a.size(), depth); udst = UMat::zeros(a.size(), depth);
+    cv::bitwise_and(a, b, dst, mask); cv::bitwise_and(ua, ub, udst, umask); expectSameBits("and mask", dst, udst);
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, BitwiseNoOclType,
+                            Values(CV_16BF, CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
 } } // namespace opencv_test::ocl
 
 #endif // HAVE_OPENCL
