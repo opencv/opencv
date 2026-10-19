@@ -153,6 +153,12 @@ CV_EXPORTS void* allocSingletonNewBuffer(size_t size);
 template <typename T> inline
 T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
+namespace hal {
+//! True when cv::hal::gemm32fPacked and gemm32fBatch run on the Arm SME units of this CPU; dnn uses it to pick
+//! between them and MLAS.
+CV_EXPORTS bool gemm32fUsesSME();
+}
+
 } // namespace
 
 #if 1 // TODO: Remove in OpenCV 4.x
