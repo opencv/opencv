@@ -10,7 +10,7 @@
 # Local patches against upstream:
 #   - lib/threading.cpp -> modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp
 #     (cv::parallel_for_).
-#   - mlasi.h: MlasGetMaximumThreadCount() returns cv::getNumThreads().
+#   - mlasi.h: MlasGetMaximumThreadCount() returns cv::getNumThreads() * 4.
 #   - lib/core/common/{narrow,common}.h shims for ORT internals MLAS uses.
 #   - lib/platform.cpp: non-SGEMM dispatch removed (`#if 0` blocks), and
 #     ReduceMaximumF32Kernel / ComputeSumExpF32Kernel initialized to the
