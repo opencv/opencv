@@ -2149,32 +2149,36 @@ OCL_TEST(Arithm, predictOptimalVectorWidth_all_depths)
 }
 
 // UMat compare() with a scalar must match Mat compare() for the 5.x integer depths
-OCL_TEST(Arithm, compare_scalar_new_int_depths)
+PARAM_TEST_CASE(CompareScalarNewIntDepths, MatDepth, double)
 {
+};
+
+OCL_TEST_P(CompareScalarNewIntDepths, Accuracy)
+{
+    const int depth = GET_PARAM(0);
+    const double scalar = GET_PARAM(1);
+
     int vals[] = { 0, 1, 2, 3, 4, 5 };
-    Mat base(1, 6, CV_32S, vals);
+    Mat src;
+    Mat(1, 6, CV_32S, vals).convertTo(src, depth);
+    UMat usrc = src.getUMat(ACCESS_READ);
 
-    for (int depth : { CV_32U, CV_64U, CV_64S })
+    for (int i = 0; i < cmp_num; ++i)
     {
-        for (double scalar : { 2.5, -1.0, 1e12, 3.0 })
-        {
-            for (int op : { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE })
-            {
-                Mat src;
-                base.convertTo(src, depth);
-                UMat usrc = src.getUMat(ACCESS_READ);
+        SCOPED_TRACE(cmp_strs[i]);
 
-                Mat dst;
-                UMat udst;
-                cv::compare(src, Scalar(scalar), dst, op);
-                cv::compare(usrc, Scalar(scalar), udst, op);
+        Mat dst;
+        UMat udst;
+        OCL_OFF(cv::compare(src, Scalar(scalar), dst, cmp_codes[i]));
+        OCL_ON(cv::compare(usrc, Scalar(scalar), udst, cmp_codes[i]));
 
-                EXPECT_EQ(0, cvtest::norm(dst, udst.getMat(ACCESS_READ), NORM_INF))
-                    << depthToString(depth) << " op=" << op << " scalar=" << scalar;
-            }
-        }
+        EXPECT_EQ(0, cvtest::norm(dst, udst.getMat(ACCESS_READ), NORM_INF));
     }
 }
+
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, CompareScalarNewIntDepths, Combine(
+                                Values(CV_32U, CV_64U, CV_64S),
+                                Values(2.5, -1.0, 1e12, 3.0)));
 
 } } // namespace opencv_test::ocl
 
