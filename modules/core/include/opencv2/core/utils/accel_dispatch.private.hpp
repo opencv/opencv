@@ -47,6 +47,12 @@ CV_EXPORTS bool isActive();
 //! true while an ExecutionScope that names a device is active on the calling thread (cheap)
 CV_EXPORTS bool inExecutionScope();
 
+/** A cv:: function starts and ends on the calling thread (the trace region that every cv::
+function opens calls these while an accelerator is in use): placement by call looks at the
+arguments of the innermost call only (see enterDeviceArgument). */
+CV_EXPORTS void enterCall() CV_NOEXCEPT;
+CV_EXPORTS void leaveCall() CV_NOEXCEPT;
+
 //! true while the calling thread runs the CPU fallback of an accelerator call
 CV_EXPORTS bool isOpenCLSuppressed();
 

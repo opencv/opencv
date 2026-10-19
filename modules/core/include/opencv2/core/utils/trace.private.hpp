@@ -53,6 +53,7 @@ namespace details {
 enum RegionFlag {
     REGION_FLAG__NEED_STACK_POP = (1 << 0),
     REGION_FLAG__ACTIVE = (1 << 1),
+    REGION_FLAG__ACCEL_CALL = (1 << 2),     //!< a function region counted as a call (accel::detail::enterCall)
 
     ENUM_REGION_FLAG_IMPL_FORCE_INT = INT_MAX
 };

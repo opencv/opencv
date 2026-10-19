@@ -434,6 +434,13 @@ inline bool rangeEnd(uint64_t begin, uint64_t size, uint64_t& end)
     return true;
 }
 
+//! a zeroed allocation struct, sized for the backend to fill (see the compatibility rules of accel_hal.h)
+inline void clearAllocation(cvAccelAllocation& a)
+{
+    memset(&a, 0, sizeof(a));
+    a.struct_size = (uint32_t)sizeof(a);
+}
+
 //! [b0, b0 + s0) and [b1, b1 + s1) share a byte (ranges known to fit, see rangeEnd)
 inline bool rangesOverlap(uint64_t b0, uint64_t s0, uint64_t b1, uint64_t s1)
 {

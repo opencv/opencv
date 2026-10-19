@@ -67,10 +67,17 @@ namespace accel {
 namespace impl { struct BufferState; }
 namespace detail {
 /** A UMat on an accelerator passed to a cv:: call (as _InputArray, _OutputArray or
-_InputOutputArray) for as long as the argument exists: new UMat data the call creates without an
-allocator of its own goes to that device (see UMat::create), so that the call's results stay
-where its data is whether the function has an accelerator hook or not. */
+_InputOutputArray, alone or in a std::vector<UMat>) for as long as the argument exists: new UMat
+data the call creates without an allocator of its own goes to that device (see UMat::create),
+so that the call's results stay where its data is whether the function has an accelerator hook
+or not. Only the arguments of the innermost call count (calls are counted by the trace regions
+that cv:: functions open). */
 CV_EXPORTS void enterDeviceArgument(const void* array, const UMat& m);
+/** A UMat of host data passed to a cv:: call while an accelerator is in use: it marks the call
+as one with arguments of its own, so that the device arguments of an outer call do not decide
+where its results go. Returns false (nothing registered) while no accelerator is in use. */
+CV_EXPORTS bool enterHostArgument(const void* array);
+//! ends every registration of @p array
 CV_EXPORTS void leaveDeviceArgument(const void* array) CV_NOEXCEPT;
 } // namespace detail
 } // namespace accel
@@ -412,8 +419,10 @@ protected:
 
     //! flags: the array is a UMat on an accelerator, registered as an argument of the call
     enum { DEVICE_ARGUMENT = 1 << 23 };
-    //! registers @p m when its data is on an accelerator (see accel::detail::enterDeviceArgument)
+    //! registers @p m as an argument of the call while an accelerator is in use (see accel::detail::enterDeviceArgument)
     void noteDeviceArgument(const UMat& m);
+    //! registers the elements of @p vec whose data is on an accelerator
+    void noteDeviceArguments(const std::vector<UMat>& vec);
 
 private:
     int dims_(int i=-1) const;

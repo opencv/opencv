@@ -46,7 +46,7 @@ struct Arg
             onDevice(false), mapped(false), exists(false), explicitAlloc(NULL), plan(PLAN_UNDECIDED), mode(0)
     {
         memset(&desc, 0, sizeof(desc));
-        memset(&viewAlloc, 0, sizeof(viewAlloc));
+        clearAllocation(viewAlloc);
     }
     bool isOutput;
     _OutputArray arr;           //!< outputs, a copy: the caller's may be a temporary (inputs are kept as UMat / Mat below)
@@ -198,7 +198,7 @@ bool viewFitsRange(const cvAccelView& v, uint64_t start, uint64_t size)
     if (v.offset < start)
         return false;
     cvAccelAllocation range;
-    memset(&range, 0, sizeof(range));
+    clearAllocation(range);
     range.size = size;
     cvAccelView rel = v;
     rel.alloc = &range;
@@ -236,6 +236,7 @@ void fillView(cvAccelView& v, const cvAccelAllocation* alloc, size_t offset, int
               int dims, const int* sizes, const size_t* steps)
 {
     memset(&v, 0, sizeof(v));
+    v.struct_size = (uint32_t)sizeof(v);
     v.alloc = alloc;
     v.offset = offset;
     v.type = type;
@@ -275,7 +276,7 @@ void fillPlannedView(cvAccelView& v, cvAccelAllocation& alloc, const MatShape& s
         steps[i] = total;
         total *= (size_t)shape.p[i];
     }
-    memset(&alloc, 0, sizeof(alloc));
+    clearAllocation(alloc);
     alloc.size = total;
     alloc.desc = desc;
     fillView(v, &alloc, 0, type, shape.dims, shape.p, steps);
@@ -291,7 +292,7 @@ size_t planBytes(const MatShape& shape, int type)
 
 void fillHostView(cvAccelView& v, cvAccelAllocation& alloc, const Mat& m)
 {
-    memset(&alloc, 0, sizeof(alloc));
+    clearAllocation(alloc);
     alloc.handle = (uint64_t)(uintptr_t)m.datastart;
     alloc.size = (uint64_t)(m.dataend - m.datastart);
     alloc.desc = hostMemoryDesc();
@@ -344,6 +345,8 @@ struct OpCall::Impl
     bool unsupported;
     bool protectedIn;   //!< an input holds protected content: so do the outputs and temporaries
     std::vector<Arg> args;
+    //! images some of whose planes are in temporaries, as this call sees them (their views point here)
+    std::vector<cvAccelImageDesc> images;
 
     RunResult run(Invoker fn, void* userdata);
 private:
@@ -354,6 +357,7 @@ private:
                            cvAccelCall& call, const void*& table, uint64_t& cost, bool& protectedRefused);
     bool planArgs(Backend* b, int device);
     void createOutput(Arg& a, Backend* b, int device);
+    void describeImages(std::vector<cvAccelView>& views);
 };
 
 OpCall::OpCall(const char* opName, const char* module, uint32_t moduleVersion)
@@ -473,6 +477,57 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
     return true;
 }
 
+/** A plane of an image copied into a temporary (uploaded, or produced and copied back) is still
+    that plane: its view gets the image, as this call sees it. All views of such an image point
+    to one copy of its record in which the moved planes say where their temporaries are (each a
+    buffer of its own); format, colours and id stay. */
+void OpCall::Impl::describeImages(std::vector<cvAccelView>& views)
+{
+    images.clear();
+    images.reserve(args.size());    // views point into it: no reallocation during the call
+    for (size_t i = 0; i < args.size(); i++)
+    {
+        const Arg& a = args[i];
+        const BufferState* src = a.isUMat && a.um.u ? a.um.u->accelState : NULL;
+        if (!src || !src->image || (a.plan != PLAN_UPLOAD && a.plan != PLAN_COPY_BACK))
+            continue;
+        const cvAccelImageDesc& orig = src->image->desc;
+        cvAccelImageDesc* d = NULL;
+        for (size_t k = 0; k < images.size() && !d; k++)
+            if (images[k].id == orig.id)
+                d = &images[k];
+        if (!d)
+        {
+            images.push_back(orig);
+            d = &images.back();
+        }
+        const cvAccelView& v = views[i];
+        cvAccelImagePlane& p = d->planes[src->plane];
+        p.offset = v.offset;
+        p.pitch = v.dims > 0 ? v.step[0] : 0;
+        p.size = planBytes(a.shape, a.type);
+        p.layout_modifier = 0;
+        p.buffer = d->plane_count + (uint32_t)i;    // a temporary is a buffer of its own
+    }
+    if (images.empty())
+        return;
+    for (size_t i = 0; i < args.size(); i++)
+    {
+        const Arg& a = args[i];
+        const BufferState* src = a.isUMat && a.um.u ? a.um.u->accelState : NULL;
+        if (!src || !src->image)
+            continue;
+        for (size_t k = 0; k < images.size(); k++)
+        {
+            if (images[k].id == src->image->desc.id)
+            {
+                views[i].image = &images[k];
+                views[i].plane = (uint32_t)src->plane;
+            }
+        }
+    }
+}
+
 void OpCall::Impl::createOutput(Arg& a, Backend* b, int device)
 {
     UMat& d = a.arr.getUMatRef();
@@ -579,6 +634,7 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         Arg& a = args[i];
         cvAccelView& v = views[i];
         memset(&v, 0, sizeof(v));
+        v.struct_size = (uint32_t)sizeof(v);    // an absent argument too: an empty view
         switch (a.plan)
         {
         case PLAN_ABSENT:
@@ -590,7 +646,7 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
                 // device memory: a range of its import (this device's, when shared), described without handles
                 const UMat& m = a.plan == PLAN_SHARE ? a.temp : a.um;
                 const BufferState* bv = m.u->accelState;
-                memset(&a.viewAlloc, 0, sizeof(a.viewAlloc));
+                clearAllocation(a.viewAlloc);
                 a.viewAlloc.size = bv ? bv->imp->alloc.size : m.u->size;
                 if (!queryMemoryDesc(m.u, a.viewAlloc.desc))
                     a.viewAlloc.desc = a.desc;
@@ -613,6 +669,7 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
             break;
         }
     }
+    describeImages(views);
     memset(&call, 0, sizeof(call));
     call.struct_size = (uint32_t)sizeof(call);
     call.mode = CV_ACCEL_QUERY;
@@ -881,6 +938,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                     CV_Error_(Error::StsInternal, ("accel: %s: argument %d does not fit its allocation", name, (int)i));
             }
 
+            describeImages(views);
             call.mode = CV_ACCEL_EXECUTE;
             call.stream = stream->handle;
             {

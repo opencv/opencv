@@ -31,16 +31,21 @@ of failed writes and one CPU mapping. Core identifies dma-bufs and host memory i
 other memory it uses the identity a backend reports (cvAccelAllocation::backing_id).
 
 Compatibility rules:
-- structs with a struct_size field grow at their end only. The side that fills one writes
-  at most struct_size bytes of it, and the side that reads one reads only the fields that
-  lie within struct_size (the others count as zero). A struct_size that does not cover the
-  fields of version 0 of the struct is an error (CV_ACCEL_INVALID_ARGUMENT, nothing written);
-  CV_ACCEL_HAS_FIELD tells whether a later field is there;
-- structs without one (cvAccelMemoryDesc, cvAccelAllocation, cvAccelView,
-  cvAccelCopyEndpoint) keep their size, since they are embedded or passed in arrays: new
-  fields take their reserved space, which the side that creates them sets to zero;
-- a table entry outside of the size reported by the backend reads as NULL, and the plugin
-  loader asks for the highest API version first;
+- every struct passed by pointer starts with struct_size, set by the side that provides the
+  memory, and grows at its end only. The side that fills one writes at most struct_size bytes
+  of it (CV_ACCEL_CLEAR_OUT clears that much), and the side that reads one reads only the
+  fields that lie within struct_size (the others count as zero). A struct_size that does not
+  cover the fields of version 0 of the struct is an error (CV_ACCEL_INVALID_ARGUMENT, nothing
+  written); CV_ACCEL_HAS_FIELD tells whether a later field is there. So a backend built against
+  a newer header never writes past the end of an older core's struct, nor reads garbage;
+- structs embedded in others (cvAccelMemoryDesc, cvAccelCopyEndpoint, cvAccelImagePlane) are
+  frozen within an ABI version, which the header checks when it is compiled: new fields take
+  their reserved space, which the side that creates them sets to zero and an older side
+  ignores (a zero field must mean what its absence meant); any other change of them is a new
+  ABI version;
+- a table entry outside of the size reported by the backend reads as NULL. The plugin loader
+  asks for the highest API version it knows first, and a table that claims a newer version
+  than the one asked for is refused: its backend would follow rules core does not know;
 - NULL entries and CV_ACCEL_NOT_IMPLEMENTED both mean "not supported, no side effects";
 - cvAccelStatus is 32 bits wide whatever the compiler's enum size (see its MAX_ENUM).
 
@@ -101,6 +106,7 @@ Rules a backend must follow, because core relies on them for correctness:
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "opencv2/core/llapi/llapi.h"
 
@@ -118,8 +124,9 @@ extern "C" {
 #define CV_ACCEL_ABI_VERSION 0
 /** 1: describe_allocation; 2: begin_device_access / end_device_access; 3: cvAccelAllocation
     reports the size of the memory it lies in and its device address, and has reserved space;
-    views carry the image they are a plane of; 4: get_device_address */
-#define CV_ACCEL_API_VERSION 4
+    views carry the image they are a plane of; 4: get_device_address; 5: cvAccelAllocation and
+    cvAccelView start with struct_size, embedded structs are frozen */
+#define CV_ACCEL_API_VERSION 5
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -135,6 +142,23 @@ extern "C" {
     added after version 0 of the struct. */
 #define CV_ACCEL_HAS_FIELD(T, ptr, field) \
     ((ptr) != NULL && offsetof(T, field) + sizeof(((T*)0)->field) <= (size_t)(ptr)->struct_size)
+
+//! for the side that fills an out-struct: clears it as far as the caller sized it, and keeps struct_size
+#define CV_ACCEL_CLEAR_OUT(ptr) \
+    do { \
+        const uint32_t cv_accel_size_ = (ptr)->struct_size; \
+        memset((ptr), 0, cv_accel_size_ < sizeof(*(ptr)) ? (size_t)cv_accel_size_ : sizeof(*(ptr))); \
+        (ptr)->struct_size = cv_accel_size_; \
+    } while (0)
+
+//! compile-time check that a struct embedded in others keeps its size within the ABI version
+#if defined(__cplusplus)
+#  define CV_ACCEL_FROZEN_SIZE(T, size) static_assert(sizeof(T) == (size), #T " is frozen within an ABI version")
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#  define CV_ACCEL_FROZEN_SIZE(T, size) _Static_assert(sizeof(T) == (size), #T " is frozen within an ABI version")
+#else
+#  define CV_ACCEL_FROZEN_SIZE(T, size)
+#endif
 
 /** @brief Flags of stream_create. */
 typedef enum cvAccelStreamFlags
@@ -237,8 +261,9 @@ typedef struct cvAccelMemoryDesc
     uint64_t layout_modifier;   //!< 0 = linear; otherwise a DRM-style format modifier with no linear CPU view
     uint32_t base_alignment;    //!< alignment of the allocation start, bytes
     uint32_t coherence_granule; //!< NONCOHERENT: cache line or atom size cache operations work on; else 0
-    uint32_t reserved[6];       //!< zero; room for new fields (the size stays)
+    uint32_t reserved[6];       //!< zero; room for new fields (frozen: embedded in cvAccelAllocation)
 } cvAccelMemoryDesc;
+CV_ACCEL_FROZEN_SIZE(cvAccelMemoryDesc, 64);
 
 /** @brief One allocation or import, filled in by the backend.
 
@@ -250,6 +275,8 @@ operations.
 */
 typedef struct cvAccelAllocation
 {
+    uint32_t struct_size;       //!< set by the side that provides the memory (see the compatibility rules)
+    uint32_t reserved0;
     uint64_t handle;            //!< see cvAccelHandleKind; 64 bits so device addresses fit on 32-bit hosts
     uint64_t size;              //!< bytes requested (allocate) or imported, never rounded up: whole-buffer copies use it
     void* backend_data;         //!< private to the backend
@@ -266,8 +293,9 @@ typedef struct cvAccelAllocation
         view passed to a kernel of another device (peer access, can_access), core sets it to
         the address that device uses (get_device_address). */
     uint64_t device_address;
-    uint64_t reserved[4];       //!< zero; room for new fields (the size stays)
 } cvAccelAllocation;
+//! what struct_size covers at least: every field of version 0
+#define CV_ACCEL_ALLOCATION_SIZE_V0 (offsetof(cvAccelAllocation, device_address) + sizeof(uint64_t))
 
 /** @brief Colour interpretation of an image (cvAccelImageDesc, cv::accel::ColorInfo). 0 is "unknown". */
 typedef enum cvAccelColorModel
@@ -324,6 +352,7 @@ typedef struct cvAccelImagePlane
     int32_t rows, cols, type;   //!< the plane as a matrix: NV12 has 8UC1 luma and 8UC2 chroma at half size
     uint32_t buffer;            //!< planes with the same index lie in the same buffer (one dma-buf, one allocation)
 } cvAccelImagePlane;
+CV_ACCEL_FROZEN_SIZE(cvAccelImagePlane, 48);
 
 /** @brief An image whose planes are arguments of operations (cvAccelView::image).
 
@@ -357,9 +386,10 @@ plane, image->planes[plane].size bytes from offset.
 */
 typedef struct cvAccelView
 {
+    uint32_t struct_size;               //!< set by core (see the compatibility rules)
+    int32_t type;                       //!< OpenCV type, e.g. CV_8UC3
     const cvAccelAllocation* alloc;
     uint64_t offset;                    //!< bytes from the allocation start to the first element
-    int32_t type;                       //!< OpenCV type, e.g. CV_8UC3
     int32_t dims;
     int32_t size[CV_ACCEL_MAX_DIMS];
     uint64_t step[CV_ACCEL_MAX_DIMS];   //!< bytes; step[dims-1] is the element size
@@ -368,7 +398,6 @@ typedef struct cvAccelView
         which bytes the argument is. */
     const cvAccelImageDesc* image;
     uint32_t plane;                     //!< index of this view's plane in image->planes
-    uint32_t reserved;                  //!< zero (views are passed in arrays: the size stays)
 } cvAccelView;
 
 typedef struct cvAccelStream_t* cvAccelStream; //!< in-order queue, owned by the backend
@@ -398,8 +427,9 @@ typedef struct cvAccelCopyEndpoint
     void* host;
     uint64_t offset;
     uint64_t step[CV_ACCEL_MAX_DIMS];
-    uint64_t reserved[2];       //!< zero; room for new fields (the size stays)
+    uint64_t reserved[2];       //!< zero; room for new fields (frozen: embedded in cvAccelCopyRegion)
 } cvAccelCopyEndpoint;
+CV_ACCEL_FROZEN_SIZE(cvAccelCopyEndpoint, 2 * sizeof(void*) + (3 + CV_ACCEL_MAX_DIMS) * sizeof(uint64_t));
 
 /** @brief cvAccelCopyRegion::flags */
 enum

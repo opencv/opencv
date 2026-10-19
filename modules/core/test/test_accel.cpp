@@ -1278,6 +1278,39 @@ TEST(Core_Accel, image_planes_carry_their_image_to_the_backend)
     EXPECT_EQ(5, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
+TEST(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image)
+{
+    // a frame of the coherent device used on the discrete one: its planes are uploaded into
+    // temporaries, and the views still say which image, which plane and where it now lies
+    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
+    accel::detail::emulatorDmaBufProduce(fd, 5, 0);
+    accel::ExternalImage img = nv12Image(fd, 256);
+    img.color.model = accel::COLOR_MODEL_BT709;
+    std::vector<UMat> planes = accel::wrapExternalImage(emulator(COHERENT), img);
+    const uint64 id = accel::describePlane(planes[0]).imageId;
+    accel::ExecutionScope scope(emulator(DISCRETE));
+    UMat out;
+    int calls = 0;
+    bool seen = true;
+    accel::detail::OpCall call("test.nv12_luma", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
+    call.input(planes[0]);
+    call.input(planes[1]);
+    call.output(out, planes[0].shape(), CV_8UC1);
+    EXPECT_EQ(accel::detail::HANDLED, call.run([&](const void* t, const cvAccelCall* c, const cvAccelView* v) {
+        calls++;
+        const cvAccelImageDesc* im = v[0].image;
+        seen = seen && im && im == v[1].image && v[0].plane == 0 && v[1].plane == 1 && im->id == id &&
+               im->fourcc == FOURCC_NV12 && im->color_model == CV_ACCEL_COLOR_MODEL_BT709 &&
+               im->planes[0].pitch == v[0].step[0] && im->planes[1].pitch == v[1].step[0] &&
+               im->planes[0].offset == v[0].offset && im->planes[0].buffer != im->planes[1].buffer &&
+               v[2].image == NULL;
+        return ((const cvAccelOpsCore_v0*)t)->flip(c, &v[0], &v[2], 1);
+    }));
+    EXPECT_EQ(2, calls);
+    EXPECT_TRUE(seen);
+    EXPECT_EQ(5, out.getMat(ACCESS_READ).at<uchar>(0, 0));
+}
+
 TEST(Core_Accel, image_planes_are_checked)
 {
     accel::Device d = emulator(COHERENT);
@@ -1519,6 +1552,50 @@ TEST(Core_Accel, results_of_functions_without_a_hook_stay_on_the_device)
     EXPECT_TRUE(accel::describe(plain).device.empty());
 }
 
+//! an application function that opens a trace region like a cv:: function, and calls cv::repeat with an argument of its own
+static void outerCall(InputArray src, OutputArray dst, const UMat& innerSrc, UMat& innerDst)
+{
+    CV_TRACE_FUNCTION();
+    cv::repeat(innerSrc, 1, 2, innerDst);
+    src.copyTo(dst);
+}
+
+//! one that only forwards its arguments
+static void forwardingCall(InputArray src, OutputArray dst)
+{
+    CV_TRACE_FUNCTION();
+    cv::repeat(src, 1, 2, dst);
+}
+
+TEST(Core_Accel, placement_by_call_looks_at_the_innermost_call)
+{
+    // the arguments of an outer call say nothing about where an inner call with arguments of
+    // its own puts its results
+    accel::Device a = emulator(DISCRETE), b = emulator(COHERENT);
+    UMat src = makeOn(a, Mat(4, 6, CV_8UC1, Scalar(3))), dst;
+    UMat host, hostResult, deviceResult;
+    Mat(2, 2, CV_8UC1, Scalar(1)).copyTo(host);
+    ASSERT_TRUE(accel::describe(host).device.empty());
+    outerCall(src, dst, host, hostResult);          // inner call: host data
+    EXPECT_TRUE(accel::describe(hostResult).device.empty());
+    UMat onB = makeOn(b, Mat(2, 2, CV_8UC1, Scalar(2)));
+    outerCall(src, dst, onB, deviceResult);         // inner call: data on another device
+    EXPECT_TRUE(b == accel::describe(deviceResult).device);
+    EXPECT_EQ(2, deviceResult.getMat(ACCESS_READ).at<uchar>(1, 3));
+    UMat forwarded;
+    forwardingCall(src, forwarded);                 // forwarded arguments are the inner call's too
+    EXPECT_TRUE(a == accel::describe(forwarded).device);
+
+    // the elements of a vector of UMats are arguments too
+    std::vector<UMat> parts;
+    parts.push_back(makeOn(a, Mat(4, 6, CV_8UC1, Scalar(1))));
+    parts.push_back(makeOn(a, Mat(4, 6, CV_8UC1, Scalar(2))));
+    UMat merged;
+    cv::merge(parts, merged);
+    EXPECT_TRUE(a == accel::describe(merged).device);
+    EXPECT_EQ(Vec2b(1, 2), merged.getMat(ACCESS_READ).at<Vec2b>(3, 5));
+}
+
 TEST(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
 {
     accel::Device d = emulator(COHERENT);
@@ -1654,7 +1731,26 @@ TEST(Core_Accel, structs_too_short_for_their_fields_are_refused)
     ext.struct_size = 8;        // ends before the fields of version 0
     cvAccelAllocation out;
     memset(&out, 0, sizeof(out));
+    out.struct_size = (uint32_t)sizeof(out);
     EXPECT_EQ(CV_ACCEL_INVALID_ARGUMENT, api->v0.import_memory(1, &ext, &out));
+
+    // an out-struct is filled only as far as its provider sized it: one shorter than version 0 is refused
+    struct
+    {
+        cvAccelAllocation alloc;
+        uchar canary[16];
+    } small;
+    memset(&small, 0xAB, sizeof(small));
+    small.alloc.struct_size = 8;
+    EXPECT_EQ(CV_ACCEL_INVALID_ARGUMENT, api->v0.allocate(1, 64, CV_ACCEL_MEM_SHARED, 0, &small.alloc));
+    for (size_t i = sizeof(uint32_t); i < sizeof(small); i++)
+        ASSERT_EQ(0xAB, ((const uchar*)&small)[i]) << "byte " << i << " was written";
+
+    // a table that claims a newer API version than core knows follows rules core does not: refused
+    static OpenCV_Core_Accel_API newer = *accel::detail::emulatorBackendTable();
+    newer.api_header.api_version = CV_ACCEL_API_VERSION + 1;
+    newer.v0.backend_name = "emulator-from-the-future";
+    EXPECT_EQ(0, accel::detail::registerBackendTable(&newer));
 }
 
 #ifdef __linux__
@@ -2073,6 +2169,27 @@ TEST(Core_Accel, devices_share_no_state_however_many_a_backend_has)
     owner.join();                               // device 68 can be synchronized again: handed back
     EXPECT_TRUE(released.load());
     accel::detail::reviveDevices();
+}
+
+TEST(Core_Accel, memory_reaches_a_device_of_another_backend_as_a_dma_buf)
+{
+#ifdef __linux__
+    // a result of emulator:1 used by a device of another backend that imports dma-bufs (it
+    // behaves as emulator:2): imported there as the same memory, nothing copied
+    Mat src(16, 24, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    UMat x = makeOn(emulator(COHERENT), src), out;
+    accel::Device other = wideDevice(65);
+    accel::ExecutionScope scope(other);
+    accel::resetTransferStats();
+    cv::flip(x, out, 0);
+    accel::TransferStats s = accel::getTransferStats();
+    EXPECT_EQ(1u, s.deviceOps);
+    EXPECT_EQ(0u, s.transfers);
+    EXPECT_TRUE(other == accel::describe(out).device);
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+#endif
 }
 
 TEST(Core_Accel, failed_work_stays_failed_however_its_fence_is_shared)

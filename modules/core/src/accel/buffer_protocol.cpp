@@ -411,7 +411,7 @@ void ensureShadow(BufferState* v)
     if ((b->deviceInfo(device).caps & CV_ACCEL_CAP_HOST_PINNED) && b->pinnedShadowAllowed(device))
     {
         cvAccelAllocation a;
-        memset(&a, 0, sizeof(a));
+        clearAllocation(a);
         if (b->takePinned(device, size, a) ||
             b->fn().allocate(device, size, CV_ACCEL_MEM_HOST_PINNED, 0, &a) == CV_ACCEL_OK)
         {
@@ -1658,7 +1658,7 @@ bool DeviceAllocator::allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsag
     CV_Assert(u->origdata != 0);
 
     cvAccelAllocation a;
-    memset(&a, 0, sizeof(a));
+    clearAllocation(a);
     if (b_->fn().allocate(device_, u->size, (uint32_t)kindFor(usageFlags), 0, &a) != CV_ACCEL_OK)
         return false;   // Mat::getUMat falls back to the host allocator
     BufferState* v = attachOwnedMemory(u, b_, device_, a);

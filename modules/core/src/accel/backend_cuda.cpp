@@ -396,13 +396,13 @@ cvAccelStatus CV_API_CALL cu_describe_allocation(int device, uint64_t /*size*/, 
 cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, uint32_t flags,
                                       cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
 {
-    if (device < 0 || device >= (int)devices().size() || !out)
+    if (device < 0 || device >= (int)devices().size() || !out || out->struct_size < CV_ACCEL_ALLOCATION_SIZE_V0)
         return CV_ACCEL_INVALID_ARGUMENT;
     if (flags & CV_ACCEL_MEMF_PROTECTED)
         return CV_ACCEL_NOT_IMPLEMENTED;    // CUDA has no protected memory
     const DeviceProps& p = devices()[device];
     CV_CUDA_GUARD(device);
-    memset(out, 0, sizeof(*out));
+    CV_ACCEL_CLEAR_OUT(out);
     CudaAlloc* a = new (std::nothrow) CudaAlloc();
     if (!a)
         return CV_ACCEL_OUT_OF_MEMORY;
@@ -435,7 +435,7 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     if (e != cudaSuccess)
     {
         delete a;
-        memset(out, 0, sizeof(*out));
+        CV_ACCEL_CLEAR_OUT(out);
         return status(e, "allocate");
     }
     out->size = size;
@@ -473,10 +473,11 @@ cvAccelStatus CV_API_CALL cu_import_memory(int device, const cvAccelExternalMemo
 {
     // version 0 of the struct ends with flags; later fields are read where present
     if (device < 0 || device >= (int)devices().size() || !ext || !out ||
-        ext->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(ext->flags))
+        ext->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(ext->flags) ||
+        out->struct_size < CV_ACCEL_ALLOCATION_SIZE_V0)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     CV_CUDA_GUARD(device);
-    memset(out, 0, sizeof(*out));
+    CV_ACCEL_CLEAR_OUT(out);
     void* ptr = (uchar*)(intptr_t)ext->handle + ext->offset;
     if (ext->type == CV_ACCEL_EXTMEM_HOST_POINTER)
     {

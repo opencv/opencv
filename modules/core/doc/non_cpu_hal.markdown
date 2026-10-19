@@ -495,9 +495,16 @@ A backend must follow eleven rules, listed in the header, because core relies on
    `CV_ACCEL_CAP_CROSS_DEVICE_FENCES`.
 
 Exceptions never cross the boundary (`noexcept` entry points, status codes, a per-thread
-error message). A plugin built against an older table simply has fewer entries, and structs
-with a `struct_size` too short for their version-0 fields are refused before anything is
-written.
+error message). A plugin built against an older table simply has fewer entries. Every struct
+passed by pointer, the allocation and the view included, starts with `struct_size`, set by
+the side that provides its memory; the other side writes at most that much
+(`CV_ACCEL_CLEAR_OUT`) and reads only fields within it, and a size too short for the version-0
+fields is refused before anything is written. So a backend built against a newer header can
+neither write past an older core's struct nor read garbage from it. Structs embedded in others
+(the memory description, copy endpoints, image planes) are frozen within an ABI version,
+checked when the header is compiled: they grow only into their reserved space. The loader asks
+a plugin for the highest API version core knows, and refuses a table that claims a newer one
+than it asked for, since its backend would follow rules core does not know.
 
 ## NPUs and DNN
 
@@ -544,6 +551,8 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | planes of one image through different handles of one buffer | grouped by the memory they lie in after wrapping; overlap refused | `wrapExternalImage` |
 | an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise | `canShare`, `shareOn` |
 | a peer device that reaches memory through its own mapping (no unified addressing, an IOMMU window) | its kernels get that device's address of the memory in the view (`get_device_address`, API version 4), and so does `DeviceAccess` on its streams; without the entry one address serves every device | `Backend::deviceAddress` |
+| nested calls (a cv:: function that calls others) | the arguments of the innermost call that has any decide where new data goes: calls are counted by the trace region every cv:: function opens, a host UMat marks a call as one with data of its own, and a call that only forwards its InputArrays follows its caller; elements of a `vector<UMat>` count too | `argumentPlacement`, `enterCall` |
+| a plane of an image copied into a temporary for another device | its view still names the image and the plane; all views of that image in the call share one record in which the moved planes say where their temporaries are | `describeImages` |
 | no memory after the work was queued | room for its fence, the ranges it writes and its failure is made before it is queued, and the list of dma-buf brackets to end is built then too: recording the outcome never allocates; a failure that still finds no room marks all of the memory | `DeviceAcquisition::acquire`, `addPoison` |
 | no memory while a `DeviceAccess` takes a buffer | the hold is recorded before the buffer counts as taken, so nothing is left half acquired | `DeviceAcquisition::acquire` |
 | the last UMat of memory whose `end_cpu_access` keeps failing | the memory is leaked, never freed under the open CPU access; device-idle memory keeps its gate | `destroyBacking` |
@@ -666,26 +675,32 @@ delays every queued task to expose missing waits.
 Measured on an Intel Core i9-14900KS with an NVIDIA GeForce RTX 5090 (CUDA 12.0, driver 570),
 GCC 13.3, Release builds:
 
-- `opencv_test_core --gtest_filter='Core_Accel*'`: the 73 emulator tests pass, also repeated,
+- `opencv_test_core --gtest_filter='Core_Accel*'`: the 87 emulator tests pass, also repeated,
   in separate processes and with every device task delayed (`OPENCV_ACCEL_EMULATOR_DELAY_US`).
   They cover the protocol, failures at every point (including work that cannot be proven
-  stopped and refused fence references), device loss, dma-buf read and write fences, a
-  dma-buf shared by two devices, planes of one buffer, images and their formats, aliases and
-  memory revived during its release, read-only and protected memory failing closed, failed
-  CPU access ends, nested CPU access levels, placement without hooks, device choice, shared
-  streams, cross-device fences, and short `struct_size`s. The stream and fence tests were
-  checked to fail with their protection removed.
+  stopped and fences the backend refuses to share), device loss, dma-buf read and write
+  fences, a dma-buf shared by two devices, memory shared between devices and backends as a
+  dma-buf instead of copied, one memory under several names, planes of one buffer, images and
+  their formats (also when planes move to another device), aliases and memory revived during
+  its release, Mat views of device memory, read-only and protected memory failing closed,
+  failed CPU access begins and ends, nested CPU access levels, placement without hooks and in
+  nested calls, outputs placed by their allocator, device choice, plans that cannot move their
+  data, shared streams, cross-device fences, peer addresses, a backend with 70 devices, and
+  `struct_size`s and API versions. Each test of the fourth review was checked to fail on the
+  code before its fix.
 - The eight `Core_Accel_CUDA` tests pass on the RTX 5090: transfer accounting of a host round
   trip, device-to-device copies, placement after CPU fallbacks, backing identity and range
   checks through `cuMemGetAddressRange`, the device address of mapped pinned memory used by a
   kernel, ordering against a kernel the caller launches on the legacy default stream, and
-  copy-back of Mat-backed UMats. The whole `opencv_test_core` passes with CUDA (25,336 tests)
-  and without (24,865), and the whole tree builds.
+  copy-back of Mat-backed UMats. The whole `opencv_test_core` passes without CUDA (24,879
+  tests), the accelerator tests pass with it (95), and the whole tree builds.
 - ThreadSanitizer (`-fsanitize=thread`, pthreads backend): no report from the accelerator code
   over repeated runs and with delayed device tasks. The one report left is in the pthreads
   `ThreadPool` (`parallel_impl.cpp`), which a plain `cv::reduce` test gives as well.
-- Cost, 4x4 flip: 0.14 us on a Mat, 0.7 us on a host UMat with a backend registered, 2.8 to
-  3.1 us dispatched to the emulator (8.6 to 8.8 us including the wait for its worker thread).
+- Cost, 4x4 flip (OpenCL off): 0.146 us on a Mat with or without a backend and a device
+  allocator handed out (the call counting in trace regions does not show), 0.27 to 0.28 us on a
+  host UMat, 3.0 to 3.1 us dispatched to the emulator (9.4 to 9.7 us including the wait for
+  its worker thread).
 - CUDA, 4K BGR frame (24.9 MB): upload 14 to 15 GB/s (GpuMat::upload 16); `getMat` into the
   pinned host copy 23.5 to 25 GB/s, against 7.1 GB/s into pageable memory (GpuMat::download
   7.1); device copy 740 to 800 GB/s. A chain flip, flip, add, `getMat` on GPU data without CUDA
@@ -693,6 +708,18 @@ GCC 13.3, Release builds:
 
 Not covered yet: NPU hardware (the emulator's non-coherent and device-idle devices stand in),
 HIP, multiple GPUs (peer access, contexts on other devices), and performance of real kernels.
+
+Known limits:
+- Placement by call counts calls through the trace regions cv:: functions open; a helper
+  without one counts as its caller. An inner call whose only data are Mats (which are not
+  registered, to keep Mat calls free of cost) and which creates UMat outputs follows the
+  devices of the call around it.
+- The CUDA backend neither exports nor imports dma-bufs yet (no begin/end_device_access), so
+  memory moves between CUDA and other backends by copy.
+- Paths that run out of memory are covered by construction (room is made before work is
+  queued; the outcome is recorded without allocating), not by tests: there is no allocation
+  failure injection. The plugin loader's ownership of its library has no test either; it needs
+  a plugin built as a separate library.
 
 ## Migration plan
 

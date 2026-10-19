@@ -37,7 +37,7 @@ namespace cv { namespace accel { namespace impl {
 
 Import::Import() : backend(0), device(-1), modifier(0), readOnly(false), hostReservation(0)
 {
-    memset(&alloc, 0, sizeof(alloc));
+    clearAllocation(alloc);
 }
 
 static std::atomic<uint64>& backingIds()
@@ -71,7 +71,7 @@ BufferState::BufferState(PhysicalBacking* b, Import* imp_, uint64_t start_, uint
       shadow(0), shadowKind(SHADOW_NONE), shadowPages(0), hostMapped(false), hostAccess(0),
       cpuCopy(0), cpuCopyPages(0), cpuCopyWriteBack(false), dying(false), matGeneration(0)
 {
-    memset(&shadowAlloc, 0, sizeof(shadowAlloc));
+    clearAllocation(shadowAlloc);
 }
 
 //////////////////////////////////// poisoned ranges ////////////////////////////////////
@@ -821,7 +821,7 @@ int DeviceAllocator::kindFor(UMatUsageFlags usageFlags) const
 cvAccelAllocation DeviceAllocator::allocateMemory(uint64_t total, int kind) const
 {
     cvAccelAllocation a;
-    memset(&a, 0, sizeof(a));
+    clearAllocation(a);
     if (total == 0)
         return a;
     const uint32_t allocFlags = protected_ ? CV_ACCEL_MEMF_PROTECTED : 0;
@@ -830,7 +830,7 @@ cvAccelAllocation DeviceAllocator::allocateMemory(uint64_t total, int kind) cons
     {
         // memory held by buffers that are released but still in flight
         collectRetired(true);
-        memset(&a, 0, sizeof(a));
+        clearAllocation(a);
         status = b_->fn().allocate(device_, total, (uint32_t)kind, allocFlags, &a);
     }
     if (protected_ && status == CV_ACCEL_NOT_IMPLEMENTED)
@@ -906,7 +906,7 @@ struct FreshImport
 {
     FreshImport(Backend* b, int device) : guard(b, alloc), committed(false)
     {
-        memset(&alloc, 0, sizeof(alloc));
+        clearAllocation(alloc);
         guard.device = device;
     }
     cvAccelAllocation alloc;
@@ -1001,7 +1001,7 @@ static void importChecked(Backend* b, int device, const cvAccelExternalMemory& e
     }
     cvAccelStatus status = b->fn().import_memory(device, &ext, &out.alloc);
     if (status != CV_ACCEL_OK)
-        memset(&out.alloc, 0, sizeof(out.alloc));   // nothing to release
+        clearAllocation(out.alloc);     // nothing to release
     if (status == CV_ACCEL_NOT_IMPLEMENTED)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): this kind of external memory cannot be imported "
                                              "(type %d); copy it into a UMat instead", b->name().c_str(), (int)ext.type));

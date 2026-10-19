@@ -169,7 +169,7 @@ inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(+MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_READ, &vec); }
 inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); noteDeviceArgument(m); }
-inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_READ, &vec); }
+inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_READ, &vec); noteDeviceArguments(vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
@@ -252,11 +252,21 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 
 inline void _InputArray::noteDeviceArgument(const UMat& m)
 {
-    if (m.u && m.u->accelState)
+    if (!m.u)
+        return;
+    if (m.u->accelState)
     {
         accel::detail::enterDeviceArgument(this, m);
         flags |= DEVICE_ARGUMENT;
     }
+    else if (accel::detail::enterHostArgument(this))
+        flags |= DEVICE_ARGUMENT;
+}
+
+inline void _InputArray::noteDeviceArguments(const std::vector<UMat>& vec)
+{
+    for (size_t i = 0; i < vec.size(); i++)
+        noteDeviceArgument(vec[i]);
 }
 
 inline _InputArray::~_InputArray()
@@ -390,7 +400,7 @@ inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS
 inline _OutputArray::_OutputArray(Mat& m) { init(+MAT+ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); noteDeviceArgument(m); }
-inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT + ACCESS_WRITE, &vec); noteDeviceArguments(vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
@@ -484,7 +494,7 @@ inline _OutputArray::_OutputArray(const UMat& m)
 { init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_WRITE, &m); noteDeviceArgument(m); }
 
 inline _OutputArray::_OutputArray(const std::vector<UMat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
+{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_WRITE, &vec); noteDeviceArguments(vec); }
 
 inline _OutputArray::_OutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_WRITE, &d_mat); }
@@ -577,7 +587,7 @@ inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flag
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(+MAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); noteDeviceArgument(m); }
-inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_RW, &vec); }
+inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_RW, &vec); noteDeviceArguments(vec); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
@@ -671,7 +681,7 @@ inline _InputOutputArray::_InputOutputArray(const UMat& m)
 { init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); noteDeviceArgument(m); }
 
 inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
-{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); }
+{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); noteDeviceArguments(vec); }
 
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_RW, &d_mat); }

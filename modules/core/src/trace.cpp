@@ -6,6 +6,7 @@
 
 #include <opencv2/core/utils/trace.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
+#include <opencv2/core/utils/accel_dispatch.private.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
 
 #include <opencv2/core/opencl/ocl_defs.hpp>
@@ -425,6 +426,13 @@ Region::Region(const LocationStaticStorage& location) :
     pImpl(NULL),
     implFlags(0)
 {
+    // a cv:: function starts: accelerator placement looks at the arguments of the innermost call
+    if ((location.flags & REGION_FLAG_FUNCTION) && accel::detail::isActive())
+    {
+        accel::detail::enterCall();
+        implFlags = REGION_FLAG__ACCEL_CALL;
+    }
+
     // Checks:
     // - global enable flag
     // - parent region is disabled
@@ -574,6 +582,13 @@ Region::Region(const LocationStaticStorage& location) :
 
 void Region::destroy()
 {
+    if (implFlags & REGION_FLAG__ACCEL_CALL)
+    {
+        accel::detail::leaveCall();
+        implFlags &= ~REGION_FLAG__ACCEL_CALL;
+        if (implFlags == 0)
+            return;
+    }
     CV_DbgAssert(implFlags != 0);
 
     TraceManagerThreadLocal& ctx = getTraceManager().tls.getRef();
@@ -1100,8 +1115,21 @@ void traceArg(const TraceArg& arg, double value)
 
 #else
 
-Region::Region(const LocationStaticStorage&) : pImpl(NULL), implFlags(0) {}
-void Region::destroy() {}
+Region::Region(const LocationStaticStorage& location) : pImpl(NULL), implFlags(0)
+{
+    // a cv:: function starts: accelerator placement looks at the arguments of the innermost call
+    if ((location.flags & REGION_FLAG_FUNCTION) && accel::detail::isActive())
+    {
+        accel::detail::enterCall();
+        implFlags = REGION_FLAG__ACCEL_CALL;
+    }
+}
+void Region::destroy()
+{
+    if (implFlags & REGION_FLAG__ACCEL_CALL)
+        accel::detail::leaveCall();
+    implFlags = 0;
+}
 
 void traceArg(const TraceArg&, const char*) {}
 void traceArg(const TraceArg&, int) {};

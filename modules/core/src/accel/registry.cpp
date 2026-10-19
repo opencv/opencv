@@ -736,6 +736,13 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
                      << ", OpenCV expects " << CV_ACCEL_ABI_VERSION);
         return 0;
     }
+    if (h.api_version > CV_ACCEL_API_VERSION)
+    {
+        // it would follow rules this core does not know (see the compatibility rules)
+        CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: API version " << h.api_version
+                     << " is newer than " << CV_ACCEL_API_VERSION);
+        return 0;
+    }
     if (h.opencv_version_major != CV_VERSION_MAJOR)
     {
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: built for OpenCV "
@@ -845,7 +852,16 @@ void Registry::loadPlugins()
         // an older header may only answer for the version it knows
         const OpenCV_Core_Accel_API* api = NULL;
         for (int v = CV_ACCEL_API_VERSION; v >= 0 && !api; v--)
+        {
             api = init(CV_ACCEL_ABI_VERSION, v, NULL);
+            if (api && api->api_header.api_version > (unsigned)v)
+            {
+                CV_LOG_WARNING(NULL, "accel: " << path << " answered API version " << v << " with a table of version "
+                               << api->api_header.api_version << "; refused");
+                api = NULL;
+                break;
+            }
+        }
         // the backend owns the library from its publication on (tables and code must outlive
         // every buffer); a rejected table leaves nothing behind that points into it
         add(api, 50, "plugin " + path, lib);
@@ -915,9 +931,13 @@ namespace {
 struct DeviceArgument
 {
     const void* array;
-    int backendId;
+    int backendId;      //!< 0: a UMat of host data (marks the call as one with arguments of its own)
     int device;
+    int depth;          //!< calls running on the thread when the argument was made (enterCall)
 };
+
+//! cv:: functions running on this thread (counted while an accelerator is in use)
+static thread_local int t_callDepth = 0;
 
 struct ArgumentFrame
 {
@@ -945,15 +965,38 @@ static MatAllocator* argumentPlacement()
     const std::vector<DeviceArgument>& args = argumentFrames().getRef().args;
     if (args.empty())
         return NULL;
-    // the arguments of the calls running on this thread agree on a device: new data goes there;
-    // with arguments on several devices there is no single answer, and the default applies
-    for (size_t i = 1; i < args.size(); i++)
-        if (args[i].backendId != args[0].backendId || args[i].device != args[0].device)
-            return NULL;
-    Backend* b = Registry::getInstance().get(args[0].backendId);
-    if (!b || b->isLost(args[0].device))
+    // The arguments of the innermost call that has any: made at the current depth (for a
+    // helper that opens no trace region, or a call about to start), otherwise by the caller of
+    // the function that runs, and so on outwards. A call that only forwards the InputArrays it
+    // got has no arguments of its own: its caller's decide. Arguments of calls further out say
+    // nothing about one that has its own. When its device arguments agree on a device new data
+    // goes there; on several devices there is no single answer, and the default applies (as it
+    // does when it has host data only).
+    const DeviceArgument* first = NULL;
+    for (int want = t_callDepth; want >= 0; want--)
+    {
+        bool any = false;
+        for (size_t i = 0; i < args.size(); i++)
+        {
+            if (args[i].depth != want)
+                continue;
+            any = true;
+            if (args[i].backendId == 0)
+                continue;   // host data: marks the call, decides nothing
+            if (!first)
+                first = &args[i];
+            else if (args[i].backendId != first->backendId || args[i].device != first->device)
+                return NULL;
+        }
+        if (any)
+            break;
+    }
+    if (!first)
         return NULL;
-    return b->allocator(args[0].device, (int)b->deviceInfo(args[0].device).preferred_kind);
+    Backend* b = Registry::getInstance().get(first->backendId);
+    if (!b || b->isLost(first->device))
+        return NULL;
+    return b->allocator(first->device, (int)b->deviceInfo(first->device).preferred_kind);
 }
 
 const MatAllocator* placementFor(const UMatData* previous)
@@ -980,10 +1023,30 @@ void enterDeviceArgument(const void* array, const UMat& m)
         a.array = array;
         a.backendId = v->backend()->id();
         a.device = v->device();
+        a.depth = impl::t_callDepth;
         impl::argumentFrames().getRef().args.push_back(a);
         impl::liveArguments()++;
     }
     catch (...) {}  // no placement hint: new data goes where it would without one
+}
+
+bool enterHostArgument(const void* array)
+{
+    if (impl::activity().load(std::memory_order_relaxed) == 0)
+        return false;
+    try
+    {
+        impl::DeviceArgument a;
+        a.array = array;
+        a.backendId = 0;
+        a.device = -1;
+        a.depth = impl::t_callDepth;
+        impl::argumentFrames().getRef().args.push_back(a);
+        impl::liveArguments()++;
+        return true;
+    }
+    catch (...) {}
+    return false;
 }
 
 void leaveDeviceArgument(const void* array) CV_NOEXCEPT
@@ -995,9 +1058,8 @@ void leaveDeviceArgument(const void* array) CV_NOEXCEPT
         {
             if (args[i].array == array)
             {
-                args.erase(args.begin() + i);
+                args.erase(args.begin() + i);   // a vector of UMats registers each of its device elements
                 impl::liveArguments()--;
-                return;
             }
         }
     }
@@ -1013,6 +1075,16 @@ bool inExecutionScope()
 {
     const impl::ScopeEntry* s = impl::currentScope();
     return s && s->backendId != 0;
+}
+
+void enterCall() CV_NOEXCEPT
+{
+    impl::t_callDepth++;
+}
+
+void leaveCall() CV_NOEXCEPT
+{
+    impl::t_callDepth--;
 }
 
 bool isOpenCLSuppressed()

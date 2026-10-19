@@ -660,7 +660,7 @@ cvAccelStatus CV_API_CALL emu_describe_allocation(int device, uint64_t /*size*/,
 cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind, uint32_t flags,
                                        cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
 {
-    if (!out || device < 0 || device >= EMU_DEVICES)
+    if (!out || out->struct_size < CV_ACCEL_ALLOCATION_SIZE_V0 || device < 0 || device >= EMU_DEVICES)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     if (deviceLost(device))
         return lostError();
@@ -669,7 +669,7 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
         return fail(CV_ACCEL_NOT_IMPLEMENTED, "no protected memory on this device");
     try
     {
-        memset(out, 0, sizeof(*out));
+        CV_ACCEL_CLEAR_OUT(out);
         std::unique_ptr<EmuAlloc> owner(new EmuAlloc());
         EmuAlloc* a = owner.get();
         a->device = device;
@@ -772,7 +772,8 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
                                             cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
 {
     // version 0 of the struct ends with flags; later fields are read where present
-    if (!ext || !out || ext->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(ext->flags))
+    if (!ext || !out || ext->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(ext->flags) ||
+        out->struct_size < CV_ACCEL_ALLOCATION_SIZE_V0)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     if ((device == EMU_COHERENT || device == EMU_NONCOHERENT) && ext->type == CV_ACCEL_EXTMEM_DMABUF_FD)
     {
@@ -782,7 +783,7 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             return fail(CV_ACCEL_INVALID_ARGUMENT, "unknown dma-buf, or a range outside it");
         try
         {
-            memset(out, 0, sizeof(*out));
+            CV_ACCEL_CLEAR_OUT(out);
             EmuAlloc* a = new EmuAlloc();
             a->device = device;
             a->kind = CV_ACCEL_MEM_SHARED;
@@ -828,7 +829,7 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
         // from another library: stored scrambled, reached by the CPU only through copies
         try
         {
-            memset(out, 0, sizeof(*out));
+            CV_ACCEL_CLEAR_OUT(out);
             EmuAlloc* a = new EmuAlloc();
             a->device = device;
             a->kind = CV_ACCEL_MEM_DEVICE;
@@ -875,7 +876,7 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
         return fail(CV_ACCEL_NOT_IMPLEMENTED, "the coherent device imports host memory, the discrete one device pointers");
     try
     {
-        memset(out, 0, sizeof(*out));
+        CV_ACCEL_CLEAR_OUT(out);
         EmuAlloc* a = new EmuAlloc();
         a->device = device;
         a->kind = CV_ACCEL_MEM_SHARED;
@@ -904,7 +905,7 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
 cvAccelStatus CV_API_CALL emu_export_memory(const cvAccelAllocation* alloc, uint32_t type,
                                             cvAccelExternalMemory* out) CV_ACCEL_NOEXCEPT
 {
-    if (!alloc || !alloc->backend_data || !out)
+    if (!alloc || !alloc->backend_data || !out || out->struct_size < offsetof(cvAccelExternalMemory, flags) + sizeof(out->flags))
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
     if (type != CV_ACCEL_EXTMEM_DMABUF_FD || a->memfd < 0)
@@ -935,8 +936,7 @@ cvAccelStatus CV_API_CALL emu_export_memory(const cvAccelAllocation* alloc, uint
         const int fd = fcntl(a->memfd, F_DUPFD_CLOEXEC, 0);
         if (fd < 0)
             return fail(CV_ACCEL_INTERNAL_ERROR, "cannot duplicate the descriptor");
-        memset(out, 0, sizeof(*out));
-        out->struct_size = (uint32_t)sizeof(*out);
+        CV_ACCEL_CLEAR_OUT(out);
         out->type = CV_ACCEL_EXTMEM_DMABUF_FD;
         out->handle = fd;
         out->offset = 0;
@@ -1597,7 +1597,7 @@ int64 emulatorViolations(int kinds)
 int64 emulatorAllocateExternal(int device, size_t size, int value, bool protectedContent)
 {
     cvAccelAllocation a;
-    memset(&a, 0, sizeof(a));
+    impl::clearAllocation(a);
     CV_Assert(impl::emu_allocate(device, size, CV_ACCEL_MEM_DEVICE, protectedContent ? CV_ACCEL_MEMF_PROTECTED : 0, &a)
               == CV_ACCEL_OK);
     impl::EmuAlloc* e = (impl::EmuAlloc*)a.backend_data;
