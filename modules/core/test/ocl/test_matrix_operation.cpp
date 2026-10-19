@@ -226,7 +226,7 @@ OCL_TEST(ConvertTo, saturate_new_int_depths)
     Mat src64f(1, 6, CV_64F, vals);
 
     for (int sdepth : { CV_8S, CV_16S, CV_32S, CV_64S, CV_32F })
-        for (int ddepth : { CV_32U, CV_64U, CV_64S })
+        for (int ddepth : { CV_32S, CV_32U, CV_64U, CV_64S })
         {
             if (sdepth == ddepth)
                 continue;

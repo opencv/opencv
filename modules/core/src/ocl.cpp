@@ -7068,7 +7068,7 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf, size_t buf
         snprintf(buf, buf_size, "convert_%s", typestr);
     }
     else if( CV_IS_FLOAT_TYPE(sdepth) )
-        snprintf(buf, buf_size, "convert_%s%s_rte", typestr, (ddepth != CV_32S ? "_sat" : ""));
+        snprintf(buf, buf_size, "convert_%s_sat_rte", typestr);
     else
         snprintf(buf, buf_size, "convert_%s_sat", typestr);
 
