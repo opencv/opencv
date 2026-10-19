@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
+#include <iterator>
 
 namespace cv {
 
