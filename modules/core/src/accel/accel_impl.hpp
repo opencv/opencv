@@ -549,6 +549,13 @@ struct PhysicalBacking
         memory meanwhile, and other devices import the memory through it (under mutex) */
     int file;
     uint64_t fileStart;     //!< where byte 0 of the backing lies in that file
+    /** UMat::handle() gave the memory to code OpenCV does not see, which orders its work only
+        with the device's default stream: the memory never takes implicit fences after that (no
+        export, no import as a dma-buf), or that code would bypass them (under mutex) */
+    bool rawHandle;
+    /** host memory known by its address (a BACKING_HOST name): the CPU address of byte 0, so
+        that a Mat over the same bytes is seen to overlap its views; 0 otherwise */
+    std::atomic<uint64_t> hostBase;
 
     // under the mutex of the registry of backings (see backing.cpp)
     std::vector<BackingName> names;     //!< every identity the backing is found by; none: reached through one allocation only
@@ -573,6 +580,13 @@ struct PhysicalBacking
     std::vector<std::pair<uint64_t, uint64_t> > writeRanges;   //!< [begin, end) it covers: poisoned if it fails
     std::vector<FenceRef> readFences;   //!< device reads after the last write, one per stream
     std::vector<PoisonRange> poison;    //!< bytes that failed work may have written, until written whole
+    struct Layout
+    {
+        uint64_t start, size, modifier;
+    };
+    /** the layout every range of the memory was wrapped or allocated with, kept while the
+        backing lives: the same bytes are never viewed with two layouts (tiled bytes as linear) */
+    std::vector<Layout> layouts;
     /** a failure that could not be recorded as a range (no room): all of the backing counts as
         written by it until all of it is written again */
     bool poisonedWhole;
@@ -853,6 +867,17 @@ UMat shareOn(const UMat& m, Backend* b, int device);
 
 //! waits on the CPU for every device use of the memory of @p v (writes and reads)
 void waitDeviceUse(BufferState* v);
+
+/** Makes the memory of @p v ready to be handed to other drivers (exportExternalMemory): refuses
+    memory given out by UMat::handle(), a Mat view that may write it, and bytes of @p v that
+    failed work wrote; uploads host copies that are newer than the memory; waits for every
+    device use; from then on the memory carries implicit fences. */
+void prepareExport(BufferState* v);
+
+//! the bytes [start, start + size) of @p b already have another layout than @p modifier (mutex held)
+bool layoutConflictLocked(const PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier);
+//! records the layout of [start, start + size) (mutex held; throws only before anything changed)
+void recordLayoutLocked(PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier);
 
 /** Gives @p b one more name (a dma-buf it was exported as, the allocation a backend says it is),
     so that a wrap through that name meets the same state. Throws when the name already belongs

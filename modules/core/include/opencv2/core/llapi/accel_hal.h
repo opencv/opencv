@@ -101,7 +101,9 @@ Rules a backend must follow, because core relies on them for correctness:
    stream_wait_fence only gets fences recorded on the stream's own device; core waits for the
    others on the CPU (peer access to memory does not imply that events cross devices).
 
-@note Preview only (no backward compatibility until ABI version 1).
+@note Preview. ABI version 1 is the first layout in which every struct passed by pointer
+starts with struct_size; tables of ABI version 0 (whose cvAccelAllocation and cvAccelView had
+another layout) are refused. Any other change of a layout is a new ABI version.
 */
 
 #include <stddef.h>
@@ -121,12 +123,14 @@ extern "C" {
 #  define CV_ACCEL_NOEXCEPT
 #endif
 
-#define CV_ACCEL_ABI_VERSION 0
+/** 0: layouts before struct_size in cvAccelAllocation and cvAccelView (refused); 1: the
+    layouts of API version 5 */
+#define CV_ACCEL_ABI_VERSION 1
 /** 1: describe_allocation; 2: begin_device_access / end_device_access; 3: cvAccelAllocation
     reports the size of the memory it lies in and its device address, and has reserved space;
     views carry the image they are a plane of; 4: get_device_address; 5: cvAccelAllocation and
-    cvAccelView start with struct_size, embedded structs are frozen */
-#define CV_ACCEL_API_VERSION 5
+    cvAccelView start with struct_size, embedded structs are frozen; 6: identify_memory */
+#define CV_ACCEL_API_VERSION 6
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -652,6 +656,16 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         alloc->device_address is valid on every device that reaches the memory. */
     cvAccelStatus (CV_API_CALL *get_device_address)(const cvAccelAllocation* alloc, int device,
                                                     uint64_t* address) CV_ACCEL_NOEXCEPT;
+
+    // --- API version 6 ---
+    /** optional: when @p ext reaches memory this backend allocated (a dma-buf exported from one
+        of its allocations through any API, its own pointer), the identity of that memory as
+        cvAccelAllocation::backing_id reports it, and where @p ext->offset lies in it; returns
+        CV_ACCEL_NOT_IMPLEMENTED for memory it does not know. Core asks every backend when it
+        wraps memory it identifies itself, so that one memory has one state whichever backend
+        allocated it and whichever imports it. Must not import anything. */
+    cvAccelStatus (CV_API_CALL *identify_memory)(const cvAccelExternalMemory* ext, uint64_t* backing_id,
+                                                 uint64_t* backing_offset, uint64_t* backing_size) CV_ACCEL_NOEXCEPT;
 };
 
 typedef struct OpenCV_Core_Accel_API_v0

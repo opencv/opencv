@@ -1420,16 +1420,16 @@ ExternalMemory exportExternalMemory(const UMat& m)
 {
     CV_Assert(m.u && m.u->accelState && "accel: only memory of an accelerator is exported");
     BufferState* v = m.u->accelState;
+    const uint64_t modifier = v->imp->modifier;
+    if (modifier != 0 && (m.offset != 0 || (v->image && (m.rows != v->image->desc.planes[v->plane].rows ||
+                                                          m.cols != v->image->desc.planes[v->plane].cols))))
+        CV_Error(Error::StsNotImplemented, "accel: a part of memory with a non-linear layout cannot be exported; "
+                                           "export the whole plane");
     uint64_t start = 0;
     const int fd = backingFile(v, start);
-    {
-        // other drivers may use the memory from now on: OpenCV's work on it is bracketed with
-        // their fences (backingFile checked that every import can)
-        std::lock_guard<std::mutex> lk(v->backing->mutex);
-        v->backing->flags |= CV_ACCEL_MEMF_EXTERNAL_SYNC;
-    }
-    // work queued before the export attached no fence to the buffer: it ends before anyone gets it
-    waitDeviceUse(v);
+    // a settled snapshot: no CPU writer, no failed bytes, host copies uploaded, device work done
+    // (work queued before the export attached no fence to the buffer); implicit fences from now on
+    prepareExport(v);
     ExternalMemory e;
     e.type = ExternalMemory::DMABUF_FD;
 #ifndef _WIN32
@@ -1443,10 +1443,66 @@ ExternalMemory exportExternalMemory(const UMat& m)
     size_t extent = m.elemSize();
     for (int i = 0; i < m.dims; i++)
         extent += (size_t)(m.size.p[i] - 1) * m.step.p[i];
-    e.size = m.empty() ? 0 : extent;
+    // a non-linear layout: its size does not follow from a shape, the whole view is the plane
+    e.size = modifier != 0 ? (size_t)v->size : m.empty() ? 0 : extent;
     e.readOnly = v->readOnly;
     e.protectedContent = (v->backing->flags & CV_ACCEL_MEMF_PROTECTED) != 0;
+    e.layoutModifier = modifier;
+    e.fourcc = v->image ? v->image->desc.fourcc : 0;
     return e;
+}
+
+ExternalImage exportExternalImage(const std::vector<UMat>& planes)
+{
+    CV_Assert(!planes.empty() && "accel: an image has planes");
+    const BufferState* v0 = planes[0].u ? planes[0].u->accelState : NULL;
+    if (!v0 || !v0->image)
+        CV_Error(Error::StsBadArg, "accel: only planes of a wrapped image are exported as an image");
+    const cvAccelImageDesc& d = v0->image->desc;
+    if (planes.size() != d.plane_count)
+        CV_Error(Error::StsBadArg, "accel: export every plane of the image, in order");
+    ExternalImage img;
+    img.type = ExternalMemory::DMABUF_FD;
+    img.fourcc = d.fourcc;
+    img.color.model = (ColorModel)d.color_model;
+    img.color.range = (ColorRange)d.color_range;
+    img.color.primaries = (ColorPrimaries)d.color_primaries;
+    img.color.transfer = (TransferFunction)d.transfer;
+    img.color.chromaSitingX = (ChromaSiting)d.chroma_siting_x;
+    img.color.chromaSitingY = (ChromaSiting)d.chroma_siting_y;
+    img.layoutModifier = d.planes[0].layout_modifier;
+    try
+    {
+        for (size_t i = 0; i < planes.size(); i++)
+        {
+            const BufferState* v = planes[i].u ? planes[i].u->accelState : NULL;
+            if (!v || v->image.get() != v0->image.get() || v->plane != (int)i)
+                CV_Error(Error::StsBadArg, "accel: export every plane of one image, in order");
+            const ExternalMemory e = exportExternalMemory(planes[i]);
+            const cvAccelImagePlane& q = d.planes[i];
+            ExternalPlane p;
+            p.handle = e.handle;
+            p.offset = e.offset;
+            p.pitch = (size_t)q.pitch;
+            p.size = (size_t)q.size;
+            p.layoutModifier = q.layout_modifier;
+            p.rows = q.rows;
+            p.cols = q.cols;
+            p.type = q.type;
+            img.planes.push_back(p);
+            img.readOnly = img.readOnly || e.readOnly;
+            img.protectedContent = img.protectedContent || e.protectedContent;
+        }
+    }
+    catch (...)
+    {
+#ifndef _WIN32
+        for (size_t i = 0; i < img.planes.size(); i++)
+            close((int)img.planes[i].handle);
+#endif
+        throw;
+    }
+    return img;
 }
 
 UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,

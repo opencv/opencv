@@ -370,10 +370,18 @@ The returned ExternalMemory (DMABUF_FD) holds a new descriptor that belongs to t
 offset and size of the UMat's bytes in it. From the export on the memory carries implicit fences:
 OpenCV's work on it waits for the fences others attach and attaches its own, so a display, an
 encoder or another device orders itself with OpenCV as with any dma-buf. Work queued before the
-export ends before the function returns. Wrapping the descriptor again, on any device, gives a
-view of the same memory, never a copy. Linux only; throws when no backend of the memory can
-export it. */
+export ends before the function returns, host copies newer than the memory reach it first, and
+the export is refused while a Mat view may write the memory, when failed device work wrote the
+bytes, and for memory given out by UMat::handle(). The layout (ExternalMemory::layoutModifier)
+and the image format go with it; memory with a non-linear layout is exported whole. Wrapping
+the descriptor again, on any device, gives a view of the same memory, never a copy. Linux only;
+throws when no backend of the memory can export it. */
 CV_EXPORTS ExternalMemory exportExternalMemory(const UMat& m);
+
+/** @brief Hands every plane of a wrapped image to another API or device, with its format, colour
+encoding and plane layouts (see exportExternalMemory). Each plane gets a descriptor of its own,
+which belongs to the caller; wrapExternalImage of the result gives views of the same memory. */
+CV_EXPORTS ExternalImage exportExternalImage(const std::vector<UMat>& planes);
 
 /** @brief Wraps each plane of an external image into a UMat, in the order of the planes, with
 the plane's pitch as its row step. Planes in one buffer and planes in separate buffers (one fd

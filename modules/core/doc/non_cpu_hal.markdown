@@ -504,7 +504,9 @@ neither write past an older core's struct nor read garbage from it. Structs embe
 (the memory description, copy endpoints, image planes) are frozen within an ABI version,
 checked when the header is compiled: they grow only into their reserved space. The loader asks
 a plugin for the highest API version core knows, and refuses a table that claims a newer one
-than it asked for, since its backend would follow rules core does not know.
+than it asked for, since its backend would follow rules core does not know. ABI version 1 is the
+first with these layouts; a plugin built for ABI version 0 had other offsets in its
+allocations and views and is refused before anything of it is called.
 
 ## NPUs and DNN
 
@@ -546,10 +548,15 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | failed work that left no fence, and a failed device sync | nothing it may touch is freed; borrowed memory waits until the device syncs or stops | `FenceRef::unknown` |
 | a plan that would move protected or non-linear memory between devices, or copy a result into non-linear memory | not run on that device: the next candidate is tried (moves between devices go through the CPU, copies are linear) | `OpCall::Impl::evaluate` |
 | an output whose own allocator places it on a device | that device is a candidate even with only host inputs, the call is counted, and the output is made by its allocator wherever the call runs (copied there when another device wins); handing out a device allocator keeps the hooks on | `createdOn`, `Device::allocator` |
+| memory given out by `UMat::handle()`, later exported or shared | refused for good: that code orders its work with the default stream only and would bypass implicit fences; the memory is copied instead | `PhysicalBacking::rawHandle` |
 | `UMat::handle()` of read-only memory, or of a dma-buf | no write handle of read-only memory; no handle at all of memory with implicit fences (`DeviceAccess` brackets it) | `deviceHandleBlocking` |
+| an export (`exportExternalMemory`, `exportExternalImage`) | a settled snapshot: refused while a Mat view may write the memory, after failed device writes to it and for memory given out by `UMat::handle()`; newer host copies are uploaded and device work ends first; the layout modifier, fourcc and image metadata go with it, and non-linear memory is exported whole | `prepareExport` |
+| the same bytes wrapped with two layouts (a tiled frame as linear memory) | refused before anything is imported: a backing remembers the layout of every range it was wrapped or allocated with | `PhysicalBacking::layouts` |
 | one memory reached through a dma-buf and through the allocation it came from | one backing with both names; names that lead to two existing states make the wrap fail | `registerBacking`, `addBackingName` |
+| a dma-buf one backend's allocation was exported as, outside OpenCV, imported through another backend | core asks every backend whether the memory is one of its allocations (`identify_memory`, API version 6): the import meets the allocation's state | `allBackendNames` |
 | planes of one image through different handles of one buffer | grouped by the memory they lie in after wrapping; overlap refused | `wrapExternalImage` |
 | an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise | `canShare`, `shareOn` |
+| a Mat over host memory that a UMat wraps (a wrapped pointer) | both compared by host address: an output that overlaps an input is produced in a temporary | `PhysicalBacking::hostBase`, `overlaps` |
 | a peer device that reaches memory through its own mapping (no unified addressing, an IOMMU window) | its kernels get that device's address of the memory in the view (`get_device_address`, API version 4), and so does `DeviceAccess` on its streams; without the entry one address serves every device | `Backend::deviceAddress` |
 | nested calls (a cv:: function that calls others) | the arguments of the innermost call that has any decide where new data goes: calls are counted by the trace region every cv:: function opens, a host UMat marks a call as one with data of its own, and a call that only forwards its InputArrays follows its caller; elements of a `vector<UMat>` count too | `argumentPlacement`, `enterCall` |
 | a plane of an image copied into a temporary for another device | its view still names the image and the plane; all views of that image in the call share one record in which the moved planes say where their temporaries are | `describeImages` |

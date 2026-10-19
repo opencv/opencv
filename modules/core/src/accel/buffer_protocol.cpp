@@ -1148,6 +1148,7 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
     waitDeviceWork(b, lk, true, v);
     if (usesShadow(v) && u->deviceCopyObsolete() && !u->hostCopyObsolete())
         uploadShadowLocked(v, u, v->backend()->defaultStream(v->device()), true);
+    b->rawHandle = true;    // see PhysicalBacking::rawHandle: no implicit fences from now on
     if (access & ACCESS_WRITE)
     {
         u->markHostCopyObsolete(true);
@@ -1163,6 +1164,35 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
         CV_Error(Error::StsNotImplemented, "UMat::handle(): this memory has no flat address and the UMat starts inside "
                                            "it; use cv::accel::DeviceAccess, which gives the offset");
     return (void*)(uintptr_t)v->imp->alloc.handle;
+}
+
+void prepareExport(BufferState* v)
+{
+    PhysicalBacking* b = v->backing;
+    std::unique_lock<std::mutex> lk(b->mutex);
+    checkOwnHolds(b, true);
+    BusyScope busy(b, lk, true);
+    endOrphanMappingsLocked(b);
+    requireCpuAccessEnded(b);
+    if (b->rawHandle)
+        CV_Error(Error::StsError, "accel: UMat::handle() gave this memory to code that does not wait for implicit "
+                                  "fences: it cannot be exported");
+    // a Mat view that may write: the bytes others would get are not settled
+    bool cpuWrites = !b->cpuLevels.empty() && (openCpuAccess(b) & ACCESS_WRITE);
+    for (size_t i = 0; i < b->views.size() && !cpuWrites; i++)
+        cpuWrites = b->views[i]->hostMapped && (b->views[i]->hostAccess & ACCESS_WRITE);
+    if (cpuWrites)
+        CV_Error(Error::StsError, "accel: a Mat view that may write this memory is alive; release it before the export");
+    // every device use ends; a failed write poisons what it wrote, and the exported bytes must be whole
+    waitDeviceWork(b, lk, true, v);
+    // host copies newer than the memory reach it first
+    for (size_t i = 0; i < b->views.size(); i++)
+    {
+        BufferState* w = b->views[i];
+        if (usesShadow(w) && w->shadow && w->u->deviceCopyObsolete() && !w->u->hostCopyObsolete())
+            uploadShadowLocked(w, w->u, w->backend()->defaultStream(w->device()), true);
+    }
+    b->flags |= CV_ACCEL_MEMF_EXTERNAL_SYNC;    // other drivers may use it from now on
 }
 
 void waitDeviceUse(BufferState* v)

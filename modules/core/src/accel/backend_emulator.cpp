@@ -967,6 +967,22 @@ cvAccelStatus CV_API_CALL emu_get_device_address(const cvAccelAllocation* alloc,
     return CV_ACCEL_OK;
 }
 
+cvAccelStatus CV_API_CALL emu_identify_memory(const cvAccelExternalMemory* ext, uint64_t* backing_id,
+                                              uint64_t* backing_offset, uint64_t* backing_size) CV_ACCEL_NOEXCEPT
+{
+    if (!ext || !backing_id || !backing_offset || !backing_size)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    if (ext->type != CV_ACCEL_EXTMEM_DMABUF_FD)
+        return CV_ACCEL_NOT_IMPLEMENTED;
+    FakeDmaBuf* buf = findDmaBuf(ext->handle);
+    if (!buf || !buf->ownerBase)
+        return CV_ACCEL_NOT_IMPLEMENTED;    // not exported from one of our allocations
+    *backing_id = buf->ownerBase;
+    *backing_offset = ext->offset;
+    *backing_size = buf->size;
+    return CV_ACCEL_OK;
+}
+
 cvAccelStatus CV_API_CALL emu_can_access(int device, const cvAccelMemoryDesc* desc, int own_device) CV_ACCEL_NOEXCEPT
 {
     if (!desc)
@@ -1544,7 +1560,8 @@ const OpenCV_Core_Accel_API g_emulatorApi = {
         emu_describe_allocation,
         emu_begin_device_access,
         emu_end_device_access,
-        emu_get_device_address
+        emu_get_device_address,
+        emu_identify_memory
     }
 };
 

@@ -47,7 +47,8 @@ static std::atomic<uint64>& backingIds()
 }
 
 PhysicalBacking::PhysicalBacking()
-    : id(++backingIds()), size(0), flags(0), borrowed(false), file(-1), fileStart(0), refs(0), registered(false),
+    : id(++backingIds()), size(0), flags(0), borrowed(false), file(-1), fileStart(0), rawHandle(false), hostBase(0),
+      refs(0), registered(false),
       retiring(false), deferred(false),
       busy(false), pendingReaders(0), pendingWriters(0), poisonedWhole(false), generation(0), cpuViews(0), cpuBase(0),
       idleGateHeld(0)
@@ -288,6 +289,8 @@ void addNameLocked(Backings& r, PhysicalBacking* b, const BackingName& name)
     b->names.reserve(b->names.size() + 1);
     r.keyed[name.key].push_back(b);
     b->names.push_back(name);   // capacity is reserved
+    if (name.key.domain == BACKING_HOST)
+        b->hostBase.store(name.start);
 }
 
 /** Registers @p nb (one reference, the caller's) under all its names. Returns @p nb, or the
@@ -711,6 +714,32 @@ BufferState* addViewLocked(PhysicalBacking* b, Import* imp, UMatData* u, uint64_
 
 } // namespace
 
+bool layoutConflictLocked(const PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier)
+{
+    for (size_t i = 0; i < b->layouts.size(); i++)
+    {
+        const PhysicalBacking::Layout& l = b->layouts[i];
+        if (l.modifier != modifier && rangesOverlap(l.start, l.size, start, size))
+            return true;
+    }
+    return false;
+}
+
+void recordLayoutLocked(PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier)
+{
+    for (size_t i = 0; i < b->layouts.size(); i++)
+    {
+        const PhysicalBacking::Layout& l = b->layouts[i];
+        if (l.modifier == modifier && rangeInside(l.start, l.size, start, size))
+            return;     // known already
+    }
+    PhysicalBacking::Layout l;
+    l.start = start;
+    l.size = size;
+    l.modifier = modifier;
+    b->layouts.push_back(l);
+}
+
 BufferState* attachOwnedMemory(UMatData* u, Backend* be, int device, const cvAccelAllocation& a0)
 {
     cvAccelAllocation a = a0;
@@ -736,6 +765,7 @@ BufferState* attachOwnedMemory(UMatData* u, Backend* be, int device, const cvAcc
     BufferState* v = 0;
     {
         std::lock_guard<std::mutex> lk(nb->mutex);
+        recordLayoutLocked(nb.get(), 0, a.size, a.desc.layout_modifier);
         v = addViewLocked(nb.get(), nb->imports[0], u, 0, a.size);
     }
     PhysicalBacking* got = 0;
@@ -1146,6 +1176,9 @@ static Import* importFor(PhysicalBacking* bk, Backend* b, int device, const cvAc
         }
     }
     checkExternalSync(b, bk->flags | d.flags);
+    if ((d.flags & CV_ACCEL_MEMF_EXTERNAL_SYNC) && bk->rawHandle)
+        CV_Error_(Error::StsError, ("accel(%s): UMat::handle() gave this memory to code that does not wait for implicit "
+                                    "fences: it cannot be imported as a dma-buf", b->name().c_str()));
     if (!bk->cpuLevels.empty())
         CV_Error_(Error::StsError, ("accel(%s): the CPU has this memory open (a Mat view of it is alive); release it "
                                     "before importing the memory into another device", b->name().c_str()));
@@ -1170,6 +1203,25 @@ static void backendName(Backend* b, const cvAccelAllocation& alloc, const Backin
     if (k == key || !rangeEnd(alloc.backing_offset, size, end) || (alloc.backing_size && end > alloc.backing_size))
         return;
     names.push_back(BackingName(k, alloc.backing_offset));
+}
+
+/** What every backend says the memory @p whole reaches is (identify_memory): a dma-buf exported
+    from an allocation of one backend and imported through another is that allocation. */
+static void allBackendNames(const cvAccelExternalMemory& whole, std::vector<BackingName>& names)
+{
+    std::vector<Backend*> all = Registry::getInstance().all();
+    for (size_t i = 0; i < all.size(); i++)
+    {
+        Backend* b = all[i];
+        if (!b->fn().identify_memory)
+            continue;
+        uint64_t id = 0, offset = 0, size = 0, end = 0;
+        if (b->fn().identify_memory(&whole, &id, &offset, &size) != CV_ACCEL_OK || !id)
+            continue;
+        if (!rangeEnd(offset, whole.size, end) || (size && end > size))
+            continue;   // an answer that cannot hold the memory: no name from it
+        names.push_back(BackingName(BackingKey(BACKING_BACKEND, (uint64_t)b->id(), id), offset));
+    }
 }
 
 UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool& referenced) const
@@ -1222,8 +1274,12 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         if (key.domain != BACKING_ANONYMOUS)
             nb->names.push_back(BackingName(key, objStart));
         // what the backend calls the memory, when core named it: a later wrap through the
-        // backend's own handle of it (a device pointer) meets the same state
+        // backend's own handle of it (a device pointer) meets the same state; and what every
+        // backend says it is, so that memory one backend allocated and exported meets its
+        // allocation whichever backend imports it
         backendName(b_, whole->alloc, key, nb->names, objSize);
+        if (key.domain == BACKING_FILE || key.domain == BACKING_HOST)
+            allBackendNames(wholeRequest(b_, ext, reqStart, objStart, objSize), nb->names);
         nb->size = objSize;
         nb->borrowed = true;
         nb->refs = 1;
@@ -1271,6 +1327,14 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
     // 3. a view of the requested bytes; the backing holds one reference for it, released on failure
     try
     {
+        {
+            // bytes already wrapped with another layout: never imported with this one (a tiled
+            // frame as linear memory would show the CPU tiles)
+            std::lock_guard<std::mutex> lk(bk->mutex);
+            if (layoutConflictLocked(bk, reqStart - bkStart, ext.size, ext.layout_modifier))
+                CV_Error_(Error::StsBadArg, ("accel(%s): these bytes are already wrapped with another layout (modifier)",
+                                             b_->name().c_str()));
+        }
         if (!imp)
         {
             imp = importFor(bk, b_, device_, ext, reqStart, bkStart, first);
@@ -1345,6 +1409,11 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         }
         nu->size = (size_t)ext.size;
         nu->flags |= UMatData::USER_ALLOCATED;
+        if (layoutConflictLocked(bk, vStart, ext.size, ext.layout_modifier))
+            CV_Error_(Error::StsBadArg, ("accel(%s): these bytes are already wrapped with another layout (modifier)",
+                                         b_->name().c_str()));
+        bk->views.reserve(bk->views.size() + 1);
+        recordLayoutLocked(bk, vStart, ext.size, ext.layout_modifier);
         BufferState* v = addViewLocked(bk, imp, nu.get(), vStart, ext.size);
         v->readOnly = readOnly;
         v->image = req.image;
@@ -1372,6 +1441,9 @@ int backingFile(BufferState* v, uint64_t& start)
     Import* via = 0;
     {
         std::lock_guard<std::mutex> lk(b->mutex);
+        if (b->rawHandle)
+            CV_Error(Error::StsError, "accel: UMat::handle() gave this memory to code that does not wait for implicit "
+                                      "fences: it cannot be shared as a dma-buf (use DeviceAccess instead of handle())");
         if (b->file >= 0)
         {
             start = b->fileStart;
@@ -1435,8 +1507,8 @@ bool canShare(const UMat& m, Backend* b, int device)
         return false;
     PhysicalBacking* bk = v->backing;
     std::lock_guard<std::mutex> lk(bk->mutex);
-    if (!bk->cpuLevels.empty())
-        return false;   // no new import while the CPU has the memory open
+    if (!bk->cpuLevels.empty() || bk->rawHandle)
+        return false;   // no new import while the CPU has the memory open, nor implicit fences after handle()
     bool exportable = bk->file >= 0;
     for (size_t i = 0; i < bk->imports.size(); i++)
     {
@@ -1461,6 +1533,15 @@ namespace cv { namespace accel { namespace detail {
 uint64 backingId(const UMat& m)
 {
     return m.u && m.u->accelState ? m.u->accelState->backing->id : 0;
+}
+
+int backingImports(const UMat& m)
+{
+    if (!m.u || !m.u->accelState)
+        return 0;
+    impl::PhysicalBacking* b = m.u->accelState->backing;
+    std::lock_guard<std::mutex> lk(b->mutex);
+    return (int)b->imports.size();
 }
 
 }}} // namespace cv::accel::detail

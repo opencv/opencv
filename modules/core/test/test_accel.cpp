@@ -890,6 +890,26 @@ TEST(Core_Accel, wrapped_host_memory_and_overlapping_imports)
     EXPECT_THROW(accel::wrapExternalMemory(d, odd, MatShape({63, 64}), CV_8UC1), cv::Exception);
 }
 
+TEST(Core_Accel, a_mat_over_wrapped_host_memory_overlaps_its_umat)
+{
+    // a UMat over host memory and a Mat one row further: the output overlaps the input, so the
+    // device writes a temporary, and the result is the flip of what the input was
+    accel::Device d = emulator(COHERENT);
+    std::vector<uchar> storage(4096 * 2);
+    uchar* p = alignPtr(storage.data(), 4096);
+    Mat host(16, 16, CV_8UC1, p), ref;
+    randu(host, 0, 255);
+    cv::flip(host.clone(), ref, 0);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::HOST_POINTER;
+    mem.handle = (int64)(intptr_t)p;
+    mem.size = host.total();
+    UMat w = accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1);
+    Mat out(16, 16, CV_8UC1, p + 16);
+    cv::flip(w, out, 0);
+    EXPECT_EQ(0, maxDiff(ref, out));
+}
+
 TEST(Core_Accel, wrapped_device_memory_reads_its_content)
 {
     // like a device pointer from another library: the content is in device memory, and the
@@ -1442,6 +1462,87 @@ TEST(Core_Accel, memory_reaches_another_device_as_a_dma_buf_without_copies)
 #endif
 }
 
+TEST(Core_Accel, exports_keep_the_layout_and_the_image)
+{
+#ifdef __linux__
+    // a tiled frame exported keeps its layout, whole; the same bytes are never wrapped as linear
+    accel::Device gpu = emulator(COHERENT), npu = emulator(NONCOHERENT);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DMABUF_FD;
+    mem.handle = accel::detail::emulatorCreateDmaBuf(256);
+    mem.size = 256;
+    mem.layoutModifier = 0x0100000000000002ull;
+    UMat tiled = accel::wrapExternalMemory(gpu, mem, MatShape({16, 16}), CV_8UC1);
+    accel::ExternalMemory e = accel::exportExternalMemory(tiled);
+    EXPECT_EQ(mem.layoutModifier, e.layoutModifier);
+    EXPECT_EQ(256u, e.size);
+    UMat again = accel::wrapExternalMemory(gpu, e, MatShape({16, 16}), CV_8UC1);
+    EXPECT_EQ(accel::HOST_ACCESS_NONE, accel::describe(again).hostAccess);
+    accel::ExternalMemory linear = e;
+    linear.layoutModifier = 0;
+    EXPECT_THROW(accel::wrapExternalMemory(gpu, linear, MatShape({16, 16}), CV_8UC1), cv::Exception);
+    EXPECT_THROW(accel::exportExternalMemory(tiled.rowRange(8, 16)), cv::Exception);   // a part of a tiled plane
+    close((int)e.handle);
+
+    // an image exported with its format, colours and planes, wrapped again on another device
+    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
+    accel::ExternalImage img = nv12Image(fd, 256);
+    img.color.model = accel::COLOR_MODEL_BT709;
+    img.color.range = accel::COLOR_RANGE_LIMITED;
+    std::vector<UMat> planes = accel::wrapExternalImage(gpu, img);
+    accel::ExternalImage x = accel::exportExternalImage(planes);
+    EXPECT_EQ(FOURCC_NV12, x.fourcc);
+    EXPECT_EQ(accel::COLOR_MODEL_BT709, x.color.model);
+    ASSERT_EQ(2u, x.planes.size());
+    EXPECT_EQ(256u, x.planes[1].offset);
+    std::vector<UMat> other = accel::wrapExternalImage(npu, x);
+    EXPECT_EQ(accel::detail::backingId(planes[1]), accel::detail::backingId(other[1]));
+    EXPECT_EQ(accel::COLOR_RANGE_LIMITED, accel::describePlane(other[1]).color.range);
+    for (size_t i = 0; i < x.planes.size(); i++)
+        close((int)x.planes[i].handle);
+#endif
+}
+
+TEST(Core_Accel, exports_are_settled_snapshots)
+{
+#ifdef __linux__
+    // nothing is handed to other drivers while the CPU may still write it, or after failed writes
+    UMat x = makeOn(emulator(COHERENT), Mat(8, 8, CV_8UC1, Scalar(1)));
+    {
+        Mat view = x.getMat(ACCESS_RW);
+        EXPECT_THROW(accel::exportExternalMemory(x), cv::Exception);
+    }
+    UMat y = makeOn(emulator(COHERENT), Mat(8, 8, CV_8UC1, Scalar(1)));
+    {
+        Mat view = y.getMat(ACCESS_WRITE);
+        view.setTo(Scalar(2));
+        accel::detail::emulatorFailNextCpuFlush();  // the CPU's writes may reach the memory only in part
+    }
+    EXPECT_THROW(accel::exportExternalMemory(y), cv::Exception);
+    accel::ExternalMemory e = accel::exportExternalMemory(x);
+    close((int)e.handle);
+#endif
+}
+
+TEST(Core_Accel, memory_given_out_by_handle_is_never_shared_as_a_dma_buf)
+{
+#ifdef __linux__
+    // code that got UMat::handle() orders its work with the device's default stream only: the
+    // memory must never take implicit fences afterwards, so it is neither exported nor shared
+    Mat src(16, 24, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    UMat x = makeOn(emulator(COHERENT), src);
+    EXPECT_TRUE(x.handle(ACCESS_READ) != NULL);
+    EXPECT_THROW(accel::exportExternalMemory(x), cv::Exception);
+    accel::ExecutionScope scope(emulator(NONCOHERENT));
+    UMat out;
+    cv::flip(x, out, 0);            // copied to the NPU instead of imported there
+    EXPECT_EQ(1, accel::detail::backingImports(x));
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+#endif
+}
+
 TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
 {
 #ifdef __linux__
@@ -1751,6 +1852,12 @@ TEST(Core_Accel, structs_too_short_for_their_fields_are_refused)
     newer.api_header.api_version = CV_ACCEL_API_VERSION + 1;
     newer.v0.backend_name = "emulator-from-the-future";
     EXPECT_EQ(0, accel::detail::registerBackendTable(&newer));
+
+    // a table of ABI version 0 had other layouts of allocations and views: refused, never read
+    static OpenCV_Core_Accel_API older = *accel::detail::emulatorBackendTable();
+    older.api_header.min_api_version = 0;
+    older.v0.backend_name = "emulator-of-abi-0";
+    EXPECT_EQ(0, accel::detail::registerBackendTable(&older));
 }
 
 #ifdef __linux__
@@ -2189,6 +2296,22 @@ TEST(Core_Accel, memory_reaches_a_device_of_another_backend_as_a_dma_buf)
     EXPECT_EQ(0u, s.transfers);
     EXPECT_TRUE(other == accel::describe(out).device);
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+#endif
+}
+
+TEST(Core_Accel, memory_exported_by_one_backend_is_one_memory_in_another)
+{
+#ifdef __linux__
+    // another library exports an emulator allocation as a dma-buf without telling OpenCV, and the
+    // descriptor is wrapped through another backend: its owner recognises it, so it is one memory
+    UMat y = makeOn(emulator(COHERENT), Mat(16, 24, CV_8UC1, Scalar(4)));
+    accel::ExternalMemory f;
+    f.type = accel::ExternalMemory::DMABUF_FD;
+    f.handle = accel::detail::emulatorExportDmaBuf(y);
+    f.size = y.total();
+    UMat other = accel::wrapExternalMemory(wideDevice(65), f, MatShape({16, 24}), CV_8UC1);
+    EXPECT_EQ(accel::detail::backingId(y), accel::detail::backingId(other));
+    close((int)f.handle);
 #endif
 }
 

@@ -115,9 +115,11 @@ bool spanOfMat(const Mat& m, Span& s)
     const BufferState* v = m.u ? m.u->accelState : NULL;
     if (v)
     {
-        // a mapping of a view: its Mat starts at the view's first byte (getHostView)
-        s.key = v->backing;
-        s.start = v->start + (uint64_t)(m.data - m.datastart);
+        // a mapping of a view: its Mat starts at the view's first byte (getHostView); host
+        // memory is compared by its addresses, whatever reaches it
+        const uint64_t base = v->backing->hostBase.load();
+        s.key = base ? NULL : (const void*)v->backing;
+        s.start = base + v->start + (uint64_t)(m.data - m.datastart);
         s.size = extentBytes(m.dims, m.size.p, m.step.p, m.type());
     }
     else
@@ -135,8 +137,10 @@ bool spanOfUMat(const UMat& m, bool host, Span& s)
         return false;
     if (const BufferState* v = m.u->accelState)
     {
-        s.key = v->backing;
-        s.start = v->start + m.offset;
+        // host memory (a wrapped pointer) by its addresses: a Mat over the same bytes overlaps it
+        const uint64_t base = v->backing->hostBase.load();
+        s.key = base ? NULL : (const void*)v->backing;
+        s.start = base + v->start + m.offset;
         s.size = extentBytes(m.dims, m.size.p, m.step.p, m.type());
     }
     else if (host && m.u->data)

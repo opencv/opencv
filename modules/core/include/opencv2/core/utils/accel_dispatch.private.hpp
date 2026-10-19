@@ -125,6 +125,8 @@ CV_EXPORTS const OpenCV_Core_Accel_API* emulatorBackendTable();
 
 //! tests: an id of the physical memory behind @p m, the same for every UMat that reaches it (0: host memory)
 CV_EXPORTS uint64 backingId(const UMat& m);
+//! tests: how many backends and devices reach the physical memory behind @p m (imports of it)
+CV_EXPORTS int backingImports(const UMat& m);
 
 //! the kernels of @p device report NOT_IMPLEMENTED while @p disable holds (a device without the operation)
 CV_EXPORTS void emulatorDisableOps(int device, bool disable);
