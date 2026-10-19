@@ -279,6 +279,48 @@ TEST(Core_Accel, writable_mat_view_keeps_the_device_away)
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
 }
 
+TEST(Core_Accel, mat_views_of_device_memory_are_device_memory)
+{
+    // A Mat from UMat::getMat maps accelerator memory the CPU has open; it is not host memory.
+    // A call that takes one runs on the CPU (counted), and its results still go to the device.
+    Mat src(16, 24, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    for (int index : {DISCRETE, COHERENT, NONCOHERENT})
+    {
+        accel::Device d = emulator(index);
+        UMat x = makeOn(d, src);
+        Mat view = x.getMat(ACCESS_READ);
+        accel::resetTransferStats();
+        UMat out;
+        cv::flip(view, out, 0);
+        accel::TransferStats s = accel::getTransferStats();
+        EXPECT_EQ(0u, s.deviceOps) << "device " << index;
+        EXPECT_EQ(1u, s.cpuFallbacks) << "device " << index;
+        EXPECT_TRUE(d == accel::describe(out).device) << "device " << index;
+        EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ))) << "device " << index;
+    }
+
+    // The same bytes under two names: a Mat view of rows 0..7 written from a UMat of rows 4..11
+    // of the same memory. The result is the CPU's on host memory aliased the same way; the
+    // device never writes the open view, and never misses the overlap.
+    Mat host = src.clone();
+    cv::flip(host.rowRange(4, 12), host.rowRange(0, 8), 0);
+    for (int index : {DISCRETE, COHERENT, NONCOHERENT})
+    {
+        for (AccessFlag access : {ACCESS_READ, ACCESS_RW})
+        {
+            accel::Device d = emulator(index);
+            UMat x = makeOn(d, src);
+            Mat view = x.rowRange(0, 8).getMat(access);
+            accel::resetTransferStats();
+            cv::flip(x.rowRange(4, 12), view, 0);
+            EXPECT_EQ(0u, accel::getTransferStats().deviceOps) << "device " << index;
+            EXPECT_EQ(0, maxDiff(host, x.getMat(ACCESS_READ))) << "device " << index << " access " << (int)access;
+        }
+    }
+}
+
 TEST(Core_Accel, copy_out_while_a_mat_view_is_open)
 {
     // non-coherent memory: the view's writes sit in CPU caches until the view ends
@@ -330,6 +372,42 @@ TEST(Core_Accel, cpu_access_whose_end_failed_keeps_the_device_away)
         EXPECT_EQ(3, out.getMat(ACCESS_READ).at<uchar>(7, 7));
     }
     EXPECT_EQ(violations, accel::detail::emulatorViolations(kinds));
+}
+
+TEST(Core_Accel, cpu_access_that_cannot_open_ends_every_begin)
+{
+    // A camera frame imported by two devices: CPU access begins on both imports. When the
+    // second begin fails, the first is ended again; when that end fails too, it stays owed
+    // and the devices stay away until it succeeds. A begin that succeeds without an address
+    // is ended as well. Every begin ends once, innermost first.
+    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DMABUF_FD;
+    mem.handle = fd;
+    mem.size = 256;
+    const int64 violations = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS);
+    {
+        UMat gpu = accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({16, 16}), CV_8UC1);
+        UMat npu = accel::wrapExternalMemory(emulator(NONCOHERENT), mem, MatShape({16, 16}), CV_8UC1);
+        gpu.setTo(Scalar(7));
+
+        accel::detail::emulatorFailNextCpuBegin(1);
+        accel::detail::emulatorFailNextCpuEnds(3);      // the end that undoes the first begin, and its next two retries
+        EXPECT_THROW(gpu.getMat(ACCESS_READ), cv::Exception);
+        accel::resetTransferStats();
+        UMat out;
+        cv::flip(gpu, out, 0);                          // the end is retried and fails again: on the CPU
+        EXPECT_EQ(0u, accel::getTransferStats().deviceOps);
+        EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
+        cv::flip(gpu, out, 0);                          // ended by now: on the device
+        EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+        EXPECT_EQ(7, out.getMat(ACCESS_READ).at<uchar>(15, 15));
+
+        accel::detail::emulatorFailNextCpuBegin(0, true);
+        EXPECT_THROW(npu.getMat(ACCESS_READ), cv::Exception);
+        EXPECT_EQ(7, npu.getMat(ACCESS_READ).at<uchar>(0, 0));
+    }
+    EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS));
 }
 
 TEST(Core_Accel, upgraded_cpu_access_ends_every_level)
@@ -1698,21 +1776,137 @@ TEST(Core_Accel, borrowed_memory_waits_until_failed_work_provably_stopped)
     accel::detail::reviveDevices();
 }
 
-TEST(Core_Accel, refused_fence_references_are_tracked_by_device_sync)
+// "emulator-wide": a backend with 70 devices, device i behaving as emulator:(i % 7). Core
+// stamps the device index on what the backend returns, so only entries that take a device change.
+enum { WIDE_DEVICES = 70 };
+static const OpenCV_Core_Accel_API_v0_0_api_entries& emu() { return accel::detail::emulatorBackendTable()->v0; }
+static int wideBase(int device) { return device < 0 ? device : device % 7; }
+static cvAccelStatus CV_API_CALL wide_get_device_count(int* n) CV_ACCEL_NOEXCEPT
 {
-    // fence_retain fails: a buffer cannot keep the fence of the work that wrote it, and must
-    // neither hold the fence without a reference (released twice later) nor forget the work
+    if (!n)
+        return CV_ACCEL_INVALID_ARGUMENT;
+    *n = WIDE_DEVICES;
+    return CV_ACCEL_OK;
+}
+static cvAccelStatus CV_API_CALL wide_get_device_info(int device, cvAccelDeviceInfo* info) CV_ACCEL_NOEXCEPT
+{
+    return device < 0 || device >= WIDE_DEVICES ? CV_ACCEL_INVALID_ARGUMENT : emu().get_device_info(wideBase(device), info);
+}
+static cvAccelStatus CV_API_CALL wide_allocate(int device, uint64_t size, uint32_t kind, uint32_t flags,
+                                               cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
+{
+    return emu().allocate(wideBase(device), size, kind, flags, out);
+}
+static cvAccelStatus CV_API_CALL wide_import_memory(int device, const cvAccelExternalMemory* ext,
+                                                    cvAccelAllocation* out) CV_ACCEL_NOEXCEPT
+{
+    return emu().import_memory(wideBase(device), ext, out);
+}
+static cvAccelStatus CV_API_CALL wide_can_access(int device, const cvAccelMemoryDesc* desc, int own) CV_ACCEL_NOEXCEPT
+{
+    return emu().can_access(wideBase(device), desc, wideBase(own));
+}
+static cvAccelStatus CV_API_CALL wide_copy(int device, cvAccelStream stream, const cvAccelCopyRegion* region) CV_ACCEL_NOEXCEPT
+{
+    return emu().copy(wideBase(device), stream, region);
+}
+static cvAccelStatus CV_API_CALL wide_stream_create(int device, uint32_t flags, cvAccelStream* out) CV_ACCEL_NOEXCEPT
+{
+    return emu().stream_create(wideBase(device), flags, out);
+}
+static cvAccelStatus CV_API_CALL wide_device_synchronize(int device) CV_ACCEL_NOEXCEPT
+{
+    return emu().device_synchronize(wideBase(device));
+}
+static cvAccelStatus CV_API_CALL wide_describe_allocation(int device, uint64_t size, uint32_t kind, uint32_t flags,
+                                                          cvAccelMemoryDesc* desc) CV_ACCEL_NOEXCEPT
+{
+    return emu().describe_allocation(wideBase(device), size, kind, flags, desc);
+}
+
+static accel::Device wideDevice(int index)
+{
+    static OpenCV_Core_Accel_API table = []() {
+        OpenCV_Core_Accel_API t = *accel::detail::emulatorBackendTable();
+        t.v0.backend_name = "emulator-wide";
+        t.v0.get_device_count = wide_get_device_count;
+        t.v0.get_device_info = wide_get_device_info;
+        t.v0.allocate = wide_allocate;
+        t.v0.import_memory = wide_import_memory;
+        t.v0.can_access = wide_can_access;
+        t.v0.copy = wide_copy;
+        t.v0.stream_create = wide_stream_create;
+        t.v0.device_synchronize = wide_device_synchronize;
+        t.v0.describe_allocation = wide_describe_allocation;
+        return t;
+    }();
+    accel::detail::registerEmulatorBackend();
+    CV_Assert(accel::detail::registerBackendTable(&table, -102) > 0);
+    accel::Device d = accel::Device::find(cv::format("emulator-wide:%d", index));
+    CV_Assert(!d.empty());
+    return d;
+}
+
+TEST(Core_Accel, devices_share_no_state_however_many_a_backend_has)
+{
+    // Device 68 (failing) loses track of a copy into borrowed memory: nothing proves it
+    // stopped. Device 67 (managed) is synchronized meanwhile, and device 64 keeps working:
+    // neither says anything about device 68, past the 64th device as before it.
+    accel::Device failing = wideDevice(68), managed = wideDevice(67), coherent = wideDevice(64);
+    failingDevice();
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DEVICE_POINTER;
+    mem.handle = accel::detail::emulatorAllocateExternal(FAILING, 256, 1, false);
+    mem.size = 256;
+    UMat borrowed = accel::wrapExternalMemory(failing, mem, MatShape({16, 16}), CV_8UC1);
+    UMat src = makeOn(failing, Mat(16, 16, CV_8UC1, Scalar(9)));
+    UMat idle = makeOn(managed, Mat(16, 16, CV_8UC1, Scalar(5)));
+    accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
+                                         accel::detail::EMU_FAIL_CALLS | accel::detail::EMU_FAIL_RECORD);
+    EXPECT_THROW(src.copyTo(borrowed), cv::Exception);
+
+    std::atomic<bool> released(false);
+    std::thread owner([&]() { borrowed.release(); released = true; });
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    EXPECT_EQ(5, idle.getMat(ACCESS_READ).at<uchar>(0, 0));  // device 67 synchronized: proves nothing about 68
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    EXPECT_FALSE(released.load());
+
+    Mat ref;
+    Mat in(8, 8, CV_8UC1);
+    randu(in, 0, 255);
+    cv::flip(in, ref, 1);
+    UMat uin = makeOn(coherent, in), out;
+    accel::resetTransferStats();
+    cv::flip(uin, out, 1);                      // device 64 is not lost with device 68
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+
+    accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    owner.join();                               // device 68 can be synchronized again: handed back
+    EXPECT_TRUE(released.load());
+    accel::detail::reviveDevices();
+}
+
+TEST(Core_Accel, failed_work_stays_failed_however_its_fence_is_shared)
+{
+    // Everything that waits for some work shares the one fence reference recorded for it, and
+    // never asks the backend for another (this device refuses them): the result of work that
+    // fails later is invalid however many buffers keep its fence, and each reference is
+    // released once.
     accel::Device d = failingDevice();
     const int64 fences = accel::detail::emulatorLiveFences();
     runWithDeviceDelay(20000, [&]() {
-        Mat src(16, 16, CV_8UC1), ref;
+        Mat src(16, 16, CV_8UC1);
         randu(src, 0, 255);
-        cv::flip(src, ref, 1);
         UMat u = makeOn(d, src), out;
-        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel::detail::EMU_FAIL_RETAIN);
-        cv::flip(u, out, 1);                                // still queued for 20 ms
-        EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ))); // waits by synchronizing the device
+        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
+                                             accel::detail::EMU_FAIL_RETAIN | accel::detail::EMU_FAIL_FENCES);
+        cv::flip(u, out, 1);                                // fails 20 ms from now
         accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
+        EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);  // and stays failed
+        EXPECT_EQ(0, maxDiff(src, u.getMat(ACCESS_READ)));     // what it only read is intact
     });
     UMat trigger = makeOn(d, Mat(1, 1, CV_8UC1, Scalar(0)));   // releases collect finished buffers
     trigger.release();

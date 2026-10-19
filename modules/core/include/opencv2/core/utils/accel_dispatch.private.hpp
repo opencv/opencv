@@ -74,6 +74,11 @@ CV_EXPORTS int64 emulatorLiveAllocations(int device = -1);
 //! the same devices through a backend table of API version 1, without begin/end_device_access ("emulator-v1")
 CV_EXPORTS int registerLegacyEmulatorBackend();
 
+/** @brief Registers a backend table that lives in the program rather than in a plugin library
+(tests; applications that link a backend in). The table must outlive the process. A backend of
+the same name that is registered already is kept. @return the backend id, 0 when rejected */
+CV_EXPORTS int registerBackendTable(const OpenCV_Core_Accel_API* api, int priority = 0);
+
 //! protocol violations the emulator detects (flags)
 enum EmulatorViolation
 {
@@ -121,6 +126,10 @@ CV_EXPORTS void emulatorDisableOps(int device, bool disable);
 CV_EXPORTS void emulatorFailNextCpuFlush();
 //! makes the next @p count end_cpu_access calls fail, whatever their access (the CPU access stays open)
 CV_EXPORTS void emulatorFailNextCpuEnds(int count);
+/** @brief Makes the begin_cpu_access after the next @p after successful ones fail, once (-1:
+none): with an error, or with @p nullAddress, with success but no address (a broken backend; the
+access is open and must be ended). */
+CV_EXPORTS void emulatorFailNextCpuBegin(int after, bool nullAddress = false);
 //! makes the next end_device_access fail: the fence is not attached to the dma-buf
 CV_EXPORTS void emulatorFailNextDeviceAccessEnd();
 

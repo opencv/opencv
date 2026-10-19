@@ -112,6 +112,36 @@ StreamHolder::~StreamHolder()
     }
 }
 
+FenceCore::~FenceCore()
+{
+    if (f && !cv::__termination)
+        b->fn().fence_release(f);
+}
+
+FenceRef FenceRef::adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device) CV_NOEXCEPT
+{
+    FenceRef r;
+    r.b_ = b;
+    r.streamUid_ = streamUid;
+    r.device_ = device;
+    if (!f)
+        return r;   // nothing to wait for (backend rule 6)
+    try
+    {
+        r.core_ = std::make_shared<FenceCore>(b, f);
+        return r;
+    }
+    catch (...) {}
+    // No memory to share the fence: the work is waited for now, and how it ended is kept. The
+    // fence is released only after that, so a failure cannot turn into a success.
+    const cvAccelStatus st = b->fn().fence_wait(f, CV_ACCEL_INFINITE);
+    b->fn().fence_release(f);
+    if (st == CV_ACCEL_DEVICE_LOST)
+        b->markStopped(device);
+    r.status_ = st;
+    return r;
+}
+
 FenceRef FenceRef::unknown(Backend* b, int device) CV_NOEXCEPT
 {
     FenceRef r;
@@ -121,69 +151,28 @@ FenceRef FenceRef::unknown(Backend* b, int device) CV_NOEXCEPT
     return r;
 }
 
-//! takes a reference to @p f for a copy; when the backend refuses one, the copy tracks the work as unknown
-static void retainOrForget(Backend* b, cvAccelFence f, int device, cvAccelFence& outFence, uint64& outTicket) CV_NOEXCEPT
+void FenceRef::reset() CV_NOEXCEPT
 {
-    outFence = 0;
-    outTicket = 0;
-    if (b->fn().fence_retain(f) == CV_ACCEL_OK)
-    {
-        outFence = f;
-        return;
-    }
-    // holding the pointer without a reference would release it twice later
-    outTicket = b->nextSyncTicket(device);
-    try
-    {
-        CV_LOG_ERROR(NULL, "accel(" << b->name() << "): fence_retain failed: " << b->fn().get_last_error()
-                     << "; the work is tracked by synchronizing device " << device);
-    }
-    catch (...) {}
-}
-
-FenceRef::FenceRef(const FenceRef& o)
-    : b_(o.b_), f_(0), streamUid_(o.streamUid_), device_(o.device_), syncTicket_(o.syncTicket_)
-{
-    if (o.f_)
-        retainOrForget(b_, o.f_, device_, f_, syncTicket_);
-}
-
-FenceRef& FenceRef::operator=(const FenceRef& o)
-{
-    if (this != &o)
-    {
-        cvAccelFence f = 0;
-        uint64 ticket = o.syncTicket_;
-        if (o.f_)
-            retainOrForget(o.b_, o.f_, o.device_, f, ticket);
-        reset();
-        b_ = o.b_;
-        f_ = f;
-        streamUid_ = o.streamUid_;
-        device_ = o.device_;
-        syncTicket_ = ticket;
-    }
-    return *this;
-}
-
-void FenceRef::reset()
-{
-    if (f_ && !cv::__termination)
-        b_->fn().fence_release(f_);
+    core_.reset();
     b_ = 0;
-    f_ = 0;
     streamUid_ = 0;
     device_ = -1;
     syncTicket_ = 0;
+    status_ = CV_ACCEL_OK;
 }
 
 bool FenceRef::isComplete() const
 {
     if (syncTicket_)
         return poll() == DONE;
-    if (!f_)
+    if (status_ != CV_ACCEL_OK)
+    {
+        b_->check(status_, "fence_wait", device_);
         return true;
-    cvAccelStatus st = b_->fn().fence_wait(f_, 0);
+    }
+    if (!core_)
+        return true;
+    cvAccelStatus st = b_->fn().fence_wait(core_->f, 0);
     if (st == CV_ACCEL_OK)
         return true;
     if (st == CV_ACCEL_TIMEOUT)
@@ -240,11 +229,16 @@ void FenceRef::wait(bool bounded) const
         waitUnknown(bounded);
         return;
     }
-    if (!f_)
+    if (status_ != CV_ACCEL_OK)
+    {
+        b_->check(status_, "fence_wait", device_);
+        return;
+    }
+    if (!core_)
         return;
     counters().hostWaits++;
     const uint64_t timeout = bounded ? waitTimeoutNs().load() : 0;
-    const cvAccelStatus st = b_->fn().fence_wait(f_, timeout ? timeout : CV_ACCEL_INFINITE);
+    const cvAccelStatus st = b_->fn().fence_wait(core_->f, timeout ? timeout : CV_ACCEL_INFINITE);
     if (st == CV_ACCEL_TIMEOUT)
     {
         b_->markLost(device_);
@@ -259,9 +253,9 @@ FenceRef::Poll FenceRef::poll(bool logFailure) const CV_NOEXCEPT
 {
     if (syncTicket_)
         return b_->isStopped(device_) || b_->syncedSince(device_, syncTicket_) ? DONE : PENDING;
-    if (!f_)
+    if (!core_ && status_ == CV_ACCEL_OK)
         return DONE;
-    const cvAccelStatus st = b_->fn().fence_wait(f_, 0);
+    const cvAccelStatus st = core_ ? b_->fn().fence_wait(core_->f, 0) : status_;
     if (st == CV_ACCEL_OK)
         return DONE;
     if (st == CV_ACCEL_TIMEOUT)
@@ -307,7 +301,7 @@ FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
     }
     catch (...) {}
     if (recorded == CV_ACCEL_OK && f)
-        return FenceRef(b, f, s->uid, s->device);
+        return FenceRef::adopt(b, f, s->uid, s->device);
     const cvAccelStatus st = b->synchronize(s->device);
     if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
         return FenceRef();      // idle, or stopped (backend rule 8): nothing of the work runs any more
@@ -353,7 +347,7 @@ FenceRef recordFence(const StreamPtr& s)
         st = s->backend->fn().stream_record_fence(s->handle, &f);
     }
     s->backend->check(st, "stream_record_fence", s->device);
-    return FenceRef(s->backend, f, s->uid, s->device);
+    return FenceRef::adopt(s->backend, f, s->uid, s->device);
 }
 
 void streamWait(const StreamPtr& s, const FenceRef& f)
@@ -365,6 +359,11 @@ void streamWait(const StreamPtr& s, const FenceRef& f)
     }
     if (f.empty() || f.streamUid() == s->uid)
         return;     // in-order stream: earlier work is already ordered
+    if (!f.get())
+    {
+        f.wait();   // settled: done, or reports how it failed
+        return;
+    }
     // a device-side wait where the stream's device takes the fence: its own, or any device of the
     // backend with CV_ACCEL_CAP_CROSS_DEVICE_FENCES (peer access does not imply it, rule 11)
     if (f.backend() == s->backend && (f.device() == s->device || (s->caps & CV_ACCEL_CAP_CROSS_DEVICE_FENCES)))
@@ -398,39 +397,57 @@ void streamWait(const StreamPtr& s, const FenceRef& f)
 
 //////////////////////////////////// Backend ////////////////////////////////////
 
-Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin)
+Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin,
+                 const std::shared_ptr<void>& library)
     : id_(id), api_(api), priority_(priority),
-      name_(api->v0.backend_name ? api->v0.backend_name : "unnamed"), origin_(origin),
-      enumerated_(false), lost_(false), stopped_(false), pinnedCacheBytes_(0)
+      name_(api->v0.backend_name ? api->v0.backend_name : "unnamed"), origin_(origin), library_(library),
+      lost_(false), stopped_(false), pinnedCacheBytes_(0)
 {
     // a backend built against an older header has a shorter table: what it lacks reads as NULL
     memset(&fn_, 0, sizeof(fn_));
     const size_t entries = api->api_header.valid_size - offsetof(OpenCV_Core_Accel_API_v0, v0);
     memcpy(&fn_, &api->v0, std::min(entries, sizeof(fn_)));
-    for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
+
+    int n = 0;
+    if (fn_.get_device_count(&n) != CV_ACCEL_OK || n < 0)
     {
-        lostDevices_[i].store(false);
-        stoppedDevices_[i].store(false);
-        noPinnedShadow_[i].store(false);
+        CV_LOG_WARNING(NULL, "accel(" << name_ << "): get_device_count failed: " << fn_.get_last_error());
+        n = 0;
     }
-    for (int i = 0; i <= MAX_TRACKED_DEVICES; i++)
+    if (n > MAX_DEVICES)
+        CV_Error_(Error::StsOutOfRange, ("accel(%s): the backend reports %d devices, more than OpenCV tracks (%d)",
+                                         name_.c_str(), n, (int)MAX_DEVICES));
+    devices_.reserve((size_t)n);
+    for (int i = 0; i < n; i++)
     {
-        syncIssued_[i].store(0);
-        syncDone_[i].store(0);
+        devices_.push_back(std::unique_ptr<DeviceState>(new DeviceState()));
+        cvAccelDeviceInfo& info = devices_.back()->info;
+        info.struct_size = (uint32_t)sizeof(info);
+        if (fn_.get_device_info(i, &info) != CV_ACCEL_OK)
+        {
+            CV_LOG_WARNING(NULL, "accel(" << name_ << "): get_device_info(" << i << ") failed: " << fn_.get_last_error());
+            memset(&info, 0, sizeof(info));
+        }
+        info.name[sizeof(info.name) - 1] = 0;
+        if (info.caps & CV_ACCEL_CAP_DEVICE_IDLE_MEMORY)
+            devices_.back()->gate.used = true;     // before any submission, so none can slip past the gate
+        CV_LOG_INFO(NULL, "accel(" << name_ << "): device " << i << ": " << info.name);
     }
 }
 
 cvAccelStatus Backend::synchronize(int device) CV_NOEXCEPT
 {
-    const int k = slot(device);
-    const uint64 ticket = ++syncIssued_[k];
+    DeviceState* d = state(device);
+    if (!d)
+        return CV_ACCEL_INVALID_ARGUMENT;   // not a device of the backend: proves nothing about any work
+    const uint64 ticket = ++d->syncIssued;
     const cvAccelStatus st = fn().device_synchronize(device);
     if (st == CV_ACCEL_OK)
     {
-        // everything queued before this call has finished: so has the work of every unknown
-        // fence created before the ticket was taken
-        uint64 done = syncDone_[k].load();
-        while (done < ticket && !syncDone_[k].compare_exchange_weak(done, ticket))
+        // everything queued on the device before this call has finished: so has the work of
+        // every unknown fence of the device created before the ticket was taken
+        uint64 done = d->syncDone.load();
+        while (done < ticket && !d->syncDone.compare_exchange_weak(done, ticket))
             ;
     }
     else if (st == CV_ACCEL_DEVICE_LOST)
@@ -471,51 +488,11 @@ void Backend::recyclePinned(cvAccelAllocation& a)
         CV_LOG_ERROR(NULL, "accel(" << name_ << "): failed to free pinned memory: " << fn().get_last_error());
 }
 
-void Backend::enumerate()
+cvAccelDeviceInfo Backend::deviceInfo(int device) const
 {
-    if (enumerated_)
-        return;
-    enumerated_ = true;
-    int n = 0;
-    if (fn().get_device_count(&n) != CV_ACCEL_OK || n < 0)
-    {
-        CV_LOG_WARNING(NULL, "accel(" << name_ << "): get_device_count failed: " << fn().get_last_error());
-        n = 0;
-    }
-    devices_.resize(n);
-    idleGates_.clear();
-    for (int i = 0; i < n; i++)
-        idleGates_.push_back(std::unique_ptr<IdleGate>(new IdleGate()));
-    for (int i = 0; i < n; i++)
-    {
-        cvAccelDeviceInfo& info = devices_[i];
-        memset(&info, 0, sizeof(info));
-        info.struct_size = (uint32_t)sizeof(info);
-        if (fn().get_device_info(i, &info) != CV_ACCEL_OK)
-        {
-            CV_LOG_WARNING(NULL, "accel(" << name_ << "): get_device_info(" << i << ") failed: " << fn().get_last_error());
-            memset(&info, 0, sizeof(info));
-        }
-        info.name[sizeof(info.name) - 1] = 0;
-        if (info.caps & CV_ACCEL_CAP_DEVICE_IDLE_MEMORY)
-            idleGates_[i]->used = true;     // before any submission, so none can slip past the gate
-        CV_LOG_INFO(NULL, "accel(" << name_ << "): device " << i << ": " << info.name);
-    }
-}
-
-int Backend::deviceCount()
-{
-    std::lock_guard<std::mutex> lk(mutex_);
-    enumerate();
-    return (int)devices_.size();
-}
-
-cvAccelDeviceInfo Backend::deviceInfo(int device)
-{
-    std::lock_guard<std::mutex> lk(mutex_);
-    enumerate();
-    CV_Assert(0 <= device && device < (int)devices_.size());
-    return devices_[device];
+    const DeviceState* d = state(device);
+    CV_Assert(d);
+    return d->info;
 }
 
 void Backend::check(cvAccelStatus st, const char* what, int device) const
@@ -586,9 +563,8 @@ StreamPtr Backend::defaultStream(int device)
 
 MatAllocator* Backend::allocator(int device, int kind, bool protectedMem)
 {
+    CV_Assert(state(device));
     std::lock_guard<std::mutex> lk(mutex_);
-    enumerate();
-    CV_Assert(0 <= device && device < (int)devices_.size());
     const std::pair<int, int> key(device, kind | (protectedMem ? 1 << 16 : 0));
     std::map<std::pair<int, int>, MatAllocator*>::const_iterator it = allocators_.find(key);
     if (it != allocators_.end())
@@ -625,10 +601,9 @@ void SubmitWindow::close()
 
 IdleGate& Backend::idleGate(int device)
 {
-    std::lock_guard<std::mutex> lk(mutex_);
-    enumerate();
-    CV_Assert(0 <= device && device < (int)idleGates_.size());
-    return *idleGates_[device];
+    DeviceState* d = state(device);
+    CV_Assert(d);
+    return d->gate;
 }
 
 static size_t hostPageSize()
@@ -690,11 +665,12 @@ static bool hasRequiredEntries(const OpenCV_Core_Accel_API_v0_0_api_entries& e)
     return e.get_device_count && e.get_device_info && e.allocate && e.deallocate &&
            e.begin_cpu_access && e.end_cpu_access && e.copy &&
            e.stream_create && e.stream_destroy && e.stream_record_fence && e.stream_wait_fence &&
-           e.fence_wait && e.fence_retain && e.fence_release && e.device_synchronize &&
+           e.fence_wait && e.fence_release && e.device_synchronize &&
            e.get_last_error;
 }
 
-int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::string& origin)
+int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::string& origin,
+                  const std::shared_ptr<void>& library)
 {
     if (!api)
         return 0;
@@ -724,23 +700,40 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: required entry points are missing");
         return 0;
     }
-    std::lock_guard<std::mutex> lk(mutex_);
-    for (size_t i = 0; i < backends_.size(); i++)
+    // One registration at a time. Only add() appends to backends_, so its size is stable here;
+    // the backend enumerates its devices outside mutex_, which dispatch takes on every call.
+    std::lock_guard<std::mutex> serial(addMutex_);
+    if (Backend* other = find(api->v0.backend_name))
     {
-        if (backends_[i]->name() == api->v0.backend_name)
-        {
-            CV_LOG_WARNING(NULL, "accel: backend '" << api->v0.backend_name << "' from " << origin
-                           << " ignored: already registered from " << backends_[i]->origin());
-            return 0;
-        }
+        CV_LOG_WARNING(NULL, "accel: backend '" << api->v0.backend_name << "' from " << origin
+                       << " ignored: already registered from " << other->origin());
+        return 0;
     }
     if ((int)backends_.size() >= MAX_BACKENDS)
         return 0;
     const int id = (int)backends_.size() + 1;
-    backends_.push_back(new Backend(id, api, priority, origin));  // capacity is reserved: get() never sees a reallocation
+    std::unique_ptr<Backend> nb;
+    try
+    {
+        nb.reset(new Backend(id, api, priority, origin, library));
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: " << e.what());
+        return 0;
+    }
+    {
+        std::lock_guard<std::mutex> lk(mutex_);
+        backends_.push_back(nb.get());  // capacity is reserved: never throws, get() never sees a reallocation
+    }
+    nb.release();
     active_.store(true, std::memory_order_release);
-    CV_LOG_INFO(NULL, "accel: registered backend '" << api->v0.backend_name << "' (" << origin << ", API "
-                << h.api_version << ", priority " << priority << ")");
+    try
+    {
+        CV_LOG_INFO(NULL, "accel: registered backend '" << api->v0.backend_name << "' (" << origin << ", API "
+                    << h.api_version << ", priority " << priority << ")");
+    }
+    catch (...) {}
     return id;
 }
 
@@ -806,8 +799,9 @@ void Registry::loadPlugins()
         const OpenCV_Core_Accel_API* api = NULL;
         for (int v = CV_ACCEL_API_VERSION; v >= 0 && !api; v--)
             api = init(CV_ACCEL_ABI_VERSION, v, NULL);
-        if (add(api, 50, "plugin " + path))
-            lib->disableAutomaticLibraryUnloading();   // tables and code must outlive every buffer
+        // the backend owns the library from its publication on (tables and code must outlive
+        // every buffer); a rejected table leaves nothing behind that points into it
+        add(api, 50, "plugin " + path, lib);
     }
 #endif
 }
@@ -1004,6 +998,19 @@ int registerEmulatorBackend()
     if (impl::Backend* b = r.find("emulator"))
         return b->id();
     return r.add(impl::emulatorBackendApi(), -100, "built-in (test)");
+}
+
+int registerBackendTable(const OpenCV_Core_Accel_API* api, int priority)
+{
+    impl::ensureInitialized();
+    impl::Registry& r = impl::Registry::getInstance();
+    if (api && api->api_header.valid_size >= offsetof(OpenCV_Core_Accel_API_v0, v0) + sizeof(const char*) &&
+        api->v0.backend_name)
+    {
+        if (impl::Backend* b = r.find(api->v0.backend_name))
+            return b->id();
+    }
+    return r.add(api, priority, "in-process");
 }
 
 int registerLegacyEmulatorBackend()

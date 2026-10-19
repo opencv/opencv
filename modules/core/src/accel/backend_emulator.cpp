@@ -97,6 +97,10 @@ void violation(int kind)
 std::atomic<int> g_failCpuEnds(0);
 //! the next end_device_access fails (emulatorFailNextDeviceAccessEnd)
 std::atomic<bool> g_failDeviceEnd(false);
+//! begin_cpu_access calls that succeed before one fails (emulatorFailNextCpuBegin); -1: none
+std::atomic<int> g_failCpuBeginAfter(-1);
+//! ... and how that one fails: an error, or success without an address (a level is taken)
+std::atomic<bool> g_failCpuBeginNull(false);
 
 //! devices whose kernels report NOT_IMPLEMENTED (emulatorDisableOps): a device without the operation
 std::atomic<bool> g_opsDisabled[EMU_DEVICES];
@@ -868,6 +872,25 @@ cvAccelStatus CV_API_CALL emu_begin_cpu_access(const cvAccelAllocation* alloc, u
     EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
     if (deviceLost(a->device))
         return lostError();
+    for (int n = g_failCpuBeginAfter.load(); n >= 0; n = g_failCpuBeginAfter.load())
+    {
+        if (!g_failCpuBeginAfter.compare_exchange_weak(n, n - 1))
+            continue;
+        if (n > 0)
+            break;
+        if (!g_failCpuBeginNull.load())
+            return fail(CV_ACCEL_INTERNAL_ERROR, "emulated begin_cpu_access failure");     // no level taken
+        try
+        {
+            a->cpuLevels.push_back(access);     // a broken backend: the access is open, the address missing
+        }
+        catch (...)
+        {
+            return fail(CV_ACCEL_OUT_OF_MEMORY, "out of memory");
+        }
+        *host_ptr = 0;
+        return CV_ACCEL_OK;
+    }
     uchar* p = 0;
     if (a->dmabuf)
     {
@@ -1481,6 +1504,12 @@ void emulatorDmaBufProduce(int64 fd, int value, int delayUs)
 void emulatorFailNextCpuEnds(int count)
 {
     impl::g_failCpuEnds.store(count);
+}
+
+void emulatorFailNextCpuBegin(int after, bool nullAddress)
+{
+    impl::g_failCpuBeginNull.store(nullAddress);
+    impl::g_failCpuBeginAfter.store(after);
 }
 
 void emulatorFailNextDeviceAccessEnd()

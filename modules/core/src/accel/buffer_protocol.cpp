@@ -198,6 +198,8 @@ void endExternal(const BufferState* v, const FenceRef& f, int access) CV_NOEXCEP
     Backend* b = v->backend();
     if (!(v->backing->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC) || f.empty())
         return;
+    if (!f.isUnknown() && !f.get())
+        return;     // settled (see FenceRef::adopt): the work has ended, there is nothing to attach
     cvAccelStatus st = CV_ACCEL_INTERNAL_ERROR;
     if (!f.isUnknown() && b->fn().end_device_access)
         st = b->fn().end_device_access(&v->imp->alloc, f.get(), (uint32_t)access);
@@ -646,36 +648,52 @@ int openCpuAccess(const PhysicalBacking* b)
     return access;
 }
 
+//! the import takes part in the backing's CPU access (begin/end_cpu_access)
+inline bool cpuViewImport(const Import* imp)
+{
+    return directClass((int)imp->alloc.desc.host_access) && imp->modifier == 0;
+}
+
+/** Ends one level of CPU access on @p imp, or keeps the end owed in failedCpuEnds when it fails
+    (backend rule 4). Ends stay in order, innermost first: while an earlier end is owed this one
+    is not tried, it is owed behind it. Never allocates: openCpuLevel reserved room for every
+    end of every open level. False when the end did not happen. */
+bool endOrOwe(PhysicalBacking* b, Import* imp, int access) CV_NOEXCEPT
+{
+    if (b->failedCpuEnds.empty())
+    {
+        const cvAccelStatus st = imp->backend->fn().end_cpu_access(&imp->alloc, 0, imp->alloc.size, (uint32_t)access);
+        if (st == CV_ACCEL_OK)
+            return true;
+        if (st == CV_ACCEL_DEVICE_LOST)
+        {
+            imp->backend->markStopped(imp->device);
+            return false;   // a stopped device touches nothing: there is no CPU access to keep open
+        }
+        try
+        {
+            CV_LOG_ERROR(NULL, "accel(" << imp->backend->name() << "): end_cpu_access failed: "
+                         << imp->backend->fn().get_last_error() << "; no device work uses this memory until it succeeds");
+        }
+        catch (...) {}
+    }
+    CV_DbgAssert(b->failedCpuEnds.size() < b->failedCpuEnds.capacity());
+    if (b->failedCpuEnds.size() < b->failedCpuEnds.capacity())
+        b->failedCpuEnds.push_back(std::make_pair(imp, access));   // never reallocates
+    return false;
+}
+
 //! ends levels [from, end) on every import with a CPU view, innermost first; false when one failed
 bool closeCpuLevels(PhysicalBacking* b, size_t from) CV_NOEXCEPT
 {
+    retryFailedCpuEndsLocked(b);    // owed ends are inner to every open level
     bool ok = true;
     while (b->cpuLevels.size() > from)
     {
         const int access = b->cpuLevels.back();
         for (size_t i = b->imports.size(); i-- > 0; )
-        {
-            Import* imp = b->imports[i];
-            if (!directClass((int)imp->alloc.desc.host_access) || imp->modifier != 0)
-                continue;
-            const cvAccelStatus st = imp->backend->fn().end_cpu_access(&imp->alloc, 0, imp->alloc.size, (uint32_t)access);
-            if (st == CV_ACCEL_OK)
-                continue;
-            ok = false;
-            if (st == CV_ACCEL_DEVICE_LOST)
-            {
-                imp->backend->markStopped(imp->device);
-                continue;   // a stopped device touches nothing: there is no CPU access to keep open
-            }
-            // the CPU access counts as open until a retry succeeds (backend rule 4)
-            try
-            {
-                b->failedCpuEnds.push_back(std::make_pair(imp, access));
-                CV_LOG_ERROR(NULL, "accel(" << imp->backend->name() << "): end_cpu_access failed: "
-                             << imp->backend->fn().get_last_error() << "; no device work uses this memory until it succeeds");
-            }
-            catch (...) {}
-        }
+            if (cpuViewImport(b->imports[i]) && !endOrOwe(b, b->imports[i], access))
+                ok = false;
         b->cpuLevels.pop_back();
     }
     if (b->cpuLevels.empty())
@@ -688,15 +706,19 @@ bool closeCpuLevels(PhysicalBacking* b, size_t from) CV_NOEXCEPT
     import covers what any device of the backing needs. Returns the CPU address of byte 0. A write
     is always opened together with a read: a partial write of a cache line must not merge with
     stale bytes. For DEVICE_IDLE memory the caller holds an IdleCpuGuard, and the first level
-    drains the device first. Called with the backing locked and busy. */
+    drains the device first. Called with the backing locked and busy.
+
+    All or nothing: when a begin fails (or succeeds without an address, or moves a nested
+    mapping), every begin of this level that succeeded is ended again, and an end that fails
+    then stays owed. Everything that can allocate happens before the first begin. */
 uchar* openCpuLevel(PhysicalBacking* b, int access)
 {
     const int want = (access & ACCESS_WRITE) ? ACCESS_RW : ACCESS_READ;
     if (!b->cpuLevels.empty() && (openCpuAccess(b) & want) == want)
         return b->cpuBase;
+    requireCpuAccessEnded(b);   // owed ends first: a new level must not start inside them
     if (b->cpuLevels.empty())
     {
-        requireCpuAccessEnded(b);
         for (size_t i = 0; i < b->imports.size(); i++)
         {
             Import* imp = b->imports[i];
@@ -704,45 +726,48 @@ uchar* openCpuLevel(PhysicalBacking* b, int access)
                 imp->backend->check(imp->backend->synchronize(imp->device), "device_synchronize", imp->device);
         }
     }
-    b->cpuLevels.reserve(b->cpuLevels.size() + 1);
     // the CPU reaches the memory through a mapping it may write, when an import has one
     const Import* through = cpuImport(b);
-    uchar* base = 0;
+    if (!through)
+        CV_Error(Error::StsInternal, "accel: this memory has no import with a CPU view");
+    size_t direct = 0;
+    for (size_t i = 0; i < b->imports.size(); i++)
+        direct += cpuViewImport(b->imports[i]) ? 1 : 0;
+    b->cpuLevels.reserve(b->cpuLevels.size() + 1);
+    // room for the end of every level of every import, should all of them fail
+    b->failedCpuEnds.reserve((b->cpuLevels.size() + 1) * direct);
     std::vector<Import*> begun;
-    begun.reserve(b->imports.size());
+    begun.reserve(direct);
+
+    uchar* base = 0;
     for (size_t i = 0; i < b->imports.size(); i++)
     {
         Import* imp = b->imports[i];
-        if (!directClass((int)imp->alloc.desc.host_access) || imp->modifier != 0)
+        if (!cpuViewImport(imp))
             continue;
         void* p = 0;
-        cvAccelStatus st = imp->backend->fn().begin_cpu_access(&imp->alloc, 0, imp->alloc.size, (uint32_t)want, &p);
-        if (st == CV_ACCEL_OK && !p)
-            st = CV_ACCEL_INTERNAL_ERROR;
+        const cvAccelStatus st = imp->backend->fn().begin_cpu_access(&imp->alloc, 0, imp->alloc.size, (uint32_t)want, &p);
+        if (st == CV_ACCEL_OK)
+            begun.push_back(imp);   // an end is owed from here on, whatever follows (capacity is reserved)
         // a nested level must return the address the outer one returned (backend rule 4)
-        const bool moved = st == CV_ACCEL_OK && imp == through && !b->cpuLevels.empty() && (uchar*)p != b->cpuBase;
-        if (st != CV_ACCEL_OK || moved)
+        const bool moved = st == CV_ACCEL_OK && p && imp == through && !b->cpuLevels.empty() && (uchar*)p != b->cpuBase;
+        if (st != CV_ACCEL_OK || !p || moved)
         {
-            if (st == CV_ACCEL_OK)
-                begun.push_back(imp);
-            // undo this level on the imports begun so far, in reverse order
+            // the backend's message, before the ends below replace it (no allocation before them)
+            char why[256];
+            const char* last = st != CV_ACCEL_OK ? imp->backend->fn().get_last_error() : 0;
+            snprintf(why, sizeof(why), "%s", st != CV_ACCEL_OK ? (last ? last : "") :
+                                             moved ? "another address for a nested level" : "no address");
             for (size_t j = begun.size(); j-- > 0; )
-            {
-                if (begun[j]->backend->fn().end_cpu_access(&begun[j]->alloc, 0, begun[j]->alloc.size, (uint32_t)want) != CV_ACCEL_OK)
-                    CV_LOG_ERROR(NULL, "accel(" << begun[j]->backend->name() << "): end_cpu_access failed: "
-                                 << begun[j]->backend->fn().get_last_error());
-            }
-            if (moved)
-                CV_Error_(Error::StsInternal, ("accel(%s): a nested begin_cpu_access returned another address",
-                                               imp->backend->name().c_str()));
-            imp->backend->check(st, "begin_cpu_access", imp->device);
+                endOrOwe(b, begun[j], want);
+            if (st == CV_ACCEL_DEVICE_LOST)
+                imp->backend->markStopped(imp->device);
+            CV_Error_(st == CV_ACCEL_OUT_OF_MEMORY ? Error::StsNoMem : Error::StsError,
+                      ("accel(%s): begin_cpu_access failed (status %d): %s", imp->backend->name().c_str(), (int)st, why));
         }
         if (imp == through)
             base = (uchar*)p;
-        begun.push_back(imp);
     }
-    if (!base)
-        CV_Error(Error::StsInternal, "accel: this memory has no import with a CPU view");
     b->cpuLevels.push_back(want);   // capacity is reserved
     b->cpuBase = base;
     return base;
@@ -881,20 +906,19 @@ void closeCpuLocked(PhysicalBacking* b) CV_NOEXCEPT
 
 bool retryFailedCpuEndsLocked(PhysicalBacking* b) CV_NOEXCEPT
 {
-    for (size_t i = 0; i < b->failedCpuEnds.size(); )
+    // in the order they became owed, innermost first: one that fails again holds back the rest
+    size_t done = 0;
+    for (; done < b->failedCpuEnds.size(); done++)
     {
-        Import* imp = b->failedCpuEnds[i].first;
+        Import* imp = b->failedCpuEnds[done].first;
         const cvAccelStatus st = imp->backend->fn().end_cpu_access(&imp->alloc, 0, imp->alloc.size,
-                                                                   (uint32_t)b->failedCpuEnds[i].second);
-        if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
-        {
-            if (st == CV_ACCEL_DEVICE_LOST)
-                imp->backend->markStopped(imp->device);
-            b->failedCpuEnds.erase(b->failedCpuEnds.begin() + i);
-            continue;
-        }
-        i++;
+                                                                   (uint32_t)b->failedCpuEnds[done].second);
+        if (st == CV_ACCEL_DEVICE_LOST)
+            imp->backend->markStopped(imp->device);
+        else if (st != CV_ACCEL_OK)
+            break;
     }
+    b->failedCpuEnds.erase(b->failedCpuEnds.begin(), b->failedCpuEnds.begin() + done);   // keeps the capacity
     if (!b->failedCpuEnds.empty())
         return false;
     if (b->idleGateHeld && b->cpuLevels.empty())

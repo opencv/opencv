@@ -559,8 +559,9 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         and TIMEOUT means the work behind the fence failed and is no longer running: core then
         frees the memory that work used. */
     cvAccelStatus (CV_API_CALL *fence_wait)(cvAccelFence fence, uint64_t timeout_ns) CV_ACCEL_NOEXCEPT;
-    /** Takes one more reference. When it fails, the caller holds no new reference (core then
-        tracks that work by synchronizing the device instead). */
+    /** Takes one more reference. Optional: core shares the reference stream_record_fence
+        returned between everything that waits for the work, and never calls this (a refused
+        reference would lose how the work ended). */
     cvAccelStatus (CV_API_CALL *fence_retain)(cvAccelFence fence) CV_ACCEL_NOEXCEPT;
     cvAccelStatus (CV_API_CALL *fence_release)(cvAccelFence fence) CV_ACCEL_NOEXCEPT;
     //! optional (CV_ACCEL_CAP_EXTERNAL_FENCE): a new handle (e.g. sync_file fd) owned by the caller

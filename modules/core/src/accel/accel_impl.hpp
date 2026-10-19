@@ -13,6 +13,8 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstring>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -57,32 +59,50 @@ private:
     std::unique_lock<std::mutex> lk_;
 };
 
-/** Counted reference to a backend fence, the stream it was recorded on and that stream's device.
+/** The one reference to a backend fence that stream_record_fence returned, shared by every
+    FenceRef that copies it. Copies never ask the backend for a reference of their own
+    (fence_retain): one that could be refused would lose how the work ended. */
+struct FenceCore
+{
+    FenceCore(Backend* b_, cvAccelFence f_) : b(b_), f(f_) {}
+    ~FenceCore();
+    Backend* b;
+    cvAccelFence f;
+private:
+    FenceCore(const FenceCore&);
+    FenceCore& operator=(const FenceCore&);
+};
+
+/** Reference to the end of some device work: a backend fence (shared, see FenceCore), the
+stream it was recorded on and that stream's device.
 
 An unknown fence stands for work whose end cannot be observed: a failure left no fence behind
-and the device could not be synchronized, or a backend refused a reference. It completes once
-a device_synchronize of its device that started after it succeeds, or once the backend reports
-the device lost (backend rule 8: a lost device has stopped). Until then nothing the work may
-touch is freed, and memory that belongs to someone else is not handed back. */
+and the device could not be synchronized. It completes once a device_synchronize of its device
+that started after it succeeds, or once the backend reports the device lost (backend rule 8:
+a lost device has stopped). Until then nothing the work may touch is freed, and memory that
+belongs to someone else is not handed back.
+
+A settled fence stands for work that has ended, with the status it ended with: what adopt()
+leaves when it has no memory to share the backend fence. Waits on a failed one report the
+failure, as the backend fence would have. Copies never allocate and never fail. */
 class FenceRef
 {
 public:
-    FenceRef() : b_(0), f_(0), streamUid_(0), device_(-1), syncTicket_(0) {}
-    //! adopts the reference returned by stream_record_fence
-    FenceRef(Backend* b, cvAccelFence f, uint64 streamUid, int device)
-        : b_(b), f_(f), streamUid_(streamUid), device_(device), syncTicket_(0) {}
+    FenceRef() : b_(0), streamUid_(0), device_(-1), syncTicket_(0), status_(CV_ACCEL_OK) {}
+    /** Adopts the reference returned by stream_record_fence. Never throws: without memory to
+        share it, waits for the work at once (without limit: nothing else will), releases the
+        fence and returns a settled fence that keeps the status the work ended with. */
+    static FenceRef adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device) CV_NOEXCEPT;
     //! work on @p device that may still be running and has no fence (see above)
     static FenceRef unknown(Backend* b, int device) CV_NOEXCEPT;
-    FenceRef(const FenceRef& o);
-    FenceRef& operator=(const FenceRef& o);
-    ~FenceRef() { reset(); }
 
-    void reset();
-    //! nothing to wait for
-    bool empty() const { return f_ == 0 && syncTicket_ == 0; }
+    void reset() CV_NOEXCEPT;
+    //! nothing to wait for, and nothing that failed
+    bool empty() const { return !core_ && syncTicket_ == 0 && status_ == CV_ACCEL_OK; }
     bool isUnknown() const { return syncTicket_ != 0; }
     Backend* backend() const { return b_; }
-    cvAccelFence get() const { return f_; }
+    //! the backend fence; 0 for an empty, unknown or settled fence
+    cvAccelFence get() const { return core_ ? core_->f : 0; }
     uint64 streamUid() const { return streamUid_; }
     int device() const { return device_; }
 
@@ -107,11 +127,12 @@ public:
 
 private:
     void waitUnknown(bool bounded) const;
+    std::shared_ptr<FenceCore> core_;
     Backend* b_;
-    cvAccelFence f_;
     uint64 streamUid_;
     int device_;
     uint64 syncTicket_;     //!< unknown fence: the first device_synchronize ticket that covers the work
+    cvAccelStatus status_;  //!< settled fence: how the work ended
 };
 
 /** After a failed enqueue, or a failed fence record after one: the backend may have queued part
@@ -167,10 +188,34 @@ private:
     bool blocked_;
 };
 
+/** What core keeps per device of a backend. Created for every device when the backend is
+    registered and never resized, so it is read without locks; nothing is shared between two
+    devices (a completion ticket of one device says nothing about another). */
+struct DeviceState
+{
+    DeviceState() : lost(false), stopped(false), noPinnedShadow(false), syncIssued(0), syncDone(0)
+    {
+        memset(&info, 0, sizeof(info));
+    }
+    cvAccelDeviceInfo info;
+    IdleGate gate;
+    std::atomic<bool> lost;             //!< core gave up on the device
+    std::atomic<bool> stopped;          //!< the backend reported it lost: nothing of it runs any more
+    std::atomic<bool> noPinnedShadow;   //!< its pinned memory is not CPU-cached (see pinnedShadowAllowed)
+    std::atomic<uint64> syncIssued;     //!< synchronize() tickets handed out
+    std::atomic<uint64> syncDone;       //!< highest ticket whose synchronize() succeeded
+};
+
 class Backend
 {
 public:
-    Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin);
+    /** Enumerates the devices (get_device_count, get_device_info) once, before the backend is
+        published; throws when a backend reports more than MAX_DEVICES. @p library: the plugin
+        library the table lives in, kept loaded for as long as the backend exists (for ever,
+        once it is registered: memory and fences of it may outlive everything else). */
+    Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const std::string& origin,
+            const std::shared_ptr<void>& library);
+    enum { MAX_DEVICES = 4096 };
 
     int id() const { return id_; }
     const std::string& name() const { return name_; }
@@ -179,8 +224,8 @@ public:
     //! the backend's entries; those past the size of its table read as NULL
     const OpenCV_Core_Accel_API_v0_0_api_entries& fn() const { return fn_; }
 
-    int deviceCount();
-    cvAccelDeviceInfo deviceInfo(int device);
+    int deviceCount() const { return (int)devices_.size(); }
+    cvAccelDeviceInfo deviceInfo(int device) const;
 
     //! throws cv::Exception with the backend message unless @p st is CV_ACCEL_OK; DEVICE_LOST marks @p device lost
     void check(cvAccelStatus st, const char* what, int device = -1) const;
@@ -199,18 +244,21 @@ public:
     MatAllocator* allocator(int device, int kind, bool protectedMem = false);
 
     /** device_synchronize, counted per device: an unknown fence completes once a
-        synchronization that started after it succeeded. DEVICE_LOST marks the device stopped.
-        Never throws. */
+        synchronization of its device that started after it succeeded. DEVICE_LOST marks the
+        device stopped. A device the backend does not have is never synchronized (and its
+        unknown fences never complete that way). Never throws. */
     cvAccelStatus synchronize(int device) CV_NOEXCEPT;
     //! the ticket the next synchronize() of @p device gets
     uint64 nextSyncTicket(int device) const CV_NOEXCEPT
     {
-        return syncIssued_[slot(device)].load() + 1;
+        const DeviceState* d = state(device);
+        return d ? d->syncIssued.load() + 1 : std::numeric_limits<uint64>::max();
     }
-    //! a synchronize() with a ticket of at least @p ticket succeeded
+    //! a synchronize() of @p device with a ticket of at least @p ticket succeeded
     bool syncedSince(int device, uint64 ticket) const CV_NOEXCEPT
     {
-        return syncDone_[slot(device)].load() >= ticket;
+        const DeviceState* d = state(device);
+        return d && d->syncDone.load() >= ticket;
     }
 
     //! tests only: forgets that devices were lost (accel::detail::reviveDevices)
@@ -218,10 +266,10 @@ public:
     {
         lost_.store(false);
         stopped_.store(false);
-        for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
+        for (size_t i = 0; i < devices_.size(); i++)
         {
-            lostDevices_[i].store(false);
-            stoppedDevices_[i].store(false);
+            devices_[i]->lost.store(false);
+            devices_[i]->stopped.store(false);
         }
     }
     /** A lost device gets no new work and none of its memory is freed through it (a call may
@@ -229,29 +277,36 @@ public:
         the whole backend. Lock-free and never throws: called from release paths and check(). */
     bool isLost(int device) const CV_NOEXCEPT
     {
-        return lost_.load() || (device >= 0 && device < MAX_TRACKED_DEVICES && lostDevices_[device].load());
+        const DeviceState* d = state(device);
+        return lost_.load() || (d && d->lost.load());
     }
     //! core gave up on the device (a timed-out wait, a failure it could not recover from)
     void markLost(int device) CV_NOEXCEPT
     {
-        if (device >= 0 && device < MAX_TRACKED_DEVICES)
-            lostDevices_[device].store(true);
+        if (DeviceState* d = state(device))
+            d->lost.store(true);
         else
             lost_.store(true);
     }
     //! the backend reported CV_ACCEL_DEVICE_LOST: the device is lost and has stopped (backend rule 8)
     void markStopped(int device) CV_NOEXCEPT
     {
-        markLost(device);
-        if (device >= 0 && device < MAX_TRACKED_DEVICES)
-            stoppedDevices_[device].store(true);
+        if (DeviceState* d = state(device))
+        {
+            d->lost.store(true);
+            d->stopped.store(true);
+        }
         else
+        {
+            lost_.store(true);
             stopped_.store(true);
+        }
     }
     //! nothing of the device runs or touches memory any more
     bool isStopped(int device) const CV_NOEXCEPT
     {
-        return stopped_.load() || (device >= 0 && device < MAX_TRACKED_DEVICES && stoppedDevices_[device].load());
+        const DeviceState* d = state(device);
+        return stopped_.load() || (d && d->stopped.load());
     }
 
     IdleGate& idleGate(int device);
@@ -261,12 +316,13 @@ public:
         Jetson), write-combined or without coherence. */
     bool pinnedShadowAllowed(int device) const CV_NOEXCEPT
     {
-        return device < 0 || device >= MAX_TRACKED_DEVICES || !noPinnedShadow_[device].load();
+        const DeviceState* d = state(device);
+        return d && !d->noPinnedShadow.load();
     }
     void disallowPinnedShadow(int device) CV_NOEXCEPT
     {
-        if (device >= 0 && device < MAX_TRACKED_DEVICES)
-            noPinnedShadow_[device].store(true);
+        if (DeviceState* d = state(device))
+            d->noPinnedShadow.store(true);
     }
 
     /** Pinned host blocks for host copies, reused by exact size. Allocating pinned memory is
@@ -282,7 +338,11 @@ public:
     void releaseHostImport(int device, const void* ptr);
 
 private:
-    void enumerate();
+    //! NULL for a device the backend does not have
+    DeviceState* state(int device) const CV_NOEXCEPT
+    {
+        return device >= 0 && (size_t)device < devices_.size() ? devices_[device].get() : 0;
+    }
 
     int id_;
     const OpenCV_Core_Accel_API* api_;
@@ -291,20 +351,13 @@ private:
     std::string name_;
     std::string origin_;
 
+    std::shared_ptr<void> library_;                         //!< the plugin library, if any (see the constructor)
+    std::vector<std::unique_ptr<DeviceState> > devices_;   //!< fixed at construction
+    std::atomic<bool> lost_, stopped_;                      //!< the whole backend
+
     std::mutex mutex_;
-    bool enumerated_;
-    std::vector<cvAccelDeviceInfo> devices_;
     std::map<std::string, const void*> opTables_;
     std::map<std::pair<int, int>, MatAllocator*> allocators_;
-    enum { MAX_TRACKED_DEVICES = 64 };  //!< devices past this are tracked together, as the backend
-    static int slot(int device) { return device >= 0 && device < MAX_TRACKED_DEVICES ? device : MAX_TRACKED_DEVICES; }
-    std::atomic<bool> lost_, stopped_;
-    std::atomic<bool> lostDevices_[MAX_TRACKED_DEVICES];
-    std::atomic<bool> stoppedDevices_[MAX_TRACKED_DEVICES];
-    std::atomic<bool> noPinnedShadow_[MAX_TRACKED_DEVICES];
-    std::atomic<uint64> syncIssued_[MAX_TRACKED_DEVICES + 1];  //!< synchronize() tickets handed out
-    std::atomic<uint64> syncDone_[MAX_TRACKED_DEVICES + 1];    //!< highest ticket whose synchronize() succeeded
-    std::vector<std::unique_ptr<IdleGate> > idleGates_;
     std::map<std::pair<int, uintptr_t>, uintptr_t> hostImports_;   //!< (device, first page) -> end
     std::multimap<std::pair<int, uint64_t>, cvAccelAllocation> pinnedCache_;
     uint64_t pinnedCacheBytes_;
@@ -315,8 +368,11 @@ class Registry
 public:
     static Registry& getInstance();
 
-    //! registers a backend table; returns its id (> 0), or 0 when the table is rejected
-    int add(const OpenCV_Core_Accel_API* api, int priority, const std::string& origin);
+    /** Registers a backend table; returns its id (> 0), or 0 when the table is rejected. A
+        table from a plugin comes with its @p library, which the backend owns from the moment it
+        is published: the library is unloaded only when the table is rejected. */
+    int add(const OpenCV_Core_Accel_API* api, int priority, const std::string& origin,
+            const std::shared_ptr<void>& library = std::shared_ptr<void>());
 
     bool isActive() const { return active_.load(std::memory_order_acquire); }
     Backend* get(int id);                       //!< NULL for 0 and unknown ids
@@ -329,6 +385,7 @@ public:
 private:
     Registry();
 
+    std::mutex addMutex_;                       //!< one add() at a time
     std::mutex mutex_;
     std::vector<Backend*> backends_;            //!< never shrinks; index = id - 1
     std::atomic<bool> active_;

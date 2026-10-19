@@ -524,9 +524,12 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | a wrap of memory that is being released | revives its backing, fences included; waits while it is being freed | `findBacking` |
 | user memory (imported, `Mat::getUMat`) | release and calls on it wait for the device; CPU writes in a host copy reach it first | `DeviceAllocator::deallocate` |
 | failed work that left no fence, and a failed device sync | nothing it may touch is freed; borrowed memory waits until the device syncs or stops | `FenceRef::unknown` |
-| `fence_retain` fails | the copy tracks the work by device synchronization, never holds an unreferenced fence | `FenceRef` |
+| a plugin whose registration fails part way | its library belongs to the backend from the moment the backend is published, so it is unloaded only when nothing of it was published; logging after publication cannot undo it | `Registry::add` |
+| a backend with many devices | state per device (lost, stopped, synchronization tickets, idle gate), created when the backend is registered; a synchronization of one device proves nothing about another; more than 4096 devices are refused | `DeviceState` |
+| copies of a fence | share the one reference recorded with the work; `fence_retain` is never called, so no copy can lose a failure; without memory to share it, the work is waited for at once and its status kept | `FenceCore`, `FenceRef::adopt` |
 | non-coherent memory | invalidate / clean around every CPU access, for all views of the memory at once | `openCpuLevel` |
-| `end_cpu_access` fails | the CPU access stays open: devices stay away (and device-idle memory keeps its gate) until a retry succeeds | `retryFailedCpuEndsLocked` |
+| `end_cpu_access` fails | the CPU access stays open: devices stay away (and device-idle memory keeps its gate) until a retry succeeds; owed ends are retried in order, innermost first, and recorded without allocating | `retryFailedCpuEndsLocked`, `endOrOwe` |
+| `begin_cpu_access` fails on one import of several, or succeeds without an address | every begin of that level that succeeded is ended again; an end that fails is owed like any other | `openCpuLevel` |
 | two buffers in one cache line | forbidden for non-coherent allocations | backend rule 3 |
 | dma-buf implicit fences | write and read fences both ways; backends without the entries are refused | backend rule 5 |
 | dma-buf fence that cannot be attached | the call waits for the work before returning | `endExternal` |

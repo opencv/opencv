@@ -41,7 +41,7 @@ enum Plan
 struct Arg
 {
     Arg() : isOutput(false), type(-1), fullOverwrite(true), isUMat(false), isHost(false),
-            onDevice(false), plan(PLAN_UNDECIDED), mode(0)
+            onDevice(false), mapped(false), plan(PLAN_UNDECIDED), mode(0)
     {
         memset(&desc, 0, sizeof(desc));
         memset(&viewAlloc, 0, sizeof(viewAlloc));
@@ -57,6 +57,7 @@ struct Arg
     Mat mat;
     cvAccelMemoryDesc desc;
     bool onDevice;              //!< memory from an accelerator backend
+    bool mapped;                //!< a Mat view of accelerator memory (UMat::getMat): the CPU has that memory open
     int plan;
     UMat temp;
     int mode;
@@ -92,24 +93,72 @@ size_t extentBytes(int dims, const int* sizes, const size_t* steps, int type)
     return e;
 }
 
-//! the two arrays share bytes: in one buffer, or in two views of one physical memory (aliases, planes)
-bool overlaps(const UMat& a, const UMat& b)
+/** Where the bytes of an argument are: offsets in one physical memory (@p key is its
+    PhysicalBacking; a Mat view of accelerator memory included), offsets in a buffer of an
+    allocator OpenCV does not know (@p key is its UMatData), or host addresses (@p key NULL). */
+struct Span
 {
-    if (!a.u || !b.u)
+    Span() : key(NULL), start(0), size(0) {}
+    const void* key;
+    uint64_t start, size;
+};
+
+//! the bytes @p m covers; host memory conservatively as its whole buffer
+bool spanOfMat(const Mat& m, Span& s)
+{
+    if (m.empty())
         return false;
-    uint64_t sa = a.offset, sb = b.offset;
-    if (a.u != b.u)
+    const BufferState* v = m.u ? m.u->accelState : NULL;
+    if (v)
     {
-        const BufferState* va = a.u->accelState;
-        const BufferState* vb = b.u->accelState;
-        if (!va || !vb || va->backing != vb->backing)
-            return false;
-        sa += va->start;
-        sb += vb->start;
+        // a mapping of a view: its Mat starts at the view's first byte (getHostView)
+        s.key = v->backing;
+        s.start = v->start + (uint64_t)(m.data - m.datastart);
+        s.size = extentBytes(m.dims, m.size.p, m.step.p, m.type());
     }
-    const uint64_t ea = extentBytes(a.dims, a.size.p, a.step.p, a.type());
-    const uint64_t eb = extentBytes(b.dims, b.size.p, b.step.p, b.type());
-    return rangesOverlap(sa, ea, sb, eb);
+    else
+    {
+        s.key = NULL;
+        s.start = (uint64_t)(uintptr_t)m.datastart;
+        s.size = (uint64_t)(m.dataend - m.datastart);
+    }
+    return true;
+}
+
+bool spanOfUMat(const UMat& m, bool host, Span& s)
+{
+    if (!m.u)
+        return false;
+    if (const BufferState* v = m.u->accelState)
+    {
+        s.key = v->backing;
+        s.start = v->start + m.offset;
+        s.size = extentBytes(m.dims, m.size.p, m.step.p, m.type());
+    }
+    else if (host && m.u->data)
+    {
+        s.key = NULL;
+        s.start = (uint64_t)(uintptr_t)m.u->data;
+        s.size = m.u->size;
+    }
+    else
+    {
+        s.key = m.u;
+        s.start = m.offset;
+        s.size = extentBytes(m.dims, m.size.p, m.step.p, m.type());
+    }
+    return true;
+}
+
+/** The argument @p a, whose Mat (when it is one) is @p m, shares bytes with @p b: in one
+    buffer, in two views of one physical memory (aliases, planes), or through a Mat that maps
+    accelerator memory and a UMat of the same memory. */
+bool overlaps(const Arg& a, const Mat& m, const Arg& b)
+{
+    Span sa, sb;
+    const bool ka = a.isUMat ? spanOfUMat(a.um, a.isHost, sa) : spanOfMat(m, sa);
+    const bool kb = b.isUMat ? spanOfUMat(b.um, b.isHost, sb) : spanOfMat(b.mat, sb);
+    return ka && kb && sa.key == sb.key && rangesOverlap(sa.start, sa.size, sb.start, sb.size);
 }
 
 /** Bytes the memory of @p m needs moved before the device uses it: in place (@p inPlace), a
@@ -215,24 +264,6 @@ size_t planBytes(const MatShape& shape, int type)
     return total;
 }
 
-//! host bytes an argument covers (conservatively: whole buffers), NULLs for device memory
-void hostRange(const Arg& a, const Mat& m, const uchar*& begin, const uchar*& end)
-{
-    begin = end = NULL;
-    if (!a.isHost)
-        return;
-    if (!m.empty())
-    {
-        begin = m.datastart;
-        end = m.dataend;
-    }
-    else if (a.isUMat && a.um.u && a.um.u->data)
-    {
-        begin = a.um.u->data;
-        end = begin + a.um.u->size;
-    }
-}
-
 void fillHostView(cvAccelView& v, cvAccelAllocation& alloc, const Mat& m)
 {
     memset(&alloc, 0, sizeof(alloc));
@@ -240,6 +271,22 @@ void fillHostView(cvAccelView& v, cvAccelAllocation& alloc, const Mat& m)
     alloc.size = (uint64_t)(m.dataend - m.datastart);
     alloc.desc = hostMemoryDesc();
     fillView(v, &alloc, (size_t)(m.data - m.datastart), m.type(), m.dims, m.size.p, m.step.p);
+}
+
+/** A Mat argument: host memory, or a view of accelerator memory that a UMat mapped for the
+    CPU. The view keeps its memory's description: it counts as being on that device, and a
+    call that takes it runs on the CPU (the device must not touch memory the CPU has open). */
+void describeMat(Arg& a, const Mat& m)
+{
+    if (m.u && m.u->accelState && queryMemoryDesc(m.u, a.desc))
+    {
+        a.mapped = true;
+        a.onDevice = a.desc.backend_id != 0;
+        a.isHost = false;
+        return;
+    }
+    a.isHost = true;
+    a.desc = hostMemoryDesc();
 }
 
 void describeUMat(Arg& a)
@@ -310,8 +357,7 @@ void OpCall::input(InputArray arr)
     else if (k == _InputArray::MAT)
     {
         a.mat = arr.getMat();
-        a.isHost = true;
-        a.desc = hostMemoryDesc();
+        describeMat(a, a.mat);
         a.type = a.mat.type();
         a.shape = a.mat.shape();
     }
@@ -336,10 +382,7 @@ void OpCall::output(OutputArray arr, const MatShape& shape, int type, bool fullO
         describeUMat(a);
     }
     else if (k == _InputArray::MAT)
-    {
-        a.isHost = true;
-        a.desc = hostMemoryDesc();
-    }
+        describeMat(a, arr.getMatRef());
     else
         p->unsupported = true;
     p->args.push_back(a);
@@ -385,18 +428,10 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
         // an output that overlaps an input is produced in a temporary
         if (a.plan == PLAN_IN_PLACE)
         {
-            const uchar *ob, *oe;
-            hostRange(a, hostOut, ob, oe);
             for (size_t j = 0; j < args.size(); j++)
             {
                 const Arg& in = args[j];
-                if (in.isOutput || in.plan != PLAN_IN_PLACE)
-                    continue;
-                const uchar *ib, *ie;
-                hostRange(in, in.mat, ib, ie);
-                const bool clash = (a.isUMat && in.isUMat && overlaps(a.um, in.um)) ||
-                                   (ob && ib && ob < ie && ib < oe);
-                if (clash)
+                if (!in.isOutput && in.plan == PLAN_IN_PLACE && overlaps(a, hostOut, in))
                     a.plan = PLAN_COPY_BACK;
             }
             if (a.plan == PLAN_IN_PLACE && !a.isUMat)
@@ -509,15 +544,16 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     // 1. candidate devices: the scope's, or every device that holds an argument (in argument order)
     const ScopeEntry* scope = currentScope();
     StreamPtr stream;
-    bool anyOnDevice = false, shadowOnDevice = false;
+    bool anyOnDevice = false, shadowOnDevice = false, mapped = false;
     std::vector<std::pair<int, int> > candidates;
     for (size_t i = 0; i < args.size(); i++)
     {
         const Arg& a = args[i];
+        mapped = mapped || a.mapped;
         if (!a.onDevice)
             continue;
         anyOnDevice = true;
-        if (a.desc.host_access == CV_ACCEL_HOST_ACCESS_COPY || a.desc.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED)
+        if (!a.mapped && (a.desc.host_access == CV_ACCEL_HOST_ACCESS_COPY || a.desc.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED))
             shadowOnDevice = true;
         const std::pair<int, int> c((int)a.desc.backend_id, (int)a.desc.device_index);
         if (!scope && std::find(candidates.begin(), candidates.end(), c) == candidates.end())
@@ -534,14 +570,16 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         return NOT_HANDLED;
 
     // 2. plan and query every candidate (both free of side effects); the device that accepts and
-    //    moves the fewest bytes wins, the earlier argument's device on a tie
+    //    moves the fewest bytes wins, the earlier argument's device on a tie. A Mat view of
+    //    accelerator memory among the arguments leaves no candidate: the CPU has that memory
+    //    open, and its bytes may be those of a UMat argument under another name.
     std::vector<cvAccelView> views(args.size());
     cvAccelCall call;
     const void* table = NULL;
     int best = -1;
     uint64_t bestCost = 0;
     bool protectedRefused = false;
-    for (size_t c = 0; c < candidates.size(); c++)
+    for (size_t c = 0; c < candidates.size() && !mapped; c++)
     {
         Backend* cb = Registry::getInstance().get(candidates[c].first);
         if (!cb || cb->isLost(candidates[c].second))
@@ -570,6 +608,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         // fallback, with the outputs on the scope's device and OpenCL kept away from them.
         if (!anyOnDevice && !scope)
             return NOT_HANDLED;
+        counters().cpuFallbacks++;
         Backend* fb = Registry::getInstance().get(candidates[0].first);
         if (!fb || fb->isLost(candidates[0].second))
             return CPU_ONLY;
@@ -580,8 +619,8 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         if (protectedIn)
             CV_Error_(Error::StsNotImplemented, ("accel(%s): %s is not implemented for these arguments, and the "
                                                  "CPU cannot read protected content", fb->name().c_str(), name));
-        counters().cpuFallbacks++;
-        CV_LOG_DEBUG(NULL, "accel(" << fb->name() << "): " << name << " runs on the CPU (not implemented for these arguments)");
+        CV_LOG_DEBUG(NULL, "accel(" << fb->name() << "): " << name << " runs on the CPU ("
+                     << (mapped ? "a Mat view of accelerator memory is an argument" : "not implemented for these arguments") << ")");
         if (shadowOnDevice)
             onImplicitTransfer("runs on the CPU, so device data is copied to the host", name);
         // results go where they would have gone if the backend had run the operation
