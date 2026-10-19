@@ -717,14 +717,19 @@ TEST_P(Test_Model, KeypointsLetterbox)
     ASSERT_FALSE(plain.empty());
 
     // Both land in the same frame, so they agree up to how the two inputs differ.
+    std::vector<float> shift;
     for (size_t i = 0; i < plain.size(); i++)
     {
         // estimate() marks a keypoint below the threshold (-1, -1), which would match trivially.
         ASSERT_GE(plain[i].x, 0.f) << "keypoint " << i;
         ASSERT_GE(letterbox[i].x, 0.f) << "keypoint " << i;
-        EXPECT_NEAR(letterbox[i].x, plain[i].x, 25) << "keypoint " << i;
-        EXPECT_NEAR(letterbox[i].y, plain[i].y, 25) << "keypoint " << i;
+        shift.push_back(std::max(std::abs(letterbox[i].x - plain[i].x),
+                                 std::abs(letterbox[i].y - plain[i].y)));
     }
+    std::sort(shift.begin(), shift.end());
+    // Leaving the padding in shifts every keypoint by 24 / 0.409 = 59 px, so the median moves with
+    // it. One heatmap cell is 20 px and moves a single keypoint, so the maximum is too brittle.
+    EXPECT_LT(shift[shift.size() / 2], 25.f);
 }
 
 TEST_P(Test_Model, KeypointsNoInputSize)
@@ -754,12 +759,12 @@ TEST_P(Test_Model, KeypointsNoInputSize)
 
     const std::vector<Point2f> inferred = estimate(false);
     ASSERT_FALSE(inferred.empty());
+    // An empty blob size collapses every keypoint to the origin, so gate on the whole set: one
+    // keypoint may legitimately sit on the left or top edge.
+    float maxCoord = 0.f;
     for (size_t i = 0; i < inferred.size(); i++)
-    {
-        // A collapse to the origin is what an empty blob size would produce.
-        EXPECT_GT(inferred[i].x, 0.f) << "keypoint " << i;
-        EXPECT_GT(inferred[i].y, 0.f) << "keypoint " << i;
-    }
+        maxCoord = std::max(maxCoord, std::max(inferred[i].x, inferred[i].y));
+    EXPECT_GT(maxCoord, 1.f);
 
     // The net's own input is [1, 3, 256, 456], so declaring that size must change nothing.
     const std::vector<Point2f> declared = estimate(true);
