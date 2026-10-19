@@ -1212,8 +1212,9 @@ public:
     Mat(const Mat& m, const std::vector<Range>& ranges);
 
     /** @overload
-    @param vec STL vector whose elements form the matrix. The matrix has a single column and the number
-    of rows equal to the number of vector elements. Type of the matrix matches the type of vector
+    @param vec STL vector whose elements form the matrix. In OpenCV 5.x, the matrix is 1D
+    (dims == 1) with a single row (rows == 1, cols == vec.size()). (Previous versions: the matrix
+    had a single column.) Type of the matrix matches the type of vector
     elements. The constructor can handle arbitrary types, for which there is a properly declared
     DataType . This means that the vector elements must be primitive numbers or uni-type numerical
     tuples of numbers. Mixed-type structures are not supported. The corresponding constructor is
