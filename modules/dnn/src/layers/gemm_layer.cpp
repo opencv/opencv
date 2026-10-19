@@ -6,6 +6,7 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
+#include "cpu_kernels/gemm_select.hpp"
 // backends
 #include "../op_cuda.hpp"
 #ifdef HAVE_CUDA
@@ -317,11 +318,25 @@ public:
             thin_packed_B.clear();
             thin_packed_B.shrink_to_fit();
 
-            bool mlas_packed = false;
+            engine_B.release();
+            if (blobs[0].type() == CV_32F) {
+                std::vector<Mat> outputs;
+                outputs_arr.getMatVector(outputs);
+                const auto shape_A = shape(inputs[0]), shape_Y = shape(outputs[0]);
+                const int na = shape_A.back(), N = shape_Y.back();
+                const int ma = shape_A.size() >= 2 ? shape_A[shape_A.size() - 2] : 1;
+                const int K = trans_a ? ma : na;
+                const int rows = flatten_a ? (shape_Y.size() >= 2 ? shape_Y[shape_Y.size() - 2] : 1)
+                                           : (int)(outputs[0].total() / (size_t)N);
+                if (gemmUseEngine(rows, N, K, true))
+                    engine_B.pack(blobs[0].ptr<const float>(), blobs[0].step[0], N, K, trans_b);
+            }
+
+            bool mlas_packed = !engine_B.empty();
 #ifdef HAVE_MLAS
             packed_B_mlas.release();
             packed_B_mlas_M = packed_B_mlas_N = packed_B_mlas_K = 0;
-            if (mlasAvailable() && !opt.use_rvv) {
+            if (!mlas_packed && mlasAvailable() && !opt.use_rvv) {
                 std::vector<Mat> outputs;
                 outputs_arr.getMatVector(outputs);
                 const auto shape_A = shape(inputs[0]);
@@ -442,8 +457,11 @@ public:
         // GEMM row count spans those dims as well: rows = total(Y)/N.
         const int rows = flatten_a ? M : (int)(Y.total() / (size_t)N);
 
+        const bool engineB = constB(mode) && !engine_B.empty() && engine_B.n == N && engine_B.k == K;
+        const bool haveC = constC(mode) || inputs.size() >= 3;
+
         // broadcast C and copy C to output
-        if (constC(mode) || inputs.size() >= 3) {
+        if (haveC) {
             float *ptr_y = Y.ptr<float>();
             if (flatten_a) {
                 if (!constC(mode) || broadcast_C.empty()) {
@@ -506,7 +524,7 @@ public:
                     }
                 }
             }
-        } else { // initialization
+        } else if (!engineB) { // initialization (the engine writes Y itself)
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
             constexpr size_t PAR_THRESHOLD = 1u << 14;
@@ -520,6 +538,13 @@ public:
                     std::memset(ptr_y + st, 0, (en - st) * sizeof(float));
                 }, nthreads);
             }
+        }
+
+        if (engineB) {
+            engine_B.gemm(0, A.ptr<const float>(), (size_t)na * sizeof(float), trans_a, Y.ptr<float>(),
+                          (size_t)N * sizeof(float), rows, alpha, haveC ? 1.f : 0.f, true);
+            fusion.run(Y);
+            return;
         }
 
         if (constB(mode)) {
@@ -781,6 +806,7 @@ private:
     bool const_C;
     bool have_bias;
     std::vector<float> packed_B;
+    EngineGemmB engine_B;  // constant B packed for the core GEMM engine (Arm)
     std::vector<float> thin_packed_B;
 #ifdef HAVE_MLAS
     cv::Mat packed_B_mlas;
