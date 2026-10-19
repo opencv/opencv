@@ -205,4 +205,23 @@ TEST(vittrack, bbox_inside_image)
     }
 }
 
+TEST(vittrack, bbox_inside_tiny_image)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    params.tracking_score_threshold = 0.f;
+    cv::Ptr<Tracker> tracker = TrackerVit::create(params);
+
+    Mat img;
+    resize(imread(findDataFile("tracking/bag/00000001.jpg"), 1), img, Size(5, 5));
+    cv::Rect imgRect(0, 0, img.cols, img.rows);
+    cv::Rect roi = imgRect;
+    tracker->init(img, roi);
+
+    bool res = tracker->update(img, roi);
+    ASSERT_TRUE(res);
+    ASSERT_EQ(roi & imgRect, roi);
+}
+
 }}  // namespace opencv_test::
