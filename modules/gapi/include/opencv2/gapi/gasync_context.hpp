@@ -7,6 +7,8 @@
 #ifndef OPENCV_GAPI_GASYNC_CONTEXT_HPP
 #define OPENCV_GAPI_GASYNC_CONTEXT_HPP
 
+#include <atomic>
+
 #if !defined(GAPI_STANDALONE)
 #  include <opencv2/core/cvdef.h>
 #else   // Without OpenCV
