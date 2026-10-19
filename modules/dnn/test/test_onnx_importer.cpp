@@ -3534,6 +3534,41 @@ TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
     testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
 }
 
+// MultiHeadAttention `bias`/`key_padding_mask`, alone and together; BiasProjected feeds
+// Q/K/V from in-graph MatMul projections (the real HF-export layout), not graph inputs.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_Bias) {
+    testONNXModels("multi_head_attention_bias", npy, 1e-4, 1e-3, false, true, 4);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMask) {
+    testONNXModels("multi_head_attention_key_padding_mask", npy, 1e-4, 1e-3, false, true, 4);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasAndKeyPaddingMask) {
+    testONNXModels("multi_head_attention_bias_key_padding_mask", npy, 1e-4, 1e-3, false, true, 5);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasProjected) {
+    testONNXModels("multi_head_attention_bias_projected", npy, 1e-4, 1e-3, false, true, 3);
+}
+// Q/K/V cast to fp16 inside the graph; key_padding_mask's own cast must follow, not stay
+// hardcoded float32. Fixed fp16-scale tolerances, since this runs fp16 math on every target.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskFp16) {
+    testONNXModels("multi_head_attention_key_padding_mask_fp16", npy, 1e-3, 5e-3, false, true, 4);
+}
+// Bias as a true ONNX initializer: the static bias-split path should fire, keeping the net
+// shape-inferable (no runtime Shape/Slice2) - see addMultiHeadAttentionBias.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasConst) {
+    testONNXModels("multi_head_attention_bias_const", npy, 1e-4, 1e-3, false, true, 3);
+}
+// key_padding_mask arrives as int64 and is Cast to int32 in-graph, so its rank is unknown at
+// import (dims == -1) - the case the importer's rank check used to reject outright.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskInGraph) {
+    testONNXModels("multi_head_attention_key_padding_mask_in_graph", npy, 1e-4, 1e-3, false, true, 4);
+}
+// key_padding_mask and attention_bias both set: the importer must sum the two additive masks
+// instead of one silently overriding the other - see the mask_add branch in parseMultiHeadAttention.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskAndAttentionBias) {
+    testONNXModels("multi_head_attention_key_padding_mask_attention_bias", npy, 1e-4, 1e-3, false, true, 5);
+}
+
 // Batch + multi-head, square attention (B=2, H=4, S_q=S_kv=16, D=D_v=32).
 TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
     testSDPAModel("sdpa_multi_head", 1e-4, 5e-4);
@@ -3826,5 +3861,40 @@ TEST(Test_ONNX_importer, parse_resize_too_few_inputs)
     EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/resize_no_scales.onnx")));
     EXPECT_TRUE(net.empty());
 }
+
+// bias/key_padding_mask must still lower to one AttentionOnnxAi, never the standalone type,
+// across every model this PR adds - not just the bias+mask one.
+typedef testing::TestWithParam<std::string> Test_ONNX_MHA_Lowering;
+TEST_P(Test_ONNX_MHA_Lowering, lowers_to_one_layer)
+{
+    const std::string basename = GetParam();
+    SCOPED_TRACE(basename);
+
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    int unified = 0;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        const String type = net.getLayer(net.getLayerId(names[i]))->type;
+        if (type == "AttentionOnnxAi")
+            unified++;
+        else
+            EXPECT_NE(type, "MultiHeadAttention");
+    }
+    EXPECT_EQ(unified, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_MHA_Lowering, testing::Values(
+    "multi_head_attention_bias",
+    "multi_head_attention_key_padding_mask",
+    "multi_head_attention_bias_key_padding_mask",
+    "multi_head_attention_bias_projected",
+    "multi_head_attention_key_padding_mask_fp16",
+    "multi_head_attention_bias_const",
+    "multi_head_attention_key_padding_mask_in_graph",
+    "multi_head_attention_key_padding_mask_attention_bias"
+));
 
 }} // namespace
