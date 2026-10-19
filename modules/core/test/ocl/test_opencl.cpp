@@ -345,9 +345,17 @@ TEST_P(OCL_TypeToStr_Depth, no_out_of_bounds_lookup)
     {
         const int type = CV_MAKETYPE(depth, cn);
         if (noOpenCLType)
+        {
             EXPECT_THROW(cv::ocl::typeToStr(type), cv::Exception) << typeToString(type);
-        EXPECT_THROW(cv::ocl::memopTypeToStr(type), cv::Exception) << typeToString(type);
-        EXPECT_THROW(cv::ocl::vecopTypeToStr(type), cv::Exception) << typeToString(type);
+            EXPECT_THROW(cv::ocl::memopTypeToStr(type), cv::Exception) << typeToString(type);
+            EXPECT_THROW(cv::ocl::vecopTypeToStr(type), cv::Exception) << typeToString(type);
+        }
+        else
+        {
+            // CV_64U, CV_64S, CV_32U: all three tables name the same OpenCL type
+            EXPECT_STREQ(cv::ocl::typeToStr(type), cv::ocl::memopTypeToStr(type)) << typeToString(type);
+            EXPECT_STREQ(cv::ocl::typeToStr(type), cv::ocl::vecopTypeToStr(type)) << typeToString(type);
+        }
     }
 }
 
