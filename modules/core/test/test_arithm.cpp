@@ -2398,6 +2398,22 @@ TEST(Core_FindNonZero, regression)
     ASSERT_TRUE(pts.size() == nz);
 }
 
+TEST(Core_FindNonZero, fp8)
+{
+    // columns: +0, -0, 1, -2, NaN
+    float vals[] = { 0.f, -0.f, 1.f, -2.f, std::numeric_limits<float>::quiet_NaN() };
+    Mat src32f(1, 5, CV_32F, vals);
+    std::vector<Point> expected = { Point(2, 0), Point(3, 0), Point(4, 0) };
+    for (int depth : {CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        Mat src;
+        src32f.convertTo(src, depth);
+        std::vector<Point> pts;
+        findNonZero(src, pts);
+        EXPECT_EQ(expected, pts) << depthToString(depth);
+    }
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;
