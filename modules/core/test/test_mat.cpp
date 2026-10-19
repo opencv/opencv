@@ -3240,4 +3240,26 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+// fitSameSize carries the layout; MatShape::operator== ignores it, so layout and C are checked directly
+TEST(Core_Mat, fitSameSize_keeps_layout)
+{
+    const MatShape blk({2, 2, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12);
+    Mat src;
+    src.fit(blk, CV_32F);
+
+    Mat m, om;
+    UMat u, ou;
+    m.fitSameSize(src, CV_32F);
+    u.fitSameSize(src, CV_32F);
+    _OutputArray(om).fitSameSize(src, CV_32F);
+    _OutputArray(ou).fitSameSize(src, CV_32F);
+
+    for (const MatShape& s : {m.shape(), u.shape(), om.shape(), ou.shape()})
+    {
+        EXPECT_EQ(blk, s);
+        EXPECT_EQ(blk.layout, s.layout);
+        EXPECT_EQ(blk.C, s.C);
+    }
+}
+
 }} // namespace

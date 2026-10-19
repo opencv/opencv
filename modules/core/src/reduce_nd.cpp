@@ -451,10 +451,10 @@ template<typename A> struct ShiftedExp
 
 template<typename A, class Op, class OpM> static void runPass(const Plan& pl, A* res, const A* mbuf)
 {
-    const int nthreads = getNumThreads();
     const double work = (double)pl.nout*(double)std::max(pl.count, (int64)1);
+    const int nthreads = work < RND_SERIAL_WORK ? 1 : getNumThreads();
     Work w;
-    w.serial = work < RND_SERIAL_WORK || nthreads <= 1;
+    w.serial = nthreads <= 1;
     w.nsplit = 1;
     int64 items;
     if (pl.innerReduced)

@@ -226,6 +226,58 @@ TEST(Core_CudaUMat, op_addWeighted_host_fallback)
     EXPECT_LE(cvtest::norm(got, expected, NORM_INF), 1e-4);
 }
 
+#ifdef HAVE_OPENCL
+// turns OpenCL on for one test and restores the previous state afterwards
+struct WithOpenCL
+{
+    bool prev;
+    WithOpenCL() : prev(cv::ocl::useOpenCL()) { cv::ocl::setUseOpenCL(true); }
+    ~WithOpenCL() { cv::ocl::setUseOpenCL(prev); }
+};
+
+// with OpenCL on, the OpenCL kernel path declines CUDA UMats and the op finishes on the CPU
+TEST(Core_CudaUMat, op_opencl_on_falls_back)
+{
+    skipIfNoCudaDevice();
+    WithOpenCL guard;
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    Mat a(50, 40, CV_32FC1), b(50, 40, CV_32FC1);
+    randu(a, 0, 10); randu(b, 0, 10);
+
+    UMat ua = makeCudaUMat(), ub = makeCudaUMat(), usum = makeCudaUMat();
+    a.copyTo(ua); b.copyTo(ub);
+    cv::add(ua, ub, usum);
+
+    Mat sum;
+    usum.copyTo(sum);
+    EXPECT_LE(cvtest::norm(sum, a + b, NORM_INF), 1e-5);
+}
+
+// device to device across allocators (CUDA -> OpenCL -> CUDA) goes through a host copy
+TEST(Core_CudaUMat, copy_cuda_opencl_cuda)
+{
+    skipIfNoCudaDevice();
+    WithOpenCL guard;
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+
+    Mat src(30, 20, CV_32FC1);
+    randu(src, 0, 10);
+
+    UMat cu = makeCudaUMat(), cl, cu2 = makeCudaUMat();
+    src.copyTo(cu);
+    cu.copyTo(cl);
+    EXPECT_EQ(cv::ocl::getOpenCLAllocator(), cl.u->currAllocator);
+    cl.copyTo(cu2);
+
+    Mat back;
+    cu2.copyTo(back);
+    EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
+}
+#endif // HAVE_OPENCL
+
 }} // namespace
 
 #endif // HAVE_CUDA

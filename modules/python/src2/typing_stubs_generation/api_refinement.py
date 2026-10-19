@@ -438,6 +438,9 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
 
 
 NODES_TO_REFINE = {
+    SymbolName(("cv", ), (), "add"): make_matlike_or_scalar_arg("src2"),
+    SymbolName(("cv", ), (), "multiply"): make_matlike_or_scalar_arg("src2"),
+    SymbolName(("cv", ), (), "remap"): make_optional_arg("map2"),
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
