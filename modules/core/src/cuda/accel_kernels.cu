@@ -17,17 +17,24 @@ template<int N> struct Bytes { unsigned char b[N]; };
 
 const int BLOCK_X = 32, BLOCK_Y = 8;
 
+// gridDim.y is at most 65535: taller images are covered by a loop over y, so the launch never
+// fails on a size that QUERY accepted
+const unsigned MAX_GRID_Y = 65535;
+
 template<int N>
 __global__ void flipKernel(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                            int rows, int cols, bool flipRows, bool flipCols)
 {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    const int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x >= cols || y >= rows)
+    if (x >= cols)
         return;
-    const int sy = flipRows ? rows - 1 - y : y;
     const int sx = flipCols ? cols - 1 - x : x;
-    *(Bytes<N>*)(dst + (size_t)y * dstep + (size_t)x * N) = *(const Bytes<N>*)(src + (size_t)sy * sstep + (size_t)sx * N);
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    {
+        const unsigned sy = flipRows ? (unsigned)rows - 1 - y : y;
+        *(Bytes<N>*)(dst + (size_t)y * dstep + (size_t)x * N) =
+            *(const Bytes<N>*)(src + (size_t)sy * sstep + (size_t)sx * N);
+    }
 }
 
 template<int N>
@@ -36,33 +43,38 @@ __global__ void transposeKernel(const unsigned char* src, size_t sstep, unsigned
 {
     // rows x cols in, cols x rows out
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
-    const int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x >= cols || y >= rows)
+    if (x >= cols)
         return;
-    *(Bytes<N>*)(dst + (size_t)x * dstep + (size_t)y * N) = *(const Bytes<N>*)(src + (size_t)y * sstep + (size_t)x * N);
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+        *(Bytes<N>*)(dst + (size_t)x * dstep + (size_t)y * N) =
+            *(const Bytes<N>*)(src + (size_t)y * sstep + (size_t)x * N);
 }
 
 static inline dim3 grid(int rows, int cols)
 {
-    return dim3((unsigned)((cols + BLOCK_X - 1) / BLOCK_X), (unsigned)((rows + BLOCK_Y - 1) / BLOCK_Y));
+    const unsigned gy = (unsigned)((rows + BLOCK_Y - 1) / BLOCK_Y);
+    return dim3((unsigned)((cols + BLOCK_X - 1) / BLOCK_X), gy < MAX_GRID_Y ? gy : MAX_GRID_Y);
 }
+
+// cudaLaunchKernel returns the status of this launch, where cudaGetLastError() after <<<>>>
+// would return the oldest error left on the thread by any earlier call
 
 template<int N>
 cudaError_t flipN(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                   int rows, int cols, int mode, cudaStream_t s)
 {
     // OpenCV's codes: 0 around the x axis (rows), > 0 around the y axis (columns), < 0 both
-    flipKernel<N><<<grid(rows, cols), dim3(BLOCK_X, BLOCK_Y), 0, s>>>(src, sstep, dst, dstep, rows, cols,
-                                                                      mode <= 0, mode != 0);
-    return cudaGetLastError();
+    bool flipRows = mode <= 0, flipCols = mode != 0;
+    void* args[] = { &src, &sstep, &dst, &dstep, &rows, &cols, &flipRows, &flipCols };
+    return cudaLaunchKernel((const void*)flipKernel<N>, grid(rows, cols), dim3(BLOCK_X, BLOCK_Y), args, 0, s);
 }
 
 template<int N>
 cudaError_t transposeN(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                        int rows, int cols, cudaStream_t s)
 {
-    transposeKernel<N><<<grid(rows, cols), dim3(BLOCK_X, BLOCK_Y), 0, s>>>(src, sstep, dst, dstep, rows, cols);
-    return cudaGetLastError();
+    void* args[] = { &src, &sstep, &dst, &dstep, &rows, &cols };
+    return cudaLaunchKernel((const void*)transposeKernel<N>, grid(rows, cols), dim3(BLOCK_X, BLOCK_Y), args, 0, s);
 }
 
 } // namespace

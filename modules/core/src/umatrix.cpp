@@ -547,20 +547,24 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
     accessFlags |= ACCESS_RW;
     UMatData* new_u = NULL;
     MatStep new_step = step;
+    MatAllocator* stdAllocator = UMat::getStdAllocator();
     {
         MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
             a = a0;
         new_u = a->allocate(dims, size.p, type(), data, new_step.p, accessFlags, usageFlags);
         new_u->originalUMatData = u;
-        // the allocator counts whole rows, but the last row of a view of external memory may
-        // end before its step does: copies to and from the device must stop at dataend
-        new_u->size = std::min(new_u->size, (size_t)(dataend - datastart));
+        // An accelerator copies u->size bytes to and from the Mat's memory, but the allocator
+        // counts whole rows, and the last row of a Mat over external memory may end before its
+        // step does: those copies stop at dataend. Other allocators keep their size (see
+        // UMat::locateROI).
+        if (accel::impl::isDeviceAllocator(stdAllocator))
+            new_u->size = std::min(new_u->size, (size_t)(dataend - datastart));
     }
     bool allocated = false;
     try
     {
-        allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
+        allocated = stdAllocator->allocate(new_u, accessFlags, usageFlags);
     }
     catch (const cv::Exception& e)
     {

@@ -109,7 +109,8 @@ static std::atomic<uint64>& streamUids()
 }
 
 StreamHolder::StreamHolder(Backend* b, int device_, cvAccelStream handle_)
-    : backend(b), device(device_), handle(handle_), uid(++streamUids()), caps(b->deviceInfo(device_).caps)
+    : backend(b), device(device_), handle(handle_), uid(++streamUids()), caps(b->deviceInfo(device_).caps),
+      recorded(0)
 {}
 
 StreamHolder::~StreamHolder()
@@ -133,11 +134,12 @@ FenceCore::~FenceCore()
         b->fn().fence_release(f);
 }
 
-FenceRef FenceRef::adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device) CV_NOEXCEPT
+FenceRef FenceRef::adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device, uint64 streamSeq) CV_NOEXCEPT
 {
     FenceRef r;
     r.b_ = b;
     r.streamUid_ = streamUid;
+    r.streamSeq_ = streamSeq;
     r.device_ = device;
     if (!f)
         return r;   // nothing to wait for (backend rule 6)
@@ -171,6 +173,7 @@ void FenceRef::reset() CV_NOEXCEPT
     core_.reset();
     b_ = 0;
     streamUid_ = 0;
+    streamSeq_ = 0;
     device_ = -1;
     syncTicket_ = 0;
     status_ = CV_ACCEL_OK;
@@ -304,19 +307,30 @@ bool FenceRef::waitNoThrow(bool bounded) const CV_NOEXCEPT
     return false;
 }
 
+/** Records a fence on @p s and numbers it. Records on one stream are taken one at a time, so that
+    the numbers follow the stream: a fence with a larger number covers the work of one with a
+    smaller (threads that share a stream record and finish in either order). */
+static cvAccelStatus recordNumbered(const StreamPtr& s, cvAccelFence* f, uint64& seq)
+{
+    std::lock_guard<std::mutex> lk(s->calls);   // what StreamCall holds where streams are not thread-safe
+    const cvAccelStatus st = s->backend->fn().stream_record_fence(s->handle, f);
+    seq = ++s->recorded;
+    return st;
+}
+
 FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
 {
     Backend* b = s->backend;
     cvAccelFence f = 0;
     cvAccelStatus recorded = CV_ACCEL_INTERNAL_ERROR;
+    uint64 seq = 0;
     try
     {
-        StreamCall one(s);
-        recorded = b->fn().stream_record_fence(s->handle, &f);
+        recorded = recordNumbered(s, &f, seq);
     }
     catch (...) {}
     if (recorded == CV_ACCEL_OK && f)
-        return FenceRef::adopt(b, f, s->uid, s->device);
+        return FenceRef::adopt(b, f, s->uid, s->device, seq);
     const cvAccelStatus st = b->synchronize(s->device);
     if (st == CV_ACCEL_OK || st == CV_ACCEL_DEVICE_LOST)
         return FenceRef();      // idle, or stopped (backend rule 8): nothing of the work runs any more
@@ -360,13 +374,10 @@ const char* currentExceptionMessage(char* buf, size_t size) CV_NOEXCEPT
 FenceRef recordFence(const StreamPtr& s)
 {
     cvAccelFence f = 0;
-    cvAccelStatus st;
-    {
-        StreamCall one(s);
-        st = s->backend->fn().stream_record_fence(s->handle, &f);
-    }
+    uint64 seq = 0;
+    const cvAccelStatus st = recordNumbered(s, &f, seq);
     s->backend->check(st, "stream_record_fence", s->device);
-    return FenceRef::adopt(s->backend, f, s->uid, s->device);
+    return FenceRef::adopt(s->backend, f, s->uid, s->device, seq);
 }
 
 void streamWait(const StreamPtr& s, const FenceRef& f)
@@ -424,7 +435,8 @@ Backend::Backend(int id, const OpenCV_Core_Accel_API* api, int priority, const s
 {
     // a backend built against an older header has a shorter table: what it lacks reads as NULL
     memset(&fn_, 0, sizeof(fn_));
-    const size_t entries = api->api_header.valid_size - offsetof(OpenCV_Core_Accel_API_v0, v0);
+    size_t entries = api->api_header.valid_size - offsetof(OpenCV_Core_Accel_API_v1_0, v0);
+    entries -= entries % sizeof(void*);     // whole entries only: never half of a pointer
     memcpy(&fn_, &api->v0, std::min(entries, sizeof(fn_)));
 
     int n = 0;
@@ -714,7 +726,7 @@ Registry& Registry::getInstance()
     return *r;
 }
 
-static bool hasRequiredEntries(const OpenCV_Core_Accel_API_v0_0_api_entries& e)
+static bool hasRequiredEntries(const OpenCV_Core_Accel_API_v1_0_api_entries& e)
 {
     return e.get_device_count && e.get_device_info && e.allocate && e.deallocate &&
            e.begin_cpu_access && e.end_cpu_access && e.copy &&
@@ -730,8 +742,8 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
         return 0;
     const OpenCV_API_Header& h = api->api_header;
     // every table has the entries up to get_last_error; later ones were appended
-    const size_t minSize = offsetof(OpenCV_Core_Accel_API_v0, v0) +
-                           offsetof(OpenCV_Core_Accel_API_v0_0_api_entries, describe_allocation);
+    const size_t minSize = offsetof(OpenCV_Core_Accel_API_v1_0, v0) +
+                           offsetof(OpenCV_Core_Accel_API_v1_0_api_entries, describe_allocation);
     if (h.valid_size < minSize)
     {
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: API table is too small");
@@ -753,9 +765,15 @@ int Registry::add(const OpenCV_Core_Accel_API* api, int priority, const std::str
     if (h.opencv_version_major != CV_VERSION_MAJOR)
     {
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: built for OpenCV "
-                     << h.opencv_version_major << ".x");
+                     << h.opencv_version_major << "." << h.opencv_version_minor << ", OpenCV version is '"
+                     CV_VERSION "'");
         return 0;
     }
+    CV_LOG_DEBUG(NULL, "accel: backend from " << origin << ": '"
+                 << (h.api_description ? h.api_description : "") << "', built with OpenCV "
+                 << h.opencv_version_major << "." << h.opencv_version_minor << " (ABI/API = "
+                 << h.min_api_version << "/" << h.api_version << "), current OpenCV version is '" CV_VERSION
+                 "' (ABI/API = " << CV_ACCEL_ABI_VERSION << "/" << CV_ACCEL_API_VERSION << ")");
     if (!hasRequiredEntries(api->v0) || !api->v0.backend_name)
     {
         CV_LOG_ERROR(NULL, "accel: backend from " << origin << " rejected: required entry points are missing");
@@ -829,16 +847,12 @@ std::vector<Backend*> Registry::all()
 void Registry::loadPlugins()
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    // explicit list for now; the search over plugin directories follows the parallel backends
-    const std::string list = utils::getConfigurationParameterString("OPENCV_ACCEL_PLUGINS", "");
-    size_t pos = 0;
-    while (pos < list.size())
+    // explicit list for now (the platform's path separator); the search over plugin directories
+    // follows the parallel backends
+    const utils::Paths list = utils::getConfigurationParameterPaths("OPENCV_ACCEL_PLUGINS", utils::Paths());
+    for (size_t i = 0; i < list.size(); i++)
     {
-        size_t end = list.find(';', pos);
-        if (end == std::string::npos)
-            end = list.size();
-        const std::string path = list.substr(pos, end - pos);
-        pos = end + 1;
+        const std::string& path = list[i];
         if (path.empty())
             continue;
         std::shared_ptr<plugin::impl::DynamicLib> lib =
@@ -848,11 +862,13 @@ void Registry::loadPlugins()
             CV_LOG_WARNING(NULL, "accel: can't load plugin " << path);
             continue;
         }
+        static const char* const initName = "opencv_core_accel_plugin_init_v" CVAUX_STR(CV_ACCEL_ABI_VERSION);
         FN_opencv_core_accel_plugin_init_t init = reinterpret_cast<FN_opencv_core_accel_plugin_init_t>(
-                lib->getSymbol("opencv_core_accel_plugin_init_v0"));
+                lib->getSymbol(initName));
         if (!init)
         {
-            CV_LOG_WARNING(NULL, "accel: " << path << " is not an accelerator plugin");
+            CV_LOG_WARNING(NULL, "accel: " << path << " is not an accelerator plugin of this ABI (no "
+                           << initName << ")");
             continue;
         }
         // the highest API version first, like the other plugin loaders: a plugin built against
@@ -869,6 +885,16 @@ void Registry::loadPlugins()
                 break;
             }
         }
+        if (!api)
+        {
+            CV_LOG_INFO(NULL, "accel: plugin is incompatible (can't be initialized): " << path);
+            continue;
+        }
+#if !defined(_WIN32)
+        // plugin code ran, and device runtimes start threads while they enumerate devices: the
+        // library stays loaded even when its table is rejected (see the parallel plugins)
+        lib->disableAutomaticLibraryUnloading();
+#endif
         // the backend owns the library from its publication on (tables and code must outlive
         // every buffer); a rejected table leaves nothing behind that points into it
         add(api, 50, "plugin " + path, lib);
@@ -879,8 +905,6 @@ void Registry::loadPlugins()
 static void initBackends()
 {
     Registry& r = Registry::getInstance();
-    if (utils::getConfigurationParameterBool("OPENCV_ACCEL_EMULATOR", false))
-        r.add(emulatorBackendApi(), -100, "built-in");
 #ifdef HAVE_CUDA
     if (utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA", true))
         r.add(cudaBackendApi(), 100, "built-in");
@@ -958,18 +982,17 @@ TLSData<ArgumentFrame>& argumentFrames()
     CV_SINGLETON_LAZY_INIT_REF(TLSData<ArgumentFrame>, new TLSData<ArgumentFrame>())
 }
 
-//! device arguments alive on all threads: while zero, nothing is looked up
-std::atomic<int>& liveArguments()
-{
-    static std::atomic<int>* c = new std::atomic<int>(0);
-    return *c;
-}
+/** device arguments alive on this thread: while zero, host arguments are not recorded and
+    nothing is looked up. Per thread, so that threads without device data pay nothing for the
+    ones that have some; a host argument only decides something below a device argument of the
+    same thread, and that one is always made first. */
+static thread_local int t_deviceArguments = 0;
 
 } // namespace
 
 static MatAllocator* argumentPlacement()
 {
-    if (liveArguments().load(std::memory_order_relaxed) == 0)
+    if (t_deviceArguments == 0)
         return NULL;
     const std::vector<DeviceArgument>& args = argumentFrames().getRef().args;
     if (args.empty())
@@ -1034,15 +1057,15 @@ void enterDeviceArgument(const void* array, const UMat& m)
         a.device = v->device();
         a.depth = impl::t_callDepth;
         impl::argumentFrames().getRef().args.push_back(a);
-        impl::liveArguments()++;
+        impl::t_deviceArguments++;
     }
     catch (...) {}  // no placement hint: new data goes where it would without one
 }
 
 bool enterHostArgument(const void* array)
 {
-    if (impl::activity().load(std::memory_order_relaxed) == 0)
-        return false;
+    if (impl::t_deviceArguments == 0)
+        return false;   // no device argument on this thread: a host one decides nothing
     try
     {
         impl::DeviceArgument a;
@@ -1051,7 +1074,6 @@ bool enterHostArgument(const void* array)
         a.device = -1;
         a.depth = impl::t_callDepth;
         impl::argumentFrames().getRef().args.push_back(a);
-        impl::liveArguments()++;
         return true;
     }
     catch (...) {}
@@ -1067,8 +1089,9 @@ void leaveDeviceArgument(const void* array) CV_NOEXCEPT
         {
             if (args[i].array == array)
             {
+                if (args[i].backendId != 0)
+                    impl::t_deviceArguments--;
                 args.erase(args.begin() + i);   // a vector of UMats registers each of its device elements
-                impl::liveArguments()--;
             }
         }
     }
@@ -1122,35 +1145,17 @@ void OpenCLSuppressor::release()
     impl::oclSuppressCount()--;
 }
 
-int registerEmulatorBackend()
-{
-    impl::ensureInitialized();
-    impl::Registry& r = impl::Registry::getInstance();
-    if (impl::Backend* b = r.find("emulator"))
-        return b->id();
-    return r.add(impl::emulatorBackendApi(), -100, "built-in (test)");
-}
-
 int registerBackendTable(const OpenCV_Core_Accel_API* api, int priority)
 {
     impl::ensureInitialized();
     impl::Registry& r = impl::Registry::getInstance();
-    if (api && api->api_header.valid_size >= offsetof(OpenCV_Core_Accel_API_v0, v0) + sizeof(const char*) &&
+    if (api && api->api_header.valid_size >= offsetof(OpenCV_Core_Accel_API_v1_0, v0) + sizeof(const char*) &&
         api->v0.backend_name)
     {
         if (impl::Backend* b = r.find(api->v0.backend_name))
             return b->id();
     }
     return r.add(api, priority, "in-process");
-}
-
-int registerLegacyEmulatorBackend()
-{
-    registerEmulatorBackend();
-    impl::Registry& r = impl::Registry::getInstance();
-    if (impl::Backend* b = r.find("emulator-v1"))
-        return b->id();
-    return r.add(impl::emulatorBackendApiV1(), -101, "built-in (test, API version 1)");
 }
 
 }} // namespace accel::detail
@@ -1293,6 +1298,7 @@ void Stream::waitForCompletion()
 ExecutionScope::ExecutionScope(const Device& device)
 {
     ScopeEntry e;
+    e.owner = this;
     e.backendId = device.backendId();
     e.device = device.index();
     threadScopes().getRef().stack.push_back(e);
@@ -1306,6 +1312,7 @@ ExecutionScope::ExecutionScope(const Stream& stream)
 {
     CV_Assert(!stream.empty());
     ScopeEntry e;
+    e.owner = this;
     e.backendId = stream.impl->s->backend->id();
     e.device = stream.impl->s->device;
     e.stream = stream.impl->s;
@@ -1316,14 +1323,20 @@ ExecutionScope::ExecutionScope(const Stream& stream)
 
 ExecutionScope::~ExecutionScope()
 {
+    // its own entry, not the top one: scopes are not always destroyed in reverse order
+    // (unique_ptr::reset(new ExecutionScope(d2)) creates the new scope before it destroys the old)
     std::vector<ScopeEntry>& stack = threadScopes().getRef().stack;
-    CV_DbgAssert(!stack.empty());
-    if (!stack.empty())
+    bool found = false;
+    for (size_t i = stack.size(); i-- > 0 && !found; )
     {
-        if (stack.back().backendId == 0)
+        if (stack[i].owner != this)
+            continue;
+        if (stack[i].backendId == 0)
             hostScopeCount()--;
-        stack.pop_back();
+        stack.erase(stack.begin() + i);
+        found = true;
     }
+    CV_DbgAssert(found);    // destroyed on another thread than the one that created it
     scopeCount()--;
     activity()--;
 }
@@ -1569,7 +1582,7 @@ UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
     m.offset = viewOffset;
     finalizeHdr(m);
     if (!referenced)
-        m.addref();     // a new view; an existing one was referenced by wrap
+        m.addref();     // with allowExistingView, wrap references the view it returns itself
     return m;
 }
 

@@ -43,9 +43,12 @@ Compatibility rules:
   their reserved space, which the side that creates them sets to zero and an older side
   ignores (a zero field must mean what its absence meant); any other change of them is a new
   ABI version;
-- a table entry outside of the size reported by the backend reads as NULL. The plugin loader
-  asks for the highest API version it knows first, and a table that claims a newer version
-  than the one asked for is refused: its backend would follow rules core does not know;
+- the ABI version is part of the names (OpenCV_Core_Accel_API_v1_0, opencv_core_accel_plugin_init_v1);
+  entry points of a later API version go into a struct of their own (..._v1_1_api_entries v1),
+  as in the other OpenCV plugin interfaces. A table entry outside of the size reported by the
+  backend reads as NULL. The plugin loader asks for the highest API version it knows first, and
+  a table that claims a newer version than the one asked for is refused: its backend would
+  follow rules core does not know;
 - NULL entries and CV_ACCEL_NOT_IMPLEMENTED both mean "not supported, no side effects";
 - cvAccelStatus is 32 bits wide whatever the compiler's enum size (see its MAX_ENUM).
 
@@ -123,14 +126,11 @@ extern "C" {
 #  define CV_ACCEL_NOEXCEPT
 #endif
 
-/** 0: layouts before struct_size in cvAccelAllocation and cvAccelView (refused); 1: the
-    layouts of API version 5 */
+/** 0: layouts before struct_size in cvAccelAllocation and cvAccelView (refused); 1: every struct
+    passed by pointer starts with struct_size, embedded structs are frozen */
 #define CV_ACCEL_ABI_VERSION 1
-/** 1: describe_allocation; 2: begin_device_access / end_device_access; 3: cvAccelAllocation
-    reports the size of the memory it lies in and its device address, and has reserved space;
-    views carry the image they are a plane of; 4: get_device_address; 5: cvAccelAllocation and
-    cvAccelView start with struct_size, embedded structs are frozen; 6: identify_memory */
-#define CV_ACCEL_API_VERSION 6
+/** API version within ABI version 1. 0: the entry points of OpenCV_Core_Accel_API_v1_0_api_entries */
+#define CV_ACCEL_API_VERSION 0
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -521,8 +521,8 @@ typedef struct cvAccelDeviceInfo
     uint32_t preferred_kind;            //!< cvAccelMemoryKind used for UMat data by default
 } cvAccelDeviceInfo;
 
-/** @brief Backend entry points, API version 0. */
-struct OpenCV_Core_Accel_API_v0_0_api_entries
+/** @brief Backend entry points, ABI version 1, API version 0. */
+struct OpenCV_Core_Accel_API_v1_0_api_entries
 {
     //! short lowercase name used in device specs and logs: "cuda", "hip", "rknpu", ...
     const char* backend_name;
@@ -628,8 +628,8 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     //! message for the last error on the calling thread (never NULL)
     const char* (CV_API_CALL *get_last_error)(void) CV_ACCEL_NOEXCEPT;
 
-    // Entries below were appended later: tables of older backends end above, and core reads
-    // what they lack as NULL.
+    // Entries below are optional: a table may leave them NULL or end before them (its
+    // api_header.valid_size), and core reads what it lacks as NULL.
 
     /** optional: the description allocate() would give @p size bytes of @p kind on @p device,
         without allocating. Core asks while it plans a call whose outputs or temporaries do not
@@ -654,7 +654,6 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     cvAccelStatus (CV_API_CALL *end_device_access)(const cvAccelAllocation* alloc, cvAccelFence fence,
                                                    uint32_t access) CV_ACCEL_NOEXCEPT;
 
-    // --- API version 4 ---
     /** optional: the flat address kernels of @p device use for byte 0 of @p alloc, memory of
         another device of this backend that can_access says @p device reaches (peer access
         through its own mapping, an IOMMU window, no unified addressing). Without the entry
@@ -662,7 +661,6 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
     cvAccelStatus (CV_API_CALL *get_device_address)(const cvAccelAllocation* alloc, int device,
                                                     uint64_t* address) CV_ACCEL_NOEXCEPT;
 
-    // --- API version 6 ---
     /** optional: when @p ext reaches memory this backend allocated (a dma-buf exported from one
         of its allocations through any API, its own pointer), the identity of that memory as
         cvAccelAllocation::backing_id reports it, and where @p ext->offset lies in it; returns
@@ -673,15 +671,22 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
                                                  uint64_t* backing_offset, uint64_t* backing_size) CV_ACCEL_NOEXCEPT;
 };
 
-typedef struct OpenCV_Core_Accel_API_v0
+typedef struct OpenCV_Core_Accel_API_v1_0
 {
     OpenCV_API_Header api_header;
-    struct OpenCV_Core_Accel_API_v0_0_api_entries v0;
-} OpenCV_Core_Accel_API_v0;
+    struct OpenCV_Core_Accel_API_v1_0_api_entries v0;
+} OpenCV_Core_Accel_API_v1_0;
 
-typedef OpenCV_Core_Accel_API_v0 OpenCV_Core_Accel_API;
+typedef OpenCV_Core_Accel_API_v1_0 OpenCV_Core_Accel_API;
 
-//! plugin entry point, exported by opencv_core_accel_<name> libraries
+#ifdef BUILD_PLUGIN
+//! plugin entry point, exported by opencv_core_accel_<name> libraries (the suffix is CV_ACCEL_ABI_VERSION)
+CV_PLUGIN_EXPORTS
+const OpenCV_Core_Accel_API* CV_API_CALL opencv_core_accel_plugin_init_v1
+        (int requested_abi_version, int requested_api_version, void* reserved /*NULL*/) CV_ACCEL_NOEXCEPT;
+#endif
+
+//! type of the plugin entry point, for the loader
 typedef const OpenCV_Core_Accel_API* (CV_API_CALL *FN_opencv_core_accel_plugin_init_t)
         (int requested_abi_version, int requested_api_version, void* reserved /*NULL*/);
 

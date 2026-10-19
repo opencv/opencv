@@ -366,6 +366,24 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
         if (readError)
             std::rethrow_exception(readError);
     }
+    if (b->rawHandle && directClass(hostAccessClass(v)))
+    {
+        // UMat::handle() gave the memory to code that queues work on the device API's default
+        // stream (see its documentation). Core's streams are ordered after that stream, the CPU
+        // is not: a fence recorded on one of them now covers the caller's work.
+        StreamPtr s = v->backend()->defaultStream(v->device());
+        lk.unlock();
+        try
+        {
+            recordFence(s).wait();
+        }
+        catch (...)
+        {
+            lk.lock();
+            throw;
+        }
+        lk.lock();
+    }
     if (!overwriteAll)
         checkNotPoisoned(v);
 }
@@ -1379,7 +1397,9 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                     // the host copy is newer: the backend that owns the memory uploads it
                     const bool sameBackend = stream->backend == v->backend();
                     StreamPtr us = sameBackend ? stream : v->backend()->defaultStream(v->device());
-                    uploadShadowLocked(v, u, us, !sameBackend);
+                    // its fence becomes b->writeFence, on another stream when the backend differs,
+                    // and goes to `waits` below: no wait for the DMA under the lock
+                    uploadShadowLocked(v, u, us, false);
                 }
             }
             if (!b->writeFence.empty() && b->writeFence.streamUid() != stream->uid)
@@ -1479,13 +1499,19 @@ void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char
         else if (!fence->empty())
         {
             bool replaced = false;
-            for (size_t i = 0; i < b->readFences.size() && !fence->isUnknown(); i++)
+            for (size_t i = 0; i < b->readFences.size() && !replaced; i++)
             {
-                if (!b->readFences[i].isUnknown() && b->readFences[i].streamUid() == fence->streamUid())
+                // A slot goes to the new fence when it covers the old one: a later point of the
+                // same in-order stream (by its number: threads that share a stream record and
+                // finish in either order, so a later finish() alone proves nothing), or when the
+                // old one has completed.
+                const FenceRef& old = b->readFences[i];
+                const bool covered = !old.isUnknown() && !fence->isUnknown() &&
+                                     old.streamUid() == fence->streamUid() && old.streamSeq() < fence->streamSeq();
+                if (covered || old.poll(false) == FenceRef::DONE)
                 {
-                    b->readFences[i] = *fence;  // in-order stream: the newer fence covers the older one
+                    b->readFences[i] = *fence;
                     replaced = true;
-                    break;
                 }
             }
             CV_DbgAssert(replaced || b->readFences.size() < b->readFences.capacity());

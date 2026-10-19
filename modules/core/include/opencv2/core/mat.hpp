@@ -75,7 +75,8 @@ that cv:: functions open). */
 CV_EXPORTS void enterDeviceArgument(const void* array, const UMat& m);
 /** A UMat of host data passed to a cv:: call while an accelerator is in use: it marks the call
 as one with arguments of its own, so that the device arguments of an outer call do not decide
-where its results go. Returns false (nothing registered) while no accelerator is in use. */
+where its results go. Returns false (nothing registered) while the calling thread has no device
+argument. */
 CV_EXPORTS bool enterHostArgument(const void* array);
 //! ends every registration of @p array
 CV_EXPORTS void leaveDeviceArgument(const void* array) CV_NOEXCEPT;

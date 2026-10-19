@@ -470,8 +470,11 @@ thread at a time on devices whose streams are not thread-safe.
 
 `modules/core/include/opencv2/core/llapi/accel_hal.h`, following the pattern of the
 parallel-backend plugins (`llapi.h`): an `OpenCV_API_Header` with ABI and API versions, then
-entry points. Plugins export `opencv_core_accel_plugin_init_v0` and are loaded from
-`OPENCV_ACCEL_PLUGINS`. Built-in backends register the same table.
+entry points. As in the other plugin interfaces the ABI version is part of the names
+(`OpenCV_Core_Accel_API_v1_0`); plugins export `opencv_core_accel_plugin_init_v1` and are loaded
+from `OPENCV_ACCEL_PLUGINS` (a path list). Built-in backends register the same table, and the
+emulator of the tests, which is part of the test binary only, registers it in process
+(`registerBackendTable`).
 
 A backend must follow eleven rules, listed in the header, because core relies on them:
 

@@ -27,13 +27,29 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <chrono>
+
 #ifndef _WIN32
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
+#ifdef __linux__
+#include <sys/vfs.h>    // fstatfs
+#endif
 
 namespace cv { namespace accel { namespace impl {
+
+#ifdef __linux__
+/** true when the descriptor's inode names its buffer. Before Linux 5.3 every dma-buf is the one
+    anonymous inode of the kernel (size 0), and (st_dev, st_ino) says nothing about which buffer
+    a descriptor reaches: such memory is identified by its backend instead. */
+static bool fileHasOwnInode(int fd)
+{
+    struct statfs sf;
+    return fstatfs(fd, &sf) == 0 && sf.f_type != 0x09041934;    // ANON_INODE_FS_MAGIC
+}
+#endif
 
 Import::Import() : backend(0), device(-1), modifier(0), readOnly(false), hostReservation(0)
 {
@@ -48,7 +64,7 @@ static std::atomic<uint64>& backingIds()
 
 PhysicalBacking::PhysicalBacking()
     : id(++backingIds()), size(0), flags(0), borrowed(false), file(-1), fileStart(0), rawHandle(false), hostBase(0),
-      refs(0), registered(false),
+      refs(0), revivals(0), registered(false),
       retiring(false), deferred(false),
       busy(false), pendingReaders(0), pendingWriters(0), poisonedWhole(false), generation(0), cpuViews(0), cpuBase(0),
       idleGateHeld(0)
@@ -241,6 +257,7 @@ PhysicalBacking* findBacking(const BackingKey& key, uint64_t start, uint64_t siz
         if (hit)
         {
             hit->refs++;    // a backing without references (waiting for its fences) is revived
+            hit->revivals++;
             nameStartLocked(hit, key, nameStart);
         }
         return hit;
@@ -334,6 +351,7 @@ PhysicalBacking* registerBacking(PhysicalBacking* nb)
                 if (nb->names[n].start >= delta)
                     addNameLocked(r, hit, BackingName(nb->names[n].key, nb->names[n].start - delta));
             hit->refs++;
+            hit->revivals++;
             return hit;
         }
         std::vector<BackingName> names;
@@ -426,26 +444,6 @@ void destroyBacking(PhysicalBacking* b) CV_NOEXCEPT
     }
 }
 
-//! the backing has no reference left: frees it, unless a wrap revived it meanwhile
-void retireIfUnused(PhysicalBacking* b) CV_NOEXCEPT
-{
-    Backings& r = Backings::instance();
-    {
-        std::lock_guard<std::mutex> lk(r.mutex);
-        if (b->refs > 0)
-            return;         // revived by a wrap of the same memory: it lives on
-        b->retiring = true; // lookups wait until it is gone, so no second state appears meanwhile
-        removeDeferredLocked(r, b);
-    }
-    destroyBacking(b);
-    {
-        std::lock_guard<std::mutex> lk(r.mutex);
-        unregisterLocked(r, b);
-    }
-    r.gone.notify_all();
-    delete b;
-}
-
 //! memory of someone else: waits without limit for every fence on it (never throws)
 void drainBorrowed(PhysicalBacking* b) CV_NOEXCEPT
 {
@@ -453,7 +451,7 @@ void drainBorrowed(PhysicalBacking* b) CV_NOEXCEPT
     try
     {
         // waits outside of the lock: a wrap that revives the backing meanwhile adds its own work,
-        // which the next release waits for
+        // which its own release, or this one once more (see releaseBacking), waits for
         FenceRef w = b->writeFence;
         std::vector<FenceRef> reads = b->readFences;
         lk.unlock();
@@ -559,13 +557,14 @@ void pruneRetiredLocked(PhysicalBacking* b) CV_NOEXCEPT
 void releaseBacking(PhysicalBacking* b) CV_NOEXCEPT
 {
     Backings& r = Backings::instance();
+    uint64_t revivals = 0;
     {
         std::lock_guard<std::mutex> lk(r.mutex);
         CV_DbgAssert(b->refs > 0);
-        if (--b->refs > 0)
-            return;
-        if (!b->borrowed)
+        if (b->refs > 1 || !b->borrowed)
         {
+            if (--b->refs > 0)
+                return;
             // core's own memory: freed once its fences complete, and findable (revivable) until then
             if (!b->deferred)
             {
@@ -578,10 +577,36 @@ void releaseBacking(PhysicalBacking* b) CV_NOEXCEPT
             }
             return;
         }
+        // memory of someone else, last reference: this thread keeps it while it drains, so that a
+        // wrap that revives the backing meanwhile shares this state, and only one thread frees it
+        revivals = b->revivals;
     }
     // memory of someone else is never handed back while the device may still use it
-    drainBorrowed(b);
-    retireIfUnused(b);
+    for (;;)
+    {
+        drainBorrowed(b);
+        std::lock_guard<std::mutex> rl(r.mutex);
+        if (b->refs > 1)
+        {
+            b->refs--;      // revived and still in use: the last release of the new holders drains it
+            return;
+        }
+        if (b->revivals == revivals)
+        {
+            b->refs = 0;
+            b->retiring = true;     // lookups wait until it is gone, so no second state appears meanwhile
+            removeDeferredLocked(r, b);
+            break;
+        }
+        revivals = b->revivals;     // revived, used and released again meanwhile: drain that work too
+    }
+    destroyBacking(b);
+    {
+        std::lock_guard<std::mutex> lk(r.mutex);
+        unregisterLocked(r, b);
+    }
+    r.gone.notify_all();
+    delete b;
 }
 
 void collectRetired(bool waitAll) CV_NOEXCEPT
@@ -611,7 +636,7 @@ void collectRetired(bool waitAll) CV_NOEXCEPT
     for (size_t i = 0; i < pending.size(); i++)
     {
         PhysicalBacking* b = pending[i];
-        bool settled = false;
+        bool mine = false;
         {
             std::unique_lock<std::mutex> lk(b->mutex);
             if (waitAll)
@@ -629,21 +654,19 @@ void collectRetired(bool waitAll) CV_NOEXCEPT
                 if (!lk.owns_lock())
                     lk.lock();
             }
-            settled = fencesSettledLocked(b);
-        }
-        if (!settled)
-            continue;
-        bool mine = false;
-        {
-            std::lock_guard<std::mutex> lk(r.mutex);
+            if (!fencesSettledLocked(b))
+                continue;
+            // Still under b->mutex: no device work can be queued on b between the two checks (a
+            // wrap that revives b, queues work and releases it again before this point leaves its
+            // fence unsettled above, and one after it finds b retiring).
+            std::lock_guard<std::mutex> rl(r.mutex);
+            removeDeferredLocked(r, b);
             if (b->refs == 0)
             {
-                removeDeferredLocked(r, b);
                 b->retiring = true;
                 mine = true;
             }
-            else
-                removeDeferredLocked(r, b);     // revived: in use again
+            // otherwise revived: in use again
         }
         if (!mine)
             continue;
@@ -1000,12 +1023,14 @@ bool coreIdentity(const cvAccelExternalMemory& ext, BackingKey& key, uint64_t& r
         objSize = ext.size;
         return true;
     }
-#ifndef _WIN32
+#ifdef __linux__
     if (ext.type == CV_ACCEL_EXTMEM_DMABUF_FD)
     {
         struct stat st;
         if (fstat((int)ext.handle, &st) != 0)
             CV_Error(Error::StsBadArg, "accel: the dma-buf file descriptor is not open");
+        if (!fileHasOwnInode((int)ext.handle))
+            return false;   // a kernel before 5.3: the backend's identity of the memory is used
         key = BackingKey(BACKING_FILE, (uint64_t)st.st_dev, (uint64_t)st.st_ino);
         reqStart = ext.offset;
         uint64_t reqEnd = 0;
@@ -1315,7 +1340,7 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
 #endif
         // the backend attests protection; every dma-buf may carry implicit fences of other drivers
         nb->flags = (whole->alloc.desc.flags & (CV_ACCEL_MEMF_PROTECTED | CV_ACCEL_MEMF_EXTERNAL_SYNC)) |
-                    (key.domain == BACKING_FILE ? CV_ACCEL_MEMF_EXTERNAL_SYNC : 0);
+                    (ext.type == CV_ACCEL_EXTMEM_DMABUF_FD ? CV_ACCEL_MEMF_EXTERNAL_SYNC : 0);
         checkExternalSync(b_, nb->flags);   // the fresh import is released when this throws
         nb->imports.reserve(1);
         nb->imports.push_back(whole->commit(b_, device_, ext));
@@ -1419,7 +1444,10 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
             {
                 if (!addRefIfAlive(&holder->u->urefcount))
                 {
-                    bk->cond.wait(lk);  // its last UMat is going right now
+                    // Its last UMat is going right now (its deallocate notifies), or it is a view
+                    // that an allocation has just made and not referenced yet, which notifies
+                    // nothing: a bounded wait covers both.
+                    bk->cond.wait_for(lk, std::chrono::milliseconds(1));
                     continue;
                 }
                 lk.unlock();
@@ -1446,6 +1474,14 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         // copy on the first CPU access, memory without CPU access never.
         nu->markDeviceCopyObsolete(false);
         nu->markHostCopyObsolete(hostCopy || d.host_access == CV_ACCEL_HOST_ACCESS_NONE);
+        if (req.allowExistingView)
+        {
+            // Published with its first reference: a concurrent wrap that finds this view as the
+            // holder of its bytes must not take urefcount 0 for a view that is going away and
+            // wait for a notification that never comes (the caller's addref signals nothing).
+            nu->urefcount = 1;
+            referenced = true;
+        }
         lk.unlock();
         noteBufferCreated();
         return nu.release();
@@ -1459,7 +1495,7 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
 
 int backingFile(BufferState* v, uint64_t& start)
 {
-#ifndef _WIN32
+#ifdef __linux__
     PhysicalBacking* b = v->backing;
     Import* via = 0;
     {
@@ -1497,7 +1533,10 @@ int backingFile(BufferState* v, uint64_t& start)
         if (out.type != CV_ACCEL_EXTMEM_DMABUF_FD || fstat(fd, &st) != 0)
             CV_Error_(Error::StsInternal, ("accel(%s): export_memory returned no dma-buf", via->backend->name().c_str()));
         // byte 0 of the import is byte 0 of the backing: a wrap of the descriptor finds this memory
-        addBackingName(b, BackingName(BackingKey(BACKING_FILE, (uint64_t)st.st_dev, (uint64_t)st.st_ino), out.offset));
+        // (unless the kernel gives every dma-buf one inode: then the backend's identity finds it)
+        if (fileHasOwnInode(fd))
+            addBackingName(b, BackingName(BackingKey(BACKING_FILE, (uint64_t)st.st_dev, (uint64_t)st.st_ino),
+                                          out.offset));
     }
     catch (...)
     {
@@ -1523,7 +1562,7 @@ int backingFile(BufferState* v, uint64_t& start)
 
 bool canShare(const UMat& m, Backend* b, int device)
 {
-#ifndef _WIN32
+#ifdef __linux__
     const BufferState* v = m.u ? m.u->accelState : NULL;
     if (!v || v->imp->modifier != 0 || !b->fn().import_memory || !b->fn().begin_device_access ||
         !b->fn().end_device_access || !(b->deviceInfo(device).caps & CV_ACCEL_CAP_IMPORT_DMABUF))
@@ -1579,6 +1618,11 @@ int backingImports(const UMat& m)
     impl::PhysicalBacking* b = m.u->accelState->backing;
     std::lock_guard<std::mutex> lk(b->mutex);
     return (int)b->imports.size();
+}
+
+const cvAccelAllocation* allocationOf(const UMat& m)
+{
+    return m.u && m.u->accelState ? &m.u->accelState->imp->alloc : NULL;
 }
 
 }}} // namespace cv::accel::detail

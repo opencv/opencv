@@ -4,12 +4,13 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the coherence protocol, checked on the built-in emulator.
+// Non-CPU HAL: the coherence protocol, checked on the emulator backend of the tests.
 // emulator:0 discrete, 1 coherent shared, 2 non-coherent shared, 3 protected, 4 managed
-// (CPU access only while the device is idle), 5 discrete that fails on request.
-// See accel_dispatch.private.hpp.
+// (CPU access only while the device is idle), 5 discrete that fails on request, 6 a peer of 0.
+// See test_accel_emulator.hpp.
 
 #include "test_precomp.hpp"
+#include "test_accel_emulator.hpp"
 
 #include <opencv2/core/accel.hpp>
 #ifdef HAVE_CUDA
@@ -19,6 +20,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <exception>
 #include <fstream>
 #include <limits>
 #include <thread>
@@ -33,7 +35,7 @@ enum { DISCRETE = 0, COHERENT = 1, NONCOHERENT = 2, PROTECTED_MEM = 3, MANAGED =
 
 static accel::Device emulator(int index)
 {
-    accel::detail::registerEmulatorBackend();
+    accel_emu::registerEmulatorBackend();
     accel::Device d = accel::Device::find(cv::format("emulator:%d", index));
     CV_Assert(!d.empty());
     return d;
@@ -43,7 +45,7 @@ static accel::Device emulator(int index)
 static accel::Device failingDevice()
 {
     accel::Device d = emulator(FAILING);
-    accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
     accel::detail::reviveDevices();
     return d;
 }
@@ -61,21 +63,53 @@ static double maxDiff(InputArray a, InputArray b)
     return cvtest::norm(a, b, NORM_INF);
 }
 
-//! runs @p body on a new thread whose emulator streams delay every task by @p delayUs
+//! runs @p body on a new thread whose emulator streams delay every task by @p delayUs; what the
+//! body throws is thrown again on the test's thread (an exception must not end the test binary)
 template<typename F>
 static void runWithDeviceDelay(int delayUs, F body)
 {
-#ifndef _WIN32
-    setenv("OPENCV_ACCEL_EMULATOR_DELAY_US", cv::format("%d", delayUs).c_str(), 1);
-#endif
-    std::thread t(body);
+    accel_emu::emulatorSetTaskDelay(delayUs);
+    std::exception_ptr error;
+    std::thread t([&body, &error]() {
+        try
+        {
+            body();
+        }
+        catch (...)
+        {
+            error = std::current_exception();
+        }
+    });
     t.join();
-#ifndef _WIN32
-    unsetenv("OPENCV_ACCEL_EMULATOR_DELAY_US");
-#endif
+    accel_emu::emulatorSetTaskDelay(-1);
+    if (error)
+        std::rethrow_exception(error);
 }
 
-TEST(Core_Accel, emulator_devices)
+/** Every Core_Accel test starts with the emulator disarmed. A test that fails half way may also
+    have left a switch of core set that it turns back only on success: it is turned back here, so
+    that the tests after it run as in a fresh process. */
+class Core_Accel : public testing::Test
+{
+protected:
+    void SetUp() CV_OVERRIDE
+    {
+        accel_emu::emulatorReset();
+    }
+    void TearDown() CV_OVERRIDE
+    {
+        accel_emu::emulatorReset();
+        if (HasFailure())
+        {
+            accel::detail::setValidation(false);
+            accel::detail::setWaitTimeout(0);
+            accel::detail::injectPageProtectionFailure(-1);
+            accel::setTransferPolicy(accel::TRANSFER_ALLOW);
+        }
+    }
+};
+
+TEST_F(Core_Accel, emulator_devices)
 {
     accel::Device d = emulator(DISCRETE);
     EXPECT_EQ("emulator", d.backend());
@@ -110,7 +144,7 @@ TEST_P(Core_Accel_AnyDevice, flip_runs_on_the_device_and_stays_there)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_Accel_AnyDevice, testing::Values(DISCRETE, COHERENT, NONCOHERENT, MANAGED));
 
-TEST(Core_Accel, shared_memory_needs_no_copies)
+TEST_F(Core_Accel, shared_memory_needs_no_copies)
 {
     for (int index : {COHERENT, NONCOHERENT})
     {
@@ -134,7 +168,7 @@ TEST(Core_Accel, shared_memory_needs_no_copies)
     }
 }
 
-TEST(Core_Accel, read_only_view_never_writes_back)
+TEST_F(Core_Accel, read_only_view_never_writes_back)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(64, 64, CV_8UC1, Scalar(7));
@@ -155,7 +189,7 @@ TEST(Core_Accel, read_only_view_never_writes_back)
     EXPECT_EQ(0u, s.bytesHostToDevice);                 // no write-back, no re-upload
 }
 
-TEST(Core_Accel, cpu_writes_reach_the_device_with_one_upload)
+TEST_F(Core_Accel, cpu_writes_reach_the_device_with_one_upload)
 {
     accel::Device d = emulator(DISCRETE);
     UMat u;
@@ -181,7 +215,7 @@ TEST(Core_Accel, cpu_writes_reach_the_device_with_one_upload)
     EXPECT_EQ(5, r.at<uchar>(5, 5));
 }
 
-TEST(Core_Accel, cpu_fallback_keeps_placement_and_skips_transfers)
+TEST_F(Core_Accel, cpu_fallback_keeps_placement_and_skips_transfers)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(16, 24, CV_32FC3);
@@ -202,7 +236,7 @@ TEST(Core_Accel, cpu_fallback_keeps_placement_and_skips_transfers)
     EXPECT_EQ(0, maxDiff(ref, udst.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, partial_device_write_keeps_the_rest_of_the_buffer)
+TEST_F(Core_Accel, partial_device_write_keeps_the_rest_of_the_buffer)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(16, 16, CV_8UC1);
@@ -224,7 +258,7 @@ TEST(Core_Accel, partial_device_write_keeps_the_rest_of_the_buffer)
     EXPECT_EQ(0, maxDiff(ref, u.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, partly_written_output_keeps_the_rest)
+TEST_F(Core_Accel, partly_written_output_keeps_the_rest)
 {
     // an operation that writes the top half of its output only (fullOverwrite = false); the
     // output is a Mat, so the device writes a temporary that is then copied into it
@@ -246,7 +280,7 @@ TEST(Core_Accel, partly_written_output_keeps_the_rest)
     EXPECT_EQ(0, maxDiff(ref, dst));
 }
 
-TEST(Core_Accel, in_place_operation)
+TEST_F(Core_Accel, in_place_operation)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(9, 13, CV_16UC2);
@@ -259,7 +293,63 @@ TEST(Core_Accel, in_place_operation)
     EXPECT_TRUE(d == accel::describe(u).device);
 }
 
-TEST(Core_Accel, writable_mat_view_keeps_the_device_away)
+TEST_F(Core_Accel, in_place_transpose_of_non_square_falls_back_with_its_input)
+{
+    // transpose(img, img) changes the shape: when the device declines (it covers elements of up
+    // to 8 bytes), the CPU path must still find the input, not a re-created output
+    Mat src(16, 24, CV_32FC3);
+    randu(src, -1, 1);
+    UMat u = makeOn(emulator(DISCRETE), src);
+    accel::resetTransferStats();
+    cv::transpose(u, u);
+    EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
+    Mat ref;
+    cv::transpose(src, ref);
+    EXPECT_EQ(Size(16, 24), u.size());
+    EXPECT_EQ(0, maxDiff(ref, u.getMat(ACCESS_READ)));
+
+    // the same where the device runs it: the result is made in a temporary and copied back
+    Mat src8(16, 24, CV_8UC1);
+    randu(src8, 0, 255);
+    UMat u8 = makeOn(emulator(DISCRETE), src8);
+    cv::transpose(u8, u8);
+    cv::transpose(src8, ref);
+    EXPECT_EQ(Size(16, 24), u8.size());
+    EXPECT_EQ(0, maxDiff(ref, u8.getMat(ACCESS_READ)));
+}
+
+TEST_F(Core_Accel, in_place_operation_on_a_device_moves_nothing)
+{
+    // the output is also the input, so it is produced in a temporary on the same device: copying
+    // it back crosses no bus, and TRANSFER_FORBID has nothing to refuse
+    Mat src(16, 24, CV_8UC1);
+    randu(src, 0, 255);
+    UMat u = makeOn(emulator(DISCRETE), src);
+    accel::resetTransferStats();
+    accel::setTransferPolicy(accel::TRANSFER_FORBID);
+    EXPECT_NO_THROW(cv::flip(u, u, 0));
+    accel::setTransferPolicy(accel::TRANSFER_ALLOW);
+    EXPECT_EQ(0u, accel::getTransferStats().implicitTransfers);
+    Mat ref;
+    cv::flip(src, ref, 0);
+    EXPECT_EQ(0, maxDiff(ref, u.getMat(ACCESS_READ)));
+}
+
+TEST_F(Core_Accel, execution_scopes_destroyed_out_of_order_keep_the_newer_one)
+{
+    // unique_ptr::reset(new ExecutionScope(b)) creates the new scope before it destroys the old
+    std::unique_ptr<accel::ExecutionScope> scope(new accel::ExecutionScope(emulator(DISCRETE)));
+    scope.reset(new accel::ExecutionScope(emulator(COHERENT)));
+    UMat inside;
+    inside.create(8, 8, CV_8UC1);
+    EXPECT_TRUE(emulator(COHERENT) == accel::describe(inside).device);
+    scope.reset();
+    UMat outside;
+    outside.create(8, 8, CV_8UC1);
+    EXPECT_TRUE(accel::describe(outside).device.empty());
+}
+
+TEST_F(Core_Accel, writable_mat_view_keeps_the_device_away)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(10, 10, CV_8UC1);
@@ -279,7 +369,7 @@ TEST(Core_Accel, writable_mat_view_keeps_the_device_away)
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
 }
 
-TEST(Core_Accel, mat_views_of_device_memory_are_device_memory)
+TEST_F(Core_Accel, mat_views_of_device_memory_are_device_memory)
 {
     // A Mat from UMat::getMat maps accelerator memory the CPU has open; it is not host memory.
     // A call that takes one runs on the CPU (counted), and its results still go to the device.
@@ -321,7 +411,7 @@ TEST(Core_Accel, mat_views_of_device_memory_are_device_memory)
     }
 }
 
-TEST(Core_Accel, copy_out_while_a_mat_view_is_open)
+TEST_F(Core_Accel, copy_out_while_a_mat_view_is_open)
 {
     // non-coherent memory: the view's writes sit in CPU caches until the view ends
     accel::Device d = emulator(NONCOHERENT);
@@ -335,18 +425,18 @@ TEST(Core_Accel, copy_out_while_a_mat_view_is_open)
     EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(42)), u.getMat(ACCESS_READ)));   // the writes survived
 }
 
-TEST(Core_Accel, cpu_access_whose_end_failed_keeps_the_device_away)
+TEST_F(Core_Accel, cpu_access_whose_end_failed_keeps_the_device_away)
 {
     // A failed end_cpu_access, even after a read, may leave the memory in the CPU's hands: on
     // memory the CPU may touch only while the device is idle, device work would fault. The
     // device stays away until a retry of the end succeeds.
-    const int kinds = accel::detail::EMU_VIOLATION_MANAGED | accel::detail::EMU_VIOLATION_CPU_ACCESS;
-    const int64 violations = accel::detail::emulatorViolations(kinds);
+    const int kinds = accel_emu::EMU_VIOLATION_MANAGED | accel_emu::EMU_VIOLATION_CPU_ACCESS;
+    const int64 violations = accel_emu::emulatorViolations(kinds);
     {
         // the device gate stays closed: no device work at all until the end went through
         accel::Device d = emulator(MANAGED);
         UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(2)));
-        accel::detail::emulatorFailNextCpuEnds(1);
+        accel_emu::emulatorFailNextCpuEnds(1);
         EXPECT_EQ(2, u.getMat(ACCESS_READ).at<uchar>(0, 0));
         accel::resetTransferStats();
         UMat out;
@@ -361,7 +451,7 @@ TEST(Core_Accel, cpu_access_whose_end_failed_keeps_the_device_away)
         // other memory: the device stays away from this buffer while the retries fail
         accel::Device d = emulator(NONCOHERENT);
         UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(3)));
-        accel::detail::emulatorFailNextCpuEnds(2);  // the end, and its retry before the next device use
+        accel_emu::emulatorFailNextCpuEnds(2);  // the end, and its retry before the next device use
         EXPECT_EQ(3, u.getMat(ACCESS_READ).at<uchar>(0, 0));
         accel::resetTransferStats();
         UMat out;
@@ -371,28 +461,28 @@ TEST(Core_Accel, cpu_access_whose_end_failed_keeps_the_device_away)
         EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
         EXPECT_EQ(3, out.getMat(ACCESS_READ).at<uchar>(7, 7));
     }
-    EXPECT_EQ(violations, accel::detail::emulatorViolations(kinds));
+    EXPECT_EQ(violations, accel_emu::emulatorViolations(kinds));
 }
 
-TEST(Core_Accel, cpu_access_that_cannot_open_ends_every_begin)
+TEST_F(Core_Accel, cpu_access_that_cannot_open_ends_every_begin)
 {
     // A camera frame imported by two devices: CPU access begins on both imports. When the
     // second begin fails, the first is ended again; when that end fails too, it stays owed
     // and the devices stay away until it succeeds. A begin that succeeds without an address
     // is ended as well. Every begin ends once, innermost first.
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
     mem.size = 256;
-    const int64 violations = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS);
+    const int64 violations = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS);
     {
         UMat gpu = accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({16, 16}), CV_8UC1);
         UMat npu = accel::wrapExternalMemory(emulator(NONCOHERENT), mem, MatShape({16, 16}), CV_8UC1);
         gpu.setTo(Scalar(7));
 
-        accel::detail::emulatorFailNextCpuBegin(1);
-        accel::detail::emulatorFailNextCpuEnds(3);      // the end that undoes the first begin, and its next two retries
+        accel_emu::emulatorFailNextCpuBegin(1);
+        accel_emu::emulatorFailNextCpuEnds(3);      // the end that undoes the first begin, and its next two retries
         EXPECT_THROW(gpu.getMat(ACCESS_READ), cv::Exception);
         accel::resetTransferStats();
         UMat out;
@@ -403,33 +493,33 @@ TEST(Core_Accel, cpu_access_that_cannot_open_ends_every_begin)
         EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
         EXPECT_EQ(7, out.getMat(ACCESS_READ).at<uchar>(15, 15));
 
-        accel::detail::emulatorFailNextCpuBegin(0, true);
+        accel_emu::emulatorFailNextCpuBegin(0, true);
         EXPECT_THROW(npu.getMat(ACCESS_READ), cv::Exception);
         EXPECT_EQ(7, npu.getMat(ACCESS_READ).at<uchar>(0, 0));
     }
-    EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS));
+    EXPECT_EQ(violations, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS));
 }
 
-TEST(Core_Accel, memory_whose_cpu_access_cannot_end_is_never_freed)
+TEST_F(Core_Accel, memory_whose_cpu_access_cannot_end_is_never_freed)
 {
     // end_cpu_access fails for good: when the last UMat goes, the memory is still open for the
     // CPU in the backend, so it is leaked rather than freed under that access
     accel::Device d = emulator(COHERENT);
-    const int64 live = accel::detail::emulatorLiveAllocations(COHERENT);
-    const int64 violations = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS);
+    const int64 live = accel_emu::emulatorLiveAllocations(COHERENT);
+    const int64 violations = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS);
     {
         UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
         Mat m = u.getMat(ACCESS_READ);
-        accel::detail::emulatorFailNextCpuEnds(1000);
+        accel_emu::emulatorFailNextCpuEnds(1000);
         m.release();
         u.release();
-        accel::detail::emulatorFailNextCpuEnds(0);
+        accel_emu::emulatorFailNextCpuEnds(0);
     }
-    EXPECT_EQ(live + 1, accel::detail::emulatorLiveAllocations(COHERENT));
-    EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS));
+    EXPECT_EQ(live + 1, accel_emu::emulatorLiveAllocations(COHERENT));
+    EXPECT_EQ(violations, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS));
 }
 
-TEST(Core_Accel, host_ranges_past_the_end_of_the_address_space_are_refused)
+TEST_F(Core_Accel, host_ranges_past_the_end_of_the_address_space_are_refused)
 {
     // the pages of such a range cannot be computed: reserving them would wrap around to address 0
     accel::ExternalMemory mem;
@@ -441,14 +531,14 @@ TEST(Core_Accel, host_ranges_past_the_end_of_the_address_space_are_refused)
     EXPECT_THROW(accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({1, 64}), CV_8UC1), cv::Exception);
 }
 
-TEST(Core_Accel, upgraded_cpu_access_ends_every_level)
+TEST_F(Core_Accel, upgraded_cpu_access_ends_every_level)
 {
     // a read mapping opened for writing too nests a second begin_cpu_access: each one ends,
     // innermost first, with the access it began with
     for (int dev : {NONCOHERENT, MANAGED})
     {
         accel::Device d = emulator(dev);
-        const int64 violations = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS);
+        const int64 violations = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS);
         UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
         {
             Mat r = u.getMat(ACCESS_READ);
@@ -459,11 +549,11 @@ TEST(Core_Accel, upgraded_cpu_access_ends_every_level)
         cv::flip(u, out, 0);    // the device sees the write: the outer level ended with a clean
         EXPECT_EQ(6, out.getMat(ACCESS_READ).at<uchar>(0, 0)) << "device " << dev;
         u.release();
-        EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS)) << "device " << dev;
+        EXPECT_EQ(violations, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS)) << "device " << dev;
     }
 }
 
-TEST(Core_Accel, failed_cache_flush_never_publishes_cpu_writes)
+TEST_F(Core_Accel, failed_cache_flush_never_publishes_cpu_writes)
 {
     // non-coherent shared memory: CPU writes reach the device only through end_cpu_access
     accel::Device d = emulator(NONCOHERENT);
@@ -471,7 +561,7 @@ TEST(Core_Accel, failed_cache_flush_never_publishes_cpu_writes)
     {
         Mat view = u.getMat(ACCESS_RW);
         view.setTo(Scalar(7));
-        accel::detail::emulatorFailNextCpuFlush();
+        accel_emu::emulatorFailNextCpuFlush();
     }   // the flush fails: the device may hold old bytes, new bytes, or both
     UMat out;
     EXPECT_THROW(cv::flip(u, out, 1), cv::Exception);     // readers get an error, not stale data
@@ -497,13 +587,13 @@ static std::string mappingPermissions(const void* p)
     return "";
 }
 
-TEST(Core_Accel, read_only_memory_has_a_read_only_cpu_view)
+TEST_F(Core_Accel, read_only_memory_has_a_read_only_cpu_view)
 {
     // read-only device memory (a wrapped pointer, say): a write through its Mat view faults
     accel::Device d = emulator(DISCRETE);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64 * 64, 3, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64 * 64, 3, false);
     mem.size = 64 * 64;
     mem.readOnly = true;
     UMat ro = accel::wrapExternalMemory(d, mem, MatShape({64, 64}), CV_8UC1);
@@ -516,13 +606,13 @@ TEST(Core_Accel, read_only_memory_has_a_read_only_cpu_view)
 }
 
 
-TEST(Core_Accel, raw_handles_keep_the_rules_of_the_memory)
+TEST_F(Core_Accel, raw_handles_keep_the_rules_of_the_memory)
 {
     // UMat::handle() hands the memory to code OpenCV does not see: no write handle of read-only
     // memory, and none of a dma-buf (only DeviceAccess orders work with the other drivers)
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 256, 3, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 256, 3, false);
     mem.size = 256;
     mem.readOnly = true;
     UMat ro = accel::wrapExternalMemory(emulator(DISCRETE), mem, MatShape({16, 16}), CV_8UC1);
@@ -531,7 +621,7 @@ TEST(Core_Accel, raw_handles_keep_the_rules_of_the_memory)
 
     accel::ExternalMemory buf;
     buf.type = accel::ExternalMemory::DMABUF_FD;
-    buf.handle = accel::detail::emulatorCreateDmaBuf(256);
+    buf.handle = accel_emu::emulatorCreateDmaBuf(256);
     buf.size = 256;
     UMat frame = accel::wrapExternalMemory(emulator(COHERENT), buf, MatShape({16, 16}), CV_8UC1);
     EXPECT_THROW(frame.handle(ACCESS_READ), cv::Exception);
@@ -539,7 +629,7 @@ TEST(Core_Accel, raw_handles_keep_the_rules_of_the_memory)
     EXPECT_NE(0u, access.handle());
 }
 
-TEST(Core_Accel, read_only_views_of_shared_memory_fault_on_writes)
+TEST_F(Core_Accel, read_only_views_of_shared_memory_fault_on_writes)
 {
     // host memory the coherent device uses in place, wrapped read-only: the CPU addresses the
     // bytes directly, but the Mat view must not let it write them
@@ -560,11 +650,11 @@ TEST(Core_Accel, read_only_views_of_shared_memory_fault_on_writes)
     EXPECT_EQ('-', perms[1]);
 }
 
-TEST(Core_Accel, read_only_dma_buf_is_mapped_read_only_without_a_copy)
+TEST_F(Core_Accel, read_only_dma_buf_is_mapped_read_only_without_a_copy)
 {
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
-    accel::detail::emulatorDmaBufProduce(fd, 6, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
+    accel_emu::emulatorDmaBufProduce(fd, 6, 0);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
@@ -578,14 +668,14 @@ TEST(Core_Accel, read_only_dma_buf_is_mapped_read_only_without_a_copy)
     EXPECT_EQ("r--s", perms);   // the buffer's own read-only shared mapping: no copy
 }
 
-TEST(Core_Accel, read_only_views_fail_closed)
+TEST_F(Core_Accel, read_only_views_fail_closed)
 {
     // read-only device memory: its host copy lives in pages that must be protected, and
     // protected again after every download; when that fails, the CPU gets no view at all
     accel::Device d = emulator(DISCRETE);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64 * 64, 3, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64 * 64, 3, false);
     mem.size = 64 * 64;
     mem.readOnly = true;
     {
@@ -603,7 +693,7 @@ TEST(Core_Accel, read_only_views_fail_closed)
     }
 }
 
-TEST(Core_Accel, validation_mode_maps_read_views_read_only)
+TEST_F(Core_Accel, validation_mode_maps_read_views_read_only)
 {
     accel::detail::setValidation(true);
     for (int dev : {COHERENT, DISCRETE})
@@ -623,7 +713,7 @@ TEST(Core_Accel, validation_mode_maps_read_views_read_only)
 #endif
 
 
-TEST(Core_Accel, protected_memory_never_reaches_the_cpu)
+TEST_F(Core_Accel, protected_memory_never_reaches_the_cpu)
 {
     accel::Device d = emulator(PROTECTED_MEM);
     Mat src(10, 12, CV_8UC1);
@@ -644,13 +734,13 @@ TEST(Core_Accel, protected_memory_never_reaches_the_cpu)
     EXPECT_THROW(cv::transpose(uf, t), cv::Exception);
 }
 
-TEST(Core_Accel, protected_content_stays_in_protected_memory)
+TEST_F(Core_Accel, protected_content_stays_in_protected_memory)
 {
     // a protected frame (from a secure decoder, say) next to ordinary memory on one device
     accel::Device d = emulator(DISCRETE);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64, 7, true);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64, 7, true);
     mem.size = 64;
     mem.protectedContent = true;
     UMat secure = accel::wrapExternalMemory(d, mem, MatShape({8, 8}), CV_8UC1);
@@ -671,16 +761,16 @@ TEST(Core_Accel, protected_content_stays_in_protected_memory)
 
     // protection comes from the backend: ordinary memory cannot be declared protected...
     accel::ExternalMemory claimed = mem;
-    claimed.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64, 7, false);
+    claimed.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64, 7, false);
     EXPECT_THROW(accel::wrapExternalMemory(d, claimed, MatShape({8, 8}), CV_8UC1), cv::Exception);
     // ...and protected memory stays protected without the caller saying so
     accel::ExternalMemory unclaimed = mem;
-    unclaimed.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64, 7, true);
+    unclaimed.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64, 7, true);
     unclaimed.protectedContent = false;
     EXPECT_TRUE(accel::describe(accel::wrapExternalMemory(d, unclaimed, MatShape({8, 8}), CV_8UC1)).protectedContent);
 }
 
-TEST(Core_Accel, transfer_policy_reports_hidden_copies)
+TEST_F(Core_Accel, transfer_policy_reports_hidden_copies)
 {
     Mat src(8, 8, CV_32FC3, Scalar::all(1));
     UMat discrete = makeOn(emulator(DISCRETE), src);
@@ -692,7 +782,7 @@ TEST(Core_Accel, transfer_policy_reports_hidden_copies)
     accel::setTransferPolicy(accel::TRANSFER_ALLOW);
 }
 
-TEST(Core_Accel, host_mat_used_in_place_by_a_coherent_device)
+TEST_F(Core_Accel, host_mat_used_in_place_by_a_coherent_device)
 {
     Mat src(32, 40, CV_8UC4);
     randu(src, 0, 255);
@@ -717,7 +807,7 @@ TEST(Core_Accel, host_mat_used_in_place_by_a_coherent_device)
     }
 }
 
-TEST(Core_Accel, mat_gets_back_what_was_written_through_its_umat)
+TEST_F(Core_Accel, mat_gets_back_what_was_written_through_its_umat)
 {
     // coherent shared memory: the UMat holds its own copy of the Mat's bytes
     accel::Device d = emulator(COHERENT);
@@ -736,7 +826,7 @@ TEST(Core_Accel, mat_gets_back_what_was_written_through_its_umat)
     EXPECT_EQ(0, maxDiff(Mat(8, 8, CV_8UC1, Scalar(5)), m));
 }
 
-TEST(Core_Accel, mat_backed_umat_stays_inside_the_mat)
+TEST_F(Core_Accel, mat_backed_umat_stays_inside_the_mat)
 {
     // external memory whose last row ends before its step does, followed by other data
     const int rows = 4, cols = 6, step = 16;
@@ -757,7 +847,7 @@ TEST(Core_Accel, mat_backed_umat_stays_inside_the_mat)
         ASSERT_EQ(0x11, buf[i]) << "byte " << i << " after the Mat was overwritten";
 }
 
-TEST(Core_Accel, mat_calls_inside_a_scope_run_on_its_device)
+TEST_F(Core_Accel, mat_calls_inside_a_scope_run_on_its_device)
 {
     Mat src(16, 24, CV_8UC1), ref;
     randu(src, 0, 255);
@@ -773,7 +863,7 @@ TEST(Core_Accel, mat_calls_inside_a_scope_run_on_its_device)
     }
 }
 
-TEST(Core_Accel, host_outputs_are_written_in_place_when_the_device_can)
+TEST_F(Core_Accel, host_outputs_are_written_in_place_when_the_device_can)
 {
     // a coherent iGPU addresses host memory: no temporary, no copy back
     Mat src(32, 40, CV_8UC4), ref;
@@ -792,7 +882,7 @@ TEST(Core_Accel, host_outputs_are_written_in_place_when_the_device_can)
     EXPECT_EQ(0, maxDiff(ref, same));
 }
 
-TEST(Core_Accel, device_choice_follows_coverage)
+TEST_F(Core_Accel, device_choice_follows_coverage)
 {
     // the input's device lacks the operation, the output's device has it
     Mat src(16, 16, CV_8UC1), ref;
@@ -800,16 +890,16 @@ TEST(Core_Accel, device_choice_follows_coverage)
     cv::flip(src, ref, 1);
     UMat in = makeOn(emulator(DISCRETE), src);
     UMat out = makeOn(emulator(COHERENT), Mat::zeros(16, 16, CV_8UC1));
-    accel::detail::emulatorDisableOps(DISCRETE, true);
+    accel_emu::emulatorDisableOps(DISCRETE, true);
     accel::resetTransferStats();
     cv::flip(in, out, 1);
-    accel::detail::emulatorDisableOps(DISCRETE, false);
+    accel_emu::emulatorDisableOps(DISCRETE, false);
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);    // not a CPU fallback
     EXPECT_EQ(0u, accel::getTransferStats().cpuFallbacks);
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, device_choice_follows_transfer_cost)
+TEST_F(Core_Accel, device_choice_follows_transfer_cost)
 {
     // a call with a small input on the discrete device, a large one on the coherent device: the
     // coherent device moves 64 bytes, the discrete one would move 4096
@@ -827,7 +917,7 @@ TEST(Core_Accel, device_choice_follows_transfer_cost)
     EXPECT_EQ(5, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, clone_stays_on_the_device)
+TEST_F(Core_Accel, clone_stays_on_the_device)
 {
     accel::Device d = emulator(DISCRETE);
     Mat src(12, 12, CV_8UC1);
@@ -841,7 +931,7 @@ TEST(Core_Accel, clone_stays_on_the_device)
     EXPECT_EQ(0, maxDiff(src, c.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, wrapped_host_memory_and_overlapping_imports)
+TEST_F(Core_Accel, wrapped_host_memory_and_overlapping_imports)
 {
     accel::Device d = emulator(COHERENT);
     std::vector<uchar> storage(4096 * 3);
@@ -890,7 +980,7 @@ TEST(Core_Accel, wrapped_host_memory_and_overlapping_imports)
     EXPECT_THROW(accel::wrapExternalMemory(d, odd, MatShape({63, 64}), CV_8UC1), cv::Exception);
 }
 
-TEST(Core_Accel, a_mat_over_wrapped_host_memory_overlaps_its_umat)
+TEST_F(Core_Accel, a_mat_over_wrapped_host_memory_overlaps_its_umat)
 {
     // a UMat over host memory and a Mat one row further: the output overlaps the input, so the
     // device writes a temporary, and the result is the flip of what the input was
@@ -910,7 +1000,7 @@ TEST(Core_Accel, a_mat_over_wrapped_host_memory_overlaps_its_umat)
     EXPECT_EQ(0, maxDiff(ref, out));
 }
 
-TEST(Core_Accel, host_pages_stay_reserved_while_their_import_is_not_released)
+TEST_F(Core_Accel, host_pages_stay_reserved_while_their_import_is_not_released)
 {
     // the backend fails to release an import of host memory: it may still pin the pages, so
     // no other import of them is let in
@@ -924,7 +1014,7 @@ TEST(Core_Accel, host_pages_stay_reserved_while_their_import_is_not_released)
     mem.handle = (int64)(intptr_t)p;
     mem.size = 4096;
     UMat w = accel::wrapExternalMemory(d, mem, MatShape({1, 4096}), CV_8UC1);
-    accel::detail::emulatorFailNextDeallocate();
+    accel_emu::emulatorFailNextDeallocate();
     w.release();
     EXPECT_THROW(accel::wrapExternalMemory(d, mem, MatShape({1, 4096}), CV_8UC1), cv::Exception);
     accel::ExternalMemory next = mem;
@@ -932,7 +1022,7 @@ TEST(Core_Accel, host_pages_stay_reserved_while_their_import_is_not_released)
     EXPECT_NO_THROW(accel::wrapExternalMemory(d, next, MatShape({1, 4096}), CV_8UC1));
 }
 
-TEST(Core_Accel, wrapped_device_memory_reads_its_content)
+TEST_F(Core_Accel, wrapped_device_memory_reads_its_content)
 {
     // like a device pointer from another library: the content is in device memory, and the
     // host copy that the CPU needs does not exist yet
@@ -956,12 +1046,12 @@ TEST(Core_Accel, wrapped_device_memory_reads_its_content)
     }
 }
 
-TEST(Core_Accel, ranges_outside_the_memory_are_refused)
+TEST_F(Core_Accel, ranges_outside_the_memory_are_refused)
 {
     accel::Device d = emulator(DISCRETE);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 256, 0, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 256, 0, false);
     mem.size = 256;
     mem.offset = std::numeric_limits<size_t>::max() - 16;  // offset + size wraps around
     EXPECT_THROW(accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1), cv::Exception);
@@ -978,13 +1068,13 @@ TEST(Core_Accel, ranges_outside_the_memory_are_refused)
     // a protected allocation is checked over the whole range too, not only where it starts
     accel::ExternalMemory secure;
     secure.type = accel::ExternalMemory::DEVICE_POINTER;
-    secure.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64, 7, true);
+    secure.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64, 7, true);
     secure.offset = 32;
     secure.size = 64;
     EXPECT_THROW(accel::wrapExternalMemory(d, secure, MatShape({8, 8}), CV_8UC1), cv::Exception);
 }
 
-TEST(Core_Accel, released_memory_in_flight_is_revived_with_its_fences)
+TEST_F(Core_Accel, released_memory_in_flight_is_revived_with_its_fences)
 {
     // A UMat is released while a device write into it is still queued; its memory, still
     // allocated, is wrapped again through its device pointer. The wrap must reach the same
@@ -1006,7 +1096,7 @@ TEST(Core_Accel, released_memory_in_flight_is_revived_with_its_fences)
     });
 }
 
-TEST(Core_Accel, borrowed_memory_rewrapped_during_its_release_is_one_memory)
+TEST_F(Core_Accel, borrowed_memory_rewrapped_during_its_release_is_one_memory)
 {
     // The last UMat of wrapped host memory goes away while device work through it is in flight,
     // so its release waits; meanwhile another thread wraps the same memory. The wrap gets the
@@ -1044,11 +1134,11 @@ TEST(Core_Accel, borrowed_memory_rewrapped_during_its_release_is_one_memory)
 }
 
 #ifdef __linux__
-TEST(Core_Accel, planes_of_one_dma_buf_are_one_memory)
+TEST_F(Core_Accel, planes_of_one_dma_buf_are_one_memory)
 {
     accel::Device d = emulator(COHERENT);
     // NV12 16x16 in one dma-buf: luma rows of 16 bytes, chroma at offset 256
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256 + 128);
     accel::ExternalImage nv12;
     nv12.type = accel::ExternalMemory::DMABUF_FD;
     accel::ExternalPlane y, uv;
@@ -1060,9 +1150,9 @@ TEST(Core_Accel, planes_of_one_dma_buf_are_one_memory)
     uv.type = CV_8UC2;
     nv12.planes.push_back(y);
     nv12.planes.push_back(uv);
-    const int64 imports = accel::detail::emulatorLiveAllocations(COHERENT);
+    const int64 imports = accel_emu::emulatorLiveAllocations(COHERENT);
     std::vector<UMat> planes = accel::wrapExternalImage(d, nv12);
-    EXPECT_EQ(imports + 1, accel::detail::emulatorLiveAllocations(COHERENT));  // one import of the buffer
+    EXPECT_EQ(imports + 1, accel_emu::emulatorLiveAllocations(COHERENT));  // one import of the buffer
     EXPECT_EQ(accel::detail::backingId(planes[0]), accel::detail::backingId(planes[1]));
     {
         // The CPU writes the luma plane. Cache maintenance of a dma-buf covers the whole buffer,
@@ -1084,10 +1174,10 @@ TEST(Core_Accel, planes_of_one_dma_buf_are_one_memory)
     EXPECT_EQ(1, planes[0].getMat(ACCESS_READ).at<uchar>(15, 15));
 }
 
-TEST(Core_Accel, one_dma_buf_imported_by_two_devices_is_one_memory)
+TEST_F(Core_Accel, one_dma_buf_imported_by_two_devices_is_one_memory)
 {
     // a camera frame used by a GPU (emulator:1) and an NPU (emulator:2)
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
@@ -1112,57 +1202,57 @@ TEST(Core_Accel, one_dma_buf_imported_by_two_devices_is_one_memory)
 }
 #endif
 
-TEST(Core_Accel, backends_must_agree_that_memory_is_protected)
+TEST_F(Core_Accel, backends_must_agree_that_memory_is_protected)
 {
     // a protected frame of emulator:0, also imported by emulator:5, which never attests
     // protection: one memory cannot be protected for one importer and readable for the other
-    const int64 live = accel::detail::emulatorLiveAllocations();
+    const int64 live = accel_emu::emulatorLiveAllocations();
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 64, 7, true);
+    mem.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 64, 7, true);
     mem.size = 64;
     UMat secure = accel::wrapExternalMemory(emulator(DISCRETE), mem, MatShape({8, 8}), CV_8UC1);
     EXPECT_TRUE(accel::describe(secure).protectedContent);
-    const int64 imported = accel::detail::emulatorLiveAllocations();
+    const int64 imported = accel_emu::emulatorLiveAllocations();
     EXPECT_THROW(accel::wrapExternalMemory(failingDevice(), mem, MatShape({8, 8}), CV_8UC1), cv::Exception);
-    EXPECT_EQ(imported, accel::detail::emulatorLiveAllocations());     // the refused import was released
+    EXPECT_EQ(imported, accel_emu::emulatorLiveAllocations());     // the refused import was released
     secure.release();
-    EXPECT_EQ(live + 1, accel::detail::emulatorLiveAllocations());     // the protected allocation itself stays
+    EXPECT_EQ(live + 1, accel_emu::emulatorLiveAllocations());     // the protected allocation itself stays
 }
 
 #ifdef __linux__
-TEST(Core_Accel, dma_buf_fences_of_other_drivers_are_honoured)
+TEST_F(Core_Accel, dma_buf_fences_of_other_drivers_are_honoured)
 {
     // a dma-buf that another driver (a camera) fills: the frame is valid once its fence completes
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(16 * 16);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(16 * 16);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
     mem.size = 16 * 16;
     UMat frame = accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1);
 
-    accel::detail::emulatorDmaBufProduce(fd, 9, 20000);    // the camera writes 9s, 20 ms from now
+    accel_emu::emulatorDmaBufProduce(fd, 9, 20000);    // the camera writes 9s, 20 ms from now
     UMat out;
     cv::flip(frame, out, 1);                                // the device waits for the camera's fence
     EXPECT_EQ(9, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 
-    accel::detail::emulatorDmaBufProduce(fd, 4, 20000);
+    accel_emu::emulatorDmaBufProduce(fd, 4, 20000);
     EXPECT_EQ(4, frame.getMat(ACCESS_READ).at<uchar>(0, 0));   // and so does the CPU
 
-    const int attached = accel::detail::emulatorDmaBufAttachedFences(fd);
+    const int attached = accel_emu::emulatorDmaBufAttachedFences(fd);
     UMat src = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(5)));
     cv::flip(src, frame, 0);                                // a device write into the dma-buf...
-    EXPECT_GT(accel::detail::emulatorDmaBufAttachedFences(fd), attached);  // ...hands its fence on
+    EXPECT_GT(accel_emu::emulatorDmaBufAttachedFences(fd), attached);  // ...hands its fence on
 }
 
-TEST(Core_Accel, other_drivers_wait_for_opencv_reads)
+TEST_F(Core_Accel, other_drivers_wait_for_opencv_reads)
 {
     // dma_resv semantics: a camera that writes the next frame into the buffer waits for every
     // device read of the previous one, not only for the last write
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
-    accel::detail::emulatorDmaBufProduce(fd, 1, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
+    accel_emu::emulatorDmaBufProduce(fd, 1, 0);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
@@ -1171,18 +1261,18 @@ TEST(Core_Accel, other_drivers_wait_for_opencv_reads)
     runWithDeviceDelay(30000, [&]() {
         UMat out;
         cv::flip(frame, out, 1);                        // reads the frame 30 ms from now
-        accel::detail::emulatorDmaBufProduce(fd, 9, 0); // the next frame: after that read
+        accel_emu::emulatorDmaBufProduce(fd, 9, 0); // the next frame: after that read
         EXPECT_EQ(0, maxDiff(Mat(16, 16, CV_8UC1, Scalar(1)), out.getMat(ACCESS_READ)));
     });
     EXPECT_EQ(9, frame.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, work_whose_fence_cannot_be_attached_ends_before_the_call)
+TEST_F(Core_Accel, work_whose_fence_cannot_be_attached_ends_before_the_call)
 {
     // when end_device_access fails, other drivers would not wait for the work: the call that
     // queued it waits instead, so the buffer holds the result as soon as the call returns
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
@@ -1192,7 +1282,7 @@ TEST(Core_Accel, work_whose_fence_cannot_be_attached_ends_before_the_call)
     ASSERT_TRUE(raw != MAP_FAILED);
     runWithDeviceDelay(30000, [&]() {
         UMat src = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(4)));
-        accel::detail::emulatorFailNextDeviceAccessEnd();
+        accel_emu::emulatorFailNextDeviceAccessEnd();
         accel::resetTransferStats();
         cv::flip(src, frame, 0);
         EXPECT_GE(accel::getTransferStats().hostWaits, 1u);
@@ -1201,13 +1291,13 @@ TEST(Core_Accel, work_whose_fence_cannot_be_attached_ends_before_the_call)
     munmap((void*)raw, 256);
 }
 
-TEST(Core_Accel, every_device_access_bracket_ends)
+TEST_F(Core_Accel, every_device_access_bracket_ends)
 {
 #ifdef __linux__
     // two camera buffers in one call: when the second bracket cannot begin, the first one ends
     // anyway, and so does every bracket of a call that runs
     accel::Device d = emulator(COHERENT);
-    const int64 fa = accel::detail::emulatorCreateDmaBuf(256), fb = accel::detail::emulatorCreateDmaBuf(256);
+    const int64 fa = accel_emu::emulatorCreateDmaBuf(256), fb = accel_emu::emulatorCreateDmaBuf(256);
     accel::ExternalMemory ma, mb;
     ma.type = mb.type = accel::ExternalMemory::DMABUF_FD;
     ma.handle = fa;
@@ -1215,40 +1305,42 @@ TEST(Core_Accel, every_device_access_bracket_ends)
     ma.size = mb.size = 256;
     UMat a = accel::wrapExternalMemory(d, ma, MatShape({16, 16}), CV_8UC1);
     UMat b = accel::wrapExternalMemory(d, mb, MatShape({16, 16}), CV_8UC1);
-    const int64 unmatched = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_BRACKET);
+    const int64 unmatched = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_BRACKET);
     cv::flip(a, b, 0);
-    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fa));
-    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fb));
-    accel::detail::emulatorFailNextDeviceAccessBegin(1);
+    EXPECT_EQ(0, accel_emu::emulatorDmaBufOpenBrackets(fa));
+    EXPECT_EQ(0, accel_emu::emulatorDmaBufOpenBrackets(fb));
+    accel_emu::emulatorFailNextDeviceAccessBegin(1);
     EXPECT_THROW(cv::flip(a, b, 0), cv::Exception);
-    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fa));
-    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fb));
-    EXPECT_EQ(unmatched, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_BRACKET));
+    EXPECT_EQ(0, accel_emu::emulatorDmaBufOpenBrackets(fa));
+    EXPECT_EQ(0, accel_emu::emulatorDmaBufOpenBrackets(fb));
+    EXPECT_EQ(unmatched, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_BRACKET));
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, dma_bufs_need_a_backend_that_honours_their_fences)
+TEST_F(Core_Accel, dma_bufs_need_a_backend_that_honours_their_fences)
 {
-    accel::detail::registerLegacyEmulatorBackend();
-    accel::Device legacy = accel::Device::find("emulator-v1:1");   // a plugin of API version 1
+    accel_emu::registerLegacyEmulatorBackend();
+    accel::Device legacy = accel::Device::find("emulator-v1:1");   // a table without begin/end_device_access
     ASSERT_FALSE(legacy.empty());
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = fd;
     mem.size = 256;
-    const int64 live = accel::detail::emulatorLiveAllocations(COHERENT);
+    const int64 live = accel_emu::emulatorLiveAllocations(COHERENT);
     EXPECT_THROW(accel::wrapExternalMemory(legacy, mem, MatShape({16, 16}), CV_8UC1), cv::Exception);
-    EXPECT_EQ(live, accel::detail::emulatorLiveAllocations(COHERENT));    // the import was given back
+    EXPECT_EQ(live, accel_emu::emulatorLiveAllocations(COHERENT));    // the import was given back
     EXPECT_NO_THROW(accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({16, 16}), CV_8UC1));
 }
 
-TEST(Core_Accel, multi_plane_images_in_one_or_several_buffers)
+TEST_F(Core_Accel, multi_plane_images_in_one_or_several_buffers)
 {
     accel::Device d = emulator(COHERENT);
     // NV12, 16x16, in one dma-buf: luma rows of 32 bytes, then chroma (8x8 pairs) at offset 512
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(512 + 32 * 8);
-    accel::detail::emulatorDmaBufProduce(fd, 7, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(512 + 32 * 8);
+    accel_emu::emulatorDmaBufProduce(fd, 7, 0);
     accel::ExternalImage nv12;
     nv12.type = accel::ExternalMemory::DMABUF_FD;
     accel::ExternalPlane y, uv;
@@ -1274,8 +1366,8 @@ TEST(Core_Accel, multi_plane_images_in_one_or_several_buffers)
     EXPECT_EQ(7, flipped.getMat(ACCESS_READ).at<uchar>(0, 0));
 
     // one fd per plane
-    const int64 fdY = accel::detail::emulatorCreateDmaBuf(256), fdUV = accel::detail::emulatorCreateDmaBuf(128);
-    accel::detail::emulatorDmaBufProduce(fdUV, 3, 0);
+    const int64 fdY = accel_emu::emulatorCreateDmaBuf(256), fdUV = accel_emu::emulatorCreateDmaBuf(128);
+    accel_emu::emulatorDmaBufProduce(fdUV, 3, 0);
     nv12.planes[0].handle = fdY;
     nv12.planes[0].pitch = 16;
     nv12.planes[1].handle = fdUV;
@@ -1305,11 +1397,11 @@ static accel::ExternalImage nv12Image(int64 fd, size_t uvOffset)
     return img;
 }
 
-TEST(Core_Accel, image_planes_carry_their_image_to_the_backend)
+TEST_F(Core_Accel, image_planes_carry_their_image_to_the_backend)
 {
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
-    accel::detail::emulatorDmaBufProduce(fd, 5, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256 + 128);
+    accel_emu::emulatorDmaBufProduce(fd, 5, 0);
     accel::ExternalImage img = nv12Image(fd, 256);
     img.color.model = accel::COLOR_MODEL_BT709;
     img.color.range = accel::COLOR_RANGE_LIMITED;
@@ -1346,13 +1438,13 @@ TEST(Core_Accel, image_planes_carry_their_image_to_the_backend)
     EXPECT_EQ(5, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image)
+TEST_F(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image)
 {
     // a frame of the coherent device used on the discrete one: its planes are uploaded into
     // temporaries, and each view still says which image and which plane it is, and where its
     // copy lies (also for a part of a plane, and for one plane copied twice)
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
-    accel::detail::emulatorDmaBufProduce(fd, 5, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256 + 128);
+    accel_emu::emulatorDmaBufProduce(fd, 5, 0);
     accel::ExternalImage img = nv12Image(fd, 256);
     img.color.model = accel::COLOR_MODEL_BT709;
     std::vector<UMat> planes = accel::wrapExternalImage(emulator(COHERENT), img);
@@ -1385,10 +1477,10 @@ TEST(Core_Accel, planes_copied_to_another_device_are_still_planes_of_their_image
     EXPECT_EQ(5, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, image_planes_are_checked)
+TEST_F(Core_Accel, image_planes_are_checked)
 {
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(1024);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(1024);
     const accel::ExternalImage img = nv12Image(fd, 256);
     EXPECT_NO_THROW(accel::wrapExternalImage(d, img));
     accel::ExternalImage bad = img;
@@ -1412,13 +1504,13 @@ TEST(Core_Accel, image_planes_are_checked)
     EXPECT_NO_THROW(accel::wrapExternalImage(d, other));
 }
 
-TEST(Core_Accel, planes_are_grouped_by_the_memory_they_lie_in)
+TEST_F(Core_Accel, planes_are_grouped_by_the_memory_they_lie_in)
 {
 #ifdef __linux__
     // the chroma plane through another descriptor of the same dma-buf: still one buffer, and
     // planes that overlap in it are refused whatever handles they came through
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(1024);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(1024);
     const int fd2 = dup((int)fd);
     ASSERT_GE(fd2, 0);
     accel::ExternalImage img = nv12Image(fd, 256);
@@ -1430,13 +1522,15 @@ TEST(Core_Accel, planes_are_grouped_by_the_memory_they_lie_in)
     img.planes[1].offset = 128;
     EXPECT_THROW(accel::wrapExternalImage(d, img), cv::Exception);
     close(fd2);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, image_planes_have_their_own_layouts)
+TEST_F(Core_Accel, image_planes_have_their_own_layouts)
 {
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(4096);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(4096);
     const uint64 tiled = 0x0100000000000002ull;
     accel::ExternalImage img = nv12Image(fd, 1024);
     img.planes[1].layoutModifier = tiled;       // the chroma plane is tiled, the luma plane linear
@@ -1451,12 +1545,12 @@ TEST(Core_Accel, image_planes_have_their_own_layouts)
     EXPECT_THROW(accel::wrapExternalImage(d, noSize), cv::Exception);
 }
 
-TEST(Core_Accel, tiled_layouts_never_reach_linear_code)
+TEST_F(Core_Accel, tiled_layouts_never_reach_linear_code)
 {
     accel::Device d = emulator(COHERENT);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
-    mem.handle = accel::detail::emulatorCreateDmaBuf(256);
+    mem.handle = accel_emu::emulatorCreateDmaBuf(256);
     mem.size = 256;
     mem.layoutModifier = 0x0100000000000002ull;    // a vendor tiling
     UMat tiled = accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1);
@@ -1468,7 +1562,7 @@ TEST(Core_Accel, tiled_layouts_never_reach_linear_code)
     // a backend that does not know the layout reports linear memory: refused
     accel::ExternalMemory ptr;
     ptr.type = accel::ExternalMemory::DEVICE_POINTER;
-    ptr.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 256, 0, false);
+    ptr.handle = accel_emu::emulatorAllocateExternal(DISCRETE, 256, 0, false);
     ptr.size = 256;
     ptr.layoutModifier = 0x0100000000000002ull;
     EXPECT_THROW(accel::wrapExternalMemory(emulator(DISCRETE), ptr, MatShape({16, 16}), CV_8UC1), cv::Exception);
@@ -1476,7 +1570,7 @@ TEST(Core_Accel, tiled_layouts_never_reach_linear_code)
 
 #endif // __linux__
 
-TEST(Core_Accel, memory_reaches_another_device_as_a_dma_buf_without_copies)
+TEST_F(Core_Accel, memory_reaches_another_device_as_a_dma_buf_without_copies)
 {
 #ifdef __linux__
     // A GPU result (emulator:1) used by an NPU (emulator:2) that cannot address the GPU's
@@ -1508,22 +1602,24 @@ TEST(Core_Accel, memory_reaches_another_device_as_a_dma_buf_without_copies)
     UMat y = makeOn(gpu, src);
     accel::ExternalMemory f;
     f.type = accel::ExternalMemory::DMABUF_FD;
-    f.handle = accel::detail::emulatorExportDmaBuf(y);
+    f.handle = accel_emu::emulatorExportDmaBuf(y);
     f.size = y.total();
     UMat viaFd = accel::wrapExternalMemory(npu, f, MatShape({16, 24}), CV_8UC1);
     EXPECT_EQ(accel::detail::backingId(y), accel::detail::backingId(viaFd));
     close((int)f.handle);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, exports_keep_the_layout_and_the_image)
+TEST_F(Core_Accel, exports_keep_the_layout_and_the_image)
 {
 #ifdef __linux__
     // a tiled frame exported keeps its layout, whole; the same bytes are never wrapped as linear
     accel::Device gpu = emulator(COHERENT), npu = emulator(NONCOHERENT);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
-    mem.handle = accel::detail::emulatorCreateDmaBuf(256);
+    mem.handle = accel_emu::emulatorCreateDmaBuf(256);
     mem.size = 256;
     mem.layoutModifier = 0x0100000000000002ull;
     UMat tiled = accel::wrapExternalMemory(gpu, mem, MatShape({16, 16}), CV_8UC1);
@@ -1539,7 +1635,7 @@ TEST(Core_Accel, exports_keep_the_layout_and_the_image)
     close((int)e.handle);
 
     // an image exported with its format, colours and planes, wrapped again on another device
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256 + 128);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256 + 128);
     accel::ExternalImage img = nv12Image(fd, 256);
     img.color.model = accel::COLOR_MODEL_BT709;
     img.color.range = accel::COLOR_RANGE_LIMITED;
@@ -1554,10 +1650,12 @@ TEST(Core_Accel, exports_keep_the_layout_and_the_image)
     EXPECT_EQ(accel::COLOR_RANGE_LIMITED, accel::describePlane(other[1]).color.range);
     for (size_t i = 0; i < x.planes.size(); i++)
         close((int)x.planes[i].handle);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, exports_are_settled_snapshots)
+TEST_F(Core_Accel, exports_are_settled_snapshots)
 {
 #ifdef __linux__
     // nothing is handed to other drivers while the CPU may still write it, or after failed writes
@@ -1570,15 +1668,17 @@ TEST(Core_Accel, exports_are_settled_snapshots)
     {
         Mat view = y.getMat(ACCESS_WRITE);
         view.setTo(Scalar(2));
-        accel::detail::emulatorFailNextCpuFlush();  // the CPU's writes may reach the memory only in part
+        accel_emu::emulatorFailNextCpuFlush();  // the CPU's writes may reach the memory only in part
     }
     EXPECT_THROW(accel::exportExternalMemory(y), cv::Exception);
     accel::ExternalMemory e = accel::exportExternalMemory(x);
     close((int)e.handle);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
+TEST_F(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
 {
 #ifdef __linux__
     // a frame of a secure heap, wrapped on the GPU, processed on the NPU: imported there as
@@ -1586,7 +1686,7 @@ TEST(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
     accel::Device gpu = emulator(COHERENT), npu = emulator(NONCOHERENT);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
-    mem.handle = accel::detail::emulatorCreateDmaBuf(256, true);
+    mem.handle = accel_emu::emulatorCreateDmaBuf(256, true);
     mem.size = 256;
     mem.protectedContent = true;
     UMat secure = accel::wrapExternalMemory(gpu, mem, MatShape({16, 16}), CV_8UC1);
@@ -1598,16 +1698,18 @@ TEST(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
     EXPECT_EQ(2, accel::detail::backingImports(secure));
     EXPECT_TRUE(npu == accel::describe(out).device);
     EXPECT_TRUE(accel::describe(out).protectedContent);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, asking_a_device_imports_nothing)
+TEST_F(Core_Accel, asking_a_device_imports_nothing)
 {
 #ifdef __linux__
     // the NPU is asked whether it runs the call on memory it would import (QUERY), and declines:
     // nothing was imported for the question, and the call runs on the CPU
     UMat x = makeOn(emulator(COHERENT), Mat(8, 8, CV_8UC1, Scalar(3)));
-    accel::detail::emulatorDisableOps(NONCOHERENT, true);
+    accel_emu::emulatorDisableOps(NONCOHERENT, true);
     {
         accel::ExecutionScope scope(emulator(NONCOHERENT));
         UMat out;
@@ -1616,11 +1718,13 @@ TEST(Core_Accel, asking_a_device_imports_nothing)
         EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
         EXPECT_EQ(1, accel::detail::backingImports(x));
     }
-    accel::detail::emulatorDisableOps(NONCOHERENT, false);
+    accel_emu::emulatorDisableOps(NONCOHERENT, false);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, memory_given_out_by_handle_is_never_shared_as_a_dma_buf)
+TEST_F(Core_Accel, memory_given_out_by_handle_is_never_shared_as_a_dma_buf)
 {
 #ifdef __linux__
     // code that got UMat::handle() orders its work with the device's default stream only: the
@@ -1636,10 +1740,12 @@ TEST(Core_Accel, memory_given_out_by_handle_is_never_shared_as_a_dma_buf)
     cv::flip(x, out, 0);            // copied to the NPU instead of imported there
     EXPECT_EQ(1, accel::detail::backingImports(x));
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
+TEST_F(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
 {
 #ifdef __linux__
     // A tiled frame of the coherent device as the output of a call whose input lives on the
@@ -1648,7 +1754,7 @@ TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
     // frame is left alone.
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
-    mem.handle = accel::detail::emulatorCreateDmaBuf(256);
+    mem.handle = accel_emu::emulatorCreateDmaBuf(256);
     mem.size = 256;
     mem.layoutModifier = 0x0100000000000002ull;    // a vendor tiling
     uchar* frame = (uchar*)mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED, (int)mem.handle, 0);
@@ -1663,10 +1769,12 @@ TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
     }
     EXPECT_EQ(0, cvtest::norm(Mat(1, 256, CV_8UC1, frame), Mat(1, 256, CV_8UC1, Scalar(5)), NORM_INF));
     munmap(frame, 256);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, an_output_placed_by_its_allocator_decides_where_the_call_runs)
+TEST_F(Core_Accel, an_output_placed_by_its_allocator_decides_where_the_call_runs)
 {
     // the output's own allocator puts it on a device: a call with host inputs runs there, and
     // one whose inputs are elsewhere still leaves its result where the allocator says
@@ -1689,7 +1797,7 @@ TEST(Core_Accel, an_output_placed_by_its_allocator_decides_where_the_call_runs)
     EXPECT_EQ(0, maxDiff(ref, placed.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, device_access_checks_the_stream)
+TEST_F(Core_Accel, device_access_checks_the_stream)
 {
     UMat u = makeOn(emulator(DISCRETE), Mat(4, 4, CV_8UC1, Scalar(1)));
     accel::Stream other = accel::Stream::getDefault(emulator(COHERENT));
@@ -1697,7 +1805,7 @@ TEST(Core_Accel, device_access_checks_the_stream)
     EXPECT_NO_THROW({ accel::DeviceAccess acc(u, accel::Stream::getDefault(emulator(DISCRETE)), ACCESS_READ); });
 }
 
-TEST(Core_Accel, aliases_of_one_memory_share_one_buffer)
+TEST_F(Core_Accel, aliases_of_one_memory_share_one_buffer)
 {
     accel::Device d = emulator(DISCRETE);
     UMat owner = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(1)));
@@ -1723,7 +1831,7 @@ TEST(Core_Accel, aliases_of_one_memory_share_one_buffer)
     EXPECT_THROW(accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1), cv::Exception);
 }
 
-TEST(Core_Accel, results_of_functions_without_a_hook_stay_on_the_device)
+TEST_F(Core_Accel, results_of_functions_without_a_hook_stay_on_the_device)
 {
     // shape-changing functions create their outputs with UMat::create, not after an input's shape
     accel::Device d = emulator(DISCRETE);
@@ -1764,7 +1872,7 @@ static void forwardingCall(InputArray src, OutputArray dst)
     cv::repeat(src, 1, 2, dst);
 }
 
-TEST(Core_Accel, placement_by_call_looks_at_the_innermost_call)
+TEST_F(Core_Accel, placement_by_call_looks_at_the_innermost_call)
 {
     // the arguments of an outer call say nothing about where an inner call with arguments of
     // its own puts its results
@@ -1793,10 +1901,10 @@ TEST(Core_Accel, placement_by_call_looks_at_the_innermost_call)
     EXPECT_EQ(Vec2b(1, 2), merged.getMat(ACCESS_READ).at<Vec2b>(3, 5));
 }
 
-TEST(Core_Accel, a_host_scope_keeps_data_and_work_on_the_host)
+TEST_F(Core_Accel, a_host_scope_keeps_data_and_work_on_the_host)
 {
     // the host scope is the CPU: new UMat data is host memory, not OpenCL's, and no OpenCL kernel runs
-    accel::detail::registerEmulatorBackend();
+    accel_emu::registerEmulatorBackend();
     accel::ExecutionScope scope{accel::Device()};
     EXPECT_FALSE(cv::ocl::useOpenCL());
     UMat a(8, 8, CV_8UC1, Scalar(1)), out;
@@ -1806,13 +1914,13 @@ TEST(Core_Accel, a_host_scope_keeps_data_and_work_on_the_host)
     EXPECT_EQ(1, out.getMat(ACCESS_READ).at<uchar>(15, 15));
 }
 
-TEST(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
+TEST_F(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
 {
     accel::Device d = emulator(COHERENT);
     Mat src(8, 8, CV_8UC1), ref;
     randu(src, 0, 255);
     cv::flip(src, ref, 0);
-    accel::detail::emulatorDisableOps(COHERENT, true);
+    accel_emu::emulatorDisableOps(COHERENT, true);
     {
         accel::ExecutionScope scope(d);
         accel::resetTransferStats();
@@ -1822,10 +1930,10 @@ TEST(Core_Accel, a_device_scope_decides_even_when_its_device_declines)
         EXPECT_TRUE(d == accel::describe(out).device);              // the result on the scope's device
         EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
     }
-    accel::detail::emulatorDisableOps(COHERENT, false);
+    accel_emu::emulatorDisableOps(COHERENT, false);
 }
 
-TEST(Core_Accel, device_choice_counts_copies_back_to_another_device_twice)
+TEST_F(Core_Accel, device_choice_counts_copies_back_to_another_device_twice)
 {
     // 64 bytes on the discrete device, 40 host bytes, a 64-byte output on the coherent device.
     // On the discrete device the result goes to the output through the CPU: downloaded from the
@@ -1848,7 +1956,7 @@ TEST(Core_Accel, device_choice_counts_copies_back_to_another_device_twice)
     EXPECT_EQ(COHERENT, ran);
 }
 
-TEST(Core_Accel, device_choice_counts_host_copies_that_must_move)
+TEST_F(Core_Accel, device_choice_counts_host_copies_that_must_move)
 {
     // the large input sits on the discrete device, but the CPU wrote it last: using it there in
     // place costs an upload of all of it, more than copying the small input to the other device
@@ -1867,7 +1975,7 @@ TEST(Core_Accel, device_choice_counts_host_copies_that_must_move)
     EXPECT_EQ(2, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, device_access_gives_the_address_kernels_use)
+TEST_F(Core_Accel, device_access_gives_the_address_kernels_use)
 {
     // host memory a device addresses at another address than the CPU (no unified addressing)
     accel::Device d = emulator(COHERENT);
@@ -1885,13 +1993,13 @@ TEST(Core_Accel, device_access_gives_the_address_kernels_use)
     EXPECT_EQ(16u * 32u, acc.offset());
 }
 
-TEST(Core_Accel, a_stream_shared_by_threads_is_used_by_one_at_a_time)
+TEST_F(Core_Accel, a_stream_shared_by_threads_is_used_by_one_at_a_time)
 {
     // emulator:2's streams are not thread-safe: two threads in ExecutionScopes of one explicit
     // stream must never be inside the backend with it at the same time
     accel::Device d = emulator(NONCOHERENT);
     accel::Stream shared(d);
-    const int64 races = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_STREAM);
+    const int64 races = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_STREAM);
     auto work = [&](int value) {
         accel::ExecutionScope scope(shared);
         UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(value))), out;
@@ -1902,14 +2010,14 @@ TEST(Core_Accel, a_stream_shared_by_threads_is_used_by_one_at_a_time)
     std::thread t1(work, 1), t2(work, 2);
     t1.join();
     t2.join();
-    EXPECT_EQ(races, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_STREAM));
+    EXPECT_EQ(races, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_STREAM));
 }
 
-TEST(Core_Accel, fences_of_another_device_are_waited_for_where_the_device_cannot)
+TEST_F(Core_Accel, fences_of_another_device_are_waited_for_where_the_device_cannot)
 {
     // emulator:6 reaches emulator:0's memory (peer access) but cannot wait for its fences on
     // the device: the wait for the queued upload into the output happens on the CPU instead
-    const int64 foreign = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_FENCE);
+    const int64 foreign = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_FENCE);
     Mat src(8, 8, CV_8UC1), ref;
     randu(src, 0, 255);
     cv::flip(src, ref, 1);
@@ -1921,14 +2029,14 @@ TEST(Core_Accel, fences_of_another_device_are_waited_for_where_the_device_cannot
         EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
         EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
     });
-    EXPECT_EQ(foreign, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_FENCE));
+    EXPECT_EQ(foreign, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_FENCE));
 }
 
-TEST(Core_Accel, a_peer_device_gets_its_own_address_of_the_memory)
+TEST_F(Core_Accel, a_peer_device_gets_its_own_address_of_the_memory)
 {
     // emulator:6 reaches emulator:0's memory through a window of its own, as without unified
     // addressing: its kernels, and DeviceAccess on its streams, get that address
-    const int64 wrong = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_ADDRESS);
+    const int64 wrong = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_ADDRESS);
     Mat src(8, 8, CV_8UC1), ref;
     randu(src, 0, 255);
     cv::flip(src, ref, 1);
@@ -1938,7 +2046,7 @@ TEST(Core_Accel, a_peer_device_gets_its_own_address_of_the_memory)
     cv::flip(in, out, 1);           // on emulator:6, writing emulator:0's memory in place
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
-    EXPECT_EQ(wrong, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_ADDRESS));
+    EXPECT_EQ(wrong, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_ADDRESS));
 
     const uint64 own = accel::DeviceAccess(out, accel::Stream::getDefault(emulator(DISCRETE)), ACCESS_READ).handle();
     const uint64 peer = accel::DeviceAccess(out, accel::Stream::getDefault(emulator(PEER)), ACCESS_READ).handle();
@@ -1946,9 +2054,9 @@ TEST(Core_Accel, a_peer_device_gets_its_own_address_of_the_memory)
     EXPECT_EQ(own + (7ull << 52), peer);
 }
 
-TEST(Core_Accel, structs_too_short_for_their_fields_are_refused)
+TEST_F(Core_Accel, structs_too_short_for_their_fields_are_refused)
 {
-    const OpenCV_Core_Accel_API* api = accel::detail::emulatorBackendTable();
+    const OpenCV_Core_Accel_API* api = accel_emu::emulatorBackendTable();
     struct
     {
         cvAccelDeviceInfo info;
@@ -1980,25 +2088,25 @@ TEST(Core_Accel, structs_too_short_for_their_fields_are_refused)
         ASSERT_EQ(0xAB, ((const uchar*)&small)[i]) << "byte " << i << " was written";
 
     // a table that claims a newer API version than core knows follows rules core does not: refused
-    static OpenCV_Core_Accel_API newer = *accel::detail::emulatorBackendTable();
+    static OpenCV_Core_Accel_API newer = *accel_emu::emulatorBackendTable();
     newer.api_header.api_version = CV_ACCEL_API_VERSION + 1;
     newer.v0.backend_name = "emulator-from-the-future";
     EXPECT_EQ(0, accel::detail::registerBackendTable(&newer));
 
     // a table of ABI version 0 had other layouts of allocations and views: refused, never read
-    static OpenCV_Core_Accel_API older = *accel::detail::emulatorBackendTable();
+    static OpenCV_Core_Accel_API older = *accel_emu::emulatorBackendTable();
     older.api_header.min_api_version = 0;
     older.v0.backend_name = "emulator-of-abi-0";
     EXPECT_EQ(0, accel::detail::registerBackendTable(&older));
 }
 
 #ifdef __linux__
-TEST(Core_Accel, wrapped_dma_buf_outlives_the_descriptor)
+TEST_F(Core_Accel, wrapped_dma_buf_outlives_the_descriptor)
 {
     // the descriptor is borrowed: the caller may close it once the wrap returned
     accel::Device d = emulator(COHERENT);
-    const int64 fd = accel::detail::emulatorCreateDmaBuf(256);
-    accel::detail::emulatorDmaBufProduce(fd, 8, 0);
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(256);
+    accel_emu::emulatorDmaBufProduce(fd, 8, 0);
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DMABUF_FD;
     mem.handle = dup((int)fd);
@@ -2014,7 +2122,7 @@ TEST(Core_Accel, wrapped_dma_buf_outlives_the_descriptor)
 }
 #endif
 
-TEST(Core_Accel, functions_without_a_hook_still_work)
+TEST_F(Core_Accel, functions_without_a_hook_still_work)
 {
     // cv::add has no accelerator hook: OpenCL (if active) must decline the device memory
     // and the CPU path must reach it through the protocol
@@ -2026,13 +2134,13 @@ TEST(Core_Accel, functions_without_a_hook_still_work)
     EXPECT_EQ(0, maxDiff(Mat(16, 16, CV_8UC1, Scalar(42)), uc.getMat(ACCESS_READ)));
 }
 
-TEST(Core_Accel, device_idle_memory_holds_back_device_work)
+TEST_F(Core_Accel, device_idle_memory_holds_back_device_work)
 {
     accel::Device d = emulator(MANAGED);
     Mat src(32, 32, CV_8UC1);
     randu(src, 0, 255);
     UMat a = makeOn(d, src), b = makeOn(d, src);
-    const int64 violations = accel::detail::emulatorViolations();
+    const int64 violations = accel_emu::emulatorViolations();
 
     accel::resetTransferStats();
     {
@@ -2047,11 +2155,11 @@ TEST(Core_Accel, device_idle_memory_holds_back_device_work)
     Mat ref;
     cv::flip(src, ref, 1);
     EXPECT_EQ(0, maxDiff(ref, out2.getMat(ACCESS_READ)));
-    EXPECT_EQ(violations, accel::detail::emulatorViolations());
+    EXPECT_EQ(violations, accel_emu::emulatorViolations());
 }
 
 #ifndef _WIN32
-TEST(Core_Accel, mat_view_chain_ends_its_mapping)
+TEST_F(Core_Accel, mat_view_chain_ends_its_mapping)
 {
     // the CPU may touch this memory only while the device is idle: an open mapping keeps
     // device work away, so it has to end when the last view goes
@@ -2068,7 +2176,7 @@ TEST(Core_Accel, mat_view_chain_ends_its_mapping)
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
 }
 
-TEST(Core_Accel, device_access_keeps_the_cpu_out_of_device_idle_memory)
+TEST_F(Core_Accel, device_access_keeps_the_cpu_out_of_device_idle_memory)
 {
     accel::Device d = emulator(MANAGED);
     UMat a = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
@@ -2085,7 +2193,7 @@ TEST(Core_Accel, device_access_keeps_the_cpu_out_of_device_idle_memory)
     EXPECT_EQ(1, a.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, cpu_waits_for_queued_device_work)
+TEST_F(Core_Accel, cpu_waits_for_queued_device_work)
 {
     accel::Device d = emulator(DISCRETE);
     runWithDeviceDelay(20000, [&]() {
@@ -2101,11 +2209,11 @@ TEST(Core_Accel, cpu_waits_for_queued_device_work)
     });
 }
 
-TEST(Core_Accel, release_while_in_flight_is_deferred)
+TEST_F(Core_Accel, release_while_in_flight_is_deferred)
 {
     accel::Device d = emulator(DISCRETE);
     runWithDeviceDelay(20000, [&]() {
-        const int64 before = accel::detail::emulatorLiveAllocations();
+        const int64 before = accel_emu::emulatorLiveAllocations();
         Mat src(32, 32, CV_8UC1, Scalar(1));
         {
             UMat u = makeOn(d, src);
@@ -2113,18 +2221,18 @@ TEST(Core_Accel, release_while_in_flight_is_deferred)
             cv::flip(u, out, 1);
             // both released while the flip is still queued
         }
-        EXPECT_GT(accel::detail::emulatorLiveAllocations(), before);   // not freed under the device
+        EXPECT_GT(accel_emu::emulatorLiveAllocations(), before);   // not freed under the device
 
         accel::Stream::getDefault(d).waitForCompletion();
         UMat trigger;                       // any later release collects finished buffers
         trigger.allocator = d.allocator();
         trigger.create(1, 1, CV_8UC1);
         trigger.release();
-        EXPECT_EQ(before, accel::detail::emulatorLiveAllocations());
+        EXPECT_EQ(before, accel_emu::emulatorLiveAllocations());
     });
 }
 
-TEST(Core_Accel, device_sync_waits_for_streams_of_finished_threads)
+TEST_F(Core_Accel, device_sync_waits_for_streams_of_finished_threads)
 {
     // managed memory: the CPU may touch it only while the device is idle, which includes work
     // queued by a thread that has exited since (its stream is gone, its work is not)
@@ -2132,14 +2240,14 @@ TEST(Core_Accel, device_sync_waits_for_streams_of_finished_threads)
     UMat x = makeOn(d, Mat(64, 64, CV_8UC1, Scalar(1)));
     UMat y = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(2)));
     UMat out;
-    const int64 violations = accel::detail::emulatorViolations();
+    const int64 violations = accel_emu::emulatorViolations();
     runWithDeviceDelay(20000, [&]() { cv::flip(x, out, 0); });     // still queued when the thread ends
     EXPECT_EQ(2, y.getMat(ACCESS_READ).at<uchar>(0, 0));           // another buffer: the device drains first
-    EXPECT_EQ(violations, accel::detail::emulatorViolations());
+    EXPECT_EQ(violations, accel_emu::emulatorViolations());
     EXPECT_EQ(1, out.getMat(ACCESS_READ).at<uchar>(0, 0));
 }
 
-TEST(Core_Accel, wait_limit_never_hands_back_memory_the_device_still_uses)
+TEST_F(Core_Accel, wait_limit_never_hands_back_memory_the_device_still_uses)
 {
     accel::Device d = emulator(COHERENT);
     accel::detail::setWaitTimeout(5);  // ms; device work below takes 50 ms
@@ -2162,7 +2270,7 @@ TEST(Core_Accel, wait_limit_never_hands_back_memory_the_device_still_uses)
     accel::detail::reviveDevices();
 }
 
-TEST(Core_Accel, aliases_are_ordered_through_their_shared_state)
+TEST_F(Core_Accel, aliases_are_ordered_through_their_shared_state)
 {
     accel::Device d = emulator(DISCRETE);
     runWithDeviceDelay(20000, [&]() {
@@ -2179,7 +2287,7 @@ TEST(Core_Accel, aliases_are_ordered_through_their_shared_state)
     });
 }
 
-TEST(Core_Accel, copy_into_wrapped_memory_is_done_on_return)
+TEST_F(Core_Accel, copy_into_wrapped_memory_is_done_on_return)
 {
     accel::Device d = emulator(COHERENT);
     runWithDeviceDelay(20000, [&]() {
@@ -2199,10 +2307,10 @@ TEST(Core_Accel, copy_into_wrapped_memory_is_done_on_return)
 }
 #endif
 
-TEST(Core_Accel, device_failures_never_escape_a_destructor)
+TEST_F(Core_Accel, device_failures_never_escape_a_destructor)
 {
     accel::Device d = failingDevice();
-    const int64 base = accel::detail::emulatorLiveAllocations(FAILING);    // memory other tests leaked on purpose
+    const int64 base = accel_emu::emulatorLiveAllocations(FAILING);    // memory other tests leaked on purpose
     Mat src(16, 16, CV_8UC1), other(16, 16, CV_8UC1);
     randu(src, 0, 128);
     randu(other, 128, 255);
@@ -2210,13 +2318,13 @@ TEST(Core_Accel, device_failures_never_escape_a_destructor)
     // 1. work that fails asynchronously: readers get the error, releases free everything
     {
         UMat u = makeOn(d, src);
-        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
         UMat out;
         cv::flip(u, out, 1);
         EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
-        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
     }
-    EXPECT_EQ(base, accel::detail::emulatorLiveAllocations(FAILING));
+    EXPECT_EQ(base, accel_emu::emulatorLiveAllocations(FAILING));
 
     // 2. a UMat made from a Mat: a failed result is not copied back, the Mat keeps its content
     {
@@ -2225,21 +2333,21 @@ TEST(Core_Accel, device_failures_never_escape_a_destructor)
         {
             UMat u = m.getUMat(ACCESS_RW);
             UMat dev = makeOn(d, other);
-            accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
+            accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR);
             dev.copyTo(u);
-            accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+            accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
         }
         EXPECT_EQ(0, maxDiff(src, m));
     }
-    EXPECT_EQ(base, accel::detail::emulatorLiveAllocations(FAILING));
+    EXPECT_EQ(base, accel_emu::emulatorLiveAllocations(FAILING));
 
     // 3. calls that fail after queuing their work: what they write is invalid until written whole
     {
         UMat u = makeOn(d, src), out, c = makeOn(d, other);
-        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel::detail::EMU_FAIL_CALLS);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel_emu::EMU_FAIL_CALLS);
         EXPECT_THROW(cv::flip(u, out, 1), cv::Exception);
         EXPECT_THROW(u.copyTo(c), cv::Exception);
-        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
         EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
         EXPECT_THROW(c.getMat(ACCESS_READ), cv::Exception);
 
@@ -2249,26 +2357,26 @@ TEST(Core_Accel, device_failures_never_escape_a_destructor)
         out.copyTo(res);                    // a download into res, no host copy kept
         EXPECT_EQ(0, maxDiff(ref, res));
     }
-    EXPECT_EQ(base, accel::detail::emulatorLiveAllocations(FAILING));
+    EXPECT_EQ(base, accel_emu::emulatorLiveAllocations(FAILING));
 
     // 4. a lost device: its memory is leaked rather than freed, the other devices keep working
     {
         UMat u = makeOn(d, src);
-        const int64 live = accel::detail::emulatorLiveAllocations(FAILING);
-        accel::detail::emulatorInjectFailure(CV_ACCEL_DEVICE_LOST);
+        const int64 live = accel_emu::emulatorLiveAllocations(FAILING);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_DEVICE_LOST);
         EXPECT_THROW(u.getMat(ACCESS_READ), cv::Exception);
         u.release();
-        EXPECT_EQ(live, accel::detail::emulatorLiveAllocations(FAILING));
+        EXPECT_EQ(live, accel_emu::emulatorLiveAllocations(FAILING));
     }
     UMat a = makeOn(emulator(DISCRETE), src), b;
     accel::resetTransferStats();
     cv::flip(a, b, 1);
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-    accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
     accel::detail::reviveDevices();
 }
 
-TEST(Core_Accel, borrowed_memory_waits_until_failed_work_provably_stopped)
+TEST_F(Core_Accel, borrowed_memory_waits_until_failed_work_provably_stopped)
 {
     // A copy into memory of "another library" queues its work and fails, and afterwards the
     // device can neither record a fence nor be synchronized: nothing proves that the copy
@@ -2277,22 +2385,22 @@ TEST(Core_Accel, borrowed_memory_waits_until_failed_work_provably_stopped)
     accel::Device d = failingDevice();
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(FAILING, 256, 1, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(FAILING, 256, 1, false);
     mem.size = 256;
     UMat borrowed = accel::wrapExternalMemory(d, mem, MatShape({16, 16}), CV_8UC1);
     UMat src = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(9)));
-    accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
-                                         accel::detail::EMU_FAIL_CALLS | accel::detail::EMU_FAIL_RECORD);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
+                                         accel_emu::EMU_FAIL_CALLS | accel_emu::EMU_FAIL_RECORD);
     EXPECT_THROW(src.copyTo(borrowed), cv::Exception);
 
     std::atomic<bool> released(false);
     std::thread owner([&]() { borrowed.release(); released = true; });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     EXPECT_FALSE(released.load());      // device_synchronize cannot record its fences: no proof yet
-    accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel::detail::EMU_FAIL_SYNC);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel_emu::EMU_FAIL_SYNC);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     EXPECT_FALSE(released.load());      // nor when it fails outright
-    accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
     owner.join();                       // the device can be synchronized again: handed back
     EXPECT_TRUE(released.load());
     accel::detail::reviveDevices();
@@ -2301,7 +2409,7 @@ TEST(Core_Accel, borrowed_memory_waits_until_failed_work_provably_stopped)
 // "emulator-wide": a backend with 70 devices, device i behaving as emulator:(i % 7). Core
 // stamps the device index on what the backend returns, so only entries that take a device change.
 enum { WIDE_DEVICES = 70 };
-static const OpenCV_Core_Accel_API_v0_0_api_entries& emu() { return accel::detail::emulatorBackendTable()->v0; }
+static const OpenCV_Core_Accel_API_v1_0_api_entries& emu() { return accel_emu::emulatorBackendTable()->v0; }
 static int wideBase(int device) { return device < 0 ? device : device % 7; }
 static cvAccelStatus CV_API_CALL wide_get_device_count(int* n) CV_ACCEL_NOEXCEPT
 {
@@ -2349,7 +2457,7 @@ static cvAccelStatus CV_API_CALL wide_describe_allocation(int device, uint64_t s
 static accel::Device wideDevice(int index)
 {
     static OpenCV_Core_Accel_API table = []() {
-        OpenCV_Core_Accel_API t = *accel::detail::emulatorBackendTable();
+        OpenCV_Core_Accel_API t = *accel_emu::emulatorBackendTable();
         t.v0.backend_name = "emulator-wide";
         t.v0.get_device_count = wide_get_device_count;
         t.v0.get_device_info = wide_get_device_info;
@@ -2362,14 +2470,99 @@ static accel::Device wideDevice(int index)
         t.v0.describe_allocation = wide_describe_allocation;
         return t;
     }();
-    accel::detail::registerEmulatorBackend();
+    accel_emu::registerEmulatorBackend();
     CV_Assert(accel::detail::registerBackendTable(&table, -102) > 0);
     accel::Device d = accel::Device::find(cv::format("emulator-wide:%d", index));
     CV_Assert(!d.empty());
     return d;
 }
 
-TEST(Core_Accel, devices_share_no_state_however_many_a_backend_has)
+//! a zeroed allocation struct, sized for the backend to fill
+static cvAccelAllocation emptyAllocation()
+{
+    cvAccelAllocation a;
+    memset(&a, 0, sizeof(a));
+    a.struct_size = (uint32_t)sizeof(a);
+    return a;
+}
+
+TEST_F(Core_Accel, emulator_detectors_fire)
+{
+    // The protocol tests compare violation counts before and after their work: every detector
+    // has to be seen firing, or one that silently broke would let all of them pass.
+    const OpenCV_Core_Accel_API_v1_0_api_entries& e = emu();
+
+    // CPU access: an end without a begin
+    cvAccelAllocation a = emptyAllocation();
+    ASSERT_EQ(CV_ACCEL_OK, e.allocate(COHERENT, 64, CV_ACCEL_MEM_SHARED, 0, &a));
+    int64 n = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS);
+    EXPECT_EQ(CV_ACCEL_INVALID_ARGUMENT, e.end_cpu_access(&a, 0, 64, ACCESS_READ));
+    EXPECT_EQ(n + 1, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_CPU_ACCESS));
+    EXPECT_EQ(CV_ACCEL_OK, e.deallocate(&a));
+
+    // fences: emulator:0 waits on the device only for fences of its own
+    cvAccelStream s0 = NULL, s1 = NULL;
+    ASSERT_EQ(CV_ACCEL_OK, e.stream_create(DISCRETE, 0, &s0));
+    ASSERT_EQ(CV_ACCEL_OK, e.stream_create(COHERENT, 0, &s1));
+    cvAccelFence f1 = NULL;
+    ASSERT_EQ(CV_ACCEL_OK, e.stream_record_fence(s1, &f1));
+    n = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_FENCE);
+    EXPECT_EQ(CV_ACCEL_INVALID_ARGUMENT, e.stream_wait_fence(s0, f1));
+    EXPECT_EQ(n + 1, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_FENCE));
+    EXPECT_EQ(CV_ACCEL_OK, e.fence_wait(f1, CV_ACCEL_INFINITE));
+    EXPECT_EQ(CV_ACCEL_OK, e.fence_release(f1));
+    EXPECT_EQ(CV_ACCEL_OK, e.stream_destroy(s0));
+    EXPECT_EQ(CV_ACCEL_OK, e.stream_destroy(s1));
+
+    // managed memory: device work launched while the CPU is inside it (queued is enough)
+    cvAccelAllocation m = emptyAllocation(), x = emptyAllocation(), y = emptyAllocation();
+    ASSERT_EQ(CV_ACCEL_OK, e.allocate(MANAGED, 64, CV_ACCEL_MEM_MANAGED, 0, &m));
+    ASSERT_EQ(CV_ACCEL_OK, e.allocate(MANAGED, 64, CV_ACCEL_MEM_MANAGED, 0, &x));
+    ASSERT_EQ(CV_ACCEL_OK, e.allocate(MANAGED, 64, CV_ACCEL_MEM_MANAGED, 0, &y));
+    cvAccelStream s4 = NULL;
+    ASSERT_EQ(CV_ACCEL_OK, e.stream_create(MANAGED, 0, &s4));
+    void* cpu = NULL;
+    ASSERT_EQ(CV_ACCEL_OK, e.begin_cpu_access(&m, 0, 64, ACCESS_READ, &cpu));
+    n = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_MANAGED);
+    cvAccelCopyRegion r;
+    memset(&r, 0, sizeof(r));
+    r.struct_size = (uint32_t)sizeof(r);
+    r.dims = 1;
+    r.size[0] = 64;
+    r.src.alloc = &x;
+    r.dst.alloc = &y;
+    EXPECT_EQ(CV_ACCEL_OK, e.copy(MANAGED, s4, &r));
+    EXPECT_GT(accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_MANAGED), n);   // at launch, maybe at start too
+    EXPECT_EQ(CV_ACCEL_OK, e.end_cpu_access(&m, 0, 64, ACCESS_READ));
+    cvAccelFence f4 = NULL;
+    ASSERT_EQ(CV_ACCEL_OK, e.stream_record_fence(s4, &f4));
+    EXPECT_EQ(CV_ACCEL_OK, e.fence_wait(f4, CV_ACCEL_INFINITE));
+    EXPECT_EQ(CV_ACCEL_OK, e.fence_release(f4));
+    EXPECT_EQ(CV_ACCEL_OK, e.stream_destroy(s4));
+    EXPECT_EQ(CV_ACCEL_OK, e.deallocate(&m));
+    EXPECT_EQ(CV_ACCEL_OK, e.deallocate(&x));
+    EXPECT_EQ(CV_ACCEL_OK, e.deallocate(&y));
+
+#ifdef __linux__
+    // implicit fences: an end_device_access without a begin
+    const int64 fd = accel_emu::emulatorCreateDmaBuf(64);
+    cvAccelExternalMemory ext;
+    memset(&ext, 0, sizeof(ext));
+    ext.struct_size = (uint32_t)sizeof(ext);
+    ext.type = CV_ACCEL_EXTMEM_DMABUF_FD;
+    ext.handle = fd;
+    ext.size = 64;
+    cvAccelAllocation imp = emptyAllocation();
+    ASSERT_EQ(CV_ACCEL_OK, e.import_memory(COHERENT, &ext, &imp));
+    n = accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_BRACKET);
+    e.end_device_access(&imp, NULL, ACCESS_READ);
+    EXPECT_EQ(n + 1, accel_emu::emulatorViolations(accel_emu::EMU_VIOLATION_BRACKET));
+    EXPECT_EQ(CV_ACCEL_OK, e.deallocate(&imp));
+    close((int)fd);
+#endif
+}
+
+TEST_F(Core_Accel, devices_share_no_state_however_many_a_backend_has)
 {
     // Device 68 (failing) loses track of a copy into borrowed memory: nothing proves it
     // stopped. Device 67 (managed) is synchronized meanwhile, and device 64 keeps working:
@@ -2378,13 +2571,13 @@ TEST(Core_Accel, devices_share_no_state_however_many_a_backend_has)
     failingDevice();
     accel::ExternalMemory mem;
     mem.type = accel::ExternalMemory::DEVICE_POINTER;
-    mem.handle = accel::detail::emulatorAllocateExternal(FAILING, 256, 1, false);
+    mem.handle = accel_emu::emulatorAllocateExternal(FAILING, 256, 1, false);
     mem.size = 256;
     UMat borrowed = accel::wrapExternalMemory(failing, mem, MatShape({16, 16}), CV_8UC1);
     UMat src = makeOn(failing, Mat(16, 16, CV_8UC1, Scalar(9)));
     UMat idle = makeOn(managed, Mat(16, 16, CV_8UC1, Scalar(5)));
-    accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
-                                         accel::detail::EMU_FAIL_CALLS | accel::detail::EMU_FAIL_RECORD);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
+                                         accel_emu::EMU_FAIL_CALLS | accel_emu::EMU_FAIL_RECORD);
     EXPECT_THROW(src.copyTo(borrowed), cv::Exception);
 
     std::atomic<bool> released(false);
@@ -2404,13 +2597,13 @@ TEST(Core_Accel, devices_share_no_state_however_many_a_backend_has)
     EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
 
-    accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+    accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
     owner.join();                               // device 68 can be synchronized again: handed back
     EXPECT_TRUE(released.load());
     accel::detail::reviveDevices();
 }
 
-TEST(Core_Accel, memory_reaches_a_device_of_another_backend_as_a_dma_buf)
+TEST_F(Core_Accel, memory_reaches_a_device_of_another_backend_as_a_dma_buf)
 {
 #ifdef __linux__
     // a result of emulator:1 used by a device of another backend that imports dma-bufs (it
@@ -2428,10 +2621,12 @@ TEST(Core_Accel, memory_reaches_a_device_of_another_backend_as_a_dma_buf)
     EXPECT_EQ(0u, s.transfers);
     EXPECT_TRUE(other == accel::describe(out).device);
     EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, memory_exported_by_one_backend_is_one_memory_in_another)
+TEST_F(Core_Accel, memory_exported_by_one_backend_is_one_memory_in_another)
 {
 #ifdef __linux__
     // another library exports an emulator allocation as a dma-buf without telling OpenCV, and the
@@ -2439,15 +2634,17 @@ TEST(Core_Accel, memory_exported_by_one_backend_is_one_memory_in_another)
     UMat y = makeOn(emulator(COHERENT), Mat(16, 24, CV_8UC1, Scalar(4)));
     accel::ExternalMemory f;
     f.type = accel::ExternalMemory::DMABUF_FD;
-    f.handle = accel::detail::emulatorExportDmaBuf(y);
+    f.handle = accel_emu::emulatorExportDmaBuf(y);
     f.size = y.total();
     UMat other = accel::wrapExternalMemory(wideDevice(65), f, MatShape({16, 24}), CV_8UC1);
     EXPECT_EQ(accel::detail::backingId(y), accel::detail::backingId(other));
     close((int)f.handle);
+#else
+    throw SkipTestException("dma-bufs are emulated on Linux only");
 #endif
 }
 
-TEST(Core_Accel, a_later_write_does_not_hide_an_earlier_failure)
+TEST_F(Core_Accel, a_later_write_does_not_hide_an_earlier_failure)
 {
     // two writes on one stream: the first fails later, the second (to half of the memory) does
     // not. The stream orders them, so nobody waits for the first; its failure still counts.
@@ -2457,9 +2654,9 @@ TEST(Core_Accel, a_later_write_does_not_hide_an_earlier_failure)
         randu(src, 0, 255);
         UMat u = makeOn(d, src), half = makeOn(d, src.rowRange(0, 8));
         UMat out = makeOn(d, Mat::zeros(16, 16, CV_8UC1));
-        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel::detail::EMU_FAIL_FENCES);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel_emu::EMU_FAIL_FENCES);
         cv::flip(u, out, 1);                        // fails 20 ms from now
-        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
         UMat top = out.rowRange(0, 8);
         cv::flip(half, top, 1);                     // succeeds, after it on the same stream
         EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
@@ -2467,35 +2664,34 @@ TEST(Core_Accel, a_later_write_does_not_hide_an_earlier_failure)
     accel::detail::reviveDevices();
 }
 
-TEST(Core_Accel, failed_work_stays_failed_however_its_fence_is_shared)
+TEST_F(Core_Accel, failed_work_stays_failed_however_its_fence_is_shared)
 {
     // Everything that waits for some work shares the one fence reference recorded for it, and
     // never asks the backend for another (this device refuses them): the result of work that
     // fails later is invalid however many buffers keep its fence, and each reference is
     // released once.
     accel::Device d = failingDevice();
-    const int64 fences = accel::detail::emulatorLiveFences();
+    const int64 fences = accel_emu::emulatorLiveFences();
     runWithDeviceDelay(20000, [&]() {
         Mat src(16, 16, CV_8UC1);
         randu(src, 0, 255);
         UMat u = makeOn(d, src), out;
-        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
-                                             accel::detail::EMU_FAIL_RETAIN | accel::detail::EMU_FAIL_FENCES);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR,
+                                             accel_emu::EMU_FAIL_RETAIN | accel_emu::EMU_FAIL_FENCES);
         cv::flip(u, out, 1);                                // fails 20 ms from now
-        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        accel_emu::emulatorInjectFailure(CV_ACCEL_OK);
         EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
         EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);  // and stays failed
         EXPECT_EQ(0, maxDiff(src, u.getMat(ACCESS_READ)));     // what it only read is intact
     });
     UMat trigger = makeOn(d, Mat(1, 1, CV_8UC1, Scalar(0)));   // releases collect finished buffers
     trigger.release();
-    EXPECT_EQ(fences, accel::detail::emulatorLiveFences());    // every reference released once
+    EXPECT_EQ(fences, accel_emu::emulatorLiveFences());    // every reference released once
     accel::detail::reviveDevices();
 }
 
 #ifdef HAVE_CUDA
-// The CUDA backend on a real GPU: memory, streams and fences. It has no kernels yet, so calls
-// run on the CPU, with their results on the GPU.
+// The CUDA backend on a real GPU: memory, streams, fences, and its flip and transpose kernels.
 
 static accel::Device cudaDevice()
 {
@@ -2574,6 +2770,27 @@ TEST(Core_Accel_CUDA, flip_and_transpose_run_on_the_gpu)
     UMat u = makeOn(d, Mat(16, 16, CV_8UC1, Scalar(1))), sum;
     cv::add(u, u, sum);
     EXPECT_TRUE(d == accel::describe(sum).device);
+}
+
+TEST(Core_Accel_CUDA, flip_and_transpose_of_images_taller_than_the_grid)
+{
+    // gridDim.y stops at 65535 blocks of 8 rows: taller images are covered by a loop, not refused
+    // by the launch after QUERY accepted them
+    accel::Device d = cudaDevice();
+    Mat src(600000, 1, CV_32FC1);
+    randu(src, -1, 1);
+    UMat u = makeOn(d, src);
+    accel::resetTransferStats();
+    UMat flipped, transposed;
+    cv::flip(u, flipped, 0);
+    cv::transpose(u, transposed);
+    EXPECT_EQ(2u, accel::getTransferStats().deviceOps);
+    EXPECT_EQ(0u, accel::getTransferStats().cpuFallbacks);
+    Mat ref;
+    cv::flip(src, ref, 0);
+    EXPECT_EQ(0, maxDiff(ref, flipped.getMat(ACCESS_READ)));
+    cv::transpose(src, ref);
+    EXPECT_EQ(0, maxDiff(ref, transposed.getMat(ACCESS_READ)));
 }
 
 TEST(Core_Accel_CUDA, wrapping_a_umat_pointer_gives_a_view_of_it)

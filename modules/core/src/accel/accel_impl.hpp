@@ -41,6 +41,7 @@ struct StreamHolder
     uint64 uid;
     uint32_t caps;          //!< CV_ACCEL_CAP_* of the device
     std::mutex calls;       //!< held around every backend call with the stream where streams are not thread-safe
+    uint64 recorded;        //!< fences recorded on the stream so far (under calls): their order on it
 };
 typedef std::shared_ptr<StreamHolder> StreamPtr;
 
@@ -88,11 +89,11 @@ failure, as the backend fence would have. Copies never allocate and never fail. 
 class FenceRef
 {
 public:
-    FenceRef() : b_(0), streamUid_(0), device_(-1), syncTicket_(0), status_(CV_ACCEL_OK) {}
+    FenceRef() : b_(0), streamUid_(0), streamSeq_(0), device_(-1), syncTicket_(0), status_(CV_ACCEL_OK) {}
     /** Adopts the reference returned by stream_record_fence. Never throws: without memory to
         share it, waits for the work at once (without limit: nothing else will), releases the
         fence and returns a settled fence that keeps the status the work ended with. */
-    static FenceRef adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device) CV_NOEXCEPT;
+    static FenceRef adopt(Backend* b, cvAccelFence f, uint64 streamUid, int device, uint64 streamSeq) CV_NOEXCEPT;
     //! work on @p device that may still be running and has no fence (see above)
     static FenceRef unknown(Backend* b, int device) CV_NOEXCEPT;
 
@@ -104,6 +105,8 @@ public:
     //! the backend fence; 0 for an empty, unknown or settled fence
     cvAccelFence get() const { return core_ ? core_->f : 0; }
     uint64 streamUid() const { return streamUid_; }
+    //! where the fence lies on its stream: of two fences of one stream, the larger covers the other
+    uint64 streamSeq() const { return streamSeq_; }
     int device() const { return device_; }
 
     //! polls; an empty fence is complete; throws if the device reports an error
@@ -130,6 +133,7 @@ private:
     std::shared_ptr<FenceCore> core_;
     Backend* b_;
     uint64 streamUid_;
+    uint64 streamSeq_;
     int device_;
     uint64 syncTicket_;     //!< unknown fence: the first device_synchronize ticket that covers the work
     cvAccelStatus status_;  //!< settled fence: how the work ended
@@ -222,7 +226,7 @@ public:
     int priority() const { return priority_; }
     const std::string& origin() const { return origin_; }
     //! the backend's entries; those past the size of its table read as NULL
-    const OpenCV_Core_Accel_API_v0_0_api_entries& fn() const { return fn_; }
+    const OpenCV_Core_Accel_API_v1_0_api_entries& fn() const { return fn_; }
 
     int deviceCount() const { return (int)devices_.size(); }
     cvAccelDeviceInfo deviceInfo(int device) const;
@@ -353,7 +357,7 @@ private:
 
     int id_;
     const OpenCV_Core_Accel_API* api_;
-    OpenCV_Core_Accel_API_v0_0_api_entries fn_;     //!< zero-filled copy of the backend's table
+    OpenCV_Core_Accel_API_v1_0_api_entries fn_;     //!< zero-filled copy of the backend's table
     int priority_;
     std::string name_;
     std::string origin_;
@@ -386,7 +390,7 @@ public:
     Backend* find(const std::string& name);
     std::vector<Backend*> all();                //!< by priority, highest first
 
-    //! loads the libraries listed in OPENCV_ACCEL_PLUGINS (';'-separated)
+    //! loads the libraries listed in OPENCV_ACCEL_PLUGINS (a path list: ':'-separated, ';' on Windows)
     void loadPlugins();
 
 private:
@@ -405,6 +409,7 @@ void ensureInitialized();
 
 struct ScopeEntry
 {
+    const void* owner;  //!< the ExecutionScope that pushed the entry: it removes this one, not the top
     int backendId;
     int device;
     StreamPtr stream;   //!< empty: the device's per-thread default stream
@@ -563,6 +568,7 @@ struct PhysicalBacking
     // under the mutex of the registry of backings (see backing.cpp)
     std::vector<BackingName> names;     //!< every identity the backing is found by; none: reached through one allocation only
     int refs;               //!< live views, and lookups in progress
+    uint64_t revivals;      //!< references taken by lookups: a release that drains sees whether one came meanwhile
     bool registered;        //!< findable through its names
     bool retiring;          //!< no reference left, being freed: lookups wait until it is gone
     bool deferred;          //!< no reference left, waiting for its fences
@@ -806,8 +812,9 @@ public:
     bool isProtected() const { return protected_; }
 
     /** Wraps external memory (wrapExternalMemory). Returns the UMatData to view it through and
-        the offset of the requested bytes in it. With @p referenced the UMatData is an existing
-        view, and one more UMat reference is taken on it; otherwise it is new and unreferenced. */
+        the offset of the requested bytes in it. With @p referenced one UMat reference is taken
+        on it: an existing view, or (with req.allowExistingView) a new one, which is published
+        referenced; otherwise it is new and unreferenced. */
     UMatData* wrap(const WrapRequest& req, size_t& viewOffset, bool& referenced) const;
 
 private:
@@ -955,9 +962,7 @@ void onImplicitTransfer(const char* what, const char* opName);
 
 ///////////////////////////////////// built-in backends /////////////////////////////////////
 
-const OpenCV_Core_Accel_API* emulatorBackendApi();
-//! the emulator as a backend of API version 1 (no begin_device_access / end_device_access), for tests
-const OpenCV_Core_Accel_API* emulatorBackendApiV1();
+// the emulator backend of the tests lives in modules/core/test (registerBackendTable)
 #ifdef HAVE_CUDA
 const OpenCV_Core_Accel_API* cudaBackendApi();
 #endif

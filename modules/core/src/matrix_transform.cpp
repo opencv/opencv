@@ -1038,9 +1038,12 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 static int accel_flip(InputArray _src, OutputArray _dst, int flipMode)
 {
+    if (_src.empty())
+        return accel::detail::NOT_HANDLED;
+    const Size sz = _src.size();    // what the CPU and OpenCL paths create: always 2-D
     accel::detail::OpCall call("core.flip", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
     call.input(_src);
-    call.output(_dst, _src.shape(), _src.type());
+    call.output(_dst, MatShape({sz.height, sz.width}), _src.type());
     return call.run([flipMode](const void* t, const cvAccelCall* c, const cvAccelView* v) {
         const cvAccelOpsCore_v0* ops = (const cvAccelOpsCore_v0*)t;
         return CV_ACCEL_OP_PRESENT(cvAccelOpsCore_v0, ops, flip) ? ops->flip(c, &v[0], &v[1], flipMode)

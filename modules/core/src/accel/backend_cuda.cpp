@@ -50,6 +50,7 @@ bool isStickyError(cudaError_t e)
     switch (e)
     {
     case cudaErrorIllegalAddress:
+    case cudaErrorLaunchTimeout:        // the display watchdog killed a kernel (WDDM, X11 desktops)
     case cudaErrorLaunchFailure:
     case cudaErrorHardwareStackError:
     case cudaErrorIllegalInstruction:
@@ -58,15 +59,43 @@ bool isStickyError(cudaError_t e)
     case cudaErrorInvalidPc:
     case cudaErrorECCUncorrectable:
     case cudaErrorAssert:
+#if CUDART_VERSION >= 12000
+    case cudaErrorExternalDevice:
+#endif
         return true;
     default:
         return false;
     }
 }
 
+//! a launch refused this way queued nothing: core may run the call on the CPU (backend rule 9)
+bool launchRefused(cudaError_t e)
+{
+    switch (e)
+    {
+    case cudaErrorInvalidConfiguration:
+    case cudaErrorNoKernelImageForDevice:   // built without code for this GPU's architecture
+    case cudaErrorInvalidDeviceFunction:
+    case cudaErrorLaunchOutOfResources:
+    case cudaErrorInvalidPtx:
+#if CUDART_VERSION >= 12000
+    case cudaErrorUnsupportedPtxVersion:
+#endif
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Entry points never throw (CV_ACCEL_NOEXCEPT): keeping the message needs memory, and a
+// message that cannot be kept is dropped.
 cvAccelStatus fail(cvAccelStatus st, const char* msg)
 {
-    lastErrorTLS().getRef() = msg;
+    try
+    {
+        lastErrorTLS().getRef() = msg;
+    }
+    catch (...) {}
     return st;
 }
 
@@ -74,7 +103,11 @@ cvAccelStatus status(cudaError_t e, const char* what)
 {
     if (e == cudaSuccess)
         return CV_ACCEL_OK;
-    lastErrorTLS().getRef() = cv::format("%s: %s", what, cudaGetErrorString(e));
+    try
+    {
+        lastErrorTLS().getRef() = cv::format("%s: %s", what, cudaGetErrorString(e));
+    }
+    catch (...) {}
     cudaGetLastError();   // clear non-sticky errors
     if (e == cudaErrorMemoryAllocation)
         return CV_ACCEL_OUT_OF_MEMORY;
@@ -83,6 +116,17 @@ cvAccelStatus status(cudaError_t e, const char* what)
     if (e == cudaErrorNotReady)
         return CV_ACCEL_TIMEOUT;
     return CV_ACCEL_INTERNAL_ERROR;
+}
+
+//! status of a kernel launch: one the driver refused queued nothing, so the call may fall back
+cvAccelStatus launchStatus(cudaError_t e, const char* what)
+{
+    if (launchRefused(e))
+    {
+        cudaGetLastError();     // not sticky: the thread's next call must not see it
+        return fail(CV_ACCEL_NOT_IMPLEMENTED, cudaGetErrorString(e));
+    }
+    return status(e, what);
 }
 
 //! the runtime's current device is per thread state shared with the user's code: restore it
@@ -259,7 +303,15 @@ std::vector<DeviceProps>& devices()
         // Peer access maps every allocation of one GPU into the other's address space and makes
         // every later allocation and free on both slower: only on request, once, here (so that
         // can_access stays free of side effects).
-        if (n > 1 && utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA_PEER_ACCESS", false))
+        // devices() is reached from entry points that never throw: a malformed value (anything
+        // but 0/1/true/false) keeps peer access off instead of terminating the process
+        bool peer = false;
+        try
+        {
+            peer = n > 1 && utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA_PEER_ACCESS", false);
+        }
+        catch (...) {}
+        if (peer)
         {
             for (int i = 0; i < n && i < 64; i++)
             {
@@ -805,8 +857,9 @@ cvAccelStatus CV_API_CALL cu_flip(const cvAccelCall* call, const cvAccelView* sr
         return CV_ACCEL_OK;
     CV_CUDA_GUARD(call->device);
     const CudaStream* s = (const CudaStream*)call->stream;
-    return status(cuda_kernels::flip(viewAddress(src), (size_t)src->step[0], viewAddress(dst), (size_t)dst->step[0],
-                                     src->size[0], src->size[1], CV_ELEM_SIZE(src->type), flipMode, s->s), "flip");
+    return launchStatus(cuda_kernels::flip(viewAddress(src), (size_t)src->step[0], viewAddress(dst),
+                                           (size_t)dst->step[0], src->size[0], src->size[1],
+                                           CV_ELEM_SIZE(src->type), flipMode, s->s), "flip");
 }
 
 cvAccelStatus CV_API_CALL cu_transpose(const cvAccelCall* call, const cvAccelView* src,
@@ -823,8 +876,9 @@ cvAccelStatus CV_API_CALL cu_transpose(const cvAccelCall* call, const cvAccelVie
         return CV_ACCEL_OK;
     CV_CUDA_GUARD(call->device);
     const CudaStream* s = (const CudaStream*)call->stream;
-    return status(cuda_kernels::transpose(viewAddress(src), (size_t)src->step[0], viewAddress(dst), (size_t)dst->step[0],
-                                          src->size[0], src->size[1], CV_ELEM_SIZE(src->type), s->s), "transpose");
+    return launchStatus(cuda_kernels::transpose(viewAddress(src), (size_t)src->step[0], viewAddress(dst),
+                                                (size_t)dst->step[0], src->size[0], src->size[1],
+                                                CV_ELEM_SIZE(src->type), s->s), "transpose");
 }
 
 const cvAccelOpsCore_v0 g_coreOps = { sizeof(cvAccelOpsCore_v0), cu_flip, cu_transpose };

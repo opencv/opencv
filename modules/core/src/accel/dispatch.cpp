@@ -457,8 +457,27 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
             if (!exists)
                 hostOut.release();
         }
-        if (a.isUMat && !exists)
-            a.plan = createdOn(a, b, device) ? PLAN_CREATE : PLAN_COPY_BACK;  // made elsewhere by its own allocator: copied there
+        // The caller's array is also an input (cv::transpose(u, u)): re-creating it before the
+        // call is sure to run on the device would leave a CPU fallback reading the new buffer, so
+        // the result is made in a temporary and the copy back re-creates the array.
+        bool aliasesInput = false;
+        if (!exists)
+        {
+            const uchar* outStart = a.isUMat ? NULL : a.arr.getMatRef().datastart;
+            for (size_t j = 0; j < args.size(); j++)
+            {
+                const Arg& in = args[j];
+                if (in.isOutput || in.plan == PLAN_ABSENT)
+                    continue;
+                if (a.isUMat ? (in.isUMat && a.um.u && in.um.u == a.um.u)
+                             : (!in.isUMat && outStart && in.mat.datastart == outStart))
+                    aliasesInput = true;
+            }
+        }
+        if (a.isUMat && !exists)    // made elsewhere (its own allocator), or an input: copied there
+            a.plan = createdOn(a, b, device) && !aliasesInput ? PLAN_CREATE : PLAN_COPY_BACK;
+        else if (aliasesInput)
+            a.plan = PLAN_COPY_BACK;    // a Mat that is also an input: created only after the call ran
         else if ((a.onDevice || a.isHost) && b->canAccess(device, a.desc))
             a.plan = PLAN_IN_PLACE;     // device memory, or host memory the device addresses (an iGPU, an NPU)
         else if (a.isUMat && a.onDevice && canShare(a.um, b, device))
@@ -827,7 +846,11 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             createOutput(a, b, device);
         else if (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK)
         {
-            if (!scope && (a.plan == PLAN_UPLOAD || a.isUMat))
+            // a copy back into memory of this very device (an output that overlaps an input, or
+            // that is an input) moves nothing between devices
+            const bool here = a.onDevice && a.desc.backend_id == (uint32_t)b->id() &&
+                              (int)a.desc.device_index == device;
+            if (!scope && (a.plan == PLAN_UPLOAD || (a.isUMat && !here)))
                 onImplicitTransfer(a.plan == PLAN_UPLOAD ? "an input is copied to the device"
                                                          : "the result is copied out of the device", name);
             a.temp.allocator = const_cast<MatAllocator*>(deviceAllocator);
