@@ -254,10 +254,25 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
-    Mat Dx, Dy;
-    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+    Mat gradientSrc = src;
+    Point offset;
+    if( src.isSubmatrix() && !(borderType & BORDER_ISOLATED) && block_size > 1 )
+    {
+        Size wholeSize;
+        Point srcOffset, gradientOffset;
+        src.locateROI(wholeSize, srcOffset);
+        const int radius = block_size / 2;
+        // The box filter needs covariances outside the requested ROI as well.
+        // Symmetric padding also covers reflected samples for even block sizes.
+        gradientSrc.adjustROI(radius, radius, radius, radius);
+        gradientSrc.locateROI(wholeSize, gradientOffset);
+        offset = srcOffset - gradientOffset;
+    }
 
-    Size size = src.size();
+    Mat Dx, Dy;
+    spatialGradient( gradientSrc, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+
+    Size size = gradientSrc.size();
     Mat cov( size, CV_32FC3 );
     int i, j;
 
@@ -304,6 +319,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
         Point(-1,-1), false, borderType );
+    cov = cov(Rect(offset, src.size()));
 
     if( op_type == MINEIGENVAL )
         calcMinEigenVal( cov, eigenv );

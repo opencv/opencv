@@ -2028,6 +2028,71 @@ TEST(Imgproc_PyramidDown, accuracy) { CV_PyramidDownTest test; test.safe_run(); 
 TEST(Imgproc_PyramidUp, accuracy) { CV_PyramidUpTest test; test.safe_run(); }
 TEST(Imgproc_MinEigenVal, accuracy) { CV_MinEigenValTest test; test.safe_run(); }
 TEST(Imgproc_EigenValsVecs, accuracy) { CV_EigenValVecTest test; test.safe_run(); }
+
+typedef tuple<MatDepth, int, int, int> CornerROIParams;
+class Imgproc_CornerROI : public testing::TestWithParam<CornerROIParams> {};
+
+static void cornerResponse(const Mat& src, Mat& dst, int method, int blockSize,
+                           int apertureSize, int borderType)
+{
+    if (method == 0)
+        cornerMinEigenVal(src, dst, blockSize, apertureSize, borderType);
+    else if (method == 1)
+        cornerHarris(src, dst, blockSize, apertureSize, 0.04, borderType);
+    else
+        cornerEigenValsAndVecs(src, dst, blockSize, apertureSize, borderType);
+}
+
+TEST_P(Imgproc_CornerROI, parent_and_isolated_borders)
+{
+    const int depth = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const int apertureSize = get<2>(GetParam());
+    const int borderType = get<3>(GetParam());
+    RNG rng(10449);
+    Mat src(23, 29, depth);
+    rng.fill(src, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 1);
+    const Mat original = src.clone();
+    // Interior, physical image borders, full-width rows and sub-kernel-sized ROIs.
+    const Rect rois[] = {
+        Rect(7, 6, 13, 11), Rect(0, 0, 9, 8), Rect(20, 0, 9, 8),
+        Rect(0, 15, 9, 8), Rect(20, 15, 9, 8), Rect(0, 5, 29, 10),
+        Rect(9, 0, 7, 23), Rect(13, 11, 1, 1), Rect(0, 0, 1, 1),
+        Rect(28, 22, 1, 1), Rect(8, 9, 1, 3), Rect(8, 9, 3, 1)
+    };
+    for (int method = 0; method < 3; ++method)
+    {
+        SCOPED_TRACE(method);
+        Mat whole;
+        cornerResponse(src, whole, method, blockSize, apertureSize, borderType);
+        for (size_t i = 0; i < sizeof(rois) / sizeof(rois[0]); ++i)
+        {
+            const Rect& rect = rois[i];
+            SCOPED_TRACE(rect);
+            Mat roi = src(rect), isolated, independent;
+            Mat output(rect.height + 2, rect.width + 2, whole.type());
+            output.reshape(1).setTo(-100);
+            Mat actual = output(Rect(1, 1, rect.width, rect.height));
+            cornerResponse(roi, actual, method, blockSize, apertureSize, borderType);
+            // Non-isolated ROIs must use the parent's covariance neighborhood.
+            ASSERT_LE(cvtest::norm(whole(rect), actual, NORM_INF), 2e-5);
+            actual.reshape(1).setTo(-100);
+            EXPECT_EQ(0, countNonZero(output.reshape(1) != -100));
+            cornerResponse(roi, isolated, method, blockSize, apertureSize,
+                           borderType | BORDER_ISOLATED);
+            cornerResponse(roi.clone(), independent, method, blockSize, apertureSize, borderType);
+            ASSERT_LE(cvtest::norm(independent, isolated, NORM_INF), 2e-5);
+        }
+    }
+    EXPECT_EQ(0, cvtest::norm(original, src, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_CornerROI,
+    testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 2, 3, 6),
+                     testing::Values(-1, 1, 3, 5, 7),
+                     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE,
+                                     BORDER_REFLECT, BORDER_REFLECT_101)));
+
 TEST(Imgproc_PreCornerDetect, accuracy) { CV_PreCornerDetectTest test; test.safe_run(); }
 TEST(Imgproc_Integral, accuracy) { CV_IntegralTest test; test.safe_run(); }
 
