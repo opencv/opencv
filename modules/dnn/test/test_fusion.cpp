@@ -740,6 +740,31 @@ TEST(Fusion, AttentionWithWrongLengthBiasIsNotFused)
     checkAttentionFusesWithMissingBias("attention_scalar_k_bias", 0);
 }
 
+// readQKVGrouping()/evalDims() must read qkv_batch/qkv_seq from a real Shape/Gather/Mul/Concat
+// chain feeding the QKV Reshape, not just accept it as a layer param (as the AttentionLayer-level
+// tests in test_layers.cpp do).
+static void checkAttentionQKVGrouping(const std::string& name)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(1, fusedCount(net, "Attention")) << name;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out, name.c_str());
+}
+
+TEST(Fusion, AttentionQKVGroupingSeqMerge)
+{
+    checkAttentionQKVGrouping("attention_qkv_grouping_seq_merge");
+}
+
+TEST(Fusion, AttentionQKVGroupingBatchMerge)
+{
+    checkAttentionQKVGrouping("attention_qkv_grouping_batch_merge");
+}
+
 static void checkBatchNormFoldsIntoConv(const std::string& name)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);

@@ -174,14 +174,16 @@ class GeometryTest: OpenCVTestCase {
     }
 
     func testGetDefaultNewCameraMatrixMat() {
-        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: gray0)
+        let cameraMatrix = Mat(rows: 3, cols: 3, type: CvType.CV_8U, scalar: Scalar(0))
+        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: cameraMatrix)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertEqual(0, Core.countNonZero(src: mtx))
     }
 
     func testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: gray0, imgsize: size, centerPrincipalPoint: true)
+        let cameraMatrix = Mat(rows: 3, cols: 3, type: CvType.CV_8U, scalar: Scalar(0))
+        let mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix: cameraMatrix, imgsize: size, centerPrincipalPoint: true)
 
         XCTAssertFalse(mtx.empty())
         XCTAssertFalse(0 == Core.countNonZero(src: mtx))

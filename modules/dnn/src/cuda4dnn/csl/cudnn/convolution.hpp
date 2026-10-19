@@ -11,6 +11,8 @@
 #include "../pointer.hpp"
 #include "../workspace.hpp"
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 #include <cudnn.h>
 
 #include <cstddef>
@@ -21,6 +23,12 @@
 #include <iterator>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cudnn {
+
+    inline bool allowTF32()
+    {
+        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true);
+        return allow;
+    }
 
     /** describe convolution filters
      *
@@ -231,7 +239,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                  * giving near-FP16 throughput at slightly reduced precision. ONNXRuntime enables
                  * this by default; we follow suit. (Was CUDNN_FMA_MATH to force exact FP32.)
                  */
-                CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, CUDNN_DEFAULT_MATH));
+                CUDA4DNN_CHECK_CUDNN(cudnnSetConvolutionMathType(descriptor, allowTF32() ? CUDNN_DEFAULT_MATH : CUDNN_FMA_MATH));
 #endif
 
                 if (std::is_same<T, half>::value)

@@ -294,31 +294,32 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     struct CudaInfo_t
     {
-        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)
+        CudaInfo_t(cuda4dnn::csl::CSLContext ctxt)
             : context(std::move(ctxt))
-            , d2h_stream(std::move(d2h_stream_))
         {}
         cuda4dnn::csl::CSLContext context;
-        cuda4dnn::csl::Stream d2h_stream;
         cuda4dnn::csl::Workspace workspace;
     };
 
     std::unique_ptr<CudaInfo_t> cudaInfo;
 
-    void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
+    void initCUDABackend();
 
     // New graph engine: per-Arg device-resident tensors owned directly by the net (no backend
-    // wrappers). Sized lazily via GpuMatND::fit() and reused across forwards. Dirty flags track
-    // which copy (host cv::Mat vs device GpuMatND) is authoritative so transfers happen only at
+    // wrappers). Sized lazily via UMat::fit() and reused across forwards. Dirty flags track
+    // which copy (host cv::Mat vs device UMat) is authoritative so transfers happen only at
     // CPU<->CUDA boundaries; intermediates stay device-resident across consecutive CUDA ops.
-    std::vector<cuda::GpuMatND> cudaArgBuffers;
+    std::vector<UMat> cudaArgBuffers;
     std::vector<uchar> cudaArgHostDirty;    // 1: host copy is authoritative -> needs H2D before device read
     std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
+    std::vector<UMat> cudaTempBuffers;
+    bool cudaPoolTemps = false;
 
     // Device element type for a host tensor (half for float tensors under the FP16 target).
     int cudaDeviceType(const Mat& hostMat) const;
     // Returns the device buffer for @p arg, fit() to the host Mat's shape and device type.
-    cuda::GpuMatND& getCudaArgBuffer(Arg arg, const Mat& hostMat);
+    UMat& getCudaArgBuffer(Arg arg, const Mat& hostMat);
+    UMat& cudaDeviceBuffer(Arg arg);
     void cudaSetHostDirty(Arg arg);       // mark host authoritative (e.g. after a CPU op wrote it)
     void cudaUploadArg(Arg arg, const Mat& hostMat);   // H2D if host dirty
     void cudaDownloadArg(Arg arg, Mat& hostMat);       // D2H if device dirty
@@ -544,6 +545,7 @@ struct Net::Impl : public detail::NetImplBase
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
+    void pinInteriorArgs(const std::vector<Arg>& neededPins);
     // collapse Reshape+InstanceNorm+Reshape+Mul+Add into InstanceNorm or GroupNormalization
     void fuseInstanceNormAffine();
     void fuseChains();

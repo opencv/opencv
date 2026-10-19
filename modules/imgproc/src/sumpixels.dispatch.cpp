@@ -422,6 +422,8 @@ void integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray
     if ( sqdepth <= 0 )
          sqdepth = CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
+    CV_Assert( sdepth == CV_32S || sdepth == CV_32F || sdepth == CV_64F );
+    CV_Assert( sqdepth == CV_32F || sqdepth == CV_64F || sqdepth == CV_32S );
 
     CV_OCL_RUN(_sum.isUMat() && !_tilted.needed(),
         (_sqsum.needed() ? ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth) : ocl_integral(_src, _sum, sdepth)));
@@ -440,6 +442,14 @@ void integral(InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray
     {
         _tilted.create( isize, CV_MAKETYPE(sdepth, cn) );
         tilted = _tilted.getMat();
+    }
+
+    if( src.empty() )
+    {
+        sum.setTo(0);
+        if( _sqsum.needed() ) sqsum.setTo(0);
+        if( _tilted.needed() ) tilted.setTo(0);
+        return;
     }
 
     hal::integral(depth, sdepth, sqdepth,

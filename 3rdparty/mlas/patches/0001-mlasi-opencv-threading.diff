@@ -2,7 +2,7 @@ Patch against upstream onnxruntime/core/mlas/lib/mlasi.h
 Base commit: 62f742f1aa0c3102745ed35e3d869eaee845b9ac (ORT v1.26.0)
 
 Reroute the public-header include to the relative vendored path,
-and make MlasGetMaximumThreadCount() return cv::getNumThreads()
+and make MlasGetMaximumThreadCount() return cv::getNumThreads() * 4
 when MLAS_OPENCV_THREADING is defined (so MLAS partitions according
 to OpenCV's thread budget, not ORT's).
 
@@ -24,9 +24,9 @@ to OpenCV's thread budget, not ORT's).
  
  
 +#if defined(MLAS_OPENCV_THREADING)
-+// Defined in 3rdparty/mlas/threading_opencv.cpp. Returns
-+// cv::getNumThreads(). Hidden behind a free function so this header doesn't
-+// need to pull <opencv2/core/utility.hpp> into every MLAS translation unit.
++// Defined in modules/dnn/src/layers/cpu_kernels/mlas_threading.cpp: cv::getNumThreads() * 4.
++// Hidden behind a free function so this header doesn't need to pull
++// <opencv2/core/utility.hpp> into every MLAS translation unit.
 +extern "C" int opencv_dnn_mlas_max_threads();
 +#endif
 +

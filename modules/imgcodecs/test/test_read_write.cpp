@@ -628,4 +628,14 @@ TEST(Imgcodecs, decode_over2GB)
     EXPECT_THROW(dst = cv::imdecode(buf, cv::IMREAD_COLOR), cv::Exception);
 }
 
+TEST(Imgcodecs, non_regular_file)
+{
+#if !defined(_WIN32)
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = cv::imread("/dev/null"));
+    EXPECT_TRUE(dst.empty());
+    EXPECT_FALSE(cv::haveImageReader("/dev/null"));
+#endif
+}
+
 }} // namespace

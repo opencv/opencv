@@ -17,6 +17,10 @@ namespace cv {
 // serial implementation, also used for the pieces of the parallel version
 static Scalar mean_(const Mat& src, const Mat& mask)
 {
+    CV_Assert( mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) && src.size == mask.size) );
+    if (src.empty())
+        return Scalar::all(0.0);
+
     int k, cn = src.channels(), depth = src.depth();
     Scalar s = Scalar::all(0.0);
 

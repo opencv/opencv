@@ -7,6 +7,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/mlas_gemm.hpp"
 #include "../net_impl.hpp"
 
 namespace cv
@@ -74,6 +75,26 @@ static ActivationFunction get_activation_function(const String& activation) {
     }
 }
 
+// One LSTM cell step on the [i | f | o | g] gate row (blocks of H) for hidden units [j0, j0+nj); c and h already point at unit j0.
+static void lstmCellFp32(float* g, int H, int j0, int nj, float forgetBias,
+                         ActivationFunc sigmoidFn, ActivationFunc tanhFn,
+                         float* c, float* h, float* tanhC)
+{
+    float *gi = g + j0, *gf = g + H + j0, *go = g + 2*H + j0, *gc = g + 3*H + j0;
+    if (forgetBias)
+        for (int j = 0; j < nj; j++)
+            gf[j] += forgetBias;
+    sigmoidFn(gi, gi, nj, nullptr);
+    sigmoidFn(gf, gf, nj, nullptr);
+    sigmoidFn(go, go, nj, nullptr);
+    tanhFn(gc, gc, nj, nullptr);
+    for (int j = 0; j < nj; j++)
+        c[j] = gf[j]*c[j] + gi[j]*gc[j];  // c_t = f_t * c_{t-1} + i_t * g_t
+    tanhFn(c, tanhC, nj, nullptr);
+    for (int j = 0; j < nj; j++)
+        h[j] = go[j]*tanhC[j];            // h_t = o_t * tanh(c_t)
+}
+
 class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 {
     int seqLenth, batchSize, numHidden;
@@ -95,6 +116,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     ActivationFunction f_activation;
     ActivationFunction g_activation;
     ActivationFunction h_activation;
+    bool defaultActivations;          // sigmoid/tanh/tanh: the gate math can take the fast path
+    ActivationFunc sigmoidFn, tanhFn; // dispatched kernels used by the fast gate path
 
     bool useAVX, useAVX2, useSVE, useNEON;
     bool constWeights;              // W/R/B are graph constants -> transform them once
@@ -102,6 +125,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     std::vector<Mat> weightBlobs;   // cached transformed weights: [Wx, Wh, bias, (pI,pF,pO)]
     FastGemmOpt gemmOpt;            // MLAS GEMM options for the batched input projection
     std::vector<std::vector<float>> packedWx;  // per-direction prepacked Wx (fp32) for fastGemm
+    std::vector<std::vector<float>> packedWh;  // per-direction prepacked Wh (fp32) for the batched recurrent GEMM
+#ifdef HAVE_MLAS
+    std::vector<Mat> packedWxMlas;  // per-direction MLAS-packed Wx; preferred over packedWx when present
+#endif
 
     public:
         LSTM2LayerImpl(const LayerParams& params)
@@ -130,11 +157,15 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 f_activation = sigmoid;
                 g_activation = tanh;
                 h_activation = tanh;
+                defaultActivations = true;
             } else {
                 CV_Assert(activations.size() == 3);
                 f_activation = get_activation_function(activations.getStringValue(0));
                 g_activation = get_activation_function(activations.getStringValue(1));
                 h_activation = get_activation_function(activations.getStringValue(2));
+                defaultActivations = activations.getStringValue(0) == "Sigmoid" &&
+                                     activations.getStringValue(1) == "Tanh" &&
+                                     activations.getStringValue(2) == "Tanh";
             }
 
             constWeights = params.get<bool>("const_weights", false);
@@ -144,6 +175,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             useSVE  = checkHardwareSupport(CPU_SVE);
             useNEON = checkHardwareSupport(CPU_NEON);
             gemmOpt.init();
+            sigmoidFn = getActivationFunc(ACTIV_SIGMOID);
+            tanhFn = getActivationFunc(ACTIV_TANH);
 
             outTailShape.clear();
         }
@@ -253,17 +286,113 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             return (int64)numDirs * _seqLen * _batchSize * flopsPerStep;
         }
 
-        // Run one direction's recurrence into its own scratch so both directions run concurrently.
-        // Writes hOutAll columns [i*H, (i+1)*H) and the matching cOut slice.
-        void forwardDirection(int i, int numDirs, const Mat& xTs, const Mat& h0All, const Mat& c0All,
-                              Mat& hOutAll, Mat& cOut) const
+        // Batched projection Wx*x + bias for one direction's whole sequence; runs outside the direction loop so the GEMM can use all threads.
+        Mat projectInput(int i, int numDirs, const Mat& xTs) const
         {
             const int batchSizeTotal = seqLenth * batchSize;
             const int dtype = xTs.type();
 
             Mat Wx = weightBlobs[0].rowRange(i * weightBlobs[0].rows / numDirs, (i + 1) * weightBlobs[0].rows / numDirs);
-            Mat Wh = weightBlobs[1].rowRange(i * weightBlobs[1].rows / numDirs, (i + 1) * weightBlobs[1].rows / numDirs);
             Mat bias = weightBlobs[2].colRange(i * weightBlobs[2].cols / numDirs, (i + 1) * weightBlobs[2].cols / numDirs);
+
+            const int gateN = 4 * numHidden, projK = xTs.cols;
+            Mat gatesAll;
+            if (dtype == CV_32F && (int)packedWx.size() == numDirs)
+            {
+                repeat(bias, batchSizeTotal, 1, gatesAll);   // each row starts as the bias
+#ifdef HAVE_MLAS
+                if (!packedWxMlas[i].empty() &&
+                    mlasSgemmPacked(false, true, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
+                                    packedWxMlas[i].data, 1.f, gatesAll.ptr<float>(), gateN))
+                    return gatesAll;
+#endif
+                if (!packedWx[i].empty())
+                {
+                    FastGemmOpt opt = gemmOpt;
+                    fastGemm(false, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
+                             packedWx[i].data(), 1.f, gatesAll.ptr<float>(), gateN, opt);
+                    return gatesAll;
+                }
+            }
+            // fp64 / unpacked fallback
+            Mat onesCol(batchSizeTotal, 1, dtype, Scalar(1));
+            gatesAll.create(batchSizeTotal, gateN, dtype);
+            gemm(onesCol, bias, 1.0, noArray(), 0.0, gatesAll);
+            gemm(xTs, Wx, 1.0, gatesAll, 1.0, gatesAll, GEMM_2_T);
+            return gatesAll;
+        }
+
+        // dst[r] += Wh.row(row0 + r) . h for r in [0, nrows): fastGEMM1T for the CPU, cv::gemm otherwise.
+        void recurrentGemv(const float* h, const Mat& Wh, int row0, int nrows, float* dst) const
+        {
+            const float* w = Wh.ptr<float>(row0);
+            const size_t wstep = Wh.step1();
+            const int K = Wh.cols;
+#if CV_TRY_AVX2
+            if (useAVX2 && K >= 8) { opt_AVX2::fastGEMM1T(h, w, wstep, dst, dst, nrows, K); return; }
+#endif
+#if CV_TRY_AVX
+            if (useAVX && K >= 8) { opt_AVX::fastGEMM1T(h, w, wstep, dst, dst, nrows, K); return; }
+#endif
+#if CV_TRY_SVE
+            if (useSVE) { opt_SVE::fastGEMM1T(h, w, wstep, dst, dst, nrows, K); return; }
+#endif
+#if CV_TRY_NEON
+            if (useNEON && K >= 4) { opt_NEON::fastGEMM1T(h, w, wstep, dst, dst, nrows, K); return; }
+#endif
+            Mat hrow(1, K, CV_32F, (void*)h), wrows(nrows, K, CV_32F, (void*)w, wstep * sizeof(float));
+            Mat drow(1, nrows, CV_32F, dst);
+            gemm(hrow, wrows, 1, drow, 1, drow, GEMM_2_T);
+        }
+
+        // Batch-1 fp32 recurrence, one parallel_for_ per timestep; each task owns a hidden-unit chunk of one direction (its four gate rows, c and h).
+        void forwardStepParallel(int numDirs, int chunksPerDir, std::vector<Mat>& gatesAll, const Mat& h0All,
+                                 const Mat& c0All, Mat& hOutAll, Mat& cOut) const
+        {
+            const int H = numHidden, T = seqLenth;
+            const int chunk = ((H + chunksPerDir - 1) / chunksPerDir + 7) & ~7;  // multiple of fastGEMM1T's 8-row block
+            const int ntasks = numDirs * chunksPerDir;
+            Mat cState = c0All.clone();                                 // numDirs x H, each task updates its own slice
+            Mat cOutRows = produceCellOutput ? cOut.reshape(1, T) : Mat();  // T x (numDirs*H)
+
+            for (int t = 0; t < T; t++)
+            {
+                parallel_for_(Range(0, ntasks), [&](const Range& r)
+                {
+                    AutoBuffer<float, 1024> tanhC(chunk);
+                    for (int task = r.start; task < r.end; task++)
+                    {
+                        const int d = task / chunksPerDir, j0 = (task % chunksPerDir) * chunk;
+                        const int nj = std::min(chunk, H - j0);
+                        if (nj <= 0)
+                            continue;
+                        const bool rev = reverse || d == 1;
+                        const int ts = rev ? T - 1 - t : t;
+                        // h_{t-1} is the previous step's row of hOutAll, complete since the last parallel_for_ returned
+                        const float* hPrev = t == 0 ? h0All.ptr<float>(d) : hOutAll.ptr<float>(rev ? ts + 1 : ts - 1) + d*H;
+                        Mat Wh = weightBlobs[1].rowRange(d * 4*H, (d + 1) * 4*H);
+                        float* g = gatesAll[d].ptr<float>(ts);
+                        for (int k = 0; k < 4; k++)
+                            recurrentGemv(hPrev, Wh, k*H + j0, nj, g + k*H + j0);
+
+                        lstmCellFp32(g, H, j0, nj, forgetBias, sigmoidFn, tanhFn,
+                                     cState.ptr<float>(d) + j0, hOutAll.ptr<float>(ts) + d*H + j0, tanhC.data());
+                        if (produceCellOutput)
+                            memcpy(cOutRows.ptr<float>(ts) + d*H + j0, cState.ptr<float>(d) + j0, nj * sizeof(float));
+                    }
+                }, ntasks);
+            }
+        }
+
+        // Run one direction's recurrence into its own scratch so both directions run concurrently.
+        // Writes hOutAll columns [i*H, (i+1)*H) and the matching cOut slice.
+        void forwardDirection(int i, int numDirs, Mat gatesAll, const Mat& h0All, const Mat& c0All,
+                              Mat& hOutAll, Mat& cOut, bool parallelInside) const
+        {
+            const int batchSizeTotal = seqLenth * batchSize;
+            const int dtype = gatesAll.type();
+
+            Mat Wh = weightBlobs[1].rowRange(i * weightBlobs[1].rows / numDirs, (i + 1) * weightBlobs[1].rows / numDirs);
             Mat pI, pF, pO;
             if (usePeephole)
             {
@@ -285,38 +414,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
             }
 
-            // Batched projection: gatesAll = Wx*x + bias for the whole sequence.
-            const int gateN = 4 * numHidden, projK = xTs.cols;
-            Mat gatesAll;
-            if (dtype == CV_32F && (int)packedWx.size() == numDirs && !packedWx[i].empty())
-            {
-                FastGemmOpt opt = gemmOpt;
-                opt.multi_thread = (numDirs == 1);  // directions are parallelized when bidirectional
-                repeat(bias, batchSizeTotal, 1, gatesAll);   // each row starts as the bias
-                fastGemm(false, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
-                         packedWx[i].data(), 1.f, gatesAll.ptr<float>(), gateN, opt);
-            }
-            else  // fp64 / unpacked fallback
-            {
-                Mat onesCol(batchSizeTotal, 1, dtype, Scalar(1));
-                gatesAll.create(batchSizeTotal, gateN, dtype);
-                gemm(onesCol, bias, 1.0, noArray(), 0.0, gatesAll);
-                gemm(xTs, Wx, 1.0, gatesAll, 1.0, gatesAll, GEMM_2_T);
-            }
-
-            // fastGEMM1T (recurrent step) needs contiguous fp32 operands
-#if CV_TRY_AVX2 || CV_TRY_AVX
-            bool canUseAvxH = hInternal.isContinuous() && gatesAll.isContinuous()
-                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F && Wh.cols >= 8;
-#endif
-#if CV_TRY_SVE
-            bool canUseSveH = hInternal.isContinuous() && gatesAll.isContinuous()
-                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F;
-#endif
-#if CV_TRY_NEON
-            bool canUseNeonH = hInternal.isContinuous() && gatesAll.isContinuous()
-                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gatesAll.depth() == CV_32F && Wh.cols >= 4;
-#endif
+            // sigmoid/tanh/tanh without peephole or clip: gate math on raw rows with the dispatched kernels
+            const bool fastGates = dtype == CV_32F && defaultActivations && !usePeephole && !useCellClip;
+            // batch > 1: one GEMM per step reads Wh once instead of once per batch row
+            const bool batchedH = dtype == CV_32F && batchSize > 1 && (int)packedWh.size() == numDirs
+                && hInternal.isContinuous() && gatesAll.isContinuous();
+            // outside a parallel region the per-step GEMM and the gate rows can use all threads
+            const bool parallelRows = parallelInside && batchSize > 1;
 
             int tsStart, tsEnd, tsInc;
             if (reverse || i == 1) {
@@ -336,44 +440,41 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 Mat gates = gatesAll.rowRange(curRowRange);  // already holds Wx * x_t + b
 
                 // gates += Wh * h_{t-1}
-#if CV_TRY_AVX2
-                if (useAVX2 && canUseAvxH)
+                if (batchedH)
+                {
+                    FastGemmOpt opt = gemmOpt;
+                    opt.multi_thread = parallelInside;
+                    fastGemm(false, batchSize, Wh.rows, Wh.cols, 1.f, hInternal.ptr<float>(), Wh.cols,
+                             packedWh[i].data(), 1.f, gates.ptr<float>(), Wh.rows, opt);
+                }
+                else if (dtype == CV_32F)
                 {
                     for (int n = 0; n < hInternal.rows; n++)
-                        opt_AVX2::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
-                                             gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
+                        recurrentGemv(hInternal.ptr<float>(n), Wh, 0, Wh.rows, gates.ptr<float>(n));
                 }
                 else
-#endif
-#if CV_TRY_AVX
-                if (useAVX && canUseAvxH)
-                {
-                    for (int n = 0; n < hInternal.rows; n++)
-                        opt_AVX::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
-                                            gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
-                }
-                else
-#endif
-#if CV_TRY_SVE
-                if (useSVE && canUseSveH)
-                {
-                    for (int n = 0; n < hInternal.rows; n++)
-                        opt_SVE::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
-                                            gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
-                }
-                else
-#endif
-#if CV_TRY_NEON
-                if (useNEON && canUseNeonH)
-                {
-                    for (int n = 0; n < hInternal.rows; n++)
-                        opt_NEON::fastGEMM1T(hInternal.ptr<float>(n), Wh.ptr<float>(), Wh.step1(),
-                                             gates.ptr<float>(n), gates.ptr<float>(n), Wh.rows, Wh.cols);
-                }
-                else
-#endif
                 {
                     gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);
+                }
+
+                if (fastGates)
+                {
+                    const int H = numHidden;
+                    auto gateRows = [&](const Range& r)
+                    {
+                        AutoBuffer<float, 1024> tanhC(H);
+                        for (int n = r.start; n < r.end; n++)
+                            lstmCellFp32(gates.ptr<float>(n), H, 0, H, forgetBias, sigmoidFn, tanhFn,
+                                         cInternal.ptr<float>(n), hInternal.ptr<float>(n), tanhC.data());
+                    };
+                    if (parallelRows)
+                        parallel_for_(Range(0, batchSize), gateRows);
+                    else
+                        gateRows(Range(0, batchSize));
+                    hInternal.copyTo(hOutTs.rowRange(curRowRange));
+                    if (produceCellOutput)
+                        cInternal.copyTo(cOutTs.rowRange(curRowRange));
+                    continue;
                 }
 
                 Mat gateI = gates.colRange(0*numHidden, 1*numHidden);
@@ -508,12 +609,43 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // Never reallocate output[0]'s header or it detaches from the graph.
             Mat hOutAll(batchSizeTotal, numDirs * numHidden, output[0].type());
 
-            // Directions are independent (disjoint output columns): run them in parallel.
-            parallel_for_(Range(0, numDirs), [&](const Range& r)
+            // Project every direction first, outside the direction loop, so the GEMM gets all threads.
+            std::vector<Mat> gatesAll(numDirs);
+            for (int i = 0; i < numDirs; i++)
+                gatesAll[i] = projectInput(i, numDirs, xTs);
+
+            const bool fp32 = input[0].type() == CV_32F && h0All.isContinuous() && c0All.isContinuous();
+            const bool fastGates = fp32 && defaultActivations && !usePeephole && !useCellClip;
+
+            // Batch 1 with enough hidden units: split each direction across threads at every timestep.
+            int chunksPerDir = 1;
+            if (fastGates && batchSize == 1 && numHidden >= 128)
+                chunksPerDir = std::min(numHidden / 64, std::max(1, std::min(getNumThreads(), 8) / numDirs));
+            if (chunksPerDir >= 2)
+                forwardStepParallel(numDirs, chunksPerDir, gatesAll, h0All, c0All, hOutAll, cOut);
+            else if (batchSize > 1)
             {
-                for (int i = r.start; i < r.end; i++)
-                    forwardDirection(i, numDirs, xTs, h0All, c0All, hOutAll, cOut);
-            }, numDirs);
+                // Pack Wh once for the batched recurrent GEMM; packWeights clears it when the weights change.
+                if (fp32 && packedWh.empty())
+                {
+                    const int N = weightBlobs[1].rows / numDirs;   // 4 * numHidden
+                    packedWh.resize(numDirs);
+                    for (int d = 0; d < numDirs; d++)
+                        fastGemmPackB(weightBlobs[1].rowRange(d * N, (d + 1) * N), packedWh[d], true, gemmOpt);
+                }
+                // One direction at a time, so each step's GEMM and gate rows can use all threads.
+                for (int i = 0; i < numDirs; i++)
+                    forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, cOut, true);
+            }
+            else
+            {
+                // Directions are independent (disjoint output columns): run them in parallel.
+                parallel_for_(Range(0, numDirs), [&](const Range& r)
+                {
+                    for (int i = r.start; i < r.end; i++)
+                        forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, cOut, false);
+                }, numDirs);
+            }
 
             // Reshape to (seq, batch, dirs, hid), then transpose into output[0] per `layout`.
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
@@ -670,16 +802,34 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             weightBlobs[1] = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
             weightBlobs[2] = b.reshape(1, 1);
 
-            // Prepack Wx per direction (fp32) so the projection is one batched GEMM.
+            // Prepack Wx per direction (fp32) so the projection is one batched GEMM; MLAS when available.
             packedWx.clear();
+            packedWh.clear();   // packed on demand in forward() for batches > 1
+#ifdef HAVE_MLAS
+            packedWxMlas.clear();
+#endif
             if (weightBlobs[0].type() == CV_32F)
             {
                 const int numDirs = 1 + static_cast<int>(bidirectional);
                 const int N = weightBlobs[0].rows / numDirs;   // 4 * numHidden
                 packedWx.resize(numDirs);
+#ifdef HAVE_MLAS
+                packedWxMlas.resize(numDirs);
+#endif
                 for (int d = 0; d < numDirs; d++)
                 {
                     Mat WxDir = weightBlobs[0].rowRange(d * N, (d + 1) * N);
+#ifdef HAVE_MLAS
+                    const int K = WxDir.cols;   // input size
+                    const size_t bytes = gemmOpt.use_rvv ? 0 : mlasSgemmPackBSize(false, true, N, K);
+                    if (bytes > 0 && bytes <= static_cast<size_t>(INT_MAX))
+                    {
+                        packedWxMlas[d].create(1, static_cast<int>(bytes), CV_8U);
+                        if (mlasSgemmPackB(false, true, N, K, WxDir.ptr<float>(), K, packedWxMlas[d].data))
+                            continue;
+                        packedWxMlas[d].release();
+                    }
+#endif
                     fastGemmPackB(WxDir, packedWx[d], true, gemmOpt);
                 }
             }

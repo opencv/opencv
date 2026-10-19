@@ -438,14 +438,16 @@ public class GeometryTest extends OpenCVTestCase {
     }
 
     public void testGetDefaultNewCameraMatrixMat() {
-        Mat mtx = Geometry.getDefaultNewCameraMatrix(gray0);
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_8U, new Scalar(0));
+        Mat mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix);
 
         assertFalse(mtx.empty());
         assertEquals(0, Core.countNonZero(mtx));
     }
 
     public void testGetDefaultNewCameraMatrixMatSizeBoolean() {
-        Mat mtx = Geometry.getDefaultNewCameraMatrix(gray0, size, true);
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_8U, new Scalar(0));
+        Mat mtx = Geometry.getDefaultNewCameraMatrix(cameraMatrix, size, true);
 
         assertFalse(mtx.empty());
         assertFalse(0 == Core.countNonZero(mtx));

@@ -198,6 +198,7 @@ softdouble getGaussianKernelBitExact(std::vector<softdouble>& result, int n, dou
 Mat getGaussianKernel(int n, double sigma, int ktype)
 {
     CV_CheckDepth(ktype, ktype == CV_32F || ktype == CV_64F, "");
+    CV_Assert(n > 0);
     Mat kernel(n, 1, ktype);
 
     std::vector<softdouble> kernel_bitexact;

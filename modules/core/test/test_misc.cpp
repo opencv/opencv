@@ -321,6 +321,41 @@ TEST(Core_BorderInterpolate, wrap_no_overflow_29232)
     EXPECT_LT(r, 5);
 }
 
+TEST(Core_CopyMakeBorder, empty_src_and_overflow)
+{
+    Mat emptySrc, dst;
+    EXPECT_THROW(cv::copyMakeBorder(emptySrc, dst, 1, 1, 1, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+
+    Mat src(5, 5, CV_8UC1, Scalar(1));
+    EXPECT_THROW(cv::copyMakeBorder(src, dst, INT_MAX, 1, 0, 0, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+    EXPECT_THROW(cv::copyMakeBorder(src, dst, 0, 0, INT_MAX, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
+}
+
+TEST(Core_MixChannels, empty_and_mismatched_inputs)
+{
+    Mat emptySrc, emptyDst;
+    std::vector<int> fromTo = {0, 0};
+    EXPECT_THROW(cv::mixChannels(&emptySrc, 1, &emptyDst, 1, fromTo.data(), 1), cv::Exception);
+
+    Mat src(5, 5, CV_8UC1, Scalar(1));
+    EXPECT_THROW(cv::mixChannels(&src, 1, &emptyDst, 1, fromTo.data(), 1), cv::Exception);
+    EXPECT_THROW(cv::mixChannels(&emptySrc, 1, &src, 1, fromTo.data(), 1), cv::Exception);
+
+    Mat dstMismatched(6, 6, CV_8UC1);
+    EXPECT_THROW(cv::mixChannels(&src, 1, &dstMismatched, 1, fromTo.data(), 1), cv::Exception);
+}
+
+TEST(Core_Repeat, empty_and_overflow)
+{
+    Mat emptySrc, dst;
+    cv::repeat(emptySrc, 5, 5, dst);
+    EXPECT_TRUE(dst.empty());
+
+    Mat src(2, 2, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::repeat(src, INT_MAX, 1, dst), cv::Exception);
+    EXPECT_THROW(cv::repeat(src, 1, INT_MAX, dst), cv::Exception);
+}
+
 class ThrowErrorParallelLoopBody : public cv::ParallelLoopBody
 {
 public:
@@ -1070,6 +1105,94 @@ struct TestSetUpSkip: public ::testing::Test {
 
 TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
+}
+
+TEST(Core_HardwareSupport, OutOfBounds) {
+    EXPECT_FALSE(cv::checkHardwareSupport(-1));
+    EXPECT_FALSE(cv::checkHardwareSupport(-100));
+    EXPECT_FALSE(cv::checkHardwareSupport(CV_HARDWARE_MAX_FEATURE));
+    EXPECT_FALSE(cv::checkHardwareSupport(652214343));
+
+    EXPECT_TRUE(cv::getHardwareFeatureName(-1).empty());
+    EXPECT_TRUE(cv::getHardwareFeatureName(CV_HARDWARE_MAX_FEATURE).empty());
+    EXPECT_TRUE(cv::getHardwareFeatureName(652214343).empty());
+}
+
+TEST(Core_KeyPoint, ConvertOutOfBounds) {
+    std::vector<cv::KeyPoint> kpts = { cv::KeyPoint(1.0f, 2.0f, 5.0f) };
+    std::vector<cv::Point2f> pts;
+
+    // Negative index throws
+    EXPECT_THROW(cv::KeyPoint::convert(kpts, pts, { -1 }), cv::Exception);
+
+    // Out-of-bounds positive index throws
+    EXPECT_THROW(cv::KeyPoint::convert(kpts, pts, { 1 }), cv::Exception);
+    EXPECT_THROW(cv::KeyPoint::convert(kpts, pts, { 100 }), cv::Exception);
+    EXPECT_THROW(cv::KeyPoint::convert({}, pts, { 0 }), cv::Exception);
+
+    // Valid index works
+    EXPECT_NO_THROW(cv::KeyPoint::convert(kpts, pts, { 0 }));
+    ASSERT_EQ(pts.size(), 1u);
+    EXPECT_EQ(pts[0], cv::Point2f(1.0f, 2.0f));
+}
+
+TEST(Core_EmptyMat, FuzzRegressions) {
+    cv::Mat empty_mat;
+    cv::Mat mask_1x1 = cv::Mat::ones(1, 1, CV_8U);
+
+    // cv::mean
+    EXPECT_NO_THROW({
+        cv::Scalar m = cv::mean(empty_mat);
+        EXPECT_EQ(m, cv::Scalar::all(0.0));
+    });
+    EXPECT_NO_THROW({
+        cv::Scalar m = cv::mean(cv::Mat(0, 4, CV_32F));
+        EXPECT_EQ(m, cv::Scalar::all(0.0));
+    });
+    EXPECT_THROW(cv::mean(empty_mat, mask_1x1), cv::Exception);
+
+    // cv::norm
+    EXPECT_NO_THROW({
+        double n = cv::norm(empty_mat);
+        EXPECT_EQ(n, 0.0);
+    });
+    EXPECT_NO_THROW({
+        double n = cv::norm(cv::Mat(0, 4, CV_32F));
+        EXPECT_EQ(n, 0.0);
+    });
+    EXPECT_THROW(cv::norm(empty_mat, cv::NORM_L2, mask_1x1), cv::Exception);
+    EXPECT_NO_THROW({
+        double n = cv::norm(empty_mat, empty_mat);
+        EXPECT_EQ(n, 0.0);
+    });
+
+    // cv::reduce
+    cv::Mat dst;
+    EXPECT_NO_THROW(cv::reduce(empty_mat, dst, 0, cv::REDUCE_SUM));
+    EXPECT_TRUE(dst.empty());
+    EXPECT_NO_THROW(cv::reduce(cv::Mat(0, 4, CV_32F), dst, 0, cv::REDUCE_SUM));
+
+    // cv::dft, cv::dct
+    EXPECT_NO_THROW(cv::dft(empty_mat, dst));
+    EXPECT_TRUE(dst.empty());
+    EXPECT_NO_THROW(cv::dct(empty_mat, dst));
+    EXPECT_TRUE(dst.empty());
+
+    // cv::mulSpectrums, cv::divSpectrums
+    EXPECT_NO_THROW(cv::mulSpectrums(empty_mat, empty_mat, dst, 0));
+    EXPECT_TRUE(dst.empty());
+    EXPECT_NO_THROW(cv::divSpectrums(empty_mat, empty_mat, dst, 0));
+    EXPECT_TRUE(dst.empty());
+    cv::Mat spec_4x4 = cv::Mat::ones(4, 4, CV_32FC1);
+    EXPECT_THROW(cv::mulSpectrums(empty_mat, spec_4x4, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::mulSpectrums(spec_4x4, empty_mat, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::divSpectrums(empty_mat, spec_4x4, dst, 0), cv::Exception);
+    EXPECT_THROW(cv::divSpectrums(spec_4x4, empty_mat, dst, 0), cv::Exception);
+
+    // cv::transposeND, cv::repeat, cv::slice
+    EXPECT_THROW(cv::transposeND(empty_mat, {}, dst), cv::Exception);
+    EXPECT_THROW(cv::repeat(empty_mat, {}, dst), cv::Exception);
+    EXPECT_THROW(cv::slice(empty_mat, {}, {}, {}, dst), cv::Exception);
 }
 
 }} // namespace

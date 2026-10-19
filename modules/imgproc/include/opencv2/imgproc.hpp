@@ -1666,6 +1666,10 @@ largest value is used to find initial segments of strong edges. See
 \f$=\sqrt{(dI/dx)^2 + (dI/dy)^2}\f$ should be used to calculate the image gradient magnitude (
 L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough (
 L2gradient=false ).
+For efficiency, when L2gradient=true the implementation compares the squared
+gradient magnitude \f$(dI/dx)^2 + (dI/dy)^2\f$ against the squared thresholds
+instead of computing the square root; the resulting edge map is the same as if
+the \f$L_2\f$ norm were computed directly.
  */
 CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
                          double threshold1, double threshold2,
@@ -1684,6 +1688,10 @@ Finds edges in an image using the Canny algorithm with custom image gradient.
 \f$=\sqrt{(dI/dx)^2 + (dI/dy)^2}\f$ should be used to calculate the image gradient magnitude (
 L2gradient=true ), or whether the default \f$L_1\f$ norm \f$=|dI/dx|+|dI/dy|\f$ is enough (
 L2gradient=false ).
+For efficiency, when L2gradient=true the implementation compares the squared
+gradient magnitude \f$(dI/dx)^2 + (dI/dy)^2\f$ against the squared thresholds
+instead of computing the square root; the resulting edge map is the same as if
+the \f$L_2\f$ norm were computed directly.
  */
 CV_EXPORTS_W void Canny( InputArray dx, InputArray dy,
                          OutputArray edges,

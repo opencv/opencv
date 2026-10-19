@@ -402,6 +402,11 @@ void cv::findContoursLinkRuns(InputArray _image,
         _hierarchy.clear();
 
     Mat image = _image.getMat();
+    if (image.empty())
+    {
+        _contours.clear();
+        return;
+    }
 
     LinkRunner runner;
     runner.process(image);

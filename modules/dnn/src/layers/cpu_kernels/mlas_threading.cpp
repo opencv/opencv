@@ -11,9 +11,9 @@
 // with a parallel `MlasTrySimpleParallel` MLAS would still emit a single
 // iteration. We patch both halves:
 //
-//   1. MlasGetMaximumThreadCount() in mlasi.h returns cv::getNumThreads()
-//      when MLAS_OPENCV_THREADING is defined (see the small patch in
-//      mlasi.h flagged with that define).
+//   1. MlasGetMaximumThreadCount() in mlasi.h returns opencv_dnn_mlas_max_threads(),
+//      i.e. cv::getNumThreads() * 4, when MLAS_OPENCV_THREADING is defined (see the
+//      small patch in mlasi.h flagged with that define).
 //   2. The three threaded entry points below dispatch to cv::parallel_for_.
 //
 // Compiled into the opencv_dnn_mlas object library only — the
@@ -35,10 +35,12 @@
 // instance so mlasi.h links — it's never read because we never call MlasQgemm.
 extern "C++" const MLAS_GEMM_QUANT_DISPATCH MlasGemmQuantDispatchDefault{};
 
+// Always 4 tiles per thread rather than detecting mixed-core-type CPUs (Intel P/E, ARM
+// big.LITTLE, ...): no portable query covers all of them (see arithm_expr.cpp).
 extern "C" int opencv_dnn_mlas_max_threads()
 {
     int n = cv::getNumThreads();
-    return n > 0 ? n : 1;
+    return (n > 0 ? n : 1) * 4;
 }
 
 void
