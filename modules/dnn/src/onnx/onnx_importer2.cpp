@@ -2604,12 +2604,17 @@ void ONNXImporter2::parseQConv(LayerParams& layerParams, const opencv_onnx::Node
 
             Mat bias_float;
             bias_int32.convertTo(bias_float, CV_32F);
+            CV_CheckGE(x_scale_mat.total(), (size_t)1, "DNN/ONNX/QLinearConv: x_scale is empty");
             float x_sc = x_scale_mat.at<float>(0);
             if (w_scale_mat.total() == 1)
                 bias_float *= x_sc * w_scale_mat.at<float>(0);
             else
+            {
+                CV_CheckEQ(w_scale_mat.total(), bias_float.total(),
+                           "DNN/ONNX/QLinearConv: per-channel w_scale length must match the bias length");
                 for (int i = 0; i < (int)w_scale_mat.total(); i++)
                     bias_float.at<float>(i) *= x_sc * w_scale_mat.at<float>(i);
+            }
 
             bias_arg = netimpl->newConstArg(bn + "/bias_float", bias_float);
         }
