@@ -8,8 +8,9 @@
 //
 // 1. Describe every argument (where its memory lives) and pick the device: the innermost
 //    ExecutionScope, otherwise the device of the first argument that lives on one.
-// 2. Plan each argument: used in place, uploaded into a temporary, created on the device,
-//    or produced in a temporary and copied to where the caller keeps it.
+// 2. Plan each argument: used in place, shared (memory of another device imported on this one,
+//    no copy), uploaded into a temporary, created on the device, or produced in a temporary and
+//    copied to where the caller keeps it.
 // 3. QUERY the backend. If it declines, outputs are still created on the device (so
 //    where data ends up does not depend on which operations a backend implements) and
 //    the call runs on the CPU through the coherence protocol.
@@ -35,7 +36,8 @@ enum Plan
     PLAN_IN_PLACE = 1,      //!< the device works on the argument's own memory
     PLAN_UPLOAD = 2,        //!< input copied into a temporary on the device
     PLAN_CREATE = 3,        //!< output (re)allocated on the device
-    PLAN_COPY_BACK = 4      //!< output produced in a temporary, then copied to the caller's array
+    PLAN_COPY_BACK = 4,     //!< output produced in a temporary, then copied to the caller's array
+    PLAN_SHARE = 5          //!< memory of another device imported on this one as a dma-buf: the same bytes, no copy (temp)
 };
 
 struct Arg
@@ -423,12 +425,15 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
     for (size_t i = 0; i < args.size(); i++)
     {
         Arg& a = args[i];
+        a.temp.release();   // a shared view of the previous candidate
         if (!a.isOutput)
         {
             if (a.plan == PLAN_ABSENT)
                 continue;
             if ((a.onDevice || a.isHost) && b->canAccess(device, a.desc))
                 a.plan = PLAN_IN_PLACE;
+            else if (a.isUMat && a.onDevice && canShare(a.um, b, device))
+                a.plan = PLAN_SHARE;
             else
                 a.plan = PLAN_UPLOAD;
             continue;
@@ -448,15 +453,17 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
             a.plan = createdOn(a, b, device) ? PLAN_CREATE : PLAN_COPY_BACK;  // made elsewhere by its own allocator: copied there
         else if ((a.onDevice || a.isHost) && b->canAccess(device, a.desc))
             a.plan = PLAN_IN_PLACE;     // device memory, or host memory the device addresses (an iGPU, an NPU)
+        else if (a.isUMat && a.onDevice && canShare(a.um, b, device))
+            a.plan = PLAN_SHARE;        // written where it is, through this device's import of it
         else
             a.plan = PLAN_COPY_BACK;    // memory the device cannot write
         // an output that overlaps an input is produced in a temporary
-        if (a.plan == PLAN_IN_PLACE)
+        if (a.plan == PLAN_IN_PLACE || a.plan == PLAN_SHARE)
         {
             for (size_t j = 0; j < args.size(); j++)
             {
                 const Arg& in = args[j];
-                if (!in.isOutput && in.plan == PLAN_IN_PLACE && overlaps(a, hostOut, in))
+                if (!in.isOutput && (in.plan == PLAN_IN_PLACE || in.plan == PLAN_SHARE) && overlaps(a, hostOut, in))
                     a.plan = PLAN_COPY_BACK;
             }
             if (a.plan == PLAN_IN_PLACE && !a.isUMat)
@@ -497,6 +504,29 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
 {
     planArgs(b, device);
     const uint32_t plannedKind = b->deviceInfo(device).preferred_kind;   // what outputs and temporaries get
+    // Shared memory: this device's import of it, made now (imports stay with the memory, so a
+    // losing candidate leaves nothing behind that matters). Planning alone shares nothing.
+    for (size_t i = 0; i < args.size(); i++)
+    {
+        Arg& a = args[i];
+        if (a.plan != PLAN_SHARE)
+            continue;
+        if (fn)
+        {
+            try
+            {
+                a.temp = shareOn(a.um, b, device);
+                continue;
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_DEBUG(NULL, "accel(" << b->name() << "): " << name << ": argument " << i << " is copied instead of "
+                             "shared: " << e.err);
+            }
+        }
+        a.temp.release();
+        a.plan = a.isOutput ? PLAN_COPY_BACK : PLAN_UPLOAD;
+    }
     // Protected content (secure video) never reaches the CPU, and nothing computed from it may
     // land in ordinary memory: outputs and temporaries are protected too.
     protectedIn = false;
@@ -554,15 +584,17 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         case PLAN_ABSENT:
             break;
         case PLAN_IN_PLACE:
+        case PLAN_SHARE:
             if (a.isUMat)
             {
-                // device memory: a range of its import, described without handles
-                const BufferState* bv = a.um.u->accelState;
+                // device memory: a range of its import (this device's, when shared), described without handles
+                const UMat& m = a.plan == PLAN_SHARE ? a.temp : a.um;
+                const BufferState* bv = m.u->accelState;
                 memset(&a.viewAlloc, 0, sizeof(a.viewAlloc));
-                a.viewAlloc.size = bv ? bv->imp->alloc.size : a.um.u->size;
-                a.viewAlloc.desc = a.desc;
-                fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + a.um.offset, a.um.type(), a.um.dims,
-                         a.um.size.p, a.um.step.p);
+                a.viewAlloc.size = bv ? bv->imp->alloc.size : m.u->size;
+                if (!queryMemoryDesc(m.u, a.viewAlloc.desc))
+                    a.viewAlloc.desc = a.desc;
+                fillView(v, &a.viewAlloc, (bv ? bv->start : 0) + m.offset, m.type(), m.dims, m.size.p, m.step.p);
                 setImage(v, bv);
             }
             else if (!a.mat.empty())
@@ -780,7 +812,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
         for (size_t i = 0; i < args.size(); i++)
         {
             Arg& a = args[i];
-            const UMat& target = (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK) ? a.temp : a.um;
+            const UMat& target = (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK || a.plan == PLAN_SHARE) ? a.temp : a.um;
             if (a.plan == PLAN_ABSENT || !target.u || !target.u->accelState)
                 continue;
             a.mode = a.isOutput ? (DEV_WRITE | (a.fullOverwrite && coversAllocation(target) ? DEV_DISCARD : 0)) : DEV_READ;
@@ -810,7 +842,7 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             {
                 Arg& a = args[i];
                 cvAccelView& v = views[i];
-                const UMat& target = (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK) ? a.temp : a.um;
+                const UMat& target = (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK || a.plan == PLAN_SHARE) ? a.temp : a.um;
                 if (a.plan == PLAN_ABSENT)
                     continue;
                 if (target.u && target.u->accelState)
@@ -818,6 +850,9 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                     // a range of the import of its memory: never past the bytes the UMatData views
                     const BufferState* bv = target.u->accelState;
                     a.viewAlloc = bv->imp->alloc;
+                    // a kernel of another device (peer access) uses that device's address of the memory
+                    if (bv->imp->device != device && bv->imp->backend == b)
+                        a.viewAlloc.device_address = b->deviceAddress(bv->imp->alloc, device);
                     fillView(v, &a.viewAlloc, bv->start + target.offset, target.type(), target.dims,
                              target.size.p, target.step.p);
                     setImage(v, bv);

@@ -235,6 +235,10 @@ public:
 
     //! true when kernels on @p device can use memory described by @p desc in place
     bool canAccess(int device, const cvAccelMemoryDesc& desc);
+    /** The address kernels of @p device use for byte 0 of @p alloc (an allocation or import of
+        this backend): its own device address, or the one get_device_address gives for another
+        device. Throws when the backend cannot tell. */
+    uint64_t deviceAddress(const cvAccelAllocation& alloc, int device);
 
     //! per-thread default stream of @p device
     StreamPtr defaultStream(int device);
@@ -463,6 +467,18 @@ struct BackingKey
     {
         return domain != o.domain ? domain < o.domain : a != o.a ? a < o.a : b < o.b;
     }
+    bool operator==(const BackingKey& o) const { return domain == o.domain && a == o.a && b == o.b; }
+};
+
+/** One name of a backing: an identity and where byte 0 of the backing lies in its address space
+    (a host address, an offset in a dma-buf, an offset in a backend allocation). One memory may
+    have several: a dma-buf, the allocation it was exported from, the device pointer of it. */
+struct BackingName
+{
+    BackingName() : start(0) {}
+    BackingName(const BackingKey& k, uint64_t s) : key(k), start(s) {}
+    BackingKey key;
+    uint64_t start;
 };
 
 /** One backend's import of a whole backing, or the allocation that a backing is. Byte 0 of
@@ -518,15 +534,19 @@ struct PhysicalBacking
 
     // identity, fixed before the backing is shared
     uint64 id;              //!< unique in the process (diagnostics and tests)
-    BackingKey key;
-    uint64_t start;         //!< first byte in the key's address space (a host address, an offset in the file, ...)
     uint64_t size;
     uint32_t flags;         //!< attested by its imports: CV_ACCEL_MEMF_PROTECTED, CV_ACCEL_MEMF_EXTERNAL_SYNC
     bool borrowed;          //!< memory of someone else: its last release waits for the device without limit
+    /** a dma-buf of the memory that core keeps open while the backing lives (the one it was
+        wrapped from, or one exported for sharing), -1 if none: its name cannot pass to other
+        memory meanwhile, and other devices import the memory through it (under mutex) */
+    int file;
+    uint64_t fileStart;     //!< where byte 0 of the backing lies in that file
 
     // under the mutex of the registry of backings (see backing.cpp)
+    std::vector<BackingName> names;     //!< every identity the backing is found by; none: reached through one allocation only
     int refs;               //!< live views, and lookups in progress
-    bool registered;        //!< findable through its key
+    bool registered;        //!< findable through its names
     bool retiring;          //!< no reference left, being freed: lookups wait until it is gone
     bool deferred;          //!< no reference left, waiting for its fences
 
@@ -808,6 +828,29 @@ void addPoison(PhysicalBacking* b, uint64_t begin, uint64_t size, const char* re
     mutex held). Never allocates: a range that would have to be split without room for its
     second half stays whole (a failure reported once too often, never one missed). */
 void clearPoison(PhysicalBacking* b, uint64_t begin, uint64_t size) CV_NOEXCEPT;
+
+/** A dma-buf descriptor of the memory of @p v that the backing keeps open, and where byte 0 of the
+    backing lies in it: the one it was wrapped from, or one exported now through an import that
+    can (every import of the memory must be able to bracket device work with implicit fences,
+    which the memory carries once something imports the descriptor). Throws when no import can
+    export it. */
+int backingFile(BufferState* v, uint64_t& start);
+
+//! the memory of @p m can be imported on (b, device) through a dma-buf of it, without copying (no side effects)
+bool canShare(const UMat& m, Backend* b, int device);
+
+/** A UMat of the same bytes as @p m, reached through an import of the same memory on
+    (b, device): no copy, and ordered with every other view of the memory. Throws when the
+    memory cannot be shared so. */
+UMat shareOn(const UMat& m, Backend* b, int device);
+
+//! waits on the CPU for every device use of the memory of @p v (writes and reads)
+void waitDeviceUse(BufferState* v);
+
+/** Gives @p b one more name (a dma-buf it was exported as, the allocation a backend says it is),
+    so that a wrap through that name meets the same state. Throws when the name already belongs
+    to other memory state: one memory would have two. */
+void addBackingName(PhysicalBacking* b, const BackingName& name);
 
 //! true for allocators of accelerator backends: their data must never move elsewhere silently
 bool isDeviceAllocator(const MatAllocator* a);

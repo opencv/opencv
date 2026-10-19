@@ -1165,6 +1165,16 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
     return (void*)(uintptr_t)v->imp->alloc.handle;
 }
 
+void waitDeviceUse(BufferState* v)
+{
+    PhysicalBacking* b = v->backing;
+    std::unique_lock<std::mutex> lk(b->mutex);
+    checkOwnHolds(b, true);
+    b->cond.wait(lk, [b]{ return !b->busy && !deviceUseInFlight(b, true); });
+    BusyScope busy(b, lk, true);
+    waitDeviceWork(b, lk, true, v, true);
+}
+
 //////////////////////////////////// device access ////////////////////////////////////
 
 void DeviceAcquisition::add(UMatData* u, int mode)

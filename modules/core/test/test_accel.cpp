@@ -1305,6 +1305,27 @@ TEST(Core_Accel, image_planes_are_checked)
     EXPECT_NO_THROW(accel::wrapExternalImage(d, other));
 }
 
+TEST(Core_Accel, planes_are_grouped_by_the_memory_they_lie_in)
+{
+#ifdef __linux__
+    // the chroma plane through another descriptor of the same dma-buf: still one buffer, and
+    // planes that overlap in it are refused whatever handles they came through
+    accel::Device d = emulator(COHERENT);
+    const int64 fd = accel::detail::emulatorCreateDmaBuf(1024);
+    const int fd2 = dup((int)fd);
+    ASSERT_GE(fd2, 0);
+    accel::ExternalImage img = nv12Image(fd, 256);
+    img.planes[1].handle = fd2;
+    std::vector<UMat> planes = accel::wrapExternalImage(d, img);
+    EXPECT_EQ(accel::describePlane(planes[0]).buffer, accel::describePlane(planes[1]).buffer);
+    EXPECT_EQ(256u, accel::describePlane(planes[1]).offset);
+    planes.clear();
+    img.planes[1].offset = 128;
+    EXPECT_THROW(accel::wrapExternalImage(d, img), cv::Exception);
+    close(fd2);
+#endif
+}
+
 TEST(Core_Accel, image_planes_have_their_own_layouts)
 {
     accel::Device d = emulator(COHERENT);
@@ -1347,6 +1368,46 @@ TEST(Core_Accel, tiled_layouts_never_reach_linear_code)
 }
 
 #endif // __linux__
+
+TEST(Core_Accel, memory_reaches_another_device_as_a_dma_buf_without_copies)
+{
+#ifdef __linux__
+    // A GPU result (emulator:1) used by an NPU (emulator:2) that cannot address the GPU's
+    // memory: the NPU imports the same memory as a dma-buf instead of receiving a copy, and the
+    // devices' work on it stays ordered as work on one memory.
+    accel::Device gpu = emulator(COHERENT), npu = emulator(NONCOHERENT);
+    Mat src(16, 24, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 0);
+    UMat x = makeOn(gpu, src);
+    UMat out = makeOn(npu, Mat::zeros(16, 24, CV_8UC1));
+    accel::resetTransferStats();
+    cv::flip(x, out, 0);            // cheapest on the NPU: its output in place, its input shared
+    accel::TransferStats s = accel::getTransferStats();
+    EXPECT_EQ(1u, s.deviceOps);
+    EXPECT_EQ(0u, s.transfers);
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+    x.setTo(Scalar(9));             // the GPU's memory changes: the NPU's next read sees it
+    cv::flip(x, out, 0);
+    EXPECT_EQ(9, out.getMat(ACCESS_READ).at<uchar>(0, 0));
+
+    // exported, the memory is one buffer whichever device wraps the descriptor
+    accel::ExternalMemory e = accel::exportExternalMemory(x);
+    UMat again = accel::wrapExternalMemory(npu, e, MatShape({16, 24}), CV_8UC1);
+    EXPECT_EQ(accel::detail::backingId(x), accel::detail::backingId(again));
+    close((int)e.handle);
+
+    // exported by another library holding the allocation: its backend tells whose memory it is
+    UMat y = makeOn(gpu, src);
+    accel::ExternalMemory f;
+    f.type = accel::ExternalMemory::DMABUF_FD;
+    f.handle = accel::detail::emulatorExportDmaBuf(y);
+    f.size = y.total();
+    UMat viaFd = accel::wrapExternalMemory(npu, f, MatShape({16, 24}), CV_8UC1);
+    EXPECT_EQ(accel::detail::backingId(y), accel::detail::backingId(viaFd));
+    close((int)f.handle);
+#endif
+}
 
 TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
 {
@@ -1551,6 +1612,28 @@ TEST(Core_Accel, fences_of_another_device_are_waited_for_where_the_device_cannot
         EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
     });
     EXPECT_EQ(foreign, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_FENCE));
+}
+
+TEST(Core_Accel, a_peer_device_gets_its_own_address_of_the_memory)
+{
+    // emulator:6 reaches emulator:0's memory through a window of its own, as without unified
+    // addressing: its kernels, and DeviceAccess on its streams, get that address
+    const int64 wrong = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_ADDRESS);
+    Mat src(8, 8, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 1);
+    UMat in = makeOn(emulator(PEER), src);
+    UMat out = makeOn(emulator(DISCRETE), Mat::zeros(8, 8, CV_8UC1));
+    accel::resetTransferStats();
+    cv::flip(in, out, 1);           // on emulator:6, writing emulator:0's memory in place
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+    EXPECT_EQ(wrong, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_ADDRESS));
+
+    const uint64 own = accel::DeviceAccess(out, accel::Stream::getDefault(emulator(DISCRETE)), ACCESS_READ).handle();
+    const uint64 peer = accel::DeviceAccess(out, accel::Stream::getDefault(emulator(PEER)), ACCESS_READ).handle();
+    EXPECT_NE(own, peer);
+    EXPECT_EQ(own + (7ull << 52), peer);
 }
 
 TEST(Core_Accel, structs_too_short_for_their_fields_are_refused)

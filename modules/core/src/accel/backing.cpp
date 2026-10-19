@@ -28,7 +28,9 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #ifndef _WIN32
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 namespace cv { namespace accel { namespace impl {
@@ -45,7 +47,8 @@ static std::atomic<uint64>& backingIds()
 }
 
 PhysicalBacking::PhysicalBacking()
-    : id(++backingIds()), start(0), size(0), flags(0), borrowed(false), refs(0), registered(false), retiring(false), deferred(false),
+    : id(++backingIds()), size(0), flags(0), borrowed(false), file(-1), fileStart(0), refs(0), registered(false),
+      retiring(false), deferred(false),
       busy(false), pendingReaders(0), pendingWriters(0), poisonedWhole(false), generation(0), cpuViews(0), cpuBase(0),
       idleGateHeld(0)
 {
@@ -57,6 +60,10 @@ PhysicalBacking::~PhysicalBacking()
 {
     for (size_t i = 0; i < imports.size(); i++)
         delete imports[i];
+#ifndef _WIN32
+    if (file >= 0)
+        close(file);
+#endif
 }
 
 BufferState::BufferState(PhysicalBacking* b, Import* imp_, uint64_t start_, uint64_t size_)
@@ -161,7 +168,7 @@ struct Backings
 
     std::mutex mutex;
     std::condition_variable gone;       //!< a retiring backing was unregistered
-    std::map<BackingKey, std::vector<PhysicalBacking*> > keyed;
+    std::map<BackingKey, std::vector<PhysicalBacking*> > keyed;     //!< backings by each of their names
     std::vector<PhysicalBacking*> deferred;     //!< core's own memory without references, fences pending
     std::mutex collecting;              //!< one collector at a time: only a collector frees deferred backings
 };
@@ -172,103 +179,185 @@ void overlapError()
                                "wrap the whole memory once and take views of it");
 }
 
-/** The registered backing of @p key that holds [start, start + size), with one more reference,
-    or NULL. Waits while an overlapping one is being freed. */
-PhysicalBacking* findBacking(const BackingKey& key, uint64_t start, uint64_t size)
+//! where byte 0 of @p b lies in the coordinates of @p key (registry mutex held); false when it has no such name
+bool nameStartLocked(const PhysicalBacking* b, const BackingKey& key, uint64_t& start)
+{
+    for (size_t i = 0; i < b->names.size(); i++)
+    {
+        if (b->names[i].key == key)
+        {
+            start = b->names[i].start;
+            return true;
+        }
+    }
+    return false;
+}
+
+/** The backing named @p key that overlaps [start, start + size) of the key's coordinates
+    (registry mutex held), NULL if none; @p wait when such a backing is being freed. A backing
+    that overlaps the range without holding it all is an error. */
+PhysicalBacking* lookupLocked(Backings& r, const BackingKey& key, uint64_t start, uint64_t size, bool& wait)
+{
+    wait = false;
+    std::map<BackingKey, std::vector<PhysicalBacking*> >::iterator it = r.keyed.find(key);
+    if (it == r.keyed.end())
+        return NULL;
+    for (size_t i = 0; i < it->second.size(); i++)
+    {
+        PhysicalBacking* b = it->second[i];
+        uint64_t s = 0;
+        nameStartLocked(b, key, s);
+        if (!rangesOverlap(s, b->size, start, size))
+            continue;
+        if (b->retiring)
+        {
+            wait = true;    // being freed: the memory gets a new backing once it is gone
+            return NULL;
+        }
+        if (!rangeInside(s, b->size, start, size))
+            overlapError();
+        return b;
+    }
+    return NULL;
+}
+
+/** The registered backing named @p key that holds [start, start + size), with one more
+    reference, and where it starts in the key's coordinates; or NULL. Waits while an
+    overlapping one is being freed. */
+PhysicalBacking* findBacking(const BackingKey& key, uint64_t start, uint64_t size, uint64_t& nameStart)
 {
     Backings& r = Backings::instance();
     std::unique_lock<std::mutex> lk(r.mutex);
     for (;;)
     {
-        std::map<BackingKey, std::vector<PhysicalBacking*> >::iterator it = r.keyed.find(key);
-        if (it == r.keyed.end())
-            return NULL;
-        PhysicalBacking* hit = NULL;
         bool wait = false;
-        for (size_t i = 0; i < it->second.size(); i++)
-        {
-            PhysicalBacking* b = it->second[i];
-            if (!rangesOverlap(b->start, b->size, start, size))
-                continue;
-            if (b->retiring)
-            {
-                wait = true;    // being freed: the memory gets a new backing once it is gone
-                break;
-            }
-            if (!rangeInside(b->start, b->size, start, size))
-                overlapError();
-            hit = b;
-            break;
-        }
+        PhysicalBacking* hit = lookupLocked(r, key, start, size, wait);
         if (wait)
         {
             r.gone.wait(lk);
             continue;
         }
         if (hit)
+        {
             hit->refs++;    // a backing without references (waiting for its fences) is revived
+            nameStartLocked(hit, key, nameStart);
+        }
         return hit;
     }
 }
 
-/** Registers @p nb (one reference, the caller's). Returns the backing to use: @p nb, or the one
-    another thread registered for the same memory first (with one more reference). */
-PhysicalBacking* registerBacking(PhysicalBacking* nb)
+//! takes @p b out of the lists of its names (registry mutex held)
+void unregisterLocked(Backings& r, PhysicalBacking* b) CV_NOEXCEPT
 {
-    if (nb->key.domain == BACKING_ANONYMOUS)
-        return nb;
-    Backings& r = Backings::instance();
-    std::unique_lock<std::mutex> lk(r.mutex);
-    for (;;)
+    for (size_t n = 0; n < b->names.size(); n++)
     {
-        std::vector<PhysicalBacking*>& list = r.keyed[nb->key];
-        PhysicalBacking* hit = NULL;
-        bool wait = false;
-        for (size_t i = 0; i < list.size(); i++)
-        {
-            PhysicalBacking* b = list[i];
-            if (!rangesOverlap(b->start, b->size, nb->start, nb->size))
-                continue;
-            if (b->retiring)
-            {
-                wait = true;
-                break;
-            }
-            if (!rangeInside(b->start, b->size, nb->start, nb->size))
-                overlapError();
-            hit = b;
-            break;
-        }
-        if (wait)
-        {
-            r.gone.wait(lk);
+        std::map<BackingKey, std::vector<PhysicalBacking*> >::iterator it = r.keyed.find(b->names[n].key);
+        if (it == r.keyed.end())
             continue;
-        }
-        if (hit)
-        {
-            hit->refs++;
-            return hit;
-        }
-        list.push_back(nb);
-        nb->registered = true;
-        return nb;
-    }
-}
-
-//! under the registry mutex
-void unregisterLocked(Backings& r, PhysicalBacking* b)
-{
-    if (!b->registered)
-        return;
-    std::map<BackingKey, std::vector<PhysicalBacking*> >::iterator it = r.keyed.find(b->key);
-    if (it != r.keyed.end())
-    {
         std::vector<PhysicalBacking*>& list = it->second;
         list.erase(std::remove(list.begin(), list.end(), b), list.end());
         if (list.empty())
             r.keyed.erase(it);
     }
     b->registered = false;
+}
+
+void twoStatesError()
+{
+    CV_Error(Error::StsBadArg, "accel: this memory is in use under two names that OpenCV keeps apart (a dma-buf and "
+                               "the device memory it was exported from, wrapped separately before either told about "
+                               "the other); release one of them first");
+}
+
+/** Adds @p name to @p b, which is registered (registry mutex held; nothing overlapping is being
+    freed). Throws when the name leads to other memory state, or says that byte 0 of @p b lies
+    elsewhere than another name of the same identity does. */
+void addNameLocked(Backings& r, PhysicalBacking* b, const BackingName& name)
+{
+    uint64_t s = 0;
+    if (nameStartLocked(b, name.key, s))
+    {
+        if (s != name.start)
+            twoStatesError();
+        return;
+    }
+    bool wait = false;
+    PhysicalBacking* other = lookupLocked(r, name.key, name.start, b->size, wait);
+    if (other || wait)
+        twoStatesError();
+    b->names.reserve(b->names.size() + 1);
+    r.keyed[name.key].push_back(b);
+    b->names.push_back(name);   // capacity is reserved
+}
+
+/** Registers @p nb (one reference, the caller's) under all its names. Returns @p nb, or the
+    backing that its names already lead to, with one more reference: another thread wrapped the
+    same memory first, or the memory is known under another of its names, and that backing gets
+    the other names too. Names that lead to two backings mean two states for one memory: an
+    error. */
+PhysicalBacking* registerBacking(PhysicalBacking* nb)
+{
+    if (nb->names.empty())
+        return nb;
+    Backings& r = Backings::instance();
+    std::unique_lock<std::mutex> lk(r.mutex);
+    for (;;)
+    {
+        PhysicalBacking* hit = NULL;
+        uint64_t delta = 0;     // byte 0 of nb is byte delta of hit
+        bool wait = false;
+        for (size_t n = 0; n < nb->names.size() && !wait; n++)
+        {
+            const BackingName& name = nb->names[n];
+            PhysicalBacking* h = lookupLocked(r, name.key, name.start, nb->size, wait);
+            if (!h)
+                continue;
+            uint64_t hs = 0;
+            nameStartLocked(h, name.key, hs);
+            if (hit && (h != hit || name.start - hs != delta))
+                twoStatesError();
+            hit = h;
+            delta = name.start - hs;
+        }
+        if (wait)
+        {
+            r.gone.wait(lk);
+            continue;
+        }
+        if (hit)
+        {
+            // the names nb would have had, in the coordinates of hit
+            for (size_t n = 0; n < nb->names.size(); n++)
+                if (nb->names[n].start >= delta)
+                    addNameLocked(r, hit, BackingName(nb->names[n].key, nb->names[n].start - delta));
+            hit->refs++;
+            return hit;
+        }
+        std::vector<BackingName> names;
+        names.swap(nb->names);
+        try
+        {
+            nb->registered = true;
+            for (size_t n = 0; n < names.size(); n++)
+                addNameLocked(r, nb, names[n]);
+        }
+        catch (...)
+        {
+            unregisterLocked(r, nb);
+            throw;
+        }
+        return nb;
+    }
+}
+
+//! where byte 0 of @p b lies in the coordinates of @p key
+uint64_t nameStart(PhysicalBacking* b, const BackingKey& key)
+{
+    Backings& r = Backings::instance();
+    std::lock_guard<std::mutex> lk(r.mutex);
+    uint64_t s = 0;
+    CV_Assert(nameStartLocked(b, key, s));
+    return s;
 }
 
 void removeDeferredLocked(Backings& r, PhysicalBacking* b)
@@ -377,6 +466,43 @@ void drainBorrowed(PhysicalBacking* b) CV_NOEXCEPT
 }
 
 } // namespace
+
+void addBackingName(PhysicalBacking* b, const BackingName& name)
+{
+    Backings& r = Backings::instance();
+    std::unique_lock<std::mutex> lk(r.mutex);
+    for (;;)
+    {
+        uint64_t s = 0;
+        if (nameStartLocked(b, name.key, s))
+        {
+            if (s != name.start)
+                twoStatesError();
+            return;
+        }
+        bool wait = false;
+        PhysicalBacking* other = lookupLocked(r, name.key, name.start, b->size, wait);
+        if (wait)
+        {
+            r.gone.wait(lk);    // old memory state under that name is going away
+            continue;
+        }
+        if (other)
+            twoStatesError();
+        const bool was = b->registered;
+        b->registered = true;   // a backing without a name so far is findable from now on
+        try
+        {
+            addNameLocked(r, b, name);
+        }
+        catch (...)
+        {
+            b->registered = was;
+            throw;
+        }
+        return;
+    }
+}
 
 bool fencesSettledLocked(PhysicalBacking* b) CV_NOEXCEPT
 {
@@ -601,10 +727,7 @@ BufferState* attachOwnedMemory(UMatData* u, Backend* be, int device, const cvAcc
     // a backend identity makes a later wrap of this memory (UMat::handle(), DeviceAccess) find it
     uint64_t end = 0;
     if (a.backing_id && rangeEnd(a.backing_offset, a.size, end))
-    {
-        nb->key = BackingKey(BACKING_BACKEND, (uint64_t)be->id(), a.backing_id);
-        nb->start = a.backing_offset;
-    }
+        nb->names.push_back(BackingName(BackingKey(BACKING_BACKEND, (uint64_t)be->id(), a.backing_id), a.backing_offset));
     nb->size = a.size;
     nb->flags = a.desc.flags & CV_ACCEL_MEMF_PROTECTED;
     nb->borrowed = false;
@@ -983,9 +1106,11 @@ static bool sameImport(const Import* imp, Backend* b, int device, const cvAccelE
            imp->readOnly == ((ext.flags & CV_ACCEL_MEMF_READ_ONLY) != 0);
 }
 
-//! the import of all of @p bk for this backend, device, layout and access; made now if there is none
+/** The import of all of @p bk for this backend, device, layout and access; made now if there is
+    none. @p reqStart and @p bkStart: where the request and the backing start in the coordinates
+    of the identity @p ext was found by. */
 static Import* importFor(PhysicalBacking* bk, Backend* b, int device, const cvAccelExternalMemory& ext,
-                         uint64_t reqStart, std::unique_ptr<FreshImport>& candidate)
+                         uint64_t reqStart, uint64_t bkStart, std::unique_ptr<FreshImport>& candidate)
 {
     {
         std::lock_guard<std::mutex> lk(bk->mutex);
@@ -994,7 +1119,7 @@ static Import* importFor(PhysicalBacking* bk, Backend* b, int device, const cvAc
                 return bk->imports[i];
     }
     // outside of the lock: importing may be slow
-    std::unique_ptr<FreshImport> fresh = importWhole(b, device, ext, reqStart, bk->start, bk->size, candidate);
+    std::unique_ptr<FreshImport> fresh = importWhole(b, device, ext, reqStart, bkStart, bk->size, candidate);
     std::lock_guard<std::mutex> lk(bk->mutex);
     for (size_t i = 0; i < bk->imports.size(); i++)
         if (sameImport(bk->imports[i], b, device, ext))
@@ -1031,6 +1156,20 @@ static Import* importFor(PhysicalBacking* bk, Backend* b, int device, const cvAc
     if (d.host_access == CV_ACCEL_HOST_ACCESS_DEVICE_IDLE)
         b->idleGate(device).used = true;
     return imp;
+}
+
+/** Appends the backend's name of memory that @p alloc imports from byte 0 on (backing_id), unless
+    the memory was found by that name (@p key) already, or the name cannot hold @p size bytes. */
+static void backendName(Backend* b, const cvAccelAllocation& alloc, const BackingKey& key,
+                        std::vector<BackingName>& names, uint64_t size)
+{
+    if (!alloc.backing_id)
+        return;
+    const BackingKey k(BACKING_BACKEND, (uint64_t)b->id(), alloc.backing_id);
+    uint64_t end = 0;
+    if (k == key || !rangeEnd(alloc.backing_offset, size, end) || (alloc.backing_size && end > alloc.backing_size))
+        return;
+    names.push_back(BackingName(k, alloc.backing_offset));
 }
 
 UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool& referenced) const
@@ -1073,18 +1212,28 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
     // 2. its backing: a registered one (revived if it waits for its fences), or a new one
     PhysicalBacking* bk = 0;
     Import* imp = 0;
-    for (;;)
+    uint64_t bkStart = 0;   // where the backing starts in the coordinates of key
+    if (key.domain != BACKING_ANONYMOUS)
+        bk = findBacking(key, reqStart, ext.size, bkStart);
+    if (!bk)
     {
-        bk = key.domain != BACKING_ANONYMOUS ? findBacking(key, reqStart, ext.size) : 0;
-        if (bk)
-            break;
         std::unique_ptr<FreshImport> whole = importWhole(b_, device_, ext, reqStart, objStart, objSize, first);
         std::unique_ptr<PhysicalBacking> nb(new PhysicalBacking());
-        nb->key = key;
-        nb->start = objStart;
+        if (key.domain != BACKING_ANONYMOUS)
+            nb->names.push_back(BackingName(key, objStart));
+        // what the backend calls the memory, when core named it: a later wrap through the
+        // backend's own handle of it (a device pointer) meets the same state
+        backendName(b_, whole->alloc, key, nb->names, objSize);
         nb->size = objSize;
         nb->borrowed = true;
         nb->refs = 1;
+#ifndef _WIN32
+        if (key.domain == BACKING_FILE)
+        {
+            nb->file = fcntl((int)ext.handle, F_DUPFD_CLOEXEC, 0);     // -1 when it cannot: nothing else depends on it
+            nb->fileStart = objStart;
+        }
+#endif
         // the backend attests protection; every dma-buf may carry implicit fences of other drivers
         nb->flags = (whole->alloc.desc.flags & (CV_ACCEL_MEMF_PROTECTED | CV_ACCEL_MEMF_EXTERNAL_SYNC)) |
                     (key.domain == BACKING_FILE ? CV_ACCEL_MEMF_EXTERNAL_SYNC : 0);
@@ -1103,23 +1252,34 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         }
         if (got != nb.get())
         {
-            // another thread registered the same memory first: its backing is the one
+            // the memory has a backing already: another thread registered it first, or it is
+            // known under the backend's name of it
             dropNewBacking(nb.release());
             bk = got;
-            break;
+            bkStart = key.domain != BACKING_ANONYMOUS ? nameStart(bk, key) : 0;
         }
-        if (nb->imports[0]->alloc.desc.host_access == CV_ACCEL_HOST_ACCESS_DEVICE_IDLE)
-            b_->idleGate(device_).used = true;
-        bk = nb.release();
-        imp = bk->imports[0];
-        break;
+        else
+        {
+            if (nb->imports[0]->alloc.desc.host_access == CV_ACCEL_HOST_ACCESS_DEVICE_IDLE)
+                b_->idleGate(device_).used = true;
+            bk = nb.release();
+            imp = bk->imports[0];
+            bkStart = objStart;
+        }
     }
 
     // 3. a view of the requested bytes; the backing holds one reference for it, released on failure
     try
     {
         if (!imp)
-            imp = importFor(bk, b_, device_, ext, reqStart, first);
+        {
+            imp = importFor(bk, b_, device_, ext, reqStart, bkStart, first);
+            // the import covers all of the backing: the backend's name of it, if it has one
+            std::vector<BackingName> more;
+            backendName(b_, imp->alloc, key, more, bk->size);
+            for (size_t i = 0; i < more.size(); i++)
+                addBackingName(bk, more[i]);
+        }
         first.reset();
         const cvAccelMemoryDesc& d = imp->alloc.desc;
         if (req.protectedRequired && !(bk->flags & CV_ACCEL_MEMF_PROTECTED))
@@ -1130,7 +1290,7 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         }
         const bool readOnly = req.readOnly || (d.flags & CV_ACCEL_MEMF_READ_ONLY) != 0;
         const bool hostCopy = d.host_access == CV_ACCEL_HOST_ACCESS_COPY || d.host_access == CV_ACCEL_HOST_ACCESS_UNCACHED;
-        const uint64_t vStart = reqStart - bk->start;
+        const uint64_t vStart = reqStart - bkStart;
 
         std::unique_ptr<UMatData> nu(new UMatData(this));
         std::unique_lock<std::mutex> lk(bk->mutex);
@@ -1203,6 +1363,95 @@ UMatData* DeviceAllocator::wrap(const WrapRequest& req, size_t& viewOffset, bool
         releaseBacking(bk);
         throw;
     }
+}
+
+int backingFile(BufferState* v, uint64_t& start)
+{
+#ifndef _WIN32
+    PhysicalBacking* b = v->backing;
+    Import* via = 0;
+    {
+        std::lock_guard<std::mutex> lk(b->mutex);
+        if (b->file >= 0)
+        {
+            start = b->fileStart;
+            return b->file;
+        }
+        for (size_t i = 0; i < b->imports.size(); i++)
+        {
+            Import* imp = b->imports[i];
+            // shared as a dma-buf, the memory carries implicit fences: every import brackets its work (rule 5)
+            checkExternalSync(imp->backend, CV_ACCEL_MEMF_EXTERNAL_SYNC);
+            const bool can = imp->modifier == 0 && imp->backend->fn().export_memory &&
+                             (imp->backend->deviceInfo(imp->device).caps & CV_ACCEL_CAP_EXPORT_DMABUF);
+            if (can && (!via || imp == v->imp))
+                via = imp;
+        }
+    }
+    if (!via)
+        CV_Error(Error::StsNotImplemented, "accel: no backend of this memory exports it as a dma-buf");
+    cvAccelExternalMemory out;
+    memset(&out, 0, sizeof(out));
+    out.struct_size = (uint32_t)sizeof(out);
+    via->backend->check(via->backend->fn().export_memory(&via->alloc, CV_ACCEL_EXTMEM_DMABUF_FD, &out),
+                        "export_memory", via->device);
+    const int fd = (int)out.handle;
+    try
+    {
+        struct stat st;
+        if (out.type != CV_ACCEL_EXTMEM_DMABUF_FD || fstat(fd, &st) != 0)
+            CV_Error_(Error::StsInternal, ("accel(%s): export_memory returned no dma-buf", via->backend->name().c_str()));
+        // byte 0 of the import is byte 0 of the backing: a wrap of the descriptor finds this memory
+        addBackingName(b, BackingName(BackingKey(BACKING_FILE, (uint64_t)st.st_dev, (uint64_t)st.st_ino), out.offset));
+    }
+    catch (...)
+    {
+        close(fd);
+        throw;
+    }
+    std::lock_guard<std::mutex> lk(b->mutex);
+    if (b->file >= 0)
+    {
+        close(fd);      // another thread exported it meanwhile: one descriptor is enough
+        start = b->fileStart;
+        return b->file;
+    }
+    b->file = fd;   // only core has it: the memory carries implicit fences once an import or the caller does
+    b->fileStart = out.offset;
+    start = out.offset;
+    return fd;
+#else
+    CV_UNUSED(v); CV_UNUSED(start);
+    CV_Error(Error::StsNotImplemented, "accel: memory is shared as dma-bufs on Linux only");
+#endif
+}
+
+bool canShare(const UMat& m, Backend* b, int device)
+{
+#ifndef _WIN32
+    const BufferState* v = m.u ? m.u->accelState : NULL;
+    if (!v || v->imp->modifier != 0 || !b->fn().import_memory || !b->fn().begin_device_access ||
+        !b->fn().end_device_access || !(b->deviceInfo(device).caps & CV_ACCEL_CAP_IMPORT_DMABUF))
+        return false;
+    PhysicalBacking* bk = v->backing;
+    std::lock_guard<std::mutex> lk(bk->mutex);
+    if (!bk->cpuLevels.empty())
+        return false;   // no new import while the CPU has the memory open
+    bool exportable = bk->file >= 0;
+    for (size_t i = 0; i < bk->imports.size(); i++)
+    {
+        const Import* imp = bk->imports[i];
+        if (!imp->backend->fn().begin_device_access || !imp->backend->fn().end_device_access)
+            return false;
+        if (imp->modifier == 0 && imp->backend->fn().export_memory &&
+            (imp->backend->deviceInfo(imp->device).caps & CV_ACCEL_CAP_EXPORT_DMABUF))
+            exportable = true;
+    }
+    return exportable;
+#else
+    CV_UNUSED(m); CV_UNUSED(b); CV_UNUSED(device);
+    return false;
+#endif
 }
 
 }}} // namespace cv::accel::impl

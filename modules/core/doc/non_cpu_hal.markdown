@@ -156,7 +156,13 @@ not per `UMatData`:
 - **Identity.** Core identifies host memory by its addresses and dma-bufs by their inode
   (`fstat`), so imports through different backends meet. Other memory is identified by the
   backend that reaches it (`cvAccelAllocation::backing_id`, the base of the allocation a
-  device pointer points into, with its size from `cuMemGetAddressRange`). Backings live in one
+  device pointer points into, with its size from `cuMemGetAddressRange`). One memory can have
+  several names: a dma-buf and the allocation it was exported from, the device pointer of it.
+  A backing keeps every name it is found by (where byte 0 of it lies in each), and a wrap
+  through any of them meets the same state: core registers the inode of every dma-buf it
+  exports, and an import reports the backend's own name of what it imported, so memory first
+  seen as a dma-buf meets the allocation it came from. Names that lead to two existing
+  backings would mean two states for one memory; such a wrap is refused. Backings live in one
   process-wide registry; a wrap that overlaps a backing without lying inside it is refused.
 - **Imports.** Every backend, device, layout and access that reaches a backing has one import
   of all of it. A `UMatData` is a view: a range of one import. Views of memory that the CPU
@@ -185,13 +191,16 @@ matrix, range, primaries, transfer function, chroma siting). A backend can tell 
 alone that two arguments are the luma and chroma planes of one NV12 frame, and convert it
 correctly. `describePlane()` gives the same to the caller.
 
-Before anything is imported, core checks the planes: every size with overflow-safe arithmetic,
-no overlap between planes of one buffer, and, for the fourccs it knows (NV12/21, NV16/61,
+Before anything is imported, core checks the planes: every size with overflow-safe arithmetic
+and, for the fourccs it knows (NV12/21, NV16/61,
 NV24/42, P010/012/016/210, I420/YV12/YU16/YV16/YU24, YUYV and its orderings, the 8-bit RGB and
 grey formats), the plane count, types and subsampled sizes the format requires. Planes may have
 layout modifiers of their own. The size of a tiled or compressed plane cannot be computed from
 its pitch and rows, so it must be given (`ExternalPlane::size`), and such a plane is only ever
-passed whole: its steps say nothing about where bytes lie.
+passed whole: its steps say nothing about where bytes lie. Once the planes are wrapped, the ones
+that lie in one memory form one buffer, whatever handles reached it (two descriptors of one
+dma-buf, two pointers into one allocation), their offsets are from the start of that memory,
+and planes that share a byte are refused.
 
 ## The coherence protocol
 
@@ -401,10 +410,14 @@ that holds an argument is a candidate: the dispatcher plans the call for each, a
 backend (QUERY, free of side effects), and picks the device that accepts and copies the fewest
 bytes, the earlier argument's device on a tie ("compute follows data", weighed by coverage and
 transfer cost). For
-each argument the dispatcher plans one of four things: use its memory in place (the device
-can access it), upload it into a temporary, create the output on the device, or produce the
-output in a temporary and copy it to where the caller keeps it (a Mat, a UMat on another
-device, or an output that overlaps an input).
+each argument the dispatcher plans one of five things: use its memory in place (the device
+can access it), share it (memory of another device that the device imports as a dma-buf: the
+same bytes, ordered as one memory, nothing copied), upload it into a temporary, create the
+output on the device, or produce the output in a temporary and copy it to where the caller
+keeps it (a Mat, a UMat on another device, or an output that overlaps an input). Sharing is
+tried before copying wherever the memory's backend can export it and the device can import
+dma-bufs; an import that the device refuses (another way for the CPU to reach the memory, say)
+falls back to the copy. `exportExternalMemory` hands the same dma-buf to other APIs.
 
 Bytes moved count everything the plan implies: temporaries filled and copied back, and a host
 copy that must be uploaded before the device can use an argument in place (or downloaded before
@@ -527,6 +540,10 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | a plan that would move protected or non-linear memory between devices, or copy a result into non-linear memory | not run on that device: the next candidate is tried (moves between devices go through the CPU, copies are linear) | `OpCall::Impl::evaluate` |
 | an output whose own allocator places it on a device | that device is a candidate even with only host inputs, the call is counted, and the output is made by its allocator wherever the call runs (copied there when another device wins); handing out a device allocator keeps the hooks on | `createdOn`, `Device::allocator` |
 | `UMat::handle()` of read-only memory, or of a dma-buf | no write handle of read-only memory; no handle at all of memory with implicit fences (`DeviceAccess` brackets it) | `deviceHandleBlocking` |
+| one memory reached through a dma-buf and through the allocation it came from | one backing with both names; names that lead to two existing states make the wrap fail | `registerBacking`, `addBackingName` |
+| planes of one image through different handles of one buffer | grouped by the memory they lie in after wrapping; overlap refused | `wrapExternalImage` |
+| an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise | `canShare`, `shareOn` |
+| a peer device that reaches memory through its own mapping (no unified addressing, an IOMMU window) | its kernels get that device's address of the memory in the view (`get_device_address`, API version 4), and so does `DeviceAccess` on its streams; without the entry one address serves every device | `Backend::deviceAddress` |
 | no memory after the work was queued | room for its fence, the ranges it writes and its failure is made before it is queued, and the list of dma-buf brackets to end is built then too: recording the outcome never allocates; a failure that still finds no room marks all of the memory | `DeviceAcquisition::acquire`, `addPoison` |
 | no memory while a `DeviceAccess` takes a buffer | the hold is recorded before the buffer counts as taken, so nothing is left half acquired | `DeviceAcquisition::acquire` |
 | the last UMat of memory whose `end_cpu_access` keeps failing | the memory is leaked, never freed under the open CPU access; device-idle memory keeps its gate | `destroyBacking` |

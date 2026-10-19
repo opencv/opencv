@@ -85,7 +85,8 @@ enum EmulatorViolation
     EMU_VIOLATION_MANAGED = 1,      //!< device work and CPU access overlapped on "emulator:4" (a fault on real hardware)
     EMU_VIOLATION_CPU_ACCESS = 2,   //!< begin/end_cpu_access not balanced, ended with another access, or never ended
     EMU_VIOLATION_STREAM = 4,       //!< one stream used by two threads at once where streams are not thread-safe
-    EMU_VIOLATION_FENCE = 8         //!< a fence of another device waited for where that is not supported
+    EMU_VIOLATION_FENCE = 8,        //!< a fence of another device waited for where that is not supported
+    EMU_VIOLATION_ADDRESS = 16      //!< a kernel given another address for memory than the one its device reaches it at
 };
 
 //! violations of the kinds in @p kinds (EmulatorViolation flags) seen so far
@@ -152,6 +153,9 @@ fd for ExternalMemory::DMABUF_FD on "emulator:1" and "emulator:2". Linux only. *
 CV_EXPORTS int64 emulatorCreateDmaBuf(size_t size);
 //! another driver (a camera, say) writes @p value into the whole dma-buf @p delayUs from now; users wait for it
 CV_EXPORTS void emulatorDmaBufProduce(int64 fd, int value, int delayUs);
+/** @brief Exports the emulator allocation behind @p m as a dma-buf, the way another library holding
+the allocation would, without telling OpenCV; returns the descriptor (the caller's). */
+CV_EXPORTS int64 emulatorExportDmaBuf(const UMat& m);
 //! how many fences OpenCV has attached to the dma-buf so far (end_device_access)
 CV_EXPORTS int emulatorDmaBufAttachedFences(int64 fd);
 

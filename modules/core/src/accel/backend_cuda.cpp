@@ -806,7 +806,8 @@ const OpenCV_Core_Accel_API g_cudaApi = {
         cu_get_last_error,
         cu_describe_allocation,
         NULL,               // begin_device_access: no dma-buf imports yet (refused by core without these)
-        NULL                // end_device_access
+        NULL,               // end_device_access
+        NULL                // get_device_address: unified addressing, every device uses the same address
     }
 };
 

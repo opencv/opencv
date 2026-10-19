@@ -35,6 +35,7 @@
 #include <thread>
 
 #ifdef __linux__
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -156,6 +157,8 @@ struct FakeDmaBuf;
 
 struct EmuAlloc
 {
+    EmuAlloc() : device(0), kind(0), size(0), mem(0), cpuView(0), owned(false), scrambled(false), dmabuf(0),
+                 protectedMem(false), memfd(-1), exported(0) {}
     int device;
     uint32_t kind;
     size_t size;
@@ -166,6 +169,8 @@ struct EmuAlloc
     std::vector<uint32_t> cpuLevels;    //!< access of each open begin_cpu_access, outermost first
     FakeDmaBuf* dmabuf; //!< an imported simulated dma-buf, NULL otherwise
     bool protectedMem;  //!< protected content (allocated with CV_ACCEL_MEMF_PROTECTED, or on emulator:3)
+    int memfd;          //!< shared memory of emulator:1 and emulator:2 is a file, so that it can be exported; -1 otherwise
+    std::atomic<FakeDmaBuf*> exported;  //!< the dma-buf it was exported as (export_memory), NULL before
 };
 
 //! owned device allocations by base address, to tell which one a device pointer lies in
@@ -212,6 +217,12 @@ bool isScrambledDesc(const cvAccelMemoryDesc& d, int device)
     if (d.kind == CV_ACCEL_MEM_HOST || d.kind == CV_ACCEL_MEM_HOST_PINNED || d.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER)
         return false;
     return device == EMU_DISCRETE || device == EMU_PROTECTED || device == EMU_FAILING || device == EMU_PEER;
+}
+
+//! the window through which a peer device reaches memory of another one: its addresses differ, as without unified addressing
+uint64_t peerAddress(uint64_t address, int device)
+{
+    return address + ((uint64_t)(device + 1) << 52);
 }
 
 uchar* devicePtr(const cvAccelAllocation* a)
@@ -264,10 +275,11 @@ struct EmuFence
     writer, a simulated camera or OpenCV, leaves an implicit fence that the next user waits for. */
 struct FakeDmaBuf
 {
-    FakeDmaBuf() : size(0), mem(0), ro(0), fence(0), attached(0) {}
+    FakeDmaBuf() : size(0), mem(0), ro(0), ownerBase(0), fence(0), attached(0) {}
     size_t size;
     uchar* mem;         //!< mapping of the whole buffer, shared with the "other drivers"
     uchar* ro;          //!< a second mapping of it, PROT_READ: what read-only imports give the CPU
+    uint64_t ownerBase; //!< exported from an emulator allocation: its base address (its backing_id), 0 otherwise
     // the reservation of the buffer, as dma_resv: one exclusive write fence and shared read fences
     std::mutex m;
     EmuFence* fence;                //!< last write, one reference held here; NULL if none
@@ -558,7 +570,7 @@ cvAccelStatus CV_API_CALL emu_get_device_info(int device, cvAccelDeviceInfo* inf
     if (device == EMU_DISCRETE || device == EMU_PEER)
         d.caps |= CV_ACCEL_CAP_PEER_ACCESS;
     if (device == EMU_COHERENT || device == EMU_NONCOHERENT)
-        d.caps |= CV_ACCEL_CAP_SHARED;
+        d.caps |= CV_ACCEL_CAP_SHARED | CV_ACCEL_CAP_IMPORT_DMABUF | CV_ACCEL_CAP_EXPORT_DMABUF;
     if (device == EMU_MANAGED)
         d.caps |= CV_ACCEL_CAP_MANAGED | CV_ACCEL_CAP_DEVICE_IDLE_MEMORY;
     if (device == EMU_COHERENT)
@@ -658,11 +670,33 @@ cvAccelStatus CV_API_CALL emu_allocate(int device, uint64_t size, uint32_t kind,
     try
     {
         memset(out, 0, sizeof(*out));
-        EmuAlloc* a = new EmuAlloc();
+        std::unique_ptr<EmuAlloc> owner(new EmuAlloc());
+        EmuAlloc* a = owner.get();
         a->device = device;
         a->size = (size_t)size;
         a->owned = true;
-        a->mem = (uchar*)fastMalloc(a->size ? a->size : 1);
+#ifdef __linux__
+        if ((device == EMU_COHERENT || device == EMU_NONCOHERENT) && desc.kind != CV_ACCEL_MEM_HOST_PINNED)
+        {
+            // shared memory that a camera or a display could use too: a file, which can be exported as a dma-buf
+            const size_t bytes = a->size ? a->size : 1;
+            const int fd = memfd_create("opencv-accel-emulator-memory", MFD_CLOEXEC);
+            void* p = MAP_FAILED;
+            if (fd >= 0 && ftruncate(fd, (off_t)bytes) == 0)
+                p = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (p == MAP_FAILED)
+            {
+                if (fd >= 0)
+                    close(fd);
+                return fail(CV_ACCEL_OUT_OF_MEMORY, "no shared memory");
+            }
+            a->memfd = fd;
+            a->mem = (uchar*)p;
+        }
+        else
+#endif
+            a->mem = (uchar*)fastMalloc(a->size ? a->size : 1);
+        owner.release();
         a->cpuView = a->mem;
         cvAccelMemoryDesc& d = out->desc;
         d = desc;
@@ -716,7 +750,16 @@ cvAccelStatus CV_API_CALL emu_deallocate(cvAccelAllocation* alloc) CV_ACCEL_NOEX
             std::lock_guard<std::mutex> lk(ownedMutex());
             ownedAllocations().erase((uintptr_t)a->mem);
         }
-        fastFree(a->mem);
+#ifdef __linux__
+        if (a->memfd >= 0)
+        {
+            if (!a->exported.load())
+                munmap(a->mem, a->size ? a->size : 1);  // an exported buffer keeps its memory: a dma-buf outlives its exporter
+            close(a->memfd);
+        }
+        else
+#endif
+            fastFree(a->mem);
     }
     countAllocation(a->device, -1);
     delete a;
@@ -763,7 +806,14 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
             out->size = ext->size;
             out->backend_data = a;
             out->device_address = deviceAddress(out->handle, out->desc.handle_kind);
-            // core identifies a dma-buf by its inode: no backing fields needed
+            if (buf->ownerBase)
+            {
+                // exported from an allocation of ours: that allocation is the memory (core
+                // identifies a dma-buf by its inode as well)
+                out->backing_id = buf->ownerBase;
+                out->backing_offset = ext->offset;
+                out->backing_size = buf->size;
+            }
             countAllocation(device, 1);
             return CV_ACCEL_OK;
         }
@@ -851,6 +901,72 @@ cvAccelStatus CV_API_CALL emu_import_memory(int device, const cvAccelExternalMem
     }
 }
 
+cvAccelStatus CV_API_CALL emu_export_memory(const cvAccelAllocation* alloc, uint32_t type,
+                                            cvAccelExternalMemory* out) CV_ACCEL_NOEXCEPT
+{
+    if (!alloc || !alloc->backend_data || !out)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    EmuAlloc* a = (EmuAlloc*)alloc->backend_data;
+    if (type != CV_ACCEL_EXTMEM_DMABUF_FD || a->memfd < 0)
+        return fail(CV_ACCEL_NOT_IMPLEMENTED, "only shared memory of emulator:1 and emulator:2 is exported, as a dma-buf");
+#ifdef __linux__
+    try
+    {
+        std::lock_guard<std::mutex> lk(dmaBufsMutex());
+        if (!a->exported.load())
+        {
+            const size_t bytes = a->size ? a->size : 1;
+            void* ro = mmap(NULL, bytes, PROT_READ, MAP_SHARED, a->memfd, 0);
+            std::pair<uint64_t, uint64_t> id;
+            if (ro == MAP_FAILED || !fileIdentity(a->memfd, id))
+            {
+                if (ro != MAP_FAILED)
+                    munmap(ro, bytes);
+                return fail(CV_ACCEL_OUT_OF_MEMORY, "cannot map the buffer");
+            }
+            FakeDmaBuf* buf = new FakeDmaBuf();
+            buf->size = a->size;
+            buf->mem = a->mem;
+            buf->ro = (uchar*)ro;
+            buf->ownerBase = (uint64_t)(uintptr_t)a->mem;
+            dmaBufs()[id] = buf;    // never freed, like the other simulated dma-bufs
+            a->exported.store(buf);
+        }
+        const int fd = fcntl(a->memfd, F_DUPFD_CLOEXEC, 0);
+        if (fd < 0)
+            return fail(CV_ACCEL_INTERNAL_ERROR, "cannot duplicate the descriptor");
+        memset(out, 0, sizeof(*out));
+        out->struct_size = (uint32_t)sizeof(*out);
+        out->type = CV_ACCEL_EXTMEM_DMABUF_FD;
+        out->handle = fd;
+        out->offset = 0;
+        out->size = a->size;
+        return CV_ACCEL_OK;
+    }
+    catch (const std::exception& e)
+    {
+        return fail(CV_ACCEL_OUT_OF_MEMORY, e.what());
+    }
+#else
+    return fail(CV_ACCEL_NOT_IMPLEMENTED, "dma-bufs are emulated on Linux only");
+#endif
+}
+
+cvAccelStatus CV_API_CALL emu_get_device_address(const cvAccelAllocation* alloc, int device,
+                                                 uint64_t* address) CV_ACCEL_NOEXCEPT
+{
+    if (!alloc || !alloc->backend_data || !address)
+        return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
+    const EmuAlloc* a = (const EmuAlloc*)alloc->backend_data;
+    if (device == a->device)
+        *address = alloc->device_address;
+    else if (peers(device, a->device) && alloc->device_address)
+        *address = peerAddress(alloc->device_address, device);
+    else
+        return fail(CV_ACCEL_NOT_IMPLEMENTED, "the device does not reach this memory");
+    return CV_ACCEL_OK;
+}
+
 cvAccelStatus CV_API_CALL emu_can_access(int device, const cvAccelMemoryDesc* desc, int own_device) CV_ACCEL_NOEXCEPT
 {
     if (!desc)
@@ -890,6 +1006,18 @@ cvAccelStatus CV_API_CALL emu_begin_cpu_access(const cvAccelAllocation* alloc, u
         }
         *host_ptr = 0;
         return CV_ACCEL_OK;
+    }
+    if (FakeDmaBuf* x = a->exported.load())
+    {
+        // exported as a dma-buf: the CPU waits for the fences its other users attached
+        try
+        {
+            waitAndRelease(x->waitList((access & (uint32_t)ACCESS_WRITE) != 0));
+        }
+        catch (const std::exception& e)
+        {
+            return fail(CV_ACCEL_OUT_OF_MEMORY, e.what());
+        }
     }
     uchar* p = 0;
     if (a->dmabuf)
@@ -1207,7 +1335,8 @@ cvAccelStatus CV_API_CALL emu_begin_device_access(const cvAccelAllocation* alloc
 {
     if (!alloc || !alloc->backend_data || !stream)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
-    FakeDmaBuf* buf = ((EmuAlloc*)alloc->backend_data)->dmabuf;
+    const EmuAlloc* ea = (const EmuAlloc*)alloc->backend_data;
+    FakeDmaBuf* buf = ea->dmabuf ? ea->dmabuf : ea->exported.load();
     if (!buf)
         return CV_ACCEL_OK;
     StreamUse use(stream);
@@ -1234,7 +1363,8 @@ cvAccelStatus CV_API_CALL emu_end_device_access(const cvAccelAllocation* alloc, 
 {
     if (!alloc || !alloc->backend_data || !fence)
         return fail(CV_ACCEL_INVALID_ARGUMENT, "bad argument");
-    FakeDmaBuf* buf = ((EmuAlloc*)alloc->backend_data)->dmabuf;
+    const EmuAlloc* ea = (const EmuAlloc*)alloc->backend_data;
+    FakeDmaBuf* buf = ea->dmabuf ? ea->dmabuf : ea->exported.load();
     if (!buf)
         return CV_ACCEL_OK;
     if (g_failDeviceEnd.exchange(false))
@@ -1272,6 +1402,19 @@ bool addressable(const cvAccelView* v)
     return v->alloc && v->alloc->desc.handle_kind != CV_ACCEL_HANDLE_NONE && v->alloc->desc.layout_modifier == 0;
 }
 
+/** A kernel of @p device would fault on another address than the one it reaches the memory
+    at: its own device's, or its peer window. The emulator reaches memory through backend_data,
+    so a wrong address shows up as a violation instead. */
+void checkAddress(const cvAccelCall* call, const cvAccelView* v)
+{
+    const EmuAlloc* a = v->alloc ? (const EmuAlloc*)v->alloc->backend_data : NULL;
+    if (!a || a->device == call->device || v->alloc->desc.handle_kind != CV_ACCEL_HANDLE_DEVICE_POINTER)
+        return;
+    const uint64_t own = deviceAddress((uint64_t)(uintptr_t)a->mem, CV_ACCEL_HANDLE_DEVICE_POINTER);
+    if (v->alloc->device_address != peerAddress(own, call->device))
+        violation(detail::EMU_VIOLATION_ADDRESS);
+}
+
 Mat viewToMat(const cvAccelView* v)
 {
     return Mat(v->size[0], v->size[1], v->type, devicePtr(v->alloc) + v->offset, (size_t)v->step[0]);
@@ -1297,6 +1440,8 @@ cvAccelStatus CV_API_CALL emu_flip(const cvAccelCall* call, const cvAccelView* s
             return CV_ACCEL_NOT_IMPLEMENTED;
         if (call->mode == CV_ACCEL_QUERY)
             return CV_ACCEL_OK;
+        checkAddress(call, src);
+        checkAddress(call, dst);
         Mat s = viewToMat(src), d = viewToMat(dst);
         ((EmuStream*)call->stream)->push([s, d, flipMode]() mutable { cv::flip(s, d, flipMode); }, true);
         return syncFailure(call->device);
@@ -1326,6 +1471,8 @@ cvAccelStatus CV_API_CALL emu_transpose(const cvAccelCall* call, const cvAccelVi
             return CV_ACCEL_NOT_IMPLEMENTED;   // like a real backend, not every type is covered
         if (call->mode == CV_ACCEL_QUERY)
             return CV_ACCEL_OK;
+        checkAddress(call, src);
+        checkAddress(call, dst);
         Mat s = viewToMat(src), d = viewToMat(dst);
         ((EmuStream*)call->stream)->push([s, d]() mutable { cv::transpose(s, d); }, true);
         return syncFailure(call->device);
@@ -1377,7 +1524,7 @@ const OpenCV_Core_Accel_API g_emulatorApi = {
         emu_allocate,
         emu_deallocate,
         emu_import_memory,
-        NULL,               // export_memory
+        emu_export_memory,
         emu_can_access,
         emu_begin_cpu_access,
         emu_end_cpu_access,
@@ -1396,7 +1543,8 @@ const OpenCV_Core_Accel_API g_emulatorApi = {
         emu_get_last_error,
         emu_describe_allocation,
         emu_begin_device_access,
-        emu_end_device_access
+        emu_end_device_access,
+        emu_get_device_address
     }
 };
 
@@ -1504,6 +1652,17 @@ void emulatorDmaBufProduce(int64 fd, int value, int delayUs)
 void emulatorFailNextCpuEnds(int count)
 {
     impl::g_failCpuEnds.store(count);
+}
+
+int64 emulatorExportDmaBuf(const UMat& m)
+{
+    CV_Assert(m.u && m.u->accelState);
+    cvAccelExternalMemory out;
+    memset(&out, 0, sizeof(out));
+    out.struct_size = (uint32_t)sizeof(out);
+    if (impl::emu_export_memory(&m.u->accelState->imp->alloc, CV_ACCEL_EXTMEM_DMABUF_FD, &out) != CV_ACCEL_OK)
+        CV_Error(Error::StsError, impl::emu_get_last_error());
+    return out.handle;
 }
 
 void emulatorFailNextCpuBegin(int after, bool nullAddress)

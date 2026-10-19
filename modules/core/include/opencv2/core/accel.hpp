@@ -343,12 +343,14 @@ struct CV_EXPORTS ExternalImage
 //! the image a UMat is a plane of (see wrapExternalImage)
 struct CV_EXPORTS ImagePlaneInfo
 {
-    ImagePlaneInfo() : imageId(0), plane(-1), planeCount(0), fourcc(0), layoutModifier(0) {}
+    ImagePlaneInfo() : imageId(0), plane(-1), planeCount(0), fourcc(0), layoutModifier(0), buffer(-1), offset(0) {}
     uint64 imageId;         //!< the same for every plane of one wrapped image; 0 when the UMat is not a plane
     int plane;              //!< index of the plane
     int planeCount;
     unsigned fourcc;
     uint64 layoutModifier;  //!< of this plane
+    int buffer;             //!< planes with the same index lie in one memory, whatever handles reached it
+    uint64 offset;          //!< bytes from the start of that memory to the plane
     ColorInfo color;
 };
 
@@ -361,6 +363,17 @@ releasing the last reference waits for pending device work on it. Throws if the 
 cannot import that kind of memory. */
 CV_EXPORTS UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
                                    const MatShape& shape, int type, const size_t* steps = 0);
+
+/** @brief Hands the memory of a UMat on an accelerator to another API or device as a dma-buf.
+
+The returned ExternalMemory (DMABUF_FD) holds a new descriptor that belongs to the caller, and the
+offset and size of the UMat's bytes in it. From the export on the memory carries implicit fences:
+OpenCV's work on it waits for the fences others attach and attaches its own, so a display, an
+encoder or another device orders itself with OpenCV as with any dma-buf. Work queued before the
+export ends before the function returns. Wrapping the descriptor again, on any device, gives a
+view of the same memory, never a copy. Linux only; throws when no backend of the memory can
+export it. */
+CV_EXPORTS ExternalMemory exportExternalMemory(const UMat& m);
 
 /** @brief Wraps each plane of an external image into a UMat, in the order of the planes, with
 the plane's pitch as its row step. Planes in one buffer and planes in separate buffers (one fd

@@ -19,6 +19,7 @@
 #include <limits>
 
 #ifndef _WIN32
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -540,6 +541,15 @@ const void* Backend::opTable(const char* module, uint32_t version)
         table = 0;  // malformed
     opTables_[key] = table;
     return table;
+}
+
+uint64_t Backend::deviceAddress(const cvAccelAllocation& alloc, int device)
+{
+    if ((int)alloc.desc.device_index == device || !fn().get_device_address || !alloc.device_address)
+        return alloc.device_address;    // its own device, or one flat address space for all of them
+    uint64_t address = 0;
+    check(fn().get_device_address(&alloc, device, &address), "get_device_address", device);
+    return address;
 }
 
 bool Backend::canAccess(int device, const cvAccelMemoryDesc& desc)
@@ -1301,6 +1311,72 @@ static uint64_t externalExtent(const MatShape& shape, int type, const size_t* st
     return extent;
 }
 
+namespace impl {
+
+UMat shareOn(const UMat& m, Backend* b, int device)
+{
+    BufferState* v = m.u->accelState;
+    uint64_t fileStart = 0;
+    const int fd = backingFile(v, fileStart);
+    DeviceAllocator* a = static_cast<DeviceAllocator*>(b->allocator(device, (int)b->deviceInfo(device).preferred_kind));
+    WrapRequest req;
+    req.ext.type = CV_ACCEL_EXTMEM_DMABUF_FD;
+    req.ext.handle = fd;
+    req.ext.offset = fileStart + v->start;
+    req.ext.size = v->size;
+    req.ext.flags = v->readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0;
+    req.readOnly = v->readOnly;
+    req.allowExistingView = true;
+    req.image = v->image;   // a plane stays a plane of its image
+    req.plane = v->plane;
+    UMat r;
+    r.flags = UMat::MAGIC_VAL | m.type();
+    setSize(r, m.dims, m.size.p, m.step.p, false);
+    size_t viewOffset = 0;
+    bool referenced = false;
+    r.u = a->wrap(req, viewOffset, referenced);
+    r.offset = viewOffset + m.offset;
+    finalizeHdr(r);
+    if (!referenced)
+        r.addref();
+    return r;
+}
+
+} // namespace impl
+
+ExternalMemory exportExternalMemory(const UMat& m)
+{
+    CV_Assert(m.u && m.u->accelState && "accel: only memory of an accelerator is exported");
+    BufferState* v = m.u->accelState;
+    uint64_t start = 0;
+    const int fd = backingFile(v, start);
+    {
+        // other drivers may use the memory from now on: OpenCV's work on it is bracketed with
+        // their fences (backingFile checked that every import can)
+        std::lock_guard<std::mutex> lk(v->backing->mutex);
+        v->backing->flags |= CV_ACCEL_MEMF_EXTERNAL_SYNC;
+    }
+    // work queued before the export attached no fence to the buffer: it ends before anyone gets it
+    waitDeviceUse(v);
+    ExternalMemory e;
+    e.type = ExternalMemory::DMABUF_FD;
+#ifndef _WIN32
+    e.handle = fcntl(fd, F_DUPFD_CLOEXEC, 0);
+    if (e.handle < 0)
+        CV_Error(Error::StsError, "accel: cannot duplicate the dma-buf descriptor");
+#else
+    CV_UNUSED(fd);
+#endif
+    e.offset = start + v->start + m.offset;
+    size_t extent = m.elemSize();
+    for (int i = 0; i < m.dims; i++)
+        extent += (size_t)(m.size.p[i] - 1) * m.step.p[i];
+    e.size = m.empty() ? 0 : extent;
+    e.readOnly = v->readOnly;
+    e.protectedContent = (v->backing->flags & CV_ACCEL_MEMF_PROTECTED) != 0;
+    return e;
+}
+
 UMat wrapExternalMemory(const Device& device, const ExternalMemory& memory,
                         const MatShape& shape, int type, const size_t* steps)
 {
@@ -1483,16 +1559,7 @@ std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& i
         uint64_t end = 0;
         if (!rangeEnd(q.offset, q.size, end) || q.size > (uint64_t)std::numeric_limits<size_t>::max())
             CV_Error_(Error::StsBadArg, ("accel: plane %d lies outside of the address space", (int)i));
-        // planes with one handle lie in one buffer, and never share a byte
-        q.buffer = (uint32_t)i;
-        for (size_t j = 0; j < i; j++)
-        {
-            if (image.planes[j].handle != p.handle)
-                continue;
-            q.buffer = d.planes[j].buffer;
-            if (rangesOverlap(d.planes[j].offset, d.planes[j].size, q.offset, q.size))
-                CV_Error_(Error::StsBadArg, ("accel: planes %d and %d overlap in their buffer", (int)j, (int)i));
-        }
+        q.buffer = (uint32_t)i;     // which planes share a buffer is known once they are wrapped (step 4)
     }
 
     // 2. the format, when OpenCV knows it: plane count, types, subsampled sizes
@@ -1543,6 +1610,26 @@ std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& i
         m.addref();
         planes.push_back(m);
     }
+
+    // 4. planes in one memory lie in one buffer, whatever handles reached it (two descriptors of
+    //    one dma-buf, two pointers into one allocation), and never share a byte; offsets are
+    //    from the start of that memory
+    for (size_t i = 0; i < n; i++)
+    {
+        const BufferState* vi = planes[i].u->accelState;
+        cvAccelImagePlane& q = d.planes[i];
+        q.offset = vi->start;
+        for (size_t j = 0; j < i; j++)
+        {
+            const BufferState* vj = planes[j].u->accelState;
+            if (vj->backing != vi->backing)
+                continue;
+            q.buffer = d.planes[j].buffer;
+            if (rangesOverlap(vj->start, vj->size, vi->start, vi->size))
+                CV_Error_(Error::StsBadArg, ("accel: planes %d and %d overlap in their buffer", (int)j, (int)i));
+            break;
+        }
+    }
     return planes;
 }
 
@@ -1558,6 +1645,8 @@ ImagePlaneInfo describePlane(const UMat& m)
     info.planeCount = (int)d.plane_count;
     info.fourcc = d.fourcc;
     info.layoutModifier = d.planes[v->plane].layout_modifier;
+    info.buffer = (int)d.planes[v->plane].buffer;
+    info.offset = d.planes[v->plane].offset;
     info.color.model = (ColorModel)d.color_model;
     info.color.range = (ColorRange)d.color_range;
     info.color.primaries = (ColorPrimaries)d.color_primaries;
@@ -1631,7 +1720,8 @@ DeviceAccess::DeviceAccess(const UMat& m, const Stream& stream, AccessFlag acces
         if (!alloc.device_address && alloc.desc.handle_kind == CV_ACCEL_HANDLE_HOST_POINTER)
             CV_Error_(Error::StsNotImplemented, ("accel(%s): DeviceAccess: the backend does not tell the device address "
                                                  "of this host memory", v->backend()->name().c_str()));
-        impl_->handle = alloc.device_address ? alloc.device_address : alloc.handle;
+        // the stream's device may reach the memory through a mapping of its own (peer access)
+        impl_->handle = alloc.device_address ? sp->backend->deviceAddress(alloc, sp->device) : alloc.handle;
     }
     else
         impl_->handle = alloc.handle;   // a native object (cl_mem, VkBuffer, ...): offset() says where in it

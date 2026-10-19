@@ -118,8 +118,8 @@ extern "C" {
 #define CV_ACCEL_ABI_VERSION 0
 /** 1: describe_allocation; 2: begin_device_access / end_device_access; 3: cvAccelAllocation
     reports the size of the memory it lies in and its device address, and has reserved space;
-    views carry the image they are a plane of */
-#define CV_ACCEL_API_VERSION 3
+    views carry the image they are a plane of; 4: get_device_address */
+#define CV_ACCEL_API_VERSION 4
 
 //! same as cv::MatShape::MAX_DIMS
 #define CV_ACCEL_MAX_DIMS 10
@@ -262,7 +262,9 @@ typedef struct cvAccelAllocation
     uint64_t backing_size;      //!< size of that memory (cuMemGetAddressRange, ...), 0 when not known
     /** the flat address kernels of the owning device use for byte 0, which for mapped host
         memory may differ from its CPU address (cudaHostGetDevicePointer); 0 when the memory
-        has no flat device address (an opaque handle). DeviceAccess::handle() returns it. */
+        has no flat device address (an opaque handle). DeviceAccess::handle() returns it. In a
+        view passed to a kernel of another device (peer access, can_access), core sets it to
+        the address that device uses (get_device_address). */
     uint64_t device_address;
     uint64_t reserved[4];       //!< zero; room for new fields (the size stays)
 } cvAccelAllocation;
@@ -612,6 +614,14 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         shared read fence otherwise; a writer of the memory waits for all of them). */
     cvAccelStatus (CV_API_CALL *end_device_access)(const cvAccelAllocation* alloc, cvAccelFence fence,
                                                    uint32_t access) CV_ACCEL_NOEXCEPT;
+
+    // --- API version 4 ---
+    /** optional: the flat address kernels of @p device use for byte 0 of @p alloc, memory of
+        another device of this backend that can_access says @p device reaches (peer access
+        through its own mapping, an IOMMU window, no unified addressing). Without the entry
+        alloc->device_address is valid on every device that reaches the memory. */
+    cvAccelStatus (CV_API_CALL *get_device_address)(const cvAccelAllocation* alloc, int device,
+                                                    uint64_t* address) CV_ACCEL_NOEXCEPT;
 };
 
 typedef struct OpenCV_Core_Accel_API_v0
