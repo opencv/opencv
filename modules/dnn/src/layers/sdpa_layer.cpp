@@ -46,8 +46,9 @@ public:
 
         outputs.assign(1, MatShape{B, S_q, H * D_v});
         // Scratch for K^T re-transposed to (B, H, S_kv, D); only the MLAS path uses it.
+        // Without it, forward() skips MLAS and flashAttention() reads K^T as it is.
         internals.clear();
-        if (mlasAvailable())
+        if (mlasAvailable() && !flashAttentionEnabled())
             internals.push_back(MatShape{B * H * S_kv * D});
         return false;
     }

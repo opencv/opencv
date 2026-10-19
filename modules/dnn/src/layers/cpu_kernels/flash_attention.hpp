@@ -11,10 +11,14 @@
 
 namespace cv { namespace dnn {
 
+// True when the layers should call flashAttention() instead of MLAS flash attention
+// (AArch64 only, see OPENCV_DNN_GEMM_PATH).
+bool flashAttentionEnabled();
+
 // out = softmax(scale * Q * K^T + mask) * V, computed tile by tile without the full score matrix.
 // Q: [B*H, Sq, D], K: [B*H, Skv, D] (or [B*H, D, Skv] if k_transposed), V: [B*H, Skv, Dv], out: [B, Sq, H, Dv].
 // mask is optional and additive; mask_steps are its element steps over (batch, head, query, key),
-// 0 for a broadcast axis.
+// 0 for a broadcast axis. On AArch64 an unmasked call runs on the core GEMM engine.
 void flashAttention(const float* Q, const float* K, const float* V, float* out,
                     int B, int H, int Sq, int Skv, int D, int Dv, float scale,
                     const float* mask = nullptr, const size_t* mask_steps = nullptr,
