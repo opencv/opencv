@@ -206,6 +206,15 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
         float h = size_map.at<float>(1, maxLoc.y, maxLoc.x);
 
         updateLastRect(cx, cy, w, h, crop_size, rect_last);
+
+        // Clip the bounding box to the image boundaries to prevent unbounded
+        // growth of rect_last (which would make crop_size explode and OOM).
+        // Same convention as DaSiamRPN and NanoTrack trackers.
+        rect_last.x = std::max(0, std::min(image.cols, rect_last.x));
+        rect_last.y = std::max(0, std::min(image.rows, rect_last.y));
+        rect_last.width = std::max(10, std::min(image.cols, rect_last.width));
+        rect_last.height = std::max(10, std::min(image.rows, rect_last.height));
+
         boundingBoxRes = rect_last;
         return true;
     } else {
