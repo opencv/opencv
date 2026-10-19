@@ -399,11 +399,14 @@ struct TorchImporter
     void readTorchTensor(int indexTensor, int typeTensor)
     {
         int ndims = readInt();
+        CV_Check(ndims, ndims >= 0 && ndims <= CV_MAX_DIM, "DNN/Torch: invalid tensor dimensionality");
         AutoBuffer<int64, 4> sizes(ndims);
         AutoBuffer<int64, 4> steps(ndims);
         THFile_readLongRaw(file, sizes.data(), ndims);
         THFile_readLongRaw(file, steps.data(), ndims);
         long offset = readLong() - 1;
+        if (offset < 0)
+            CV_Error(Error::StsParseError, "DNN/Torch: negative storage offset");
 
         //read Storage
         int typeidx = readInt();
@@ -435,10 +438,43 @@ struct TorchImporter
         //convert sizes
         AutoBuffer<int, 4> isizes(ndims);
         AutoBuffer<size_t, 4> ssteps(ndims);
+        const size_t elemSize = CV_ELEM_SIZE(typeTensor);
+        bool hasZeroDim = (ndims == 0);
         for (int i = ndims - 1; i >= 0; i--)
         {
+            if (sizes[i] < 0 || sizes[i] > (int64)std::numeric_limits<int>::max())
+                CV_Error(Error::StsOutOfRange, "DNN/Torch: invalid tensor dimension size");
+            if (steps[i] <= 0)
+                CV_Error(Error::StsOutOfRange, "DNN/Torch: non-positive tensor stride");
+            if (sizes[i] == 0)
+                hasZeroDim = true;
+            if ((uint64_t)steps[i] > std::numeric_limits<size_t>::max() / elemSize)
+                CV_Error(Error::StsOutOfRange, "DNN/Torch: byte stride overflow");
             isizes[i] = (int)sizes[i];
-            ssteps[i] = (size_t)steps[i] * CV_ELEM_SIZE(typeTensor);
+            ssteps[i] = (size_t)steps[i] * elemSize;
+        }
+
+        // The strided view below spans offset + sum_i (sizes[i]-1)*steps[i] elements of the storage.
+        const uint64_t storageTotal = (uint64_t)storageElems;
+        const uint64_t uoffset = (uint64_t)offset;
+        if (hasZeroDim)
+        {
+            if (uoffset > storageTotal)
+                CV_Error(Error::StsBadSize, "DNN/Torch: tensor storage offset out of bounds");
+        }
+        else
+        {
+            uint64_t maxElemIndex = uoffset;
+            for (int i = 0; i < ndims; ++i)
+            {
+                const uint64_t dimSpan = (uint64_t)(sizes[i] - 1);
+                const uint64_t stride = (uint64_t)steps[i];
+                if (dimSpan != 0 && stride > (std::numeric_limits<uint64_t>::max() - maxElemIndex) / dimSpan)
+                    CV_Error(Error::StsOutOfRange, "DNN/Torch: tensor strided span overflow");
+                maxElemIndex += dimSpan * stride;
+            }
+            if (maxElemIndex >= storageTotal)
+                CV_Error(Error::StsBadSize, "DNN/Torch: tensor shape and strides exceed backing storage size");
         }
 
         //allocate Blob
