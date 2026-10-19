@@ -606,7 +606,7 @@ TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
     const int flags = get<1>(GetParam());
     const bool fromFile = get<2>(GetParam());
     Mat image(3, 5, CV_MAKETYPE(CV_32F, channels));
-    RNG rng(0);
+    RNG& rng = theRNG();
     rng.fill(image, RNG::UNIFORM, 0, 255);
 
     const int outputChannels = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYCOLOR)
