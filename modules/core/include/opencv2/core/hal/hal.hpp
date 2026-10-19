@@ -82,6 +82,59 @@ CV_EXPORTS void gemm64fc(const double* src1, size_t src1_step, const double* src
                         double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
                         int m_a, int n_a, int n_d, int flags);
 
+/** @brief Returns the size in bytes of a buffer for gemm32fPackB.
+@param n number of columns of op(B)
+@param k number of rows of op(B)
+@param flags CV_HAL_GEMM_2_T if B is stored as an n x k matrix
+*/
+CV_EXPORTS size_t gemm32fPackBSize(int n, int k, int flags);
+
+/** @brief Packs op(B) once so that gemm32fPacked can reuse it.
+@param B matrix B, k x n (or n x k with CV_HAL_GEMM_2_T)
+@param B_step bytes between rows of B
+@param n number of columns of op(B)
+@param k number of rows of op(B)
+@param flags CV_HAL_GEMM_2_T if B is stored as an n x k matrix, CV_HAL_GEMM_SINGLE_THREAD
+@param packedB output buffer of gemm32fPackBSize(n, k, flags) bytes
+*/
+CV_EXPORTS void gemm32fPackB(const float* B, size_t B_step, int n, int k, int flags, void* packedB);
+
+/** @brief Computes C = alpha*op(A)*B + beta*C with B packed by gemm32fPackB.
+@param A matrix A, m x k (or k x m with CV_HAL_GEMM_1_T)
+@param A_step bytes between rows of A
+@param packedB buffer filled by gemm32fPackB with the same n and k
+@param C matrix C, m x n, read when beta != 0
+@param C_step bytes between rows of C
+@param m number of rows of C
+@param n number of columns of C
+@param k number of columns of op(A)
+@param alpha multiplier of op(A)*B
+@param beta multiplier of C
+@param flags CV_HAL_GEMM_1_T, CV_HAL_GEMM_SINGLE_THREAD
+*/
+CV_EXPORTS void gemm32fPacked(const float* A, size_t A_step, const void* packedB,
+                              float* C, size_t C_step, int m, int n, int k,
+                              float alpha, float beta, int flags);
+
+/** @brief Computes C_i = alpha*op(A_i)*op(B_i) + beta*C_i for i = 0..batch-1.
+
+Matrix i starts at A + A_offsets[i], B + B_offsets[i] and C + C_offsets[i]. Offsets are in elements,
+so a shared (broadcast) matrix simply repeats its offset.
+@param batch number of products
+@param A, A_offsets, A_step matrices A, m x k (or k x m with CV_HAL_GEMM_1_T), row step in bytes
+@param B, B_offsets, B_step matrices B, k x n (or n x k with CV_HAL_GEMM_2_T), row step in bytes
+@param C, C_offsets, C_step matrices C, m x n, row step in bytes
+@param m, n, k sizes of the products
+@param alpha multiplier of op(A)*op(B)
+@param beta multiplier of C
+@param flags CV_HAL_GEMM_1_T, CV_HAL_GEMM_2_T, CV_HAL_GEMM_SINGLE_THREAD
+*/
+CV_EXPORTS void gemm32fBatch(int batch,
+                             const float* A, const size_t* A_offsets, size_t A_step,
+                             const float* B, const size_t* B_offsets, size_t B_step,
+                             float* C, const size_t* C_offsets, size_t C_step,
+                             int m, int n, int k, float alpha, float beta, int flags);
+
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);
 CV_EXPORTS float normL2Sqr_(const float* a, const float* b, int n);
