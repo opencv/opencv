@@ -47,6 +47,7 @@
 #include "grfmts.hpp"
 #include "utils.hpp"
 #include "exif.hpp"
+#include <sys/stat.h>
 #undef min
 #undef max
 #include <iostream>
@@ -278,6 +279,14 @@ static ImageDecoder findDecoder( const String& filename ) {
         CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
+
+#if defined(S_ISREG)
+    struct stat st;
+    if (fstat(fileno(f), &st) != 0 || !S_ISREG(st.st_mode)) {
+        fclose(f);
+        return ImageDecoder();
+    }
+#endif
 
     // read the file signature
     String signature(maxlen, ' ');
@@ -1257,6 +1266,8 @@ bool imwriteanimation(const String& filename, const Animation& animation, const 
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     return imwriteanimation_(filename, animation, params);
 }
 
@@ -1289,6 +1300,8 @@ bool imencodeanimation(const String& ext, const Animation& animation, std::vecto
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     return imencodeanimation_(ext, animation, buf, params);
 }
 

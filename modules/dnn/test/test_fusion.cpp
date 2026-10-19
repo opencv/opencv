@@ -370,7 +370,7 @@ TEST(Fusion, SubclassOfElementWiseLayerIsRegistered)
     ASSERT_TRUE(ops->unfold(prelu.get(), m, side));
 }
 
-TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
+TEST(Fusion, ApplyTakesKernelPathThenAffinePath)
 {
     LayerMath r;
     r.setKernel(cv::dnn::getActivationFunc(ACTIV_CLIP), { 0.f, 6.f });
@@ -390,19 +390,32 @@ TEST(Fusion, ApplyTakesKernelPathThenInterpreterPath)
     for (int i = 0; i < n; i++)
         EXPECT_FLOAT_EQ(want[i], y.ptr<float>()[i]) << "clip i=" << i;
 
+    // A scalar scale and shift has no kernel but is taken and run as a row loop.
     r = LayerMath();
-    r.unary(FusionEltwiseOp::SQRT, LayerMath::INPUT_VALUE);
-    PreparedFusion interp;
-    ASSERT_TRUE(interp.take(graphOf(r)));
-    EXPECT_TRUE(interp.activationFn == nullptr);
+    const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, r.constant(2.f));
+    r.binary(FusionEltwiseOp::ADD, scaled, r.constant(5.f));
+    PreparedFusion affine;
+    ASSERT_TRUE(affine.take(graphOf(r)));
+    EXPECT_TRUE(affine.activationFn == nullptr);
 
-    int big = (1 << 16) + 17;
-    Mat z(1, &big, CV_32F);
-    for (int i = 0; i < big; i++)
+    int sz[] = { 257, 384 };
+    Mat z(2, sz, CV_32F);
+    const int total = (int)z.total();
+    for (int i = 0; i < total; i++)
         z.ptr<float>()[i] = (float)(i % 100);
-    interp.run(z);
-    for (int i = 0; i < big; i += 997)
-        EXPECT_NEAR(std::sqrt((float)(i % 100)), z.ptr<float>()[i], 1e-5) << "sqrt i=" << i;
+    affine.run(z);
+    for (int i = 0; i < total; i += 997)
+        EXPECT_FLOAT_EQ(2.f * (float)(i % 100) + 5.f, z.ptr<float>()[i]) << "affine i=" << i;
+}
+
+TEST(Fusion, ExpressionWithoutKernelOrAffineFormIsRefused)
+{
+    // Evaluating it one value at a time would be slower than keeping it as its own layer.
+    LayerMath r;
+    r.unary(FusionEltwiseOp::SQRT, LayerMath::INPUT_VALUE);
+    PreparedFusion f;
+    EXPECT_FALSE(f.take(graphOf(r)));
+    EXPECT_FALSE(f.expr);
 }
 
 TEST(Fusion, PerChannelConstIndexesTheLastAxis)
@@ -523,6 +536,86 @@ TEST(Fusion, SharedRootKeepsEachChainsOwnBuffers)
     }
 }
 
+TEST(Fusion, AffineWithScaleAndShiftBuffers)
+{
+    AdjacencyGraphBuilder arena;
+    const int in = arena.internNode(FusionEltwiseOp::INPUT, {});
+    LayerMath r;
+    const int shift = r.perChannelConstant(1);  // created first, so it lands on the left of the ADD
+    const int scaled = r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, r.perChannelConstant(0));
+    r.binary(FusionEltwiseOp::ADD, shift, scaled);
+    const int root = fusion::instantiate(arena, in, r);
+    ASSERT_GE(root, 0);
+
+    // 37 is not a multiple of any SIMD width, so every row also runs the scalar tail.
+    const int nch = 37, rows = 5;
+    Mat s(1, &nch, CV_32F), b(1, &nch, CV_32F);
+    for (int c = 0; c < nch; c++) { s.ptr<float>()[c] = 0.5f + c; b.ptr<float>()[c] = c - 3.f; }
+    Ptr<AdjacencyGraph> expr = fusion::extract(arena.graph(), root, std::vector<Mat>{ s, b });
+    ASSERT_TRUE(expr);
+    PreparedFusion f;
+    ASSERT_TRUE(f.take(expr));
+
+    int sz[] = { rows, nch };
+    Mat y(2, sz, CV_32F);
+    for (int i = 0; i < rows * nch; i++)
+        y.ptr<float>()[i] = 0.25f * i;
+    f.run(y);
+    for (int i = 0; i < rows * nch; i++) {
+        const int c = i % nch;
+        EXPECT_NEAR(0.25f * i * (0.5f + c) + (c - 3.f), y.ptr<float>()[i], 1e-3) << "i=" << i;
+    }
+}
+
+TEST(Fusion, AffineFoldsSubAndShiftBeforeScale)
+{
+    // (x + b[c]) * s[c] folds to x * s[c] + b[c] * s[c].
+    AdjacencyGraphBuilder arena;
+    const int in = arena.internNode(FusionEltwiseOp::INPUT, {});
+    LayerMath r;
+    const int shifted = r.binary(FusionEltwiseOp::ADD, LayerMath::INPUT_VALUE, r.perChannelConstant(1));
+    r.binary(FusionEltwiseOp::MUL, shifted, r.perChannelConstant(0));
+    const int root = fusion::instantiate(arena, in, r);
+    ASSERT_GE(root, 0);
+
+    const int nch = 37, rows = 3;
+    Mat s(1, &nch, CV_32F), b(1, &nch, CV_32F);
+    for (int c = 0; c < nch; c++) { s.ptr<float>()[c] = 1.f + 0.1f * c; b.ptr<float>()[c] = 2.f - c; }
+    Ptr<AdjacencyGraph> expr = fusion::extract(arena.graph(), root, std::vector<Mat>{ s, b });
+    ASSERT_TRUE(expr);
+    PreparedFusion f;
+    ASSERT_TRUE(f.take(expr));
+
+    int sz[] = { rows, nch };
+    Mat y(2, sz, CV_32F);
+    for (int i = 0; i < rows * nch; i++)
+        y.ptr<float>()[i] = (float)(i % 11);
+    f.run(y);
+    for (int i = 0; i < rows * nch; i++) {
+        const int c = i % nch;
+        EXPECT_NEAR(((float)(i % 11) + (2.f - c)) * (1.f + 0.1f * c), y.ptr<float>()[i], 1e-3) << "i=" << i;
+    }
+
+    // (x - 3) * 0.5 with scalars is taken; c - x is not affine in this form and is refused.
+    LayerMath sub;
+    const int minus = sub.binary(FusionEltwiseOp::SUB, LayerMath::INPUT_VALUE, sub.constant(3.f));
+    sub.binary(FusionEltwiseOp::MUL, minus, sub.constant(0.5f));
+    PreparedFusion fs;
+    ASSERT_TRUE(fs.take(graphOf(sub)));
+    int n = 19;
+    Mat z(1, &n, CV_32F);
+    for (int i = 0; i < n; i++)
+        z.ptr<float>()[i] = (float)i;
+    fs.run(z);
+    for (int i = 0; i < n; i++)
+        EXPECT_FLOAT_EQ((i - 3.f) * 0.5f, z.ptr<float>()[i]) << "sub i=" << i;
+
+    LayerMath rev;
+    rev.binary(FusionEltwiseOp::SUB, rev.constant(3.f), LayerMath::INPUT_VALUE);
+    PreparedFusion fr;
+    EXPECT_FALSE(fr.take(graphOf(rev)));
+}
+
 TEST(Fusion, ShapeOfStaticInputFoldsToConstant)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/dynamic_reshape.onnx"));
@@ -605,6 +698,71 @@ TEST(Fusion, SharedProjectionsCollapseToOneGemm)
 
     EXPECT_EQ(fusedCount(net, "Gemm"), 1);
     EXPECT_EQ(fusedCount(net, "Slice2"), 3);
+}
+
+// A projection without bias must still fuse, with zeros for its part of the QKV bias.
+static void checkAttentionFusesWithMissingBias(const std::string& name, int nfused = 1)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(nfused, fusedCount(net, "Attention")) << name;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               name.c_str());
+}
+
+TEST(Fusion, AttentionWithoutProjectionBias)
+{
+    checkAttentionFusesWithMissingBias("attention_no_qkv_bias");
+}
+
+TEST(Fusion, AttentionWithoutKeyBias)
+{
+    checkAttentionFusesWithMissingBias("attention_no_k_bias");
+}
+
+TEST(Fusion, ClipAttentionWithoutKeyBias)
+{
+    checkAttentionFusesWithMissingBias("clip_attention_no_k_bias");
+}
+
+TEST(Fusion, CombinedQKVAttentionWithoutBias)
+{
+    checkAttentionFusesWithMissingBias("attention_combined_qkv_no_bias");
+}
+
+// A scalar K bias does not fit the K part of the QKV bias, so the block stays unfused.
+TEST(Fusion, AttentionWithWrongLengthBiasIsNotFused)
+{
+    checkAttentionFusesWithMissingBias("attention_scalar_k_bias", 0);
+}
+
+// readQKVGrouping()/evalDims() must read qkv_batch/qkv_seq from a real Shape/Gather/Mul/Concat
+// chain feeding the QKV Reshape, not just accept it as a layer param (as the AttentionLayer-level
+// tests in test_layers.cpp do).
+static void checkAttentionQKVGrouping(const std::string& name)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(1, fusedCount(net, "Attention")) << name;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out, name.c_str());
+}
+
+TEST(Fusion, AttentionQKVGroupingSeqMerge)
+{
+    checkAttentionQKVGrouping("attention_qkv_grouping_seq_merge");
+}
+
+TEST(Fusion, AttentionQKVGroupingBatchMerge)
+{
+    checkAttentionQKVGrouping("attention_qkv_grouping_batch_merge");
 }
 
 static void checkBatchNormFoldsIntoConv(const std::string& name)

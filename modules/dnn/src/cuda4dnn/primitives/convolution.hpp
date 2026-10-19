@@ -83,8 +83,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class ConvolutionOp final : public CUDABackendNode {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         ConvolutionOp(csl::Stream stream_, csl::cudnn::Handle handle_, const ConvolutionConfiguration& config, const Mat& filters, const Mat& bias)
             : stream(std::move(stream_)), cudnnHandle(std::move(handle_))
         {
@@ -286,8 +284,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cuda::GpuMatND>& inputs,
-            const std::vector<cuda::GpuMatND>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
             /* input[0] = conv input, input[1] = bias (from fused eltwise layer) */

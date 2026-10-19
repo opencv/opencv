@@ -108,6 +108,20 @@ int armpl_hal_gemm64fc(const double* src1, size_t src1_step, const double* src2,
 #undef  cv_hal_gemm64fc
 #define cv_hal_gemm64fc armpl_hal_gemm64fc
 
+int armpl_hal_SVD32f_impl(float* src, size_t src_step, float* w, float* u, size_t u_step, float* vt, size_t vt_step, int m, int n, int flags);
+
+#ifdef cv_hal_SVD32f
+static inline int armpl_hal_SVD32f(float* src, size_t src_step, float* w, float* u, size_t u_step, float* vt, size_t vt_step, int m, int n, int flags)
+{
+    int res = armpl_hal_SVD32f_impl(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
+    if (res == CV_HAL_ERROR_OK)
+        return res;
+    return cv_hal_SVD32f(src, src_step, w, u, u_step, vt, vt_step, m, n, flags);
+}
+#undef  cv_hal_SVD32f
+#define cv_hal_SVD32f armpl_hal_SVD32f
+#endif
+
 int armpl_hal_LU32f(float* a, size_t a_step, int m, float* b, size_t b_step, int n, int* info);
 int armpl_hal_LU64f(double* a, size_t a_step, int m, double* b, size_t b_step, int n, int* info);
 

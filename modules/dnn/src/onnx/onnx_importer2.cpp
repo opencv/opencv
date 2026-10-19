@@ -749,7 +749,9 @@ Net ONNXImporter2::parseModel()
             }
         }
         CV_LOG_WARNING(NULL, sstrm.str());
-        return Net();
+        Net failed;
+        failed.getImpl()->importFailure = sstrm.str();
+        return failed;
     }
     netimpl->prepareForInference();
     // ************ uncomment for debugging **********
@@ -1090,7 +1092,12 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     }
     catch (const cv::Exception& e)
     {
-        raiseError();
+        // An unknown op that throws before addLayer() is never recorded there, and
+        // the "cannot be loaded" warning would then name no operation at all.
+        if (dispatch.find(layer_type) == dispatch.end() && !LayerFactory::isLayerRegistered(layer_type))
+            rememberMissingOp(layer_type);
+        else
+            raiseError();
         CV_LOG_INFO(NULL, "DNN/ONNX: error '" << e.what() << "' occurred when processing node '" << node_name
                     << "' (" << layer_type << ") with "
                     << node_proto.input_size() << " inputs and "
@@ -1932,6 +1939,10 @@ Arg ONNXImporter2::resolveConstThroughIdentity(Arg arg)
 void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
+    // Resize always carries the data input plus scales or sizes, so the smallest
+    // valid node has 2 inputs (opset-10 [X, scales]); opset-11+ adds roi/sizes.
+    // scalesInputId below assumes that, so reject a short input list before indexing.
+    CV_CheckGE(ninputs, 2, "DNN/ONNX: Resize requires at least 2 inputs");
     layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 

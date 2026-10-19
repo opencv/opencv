@@ -83,6 +83,8 @@ namespace cv
         void valueToStr64s() { snprintf(buf, sizeof(buf), "%lld", (long long)mtx.ptr<int64_t>(row, col)[cn]); }
         void valueToStr16f() { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<hfloat>(row, col)[cn]); }
         void valueToStr16bf() { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<bfloat>(row, col)[cn]); }
+        void valueToStr8f()   { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<fp8_t>(row, col)[cn]); }
+        void valueToStr8fnuz() { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<fp8a_t>(row, col)[cn]); }
         void valueToStrOther() { buf[0] = 0; }
 
     public:
@@ -127,6 +129,8 @@ namespace cv
                 case CV_64S: valueToStr = &FormattedImpl::valueToStr64s; break;
                 case CV_16F: valueToStr = &FormattedImpl::valueToStr16f; break;
                 case CV_16BF: valueToStr = &FormattedImpl::valueToStr16bf; break;
+                case CV_8F_E4M3FN:   valueToStr = &FormattedImpl::valueToStr8f; break;
+                case CV_8F_E4M3FNUZ: valueToStr = &FormattedImpl::valueToStr8fnuz; break;
                 default:
                     CV_Error_(Error::StsError, ("unsupported matrix type %d\n", mtx.depth()));
             }
@@ -345,7 +349,8 @@ namespace cv
             static const char* numpyTypes[CV_DEPTH_MAX] =
             {
                 "uint8", "int8", "uint16", "int16", "int32", "float32", "float64",
-                "float16", "bfloat16", "bool", "uint64", "int64", "uint32"
+                "float16", "bfloat16", "bool", "uint64", "int64", "uint32",
+                "float8_e4m3fn", "float8_e4m3fnuz"
             };
             char braces[5] = {'[', ']', ',', '[', ']'};
             if (mtx.cols == 1)
@@ -452,6 +457,18 @@ namespace cv
         static const char* fmt() { return "%.4g"; }
     };
 
+    template<> struct Fmt<fp8_t>
+    {
+        typedef float temp_type;
+        static const char* fmt() { return "%.4g"; }
+    };
+
+    template<> struct Fmt<fp8a_t>
+    {
+        typedef float temp_type;
+        static const char* fmt() { return "%.4g"; }
+    };
+
     template <typename _Tp>
     static void pprintRow(std::ostream& strm, const _Tp* ptr, int n, size_t ofs, int edge)
     {
@@ -510,6 +527,10 @@ namespace cv
                 pprintRow(strm, (const bfloat*)data, n, ofs, edge);
             else if (typ == CV_Bool)
                 pprintRow(strm, (const bool*)data, n, ofs, edge);
+            else if (typ == CV_8F_E4M3FN)
+                pprintRow(strm, (const fp8_t*)data, n, ofs, edge);
+            else if (typ == CV_8F_E4M3FNUZ)
+                pprintRow(strm, (const fp8a_t*)data, n, ofs, edge);
             else {
                 CV_Error(Error::StsNotImplemented, "unsupported type");
             }

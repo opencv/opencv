@@ -3735,6 +3735,13 @@ int Kernel::set(int i, const UMat& m)
     return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m));
 }
 
+// a CUDA-backed UMat carries a device pointer in u->handle, not a cl_mem
+static bool isCudaBacked(const UMatData* u)
+{
+    const MatAllocator* cudaAllocator = cv::cuda::getCudaAllocator();
+    return u && cudaAllocator && u->currAllocator == cudaAllocator;
+}
+
 int Kernel::set(int i, const KernelArg& arg)
 {
     if( !p || !p->handle )
@@ -3759,6 +3766,16 @@ int Kernel::set(int i, const KernelArg& arg)
             status = clSetKernelArg(p->handle, (cl_uint)i, sizeof(h_null), &h_null);
             CV_OCL_DBG_CHECK_RESULT(status, cv::format("clSetKernelArg('%s', arg_index=%d, cl_mem=NULL)", p->name.c_str(), (int)i).c_str());
             return i + 1;
+        }
+        // a CUDA-backed UMat has no cl_mem; decline so the caller falls back to CPU
+        if (isCudaBacked(arg.m->u))
+        {
+            CV_LOG_DEBUG(NULL, cv::format("OpenCL: Kernel(%s)::set(arg_index=%d): UMat is backed by the CUDA allocator, declining",
+                    p->name.c_str(), (int)i));
+            p->cleanupUMats();
+            p->release();
+            p = 0;
+            return -1;
         }
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
@@ -7188,12 +7205,17 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
     if (ddepth < 0)
         ddepth = depth;
 
+    // bf16 and fp8 constants have no OpenCL literal form, output them as regular float
+    if (ddepth == CV_16BF || ddepth == CV_8F_E4M3FN || ddepth == CV_8F_E4M3FNUZ)
+        ddepth = CV_32F;
+
     if (ddepth != depth)
         kernel.convertTo(kernel, ddepth);
 
     typedef std::string (* func_t)(const Mat &);
-    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<hfloat> };
+    static const func_t funcs[CV_DEPTH_MAX] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
+                                                kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<hfloat>,
+                                                0, kerToStr<bool>, kerToStr<uint64_t>, kerToStr<int64_t>, kerToStr<unsigned> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
@@ -7593,6 +7615,8 @@ bool internal::isPerformanceCheckBypassed()
 
 bool internal::isCLBuffer(UMat& u)
 {
+    if (isCudaBacked(u.u))
+        return false;
     void* h = u.handle(ACCESS_RW);
     if (!h)
         return true;

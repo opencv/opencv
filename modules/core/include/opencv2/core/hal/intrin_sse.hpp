@@ -607,33 +607,58 @@ void v_rshr_pack_store(short* ptr, const v_int32x4& a)
 }
 
 
-// [a0 0 | b0 0]  [a1 0 | b1 0]
-inline v_uint32x4 v_pack(const v_uint64x2& a, const v_uint64x2& b)
+// Gather the low and the high 32-bit halves of a and b as [a0 a1 b0 b1].
+// SSE2 has no 64-bit compare, so the saturation below is decided on the high halves alone, which
+// only ever needs 32-bit compares.
+#define OPENCV_HAL_SSE_SPLIT64(a, b, lo, hi)     __m128 lo##_af = _mm_castsi128_ps(a), lo##_bf = _mm_castsi128_ps(b);     __m128i lo = _mm_castps_si128(_mm_shuffle_ps(lo##_af, lo##_bf, _MM_SHUFFLE(2,0,2,0)));     __m128i hi = _mm_castps_si128(_mm_shuffle_ps(lo##_af, lo##_bf, _MM_SHUFFLE(3,1,3,1)))
+
+// mask ? a : b, per 32-bit lane
+inline __m128i _v_sse_select(__m128i mask, __m128i a, __m128i b)
 {
-    __m128i v0 = _mm_unpacklo_epi32(a.val, b.val); // a0 a1 0 0
-    __m128i v1 = _mm_unpackhi_epi32(a.val, b.val); // b0 b1 0 0
-    return v_uint32x4(_mm_unpacklo_epi32(v0, v1));
+#if CV_SSE4_1
+    return _mm_blendv_epi8(b, a, mask);
+#else
+    return _mm_or_si128(_mm_and_si128(mask, a), _mm_andnot_si128(mask, b));
+#endif
 }
 
-inline void v_pack_store(unsigned* ptr, const v_uint64x2& a)
-{
-    __m128i a1 = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 2, 2, 0));
-    _mm_storel_epi64((__m128i*)ptr, a1);
-}
-
-// [a0 0 | b0 0]  [a1 0 | b1 0]
+// s64 -> s32: the value fits exactly when hi == sext(lo); otherwise clamp to INT_MIN / INT_MAX
+// according to the sign, which sext(hi) already carries.
 inline v_int32x4 v_pack(const v_int64x2& a, const v_int64x2& b)
 {
-    __m128i v0 = _mm_unpacklo_epi32(a.val, b.val); // a0 a1 0 0
-    __m128i v1 = _mm_unpackhi_epi32(a.val, b.val); // b0 b1 0 0
-    return v_int32x4(_mm_unpacklo_epi32(v0, v1));
+    OPENCV_HAL_SSE_SPLIT64(a.val, b.val, lo, hi);
+    __m128i fits = _mm_cmpeq_epi32(hi, _mm_srai_epi32(lo, 31));
+    __m128i sat  = _mm_xor_si128(_mm_srai_epi32(hi, 31), _mm_set1_epi32(INT_MAX));
+    return v_int32x4(_v_sse_select(fits, lo, sat));
+}
+
+// u64 -> u32: fits exactly when hi == 0, else UINT_MAX
+inline v_uint32x4 v_pack(const v_uint64x2& a, const v_uint64x2& b)
+{
+    OPENCV_HAL_SSE_SPLIT64(a.val, b.val, lo, hi);
+    __m128i fits = _mm_cmpeq_epi32(hi, _mm_setzero_si128());
+    return v_uint32x4(_v_sse_select(fits, lo, _mm_set1_epi32(-1)));
+}
+
+// s64 -> u32: hi == 0 keeps lo, hi < 0 clamps to 0, hi > 0 clamps to UINT_MAX - and the
+// cmpgt result is exactly 0 / all-ones, so it doubles as the saturated value.
+inline v_uint32x4 v_pack_u(const v_int64x2& a, const v_int64x2& b)
+{
+    OPENCV_HAL_SSE_SPLIT64(a.val, b.val, lo, hi);
+    __m128i zero = _mm_setzero_si128();
+    __m128i fits = _mm_cmpeq_epi32(hi, zero);
+    __m128i sat  = _mm_cmpgt_epi32(hi, zero);
+    return v_uint32x4(_v_sse_select(fits, lo, sat));
 }
 
 inline void v_pack_store(int* ptr, const v_int64x2& a)
-{
-    __m128i a1 = _mm_shuffle_epi32(a.val, _MM_SHUFFLE(0, 2, 2, 0));
-    _mm_storel_epi64((__m128i*)ptr, a1);
-}
+{ _mm_storel_epi64((__m128i*)ptr, v_pack(a, a).val); }
+
+inline void v_pack_store(unsigned* ptr, const v_uint64x2& a)
+{ _mm_storel_epi64((__m128i*)ptr, v_pack(a, a).val); }
+
+inline void v_pack_u_store(unsigned* ptr, const v_int64x2& a)
+{ _mm_storel_epi64((__m128i*)ptr, v_pack_u(a, a).val); }
 
 template<int n> inline
 v_uint32x4 v_rshr_pack(const v_uint64x2& a, const v_uint64x2& b)

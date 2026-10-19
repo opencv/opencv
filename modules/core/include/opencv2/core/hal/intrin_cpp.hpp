@@ -3051,17 +3051,18 @@ template<int n> inline v_reg<_Tpn, 2*n> v_##pack_suffix(const v_reg<_Tp, n>& a, 
 //! converts to corresponding unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
-//! - pack_u: for 16- and 32-bit signed integer input types
+//! - pack_u: for 16-, 32- and 64-bit signed integer input types
 //!
-//! @note All variants except 64-bit use saturation.
+//! @note All variants use saturation.
 OPENCV_HAL_IMPL_C_PACK(ushort, uchar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK(short, schar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK(unsigned, ushort, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK(int, short, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_PACK(uint64, unsigned, pack, static_cast)
-OPENCV_HAL_IMPL_C_PACK(int64, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK(uint64, unsigned, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(int64, int, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK(short, uchar, pack_u, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK(int, ushort, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK(int64, unsigned, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
@@ -3086,17 +3087,18 @@ template<int shift, int n> inline v_reg<_Tpn, 2*n> v_rshr_##pack_suffix(const v_
 //! type and returned in the result vector. Variant with _u_ suffix converts to unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
-//! - pack_u: for 16- and 32-bit signed integer input types
+//! - pack_u: for 16-, 32- and 64-bit signed integer input types
 //!
-//! @note All variants except 64-bit use saturation.
+//! @note All variants use saturation.
 OPENCV_HAL_IMPL_C_RSHR_PACK(ushort, uchar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(short, schar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(unsigned, ushort, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(int, short, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(uint64, unsigned, pack, static_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(int64, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(uint64, unsigned, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(int64, int, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(short, uchar, pack_u, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(int, ushort, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(int64, unsigned, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
@@ -3116,17 +3118,18 @@ template<int n> inline void v_##pack_suffix##_store(_Tpn* ptr, const v_reg<_Tp, 
 //! Variant with _u_ suffix converts to corresponding unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
-//! - pack_u: for 16- and 32-bit signed integer input types
+//! - pack_u: for 16-, 32- and 64-bit signed integer input types
 //!
-//! @note All variants except 64-bit use saturation.
+//! @note All variants use saturation.
 OPENCV_HAL_IMPL_C_PACK_STORE(ushort, uchar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK_STORE(short, schar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK_STORE(unsigned, ushort, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK_STORE(int, short, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_PACK_STORE(uint64, unsigned, pack, static_cast)
-OPENCV_HAL_IMPL_C_PACK_STORE(int64, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(uint64, unsigned, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(int64, int, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK_STORE(short, uchar, pack_u, saturate_cast)
 OPENCV_HAL_IMPL_C_PACK_STORE(int, ushort, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_PACK_STORE(int64, unsigned, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
@@ -3146,9 +3149,9 @@ template<int shift, int n> inline void v_rshr_##pack_suffix##_store(_Tpn* ptr, c
 //! memory. Variant with _u_ suffix converts to unsigned type.
 //!
 //! - pack: for 16-, 32- and 64-bit integer input types
-//! - pack_u: for 16- and 32-bit signed integer input types
+//! - pack_u: for 16-, 32- and 64-bit signed integer input types
 //!
-//! @note All variants except 64-bit use saturation.
+//! @note All variants use saturation.
 OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(ushort, uchar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(short, schar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK_STORE(unsigned, ushort, pack, saturate_cast)

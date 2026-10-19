@@ -137,6 +137,23 @@ each row represents a point.
  */
 CV_EXPORTS_W void showPoints(const String& win_name, const String& obj_name, InputArray points);
 
+/** @brief Shows a 3D Gaussian Splatting scene in the specified viz3d window. See cv::viz3d::destroyObject.
+
+Splats are alpha blended, sorted back to front by camera-space depth on the CPU whenever the view
+changes, and drawn after all opaque objects in the same window.
+
+Several splat objects in one window are drawn back to front by the depth of their centers. This is
+correct for scenes that are apart from each other, but scenes that interpenetrate can blend in the
+wrong order where they overlap. Merge such scenes into a single object instead.
+
+@param win_name Name of the viz3d window.
+@param obj_name Name of the object.
+@param splats One row per Gaussian, 13 floats wide: position (3), upper triangle of the symmetric
+3D covariance (6: xx, xy, xz, yy, yz, zz), color (3), opacity (1). As produced by
+cv::loadGaussianSplats or cv::decodeGaussianSplats, see cv::GaussianSplatLayout.
+ */
+CV_EXPORTS_W void showGaussianSplats(const String& win_name, const String& obj_name, InputArray splats);
+
 /** @brief Shows a colored depth map as a point cloud in the specified viz3d window. See cv::viz3d::destroyObject.
 
 The colored depth map must be a 2D image with 4 channels (RGBD). The points are created assuming

@@ -1145,9 +1145,7 @@ void Mat::fit(Size _sz, int _type)
 
 void Mat::fitSameSize(InputArray m, int _type)
 {
-    int _sizes[CV_MAX_DIM];
-    int _dims = m.sizend(_sizes);
-    fit(_dims, _sizes, _type);
+    fit(m.shape(), _type);
 }
 
 void Mat::addref()

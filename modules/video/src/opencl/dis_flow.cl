@@ -4,6 +4,10 @@
 
 //#define CV_USE_SUBGROUPS
 
+#ifdef CV_USE_SUBGROUPS
+#pragma OPENCL EXTENSION cl_khr_subgroups : enable
+#endif
+
 #define EPS 0.001f
 #define INF 1E+10F
 

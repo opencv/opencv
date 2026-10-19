@@ -315,4 +315,25 @@ TEST(OpenCL, move_construct_assign)
     testOpenCLKernel(k3);
 }
 
+#ifdef HAVE_OPENCL
+
+typedef testing::TestWithParam<perf::MatDepth> OCL_KernelToStr_Depth;
+
+TEST_P(OCL_KernelToStr_Depth, new_depths)
+{
+    const int depth = GetParam();
+    const bool isFloat = depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+    Mat kernel = Mat::ones(1, 3, CV_MAKETYPE(depth, 1));
+
+    const std::string expected = isFloat ? " -D COEFF=DIG(1.000000000f)DIG(1.000000000f)DIG(1.000000000f)"
+                                         : " -D COEFF=DIG(1)DIG(1)DIG(1)";
+    EXPECT_EQ(expected, cv::ocl::kernelToStr(kernel));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_KernelToStr_Depth,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
+);
+
+#endif // HAVE_OPENCL
+
 }} // namespace

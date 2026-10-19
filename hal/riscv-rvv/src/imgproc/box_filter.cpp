@@ -226,66 +226,19 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
                 for (int j = right; j < width; j++)
                     process(i, j);
 
+                // channel-blind on the interleaved row: flat[f] sums flat[f],
+                // flat[f+3], ..., flat[f+(ksize-1)*3], i.e. its own-channel taps,
+                // in the same order as the per-channel formulation
+                float* row = res.data() + p2idx(i, 0);
                 int vl;
-                for (int j = left; j < right; j += vl)
+                for (int fj = left * 3; fj < right * 3; fj += vl)
                 {
-                    vl = __riscv_vsetvl_e32m2(right - j);
-                    const float* extra = reinterpret_cast<const float*>(src_data + i * src_step) + (j - anchor_x) * 3;
-                    auto src = __riscv_vlseg3e32_v_f32m2x3(extra, vl);
-                    auto src0 = __riscv_vget_v_f32m2x3_f32m2(src, 0);
-                    auto src1 = __riscv_vget_v_f32m2x3_f32m2(src, 1);
-                    auto src2 = __riscv_vget_v_f32m2x3_f32m2(src, 2);
-
-                    extra += vl * 3;
-                    auto sum0 = src0, sum1 = src1, sum2 = src2;
-                    src0 = __riscv_vfslide1down(src0, extra[0], vl);
-                    src1 = __riscv_vfslide1down(src1, extra[1], vl);
-                    src2 = __riscv_vfslide1down(src2, extra[2], vl);
-                    sum0 = __riscv_vfadd(sum0, src0, vl);
-                    sum1 = __riscv_vfadd(sum1, src1, vl);
-                    sum2 = __riscv_vfadd(sum2, src2, vl);
-                    src0 = __riscv_vfslide1down(src0, extra[3], vl);
-                    src1 = __riscv_vfslide1down(src1, extra[4], vl);
-                    src2 = __riscv_vfslide1down(src2, extra[5], vl);
-                    sum0 = __riscv_vfadd(sum0, src0, vl);
-                    sum1 = __riscv_vfadd(sum1, src1, vl);
-                    sum2 = __riscv_vfadd(sum2, src2, vl);
-                    if (ksize >= 5)
-                    {
-                        src0 = __riscv_vfslide1down(src0, extra[6], vl);
-                        src1 = __riscv_vfslide1down(src1, extra[7], vl);
-                        src2 = __riscv_vfslide1down(src2, extra[8], vl);
-                        sum0 = __riscv_vfadd(sum0, src0, vl);
-                        sum1 = __riscv_vfadd(sum1, src1, vl);
-                        sum2 = __riscv_vfadd(sum2, src2, vl);
-                        src0 = __riscv_vfslide1down(src0, extra[ 9], vl);
-                        src1 = __riscv_vfslide1down(src1, extra[10], vl);
-                        src2 = __riscv_vfslide1down(src2, extra[11], vl);
-                        sum0 = __riscv_vfadd(sum0, src0, vl);
-                        sum1 = __riscv_vfadd(sum1, src1, vl);
-                        sum2 = __riscv_vfadd(sum2, src2, vl);
-                    }
-                    if (ksize == 7)
-                    {
-                        src0 = __riscv_vfslide1down(src0, extra[12], vl);
-                        src1 = __riscv_vfslide1down(src1, extra[13], vl);
-                        src2 = __riscv_vfslide1down(src2, extra[14], vl);
-                        sum0 = __riscv_vfadd(sum0, src0, vl);
-                        sum1 = __riscv_vfadd(sum1, src1, vl);
-                        sum2 = __riscv_vfadd(sum2, src2, vl);
-                        src0 = __riscv_vfslide1down(src0, extra[15], vl);
-                        src1 = __riscv_vfslide1down(src1, extra[16], vl);
-                        src2 = __riscv_vfslide1down(src2, extra[17], vl);
-                        sum0 = __riscv_vfadd(sum0, src0, vl);
-                        sum1 = __riscv_vfadd(sum1, src1, vl);
-                        sum2 = __riscv_vfadd(sum2, src2, vl);
-                    }
-
-                    vfloat32m2x3_t dst{};
-                    dst = __riscv_vset_v_f32m2_f32m2x3(dst, 0, sum0);
-                    dst = __riscv_vset_v_f32m2_f32m2x3(dst, 1, sum1);
-                    dst = __riscv_vset_v_f32m2_f32m2x3(dst, 2, sum2);
-                    __riscv_vsseg3e32(res.data() + p2idx(i, j), dst, vl);
+                    vl = __riscv_vsetvl_e32m8(right * 3 - fj);
+                    const float* p = reinterpret_cast<const float*>(src_data + i * src_step) + fj - anchor_x * 3;
+                    auto sum = __riscv_vle32_v_f32m8(p, vl);
+                    for (int t = 1; t < ksize; t++)
+                        sum = __riscv_vfadd(sum, __riscv_vle32_v_f32m8(p + t * 3, vl), vl);
+                    __riscv_vse32(row + fj, sum, vl);
                 }
             }
         }
@@ -309,17 +262,13 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
             }
 
             int vl;
-            for (int j = 0; j < width; j += vl)
+            for (int fj = 0; fj < width * 3; fj += vl)
             {
-                vl = __riscv_vsetvl_e32m2(width - j);
-                vfloat32m2_t sum0, sum1, sum2;
-                sum0 = sum1 = sum2 = __riscv_vfmv_v_f_f32m2(0, vl);
+                vl = __riscv_vsetvl_e32m8(width * 3 - fj);
+                auto sum = __riscv_vfmv_v_f_f32m8(0, vl);
                 auto loadres = [&](const float* row) {
                     if (!row) return;
-                    auto src = __riscv_vlseg3e32_v_f32m2x3(row + j * 3, vl);
-                    sum0 = __riscv_vfadd(sum0, __riscv_vget_v_f32m2x3_f32m2(src, 0), vl);
-                    sum1 = __riscv_vfadd(sum1, __riscv_vget_v_f32m2x3_f32m2(src, 1), vl);
-                    sum2 = __riscv_vfadd(sum2, __riscv_vget_v_f32m2x3_f32m2(src, 2), vl);
+                    sum = __riscv_vfadd(sum, __riscv_vle32_v_f32m8(row + fj, vl), vl);
                 };
                 loadres(row0);
                 loadres(row1);
@@ -329,17 +278,9 @@ static inline int boxFilterC3(int start, int end, const uchar* src_data, size_t 
                 loadres(row5);
                 loadres(row6);
                 if (normalize)
-                {
-                    sum0 = __riscv_vfdiv(sum0, ksize * ksize, vl);
-                    sum1 = __riscv_vfdiv(sum1, ksize * ksize, vl);
-                    sum2 = __riscv_vfdiv(sum2, ksize * ksize, vl);
-                }
+                    sum = __riscv_vfdiv(sum, ksize * ksize, vl);
 
-                vfloat32m2x3_t dst{};
-                dst = __riscv_vset_v_f32m2_f32m2x3(dst, 0, sum0);
-                dst = __riscv_vset_v_f32m2_f32m2x3(dst, 1, sum1);
-                dst = __riscv_vset_v_f32m2_f32m2x3(dst, 2, sum2);
-                __riscv_vsseg3e32(reinterpret_cast<float*>(dst_data + cur * dst_step) + j * 3, dst, vl);
+                __riscv_vse32(reinterpret_cast<float*>(dst_data + cur * dst_step) + fj, sum, vl);
             }
         }
     }

@@ -258,16 +258,74 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             for( ; imsize.height--; p0 += step0, mask += mstep )
             {
                 if( !mask )
-                    for( x = 0; x < imsize.width; x++, p0 += d0 )
+                {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                    if( d0 == 1 && sizeof(T) == 2 )
                     {
-                        double v0 = (double)*p0;
-                        int idx = cvFloor(v0*a + b);
-                        if (v0 < v0_lo || v0 >= v0_hi)
-                            continue;
-                        idx = CV_CLAMP_INT(idx, 0, sz - 1);
-                        CV_DbgAssert((unsigned)idx < (unsigned)sz);
-                        ((int*)H)[idx]++;
+                        const ushort* p  = (const ushort*)p0;
+                        const int nlanes = VTraits<v_uint16>::vlanes();
+
+                        const v_float32 va   = vx_setall_f32((float)a);
+                        const v_float32 vb   = vx_setall_f32((float)b);
+                        const v_float32 vlo  = vx_setall_f32((float)v0_lo);
+                        const v_float32 vhi  = vx_setall_f32((float)v0_hi);
+                        const v_int32   vi0  = vx_setall_s32(0);
+                        const v_int32   visz = vx_setall_s32(sz - 1);
+
+                        x = 0;
+                        for( ; x <= imsize.width - nlanes; x += nlanes )
+                        {
+                            v_uint16 pix = vx_load(&p[x]);
+                            v_uint32 lo32, hi32;
+                            v_expand(pix, lo32, hi32);
+                            v_float32 flo = v_cvt_f32(v_reinterpret_as_s32(lo32));
+                            v_float32 fhi = v_cvt_f32(v_reinterpret_as_s32(hi32));
+                            v_uint32 rlo = v_reinterpret_as_u32(v_and(v_ge(flo, vlo), v_lt(flo, vhi)));
+                            v_uint32 rhi = v_reinterpret_as_u32(v_and(v_ge(fhi, vlo), v_lt(fhi, vhi)));
+
+                            v_int32 idx_lo = v_max(vi0, v_min(visz, v_floor(v_fma(flo, va, vb))));
+                            v_int32 idx_hi = v_max(vi0, v_min(visz, v_floor(v_fma(fhi, va, vb))));
+
+                            int idxbuf[2 * VTraits<v_int32>::max_nlanes];
+                            v_store(idxbuf, idx_lo);
+                            v_store(idxbuf + nlanes / 2, idx_hi);
+
+                            if( v_check_all(v_reinterpret_as_s32(rlo)) && v_check_all(v_reinterpret_as_s32(rhi)) )
+                            {
+                                for( int k = 0; k < nlanes; k++ )
+                                    ((int*)H)[idxbuf[k]]++;
+                            }
+                            else
+                            {
+                                int deltabuf[2 * VTraits<v_int32>::max_nlanes];
+                                v_store(deltabuf, v_reinterpret_as_s32(rlo));
+                                v_store(deltabuf + nlanes / 2, v_reinterpret_as_s32(rhi));
+                                for( int k = 0; k < nlanes; k++ )
+                                    ((int*)H)[idxbuf[k]] += (deltabuf[k] != 0);
+                            }
+                        }
+                        for( ; x < imsize.width; x++ )
+                        {
+                            double v0 = (double)p[x];
+                            int delta = int(v0_lo <= v0) & int(v0 < v0_hi);
+                            int idx   = CV_CLAMP_INT(cvFloor(v0*a + b), 0, sz-1);
+                            ((int*)H)[idx] += delta;
+                        }
+                        p0 = (const T*)(p + imsize.width);
                     }
+                    else
+#endif
+                        for( x = 0; x < imsize.width; x++, p0 += d0 )
+                        {
+                            double v0 = (double)*p0;
+                            int idx = cvFloor(v0*a + b);
+                            if (v0 < v0_lo || v0 >= v0_hi)
+                                continue;
+                            idx = CV_CLAMP_INT(idx, 0, sz - 1);
+                            CV_DbgAssert((unsigned)idx < (unsigned)sz);
+                            ((int*)H)[idx]++;
+                        }
+                }
                 else
                     for( x = 0; x < imsize.width; x++, p0 += d0 )
                         if( mask[x] )
@@ -1234,7 +1292,7 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
-    CV_Assert(nimages > 0 && dims > 0);
+    CV_Assert(nimages > 0 && dims > 0 && dims <= CV_MAX_DIM);
     CV_Assert(rsz == dims*2 || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims);
     float* _ranges[CV_MAX_DIM];
@@ -1950,7 +2008,7 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
     int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
-    CV_Assert(nimages > 0);
+    CV_Assert(nimages > 0 && dims <= CV_MAX_DIM);
     CV_Assert(rsz == dims*2 || (rsz == 2 && _1d) || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims || (csz == 1 && _1d));
 
@@ -2262,6 +2320,21 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             double b = (method == cv::HISTCMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
+        }
+        if( method == cv::HISTCMP_CHISQR_ALT )
+        {
+            // Include bins present only in H2; bins stored in H1 were counted above.
+            it = PH2->begin();
+            for( i = 0; i < N2; i++, ++it )
+            {
+                const SparseMat::Node* node = it.node();
+                if( !PH1->find<float>(node->idx, (size_t*)&node->hashval) )
+                {
+                    double v2 = it.value<float>();
+                    if( fabs(v2) > DBL_EPSILON )
+                        result += v2;
+                }
+            }
         }
     }
     else if( method == cv::HISTCMP_CORREL )

@@ -107,7 +107,7 @@ __kernel void RGB2XYZ(__global const uchar * srcptr, int src_step, int src_offse
                 __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
                 __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
 
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
                 DATA_TYPE r = src_pix.x, g = src_pix.y, b = src_pix.z;
 
 #ifdef DEPTH_5
@@ -151,7 +151,7 @@ __kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offse
                 __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
                 __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
 
-                DATA_TYPE_4 src_pix = vload4(0, src);
+                DATA_TYPE_3 src_pix = vload3(0, src);
                 DATA_TYPE x = src_pix.x, y = src_pix.y, z = src_pix.z;
 
 #ifdef DEPTH_5
@@ -224,7 +224,7 @@ __kernel void BGR2Lab(__global const uchar * src, int src_step, int src_offset,
             {
                 __global const uchar* src_ptr = src + src_index;
                 __global uchar* dst_ptr = dst + dst_index;
-                uchar4 src_pix = vload4(0, src_ptr);
+                uchar3 src_pix = vload3(0, src_ptr);
 
                 int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
                     C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -275,7 +275,7 @@ __kernel void BGR2Lab(__global const uchar * srcptr, int src_step, int src_offse
             {
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float4 src_pix = vload4(0, src);
+                float3 src_pix = vload3(0, src);
 
                 float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
                       C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
@@ -390,7 +390,7 @@ __kernel void Lab2BGR(__global const uchar * src, int src_step, int src_offset,
             {
                 __global const uchar* src_ptr = src + src_index;
                 __global uchar * dst_ptr = dst + dst_index;
-                uchar4 src_pix = vload4(0, src_ptr);
+                uchar3 src_pix = vload3(0, src_ptr);
 
                 float srcbuf[3], dstbuf[3];
                 srcbuf[0] = src_pix.x*(100.f/255.f);
@@ -443,7 +443,7 @@ __kernel void Lab2BGR(__global const uchar * srcptr, int src_step, int src_offse
             {
                 __global const float * src = (__global const float *)(srcptr + src_index);
                 __global float * dst = (__global float *)(dstptr + dst_index);
-                float4 src_pix = vload4(0, src);
+                float3 src_pix = vload3(0, src);
 
                 float srcbuf[3], dstbuf[3];
                 srcbuf[0] = src_pix.x, srcbuf[1] = src_pix.y, srcbuf[2] = src_pix.z;

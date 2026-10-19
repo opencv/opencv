@@ -29,6 +29,14 @@ TEST(Core_TExpr, add)
     EXPECT_LE(cvtest::norm(got, exp, NORM_INF), 1e-3);
 }
 
+TEST(Core_TExpr, empty_inputs)
+{
+    Mat emptyA(0, 0, CV_32F), emptyB(0, 0, CV_32F);
+    std::vector<Mat> out;
+    EXPECT_THROW(cv::texpr("{0} + {1}", std::vector<Mat>{ emptyA, emptyB }, out), cv::Exception);
+    EXPECT_THROW(cv::texpr("0 - 0", std::vector<Mat>{ emptyA }, out), cv::Exception);
+}
+
 // Built-in binary functions min/max/absdiff parsed and dispatched through emitBinary.
 TEST(Core_TExpr, minmax_absdiff)
 {
@@ -640,6 +648,25 @@ TEST(Core_TExpr, addweighted_fusion_declined)
     Mat u; cv::multiply(a, 2.0, u);
     EXPECT_LE(cvtest::norm(out[0], sum, NORM_INF), 1e-3) << "u + v";
     EXPECT_LE(cvtest::norm(out[1], u,   NORM_INF), 1e-3) << "u reused";
+}
+
+TEST(Core_TExpr, select_branch_broadcast_per_row)
+{
+    RNG& rng = theRNG();
+    for (int depth : {CV_8U, CV_16S, CV_32F, CV_32S, CV_64F})
+        for (int branch = 0; branch < 2; branch++)
+        {
+            Mat c({6, 64}, CV_8U), full({6, 64}, depth), col({6, 1}, depth);
+            rng.fill(c, RNG::UNIFORM, 0, 2);
+            rng.fill(full, RNG::UNIFORM, 0, 100);
+            rng.fill(col, RNG::UNIFORM, 0, 100);
+            std::vector<Mat> out;
+            cv::texpr("{0} ? {1} : {2}", branch == 0 ? std::vector<Mat>{c, col, full} : std::vector<Mat>{c, full, col}, out);
+            Mat expected = full.clone(), colFull;
+            cv::repeat(col, 1, 64, colFull);
+            colFull.copyTo(expected, branch == 0 ? c : (c == 0));
+            EXPECT_EQ(0, cvtest::norm(out[0], expected, NORM_INF)) << typeToString(depth) << " branch " << branch;
+        }
 }
 
 }} // namespace

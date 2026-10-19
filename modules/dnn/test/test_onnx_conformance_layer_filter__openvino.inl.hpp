@@ -1124,6 +1124,10 @@ CASE(test_group_normalization_epsilon)
     // no filter
 CASE(test_group_normalization_example)
     // no filter
+CASE(test_group_normalization_epsilon_expanded)
+    SKIP;
+CASE(test_group_normalization_example_expanded)
+    SKIP;
 CASE(test_gru_batchwise)
     SKIP;
 CASE(test_gru_defaults)
@@ -3474,6 +3478,10 @@ CASE(test_attention_3d_with_past_and_present_qk_matmul)
     SKIP;
 CASE(test_attention_3d_with_past_and_present_qk_matmul_bias)
     SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_softcap)
+    SKIP;
+CASE(test_attention_3d_with_past_and_present_qk_matmul_softcap_expanded)
+    SKIP;
 CASE(test_attention_4d_diff_heads_with_past_and_present)
     SKIP;
 CASE(test_attention_4d_diff_heads_with_past_and_present_expanded)
@@ -3554,6 +3562,10 @@ CASE(test_attention_4d_with_qk_matmul_softmax)
     SKIP;
 CASE(test_attention_4d_with_qk_matmul_softmax_expanded)
     SKIP;
+CASE(test_attention_4d_with_qk_matmul_softcap)
+    SKIP;
+CASE(test_attention_4d_with_qk_matmul_softcap_expanded)
+    SKIP;
 
 // ONNX 1.22 additions: unsupported on OpenVINO
 CASE(test_dft_rfft)
@@ -3563,6 +3575,10 @@ CASE(test_nonmaxsuppression_iou_threshold_boundary)
 CASE(test_attention_4d_softcap_neginf_mask_expanded)
     SKIP;
 CASE(test_attention_4d_softcap_neginf_mask_poison_expanded)
+    SKIP;
+CASE(test_attention_4d_softcap_neginf_mask)
+    SKIP;
+CASE(test_attention_4d_softcap_neginf_mask_poison)
     SKIP;
 CASE(test_causal_conv_with_state_b1_c1_degenerate_expanded)
     SKIP;
@@ -3737,6 +3753,8 @@ CASE(test_linear_attention_prefill_with_past_expanded)
 CASE(test_range_bfloat16_type_positive_delta)
     SKIP;
 CASE(test_range_float16_type_positive_delta)
+    SKIP;
+CASE(test_range_float16_type_positive_delta_expanded)
     SKIP;
 CASE(test_dft_rfft_opset19)
     SKIP;

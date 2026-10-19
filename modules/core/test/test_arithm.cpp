@@ -2398,6 +2398,22 @@ TEST(Core_FindNonZero, regression)
     ASSERT_TRUE(pts.size() == nz);
 }
 
+TEST(Core_FindNonZero, fp8)
+{
+    // columns: +0, -0, 1, -2, NaN
+    float vals[] = { 0.f, -0.f, 1.f, -2.f, std::numeric_limits<float>::quiet_NaN() };
+    Mat src32f(1, 5, CV_32F, vals);
+    std::vector<Point> expected = { Point(2, 0), Point(3, 0), Point(4, 0) };
+    for (int depth : {CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        Mat src;
+        src32f.convertTo(src, depth);
+        std::vector<Point> pts;
+        findNonZero(src, pts);
+        EXPECT_EQ(expected, pts) << depthToString(depth);
+    }
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;
@@ -2526,6 +2542,60 @@ TEST(Compare, regression_8999)
     EXPECT_EQ(0, cvtest::norm(C, expected, NORM_INF));
 }
 
+// A 4x1 CV_64FC1 Mat is classified as a bindings-style Scalar (isScalarArg). That must never
+// happen against an operand of the same shape: such a pair is element-wise, as it is in 4.x.
+TEST(Core_Arithm, same_shape_is_elementwise)
+{
+    // a continuous 4x1 CV_64F operand met by a non-continuous view of the same shape - a column of
+    // a 4xN matrix of homogeneous points - used to broadcast the continuous side as a Scalar.
+    Mat Pf(4, 10, CV_32F); randu(Pf, 10, 100);
+    Mat cf = Pf.col(0), df;
+    subtract(cf.clone(), cf, df);
+    EXPECT_LT(cvtest::norm(df, NORM_INF), FLT_EPSILON);
+
+    Mat Pd(4, 10, CV_64F); randu(Pd, 10, 100);
+    Mat cd = Pd.col(0), dd;
+    subtract(cd.clone(), cd, dd);
+    EXPECT_LT(cvtest::norm(dd, NORM_INF), DBL_EPSILON);
+    subtract(cd, cd.clone(), dd);                        // the other operand order too
+    EXPECT_LT(cvtest::norm(dd, NORM_INF), DBL_EPSILON);
+
+    Mat Ps(4, 10, CV_64S); randu(Ps, 10, 100);
+    Mat cs = Ps.col(0), ds;
+    subtract(cs.clone(), cs, ds);
+    EXPECT_EQ(0, cvtest::norm(ds, NORM_INF));
+
+    UMat UPd; Pd.copyTo(UPd);                            // UMat, same thing (CPU and OpenCL paths)
+    UMat ucd = UPd.col(0), udd;
+    subtract(ucd.clone(), ucd, udd);
+    EXPECT_LT(cvtest::norm(udd.getMat(ACCESS_READ), NORM_INF), DBL_EPSILON);
+}
+
+// The flip side: a genuine Scalar partner keeps its per-channel semantics against a 4x1 CV_64FC1
+// array - only the Mat/UMat side is ever demoted to an array operand.
+TEST(Core_Arithm, scalar_vs_4x1_64F_array)
+{
+    Mat a = Mat_<double>({4, 1}, {10, 20, 30, 40}), d;
+    Mat expected1 = Mat_<double>({4, 1}, {5, 15, 25, 35});     // every element minus Scalar::val[0]
+    subtract(a, Scalar(5), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    subtract(a, Scalar(5, 6, 7, 8), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    subtract(a, Vec4d(5, 6, 7, 8), d);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+    d = a - Scalar(5);
+    EXPECT_EQ(0, cvtest::norm(d, expected1, NORM_INF));
+
+    Mat expected2 = Mat_<double>({4, 1}, {-5, -15, -25, -35});
+    subtract(Scalar(5), a, d);
+    EXPECT_EQ(0, cvtest::norm(d, expected2, NORM_INF));
+
+    // and the bindings-style 4x1 CV_64F Scalar still broadcasts over a REAL array
+    Mat img(2, 2, CV_8UC3, Scalar(100, 110, 120));
+    subtract(img, Mat_<double>({4, 1}, {1, 2, 3, 4}), d);
+    EXPECT_EQ(0, cvtest::norm(d, Mat(2, 2, CV_8UC3, Scalar(99, 108, 117)), NORM_INF));
+}
+
 TEST(Compare, regression_16F_do_not_crash)
 {
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
@@ -2606,7 +2676,7 @@ TEST_P(TransposeND, basic)
     do
     {
         Mat out;
-        cv::transposeND(inp, order, out);
+        cv::transpose(inp, order, out);
         std::vector<int> id(order.size());
         for (size_t i = 0; i < inp.total(); ++i)
         {
@@ -3027,6 +3097,63 @@ TEST(Core_Norm, NORM_L2_8UC4)
     EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
 }
 
+// cv_abs() must return the magnitude for every input, including the lowest value of each signed
+// type, where the magnitude is not representable in that type and std::abs() is undefined.
+TEST(Core_CvAbs, lowest_signed_values)
+{
+    EXPECT_EQ((unsigned)INT_MAX + 1u, cv_abs(INT_MIN));
+    EXPECT_EQ((unsigned)INT_MAX,      cv_abs(INT_MAX));
+    EXPECT_EQ(1u,                     cv_abs(-1));
+
+    EXPECT_EQ((uint64)LLONG_MAX + 1ull, cv_abs((int64)LLONG_MIN));
+    EXPECT_EQ((uint64)LLONG_MAX,        cv_abs((int64)LLONG_MAX));
+    EXPECT_EQ(1ull,                     cv_abs((int64)-1));
+}
+
+// An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
+// Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
+// width so the body, the tail and the two together are covered.
+typedef testing::TestWithParam< tuple<int, int64_t, int, bool> > Core_NormL1_Signed;
+
+TEST_P(Core_NormL1_Signed, exact_and_non_negative)
+{
+    const int     depth  = get<0>(GetParam());
+    const int64_t value  = get<1>(GetParam());
+    const int     len    = get<2>(GetParam());
+    const bool    masked = get<3>(GetParam());
+
+    if (depth == CV_32S && (value < INT_MIN || value > INT_MAX))
+        throw SkipTestException("value is out of int32 range");
+
+    Mat src(1, len, depth);
+    for (int i = 0; i < len; i++)
+    {
+        if (depth == CV_32S)
+            src.ptr<int>(0)[i] = (int)value;
+        else
+            src.ptr<int64_t>(0)[i] = value;
+    }
+    Mat mask = masked ? Mat(1, len, CV_8U, Scalar(255)) : Mat();
+
+    const double got = cv::norm(src, NORM_L1, mask);
+    // |value| and the total are both below 2^53 for the values used here, so this is exact
+    const double expected = (double)len * std::abs((double)value);
+
+    EXPECT_GE(got, 0.0) << "an L1 norm cannot be negative";
+    EXPECT_EQ(expected, got)
+        << "depth " << depth << ", value " << value << ", length " << len
+        << (masked ? ", masked" : "");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_Signed,
+    testing::Combine(
+        testing::Values(CV_32S, CV_64S),
+        testing::Values((int64_t)INT_MIN, (int64_t)INT_MAX, (int64_t)16777217,
+                        (int64_t)1073741825, (int64_t)-1073741825, (int64_t)1000,
+                        -(1LL << 52), (1LL << 52)),
+        testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
+        testing::Bool()));
+
 TEST(Core_Norm, NORM_L2SQR_16SC4_large)
 {
     const int sizes[] = {1, 116, 40};
@@ -3131,6 +3258,102 @@ TEST(Core_ConvertTo, float_overflow_saturation)
     checkConvertToOverflow<double, int64>(CV_64F, CV_64S);
     checkConvertToOverflow<double, uint64>(CV_64F, CV_64U);
 }
+
+// Narrowing a 64-bit or 32-bit-unsigned array must SATURATE, and identically at every dispatch
+// level. The vectorized path narrows through a 32-bit intermediate, and v_pack() truncates at
+// 64->32 (unlike the narrower widths, which saturate), so an unclamped value used to wrap before
+// the final saturating step ever saw it - turning 4294967295 into 0 rather than 255. Only the
+// vector loop was affected, so the single element result is the reference. 127 elements covers
+// both the vector body and an odd tail.
+typedef testing::TestWithParam< tuple<int, int, double> > Core_ConvertToSaturate;
+
+TEST_P(Core_ConvertToSaturate, length_independent)
+{
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const double value = get<2>(GetParam());
+    const int N = 127;
+
+    Mat one64(1, 1, CV_64F, Scalar(value));
+    Mat one; one64.convertTo(one, srcDepth);
+    Mat oneDst; one.convertTo(oneDst, dstDepth);
+    Mat ref; oneDst.convertTo(ref, CV_64F);
+    const double expected = ref.at<double>(0, 0);
+
+    Mat src64(1, N, CV_64F, Scalar(value));
+    Mat src; src64.convertTo(src, srcDepth);
+    Mat dst; src.convertTo(dst, dstDepth);
+    Mat got; dst.convertTo(got, CV_64F);
+
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(expected, got.at<double>(0, i)) << "index " << i;
+}
+
+INSTANTIATE_TEST_CASE_P(From32U, Core_ConvertToSaturate,
+    testing::Combine(
+        testing::Values(CV_32U),
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(4294967295.0, 2147483648.0, 70000.0, 65536.0, 300.0)));
+
+// The 64-bit sources additionally carry values at opposite ends of the 64-bit range: a clamp built
+// on the 64-bit ordering compares gets those wrong at the SSE and NEON baselines, where v_gt is
+// the sign of a subtraction that overflows. They are not crossed with the CV_32U source, where
+// they would only exercise the double -> CV_32U conversion rather than the narrowing under test.
+INSTANTIATE_TEST_CASE_P(From64, Core_ConvertToSaturate,
+    testing::Combine(
+        testing::Values(CV_64U, CV_64S),
+        testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+        testing::Values(4294967295.0, 2147483648.0, 65536.0, 300.0,
+                        -9223372036854775808.0, 9223372036854775807.0,
+                        -2147483649.0, -2147483648.0, -1.0)));
+
+// Converting from CV_32U must hold two properties, for every value and every array length:
+//   - the result is never negative, because the source is unsigned;
+//   - a destination that can represent the value exactly does so, which among the destinations
+//     covered here means CV_64F.
+// Both the plain and the scaled (alpha/beta) conversion paths are checked, since they are separate
+// implementations. Lengths straddle the vector width so that the vectorized body, the scalar tail
+// and the two together are all exercised.
+typedef testing::TestWithParam< tuple<int, unsigned, int, bool> > Core_ConvertFrom32U;
+
+TEST_P(Core_ConvertFrom32U, exact_and_unsigned)
+{
+    const int      dstDepth = get<0>(GetParam());
+    const unsigned value    = get<1>(GetParam());
+    const int      len      = get<2>(GetParam());
+    const bool     scaled   = get<3>(GetParam());
+
+    // alpha of exactly 1 with beta 0 is treated as "no scale" and routes to getConvertFunc(), so the
+    // scaled arm has to use a real scale factor to reach getConvertScaleFunc() at all
+    const double alpha = scaled ? 2.0 : 1.0;
+
+    Mat src(1, len, CV_32U, Scalar(value));
+    Mat dst;
+    if (scaled)
+        src.convertTo(dst, dstDepth, alpha, 0.0);
+    else
+        src.convertTo(dst, dstDepth);
+    Mat got; dst.convertTo(got, CV_64F);
+
+    for (int i = 0; i < len; i++)
+    {
+        SCOPED_TRACE(cv::format("dstDepth=%d value=%u len=%d scaled=%d i=%d",
+                                dstDepth, value, len, (int)scaled, i));
+        EXPECT_GE(got.at<double>(0, i), 0.0) << "an unsigned source cannot convert to a negative";
+        if (dstDepth == CV_64F)
+        {
+            // alpha * value stays below 2^53 for every value used here, so this is exact
+            EXPECT_EQ(alpha * (double)value, got.at<double>(0, i));
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom32U,
+    testing::Combine(
+        testing::Values(CV_64F, CV_16BF, CV_16F, CV_32F),
+        testing::Values(0u, 1u, 16777217u, 2147483647u, 2147483648u, 3000000000u, 4294967295u),
+        testing::Values(1, 7, 8, 127),
+        testing::Bool()));
 
 TEST(Core_ConvertTo, regression_12121)
 {
@@ -4503,12 +4726,117 @@ TEST(Core_Arithm, inRange_unsupported_depth_30153)
     }
 }
 
+TEST(Core_Arithm, sum_unsupported_depth)
+{
+    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    {
+        for (int cn : {1, 3})
+        {
+            if (depth == CV_Bool && cn == 1)
+                continue; // single-channel CV_Bool is supported by cv::sum
+            cv::Mat src(4, 4, CV_MAKETYPE(depth, cn), cv::Scalar::all(0));
+            try
+            {
+                cv::sum(src);
+                ADD_FAILURE() << "cv::sum did not throw for " << cv::typeToString(src.type());
+            }
+            catch (const cv::Exception& e)
+            {
+                EXPECT_NE(std::string::npos, e.err.find(cv::typeToString(src.type()))) << e.err;
+            }
+        }
+    }
+}
 
 TEST(Core_Arithm, min_empty)
 {
   cv::Mat A, B, C;
   cv::max(A,B,C);
   EXPECT_TRUE(C.empty());
+}
+
+TEST(Core_Arithm, empty_sum)
+{
+  cv::Mat empty_mat;
+  cv::add(empty_mat, cv::Scalar(1.0), empty_mat);
+  ASSERT_TRUE(empty_mat.empty());
+  ASSERT_THROW(cv::Mat empty_sum = empty_mat + cv::Scalar(1.0), cv::Exception);
+}
+
+TEST(Core_Arithm, mul_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U: float32: (1 * 0.7f) * 175 = 122.49999... -> 122; float16: 123
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(175));
+        cv::Mat dst;
+        cv::multiply(a, b, dst, 0.7);
+        EXPECT_EQ(0, cv::countNonZero(dst != 122));
+    }
+    // CV_8S: float32: (-124 * (1/7.f)) * -5 = 88.5714... -> 89; float16: 88
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-124));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-5));
+        cv::Mat dst;
+        cv::multiply(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 89));
+    }
+}
+
+TEST(Core_Arithm, div_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U: float32: (21 * (1/7.f)) / 6 = 0.50000006f -> 1; float16: 0
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(21));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(6));
+        cv::Mat dst;
+        cv::divide(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 1));
+    }
+    // CV_8S: float32: (-105 * (1/7.f)) / -30 = 0.50000006f -> 1; float16: 0
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-105));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-30));
+        cv::Mat dst;
+        cv::divide(a, b, dst, 1.0 / 7.0);
+        EXPECT_EQ(0, cv::countNonZero(dst != 1));
+    }
+}
+
+TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
+{
+    // CV_8U precision: float32: 1 * (1/3.f) + 1 * (2/3.f) + 0.5f = 1.5f -> 2; float16: 1
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(1));
+        cv::Mat dst;
+        cv::addWeighted(a, 1.0 / 3.0, b, 2.0 / 3.0, 0.5, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 2));
+    }
+    // CV_8U overflow avoidance: 255 * 300 - 255 * 299 = 255; float16 intermediate overflows > 65504 to inf/nan
+    {
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(255));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(255));
+        cv::Mat dst;
+        cv::addWeighted(a, 300.0, b, -299.0, 0.0, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 255));
+    }
+    // CV_8S precision: float32: -1 * (1/3.f) + -1 * (2/3.f) - 0.5f = -1.5f -> -2; float16: -1
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-1));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-1));
+        cv::Mat dst;
+        cv::addWeighted(a, 1.0 / 3.0, b, 2.0 / 3.0, -0.5, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != -2));
+    }
+    // CV_8S overflow avoidance: 127 * 600 - 127 * 599 = 127; float16 intermediate overflows > 65504 to inf/nan
+    {
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(127));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(127));
+        cv::Mat dst;
+        cv::addWeighted(a, 600.0, b, -599.0, 0.0, dst);
+        EXPECT_EQ(0, cv::countNonZero(dst != 127));
+    }
 }
 
 }} // namespace

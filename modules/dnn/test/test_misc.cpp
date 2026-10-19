@@ -79,6 +79,30 @@ TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
     ASSERT_EQ(rImg, rOri);
 }
 
+TEST(blobRectToImageRect, no_resize)
+{
+    Size imgSize(64, 48);
+    Mat img(imgSize, CV_8UC1), img32f;
+    randu(img, 0, 256);
+    img.convertTo(img32f, CV_32F);
+    Rect rBlob(10, 20, 30, 15);
+    const ImagePaddingMode modes[] = { DNN_PMODE_NULL, DNN_PMODE_CROP_CENTER, DNN_PMODE_LETTERBOX };
+    for (ImagePaddingMode mode : modes)
+    {
+        // Blob size equal to the image size, or left empty: no resize, crop or padding is applied
+        for (const Size& size : { imgSize, Size() })
+        {
+            SCOPED_TRACE(cv::format("paddingmode=%d size=%dx%d", (int)mode, size.width, size.height));
+            Image2BlobParams paramNet;
+            paramNet.size = size;
+            paramNet.paddingmode = mode;
+            Mat blob = blobFromImageWithParams(img, paramNet);
+            ASSERT_EQ(0, cvtest::norm(Mat(imgSize, CV_32F, blob.ptr<float>()), img32f, NORM_INF));
+            EXPECT_EQ(rBlob, paramNet.blobRectToImageRect(rBlob, imgSize));
+        }
+    }
+}
+
 
 TEST(blobFromImage_4ch, Regression)
 {
@@ -605,6 +629,57 @@ TEST(Net, forwardAndRetrieve)
     normAssert(outBlobs[0][0], inp.rowRange(0, 2), "first part");
     normAssert(outBlobs[0][1], inp.rowRange(2, 4), "second part");
 }
+
+static void testForwardOutputsArePrivate(EngineType engine)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/top_k.onnx"), engine);
+    Mat inp = readTensorFromONNX(findDataFile("dnn/onnx/data/input_top_k.pb"));
+    const std::vector<String> names = {"values", "indices"};
+
+    net.setInput(inp);
+    std::vector<Mat> first, ref;
+    net.forward(first, names);
+    for (const Mat& m : first) ref.push_back(m.clone());
+
+    // a later forward() must not overwrite earlier results
+    Mat inp2;
+    inp.convertTo(inp2, -1, -1.0);
+    net.setInput(inp2);
+    std::vector<Mat> second;
+    net.forward(second, names);
+    EXPECT_GT(cvtest::norm(ref[0], second[0], NORM_INF), 0);
+    for (size_t i = 0; i < ref.size(); i++)
+        normAssert(ref[i], first[i]);
+
+    // a preallocated buffer of matching size and type is filled in place
+    std::vector<Mat> prealloc(1, ref[0].clone());
+    const void* data0 = prealloc[0].data;
+    net.forward(prealloc, std::vector<String>(1, names[0]));
+    EXPECT_EQ(data0, (const void*)prealloc[0].data);
+    normAssert(second[0], prealloc[0]);
+
+    // the same output requested twice gets two buffers
+    std::vector<Mat> dup;
+    net.forward(dup, std::vector<String>(2, names[0]));
+    ASSERT_EQ(dup.size(), 2u);
+    EXPECT_NE((const void*)dup[0].data, (const void*)dup[1].data);
+    normAssert(dup[0], dup[1]);
+}
+
+typedef testing::TestWithParam<EngineType> Net_ForwardOutputsArePrivate;
+TEST_P(Net_ForwardOutputsArePrivate, Accuracy)
+{
+    testForwardOutputsArePrivate(GetParam());
+}
+static std::vector<EngineType> forwardOutputsEngines()
+{
+    std::vector<EngineType> engines = {ENGINE_OPENCV};
+#ifdef HAVE_ONNXRUNTIME
+    engines.push_back(ENGINE_ORT);
+#endif
+    return engines;
+}
+INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::ValuesIn(forwardOutputsEngines()));
 
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);

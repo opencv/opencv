@@ -1987,6 +1987,13 @@ Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
         a = Rect_<_Tp>();
         return a;
     }
+    // If the gaps between the left/upper coordinates exceed the corresponding widths/heights,
+    // the rectangles are disjoint and width - gap below would underflow for unsigned _Tp.
+    if (Rx_min.width < (Rx_max.x - Rx_min.x) ||
+        Ry_min.height < (Ry_max.y - Ry_min.y)) {
+        a = Rect_<_Tp>();
+        return a;
+    }
     // We now know that either Rx_min.x >= 0, or
     // Rx_min.x < 0 && Rx_min.x + Rx_min.width >= Rx_max.x and therefore
     // Rx_min.width >= (Rx_max.x - Rx_min.x) which means (Rx_max.x - Rx_min.x)

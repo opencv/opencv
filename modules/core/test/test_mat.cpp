@@ -1864,10 +1864,30 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_arrays, testing::Combine(
         perf::MatType(CV_8U),
         perf::MatType(CV_16U),
         perf::MatType(CV_32S),
-        perf::MatType(CV_64F)
+        perf::MatType(CV_64F),
+        perf::MatType(CV_8F_E4M3FN),
+        perf::MatType(CV_8F_E4M3FNUZ)
     )
 )
 );
+
+typedef testing::TestWithParam<perf::MatType> Core_MixChannels_FP8;
+
+TEST_P(Core_MixChannels_FP8, reverse_channels)
+{
+    Mat src, dst64f;
+    Mat(4, 4, CV_64FC3, Scalar(1, 2, 0.5)).convertTo(src, GetParam());
+    Mat dst(src.size(), src.type());
+
+    int fromTo[] = { 0, 2, 1, 1, 2, 0 };  // reverse the channel order
+    mixChannels(&src, 1, &dst, 1, fromTo, 3);
+
+    dst.convertTo(dst64f, CV_64F);
+    EXPECT_EQ(0, cvtest::norm(dst64f, Mat(4, 4, CV_64FC3, Scalar(0.5, 2, 1)), NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_MixChannels_FP8,
+    testing::Values(perf::MatType(CV_8F_E4M3FN), perf::MatType(CV_8F_E4M3FNUZ)));
 
 TEST(Mat, regression_8680)
 {
@@ -3218,6 +3238,28 @@ TEST(Core_InputOutputArray, std_vector_vector)
     double err2 = cvtest::norm(m2, Mat(cn_d[2]), NORM_INF);
     EXPECT_EQ(m2.ptr<double>(), &cn_d[2][0]);
     EXPECT_EQ(0., err2);
+}
+
+// fitSameSize carries the layout; MatShape::operator== ignores it, so layout and C are checked directly
+TEST(Core_Mat, fitSameSize_keeps_layout)
+{
+    const MatShape blk({2, 2, 5, 5, 8}, DATA_LAYOUT_BLOCK, 12);
+    Mat src;
+    src.fit(blk, CV_32F);
+
+    Mat m, om;
+    UMat u, ou;
+    m.fitSameSize(src, CV_32F);
+    u.fitSameSize(src, CV_32F);
+    _OutputArray(om).fitSameSize(src, CV_32F);
+    _OutputArray(ou).fitSameSize(src, CV_32F);
+
+    for (const MatShape& s : {m.shape(), u.shape(), om.shape(), ou.shape()})
+    {
+        EXPECT_EQ(blk, s);
+        EXPECT_EQ(blk.layout, s.layout);
+        EXPECT_EQ(blk.C, s.C);
+    }
 }
 
 }} // namespace

@@ -2296,17 +2296,30 @@ void v_rshr_pack_store(short* ptr, const v_int32x16& a)
 
 // 64
 // Non-saturating pack
-inline v_uint32x16 v_pack(const v_uint64x8& a, const v_uint64x8& b)
-{ return v_uint32x16(_v512_combine(_mm512_cvtepi64_epi32(a.val), _mm512_cvtepi64_epi32(b.val))); }
-
+// AVX-512 narrows with saturation natively: vpmovsqd / vpmovusqd.
 inline v_int32x16 v_pack(const v_int64x8& a, const v_int64x8& b)
-{ return v_reinterpret_as_s32(v_pack(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b))); }
+{ return v_int32x16(_v512_combine(_mm512_cvtsepi64_epi32(a.val), _mm512_cvtsepi64_epi32(b.val))); }
+
+inline v_uint32x16 v_pack(const v_uint64x8& a, const v_uint64x8& b)
+{ return v_uint32x16(_v512_combine(_mm512_cvtusepi64_epi32(a.val), _mm512_cvtusepi64_epi32(b.val))); }
+
+// s64 -> u32: clamp the negatives to zero first, then narrow as unsigned
+inline v_uint32x16 v_pack_u(const v_int64x8& a, const v_int64x8& b)
+{
+    __m512i zero = _mm512_setzero_si512();
+    __m256i lo = _mm512_cvtusepi64_epi32(_mm512_max_epi64(a.val, zero));
+    __m256i hi = _mm512_cvtusepi64_epi32(_mm512_max_epi64(b.val, zero));
+    return v_uint32x16(_v512_combine(lo, hi));
+}
+
+inline void v_pack_store(int* ptr, const v_int64x8& a)
+{ _mm256_storeu_si256((__m256i*)ptr, _mm512_cvtsepi64_epi32(a.val)); }
 
 inline void v_pack_store(unsigned* ptr, const v_uint64x8& a)
-{ _mm256_storeu_si256((__m256i*)ptr, _mm512_cvtepi64_epi32(a.val)); }
+{ _mm256_storeu_si256((__m256i*)ptr, _mm512_cvtusepi64_epi32(a.val)); }
 
-inline void v_pack_store(int* ptr, const v_int64x8& b)
-{ v_pack_store((unsigned*)ptr, v_reinterpret_as_u64(b)); }
+inline void v_pack_u_store(unsigned* ptr, const v_int64x8& a)
+{ _mm256_storeu_si256((__m256i*)ptr, _mm512_cvtusepi64_epi32(_mm512_max_epi64(a.val, _mm512_setzero_si512()))); }
 
 template<int n> inline
 v_uint32x16 v_rshr_pack(const v_uint64x8& a, const v_uint64x8& b)

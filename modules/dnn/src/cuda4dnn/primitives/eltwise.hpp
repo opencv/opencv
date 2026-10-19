@@ -51,16 +51,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class EltwiseOp final : public EltwiseOpBase {
     public:
-        using wrapper_type = GetCUDABackendWrapperType<T>;
-
         EltwiseOp(csl::Stream stream_, EltwiseOpType op_, std::vector<float> coeffs_)
             : EltwiseOpBase(std::move(stream_), op_, std::move(coeffs_))
         {
         }
 
         void forward(
-            const std::vector<cuda::GpuMatND>& inputs,
-            const std::vector<cuda::GpuMatND>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
             CV_Assert(outputs.size() == 1);

@@ -202,13 +202,9 @@ template<> inline void EXPECT_COMPARE_EQ_<hfloat>(const hfloat a, const hfloat b
 }
 #endif
 
-// pack functions do not do saturation when converting from 64-bit types
+// every width saturates, 64-bit included
 template<typename T, typename W>
 inline T pack_saturate_cast(W a) { return saturate_cast<T>(a); }
-template<>
-inline int pack_saturate_cast<int, int64>(int64 a) { return static_cast<int>(a); }
-template<>
-inline unsigned pack_saturate_cast<unsigned, uint64>(uint64 a) { return static_cast<unsigned>(a); }
 
 template<typename R> struct TheTest
 {
@@ -1680,6 +1676,65 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    // 64->32 now saturates like every other width, so check the three narrows at the boundaries
+    // that tell saturation and truncation apart. Truncation returns the low 32 bits, which for
+    // these inputs is a different value - and usually the wrong end of the range.
+    TheTest & test_pack64_saturation()
+    {
+        typedef typename V_RegTraits<R>::w_reg W;              // 64-bit, same signedness as R
+        typedef typename VTraits<W>::lane_type w_type;
+        const int n = VTraits<W>::vlanes();
+
+        Data<W> dataA, dataB;
+        for (int i = 0; i < n; ++i)
+        {
+            dataA[i] = (w_type)((int64)INT_MAX + 1 + i);       // just above the int32 range
+            dataB[i] = (w_type)((int64)1 << 40);               // far above both 32-bit ranges
+        }
+        W a = dataA, b = dataB;
+
+        Data<R> res = v_pack(a, b);
+        for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i]), res[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), res[i + n]);
+        }
+
+        Data<R> stored(0);
+        v_pack_store(stored.d, b);
+        for (int i = 0; i < n; ++i)
+            EXPECT_EQ(saturate_cast<LaneType>(dataB[i]), stored[i]);
+        return *this;
+    }
+
+    // v_pack_u: int64 -> uint32, so negatives clamp to 0 and anything above UINT_MAX to UINT_MAX
+    TheTest & test_pack64_u_saturation()
+    {
+        const int n = VTraits<v_int64>::vlanes();
+        Data<v_int64> dataA, dataB;
+        for (int i = 0; i < n; ++i)
+        {
+            dataA[i] = -((int64)1 << 40) - i;                  // below zero by a long way
+            dataB[i] = ((int64)1 << 40) + i;                   // above UINT_MAX
+        }
+        v_int64 a = dataA, b = dataB;
+
+        Data<v_uint32> res = v_pack_u(a, b);
+        for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(saturate_cast<unsigned>(dataA[i]), res[i]);
+            EXPECT_EQ(saturate_cast<unsigned>(dataB[i]), res[i + n]);
+        }
+
+        Data<v_uint32> stored(0);
+        v_pack_u_store(stored.d, a);
+        for (int i = 0; i < n; ++i)
+            EXPECT_EQ(saturate_cast<unsigned>(dataA[i]), stored[i]);
+        return *this;
+    }
+
     TheTest & test_matmul()
     {
         Data<R> dataV, dataA, dataB, dataC, dataD;
@@ -2508,6 +2563,8 @@ void test_hal_intrin_uint32()
         .test_mask()
         .test_popcount()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_pack64_saturation()
+        .test_pack64_u_saturation()
         .test_unpack()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
@@ -2544,6 +2601,7 @@ void test_hal_intrin_int32()
         .test_reduce_sad()
         .test_mask()
         .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_pack64_saturation()
         .test_unpack()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()

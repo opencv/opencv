@@ -639,7 +639,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     }
 
     // Reorder filter data from OHWI to OIHW and change shape correspondingly.
-    transposeND(filter, {0, 3, 1, 2}, layerParams.blobs[0]);
+    cv::transpose(filter, {0, 3, 1, 2}, layerParams.blobs[0]);
 
     if (isInt8) {
         float inpScale, outScale;
@@ -705,7 +705,7 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
         layerParams.blobs[1] = bias.u ? bias : bias.clone();
     }
 
-    transposeND(filter, {3, 0, 1, 2}, layerParams.blobs[0]);
+    cv::transpose(filter, {3, 0, 1, 2}, layerParams.blobs[0]);
 
     if (isInt8) {
         float inpScale, outScale;
@@ -998,7 +998,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
         if (hasNHWCInput && blob.dims == 4)
         {
             Mat nchwBlob;
-            transposeND(blob, {0, 3, 1, 2}, nchwBlob);
+            cv::transpose(blob, {0, 3, 1, 2}, nchwBlob);
             blob = nchwBlob;
         }
         addConstLayer(blob, idx);
@@ -1454,7 +1454,7 @@ void TFLiteImporter::parseTransposeConv(const Operator& op, const std::string& o
     const int ohwiShape[] = {oc, kh, kw, ic};
     Mat filterOHWI(4, ohwiShape, CV_32F, (void*)filter.ptr<float>());
     Mat reordered;
-    transposeND(filterOHWI, {3, 0, 1, 2}, reordered);
+    cv::transpose(filterOHWI, {3, 0, 1, 2}, reordered);
 
     // Populate blobs manually so addLayer does not treat the output_shape
     // constant (input 0) as a weight blob.

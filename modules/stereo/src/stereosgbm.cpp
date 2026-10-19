@@ -2550,6 +2550,9 @@ void validateDisparity( InputOutputArray _disp, InputArray _cost, int minDispari
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
 
+                if( (unsigned)x2 >= (unsigned)cols )
+                    continue;
+
                 if( disp2cost[x2] > c )
                 {
                     disp2cost[x2] = c;
@@ -2569,6 +2572,9 @@ void validateDisparity( InputOutputArray _disp, InputArray _cost, int minDispari
                     continue;
 
                 int x2 = x - ((d + DISP_SCALE/2) >> DISP_SHIFT);
+
+                if( (unsigned)x2 >= (unsigned)cols )
+                    continue;
 
                 if( disp2cost[x2] > c )
                 {

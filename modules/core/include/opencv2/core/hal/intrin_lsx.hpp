@@ -1968,17 +1968,14 @@ void v_rshr_pack_store(short* ptr, const v_int32x4& a)
 
 // 64
 // Non-saturaing pack
-inline v_uint32x4 v_pack(const v_uint64x2& a, const v_uint64x2& b)
+// truncating narrows, kept private: v_pack()/v_pack_u() below saturate like every other width
+inline v_uint32x4 v_pack_trunc(const v_uint64x2& a, const v_uint64x2& b)
 { return v_uint32x4(__lsx_vpickev_w(b.val, a.val)); }
 
-inline v_int32x4 v_pack(const v_int64x2& a, const v_int64x2& b)
-{ return v_reinterpret_as_s32(v_pack(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b))); }
+inline v_int32x4 v_pack_trunc(const v_int64x2& a, const v_int64x2& b)
+{ return v_reinterpret_as_s32(v_pack_trunc(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b))); }
 
-inline void v_pack_store(unsigned* ptr, const v_uint64x2& a)
-{ __lsx_vstelm_d(__lsx_vshuf4i_w(a.val, 0x08), ptr, 0, 0); }
-
-inline void v_pack_store(int *ptr, const v_int64x2& a)
-{ v_pack_store((unsigned*)ptr, v_reinterpret_as_u64(a)); }
+OPENCV_HAL_IMPL_SATURATING_PACK_64(v_int64x2, v_uint64x2, v_int32x4, v_uint32x4, v_setall_s32, v_pack_trunc, v_pack_trunc)
 
 template<int n> inline
 v_uint32x4 v_rshr_pack(const v_uint64x2& a, const v_uint64x2& b)

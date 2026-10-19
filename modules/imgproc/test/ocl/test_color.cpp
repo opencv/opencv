@@ -496,6 +496,43 @@ OCL_TEST_P(CvtColor_RGB2YUV_422, BGR2YUV_YVYU)  { performTest(3, 2, CVTCODE(BGR2
 OCL_TEST_P(CvtColor_RGB2YUV_422, RGBA2YUV_YVYU) { performTest(4, 2, CVTCODE(RGBA2YUV_YVYU)); }
 OCL_TEST_P(CvtColor_RGB2YUV_422, BGRA2YUV_YVYU) { performTest(4, 2, CVTCODE(BGRA2YUV_YVYU)); }
 
+// Exact-size 3-channel source
+
+struct CvtColor_ExactSize :
+        public CvtColor
+{
+    void generateTestData(int channelsIn, int channelsOut)
+    {
+        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+
+        Size roiSize = depth == CV_8U ? Size(1024, 1024) : Size(512, 512);
+        Border noBorder = randomBorder(0, 0);
+        randomSubMat(src, src_roi, roiSize, noBorder, srcType, 2, 100);
+        randomSubMat(dst, dst_roi, roiSize, noBorder, dstType, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+    }
+};
+
+OCL_TEST_P(CvtColor_ExactSize, YUV2RGB) { performTest(3, 3, CVTCODE(YUV2RGB)); }
+OCL_TEST_P(CvtColor_ExactSize, RGB2YCrCb) { performTest(3, 3, CVTCODE(RGB2YCrCb), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_ExactSize, YCrCb2RGB) { performTest(3, 3, CVTCODE(YCrCb2RGB)); }
+OCL_TEST_P(CvtColor_ExactSize, RGB2XYZ) { performTest(3, 3, CVTCODE(RGB2XYZ), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_ExactSize, XYZ2RGB) { performTest(3, 3, CVTCODE(XYZ2RGB), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_ExactSize, BGR2Lab) { performTest(3, 3, CVTCODE(BGR2Lab)); }
+OCL_TEST_P(CvtColor_ExactSize, Lab2BGR) { performTest(3, 3, CVTCODE(Lab2BGR), depth == CV_8U ? 1 : 1e-5); }
+OCL_TEST_P(CvtColor_ExactSize, RGB2HSV) { performTest(3, 3, CVTCODE(RGB2HSV), EPS_FOR_FLOATING_POINT(1e-3)); }
+OCL_TEST_P(CvtColor_ExactSize, HSV2RGB) { performTest(3, 3, CVTCODE(HSV2RGB), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor_ExactSize, RGB2HLS) { performTest(3, 3, CVTCODE(RGB2HLS), depth == CV_8U ? 1 : 1e-3); }
+OCL_TEST_P(CvtColor_ExactSize, HLS2RGB) { performTest(3, 3, CVTCODE(HLS2RGB), 1); }
+
+typedef CvtColor_ExactSize CvtColor_ExactSize8u;
+
+OCL_TEST_P(CvtColor_ExactSize8u, RGB2BGR565) { performTest(3, 2, CVTCODE(RGB2BGR565)); }
+OCL_TEST_P(CvtColor_ExactSize8u, RGB2BGR555) { performTest(3, 2, CVTCODE(RGB2BGR555)); }
+
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor8u,
                             testing::Combine(testing::Values(MatDepth(CV_8U)), Bool()));
 
@@ -526,6 +563,16 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor_RGB2YUV_422,
                             testing::Combine(
                                 testing::Values(MatDepth(CV_8U)),
                                 Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor_ExactSize,
+                            testing::Combine(
+                                testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)),
+                                testing::Values(false)));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor_ExactSize8u,
+                            testing::Combine(
+                                testing::Values(MatDepth(CV_8U)),
+                                testing::Values(false)));
 
 } } // namespace opencv_test::ocl
 

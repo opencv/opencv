@@ -104,6 +104,9 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
         HT fine[16][16];
     } Histogram;
 
+    static_assert(sizeof(HT) == 2, "HT must be 16-bit for SIMD packing");
+    CV_DbgAssert( ksize <= 255 );
+
 /**
  * HOP is short for Histogram OPeration. This macro makes an operation \a op on
  * histogram \a h for pixel value \a x. It takes care of handling both levels.
@@ -897,7 +900,11 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
         CV_Assert( src.depth() == CV_8U && (cn == 1 || cn == 3 || cn == 4) );
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
-        if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
+
+        // Overflow safety check for 16-bit buckets: ksize > 255 causes k*255 > 65535
+        const bool o1_unsafe = (ksize > 255);
+
+        if( o1_unsafe || ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
             ((CV_SIMD || CV_SIMD_SCALABLE) ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else

@@ -64,7 +64,8 @@ static MergeFunc getMergeFunc(int depth)
         mergeWrap<int64_t, cv::hal::merge64s>, mergeWrap<ushort, cv::hal::merge16u>,
         mergeWrap<ushort, cv::hal::merge16u>, mergeWrap<uchar, cv::hal::merge8u>,
         mergeWrap<int64_t, cv::hal::merge64s>, mergeWrap<int64_t, cv::hal::merge64s>,
-        mergeWrap<int, cv::hal::merge32s>, 0, 0, 0,
+        mergeWrap<int, cv::hal::merge32s>, mergeWrap<uchar, cv::hal::merge8u>,
+        mergeWrap<uchar, cv::hal::merge8u>, 0,
     };
 
     return mergeTab[depth];

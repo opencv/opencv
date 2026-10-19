@@ -386,6 +386,10 @@ public:
             if (ElementWiseIntDispatch<Func>::apply(func, src, dst))
                 continue;
 
+            if ((src.depth() == CV_32F || src.depth() == CV_64F) && src.type() == dst.type() &&
+                func.applyCore(src, dst))
+                continue;
+
             if (src.type() == CV_32F && dst.type() == CV_32F)
             {
                 // Try fast activation function path first
@@ -505,11 +509,36 @@ struct BaseFunctor
     { return nullptr; }
 
     bool unfoldOp(LayerMath&, const ConstOperand&) const { return false; }
+
+    // CV_32F/CV_64F via the core element-wise engine; false if there is no exact equivalent
+    bool applyCore(const Mat&, Mat&) const { return false; }
 };
+
+// 1-d views: Mat::create() would reallocate a 0-d dst
+static inline bool applyCoreExpr(const std::string& expr, const Mat& src, Mat& dst)
+{
+    CV_Assert(src.isContinuous() && dst.isContinuous() && src.total() == dst.total() &&
+              src.total() <= (size_t)INT_MAX);
+    int n = (int)src.total();
+    std::vector<Mat> res{Mat(1, &n, dst.type(), dst.data)};
+    cv::texpr(expr, std::vector<Mat>{Mat(1, &n, src.type(), src.data)}, res);
+    CV_Assert(res[0].data == dst.data);
+    return true;
+}
+
+static inline std::string exprConst(float v)
+{
+    return cv::format("%.9g", v);
+}
 
 struct ReLUFunctor : public BaseFunctor
 {
     typedef ReLULayer Layer;
+
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        return slope == 0.f && applyCoreExpr("relu({0})", src, dst);
+    }
     float slope;
 
     explicit ReLUFunctor(float slope_=1.f) : slope(slope_) {}
@@ -1285,9 +1314,11 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
     using Layer = SwishLayer;
 
+    // ONNX Swish-24: y = x * sigmoid(alpha * x). alpha != 1 has no fused kernel.
+    float alpha;
     int vlanes;
 
-    explicit SwishFunctor() {
+    explicit SwishFunctor(float alpha_ = 1.f) : alpha(alpha_) {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         vlanes = VTraits<v_float32>::vlanes();
 #else
@@ -1297,13 +1328,15 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
     ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
     {
-        if (depth != CV_32F) return nullptr;
+        if (depth != CV_32F || alpha != 1.f) return nullptr;
         activParams.clear();
         return cv::dnn::getActivationFunc(ACTIV_SWISH);
     }
 
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
+        if (alpha != 1.f)
+            return false;
         const int gate = fusion::detail::sigmoid(r);
         r.binary(FusionEltwiseOp::MUL, LayerMath::INPUT_VALUE, gate);
         return true;
@@ -1311,15 +1344,23 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               backendId == DNN_BACKEND_CANN;
+        if (backendId == DNN_BACKEND_OPENCV)
+            return true;
+        // The CUDA/OpenVINO/CANN nodes below are the alpha == 1 formula only.
+        return alpha == 1.f &&
+               (backendId == DNN_BACKEND_CUDA ||
+                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+                backendId == DNN_BACKEND_CANN);
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
     }
 
     inline float calculate(float x) const
     {
-        return x / (1.f + exp(-x));
+        return x / (1.f + exp(-alpha * x));
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -1327,13 +1368,13 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
             int i = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            // x / (1.f + exp(-x));
             v_float32 one = vx_setall_f32(1.0f),
+                      valpha = vx_setall_f32(alpha),
                       zero = vx_setzero_f32();
             for (; i <= len - vlanes; i += vlanes) {
                 v_float32 x = vx_load(srcptr + i);
 
-                v_float32 t = v_sub(zero, x);
+                v_float32 t = v_sub(zero, v_mul(valpha, x));
                 t = v_exp(t);
                 t = v_add(one, t);
                 t = v_div(x, t);
@@ -1701,6 +1742,8 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 {
     typedef AbsLayer Layer;
 
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("abs({0})", src, dst); }
+
     bool unfoldOp(LayerMath& r, const ConstOperand&) const
     {
         fusion::detail::abs(r, LayerMath::INPUT_VALUE);
@@ -2048,6 +2091,8 @@ const char* const BaseDefaultFunctor<RoundFunctor>::ocl_kernel_name = "RoundForw
 struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 {
     typedef SqrtLayer Layer;
+
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("sqrt({0})", src, dst); }
 
     bool supportBackend(int backendId, int)
     {
@@ -3108,6 +3153,18 @@ struct PowerFunctor : public BaseFunctor
 {
     typedef PowerLayer Layer;
 
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        std::string x = "{0}";
+        if (scale != 1.f)
+            x = "(" + x + "*(" + exprConst(scale) + "))";
+        if (shift != 0.f)
+            x = "(" + x + "+(" + exprConst(shift) + "))";
+        if (power != 1.f)
+            x = x + "**(" + exprConst(power) + ")";
+        return applyCoreExpr(x, src, dst);
+    }
+
     float power, scale, shift;
     float originPower, originScale, originShift;
 
@@ -3330,6 +3387,12 @@ struct ElementWiseIntDispatch<PowerFunctor>
 struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 {
     typedef ExpLayer Layer;
+
+    // with a base, scale or shift the SIMD kernel of this layer is as fast
+    bool applyCore(const Mat& src, Mat& dst) const
+    {
+        return normScale == 1.f && normShift == 0.f && applyCoreExpr("exp({0})", src, dst);
+    }
 
     ActivationFunc getActivationFunc(int depth, std::vector<float>& activParams) const
     {
@@ -3747,6 +3810,8 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 {
     typedef ReciprocalLayer Layer;
 
+    bool applyCore(const Mat& src, Mat& dst) const { return applyCoreExpr("1/{0}", src, dst); }
+
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
@@ -3826,7 +3891,8 @@ Ptr<TanHLayer> TanHLayer::create(const LayerParams& params)
 
 Ptr<SwishLayer> SwishLayer::create(const LayerParams& params)
 {
-    Ptr<SwishLayer> l(new ElementWiseLayer<SwishFunctor>());
+    float alpha = params.get<float>("alpha", 1.f);
+    Ptr<SwishLayer> l(new ElementWiseLayer<SwishFunctor>(SwishFunctor(alpha)));
     l->setParamsFrom(params);
 
     return l;

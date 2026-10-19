@@ -78,6 +78,12 @@ static const char* oclop2str[] = { "OP_ADD", "OP_SUB", "OP_RSUB", "OP_ABSDIFF",
     "OP_MUL", "OP_MUL_SCALE", "OP_DIV_SCALE", "OP_RECIP_SCALE",
     "OP_ADDW", "OP_AND", "OP_OR", "OP_XOR", "OP_NOT", "OP_MIN", "OP_MAX", "OP_RDIV_SCALE", 0 };
 
+// depths with no OpenCL type name (ocl::typeToStr() asserts on them)
+static inline bool noOclType(int depth)
+{
+    return depth == CV_16BF || depth == CV_Bool || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+}
+
 static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, bool bitwise, int oclop, bool haveScalar )
 {
@@ -89,7 +95,8 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     const ocl::Device d = ocl::Device::getDefault();
     bool doubleSupport = d.doubleFPConfig() > 0;
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
-            (!doubleSupport && srcdepth == CV_64F && !bitwise))
+            (!doubleSupport && srcdepth == CV_64F && !bitwise) ||
+            (noOclType(srcdepth) && !bitwise))
         return false;
 
     char opts[1024];
@@ -336,6 +343,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     wtype = CV_MAKETYPE(wdepth, cn);
     int type2 = haveScalar ? wtype : _src2.type(), depth2 = CV_MAT_DEPTH(type2);
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
+        return false;
+
+    if (noOclType(depth1) || noOclType(depth2) || noOclType(ddepth) || noOclType(wdepth))
         return false;
 
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
@@ -623,9 +633,11 @@ enum { ARITHM_SMALL_DIRECT = 100000 };
 static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray dst,
                       InputArray mask, int dtype, int oclop, bool muldiv, const Scalar& params)
 {
-    CV_Assert(src1.empty() == src2.empty());
-    if (src1.empty() && src2.empty())          // empty inputs -> empty result
+    if (src1.empty() || src2.empty())          // empty inputs -> empty result
     {
+        CV_Assert((src1.empty() && src2.empty()) ||
+                  (src1.empty() && isScalarArg(src2, src1.channels())) ||
+                  (src2.empty() && isScalarArg(src1, src2.channels())));
         dst.release();
         if (dtype >= 0)
             dst.create(0, 0, dtype);
@@ -636,7 +648,8 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     // broadcast, cn>4 masked, ...) - then the CPU engine below handles it (mapping the UMat via getMat).
     // oclop < 0 is a sentinel: the caller (e.g. cv::compare) already ran its own OpenCL path, so this
     // helper only runs the CPU engine (a UMat operand is mapped via getMat).
-    if (oclop >= 0 && (src1.isUMat() || src2.isUMat() || dst.isUMat()))
+    if (oclop >= 0 && cv::ocl::isOpenCLActivated() &&
+        (src1.isUMat() || src2.isUMat() || dst.isUMat()))
     {
         double abg[3] = { params[0], params[1], params[2] }, scale = params[0];
         void* usrdata = (op == ew::OP_ADDW) ? (void*)abg : (muldiv ? (void*)&scale : nullptr);
@@ -646,7 +659,7 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
 
     const bool haveMask = !mask.empty();
     const int cn1 = src1.channels(), cn2 = src2.channels();
-    bool s1 = isScalarArg(src1, cn2), s2 = isScalarArg(src2, cn1);
+    bool s1 = isScalarArg(src1, src2), s2 = isScalarArg(src2, src1);
     if (s1 && s2)
         s1 = s2 = false;    // two scalars: treat both as tiny array operands (element-wise + broadcast),
                             // matching arithm_op (Scalar+Scalar -> 4x1, number+number -> 1x1, ...)

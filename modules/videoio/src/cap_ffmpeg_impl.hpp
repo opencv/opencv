@@ -2265,7 +2265,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
     // av_stream_get_side_data removed in FFmpeg release 8.0
-# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 3, 100))
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
 # else
     AVPacketSideData* sd = video_st->codecpar->coded_side_data;

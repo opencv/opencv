@@ -123,15 +123,22 @@ FourCC code is passed as `cv.VideoWriter_fourcc('M','J','P','G')` or
 `cv.VideoWriter_fourcc(*'MJPG')` for MJPG.
 
 The below code captures from a camera, flips every frame in the vertical direction, and saves the video.
+
+@note The frame size passed to `cv.VideoWriter` must match the resolution of the captured frames; otherwise, frame writing will fail.
+
 @code{.py}
 import numpy as np
 import cv2 as cv
 
 cap = cv.VideoCapture(0)
 
+# Get camera frame resolution
+frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+
 # Define the codec and create VideoWriter object
 fourcc = cv.VideoWriter_fourcc(*'XVID')
-out = cv.VideoWriter('output.avi', fourcc, 20.0, (640,  480))
+out = cv.VideoWriter('output.avi', fourcc, 20.0, (frame_width, frame_height))
 
 while cap.isOpened():
     ret, frame = cap.read()

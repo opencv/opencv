@@ -12,6 +12,9 @@
 namespace cv {
 namespace dnn {
 
+using recurrent::clipToThreshold;
+using recurrent::holdFinishedRows;
+
 // ONNX RNN: Ht = f(Xt*Wi^T + Ht-1*Ri^T + Wbi + Rbi)
 // Spec: https://onnx.ai/onnx/operators/onnx__RNN.html
 // Supported opsets: 7-22 (opset 1 output_sequence is not handled); FP32 only.
@@ -34,11 +37,7 @@ void applyRNNActivation(Mat& m, RNNActivation kind, float clip)
 {
     CV_Assert(m.type() == CV_32F);
     // ONNX clips the activation input, not its result.
-    if (clip > 0.f)
-    {
-        cv::min(m, clip, m);
-        cv::max(m, -clip, m);
-    }
+    clipToThreshold(m, clip);
     switch (kind)
     {
     case RNN_RELU:    cv::max(m, 0.f, m); break;
@@ -159,7 +158,7 @@ public:
         const int I = W.size[2];
 
         if (layout == BATCH_SEQ_HID)
-            cv::transposeND(X.clone(), {1, 0, 2}, X);
+            cv::transpose(X.clone(), {1, 0, 2}, X);
         numTimeStamps = X.size[0];
         numSamples = X.size[1];
         const int T = numTimeStamps, N = numSamples;
@@ -178,7 +177,7 @@ public:
             Mat h0 = input[5];
             // layout=1 gives initial_h as [N, D, H]; the loop slices it direction-major.
             if (layout == BATCH_SEQ_HID)
-                cv::transposeND(h0.clone(), {1, 0, 2}, h0);
+                cv::transpose(h0.clone(), {1, 0, 2}, h0);
             H0 = h0.isContinuous() ? h0.reshape(1, D * N) : h0.clone().reshape(1, D * N);
         }
 
@@ -249,16 +248,6 @@ private:
         }
         y = output[0];
         yh = output[1];
-    }
-
-    static void holdFinishedRows(const Mat& seqLens, int ts, const Mat& hPrev, Mat& h)
-    {
-        const int* lens = seqLens.ptr<int>();
-        for (int n = 0; n < h.rows; n++)
-        {
-            if (ts >= lens[n])
-                hPrev.row(n).copyTo(h.row(n));
-        }
     }
 
     // Y is [T,D,N,H], or [N,T,D,H] batchwise; both contiguous in H.

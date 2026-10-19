@@ -60,7 +60,7 @@ static Mat Transpose(
     MatShape order(permutation.begin(), permutation.end());
 
     std::vector<int> order_(order.begin(), order.end());
-    cv::transposeND((reshape ? input_reshaped : input), order_, output);
+    cv::transpose((reshape ? input_reshaped : input), order_, output);
     return output;
 }
 
@@ -795,7 +795,7 @@ void LayerEinsumImpl::parseEquation(String equation)
     }
 
     // trailing comma without token
-    if (lhs_eq[lhs_eq.size()-1] == ',')
+    if (!lhs_eq.empty() && lhs_eq[lhs_eq.size()-1] == ',')
         lhs_eq_tokens.push_back(std::string());
 
 }

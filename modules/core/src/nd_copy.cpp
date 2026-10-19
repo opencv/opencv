@@ -550,7 +550,7 @@ static void runPlan(const Plan& p, int64 i0, int64 i1)
         runRows<false>(p, i0, i1);
 }
 
-// Plans over the same rows (concatND inputs, splitND outputs) run in lockstep, block by block,
+// Plans over the same rows (concat inputs, split outputs) run in lockstep, block by block,
 // so that the shared destination (or source) is accessed sequentially.
 static bool canRunInLockstep(const Plan* plans, size_t np)
 {

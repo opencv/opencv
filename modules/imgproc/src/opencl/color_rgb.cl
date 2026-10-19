@@ -293,7 +293,11 @@ __kernel void RGB2RGB5x5(__global const uchar* src, int src_step, int src_offset
         {
             if (y < rows)
             {
+#if SCN == 3
+                uchar3 src_pix = vload3(0, src + src_index);
+#else
                 uchar4 src_pix = vload4(0, src + src_index);
+#endif
 
 #if GREENBITS == 6
                     *((__global ushort*)(dst + dst_index)) = (ushort)((src_pix.B_COMP >> 3)|((src_pix.G_COMP&~3) << 3)|((src_pix.R_COMP&~7) << 8));

@@ -276,42 +276,10 @@ static inline void v_setall_mask(v_uint32& v, uchar t) { v = vx_setall_u32(t); }
 #if CV_SIMD_16F
 static inline void vx_setall_as(const hfloat* p, v_float16& a)
 { a = vx_setall_f16(*p); }
-static inline void vx_setall_as(const float* p, v_float16& a)
-{ a = vx_setall_f16(hfloat(*p)); }
-static inline void vx_setall_as(const uchar* p, v_float16& a)
-{ a = vx_setall_f16(hfloat(float(*p))); }
-static inline void vx_setall_as(const schar* p, v_float16& a)
-{ a = vx_setall_f16(hfloat(float(*p))); }
-static inline void vx_load_pair_as(const uchar* p, v_float16& a, v_float16& b)
-{
-    v_uint8 v = vx_load(p);
-    v_uint16 v0, v1;
-    v_expand(v, v0, v1);
-    a = v_cvt_f16(v_reinterpret_as_s16(v0));
-    b = v_cvt_f16(v_reinterpret_as_s16(v1));
-}
-static inline void vx_load_pair_as(const schar* p, v_float16& a, v_float16& b)
-{
-    v_int8 v = vx_load(p);
-    v_int16 v0, v1;
-    v_expand(v, v0, v1);
-    a = v_cvt_f16(v0);
-    b = v_cvt_f16(v1);
-}
 static inline void vx_load_pair_as(const hfloat* p, v_float16& a, v_float16& b)
 {
     a = vx_load(p);
     b = vx_load(p + VTraits<v_float16>::vlanes());
-}
-static inline void v_store_pair_as(uchar* p, const v_float16& a, const v_float16& b)
-{
-    v_int16 v0 = v_round(a), v1 = v_round(b);
-    v_store(p, v_pack_u(v0, v1));
-}
-static inline void v_store_pair_as(schar* p, const v_float16& a, const v_float16& b)
-{
-    v_int16 v0 = v_round(a), v1 = v_round(b);
-    v_store(p, v_pack(v0, v1));
 }
 static inline void v_store_pair_as(hfloat* p, const v_float16& a, const v_float16& b)
 {
@@ -591,6 +559,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                               const void*, size_t, size_t, void* dst_, size_t dsty,
                               int width, int height, const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -625,6 +594,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
 template<typename T, typename WT>
 static void expandScalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
 {
+    if (n0 <= 0 || n <= 0) return;
     int i = 0;
     for (; i < n0; i++) scbuf[i] = (WT)sc[i*sx];
     for (; i < n; i++) scbuf[i] = scbuf[i - n0];
@@ -931,6 +901,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                          void* dst_, size_t dsty, int width, int height,
                          const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -1166,22 +1137,13 @@ TKernel getMulFunc_(int T, int R)
     switch (T)
     {
     case CV_8U:
-        fptr =   // scale==1 fast path: whole u8 registers, v_mul_sat widens+clamps inside;
-                 // Wvec (f16 where available, else f32) for the scale path
-        #if CV_SIMD_16F
-            R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float16, float, EwMul, float, v_uint8> :
-        #else
+        fptr =   // scale==1 fast path: whole u8 registers, v_mul_sat widens+clamps inside; Wvec=f32 for scale
             R == CV_8U ? vecBinaryKernel<uchar, uchar, v_float32, float, EwMul, float, v_uint8> :
-        #endif
             R == CV_32F ? vecBinaryKernel<uchar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_8S:
-        fptr =   // scale==1 fast path: whole s8 registers via v_mul_sat
-        #if CV_SIMD_16F
-            R == CV_8S ? vecBinaryKernel<schar, schar, v_float16, float, EwMul, float, v_int8> :
-        #else
+        fptr =   // scale==1 fast path: whole s8 registers via v_mul_sat; Wvec=f32 for scale
             R == CV_8S ? vecBinaryKernel<schar, schar, v_float32, float, EwMul, float, v_int8> :
-        #endif
             R == CV_32F ? vecBinaryKernel<schar, float, v_float32, float, EwMul> : nullptr;
         break;
     case CV_16U:
@@ -1264,14 +1226,9 @@ TKernel getDivFunc_(int T, int R, bool checked)
     // SIMD via vecBinaryKernel: div scales the numerator in vec (a*scale/b), EwDivFlt (float a/0 -> inf,
     // saturates on cast) / EwDivInt (v_select guards b==0 -> 0 post-facto). Prefer a DIRECT T->T kernel
     // (1 pass, saturate on store) - emitBinary probes result==T first; a T->f32/f64 kernel serves an
-    // explicit float dtype. Work type: f16 for 8-bit (CV_SIMD_16F), else f32; f64 for 32/64-bit.
+    // explicit float dtype. Work type: f32 for <=16-bit/f16/bf16/f32; f64 for 32/64-bit.
     #define DIV(T_, Tr_, Wv_, W_) (checked ? vecBinaryKernel<T_, Tr_, Wv_, W_, EwDivInt> \
                                            : vecBinaryKernel<T_, Tr_, Wv_, W_, EwDivFlt>)
-#if CV_SIMD_16F
-    #define DIV8(T_)   DIV(T_, T_, v_float16, float)                      // 8-bit T->T, f16 work
-#else
-    #define DIV8(T_)   DIV(T_, T_, v_float32, float)
-#endif
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     #define DIVW(T_, Tr_) DIV(T_, Tr_, v_float64, double)                 // 32/64-bit, f64 SIMD
 #else
@@ -1280,8 +1237,8 @@ TKernel getDivFunc_(int T, int R, bool checked)
 #endif
     switch (T)
     {
-    case CV_8U:   fptr = R==CV_8U  ? DIV8(uchar)  : R==CV_32F ? DIV(uchar,  float, v_float32, float) : nullptr; break;
-    case CV_8S:   fptr = R==CV_8S  ? DIV8(schar)  : R==CV_32F ? DIV(schar,  float, v_float32, float) : nullptr; break;
+    case CV_8U:   fptr = R==CV_8U  ? DIV(uchar,  uchar,  v_float32, float) : R==CV_32F ? DIV(uchar,  float, v_float32, float) : nullptr; break;
+    case CV_8S:   fptr = R==CV_8S  ? DIV(schar,  schar,  v_float32, float) : R==CV_32F ? DIV(schar,  float, v_float32, float) : nullptr; break;
     case CV_16U:  fptr = R==CV_16U ? DIV(ushort, ushort, v_float32, float) : R==CV_32F ? DIV(ushort, float, v_float32, float) : nullptr; break;
     case CV_16S:  fptr = R==CV_16S ? DIV(short,  short,  v_float32, float) : R==CV_32F ? DIV(short,  float, v_float32, float) : nullptr; break;
     case CV_16F:  fptr = R==CV_16F ? DIV(hfloat, hfloat, v_float32, float) : R==CV_32F ? DIV(hfloat, float, v_float32, float) : nullptr; break;
@@ -1295,7 +1252,6 @@ TKernel getDivFunc_(int T, int R, bool checked)
     default:      ;
     }
     #undef DIV
-    #undef DIV8
     #undef DIVW
     return {fptr, nullptr, 0};
 }
@@ -1441,6 +1397,7 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
                      void* dst_, size_t dsty, int width, int height,
                      const double*, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     dsty /= sizeof(T);
     CV_Assert(s0x == 1u || width == 1);
@@ -1518,6 +1475,7 @@ static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
                              void* dst_, size_t dsty, int width, int height,
                              const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T); s1y /= sizeof(T); dsty /= sizeof(Tr);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
     const T* src0 = (const T*)src0_;
@@ -1588,11 +1546,6 @@ TKernel getAddWeightedFunc_(int T, int R)
 {
     KernelFunc f = nullptr;
     #define AWS(Tt, Rr) addWeightedKernel<Tt, Rr, v_float32, float, true>
-#if CV_SIMD_16F
-    #define AWH(Tt)     addWeightedKernel<Tt, Tt, v_float16, float, true>            // u8/s8 -> same, f16 work
-#else
-    #define AWH(Tt)     AWS(Tt, Tt)                                                  // no f16: f32 work
-#endif
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     #define AWD(Tt, Rr) addWeightedKernel<Tt, Rr, v_float64, double, true>       // f64 SIMD
 #else
@@ -1600,8 +1553,8 @@ TKernel getAddWeightedFunc_(int T, int R)
 #endif
     switch (T)
     {
-    case CV_8U:  f = R==CV_8U  ? AWH(uint8_t)            : R==CV_32F ? AWS(uint8_t,  float) : nullptr; break;
-    case CV_8S:  f = R==CV_8S  ? AWH(int8_t)             : R==CV_32F ? AWS(int8_t,   float) : nullptr; break;
+    case CV_8U:  f = R==CV_8U  ? AWS(uint8_t,  uint8_t)  : R==CV_32F ? AWS(uint8_t,  float) : nullptr; break;
+    case CV_8S:  f = R==CV_8S  ? AWS(int8_t,   int8_t)   : R==CV_32F ? AWS(int8_t,   float) : nullptr; break;
     case CV_16U: f = R==CV_16U ? AWS(uint16_t, uint16_t) : R==CV_32F ? AWS(uint16_t, float) : nullptr; break;
     case CV_16S: f = R==CV_16S ? AWS(int16_t,  int16_t)  : R==CV_32F ? AWS(int16_t,  float) : nullptr; break;
     case CV_16F: f = R==CV_16F ? AWS(hfloat,   hfloat)   : R==CV_32F ? AWS(hfloat,   float) : nullptr; break;
@@ -1615,7 +1568,6 @@ TKernel getAddWeightedFunc_(int T, int R)
     default: ;
     }
     #undef AWS
-    #undef AWH
     #undef AWD
     return {f, nullptr, 0};
 }
@@ -1713,10 +1665,11 @@ static int selectKernel(const void* mask_, size_t smy, size_t smx,
             // a branch aliasing dst is fine under the backoff (idempotent select); dst == mask is not
             const bool use_tail_trick = width >= VECSZ*2 && dst_ != mask_;
             Tvec a, b;
-            if (s1x == 0) setallSelect(src1, a);
-            if (s2x == 0) setallSelect(src2, b);
             for (; y < height; y++, mask += smy, src1 += s1y, src2 += s2y, dst += dsty)
             {
+                // a row-constant branch still changes per row
+                if (s1x == 0) setallSelect(src1, a);
+                if (s2x == 0) setallSelect(src2, b);
                 int x = 0;
                 for (; x < width; x += VECSZ)
                 {

@@ -37,6 +37,12 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
  void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
                           const std::vector<size_t>& strides, const String &padMode,
                           std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
+
+// Global pooling spans every spatial dimension, but pads and strides are
+// trailing-aligned to the spatial dims and only guaranteed to be two long.
+// Front-insert neutral values so that they cover nspatial dims.
+void expandGlobalPoolingParams(std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
+                               std::vector<size_t>& strides, size_t nspatial);
 }
 }
 

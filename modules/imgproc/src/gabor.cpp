@@ -51,6 +51,11 @@
 cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
                             double lambd, double gamma, double psi, int ktype )
 {
+    CV_Assert( std::isfinite(sigma) && sigma > 0 );
+    CV_Assert( std::isfinite(gamma) && gamma > 0 );
+    CV_Assert( std::isfinite(lambd) && std::abs(lambd) > DBL_EPSILON );
+    CV_Assert( std::isfinite(theta) );
+
     double sigma_x = sigma;
     double sigma_y = sigma/gamma;
     int nstds = 3;
@@ -66,6 +71,8 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
         ymax = ksize.height/2;
     else
         ymax = cvRound(std::max(fabs(nstds*sigma_x*s), fabs(nstds*sigma_y*c)));
+
+    CV_Assert( xmax >= 0 && ymax >= 0 );
 
     xmin = -xmax;
     ymin = -ymax;

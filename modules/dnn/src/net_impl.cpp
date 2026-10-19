@@ -889,12 +889,6 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 CV_Assert(!cudaNode.empty());
 
                 cudaNode->forward(ld.inputBlobsWrappers, ld.outputBlobsWrappers, cudaInfo->workspace);
-
-                for (auto id : ld.cudaD2HBackgroundTransfers)
-                {
-                    auto wrapper = ld.outputBlobsWrappers[id].dynamicCast<CUDABackendWrapper>();
-                    wrapper->copyToHostInBackground();
-                }
 #endif
             }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1583,6 +1577,11 @@ void Net::Impl::setInputShape(const String& inputName, const MatShape& shape)
 void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    // A refused model leaves an empty net; without this the lookup below reports a
+    // missing blob, which blames the caller's input name for an import failure.
+    if (!importFailure.empty())
+        CV_Error(Error::StsError, importFailure);
 
     if (mainGraph) {
         CV_Assert(scalefactor == 1);

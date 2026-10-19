@@ -253,6 +253,17 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
     }
 }
 
+void expandGlobalPoolingParams(std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
+                               std::vector<size_t>& strides, size_t nspatial)
+{
+    if (pads_begin.size() < nspatial)
+        pads_begin.insert(pads_begin.begin(), nspatial - pads_begin.size(), 0);
+    if (pads_end.size() < nspatial)
+        pads_end.insert(pads_end.begin(), nspatial - pads_end.size(), 0);
+    if (strides.size() < nspatial)
+        strides.insert(strides.begin(), nspatial - strides.size(), 1);
+}
+
 double getWeightScale(const Mat& weightsMat)
 {
     double realMin, realMax;
@@ -319,19 +330,20 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
     CV_Assert(inpKind == outKind);
     CV_Assert(inpKind == _InputArray::STD_VECTOR_MAT ||
               inpKind == _InputArray::STD_VECTOR_UMAT);
-    CV_Assert(inputs.isContinuous(0));
     int inpType = inputs.type(0);
+    MatShape inpShape = inputs.shape(0);
+    const size_t inpTotal = inpShape.total();
+    const size_t outTotal = shape.total();
+
     if (inpKind == _InputArray::STD_VECTOR_MAT) {
-        Mat inp = inputs.getMat(0);
-        MatShape inpShape = inp.shape();
-        const size_t inpTotal = inpShape.total();
-        const size_t outTotal = shape.total();
         std::vector<Mat>& outref = outputs.getMatVecRef();
         outref.resize(1);
         outref[0].fit(shape, inpType);
         CV_Assert(outref[0].isContinuous());
         if (inpTotal == 0 && outTotal == 0)
             return;
+        CV_Assert(inputs.isContinuous(0));
+        Mat inp = inputs.getMat(0);
         Mat inp_ = inp.reshape(0, shape);
         if (inp_.data != outref[0].data) {
             // Parallel memcpy for large buffers to avoid single-thread bottleneck
@@ -357,16 +369,14 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
         }
     }
     else {
-        UMat inp = inputs.getUMat(0);
-        MatShape inpShape = inputs.shape(0);
-        const size_t inpTotal = inpShape.total();
-        const size_t outTotal = shape.total();
         std::vector<UMat>& outref = outputs.getUMatVecRef();
         outref.resize(1);
         outref[0].fit(shape, inpType);
         CV_Assert(outref[0].isContinuous());
         if (inpTotal == 0 && outTotal == 0)
             return;
+        CV_Assert(inputs.isContinuous(0));
+        UMat inp = inputs.getUMat(0);
         UMat inp_ = inp.reshape(0, shape);
         inp_.copyTo(outref[0]);
     }

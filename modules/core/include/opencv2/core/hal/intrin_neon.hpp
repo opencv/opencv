@@ -502,11 +502,14 @@ OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_uint16x8, pack, vq
 OPENCV_HAL_IMPL_NEON_PACK(v_int8x16, schar, int8x8_t, s8, v_int16x8, pack, vqmovn_s16, vqrshrn_n_s16)
 OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_uint32x4, pack, vqmovn_u32, vqrshrn_n_u32)
 OPENCV_HAL_IMPL_NEON_PACK(v_int16x8, short, int16x4_t, s16, v_int32x4, pack, vqmovn_s32, vqrshrn_n_s32)
-OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, pack, vmovn_u64, vrshrn_n_u64)
-OPENCV_HAL_IMPL_NEON_PACK(v_int32x4, int, int32x2_t, s32, v_int64x2, pack, vmovn_s64, vrshrn_n_s64)
+// 64->32 saturates like every other width: vqmovn/vqmovun rather than the plain vmovn, which
+// truncated. The compiler folds vqmovn_* + vcombine into sqxtn/sqxtn2 (uqxtn, sqxtun) on ARM64.
+OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_uint64x2, pack, vqmovn_u64, vqrshrn_n_u64)
+OPENCV_HAL_IMPL_NEON_PACK(v_int32x4, int, int32x2_t, s32, v_int64x2, pack, vqmovn_s64, vqrshrn_n_s64)
 
 OPENCV_HAL_IMPL_NEON_PACK(v_uint8x16, uchar, uint8x8_t, u8, v_int16x8, pack_u, vqmovun_s16, vqrshrun_n_s16)
 OPENCV_HAL_IMPL_NEON_PACK(v_uint16x8, ushort, uint16x4_t, u16, v_int32x4, pack_u, vqmovun_s32, vqrshrun_n_s32)
+OPENCV_HAL_IMPL_NEON_PACK(v_uint32x4, unsigned, uint32x2_t, u32, v_int64x2, pack_u, vqmovun_s64, vqrshrun_n_s64)
 
 // pack boolean
 inline v_uint8x16 v_pack_b(const v_uint16x8& a, const v_uint16x8& b)

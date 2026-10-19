@@ -56,6 +56,14 @@ bool mlasSgemmPacked(bool trans_a, bool trans_b,
                      float beta,
                      float* C, int ldc);
 
+// Batch of independent mlasSgemmPacked() calls (no transposes) sharing M/N/K and leading
+// dims, run as one parallel region so small GEMMs are spread over all threads.
+bool mlasSgemmPackedBatch(size_t batch, int M, int N, int K, float alpha,
+                          const float* const* A, int lda,
+                          const void* const* packed_B,
+                          float beta,
+                          float* const* C, int ldc);
+
 // Scratch-buffer size (in bytes) per worker thread for mlasFlashAttention.
 // The caller must allocate `thread_count * this` bytes for the scratch
 // pointer. Returns 0 if any argument is non-positive.
@@ -109,6 +117,8 @@ inline size_t mlasSgemmPackBSize(bool, bool, int, int) { return 0; }
 inline bool mlasSgemmPackB(bool, bool, int, int, const float*, int, void*) { return false; }
 inline bool mlasSgemmPacked(bool, bool, int, int, int, float,
                             const float*, int, const void*, float, float*, int) { return false; }
+inline bool mlasSgemmPackedBatch(size_t, int, int, int, float, const float* const*, int,
+                                 const void* const*, float, float* const*, int) { return false; }
 
 inline size_t mlasFlashAttentionBufferBytesPerThread(int, int, int) { return 0; }
 inline bool mlasFlashAttention(const float*, const float*, const float*, float*,

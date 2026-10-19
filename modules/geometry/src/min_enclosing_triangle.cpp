@@ -317,10 +317,19 @@ namespace minEnclosingTriangle {
 */
 static void findMinEnclosingTriangle(cv::InputArray points,
                                      CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
-    CV_Assert(!points.empty());
+    if (points.empty()) {
+        area = 0;
+        triangle.release();
+        return;
+    }
     std::vector<cv::Point2f> resultingTriangle;
     cv::Mat polygon;
     convexHull(points, polygon, true, true);
+    if (polygon.empty()) {
+        area = 0;
+        triangle.release();
+        return;
+    }
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
     cv::Mat(resultingTriangle).copyTo(triangle);
 }
@@ -422,6 +431,11 @@ static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &pol
 static void returnMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                                std::vector<cv::Point2f> &triangle, double &area) {
     unsigned int nrOfPoints = static_cast<unsigned int>(polygon.size());
+    if (nrOfPoints == 0) {
+        area = 0;
+        triangle.clear();
+        return;
+    }
 
     for (int i = 0; i < 3; i++) {
         triangle.push_back(polygon[i % nrOfPoints]);

@@ -1774,7 +1774,10 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
             parity = static_cast<uint8_t>(bitstream.next(8));
         }
         else
-            CV_Error(Error::StsNotImplemented, format("mode %d", currMode));
+        {
+            CV_LOG_ERROR(NULL, "QRcode mode " << (int)currMode << " is not supported!");
+            return false;
+        }
     }
     return true;
 }

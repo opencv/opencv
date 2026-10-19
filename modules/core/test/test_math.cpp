@@ -2009,6 +2009,11 @@ TEST(Core_SolvePoly, degree_2_polynomials)
             for (float c2 = -20; c2 <= 20; c2++)
             {
                 coefs.at<float>(2) = c2;
+                if (c1 == 0 && c2 == 0)
+                {
+                    EXPECT_THROW(cv::solvePoly(coefs, r), cv::Exception);
+                    continue;
+                }
                 prec = cv::solvePoly(coefs, r);
                 EXPECT_LE(prec, 1e-6);
             }
@@ -2038,6 +2043,11 @@ TEST(Core_SolvePoly, degree_4_polynomials)
                     for (float c4 = -10; c4 <= 10; c4++)
                     {
                         coefs.at<float>(4) = c4;
+                        if (c1 == 0 && c2 == 0 && c3 == 0 && c4 == 0)
+                        {
+                            EXPECT_THROW(cv::solvePoly(coefs, r), cv::Exception);
+                            continue;
+                        }
                         prec = cv::solvePoly(coefs, r);
                         EXPECT_LE(prec, 1e-3);
                     }
@@ -2066,6 +2076,19 @@ TEST(Core_SolvePoly, different_magnitudes_polynomials)
             }
         }
     }
+}
+
+TEST(Core_SolvePoly, invalid_inputs)
+{
+    Mat r;
+    Mat empty;
+    EXPECT_THROW(cv::solvePoly(empty, r), cv::Exception);
+
+    Mat single(1, 1, CV_64F, Scalar(5.0));
+    EXPECT_THROW(cv::solvePoly(single, r), cv::Exception);
+
+    Mat zeroPoly(3, 1, CV_64F, Scalar(0.0));
+    EXPECT_THROW(cv::solvePoly(zeroPoly, r), cv::Exception);
 }
 
 class Core_PhaseTest : public cvtest::BaseTest
@@ -2318,6 +2341,83 @@ TEST(Core_CheckRange, Inf_Minus)
     ASSERT_EQ(bad_pt.y, 1);
 }
 
+typedef testing::TestWithParam<int> Core_CheckRange_Float;
+
+TEST_P(Core_CheckRange_Float, accuracy)
+{
+    const int depth = GetParam();
+    cv::Mat src(3, 3, CV_MAKETYPE(depth, 3));
+    cv::randu(src, cv::Scalar::all(-10), cv::Scalar::all(10));
+    cv::Point bad_pt(-1, -1);
+
+    ASSERT_TRUE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, -1);
+    ASSERT_EQ(bad_pt.y, -1);
+
+    const float inf = std::numeric_limits<float>::infinity();
+    const int bad_scalar = 2 * src.channels() + 2;
+    switch (depth)
+    {
+    case CV_16F:
+        src.ptr<cv::hfloat>(1)[bad_scalar] = cv::hfloat(inf);
+        break;
+    case CV_16BF:
+        src.ptr<cv::bfloat>(1)[bad_scalar] = cv::bfloat(inf);
+        break;
+    case CV_32F:
+        src.ptr<float>(1)[bad_scalar] = inf;
+        break;
+    default:
+        FAIL() << "Unexpected depth: " << depth;
+    }
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_Float,
+    testing::Values(CV_16F, CV_16BF, CV_32F));
+
+typedef testing::TestWithParam<int> Core_CheckRange_ExtendedInteger;
+
+TEST_P(Core_CheckRange_ExtendedInteger, accuracy)
+{
+    const int depth = GetParam();
+    cv::Mat src = cv::Mat::zeros(2, 3, CV_MAKETYPE(depth, 2));
+    cv::Point bad_pt(-1, -1);
+
+    ASSERT_TRUE(checkRange(src, true, &bad_pt, 0, 1));
+    ASSERT_EQ(bad_pt.x, -1);
+    ASSERT_EQ(bad_pt.y, -1);
+
+    const int bad_scalar = src.channels() + 1;
+    switch (depth)
+    {
+    case CV_Bool:
+        src.ptr<uchar>(1)[bad_scalar] = 1;
+        break;
+    case CV_32U:
+        src.ptr<uint32_t>(1)[bad_scalar] = 1;
+        break;
+    case CV_64U:
+        src.ptr<uint64_t>(1)[bad_scalar] = 1;
+        break;
+    case CV_64S:
+        src.ptr<int64_t>(1)[bad_scalar] = 1;
+        break;
+    default:
+        FAIL() << "Unexpected depth: " << depth;
+    }
+
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, 0, 1));
+    ASSERT_EQ(bad_pt.x, 1);
+    ASSERT_EQ(bad_pt.y, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_ExtendedInteger,
+    testing::Values(CV_Bool, CV_32U, CV_64U, CV_64S));
+
 REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
@@ -2344,6 +2444,37 @@ TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run();
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
+
+TEST(Core_GEMM, inplace_complex)
+{
+    const Mat a64 = Mat_<Vec2d>({2, 2}, {Vec2d(1, 2), Vec2d(2, -1),
+                                        Vec2d(-3, 1), Vec2d(4, 2)});
+    const Mat b64 = Mat_<Vec2d>({2, 2}, {Vec2d(3, 4), Vec2d(-2, 1),
+                                        Vec2d(1, -3), Vec2d(2, 5)});
+    const Mat expected64 = Mat_<Vec2d>({2, 2}, {Vec2d(-6, 3), Vec2d(5, 5),
+                                               Vec2d(-3, -19), Vec2d(3, 19)});
+    const int types[] = {CV_32FC2, CV_64FC2};
+    for (int i = 0; i < 2; ++i)
+    {
+        SCOPED_TRACE(types[i]);
+        Mat a, b, expected, actual;
+        a64.convertTo(a, types[i]);
+        b64.convertTo(b, types[i]);
+        expected64.convertTo(expected, types[i]);
+
+        gemm(a, b, 1, Mat(), 0, actual);
+        EXPECT_EQ(0., cvtest::norm(actual, expected, NORM_INF)) << "out-of-place";
+
+        Mat aliasA = a.clone();
+        gemm(aliasA, b, 1, Mat(), 0, aliasA);
+        EXPECT_EQ(0., cvtest::norm(aliasA, expected, NORM_INF)) << "destination aliases A";
+
+        Mat aliasB = b.clone();
+        gemm(a, aliasB, 1, Mat(), 0, aliasB);
+        EXPECT_EQ(0., cvtest::norm(aliasB, expected, NORM_INF)) << "destination aliases B";
+    }
+}
+
 TEST(Core_Invert, accuracy) { Core_InvertTest test; test.safe_run(); }
 TEST(Core_Mahalanobis, accuracy) { Core_MahalanobisTest test; test.safe_run(); }
 TEST(Core_MulTransposed, accuracy) { Core_MulTransposedTest test; test.safe_run(); }

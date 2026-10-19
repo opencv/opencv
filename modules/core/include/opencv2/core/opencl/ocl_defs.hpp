@@ -28,7 +28,7 @@ inline bool isOpenCLActivated() { return false; }
 #ifdef CV_OPENCL_RUN_VERBOSE
 #define CV_OCL_RUN_(condition, func, ...)                                   \
     {                                                                       \
-        if (cv::ocl::isOpenCLActivated() && (condition) && func)            \
+        if ((condition) && cv::ocl::isOpenCLActivated() && func)            \
         {                                                                   \
             printf("%s: OpenCL implementation is running\n", CV_Func);      \
             fflush(stdout);                                                 \
@@ -44,7 +44,7 @@ inline bool isOpenCLActivated() { return false; }
 #elif defined CV_OPENCL_RUN_ASSERT
 #define CV_OCL_RUN_(condition, func, ...)                                   \
     {                                                                       \
-        if (cv::ocl::isOpenCLActivated() && (condition))                    \
+        if ((condition) && cv::ocl::isOpenCLActivated())                    \
         {                                                                   \
             if(func)                                                        \
             {                                                               \
@@ -59,18 +59,21 @@ inline bool isOpenCLActivated() { return false; }
     }
 #else
 #define CV_OCL_RUN_(condition, func, ...)                                   \
-try \
-{ \
-    if (cv::ocl::isOpenCLActivated() && (condition) && func)                \
+    if (condition)                                                          \
     {                                                                       \
-        CV_IMPL_ADD(CV_IMPL_OCL);                                           \
-        return __VA_ARGS__;                                                 \
-    } \
-} \
-catch (const cv::Exception& e) \
-{ \
-    CV_UNUSED(e); /* TODO: Add some logging here */ \
-}
+        try                                                                 \
+        {                                                                   \
+            if (cv::ocl::isOpenCLActivated() && func)                       \
+            {                                                               \
+                CV_IMPL_ADD(CV_IMPL_OCL);                                   \
+                return __VA_ARGS__;                                         \
+            }                                                               \
+        }                                                                   \
+        catch (const cv::Exception& e)                                      \
+        {                                                                   \
+            CV_UNUSED(e); /* TODO: Add some logging here */                 \
+        }                                                                   \
+    }
 #endif
 
 #else

@@ -494,7 +494,9 @@ inline Quat<T> Quat<T>::sinh() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::cosh(w) * std::sin(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::cosh(w))
+        : std::cosh(w) * std::sin(vNorm) / vNorm;
     return Quat<T>(std::sinh(w) * std::cos(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -511,7 +513,9 @@ inline Quat<T> Quat<T>::cosh() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::sinh(w) * std::sin(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::sinh(w))
+        : std::sinh(w) * std::sin(vNorm) / vNorm;
     return Quat<T>(std::cosh(w) * std::cos(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -540,7 +544,9 @@ inline Quat<T> Quat<T>::sin() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::cos(w) * std::sinh(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::cos(w))
+        : std::cos(w) * std::sinh(vNorm) / vNorm;
     return Quat<T>(std::sin(w) * std::cosh(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -555,7 +561,9 @@ inline Quat<T> Quat<T>::cos() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::sin(w) * std::sinh(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::sin(w))
+        : std::sin(w) * std::sinh(vNorm) / vNorm;
     return Quat<T>(std::cos(w) * std::cosh(vNorm), -v[0] * k, -v[1] * k, -v[2] * k);
 }
 

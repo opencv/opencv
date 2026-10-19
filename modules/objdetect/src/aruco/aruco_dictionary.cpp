@@ -250,6 +250,10 @@ void Dictionary::generateImageMarker(int id, int sidePixels, OutputArray _img, i
 
 
 Mat Dictionary::getByteListFromBits(const Mat &bits) {
+    CV_Assert(!bits.empty());
+    CV_Assert(bits.type() == CV_8UC1);
+    CV_Assert(bits.rows == bits.cols);
+
     // integer ceil
     int nbytes = (bits.cols * bits.rows + 8 - 1) / 8;
 

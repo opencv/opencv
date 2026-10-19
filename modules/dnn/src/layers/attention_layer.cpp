@@ -125,6 +125,8 @@ static void precompRotationTable(float *data,
 
 
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/v1.16.1/docs/ContribOperators.md#com.microsoft.Attention
+// Extension: a fused Attention may take [..., C] and group its tokens into batch and sequence the
+// way the replaced QKV reshape did (spec: 3D only).
 class AttentionLayerImpl CV_FINAL : public AttentionLayer {
  public:
     AttentionLayerImpl(const LayerParams &params) {
@@ -153,6 +155,18 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         output_ndims = params.get<int>("output_ndims", 3);
 
         do_rotary = params.get<bool>("do_rotary", false);
+
+        // Set by the attention fusion: {factor, dims...} for the QKV reshape's batch and sequence
+        // entries, factor -1 when the entry is inferred.
+        auto readExpr = [&](const char* key, std::vector<int>& expr) {
+            if (!params.has(key)) return;
+            const DictValue& v = params.get(key);
+            for (int i = 0; i < v.size(); i++)
+                expr.push_back(v.get<int>(i));
+        };
+        readExpr("qkv_batch", qkv_batch);
+        readExpr("qkv_seq", qkv_seq);
+        CV_CheckEQ(qkv_batch.empty(), qkv_seq.empty(), "DNN/Attention: qkv_batch needs qkv_seq");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -170,26 +184,36 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
 
-        CV_CheckEQ(input_shape.size(), static_cast<size_t>(3), "DNN/Attention: invalid input dimension");
+        CV_CheckGE(input_shape.size(), static_cast<size_t>(3),
+                   "DNN/Attention: invalid input dimension");
         CV_CheckEQ(weight_shape.size(), static_cast<size_t>(2), "DNN/Attention: invalid weight dimension");
+        const int nd = (int)input_shape.size();
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
 
-        CV_CheckEQ(input_shape[2], weight_shape[0], "DNN/Attention: invalid input shape");
+        CV_CheckEQ(input_shape[nd - 1], weight_shape[0], "DNN/Attention: invalid input shape");
         CV_CheckEQ(weight_shape[1], bias_shape[0], "DNN/Attention: invalid weight or bias shape");
 
+        const int v_hidden = weight_shape[1] - (int)qkv_hidden_sizes[0] - (int)qkv_hidden_sizes[1];
+        CV_CheckGT(v_hidden, 0, "DNN/Attention: qkv_hidden_sizes exceed the weight width");
+        CV_CheckEQ(v_hidden % (int)num_heads, 0, "DNN/Attention: v_hidden_size must be divisible by num_heads");
+
+        // Each token gets v_hidden output values, which may differ from the input width.
         if (output_ndims == 3) {
-            outputs.assign(1, inputs[0]);
+            MatShape output_shape = input_shape;
+            output_shape[nd - 1] = v_hidden;
+            outputs.assign(1, output_shape);
         } else if (output_ndims == 2) {
-            int batch = input_shape[0], seq_len = input_shape[1], input_hidden_size = input_shape[2];
-            MatShape output_shape{batch * seq_len, input_hidden_size};
+            MatShape output_shape{batch * seq, v_hidden};
             outputs.assign(1, output_shape);
         } else {
             CV_Error(Error::StsBadArg, format("DNN/Attention: invalid output dimension %zu, valid value is 2 or 3", output_ndims));
         }
 
-        const int batch_size_ = input_shape[0], seq_len_ = input_shape[1],
+        const int batch_size_ = batch, seq_len_ = seq,
                   hidden_size_ = weight_shape.back(),
                   num_heads_ = static_cast<int>(num_heads),
-                  v_head_size_ = static_cast<int>((hidden_size_ - qkv_hidden_sizes[0] - qkv_hidden_sizes[1]) / num_heads);
+                  v_head_size_ = v_hidden / num_heads_;
 
         MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
                  attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
@@ -212,13 +236,47 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         return false;
     }
 
+    // Batch and sequence length the attention runs over. The tokens are contiguous, so any split
+    // of them recorded by the fusion is a view; without a record the input must be [B, S, C].
+    void groupTokens(const MatShape& input_shape, int& batch, int& seq) const
+    {
+        const int nd = (int)input_shape.size();
+        if (qkv_batch.empty()) {
+            CV_CheckEQ(nd, 3, "DNN/Attention: input must be [batch, sequence, hidden]");
+            batch = input_shape[0];
+            seq = input_shape[1];
+            return;
+        }
+        const int tokens = (int)total(input_shape, 0, nd - 1);
+        auto eval = [&](const std::vector<int>& expr) {
+            int v = expr[0];
+            for (size_t i = 1; i < expr.size() && v >= 0; i++) {
+                const int d = expr[i] < 0 ? expr[i] + nd : expr[i];
+                CV_CheckGE(d, 0, "DNN/Attention: QKV reshape refers to a missing input dim");
+                CV_CheckLT(d, nd - 1, "DNN/Attention: QKV reshape refers to a missing input dim");
+                v *= input_shape[d];
+            }
+            return v;
+        };
+        batch = eval(qkv_batch);
+        seq = eval(qkv_seq);
+        if (batch < 0 && seq > 0) batch = tokens / seq;
+        if (seq < 0 && batch > 0) seq = tokens / batch;
+        CV_CheckGT(batch, 0, "DNN/Attention: invalid QKV reshape");
+        CV_CheckEQ(batch * seq, tokens,
+                   "DNN/Attention: QKV reshape does not match the token count");
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         const auto &input_shape = inputs[0];
-        int64 B = input_shape[0];
-        int64 S = input_shape[1];
-        int64 D = input_shape[2];
+        const int nd = (int)input_shape.size();
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
+        int64 B = batch;
+        int64 S = seq;
+        int64 D = input_shape[nd - 1];
 
         const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         int64 hidden = weight_shape[1];
@@ -250,9 +308,44 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
 
         const auto *weight_data = weight.ptr<const float>();
+#ifdef HAVE_MLAS
+        // One MLAS-packed [input_hidden_size, head_size] slice per (Q/K/V, head).
+        if (mlasAvailable() && !opt.use_rvv) {
+            const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
+            size_t total = 0;
+            bool sizes_ok = true;
+            for (int t = 0; t < 3; t++) {
+                packed_qkv_ofs[t] = total;
+                packed_qkv_step[t] = alignSize(mlasSgemmPackBSize(false, false, (int)qkv_head_sizes[t],
+                                                                  (int)input_hidden_size), 64);
+                sizes_ok = sizes_ok && packed_qkv_step[t] > 0;
+                total += packed_qkv_step[t] * num_heads;
+            }
+            if (sizes_ok && total <= (size_t)INT_MAX) {
+                packed_qkv_mlas.create(1, (int)total, CV_8U);
+                bool ok = true;
+                for (int t = 0; t < 3 && ok; t++)
+                    for (size_t h = 0; h < num_heads && ok; h++)
+                        ok = mlasSgemmPackB(false, false, (int)qkv_head_sizes[t], (int)input_hidden_size,
+                                            weight_data + col_ofs[t] + h * qkv_head_sizes[t], (int)hidden_size,
+                                            packed_qkv_mlas.ptr() + packed_qkv_ofs[t] + h * packed_qkv_step[t]);
+                if (ok) {
+                    packed_weight_q.clear();
+                    packed_weight_k.clear();
+                    packed_weight_v.clear();
+                    return;
+                }
+            }
+        }
+        packed_qkv_mlas.release();
+#endif
         packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
         packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
         packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
+    }
+
+    bool qkvPacked() const {
+        return !packed_weight_q.empty() || !packed_qkv_mlas.empty();
     }
 
     // Dynamic weights (blobs empty) aren't available yet; forward() packs those.
@@ -267,9 +360,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         const auto input_shape = shape(inputs[0]);
-        batch_size = static_cast<size_t>(input_shape[0]);
-        seq_len = static_cast<size_t>(input_shape[1]);
-        input_hidden_size = static_cast<size_t>(input_shape[2]);
+        const int nd = (int)input_shape.size();
+        int batch = 0, seq = 0;
+        groupTokens(input_shape, batch, seq);
+        batch_size = static_cast<size_t>(batch);
+        seq_len = static_cast<size_t>(seq);
+        input_hidden_size = static_cast<size_t>(input_shape[nd - 1]);
 
         const auto &weight = blobs.empty() ? inputs[1] : blobs.front();
         const auto weight_shape = shape(weight);
@@ -297,7 +393,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         if (blobs.empty())
             packQKV(inputs[1]);
         // Const weight: pack once as fallback when prepackWeights() wasn't called.
-        else if (packed_weight_q.empty())
+        else if (!qkvPacked())
             packQKV(blobs.front());
 
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
@@ -327,50 +423,80 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             // When do_rotary is false, internals.back() aliases output_buffer; harmless because rope_table is then unused.
             const auto &rope_table = internals.back();
 
-            opt.multi_thread = false;
-            auto fn = [&](const Range &r) {
-                for (int i = r.start; i < r.end; i++) {
-                    const int batch_index = static_cast<int>((i / 3) / num_heads);
-                    const int head_index = static_cast<int>((i / 3) % num_heads);
-                    const int qkv_index = static_cast<int>(i % 3);
-
-                    auto *dst = QKV[qkv_index];
-                    size_t head_size = qkv_head_sizes[qkv_index];
-
-                    int input_offset = batch_index * seq_len * input_hidden_size;
-                    int bias_offset = qkv_index * qkv_hidden_sizes[0] + head_index * head_size;
-                    int dst_offset = (batch_index * num_heads + head_index) * (seq_len * head_size);
-
-                    // Broadcast bias [NH] -> [BN, SH] into dst before gemm so beta=1 adds it implicitly.
-                    const auto *bias_data_src = bias_data + bias_offset;
-                    auto *dst_data = dst + dst_offset;
-                    for (size_t seq_len_idx = 0; seq_len_idx < seq_len; seq_len_idx++) {
-                        std::memcpy(dst_data, bias_data_src, head_size * sizeof(float));
-                        dst_data += head_size;
-                    }
-
-                    auto *packed_weight = packed_weights[qkv_index] + packed_weights_size[qkv_index] * head_index;
-                    // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
-                    fastGemm(false, seq_len, head_size, input_hidden_size,
-                            1.f, input_data + input_offset, input_hidden_size,
-                            packed_weight, 1.f, dst + dst_offset, head_size, opt);
-
-                    if(qkv_index < 2 && do_rotary) {
-                        // Apply RoPE to Q/K in place (V is left untouched).
-                        const auto *rope_table_data = rope_table.ptr<const float>();
-                        rotationKernel(
-                            dst + dst_offset,
-                            rope_table_data,
-                            seq_len,
-                            qkv_head_sizes[qkv_index]
-                        );
-                    }
-                }
+            // Task i projects head (i / 3) % num_heads of batch (i / 3) / num_heads onto Q, K or V (i % 3).
+            const size_t loops = 3 * batch_size * num_heads;
+            auto taskInput = [&](size_t i) {
+                return input_data + ((i / 3) / num_heads) * seq_len * input_hidden_size;
+            };
+            auto taskOutput = [&](size_t i) {
+                return QKV[i % 3] + (i / 3) * seq_len * qkv_head_sizes[i % 3];
+            };
+            const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
+            // Broadcast bias [NH] -> [BN, SH] into dst before gemm so beta=1 adds it implicitly.
+            auto fillBias = [&](size_t i) {
+                const size_t head_size = qkv_head_sizes[i % 3];
+                const float *src = bias_data + col_ofs[i % 3] + ((i / 3) % num_heads) * head_size;
+                float *dst = taskOutput(i);
+                for (size_t s = 0; s < seq_len; s++, dst += head_size)
+                    std::memcpy(dst, src, head_size * sizeof(float));
+            };
+            // Apply RoPE to Q/K in place (V is left untouched).
+            auto applyRotary = [&](size_t i) {
+                if (do_rotary && i % 3 < 2)
+                    rotationKernel(taskOutput(i), rope_table.ptr<const float>(), seq_len, qkv_head_sizes[i % 3]);
             };
 
-            size_t loops = 3 * batch_size * num_heads;
-            double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
-            parallel_for_(Range(0, loops), fn, nstripes);
+            opt.multi_thread = false;
+            bool projected = false;
+#ifdef HAVE_MLAS
+            if (!packed_qkv_mlas.empty()) {
+                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                    for (int i = r.start; i < r.end; i++)
+                        fillBias(i);
+                });
+                // All per-head GEMMs in one MLAS batch, which also splits each GEMM across threads.
+                // Q, K and V go in separate batches only if their head sizes differ.
+                const bool same_size = qkv_head_sizes[0] == qkv_head_sizes[1] && qkv_head_sizes[1] == qkv_head_sizes[2];
+                std::vector<const float*> A;
+                std::vector<const void*> B;
+                std::vector<float*> C;
+                for (size_t t = 0; t < (same_size ? 1u : 3u); t++) {
+                    A.clear(); B.clear(); C.clear();
+                    for (size_t i = 0; i < loops; i++) {
+                        if (!same_size && i % 3 != t)
+                            continue;
+                        A.push_back(taskInput(i));
+                        B.push_back(packed_qkv_mlas.ptr() + packed_qkv_ofs[i % 3] + ((i / 3) % num_heads) * packed_qkv_step[i % 3]);
+                        C.push_back(taskOutput(i));
+                    }
+                    const int N = (int)qkv_head_sizes[t];
+                    projected = mlasSgemmPackedBatch(A.size(), (int)seq_len, N, (int)input_hidden_size, 1.f,
+                                                     A.data(), (int)input_hidden_size, B.data(), 1.f, C.data(), N);
+                    CV_Assert(projected);
+                }
+                if (do_rotary) {
+                    parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                        for (int i = r.start; i < r.end; i++)
+                            applyRotary(i);
+                    });
+                }
+            }
+#endif
+            if (!projected) {
+                double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
+                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                    for (int i = r.start; i < r.end; i++) {
+                        fillBias(i);
+                        const size_t head_size = qkv_head_sizes[i % 3];
+                        auto *packed_weight = packed_weights[i % 3] + packed_weights_size[i % 3] * ((i / 3) % num_heads);
+                        // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
+                        fastGemm(false, seq_len, head_size, input_hidden_size,
+                                1.f, taskInput(i), input_hidden_size,
+                                packed_weight, 1.f, taskOutput(i), head_size, opt);
+                        applyRotary(i);
+                    }
+                }, nstripes);
+            }
         }
 
         const int num_non_blob_inputs = (int)inputs.size();
@@ -561,9 +687,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t hidden_size;
 
     bool do_rotary;
+    std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
     std::vector<float> packed_weight_v;
+    Mat packed_qkv_mlas;  // used instead of packed_weight_q/k/v when MLAS is available
+    size_t packed_qkv_ofs[3] = {0, 0, 0}, packed_qkv_step[3] = {0, 0, 0};
     std::vector<unsigned char> flash_scratch;
 
     FastGemmOpt opt;

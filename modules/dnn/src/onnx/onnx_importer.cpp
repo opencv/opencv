@@ -154,6 +154,9 @@ Mat readTensorFromONNX(const String& path)
         for (int i = 0; i < dims; ++i) sizes[i] = (int)tensor_proto.dims(i);
         mat.create(dims, sizes.data(), cv_type);
     }
+    // getMatFromTensor() gives a rank-0 tensor a 1x1 header; keep the file's own rank.
+    if (dims == 0 && mat.total() == 1)
+        mat = mat.reshape(0, 0, nullptr);
     releaseONNXTensor(tensor_proto);
     return mat;
 }

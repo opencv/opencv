@@ -1168,6 +1168,30 @@ check_range_function check_range_functions[] =
     &checkIntegerRange<CV_32S>
 };
 
+template<typename T>
+static void checkTypedRange(Mat& src, Point& badPt, double minVal, double maxVal)
+{
+    int loc = 0;
+    int cn = src.channels();
+    Size size = getContinuousSize2D(src, cn);
+    const T* isrc = src.ptr<T>();
+    size_t step = src.step / sizeof(isrc[0]);
+
+    for( ; badPt.x < 0 && size.height--; loc += size.width, isrc += step )
+    {
+        for( int i = 0; i < size.width; i++ )
+        {
+            double val = (double)isrc[i];
+            if( !(val >= minVal && val < maxVal) )
+            {
+                int pixelId = (loc + i) / cn;
+                badPt = Point(pixelId % src.cols, pixelId / src.cols);
+                break;
+            }
+        }
+    }
+}
+
 bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double maxVal)
 {
     CV_INSTRUMENT_REGION();
@@ -1208,7 +1232,15 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         int cn = src.channels();
         Size size = getContinuousSize2D(src, cn);
 
-        if( depth == CV_32F )
+        if( depth == CV_16F )
+        {
+            checkTypedRange<hfloat>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_16BF )
+        {
+            checkTypedRange<bfloat>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_32F )
         {
             Cv32suf a, b;
             int ia, ib;
@@ -1237,7 +1269,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
                 }
             }
         }
-        else
+        else if( depth == CV_64F )
         {
             Cv64suf a, b;
             int64 ia, ib;
@@ -1265,6 +1297,26 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
                     }
                 }
             }
+        }
+        else if( depth == CV_Bool )
+        {
+            checkTypedRange<uchar>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_32U )
+        {
+            checkTypedRange<uint32_t>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_64U )
+        {
+            checkTypedRange<uint64_t>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_64S )
+        {
+            checkTypedRange<int64_t>(src, badPt, minVal, maxVal);
+        }
+        else
+        {
+            CV_Error(Error::StsUnsupportedFormat, "Unsupported matrix depth in checkRange");
         }
     }
 
@@ -1487,7 +1539,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     int cdepth = CV_MAT_DEPTH(ctype);
 
     CV_Assert( CV_MAT_DEPTH(ctype) >= CV_32F && CV_MAT_CN(ctype) <= 2 );
-    CV_Assert( coeffs0.rows == 1 || coeffs0.cols == 1 );
+    CV_Assert( (coeffs0.rows == 1 || coeffs0.cols == 1) && coeffs0.total() >= 2 );
 
     int n0 = coeffs0.cols + coeffs0.rows - 2, n = n0;
 
@@ -1510,6 +1562,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         if( std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON )
             break;
     }
+    CV_Assert( std::abs(coeffs[n].re) + std::abs(coeffs[n].im) > DBL_EPSILON );
 
     // Related issue: https://github.com/opencv/opencv/issues/23644,
     // This the initialization scheme of "Initial approximations in Durand-Kerner's root finding method" by Guggenheimer.

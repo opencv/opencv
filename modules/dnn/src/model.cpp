@@ -139,6 +139,24 @@ public:
         }
 
         net.forward(outs, outNames);
+
+        // Every Model subclass post-processes in float, so widen a declared-half output back.
+        for (int i = 0; i < (int)outs.total(); i++)
+        {
+            const int depth = outs.depth(i);
+            if (depth != CV_16F && depth != CV_16BF)
+                continue;
+            if (outs.isUMatVector())
+            {
+                UMat& out = outs.getUMatRef(i);
+                out.convertTo(out, CV_32F);
+            }
+            else
+            {
+                Mat& out = outs.getMatRef(i);
+                out.convertTo(out, CV_32F);
+            }
+        }
     }
 };
 

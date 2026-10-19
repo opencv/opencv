@@ -184,6 +184,10 @@ public:
 
         if (useSoftmax)
         {
+            // An fp16 model hands back an fp16 blob; the Softmax net below is float-only.
+            if (out.depth() == CV_16F || out.depth() == CV_16BF)
+                out.convertTo(out, CV_32F);
+
             LayerParams lp;
             Net netSoftmax;
             netSoftmax.addLayerToPrev("softmaxLayer", "Softmax", lp);
@@ -3062,10 +3066,17 @@ void yoloPostProcessing(
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
 
+    // An fp16 model hands back fp16 blobs; everything below reads them as float.
+    for (Mat& out : outs)
+    {
+        if (out.depth() == CV_16F || out.depth() == CV_16BF)
+            out.convertTo(out, CV_32F);
+    }
+
     if (model_name == "yolov8" || model_name == "yolov10" ||
         model_name == "yolov9")
     {
-        cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
+        cv::transpose(outs[0], {0, 2, 1}, outs[0]);
     }
 
     if (model_name == "yolonas"){
@@ -3693,8 +3704,8 @@ TEST_P(Test_ONNX_layers, ConsecutiveTransposeNonIdentity)
 {
     Mat input = makeConsecutiveTransposeInput();
     Mat ref1, ref;
-    cv::transposeND(input, std::vector<int>{0, 2, 3, 1}, ref1);
-    cv::transposeND(ref1, std::vector<int>{0, 1, 3, 2}, ref);
+    cv::transpose(input, std::vector<int>{0, 2, 3, 1}, ref1);
+    cv::transpose(ref1, std::vector<int>{0, 1, 3, 2}, ref);
 
     testConsecutiveTransposeModel("transpose_non_identity", backend, target, -1, input, ref);
 }
@@ -3802,6 +3813,18 @@ TEST_P(Test_ONNX_layers, getUnconnectedOutLayers)
     EXPECT_GT(outIds[0], 0);
     Ptr<Layer> layer = net.getLayer(outIds[0]);
     ASSERT_TRUE(layer);
+}
+
+// A Resize node that carries only its data input makes the importer pick input
+// index 2 for "scales" (opset-11 layout) although the node holds index 0 only,
+// reading past the node's input list. roi/scales/sizes are optional in the
+// operator schema, so the model is valid ONNX and has to be rejected cleanly.
+// Test data: https://github.com/opencv/opencv_extra/pull/1427
+TEST(Test_ONNX_importer, parse_resize_too_few_inputs)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/resize_no_scales.onnx")));
+    EXPECT_TRUE(net.empty());
 }
 
 }} // namespace
