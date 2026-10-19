@@ -8,6 +8,7 @@
 #include "opencv2/core/utils/configuration.private.hpp"
 #include "gemm_engine.hpp"
 #include "gemm_kernels.simd.hpp"
+#include "gemm_sme.hpp"
 
 namespace cv {
 namespace gemm_engine {
@@ -30,12 +31,24 @@ static void scaleC(float* C, size_t ldc, int m, int n, float beta)
 
 bool smeEnabled()
 {
+#if defined(CV_GEMM_HAVE_SME)
+    static const bool enabled = checkHardwareSupport(CPU_SME) &&
+                                utils::getConfigurationParameterBool("OPENCV_CORE_GEMM_SME", true) &&
+                                sme::vectorLength() >= 4;
+    return enabled;
+#else
     return false;
+#endif
 }
 
 int smeVectorLength()
 {
+#if defined(CV_GEMM_HAVE_SME)
+    static const int vl = smeEnabled() ? sme::vectorLength() : 0;
+    return vl;
+#else
     return 0;
+#endif
 }
 
 #if CV_GEMM_ENGINE_NEON
@@ -45,7 +58,12 @@ using namespace CV_CPU_OPTIMIZATION_NAMESPACE;
 enum
 {
     SMALL_M_MAX = 32,        // rows up to this go to the direct-A kernels
-    GEMM_ROWS_OUTER_BYTES = 1 << 16  // B blocks up to this size are swept with one A panel held in L1
+    GEMM_ROWS_OUTER_BYTES = 1 << 16, // B blocks up to this size are swept with one A panel held in L1
+    SME_MIN_M = 8,           // fewer rows waste most of an SME tile
+    SME_MIN_MACS = 1 << 18,  // below this the streaming-mode switch and packing dominate
+    SME_TASK_MACS = 1 << 21, // smallest SME task
+    SME_KC = 512,            // k block when k and the tiles are large
+    SME_BIG = 256
 };
 
 struct Problem
@@ -309,13 +327,120 @@ static void gemmSmall(const Problem& P)
     });
 }
 
+#if defined(CV_GEMM_HAVE_SME)
+// SME: near-square tiles, about 2 per thread. A and B are packed outside streaming mode,
+// then one streaming call runs all tiles of a task for each k block.
+static void gemmSME(const Problem& P)
+{
+    const int m = P.m, n = P.n, k = P.k;
+    const int vl = smeVectorLength(), W = 2 * vl;
+    const int R = m <= vl ? vl : W;            // short A uses the VL x 4VL kernel
+    const int colUnit = R == vl ? 2 * W : W;
+    // ZA holds the whole k unless both sides are large, where k blocks keep the panels in cache.
+    const int KC = k <= 3 * SME_KC || m < SME_BIG || n < SME_BIG ? k : (int)SME_KC;
+    const bool direct = P.B.panelWidth == W;
+
+    const int rowUnits = (m + R - 1) / R, colUnits = (n + colUnit - 1) / colUnit;
+    const int target = P.nthreads > 1 ? 2 * P.nthreads : 1;
+    int rb = rowUnits, cb = colUnits;
+    auto tasks = [&]() { return P.batch * ((rowUnits + rb - 1) / rb) * ((colUnits + cb - 1) / cb); };
+    while (tasks() < target && (rb > 1 || cb > 1) && (double)rb * R * cb * colUnit * k >= 2. * SME_TASK_MACS)
+    {
+        if ((rb * R >= cb * colUnit && rb > 1) || cb == 1)
+            rb = (rb + 1) / 2;
+        else
+            cb = (cb + 1) / 2;
+    }
+    const int rowsPerTask = rb * R, colsPerTask = cb * colUnit;
+    const int tM = (m + rowsPerTask - 1) / rowsPerTask, tN = (n + colsPerTask - 1) / colsPerTask;
+    const int perProblem = tM * tN;
+    // An operand read by several tasks is packed once per k block instead of once per task.
+    const bool shareA = P.batch == 1 && tN > 1, shareB = !direct && P.batch == 1 && tM > 1;
+    const int aPanels = shareA ? (m + R - 1) / R : 0, bPanels = shareB ? (n + W - 1) / W : 0;
+    AutoBuffer<float> shared((size_t)aPanels * R * KC + (size_t)bPanels * W * KC);
+    float* sharedA = shared.data();
+    float* sharedB = sharedA + (size_t)aPanels * R * KC;
+    const size_t aSize = shareA ? 0 : (size_t)rowsPerTask * KC, bSize = direct || shareB ? 0 : (size_t)colsPerTask * KC;
+
+    for (int p0 = 0; p0 < k; p0 += KC)
+    {
+        const int kc = std::min(KC, k - p0);
+        const float beta = p0 == 0 ? P.beta : 1.f;
+        if (aPanels + bPanels > 0)
+        {
+            runTasks(aPanels + bPanels, P.nthreads, [&](const Range& r) {
+                for (int q = r.start; q < r.end; q++)
+                {
+                    if (q < aPanels)
+                    {
+                        const int i0 = q * R;
+                        packPanel(std::min(R, m - i0), kc, P.A + P.aOfs[0] + i0 * P.lda0 + p0 * P.lda1,
+                                  P.lda1, P.lda0, R, sharedA + (size_t)i0 * kc);
+                    }
+                    else
+                    {
+                        const int j0 = (q - aPanels) * W;
+                        packPanel(std::min(W, n - j0), kc, P.B.ptr + P.bOfs[0] + p0 * P.B.ld0 + j0 * P.B.ld1,
+                                  P.B.ld0, P.B.ld1, W, sharedB + (size_t)j0 * kc);
+                    }
+                }
+            });
+        }
+        runTasks(P.batch * perProblem, P.nthreads, [&](const Range& r) {
+            AutoBuffer<float> buf(aSize + bSize);
+            float* abuf = buf.data();
+            float* bbuf = abuf + aSize;
+            for (int t = r.start; t < r.end; t++)
+            {
+                const int b = t / perProblem, rem = t - b * perProblem;
+                const int i0 = rem / tN * rowsPerTask, j0 = rem % tN * colsPerTask;
+                const int mc = std::min(rowsPerTask, m - i0), nc = std::min(colsPerTask, n - j0);
+                const float* ap = sharedA + (size_t)i0 * kc;
+                if (!shareA)
+                {
+                    const float* a = P.A + P.aOfs[b] + i0 * P.lda0 + p0 * P.lda1;
+                    for (int ii = 0; ii < mc; ii += R)
+                        packPanel(std::min(R, mc - ii), kc, a + ii * P.lda0, P.lda1, P.lda0, R, abuf + (size_t)ii * kc);
+                    ap = abuf;
+                }
+                const float* bp;
+                size_t bStride = (size_t)W * kc;
+                if (direct)
+                {
+                    bp = P.B.ptr + (size_t)j0 * k + (size_t)p0 * W;
+                    bStride = (size_t)W * k;
+                }
+                else if (shareB)
+                    bp = sharedB + (size_t)j0 * kc;
+                else
+                {
+                    packBPanels(nc, kc, P.B.ptr + P.bOfs[b] + p0 * P.B.ld0 + j0 * P.B.ld1, P.B.ld0, P.B.ld1, W, bbuf);
+                    bp = bbuf;
+                }
+                sme::gemmPanels(mc, nc, kc, R, ap, (size_t)R * kc, bp, bStride, P.alpha, beta,
+                                P.C + P.cOfs[b] + i0 * P.ldc + j0, P.ldc);
+            }
+        });
+    }
+}
+#endif
+
 void gemmBatch(int batch, const size_t* A_offsets, const size_t* B_offsets, const size_t* C_offsets,
                int m, int n, int k, float alpha, const float* A, size_t lda0, size_t lda1,
                const BMatrix& B, float beta, float* C, size_t ldc, bool multiThread, bool sme)
 {
     const Problem P = { batch, A_offsets, B_offsets, C_offsets, m, n, k, alpha, beta, A, lda0, lda1,
                         B, C, ldc, multiThread ? std::max(getNumThreads(), 1) : 1 };
+#if defined(CV_GEMM_HAVE_SME)
+    const int vl = sme ? smeVectorLength() : 0;
+    if (vl && m >= SME_MIN_M && (B.panelWidth == 0 || B.panelWidth == 2 * vl) && (double)m * n * k >= SME_MIN_MACS)
+    {
+        gemmSME(P);
+        return;
+    }
+#else
     CV_UNUSED(sme);
+#endif
     if (m <= SMALL_M_MAX)
         gemmSmall(P);
     else
@@ -383,6 +508,11 @@ bool gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2
 namespace hal {
 
 using namespace gemm_engine;
+
+bool gemm32fUsesSME()
+{
+    return smeEnabled();
+}
 
 size_t gemm32fPackBSize(int n, int k, int flags)
 {
