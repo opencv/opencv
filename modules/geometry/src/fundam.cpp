@@ -1294,12 +1294,17 @@ double sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_pt1.depth() == CV_64F && _pt2.depth() == CV_64F && _F.depth() == CV_64F);
-    CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
+    CV_Assert(_pt1.depth() == CV_64F && _pt2.depth() == CV_64F && _F.type() == CV_64FC1);
+    CV_Assert(_pt1.dims() <= 2 && _pt1.total() * _pt1.channels() == 3);
+    CV_Assert(_pt2.dims() <= 2 && _pt2.total() * _pt2.channels() == 3);
+    CV_Assert(_F.size() == Size(3, 3));
 
     Mat pt1(_pt1.getMat());
     Mat pt2(_pt2.getMat());
     Mat F(_F.getMat());
+    if (!pt1.isContinuous()) pt1 = pt1.clone();
+    if (!pt2.isContinuous()) pt2 = pt2.clone();
+    if (!F.isContinuous()) F = F.clone();
 
     Vec3d F_pt1 = *F.ptr<Matx33d>() * *pt1.ptr<Vec3d>();
     Vec3d Ft_pt2 = F.ptr<Matx33d>()->t() * *pt2.ptr<Vec3d>();

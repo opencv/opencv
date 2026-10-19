@@ -2108,6 +2108,13 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
     int nelems = corners.checkVector(2, CV_32F, true);
     CV_Assert(nelems >= 0);
 
+    if (patternWasFound)
+    {
+        CV_CheckGT(patternSize.width, 0, "patternSize.width must be positive");
+        CV_CheckGT(patternSize.height, 0, "patternSize.height must be positive");
+        CV_CheckGE(nelems, patternSize.area(), "Number of corners must be at least patternSize.area()");
+    }
+
     const int shift = 0;
     const int radius = 4;
     const int r = radius*(1 << shift);

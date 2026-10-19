@@ -114,9 +114,15 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     int *sdelta = (int*)(tab + npairs*4), *ddelta = sdelta + npairs;
 
     for( i = 0; i < nsrcs; i++ )
+    {
+        CV_Assert( !src[i].empty() && src[i].size == dst[0].size && src[i].depth() == depth );
         arrays[i] = &src[i];
+    }
     for( i = 0; i < ndsts; i++ )
+    {
+        CV_Assert( !dst[i].empty() && dst[i].size == dst[0].size && dst[i].depth() == depth );
         arrays[i + nsrcs] = &dst[i];
+    }
     ptrs[nsrcs + ndsts] = 0;
 
     for( i = 0; i < npairs; i++ )

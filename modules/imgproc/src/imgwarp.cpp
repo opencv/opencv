@@ -1416,13 +1416,18 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
 
+    CV_Assert( !_src.empty() );
     CV_Assert( !_map1.empty() );
+    Mat map1 = _map1.getMat(), map2 = _map2.getMat();
+    CV_Assert( (map1.type() == CV_16SC2 && (map2.empty() || map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) ||
+               (map1.type() == CV_32FC1 && map2.type() == CV_32FC1) ||
+               (map1.type() == CV_32FC2 && map2.empty()) );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
 
-    Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
+    Mat src = _src.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
 
@@ -1676,7 +1681,14 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     CV_INSTRUMENT_REGION();
 
     Mat map1 = _map1.getMat(), map2 = _map2.getMat(), dstmap1, dstmap2;
+    if( map1.empty() )
+    {
+        _dstmap1.release();
+        _dstmap2.release();
+        return;
+    }
     Size size = map1.size();
+    CV_Assert( map2.empty() || map1.size() == map2.size() );
     const Mat *m1 = &map1, *m2 = &map2;
     int m1type = m1->type(), m2type = m2->type();
 
@@ -1745,12 +1757,12 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     for( y = 0; y < size.height; y++ )
     {
         const float* src1f = m1->ptr<float>(y);
-        const float* src2f = m2->ptr<float>(y);
+        const float* src2f = !m2->empty() ? m2->ptr<float>(y) : nullptr;
         const short* src1 = (const short*)src1f;
         const ushort* src2 = (const ushort*)src2f;
 
         float* dst1f = dstmap1.ptr<float>(y);
-        float* dst2f = dstmap2.ptr<float>(y);
+        float* dst2f = !dstmap2.empty() ? dstmap2.ptr<float>(y) : nullptr;
         short* dst1 = (short*)dst1f;
         ushort* dst2 = (ushort*)dst2f;
         x = 0;
@@ -3071,6 +3083,9 @@ PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                    Point2f center, double maxRadius, int flags)
 {
+    CV_Assert( !_src.empty() );
+    CV_Assert( std::isfinite(maxRadius) && maxRadius > 0);
+
     // if dest size is empty given than calculate using proportional setting
     // thus we calculate needed angles to keep same area as bounding circle
     if ((dsize.width <= 0) && (dsize.height <= 0))

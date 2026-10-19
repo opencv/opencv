@@ -2179,6 +2179,7 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     int i = 0, end = (int)ncontours;
     if (contourIdx >= 0)
     {
+        CV_CheckLT(contourIdx, (int)ncontours, "contourIdx must be less than number of contours");
         i = contourIdx;
         end = i + 1;
     }
