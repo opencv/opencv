@@ -255,6 +255,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_NEON_FP16        102
 #define CV_CPU_NEON_BF16        103
 #define CV_CPU_SVE              104
+#define CV_CPU_SME              105
 
 #define CV_CPU_MSA              150
 
@@ -320,6 +321,7 @@ enum CpuFeatures {
     CPU_NEON_FP16       = 102,
     CPU_NEON_BF16       = 103,
     CPU_SVE             = 104,
+    CPU_SME             = 105, //!< Arm Scalable Matrix Extension
 
     CPU_MSA             = 150,
 
