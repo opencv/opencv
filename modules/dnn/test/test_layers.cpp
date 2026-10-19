@@ -87,48 +87,43 @@ void testReshape(const MatShape& inputShape, const MatShape& targetShape,
     EXPECT_EQ(shape, targetShape);
 }
 
-typedef testing::TestWithParam<tuple<int, int, int, bool, bool> > Layer_Gemm_Kernels;
+typedef testing::TestWithParam<tuple<int, int, int, bool, bool, float, float> > Layer_Gemm_Kernels;
 
 TEST_P(Layer_Gemm_Kernels, Accuracy)
 {
     const int M = get<0>(GetParam()), N = get<1>(GetParam()), K = get<2>(GetParam());
     const bool transA = get<3>(GetParam()), transB = get<4>(GetParam());
+    const float alpha = get<5>(GetParam()), beta = get<6>(GetParam());
     Mat a(transA ? K : M, transA ? M : K, CV_32F);
     Mat b(transB ? N : K, transB ? K : N, CV_32F);
     Mat c(M, N, CV_32F);
-    RNG rng(0);
+    RNG& rng = theRNG();
     rng.fill(a, RNG::UNIFORM, -1.f, 1.f);
     rng.fill(b, RNG::UNIFORM, -1.f, 1.f);
     rng.fill(c, RNG::UNIFORM, -1.f, 1.f);
 
-    for (float alpha : {1.f, 0.75f})
-    {
-        for (float beta : {0.f, 1.f})
-        {
-            SCOPED_TRACE(format("alpha=%g beta=%g", alpha, beta));
-            LayerParams params;
-            params.set("transA", transA);
-            params.set("transB", transB);
-            params.set("alpha", alpha);
-            params.set("beta", beta);
-            params.set("have_bias", true);
-            Ptr<Layer> layer = GemmLayer::create(params);
-            std::vector<Mat> inputs{a, b, c}, outputs;
-            runLayer(layer, inputs, outputs);
+    LayerParams params;
+    params.set("transA", transA);
+    params.set("transB", transB);
+    params.set("alpha", alpha);
+    params.set("beta", beta);
+    params.set("have_bias", true);
+    Ptr<Layer> layer = GemmLayer::create(params);
+    std::vector<Mat> inputs{a, b, c}, outputs;
+    runLayer(layer, inputs, outputs);
 
-            Mat expected;
-            cv::gemm(a, b, alpha, c, beta, expected,
-                     (transA ? GEMM_1_T : 0) | (transB ? GEMM_2_T : 0));
-            ASSERT_EQ(1u, outputs.size());
-            ASSERT_EQ(expected.size(), outputs[0].size());
-            EXPECT_LE(cv::norm(expected, outputs[0], NORM_INF), 1e-4);
-        }
-    }
+    Mat expected;
+    cv::gemm(a, b, alpha, c, beta, expected,
+             (transA ? GEMM_1_T : 0) | (transB ? GEMM_2_T : 0));
+    ASSERT_EQ(1u, outputs.size());
+    ASSERT_EQ(expected.size(), outputs[0].size());
+    EXPECT_LE(cv::norm(expected, outputs[0], NORM_INF), 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Gemm_Kernels, testing::Combine(
     testing::Values(1, 5), testing::Values(1, 7, 17, 65),
-    testing::Values(1, 5, 19), testing::Bool(), testing::Bool()));
+    testing::Values(1, 5, 19), testing::Bool(), testing::Bool(),
+    testing::Values(1.f, 0.75f), testing::Values(0.f, 1.f)));
 
 typedef testing::TestWithParam<tuple<int, int, int> > Layer_SDPA_Kernels;
 
@@ -138,7 +133,7 @@ TEST_P(Layer_SDPA_Kernels, Accuracy)
     const int D = 19;
     const int qShape[] = {1, 1, M, D}, ktShape[] = {1, 1, D, K}, vShape[] = {1, 1, K, N};
     Mat q(4, qShape, CV_32F), kt(4, ktShape, CV_32F), v(4, vShape, CV_32F);
-    RNG rng(0);
+    RNG& rng = theRNG();
     rng.fill(q, RNG::UNIFORM, -1.f, 1.f);
     rng.fill(kt, RNG::UNIFORM, -1.f, 1.f);
     rng.fill(v, RNG::UNIFORM, -1.f, 1.f);
