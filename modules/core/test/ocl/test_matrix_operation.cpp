@@ -240,10 +240,10 @@ OCL_TEST(ConvertTo, saturate_new_int_depths)
             src.convertTo(dst, ddepth);
             usrc.convertTo(udst, ddepth);
 
-            Mat dst64f, udst64f;
-            dst.convertTo(dst64f, CV_64F);
-            udst.getMat(ACCESS_READ).convertTo(udst64f, CV_64F);
-            EXPECT_EQ(0, cvtest::norm(dst64f, udst64f, NORM_INF))
+            // compare in the destination type: CV_64F can't tell adjacent 64-bit integers apart
+            Mat diff;
+            cv::compare(dst, udst.getMat(ACCESS_READ), diff, CMP_NE);
+            EXPECT_EQ(0, cv::countNonZero(diff))
                 << depthToString(sdepth) << " -> " << depthToString(ddepth);
         }
 }
