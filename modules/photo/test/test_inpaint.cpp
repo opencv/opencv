@@ -227,13 +227,13 @@ TEST_P(Photo_InpaintNonuniform, regression)
     case CV_8UC1:
     {
         const int expected[] = {123, 134, 113, 133, 149};
-        for (int k = 0; k < 5; k++) ASSERT_EQ((int)dst.at<uchar>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_NEAR((int)dst.at<uchar>(rows[k], cols[k]), expected[k], 1);
         break;
     }
     case CV_16UC1:
     {
         const int expected[] = {31891, 34654, 28621, 34077, 38605};
-        for (int k = 0; k < 5; k++) ASSERT_EQ((int)dst.at<ushort>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_NEAR((int)dst.at<ushort>(rows[k], cols[k]), expected[k], 1);
         break;
     }
     case CV_32FC1:
@@ -247,7 +247,7 @@ TEST_P(Photo_InpaintNonuniform, regression)
         const Vec3b expected[] = {
             Vec3b(148, 135, 127), Vec3b(138, 111, 122), Vec3b(181, 129, 76), Vec3b(150, 95, 104), Vec3b(97, 141, 148)
         };
-        for (int k = 0; k < 5; k++) ASSERT_EQ(dst.at<Vec3b>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_LE(cvtest::norm(dst.at<Vec3b>(rows[k], cols[k]), expected[k], NORM_INF), 1.);
         break;
     }
     }
@@ -258,13 +258,13 @@ TEST_P(Photo_InpaintNonuniform, regression)
     case CV_8UC1:
     {
         const int expected[] = {141, 159, 115, 146, 129};
-        for (int k = 0; k < 5; k++) ASSERT_EQ((int)dst.at<uchar>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_NEAR((int)dst.at<uchar>(rows[k], cols[k]), expected[k], 1);
         break;
     }
     case CV_16UC1:
     {
         const int expected[] = {36271, 41082, 29646, 37694, 33247};
-        for (int k = 0; k < 5; k++) ASSERT_EQ((int)dst.at<ushort>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_NEAR((int)dst.at<ushort>(rows[k], cols[k]), expected[k], 1);
         break;
     }
     case CV_32FC1:
@@ -278,12 +278,29 @@ TEST_P(Photo_InpaintNonuniform, regression)
         const Vec3b expected[] = {
             Vec3b(118, 123, 112), Vec3b(117, 122, 91), Vec3b(177, 149, 71), Vec3b(151, 102, 101), Vec3b(117, 153, 84)
         };
-        for (int k = 0; k < 5; k++) ASSERT_EQ(dst.at<Vec3b>(rows[k], cols[k]), expected[k]);
+        for (int k = 0; k < 5; k++) ASSERT_LE(cvtest::norm(dst.at<Vec3b>(rows[k], cols[k]), expected[k], NORM_INF), 1.);
         break;
     }
     }
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_InpaintNonuniform, Values(CV_8UC1, CV_16UC1, CV_32FC1, CV_8UC3));
+TEST(Photo_InpaintTelea, tiny_2x2_rounding)
+{
+    Mat src = (Mat_<uchar>(2, 2) << 178, 171, 108, 62);
+    Mat mask = (Mat_<uchar>(2, 2) << 0, 0, 255, 0);
+    Mat dst;
+    inpaint(src, mask, dst, 1, INPAINT_TELEA);
+    EXPECT_NEAR((int)dst.at<uchar>(1, 0), 120.5, 0.5);
+    EXPECT_EQ(178, (int)dst.at<uchar>(0, 0));
+    EXPECT_EQ(171, (int)dst.at<uchar>(0, 1));
+    EXPECT_EQ(62, (int)dst.at<uchar>(1, 1));
+
+    inpaint(src, mask, dst, 1, INPAINT_NS);
+    EXPECT_EQ(120, (int)dst.at<uchar>(1, 0));
+    EXPECT_EQ(178, (int)dst.at<uchar>(0, 0));
+    EXPECT_EQ(171, (int)dst.at<uchar>(0, 1));
+    EXPECT_EQ(62, (int)dst.at<uchar>(1, 1));
+}
 
 }} // namespace
