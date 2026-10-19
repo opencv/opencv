@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "right_svd.hpp"
 #include "fisheye.hpp"
 #include <limits>
 
@@ -1474,8 +1475,13 @@ cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
         }
     }
 
-    if (Np > 4) L = L.t() * L;
-    SVD svd(L);
+    // The normal matrix retains the nullspace of four-point systems but squares
+    // the condition number and may lose the nullspace of ill-conditioned ones.
+    SVD svd(L.t() * L);
+    if (!cv::internal::isNormalMatrixResolved(svd.w.at<double>(7), svd.w.at<double>(0)))
+    {
+        cv::internal::SVDecompRight(L, svd.w, svd.vt);
+    }
     Mat hh = svd.vt.row(8) / svd.vt.row(8).at<double>(8);
     Mat Hrem = hh.reshape(1, 3);
     Mat H = inv_Hnorm * Hrem;

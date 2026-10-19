@@ -34,6 +34,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "precomp.hpp"
+#include "right_svd.hpp"
 #include "ippe.hpp"
 
 namespace cv {
@@ -1068,6 +1069,11 @@ void homographyHO(InputArray _srcPoints, InputArray _targPoints, Matx33d& H)
 
     Mat S, U;
     eigen(DDT, S, U);
+    // The normal matrix squares the condition number and may lose the nullspace.
+    if (!cv::internal::isNormalMatrixResolved(S.at<double>(1), S.at<double>(0)))
+    {
+        cv::internal::SVDecompRight(D, S, U);
+    }
 
     Mat h789(3, 1, CV_64FC1);
     h789.at<double>(0, 0) = U.at<double>(2, 0);
