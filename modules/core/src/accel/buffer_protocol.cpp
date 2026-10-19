@@ -163,6 +163,59 @@ void checkNotPoisoned(const BufferState* v)
                                     v->backend()->name().c_str(), p->reason));
 }
 
+} // namespace
+
+void replaceWriteLocked(PhysicalBacking* b, const FenceRef& next, uint64_t overStart, uint64_t overSize) CV_NOEXCEPT
+{
+    if (!b->writeFence.empty() && !b->writeRanges.empty())
+    {
+        uint64_t lo = b->writeRanges[0].first, hi = b->writeRanges[0].second;
+        for (size_t i = 1; i < b->writeRanges.size(); i++)
+        {
+            lo = std::min(lo, b->writeRanges[i].first);
+            hi = std::max(hi, b->writeRanges[i].second);
+        }
+        const bool rewritten = overSize != 0 && rangeInside(overStart, overSize, lo, hi - lo);
+        const FenceRef::Poll p = rewritten ? FenceRef::DONE : b->writeFence.poll(false);
+        if (p == FenceRef::FAILED)
+            addPoison(b, lo, hi - lo, "earlier device work that wrote this memory failed");
+        else if (p == FenceRef::PENDING)
+        {
+            PhysicalBacking::PriorWrite w;
+            w.fence = b->writeFence;
+            w.begin = lo;
+            w.end = hi;
+            if (b->priorWrites.size() < b->priorWrites.capacity())
+                b->priorWrites.push_back(w);    // room was made before the work was queued
+            else
+                addPoison(b, lo, hi - lo, "earlier device work on this memory could not be tracked");  // fail closed
+        }
+    }
+    b->writeFence = next;
+    b->readFences.clear();
+    b->writeRanges.clear();
+}
+
+bool settlePriorWritesLocked(PhysicalBacking* b) CV_NOEXCEPT
+{
+    for (size_t i = 0; i < b->priorWrites.size(); )
+    {
+        const PhysicalBacking::PriorWrite& w = b->priorWrites[i];
+        const FenceRef::Poll p = w.fence.poll(false);
+        if (p == FenceRef::PENDING)
+        {
+            i++;
+            continue;
+        }
+        if (p == FenceRef::FAILED)
+            addPoison(b, w.begin, w.end - w.begin, "earlier device work that wrote this memory failed");
+        b->priorWrites.erase(b->priorWrites.begin() + i);
+    }
+    return b->priorWrites.empty();
+}
+
+namespace {
+
 //! the last device write is the one that covers @p v's bytes and just completed with @p failure
 void poisonLastWriteLocked(PhysicalBacking* b, const char* failure) CV_NOEXCEPT
 {
@@ -174,11 +227,11 @@ void poisonLastWriteLocked(PhysicalBacking* b, const char* failure) CV_NOEXCEPT
 /** Memory with implicit fences of other drivers (CV_ACCEL_MEMF_EXTERNAL_SYNC, e.g. a camera's
     dma-buf): device work on it waits for their fences, and they wait for the work's fence. Core
     imports such memory only through backends that bracket it (backend rule 5). */
-void beginExternal(const BufferState* v, const StreamPtr& s, int access)
+bool beginExternal(const BufferState* v, const StreamPtr& s, int access)
 {
     Backend* b = v->backend();
     if (!(v->backing->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC))
-        return;
+        return false;
     if (!b->fn().begin_device_access || !b->fn().end_device_access)
         CV_Error_(Error::StsNotImplemented, ("accel(%s): this memory carries implicit fences of other drivers that the "
                                              "backend cannot handle", b->name().c_str()));
@@ -188,6 +241,7 @@ void beginExternal(const BufferState* v, const StreamPtr& s, int access)
         st = b->fn().begin_device_access(&v->imp->alloc, s->handle, (uint32_t)access);
     }
     b->check(st, "begin_device_access", v->device());
+    return true;
 }
 
 /** Never throws: runs when the work is already queued. When the work's fence cannot be handed
@@ -196,14 +250,14 @@ void beginExternal(const BufferState* v, const StreamPtr& s, int access)
 void endExternal(const BufferState* v, const FenceRef& f, int access) CV_NOEXCEPT
 {
     Backend* b = v->backend();
-    if (!(v->backing->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC) || f.empty())
-        return;
-    if (!f.isUnknown() && !f.get())
-        return;     // settled (see FenceRef::adopt): the work has ended, there is nothing to attach
-    cvAccelStatus st = CV_ACCEL_INTERNAL_ERROR;
-    if (!f.isUnknown() && b->fn().end_device_access)
-        st = b->fn().end_device_access(&v->imp->alloc, f.get(), (uint32_t)access);
-    if (st == CV_ACCEL_OK)
+    // A bracket that began always ends (backend rule 5). Without a fence to hand over (nothing
+    // was queued, the work has ended, or its end cannot be observed) it ends without one; work
+    // that may still run is waited for first, since the other drivers could not wait for it.
+    const bool attach = !f.isUnknown() && f.get();
+    if (f.isUnknown())
+        f.waitNoThrow(false);
+    const cvAccelStatus st = b->fn().end_device_access(&v->imp->alloc, attach ? f.get() : 0, (uint32_t)access);
+    if (st == CV_ACCEL_OK || !attach)
         return;
     try
     {
@@ -213,6 +267,31 @@ void endExternal(const BufferState* v, const FenceRef& f, int access) CV_NOEXCEP
     catch (...) {}
     f.waitNoThrow(false);
 }
+
+/** begin_device_access .. end_device_access around one piece of work on memory with implicit
+    fences: every bracket that began ends once, with the work's fence (end), or, when nothing
+    was queued or the caller waited for it, without one (the destructor). */
+class ExternalBracket
+{
+public:
+    ExternalBracket(const BufferState* v, int access) : v_(v), access_(access), open_(false) {}
+    ~ExternalBracket() { end(FenceRef()); }
+    void begin(const StreamPtr& s) { open_ = beginExternal(v_, s, access_); }
+    void end(const FenceRef& f) CV_NOEXCEPT
+    {
+        if (open_)
+        {
+            open_ = false;
+            endExternal(v_, f, access_);
+        }
+    }
+private:
+    ExternalBracket(const ExternalBracket&);
+    ExternalBracket& operator=(const ExternalBracket&);
+    const BufferState* v_;
+    int access_;
+    bool open_;
+};
 
 /** Waits on the CPU for device work that conflicts with a CPU access through @p v. Called with
     b->busy set, so no new device work on the backing can start meanwhile; the mutex is released
@@ -227,7 +306,7 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
     std::vector<FenceRef> reads;
     if (write)
         reads = b->readFences;
-    if (!lastWrite.empty() || !reads.empty())
+    if (!lastWrite.empty() || !reads.empty() || !b->priorWrites.empty())
     {
         lk.unlock();
         char failure[160] = "";
@@ -257,6 +336,8 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
             }
         }
         lk.lock();
+        // earlier writes come before the last one (on its stream, or waited for by it): settled now
+        settlePriorWritesLocked(b);
         // busy keeps writers away, so b->writeFence is still lastWrite. Work that may still run
         // (a wait that timed out, an unknown fence) keeps its fence: what it touches stays guarded.
         bool running = false;
@@ -479,18 +560,20 @@ void downloadWhole(BufferState* v)
     const bool pages = v->shadowKind == SHADOW_PAGES;
     if (pages && !protectPages(v->shadow, v->shadowPages, true))
         CV_Error(Error::StsError, "accel: cannot unprotect the host copy of read-only memory for a download");
+    ExternalBracket bracket(v, ACCESS_READ);
     try
     {
-        beginExternal(v, s, ACCESS_READ);
+        bracket.begin(s);
         b->check(copyOn(b, v->device(), s, r), "copy (device to host)", v->device());
         f = recordFence(s);
-        endExternal(v, f, ACCESS_READ);
+        bracket.end(f);
         f.wait(false);  // the host copy may be a Mat's memory, and this fence is not kept
     }
     catch (...)
     {
         if (f.empty())
             fenceAfterFailure(s).waitNoThrow(false);    // part of the copy may be queued, writing the host copy
+        bracket.end(FenceRef());    // the copy has ended
         if (pages && !protectPages(v->shadow, v->shadowPages, false))
             dropProtectedShadow(v);
         throw;
@@ -527,9 +610,7 @@ void uploadWhole(BufferState* v, const StreamPtr& s)
 //! the last device write of the backing is @p f, which covers @p v's bytes
 void recordWriteLocked(PhysicalBacking* b, const BufferState* v, const FenceRef& f)
 {
-    b->writeFence = f;
-    b->readFences.clear();
-    b->writeRanges.clear();
+    replaceWriteLocked(b, f, v->start, v->size);    // the copy writes all of v
     b->writeRanges.push_back(std::make_pair(v->start, v->start + v->size));     // room for one from the start
 }
 
@@ -538,16 +619,18 @@ void recordWriteLocked(PhysicalBacking* b, const BufferState* v, const FenceRef&
 void uploadShadowLocked(BufferState* v, UMatData* u, const StreamPtr& s, bool waitNow)
 {
     PhysicalBacking* b = v->backing;
+    b->priorWrites.reserve(b->priorWrites.size() + 1);  // recordWriteLocked never allocates
     streamWait(s, b->writeFence);
     for (size_t i = 0; i < b->readFences.size(); i++)
         streamWait(s, b->readFences[i]);
     FenceRef f;
+    ExternalBracket bracket(v, ACCESS_WRITE);
     try
     {
-        beginExternal(v, s, ACCESS_WRITE);
+        bracket.begin(s);
         uploadWhole(v, s);
         f = recordFence(s);
-        endExternal(v, f, ACCESS_WRITE);
+        bracket.end(f);
         if (waitNow)
             f.wait(false);  // reads the host copy, which may be a Mat's memory
     }
@@ -558,6 +641,7 @@ void uploadShadowLocked(BufferState* v, UMatData* u, const StreamPtr& s, bool wa
         if (f.empty())
         {
             FenceRef after = fenceAfterFailure(s);
+            bracket.end(after);     // the other drivers wait for what may still run
             if (!after.empty())
                 recordWriteLocked(b, v, after);
         }
@@ -1308,7 +1392,8 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                 // finish() records the outcome without allocating: a range and a failure per view
                 // written (clearing a failure may split one range in two)
                 b->writeRanges.reserve(g.count);
-                b->poison.reserve(b->poison.size() + 2 * g.count);
+                b->poison.reserve(b->poison.size() + 2 * g.count + 1);
+                b->priorWrites.reserve(b->priorWrites.size() + 1);
             }
             else
                 b->readFences.reserve(b->readFences.size() + b->pendingReaders + 1);   // one per reader in flight
@@ -1338,8 +1423,10 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                 external_.push_back(std::make_pair(v, 0));
             external_[j].second |= accessOfMode(uses_[i].mode);
         }
-        for (size_t i = 0; i < external_.size(); i++)
-            beginExternal(external_[i].first, stream, external_[i].second);
+        // every bracket that begins is ended (record, fail, abandon), the ones before a failure too
+        for (externalBegun_ = 0; externalBegun_ < external_.size(); externalBegun_++)
+            if (!beginExternal(external_[externalBegun_].first, stream, external_[externalBegun_].second))
+                break;  // not shared through implicit fences after all: nothing to bracket
     }
     catch (...)
     {
@@ -1360,10 +1447,18 @@ void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char
     {
         if (write)
         {
-            // writers exclude everyone, so every read fence here was waited for by this work
-            b->writeFence = *fence;
-            b->readFences.clear();
-            b->writeRanges.clear();
+            // writers exclude everyone, so every read fence here was waited for by this work; the
+            // write it replaces may still fail (the same stream orders it: nobody waited for it)
+            uint64_t overStart = 0, overSize = 0;
+            for (size_t k = g.first; k < g.first + g.count && !failure; k++)
+            {
+                if (uses_[k].mode & DEV_DISCARD)
+                {
+                    overStart = uses_[k].u->accelState->start;
+                    overSize = uses_[k].u->accelState->size;
+                }
+            }
+            replaceWriteLocked(b, *fence, overStart, overSize);
             b->generation++;
             for (size_t k = g.first; k < g.first + g.count; k++)
             {
@@ -1418,10 +1513,9 @@ void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char
 
 void DeviceAcquisition::endExternalUses(const FenceRef& fence) CV_NOEXCEPT
 {
-    if (acquired_ == 0)
-        return;
-    for (size_t i = 0; i < external_.size(); i++)
+    for (size_t i = 0; i < externalBegun_; i++)
         endExternal(external_[i].first, fence, external_[i].second);
+    externalBegun_ = 0;
 }
 
 void DeviceAcquisition::record(const FenceRef& fence) CV_NOEXCEPT
@@ -1442,6 +1536,7 @@ void DeviceAcquisition::fail(const FenceRef& fence, const char* reason) CV_NOEXC
 
 void DeviceAcquisition::abandon() CV_NOEXCEPT
 {
+    endExternalUses(FenceRef());    // nothing was queued: the brackets close without a fence
     while (acquired_ > 0)
     {
         acquired_--;
@@ -1780,19 +1875,20 @@ void DeviceAllocator::download(UMatData* u, void* dstptr, int dims, const size_t
         r.src.offset = v->start + srcOffset;
         r.dst.host = dstptr;
         FenceRef f;
+        ExternalBracket bracket(v, ACCESS_READ);
         try
         {
-            beginExternal(v, s, ACCESS_READ);
+            bracket.begin(s);
             b_->check(copyOn(b_, device_, s, r), "copy (device to host)", device_);
             f = recordFence(s);
-            endExternal(v, f, ACCESS_READ);
+            bracket.end(f);
             f.wait(false);  // the destination is user memory: no time limit
         }
         catch (...)
         {
             if (f.empty())
                 fenceAfterFailure(s).waitNoThrow(false);    // part of the copy may be queued, writing user memory
-            throw;
+            throw;  // the bracket ends: the copy has ended
         }
         Counters& c = counters();
         c.bytesD2H += totalND(sz, dims);
@@ -1861,12 +1957,13 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         r.dst.alloc = &v->imp->alloc;
         r.dst.offset = v->start + dstOffset;
         FenceRef f;
+        ExternalBracket bracket(v, ACCESS_WRITE);
         try
         {
-            beginExternal(v, s, ACCESS_WRITE);
+            bracket.begin(s);
             b_->check(copyOn(b_, device_, s, r), "copy (host to device)", device_);
             f = recordFence(s);
-            endExternal(v, f, ACCESS_WRITE);
+            bracket.end(f);
             lk.unlock();
             f.wait(false);  // the source is user memory that may be freed when we return: no time limit
             lk.lock();
@@ -1881,6 +1978,7 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
                 after = fenceAfterFailure(s);
                 after.waitNoThrow(false);   // part of the copy may be queued, reading user memory
             }
+            bracket.end(after);
             if (!lk.owns_lock())
                 lk.lock();
             // the device copy may be partly overwritten: invalid until written whole

@@ -92,7 +92,8 @@ enum EmulatorViolation
     EMU_VIOLATION_CPU_ACCESS = 2,   //!< begin/end_cpu_access not balanced, ended with another access, or never ended
     EMU_VIOLATION_STREAM = 4,       //!< one stream used by two threads at once where streams are not thread-safe
     EMU_VIOLATION_FENCE = 8,        //!< a fence of another device waited for where that is not supported
-    EMU_VIOLATION_ADDRESS = 16      //!< a kernel given another address for memory than the one its device reaches it at
+    EMU_VIOLATION_ADDRESS = 16,     //!< a kernel given another address for memory than the one its device reaches it at
+    EMU_VIOLATION_BRACKET = 32      //!< end_device_access without a begin_device_access it ends
 };
 
 //! violations of the kinds in @p kinds (EmulatorViolation flags) seen so far
@@ -139,6 +140,12 @@ CV_EXPORTS void emulatorFailNextCpuEnds(int count);
 none): with an error, or with @p nullAddress, with success but no address (a broken backend; the
 access is open and must be ended). */
 CV_EXPORTS void emulatorFailNextCpuBegin(int after, bool nullAddress = false);
+//! makes the next deallocate fail, once: the memory (an import of host pages, say) stays held
+CV_EXPORTS void emulatorFailNextDeallocate();
+//! makes the begin_device_access after the next @p after successful ones fail, once (-1: none)
+CV_EXPORTS void emulatorFailNextDeviceAccessBegin(int after);
+//! brackets begun on the dma-buf (begin_device_access) that have not ended yet
+CV_EXPORTS int emulatorDmaBufOpenBrackets(int64 fd);
 //! makes the next end_device_access fail: the fence is not attached to the dma-buf
 CV_EXPORTS void emulatorFailNextDeviceAccessEnd();
 
@@ -157,8 +164,10 @@ allocates it as protected memory and attests that when it is wrapped. Never free
 CV_EXPORTS int64 emulatorAllocateExternal(int device, size_t size, int value, bool protectedContent);
 
 /** @brief A simulated dma-buf of @p size bytes (a memfd), shared with other "drivers"; returns its
-fd for ExternalMemory::DMABUF_FD on "emulator:1" and "emulator:2". Linux only. */
-CV_EXPORTS int64 emulatorCreateDmaBuf(size_t size);
+fd for ExternalMemory::DMABUF_FD on "emulator:1" and "emulator:2". With @p protectedContent it is
+a buffer of a secure heap: imported only as protected memory (CV_ACCEL_MEMF_PROTECTED asked
+for), which the CPU never sees. Linux only. */
+CV_EXPORTS int64 emulatorCreateDmaBuf(size_t size, bool protectedContent = false);
 //! another driver (a camera, say) writes @p value into the whole dma-buf @p delayUs from now; users wait for it
 CV_EXPORTS void emulatorDmaBufProduce(int64 fd, int value, int delayUs);
 /** @brief Exports the emulator allocation behind @p m as a dma-buf, the way another library holding

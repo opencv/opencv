@@ -642,10 +642,13 @@ struct OpenCV_Core_Accel_API_v0_0_api_entries
         cv::AccessFlag values. */
     cvAccelStatus (CV_API_CALL *begin_device_access)(const cvAccelAllocation* alloc, cvAccelStream stream,
                                                      uint32_t access) CV_ACCEL_NOEXCEPT;
-    /** required with begin_device_access: attaches @p fence, which completes the work begun
-        with begin_device_access, to the memory, so that other drivers wait for it
+    /** required with begin_device_access, called exactly once for every begin_device_access
+        that succeeded: attaches @p fence, which completes the work begun with
+        begin_device_access, to the memory, so that other drivers wait for it
         (DMA_BUF_IOCTL_IMPORT_SYNC_FILE: as the exclusive write fence after a write, as one more
-        shared read fence otherwise; a writer of the memory waits for all of them). */
+        shared read fence otherwise; a writer of the memory waits for all of them). @p fence is
+        NULL when there is nothing to attach (no work was queued, or core waited for it): the
+        bracket just ends. A failed end ends the bracket as well; core then waits for the work. */
     cvAccelStatus (CV_API_CALL *end_device_access)(const cvAccelAllocation* alloc, cvAccelFence fence,
                                                    uint32_t access) CV_ACCEL_NOEXCEPT;
 

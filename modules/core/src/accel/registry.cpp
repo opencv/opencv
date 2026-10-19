@@ -1396,8 +1396,11 @@ UMat shareOn(const UMat& m, Backend* b, int device)
     req.ext.handle = fd;
     req.ext.offset = fileStart + v->start;
     req.ext.size = v->size;
-    req.ext.flags = v->readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0;
+    // what the memory is goes with it: read-only, and protected (a secure import, attested again)
+    const bool secure = (v->backing->flags & CV_ACCEL_MEMF_PROTECTED) != 0;
+    req.ext.flags = (v->readOnly ? CV_ACCEL_MEMF_READ_ONLY : 0) | (secure ? CV_ACCEL_MEMF_PROTECTED : 0);
     req.readOnly = v->readOnly;
+    req.protectedRequired = secure;
     req.allowExistingView = true;
     req.image = v->image;   // a plane stays a plane of its image
     req.plane = v->plane;
@@ -1699,10 +1702,11 @@ std::vector<UMat> wrapExternalImage(const Device& device, const ExternalImage& i
         for (int i = 0; i < f->planes; i++)
         {
             const FormatPlane& fp = f->p[i];
-            const int cols = (width + fp.hsub - 1) / fp.hsub, rows = (height + fp.vsub - 1) / fp.vsub;
+            // 64 bits: a width near INT_MAX must not wrap before the division
+            const int64 cols = ((int64)width + fp.hsub - 1) / fp.hsub, rows = ((int64)height + fp.vsub - 1) / fp.vsub;
             if (d.planes[i].type != fp.type || d.planes[i].cols != cols || d.planes[i].rows != rows)
                 CV_Error_(Error::StsBadArg, ("accel: plane %d of a %dx%d %s image must be %dx%d of type %s",
-                                             i, width, height, fourccName(image.fourcc).c_str(), cols, rows,
+                                             i, width, height, fourccName(image.fourcc).c_str(), (int)cols, (int)rows,
                                              typeToString(fp.type).c_str()));
         }
     }

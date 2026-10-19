@@ -910,6 +910,28 @@ TEST(Core_Accel, a_mat_over_wrapped_host_memory_overlaps_its_umat)
     EXPECT_EQ(0, maxDiff(ref, out));
 }
 
+TEST(Core_Accel, host_pages_stay_reserved_while_their_import_is_not_released)
+{
+    // the backend fails to release an import of host memory: it may still pin the pages, so
+    // no other import of them is let in
+    accel::Device d = emulator(COHERENT);
+    // never freed: the pages a run leaves reserved are never another test's, nor the next run's
+    static uchar storage[4096 * (2 * 32 + 1)];
+    static int run = 0;
+    uchar* p = alignPtr(storage, 4096) + 2 * 4096 * (run++ % 32);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::HOST_POINTER;
+    mem.handle = (int64)(intptr_t)p;
+    mem.size = 4096;
+    UMat w = accel::wrapExternalMemory(d, mem, MatShape({1, 4096}), CV_8UC1);
+    accel::detail::emulatorFailNextDeallocate();
+    w.release();
+    EXPECT_THROW(accel::wrapExternalMemory(d, mem, MatShape({1, 4096}), CV_8UC1), cv::Exception);
+    accel::ExternalMemory next = mem;
+    next.handle = (int64)(intptr_t)(p + 4096);     // other pages: fine
+    EXPECT_NO_THROW(accel::wrapExternalMemory(d, next, MatShape({1, 4096}), CV_8UC1));
+}
+
 TEST(Core_Accel, wrapped_device_memory_reads_its_content)
 {
     // like a device pointer from another library: the content is in device memory, and the
@@ -1177,6 +1199,32 @@ TEST(Core_Accel, work_whose_fence_cannot_be_attached_ends_before_the_call)
         EXPECT_EQ(4, raw[255]);
     });
     munmap((void*)raw, 256);
+}
+
+TEST(Core_Accel, every_device_access_bracket_ends)
+{
+#ifdef __linux__
+    // two camera buffers in one call: when the second bracket cannot begin, the first one ends
+    // anyway, and so does every bracket of a call that runs
+    accel::Device d = emulator(COHERENT);
+    const int64 fa = accel::detail::emulatorCreateDmaBuf(256), fb = accel::detail::emulatorCreateDmaBuf(256);
+    accel::ExternalMemory ma, mb;
+    ma.type = mb.type = accel::ExternalMemory::DMABUF_FD;
+    ma.handle = fa;
+    mb.handle = fb;
+    ma.size = mb.size = 256;
+    UMat a = accel::wrapExternalMemory(d, ma, MatShape({16, 16}), CV_8UC1);
+    UMat b = accel::wrapExternalMemory(d, mb, MatShape({16, 16}), CV_8UC1);
+    const int64 unmatched = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_BRACKET);
+    cv::flip(a, b, 0);
+    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fa));
+    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fb));
+    accel::detail::emulatorFailNextDeviceAccessBegin(1);
+    EXPECT_THROW(cv::flip(a, b, 0), cv::Exception);
+    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fa));
+    EXPECT_EQ(0, accel::detail::emulatorDmaBufOpenBrackets(fb));
+    EXPECT_EQ(unmatched, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_BRACKET));
+#endif
 }
 
 TEST(Core_Accel, dma_bufs_need_a_backend_that_honours_their_fences)
@@ -1521,6 +1569,29 @@ TEST(Core_Accel, exports_are_settled_snapshots)
     EXPECT_THROW(accel::exportExternalMemory(y), cv::Exception);
     accel::ExternalMemory e = accel::exportExternalMemory(x);
     close((int)e.handle);
+#endif
+}
+
+TEST(Core_Accel, protected_memory_is_shared_between_devices_as_protected_memory)
+{
+#ifdef __linux__
+    // a frame of a secure heap, wrapped on the GPU, processed on the NPU: imported there as
+    // protected memory (nothing copied, which protection would forbid), the result protected too
+    accel::Device gpu = emulator(COHERENT), npu = emulator(NONCOHERENT);
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DMABUF_FD;
+    mem.handle = accel::detail::emulatorCreateDmaBuf(256, true);
+    mem.size = 256;
+    mem.protectedContent = true;
+    UMat secure = accel::wrapExternalMemory(gpu, mem, MatShape({16, 16}), CV_8UC1);
+    accel::ExecutionScope scope(npu);
+    UMat out;
+    accel::resetTransferStats();
+    cv::flip(secure, out, 1);
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+    EXPECT_EQ(2, accel::detail::backingImports(secure));
+    EXPECT_TRUE(npu == accel::describe(out).device);
+    EXPECT_TRUE(accel::describe(out).protectedContent);
 #endif
 }
 
@@ -2313,6 +2384,26 @@ TEST(Core_Accel, memory_exported_by_one_backend_is_one_memory_in_another)
     EXPECT_EQ(accel::detail::backingId(y), accel::detail::backingId(other));
     close((int)f.handle);
 #endif
+}
+
+TEST(Core_Accel, a_later_write_does_not_hide_an_earlier_failure)
+{
+    // two writes on one stream: the first fails later, the second (to half of the memory) does
+    // not. The stream orders them, so nobody waits for the first; its failure still counts.
+    accel::Device d = failingDevice();
+    runWithDeviceDelay(20000, [&]() {
+        Mat src(16, 16, CV_8UC1);
+        randu(src, 0, 255);
+        UMat u = makeOn(d, src), half = makeOn(d, src.rowRange(0, 8));
+        UMat out = makeOn(d, Mat::zeros(16, 16, CV_8UC1));
+        accel::detail::emulatorInjectFailure(CV_ACCEL_INTERNAL_ERROR, accel::detail::EMU_FAIL_FENCES);
+        cv::flip(u, out, 1);                        // fails 20 ms from now
+        accel::detail::emulatorInjectFailure(CV_ACCEL_OK);
+        UMat top = out.rowRange(0, 8);
+        cv::flip(half, top, 1);                     // succeeds, after it on the same stream
+        EXPECT_THROW(out.getMat(ACCESS_READ), cv::Exception);
+    });
+    accel::detail::reviveDevices();
 }
 
 TEST(Core_Accel, failed_work_stays_failed_however_its_fence_is_shared)

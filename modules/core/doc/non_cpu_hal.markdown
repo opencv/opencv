@@ -555,6 +555,7 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | one memory reached through a dma-buf and through the allocation it came from | one backing with both names; names that lead to two existing states make the wrap fail | `registerBacking`, `addBackingName` |
 | a dma-buf one backend's allocation was exported as, outside OpenCV, imported through another backend | core asks every backend whether the memory is one of its allocations (`identify_memory`, API version 6): the import meets the allocation's state | `allBackendNames` |
 | planes of one image through different handles of one buffer | grouped by the memory they lie in after wrapping; overlap refused | `wrapExternalImage` |
+| protected memory needed on another device | shared as protected memory: the import asks for protection and the backend attests it again; results go to protected memory there | `shareOn` |
 | an input or output on a device the candidate cannot address | imported there as a dma-buf when its backend exports and the device imports; a copy otherwise | `canShare`, `shareOn` |
 | a Mat over host memory that a UMat wraps (a wrapped pointer) | both compared by host address: an output that overlaps an input is produced in a temporary | `PhysicalBacking::hostBase`, `overlaps` |
 | a peer device that reaches memory through its own mapping (no unified addressing, an IOMMU window) | its kernels get that device's address of the memory in the view (`get_device_address`, API version 4), and so does `DeviceAccess` on its streams; without the entry one address serves every device | `Backend::deviceAddress` |
@@ -563,10 +564,12 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | no memory after the work was queued | room for its fence, the ranges it writes and its failure is made before it is queued, and the list of dma-buf brackets to end is built then too: recording the outcome never allocates; a failure that still finds no room marks all of the memory | `DeviceAcquisition::acquire`, `addPoison` |
 | no memory while a `DeviceAccess` takes a buffer | the hold is recorded before the buffer counts as taken, so nothing is left half acquired | `DeviceAcquisition::acquire` |
 | the last UMat of memory whose `end_cpu_access` keeps failing | the memory is leaked, never freed under the open CPU access; device-idle memory keeps its gate | `destroyBacking` |
+| an import of host memory that the backend fails to release (or a lost device's) | its pages stay reserved: the backend may still pin them, so no overlapping import is let in | `destroyBacking`, `MemoryGuard` |
 | a host range whose pages run past the end of the address space | refused, never rounded around to address 0 | `Backend::reserveHostImport` |
 | no memory for the holder of a new stream | the stream is destroyed before the error is reported | `Backend::newStream` |
 | a plugin whose registration fails part way | its library belongs to the backend from the moment the backend is published, so it is unloaded only when nothing of it was published; logging after publication cannot undo it | `Registry::add` |
 | a backend with many devices | state per device (lost, stopped, synchronization tickets, idle gate), created when the backend is registered; a synchronization of one device proves nothing about another; more than 4096 devices are refused | `DeviceState` |
+| a write that fails after a newer write on the same stream replaced its fence | kept as a prior write until it settles; its failure poisons what it wrote (unless the newer write overwrote all of it); collection poisons failed writes too, for a backing a wrap revives | `replaceWriteLocked`, `settlePriorWritesLocked` |
 | copies of a fence | share the one reference recorded with the work; `fence_retain` is never called, so no copy can lose a failure; without memory to share it, the work is waited for at once and its status kept | `FenceCore`, `FenceRef::adopt` |
 | non-coherent memory | invalidate / clean around every CPU access, for all views of the memory at once | `openCpuLevel` |
 | `end_cpu_access` fails | the CPU access stays open: devices stay away (and device-idle memory keeps its gate) until a retry succeeds; owed ends are retried in order, innermost first, and recorded without allocating | `retryFailedCpuEndsLocked`, `endOrOwe` |
@@ -574,6 +577,7 @@ the DNN CUDA backend to UMat buffers, which is the precondition.
 | two buffers in one cache line | forbidden for non-coherent allocations | backend rule 3 |
 | dma-buf implicit fences | write and read fences both ways; backends without the entries are refused | backend rule 5 |
 | dma-buf fence that cannot be attached | the call waits for the work before returning | `endExternal` |
+| a `begin_device_access` that fails after others of the same call succeeded, or work abandoned after them | every bracket that began ends exactly once: with the work's fence, or without one when nothing was queued (`end_device_access` takes NULL) | `DeviceAcquisition::externalBegun_`, `ExternalBracket` |
 | managed memory without concurrent access | device gate | `IdleGate`, `SubmitWindow` |
 | uncached or write-combined memory | CPU kernels work on a cached copy | `usesShadow` |
 | protected memory, tiled layouts | CPU access and CPU fallback throw | `checkHostAccessAllowed` |

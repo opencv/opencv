@@ -418,7 +418,14 @@ cvAccelStatus CV_API_CALL cu_allocate(int device, uint64_t size, uint32_t kind, 
     case CV_ACCEL_MEM_SHARED:
         e = cudaHostAlloc(&a->hostPtr, size, cudaHostAllocPortable | cudaHostAllocMapped);
         if (e == cudaSuccess)
+        {
             e = cudaHostGetDevicePointer(&a->devPtr, a->hostPtr, 0);
+            if (e != cudaSuccess)
+            {
+                cudaFreeHost(a->hostPtr);   // the allocation is not handed out: freed here
+                a->hostPtr = 0;
+            }
+        }
         out->handle = (uint64_t)(uintptr_t)(kind == CV_ACCEL_MEM_HOST_PINNED ? a->hostPtr : a->devPtr);
         break;
     case CV_ACCEL_MEM_MANAGED:

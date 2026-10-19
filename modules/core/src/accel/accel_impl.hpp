@@ -542,7 +542,9 @@ struct PhysicalBacking
     // identity, fixed before the backing is shared
     uint64 id;              //!< unique in the process (diagnostics and tests)
     uint64_t size;
-    uint32_t flags;         //!< attested by its imports: CV_ACCEL_MEMF_PROTECTED, CV_ACCEL_MEMF_EXTERNAL_SYNC
+    /** attested by its imports: CV_ACCEL_MEMF_PROTECTED, CV_ACCEL_MEMF_EXTERNAL_SYNC; set when
+        an import or an export adds one, read without the mutex: atomic */
+    std::atomic<uint32_t> flags;
     bool borrowed;          //!< memory of someone else: its last release waits for the device without limit
     /** a dma-buf of the memory that core keeps open while the backing lives (the one it was
         wrapped from, or one exported for sharing), -1 if none: its name cannot pass to other
@@ -578,6 +580,15 @@ struct PhysicalBacking
     std::vector<Hold> longHolds;        //!< open DeviceAccess objects, to report same-thread conflicts
     FenceRef writeFence;                //!< last device write
     std::vector<std::pair<uint64_t, uint64_t> > writeRanges;   //!< [begin, end) it covers: poisoned if it fails
+    struct PriorWrite
+    {
+        FenceRef fence;
+        uint64_t begin, end;            //!< the bytes it wrote (a bound)
+    };
+    /** earlier writes still in flight when a newer one replaced writeFence (the same stream
+        orders them, so nothing waited for them): kept until they settle, so that a failure of
+        theirs poisons what they wrote instead of being forgotten */
+    std::vector<PriorWrite> priorWrites;
     std::vector<FenceRef> readFences;   //!< device reads after the last write, one per stream
     std::vector<PoisonRange> poison;    //!< bytes that failed work may have written, until written whole
     struct Layout
@@ -707,7 +718,7 @@ thread touching the memory again gets an error instead of a deadlock. */
 class DeviceAcquisition
 {
 public:
-    explicit DeviceAcquisition(bool longHold = false) : longHold_(longHold), acquired_(0) {}
+    explicit DeviceAcquisition(bool longHold = false) : externalBegun_(0), longHold_(longHold), acquired_(0) {}
     ~DeviceAcquisition() { abandon(); }
 
     void add(UMatData* u, int mode);
@@ -742,6 +753,7 @@ private:
     std::vector<Group> groups_;
     //! the views of memory with implicit fences, one per import, with the access of all their uses (acquire)
     std::vector<std::pair<const BufferState*, int> > external_;
+    size_t externalBegun_;      //!< brackets of external_ begun so far (each ends exactly once)
     bool longHold_;
     size_t acquired_;           //!< groups acquired so far
     std::thread::id holder_;
@@ -876,6 +888,14 @@ void prepareExport(BufferState* v);
 
 //! the bytes [start, start + size) of @p b already have another layout than @p modifier (mutex held)
 bool layoutConflictLocked(const PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier);
+/** A new device write (fence @p next, which overwrites [overStart, overStart + overSize) whole
+    when overSize is not 0) replaces writeFence: a failure of the write it replaces poisons what
+    that one wrote, now or once it settles (priorWrites, room reserved by the caller); bytes
+    the new write overwrites whole do not matter any more. Mutex held; never allocates. */
+void replaceWriteLocked(PhysicalBacking* b, const FenceRef& next, uint64_t overStart, uint64_t overSize) CV_NOEXCEPT;
+//! settles priorWrites: the failed ones poison what they wrote; false while one is still in flight (mutex held)
+bool settlePriorWritesLocked(PhysicalBacking* b) CV_NOEXCEPT;
+
 //! records the layout of [start, start + size) (mutex held; throws only before anything changed)
 void recordLayoutLocked(PhysicalBacking* b, uint64_t start, uint64_t size, uint64_t modifier);
 

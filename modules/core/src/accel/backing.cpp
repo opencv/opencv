@@ -405,9 +405,13 @@ void destroyBacking(PhysicalBacking* b) CV_NOEXCEPT
         // free would block, as cudaFree does): its allocations and imports are leaked.
         if (cpuOpen)
             continue;   // the host reservation stays too: the import still exists
-        if (!be->isLost(imp->device) && (imp->alloc.handle || imp->alloc.backend_data))
+        // an import that is not released (a lost device, a failed release) may still pin its
+        // pages: they stay reserved, so that no overlapping import is let in
+        bool released = !(imp->alloc.handle || imp->alloc.backend_data);
+        if (!released && !be->isLost(imp->device))
         {
-            if (be->fn().deallocate(&imp->alloc) != CV_ACCEL_OK)
+            released = be->fn().deallocate(&imp->alloc) == CV_ACCEL_OK;
+            if (!released)
             {
                 try
                 {
@@ -417,7 +421,7 @@ void destroyBacking(PhysicalBacking* b) CV_NOEXCEPT
                 catch (...) {}
             }
         }
-        if (imp->hostReservation)
+        if (released && imp->hostReservation)
             be->releaseHostImport(imp->device, imp->hostReservation);
     }
 }
@@ -509,11 +513,20 @@ void addBackingName(PhysicalBacking* b, const BackingName& name)
 
 bool fencesSettledLocked(PhysicalBacking* b) CV_NOEXCEPT
 {
+    // a failure poisons what the work wrote: the backing may still be revived by a wrap
+    if (!settlePriorWritesLocked(b))
+        return false;
     if (!b->writeFence.empty())
     {
-        if (b->writeFence.poll() == FenceRef::PENDING)
+        const FenceRef::Poll p = b->writeFence.poll();
+        if (p == FenceRef::PENDING)
             return false;
+        if (p == FenceRef::FAILED)
+            for (size_t i = 0; i < b->writeRanges.size(); i++)
+                addPoison(b, b->writeRanges[i].first, b->writeRanges[i].second - b->writeRanges[i].first,
+                          "the device work that wrote this memory failed");
         b->writeFence.reset();
+        b->writeRanges.clear();
     }
     for (size_t i = 0; i < b->readFences.size(); )
     {
@@ -681,6 +694,7 @@ struct MemoryGuard
         {
             try { CV_LOG_ERROR(NULL, "accel(" << b->name() << "): failed to release memory: " << b->fn().get_last_error()); }
             catch (...) {}
+            return;     // the backend may still hold the pages: they stay reserved
         }
         if (reservation)
             b->releaseHostImport(device, reservation);
@@ -755,8 +769,14 @@ BufferState* attachOwnedMemory(UMatData* u, Backend* be, int device, const cvAcc
     imp->modifier = a.desc.layout_modifier;
     // a backend identity makes a later wrap of this memory (UMat::handle(), DeviceAccess) find it
     uint64_t end = 0;
-    if (a.backing_id && rangeEnd(a.backing_offset, a.size, end))
+    if (a.backing_id)
+    {
+        // a part of a larger memory must lie inside it: another backing must not take its bytes
+        if (!rangeEnd(a.backing_offset, a.size, end) || (a.backing_size && end > a.backing_size))
+            CV_Error_(Error::StsInternal, ("accel(%s): the backend placed a new allocation outside of the memory it "
+                                           "says the allocation lies in", be->name().c_str()));
         nb->names.push_back(BackingName(BackingKey(BACKING_BACKEND, (uint64_t)be->id(), a.backing_id), a.backing_offset));
+    }
     nb->size = a.size;
     nb->flags = a.desc.flags & CV_ACCEL_MEMF_PROTECTED;
     nb->borrowed = false;
@@ -1122,7 +1142,10 @@ static void dropNewBacking(PhysicalBacking* nb) CV_NOEXCEPT
         Import* x = nb->imports[i];
         Backend* be = x->backend;
         if ((x->alloc.handle || x->alloc.backend_data) && be->fn().deallocate(&x->alloc) != CV_ACCEL_OK)
+        {
             releaseImportError(be);
+            continue;   // the backend may still hold the pages: they stay reserved
+        }
         if (x->hostReservation)
             be->releaseHostImport(x->device, x->hostReservation);
     }
