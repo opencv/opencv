@@ -41,7 +41,7 @@ enum Plan
 struct Arg
 {
     Arg() : isOutput(false), type(-1), fullOverwrite(true), isUMat(false), isHost(false),
-            onDevice(false), mapped(false), plan(PLAN_UNDECIDED), mode(0)
+            onDevice(false), mapped(false), exists(false), explicitAlloc(NULL), plan(PLAN_UNDECIDED), mode(0)
     {
         memset(&desc, 0, sizeof(desc));
         memset(&viewAlloc, 0, sizeof(viewAlloc));
@@ -58,6 +58,8 @@ struct Arg
     cvAccelMemoryDesc desc;
     bool onDevice;              //!< memory from an accelerator backend
     bool mapped;                //!< a Mat view of accelerator memory (UMat::getMat): the CPU has that memory open
+    bool exists;                //!< a UMat output that already has the shape and type the call produces
+    const MatAllocator* explicitAlloc;  //!< a UMat output's own allocator: where it is created, whichever device runs the call
     int plan;
     UMat temp;
     int mode;
@@ -200,6 +202,27 @@ bool viewFitsRange(const cvAccelView& v, uint64_t start, uint64_t size)
     rel.alloc = &range;
     rel.offset = v.offset - start;
     return viewFitsAllocation(rel);
+}
+
+//! the CPU can read and write the memory (a mapping or a host copy): data may move through it
+bool cpuReachable(const cvAccelMemoryDesc& d)
+{
+    return d.host_access != CV_ACCEL_HOST_ACCESS_NONE && !(d.flags & CV_ACCEL_MEMF_PROTECTED) && d.layout_modifier == 0;
+}
+
+//! the device allocator @p a allocates on, NULL for other allocators
+const DeviceAllocator* deviceAllocatorOf(const MatAllocator* a)
+{
+    return a && isDeviceAllocator(a) ? static_cast<const DeviceAllocator*>(a) : NULL;
+}
+
+//! an output without memory of the right shape gets it on (b, device): its own allocator, if any, allocates there
+bool createdOn(const Arg& a, Backend* b, int device)
+{
+    if (!a.explicitAlloc)
+        return true;
+    const DeviceAllocator* da = deviceAllocatorOf(a.explicitAlloc);
+    return da && da->backend() == b && da->device() == device;
 }
 
 bool coversAllocation(const UMat& m)
@@ -380,6 +403,8 @@ void OpCall::output(OutputArray arr, const MatShape& shape, int type, bool fullO
         a.isUMat = true;
         a.um = arr.getUMatRef();
         describeUMat(a);
+        a.exists = !a.um.empty() && sameShape(a.um, shape) && a.um.type() == a.type;
+        a.explicitAlloc = arr.getUMatRef().allocator;   // explicit placement wins
     }
     else if (k == _InputArray::MAT)
         describeMat(a, arr.getMatRef());
@@ -411,7 +436,7 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
         bool exists = false;
         Mat hostOut;    // the caller's Mat, when it already has the right shape and type
         if (a.isUMat)
-            exists = !a.um.empty() && sameShape(a.um, a.shape) && a.um.type() == a.type;
+            exists = a.exists;
         else
         {
             hostOut = a.arr.getMat();
@@ -420,7 +445,7 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
                 hostOut.release();
         }
         if (a.isUMat && !exists)
-            a.plan = PLAN_CREATE;
+            a.plan = createdOn(a, b, device) ? PLAN_CREATE : PLAN_COPY_BACK;  // made elsewhere by its own allocator: copied there
         else if ((a.onDevice || a.isHost) && b->canAccess(device, a.desc))
             a.plan = PLAN_IN_PLACE;     // device memory, or host memory the device addresses (an iGPU, an NPU)
         else
@@ -444,6 +469,13 @@ bool OpCall::Impl::planArgs(Backend* b, int device)
 void OpCall::Impl::createOutput(Arg& a, Backend* b, int device)
 {
     UMat& d = a.arr.getUMatRef();
+    if (a.explicitAlloc)
+    {
+        a.arr.create(a.shape, a.type);  // its own allocator, on this device (see createdOn)
+        a.um = d;
+        describeUMat(a);
+        return;
+    }
     MatAllocator* saved = d.allocator;
     d.allocator = b->allocator(device, (int)b->deviceInfo(device).preferred_kind, protectedIn);
     try
@@ -472,6 +504,25 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
     for (size_t i = 0; i < args.size(); i++)
         if (!args[i].isOutput && args[i].plan != PLAN_ABSENT && (args[i].desc.flags & CV_ACCEL_MEMF_PROTECTED))
             protectedIn = true;
+    const uint32_t plannedFlags = protectedIn ? CV_ACCEL_MEMF_PROTECTED : 0;
+    // A move between two devices goes through the CPU (UMat::copyTo), and copies are linear:
+    // memory the CPU cannot read (protected, non-linear, without host access) is used where it
+    // is, and only linear memory takes a copy back. A plan that needs more is not this device's
+    // to run: the next candidate is tried.
+    bool impossible = false;
+    for (size_t i = 0; i < args.size(); i++)
+    {
+        const Arg& a = args[i];
+        if (a.plan == PLAN_UPLOAD && a.onDevice && !cpuReachable(a.desc))
+            impossible = true;
+        if (a.plan == PLAN_COPY_BACK && a.isUMat)
+        {
+            const bool here = a.onDevice && a.desc.backend_id == (uint32_t)b->id() && (int)a.desc.device_index == device;
+            if ((a.onDevice && a.desc.layout_modifier != 0) ||
+                (!here && !cpuReachable(plannedDesc(b, device, plannedKind, planBytes(a.shape, a.type), plannedFlags))))
+                impossible = true;  // the temporary goes through the CPU, into memory with the same layout
+        }
+    }
     // bytes the plan moves: temporaries filled or copied back, and what the arguments' own
     // memory needs first (a newer host copy uploaded, a stale one downloaded before an upload)
     cost = 0;
@@ -481,14 +532,16 @@ cvAccelStatus OpCall::Impl::evaluate(Backend* b, int device, Invoker fn, void* u
         if (protectedIn && a.isOutput && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_COPY_BACK) &&
             !(a.desc.flags & CV_ACCEL_MEMF_PROTECTED))
             protectedRefused = true;
+        if (protectedIn && a.isOutput && a.plan == PLAN_CREATE && a.explicitAlloc &&
+            !(deviceAllocatorOf(a.explicitAlloc) && deviceAllocatorOf(a.explicitAlloc)->isProtected()))
+            protectedRefused = true;    // its own allocator gives ordinary memory
         if (a.plan == PLAN_UPLOAD || a.plan == PLAN_COPY_BACK)
             cost += planBytes(a.shape, a.type) * (a.plan == PLAN_COPY_BACK && !a.fullOverwrite ? 2 : 1);
         if (a.isUMat && a.onDevice && (a.plan == PLAN_IN_PLACE || a.plan == PLAN_UPLOAD))
             cost += pendingTransferBytes(a.um, a.plan == PLAN_IN_PLACE);
     }
-    if (protectedRefused || !fn)
+    if (protectedRefused || impossible || !fn)
         return CV_ACCEL_NOT_IMPLEMENTED;
-    const uint32_t plannedFlags = protectedIn ? CV_ACCEL_MEMF_PROTECTED : 0;
 
     table = b->opTable(module, version);
     for (size_t i = 0; i < args.size(); i++)
@@ -550,6 +603,17 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
     {
         const Arg& a = args[i];
         mapped = mapped || a.mapped;
+        if (a.isOutput && !a.exists)
+        {
+            // an output that its own allocator puts on a device: that device is where the result goes
+            if (const DeviceAllocator* da = deviceAllocatorOf(a.explicitAlloc))
+            {
+                anyOnDevice = true;
+                const std::pair<int, int> c(da->backend()->id(), da->device());
+                if (!scope && std::find(candidates.begin(), candidates.end(), c) == candidates.end())
+                    candidates.push_back(c);
+            }
+        }
         if (!a.onDevice)
             continue;
         anyOnDevice = true;
@@ -673,7 +737,10 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
                 // the whole temporary is copied back: what the operation leaves alone must
                 // already hold the output's current content
                 if (a.isUMat)
-                    a.um.copyTo(a.temp);    // a UMat output to copy back always exists (see planArgs)
+                {
+                    if (a.exists)
+                        a.um.copyTo(a.temp);    // one that does not exist yet has no content to keep
+                }
                 else
                 {
                     Mat current = a.arr.getMat();
@@ -813,7 +880,8 @@ RunResult OpCall::Impl::run(Invoker fn, void* userdata)
             }
             // part of the work may be queued: the buffers wait for it, and what it writes is
             // invalid until it is written whole
-            acq.fail(fenceAfterFailure(stream), currentExceptionMessage());
+            char why[160];
+            acq.fail(fenceAfterFailure(stream), currentExceptionMessage(why, sizeof(why)));
             throw;
         }
         acq.record(done);

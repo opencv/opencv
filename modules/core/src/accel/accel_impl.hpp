@@ -141,8 +141,8 @@ private:
     Never throws. */
 FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT;
 
-//! the message of the exception being handled (call inside a catch block)
-std::string currentExceptionMessage();
+//! the message of the exception being handled (call inside a catch block), copied into @p buf
+const char* currentExceptionMessage(char* buf, size_t size) CV_NOEXCEPT;
 
 //! records a fence at the current end of @p s
 FenceRef recordFence(const StreamPtr& s);
@@ -238,6 +238,8 @@ public:
 
     //! per-thread default stream of @p device
     StreamPtr defaultStream(int device);
+    //! a new stream of @p device, destroyed with its holder (never leaked when the holder cannot be made)
+    StreamPtr newStream(int device);
 
     //! the generic allocator for @p device and memory kind (cvAccelMemoryKind), never released
     //! @p protectedMem: allocations for results computed from protected content
@@ -328,12 +330,13 @@ public:
     /** Pinned host blocks for host copies, reused by exact size. Allocating pinned memory is
         slow and stalls the streams of the device, so it should not happen per buffer. */
     bool takePinned(int device, uint64_t size, cvAccelAllocation& out);
-    //! keeps the block for reuse, or frees it when the cache is full (OPENCV_ACCEL_PINNED_CACHE_MB)
-    void recyclePinned(cvAccelAllocation& a);
+    //! keeps the block for reuse, or frees it when the cache is full (OPENCV_ACCEL_PINNED_CACHE_MB); never throws
+    void recyclePinned(cvAccelAllocation& a) CV_NOEXCEPT;
 
     /** Reserves the pages of a host range for an import. Pinning works on whole pages and
         overlapping imports fail or, worse, tear down each other's mappings (Level Zero), so
-        a range touching pages that are already imported is refused and the caller copies. */
+        a range touching pages that are already imported is refused (false). Throws for a range
+        whose pages would run past the end of the address space. */
     bool reserveHostImport(int device, const void* ptr, size_t size);
     void releaseHostImport(int device, const void* ptr);
 
@@ -481,7 +484,7 @@ struct Import
 struct PoisonRange
 {
     uint64_t begin, end;
-    std::string reason;
+    char reason[160];       //!< fixed: recording a failure never allocates
 };
 
 //! host memory of a released view, freed once the device work that may touch it completed
@@ -543,6 +546,10 @@ struct PhysicalBacking
     std::vector<std::pair<uint64_t, uint64_t> > writeRanges;   //!< [begin, end) it covers: poisoned if it fails
     std::vector<FenceRef> readFences;   //!< device reads after the last write, one per stream
     std::vector<PoisonRange> poison;    //!< bytes that failed work may have written, until written whole
+    /** a failure that could not be recorded as a range (no room): all of the backing counts as
+        written by it until all of it is written again */
+    bool poisonedWhole;
+    PoisonRange wholePoison;
     uint64 generation;                  //!< incremented by every write
     std::vector<Import*> imports;       //!< owned
     std::vector<BufferState*> views;    //!< live views
@@ -666,16 +673,18 @@ public:
     bool empty() const { return uses_.empty(); }
 
     /** Returns false and holds nothing when a live Mat view conflicts with a use. Appends the
-        fences that work enqueued on @p stream must wait for to @p waits. */
+        fences that work enqueued on @p stream must wait for to @p waits. Everything recording
+        the outcome needs later (room for fences, written ranges, failures; the list of
+        external uses) is allocated here, before any work is queued. */
     bool acquire(const StreamPtr& stream, std::vector<FenceRef>& waits);
     //! the work was enqueued: @p fence completes it; releases everything
-    void record(const FenceRef& fence);
+    void record(const FenceRef& fence) CV_NOEXCEPT;
     /** The work failed after the backend may have queued part of it: every backing takes
         @p fence (empty: nothing runs any more) and the views written are poisoned; releases
         everything. */
-    void fail(const FenceRef& fence, const std::string& reason);
+    void fail(const FenceRef& fence, const char* reason) CV_NOEXCEPT;
     //! nothing was enqueued; releases everything (safe to call more than once)
-    void abandon();
+    void abandon() CV_NOEXCEPT;
 
 private:
     DeviceAcquisition(const DeviceAcquisition&);
@@ -686,12 +695,12 @@ private:
         size_t first, count;    //!< uses_[first, first + count) are views of it
         int mode;               //!< union of their DEV_READ / DEV_WRITE
     };
-    void finish(const Group& g, const FenceRef* fence, const char* failure);
-    //! the views of memory with implicit fences, one per import, with the access of all their uses
-    std::vector<std::pair<const BufferState*, int> > externalUses() const;
+    void finish(const Group& g, const FenceRef* fence, const char* failure) CV_NOEXCEPT;
     void endExternalUses(const FenceRef& fence) CV_NOEXCEPT;
     std::vector<DeviceUse> uses_;
     std::vector<Group> groups_;
+    //! the views of memory with implicit fences, one per import, with the access of all their uses (acquire)
+    std::vector<std::pair<const BufferState*, int> > external_;
     bool longHold_;
     size_t acquired_;           //!< groups acquired so far
     std::thread::id holder_;
@@ -740,6 +749,7 @@ public:
     Backend* backend() const { return b_; }
     int device() const { return device_; }
     int kind() const { return kind_; }
+    bool isProtected() const { return protected_; }
 
     /** Wraps external memory (wrapExternalMemory). Returns the UMatData to view it through and
         the offset of the requested bytes in it. With @p referenced the UMatData is an existing
@@ -791,10 +801,13 @@ bool retryFailedCpuEndsLocked(PhysicalBacking* b) CV_NOEXCEPT;
 
 //! poisoned bytes of @p b overlapping [begin, begin + size), NULL when there are none (backing mutex held)
 const PoisonRange* findPoison(const PhysicalBacking* b, uint64_t begin, uint64_t size);
-//! marks [begin, begin + size) of @p b as written by failed work (backing mutex held)
-void addPoison(PhysicalBacking* b, uint64_t begin, uint64_t size, const std::string& reason);
-//! [begin, begin + size) was written whole: earlier failures there no longer matter (backing mutex held)
-void clearPoison(PhysicalBacking* b, uint64_t begin, uint64_t size);
+/** Marks [begin, begin + size) of @p b as written by failed work (backing mutex held). Never
+    fails open: without room for the range, all of the backing is marked. */
+void addPoison(PhysicalBacking* b, uint64_t begin, uint64_t size, const char* reason) CV_NOEXCEPT;
+/** [begin, begin + size) was written whole: earlier failures there no longer matter (backing
+    mutex held). Never allocates: a range that would have to be split without room for its
+    second half stays whole (a failure reported once too often, never one missed). */
+void clearPoison(PhysicalBacking* b, uint64_t begin, uint64_t size) CV_NOEXCEPT;
 
 //! true for allocators of accelerator backends: their data must never move elsewhere silently
 bool isDeviceAllocator(const MatAllocator* a);

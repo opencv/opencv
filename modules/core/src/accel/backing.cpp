@@ -46,8 +46,12 @@ static std::atomic<uint64>& backingIds()
 
 PhysicalBacking::PhysicalBacking()
     : id(++backingIds()), start(0), size(0), flags(0), borrowed(false), refs(0), registered(false), retiring(false), deferred(false),
-      busy(false), pendingReaders(0), pendingWriters(0), generation(0), cpuViews(0), cpuBase(0), idleGateHeld(0)
-{}
+      busy(false), pendingReaders(0), pendingWriters(0), poisonedWhole(false), generation(0), cpuViews(0), cpuBase(0),
+      idleGateHeld(0)
+{
+    memset(&wholePoison, 0, sizeof(wholePoison));
+    writeRanges.reserve(1);     // recordWriteLocked never allocates
+}
 
 PhysicalBacking::~PhysicalBacking()
 {
@@ -67,6 +71,8 @@ BufferState::BufferState(PhysicalBacking* b, Import* imp_, uint64_t start_, uint
 
 const PoisonRange* findPoison(const PhysicalBacking* b, uint64_t begin, uint64_t size)
 {
+    if (b->poisonedWhole)
+        return &b->wholePoison;
     for (size_t i = 0; i < b->poison.size(); i++)
     {
         const PoisonRange& r = b->poison[i];
@@ -76,46 +82,69 @@ const PoisonRange* findPoison(const PhysicalBacking* b, uint64_t begin, uint64_t
     return NULL;
 }
 
-void addPoison(PhysicalBacking* b, uint64_t begin, uint64_t size, const std::string& reason)
+void addPoison(PhysicalBacking* b, uint64_t begin, uint64_t size, const char* reason) CV_NOEXCEPT
 {
     if (size == 0)
         return;
     PoisonRange r;
     r.begin = begin;
     r.end = begin + size;
-    r.reason = reason;
-    b->poison.push_back(r);
+    snprintf(r.reason, sizeof(r.reason), "%s", reason ? reason : "the device work failed");
+    if (b->poison.size() < b->poison.capacity())
+    {
+        b->poison.push_back(r);     // room was made before the work was queued: no allocation
+        return;
+    }
+    try
+    {
+        b->poison.push_back(r);
+        return;
+    }
+    catch (...) {}
+    if (!b->poisonedWhole)
+    {
+        b->wholePoison = r;
+        b->wholePoison.begin = 0;
+        b->wholePoison.end = std::numeric_limits<uint64_t>::max();
+        b->poisonedWhole = true;
+    }
 }
 
-void clearPoison(PhysicalBacking* b, uint64_t begin, uint64_t size)
+void clearPoison(PhysicalBacking* b, uint64_t begin, uint64_t size) CV_NOEXCEPT
 {
-    if (b->poison.empty())
-        return;
-    // what lies inside the range is gone; what sticks out of it stays poisoned
     const uint64_t end = begin + size;
-    std::vector<PoisonRange> keep;
-    for (size_t i = 0; i < b->poison.size(); i++)
+    if (b->poisonedWhole && begin == 0 && size >= b->size)
+        b->poisonedWhole = false;
+    // what lies inside the range is gone; what sticks out of it stays poisoned
+    for (size_t i = 0; i < b->poison.size(); )
     {
-        const PoisonRange& r = b->poison[i];
+        PoisonRange& r = b->poison[i];
         if (r.end <= begin || r.begin >= end)
+            i++;
+        else if (r.begin < begin && r.end > end)
         {
-            keep.push_back(r);
-            continue;
+            if (b->poison.size() < b->poison.capacity())
+            {
+                PoisonRange right = r;
+                right.begin = end;
+                r.end = begin;
+                b->poison.push_back(right);     // never reallocates: r stays valid
+            }
+            i++;
         }
-        if (r.begin < begin)
+        else if (r.begin < begin)
         {
-            PoisonRange left = r;
-            left.end = begin;
-            keep.push_back(left);
+            r.end = begin;
+            i++;
         }
-        if (r.end > end)
+        else if (r.end > end)
         {
-            PoisonRange right = r;
-            right.begin = end;
-            keep.push_back(right);
+            r.begin = end;
+            i++;
         }
+        else
+            b->poison.erase(b->poison.begin() + i);
     }
-    b->poison.swap(keep);
 }
 
 //////////////////////////////////// the registry of backings ////////////////////////////////////
@@ -254,8 +283,19 @@ void removeDeferredLocked(Backings& r, PhysicalBacking* b)
     its imports. Its fences completed (or its device stopped); nobody can reach it any more. */
 void destroyBacking(PhysicalBacking* b) CV_NOEXCEPT
 {
-    retryFailedCpuEndsLocked(b);    // best effort: the memory goes anyway
-    if (b->idleGateHeld)
+    // A CPU access whose end keeps failing is still open in the backend (rule 4): its memory
+    // cannot be freed under it, so it is leaked, mapping and all, and device-idle memory keeps
+    // its device's gate (new work there would fault against the open access).
+    const bool cpuOpen = !retryFailedCpuEndsLocked(b);
+    if (cpuOpen)
+    {
+        try
+        {
+            CV_LOG_ERROR(NULL, "accel: memory is released while end_cpu_access keeps failing on it; it is leaked");
+        }
+        catch (...) {}
+    }
+    else if (b->idleGateHeld)
     {
         b->idleGateHeld->cpuMappings--;
         b->idleGateHeld = 0;
@@ -271,6 +311,8 @@ void destroyBacking(PhysicalBacking* b) CV_NOEXCEPT
         Backend* be = imp->backend;
         // A lost device rejects every call, or is still running after a timed-out wait (where a
         // free would block, as cudaFree does): its allocations and imports are leaked.
+        if (cpuOpen)
+            continue;   // the host reservation stays too: the import still exists
         if (!be->isLost(imp->device) && (imp->alloc.handle || imp->alloc.backend_data))
         {
             if (be->fn().deallocate(&imp->alloc) != CV_ACCEL_OK)

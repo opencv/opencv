@@ -410,6 +410,37 @@ TEST(Core_Accel, cpu_access_that_cannot_open_ends_every_begin)
     EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS));
 }
 
+TEST(Core_Accel, memory_whose_cpu_access_cannot_end_is_never_freed)
+{
+    // end_cpu_access fails for good: when the last UMat goes, the memory is still open for the
+    // CPU in the backend, so it is leaked rather than freed under that access
+    accel::Device d = emulator(COHERENT);
+    const int64 live = accel::detail::emulatorLiveAllocations(COHERENT);
+    const int64 violations = accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS);
+    {
+        UMat u = makeOn(d, Mat(8, 8, CV_8UC1, Scalar(1)));
+        Mat m = u.getMat(ACCESS_READ);
+        accel::detail::emulatorFailNextCpuEnds(1000);
+        m.release();
+        u.release();
+        accel::detail::emulatorFailNextCpuEnds(0);
+    }
+    EXPECT_EQ(live + 1, accel::detail::emulatorLiveAllocations(COHERENT));
+    EXPECT_EQ(violations, accel::detail::emulatorViolations(accel::detail::EMU_VIOLATION_CPU_ACCESS));
+}
+
+TEST(Core_Accel, host_ranges_past_the_end_of_the_address_space_are_refused)
+{
+    // the pages of such a range cannot be computed: reserving them would wrap around to address 0
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::HOST_POINTER;
+    mem.handle = (int64)(intptr_t)(std::numeric_limits<uintptr_t>::max() & ~(uintptr_t)4095);
+    mem.size = 8192;
+    EXPECT_THROW(accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({1, 8192}), CV_8UC1), cv::Exception);
+    mem.size = 64;
+    EXPECT_THROW(accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({1, 64}), CV_8UC1), cv::Exception);
+}
+
 TEST(Core_Accel, upgraded_cpu_access_ends_every_level)
 {
     // a read mapping opened for writing too nests a second begin_cpu_access: each one ends,
@@ -484,6 +515,29 @@ TEST(Core_Accel, read_only_memory_has_a_read_only_cpu_view)
     EXPECT_EQ('-', perms[1]);
 }
 
+
+TEST(Core_Accel, raw_handles_keep_the_rules_of_the_memory)
+{
+    // UMat::handle() hands the memory to code OpenCV does not see: no write handle of read-only
+    // memory, and none of a dma-buf (only DeviceAccess orders work with the other drivers)
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DEVICE_POINTER;
+    mem.handle = accel::detail::emulatorAllocateExternal(DISCRETE, 256, 3, false);
+    mem.size = 256;
+    mem.readOnly = true;
+    UMat ro = accel::wrapExternalMemory(emulator(DISCRETE), mem, MatShape({16, 16}), CV_8UC1);
+    EXPECT_THROW(ro.handle(ACCESS_RW), cv::Exception);
+    EXPECT_TRUE(ro.handle(ACCESS_READ) != NULL);
+
+    accel::ExternalMemory buf;
+    buf.type = accel::ExternalMemory::DMABUF_FD;
+    buf.handle = accel::detail::emulatorCreateDmaBuf(256);
+    buf.size = 256;
+    UMat frame = accel::wrapExternalMemory(emulator(COHERENT), buf, MatShape({16, 16}), CV_8UC1);
+    EXPECT_THROW(frame.handle(ACCESS_READ), cv::Exception);
+    accel::DeviceAccess access(frame, accel::Stream::getDefault(emulator(COHERENT)), ACCESS_READ);
+    EXPECT_NE(0u, access.handle());
+}
 
 TEST(Core_Accel, read_only_views_of_shared_memory_fault_on_writes)
 {
@@ -1293,6 +1347,56 @@ TEST(Core_Accel, tiled_layouts_never_reach_linear_code)
 }
 
 #endif // __linux__
+
+TEST(Core_Accel, no_device_runs_a_plan_that_moves_data_the_cpu_cannot_carry)
+{
+#ifdef __linux__
+    // A tiled frame of the coherent device as the output of a call whose input lives on the
+    // non-coherent one. That device could run it only by copying a linear result into the
+    // tiled memory, and the coherent device's kernels are linear: nobody runs it, and the
+    // frame is left alone.
+    accel::ExternalMemory mem;
+    mem.type = accel::ExternalMemory::DMABUF_FD;
+    mem.handle = accel::detail::emulatorCreateDmaBuf(256);
+    mem.size = 256;
+    mem.layoutModifier = 0x0100000000000002ull;    // a vendor tiling
+    uchar* frame = (uchar*)mmap(NULL, 256, PROT_READ | PROT_WRITE, MAP_SHARED, (int)mem.handle, 0);
+    ASSERT_TRUE(frame != MAP_FAILED);
+    memset(frame, 5, 256);
+    {
+        UMat tiled = accel::wrapExternalMemory(emulator(COHERENT), mem, MatShape({16, 16}), CV_8UC1);
+        Mat src(16, 16, CV_8UC1);
+        randu(src, 0, 255);
+        UMat in = makeOn(emulator(NONCOHERENT), src);
+        EXPECT_THROW(cv::flip(in, tiled, 1), cv::Exception);
+    }
+    EXPECT_EQ(0, cvtest::norm(Mat(1, 256, CV_8UC1, frame), Mat(1, 256, CV_8UC1, Scalar(5)), NORM_INF));
+    munmap(frame, 256);
+#endif
+}
+
+TEST(Core_Accel, an_output_placed_by_its_allocator_decides_where_the_call_runs)
+{
+    // the output's own allocator puts it on a device: a call with host inputs runs there, and
+    // one whose inputs are elsewhere still leaves its result where the allocator says
+    accel::Device d = emulator(DISCRETE);
+    Mat src(8, 8, CV_8UC1), ref;
+    randu(src, 0, 255);
+    cv::flip(src, ref, 1);
+    accel::resetTransferStats();
+    UMat out;
+    out.allocator = d.allocator();
+    cv::flip(src, out, 1);
+    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+    EXPECT_TRUE(d == accel::describe(out).device);
+    EXPECT_EQ(0, maxDiff(ref, out.getMat(ACCESS_READ)));
+
+    UMat in = makeOn(emulator(COHERENT), src), placed;
+    placed.allocator = d.allocator();
+    cv::flip(in, placed, 1);
+    EXPECT_TRUE(d == accel::describe(placed).device);
+    EXPECT_EQ(0, maxDiff(ref, placed.getMat(ACCESS_READ)));
+}
 
 TEST(Core_Accel, device_access_checks_the_stream)
 {

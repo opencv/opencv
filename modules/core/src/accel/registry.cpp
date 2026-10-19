@@ -32,8 +32,9 @@ namespace accel { namespace impl {
 
 //////////////////////////////// activity, counters, policy ////////////////////////////////
 
-// live device buffers plus live execution scopes, over all threads: while this is zero the
-// hook in cv:: functions costs one atomic load
+// live device buffers plus live execution scopes over all threads, plus one once a device
+// allocator was handed out (Device::allocator): while this is zero the hook in cv:: functions
+// costs one atomic load
 static std::atomic<long long>& activity()
 {
     static std::atomic<long long>* a = new std::atomic<long long>(0);
@@ -108,7 +109,13 @@ StreamHolder::~StreamHolder()
     if (handle && !cv::__termination)
     {
         if (backend->fn().stream_destroy(handle) != CV_ACCEL_OK)
-            CV_LOG_ERROR(NULL, "accel(" << backend->name() << "): stream_destroy failed: " << backend->fn().get_last_error());
+        {
+            try
+            {
+                CV_LOG_ERROR(NULL, "accel(" << backend->name() << "): stream_destroy failed: " << backend->fn().get_last_error());
+            }
+            catch (...) {}
+        }
     }
 }
 
@@ -318,24 +325,28 @@ FenceRef fenceAfterFailure(const StreamPtr& s) CV_NOEXCEPT
     return FenceRef::unknown(b, s->device);
 }
 
-std::string currentExceptionMessage()
+const char* currentExceptionMessage(char* buf, size_t size) CV_NOEXCEPT
 {
+    if (!buf || size == 0)
+        return "";
+    buf[0] = 0;
     try
     {
         throw;
     }
     catch (const cv::Exception& e)
     {
-        return e.err;
+        snprintf(buf, size, "%s", e.err.c_str());
     }
     catch (const std::exception& e)
     {
-        return e.what();
+        snprintf(buf, size, "%s", e.what());
     }
     catch (...)
     {
-        return "unknown error";
+        snprintf(buf, size, "unknown error");
     }
+    return buf;
 }
 
 FenceRef recordFence(const StreamPtr& s)
@@ -473,8 +484,9 @@ bool Backend::takePinned(int device, uint64_t size, cvAccelAllocation& out)
     return true;
 }
 
-void Backend::recyclePinned(cvAccelAllocation& a)
+void Backend::recyclePinned(cvAccelAllocation& a) CV_NOEXCEPT
 {
+    try
     {
         std::lock_guard<std::mutex> lk(mutex_);
         if (pinnedCacheBytes_ + a.size <= pinnedCacheLimit())
@@ -484,8 +496,15 @@ void Backend::recyclePinned(cvAccelAllocation& a)
             return;
         }
     }
+    catch (...) {}  // no room in the cache: freed instead
     if (fn().deallocate(&a) != CV_ACCEL_OK)
-        CV_LOG_ERROR(NULL, "accel(" << name_ << "): failed to free pinned memory: " << fn().get_last_error());
+    {
+        try
+        {
+            CV_LOG_ERROR(NULL, "accel(" << name_ << "): failed to free pinned memory: " << fn().get_last_error());
+        }
+        catch (...) {}
+    }
 }
 
 cvAccelDeviceInfo Backend::deviceInfo(int device) const
@@ -554,11 +573,24 @@ StreamPtr Backend::defaultStream(int device)
     std::map<std::pair<int, int>, StreamPtr>::const_iterator it = ts.streams.find(key);
     if (it != ts.streams.end())
         return it->second;
+    StreamPtr s = newStream(device);
+    ts.streams[key] = s;    // on failure the holder destroys the stream
+    return s;
+}
+
+StreamPtr Backend::newStream(int device)
+{
     cvAccelStream h = 0;
     check(fn().stream_create(device, 0, &h), "stream_create", device);
-    StreamPtr s = std::make_shared<StreamHolder>(this, device, h);
-    ts.streams[key] = s;
-    return s;
+    try
+    {
+        return std::make_shared<StreamHolder>(this, device, h);
+    }
+    catch (...)
+    {
+        fn().stream_destroy(h);     // no holder took it
+        throw;
+    }
 }
 
 MatAllocator* Backend::allocator(int device, int kind, bool protectedMem)
@@ -619,8 +651,13 @@ static size_t hostPageSize()
 bool Backend::reserveHostImport(int device, const void* ptr, size_t size)
 {
     const uintptr_t page = hostPageSize();
-    const uintptr_t begin = (uintptr_t)ptr & ~(page - 1);
-    const uintptr_t end = ((uintptr_t)ptr + size + page - 1) & ~(page - 1);
+    const uintptr_t p = (uintptr_t)ptr;
+    const uintptr_t top = std::numeric_limits<uintptr_t>::max();
+    // whole pages: a range whose last page would end past the address space is no memory at all
+    if (size > top - p || p + size > top - (page - 1))
+        CV_Error(Error::StsOutOfRange, "accel: the host memory range runs past the end of the address space");
+    const uintptr_t begin = p & ~(page - 1);
+    const uintptr_t end = (p + std::max(size, (size_t)1) + page - 1) & ~(page - 1);
     std::lock_guard<std::mutex> lk(mutex_);
     // the first range that starts at or after begin, and the one before it
     std::map<std::pair<int, uintptr_t>, uintptr_t>::iterator it = hostImports_.lower_bound(std::make_pair(device, begin));
@@ -1092,7 +1129,13 @@ MatAllocator* Device::allocator() const
     if (empty())
         return Mat::getDefaultAllocator();
     Backend* b = backendOf(*this);
-    return b->allocator(index_, (int)b->deviceInfo(index_).preferred_kind);
+    MatAllocator* a = b->allocator(index_, (int)b->deviceInfo(index_).preferred_kind);
+    // Any UMat header may carry the allocator from now on, and an empty output with it decides
+    // where a call runs before any device buffer exists: the hooks stay on for good.
+    static std::atomic<bool> handedOut(false);
+    if (!handedOut.exchange(true))
+        activity()++;
+    return a;
 }
 
 MemoryInfo describe(const UMat& m)
@@ -1122,10 +1165,9 @@ Stream::Stream(const Device& device)
 {
     CV_Assert(!device.empty() && "accel: the host has no streams");
     Backend* b = backendOf(device);
-    cvAccelStream h = 0;
-    b->check(b->fn().stream_create(device.index(), 0, &h), "stream_create", device.index());
-    impl = makePtr<Impl>();
-    impl->s = std::make_shared<StreamHolder>(b, device.index(), h);
+    Ptr<Impl> i = makePtr<Impl>();
+    i->s = b->newStream(device.index());
+    impl = i;
 }
 
 Stream Stream::getDefault(const Device& device)
@@ -1613,12 +1655,17 @@ DeviceAccess::~DeviceAccess()
         {
             done = recordFence(p->s);
         }
-        catch (const std::exception& e)
+        catch (...)
         {
             // the caller's work is not tracked: what it touched waits for the device, and what
             // it could write is invalid until overwritten
-            CV_LOG_ERROR(NULL, "accel: DeviceAccess: can't record the stream position: " << e.what());
-            p->acq.fail(fenceAfterFailure(p->s), e.what());
+            char why[160];
+            p->acq.fail(fenceAfterFailure(p->s), currentExceptionMessage(why, sizeof(why)));
+            try
+            {
+                CV_LOG_ERROR(NULL, "accel: DeviceAccess: can't record the stream position: " << why);
+            }
+            catch (...) {}
         }
         p->acq.record(done);    // nothing left to record after fail()
     }

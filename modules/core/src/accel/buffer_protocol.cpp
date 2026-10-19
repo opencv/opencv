@@ -160,11 +160,11 @@ void checkNotPoisoned(const BufferState* v)
 {
     if (const PoisonRange* p = findPoison(v->backing, v->start, v->size))
         CV_Error_(Error::StsError, ("accel(%s): the device operation that produced this UMat failed: %s",
-                                    v->backend()->name().c_str(), p->reason.c_str()));
+                                    v->backend()->name().c_str(), p->reason));
 }
 
 //! the last device write is the one that covers @p v's bytes and just completed with @p failure
-void poisonLastWriteLocked(PhysicalBacking* b, const std::string& failure)
+void poisonLastWriteLocked(PhysicalBacking* b, const char* failure) CV_NOEXCEPT
 {
     for (size_t i = 0; i < b->writeRanges.size(); i++)
         addPoison(b, b->writeRanges[i].first, b->writeRanges[i].second - b->writeRanges[i].first, failure);
@@ -230,15 +230,17 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
     if (!lastWrite.empty() || !reads.empty())
     {
         lk.unlock();
-        std::string failure;
+        char failure[160] = "";
         try
         {
             lastWrite.wait();
         }
-        catch (const cv::Exception& e)
+        catch (...)
         {
             // async errors surface here: the bytes that work wrote are not what it should have written
-            failure = e.err;
+            currentExceptionMessage(failure, sizeof(failure));
+            if (!failure[0])
+                snprintf(failure, sizeof(failure), "the device work failed");
         }
         std::exception_ptr readError;
         for (size_t i = 0; i < reads.size(); i++)
@@ -265,8 +267,8 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
                 running = true;
             else
             {
-                if (p == FenceRef::FAILED || !failure.empty())
-                    poisonLastWriteLocked(b, failure.empty() ? std::string("the device work failed") : failure);
+                if (p == FenceRef::FAILED || failure[0])
+                    poisonLastWriteLocked(b, failure[0] ? failure : "the device work failed");
                 b->writeFence.reset();  // completed: carries no information any more
             }
         }
@@ -278,7 +280,7 @@ void waitDeviceWork(PhysicalBacking* b, std::unique_lock<std::mutex>& lk, bool w
             if (readsDone)
                 b->readFences.clear();
         }
-        if (!failure.empty() && (running || lastWrite.backend()->isLost(lastWrite.device())))
+        if (failure[0] && (running || lastWrite.backend()->isLost(lastWrite.device())))
             CV_Error(Error::StsError, failure);     // the device is gone or late: nothing more to do with it
         if (readError)
             std::rethrow_exception(readError);
@@ -528,15 +530,7 @@ void recordWriteLocked(PhysicalBacking* b, const BufferState* v, const FenceRef&
     b->writeFence = f;
     b->readFences.clear();
     b->writeRanges.clear();
-    try
-    {
-        b->writeRanges.push_back(std::make_pair(v->start, v->start + v->size));
-    }
-    catch (...)
-    {
-        b->writeRanges.clear();     // no memory: a failure of this write would go unnoticed by readers of v
-        b->writeRanges.reserve(0);
-    }
+    b->writeRanges.push_back(std::make_pair(v->start, v->start + v->size));     // room for one from the start
 }
 
 /** Makes the device copy current from the host copy. The upload overwrites the device copy,
@@ -888,11 +882,7 @@ void closeCpuLocked(PhysicalBacking* b) CV_NOEXCEPT
     if (!closeCpuLevels(b, 0) && wrote)
     {
         // the device may see part of the CPU's writes: invalid until written whole
-        try
-        {
-            addPoison(b, 0, b->size, "end_cpu_access failed after a CPU write");
-        }
-        catch (...) {}
+        addPoison(b, 0, b->size, "end_cpu_access failed after a CPU write");
     }
     // device-idle memory: the CPU access is over only once every end succeeded
     if (b->idleGateHeld && b->failedCpuEnds.empty())
@@ -1138,6 +1128,15 @@ void* deviceHandleBlocking(UMatData* u, AccessFlag access)
 {
     BufferState* v = u->accelState;
     PhysicalBacking* b = v->backing;
+    if ((access & ACCESS_WRITE) && v->readOnly)
+        CV_Error_(Error::StsError, ("UMat::handle(): this UMat wraps read-only memory (%s); ask for ACCESS_READ",
+                                    v->backend()->name().c_str()));
+    // the caller's work would reach memory shared through implicit fences (a dma-buf) without
+    // waiting for the other drivers or being waited for by them
+    if (b->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC)
+        CV_Error_(Error::StsNotImplemented, ("UMat::handle(): this memory is shared with other drivers through implicit "
+                                             "fences (%s); use cv::accel::DeviceAccess, which orders the work with theirs",
+                                             v->backend()->name().c_str()));
     std::unique_lock<std::mutex> lk(b->mutex);
     checkOwnHolds(b, true);
     BusyScope busy(b, lk, true);
@@ -1266,10 +1265,13 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                 for (size_t i = 0; i < b->readFences.size(); i++)
                     if (b->readFences[i].streamUid() != stream->uid)
                         waits.push_back(b->readFences[i]);
-                b->pendingWriters++;
+                // finish() records the outcome without allocating: a range and a failure per view
+                // written (clearing a failure may split one range in two)
+                b->writeRanges.reserve(g.count);
+                b->poison.reserve(b->poison.size() + 2 * g.count);
             }
             else
-                b->pendingReaders++;
+                b->readFences.reserve(b->readFences.size() + b->pendingReaders + 1);   // one per reader in flight
             if (longHold_)
             {
                 PhysicalBacking::Hold h;
@@ -1277,10 +1279,27 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
                 h.mode = g.mode;
                 b->longHolds.push_back(h);
             }
+            // nothing below throws: the group counts as acquired from here on
+            if (write)
+                b->pendingWriters++;
+            else
+                b->pendingReaders++;
         }
-        std::vector<std::pair<const BufferState*, int> > ext = externalUses();
-        for (size_t i = 0; i < ext.size(); i++)
-            beginExternal(ext[i].first, stream, ext[i].second);
+        // one bracket per import of memory with implicit fences, with the access of all its uses
+        for (size_t i = 0; i < uses_.size(); i++)
+        {
+            const BufferState* v = uses_[i].u->accelState;
+            if (!(v->backing->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC))
+                continue;
+            size_t j = 0;
+            while (j < external_.size() && external_[j].first->imp != v->imp)
+                j++;
+            if (j == external_.size())
+                external_.push_back(std::make_pair(v, 0));
+            external_[j].second |= accessOfMode(uses_[i].mode);
+        }
+        for (size_t i = 0; i < external_.size(); i++)
+            beginExternal(external_[i].first, stream, external_[i].second);
     }
     catch (...)
     {
@@ -1290,27 +1309,9 @@ bool DeviceAcquisition::acquire(const StreamPtr& stream, std::vector<FenceRef>& 
     return true;
 }
 
-std::vector<std::pair<const BufferState*, int> > DeviceAcquisition::externalUses() const
-{
-    // one bracket per import of memory with implicit fences, with the access of all its uses
-    std::vector<std::pair<const BufferState*, int> > r;
-    for (size_t i = 0; i < uses_.size(); i++)
-    {
-        const BufferState* v = uses_[i].u->accelState;
-        if (!(v->backing->flags & CV_ACCEL_MEMF_EXTERNAL_SYNC))
-            continue;
-        size_t j = 0;
-        while (j < r.size() && r[j].first->imp != v->imp)
-            j++;
-        if (j == r.size())
-            r.push_back(std::make_pair(v, 0));
-        r[j].second |= accessOfMode(uses_[i].mode);
-    }
-    return r;
-}
-
-//! ends the acquisition of one backing; with @p fence the work was enqueued and completes at that fence
-void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char* failure)
+/** Ends the acquisition of one backing; with @p fence the work was enqueued and completes at
+    that fence. Never allocates: acquire() made room for every fence, range and failure. */
+void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char* failure) CV_NOEXCEPT
 {
     PhysicalBacking* b = g.backing;
     std::lock_guard<std::mutex> lk(b->mutex);
@@ -1332,15 +1333,12 @@ void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char
                 const BufferState* v = u->accelState;
                 u->markHostCopyObsolete(true);
                 u->markDeviceCopyObsolete(false);
-                try
-                {
-                    b->writeRanges.push_back(std::make_pair(v->start, v->start + v->size));
-                    if (failure)
-                        addPoison(b, v->start, v->size, failure);   // part of it may have been written
-                    else if (uses_[k].mode & DEV_DISCARD)
-                        clearPoison(b, v->start, v->size);
-                }
-                catch (...) {}
+                CV_DbgAssert(b->writeRanges.size() < b->writeRanges.capacity());
+                b->writeRanges.push_back(std::make_pair(v->start, v->start + v->size));
+                if (failure)
+                    addPoison(b, v->start, v->size, failure);   // part of it may have been written
+                else if (uses_[k].mode & DEV_DISCARD)
+                    clearPoison(b, v->start, v->size);
             }
         }
         else if (!fence->empty())
@@ -1355,8 +1353,9 @@ void DeviceAcquisition::finish(const Group& g, const FenceRef* fence, const char
                     break;
                 }
             }
+            CV_DbgAssert(replaced || b->readFences.size() < b->readFences.capacity());
             if (!replaced)
-                b->readFences.push_back(*fence);
+                b->readFences.push_back(*fence);    // room for every reader in flight
         }
     }
     int& pending = write ? b->pendingWriters : b->pendingReaders;
@@ -1381,16 +1380,11 @@ void DeviceAcquisition::endExternalUses(const FenceRef& fence) CV_NOEXCEPT
 {
     if (acquired_ == 0)
         return;
-    try
-    {
-        std::vector<std::pair<const BufferState*, int> > ext = externalUses();
-        for (size_t i = 0; i < ext.size(); i++)
-            endExternal(ext[i].first, fence, ext[i].second);
-    }
-    catch (...) {}
+    for (size_t i = 0; i < external_.size(); i++)
+        endExternal(external_[i].first, fence, external_[i].second);
 }
 
-void DeviceAcquisition::record(const FenceRef& fence)
+void DeviceAcquisition::record(const FenceRef& fence) CV_NOEXCEPT
 {
     endExternalUses(fence);
     for (size_t i = 0; i < acquired_; i++)
@@ -1398,15 +1392,15 @@ void DeviceAcquisition::record(const FenceRef& fence)
     acquired_ = 0;
 }
 
-void DeviceAcquisition::fail(const FenceRef& fence, const std::string& reason)
+void DeviceAcquisition::fail(const FenceRef& fence, const char* reason) CV_NOEXCEPT
 {
     endExternalUses(fence);
     for (size_t i = 0; i < acquired_; i++)
-        finish(groups_[i], &fence, reason.c_str());
+        finish(groups_[i], &fence, reason ? reason : "the device work failed");
     acquired_ = 0;
 }
 
-void DeviceAcquisition::abandon()
+void DeviceAcquisition::abandon() CV_NOEXCEPT
 {
     while (acquired_ > 0)
     {
@@ -1591,8 +1585,14 @@ void DeviceAllocator::deallocate(UMatData* u) const
             if (deviceOk && !poisoned && !v->backend()->isLost(v->device()))
                 copyBackToMat(u, v);
             else
-                CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): the device failed before its result was copied "
-                             "back; the Mat keeps its previous content");
+            {
+                try
+                {
+                    CV_LOG_ERROR(NULL, "accel(" << b_->name() << "): the device failed before its result was copied "
+                                 "back; the Mat keeps its previous content");
+                }
+                catch (...) {}
+            }
         }
         u->accelState = NULL;
         releaseView(v);
@@ -1772,6 +1772,9 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
     PhysicalBacking* b = v->backing;
     if (v->readOnly)
         CV_Error_(Error::StsError, ("accel(%s): this UMat wraps read-only memory", b_->name().c_str()));
+    if (v->imp->alloc.desc.layout_modifier != 0)
+        CV_Error_(Error::StsNotImplemented, ("accel(%s): memory with a non-linear layout cannot be written by a "
+                                             "linear copy", b_->name().c_str()));
     IdleCpuGuard idle(v);
     std::unique_lock<std::mutex> lk(b->mutex);
     checkOwnHolds(b, true);
@@ -1830,7 +1833,8 @@ void DeviceAllocator::upload(UMatData* u, const void* srcptr, int dims, const si
         }
         catch (...)
         {
-            const std::string reason = currentExceptionMessage();
+            char reason[160];
+            currentExceptionMessage(reason, sizeof(reason));
             FenceRef after = f;
             if (f.empty())
             {
@@ -1888,6 +1892,11 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
                                     b_->name().c_str()));
     const size_t srcOffset = offsetND(srcofs, srcstep, dims);
     const size_t dstOffset = offsetND(dstofs, dststep, dims);
+    const uint64_t sm = sv->imp->alloc.desc.layout_modifier, dm = dv->imp->alloc.desc.layout_modifier;
+    if ((sm != 0 || dm != 0) &&
+        !(sm == dm && srcOffset == 0 && dstOffset == 0 && totalND(sz, dims) == src->size && src->size == dst->size))
+        CV_Error_(Error::StsNotImplemented, ("accel(%s): copy regions are linear: memory with a non-linear layout is "
+                                             "copied whole into memory of the same layout, or not at all", b_->name().c_str()));
     if (sv->backing == dv->backing)
     {
         // two views of one memory (aliases, ROIs of one buffer): a device copy between bytes that
@@ -1956,7 +1965,8 @@ void DeviceAllocator::copy(UMatData* src, UMatData* dst, int dims, const size_t 
     catch (...)
     {
         // part of the copy may be queued: the buffers wait for it, the destination is invalid
-        acq.fail(fenceAfterFailure(s), currentExceptionMessage());
+        char why[160];
+        acq.fail(fenceAfterFailure(s), currentExceptionMessage(why, sizeof(why)));
         throw;
     }
     acq.record(done);
