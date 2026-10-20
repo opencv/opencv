@@ -2043,13 +2043,49 @@ static void cornerResponse(const Mat& src, Mat& dst, int method, int blockSize,
         cornerEigenValsAndVecs(src, dst, blockSize, apertureSize, borderType);
 }
 
+static Mat cornerResponseInvariant(const Mat& response)
+{
+    if (response.channels() == 1)
+        return response;
+    Mat invariant(response.size(), CV_32FC(8));
+    for (int y = 0; y < response.rows; ++y)
+    {
+        const Vec<float, 6>* src = response.ptr<Vec<float, 6> >(y);
+        Vec<float, 8>* dst = invariant.ptr<Vec<float, 8> >(y);
+        for (int x = 0; x < response.cols; ++x)
+        {
+            dst[x][0] = src[x][0];
+            dst[x][1] = src[x][1];
+            // Eigenvector signs are arbitrary; repeated eigenvalues also make
+            // their directions undefined. Compare gap-weighted projectors.
+            const float gap = std::abs(src[x][0] - src[x][1]);
+            for (int v = 0; v < 2; ++v)
+            {
+                const float vx = src[x][2 + 2*v], vy = src[x][3 + 2*v];
+                dst[x][2 + 3*v] = gap * vx * vx;
+                dst[x][3 + 3*v] = gap * vx * vy;
+                dst[x][4 + 3*v] = gap * vy * vy;
+            }
+        }
+    }
+    return invariant;
+}
+
+static void expectCornerResponseNear(const Mat& expected, const Mat& actual)
+{
+    const Mat reference = cornerResponseInvariant(expected);
+    const Mat result = cornerResponseInvariant(actual);
+    EXPECT_LE(cvtest::norm(reference, result, NORM_INF),
+              2e-5 * std::max(1.0, cvtest::norm(reference, NORM_INF)));
+}
+
 TEST_P(Imgproc_CornerROI, parent_and_isolated_borders)
 {
     const int depth = get<0>(GetParam());
     const int blockSize = get<1>(GetParam());
     const int apertureSize = get<2>(GetParam());
     const int borderType = get<3>(GetParam());
-    RNG rng(10449);
+    RNG& rng = theRNG();
     Mat src(23, 29, depth);
     rng.fill(src, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 1);
     const Mat original = src.clone();
@@ -2075,13 +2111,13 @@ TEST_P(Imgproc_CornerROI, parent_and_isolated_borders)
             Mat actual = output(Rect(1, 1, rect.width, rect.height));
             cornerResponse(roi, actual, method, blockSize, apertureSize, borderType);
             // Non-isolated ROIs must use the parent's covariance neighborhood.
-            ASSERT_LE(cvtest::norm(whole(rect), actual, NORM_INF), 2e-5);
+            expectCornerResponseNear(whole(rect), actual);
             actual.reshape(1).setTo(-100);
             EXPECT_EQ(0, countNonZero(output.reshape(1) != -100));
             cornerResponse(roi, isolated, method, blockSize, apertureSize,
                            borderType | BORDER_ISOLATED);
             cornerResponse(roi.clone(), independent, method, blockSize, apertureSize, borderType);
-            ASSERT_LE(cvtest::norm(independent, isolated, NORM_INF), 2e-5);
+            expectCornerResponseNear(independent, isolated);
         }
     }
     EXPECT_EQ(0, cvtest::norm(original, src, NORM_INF));

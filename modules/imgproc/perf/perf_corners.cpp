@@ -98,15 +98,22 @@ PERF_TEST_P(CornerROIPerf, cornerHarrisROI,
 {
     const Size size = get<0>(GetParam());
     const int blockSize = get<1>(GetParam());
-    const int borderType = BORDER_REFLECT_101 | (get<2>(GetParam()) ? BORDER_ISOLATED : 0);
+    const bool isolated = get<2>(GetParam());
+    const int borderType = BORDER_REFLECT_101 | (isolated ? BORDER_ISOLATED : 0);
     Mat parent(size + Size(32, 32), CV_8UC1);
-    RNG rng(10449);
+    RNG& rng = theRNG();
     rng.fill(parent, RNG::UNIFORM, 0, 256);
     Mat src = parent(Rect(16, 16, size.width, size.height)), dst;
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
 
-    SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
+    // Verify against a whole-image result without requiring new golden data.
+    Mat expected;
+    cornerHarris(isolated ? src.clone() : parent, expected, blockSize, 3, 0.04, BORDER_REFLECT_101);
+    const Mat reference = isolated ? expected : expected(Rect(16, 16, size.width, size.height));
+    ASSERT_LE(cvtest::norm(reference, dst, NORM_INF),
+              2e-5 * std::max(1.0, cvtest::norm(reference, NORM_INF)));
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

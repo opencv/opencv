@@ -643,7 +643,8 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
 #endif
-    CV_IPP_RUN(((ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
+    // IPP uses a different covariance anchor for even block sizes.
+    CV_IPP_RUN(((blockSize & 1) && (ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
         (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && CV_MAT_CN(_src.type()) == 1 &&
         (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 810, ipp_cornerHarris( src, dst, blockSize, ksize, k, borderType ));
 
