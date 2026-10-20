@@ -1570,7 +1570,7 @@ static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int max
     Ipp8u* pBuffer = (Ipp8u*) CV_IPP_MALLOC(bufSize);
     void* pState = 0;
     if (pStateBuf && pBuffer)
-        ok = pyrInitFunc(&pState, srcRoi, rate, kernel, kerSize, IPPI_INTER_LINEAR, pStateBuf, pBuffer);
+        ok = pyrInitFunc(&pState, srcRoi, rate, kernel, kerSize, IPPI_INTER_LINEAR | IPPI_OCV_ALIGNMENT, pStateBuf, pBuffer);
     else
         ok = ippStsMemAllocErr;
 

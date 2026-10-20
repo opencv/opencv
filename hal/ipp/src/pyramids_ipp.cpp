@@ -94,15 +94,22 @@ int ipp_hal_pyrdown(const uchar* src_data, size_t src_step, int src_width, int s
     if (ok < 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    IppAutoBuffer<Ipp8u> pStateBuf(stateSize);
-    IppAutoBuffer<Ipp8u> pBuffer(bufSize);
+    Ipp8u* pStateBuf = stateSize > 0 ? (Ipp8u*)ippMalloc_L(stateSize) : NULL;
+    Ipp8u* pBuffer = bufSize > 0 ? (Ipp8u*)ippMalloc_L(bufSize) : NULL;
+    if ((stateSize > 0 && !pStateBuf) || (bufSize > 0 && !pBuffer))
+    {
+        if (pStateBuf) ippFree(pStateBuf);
+        if (pBuffer) ippFree(pBuffer);
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
 
     void* state = NULL;
-    ok = pyrDownInitFunc(&state, srcRoi, rate, kernel, kernelSize, IPPI_INTER_LINEAR, pStateBuf.get(), pBuffer.get());
-    if (ok < 0)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    ok = pyrDownInitFunc(&state, srcRoi, rate, kernel, kernelSize, IPPI_INTER_LINEAR | IPPI_OCV_ALIGNMENT, pStateBuf, pBuffer);
+    if (ok >= 0)
+        ok = CV_INSTRUMENT_FUN_IPP(pyrDownFunc, src_data, (int)src_step, srcRoi, dst_data, (int)dst_step, dstRoi, state);
 
-    ok = CV_INSTRUMENT_FUN_IPP(pyrDownFunc, src_data, (int)src_step, srcRoi, dst_data, (int)dst_step, dstRoi, state);
+    if (pStateBuf) ippFree(pStateBuf);
+    if (pBuffer) ippFree(pBuffer);
     if (ok < 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -120,7 +127,7 @@ int ipp_hal_pyrup(const uchar* src_data, size_t src_step, int src_width, int src
     if (dst_width != src_width*2 || dst_height != src_height*2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    // 16U is slower, so it is used only with IPP_CALLS_ENFORCED.
+    // 16U is used only with IPP_CALLS_ENFORCED.
                                       /* C1 C2 C3 C4 */
 #if defined(IPP_CALLS_ENFORCED)
     const char impl[CV_DEPTH_MAX][4] = {{1, 0, 1, 0},   //8U
@@ -186,14 +193,16 @@ int ipp_hal_pyrup(const uchar* src_data, size_t src_step, int src_width, int src
     if (ok < 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    IppAutoBuffer<Ipp8u> pStateBuf(stateSize);
-
-    void* state = NULL;
-    ok = pyrUpInitFunc(&state, dstRoi, rate, kernel, kernelSize, pyrUpMode, pStateBuf.get());
-    if (ok < 0)
+    Ipp8u* pStateBuf = stateSize > 0 ? (Ipp8u*)ippMalloc_L(stateSize) : NULL;
+    if (stateSize > 0 && !pStateBuf)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    ok = CV_INSTRUMENT_FUN_IPP(pyrUpFunc, src_data, (int)src_step, srcRoi, dst_data, (int)dst_step, dstRoi, state);
+    void* state = NULL;
+    ok = pyrUpInitFunc(&state, dstRoi, rate, kernel, kernelSize, pyrUpMode, pStateBuf);
+    if (ok >= 0)
+        ok = CV_INSTRUMENT_FUN_IPP(pyrUpFunc, src_data, (int)src_step, srcRoi, dst_data, (int)dst_step, dstRoi, state);
+
+    if (pStateBuf) ippFree(pStateBuf);
     if (ok < 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
