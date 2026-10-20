@@ -644,7 +644,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputBlobs contains all output blobs for specified layer.
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
-         *  @note The output Mats may share storage with internal network buffers
+         *  @note When Mat outputs are requested, they may share storage with internal network buffers
          *  and may be overwritten by subsequent calls to `forward()`. Use `clone()`
          *  to preserve the outputs across later forward passes.
          */
@@ -653,6 +653,9 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
+         *  @note When Mat outputs are requested, they may share storage with internal network buffers
+         *  and may be overwritten by subsequent calls to `forward()`. Use `clone()`
+         *  to preserve the outputs across later forward passes.
          */
         CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
@@ -660,6 +663,9 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
          *  @param outBlobNames names for layers which outputs are needed to get
+         *  @note The output Mats may share storage with internal network buffers
+         *  and may be overwritten by subsequent calls to `forward()`. Use `clone()`
+         *  to preserve the outputs across later forward passes.
          */
         CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
                                                     const std::vector<String>& outBlobNames);
