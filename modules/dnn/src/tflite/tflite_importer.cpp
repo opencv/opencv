@@ -272,6 +272,28 @@ void TFLiteImporter::populateNet()
 
     CV_Assert(modelTensors);
     layouts.resize(modelTensors->size(), DNN_LAYOUT_UNKNOWN);
+
+    // Tensor and operator code indices are read from the model as is and used
+    // to index modelTensors, opCodes and layouts, so bound them all up front.
+    const int numTensors = (int)modelTensors->size();
+    for (int idx : *subgraph_inputs)
+        CV_Check(idx, 0 <= idx && idx < numTensors, "DNN/TFLite: subgraph input tensor index is out of range");
+    if (subgraph->outputs())
+    {
+        for (int idx : *subgraph->outputs())
+            CV_Check(idx, 0 <= idx && idx < numTensors, "DNN/TFLite: subgraph output tensor index is out of range");
+    }
+    for (const auto op : *subgraph_operators)
+    {
+        CV_Assert(op && op->inputs() && op->outputs());
+        CV_CheckLT((size_t)op->opcode_index(), (size_t)opCodes->size(), "DNN/TFLite: operator code index is out of range");
+        CV_CheckGT((int)op->outputs()->size(), 0, "DNN/TFLite: operator has no outputs");
+        // -1 marks an omitted optional input
+        for (int idx : *op->inputs())
+            CV_Check(idx, -1 <= idx && idx < numTensors, "DNN/TFLite: operator input tensor index is out of range");
+        for (int idx : *op->outputs())
+            CV_Check(idx, 0 <= idx && idx < numTensors, "DNN/TFLite: operator output tensor index is out of range");
+    }
     size_t subgraph_inputs_size = subgraph_inputs->size();
     std::vector<std::string> inputsNames(subgraph_inputs_size);
     std::vector<MatShape> inputsShapes(subgraph_inputs_size);
@@ -322,6 +344,7 @@ void TFLiteImporter::populateNet()
 
     if (newEngine)
     {
+        CV_CheckGT(all_operators_size, (size_t)0, "DNN/TFLite: subgraph has no operators");
         const auto last_op = all_operators[all_operators_size - 1];
         std::string type = EnumNameBuiltinOperator(getBuiltinCode(opCodes->Get(last_op->opcode_index())));
         if (type == "CUSTOM")
