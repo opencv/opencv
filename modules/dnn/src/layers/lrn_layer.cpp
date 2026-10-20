@@ -99,6 +99,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        if (backendId == DNN_BACKEND_CUDA)
+            return false;  // csl::LRN needs the legacy cuDNN API, absent in a JIT-only build
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return bias == (int)bias;

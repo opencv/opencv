@@ -103,6 +103,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        if (backendId == DNN_BACKEND_CUDA)
+            return false;  // SoftmaxOp uses cudnnSoftmaxForward, absent in a JIT-only build
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;

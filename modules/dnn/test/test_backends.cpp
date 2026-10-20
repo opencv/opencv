@@ -139,10 +139,6 @@ TEST_P(DNNTestNetwork, ResNet_50)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-    // New-engine CUDA: result is off the strict FP32 tolerance vs the CPU reference; skip for now.
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
-
     double l1 = default_l1, lInf = default_lInf;
     if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {

@@ -113,5 +113,3 @@
 "test_mod_uint16",
 "test_mod_uint32",
 "test_mod_uint64",
-"test_batchnorm_epsilon",
-"test_batchnorm_example",

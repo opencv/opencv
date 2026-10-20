@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 // backends
 #include "../op_cuda.hpp"
@@ -92,8 +93,13 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
         if (fusion.expr)
             return backendId == DNN_BACKEND_OPENCV;
+        // inpType is set by getTypes() on the first forward; until then use the graph's arg type
+        int t = inpType;
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (t < 0 && netimpl_ && !inputs.empty())
+            t = netimpl_->argData(inputs[0]).type;
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && inpType == CV_32F) ||
+               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && (t < 0 || t == CV_32F)) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
