@@ -819,12 +819,17 @@ struct NormL2_SIMD<short, double> {
         int j = 0;
         double s = 0.f;
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+        // a^2 + b^2 is at most 2^31 for int16 a, b: it overflows int32 when a == b == -32768,
+        // but always fits into uint32, so widen the pairwise sums as unsigned.
         for (; j <= n - 2 * VTraits<v_int16>::vlanes(); j += 2 * VTraits<v_int16>::vlanes()) {
+            v_uint64 p00, p01, p10, p11;
             v_int16 v0 = vx_load(src + j);
-            r0 = v_add(r0, v_cvt_f64(v_dotprod_expand_fast(v0, v0)));
+            v_expand(v_reinterpret_as_u32(v_dotprod(v0, v0)), p00, p01);
+            r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(v_add(p00, p01))));
 
             v_int16 v1 = vx_load(src + j + VTraits<v_int16>::vlanes());
-            r1 = v_add(r1, v_cvt_f64(v_dotprod_expand_fast(v1, v1)));
+            v_expand(v_reinterpret_as_u32(v_dotprod(v1, v1)), p10, p11);
+            r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(v_add(p10, p11))));
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
@@ -840,15 +845,18 @@ struct NormL2_SIMD<int, double> {
     double operator() (const int* src, int n) const {
         int j = 0;
         double s = 0.f;
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+        // The int32 dot product sums adjacent pairs in int64, which overflows
+        // for INT_MIN^2 + INT_MIN^2 = 2^63. Square in double instead.
+        v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
+        v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            v_int32 v0 = vx_load(src + j);
-            r0 = v_dotprod_expand_fast(v0, v0, r0);
-
-            v_int32 v1 = vx_load(src + j + VTraits<v_int32>::vlanes());
-            r1 = v_dotprod_expand_fast(v1, v1, r1);
+            v_int32 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_int32>::vlanes());
+            v_float64 v00 = v_cvt_f64(v0), v01 = v_cvt_f64_high(v0);
+            v_float64 v10 = v_cvt_f64(v1), v11 = v_cvt_f64_high(v1);
+            r00 = v_fma(v00, v00, r00); r01 = v_fma(v01, v01, r01);
+            r10 = v_fma(v10, v10, r10); r11 = v_fma(v11, v11, r11);
         }
-        s += v_reduce_sum(v_add(r0, r1));
+        s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         for (; j < n; j++) {
             double v = src[j];
             s += v * v;
