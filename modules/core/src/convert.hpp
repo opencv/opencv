@@ -567,10 +567,23 @@ encodeFp8Vec4(const v_float32& vf0, const v_float32& vf1, const v_float32& vf2, 
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
+// v_cvt_f64() converts SIGNED 64-bit lanes, so it cannot be used on a uint64 directly. Split into
+// two halves below 2^32 instead: each converts exactly, scaling the high half by 2^32 is exact, and
+// the single add at the end is the only rounding - so the result matches (double)x.
+//
+// Converting the bit pattern as signed and adding 2^64 back would be simpler, but it rounds twice:
+// for 2^63 + 1025 it gives 2^63 where (double)x is 2^63 + 2048.
+static inline v_float64 v_cvt_f64_u64(const v_uint64& x)
+{
+    const v_int64 hi = v_reinterpret_as_s64(v_shr<32>(x));
+    const v_int64 lo = v_reinterpret_as_s64(v_and(x, vx_setall_u64(0xFFFFFFFFull)));
+    return v_add(v_mul(v_cvt_f64(hi), vx_setall_f64(4294967296.0)), v_cvt_f64(lo));
+}
+
 static inline void vx_load_as(const uint64_t* ptr, v_float32& a)
 {
-    v_float64 a_0 = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr)));
-    v_float64 a_1 = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr + VTraits<v_uint64>::vlanes())));
+    v_float64 a_0 = v_cvt_f64_u64(vx_load(ptr));
+    v_float64 a_1 = v_cvt_f64_u64(vx_load(ptr + VTraits<v_uint64>::vlanes()));
     a = v_cvt_f32(a_0, a_1);
 }
 
@@ -624,8 +637,8 @@ static inline void vx_load_pair_as(const double* ptr, v_int32& a, v_int32& b)
 static inline void vx_load_pair_as(const uint64_t* ptr, v_float64& a, v_float64& b)
 {
     const int int64_nlanes = VTraits<v_uint64>::vlanes();
-    a = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr)));
-    b = v_cvt_f64(v_reinterpret_as_s64(vx_load(ptr + int64_nlanes)));
+    a = v_cvt_f64_u64(vx_load(ptr));
+    b = v_cvt_f64_u64(vx_load(ptr + int64_nlanes));
 }
 
 static inline void vx_load_pair_as(const double* ptr, v_float32& a, v_float32& b)
