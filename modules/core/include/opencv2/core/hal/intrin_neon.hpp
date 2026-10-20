@@ -840,14 +840,14 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-    int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
-    int16x8_t p1  = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
-    int16x8_t uzp1, uzp2;
-    _v128_unzip(p0, p1, uzp1, uzp2);
-    int16x8_t sum = vaddq_s16(uzp1, uzp2);
-    int16x4_t uzpl1, uzpl2;
-    _v128_unzip(vget_low_s16(sum), vget_high_s16(sum), uzpl1, uzpl2);
-    return v_int32x4(vaddl_s16(uzpl1, uzpl2));
+    int32x4_t s0 = vpaddlq_s16(vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val)));
+    int32x4_t s1 = vpaddlq_s16(vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val)));
+#if CV_NEON_AARCH64
+    return v_int32x4(vpaddq_s32(s0, s1));
+#else // #if CV_NEON_AARCH64
+    return v_int32x4(vcombine_s32(vpadd_s32(vget_low_s32(s0), vget_high_s32(s0)),
+                                   vpadd_s32(vget_low_s32(s1), vget_high_s32(s1))));
+#endif // #if CV_NEON_AARCH64
 }
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
                                   const v_int32x4& c)
