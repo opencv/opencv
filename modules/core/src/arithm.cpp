@@ -1017,6 +1017,10 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     if (!doubleSupport && depth1 == CV_64F)
         return false;
 
+    // the integer scalar path below works in int; let the CPU handle the wider 5.x integer depths
+    if (haveScalar && (depth1 == CV_32U || depth1 == CV_64U || depth1 == CV_64S))
+        return false;
+
     if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))
             return false;
 
