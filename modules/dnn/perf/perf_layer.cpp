@@ -1475,4 +1475,39 @@ PERF_TEST_P_(Layer_Activation, Atanh)    { test_activation("Atanh",    -0.95f, 0
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Activation, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
+struct Layer_DynamicInt8 : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_model(const std::string& name, const std::vector<int>& inp_shape)
+    {
+        std::string model = findDataFile("dnn/onnx/models/" + name + ".onnx", true);
+        Net net = readNetFromONNX(model, ENGINE_OPENCV);
+        net.setPreferableBackend(get<0>(GetParam()));
+        net.setPreferableTarget(get<1>(GetParam()));
+
+        Mat inp(inp_shape, CV_32F);
+        randu(inp, -1.f, 1.f);
+        net.setInput(inp);
+        net.forward();
+
+        TEST_CYCLE()
+        {
+            net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_DynamicInt8, ConvInteger)
+{
+    test_model("convinteger_dynamic_block", {1, 3, 256, 256});
+}
+
+PERF_TEST_P_(Layer_DynamicInt8, MatMulInteger)
+{
+    test_model("matmulinteger_dynamic_block", {1, 256, 256});
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_DynamicInt8, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+
 } // namespace
