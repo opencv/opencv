@@ -2318,4 +2318,87 @@ TEST(AP3P, ctheta1p_nan_23607)
     }
 }
 
+// Regression test for issue #29573:
+// solvePnPRansac was reporting inliers from the RANSAC consensus mask (pre-refinement)
+// rather than re-evaluating inliers against the final refined pose.
+TEST(Calib3d_SolvePnPRansac, inlier_refinement_29573)
+{
+    // Build a simple scene: 20 inlier points on a planar grid + 2 outlier points whose
+    // reprojection errors sit just above the threshold after the final pose refinement.
+    const int N_INLIERS = 20;
+    const float REPROJ_THRESH = 3.0f;   // pixels
+
+    // Known camera intrinsics
+    Mat K = (Mat_<double>(3,3) <<
+             800.0,   0.0, 320.0,
+               0.0, 800.0, 240.0,
+               0.0,   0.0,   1.0);
+    Mat distCoeffs = Mat::zeros(1, 5, CV_64F);
+
+    // Known ground-truth pose (Rodrigues vector + translation)
+    Mat rvec_gt = (Mat_<double>(3,1) << 0.1, 0.2, 0.05);
+    Mat tvec_gt = (Mat_<double>(3,1) << 0.0, 0.0, 5.0);
+
+    // Generate inlier 3-D points on a grid and project them
+    std::vector<Point3f> obj_pts;
+    std::vector<Point2f> img_pts;
+    for (int r = 0; r < 4; ++r)
+    {
+        for (int c = 0; c < 5; ++c)
+        {
+            obj_pts.push_back(Point3f((c - 2) * 0.1f, (r - 1) * 0.1f, 0.0f));
+        }
+    }
+    std::vector<Point2f> projected;
+    projectPoints(obj_pts, rvec_gt, tvec_gt, K, distCoeffs, projected);
+    img_pts = projected;   // perfect inliers (zero reprojection error)
+
+    // Add 2 outlier points whose image coordinates are clearly outside the threshold
+    const int IDX_OUTLIER_A = (int)obj_pts.size();
+    obj_pts.push_back(Point3f( 0.05f,  0.05f, 0.0f));
+    img_pts.push_back(Point2f(img_pts[0].x + REPROJ_THRESH * 5.0f,
+                              img_pts[0].y + REPROJ_THRESH * 5.0f));
+
+    const int IDX_OUTLIER_B = (int)obj_pts.size();
+    obj_pts.push_back(Point3f(-0.05f, -0.05f, 0.0f));
+    img_pts.push_back(Point2f(img_pts[N_INLIERS/2].x - REPROJ_THRESH * 5.0f,
+                              img_pts[N_INLIERS/2].y - REPROJ_THRESH * 5.0f));
+
+    // Run solvePnPRansac
+    Mat rvec_out, tvec_out;
+    std::vector<int> inliers;
+    bool ok = solvePnPRansac(obj_pts, img_pts, K, distCoeffs,
+                             rvec_out, tvec_out, false,
+                             100, REPROJ_THRESH, 0.99,
+                             inliers);
+    ASSERT_TRUE(ok) << "solvePnPRansac failed";
+    ASSERT_FALSE(inliers.empty()) << "No inliers returned";
+
+    // Verify: the two outlier indices must NOT appear in the returned inlier list
+    bool outlier_a_present = (std::find(inliers.begin(), inliers.end(), IDX_OUTLIER_A) != inliers.end());
+    bool outlier_b_present = (std::find(inliers.begin(), inliers.end(), IDX_OUTLIER_B) != inliers.end());
+    EXPECT_FALSE(outlier_a_present) << "Outlier A (index " << IDX_OUTLIER_A << ") wrongly included in inliers";
+    EXPECT_FALSE(outlier_b_present) << "Outlier B (index " << IDX_OUTLIER_B << ") wrongly included in inliers";
+
+    // Verify: every returned inlier index satisfies the reprojection criterion on the final pose
+    std::vector<Point2f> reproj;
+    projectPoints(obj_pts, rvec_out, tvec_out, K, distCoeffs, reproj);
+    for (int idx : inliers)
+    {
+        float dx = img_pts[idx].x - reproj[idx].x;
+        float dy = img_pts[idx].y - reproj[idx].y;
+        float err = std::sqrt(dx*dx + dy*dy);
+        EXPECT_LE(err, REPROJ_THRESH)
+            << "Inlier index " << idx << " has reprojection error " << err
+            << " > threshold " << REPROJ_THRESH;
+    }
+
+    // Verify: all ground-truth inliers (indices 0..N_INLIERS-1) are present
+    for (int i = 0; i < N_INLIERS; ++i)
+    {
+        bool found = (std::find(inliers.begin(), inliers.end(), i) != inliers.end());
+        EXPECT_TRUE(found) << "True inlier index " << i << " missing from inlier list";
+    }
+}
+
 }} // namespace
