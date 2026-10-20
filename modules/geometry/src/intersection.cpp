@@ -79,8 +79,9 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     coordinateScale = std::max(coordinateScale, std::abs(rect1.size.height));
     coordinateScale = std::max(coordinateScale, std::abs(rect2.size.width));
     coordinateScale = std::max(coordinateScale, std::abs(rect2.size.height));
-    const float machineEps = std::numeric_limits<float>::epsilon();
-    const float samePointEps = std::max(machineEps, machineEps * coordinateScale);
+    // Keep the equality tolerance relative to the coordinate magnitude. An
+    // absolute float epsilon would be too large for valid sub-epsilon rects.
+    const float samePointEps = std::numeric_limits<float>::epsilon() * coordinateScale;
     float samePointEps2 = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
     samePointEps2 = std::min(samePointEps2, rect1.size.width * rect1.size.width);
     samePointEps2 = std::min(samePointEps2, rect1.size.height * rect1.size.height);
