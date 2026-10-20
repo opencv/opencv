@@ -1194,17 +1194,21 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
     // "axes" is turned to one of the inputs since opset 18,
     // except for ReduceSum, which has "axes" input since opset 13.
-    if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
-        Mat mat_axes = getBlob(node_proto, 1);
-        int num_axes = mat_axes.total();
-        std::vector<int> axes(num_axes);
-        for (int i = 0; i < num_axes; ++i)
-            axes[i] = mat_axes.at<int>(i);
-        layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
+    if (!layerParams.has("axes") && num_inputs == 2 && !node_proto.input(1).empty()) {
+        if (constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
+            Mat mat_axes = getBlob(node_proto, 1);
+            int num_axes = mat_axes.total();
+            std::vector<int> axes(num_axes);
+            for (int i = 0; i < num_axes; ++i)
+                axes[i] = mat_axes.at<int>(i);
+            layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
+        } else {
+            CV_Error(Error::StsNotImplemented, "DNN/ONNX: Non-constant axes in Reduce layers are not supported");
+        }
     }
 
     layerParams.type = "Reduce";
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, 1);
 }
 
 void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
