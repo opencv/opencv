@@ -176,7 +176,7 @@ protected:
     bool m_useDnn = false;
 #endif
     DetectorParametersMCC m_params = DetectorParametersMCC();
-    ColorChart m_chartType;
+    ColorChart m_chartType = MCC24;
 
 private: // methods aux
     void get_subbox_chart_physical(
