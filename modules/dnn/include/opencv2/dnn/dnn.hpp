@@ -625,6 +625,9 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputName name for layer which output is needed to get
          *  @return blob for first output of specified layer.
          *  @details By default runs forward pass for the whole network.
+         *  @note The returned output may share storage with internal network buffers
+         *  and may be overwritten by subsequent calls to `forward()`. Use `clone()`
+         *  to preserve the output across later forward passes.
          */
         CV_WRAP Mat forward(const String& outputName = String());
 
@@ -641,6 +644,9 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputBlobs contains all output blobs for specified layer.
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
+         *  @note The output Mats may share storage with internal network buffers
+         *  and may be overwritten by subsequent calls to `forward()`. Use `clone()`
+         *  to preserve the outputs across later forward passes.
          */
         CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
