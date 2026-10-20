@@ -441,6 +441,35 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("deconv_overlap_groups", npy, 0, 0, false, false);
 }
 
+// Zero batch or spatial size: the output is empty or holds only the bias, which is arange(12).
+TEST_P(Test_ONNX_layers, Deconvolution_empty)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+
+    struct Case { const char* model; std::vector<int> inpshape, outshape; };
+    const Case cases[] = {
+        {"deconv_empty_k1", {1, 4, 0, 5}, {1, 12, 0, 5}},
+        {"deconv_empty_k3", {1, 4, 0, 5}, {1, 12, 2, 7}},
+        {"deconv_empty_k3", {0, 4, 5, 5}, {0, 12, 7, 7}},
+    };
+    for (const Case& c : cases)
+    {
+        const std::string path = std::string("dnn/onnx/models/") + c.model + ".onnx";
+        Net net = readNetFromONNX(findDataFile(path, true));
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(Mat(c.inpshape, CV_32F));
+        Mat out = net.forward();
+
+        ASSERT_EQ(std::vector<int>(out.size.p, out.size.p + out.dims), c.outshape) << c.model;
+        const int K = c.outshape[1], plane = c.outshape[2] * c.outshape[3];
+        const float* data = out.ptr<float>();
+        for (size_t i = 0; i < out.total(); i++)
+            ASSERT_EQ(data[i], (float)(i / plane % K)) << c.model << " at " << i;
+    }
+}
+
 TEST_P(Test_ONNX_layers, Deconvolution3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)

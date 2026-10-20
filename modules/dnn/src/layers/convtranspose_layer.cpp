@@ -186,6 +186,27 @@ public:
                inpshape.C == gemmCg * ngroups && outshape.C == gemmKg * ngroups;
     }
 
+    // With an empty input no tap reaches any output pixel, so the output is the bias alone.
+    void fillWithBias(Mat& out) const
+    {
+        CV_Assert(out.type() == CV_32F);
+        const MatShape& shape = out.shape();
+        const int N = shape[0], K1 = shape[1], C0 = shape.back(), K = shape.C;
+        const size_t plane = out.total() / ((size_t)N * K1 * C0);
+        const int nbias = bias.empty() ? 0 : std::min((int)bias.total(), K);
+        std::vector<float> block((size_t)K1 * C0, 0.f);
+        if (nbias > 0)
+            std::copy(bias.ptr<float>(), bias.ptr<float>() + nbias, block.begin());
+        float* data = out.ptr<float>();
+        for (int n = 0; n < N; n++)
+            for (int k1 = 0; k1 < K1; k1++) {
+                const float* b = block.data() + (size_t)k1 * C0;
+                float* dst = data + ((size_t)n * K1 + k1) * plane * C0;
+                for (size_t p = 0; p < plane; p++, dst += C0)
+                    std::copy(b, b + C0, dst);
+            }
+    }
+
     static int floorDiv(int a, int b) { return a >= 0 ? a / b : -((b - 1 - a) / b); }
 
     void forwardGemm(const Mat& inp, Mat& out)
@@ -250,9 +271,9 @@ public:
         const int iinner = ispatial / I0, oinner = ospatial / O0;
         const int ntasks0 = N * ngroups * nchunks;
         const int wantBands = std::max(1, (getNumThreads() * 4 + ntasks0 - 1) / ntasks0);
-        const int minRows = span0 < S0 ? S0 : (int)alignSize(4 * span0, S0);
-        const int bandRows = std::max(minRows,
-                                      (int)alignSize((O0 + wantBands - 1) / wantBands, S0));
+        // roundUp, not alignSize: the stride need not be a power of 2
+        const int minRows = span0 < S0 ? S0 : roundUp(4 * span0, S0);
+        const int bandRows = std::max(minRows, roundUp((O0 + wantBands - 1) / wantBands, S0));
         const int nbands = (O0 + bandRows - 1) / bandRows;
         const int rows = std::max(16, std::min(256, (1 << 17) / (ksize * KC)));
 
@@ -546,7 +567,11 @@ public:
             out.fit(outshape, outtype);
         }
 
-        if (inptype == CV_32F && gemmCoversShape(inpshape, outshape)) {
+        if (out.total() == 0) {
+            // nothing to compute; the kernels below assume non-empty batch and spatial dims
+        } else if (inp.total() == 0) {
+            fillWithBias(out);
+        } else if (inptype == CV_32F && gemmCoversShape(inpshape, outshape)) {
             forwardGemm(inp, out);
         } else {
             DeconvFunc func = getDeconvFunc(inptype);
