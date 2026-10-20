@@ -3910,4 +3910,13 @@ TEST(Test_ONNX_importer, parse_qconv_bias_scale_mismatch)
     EXPECT_TRUE(net.empty());
 }
 
+// The same bias fold reads the scalar x_scale unconditionally, so an empty
+// x_scale has to be rejected instead of being read past its end.
+TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_empty_x_scale.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
 }} // namespace
