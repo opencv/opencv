@@ -45,7 +45,9 @@ while True:
 
 # When everything done, release the capture
 cap.release()
-cv.destroyAllWindows()@endcode
+cv.destroyAllWindows()
+@endcode
+
 `cap.read()` returns a bool (`True`/`False`). If the frame is read correctly, it will be `True`. So you can
 check for the end of the video by checking this returned value.
 
