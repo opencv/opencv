@@ -46,7 +46,9 @@ TEST(CV_mccRunCCheckerDetectorBasic, default_chart_type)
 {
     Ptr<CCheckerDetector> detector = CCheckerDetector::create();
     EXPECT_EQ(MCC24, detector->getColorChartType());
-    EXPECT_EQ(MCC24, CChecker::create()->getTarget());
+    Ptr<CChecker> checker = CChecker::create();
+    EXPECT_EQ(MCC24, checker->getTarget());
+    EXPECT_EQ(0.f, checker->getCost());
 
     std::string path = cvtest::findDataFile("mcc/MCC24.png");
     cv::Mat img = imread(path);
