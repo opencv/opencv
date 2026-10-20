@@ -42,5 +42,19 @@ TEST(CV_mccRunCCheckerDetectorBasic, accuracy_VINYL18)
     runCCheckerDetectorBasic("VINYL18.png", VINYL18);
 }
 
+TEST(CV_mccRunCCheckerDetectorBasic, default_chart_type)
+{
+    Ptr<CCheckerDetector> detector = CCheckerDetector::create();
+    EXPECT_EQ(MCC24, detector->getColorChartType());
+    Ptr<CChecker> checker = CChecker::create();
+    EXPECT_EQ(MCC24, checker->getTarget());
+    EXPECT_EQ(0.f, checker->getCost());
+
+    std::string path = cvtest::findDataFile("mcc/MCC24.png");
+    cv::Mat img = imread(path);
+    ASSERT_FALSE(img.empty()) << "Test image can't be loaded: " << path;
+    ASSERT_TRUE(detector->process(img));
+}
+
 } // namespace
 } // namespace opencv_test

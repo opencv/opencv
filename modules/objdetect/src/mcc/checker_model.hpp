@@ -144,11 +144,11 @@ public:
     Point2f getCenter() CV_OVERRIDE;
 
 private:
-    ColorChart target;             ///< type of checkercolor
+    ColorChart target = MCC24;     ///< type of checkercolor
     std::vector<Point2f> box; ///< positions of the corners
     Mat chartsRGB;             ///< charts profile in rgb color space
     Mat chartsYCbCr;         ///< charts profile in YCbCr color space
-    float cost;                     ///< cost to aproximate
+    float cost = 0;                 ///< cost to aproximate
     Point2f center;             ///< center of the chart.
 };
 // @}
