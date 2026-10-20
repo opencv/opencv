@@ -146,6 +146,13 @@ bool PFMDecoder::readData(Mat& mat)
   CV_Assert(fabs(m_scale_factor) > 0.0f);
   buffer *= 1.f / fabs(m_scale_factor);
 
+  // convertTo changes depth only; match the requested channels before writing mat.
+  if (buffer.channels() == 3 && mat.channels() == 1) {
+    cv::cvtColor(buffer, buffer, m_use_rgb ? cv::COLOR_RGB2GRAY : cv::COLOR_BGR2GRAY);
+  } else if (buffer.channels() == 1 && mat.channels() == 3) {
+    cv::cvtColor(buffer, buffer, cv::COLOR_GRAY2BGR);
+  }
+
   buffer.convertTo(mat, mat.type());
 
   return true;

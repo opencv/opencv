@@ -598,6 +598,86 @@ TEST(Imgcodecs_Pam, decode_graya_as_gray)
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
+typedef testing::TestWithParam<tuple<int, int, bool, bool> > Imgcodecs_Pfm_ReadMode;
+
+TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
+{
+    const int channels = get<0>(GetParam());
+    const int flags = get<1>(GetParam());
+    const bool fromFile = get<2>(GetParam());
+    const bool bigEndian = get<3>(GetParam());
+    Mat image(2, 3, CV_MAKETYPE(CV_32F, channels));
+    for (int y = 0; y < image.rows; ++y)
+        for (int x = 0; x < image.cols; ++x)
+            for (int c = 0; c < channels; ++c)
+                image.ptr<float>(y)[x * channels + c] = float(8 + 12 * x + 24 * y + 64 * c);
+
+    // Generate the PFM independently of the encoder, including bottom-up RGB data,
+    // both byte orders and a non-unit scale factor.
+    const string header = format("P%c\n%d %d\n%s\n", channels == 1 ? 'f' : 'F',
+                                 image.cols, image.rows, bigEndian ? "2.0" : "-2.0");
+    vector<uchar> encoded(header.begin(), header.end());
+    const unsigned int endianProbe = 1;
+    const bool hostLittleEndian = *reinterpret_cast<const uchar*>(&endianProbe) == 1;
+    for (int y = image.rows - 1; y >= 0; --y)
+        for (int x = 0; x < image.cols; ++x)
+            for (int c = 0; c < channels; ++c)
+            {
+                const int sourceChannel = channels == 3 ? 2 - c : c;
+                const float value = 2.f * image.ptr<float>(y)[x * channels + sourceChannel];
+                const uchar* bytes = reinterpret_cast<const uchar*>(&value);
+                for (size_t i = 0; i < sizeof(value); ++i)
+                    encoded.push_back(bytes[bigEndian == hostLittleEndian ? sizeof(value) - 1 - i : i]);
+            }
+
+    const int outputChannels = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYCOLOR)
+        ? channels : (flags & (IMREAD_COLOR | IMREAD_COLOR_RGB)) ? 3 : 1;
+    const int outputDepth = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYDEPTH) ? CV_32F : CV_8U;
+    Mat expected;
+    if (channels == 3 && outputChannels == 1)
+        cvtColor(image, expected, COLOR_BGR2GRAY);
+    else if (channels == 1 && outputChannels == 3)
+        cvtColor(image, expected, COLOR_GRAY2BGR);
+    else if (channels == 3 && flags != IMREAD_UNCHANGED && (flags & IMREAD_COLOR_RGB))
+        cvtColor(image, expected, COLOR_BGR2RGB);
+    else
+        image.copyTo(expected);
+    expected.convertTo(expected, outputDepth);
+
+    Mat decoded;
+    if (fromFile)
+    {
+        const string filename = cv::tempfile(".pfm");
+        FILE* file = fopen(filename.c_str(), "wb");
+        ASSERT_TRUE(file != NULL);
+        const size_t written = fwrite(encoded.data(), 1, encoded.size(), file);
+        const int closed = fclose(file);
+        EXPECT_EQ(encoded.size(), written);
+        EXPECT_EQ(0, closed);
+        decoded = imread(filename, flags);
+        EXPECT_EQ(0, remove(filename.c_str()));
+    }
+    else
+    {
+        decoded.create(expected.size(), expected.type());
+        const uchar* originalData = decoded.data;
+        const Mat result = imdecode(encoded, flags, &decoded);
+        EXPECT_EQ(originalData, decoded.data);
+        EXPECT_EQ(decoded.data, result.data);
+    }
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(expected.type(), decoded.type());
+    ASSERT_EQ(expected.size(), decoded.size());
+    EXPECT_EQ(0, cvtest::norm(expected, decoded, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_ReadMode, testing::Combine(
+    testing::Values(1, 3),
+    testing::Values(IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB,
+                    IMREAD_ANYDEPTH, IMREAD_ANYCOLOR, IMREAD_ANYDEPTH | IMREAD_COLOR,
+                    IMREAD_ANYDEPTH | IMREAD_COLOR_RGB, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR),
+    testing::Bool(), testing::Bool()));
+
 TEST(Imgcodecs_Pfm, read_write)
 {
   Mat img = imread(findDataFile("readwrite/lena.pam"));
