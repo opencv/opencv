@@ -565,7 +565,7 @@ public:
             endptr = ptr + (c == '-' || c == '+');
             while( cv_isdigit(*endptr) )
                 endptr++;
-            if( *endptr == '.' || *endptr == 'e' )
+            if( *endptr == '.' || *endptr == 'e' || *endptr == 'E' )
             {
             force_real:
                 double fval = fs->strtod( ptr, &endptr );

@@ -602,7 +602,7 @@ public:
                 ptr++;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
             }
-            if (*ptr == '.' || *ptr == 'e')
+            if (*ptr == '.' || *ptr == 'e' || *ptr == 'E')
             {
                 double fval = fs->strtod( beg, &ptr );
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
