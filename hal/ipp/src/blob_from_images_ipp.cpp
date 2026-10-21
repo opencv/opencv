@@ -8,6 +8,8 @@
 #include <opencv2/core.hpp>
 #include "precomp_ipp.hpp"
 
+#include <atomic>
+
 #if IPP_VERSION_X100 >= 202610
 
 // Resize goes through ipp_hal_resize(), which is available with IW only
@@ -207,12 +209,14 @@ static IppStatus ipp_apply_mean_scale_32f(cv::Mat& img, const float mean[4], con
     return ippStsDataTypeErr;
 }
 
-// dst = (src - mean) * scale over a continuous plane, the same expression as the OpenCV implementation uses
-template <typename T>
-static void mean_scale_plane(const T* src, float* dst, size_t len, float mean, float scale)
+// in-place plane = (plane - mean) * scale with the same operations as the OpenCV implementation
+static IppStatus ipp_mean_scale_plane_32f(Ipp32f* plane, size_t step, IppiSizeL roi, float mean, float scale)
 {
-    for (size_t i = 0; i < len; i++)
-        dst[i] = ((float)src[i] - mean) * scale;
+    if (mean != 0.0f)
+        IPP_RETURN_ON_ERROR(CV_INSTRUMENT_FUN_IPP(ippiSubC_32f_C1IR_L, mean, plane, (IppSizeL)step, roi));
+    if (scale != 1.0f)
+        IPP_RETURN_ON_ERROR(CV_INSTRUMENT_FUN_IPP(ippiMulC_32f_C1IR_L, scale, plane, (IppSizeL)step, roi));
+    return ippStsNoErr;
 }
 
 // Resize (+ crop or letterbox) one HWC image to dsize exactly like blobFromImagesWithParams() does,
@@ -240,37 +244,139 @@ static int ipp_resize_hwc(const cv::Mat& src, cv::Mat& dst, cv::Mat& resized, cv
     if (rsize.empty())
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    // cv::resize() copies an image of the same size without calling the HAL
-    cv::Mat img = src;
-    if (rsize != src.size())
+    // Resize `src` to the rsize image `out`; cv::resize() copies an image of the same size without calling the HAL
+    auto resizeTo = [&](cv::Mat& out) -> int
+    {
+        if (rsize == src.size())
+            return ipp_copy_interleaved(src, out.ptr(), out.step, false) < 0 ? CV_HAL_ERROR_NOT_IMPLEMENTED : CV_HAL_ERROR_OK;
+        return ipp_hal_resize(src.type(), src.ptr(), src.step, src.cols, src.rows,
+                              out.ptr(), out.step, out.cols, out.rows,
+                              inv_scale_x, inv_scale_y, interpolation) == CV_HAL_ERROR_OK ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    };
+
+    if (paddingmode == IPP_DNN_PMODE_LETTERBOX && rsize != dsize)
+    {
+        // Resize straight into the middle of the blob image and fill only the border strips around it
+        const int top = (dsize.height - rsize.height) / 2, bottom = dsize.height - top - rsize.height;
+        const int left = (dsize.width - rsize.width) / 2, right = dsize.width - left - rsize.width;
+        bordered.create(dsize, src.type());
+        const cv::Rect strips[] = { cv::Rect(0, 0, dsize.width, top), cv::Rect(0, top + rsize.height, dsize.width, bottom),
+                                    cv::Rect(0, top, left, rsize.height), cv::Rect(left + rsize.width, top, right, rsize.height) };
+        for (const cv::Rect& strip : strips)
+        {
+            if (strip.empty())
+                continue;
+            cv::Mat border = bordered(strip);
+            HAL_RETURN_ON_ERROR(ipp_set_constant(border, borderValue));
+        }
+        cv::Mat roi = bordered(cv::Rect(left, top, rsize.width, rsize.height));
+        int res = resizeTo(roi);
+        dst = bordered;
+        return res;
+    }
+
+    // Without padding the letterbox is a plain resize
+    if (rsize == src.size())
+    {
+        dst = src;
+    }
+    else
     {
         resized.create(rsize, src.type());
-        if (ipp_hal_resize(src.type(), src.ptr(), src.step, src.cols, src.rows,
-                           resized.ptr(), resized.step, resized.cols, resized.rows,
-                           inv_scale_x, inv_scale_y, interpolation) != CV_HAL_ERROR_OK)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        img = resized;
+        int res = resizeTo(resized);
+        if (res != CV_HAL_ERROR_OK)
+            return res;
+        dst = resized;
     }
 
     if (paddingmode == IPP_DNN_PMODE_CROP_CENTER)
     {
-        if (img.cols < dsize.width || img.rows < dsize.height)
+        if (dst.cols < dsize.width || dst.rows < dsize.height)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        dst = img(cv::Rect(cv::Point((int)(0.5 * (img.cols - dsize.width)), (int)(0.5 * (img.rows - dsize.height))), dsize));
+        dst = dst(cv::Rect(cv::Point((int)(0.5 * (dst.cols - dsize.width)), (int)(0.5 * (dst.rows - dsize.height))), dsize));
     }
-    else if (paddingmode == IPP_DNN_PMODE_LETTERBOX)
+    return CV_HAL_ERROR_OK;
+}
+
+struct ipp_blob_params
+{
+    int depth, ddepth, channels, layout;
+    bool swap, needMeanScale;
+    const float* mean;
+    const float* scalefactor;
+    const size_t* dst_step;
+};
+
+// Convert rows [r0, r1) of the HWC image `img`, which already has the blob width x height, to the blob of one image at `dst`.
+// `buf` is a scratch buffer reused between calls.
+static int ipp_blob_rows(const cv::Mat& img, uchar* dst, int r0, int r1, const ipp_blob_params& p, cv::AutoBuffer<uchar>& buf)
+{
+    const cv::Mat rows = img.rowRange(r0, r1);
+    const int width = img.cols, nrows = r1 - r0;
+    const size_t planeLen = (size_t)width * nrows;
+    const IppiSizeL roiL = ippiSizeL(width, nrows);
+    const size_t* dst_step = p.dst_step;
+
+    if (p.layout == cv::DATA_LAYOUT_NCHW)
     {
-        int top = (dsize.height - rsize.height) / 2;
-        int left = (dsize.width - rsize.width) / 2;
-        bordered.create(dsize, src.type());
-        HAL_RETURN_ON_ERROR(ipp_set_constant(bordered, borderValue));
-        cv::Mat roi = bordered(cv::Rect(left, top, rsize.width, rsize.height));
-        HAL_RETURN_ON_ERROR(ipp_copy_interleaved(img, roi.ptr(), roi.step, false));
-        dst = bordered;
+        uchar* dst0 = dst + r0 * dst_step[2];
+        if (p.depth == CV_8U && p.ddepth == CV_32F)
+        {
+            // Deinterleave to 8U planes, then convert each plane: no 32F HWC intermediate.
+            // A single channel image is a plane already.
+            const uchar* planes = rows.ptr();
+            size_t planeStep = rows.step;
+            if (p.channels > 1)
+            {
+                buf.allocate(planeLen * p.channels);
+                HAL_RETURN_ON_ERROR(ipp_copy_planar(rows, buf.data(), planeLen, width, p.swap));
+                planes = buf.data();
+                planeStep = width;
+            }
+            for (int c = 0; c < p.channels; c++)
+            {
+                const Ipp8u* srcPlane = planes + c * planeLen;
+                Ipp32f* dstPlane = (Ipp32f*)(dst0 + c * dst_step[1]);
+                HAL_RETURN_ON_ERROR(CV_INSTRUMENT_FUN_IPP(ippiConvert_8u32f_C1R, srcPlane, (int)planeStep, dstPlane, (int)dst_step[2], ippiSize(width, nrows)));
+                HAL_RETURN_ON_ERROR(ipp_mean_scale_plane_32f(dstPlane, dst_step[2], roiL, p.mean[c], p.scalefactor[c]));
+            }
+        }
+        else
+        {
+            HAL_RETURN_ON_ERROR(ipp_copy_planar(rows, dst0, dst_step[1], dst_step[2], p.swap));
+            for (int c = 0; c < p.channels && p.needMeanScale; c++)
+                HAL_RETURN_ON_ERROR(ipp_mean_scale_plane_32f((Ipp32f*)(dst0 + c * dst_step[1]), dst_step[2], roiL,
+                                                             p.mean[c], p.scalefactor[c]));
+        }
     }
-    else
+    else // DATA_LAYOUT_NHWC
     {
-        dst = img;
+        uchar* dst0 = dst + r0 * dst_step[1];
+        if (p.depth == p.ddepth && !p.needMeanScale)
+        {
+            HAL_RETURN_ON_ERROR(ipp_copy_interleaved(rows, dst0, dst_step[1], p.swap));
+        }
+        else
+        {
+            cv::Mat dstMat(nrows, width, CV_MAKETYPE(CV_32F, p.channels), dst0, dst_step[1]);
+            if (p.depth == CV_8U)
+            {
+                // There is no in-place 32F channel swap, so swap the 8U source before the conversion
+                cv::Mat src8u = rows;
+                if (p.swap)
+                {
+                    buf.allocate(planeLen * p.channels);
+                    src8u = cv::Mat(nrows, width, rows.type(), buf.data());
+                    HAL_RETURN_ON_ERROR(ipp_copy_interleaved(rows, src8u.ptr(), src8u.step, true));
+                }
+                HAL_RETURN_ON_ERROR(ipp_convert_8u32f(src8u, dstMat));
+            }
+            else
+            {
+                HAL_RETURN_ON_ERROR(ipp_copy_interleaved(rows, dst0, dst_step[1], p.swap));
+            }
+            HAL_RETURN_ON_ERROR(ipp_apply_mean_scale_32f(dstMat, p.mean, p.scalefactor));
+        }
     }
     return CV_HAL_ERROR_OK;
 }
@@ -328,85 +434,87 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     }
     if ((size_t)dst_width * (size_t)dst_height > (size_t)INT_MAX)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    // NCHW channel planes are processed as continuous arrays
-    if (layout == cv::DATA_LAYOUT_NCHW && dst_step[1] != dst_step[2] * dst_height)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const cv::Size dsize(dst_width, dst_height);
     const bool needResize = dst_width != width || dst_height != height;
-    const bool swap = swapRB && channels >= 3;
 
-    cv::Mat resized, bordered, tmp;
+#if !defined(IPP_CALLS_ENFORCED)
+    // ipp_hal_resize() declines 8U INTER_LINEAR in this mode: give up before any work is done
+    if (needResize && depth == CV_8U && (interpolation & cv::INTER_MAX) == cv::INTER_LINEAR)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+#endif
+
+    const ipp_blob_params p = { depth, ddepth, channels, layout, swapRB && channels >= 3, needMeanScale,
+                                mean, scalefactor, dst_step };
+
+    // Large images are converted in bands of rows, so the intermediate data of a band stays in cache.
+    // The bands of all images are split into one contiguous run per thread.
+    const size_t srcPixelSize = (size_t)channels * CV_ELEM_SIZE1(depth);
+    const size_t dstPixelSize = (size_t)channels * CV_ELEM_SIZE1(ddepth);
+    const size_t imageBytes = dstPixelSize * dst_width * dst_height;
+    int l2cache = 0;
+    ippGetL2CacheSize(&l2cache);
+    if (l2cache <= 0)
+        l2cache = 1 << 18;
+
+    // Convert `count` images of the blob size starting with blob image `first`
+    auto convertImages = [&](const cv::Mat* imgs, int first, int count) -> int
+    {
+        const int threads = ippiSuggestThreadsNum(dst_width, (size_t)count * dst_height, dstPixelSize,
+                                                  1 + (double)srcPixelSize / dstPixelSize);
+        const int bandRows = threads == 1 && imageBytes <= (size_t)l2cache ? dst_height
+                           : std::max(1, std::min(dst_height, (int)((128 << 10) / (dstPixelSize * dst_width))));
+        const int nbands = (dst_height + bandRows - 1) / bandRows;
+        const int ntasks = count * nbands;
+
+        std::atomic_bool ok{true};
+        auto convertTasks = [&](int t0, int t1)
+        {
+            cv::AutoBuffer<uchar> buf;
+            for (int t = t0; t < t1 && ok; t++)
+            {
+                const int i = t / nbands, r0 = (t % nbands) * bandRows;
+                if (ipp_blob_rows(imgs[i], dst_data + (size_t)(first + i) * dst_step[0],
+                                  r0, std::min(r0 + bandRows, dst_height), p, buf) != CV_HAL_ERROR_OK)
+                    ok = false;
+            }
+        };
+        const int nchunks = std::min(threads, ntasks);
+        if (nchunks > 1)
+        {
+            // One range element per thread: the thread pool wakes only the threads that get work
+            cv::parallel_for_(cv::Range(0, nchunks), [&](const cv::Range& range)
+            {
+                for (int c = range.start; c < range.end; c++)
+                    convertTasks((int)((int64)ntasks * c / nchunks), (int)((int64)ntasks * (c + 1) / nchunks));
+            }, nchunks);
+        }
+        else
+        {
+            convertTasks(0, ntasks);
+        }
+        return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
+    };
+
+    if (!needResize)
+    {
+        std::vector<cv::Mat> imgs(nimages);
+        for (int i = 0; i < nimages; ++i)
+            imgs[i] = cv::Mat(height, width, src_type, const_cast<uchar*>(src_data[i]), src_step[i]);
+        return convertImages(imgs.data(), 0, nimages);
+    }
+
+    // The IPP HAL resize is parallel itself, so the images are resized one by one
+    cv::Mat resized, bordered;
     for (int i = 0; i < nimages; ++i)
     {
-        const cv::Mat src(height, width, CV_MAKETYPE(depth, channels), const_cast<uchar*>(src_data[i]), src_step[i]);
-        cv::Mat img = src;
-        if (needResize)
-        {
-            int res = ipp_resize_hwc(src, img, resized, bordered, dsize, interpolation, paddingmode, borderValue);
-            if (res != CV_HAL_ERROR_OK)
-                return res;
-        }
-
-        uchar* dst = dst_data + (size_t)i * dst_step[0];
-        const size_t planeSize = (size_t)dst_width * dst_height;
-
-        if (layout == cv::DATA_LAYOUT_NCHW)
-        {
-            if (depth == CV_8U && ddepth == CV_32F)
-            {
-                // Deinterleave to 8U planes, then convert each plane: no 32F HWC intermediate
-                tmp.create(dst_height * channels, dst_width, CV_8UC1);
-                HAL_RETURN_ON_ERROR(ipp_copy_planar(img, tmp.ptr(), planeSize, dst_width, swap));
-                for (int c = 0; c < channels; c++)
-                {
-                    const Ipp8u* srcPlane = tmp.ptr<Ipp8u>() + c * planeSize;
-                    Ipp32f* dstPlane = (Ipp32f*)(dst + c * dst_step[1]);
-                    if (mean[c] == 0.0f && scalefactor[c] == 1.0f)
-                        HAL_RETURN_ON_ERROR(CV_INSTRUMENT_FUN_IPP(ippiConvert_8u32f_C1R, srcPlane, dst_width, dstPlane, (int)dst_step[2], ippiSize(dsize)));
-                    else
-                        mean_scale_plane(srcPlane, dstPlane, planeSize, mean[c], scalefactor[c]);
-                }
-            }
-            else
-            {
-                HAL_RETURN_ON_ERROR(ipp_copy_planar(img, dst, dst_step[1], dst_step[2], swap));
-                for (int c = 0; c < channels && needMeanScale; c++)
-                {
-                    Ipp32f* dstPlane = (Ipp32f*)(dst + c * dst_step[1]);
-                    if (mean[c] != 0.0f || scalefactor[c] != 1.0f)
-                        mean_scale_plane(dstPlane, dstPlane, planeSize, mean[c], scalefactor[c]);
-                }
-            }
-        }
-        else // DATA_LAYOUT_NHWC
-        {
-            if (depth == ddepth && !needMeanScale)
-            {
-                HAL_RETURN_ON_ERROR(ipp_copy_interleaved(img, dst, dst_step[1], swap));
-            }
-            else
-            {
-                cv::Mat dstMat(dst_height, dst_width, CV_MAKETYPE(CV_32F, channels), dst, dst_step[1]);
-                if (depth == CV_8U)
-                {
-                    // There is no in-place 32F channel swap, so swap the 8U source before the conversion
-                    cv::Mat src8u = img;
-                    if (swap)
-                    {
-                        tmp.create(img.size(), img.type());
-                        HAL_RETURN_ON_ERROR(ipp_copy_interleaved(img, tmp.ptr(), tmp.step, true));
-                        src8u = tmp;
-                    }
-                    HAL_RETURN_ON_ERROR(ipp_convert_8u32f(src8u, dstMat));
-                }
-                else
-                {
-                    HAL_RETURN_ON_ERROR(ipp_copy_interleaved(img, dst, dst_step[1], swap));
-                }
-                HAL_RETURN_ON_ERROR(ipp_apply_mean_scale_32f(dstMat, mean, scalefactor));
-            }
-        }
+        const cv::Mat src(height, width, src_type, const_cast<uchar*>(src_data[i]), src_step[i]);
+        cv::Mat img;
+        int res = ipp_resize_hwc(src, img, resized, bordered, dsize, interpolation, paddingmode, borderValue);
+        if (res == CV_HAL_ERROR_OK)
+            res = convertImages(&img, i, 1);
+        if (res != CV_HAL_ERROR_OK)
+            return res;
     }
 
     return CV_HAL_ERROR_OK;
