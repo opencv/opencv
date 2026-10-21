@@ -59,13 +59,19 @@ class Imgcodecs_Avif_RoundTripSuite
       if (quality_ == 100) {
         EXPECT_EQ(0, cvtest::norm(img, img_original, NORM_INF));
       } else {
-        const float norm = cvtest::norm(img, img_original, NORM_L2) /
-                           img.channels() / img.cols / img.rows /
-                           (1 << (bit_depth_ - 8));
+        const float num_samples = static_cast<float>(img.channels() * img.cols * img.rows);
+        const float norm_ = cvtest::norm(img, img_original, NORM_L2) / std::sqrt(num_samples);
+        const float norm = (bit_depth_ == 12)? norm_ / 4095.0f * 255.0f :
+                           (bit_depth_ == 10)? norm_ / 1023.0f * 255.0f :
+                                               norm_; // scale to 8 bit
+
+        // Uncomment to print norm values for calibration/debugging
+        // std::cout << "quality = " << quality_ << " bit_depth = " << bit_depth_ << " norm_ = " << norm_ << " norm = " << norm << std::endl;
+
         if (quality_ == 50) {
-          EXPECT_LE(norm, 10);
+          EXPECT_LE(norm, 20); // Maximum = 18.15 -> ceil(18.15 * 1.1) = 20
         } else if (quality_ == 0) {
-          EXPECT_LE(norm, 13);
+          EXPECT_LE(norm, 36); // Maximum = 32.57 -> ceil(32.57 * 1.1) = 36
         } else {
           EXPECT_FALSE(true);
         }
@@ -306,45 +312,62 @@ INSTANTIATE_TEST_CASE_P(
 
 
 #ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
-class Imgcodecs_Avif_16bit : public testing::TestWithParam<int> {};
+class Imgcodecs_Avif_16bit : public testing::TestWithParam<std::tuple<int, int>> {};
 
 TEST_P(Imgcodecs_Avif_16bit, encode_decode)
 {
-  const int quality = GetParam();
+  const int quality = std::get<0>(GetParam());
+  const int channels = std::get<1>(GetParam());
   const int bit_depth = 16;
 
   const string root = cvtest::TS::ptr()->get_data_path();
   const string filename = root + "../cv/features2d/tsukuba.png";
 
-  cv::Mat src;
-  EXPECT_NO_THROW(src = cv::imread(filename));
-  ASSERT_FALSE(src.empty());
+  cv::Mat img_original;
+  EXPECT_NO_THROW(img_original = cv::imread(filename));
+  ASSERT_FALSE(img_original.empty());
 
-  EXPECT_NO_THROW(src.convertTo(src, CV_16UC3, 65536.0 / 255.0));
+  cv::Mat src;
+  if (channels == 1) {
+    cv::cvtColor(img_original, src, cv::COLOR_BGR2GRAY);
+  } else if (channels == 4) {
+    cv::cvtColor(img_original, src, cv::COLOR_BGR2BGRA);
+  } else {
+    src = img_original.clone();
+  }
+  src.convertTo(src, CV_16U, 1 << (bit_depth - 8));
 
   std::vector<uint8_t> buf;
   EXPECT_NO_THROW(imencode(".avif", src, buf, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality}));
+imwrite("output_16bit.avif", src, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality});
 
   cv::Mat dst;
   EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_UNCHANGED));
   ASSERT_FALSE(dst.empty());
 
-  const float norm = cvtest::norm(dst, src, NORM_L2) /
-                     src.channels() / src.cols / src.rows /
-                     (1 << (bit_depth - 8));
+  const float num_samples = static_cast<float>(src.channels() * src.cols * src.rows);
+  const float norm_ = cvtest::norm(dst, src, NORM_L2) / std::sqrt(num_samples);
+  const float norm = norm_ / 65535.0f * 255.0f; // scale to 8 bit
+
+  // Uncomment to print norm values for calibration/debugging
+  // std::cout << "quality = " << quality << " channels = " << channels << " norm_ = " << norm_ << " norm = " << norm << std::endl;
 
   switch ( quality ) {
     case 100: EXPECT_EQ(norm,  0); break; // lossless
-    case  50: EXPECT_LE(norm, 10); break;
-    case   0: EXPECT_LE(norm, 13); break;
+    case  50: EXPECT_LE(norm,  7); break; // Max 5.93 + 10% margin
+    case   0: EXPECT_LE(norm, 19); break; // Max 16.54 + 10% margin
     default:  ADD_FAILURE() << "Unknown quality setting: " << quality; break;
   }
 }
 
 INSTANTIATE_TEST_CASE_P(
   Imgcodecs_AVIF, Imgcodecs_Avif_16bit,
-  testing::Values(0, 50, 100) // Quality
+  testing::Combine(
+    testing::Values(0, 50, 100), // Quality
+    testing::Values(1, 3, 4)     // Channels
+  )
 );
+
 #endif // OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
 
 
