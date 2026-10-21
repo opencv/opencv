@@ -350,8 +350,18 @@ copyMask_<Vec2i>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
         const int vlanes = VTraits<v_uint8>::vlanes();
         for (; x <= size.width - vlanes; x += vlanes)
         {
-            // expand each mask byte to the 8 bytes of its element: 1 -> 2 -> 4 -> 8
             v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+            const uchar* s = (const uchar*)(src + x);
+            uchar* d = (uchar*)(dst + x);
+            if (v_check_all(v_nmask))       // no pixel selected: leave dst untouched
+                continue;
+            if (!v_check_any(v_nmask))      // all pixels selected: plain copy, dst is not read
+            {
+                for (int i = 0; i < 8; i++)
+                    vx_store(d + i * vlanes, vx_load(s + i * vlanes));
+                continue;
+            }
+            // mixed: expand each mask byte to the 8 bytes of its element (1 -> 2 -> 4 -> 8) and blend
             v_uint8 v_nmask0, v_nmask1;
             v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
             v_uint8 v_nmask00, v_nmask01, v_nmask10, v_nmask11;
@@ -362,9 +372,6 @@ copyMask_<Vec2i>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
             v_zip(v_nmask01, v_nmask01, v_nm2, v_nm3);
             v_zip(v_nmask10, v_nmask10, v_nm4, v_nm5);
             v_zip(v_nmask11, v_nmask11, v_nm6, v_nm7);
-
-            const uchar* s = (const uchar*)(src + x);
-            uchar* d = (uchar*)(dst + x);
             vx_store(d,              v_select(v_nm0, vx_load(d),              vx_load(s)));
             vx_store(d +     vlanes, v_select(v_nm1, vx_load(d +     vlanes), vx_load(s +     vlanes)));
             vx_store(d + 2 * vlanes, v_select(v_nm2, vx_load(d + 2 * vlanes), vx_load(s + 2 * vlanes)));
