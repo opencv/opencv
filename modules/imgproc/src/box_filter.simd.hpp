@@ -1653,6 +1653,8 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
         return makePtr<RowSum<int, int> >(ksize, anchor);
     if( sdepth == CV_16S && ddepth == CV_64F )
         return makePtr<RowSum<short, double> >(ksize, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<RowSum<hfloat, double> >(ksize, anchor);
     if( sdepth == CV_32F && ddepth == CV_64F )
         return makePtr<RowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
@@ -1692,6 +1694,8 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         return makePtr<ColumnSum<int, int> >(ksize, anchor, scale);
     if( ddepth == CV_32F && sdepth == CV_32S )
         return makePtr<ColumnSum<int, float> >(ksize, anchor, scale);
+    if( ddepth == CV_16F && sdepth == CV_64F )
+        return makePtr<ColumnSum<double, hfloat> >(ksize, anchor, scale);
     if( ddepth == CV_32F && sdepth == CV_64F )
         return makePtr<ColumnSum<double, float> >(ksize, anchor, scale);
     if( ddepth == CV_64F && sdepth == CV_32S )

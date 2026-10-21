@@ -301,13 +301,14 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 // compiler can inline and optimize memcpy for common fixed sizes (1, 2, 4 …).
 // Avoids the full cv::copyMakeBorder() overhead: no OpenCL/IPP dispatch,
 // no Mat header re-allocation, and a single AutoBuffer for the border table.
-template<int esz>
+template<int fixed_esz>
 static void fillTileBorder(
     const uchar* src, size_t srcstep, int src_w, int src_h,
     uchar*       dst, size_t dststep,
     int pad_top, int pad_bottom, int pad_left, int pad_right,
-    int borderType, const uchar* constVal)
+    int borderType, const uchar* constVal, int elemSize)
 {
+    const int esz = fixed_esz ? fixed_esz : elemSize;
     const int dst_w = src_w + pad_left + pad_right;
 
     // ── Left/right column offset table (byte offsets into a source row) ────────
@@ -450,7 +451,7 @@ public:
 
 #define FILL_BORDER(E) fillTileBorder<E>(src_region.ptr(), (size_t)src_region.step, \
     src_region.cols, src_region.rows, tile_mat.ptr(), (size_t)tile_mat.step, \
-    pad_top, pad_bottom, pad_left, pad_right, borderType, cval)
+    pad_top, pad_bottom, pad_left, pad_right, borderType, cval, esz)
                 switch (esz)
                 {
                 case 1:  FILL_BORDER(1);  break;
@@ -461,31 +462,7 @@ public:
                 case 8:  FILL_BORDER(8);  break;
                 case 12: FILL_BORDER(12); break;
                 case 16: FILL_BORDER(16); break;
-                default:
-                {
-                    // Generic fallback for exotic element sizes.
-                    Scalar bv = Scalar::all(0);
-                    if (!fe.constBorderValue.empty())
-                    {
-                        const uchar* bptr = &fe.constBorderValue[0];
-                        int depth = CV_MAT_DEPTH(fe.srcType);
-                        for (int k = 0; k < cn; k++)
-                        {
-                            switch(depth)
-                            {
-                            case CV_8U:  bv[k] = bptr[k]; break;
-                            case CV_8S:  bv[k] = ((const schar*)bptr)[k]; break;
-                            case CV_16U: bv[k] = ((const ushort*)bptr)[k]; break;
-                            case CV_16S: bv[k] = ((const short*)bptr)[k]; break;
-                            case CV_32S: bv[k] = ((const int*)bptr)[k]; break;
-                            case CV_32F: bv[k] = ((const float*)bptr)[k]; break;
-                            case CV_64F: bv[k] = ((const double*)bptr)[k]; break;
-                            default: bv[k] = bptr[k];
-                            }
-                        }
-                    }
-                    copyMakeBorder(src_region, tile_mat, pad_top, pad_bottom, pad_left, pad_right, borderType, bv);
-                }
+                default: FILL_BORDER(0); break;
                 }
 #undef FILL_BORDER
             }
@@ -3340,7 +3317,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(bufType);
     int cn = CV_MAT_CN(srcType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
-        ddepth >= std::max(sdepth, CV_32S) &&
+        ddepth >= std::max(sdepth == CV_16F ? CV_32F : sdepth, CV_32S) &&
         kernel.type() == ddepth );
     int ksize = kernel.rows + kernel.cols - 1;
 
@@ -3349,6 +3326,9 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         if( sdepth == CV_8U && ddepth == CV_32S )
             return makePtr<SymmRowSmallFilter<uchar, int, SymmRowSmallVec_8u32s> >
                 (kernel, anchor, symmetryType, SymmRowSmallVec_8u32s(kernel, symmetryType));
+        if( sdepth == CV_16F && ddepth == CV_32F )
+            return makePtr<SymmRowSmallFilter<hfloat, float, RowNoVec> >
+                (kernel, anchor, symmetryType);
         if( sdepth == CV_32F && ddepth == CV_32F )
             return makePtr<SymmRowSmallFilter<float, float, SymmRowSmallVec_32f> >
                 (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType));
@@ -3371,6 +3351,10 @@ Ptr<BaseRowFilter> getLinearRowFilter(
                                   (kernel, anchor, RowVec_16s32f(kernel));
     if( sdepth == CV_16S && ddepth == CV_64F )
         return makePtr<RowFilter<short, double, RowNoVec> >(kernel, anchor);
+    if( sdepth == CV_16F && ddepth == CV_32F )
+        return makePtr<RowFilter<hfloat, float, RowNoVec> >(kernel, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<RowFilter<hfloat, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_32F && ddepth == CV_32F )
         return makePtr<RowFilter<float, float, RowVec_32f> >
             (kernel, anchor, RowVec_32f(kernel));
@@ -3396,7 +3380,7 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
     int sdepth = CV_MAT_DEPTH(bufType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(dstType);
     CV_Assert( cn == CV_MAT_CN(bufType) &&
-        sdepth >= std::max(ddepth, CV_32S) &&
+        sdepth >= std::max(ddepth == CV_16F ? CV_32F : ddepth, CV_32S) &&
         kernel.type() == sdepth );
 
     if( !(symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) )
@@ -3416,6 +3400,8 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
             return makePtr<ColumnFilter<Cast<float, short>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16S && sdepth == CV_64F )
             return makePtr<ColumnFilter<Cast<double, short>, ColumnNoVec> >(kernel, anchor, delta);
+        if( ddepth == CV_16F && sdepth == CV_32F )
+            return makePtr<ColumnFilter<Cast<float, hfloat>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_32F && sdepth == CV_32F )
             return makePtr<ColumnFilter<Cast<float, float>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_64F && sdepth == CV_64F )
@@ -3435,6 +3421,9 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 return makePtr<SymmColumnSmallFilter<Cast<int, short>,
                     SymmColumnSmallVec_32s16s> >(kernel, anchor, delta, symmetryType,
                         Cast<int, short>(), SymmColumnSmallVec_32s16s(kernel, symmetryType, bits, delta));
+            if( ddepth == CV_16F && sdepth == CV_32F )
+                return makePtr<SymmColumnSmallFilter<Cast<float, hfloat>, ColumnNoVec> >
+                    (kernel, anchor, delta, symmetryType);
             if( ddepth == CV_32F && sdepth == CV_32F )
                 return makePtr<SymmColumnSmallFilter<
                     Cast<float, float>,SymmColumnSmallVec_32f> >
@@ -3468,6 +3457,9 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                   SymmColumnVec_32f16s(kernel, symmetryType, 0, delta));
         if( ddepth == CV_16S && sdepth == CV_64F )
             return makePtr<SymmColumnFilter<Cast<double, short>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
+        if( ddepth == CV_16F && sdepth == CV_32F )
+            return makePtr<SymmColumnFilter<Cast<float, hfloat>, ColumnNoVec> >
                 (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_32F && sdepth == CV_32F )
             return makePtr<SymmColumnFilter<Cast<float, float>, SymmColumnVec_32f> >
@@ -3570,7 +3562,8 @@ Ptr<BaseFilter> getLinearFilter(
 
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(srcType), kdepth = _kernel.depth();
-    CV_Assert( cn == CV_MAT_CN(dstType) && ddepth >= sdepth );
+    CV_Assert( cn == CV_MAT_CN(dstType) &&
+        (ddepth >= sdepth || (sdepth == CV_16F && (ddepth == CV_32F || ddepth == CV_64F))) );
 
     anchor = normalizeAnchor(anchor, _kernel.size());
 
@@ -3626,6 +3619,12 @@ Ptr<BaseFilter> getLinearFilter(
         return makePtr<Filter2D<short,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
+    if( sdepth == CV_16F && ddepth == CV_16F )
+        return makePtr<Filter2D<hfloat, Cast<float, hfloat>, FilterNoVec> >(kernel, anchor, delta);
+    if( sdepth == CV_16F && ddepth == CV_32F )
+        return makePtr<Filter2D<hfloat, Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<Filter2D<hfloat, Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_32F && ddepth == CV_32F )
         return makePtr<Filter2D<float, Cast<float, float>, FilterVec_32f> >
             (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta));
