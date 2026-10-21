@@ -339,6 +339,99 @@ TEST_P(Test_TFLite, minimum)
     normAssert(ref, out, "", l1, lInf);
 }
 
+static std::string tfliteBoundsModel(const char* name)
+{
+    return findDataFile(std::string("dnn/tflite/") + name + ".tflite");
+}
+
+static void expectTFLiteRejected(const char* model, const char* reason)
+{
+    try
+    {
+        (void)readNetFromTFLite(tfliteBoundsModel(model));
+        FAIL() << "Malformed TFLite tensor was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos);
+    }
+}
+
+TEST(Test_TFLite_Importer, ControlPadding)
+{
+    EXPECT_NO_THROW(readNetFromTFLite(tfliteBoundsModel("tfliteControl")));
+}
+
+TEST(Test_TFLite_Importer, ShortInt32Buffer)
+{
+    expectTFLiteRejected("tfliteShortBuffer", "tensor requires");
+}
+
+TEST(Test_TFLite_Importer, ShortInt32ElementWidth)
+{
+    expectTFLiteRejected("tfliteShortElementWidth", "tensor requires 32 bytes but its buffer has 16 bytes");
+}
+
+TEST(Test_TFLite_Importer, NegativeShape)
+{
+    expectTFLiteRejected("tfliteNegativeShape", "negative dimension");
+}
+
+TEST(Test_TFLite_Importer, OverflowShape)
+{
+    expectTFLiteRejected("tfliteOverflowShape", "overflows size_t");
+}
+
+TEST(Test_TFLite_Importer, BufferIndexEqualCount)
+{
+    expectTFLiteRejected("tfliteInvalidBufferIndex", "tensor buffer index is out of range");
+}
+
+TEST(Test_TFLite_Importer, BufferIndexUintMax)
+{
+    expectTFLiteRejected("tfliteHugeBufferIndex", "tensor buffer index is out of range");
+}
+
+TEST(Test_TFLite_Importer, Int8Control)
+{
+    EXPECT_NO_THROW(readNetFromTFLite(tfliteBoundsModel("tfliteInt8Control")));
+}
+
+TEST(Test_TFLite_Importer, ShortInt8Buffer)
+{
+    expectTFLiteRejected("tfliteShortInt8Buffer", "tensor requires 8 bytes but its buffer has 4 bytes");
+}
+
+TEST(Test_TFLite_Importer, ScalarControl)
+{
+    EXPECT_NO_THROW(readNetFromTFLite(tfliteBoundsModel("tfliteScalarControl")));
+}
+
+TEST(Test_TFLite_Importer, ZeroElementControl)
+{
+    EXPECT_NO_THROW(readNetFromTFLite(tfliteBoundsModel("tfliteZeroElementControl")));
+}
+
+TEST(Test_TFLite_Importer, EmptyDataControl)
+{
+    EXPECT_NO_THROW(readNetFromTFLite(tfliteBoundsModel("tfliteEmptyDataControl")));
+}
+
+TEST(Test_TFLite_Importer, ZeroFirstOverflow)
+{
+    expectTFLiteRejected("tfliteZeroFirstOverflow", "overflows size_t");
+}
+
+TEST(Test_TFLite_Importer, ZeroLastOverflow)
+{
+    expectTFLiteRejected("tfliteZeroLastOverflow", "overflows size_t");
+}
+
+TEST(Test_TFLite_Importer, SparseTensor)
+{
+    expectTFLiteRejected("tfliteSparseTensor", "sparse tensors are not supported");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
