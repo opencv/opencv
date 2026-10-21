@@ -6,6 +6,7 @@ set(IPP_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL ""
 set(IPP_HAL_HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_core.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_imgproc.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_dnn.hpp"
   CACHE INTERNAL "")
 
 add_library(ipphal STATIC
@@ -29,6 +30,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/distancetransform_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/bilateral_filter_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/samplers_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/blob_from_images_ipp.cpp"
 )
 
 #TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
