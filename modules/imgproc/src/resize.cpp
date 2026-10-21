@@ -3178,21 +3178,25 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
     }
 }
 template <int CN, typename T, typename WT>
+inline void hresize_pixel(const T* S, WT* D, int k0, int k1, const DecimateAlpha* xtab) {
+    WT s[CN];
+    for (int c = 0; c < CN; ++c)
+        s[c] = (WT)0;
+    for (int k = k0; k < k1; ++k) {
+        const int sxn = xtab[k].si;
+        const WT alpha = (WT)xtab[k].alpha;
+        for (int c = 0; c < CN; ++c)
+            s[c] += S[sxn + c]*alpha;
+    }
+    for (int c = 0; c < CN; ++c)
+        D[c] = s[c];
+}
+
+template <int CN, typename T, typename WT>
 inline void hresize(const T* S, WT* buf, int dx, int dst_width,
                     const DecimateAlpha* xtab, const int* xtabofs) {
-    for (; dx < dst_width; ++dx) {
-        WT s[CN];
-        for (int c = 0; c < CN; ++c)
-            s[c] = (WT)0;
-        for (int k = xtabofs[dx], k1 = xtabofs[dx + 1]; k < k1; ++k) {
-            const int sxn = xtab[k].si;
-            const WT alpha = (WT)xtab[k].alpha;
-            for (int c = 0; c < CN; ++c)
-                s[c] += S[sxn + c]*alpha;
-        }
-        for (int c = 0; c < CN; ++c)
-            buf[dx*CN + c] = s[c];
-    }
+    for (; dx < dst_width; ++dx)
+        hresize_pixel<CN>(S, buf + dx*CN, xtabofs[dx], xtabofs[dx + 1], xtab);
 }
 
 template <typename T, typename WT, int BLK = 4>
@@ -3203,36 +3207,17 @@ inline void hresize_n(const T* __restrict S, WT* __restrict buf,
         WT* D = buf + dx*cn;
         const int k0 = xtabofs[dx], k1 = xtabofs[dx + 1];
         int c = 0;
-
-        for (; c <= cn - BLK; c += BLK) {
-            WT s[BLK];
-            for (int i = 0; i < BLK; ++i)
-                s[i] = (WT)0;
-
-            for (int k = k0; k < k1; ++k) {
-                const int sxn = xtab[k].si + c;
-                const WT alpha = (WT)xtab[k].alpha;
-                for (int i = 0; i < BLK; ++i)
-                    s[i] += S[sxn + i]*alpha;
-            }
-
-            for (int i = 0; i < BLK; ++i)
-                D[c + i] = s[i];
-        }
-
-        for (; c < cn; ++c) {
-            WT s = (WT)0;
-            for (int k = k0; k < k1; ++k)
-                s += S[xtab[k].si + c]*(WT)xtab[k].alpha;
-            D[c] = s;
-        }
+        for (; c <= cn - BLK; c += BLK)
+            hresize_pixel<BLK>(S + c, D + c, k0, k1, xtab);
+        for (; c < cn; ++c)
+            hresize_pixel<1>(S + c, D + c, k0, k1, xtab);
     }
 }
 
 template <typename T, typename WT>
 struct AreaHResize {
     template <int CN>
-    static void run(const T* S, WT* buf, int dst_width, int /*srcRowElems*/,
+    static void run(const T* S, WT* buf, int dst_width,
                     const DecimateAlpha* xtab, const int* xtabofs, int /*vec_width*/) {
         hresize<CN>(S, buf, 0, dst_width, xtab, xtabofs);
     }
@@ -3242,7 +3227,7 @@ struct AreaHResize {
 template <>
 struct AreaHResize<uchar, float> {
     template <int CN>
-    static void run(const uchar* S, float* buf, int dst_width, int /*srcRowElems*/,
+    static void run(const uchar* S, float* buf, int dst_width,
                     const DecimateAlpha* xtab, const int* xtabofs, int vec_width) {
         int dx = 0;
         if (CN == 3 || CN == 4) {
@@ -3267,13 +3252,13 @@ struct AreaHResize<uchar, float> {
 #endif
 
 template <typename T, typename WT>
-inline void hresize_dispatch(const T* S, WT* buf, int dst_width, int cn, int srcRowElems,
+inline void hresize_dispatch(const T* S, WT* buf, int dst_width, int cn,
                              const DecimateAlpha* xtab, const int* xtabofs, int vec_width) {
     switch (cn) {
-    case 1: AreaHResize<T, WT>::template run<1>(S, buf, dst_width, srcRowElems, xtab, xtabofs, vec_width); break;
-    case 2: AreaHResize<T, WT>::template run<2>(S, buf, dst_width, srcRowElems, xtab, xtabofs, vec_width); break;
-    case 3: AreaHResize<T, WT>::template run<3>(S, buf, dst_width, srcRowElems, xtab, xtabofs, vec_width); break;
-    case 4: AreaHResize<T, WT>::template run<4>(S, buf, dst_width, srcRowElems, xtab, xtabofs, vec_width); break;
+    case 1: AreaHResize<T, WT>::template run<1>(S, buf, dst_width, xtab, xtabofs, vec_width); break;
+    case 2: AreaHResize<T, WT>::template run<2>(S, buf, dst_width, xtab, xtabofs, vec_width); break;
+    case 3: AreaHResize<T, WT>::template run<3>(S, buf, dst_width, xtab, xtabofs, vec_width); break;
+    case 4: AreaHResize<T, WT>::template run<4>(S, buf, dst_width, xtab, xtabofs, vec_width); break;
     default: hresize_n(S, buf, dst_width, cn, xtab, xtabofs); break;
     }
 }
@@ -3292,7 +3277,6 @@ public:
         src = &_src;
         dst = &_dst;
         xtab0 = _xtab;
-        xtab_size0 = _xtab_size;
         ytab = _ytab;
         ytab_size = _ytab_size;
         tabofs = _tabofs;
@@ -3308,7 +3292,6 @@ public:
         }
         while( dx <= dst_width )
             xofs[dx++] = _xtab_size;
-        xtabofs = xofs;
 
         vec_width = dst_width;
         if (cn == 3 || cn == 4)
@@ -3331,9 +3314,9 @@ public:
         int cn = dst->channels();
         int dst_width = dst->cols;
         int width = dst_width*cn;
-        int srcRowElems = src->cols*cn;
         AutoBuffer<WT> _buffer(width*2);
         const DecimateAlpha* xtab = xtab0;
+        const int* xtabofs = _xtabofs.data();
         WT *buf = _buffer.data(), *sum = buf + width;
         int j_start = tabofs[range.start], j_end = tabofs[range.end], j, dx;
         int prev_dy = ytab[j_start].di, prev_sy = -1;
@@ -3350,7 +3333,7 @@ public:
             if( sy != prev_sy )
             {
                 inter_area::hresize_dispatch(src->template ptr<T>(sy), buf,
-                                             dst_width, cn, srcRowElems, xtab, xtabofs, vec_width);
+                                             dst_width, cn, xtab, xtabofs, vec_width);
                 prev_sy = sy;
             }
 
@@ -3374,9 +3357,8 @@ private:
     Mat* dst;
     const DecimateAlpha* xtab0;
     const DecimateAlpha* ytab;
-    int xtab_size0, ytab_size;
+    int ytab_size;
     const int* tabofs;
-    const int* xtabofs;
     AutoBuffer<int> _xtabofs;
     int vec_width;
 };
