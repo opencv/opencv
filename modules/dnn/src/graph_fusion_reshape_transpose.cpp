@@ -104,6 +104,11 @@ struct ModelFusionReshapeTranspose
                     redirectConsumers(prog, dropped, i + 1, out, layer->inputs[0]);
                     dropped[i] = true;
                     usecounts[out.idx] = 0;
+                    // The bypassed Transpose no longer reads its input. Without this the
+                    // producer's count never reaches 0 and it survives as a dead layer.
+                    for (Arg a : layer->inputs)
+                        if (a.idx > 0)
+                            usecounts[a.idx]--;
                     modified = true;
                     continue;
                 }
