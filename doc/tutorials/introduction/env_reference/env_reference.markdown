@@ -221,7 +221,8 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_DNN_BACKEND_DEFAULT | num | 3 (OpenCV) | set default DNN backend, see dnn.hpp for backends enumeration |
 | OPENCV_DNN_NETWORK_DUMP | num | 0 | level of information dumps, 0 - no dumps (default file name `${dump_base_name}.dot`) |
 | OPENCV_DNN_DISABLE_MEMORY_OPTIMIZATIONS | bool | false |  |
-| OPENCV_DNN_CUDA_ALLOW_TF32 | bool | true | allow cuDNN to use TF32 Tensor Core math for FP32 convolutions on the CUDA target (compute capability 8.0 and newer); faster, but with a 10-bit mantissa; set to false for exact FP32 results |
+| OPENCV_DNN_CUDA_ALLOW_TF32 | bool | true | allow TF32 Tensor Core math for FP32 cuDNN convolutions and cuBLAS GEMMs (MatMul, Gemm) on the CUDA target (compute capability 8.0 and newer); faster, but with a 10-bit mantissa; set to false for exact FP32 results |
+| OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE | bool | false | let FP16 cuBLAS GEMMs on the CUDA_FP16 target accumulate in half precision; faster, but less accurate; by default they accumulate in FP32 |
 | OPENCV_DNN_CHECK_NAN_INF | bool | false | check for NaNs in layer outputs |
 | OPENCV_DNN_CHECK_NAN_INF_DUMP | bool | false | print layer data when NaN check has failed |
 | OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR | bool | false | also raise exception when NaN check has failed |

@@ -262,6 +262,36 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <class T> __device__ T fast_sigmoid(T value) { return sigmoid(value); }
     template <> inline __device__ float fast_sigmoid(float value) { return __fdividef(1, 1 + __expf(-value)); }
 
+    constexpr int GPU_WARP_SIZE = 32;
+    constexpr int GPU_WARP_SIZE_HOST = 32;
+
+    template <class T>
+    __device__ __forceinline__ T WARP_SHFL(T value, int srcLane, int width = GPU_WARP_SIZE, unsigned int mask = 0xffffffff) {
+        return __shfl_sync(mask, value, srcLane, width);
+    }
+
+    template <class T>
+    __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = GPU_WARP_SIZE, unsigned int mask = 0xffffffff) {
+        return __shfl_xor_sync(mask, value, laneMask, width);
+    }
+
+    template <class T>
+    __device__ __forceinline__ T WARP_SHFL_DOWN(T value, unsigned int delta, int width = GPU_WARP_SIZE, unsigned int mask = 0xffffffff) {
+        return __shfl_down_sync(mask, value, delta, width);
+    }
+
+    inline int log2_ceil(int value) {
+        int log2_value = 0;
+        while ((1 << log2_value) < value) ++log2_value;
+        return log2_value;
+    }
+
+    __host__ __device__ __forceinline__ int least_pow2_bound(int value) {
+        unsigned int cur = 1;
+        while (cur < static_cast<unsigned int>(value)) cur <<= 1;
+        return static_cast<int>(cur);
+    }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_MATH_HPP */

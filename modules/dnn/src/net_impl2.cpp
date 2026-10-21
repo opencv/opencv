@@ -613,7 +613,12 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
             if (!op)
                 continue;
             if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
-            if (op->dynamicOutputShapes()) { graphOnCuda = false; break; }
+            // a dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
+            // argTensor(), i.e. the host copies forwardGraph() downloads before the op runs
+            static const std::set<std::string> hostSizedDynamicOps = {
+                "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
+            };
+            if (op->dynamicOutputShapes() && !hostSizedDynamicOps.count(op->type)) { graphOnCuda = false; break; }
             Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
             if (!e) { graphOnCuda = false; break; }
             cudaExecs[i] = e;
@@ -740,6 +745,7 @@ void Net::Impl::finalize()
     cudaArgDeviceDirty.clear();
     cudaTempBuffers.clear();
     cudaPoolTemps = false;
+    cudaGraphReset();  // the recorded graph wrote into the buffers released here
     if (preferableBackend == DNN_BACKEND_CUDA && haveCUDA()) {
         useCUDA = true;
         if (!cudaInfo) {
@@ -1156,6 +1162,9 @@ void Net::Impl::pinInteriorArgs(const std::vector<Arg>& neededPins)
     if (want != have) {
         pinnedArgs = neededPins;
         assignBuffers();
+#ifdef HAVE_CUDA
+        cudaGraphReset();  // buffers were re-planned under the recorded graph
+#endif
     }
 }
 
@@ -1579,6 +1588,14 @@ void Net::Impl::cudaDownloadArg(Arg arg, Mat& hostMat)
     }
 }
 
+void Net::Impl::cudaGraphReset()
+{
+    if (cudaGraphExec)
+        cudaGraphExecDestroy(cudaGraphExec);
+    cudaGraphExec = nullptr;
+    cudaGraphInputShapes.clear();
+}
+
 static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
                           const std::vector<Arg>& inputs, const std::vector<Arg>& outputs,
                           std::vector<Mat>& inpMats, std::vector<Mat>& outMats)
@@ -1699,7 +1716,47 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     }
 #endif
 
-    for (size_t opidx = 0; opidx < nops; opidx++) {
+    // A main graph running fully on CUDA with static shapes is recorded as one CUDA Graph on its
+    // second forward with the same input shapes, then replayed: one launch instead of one per kernel.
+    bool replay = false;
+#ifdef HAVE_CUDA
+    bool record = false;
+    // ends a recording that an exception interrupted, so the stream stays usable
+    struct EndCaptureOnError {
+        cudaStream_t stream = nullptr;
+        ~EndCaptureOnError() {
+            cudaGraph_t interrupted = nullptr;
+            if (stream && cudaStreamEndCapture(stream, &interrupted) == cudaSuccess && interrupted)
+                cudaGraphDestroy(interrupted);
+        }
+    } captureGuard;
+    if (isMainGraph && cudaPoolTemps && tracingMode == DNN_TRACE_NONE && profilingMode == DNN_PROFILE_NONE) {
+        std::vector<MatShape> inputShapes(n_gr_inputs);
+        for (i = 0; i < n_gr_inputs; i++)
+            inputShapes[i] = argTensor(gr_inputs[i]).shape();
+        if (inputShapes != cudaGraphInputShapes) {
+            cudaGraphReset();
+            cudaGraphInputShapes = inputShapes;
+        } else {
+            replay = cudaGraphExec != nullptr;
+            // a dynamic op reads values on the host mid-forward, which a recording cannot hold
+            record = !replay && std::none_of(prog.begin(), prog.end(), [](const Ptr<LayerInfo>& op) {
+                return op && op->dynamicOutputShapes();
+            });
+        }
+        if (replay || record) {
+            // the graph holds device work only, so the inputs are uploaded before it
+            for (i = 0; i < n_gr_inputs; i++)
+                cudaUploadArg(gr_inputs[i], argTensor(gr_inputs[i]));
+        }
+        if (record) {
+            CUDA4DNN_CHECK_CUDA(cudaStreamBeginCapture(cudaInfo->context.stream.get(), cudaStreamCaptureModeThreadLocal));
+            captureGuard.stream = cudaInfo->context.stream.get();
+        }
+    }
+#endif
+
+    for (size_t opidx = 0; !replay && opidx < nops; opidx++) {
         const Ptr<LayerInfo>& op = prog.at(opidx);
         if (!op) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
             continue;
@@ -1720,13 +1777,17 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         outMats.clear();
         outOrigData.clear();
 
+        // a dynamic op on CUDA is sized from its value inputs, read on the host: all but the
+        // first, or the only one of a single-input op such as ConstantOfShape
+        const bool dynamicOnCuda = opBackend == DNN_BACKEND_CUDA && op->dynamicOutputShapes();
+
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
 #ifdef HAVE_CUDA
             // CPU op: bring any device-resident input back to host before reading its
             // shape/data. This must happen before allocateLayerOutputs(), which may fit()
             // an in-place op's output onto this very buffer and rewrite its header.
-            if (opBackend != DNN_BACKEND_CUDA)
+            if (opBackend != DNN_BACKEND_CUDA || (dynamicOnCuda && (i > 0 || ninputs == 1)))
                 cudaDownloadArg(inp, argTensor(inp));
 #endif
             const Mat& m = argTensor(inp);
@@ -1743,7 +1804,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 traceArg(strm_, "Input", i, inp, false);
             }
         }
-        bool dynamicOutShapes = op->dynamicOutputShapes();
+        // with its value inputs on the host, a dynamic op on CUDA is allocated like a static one
+        bool dynamicOutShapes = op->dynamicOutputShapes() && !dynamicOnCuda;
         if (!dynamicOutShapes) {
             allocateLayerOutputs(op, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
@@ -2034,6 +2096,29 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    if (record) {
+        cudaGraph_t recorded = nullptr;
+        captureGuard.stream = nullptr;
+        CUDA4DNN_CHECK_CUDA(cudaStreamEndCapture(cudaInfo->context.stream.get(), &recorded));
+        const cudaError_t status = cudaGraphInstantiate(&cudaGraphExec, recorded, 0);
+        cudaGraphDestroy(recorded);
+        CUDA4DNN_CHECK_CUDA(status);
+    }
+    if (replay || record) {
+        // recording runs nothing, so the graph is launched for this forward too
+        CUDA4DNN_CHECK_CUDA(cudaGraphLaunch(cudaGraphExec, cudaInfo->context.stream.get()));
+        for (const Ptr<LayerInfo>& op : prog) {
+            if (!op)
+                continue;
+            for (const Arg& out : op->outputs) {
+                cudaArgDeviceDirty[out.idx] = 1;
+                cudaArgHostDirty[out.idx] = 0;
+            }
+        }
+    }
+#endif
 
     std::vector<Mat>& outputsVec = outputs_.getMatVecRef();
     outputsVec.resize(n_gr_outputs);

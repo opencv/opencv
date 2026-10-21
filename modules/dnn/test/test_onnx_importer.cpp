@@ -217,6 +217,24 @@ public:
             expectNoFallbacksFromIE(net);
     }
 
+    // forward() #1 runs eagerly, #2 records a CUDA Graph and #3 replays it; each must match the reference
+    void testONNXModelsRepeatedForward(const String& basename)
+    {
+        Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+        Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        checkBackend(&inp, &ref);
+        Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        const int forwards = 3;
+        for (int i = 1; i <= forwards; i++) {
+            net.setInput(inp);
+            Mat out = net.forward();
+            normAssert(ref, out, format("%s, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
+        }
+    }
+
     // Runs an SDPA ONNX model through the importer + SDPALayer and checks the
     // output against an in-test attention reference computed from the same inputs.
     void testSDPAModel(const String& basename, double l1, double lInf)
@@ -1195,14 +1213,21 @@ TEST_P(Test_ONNX_layers, MatMul_init_2)
 }
 TEST_P(Test_ONNX_layers, MatMul_init_bcast)
 {
-    // New-engine CUDA MatMul/GEMM does not yet cover this broadcast variant; skip for now.
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testONNXModels("matmul_init_bcast");
 }
 
 TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
     testONNXModels("matmul_bcast");
+}
+
+TEST_P(Test_ONNX_layers, MatMul_batch_bcast_repeated_forward)
+{
+    testONNXModelsRepeatedForward("matmul_batch_bcast");
+}
+
+TEST_P(Test_ONNX_layers, Shape_repeated_forward)
+{
+    testONNXModelsRepeatedForward("shape_scale_static");
 }
 
 // forwardInt<T> integer-accumulation path.
@@ -3549,7 +3574,11 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
 }
 
 TEST_P(Test_ONNX_layers, Attention) {
-    testONNXModels("attention");
+    // CUDA_FP16 keeps Q/K/V, the scores and the softmax output in half; same bound as ViT_B_32
+    if (target == DNN_TARGET_CUDA_FP16)
+        testONNXModels("attention", npy, 0.01, 0.06);
+    else
+        testONNXModels("attention");
 }
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
@@ -3565,7 +3594,14 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
     testONNXModels("pytorch_attention_single_head");
 }
 TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
-    testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
+    double l1 = 1e-4, lInf = 5e-4;
+    // CUDA FP16 computes the attention in half precision
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = default_l1;
+        lInf = default_lInf;
+    }
+    testONNXModels("attention_shared_shape_reshape", npy, l1, lInf);
 }
 
 // MultiHeadAttention `bias`/`key_padding_mask`, alone and together; BiasProjected feeds

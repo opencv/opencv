@@ -61,6 +61,7 @@ using namespace cv::dnn::ocl4dnn;
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/softmax.hpp"
+#include "../cuda4dnn/primitives/softmax_kernel.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -103,10 +104,6 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
-        if (backendId == DNN_BACKEND_CUDA)
-            return false;  // SoftmaxOp uses cudnnSoftmaxForward, absent in a JIT-only build
-#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
@@ -288,8 +285,19 @@ public:
         inputs_.getUMatVector(inputs);
         CV_Assert(!inputs.empty());
 
-        auto channel_axis = normalize_axis(axisRaw, cv::dnn::shape(inputs[0]).dims);
+        const int rank = cv::dnn::shape(inputs[0]).dims;
+        auto channel_axis = normalize_axis(axisRaw, rank);
+        // pre-opset-13 reduces the flattened tail [axis, rank), which is one axis only when axis is last
+        const bool flattenTail = coerced2d && channel_axis != rank - 1;
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        // a JIT-only build does not link cudnnSoftmaxForward, so use the hand-written kernel
+        return make_cuda_node<cuda4dnn::SoftmaxKernelOp>(preferableTarget, std::move(context->stream), channel_axis, logSoftMax, scale, flattenTail);
+#else
+        // the cuDNN SoftmaxOp has no scale and reduces one axis; the hand-written kernel does both
+        if (scale != 1.f || flattenTail)
+            return make_cuda_node<cuda4dnn::SoftmaxKernelOp>(preferableTarget, std::move(context->stream), channel_axis, logSoftMax, scale, flattenTail);
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
+#endif
     }
 #endif
 
