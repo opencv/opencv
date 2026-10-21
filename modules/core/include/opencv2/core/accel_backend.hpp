@@ -131,6 +131,14 @@ public:
 
     virtual Ptr<Stream> createStream(int device) = 0;
 
+    /** @brief Imports a Linux dma-buf of @p size bytes as device memory, without copying.
+    @p fd stays the caller's (dup() it to keep it). deallocate() releases the import. Returns
+    NULL when the device cannot import it, which is the default. */
+    virtual void* importDmaBuf(int device, int fd, size_t size);
+    /** @brief Exports allocate()'d or imported memory as a dma-buf: a new file descriptor that
+    the caller closes, or -1 when that is not possible, which is the default. */
+    virtual int exportDmaBuf(int device, void* ptr, size_t size);
+
     //! operations for @p module ("core", ...), or NULL when the backend has none
     virtual Ops* ops(const String& module);
 };
@@ -146,8 +154,37 @@ static inline void* devicePtr(const UMat& m)
     return m.u ? (void*)((uchar*)m.u->handle + m.offset) : 0;
 }
 
+/** @brief Entry point of a backend plugin.
+
+A plugin is a shared library built against the headers of the OpenCV version that loads it.
+It exports this function, which returns a new Backend, or NULL when @p major and @p minor are
+not the version it was built for. Define it with CV_ACCEL_DEFINE_PLUGIN. */
+typedef Backend* (*FN_opencv_core_accel_plugin_init_v1)(int major, int minor, int patch);
+#define CV_ACCEL_PLUGIN_INIT_NAME "opencv_core_accel_plugin_init_v1"
+
 //! @}
 
 }} // namespace cv::accel
+
+#if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#  define CV_ACCEL_PLUGIN_EXPORTS __declspec(dllexport)
+#elif defined __GNUC__ && __GNUC__ >= 4
+#  define CV_ACCEL_PLUGIN_EXPORTS __attribute__ ((visibility ("default")))
+#else
+#  define CV_ACCEL_PLUGIN_EXPORTS
+#endif
+
+/** @brief Defines the entry point of a backend plugin; @p expr creates its Backend.
+@code
+CV_ACCEL_DEFINE_PLUGIN(new MyBackend())
+@endcode */
+#define CV_ACCEL_DEFINE_PLUGIN(expr) \
+    extern "C" CV_ACCEL_PLUGIN_EXPORTS cv::accel::Backend* opencv_core_accel_plugin_init_v1(int major, int minor, int patch) \
+    { \
+        (void)patch; \
+        if (major != CV_VERSION_MAJOR || minor != CV_VERSION_MINOR) \
+            return 0; \
+        try { return (expr); } catch (...) { return 0; } \
+    }
 
 #endif // OPENCV_CORE_ACCEL_BACKEND_HPP

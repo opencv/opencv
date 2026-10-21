@@ -28,6 +28,8 @@ Device work is queued and runs asynchronously. The CPU waits where it needs the 
 
 namespace cv { namespace accel {
 
+class Stream;   // accel_backend.hpp
+
 //! @addtogroup core_accel
 //! @{
 
@@ -76,6 +78,11 @@ private:
 //! the device that holds @p m: empty for host memory, OpenCL buffers and other UMats
 CV_EXPORTS Device getDevice(const UMat& m);
 
+/** @brief A new in-order queue of work on @p device (see accel_backend.hpp), for ExecutionScope.
+Work on different streams may run concurrently. OpenCV orders the work of all streams that
+touch the same UMat. */
+CV_EXPORTS Ptr<Stream> createStream(const Device& device);
+
 /** @brief Runs this thread's cv:: calls on @p device.
 
 Inside the scope, cv:: calls with UMat arguments run on @p device whatever device their
@@ -86,16 +93,57 @@ class CV_EXPORTS ExecutionScope
 {
 public:
     explicit ExecutionScope(const Device& device);
+    //! as above, and the work of the calls is queued on @p stream, a stream of @p device
+    ExecutionScope(const Device& device, const Ptr<Stream>& stream);
     ~ExecutionScope();
 private:
     ExecutionScope(const ExecutionScope&);
     ExecutionScope& operator=(const ExecutionScope&);
     bool prevActive_;
     Device prev_;
+    const Ptr<Stream>* prevStream_;
+    Ptr<Stream> stream_;
 };
 
-//! blocks until all work queued on @p device has finished; throws the device's first error
+//! blocks until all work queued on @p device's default stream has finished; throws the device's first error
 CV_EXPORTS void synchronize(const Device& device);
+
+/** @brief Devices to try first for calls on memory shared with the CPU.
+
+Memory that NPUs, integrated GPUs and 2D engines share with the CPU can be reached by several
+of them. A call on such memory is offered to these devices in order (each reaches the memory
+through a dma-buf import, without copies), then to the device that holds it, then it runs on
+the CPU. The data stays where it is. Has no effect on memory the CPU reaches only through a copy
+(discrete GPUs). Empty by default. */
+CV_EXPORTS void setPreferredDevices(const std::vector<Device>& devices);
+CV_EXPORTS std::vector<Device> getPreferredDevices();
+
+/** @brief Wraps a Linux dma-buf (a camera frame, a decoder output, another device's buffer)
+into a UMat on @p device, without copying.
+
+@p fd stays the caller's; it may be closed after the call. The producer's writes must be
+finished. The UMat starts @p offset bytes into the buffer, with rows @p step bytes apart.
+Outputs of cv:: calls that are wrapped memory get their results copied in; they never move.
+Throws when @p device cannot import dma-bufs. */
+CV_EXPORTS UMat wrapDmaBuf(const Device& device, int fd, Size size, int type,
+                           size_t step = Mat::AUTO_STEP, size_t offset = 0);
+
+/** @brief Exports the memory of @p m as a dma-buf, without copying: a new file descriptor that
+the caller closes.
+
+The descriptor covers the whole buffer of @p m; m.offset and m.step locate @p m in it. OpenCV's
+work on @p m has finished when this returns. Do not use @p m while someone else writes the
+buffer. Throws when the device cannot export its memory. */
+CV_EXPORTS int exportDmaBuf(const UMat& m);
+
+/** @brief Loads a backend plugin, a shared library built with this OpenCV version (see
+CV_ACCEL_DEFINE_PLUGIN). Returns false when it cannot be loaded or was built for another version.
+
+Plugins named like libopencv_core_accel_<name>.so are also loaded on first use, from the
+directories in OPENCV_CORE_PLUGIN_PATH or, without it, from the directory of the OpenCV
+libraries. OPENCV_ACCEL_PLUGINS lists files to load instead; OPENCV_ACCEL_PLUGINS_ENABLE=0
+turns automatic loading off. */
+CV_EXPORTS bool loadPlugin(const String& path);
 
 /** @brief What to do when a cv:: call would copy data between the host and a device's
 memory without being asked to (an input that has to be uploaded, a result copied into a Mat,

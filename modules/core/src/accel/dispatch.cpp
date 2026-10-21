@@ -6,15 +6,18 @@
 
 // Non-CPU HAL: running a cv:: call on a device (OpCall).
 //
-// Where a call runs is decided by one fixed rule, never by how many bytes would move:
+// Where a call runs is decided by fixed rules, never by how many bytes would move:
 // the device of this thread's ExecutionScope, otherwise the device that holds the first UMat
 // input. Inputs elsewhere are copied to that device; outputs are created on it, or, when they
 // cannot move (a Mat, a region of a larger UMat, memory with its own allocator), get the result
-// copied in.
+// copied in. Memory shared with the CPU may be computed on by other devices: the preferred
+// devices are offered the call first, in their order, through imports of the same bytes.
 
 #include "../precomp.hpp"
 #include "../umatrix.hpp"
 #include "accel_impl.hpp"
+
+#include <algorithm>
 
 namespace cv { namespace accel { namespace detail {
 
@@ -80,6 +83,24 @@ bool createOn(UMat& m, Device::Impl* dev, const MatShape& shape, int type)
     }
     m.allocator = prev;
     return onDevice(m, dev);    // UMat::create falls back to the default allocator when the device is full
+}
+
+//! headers like @p umats over the imports of their bytes on @p dev; false when one cannot be shared
+bool aliasArgs(const std::vector<UMat>& umats, Device::Impl* dev, std::vector<UMat>& out)
+{
+    out.assign(umats.size(), UMat());
+    for (size_t i = 0; i < umats.size(); i++)
+    {
+        UMatData* a = aliasOn(umats[i].u, dev);
+        if (!a)
+            return false;
+        UMat h(umats[i]);                   // same size, steps and offset ...
+        CV_XADD(&h.u->urefcount, -1);       // ... (umats[i] keeps its buffer alive)
+        h.u = a;                            // over the alias
+        CV_XADD(&a->urefcount, 1);
+        out[i] = h;
+    }
+    return true;
 }
 
 } // namespace
@@ -187,14 +208,26 @@ bool OpCall::runImpl(const char* module, const std::function<bool(Ops*, std::vec
         return false;
     };
 
-    Ops* ops = dev->backend->ops(module);
-    if (!ops || mapped)
+    if (mapped)
         return fallback();
     if (copies && getTransferPolicy() == TRANSFER_FORBID)
         CV_Error_(Error::StsError, ("accel: %s on %s would copy data between host and device memory "
                                     "(TRANSFER_FORBID)", name_, dev->name.c_str()));
 
-    // 3. every argument in the device's memory
+    // the devices that may run it: for memory shared with the CPU, the preferred devices first
+    // (they reach it through an alias, the data stays where it is), then the device holding it
+    std::vector<Device::Impl*> candidates;
+    if (!scoped && dev->shared)
+        candidates = preferredDevices();
+    if (std::find(candidates.begin(), candidates.end(), dev) == candidates.end())
+        candidates.push_back(dev);
+    bool anyOps = false;
+    for (size_t c = 0; c < candidates.size() && !anyOps; c++)
+        anyOps = candidates[c]->backend->ops(module) != 0;
+    if (!anyOps)
+        return fallback();
+
+    // 3. every argument in the memory of that device
     std::vector<UMat> umats(n);
     for (size_t i = 0; i < n; i++)
     {
@@ -225,63 +258,79 @@ bool OpCall::runImpl(const char* module, const std::function<bool(Ops*, std::vec
         }
     }
 
-    // 4. run, after the device work the arguments wait for
-    Stream& s = dev->defaultStream();
-    for (size_t i = 0; i < n; i++)
+    // 4. offer the call to each candidate; one that declines has queued nothing
+    for (size_t c = 0; c < candidates.size(); c++)
     {
-        UMatDataAutoLock lock(umats[i].u);
-        orderOnStream(stateOf(umats[i].u), s, args_[i].isOutput);
-    }
-    bool done = false;
-    try
-    {
-        done = fn(ops, umats, s);
-    }
-    catch (...)
-    {
-        // work may have been queued before the error: later uses of the outputs wait for it
+        Device::Impl* cand = candidates[c];
+        Ops* ops = cand->backend->ops(module);
+        if (!ops)
+            continue;
+        std::vector<UMat> args;
+        if (cand == dev)
+            args = umats;
+        else if (!aliasArgs(umats, cand, args))
+            continue;
+
+        const Ptr<Stream>& s = currentStream(cand);
+        for (size_t i = 0; i < n; i++)
+        {
+            UMatData* od = owningData(args[i].u);
+            UMatDataAutoLock lock(od);
+            orderOnStream(stateOf(od), s, args_[i].isOutput);
+        }
+        bool done = false;
         try
         {
-            Ptr<Event> e = s.record();
-            for (size_t i = 0; i < n; i++)
+            done = fn(ops, args, *s);
+        }
+        catch (...)
+        {
+            // work may have been queued before the error: later uses of the outputs wait for it
+            try
             {
-                if (args_[i].isOutput)
+                Ptr<Event> e = s->record();
+                for (size_t i = 0; i < n; i++)
                 {
-                    UMatDataAutoLock lock(umats[i].u);
-                    recordUse(stateOf(umats[i].u), s, e, true);
+                    if (args_[i].isOutput)
+                    {
+                        UMatData* od = owningData(args[i].u);
+                        UMatDataAutoLock lock(od);
+                        recordUse(stateOf(od), s, e, true);
+                    }
+                }
+            }
+            catch (...) {}
+            throw;
+        }
+        if (!done)
+            continue;
+
+        Ptr<Event> e = s->record();
+        for (size_t i = 0; i < n; i++)
+        {
+            UMatData* od = owningData(args[i].u);
+            UMatDataAutoLock lock(od);
+            BufferState* st = stateOf(od);
+            recordUse(st, s, e, args_[i].isOutput);
+            if (args_[i].isOutput)
+            {
+                st->initialized = true;
+                if (!st->dev->shared)
+                {
+                    od->markHostCopyObsolete(true);
+                    od->markDeviceCopyObsolete(false);
                 }
             }
         }
-        catch (...) {}
-        throw;
-    }
-    if (!done)
-        return fallback();
+        countDeviceOp();
 
-    Ptr<Event> e = s.record();
-    for (size_t i = 0; i < n; i++)
-    {
-        UMatData* u = umats[i].u;
-        UMatDataAutoLock lock(u);
-        BufferState* st = stateOf(u);
-        recordUse(st, s, e, args_[i].isOutput);
-        if (args_[i].isOutput)
-        {
-            st->initialized = true;
-            if (!dev->shared)
-            {
-                u->markHostCopyObsolete(true);
-                u->markDeviceCopyObsolete(false);
-            }
-        }
+        // 5. results whose destination is elsewhere
+        for (size_t i = 0; i < n; i++)
+            if (plan[i] == PLAN_TEMP)
+                umats[i].copyTo(*args_[i].out);
+        return true;
     }
-    countDeviceOp();
-
-    // 5. results whose destination is elsewhere
-    for (size_t i = 0; i < n; i++)
-        if (plan[i] == PLAN_TEMP)
-            umats[i].copyTo(*args_[i].out);
-    return true;
+    return fallback();
 }
 
 OpCall::OpCall(const char* name) : name_(name ? name : "a call") {}

@@ -36,8 +36,8 @@ struct Device::Impl
     bool shared;                        // backend->sharesHostMemory(index)
     detail::DeviceAllocator* allocator; // lives as long as the process
 
-    //! the stream cv:: calls use on this device; created on first use, never destroyed
-    Stream& defaultStream();
+    //! the stream cv:: calls use on this device outside an ExecutionScope with a stream of its own
+    const Ptr<Stream>& defaultStream();
 
 private:
     std::mutex streamMutex_;
@@ -54,20 +54,32 @@ DEVICE_COPY_OBSOLETE for memory the CPU reaches through a copy (COPY_ON_MAP is s
 memory has one copy only; there the flags are unused.
 
 The events order device work against the CPU and against other streams: CPU reads wait for
-the last write, CPU writes and the release of the memory wait for the reads as well. All
-fields are protected by the UMatData lock.
+the last write, CPU writes and the release of the memory wait for the reads as well. Streams
+are held, so a stream is never confused with a later one at the same address. All fields are
+protected by the UMatData lock.
+
+Shared memory can be reached by other devices through a dma-buf (setPreferredDevices). Such
+an import is an alias: a UMatData of the other device over the same bytes, owned by this
+buffer and released with it. Device work on an alias is ordered by the events of the buffer it
+imports, so one set of events covers every device touching those bytes.
 */
 struct BufferState
 {
-    explicit BufferState(Device::Impl* d) : dev(d), initialized(false), mapped(false), mappedWrite(false), writeStream(0) {}
+    explicit BufferState(Device::Impl* d)
+        : dev(d), initialized(false), mapped(false), mappedWrite(false), imported(false), aliasOf(0) {}
 
     Device::Impl* dev;
     bool initialized;       // something was written into it; until then there is nothing to download
     bool mapped;            // Mat views exist (UMat::getMat)
     bool mappedWrite;       // ... and one of them may write
+    bool imported;          // memory of someone else (wrapDmaBuf)
     Ptr<Event> write;       // the last device work writing the buffer
-    Stream* writeStream;    // where it was queued (default streams live for the whole process)
-    std::vector<std::pair<Stream*, Ptr<Event> > > reads;   // last read per stream since that write
+    Ptr<Stream> writeStream;
+    std::vector<std::pair<Ptr<Stream>, Ptr<Event> > > reads;   // last read per stream since that write
+
+    UMatData* aliasOf;                  // in an alias: the buffer whose bytes it imports
+    std::vector<UMatData*> aliases;     // imports of these bytes on other devices
+    std::vector<Device::Impl*> refused; // devices that cannot import them
 };
 
 /*
@@ -98,6 +110,9 @@ public:
               const size_t srcofs[], const size_t srcstep[],
               const size_t dstofs[], const size_t dststep[], bool sync) const CV_OVERRIDE;
 
+    //! a buffer over an imported dma-buf of @p size bytes; NULL when the device cannot import it
+    UMatData* importDmaBuf(int fd, size_t size) const;
+
     Device::Impl* device() const { return dev_; }
 
 private:
@@ -107,25 +122,36 @@ private:
 //! the state of device memory; NULL for host memory, OpenCL buffers and other UMats
 BufferState* stateOf(const UMatData* u);
 bool isDeviceAllocator(const MatAllocator* a);
+//! the buffer whose events order work on @p u: @p u itself, or for an alias the buffer it imports
+UMatData* owningData(UMatData* u);
 
 //! the CPU waits for the device work its access conflicts with: writes, and reads too for @p write
 void waitOnCpu(BufferState* st, bool write);
 //! makes the work queued next on @p s wait for the device work it conflicts with
-void orderOnStream(BufferState* st, Stream& s, bool write);
+void orderOnStream(BufferState* st, const Ptr<Stream>& s, bool write);
 //! records that the work queued on @p s up to @p e reads, or for @p write writes, the buffer
-void recordUse(BufferState* st, Stream& s, const Ptr<Event>& e, bool write);
+void recordUse(BufferState* st, const Ptr<Stream>& s, const Ptr<Event>& e, bool write);
 //! UMat::handle(): the CPU waits for device work, so the caller's own work sees finished data
 void prepareHandle(UMatData* u, AccessFlag accessFlags);
+
+/** @brief An import of the bytes of shared memory @p u on device @p dev, made through a dma-buf
+on first use and kept with @p u. Returns @p u for its own device, NULL when the bytes cannot be
+shared with @p dev. */
+UMatData* aliasOn(UMatData* u, Device::Impl* dev);
 
 /** @brief Frees released device memory whose device work has finished.
 Memory released while device work still used it waits in a list; with @p wait the CPU
 waits for that work and frees everything. */
 void collectRetired(bool wait);
 
+//! the stream for work on @p dev: this thread's ExecutionScope stream there, otherwise the device's default stream
+const Ptr<Stream>& currentStream(Device::Impl* dev);
 //! for UMat::create: the allocator of this thread's device ExecutionScope, NULL otherwise
 MatAllocator* scopeAllocator();
 //! the device of this thread's ExecutionScope (NULL for a CPU scope); @p active tells whether a scope exists
 Device::Impl* scopeDevice(bool& active);
+//! setPreferredDevices(), in order
+std::vector<Device::Impl*> preferredDevices();
 
 void countCopy(CopyKind kind, size_t bytes);
 void countDeviceOp();
