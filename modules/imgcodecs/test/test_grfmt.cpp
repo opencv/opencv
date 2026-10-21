@@ -598,6 +598,51 @@ TEST(Imgcodecs_Pam, decode_graya_as_gray)
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
+typedef testing::TestWithParam<tuple<int, int> > Imgcodecs_Pfm_ReadMode;
+
+TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
+{
+    const int channels = get<0>(GetParam());
+    const int flags = get<1>(GetParam());
+    Mat image(3, 5, CV_MAKETYPE(CV_32F, channels));
+    RNG& rng = theRNG();
+    rng.fill(image, RNG::UNIFORM, 0, 255);
+
+    const int outputChannels = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYCOLOR)
+        ? channels : (flags & (IMREAD_COLOR | IMREAD_COLOR_RGB)) ? 3 : 1;
+    const int outputDepth = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYDEPTH)
+        ? CV_32F : CV_8U;
+    Mat expected;
+    if (channels == 3 && outputChannels == 1)
+        cvtColor(image, expected, COLOR_BGR2GRAY);
+    else if (channels == 1 && outputChannels == 3)
+        cvtColor(image, expected, COLOR_GRAY2BGR);
+    else if (channels == 3 && flags != IMREAD_UNCHANGED && (flags & IMREAD_COLOR_RGB))
+        cvtColor(image, expected, COLOR_BGR2RGB);
+    else
+        image.copyTo(expected);
+    expected.convertTo(expected, outputDepth);
+
+    vector<uchar> encoded;
+    ASSERT_TRUE(imencode(".pfm", image, encoded));
+    Mat decoded(expected.size(), expected.type());
+    const uchar* originalData = decoded.data;
+    Mat result = imdecode(encoded, flags, &decoded);
+    EXPECT_EQ(originalData, decoded.data);
+    EXPECT_EQ(decoded.data, result.data);
+
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(expected.type(), decoded.type());
+    ASSERT_EQ(expected.size(), decoded.size());
+    EXPECT_EQ(0, cvtest::norm(expected, decoded, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_ReadMode, testing::Combine(
+    testing::Values(1, 3),
+    testing::Values(IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB,
+                    IMREAD_ANYDEPTH | IMREAD_GRAYSCALE, IMREAD_ANYDEPTH | IMREAD_COLOR,
+                    IMREAD_ANYDEPTH | IMREAD_COLOR_RGB, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR)));
+
 TEST(Imgcodecs_Pfm, read_write)
 {
   Mat img = imread(findDataFile("readwrite/lena.pam"));
