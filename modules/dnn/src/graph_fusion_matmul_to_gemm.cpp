@@ -66,8 +66,7 @@ struct ModelFusionMatMulToGemm
     // Folds the per-channel Mul/Add chain after the MatMul into B and bias.
     // Returns the outputs the Gemm takes over.
     vector<Arg> foldChannelAffine(const vector<Ptr<LayerInfo>>& prog, const Ptr<LayerInfo>& layer,
-                                  const std::map<int, int>& consumer,
-                                  const std::set<int>& externalArgs, vector<int>& usecounts,
+                                  const std::map<int, int>& consumer, vector<int>& usecounts,
                                   vector<bool>& dropped, bool trans_b, int N,
                                   Mat& B, Mat& bias) const
     {
@@ -75,7 +74,8 @@ struct ModelFusionMatMulToGemm
         bool cloned = false;
         while (outputs.size() == 1) {
             const int out = outputs[0].idx;
-            if (usecounts[out] != 1 || externalArgs.count(out)) break;
+            // A graph output counts as a use, so this also skips MatMul results that are outputs.
+            if (usecounts[out] != 1) break;
             auto cit = consumer.find(out);
             if (cit == consumer.end() || dropped[cit->second]) break;
             const Ptr<LayerInfo>& c = prog[cit->second];
@@ -153,9 +153,6 @@ struct ModelFusionMatMulToGemm
 
         vector<int> usecounts;
         netimpl->useCounts(usecounts);
-        std::set<int> externalArgs;
-        for (Arg out : graph->outputs())
-            externalArgs.insert(out.idx);
         std::map<int, int> consumer;  // arg -> the op that uses it (read only when it has one user)
         for (size_t i = 0; i < nops; i++) {
             if (!prog[i]) continue;
@@ -202,7 +199,7 @@ struct ModelFusionMatMulToGemm
             Mat Bw = B, bias = have_bias ? layer->blobs[1] : Mat();
             vector<Arg> outputs = layer->outputs;
             if (mm->alpha == 1.f && mm->beta == 1.f)
-                outputs = foldChannelAffine(newprog, layer, consumer, externalArgs, usecounts,
+                outputs = foldChannelAffine(newprog, layer, consumer, usecounts,
                                             dropped, mm->trans_b, N, Bw, bias);
             have_bias = !bias.empty();
 
