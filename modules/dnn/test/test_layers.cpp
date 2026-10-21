@@ -1160,6 +1160,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Attention_v_hidden, Combine(
 // 600 tokens give three blocks of 256 keys, the last one partial
 TEST(Layer_Attention, flash_across_kv_blocks)
 {
+    ScopedNoMlas noMlas;
     const int B = 2, S = 600, C = 32, NH = 2, d = C / NH;
     std::vector<int> qkv_hidden_sizes = { C, C, C };
     Mat W(C, 3 * C, CV_32F), bias(std::vector<int>{3 * C}, CV_32F), x(std::vector<int>{B, S, C}, CV_32F);
