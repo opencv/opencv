@@ -21,8 +21,7 @@ TEST_P(CLAHE_Padding, reflected_border)
     // uses the same pixels as a standalone image, while preserving a row stride.
     Mat storage(size.height + 2, size.width + 3, type);
     Mat src = useRoi ? storage(Rect(3, 2, size.width, size.height)) : Mat(size, type);
-    RNG rng(0x12345678);
-    rng.fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
+    theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
 
     const int bottom = (grid.height - size.height % grid.height) % grid.height;
     const int right = (grid.width - size.width % grid.width) % grid.width;
