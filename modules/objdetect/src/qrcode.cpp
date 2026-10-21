@@ -2696,8 +2696,22 @@ void QRDecode::detectAlignment() {
             minMaxLoc(resTemplate, &minVal, &maxVal, &minLoc, &maxLoc);
             CV_LOG_DEBUG(NULL, "Alignment maxVal: " << maxVal);
             if (maxVal > 0.65) {
+                // Refine the maximum to sub-pixel precision with a parabolic fit through the
+                // neighbours. The marker is symmetric, so the correlation often has two (almost)
+                // equal maxima at adjacent pixels; the fit gives the position between them
+                // regardless of which one minMaxLoc happens to pick (rounding-dependent).
+                Point2f refined(maxLoc);
+                if (maxLoc.x > 0 && maxLoc.x < resTemplate.cols - 1 && maxLoc.y > 0 && maxLoc.y < resTemplate.rows - 1)
+                {
+                    float c = resTemplate.at<float>(maxLoc.y, maxLoc.x);
+                    float l = resTemplate.at<float>(maxLoc.y, maxLoc.x - 1), r = resTemplate.at<float>(maxLoc.y, maxLoc.x + 1);
+                    float u = resTemplate.at<float>(maxLoc.y - 1, maxLoc.x), d = resTemplate.at<float>(maxLoc.y + 1, maxLoc.x);
+                    float denx = l - 2*c + r, deny = u - 2*c + d;
+                    if (denx < 0) refined.x += std::max(-0.5f, std::min(0.5f, (l - r)/(2*denx)));
+                    if (deny < 0) refined.y += std::max(-0.5f, std::min(0.5f, (u - d)/(2*deny)));
+                }
                 const float templateOffset = static_cast<float>(resizedAlignmentMarker.size().width) / 2.f;
-                Point2f alignmentCoord(Point2f(maxLoc.x + left_top_x + templateOffset, maxLoc.y + left_top_y + templateOffset));
+                Point2f alignmentCoord(Point2f(refined.x + left_top_x + templateOffset, refined.y + left_top_y + templateOffset));
                 alignment_coords.push_back(alignmentCoord);
                 perspectiveTransform(alignment_coords, alignment_coords, homography.inv());
                 CV_LOG_DEBUG(NULL, "Alignment coords: " << alignment_coords);
