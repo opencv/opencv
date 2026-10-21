@@ -14,8 +14,11 @@ if(HAVE_WINRT_CX AND NOT WINRT)
 endif()
 
 if (HAVE_AVIF)
-  ocv_include_directories(${AVIF_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${AVIF_LIBRARY})
+  ocv_include_directories(${AVIF_INCLUDE_DIRS})
+  list(APPEND GRFMT_LIBS ${AVIF_LIBRARIES})
+  if(NOT (AVIF_VERSION VERSION_LESS "1.4.0")) # libavif v1.4.0+ supports 16 bit images.
+    add_definitions(-DOPENCV_IMGCODECS_AVIF_SUPPORT_16BIT=1)
+  endif()
 endif()
 
 if(HAVE_JPEG)

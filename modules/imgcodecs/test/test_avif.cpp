@@ -304,6 +304,50 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
                                             IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
+
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+class Imgcodecs_Avif_16bit : public testing::TestWithParam<int> {};
+
+TEST_P(Imgcodecs_Avif_16bit, encode_decode)
+{
+  const int quality = GetParam();
+  const int bit_depth = 16;
+
+  const string root = cvtest::TS::ptr()->get_data_path();
+  const string filename = root + "../cv/features2d/tsukuba.png";
+
+  cv::Mat src;
+  EXPECT_NO_THROW(src = cv::imread(filename));
+  ASSERT_FALSE(src.empty());
+
+  EXPECT_NO_THROW(src.convertTo(src, CV_16UC3, 65536.0 / 255.0));
+
+  std::vector<uint8_t> buf;
+  EXPECT_NO_THROW(imencode(".avif", src, buf, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality}));
+
+  cv::Mat dst;
+  EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_UNCHANGED));
+  ASSERT_FALSE(dst.empty());
+
+  const float norm = cvtest::norm(dst, src, NORM_L2) /
+                     src.channels() / src.cols / src.rows /
+                     (1 << (bit_depth - 8));
+
+  switch ( quality ) {
+    case 100: EXPECT_EQ(norm,  0); break; // lossless
+    case  50: EXPECT_LE(norm, 10); break;
+    case   0: EXPECT_LE(norm, 13); break;
+    default:  ADD_FAILURE() << "Unknown quality setting: " << quality; break;
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(
+  Imgcodecs_AVIF, Imgcodecs_Avif_16bit,
+  testing::Values(0, 50, 100) // Quality
+);
+#endif // OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+
+
 }  // namespace
 }  // namespace opencv_test
 
