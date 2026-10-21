@@ -555,7 +555,7 @@ public:
                     endptr = ptr + (c == '-' || c == '+');
                     while( cv_isdigit(*endptr) )
                         endptr++;
-                    if( *endptr == '.' || *endptr == 'e' )
+                    if( *endptr == '.' || *endptr == 'e' || *endptr == 'E' )
                     {
                         double fval = fs->strtod( ptr, &endptr );
                         elem->setValue(FileNode::REAL, &fval);

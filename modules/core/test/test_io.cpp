@@ -2229,4 +2229,31 @@ INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json", ".xml.gz", ".xml.gz0", ".xml.gz9")
 );
 
+TEST(Core_InputOutput, filestorage_read_uppercase_exponent)
+{
+    // JSON, YAML and XML all allow an upper-case exponent marker. A number whose
+    // mantissa has no '.' was only read as a real for a lower-case 'e', so "1E5"
+    // was read as the integer 1 followed by stray "E5".
+    const char* contents[] = {
+        "{\n  \"a\": 1E5,\n  \"b\": -3E-2,\n  \"c\": 1e5\n}\n",
+        "%YAML:1.0\n---\na: 1E5\nb: -3E-2\nc: 1e5\n",
+        "<?xml version=\"1.0\"?>\n<opencv_storage>\n<a>1E5</a>\n<b>-3E-2</b>\n<c>1e5</c>\n</opencv_storage>\n",
+    };
+    for (const char* content : contents)
+    {
+        SCOPED_TRACE(content);
+        double a = 0, b = 0, c = 0;
+        ASSERT_NO_THROW({
+            FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+            EXPECT_TRUE(fs["a"].isReal());
+            fs["a"] >> a;
+            fs["b"] >> b;
+            fs["c"] >> c;
+        });
+        EXPECT_EQ(1e5, a);
+        EXPECT_EQ(-3e-2, b);
+        EXPECT_EQ(1e5, c);
+    }
+}
+
 }} // namespace
