@@ -336,12 +336,6 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     const bool needResize = dst_width != width || dst_height != height;
     const bool swap = swapRB && channels >= 3;
 
-    // NCHW 8U -> 32F with resize and without mean/scale: the multi-pass IPP path loses to
-    // the OpenCV loop that does deinterleave + convert in a single pass
-    if (layout == cv::DATA_LAYOUT_NCHW && depth == CV_8U && ddepth == CV_32F
-        && channels > 1 && needResize && !needMeanScale)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
     cv::Mat resized, bordered, tmp;
     for (int i = 0; i < nimages; ++i)
     {
