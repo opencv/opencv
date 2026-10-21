@@ -628,6 +628,54 @@ TEST(Core_InputOutput, FileStorage_unbalanced_endWriteStruct)
     EXPECT_EQ(1, (int)reader["m"]["k"]);
 }
 
+// A throwing destructor terminates the process, so these tests end the run if the exception escapes.
+TEST(Core_InputOutput, FileStorage_write_struct_context_closed_by_hand)
+{
+    cv::FileStorage fs("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    {
+        cv::internal::WriteStructContext ctx(fs, "m", cv::FileNode::MAP);
+        fs.endWriteStruct();  // the destructor of ctx finds nothing to close
+    }
+    fs.write("k", 1);
+    cv::FileStorage reader(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    ASSERT_TRUE(reader["m"].isMap());
+    EXPECT_EQ(1, (int)reader["k"]);
+}
+
+TEST(Core_InputOutput, FileStorage_base64_write_vector_with_empty_name)
+{
+    // the emitter rejects the empty key of the delayed sequence, then the destructor of the context finds nothing to close
+    const std::vector<int> vec(3, 1);
+    cv::FileStorage fs("dummy.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY | cv::FileStorage::BASE64);
+    EXPECT_THROW(cv::write(fs, "", vec), cv::Exception);
+    fs.write("k", 1);
+    cv::FileStorage reader(fs.releaseAndGetString(), cv::FileStorage::READ | cv::FileStorage::MEMORY);
+    EXPECT_EQ(1, (int)reader["k"]);
+}
+
+TEST(Core_InputOutput, FileStorage_destructor_with_rejected_delayed_sequence)
+{
+    // the delayed sequence has an empty key, so the first release in the destructor throws
+    const char* const exts[] = { ".yml", ".json", ".xml" };
+    for (const char* ext : exts)
+    {
+        const std::string fname = cv::tempfile(ext);
+        SCOPED_TRACE(fname);
+        {
+            cv::FileStorage fs(fname, cv::FileStorage::WRITE | cv::FileStorage::BASE64);
+            fs.write("a", 1);
+            fs.write("b", 2);
+            fs.startWriteStruct("", cv::FileNode::SEQ);
+        }
+        {
+            cv::FileStorage reader(fname, cv::FileStorage::READ);  // a JSON file without its closing bracket throws here
+            EXPECT_EQ(1, (int)reader["a"]);
+            EXPECT_EQ(2, (int)reader["b"]);
+        }
+        EXPECT_EQ(0, remove(fname.c_str()));  // fails on Windows if the file is still open
+    }
+}
+
 struct data_t
 {
     typedef uchar  u;

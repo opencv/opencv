@@ -460,7 +460,25 @@ FileStorage::Impl::Impl(FileStorage *_fs) {
 }
 
 FileStorage::Impl::~Impl() {
-    release();
+    // workaround() in release() can throw before the rest of the file is written;
+    // it drops the delayed structure first, so a second call finishes the file
+    for (int attempt = 0; attempt < 2 && is_opened; attempt++)
+    {
+        try
+        {
+            release();
+        }
+        catch (const std::exception& e)
+        {
+            CV_LOG_WARNING(NULL, "Exception in FileStorage destructor: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_WARNING(NULL, "Unknown exception in FileStorage destructor");
+        }
+    }
+    // release() leaves the file open if both calls throw
+    closeFile();
 }
 
 void FileStorage::Impl::release(String *out) {
@@ -2844,7 +2862,18 @@ WriteStructContext::WriteStructContext(FileStorage& _fs, const std::string& name
 
 WriteStructContext::~WriteStructContext()
 {
-    fs->endWriteStruct();
+    try
+    {
+        fs->endWriteStruct();
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "Exception in WriteStructContext destructor: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "Unknown exception in WriteStructContext destructor");
+    }
 }
 
 }
