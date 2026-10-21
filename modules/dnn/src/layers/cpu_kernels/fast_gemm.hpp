@@ -249,6 +249,9 @@ void fastGemmBatch(size_t batch,
                    int M, int N, int K, float alpha, const Mat&A, int lda0, int lda1,
                    const Mat&B, int ldb0, int ldb1, float beta, Mat&C, int ldc, FastGemmOpt &opt);
 
+// AArch64: fastGemmThinPackB packs B in strips this many columns wide for fastGemmThinKernel.
+static constexpr int FAST_GEMM_THIN_NEON_W = 16;
+
 bool fastGemmThinEligible(int M, int N, int K);
 size_t fastGemmThinPackBSize(int N, int K);
 void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B);
