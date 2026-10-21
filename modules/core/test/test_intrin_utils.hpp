@@ -2336,7 +2336,7 @@ void test_hal_intrin_int64()
 }
 
 //============= Floating point =====================================================================
-void test_v_round_float32()
+static void test_v_round_float32()
 {
     static const float inputValues[] = {
         -2.5f, -3.5f, -2.6f, -2.4f, 2.5f, 3.5f, 2.6f, 2.4f,
