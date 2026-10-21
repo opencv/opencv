@@ -303,12 +303,16 @@ void PoseSolver::rot2vec(InputArray _R, OutputArray _r)
     Mat rvec = _r.getMat();
 
     double trace = R.at<double>(0, 0) + R.at<double>(1, 1) + R.at<double>(2, 2);
-    double w_norm = std::acos((trace - 1.0) / 2.0);
+    double w_norm = std::acos(std::min(std::max((trace - 1.0) / 2.0, -1.0), 1.0));
     double eps = std::numeric_limits<float>::epsilon();
     double d = 1 / (2 * std::sin(w_norm)) * w_norm;
     if (w_norm < eps) //rotation is the identity
     {
         rvec.setTo(0);
+    }
+    else if (std::sin(w_norm) < 1e-5) //close to 180 degrees, the axis can't be read from R - R^T
+    {
+        Rodrigues(R, rvec);
     }
     else
     {

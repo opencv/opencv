@@ -2318,4 +2318,30 @@ TEST(AP3P, ctheta1p_nan_23607)
     }
 }
 
+TEST(Calib3d_SolvePnP, regression_30402)
+{
+    // A tag seen exactly head-on: the pose has a 180 degree rotation about X.
+    const double L = 0.05;
+    std::vector<Point3d> objectPoints = {
+        Point3d(-L,  L, 0), Point3d( L,  L, 0), Point3d( L, -L, 0), Point3d(-L, -L, 0)
+    };
+    Matx33d intrinsics(800, 0, 320,
+                       0, 800, 240,
+                       0, 0, 1);
+    Vec3d rvecGT(CV_PI, 0, 0), tvecGT(0, 0, 0.5);
+
+    std::vector<Point2d> imagePoints;
+    projectPoints(objectPoints, rvecGT, tvecGT, intrinsics, noArray(), imagePoints);
+
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnP(objectPoints, imagePoints, intrinsics, noArray(), rvec, tvec,
+                         false, SOLVEPNP_IPPE_SQUARE));
+
+    Mat R, RGT;
+    cv::Rodrigues(rvec, R);
+    cv::Rodrigues(rvecGT, RGT);
+    EXPECT_LE(cvtest::norm(R, RGT, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1e-6);
+}
+
 }} // namespace
