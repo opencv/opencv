@@ -120,11 +120,9 @@ MatShape convInferShape(const MatShape& inpShape, const MatShape& wshape,
     return outshape;
 }
 
-struct SpatialDim { int ksize, inpsz, stride, dilation; };
-
-static inline void getPadding(const std::vector<int>& pads,
-                              int dim, int nspatialdims, AutoPadding autoPad,
-                              const SpatialDim& d, int& pad0, int& pad1)
+void getPadding(const std::vector<int>& pads,
+                 int dim, int nspatialdims, AutoPadding autoPad,
+                 const SpatialDim& d, int& pad0, int& pad1)
 {
     CV_Assert(0 <= dim && dim < nspatialdims);
 

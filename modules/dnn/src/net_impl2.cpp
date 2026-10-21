@@ -621,8 +621,13 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         }
         if (!graphOnCuda) {
             cudaExecs.clear();
-            CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: graph '%s' has layer(s) without CUDA support; "
-                                         "running the whole graph on CPU", graph->name().c_str()));
+            const Ptr<LayerInfo>& blocker = prog[i];
+            const char* reason = blocker->subgraphs() ? "has subgraphs"
+                               : blocker->dynamicOutputShapes() ? "has dynamic output shapes"
+                               : "has no CUDA exec";
+            CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: graph '%s': op '%s' (%s) %s; "
+                                         "running the whole graph on CPU", graph->name().c_str(),
+                                         blocker->name.c_str(), blocker->type.c_str(), reason));
         }
     }
     if (graph == mainGraph)

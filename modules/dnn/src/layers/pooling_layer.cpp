@@ -69,6 +69,7 @@ using namespace cv::dnn::ocl4dnn;
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/pooling.hpp"
+#include "../cuda4dnn/primitives/average_pooling.hpp"
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
@@ -429,6 +430,21 @@ public:
             return Ptr<BackendNode>();
         }
 
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        if (type == AVE)
+        {
+            const int nspatial = (int)kernel_size.size();
+            cuda4dnn::AveragePoolingConfiguration apconfig;
+            apconfig.kernel_shape.assign(std::begin(kernel_size), std::end(kernel_size));
+            apconfig.strides.assign(std::begin(strides), std::end(strides));
+            apconfig.pads.assign(std::begin(pads_begin), std::end(pads_begin));
+            apconfig.pads.insert(apconfig.pads.end(), std::begin(pads_end), std::end(pads_end));
+            apconfig.dilations.assign(nspatial, 1);
+            apconfig.count_include_pad = avePoolPaddedArea;
+            return make_cuda_node<cuda4dnn::AveragePoolingOp>(preferableTarget, std::move(context->stream), apconfig);
+        }
+#endif
+
         if (input_shape.size() == 3)
         {
             // Pool1D
@@ -489,7 +505,8 @@ public:
 
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
 
-        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->stream),
+                                                   std::move(context->cudnn_handle), config);
     }
 #endif
 

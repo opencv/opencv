@@ -284,6 +284,10 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE
     {
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        if (backendId == DNN_BACKEND_CUDA)
+            return false;  // LSTMOp needs the legacy cuDNN RNN API, absent in a JIT-only build
+#endif
         return backendId == DNN_BACKEND_OPENCV
                || (backendId == DNN_BACKEND_CUDA && isDefaultActivations && !reverse && !usePeephole);
     }

@@ -116,6 +116,12 @@ static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_p
     return nSpatChunks;
 }
 
+struct SpatialDim { int ksize, inpsz, stride, dilation; };
+
+void getPadding(const std::vector<int>& pads,
+                 int dim, int nspatialdims, AutoPadding autoPad,
+                 const SpatialDim& d, int& pad0, int& pad1);
+
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,
                          const float* scale, const float* bias);
