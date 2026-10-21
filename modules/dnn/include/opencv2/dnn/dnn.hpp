@@ -645,12 +645,14 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputBlobs contains all output blobs for specified layer.
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
-         *  @note A single Mat or UMat receives a copy into its storage, which can be
-         *  overwritten when reused in a later call. In C++, Mat elements returned in a
-         *  `std::vector<Mat>` may share storage with internal network buffers. UMat
-         *  elements may share storage when using the OpenCL target. Such shared outputs
-         *  may be overwritten by subsequent calls to `forward()`; use `clone()` to
-         *  preserve them.
+         *  @note When @p outputBlobs is a single `Mat`, it may share storage
+         *  with internal network buffers and may be overwritten by subsequent
+         *  calls to `forward()`. When it is a single `UMat`, the output is copied
+         *  into the provided storage. In C++, `Mat` elements returned in a
+         *  `std::vector<Mat>` may share storage with internal network buffers.
+         *  `UMat` elements may share storage when using the OpenCL target.
+         *  Such shared outputs may be overwritten by subsequent calls to
+         *  `forward()`; use `clone()` to preserve them.
          */
         CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
