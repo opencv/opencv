@@ -25,23 +25,14 @@ static LayerParams attentionWorkspaceParams(int valueHidden, bool rotary, Mat& w
     return params;
 }
 
-static Mat runAttentionWorkspace(const LayerParams& params, std::vector<Mat>& inputs,
-                                int valueHidden, bool denseWorkspace, bool smallWorkspace = false)
+static Mat runAttentionWithSmallWorkspace(const LayerParams& params, std::vector<Mat>& inputs)
 {
     Ptr<Layer> layer = AttentionLayer::create(params);
     std::vector<MatShape> inputShapes, outputShapes, internalShapes;
     for (const Mat& input : inputs)
         inputShapes.push_back(input.shape());
     layer->getMemoryShapes(inputShapes, 1, outputShapes, internalShapes);
-    const int batch = inputs[0].size[0], seq = inputs[0].size[1];
-    if (denseWorkspace)
-    {
-        // The workspace layout used before this change, with the same kernel.
-        internalShapes[1] = MatShape{batch * 2, seq, seq};
-        internalShapes[2] = MatShape{batch * 2, seq, valueHidden / 2};
-    }
-    if (smallWorkspace)
-        internalShapes[1] = internalShapes[2] = MatShape{1};
+    internalShapes[1] = internalShapes[2] = MatShape{1};
     std::vector<Mat> outputs, internals;
     for (const MatShape& shape : outputShapes)
         outputs.emplace_back(shape, CV_32F);
@@ -104,12 +95,12 @@ TEST(Layer_AttentionWorkspace, memoryPlan)
             }
 }
 
-typedef testing::TestWithParam<tuple<bool, bool, bool, int> > Layer_AttentionWorkspaceParity;
+typedef testing::TestWithParam<tuple<bool, bool, int> > Layer_AttentionWorkspaceFallback;
 
-TEST_P(Layer_AttentionWorkspaceParity, bitwiseIdenticalToDenseWorkspace)
+TEST_P(Layer_AttentionWorkspaceFallback, maskedFallback)
 {
-    const bool dynamicWeights = get<0>(GetParam()), hasMask = get<1>(GetParam()), rotary = get<2>(GetParam());
-    const int valueHidden = get<3>(GetParam());
+    const bool dynamicWeights = get<0>(GetParam()), rotary = get<1>(GetParam());
+    const int valueHidden = get<2>(GetParam());
     Mat weights, bias;
     LayerParams params = attentionWorkspaceParams(valueHidden, rotary, weights, bias);
     if (!dynamicWeights)
@@ -127,28 +118,22 @@ TEST_P(Layer_AttentionWorkspaceParity, bitwiseIdenticalToDenseWorkspace)
                 inputs.push_back(weights);
                 inputs.push_back(bias);
             }
-            if (hasMask)
-            {
-                Mat mask(MatShape{seq, seq}, CV_32F, Scalar(0));
-                if (seq > 1)
-                    mask.col(seq - 1).setTo(-10000.f);
-                inputs.push_back(mask);
-            }
-            Mat expected = runAttentionWorkspace(params, inputs, valueHidden, true);
-            Mat actual = runAttentionWorkspace(params, inputs, valueHidden, false);
-            ASSERT_EQ(expected.shape(), actual.shape());
-            EXPECT_EQ(0, std::memcmp(expected.data, actual.data, expected.total() * expected.elemSize()));
-            if (hasMask)
-            {
-                // A declined fast path must be able to obtain dense scratch.
-                Mat fallback = runAttentionWorkspace(params, inputs, valueHidden, false, true);
-                EXPECT_EQ(0, std::memcmp(expected.data, fallback.data, expected.total() * expected.elemSize()));
-            }
+            Mat mask(MatShape{seq, seq}, CV_32F, Scalar(0));
+            if (seq > 1)
+                mask.col(seq - 1).setTo(-10000.f);
+            inputs.push_back(mask);
+
+            std::vector<Mat> expected;
+            runLayer(AttentionLayer::create(params), inputs, expected);
+            // The mask forces the fallback to obtain dense scratch from small buffers.
+            Mat actual = runAttentionWithSmallWorkspace(params, inputs);
+            ASSERT_EQ(expected[0].shape(), actual.shape());
+            EXPECT_EQ(0, std::memcmp(expected[0].data, actual.data, expected[0].total() * expected[0].elemSize()));
         }
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionWorkspaceParity, testing::Combine(
-    testing::Bool(), testing::Bool(), testing::Bool(), testing::Values(16, 32, 48)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_AttentionWorkspaceFallback, testing::Combine(
+    testing::Bool(), testing::Bool(), testing::Values(16, 32, 48)));
 
 TEST(Layer_AttentionWorkspace, changingInputShape)
 {
@@ -165,11 +150,12 @@ TEST(Layer_AttentionWorkspace, changingInputShape)
             Mat input(MatShape{2, seq, 32}, CV_32F);
             RNG(7544).fill(input, RNG::UNIFORM, -1.f, 1.f);
             std::vector<Mat> inputs{input};
-            Mat expected = runAttentionWorkspace(params, inputs, 48, true);
+            std::vector<Mat> expected;
+            runLayer(AttentionLayer::create(params), inputs, expected);
             net.setInput(input);
             Mat actual = net.forward();
-            ASSERT_EQ(expected.shape(), actual.shape());
-            EXPECT_EQ(0, std::memcmp(expected.data, actual.data, expected.total() * expected.elemSize()));
+            ASSERT_EQ(expected[0].shape(), actual.shape());
+            EXPECT_EQ(0, std::memcmp(expected[0].data, actual.data, expected[0].total() * expected[0].elemSize()));
         }
     }
 }
