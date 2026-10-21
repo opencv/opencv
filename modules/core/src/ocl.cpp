@@ -7068,15 +7068,15 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf, size_t buf
     if( sdepth == ddepth )
         return "noconvert";
     const char *typestr = typeToStr(CV_MAKETYPE(ddepth, cn));
-    if( ddepth >= CV_32F ||
+    if( CV_IS_FLOAT_TYPE(ddepth) ||
         (ddepth == CV_32S && sdepth < CV_32S) ||
         (ddepth == CV_16S && sdepth <= CV_8S) ||
         (ddepth == CV_16U && sdepth == CV_8U))
     {
         snprintf(buf, buf_size, "convert_%s", typestr);
     }
-    else if( sdepth >= CV_32F )
-        snprintf(buf, buf_size, "convert_%s%s_rte", typestr, (ddepth < CV_32S ? "_sat" : ""));
+    else if( CV_IS_FLOAT_TYPE(sdepth) )
+        snprintf(buf, buf_size, "convert_%s_sat_rte", typestr);
     else
         snprintf(buf, buf_size, "convert_%s_sat", typestr);
 
