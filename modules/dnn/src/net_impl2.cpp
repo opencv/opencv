@@ -619,7 +619,7 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         // a dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
         // argTensor(), i.e. the host copies forwardGraph() downloads before the op runs
         static const std::set<std::string> hostSizedDynamicOps = {
-            "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
+            "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2", "Resize2", "Range"
         };
         // Shape and the small ops on its values run on the host, so the dynamic ops they size never wait for the device
         static const std::set<std::string> hostShapeOpTypes = {

@@ -53,6 +53,44 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             __device__ static std::int64_t apply(float v) { return __float2ll_rz(v); }
         };
 
+        // 8-bit outputs saturate like the CPU's saturate_cast; integer sources need no rounding
+        template <class TIn>
+        struct Converter<std::uint8_t, TIn> {
+            __device__ static std::uint8_t apply(TIn v) {
+                const long long x = static_cast<long long>(v);
+                return static_cast<std::uint8_t>(x < 0 ? 0 : (x > 255 ? 255 : x));
+            }
+        };
+
+        template <class TIn>
+        struct Converter<std::int8_t, TIn> {
+            __device__ static std::int8_t apply(TIn v) {
+                const long long x = static_cast<long long>(v);
+                return static_cast<std::int8_t>(x < -128 ? -128 : (x > 127 ? 127 : x));
+            }
+        };
+
+        // float truncates toward zero first, as the CPU Cast does; NaN saturates like saturate_cast(INT_MIN)
+        template <>
+        struct Converter<std::uint8_t, float> {
+            __device__ static std::uint8_t apply(float v) {
+                if (isnan(v))
+                    return 0;
+                const float t = truncf(v);
+                return static_cast<std::uint8_t>(t < 0.f ? 0.f : (t > 255.f ? 255.f : t));
+            }
+        };
+
+        template <>
+        struct Converter<std::int8_t, float> {
+            __device__ static std::int8_t apply(float v) {
+                if (isnan(v))
+                    return -128;
+                const float t = truncf(v);
+                return static_cast<std::int8_t>(t < -128.f ? -128.f : (t > 127.f ? 127.f : t));
+            }
+        };
+
         template <class TOut, class TIn>
         __global__ void cast(Span<TOut> output, View<TIn> input) {
             for (auto i : grid_stride_range(output.size()))
@@ -86,5 +124,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void cast(const Stream&, Span<float>, View<std::int32_t>);
     template void cast(const Stream&, Span<float>, View<std::int64_t>);
     template void cast(const Stream&, Span<float>, View<float>);
+
+#define CV_CUDA_CAST_8BIT(T8) \
+    template void cast(const Stream&, Span<T8>, View<bool>); \
+    template void cast(const Stream&, Span<T8>, View<std::int32_t>); \
+    template void cast(const Stream&, Span<T8>, View<std::int64_t>); \
+    template void cast(const Stream&, Span<T8>, View<float>); \
+    template void cast(const Stream&, Span<T8>, View<std::uint8_t>); \
+    template void cast(const Stream&, Span<T8>, View<std::int8_t>); \
+    template void cast(const Stream&, Span<bool>, View<T8>); \
+    template void cast(const Stream&, Span<std::int32_t>, View<T8>); \
+    template void cast(const Stream&, Span<std::int64_t>, View<T8>); \
+    template void cast(const Stream&, Span<float>, View<T8>);
+    CV_CUDA_CAST_8BIT(std::uint8_t)
+    CV_CUDA_CAST_8BIT(std::int8_t)
+#undef CV_CUDA_CAST_8BIT
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

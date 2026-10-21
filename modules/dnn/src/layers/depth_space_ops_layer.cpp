@@ -18,6 +18,7 @@
 
 // CUDA backend
 #ifdef HAVE_CUDA
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../cuda4dnn/primitives/depth_space_ops.hpp"
 #endif
@@ -57,6 +58,21 @@ struct DepthSpaceOps {
         umat_transposed_internal_strides.release();
 #endif
     }
+
+#ifdef HAVE_CUDA
+    static bool cudaSupported(const LayerInfo* op) {
+        Net::Impl* netimpl_ = getNetImpl(op);
+        // classic-engine nets carry no graph args to inspect
+        if (!netimpl_ || op->inputs.empty())
+            return true;
+        // an intermediate arg has no type or shape until the first forward; refuse only a known unsupported one
+        const ArgData& inp = netimpl_->argData(op->inputs[0]);
+        if (inp.shape.dims >= 0 && inp.shape.dims != 4)
+            return false;
+        const int t = inp.type;
+        return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+    }
+#endif
 
     void cpuCompute(const Mat &input, Mat &output) {
         const auto output_shape = shape(output);
@@ -136,6 +152,10 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return cudaSupported(this);
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CUDA   ||
@@ -215,12 +235,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
-                              const std::vector<Ptr<BackendWrapper>>& inputs,
-                              const std::vector<Ptr<BackendWrapper>>& outputs) override {
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) override {
         using namespace cv::dnn::cuda4dnn;
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<size_t> perm(permutation.begin(), permutation.end());
-        return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
+        return make_cuda_node_with_type<cuda4dnn::DepthSpaceOps>(preferableTarget, inputs_arr.depth(0),
+                                                                 std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
 
@@ -330,6 +351,10 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return cudaSupported(this);
+#endif
         // The CANN and TimVX nodes take no mode and always lay the output out as DCR.
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
@@ -404,12 +429,13 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
-                              const std::vector<Ptr<BackendWrapper>> &inputs,
-                              const std::vector<Ptr<BackendWrapper>> &outputs) override {
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) override {
         using namespace cv::dnn::cuda4dnn;
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<size_t> perm(permutation.begin(), permutation.end());
-        return make_cuda_node<cuda4dnn::DepthSpaceOps>(preferableTarget, std::move(context->stream), internal_shape, perm);
+        return make_cuda_node_with_type<cuda4dnn::DepthSpaceOps>(preferableTarget, inputs_arr.depth(0),
+                                                                 std::move(context->stream), internal_shape, perm);
     }
 #endif // HAVE_CUDA
 

@@ -115,8 +115,12 @@ public:
             if (inType >= 0 && inType == outType)
                 return isCudaNodeType(inType);
             // an intermediate arg has no type until the first forward; check only the known side(s)
-            auto castable = [](int t) { return t < 0 || t == CV_Bool || t == CV_32S || t == CV_64S || t == CV_32F; };
+            auto castable = [](int t) { return t < 0 || t == CV_Bool || t == CV_32S || t == CV_64S || t == CV_32F ||
+                                               t == CV_8U || t == CV_8S; };
             if (!castable(inType) || !castable(outType))
+                return false;
+            // an unknown output type still has to match the static 'to' attribute
+            if (outType < 0 && toCvDepth_ >= 0 && !castable(resolveStorageDepth(toCvDepth_, false)))
                 return false;
             // the FP16 target stores float as half, which has no CastOp instantiation; an unknown type may be float
             return netimpl_->preferableTarget != DNN_TARGET_CUDA_FP16 ||
@@ -147,6 +151,8 @@ public:
         case CV_32S: return makeCastFrom<int32_t>(outDepth, std::move(context->stream));
         case CV_64S: return makeCastFrom<int64_t>(outDepth, std::move(context->stream));
         case CV_32F: return makeCastFrom<float>(outDepth, std::move(context->stream));
+        case CV_8U: return makeCastFrom<uint8_t>(outDepth, std::move(context->stream));
+        case CV_8S: return makeCastFrom<int8_t>(outDepth, std::move(context->stream));
         }
         CV_Error(Error::BadDepth, "Cast: unsupported input type on CUDA");
         return Ptr<BackendNode>();
@@ -161,6 +167,8 @@ public:
         case CV_32S: return Ptr<BackendNode>(new cuda4dnn::CastOp<int32_t, TIn>(std::move(stream)));
         case CV_64S: return Ptr<BackendNode>(new cuda4dnn::CastOp<int64_t, TIn>(std::move(stream)));
         case CV_32F: return Ptr<BackendNode>(new cuda4dnn::CastOp<float, TIn>(std::move(stream)));
+        case CV_8U: return Ptr<BackendNode>(new cuda4dnn::CastOp<uint8_t, TIn>(std::move(stream)));
+        case CV_8S: return Ptr<BackendNode>(new cuda4dnn::CastOp<int8_t, TIn>(std::move(stream)));
         }
         CV_Error(Error::BadDepth, "Cast: unsupported output type on CUDA");
         return Ptr<BackendNode>();

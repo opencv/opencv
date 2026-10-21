@@ -40,6 +40,7 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -67,6 +68,18 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
+#endif
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // classic-engine nets carry no graph args to inspect
+            if (!netimpl_ || inputs.empty())
+                return true;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || t == CV_Bool || t == CV_32F || t == CV_16F || t == CV_8S ||
+                   t == CV_8U || t == CV_32S || t == CV_64S;
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -179,15 +192,16 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_arr,
+        InputArrayOfArrays
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        if (inputs[0]->getHostMatDepth() == CV_Bool)
+        const int depth = inputs_arr.depth(0);
+        if (depth == CV_Bool)
             return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
         else
-            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream));
+            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, depth, std::move(context->stream));
     }
 #endif
 };

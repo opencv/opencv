@@ -114,7 +114,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto loops = input.size_range(0, axis);
             auto norm_size = input.size_range(axis, input.rank());
-            if (norm_size == 1) {
+            // the optional Mean/InvStdDev outputs still need the statistics
+            if (norm_size == 1 && outputs.size() == 1) {
                 kernels::fill<T>(stream, output, 0.f);
                 return;
             }
@@ -131,6 +132,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, bias, mean, inv_stddev, norm_size);
             else
                 kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, inv_stddev, norm_size);
+
+            // ONNX Mean and InvStdDev are float per row, which is what the scratch holds
+            if (outputs.size() >= 2 && !outputs[1].empty())
+                csl::memcpy<float>(csl::spanOf<float>(outputs[1]).get(), mean.data(), loops, stream);
+            if (outputs.size() >= 3 && !outputs[2].empty())
+                csl::memcpy<float>(csl::spanOf<float>(outputs[2]).get(), inv_stddev.data(), loops, stream);
         }
 
         std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }

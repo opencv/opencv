@@ -41,8 +41,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <class T>
         __global__ void reciprocal(Span<T> output, T epsilon) {
+            // a zero slice scales to 0; in half, eps underflows to 0 and 1/0 would give 0 * inf = NaN
             for (auto idx : grid_stride_range(output.size()))
-                output[idx] = T(1) / (output[idx] + epsilon);
+                output[idx] = output[idx] == T(0) ? T(0) : T(1) / (output[idx] + epsilon);
         }
 
         template <class T>
@@ -60,7 +61,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         __global__ void rsqrt(Span<T> output, T epsilon) {
             for (auto idx : grid_stride_range(output.size())) {
                 using device::sqrt;
-                output[idx] = T(1) / sqrt(output[idx] + epsilon);
+                // a zero slice scales to 0; in half, eps underflows to 0 and 1/0 would give 0 * inf = NaN
+                output[idx] = output[idx] == T(0) ? T(0) : T(1) / sqrt(output[idx] + epsilon);
             }
         }
 
@@ -115,9 +117,51 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         launch_kernel(scale_kernel, policy, output, input, mid_size * inner_size, inner_size, sums);
     }
 
+    namespace raw {
+        template <class T>
+        __global__ void lrn_across_channels(Span<T> output, View<T> input, size_type channels, size_type plane_size,
+                                            int radius, float alpha_scaled, float bias, float beta)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                const index_type p = i % plane_size;
+                const index_type c = (i / plane_size) % channels;
+                const index_type n = i / (plane_size * channels);
+                const index_type c0 = c - radius < 0 ? 0 : c - radius;
+                const index_type c1 = c + radius >= channels ? channels - 1 : c + radius;
+
+                // same window as the CPU ChannelLRN, accumulated in float
+                float s = 0.f;
+                for (index_type k = c0; k <= c1; k++) {
+                    const float v = static_cast<float>(input[(n * channels + k) * plane_size + p]);
+                    s += v * v;
+                }
+                const float x = static_cast<float>(input[i]);
+                output[i] = static_cast<T>(x * powf(bias + alpha_scaled * s, -beta));
+            }
+        }
+    }
+
+    template <class T>
+    void lrn_across_channels(
+        const Stream& stream,
+        Span<T> output, View<T> input,
+        std::size_t batch, std::size_t channels, std::size_t plane_size,
+        int radius, float alpha_scaled, float bias, float beta)
+    {
+        CV_Assert(output.size() == input.size());
+        CV_Assert(output.size() == batch * channels * plane_size);
+        if (output.size() == 0)
+            return;
+        auto kernel = raw::lrn_across_channels<T>;
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, input, channels, plane_size, radius, alpha_scaled, bias, beta);
+    }
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void normalize(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t, std::size_t, std::size_t, __half, Span<__half>);
+    template void lrn_across_channels(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t, std::size_t, int, float, float, float);
 #endif
+    template void lrn_across_channels(const Stream&, Span<float>, View<float>, std::size_t, std::size_t, std::size_t, int, float, float, float);
     template void normalize(const Stream&, Span<float>, View<float>, std::size_t, std::size_t, std::size_t, std::size_t, float, Span<float>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

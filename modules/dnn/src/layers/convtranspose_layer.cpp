@@ -12,6 +12,11 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/conv_transpose2.hpp"
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -95,6 +100,81 @@ public:
     {
         return inptype0;
     }
+
+    // compute actual pads for SAME/VALID auto-padding, or from an explicit output_shape
+    std::vector<int> resolvePads(const MatShape& inpshape, const MatShape& outshape,
+                                 const MatShape& wshape, int nsd) const
+    {
+        std::vector<int> pads_resolved = pads;
+        if (auto_pad != AUTO_PAD_NONE || !explicit_out_shape.empty()) {
+            pads_resolved.resize(nsd * 2, 0);
+            for (int i = 0; i < nsd; i++) {
+                int inpsz   = inpshape[2 + i];
+                int outsz   = outshape[2 + i];
+                int adj_i   = adjust_pads.empty() ? 0 : adjust_pads[i];
+                int stride  = strides.empty() ? 1 : strides[i];
+                int dil     = dilations.empty() ? 1 : dilations[i];
+                int ki      = wshape[2 + i];
+                int total   = (inpsz - 1) * stride + dil * (ki - 1) + 1 + adj_i - outsz;
+                total = std::max(total, 0);
+                // ONNX splits total_padding evenly; odd pixel goes last for SAME_UPPER.
+                int pb = (auto_pad == AUTO_PAD_SAME_UPPER) ? total / 2 : total - total / 2;
+                pads_resolved[i]       = pb;
+                pads_resolved[nsd + i] = total - pb;
+            }
+        }
+        return pads_resolved;
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // ConvTranspose2Op reads weights and bias as device inputs
+            if (!netimpl_ || inputs.size() < 2 || inputs.size() > 3)
+                return false;
+            // 2-D and FP32 only; the FP16 target keeps the CPU path
+            if (netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
+            const int xdims = netimpl_->argData(inputs[0]).shape.dims;
+            const int wdims = netimpl_->argData(inputs[1]).shape.dims;
+            if ((xdims >= 0 && xdims != 4) || (wdims >= 0 && wdims != 4))
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            for (const Arg& a : inputs) {
+                const int t = a.empty() ? -1 : netimpl_->argData(a).type;
+                if (t >= 0 && t != CV_32F)
+                    return false;
+            }
+            return true;
+        }
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int nsd = 2;
+
+        cuda4dnn::ConvTranspose2Configuration config;
+        config.input_shape = inputs_arr.shape(0);
+        config.weight_shape = inputs_arr.shape(1);
+        config.output_shape = outputs_arr.shape(0);
+        config.groups = ngroups;
+        // same pads as the CPU path; output_padding only grows the end, which the output shape carries
+        std::vector<int> pads_resolved = resolvePads(config.input_shape, config.output_shape, config.weight_shape, nsd);
+        for (int i = 0; i < nsd; i++) {
+            config.strides.push_back(strides.empty() ? 1 : strides[i]);
+            config.dilations.push_back(dilations.empty() ? 1 : dilations[i]);
+            config.pads_begin.push_back(pads_resolved.empty() ? 0 : pads_resolved[i]);
+        }
+        return make_cuda_node<cuda4dnn::ConvTranspose2Op>(preferableTarget, std::move(context->stream),
+                                                          std::move(context->cublas_handle), config);
+    }
+#endif
 
     virtual void setWeights(InputArray weights_arr, InputArray bias_arr,
                             int C0, int /*accuracy*/) CV_OVERRIDE
@@ -518,26 +598,8 @@ public:
                                              pads, adjust_pads, auto_pad);
         applyExplicitOutShape(outshape);
 
-        // compute actual pads for SAME/VALID auto-padding, or from an explicit output_shape
-        int nsd = inpshape.dims - 3;
-        std::vector<int> pads_resolved = pads;
-        if (auto_pad != AUTO_PAD_NONE || !explicit_out_shape.empty()) {
-            pads_resolved.resize(nsd * 2, 0);
-            for (int i = 0; i < nsd; i++) {
-                int inpsz   = inpshape[2 + i];
-                int outsz   = outshape[2 + i];
-                int adj_i   = adjust_pads.empty() ? 0 : adjust_pads[i];
-                int stride  = strides.empty() ? 1 : strides[i];
-                int dil     = dilations.empty() ? 1 : dilations[i];
-                int ki      = wshape0[2 + i];
-                int total   = (inpsz - 1) * stride + dil * (ki - 1) + 1 + adj_i - outsz;
-                total = std::max(total, 0);
-                // ONNX splits total_padding evenly; odd pixel goes last for SAME_UPPER.
-                int pb = (auto_pad == AUTO_PAD_SAME_UPPER) ? total / 2 : total - total / 2;
-                pads_resolved[i]       = pb;
-                pads_resolved[nsd + i] = total - pb;
-            }
-        }
+        // block layout: N, C/C0, spatial..., C0
+        std::vector<int> pads_resolved = resolvePads(inpshape, outshape, wshape0, inpshape.dims - 3);
 
         int outtype = inferType(inptype);
 

@@ -34,6 +34,24 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // classic-engine nets carry no graph args to inspect
+            if (!netimpl_ || this->inputs.empty())
+                return true;
+            if (this->inputs.size() != 3)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            for (const Arg& a : this->inputs) {
+                const int ta = netimpl_->argData(a).type;
+                if ((ta >= 0 && ta != CV_32F && ta != CV_16F) || (ta >= 0 && t >= 0 && ta != t))
+                    return false;
+            }
+            return true;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA;
     }
@@ -175,12 +193,11 @@ public:
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
-                          const std::vector<Ptr<BackendWrapper>>& inputs,
-                          const std::vector<Ptr<BackendWrapper>>& outputs) override {
+                          InputArrayOfArrays inputs_arr,
+                          InputArrayOfArrays) CV_OVERRIDE {
     auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-    auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-    auto input_shape = input_wrapper->getShape();
+    const MatShape input_shape = inputs_arr.shape(0);
     size_t N = input_shape[0];
     size_t num_groups = this->num_groups;
     size_t loops = N * num_groups;

@@ -17,9 +17,8 @@
 #include "../csl/tensor.hpp"
 #include "../csl/tensor_ops.hpp"
 
-#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+// max pooling with left padding uses the hand kernel in every build
 #include "../kernels/max_unpooling.hpp"
-#endif
 
 #include <opencv2/core.hpp>
 
@@ -181,13 +180,21 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 if (std::any_of(std::begin(padding_left), std::end(padding_left), is_not_zero))
                 {
 #if !defined(HAVE_CUDNNJIT) || defined(HAVE_CUDNN)
-                    /* there is padding on the left and we are forced to transform */
-                    auto transformed_input_shape = input_shape;
-                    for (int i = 0; i < rank; i++)
-                        transformed_input_shape[i] += padding_left[i] + padding_right[i];
+                    // the transform pads with zeros, which wins a max over negative borders; the index kernel skips them
+                    if (config.poolMode == PoolingConfiguration::PoolingMode::MAX)
+                    {
+                        useIndexKernel = true;
+                    }
+                    else
+                    {
+                        /* there is padding on the left and we are forced to transform */
+                        auto transformed_input_shape = input_shape;
+                        for (int i = 0; i < rank; i++)
+                            transformed_input_shape[i] += padding_left[i] + padding_right[i];
 
-                    transformedInput.resize(std::begin(transformed_input_shape), std::end(transformed_input_shape));
-                    inputTransformer = csl::TensorTransform<T>(cudnnHandle, padding_left, padding_right);
+                        transformedInput.resize(std::begin(transformed_input_shape), std::end(transformed_input_shape));
+                        inputTransformer = csl::TensorTransform<T>(cudnnHandle, padding_left, padding_right);
+                    }
 #endif
                 }
             }
@@ -237,12 +244,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 #if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
             // JIT builds route average pooling to AveragePoolingOp, so only MAX reaches here
             CV_Assert(config.poolMode == PoolingConfiguration::PoolingMode::MAX);
-            poolWindow.assign(std::begin(window_size), std::end(window_size));
-            poolStrides.assign(std::begin(strides), std::end(strides));
-            for (std::size_t i = 0; i < window_size.size(); i++)
-                poolPadsBegin.push_back(common_padding[i + 2] + padding_left[i + 2]);
-#else
-            pooler = csl::Pooling<T>(cudnnHandle, params);
+            useIndexKernel = true;
+#endif
+            if (useIndexKernel)
+            {
+                poolWindow.assign(std::begin(window_size), std::end(window_size));
+                poolStrides.assign(std::begin(strides), std::end(strides));
+                for (std::size_t i = 0; i < window_size.size(); i++)
+                    poolPadsBegin.push_back(common_padding[i + 2] + padding_left[i + 2]);
+            }
+#if !defined(HAVE_CUDNNJIT) || defined(HAVE_CUDNN)
+            else
+            {
+                pooler = csl::Pooling<T>(cudnnHandle, params);
+            }
 #endif
         }
 
@@ -256,11 +271,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto input = csl::viewOf<T>(inputs[0]);
             auto output = csl::spanOf<T>(outputs[0]);
 
-#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
             CV_UNUSED(workspace);
-            kernels::max_pooling_with_indices<T, std::int64_t>(stream, output, csl::TensorSpan<std::int64_t>(), input,
-                                                               poolWindow, poolStrides, poolPadsBegin);
-#else
+            if (useIndexKernel)
+            {
+                kernels::max_pooling_with_indices<T, std::int64_t>(stream, output, csl::TensorSpan<std::int64_t>(), input,
+                                                                   poolWindow, poolStrides, poolPadsBegin);
+                return;
+            }
+#if !defined(HAVE_CUDNNJIT) || defined(HAVE_CUDNN)
             if (!transformedInput.empty())
             {
                 inputTransformer.transform(input, transformedInput);
@@ -275,9 +293,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         csl::cudnn::Handle cudnnHandle;
 
-#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        // max pooling through the hand kernel: always in JIT builds, for left padding in full cuDNN builds
+        bool useIndexKernel = false;
         std::vector<std::size_t> poolWindow, poolStrides, poolPadsBegin;
-#else
+#if !defined(HAVE_CUDNNJIT) || defined(HAVE_CUDNN)
         csl::Pooling<T> pooler;
 
         csl::Tensor<T> transformedInput;

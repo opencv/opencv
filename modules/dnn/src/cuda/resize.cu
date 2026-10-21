@@ -242,4 +242,76 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 #endif
     template void resize_bilinear<float>(const Stream&, TensorSpan<float>, TensorView<float>, float, float, bool);
 
+    namespace raw {
+        template <class T>
+        __global__ void resize_separable(Span<T> output, View<T> input, size_type in_h, size_type in_w,
+                                         size_type out_h, size_type out_w,
+                                         View<int> idx_y, View<float> w_y, View<int> oob_y, int taps_y,
+                                         View<int> idx_x, View<float> w_x, View<int> oob_x, int taps_x,
+                                         float extrapolation_value)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                const index_type ox = i % out_w;
+                const index_type oy = (i / out_w) % out_h;
+                const index_type plane = i / (out_w * out_h);
+                if (oob_y[oy] || oob_x[ox]) {
+                    output[i] = static_cast<T>(extrapolation_value);
+                    continue;
+                }
+                const index_type in_plane = plane * in_h * in_w;
+                float acc = 0.f;
+                for (int ky = 0; ky < taps_y; ky++) {
+                    const int iy = idx_y[oy * taps_y + ky];
+                    if (iy < 0)
+                        continue;
+                    float row = 0.f;
+                    for (int kx = 0; kx < taps_x; kx++) {
+                        const int ix = idx_x[ox * taps_x + kx];
+                        if (ix < 0)
+                            continue;
+                        row += w_x[ox * taps_x + kx] * static_cast<float>(input[in_plane + iy * in_w + ix]);
+                    }
+                    acc += w_y[oy * taps_y + ky] * row;
+                }
+                output[i] = static_cast<T>(acc);
+            }
+        }
+    }
+
+    template <class T>
+    void resize_separable(const Stream& stream, TensorSpan<T> output, TensorView<T> input,
+                          View<int> idx_y, View<float> w_y, View<int> oob_y, int taps_y,
+                          View<int> idx_x, View<float> w_x, View<int> oob_x, int taps_x,
+                          float extrapolation_value)
+    {
+        CV_Assert(input.rank() == output.rank() && input.rank() >= 2);
+        const auto out_h = output.get_axis_size(-2), out_w = output.get_axis_size(-1);
+        const auto in_h = input.get_axis_size(-2), in_w = input.get_axis_size(-1);
+        CV_Assert(input.size() / (in_h * in_w) == output.size() / (out_h * out_w));
+        CV_Assert(idx_y.size() == out_h * taps_y && idx_x.size() == out_w * taps_x);
+        if (output.size() == 0)
+            return;
+
+        auto kernel = raw::resize_separable<T>;
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, Span<T>(output.get(), output.size()), View<T>(input.get(), input.size()),
+                      in_h, in_w, out_h, out_w, idx_y, w_y, oob_y, taps_y, idx_x, w_x, oob_x, taps_x,
+                      extrapolation_value);
+    }
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template void resize_separable<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+#endif
+    template void resize_separable<float>(const Stream&, TensorSpan<float>, TensorView<float>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+    template void resize_separable<int8_t>(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+    template void resize_separable<uint8_t>(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+    template void resize_separable<int32_t>(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+    template void resize_separable<int64_t>(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>,
+        View<int>, View<float>, View<int>, int, View<int>, View<float>, View<int>, int, float);
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

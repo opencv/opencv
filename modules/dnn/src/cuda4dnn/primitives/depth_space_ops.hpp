@@ -40,17 +40,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
-        void forward(const std::vector<cv::Ptr<BackendWrapper>> &inputs,
-                     const std::vector<cv::Ptr<BackendWrapper>> &outputs,
+        void forward(const std::vector<UMat> &inputs,
+                     const std::vector<UMat> &outputs,
                      csl::Workspace &workspace) override {
             CV_CheckEQ(inputs.size(), size_t(1), "DepthSpaceOps: only one input is accepted");
             CV_CheckEQ(outputs.size(), size_t(1), "DepthSpaceOps: only one output is accepted");
 
-            auto input_wrapper = inputs.front().dynamicCast<wrapper_type>();
-            auto input = input_wrapper->getView();
+            auto input = csl::viewOf<T>(inputs.front());
             CV_CheckEQ(input.rank(), size_t(4), "DepthSpaceOps: input needs to be 4-dimensional [N, C, H, W]");
-            auto output_wrapper = outputs.front().dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs.front());
             auto ws_allocator = csl::WorkspaceAllocator(workspace);
             auto transposed_internal = ws_allocator.get_tensor_span<T>(transposed_internal_shape.begin(), transposed_internal_shape.end());
 

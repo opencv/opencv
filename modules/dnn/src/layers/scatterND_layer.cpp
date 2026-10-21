@@ -6,6 +6,11 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/scatter_nd.hpp"
+#endif
 
 #include <algorithm> // for std::max & std::min
 
@@ -44,9 +49,38 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // the CUDA kernel only overwrites, it has no reduction
+            if (!netimpl_ || this->inputs.size() != 3 || reduction != REDUCTION::NONE)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            const int it = netimpl_->argData(this->inputs[1]).type;
+            if (it >= 0 && it != CV_32S && it != CV_64S)
+                return false;
+            return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && reduction == REDUCTION::NONE);
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        if (inputs_arr.depth(1) == CV_32S)
+            return make_cuda_node_with_indices<cuda4dnn::ScatterNDOp, int32_t>(preferableTarget, inputs_arr.type(0),
+                                                                                std::move(context->stream));
+        CV_CheckDepthEQ(inputs_arr.depth(1), CV_64S, "ScatterND: indices must be int32 or int64");
+        return make_cuda_node_with_indices<cuda4dnn::ScatterNDOp, int64_t>(preferableTarget, inputs_arr.type(0),
+                                                                            std::move(context->stream));
+    }
+#endif
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,

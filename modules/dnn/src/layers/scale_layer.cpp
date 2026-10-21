@@ -11,6 +11,7 @@ Implementation of Scale layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -80,6 +81,20 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return axis > 0;
+#endif
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // classic-engine nets carry no graph args to inspect
+            if (!netimpl_ || inputs.empty())
+                return true;
+            // the UMat forward of ScaleShiftOp takes constant scale/shift blobs only
+            if (blobs.empty() || inputs.size() != 1)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F;
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -214,13 +229,13 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_arr,
+        InputArrayOfArrays
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        CV_Assert(!blobs.empty() || inputs.size() == 2);
+        CV_Assert(!blobs.empty() || inputs_arr.total() == 2);
 
         auto weightsMat = Mat(), biasMat = Mat();
 

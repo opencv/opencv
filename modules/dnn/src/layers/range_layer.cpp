@@ -6,6 +6,11 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/range.hpp"
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -72,8 +77,29 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || this->inputs.size() != 3)
+                return false;
+            // a dynamic op on CUDA gets inputs 1.. downloaded before sizing; start must already be on the host
+            if (!netimpl_->isConstArg(this->inputs[0]))
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        return make_cuda_node_with_type<cuda4dnn::RangeOp>(preferableTarget, inputs_arr.depth(0), std::move(context->stream));
+    }
+#endif
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
@@ -122,8 +148,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!dynamicOutputShapes());
-
+        // a dynamic Range is sized here only on CUDA, after its value inputs reach the host
         CV_Assert(inputs.size() == (size_t)3);
         CV_Assert(inputs.size() == this->inputs.size());
         Net::Impl* netimpl_ = getNetImpl(this);

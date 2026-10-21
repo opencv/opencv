@@ -9,6 +9,8 @@
 
 #include "math.hpp"
 
+#include <type_traits>
+
 #include "../cuda4dnn/csl/nvcc_defs.hpp"
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
@@ -849,6 +851,62 @@ struct FModFunctor {
         using csl::device::fmod;
         return fmod(x, y);
     }
+};
+
+// ONNX PRelu with a broadcast slope: y is the slope
+template <class T>
+struct PReluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE PReluFunctor() { }
+    CUDA4DNN_DEVICE PReluFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        // an unsigned value is never negative, so PRelu passes it through
+        if constexpr (std::is_unsigned<T>::value)
+            return x;
+        else
+            return x >= T(0) ? x : T(x * y);
+    }
+};
+
+// bitwise functors are instantiated for integer types only
+template <class T>
+struct BitAndFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE BitAndFunctor() { }
+    CUDA4DNN_DEVICE BitAndFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x & y; }
+};
+
+template <class T>
+struct BitOrFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE BitOrFunctor() { }
+    CUDA4DNN_DEVICE BitOrFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x | y; }
+};
+
+template <class T>
+struct BitXorFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE BitXorFunctor() { }
+    CUDA4DNN_DEVICE BitXorFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) { return x ^ y; }
 };
 
 template <class T>

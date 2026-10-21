@@ -53,6 +53,30 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         const T slope;
     };
 
+    // ONNX Clip: min/max may arrive as extra inputs, so only input 0 is data
+    template <class T>
+    class ClipOp final : public CUDABackendNode {
+    public:
+        ClipOp(csl::Stream stream_, float min_, float max_)
+            : stream(std::move(stream_)), min{ static_cast<T>(min_) }, max{ static_cast<T>(max_) } { }
+
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(!inputs.empty() && outputs.size() == 1);
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto output = csl::spanOf<T>(outputs[0]);
+            kernels::clipped_relu<T>(stream, output, input, min, max);
+        }
+
+    private:
+        csl::Stream stream;
+        const T min, max;
+    };
+
     template <class T>
     class ClippedReLUOp final : public BaseOp<ClippedReLUOp, T> {
     public:

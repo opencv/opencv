@@ -8,6 +8,10 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 #include "../onnx/onnx_dtype_convert.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/quantize_dequantize.hpp"
+#endif
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -499,6 +503,27 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            const size_t ninputs = this->inputs.size();
+            // the kernel reads the scale and writes the output as float32, which the FP16 target stores as half
+            if (!netimpl_ || ninputs < 2 || ninputs > 3 || block_size != 0 ||
+                netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int xt = netimpl_->argData(this->inputs[0]).type;
+            const int st = netimpl_->argData(this->inputs[1]).type;
+            if (st >= 0 && st != CV_32F)
+                return false;
+            if (ninputs == 3) {
+                const int zt = netimpl_->argData(this->inputs[2]).type;
+                if (xt >= 0 && zt >= 0 && zt != xt)
+                    return false;
+            }
+            return xt < 0 || xt == CV_8S || xt == CV_8U;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
@@ -526,6 +551,20 @@ public:
         outputs.assign(requiredOutputs, keep);
         return 0;
     }
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        CV_CheckDepthEQ(inputs_arr.depth(1), CV_32F, "DequantizeLinear: CUDA reads the scale as float");
+        // the kernel is only instantiated for the two 8-bit inputs
+        if (inputs_arr.depth(0) == CV_8S)
+            return Ptr<BackendNode>(new cuda4dnn::DequantizeLinearOp<int8_t>(std::move(context->stream), axis));
+        CV_CheckDepthEQ(inputs_arr.depth(0), CV_8U, "DequantizeLinear: CUDA reads int8 or uint8 only");
+        return Ptr<BackendNode>(new cuda4dnn::DequantizeLinearOp<uint8_t>(std::move(context->stream), axis));
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,

@@ -7,6 +7,10 @@
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/one_hot.hpp"
+#endif
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
 #include <atomic>
@@ -30,8 +34,51 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // depth sizes the output and off/on are baked into the node; a runtime read would break graph capture
+            if (!netimpl_ || this->inputs.size() != 3 ||
+                !netimpl_->isConstArg(this->inputs[1]) || !netimpl_->isConstArg(this->inputs[2]))
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int it = netimpl_->argData(this->inputs[0]).type;
+            if (it >= 0 && it != CV_32S && it != CV_64S)
+                return false;
+            const int t = netimpl_->argData(this->inputs[2]).type;
+            return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Net::Impl* netimpl_ = getNetImpl(this);
+        CV_Assert(netimpl_ && netimpl_->isConstArg(this->inputs[2]));
+        double offVal = 0., onVal = 1.;
+        Mat values = netimpl_->argTensor(this->inputs[2]);
+        if (!values.empty()) {
+            CV_Assert(values.total() == 2);
+            Mat values64;
+            values.convertTo(values64, CV_64F);
+            offVal = values64.ptr<double>()[0];
+            onVal = values64.ptr<double>()[1];
+        }
+        if (inputs_arr.depth(0) == CV_32S)
+            return make_cuda_node_with_indices<cuda4dnn::OneHotOp, int32_t>(preferableTarget, outputs_arr.type(0),
+                                                                             std::move(context->stream), axis,
+                                                                             offVal, onVal, false);
+        CV_CheckDepthEQ(inputs_arr.depth(0), CV_64S, "OneHot: CUDA reads int32 or int64 indices only");
+        return make_cuda_node_with_indices<cuda4dnn::OneHotOp, int64_t>(preferableTarget, outputs_arr.type(0),
+                                                                         std::move(context->stream), axis,
+                                                                         offVal, onVal, false);
+    }
+#endif
 
 private:
     bool getConstPositiveDepth(int& depthOut) const

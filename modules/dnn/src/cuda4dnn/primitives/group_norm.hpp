@@ -36,19 +36,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
-        void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-                     const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        void forward(const std::vector<UMat>& inputs,
+                     const std::vector<UMat>& outputs,
                      csl::Workspace& workspace) override {
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto scale_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
+            CV_Assert(inputs.size() == 3 && outputs.size() == 1);
 
-            auto input = input_wrapper->getView();
-            auto scale = scale_wrapper->getView();
-            auto bias = bias_wrapper->getView();
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto scale = csl::viewOf<T>(inputs[1]);
+            auto bias = csl::viewOf<T>(inputs[2]);
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs[0]);
 
             auto C = input.get_axis_size(1);
             auto loops = input.size_range(0, 2);

@@ -24,8 +24,14 @@ static inline void clampFloatChunkDispatch(const float* src, float* dst,
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/interface.h>
+
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/activation.hpp"
+#endif
 #include <limits>
 #include <cfloat>
 #include <cmath>
@@ -113,8 +119,47 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty() || inputs.size() > 3)
+                return false;
+            // initCUDA reads min/max on the host
+            for (size_t i = 1; i < inputs.size(); i++)
+                if (!inputs[i].empty() && !netimpl_->isConstArg(inputs[i]))
+                    return false;
+            // clipped_relu is float/half only; an intermediate arg has no type until the first forward
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays, InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Net::Impl* netimpl_ = getNetImpl(this);
+        CV_Assert(netimpl_);
+
+        // same bounds as forward(): const inputs win over attributes, then the float range
+        auto constScalar = [&](size_t i, double& v) {
+            if (inputs.size() <= i || inputs[i].empty())
+                return false;
+            Mat tmp;
+            netimpl_->argTensor(inputs[i]).convertTo(tmp, CV_64F);
+            CV_Assert(tmp.total() == 1);
+            v = tmp.at<double>(0);
+            return true;
+        };
+        double lo = hasMin ? minValue : -FLT_MAX, hi = hasMax ? maxValue : FLT_MAX;
+        constScalar(1, lo);
+        constScalar(2, hi);
+        CV_Assert(lo <= hi);
+        return make_cuda_node<cuda4dnn::ClipOp>(preferableTarget, std::move(context->stream), (float)lo, (float)hi);
+    }
+#endif
 
     // Clip rewrites values in place of the input layout.
     virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
