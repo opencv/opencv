@@ -82,22 +82,12 @@ public:
     {
         if (int32_output) {
             CV_CheckGE(inputs.size(), (size_t)2, "DNN/MatMulInteger: A and B are required");
-            const MatShape& a = inputs[0];
-            const MatShape& b = inputs[1];
-            CV_CheckGE(a.dims, 1, "DNN/MatMulInteger: A must have at least one dimension");
-            CV_CheckGE(b.dims, 2, "DNN/MatMulInteger: B must have at least two dimensions");
-            CV_CheckEQ(a[a.dims - 1], b[b.dims - 2],
-                       "DNN/MatMulInteger: inner dimensions of A and B differ");
-            // batch dims broadcast as in numpy; a 1-D A leaves no M dimension in the output
-            MatShape outShape = MatShape(a.begin(), a.begin() + std::max(a.dims - 2, 0))
-                                    .expand(MatShape(b.begin(), b.end() - 2));
-            if (a.dims > 1)
-                outShape.push_back(a[a.dims - 2]);
-            outShape.push_back(b[b.dims - 1]);
-            outputs.assign(1, outShape);
+            MatShape ap, bp, full, out;
+            matmulShapes(inputs[0], inputs[1], false, false, ap, bp, full, out);
+            outputs.assign(1, out);
             int rows = 1;
-            for (int i = 0; i < a.dims - 1; i++)
-                rows *= a[i];
+            for (size_t i = 0; i + 1 < ap.size(); i++)
+                rows *= ap[i];
             // per-row correction term, used when B is uint8 or has a nonzero zero point
             internals.assign(1, MatShape({std::max(rows, 1)}));
             return false;
@@ -237,7 +227,7 @@ private:
     }
 
     // ONNX MatMulInteger: https://onnx.ai/onnx/operators/onnx__MatMulInteger.html, opset 10 (its
-    // only version); per-row a_zero_point is not supported, b_zero_point may be per column
+    // only version); a_zero_point may be per row of A, b_zero_point per column of B
     void forwardInt32(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,
                       OutputArrayOfArrays internals_arr)
     {
@@ -247,26 +237,54 @@ private:
         internals_arr.getMatVector(internals);
         const int ninputs = (int)input.size();
         const Mat& A = input[0];
-        const Mat& B = input[1];
         Mat& Y = output[0];
         CV_CheckType(A.type(), A.type() == CV_8UC1 || A.type() == CV_8SC1,
                      "DNN/MatMulInteger: A must be uint8 or int8");
-        CV_CheckGE(B.dims, 2, "DNN/MatMulInteger: B must have at least two dimensions");
         CV_Assert(A.isContinuous() && Y.isContinuous());
+        MatShape ap, bp, full, out;
+        matmulShapes(A.shape(), input[1].shape(), false, false, ap, bp, full, out);
+        const Mat B = input[1].reshape(1, bp);  // a 1-D B is one column, [K, 1]
         const bool isU8 = A.type() == CV_8UC1;
 
-        int za = 0;
-        if (ninputs > 2 && !input[2].empty()) {
-            const Mat& zam = input[2];
-            CV_CheckEQ(zam.total(), (size_t)1,
-                       "DNN/MatMulInteger: per-row a_zero_point is not supported, only a scalar");
-            CV_CheckTypeEQ(zam.type(), A.type(),
-                           "DNN/MatMulInteger: a_zero_point must have the type of A");
-            za = isU8 ? (int)zam.ptr<uchar>()[0] : (int)zam.ptr<schar>()[0];
-        }
         const Mat zbm = ninputs > 3 ? input[3] : Mat();
         const int K = B.size[B.dims - 2], N = B.size[B.dims - 1];
         const int R = (int)A.total(0, A.dims - 1);
+        int za = 0;
+        std::vector<int> zrow;  // per-row a_zero_point, empty when it is a scalar
+        if (ninputs > 2 && !input[2].empty()) {
+            const Mat& zam = input[2];
+            CV_CheckTypeEQ(zam.type(), A.type(),
+                           "DNN/MatMulInteger: a_zero_point must have the type of A");
+            const uchar* zp = zam.ptr<uchar>();
+            if (zam.total() == 1) {
+                za = isU8 ? (int)zp[0] : (int)(schar)zp[0];
+            } else {
+                // [M] for a 2-D A, otherwise A's shape with K -> 1, where batch dims may be 1
+                const MatShape as = A.shape();
+                MatShape zs = zam.shape();
+                if (zs.size() == 1)
+                    zs.push_back(1);
+                while (zs.size() < as.size())
+                    zs.insert(zs.begin(), 1);
+                bool ok = zs.size() == as.size() && zs.back() == 1;
+                for (size_t d = 0; ok && d + 1 < as.size(); d++)
+                    ok = zs[d] == as[d] || zs[d] == 1;
+                CV_Check(zam.total(), ok,
+                         "DNN/MatMulInteger: a_zero_point must be a scalar or one value per row");
+                zrow.resize(R);
+                for (int r = 0; r < R; r++) {
+                    size_t zi = 0, zstep = 1;
+                    for (int d = (int)as.size() - 2, rem = r; d >= 0; d--) {
+                        if (zs[d] != 1)
+                            zi += (size_t)(rem % as[d]) * zstep;
+                        rem /= as[d];
+                        zstep *= zs[d];
+                    }
+                    zrow[r] = isU8 ? (int)zp[zi] : (int)(schar)zp[zi];
+                }
+            }
+        }
+        const int* zr = zrow.empty() ? nullptr : zrow.data();
         if (Y.total() == 0)
             return;
         if (K == 0) {
@@ -314,31 +332,42 @@ private:
                     else
                         for (int k = 0; k < K; k++)
                             s += (schar)ar[k];
-                    rowterm[r] = s - K * za;
+                    rowterm[r] = s - K * (zr ? zr[r] : za);
                 }
             }, (double)R * K / (1 << 16));
         }
+
+        // a per-row zero point runs the kernel with a_zp = 0 and subtracts za[r] * colsum[n] here
+        auto subtractRowZeroPoints = [&](const int* zrows, const int* csm, int* ym, int rows) {
+            parallel_for_(Range(0, rows), [&](const Range& range) {
+                for (int r = range.start; r < range.end; r++)
+                    for (int n = 0; n < N; n++)
+                        ym[(size_t)r * N + n] -= zrows[r] * csm[n];
+            }, (double)rows * N / (1 << 16));
+        };
 
         const int8_t* pb = packedB.ptr<int8_t>();
         const int* cs = colsum.ptr<int>();
         int* y = Y.ptr<int>();
         if (nb == 1) {
-            matMulInt8Int32(a, K, pb, cs, hasCorr ? cr : nullptr, rowterm, y, N, R, N, K, za, isU8);
+            matMulInt8Int32(a, K, pb, cs, hasCorr ? cr : nullptr, rowterm, y, N, R, N, K,
+                            zr ? 0 : za, isU8);
+            if (zr)
+                subtractRowZeroPoints(zr, cs, y, R);
         } else {
             // one GEMM per output matrix, at the offsets MatMul uses to broadcast batch dims
             const size_t matSize = packedB.total() / nb;
-            MatShape cshape = Y.shape();
-            if (A.dims == 1)
-                cshape.insert(cshape.end() - 1, 1);
             MatMulHelper helper;
-            helper.compute(false, false, A.dims > 1 ? A.shape() : MatShape({1, K}), B.shape(),
-                           cshape);
+            helper.compute(false, false, ap, bp, full);
             for (size_t i = 0; i < helper.batch; i++) {
                 const size_t m = helper.B_rows[i];
                 const size_t ofs = helper.A_offsets[i];
                 matMulInt8Int32(a + ofs, K, pb + m * matSize, cs + m * Npad,
                                 hasCorr ? cr + m * Npad : nullptr, rowterm + ofs / K,
-                                y + helper.C_offsets[i], N, helper.M, N, K, za, isU8);
+                                y + helper.C_offsets[i], N, helper.M, N, K, zr ? 0 : za, isU8);
+                if (zr)
+                    subtractRowZeroPoints(zr + ofs / K, cs + m * Npad, y + helper.C_offsets[i],
+                                          helper.M);
             }
         }
 

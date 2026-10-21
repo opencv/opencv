@@ -2426,6 +2426,10 @@ TEST_P(Test_ONNX_layers, MatMulInteger)
     testONNXModels("matmulinteger_batched_b");
     testONNXModels("matmulinteger_batched_s8");
     testONNXModels("matmulinteger_vector_a");
+    testONNXModels("matmulinteger_b_vector");
+    testONNXModels("matmulinteger_vector_vector");
+    testONNXModels("matmulinteger_a_zp_per_row");
+    testONNXModels("matmulinteger_a_zp_per_row_nd");
     testONNXModels("matmulinteger_dynamic");
 
     // the second input gives DynamicQuantizeLinear another zero point on the same net
