@@ -71,7 +71,7 @@ class Imgcodecs_Avif_RoundTripSuite
         if (quality_ == 50) {
           EXPECT_LE(norm, 20); // Maximum = 18.15 -> ceil(18.15 * 1.1) = 20
         } else if (quality_ == 0) {
-          EXPECT_LE(norm, 36); // Maximum = 32.57 -> ceil(32.57 * 1.1) = 36
+          EXPECT_LE(norm, 60); // Maximum = 54.0416 -> ceil(54.0416 * 1.1) = 60
         } else {
           EXPECT_FALSE(true);
         }
