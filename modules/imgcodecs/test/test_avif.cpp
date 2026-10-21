@@ -21,18 +21,21 @@ class Imgcodecs_Avif_RoundTripSuite
     if (channels == 1) {
       cv::cvtColor(img_original, img, cv::COLOR_BGR2GRAY);
     } else if (channels == 4) {
-      std::vector<cv::Mat> imgs;
-      cv::split(img_original, imgs);
-      imgs.push_back(cv::Mat(imgs[0]));
-      imgs[imgs.size() - 1] = cv::Scalar::all(128);
-      cv::merge(imgs, img);
+      cv::cvtColor(img_original, img, cv::COLOR_BGR2BGRA);
+      img.at<cv::Vec4b>(0, 0)[3] = 254; // Do not use opaque alpha plane.
     } else {
       img = img_original.clone();
     }
 
-    cv::Mat img_final = img;
+    cv::Mat img_final;
     // Convert image to CV_16U for some bit depths.
-    if (bit_depth > 8) img.convertTo(img_final, CV_16U, 1 << (bit_depth - 8));
+    if (bit_depth == 10) {
+      img.convertTo(img_final, CV_16U, 1023.0 / 255.0);
+    } else if (bit_depth == 12) {
+      img.convertTo(img_final, CV_16U, 4095.0 / 255.0);
+    } else {
+      img_final = img;
+    }
 
     return img_final;
   }
@@ -332,10 +335,12 @@ TEST_P(Imgcodecs_Avif_16bit, encode_decode)
     cv::cvtColor(img_original, src, cv::COLOR_BGR2GRAY);
   } else if (channels == 4) {
     cv::cvtColor(img_original, src, cv::COLOR_BGR2BGRA);
+    src.at<cv::Vec4b>(0, 0)[3] = 254; // Do not use opaque alpha plane.
   } else {
     src = img_original.clone();
   }
-  src.convertTo(src, CV_16U, 1 << (bit_depth - 8));
+  // Convert image to CV_16U.
+  src.convertTo(src, CV_16U, 65535.0 / 255.0);
 
   std::vector<uint8_t> buf;
   EXPECT_NO_THROW(imencode(".avif", src, buf, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality}));
@@ -353,8 +358,8 @@ TEST_P(Imgcodecs_Avif_16bit, encode_decode)
 
   switch ( quality ) {
     case 100: EXPECT_EQ(norm,  0); break; // lossless
-    case  50: EXPECT_LE(norm,  7); break; // Max 5.93 + 10% margin
-    case   0: EXPECT_LE(norm, 19); break; // Max 16.54 + 10% margin
+    case  50: EXPECT_LE(norm,  7); break; // Max  5.93088 + 10% margin
+    case   0: EXPECT_LE(norm, 19); break; // Max 16.7447 + 10% margin
     default:  ADD_FAILURE() << "Unknown quality setting: " << quality; break;
   }
 }
