@@ -185,6 +185,43 @@ QUnit.test('test_mat_creation', function(assert) {
         mat.delete();
         mat2.delete();
     }
+    // clone must perform a deep copy
+    {
+        let mat = cv.matFromArray(2, 2, cv.CV_8UC1, [1, 2, 3, 4]);
+        let cloned = mat.clone();
+
+        assert.deepEqual(mat.data, cloned.data);
+
+        mat.data[0] = 99;
+
+        assert.equal(cloned.data[0], 1);
+        assert.equal(mat.data[0], 99);
+
+        cloned.delete();
+        mat.delete();
+    }
+
+    // Cloning a non-contiguous ROI must produce independent continuous data
+    {
+        let mat = cv.matFromArray(3, 3, cv.CV_8UC1,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let roi = mat.roi(new cv.Rect(0, 0, 2, 3));
+        let cloned = roi.clone();
+
+        assert.ok(!roi.isContinuous());
+        assert.ok(cloned.isContinuous());
+        assert.equal(cloned.rows, 3);
+        assert.equal(cloned.cols, 2);
+        assert.deepEqual(Array.from(cloned.data), [1, 2, 4, 5, 7, 8]);
+
+        mat.data[0] = 99;
+        assert.equal(cloned.data[0], 1);
+
+        cloned.delete();
+        roi.delete();
+        mat.delete();
+    }
+
     // copyTo
     {
         let mat = cv.Mat.ones(5, 5, cv.CV_8UC1);
