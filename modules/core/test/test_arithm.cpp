@@ -2414,6 +2414,32 @@ TEST(Core_FindNonZero, fp8)
     }
 }
 
+// widths around and above the SIMD block size, so both the vector loop and the scalar tail run
+TEST(Core_FindNonZero, wide_rows_8u)
+{
+    RNG& rng = theRNG();
+    for (int cols : { 15, 16, 17, 63, 64, 65, 127, 1000 })
+    {
+        for (double density : { 0.0, 0.01, 0.3 })
+        {
+            Mat r(3, cols + 5, CV_32FC1);
+            rng.fill(r, RNG::UNIFORM, 0, 1);
+            Mat full = r < density;
+            Mat src = full.colRange(2, 2 + cols);   // ROI: rows are not continuous
+
+            std::vector<Point> expected;
+            for (int y = 0; y < src.rows; y++)
+                for (int x = 0; x < src.cols; x++)
+                    if (src.at<uchar>(y, x) != 0)
+                        expected.push_back(Point(x, y));
+
+            std::vector<Point> pts;
+            findNonZero(src, pts);
+            EXPECT_EQ(expected, pts) << "cols=" << cols << " density=" << density;
+        }
+    }
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;

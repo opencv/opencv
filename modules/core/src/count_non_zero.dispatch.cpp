@@ -167,7 +167,20 @@ void findNonZero(InputArray _src, OutputArray _idx)
         const uchar* ptr8 = src.ptr(i);
         if( depth == CV_8U || depth == CV_8S || depth == CV_Bool || depth == CV_8F_E4M3FNUZ )
         {
-            for( j = 0; j < cols; j++ )
+            j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // skip whole SIMD blocks of zeros; only scan blocks that contain a non-zero byte
+            const int vlanes = VTraits<v_uint8>::vlanes();
+            const v_uint8 vzero = vx_setzero_u8();
+            for( ; j <= cols - vlanes; j += vlanes )
+            {
+                if( !v_check_any(v_ne(vx_load(ptr8 + j), vzero)) )
+                    continue;
+                for( int t = j; t < j + vlanes; t++ )
+                    if( ptr8[t] != 0 ) buf[k++] = t;
+            }
+#endif
+            for( ; j < cols; j++ )
                 if( ptr8[j] != 0 ) buf[k++] = j;
         }
         else if( depth == CV_16U || depth == CV_16S )
