@@ -81,7 +81,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 if (bias_scale == 1.f)
                     kernels::eltwise_sum_2<T>(stream, output, output, bias);
                 else
-                    kernels::eltwise_sum_coeff_2<T>(stream, output, T(1), output, T(bias_scale), bias);
+                    kernels::eltwise_sum_coeff_2<T>(stream, output, T(1.f), output,
+                                                    T(bias_scale), bias);
             }
         }
 
