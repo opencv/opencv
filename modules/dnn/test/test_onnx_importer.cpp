@@ -3897,4 +3897,26 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_MHA_Lowering, testing::Values(
     "multi_head_attention_key_padding_mask_attention_bias"
 ));
 
+// QLinearConv folds a const int32 bias to float by multiplying each bias element
+// by the matching per-channel weight scale, writing into a buffer sized from the
+// bias tensor. w_scale and the bias are independent model fields, so a w_scale
+// longer than the bias wrote past the bias buffer during import. The mismatched
+// pair has to be rejected instead of overrunning the buffer.
+// Test data in opencv_extra under the same branch name as this patch.
+TEST(Test_ONNX_importer, parse_qconv_bias_scale_mismatch)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_bias_scale_mismatch.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
+// The same bias fold reads the scalar x_scale unconditionally, so an empty
+// x_scale has to be rejected instead of being read past its end.
+TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_empty_x_scale.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
 }} // namespace
