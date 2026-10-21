@@ -257,6 +257,31 @@ TEST(Splat, load_ply_rejects_plain_cloud)
     EXPECT_TRUE(splats.empty());
 }
 
+// A vertex count above INT_MAX must be rejected, not truncated when sizing the output.
+TEST(Splat, load_ply_rejects_huge_vertex_count)
+{
+    std::string path = tempfile("huge.ply");
+    {
+        std::ofstream f(path);
+        f << "ply\nformat ascii 1.0\nelement vertex 4294967297\n";
+        for (const String& name : getGaussianSplatPlyPropNames())
+            f << "property float " << name << "\n";
+        f << "end_header\n";
+        for (int i = 0; i < 4; i++)
+        {
+            for (size_t j = 0; j < getGaussianSplatPlyPropNames().size(); j++)
+                f << "1 ";
+            f << "\n";
+        }
+    }
+
+    Mat splats;
+    loadGaussianSplats(path, splats);
+    remove(path.c_str());
+
+    EXPECT_TRUE(splats.empty());
+}
+
 static void writeSplatFile(const std::string& path, int n)
 {
     std::ofstream f(path, std::ios::binary);
