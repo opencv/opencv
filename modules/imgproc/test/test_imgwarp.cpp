@@ -1672,6 +1672,78 @@ TEST(Imgproc_ConvertMaps, regression_22763)
     EXPECT_EQ(CV_16UC1, dst2.type());
 }
 
+typedef testing::TestWithParam<bool> Imgproc_ConvertMapsEmptyOutput;
+
+TEST_P(Imgproc_ConvertMapsEmptyOutput, nearest_neighbor)
+{
+    const Rect roi(1, 1, 35, 3);
+    Mat baseX(5, 37, CV_32FC1), baseY(5, 37, CV_32FC1);
+    Mat mapX = baseX(roi), mapY = baseY(roi);
+    Mat expected(roi.size(), CV_16SC2);
+
+    for (int y = 0; y < roi.height; ++y)
+    {
+        for (int x = 0; x < roi.width; ++x)
+        {
+            mapX.at<float>(y, x) = x - 17 + 0.25f;
+            mapY.at<float>(y, x) = y - 1 + 0.125f;
+            expected.at<Vec2s>(y, x) = Vec2s(x - 17, y - 1);
+        }
+    }
+
+    if (GetParam())
+    {
+        mapX = mapX.clone();
+        mapY = mapY.clone();
+    }
+    ASSERT_EQ(GetParam(), mapX.isContinuous());
+    ASSERT_EQ(GetParam(), mapY.isContinuous());
+
+    Mat dst1, dst2(roi.size(), CV_16UC1, Scalar(1));
+    convertMaps(mapX, mapY, dst1, dst2, CV_16SC2, true);
+
+    EXPECT_EQ(expected.size(), dst1.size());
+    EXPECT_EQ(expected.type(), dst1.type());
+    EXPECT_EQ(0.0, cvtest::norm(expected, dst1, NORM_INF));
+    EXPECT_TRUE(dst2.empty());
+}
+
+TEST_P(Imgproc_ConvertMapsEmptyOutput, interleaved_float)
+{
+    const Rect roi(1, 1, 35, 3);
+    Mat base1(5, 37, CV_16SC2), base2(5, 37, CV_16UC1);
+    Mat map1 = base1(roi), map2 = base2(roi);
+    Mat expected(roi.size(), CV_32FC2);
+
+    for (int y = 0; y < roi.height; ++y)
+    {
+        for (int x = 0; x < roi.width; ++x)
+        {
+            map1.at<Vec2s>(y, x) = Vec2s(x - 17, y - 1);
+            map2.at<ushort>(y, x) = 4 * INTER_TAB_SIZE + 8;
+            expected.at<Vec2f>(y, x) = Vec2f(x - 17 + 0.25f, y - 1 + 0.125f);
+        }
+    }
+
+    if (GetParam())
+    {
+        map1 = map1.clone();
+        map2 = map2.clone();
+    }
+    ASSERT_EQ(GetParam(), map1.isContinuous());
+    ASSERT_EQ(GetParam(), map2.isContinuous());
+
+    Mat dst1, dst2(roi.size(), CV_16UC1, Scalar(1));
+    convertMaps(map1, map2, dst1, dst2, CV_32FC2, false);
+
+    EXPECT_EQ(expected.size(), dst1.size());
+    EXPECT_EQ(expected.type(), dst1.type());
+    EXPECT_EQ(0.0, cvtest::norm(expected, dst1, NORM_INF));
+    EXPECT_TRUE(dst2.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_ConvertMapsEmptyOutput, testing::Bool());
+
 TEST(Imgproc_Warp, regression_28554)
 {
     const Size inSize(128, 128);

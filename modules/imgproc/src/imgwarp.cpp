@@ -1939,7 +1939,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         const ushort* src2 = (const ushort*)src2f;
 
         float* dst1f = dstmap1.ptr<float>(y);
-        float* dst2f = dstmap2.ptr<float>(y);
+        float* dst2f = dstmap2.empty() ? NULL : dstmap2.ptr<float>(y);
         short* dst1 = (short*)dst1f;
         ushort* dst2 = (ushort*)dst2f;
         x = 0;
