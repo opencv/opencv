@@ -339,7 +339,6 @@ TEST_P(Imgcodecs_Avif_16bit, encode_decode)
 
   std::vector<uint8_t> buf;
   EXPECT_NO_THROW(imencode(".avif", src, buf, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality}));
-imwrite("output_16bit.avif", src, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality});
 
   cv::Mat dst;
   EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_UNCHANGED));
