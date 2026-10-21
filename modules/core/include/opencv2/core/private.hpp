@@ -746,9 +746,8 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
-// General OpenCV region instrumentation macro. It opens the trace region as well, as the build
-// without instrumentation does: accelerator placement counts cv:: calls through trace regions.
-#define CV_INSTRUMENT_REGION_();             CV_TRACE_FUNCTION() CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
+// General OpenCV region instrumentation macro
+#define CV_INSTRUMENT_REGION_();             CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Custom OpenCV region instrumentation macro
 #define CV_INSTRUMENT_REGION_NAME(NAME)     CV_INSTRUMENT_REGION_CUSTOM_META(NAME,  false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN)
 // Instrumentation for parallel_for_ or other regions which forks and gathers threads

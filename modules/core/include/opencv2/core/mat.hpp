@@ -57,31 +57,8 @@
 #include <functional>
 #include <type_traits>
 
-//! see opencv2/core/llapi/accel_hal.h
-struct cvAccelMemoryDesc;
-
 namespace cv
 {
-
-namespace accel {
-namespace impl { struct BufferState; }
-namespace detail {
-/** A UMat on an accelerator passed to a cv:: call (as _InputArray, _OutputArray or
-_InputOutputArray, alone or in a std::vector<UMat>) for as long as the argument exists: new UMat
-data the call creates without an allocator of its own goes to that device (see UMat::create),
-so that the call's results stay where its data is whether the function has an accelerator hook
-or not. Only the arguments of the innermost call count (calls are counted by the trace regions
-that cv:: functions open). */
-CV_EXPORTS void enterDeviceArgument(const void* array, const UMat& m);
-/** A UMat of host data passed to a cv:: call while an accelerator is in use: it marks the call
-as one with arguments of its own, so that the device arguments of an outer call do not decide
-where its results go. Returns false (nothing registered) while the calling thread has no device
-argument. */
-CV_EXPORTS bool enterHostArgument(const void* array);
-//! ends every registration of @p array
-CV_EXPORTS void leaveDeviceArgument(const void* array) CV_NOEXCEPT;
-} // namespace detail
-} // namespace accel
 
 //! @addtogroup core_basic
 //! @{
@@ -406,9 +383,6 @@ public:
     bool isGpuMatVector() const;
     bool isGpuMatND() const;
     ~_InputArray();
-    //! copies refer to the same array, but only the original counts as an argument on a device
-    _InputArray(const _InputArray& other);
-    _InputArray& operator = (const _InputArray& other);
 
 protected:
     int flags;
@@ -417,13 +391,6 @@ protected:
 
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
-
-    //! flags: the array is a UMat on an accelerator, registered as an argument of the call
-    enum { DEVICE_ARGUMENT = 1 << 23 };
-    //! registers @p m as an argument of the call while an accelerator is in use (see accel::detail::enterDeviceArgument)
-    void noteDeviceArgument(const UMat& m);
-    //! registers the elements of @p vec whose data is on an accelerator
-    void noteDeviceArguments(const std::vector<UMat>& vec);
 
 private:
     int dims_(int i=-1) const;
@@ -724,15 +691,6 @@ public:
 
     // default implementation returns DummyBufferPoolController
     virtual BufferPoolController* getBufferPoolController(const char* id = NULL) const;
-
-    /** @brief Describes where the memory of @p data lives and what UMatData::handle holds.
-
-    Code that has to know whether it can use a buffer (the OpenCL path, accelerator
-    backends) asks the allocator instead of comparing allocator pointers, so allocators
-    written by users keep working. The default implementation returns false ("unknown"),
-    which keeps the behaviour OpenCV had before this method existed.
-    */
-    virtual bool getMemoryDesc(const UMatData* data, struct ::cvAccelMemoryDesc* desc) const;
 };
 
 
@@ -781,8 +739,6 @@ struct CV_EXPORTS UMatData
     int mapcount;
     UMatData* originalUMatData;
     std::shared_ptr<void> allocatorContext;
-    //! coherence state of memory owned by an accelerator backend (Non-CPU HAL), NULL otherwise
-    accel::impl::BufferState* accelState;
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
@@ -2843,21 +2799,20 @@ cv::cuda::getCudaAllocator). Headers, reference counting, ROIs and submatrices a
 n-dimensional shapes behave as they do in Mat.
 
 Passing UMat instead of Mat to a cv:: function is the basis of the Transparent API
-(T-API). A cv:: call whose UMat arguments live on an accelerator (see @ref core_accel)
-runs on that accelerator when its backend implements the function, and on the CPU
-otherwise. UMat data of the OpenCL allocator takes the OpenCL branch when OpenCL is active.
-Any other UMat is mapped to host memory and processed by the CPU implementation. UMat has
-no `data` pointer and no element accessors, because there may be no host address to
-expose; host access goes through UMat::getMat.
+(T-API). The dispatch is not keyed on the allocator: a cv:: call takes its OpenCL branch
+when OpenCL is active and the arguments are UMat objects, and otherwise maps the data
+back to host memory and runs the CPU implementation. UMat has no `data` pointer and no
+element accessors, because there may be no host address to expose; host access goes
+through UMat::getMat.
 
 @note
   A non-default allocator must be assigned to @ref cv::UMat::allocator "UMat::allocator"
-  before the data is allocated, or the allocation must happen inside a
-  cv::accel::ExecutionScope. Which code may use a buffer is decided by
-  MatAllocator::getMemoryDesc, so a buffer from another device allocator is never handed
-  to OpenCL kernels.
+  before the data is allocated. OpenCL is the only allocator with accelerated cv::
+  implementations, and because the T-API branch tests only whether OpenCL is active, a
+  UMat backed by any other device allocator must not be passed to cv:: functions while
+  OpenCL is enabled.
 
-@sa Mat, MatAllocator, UMatUsageFlags, cv::accel::Device, cv::ocl::getOpenCLAllocator,
+@sa Mat, MatAllocator, UMatUsageFlags, cv::ocl::getOpenCLAllocator,
 cv::cuda::getCudaAllocator
 */
 class CV_EXPORTS UMat
@@ -2896,10 +2851,9 @@ public:
     /** @brief Returns a Mat header giving host access to the same data
     @note
       The data is mapped into host memory on the first such view and unmapped when the
-      returned Mat is destroyed. For data on an accelerator the call waits for device work
-      that conflicts with @p flags, and a view requested with ACCESS_READ never causes a
-      write-back: writing through it is undefined. For other allocators @p flags is
-      widened to ACCESS_RW internally.
+      returned Mat is destroyed. @p flags is widened to ACCESS_RW internally, so the
+      mapping is always read-write and the allocator may write back even after
+      read-only use.
     @param flags combination of AccessFlag values
     */
     Mat getMat(AccessFlag flags) const;
@@ -3050,10 +3004,6 @@ public:
         a CUDA device pointer for cv::cuda::getCudaAllocator().
         The UMat instance should be kept alive during the use of the handle to prevent the buffer to be
         returned to the OpenCV buffer pool.
-        For memory of an accelerator backend (see cv::accel) the call first waits for OpenCV's work
-        on the buffer. Work the caller then enqueues on the device API's default stream (the CUDA or
-        HIP legacy stream) runs before OpenCV's next use of the UMat; work on other streams needs
-        cv::accel::DeviceAccess.
      */
     void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;

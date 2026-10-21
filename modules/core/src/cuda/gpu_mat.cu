@@ -230,19 +230,6 @@ void cv::cuda::GpuMat::upload(InputArray arr)
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-//! copies to or from @p p run asynchronously: CUDA-registered (pinned) or managed host memory.
-//! For pageable memory cudaMemcpyAsync returns only once the host side is no longer needed.
-static bool asyncHostMemory(const void* p)
-{
-    cudaPointerAttributes attr;
-    if (cudaPointerGetAttributes(&attr, p) != cudaSuccess)
-    {
-        cudaGetLastError();
-        return false;   // unknown to CUDA: pageable memory
-    }
-    return attr.type == cudaMemoryTypeHost || attr.type == cudaMemoryTypeManaged;
-}
-
 void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 {
     Mat mat = arr.getMat();
@@ -253,10 +240,6 @@ void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
     CV_CUDEV_SAFE_CALL( cudaMemcpy2DAsync(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice, stream) );
-    // the host view of a UMat ends with this call: when it is pinned memory, where the copy
-    // really is asynchronous, the copy must not outlive the view
-    if (arr.isUMat() && asyncHostMemory(mat.data))
-        _stream.waitForCompletion();
 }
 
 /////////////////////////////////////////////////////
@@ -283,9 +266,6 @@ void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
     CV_CUDEV_SAFE_CALL( cudaMemcpy2DAsync(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost, stream) );
-    // the host view of a UMat ends with this call (see upload)
-    if (_dst.isUMat() && asyncHostMemory(dst.data))
-        _stream.waitForCompletion();
 }
 
 /////////////////////////////////////////////////////

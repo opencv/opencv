@@ -6,7 +6,6 @@
 #include "opencl_kernels_core.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
-#include "opencv2/core/utils/accel_dispatch.private.hpp"
 
 #include "transpose.simd.hpp"
 #include "transpose.simd_declarations.hpp"
@@ -480,29 +479,12 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
-static int accel_transpose(InputArray _src, OutputArray _dst)
-{
-    if (_src.empty())
-        return accel::detail::NOT_HANDLED;
-    const Size sz = _src.size();
-    accel::detail::OpCall call("core.transpose", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
-    call.input(_src);
-    call.output(_dst, MatShape({sz.width, sz.height}), _src.type());
-    return call.run([](const void* t, const cvAccelCall* c, const cvAccelView* v) {
-        const cvAccelOpsCore_v0* ops = (const cvAccelOpsCore_v0*)t;
-        return CV_ACCEL_OP_PRESENT(cvAccelOpsCore_v0, ops, transpose) ? ops->transpose(c, &v[0], &v[1])
-                                                                      : CV_ACCEL_NOT_IMPLEMENTED;
-    });
-}
-
 void transpose( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
 
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
-
-    CV_ACCEL_RUN(_src.isUMat() || _dst.isUMat(), accel_transpose(_src, _dst))
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_transpose(_src, _dst))
@@ -1036,21 +1018,6 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 #endif
 
-static int accel_flip(InputArray _src, OutputArray _dst, int flipMode)
-{
-    if (_src.empty())
-        return accel::detail::NOT_HANDLED;
-    const Size sz = _src.size();    // what the CPU and OpenCL paths create: always 2-D
-    accel::detail::OpCall call("core.flip", CV_ACCEL_OPS_CORE, CV_ACCEL_OPS_CORE_VERSION);
-    call.input(_src);
-    call.output(_dst, MatShape({sz.height, sz.width}), _src.type());
-    return call.run([flipMode](const void* t, const cvAccelCall* c, const cvAccelView* v) {
-        const cvAccelOpsCore_v0* ops = (const cvAccelOpsCore_v0*)t;
-        return CV_ACCEL_OP_PRESENT(cvAccelOpsCore_v0, ops, flip) ? ops->flip(c, &v[0], &v[1], flipMode)
-                                                                 : CV_ACCEL_NOT_IMPLEMENTED;
-    });
-}
-
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_INSTRUMENT_REGION();
@@ -1071,8 +1038,6 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     {
         return _src.copyTo(_dst);
     }
-
-    CV_ACCEL_RUN(_src.isUMat() || _dst.isUMat(), accel_flip(_src, _dst, flip_mode))
 
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
