@@ -158,7 +158,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", (unchar)c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", (uchar)c );
                         data += 3;
                     }
                 }
