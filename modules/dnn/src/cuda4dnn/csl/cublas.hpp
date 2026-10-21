@@ -53,6 +53,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
     }
 
+    /** half GEMMs accumulate in FP32 unless OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE is set */
+    inline bool allowHalfAccumulate()
+    {
+#if CUDART_VERSION >= 11000
+        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE", false);
+        return allow;
+#else
+        return true;  // the FP32-accumulate path needs CUBLAS_COMPUTE_32F (CUDA 11)
+#endif
+    }
+
+    /** FP32 GEMMs use TF32 tensor cores unless OPENCV_DNN_CUDA_ALLOW_TF32 is off, as cuDNN convolutions do */
+    inline bool allowTF32()
+    {
+        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true);
+        return allow;
+    }
+
     /** non-copyable cuBLAS smart handle
      *
      * UniqueHandle is a smart non-sharable wrapper for cuBLAS handle which ensures that the handle
@@ -227,13 +245,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
 #else
         CUDA4DNN_CHECK_CUBLAS(
-            cublasHgemm(
+            cublasGemmEx(
                 handle.get(),
                 opa, opb,
                 irows_c, icols_c, icommon_dim,
-                &alpha, A.get(), ilda,
-                B.get(), ildb,
-                &beta, C.get(), ildc
+                &falpha, A.get(), CUDA_R_16F, ilda,
+                B.get(), CUDA_R_16F, ildb,
+                &fbeta, C.get(), CUDA_R_16F, ildc,
+                CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
             )
         );
 #endif
@@ -350,14 +369,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
 #else
         CUDA4DNN_CHECK_CUBLAS(
-            cublasHgemmStridedBatched(
+            cublasGemmStridedBatchedEx(
                 handle.get(),
                 opa, opb,
                 irows_c, icols_c, icommon_dim,
-                &alpha, A.get(), ilda, stride_a,
-                B.get(), ildb, stride_b,
-                &beta, C.get(), ildc, stride_c,
-                batch_count
+                &falpha, A.get(), CUDA_R_16F, ilda, stride_a,
+                B.get(), CUDA_R_16F, ildb, stride_b,
+                &fbeta, C.get(), CUDA_R_16F, ildc, stride_c,
+                batch_count,
+                CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
             )
         );
 #endif
