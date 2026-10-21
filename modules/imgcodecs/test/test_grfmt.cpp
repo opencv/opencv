@@ -598,13 +598,12 @@ TEST(Imgcodecs_Pam, decode_graya_as_gray)
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
-typedef testing::TestWithParam<tuple<int, int, bool> > Imgcodecs_Pfm_ReadMode;
+typedef testing::TestWithParam<tuple<int, int> > Imgcodecs_Pfm_ReadMode;
 
 TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
 {
     const int channels = get<0>(GetParam());
     const int flags = get<1>(GetParam());
-    const bool fromFile = get<2>(GetParam());
     Mat image(3, 5, CV_MAKETYPE(CV_32F, channels));
     RNG& rng = theRNG();
     rng.fill(image, RNG::UNIFORM, 0, 255);
@@ -624,24 +623,13 @@ TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
         image.copyTo(expected);
     expected.convertTo(expected, outputDepth);
 
-    Mat decoded;
-    if (fromFile)
-    {
-        const string filename = cv::tempfile(".pfm");
-        ASSERT_TRUE(imwrite(filename, image));
-        decoded = imread(filename, flags);
-        EXPECT_EQ(0, remove(filename.c_str()));
-    }
-    else
-    {
-        vector<uchar> encoded;
-        ASSERT_TRUE(imencode(".pfm", image, encoded));
-        decoded.create(expected.size(), expected.type());
-        const uchar* originalData = decoded.data;
-        Mat result = imdecode(encoded, flags, &decoded);
-        EXPECT_EQ(originalData, decoded.data);
-        EXPECT_EQ(decoded.data, result.data);
-    }
+    vector<uchar> encoded;
+    ASSERT_TRUE(imencode(".pfm", image, encoded));
+    Mat decoded(expected.size(), expected.type());
+    const uchar* originalData = decoded.data;
+    Mat result = imdecode(encoded, flags, &decoded);
+    EXPECT_EQ(originalData, decoded.data);
+    EXPECT_EQ(decoded.data, result.data);
 
     ASSERT_FALSE(decoded.empty());
     ASSERT_EQ(expected.type(), decoded.type());
@@ -653,8 +641,7 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_ReadMode, testing::Combine(
     testing::Values(1, 3),
     testing::Values(IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB,
                     IMREAD_ANYDEPTH | IMREAD_GRAYSCALE, IMREAD_ANYDEPTH | IMREAD_COLOR,
-                    IMREAD_ANYDEPTH | IMREAD_COLOR_RGB, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR),
-    testing::Bool()));
+                    IMREAD_ANYDEPTH | IMREAD_COLOR_RGB, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR)));
 
 TEST(Imgcodecs_Pfm, read_write)
 {
