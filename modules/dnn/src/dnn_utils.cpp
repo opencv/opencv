@@ -314,10 +314,12 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
 
     if constexpr (std::is_same<Tmat, Mat>::value)
     {
-        // The HAL takes a single size and type for the whole batch
+        // The HAL takes a single size and type for the whole batch.
+        // copyMakeBorder() pads a part of a bigger image with the pixels around it, the HAL can't know them.
         const Mat& image0 = images[0];
         if (std::all_of(images.begin(), images.end(), [&](const Mat& image) {
-                return image.dims == 2 && image.type() == image0.type() && image.size() == image0.size(); }))
+                return image.dims == 2 && image.type() == image0.type() && image.size() == image0.size() &&
+                       !(param.paddingmode == DNN_PMODE_LETTERBOX && image.isSubmatrix()); }))
         {
             const Size bsize = size == Size() ? image0.size() : size;
             const int n = (int)images.size(), cn = image0.channels();
