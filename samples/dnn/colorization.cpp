@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
         cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA,
         cv::dnn::DNN_TARGET_CUDA_FP16);
 
-    const string keys = param_keys + backend_keys + target_keys;
+    const string keys = param_keys + engine_keys + backend_keys + target_keys;
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
 
@@ -83,10 +83,12 @@ int main(int argc, char** argv) {
     resize(imgL, imgLResized, Size(256, 256), 0, 0, INTER_CUBIC);
 
     // Prepare the model
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
     dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engine);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
+    printDnnConfig(net);
     //! [Read and initialize network]
 
     // Create blob from the image

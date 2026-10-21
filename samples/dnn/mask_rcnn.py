@@ -39,6 +39,31 @@ parser.add_argument('--input', help='Path to input image or video file. Skip thi
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--colors', help='Optional path to a text file with colors for an every class. '
                                      'An every color is represented with three values from 0 to 255 in BGR channels order.')
+parser.add_argument('--backend', default='default', type=str,
+                    choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                    help="Choose one of computation backends: "
+                         "default: automatically (by default), "
+                         "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                         "opencv: OpenCV's built-in engine, "
+                         "vkcom: Vulkan-based backend, "
+                         "cuda: CUDA backend")
+parser.add_argument('--target', default='cpu', type=str,
+                    choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                    help='Choose one of target devices: '
+                         'cpu: CPU (by default), '
+                         'opencl: OpenCL, '
+                         'opencl_fp16: OpenCL FP16 (half-precision), '
+                         'ncs2_vpu: NCS2 VPU, '
+                         'hddl_vpu: HDDL VPU, '
+                         'vulkan: Vulkan, '
+                         'cuda: CUDA, '
+                         'cuda_fp16: CUDA FP16')
+parser.add_argument('--engine', default='auto', type=str,
+                    choices=['auto', 'opencv', 'ort'],
+                    help='Choose DNN engine: '
+                         'auto: automatically select engine (default), '
+                         'opencv: OpenCV built-in DNN engine, '
+                         'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'mask_rcnn')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -113,8 +138,11 @@ def preprocess(frame, mean):
     return padded, ratio
 
 
-net = cv.dnn.readNetFromONNX(args.model)
-net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
+engine = get_engine_id(args.engine)
+net = cv.dnn.readNetFromONNX(args.model, engine=engine)
+net.setPreferableBackend(get_backend_id(args.backend))
+net.setPreferableTarget(get_target_id(args.target))
+print_dnn_config(net)
 outNames = net.getUnconnectedOutLayersNames()
 
 winName = 'Mask-RCNN in OpenCV'

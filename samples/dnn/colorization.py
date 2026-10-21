@@ -4,7 +4,7 @@
 import numpy as np
 import argparse
 import cv2 as cv
-import numpy as np
+from common import get_engine_id, print_dnn_config
 
 def parse_args():
     backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
@@ -15,6 +15,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='iColor: deep interactive colorization')
     parser.add_argument('--input', default='baboon.jpg',help='Path to image.')
     parser.add_argument('--onnx_model_path', help='Path to onnx model', required=True)
+    parser.add_argument('--engine', default='auto', choices=('auto', 'opencv', 'ort'),
+                        help='Choose one of computation engines: auto, opencv, ort')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -44,10 +46,11 @@ if __name__ == '__main__':
     img_gray_rs *= (100.0 / 255.0)      # Scale L channel to 0-100 range
 
     onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
-    engine = cv.dnn.ENGINE_OPENCV
+    engine = get_engine_id(args.engine)
     session = cv.dnn.readNetFromONNX(onnx_model_path, engine)
     session.setPreferableBackend(args.backend)
     session.setPreferableTarget(args.target)
+    print_dnn_config(session)
 
     # Process each image in the batch (assuming batch processing is needed)
     blob = cv.dnn.blobFromImage(img_gray_rs, swapRB=False)  # Adjust swapRB according to your model's training

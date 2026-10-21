@@ -33,8 +33,13 @@ Run the script:
 import numpy as np
 import argparse
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 def parse_args():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
+
     parser = argparse.ArgumentParser(description='Use this script to run GPT-2 inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, required=True, help='Path to GPT-2 model ONNX model file.')
@@ -42,6 +47,12 @@ def parse_args():
     parser.add_argument("--prompt", type=str, default="Hello, I'm a language model,", help="Prompt to start with.")
     parser.add_argument("--max_seq_len", type=int, default=32, help="Number of tokens to continue.")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
+    parser.add_argument('--backend', default='default', choices=backends,
+                        help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+    parser.add_argument('--target', default='cpu', choices=targets,
+                        help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
     return parser.parse_args()
 
 def stable_softmax(logits):
@@ -82,7 +93,11 @@ if __name__ == '__main__':
     prompt = args.prompt
     tokenizer_path = args.tokenizer_path
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+    engine = get_engine_id(args.engine)
+    net = cv.dnn.readNetFromONNX(args.model, engine)
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
     tokenizer = cv.dnn.Tokenizer.load(tokenizer_path)
 
     tokens = gpt2_inference(net, prompt, max_length, tokenizer)

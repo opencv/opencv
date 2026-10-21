@@ -68,8 +68,13 @@ Paged KV-cache and reserveKVCache():
 import numpy as np
 import argparse
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 def parse_args():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
+
     parser = argparse.ArgumentParser(description='Use this script to run Gemma3 inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, required=True, help='Path to Gemma3 ONNX model file.')
@@ -78,6 +83,12 @@ def parse_args():
     parser.add_argument('--max_new_tokens', type=int, default=64, help='Maximum number of new tokens to generate.')
     parser.add_argument('--use_kv_cache', action='store_true', default=False, help='Enable KV-cache for faster inference (requires causal-lm-with-past export).')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
+    parser.add_argument('--backend', default='default', choices=backends,
+                        help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+    parser.add_argument('--target', default='cpu', choices=targets,
+                        help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
     return parser.parse_args()
 
 def set_optional_input(net, name, value):
@@ -156,10 +167,14 @@ if __name__ == '__main__':
     print("Preparing Gemma3 model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+    engine = get_engine_id(args.engine)
+    net = cv.dnn.readNetFromONNX(args.model, engine)
     if net.empty():
         raise SystemExit('Failed to load the model - readNetFromONNX() only warns, it does not raise. '
                          'Re-run with OPENCV_LOG_LEVEL=INFO to see which node was rejected and why.')
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
 
     gemma3_prompt = build_gemma3_prompt(args.prompt)
     print(f"Prompt:\n{gemma3_prompt}")

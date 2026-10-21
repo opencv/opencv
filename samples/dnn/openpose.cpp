@@ -20,12 +20,31 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include "common.hpp"
 using namespace cv;
 using namespace cv::dnn;
 
 #include <iostream>
 using namespace std;
 
+const string backend_keys = format(
+    "{ backend | default | Choose one of computation backends: "
+    "default: automatically (by default), "
+    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+    "opencv: OpenCV implementation, "
+    "vkcom: VKCOM, "
+    "cuda: CUDA, "
+    "webnn: WebNN }");
+
+const string target_keys = format(
+    "{ target | cpu | Choose one of target computation devices: "
+    "cpu: CPU target (by default), "
+    "opencl: OpenCL, "
+    "opencl_fp16: OpenCL fp16 (half-float precision), "
+    "vpu: VPU, "
+    "vulkan: Vulkan, "
+    "cuda: CUDA, "
+    "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 // connection table, in the format [model_id][pair_id][from/to]
 // please look at the nice explanation at the bottom of:
@@ -56,7 +75,7 @@ const int POSE_PAIRS[3][20][2] = {
 
 int main(int argc, char **argv)
 {
-    CommandLineParser parser(argc, argv,
+    string keys =
         "{ h help           | false     | print this help message }"
         "{ p proto          |           | (required) model configuration, e.g. hand/pose.prototxt }"
         "{ m model          |           | (required) model weights, e.g. hand/pose_iter_102000.caffemodel }"
@@ -66,7 +85,8 @@ int main(int argc, char **argv)
         "{ height           |  368      | Preprocess input image by resizing to a specific height. }"
         "{ t threshold      |  0.1      | threshold or confidence value for the heatmap }"
         "{ s scale          |  0.003922 | scale for blob }"
-    );
+        + engine_keys + backend_keys + target_keys;
+    CommandLineParser parser(argc, argv, keys);
 
     String modelTxt = samples::findFile(parser.get<string>("proto"));
     String modelBin = samples::findFile(parser.get<string>("model"));
@@ -95,7 +115,15 @@ int main(int argc, char **argv)
     }
 
     // read the network model
-    Net net = readNet(modelBin, modelTxt);
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
+    string backend = parser.get<String>("backend");
+    string target = parser.get<String>("target");
+
+    Net net = readNet(modelBin, modelTxt, "", engine);
+    net.setPreferableBackend(getBackendID(backend));
+    net.setPreferableTarget(getTargetID(target));
+    printDnnConfig(net);
     // and the image
     Mat img = imread(imageFile);
     if (img.empty())

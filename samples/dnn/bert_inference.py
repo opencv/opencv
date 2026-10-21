@@ -40,16 +40,27 @@ Run the script:
 import numpy as np
 import argparse
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 MASK_TOKEN = '[MASK]'
 
 def parse_args():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
+
     parser = argparse.ArgumentParser(description='Use this script to run BERT masked-LM inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, required=True, help='Path to the BERT ONNX model file.')
     parser.add_argument('--tokenizer_path', type=str, required=True, help='Path to the BERT tokenizer directory, or to its config.json.')
     parser.add_argument('--text', type=str, default='Paris is the [MASK] of France.', help='Input text containing a single [MASK] token.')
     parser.add_argument('--topk', type=int, default=5, help='Number of top predictions to print.')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
+    parser.add_argument('--backend', default='default', choices=backends,
+                        help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+    parser.add_argument('--target', default='cpu', choices=targets,
+                        help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
     return parser.parse_args()
 
 def encode_with_mask(tokenizer, text):
@@ -93,7 +104,11 @@ if __name__ == '__main__':
     print("Preparing BERT model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    net = cv.dnn.readNetFromONNX(args.model, cv.dnn.ENGINE_OPENCV)
+    engine = get_engine_id(args.engine)
+    net = cv.dnn.readNetFromONNX(args.model, engine)
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
 
     print(f"Text: {args.text}")
     predictions = bert_inference(net, tokenizer, args.text, args.topk)

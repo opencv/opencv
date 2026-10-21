@@ -131,6 +131,28 @@ void Net::setPreferableTarget(int targetId)
     return impl->setPreferableTarget(targetId);
 }
 
+int Net::getPreferableBackend() const
+{
+    CV_Assert(impl);
+    return impl->preferableBackend;
+}
+
+int Net::getPreferableTarget() const
+{
+    CV_Assert(impl);
+    return impl->preferableTarget;
+}
+
+EngineType Net::getEngine() const
+{
+    CV_Assert(impl);
+#ifdef HAVE_ONNXRUNTIME
+    return impl->useOrtEngine ? ENGINE_ORT : ENGINE_OPENCV;
+#else
+    return ENGINE_OPENCV;
+#endif
+}
+
 void Net::finalizeNet()
 {
     CV_TRACE_FUNCTION();

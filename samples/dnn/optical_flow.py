@@ -15,14 +15,17 @@ import argparse
 import os.path
 import numpy as np
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 
 class OpticalFlow(object):
-    def __init__(self, model, height, width, proto=""):
+    def __init__(self, model, height, width, proto="", engine=0, backend=0, target=0):
         if proto:
             raise cv.error("Caffe support has been removed. Please provide a single ONNX model path (e.g. RAFT).")
-        self.net = cv.dnn.readNetFromONNX(model)
-        self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
+        self.net = cv.dnn.readNetFromONNX(model, engine=engine)
+        self.net.setPreferableBackend(backend)
+        self.net.setPreferableTarget(target)
+        print_dnn_config(self.net)
         self.height = height
         self.width = width
 
@@ -70,6 +73,31 @@ if __name__ == '__main__':
     parser.add_argument('--height', default=320, type=int, help='Input height')
     parser.add_argument('--width', default=448, type=int, help='Input width')
     parser.add_argument('--model', '-m', required=True, help='Path to a single ONNX model (e.g. RAFT).')
+    parser.add_argument('--backend', default='default', type=str,
+                        choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                        help="Choose one of computation backends: "
+                             "default: automatically (by default), "
+                             "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                             "opencv: OpenCV's built-in engine, "
+                             "vkcom: Vulkan-based backend, "
+                             "cuda: CUDA backend")
+    parser.add_argument('--target', default='cpu', type=str,
+                        choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                        help='Choose one of target devices: '
+                             'cpu: CPU (by default), '
+                             'opencl: OpenCL, '
+                             'opencl_fp16: OpenCL FP16 (half-precision), '
+                             'ncs2_vpu: NCS2 VPU, '
+                             'hddl_vpu: HDDL VPU, '
+                             'vulkan: Vulkan, '
+                             'cuda: CUDA, '
+                             'cuda_fp16: CUDA FP16')
+    parser.add_argument('--engine', default='auto', type=str,
+                        choices=['auto', 'opencv', 'ort'],
+                        help='Choose DNN engine: '
+                             'auto: automatically select engine (default), '
+                             'opencv: OpenCV built-in DNN engine, '
+                             'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
     args, _ = parser.parse_known_args()
 
     if not os.path.isfile(args.model):
@@ -80,7 +108,10 @@ if __name__ == '__main__':
     cap = cv.VideoCapture(args.input if args.input else 0)
     hasFrame, first_frame = cap.read()
 
-    opt_flow = OpticalFlow(args.model, 360, 480)
+    engine = get_engine_id(args.engine)
+    backend = get_backend_id(args.backend)
+    target = get_target_id(args.target)
+    opt_flow = OpticalFlow(args.model, 360, 480, engine=engine, backend=backend, target=target)
 
     while cv.waitKey(1) < 0:
         hasFrame, second_frame = cap.read()

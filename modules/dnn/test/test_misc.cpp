@@ -1142,4 +1142,31 @@ TEST(Net, ShapeUtils_total_no_int32_overflow)
     EXPECT_EQ(t, 2839019520llu);
 }
 
+TEST(Net, ConfigGetters)
+{
+    Net net;
+    EXPECT_EQ(net.getEngine(), cv::dnn::ENGINE_OPENCV);
+    EXPECT_EQ(net.getPreferableBackend(), DNN_BACKEND_OPENCV);
+    EXPECT_EQ(net.getPreferableTarget(), DNN_TARGET_CPU);
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    EXPECT_EQ(net.getPreferableBackend(), DNN_BACKEND_OPENCV);
+
+#ifdef HAVE_OPENCL
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+    EXPECT_EQ(net.getPreferableTarget(), DNN_TARGET_OPENCL);
+#endif
+
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    EXPECT_EQ(net.getPreferableTarget(), DNN_TARGET_CPU);
+}
+
+TEST(Net, EngineTypeEnumValues)
+{
+    EXPECT_EQ(cv::dnn::ENGINE_AUTO, 0);
+    EXPECT_EQ(cv::dnn::ENGINE_OPENCV, 1);
+    EXPECT_EQ(cv::dnn::ENGINE_ORT, 2);
+}
+
 }} // namespace
+

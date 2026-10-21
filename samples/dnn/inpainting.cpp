@@ -76,7 +76,7 @@ const string target_keys = format(
     "cuda: CUDA, "
     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 bool drawing = false;
 Mat maskGray;
 int brush_size = 15;
@@ -129,11 +129,13 @@ int main(int argc, char **argv)
 
     cout<<"Model loading..."<<endl;
 
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
 
     Net net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
+    printDnnConfig(net);
 
     FontFace fontFace("sans");
 

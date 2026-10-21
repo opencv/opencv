@@ -17,6 +17,7 @@ import argparse
 import os.path
 import numpy as np
 import cv2 as cv
+from common import get_engine_id, print_dnn_config
 
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
@@ -36,16 +37,17 @@ def preprocess(image):
     return input
 
 
-def run_net(input, model_path, backend, target):
+def run_net(input, model_path, backend, target, engine=cv.dnn.ENGINE_AUTO, engine_name="auto"):
     """
     Read network and infer model
     :param model_path: path to JPPNet model
     :param backend: computation backend
     :param target: computation device
     """
-    net = cv.dnn.readNetFromONNX(model_path)
+    net = cv.dnn.readNetFromONNX(model_path, engine)
     net.setPreferableBackend(backend)
     net.setPreferableTarget(target)
+    print_dnn_config(net)
     net.setInput(input)
     out = net.forward()
     return out
@@ -114,16 +116,18 @@ def decode_labels(gray_image):
     return segm
 
 
-def parse_human(image, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
+def parse_human(image, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, engine=cv.dnn.ENGINE_AUTO, engine_name="auto"):
     """
     Prepare input for execution, run net and postprocess output to parse human.
     :param image: input image
     :param model_path: path to JPPNet model
     :param backend: name of computation backend
     :param target: name of computation target
+    :param engine: engine ID
+    :param engine_name: name of computation engine
     """
     input = preprocess(image)
-    output = run_net(input, model_path, backend, target)
+    output = run_net(input, model_path, backend, target, engine, engine_name)
     grayscale_out = postprocess(output, (image.shape[1], image.shape[0]))
     segmentation = decode_labels(grayscale_out)
     return segmentation
@@ -134,6 +138,8 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input', '-i', required=True, help='Path to input image.')
     parser.add_argument('--model', '-m', default='human_parsing_jppnet_2026sep.onnx', help='Path to onnx model.')
+    parser.add_argument('--engine', default='auto', choices=('auto', 'opencv', 'ort'),
+                        help='Choose one of computation engines: auto, opencv, ort')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
@@ -157,7 +163,8 @@ if __name__ == '__main__':
         raise OSError("Model not exist")
 
     image = cv.imread(args.input)
-    output = parse_human(image, args.model, args.backend, args.target)
+    engine = get_engine_id(args.engine)
+    output = parse_human(image, args.model, args.backend, args.target, engine, args.engine)
     winName = 'Deep learning human parsing in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
     cv.imshow(winName, output)

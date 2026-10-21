@@ -46,11 +46,17 @@ def help():
 def get_args_parser():
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input', '-i', default="licenseplate_motion.jpg", help='Path to image file.', required=False)
+    parser.add_argument('--engine', default="auto", type=str, choices=engines,
+            help="Choose one of computation engines: "
+            "auto: automatically (by default), "
+            "opencv: OpenCV built-in engine, "
+            "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON)")
     parser.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -83,11 +89,12 @@ def main():
 
     args.model = findModel(args.model, args.sha1)
 
-    engine = cv.dnn.ENGINE_OPENCV
+    engine = get_engine_id(args.engine)
 
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
 
     input_image = cv.imread(findFile(args.input))
     image = input_image.copy()

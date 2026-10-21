@@ -53,7 +53,7 @@ const string target_keys = format(
                               "cuda: CUDA, "
                               "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 
 vector<string> classes;
 static bool readStringList( const string& filename, vector<string>& l )
@@ -146,11 +146,13 @@ int main(int argc, char** argv)
     }
     CV_Assert(!model.empty());
     //! [Read and initialize network]
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
     Net net = readNetFromONNX(model, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
     net.setProfilingMode(DNN_PROFILE_SUMMARY);
+    printDnnConfig(net);
     //! [Read and initialize network]
 
     // Create a window

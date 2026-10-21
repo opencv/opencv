@@ -31,6 +31,7 @@ def get_args_parser(func_args):
         "cuda",
         "cuda_fp16",
     )
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
@@ -40,6 +41,16 @@ def get_args_parser(func_args):
     )
     parser.add_argument(
         "--input", help="Path to input image file.", default="chicky_512.png", required=False
+    )
+    parser.add_argument(
+        "--engine",
+        default="auto",
+        type=str,
+        choices=engines,
+        help="Choose one of computation engines: "
+             "auto: automatically (by default), "
+             "opencv: OpenCV built-in engine, "
+             "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON)",
     )
     parser.add_argument(
         "--backend",
@@ -94,9 +105,11 @@ def load_model(args):
     """Load the super-resolution model"""
     try:
         model_path = findModel(args.model, args.sha1)
-        net = cv.dnn.readNetFromONNX(model_path)
+        engine = get_engine_id(args.engine)
+        net = cv.dnn.readNetFromONNX(model_path, engine)
         net.setPreferableBackend(get_backend_id(args.backend))
         net.setPreferableTarget(get_target_id(args.target))
+        print_dnn_config(net)
         return net
     except Exception as e:
         print(f"Error loading model: {e}")

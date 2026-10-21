@@ -2,6 +2,7 @@ from __future__ import print_function
 import cv2 as cv
 import numpy as np
 import argparse
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 parser = argparse.ArgumentParser(
         description='This script is used to run style transfer models from '
@@ -11,10 +12,38 @@ parser.add_argument('--model', help='Path to .onnx model')
 parser.add_argument('--width', default=-1, type=int, help='Resize input to specific width.')
 parser.add_argument('--height', default=-1, type=int, help='Resize input to specific height.')
 parser.add_argument('--median_filter', default=0, type=int, help='Kernel size of postprocessing blurring.')
+parser.add_argument('--backend', default='default', type=str,
+                    choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                    help="Choose one of computation backends: "
+                         "default: automatically (by default), "
+                         "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                         "opencv: OpenCV's built-in engine, "
+                         "vkcom: Vulkan-based backend, "
+                         "cuda: CUDA backend")
+parser.add_argument('--target', default='cpu', type=str,
+                    choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                    help='Choose one of target devices: '
+                         'cpu: CPU (by default), '
+                         'opencl: OpenCL, '
+                         'opencl_fp16: OpenCL FP16 (half-precision), '
+                         'ncs2_vpu: NCS2 VPU, '
+                         'hddl_vpu: HDDL VPU, '
+                         'vulkan: Vulkan, '
+                         'cuda: CUDA, '
+                         'cuda_fp16: CUDA FP16')
+parser.add_argument('--engine', default='auto', type=str,
+                    choices=['auto', 'opencv', 'ort'],
+                    help='Choose DNN engine: '
+                         'auto: automatically select engine (default), '
+                         'opencv: OpenCV built-in DNN engine, '
+                         'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
 args = parser.parse_args()
 
-net = cv.dnn.readNetFromONNX(cv.samples.findFile(args.model))
-net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
+engine = get_engine_id(args.engine)
+net = cv.dnn.readNetFromONNX(cv.samples.findFile(args.model), engine=engine)
+net.setPreferableBackend(get_backend_id(args.backend))
+net.setPreferableTarget(get_target_id(args.target))
+print_dnn_config(net)
 
 if args.input:
     cap = cv.VideoCapture(args.input)

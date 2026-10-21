@@ -29,10 +29,11 @@ static void applyCanny(const Mat& image, Mat& result) {
 }
 
 // Load Model
-static void loadModel(const string modelPath, String backend, String target, Net &net, EngineType engine){
+static void loadModel(const string modelPath, String backend, String target, Net &net, EngineType engine, const String& engineStr = ""){
     net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
+    printDnnConfig(net);
 }
 
 static void setupCannyWindow(){
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
                               "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 
-    string keys = param_keys + backend_keys + target_keys;
+    string keys = param_keys + engine_keys + backend_keys + target_keys;
 
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
@@ -159,7 +160,8 @@ int main(int argc, char** argv) {
     string method = parser.get<String>("method");
     String sha1 = parser.get<String>("sha1");
     string model = findModel(parser.get<String>("model"), sha1);
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
     parser.about(about);
 
     VideoCapture cap;
@@ -185,7 +187,7 @@ int main(int argc, char** argv) {
     }
 
     if (method == "dexined") {
-        loadModel(model, backend, target, net, engine);
+        loadModel(model, backend, target, net, engine, engineStr);
     }
     else{
         Mat dummy = Mat::zeros(512, 512, CV_8UC3);
@@ -224,7 +226,7 @@ int main(int argc, char** argv) {
             if (!model.empty()){
                 method = "dexined";
                 if (net.empty())
-                    loadModel(model, backend, target, net, engine);
+                    loadModel(model, backend, target, net, engine, engineStr);
                 destroyWindow("Output");
                 namedWindow("Input", WINDOW_AUTOSIZE);
                 namedWindow("Output", WINDOW_AUTOSIZE);

@@ -29,6 +29,31 @@ def load_parser(model_name):
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument("--input", type=str, help="Path to video source")
+    parser.add_argument('--backend', default='default', type=str,
+                        choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                        help="Choose one of computation backends: "
+                             "default: automatically (by default), "
+                             "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                             "opencv: OpenCV's built-in engine, "
+                             "vkcom: Vulkan-based backend, "
+                             "cuda: CUDA backend")
+    parser.add_argument('--target', default='cpu', type=str,
+                        choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                        help='Choose one of target devices: '
+                             'cpu: CPU (by default), '
+                             'opencl: OpenCL, '
+                             'opencl_fp16: OpenCL FP16 (half-precision), '
+                             'ncs2_vpu: NCS2 VPU, '
+                             'hddl_vpu: HDDL VPU, '
+                             'vulkan: Vulkan, '
+                             'cuda: CUDA, '
+                             'cuda_fp16: CUDA FP16')
+    parser.add_argument('--engine', default='auto', type=str,
+                        choices=['auto', 'opencv', 'ort'],
+                        help='Choose DNN engine: '
+                             'auto: automatically select engine (default), '
+                             'opencv: OpenCV built-in DNN engine, '
+                             'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
     args, _ = parser.parse_known_args()
 
     add_preproc_args(args.zoo, parser, 'object_tracker', alias=model_name)
@@ -76,6 +101,7 @@ def createTracker(model_name, args):
 
 def main(model_name, args):
     tracker = createTracker(model_name, args)
+    print_dnn_config(args.engine, args.backend, args.target)
     videoPath = args.input
     print('Using video: {}'.format(videoPath))
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)

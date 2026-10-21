@@ -50,7 +50,7 @@ const string target_keys = format(
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 
 static void loadParser(const string &modelName, const string &zooFile)
 {
@@ -139,6 +139,10 @@ int main(int argc, char** argv)
 
     Ptr<Tracker> tracker;
     createTracker(modelName, parser, tracker);
+    string engineStr = parser.get<String>("engine");
+    int backend = getBackendID(parser.get<String>("backend"));
+    int target = getTargetID(parser.get<String>("target"));
+    printDnnConfig(engineStr, backend, target);
 
     const string windowName = "TRACKING";
     namedWindow(windowName, WINDOW_NORMAL);

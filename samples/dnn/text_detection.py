@@ -69,6 +69,31 @@ def get_args_parser():
                         help='Unclip ratio for DB detector.')
     parser.add_argument('--vocabulary_path', default='alphabet_36.txt',
                         help='Path to vocabulary file.')
+    parser.add_argument('--backend', default='default', type=str,
+                        choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                        help="Choose one of computation backends: "
+                             "default: automatically (by default), "
+                             "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                             "opencv: OpenCV's built-in engine, "
+                             "vkcom: Vulkan-based backend, "
+                             "cuda: CUDA backend")
+    parser.add_argument('--target', default='cpu', type=str,
+                        choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                        help='Choose one of target devices: '
+                             'cpu: CPU (by default), '
+                             'opencl: OpenCL, '
+                             'opencl_fp16: OpenCL FP16 (half-precision), '
+                             'ncs2_vpu: NCS2 VPU, '
+                             'hddl_vpu: HDDL VPU, '
+                             'vulkan: Vulkan, '
+                             'cuda: CUDA, '
+                             'cuda_fp16: CUDA FP16')
+    parser.add_argument('--engine', default='auto', type=str,
+                        choices=['auto', 'opencv', 'ort'],
+                        help='Choose DNN engine: '
+                             'auto: automatically select engine (default), '
+                             'opencv: OpenCV built-in DNN engine, '
+                             'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
     args, _ = parser.parse_known_args()
 
     add_preproc_args(args.zoo, parser, 'text_detection', prefix="")
@@ -113,9 +138,18 @@ def main():
     fontSize = (stdSize*imgWidth)/stdImgSize
     fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
 
+    engine_id = get_engine_id(args.engine)
+    backend_id = get_backend_id(args.backend)
+    target_id = get_target_id(args.target)
+
+    detNet = cv2.dnn.readNet(args.model, engine=engine_id)
+    detNet.setPreferableBackend(backend_id)
+    detNet.setPreferableTarget(target_id)
+    print_dnn_config(detNet)
+
     if(args.alias == "DB"):
         # DB Detector initialization
-        detector = cv2.dnn_TextDetectionModel_DB(args.model)
+        detector = cv2.dnn_TextDetectionModel_DB(detNet)
         detector.setBinaryThreshold(args.binary_threshold)
         detector.setPolygonThreshold(args.polygon_threshold)
         detector.setUnclipRatio(args.unclip_ratio)
@@ -126,7 +160,7 @@ def main():
         detResults = detector.detect(frame)
     elif(args.alias == "East"):
         # EAST Detector initialization
-        detector = cv2.dnn_TextDetectionModel_EAST(args.model)
+        detector = cv2.dnn_TextDetectionModel_EAST(detNet)
         detector.setConfidenceThreshold(args.thr)
         detector.setNMSThreshold(args.nms)
         # Setting input parameters specific to EAST model
@@ -142,7 +176,11 @@ def main():
         print("[ERROR] Please pass the path to the ocr model using --ocr_model to run the sample")
         exit(1)
     # Initialize the text recognition model with the specified model path
-    recognizer = cv2.dnn_TextRecognitionModel(args.ocr_model)
+    ocrNet = cv2.dnn.readNet(args.ocr_model, engine=engine_id)
+    ocrNet.setPreferableBackend(backend_id)
+    ocrNet.setPreferableTarget(target_id)
+    print_dnn_config(ocrNet)
+    recognizer = cv2.dnn_TextRecognitionModel(ocrNet)
 
     # Set the vocabulary for the model
     recognizer.setVocabulary(vocabulary)

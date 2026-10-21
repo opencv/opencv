@@ -8,10 +8,11 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include "common.hpp"
 using namespace cv;
 
 
-static Mat parse_human(const Mat &image, const std::string &model, int backend=dnn::DNN_BACKEND_DEFAULT, int target=dnn::DNN_TARGET_CPU) {
+static Mat parse_human(const Mat &image, const std::string &model, int backend=dnn::DNN_BACKEND_DEFAULT, int target=dnn::DNN_TARGET_CPU, dnn::EngineType engine=dnn::ENGINE_AUTO, const std::string& engineStr="") {
     // this network expects an image and a flipped copy as input
     Mat resized, flipped;
     resize(image, resized, Size(384, 384));
@@ -21,9 +22,10 @@ static Mat parse_human(const Mat &image, const std::string &model, int backend=d
     batch.push_back(flipped);
     Mat blob = dnn::blobFromImages(batch, 1.0, Size(), Scalar(104.00698793, 116.66876762, 122.67891434));
 
-    dnn::Net net = dnn::readNetFromONNX(model);
+    dnn::Net net = dnn::readNetFromONNX(model, engine);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    printDnnConfig(net);
     net.setInput(blob);
     Mat out = net.forward();
     // expected output: [2, 20, 384, 384], (2 lists(orig, flipped) of 20 body part heatmaps 384x384)
@@ -91,7 +93,7 @@ int main(int argc, char**argv)
                           "%d: Vulkan, "
                           "%d: CUDA, "
                           "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
-    std::string keys = param_keys + backend_keys + target_keys;
+    std::string keys = param_keys + engine_keys + backend_keys + target_keys;
     CommandLineParser parser(argc, argv, keys);
     if (argc == 1 || parser.has("help"))
     {
@@ -100,11 +102,13 @@ int main(int argc, char**argv)
     }
     std::string model = parser.get<std::string>("model");
     std::string image = parser.get<std::string>("image");
+    std::string engineStr = parser.get<std::string>("engine");
+    dnn::EngineType engine = getEngineID(engineStr);
     int backend = parser.get<int>("backend");
     int target = parser.get<int>("target");
 
     Mat input = imread(image);
-    Mat segm = parse_human(input, model, backend, target);
+    Mat segm = parse_human(input, model, backend, target, engine, engineStr);
 
     imshow("human parsing", segm);
     waitKey();

@@ -39,6 +39,7 @@ def get_args_parser(func_args):
         "cuda",
         "cuda_fp16",
     )
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
@@ -50,6 +51,12 @@ def get_args_parser(func_args):
         "--input",
         default="messi5.jpg",
         help="Path to input image or video file. Defaults to messi5.jpg in samples/data.",
+    )
+    parser.add_argument(
+        "--engine",
+        default="auto",
+        choices=engines,
+        help="Choose one of computation engines: auto, opencv, ort",
     )
     parser.add_argument(
         "--backend",
@@ -111,6 +118,7 @@ def loadModel(args, engine):
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
     return net
 
 
@@ -140,7 +148,7 @@ def apply_modnet(args, model, image):
 
 def main(func_args=None):
     args = get_args_parser(func_args)
-    engine = cv.dnn.ENGINE_OPENCV
+    engine = get_engine_id(args.engine)
 
     image = cv.imread(cv.samples.findFile(args.input))
     if image is None:

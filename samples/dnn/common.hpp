@@ -1,6 +1,163 @@
 #include <opencv2/core/utils/filesystem.hpp>
-#include<iostream>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/dnn.hpp>
+#include <iostream>
+#include <cstdlib>
 using namespace cv;
+
+inline const std::string engine_keys = format(
+    "{ engine           | auto | Choose one of computation engines: "
+                              "auto: automatically (by default), "
+                              "opencv: OpenCV built-in engine, "
+                              "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON) }");
+
+inline cv::dnn::EngineType getEngineID(const String& engine) {
+    std::map<String, cv::dnn::EngineType> engineIDs = {
+        {"auto", cv::dnn::ENGINE_AUTO},
+        {"opencv", cv::dnn::ENGINE_OPENCV},
+        {"ort", cv::dnn::ENGINE_ORT}
+    };
+    if (engineIDs.find(engine) != engineIDs.end()) {
+        return engineIDs[engine];
+    } else {
+        throw std::invalid_argument("Invalid engine name: " + engine);
+    }
+}
+
+inline std::string getEngineName(cv::dnn::EngineType engine) {
+    switch (engine) {
+        case cv::dnn::ENGINE_ORT: return "ort";
+        case cv::dnn::ENGINE_OPENCV: return "opencv";
+        default: return "opencv";
+    }
+}
+
+inline std::string getBackendName(int backend) {
+    switch (backend) {
+        case cv::dnn::DNN_BACKEND_DEFAULT: return "default";
+        case cv::dnn::DNN_BACKEND_INFERENCE_ENGINE:
+        case 1000000: // DNN_BACKEND_INFERENCE_ENGINE_NGRAPH (internal)
+            return "openvino";
+        case cv::dnn::DNN_BACKEND_OPENCV: return "opencv";
+        case cv::dnn::DNN_BACKEND_VKCOM: return "vkcom";
+        case cv::dnn::DNN_BACKEND_CUDA: return "cuda";
+        case cv::dnn::DNN_BACKEND_WEBNN: return "webnn";
+        case cv::dnn::DNN_BACKEND_TIMVX: return "timvx";
+        case cv::dnn::DNN_BACKEND_CANN: return "cann";
+        default: return std::to_string(backend);
+    }
+}
+
+inline std::string getTargetName(int target) {
+    switch (target) {
+        case cv::dnn::DNN_TARGET_CPU: return "cpu";
+        case cv::dnn::DNN_TARGET_OPENCL: return "opencl";
+        case cv::dnn::DNN_TARGET_OPENCL_FP16: return "opencl_fp16";
+        case cv::dnn::DNN_TARGET_MYRIAD: return "ncs2_vpu";
+        case cv::dnn::DNN_TARGET_HDDL: return "hddl_vpu";
+        case cv::dnn::DNN_TARGET_VULKAN: return "vulkan";
+        case cv::dnn::DNN_TARGET_CUDA: return "cuda";
+        case cv::dnn::DNN_TARGET_CUDA_FP16: return "cuda_fp16";
+        default: return std::to_string(target);
+    }
+}
+
+inline std::string resolveEngineName(const String& engine) {
+    int engineType = cv::dnn::ENGINE_AUTO;
+    if (engine == "opencv") {
+        engineType = cv::dnn::ENGINE_OPENCV;
+    } else if (engine == "ort") {
+        engineType = cv::dnn::ENGINE_ORT;
+    } else if (engine == "auto" || engine.empty()) {
+        engineType = cv::dnn::ENGINE_AUTO;
+    } else {
+        return engine;
+    }
+
+    const char* forcedEnv = std::getenv("OPENCV_FORCE_DNN_ENGINE");
+    if (forcedEnv) {
+        int forced = std::atoi(forcedEnv);
+        if (forced == cv::dnn::ENGINE_OPENCV || forced == cv::dnn::ENGINE_ORT) {
+            engineType = forced;
+        }
+    }
+
+    if (engineType == cv::dnn::ENGINE_AUTO) {
+        engineType = cv::dnn::ENGINE_OPENCV;
+    }
+
+    if (engineType == cv::dnn::ENGINE_ORT) {
+        bool ortAvailable = false;
+#ifdef HAVE_ONNXRUNTIME
+        ortAvailable = true;
+#else
+        const std::string buildInfo = cv::getBuildInformation();
+        size_t pos = buildInfo.find("ONNX Runtime:");
+        if (pos != std::string::npos) {
+            size_t end = buildInfo.find('\n', pos);
+            std::string line = buildInfo.substr(pos, end == std::string::npos ? end : end - pos);
+            ortAvailable = (line.find("YES") != std::string::npos);
+        }
+#endif
+        if (!ortAvailable) {
+            engineType = cv::dnn::ENGINE_OPENCV;
+        }
+    }
+
+    return (engineType == cv::dnn::ENGINE_ORT) ? "ort" : "opencv";
+}
+
+inline std::string resolveEngineName(cv::dnn::EngineType engine) {
+    if (engine == cv::dnn::ENGINE_ORT) {
+        return resolveEngineName("ort");
+    } else if (engine == cv::dnn::ENGINE_OPENCV) {
+        return resolveEngineName("opencv");
+    } else {
+        return resolveEngineName("auto");
+    }
+}
+
+inline std::string resolveBackendName(int backend) {
+    if (backend == cv::dnn::DNN_BACKEND_DEFAULT) {
+        const char* forcedEnv = std::getenv("OPENCV_DNN_BACKEND_DEFAULT");
+        if (forcedEnv) {
+            return getBackendName(std::atoi(forcedEnv));
+        }
+        return "opencv";
+    }
+    return getBackendName(backend);
+}
+
+inline std::string resolveBackendName(const String& backend) {
+    if (backend == "default") {
+        const char* forcedEnv = std::getenv("OPENCV_DNN_BACKEND_DEFAULT");
+        if (forcedEnv) {
+            return getBackendName(std::atoi(forcedEnv));
+        }
+        return "opencv";
+    }
+    return backend;
+}
+
+inline void printDnnConfig(const cv::dnn::Net& net) {
+    std::cout << "DNN Engine: " << getEngineName(net.getEngine())
+              << ", Backend: " << getBackendName(net.getPreferableBackend())
+              << ", Target: " << getTargetName(net.getPreferableTarget()) << std::endl;
+}
+
+inline void printDnnConfig(const String& engine, const String& backend, const String& target) {
+    std::cout << "DNN Engine: " << resolveEngineName(engine)
+              << ", Backend: " << resolveBackendName(backend)
+              << ", Target: " << target << std::endl;
+}
+
+inline void printDnnConfig(const String& engine, int backend, int target) {
+    printDnnConfig(engine, resolveBackendName(backend), getTargetName(target));
+}
+
+inline void printDnnConfig(cv::dnn::EngineType engine, int backend, int target) {
+    printDnnConfig(resolveEngineName(engine), resolveBackendName(backend), getTargetName(target));
+}
 
 std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,

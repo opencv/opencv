@@ -3,6 +3,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
+#include "common.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -512,6 +513,7 @@ int main(int argc, char** argv)
         "{show_spectrogram s | false                    | Show a spectrogram of the input audio: true / false / 1 / 0 }"
         "{model m            | jasper.onnx              | Path to the onnx file of Jasper. You can download the converted onnx model "
                                                           "from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing}"
+        + engine_keys +
         "{backend b          | dnn::DNN_BACKEND_DEFAULT | Select a computation backend: "
                                                           "dnn::DNN_BACKEND_DEFAULT, "
                                                           "dnn::DNN_BACKEND_INFERENCE_ENGINE, "
@@ -529,9 +531,14 @@ int main(int argc, char** argv)
     }
 
     // Load Network
-    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"));
-    net.setPreferableBackend(parser.get<int>("backend"));
-    net.setPreferableTarget(parser.get<int>("target"));
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
+    int backend = parser.get<int>("backend");
+    int target = parser.get<int>("target");
+    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"), engine);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    printDnnConfig(net);
 
     // Get audio
     vector<double>inputAudio = {};

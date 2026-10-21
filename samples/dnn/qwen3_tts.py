@@ -80,6 +80,7 @@ def help():
 def get_args_parser():
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(description='Text-to-speech synthesis with Qwen3-TTS.')
     parser.add_argument('--model', help='Directory with the Qwen3-TTS ONNX graphs.')
@@ -94,6 +95,8 @@ def get_args_parser():
     parser.add_argument('--output', default='qwen3_tts.wav', help='Path of the .wav file to write.')
     parser.add_argument('--max_frames', type=int, default=400,
                         help='Stop after this many code frames (about 12 per second).')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
     parser.add_argument('--backend', default='default', choices=backends,
                         help='Computation backend.')
     parser.add_argument('--target', default='cpu', choices=targets,
@@ -145,14 +148,18 @@ def main():
         raise ValueError('the text tokenized to nothing')
 
     nets = {}
+    engine = get_engine_id(args.engine)
+    backend_id = get_backend_id(args.backend)
+    target_id = get_target_id(args.target)
     for name in ('text_embed', 'codec_embed', 'talker_cache',
                  'code_predictor', 'residual_embed', 'tok_decoder'):
         path = os.path.join(args.model, name + '.onnx')
         require_file(path)
         print('loading  : %s' % name)
-        nets[name] = cv.dnn.readNetFromONNX(path)
-        nets[name].setPreferableBackend(get_backend_id(args.backend))
-        nets[name].setPreferableTarget(get_target_id(args.target))
+        nets[name] = cv.dnn.readNetFromONNX(path, engine)
+        nets[name].setPreferableBackend(backend_id)
+        nets[name].setPreferableTarget(target_id)
+    print_dnn_config(nets['text_embed'])
 
     # Prefill: role embeddings, then the codec tag block, then the text and its closing tags.
     special = embed(nets['text_embed'], 'text_ids', [TTS_BOS, TTS_EOS, TTS_PAD])

@@ -18,6 +18,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "common.hpp"
 
 using namespace cv;
 using namespace cv::dnn;
@@ -77,7 +78,7 @@ int main(int argc, char** argv)
         "{ model m |                                  | Path to ONNX model containing the custom op }"
         "{ op    o | MyCustomOp                       | Op key for registration. Default-domain: just the op_type "
                                                        "(e.g. MyCustomOp). Custom-domain: <domain>.<op_type> "
-                                                       "(e.g. my.namespace.MyDomainOp) }";
+                                                       "(e.g. my.namespace.MyDomainOp) }" + engine_keys;
     CommandLineParser parser(argc, argv, keys);
     parser.about("Demonstrates importing an ONNX model that contains a custom (non-standard) op "
                  "by registering a user-defined layer with cv::dnn::LayerFactory.");
@@ -97,13 +98,17 @@ int main(int argc, char** argv)
     LayerFactory::registerLayer(opKey, CustomScaleBiasLayer::create);
     //! [Register CustomScaleBiasLayer]
 
-    Net net = readNetFromONNX(modelPath);
+    string engineStr = parser.get<string>("engine");
+    EngineType engine = getEngineID(engineStr);
+
+    Net net = readNetFromONNX(modelPath, engine);
     if (net.empty())
     {
         cerr << "Failed to load model: " << modelPath << "\n";
         LayerFactory::unregisterLayer(opKey);
         return 1;
     }
+    printDnnConfig(net);
 
     // The companion ONNX models accept a 1x3x4x4 float input.
     Mat input(vector<int>{1, 3, 4, 4}, CV_32F, Scalar(1.0f));

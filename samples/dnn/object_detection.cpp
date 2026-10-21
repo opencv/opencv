@@ -64,7 +64,7 @@ const string target_keys = format(
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 
 float confThreshold, nmsThreshold, scale, paddingValue;
 vector<string> labels;
@@ -220,12 +220,17 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
     Net net = readNet(modelPath, configPath, "", engine);
-    int backend = getBackendID(parser.get<String>("backend"));
+    string backendStr = parser.get<String>("backend");
+    string targetStr = parser.get<String>("target");
+    int backend = getBackendID(backendStr);
+    int target = getTargetID(targetStr);
     net.setPreferableBackend(backend);
-    net.setPreferableTarget(getTargetID(parser.get<String>("target")));
+    net.setPreferableTarget(target);
     net.setProfilingMode(DNN_PROFILE_SUMMARY);
+    printDnnConfig(net);
     //![read_net]
 
     // Create a window

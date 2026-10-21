@@ -38,10 +38,15 @@ Run the script:
 import numpy as np
 import argparse
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 EOS_ID = 1
 
 def parse_args():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
+
     parser = argparse.ArgumentParser(description='Use this script to run PaliGemma2 vision-language inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--siglip', type=str, required=True, help='Path to SigLIP vision encoder ONNX model file.')
@@ -52,6 +57,12 @@ def parse_args():
     parser.add_argument('--prompt', type=str, default='cap en\n', help='Task prompt (e.g. "cap en\\n" to caption in English).')
     parser.add_argument('--max_new_tokens', type=int, default=64, help='Maximum number of new tokens to generate.')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
+    parser.add_argument('--backend', default='default', choices=backends,
+                        help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+    parser.add_argument('--target', default='cpu', choices=targets,
+                        help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
     return parser.parse_args()
 
 def preprocess_image(image_path):
@@ -117,9 +128,23 @@ if __name__ == '__main__':
     print("Preparing PaliGemma2 model...")
     tokenizer = cv.dnn.Tokenizer.load(args.tokenizer_path)
 
-    siglip_net = cv.dnn.readNetFromONNX(args.siglip, cv.dnn.ENGINE_OPENCV)
-    embed_net  = cv.dnn.readNetFromONNX(args.embedding, cv.dnn.ENGINE_OPENCV)
-    gemma_net  = cv.dnn.readNetFromONNX(args.gemma, cv.dnn.ENGINE_OPENCV)
+    engine = get_engine_id(args.engine)
+    backend_id = get_backend_id(args.backend)
+    target_id = get_target_id(args.target)
+
+    siglip_net = cv.dnn.readNetFromONNX(args.siglip, engine)
+    siglip_net.setPreferableBackend(backend_id)
+    siglip_net.setPreferableTarget(target_id)
+
+    embed_net = cv.dnn.readNetFromONNX(args.embedding, engine)
+    embed_net.setPreferableBackend(backend_id)
+    embed_net.setPreferableTarget(target_id)
+
+    gemma_net = cv.dnn.readNetFromONNX(args.gemma, engine)
+    gemma_net.setPreferableBackend(backend_id)
+    gemma_net.setPreferableTarget(target_id)
+
+    print_dnn_config(gemma_net)
 
     print(f"Prompt:\n{args.prompt}")
     pixel_values = preprocess_image(args.input)

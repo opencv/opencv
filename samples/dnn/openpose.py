@@ -3,6 +3,11 @@
 import cv2 as cv
 import numpy as np
 import argparse
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
+
+backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+engines = ("auto", "opencv", "ort")
 
 parser = argparse.ArgumentParser(
         description='This script is used to demonstrate OpenPose human pose estimation network '
@@ -17,6 +22,12 @@ parser.add_argument('--thr', default=0.1, type=float, help='Threshold value for 
 parser.add_argument('--width', default=368, type=int, help='Resize input to specific width.')
 parser.add_argument('--height', default=368, type=int, help='Resize input to specific height.')
 parser.add_argument('--scale', default=0.003922, type=float, help='Scale for blob.')
+parser.add_argument('--engine', default='auto', choices=engines,
+                    help='Choose one of computation engines: auto, opencv, ort')
+parser.add_argument('--backend', default='default', choices=backends,
+                    help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+parser.add_argument('--target', default='cpu', choices=targets,
+                    help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
 
 args = parser.parse_args()
 
@@ -67,7 +78,11 @@ inWidth = args.width
 inHeight = args.height
 inScale = args.scale
 
-net = cv.dnn.readNet(cv.samples.findFile(args.proto), cv.samples.findFile(args.model))
+engine = get_engine_id(args.engine)
+net = cv.dnn.readNet(cv.samples.findFile(args.proto), cv.samples.findFile(args.model), engine=engine)
+net.setPreferableBackend(get_backend_id(args.backend))
+net.setPreferableTarget(get_target_id(args.target))
+print_dnn_config(net)
 
 cap = cv.VideoCapture(args.input if args.input else 0)
 

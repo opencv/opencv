@@ -115,12 +115,18 @@ def get_args_parser(func_args):
     backends = ("default", "openvino", "opencv", "vkcom", "cuda", "webnn")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan",
                "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
 
     p = argparse.ArgumentParser(add_help=False)
     p.add_argument('--zoo',
                    default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                    help='An optional path to file with preprocessing parameters.')
     p.add_argument("--input", help="Path to input image", default="castle.png")
+    p.add_argument('--engine', default="auto", type=str, choices=engines,
+            help="Choose one of computation engines: "
+                 "auto: automatically (by default), "
+                 "opencv: OpenCV built-in engine, "
+                 "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON)")
     p.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -157,9 +163,11 @@ def main(func_args=None):
     args.model = findModel(args.model, args.sha1)
 
     try:
-        net = cv.dnn.readNetFromONNX(args.model)
+        engine = get_engine_id(args.engine)
+        net = cv.dnn.readNetFromONNX(args.model, engine)
         net.setPreferableBackend(get_backend_id(args.backend))
         net.setPreferableTarget(get_target_id(args.target))
+        print_dnn_config(net)
     except cv.error as e:
         print(f"Error loading model: {e}", file=sys.stderr)
         sys.exit(1)

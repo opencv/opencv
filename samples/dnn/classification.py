@@ -23,6 +23,7 @@ def help():
 def get_args_parser(func_args):
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -31,6 +32,11 @@ def get_args_parser(func_args):
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--crop', type=bool, default=False,
                         help='Center crop the image.')
+    parser.add_argument('--engine', default="auto", type=str, choices=engines,
+                        help="Choose one of computation engines: "
+                             "auto: automatically (by default), "
+                             "opencv: OpenCV built-in engine, "
+                             "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON)")
     parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
                          "default: automatically (by default), "
@@ -83,10 +89,11 @@ def main(func_args=None):
             labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
-    engine = cv.dnn.ENGINE_OPENCV
+    engine = get_engine_id(args.engine)
     net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
     if hasattr(cv.dnn, 'DNN_PROFILE_SUMMARY'):
         net.setProfilingMode(cv.dnn.DNN_PROFILE_SUMMARY)
 

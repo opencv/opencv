@@ -45,6 +45,25 @@ const string about = "Use this script for Text Detection and Recognition using O
         "Detection model path can also be specified using --model argument. \n\n"
         "Download ocr model using: python download_models.py OCR \n\n";
 
+const string backend_keys = format(
+    "{ backend | default | Choose one of computation backends: "
+                    "default: automatically (by default), "
+                    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                    "opencv: OpenCV implementation, "
+                    "vkcom: VKCOM, "
+                    "cuda: CUDA, "
+                    "webnn: WebNN }");
+
+const string target_keys = format(
+    "{ target | cpu | Choose one of target computation devices: "
+                    "cpu: CPU target (by default), "
+                    "opencl: OpenCL, "
+                    "opencl_fp16: OpenCL fp16 (half-float precision), "
+                    "vpu: VPU, "
+                    "vulkan: Vulkan, "
+                    "cuda: CUDA, "
+                    "cuda_fp16: CUDA fp16 (half-float preprocess) }");
+
 // Command-line keys to parse the input arguments
 string keys =
     "{ help  h                        |                     | Print help message. }"
@@ -59,7 +78,7 @@ string keys =
     "{ polygonThreshold pt            |        0.5          | Confidence threshold for polygons in DB detector. }"
     "{ maxCandidate max               |        200          | Max candidates for polygons in DB detector. }"
     "{ unclipRatio ratio              |        2.0          | Unclip ratio for DB detector. }"
-    "{ vocabularyPath vp              |   alphabet_36.txt   | Path to vocabulary file. }";
+    "{ vocabularyPath vp              |   alphabet_36.txt   | Path to vocabulary file. }" + engine_keys + backend_keys + target_keys;
 
 // Function prototype for the four-point perspective transform
 static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
@@ -72,7 +91,10 @@ static void processFrame(
     FontFace& fontFace,
     int fontSize,
     int fontWeight,
-    const vector<std::string>& vocabulary
+    const vector<std::string>& vocabulary,
+    EngineType engine = cv::dnn::ENGINE_AUTO,
+    int backendId = cv::dnn::DNN_BACKEND_DEFAULT,
+    int targetId = cv::dnn::DNN_TARGET_CPU
 );
 
 int main(int argc, char** argv) {
@@ -111,6 +133,13 @@ int main(int argc, char** argv) {
     float nmsThreshold = parser.get<float>("nms");
     Scalar mean = parser.get<Scalar>("mean");
 
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
+    string backend = parser.get<String>("backend");
+    string target = parser.get<String>("target");
+    int backendId = getBackendID(backend);
+    int targetId = getTargetID(target);
+
     // Ensuring the provided arguments are valid
     if (!parser.check()) {
         parser.printErrors();
@@ -119,6 +148,11 @@ int main(int argc, char** argv) {
 
     // Asserting detection model path is provided
     CV_Assert(!detModelPath.empty());
+
+    Net detNet = readNet(detModelPath, "", "", engine);
+    detNet.setPreferableBackend(backendId);
+    detNet.setPreferableTarget(targetId);
+    printDnnConfig(detNet);
 
     vector<vector<Point>> detResults;
     // Reading the input image
@@ -135,7 +169,7 @@ int main(int argc, char** argv) {
     // Initializing and configuring the text detection model based on the provided config
     if (modelName == "East") {
         // EAST Detector initialization
-        TextDetectionModel_EAST detector(detModelPath);
+        TextDetectionModel_EAST detector(detNet);
         detector.setConfidenceThreshold(confThreshold)
                 .setNMSThreshold(nmsThreshold);
         // Setting input parameters specific to EAST model
@@ -145,7 +179,7 @@ int main(int argc, char** argv) {
     }
     else if (modelName == "DB") {
         // DB Detector initialization
-        TextDetectionModel_DB detector(detModelPath);
+        TextDetectionModel_DB detector(detNet);
         detector.setBinaryThreshold(binThresh)
                 .setPolygonThreshold(polyThresh)
                 .setUnclipRatio(unclipRatio)
@@ -171,7 +205,7 @@ int main(int argc, char** argv) {
         vocabulary.push_back(vocLine);
     }
 
-    processFrame(frame, detResults, ocr, imreadRGB, board, fontFace, size, weight, vocabulary);
+    processFrame(frame, detResults, ocr, imreadRGB, board, fontFace, size, weight, vocabulary, engine, backendId, targetId);
     return 0;
 }
 
@@ -200,7 +234,10 @@ void processFrame(
     FontFace& fontFace,
     int fontSize,
     int fontWeight,
-    const vector<std::string>& vocabulary
+    const vector<std::string>& vocabulary,
+    EngineType engine,
+    int backendId,
+    int targetId
 ) {
     if (detResults.size() > 0) {
         // Text Recognition
@@ -209,6 +246,23 @@ void processFrame(
             cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
         } else {
             recInput = frame;
+        }
+
+        Ptr<TextRecognitionModel> recognizer;
+        if (!ocr_model.empty()) {
+            Net ocrNet = readNet(ocr_model, "", "", engine);
+            ocrNet.setPreferableBackend(backendId);
+            ocrNet.setPreferableTarget(targetId);
+            printDnnConfig(ocrNet);
+            recognizer = makePtr<TextRecognitionModel>(ocrNet);
+            recognizer->setVocabulary(vocabulary);
+            recognizer->setDecodeType("CTC-greedy");
+            double recScale = 1.0 / 127.5;
+            Scalar recMean = Scalar(127.5);
+            Size recInputSize = Size(100, 32);
+            recognizer->setInputParams(recScale, recInputSize, recMean);
+        } else {
+            cout << "[WARN] Please pass the path to the ocr model using --ocr_model to get the recognised text." << endl;
         }
 
         vector<vector<Point>> contours;
@@ -226,25 +280,13 @@ void processFrame(
             Mat cropped;
             fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
-            if(!ocr_model.empty()){
-                TextRecognitionModel recognizer(ocr_model);
-                recognizer.setVocabulary(vocabulary);
-                recognizer.setDecodeType("CTC-greedy");
-
-                // Setting input parameters for the recognition model
-                double recScale = 1.0 / 127.5;
-                Scalar recMean = Scalar(127.5);
-                Size recInputSize = Size(100, 32);
-                recognizer.setInputParams(recScale, recInputSize, recMean);
+            if (recognizer) {
                 // Recognizing text from the cropped image
-                string recognitionResult = recognizer.recognize(cropped);
+                string recognitionResult = recognizer->recognize(cropped);
                 cout << i << ": '" << recognitionResult << "'" << endl;
 
                 // Displaying the recognized text on the image
                 putText(board, recognitionResult, Point(detResults[i][1].x, detResults[i][0].y), Scalar(0, 0, 0), fontFace, fontSize, fontWeight);
-            }
-            else{
-                cout << "[WARN] Please pass the path to the ocr model using --ocr_model to get the recognised text." << endl;
             }
         }
         // Drawing detected text regions on the image

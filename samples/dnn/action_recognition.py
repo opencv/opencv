@@ -2,13 +2,38 @@ import os
 import numpy as np
 import cv2 as cv
 import argparse
-from common import findFile
+from common import findFile, get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 parser = argparse.ArgumentParser(description='Use this script to run action recognition using 3D ResNet34',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input', '-i', help='Path to input video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', required=True, help='Path to model.')
 parser.add_argument('--classes', default=findFile('action_recongnition_kinetics.txt'), help='Path to classes list.')
+parser.add_argument('--backend', default='default', type=str,
+                    choices=['default', 'openvino', 'opencv', 'vkcom', 'cuda'],
+                    help="Choose one of computation backends: "
+                         "default: automatically (by default), "
+                         "openvino: Intel's Deep Learning Deployment Toolkit (has been deprecated), "
+                         "opencv: OpenCV's built-in engine, "
+                         "vkcom: Vulkan-based backend, "
+                         "cuda: CUDA backend")
+parser.add_argument('--target', default='cpu', type=str,
+                    choices=['cpu', 'opencl', 'opencl_fp16', 'ncs2_vpu', 'hddl_vpu', 'vulkan', 'cuda', 'cuda_fp16'],
+                    help='Choose one of target devices: '
+                         'cpu: CPU (by default), '
+                         'opencl: OpenCL, '
+                         'opencl_fp16: OpenCL FP16 (half-precision), '
+                         'ncs2_vpu: NCS2 VPU, '
+                         'hddl_vpu: HDDL VPU, '
+                         'vulkan: Vulkan, '
+                         'cuda: CUDA, '
+                         'cuda_fp16: CUDA FP16')
+parser.add_argument('--engine', default='auto', type=str,
+                    choices=['auto', 'opencv', 'ort'],
+                    help='Choose DNN engine: '
+                         'auto: automatically select engine (default), '
+                         'opencv: OpenCV built-in DNN engine, '
+                         'ort: ONNX Runtime (requires build with WITH_ONNXRUNTIME=ON)')
 
 # To get net download original repository https://github.com/kenshohara/video-classification-3d-cnn-pytorch
 # For correct ONNX export modify file: video-classification-3d-cnn-pytorch/models/resnet.py
@@ -45,9 +70,11 @@ def classify_video(video_path, net_path):
     mean = (114.7748, 107.7354, 99.4750)
     class_names = get_class_names(args.classes)
 
-    net = cv.dnn.readNetFromONNX(net_path)
-    net.setPreferableBackend(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE)
-    net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
+    engine = get_engine_id(args.engine)
+    net = cv.dnn.readNetFromONNX(net_path, engine=engine)
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(net)
 
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)

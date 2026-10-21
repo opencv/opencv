@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import argparse
 import os
+from common import get_engine_id, print_dnn_config
 
 '''
  You can download the converted onnx model from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing
@@ -469,6 +470,7 @@ if __name__ == '__main__':
     backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
     # Target Devices for computation
     targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16)
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -479,6 +481,8 @@ if __name__ == '__main__':
     parser.add_argument('--show_spectrogram', action='store_true', help='Whether to show a spectrogram of the input audio.')
     parser.add_argument('--model', type=str, default='jasper.onnx', help='Path to the onnx file of Jasper. default="jasper.onnx"')
     parser.add_argument('--output', type=str, help='Path to file where recognized audio transcript must be saved. Leave this to print on console.')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help='Select a computation backend: '
                         "%d: automatically (by default) "
@@ -534,9 +538,11 @@ if __name__ == '__main__':
         features[i] = feature_extractor.calculate_features(x=X, seq_len=seq_len)
 
     # Load Network
-    net = cv.dnn.readNetFromONNX(args.model)
+    engine = get_engine_id(args.engine)
+    net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(args.backend)
     net.setPreferableTarget(args.target)
+    print_dnn_config(net)
 
     # Show spectogram if required
     if args.show_spectrogram and not args.input_audio.endswith('.txt'):

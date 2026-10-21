@@ -81,7 +81,7 @@ const string target_keys = format(
                           "cuda: CUDA, "
                           "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 
 // Audio and graph geometry, all fixed by the export.
 const int SAMPLE_RATE = 24000;
@@ -254,8 +254,12 @@ int main(int argc, char** argv)
     const string language = parser.get<String>("language");
     const string outPath = parser.get<String>("output");
     const int maxFrames = parser.get<int>("max_frames");
-    const int backendId = getBackendID(parser.get<String>("backend"));
-    const int targetId = getTargetID(parser.get<String>("target"));
+    const string engineStr = parser.get<String>("engine");
+    const EngineType engine = getEngineID(engineStr);
+    const string backendStr = parser.get<String>("backend");
+    const string targetStr = parser.get<String>("target");
+    const int backendId = getBackendID(backendStr);
+    const int targetId = getTargetID(targetStr);
 
     string tokenizerDir = parser.get<String>("tokenizer");
     if (!tokenizerDir.empty() && tokenizerDir.back() != '/')
@@ -292,10 +296,11 @@ int main(int argc, char** argv)
         const string path = modelDir + "/" + graphs[i] + ".onnx";
         requireFile(path);
         cout << "loading  : " << graphs[i] << endl;
-        nets[i] = readNetFromONNX(path);
+        nets[i] = readNetFromONNX(path, engine);
         nets[i].setPreferableBackend(backendId);
         nets[i].setPreferableTarget(targetId);
     }
+    printDnnConfig(nets[0]);
     Net& textEmbed = nets[0];
     Net& codecEmbed = nets[1];
     Net& talker = nets[2];

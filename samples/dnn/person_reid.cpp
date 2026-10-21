@@ -72,7 +72,7 @@ const string target_keys = format(
     "cuda: CUDA, "
     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-string keys = param_keys + backend_keys + target_keys;
+string keys = param_keys + engine_keys + backend_keys + target_keys;
 
 
 struct MatComparator
@@ -258,10 +258,12 @@ int main(int argc, char **argv)
     int fontSize = 50;
     int fontWeight = 500;
 
-    EngineType engine = ENGINE_OPENCV;
+    string engineStr = parser.get<String>("engine");
+    EngineType engine = getEngineID(engineStr);
     Net reidNet = readNetFromONNX(modelPath, engine);
     reidNet.setPreferableBackend(getBackendID(backend));
     reidNet.setPreferableTarget(getTargetID(target));
+    printDnnConfig(reidNet);
 
     if(yoloPath.empty()){
         cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo_model."<<endl;

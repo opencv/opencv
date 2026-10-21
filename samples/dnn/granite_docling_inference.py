@@ -44,12 +44,17 @@ import os
 import numpy as np
 import argparse
 import cv2 as cv
+from common import get_engine_id, get_backend_id, get_target_id, print_dnn_config
 
 FAKE_IMAGE_TOKEN = '<fake_token_around_image>'
 GLOBAL_IMAGE_TOKEN = '<global-img>'
 IMAGE_TOKEN = '<image>'
 
 def parse_args():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
+
     parser = argparse.ArgumentParser(description='Use this script to run Granite-Docling-258M vision-language inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model_dir', type=str, required=True, help='Path to the model directory (see the layout in this script\'s docstring).')
@@ -57,6 +62,12 @@ def parse_args():
     parser.add_argument('--prompt', type=str, default='Convert this page to docling.', help='Task instruction (see the model card for alternatives like "Convert table to OTSL.").')
     parser.add_argument('--max_new_tokens', type=int, default=512, help='Maximum number of new tokens to generate.')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
+    parser.add_argument('--engine', default='auto', choices=engines,
+                        help='Choose one of computation engines: auto, opencv, ort')
+    parser.add_argument('--backend', default='default', choices=backends,
+                        help='Choose one of computation backends: default, openvino, opencv, vkcom, cuda')
+    parser.add_argument('--target', default='cpu', choices=targets,
+                        help='Choose one of target computation devices: cpu, opencl, opencl_fp16, ncs2_vpu, hddl_vpu, vulkan, cuda, cuda_fp16')
     return parser.parse_args()
 
 def open_json_config_or_throw(path):
@@ -252,9 +263,23 @@ if __name__ == '__main__':
     image_size = get_int(preprocessor.getNode('max_image_size'), 'longest_edge', 512)
 
     onnx_dir = os.path.join(args.model_dir, 'onnx')
-    vision_net = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'vision_encoder.onnx'), cv.dnn.ENGINE_OPENCV)
-    embed_net  = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'embed_tokens.onnx'), cv.dnn.ENGINE_OPENCV)
-    text_net   = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'decoder_model_merged.onnx'), cv.dnn.ENGINE_OPENCV)
+    engine = get_engine_id(args.engine)
+    backend_id = get_backend_id(args.backend)
+    target_id = get_target_id(args.target)
+
+    vision_net = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'vision_encoder.onnx'), engine)
+    vision_net.setPreferableBackend(backend_id)
+    vision_net.setPreferableTarget(target_id)
+
+    embed_net = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'embed_tokens.onnx'), engine)
+    embed_net.setPreferableBackend(backend_id)
+    embed_net.setPreferableTarget(target_id)
+
+    text_net = cv.dnn.readNetFromONNX(os.path.join(onnx_dir, 'decoder_model_merged.onnx'), engine)
+    text_net.setPreferableBackend(backend_id)
+    text_net.setPreferableTarget(target_id)
+
+    print_dnn_config(text_net)
 
     print(f"Task:\n{args.prompt}")
     pixel_values, pixel_attention_mask, grid = preprocess_image(args.input, image_size)

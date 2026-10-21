@@ -127,6 +127,13 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_MODEL_TFLITE = 2, //!< TFLite model
     };
 
+    enum EngineType
+    {
+        ENGINE_AUTO=0,    //!< Automatically select the engine. Currently resolves to ENGINE_OPENCV; the mapping may change as more engines are added.
+        ENGINE_OPENCV=1,  //!< Use OpenCV's built-in DNN engine. Does not support non-CPU back-ends for now.
+        ENGINE_ORT=2      //!< Use the ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
+    };
+
     CV_EXPORTS std::string modelFormatToString(ModelFormat modelFormat);
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -779,6 +786,24 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
+        /**
+         * @brief Returns the configured preferable backend identifier.
+         * @see setPreferableBackend
+         */
+        CV_WRAP int getPreferableBackend() const;
+
+        /**
+         * @brief Returns the configured preferable target identifier.
+         * @see setPreferableTarget
+         */
+        CV_WRAP int getPreferableTarget() const;
+
+        /**
+         * @brief Returns the active engine type used by the network.
+         * @see EngineType
+         */
+        CV_WRAP EngineType getEngine() const;
+
         /** @brief Finalizes the network configuration and prepares it for inference.
          *
          * This method must be called after setting backend/target via
@@ -1098,13 +1123,6 @@ CV__DNN_INLINE_NS_BEGIN
         friend class accessor::DnnNetAccessor;
     protected:
         Ptr<Impl> impl;
-    };
-
-    enum EngineType
-    {
-        ENGINE_AUTO=0,    //!< Automatically select the engine. Currently resolves to ENGINE_OPENCV; the mapping may change as more engines are added.
-        ENGINE_OPENCV=1,  //!< Use OpenCV's built-in DNN engine. Does not support non-CPU back-ends for now.
-        ENGINE_ORT=2      //!< Use the ONNX Runtime wrapper (ONNX only, requires build with WITH_ONNXRUNTIME=ON).
     };
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.

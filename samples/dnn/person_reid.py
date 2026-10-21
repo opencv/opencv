@@ -47,12 +47,18 @@ def help():
 def get_args_parser():
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    engines = ("auto", "opencv", "ort")
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
     parser.add_argument('--input', '-i', default=0, help='Path to video file.', required=False)
+    parser.add_argument('--engine', default="auto", type=str, choices=engines,
+            help="Choose one of computation engines: "
+            "auto: automatically (by default), "
+            "opencv: OpenCV built-in engine, "
+            "ort: ONNX Runtime wrapper (requires build with WITH_ONNXRUNTIME=ON)")
     parser.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -183,11 +189,12 @@ def main():
     else:
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
 
-    engine = cv.dnn.ENGINE_OPENCV
+    engine = get_engine_id(args.engine)
     yolo_net = cv.dnn.readNetFromONNX(args.yolo_model, engine)
     reid_net = cv.dnn.readNetFromONNX(args.model, engine)
     reid_net.setPreferableBackend(get_backend_id(args.backend))
     reid_net.setPreferableTarget(get_target_id(args.target))
+    print_dnn_config(reid_net)
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     query_images = []
 

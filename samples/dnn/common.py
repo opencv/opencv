@@ -192,3 +192,135 @@ def get_target_id(target_name):
         raise ValueError(f"Invalid target name: {target_name}")
 
     return target_ids[target_name]
+
+def get_backend_name(backend_id):
+    backend_names = {
+        cv.dnn.DNN_BACKEND_DEFAULT: "default",
+        cv.dnn.DNN_BACKEND_INFERENCE_ENGINE: "openvino",
+        cv.dnn.DNN_BACKEND_OPENCV: "opencv",
+        cv.dnn.DNN_BACKEND_VKCOM: "vkcom",
+        cv.dnn.DNN_BACKEND_CUDA: "cuda"
+    }
+    if hasattr(cv.dnn, 'DNN_BACKEND_INFERENCE_ENGINE_NGRAPH'):
+        backend_names[cv.dnn.DNN_BACKEND_INFERENCE_ENGINE_NGRAPH] = "openvino"
+    if hasattr(cv.dnn, 'DNN_BACKEND_TIMVX'):
+        backend_names[cv.dnn.DNN_BACKEND_TIMVX] = "timvx"
+    if hasattr(cv.dnn, 'DNN_BACKEND_CANN'):
+        backend_names[cv.dnn.DNN_BACKEND_CANN] = "cann"
+    if hasattr(cv.dnn, 'DNN_BACKEND_WEBNN'):
+        backend_names[cv.dnn.DNN_BACKEND_WEBNN] = "webnn"
+    return backend_names.get(backend_id, str(backend_id))
+
+
+def get_engine_name(engine_id):
+    engine_names = {
+        getattr(cv.dnn, 'ENGINE_ORT', 2): "ort",
+        getattr(cv.dnn, 'ENGINE_OPENCV', 1): "opencv",
+        getattr(cv.dnn, 'ENGINE_AUTO', 0): "opencv"
+    }
+    return engine_names.get(engine_id, "opencv")
+
+
+def get_target_name(target_id):
+    target_names = {
+        cv.dnn.DNN_TARGET_CPU: "cpu",
+        cv.dnn.DNN_TARGET_OPENCL: "opencl",
+        cv.dnn.DNN_TARGET_OPENCL_FP16: "opencl_fp16",
+        cv.dnn.DNN_TARGET_MYRIAD: "ncs2_vpu",
+        cv.dnn.DNN_TARGET_HDDL: "hddl_vpu",
+        cv.dnn.DNN_TARGET_VULKAN: "vulkan",
+        cv.dnn.DNN_TARGET_CUDA: "cuda",
+        cv.dnn.DNN_TARGET_CUDA_FP16: "cuda_fp16"
+    }
+    return target_names.get(target_id, str(target_id))
+
+
+def get_engine_id(engine_name):
+    engine_ids = {
+        "auto": getattr(cv.dnn, 'ENGINE_AUTO', 0),
+        "opencv": getattr(cv.dnn, 'ENGINE_OPENCV', 1),
+        "ort": getattr(cv.dnn, 'ENGINE_ORT', 2)
+    }
+    if engine_name not in engine_ids:
+        raise ValueError(f"Invalid engine name: {engine_name}")
+
+    return engine_ids[engine_name]
+
+
+def resolve_engine_name(engine_name):
+    if isinstance(engine_name, int):
+        engine_map = {
+            getattr(cv.dnn, 'ENGINE_AUTO', 0): "auto",
+            getattr(cv.dnn, 'ENGINE_OPENCV', 1): "opencv",
+            getattr(cv.dnn, 'ENGINE_ORT', 2): "ort"
+        }
+        engine_name = engine_map.get(engine_name, "auto")
+
+    forced = os.environ.get("OPENCV_FORCE_DNN_ENGINE")
+    if forced is not None:
+        try:
+            forced_val = int(forced)
+            if forced_val == getattr(cv.dnn, 'ENGINE_OPENCV', 1):
+                engine_name = "opencv"
+            elif forced_val == getattr(cv.dnn, 'ENGINE_ORT', 2):
+                engine_name = "ort"
+        except ValueError:
+            pass
+
+    if engine_name == "auto" or not engine_name:
+        engine_name = "opencv"
+
+    if engine_name == "ort":
+        ort_available = False
+        try:
+            build_info = cv.getBuildInformation()
+            for line in build_info.splitlines():
+                if "ONNX Runtime:" in line and "YES" in line:
+                    ort_available = True
+                    break
+        except Exception:
+            pass
+        if not ort_available:
+            engine_name = "opencv"
+
+    return engine_name
+
+
+def resolve_backend_name(backend_name):
+    if isinstance(backend_name, int):
+        if backend_name == getattr(cv.dnn, 'DNN_BACKEND_DEFAULT', 0):
+            forced = os.environ.get("OPENCV_DNN_BACKEND_DEFAULT")
+            if forced is not None:
+                try:
+                    return get_backend_name(int(forced))
+                except ValueError:
+                    pass
+            return "opencv"
+        return get_backend_name(backend_name)
+    elif isinstance(backend_name, str):
+        if backend_name == "default":
+            forced = os.environ.get("OPENCV_DNN_BACKEND_DEFAULT")
+            if forced is not None:
+                try:
+                    return get_backend_name(int(forced))
+                except ValueError:
+                    pass
+            return "opencv"
+        return backend_name
+    return str(backend_name)
+
+
+def print_dnn_config(net_or_engine, backend_name=None, target_name=None):
+    if backend_name is None and target_name is None and hasattr(net_or_engine, 'getEngine'):
+        net = net_or_engine
+        engine = get_engine_name(net.getEngine())
+        backend = get_backend_name(net.getPreferableBackend())
+        target = get_target_name(net.getPreferableTarget())
+        print(f"DNN Engine: {engine}, Backend: {backend}, Target: {target}")
+        return
+
+    engine_resolved = resolve_engine_name(net_or_engine)
+    backend_resolved = resolve_backend_name(backend_name)
+    if isinstance(target_name, int):
+        target_name = get_target_name(target_name)
+    print(f"DNN Engine: {engine_resolved}, Backend: {backend_resolved}, Target: {target_name}")
