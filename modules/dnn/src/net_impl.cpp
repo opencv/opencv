@@ -42,6 +42,9 @@ Net::Impl::~Impl()
     if (context)
         context->reset();
 #endif
+#ifdef HAVE_CUDA
+    cudaGraphReset();
+#endif
 }
 
 

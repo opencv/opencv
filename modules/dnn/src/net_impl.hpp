@@ -314,6 +314,10 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
     std::vector<UMat> cudaTempBuffers;
     bool cudaPoolTemps = false;
+    // the main graph's forward recorded as one CUDA Graph, and the input shapes it was recorded for
+    cudaGraphExec_t cudaGraphExec = nullptr;
+    std::vector<MatShape> cudaGraphInputShapes;
+    void cudaGraphReset();
 
     // Device element type for a host tensor (half for float tensors under the FP16 target).
     int cudaDeviceType(const Mat& hostMat) const;

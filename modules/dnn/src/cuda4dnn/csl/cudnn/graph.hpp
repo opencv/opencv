@@ -96,6 +96,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         return stride;
     }
 
+    /** packed strides for a tensor in [N, C, spatial...] order, i.e. the NCHW layout the engine keeps */
+    inline std::vector<int64_t> packedStrides(const std::vector<int64_t>& shape) {
+        const int64_t rank = static_cast<int64_t>(shape.size());
+        CV_Assert(rank >= 3);
+        std::vector<int64_t> stride(rank);
+        int64_t running = 1;
+        for (int64_t k = rank - 1; k >= 0; k--) {
+            stride[k] = running;
+            running *= shape[k];
+        }
+        return stride;
+    }
+
     /** wraps one finalized op in an op graph and keeps the first heuristic engine config whose plan compiles */
     inline void buildExecutionPlan(const Handle& handle, const BackendDescriptor& op, const char* what,
                                    BackendDescriptor& opGraph, BackendDescriptor& engineConfig,
@@ -155,7 +168,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             1, &count, &workspace_size));
     }
 
-    /** cuDNN graph convolution (NHWC data, KRSC filter); the plan is built once at construction */
+    /** cuDNN graph convolution (NCHW data and OIHW filter, or NHWC/KRSC with channels_last); the plan is built once at construction */
     template <class T>
     class ConvolutionGraph {
     public:
@@ -164,6 +177,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             std::vector<int64_t> output_shape;  /* N, C, spatial... */
             std::vector<int64_t> filter_shape;  /* OC, IC, kernel... */
             std::vector<int64_t> padding_pre, padding_post, stride, dilation; /* one entry per spatial dim */
+            bool channels_last = false;          /* NHWC data and KRSC filter instead of NCHW/OIHW */
         };
 
         ConvolutionGraph() = default;
@@ -187,10 +201,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             CV_Assert(params.stride.size() == static_cast<std::size_t>(spatial_dims));
             CV_Assert(params.dilation.size() == static_cast<std::size_t>(spatial_dims));
 
-            /* channel-last strides, e.g. NHWC: {C*H*W, 1, W*C, C} */
-            const std::vector<int64_t> xStride = channelLastStrides(i);
-            const std::vector<int64_t> yStride = channelLastStrides(o);
-            const std::vector<int64_t> wStride = channelLastStrides(f);
+            /* packed strides read the engine's NCHW buffers and OIHW weights in place */
+            auto strides = params.channels_last ? channelLastStrides : packedStrides;
+            const std::vector<int64_t> xStride = strides(i);
+            const std::vector<int64_t> yStride = strides(o);
+            const std::vector<int64_t> wStride = strides(f);
 
             xDesc = makeTensorDescriptor<T>('x', i, xStride);
             yDesc = makeTensorDescriptor<T>('y', o, yStride);

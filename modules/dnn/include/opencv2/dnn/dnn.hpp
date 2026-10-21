@@ -713,6 +713,10 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void setInputsNames(const std::vector<String> &inputBlobNames);
 
         /** @brief Specify shape of network input.
+         *
+         * Must be called before the first forward(). With the new engine, shape computations that depend
+         * on a pinned input are folded into constants; on the CUDA backend a model left with no dynamic
+         * shapes then runs each forward() as one replayed CUDA Graph instead of one launch per layer.
          */
         CV_WRAP void setInputShape(const String &inputName, const MatShape& shape);
 

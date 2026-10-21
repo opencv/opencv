@@ -173,8 +173,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                        ldb = B.get_axis_size(-1),
                        ldc = N;
 
-            // collect pointers and run cublasSgemmBatched / cublasHgemmBatched
-            csl::cublas::gemmBatched<T>(handle, trans_b, trans_a, N, M, K, 1.f, B.get(), ldb, B_offsets, A.get(), lda, A_offsets, 0.f, C.get(), ldc, C_offsets, batch);
+            // one strided call per evenly spaced run; pointer arrays need cudaMalloc, illegal in a CUDA Graph capture
+            auto continues = [](const std::vector<std::size_t>& offsets, std::size_t start, std::size_t i) {
+                return offsets[i] >= offsets[i - 1] &&
+                       (i == start + 1 || offsets[i] - offsets[i - 1] == offsets[start + 1] - offsets[start]);
+            };
+            std::size_t start = 0;
+            while (start < batch) {
+                std::size_t end = start + 1;
+                while (end < batch && continues(A_offsets, start, end) && continues(B_offsets, start, end) &&
+                       continues(C_offsets, start, end) && C_offsets[end] - C_offsets[end - 1] >= M * N)
+                    end++;
+                const std::size_t count = end - start;
+                const std::size_t strideA = count > 1 ? A_offsets[start + 1] - A_offsets[start] : 0,
+                                  strideB = count > 1 ? B_offsets[start + 1] - B_offsets[start] : 0,
+                                  strideC = count > 1 ? C_offsets[start + 1] - C_offsets[start] : M * N;
+                csl::cublas::gemmStridedBatched<T>(handle, trans_b, trans_a, N, M, K,
+                    1.f, B.get() + static_cast<std::ptrdiff_t>(B_offsets[start]), ldb, strideB,
+                    A.get() + static_cast<std::ptrdiff_t>(A_offsets[start]), lda, strideA,
+                    0.f, C.get() + static_cast<std::ptrdiff_t>(C_offsets[start]), ldc, strideC, count);
+                start = end;
+            }
         }
 
         /** @brief performs element-wise addition with broadcasting
