@@ -235,12 +235,19 @@ public:
         net.setInput(KT, "1");
         net.setInput(V,  "2");
         Mat out = net.forward("");
+        Mat outNoMlas;
+        {
+            ScopedNoMlas noMlas;
+            outNoMlas = net.forward("");
+        }
 
         // The models are generated with scale = sqrt(head_dim).
         Mat ref = sdpaReference(Q, KT, V, std::sqrt((float)Q.size[3]));
 
         EXPECT_EQ(ref.shape(), out.shape());
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(ref, outNoMlas, (basename + " without MLAS").c_str(),
+                   l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
 
