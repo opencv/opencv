@@ -53,8 +53,6 @@
 "test_einsum_batch_matmul",
 "test_einsum_sum",
 "test_einsum_transpose",
-"test_logsoftmax_large_number",
-"test_logsoftmax_large_number_expanded",
 "test_lppool_1d_default",
 "test_lppool_2d_default",
 "test_lppool_2d_dilations",

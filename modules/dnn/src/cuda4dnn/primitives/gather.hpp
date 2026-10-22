@@ -26,12 +26,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class GatherOp final : public CUDABackendNode {
     public:
-        GatherOp(csl::Stream stream_, int axis_)
-            : stream(std::move(stream_)), axis(axis_)
+        GatherOp(csl::Stream stream_, int axis_, int* error_flag_)
+            : stream(std::move(stream_)), axis(axis_), error_flag(error_flag_)
         {
-            csl::WorkspaceBuilder builder;
-            builder.require<int>(1);  // out-of-range flag
-            scratch_mem_in_bytes = builder.required_workspace_size();
+            CV_Assert(error_flag);
         }
 
         void forward(
@@ -65,21 +63,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::size_t index_element_size = inputs[1].elemSize();
             const void* indices = reinterpret_cast<const uchar*>(inputs[1].u->handle) + inputs[1].offset;
 
-            csl::WorkspaceAllocator allocator(workspace);
-            auto out_of_range = allocator.get_span<int>(1);
-            csl::memset<int>(out_of_range.data(), 0, 1, stream);
-            // the flag is not read back: that would synchronize the stream on every call
+            // the net checks the flag after the forward, so no per-call sync is needed
             kernels::gather<T>(stream, output, data, indices, index_element_size,
                                input_block_size, indices_max, divmod_output_block_size, divmod_block_size,
-                               out_of_range.data().get());
+                               error_flag);
         }
-
-        std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }
 
     private:
         csl::Stream stream;
         int axis;
-        std::size_t scratch_mem_in_bytes = 0;
+        int* error_flag;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

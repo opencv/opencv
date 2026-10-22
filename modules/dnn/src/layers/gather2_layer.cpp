@@ -123,9 +123,9 @@ public:
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
         if (inputs_arr.depth(0) == CV_Bool)
-            return make_cuda_node_bool<cuda4dnn::GatherOp>(std::move(context->stream), axis);
+            return make_cuda_node_bool<cuda4dnn::GatherOp>(std::move(context->stream), axis, context->error_flag);
         return make_cuda_node_with_type<cuda4dnn::GatherOp>(preferableTarget, inputs_arr.type(0),
-                                                            std::move(context->stream), axis);
+                                                            std::move(context->stream), axis, context->error_flag);
     }
 #endif
 
