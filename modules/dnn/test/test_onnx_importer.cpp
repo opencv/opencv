@@ -225,20 +225,23 @@ public:
         Mat KT = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
         Mat V  = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
 
-        Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
-        ASSERT_FALSE(net.empty());
-        net.setPreferableBackend(backend);
-        net.setPreferableTarget(target);
+        auto run = [&](Mat& result) {
+            Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+            ASSERT_FALSE(net.empty());
+            net.setPreferableBackend(backend);
+            net.setPreferableTarget(target);
 
-        net.setInputsNames({"0", "1", "2"});
-        net.setInput(Q,  "0");
-        net.setInput(KT, "1");
-        net.setInput(V,  "2");
-        Mat out = net.forward("");
-        Mat outNoMlas;
+            net.setInputsNames({"0", "1", "2"});
+            net.setInput(Q,  "0");
+            net.setInput(KT, "1");
+            net.setInput(V,  "2");
+            result = net.forward("");
+        };
+        Mat out, outNoMlas;
+        run(out);
         {
             ScopedNoMlas noMlas;
-            outNoMlas = net.forward("");
+            run(outNoMlas);
         }
 
         // The models are generated with scale = sqrt(head_dim).
