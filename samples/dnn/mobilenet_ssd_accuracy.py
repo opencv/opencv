@@ -1,10 +1,8 @@
 from __future__ import print_function
-# Script to evaluate MobileNet-SSD object detection model trained in TensorFlow
-# using both TensorFlow and OpenCV. Example:
+# Script to evaluate MobileNet-SSD object detection model with OpenCV. Example:
 #
 # python mobilenet_ssd_accuracy.py \
-#   --weights=frozen_inference_graph.pb \
-#   --prototxt=ssd_mobilenet_v1_coco.pbtxt \
+#   --model=ssd_mobilenet_v1_coco_2017_11_17_2026jul.onnx \
 #   --images=val2017 \
 #   --annotations=annotations/instances_val2017.json
 #
@@ -15,18 +13,18 @@ import json
 import argparse
 
 parser = argparse.ArgumentParser(
-    description='Evaluate MobileNet-SSD model using both TensorFlow and OpenCV. '
+    description='Evaluate MobileNet-SSD model using OpenCV. '
                 'COCO evaluation framework is required: http://cocodataset.org')
-parser.add_argument('--weights', required=True,
-                    help='Path to frozen_inference_graph.pb of MobileNet-SSD model. '
-                         'Download it from http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_11_06_2017.tar.gz')
-parser.add_argument('--prototxt', help='Path to ssd_mobilenet_v1_coco.pbtxt from opencv_extra.', required=True)
+parser.add_argument('--model', required=True,
+                    help='Path to ssd_mobilenet_v1_coco .onnx model. '
+                         'Download it from https://huggingface.co/opencv/opencv_contribution/resolve/main/'
+                         'ssd_mobilenet_v1_coco_2017_11_17/ssd_mobilenet_v1_coco_2017_11_17_2026jul.onnx?download=true')
 parser.add_argument('--images', help='Path to COCO validation images directory.', required=True)
 parser.add_argument('--annotations', help='Path to COCO annotations file.', required=True)
 args = parser.parse_args()
 
 ### Get OpenCV predictions #####################################################
-net = cv.dnn.readNetFromTensorflow(cv.samples.findFile(args.weights), cv.samples.findFile(args.prototxt))
+net = cv.dnn.readNetFromONNX(cv.samples.findFile(args.model))
 net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 
 detections = []
@@ -34,73 +32,30 @@ for imgName in os.listdir(args.images):
     inp = cv.imread(cv.samples.findFile(os.path.join(args.images, imgName)))
     rows = inp.shape[0]
     cols = inp.shape[1]
-    inp = cv.resize(inp, (300, 300))
+    resized = cv.resize(inp, (300, 300))
 
-    net.setInput(cv.dnn.blobFromImage(inp, 1.0/127.5, (300, 300), (127.5, 127.5, 127.5), True))
-    out = net.forward()
+    # image_tensor input is NHWC uint8 RGB
+    blob = cv.cvtColor(resized, cv.COLOR_BGR2RGB).reshape(1, 300, 300, 3)
+    net.setInput(blob)
+    boxes, scores, classes, num = net.forward(
+        ['detection_boxes:0', 'detection_scores:0', 'detection_classes:0', 'num_detections:0'])
 
-    for i in range(out.shape[2]):
-        score = float(out[0, 0, i, 2])
-        # Confidence threshold is in prototxt.
-        classId = int(out[0, 0, i, 1])
-
-        x = out[0, 0, i, 3] * cols
-        y = out[0, 0, i, 4] * rows
-        w = out[0, 0, i, 5] * cols - x
-        h = out[0, 0, i, 6] * rows - y
+    boxes = boxes.reshape(-1, 4)
+    scores = scores.reshape(-1)
+    classes = classes.reshape(-1)
+    for i in range(int(num.reshape(-1)[0])):
+        y = boxes[i][0] * rows
+        x = boxes[i][1] * cols
+        h = boxes[i][2] * rows - y
+        w = boxes[i][3] * cols - x
         detections.append({
           "image_id": int(imgName.rstrip('0')[:imgName.rfind('.')]),
-          "category_id": classId,
+          "category_id": int(classes[i]),
           "bbox": [x, y, w, h],
-          "score": score
+          "score": float(scores[i])
         })
 
 with open('cv_result.json', 'wt') as f:
-    json.dump(detections, f)
-
-### Get TensorFlow predictions #################################################
-import tensorflow as tf
-
-with tf.gfile.FastGFile(args.weights) as f:
-    # Load the model
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
-
-with tf.Session() as sess:
-    # Restore session
-    sess.graph.as_default()
-    tf.import_graph_def(graph_def, name='')
-
-    detections = []
-    for imgName in os.listdir(args.images):
-        inp = cv.imread(os.path.join(args.images, imgName))
-        rows = inp.shape[0]
-        cols = inp.shape[1]
-        inp = cv.resize(inp, (300, 300))
-        inp = inp[:, :, [2, 1, 0]]  # BGR2RGB
-        out = sess.run([sess.graph.get_tensor_by_name('num_detections:0'),
-                        sess.graph.get_tensor_by_name('detection_scores:0'),
-                        sess.graph.get_tensor_by_name('detection_boxes:0'),
-                        sess.graph.get_tensor_by_name('detection_classes:0')],
-                       feed_dict={'image_tensor:0': inp.reshape(1, inp.shape[0], inp.shape[1], 3)})
-        num_detections = int(out[0][0])
-        for i in range(num_detections):
-            classId = int(out[3][0][i])
-            score = float(out[1][0][i])
-            bbox = [float(v) for v in out[2][0][i]]
-            if score > 0.01:
-                x = bbox[1] * cols
-                y = bbox[0] * rows
-                w = bbox[3] * cols - x
-                h = bbox[2] * rows - y
-                detections.append({
-                  "image_id": int(imgName.rstrip('0')[:imgName.rfind('.')]),
-                  "category_id": classId,
-                  "bbox": [x, y, w, h],
-                  "score": score
-                })
-
-with open('tf_result.json', 'wt') as f:
     json.dump(detections, f)
 
 ### Evaluation part ############################################################
@@ -123,11 +78,11 @@ print('Running demo for *%s* results.'%(annType))
 cocoGt=COCO(args.annotations)
 
 #initialize COCO detections api
-for resFile in ['tf_result.json', 'cv_result.json']:
-    print(resFile)
-    cocoDt=cocoGt.loadRes(resFile)
+resFile = 'cv_result.json'
+print(resFile)
+cocoDt=cocoGt.loadRes(resFile)
 
-    cocoEval = COCOeval(cocoGt,cocoDt,annType)
-    cocoEval.evaluate()
-    cocoEval.accumulate()
-    cocoEval.summarize()
+cocoEval = COCOeval(cocoGt,cocoDt,annType)
+cocoEval.evaluate()
+cocoEval.accumulate()
+cocoEval.summarize()
