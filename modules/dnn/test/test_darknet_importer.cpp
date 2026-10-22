@@ -274,6 +274,12 @@ TEST_P(Test_YOLO_nets, YOLOv4)
         scoreDiff = 0.008;
         iouDiff = 0.03;
     }
+    else if (target == DNN_TARGET_CUDA && cudaTF32Enabled())
+    {
+        // TF32 convolutions round inputs to 10 mantissa bits; a small box can move by a few % IoU
+        scoreDiff = 0.008;
+        iouDiff = 0.05;
+    }
 
     std::string model_file = "yolov4.onnx";
 
