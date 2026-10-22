@@ -436,7 +436,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 return QKV[i % 3] + (i / 3) * seq_len * qkv_head_sizes[i % 3];
             };
             const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
-            // Broadcast bias [NH] -> [BN, SH] into rows s0..s0+rows-1 of dst before gemm so beta=1 adds it implicitly.
+            // Broadcast bias [NH] -> [BN, SH] into dst before gemm so beta=1 adds it implicitly.
             auto fillBias = [&](size_t i, size_t s0, size_t rows) {
                 const size_t head_size = qkv_head_sizes[i % 3];
                 const float *src = bias_data + col_ofs[i % 3] + ((i / 3) % num_heads) * head_size;
@@ -444,7 +444,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 for (size_t s = 0; s < rows; s++, dst += head_size)
                     std::memcpy(dst, src, head_size * sizeof(float));
             };
-            // Apply RoPE to rows s0..s0+rows-1 of Q/K in place (V is left untouched).
+            // Apply RoPE to Q/K in place (V is left untouched).
             auto applyRotary = [&](size_t i, size_t s0, size_t rows) {
                 const size_t head_size = qkv_head_sizes[i % 3];
                 if (do_rotary && i % 3 < 2)
@@ -489,8 +489,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
 #endif
             if (!projected) {
-                // With fewer tasks than threads (few heads), each task's rows are also split: into as many
-                // parts as fill the threads, none under 16 rows. Every row is still computed the same way.
                 const size_t nthreads = (size_t)std::max(getNumThreads(), 1);
                 const size_t parts = std::max<size_t>(1, std::min((nthreads + loops - 1) / loops, seq_len / 16));
                 const size_t part_rows = (seq_len + parts - 1) / parts;
@@ -504,7 +502,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                         fillBias(i, s0, rows);
                         const size_t head_size = qkv_head_sizes[i % 3];
                         auto *packed_weight = packed_weights[i % 3] + packed_weights_size[i % 3] * ((i / 3) % num_heads);
-                        // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv, rows).
+                        // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
                         fastGemm(false, rows, head_size, input_hidden_size,
                                 1.f, taskInput(i) + s0 * input_hidden_size, input_hidden_size,
                                 packed_weight, 1.f, taskOutput(i) + s0 * head_size, head_size, opt);

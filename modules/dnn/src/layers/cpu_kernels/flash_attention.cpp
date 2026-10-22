@@ -19,7 +19,6 @@ static constexpr int FLASH_ATTN_MAX_Q_BLOCK = 128;  // a 128 x 256 score tile (1
 static constexpr int FLASH_ATTN_MIN_Q_BLOCK = 16;   // smallest query block when splitting for threads
 static constexpr int FLASH_ATTN_KV_BLOCK = 256;     // the key block the MLAS path uses
 
-// The softmax part (flash_attention.simd.hpp) is also built for AVX2; the best match for the CPU runs.
 static void flash_attn_softmax_block(float* S, int rows, int n, float* O, int Dv, float* m, float* l, bool first) {
     CV_CPU_DISPATCH(flashAttnSoftmaxBlock, (S, rows, n, O, Dv, m, l, first), CV_CPU_DISPATCH_MODES_ALL);
 }

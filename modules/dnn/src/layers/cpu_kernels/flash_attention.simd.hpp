@@ -12,9 +12,6 @@
 namespace cv { namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-// One online-softmax step of flash attention for a block of scores S [rows x n]. Per row: raise the
-// running max m, replace the scores by exp(s - m), add their sum to l and, unless this is the first
-// block, rescale that row of the output O [rows x Dv] by exp(m_old - m).
 void flashAttnSoftmaxBlock(float* S, int rows, int n, float* O, int Dv, float* m, float* l, bool first);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
