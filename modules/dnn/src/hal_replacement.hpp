@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
 #ifndef OPENCV_DNN_HAL_REPLACEMENT_HPP
 #define OPENCV_DNN_HAL_REPLACEMENT_HPP
 
