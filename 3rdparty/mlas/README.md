@@ -21,7 +21,7 @@ The SGEMM (single-precision GEMM) subset of MLAS plus `MlasFlashAttention`
 FP16-dispatch SoftMax, etc.) is excluded so the OpenCV DNN module gets the
 fast SGEMM and FlashAttention paths without dragging in the full library.
 
-Source files imported from upstream (local patches are listed below):
+Source files imported verbatim from upstream (local patches are listed below):
 
 - `lib/sgemm.cpp` — SGEMM dispatch and host-side glue.
 - `lib/compute.cpp` — softmax / exp / row-max / sum-exp kernels. Only the
@@ -37,8 +37,6 @@ Source files imported from upstream (local patches are listed below):
 - `lib/softmax.h` — header included by `compute.cpp`; pure FP16-dispatch
   typedefs, harmless under FP32-only builds.
 - Per-arch SGEMM kernels under `lib/<arch>/`.
-- `lib/arm64/SgemmKernelNeon.asm` and `SgemvKernelNeon.asm` are the Windows
-  ARM64 kernels, imported verbatim from the same upstream commit above.
 
 Top-level layout:
 
