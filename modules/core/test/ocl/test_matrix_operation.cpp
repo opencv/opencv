@@ -230,6 +230,11 @@ OCL_TEST_P(ConvertToSaturate, Accuracy)
     const int ddepth = GET_PARAM(1);
     if (sdepth == ddepth)
         throw cvtest::SkipTestException("same depth");
+#ifdef __APPLE__
+    // Apple's OpenCL driver for Intel GPUs doesn't saturate convert_int_sat_rte
+        if (sdepth == CV_32F && ddepth == CV_32S && cv::ocl::Device::getDefault().isIntel())
+        throw cvtest::SkipTestException("Apple OpenCL on Intel GPU: convert_int_sat_rte doesn't saturate");
+#endif
 
     double vals[] = { -5, -1.5, 0, 2.5, 3e9, 1e20 };
     Mat src;
