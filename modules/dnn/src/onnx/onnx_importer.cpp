@@ -60,6 +60,7 @@ template <typename T>
 static T getScalarFromMat(Mat m)
 {
     CV_Assert(m.total() == 1);
+    CV_CheckEQ(m.elemSize(), sizeof(T), "DNN/ONNX: scalar Mat element size mismatch");
     return m.at<T>(0);
 }
 

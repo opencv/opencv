@@ -254,6 +254,8 @@ void TFLiteImporter::populateNet()
         CV_Assert(op_inputs);
         const auto op_outputs = op->outputs();
         CV_Assert(op_outputs);
+        CV_CheckLT(static_cast<size_t>(op->opcode_index()), static_cast<size_t>(opCodes->size()),
+                   "DNN/TFLite: operator opcode_index out of range");
         int idx = op->opcode_index();
 
         LayerParams layerParams;
@@ -685,7 +687,12 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
-    auto options = reinterpret_cast<const Pool2DOptions*>(op.builtin_options());
+    auto options = op.builtin_options_as_Pool2DOptions();
+    CV_Assert(options);
+    CV_CheckGT(options->stride_w(), 0, "DNN/TFLite: pooling stride_w must be positive");
+    CV_CheckGT(options->stride_h(), 0, "DNN/TFLite: pooling stride_h must be positive");
+    CV_CheckGT(options->filter_width(), 0, "DNN/TFLite: pooling filter_w must be positive");
+    CV_CheckGT(options->filter_height(), 0, "DNN/TFLite: pooling filter_h must be positive");
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -704,8 +711,17 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
+    // MediaPipe MaxPoolingWithArgmax2D / MaxUnpooling2D serialize the fields up to and
+    // including TfLitePoolParams::activation, without the trailing `computed` struct.
+    CV_Assert(op.custom_options() != nullptr);
+    CV_CheckGE(static_cast<size_t>(op.custom_options()->size()),
+               offsetof(TfLitePoolParams, activation) + sizeof(TfLiteFusedActivation),
+               "DNN/TFLite: custom_options too small for TfLitePoolParams");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    CV_CheckGT(params->stride_width, 0, "DNN/TFLite: pooling stride_w must be positive");
+    CV_CheckGT(params->stride_height, 0, "DNN/TFLite: pooling stride_h must be positive");
+    CV_CheckGT(params->filter_width, 0, "DNN/TFLite: pooling filter_w must be positive");
+    CV_CheckGT(params->filter_height, 0, "DNN/TFLite: pooling filter_h must be positive");
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Argmax pooling with fused activation");
     }
@@ -722,8 +738,17 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
 void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "MaxUnpool";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
+    // MediaPipe MaxPoolingWithArgmax2D / MaxUnpooling2D serialize the fields up to and
+    // including TfLitePoolParams::activation, without the trailing `computed` struct.
+    CV_Assert(op.custom_options() != nullptr);
+    CV_CheckGE(static_cast<size_t>(op.custom_options()->size()),
+               offsetof(TfLitePoolParams, activation) + sizeof(TfLiteFusedActivation),
+               "DNN/TFLite: custom_options too small for TfLitePoolParams");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    CV_CheckGT(params->stride_width, 0, "DNN/TFLite: pooling stride_w must be positive");
+    CV_CheckGT(params->stride_height, 0, "DNN/TFLite: pooling stride_h must be positive");
+    CV_CheckGT(params->filter_width, 0, "DNN/TFLite: pooling filter_w must be positive");
+    CV_CheckGT(params->filter_height, 0, "DNN/TFLite: pooling filter_h must be positive");
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Unpooling with fused activation");
     }
@@ -987,7 +1012,9 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Deconvolution";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
+    CV_Assert(op.custom_options() != nullptr);
+    CV_CheckGE(static_cast<size_t>(op.custom_options()->size()), sizeof(TfLiteTransposeConvParams),
+               "DNN/TFLite: custom_options too small for TfLiteTransposeConvParams");
     const auto* params = reinterpret_cast<const TfLiteTransposeConvParams*>(op.custom_options()->Data());
     if (params->padding != kTfLitePaddingUnknown)
         layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
