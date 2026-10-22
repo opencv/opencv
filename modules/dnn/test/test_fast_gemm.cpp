@@ -75,14 +75,19 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, DNN_FastGemmThin, Combine(
     Values(1.f, -0.5f)
 ));
 
+struct ScopedNumThreads
+{
+    explicit ScopedNumThreads(int n) : saved(getNumThreads()) { setNumThreads(n); }
+    ~ScopedNumThreads() { setNumThreads(saved); }
+    const int saved;
+};
+
 static Mat forwardWithThreads(LayerParams lp, std::vector<Mat> inputs, int threads)
 {
-    const int saved = getNumThreads();
-    setNumThreads(threads);
+    ScopedNumThreads numThreads(threads);
     Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
-    setNumThreads(saved);
     return outputs[0];
 }
 
@@ -150,11 +155,8 @@ static Mat initialC(int rows, int cols, float beta, RNG& rng)
 
 template<typename F> static Mat runWithThreads(int threads, F f)
 {
-    const int saved = getNumThreads();
-    setNumThreads(threads);
-    Mat out = f();
-    setNumThreads(saved);
-    return out;
+    ScopedNumThreads numThreads(threads);
+    return f();
 }
 
 static void checkGemm(const Mat& ref, const Mat& single, const Mat& multi, int K, const std::string& what)
