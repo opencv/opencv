@@ -1539,11 +1539,22 @@ template<typename R> struct TheTest
             {
                 LaneType x = dataO[i];
                 double xd = (double)x;
+
+                // NOTE: Armv7 scalar cvRound and vector v_round may produce different result on the range edges and clams differently
+                auto check_big_int = [&](int v0, int v) {
+                    constexpr int F2INT_MAX = 2147483520;
+                    if (v0 < F2INT_MAX) {
+                        EXPECT_EQ(v0, v);
+                    } else {
+                        EXPECT_GE(v, F2INT_MAX);
+                    }
+                };
                 SCOPED_TRACE(cv::format("overflow: i=%d, x=%g", i, xd));
-                EXPECT_EQ(saturate_cast<ILaneType>(cvRound(x)), roundO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvTrunc(x)), truncO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvFloor(x)), floorO[i]);
-                EXPECT_EQ(saturate_cast<ILaneType>(cvCeil(x)), ceilO[i]);
+                check_big_int(saturate_cast<ILaneType>(cvRound(x)), roundO[i]);
+                check_big_int(saturate_cast<ILaneType>(cvTrunc(x)), truncO[i]);
+                check_big_int(saturate_cast<ILaneType>(cvFloor(x)), floorO[i]);
+                check_big_int(saturate_cast<ILaneType>(cvCeil(x)), ceilO[i]);
+
                 if (sizeof(ILaneType) == 4)
                 {
                     if (xd >= 2147483648.)
