@@ -12,13 +12,15 @@
 #include "../cuda4dnn/primitives/average_pooling.hpp"
 #endif
 #include "../hal_replacement.hpp"
+#include <atomic>
 
 namespace cv
 {
 namespace dnn
 {
 
-// NCHW input; tasks are output rows, so a single large plane still uses all threads
+// NCHW input. Plane ranges are offered to the HAL with C0 = 1; if it declines, tasks are
+// output rows, so a single large plane still uses all threads.
 static void avgPool32fPlain(const float* inp, float* out,
                             const ConvState& cs, bool count_include_pad)
 {
@@ -35,6 +37,18 @@ static void avgPool32fPlain(const float* inp, float* out,
     int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
     int H = sdims > 1 ? cs.outshape[sdims] : 1;
     int W = cs.outshape[sdims + 1];
+
+    int insize[3] = { Di, Hi, Wi }, outsize[3] = { D, H, W };
+    std::atomic<bool> hal_done(true);
+    parallel_for_(Range(0, NC), [&](const Range& r) {
+        CALL_HAL(dnn_avgpool3d32f, cv_hal_dnn_avgpool3d32f, inp, out, 1, insize, outsize,
+                 cs.strides, cs.pads, cs.inner, cs.coordtab.data(), cs.ofstab.data(),
+                 (int)cs.ofstab.size(), count_include_pad ? 1 : 0, r.start, r.end);
+        hal_done = false;
+    });
+    if (hal_done)
+        return;
+
     int nrows = NC*D*H;
     double nstripes = (double)nrows*W*cs.ofstab.size()*(1./(1 << 14));
 
@@ -552,12 +566,6 @@ static void avgPool16bf(const void* inp_, void* out_,
 typedef void (*AvgPoolFunc)(const void* inp, void* out,
                             const ConvState& cs, bool countIncludePadding);
 
-static bool haveAvgPoolHal()
-{
-    decltype(&hal_ni_dnn_avgpool3d32f) hal = cv_hal_dnn_avgpool3d32f;
-    return hal != hal_ni_dnn_avgpool3d32f;
-}
-
 class AveragePoolLayerImpl : public AveragePoolLayer
 {
 public:
@@ -691,11 +699,10 @@ public:
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
     {
         CV_Assert(actualInputs.size() == 1u);
-        // plain input stays plain: converting it costs a pass and pads few channels up to C0;
-        // a registered HAL hook takes block input only, so it keeps getting it
+        // plain input stays plain: converting it costs a pass and pads few channels up to C0
         Net::Impl* netimpl_ = getNetImpl(this);
         bool block = actualInputs[0] == DATA_LAYOUT_BLOCK ||
-                     netimpl_->originalLayout != DATA_LAYOUT_NCHW || haveAvgPoolHal();
+                     netimpl_->originalLayout != DATA_LAYOUT_NCHW;
         DataLayout layout = block ? DATA_LAYOUT_BLOCK : actualInputs[0];
         desiredInputs.assign(1, layout);
         outputs.assign(requiredOutputs, layout);

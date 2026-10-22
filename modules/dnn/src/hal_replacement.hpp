@@ -51,7 +51,8 @@ inline int hal_ni_dnn_maxpool3d32f(const float* inp_data, float* out_data, int C
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /** @brief Average pooling over a slice [task_start, task_end) of the output (blocked NCDHWc,
-CV_32F); a nonzero @c count_include_pad divides by the full kernel size (counts padded cells). */
+CV_32F); a nonzero @c count_include_pad divides by the full kernel size (counts padded cells).
+@c C0 = 1 passes a plain NCDHW tensor; the task range then runs over the N*C planes. */
 inline int hal_ni_dnn_avgpool3d32f(const float* inp_data, float* out_data, int C0,
                                  const int* insize, const int* outsize, const int* strides,
                                  const int* pads, const int* inner, const int* coordtab,

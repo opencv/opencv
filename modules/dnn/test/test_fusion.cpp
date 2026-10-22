@@ -929,9 +929,7 @@ static Net forwardAgainstReference(const std::string& name)
 TEST(Fusion, AveragePoolKeepsPlainInput)
 {
     Net net = forwardAgainstReference("avgpool_plain_input");
-#ifndef __riscv  // the RVV avgpool HAL keeps the input in block layout
     EXPECT_EQ(0, fusedCount(net, "TransformLayout"));
-#endif
 }
 
 TEST(Fusion, ScalarMulKeepsBlockLayout)
