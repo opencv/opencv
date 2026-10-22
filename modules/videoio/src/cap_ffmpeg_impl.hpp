@@ -2021,7 +2021,21 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     }
 
 #if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
-    sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
+#ifdef AV_FRAME_FLAG_INTERLACED
+    // swscale refuses to convert between interlaced and progressive frames
+    const int field_flags = AV_FRAME_FLAG_INTERLACED | AV_FRAME_FLAG_TOP_FIELD_FIRST;
+    rgb_picture.flags = (rgb_picture.flags & ~field_flags) | (sw_picture->flags & field_flags);
+#endif
+    int sws_ret = sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
+    if (sws_ret < 0)
+    {
+#if USE_AV_HW_CODECS
+        if (sw_picture != picture)
+            av_frame_free(&sw_picture);
+#endif
+        CV_LOG_ERROR(NULL, "sws_scale_frame failed: " << _opencv_ffmpeg_get_error_string(sws_ret));
+        return false;
+    }
 #else
     sws_scale(
             img_convert_ctx,

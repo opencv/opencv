@@ -1401,6 +1401,27 @@ TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 
     remove(file.c_str());
 }
+
+// Decoded frames of an interlaced stream used to be converted silently to black by retrieveFrame().
+// Sample video/interlaced_tff_8x8_gray.mkv (opencv_extra): 8x8 gray rawvideo in Matroska, field_order=tt, generated with:
+//   ffmpeg -f lavfi -i testsrc=size=8x8 -frames:v 1 -vf setfield=tff,format=gray -c:v rawvideo \
+//          -fflags +bitexact -flags:v +bitexact -map_metadata -1 -f matroska - > interlaced_tff_8x8_gray.mkv
+// Expected sum comes from the same command without "setfield=tff,".
+// related issue: https://github.com/opencv/opencv/issues/30299
+TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    VideoCapture cap(findDataFile("video/interlaced_tff_8x8_gray.mkv"), CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("FFmpeg backend can not open the Matroska test stream");
+
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_EQ(Size(8, 8), frame.size());
+    EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
+}
 #endif
 
 }} // namespace
