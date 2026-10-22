@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 
 #ifndef __IPP_HAL_RESIZE_IPP_HPP__
 #define __IPP_HAL_RESIZE_IPP_HPP__
