@@ -47,6 +47,13 @@
 #define FAST_GEMM_F32_NR 12
 #endif
 
+// AVX2 reads a row-major A (K contiguous) straight from its rows instead of packing it
+#if CV_AVX2
+#define FAST_GEMM_F32_ROWS_A 1
+#else
+#define FAST_GEMM_F32_ROWS_A 0
+#endif
+
 // narrowest column tile when the work is split between threads
 #if CV_AVX2
 #define FAST_GEMM_F32_MIN_SPLIT_NC 32
@@ -351,8 +358,12 @@ static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
 FAST_GEMM_IMPLEMENT_PACK(6, _f32, float, float) // a packer
 FAST_GEMM_IMPLEMENT_PACK(16, _f32, float, float) // b packer
 
-static inline void fast_gemm6x16_f32(int k, const char *a_, const char *b_, char *c_, int ldc, float alpha) {
-    const float* a = (const float*)a_;
+// A comes as six row pointers: rows of a packed panel (ASTEP = MR) or of a row-major A (ASTEP = 1).
+// The products and their order are the same in both cases.
+template<int ASTEP>
+static inline void fast_gemm6x16_f32_impl(int k, const float* r0, const float* r1, const float* r2,
+                                          const float* r3, const float* r4, const float* r5,
+                                          const char *b_, char *c_, int ldc, float alpha) {
     const float* b = (const float*)b_;
     float* c = (float*)c_;
 
@@ -362,27 +373,27 @@ static inline void fast_gemm6x16_f32(int k, const char *a_, const char *b_, char
            s30 = s00, s31 = s00,
            s40 = s00, s41 = s00,
            s50 = s00, s51 = s00;
-    for (int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
+    for (int p = 0, q = 0; p < k; p++, q += ASTEP, b += FAST_GEMM_F32_NR) {
         __m256 b0 = _mm256_loadu_ps(b), b1 = _mm256_loadu_ps(b + 8);
 
-        __m256 a0 = _mm256_set1_ps(*a);
+        __m256 a0 = _mm256_set1_ps(r0[q]);
         s00 = _mm256_fmadd_ps(b0, a0, s00);
         s01 = _mm256_fmadd_ps(b1, a0, s01);
-        __m256 a1 = _mm256_set1_ps(*(a + 1));
+        __m256 a1 = _mm256_set1_ps(r1[q]);
         s10 = _mm256_fmadd_ps(b0, a1, s10);
         s11 = _mm256_fmadd_ps(b1, a1, s11);
 
-        a0 = _mm256_set1_ps(*(a + 2));
+        a0 = _mm256_set1_ps(r2[q]);
         s20 = _mm256_fmadd_ps(b0, a0, s20);
         s21 = _mm256_fmadd_ps(b1, a0, s21);
-        a1 = _mm256_set1_ps(*(a + 3));
+        a1 = _mm256_set1_ps(r3[q]);
         s30 = _mm256_fmadd_ps(b0, a1, s30);
         s31 = _mm256_fmadd_ps(b1, a1, s31);
 
-        a0 = _mm256_set1_ps(*(a + 4));
+        a0 = _mm256_set1_ps(r4[q]);
         s40 = _mm256_fmadd_ps(b0, a0, s40);
         s41 = _mm256_fmadd_ps(b1, a0, s41);
-        a1 = _mm256_set1_ps(*(a + 5));
+        a1 = _mm256_set1_ps(r5[q]);
         s50 = _mm256_fmadd_ps(b0, a1, s50);
         s51 = _mm256_fmadd_ps(b1, a1, s51);
     }
@@ -406,6 +417,20 @@ static inline void fast_gemm6x16_f32(int k, const char *a_, const char *b_, char
     FAST_GEMM_FINALE(2, 3);
     FAST_GEMM_FINALE(4, 5);
 #undef FAST_GEMM_FINALE
+}
+
+static inline void fast_gemm6x16_f32(int k, const char *a_, const char *b_, char *c_, int ldc, float alpha) {
+    const float* a = (const float*)a_;
+    fast_gemm6x16_f32_impl<FAST_GEMM_F32_MR>(k, a, a + 1, a + 2, a + 3, a + 4, a + 5, b_, c_, ldc, alpha);
+}
+
+// A read from its rows, lda apart. Rows from mr on repeat row 0; the caller drops their results.
+static inline void fast_gemm6x16_f32_rows(int k, const float* a, int lda, int mr,
+                                          const char *b_, char *c_, int ldc, float alpha) {
+    const float* r[FAST_GEMM_F32_MR];
+    for (int i = 0; i < FAST_GEMM_F32_MR; i++)
+        r[i] = a + (size_t)(i < mr ? i : 0) * lda;
+    fast_gemm6x16_f32_impl<1>(k, r[0], r[1], r[2], r[3], r[4], r[5], b_, c_, ldc, alpha);
 }
 
 #elif CV_AVX // AVX (16 x 256-bit registers)
@@ -676,9 +701,10 @@ static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
 
 #endif
 
+// With lda > 0, packed_A is a row-major A with rows lda apart (only when FAST_GEMM_F32_ROWS_A).
 static inline void fast_gemm_macro_kernel(int m, int n, int k,
                                           const char *packed_A, const char *packed_B,
-                                          float alpha, char *c, int ldc0, int esz) {
+                                          float alpha, char *c, int ldc0, int esz, int lda = 0) {
     int ldc0_esz = ldc0 * esz;
 
     double tempC[FAST_GEMM_F32_MR * FAST_GEMM_F32_NR]; // make sure the buffer is big enough
@@ -704,7 +730,11 @@ static inline void fast_gemm_macro_kernel(int m, int n, int k,
 #elif CV_NEON && CV_NEON_AARCH64
             fast_gemm8x12_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
 #elif CV_AVX2
-            fast_gemm6x16_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
+            if (lda > 0)
+                fast_gemm6x16_f32_rows(k, (const float*)packed_A + (size_t)i * lda, lda, mr,
+                                       packed_B + j * k * esz, cptr, ldc, alpha);
+            else
+                fast_gemm6x16_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
 #elif CV_AVX
             fast_gemm12x8_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
 #elif CV_LASX
@@ -807,6 +837,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     size_t total_tiles = m_tiles * n_tiles;
+    const bool rows_a = FAST_GEMM_F32_ROWS_A && lda1 == 1;
 
     auto fn = [&](const Range &r) {
         char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
@@ -842,7 +873,8 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 #elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 #elif CV_AVX2
-                fast_gemm_pack6_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+                if (!rows_a)
+                    fast_gemm_pack6_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 #elif CV_LASX
@@ -866,7 +898,8 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, rows_a ? A + (i0 * lda0 + k0) * esz : packed_a, packed_b, alpha,
+                                       c_block, ldc_block, esz, rows_a ? (int)lda0 : 0);
             }
         }
 
@@ -914,6 +947,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     size_t buff_size = KC * MC * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     size_t total_tiles = m_tiles * n_tiles;
+    const bool rows_a = FAST_GEMM_F32_ROWS_A && lda1 == 1;
 
     auto fn = [&](const Range &r) {
         char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size)); // TODO: use AutoBuffer
@@ -958,7 +992,8 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 #elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
 #elif CV_AVX2
-                fast_gemm_pack6_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
+                if (!rows_a)
+                    fast_gemm_pack6_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, A + step_a, lda0, lda1, packed_a);
 #elif CV_LASX
@@ -968,8 +1003,8 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_ + (j0 - jb) * kc * esz,
-                                       alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, rows_a ? A + step_a : packed_a, packed_b_ + (j0 - jb) * kc * esz,
+                                       alpha, c_block, ldc_block, esz, rows_a ? (int)lda0 : 0);
                 packed_b_ += _nc * kc;
             }
         }
@@ -1014,6 +1049,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     size_t total_tiles = m_tiles * n_tiles;
+    const bool rows_a = FAST_GEMM_F32_ROWS_A && lda1 == 1;
 
     auto fn = [&](const Range &r) {
         char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
@@ -1058,7 +1094,8 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
 #elif CV_AVX2
-                fast_gemm_pack6_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
+                if (!rows_a)
+                    fast_gemm_pack6_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
 #elif CV_LASX
@@ -1083,7 +1120,8 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, rows_a ? a_block + step_a : packed_a, packed_b, alpha,
+                                       c_block, ldc_block, esz, rows_a ? (int)lda0 : 0);
             }
         }
 
@@ -1126,6 +1164,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 
     size_t buff_size = KC * MC * esz;
     size_t total_tiles = m_tiles * n_tiles;
+    const bool rows_a = FAST_GEMM_F32_ROWS_A && lda1 == 1;
 
     auto fn = [&](const Range &r) {
         cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_a_buff;
@@ -1180,7 +1219,8 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #elif CV_NEON && CV_NEON_AARCH64
                 fast_gemm_pack8_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
 #elif CV_AVX2
-                fast_gemm_pack6_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
+                if (!rows_a)
+                    fast_gemm_pack6_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
 #elif CV_AVX
                 fast_gemm_pack12_f32(mc, kc, a_block + step, lda0, lda1, packed_a);
 #elif CV_LASX
@@ -1190,8 +1230,8 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b + (j0 - jb) * kc * esz,
-                                       alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, rows_a ? a_block + step : packed_a, packed_b + (j0 - jb) * kc * esz,
+                                       alpha, c_block, ldc_block, esz, rows_a ? (int)lda0 : 0);
                 packed_b += _nc * kc;
             }
         }
