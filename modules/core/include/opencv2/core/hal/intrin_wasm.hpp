@@ -462,16 +462,7 @@ inline v_int16x8 v_pack(const v_int32x4& a, const v_int32x4& b)
     v128_t b2 = wasm_v128_bitselect(minval, b1, wasm_i32x4_lt(b1, minval));
     return v_int16x8(wasm_i8x16_shuffle(a2, b2, 0,1,4,5,8,9,12,13,16,17,20,21,24,25,28,29));
 }
-// truncating narrows, kept private: v_pack()/v_pack_u() below saturate like every other width
-inline v_uint32x4 v_pack_trunc(const v_uint64x2& a, const v_uint64x2& b)
-{
-    return v_uint32x4(wasm_i8x16_shuffle(a.val, b.val, 0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27));
-}
-inline v_int32x4 v_pack_trunc(const v_int64x2& a, const v_int64x2& b)
-{
-    return v_int32x4(wasm_i8x16_shuffle(a.val, b.val, 0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27));
-}
-OPENCV_HAL_IMPL_SATURATING_PACK_64(v_int64x2, v_uint64x2, v_int32x4, v_uint32x4, v_setall_s32, v_pack_trunc, v_pack_trunc)
+
 inline v_uint8x16 v_pack_u(const v_int16x8& a, const v_int16x8& b)
 {
     v128_t maxval = wasm_i16x8_splat(255);
@@ -1837,6 +1828,17 @@ OPENCV_HAL_IMPL_WASM_SELECT(v_uint64x2)
 OPENCV_HAL_IMPL_WASM_SELECT(v_int64x2)
 OPENCV_HAL_IMPL_WASM_SELECT(v_float32x4)
 OPENCV_HAL_IMPL_WASM_SELECT(v_float64x2)
+
+// truncating narrows, kept private: v_pack()/v_pack_u() below saturate like every other width
+inline v_uint32x4 v_pack_trunc(const v_uint64x2& a, const v_uint64x2& b)
+{
+    return v_uint32x4(wasm_i8x16_shuffle(a.val, b.val, 0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27));
+}
+inline v_int32x4 v_pack_trunc(const v_int64x2& a, const v_int64x2& b)
+{
+    return v_int32x4(wasm_i8x16_shuffle(a.val, b.val, 0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27));
+}
+OPENCV_HAL_IMPL_SATURATING_PACK_64(v_int64x2, v_uint64x2, v_int32x4, v_uint32x4, v_setall_s32, v_pack_trunc, v_pack_trunc)
 
 #define OPENCV_HAL_IMPL_WASM_EXPAND(_Tpvec, _Tpwvec, _Tp, intrin)    \
 inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1)      \
