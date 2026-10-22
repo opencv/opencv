@@ -3871,6 +3871,89 @@ void resize(int src_type,
             func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs );
             return;
         }
+
+        // For mixed scaling, use area weights on the shrinking axis and the
+        // fallback's two-tap weights on the enlarging axis.
+        if( interpolation == INTER_AREA && cn <= 4 &&
+            (scale_x >= 1 || scale_y >= 1) )
+        {
+            ResizeAreaFunc func = area_tab[depth];
+            CV_Assert( func != 0 );
+
+            AutoBuffer<DecimateAlpha> _xtab(std::max(src_width * 2, dsize.width * 2));
+            AutoBuffer<DecimateAlpha> _ytab(std::max(src_height * 2, dsize.height * 2));
+            DecimateAlpha* xtab = _xtab.data();
+            DecimateAlpha* ytab = _ytab.data();
+
+            int xtab_size;
+            if( scale_x >= 1 )
+                xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
+            else
+            {
+                xtab_size = 0;
+                float fx;
+                for( dx = 0; dx < dsize.width; dx++ )
+                {
+                    sx = cvFloor(dx * scale_x);
+                    fx = (float)((dx + 1) - (sx + 1) * inv_scale_x);
+                    fx = fx <= 0 ? 0.f : fx - cvFloor(fx);
+                    if( sx >= src_width - 1 )
+                        fx = 0.f, sx = src_width - 1;
+
+                    xtab[xtab_size].di = dx * cn;
+                    xtab[xtab_size].si = sx * cn;
+                    xtab[xtab_size++].alpha = 1.f - fx;
+                    if( fx > 0.f )
+                    {
+                        xtab[xtab_size].di = dx * cn;
+                        xtab[xtab_size].si = (sx + 1) * cn;
+                        xtab[xtab_size++].alpha = fx;
+                    }
+                }
+            }
+
+            int ytab_size;
+            if( scale_y >= 1 )
+                ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
+            else
+            {
+                ytab_size = 0;
+                float fy;
+                for( dy = 0; dy < dsize.height; dy++ )
+                {
+                    sy = cvFloor(dy * scale_y);
+                    fy = (float)((dy + 1) - (sy + 1) * inv_scale_y);
+                    fy = fy <= 0 ? 0.f : fy - cvFloor(fy);
+                    if( sy >= src_height - 1 )
+                        fy = 0.f, sy = src_height - 1;
+
+                    ytab[ytab_size].di = dy;
+                    ytab[ytab_size].si = sy;
+                    ytab[ytab_size++].alpha = 1.f - fy;
+                    if( fy > 0.f )
+                    {
+                        ytab[ytab_size].di = dy;
+                        ytab[ytab_size].si = sy + 1;
+                        ytab[ytab_size++].alpha = fy;
+                    }
+                }
+            }
+
+            AutoBuffer<int> _tabofs(dsize.height + 1);
+            int* tabofs = _tabofs.data();
+            for( k = 0, dy = 0; k < ytab_size; k++ )
+            {
+                if( k == 0 || ytab[k].di != ytab[k-1].di )
+                {
+                    CV_Assert( ytab[k].di == dy );
+                    tabofs[dy++] = k;
+                }
+            }
+            tabofs[dy] = ytab_size;
+
+            func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs );
+            return;
+        }
     }
 
     int xmin = 0, xmax = dsize.width, width = dsize.width*cn;

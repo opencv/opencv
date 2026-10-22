@@ -1352,6 +1352,62 @@ TEST(Imgproc_resize_area, regression_quarter_round)
     check_resize_area<uchar>(expected, actual, 0.5);
 }
 
+TEST(Imgproc_resize_area, mixed_axis_scaling)
+{
+    Mat src = (Mat_<float>(1, 3) << 0.1f, 0.2f, 0.3f);
+    Mat actual;
+
+    cv::resize(src, actual, Size(1, 2), 0, 0, INTER_AREA);
+
+    for (int y = 0; y < actual.rows; ++y)
+        EXPECT_NEAR(0.2f, actual.at<float>(y, 0), 1e-5f);
+}
+
+TEST(Imgproc_resize_area, mixed_axis_scaling_horizontal_up)
+{
+    Mat src = (Mat_<float>(3, 1) << 0.1f, 0.2f, 0.3f);
+    Mat actual;
+
+    cv::resize(src, actual, Size(2, 1), 0, 0, INTER_AREA);
+
+    for (int x = 0; x < actual.cols; ++x)
+        EXPECT_NEAR(0.2f, actual.at<float>(0, x), 1e-5f);
+}
+
+TEST(Imgproc_resize_area, mixed_axis_scaling_multichannel_integer)
+{
+    Mat src = (Mat_<Vec3b>(1, 3) << Vec3b(0, 30, 60), Vec3b(30, 60, 90), Vec3b(60, 90, 120));
+    Mat actual;
+
+    cv::resize(src, actual, Size(1, 2), 0, 0, INTER_AREA);
+
+    for (int y = 0; y < actual.rows; ++y)
+        EXPECT_EQ(Vec3b(30, 60, 90), actual.at<Vec3b>(y, 0));
+}
+
+TEST(Imgproc_resize_area, mixed_axis_scaling_horizontal_enlargement_non_integer)
+{
+    Mat src = (Mat_<float>(2, 3) << 0.f, 10.f, 20.f, 0.f, 10.f, 20.f);
+    Mat actual;
+
+    cv::resize(src, actual, Size(5, 1), 0, 0, INTER_AREA);
+
+    const float expected[] = { 0.f, 10.f / 3.f, 10.f, 50.f / 3.f, 20.f };
+    for (int x = 0; x < actual.cols; ++x)
+        EXPECT_NEAR(expected[x], actual.at<float>(0, x), 1e-5f);
+}
+
+TEST(Imgproc_resize_area, mixed_axis_scaling_vertical_enlargement_non_integer)
+{
+    Mat src = (Mat_<float>(3, 2) << 0.f, 0.f, 10.f, 10.f, 20.f, 20.f);
+    Mat actual;
+
+    cv::resize(src, actual, Size(1, 5), 0, 0, INTER_AREA);
+
+    const float expected[] = { 0.f, 10.f / 3.f, 10.f, 50.f / 3.f, 20.f };
+    for (int y = 0; y < actual.rows; ++y)
+        EXPECT_NEAR(expected[y], actual.at<float>(y, 0), 1e-5f);
+}
 typedef tuple<int, int, int, int, bool> RemapRelativeParam;
 typedef testing::TestWithParam<RemapRelativeParam> Imgproc_RemapRelative;
 
