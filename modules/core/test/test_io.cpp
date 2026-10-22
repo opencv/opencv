@@ -2255,5 +2255,29 @@ TEST(Core_InputOutput, filestorage_read_uppercase_exponent)
         EXPECT_EQ(1e5, c);
     }
 }
+TEST(Core_InputOutput, filestorage_yaml_escape_string)
+{
+    const String value1 = "O'Reilly\x01";
+    const String value2 = "hex_\x10_\x1f_\xab_end";
+    FileStorage writer("test.yml", FileStorage::WRITE | FileStorage::MEMORY);
+    writer << "text1" << value1;
+    writer << "text2" << value2;
+    const String yaml = writer.releaseAndGetString();
 
+    EXPECT_NE(String::npos, yaml.find("text1: \"O\\'Reilly\\x01\""));
+    EXPECT_NE(String::npos, yaml.find("text2: \"hex_\\x10_\\x1f_\xab_end\""));
+
+    FileStorage reader(yaml, FileStorage::READ | FileStorage::MEMORY);
+    String restored1, restored2;
+    reader["text1"] >> restored1;
+    reader["text2"] >> restored2;
+    EXPECT_EQ(value1, restored1);
+    EXPECT_EQ(value2, restored2);
+
+    const String yaml_octal = "%YAML:1.0\n---\noct: \"\\101\\060!\"\n";
+    FileStorage reader_oct(yaml_octal, FileStorage::READ | FileStorage::MEMORY);
+    String restored_oct;
+    reader_oct["oct"] >> restored_oct;
+    EXPECT_EQ(String("A0!"), restored_oct);
+}
 }} // namespace
