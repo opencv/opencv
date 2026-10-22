@@ -411,18 +411,25 @@ if (
     // Add more as OpenCV gains new manual-cleanup classes
 }
 
-// Override Emscripten's shallow clone() with OpenCV's deep copy mat_clone()
-// This restores the expected behavior where clone() performs a deep copy.
-// Background: Emscripten 3.1.71+ added ClassHandle.clone() which only does shallow copy.
-// See: https://github.com/opencv/opencv/pull/26643
+// Override Emscripten's shallow clone() with OpenCV's deep copy mat_clone().
 // See: https://github.com/opencv/opencv/issues/27572
-var _opencv_onRuntimeInitialized_backup = Module['onRuntimeInitialized'];
-Module['onRuntimeInitialized'] = function() {
-    if (_opencv_onRuntimeInitialized_backup) {
-        _opencv_onRuntimeInitialized_backup();
-    }
+// See: https://github.com/opencv/opencv/issues/30408
+
+function _opencv_useDeepClone() {
     if (typeof cv !== 'undefined' && cv.Mat &&
         typeof cv.Mat.prototype.mat_clone === 'function') {
         cv.Mat.prototype.clone = cv.Mat.prototype.mat_clone;
     }
+}
+
+var _opencv_onRuntimeInitialized_backup = Module['onRuntimeInitialized'];
+
+Module['onRuntimeInitialized'] = function() {
+    if (_opencv_onRuntimeInitialized_backup) {
+        _opencv_onRuntimeInitialized_backup();
+    }
+    _opencv_useDeepClone();
 };
+
+// Also handle builds where runtime initialization has already completed.
+_opencv_useDeepClone();
