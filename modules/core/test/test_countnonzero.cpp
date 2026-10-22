@@ -335,7 +335,21 @@ TEST_P(CountNonZero1D, /**/)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, CountNonZero1D,
-    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool)
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
+
+// 0x80 is -0.0 in E4M3FN (counts as zero) but NaN in E4M3FNUZ (counts as non-zero)
+TEST(Core_CountNonZero, fp8_sign_bit)
+{
+    Mat fn(1, 100, CV_8F_E4M3FNC1, Scalar(0));
+    Mat fnuz(1, 100, CV_8F_E4M3FNUZC1, Scalar(0));
+    fn.data[50] = 0x80;
+    fnuz.data[50] = 0x80;
+
+    EXPECT_EQ(0, countNonZero(fn));
+    EXPECT_FALSE(hasNonZero(fn));
+    EXPECT_EQ(1, countNonZero(fnuz));
+    EXPECT_TRUE(hasNonZero(fnuz));
+}
 
 }} // namespace

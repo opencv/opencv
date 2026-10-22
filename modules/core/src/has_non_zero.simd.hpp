@@ -79,6 +79,8 @@ static bool funcname( const void* _src, size_t len ) \
 #define CHECK_NZ_FP(x) (((x)<<1) != 0)
 #undef CHECK_NZ_FP16
 #define CHECK_NZ_FP16(x) (((x)&0x7fff) != 0)
+#undef CHECK_NZ_FP8
+#define CHECK_NZ_FP8(x) (((x)&0x7f) != 0)
 #undef VEC_CMP_EQ_Z_FP16
 #define VEC_CMP_EQ_Z_FP16(x, z) v_ne(v_add_wrap(x, x), z)
 #undef VEC_CMP_EQ_Z_FP
@@ -92,6 +94,7 @@ DEFINE_HASNONZERO_FUNC(hasNonZero64s, s64, int64, v_int64, v_ne, CHECK_NZ_INT)
 DEFINE_HASNONZERO_FUNC(hasNonZero32f, s32, int, v_int32, VEC_CMP_EQ_Z_FP, CHECK_NZ_FP)
 DEFINE_HASNONZERO_FUNC(hasNonZero64f, s64, int64, v_int64, VEC_CMP_EQ_Z_FP, CHECK_NZ_FP)
 DEFINE_HASNONZERO_FUNC(hasNonZero16f, u16, ushort, v_uint16, VEC_CMP_EQ_Z_FP16, CHECK_NZ_FP16)
+DEFINE_HASNONZERO_FUNC(hasNonZero8f, u8, uchar, v_uint8, VEC_CMP_EQ_Z_FP16, CHECK_NZ_FP8)
 
 HasNonZeroFunc getHasNonZeroFunc(int depth)
 {
@@ -110,7 +113,8 @@ HasNonZeroFunc getHasNonZeroFunc(int depth)
         hasNonZero64s,
         hasNonZero64s,
         hasNonZero32s,
-        0
+        hasNonZero8f,
+        hasNonZero8u
     };
 
     return hasNonZeroTab[depth];
