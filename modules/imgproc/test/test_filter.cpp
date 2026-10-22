@@ -2503,6 +2503,67 @@ TEST(Imgproc_MedianBlur, arbitrary_channel_count_29592)
     }
 }
 
+// ksize == 5 on CV_16U, CV_16S and CV_32F against a sort-based reference.
+// The 8-bit accuracy test does not cover these depths, and the OpenCL test
+// compares two implementations that share the same compare-exchange network.
+// The reference replicates the border and takes the 13th smallest of the 25
+// window values.
+TEST(Imgproc_MedianBlur, ksize5_accuracy_16u_16s_32f)
+{
+    const int depths[] = { CV_16U, CV_16S, CV_32F };
+    const Size sizes[] = { Size(1, 1), Size(2, 3), Size(1, 9), Size(9, 1), Size(4, 4),
+                           Size(7, 5), Size(33, 17), Size(61, 127), Size(97, 71) };
+    const double palette[3][5] = { { 0, 1, 2, 65534, 65535 }, { -32768, -1, 0, 1, 32767 },
+                                   { -0.0, 0.0, -1.5, 3e38, -3e38 } };
+    RNG& rng = theRNG();
+
+    for (int depth : depths)
+    for (int cn = 1; cn <= 4; cn++)
+    for (const Size& sz : sizes)
+    for (int mode = 0; mode < 3; mode++)  // 0: full range, 1: few distinct values, 2: full range inside an ROI
+    {
+        const Point roi = mode == 2 ? Point(3, 2) : Point(0, 0);
+        const Size full(sz.width + roi.x*2, sz.height + roi.y*2);
+        // values are generated as doubles, which hold all of 16U, 16S and 32F exactly
+        Mat vals(full, CV_64FC(cn));
+        for (int i = 0; i < full.height; i++)
+            for (int j = 0; j < full.width*cn; j++)
+            {
+                double v;
+                if (mode == 1)
+                    v = palette[depth == CV_16U ? 0 : depth == CV_16S ? 1 : 2][rng.uniform(0, 5)];
+                else if (depth == CV_32F)
+                    v = (double)(float)(rng.uniform(-1., 1.) * (rng.uniform(0, 4) ? 1e3 : 1e30));
+                else
+                    v = depth == CV_16U ? rng.uniform(0, 65536) : rng.uniform(-32768, 32768);
+                vals.ptr<double>(i)[j] = v;
+            }
+        const int type = CV_MAKETYPE(depth, cn);
+        Mat big;
+        vals.convertTo(big, type);
+        Mat src = big(Rect(roi, sz)), s64 = vals(Rect(roi, sz));
+
+        Mat expected(sz, CV_64FC(cn)), dst;
+        for (int y = 0; y < sz.height; y++)
+            for (int x = 0; x < sz.width; x++)
+                for (int c = 0; c < cn; c++)
+                {
+                    double w[25];
+                    for (int dy = -2; dy <= 2; dy++)
+                        for (int dx = -2; dx <= 2; dx++)
+                            w[(dy + 2)*5 + dx + 2] = s64.ptr<double>(std::min(std::max(y + dy, 0), sz.height - 1))
+                                                         [std::min(std::max(x + dx, 0), sz.width - 1)*cn + c];
+                    std::nth_element(w, w + 12, w + 25);
+                    expected.ptr<double>(y)[x*cn + c] = w[12];
+                }
+        expected.convertTo(expected, type);
+
+        medianBlur(src, dst, 5);
+        EXPECT_EQ(0.0, cvtest::norm(dst, expected, NORM_INF))
+            << "type=" << typeToString(type) << " size=" << sz << " mode=" << mode;
+    }
+}
+
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
     Mat src = (Mat_<short>(8, 16) << 127, 138, 130, 102, 118,  97,  76,  84, 124,  90, 146,  63, 130,  87, 212,  85,
