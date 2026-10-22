@@ -264,13 +264,31 @@ struct BlockLayoutTransformer
         return k >= 0 && !netimpl->isConstArg(add->inputs[k]);
     }
 
+    //! A plain copy of block @p x produced before @p pos in this graph, or an empty Arg.
+    Arg plainCopyBefore(const vector<PLayer>& prog, const vector<int>& producer,
+                        const vector<int>& consumer, const vector<Arg>& hoisted,
+                        Arg x, int pos) const
+    {
+        for (Arg p : { hoisted[x.idx], nonblockCache[x.idx] }) {
+            int pp = p.empty() ? -1 : producer[p.idx];
+            const TransformLayoutLayer* tr = pp >= 0 && pp < pos ?
+                dynamic_cast<const TransformLayoutLayer*>(prog[pp].get()) : nullptr;
+            if (tr && tr->layout != DATA_LAYOUT_BLOCK && tr->inputs[0].idx == x.idx &&
+                tr->outputs[0].idx == p.idx && !feedsResidualAdd(prog, consumer, p))
+                return p;
+        }
+        return Arg();
+    }
+
     // An elementwise op feeding only a conversion to plain runs after it instead: the same copy,
-    // but the op then works on C channels rather than on padded C0 lanes.
+    // but the op then works on C channels rather than on padded C0 lanes. When its input already
+    // has a plain copy, the op reads that one and the conversion is dropped.
     void hoistConversions(PGraph& g)
     {
         vector<PLayer> prog = g->prog();
         size_t nops = prog.size();
         vector<int> producer(netimpl->args.size(), -1), consumer(netimpl->args.size(), -1);
+        vector<Arg> hoisted(netimpl->args.size());
         for (size_t i = 0; i < nops; i++) {
             vector<PGraph>* subgraphs = prog[i]->subgraphs();
             if (subgraphs) {
@@ -293,14 +311,32 @@ struct BlockLayoutTransformer
             for (;;) {
                 Arg y = prog[tidx]->inputs[0];
                 int pidx = producer[y.idx];
-                if (pidx < 0 || usecounts[y.idx] != 1)
+                if (pidx < 0 || !prog[pidx] || usecounts[y.idx] != 1)
                     break;
                 const PLayer& op = prog[pidx];
                 int flow = flowInput(op);
                 if (flow < 0 || layouts[op->inputs[flow].idx] != DATA_LAYOUT_BLOCK)
                     break;
-                // conversion: x -> y, op: y -> z, where it was op: x -> y, conversion: y -> z
                 Arg x = op->inputs[flow], z = prog[tidx]->outputs[0];
+                Arg p = plainCopyBefore(prog, producer, consumer, hoisted, x, tidx);
+                if (!p.empty()) {
+                    // op: p -> z in the conversion's slot (it was op: x -> y, conversion: y -> z)
+                    PLayer layer = op;
+                    layer->inputs[flow] = p;
+                    layer->outputs[0] = z;
+                    prog[tidx] = layer;
+                    prog[pidx] = PLayer();
+                    usecounts[x.idx]--;
+                    usecounts[p.idx]++;
+                    usecounts[y.idx] = 0;
+                    producer[y.idx] = -1;
+                    producer[z.idx] = tidx;
+                    changed = true;
+                    break;
+                }
+                // conversion: x -> y, op: y -> z, where it was op: x -> y, conversion: y -> z
+                if (hoisted[x.idx].empty())
+                    hoisted[x.idx] = y;
                 prog[tidx]->inputs[0] = x;
                 prog[tidx]->outputs[0] = y;
                 op->inputs[flow] = y;
@@ -313,8 +349,11 @@ struct BlockLayoutTransformer
                 changed = true;
             }
         }
-        if (changed)
+        if (changed) {
+            prog.erase(std::remove_if(prog.begin(), prog.end(),
+                                      [](const PLayer& l) { return !l; }), prog.end());
             g->setProg(prog);
+        }
     }
 
     vector<int> usecounts;
