@@ -124,12 +124,17 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     }
 
     const VideoCaptureParameters parameters(params);
+    bool backendSupportsMode = false;
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
+            if (apiPreference == info.id)
+            {
+                backendSupportsMode = true;
+            }
             if (!info.backendFactory)
             {
                 CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
@@ -204,9 +209,10 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
         }
     }
 
-    if(apiPreference != CAP_ANY)
+    if (apiPreference != CAP_ANY && !backendSupportsMode)
     {
-        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        bool found = cv::videoio_registry::hasBackend(static_cast<VideoCaptureAPIs>(apiPreference)) ||
+                     cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
         if (found)
         {
             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
@@ -252,12 +258,14 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
     }
 
     const VideoCaptureParameters parameters(params);
+    bool backendSupportsMode = false;
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByStream();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference != info.id)
             continue;
+        backendSupportsMode = true;
 
         if (!info.backendFactory)
         {
@@ -332,12 +340,16 @@ bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, con
         }
     }
 
-    bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
-    if (found)
+    if (apiPreference != CAP_ANY && !backendSupportsMode)
     {
-        CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
-                                        "but can't be used to capture by read data stream",
-                                        cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
+        bool found = cv::videoio_registry::hasBackend(static_cast<VideoCaptureAPIs>(apiPreference)) ||
+                     cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by read data stream",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
+        }
     }
 
     if (throwOnFail)
@@ -387,12 +399,17 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
     }
 
     const VideoCaptureParameters parameters(params);
+    bool backendSupportsMode = false;
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
+            if (apiPreference == info.id)
+            {
+                backendSupportsMode = true;
+            }
             if (!info.backendFactory)
             {
                 CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
@@ -467,9 +484,10 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
         }
     }
 
-    if(apiPreference != CAP_ANY)
+    if (apiPreference != CAP_ANY && !backendSupportsMode)
     {
-        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        bool found = cv::videoio_registry::hasBackend(static_cast<VideoCaptureAPIs>(apiPreference)) ||
+                     cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
         if (found)
         {
             CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
