@@ -2273,6 +2273,61 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         inputNames.push_back(cv::format("%d", i));
     net.setInputsNames(inputNames);
 
+    auto matches = [&](const std::vector<Mat>& a, const std::vector<Mat>& b) {
+        if (a.size() != b.size())
+            return false;
+        for (size_t k = 0; k < a.size(); ++k) {
+            if (a[k].type() != b[k].type() || a[k].total() != b[k].total())
+                return false;
+            if (cvtest::norm(a[k], b[k], NORM_L1) / a[k].total() > default_l1 ||
+                cvtest::norm(a[k], b[k], NORM_INF) > default_lInf)
+                return false;
+        }
+        return true;
+    };
+
+    // CUDA FP16 rounds float inputs to half on upload; when that alone puts the reference out of
+    // reach (e.g. 10001 -> 10000), FP32 math on the half-rounded inputs is an accepted fallback
+    std::vector<Mat> halfRefOutputs;
+    if (target == DNN_TARGET_CUDA_FP16 && checkAccuracy)
+    {
+        auto cpuForward = [&](const std::vector<Mat>& inps) {
+            Net cpuNet = readNetFromONNX(model_path);
+            cpuNet.setInputsNames(inputNames);
+            cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+            for (size_t k = 0; k < inps.size(); ++k)
+                cpuNet.setInput(inps[k], inputNames[k]);
+            std::vector<Mat> outs;
+            cpuNet.forward(outs, cpuNet.getUnconnectedOutLayersNames());
+            return outs;
+        };
+        std::vector<Mat> halfInputs(inputs.size());
+        bool anyFloat = false;
+        for (size_t k = 0; k < inputs.size(); ++k) {
+            if (inputs[k].depth() != CV_32F) {
+                halfInputs[k] = inputs[k];
+                continue;
+            }
+            Mat h;
+            inputs[k].convertTo(h, CV_16F);
+            h.convertTo(halfInputs[k], CV_32F);
+            anyFloat = true;
+        }
+        try
+        {
+            // the CPU result is trusted as a fallback only if it reproduces the reference first
+            if (anyFloat && matches(cpuForward(inputs), ref_outputs)) {
+                std::vector<Mat> halfRef = cpuForward(halfInputs);
+                if (!matches(halfRef, ref_outputs))
+                    halfRefOutputs = halfRef;
+            }
+        }
+        catch (const cv::Exception&)
+        {
+            // the CPU backend cannot run this model; keep the ONNX reference
+        }
+    }
+
     try
     {
         net.setPreferableBackend(backend);
@@ -2309,6 +2364,10 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     {
         applyTestTag(CV_TEST_TAG_DNN_LAYER_FALLBACK);
     }
+
+    // an output that meets the ONNX reference is checked against it; the fallback is for one that does not
+    if (!halfRefOutputs.empty() && !matches(outputs, ref_outputs) && matches(outputs, halfRefOutputs))
+        ref_outputs = halfRefOutputs;
 
     if (checkAccuracy)
     {

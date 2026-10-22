@@ -70,8 +70,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
             int local_idx = threadIdx.x;
 
-            src += first_batch * stride + local_idx;
-            dst += first_batch * stride + local_idx;
+            src += static_cast<std::int64_t>(first_batch) * stride + local_idx;
+            dst += static_cast<std::int64_t>(first_batch) * stride + local_idx;
 
             acc_t elements[WARP_BATCH][WARP_ITERATIONS];
             for (int i = 0; i < WARP_BATCH; ++i) {
@@ -116,13 +116,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             for (int i = 0; i < WARP_BATCH; ++i) {
                 if (i >= local_batches)
                     break;
-                if (is_log_softmax) sum[i] = max_value[i] + std::log((float)(sum[i]));
+                // subtract the max before the log-sum: max + log(sum) rounds away small terms at large inputs
+                if (is_log_softmax) sum[i] = std::log((float)(sum[i]));
 #pragma unroll
                 for (int it = 0; it < WARP_ITERATIONS; ++it) {
                     int element_index = local_idx + it * WARP_SIZE;
                     if (element_index < element_count) {
                         if (is_log_softmax) {
-                            dst[i * element_count + it * WARP_SIZE] = elements[i][it] - sum[i];
+                            dst[i * element_count + it * WARP_SIZE] = (elements[i][it] - max_value[i]) - sum[i];
                         } else {
                             dst[i * element_count + it * WARP_SIZE] = elements[i][it] / sum[i];
                         }
@@ -140,8 +141,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             constexpr int WARP_ITERATIONS = next_power_of_two / WARP_SIZE;
 
             int local_idx = threadIdx.x;
-            src += blockIdx.x * stride + local_idx;
-            dst += blockIdx.x * stride + local_idx;
+            src += static_cast<std::int64_t>(blockIdx.x) * stride + local_idx;
+            dst += static_cast<std::int64_t>(blockIdx.x) * stride + local_idx;
             extern __shared__ unsigned char smem[];
             input_t(&elements)[WARP_ITERATIONS][WARP_SIZE] = *reinterpret_cast<input_t(*)[WARP_ITERATIONS][WARP_SIZE]>(smem);
 #pragma unroll
@@ -173,14 +174,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 }
             }
             warp_reduce<acc_t, 1, WARP_SIZE, Add>(&sum);
-            if (is_log_softmax) sum = static_cast<acc_t>(max_value) + std::log((float)(sum));
+            if (is_log_softmax) sum = std::log((float)(sum));
             acc_t invsum = static_cast<acc_t>(1.0f / sum);
 #pragma unroll
             for (int it = 0; it < WARP_ITERATIONS; ++it) {
                 int element_index = local_idx + it * WARP_SIZE;
                 if (element_index < element_count) {
                     if (is_log_softmax) {
-                        dst[it * WARP_SIZE] = (float)elements[it][local_idx] - sum;
+                        dst[it * WARP_SIZE] = ((float)elements[it][local_idx] - (float)max_value) - sum;
                     } else {
                         dst[it * WARP_SIZE] = (float)elements[it][local_idx] * invsum;
                     }
@@ -471,8 +472,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             extern __shared__ unsigned char smem[];
             auto sdata = reinterpret_cast<accscalar_t*>(smem);
 
-            input += blockIdx.x * input_stride;
-            output += blockIdx.x * output_stride;
+            input += static_cast<std::int64_t>(blockIdx.x) * input_stride;
+            output += static_cast<std::int64_t>(blockIdx.x) * output_stride;
 
             const int input_align_bytes = ILP * sizeof(scalar_t);
             const int output_align_bytes = ILP * sizeof(outscalar_t);

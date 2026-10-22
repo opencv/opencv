@@ -39,7 +39,7 @@ public:
                 return false;
             // an intermediate arg has no type until the first forward; refuse only a known unsupported one
             const int t = netimpl_->argData(this->inputs[0]).type;
-            if (t >= 0 && t != CV_32F && t != CV_16F && t != CV_8S && t != CV_8U && t != CV_32S && t != CV_64S)
+            if (t >= 0 && t != CV_Bool && t != CV_32F && t != CV_16F && t != CV_8S && t != CV_8U && t != CV_32S && t != CV_64S)
                 return false;
             return netimpl_->argData(this->outputs[0]).shape.dims <= cuda4dnn::kernels::kMaxBroadcastRank;
         }
@@ -53,6 +53,8 @@ public:
                               InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::BroadcastCopyOp>(std::move(context->stream));
         return make_cuda_node_with_type<cuda4dnn::BroadcastCopyOp>(preferableTarget, inputs_arr.type(0),
                                                                    std::move(context->stream));
     }

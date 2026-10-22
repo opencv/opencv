@@ -38,6 +38,7 @@ namespace cv { namespace dnn {
             Stream stream;
             cublas::Handle cublas_handle;
             cudnn::Handle cudnn_handle;
+            int* error_flag = nullptr;  // device alias of a mapped host int; set by a kernel on invalid input
         };
 
         /** @brief creates Tensor object from cv::Mat (only the header is created, i.e. no data is copied)

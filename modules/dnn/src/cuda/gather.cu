@@ -40,7 +40,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 std::int64_t idx = static_cast<std::int64_t>(indices[indices_index]);
                 idx = idx < 0 ? idx + indices_max : idx;
                 if (idx < 0 || idx >= indices_max) {
-                    // zero rather than stale memory; GatherOp does not read the flag back
+                    // zero rather than stale memory; the net raises the error after the forward
                     *out_of_range = 1;
                     output[id] = T(0);
                     continue;

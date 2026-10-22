@@ -218,7 +218,7 @@ public:
     }
 
     // forward() #1 runs eagerly, #2 records a CUDA Graph and #3 replays it; each must match the reference
-    void testONNXModelsRepeatedForward(const String& basename)
+    void testONNXModelsRepeatedForward(const String& basename, bool changeBatch = false)
     {
         Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
         Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
@@ -227,11 +227,35 @@ public:
         ASSERT_FALSE(net.empty());
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        // the replay gets a new same-shaped input: replaying stale device data would fail here
+        Mat inp2;
+        inp.convertTo(inp2, -1, 0.5, 1.0);
+        Net refNet = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        refNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        refNet.setInput(inp2);
+        Mat ref2 = refNet.forward();
         const int forwards = 3;
         for (int i = 1; i <= forwards; i++) {
-            net.setInput(inp);
+            net.setInput(i < forwards ? inp : inp2);
             Mat out = net.forward();
-            normAssert(ref, out, format("%s, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
+            normAssert(i < forwards ? ref : ref2, out, format("%s, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
+        }
+        if (!changeBatch)
+            return;
+        // a doubled batch resets the recorded graph and re-sizes every dynamic op
+        const int n = inp.size[0];
+        const int rowLen = (int)(inp.total() / n);
+        Mat rows;
+        vconcat(inp.reshape(1, std::vector<int>{n, rowLen}), inp2.reshape(1, std::vector<int>{n, rowLen}), rows);
+        std::vector<int> bigShape(inp.size.p, inp.size.p + inp.dims);
+        bigShape[0] = 2 * n;
+        Mat inp3 = rows.reshape(1, bigShape);
+        refNet.setInput(inp3);
+        Mat ref3 = refNet.forward();
+        for (int i = 1; i <= 2; i++) {
+            net.setInput(inp3);
+            Mat out = net.forward();
+            normAssert(ref3, out, format("%s, doubled batch, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
         }
     }
 
@@ -1228,6 +1252,11 @@ TEST_P(Test_ONNX_layers, MatMul_batch_bcast_repeated_forward)
 TEST_P(Test_ONNX_layers, Shape_repeated_forward)
 {
     testONNXModelsRepeatedForward("shape_scale_static");
+}
+
+TEST_P(Test_ONNX_layers, Shape_reshape_dynamic_repeated_forward)
+{
+    testONNXModelsRepeatedForward("shape_reshape_dynamic", true);
 }
 
 // forwardInt<T> integer-accumulation path.

@@ -410,6 +410,7 @@ public:
         prog_ = newprog;
         exec_.clear();
         execBackend_.clear();
+        hostShapeOp_.clear();
         inH2D_.clear();
         outD2H_.clear();
     }
@@ -421,6 +422,7 @@ public:
     std::vector<Ptr<LayerInfo> > prog_;
     std::vector<Ptr<Layer> > exec_;
     std::vector<int> execBackend_;
+    std::vector<uchar> hostShapeOp_;  // op computes shape values on the host inside a CUDA graph
     std::vector<std::vector<uchar> > inH2D_;
     std::vector<std::vector<uchar> > outD2H_;
 };
@@ -598,6 +600,7 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     size_t i, nops = prog.size();
     g->exec_.assign(nops, Ptr<Layer>());
     g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
+    g->hostShapeOp_.assign(nops, 0);
 
 #ifdef HAVE_CUDA
     // Whole-graph CUDA gate: run on CUDA only if *every* op has a CUDA executor; if any op is
@@ -606,18 +609,83 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     std::vector<Ptr<Layer> > cudaExecs;
     bool graphOnCuda = false;
     if (useCUDA && cudaInfo) {
-        graphOnCuda = true;
-        cudaExecs.assign(nops, Ptr<Layer>());
+        // a dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
+        // argTensor(), i.e. the host copies forwardGraph() downloads before the op runs
+        static const std::set<std::string> hostSizedDynamicOps = {
+            "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
+        };
+        // Shape and the small ops on its values run on the host, so the dynamic ops they size never wait for the device
+        static const std::set<std::string> hostShapeOpTypes = {
+            "Shape", "Gather2", "Concat2", "Unsqueeze", "Squeeze", "Slice2", "Cast2", "NaryEltwise", "Not", "Reshape2"
+        };
+        std::vector<uchar> hostArg(args.size(), 0);
+        std::vector<int> producer(args.size(), -1);
         for (i = 0; i < nops; i++) {
             const Ptr<LayerInfo>& op = prog[i];
             if (!op)
                 continue;
+            for (const Arg& out : op->outputs)
+                if (!out.empty())
+                    producer[out.idx] = (int)i;
+            if (!hostShapeOpTypes.count(op->type))
+                continue;
+            bool anyHost = false, allHost = true;
+            for (const Arg& inp : op->inputs) {
+                if (inp.empty() || isConstArg(inp))
+                    continue;
+                anyHost |= hostArg[inp.idx] != 0;
+                allHost &= hostArg[inp.idx] != 0;
+            }
+            if (op->type != "Shape" && !(anyHost && allHost))
+                continue;
+            g->hostShapeOp_[i] = 1;
+            for (const Arg& out : op->outputs)
+                if (!out.empty())
+                    hostArg[out.idx] = 1;
+        }
+        auto unmarkHostOp = [&](size_t k) {
+            g->hostShapeOp_[k] = 0;
+            for (const Arg& out : prog[k]->outputs)
+                if (!out.empty())
+                    hostArg[out.idx] = 0;
+        };
+        // a host value read as device data would need an upload every forward, so that chain stays on CUDA
+        for (bool changed = true; changed;) {
+            changed = false;
+            for (i = nops; i-- > 0;) {
+                const Ptr<LayerInfo>& op = prog[i];
+                if (!op)
+                    continue;
+                const size_t ninp = op->inputs.size();
+                if (g->hostShapeOp_[i]) {
+                    // a host op fed by an unmarked producer would have to download from the device
+                    for (const Arg& inp : op->inputs) {
+                        if (op->type != "Shape" && !inp.empty() && !isConstArg(inp) && !hostArg[inp.idx]) {
+                            unmarkHostOp(i);
+                            changed = true;
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                const bool sizedOnHost = op->dynamicOutputShapes() && hostSizedDynamicOps.count(op->type);
+                for (size_t j = 0; j < ninp; j++) {
+                    Arg inp = op->inputs[j];
+                    if (inp.empty() || !hostArg[inp.idx] || (sizedOnHost && (j > 0 || ninp == 1)))
+                        continue;
+                    unmarkHostOp((size_t)producer[inp.idx]);
+                    changed = true;
+                }
+            }
+        }
+
+        graphOnCuda = true;
+        cudaExecs.assign(nops, Ptr<Layer>());
+        for (i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op || g->hostShapeOp_[i])
+                continue;  // a host shape op takes its CPU exec below
             if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
-            // a dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
-            // argTensor(), i.e. the host copies forwardGraph() downloads before the op runs
-            static const std::set<std::string> hostSizedDynamicOps = {
-                "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
-            };
             if (op->dynamicOutputShapes() && !hostSizedDynamicOps.count(op->type)) { graphOnCuda = false; break; }
             Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
             if (!e) { graphOnCuda = false; break; }
@@ -625,6 +693,7 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         }
         if (!graphOnCuda) {
             cudaExecs.clear();
+            g->hostShapeOp_.assign(nops, 0);
             const Ptr<LayerInfo>& blocker = prog[i];
             const char* reason = blocker->subgraphs() ? "has subgraphs"
                                : blocker->dynamicOutputShapes() ? "has dynamic output shapes"
@@ -1787,7 +1856,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             // CPU op: bring any device-resident input back to host before reading its
             // shape/data. This must happen before allocateLayerOutputs(), which may fit()
             // an in-place op's output onto this very buffer and rewrite its header.
-            if (opBackend != DNN_BACKEND_CUDA || (dynamicOnCuda && (i > 0 || ninputs == 1)))
+            // A host Shape op reads only the header, which the host shadow already carries.
+            const bool headerOnly = opidx < gimpl->hostShapeOp_.size() && gimpl->hostShapeOp_[opidx] &&
+                                    op->type == "Shape";
+            if (!headerOnly && (opBackend != DNN_BACKEND_CUDA || (dynamicOnCuda && (i > 0 || ninputs == 1))))
                 cudaDownloadArg(inp, argTensor(inp));
 #endif
             const Mat& m = argTensor(inp);
@@ -2102,7 +2174,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         cudaGraph_t recorded = nullptr;
         captureGuard.stream = nullptr;
         CUDA4DNN_CHECK_CUDA(cudaStreamEndCapture(cudaInfo->context.stream.get(), &recorded));
+#if CUDART_VERSION >= 12000
         const cudaError_t status = cudaGraphInstantiate(&cudaGraphExec, recorded, 0);
+#else
+        const cudaError_t status = cudaGraphInstantiate(&cudaGraphExec, recorded, nullptr, nullptr, 0);
+#endif
         cudaGraphDestroy(recorded);
         CUDA4DNN_CHECK_CUDA(status);
     }
@@ -2116,6 +2192,14 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 cudaArgDeviceDirty[out.idx] = 1;
                 cudaArgHostDirty[out.idx] = 0;
             }
+        }
+    }
+    if (isMainGraph && cudaPoolTemps) {
+        // the outputs are read next anyway, so this sync only moves the wait earlier
+        cudaInfo->context.stream.synchronize();
+        if (*cudaInfo->errorFlag) {
+            *cudaInfo->errorFlag = 0;
+            CV_Error(Error::StsOutOfRange, "DNN/CUDA: Gather: some of indices are outside of range");
         }
     }
 #endif
