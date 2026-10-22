@@ -437,7 +437,41 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
     return _make_matlike_or_scalar_arg
 
 
+def refine_min_max(root_node: NamespaceNode,
+                   function_symbol_name: SymbolName) -> None:
+    make_matlike_or_scalar_arg("src2")(root_node, function_symbol_name)
+    function = find_function_node(root_node, function_symbol_name)
+    for overload in tuple(function.overloads):
+        first_type = cast(TypeNode, overload.arguments[0].type_node)
+        if first_type.typename == "UMat":
+            # Keep Scalar/Scalar on Mat without overlapping UMat signatures.
+            function.add_overload([
+                FunctionNode.Arg("src1", AliasRefTypeNode("Scalar")),
+                FunctionNode.Arg("src2", first_type),
+                *overload.arguments[2:],
+            ], overload.return_type)
+        else:
+            overload.arguments[0].type_node = UnionTypeNode(
+                "src1_type", (first_type, AliasRefTypeNode("Scalar"))
+            )
+
+def refine_umat_constructor(root_node: NamespaceNode,
+                            function_symbol_name: SymbolName) -> None:
+    # shadow_umat.hpp maps Mat inputs even though C++ constructors declare UMat.
+    constructor = find_function_node(root_node, function_symbol_name)
+    for overload in constructor.overloads:
+        index = _find_argument_index(overload.arguments, "m")
+        if index is not None:
+            argument = overload.arguments[index]
+            argument.type_node = UnionTypeNode(
+                "umat_input", (cast(TypeNode, argument.type_node), AliasRefTypeNode("MatLike"))
+            )
+
+
 NODES_TO_REFINE = {
+    SymbolName(("cv", ), (), "min"): refine_min_max,
+    SymbolName(("cv", ), (), "max"): refine_min_max,
+    SymbolName(("cv", ), ("UMat", ), "UMat"): refine_umat_constructor,
     SymbolName(("cv", ), (), "add"): make_matlike_or_scalar_arg("src2"),
     SymbolName(("cv", ), (), "multiply"): make_matlike_or_scalar_arg("src2"),
     SymbolName(("cv", ), (), "remap"): make_optional_arg("map2"),

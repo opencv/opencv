@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 // backends
 #include "../op_cuda.hpp"
@@ -92,8 +93,13 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
         if (fusion.expr)
             return backendId == DNN_BACKEND_OPENCV;
+        // inpType is set by getTypes() on the first forward; until then use the graph's arg type
+        int t = inpType;
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (t < 0 && netimpl_ && !inputs.empty())
+            t = netimpl_->argData(inputs[0]).type;
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && inpType == CV_32F) ||
+               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && (t < 0 || t == CV_32F)) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
@@ -625,14 +631,14 @@ public:
         CV_CheckFalse(trans_a, "DNN/Gemm/Cuda: does not support transA");
         CV_CheckTrue(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        std::vector<cuda::GpuMatND> inputs;
-        inputs_.getGpuMatNDVector(inputs);
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
         auto B = blobs[0];
         auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
             cv::transpose(B, B);
-        auto flatten_start_axis = normalize_axis(1, (int)inputs[0].size.size());
+        auto flatten_start_axis = normalize_axis(1, inputs[0].dims);
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
     }
 #endif // HAVE_CUDA

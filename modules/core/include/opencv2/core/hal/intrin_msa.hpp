@@ -511,12 +511,16 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, con
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-    v8i16 prod = msa_dotp_s_h(a.val, b.val);
-    return v_int32x4(msa_hadd_s32(prod, prod));
+    v8i16 even_a = msa_shrq_n_s16(msa_shlq_n_s16(MSA_TPV_REINTERPRET(v8i16, a.val), 8), 8);
+    v8i16 odd_a  = msa_shrq_n_s16(MSA_TPV_REINTERPRET(v8i16, a.val), 8);
+    v8i16 even_b = msa_shrq_n_s16(msa_shlq_n_s16(MSA_TPV_REINTERPRET(v8i16, b.val), 8), 8);
+    v8i16 odd_b  = msa_shrq_n_s16(MSA_TPV_REINTERPRET(v8i16, b.val), 8);
+    v4i32 prod   = msa_dotp_s_w(even_a, even_b);
+    return v_int32x4(msa_dpadd_s_w(prod, odd_a, odd_b));
 }
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
                                   const v_int32x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 16 >> 64
 inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)

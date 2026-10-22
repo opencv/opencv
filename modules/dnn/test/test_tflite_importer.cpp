@@ -564,6 +564,17 @@ TEST_P(Test_TFLite, pose_landmark)
     }
 }
 
+// x -> RELU -> y, where the operator's outputs[0] tensor index is out of range.
+// The subgraph has 2 tensors, so 2 is the first out-of-range index.
+TEST(Test_TFLite_Importer, reject_out_of_range_tensor_index)
+{
+    for (int idx : {2, 1000})
+    {
+        std::string model = findDataFile(format("dnn/tflite/invalid_tensor_index_%d.tflite", idx));
+        EXPECT_THROW(readNetFromTFLite(model), cv::Exception) << "output tensor index " << idx;
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace

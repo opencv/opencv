@@ -2230,6 +2230,85 @@ static inline void convBlockNoSIMD(int np, const float* a, const float* b, float
     }
 }
 
+#if CV_RVV
+// One LMUL=1 row segment of the convBlock_F32 RVV kernel: 4 rows x NC column chunks of vl lanes
+// each. NC is a template argument so unused chunks cost nothing; at VLEN=256 a 24-wide tile is
+// NC=3 chunks of 8 (12 accumulators), at VLEN=1024 one chunk of 24.
+template<int NC>
+static inline void convBlockRVV4xN_m1(int np, const float* a, const float* b, float* c, int ldc,
+                                      bool init_c, int convNR, size_t vl)
+{
+    const size_t o1 = vl, o2 = 2 * vl;  // column offsets of chunks 1 and 2
+    vfloat32m1_t c00 = __riscv_vfmv_v_f_f32m1(0.f, vl), c10 = c00, c20 = c00, c30 = c00;
+    vfloat32m1_t c01 = c00, c11 = c00, c21 = c00, c31 = c00;
+    vfloat32m1_t c02 = c00, c12 = c00, c22 = c00, c32 = c00;
+    for (int p = 0; p < np; p++, a += 4, b += convNR)
+    {
+        vfloat32m1_t b0 = __riscv_vle32_v_f32m1(b, vl);
+        c00 = __riscv_vfmacc_vf_f32m1(c00, a[0], b0, vl);
+        c10 = __riscv_vfmacc_vf_f32m1(c10, a[1], b0, vl);
+        c20 = __riscv_vfmacc_vf_f32m1(c20, a[2], b0, vl);
+        c30 = __riscv_vfmacc_vf_f32m1(c30, a[3], b0, vl);
+        if (NC > 1)
+        {
+            vfloat32m1_t b1 = __riscv_vle32_v_f32m1(b + o1, vl);
+            c01 = __riscv_vfmacc_vf_f32m1(c01, a[0], b1, vl);
+            c11 = __riscv_vfmacc_vf_f32m1(c11, a[1], b1, vl);
+            c21 = __riscv_vfmacc_vf_f32m1(c21, a[2], b1, vl);
+            c31 = __riscv_vfmacc_vf_f32m1(c31, a[3], b1, vl);
+        }
+        if (NC > 2)
+        {
+            vfloat32m1_t b2 = __riscv_vle32_v_f32m1(b + o2, vl);
+            c02 = __riscv_vfmacc_vf_f32m1(c02, a[0], b2, vl);
+            c12 = __riscv_vfmacc_vf_f32m1(c12, a[1], b2, vl);
+            c22 = __riscv_vfmacc_vf_f32m1(c22, a[2], b2, vl);
+            c32 = __riscv_vfmacc_vf_f32m1(c32, a[3], b2, vl);
+        }
+    }
+    // Same accumulation order as convBlockNoSIMD: FMA from zero over p, then add the existing C.
+    if (!init_c)
+    {
+        c00 = __riscv_vfadd_vv_f32m1(c00, __riscv_vle32_v_f32m1(c,           vl), vl);
+        c10 = __riscv_vfadd_vv_f32m1(c10, __riscv_vle32_v_f32m1(c + ldc,     vl), vl);
+        c20 = __riscv_vfadd_vv_f32m1(c20, __riscv_vle32_v_f32m1(c + ldc * 2, vl), vl);
+        c30 = __riscv_vfadd_vv_f32m1(c30, __riscv_vle32_v_f32m1(c + ldc * 3, vl), vl);
+        if (NC > 1)
+        {
+            c01 = __riscv_vfadd_vv_f32m1(c01, __riscv_vle32_v_f32m1(c + o1,           vl), vl);
+            c11 = __riscv_vfadd_vv_f32m1(c11, __riscv_vle32_v_f32m1(c + ldc + o1,     vl), vl);
+            c21 = __riscv_vfadd_vv_f32m1(c21, __riscv_vle32_v_f32m1(c + ldc * 2 + o1, vl), vl);
+            c31 = __riscv_vfadd_vv_f32m1(c31, __riscv_vle32_v_f32m1(c + ldc * 3 + o1, vl), vl);
+        }
+        if (NC > 2)
+        {
+            c02 = __riscv_vfadd_vv_f32m1(c02, __riscv_vle32_v_f32m1(c + o2,           vl), vl);
+            c12 = __riscv_vfadd_vv_f32m1(c12, __riscv_vle32_v_f32m1(c + ldc + o2,     vl), vl);
+            c22 = __riscv_vfadd_vv_f32m1(c22, __riscv_vle32_v_f32m1(c + ldc * 2 + o2, vl), vl);
+            c32 = __riscv_vfadd_vv_f32m1(c32, __riscv_vle32_v_f32m1(c + ldc * 3 + o2, vl), vl);
+        }
+    }
+    __riscv_vse32_v_f32m1(c,           c00, vl);
+    __riscv_vse32_v_f32m1(c + ldc,     c10, vl);
+    __riscv_vse32_v_f32m1(c + ldc * 2, c20, vl);
+    __riscv_vse32_v_f32m1(c + ldc * 3, c30, vl);
+    if (NC > 1)
+    {
+        __riscv_vse32_v_f32m1(c + o1,           c01, vl);
+        __riscv_vse32_v_f32m1(c + ldc + o1,     c11, vl);
+        __riscv_vse32_v_f32m1(c + ldc * 2 + o1, c21, vl);
+        __riscv_vse32_v_f32m1(c + ldc * 3 + o1, c31, vl);
+    }
+    if (NC > 2)
+    {
+        __riscv_vse32_v_f32m1(c + o2,           c02, vl);
+        __riscv_vse32_v_f32m1(c + ldc + o2,     c12, vl);
+        __riscv_vse32_v_f32m1(c + ldc * 2 + o2, c22, vl);
+        __riscv_vse32_v_f32m1(c + ldc * 3 + o2, c32, vl);
+    }
+}
+#endif
+
 void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
                const int convMR, const int convNR)
 {
@@ -2266,64 +2345,32 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
 #elif CV_RVV
 {
-    // LMUL=1 kernel: vlanes = VLEN/32 (8 at VLEN=256).
-    // OpenCV's v_float32 is vfloat32m2_t (LMUL=2, vlanes=2*VLEN/32=16 at VLEN=256);
-    // 24 % 16 != 0, so the 24-wide tile requires LMUL=1 and native intrinsics.
-    // vfmacc.vf (scalar-into-vector FMA) avoids a broadcast register.
-    // Only the exact full-tile case (outLen==convNR) is handled; tails fall to scalar.
-    const size_t vl = __riscv_vsetvlmax_e32m1();
-    if (convMR == 4 && (size_t)convNR == 3 * vl && outLen == convNR)
+    // VLEN-agnostic LMUL=1 kernel. Columns are processed in chunks of one length vl that divides
+    // convNR (24: vl = 8 at VLEN=256, 24 at VLEN>=1024, 4 at VLEN=128), like the x86 kernels'
+    // whole 8-lane vectors: a chunk never crosses the convNR-wide stripe the caller allocates for
+    // both the packed input and the output, and columns past outLen are computed on padding and
+    // never copied out. A single vl keeps vsetvli out of the inner loop; VLMAX is a power of two,
+    // so vl and the chunk count need no division (this runs once per call).
+    if (convMR == 4)
     {
-        vfloat32m1_t c00 = __riscv_vfmv_v_f_f32m1(0.f, vl);
-        vfloat32m1_t c01 = c00, c02 = c00;
-        vfloat32m1_t c10 = c00, c11 = c00, c12 = c00;
-        vfloat32m1_t c20 = c00, c21 = c00, c22 = c00;
-        vfloat32m1_t c30 = c00, c31 = c00, c32 = c00;
-        for (int p = 0; p < np; p++, a += convMR, b += convNR)
+        const int vm = (int)__riscv_vsetvlmax_e32m1();
+        int vl = convNR;
+        if (vm < convNR)
         {
-            vfloat32m1_t b0 = __riscv_vle32_v_f32m1(b,          vl);
-            vfloat32m1_t b1 = __riscv_vle32_v_f32m1(b + vl,     vl);
-            vfloat32m1_t b2 = __riscv_vle32_v_f32m1(b + 2 * vl, vl);
-            c00 = __riscv_vfmacc_vf_f32m1(c00, a[0], b0, vl);
-            c01 = __riscv_vfmacc_vf_f32m1(c01, a[0], b1, vl);
-            c02 = __riscv_vfmacc_vf_f32m1(c02, a[0], b2, vl);
-            c10 = __riscv_vfmacc_vf_f32m1(c10, a[1], b0, vl);
-            c11 = __riscv_vfmacc_vf_f32m1(c11, a[1], b1, vl);
-            c12 = __riscv_vfmacc_vf_f32m1(c12, a[1], b2, vl);
-            c20 = __riscv_vfmacc_vf_f32m1(c20, a[2], b0, vl);
-            c21 = __riscv_vfmacc_vf_f32m1(c21, a[2], b1, vl);
-            c22 = __riscv_vfmacc_vf_f32m1(c22, a[2], b2, vl);
-            c30 = __riscv_vfmacc_vf_f32m1(c30, a[3], b0, vl);
-            c31 = __riscv_vfmacc_vf_f32m1(c31, a[3], b1, vl);
-            c32 = __riscv_vfmacc_vf_f32m1(c32, a[3], b2, vl);
+            vl = vm;
+            while (convNR & (vl - 1))  // largest power of two <= VLMAX that divides convNR
+                vl >>= 1;
         }
-        if (!init_c)
+        for (int j0 = 0; j0 < outLen; j0 += 3 * vl)
         {
-            c00 = __riscv_vfadd_vv_f32m1(c00, __riscv_vle32_v_f32m1(c,              vl), vl);
-            c01 = __riscv_vfadd_vv_f32m1(c01, __riscv_vle32_v_f32m1(c + vl,         vl), vl);
-            c02 = __riscv_vfadd_vv_f32m1(c02, __riscv_vle32_v_f32m1(c + 2*vl,       vl), vl);
-            c10 = __riscv_vfadd_vv_f32m1(c10, __riscv_vle32_v_f32m1(c + ldc,        vl), vl);
-            c11 = __riscv_vfadd_vv_f32m1(c11, __riscv_vle32_v_f32m1(c + ldc + vl,   vl), vl);
-            c12 = __riscv_vfadd_vv_f32m1(c12, __riscv_vle32_v_f32m1(c + ldc + 2*vl, vl), vl);
-            c20 = __riscv_vfadd_vv_f32m1(c20, __riscv_vle32_v_f32m1(c + ldc*2,          vl), vl);
-            c21 = __riscv_vfadd_vv_f32m1(c21, __riscv_vle32_v_f32m1(c + ldc*2 + vl,     vl), vl);
-            c22 = __riscv_vfadd_vv_f32m1(c22, __riscv_vle32_v_f32m1(c + ldc*2 + 2*vl,   vl), vl);
-            c30 = __riscv_vfadd_vv_f32m1(c30, __riscv_vle32_v_f32m1(c + ldc*3,          vl), vl);
-            c31 = __riscv_vfadd_vv_f32m1(c31, __riscv_vle32_v_f32m1(c + ldc*3 + vl,     vl), vl);
-            c32 = __riscv_vfadd_vv_f32m1(c32, __riscv_vle32_v_f32m1(c + ldc*3 + 2*vl,   vl), vl);
+            const int rem = outLen - j0;
+            if (rem > 2 * vl)
+                convBlockRVV4xN_m1<3>(np, a, b + j0, c + j0, ldc, init_c, convNR, vl);
+            else if (rem > vl)
+                convBlockRVV4xN_m1<2>(np, a, b + j0, c + j0, ldc, init_c, convNR, vl);
+            else
+                convBlockRVV4xN_m1<1>(np, a, b + j0, c + j0, ldc, init_c, convNR, vl);
         }
-        __riscv_vse32_v_f32m1(c,              c00, vl);
-        __riscv_vse32_v_f32m1(c + vl,         c01, vl);
-        __riscv_vse32_v_f32m1(c + 2*vl,       c02, vl);
-        __riscv_vse32_v_f32m1(c + ldc,        c10, vl);
-        __riscv_vse32_v_f32m1(c + ldc + vl,   c11, vl);
-        __riscv_vse32_v_f32m1(c + ldc + 2*vl, c12, vl);
-        __riscv_vse32_v_f32m1(c + ldc*2,          c20, vl);
-        __riscv_vse32_v_f32m1(c + ldc*2 + vl,     c21, vl);
-        __riscv_vse32_v_f32m1(c + ldc*2 + 2*vl,   c22, vl);
-        __riscv_vse32_v_f32m1(c + ldc*3,          c30, vl);
-        __riscv_vse32_v_f32m1(c + ldc*3 + vl,     c31, vl);
-        __riscv_vse32_v_f32m1(c + ldc*3 + 2*vl,   c32, vl);
         return;
     }
     convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);

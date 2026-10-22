@@ -126,7 +126,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 }
 
                 output[idx] = max_value;
-                indices[idx] = max_idx;
+                if (!indices.empty())
+                    indices[idx] = max_idx;
             }
         }
 
@@ -177,7 +178,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         const std::vector<std::size_t>& window_size,
         const std::vector<std::size_t>& strides, const std::vector<std::size_t>& padding_left)
     {
-        CV_Assert(indices.size() == output.size());
+        CV_Assert(indices.empty() || indices.size() == output.size());
         CV_Assert(out_spatial_dims.size() == Order);
         CV_Assert(in_spatial_dims.size() == Order);
         CV_Assert(window_size.size() == Order);
@@ -206,7 +207,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         const std::vector<std::size_t>& window_size, const std::vector<std::size_t>& strides,
         const std::vector<std::size_t>& padding_left)
     {
-        CV_Assert(is_shape_same(output, indices));
+        CV_Assert(indices.empty() || is_shape_same(output, indices));
         CV_Assert(input.get_axis_size(1) == output.get_axis_size(1));
 
         auto order = window_size.size();
@@ -221,16 +222,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             out_spatial_dims[i] = output.get_axis_size(2 + i);
         }
 
+        // an empty TensorSpan cannot convert implicitly (its size() asserts), so pass an empty Span
+        Span<T_INDEX> indices_span = indices.empty() ? Span<T_INDEX>() : Span<T_INDEX>(indices);
+
         CV_Assert(1 <= order && order <= 3);
         std::size_t channels = input.get_axis_size(1);
         if (order == 3) {
-            launch_max_pooling_kernel<T, T_INDEX, 3>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 3>(stream, output, indices_span, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         } else if (order == 2) {
-            launch_max_pooling_kernel<T, T_INDEX, 2>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 2>(stream, output, indices_span, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         } else if (order == 1) {
-            launch_max_pooling_kernel<T, T_INDEX, 1>(stream, output, indices, input, channels,
+            launch_max_pooling_kernel<T, T_INDEX, 1>(stream, output, indices_span, input, channels,
                 out_spatial_dims, in_spatial_dims, window_size, strides, padding_left);
         }
     }

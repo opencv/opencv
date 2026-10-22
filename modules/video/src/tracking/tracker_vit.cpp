@@ -38,6 +38,15 @@ TrackerVit::Params::Params()
 
 #ifdef HAVE_OPENCV_DNN
 
+// Image2BlobParams applies (x - mean) * scalefactor, so the factor must be 1/(255 * std).
+// `1.0 / Scalar` is Scalar's quaternion inverse, not an elementwise divide, so build it per channel.
+static Scalar vitScalefactor(const Scalar& stdvalue)
+{
+    return Scalar(1.0 / (255.0 * stdvalue[0]),
+                  1.0 / (255.0 * stdvalue[1]),
+                  1.0 / (255.0 * stdvalue[2]), 0.0);
+}
+
 class TrackerVitImpl : public TrackerVit
 {
 public:
@@ -50,7 +59,7 @@ public:
         net.setPreferableTarget(parameters.target);
 
         i2bp.mean = parameters.meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / parameters.stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = vitScalefactor(parameters.stdvalue);
         tracking_score_threshold = parameters.tracking_score_threshold;
     }
 
@@ -60,7 +69,7 @@ public:
 
         net = model;
         i2bp.mean = meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / stdvalue) * (1 / 255.0);
+        i2bp.scalefactor = vitScalefactor(stdvalue);
         tracking_score_threshold = _tracking_score_threshold;
     }
 
@@ -162,6 +171,17 @@ static void updateLastRect(float cx, float cy, float w, float h, int crop_size, 
     rect_last.height = cvFloor(h * crop_size);
 }
 
+static void clipRect(Rect &rect, Size imgSize, int margin)
+{
+    int mx = std::min(margin, imgSize.width);
+    int my = std::min(margin, imgSize.height);
+    int x1 = std::min(std::max(0, rect.x), imgSize.width - mx);
+    int y1 = std::min(std::max(0, rect.y), imgSize.height - my);
+    int x2 = std::min(std::max(mx, rect.x + rect.width), imgSize.width);
+    int y2 = std::min(std::max(my, rect.y + rect.height), imgSize.height);
+    rect = Rect(x1, y1, std::max(mx, x2 - x1), std::max(my, y2 - y1));
+}
+
 void TrackerVitImpl::init(InputArray image_, const Rect &boundingBox_)
 {
     Mat image = image_.getMat();
@@ -206,6 +226,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
         float h = size_map.at<float>(1, maxLoc.y, maxLoc.x);
 
         updateLastRect(cx, cy, w, h, crop_size, rect_last);
+        clipRect(rect_last, image.size(), 10);
         boundingBoxRes = rect_last;
         return true;
     } else {

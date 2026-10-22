@@ -808,6 +808,22 @@ template<typename R> struct TheTest
         EXPECT_EQ(sumAB,  resF);
         EXPECT_EQ(sumABC, resG);
 
+        // 8-bit lanes at the minimum value: two such products already overflow a 16-bit sum
+        if (sizeof(LaneType) == 1)
+        {
+            Data<R> dataM;
+            for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+                dataM[i] = std::numeric_limits<LaneType>::min();
+            R m = dataM;
+            const l4_type minsq = (l4_type)std::numeric_limits<LaneType>::min() *
+                                  (l4_type)std::numeric_limits<LaneType>::min();
+            Data<Rx4> resM = v_dotprod_expand(m, m);
+            for (int i = 0; i < VTraits<Rx4>::vlanes(); ++i)
+                EXPECT_EQ(4 * minsq, resM[i]);
+            EXPECT_EQ(4 * minsq * VTraits<Rx4>::vlanes(),
+                      v_reduce_sum(v_dotprod_expand_fast(m, m)));
+        }
+
         return *this;
     }
 

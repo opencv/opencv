@@ -499,6 +499,15 @@ struct EwAbsdiffS {
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     template<typename W, typename ST> static W scl(W a, W b, ST) { return a > b ? W(a - b) : W(b - a); }
+    // 64-bit signed has no wider work type to widen into, and |INT64_MIN - b| does not fit in
+    // int64_t, so the difference is taken in uint64 - exact for every pair - and then clamped.
+    // The narrower widths reach this overload only through their int64 work type, where |a - b|
+    // is at most 2^32 and the clamp is a no-op.
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        const uint64_t d = (a > b) ? (uint64_t)a - (uint64_t)b : (uint64_t)b - (uint64_t)a;
+        return (int64_t)std::min<uint64_t>(d, (uint64_t)INT64_MAX);
+    }
 };
 
 // compare: T x T -> u8 mask. cmp(a,b) is the scalar relation over a work type W (integers compare
@@ -559,6 +568,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                               const void*, size_t, size_t, void* dst_, size_t dsty,
                               int width, int height, const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -593,6 +603,7 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
 template<typename T, typename WT>
 static void expandScalar(const T* sc, size_t sx, int n0, WT* scbuf, int n)
 {
+    if (n0 <= 0 || n <= 0) return;
     int i = 0;
     for (; i < n0; i++) scbuf[i] = (WT)sc[i*sx];
     for (; i < n; i++) scbuf[i] = scbuf[i - n0];
@@ -899,6 +910,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                          void* dst_, size_t dsty, int width, int height,
                          const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
@@ -1316,7 +1328,8 @@ TKernel getAbsdiffFunc_(int T, int R)
     case CV_16BF: fptr = R == CV_16BF ? vecBinaryKernel<bfloat, bfloat, v_float32, float, EwAbsdiff, float> : nullptr; break;
     case CV_32F:  fptr = R == CV_32F  ? vecBinaryKernel<float,  float,  v_float32, float, EwAbsdiff, float> : nullptr; break;
     case CV_64U:  fptr = R == CV_64U  ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwAbsdiff> : nullptr; break;
-    case CV_64S:  fptr = R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
+    case CV_64S:  fptr = R == CV_64S  ? scalarBinaryKernel<int64_t,  int64_t,  int64_t,  EwAbsdiffS> :
+                         R == CV_64U  ? scalarBinaryKernel<int64_t,  uint64_t, int64_t,  EwAbsdiff> : nullptr; break;
     #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  fptr = R == CV_64F  ? vecBinaryKernel<double, double, v_float64, double, EwAbsdiff, double> : nullptr; break;
     #else
@@ -1394,6 +1407,7 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
                      void* dst_, size_t dsty, int width, int height,
                      const double*, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T);
     dsty /= sizeof(T);
     CV_Assert(s0x == 1u || width == 1);
@@ -1471,6 +1485,7 @@ static int addWeightedKernel(const void* src0_, size_t s0y, size_t s0x,
                              void* dst_, size_t dsty, int width, int height,
                              const double* params, int, void*)
 {
+    if (width <= 0 || height <= 0) return 0;
     s0y /= sizeof(T); s1y /= sizeof(T); dsty /= sizeof(Tr);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
     const T* src0 = (const T*)src0_;

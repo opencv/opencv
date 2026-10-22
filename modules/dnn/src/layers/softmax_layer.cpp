@@ -103,6 +103,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        if (backendId == DNN_BACKEND_CUDA)
+            return false;  // SoftmaxOp uses cudnnSoftmaxForward, absent in a JIT-only build
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
@@ -274,14 +278,17 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_,
+        InputArrayOfArrays
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto channel_axis = normalize_axis(axisRaw, input_wrapper->getRank());
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
+        CV_Assert(!inputs.empty());
+
+        auto channel_axis = normalize_axis(axisRaw, cv::dnn::shape(inputs[0]).dims);
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
     }
 #endif

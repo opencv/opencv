@@ -414,7 +414,8 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV
 #ifdef HAVE_CUDA
-               || backendId == DNN_BACKEND_CUDA
+               // BatchNormOp needs scale/bias folded at load time (constant params)
+               || (backendId == DNN_BACKEND_CUDA && inputs.size() <= 1)
 #endif
                ;
     }

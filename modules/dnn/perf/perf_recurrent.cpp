@@ -87,4 +87,49 @@ PERF_TEST_P_(Layer_LSTM, lstm) {
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LSTM, testing::ValuesIn(testLstmConfigs));
 
+class Layer_LSTM2 : public TestBaseWithParam<LstmParams> {};
+
+PERF_TEST_P_(Layer_LSTM2, lstm2) {
+    const LstmParams& params = GetParam();
+    const int H = params.hiddenSize;
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "testLstm2";
+    lp.set("hidden_size", H);
+    lp.set("const_weights", true);
+
+    // ONNX layout: X is (seq, batch, input), W/R/B are passed as inputs like the ONNX importer does
+    Mat x({params.nrSteps, params.nrSamples, params.inputSize}, CV_32F);
+    Mat W({1, 4 * H, params.inputSize}, CV_32F);
+    Mat R({1, 4 * H, H}, CV_32F);
+    Mat B({1, 8 * H}, CV_32F);
+    randu(x, -1.f, 1.f);
+    randu(W, -0.1f, 0.1f);
+    randu(R, -0.1f, 0.1f);
+    randu(B, -0.1f, 0.1f);
+
+    Net net;
+    int id = net.addLayer(lp.name, lp.type, lp);
+    std::vector<String> inputNames{"x", "W", "R", "B"};
+    for (int i = 0; i < (int)inputNames.size(); i++)
+        net.connect(0, i, id, i);
+    net.setInputsNames(inputNames);
+    net.setInput(x, "x");
+    net.setInput(W, "W");
+    net.setInput(R, "R");
+    net.setInput(B, "B");
+
+    // Warm up
+    std::vector<Mat> outputs;
+    net.forward(outputs, "testLstm2");
+
+    TEST_CYCLE()
+    {
+        net.forward(outputs, "testLstm2");
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_LSTM2, testing::ValuesIn(testLstmConfigs));
+
 } // namespace

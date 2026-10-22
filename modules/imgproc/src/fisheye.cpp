@@ -13,6 +13,7 @@ void initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArr
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert( size.width > 0 && size.height > 0 );
     CV_Assert( m1type == CV_16SC2 || m1type == CV_32F || m1type <=0 );
     map1.create( size, m1type <= 0 ? CV_16SC2 : m1type );
     map2.create( size, map1.type() == CV_16SC2 ? CV_16UC1 : CV_32F );

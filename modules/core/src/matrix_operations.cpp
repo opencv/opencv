@@ -793,11 +793,11 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         srcUMat = _src.getUMat();
 
     Mat src = _src.getMat();
+    if (src.empty()) {
+        src.convertTo(_dst, dtype);
+        return;
+    }
     if (src.dims <= 1) {
-        if (src.dims == 0) {
-            src.convertTo(_dst, dtype);
-            return;
-        }
         CV_Assert(dim == 0);
         dim = 1;
     }

@@ -434,6 +434,40 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     // out_channels == C0, so NK1 == 1: exercises computeSpatChunks()'s spatial
     // split in conv2_deconv.cpp regardless of thread count.
     testONNXModels("deconv_spatial_narrow", npy, 0, 0, false, false);
+    // GEMM + col2im paths: one tap per output pixel, overlapping taps split into channel chunks,
+    // and a second group that starts inside a channel block.
+    testONNXModels("deconv_k2s2", npy, 0, 0, false, false);
+    testONNXModels("deconv_overlap_chunks", npy, 0, 0, false, false);
+    testONNXModels("deconv_overlap_groups", npy, 0, 0, false, false);
+}
+
+// Zero batch or spatial size: the output is empty or holds only the bias, which is arange(12).
+TEST_P(Test_ONNX_layers, Deconvolution_empty)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");
+
+    struct Case { const char* model; std::vector<int> inpshape, outshape; };
+    const Case cases[] = {
+        {"deconv_empty_k1", {1, 4, 0, 5}, {1, 12, 0, 5}},
+        {"deconv_empty_k3", {1, 4, 0, 5}, {1, 12, 2, 7}},
+        {"deconv_empty_k3", {0, 4, 5, 5}, {0, 12, 7, 7}},
+    };
+    for (const Case& c : cases)
+    {
+        const std::string path = std::string("dnn/onnx/models/") + c.model + ".onnx";
+        Net net = readNetFromONNX(findDataFile(path, true));
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(Mat(c.inpshape, CV_32F));
+        Mat out = net.forward();
+
+        ASSERT_EQ(std::vector<int>(out.size.p, out.size.p + out.dims), c.outshape) << c.model;
+        const int K = c.outshape[1], plane = c.outshape[2] * c.outshape[3];
+        const float* data = out.ptr<float>();
+        for (size_t i = 0; i < out.total(); i++)
+            ASSERT_EQ(data[i], (float)(i / plane % K)) << c.model << " at " << i;
+    }
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D)
@@ -3534,6 +3568,41 @@ TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
     testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
 }
 
+// MultiHeadAttention `bias`/`key_padding_mask`, alone and together; BiasProjected feeds
+// Q/K/V from in-graph MatMul projections (the real HF-export layout), not graph inputs.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_Bias) {
+    testONNXModels("multi_head_attention_bias", npy, 1e-4, 1e-3, false, true, 4);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMask) {
+    testONNXModels("multi_head_attention_key_padding_mask", npy, 1e-4, 1e-3, false, true, 4);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasAndKeyPaddingMask) {
+    testONNXModels("multi_head_attention_bias_key_padding_mask", npy, 1e-4, 1e-3, false, true, 5);
+}
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasProjected) {
+    testONNXModels("multi_head_attention_bias_projected", npy, 1e-4, 1e-3, false, true, 3);
+}
+// Q/K/V cast to fp16 inside the graph; key_padding_mask's own cast must follow, not stay
+// hardcoded float32. Fixed fp16-scale tolerances, since this runs fp16 math on every target.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskFp16) {
+    testONNXModels("multi_head_attention_key_padding_mask_fp16", npy, 1e-3, 5e-3, false, true, 4);
+}
+// Bias as a true ONNX initializer: the static bias-split path should fire, keeping the net
+// shape-inferable (no runtime Shape/Slice2) - see addMultiHeadAttentionBias.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_BiasConst) {
+    testONNXModels("multi_head_attention_bias_const", npy, 1e-4, 1e-3, false, true, 3);
+}
+// key_padding_mask arrives as int64 and is Cast to int32 in-graph, so its rank is unknown at
+// import (dims == -1) - the case the importer's rank check used to reject outright.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskInGraph) {
+    testONNXModels("multi_head_attention_key_padding_mask_in_graph", npy, 1e-4, 1e-3, false, true, 4);
+}
+// key_padding_mask and attention_bias both set: the importer must sum the two additive masks
+// instead of one silently overriding the other - see the mask_add branch in parseMultiHeadAttention.
+TEST_P(Test_ONNX_layers, MultiHeadAttention_KeyPaddingMaskAndAttentionBias) {
+    testONNXModels("multi_head_attention_key_padding_mask_attention_bias", npy, 1e-4, 1e-3, false, true, 5);
+}
+
 // Batch + multi-head, square attention (B=2, H=4, S_q=S_kv=16, D=D_v=32).
 TEST_P(Test_ONNX_layers, SDPA_MultiHead) {
     testSDPAModel("sdpa_multi_head", 1e-4, 5e-4);
@@ -3824,6 +3893,63 @@ TEST(Test_ONNX_importer, parse_resize_too_few_inputs)
 {
     Net net;
     EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/resize_no_scales.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
+// bias/key_padding_mask must still lower to one AttentionOnnxAi, never the standalone type,
+// across every model this PR adds - not just the bias+mask one.
+typedef testing::TestWithParam<std::string> Test_ONNX_MHA_Lowering;
+TEST_P(Test_ONNX_MHA_Lowering, lowers_to_one_layer)
+{
+    const std::string basename = GetParam();
+    SCOPED_TRACE(basename);
+
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    int unified = 0;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); ++i)
+    {
+        const String type = net.getLayer(net.getLayerId(names[i]))->type;
+        if (type == "AttentionOnnxAi")
+            unified++;
+        else
+            EXPECT_NE(type, "MultiHeadAttention");
+    }
+    EXPECT_EQ(unified, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_MHA_Lowering, testing::Values(
+    "multi_head_attention_bias",
+    "multi_head_attention_key_padding_mask",
+    "multi_head_attention_bias_key_padding_mask",
+    "multi_head_attention_bias_projected",
+    "multi_head_attention_key_padding_mask_fp16",
+    "multi_head_attention_bias_const",
+    "multi_head_attention_key_padding_mask_in_graph",
+    "multi_head_attention_key_padding_mask_attention_bias"
+));
+
+// QLinearConv folds a const int32 bias to float by multiplying each bias element
+// by the matching per-channel weight scale, writing into a buffer sized from the
+// bias tensor. w_scale and the bias are independent model fields, so a w_scale
+// longer than the bias wrote past the bias buffer during import. The mismatched
+// pair has to be rejected instead of overrunning the buffer.
+// Test data in opencv_extra under the same branch name as this patch.
+TEST(Test_ONNX_importer, parse_qconv_bias_scale_mismatch)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_bias_scale_mismatch.onnx")));
+    EXPECT_TRUE(net.empty());
+}
+
+// The same bias fold reads the scalar x_scale unconditionally, so an empty
+// x_scale has to be rejected instead of being read past its end.
+TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
+{
+    Net net;
+    EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_empty_x_scale.onnx")));
     EXPECT_TRUE(net.empty());
 }
 

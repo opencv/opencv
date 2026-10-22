@@ -1025,8 +1025,6 @@ public:
     {
         if (origWeights.empty() || wshape0.dims != 4)  // [Cout, Cin/group, kh, kw] (2D conv)
             return false;
-        if (auto_pad != AUTO_PAD_NONE && auto_pad != AUTO_PAD_VALID)
-            return false;
         if (activationFunc != nullptr || !activ.empty())
             return false;
         if (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
@@ -1052,8 +1050,14 @@ public:
         } else {
             config.padMode = ConvolutionConfiguration::PaddingMode::MANUAL;
             for (int i = 0; i < nspatial; i++) {
-                config.pads_begin.push_back(pads.empty() ? 0 : (size_t)pads[i]);
-                config.pads_end.push_back(pads.empty() ? 0 : (size_t)pads[i + nspatial]);
+                int pad0, pad1;
+                getPadding(pads, i, nspatial, auto_pad,
+                           {(int)wshape0[2 + i], inpShape[i + 2],
+                            strides.empty() ? 1 : strides[i],
+                            dilations.empty() ? 1 : dilations[i]},
+                           pad0, pad1);
+                config.pads_begin.push_back((size_t)pad0);
+                config.pads_end.push_back((size_t)pad1);
             }
         }
         config.input_shape.assign(inpShape.begin(), inpShape.end());
@@ -1155,14 +1159,14 @@ public:
                      OutputArrayOfArrays outputs_,
                      void* workspace) CV_OVERRIDE
     {
-        std::vector<cuda::GpuMatND> inputs, outputs;
-        inputs_.getGpuMatNDVector(inputs);
-        outputs_.getGpuMatNDVector(outputs);
+        std::vector<UMat> inputs, outputs;
+        inputs_.getUMatVector(inputs);
+        outputs_.getUMatVector(outputs);
         CV_Assert(!inputs.empty() && !outputs.empty());
 
         auto& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
         if (!node) {
-            node = conv->initCudaConvNode(ctx, inputs[0].size, outputs[0].size, preferableTarget);
+            node = conv->initCudaConvNode(ctx, cv::dnn::shape(inputs[0]), cv::dnn::shape(outputs[0]), preferableTarget);
             cudaNode = node.dynamicCast<CUDABackendNode>();
             CV_Assert(cudaNode);
             ws.require(cudaNode->get_workspace_memory_in_bytes());

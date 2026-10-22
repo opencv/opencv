@@ -219,6 +219,38 @@ OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
                                 OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 
+// UMat::convertTo must saturate and round like Mat::convertTo for the 5.x integer depths
+PARAM_TEST_CASE(ConvertToSaturate, MatDepth, MatDepth)
+{
+};
+
+OCL_TEST_P(ConvertToSaturate, Accuracy)
+{
+    const int sdepth = GET_PARAM(0);
+    const int ddepth = GET_PARAM(1);
+    if (sdepth == ddepth)
+        throw cvtest::SkipTestException("same depth");
+
+    double vals[] = { -5, -1.5, 0, 2.5, 3e9, 1e20 };
+    Mat src;
+    Mat(1, 6, CV_64F, vals).convertTo(src, sdepth);
+    UMat usrc = src.getUMat(ACCESS_READ);
+
+    Mat dst;
+    UMat udst;
+    OCL_OFF(src.convertTo(dst, ddepth));
+    OCL_ON(usrc.convertTo(udst, ddepth));
+
+    // compare in the destination type: CV_64F can't tell adjacent 64-bit integers apart
+    Mat diff;
+    cv::compare(dst, udst.getMat(ACCESS_READ), diff, CMP_NE);
+    EXPECT_EQ(0, cv::countNonZero(diff));
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertToSaturate, Combine(
+                                Values(CV_8S, CV_16S, CV_32S, CV_64S, CV_32F),
+                                Values(CV_32S, CV_32U, CV_64U, CV_64S)));
+
 } } // namespace opencv_test::ocl
 
 #endif

@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reshape.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -129,12 +132,30 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
     // Reshape just re-interprets the same contiguous buffer. Let the graph
     // buffer allocator alias input and output so the memcpy in forward() is a no-op.
     virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        CV_UNUSED(outputs_arr);
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
+        return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs_arr.depth(0),
+                                                             std::move(context->stream));
+    }
+#endif
 
     bool haveShapeSpec() const
     {

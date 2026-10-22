@@ -606,7 +606,12 @@ public:
     {
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
-            if (inpType != CV_32F)
+            // inpType is set by getTypes() on the first forward; until then use the graph's arg type
+            int t = inpType;
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (t < 0 && netimpl_ && !inputs.empty())
+                t = netimpl_->argData(inputs[0]).type;
+            if (t >= 0 && t != CV_32F)
                 return false;
             if (kernel_shape.size() != 2 || outputs.size() != 1)
                 return false;
@@ -623,9 +628,9 @@ public:
                               InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
-        std::vector<cuda::GpuMatND> inputs;
-        inputs_.getGpuMatNDVector(inputs);
-        MatShape inShape = inputs[0].size;
+        std::vector<UMat> inputs;
+        inputs_.getUMatVector(inputs);
+        MatShape inShape = cv::dnn::shape(inputs[0]);
         const int nspatial = (int)kernel_shape.size();
 
         cuda4dnn::PoolingConfiguration config;
@@ -645,7 +650,8 @@ public:
         config.roundMode = ceil_mode ? cuda4dnn::PoolingConfiguration::RoundingMode::CEIL
                                      : cuda4dnn::PoolingConfiguration::RoundingMode::FLOOR;
         config.input_shape.assign(inShape.begin(), inShape.end());
-        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
+        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->stream),
+                                                   std::move(context->cudnn_handle), config);
     }
 #endif
 

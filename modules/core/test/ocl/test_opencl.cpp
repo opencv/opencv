@@ -334,6 +334,35 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_KernelToStr_Depth,
     testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
+typedef testing::TestWithParam<perf::MatDepth> OCL_TypeToStr_Depth;
+
+TEST_P(OCL_TypeToStr_Depth, no_out_of_bounds_lookup)
+{
+    const int depth = GetParam();
+    const bool noOpenCLType = depth == CV_16BF || depth == CV_Bool ||
+                              depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+    for (int cn : {1, 2, 3, 4, 8, 16})
+    {
+        const int type = CV_MAKETYPE(depth, cn);
+        if (noOpenCLType)
+        {
+            EXPECT_THROW(cv::ocl::typeToStr(type), cv::Exception) << typeToString(type);
+            EXPECT_THROW(cv::ocl::memopTypeToStr(type), cv::Exception) << typeToString(type);
+            EXPECT_THROW(cv::ocl::vecopTypeToStr(type), cv::Exception) << typeToString(type);
+        }
+        else
+        {
+            // CV_64U, CV_64S, CV_32U: all three tables name the same OpenCL type
+            EXPECT_STREQ(cv::ocl::typeToStr(type), cv::ocl::memopTypeToStr(type)) << typeToString(type);
+            EXPECT_STREQ(cv::ocl::typeToStr(type), cv::ocl::vecopTypeToStr(type)) << typeToString(type);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_TypeToStr_Depth,
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
+);
+
 #endif // HAVE_OPENCL
 
 }} // namespace

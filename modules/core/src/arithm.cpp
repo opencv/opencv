@@ -78,6 +78,12 @@ static const char* oclop2str[] = { "OP_ADD", "OP_SUB", "OP_RSUB", "OP_ABSDIFF",
     "OP_MUL", "OP_MUL_SCALE", "OP_DIV_SCALE", "OP_RECIP_SCALE",
     "OP_ADDW", "OP_AND", "OP_OR", "OP_XOR", "OP_NOT", "OP_MIN", "OP_MAX", "OP_RDIV_SCALE", 0 };
 
+// depths with no OpenCL type name (ocl::typeToStr() asserts on them)
+static inline bool noOclType(int depth)
+{
+    return depth == CV_16BF || depth == CV_Bool || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+}
+
 static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, bool bitwise, int oclop, bool haveScalar )
 {
@@ -89,7 +95,8 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     const ocl::Device d = ocl::Device::getDefault();
     bool doubleSupport = d.doubleFPConfig() > 0;
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
-            (!doubleSupport && srcdepth == CV_64F && !bitwise))
+            (!doubleSupport && srcdepth == CV_64F && !bitwise) ||
+            (noOclType(srcdepth) && !bitwise))
         return false;
 
     char opts[1024];
@@ -336,6 +343,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     wtype = CV_MAKETYPE(wdepth, cn);
     int type2 = haveScalar ? wtype : _src2.type(), depth2 = CV_MAT_DEPTH(type2);
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
+        return false;
+
+    if (noOclType(depth1) || noOclType(depth2) || noOclType(ddepth) || noOclType(wdepth))
         return false;
 
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
@@ -1005,6 +1015,10 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
             type2 = _src2.type(), depth2 = CV_MAT_DEPTH(type2);
 
     if (!doubleSupport && depth1 == CV_64F)
+        return false;
+
+    // the integer scalar path below works in int; let the CPU handle the wider 5.x integer depths
+    if (haveScalar && (depth1 == CV_32U || depth1 == CV_64U || depth1 == CV_64S))
         return false;
 
     if (!haveScalar && (!_src1.sameSize(_src2) || type1 != type2))

@@ -3080,6 +3080,9 @@ void TFImporter::populateNet()
 
     if (newEngine)
     {
+        if (layersOutputs.empty())
+            CV_Error(Error::StsError, "TensorFlow graph contains no valid layers");
+
         Net::Impl* netimpl = dstNet.getImpl();
         for (const std::string& outputName : layersOutputs.back())
             netimpl->newArg(outputName, DNN_ARG_OUTPUT);
@@ -3093,6 +3096,7 @@ void TFImporter::populateNet()
         for (const String& extraOutName: extraOutputs) {
             if (!dstNet.haveArg(extraOutName)) {
                 CV_LOG_WARNING(NULL, "DNN/TF: the model extra output '" << extraOutName << "' is not found");
+                continue;
             }
             Arg arg = dstNet.getArg(extraOutName);
             extraOutSet.insert(arg.idx);

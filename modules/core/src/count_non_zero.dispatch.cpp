@@ -165,7 +165,7 @@ void findNonZero(InputArray _src, OutputArray _idx)
     {
         int j, k = 0;
         const uchar* ptr8 = src.ptr(i);
-        if( depth == CV_8U || depth == CV_8S || depth == CV_Bool )
+        if( depth == CV_8U || depth == CV_8S || depth == CV_Bool || depth == CV_8F_E4M3FNUZ )
         {
             for( j = 0; j < cols; j++ )
                 if( ptr8[j] != 0 ) buf[k++] = j;
@@ -201,6 +201,12 @@ void findNonZero(InputArray _src, OutputArray _idx)
                 // mask sign bit so -0 (0x8000) is treated as zero; cannot use <<1 here
                 // because ushort is promoted to int and the sign bit would not be discarded
                 if( (ptr16[j] & 0x7fff) != 0 ) buf[k++] = j;
+        }
+        else if( depth == CV_8F_E4M3FN )
+        {
+            for( j = 0; j < cols; j++ )
+                // mask sign bit so -0 (0x80) is treated as zero
+                if( (ptr8[j] & 0x7f) != 0 ) buf[k++] = j;
         }
         else
         {

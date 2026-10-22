@@ -611,6 +611,42 @@ PERF_TEST_P_(DNNTestNetwork, SAM2_Decoder)
                 std::make_tuple(has_mask_input,   "has_mask_input")});
 }
 
+// Model: https://huggingface.co/onnx-community/sam3-tracker-ONNX/blob/main/onnx/prompt_encoder_mask_decoder.onnx
+PERF_TEST_P_(DNNTestNetwork, SAM3_Decoder)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
+
+    // Synthetic encoder outputs used as decoder inputs
+    int shp_emb0[4] = {1, 32, 288, 288};
+    int shp_emb1[4] = {1, 64, 144, 144};
+    int shp_emb2[4] = {1, 256, 72, 72};
+    Mat image_embeddings_0(4, shp_emb0, CV_32F);
+    Mat image_embeddings_1(4, shp_emb1, CV_32F);
+    Mat image_embeddings_2(4, shp_emb2, CV_32F);
+    randu(image_embeddings_0, -0.2f, 0.2f);
+    randu(image_embeddings_1, -0.2f, 0.2f);
+    randu(image_embeddings_2, -0.2f, 0.2f);
+
+    // One foreground point and one box in the 1008x1008 input image
+    int shp_pts[4] = {1, 1, 1, 2};
+    int shp_lbl[3] = {1, 1, 1};
+    int shp_box[3] = {1, 1, 4};
+    float input_points_data[2] = {504.0f, 504.0f};
+    int64_t input_labels_data[1] = {1};
+    float input_boxes_data[4] = {252.0f, 252.0f, 756.0f, 756.0f};
+    Mat input_points(4, shp_pts, CV_32F, input_points_data);
+    Mat input_labels(3, shp_lbl, CV_64S, input_labels_data);
+    Mat input_boxes(3, shp_box, CV_32F, input_boxes_data);
+
+    processNet("dnn/onnx/models/sam3_tracker/prompt_encoder_mask_decoder.onnx", "",
+               {std::make_tuple(input_points,       "input_points"),
+                std::make_tuple(input_labels,       "input_labels"),
+                std::make_tuple(input_boxes,        "input_boxes"),
+                std::make_tuple(image_embeddings_0, "image_embeddings.0"),
+                std::make_tuple(image_embeddings_1, "image_embeddings.1"),
+                std::make_tuple(image_embeddings_2, "image_embeddings.2")});
+}
+
 // Model: https://github.com/opencv/opencv_zoo/tree/main/models/optical_flow_estimation_raft
 PERF_TEST_P_(DNNTestNetwork, RAFT)
 {
