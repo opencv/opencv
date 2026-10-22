@@ -21,8 +21,11 @@ class Imgcodecs_Avif_RoundTripSuite
     if (channels == 1) {
       cv::cvtColor(img_original, img, cv::COLOR_BGR2GRAY);
     } else if (channels == 4) {
-      cv::cvtColor(img_original, img, cv::COLOR_BGR2BGRA);
-      img.at<cv::Vec4b>(0, 0)[3] = 254; // Do not use opaque alpha plane.
+      std::vector<cv::Mat> imgs;
+      cv::split(img_original, imgs);
+      imgs.push_back(cv::Mat(imgs[0]));
+      imgs[imgs.size() - 1] = cv::Scalar::all(128); // Do not use opaque alpha plane.
+      cv::merge(imgs, img);
     } else {
       img = img_original.clone();
     }
@@ -334,8 +337,11 @@ TEST_P(Imgcodecs_Avif_16bit, encode_decode)
   if (channels == 1) {
     cv::cvtColor(img_original, src, cv::COLOR_BGR2GRAY);
   } else if (channels == 4) {
-    cv::cvtColor(img_original, src, cv::COLOR_BGR2BGRA);
-    src.at<cv::Vec4b>(0, 0)[3] = 254; // Do not use opaque alpha plane.
+    std::vector<cv::Mat> imgs;
+    cv::split(img_original, imgs);
+    imgs.push_back(cv::Mat(imgs[0]));
+    imgs[imgs.size() - 1] = cv::Scalar::all(128); // Do not use opaque alpha plane.
+    cv::merge(imgs, src);
   } else {
     src = img_original.clone();
   }
