@@ -419,18 +419,17 @@ function _opencv_useDeepClone() {
     if (typeof cv !== 'undefined' && cv.Mat &&
         typeof cv.Mat.prototype.mat_clone === 'function') {
         cv.Mat.prototype.clone = cv.Mat.prototype.mat_clone;
-        return true;
     }
-    return false;
 }
 
-if (!_opencv_useDeepClone()) {
-    var _opencv_onRuntimeInitialized_backup = Module['onRuntimeInitialized'];
+var _opencv_onRuntimeInitialized_backup = Module['onRuntimeInitialized'];
 
-    Module['onRuntimeInitialized'] = function() {
-        if (_opencv_onRuntimeInitialized_backup) {
-            _opencv_onRuntimeInitialized_backup();
-        }
-        _opencv_useDeepClone();
-    };
-}
+Module['onRuntimeInitialized'] = function() {
+    if (_opencv_onRuntimeInitialized_backup) {
+        _opencv_onRuntimeInitialized_backup();
+    }
+    _opencv_useDeepClone();
+};
+
+// Also handle builds where runtime initialization has already completed.
+_opencv_useDeepClone();

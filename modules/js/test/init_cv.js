@@ -11,9 +11,13 @@ QUnit.test("init_cv", (assert) => {
         });
     } else if (cv.getBuildInformation === undefined) {
         const done = assert.async();
+        const previousOnRuntimeInitialized = cv['onRuntimeInitialized'];
         cv['onRuntimeInitialized'] = () => {
+            if (previousOnRuntimeInitialized) {
+                previousOnRuntimeInitialized();
+            }
             done();
-        }
+        };
     }
     assert.ok(true);
 });
