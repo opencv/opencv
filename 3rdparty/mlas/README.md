@@ -41,7 +41,7 @@ Top-level layout:
 - `inc/` — public MLAS headers (kept verbatim from upstream).
 - `lib/` — implementation, kept verbatim from upstream except for the local
   patches listed below. Per-architecture kernels live in subdirectories
-  (`x86_64/`, `aarch64/`, `arm/`, `power/`, `riscv64/`, `loongarch64/`,
+  (`x86_64/`, `aarch64/`, `arm64/`, `arm/`, `power/`, `riscv64/`, `loongarch64/`,
   `s390x/`, `sve/`, `kleidiai/`).
 - `CMakeLists.txt` — OpenCV-side build glue. Builds an OBJECT library
   (`opencv_dnn_mlas`) whose objects are linked directly into `opencv_dnn`.
@@ -101,6 +101,20 @@ re-vendor. The unified-diff form of each in-tree edit lives under
 - `BUILD_MLAS_NO_ONNXRUNTIME=1`, `MLAS_OPENCV_THREADING=1`,
   `MLAS_GEMM_ONLY=1` are set as private compile definitions on the OBJECT
   library.
+
+### Windows ARM64
+
+Architecture matching is case-insensitive. MSVC builds use the compiler's
+target architecture, including when cross-compiling from an x64 host.
+The Windows kernels are preprocessed with the C++ compiler (for the Windows
+SDK's `kxarm64.h`) and assembled with `armasm64`, rather than passing GNU
+`aarch64/*.S` files to MSVC. Both SGEMM and the single-row SGEMV fast path
+are linked into `opencv_dnn`. Install the Visual Studio ARM64 C++ build
+tools and Windows SDK; if `armasm64` is unavailable, configuration reports
+that MLAS is disabled and DNN uses its existing GEMM implementation.
+Only Microsoft's `cl.exe` is enabled on ARM64. clang-cl, MinGW, and other
+Windows targets retain the upstream MLAS disable until their compiler and
+kernel integration is supported.
 
 ## Caller in OpenCV
 
