@@ -1886,7 +1886,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
-    if( !nninterpolate && dstm1type != CV_32FC2 )
+    if( dstm1type == CV_32FC1 || (!nninterpolate && dstm1type == CV_16SC2) )
     {
         _dstmap2.create( size, dstm1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
         dstmap2 = _dstmap2.getMat();
