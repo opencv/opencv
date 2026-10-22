@@ -671,6 +671,19 @@ static inline v_float32x4 inpaintNSKnownMask4(const uchar* p)
     return v_reinterpret_as_f32(v_ne(v_load_expand_q(p), v_setall_u32(INSIDE)));
 }
 
+static inline v_float32x4 inpaintDivSqrt(const v_float32x4& num, const v_float32x4& len2)
+{
+#if CV_NEON && !CV_SIMD128_64F
+    float n[4], d[4];
+    v_store(n, num); v_store(d, len2);
+    for (int k = 0; k < 4; k++)
+        n[k] = (float)(n[k]/sqrt(d[k]));
+    return v_load(n);
+#else
+    return v_div(num, v_sqrt(len2));
+#endif
+}
+
 template <typename data_type>
 static int inpaintNSRowWeights(const uchar* fk, const uchar* fkm1, const uchar* fkp1,
                          const data_type* o_k2, const data_type* o_k1, const data_type* o_k,
@@ -705,8 +718,8 @@ static int inpaintNSRowWeights(const uchar* fk, const uchar* fkm1, const uchar* 
         const v_float32x4 rLen2 = v_add(v_mul(rx, rx), vRySq);
         const v_float32x4 gradLen2 = v_add(v_mul(gx, gx), v_mul(gy, gy));
         const v_float32x4 smallMask = v_le(v_abs(dir), vthr);
-        const v_float32x4 safeDenom = v_select(smallMask, v_setall_f32(1.f), v_sqrt(v_mul(rLen2, gradLen2)));
-        const v_float32x4 dirNorm = v_abs(v_div(dir, safeDenom));
+        const v_float32x4 safeLen2 = v_select(smallMask, v_setall_f32(1.f), v_mul(rLen2, gradLen2));
+        const v_float32x4 dirNorm = v_abs(inpaintDivSqrt(dir, safeLen2));
         dir = v_select(smallMask, vsmall, dirNorm);
         v_store(w + (l - lbeg), v_mul(v_load(drow + (l - j)), dir));
     }
@@ -877,10 +890,10 @@ static void inpaintNSPixelC3(const Mat &f, Mat &out, const InpaintDiskTable &dis
          gx = v_xor(gx, v_setall_f32(-0.f));
          v_float32x4 dir = v_add(v_mul(gx, v_setall_f32(r.x)), v_mul(gy, v_setall_f32(r.y)));
          v_float32x4 gradLen2 = v_add(v_mul(gx, gx), v_mul(gy, gy));
-         v_float32x4 denom = v_sqrt(v_mul(gradLen2, v_setall_f32(VectorLength(r))));
+         v_float32x4 len2 = v_mul(gradLen2, v_setall_f32(VectorLength(r)));
          v_float32x4 smallMask = v_le(v_abs(dir), vthr);
-         v_float32x4 safeDenom = v_select(smallMask, v_setall_f32(1.f), denom);
-         v_float32x4 dirNorm = v_abs(v_div(dir, safeDenom));
+         v_float32x4 safeLen2 = v_select(smallMask, v_setall_f32(1.f), len2);
+         v_float32x4 dirNorm = v_abs(inpaintDivSqrt(dir, safeLen2));
          dir = v_select(smallMask, vsmall, dirNorm);
          const v_float32x4 vw = v_mul(vdst, dir);
          vIa = v_add(vIa, v_mul(vw, v_cvt_f32(inpaintLoadPixel3(o_k1 + 3*(l-1), pixelLoadEnd))));
