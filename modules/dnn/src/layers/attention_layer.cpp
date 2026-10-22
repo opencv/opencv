@@ -534,9 +534,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         // Compute Softmax(scale * MatMul(Q, K))
         auto &attention_prob = internals[1];
-        // Normally these buffers are already allocated by the memory planner.
-        // Retain the fallback if the fast kernel declines a planned flash call.
-        attention_prob.create(MatShape{(int)(batch_size * num_heads), (int)seq_len, (int)seq_len}, CV_32F);
+        // getMemoryShapes() plans dense buffers whenever FlashAttention is not used
+        CV_CheckEQ(attention_prob.total(), (size_t)(batch_size * num_heads * seq_len * seq_len), "");
         {
             auto *output = attention_prob.ptr<float>();
 
@@ -635,7 +634,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         // output = attention_prob @ V, then transpose back to [B, S, H*D]
         auto &output_buffer = internals[2];
-        output_buffer.create(MatShape{(int)(batch_size * num_heads), (int)seq_len, (int)qkv_head_sizes[2]}, CV_32F);
+        CV_CheckEQ(output_buffer.total(), (size_t)(batch_size * num_heads * seq_len * qkv_head_sizes[2]), "");
         {
             auto *output = outputs[0].ptr<float>();
             auto *output_buff = output_buffer.ptr<float>();
