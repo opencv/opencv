@@ -313,9 +313,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 jit_params.stride   = toInt64(params.stride);
                 jit_params.dilation = toInt64(params.dilation);
 
-                /* cuDNN's runtime-compiled FP16 grouped kernels give wrong results on NCHW strides once a
-                 * differently shaped one has run, so those convolve NHWC copies and a KRSC filter instead */
-                jit_params.channels_last = std::is_same<T, half>::value && groups > 1;
+                /* cuDNN's runtime-compiled kernels give wrong results on NCHW strides once a differently
+                 * shaped one has run (FP32 and FP16), so every conv convolves NHWC copies and a KRSC filter */
+                jit_params.channels_last = true;
                 if (jit_params.channels_last)
                 {
                     /* [N, C, spatial...] -> [N, spatial..., C] */
