@@ -230,11 +230,6 @@ OCL_TEST_P(ConvertToSaturate, Accuracy)
     const int ddepth = GET_PARAM(1);
     if (sdepth == ddepth)
         throw cvtest::SkipTestException("same depth");
-#ifdef __APPLE__
-    // Apple's OpenCL driver for Intel GPUs doesn't saturate convert_int_sat_rte
-        if (sdepth == CV_32F && ddepth == CV_32S && cv::ocl::Device::getDefault().isIntel())
-        throw cvtest::SkipTestException("Apple OpenCL on Intel GPU: convert_int_sat_rte doesn't saturate");
-#endif
 
     double vals[] = { -5, -1.5, 0, 2.5, 3e9, 1e20 };
     Mat src;
@@ -246,9 +241,18 @@ OCL_TEST_P(ConvertToSaturate, Accuracy)
     OCL_OFF(src.convertTo(dst, ddepth));
     OCL_ON(usrc.convertTo(udst, ddepth));
 
+    Mat udst_cpu;
+    udst.copyTo(udst_cpu);
+    if (sdepth == CV_32F && ddepth == CV_32S)
+    {
+        // INT_MAX isn't representable in float: saturation may give 2147483520 (x86 CPU) or INT_MAX (NEON, OpenCL)
+        dst = cv::min(dst, 2147483520);
+        udst_cpu = cv::min(udst_cpu, 2147483520);
+    }
+
     // compare in the destination type: CV_64F can't tell adjacent 64-bit integers apart
     Mat diff;
-    cv::compare(dst, udst.getMat(ACCESS_READ), diff, CMP_NE);
+    cv::compare(dst, udst_cpu, diff, CMP_NE);
     EXPECT_EQ(0, cv::countNonZero(diff));
 }
 
