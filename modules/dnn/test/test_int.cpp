@@ -902,6 +902,46 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_GatherElements_Int, Combine(
     dnnBackendsAndTargets()
 ));
 
+TEST(Layer_GatherElements, out_of_range_index)
+{
+    std::vector<int> inShape{3, 4};
+    Mat input(inShape, CV_32S);
+    cv::randu(input, -100, 100);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "GatherElements";
+    lp.name = "testLayer";
+    lp.set("axis", 0);
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "gather_input";
+    inpNames[1] = "gather_indices";
+    net.setInputsNames(inpNames);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    std::vector<int> idxShape{1, 4};
+    Mat indices(idxShape, CV_64S);
+
+    // A negative index counts from the end.
+    indices.setTo(-1);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    Mat re = net.forward();
+    ASSERT_EQ(re.total(), (size_t)input.size[1]);
+    EXPECT_EQ(0, cvtest::norm(re.reshape(1, 1), input.row(2), NORM_INF));
+
+    for (int64_t bad : {(int64_t)3, (int64_t)-4, (int64_t)-1000000})
+    {
+        indices.setTo(Scalar::all((double)bad));
+        net.setInput(input, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        EXPECT_ANY_THROW(net.forward()) << "index=" << bad;
+    }
+}
+
 typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_Gather_Int;
 TEST_P(Test_Gather_Int, random)
 {
@@ -1629,5 +1669,44 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_GatherND_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
+
+TEST(Layer_GatherND, out_of_range_index)
+{
+    std::vector<int> inShape{4, 5};
+    Mat input(inShape, CV_32S);
+    cv::randu(input, -100, 100);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+
+    std::vector<String> inpNames(2);
+    inpNames[0] = "gathernd_input";
+    inpNames[1] = "gathernd_indices";
+    net.setInputsNames(inpNames);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    std::vector<int> idxShape{1, 1};
+    Mat indices(idxShape, CV_64S);
+
+    // A negative index counts from the end.
+    indices.ptr<int64_t>()[0] = -1;
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    Mat re = net.forward();
+    ASSERT_EQ(re.total(), (size_t)input.size[1]);
+    EXPECT_EQ(0, cvtest::norm(re.reshape(1, 1), input.row(3), NORM_INF));
+
+    for (int64_t bad : {(int64_t)4, (int64_t)-5, (int64_t)1000000})
+    {
+        indices.ptr<int64_t>()[0] = bad;
+        net.setInput(input, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        EXPECT_ANY_THROW(net.forward()) << "index=" << bad;
+    }
+}
 
 }} // namespace
