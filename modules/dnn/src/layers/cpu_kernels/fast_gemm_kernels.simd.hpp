@@ -47,14 +47,12 @@
 #define FAST_GEMM_F32_NR 12
 #endif
 
-// AVX2 reads a row-major A (K contiguous) straight from its rows instead of packing it
 #if CV_AVX2
 #define FAST_GEMM_F32_ROWS_A 1
 #else
 #define FAST_GEMM_F32_ROWS_A 0
 #endif
 
-// narrowest column tile when the work is split between threads
 #if CV_AVX2
 #define FAST_GEMM_F32_MIN_SPLIT_NC 32
 #else
@@ -79,7 +77,6 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
         if (i + N-1 < m) { \
             const styp* a_ptr = A + lda0*i; \
             if (lda0 == 1) { \
-                /* the N values of a step are next to each other: copy them as one block */ \
                 for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
                     FAST_GEMM_PACK##suffix##_##N(a_ptr + j, packA); \
             } else { \
@@ -364,8 +361,6 @@ static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
 FAST_GEMM_IMPLEMENT_PACK(6, _f32, float, float) // a packer
 FAST_GEMM_IMPLEMENT_PACK(16, _f32, float, float) // b packer
 
-// A comes as six row pointers: rows of a packed panel (ASTEP = MR) or of a row-major A (ASTEP = 1).
-// The products and their order are the same in both cases.
 template<int ASTEP>
 static inline void fast_gemm6x16_f32_impl(int k, const float* r0, const float* r1, const float* r2,
                                           const float* r3, const float* r4, const float* r5,
@@ -430,7 +425,6 @@ static inline void fast_gemm6x16_f32(int k, const char *a_, const char *b_, char
     fast_gemm6x16_f32_impl<FAST_GEMM_F32_MR>(k, a, a + 1, a + 2, a + 3, a + 4, a + 5, b_, c_, ldc, alpha);
 }
 
-// A read from its rows, lda apart. Rows from mr on repeat row 0; the caller drops their results.
 static inline void fast_gemm6x16_f32_rows(int k, const float* a, int lda, int mr,
                                           const char *b_, char *c_, int ldc, float alpha) {
     const float* r[FAST_GEMM_F32_MR];
@@ -707,7 +701,6 @@ static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
 
 #endif
 
-// With lda > 0, packed_A is a row-major A with rows lda apart (only when FAST_GEMM_F32_ROWS_A).
 static inline void fast_gemm_macro_kernel(int m, int n, int k,
                                           const char *packed_A, const char *packed_B,
                                           float alpha, char *c, int ldc0, int esz, int lda = 0) {
