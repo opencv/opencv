@@ -743,6 +743,20 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 auto input_bias_wrapper = inputs[2].dynamicCast<CannBackendWrapper>();
                 auto input_bias_desc = input_bias_wrapper->getTensorDesc();
                 auto input_bias_node = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+                if (beta != 1.f) { // BatchMatMulV2 adds the bias unscaled
+                    Mat beta_mat(1, 1, CV_32F, Scalar(beta));
+                    auto const_beta_node = std::make_shared<CannConstOp>(
+                        beta_mat.data, beta_mat.type(), std::vector<int>{1},
+                        cv::format("%s_beta", name.c_str()));
+                    auto mul = std::make_shared<ge::op::Mul>(
+                        cv::format("%s_bias_beta", name.c_str()));
+                    mul->set_input_x1_by_name(*input_bias_node, "y");
+                    mul->update_input_desc_x1(*input_bias_desc);
+                    mul->set_input_x2_by_name(*(const_beta_node->getOp()), "y");
+                    mul->update_input_desc_x2(*(const_beta_node->getTensorDesc()));
+                    mul->update_output_desc_y(*input_bias_desc);
+                    input_bias_node = mul;
+                }
                 op->set_input_bias_by_name(*input_bias_node, "y");
                 op->update_input_desc_bias(*input_bias_desc);
             }
@@ -752,7 +766,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             op->set_input_x2_by_name(*(const_B_node->getOp()), "y");
             op->update_input_desc_x2(*(const_B_node->getTensorDesc()));
             if ((inputs.size() + blobs.size()) >= 3) { // does not support broadcast bias
-                auto bias_mat = blobs.back();
+                Mat bias_mat;
+                blobs.back().convertTo(bias_mat, -1, beta);  // BatchMatMulV2 adds the bias unscaled
                 auto bias_shape = shape(bias_mat);
 
                 // reshape if 1d
