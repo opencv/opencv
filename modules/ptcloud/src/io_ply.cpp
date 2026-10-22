@@ -482,6 +482,12 @@ bool PlyDecoder::readNamedProperties(const std::vector<std::string>& names, Mat&
         }
     }
 
+    if (m_vertexCount > (size_t)INT_MAX)
+    {
+        CV_LOG_ERROR(NULL, "PLY vertex count " << m_vertexCount << " is too large");
+        return false;
+    }
+
     values.create((int)m_vertexCount, (int)names.size(), CV_32F);
     for (size_t i = 0; i < m_vertexCount; i++)
     {
