@@ -2414,6 +2414,24 @@ TEST(Core_FindNonZero, fp8)
     }
 }
 
+// 127 columns: every row runs both the SIMD loop and the scalar tail
+TEST(Core_FindNonZero, wide_rows_8u)
+{
+    Mat r(113, 127, CV_32FC1);
+    theRNG().fill(r, RNG::UNIFORM, 0, 1);
+    Mat src = r < 0.1;   // about 10% non-zero
+
+    std::vector<Point> expected;
+    for (int y = 0; y < src.rows; y++)
+        for (int x = 0; x < src.cols; x++)
+            if (src.at<uchar>(y, x) != 0)
+                expected.push_back(Point(x, y));
+
+    std::vector<Point> pts;
+    findNonZero(src, pts);
+    EXPECT_EQ(expected, pts);
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;
