@@ -331,6 +331,43 @@ inline void flipXY(int esz,
     }
 }
 
+// Byte matrices may have addresses or row steps that are not aligned to the
+// wider storage type used by the specialized kernels. Preserve pixel byte
+// order without issuing unaligned wide vector loads or stores.
+static void flipUnaligned(int esz, const uchar* src_data, size_t src_step,
+                          int width, int height, uchar* dst_data, size_t dst_step,
+                          int flip_mode)
+{
+    if (src_data == dst_data)
+    {
+        const int rows = flip_mode < 0 ? (height + 1) / 2 : height;
+        for (int y = 0; y < rows; ++y)
+        {
+            const int dy = flip_mode < 0 ? height - 1 - y : y;
+            uchar* src_row = dst_data + static_cast<size_t>(y) * dst_step;
+            uchar* dst_row = dst_data + static_cast<size_t>(dy) * dst_step;
+            const int cols = y == dy ? width / 2 : width;
+            for (int x = 0; x < cols; ++x)
+            {
+                uchar* src = src_row + static_cast<size_t>(x) * esz;
+                uchar* dst = dst_row + static_cast<size_t>(width - 1 - x) * esz;
+                std::swap_ranges(src, src + esz, dst);
+            }
+        }
+    }
+    else
+    {
+        for (int y = 0; y < height; ++y)
+        {
+            const uchar* src_row = src_data + static_cast<size_t>(y) * src_step;
+            uchar* dst_row = dst_data + static_cast<size_t>(flip_mode < 0 ? height - 1 - y : y) * dst_step;
+            for (int x = 0; x < width; ++x)
+                std::memcpy(dst_row + static_cast<size_t>(width - 1 - x) * esz,
+                            src_row + static_cast<size_t>(x) * esz, esz);
+        }
+    }
+}
+
 } // namespace anonymous
 
 inline int flip_inplace(int esz, uchar* data, size_t step, int width, int height, int flip_mode) {
@@ -370,6 +407,21 @@ int flip(int src_type, const uchar* src_data, size_t src_step, int src_width, in
     int esz = CV_ELEM_SIZE(src_type);
     if (src_width < 0 || src_height < 0 || esz > 32)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    // Match the access width of the C1/C3 kernel selected by pixel size, not
+    // the channel depth: e.g. CV_8UC2 is dispatched to a 16-bit kernel.
+    const size_t alignment = esz == 2 || esz == 6 ? 2 :
+                             esz == 4 || esz == 12 ? 4 :
+                             esz == 8 || esz == 24 ? 8 : 1;
+    if (flip_mode != 0 &&
+        (reinterpret_cast<uintptr_t>(src_data) % alignment != 0 ||
+         reinterpret_cast<uintptr_t>(dst_data) % alignment != 0 ||
+         src_step % alignment != 0 || dst_step % alignment != 0))
+    {
+        flipUnaligned(esz, src_data, src_step, src_width, src_height,
+                      dst_data, dst_step, flip_mode);
+        return CV_HAL_ERROR_OK;
+    }
 
     if (src_data == dst_data) {
         return flip_inplace(esz, dst_data, dst_step, src_width, src_height, flip_mode);
