@@ -774,29 +774,25 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                         p[k*5+4] = rowk[j4];
                     }
 
-                    op(p[1], p[2]); op(p[0], p[1]); op(p[1], p[2]); op(p[4], p[5]); op(p[3], p[4]);
-                    op(p[4], p[5]); op(p[0], p[3]); op(p[2], p[5]); op(p[2], p[3]); op(p[1], p[4]);
-                    op(p[1], p[2]); op(p[3], p[4]); op(p[7], p[8]); op(p[6], p[7]); op(p[7], p[8]);
-                    op(p[10], p[11]); op(p[9], p[10]); op(p[10], p[11]); op(p[6], p[9]); op(p[8], p[11]);
-                    op(p[8], p[9]); op(p[7], p[10]); op(p[7], p[8]); op(p[9], p[10]); op(p[0], p[6]);
-                    op(p[4], p[10]); op(p[4], p[6]); op(p[2], p[8]); op(p[2], p[4]); op(p[6], p[8]);
-                    op(p[1], p[7]); op(p[5], p[11]); op(p[5], p[7]); op(p[3], p[9]); op(p[3], p[5]);
-                    op(p[7], p[9]); op(p[1], p[2]); op(p[3], p[4]); op(p[5], p[6]); op(p[7], p[8]);
-                    op(p[9], p[10]); op(p[13], p[14]); op(p[12], p[13]); op(p[13], p[14]); op(p[16], p[17]);
-                    op(p[15], p[16]); op(p[16], p[17]); op(p[12], p[15]); op(p[14], p[17]); op(p[14], p[15]);
-                    op(p[13], p[16]); op(p[13], p[14]); op(p[15], p[16]); op(p[19], p[20]); op(p[18], p[19]);
-                    op(p[19], p[20]); op(p[21], p[22]); op(p[23], p[24]); op(p[21], p[23]); op(p[22], p[24]);
-                    op(p[22], p[23]); op(p[18], p[21]); op(p[20], p[23]); op(p[20], p[21]); op(p[19], p[22]);
-                    op(p[22], p[24]); op(p[19], p[20]); op(p[21], p[22]); op(p[23], p[24]); op(p[12], p[18]);
-                    op(p[16], p[22]); op(p[16], p[18]); op(p[14], p[20]); op(p[20], p[24]); op(p[14], p[16]);
-                    op(p[18], p[20]); op(p[22], p[24]); op(p[13], p[19]); op(p[17], p[23]); op(p[17], p[19]);
-                    op(p[15], p[21]); op(p[15], p[17]); op(p[19], p[21]); op(p[13], p[14]); op(p[15], p[16]);
-                    op(p[17], p[18]); op(p[19], p[20]); op(p[21], p[22]); op(p[23], p[24]); op(p[0], p[12]);
-                    op(p[8], p[20]); op(p[8], p[12]); op(p[4], p[16]); op(p[16], p[24]); op(p[12], p[16]);
-                    op(p[2], p[14]); op(p[10], p[22]); op(p[10], p[14]); op(p[6], p[18]); op(p[6], p[10]);
-                    op(p[10], p[12]); op(p[1], p[13]); op(p[9], p[21]); op(p[9], p[13]); op(p[5], p[17]);
-                    op(p[13], p[17]); op(p[3], p[15]); op(p[11], p[23]); op(p[11], p[15]); op(p[7], p[19]);
-                    op(p[7], p[11]); op(p[11], p[13]); op(p[11], p[12]);
+                    // median of 25: 85 compare-exchanges, 146 min/max once unused halves are dropped (B. Dobbelaere's
+                    // median network list, https://bertdobbelaere.github.io/median_networks.html), reordered to reduce register pressure
+                    op(p[12], p[13]); op(p[6], p[7]); op(p[0], p[1]); op(p[14], p[15]); op(p[13], p[15]);
+                    op(p[2], p[3]); op(p[4], p[5]); op(p[4], p[6]); op(p[1], p[3]); op(p[0], p[2]);
+                    op(p[10], p[11]); op(p[5], p[7]); op(p[12], p[14]); op(p[3], p[7]); op(p[8], p[9]);
+                    op(p[9], p[11]); op(p[11], p[15]); op(p[7], p[15]); op(p[8], p[10]); op(p[10], p[14]);
+                    op(p[2], p[6]); op(p[3], p[11]); op(p[8], p[12]); op(p[1], p[5]); op(p[0], p[4]);
+                    op(p[9], p[13]); op(p[4], p[12]); op(p[1], p[9]); op(p[0], p[8]); op(p[18], p[19]);
+                    op(p[16], p[17]); op(p[16], p[18]); op(p[17], p[19]); op(p[20], p[21]); op(p[22], p[23]);
+                    op(p[20], p[22]); op(p[16], p[20]); op(p[8], p[16]); op(p[12], p[20]); op(p[1], p[12]);
+                    op(p[21], p[23]); op(p[19], p[23]); op(p[7], p[23]); op(p[6], p[14]); op(p[3], p[19]);
+                    op(p[14], p[19]); op(p[18], p[22]); op(p[5], p[13]); op(p[6], p[22]); op(p[13], p[22]);
+                    op(p[17], p[21]); op(p[5], p[21]); op(p[11], p[21]); op(p[11], p[13]); op(p[7], p[13]);
+                    op(p[2], p[10]); op(p[11], p[14]); op(p[9], p[17]); op(p[10], p[18]); op(p[3], p[5]);
+                    op(p[4], p[10]); op(p[2], p[9]); op(p[9], p[10]); op(p[5], p[11]); op(p[10], p[12]);
+                    op(p[18], p[20]); op(p[10], p[16]); op(p[9], p[16]); op(p[11], p[20]); op(p[11], p[17]);
+                    op(p[12], p[18]); op(p[3], p[12]); op(p[11], p[24]); op(p[14], p[18]); op(p[7], p[14]);
+                    op(p[5], p[16]); op(p[7], p[16]); op(p[6], p[12]); op(p[12], p[17]); op(p[7], p[11]);
+                    op(p[16], p[24]); op(p[6], p[11]); op(p[12], p[16]); op(p[11], p[12]); op(p[12], p[16]);
                     dst[j] = (T)p[12];
                 }
 
@@ -822,29 +818,24 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     VT p3 = vop.load(row[0]+j+cn*1), p8 = vop.load(row[1]+j+cn*1), p13 = vop.load(row[2]+j+cn*1), p18 = vop.load(row[3]+j+cn*1), p23 = vop.load(row[4]+j+cn*1);
                     VT p4 = vop.load(row[0]+j+cn*2), p9 = vop.load(row[1]+j+cn*2), p14 = vop.load(row[2]+j+cn*2), p19 = vop.load(row[3]+j+cn*2), p24 = vop.load(row[4]+j+cn*2);
 
-                    vop(p1, p2); vop(p0, p1); vop(p1, p2); vop(p4, p5); vop(p3, p4);
-                    vop(p4, p5); vop(p0, p3); vop(p2, p5); vop(p2, p3); vop(p1, p4);
-                    vop(p1, p2); vop(p3, p4); vop(p7, p8); vop(p6, p7); vop(p7, p8);
-                    vop(p10, p11); vop(p9, p10); vop(p10, p11); vop(p6, p9); vop(p8, p11);
-                    vop(p8, p9); vop(p7, p10); vop(p7, p8); vop(p9, p10); vop(p0, p6);
-                    vop(p4, p10); vop(p4, p6); vop(p2, p8); vop(p2, p4); vop(p6, p8);
-                    vop(p1, p7); vop(p5, p11); vop(p5, p7); vop(p3, p9); vop(p3, p5);
-                    vop(p7, p9); vop(p1, p2); vop(p3, p4); vop(p5, p6); vop(p7, p8);
-                    vop(p9, p10); vop(p13, p14); vop(p12, p13); vop(p13, p14); vop(p16, p17);
-                    vop(p15, p16); vop(p16, p17); vop(p12, p15); vop(p14, p17); vop(p14, p15);
-                    vop(p13, p16); vop(p13, p14); vop(p15, p16); vop(p19, p20); vop(p18, p19);
-                    vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p21, p23); vop(p22, p24);
-                    vop(p22, p23); vop(p18, p21); vop(p20, p23); vop(p20, p21); vop(p19, p22);
-                    vop(p22, p24); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p12, p18);
-                    vop(p16, p22); vop(p16, p18); vop(p14, p20); vop(p20, p24); vop(p14, p16);
-                    vop(p18, p20); vop(p22, p24); vop(p13, p19); vop(p17, p23); vop(p17, p19);
-                    vop(p15, p21); vop(p15, p17); vop(p19, p21); vop(p13, p14); vop(p15, p16);
-                    vop(p17, p18); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p0, p12);
-                    vop(p8, p20); vop(p8, p12); vop(p4, p16); vop(p16, p24); vop(p12, p16);
-                    vop(p2, p14); vop(p10, p22); vop(p10, p14); vop(p6, p18); vop(p6, p10);
-                    vop(p10, p12); vop(p1, p13); vop(p9, p21); vop(p9, p13); vop(p5, p17);
-                    vop(p13, p17); vop(p3, p15); vop(p11, p23); vop(p11, p15); vop(p7, p19);
-                    vop(p7, p11); vop(p11, p13); vop(p11, p12);
+                    // same median-of-25 network as above
+                    vop(p12, p13); vop(p6, p7); vop(p0, p1); vop(p14, p15); vop(p13, p15);
+                    vop(p2, p3); vop(p4, p5); vop(p4, p6); vop(p1, p3); vop(p0, p2);
+                    vop(p10, p11); vop(p5, p7); vop(p12, p14); vop(p3, p7); vop(p8, p9);
+                    vop(p9, p11); vop(p11, p15); vop(p7, p15); vop(p8, p10); vop(p10, p14);
+                    vop(p2, p6); vop(p3, p11); vop(p8, p12); vop(p1, p5); vop(p0, p4);
+                    vop(p9, p13); vop(p4, p12); vop(p1, p9); vop(p0, p8); vop(p18, p19);
+                    vop(p16, p17); vop(p16, p18); vop(p17, p19); vop(p20, p21); vop(p22, p23);
+                    vop(p20, p22); vop(p16, p20); vop(p8, p16); vop(p12, p20); vop(p1, p12);
+                    vop(p21, p23); vop(p19, p23); vop(p7, p23); vop(p6, p14); vop(p3, p19);
+                    vop(p14, p19); vop(p18, p22); vop(p5, p13); vop(p6, p22); vop(p13, p22);
+                    vop(p17, p21); vop(p5, p21); vop(p11, p21); vop(p11, p13); vop(p7, p13);
+                    vop(p2, p10); vop(p11, p14); vop(p9, p17); vop(p10, p18); vop(p3, p5);
+                    vop(p4, p10); vop(p2, p9); vop(p9, p10); vop(p5, p11); vop(p10, p12);
+                    vop(p18, p20); vop(p10, p16); vop(p9, p16); vop(p11, p20); vop(p11, p17);
+                    vop(p12, p18); vop(p3, p12); vop(p11, p24); vop(p14, p18); vop(p7, p14);
+                    vop(p5, p16); vop(p7, p16); vop(p6, p12); vop(p12, p17); vop(p7, p11);
+                    vop(p16, p24); vop(p6, p11); vop(p12, p16); vop(p11, p12); vop(p12, p16);
                     vop.store(dst+j, p12);
 
                 }
