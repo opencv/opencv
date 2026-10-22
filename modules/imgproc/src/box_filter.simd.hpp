@@ -1545,7 +1545,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
                     int rc = height1-(dy2-idx);
                     int srcY = borderInterpolate(rc + roi.y - anchor.y, wholeSize.height, borderType);
                     const uchar* inp = (uchar*)(src+(srcY-roi.y)*srcStep);
-                    memcpy(out, inp, width*sesz);
+                    memcpy(out, inp, (width1 - dx1 - dx2)*sesz);
                 }
             }
         }
@@ -1598,7 +1598,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
         i=0;
         if( inplace )
         {
-            BlockSumBorderInplace<ST,T>(ref, S, R, btab, width, cn, dx1, dx2, borderType);
+            BlockSumBorderInplace<ST,T>(ref, S, R, btab, width1 - dx1 - dx2, cn, dx1, dx2, borderType);
             BlockSumCore<ST,T>(R, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, kwidth);
         }
         else
