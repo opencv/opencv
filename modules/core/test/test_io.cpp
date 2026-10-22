@@ -2264,8 +2264,8 @@ TEST(Core_InputOutput, filestorage_yaml_escape_string)
     writer << "text2" << value2;
     const String yaml = writer.releaseAndGetString();
 
-    EXPECT_NE(String::npos, yaml.find("text1: \"O'Reilly\\x01\""));
-    EXPECT_NE(String::npos, yaml.find("text2: \"hex_\\x10_\\x1f_\\xab_end\""));
+    EXPECT_NE(String::npos, yaml.find("text1: \"O\\'Reilly\\x01\""));
+    EXPECT_NE(String::npos, yaml.find("text2: \"hex_\\x10_\\x1f_\xab_end\""));
 
     FileStorage reader(yaml, FileStorage::READ | FileStorage::MEMORY);
     String restored1, restored2;
