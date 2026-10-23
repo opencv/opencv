@@ -305,4 +305,37 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
     }
 }
 
+// Issue #29985: when dsize is empty, cv::resize derives it from fx/fy and rounds,
+// but kept passing the original factor to the coordinate generation. For a source
+// whose size is not an integer multiple of the factor (e.g. 55*0.5 = 27.5 -> 28)
+// the CPU scalar path then used the passed factor while the HAL/OpenCL back ends
+// used the realised ratio dsize/ssize, so resize(src, dst, Size(), 0.5, 0.5) and
+// resize(src, dst, Size(28, 28), 0, 0) disagreed for INTER_LINEAR.
+    TEST(Resize_Bitexact, LinearEmptyDsizeMatchesExplicit)
+{
+    const int cases[][2] = {
+        {55, 41},   // 55*0.5 = 27.5 -> 28, 41*0.5 = 20.5 -> 21
+        {41, 55},
+        {55, 55},
+        {41, 41},
+    };
+
+    for (const auto& sz : cases)
+    {
+        int src_w = sz[0], src_h = sz[1];
+        int dst_w = cvRound(src_w * 0.5), dst_h = cvRound(src_h * 0.5);
+
+        Mat src(src_h, src_w, CV_8UC1);
+        randu(src, Scalar::all(0), Scalar::all(256));
+
+        Mat dst_empty, dst_explicit;
+        resize(src, dst_empty, Size(), 0.5, 0.5, INTER_LINEAR);
+        resize(src, dst_explicit, Size(dst_w, dst_h), 0, 0, INTER_LINEAR);
+
+        ASSERT_EQ(dst_empty.size(), dst_explicit.size());
+        EXPECT_LE(cvtest::norm(dst_empty, dst_explicit, cv::NORM_INF), 1)
+            << "empty-dsize vs explicit-dsize mismatch for " << src_w << "x" << src_h;
+    }
+}
+
 }} // namespace

@@ -3591,6 +3591,16 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
                      saturate_cast<int>(ssize.height*inv_scale_y));
         CV_Assert( !dsize.empty() );
+        // When dsize is derived from the factor, the rounded dsize and the
+        // passed factor can disagree (e.g. 55*0.5 = 27.5 -> 28). Recompute the
+        // scale from the rounded dsize so coordinate generation uses the
+        // realized ratio (dsize/ssize) and matches the HAL/OpenCL back ends.
+        // INTER_AREA is excluded: it accumulates over the integer iscale window.
+        if( interpolation != INTER_AREA )
+        {
+            inv_scale_x = (double)dsize.width/ssize.width;
+            inv_scale_y = (double)dsize.height/ssize.height;
+        }
     }
     else
     {
