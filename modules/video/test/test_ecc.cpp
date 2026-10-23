@@ -509,5 +509,151 @@ TEST(Video_ECC_BoolMask, matches_uchar_mask) {
 
     EXPECT_LE(cv::norm(warp_bool, warp_uchar, NORM_INF), 1e-5);
 }
+
+class EccMsAnalyticScene {
+   public:
+    EccMsAnalyticScene() {
+        cv::RNG& rng = cv::theRNG();
+        for (int i = 0; i < components; i++) {
+            const double frequency = rng.uniform(0.03, 0.10);
+            const double direction = rng.uniform(0.0, CV_PI);
+            frequencyX.push_back(frequency * std::cos(direction));
+            frequencyY.push_back(frequency * std::sin(direction));
+            phase.push_back(rng.uniform(0.0, 2 * CV_PI));
+        }
+    }
+
+    void render(Mat& image, Size size, const Matx33d& imageToScene) const {
+        image.create(size, CV_32F);
+        for (int y = 0; y < size.height; y++)
+            for (int x = 0; x < size.width; x++) {
+                const double sceneX = imageToScene(0, 0) * x + imageToScene(0, 1) * y + imageToScene(0, 2);
+                const double sceneY = imageToScene(1, 0) * x + imageToScene(1, 1) * y + imageToScene(1, 2);
+                double sum = 0;
+                for (int i = 0; i < components; i++)
+                    sum += std::cos(2 * CV_PI * (frequencyX[i] * sceneX + frequencyY[i] * sceneY) +
+                                    phase[i]);
+                image.at<float>(y, x) = (float)(128.0 + 120.0 / components * sum);
+            }
+    }
+
+   private:
+    static const int components = 16;
+    std::vector<double> frequencyX, frequencyY, phase;
+};
+
+static void runPrefilterBorderBiasTest(bool useUserMask) {
+        const EccMsAnalyticScene scene;
+        const int templateSize = 128, margin = 8, inputSize = templateSize + 2 * margin, trials = 20;
+        const std::vector<Point2f> templateCorners = {
+            Point2f(0, 0), Point2f((float)templateSize, 0),
+            Point2f(0, (float)templateSize), Point2f((float)templateSize, (float)templateSize)};
+
+        cv::RNG& rng = cv::theRNG();
+        double scaleErrorSum = 0, cornerErrorSum = 0;
+
+        for (int k = 0; k < trials; k++) {
+            const double angle = rng.uniform(-2.0, 2.0) * CV_PI / 180;
+            const double scale = rng.uniform(-0.02, 0.02);
+            const double shear = rng.uniform(-0.01, 0.01);
+            const Matx22d rotation(std::cos(angle), -std::sin(angle), std::sin(angle), std::cos(angle));
+            const Matx22d linearPart = rotation * Matx22d(1 + scale, shear, shear, 1 - scale);
+            const Matx33d groundMap(linearPart(0, 0), linearPart(0, 1), margin + rng.uniform(-3.0, 3.0),
+                                    linearPart(1, 0), linearPart(1, 1), margin + rng.uniform(-3.0, 3.0),
+                                    0, 0, 1);
+            const Matx33d sceneOffset(1, 0, rng.uniform(0.0, 997.0),
+                                      0, 1, rng.uniform(0.0, 991.0), 0, 0, 1);
+
+            Mat templateImage, inputImage;
+            scene.render(templateImage, Size(templateSize, templateSize), sceneOffset);
+            scene.render(inputImage, Size(inputSize, inputSize), sceneOffset * groundMap.inv());
+
+            const Mat groundMatrix = Mat_<double>({2, 3}, {groundMap(0, 0), groundMap(0, 1), groundMap(0, 2),
+                                                           groundMap(1, 0), groundMap(1, 1), groundMap(1, 2)});
+            Mat foundMatrix = groundMatrix.clone();
+
+            ECCParameters params;
+            params.criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6);
+            params.motionType = MOTION_AFFINE;
+            params.nlevels = 3;
+            params.gaussFiltSize = 5;
+            Mat refMask, smpMask;
+            if (useUserMask) {
+                refMask = Mat::ones(templateImage.size(), CV_8UC1) * 255;
+                smpMask = Mat::ones(inputImage.size(), CV_8UC1) * 255;
+            }
+            findTransformECCMultiScale(templateImage, inputImage, foundMatrix, params, refMask, smpMask);
+
+            const Matx22d foundLinearPart(foundMatrix.at<double>(0, 0), foundMatrix.at<double>(0, 1),
+                                          foundMatrix.at<double>(1, 0), foundMatrix.at<double>(1, 1));
+            scaleErrorSum += std::sqrt(std::abs(determinant(foundLinearPart * linearPart.inv()))) - 1.0;
+
+            std::vector<Point2f> expectedCorners, foundCorners;
+            cv::transform(templateCorners, expectedCorners, groundMatrix);
+            cv::transform(templateCorners, foundCorners, foundMatrix);
+            cornerErrorSum += cv::norm(foundCorners, expectedCorners, NORM_L2) / 2;
+        }
+
+        EXPECT_LT(std::abs(scaleErrorSum / trials), 1e-4);
+        EXPECT_LT(cornerErrorSum / trials, 0.02);
+}
+
+TEST(Video_ECC_MultiScale, prefilter_border_does_not_bias_scale) { runPrefilterBorderBiasTest(false); }
+
+TEST(Video_ECC_MultiScale, prefilter_border_does_not_bias_scale_with_user_mask) { runPrefilterBorderBiasTest(true); }
+
+TEST(Video_ECC_MultiScale, skips_too_small_pyramid_level) {
+    Mat img(8, 8, CV_8UC1);
+    randu(img, Scalar(0), Scalar(255));
+    Mat warp = Mat::eye(2, 3, CV_32F);
+    ECCParameters params;
+    params.motionType = MOTION_AFFINE;
+    params.gaussFiltSize = 5;
+    params.nlevels = 2;
+    double rho = -1;
+    ASSERT_NO_THROW(rho = findTransformECCMultiScale(img, img, warp, params));
+    EXPECT_TRUE(cv::checkRange(warp));
+    EXPECT_TRUE(std::isfinite(rho));
+}
+
+TEST(Video_ECC_MultiScale, skips_too_small_pyramid_level_with_mask) {
+    Mat img(8, 8, CV_8UC1);
+    randu(img, Scalar(0), Scalar(255));
+    Mat mask = Mat::ones(8, 8, CV_8UC1) * 255;
+    Mat warp = Mat::eye(2, 3, CV_32F);
+    ECCParameters params;
+    params.motionType = MOTION_AFFINE;
+    params.gaussFiltSize = 5;
+    params.nlevels = 2;
+    double rho = -1;
+    ASSERT_NO_THROW(rho = findTransformECCMultiScale(img, img, warp, params, mask, mask));
+    EXPECT_TRUE(cv::checkRange(warp));
+    EXPECT_TRUE(std::isfinite(rho));
+}
+
+TEST(Video_ECC_MultiScale, small_image_is_not_rejected) {
+    Mat img(32, 32, CV_8UC1);
+    randu(img, Scalar(0), Scalar(255));
+    Mat warp = Mat::eye(2, 3, CV_32F);
+    ECCParameters params;
+    params.motionType = MOTION_AFFINE;
+    params.gaussFiltSize = 5;
+    params.nlevels = 4;
+    double rho = -1;
+    ASSERT_NO_THROW(rho = findTransformECCMultiScale(img, img, warp, params));
+    EXPECT_TRUE(cv::checkRange(warp));
+    EXPECT_TRUE(std::isfinite(rho));
+}
+
+TEST(Video_ECC_MultiScale, rejects_image_smaller_than_blur_ring) {
+    Mat img(5, 5, CV_8UC1);
+    randu(img, Scalar(0), Scalar(255));
+    Mat warp = Mat::eye(2, 3, CV_32F);
+    ECCParameters params;
+    params.motionType = MOTION_AFFINE;
+    params.gaussFiltSize = 5;
+    params.nlevels = 1;
+    EXPECT_THROW(findTransformECCMultiScale(img, img, warp, params), cv::Exception);
+}
 }  // namespace
 }  // namespace opencv_test
