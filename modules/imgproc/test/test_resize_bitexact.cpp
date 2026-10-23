@@ -305,4 +305,37 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
     }
 }
 
+
+// Regression test for #29794: CV_8UC3 + INTER_LINEAR at downscale factors just below 1.0
+// crashed on arm64 (KleidiCV HAL) when the last destination row read a source row at
+// index (sy + 1) that was never clamped to src_height - 1. The band is narrow: with a
+// source height of 2598, destination heights 2588..2596 read one row past the source.
+TEST(Resize_Bitexact, LinearNearOneDownscale8U_C3)
+{
+    // Source taller than the documented reproducer; width chosen so a 16-byte NEON
+    // vector step does not divide the 3-channel pixel stride.
+    const int src_h = 2598, src_w = 1736;
+    const int dst_w = 1728;
+
+    // Destination heights inside the crash band (2588..2596) plus the known-good edges.
+    const int dst_heights[] = {2600, 2598, 2596, 2594, 2592, 2590, 2588, 2586, 2584};
+
+    for (int dh : dst_heights)
+    {
+        Mat src(src_h, src_w, CV_8UC3);
+        randu(src, Scalar::all(0), Scalar::all(256));
+
+        Mat dst;
+        resize(src, dst, Size(dst_w, dh), 0, 0, INTER_LINEAR);
+
+        ASSERT_EQ(dst.type(), CV_8UC3);
+        ASSERT_EQ(dst.rows, dh);
+        ASSERT_EQ(dst.cols, dst_w);
+
+        // Every byte must be a valid in-range read (an out-of-bounds row read would
+        // fault or produce garbage on the affected arm64 builds).
+        const size_t bytes = (size_t)dst.rows * dst.cols * dst.elemSize();
+        CV_Assert(dst.total() * dst.elemSize() == bytes);
+    }
+}
 }} // namespace
