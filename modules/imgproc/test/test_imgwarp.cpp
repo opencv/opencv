@@ -1640,6 +1640,45 @@ TEST(Resize, horizontal_upscale_left_edge_regression)
     }
 }
 
+TEST(Resize, nearest_neon_scalar_tail)
+{
+    RNG& rng = theRNG();
+    const int src_w = 13, src_h = 5;
+
+    for (int cn = 2; cn <= 4; cn += 2)
+    {
+        int type = CV_MAKETYPE(CV_8U, cn);
+        for (int dst_w = 1; dst_w <= 20; dst_w++)
+        {
+            SCOPED_TRACE(cv::format("cn=%d dst_w=%d", cn, dst_w));
+
+            Mat src(src_h, src_w, type);
+            rng.fill(src, RNG::UNIFORM, 0, 256);
+
+            Size dst_size(dst_w, src_h);
+            Mat dst;
+            cv::resize(src, dst, dst_size, 0, 0, INTER_NEAREST);
+
+            const double fx = (double)dst_size.width / src_w;
+            const double fy = (double)dst_size.height / src_h;
+            const double ifx = 1. / fx, ify = 1. / fy;
+
+            for (int y = 0; y < dst_size.height; y++)
+            {
+                int sy = std::min(cvFloor(y * ify), src_h - 1);
+                for (int x = 0; x < dst_size.width; x++)
+                {
+                    int sx = std::min(cvFloor(x * ifx), src_w - 1);
+                    const uchar* s = src.ptr<uchar>(sy) + sx * cn;
+                    const uchar* d = dst.ptr<uchar>(y) + x * cn;
+                    for (int c = 0; c < cn; c++)
+                        EXPECT_EQ(s[c], d[c]) << "x=" << x << " y=" << y << " c=" << c;
+                }
+            }
+        }
+    }
+}
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
