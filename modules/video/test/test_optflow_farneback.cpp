@@ -12,10 +12,10 @@ namespace opencv_test { namespace {
 const Point2f SHIFT(1.7f, -1.1f);
 
 // A blurred noise texture translated by SHIFT per frame.
-static std::vector<Mat> makeSequence(Size size, int count, int seed = 0x5eed)
+static std::vector<Mat> makeSequence(Size size, int count)
 {
     Mat base(size.height * 2, size.width * 2, CV_8U);
-    RNG(seed).fill(base, RNG::UNIFORM, 0, 256);
+    theRNG().fill(base, RNG::UNIFORM, 0, 256);
     GaussianBlur(base, base, Size(9, 9), 3, 3);
 
     std::vector<Mat> frames;
@@ -93,7 +93,7 @@ TEST(DenseOpticalFlow_Farneback, ReuseMatchesNoReuseOnSequence)
 TEST(DenseOpticalFlow_Farneback, ReuseMissesOnChangedContentOrParameters)
 {
     const std::vector<Mat> frames = makeSequence(Size(160, 120), 3);
-    const std::vector<Mat> other = makeSequence(Size(160, 120), 2, 0x77);
+    const std::vector<Mat> other = makeSequence(Size(160, 120), 2);
 
     // Same buffer refilled between calls: only the content differs.
     {
@@ -182,7 +182,7 @@ TEST(DenseOpticalFlow_Farneback, ReuseConcurrentCalls)
     std::vector<std::vector<Mat> > frames(threads), actual(threads);
     for( int t = 0; t < threads; t++ )
     {
-        frames[t] = makeSequence(Size(64, 48), pairs + 1, 0x900 + t);
+        frames[t] = makeSequence(Size(64, 48), pairs + 1);
         actual[t].resize(pairs);
     }
 
