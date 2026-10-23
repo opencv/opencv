@@ -1120,4 +1120,20 @@ TEST(Fusion, SplitKeepsBlockLayout)
     EXPECT_EQ(1, fusedCount(net, "TransformLayout"));
 }
 
+// A zero batch: the block-layout Split and Concat copies must give empty outputs, not divide by zero.
+TEST(Fusion, SplitAndConcatInBlockLayoutWithZeroBatch)
+{
+    Net net = loadModel("split_block_layout");
+    net.setInput(Mat(std::vector<int>{0, 8, 10, 12}, CV_32F));
+    std::vector<Mat> outs;
+    net.forward(outs, std::vector<String>{"Y_aligned", "Y_unaligned", "Y_height", "Y_default"});
+    ASSERT_EQ(4u, outs.size());
+
+    EXPECT_EQ(MatShape({0, 48, 10, 12}), outs[0].shape());
+    EXPECT_EQ(MatShape({0, 32, 10, 12}), outs[1].shape());
+    EXPECT_EQ(MatShape({0, 32, 5, 24}), outs[2].shape());
+    EXPECT_EQ(MatShape({0, 32, 10, 12}), outs[3].shape());
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout"));
+}
+
 }} // namespace opencv_test

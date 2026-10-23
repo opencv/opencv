@@ -460,6 +460,9 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
 
 void copyChannelBlocks(const Mat& whole, const std::vector<Mat>& parts, bool split)
 {
+    // Nothing to copy for an empty tensor (e.g. a zero batch), and N*C1 below would be 0.
+    if (whole.total() == 0)
+        return;
     CV_Assert(whole.isContinuous());
     const int N = whole.size[0], C1 = whole.size[1];
     const size_t blockBytes = whole.total() / ((size_t)N * C1) * whole.elemSize();
