@@ -6,6 +6,7 @@
 #define OPENCV_HAL_INTRIN_LSX_HPP
 
 #include <lsxintrin.h>
+#include <climits>
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 1
