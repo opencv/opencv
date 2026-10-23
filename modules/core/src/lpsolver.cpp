@@ -371,12 +371,14 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
 
-    // Snap values that are within floating-point noise of zero back to exactly
-    // zero. The simplex tableau is updated by repeated multiply/subtract pivots
-    // in naive double arithmetic, so entries that are mathematically zero (for
-    // example a constraint coefficient that has been eliminated) drift to small
-    // non-zero magnitudes (~1e-13). Left uncorrected this drift makes the
-    // feasibility check reject an otherwise valid solution (see issue #12343).
+    // Snap tableau entries that are within floating-point noise of zero back to
+    // exactly zero. Each pivot updates the tableau by multiply/subtract in naive
+    // double arithmetic, so entries that are mathematically zero (an eliminated
+    // constraint coefficient, say) drift to ~1e-13; left uncorrected this drift
+    // makes the feasibility check reject an otherwise valid solution.
+    // pivot_eps (1e-12) sits an order of magnitude above that drift while staying
+    // well below the ~1.0 magnitudes the tableau entries take at unit scale.
+    // solveLP targets small LPs, so the O(rows*cols) scan per pivot is cheap.
     const double pivot_eps = 1e-12;
     for(int i=0;i<b.rows;i++){
         for(int j=0;j<b.cols;j++){
