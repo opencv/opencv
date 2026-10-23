@@ -263,7 +263,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ float fast_sigmoid(float value) { return __fdividef(1, 1 + __expf(-value)); }
 
     constexpr int GPU_WARP_SIZE = 32;
-    constexpr int GPU_WARP_SIZE_HOST = 32;
 
     template <class T>
     __device__ __forceinline__ T WARP_SHFL(T value, int srcLane, int width = GPU_WARP_SIZE, unsigned int mask = 0xffffffff) {

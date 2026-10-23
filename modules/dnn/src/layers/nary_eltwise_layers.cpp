@@ -330,6 +330,7 @@ public:
                    op == OPERATION::DIV;
 #endif
 
+#ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
             if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL ||
                 op == OPERATION::LESS || op == OPERATION::LESS_EQUAL || op == OPERATION::AND ||
@@ -341,10 +342,7 @@ public:
                 for (const Arg& a : inputs)
                     types.push_back(netimpl_->argData(a).type);
                 // an intermediate arg has no type until the first forward; refuse only known mismatches
-                auto isCudaType = [](int t) {
-                    return t < 0 || t == CV_Bool || t == CV_32F || t == CV_16F || t == CV_8S ||
-                           t == CV_8U || t == CV_32S || t == CV_64S;
-                };
+                auto isCudaType = [](int t) { return t < 0 || isCudaNodeType(t); };
                 auto isBool = [](int t) { return t < 0 || t == CV_Bool; };
                 auto sameType = [](int a, int b) { return a < 0 || b < 0 || a == b; };
                 if (op == OPERATION::WHERE)
@@ -369,6 +367,7 @@ public:
                    op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
                    op == OPERATION::SUB  || op == OPERATION::MOD || op == OPERATION::FMOD;
         }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 

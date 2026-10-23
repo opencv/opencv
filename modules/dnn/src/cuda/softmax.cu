@@ -200,7 +200,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 int log2_elements = log2_ceil(softmax_elements);
                 const int next_power_of_two = 1 << log2_elements;
 
-                int warp_size = (next_power_of_two < GPU_WARP_SIZE_HOST) ? next_power_of_two : GPU_WARP_SIZE_HOST;
+                int warp_size = (next_power_of_two < GPU_WARP_SIZE) ? next_power_of_two : GPU_WARP_SIZE;
                 int threads_per_block, shared_memory_size;
                 int batches_per_warp = (next_power_of_two <= 128) ? 2 : 1;
                 if (log2_elements <= 10) {
@@ -253,7 +253,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             }
 
             while (block_size < (max_block_size)) block_size *= 2;
-            block_size = std::max(block_size, static_cast<uint64_t>(GPU_WARP_SIZE_HOST));
+            block_size = std::max(block_size, static_cast<uint64_t>(GPU_WARP_SIZE));
             return dim3(static_cast<unsigned int>(block_size));
         }
 
