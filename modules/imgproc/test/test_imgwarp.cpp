@@ -1127,6 +1127,29 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_Remap, issue_29412)
+{
+    // BORDER_TRANSPARENT must leave destination pixels that map outside the
+    // source untouched (not blended with blank), for INTER_LINEAR (and INTER_AREA,
+    // which remap routes through INTER_LINEAR). Reproducer from issue #29412: a
+    // 3x4 source of value 10 with a map that places pixels partially off-image.
+    Mat src(3, 4, CV_8UC1, Scalar(10));
+    Mat_<float> mapx(7, 8), mapy(7, 8);
+    for (int r = 0; r < 7; ++r)
+        for (int c = 0; c < 8; ++c) { mapx(r, c) = -1.5f + c; mapy(r, c) = -1.5f + r; }
+
+    // Only the fully-in-bounds region (columns 2..5, rows 2..4) is written; the
+    // half-off and fully-off pixels stay at the pre-set zero.
+    Mat ref = Mat::zeros(7, 8, CV_8UC1);
+    ref(Rect(2, 2, 4, 3)).setTo(10);
+
+    for (int flags : {INTER_LINEAR, INTER_AREA}) {
+        Mat dst = Mat::zeros(7, 8, CV_8UC1);
+        remap(src, dst, mapx, mapy, flags, BORDER_TRANSPARENT);
+        ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF)) << "flags=" << flags;
+    }
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
