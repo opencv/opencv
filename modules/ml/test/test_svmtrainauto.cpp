@@ -161,4 +161,30 @@ TEST(ML_SVM, getSupportVectors)
     EXPECT_EQ(0, sv.rows);    // inapplicable for non-linear SVMs
 }
 
+TEST(ML_SVM, nu_svc_extreme_float_no_crash)
+{
+    float fdata[] = {
+        -3.40282347e+38f, 0.0f,
+         3.08375703e+38f, 0.0f,
+         3.38958311e+38f, 0.0f,
+        -3.40053886e+38f, 0.0f,
+        -5.19229686e+33f, 0.0f,
+        -5.17201445e+33f, 0.0f,
+    };
+    int labels[] = {1, 0, 0, 0, 0, 0};
+
+    Mat features(6, 2, CV_32FC1, fdata);
+    Mat responses(6, 1, CV_32SC1, labels);
+
+    Ptr<SVM> svm = SVM::create();
+    ASSERT_TRUE(svm);
+    svm->setType(SVM::NU_SVC);
+    svm->setKernel(SVM::LINEAR);
+    svm->setNu(0.010317);
+    svm->setTermCriteria(TermCriteria(
+        TermCriteria::MAX_ITER | TermCriteria::EPS, 11, 0.099998f));
+
+    EXPECT_NO_THROW(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+}
+
 }} // namespace
