@@ -90,6 +90,9 @@ static const GemmParam_t test_matmul_configs[] = {
     { {1, 1, 3072}, {1, 3072, 768} },
     { {1, 2, 768}, {1, 768, 768} },
     { {1, 4, 768}, {1, 768, 768} },
+
+    // write-heavy, small K, no bias: the output store dominates
+    { {512, 32}, {32, 512} },
 };
 
 struct GemmParamId
@@ -345,6 +348,56 @@ PERF_TEST_P_(MatMul, matmul)
         std::vector<std::string> input_names{"A"};
         net.setInputsNames(input_names);
         net.setInput(A, input_names[0]);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Same configs as matmul, but with B as a second network input instead of a constant
+// blob - exercises the blobs.empty() dispatch (MLAS / fastGemmBatch "truly dynamic B"),
+// which matmul above never reaches since it always packs B as a blob.
+PERF_TEST_P_(MatMul, matmul_dynamicB)
+{
+    int test_id = (int)get<0>(GetParam());
+    ASSERT_GE(test_id, 0); ASSERT_LT(test_id, MatMulParamId::MATMUL_LAST);
+    const GemmParam_t& params = test_matmul_configs[test_id];
+    auto a_shape = params.a_shape;
+    auto b_shape = params.b_shape;
+    auto trans_a = params.trans_a;
+    auto trans_b = params.trans_b;
+
+    Backend backend_id = get<0>(get<1>(GetParam()));
+    Target target_id = get<1>(get<1>(GetParam()));
+
+    Mat A(a_shape, CV_32F);
+    randu(A, -1.0f, 1.0f);
+    Mat B(b_shape, CV_32F);
+    randu(B, -1.0f, 1.0f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "testLayer";
+    lp.set("transA", trans_a);
+    lp.set("transB", trans_b);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 1, id, 1);
+    net.setPreferableBackend(backend_id);
+    net.setPreferableTarget(target_id);
+
+    // warmup
+    {
+        std::vector<std::string> input_names{"A", "B"};
+        net.setInputsNames(input_names);
+        net.setInput(A, input_names[0]);
+        net.setInput(B, input_names[1]);
         Mat out = net.forward();
     }
 

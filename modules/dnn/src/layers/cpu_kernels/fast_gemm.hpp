@@ -131,6 +131,9 @@ struct MatMulHelper {
             B_steps[i] = B_steps[i + 1] * B_broadcast_shape[i + 1];
         }
         size_t t, idx;
+        // M*K or N*K can be 0 (empty A/B); row indices are 0 and unread for K == 0 -
+        // matmul_layer.cpp's forward_ocl() (the only reader) bails out before using them.
+        const size_t A_step = (size_t)M * K, B_step = (size_t)N * K;
         for (size_t i = 0; i < batch; i++) {
             C_offsets[i] = i * C_step;
             C_rows[i] = i;
@@ -146,8 +149,8 @@ struct MatMulHelper {
             }
             A_offsets[i] = A_offset;
             B_offsets[i] = B_offset;
-            A_rows[i] = A_offset / (M * K);
-            B_rows[i] = B_offset / (N * K);
+            A_rows[i] = A_step > 0 ? A_offset / A_step : 0;
+            B_rows[i] = B_step > 0 ? B_offset / B_step : 0;
         }
     }
 
