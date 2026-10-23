@@ -69,9 +69,7 @@ public:
             if (blobs.size() != 1 || blobs[0].total() != 1)
                 return false;
             // make_cuda_node_with_type() hard-errors outside these types; bool goes through make_cuda_node_bool()
-            const int t = blobs[0].type();
-            return t == CV_Bool || t == CV_32F || t == CV_16F || t == CV_8S ||
-                   t == CV_8U || t == CV_32S || t == CV_64S;
+            return isCudaNodeType(blobs[0].type());
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV;

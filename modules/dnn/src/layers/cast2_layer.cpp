@@ -113,8 +113,7 @@ public:
             const int inType = netimpl_->argData(inputs[0]).type;
             const int outType = netimpl_->argData(outputs[0]).type;
             if (inType >= 0 && inType == outType)
-                return inType == CV_Bool || inType == CV_32F || inType == CV_16F || inType == CV_8S ||
-                       inType == CV_8U || inType == CV_32S || inType == CV_64S;
+                return isCudaNodeType(inType);
             // an intermediate arg has no type until the first forward; check only the known side(s)
             auto castable = [](int t) { return t < 0 || t == CV_Bool || t == CV_32S || t == CV_64S || t == CV_32F; };
             if (!castable(inType) || !castable(outType))

@@ -39,7 +39,7 @@ public:
                 return false;
             // an intermediate arg has no type until the first forward; refuse only a known unsupported one
             const int t = netimpl_->argData(this->inputs[0]).type;
-            if (t >= 0 && t != CV_Bool && t != CV_32F && t != CV_16F && t != CV_8S && t != CV_8U && t != CV_32S && t != CV_64S)
+            if (t >= 0 && !isCudaNodeType(t))
                 return false;
             return netimpl_->argData(this->outputs[0]).shape.dims <= cuda4dnn::kernels::kMaxBroadcastRank;
         }

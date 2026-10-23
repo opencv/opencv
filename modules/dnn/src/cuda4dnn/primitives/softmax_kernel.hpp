@@ -15,6 +15,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <limits>
 #include <utility>
 
 namespace cv { namespace dnn { namespace cuda4dnn {
@@ -44,15 +45,21 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const int ax = normalize_axis(axis, rank);
 
             const int axis_end = flatten_tail ? rank : ax + 1;
-            int axis_size = 1;
+            std::size_t axis_total = 1, inner_total = 1, outer_total = 1;
             for (int i = ax; i < axis_end; i++)
-                axis_size *= inShape[i];
-            int inner_size = 1;
+                axis_total *= inShape[i];
             for (int i = axis_end; i < rank; i++)
-                inner_size *= inShape[i];
-            int outer_size = 1;
+                inner_total *= inShape[i];
             for (int i = 0; i < ax; i++)
-                outer_size *= inShape[i];
+                outer_total *= inShape[i];
+            // the kernels take int extents; the int64 offsets inside them cover the full product
+            const std::size_t int_max = static_cast<std::size_t>(std::numeric_limits<int>::max());
+            CV_CheckLE(axis_total, int_max, "DNN/CUDA: softmax axis is too large");
+            CV_CheckLE(inner_total, int_max, "DNN/CUDA: softmax inner size is too large");
+            CV_CheckLE(outer_total, int_max, "DNN/CUDA: softmax outer size is too large");
+            const int axis_size = static_cast<int>(axis_total);
+            const int inner_size = static_cast<int>(inner_total);
+            const int outer_size = static_cast<int>(outer_total);
 
             if (scale != 1.f) {
                 // softmax(s*x) does not reduce to a rescale, so fold the scale in before max/exp
