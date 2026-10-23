@@ -2029,13 +2029,27 @@ public:
                 for( y1 = 0; y1 < bh; y1++ )
                 {
                     short* xy = XY + y1*bw*2;
-                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
-                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
 
                     if( interpolation == INTER_NEAREST )
-                        hal::warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);
+                    {
+                        float fM[6];
+                        for( int i = 0; i < 6; i++ ) fM[i] = static_cast<float>(M[i]);
+                        float M_x = static_cast<float>(y + y1) * fM[1] + fM[2];
+                        float M_y = static_cast<float>(y + y1) * fM[4] + fM[5];
+                        for( int dx = 0; dx < bw; dx++ )
+                        {
+                            float sx = std::fma(static_cast<float>(x + dx), fM[0], M_x);
+                            float sy = std::fma(static_cast<float>(x + dx), fM[3], M_y);
+                            xy[dx * 2] = saturate_cast<short>(cvRound(sx));
+                            xy[dx * 2 + 1] = saturate_cast<short>(cvRound(sy));
+                        }
+                    }
                     else
+                    {
+                        int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
+                        int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
                         hal::warpAffineBlockline(adelta + x, bdelta + x, xy, A + y1*bw, X0, Y0, bw);
+                    }
                 }
 
                 if( interpolation == INTER_NEAREST )
@@ -2259,30 +2273,54 @@ static void warpAffine(int src_type,
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
-    if (interpolation == INTER_NEAREST) {
+    if (interpolation == INTER_NEAREST && CV_MAT_CN(src_type) <= 4) {
+        alignas(16) uint8_t rawBuf[32] = {0};
+        scalarToRawData(Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]), rawBuf, src_type);
+        const uint16_t* u16 = (const uint16_t*)rawBuf;
+
         switch (src_type) {
-            case CV_8UC1: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_8UC1:
+            case CV_8SC1: {
+                double bval[4] = { (double)rawBuf[0], 0, 0, 0 };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            case CV_8UC3: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_8UC2:
+            case CV_8SC2:
+            case CV_16UC1:
+            case CV_16SC1: {
+                double bval[4] = { (double)u16[0], 0, 0, 0 };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            case CV_8UC4: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_8UC3:
+            case CV_8SC3: {
+                double bval[4] = { (double)rawBuf[0], (double)rawBuf[1], (double)rawBuf[2], 0 };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            case CV_16UC1: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_8UC4:
+            case CV_8SC4:
+            case CV_16UC2:
+            case CV_16SC2:
+            case CV_32SC1: {
+                double bval[4] = { (double)rawBuf[0], (double)rawBuf[1], (double)rawBuf[2], (double)rawBuf[3] };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            case CV_16UC3: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_16UC3:
+            case CV_16SC3: {
+                double bval[4] = { (double)u16[0], (double)u16[1], (double)u16[2], 0 };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            case CV_16UC4: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            case CV_16UC4:
+            case CV_16SC4:
+            case CV_32SC2:
+            case CV_32FC2:
+            case CV_64FC1: {
+                double bval[4] = { (double)u16[0], (double)u16[1], (double)u16[2], (double)u16[3] };
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, bval), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC1: {
