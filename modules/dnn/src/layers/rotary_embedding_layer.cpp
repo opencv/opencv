@@ -27,7 +27,7 @@ static void gather(
         const int b = i / seq_len;
 
         int64_t pos_id = pos_ids[b * seq_len + t];
-        if (pos_id >= seq_len_max)
+        if (pos_id < 0 || pos_id >= seq_len_max)
         {
             outOfRangeIdx = true;
             break;

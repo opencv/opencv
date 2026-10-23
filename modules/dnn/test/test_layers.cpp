@@ -1037,6 +1037,26 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+// A negative position id must be rejected, not used as a buffer offset. The gather path
+// only bounded the id from above, so a negative one read before the cos/sin cache.
+TEST(Layer_RotaryEmbedding, rejects_negative_position_id)
+{
+    const int B = 1, S = 2, num_heads = 1, dim_head = 4;
+    const int seq_len_max = 8, d_half = dim_head / 2;
+
+    Mat input(std::vector<int>{B, S, num_heads * dim_head}, CV_32F, Scalar(1.f));
+    Mat cos_cache(std::vector<int>{seq_len_max, d_half}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{seq_len_max, d_half}, CV_32F, Scalar(0.5f));
+    Mat pos(std::vector<int>{B, S}, CV_64S);
+    pos.ptr<int64_t>()[0] = -1;
+    pos.ptr<int64_t>()[1] = 0;
+
+    LayerParams lp;
+    lp.set("num_heads", num_heads);
+    std::vector<Mat> inputs{input, cos_cache, sin_cache, pos}, outputs;
+    EXPECT_THROW(runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs), cv::Exception);
+}
+
 TEST(Layer_Attention, rank4_input_matches_rank3)
 {
     const int B0 = 2, B1 = 3, S = 17, C = 64, NH = 4;
