@@ -975,16 +975,15 @@ CopyColumn( const uchar* _src, size_t src_step,
 
 // Copies `ncols` adjacent columns of `src` (element size elem_size, row step src_step in bytes)
 // into `ncols` contiguous column buffers of `len` elements each: dst + k*len*elem_size holds
-// column k. Row-wise: each source row is read once, sequentially. (Row steps are only
-// guaranteed to be multiples of the element size, hence the byte arithmetic.)
+// column k. Row-wise: each source row is read once, sequentially. Packed float
+// spectra can start at a four-byte offset, so eight-byte elements need unaligned copies.
 template<typename T> static inline void
 copyFromColumns_( const uchar* src, size_t src_step, T* dst, int ncols, int len )
 {
     for( int i = 0; i < len; i++, src += src_step )
     {
-        const T* s = (const T*)src;
         for( int k = 0; k < ncols; k++ )
-            dst[(size_t)k*len + i] = s[k];
+            memcpy((uchar*)dst + ((size_t)k*len + i)*sizeof(T), src + k*sizeof(T), sizeof(T));
     }
 }
 
@@ -1009,9 +1008,8 @@ copyToColumns_( const T* src, uchar* dst, size_t dst_step, int ncols, int len )
 {
     for( int i = 0; i < len; i++, dst += dst_step )
     {
-        T* d = (T*)dst;
         for( int k = 0; k < ncols; k++ )
-            d[k] = src[(size_t)k*len + i];
+            memcpy(dst + k*sizeof(T), (const uchar*)src + ((size_t)k*len + i)*sizeof(T), sizeof(T));
     }
 }
 
