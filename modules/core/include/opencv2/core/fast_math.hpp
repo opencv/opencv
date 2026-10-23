@@ -66,7 +66,7 @@
 #  include <limits.h>
 #endif
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
   // nothing, intrinsics/asm code is not supported
 #else
   #if ((defined _MSC_VER && (defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2))) \
