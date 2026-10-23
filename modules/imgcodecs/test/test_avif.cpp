@@ -332,6 +332,21 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
                                             IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
+////////////////////////////////////////////////////////////////////////////////
+
+#ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+TEST(Imgcodecs_Avif, unsupported_animation_with_16bit)
+#else
+TEST(Imgcodecs_Avif, DISABLED_unsupported_animation_with_16bit)
+#endif
+{
+  cv::Mat frame(cv::Size(160, 120), CV_16UC3, cv::Scalar::all(32));
+  std::vector<cv::Mat> frames = {frame, frame};
+  std::vector<uchar> buf;
+  // Encoding 16-bit AVIF animations should fail due to a libavif limitation.
+  EXPECT_NO_THROW(EXPECT_FALSE(cv::imencodemulti(".avif", frames, buf, {IMWRITE_AVIF_DEPTH, 16})));
+}
+
 }  // namespace
 }  // namespace opencv_test
 

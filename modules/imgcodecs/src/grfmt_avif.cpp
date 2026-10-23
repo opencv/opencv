@@ -414,6 +414,9 @@ bool AvifEncoder::writeanimation(const Animation& animation,
 
 #ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
   if(bit_depth == 16) {
+    // Encoding 16-bit AVIF animations should fail due to a libavif limitation.
+    CV_CheckEQ(animation.frames.size(), 1L, "16-bit encoding only supports a single still image, not animation.");
+
     encoder_->sampleTransformRecipe = (do_lossless)?
                                       AVIF_SAMPLE_TRANSFORM_BIT_DEPTH_EXTENSION_12B_4B: // lossless
                                       AVIF_SAMPLE_TRANSFORM_BIT_DEPTH_EXTENSION_12B_8B_OVERLAP_4B; // lossy
