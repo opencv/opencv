@@ -374,11 +374,16 @@ bool AvifEncoder::writeanimation(const Animation& animation,
       }
 #if CV_AVIF_USE_QUALITY
       encoder_->quality = quality;
+      encoder_->qualityAlpha = quality; // Keep alpha channel quality in sync with color channels
 #else
       encoder_->minQuantizer = encoder_->maxQuantizer =
           (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
               quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
           AVIF_QUANTIZER_WORST_QUALITY;
+      encoder_->minQuantizerAlpha = encoder_->maxQuantizerAlpha =
+          (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
+              quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
+          AVIF_QUANTIZER_WORST_QUALITY; // Keep alpha channel quality in sync with color channels
 #endif
     } else if (params[i] == IMWRITE_AVIF_DEPTH) {
       bit_depth = value;
@@ -409,6 +414,9 @@ bool AvifEncoder::writeanimation(const Animation& animation,
 
 #ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
   if(bit_depth == 16) {
+    // Encoding 16-bit AVIF animations should fail due to a libavif limitation.
+    CV_CheckEQ(animation.frames.size(), 1L, "16-bit encoding only supports a single still image, not animation.");
+
     encoder_->sampleTransformRecipe = (do_lossless)?
                                       AVIF_SAMPLE_TRANSFORM_BIT_DEPTH_EXTENSION_12B_4B: // lossless
                                       AVIF_SAMPLE_TRANSFORM_BIT_DEPTH_EXTENSION_12B_8B_OVERLAP_4B; // lossy
