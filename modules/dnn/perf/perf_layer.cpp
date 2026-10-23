@@ -799,6 +799,18 @@ PERF_TEST_P_(Layer_Attention, BERT_ConstWeights) {
     test_layer({1, 128, 768}, {768, 768, 768}, 12, /*const_weights=*/true);
 }
 
+PERF_TEST_P_(Layer_Attention, LongSequence_257) {
+    test_layer({1, 257, 192}, {192, 192, 192}, 12, /*const_weights=*/true);
+}
+
+PERF_TEST_P_(Layer_Attention, LongSequence_1024) {
+    test_layer({1, 1024, 192}, {192, 192, 192}, 12, /*const_weights=*/true);
+}
+
+PERF_TEST_P_(Layer_Attention, LongSequence_4096) {
+    test_layer({1, 4096, 192}, {192, 192, 192}, 12, /*const_weights=*/true);
+}
+
 // GroupQueryAttention runs on AttentionOnnxAi; these flags are what the ONNX importer sets.
 struct Layer_GroupQueryAttention : public TestBaseWithParam<tuple<Backend, Target>> {
     void test_layer(int B, int S, int Sp, int num_heads, int kv_num_heads, int D) {

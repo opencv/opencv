@@ -218,6 +218,13 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
                  attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
                  output_buffer_shape{batch_size_ * num_heads_, seq_len_, v_head_size_};
+        if (useFlashAttention(inputs.size(), batch_size_, seq_len_, v_head_size_))
+        {
+            // FlashAttention writes directly to the output and never uses either
+            // dense workspace. Keep their slots so the RoPE table index is stable.
+            attention_prob_shape = MatShape{1};
+            output_buffer_shape = MatShape{1};
+        }
         internals.assign(1, gemm_buffer_shape);
         internals.push_back(attention_prob_shape);
         internals.push_back(output_buffer_shape);
@@ -499,13 +506,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
         }
 
-        const int num_non_blob_inputs = (int)inputs.size();
-        const bool has_mask = (!blobs.empty() && num_non_blob_inputs >= 2) ||
-                                ( blobs.empty() && num_non_blob_inputs >= 4);
-
-        if (mlasAvailable() && !has_mask &&
-            batch_size > 0 && num_heads > 0 && seq_len > 0 &&
-            qkv_head_sizes[0] > 0 && qkv_head_sizes[2] > 0)
+        if (useFlashAttention(inputs.size(), (int)batch_size, (int)seq_len, (int)qkv_head_sizes[2]))
         {
             const int B   = (int)batch_size;
             const int H   = (int)num_heads;
@@ -533,6 +534,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         // Compute Softmax(scale * MatMul(Q, K))
         auto &attention_prob = internals[1];
+        // getMemoryShapes() plans dense buffers whenever FlashAttention is not used
+        CV_CheckEQ(attention_prob.total(), (size_t)(batch_size * num_heads * seq_len * seq_len), "");
         {
             auto *output = attention_prob.ptr<float>();
 
@@ -631,6 +634,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         // output = attention_prob @ V, then transpose back to [B, S, H*D]
         auto &output_buffer = internals[2];
+        CV_CheckEQ(output_buffer.total(), (size_t)(batch_size * num_heads * seq_len * qkv_head_sizes[2]), "");
         {
             auto *output = outputs[0].ptr<float>();
             auto *output_buff = output_buffer.ptr<float>();
@@ -674,6 +678,14 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     }
 
  private:
+    bool useFlashAttention(size_t inputCount, int batch, int sequence, int valueHeadSize) const
+    {
+        const bool hasMask = (!blobs.empty() && inputCount >= 2) ||
+                             (blobs.empty() && inputCount >= 4);
+        return mlasAvailable() && !hasMask && batch > 0 && num_heads > 0 && sequence > 0 &&
+               qkv_head_sizes[0] > 0 && valueHeadSize > 0;
+    }
+
     size_t num_heads;
     std::vector<size_t> qkv_hidden_sizes; // order: {qk_hidden_size, qk_hidden_size, v_hidden_size}
     float scale;
