@@ -9,6 +9,10 @@ constructs (`#` headings, ``:::{div}`` cards, ``$$…$$`` math, fenced ```` ``` 
 
 These tests pin the migrated pages so a reversion to the old markers fails
 CI. They scan the Markdown sources directly, so no built OpenCV is required.
+
+Scope note: the scan is line-based and only flags lines that *start* with `@`
+after optional indentation, so an `@` inside a code span or inline code (for
+example a `` ``@f$...$@/ `` math snippet) is not mistaken for a directive.
 """
 from __future__ import annotations
 
@@ -41,7 +45,11 @@ CAMERA_CALIBRATION = (
 
 
 def _legacy_hits(path: pathlib.Path) -> list[tuple[int, str]]:
-    """Return (line_no, text) for every line carrying a legacy marker."""
+    """Return (line_no, text) for every line carrying a legacy marker.
+
+    A line counts only when it *starts* with `@` after indentation, so inline
+    `@` uses (math, code spans) are not flagged.
+    """
     hits = []
     for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         stripped = line.strip()
