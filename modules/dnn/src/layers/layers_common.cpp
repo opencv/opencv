@@ -458,5 +458,38 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     }
 }
 
+void copyChannelBlocks(const Mat& whole, const std::vector<Mat>& parts, bool split)
+{
+    // Nothing to copy for an empty tensor (e.g. a zero batch), and N*C1 below would be 0.
+    if (whole.total() == 0)
+        return;
+    CV_Assert(whole.isContinuous());
+    const int N = whole.size[0], C1 = whole.size[1];
+    const size_t blockBytes = whole.total() / ((size_t)N * C1) * whole.elemSize();
+    struct Piece { uchar* dst; const uchar* src; size_t len; };
+    std::vector<Piece> pieces;
+    constexpr size_t PIECE = 1 << 16;
+    int c1ofs = 0;
+    for (const Mat& part : parts) {
+        CV_Assert(part.isContinuous());
+        const int C1k = part.size[1];
+        CV_Assert(c1ofs + C1k <= C1);
+        const size_t len = C1k * blockBytes;
+        for (int n = 0; n < N; n++) {
+            uchar* w = whole.data + ((size_t)n * C1 + c1ofs) * blockBytes;
+            uchar* p = part.data + (size_t)n * len;
+            for (size_t ofs = 0; ofs < len; ofs += PIECE) {
+                const size_t sz = std::min(PIECE, len - ofs);
+                pieces.push_back(split ? Piece{p + ofs, w + ofs, sz} : Piece{w + ofs, p + ofs, sz});
+            }
+        }
+        c1ofs += C1k;
+    }
+    parallel_for_(Range(0, (int)pieces.size()), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++)
+            std::memcpy(pieces[i].dst, pieces[i].src, pieces[i].len);
+    });
+}
+
 }
 }
