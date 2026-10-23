@@ -338,18 +338,27 @@ INSTANTIATE_TEST_CASE_P(Core, CountNonZero1D,
     testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
-// 0x80 is -0.0 in E4M3FN (counts as zero) but NaN in E4M3FNUZ (counts as non-zero)
+// 0x80 is -0.0 in E4M3FN (counts as zero) but NaN in E4M3FNUZ (counts as non-zero).
+// The sizes reach the scalar tail (1), the single-vector loop (100) and the unrolled loop (1031).
 TEST(Core_CountNonZero, fp8_sign_bit)
 {
-    Mat fn(1, 100, CV_8F_E4M3FNC1, Scalar(0));
-    Mat fnuz(1, 100, CV_8F_E4M3FNUZC1, Scalar(0));
-    fn.data[50] = 0x80;
-    fnuz.data[50] = 0x80;
-
-    EXPECT_EQ(0, countNonZero(fn));
-    EXPECT_FALSE(hasNonZero(fn));
-    EXPECT_EQ(1, countNonZero(fnuz));
-    EXPECT_TRUE(hasNonZero(fnuz));
+    const uchar pattern[] = { 0x80, 0x00, 0x38 }; // -0.0 or NaN, +0.0, 1.0
+    for (int n : {1, 100, 1031})
+    {
+        for (int depth : {CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+        {
+            Mat m(1, n, CV_MAKETYPE(depth, 1));
+            int ref = 0;
+            for (int i = 0; i < n; i++)
+            {
+                const uchar b = pattern[i % 3];
+                m.data[i] = b;
+                ref += depth == CV_8F_E4M3FN ? (b & 0x7f) != 0 : b != 0;
+            }
+            EXPECT_EQ(ref, countNonZero(m)) << "depth=" << depth << " n=" << n;
+            EXPECT_EQ(ref != 0, hasNonZero(m)) << "depth=" << depth << " n=" << n;
+        }
+    }
 }
 
 }} // namespace
