@@ -552,6 +552,20 @@ struct MinMax32f
     }
 };
 
+struct MinMax16f
+{
+    typedef hfloat value_type;
+    typedef float arg_type;
+    arg_type load(const hfloat* ptr) { return (float)*ptr; }
+    void store(hfloat* ptr, arg_type val) { *ptr = hfloat(val); }
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = std::min(a, b);
+        b = std::max(b, t);
+    }
+};
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
 struct MinMaxVec8u
@@ -613,12 +627,33 @@ struct MinMaxVec32f
     }
 };
 
+struct MinMaxVec16f
+{
+    typedef hfloat value_type;
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    typedef v_float16 arg_type;
+    arg_type load(const hfloat* ptr) { return vx_load(ptr); }
+    void store(hfloat* ptr, const arg_type &val) { v_store(ptr, val); }
+#else
+    typedef v_float32 arg_type;
+    arg_type load(const hfloat* ptr) { return vx_load_expand(ptr); }
+    void store(hfloat* ptr, const arg_type &val) { v_pack_store(ptr, val); }
+#endif
+    void operator()(arg_type& a, arg_type& b) const
+    {
+        arg_type t = a;
+        a = v_min(a, b);
+        b = v_max(b, t);
+    }
+};
+
 #else
 
 typedef MinMax8u MinMaxVec8u;
 typedef MinMax16u MinMaxVec16u;
 typedef MinMax16s MinMaxVec16s;
 typedef MinMax32f MinMaxVec32f;
+typedef MinMax16f MinMaxVec16f;
 
 #endif
 
@@ -886,6 +921,8 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
             medianBlur_SortNet<MinMax16s, MinMaxVec16s>( src, dst, ksize );
         else if( src.depth() == CV_32F )
             medianBlur_SortNet<MinMax32f, MinMaxVec32f>( src, dst, ksize );
+        else if( src.depth() == CV_16F )
+            medianBlur_SortNet<MinMax16f, MinMaxVec16f>( src, dst, ksize );
         else
             CV_Error(cv::Error::StsUnsupportedFormat, "");
 
