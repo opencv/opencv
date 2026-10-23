@@ -17,6 +17,14 @@ PyObject* failmsgp(const char *fmt, ...);
 int cvDepthToNumpyType(int depth);
 int numpyTypeToCvDepth(int typenum);
 
+// bfloat16 / float8 keep their exact ml_dtypes dtype only when allowed (off by default).
+void setAllowNonConventionalDataTypes(bool allow);
+bool getAllowNonConventionalDataTypes();
+bool isNonConventionalDepth(int depth);
+// nullptr / -1 when disallowed, not registered with NumPy, or without an OpenCV counterpart.
+PyArray_Descr* nonConventionalDescrForCvDepth(int depth);
+int nonConventionalTypeToCvDepth(int typenum);
+
 //======================================================================================================================
 
 class PyAllowThreads
