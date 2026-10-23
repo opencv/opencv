@@ -494,6 +494,13 @@ Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
     return arg;
 }
 
+void Net::Impl::aliasArg(const std::string& name, Arg arg)
+{
+    CV_Assert(!name.empty() && arg.idx > 0);
+    CV_Assert(argnames.find(name) == argnames.end());
+    argnames.insert(std::make_pair(name, (int64_t)arg.idx));
+}
+
 Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName)
 {
     CV_Assert(allowEmptyName || !name.empty());
