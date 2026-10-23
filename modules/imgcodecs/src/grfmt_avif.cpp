@@ -374,11 +374,16 @@ bool AvifEncoder::writeanimation(const Animation& animation,
       }
 #if CV_AVIF_USE_QUALITY
       encoder_->quality = quality;
+      encoder_->qualityAlpha = quality; // Keep alpha channel quality in sync with color channels
 #else
       encoder_->minQuantizer = encoder_->maxQuantizer =
           (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
               quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
           AVIF_QUANTIZER_WORST_QUALITY;
+      encoder_->minQuantizerAlpha = encoder_->maxQuantizerAlpha =
+          (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
+              quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
+          AVIF_QUANTIZER_WORST_QUALITY; // Keep alpha channel quality in sync with color channels
 #endif
     } else if (params[i] == IMWRITE_AVIF_DEPTH) {
       bit_depth = value;
