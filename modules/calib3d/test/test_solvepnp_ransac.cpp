@@ -2430,4 +2430,57 @@ TEST(Calib3d_SolvePnP, regression_30402)
     EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1e-6);
 }
 
+static std::vector<Point3d> pnpTestCube(double scale, const Point3d& offset)
+{
+    const double c[12][3] = {
+        {-.5, -.5, -.5}, {.5, -.5, -.5}, {.5, .5, -.5}, {-.5, .5, -.5},
+        {-.5, -.5,  .5}, {.5, -.5,  .5}, {.5, .5,  .5}, {-.5, .5,  .5},
+        {.1, .2, -.3}, {-.2, .1, .25}, {.3, -.15, .05}, {-.35, -.25, -.1}
+    };
+    std::vector<Point3d> pts;
+    for (int i = 0; i < 12; i++)
+        pts.push_back(Point3d(c[i][0]*scale, c[i][1]*scale, c[i][2]*scale) + offset);
+    return pts;
+}
+
+static double rotationDistanceInf(InputArray r1, InputArray r2)
+{
+    Mat R1, R2;
+    Rodrigues(r1, R1);
+    Rodrigues(r2, R2);
+    return cvtest::norm(R1, R2, NORM_INF);
+}
+
+// Finding F: ITERATIVE refinement stopped immediately when the object origin is far away,
+// because the LM stopping test is relative to ||(rvec, tvec)||.
+TEST(Calib3d_SolvePnP, iterative_guess_far_origin)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    const Point3d off(3e5, 9e5, 8e5);
+    const std::vector<Point3d> obj = pnpTestCube(20.0, off);
+    const Vec3d rGT(1.2, -0.4, 0.3);
+    Matx33d R;
+    Rodrigues(rGT, R);
+    const Vec3d tGT = Vec3d(0.5, -0.3, 80.0) - R * Vec3d(off);
+    std::vector<Point2d> img, proj;
+    projectPoints(obj, rGT, tGT, K, noArray(), img);
+
+    // a guess 0.2 degree off that keeps the object centroid in place (image-consistent)
+    Matx33d dR;
+    Rodrigues(Vec3d(0.0035, 0, 0), dR);
+    const Matx33d Rg = R * dR;
+    Point3d c(0, 0, 0);
+    for (const Point3d& p : obj) c += p;
+    c *= 1.0 / obj.size();
+    Vec3d rg;
+    Rodrigues(Rg, rg);
+    const Vec3d tg = tGT + R * Vec3d(c) - Rg * Vec3d(c) + Vec3d(0.05, 0.05, 0.05);
+    Mat rvec = Mat(rg).clone(), tvec = Mat(tg).clone();
+
+    ASSERT_TRUE(solvePnP(obj, img, K, noArray(), rvec, tvec, true, SOLVEPNP_ITERATIVE));
+    EXPECT_LE(rotationDistanceInf(rvec, rGT), 1e-6);
+    projectPoints(obj, rvec, tvec, K, noArray(), proj);
+    EXPECT_LE(cvtest::norm(proj, img, NORM_L2) / std::sqrt((double)proj.size()), 1e-3);
+}
+
 }} // namespace
