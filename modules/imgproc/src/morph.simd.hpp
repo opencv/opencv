@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -93,7 +94,7 @@ template<> inline uchar MaxOp<uchar>::operator ()(const uchar a, const uchar b) 
 struct MorphRowNoVec
 {
     MorphRowNoVec(int, int) {}
-    int operator()(const uchar*, uchar*, int, int) const { return 0; }
+    int operator()(const uchar*, uchar*, int, int, bool /*processInnerRegion*/) const { return 0; }
 };
 
 struct MorphColumnNoVec
@@ -114,7 +115,7 @@ template<class VecUpdate> struct MorphRowVec
     typedef typename VecUpdate::vtype vtype;
     typedef typename VTraits<vtype>::lane_type stype;
     MorphRowVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
-    int operator()(const uchar* src, uchar* dst, int width, int cn) const
+    int operator()(const uchar* src, uchar* dst, int width, int cn, bool /*processInnerRegion*/) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -498,7 +499,7 @@ template<class Op, class VecOp> struct MorphRowFilter : public BaseRowFilter
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
+    void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -514,7 +515,7 @@ template<class Op, class VecOp> struct MorphRowFilter : public BaseRowFilter
             return;
         }
 
-        int i0 = vecOp(src, dst, width, cn);
+        int i0 = vecOp(src, dst, width, cn, processInnerRegion);
         width *= cn;
 
         for( k = 0; k < cn; k++, S++, D++ )
@@ -556,7 +557,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
+    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width, int, bool) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
