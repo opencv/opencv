@@ -1955,7 +1955,8 @@ M-element vector - the corresponding element of the output array dst .
 The function may be used for geometrical transformation of
 N -dimensional points, arbitrary linear color space transformation (such
 as various kinds of RGB to YUV transforms), shuffling the image
-channels, and so forth.
+channels, and so forth. CV_16F input is supported with single-precision arithmetic and
+half-precision output.
 @param src input array that must have as many channels (1 to 4) as
 m.cols or m.cols-1.
 @param dst output array of the same size and depth as src; it has as

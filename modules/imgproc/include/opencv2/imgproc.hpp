@@ -3574,7 +3574,7 @@ sixth bytes would then be the second pixel (Blue, then Green, then Red), and so 
 The conventional ranges for R, G, and B channel values are:
 -   0 to 255 for CV_8U images
 -   0 to 65535 for CV_16U images
--   0 to 1 for CV_32F images
+-   0 to 1 for CV_16F and CV_32F images
 
 In case of linear transformations, the range does not matter. But in case of a non-linear
 transformation, an input RGB image should be normalized to the proper value range to get the correct
@@ -3592,10 +3592,14 @@ that need the full range of colors or that convert an image before an operation 
 back.
 
 If conversion adds the alpha channel, its value will set to the maximum of corresponding channel
-range: 255 for CV_8U, 65535 for CV_16U, 1 for CV_32F.
+range: 255 for CV_8U, 65535 for CV_16U, 1 for CV_16F and CV_32F.
 
 @param src input image: 8-bit unsigned, 16-bit unsigned ( CV_16UC... ), or single-precision
-floating-point.
+floating-point. Half-precision (CV_16F) input is supported on the CPU for RGB/BGR channel
+reordering, adding or removing alpha, RGB/BGR-to-gray, gray-to-RGB/BGR, and conversions between
+RGB/BGR and HSV/HLS, including the FULL variants. Half-precision conversions use single-precision
+arithmetic and round the output to half. HSV/HLS hue uses degrees (0 to 360), as for CV_32F;
+the other channels use the normalized floating-point ranges.
 @param dst output image of the same size and depth as src.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the

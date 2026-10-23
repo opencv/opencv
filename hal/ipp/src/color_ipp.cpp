@@ -441,6 +441,9 @@ int ipp_hal_cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * dst_da
 {
     CV_HAL_CHECK_USE_IPP();
 
+    if (depth != CV_8U && depth != CV_16U && depth != CV_32F)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     bool ippres = false;
     if(dcn == 3)
     {
