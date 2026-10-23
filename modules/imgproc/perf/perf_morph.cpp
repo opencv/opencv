@@ -39,4 +39,40 @@ PERF_TEST_P(Size_MatType, dilate, TYPICAL_MATS_MORPH)
     SANITY_CHECK(dst);
 }
 
+typedef perf::TestBaseWithParam<tuple<Size, MatType, int, bool> > MorphologyOpen;
+
+PERF_TEST_P(MorphologyOpen, open,
+    testing::Combine(
+        testing::Values(Size(512, 512), Size(1024, 1024), Size(2048, 2048)),
+        testing::Values(TYPICAL_MAT_TYPES_MORPH),
+        testing::Values(3, 5, 15),
+        testing::Bool()
+    )
+)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int ksize = get<2>(GetParam());
+    const bool inplace = get<3>(GetParam());
+    Mat input(size, type), src(size, type), dst(size, type);
+    const Mat kernel = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
+    declare.in(input, WARMUP_RNG).out(inplace ? src : dst);
+
+    // Restore the input outside the timed region: opening is not an identity.
+    while (next())
+    {
+        input.copyTo(src);
+        startTimer();
+        morphologyEx(src, inplace ? src : dst, MORPH_OPEN, kernel);
+        stopTimer();
+    }
+
+    const Mat result = inplace ? src : dst;
+    Mat eroded, expected;
+    cv::erode(input, eroded, kernel);
+    cv::dilate(eroded, expected, kernel);
+    ASSERT_EQ(0, cvtest::norm(expected, result, NORM_INF));
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

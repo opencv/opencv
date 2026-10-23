@@ -2871,6 +2871,125 @@ TEST(ImgProc_ParallelFilter, morphology_compound)
     }
 }
 
+typedef tuple<Size, int, int, int> ParallelSeparableFilterParams;
+typedef TestWithParam<ParallelSeparableFilterParams> ImgProc_ParallelSeparableFilter;
+
+TEST_P(ImgProc_ParallelSeparableFilter, borders_and_overlap)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const int layout = get<3>(GetParam());
+    // Uneven row counts exercise partial parallel ranges and non-centred anchors.
+    const Rect srcROI(3, 5, size.width, size.height);
+    const Rect dstROI = layout == 2 ? Rect(6, 9, size.width, size.height) : srcROI;
+    Mat input(size.height + 14, size.width + 11, type);
+    randu(input, 0, 256);
+    const Mat kernel = getStructuringElement(MORPH_RECT, Size(5, 5));
+    const Mat kx = (Mat_<float>(1, 5) << 0.125f, 0.25f, 0.25f, 0.25f, 0.125f);
+    const Mat ky = Mat::ones(1, 5, CV_32F) / 5.f;
+    const Point anchor(1, 3);
+    const Scalar borderValue(17, 33, 49, 65);
+    ScopedThreadsGuard threadsGuard;
+
+    for (int op = 0; op < 3; ++op)
+    {
+        Mat referenceParent = input.clone(), parallelParent = input.clone();
+        // The reference reads immutable input, including for overlapping ROIs.
+        Mat referenceSrc = input(srcROI), parallelSrc = parallelParent(srcROI);
+        Mat referenceDst, parallelDst;
+        if (layout != 0)
+        {
+            referenceDst = referenceParent(dstROI);
+            parallelDst = parallelParent(dstROI);
+        }
+        for (int pass = 0; pass < 2; ++pass)
+        {
+            threadsGuard.set(pass == 0 ? 1 : 8);
+            const Mat& src = pass == 0 ? referenceSrc : parallelSrc;
+            Mat& dst = pass == 0 ? referenceDst : parallelDst;
+            if (op == 0)
+                erode(src, dst, kernel, anchor, 1, border, borderValue);
+            else if (op == 1)
+                dilate(src, dst, kernel, anchor, 1, border, borderValue);
+            else
+                sepFilter2D(src, dst, -1, kx, ky, anchor, 0, border);
+        }
+        EXPECT_EQ(0, cv::norm(referenceDst, parallelDst, NORM_INF)) << "operation=" << op;
+        EXPECT_EQ(0, cv::norm(referenceParent, parallelParent, NORM_INF)) << "operation=" << op;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableFilter,
+    Combine(
+        Values(Size(1001, 1049), Size(127, 8301)),
+        Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16SC1,
+               CV_32FC1, CV_32FC3, CV_64FC1),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101,
+               BORDER_CONSTANT | BORDER_ISOLATED, BORDER_REPLICATE | BORDER_ISOLATED,
+               BORDER_REFLECT_101 | BORDER_ISOLATED),
+        Values(0, 1, 2) // out-of-place, in-place ROI, overlapping ROIs
+    )
+);
+
+typedef tuple<Size, tuple<int, int>, int, Point> ParallelSeparableConversionParams;
+typedef TestWithParam<ParallelSeparableConversionParams> ImgProc_ParallelSeparableConversion;
+
+TEST_P(ImgProc_ParallelSeparableConversion, depth_and_extreme_anchors)
+{
+    const Size size = get<0>(GetParam());
+    const int srcType = get<0>(get<1>(GetParam()));
+    const int dstDepth = get<1>(get<1>(GetParam()));
+    const int border = get<2>(GetParam());
+    const Point anchor = get<3>(GetParam());
+    // The narrow case uses stripes; the other sizes exercise tiled filtering
+    // with a final one-pixel column or row, including after depth conversion.
+    const Rect srcROI(1, 1, size.width, size.height);
+    const Rect dstROI(2, 3, size.width, size.height);
+    Mat parent(size.height + 2, size.width + 3, srcType);
+    randu(parent, parent.depth() >= CV_16S ? -128 : 0, 128);
+    const Mat original = parent.clone();
+    const Mat src = parent(srcROI);
+    const Mat kx = (Mat_<float>(1, 3) << 0.25f, -0.5f, 0.75f);
+    const Mat ky = (Mat_<float>(9, 1) << 0.125f, -0.25f, 0.375f, -0.125f,
+                    0.5f, 0.125f, -0.375f, 0.25f, 0.5f);
+    const int dstType = CV_MAKETYPE(dstDepth, src.channels());
+    Mat referenceParent(size.height + 6, size.width + 5, dstType, Scalar::all(91));
+    Mat parallelParent = referenceParent.clone();
+    const Mat expectedGuards = referenceParent.clone();
+    Mat reference = referenceParent(dstROI), parallel = parallelParent(dstROI);
+    ScopedThreadsGuard threadsGuard;
+
+    threadsGuard.set(1);
+    sepFilter2D(src, reference, dstDepth, kx, ky, anchor, 3.25, border);
+    threadsGuard.set(8);
+    sepFilter2D(src, parallel, dstDepth, kx, ky, anchor, 3.25, border);
+
+    const double tolerance = dstDepth == CV_32F ? 1e-4 : dstDepth == CV_64F ? 1e-10 : 0;
+    EXPECT_LE(cv::norm(reference, parallel, NORM_INF), tolerance);
+    EXPECT_LE(cv::norm(referenceParent, parallelParent, NORM_INF), tolerance);
+    // Check the guards independently: matching writes outside both ROIs must
+    // not pass just because the sequential and parallel results agree.
+    Mat guards(parallelParent.size(), CV_8U, Scalar::all(255));
+    guards(dstROI).setTo(0);
+    EXPECT_EQ(0, cv::norm(referenceParent, expectedGuards, NORM_INF, guards));
+    EXPECT_EQ(0, cv::norm(parallelParent, expectedGuards, NORM_INF, guards));
+    EXPECT_EQ(0, cv::norm(parent, original, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableConversion,
+    Combine(
+        Values(Size(63, 16651), Size(257, 4091), Size(4091, 257)),
+        Values(make_tuple(CV_8UC1, CV_32F), make_tuple(CV_8UC3, CV_16S),
+               make_tuple(CV_16SC1, CV_32F), make_tuple(CV_32FC1, CV_64F)),
+        Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+               BORDER_CONSTANT | BORDER_ISOLATED, BORDER_REPLICATE | BORDER_ISOLATED,
+               BORDER_REFLECT | BORDER_ISOLATED,
+               BORDER_REFLECT_101 | BORDER_ISOLATED),
+        Values(Point(0, 0), Point(2, 8))
+    )
+);
+
 // Regression test for ndsrvp HAL filter padding robustness:
 // Exercises extreme-but-valid anchor positions with small images and large kernels
 // to ensure HAL implementations handle boundary-dominated padding correctly.
