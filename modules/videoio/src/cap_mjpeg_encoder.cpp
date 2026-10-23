@@ -41,18 +41,27 @@
 
 #include "precomp.hpp"
 #include "opencv2/videoio/container_avi.private.hpp"
+#include "opencv2/core/hal/intrin.hpp"
+
+#include "cap_mjpeg_cvtcolor.simd.hpp"
+#include "cap_mjpeg_cvtcolor.simd_declarations.hpp"
 
 #include <vector>
 #include <deque>
 #include <iostream>
 #include <cstdlib>
 
-#if CV_NEON
-#define WITH_NEON
-#endif
-
 namespace cv
 {
+
+static inline void mjpeg_convertToYUV_dispatch(int colorspace, int channels, int input_channels,
+        short* UV_data, short* Y_data, const uchar* pix_data,
+        int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
+{
+    CV_CPU_DISPATCH(mjpeg_convertToYUV, (colorspace, channels, input_channels, UV_data, Y_data, pix_data,
+                                         y_limit, x_limit, step, u_plane_ofs, v_plane_ofs),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
 
 static const unsigned bit_mask[] =
 {
@@ -69,6 +78,45 @@ static const unsigned bit_mask[] =
 
 static const uchar huff_val_shift = 20;
 static const int huff_code_mask = (1 << huff_val_shift) - 1;
+
+// Native 64-bit ALU (LP64 / LL64). 32-bit ABIs keep a 32-bit packer so
+// put_bits does not expand to compiler-emulated uint64 shifts.
+#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(_M_ARM64) || \
+    defined(__x86_64__) || defined(__aarch64__)
+#  define MJPEG_BIT_BUF_64 1
+#else
+#  define MJPEG_BIT_BUF_64 0
+#endif
+static const int MJPEG_CAT_TAB_SIZE = 4096;
+
+// JPEG DC amplitude uses at most 11 bits, AC at most 10. Gray's *4 sample
+// scale plus a less-rounded SIMD FDCT can produce |coeff| > 2047 (category 12+).
+// The Huffman tables only define symbols 0..11, and cat_table only covers
+// [-4096, 4096] — larger values were an OOB read that showed up as
+// put_bits(len>=32) on some platforms (Mac M5).
+static inline int mjpeg_coeff_category(int val, const uchar* cat_table)
+{
+    int idx = val;
+    if( idx < -MJPEG_CAT_TAB_SIZE )
+        idx = -MJPEG_CAT_TAB_SIZE;
+    else if( idx > MJPEG_CAT_TAB_SIZE )
+        idx = MJPEG_CAT_TAB_SIZE;
+    return (int)cat_table[idx + MJPEG_CAT_TAB_SIZE];
+}
+
+static inline int mjpeg_clamp_category(int& val, int cat, int max_cat)
+{
+    if( cat > max_cat )
+    {
+        cat = max_cat;
+        const int lim = (1 << max_cat) - 1;
+        if( val > lim )
+            val = lim;
+        else if( val < -lim )
+            val = -lim;
+    }
+    return cat;
+}
 
 static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_size )
 {
@@ -98,7 +146,9 @@ static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_s
         CV_Error(cv::Error::StsOutOfRange, "too big maximum Huffman code size");
     }
 
-    memset( table, 0, size*sizeof(table[0]));
+    // Zero the whole destination table. Categories outside the JPEG DC/AC
+    // symbol set (0..11 / 0..10) must not see leftover stack bytes as bit lengths.
+    memset( table, 0, max_size*sizeof(table[0]));
 
     table[0] = min_val;
     table[1] = size - 2;
@@ -160,19 +210,41 @@ public:
 
     inline void put_bits(unsigned bits, int len)
     {
-        CV_Assert(len >=0 && len < 32);
-        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
-        {
+        CV_Assert(len >= 0 && len <= 32);
+        if( len == 0 )
+            return;
+
+#if MJPEG_BIT_BUF_64
+        if( m_pos + 2 >= data.size() )
             resize(int(2*data.size()));
+
+        bits_free -= len;
+        const uint64_t payload = (uint64_t)(bits & (len >= 32 ? 0xffffffffu : ((1u << len) - 1)));
+        if( bits_free > 0 )
+        {
+            accum |= payload << bits_free;
         }
+        else
+        {
+            // Buffer is full (or overfull): dump 64 bits as two unsigned words.
+            if( bits_free == 0 )
+                accum |= payload;
+            else
+                accum |= payload >> -bits_free;
+            data[m_pos++] = (unsigned)(accum >> 32);
+            data[m_pos++] = (unsigned)accum;
+            bits_free += 64;
+            accum = (bits_free == 64) ? 0 : (payload << bits_free);
+        }
+#else
+        if((m_pos == (data.size() - 1) && len >= bits_free) || m_pos == data.size())
+            resize(int(2*data.size()));
 
-        bits_free -= (len);
-        unsigned int tempval = (bits) & bit_mask[(len)];
-
+        bits_free -= len;
+        unsigned tempval = bits & bit_mask[len];
         if( bits_free <= 0 )
         {
             data[m_pos] |= ((unsigned)tempval >> -bits_free);
-
             bits_free += 32;
             ++m_pos;
             data[m_pos] = bits_free < 32 ? (tempval << bits_free) : 0;
@@ -181,6 +253,7 @@ public:
         {
             data[m_pos] |= (bits_free == 32) ? tempval : (tempval << bits_free);
         }
+#endif
     }
 
     inline void put_val(int val, const unsigned * table)
@@ -189,8 +262,41 @@ public:
         put_bits(code >> 8, (int)(code & 255));
     }
 
+    // Huffman symbol plus extra amplitude bits in one insert (JPEG max ~27 bits).
+    inline void put_val_bits(int val, const unsigned * table, unsigned extra, int extra_len)
+    {
+        unsigned code = table[(val) + 2];
+        int n = (int)(code & 255);
+        if( extra_len == 0 )
+            put_bits(code >> 8, n);
+        else
+            put_bits((unsigned)(((code >> 8) << extra_len) | (extra & bit_mask[extra_len])), n + extra_len);
+    }
+
     void finish()
     {
+#if MJPEG_BIT_BUF_64
+        if(bits_free == 64)
+        {
+            bits_free = 0;
+            m_data_len = m_pos;
+        }
+        else
+        {
+            if( m_pos + 2 >= data.size() )
+                resize(int(2*data.size()));
+            data[m_pos++] = (unsigned)(accum >> 32);
+            if( bits_free < 32 )
+            {
+                data[m_pos++] = (unsigned)accum;
+            }
+            else
+            {
+                bits_free -= 32;
+            }
+            m_data_len = m_pos;
+        }
+#else
         if(bits_free == 32)
         {
             bits_free = 0;
@@ -200,11 +306,17 @@ public:
         {
             m_data_len = m_pos + 1;
         }
+#endif
     }
 
     void reset()
     {
+#if MJPEG_BIT_BUF_64
+        accum = 0;
+        bits_free = 64;
+#else
         bits_free = 32;
+#endif
         m_pos = 0;
         m_data_len = 0;
     }
@@ -232,6 +344,9 @@ public:
 
 private:
     std::vector<unsigned> data;
+#if MJPEG_BIT_BUF_64
+    uint64_t accum;
+#endif
     int bits_free;
     unsigned m_pos;
     unsigned m_data_len;
@@ -563,18 +678,6 @@ static const int C0_541 = fix(0.541196100f, fixb);
 static const int C0_382 = fix(0.382683432f, fixb);
 static const int C1_306 = fix(1.306562965f, fixb);
 
-static const int y_r = fix(0.299, fixc);
-static const int y_g = fix(0.587, fixc);
-static const int y_b = fix(0.114, fixc);
-
-static const int cb_r = -fix(0.1687, fixc);
-static const int cb_g = -fix(0.3313, fixc);
-static const int cb_b = fix(0.5, fixc);
-
-static const int cr_r = fix(0.5, fixc);
-static const int cr_g = -fix(0.4187, fixc);
-static const int cr_b = -fix(0.0813, fixc);
-
 // Standard JPEG quantization tables
 static const uchar jpegTableK1_T[] =
 {
@@ -702,207 +805,133 @@ static const char jpegHeader[] =
 "\x00\x01\x00\x01" // 2 2-bytes values: x density & y density
 "\x00\x00"; // width & height of thumbnail: ( 0x0 means no thumbnail)
 
-#ifdef WITH_NEON
-// FDCT with postscaling
+#if CV_SIMD128
+// 8 parallel AAN lanes as two v_int32x4 (low/high 4 columns).
+struct Lane8
+{
+    v_int32x4 lo, hi;
+};
+
+static inline Lane8 l8_add(const Lane8& a, const Lane8& b)
+{
+    Lane8 r = { v_add(a.lo, b.lo), v_add(a.hi, b.hi) };
+    return r;
+}
+static inline Lane8 l8_sub(const Lane8& a, const Lane8& b)
+{
+    Lane8 r = { v_sub(a.lo, b.lo), v_sub(a.hi, b.hi) };
+    return r;
+}
+static inline Lane8 l8_mulk(const Lane8& a, int k)
+{
+    v_int32x4 vk(k, k, k, k);
+    Lane8 r = { v_mul(a.lo, vk), v_mul(a.hi, vk) };
+    return r;
+}
+static inline Lane8 l8_mul(const Lane8& a, const Lane8& b)
+{
+    Lane8 r = { v_mul(a.lo, b.lo), v_mul(a.hi, b.hi) };
+    return r;
+}
+static inline Lane8 l8_descale14(const Lane8& a)
+{
+    v_int32x4 rnd(1 << (fixb - 1), 1 << (fixb - 1), 1 << (fixb - 1), 1 << (fixb - 1));
+    Lane8 r = { v_shr<fixb>(v_add(a.lo, rnd)), v_shr<fixb>(v_add(a.hi, rnd)) };
+    return r;
+}
+static inline Lane8 l8_load(const short* p)
+{
+    Lane8 r;
+    v_expand(v_load(p), r.lo, r.hi);
+    return r;
+}
+static inline void l8_store_s16(short* p, const Lane8& a)
+{
+    v_store(p, v_pack(a.lo, a.hi));
+}
+
+static inline void l8_transpose8x8(const Lane8 in[8], Lane8 out[8])
+{
+    v_int32x4 a0, a1, a2, a3, b0, b1, b2, b3;
+    v_transpose4x4(in[0].lo, in[1].lo, in[2].lo, in[3].lo, a0, a1, a2, a3);
+    v_transpose4x4(in[4].lo, in[5].lo, in[6].lo, in[7].lo, b0, b1, b2, b3);
+    out[0].lo = a0; out[0].hi = b0;
+    out[1].lo = a1; out[1].hi = b1;
+    out[2].lo = a2; out[2].hi = b2;
+    out[3].lo = a3; out[3].hi = b3;
+    v_transpose4x4(in[0].hi, in[1].hi, in[2].hi, in[3].hi, a0, a1, a2, a3);
+    v_transpose4x4(in[4].hi, in[5].hi, in[6].hi, in[7].hi, b0, b1, b2, b3);
+    out[4].lo = a0; out[4].hi = b0;
+    out[5].lo = a1; out[5].hi = b1;
+    out[6].lo = a2; out[6].hi = b2;
+    out[7].lo = a3; out[7].hi = b3;
+}
+
+// 8-point AAN on 8 columns in parallel. Rounding matches the scalar DCT_DESCALE path.
+static inline void aan_fdct_1d(const Lane8 in[8], Lane8 out[8])
+{
+    Lane8 x0 = in[0], x1 = in[7], x2 = in[3], x3 = in[4];
+    Lane8 x4 = l8_add(x0, x1); x0 = l8_sub(x0, x1);
+    x1 = l8_add(x2, x3); x2 = l8_sub(x2, x3);
+    Lane8 t1 = x0, t2 = x2;
+    x2 = l8_add(x4, x1); x4 = l8_sub(x4, x1);
+
+    x0 = in[1]; x3 = in[6];
+    x1 = l8_add(x0, x3); x0 = l8_sub(x0, x3);
+    Lane8 t3 = x0;
+
+    x0 = in[2]; x3 = in[5];
+    Lane8 t4 = l8_sub(x0, x3);
+    x0 = l8_add(x0, x3);
+
+    x3 = l8_add(x0, x1); x0 = l8_sub(x0, x1);
+    x1 = l8_add(x2, x3); x2 = l8_sub(x2, x3);
+    out[0] = x1; out[4] = x2;
+
+    x0 = l8_descale14(l8_mulk(l8_sub(x0, x4), C0_707));
+    x1 = l8_add(x4, x0); x4 = l8_sub(x4, x0);
+    out[2] = x4; out[6] = x1;
+
+    x0 = t2; x1 = t4; x2 = t3; x3 = t1;
+    x0 = l8_add(x0, x1); x1 = l8_add(x1, x2); x2 = l8_add(x2, x3);
+    x1 = l8_descale14(l8_mulk(x1, C0_707));
+    x4 = l8_add(x1, x3); x3 = l8_sub(x3, x1);
+    x1 = l8_mulk(l8_sub(x0, x2), C0_382);
+    x0 = l8_descale14(l8_add(l8_mulk(x0, C0_541), x1));
+    x2 = l8_descale14(l8_add(l8_mulk(x2, C1_306), x1));
+    x1 = l8_add(x0, x3); x3 = l8_sub(x3, x0);
+    x0 = l8_add(x4, x2); x4 = l8_sub(x4, x2);
+    out[5] = x1; out[1] = x0; out[7] = x4; out[3] = x3;
+}
+
+static inline void l8_store_descaled(short* dst, const Lane8& x, const short* postscale)
+{
+    Lane8 ps = l8_load(postscale);
+    l8_store_s16(dst, l8_descale14(l8_mul(x, ps)));
+}
+
 static void aan_fdct8x8( const short *src, short *dst,
                         int step, const short *postscale )
 {
-    // Pass 1: process rows
-    int16x8_t x0 = vld1q_s16(src);    int16x8_t x1 = vld1q_s16(src + step*7);
-    int16x8_t x2 = vld1q_s16(src + step*3);    int16x8_t x3 = vld1q_s16(src + step*4);
+    Lane8 in[8], tmp[8], cols[8], out[8];
+    for (int r = 0; r < 8; r++)
+        in[r] = l8_load(src + r * step);
 
-    int16x8_t x4 = vaddq_s16(x0, x1);    x0 = vsubq_s16(x0, x1);
-    x1 = vaddq_s16(x2, x3);    x2 = vsubq_s16(x2, x3);
+    // Pass 1: 8-point AAN along columns (8 columns in parallel), then transpose.
+    aan_fdct_1d(in, tmp);
+    l8_transpose8x8(tmp, cols);
 
-    int16x8_t t1 = x0; int16x8_t t2 = x2;
-
-    x2 = vaddq_s16(x4, x1);    x4 = vsubq_s16(x4, x1);
-
-    x0 = vld1q_s16(src + step);    x3 = vld1q_s16(src + step*6);
-
-    x1 = vaddq_s16(x0, x3);    x0 = vsubq_s16(x0, x3);
-    int16x8_t t3 = x0;
-
-    x0 = vld1q_s16(src + step*2);    x3 = vld1q_s16(src + step*5);
-
-    int16x8_t t4 = vsubq_s16(x0, x3);
-
-    x0 = vaddq_s16(x0, x3);
-    x3 = vaddq_s16(x0, x1);    x0 = vsubq_s16(x0, x1);
-    x1 = vaddq_s16(x2, x3);    x2 = vsubq_s16(x2, x3);
-
-    int16x8_t res0 = x1;
-    int16x8_t res4 = x2;
-    x0 = vqdmulhq_n_s16(vsubq_s16(x0, x4), (short)(C0_707*2));
-    x1 = vaddq_s16(x4, x0);    x4 = vsubq_s16(x4, x0);
-
-    int16x8_t res2 = x4;
-    int16x8_t res6 = x1;
-
-    x0 = t2;    x1 = t4;
-    x2 = t3;    x3 = t1;
-    x0 = vaddq_s16(x0, x1);    x1 = vaddq_s16(x1, x2);    x2 = vaddq_s16(x2, x3);
-    x1 =vqdmulhq_n_s16(x1, (short)(C0_707*2));
-
-    x4 = vaddq_s16(x1, x3);    x3 = vsubq_s16(x3, x1);
-    x1 = vqdmulhq_n_s16(vsubq_s16(x0, x2), (short)(C0_382*2));
-    x0 = vaddq_s16(vqdmulhq_n_s16(x0, (short)(C0_541*2)), x1);
-    x2 = vaddq_s16(vshlq_n_s16(vqdmulhq_n_s16(x2, (short)C1_306), 1), x1);
-
-    x1 = vaddq_s16(x0, x3);    x3 = vsubq_s16(x3, x0);
-    x0 = vaddq_s16(x4, x2);    x4 = vsubq_s16(x4, x2);
-
-    int16x8_t res1 = x0;
-    int16x8_t res3 = x3;
-    int16x8_t res5 = x1;
-    int16x8_t res7 = x4;
-
-    //transpose a matrix
-    /*
-     res0 00 01 02 03 04 05 06 07
-     res1 10 11 12 13 14 15 16 17
-     res2 20 21 22 23 24 25 26 27
-     res3 30 31 32 33 34 35 36 37
-     res4 40 41 42 43 44 45 46 47
-     res5 50 51 52 53 54 55 56 57
-     res6 60 61 62 63 64 65 66 67
-     res7 70 71 72 73 74 75 76 77
-     */
-
-    //transpose elements 00-33
-    int16x4_t res0_0 = vget_low_s16(res0);
-    int16x4_t res1_0 = vget_low_s16(res1);
-    int16x4x2_t tres = vtrn_s16(res0_0, res1_0);
-    int32x4_t l0 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    res0_0 = vget_low_s16(res2);
-    res1_0 = vget_low_s16(res3);
-    tres = vtrn_s16(res0_0, res1_0);
-    int32x4_t l1 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    int32x4x2_t tres1 = vtrnq_s32(l0, l1);
-
-    // transpose elements 40-73
-    res0_0 = vget_low_s16(res4);
-    res1_0 = vget_low_s16(res5);
-    tres = vtrn_s16(res0_0, res1_0);
-    l0 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    res0_0 = vget_low_s16(res6);
-    res1_0 = vget_low_s16(res7);
-
-    tres = vtrn_s16(res0_0, res1_0);
-    l1 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    int32x4x2_t tres2 = vtrnq_s32(l0, l1);
-
-    //combine into 0-3
-    int16x8_t transp_res0 =  vreinterpretq_s16_s32(vcombine_s32(vget_low_s32(tres1.val[0]), vget_low_s32(tres2.val[0])));
-    int16x8_t transp_res1 =  vreinterpretq_s16_s32(vcombine_s32(vget_high_s32(tres1.val[0]), vget_high_s32(tres2.val[0])));
-    int16x8_t transp_res2 =  vreinterpretq_s16_s32(vcombine_s32(vget_low_s32(tres1.val[1]), vget_low_s32(tres2.val[1])));
-    int16x8_t transp_res3 =  vreinterpretq_s16_s32(vcombine_s32(vget_high_s32(tres1.val[1]), vget_high_s32(tres2.val[1])));
-
-    // transpose elements 04-37
-    res0_0 = vget_high_s16(res0);
-    res1_0 = vget_high_s16(res1);
-    tres = vtrn_s16(res0_0, res1_0);
-    l0 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    res0_0 = vget_high_s16(res2);
-    res1_0 = vget_high_s16(res3);
-
-    tres = vtrn_s16(res0_0, res1_0);
-    l1 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    tres1 = vtrnq_s32(l0, l1);
-
-    // transpose elements 44-77
-    res0_0 = vget_high_s16(res4);
-    res1_0 = vget_high_s16(res5);
-    tres = vtrn_s16(res0_0, res1_0);
-    l0 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    res0_0 = vget_high_s16(res6);
-    res1_0 = vget_high_s16(res7);
-
-    tres = vtrn_s16(res0_0, res1_0);
-    l1 = vcombine_s32(vreinterpret_s32_s16(tres.val[0]),vreinterpret_s32_s16(tres.val[1]));
-
-    tres2 = vtrnq_s32(l0, l1);
-
-    //combine into 4-7
-    int16x8_t transp_res4 =  vreinterpretq_s16_s32(vcombine_s32(vget_low_s32(tres1.val[0]), vget_low_s32(tres2.val[0])));
-    int16x8_t transp_res5 =  vreinterpretq_s16_s32(vcombine_s32(vget_high_s32(tres1.val[0]), vget_high_s32(tres2.val[0])));
-    int16x8_t transp_res6 =  vreinterpretq_s16_s32(vcombine_s32(vget_low_s32(tres1.val[1]), vget_low_s32(tres2.val[1])));
-    int16x8_t transp_res7 =  vreinterpretq_s16_s32(vcombine_s32(vget_high_s32(tres1.val[1]), vget_high_s32(tres2.val[1])));
-
-    //special hack for vqdmulhq_s16 command that is producing -1 instead of 0
-#define STORE_DESCALED(addr, reg, mul_addr)            postscale_line = vld1q_s16((mul_addr)); \
-mask = vreinterpretq_s16_u16(vcltq_s16((reg), z)); \
-reg = vabsq_s16(reg); \
-reg = vqdmulhq_s16(vqaddq_s16((reg), (reg)), postscale_line); \
-reg = vsubq_s16(veorq_s16(reg, mask), mask); \
-vst1q_s16((addr), reg);
-
-    int16x8_t z = vdupq_n_s16(0), postscale_line, mask;
-
-    // pass 2: process columns
-    x0 = transp_res0;    x1 = transp_res7;
-    x2 = transp_res3;    x3 = transp_res4;
-
-    x4 = vaddq_s16(x0, x1);   x0 = vsubq_s16(x0, x1);
-    x1 = vaddq_s16(x2, x3);    x2 = vsubq_s16(x2, x3);
-
-    t1 = x0; t2 = x2;
-
-    x2 = vaddq_s16(x4, x1);    x4 = vsubq_s16(x4, x1);
-
-    x0 = transp_res1;
-    x3 = transp_res6;
-
-    x1 = vaddq_s16(x0, x3);    x0 = vsubq_s16(x0, x3);
-
-    t3 = x0;
-
-    x0 = transp_res2; x3 = transp_res5;
-
-    t4 = vsubq_s16(x0, x3);
-
-    x0 = vaddq_s16(x0, x3);
-
-    x3 = vaddq_s16(x0, x1);    x0 = vsubq_s16(x0, x1);
-    x1 = vaddq_s16(x2, x3);    x2 = vsubq_s16(x2, x3);
-
-    STORE_DESCALED(dst, x1, postscale);
-    STORE_DESCALED(dst + 4*8, x2, postscale + 4*8);
-
-    x0 = vqdmulhq_n_s16(vsubq_s16(x0, x4), (short)(C0_707*2));
-
-    x1 = vaddq_s16(x4, x0);    x4 = vsubq_s16(x4, x0);
-
-    STORE_DESCALED(dst + 2*8, x4,postscale + 2*8);
-    STORE_DESCALED(dst + 6*8, x1,postscale + 6*8);
-
-    x0 = t2; x1 = t4;
-    x2 = t3; x3 = t1;
-
-    x0 = vaddq_s16(x0, x1);    x1 = vaddq_s16(x1, x2);    x2 = vaddq_s16(x2, x3);
-
-    x1 =vqdmulhq_n_s16(x1, (short)(C0_707*2));
-
-    x4 = vaddq_s16(x1, x3);    x3 = vsubq_s16(x3, x1);
-
-    x1 = vqdmulhq_n_s16(vsubq_s16(x0, x2), (short)(C0_382*2));
-    x0 = vaddq_s16(vqdmulhq_n_s16(x0, (short)(C0_541*2)), x1);
-    x2 = vaddq_s16(vshlq_n_s16(vqdmulhq_n_s16(x2, (short)C1_306), 1), x1);
-
-    x1 = vaddq_s16(x0, x3);    x3 = vsubq_s16(x3, x0);
-    x0 = vaddq_s16(x4, x2);    x4 = vsubq_s16(x4, x2);
-
-    STORE_DESCALED(dst + 5*8, x1,postscale + 5*8);
-    STORE_DESCALED(dst + 1*8, x0,postscale + 1*8);
-    STORE_DESCALED(dst + 7*8, x4,postscale + 7*8);
-    STORE_DESCALED(dst + 3*8, x3,postscale + 3*8);
+    // Pass 2: 8-point AAN along the transposed rows + quantization postscale.
+    aan_fdct_1d(cols, out);
+    l8_store_descaled(dst,      out[0], postscale);
+    l8_store_descaled(dst + 8,  out[1], postscale + 8);
+    l8_store_descaled(dst + 16, out[2], postscale + 16);
+    l8_store_descaled(dst + 24, out[3], postscale + 24);
+    l8_store_descaled(dst + 32, out[4], postscale + 32);
+    l8_store_descaled(dst + 40, out[5], postscale + 40);
+    l8_store_descaled(dst + 48, out[6], postscale + 48);
+    l8_store_descaled(dst + 56, out[7], postscale + 56);
+    v_cleanup();
 }
 
 #else
@@ -1016,130 +1045,8 @@ static void aan_fdct8x8( const short *src, short *dst,
 
 inline void convertToYUV(int colorspace, int channels, int input_channels, short* UV_data, short* Y_data, const uchar* pix_data, int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
 {
-    int i, j;
-    const int UV_step = 16;
-    int  x_scale = channels > 1 ? 2 : 1, y_scale = x_scale;
-    int  Y_step = x_scale*8;
-
-    if( channels > 1 )
-    {
-        if( colorspace == COLORSPACE_YUV444P && y_limit == 16 && x_limit == 16 )
-        {
-            for( i = 0; i < y_limit; i += 2, pix_data += step*2, Y_data += Y_step*2, UV_data += UV_step )
-            {
-#ifdef WITH_NEON
-                {
-                    uint16x8_t masklo = vdupq_n_u16(255);
-                    uint16x8_t lane = vld1q_u16((unsigned short*)(pix_data+v_plane_ofs));
-                    uint16x8_t t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                    lane = vld1q_u16((unsigned short*)(pix_data + v_plane_ofs + step));
-                    uint16x8_t t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                    t1 = vaddq_u16(t1, t2);
-                    vst1q_s16(UV_data, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
-
-                    lane = vld1q_u16((unsigned short*)(pix_data+u_plane_ofs));
-                    t1 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                    lane = vld1q_u16((unsigned short*)(pix_data + u_plane_ofs + step));
-                    t2 = vaddq_u16(vshrq_n_u16(lane, 8), vandq_u16(lane, masklo));
-                    t1 = vaddq_u16(t1, t2);
-                    vst1q_s16(UV_data + 8, vsubq_s16(vreinterpretq_s16_u16(t1), vdupq_n_s16(128*4)));
-                }
-
-                {
-                    int16x8_t lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data)));
-                    int16x8_t delta = vdupq_n_s16(128);
-                    lane = vsubq_s16(lane, delta);
-                    vst1q_s16(Y_data, lane);
-
-                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+8)));
-                    lane = vsubq_s16(lane, delta);
-                    vst1q_s16(Y_data + 8, lane);
-
-                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data+step)));
-                    lane = vsubq_s16(lane, delta);
-                    vst1q_s16(Y_data+Y_step, lane);
-
-                    lane = vreinterpretq_s16_u16(vmovl_u8(vld1_u8(pix_data + step + 8)));
-                    lane = vsubq_s16(lane, delta);
-                    vst1q_s16(Y_data+Y_step + 8, lane);
-                }
-#else
-                for( j = 0; j < x_limit; j += 2, pix_data += 2 )
-                {
-                    Y_data[j] = pix_data[0] - 128;
-                    Y_data[j+1] = pix_data[1] - 128;
-                    Y_data[j+Y_step] = pix_data[step] - 128;
-                    Y_data[j+Y_step+1] = pix_data[step+1] - 128;
-
-                    UV_data[j>>1] = pix_data[v_plane_ofs] + pix_data[v_plane_ofs+1] +
-                        pix_data[v_plane_ofs+step] + pix_data[v_plane_ofs+step+1] - 128*4;
-                    UV_data[(j>>1)+8] = pix_data[u_plane_ofs] + pix_data[u_plane_ofs+1] +
-                        pix_data[u_plane_ofs+step] + pix_data[u_plane_ofs+step+1] - 128*4;
-
-                }
-
-                pix_data -= x_limit*input_channels;
-#endif
-            }
-        }
-        else
-        {
-            for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-            {
-                for( j = 0; j < x_limit; j++, pix_data += input_channels )
-                {
-                    int Y, U, V;
-
-                    if( colorspace == COLORSPACE_BGR )
-                    {
-                        int r = pix_data[2];
-                        int g = pix_data[1];
-                        int b = pix_data[0];
-
-                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                    }
-                    else if( colorspace == COLORSPACE_RGBA )
-                    {
-                        int r = pix_data[0];
-                        int g = pix_data[1];
-                        int b = pix_data[2];
-
-                        Y = DCT_DESCALE( r*y_r + g*y_g + b*y_b, fixc) - 128;
-                        U = DCT_DESCALE( r*cb_r + g*cb_g + b*cb_b, fixc );
-                        V = DCT_DESCALE( r*cr_r + g*cr_g + b*cr_b, fixc );
-                    }
-                    else
-                    {
-                        Y = pix_data[0] - 128;
-                        U = pix_data[v_plane_ofs] - 128;
-                        V = pix_data[u_plane_ofs] - 128;
-                    }
-
-                    int j2 = j >> (x_scale - 1);
-                    Y_data[j] = (short)Y;
-                    UV_data[j2] = (short)(UV_data[j2] + U);
-                    UV_data[j2 + 8] = (short)(UV_data[j2 + 8] + V);
-                }
-
-                pix_data -= x_limit*input_channels;
-                if( ((i+1) & (y_scale - 1)) == 0 )
-                {
-                    UV_data += UV_step;
-                }
-            }
-        }
-
-    }
-    else
-    {
-        for( i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step )
-        {
-            for( j = 0; j < x_limit; j++ )
-                Y_data[j] = (short)(pix_data[j]*4 - 128*4);
-        }
-    }
+    mjpeg_convertToYUV_dispatch(colorspace, channels, input_channels, UV_data, Y_data, pix_data,
+                                y_limit, x_limit, step, u_plane_ofs, v_plane_ofs);
 }
 
 class MjpegEncoder : public ParallelLoopBody
@@ -1202,8 +1109,6 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        const int CAT_TAB_SIZE = 4096;
-
         int x, y;
         int i, j;
 
@@ -1305,11 +1210,9 @@ public:
                         dc_pred[j] = buffer[0];
 
                         {
-                            int cat = cat_table[val + CAT_TAB_SIZE];
-
-                            //CV_Assert( cat <= 11 );
-                            output_buffer.put_val(cat, huff_dc_tab[is_chroma] );
-                            output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
+                            int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 11);
+                            output_buffer.put_val_bits(cat, huff_dc_tab[is_chroma],
+                                                       (unsigned)(val - (val < 0 ? 1 : 0)), cat);
                         }
 
                         for( j = 1; j < 64; j++ )
@@ -1329,10 +1232,9 @@ public:
                                 }
 
                                 {
-                                    int cat = cat_table[val + CAT_TAB_SIZE];
-                                    //CV_Assert( cat <= 10 );
-                                    output_buffer.put_val( cat + run*16, htable );
-                                    output_buffer.put_bits( val - (val < 0 ? 1 : 0), cat );
+                                    int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 10);
+                                    output_buffer.put_val_bits(cat + run*16, htable,
+                                                               (unsigned)(val - (val < 0 ? 1 : 0)), cat);
                                 }
 
                                 run = 0;
@@ -1382,15 +1284,14 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 {
     //double total_cvt = 0, total_dct = 0;
     static bool init_cat_table = false;
-    const int CAT_TAB_SIZE = 4096;
-    static uchar cat_table[CAT_TAB_SIZE*2+1];
+    static uchar cat_table[MJPEG_CAT_TAB_SIZE*2+1];
     if( !init_cat_table )
     {
-        for( int i = -CAT_TAB_SIZE; i <= CAT_TAB_SIZE; i++ )
+        for( int i = -MJPEG_CAT_TAB_SIZE; i <= MJPEG_CAT_TAB_SIZE; i++ )
         {
             Cv32suf a;
             a.f = (float)i;
-            cat_table[i+CAT_TAB_SIZE] = ((a.i >> 23) & 255) - (126 & (i ? -1 : 0));
+            cat_table[i+MJPEG_CAT_TAB_SIZE] = ((a.i >> 23) & 255) - (126 & (i ? -1 : 0));
         }
         init_cat_table = true;
     }
