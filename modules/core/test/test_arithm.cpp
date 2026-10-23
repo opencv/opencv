@@ -4907,20 +4907,21 @@ TEST(Core_Arithm, mul_8u_8s_uses_fp32_intermediate)
 
 TEST(Core_Arithm, div_8u_8s_uses_fp32_intermediate)
 {
-    // CV_8U: float32: (21 * (1/7.f)) / 6 = 0.50000006f -> 1; float16: 0
+    const double scale = 6.0 / 19.0;
+    // CV_8U
     {
-        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(21));
-        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(6));
+        cv::Mat a(1, 128, CV_8UC1, cv::Scalar(103));
+        cv::Mat b(1, 128, CV_8UC1, cv::Scalar(65));
         cv::Mat dst;
-        cv::divide(a, b, dst, 1.0 / 7.0);
+        cv::divide(a, b, dst, scale);
         EXPECT_EQ(0, cv::countNonZero(dst != 1));
     }
-    // CV_8S: float32: (-105 * (1/7.f)) / -30 = 0.50000006f -> 1; float16: 0
+    // CV_8S
     {
-        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-105));
-        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-30));
+        cv::Mat a(1, 128, CV_8SC1, cv::Scalar(-103));
+        cv::Mat b(1, 128, CV_8SC1, cv::Scalar(-65));
         cv::Mat dst;
-        cv::divide(a, b, dst, 1.0 / 7.0);
+        cv::divide(a, b, dst, scale);
         EXPECT_EQ(0, cv::countNonZero(dst != 1));
     }
 }
