@@ -2029,27 +2029,13 @@ public:
                 for( y1 = 0; y1 < bh; y1++ )
                 {
                     short* xy = XY + y1*bw*2;
+                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
+                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
 
                     if( interpolation == INTER_NEAREST )
-                    {
-                        float fM[6];
-                        for( int i = 0; i < 6; i++ ) fM[i] = static_cast<float>(M[i]);
-                        float M_x = static_cast<float>(y + y1) * fM[1] + fM[2];
-                        float M_y = static_cast<float>(y + y1) * fM[4] + fM[5];
-                        for( int dx = 0; dx < bw; dx++ )
-                        {
-                            float sx = std::fma(static_cast<float>(x + dx), fM[0], M_x);
-                            float sy = std::fma(static_cast<float>(x + dx), fM[3], M_y);
-                            xy[dx * 2] = saturate_cast<short>(cvRound(sx));
-                            xy[dx * 2 + 1] = saturate_cast<short>(cvRound(sy));
-                        }
-                    }
+                        hal::warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);
                     else
-                    {
-                        int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
-                        int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
                         hal::warpAffineBlockline(adelta + x, bdelta + x, xy, A + y1*bw, X0, Y0, bw);
-                    }
                 }
 
                 if( interpolation == INTER_NEAREST )
