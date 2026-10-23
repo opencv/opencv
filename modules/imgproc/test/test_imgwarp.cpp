@@ -1687,7 +1687,7 @@ TEST_P(Imgproc_ConvertMapsEmptyOutput, nearest_neighbor)
         {
             mapX.at<float>(y, x) = x - 17 + 0.25f;
             mapY.at<float>(y, x) = y - 1 + 0.125f;
-            expected.at<Vec2s>(y, x) = Vec2s(x - 17, y - 1);
+            expected.at<Vec2s>(y, x) = Vec2s(static_cast<short>(x - 17), static_cast<short>(y - 1));
         }
     }
 
@@ -1719,7 +1719,7 @@ TEST_P(Imgproc_ConvertMapsEmptyOutput, interleaved_float)
     {
         for (int x = 0; x < roi.width; ++x)
         {
-            map1.at<Vec2s>(y, x) = Vec2s(x - 17, y - 1);
+            map1.at<Vec2s>(y, x) = Vec2s(static_cast<short>(x - 17), static_cast<short>(y - 1));
             map2.at<ushort>(y, x) = 4 * INTER_TAB_SIZE + 8;
             expected.at<Vec2f>(y, x) = Vec2f(x - 17 + 0.25f, y - 1 + 0.125f);
         }
