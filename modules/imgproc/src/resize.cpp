@@ -3875,7 +3875,7 @@ void resize(int src_type,
         // For mixed scaling, use area weights on the shrinking axis and the
         // fallback's two-tap weights on the enlarging axis.
         if( interpolation == INTER_AREA && cn <= 4 &&
-            (scale_x >= 1 || scale_y >= 1) )
+            (scale_x > 1 || scale_y > 1) )
         {
             ResizeAreaFunc func = area_tab[depth];
             CV_Assert( func != 0 );
