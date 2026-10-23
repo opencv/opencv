@@ -2945,6 +2945,39 @@ TEST(Core_QR_Solver, accuracy64f)
     ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
+// Non-symmetric and above the HAL thresholds (LU 100, QR 30), unlike every other solve test.
+TEST(Core_SolveLinearSystem, large_nonsymmetric)
+{
+    const int n = 120;
+    RNG& rng = theRNG();
+
+    for( int depth = CV_32F; depth <= CV_64F; depth++ )
+    {
+        const double eps = depth == CV_32F ? 1e-4 : 1e-10;
+
+        Mat a(n, n, depth), x0(n, 1, depth);
+        rng.fill(a, RNG::UNIFORM, -1, 1);
+        rng.fill(x0, RNG::UNIFORM, -1, 1);
+        a += Mat::eye(n, n, depth)*n;
+
+        Mat b = a*x0;
+
+        int methods[] = { DECOMP_LU, DECOMP_QR };
+        for( size_t i = 0; i < sizeof(methods)/sizeof(methods[0]); i++ )
+        {
+            Mat x;
+            ASSERT_TRUE(solve(a, b, x, methods[i])) << "depth " << depth << " method " << methods[i];
+            EXPECT_LE(cvtest::norm(Mat(a*x), b, NORM_INF | NORM_RELATIVE), eps)
+                << "depth " << depth << " method " << methods[i];
+        }
+
+        Mat inv;
+        invert(a, inv, DECOMP_LU);
+        EXPECT_LE(cvtest::norm(Mat(a*inv), Mat(Mat::eye(n, n, depth)), NORM_INF), eps)
+            << "depth " << depth;
+    }
+}
+
 TEST(Core_Solve, regression_11888)
 {
     cv::Matx<float, 3, 2> A(
