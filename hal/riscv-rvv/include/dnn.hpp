@@ -14,8 +14,7 @@ namespace cv { namespace rvv_hal { namespace dnn {
 // input/output spatial dims in a fixed Z,Y,X frame (unused leading dims = 1); strides[3]; pads[6]
 // (begin[0..2]+end[3..5]); inner[6] = the padding-free interior bounds; coordtab[ksize*3]
 // = per-tap (dz,dy,dx); ofstab[ksize] = per-tap flat input offset for the interior.
-// Each hook computes only the block-plane range [task_start, task_end) (N*C1 planes);
-// OpenCV owns the parallel_for_ and never expects the HAL to spawn threads.
+// Each hook computes only the block-plane range [task_start, task_end) (N*C1 planes).
 
 /* ############ maxpool3d32f ############ */
 

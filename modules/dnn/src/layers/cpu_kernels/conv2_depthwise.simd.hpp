@@ -44,11 +44,10 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     // present we still run the HAL for the heavy conv and apply the (elementwise) activation
     // over this range afterwards -- matching the built-in fast-epilogue-then-activation
     // order below. On NOT_IMPLEMENTED fall through to the built-in path.
-    auto callHal = [&](int nc_start, int nc_end) -> bool
+    int sd = cs.nspatialdims;
+    int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
+    int outsize[3] = { sd > 2 ? cs.outshape[sd-1] : 1, sd > 1 ? cs.outshape[sd] : 1, cs.outshape[sd+1] };
     {
-        int sd = cs.nspatialdims;
-        int insize[3]  = { sd > 2 ? cs.inpshape[sd-1] : 1, sd > 1 ? cs.inpshape[sd] : 1, cs.inpshape[sd+1] };
-        int outsize[3] = { sd > 2 ? cs.outshape[sd-1] : 1, sd > 1 ? cs.outshape[sd] : 1, cs.outshape[sd+1] };
         float maxval = FLT_MAX, default_alpha = 0.f;
         const float* prelu_slope = nullptr;
         switch (cs.fastActivation) {
@@ -65,37 +64,33 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
                  insize, outsize, cs.strides, cs.pads, cs.inner,
                  cs.coordtab.data(), cs.ofstab.data(), (int)cs.ofstab.size(),
                  maxval, default_alpha, prelu_slope,
-                 nc_start, nc_end);
+                 0, NC1);
         if (hal_res == CV_HAL_ERROR_OK) {
             if (cs.activation) {
                 // The HAL wrote conv + scale/bias/residual with an identity fast-epilogue;
                 // apply the generic activation in place over this range's output planes.
                 int planesz = outsize[0]*outsize[1]*outsize[2]*cs.inpshape.back();
                 const float* activParams = cs.activParams.data();
-                float* outp = (float*)out__ + nc_start*planesz;
-                for (int nc1 = nc_start; nc1 < nc_end; nc1++, outp += planesz)
-                    cs.activation(outp, outp, planesz, activParams);
+                parallel_for_(Range(0, NC1), [&](const Range& r) {
+                    float* outp = (float*)out__ + (size_t)r.start*planesz;
+                    for (int nc1 = r.start; nc1 < r.end; nc1++, outp += planesz)
+                        cs.activation(outp, outp, planesz, activParams);
+                });
             }
-            return true;
+            return;
         }
         else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
             CV_Error_(cv::Error::StsInternal,
                 ("HAL implementation dnn_depthwise_conv32f ==> cv_hal_dnn_depthwise_conv32f returned %d (0x%08x)", hal_res, hal_res));
-        return false;
-    };
+    }
 
-    const bool useHal = callHal(0, 0);
-    const int sd = cs.nspatialdims;
-    const int nrows = (sd > 2 ? cs.outshape[sd-1] : 1)*(sd > 1 ? cs.outshape[sd] : 1);
-    const double row_macs = (double)cs.outshape[sd+1]*cs.outshape.back()*cs.ofstab.size();
-    const int nchunks = useHal ? 1 : computeSpatChunks(NC1, nrows, row_macs, 1);
+    const int nrows = outsize[0]*outsize[1];
+    const double row_macs = (double)outsize[2]*cs.outshape.back()*cs.ofstab.size();
+    const int nchunks = computeSpatChunks(NC1, nrows, row_macs, 1);
     const int ntasks = NC1*nchunks;
 
     parallel_for_(Range(0, ntasks), [&](const Range& range)
     {
-        if (useHal && callHal(range.start, range.end))
-            return;
-
         constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
         constexpr int C0 = 8;
 
@@ -426,7 +421,7 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
             if (activation)
                 activation(outrows, outrows, (r1 - r0)*W*C0, activParams);
         }
-    }, useHal ? -1. : convStripes(ntasks, NC1*nrows*row_macs));
+    }, convStripes(ntasks, NC1*nrows*row_macs));
 }
 
 ConvFunc getDepthwiseConvFunc_(int depth)
