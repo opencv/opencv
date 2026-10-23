@@ -404,8 +404,22 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         scale *= 255.0;
     scale = 1.0 / scale;
 
+    UMat gradientSrc = _src.getUMat();
+    const Size size = gradientSrc.size();
+    Point offset;
+    if (gradientSrc.isSubmatrix() && block_size > 1)
+    {
+        Size wholeSize;
+        Point srcOffset, gradientOffset;
+        gradientSrc.locateROI(wholeSize, srcOffset);
+        const int radius = block_size / 2;
+        gradientSrc.adjustROI(radius, radius, radius, radius);
+        gradientSrc.locateROI(wholeSize, gradientOffset);
+        offset = srcOffset - gradientOffset;
+    }
+
     UMat Dx, Dy;
-    if (!extractCovData(_src, Dx, Dy, depth, (float)scale, aperture_size, borderType))
+    if (!extractCovData(gradientSrc, Dx, Dy, depth, (float)scale, aperture_size, borderType))
         return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
@@ -416,7 +430,11 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         return false;
 
     _dst.createSameSize(_src, CV_32FC1);
-    UMat dst = _dst.getUMat();
+    UMat dst;
+    if (gradientSrc.size() == size)
+        dst = _dst.getUMat();
+    else
+        dst.create(gradientSrc.size(), CV_32FC1);
 
     cornelKernel.args(ocl::KernelArg::ReadOnly(Dx), ocl::KernelArg::ReadOnly(Dy),
                       ocl::KernelArg::WriteOnly(dst), (float)k);
@@ -430,7 +448,11 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
                          (((Dx.rows + rows_per_thread - 1) / rows_per_thread) / blockSizeY + 1) * blockSizeY;
 
     size_t globalsize[2] = { globalSizeX, globalSizeY }, localsize[2] = { blockSizeX, blockSizeY };
-    return cornelKernel.run(2, globalsize, localsize, false);
+    if (!cornelKernel.run(2, globalsize, localsize, false))
+        return false;
+    if (gradientSrc.size() != size)
+        dst(Rect(offset, size)).copyTo(_dst);
+    return true;
 }
 
 static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType, int depth )

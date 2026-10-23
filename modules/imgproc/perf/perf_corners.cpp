@@ -116,4 +116,29 @@ PERF_TEST_P(CornerROIPerf, cornerHarrisROI,
     SANITY_CHECK_NOTHING();
 }
 
+typedef tuple<Size, int, BorderType> CornerWholeImagePerfParams;
+typedef perf::TestBaseWithParam<CornerWholeImagePerfParams> CornerWholeImagePerf;
+
+PERF_TEST_P(CornerWholeImagePerf, cornerHarrisEvenBlock,
+           testing::Combine(testing::Values(szVGA, sz1080p), testing::Values(2, 6),
+                            testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)))
+{
+    const Size size = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const int borderType = get<2>(GetParam());
+    Mat src(size, CV_8UC1), dst;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+
+    TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
+
+    const bool useIPP = cv::ipp::useIPP();
+    cv::ipp::setUseIPP(false);
+    Mat expected;
+    cornerHarris(src, expected, blockSize, 3, 0.04, borderType);
+    cv::ipp::setUseIPP(useIPP);
+    ASSERT_LE(cvtest::norm(expected, dst, NORM_INF),
+              2e-5 * std::max(1.0, cvtest::norm(expected, NORM_INF)));
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
