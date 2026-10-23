@@ -41,6 +41,7 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
+#include <cmath>
 
 #define dprintf(x)
 #define print_matrix(x)
@@ -369,6 +370,24 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
 
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
+
+    // Snap values that are within floating-point noise of zero back to exactly
+    // zero. The simplex tableau is updated by repeated multiply/subtract pivots
+    // in naive double arithmetic, so entries that are mathematically zero (for
+    // example a constraint coefficient that has been eliminated) drift to small
+    // non-zero magnitudes (~1e-13). Left uncorrected this drift makes the
+    // feasibility check reject an otherwise valid solution (see issue #12343).
+    const double pivot_eps = 1e-12;
+    for(int i=0;i<b.rows;i++){
+        for(int j=0;j<b.cols;j++){
+            if(std::abs(b(i,j)) < pivot_eps)
+                b(i,j) = 0;
+        }
+    }
+    for(int i=0;i<c.cols;i++){
+        if(std::abs(c(0,i)) < pivot_eps)
+            c(0,i) = 0;
+    }
 }
 
 static inline void swap_columns(Mat_<double>& A,int col1,int col2){

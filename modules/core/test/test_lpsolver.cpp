@@ -151,8 +151,10 @@ TEST(Core_LPSolver, issue_12337)
     EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
-// NOTE: Test parameters found experimentally to get numerically inaccurate result.
-// The test behaviour may change after algorithm tuning and may removed.
+// The parameters below exercise the near-degenerate tableau where naive double
+// arithmetic leaves entries at ~1e-13 after several pivots. Before the fix this
+// made solveLP report SOLVELP_LOST and return a z that violated a constraint;
+// after the fix the returned z satisfies every constraint.
 TEST(Core_LPSolver, issue_12343)
 {
     Mat A = cv::Mat_<double>({4, 1}, {3., 3., 3., 4.});
@@ -164,7 +166,16 @@ TEST(Core_LPSolver, issue_12343)
     });
     Mat z;
     int result = cv::solveLP(A, B, z);
-    EXPECT_EQ(SOLVELP_LOST, result);
+    // The problem is feasible and has a single optimum; the solver must not lose
+    // the solution to floating-point drift.
+    EXPECT_EQ(SOLVELP_SINGLE, result);
+    // Every constraint B(i, 0:cols-1) * z <= B(i, cols-1) must hold.
+    Mat lhs = B(cv::Rect(0, 0, B.cols - 1, B.rows)) * z;
+    Mat slack = B.col(B.cols - 1) - lhs;
+    for (int i = 0; i < slack.rows; ++i)
+    {
+        EXPECT_GE(slack.at<double>(i), -1e-9) << "constraint row " << i << " violated";
+    }
 }
 
 }} // namespace
