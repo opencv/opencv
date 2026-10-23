@@ -1886,7 +1886,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
-    if( !nninterpolate && dstm1type != CV_32FC2 )
+    if( dstm1type == CV_32FC1 || (!nninterpolate && dstm1type == CV_16SC2) )
     {
         _dstmap2.create( size, dstm1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
         dstmap2 = _dstmap2.getMat();
@@ -1939,7 +1939,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         const ushort* src2 = (const ushort*)src2f;
 
         float* dst1f = dstmap1.ptr<float>(y);
-        float* dst2f = dstmap2.ptr<float>(y);
+        float* dst2f = dstmap2.empty() ? NULL : dstmap2.ptr<float>(y);
         short* dst1 = (short*)dst1f;
         ushort* dst2 = (ushort*)dst2f;
         x = 0;
