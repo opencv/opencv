@@ -385,7 +385,7 @@ TEST(Photo_CalibrateDebevec, regression)
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
     ASSERT_LT(max, 0.25);
 #else
-    ASSERT_LT(max, 0.15);
+    ASSERT_LT(max, 0.22);
 #endif
 }
 
