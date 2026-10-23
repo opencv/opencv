@@ -211,7 +211,17 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
 { init(FIXED_TYPE + MAT + traits::Type<_Tp>::value + ACCESS_READ, &m); }
 
 inline _InputArray::_InputArray(const double& val)
-{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
+{
+    // Store the scalar by value: `val` is a reference parameter, so when the
+    // constructor is invoked with a temporary (e.g. `InputArray one(1)`), `val`
+    // binds to that temporary which is destroyed at the end of the full
+    // expression. Storing `&val` then leaves `obj` dangling, so a later
+    // `getMat()` aliases stack memory that is already out of scope
+    // (stack-use-after-scope, see issue #29470). `val_` lives as long as the
+    // `_InputArray` itself, so its address stays valid for `getMat()`.
+    val_ = val;
+    init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val_, Size(1,1));
+}
 
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(+CUDA_GPU_MAT + ACCESS_READ, &d_mat); }

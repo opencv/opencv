@@ -1505,6 +1505,25 @@ TEST(Core_InputArray, convert_from_vector_over2GB)
     EXPECT_ANY_THROW(auto work = _InputArray(buf));
 }
 
+// https://github.com/opencv/opencv/issues/29470
+// _InputArray(const double&) used to store the address of its reference
+// parameter. When constructed from a temporary scalar (e.g. InputArray one(1))
+// that parameter bound to a temporary destroyed at the end of the full
+// expression, so getMat() aliased stack memory that was already out of scope
+// (stack-use-after-scope). The fix stores the scalar by value in `val_`.
+// Reading only one byte through the resulting Mat exercises the aliased storage.
+TEST(Core_InputArray, scalar_getMat_no_dangling_temporary_29470)
+{
+    Mat mat = _InputArray(3.14).getMat();
+    ASSERT_EQ(mat.type(), CV_64F);
+    ASSERT_EQ(mat.total(), 1u);
+    // Read a single byte through the Mat header; with the old code this touched
+    // a destroyed temporary, triggering an ASan stack-use-after-scope report.
+    uint8_t test = 0;
+    memcpy(&test, mat.data, 1);
+    EXPECT_EQ((int)test, (int)(reinterpret_cast<const uint8_t*>(&mat.at<double>(0, 0))[0]));
+}
+
 TEST(Core_CopyMask, bug1918)
 {
     Mat_<unsigned char> tmpSrc(100,100);

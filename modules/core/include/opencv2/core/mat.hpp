@@ -388,6 +388,7 @@ protected:
     int flags;
     void* obj;
     Size sz;
+    double val_;
 
     void init(int _flags, const void* _obj);
     void init(int _flags, const void* _obj, Size _sz);
