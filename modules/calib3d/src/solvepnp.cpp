@@ -896,19 +896,33 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == SOLVEPNP_ITERATIVE)
     {
-        Mat rvec, tvec;
+        // Work in an object frame centred on the points. The Levenberg-Marquardt stopping test in
+        // findExtrinsicCameraParams2 is relative to ||(rvec, tvec)||, and with a far-away object
+        // origin (e.g. georeferenced coordinates) ||tvec|| is huge, so refinement stops before it
+        // moves. R X + t = R (X - c) + (t + R c).
+        Mat opoints64;
+        opoints.convertTo(opoints64, CV_64F);
+        Scalar c = mean(opoints64);
+        const Vec3d centre(c[0], c[1], c[2]);
+        Mat opointsCentred = opoints64 - c;
+
+        Mat rvec(3, 1, CV_64FC1), tvec(3, 1, CV_64FC1);
         if (useExtrinsicGuess)
         {
-            rvec = _rvec.getMat();
-            tvec = _tvec.getMat();
-        }
-        else
-        {
-            rvec.create(3, 1, CV_64FC1);
-            tvec.create(3, 1, CV_64FC1);
+            _rvec.getMat().reshape(1, 3).convertTo(rvec, CV_64F);
+            _tvec.getMat().reshape(1, 3).convertTo(tvec, CV_64F);
+            Matx33d R;
+            Rodrigues(rvec, R);
+            const Vec3d t0(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
+            Mat(Vec3d(t0 + R * centre)).copyTo(tvec);
         }
 
-        findExtrinsicCameraParams2(opoints, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
+        findExtrinsicCameraParams2(opointsCentred, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
+
+        Matx33d R;
+        Rodrigues(rvec, R);
+        const Vec3d tc(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
+        Mat(Vec3d(tc - R * centre)).copyTo(tvec);
 
         vec_rvecs.push_back(rvec);
         vec_tvecs.push_back(tvec);
