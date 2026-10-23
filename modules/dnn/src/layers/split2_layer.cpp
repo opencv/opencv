@@ -231,6 +231,9 @@ public:
 
     void runOp(const Mat& inp, std::vector<Mat>& outs, int axis_)
     {
+        // An empty input (e.g. a zero batch) has nothing to copy; the outputs already have their shapes.
+        if (inp.total() == 0)
+            return;
         if (isBlockChannelSplit(inp.size, axis_)) {
             runOpBlockAxis1(inp, outs);
             return;
