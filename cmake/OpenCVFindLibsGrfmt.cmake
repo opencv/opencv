@@ -57,6 +57,10 @@ else()
   endif()
 endif()
 
+if(TARGET ${ZLIB_LIBRARY} AND NOT TARGET ZLIB::ZLIB)
+  add_library(ZLIB::ZLIB ALIAS ${ZLIB_LIBRARY})
+endif()
+
 # --- libavif (optional) ---
 
 if(WITH_AVIF)
