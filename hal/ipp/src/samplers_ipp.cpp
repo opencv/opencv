@@ -21,6 +21,24 @@ int ipp_hal_getRectSubPix(int src_type, const uchar* src_data, size_t src_step, 
 
     int ddepth = CV_MAT_DEPTH(patch_type);
 
+    // ippiCopySubpixIntersect replicates the border incorrectly in some cases, see
+    // https://github.com/opencv/opencv/issues/30301. The window position is computed the same way as IPP does,
+    // including (int)(x + w) - w, which is not equal to cvFloor() for some inputs.
+    float fx = (float)center_x - 0.5f * (patch_width - 1);
+    float fy = (float)center_y - 0.5f * (patch_height - 1);
+    int sx = (int)(fx + patch_width) - patch_width;
+    int sy = (int)(fy + patch_height) - patch_height;
+
+    // the window crosses the top edge and reaches the last column: the top rows get src(0, cols-2)
+    // instead of src(0, cols-1), and for 1-column images IPP reads outside of the image
+    if( sy < 0 && sx >= src_width - patch_width )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+
+    // 8u->8u, the window lies totally to the left of the image: the fixed-point weights overflow
+    if( src_type == CV_8UC1 && ddepth == CV_8U && fx + patch_width < 0 )
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
                                                            IppiSize src_size, void* dst,
                                                            int dst_step, IppiSize win_size,
