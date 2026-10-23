@@ -3603,9 +3603,9 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
 }
 
 TEST_P(Test_ONNX_layers, Attention) {
-    // CUDA_FP16 keeps Q/K/V, the scores and the softmax output in half; same bound as ViT_B_32
+    // CUDA_FP16 keeps Q/K/V, the scores and the softmax output in half; ~4.5 half ULPs at |ref| ~18
     if (target == DNN_TARGET_CUDA_FP16)
-        testONNXModels("attention", npy, 0.01, 0.06);
+        testONNXModels("attention", npy, 0.01, 0.07);
     else
         testONNXModels("attention");
 }
