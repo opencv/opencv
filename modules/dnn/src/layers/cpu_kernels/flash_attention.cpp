@@ -7,63 +7,20 @@
 #include "../../precomp.hpp"
 #include "flash_attention.hpp"
 #include "fast_gemm.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+
+#include "flash_attention.simd.hpp"
+#include "layers/cpu_kernels/flash_attention.simd_declarations.hpp"
 
 #include <cfloat>
 
 namespace cv { namespace dnn {
 
 static constexpr int FLASH_ATTN_MAX_Q_BLOCK = 128;  // a 128 x 256 score tile (128 KB) stays in L2
-static constexpr int FLASH_ATTN_MIN_Q_BLOCK = 16;   // smallest query block when splitting for threads
+static constexpr int FLASH_ATTN_MIN_Q_BLOCK = 32;   // smallest query block when splitting for threads
 static constexpr int FLASH_ATTN_KV_BLOCK = 256;     // the key block the MLAS path uses
 
-static float flash_attn_row_max(const float* p, int n) {
-    float mx = -FLT_MAX;
-    int j = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int VL = VTraits<v_float32>::vlanes();
-    if (n >= VL) {
-        v_float32 vm = vx_load(p);
-        for (j = VL; j + VL <= n; j += VL)
-            vm = v_max(vm, vx_load(p + j));
-        mx = v_reduce_max(vm);
-    }
-#endif
-    for (; j < n; j++)
-        mx = std::max(mx, p[j]);
-    return mx;
-}
-
-static float flash_attn_exp_sum(float* p, int n, float mx) {
-    float s = 0.f;
-    int j = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int VL = VTraits<v_float32>::vlanes();
-    v_float32 vmx = vx_setall_f32(mx), vs = vx_setzero_f32();
-    for (; j + VL <= n; j += VL) {
-        v_float32 e = v_exp(v_sub(vx_load(p + j), vmx));
-        vx_store(p + j, e);
-        vs = v_add(vs, e);
-    }
-    s = v_reduce_sum(vs);
-#endif
-    for (; j < n; j++) {
-        p[j] = std::exp(p[j] - mx);
-        s += p[j];
-    }
-    return s;
-}
-
-static void flash_attn_scale_row(float* p, int n, float a) {
-    int j = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int VL = VTraits<v_float32>::vlanes();
-    v_float32 va = vx_setall_f32(a);
-    for (; j + VL <= n; j += VL)
-        vx_store(p + j, v_mul(vx_load(p + j), va));
-#endif
-    for (; j < n; j++)
-        p[j] *= a;
+static void flash_attn_softmax_block(float* S, int rows, int n, float* O, int Dv, float* m, float* l, bool first) {
+    CV_CPU_DISPATCH(flashAttnSoftmaxBlock, (S, rows, n, O, Dv, m, l, first), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void flashAttention(const float* Q, const float* K, const float* V, float* out,
@@ -106,19 +63,7 @@ void flashAttention(const float* Q, const float* K, const float* V, float* out,
                 const int nk = std::min(kb, Skv - k0);
                 fastGemm(false, true, mq, D, nk, D, scale, q, D, 1,
                          k + (size_t)k0 * D, D, 1, 0.f, S, nk, lopt);
-                for (int i = 0; i < mq; i++) {
-                    float* s = S + (size_t)i * nk;
-                    const float mnew = std::max(m[i], flash_attn_row_max(s, nk));
-                    const float rowsum = flash_attn_exp_sum(s, nk, mnew);
-                    if (k0 > 0) {
-                        const float a = std::exp(m[i] - mnew);
-                        l[i] = l[i] * a + rowsum;
-                        flash_attn_scale_row(O + (size_t)i * Dv, Dv, a);
-                    } else {
-                        l[i] = rowsum;
-                    }
-                    m[i] = mnew;
-                }
+                flash_attn_softmax_block(S, mq, nk, O, Dv, m, l, k0 == 0);
                 fastGemm(false, false, mq, nk, nk, Dv, 1.f, S, nk, 1,
                          v + (size_t)k0 * Dv, Dv, 1, k0 > 0 ? 1.f : 0.f, O, Dv, lopt);
             }
