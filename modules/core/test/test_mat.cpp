@@ -1514,14 +1514,19 @@ TEST(Core_InputArray, convert_from_vector_over2GB)
 // Reading only one byte through the resulting Mat exercises the aliased storage.
 TEST(Core_InputArray, scalar_getMat_no_dangling_temporary_29470)
 {
-    Mat mat = _InputArray(3.14).getMat();
+    // Mirror the issue reproducer: `one` is a `const _InputArray&` bound to a
+    // temporary, so the temporary (and its `val_` member after the fix) outlives
+    // the statement. With the old code `obj` pointed at the temporary `double`
+    // parameter, which died at the end of `_InputArray(1)` regardless.
+    InputArray one(1);
+    Mat mat = one.getMat();
     ASSERT_EQ(mat.type(), CV_64F);
     ASSERT_EQ(mat.total(), 1u);
     // Read a single byte through the Mat header; with the old code this touched
     // a destroyed temporary, triggering an ASan stack-use-after-scope report.
     uint8_t test = 0;
     memcpy(&test, mat.data, 1);
-    EXPECT_EQ((int)test, (int)(reinterpret_cast<const uint8_t*>(&mat.at<double>(0, 0))[0]));
+    EXPECT_EQ((int)test, (int)(reinterpret_cast<const uint8_t*>(mat.data)[0]));
 }
 
 TEST(Core_CopyMask, bug1918)
