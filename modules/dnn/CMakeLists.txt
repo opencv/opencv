@@ -16,6 +16,7 @@ ocv_add_dispatched_file("layers/cpu_kernels/conv2_deconv" AVX AVX2 NEON)
 ocv_add_dispatched_file("int8layers/conv2_int8_kernels" AVX2 RVV AVX_VNNI)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/gridsample_kernels" AVX AVX2 NEON RVV LASX)
+ocv_add_dispatched_file_force_all("dnn_utils" AVX AVX2 AVX512_SKX AVX512_ICL NEON RVV LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc opencv_geometry OPTIONAL opencv_imgcodecs WRAP python java objc js)
 

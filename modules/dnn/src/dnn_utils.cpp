@@ -1,16 +1,43 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #include "precomp.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#include "dnn_utils.simd.hpp"
+#include "dnn_utils.simd_declarations.hpp"
+
 
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+static void blobFromImage32FDispatch(const float* src, size_t srcstep, float* const dst[4],
+                                     int rows, int cols, int nch,
+                                     const float mean[4], const float scale[4], bool normalize)
+{
+    CV_CPU_DISPATCH(blobFromImage32F_, (src, srcstep, dst, rows, cols, nch, mean, scale, normalize),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
+
+static void blobFromImage8U32FDispatch(const uchar* src, size_t srcstep, float* const dst[4],
+                                       int rows, int cols, int nch,
+                                       const float mean[4], const float scale[4], bool normalize)
+{
+    CV_CPU_DISPATCH(blobFromImage8U32F_, (src, srcstep, dst, rows, cols, nch, mean, scale, normalize),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
+
+static void blobFromImage8U8UDispatch(const uchar* src, size_t srcstep, uchar* const dst[4],
+                                      int rows, int cols, int nch)
+{
+    CV_CPU_DISPATCH(blobFromImage8U8U_, (src, srcstep, dst, rows, cols, nch),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
 
 Image2BlobParams::Image2BlobParams():scalefactor(Scalar::all(1.0)), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
                            datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL)
@@ -136,6 +163,10 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
     CV_Assert(nch == 1 || nch == 3 || nch == 4);
     int sz[] = { (int)images.size(), nch, h, w};
     blob_.create(4, sz, param.ddepth);
+    const bool useFusedKernel =
+            (std::is_same<Tinp, float>::value && std::is_same<Tout, float>::value) ||
+            (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, float>::value) ||
+            (std::is_same<Tinp, uint8_t>::value && std::is_same<Tout, uint8_t>::value);
 
     for (size_t k = 0; k < images.size(); ++k)
     {
@@ -151,6 +182,46 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
 
         if (param.swapRB)
             std::swap(p_blob_r, p_blob_b);
+
+        if (useFusedKernel)
+        {
+            float mean[4] = {
+                (float)param.mean[0], (float)param.mean[1],
+                (float)param.mean[2], (float)param.mean[3]
+            };
+            float scale[4] = {
+                (float)param.scalefactor[0], (float)param.scalefactor[1],
+                (float)param.scalefactor[2], (float)param.scalefactor[3]
+            };
+            if (param.swapRB && nch > 2)
+            {
+                std::swap(mean[0], mean[2]);
+                std::swap(scale[0], scale[2]);
+            }
+            const bool normalize = param.mean != Scalar() ||
+                                   param.scalefactor != Scalar::all(1.0);
+
+            Tout* dst[4] = { p_blob_r, p_blob_g, p_blob_b, p_blob_a };
+            if (std::is_same<Tinp, float>::value)
+            {
+                blobFromImage32FDispatch(reinterpret_cast<const float*>(images[k].ptr<Tinp>()),
+                        images[k].step1(), reinterpret_cast<float* const*>(dst),
+                        h, w, nch, mean, scale, normalize);
+            }
+            else if (std::is_same<Tout, float>::value)
+            {
+                blobFromImage8U32FDispatch(reinterpret_cast<const uchar*>(images[k].ptr<Tinp>()),
+                        images[k].step, reinterpret_cast<float* const*>(dst),
+                        h, w, nch, mean, scale, normalize);
+            }
+            else
+            {
+                blobFromImage8U8UDispatch(reinterpret_cast<const uchar*>(images[k].ptr<Tinp>()),
+                        images[k].step, reinterpret_cast<uchar* const*>(dst),
+                        h, w, nch);
+            }
+            continue;
+        }
 
         if (nch == 1)
         {
@@ -169,25 +240,6 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
             {
                 const Tinp* p_src = images[k].ptr<Tinp>();
                 size_t i = 0;
-// NOTE: Visual Studio compiler is not able to vectorize the following loop on ARM64 CPU.
-// GCC and Clang does it efficiently.
-// TODO: Drop NEON block when MSVC is able to vectorize it too.
-#if CV_NEON
-                if (sizeof(Tinp) == 4 && sizeof(Tout) == 4)
-                {
-                    const float* src_f = reinterpret_cast<const float*>(p_src);
-                    float* dst_r = reinterpret_cast<float*>(p_blob_r);
-                    float* dst_g = reinterpret_cast<float*>(p_blob_g);
-                    float* dst_b = reinterpret_cast<float*>(p_blob_b);
-                    for (; i + 4 <= (size_t)wh; i += 4)
-                    {
-                        float32x4x3_t rgb = vld3q_f32(src_f + i * 3);
-                        vst1q_f32(dst_r + i, rgb.val[0]);
-                        vst1q_f32(dst_g + i, rgb.val[1]);
-                        vst1q_f32(dst_b + i, rgb.val[2]);
-                    }
-                }
-#endif
                 for (; i < (size_t)wh; ++i)
                 {
                     p_blob_r[i] = p_src[i * 3    ];
@@ -224,6 +276,9 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
             }
         }
     }
+
+    if (useFusedKernel)
+        return;
 
     if (param.mean == Scalar() && param.scalefactor == Scalar::all(1.0))
         return;
