@@ -3372,6 +3372,32 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
+static int computeResizeAreaUpTab(int ssize, int dsize, int cn, double scale,
+                                  double inv_scale, DecimateAlpha* tab)
+{
+    int k = 0;
+    for (int dx = 0; dx < dsize; dx++)
+    {
+        int sx = cvFloor(dx * scale);
+        float fx = (float)((dx + 1) - (sx + 1) * inv_scale);
+        fx = fx <= 0 ? 0.f : fx - cvFloor(fx);
+        if (sx >= ssize - 1)
+            fx = 0.f, sx = ssize - 1;
+
+        tab[k].di = dx * cn;
+        tab[k].si = sx * cn;
+        tab[k++].alpha = 1.f - fx;
+
+        if (fx > 0.f)
+        {
+            tab[k].di = dx * cn;
+            tab[k].si = (sx + 1) * cn;
+            tab[k++].alpha = fx;
+        }
+    }
+    return k;
+}
+
 #ifdef HAVE_OPENCL
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                       float * const alpha_tab, int * const ofs_tab)
@@ -3874,7 +3900,7 @@ void resize(int src_type,
 
         // For mixed scaling, use area weights on the shrinking axis and the
         // fallback's two-tap weights on the enlarging axis.
-        if( interpolation == INTER_AREA && cn <= 4 &&
+        if( interpolation == INTER_AREA &&
             (scale_x > 1 || scale_y > 1) )
         {
             ResizeAreaFunc func = area_tab[depth];
@@ -3889,55 +3915,15 @@ void resize(int src_type,
             if( scale_x >= 1 )
                 xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
             else
-            {
-                xtab_size = 0;
-                float fx;
-                for( dx = 0; dx < dsize.width; dx++ )
-                {
-                    sx = cvFloor(dx * scale_x);
-                    fx = (float)((dx + 1) - (sx + 1) * inv_scale_x);
-                    fx = fx <= 0 ? 0.f : fx - cvFloor(fx);
-                    if( sx >= src_width - 1 )
-                        fx = 0.f, sx = src_width - 1;
-
-                    xtab[xtab_size].di = dx * cn;
-                    xtab[xtab_size].si = sx * cn;
-                    xtab[xtab_size++].alpha = 1.f - fx;
-                    if( fx > 0.f )
-                    {
-                        xtab[xtab_size].di = dx * cn;
-                        xtab[xtab_size].si = (sx + 1) * cn;
-                        xtab[xtab_size++].alpha = fx;
-                    }
-                }
-            }
+                xtab_size = computeResizeAreaUpTab(
+                    src_width, dsize.width, cn, scale_x, inv_scale_x, xtab);
 
             int ytab_size;
             if( scale_y >= 1 )
                 ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
             else
-            {
-                ytab_size = 0;
-                float fy;
-                for( dy = 0; dy < dsize.height; dy++ )
-                {
-                    sy = cvFloor(dy * scale_y);
-                    fy = (float)((dy + 1) - (sy + 1) * inv_scale_y);
-                    fy = fy <= 0 ? 0.f : fy - cvFloor(fy);
-                    if( sy >= src_height - 1 )
-                        fy = 0.f, sy = src_height - 1;
-
-                    ytab[ytab_size].di = dy;
-                    ytab[ytab_size].si = sy;
-                    ytab[ytab_size++].alpha = 1.f - fy;
-                    if( fy > 0.f )
-                    {
-                        ytab[ytab_size].di = dy;
-                        ytab[ytab_size].si = sy + 1;
-                        ytab[ytab_size++].alpha = fy;
-                    }
-                }
-            }
+                ytab_size = computeResizeAreaUpTab(
+                    src_height, dsize.height, 1, scale_y, inv_scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
             int* tabofs = _tabofs.data();

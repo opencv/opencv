@@ -1289,23 +1289,32 @@ TEST_P(Imgproc_ResizeMultiChannel, smoke)
     std::vector<cv::Mat> srcChannels;
     cv::split(src, srcChannels);
 
-    cv::Size dsize = (mode == cv::INTER_LINEAR) ? cv::Size(32, 32) : cv::Size(31, 31);
+    std::vector<cv::Size> sizes;
+    sizes.push_back(mode == cv::INTER_LINEAR ? cv::Size(32, 32) : cv::Size(31, 31));
 
-    cv::Mat dstMulti;
-    ASSERT_NO_THROW(cv::resize(src, dstMulti, dsize, 0, 0, mode));
-    EXPECT_EQ(dstMulti.channels(), cn);
-    EXPECT_EQ(dstMulti.size(), dsize);
+    if (mode == cv::INTER_AREA)
+        sizes.push_back(cv::Size(31, 96));
 
-    std::vector<cv::Mat> dstChannels(cn);
-    for (int i = 0; i < cn; i++)
-        cv::resize(srcChannels[i], dstChannels[i], dsize, 0, 0, mode);
+    for (size_t s = 0; s < sizes.size(); s++)
+    {
+        cv::Size dsize = sizes[s];
 
-    cv::Mat dstMerged;
-    cv::merge(dstChannels, dstMerged);
+        cv::Mat dstMulti;
+        ASSERT_NO_THROW(cv::resize(src, dstMulti, dsize, 0, 0, mode));
+        EXPECT_EQ(dstMulti.channels(), cn);
+        EXPECT_EQ(dstMulti.size(), dsize);
 
-    EXPECT_LE(cv::norm(dstMulti, dstMerged, cv::NORM_INF), 1)
-        << "Multi-channel resize (cn=" << cn << ", mode=" << mode
-        << ") does not match per-channel resize";
+        std::vector<cv::Mat> dstChannels(cn);
+        for (int i = 0; i < cn; i++)
+            cv::resize(srcChannels[i], dstChannels[i], dsize, 0, 0, mode);
+
+        cv::Mat dstMerged;
+        cv::merge(dstChannels, dstMerged);
+
+        EXPECT_LE(cv::norm(dstMulti, dstMerged, cv::NORM_INF), 1)
+            << "Multi-channel resize (cn=" << cn << ", mode=" << mode
+            << ", dsize=" << dsize << ") does not match per-channel resize";
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
