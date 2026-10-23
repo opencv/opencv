@@ -6,6 +6,7 @@
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/flash_attention.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -218,6 +219,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
                  attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
                  output_buffer_shape{batch_size_ * num_heads_, seq_len_, v_head_size_};
+        // without a mask the attention runs blockwise and never needs the full score matrix
+        if (num_inputs < 4)
+            attention_prob_shape = output_buffer_shape = MatShape{1};
         internals.assign(1, gemm_buffer_shape);
         internals.push_back(attention_prob_shape);
         internals.push_back(output_buffer_shape);
@@ -433,17 +437,19 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             };
             const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
             // Broadcast bias [NH] -> [BN, SH] into dst before gemm so beta=1 adds it implicitly.
-            auto fillBias = [&](size_t i) {
+            auto fillBias = [&](size_t i, size_t s0, size_t rows) {
                 const size_t head_size = qkv_head_sizes[i % 3];
                 const float *src = bias_data + col_ofs[i % 3] + ((i / 3) % num_heads) * head_size;
-                float *dst = taskOutput(i);
-                for (size_t s = 0; s < seq_len; s++, dst += head_size)
+                float *dst = taskOutput(i) + s0 * head_size;
+                for (size_t s = 0; s < rows; s++, dst += head_size)
                     std::memcpy(dst, src, head_size * sizeof(float));
             };
             // Apply RoPE to Q/K in place (V is left untouched).
-            auto applyRotary = [&](size_t i) {
+            auto applyRotary = [&](size_t i, size_t s0, size_t rows) {
+                const size_t head_size = qkv_head_sizes[i % 3];
                 if (do_rotary && i % 3 < 2)
-                    rotationKernel(taskOutput(i), rope_table.ptr<const float>(), seq_len, qkv_head_sizes[i % 3]);
+                    rotationKernel(taskOutput(i) + s0 * head_size, rope_table.ptr<const float>() + s0 * head_size,
+                                   rows, head_size);
             };
 
             opt.multi_thread = false;
@@ -452,7 +458,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             if (!packed_qkv_mlas.empty()) {
                 parallel_for_(Range(0, (int)loops), [&](const Range &r) {
                     for (int i = r.start; i < r.end; i++)
-                        fillBias(i);
+                        fillBias(i, 0, seq_len);
                 });
                 // All per-head GEMMs in one MLAS batch, which also splits each GEMM across threads.
                 // Q, K and V go in separate batches only if their head sizes differ.
@@ -477,23 +483,30 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 if (do_rotary) {
                     parallel_for_(Range(0, (int)loops), [&](const Range &r) {
                         for (int i = r.start; i < r.end; i++)
-                            applyRotary(i);
+                            applyRotary(i, 0, seq_len);
                     });
                 }
             }
 #endif
             if (!projected) {
+                const size_t nthreads = (size_t)std::max(getNumThreads(), 1);
+                const size_t parts = std::max<size_t>(1, std::min((nthreads + loops - 1) / loops, seq_len / 16));
+                const size_t part_rows = (seq_len + parts - 1) / parts;
                 double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
-                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
-                    for (int i = r.start; i < r.end; i++) {
-                        fillBias(i);
+                parallel_for_(Range(0, (int)(loops * parts)), [&](const Range &r) {
+                    for (int p = r.start; p < r.end; p++) {
+                        const size_t i = p / parts, s0 = (p % parts) * part_rows;
+                        if (s0 >= seq_len)
+                            continue;
+                        const size_t rows = std::min(part_rows, seq_len - s0);
+                        fillBias(i, s0, rows);
                         const size_t head_size = qkv_head_sizes[i % 3];
                         auto *packed_weight = packed_weights[i % 3] + packed_weights_size[i % 3] * ((i / 3) % num_heads);
                         // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
-                        fastGemm(false, seq_len, head_size, input_hidden_size,
-                                1.f, taskInput(i), input_hidden_size,
-                                packed_weight, 1.f, taskOutput(i), head_size, opt);
-                        applyRotary(i);
+                        fastGemm(false, rows, head_size, input_hidden_size,
+                                1.f, taskInput(i) + s0 * input_hidden_size, input_hidden_size,
+                                packed_weight, 1.f, taskOutput(i) + s0 * head_size, head_size, opt);
+                        applyRotary(i, s0, rows);
                     }
                 }, nstripes);
             }
@@ -529,6 +542,15 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             {
                 return;  // fast path done; outputs[0] is fully written
             }
+        }
+
+        if (!has_mask && batch_size > 0 && num_heads > 0 && seq_len > 0 &&
+            qkv_head_sizes[0] > 0 && qkv_head_sizes[2] > 0)
+        {
+            flashAttention(Q, K, V, outputs[0].ptr<float>(),
+                           (int)batch_size, (int)num_heads, (int)seq_len, (int)seq_len,
+                           (int)qkv_head_sizes[0], (int)qkv_head_sizes[2], scale);
+            return;
         }
 
         // Compute Softmax(scale * MatMul(Q, K))

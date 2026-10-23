@@ -12,6 +12,7 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 #include "opencv2/core/utils/configuration.private.hpp"
+#include "../src/layers/cpu_kernels/mlas_gemm.hpp"
 #ifdef HAVE_CUDA
 #include "opencv2/core/cuda.hpp"
 #endif
@@ -264,6 +265,13 @@ protected:
 };
 
 void runLayer(cv::Ptr<cv::dnn::Layer> layer, std::vector<cv::Mat> &inpBlobs, std::vector<cv::Mat> &outBlobs);
+
+// Turns MLAS off while in scope, so a test covers the code used in builds without it.
+struct ScopedNoMlas
+{
+    ScopedNoMlas() { cv::dnn::setUseMlas(false); }
+    ~ScopedNoMlas() { cv::dnn::setUseMlas(true); }
+};
 
 inline std::string getCurrentTestNameNoParams()
 {
