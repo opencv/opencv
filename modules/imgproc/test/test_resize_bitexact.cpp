@@ -306,10 +306,10 @@ TEST(Resize_Bitexact, NearestExact_PillowCompat)
 }
 
 
-// Regression test for #29794: CV_8UC3 + INTER_LINEAR at downscale factors just below 1.0
-// crashed on arm64 (KleidiCV HAL) when the last destination row read a source row at
-// index (sy + 1) that was never clamped to src_height - 1. The band is narrow: with a
-// source height of 2598, destination heights 2588..2596 read one row past the source.
+// Regression test for #29794: CV_8UC3 + INTER_LINEAR just below a 1.0 downscale factor.
+// The bug was a source row read at (sy + 1) without clamping to src_height - 1, so the
+// narrow band just below 1.0 (here source 2598 -> dst 2588..2596) read one row past the
+// buffer; the 3-channel stride also does not divide the 16-byte NEON step.
 TEST(Resize_Bitexact, LinearNearOneDownscale8U_C3)
 {
     // Source taller than the documented reproducer; width chosen so a 16-byte NEON
