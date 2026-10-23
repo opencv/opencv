@@ -1282,6 +1282,15 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     borderType &= ~BORDER_ISOLATED;
 
+    if (borderType == BORDER_CONSTANT && src.channels() > 4)
+    {
+        CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
+    }
+
+    CALL_HAL(copyMakeBorder, cv_hal_copyMakeBorder, src.ptr(), src.step,
+             src.type(), src.cols, src.rows, dst.ptr(), dst.step,
+             top, bottom, left, right, borderType, value.val);
+
     CV_IPP_RUN_FAST(ipp_copyMakeBorder(src, dst, top, bottom, left, right, borderType, value))
 
     if( borderType != BORDER_CONSTANT )
@@ -1294,7 +1303,6 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
         AutoBuffer<double> buf(cn);
         if( cn > 4 )
         {
-            CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
             cn1 = 1;
         }
         scalarToRawData(value, buf.data(), CV_MAKETYPE(src.depth(), cn1), cn);
