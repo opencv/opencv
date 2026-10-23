@@ -446,6 +446,80 @@ TEST(Video_ECC_Test_Compute, properties) {
     testECCProperties(x_u16, 1);
 }
 
+    // The same integer-valued pixels stored as CV_8U, CV_16U and CV_32F must give the
+    // CV_64F coefficient, for 1 and 3 channels. Unsigned multi-channel input used to skip
+    // the promotion that protected the mean subtraction and returned roughly half of the
+    // correct coefficient (see computeECC).
+    TEST(Video_ECC_Test_Compute, storage_type_invariance)
+    {
+        const int channelCounts[2] = {1, 3};
+        const int storageDepths[3] = {CV_8U, CV_16U, CV_32F};
+
+        for (int channelIndex = 0; channelIndex < 2; ++channelIndex)
+        {
+            const int channels = channelCounts[channelIndex];
+            Mat templateImage(64, 64, CV_MAKETYPE(CV_64F, channels));
+            Mat inputImage(64, 64, CV_MAKETYPE(CV_64F, channels));
+
+            for (int y = 0; y < templateImage.rows; ++y)
+                for (int x = 0; x < templateImage.cols; ++x)
+                    for (int channel = 0; channel < channels; ++channel)
+                    {
+                        // a triangle wave, so every storage type below holds the same numbers
+                        const int tv = ((x + 5 * channel) % 13) < 6 ? ((x + 5 * channel) % 13) : 12 - ((x + 5 * channel) % 13);
+                        const int iv = ((x + 1 + 5 * channel) % 13) < 6 ? ((x + 1 + 5 * channel) % 13) : 12 - ((x + 1 + 5 * channel) % 13);
+                        const int ty = (y % 9) < 4 ? (y % 9) : 8 - (y % 9);
+                        const int iy = ((y + 1) % 9) < 4 ? ((y + 1) % 9) : 8 - ((y + 1) % 9);
+                        templateImage.ptr<double>(y)[x * channels + channel] = 20.0 + 8.0 * tv + 5.0 * ty;
+                        inputImage.ptr<double>(y)[x * channels + channel] = 20.0 + 8.0 * iv + 5.0 * iy;
+                    }
+
+            const double expected = computeECC(templateImage, inputImage);
+
+            for (int depthIndex = 0; depthIndex < 3; ++depthIndex)
+            {
+                const int storedType = CV_MAKETYPE(storageDepths[depthIndex], channels);
+                Mat storedTemplate, storedInput;
+                templateImage.convertTo(storedTemplate, storedType);
+                inputImage.convertTo(storedInput, storedType);
+                EXPECT_NEAR(computeECC(storedTemplate, storedInput), expected, 1e-5)
+                    << "channels = " << channels << ", depth = " << storageDepths[depthIndex];
+            }
+        }
+    }
+
+    // computeECC(x, x) is 1 by definition and the coefficient is bounded by [-1, 1].
+    // Subtracting a mean that had been rounded to an integer work depth broke both: the
+    // coefficient came out at 2.0 for a low contrast image of two adjacent levels.
+    TEST(Video_ECC_Test_Compute, self_correlation_unsigned)
+    {
+        const int channelCounts[2] = {1, 3};
+        const int storageDepths[2] = {CV_8U, CV_16U};
+
+        for (int channelIndex = 0; channelIndex < 2; ++channelIndex)
+            for (int depthIndex = 0; depthIndex < 2; ++depthIndex)
+            {
+                const int channels = channelCounts[channelIndex];
+                const int depth = storageDepths[depthIndex];
+                Mat image(64, 64, CV_MAKETYPE(depth, channels));
+
+                for (int y = 0; y < image.rows; ++y)
+                    for (int x = 0; x < image.cols; ++x)
+                        for (int channel = 0; channel < channels; ++channel)
+                        {
+                            // two adjacent levels, so the mean lands halfway between them
+                            const int value = 100 + ((x + y + channel) & 1);
+                            if (depth == CV_8U)
+                                image.ptr<uchar>(y)[x * channels + channel] = (uchar)value;
+                            else
+                                image.ptr<ushort>(y)[x * channels + channel] = (ushort)value;
+                        }
+
+                EXPECT_NEAR(computeECC(image, image), 1.0, 1e-6)
+                    << "channels = " << channels << ", depth = " << depth;
+            }
+    }
+
 TEST(Video_ECC_Test_Compute, accuracy) {
     Mat testImg = Mat_<float>({3, 3}, {1, 0, 0, 1, 0, 0, 1, 0, 0});
     Mat warpedImage = Mat_<float>({3, 3}, {0, 1, 0, 0, 1, 0, 0, 1, 0});
