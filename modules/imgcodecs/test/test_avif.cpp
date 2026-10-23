@@ -75,9 +75,6 @@ class Imgcodecs_Avif_RoundTripSuite
                            (bit_depth_ == 10)? norm_ / 1023.0f * 255.0f :
                                                norm_; // scale to 8 bit
 
-        // Uncomment to print norm values for calibration/debugging
-        // std::cout << "quality = " << quality_ << " bit_depth = " << bit_depth_ << " norm_ = " << norm_ << " norm = " << norm << std::endl;
-
         if (quality_ == 50) {
           EXPECT_LE(norm, 20); // Maximum = 18.15 -> ceil(18.15 * 1.1) = 20
         } else if (quality_ == 0) {
