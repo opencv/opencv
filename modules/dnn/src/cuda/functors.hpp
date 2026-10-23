@@ -866,6 +866,12 @@ struct PowFunctor {
     }
 };
 
+// powf is not correctly rounded and its last bit differs across CUDA versions; double rounds back to the CPU result
+template <>
+inline CUDA4DNN_DEVICE float PowFunctor<float>::operator()(float x, float y) {
+    return static_cast<float>(::pow(static_cast<double>(x), static_cast<double>(y)));
+}
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA_FUNCTORS_HPP */
