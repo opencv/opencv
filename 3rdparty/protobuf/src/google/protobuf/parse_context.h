@@ -704,7 +704,11 @@ const char* EpsCopyInputStream::ReadPackedFixed(const char* ptr, int size,
     int block_size = num * sizeof(T);
     auto dst = out->AddNAlreadyReserved(num);
 #ifdef PROTOBUF_LITTLE_ENDIAN
-    std::memcpy(dst, ptr, block_size);
+    // block_size can be 0 when nbytes < sizeof(T); AddNAlreadyReserved(0)
+    // returns unsafe_elements() (nullptr for an empty field), and
+    // memcpy(nullptr, ptr, 0) is UB even though the length is zero.
+    if (block_size > 0)
+      std::memcpy(dst, ptr, block_size);
 #else
     for (int i = 0; i < num; i++)
       dst[i] = UnalignedLoad<T>(ptr + i * sizeof(T));
@@ -722,7 +726,11 @@ const char* EpsCopyInputStream::ReadPackedFixed(const char* ptr, int size,
   int block_size = num * sizeof(T);
   auto dst = out->AddNAlreadyReserved(num);
 #ifdef PROTOBUF_LITTLE_ENDIAN
-  std::memcpy(dst, ptr, block_size);
+  // block_size can be 0 when size < sizeof(T); AddNAlreadyReserved(0)
+  // returns unsafe_elements() (nullptr for an empty field), and
+  // memcpy(nullptr, ptr, 0) is UB even though the length is zero.
+  if (block_size > 0)
+    std::memcpy(dst, ptr, block_size);
 #else
   for (int i = 0; i < num; i++) dst[i] = UnalignedLoad<T>(ptr + i * sizeof(T));
 #endif

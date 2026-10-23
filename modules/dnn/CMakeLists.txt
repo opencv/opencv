@@ -574,6 +574,19 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${ML
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
+if(TARGET opencv_test_dnn)
+  # misc/onnx holds the generated opencv-onnx.pb.{h,cc}; the module includes it
+  # privately, so expose it to the test target too (needed by test_protobuf_packed).
+  # The bundled protobuf (BUILD_PROTOBUF=ON) puts its headers under 3rdparty/protobuf/src,
+  # reachable by the module through the libprotobuf target; expose the same to the test target.
+  ocv_target_include_directories(opencv_test_dnn PRIVATE ${fw_inc} ${Protobuf_INCLUDE_DIRS}
+                                 "${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/protobuf/src")
+  # test_protobuf_packed.cpp uses the protobuf API directly, so link the bundled lib.
+  target_link_libraries(opencv_test_dnn PRIVATE "${CMAKE_BINARY_DIR}/3rdparty/lib/liblibprotobuf.a")
+  # opencv_onnx::TensorProto symbols are hidden (local visibility) inside libopencv_dnn.so,
+  # so compile the generated pb.cc into the test target too to resolve them at link time.
+  target_sources(opencv_test_dnn PRIVATE "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
+endif()
 
 if(NOT BUILD_PROTOBUF)
   if(TARGET opencv_test_dnn)
