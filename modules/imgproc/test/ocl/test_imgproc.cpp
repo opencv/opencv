@@ -263,6 +263,55 @@ OCL_TEST_P(CornerHarris, Mat)
     }
 }
 
+typedef tuple<MatDepth, int, int, int> CornerROIParams;
+class CornerROI : public TestWithParam<CornerROIParams> {};
+
+OCL_TEST_P(CornerROI, parent_borders)
+{
+    const int depth = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const int apertureSize = get<2>(GetParam());
+    const int borderType = get<3>(GetParam());
+    Mat parent(23, 29, depth);
+    theRNG().fill(parent, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 1);
+    UMat src;
+    parent.copyTo(src);
+    const Rect rois[] = {
+        Rect(7, 6, 13, 11), Rect(0, 0, 9, 8), Rect(20, 15, 9, 8),
+        Rect(0, 5, 29, 10), Rect(13, 11, 1, 1), Rect(28, 22, 1, 1)
+    };
+    for (int method = 0; method < 2; ++method)
+    {
+        Mat whole;
+        OCL_OFF(if (method == 0)
+            cv::cornerMinEigenVal(parent, whole, blockSize, apertureSize, borderType);
+        else
+            cv::cornerHarris(parent, whole, blockSize, apertureSize, 0.04, borderType));
+        cv::ocl::setUseOpenCL(true);
+        for (size_t i = 0; i < sizeof(rois) / sizeof(rois[0]); ++i)
+        {
+            SCOPED_TRACE(method);
+            SCOPED_TRACE(rois[i]);
+            UMat output(rois[i].height + 2, rois[i].width + 2, CV_32FC1, Scalar(-100));
+            UMat dst = output(Rect(1, 1, rois[i].width, rois[i].height));
+            OCL_ON(if (method == 0)
+                cv::cornerMinEigenVal(src(rois[i]), dst, blockSize, apertureSize, borderType);
+            else
+                cv::cornerHarris(src(rois[i]), dst, blockSize, apertureSize, 0.04, borderType));
+            EXPECT_LE(cvtest::norm(whole(rois[i]), dst.getMat(ACCESS_READ), NORM_INF),
+                      2e-5 * std::max(1.0, cvtest::norm(whole(rois[i]), NORM_INF)));
+            dst.setTo(-100);
+            EXPECT_EQ(0, countNonZero(output.getMat(ACCESS_READ) != -100));
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, CornerROI,
+    testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 2, 3, 6),
+                     testing::Values(-1, 1, 3, 5, 7),
+                     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE,
+                                     BORDER_REFLECT, BORDER_REFLECT_101)));
+
 //////////////////////////////// preCornerDetect //////////////////////////////////////////
 
 typedef ImgprocTestBase PreCornerDetect;
