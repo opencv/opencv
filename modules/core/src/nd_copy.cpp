@@ -572,8 +572,7 @@ static bool canRunInLockstep(const Plan* plans, size_t np)
 
 static void runPlans(const Plan* plans, size_t np)
 {
-    if (np == 0)
-        return;
+    CV_Assert(np > 0);
     AutoBuffer<int64, 16> ofs(np + 1);
     ofs[0] = 0;
     double cost = 0, rowBytes = 0;
@@ -707,7 +706,13 @@ void copyBatch(const View* src, const View* dst, int n)
         if (buildPlan(s, d, plans[np]))
             np++;
     }
-    runPlans(plans.data(), np);
+
+    // To fix maybe-uninitialized warning on GCC16.
+    // Run plans only if at least one plan was successfully built
+    if (np > 0)
+    {
+        runPlans(plans.data(), np);
+    }
 }
 
 void copy(const View& src, const View& dst)

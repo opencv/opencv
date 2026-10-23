@@ -111,7 +111,9 @@ TEST_P(DeconvolutionCoordinates, Accuracy)
                 for (int pos = 0; pos < outputSize; ++pos)
                     expected.ptr<float>()[(n * outChannels + c) * outputSize + pos] += bias.ptr<float>()[c];
 
-        std::vector<Mat> inputs(1, input), outputs;
+        std::vector<Mat> inputs, outputs;
+        inputs.push_back(input);
+
         if (dynamicWeights)
         {
             inputs.push_back(weights);
