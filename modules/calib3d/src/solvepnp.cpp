@@ -245,11 +245,20 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     CV_Assert(ipoints.depth() == CV_32F || ipoints.depth() == CV_64F);
     CV_Assert((ipoints.rows == 1 && ipoints.channels() == 2) || ipoints.cols*ipoints.channels() == 2);
 
+    // Read the initial guess before _rvec/_tvec.create(): create() reallocates a CV_32F or
+    // 1x3 guess (both accepted by solvePnP), and the guess was silently replaced by
+    // uninitialized memory.
+    Mat rvec(3, 1, CV_64FC1), tvec(3, 1, CV_64FC1);
+    if (useExtrinsicGuess && _rvec.total() == 3 && _tvec.total() == 3 &&
+        (_rvec.depth() == CV_32F || _rvec.depth() == CV_64F) &&
+        (_tvec.depth() == CV_32F || _tvec.depth() == CV_64F))
+    {
+        _rvec.getMat().reshape(1, 3).convertTo(rvec, CV_64F);
+        _tvec.getMat().reshape(1, 3).convertTo(tvec, CV_64F);
+    }
+
     _rvec.create(3, 1, CV_64FC1);
     _tvec.create(3, 1, CV_64FC1);
-
-    Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
-    Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
     int model_points = 5;
