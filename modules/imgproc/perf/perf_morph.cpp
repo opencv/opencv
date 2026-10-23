@@ -68,7 +68,11 @@ PERF_TEST_P(MorphologyOpen, open,
     }
 
     const Mat result = inplace ? src : dst;
-    SANITY_CHECK(result);
+    Mat eroded, expected;
+    cv::erode(input, eroded, kernel);
+    cv::dilate(eroded, expected, kernel);
+    ASSERT_EQ(0, cvtest::norm(expected, result, NORM_INF));
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
