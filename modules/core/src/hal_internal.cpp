@@ -168,6 +168,8 @@ CV_ANNOTATE_NO_SANITIZE_MEMORY lapack_LU(fptype* a, size_t a_step, int m, fptype
 #endif
     int retcode = *info >= 0 ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    if (retcode == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        transpose_square_inplace(a, lda, m);
     int sign = 0;
     if(*info == 0)
     {
@@ -379,7 +381,11 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
 
             CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
             if (*info < 0)
+            {
+                if (m == n)
+                    transpose_square_inplace(a, lda, m);
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
@@ -404,7 +410,11 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
 
             CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
             if (*info < 0)
+            {
+                if (m == n)
+                    transpose_square_inplace(a, lda, m);
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
@@ -427,7 +437,11 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
 
         CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
         if (*info < 0)
+        {
+            if (m == n)
+                transpose_square_inplace(a, lda, m);
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
 
         lwork = cvRound(work1); //optimal buffer size
         std::vector<fptype> workBufMemHolder(lwork + 1);
