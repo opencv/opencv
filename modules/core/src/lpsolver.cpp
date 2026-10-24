@@ -332,6 +332,16 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
     }
 }
 
+// Returns a-b, or exactly 0 when the result is only rounding noise of the operands.
+// The simplex logic compares tableau entries with exactly 0, so a cancellation that leaves
+// ~1e-13 behind would be taken as a real value. The threshold is relative to the operands,
+// so it does not depend on the scale of the problem.
+static inline double sub_snap_zero(double a,double b){
+    const double rel_eps=1e-12;
+    double d=a-b;
+    return std::abs(d)<=rel_eps*std::max(std::abs(a),std::abs(b))?0.0:d;
+}
+
 static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,
         int leaving_index,int entering_index,vector<unsigned int>& indexToRow){
     double Coef=b(leaving_index,entering_index);
@@ -350,7 +360,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
                 if(j==entering_index){
                     b(i,j)=-coef*b(leaving_index,j);
                 }else{
-                    b(i,j)-=(coef*b(leaving_index,j));
+                    b(i,j)=sub_snap_zero(b(i,j),coef*b(leaving_index,j));
                 }
             }
         }
@@ -362,7 +372,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         if(i==entering_index){
             c(0,i)=-Coef*b(leaving_index,i);
         }else{
-            c(0,i)-=Coef*b(leaving_index,i);
+            c(0,i)=sub_snap_zero(c(0,i),Coef*b(leaving_index,i));
         }
     }
     dprintf(("v was %g\n",v));
@@ -370,26 +380,6 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
 
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
-
-    // Snap tableau entries that are within floating-point noise of zero back to
-    // exactly zero. Each pivot updates the tableau by multiply/subtract in naive
-    // double arithmetic, so entries that are mathematically zero (an eliminated
-    // constraint coefficient, say) drift to ~1e-13; left uncorrected this drift
-    // makes the feasibility check reject an otherwise valid solution.
-    // pivot_eps (1e-12) sits an order of magnitude above that drift while staying
-    // well below the ~1.0 magnitudes the tableau entries take at unit scale.
-    // solveLP targets small LPs, so the O(rows*cols) scan per pivot is cheap.
-    const double pivot_eps = 1e-12;
-    for(int i=0;i<b.rows;i++){
-        for(int j=0;j<b.cols;j++){
-            if(std::abs(b(i,j)) < pivot_eps)
-                b(i,j) = 0;
-        }
-    }
-    for(int i=0;i<c.cols;i++){
-        if(std::abs(c(0,i)) < pivot_eps)
-            c(0,i) = 0;
-    }
 }
 
 static inline void swap_columns(Mat_<double>& A,int col1,int col2){

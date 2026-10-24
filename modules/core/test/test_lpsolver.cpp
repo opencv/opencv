@@ -151,10 +151,8 @@ TEST(Core_LPSolver, issue_12337)
     EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
-// The parameters below exercise the near-degenerate tableau where naive double
-// arithmetic leaves entries at ~1e-13 after several pivots. Before the fix this
-// made solveLP report SOLVELP_LOST and return a z that violated a constraint;
-// after the fix the returned z satisfies every constraint.
+// Near-degenerate problem: rounding errors accumulated over the pivots must not
+// make the returned z violate a constraint.
 TEST(Core_LPSolver, issue_12343)
 {
     Mat A = cv::Mat_<double>({4, 1}, {3., 3., 3., 4.});
@@ -166,8 +164,6 @@ TEST(Core_LPSolver, issue_12343)
     });
     Mat z;
     int result = cv::solveLP(A, B, z);
-    // The problem is feasible and has a single optimum; the solver must not lose
-    // the solution to floating-point drift.
     EXPECT_EQ(SOLVELP_SINGLE, result);
     // Every constraint B(i, 0:cols-1) * z <= B(i, cols-1) must hold.
     Mat lhs = B(cv::Rect(0, 0, B.cols - 1, B.rows)) * z;
@@ -176,6 +172,22 @@ TEST(Core_LPSolver, issue_12343)
     {
         EXPECT_GE(slack.at<double>(i), -1e-9) << "constraint row " << i << " violated";
     }
+}
+
+// The solution scales with the data: nothing may be treated as zero because it is small.
+TEST(Core_LPSolver, small_magnitude_data)
+{
+    const double scale = 1e-14;
+    Mat A = cv::Mat_<double>({3, 1}, {3, 1, 2});
+    Mat B = cv::Mat_<double>({3, 4}, {1, 1, 3, 30 * scale,
+                                      2, 2, 5, 24 * scale,
+                                      4, 1, 2, 36 * scale});
+    Mat z;
+    EXPECT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    ASSERT_EQ(3, z.rows);
+    EXPECT_NEAR(8 * scale, z.at<double>(0), 1e-6 * scale);
+    EXPECT_NEAR(4 * scale, z.at<double>(1), 1e-6 * scale);
+    EXPECT_NEAR(0, z.at<double>(2), 1e-6 * scale);
 }
 
 }} // namespace
