@@ -4053,6 +4053,28 @@ TEST(Test_MatMul, EmptyDimsDoNotCrash)
     }
 }
 
+TEST(Test_GatherND, EmptyIndicesDoNotCrash)
+{
+    for (int indicesType : {CV_32S, CV_64S})
+    {
+        Mat data(4, 5, CV_32F);
+        randu(data, -1, 1);
+        Mat indices(std::vector<int>{0, 1}, indicesType);
+
+        LayerParams lp;
+        lp.type = "GatherND";
+        lp.name = "gathernd_empty_indices";
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{data, indices};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        EXPECT_EQ(outputs[0].total(), (size_t)0);
+    }
+}
+
 // K == 0 skips the gemm entirely, so beta must be applied to the bias explicitly instead of
 // relying on the (never-called) gemm's own beta. Rank-2 bias, both as a constant blob
 // (finalize()'s broadcast_bias path) and as a dynamic input (forward()'s own broadcast path).
