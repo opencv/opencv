@@ -254,6 +254,11 @@ void gelu(const Stream& stream, Span<T> output, View<T> input) {
 }
 
 template <class T>
+void gelu_approximation(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, GeluApproximationFunctor<T>>(stream, output, input);
+}
+
+template <class T>
 void sign(const Stream& stream, Span<T> output, View<T> input) {
     generic_op<T, SignFunctor<T>>(stream, output, input);
 }
@@ -330,6 +335,7 @@ template void celu<__half>(const Stream&, Span<__half>, View<__half>, __half);
 template void hardsigmoid<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 template void selu<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 template void gelu<__half>(const Stream&, Span<__half>, View<__half>);
+template void gelu_approximation<__half>(const Stream&, Span<__half>, View<__half>);
 template void thresholdedrelu<__half>(const Stream&, Span<__half>, View<__half>, __half);
 template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
 template void exp<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
@@ -373,6 +379,7 @@ template void celu<float>(const Stream&, Span<float>, View<float>, float);
 template void hardsigmoid<float>(const Stream&, Span<float>, View<float>, float, float);
 template void selu<float>(const Stream&, Span<float>, View<float>, float, float);
 template void gelu<float>(const Stream&, Span<float>, View<float>);
+template void gelu_approximation<float>(const Stream&, Span<float>, View<float>);
 template void thresholdedrelu<float>(const Stream&, Span<float>, View<float>, float);
 template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 template void exp<float>(const Stream&, Span<float>, View<float>, float, float);

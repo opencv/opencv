@@ -34,6 +34,9 @@ public:
     void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs) CV_OVERRIDE
     {
         impl->finalize(inputs, outputs);
+        // the engine re-finalizes on a new input signature; initCUDA() must see the new shapes
+        node.release();
+        cudaNode.release();
     }
 
     void forwardCUDA(InputArrayOfArrays inputs_,
@@ -45,7 +48,8 @@ public:
         outputs_.getUMatVector(outputs);
 
         cuda4dnn::csl::Workspace& ws = *reinterpret_cast<cuda4dnn::csl::Workspace*>(workspace);
-        if (!node) {
+        // a dynamic op's node bakes in input values (e.g. Slice offsets) that change without a new shape
+        if (!node || impl->dynamicOutputShapes()) {
             impl->preferableTarget = preferableTarget;  // initCUDA may pick FP16/FP32 by target
             cuda4dnn::csl::CSLContext context = *reinterpret_cast<cuda4dnn::csl::CSLContext*>(ctx);
             node = impl->initCUDA(&context, inputs_, outputs_);
@@ -75,6 +79,61 @@ void registerCudaCommonExecs()
     CV_DNN_REGISTER_EXEC_CLASS(Gemm,        DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Pooling,     DNN_BACKEND_CUDA, CUDALegacyExec);  // GlobalAveragePool/GlobalMaxPool
     CV_DNN_REGISTER_EXEC_CLASS(AveragePool, DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Attention,       DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Cast2,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(ConstantOfShape, DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Expand2,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Gather2,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Not,             DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Reduce2,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Shape,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Slice2,          DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Softmax,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Tile2,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Transpose,       DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Concat2,             DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Gelu,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(LayerNormalization2, DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(MatMul,              DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Split2,              DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Sqrt,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Squeeze,             DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Unsqueeze,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Sigmoid,             DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Swish,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Mish,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(TanH,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(ELU,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Celu,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Selu,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Erf,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(GeluApproximation,   DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(HardSwish,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(HardSigmoid,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(ThresholdedRelu,     DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Exp,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Log,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Power,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(AbsVal,              DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Sign,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(BNLL,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Softplus,            DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Softsign,            DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Shrink,              DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Ceil,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Floor,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Round,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Sin,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Sinh,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Cos,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Cosh,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Tan,                 DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Acos,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Acosh,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Asin,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Asinh,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Atan,                DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Atanh,               DNN_BACKEND_CUDA, CUDALegacyExec);
 }
 
 

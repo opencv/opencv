@@ -296,9 +296,18 @@ struct Net::Impl : public detail::NetImplBase
     {
         CudaInfo_t(cuda4dnn::csl::CSLContext ctxt)
             : context(std::move(ctxt))
-        {}
+        {
+            // zero-copy: kernels write it directly, the host reads it after the forward's sync
+            CUDA4DNN_CHECK_CUDA(cudaHostAlloc(reinterpret_cast<void**>(&errorFlag), sizeof(int), cudaHostAllocMapped));
+            *errorFlag = 0;
+            CUDA4DNN_CHECK_CUDA(cudaHostGetDevicePointer(reinterpret_cast<void**>(&context.error_flag), errorFlag, 0));
+        }
+        ~CudaInfo_t() { cudaFreeHost(errorFlag); }
+        CudaInfo_t(const CudaInfo_t&) = delete;
+        CudaInfo_t& operator=(const CudaInfo_t&) = delete;
         cuda4dnn::csl::CSLContext context;
         cuda4dnn::csl::Workspace workspace;
+        int* errorFlag = nullptr;
     };
 
     std::unique_ptr<CudaInfo_t> cudaInfo;
@@ -314,6 +323,10 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
     std::vector<UMat> cudaTempBuffers;
     bool cudaPoolTemps = false;
+    // the main graph's forward recorded as one CUDA Graph, and the input shapes it was recorded for
+    cudaGraphExec_t cudaGraphExec = nullptr;
+    std::vector<MatShape> cudaGraphInputShapes;
+    void cudaGraphReset();
 
     // Device element type for a host tensor (half for float tensors under the FP16 target).
     int cudaDeviceType(const Mat& hostMat) const;

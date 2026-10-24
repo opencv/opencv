@@ -301,27 +301,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto toInt64 = [](const std::vector<std::size_t>& v) {
                     return std::vector<int64_t>(v.begin(), v.end());
                 };
-                /* [N, C, spatial...] -> [N, spatial..., C] */
-                auto toChannelLast = [](const std::vector<std::size_t>& v) {
-                    std::vector<std::size_t> out;
-                    out.push_back(v[0]);
-                    out.insert(out.end(), v.begin() + 2, v.end());
-                    out.push_back(v[1]);
-                    return out;
-                };
-                /* axis permutation taking a [N, C, spatial...]-ordered tensor to [N, spatial..., C] */
-                auto nchwToNhwcOrder = [](std::size_t rank_) {
-                    std::vector<std::size_t> order = { 0 };
-                    for (std::size_t k = 2; k < rank_; k++) order.push_back(k);
-                    order.push_back(1);
-                    return order;
-                };
-                /* axis permutation taking a [N, spatial..., C]-ordered tensor to [N, C, spatial...] */
-                auto nhwcToNchwOrder = [](std::size_t rank_) {
-                    std::vector<std::size_t> order = { 0, rank_ - 1 };
-                    for (std::size_t k = 1; k < rank_ - 1; k++) order.push_back(k);
-                    return order;
-                };
 
                 typename csl::cudnn::ConvolutionGraph<T>::params_type jit_params;
                 jit_params.input_shape  = toInt64(conv_in);
@@ -334,7 +313,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 jit_params.stride   = toInt64(params.stride);
                 jit_params.dilation = toInt64(params.dilation);
 
-                jitConvoluter = csl::cudnn::ConvolutionGraph<T>(cudnnHandle, jit_params);
+                /* cuDNN's runtime-compiled kernels give wrong results on NCHW strides once a differently
+                 * shaped one has run (FP32 and FP16), so every conv convolves NHWC copies and a KRSC filter */
+                jit_params.channels_last = true;
+
+                /* [N, C, spatial...] -> [N, spatial..., C] */
+                auto toChannelLast = [](const std::vector<std::size_t>& v) {
+                    std::vector<std::size_t> out;
+                    out.push_back(v[0]);
+                    out.insert(out.end(), v.begin() + 2, v.end());
+                    out.push_back(v[1]);
+                    return out;
+                };
+                jitNchwToNhwcOrder = { 0 };
+                for (std::size_t k = 2; k < rank; k++) jitNchwToNhwcOrder.push_back(k);
+                jitNchwToNhwcOrder.push_back(1);
+                jitNhwcToNchwOrder = { 0, rank - 1 };
+                for (std::size_t k = 1; k < rank - 1; k++) jitNhwcToNchwOrder.push_back(k);
 
                 jitInputShapeCL  = toChannelLast(conv_in);
                 jitOutputShapeCL = toChannelLast(output_shape);
@@ -345,10 +340,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 if (filter_oihw.size() == 1)
                     kernels::copy<T>(stream, jitFilterKRSC, filter_oihw);
                 else
-                    kernels::permute<T>(stream, jitFilterKRSC, filter_oihw, nchwToNhwcOrder(rank));
+                    kernels::permute<T>(stream, jitFilterKRSC, filter_oihw, jitNchwToNhwcOrder);
 
-                jitNchwToNhwcOrder = nchwToNhwcOrder(rank);
-                jitNhwcToNchwOrder = nhwcToNchwOrder(rank);
+                jitConvoluter = csl::cudnn::ConvolutionGraph<T>(cudnnHandle, jit_params);
             }
 #endif
 
@@ -428,9 +422,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (fusion_location == InternalFusionLocation::NATIVE)
             {
 #if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
-                kernels::permute<T>(stream, jitInputNHWC, input, jitNchwToNhwcOrder);   /* NCHW/NCDHW -> NHWC/NDHWC */
+                kernels::permute<T>(stream, jitInputNHWC, input, jitNchwToNhwcOrder);
                 jitConvoluter.convolve(cudnnHandle, jitInputNHWC.get(), jitFilterKRSC.get(), jitOutputNHWC.get(), conv_scratchpad);
-                kernels::permute<T>(stream, output, jitOutputNHWC, jitNhwcToNchwOrder);  /* NHWC/NDHWC -> NCHW/NCDHW */
+                kernels::permute<T>(stream, output, jitOutputNHWC, jitNhwcToNchwOrder);
 #else
                 convoluter.convolve(output, input, filtersTensor, conv_scratchpad);
 #endif
@@ -682,6 +676,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
 #if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
         csl::cudnn::ConvolutionGraph<T> jitConvoluter;
+        /* NHWC staging: the JIT graph always convolves channel-last copies and a KRSC filter */
         csl::Tensor<T> jitFilterKRSC;
         std::vector<std::size_t> jitInputShapeCL, jitOutputShapeCL;
         std::vector<std::size_t> jitNchwToNhwcOrder, jitNhwcToNchwOrder;

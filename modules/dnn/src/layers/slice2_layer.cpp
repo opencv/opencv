@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -58,8 +61,59 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty())
+                return false;
+            const ArgData& adata = netimpl_->argData(inputs[0]);
+            if (adata.shape.dims > CSL_MAX_TENSOR_RANK)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = adata.type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        MatShape inpShape = inputs_arr.shape(0);
+
+        // a non-const starts/ends/axes/steps input is read from its host copy, downloaded before the op runs
+        std::vector<int> tempStarts, tempEnds, tempAxes, tempSteps;
+        const std::vector<int> *starts_ = &starts, *ends_ = &ends, *axes_ = &axes;
+        if (inputs.size() > 1) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            tensorToIntVec(netimpl_->argTensor(inputs[1]), tempStarts);
+            starts_ = &tempStarts;
+            tensorToIntVec(netimpl_->argTensor(inputs[2]), tempEnds);
+            ends_ = &tempEnds;
+            if (inputs.size() > 3) {
+                tensorToIntVec(netimpl_->argTensor(inputs[3]), tempAxes);
+                axes_ = &tempAxes;
+            }
+            if (inputs.size() > 4)
+                tensorToIntVec(netimpl_->argTensor(inputs[4]), tempSteps);
+        }
+        int allStarts[MatShape::MAX_DIMS], allSteps[MatShape::MAX_DIMS];
+        getOutShape(inpShape, *starts_, *ends_, *axes_, tempSteps, allStarts, nullptr, allSteps);
+
+        // Slice2 has exactly one output
+        std::vector<std::vector<std::size_t>> offsets{ std::vector<std::size_t>(allStarts, allStarts + inpShape.dims) };
+        std::vector<std::vector<std::int64_t>> steps{ std::vector<std::int64_t>(allSteps, allSteps + inpShape.dims) };
+
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::SliceOp>(std::move(context->stream), std::move(offsets), std::move(steps));
+        return make_cuda_node_with_type<cuda4dnn::SliceOp>(preferableTarget, inputs_arr.type(0), std::move(context->stream),
+                                                           std::move(offsets), std::move(steps));
+    }
+#endif
 
     MatShape getOutShape(const MatShape& inpShape,
                          const std::vector<int>& starts_,

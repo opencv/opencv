@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -38,8 +41,56 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty() || outputs.empty())
+                return false;
+            // offsets are fixed in initCUDA(), so the split sizes must be constant
+            if (inputs.size() == 2 && !netimpl_->isConstArg(inputs[1]))
+                return false;
+            // forwardOpCUDA() skips the whole op when any output is empty
+            for (const Arg& out : outputs) {
+                const MatShape& s = netimpl_->argData(out).shape;
+                for (int j = 0; j < s.dims; j++)
+                    if (s[j] == 0)
+                        return false;
+            }
+            const ArgData& adata = netimpl_->argData(inputs[0]);
+            if (adata.shape.dims > CSL_MAX_TENSOR_RANK)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = adata.type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int ndims = inputs_arr.shape(0).dims;
+        const int axis_ = normalize_axis(axis, ndims);
+
+        // output i starts where the previous outputs end along the split axis
+        const size_t noutputs = outputs_arr.total();
+        std::vector<std::vector<std::size_t>> offsets(noutputs, std::vector<std::size_t>(ndims, 0));
+        std::size_t start = 0;
+        for (size_t i = 0; i < noutputs; i++) {
+            offsets[i][axis_] = start;
+            start += (std::size_t)outputs_arr.shape((int)i)[axis_];
+        }
+
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::SliceOp>(std::move(context->stream), std::move(offsets));
+        return make_cuda_node_with_type<cuda4dnn::SliceOp>(preferableTarget, inputs_arr.type(0),
+                                                           std::move(context->stream), std::move(offsets));
+    }
+#endif
 
     void getOutShapes(const MatShape& inpShape, int axis_,
                       const std::vector<int>& split,

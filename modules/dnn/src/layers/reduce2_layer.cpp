@@ -9,6 +9,10 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../net_impl.hpp"
 #include "../op_cann.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reduce.hpp"
+#endif
 #include "layers_common.hpp"
 #include "../dnn_common.hpp"
 
@@ -143,8 +147,56 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty())
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || isCudaNodeType(t, false);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int rank = inputs_arr.shape(0).dims;
+
+        // a non-const axes input makes dynamicOutputShapes() true, which keeps the graph off CUDA
+        std::vector<int> resolved_axes = axes;
+        if (resolved_axes.empty() && inputs.size() >= 2) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            CV_Assert(netimpl_ && netimpl_->isConstArg(inputs[1]));
+            tensorToIntVec(netimpl_->argTensor(inputs[1]), resolved_axes);
+        }
+        std::vector<std::int64_t> norm_axes;
+        for (int a : resolved_axes)
+            norm_axes.push_back(normalize_axis(a, rank));
+
+        cuda4dnn::ReduceOpType cudaOp = cuda4dnn::ReduceOpType::SUM;
+        switch (reduce_type) {
+            case ReduceType::MEAN: cudaOp = cuda4dnn::ReduceOpType::MEAN; break;
+            case ReduceType::MAX:  cudaOp = cuda4dnn::ReduceOpType::MAX;  break;
+            case ReduceType::MIN:  cudaOp = cuda4dnn::ReduceOpType::MIN;  break;
+            case ReduceType::SUM:  cudaOp = cuda4dnn::ReduceOpType::SUM;  break;
+            case ReduceType::PROD: cudaOp = cuda4dnn::ReduceOpType::PROD; break;
+            case ReduceType::L1:   cudaOp = cuda4dnn::ReduceOpType::L1;   break;
+            case ReduceType::L2:   cudaOp = cuda4dnn::ReduceOpType::L2;   break;
+            case ReduceType::SUM_SQUARE:  cudaOp = cuda4dnn::ReduceOpType::SUM_SQUARE;  break;
+            case ReduceType::LOG_SUM:     cudaOp = cuda4dnn::ReduceOpType::LOG_SUM;     break;
+            case ReduceType::LOG_SUM_EXP: cudaOp = cuda4dnn::ReduceOpType::LOG_SUM_EXP; break;
+        }
+        return make_cuda_node_with_type<cuda4dnn::ReduceOp>(preferableTarget, inputs_arr.type(0),
+                                                            std::move(context->stream), cudaOp,
+                                                            norm_axes, noop_with_empty_axes);
+    }
+#endif
 
     virtual void getTypes(const std::vector<MatType>& inputs,
         const int requiredOutputs,

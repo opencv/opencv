@@ -11,6 +11,7 @@
 #include "memory.hpp"
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utils/configuration.private.hpp>
 
 #include <cublas_v2.h>
 
@@ -52,6 +53,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
     }
 
+    /** half GEMMs accumulate in FP32 unless OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE is set */
+    inline bool allowHalfAccumulate()
+    {
+#if CUDART_VERSION >= 11000
+        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE", false);
+        return allow;
+#else
+        return true;  // the FP32-accumulate path needs CUBLAS_COMPUTE_32F (CUDA 11)
+#endif
+    }
+
+    /** FP32 GEMMs use TF32 tensor cores unless OPENCV_DNN_CUDA_ALLOW_TF32 is off, as cuDNN convolutions do */
+    inline bool allowTF32()
+    {
+        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true);
+        return allow;
+    }
+
     /** non-copyable cuBLAS smart handle
      *
      * UniqueHandle is a smart non-sharable wrapper for cuBLAS handle which ensures that the handle
@@ -79,6 +98,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             CUDA4DNN_CHECK_CUBLAS(cublasCreate(&handle));
             try {
                 CUDA4DNN_CHECK_CUBLAS(cublasSetStream(handle, stream.get()));
+#if CUDART_VERSION >= 11000
+                CUDA4DNN_CHECK_CUBLAS(cublasSetMathMode(handle, allowTF32() ? CUBLAS_TF32_TENSOR_OP_MATH : CUBLAS_DEFAULT_MATH));
+#endif
             } catch (...) {
                 /* cublasDestroy won't throw if a valid handle is passed */
                 CUDA4DNN_CHECK_CUBLAS(cublasDestroy(handle));
@@ -205,16 +227,35 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             ildb = static_cast<int>(ldb),
             ildc = static_cast<int>(ldc);
 
+        if (allowHalfAccumulate()) {
+            CUDA4DNN_CHECK_CUBLAS(
+                cublasHgemm(
+                    handle.get(),
+                    opa, opb,
+                    irows_c, icols_c, icommon_dim,
+                    &alpha, A.get(), ilda,
+                    B.get(), ildb,
+                    &beta, C.get(), ildc
+                )
+            );
+            return;
+        }
+
+#if CUDART_VERSION >= 11000
+        /* CUBLAS_COMPUTE_32F takes float scale factors */
+        const float falpha = static_cast<float>(alpha), fbeta = static_cast<float>(beta);
         CUDA4DNN_CHECK_CUBLAS(
-            cublasHgemm(
+            cublasGemmEx(
                 handle.get(),
                 opa, opb,
                 irows_c, icols_c, icommon_dim,
-                &alpha, A.get(), ilda,
-                B.get(), ildb,
-                &beta, C.get(), ildc
+                &falpha, A.get(), CUDA_R_16F, ilda,
+                B.get(), CUDA_R_16F, ildb,
+                &fbeta, C.get(), CUDA_R_16F, ildc,
+                CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
             )
         );
+#endif
     }
 
     template <> inline
@@ -311,17 +352,37 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
 
+        if (allowHalfAccumulate()) {
+            CUDA4DNN_CHECK_CUBLAS(
+                cublasHgemmStridedBatched(
+                    handle.get(),
+                    opa, opb,
+                    irows_c, icols_c, icommon_dim,
+                    &alpha, A.get(), ilda, stride_a,
+                    B.get(), ildb, stride_b,
+                    &beta, C.get(), ildc, stride_c,
+                    batch_count
+                )
+            );
+            return;
+        }
+
+#if CUDART_VERSION >= 11000
+        /* CUBLAS_COMPUTE_32F takes float scale factors */
+        const float falpha = static_cast<float>(alpha), fbeta = static_cast<float>(beta);
         CUDA4DNN_CHECK_CUBLAS(
-            cublasHgemmStridedBatched(
+            cublasGemmStridedBatchedEx(
                 handle.get(),
                 opa, opb,
                 irows_c, icols_c, icommon_dim,
-                &alpha, A.get(), ilda, stride_a,
-                B.get(), ildb, stride_b,
-                &beta, C.get(), ildc, stride_c,
-                batch_count
+                &falpha, A.get(), CUDA_R_16F, ilda, stride_a,
+                B.get(), CUDA_R_16F, ildb, stride_b,
+                &fbeta, C.get(), CUDA_R_16F, ildc, stride_c,
+                batch_count,
+                CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
             )
         );
+#endif
     }
 
     template <> inline
@@ -362,145 +423,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 batch_count
             )
         );
-    }
-
-    /** @brief Strided batched GEMM for column-major matrices
-     *
-     * \f$ C_i = \alpha A_i B_i + \beta C_i \f$ for a stack of matrices A, B and C indexed by i
-     *
-     * @tparam          T           matrix element type (must be `half` or `float`)
-     *
-     * @param           handle      valid cuBLAS Handle
-     * @param           trans_a     use transposed matrix of A_i for computation
-     * @param           trans_b     use transposed matrix of B_i for computation
-     * @param           M           number of rows in C
-     * @param           N           number of columns in C
-     * @param           K           common dimension of A (or trans A) and B (or trans B)
-     * @param           alpha       scale factor for A B
-     * @param[in]       A           pointer to stack of column-major matrices A in device memory
-     * @param           lda         leading dimension of matrix A
-     * @param           A_offsets   offsets to get A slices
-     * @param[in]       B           pointer to stack of column-major matrices B in device memory
-     * @param           ldb         leading dimension of matrix B
-     * @param           B_offsets   offsets to get B slices
-     * @param           beta        scale factor for C
-     * @param[in,out]   C           pointer to stack of column-major matrices C in device memory
-     * @param           ldc         leading dimension of matrix C
-     * @param           C_offsets   offsets to get C slices
-     * @param           batchCount  number of matrices in the batch
-     *
-     * Exception Guarantee: Basic
-     */
-    template <class T>
-    void gemmBatched(const Handle &handle,
-                     bool trans_a, bool trans_b,
-                     std::size_t M, std::size_t N, std::size_t K,
-                     T alpha,
-                     const DevicePtr<const T> A, std::size_t lda, std::vector<std::size_t> A_offsets,
-                     const DevicePtr<const T> B, std::size_t ldb, std::vector<std::size_t> B_offsets,
-                     T beta,
-                     const DevicePtr<T> C, std::size_t ldc, std::vector<std::size_t> C_offsets,
-                     std::size_t batchCount);
-
-    template <> inline
-    void gemmBatched<half>(const Handle &handle,
-                           bool trans_a, bool trans_b,
-                           std::size_t M, std::size_t N, std::size_t K,
-                           half alpha,
-                           const DevicePtr<const half> A, std::size_t lda, std::vector<std::size_t> A_offsets,
-                           const DevicePtr<const half> B, std::size_t ldb, std::vector<std::size_t> B_offsets,
-                           half beta,
-                           const DevicePtr<half> C, std::size_t ldc, std::vector<std::size_t> C_offsets,
-                           std::size_t batchCount) {
-        CV_Assert(handle);
-
-        const auto opa = trans_a ? CUBLAS_OP_T : CUBLAS_OP_N,
-                   opb = trans_b ? CUBLAS_OP_T : CUBLAS_OP_N;
-        const auto iM = static_cast<int>(M),
-                   iN = static_cast<int>(N),
-                   iK = static_cast<int>(K),
-                   ilda = static_cast<int>(lda),
-                   ildb = static_cast<int>(ldb),
-                   ildc = static_cast<int>(ldc);
-
-        const auto batch_count = static_cast<int>(batchCount);
-
-        AutoBuffer<half*> buffer(3 * batch_count);
-        auto A_slices = buffer.data();
-        auto B_slices = A_slices + batch_count;
-        auto C_slices = B_slices + batch_count;
-        // collect A, B and C slices
-        for (int i = 0; i < batch_count; i++) {
-            A_slices[i] = (half*)(A.get()) + A_offsets[i];
-            B_slices[i] = (half*)(B.get()) + B_offsets[i];
-            C_slices[i] = (half*)(C.get()) + C_offsets[i];
-        }
-
-        const half **dev_A_slices = 0, **dev_B_slices = 0;
-        half **dev_C_slices = 0;
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(half*)));
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(half*)));
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(half*)));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
-
-        CUDA4DNN_CHECK_CUBLAS(cublasHgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
-
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_A_slices));
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_B_slices));
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_C_slices));
-    }
-
-    template <> inline
-    void gemmBatched<float>(const Handle &handle,
-                           bool trans_a, bool trans_b,
-                           std::size_t M, std::size_t N, std::size_t K,
-                           float alpha,
-                           const DevicePtr<const float> A, std::size_t lda, std::vector<std::size_t> A_offsets,
-                           const DevicePtr<const float> B, std::size_t ldb, std::vector<std::size_t> B_offsets,
-                           float beta,
-                           const DevicePtr<float> C, std::size_t ldc, std::vector<std::size_t> C_offsets,
-                           std::size_t batchCount) {
-        CV_Assert(handle);
-
-        const auto opa = trans_a ? CUBLAS_OP_T : CUBLAS_OP_N,
-                   opb = trans_b ? CUBLAS_OP_T : CUBLAS_OP_N;
-        const auto iM = static_cast<int>(M),
-                   iN = static_cast<int>(N),
-                   iK = static_cast<int>(K),
-                   ilda = static_cast<int>(lda),
-                   ildb = static_cast<int>(ldb),
-                   ildc = static_cast<int>(ldc);
-
-        const auto batch_count = static_cast<int>(batchCount);
-
-        AutoBuffer<float*> buffer(3 * batch_count);
-        auto A_slices = buffer.data();
-        auto B_slices = A_slices + batch_count;
-        auto C_slices = B_slices + batch_count;
-        // collect A, B and C slices
-        for (int i = 0; i < batch_count; i++) {
-            A_slices[i] = (float*)(A.get()) + A_offsets[i];
-            B_slices[i] = (float*)(B.get()) + B_offsets[i];
-            C_slices[i] = (float*)(C.get()) + C_offsets[i];
-        }
-
-        const float **dev_A_slices = 0, **dev_B_slices = 0;
-        float **dev_C_slices = 0;
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(float*)));
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(float*)));
-        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(float*)));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
-        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
-
-        // cuBLAS is column-major
-        CUDA4DNN_CHECK_CUBLAS(cublasSgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
-
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_A_slices));
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_B_slices));
-        CUDA4DNN_CHECK_CUDA(cudaFree(dev_C_slices));
     }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */

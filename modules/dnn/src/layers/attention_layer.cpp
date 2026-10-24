@@ -3,11 +3,17 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/attention.hpp"
+#endif
 
 namespace cv { namespace dnn {
 
@@ -170,8 +176,48 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            // AttentionOp takes const float weight/bias blobs, the input and an optional additive
+            // float mask; rotary stays on CPU
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || do_rotary || blobs.size() < 2 ||
+                (this->inputs.size() != 1 && this->inputs.size() != 2))
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known non-float one
+            for (const Arg& a : this->inputs) {
+                const int t = netimpl_->argData(a).type;
+                if (t >= 0 && t != CV_32F)
+                    return false;
+            }
+            return blobs.front().type() == CV_32F && blobs.back().type() == CV_32F &&
+                   qkv_head_sizes[0] == qkv_head_sizes[1];
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+
+        // finalize() has grouped the tokens and filled qkv_hidden_sizes[2]
+        cuda4dnn::AttentionConfiguration cfg;
+        cfg.num_heads = num_heads;
+        cfg.qkv_hidden_sizes = qkv_hidden_sizes;
+        cfg.input_hidden_size = input_hidden_size;
+        cfg.batch_size = batch_size;
+        cfg.seq_len = seq_len;
+        cfg.scale = scale;
+
+        return make_cuda_node<cuda4dnn::AttentionOp>(preferableTarget, std::move(context->stream),
+                                                     std::move(context->cublas_handle),
+                                                     blobs.front(), blobs.back(), cfg);
+    }
+#endif
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,

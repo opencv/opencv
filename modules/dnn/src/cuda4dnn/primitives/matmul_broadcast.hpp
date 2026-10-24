@@ -86,6 +86,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             }
         }
 
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            auto input_A = csl::viewOf<T>(inputs[0]);
+            csl::TensorView<T> input_B = input_B_tensor.empty() ? csl::viewOf<T>(inputs[1])
+                                                                : csl::TensorView<T>(input_B_tensor);
+            auto output = csl::spanOf<T>(outputs[0]);
+
+            csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, 1.f, transA, input_A, A_offsets, transB, input_B, B_offsets);
+
+            if (!bias_tensor.empty())
+                kernels::eltwise_sum_2<T>(stream, output, output, csl::TensorView<T>(bias_tensor));
+        }
+
     private:
         csl::Stream stream;
         csl::cublas::Handle cublasHandle;
