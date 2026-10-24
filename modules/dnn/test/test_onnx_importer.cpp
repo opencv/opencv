@@ -411,6 +411,13 @@ TEST_P(Test_ONNX_layers, Convolution3D_bias)
     testONNXModels("conv3d_depthwise_bias"); // kernel 1x1
 }
 
+TEST_P(Test_ONNX_layers, Convolution3D_depthwise_sigmoid)
+{
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    testONNXModels("conv3d_depthwise_sigmoid");
+}
+
 TEST_P(Test_ONNX_layers, Two_convolution)
 {
 #if defined(INF_ENGINE_RELEASE)
