@@ -351,7 +351,7 @@ TEST_P(CountNonZeroFP8, sign_bit)
     Mat src(1, n, CV_32S), m;
     randu(src, -3, 4);
     src.convertTo(m, depth);
-    
+
     // put 0x80 (-0.0 or NaN) on every 5th element and on the last one
     for (int i = 0; i < n; i += 5)
         m.data[i] = 0x80;
