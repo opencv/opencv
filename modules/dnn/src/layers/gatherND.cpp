@@ -1,5 +1,6 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <atomic>
 
 namespace cv { namespace dnn {
 
@@ -52,7 +53,10 @@ public:
 
         CV_CheckGE(r, 1, "GatherND: data rank must be >= 1");
         CV_CheckGE(q, 1, "GatherND: indices rank must be >= 1");
+        CV_CheckGE(batch_dims, 0, "GatherND: batch_dims must be >= 0");
         CV_CheckLE(batch_dims, std::min(q, r), "GatherND: batch_dims must be <= min(q, r)");
+        for (int i = 0; i < batch_dims; ++i)
+            CV_CheckEQ(data[i], indices[i], "GatherND: batch dimensions of data and indices must match");
         CV_CheckGE(last_indices_dim, 1, "GatherND: last dimension of indices must be >= 1");
         CV_CheckLE(last_indices_dim, r - batch_dims, "GatherND: last dimension of indices must be <= r - batch_dims");
 
@@ -137,10 +141,10 @@ public:
         for (int d = batch_dims; d < static_cast<int>(q) - 1; ++d)
             num_slices_per_batch *= indices.size[d];
 
-        volatile bool globOutOfRangeIdx = false;
+        std::atomic<bool> globOutOfRangeIdx(false);
 
         parallel_for_(Range(0, outer_size), [&](const Range& range) {
-            bool outOfRangeIdx = globOutOfRangeIdx;
+            bool outOfRangeIdx = globOutOfRangeIdx.load(std::memory_order_relaxed);
             for (size_t i = range.start; i < range.end; ++i)
             {
                 const iT* sliced_indices = indices_ptr + i * last_indices_dim;
@@ -169,10 +173,10 @@ public:
                 std::memcpy(out_ptr + i * inner_size, data_ptr + offset, inner_size * sizeof(dT));
             }
             if (outOfRangeIdx)
-                globOutOfRangeIdx = true;
+                globOutOfRangeIdx.store(true, std::memory_order_relaxed);
         }, nstripes);
 
-        if (globOutOfRangeIdx) {
+        if (globOutOfRangeIdx.load()) {
             CV_Error(Error::StsOutOfRange, "GatherND: some of indices are outside of range");
         }
     }

@@ -6,6 +6,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <atomic>
 
 namespace cv { namespace dnn {
 
@@ -114,10 +115,10 @@ public:
         size_t axis_step = static_cast<size_t>(step_data[axis] / sizeof(T));
 
         bool innermost_axis = axis == static_cast<int>(shape_data.size() - 1);
-        volatile bool globOutOfRangeIdx = false;
+        std::atomic<bool> globOutOfRangeIdx(false);
 
         auto fn = [&](const Range &r) {
-            bool outOfRangeIdx = globOutOfRangeIdx;
+            bool outOfRangeIdx = globOutOfRangeIdx.load(std::memory_order_relaxed);
             for (int i = r.start; i < r.end && !outOfRangeIdx; i++) {
                 auto *data = ptr_data + static_cast<size_t>(calculateOffset(i, shape_indices, axis, step_data) / sizeof(T));
                 auto *indices = ptr_indices + i * inner_most_dim;
@@ -146,14 +147,14 @@ public:
                 }
             }
             if (outOfRangeIdx)
-                globOutOfRangeIdx = true;
+                globOutOfRangeIdx.store(true, std::memory_order_relaxed);
         };
 
         int outer_dims = total(shape_indices, 0, shape_indices.size() - 1);
         double nstripes = static_cast<size_t>(outer_dims * inner_most_dim * (1 / 1024.0));
         parallel_for_(Range(0, outer_dims), fn, nstripes);
 
-        if (globOutOfRangeIdx) {
+        if (globOutOfRangeIdx.load()) {
             CV_Error(Error::StsOutOfRange, "GatherElements: some of indices are outside of range");
         }
     }
