@@ -560,14 +560,6 @@ struct ModelFusionQDQ
                                     if (wz != 0) all_wzp_zero = false;
                                 }
 
-                                bool symmetric_pads = true;
-                                size_t npads = conv->pads.size();
-                                size_t ndims_pad = npads / 2;
-                                for (size_t d = 0; d < ndims_pad && symmetric_pads; d++) {
-                                    if (conv->pads[d] != conv->pads[d + ndims_pad])
-                                        symmetric_pads = false;
-                                }
-
                                 // Conv2Int8's VNNI kernel processes K0=8 output channels per
                                 // SIMD iteration. When ngroups>1 and Kg<K0, multiple groups map
                                 // to the same K0-wide output slot and clobber one another, so
@@ -581,7 +573,7 @@ struct ModelFusionQDQ
                                 const bool kernelSupportsGrouping =
                                     conv->ngroups <= 1 || outChannelsPerGroup >= 8 || isDepthwise;
 
-                                if (all_wzp_zero && symmetric_pads && kernelSupportsGrouping) {
+                                if (all_wzp_zero && kernelSupportsGrouping) {
                                     Mat bias = Mat::zeros(1, outCn, CV_32S);
                                     bool biasOk = true;
                                     int dq_bias_idx = -1;

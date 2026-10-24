@@ -117,7 +117,8 @@ public:
         Mat dstMat = output[0].reshape(1, outerSize);
         Mat dstMatInt32 = Mat(shape(dstMat), CV_32S);
 
-        const int nstripes = outerSize <= 4 ? 1 : getNumThreads();
+        const size_t nouts = (size_t)outerSize * weightsMat.rows;
+        const int nstripes = (int)std::max<size_t>(1, std::min<size_t>(getNumThreads(), nouts / 16));
         runInt8Gemm(srcMat, weightsMat, biasMat, outputMultiplier, dstMatInt32, nstripes, output_zp);
         if (output_type == CV_8U) {
             dstMatInt32.convertTo(dstMat, output_type, 1, 128);
