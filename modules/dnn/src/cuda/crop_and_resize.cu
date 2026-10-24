@@ -81,14 +81,30 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const auto box_width = right - left;
                 const auto box_height = bottom - top;
 
-                const auto o2i_fy = static_cast<T>(in_height - 1) / static_cast<T>(out_height - 1);
-                const auto o2i_fx = static_cast<T>(in_width - 1) / static_cast<T>(out_width - 1);
+                const auto o2i_fy = out_height > 1 ? static_cast<T>(in_height - 1) / static_cast<T>(out_height - 1) : T(0);
+                const auto o2i_fx = out_width > 1 ? static_cast<T>(in_width - 1) / static_cast<T>(out_width - 1) : T(0);
 
                 const auto height_scale = box_height * o2i_fy;
                 const auto width_scale = box_width * o2i_fx;
 
-                const auto in_y = top * static_cast<T>(in_height - 1) + static_cast<T>(y) * height_scale;
-                const auto in_x = left * static_cast<T>(in_width - 1) + static_cast<T>(x) * width_scale;
+                /* a single output row/column samples the middle of the box */
+                const T in_y = out_height > 1 ? T(top * static_cast<T>(in_height - 1) + static_cast<T>(y) * height_scale)
+                                              : T(T(0.5f) * (top + bottom) * static_cast<T>(in_height - 1));
+                const T in_x = out_width > 1 ? T(left * static_cast<T>(in_width - 1) + static_cast<T>(x) * width_scale)
+                                             : T(T(0.5f) * (left + right) * static_cast<T>(in_width - 1));
+
+                index_type out_idx = box_no * out_box_size + c_start * out_image_size + y * out_width + x;
+
+                /* samples outside the image get the extrapolation value (0) */
+                if (!(in_y >= T(0) && in_y <= static_cast<T>(in_height - 1) &&
+                      in_x >= T(0) && in_x <= static_cast<T>(in_width - 1)))
+                {
+                    for (int i = 0; i < CHANNELS_PER_ITER; i++) {
+                        output[out_idx] = T(0);
+                        out_idx += out_image_size;
+                    }
+                    continue;
+                }
 
                 const auto in_y0 = static_cast<index_type>(in_y);
                 const auto in_x0 = static_cast<index_type>(in_x);
@@ -99,7 +115,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
                 index_type in_offset_r0 = c_start * in_image_size + in_y0 * in_width;
                 index_type in_offset_r1 = c_start * in_image_size + in_y1 * in_width;
-                index_type out_idx = box_no * out_box_size + c_start * out_image_size + y * out_width + x;
 
                 #pragma unroll 1 /* disable unrolling */
                 for (int i = 0; i < CHANNELS_PER_ITER; i++) {
