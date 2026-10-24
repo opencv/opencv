@@ -10,6 +10,7 @@
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <numeric>
+#include <fstream>
 namespace opencv_test { namespace {
 
 void yoloPostProcessing(
@@ -3956,6 +3957,35 @@ TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
     Net net;
     EXPECT_NO_THROW(net = readNetFromONNX(_tf("models/qconv_empty_x_scale.onnx")));
     EXPECT_TRUE(net.empty());
+}
+
+TEST(Test_ONNX_importer, parse_bool_tensor_int32)
+{
+    const uint8_t proto_bytes[] = {
+        0x08, 0x03,                   // dims: [3]
+        0x10, 0x09,                   // data_type: BOOL (9)
+        0x2a, 0x03, 0x01, 0x00, 0x01  // int32_data: [1, 0, 1]
+    };
+    const std::string filename = cv::tempfile(".pb");
+    struct FileGuard
+    {
+        std::string name;
+        ~FileGuard() { if (!name.empty()) std::remove(name.c_str()); }
+    } guard{filename};
+
+    std::ofstream ofs(filename.c_str(), std::ios::binary);
+    ASSERT_TRUE(ofs.is_open());
+    ofs.write(reinterpret_cast<const char*>(proto_bytes), sizeof(proto_bytes));
+    ofs.close();
+
+    Mat m = readTensorFromONNX(filename);
+
+    ASSERT_EQ(m.dims, 1);
+    ASSERT_EQ(m.size[0], 3);
+    EXPECT_EQ(m.depth(), CV_Bool);
+    EXPECT_EQ(m.ptr<bool>()[0], true);
+    EXPECT_EQ(m.ptr<bool>()[1], false);
+    EXPECT_EQ(m.ptr<bool>()[2], true);
 }
 
 }} // namespace
