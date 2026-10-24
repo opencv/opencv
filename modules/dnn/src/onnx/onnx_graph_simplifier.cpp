@@ -2220,8 +2220,16 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
     {
-        checkPayloadSize(raw_data_size);
-        Mat(sizes, CV_Bool, rawdata).copyTo(blob);
+        if (!tensor_proto.int32_data().empty())
+        {
+            checkPayloadSize(tensor_proto.int32_data().size());
+            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_Bool);
+        }
+        else
+        {
+            checkPayloadSize(raw_data_size);
+            Mat(sizes, CV_Bool, rawdata).copyTo(blob);
+        }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT16)
     {
@@ -2235,27 +2243,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             checkPayloadSize(raw_data_size / sizeof(int16_t));
             Mat(sizes, CV_16SC1, rawdata).copyTo(blob);
         }
-    }
-    else if (datatype == opencv_onnx::TensorProto_DataType_UINT16)
-    {
-        if (!tensor_proto.int32_data().empty())
-            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_16UC1);
-        else
-            Mat(sizes, CV_16UC1, rawdata).copyTo(blob);
-    }
-    else if (datatype == opencv_onnx::TensorProto_DataType_UINT32)
-    {
-        if (!tensor_proto.int32_data().empty())
-            Mat(sizes, CV_32SC1, (void*)tensor_proto.int32_data().data()).convertTo(blob, CV_32UC1);
-        else
-            Mat(sizes, CV_32UC1, rawdata).copyTo(blob);
-    }
-    else if (datatype == opencv_onnx::TensorProto_DataType_UINT64)
-    {
-        if (!tensor_proto.int64_data().empty())
-            Mat(sizes, CV_64SC1, (void*)tensor_proto.int64_data().data()).convertTo(blob, CV_64UC1);
-        else
-            Mat(sizes, CV_64UC1, rawdata).copyTo(blob);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FN ||
              datatype == opencv_onnx::TensorProto_DataType_FLOAT8E4M3FNUZ)
