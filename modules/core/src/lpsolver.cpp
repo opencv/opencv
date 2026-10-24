@@ -41,6 +41,7 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
+#include <cmath>
 
 #define dprintf(x)
 #define print_matrix(x)
@@ -331,6 +332,16 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
     }
 }
 
+// Returns a-b, or exactly 0 when the result is only rounding noise of the operands.
+// The simplex logic compares tableau entries with exactly 0, so a cancellation that leaves
+// ~1e-13 behind would be taken as a real value. The threshold is relative to the operands,
+// so it does not depend on the scale of the problem.
+static inline double sub_snap_zero(double a,double b){
+    const double rel_eps=1e-12;
+    double d=a-b;
+    return std::abs(d)<=rel_eps*std::max(std::abs(a),std::abs(b))?0.0:d;
+}
+
 static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,
         int leaving_index,int entering_index,vector<unsigned int>& indexToRow){
     double Coef=b(leaving_index,entering_index);
@@ -349,7 +360,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
                 if(j==entering_index){
                     b(i,j)=-coef*b(leaving_index,j);
                 }else{
-                    b(i,j)-=(coef*b(leaving_index,j));
+                    b(i,j)=sub_snap_zero(b(i,j),coef*b(leaving_index,j));
                 }
             }
         }
@@ -361,7 +372,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         if(i==entering_index){
             c(0,i)=-Coef*b(leaving_index,i);
         }else{
-            c(0,i)-=Coef*b(leaving_index,i);
+            c(0,i)=sub_snap_zero(c(0,i),Coef*b(leaving_index,i));
         }
     }
     dprintf(("v was %g\n",v));
