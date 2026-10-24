@@ -344,6 +344,86 @@ TEST(Imgcodecs_Avif, DISABLED_unsupported_animation_with_16bit)
   EXPECT_NO_THROW(EXPECT_FALSE(cv::imencodemulti(".avif", frames, buf, {IMWRITE_AVIF_DEPTH, 16})));
 }
 
+TEST(Imgcodecs_Avif, alpha_quality_control)
+{
+  const int width = 64;
+  const int height = 64;
+  cv::Mat img(height, width, CV_8UC4);
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      img.at<cv::Vec4b>(y, x) = cv::Vec4b(
+        static_cast<uchar>((x * 3 + y * 7) % 256),
+        static_cast<uchar>((x * 11 + y * 5) % 256),
+        static_cast<uchar>((x * 13 + y * 17) % 256),
+        static_cast<uchar>((x * 5 + y * 3) % 256)
+      );
+    }
+  }
+
+  std::vector<cv::Mat> planes;
+  cv::split(img, planes);
+
+  // 1. Lossless color (quality=100) + Lossy alpha (alpha_quality=10)
+  {
+    std::vector<uchar> buf;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                             {IMWRITE_AVIF_QUALITY, 100, IMWRITE_AVIF_ALPHA_QUALITY, 10}));
+    cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_EQ(decoded.type(), CV_8UC4);
+
+    std::vector<cv::Mat> dec_planes;
+    cv::split(decoded, dec_planes);
+    EXPECT_EQ(0, cvtest::norm(planes[0], dec_planes[0], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(planes[1], dec_planes[1], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(planes[2], dec_planes[2], NORM_INF));
+    EXPECT_GT(cvtest::norm(planes[3], dec_planes[3], NORM_INF), 0);
+  }
+
+  // 2. Lossy color (quality=10) + Lossless alpha (alpha_quality=100)
+  {
+    std::vector<uchar> buf;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                             {IMWRITE_AVIF_QUALITY, 10, IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+    cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_EQ(decoded.type(), CV_8UC4);
+
+    std::vector<cv::Mat> dec_planes;
+    cv::split(decoded, dec_planes);
+    EXPECT_GT(cvtest::norm(planes[0], dec_planes[0], NORM_INF), 0);
+    EXPECT_EQ(0, cvtest::norm(planes[3], dec_planes[3], NORM_INF));
+  }
+
+  // 3. Both lossless (quality=100, alpha_quality=100)
+  {
+    std::vector<uchar> buf;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                             {IMWRITE_AVIF_QUALITY, 100, IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+    cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_EQ(decoded.type(), CV_8UC4);
+    EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
+  }
+
+  // 4. Parameter order independence
+  {
+    std::vector<uchar> buf1, buf2;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf1,
+                             {IMWRITE_AVIF_QUALITY, 80, IMWRITE_AVIF_ALPHA_QUALITY, 20}));
+    EXPECT_TRUE(cv::imencode(".avif", img, buf2,
+                             {IMWRITE_AVIF_ALPHA_QUALITY, 20, IMWRITE_AVIF_QUALITY, 80}));
+    cv::Mat dec1 = cv::imdecode(buf1, IMREAD_UNCHANGED);
+    cv::Mat dec2 = cv::imdecode(buf2, IMREAD_UNCHANGED);
+    EXPECT_EQ(0, cvtest::norm(dec1, dec2, NORM_INF));
+  }
+
+  // 5. Out-of-bounds parameter fallback
+  {
+    std::vector<uchar> buf;
+    EXPECT_NO_THROW(cv::imencode(".avif", img, buf,
+                                 {IMWRITE_AVIF_QUALITY, 150, IMWRITE_AVIF_ALPHA_QUALITY, -50}));
+    EXPECT_FALSE(buf.empty());
+  }
+}
+
 }  // namespace
 }  // namespace opencv_test
 

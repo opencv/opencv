@@ -349,7 +349,7 @@ AvifEncoder::AvifEncoder() {
   m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
   m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
-  m_supported_encode_key = { IMWRITE_AVIF_QUALITY, IMWRITE_AVIF_DEPTH, IMWRITE_AVIF_SPEED };
+  m_supported_encode_key = { IMWRITE_AVIF_QUALITY, IMWRITE_AVIF_DEPTH, IMWRITE_AVIF_SPEED, IMWRITE_AVIF_ALPHA_QUALITY };
 }
 
 AvifEncoder::~AvifEncoder() {
@@ -374,16 +374,25 @@ bool AvifEncoder::writeanimation(const Animation& animation,
       }
 #if CV_AVIF_USE_QUALITY
       encoder_->quality = quality;
-      encoder_->qualityAlpha = quality; // Keep alpha channel quality in sync with color channels
 #else
       encoder_->minQuantizer = encoder_->maxQuantizer =
           (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
               quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
           AVIF_QUANTIZER_WORST_QUALITY;
+#endif
+    } else if (params[i] == IMWRITE_AVIF_ALPHA_QUALITY) {
+      const int qualityAlpha = std::min(std::max(value, AVIF_QUALITY_WORST),
+                                         AVIF_QUALITY_BEST);
+      if (value != qualityAlpha) {
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_ALPHA_QUALITY must be between 0 to 100. It is fallbacked to %d", value, qualityAlpha));
+      }
+#if CV_AVIF_USE_QUALITY
+      encoder_->qualityAlpha = qualityAlpha;
+#else
       encoder_->minQuantizerAlpha = encoder_->maxQuantizerAlpha =
           (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
-              quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
-          AVIF_QUANTIZER_WORST_QUALITY; // Keep alpha channel quality in sync with color channels
+              qualityAlpha / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
+          AVIF_QUANTIZER_WORST_QUALITY;
 #endif
     } else if (params[i] == IMWRITE_AVIF_DEPTH) {
       bit_depth = value;
