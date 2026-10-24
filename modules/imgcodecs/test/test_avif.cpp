@@ -344,7 +344,6 @@ TEST(Imgcodecs_Avif, DISABLED_unsupported_animation_with_16bit)
   EXPECT_NO_THROW(EXPECT_FALSE(cv::imencodemulti(".avif", frames, buf, {IMWRITE_AVIF_DEPTH, 16})));
 }
 
-#ifdef OPENCV_IMGCODECS_AVIF_USE_QUALITY
 class Imgcodecs_Avif_AlphaQuality : public testing::Test
 {
 protected:
@@ -484,7 +483,6 @@ TEST_F(Imgcodecs_Avif_AlphaQuality, omitted_alpha_syncs_with_color)
   cv::Mat decExplicit = cv::imdecode(bufExplicit, IMREAD_UNCHANGED);
   EXPECT_EQ(0, cvtest::norm(decSynced, decExplicit, NORM_INF));
 }
-#endif // OPENCV_IMGCODECS_AVIF_USE_QUALITY
 
 }  // namespace
 }  // namespace opencv_test

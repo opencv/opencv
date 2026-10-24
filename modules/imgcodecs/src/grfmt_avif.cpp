@@ -15,11 +15,8 @@
 #include "opencv2/imgproc.hpp"
 #include "grfmt_avif.hpp"
 
-#ifndef OPENCV_IMGCODECS_AVIF_USE_QUALITY
-#define OPENCV_IMGCODECS_AVIF_USE_QUALITY \
+#define CV_AVIF_USE_QUALITY \
   (AVIF_VERSION > ((0 * 1000000) + (11 * 10000) + (1 * 100)))
-#endif
-#define CV_AVIF_USE_QUALITY OPENCV_IMGCODECS_AVIF_USE_QUALITY
 
 #if !CV_AVIF_USE_QUALITY
 #define AVIF_QUALITY_LOSSLESS 100
