@@ -6,6 +6,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <atomic>
 
 namespace cv { namespace dnn {
 
@@ -114,30 +115,48 @@ public:
         size_t axis_step = static_cast<size_t>(step_data[axis] / sizeof(T));
 
         bool innermost_axis = axis == static_cast<int>(shape_data.size() - 1);
+        std::atomic<bool> globOutOfRangeIdx(false);
 
         auto fn = [&](const Range &r) {
-            for (int i = r.start; i < r.end; i++) {
+            bool outOfRangeIdx = globOutOfRangeIdx.load(std::memory_order_relaxed);
+            for (int i = r.start; i < r.end && !outOfRangeIdx; i++) {
                 auto *data = ptr_data + static_cast<size_t>(calculateOffset(i, shape_indices, axis, step_data) / sizeof(T));
                 auto *indices = ptr_indices + i * inner_most_dim;
                 auto *out = ptr_out + i * inner_most_dim;
 
                 if (innermost_axis) {
                     for (int j = 0; j < inner_most_dim; j++) {
-                        int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
+                        int64_t index = (int64_t)indices[j];
+                        index += index < 0 ? axis_dim : 0;
+                        if (index < 0 || index >= axis_dim) {
+                            outOfRangeIdx = true;
+                            break;
+                        }
                         out[j] = data[index];
                     }
                 } else {
                     for (int j = 0; j < inner_most_dim; j++) {
-                        int index = (indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
+                        int64_t index = (int64_t)indices[j];
+                        index += index < 0 ? axis_dim : 0;
+                        if (index < 0 || index >= axis_dim) {
+                            outOfRangeIdx = true;
+                            break;
+                        }
                         out[j] = data[index * axis_step + j];
                     }
                 }
             }
+            if (outOfRangeIdx)
+                globOutOfRangeIdx.store(true, std::memory_order_relaxed);
         };
 
         int outer_dims = total(shape_indices, 0, shape_indices.size() - 1);
         double nstripes = static_cast<size_t>(outer_dims * inner_most_dim * (1 / 1024.0));
         parallel_for_(Range(0, outer_dims), fn, nstripes);
+
+        if (globOutOfRangeIdx.load()) {
+            CV_Error(Error::StsOutOfRange, "GatherElements: some of indices are outside of range");
+        }
     }
 
     template<typename... Args>
