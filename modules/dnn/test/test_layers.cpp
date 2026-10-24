@@ -4181,4 +4181,26 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
     }
 }
 
+TEST(Test_GatherND, EmptyIndicesDoNotCrash)
+{
+    for (int indicesType : {CV_32S, CV_64S})
+    {
+        Mat data(4, 5, CV_32F);
+        randu(data, -1, 1);
+        Mat indices(std::vector<int>{0, 1}, indicesType);
+
+        LayerParams lp;
+        lp.type = "GatherND";
+        lp.name = "gathernd_empty_indices";
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{data, indices};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 5}));
+    }
+}
+
 }} // namespace
