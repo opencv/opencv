@@ -19,6 +19,9 @@ if (HAVE_AVIF)
   if(NOT (AVIF_VERSION VERSION_LESS "1.4.0")) # libavif v1.4.0+ supports 16 bit images.
     add_definitions(-DOPENCV_IMGCODECS_AVIF_SUPPORT_16BIT=1)
   endif()
+  if(AVIF_VERSION VERSION_GREATER "0.11.1")
+    add_definitions(-DOPENCV_IMGCODECS_AVIF_USE_QUALITY=1)
+  endif()
 endif()
 
 if(HAVE_JPEG)
@@ -205,5 +208,8 @@ endif()
 if(TARGET opencv_test_imgcodecs AND HAVE_PNG AND PNG_VERSION_STRING VERSION_LESS "1.6.0")
   # Old libpng (< 1.6.0) is known to have lower precision in internal RGB-to-Gray calculation for 16-bit images.
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_EPS_16BIT_GRAY=9)
+endif()
+if(TARGET opencv_test_imgcodecs AND HAVE_AVIF AND (AVIF_VERSION VERSION_GREATER "0.11.1"))
+  ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_AVIF_USE_QUALITY=1)
 endif()
 ocv_add_perf_tests()
