@@ -3430,6 +3430,50 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom64U,
         testing::Values(CV_64S, CV_64F, CV_32F, CV_16F, CV_16BF),
         testing::Values(1, 7, 8, 127)));
 
+// Converting floating-point depths to 64-bit integer depths (CV_64U, CV_64S) must preserve the full
+// 64-bit destination range without truncating to 32 bits on the vector path, across lengths that
+// straddle the vector width.
+typedef testing::TestWithParam< tuple<int, int, int> > Core_ConvertTo64Int;
+
+TEST_P(Core_ConvertTo64Int, preserves_range_across_lengths)
+{
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const int len      = get<2>(GetParam());
+
+    const double vals[] = { -4000000000.0, -2147483648.0, -1.0, 0.0, 1.0, 1000.0, 2147483647.0, 2147483648.0, 4000000000.0 };
+
+    for (double v : vals)
+    {
+        Mat src(1, len, srcDepth, Scalar(v));
+        Mat dst;
+        src.convertTo(dst, dstDepth);
+
+        for (int i = 0; i < len; i++)
+        {
+            SCOPED_TRACE(cv::format("srcDepth=%d dstDepth=%d value=%f len=%d i=%d",
+                                    srcDepth, dstDepth, v, len, i));
+            const float fv = static_cast<float>(v);
+            if (dstDepth == CV_64U)
+            {
+                uint64_t expected = saturate_cast<uint64_t>(srcDepth == CV_16BF ? (float)(bfloat)fv : (float)(hfloat)fv);
+                EXPECT_EQ(expected, dst.ptr<uint64_t>(0)[i]);
+            }
+            else // CV_64S
+            {
+                int64_t expected = saturate_cast<int64_t>(srcDepth == CV_16BF ? (float)(bfloat)fv : (float)(hfloat)fv);
+                EXPECT_EQ(expected, dst.ptr<int64_t>(0)[i]);
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertTo64Int,
+    testing::Combine(
+        testing::Values(CV_16BF, CV_16F),
+        testing::Values(CV_64U, CV_64S),
+        testing::Values(1, 4, 7, 8, 9, 32, 127)));
+
 // absdiff keeps the signed depth, so the result has to be the magnitude clamped into that depth:
 // never negative, and saturating at the depth's maximum when |a - b| does not fit. Checked across
 // the signed depths, at lengths straddling the vector width.
