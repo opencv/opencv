@@ -798,6 +798,31 @@ TEST(Fusion, BatchNormFoldsIntoPrepacked1x1Conv)
     checkBatchNormFoldsIntoConv("batchnorm_conv_1x1_mlas");
 }
 
+static void checkBatchNormAbsorbs(const std::string& name, int eltwiseLeft)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    EXPECT_EQ(1, fusedCount(net, "BatchNorm2")) << name;
+    EXPECT_EQ(eltwiseLeft, fusedCount(net, "NaryEltwise")) << name;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               name.c_str());
+}
+
+TEST(Fusion, BatchNormAbsorbsFollowingMulAdd)
+{
+    checkBatchNormAbsorbs("batchnorm_mul_add", 0);
+}
+
+// [C,1] on a C x C plane scales rows, not channels
+TEST(Fusion, BatchNormKeepsPerRowMul)
+{
+    checkBatchNormAbsorbs("batchnorm_mul_rows", 1);
+}
+
 // ConvTranspose2d(8->16) -> Add(residual): the Add fuses into TransformLayout.
 TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
 {
@@ -889,6 +914,77 @@ TEST(Fusion, TransformLayoutAddBroadcastResidualMatchesUnfused)
     cv::add(deconvOut, residualFull, unfusedOut);
 
     normAssert(unfusedOut, fusedOut, "fused vs unfused, broadcast residual", 1e-5, 1e-5);
+}
+
+//! Runs @p name against its ORT reference; the net is returned to inspect its program.
+static Net forwardAgainstReference(const std::string& name)
+{
+    Net net = readNetFromONNX(_tf("models/" + name + ".onnx"), ENGINE_OPENCV);
+    net.setInput(blobFromNPY(_tf("data/input_" + name + ".npy")));
+    Mat out = net.forward();
+    normAssert(blobFromNPY(_tf("data/output_" + name + ".npy")), out, name.c_str());
+    return net;
+}
+
+TEST(Fusion, AveragePoolKeepsPlainInput)
+{
+    Net net = forwardAgainstReference("avgpool_plain_input");
+    EXPECT_EQ(0, fusedCount(net, "TransformLayout"));
+}
+
+TEST(Fusion, ScalarMulKeepsBlockLayout)
+{
+    Net net = forwardAgainstReference("eltwise_scalar_block");
+    EXPECT_EQ(1, fusedCount(net, "NaryEltwise"));
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+TEST(Fusion, GlobalPoolingKeepsBlockLayout)
+{
+    Net net = forwardAgainstReference("global_pool_block_c16");
+    EXPECT_EQ(2, fusedCount(net, "Pooling"));
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+// C = 12 leaves padding lanes in the last block
+TEST(Fusion, GlobalPoolingKeepsBlockLayoutPartialBlock)
+{
+    Net net = forwardAgainstReference("global_pool_block_c12");
+    EXPECT_EQ(2, fusedCount(net, "Pooling"));
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+// Sigmoid and Add then run on 1 channel instead of C0 padded lanes
+TEST(Fusion, ConversionToPlainMovesAboveElementwiseOps)
+{
+    Net net = forwardAgainstReference("convtranspose_sigmoid_add");
+    Ptr<Graph> g = net.getMainGraph();
+    ASSERT_TRUE(g);
+    const std::vector<Ptr<LayerInfo> >& prog = g->prog();
+    auto deconv = std::find_if(prog.begin(), prog.end(), [](const Ptr<LayerInfo>& l) {
+        return l->type == "ConvTranspose2";
+    });
+    ASSERT_TRUE(deconv != prog.end() && deconv + 1 != prog.end());
+    EXPECT_EQ("TransformLayout", (*(deconv + 1))->type);
+}
+
+TEST(Fusion, ChannelSliceKeepsBlockLayout)
+{
+    Net net = forwardAgainstReference("slice_channels_block");
+    EXPECT_EQ(1, fusedCount(net, "Slice2"));
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+TEST(Fusion, ChannelSliceKeepsBlockLayoutUnaligned)
+{
+    Net net = forwardAgainstReference("slice_channels_block_unaligned");
+    EXPECT_EQ(1, fusedCount(net, "TransformLayout")) << "only the network input is converted";
+}
+
+TEST(Fusion, ChannelSliceConstantUnalignedStaysPlain)
+{
+    Net net = forwardAgainstReference("slice_channels_const_unaligned");
+    EXPECT_EQ(3, fusedCount(net, "TransformLayout"));
 }
 
 }} // namespace opencv_test

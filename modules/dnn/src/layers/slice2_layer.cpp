@@ -26,7 +26,73 @@ namespace dnn
     Opset's 1 to 13 are covered.
 */
 
+// Block tensor [N, C1, S..., C0] cut on the channel axis with step 1: output channel c is input
+// channel starts[1] + c, so when starts[1] is not a multiple of C0 a block spans two input blocks.
+template <typename T>
+static void sliceChannelsBlock_(const Mat& inp, Mat& out, const int* starts, const int* steps)
+{
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+    CV_Assert(steps[1] == 1);
+    const int ndims = out.dims, wAxis = ndims - 2;
+    const int C0 = out.size[ndims - 1], C1out = out.size[1], Cout = out.size.C;
+    const int Wout = out.size[wAxis];
+    size_t istep[MatShape::MAX_DIMS];
+    for (int d = 0; d < ndims; d++)
+        istep[d] = inp.step.p[d] / sizeof(T);
+    // for k >= len0 below, src[nextBlock + k] is lane k - len0 of the next input block
+    const size_t nextBlock = istep[1] - C0;
 
+    int nrows = out.size[0] * C1out;
+    for (int d = 2; d < wAxis; d++)
+        nrows *= out.size[d];
+
+    parallel_for_(Range(0, nrows), [&](const Range& r) {
+        const T* inpdata = inp.ptr<T>();
+        T* outdata = out.ptr<T>();
+        for (int row = r.start; row < r.end; row++) {
+            int t = row;
+            size_t ofs = 0;
+            for (int d = wAxis - 1; d >= 2; d--) {
+                int i = t % out.size[d];
+                t /= out.size[d];
+                ofs += (size_t)(starts[d] + i*steps[d])*istep[d];
+            }
+            int oc1 = t % C1out, n = t / C1out;
+            int c = starts[1] + oc1*C0;
+            int nvalid = std::min(C0, Cout - oc1*C0);
+            int len0 = std::min(nvalid, C0 - c % C0);
+            ofs += (size_t)(starts[0] + n*steps[0])*istep[0] + (size_t)(c / C0)*istep[1] + c % C0;
+            const T* inprow = inpdata + ofs + (size_t)starts[wAxis]*istep[wAxis];
+            T* outrow = outdata + (size_t)row*Wout*C0;
+            if (len0 == C0 && steps[wAxis] == 1) {
+                memcpy(outrow, inprow, (size_t)Wout*C0*sizeof(T));
+                continue;
+            }
+            for (int w = 0; w < Wout; w++) {
+                const T* src = inprow + (ptrdiff_t)w*steps[wAxis]*(ptrdiff_t)istep[wAxis];
+                T* dst = outrow + (size_t)w*C0;
+                int k = 0;
+                for (; k < len0; k++)
+                    dst[k] = src[k];
+                for (; k < nvalid; k++)
+                    dst[k] = src[nextBlock + k];
+                for (; k < C0; k++)
+                    dst[k] = T(0);
+            }
+        }
+    });
+}
+
+static void sliceChannelsBlock(const Mat& inp, Mat& out, const int* starts, const int* steps)
+{
+    switch (inp.elemSize()) {
+    case 1: sliceChannelsBlock_<uint8_t>(inp, out, starts, steps); break;
+    case 2: sliceChannelsBlock_<uint16_t>(inp, out, starts, steps); break;
+    case 4: sliceChannelsBlock_<uint32_t>(inp, out, starts, steps); break;
+    case 8: sliceChannelsBlock_<uint64_t>(inp, out, starts, steps); break;
+    default: CV_Error(Error::StsNotImplemented, "unsupported element size");
+    }
+}
 
 class Slice2LayerImpl CV_FINAL : public Slice2Layer
 {
@@ -131,6 +197,61 @@ public:
         return outShape;
     }
 
+    // A block input cut on the channel axis is sliced in its NCHW form, where the bounds count
+    // channels rather than blocks, and blocked again; any other input keeps its own shape.
+    MatShape getSliceShape(const MatShape& inpShape,
+                           const std::vector<int>& starts_,
+                           const std::vector<int>& ends_,
+                           const std::vector<int>& axes_,
+                           const std::vector<int>& steps_,
+                           int* allStarts, int* allEnds, int* allSteps,
+                           bool* channelsCut = nullptr) const
+    {
+        if (channelsCut)
+            *channelsCut = false;
+        if (inpShape.layout == DATA_LAYOUT_BLOCK &&
+            getNetImpl(this)->originalLayout == DATA_LAYOUT_NCHW) {
+            MatShape nchwShape = inpShape.toLayout(DATA_LAYOUT_NCHW);
+            MatShape outShape = getOutShape(nchwShape, starts_, ends_, axes_, steps_,
+                                            allStarts, allEnds, allSteps);
+            if (allStarts[1] != 0 || allEnds[1] != nchwShape[1] || allSteps[1] != 1) {
+                if (channelsCut)
+                    *channelsCut = true;
+                return outShape.toLayout(DATA_LAYOUT_BLOCK, inpShape.back());
+            }
+        }
+        return getOutShape(inpShape, starts_, ends_, axes_, steps_, allStarts, allEnds, allSteps);
+    }
+
+    // Constant channel bounds keep block layout only on whole blocks, i.e. multiples of C0 or the
+    // "to the end" value; runtime bounds may fall anywhere, sliceChannelsBlock_() takes any start.
+    bool channelCutKeepsBlock(const std::vector<int>& axes_, int C0) const
+    {
+        Net::Impl* netimpl_ = getNetImpl(this);
+        const size_t ninputs = this->inputs.size();
+        const size_t k = std::find(axes_.begin(), axes_.end(), 1) - axes_.begin();
+        if (ninputs > 4 && !this->inputs[4].empty()) {
+            std::vector<int> steps_;
+            if (!netimpl_->isConstArg(this->inputs[4]))
+                return false;
+            tensorToIntVec(netimpl_->argTensor(this->inputs[4]), steps_);
+            if (!steps_.empty() && (k >= steps_.size() || steps_[k] != 1))
+                return false;
+        }
+        for (size_t i = 0; i < 2; i++) {
+            std::vector<int> bounds = i == 0 ? starts : ends;
+            if (ninputs > 1) {
+                if (!netimpl_->isConstArg(this->inputs[1 + i]))
+                    continue;
+                tensorToIntVec(netimpl_->argTensor(this->inputs[1 + i]), bounds);
+            }
+            if (k >= bounds.size() || bounds[k] < 0 ||
+                (bounds[k] % C0 != 0 && bounds[k] != INT_MAX))
+                return false;
+        }
+        return true;
+    }
+
     bool isDataShuffling() const CV_OVERRIDE { return true; }
 
     int getLayouts(const std::vector<DataLayout>& actualInputs,
@@ -153,13 +274,18 @@ public:
             tensorToIntVec(axesT, resolvedAxes);
         }
         bool axesOK = !resolvedAxes.empty();
+        bool cutsChannels = false;
         if (axesOK) {
             const int channelAxis = (defaultLayout == DATA_LAYOUT_NCHW) ? 1 :
                                     (defaultLayout == DATA_LAYOUT_NHWC) ? 3 : -1;
             for (int a : resolvedAxes) {
-                if (a < 0 || a == channelAxis) { axesOK = false; break; }
+                if (a < 0) { axesOK = false; break; }
+                cutsChannels = cutsChannels || a == channelAxis;
             }
         }
+        if (inputIsBlock && axesOK && cutsChannels)
+            axesOK = defaultLayout == DATA_LAYOUT_NCHW &&
+                     channelCutKeepsBlock(resolvedAxes, netimpl_->defaultC0);
 
         if (inputIsBlock && axesOK) {
             outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
@@ -197,7 +323,11 @@ public:
                 tensorToIntVec(stepsTensor, steps);
             }
         }
-        MatShape outShape = getOutShape(inputs[0], *starts_, *ends_, *axes_, steps);
+        int allStarts[MatShape::MAX_DIMS];
+        int allEnds[MatShape::MAX_DIMS];
+        int allSteps[MatShape::MAX_DIMS];
+        MatShape outShape = getSliceShape(inputs[0], *starts_, *ends_, *axes_, steps,
+                                          allStarts, allEnds, allSteps);
         outputs.assign(1, outShape);
         internals.clear();
         return true;
@@ -258,14 +388,23 @@ private:
         int allStarts[MatShape::MAX_DIMS];
         int allEnds[MatShape::MAX_DIMS];
         int allSteps[MatShape::MAX_DIMS];
-        MatShape outShape = getOutShape(inpShape, *starts_, *ends_, *axes_, steps,
-                                        allStarts, allEnds, allSteps);
-        const int ndims = inpShape.dims;
-        const std::vector<int> sliceStarts(allStarts, allStarts + ndims);
-        const std::vector<int> sliceEnds(allEnds, allEnds + ndims);
-        const std::vector<int> sliceSteps(allSteps, allSteps + ndims);
+        bool channelsCut = false;
+        MatShape outShape = getSliceShape(inpShape, *starts_, *ends_, *axes_, steps,
+                                          allStarts, allEnds, allSteps, &channelsCut);
         // an empty output may keep an out-of-range end, which cv::slice would reject
         const bool emptyOut = outShape.empty();
+        auto runSlice = [&](const Mat& inp, Mat& out) {
+            if (emptyOut)
+                return;
+            if (channelsCut) {
+                sliceChannelsBlock(inp, out, allStarts, allSteps);
+                return;
+            }
+            const int ndims = inpShape.dims;
+            cv::slice(inp, std::vector<int>(allStarts, allStarts + ndims),
+                      std::vector<int>(allEnds, allEnds + ndims),
+                      std::vector<int>(allSteps, allSteps + ndims), out);
+        };
 
         int outKind = outputs_arr.kind();
         CV_Assert(outKind == _InputArray::STD_VECTOR_MAT ||
@@ -276,19 +415,14 @@ private:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, inpType);
-
-            if (!emptyOut)
-                cv::slice(inp, sliceStarts, sliceEnds, sliceSteps, outs[0]);
+            runSlice(inp, outs[0]);
         } else {
              Mat inp = inputs_arr.getMat(0);
              std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
              outs.resize(1);
              outs[0].fit(outShape, inpType);
              Mat temp(outShape, inpType);
-
-             if (!emptyOut)
-                 cv::slice(inp, sliceStarts, sliceEnds, sliceSteps, temp);
-
+             runSlice(inp, temp);
              temp.copyTo(outs[0]);
         }
     }

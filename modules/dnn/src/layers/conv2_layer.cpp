@@ -411,7 +411,7 @@ private:
         if (c.empty() || c.type() != CV_32F || !c.isContinuous() || (int)c.total() != K)
             return false;
 
-        // A declared buffer is per-channel by construction; a graph constant must prove it,
+        // A flagged buffer is declared or proven per-channel; any other must prove it here,
         // since a bare [K] broadcasts onto the last axis, not the channel axis.
         if (bufId >= (int)g.constBufPerChannel.size() || !g.constBufPerChannel[bufId]) {
             const int nspatial = wshape0.dims - 2;
