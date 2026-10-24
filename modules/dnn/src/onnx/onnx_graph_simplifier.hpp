@@ -18,6 +18,10 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include "../mapped_file.hpp"
+
+#include <map>
+
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -32,11 +36,25 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
     }
 }
 
+// Per-model state for mapping external initializers.
+struct ExternalDataCache
+{
+    Ptr<MappedSource> open(const std::string& path);
+
+    // What readNetFromONNX()'s mapExternalData asked for, after the environment override.
+    bool mappingEnabled = true;
+
+    std::map<std::string, Ptr<MappedSource> > files;
+};
+
 /** @brief converts tensor to Mat, preserving the tensor data type
  *  @param uint8ToInt8 if true, handles uint8 tensor as quantized weight. So output Mat = int8(int32(uint8_tensor) - 128)).
  *  if false, just returns uint8 Mat.
+ *  @param cache when given, an external tensor whose payload needs no reordering is returned as a
+ *  Mat over the mapped file instead of a copy; the mapping must outlive every Mat built from it.
 */
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8=true, const std::string base_path = "");
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8=true,
+                     const std::string base_path = "", ExternalDataCache* cache = nullptr);
 
 // Maps an ONNX declared data_type to its OpenCV type (e.g. FLOAT16 becomes CV_16F),
 // or returns -1 when the data_type has no OpenCV equivalent.
