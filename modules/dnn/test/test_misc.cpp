@@ -104,6 +104,104 @@ TEST(blobRectToImageRect, no_resize)
 }
 
 
+static std::vector<Point2f> samplePointsIn(const Size& inputSize)
+{
+    return {Point2f(0.f, 0.f),
+            Point2f(inputSize.width / 4.f, inputSize.height / 3.f),
+            Point2f(inputSize.width / 2.f, inputSize.height / 2.f),
+            Point2f((float)inputSize.width, (float)inputSize.height)};
+}
+
+TEST(blobPointsToImagePoints, DNN_PMODE_NULL)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    std::vector<Point2f> pBlob = samplePointsIn(inputSize);
+    Image2BlobParams paramNet;
+    paramNet.size = inputSize;
+    paramNet.paddingmode = DNN_PMODE_NULL;
+
+    std::vector<Point2f> pImg;
+    paramNet.blobPointsToImagePoints(pBlob, pImg, imgSize);
+    ASSERT_EQ(pImg.size(), pBlob.size());
+    for (size_t i = 0; i < pBlob.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(pImg[i].x, pBlob[i].x * imgSize.width / (float)inputSize.width);
+        EXPECT_FLOAT_EQ(pImg[i].y, pBlob[i].y * imgSize.height / (float)inputSize.height);
+    }
+}
+
+TEST(blobPointsToImagePoints, DNN_PMODE_CROP_CENTER)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    std::vector<Point2f> pBlob = samplePointsIn(inputSize);
+    Image2BlobParams paramNet;
+    paramNet.size = inputSize;
+    paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
+
+    std::vector<Point2f> pImg;
+    paramNet.blobPointsToImagePoints(pBlob, pImg, imgSize);
+    ASSERT_EQ(pImg.size(), pBlob.size());
+    float resizeFactor = std::max(inputSize.width / (float)imgSize.width,
+                                  inputSize.height / (float)imgSize.height);
+    float offsetX = -0.5f * (imgSize.width * resizeFactor - inputSize.width);
+    float offsetY = -0.5f * (imgSize.height * resizeFactor - inputSize.height);
+    for (size_t i = 0; i < pBlob.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(pImg[i].x, (pBlob[i].x - offsetX) / resizeFactor);
+        EXPECT_FLOAT_EQ(pImg[i].y, (pBlob[i].y - offsetY) / resizeFactor);
+    }
+}
+
+TEST(blobPointsToImagePoints, DNN_PMODE_LETTERBOX)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    std::vector<Point2f> pBlob = samplePointsIn(inputSize);
+    Image2BlobParams paramNet;
+    paramNet.size = inputSize;
+    paramNet.paddingmode = DNN_PMODE_LETTERBOX;
+
+    std::vector<Point2f> pImg;
+    paramNet.blobPointsToImagePoints(pBlob, pImg, imgSize);
+    ASSERT_EQ(pImg.size(), pBlob.size());
+    float resizeFactor = std::min(inputSize.width / (float)imgSize.width,
+                                  inputSize.height / (float)imgSize.height);
+    float left = (float)((inputSize.width - int(imgSize.width * resizeFactor)) / 2);
+    float top = (float)((inputSize.height - int(imgSize.height * resizeFactor)) / 2);
+    for (size_t i = 0; i < pBlob.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(pImg[i].x, (pBlob[i].x - left) / resizeFactor);
+        EXPECT_FLOAT_EQ(pImg[i].y, (pBlob[i].y - top) / resizeFactor);
+    }
+}
+
+TEST(blobPointsToImagePoints, empty_size_member)
+{
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    std::vector<Point2f> pBlob = samplePointsIn(imgSize);
+
+    // An empty size member means the image size, as in blobFromImagesWithParams(), so the points
+    // come back unchanged instead of being divided by zero.
+    const ImagePaddingMode modes[] = {DNN_PMODE_NULL, DNN_PMODE_CROP_CENTER, DNN_PMODE_LETTERBOX};
+    for (ImagePaddingMode mode : modes)
+    {
+        Image2BlobParams paramNet;
+        paramNet.paddingmode = mode;
+        ASSERT_TRUE(paramNet.size.empty());
+
+        std::vector<Point2f> pImg;
+        paramNet.blobPointsToImagePoints(pBlob, pImg, imgSize);
+        ASSERT_EQ(pImg.size(), pBlob.size());
+        for (size_t i = 0; i < pBlob.size(); i++)
+        {
+            EXPECT_FLOAT_EQ(pImg[i].x, pBlob[i].x) << "mode " << (int)mode << " point " << i;
+            EXPECT_FLOAT_EQ(pImg[i].y, pBlob[i].y) << "mode " << (int)mode << " point " << i;
+        }
+    }
+}
+
 TEST(blobFromImage_4ch, Regression)
 {
     Mat ch[4];
