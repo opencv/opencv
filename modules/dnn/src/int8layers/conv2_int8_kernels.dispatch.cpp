@@ -23,11 +23,11 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const float* multiplier,
                    int inp_zp, int out_zp,
                    const int8_t* activLUT,
-                   bool inputIsU8)
+                   bool inputIsU8, bool int32Out)
 {
     CV_CPU_DISPATCH(convInt8Block, (inp_, residual_, out_, cs, weights_, weightsVNNI_,
                                     bias, biasVNNI_, multiplier, inp_zp, out_zp,
-                                    activLUT, inputIsU8),
+                                    activLUT, inputIsU8, int32Out),
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 

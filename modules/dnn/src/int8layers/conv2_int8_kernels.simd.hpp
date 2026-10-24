@@ -6,6 +6,7 @@
 
 #include "opencv2/core/hal/intrin.hpp"
 #include "../layers/conv2_common.hpp"
+#include <type_traits>
 #if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
 #include <immintrin.h>
 #endif
@@ -22,7 +23,7 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const float* multiplier,
                    int inp_zp, int out_zp,
                    const int8_t* activLUT,
-                   bool inputIsU8);
+                   bool inputIsU8, bool int32Out);
 
 // AVX-VNNI kernel of the legacy int8 convolution layer (im2col + GEMM).
 // Only the AVX_VNNI build of this file defines it.
@@ -33,10 +34,18 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
 
 #if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY)
 
+// kernel output element: requantized int8, or the raw int32 sums of ONNX ConvInteger
+template<bool INT32_OUT> using ConvInt8Out = std::conditional_t<INT32_OUT, int32_t, int8_t>;
+
 #if CV_NEON && defined(CV_NEON_DOT) && CV_NEON_DOT
 #include <arm_neon.h>
 
-#define CONV_NEON_STORE(j) { \
+#define CONV_NEON_STORE32(j) { \
+    vst1q_s32(outptr + (p + (j)) * K0, s##j##_lo); \
+    vst1q_s32(outptr + (p + (j)) * K0 + 4, s##j##_hi); \
+}
+
+#define CONV_NEON_STORE(j) if constexpr (INT32_OUT) CONV_NEON_STORE32(j) else { \
     float32x4_t facc_lo = vfmaq_f32(vzp, vcvtq_f32_s32(s##j##_lo), vmult_lo); \
     float32x4_t facc_hi = vfmaq_f32(vzp, vcvtq_f32_s32(s##j##_hi), vmult_hi); \
     if (resptr) { \
@@ -84,6 +93,7 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
     } \
 }
 
+template<bool INT32_OUT>
 static void convInt8BlockNEON(const void* inp_, const void* residual_,
                               void* out_, const ConvState& cs,
                               const void* weightsVNNI_,
@@ -92,9 +102,9 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                               const int8_t* activLUT,
                               bool inputIsU8)
 {
-    constexpr int C0 = 8, K0 = 8;
-    constexpr int C0shift = 3;
-    constexpr int SPAT_BLOCK_SIZE = 8;
+    static constexpr int C0 = 8, K0 = 8;
+    static constexpr int C0shift = 3;
+    static constexpr int SPAT_BLOCK_SIZE = 8;
     constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
@@ -125,18 +135,20 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
 
     const int8_t* inp = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t* out = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t* out = (out_t*)out_;
     const int8_t* wdata = (const int8_t*)weightsVNNI_;
     const int* ofsZYX = cs.coordtab.data();
 
     size_t outtotal = outshape.total();
-    if ((Kg % K0) != 0) memset(out, 0, outtotal);
+    if ((Kg % K0) != 0) memset(out, 0, outtotal * sizeof(out_t));
 
     const int8x16_t v_xor = inputIsU8 ? vdupq_n_s8((int8_t)0x80) : vdupq_n_s8(0);
 
     int Sz = cs.strides[0], Sy = cs.strides[1], Sx = cs.strides[2];
 
-    if (ksize_ == 1 && Sx == 1 && Sy == 1 && Sz == 1) {
+    if (ksize_ == 1 && Sx == 1 && Sy == 1 && Sz == 1 && !cs.hasPadding() &&
+        planeblocks_ >= SPAT_BLOCK_SIZE) {
         int total_spatial = planeblocks_;
         int iplanesize = total_spatial * C0;
         int cblocks_g = (Cg + C0 - 1) / C0;
@@ -189,7 +201,7 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                 if (k_base >= K) continue;
 
                 int k1 = k_base >> C0shift;
-                int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+                out_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
                 const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
                 const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * C1Max * C0 * K0;
 
@@ -332,7 +344,7 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
             const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * ksize * C1Max * C0 * K0;
 
             int k1 = k_base >> C0shift;
-            int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+            out_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
             int32x4_t vbias_lo = vld1q_s32(bias + k_base);
@@ -511,8 +523,12 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                         }
                     }
                 }
-                int8_t* optr = outptr + p * K0;
+                out_t* optr = outptr + p * K0;
                 const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
+                if constexpr (INT32_OUT) {
+                    memcpy(optr, acc, sizeof(acc));
+                    continue;
+                }
                 for (int k0 = 0; k0 < K0; k0++) {
                     float val = (float)acc[k0] * multiplier[k_base + k0] + (float)out_zp;
                     if (rptr) {
@@ -535,6 +551,7 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
     });
 }
 #undef CONV_NEON_STORE
+#undef CONV_NEON_STORE32
 #endif // CV_NEON && CV_NEON_DOT
 
 #if CV_RVV
@@ -577,6 +594,8 @@ struct ConvInt8RVV_M1
         vint16mf2_t x16 = __riscv_vncvt_x_x_w_i16mf2(x, vl);
         __riscv_vse8_v_i8mf4(dst, __riscv_vncvt_x_x_w_i8mf4(x16, vl), vl);
     }
+    static inline void store32(int32_t* p, vi32 x, size_t vl)
+    { __riscv_vse32_v_i32m1(p, x, vl); }
 };
 
 struct ConvInt8RVV_M2
@@ -610,6 +629,8 @@ struct ConvInt8RVV_M2
         vint16m1_t x16 = __riscv_vncvt_x_x_w_i16m1(x, vl);
         __riscv_vse8_v_i8mf2(dst, __riscv_vncvt_x_x_w_i8mf2(x16, vl), vl);
     }
+    static inline void store32(int32_t* p, vi32 x, size_t vl)
+    { __riscv_vse32_v_i32m2(p, x, vl); }
 };
 
 // vfcvt.x.f.v uses the current FP rounding mode; Linux default is RNE,
@@ -626,7 +647,9 @@ struct ConvInt8RVV_M2
     acc##j = RVV::vwmacc(acc##j, (int16_t)(int8_t)((uint8_t)ipj[7] ^ xor_val), w7, vl); \
 }
 
-#define CONV_RVV_STORE(j) { \
+#define CONV_RVV_STORE32(j) { RVV::store32(outptr + (size_t)(p + (j)) * K0, acc##j, vl); }
+
+#define CONV_RVV_STORE(j) if constexpr (INT32_OUT) CONV_RVV_STORE32(j) else { \
     typename RVV::vf32 facc = RVV::fmadd(RVV::tofloat(acc##j, vl), vmult, vzp, vl); \
     int8_t* optrj = outptr + (size_t)(p + (j)) * K0; \
     if (resptr) { \
@@ -656,7 +679,7 @@ struct ConvInt8RVV_M2
     } \
 }
 
-template<typename RVV>
+template<typename RVV, bool INT32_OUT>
 static void convInt8BlockRVV(const void* inp_, const void* residual_,
                              void* out_, const ConvState& cs,
                              const void* weights_,
@@ -665,9 +688,9 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
                              const int8_t* activLUT,
                              bool inputIsU8)
 {
-    constexpr int C0 = 8, K0 = 8;
-    constexpr int C0shift = 3;
-    constexpr int SPAT_BLOCK_SIZE = 8;
+    static constexpr int C0 = 8, K0 = 8;
+    static constexpr int C0shift = 3;
+    static constexpr int SPAT_BLOCK_SIZE = 8;
     constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
@@ -702,13 +725,14 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
 
     const int8_t* inp = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t* out = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t* out = (out_t*)out_;
     const int8_t* wdata = (const int8_t*)weights_;
     const int* ofsZYX = cs.coordtab.data();
 
     size_t outtotal = outshape.total();
     if ((Kg % K0) != 0)
-        memset(out, 0, outtotal);
+        memset(out, 0, outtotal * sizeof(out_t));
 
     int total_blocks = N * ngroups * Kblk;
 
@@ -749,7 +773,7 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
             const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * ksize * C1Max * C0 * K0;
 
             int k1 = k_base >> C0shift;
-            int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+            out_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
             int D_l = D, H_l = H, W_l = W;
@@ -903,8 +927,12 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
                     }
                 }
 
-                int8_t* optr = outptr + p * K0;
+                out_t* optr = outptr + p * K0;
                 const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
+                if constexpr (INT32_OUT) {
+                    memcpy(optr, acc, sizeof(acc));
+                    continue;
+                }
                 for (int k0 = 0; k0 < K0; k0++) {
                     float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
                     if (rptr) {
@@ -929,9 +957,25 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
 
 #undef CONV_RVV_MAC
 #undef CONV_RVV_STORE
+#undef CONV_RVV_STORE32
 #endif // CV_RVV
 
+#if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
+// stores the first n of the 8 int32 lanes
+static inline void storeInt32x8(int32_t* dst, __m256i v, int n)
+{
+    if (n == 8) {
+        _mm256_storeu_si256((__m256i*)dst, v);
+    } else {
+        alignas(32) int32_t buf[8];
+        _mm256_store_si256((__m256i*)buf, v);
+        memcpy(dst, buf, n * sizeof(int32_t));
+    }
+}
+#endif
+
 // INT8 depthwise convolution kernel (ngroups==K==C, Kg==Cg==1).
+template<bool INT32_OUT>
 static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                                    void* out_, const ConvState& cs,
                                    const void* weights_,
@@ -975,7 +1019,8 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
 
     const int8_t* inp      = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t*       out      = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t*        out      = (out_t*)out_;
     const int8_t* wdata    = (const int8_t*)weights_;
     const int*    ofsZYX   = cs.coordtab.data();
 
@@ -1014,7 +1059,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
             int p_task_end   = std::min(p_task_start + TILE, planeblocks);
 
             const int8_t* inpbaseptr = inp      + (size_t)(n * C1 + k1) * iplanesize;
-            int8_t*       outbase    = out      + (size_t)(n * K1 + k1) * planesize;
+            out_t*        outbase    = out      + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resbase    = residual ? residual + (size_t)(n * K1 + k1) * planesize
                                                 : nullptr;
 
@@ -1155,7 +1200,8 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                         }
                     }
 
-                    #define DW_STORE(j) { \
+                    #define DW_STORE32(j) { storeInt32x8(outbase + (p + (j)) * K0, s##j, n_g); }
+                    #define DW_STORE(j) if constexpr (INT32_OUT) DW_STORE32(j) else { \
                         __m256 facc = _mm256_add_ps( \
                             _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
                         int8_t*       optr = outbase + (p + (j)) * K0; \
@@ -1195,6 +1241,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                     DW_STORE(0); DW_STORE(1); DW_STORE(2); DW_STORE(3);
                     DW_STORE(4); DW_STORE(5); DW_STORE(6); DW_STORE(7);
                     #undef DW_STORE
+                    #undef DW_STORE32
                 }
                 for (; p < p_task_end; p++) {
                     int zj  = p / (H * W);
@@ -1222,9 +1269,13 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                             _mm_loadl_epi64((const __m128i*)(wbuf + i*K0)));
                         acc = _mm256_add_epi32(acc, _mm256_mullo_epi32(inp32, w32));
                     }
+                    if constexpr (INT32_OUT) {
+                        storeInt32x8(outbase + p * K0, acc, n_g);
+                        continue;
+                    }
                     __m256 facc = _mm256_add_ps(
                         _mm256_mul_ps(_mm256_cvtepi32_ps(acc), vmult), vzp);
-                    int8_t* optr = outbase + p * K0;
+                    out_t* optr = outbase + p * K0;
                     const int8_t* rptr = resbase ? resbase + p * K0 : nullptr;
                     if (rptr) {
                         facc = _mm256_add_ps(facc, _mm256_sub_ps(_mm256_cvtepi32_ps(
@@ -1270,7 +1321,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                 int yi_base = yj * Sy - padY;
                 int xi_base = xj * Sx - padX;
 
-                int8_t*       optr = outbase + p * K0;
+                out_t*        optr = outbase + p * K0;
                 const int8_t* rptr = resbase ? resbase + p * K0 : nullptr;
 
                 for (int g = g_start; g < g_end; g++) {
@@ -1310,6 +1361,10 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                         }
                     }
 
+                    if constexpr (INT32_OUT) {
+                        optr[j] = acc;
+                        continue;
+                    }
                     float val = (float)acc * multiplier[g] + (float)out_zp;
                     if (rptr) val += (float)((int)rptr[j] - out_zp);
                     int ival = cvRound(val);
@@ -1336,6 +1391,7 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
 // consume the uint8 input directly and use the VNNI-reordered weights/bias
 // (weightsVNNI_/biasVNNI_) prepared by the layer.
 
+template<bool INT32_OUT>
 static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
                                   void* out_, const ConvState& cs,
                                   const void* weightsVNNI_,
@@ -1345,7 +1401,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
                                   bool inputIsU8)
 {
     constexpr int C0 = 8, K0 = 8;
-    constexpr int SPAT_BLOCK_SIZE = 8;
+    static constexpr int SPAT_BLOCK_SIZE = 8;
     constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
@@ -1380,12 +1436,13 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
 
     const int8_t* inp = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t* out = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t* out = (out_t*)out_;
     const int8_t* wdata = (const int8_t*)weightsVNNI_;
     const int* ofsZYX = cs.coordtab.data();
 
     size_t outtotal = outshape.total();
-    if ((Kg % K0) != 0) memset(out, 0, outtotal);
+    if ((Kg % K0) != 0) memset(out, 0, outtotal * sizeof(out_t));
 
     int nkb = N * ngroups * Kblk;
     int nthreads = std::max(1, cv::getNumThreads());
@@ -1436,7 +1493,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
             const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * ksize * C1Max * C0 * K0;
 
             int k1 = k_base >> C0shift;
-            int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+            out_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
             const int k_valid = std::min(K0, K - k_base);
@@ -1587,7 +1644,16 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
                 __m256 vmult = _mm256_load_ps(multbuf);
                 __m256 vzp = _mm256_set1_ps((float)out_zp);
 
-                #define CONV_VNNI_STORE(j) { \
+                #define CONV_VNNI_STORE32(j) { \
+                    if (!cs.depthwise) { \
+                        _mm256_storeu_si256((__m256i*)(outptr + (p + (j)) * K0), s##j); \
+                    } else { \
+                        alignas(32) int32_t tmp32[K0]; \
+                        _mm256_store_si256((__m256i*)tmp32, s##j); \
+                        outptr[(p + (j)) * K0 + k0_off_dw] = tmp32[k0_off_dw]; \
+                    } \
+                }
+                #define CONV_VNNI_STORE(j) if constexpr (INT32_OUT) CONV_VNNI_STORE32(j) else { \
                     __m256 facc = _mm256_add_ps( \
                         _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
                     if (resptr) { \
@@ -1629,6 +1695,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
                 CONV_VNNI_STORE(4); CONV_VNNI_STORE(5);
                 CONV_VNNI_STORE(6); CONV_VNNI_STORE(7);
                 #undef CONV_VNNI_STORE
+                #undef CONV_VNNI_STORE32
             }
 
             // Scalar tail
@@ -1666,10 +1733,15 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
                         }
                     }
                 }
-                int8_t* optr = outptr + p * K0;
+                out_t* optr = outptr + p * K0;
                 const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
                 int k0_lo = cs.depthwise ? k0_off_dw : 0;
                 int k0_hi = cs.depthwise ? k0_off_dw + 1 : K0;
+                if constexpr (INT32_OUT) {
+                    for (int k0 = k0_lo; k0 < k0_hi; k0++)
+                        optr[k0] = acc[k0];
+                    continue;
+                }
                 for (int k0 = k0_lo; k0 < k0_hi; k0++) {
                     float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
                     if (rptr) val += (float)((int)rptr[k0] - out_zp);
@@ -1689,6 +1761,7 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
     });
 }
 
+template<bool INT32_OUT>
 static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
                                   void* out_, const ConvState& cs,
                                   const void* weightsVNNI_,
@@ -1698,7 +1771,7 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
                                   bool inputIsU8)
 {
     constexpr int C0 = 8, K0 = 8;
-    constexpr int SPAT_BLOCK_SIZE = 8;
+    static constexpr int SPAT_BLOCK_SIZE = 8;
 
     const MatShape& inpshape = cs.inpshape;
     const MatShape& outshape = cs.outshape;
@@ -1728,14 +1801,15 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
 
     const int8_t* inp      = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t*       out      = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t*        out      = (out_t*)out_;
     const int8_t* wdata    = (const int8_t*)weightsVNNI_;
 
     int iplanesize = Pi * C0;
     int planesize  = P * K0;
 
     if ((Kg % K0) != 0)
-        memset(out, 0, outshape.total());
+        memset(out, 0, outshape.total() * sizeof(out_t));
 
     constexpr int SB_TILE = 8;
     int nthreads    = std::max(1, cv::getNumThreads());
@@ -1772,7 +1846,7 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
             const int8_t* wbaseptr   = wdata + (size_t)(g * Kblk + kblk) * C1Max * C0 * K0;
 
             int k1 = k_base >> C0shift;
-            int8_t*       outptr = out      + (size_t)(n * K1 + k1) * planesize;
+            out_t*        outptr = out      + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
             const int k_valid = std::min(K0, K - k_base);
@@ -1821,7 +1895,10 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
                 __m256 vmult = _mm256_load_ps(multbuf);
                 __m256 vzp   = _mm256_set1_ps((float)out_zp);
 
-                #define CONV_1x1_STORE(j) { \
+                #define CONV_1x1_STORE32(j) { \
+                    _mm256_storeu_si256((__m256i*)(outptr + (p + (j)) * K0), s##j); \
+                }
+                #define CONV_1x1_STORE(j) if constexpr (INT32_OUT) CONV_1x1_STORE32(j) else { \
                     __m256 facc = _mm256_add_ps( \
                         _mm256_mul_ps(_mm256_cvtepi32_ps(s##j), vmult), vzp); \
                     if (resptr) { \
@@ -1854,6 +1931,7 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
                 CONV_1x1_STORE(4); CONV_1x1_STORE(5);
                 CONV_1x1_STORE(6); CONV_1x1_STORE(7);
                 #undef CONV_1x1_STORE
+                #undef CONV_1x1_STORE32
             }
 
             for (; p < p_end; p++) {
@@ -1871,8 +1949,12 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
                 alignas(32) int32_t acc[K0];
                 _mm256_store_si256((__m256i*)acc, s);
 
-                int8_t*       optr = outptr + (size_t)p * K0;
+                out_t*        optr = outptr + (size_t)p * K0;
                 const int8_t* rptr = resptr ? resptr + (size_t)p * K0 : nullptr;
+                if constexpr (INT32_OUT) {
+                    memcpy(optr, acc, sizeof(acc));
+                    continue;
+                }
                 for (int k0 = 0; k0 < K0; k0++) {
                     float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
                     if (rptr) {
@@ -1895,12 +1977,36 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
     });
 }
 
+// 8 vectors of 8 pixels per channel into 8 vectors of 8 channels per pixel
+static inline void transpose8x8Int32(__m256i r0, __m256i r1, __m256i r2, __m256i r3,
+                                     __m256i r4, __m256i r5, __m256i r6, __m256i r7,
+                                     __m256i* dst)
+{
+    __m256i t0 = _mm256_unpacklo_epi32(r0, r1), t1 = _mm256_unpackhi_epi32(r0, r1);
+    __m256i t2 = _mm256_unpacklo_epi32(r2, r3), t3 = _mm256_unpackhi_epi32(r2, r3);
+    __m256i t4 = _mm256_unpacklo_epi32(r4, r5), t5 = _mm256_unpackhi_epi32(r4, r5);
+    __m256i t6 = _mm256_unpacklo_epi32(r6, r7), t7 = _mm256_unpackhi_epi32(r6, r7);
+    __m256i u0 = _mm256_unpacklo_epi64(t0, t2), u1 = _mm256_unpackhi_epi64(t0, t2);
+    __m256i u2 = _mm256_unpacklo_epi64(t1, t3), u3 = _mm256_unpackhi_epi64(t1, t3);
+    __m256i u4 = _mm256_unpacklo_epi64(t4, t6), u5 = _mm256_unpackhi_epi64(t4, t6);
+    __m256i u6 = _mm256_unpacklo_epi64(t5, t7), u7 = _mm256_unpackhi_epi64(t5, t7);
+    dst[0] = _mm256_permute2x128_si256(u0, u4, 0x20);
+    dst[1] = _mm256_permute2x128_si256(u1, u5, 0x20);
+    dst[2] = _mm256_permute2x128_si256(u2, u6, 0x20);
+    dst[3] = _mm256_permute2x128_si256(u3, u7, 0x20);
+    dst[4] = _mm256_permute2x128_si256(u0, u4, 0x31);
+    dst[5] = _mm256_permute2x128_si256(u1, u5, 0x31);
+    dst[6] = _mm256_permute2x128_si256(u2, u6, 0x31);
+    dst[7] = _mm256_permute2x128_si256(u3, u7, 0x31);
+}
+
+template<bool INT32_OUT>
 static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvState& cs,
                                        const void* weights_, const int* bias,
                                        const float* multiplier, int inp_zp, int out_zp,
                                        const int8_t* activLUT, bool inputIsU8)
 {
-    constexpr int C0 = 8, K0 = 8;
+    static constexpr int C0 = 8, K0 = 8;
     const MatShape& inpshape = cs.inpshape;
     const MatShape& outshape = cs.outshape;
     if (cs.nspatialdims != 2 || inpshape.dims != 5 || outshape.dims != 5)
@@ -1930,7 +2036,8 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
     const int maxRows = (band - 1) * sy + (kh - 1) * dy + 1;
 
     const int8_t* inp = (const int8_t*)inp_;
-    int8_t* out = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t* out = (out_t*)out_;
     const int8_t* wdata = (const int8_t*)weights_;
     const int* ofsZYX = cs.coordtab.data();
 
@@ -2020,7 +2127,7 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
 
             for (int oy = oy0; oy < oy1; oy++) {
                 const uint8_t* rbase = planar + (size_t)(oy - oy0) * sy * C0 * Wp;
-                int8_t* orow = out + ((size_t)(n * K1 + k1) * Ho + oy) * Wo * K0;
+                out_t* orow = out + ((size_t)(n * K1 + k1) * Ho + oy) * Wo * K0;
                 for (int ox0 = 0; ox0 < Wo; ox0 += 8) {
                     __m256i s0 = _mm256_set1_epi32(biasv[0]), s1 = _mm256_set1_epi32(biasv[1]);
                     __m256i s2 = _mm256_set1_epi32(biasv[2]), s3 = _mm256_set1_epi32(biasv[3]);
@@ -2044,6 +2151,16 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                         }
                     }
 
+                    if constexpr (INT32_OUT) {
+                        __m256i px[8];
+                        transpose8x8Int32(s0, s1, s2, s3, s4, s5, s6, s7, px);
+                        out_t* optr = orow + (size_t)ox0 * K0;
+                        const int npix = std::min(8, Wo - ox0);
+                        for (int j = 0; j < npix; j++)
+                            storeInt32x8(optr + j * K0, px[j], n_g);
+                        continue;
+                    }
+
                     #define DWV_Q(c) _mm256_cvtps_epi32(_mm256_add_ps(_mm256_mul_ps( \
                         _mm256_cvtepi32_ps(s##c), _mm256_set1_ps(multv[c])), vzp))
                     __m256i p01 = _mm256_packs_epi32(DWV_Q(0), DWV_Q(1));
@@ -2060,7 +2177,7 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                     __m256i px03 = _mm256_permute2x128_si256(lo, hi, 0x20);
                     __m256i px47 = _mm256_permute2x128_si256(lo, hi, 0x31);
 
-                    int8_t* optr = orow + (size_t)ox0 * K0;
+                    out_t* optr = orow + (size_t)ox0 * K0;
                     const int npix = std::min(8, Wo - ox0);
                     if (npix == 8 && n_g == K0 && !activLUT) {
                         _mm256_storeu_si256((__m256i*)optr, px03);
@@ -2070,7 +2187,7 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
                         _mm256_store_si256((__m256i*)tmp, px03);
                         _mm256_store_si256((__m256i*)(tmp + 32), px47);
                         for (int j = 0; j < npix; j++) {
-                            int8_t* o = optr + j * K0;
+                            out_t* o = optr + j * K0;
                             const int8_t* tj = tmp + j * K0;
                             if (!activLUT)
                                 memcpy(o, tj, n_g);
@@ -2089,6 +2206,7 @@ static bool convInt8BlockDepthwiseVNNI(const void* inp_, void* out_, const ConvS
     return true;
 }
 
+template<bool INT32_OUT>
 static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                        void* out_, const ConvState& cs,
                        const void* weightsVNNI_,
@@ -2099,12 +2217,12 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
 {
     if (cs.wshape[2] == 1 && !cs.hasPadding() &&
         cs.strides[0] == 1 && cs.strides[1] == 1 && cs.strides[2] == 1) {
-        convInt8BlockVNNI_1x1(inp_, residual_, out_, cs, weightsVNNI_,
-                              biasVNNI, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        convInt8BlockVNNI_1x1<INT32_OUT>(inp_, residual_, out_, cs, weightsVNNI_, biasVNNI,
+                                         multiplier, inp_zp, out_zp, activLUT, inputIsU8);
         return;
     }
-    convInt8BlockVNNI_kxk(inp_, residual_, out_, cs, weightsVNNI_,
-                          biasVNNI, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+    convInt8BlockVNNI_kxk<INT32_OUT>(inp_, residual_, out_, cs, weightsVNNI_, biasVNNI,
+                                     multiplier, inp_zp, out_zp, activLUT, inputIsU8);
 }
 
 // Legacy int8 convolution (im2col + GEMM) AVX-VNNI kernel, used by
@@ -2335,26 +2453,29 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
 
 #endif // CV_AVX_VNNI
 
-void convInt8Block(const void* inp_, const void* residual_,
-                   void* out_, const ConvState& cs,
-                   const void* weights_,
-                   const void* weightsVNNI_,
-                   const int* bias, const int* biasVNNI_,
-                   const float* multiplier,
-                   int inp_zp, int out_zp,
-                   const int8_t* activLUT,
-                   bool inputIsU8)
+template<bool INT32_OUT>
+static void convInt8BlockImpl(const void* inp_, const void* residual_,
+                              void* out_, const ConvState& cs,
+                              const void* weights_,
+                              const void* weightsVNNI_,
+                              const int* bias, const int* biasVNNI_,
+                              const float* multiplier,
+                              int inp_zp, int out_zp,
+                              const int8_t* activLUT,
+                              bool inputIsU8)
 {
     // Depthwise convolution has a dedicated kernel.
     if (cs.depthwise) {
         const int* dw_bias = biasVNNI_ ? biasVNNI_ : bias;
 #if CV_AVX_VNNI
-        if (!residual_ && convInt8BlockDepthwiseVNNI(inp_, out_, cs, weights_, dw_bias, multiplier,
-                                                      inp_zp, out_zp, activLUT, inputIsU8))
+        if (!residual_ && convInt8BlockDepthwiseVNNI<INT32_OUT>(inp_, out_, cs, weights_, dw_bias,
+                                                                 multiplier, inp_zp, out_zp,
+                                                                 activLUT, inputIsU8))
             return;
 #endif
-        convInt8BlockDepthwise(inp_, residual_, out_, cs, weights_,
-                               dw_bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        convInt8BlockDepthwise<INT32_OUT>(inp_, residual_, out_, cs, weights_,
+                                          dw_bias, multiplier, inp_zp, out_zp,
+                                          activLUT, inputIsU8);
         return;
     }
 #if CV_AVX_VNNI
@@ -2364,15 +2485,16 @@ void convInt8Block(const void* inp_, const void* residual_,
         useVNNI = os.total() / ((size_t)os[0] * os[1] * os.back()) >= 8;
     }
     if (useVNNI) {
-        convInt8BlockVNNI(inp_, residual_, out_, cs, weightsVNNI_,
-                          biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        convInt8BlockVNNI<INT32_OUT>(inp_, residual_, out_, cs, weightsVNNI_,
+                                     biasVNNI_, multiplier, inp_zp, out_zp,
+                                     activLUT, inputIsU8);
         return;
     }
 #endif
 #if CV_NEON && defined(CV_NEON_DOT) && CV_NEON_DOT
     if (weightsVNNI_) {
-        convInt8BlockNEON(inp_, residual_, out_, cs, weightsVNNI_,
-                          bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+        convInt8BlockNEON<INT32_OUT>(inp_, residual_, out_, cs, weightsVNNI_,
+                                     bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
         return;
     }
 #endif
@@ -2381,13 +2503,15 @@ void convInt8Block(const void* inp_, const void* residual_,
         // vl=8 over the K0 output channels; pick the narrowest register group
         // that provides 8 lanes at the runtime VLEN (no VLEN hardcoded).
         if (__riscv_vsetvlmax_e32m1() >= 8) {
-            convInt8BlockRVV<ConvInt8RVV_M1>(inp_, residual_, out_, cs, weights_,
-                                             bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+            convInt8BlockRVV<ConvInt8RVV_M1, INT32_OUT>(inp_, residual_, out_, cs, weights_,
+                                                        bias, multiplier, inp_zp, out_zp,
+                                                        activLUT, inputIsU8);
             return;
         }
         if (__riscv_vsetvlmax_e32m2() >= 8) {
-            convInt8BlockRVV<ConvInt8RVV_M2>(inp_, residual_, out_, cs, weights_,
-                                             bias, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+            convInt8BlockRVV<ConvInt8RVV_M2, INT32_OUT>(inp_, residual_, out_, cs, weights_,
+                                                        bias, multiplier, inp_zp, out_zp,
+                                                        activLUT, inputIsU8);
             return;
         }
     }
@@ -2433,13 +2557,14 @@ void convInt8Block(const void* inp_, const void* residual_,
 
     const int8_t* inp = (const int8_t*)inp_;
     const int8_t* residual = (const int8_t*)residual_;
-    int8_t* out = (int8_t*)out_;
+    typedef ConvInt8Out<INT32_OUT> out_t;
+    out_t* out = (out_t*)out_;
     const int8_t* wdata = (const int8_t*)weights_;
     const int* ofsZYX = cs.coordtab.data();
 
     size_t outtotal = outshape.total();
     if ((Kg % K0) != 0) {
-        memset(out, 0, outtotal);
+        memset(out, 0, outtotal * sizeof(out_t));
     }
 
     int total_blocks = N * ngroups * Kblk;
@@ -2489,7 +2614,7 @@ void convInt8Block(const void* inp_, const void* residual_,
             const int8_t* wbaseptr = wdata + (size_t)(g * Kblk + kblk) * ksize * C1Max * C0 * K0;
 
             int k1 = k_base >> C0shift;
-            int8_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
+            out_t* outptr = out + (size_t)(n * K1 + k1) * planesize;
             const int8_t* resptr = residual ? residual + (size_t)(n * K1 + k1) * planesize : nullptr;
 
             int D_l = D, H_l = H, W_l = W;
@@ -2617,6 +2742,15 @@ void convInt8Block(const void* inp_, const void* residual_,
                     }
                 }
 
+                if constexpr (INT32_OUT) {
+                    __m256i* optr = (__m256i*)(outptr + p * K0);
+                    _mm256_storeu_si256(optr + 0, s0); _mm256_storeu_si256(optr + 1, s1);
+                    _mm256_storeu_si256(optr + 2, s2); _mm256_storeu_si256(optr + 3, s3);
+                    _mm256_storeu_si256(optr + 4, s4); _mm256_storeu_si256(optr + 5, s5);
+                    _mm256_storeu_si256(optr + 6, s6); _mm256_storeu_si256(optr + 7, s7);
+                    continue;
+                }
+
                 // Store accumulators
                 _mm256_store_si256((__m256i*)(sumbuf + 0*K0), s0);
                 _mm256_store_si256((__m256i*)(sumbuf + 1*K0), s1);
@@ -2651,7 +2785,7 @@ void convInt8Block(const void* inp_, const void* residual_,
                     __m128i packed8 = inputIsU8 ? _mm_packus_epi16(packed16, packed16)
                                                 : _mm_packs_epi16(packed16, packed16);
 
-                    int8_t* optr = outptr + (p + j) * K0;
+                    out_t* optr = outptr + (p + j) * K0;
                     if (activLUT) {
                         alignas(16) int8_t tmp8[16];
                         _mm_store_si128((__m128i*)tmp8, packed8);
@@ -2705,8 +2839,12 @@ void convInt8Block(const void* inp_, const void* residual_,
                     }
                 }
 
-                int8_t* optr = outptr + p * K0;
+                out_t* optr = outptr + p * K0;
                 const int8_t* rptr = resptr ? resptr + p * K0 : nullptr;
+                if constexpr (INT32_OUT) {
+                    memcpy(optr, acc, sizeof(acc));
+                    continue;
+                }
                 for (int k0 = 0; k0 < K0; k0++) {
                     float val = (float)acc[k0] * multbuf[k0] + (float)out_zp;
                     if (rptr) {
@@ -2727,6 +2865,24 @@ void convInt8Block(const void* inp_, const void* residual_,
             }
         }
     });
+}
+
+void convInt8Block(const void* inp_, const void* residual_,
+                   void* out_, const ConvState& cs,
+                   const void* weights_,
+                   const void* weightsVNNI_,
+                   const int* bias, const int* biasVNNI_,
+                   const float* multiplier,
+                   int inp_zp, int out_zp,
+                   const int8_t* activLUT,
+                   bool inputIsU8, bool int32Out)
+{
+    if (int32Out)
+        convInt8BlockImpl<true>(inp_, residual_, out_, cs, weights_, weightsVNNI_, bias,
+                                biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
+    else
+        convInt8BlockImpl<false>(inp_, residual_, out_, cs, weights_, weightsVNNI_, bias,
+                                 biasVNNI_, multiplier, inp_zp, out_zp, activLUT, inputIsU8);
 }
 
 #endif // !CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
