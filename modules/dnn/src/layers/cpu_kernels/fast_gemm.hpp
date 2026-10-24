@@ -168,7 +168,7 @@ struct MatMulHelper {
 
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
 
-void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+CV_EXPORTS void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
 int fastGemmMC(const FastGemmOpt &opt);
 int fastGemmNC(const FastGemmOpt &opt);
@@ -177,21 +177,21 @@ int fastGemmNR(const FastGemmOpt &opt);
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
 
-void fastGemm(bool trans_a, int M, int N, int K,
+CV_EXPORTS void fastGemm(bool trans_a, int M, int N, int K,
               float alpha, const float *A, int lda,
               const float *packed_B, float beta,
               float *C, int ldc, FastGemmOpt &opt);
-void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+CV_EXPORTS void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
               float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemm(bool trans_a, bool trans_b,
               float alpha, const Mat &A, const Mat &B,
               float beta, Mat &C, FastGemmOpt &opt);
 
-void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+CV_EXPORTS void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
                    int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
                    const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt);
-void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+CV_EXPORTS void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
                    int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
                    const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,

@@ -14,6 +14,7 @@
 
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
 #define FAST_GEMM_MAX_STACKBUF (1 << 13)
+#define FAST_GEMM_MIN_TILE_MACS (1 << 17)
 
 #if CV_RVV
 #define FAST_GEMM_F32_MC 64
@@ -647,6 +648,19 @@ int fastGemmNC() {return FAST_GEMM_F32_NC;}
 int fastGemmKC() {return FAST_GEMM_F32_PACKED_STRIDE_K;}
 int fastGemmNR() {return FAST_GEMM_F32_NR;}
 
+static size_t fast_gemm_target_tiles(size_t M, size_t N, size_t K, bool multi_thread) {
+    int nthreads = multi_thread ? getNumThreads() : 1;
+    if (nthreads <= 1)
+        return 1;
+    double tiles = (double)M * N * K / FAST_GEMM_MIN_TILE_MACS;
+    return (size_t)std::max(1., std::min((double)nthreads * 4, tiles));
+}
+
+static size_t fast_gemm_split(size_t len, size_t cur, size_t parts, size_t R, size_t minsz) {
+    size_t sz = ((len + parts - 1) / parts + R - 1) / R * R;
+    return std::min(cur, std::max(sz, minsz));
+}
+
 void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
@@ -687,14 +701,24 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 
     size_t MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    // KC comes from the default tiles, so the result does not depend on the thread count
     size_t KC = FAST_GEMM_STORAGE / ((MC + NC) * esz);
     KC = KC > 8 ? KC : 8;
     KC = KC < K ? KC : K;
+    size_t m_tiles = (M + MC - 1) / MC;
+    size_t n_tiles = (N + NC - 1) / NC;
+    size_t want = fast_gemm_target_tiles(M, N, K, multi_thread);
+    if (m_tiles * n_tiles < want) {
+        NC = fast_gemm_split(N, NC, (want + m_tiles - 1) / m_tiles, GEMM_NR, GEMM_NR * 4);
+        n_tiles = (N + NC - 1) / NC;
+        if (m_tiles * n_tiles < want) {
+            MC = fast_gemm_split(M, MC, (want + n_tiles - 1) / n_tiles, GEMM_MR, GEMM_MR);
+            m_tiles = (M + MC - 1) / MC;
+        }
+    }
 
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
-    size_t m_tiles = (M + MC - 1) / MC;
-    size_t n_tiles = (N + NC - 1) / NC;
     size_t total_tiles = m_tiles * n_tiles;
 
     auto fn = [&](const Range &r) {
@@ -781,10 +805,23 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
     size_t KC = std::min(static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), K);
 
+    size_t m_tiles = (M + MC - 1) / MC;
+    size_t nb_tiles = (N + NC - 1) / NC;
+    size_t sub_nc = NC, subs = 1;
+    size_t want = fast_gemm_target_tiles(M, N, K, multi_thread);
+    if (m_tiles * nb_tiles < want) {
+        sub_nc = fast_gemm_split(N, NC, (want + m_tiles - 1) / m_tiles, GEMM_NR, GEMM_NR * 4);
+        subs = (NC + sub_nc - 1) / sub_nc;
+    }
+    size_t last_nc = N - (nb_tiles - 1) * NC;
+    size_t n_tiles = (nb_tiles - 1) * subs + (last_nc + sub_nc - 1) / sub_nc;
+    if (m_tiles * n_tiles < want) {
+        MC = fast_gemm_split(M, MC, (want + n_tiles - 1) / n_tiles, GEMM_MR, GEMM_MR);
+        m_tiles = (M + MC - 1) / MC;
+    }
+
     size_t buff_size = KC * MC * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
-    size_t m_tiles = (M + MC - 1) / MC;
-    size_t n_tiles = (N + NC - 1) / NC;
     size_t total_tiles = m_tiles * n_tiles;
 
     auto fn = [&](const Range &r) {
@@ -795,14 +832,17 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             size_t i0 = (tile_idx / n_tiles) * MC;
-            size_t j0 = (tile_idx % n_tiles) * NC;
+            size_t t = tile_idx % n_tiles;
+            size_t jb = (t / subs) * NC;
+            size_t jb_end = N - jb < NC ? N : jb + NC;
+            size_t j0 = jb + (t % subs) * sub_nc;
             size_t mc = M - i0 < MC ? M - i0 : MC;
-            size_t nc = N - j0 < NC ? N - j0 : NC;
+            size_t nc = jb_end - j0 < sub_nc ? jb_end - j0 : sub_nc;
             size_t ldc_block = ldc;
             size_t step_c = ((size_t)i0 * (size_t)ldc + (size_t)j0) * (size_t)esz;
             char* c_block = C + step_c;
 
-            size_t step_b = (size_t)j0 * (size_t)K  * (size_t)esz;
+            size_t step_b = (size_t)jb * (size_t)K  * (size_t)esz;
             packed_b_ = packed_B + step_b;
 
             if (beta == 0.f) {
@@ -816,7 +856,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
                 }
             }
 
-            size_t _nc = static_cast<size_t>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
+            size_t _nc = static_cast<size_t>((jb_end - jb + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
             for(size_t k0 = 0; k0 < K; k0 += KC)
             {
                 size_t kc = K - k0 < KC ? K - k0 : KC;
@@ -835,7 +875,8 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_ + (j0 - jb) * kc * esz,
+                                       alpha, c_block, ldc_block, esz);
                 packed_b_ += _nc * kc;
             }
         }
@@ -865,10 +906,20 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
     size_t KC = std::min(static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), K);
 
-    size_t buff_size = KC * (MC + NC) * esz;
-    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     size_t m_tiles = (M + MC - 1) / MC;
     size_t n_tiles = (N + NC - 1) / NC;
+    size_t want = (fast_gemm_target_tiles(batch * M, N, K, true) + batch - 1) / batch;
+    if (m_tiles * n_tiles < want) {
+        NC = fast_gemm_split(N, NC, (want + m_tiles - 1) / m_tiles, GEMM_NR, GEMM_NR * 4);
+        n_tiles = (N + NC - 1) / NC;
+        if (m_tiles * n_tiles < want) {
+            MC = fast_gemm_split(M, MC, (want + n_tiles - 1) / n_tiles, GEMM_MR, GEMM_MR);
+            m_tiles = (M + MC - 1) / MC;
+        }
+    }
+
+    size_t buff_size = KC * (MC + NC) * esz;
+    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     size_t total_tiles = m_tiles * n_tiles;
 
     auto fn = [&](const Range &r) {
@@ -961,9 +1012,22 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
     size_t KC = std::min( static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), K);
 
-    size_t buff_size = KC * MC * esz;
     size_t m_tiles = (M + MC - 1) / MC;
-    size_t n_tiles = (N + NC - 1) / NC;
+    size_t nb_tiles = (N + NC - 1) / NC;
+    size_t sub_nc = NC, subs = 1;
+    size_t want = (fast_gemm_target_tiles(batch * M, N, K, true) + batch - 1) / batch;
+    if (m_tiles * nb_tiles < want) {
+        sub_nc = fast_gemm_split(N, NC, (want + m_tiles - 1) / m_tiles, GEMM_NR, GEMM_NR * 4);
+        subs = (NC + sub_nc - 1) / sub_nc;
+    }
+    size_t last_nc = N - (nb_tiles - 1) * NC;
+    size_t n_tiles = (nb_tiles - 1) * subs + (last_nc + sub_nc - 1) / sub_nc;
+    if (m_tiles * n_tiles < want) {
+        MC = fast_gemm_split(M, MC, (want + n_tiles - 1) / n_tiles, GEMM_MR, GEMM_MR);
+        m_tiles = (M + MC - 1) / MC;
+    }
+
+    size_t buff_size = KC * MC * esz;
     size_t total_tiles = m_tiles * n_tiles;
 
     auto fn = [&](const Range &r) {
@@ -978,16 +1042,18 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
         for (size_t tile_idx = start; tile_idx < end; tile_idx++) {
             const size_t batch_index = tile_idx / total_tiles;
             const size_t m_tiles_index = (tile_idx - batch_index * total_tiles) / n_tiles;
-            const size_t n_tiles_index = tile_idx % n_tiles;
+            const size_t t = tile_idx % n_tiles;
 
             size_t i0 = m_tiles_index * MC;
-            size_t j0 = n_tiles_index * NC;
+            size_t jb = (t / subs) * NC;
+            size_t jb_end = N - jb < NC ? N : jb + NC;
+            size_t j0 = jb + (t % subs) * sub_nc;
             size_t mc = M - i0 < MC ? M - i0 : MC;
-            size_t nc = N - j0 < NC ? N - j0 : NC;
+            size_t nc = jb_end - j0 < sub_nc ? jb_end - j0 : sub_nc;
             size_t ldc_block = ldc;
             const char *a_block = A + A_offsets[batch_index] * esz;
 
-            size_t step_b = B_offsets[batch_index] * esz + j0 * K * esz;
+            size_t step_b = B_offsets[batch_index] * esz + jb * K * esz;
             size_t step_c = C_offsets[batch_index] * esz + (i0 * ldc + j0) * esz;
 
             packed_b = packed_B + step_b;
@@ -1005,7 +1071,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
                 }
             }
 
-            size_t _nc = static_cast<size_t>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
+            size_t _nc = static_cast<size_t>((jb_end - jb + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 size_t kc = K - k0 < KC ? K - k0 : KC;
@@ -1025,7 +1091,8 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 #endif
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b + (j0 - jb) * kc * esz,
+                                       alpha, c_block, ldc_block, esz);
                 packed_b += _nc * kc;
             }
         }

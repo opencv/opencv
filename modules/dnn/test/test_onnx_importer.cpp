@@ -225,22 +225,32 @@ public:
         Mat KT = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
         Mat V  = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
 
-        Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
-        ASSERT_FALSE(net.empty());
-        net.setPreferableBackend(backend);
-        net.setPreferableTarget(target);
+        auto run = [&](Mat& result) {
+            Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+            ASSERT_FALSE(net.empty());
+            net.setPreferableBackend(backend);
+            net.setPreferableTarget(target);
 
-        net.setInputsNames({"0", "1", "2"});
-        net.setInput(Q,  "0");
-        net.setInput(KT, "1");
-        net.setInput(V,  "2");
-        Mat out = net.forward("");
+            net.setInputsNames({"0", "1", "2"});
+            net.setInput(Q,  "0");
+            net.setInput(KT, "1");
+            net.setInput(V,  "2");
+            result = net.forward("");
+        };
+        Mat out, outNoMlas;
+        run(out);
+        {
+            ScopedNoMlas noMlas;
+            run(outNoMlas);
+        }
 
         // The models are generated with scale = sqrt(head_dim).
         Mat ref = sdpaReference(Q, KT, V, std::sqrt((float)Q.size[3]));
 
         EXPECT_EQ(ref.shape(), out.shape());
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(ref, outNoMlas, (basename + " without MLAS").c_str(),
+                   l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
     }
 };
 

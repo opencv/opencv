@@ -8,8 +8,13 @@
 #define OPENCV_DNN_MLAS_GEMM_HPP
 
 #include <cstddef>
+#include "opencv2/core/cvdef.h"
 
 namespace cv { namespace dnn {
+
+// Lets tests run the code used without MLAS in a build that has it. Call it before the net or
+// layer is set up: Gemm and Attention with constant weights pack them only for MLAS at that point.
+CV_EXPORTS void setUseMlas(bool flag);
 
 #ifdef HAVE_MLAS
 
