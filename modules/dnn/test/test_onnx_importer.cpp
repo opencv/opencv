@@ -3958,4 +3958,29 @@ TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
     EXPECT_TRUE(net.empty());
 }
 
+TEST(Test_ONNX_importer, parse_bool_tensor_int32)
+{
+    Mat m = readTensorFromONNX(_tf("models/bool_tensor_int32.pb"));
+
+    ASSERT_EQ(m.dims, 1);
+    ASSERT_EQ(m.size[0], 3);
+    EXPECT_EQ(m.depth(), CV_Bool);
+    EXPECT_EQ(m.ptr<bool>()[0], true);
+    EXPECT_EQ(m.ptr<bool>()[1], false);
+    EXPECT_EQ(m.ptr<bool>()[2], true);
+}
+
+TEST(Test_ONNX_importer, read_bool_tensor_int32_graph)
+{
+    Net net = readNetFromONNX(_tf("models/bool_tensor_int32.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 1);
+    ASSERT_EQ(out.size[0], 3);
+    EXPECT_EQ(out.depth(), CV_Bool);
+    EXPECT_EQ(out.ptr<bool>()[0], false);
+    EXPECT_EQ(out.ptr<bool>()[1], true);
+    EXPECT_EQ(out.ptr<bool>()[2], false);
+}
 }} // namespace
