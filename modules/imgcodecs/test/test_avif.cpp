@@ -403,7 +403,30 @@ TEST(Imgcodecs_Avif, alpha_quality_control)
     EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
   }
 
-  // 4. Parameter order independence
+  // 4. Default sync: IMWRITE_AVIF_QUALITY=100 without alpha quality syncs alpha to 100 (both lossless)
+  {
+    std::vector<uchar> buf;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                             {IMWRITE_AVIF_QUALITY, 100}));
+    cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_EQ(decoded.type(), CV_8UC4);
+    EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
+  }
+
+  // 5. Only IMWRITE_AVIF_ALPHA_QUALITY=100 specified (color defaults to 95, alpha lossless)
+  {
+    std::vector<uchar> buf;
+    EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                             {IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+    cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_EQ(decoded.type(), CV_8UC4);
+
+    std::vector<cv::Mat> dec_planes;
+    cv::split(decoded, dec_planes);
+    EXPECT_EQ(0, cvtest::norm(planes[3], dec_planes[3], NORM_INF));
+  }
+
+  // 6. Parameter order independence
   {
     std::vector<uchar> buf1, buf2;
     EXPECT_TRUE(cv::imencode(".avif", img, buf1,
@@ -415,12 +438,35 @@ TEST(Imgcodecs_Avif, alpha_quality_control)
     EXPECT_EQ(0, cvtest::norm(dec1, dec2, NORM_INF));
   }
 
-  // 5. Out-of-bounds parameter fallback
+  // 7. Out-of-bounds parameter fallback
   {
     std::vector<uchar> buf;
     EXPECT_NO_THROW(cv::imencode(".avif", img, buf,
                                  {IMWRITE_AVIF_QUALITY, 150, IMWRITE_AVIF_ALPHA_QUALITY, -50}));
     EXPECT_FALSE(buf.empty());
+  }
+
+  // 8. Omitted key fallback tests: default parameters match explicit 95/95
+  {
+    std::vector<uchar> bufDefault, bufExplicit;
+    EXPECT_TRUE(cv::imencode(".avif", img, bufDefault));
+    EXPECT_TRUE(cv::imencode(".avif", img, bufExplicit,
+                             {IMWRITE_AVIF_QUALITY, 95, IMWRITE_AVIF_ALPHA_QUALITY, 95}));
+    cv::Mat decDefault = cv::imdecode(bufDefault, IMREAD_UNCHANGED);
+    cv::Mat decExplicit = cv::imdecode(bufExplicit, IMREAD_UNCHANGED);
+    EXPECT_EQ(0, cvtest::norm(decDefault, decExplicit, NORM_INF));
+  }
+
+  // 9. Omitted alpha quality matches explicitly synced color quality
+  {
+    std::vector<uchar> bufSynced, bufExplicit;
+    EXPECT_TRUE(cv::imencode(".avif", img, bufSynced,
+                             {IMWRITE_AVIF_QUALITY, 80}));
+    EXPECT_TRUE(cv::imencode(".avif", img, bufExplicit,
+                             {IMWRITE_AVIF_QUALITY, 80, IMWRITE_AVIF_ALPHA_QUALITY, 80}));
+    cv::Mat decSynced = cv::imdecode(bufSynced, IMREAD_UNCHANGED);
+    cv::Mat decExplicit = cv::imdecode(bufExplicit, IMREAD_UNCHANGED);
+    EXPECT_EQ(0, cvtest::norm(decSynced, decExplicit, NORM_INF));
   }
 }
 

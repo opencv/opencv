@@ -364,36 +364,22 @@ bool AvifEncoder::writeanimation(const Animation& animation,
                                  const std::vector<int> &params) {
   int bit_depth = 8;
   int speed = AVIF_SPEED_FASTEST;
+  int qualityColorWork = -1;
+  int qualityAlphaWork = -1;
   for (size_t i = 0; i < params.size(); i += 2) {
     const int value = params[i + 1];
     if (params[i] == IMWRITE_AVIF_QUALITY) {
-      const int quality = std::min(std::max(value, AVIF_QUALITY_WORST),
-                                   AVIF_QUALITY_BEST);
-      if (value != quality) {
-        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_QUALITY must be between 0 to 100. It is fallbacked to %d", value, quality));
+      qualityColorWork = std::min(std::max(value, AVIF_QUALITY_WORST),
+                                  AVIF_QUALITY_BEST);
+      if (value != qualityColorWork) {
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_QUALITY must be between 0 to 100. It is fallbacked to %d", value, qualityColorWork));
       }
-#if CV_AVIF_USE_QUALITY
-      encoder_->quality = quality;
-#else
-      encoder_->minQuantizer = encoder_->maxQuantizer =
-          (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
-              quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
-          AVIF_QUANTIZER_WORST_QUALITY;
-#endif
     } else if (params[i] == IMWRITE_AVIF_ALPHA_QUALITY) {
-      const int qualityAlpha = std::min(std::max(value, AVIF_QUALITY_WORST),
-                                         AVIF_QUALITY_BEST);
-      if (value != qualityAlpha) {
-        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_ALPHA_QUALITY must be between 0 to 100. It is fallbacked to %d", value, qualityAlpha));
+      qualityAlphaWork = std::min(std::max(value, AVIF_QUALITY_WORST),
+                                  AVIF_QUALITY_BEST);
+      if (value != qualityAlphaWork) {
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_ALPHA_QUALITY must be between 0 to 100. It is fallbacked to %d", value, qualityAlphaWork));
       }
-#if CV_AVIF_USE_QUALITY
-      encoder_->qualityAlpha = qualityAlpha;
-#else
-      encoder_->minQuantizerAlpha = encoder_->maxQuantizerAlpha =
-          (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
-              qualityAlpha / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
-          AVIF_QUANTIZER_WORST_QUALITY;
-#endif
     } else if (params[i] == IMWRITE_AVIF_DEPTH) {
       bit_depth = value;
       if ((bit_depth != 8) && (!isSupportedBitDepth16U(bit_depth)))
@@ -408,6 +394,43 @@ bool AvifEncoder::writeanimation(const Animation& animation,
       }
     }
   }
+
+  int quality = 95;
+  int qualityAlpha = 95;
+
+  if (qualityAlphaWork == -1) {
+    if (qualityColorWork == -1) {
+      // Both IMWRITE_AVIF_QUALITY and _ALPHA are not specified.
+      quality = 95;
+      qualityAlpha = 95;
+    } else {
+      // IMWRITE_AVIF_QUALITY is specified, but _ALPHA is not.
+      quality = qualityColorWork;
+      qualityAlpha = qualityColorWork;
+    }
+  } else {
+    if (qualityColorWork == -1) {
+      quality = 95;
+      qualityAlpha = qualityAlphaWork;
+    } else {
+      quality = qualityColorWork;
+      qualityAlpha = qualityAlphaWork;
+    }
+  }
+
+#if CV_AVIF_USE_QUALITY
+  encoder_->quality = quality;
+  encoder_->qualityAlpha = qualityAlpha;
+#else
+  encoder_->minQuantizer = encoder_->maxQuantizer =
+      (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
+          quality / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
+      AVIF_QUANTIZER_WORST_QUALITY;
+  encoder_->minQuantizerAlpha = encoder_->maxQuantizerAlpha =
+      (AVIF_QUANTIZER_BEST_QUALITY - AVIF_QUANTIZER_WORST_QUALITY) *
+          qualityAlpha / (AVIF_QUALITY_BEST - AVIF_QUALITY_WORST) +
+      AVIF_QUANTIZER_WORST_QUALITY;
+#endif
 
   avifRWData output_ori = AVIF_DATA_EMPTY;
   std::unique_ptr<avifRWData, decltype(&avifRWDataFree)> output(&output_ori,
