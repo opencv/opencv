@@ -698,7 +698,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
     size_t i, nplanes = it.nplanes;
     int depth = src.depth(), cn = src.channels();
     union { double d[4]; float f[4]; int i[4]; unsigned u[4]; int64 L[4]; uint64 UL[4]; } lbuf, rbuf;
-    int wtype = CV_MAKETYPE((depth <= CV_32S ? CV_32S :
+    int wtype = CV_MAKETYPE((depth <= CV_32S || depth == CV_32U || depth == CV_64S || depth == CV_64U ? CV_64F :
         depth == CV_16F || depth == CV_16BF || depth == CV_32F ? CV_32F : depth), cn);
     scalarToRawData(lb, lbuf.d, wtype, cn);
     scalarToRawData(rb, rbuf.d, wtype, cn);
@@ -711,28 +711,28 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
         switch( depth )
         {
         case CV_8U:
-            inRangeS_((const uchar*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            inRangeS_<uchar, double>((const uchar*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_8S:
-            inRangeS_((const schar*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            inRangeS_<schar, double>((const schar*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_16U:
-            inRangeS_((const ushort*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            inRangeS_<ushort, double>((const ushort*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_16S:
-            inRangeS_((const short*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            inRangeS_<short, double>((const short*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_32U:
-            inRangeS_((const unsigned*)sptr, lbuf.u, rbuf.u, dptr, total, cn);
+            inRangeS_<unsigned, double>((const unsigned*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_32S:
-            inRangeS_((const int*)sptr, lbuf.i, rbuf.i, dptr, total, cn);
+            inRangeS_<int, double>((const int*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_64U:
-            inRangeS_((const uint64*)sptr, lbuf.UL, rbuf.UL, dptr, total, cn);
+            inRangeS_<uint64, double>((const uint64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_64S:
-            inRangeS_((const int64*)sptr, lbuf.L, rbuf.L, dptr, total, cn);
+            inRangeS_<int64, double>((const int64*)sptr, lbuf.d, rbuf.d, dptr, total, cn);
             break;
         case CV_32F:
             inRangeS_((const float*)sptr, lbuf.f, rbuf.f, dptr, total, cn);
@@ -4832,6 +4832,138 @@ TEST(Core_Arithm, addWeighted_fp64_uses_fp32_intermediate_29880)
     const double fp64Only = (double)srcVal*(double)alpha + (double)srcVal*(double)beta + (double)gamma;
     ASSERT_NE(fp32Then64, fp64Only) << "chosen alpha does not distinguish the two code paths";
     EXPECT_EQ(fp32Then64, dst.at<double>(0, 0));
+}
+
+TEST(Core_Arithm, InRangeScalarFractionalAndWideBounds)
+{
+    const cv::Mat src = cv::Mat_<uchar>({1, 5}, {0, 1, 127, 128, 255});
+    cv::Mat dst;
+
+    cv::inRange(src, cv::Scalar(0.1), cv::Scalar(0.9), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+    cv::inRange(src, cv::Scalar(127.1), cv::Scalar(127.9), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+
+    cv::inRange(src, cv::Scalar(0), cv::Scalar(2147483648.0), dst);
+    EXPECT_EQ(src.total(), static_cast<size_t>(cv::countNonZero(dst)));
+    cv::inRange(src, cv::Scalar(0), cv::Scalar(2147483647.0), dst);
+    EXPECT_EQ(src.total(), static_cast<size_t>(cv::countNonZero(dst)));
+
+    cv::inRange(src, cv::Scalar(0.1), cv::Scalar(1.9), dst);
+    const cv::Mat expected = cv::Mat_<uchar>({1, 5}, {0, 255, 0, 0, 0});
+    EXPECT_EQ(0, cv::norm(dst, expected, cv::NORM_INF));
+
+    const cv::Mat signedSrc = cv::Mat_<short>({1, 5}, {-2, -1, 0, 1, 2});
+    cv::inRange(signedSrc, cv::Scalar(-1.9), cv::Scalar(-0.1), dst);
+    EXPECT_EQ(0, cv::norm(dst, expected, cv::NORM_INF));
+
+    const cv::Mat signed8 = cv::Mat_<schar>({1, 3}, {-128, 0, 127});
+    cv::inRange(signed8, cv::Scalar(-0.9), cv::Scalar(0.9), dst);
+    const cv::Mat onlyMiddle = cv::Mat_<uchar>({1, 3}, {0, 255, 0});
+    EXPECT_EQ(0, cv::norm(dst, onlyMiddle, cv::NORM_INF));
+
+    const cv::Mat signed32 = cv::Mat_<int>({1, 3}, {INT_MIN, 0, INT_MAX});
+    cv::inRange(signed32, cv::Scalar(-0.9), cv::Scalar(0.9), dst);
+    EXPECT_EQ(0, cv::norm(dst, onlyMiddle, cv::NORM_INF));
+
+    const cv::Mat src16 = cv::Mat_<ushort>({1, 3}, {0, 1, 65535});
+    cv::inRange(src16, cv::Scalar(0.1), cv::Scalar(1.9), dst);
+    const cv::Mat expected16 = cv::Mat_<uchar>({1, 3}, {0, 255, 0});
+    EXPECT_EQ(0, cv::norm(dst, expected16, cv::NORM_INF));
+    cv::inRange(src16, cv::Scalar(0), cv::Scalar(65535), dst);
+    EXPECT_EQ(3, cv::countNonZero(dst));
+
+    const cv::Mat floatSrc = cv::Mat_<float>({1, 3}, {0.f, 1.f, 2.f});
+    float floatLower = 1.f, floatUpper = 2.f;
+    const cv::Mat floatLowerMat(1, 1, CV_32F, &floatLower);
+    const cv::Mat floatUpperMat(1, 1, CV_32F, &floatUpper);
+    cv::inRange(floatSrc, floatLowerMat, floatUpperMat, dst);
+    const cv::Mat floatExpected = cv::Mat_<uchar>({1, 3}, {0, 255, 255});
+    EXPECT_EQ(0, cv::norm(dst, floatExpected, cv::NORM_INF));
+
+    const cv::Mat unsignedSrc = cv::Mat_<unsigned>({1, 3}, {0u, 2147483648u, 4294967295u});
+    cv::inRange(unsignedSrc, cv::Scalar(2147483648.0), cv::Scalar(4294967295.0), dst);
+    const cv::Mat expected32 = cv::Mat_<uchar>({1, 3}, {0, 255, 255});
+    EXPECT_EQ(0, cv::norm(dst, expected32, cv::NORM_INF));
+
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    cv::inRange(src, cv::Scalar(-inf), cv::Scalar(inf), dst);
+    EXPECT_EQ(src.total(), static_cast<size_t>(cv::countNonZero(dst)));
+    cv::inRange(src, cv::Scalar(nan), cv::Scalar(255), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+    cv::inRange(src, cv::Scalar(0), cv::Scalar(nan), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+    cv::inRange(src, cv::Scalar(inf), cv::Scalar(inf), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+    cv::inRange(src, cv::Scalar(-inf), cv::Scalar(-inf), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+}
+
+TEST(Core_Arithm, InRangeScalarMultichannelAnd64Bit)
+{
+    cv::Mat src(1, 2, CV_8UC3);
+    src.at<cv::Vec3b>(0, 0) = cv::Vec3b(1, 7, 255);
+    src.at<cv::Vec3b>(0, 1) = cv::Vec3b(0, 7, 255);
+    cv::Mat dst;
+    cv::inRange(src, cv::Scalar(0.1, 5, 0), cv::Scalar(1.9, 10, 255), dst);
+    const cv::Mat expected = cv::Mat_<uchar>({1, 2}, {255, 0});
+    EXPECT_EQ(0, cv::norm(dst, expected, cv::NORM_INF));
+    cv::inRange(src, cv::Scalar(0, 0.1, 0), cv::Scalar(255, 0.9, 255), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+
+    uchar lowerByte = 1, upperByte = 255;
+    const cv::Mat lowerByteMat(1, 1, CV_8U, &lowerByte);
+    const cv::Mat upperByteMat(1, 1, CV_8U, &upperByte);
+    cv::inRange(src, lowerByteMat, upperByteMat, dst);
+    EXPECT_EQ(0, cv::norm(dst, expected, cv::NORM_INF));
+
+    cv::Vec3b exactPixel(1, 7, 255);
+    const cv::Mat exactBound(1, 1, CV_8UC3, &exactPixel);
+    cv::inRange(src, exactBound, exactBound, dst);
+    EXPECT_EQ(0, cv::norm(dst, expected, cv::NORM_INF));
+
+    double lowerValue = 0.0, upperValue = 255.0;
+    const cv::Mat lowerMat(1, 1, CV_64F, &lowerValue);
+    const cv::Mat upperMat(1, 1, CV_64F, &upperValue);
+    cv::inRange(src, lowerMat, upperMat, dst);
+    EXPECT_EQ(2, cv::countNonZero(dst));
+
+    cv::Mat signedSrc(1, 3, CV_64SC1);
+    signedSrc.ptr<int64>()[0] = INT64_MIN;
+    signedSrc.ptr<int64>()[1] = 0;
+    signedSrc.ptr<int64>()[2] = INT64_MAX;
+    const double inf = std::numeric_limits<double>::infinity();
+    cv::inRange(signedSrc, cv::Scalar(-inf), cv::Scalar(inf), dst);
+    EXPECT_EQ(3, cv::countNonZero(dst));
+    cv::inRange(signedSrc, cv::Scalar(9223372036854775808.0), cv::Scalar(inf), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+
+    int64 signedMax = INT64_MAX;
+    const cv::Mat signedMaxMat(1, 1, CV_64S, &signedMax);
+    cv::inRange(signedSrc, signedMaxMat, signedMaxMat, dst);
+    const cv::Mat signedMaxExpected = cv::Mat_<uchar>({1, 3}, {0, 0, 255});
+    EXPECT_EQ(0, cv::norm(dst, signedMaxExpected, cv::NORM_INF));
+
+    cv::Mat unsignedSrc(1, 2, CV_64UC1);
+    unsignedSrc.ptr<uint64>()[0] = 0;
+    unsignedSrc.ptr<uint64>()[1] = UINT64_MAX;
+    cv::inRange(unsignedSrc, cv::Scalar(0), cv::Scalar(inf), dst);
+    EXPECT_EQ(2, cv::countNonZero(dst));
+    cv::inRange(unsignedSrc, cv::Scalar(18446744073709551616.0), cv::Scalar(inf), dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
+
+    uint64 unsignedMax = UINT64_MAX;
+    const cv::Mat unsignedMaxMat(1, 1, CV_64U, &unsignedMax);
+    cv::inRange(unsignedSrc, unsignedMaxMat, unsignedMaxMat, dst);
+    const cv::Mat unsignedMaxExpected = cv::Mat_<uchar>({1, 2}, {0, 255});
+    EXPECT_EQ(0, cv::norm(dst, unsignedMaxExpected, cv::NORM_INF));
+
+    uint64 largeUnsigned = static_cast<uint64>(INT64_MAX) + 1;
+    cv::Mat lower64(1, 1, CV_64UC1, &largeUnsigned);
+    cv::Mat upper64(1, 1, CV_64UC1, &largeUnsigned);
+    cv::inRange(signedSrc, lower64, upper64, dst);
+    EXPECT_EQ(0, cv::countNonZero(dst));
 }
 
 // https://github.com/opencv/opencv/issues/30153
