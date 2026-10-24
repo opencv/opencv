@@ -1465,10 +1465,17 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
             {
             case CV_8U: check_<uchar>(values_row, idx_row); break;
             case CV_8S: check_<char>(values_row, idx_row); break;
+            case CV_16U: check_<ushort>(values_row, idx_row); break;
             case CV_16S: check_<short>(values_row, idx_row); break;
             case CV_32S: check_<int>(values_row, idx_row); break;
             case CV_32F: check_<float>(values_row, idx_row); break;
             case CV_64F: check_<double>(values_row, idx_row); break;
+            case CV_16F: check_<hfloat>(values_row, idx_row); break;
+            case CV_16BF: check_<bfloat>(values_row, idx_row); break;
+            case CV_Bool: check_<uchar>(values_row, idx_row); break;
+            case CV_64U: check_<uint64_t>(values_row, idx_row); break;
+            case CV_64S: check_<int64_t>(values_row, idx_row); break;
+            case CV_32U: check_<uint32_t>(values_row, idx_row); break;
             default: ASSERT_FALSE(true) << "Unsupported type: " << type;
             }
         }
@@ -1483,11 +1490,20 @@ TEST_P(sortIdx, simple)
 
         cv::sortIdx(src_roi, dst_roi, flags);
         validate();
+
+        // cv::sort must give the same values as sorting a CV_64F copy
+        Mat sorted, sorted64f, ref64f, src64f;
+        cv::sort(src_roi, sorted, flags);
+        src_roi.convertTo(src64f, CV_64F);
+        cv::sort(src64f, ref64f, flags);
+        sorted.convertTo(sorted64f, CV_64F);
+        EXPECT_EQ(0, cvtest::norm(sorted64f, ref64f, NORM_INF));
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Core, sortIdx, Combine(
-        Values(CV_8U, CV_8S, CV_16S, CV_32S, CV_32F, CV_64F), // depth
+        Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F,
+               CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U), // depth
         Values(SORT_EVERY_COLUMN, SORT_EVERY_ROW),
         Values(SORT_ASCENDING, SORT_DESCENDING),
         Values(Size(3, 3), Size(16, 8)),
