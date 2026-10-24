@@ -335,7 +335,41 @@ TEST_P(CountNonZero1D, /**/)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, CountNonZero1D,
-    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool)
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
+
+// 0x80 is -0.0 in E4M3FN (counts as zero) but NaN in E4M3FNUZ (counts as non-zero).
+// The sizes reach the scalar tail (1), the single-vector loop (100) and the unrolled loop (1031).
+typedef testing::TestWithParam<tuple<int, int> > CountNonZeroFP8;
+
+TEST_P(CountNonZeroFP8, sign_bit)
+{
+    const int depth = get<0>(GetParam());
+    const int n = get<1>(GetParam());
+
+    // small random integers: fp8 stores them exactly, some are 0 and about half are negative
+    Mat src(1, n, CV_32S), m;
+    randu(src, -3, 4);
+    src.convertTo(m, depth);
+
+    // put 0x80 (-0.0 or NaN) on every 5th element and on the last one
+    for (int i = 0; i < n; i += 5)
+        m.data[i] = 0x80;
+    m.data[n - 1] = 0x80;
+
+    int ref = 0;
+    for (int i = 0; i < n; i++)
+    {
+        const uchar b = m.data[i];
+        ref += depth == CV_8F_E4M3FN ? (b & 0x7f) != 0 : b != 0;
+    }
+    EXPECT_EQ(ref, countNonZero(m));
+    EXPECT_EQ(ref != 0, hasNonZero(m));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, CountNonZeroFP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Values(1, 100, 1031)
+));
 
 }} // namespace
