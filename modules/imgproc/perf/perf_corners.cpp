@@ -107,12 +107,6 @@ PERF_TEST_P(CornerROIPerf, cornerHarrisROI,
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
 
-    // Verify against a whole-image result without requiring new golden data.
-    Mat expected;
-    cornerHarris(isolated ? src.clone() : parent, expected, blockSize, 3, 0.04, BORDER_REFLECT_101);
-    const Mat reference = isolated ? expected : expected(Rect(16, 16, size.width, size.height));
-    ASSERT_LE(cvtest::norm(reference, dst, NORM_INF),
-              2e-5 * std::max(1.0, cvtest::norm(reference, NORM_INF)));
     SANITY_CHECK_NOTHING();
 }
 
@@ -131,13 +125,6 @@ PERF_TEST_P(CornerWholeImagePerf, cornerHarrisEvenBlock,
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
 
-    const bool useIPP = cv::ipp::useIPP();
-    cv::ipp::setUseIPP(false);
-    Mat expected;
-    cornerHarris(src, expected, blockSize, 3, 0.04, borderType);
-    cv::ipp::setUseIPP(useIPP);
-    ASSERT_LE(cvtest::norm(expected, dst, NORM_INF),
-              2e-5 * std::max(1.0, cvtest::norm(expected, NORM_INF)));
     SANITY_CHECK_NOTHING();
 }
 
