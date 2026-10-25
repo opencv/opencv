@@ -4181,6 +4181,34 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
     }
 }
 
+TEST(Test_SoftmaxCrossEntropyLoss, RejectMismatchedWeightsAndLabels)
+{
+    const int N = 2, C = 64;
+    Mat scores(std::vector<int>{N, C}, CV_32F);
+    randu(scores, -1, 1);
+    Mat labels(std::vector<int>{N}, CV_32S, Scalar(C - 1));
+
+    LayerParams lp;
+    lp.type = "SoftmaxCrossEntropyLoss";
+    lp.name = "sce_weights";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weights must hold one value per class
+    std::vector<Mat> inputs{scores, labels, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // probability labels must cover every sample of the scores
+    Mat probs(std::vector<int>{1, C}, CV_32F, Scalar(1.f / C));
+    inputs = {scores, probs};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    inputs = {scores, labels, Mat(std::vector<int>{C}, CV_32F, Scalar(1))};
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(outputs.size(), (size_t)1);
+}
+
 TEST(Test_GatherND, EmptyIndicesDoNotCrash)
 {
     for (int indicesType : {CV_32S, CV_64S})
