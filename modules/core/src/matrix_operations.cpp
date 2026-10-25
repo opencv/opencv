@@ -1314,7 +1314,7 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
         sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
         sort_<int>, sort_<float>, sort_<double>, sort_<hfloat>,
         sort_<bfloat>, sort_<uchar>, sort_<uint64_t>, sort_<int64_t>,
-        sort_<uint32_t>, 0
+        sort_<uint32_t>, sort_<fp8_t>, sort_<fp8a_t>
     };
     SortFunc func = tab[src.depth()];
     CV_Assert( func != 0 );
@@ -1343,7 +1343,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
         sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
         sortIdx_<int>, sortIdx_<float>, sortIdx_<double>, sortIdx_<hfloat>,
         sortIdx_<bfloat>, sortIdx_<uchar>, sortIdx_<uint64_t>, sortIdx_<int64_t>,
-        sortIdx_<uint32_t>, 0
+        sortIdx_<uint32_t>, sortIdx_<fp8_t>, sortIdx_<fp8a_t>
     };
     SortFunc func = tab[src.depth()];
     CV_Assert( func != 0 );
