@@ -49,12 +49,12 @@ public:
 
         int r = data.size();
         int q = indices.size();
-        int last_indices_dim = indices[q - 1];
 
         CV_CheckGE(r, 1, "GatherND: data rank must be >= 1");
         CV_CheckGE(q, 1, "GatherND: indices rank must be >= 1");
+        int last_indices_dim = indices[q - 1];
         CV_CheckGE(batch_dims, 0, "GatherND: batch_dims must be >= 0");
-        CV_CheckLE(batch_dims, std::min(q, r), "GatherND: batch_dims must be <= min(q, r)");
+        CV_CheckLT(batch_dims, std::min(q, r), "GatherND: batch_dims must be < min(q, r)");
         for (int i = 0; i < batch_dims; ++i)
             CV_CheckEQ(data[i], indices[i], "GatherND: batch dimensions of data and indices must match");
         CV_CheckGE(last_indices_dim, 1, "GatherND: last dimension of indices must be >= 1");
