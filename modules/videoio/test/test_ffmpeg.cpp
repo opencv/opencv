@@ -1375,8 +1375,6 @@ TEST(videoio_ffmpeg_encoder_props, unsupported_property_fails_open)
                                       VideoWriter::fourcc('Z', 'Z', 'Z', 'Z')}));
 }
 
-// Disabled on Windows until the prebuilt FFmpeg wrapper is rebuilt with the new encoder options
-#ifndef _WIN32
 TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -1422,6 +1420,5 @@ TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
     ASSERT_EQ(Size(8, 8), frame.size());
     EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
 }
-#endif
 
 }} // namespace
