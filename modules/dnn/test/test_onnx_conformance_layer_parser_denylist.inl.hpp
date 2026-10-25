@@ -124,7 +124,6 @@
 "test_qlinearmatmul_3D_uint8_float16",
 "test_qlinearmatmul_3D_uint8_float32",
 "test_quantizelinear_blocked_asymmetric",
-"test_quantizelinear_blocked_symmetric",
 "test_quantizelinear_float4e2m1",
 "test_quantizelinear_int4",
 "test_quantizelinear_uint4",
