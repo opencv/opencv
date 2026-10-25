@@ -3016,7 +3016,34 @@ TEST(Core_CheckRange, Inf_Minus)
     ASSERT_EQ(bad_pt.y, 1);
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One);
+TYPED_TEST_P(Core_CheckRange, FractionalMinBound)
+{
+    TypeParam data[] = {5, 10, 15, 10, 10, 4, 8, 12, 14};
+    cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
+
+    cv::Point bad_pt(0, 0);
+
+    // 4 < 4.5, so it is out of range
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, 4.5, 16.0));
+    ASSERT_EQ(bad_pt.x, 2);
+    ASSERT_EQ(bad_pt.y, 1);
+
+    ASSERT_TRUE(checkRange(src, true, NULL, 4.0, 16.0));
+    ASSERT_TRUE(checkRange(src, true, NULL, 3.5, 15.5));
+    ASSERT_FALSE(checkRange(src, true, NULL, 3.5, 15.0));
+}
+
+TYPED_TEST_P(Core_CheckRange, BoundsOutsideIntRange)
+{
+    cv::Mat src = cv::Mat::zeros(3, 3, cv::DataDepth<TypeParam>::value);
+
+    ASSERT_FALSE(checkRange(src, true, NULL, -2e10, -1e10));
+    ASSERT_FALSE(checkRange(src, true, NULL, 1e10, 2e10));
+    ASSERT_FALSE(checkRange(src, true, NULL, -1e12, -3e9));
+    ASSERT_TRUE(checkRange(src, true, NULL, -1e10, 1e10));
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One, FractionalMinBound, BoundsOutsideIntRange);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
