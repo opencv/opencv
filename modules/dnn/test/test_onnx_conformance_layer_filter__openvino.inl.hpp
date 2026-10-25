@@ -812,6 +812,10 @@ CASE(test_dequantizelinear_e4m3fn_zero_point)
     SKIP;
 CASE(test_dequantizelinear_e5m2)
     SKIP;
+CASE(test_dequantizelinear_int16)
+    SKIP;
+CASE(test_dequantizelinear_uint16)
+    SKIP;
 CASE(test_det_2d)
     SKIP;
 CASE(test_det_nd)
@@ -2121,9 +2125,15 @@ CASE(test_quantizelinear_axis)
     SKIP;
 CASE(test_quantizelinear_blocked)
     SKIP;
+CASE(test_quantizelinear_blocked_symmetric)
+    SKIP;
 CASE(test_quantizelinear_e4m3fn)
     SKIP;
 CASE(test_quantizelinear_e5m2)
+    SKIP;
+CASE(test_quantizelinear_int16)
+    SKIP;
+CASE(test_quantizelinear_uint16)
     SKIP;
 CASE(test_range_float_type_positive_delta)
     SKIP;
