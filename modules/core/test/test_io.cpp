@@ -1647,6 +1647,24 @@ TEST(Core_InputOutput, FileStorage_json_key_backslash)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_json_key_escape_in_middle)
+{
+    // the character following an escape sequence must not be dropped
+    std::string test = R"({"\".":1,"\",":2,"a\\b":3,".\"x\"":4,"a\nb\tc":5,"\/":6})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+
+    FileNode root = fs.root();
+    ASSERT_EQ(root.size(), 6u);
+
+    EXPECT_EQ((int)root[R"(".)"], 1);
+    EXPECT_EQ((int)root[R"(",)"], 2);
+    EXPECT_EQ((int)root[R"(a\b)"], 3);
+    EXPECT_EQ((int)root[R"(."x")"], 4);
+    EXPECT_EQ((int)root["a\nb\tc"], 5);
+    EXPECT_EQ((int)root["/"], 6);
+    fs.release();
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =

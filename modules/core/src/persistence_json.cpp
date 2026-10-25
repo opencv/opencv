@@ -420,19 +420,30 @@ public:
 
         char * beg = ptr + 1;
         std::string key_name;
-        do {
-            if (*ptr == '\\') { // skip the next character if current is back slash
+        for (;;) {
+            ++ptr;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            char c = *ptr;
+            if (!cv_isprint(c) || c == '"')
+                break;
+            if (c == '\\') { // take the escaped character instead of the back slash
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                key_name += *ptr;
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            } else {
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+                c = *ptr;
+                if (!cv_isprint(c))
+                    break;
+                switch (c)
+                {
+                case 'n': c = '\n'; break;
+                case 'r': c = '\r'; break;
+                case 't': c = '\t'; break;
+                case 'b': c = '\b'; break;
+                case 'f': c = '\f'; break;
+                default: break;
+                }
             }
-        } while( cv_isprint(*ptr) && *ptr != '"' );
+            key_name += c;
+        }
 
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
