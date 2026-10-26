@@ -1199,8 +1199,11 @@ public:
     void globalPoolBlock(const Mat& inp, Mat& out) const
     {
         CV_Assert_N(inp.type() == CV_32F, inp.isContinuous(), out.isContinuous());
+        if (out.total() == 0)
+            return;
         const int C0 = inp.size[inp.dims - 1], NC1 = inp.size[0]*inp.size[1];
         const size_t planesize = inp.total()/((size_t)NC1*C0);
+        CV_CheckGT(planesize, (size_t)0, "Global pooling: only the batch dimension can be empty");
         CV_Assert(out.total() == (size_t)NC1*C0);
         const float scale = (float)(1.0/planesize);
         const bool isMax = type == MAX;
