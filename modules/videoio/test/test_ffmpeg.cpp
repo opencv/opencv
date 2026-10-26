@@ -1240,7 +1240,7 @@ static long writeWithEncoderParams(const std::string& file, const std::vector<in
 
     std::ifstream fs(file.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!fs)
-        return -1;
+        return -2;
     return (long)fs.tellg();
 }
 
@@ -1344,7 +1344,7 @@ TEST(videoio_ffmpeg_encoder_props, pixel_format_round_trips_with_capture_propert
     double readBack = -1;
     const long size = writeWithEncoderParams(file, {VIDEOWRITER_PROP_COLOR_SPACE, requested}, frames,
                                              &readBack, VIDEOWRITER_PROP_COLOR_SPACE);
-    if (size < 0)
+    if (size == -1)
         throw SkipTestException("Encoder does not support the requested pixel format");
 
     EXPECT_EQ(fourccToString(requested), fourccToString((int)readBack));
@@ -1385,6 +1385,9 @@ TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 
     const string file = cv::tempfile(".mp4");
     const long size = writeWithEncoderParams(file, std::vector<int>(), frames);
+    if (size == -1)
+        throw SkipTestException("H264 encoder is not available");
+
     ASSERT_GT(size, 0);
 
     VideoCapture cap;
