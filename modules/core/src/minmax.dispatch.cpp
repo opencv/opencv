@@ -369,7 +369,8 @@ static void minMaxIdx_(cv::InputArray _src, double* minVal,
     double dminval, dmaxval;
     if( depth <= CV_32S || depth == CV_Bool )
         dminval = minval.i, dmaxval = maxval.i;
-    else if( depth == CV_32F || depth == CV_16F || depth == CV_16BF )
+    else if( depth == CV_32F || depth == CV_16F || depth == CV_16BF ||
+             depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ )
         dminval = minval.f, dmaxval = maxval.f;
     else if( depth == CV_64F )
         dminval = minval.d, dmaxval = maxval.d;

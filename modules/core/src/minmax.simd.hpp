@@ -373,6 +373,8 @@ DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64f, double, double)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64u, uint64, uint64)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64s, int64, int64)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx32u, unsigned, int64)
+DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx8f, fp8_t, float)
+DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx8fnuz, fp8a_t, float)
 
 MinMaxIdxFunc getMinMaxIdxFunc(int depth)
 {
@@ -391,6 +393,8 @@ MinMaxIdxFunc getMinMaxIdxFunc(int depth)
         minMaxIdxWrap<uint64, uint64, minMaxIdx64u>,
         minMaxIdxWrap<int64, int64, minMaxIdx64s>,
         minMaxIdxWrap<unsigned, int64, minMaxIdx32u>,
+        minMaxIdxWrap<fp8_t, float, minMaxIdx8f>,
+        minMaxIdxWrap<fp8a_t, float, minMaxIdx8fnuz>,
         0
     };
 
