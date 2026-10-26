@@ -224,4 +224,29 @@ TEST(vittrack, bbox_inside_tiny_image)
     ASSERT_EQ(roi & imgRect, roi);
 }
 
+TEST(vittrack, roi_image_matches_clone)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    params.tracking_score_threshold = 0.f;
+
+    Mat parent(160, 160, CV_8UC3, Scalar(255, 0, 0));
+    Mat image = parent(Rect(16, 16, 128, 128));
+    image.setTo(Scalar::all(0));
+    Mat clone = image.clone();
+    Rect initial(100, 100, 20, 20);
+
+    Ptr<TrackerVit> roiTracker = TrackerVit::create(params);
+    Ptr<TrackerVit> cloneTracker = TrackerVit::create(params);
+    roiTracker->init(image, initial);
+    cloneTracker->init(clone, initial);
+
+    Rect roiResult, cloneResult;
+    ASSERT_TRUE(roiTracker->update(image, roiResult));
+    ASSERT_TRUE(cloneTracker->update(clone, cloneResult));
+    EXPECT_EQ(roiResult, cloneResult);
+    EXPECT_NEAR(roiTracker->getTrackingScore(), cloneTracker->getTrackingScore(), 1e-6f);
+}
+
 }}  // namespace opencv_test::

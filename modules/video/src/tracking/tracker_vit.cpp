@@ -107,12 +107,13 @@ static int crop_image(const Mat& src, Mat& dst, Rect box, int factor)
 
     int x1_pad = std::max(0, -x1);
     int y1_pad = std::max(0, -y1);
-    int x2_pad = std::max(x2 - src.size[1] + 1, 0);
-    int y2_pad = std::max(y2 - src.size[0] + 1, 0);
+    int x2_pad = std::max(x2 - src.size[1], 0);
+    int y2_pad = std::max(y2 - src.size[0], 0);
 
     Rect roi(x1 + x1_pad, y1 + y1_pad, x2 - x2_pad - x1 - x1_pad, y2 - y2_pad - y1 - y1_pad);
     Mat im_crop = src(roi);
-    copyMakeBorder(im_crop, dst, y1_pad, y2_pad, x1_pad, x2_pad, BORDER_CONSTANT);
+    // Keep padding inside src when src is itself an ROI of a larger image.
+    copyMakeBorder(im_crop, dst, y1_pad, y2_pad, x1_pad, x2_pad, BORDER_CONSTANT | BORDER_ISOLATED);
 
     return crop_sz;
 }
