@@ -135,6 +135,9 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<ArgData> args;
     std::vector<Mat> __tensors__;
     std::vector<int> bufidxs;
+    // per arg: for a TEMP arg that views another arg's memory instead of having a buffer
+    // (a Reshape of a model input or output), the arg it views; -1 otherwise
+    std::vector<int> viewOf;
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     // interior tensors kept alive for forward-to-layer
@@ -457,6 +460,13 @@ struct Net::Impl : public detail::NetImplBase
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
+    bool isViewArg(Arg arg) const
+    {
+        return arg.idx > 0 && (size_t)arg.idx < viewOf.size() && viewOf[arg.idx] >= 0;
+    }
+    // points a view arg's tensor at the memory of the tensor it views, or, when that one
+    // is in block layout, leaves it to get memory of its own
+    void bindView(Arg view);
     int argType(Arg arg) const;
     void checkArg(Arg arg) const;
     void checkArgs(const std::vector<Arg>& args) const;
@@ -566,6 +576,7 @@ struct Net::Impl : public detail::NetImplBase
     void fuseTransposeMatMul();
     // fold a scalar Mul/Div before Softmax into Softmax::scale (CPU only)
     void fuseScaleSoftmax();
+    void fuseMatMulIntegerDequant();
     // replace constant sub-expressions with their results
 
     // widen FP16/BF16 constants to execution precision while the engine lacks half kernels

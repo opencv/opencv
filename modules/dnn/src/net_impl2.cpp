@@ -457,13 +457,24 @@ ArgKind Net::Impl::argKind(Arg arg) const
 Mat& Net::Impl::argTensor(Arg arg) const
 {
     const ArgData& adata = argData(arg);
-    if (adata.kind == DNN_ARG_TEMP) {
+    if (adata.kind == DNN_ARG_TEMP && !isViewArg(arg)) {
         CV_Assert(__tensors__.at(arg.idx).empty());
         int bufidx = bufidxs.at(arg.idx);
         CV_Assert(bufidx >= 0);
         return const_cast<Mat&>(buffers.at(bufidx));
     }
     return const_cast<Mat&>(__tensors__.at(arg.idx));
+}
+
+void Net::Impl::bindView(Arg view)
+{
+    Mat& t = __tensors__.at(view.idx);
+    const Mat& src = argTensor(Arg(viewOf[view.idx]));
+    // a reshape of a continuous tensor is the same bytes; fit() then only changes the header
+    if (!src.empty() && src.isContinuous() && src.size.layout != DATA_LAYOUT_BLOCK)
+        t = src;
+    else
+        t.release();
 }
 
 Arg Net::Impl::getArg(const std::string& name)
@@ -818,6 +829,8 @@ void Net::Impl::allocateLayerOutputs(
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
         if (useBufferPool) {
+            if (isViewArg(out))
+                bindView(out);
             Mat& out_t = argTensor(out);
             out_t.fit(outShapes[i], outTypes[i]);
             outputs[i] = out_t;
@@ -996,15 +1009,7 @@ void Net::Impl::forwardWithSingleOutput(const std::string& outname, OutputArrayO
 #ifdef HAVE_CUDA
             cudaDownloadArg(targetArg, argTensor(targetArg));
 #endif
-            const ArgData& adata = args.at(targetArg.idx);
-            Mat result;
-            if (adata.kind == DNN_ARG_TEMP) {
-                int bufidx = bufidxs.at(targetArg.idx);
-                CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                result = buffers[bufidx];
-            } else {
-                result = __tensors__.at(targetArg.idx);
-            }
+            Mat result = argTensor(targetArg);
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
                 transformLayout(result, converted, originalLayout, originalLayout, defaultC0);
@@ -1232,14 +1237,7 @@ void Net::Impl::forwardWithMultipleOutputsPerLayer(std::vector<std::vector<Mat> 
 #ifdef HAVE_CUDA
                 cudaDownloadArg(Arg(idx), argTensor(Arg(idx)));
 #endif
-                const ArgData& adata = args.at(idx);
-                if (adata.kind == DNN_ARG_TEMP) {
-                    int bufidx = bufidxs.at(idx);
-                    CV_Assert(bufidx >= 0 && bufidx < (int)buffers.size());
-                    result = buffers[bufidx];
-                } else {
-                    result = __tensors__.at(idx);
-                }
+                result = argTensor(Arg(idx));
             }
             if (result.shape().layout == DATA_LAYOUT_BLOCK) {
                 Mat converted;
@@ -1758,6 +1756,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
+                if (isViewArg(out))
+                    bindView(out);
                 outMats[i] = argTensor(out);
             }
             tempMats = scratchBufs;
@@ -1975,7 +1975,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();
-            if (adata.kind == DNN_ARG_TEMP) {
+            if (isViewArg(out)) {
+                __tensors__.at(out.idx) = m;
+            } else if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(out.idx);
                 Mat& buf = buffers.at(bufidx);
 

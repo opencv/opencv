@@ -7,6 +7,7 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 #include "../onnx/onnx_dtype_convert.hpp"
+#include "../dynamic_quantize.hpp"
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
@@ -667,21 +668,6 @@ public:
         CV_Assert(inp.type() == CV_32F);
         CV_Assert(inp.isContinuous());
 
-        // Data range, forced to include zero (qmin = 0, qmax = 255 for uint8).
-        const float qmin = 0.f, qmax = 255.f;
-        double minVal = 0.0, maxVal = 0.0;
-        minMaxIdx(inp, &minVal, &maxVal);
-        float xmin = std::min(0.f, (float)minVal);
-        float xmax = std::max(0.f, (float)maxVal);
-
-        float y_scale = (xmax - xmin) / (qmax - qmin);
-        if (y_scale == 0.f)
-            y_scale = 1.f; // degenerate all-zero input: avoid divide-by-zero
-
-        // round-half-to-even + clamp to [0, 255], same as the ONNX reference.
-        float intermediate_zp = qmin - xmin / y_scale;
-        uint8_t y_zero_point = saturate_cast<uint8_t>(intermediate_zp);
-
         MatShape inpshape = inp.shape();
         Mat outY, outScale, outZp;
         auto kind = outputs_arr.kind();
@@ -705,22 +691,9 @@ public:
             CV_Error(Error::StsNotImplemented, "");
         }
 
-        // y = saturate(round(x / y_scale) + y_zero_point). Round first, then add the
-        // integer zero-point: folding an odd zp in before rounding flips half-to-even ties.
-        const float* src = inp.ptr<float>();
-        uint8_t* dst = outY.ptr<uint8_t>();
-        int64_t total = (int64_t)inp.total();
-        int zp_i = (int)y_zero_point;
-        const int64_t block = 1024;
-        int64_t nblocks = (total + block - 1) / block;
-        parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
-            for (int i = r.start; i < r.end; i++) {
-                int64_t ofs = i * block;
-                int64_t len = std::min(block, total - ofs);
-                for (int64_t j = 0; j < len; j++)
-                    dst[ofs + j] = saturate_cast<uint8_t>(cvRound(src[ofs + j] / y_scale) + zp_i);
-            }
-        });
+        float y_scale = 1.f;
+        uchar y_zero_point = 0;
+        dynamicQuantizeLinearU8(inp, outY.ptr<uchar>(), y_scale, y_zero_point);
 
         outScale.ptr<float>()[0] = y_scale;
         outZp.ptr<uint8_t>()[0] = y_zero_point;

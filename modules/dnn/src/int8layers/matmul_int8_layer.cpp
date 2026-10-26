@@ -7,6 +7,7 @@
 #include "../net_impl.hpp"
 #include "../layers/cpu_kernels/fast_gemm.hpp"
 #include "matmul_int8_kernels.hpp"
+#include "../dynamic_quantize.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -75,6 +76,33 @@ public:
         }
     }
 
+    // the folded Reshape applied to the product's shape x, as Reshape2 does it
+    MatShape headSplitTarget(const MatShape& x) const
+    {
+        MatShape spec = head_split_shape;
+        if (spec.dims < 0) {
+            CV_CheckGT(inputs.size(), (size_t)6,
+                       "DNN/MatMulInteger: the folded Reshape has no shape");
+            const Mat& t = getNetImpl(this)->argTensor(inputs[6]);
+            CV_CheckType(t.depth(), t.depth() == CV_32S || t.depth() == CV_64S,
+                         "DNN/MatMulInteger: the Reshape shape must be int32 or int64");
+            std::vector<int> v((size_t)t.total());
+            for (size_t i = 0; i < v.size(); i++)
+                v[i] = t.depth() == CV_32S ? t.ptr<int>()[i] : (int)t.ptr<int64_t>()[i];
+            spec = MatShape(v);
+        }
+        MatShape target = x.reshape(spec);
+        CV_CheckEQ(target.dims, 4, "DNN/MatMulInteger: the folded Transpose needs a 4-D Reshape");
+        return target;
+    }
+
+    static MatShape swapHeads(const MatShape& t) { return MatShape({t[0], t[2], t[1], t[3]}); }
+
+    bool dynamicOutputShapes() const CV_OVERRIDE
+    {
+        return head_split && head_split_shape.dims < 0;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -84,7 +112,7 @@ public:
             CV_CheckGE(inputs.size(), (size_t)2, "DNN/MatMulInteger: A and B are required");
             MatShape ap, bp, full, out;
             matmulShapes(inputs[0], inputs[1], false, false, ap, bp, full, out);
-            outputs.assign(1, out);
+            outputs.assign(1, head_split ? swapHeads(headSplitTarget(out)) : out);
             int rows = 1;
             for (size_t i = 0; i + 1 < ap.size(); i++)
                 rows *= ap[i];
@@ -115,11 +143,15 @@ public:
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
         if (int32_output) {
-            CV_CheckType(inputs[0], inputs[0] == CV_8U || inputs[0] == CV_8S,
-                         "DNN/MatMulInteger: A must be uint8 or int8");
+            if (quantize_input)
+                CV_CheckType(inputs[0], inputs[0] == CV_32F,
+                             "DNN/MatMulInteger: A must be float when quantized in the layer");
+            else
+                CV_CheckType(inputs[0], inputs[0] == CV_8U || inputs[0] == CV_8S,
+                             "DNN/MatMulInteger: A must be uint8 or int8");
             CV_CheckType(inputs[1], inputs[1] == CV_8U || inputs[1] == CV_8S,
                          "DNN/MatMulInteger: B must be uint8 or int8");
-            outputs.assign(requiredOutputs, CV_32S);
+            outputs.assign(requiredOutputs, dequant_output ? CV_32F : CV_32S);
             internals.assign(requiredInternals, CV_32S);
             return;
         }
@@ -209,16 +241,19 @@ private:
         const uchar* b = B.ptr<uchar>();
         int8_t* dst = packedB.ptr<int8_t>();
         int* cs = colsum.ptr<int>();
+        const bool paired = matMulInt8PairedB();
         parallel_for_(Range(0, nb * N), [&](const Range& range) {
             for (int j = range.start; j < range.end; j++) {
                 const int m = j / N, n = j % N;
                 const uchar* bm = b + (size_t)m * K * N;
-                int8_t* d = dst + m * matSize + n / NR * panelSize + n % NR * KR;
+                int8_t* d = dst + m * matSize + n / NR * panelSize;
                 int s = 0;
                 for (int k = 0; k < K; k++) {
                     const uchar v = bm[(size_t)k * N + n];
                     int w = (delta ? (int)v : (int)(schar)v) - delta;
-                    d[k / KR * NR * KR + k % KR] = (int8_t)w;
+                    const int kk = k % KR;
+                    d[k / KR * NR * KR + (paired ? kk / 2 * NR * 2 + n % NR * 2 + kk % 2
+                                                 : n % NR * KR + kk)] = (int8_t)w;
                     s += w;
                 }
                 cs[m * Npad + n] = s;
@@ -236,20 +271,40 @@ private:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
         const int ninputs = (int)input.size();
-        const Mat& A = input[0];
-        Mat& Y = output[0];
+        Mat A = input[0];
+        Mat Y = output[0];
+        float aScale = 1.f;
+        int qzp = 0;  // zero point of an A quantized here
+        if (quantize_input) {
+            CV_Assert(dequant_output);
+            CV_CheckType(A.type(), A.type() == CV_32FC1, "DNN/MatMulInteger: A must be float");
+            quantA.fit(A.shape(), CV_8U);
+            uchar zp = 0;
+            dynamicQuantizeLinearU8(A, quantA.ptr<uchar>(), aScale, zp);
+            qzp = zp;
+            A = quantA;
+        }
         CV_CheckType(A.type(), A.type() == CV_8UC1 || A.type() == CV_8SC1,
                      "DNN/MatMulInteger: A must be uint8 or int8");
-        CV_Assert(A.isContinuous() && Y.isContinuous());
         MatShape ap, bp, full, out;
         matmulShapes(A.shape(), input[1].shape(), false, false, ap, bp, full, out);
         const Mat B = input[1].reshape(1, bp);  // a 1-D B is one column, [K, 1]
+        MatShape target;
+        if (head_split) {
+            CV_Assert(dequant_output);
+            // with a runtime Reshape shape the output is sized here, not by the engine
+            target = headSplitTarget(out);
+            std::vector<Mat>& outs = outputs_arr.getMatVecRef();
+            outs[0].fit(swapHeads(target), CV_32F);
+            Y = outs[0];
+        }
+        CV_Assert(A.isContinuous() && Y.isContinuous());
         const bool isU8 = A.type() == CV_8UC1;
 
         const Mat zbm = ninputs > 3 ? input[3] : Mat();
         const int K = B.size[B.dims - 2], N = B.size[B.dims - 1];
         const int R = (int)A.total(0, A.dims - 1);
-        int za = 0;
+        int za = qzp;
         std::vector<int> zrow;  // per-row a_zero_point, empty when it is a scalar
         if (ninputs > 2 && !input[2].empty()) {
             const Mat& zam = input[2];
@@ -320,6 +375,11 @@ private:
         }
 
         const uchar* a = A.ptr<uchar>();
+        // a layer with runtime output shapes gets no internals sized for it
+        if (internals.empty() || internals[0].total() < (size_t)std::max(R, 1)) {
+            rowtermBuf.fit(MatShape({std::max(R, 1)}), CV_32S);
+            internals.assign(1, rowtermBuf);
+        }
         int* rowterm = internals[0].ptr<int>();
         if (hasCorr) {
             parallel_for_(Range(0, R), [&](const Range& range) {
@@ -348,13 +408,55 @@ private:
 
         const int8_t* pb = packedB.ptr<int8_t>();
         const int* cs = colsum.ptr<int>();
-        int* y = Y.ptr<int>();
-        if (nb == 1) {
-            matMulInt8Int32(a, K, pb, cs, hasCorr ? cr : nullptr, rowterm, y, N, R, N, K,
-                            zr ? 0 : za, isU8);
+        if (dequant_output) {
+            CV_CheckEQ(nb, 1, "DNN/MatMulInteger: the folded scale needs a 2-D B");
+            CV_CheckTypeEQ(Y.type(), CV_32F, "");
+            CV_Check(R, !zr, "DNN/MatMulInteger: a per-row a_zero_point can't be folded");
+            const Mat& sc = input[4];
+            // a folded quantization has no weight scale when it was 1
+            if (!(quantize_input && sc.empty())) {
+                CV_CheckTypeEQ(sc.type(), CV_32F, "DNN/MatMulInteger: the scale must be float");
+                CV_Check(sc.total(), sc.total() == 1 || sc.total() == (size_t)N,
+                         "DNN/MatMulInteger: the scale must be a scalar or one value per column");
+            }
+            epilogue.create(2, Npad, CV_32F);
+            epilogue.setTo(Scalar::all(0));
+            float* esc = epilogue.ptr<float>(0);
+            float* ebias = epilogue.ptr<float>(1);
+            const float* s = sc.empty() ? nullptr : sc.ptr<float>();
+            for (int n = 0; n < N; n++) {
+                float w = s ? s[sc.total() == 1 ? 0 : n] : 1.f;
+                esc[n] = quantize_input ? (s ? aScale * w : aScale) : w;
+            }
+            if (ninputs > 5 && !input[5].empty()) {
+                CV_CheckTypeEQ(input[5].type(), CV_32F,
+                               "DNN/MatMulInteger: the bias must be float");
+                CV_CheckEQ(input[5].total(), (size_t)N, "DNN/MatMulInteger: one bias per column");
+                memcpy(ebias, input[5].ptr<float>(), N * sizeof(float));
+            }
+            MatMulInt8OutLayout lay(N);
+            Mat dst = Y;
+            if (head_split) {
+                // a split of the rows into [B,S] and the columns into heads [H,D] is stored
+                // straight into [B,H,S,D]; any other Reshape goes through a transpose
+                if (target[0] * target[1] == R && target[2] * target[3] == N &&
+                    target[3] % MATMUL_INT8_NR == 0)
+                    lay = MatMulInt8OutLayout(target[1], target[2], target[3]);
+                else
+                    dst = Mat(out, CV_32F);
+            }
+            matMulInt8Int32(a, K, pb, cs, hasCorr ? cr : nullptr, rowterm, dst.data, lay, R, N,
+                            K, za, isU8, esc, ebias);
+            if (dst.data != Y.data)
+                transposeND(dst.reshape(1, target.dims, target.p), {0, 2, 1, 3}, Y);
+        } else if (nb == 1) {
+            int* y = Y.ptr<int>();
+            matMulInt8Int32(a, K, pb, cs, hasCorr ? cr : nullptr, rowterm, y,
+                            MatMulInt8OutLayout(N), R, N, K, zr ? 0 : za, isU8);
             if (zr)
                 subtractRowZeroPoints(zr, cs, y, R);
         } else {
+            int* y = Y.ptr<int>();
             // one GEMM per output matrix, at the offsets MatMul uses to broadcast batch dims
             const size_t matSize = packedB.total() / nb;
             MatMulHelper helper;
@@ -364,7 +466,8 @@ private:
                 const size_t ofs = helper.A_offsets[i];
                 matMulInt8Int32(a + ofs, K, pb + m * matSize, cs + m * Npad,
                                 hasCorr ? cr + m * Npad : nullptr, rowterm + ofs / K,
-                                y + helper.C_offsets[i], N, helper.M, N, K, zr ? 0 : za, isU8);
+                                y + helper.C_offsets[i], MatMulInt8OutLayout(N), helper.M, N, K,
+                                zr ? 0 : za, isU8);
                 if (zr)
                     subtractRowZeroPoints(zr + ofs / K, cs + m * Npad, y + helper.C_offsets[i],
                                           helper.M);
@@ -522,6 +625,9 @@ private:
     int num_output;
     Mat weightsMat, biasMat, outputMultiplier;
     Mat packedB, colsum, corr; // int32 mode
+    Mat epilogue;              // per-column scale and bias of the dequant_output mode
+    Mat rowtermBuf;            // the per-row term when the engine gives no internals
+    Mat quantA;                // A quantized here in the quantize_input mode
 };
 
 Ptr<MatMulInt8Layer> MatMulInt8Layer::create(const LayerParams& params)

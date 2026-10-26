@@ -14,11 +14,37 @@ namespace dnn
 
 enum { MATMUL_INT8_NR = 16, MATMUL_INT8_KR = 4 };
 
+// Where Y[r,n] goes: row-major with row stride ldy, or, with headD set, the [B,S,H,D] reshape of
+// [B*S, H*headD] transposed to [B,H,S,D] (rows in blocks of headS); headD is a multiple of NR
+struct MatMulInt8OutLayout
+{
+    size_t ldy = 0;
+    int headS = 0, headD = 0, heads = 0;
+
+    explicit MatMulInt8OutLayout(size_t ldy_) : ldy(ldy_) {}
+    MatMulInt8OutLayout(int headS_, int heads_, int headD_)
+        : headS(headS_), headD(headD_), heads(heads_) {}
+    size_t rowOfs(int r) const
+    {
+        return headD ? ((size_t)(r / headS) * heads * headS + r % headS) * headD : (size_t)r * ldy;
+    }
+    size_t colOfs(int n) const
+    {
+        return headD ? (size_t)(n / headD) * headS * headD + n % headD : (size_t)n;
+    }
+};
+
+// true when the kernel wants each group of KR rows of a panel as [KR/2][NR][2], pairs of k per
+// column, instead of [NR][KR]
+bool matMulInt8PairedB();
+
 // Y[r,n] = sum_k (A[r,k] - a_zp) * B[k,n] + corr[n] * rowterm[r] in int32, corr may be null;
 // packedB is int8 B as [N/NR][K/KR][NR][KR] rounded up and zero-padded; colsum and corr pad N alike
+// With scale set, Y is float: Y[r,n] * scale[n] + bias[n]; scale and bias pad N alike
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,
-                     const int* corr, const int* rowterm, int* Y, size_t ldy,
-                     int M, int N, int K, int a_zp, bool aIsU8);
+                     const int* corr, const int* rowterm, void* Y, const MatMulInt8OutLayout& lay,
+                     int M, int N, int K, int a_zp, bool aIsU8,
+                     const float* scale = nullptr, const float* bias = nullptr);
 
 }
 }

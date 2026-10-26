@@ -80,6 +80,8 @@ struct BufferAllocator
     vector<int> freebufs;
     vector<int> buf_usecounts;
     vector<int> bufidxs;
+    vector<int> viewOf;
+    bool allowViews = false;
     int nbufs = 0;
 
     BufferAllocator(Net::Impl* netimpl_) : netimpl(netimpl_) {}
@@ -198,9 +200,13 @@ struct BufferAllocator
         netimpl->useCounts(usecounts);
         size_t nargs = usecounts.size();
         bufidxs.assign(nargs, -1);
+        viewOf.assign(nargs, -1);
+        allowViews = netimpl->preferableBackend == DNN_BACKEND_OPENCV &&
+                     netimpl->preferableTarget == DNN_TARGET_CPU;
         nbufs = 0;
         assign(netimpl->mainGraph);
         netimpl->bufidxs = bufidxs;
+        netimpl->viewOf = viewOf;
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
             netimpl->buffers[i] = Mat();
@@ -265,8 +271,28 @@ struct BufferAllocator
                 layer->alwaysSupportInplace()) {
                 CV_Assert(ninputs >= 1);
                 Arg inp0 = inputs[0];
-                inplace = netimpl->argKind(inp0) == DNN_ARG_TEMP && usecounts[inp0.idx] == 1;
+                // a view has no buffer of its own, so nothing may write into it in place
+                inplace = netimpl->argKind(inp0) == DNN_ARG_TEMP && usecounts[inp0.idx] == 1 &&
+                          bufidxs[inp0.idx] >= 0;
                 reuseArg = inp0;
+            }
+
+            /*
+             A Reshape of a model input or output, whose memory stays put for the whole run, can
+             view that memory instead of copying it into a buffer; so can a Reshape of such a view.
+             Their other users still read them, so this is not the in-place case above.
+             */
+            bool isView = false;
+            if (allowViews && !isSubGraph && ninputs >= 1 && noutputs == 1 &&
+                dynamic_cast<Reshape2Layer*>(layer.get()) &&
+                netimpl->argKind(outputs[0]) == DNN_ARG_TEMP && bufidxs[outputs[0].idx] < 0) {
+                Arg inp0 = inputs[0];
+                ArgKind k = netimpl->argKind(inp0);
+                if (k == DNN_ARG_INPUT || k == DNN_ARG_OUTPUT ||
+                    (k == DNN_ARG_TEMP && viewOf[inp0.idx] >= 0)) {
+                    viewOf[outputs[0].idx] = inp0.idx;
+                    isView = true;
+                }
             }
 
             /*
@@ -277,7 +303,7 @@ struct BufferAllocator
              */
             //if (layer->type == "Softmax")
             //    putchar('.');
-            if (noutputs > 0) {
+            if (noutputs > 0 && !isView) {
                 Arg out0 = outputs[0];
                 if (inplace &&
                     noutputs == 1 &&
