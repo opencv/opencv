@@ -14,8 +14,9 @@
 
 int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step, int nimages,
                            int width, int height, int src_type, int ddepth, int swapRB,
-                           int dst_width, int dst_height, int paddingmode, const double borderValue[4],
-                           const double mean[4], const double scalefactor[4],
+                           int dst_width, int dst_height, int resized_width, int resized_height,
+                           double inv_scale_x, double inv_scale_y, int offset_x, int offset_y,
+                           const double borderValue[4], const double mean[4], const double scalefactor[4],
                            uchar* dst_data, const size_t* dst_step, int layout, int interpolation);
 
 #undef cv_hal_dnn_blobFromImages

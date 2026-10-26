@@ -291,6 +291,52 @@ static void normalizeImage(Tmat& image, int ddepth, const Scalar& mean, const Sc
         image = dst;
 }
 
+// How an image of the batch is mapped to its image in the blob: the image is resized to `rsize` as
+// resize(image, resized, Size(), inv_scale_x, inv_scale_y) does, and the resized image is placed at `offset` in the blob
+// image. A negative offset crops the resized image (DNN_PMODE_CROP_CENTER), the blob pixels it doesn't cover are padded
+// with the border value (DNN_PMODE_LETTERBOX).
+struct BlobImageGeometry
+{
+    Size rsize;
+    double inv_scale_x, inv_scale_y;
+    Point offset;
+
+    // The part of the resized image that is in the blob image of size dsize
+    Rect visible(const Size& dsize) const { return Rect(-offset, dsize) & Rect(Point(), rsize); }
+};
+
+static BlobImageGeometry getBlobImageGeometry(const Size& imgSize, const Size& dsize, ImagePaddingMode paddingmode)
+{
+    BlobImageGeometry g;
+    if (paddingmode == DNN_PMODE_CROP_CENTER)
+    {
+        float resizeFactor = std::max(dsize.width / (float)imgSize.width,
+                                      dsize.height / (float)imgSize.height);
+        g.inv_scale_x = g.inv_scale_y = resizeFactor;
+        g.rsize = Size(saturate_cast<int>(imgSize.width * g.inv_scale_x),
+                       saturate_cast<int>(imgSize.height * g.inv_scale_y));
+        g.offset = -Point((int)(0.5 * (g.rsize.width - dsize.width)),
+                          (int)(0.5 * (g.rsize.height - dsize.height)));
+    }
+    else if (paddingmode == DNN_PMODE_LETTERBOX)
+    {
+        float resizeFactor = std::min(dsize.width / (float)imgSize.width,
+                                      dsize.height / (float)imgSize.height);
+        g.rsize = Size(int(imgSize.width * resizeFactor), int(imgSize.height * resizeFactor));
+        g.inv_scale_x = (double)g.rsize.width / imgSize.width;
+        g.inv_scale_y = (double)g.rsize.height / imgSize.height;
+        g.offset = Point((dsize.width - g.rsize.width) / 2, (dsize.height - g.rsize.height) / 2);
+    }
+    else
+    {
+        g.rsize = dsize;
+        g.inv_scale_x = (double)dsize.width / imgSize.width;
+        g.inv_scale_y = (double)dsize.height / imgSize.height;
+        g.offset = Point();
+    }
+    return g;
+}
+
 template<class Tmat>
 void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const Image2BlobParams& param)
 {
@@ -317,14 +363,17 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
 
     if constexpr (std::is_same<Tmat, Mat>::value)
     {
-        // The HAL takes a single size and type for the whole batch.
-        // copyMakeBorder() pads a part of a bigger image with the pixels around it, the HAL can't know them.
+        // The HAL takes a single size and type, so a single geometry, for the whole batch.
+        // An image that is padded without a resize is a part of a bigger image if it's a submatrix: copyMakeBorder()
+        // pads it with the pixels around it, the HAL can't know them.
         const Mat& image0 = images[0];
+        const Size bsize = size == Size() ? image0.size() : size;
+        const BlobImageGeometry g = getBlobImageGeometry(image0.size(), bsize, param.paddingmode);
+        const bool padsWithoutResize = g.rsize == image0.size() && g.visible(bsize).size() != bsize;
         if (std::all_of(images.begin(), images.end(), [&](const Mat& image) {
                 return image.dims == 2 && image.type() == image0.type() && image.size() == image0.size() &&
-                       !(param.paddingmode == DNN_PMODE_LETTERBOX && image.isSubmatrix()); }))
+                       !(padsWithoutResize && image.isSubmatrix()); }))
         {
-            const Size bsize = size == Size() ? image0.size() : size;
             const int n = (int)images.size(), cn = image0.channels();
             const bool nhwc = param.datalayout == DNN_LAYOUT_NHWC;
             blob_.create({ n, nhwc ? bsize.height : cn, nhwc ? bsize.width : bsize.height, nhwc ? cn : bsize.width }, param.ddepth);
@@ -337,7 +386,8 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             }
             CALL_HAL(dnn_blobFromImages, cv_hal_dnn_blobFromImages, src_data.data(), src_step.data(), n,
                      image0.cols, image0.rows, image0.type(), param.ddepth, param.swapRB, bsize.width, bsize.height,
-                     param.paddingmode, param.borderValue.val, param.mean.val, param.scalefactor.val,
+                     g.rsize.width, g.rsize.height, g.inv_scale_x, g.inv_scale_y, g.offset.x, g.offset.y,
+                     param.borderValue.val, param.mean.val, param.scalefactor.val,
                      blob_.ptr(), blob_.step.p, param.datalayout, INTER_LINEAR);
         }
     }
@@ -353,33 +403,20 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             size = imgSize;
         if (size != imgSize)
         {
-            if (param.paddingmode == DNN_PMODE_CROP_CENTER)
-            {
-                float resizeFactor = std::max(size.width / (float)imgSize.width,
-                                              size.height / (float)imgSize.height);
-                resize(images[i], images[i], Size(), resizeFactor, resizeFactor, INTER_LINEAR);
-                Rect crop(Point(0.5 * (images[i].cols - size.width),
-                                0.5 * (images[i].rows - size.height)),
-                          size);
-                images[i] = images[i](crop);
-            }
-            else if (param.paddingmode == DNN_PMODE_LETTERBOX)
-            {
-                float resizeFactor = std::min(size.width / (float)imgSize.width,
-                                              size.height / (float)imgSize.height);
-                int rh = int(imgSize.height * resizeFactor);
-                int rw = int(imgSize.width * resizeFactor);
-                resize(images[i], images[i], Size(rw, rh), INTER_LINEAR);
+            const BlobImageGeometry g = getBlobImageGeometry(imgSize, size, param.paddingmode);
+            resize(images[i], images[i], Size(), g.inv_scale_x, g.inv_scale_y, INTER_LINEAR);
+            CV_Assert(images[i].size() == g.rsize);
 
-                int top = (size.height - rh)/2;
-                int bottom = size.height - top - rh;
-                int left = (size.width - rw)/2;
-                int right = size.width - left - rw;
-                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT, param.borderValue);
-            }
-            else
+            const Rect visible = g.visible(size);
+            if (visible.size() != g.rsize)
+                images[i] = images[i](visible);
+            if (visible.size() != size)
             {
-                resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
+                int top = visible.y + g.offset.y;
+                int bottom = size.height - top - visible.height;
+                int left = visible.x + g.offset.x;
+                int right = size.width - left - visible.width;
+                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT, param.borderValue);
             }
         }
     }

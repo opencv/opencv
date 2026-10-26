@@ -46,29 +46,14 @@ public:
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
-        if(!m_ok)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
-            if constexpr (std::is_same_v<IwiOp, ::ipp::IwiResize>)
-                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, ippBorderRepl, tile);
-            else
-                CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
+        if (m_ok && !runTile(::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start)))
             m_ok = false;
-            return;
-        }
     }
     // Compute one tile (a rectangle of the destination); returns false on an IPP error
-    bool runTile(const ::ipp::IwiTile& roi) const
+    bool runTile(const ::ipp::IwiTile& tile) const
     {
         try
         {
-            ::ipp::IwiTile tile = roi;
             if constexpr (std::is_same_v<IwiOp, ::ipp::IwiResize>)
                 CV_INSTRUMENT_FUN_IPP(iwiOp, m_src, m_dst, ippBorderRepl, tile);
             else
