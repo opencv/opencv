@@ -18,7 +18,8 @@ struct CvNThreadScope{
     }
 };
 
-// Order-independent contour-set comparison
+// Order-independent comparison of the two contour lists as multisets: every contour must appear
+// the same number of times in both (duplicated, missing or extra contours are reported)
 static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
 {
         //order senstive hash
@@ -53,18 +54,17 @@ static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<
         }
         return hash;
     };
-    std::set<uint64> hashes1,hashes2;
+    if (cont1.size() != cont2.size()) return false;
+    std::vector<uint64> hashes1,hashes2;
     for(auto &contour:cont1){
-        hashes1.insert( Hash(contour));
+        hashes1.push_back( Hash(contour));
     }
     for(auto &contour:cont2){
-        hashes2.insert( Hash(contour));
+        hashes2.push_back( Hash(contour));
     }
-
-    for(auto &h1:hashes1){//element in cont and not in cont2
-        if( hashes2.find(h1) ==hashes2.end()) return false;
-    }
-    return true;
+    std::sort(hashes1.begin(), hashes1.end());
+    std::sort(hashes2.begin(), hashes2.end());
+    return hashes1 == hashes2;
 }
 
 typedef testing::TestWithParam<ContourApproximationModes> Imgproc_FindTRUContours;
