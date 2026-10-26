@@ -4203,6 +4203,91 @@ TEST(Test_GatherND, EmptyIndicesDoNotCrash)
     }
 }
 
+TEST(Test_MeanVarianceNormalization, DefaultAxes)
+{
+    Mat input({2, 3, 2, 2}, CV_32F);
+    for (size_t i = 0; i < input.total(); ++i)
+        input.ptr<float>()[i] = static_cast<float>(std::sin(i * 0.37) + i * 0.13);
+    Mat original = input.clone();
+
+    LayerParams params;
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("MeanVarianceNormalization", params);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(shape(outputs[0]), shape(input));
+    EXPECT_EQ(cv::norm(input, original, cv::NORM_INF), 0.0);
+
+    const float* src = input.ptr<float>();
+    const float* dst = outputs[0].ptr<float>();
+    for (int c = 0; c < 3; ++c)
+    {
+        double sum = 0.0, sumSquares = 0.0;
+        for (int n = 0; n < 2; ++n)
+            for (int h = 0; h < 2; ++h)
+                for (int w = 0; w < 2; ++w)
+                {
+                    const size_t idx = ((n * 3 + c) * 2 + h) * 2 + w;
+                    sum += src[idx];
+                    sumSquares += static_cast<double>(src[idx]) * src[idx];
+                }
+        const double mean = sum / 8.0;
+        const double variance = sumSquares / 8.0 - mean * mean;
+        const double stddev = std::sqrt(variance) + 1e-9;
+        for (int n = 0; n < 2; ++n)
+            for (int h = 0; h < 2; ++h)
+                for (int w = 0; w < 2; ++w)
+                {
+                    const size_t idx = ((n * 3 + c) * 2 + h) * 2 + w;
+                    EXPECT_NEAR(dst[idx], (src[idx] - mean) / stddev, 1e-5);
+                }
+    }
+}
+
+TEST(Test_MeanVarianceNormalization, ExplicitAndNegativeAxes)
+{
+    Mat input({2, 3}, CV_32F);
+    const float values[] = {1.f, 2.f, 4.f, 3.f, 5.f, 9.f};
+    std::copy(values, values + 6, input.ptr<float>());
+
+    LayerParams params;
+    const int axes[] = {-1};
+    params.set("axes", DictValue::arrayInt(axes, 1));
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("MeanVarianceNormalization", params);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(shape(outputs[0]), shape(input));
+    for (int row = 0; row < 2; ++row)
+    {
+        const float* src = input.ptr<float>(row);
+        const float* dst = outputs[0].ptr<float>(row);
+        const double mean = (src[0] + src[1] + src[2]) / 3.0;
+        const double variance = (src[0] * src[0] + src[1] * src[1] + src[2] * src[2]) / 3.0 - mean * mean;
+        const double stddev = std::sqrt(variance) + 1e-9;
+        for (int col = 0; col < 3; ++col)
+            EXPECT_NEAR(dst[col], (src[col] - mean) / stddev, 1e-5);
+    }
+}
+
+TEST(Test_MeanVarianceNormalization, RejectsInvalidAxes)
+{
+    Mat input({2, 3}, CV_32F);
+    for (const std::vector<int>& axes : {std::vector<int>{2}, std::vector<int>{1, -1}})
+    {
+        LayerParams params;
+        params.set("axes", DictValue::arrayInt(axes.data(), axes.size()));
+        Ptr<Layer> layer = LayerFactory::createLayerInstance("MeanVarianceNormalization", params);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{input}, outputs;
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    }
+}
+
 static Ptr<Layer> createCropAndResize(int width, int height)
 {
     LayerParams lp;
