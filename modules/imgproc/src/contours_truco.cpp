@@ -4,6 +4,10 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <map>
 #include <atomic>
+#include <algorithm>
+#include <climits>
+#include <cstdlib>
+#include <memory>
 #if defined(_MSC_VER)
 #include <intrin.h>   // __iso_volatile_load8 / __iso_volatile_store8
 #endif
@@ -131,11 +135,8 @@ private:
 
 ////IMPLEMENTATION
 
-// Relaxed atomic byte access to the shared label board (the padded image). The only bytes accessed
-// by more than one thread are read by the other threads just to tell background from non-background,
-// which never changes, so no ordering is needed: relaxed atomics make the algorithm data-race-free
-// and compile to plain byte loads/stores. std::atomic_ref is C++20, hence the compiler-specific
-// equivalents (also used by the standard libraries themselves to implement relaxed atomics).
+// Relaxed atomic access to the shared board: other threads only test background vs. non-background,
+// which never changes, so no ordering is needed. std::atomic_ref is C++20, hence the fallbacks.
 static inline uchar loadRelaxed(const uchar* p)
 {
 #if defined(__cpp_lib_atomic_ref)
@@ -161,24 +162,24 @@ static inline void storeRelaxed(uchar* p, uchar v)
 #endif
 }
 
+// Per contour C: its Suzuki-Abe order and a neighbouring border D found on its start row
+// (external: east side of the previous run end; hole: west side of its run start).
+// parent(C) = type(D) != type(C) ? D : parent(D).
+struct ContourInfo {
+    int64_t order;   // start pixel (linear index in the source image) * 2 + isHole
+    int64_t refPix;  // pixel of D, -1: root. 64-bit for images of more than 2^31 pixels
+    uchar refSide;   // REF_WEST or REF_EAST
+    bool isHole;
+};
+enum : uchar { REF_WEST = 1, REF_EAST = 2 };
+
 struct AccumulatorT:public std::vector<std::vector<cv::Point>>{
-    std::vector<int> idx_internal_lastLine,idx_external_firstLine;
+    std::vector<ContourInfo> info;
 };
 
-// The image is split in horizontal stripes [s_k, e_k), one per task. Correctness does not depend
-// on the schedule of the tasks (the output is a pure function of the image) because of two rules:
-//  1. Task k writes VISITED / VISITED_OUTER_RIGHT marks only on its own rows [s_k, e_k) of the shared
-//     board, plus a private copy of row e_k (the first row of the next stripe, scanned by task k for
-//     internal contours only). Traces still run freely downwards, but do not write outside those rows,
-//     and background pixels are never written. Hence every decision of task k (the external/internal
-//     start tests) reads only marks written by task k itself, while the other tasks only test
-//     background vs. non-background on its rows.
-//  2. Ownership is geometric. Let minrow(C) be the top row of contour C. An external contour is
-//     accepted only from an attempt on row minrow(C), an internal one only from an attempt on row
-//     minrow(C)+1; both attempts are the Suzuki-Abe border following start points of C. External
-//     attempts are made on rows [s_k, e_k) and internal ones on rows (s_k, e_k], so each contour is
-//     accepted exactly once, by the task whose own rows contain minrow(C). A trace that moves above
-//     s_k is aborted.
+// One task per stripe of rows [s_k, e_k). Task k writes marks only on its own rows (plus a private
+// copy of row e_k), and accepts a contour only if its top row is in [s_k, e_k): every contour is
+// found exactly once and the result does not depend on the schedule.
 class TRUCOntourTracer : public cv::ParallelLoopBody
 {
 public:
@@ -191,9 +192,8 @@ public:
     TRUCOntourTracer(cv::Mat& img,
                      const std::vector<cv::Range>& stripRanges,
                      AccumulatorType& accumulator,
-                     cv::Mat& extra,
-                     size_t minSize)
-        : padded_(img), extra_(extra), ranges_(stripRanges), accumulator_(accumulator), minSize_(minSize)
+                     cv::Mat& extra)
+        : padded_(img), extra_(extra), ranges_(stripRanges), accumulator_(accumulator)
     {
         step_ = padded_.step;
         int istep = (int)step_;
@@ -231,6 +231,7 @@ public:
 
             // Hint for result vector size
             local_contours.reserve(2048);
+            local_contours.info.reserve(2048);
 
             // private copy of row e, normalized to FOREGROUND / BACKGROUND
             // (the owner of row e may be writing marks on it concurrently)
@@ -243,36 +244,38 @@ public:
             for (int r = s; r <= e; ++r)
             {
                 uchar* row_ptr = (r < e) ? padded_.data + (size_t)r * step_ : ext;
+                // linear index in the source image of the padded column x of row r: rowBase + x
+                const int64_t rowBase = (int64_t)(r - 1) * (cols - 2) - 1;
+                int prevEnd = -1;   // padded column of the end of the previous run of this row
 
                 // "c" is updated by the find* functions
                 for (int c = 1; c < cols - 1; )
                 {
                     // 1. FAST SCAN: Skip background pixels
                     if ((c = findStartContourPoint(row_ptr, cols, c)) == cols) break;
+                    const int runStart = c;
 
                     // 2. External contour: start point not visited yet, rows [s, e)
                     if (r < e && row_ptr[c] == FOREGROUND)
                     {
-                        if (traceContour(&buffer, r, c, s, e, labels, true) &&
-                            emit(buffer, local_contours) && r == s)
-                            // register this so we can zip them as Suzuki&Abe method
-                            local_contours.idx_external_firstLine.push_back((int)(local_contours.size() - 1));
+                        const ContourInfo info = { (rowBase + c) * 2,
+                                                   prevEnd < 0 ? -1 : rowBase + prevEnd, REF_EAST, false };
+                        if (traceContour(&buffer, r, c, s, e, labels, true))
+                            emit(buffer, local_contours, info);
                     }
 
                     // 3. FAST SCAN: Find end of current component to skip processing it again
                     c = findEndContourPoint(row_ptr, cols, c + 1);
                     if (c >= cols) break; // end of row
+                    prevEnd = c - 1;
 
-                    // 4. Internal contour: rows (s, e]; its start point always has a non-background NE
-                    //    neighbour (the pixel above the first background pixel of the hole), on row r-1,
-                    //    which is always an own row
+                    // 4. Internal contour: rows (s, e]; its NE neighbour (row r-1, an own row) is not background
                     if (r > s && row_ptr[c - 1] != VISITED_OUTER_RIGHT &&
                         padded_.data[(size_t)(r - 1) * step_ + c] != BACKGROUND)
                     {
-                        if (traceContour(&buffer, r, c - 1, s, e, labels, false) &&
-                            emit(buffer, local_contours) && r == e)
-                            // register this so we can zip them as Suzuki&Abe method
-                            local_contours.idx_internal_lastLine.push_back((int)(local_contours.size() - 1));
+                        const ContourInfo info = { (rowBase + c - 1) * 2 + 1, rowBase + runStart, REF_WEST, true };
+                        if (traceContour(&buffer, r, c - 1, s, e, labels, false))
+                            emit(buffer, local_contours, info);
                     }
                 }
             }
@@ -334,16 +337,14 @@ private:
         }
     };
 
-    // adds the traced contour to the output; returns false if it is discarded by minSize
-    inline bool emit(TRUCOPagedContour<4096>& buffer, AccumulatorT& local_contours) const
+    // adds the traced contour to the output
+    inline void emit(TRUCOPagedContour<4096>& buffer, AccumulatorT& local_contours, const ContourInfo& info) const
     {
         if (buffer.size() > 1 && buffer.back() == buffer.front())
             buffer.pop_back();
-        if (buffer.size() < minSize_)
-            return false;
         local_contours.emplace_back();
         buffer.copyTo(local_contours.back());
-        return true;
+        local_contours.info.push_back(info);
     }
 
     // Moore tracing from (r, c). Returns true iff the contour was traced completely AND this attempt
@@ -416,7 +417,6 @@ private:
     cv::Mat& extra_;
     const std::vector<cv::Range>& ranges_;
     AccumulatorType& accumulator_;
-    size_t minSize_;
     size_t step_;
     int offsets_[16];
 
@@ -485,149 +485,360 @@ void approxContour(std::vector<cv::Point> &inout,cv::ContourApproximationModes c
     }
 }
 
-// ==========================================================
-// 1. The Core Implementation (Operates on std::vector directly)
-// ==========================================================
-void findTRUContoursImpl(cv::Mat& padded,
-                           std::vector<std::vector<cv::Point>>& outContours,
-                           int minSize,int contApprox)
+// direction (0=E, 1=NE, ..., 7=SE, y down) of the move a -> b between 8-neighbours
+static inline int moveDir(const cv::Point& a, const cv::Point& b)
 {
-    //   Load Balancing Logic: one stripe of rows per thread (at least one row per stripe)
-    const int innerRows = padded.rows - 2;
-    const int nstripes = std::max(1, std::min(cv::getNumThreads(), innerRows));
-    std::vector<cv::Range> balancedRanges;
-    int rowsPerStripe = innerRows / nstripes;
-    int remainingRows = innerRows % nstripes;
-    int currentRow = 1;
-    for (int t = 0; t < nstripes; ++t) {
-        int startRow = currentRow;
-        int endRow = startRow + rowsPerStripe + (t < remainingRows ? 1 : 0);
-        balancedRanges.emplace_back(startRow, endRow);
-        currentRow = endRow;
+    static const int lut[3][3] = { { 3, 2, 1 }, { 4, -1, 0 }, { 5, 6, 7 } };   // [dy+1][dx+1]
+    return lut[b.y - a.y + 1][b.x - a.x + 1];
+}
+
+// Background sides (REF_WEST / REF_EAST) examined at a point whose search started at direction sc
+// and found the next point at direction d: the cyclic range [sc-1, d)
+static inline uchar examinedSides(int sc, int d)
+{
+    const int from = (sc + 7) & 7;
+    const int len = ((d - sc) & 7) + 1;
+    uchar sides = 0;
+    if (((4 - from) & 7) < len) sides |= REF_WEST;
+    if (((0 - from) & 7) < len) sides |= REF_EAST;
+    return sides;
+}
+
+// Sorts (pixel * 2 + bit, index) pairs concatenated from the sorted stripe lists: consecutive lists
+// only overlap on their shared row, so only those rows are sorted.
+static void sortStripeConcat(std::vector<std::pair<int64_t, int>>& v, int width)
+{
+    auto row = [&](size_t i) { return (v[i].first >> 1) / width; };
+    const size_t n = v.size();
+    for (size_t i = 1; i < n; ++i)
+    {
+        if (!(v[i] < v[i - 1])) continue;
+        const int64_t r = row(i);
+        size_t l = i, h = i;
+        while (l > 0 && row(l - 1) == r) --l;
+        while (h < n && row(h) == r) ++h;
+        std::sort(v.begin() + l, v.begin() + h);
+        i = h;
     }
-    //  Parallel Execution
-    std::vector<AccumulatorT> threadAccumulators(balancedRanges.size());
-    cv::Mat extraRows((int)balancedRanges.size(), padded.cols, CV_8UC1);   // one private row per stripe
-    TRUCOntourTracer worker(padded, balancedRanges, threadAccumulators, extraRows, minSize);
-    cv::parallel_for_(cv::Range(0, (int)balancedRanges.size()), worker);
+}
 
+// Finds the contour D of every reference (pixel, side): a (pixel, background side) pair lies on exactly
+// one border. Walks the contour points in parallel chunks and looks them up in a mask of references.
+class ReferenceResolver : public cv::ParallelLoopBody
+{
+public:
+    enum { CHUNK = 1 << 15 };   // points per task
 
-    // REORG To Match Suzuki & Abe's Contour Ordering.
-    // Every adjacent strip pair (t, t+1) shares a boundary row. On that row:
-    //   * thread t   recorded INTERNAL fragments -> idx_internal_lastLine (tail of accT)
-    //   * thread t+1 recorded EXTERNAL fragments -> idx_external_firstLine (head of accT1)
-    // Both runs are already in X-ascending order (left-to-right raster scan),
-    // so a two-pointer merge restores the sequential Suzuki & Abe ordering.
-    for (size_t t = 0; t + 1 < threadAccumulators.size(); ++t) {
-        auto& accT  = threadAccumulators[t];
-        auto& accT1 = threadAccumulators[t + 1];
+    ReferenceResolver(const std::vector<std::vector<cv::Point>>& contours, const std::vector<ContourInfo>& info,
+                      int width, const uchar* mask, const std::vector<std::pair<int64_t, int>>& refs,
+                      const std::vector<size_t>& firstPoint, std::vector<int>& target)
+        : contours_(contours), info_(info), width_(width), mask_(mask), refs_(refs),
+          firstPoint_(firstPoint), target_(target)
+    {
+        for (int din = 0; din < 8; ++din)
+            for (int dout = 0; dout < 8; ++dout)
+                sides_[din][dout] = examinedSides((din + 6) & 7, dout);
+    }
 
-        const size_t kI = accT.idx_internal_lastLine.size();
-        const size_t kE = accT1.idx_external_firstLine.size();
-        if (kI == 0 && kE == 0) continue;
-
-        const size_t tailStart = accT.size() - kI;
-
-        // Merge by ascending X of each contour's first point. Contours are moved,
-        // not copied — only std::vector handles (three pointers) change hands.
-        std::vector<std::vector<cv::Point>> merged;
-        merged.reserve(kI + kE);
-        size_t i = tailStart, iEnd = accT.size();
-        size_t j = 0,         jEnd = kE;
-        while (i < iEnd && j < jEnd) {
-            if (accT[i].front().x <= accT1[j].front().x)
-                merged.emplace_back(std::move(accT[i++]));
-            else
-                merged.emplace_back(std::move(accT1[j++]));
+    void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        const size_t p0 = (size_t)range.start * CHUNK;
+        const size_t p1 = std::min((size_t)range.end * CHUNK, firstPoint_.back());
+        // contour that contains the point p0
+        size_t i = std::upper_bound(firstPoint_.begin(), firstPoint_.end(), p0) - firstPoint_.begin() - 1;
+        for (size_t p = p0; p < p1; ++i)
+        {
+            const std::vector<cv::Point>& c = contours_[i];
+            const size_t m = c.size();
+            const size_t j0 = p - firstPoint_[i], j1 = std::min(m, j0 + (p1 - p));
+            p += j1 - j0;
+            if (m == 0) continue;
+            if (m == 1)   // isolated pixel
+            {
+                answer(c[0], REF_WEST | REF_EAST, (int)i);
+                continue;
+            }
+            if (j0 == 0)   // first visit of the start point (search started at SW for external, NE for internal)
+                answer(c[0], examinedSides(info_[i].isHole ? 1 : 5, moveDir(c[0], c[1])), (int)i);
+            // every visit, including the closing one of the start point
+            int din = moveDir(c[j0 == 0 ? m - 1 : j0 - 1], c[j0]);
+            for (size_t j = j0; j < j1; ++j)
+            {
+                const int dout = moveDir(c[j], c[j + 1 == m ? 0 : j + 1]);
+                answer(c[j], sides_[din][dout], (int)i);
+                din = dout;
+            }
         }
-        while (i < iEnd) merged.emplace_back(std::move(accT[i++]));
-        while (j < jEnd) merged.emplace_back(std::move(accT1[j++]));
-
-        // Replace accT's tail with the merged run.
-        accT.resize(tailStart);
-        for (auto& c : merged) accT.emplace_back(std::move(c));
-
-        // Drop the consumed externals from the head of accT1.
-        accT1.erase(accT1.begin(), accT1.begin() + kE);
-
-        // Any remaining bookkeeping in accT1 indexed absolute positions — fix them.
-        for (auto& idx : accT1.idx_internal_lastLine)
-            idx -= static_cast<int>(kE);
-
-        // This boundary's bookkeeping is now consumed.
-        accT.idx_internal_lastLine.clear();
-        accT1.idx_external_firstLine.clear();
     }
 
-    //   ZERO-COPY MERGE
-    size_t totalContours = 0;
-    for (auto& tVec : threadAccumulators)
-        totalContours += tVec.size();
+private:
+    inline void answer(const cv::Point& pt, uchar sides, int contour) const
+    {
+        const int64_t pix = (int64_t)pt.y * width_ + pt.x;
+        const uchar hit = mask_[pix] & sides;
+        if (!hit) return;
+        for (int side = REF_WEST; side <= REF_EAST; ++side)
+        {
+            if (!(hit & side)) continue;
+            const int64_t key = pix * 2 + (side - 1);
+            auto it = std::lower_bound(refs_.begin(), refs_.end(), std::make_pair(key, INT_MIN));
+            // a contour may visit a pixel several times, possibly in two chunks: same value
+            storeRelaxedInt(&target_[it->second], contour);
+        }
+    }
+    static inline void storeRelaxedInt(int* p, int v)
+    {
+#if defined(__cpp_lib_atomic_ref)
+        std::atomic_ref<int>(*p).store(v, std::memory_order_relaxed);
+#elif defined(__GNUC__) || defined(__clang__)
+        __atomic_store_n(p, v, __ATOMIC_RELAXED);
+#else
+        *(volatile int*)p = v;
+#endif
+    }
 
+    const std::vector<std::vector<cv::Point>>& contours_;
+    const std::vector<ContourInfo>& info_;
+    const int width_;
+    const uchar* mask_;
+    const std::vector<std::pair<int64_t, int>>& refs_;
+    const std::vector<size_t>& firstPoint_;
+    std::vector<int>& target_;
+    uchar sides_[8][8];
+};
+
+// Contours and hierarchy in the layout of cv::findContours: each contour, in Suzuki-Abe order, is
+// added as the first child of its parent, and the output is the pre-order traversal of the tree.
+void findTRUContoursImpl(cv::Mat& padded,
+                         std::vector<std::vector<cv::Point>>& outContours,
+                         std::vector<cv::Vec4i>& outHierarchy, bool needHierarchy,
+                         int mode, int contApprox)
+{
+    const int width = padded.cols - 2, height = padded.rows - 2;
+    const int nstripes = std::max(1, std::min(cv::getNumThreads(), height));
+    std::vector<cv::Range> ranges;
+    for (int t = 0, cur = 1; t < nstripes; ++t)
+    {
+        const int end = cur + height / nstripes + (t < height % nstripes ? 1 : 0);
+        ranges.emplace_back(cur, end);
+        cur = end;
+    }
+
+    // 1. tracing (parallel)
+    std::vector<AccumulatorT> acc(ranges.size());
+    cv::Mat extraRows((int)ranges.size(), padded.cols, CV_8UC1);
+    TRUCOntourTracer worker(padded, ranges, acc, extraRows);
+    cv::parallel_for_(cv::Range(0, (int)ranges.size()), worker);
+
+    size_t total = 0;
+    for (auto& a : acc) total += a.size();
+    const int n = (int)total;
+    const int K = (int)acc.size();
 
     outContours.clear();
-    outContours.reserve(totalContours);
-    // move the contours from thread accumulators to output without copying pixel data
-    for (auto& tVec : threadAccumulators) {
-        // move_iterator moves the vector internals (pointers) without copying pixel data
-        outContours.insert(outContours.end(),
-                           std::make_move_iterator(tVec.begin()),
-                           std::make_move_iterator(tVec.end()));
-    }
-    //  reverse the order to match original findContours Suzuki&Abe
-    std::reverse(outContours.begin(), outContours.end());
-
-
-    //7. now, lets do the contour approximation if needed in parallel
-    if(contApprox!=cv::CHAIN_APPROX_NONE){
-        cv::parallel_for_(cv::Range(0, (int)outContours.size()), [&](const cv::Range& range){
-            for(int i=range.start;i<range.end;i++){
-                approxContour(outContours[i],(cv::ContourApproximationModes)contApprox);
+    outContours.reserve(n);
+    if (mode == cv::RETR_LIST)
+    {
+        // 2. every contour is a root: the output is the reverse Suzuki-Abe order. Each stripe list is
+        //    sorted, and two consecutive lists only overlap on their shared row (source row
+        //    ranges[k].end - 1): the holes at the tail of list k, the externals at the head of list k + 1
+        auto onRow = [&](const ContourInfo& c, int row) { return (c.order >> 1) / width == row; };
+        std::vector<size_t> head(K, 0), tail(K);   // list k: head [0, head[k]), tail [tail[k], size)
+        for (int k = 0; k < K; ++k)
+        {
+            const auto& info = acc[k].info;
+            tail[k] = info.size();
+            if (k + 1 < K)
+                while (tail[k] > 0 && onRow(info[tail[k] - 1], ranges[k].end - 1)) --tail[k];
+            if (k > 0)
+                while (head[k] < info.size() && onRow(info[head[k]], ranges[k].start - 1)) ++head[k];
+        }
+        for (int k = K - 1; k >= 0; --k)
+        {
+            auto& a = acc[k];
+            for (size_t j = tail[k]; j-- > head[k]; )
+                outContours.push_back(std::move(a[j]));
+            if (k == 0) break;
+            // merge (descending) the shared row of lists k - 1 and k
+            auto& b = acc[k - 1];
+            size_t i = head[k], t = b.size();
+            while (i > 0 || t > tail[k - 1])
+            {
+                if (t == tail[k - 1] || (i > 0 && a.info[i - 1].order > b.info[t - 1].order))
+                    { --i; outContours.push_back(std::move(a[i])); }
+                else
+                    { --t; outContours.push_back(std::move(b[t])); }
             }
+        }
+        if (needHierarchy)
+        {
+            outHierarchy.resize(n);
+            for (int i = 0; i < n; ++i)
+                outHierarchy[i] = cv::Vec4i(i + 1 < n ? i + 1 : -1, i - 1, -1, -1);
+        }
+    }
+    else
+    {
+        std::vector<std::vector<cv::Point>> contours;
+        std::vector<ContourInfo> info;
+        contours.reserve(n);
+        info.reserve(n);
+        for (auto& a : acc)
+        {
+            contours.insert(contours.end(), std::make_move_iterator(a.begin()), std::make_move_iterator(a.end()));
+            info.insert(info.end(), a.info.begin(), a.info.end());
+        }
+        acc.clear();
+
+        // 2. Suzuki-Abe order
+        std::vector<std::pair<int64_t, int>> sorted(n);
+        for (int i = 0; i < n; ++i) sorted[i] = { info[i].order, i };
+        sortStripeConcat(sorted, width);
+
+        // 3. references (parallel walk)
+        std::vector<int> ref(n, -1);
+        {
+            std::unique_ptr<uchar, void (*)(void*)> mask((uchar*)std::calloc((size_t)width * height, 1), &std::free);
+            CV_Assert(mask);
+            std::vector<std::pair<int64_t, int>> refs;   // (pixel * 2 + (side == REF_EAST), contour)
+            refs.reserve(n);
+            std::vector<size_t> firstPoint(n + 1, 0);
+            for (int i = 0; i < n; ++i)
+            {
+                firstPoint[i + 1] = firstPoint[i] + contours[i].size();
+                if (info[i].refPix < 0) continue;
+                mask.get()[info[i].refPix] |= info[i].refSide;
+                refs.emplace_back(info[i].refPix * 2 + (info[i].refSide - 1), i);
+            }
+            sortStripeConcat(refs, width);
+            const int nchunks = (int)((firstPoint[n] + ReferenceResolver::CHUNK - 1) / ReferenceResolver::CHUNK);
+            ReferenceResolver resolver(contours, info, width, mask.get(), refs, firstPoint, ref);
+            cv::parallel_for_(cv::Range(0, nchunks), resolver);
+        }
+
+        // 4. parents (RETR_TREE). ref[i] precedes i in raster order but not always in stripe order,
+        //    hence the explicit stack
+        std::vector<int> parent(n, -2);   // -2: unresolved, -1: root
+        {
+            std::vector<int> stack;
+            for (int i = 0; i < n; ++i)
+            {
+                int j = i;
+                while (parent[j] == -2)
+                {
+                    const int d = ref[j];
+                    if (d < 0) { parent[j] = -1; break; }
+                    if (info[d].isHole != info[j].isHole) { parent[j] = d; break; }
+                    stack.push_back(j);
+                    j = d;
+                }
+                while (!stack.empty())
+                {
+                    const int k = stack.back(); stack.pop_back();
+                    parent[k] = parent[ref[k]];
+                }
+            }
+        }
+
+        // 5. tree of the requested mode
+        std::vector<int> firstChild(n + 1, -1), next(n, -1), treeParent(n, -1);   // n: root
+        for (int k = 0; k < n; ++k)
+        {
+            const int i = sorted[k].second;
+            const int p = (mode == cv::RETR_CCOMP && !info[i].isHole) ? -1 : parent[i];
+            treeParent[i] = p;
+            const int pp = p < 0 ? n : p;
+            next[i] = firstChild[pp];
+            firstChild[pp] = i;
+        }
+
+        // 6. pre-order traversal
+        std::vector<int> newIdx(n, -1), preorder;
+        preorder.reserve(n);
+        {
+            std::vector<int> stack;
+            auto pushChildren = [&](int node) {
+                const size_t mark = stack.size();
+                for (int c = firstChild[node]; c >= 0; c = next[c]) stack.push_back(c);
+                std::reverse(stack.begin() + mark, stack.end());
+            };
+            pushChildren(n);
+            while (!stack.empty())
+            {
+                const int i = stack.back(); stack.pop_back();
+                newIdx[i] = (int)preorder.size();
+                preorder.push_back(i);
+                pushChildren(i);
+            }
+        }
+
+        outHierarchy.assign(n, cv::Vec4i(-1, -1, -1, -1));
+        for (int ni = 0; ni < n; ++ni)
+        {
+            const int i = preorder[ni];
+            cv::Vec4i& h = outHierarchy[ni];
+            h[0] = next[i] < 0 ? -1 : newIdx[next[i]];
+            if (h[0] >= 0) outHierarchy[h[0]][1] = ni;
+            h[2] = firstChild[i] < 0 ? -1 : newIdx[firstChild[i]];
+            h[3] = treeParent[i] < 0 ? -1 : newIdx[treeParent[i]];
+            outContours.push_back(std::move(contours[i]));
+        }
+    }
+
+    // 7. contour approximation (parallel)
+    if (contApprox != cv::CHAIN_APPROX_NONE)
+    {
+        cv::parallel_for_(cv::Range(0, n), [&](const cv::Range& range) {
+            for (int i = range.start; i < range.end; i++)
+                approxContour(outContours[i], (cv::ContourApproximationModes)contApprox);
         });
     }
-
 }
 }
 
 namespace cv{
 
-// ==========================================================
-//
-//  Public API: Handles OutputArray and dispatches to the core implementation
-//  This is a modified version of the original TRUCO parallel algorithm to produce the exact same output
-//  as original findContours with RETR_LIST mode (no hierarchy, all contours are external). It also supports contour approximation.
-//
-// ==========================================================
-void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, int minSize, bool binarize,int method)
+// TRUCO for findContours: 8-bit image (any non-zero value is foreground), mode RETR_LIST, RETR_CCOMP
+// or RETR_TREE. Same contours, order and hierarchy as the Suzuki-Abe implementation.
+void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, OutputArray _hierarchy, int mode, int method)
 {
     CV_INSTRUMENT_REGION();
     Mat src = _src.getMat();
     CV_Assert(src.type() == CV_8UC1);
+    CV_Assert(mode == RETR_LIST || mode == RETR_CCOMP || mode == RETR_TREE);
 
-    // Buffer handling
     cv::Mat padded;
-    cv::copyMakeBorder(src, padded, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
-    if (binarize)
-        cv::threshold(padded, padded, 0, 255, cv::THRESH_BINARY);
+    cv::copyMakeBorder(src, padded, 1, 1, 1, 1, cv::BORDER_CONSTANT | cv::BORDER_ISOLATED, 0);   // ISOLATED: ignore the pixels outside a ROI
+    cv::threshold(padded, padded, 0, 255, cv::THRESH_BINARY);
 
+    // a std::vector<std::vector<Point>> output is filled directly; any other element type goes
+    // through create(), which rejects it as Suzuki-Abe does
+    std::vector<std::vector<cv::Point>> tempContours;
+    std::vector<std::vector<cv::Point>>* contours = &tempContours;
+    if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR && _contours.type() == CV_32SC2)
+        contours = reinterpret_cast<std::vector<std::vector<cv::Point>>*>(_contours.getObj());
+    std::vector<Vec4i> hierarchy;
+    findTRUContoursImpl(padded, *contours, hierarchy, _hierarchy.needed(), mode, method);
 
-    // Fast path: caller passed std::vector<std::vector<cv::Point>> directly.
-    // Write into it without any intermediate copy.
-    if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR) {
-        auto* vec = reinterpret_cast<std::vector<std::vector<cv::Point>>*>(_contours.getObj());
-        findTRUContoursImpl(padded, *vec, minSize,method);
+    if (contours->empty())
+    {
+        _contours.clear();
+        return;
     }
-    else{ // Slow path: generic OutputArray — build in a temp vector then copy.
-        std::vector<std::vector<cv::Point>> tempContours;
-        findTRUContoursImpl(padded, tempContours, minSize,method);
-
+    if (contours == &tempContours)
+    {
         _contours.create((int)tempContours.size(), 1, 0, -1, true);
-        for (size_t i = 0; i < tempContours.size(); i++) {
+        for (size_t i = 0; i < tempContours.size(); i++)
+        {
             _contours.create((int)tempContours[i].size(), 1, CV_32SC2, (int)i, true);
             Mat m = _contours.getMat((int)i);
             std::memcpy(m.data, tempContours[i].data(), tempContours[i].size() * sizeof(cv::Point));
         }
+    }
+    if (_hierarchy.needed())
+    {
+        _hierarchy.create(1, (int)hierarchy.size(), CV_32SC4, -1, true);
+        std::memcpy(_hierarchy.getMat().data, hierarchy.data(), hierarchy.size() * sizeof(Vec4i));
     }
 }
 
