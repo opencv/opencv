@@ -202,4 +202,19 @@ TEST(Core_LPSolver, negative_rhs_restore_cancellation)
     EXPECT_NEAR(3 - 3 * t, z.at<double>(1), 1e-12);
 }
 
+// x1 must be 0 and x2 >= 2/3, so the optimum is unique: z = (0, 2/3), objective -8/3.
+// Phase I ends with its auxiliary variable basic at 0 and a 0 in the first column of its row.
+TEST(Core_LPSolver, phase1_auxiliary_basic_at_zero)
+{
+    Mat A = cv::Mat_<double>({2, 1}, {1., -4.});
+    Mat B = cv::Mat_<double>({2, 3}, {
+        -4., -3., -2.,
+         2.,  0.,  0.
+    });
+    Mat z;
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({2, 1}, {0., 2. / 3});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+}
+
 }} // namespace
