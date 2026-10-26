@@ -17,9 +17,6 @@
 // The resize uses IPP Integration Wrappers (see resize_ipp.hpp)
 #ifdef HAVE_IPP_IW
 
-// cv::dnn::ImagePaddingMode values (the HAL does not depend on the dnn module)
-enum { IPP_DNN_PMODE_NULL = 0, IPP_DNN_PMODE_CROP_CENTER = 1, IPP_DNN_PMODE_LETTERBOX = 2 };
-
 // Helpers propagate the IPP status, ipp_hal_blobFromImages() falls back to OpenCV on any IPP error
 #define IPP_RETURN_ON_ERROR(call) do { IppStatus sts_ = (call); if (sts_ < 0) return sts_; } while (0)
 #define HAL_RETURN_ON_ERROR(call) do { if ((call) < 0) return CV_HAL_ERROR_NOT_IMPLEMENTED; } while (0)
@@ -221,8 +218,8 @@ static IppStatus ipp_mean_scale_plane_32f(Ipp32f* plane, size_t step, IppiSizeL 
     return ippStsNoErr;
 }
 
-// How blobFromImagesWithParams() maps an image to the dsize blob image: the image is resized to `rsize`, then the blob
-// takes the dsize window at `crop` of it (CROP_CENTER) or puts it at (`left`, `top`) and pads it (LETTERBOX)
+// How an image is mapped to the dsize blob image: the image is resized to `rsize`, then the blob takes the dsize window
+// at `crop` of it, or puts it at (`left`, `top`) and pads it (`letterbox`)
 struct ipp_blob_geometry
 {
     cv::Size rsize;
@@ -232,35 +229,32 @@ struct ipp_blob_geometry
     int top, left;
 };
 
-static bool ipp_blob_get_geometry(const cv::Size& src, const cv::Size& dsize, int paddingmode, ipp_blob_geometry& g)
+// The resized image is placed at `offset` in the blob image: a negative offset is a crop window, a resized image that
+// doesn't cover the blob image is padded. A mix of both (crop along one axis, padding along the other) isn't supported.
+static bool ipp_blob_get_geometry(const cv::Size& rsize, double inv_scale_x, double inv_scale_y, const cv::Point& offset,
+                                  const cv::Size& dsize, ipp_blob_geometry& g)
 {
-    g.rsize = dsize;
-    g.inv_scale_x = (double)dsize.width / src.width;
-    g.inv_scale_y = (double)dsize.height / src.height;
-    g.crop = cv::Point();
-    g.letterbox = false;
-    g.top = g.left = 0;
-    if (paddingmode == IPP_DNN_PMODE_CROP_CENTER)
+    if (rsize.width <= 0 || rsize.height <= 0 || !(inv_scale_x > 0) || !(inv_scale_y > 0))
+        return false;
+    g.rsize = rsize;
+    g.inv_scale_x = inv_scale_x;
+    g.inv_scale_y = inv_scale_y;
+    g.letterbox = offset.x > 0 || offset.y > 0 ||
+                  offset.x + rsize.width < dsize.width || offset.y + rsize.height < dsize.height;
+    if (g.letterbox)
     {
-        // cv::resize(src, dst, Size(), f, f): the size is derived from the factor
-        float resizeFactor = std::max(dsize.width / (float)src.width, dsize.height / (float)src.height);
-        g.inv_scale_x = g.inv_scale_y = resizeFactor;
-        g.rsize = cv::Size(cv::saturate_cast<int>(src.width * g.inv_scale_x), cv::saturate_cast<int>(src.height * g.inv_scale_y));
-        if (g.rsize.width < dsize.width || g.rsize.height < dsize.height)
+        if (offset.x < 0 || offset.y < 0 || offset.x + rsize.width > dsize.width || offset.y + rsize.height > dsize.height)
             return false;
-        g.crop = cv::Point((int)(0.5 * (g.rsize.width - dsize.width)), (int)(0.5 * (g.rsize.height - dsize.height)));
+        g.crop = cv::Point();
+        g.left = offset.x;
+        g.top = offset.y;
     }
-    else if (paddingmode == IPP_DNN_PMODE_LETTERBOX)
+    else
     {
-        float resizeFactor = std::min(dsize.width / (float)src.width, dsize.height / (float)src.height);
-        g.rsize = cv::Size((int)(src.width * resizeFactor), (int)(src.height * resizeFactor));
-        g.inv_scale_x = (double)g.rsize.width / src.width;
-        g.inv_scale_y = (double)g.rsize.height / src.height;
-        g.letterbox = g.rsize != dsize;
-        g.top = (dsize.height - g.rsize.height) / 2;
-        g.left = (dsize.width - g.rsize.width) / 2;
+        g.crop = -offset;
+        g.top = g.left = 0;
     }
-    return !g.rsize.empty();
+    return true;
 }
 
 // Fill rows [r0, r1) of the letterbox padding around the resized image in the blob image `img`
@@ -387,8 +381,9 @@ static int ipp_blob_rows(const cv::Mat& img, uchar* dst, int r0, int r1, const i
 // mean[c] and scalefactor[c] apply to channel c of the blob, i.e. after the swapRB channel swap.
 int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step, int nimages,
                            int width, int height, int src_type, int ddepth, int swapRB,
-                           int dst_width, int dst_height, int paddingmode, const double borderValue[4],
-                           const double mean_[4], const double scalefactor_[4],
+                           int dst_width, int dst_height, int resized_width, int resized_height,
+                           double inv_scale_x, double inv_scale_y, int offset_x, int offset_y,
+                           const double borderValue[4], const double mean_[4], const double scalefactor_[4],
                            uchar* dst_data, const size_t* dst_step, int layout, int interpolation)
 {
     CV_HAL_CHECK_USE_IPP();
@@ -429,16 +424,15 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     if (ddepth == CV_8U && (depth != CV_8U || needMeanScale))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    if (dst_width <= 0 || dst_height <= 0)
-    {
-        dst_width = width;
-        dst_height = height;
-    }
-    if ((size_t)dst_width * (size_t)dst_height > (size_t)INT_MAX)
+    if (dst_width <= 0 || dst_height <= 0 || (size_t)dst_width * (size_t)dst_height > (size_t)INT_MAX)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const cv::Size dsize(dst_width, dst_height);
-    const bool needResize = dst_width != width || dst_height != height;
+    ipp_blob_geometry g;
+    if (!ipp_blob_get_geometry(cv::Size(resized_width, resized_height), inv_scale_x, inv_scale_y,
+                               cv::Point(offset_x, offset_y), dsize, g))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    const bool needResize = g.rsize != cv::Size(width, height);
 
 #if !defined(IPP_CALLS_ENFORCED)
     // ipp_resize_prepare() declines 8U INTER_LINEAR in this mode: give up before any work is done
@@ -503,7 +497,7 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
         return ok ? CV_HAL_ERROR_OK : CV_HAL_ERROR_NOT_IMPLEMENTED;
     };
 
-    if (!needResize)
+    if (!needResize && g.rsize == dsize) // no crop or padding either
     {
         std::vector<cv::Mat> imgs(nimages);
         for (int i = 0; i < nimages; ++i)
@@ -514,7 +508,7 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     // Resize and convert one image: every band of blob rows is resized (only the part the blob takes from the
     // resized image) and converted by the same thread, so the resized data does not travel between cores
     cv::Mat resized, bordered;
-    auto resizeAndConvert = [&](const cv::Mat& src, int i, const ipp_blob_geometry& g) -> int
+    auto resizeAndConvert = [&](const cv::Mat& src, int i) -> int
     {
         IppiInterpolationType inter;
         bool affine;
@@ -572,11 +566,8 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
     for (int i = 0; i < nimages; ++i)
     {
         const cv::Mat src(height, width, src_type, const_cast<uchar*>(src_data[i]), src_step[i]);
-        ipp_blob_geometry g;
-        if (!ipp_blob_get_geometry(src.size(), dsize, paddingmode, g))
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
         int res;
-        if (g.rsize == src.size())
+        if (!needResize)
         {
             cv::Mat img;
             res = ipp_blob_no_resize(src, img, bordered, g, dsize, borderValue);
@@ -585,7 +576,7 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
         }
         else
         {
-            res = resizeAndConvert(src, i, g);
+            res = resizeAndConvert(src, i);
         }
         if (res != CV_HAL_ERROR_OK)
             return res;
@@ -596,8 +587,9 @@ int ipp_hal_blobFromImages(const uchar* const* src_data, const size_t* src_step,
 
 #else // HAVE_IPP_IW
 
-int ipp_hal_blobFromImages(const uchar* const*, const size_t*, int, int, int, int, int, int, int, int, int,
-                           const double[4], const double[4], const double[4], uchar*, const size_t*, int, int)
+int ipp_hal_blobFromImages(const uchar* const*, const size_t*, int, int, int, int, int, int, int, int, int, int,
+                           double, double, int, int, const double[4], const double[4], const double[4],
+                           uchar*, const size_t*, int, int)
 {
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
