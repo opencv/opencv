@@ -151,8 +151,8 @@ TEST(Core_LPSolver, issue_12337)
     EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
-// Near-degenerate problem: rounding errors accumulated over the pivots must not
-// make the returned z violate a constraint.
+// Degenerate problem: the first ratio test is a three-way tie.
+// The optimum is unique: z = (16, 15, 0, 24) / 37, objective 189 / 37.
 TEST(Core_LPSolver, issue_12343)
 {
     Mat A = cv::Mat_<double>({4, 1}, {3., 3., 3., 4.});
@@ -163,17 +163,12 @@ TEST(Core_LPSolver, issue_12343)
             4., 0., 4., 1., 4.
     });
     Mat z;
-    int result = cv::solveLP(A, B, z);
-    EXPECT_EQ(SOLVELP_SINGLE, result);
-    // Every constraint B(i, 0:cols-1) * z <= B(i, cols-1) must hold.
-    Mat lhs = B(cv::Rect(0, 0, B.cols - 1, B.rows)) * z;
-    Mat slack = B.col(B.cols - 1) - lhs;
-    for (int i = 0; i < slack.rows; ++i)
-    {
-        EXPECT_GE(slack.at<double>(i), -1e-9) << "constraint row " << i << " violated";
-    }
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({4, 1}, {16. / 37, 15. / 37, 0., 24. / 37});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 }
 
+// Cormen's example #1 from regression_basic with the right-hand side scaled by 1e-14.
 // The solution scales with the data: nothing may be treated as zero because it is small.
 TEST(Core_LPSolver, small_magnitude_data)
 {
@@ -183,16 +178,13 @@ TEST(Core_LPSolver, small_magnitude_data)
                                       2, 2, 5, 24 * scale,
                                       4, 1, 2, 36 * scale});
     Mat z;
-    EXPECT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
-    ASSERT_EQ(3, z.rows);
-    EXPECT_NEAR(8 * scale, z.at<double>(0), 1e-6 * scale);
-    EXPECT_NEAR(4 * scale, z.at<double>(1), 1e-6 * scale);
-    EXPECT_NEAR(0, z.at<double>(2), 1e-6 * scale);
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({3, 1}, {8 * scale, 4 * scale, 0});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12 * scale);
 }
 
-// Negative right-hand side forces initialize_simplex through Phase I. Objective
-// restoration must snap cancellation noise so that exact-zero decisions in Phase II
-// (such as multi-solution detection) are not distorted by rounding errors.
+// A negative right-hand side makes solveLP start with Phase I. The objective is parallel to
+// the first constraint, so the optimal points are z = (t, 3 - 3t) for 0 <= t <= 0.9.
 TEST(Core_LPSolver, negative_rhs_restore_cancellation)
 {
     Mat A = cv::Mat_<double>({2, 1}, {-3., -1.});
@@ -202,17 +194,12 @@ TEST(Core_LPSolver, negative_rhs_restore_cancellation)
          1.,  2.,  6.
     });
     Mat z;
-    int result = cv::solveLP(A, B, z);
-    EXPECT_EQ(SOLVELP_MULTI, result);
+    ASSERT_EQ(SOLVELP_MULTI, cv::solveLP(A, B, z));
     ASSERT_EQ(2, z.rows);
-    EXPECT_NEAR(-3., A.dot(z), 1e-9);
-    // Every constraint B(i, 0:cols-1) * z <= B(i, cols-1) must hold.
-    Mat lhs = B(cv::Rect(0, 0, B.cols - 1, B.rows)) * z;
-    Mat slack = B.col(B.cols - 1) - lhs;
-    for (int i = 0; i < slack.rows; ++i)
-    {
-        EXPECT_GE(slack.at<double>(i), -1e-9) << "constraint row " << i << " violated";
-    }
+    const double t = z.at<double>(0);
+    EXPECT_GE(t, -1e-12);
+    EXPECT_LE(t, 0.9 + 1e-12);
+    EXPECT_NEAR(3 - 3 * t, z.at<double>(1), 1e-12);
 }
 
 }} // namespace

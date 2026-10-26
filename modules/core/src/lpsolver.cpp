@@ -164,17 +164,13 @@ int solveLP(InputArray Func, InputArray Constr, OutputArray z)
 }
 
 // Returns a-b, or exactly 0 when the result is only rounding noise of the operands.
-// The simplex logic compares tableau entries with exactly 0, so a cancellation that leaves
-// ~1e-13 behind would be taken as a real value. The threshold is relative to the operands,
+// The simplex logic compares tableau entries with exactly 0, so the noise that a cancellation
+// leaves behind would be taken as a real value. The threshold is relative to the operands,
 // so it does not depend on the scale of the problem.
 static inline double sub_snap_zero(double a,double b){
     const double rel_eps=1e-12;
     double d=a-b;
     return std::abs(d)<=rel_eps*std::max(std::abs(a),std::abs(b))?0.0:d;
-}
-
-static inline double add_snap_zero(double a,double b){
-    return sub_snap_zero(a,-b);
 }
 
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
@@ -262,7 +258,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
-            c(0,iterator_offset)=add_snap_zero(c(0,iterator_offset),old_c(0,I));
+            c(0,iterator_offset)=sub_snap_zero(c(0,iterator_offset),-old_c(0,I));
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
