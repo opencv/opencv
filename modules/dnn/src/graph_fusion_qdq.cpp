@@ -60,7 +60,7 @@ struct ModelFusionQDQ
     static bool getInt8OutputParams(Layer* layer, float& sc, int& zp)
     {
         if (auto* p = dynamic_cast<Conv2Int8Layer*>(layer))
-            { sc = p->output_sc; zp = p->output_zp; return true; }
+            { sc = p->output_sc; zp = p->output_zp; return !p->int32_output; }
         if (auto* p = dynamic_cast<Eltwise2Int8Layer*>(layer))
             { sc = p->output_sc; zp = p->output_zp; return true; }
         if (auto* p = dynamic_cast<InnerProductLayerInt8*>(layer))
@@ -1258,7 +1258,7 @@ struct ModelFusionQDQ
         {
             if (newprog[j].empty()) continue;
             Conv2Int8Layer* conv = dynamic_cast<Conv2Int8Layer*>(newprog[j].get());
-            if (!conv || conv->inputs.empty() || conv->float_input)
+            if (!conv || conv->inputs.empty() || conv->float_input || conv->int32_output)
                 continue;
 
             Arg conv_in0 = conv->inputs[0];

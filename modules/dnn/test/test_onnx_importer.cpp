@@ -2388,6 +2388,69 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
     }
 }
 
+TEST_P(Test_ONNX_layers, ConvInteger)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    testONNXModels("convinteger_u8");
+    testONNXModels("convinteger_depthwise");
+    testONNXModels("convinteger_1x1");
+    testONNXModels("convinteger_s8");
+    testONNXModels("convinteger_full_range_weights");
+    testONNXModels("convinteger_groups");
+    testONNXModels("convinteger_1d");
+    testONNXModels("convinteger_runtime_weights", npy, 0, 0, false, true, 2);
+    testONNXModels("convinteger_dynamic");
+
+    // the second input gives DynamicQuantizeLinear another zero point on the same net
+    Net net = readNetFromONNX(_tf("models/convinteger_dynamic.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    for (const String set : {"", "_set2"}) {
+        net.setInput(blobFromNPY(_tf("data/input_convinteger_dynamic" + set + ".npy")));
+        Mat ref = blobFromNPY(_tf("data/output_convinteger_dynamic" + set + ".npy"));
+        normAssert(ref, net.forward(), set.c_str());
+    }
+}
+
+TEST_P(Test_ONNX_layers, MatMulInteger)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    testONNXModels("matmulinteger_u8_per_column");
+    testONNXModels("matmulinteger_s8_weights");
+    testONNXModels("matmulinteger_full_range_weights");
+    testONNXModels("matmulinteger_s8");
+    testONNXModels("matmulinteger_runtime_weights", npy, 0, 0, false, true, 2);
+    testONNXModels("matmulinteger_b_zero_point_only");
+    testONNXModels("matmulinteger_transposed_a");
+    testONNXModels("matmulinteger_k1_n1");
+    testONNXModels("matmulinteger_extremes");
+    testONNXModels("matmulinteger_extremes_s8");
+    testONNXModels("matmulinteger_batched_b");
+    testONNXModels("matmulinteger_batched_s8");
+    testONNXModels("matmulinteger_vector_a");
+    testONNXModels("matmulinteger_b_vector");
+    testONNXModels("matmulinteger_vector_vector");
+    testONNXModels("matmulinteger_a_zp_per_row");
+    testONNXModels("matmulinteger_a_zp_per_row_nd");
+    testONNXModels("matmulinteger_dynamic");
+
+    // the second input gives DynamicQuantizeLinear another zero point on the same net
+    Net net = readNetFromONNX(_tf("models/matmulinteger_dynamic.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    for (const String set : {"", "_set2"}) {
+        net.setInput(blobFromNPY(_tf("data/input_matmulinteger_dynamic" + set + ".npy")));
+        Mat ref = blobFromNPY(_tf("data/output_matmulinteger_dynamic" + set + ".npy"));
+        normAssert(ref, net.forward(), set.c_str());
+    }
+}
+
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
     testONNXModels("quantized_matmul_uint8_weights", npy, 0.008, 0.015);

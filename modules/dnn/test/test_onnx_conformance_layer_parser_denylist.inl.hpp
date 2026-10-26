@@ -24,7 +24,6 @@
 "test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_False",
 "test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True",
 "test_averagepool_3d_dilations_small",
-"test_basic_convinteger",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_basic_deform_conv_with_padding",
 "test_basic_deform_conv_without_padding",
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
@@ -79,8 +78,6 @@
 "test_compress_1",  // ---- same as above ---
 "test_compress_default_axis",  // ---- same as above ---
 "test_compress_negative_axis",  // ---- same as above ---
-"test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",
@@ -97,7 +94,6 @@
 "test_if_seq",  // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
 "test_loop13_seq",  // Loop with tensor sequences output, not yet supported in OpenCV
 "test_loop16_seq_none",  // Loop with optional tensor sequences, not yet supported in OpenCV
-"test_matmulinteger",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
