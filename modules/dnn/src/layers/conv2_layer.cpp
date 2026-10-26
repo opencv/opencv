@@ -340,6 +340,25 @@ public:
         return true;
     }
 
+    // How forwardMlasIm2col() splits the work: a few output rows per task, each task with
+    // its own im2col tile of (Cin*kh*kw) x (rows*OW) floats in the internal buffer.
+    struct Im2colTiling
+    {
+        int rowsPerTask, tasksPerImage, tasks;
+        size_t tileSize;
+    };
+
+    Im2colTiling im2colTiling(const MatShape& inpshape, const MatShape& outshape) const
+    {
+        const int OH = outshape[2], OW = outshape[3];
+        Im2colTiling t;
+        t.rowsPerTask = std::max(1, 32 / std::max(OW, 1));
+        t.tasksPerImage = (OH + t.rowsPerTask - 1) / t.rowsPerTask;
+        t.tasks = inpshape[0]*t.tasksPerImage;
+        t.tileSize = (size_t)inpshape[1]*wshape0[2]*wshape0[3]*t.rowsPerTask*OW;
+        return t;
+    }
+
     // Only with one input: constant weights taken by constArgs(), no residual. Runtime weights
     // are re-set in forward() on the block path, so a copy of them here could go stale.
     bool mlasIm2colEnabled() const
@@ -695,7 +714,7 @@ public:
     }
 
     virtual void getTypes(const std::vector<MatType>& inptypes,
-                          const int, const int,
+                          const int, const int requiredInternals,
                           std::vector<MatType>& outtypes,
                           std::vector<MatType>& temptypes) const CV_OVERRIDE
     {
@@ -703,7 +722,8 @@ public:
         CV_Assert(ninputs >= 1);
 
         outtypes.assign(1, inferType(inptypes[0]));
-        temptypes.clear();
+        // Only the patch embedding has an internal buffer: its FP32 im2col tiles.
+        temptypes.assign(requiredInternals, CV_32F);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape>& inpshapes,
@@ -721,6 +741,11 @@ public:
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode));
         tempshapes.clear();
+        if (inpshapes[0].layout != DATA_LAYOUT_BLOCK && inpshapes[0].dims == 4 && mlasIm2colEnabled()) {
+            const Im2colTiling t = im2colTiling(inpshapes[0], outshapes[0]);
+            if (t.tasks > 0 && t.tileSize > 0)
+                tempshapes.assign(1, MatShape({t.tasks, (int)t.tileSize}));
+        }
         return true;
     }
 
@@ -767,7 +792,7 @@ public:
         if (inpshape.layout != DATA_LAYOUT_BLOCK) {
             // getLayouts() leaves the input in plain layout only for this path
             CV_Assert(mlasIm2colEnabled());
-            forwardMlasIm2col(inp, output_arrs);
+            forwardMlasIm2col(inp, output_arrs, *temp_mats);
             return;
         }
 
@@ -839,6 +864,13 @@ public:
             out.fit(outshape, outtype);
         }
 
+        // An empty output (e.g. a zero batch) has nothing to compute; the kernels assume work.
+        if (out.total() == 0) {
+            if (dynamicWeights)
+                weights.release();
+            return;
+        }
+
         const void* inptr = inp.data;
         void* outptr = out.data;
         const void* wptr = weights.data;
@@ -878,7 +910,7 @@ public:
 
     // Patch embedding on the plain NCHW tensor: for a few output rows at a time, gather the
     // input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
-    void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs)
+    void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs, const std::vector<Mat>& temps)
     {
         const MatShape inpshape = inp0.shape();
         CV_Assert(inpshape.dims == 4);
@@ -914,7 +946,7 @@ public:
         if (out.empty())
             out.fit(outshape, CV_32F);
 
-        const int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
+        const int C = inpshape[1], H = inpshape[2], W = inpshape[3];
         const int K = outshape[1], OH = outshape[2], OW = outshape[3];
         const int kh = cs.kshape[1], kw = cs.kshape[2];  // also the strides
         const int KD = C*kh*kw;
@@ -922,8 +954,13 @@ public:
         CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
         CV_Assert(OH*kh <= H && OW*kw <= W);
 
-        const int rowsPerTask = std::max(1, 32 / std::max(OW, 1));
-        const int tasksPerImage = (OH + rowsPerTask - 1) / rowsPerTask;
+        const Im2colTiling t = im2colTiling(inpshape, outshape);
+        if (t.tasks == 0)
+            return;  // an empty output, e.g. a zero batch
+        CV_Assert(!temps.empty() && temps[0].type() == CV_32F && temps[0].isContinuous() &&
+                  temps[0].total() >= (size_t)t.tasks*t.tileSize);
+        const int rowsPerTask = t.rowsPerTask, tasksPerImage = t.tasksPerImage;
+        float* colbase = (float*)temps[0].data;
         const float* wptr = im2colWeights_.ptr<float>();
         const float* scale = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
         const float* shift = fusedBatchNorm ? fusedBias.ptr<float>() :
@@ -933,15 +970,14 @@ public:
         const float* inpdata = inp.ptr<float>();
         float* outdata = out.ptr<float>();
 
-        parallel_for_(Range(0, N*tasksPerImage), [&](const Range& r) {
-            AutoBuffer<float> colbuf((size_t)KD*rowsPerTask*OW);
+        parallel_for_(Range(0, t.tasks), [&](const Range& r) {
             for (int task = r.start; task < r.end; task++) {
                 const int n = task / tasksPerImage;
                 const int oy0 = (task % tasksPerImage)*rowsPerTask;
                 const int nrows = std::min(rowsPerTask, OH - oy0);
                 const int np = nrows*OW;
                 const float* x = inpdata + (size_t)n*C*H*W;
-                float* col = colbuf.data();
+                float* col = colbase + (size_t)task*t.tileSize;
 
                 // im2col: row (c, ky, kx) of col holds that input value for every output pixel here.
                 // Patches do not overlap or leave the image, so every read is inside the input.
