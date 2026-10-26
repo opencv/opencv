@@ -85,7 +85,7 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
 
     CV_Assert(src.type() == dst.type());
     CV_Assert(src.channels() <= MAX_CHANNELS);
-    Matx33f Mdata(1.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f);
+    Matx33d Mdata(1., 0., 0., 0., 1., 0., 0., 0., 1.);
 
     if (!M_.empty()) {
         if (!mapx.empty() || !mapy.empty()) {
@@ -93,8 +93,8 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
         }
         CV_Assert(M_.size() == Size(3, 2) || M_.size() == Size(3, 3));
         CV_Assert(M_.type() == CV_32F || M_.type() == CV_64F);
-        Mat Mcopy(M_.size(), CV_32F, Mdata.val);
-        M_.convertTo(Mcopy, CV_32F);
+        Mat Mcopy(M_.size(), CV_64F, Mdata.val);
+        M_.convertTo(Mcopy, CV_64F);
     } else {
         if (mapx.empty()) {
             CV_Error(Error::StsBadArg, "When M is empty, mapx and/or mapy must be non-empty");
@@ -138,18 +138,18 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
 
         CV_Assert(warping || interleavedmap || planarmap || fixedmap);
 
-        Matx33f M = Mdata;
+        Matx33d M = Mdata;
         const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_;
-        float M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
+        double M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
         float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
         const float* xbufptr = xbuf;
         const float* ybufptr = ybuf;
 
         for (int y = range.start; y < range.end; y++) {
             uint8_t* dstptr = dst.ptr(y);
-            float M_x = float(y)*M(0, 1) + M(0, 2);
-            float M_y = float(y)*M(1, 1) + M(1, 2);
-            float M_z = float(y)*M(2, 1) + M(2, 2);
+            double M_x = double(y)*M(0, 1) + M(0, 2);
+            double M_y = double(y)*M(1, 1) + M(1, 2);
+            double M_z = double(y)*M(2, 1) + M(2, 2);
             const Vec2s* xysptr = fixedmap ? mapx.ptr<Vec2s>(y) : nullptr;
             const ushort* idxptr = fixedmap ? mapy.ptr<ushort>(y) : nullptr;
             const Vec2f* xyfptr = interleavedmap ? mapx.ptr<Vec2f>(y) : nullptr;
@@ -161,9 +161,9 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
                 int blocksize = std::min(BLOCK_SIZE, dstcols - x);
                 if (warpAffine) {
                     for (int dx = 0; dx < blocksize; dx++) {
-                        float xf = float(x + dx);
-                        xbuf[dx] = M_x + M_xx*xf;
-                        ybuf[dx] = M_y + M_yx*xf;
+                        double xf = double(x + dx);
+                        xbuf[dx] = float(M_x + M_xx*xf);
+                        ybuf[dx] = float(M_y + M_yx*xf);
                     }
                 } else if (warpPerspective) {
                     for (int dx = 0; dx < blocksize; dx++) {

@@ -1425,6 +1425,27 @@ TEST_P(Imgproc_GetRectSubPix_Border, regression_30301)
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_GetRectSubPix_Border, testing::Values(
     testing::make_tuple(CV_8U, CV_8U), testing::make_tuple(CV_8U, CV_32F), testing::make_tuple(CV_32F, CV_32F)));
 
+TEST(Imgproc_WarpPerspective, regression_30528)
+{
+    const double row[] = { 0, 0, 255, 255, 0, 0, 255, 255 };
+    Mat src(8, 8, CV_64F);
+    for (int i = 0; i < 8; i++)
+        memcpy(src.ptr<double>(i), row, sizeof(row));
+
+    const Matx33d H(100000000.5, -100000000.0, 2.0,
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 1.0);
+    Mat dst;
+    warpPerspective(src, dst, H, Size(8, 8), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    EXPECT_NEAR(dst.at<double>(1, 1), 302.8125, 1e-3);
+
+    const Matx23d M(100000000.5, -100000000.0, 2.0,
+                    0.0, 1.0, 0.0);
+    Mat dstAffine;
+    warpAffine(src, dstAffine, M, Size(8, 8), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    EXPECT_NEAR(dstAffine.at<double>(1, 1), 302.8125, 1e-3);
+}
+
 
 }} // namespace
 /* End of file. */
