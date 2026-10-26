@@ -3335,11 +3335,14 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     bool enable_alpha = params.get<bool>(VIDEOWRITER_PROP_ENABLE_ALPHA, false);
 
-    enc_params.bitrate = params.get<int>(VIDEOWRITER_PROP_BITRATE, 0);
+    enc_params.bitrate = params.get<int>(VIDEOWRITER_PROP_BITRATE, -1);
     enc_params.crf = params.get<int>(VIDEOWRITER_PROP_CRF, -1);
     enc_params.preset = params.get<int>(VIDEOWRITER_PROP_PRESET, -1);
-    enc_params.gop_size = params.get<int>(VIDEOWRITER_PROP_GOP_SIZE, 0);
+    enc_params.gop_size = params.get<int>(VIDEOWRITER_PROP_GOP_SIZE, -1);
     enc_params.pix_fmt = params.get<int>(VIDEOWRITER_PROP_COLOR_SPACE, 0);
+
+    // printf("enc_params.bitrate: %d, enc_params.crf: %d, enc_params.preset: %d, enc_params.gop_size: %d, enc_params.pix_fmt: %d\n",
+    //        enc_params.bitrate, enc_params.crf, enc_params.preset, enc_params.gop_size, enc_params.pix_fmt);
 
     if (enc_params.crf < -1 || enc_params.preset < -1)
     {
