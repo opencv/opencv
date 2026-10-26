@@ -1763,4 +1763,16 @@ TEST(Layer_GatherND, batch_dims)
     }
 }
 
+TEST(Layer_GatherND, scalar_indices)
+{
+    // Rank-0 indices must be rejected before the last indices dimension is read.
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_FALSE(layer.empty());
+    std::vector<MatShape> inputs{MatShape{4, 5}, MatShape::scalar()}, outputs, internals;
+    EXPECT_ANY_THROW(layer->getMemoryShapes(inputs, 1, outputs, internals));
+}
+
 }} // namespace
