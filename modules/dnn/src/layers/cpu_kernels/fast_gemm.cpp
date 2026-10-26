@@ -13,169 +13,15 @@
 #include "fast_gemm.hpp"
 #include "mlas_gemm.hpp"
 
-#define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
-#include "fast_gemm_kernels.simd.hpp"
-#include "layers/cpu_kernels/fast_gemm_kernels.simd_declarations.hpp"
-#undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
-#include "fast_gemm_kernels.default.hpp"
-
 namespace cv { namespace dnn {
 
-int fastGemmMC(const FastGemmOpt &opt) {
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        return opt_RVV::fastGemmMC();
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        return opt_NEON::fastGemmMC();
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        return opt_AVX2::fastGemmMC();
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        return opt_AVX::fastGemmMC();
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        return opt_LASX::fastGemmMC();
-    } else
-#endif
-    {
-        return cpu_baseline::fastGemmMC();
-    }
-}
-
-int fastGemmNC(const FastGemmOpt &opt) {
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        return opt_RVV::fastGemmNC();
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        return opt_NEON::fastGemmNC();
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        return opt_AVX2::fastGemmNC();
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        return opt_AVX::fastGemmNC();
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        return opt_LASX::fastGemmNC();
-    } else
-#endif
-    {
-        return cpu_baseline::fastGemmNC();
-    }
-}
-
-int fastGemmKC(const FastGemmOpt &opt) {
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        return opt_RVV::fastGemmKC();
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        return opt_NEON::fastGemmKC();
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        return opt_AVX2::fastGemmKC();
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        return opt_AVX::fastGemmKC();
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        return opt_LASX::fastGemmKC();
-    } else
-#endif
-    {
-        return cpu_baseline::fastGemmKC();
-    }
-}
-
-int fastGemmNR(const FastGemmOpt &opt) {
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        return opt_RVV::fastGemmNR();
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        return opt_NEON::fastGemmNR();
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        return opt_AVX2::fastGemmNR();
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        return opt_AVX::fastGemmNR();
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        return opt_LASX::fastGemmNR();
-    } else
-#endif
-    {
-        return cpu_baseline::fastGemmNR();
-    }
-}
-
-
+int fastGemmMC(const FastGemmOpt &opt) { return hal::fastGemmMC(opt); }
+int fastGemmNC(const FastGemmOpt &opt) { return hal::fastGemmNC(opt); }
+int fastGemmKC(const FastGemmOpt &opt) { return hal::fastGemmKC(opt); }
+int fastGemmNR(const FastGemmOpt &opt) { return hal::fastGemmNR(opt); }
 
 size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        return static_cast<size_t>(opt_RVV::fastGemmPackBSize(N, K));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        return static_cast<size_t>(opt_NEON::fastGemmPackBSize(N, K));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        return static_cast<size_t>(opt_AVX2::fastGemmPackBSize(N, K));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        return static_cast<size_t>(opt_AVX::fastGemmPackBSize(N, K));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        return static_cast<size_t>(opt_LASX::fastGemmPackBSize(N, K));
-    } else
-#endif
-    {
-        return static_cast<size_t>(cpu_baseline::fastGemmPackBSize(N, K));
-    }
+    return hal::fastGemmPackBSize(N, K, opt);
 }
 
 void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
@@ -183,479 +29,67 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
 
     auto B_shape = shape(B);
     int batch = total(B_shape, 0, B_shape.size() - 2),
-        K = B_shape[B_shape.size() - 2], N = B_shape.back(), ldb0 = N, ldb1 = 1;
-    if (trans) {
-        std::swap(K, N);
-        std::swap(ldb0, ldb1);
-    }
-
-    const auto *b = B.ptr<const char>();
-    int esz = B.elemSize();
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        size_t size_packed_B = opt_RVV::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        size_t size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        size_t size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        size_t size_packed_B = opt_AVX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        size_t size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-    {
-        size_t size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    }
+        rows = B_shape[B_shape.size() - 2], cols = B_shape.back();
+    // hal::fastGemmPackB takes the stored width and height of B and transposes it when asked
+    size_t size_packed_B = hal::fastGemmPackBSize(trans ? rows : cols, trans ? cols : rows, opt);
+    packed_B.resize(size_packed_B * batch);
+    const float *b = B.ptr<const float>();
+    for (int i = 0; i < batch; i++)
+        hal::fastGemmPackB(trans, cols, rows, b + (size_t)i * rows * cols, cols,
+                           packed_B.data() + (size_t)i * size_packed_B, opt);
 }
 
 void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt) {
-    size_t ldb0 = ldb, ldb1 = 1;
-    if (trans) {
-        std::swap(K, N);
-        std::swap(ldb0, ldb1);
-    }
-
-    const auto &b = (const char *)B;
-    auto *packed_b = (char *)packed_B;
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    }
-}
-
-static constexpr int FAST_GEMM_THIN_MAX_M = 12;
-#if !CV_SIMD
-// Scalar-fallback strip width (unroll factor, not SIMD lanes); 4 matches the narrowest universal-intrinsic float width so layout stays consistent with SIMD builds.
-static constexpr int FAST_GEMM_THIN_SCALAR_NR = 4;
-#endif
-
-static inline int fast_gemm_thin_lanes() {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    return VTraits<v_float32>::vlanes();
-#else
-    return FAST_GEMM_THIN_SCALAR_NR;
-#endif
-}
-
-#if CV_SIMD_SCALABLE
-// Apply the alpha/beta epilogue to one accumulator row.
-static inline void fast_gemm_thin_store_row(float* c, v_float32 acc,
-                                            v_float32 v_alpha, float beta) {
-    if (beta == 0.f)
-        vx_store(c, v_mul(acc, v_alpha));
-    else if (beta == 1.f)
-        vx_store(c, v_fma(acc, v_alpha, vx_load(c)));
-    else
-        vx_store(c, v_fma(acc, v_alpha, v_mul(vx_load(c), vx_setall_f32(beta))));
-}
-
-// Multiply MR (1..4) rows of A by one packed-B strip. Sizeless vector types
-// cannot form the acc[] array the CV_SIMD path uses, so the accumulators are
-// named variables selected by the compile-time MR (the `if (MR > n)` branches
-// fold away) and stay in registers for the whole K loop. Accumulation remains
-// in increasing-k order, bit-exact with the previous scratch-buffer code.
-template<int MR>
-static inline void fast_gemm_thin_block(int K, const float* A, int lda0, int lda1,
-                                        const float* b_strip, int NR,
-                                        v_float32 v_alpha, float beta,
-                                        float* c_strip, int ldc) {
-    v_float32 c0 = vx_setzero_f32(), c1 = vx_setzero_f32();
-    v_float32 c2 = vx_setzero_f32(), c3 = vx_setzero_f32();
-    for (int k = 0; k < K; k++) {
-        v_float32 bv = vx_load(b_strip + k * NR);
-        const float* a = A + k * lda1;
-                     c0 = v_fma(bv, vx_setall_f32(a[0]),         c0);
-        if (MR > 1) c1 = v_fma(bv, vx_setall_f32(a[lda0]),       c1);
-        if (MR > 2) c2 = v_fma(bv, vx_setall_f32(a[2 * lda0]),   c2);
-        if (MR > 3) c3 = v_fma(bv, vx_setall_f32(a[3 * lda0]),   c3);
-    }
-                 fast_gemm_thin_store_row(c_strip,             c0, v_alpha, beta);
-    if (MR > 1)  fast_gemm_thin_store_row(c_strip + ldc,       c1, v_alpha, beta);
-    if (MR > 2)  fast_gemm_thin_store_row(c_strip + 2 * ldc,   c2, v_alpha, beta);
-    if (MR > 3)  fast_gemm_thin_store_row(c_strip + 3 * ldc,   c3, v_alpha, beta);
-}
-#endif // CV_SIMD_SCALABLE
-
-static inline void fast_gemm_thin_strip(int M, int K, float alpha,
-                                        const float* A, int lda0, int lda1,
-                                        const float* b_strip,
-                                        float beta, float* c_strip, int ldc) {
-#if CV_SIMD
-    const int NR = VTraits<v_float32>::vlanes();
-    v_float32 acc[FAST_GEMM_THIN_MAX_M];
-    for (int m = 0; m < M; m++) acc[m] = vx_setzero_f32();
-
-    for (int k = 0; k < K; k++) {
-        v_float32 bv = vx_load(b_strip + k * NR);
-        for (int m = 0; m < M; m++) {
-            v_float32 am = vx_setall_f32(A[m * lda0 + k * lda1]);
-            acc[m] = v_fma(bv, am, acc[m]);
-        }
-    }
-
-    const v_float32 v_alpha = vx_setall_f32(alpha);
-    if (beta == 0.f) {
-        for (int m = 0; m < M; m++)
-            vx_store(c_strip + m * ldc, v_mul(acc[m], v_alpha));
-    } else if (beta == 1.f) {
-        for (int m = 0; m < M; m++) {
-            v_float32 cv = vx_load(c_strip + m * ldc);
-            vx_store(c_strip + m * ldc, v_fma(acc[m], v_alpha, cv));
-        }
-    } else {
-        const v_float32 v_beta = vx_setall_f32(beta);
-        for (int m = 0; m < M; m++) {
-            v_float32 cv = vx_load(c_strip + m * ldc);
-            cv = v_mul(cv, v_beta);
-            vx_store(c_strip + m * ldc, v_fma(acc[m], v_alpha, cv));
-        }
-    }
-#elif CV_SIMD_SCALABLE
-    // Process the strip in register-resident row blocks; the common thin case
-    // M <= 4 (transformer token generation) is a single pass.
-    const int NR = VTraits<v_float32>::vlanes();
-    const v_float32 v_alpha = vx_setall_f32(alpha);
-    int m = 0;
-    for (; m + 4 <= M; m += 4)
-        fast_gemm_thin_block<4>(K, A + m * lda0, lda0, lda1, b_strip, NR, v_alpha, beta, c_strip + m * ldc, ldc);
-    switch (M - m) {
-        case 1: fast_gemm_thin_block<1>(K, A + m * lda0, lda0, lda1, b_strip, NR, v_alpha, beta, c_strip + m * ldc, ldc); break;
-        case 2: fast_gemm_thin_block<2>(K, A + m * lda0, lda0, lda1, b_strip, NR, v_alpha, beta, c_strip + m * ldc, ldc); break;
-        case 3: fast_gemm_thin_block<3>(K, A + m * lda0, lda0, lda1, b_strip, NR, v_alpha, beta, c_strip + m * ldc, ldc); break;
-    }
-#else
-    const int NR = FAST_GEMM_THIN_SCALAR_NR;
-    float acc[FAST_GEMM_THIN_MAX_M * FAST_GEMM_THIN_SCALAR_NR] = {0};
-    for (int k = 0; k < K; k++) {
-        for (int m = 0; m < M; m++) {
-            float a_mk = A[m * lda0 + k * lda1];
-            for (int c = 0; c < NR; c++)
-                acc[m * NR + c] += a_mk * b_strip[k * NR + c];
-        }
-    }
-    if (beta == 0.f) {
-        for (int m = 0; m < M; m++)
-            for (int c = 0; c < NR; c++)
-                c_strip[m * ldc + c] = alpha * acc[m * NR + c];
-    } else {
-        for (int m = 0; m < M; m++)
-            for (int c = 0; c < NR; c++)
-                c_strip[m * ldc + c] = beta * c_strip[m * ldc + c] + alpha * acc[m * NR + c];
-    }
-#endif
-}
-
-static constexpr int FAST_GEMM_THIN_TB_MAX_M = 4;
-static constexpr int FAST_GEMM_THIN_TB_MIN_TASK_MACS = 1 << 15;
-
-static inline void fast_gemm_thin_tb_store(float* c, float d, float alpha, float beta) {
-    *c = beta == 0.f ? alpha * d : alpha * d + beta * *c;
-}
-
-static void fast_gemm_thin_tb(float alpha, float beta, int M, int n0, int n1, int K,
-                              const float* A, int lda, const float* B, int ldb,
-                              float* C, int ldc) {
-    for (int m = 0; m < M; m++) {
-        const float* a = A + (size_t)m * lda;
-        float* c = C + (size_t)m * ldc;
-        int n = n0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int VL = VTraits<v_float32>::vlanes();
-        for (; n + 4 <= n1; n += 4) {
-            const float* b0 = B + (size_t)n * ldb;
-            const float* b1 = b0 + ldb;
-            const float* b2 = b1 + ldb;
-            const float* b3 = b2 + ldb;
-            v_float32 s0 = vx_setzero_f32(), s1 = vx_setzero_f32();
-            v_float32 s2 = vx_setzero_f32(), s3 = vx_setzero_f32();
-            int k = 0;
-            for (; k + VL <= K; k += VL) {
-                v_float32 av = vx_load(a + k);
-                s0 = v_fma(av, vx_load(b0 + k), s0);
-                s1 = v_fma(av, vx_load(b1 + k), s1);
-                s2 = v_fma(av, vx_load(b2 + k), s2);
-                s3 = v_fma(av, vx_load(b3 + k), s3);
-            }
-            float d0 = v_reduce_sum(s0), d1 = v_reduce_sum(s1);
-            float d2 = v_reduce_sum(s2), d3 = v_reduce_sum(s3);
-            for (; k < K; k++) {
-                d0 += a[k] * b0[k];
-                d1 += a[k] * b1[k];
-                d2 += a[k] * b2[k];
-                d3 += a[k] * b3[k];
-            }
-            fast_gemm_thin_tb_store(c + n, d0, alpha, beta);
-            fast_gemm_thin_tb_store(c + n + 1, d1, alpha, beta);
-            fast_gemm_thin_tb_store(c + n + 2, d2, alpha, beta);
-            fast_gemm_thin_tb_store(c + n + 3, d3, alpha, beta);
-        }
-#endif
-        for (; n < n1; n++) {
-            const float* b = B + (size_t)n * ldb;
-            float d = 0.f;
-            for (int k = 0; k < K; k++)
-                d += a[k] * b[k];
-            fast_gemm_thin_tb_store(c + n, d, alpha, beta);
-        }
-    }
+    hal::fastGemmPackB(trans, N, K, B, ldb, packed_B, opt);
 }
 
 bool fastGemmThinEligible(int M, int N, int K) {
-    if (M <= 0 || N <= 0 || K <= 0) return false;
-    if (M > FAST_GEMM_THIN_MAX_M) return false;
-    const int NR = fast_gemm_thin_lanes();
-    if (N < 2 * NR) return false;
-    return true;
+    return hal::fastGemmThinEligible(M, N, K);
 }
 
 size_t fastGemmThinPackBSize(int N, int K) {
-    const int NR = fast_gemm_thin_lanes();
-    const int n_strips = (N + NR - 1) / NR;
-    return (size_t)n_strips * (size_t)NR * (size_t)K;
+    return hal::fastGemmThinPackBSize(N, K);
 }
 
 void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B) {
-    const int NR = fast_gemm_thin_lanes();
-    const int n_strips = (N + NR - 1) / NR;
-    for (int s = 0; s < n_strips; s++) {
-        const int j0 = s * NR;
-        const int nr = std::min(NR, N - j0);
-        float* strip = packed_B + (size_t)s * NR * K;
-        for (int k = 0; k < K; k++) {
-            float* out = strip + k * NR;
-            int c = 0;
-            for (; c < nr; c++) out[c] = B[k * ldb_K + (j0 + c) * ldb_N];
-            for (; c < NR; c++) out[c] = 0.f;
-        }
-    }
+    hal::fastGemmThinPackB(N, K, B, ldb_K, ldb_N, packed_B);
 }
 
 void fastGemmThin(int M, int N, int K, float alpha,
                   const float* A, int lda0, int lda1,
                   const float* packed_B, float beta,
                   float* C, int ldc, bool multi_thread) {
-    const int NR = fast_gemm_thin_lanes();
-    const int n_full_strips = N / NR;
-    const int n_tail = N - n_full_strips * NR;
-
-    auto fn = [&](const Range& r) {
-        for (int s = r.start; s < r.end; s++) {
-            const float* b_strip = packed_B + (size_t)s * NR * K;
-            float* c_strip = C + s * NR;
-            fast_gemm_thin_strip(M, K, alpha, A, lda0, lda1, b_strip, beta, c_strip, ldc);
-        }
-    };
-    if (multi_thread && n_full_strips > 1) {
-        parallel_for_(Range(0, n_full_strips), fn, (double)n_full_strips * M * K * NR * (1.0 / 1024.0));
-    } else {
-        fn(Range(0, n_full_strips));
-    }
-
-    if (n_tail > 0) {
-        const int j0 = n_full_strips * NR;
-        const float* b_strip = packed_B + (size_t)n_full_strips * NR * K;
-        for (int m = 0; m < M; m++) {
-            for (int c = 0; c < n_tail; c++) {
-                float acc_s = 0.f;
-                for (int k = 0; k < K; k++)
-                    acc_s += A[m * lda0 + k * lda1] * b_strip[k * NR + c];
-                const float mul = alpha * acc_s;
-                float* p = C + m * ldc + j0 + c;
-                *p = (beta == 0.f) ? mul : beta * (*p) + mul;
-            }
-        }
-    }
-}
-
-static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
-                           const char *a_, int lda0, int lda1,
-                           const char *b_, int ldb,
-                           char *c_, int ldc, bool multi_thread) {
-    const float* A = (const float*)a_;
-    const float* B = (const float*)b_;
-    float* C = (float*)c_;
-
-    if (fastGemmThinEligible(M, N, K)) {
-        AutoBuffer<float> packed(fastGemmThinPackBSize(N, K));
-        fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data());
-        fastGemmThin(M, N, K, alpha, A, lda0, lda1, packed.data(), beta, C, ldc, multi_thread);
-        return;
-    }
-
-    auto fn = [&](const Range &r) {
-        for (int i = r.start; i < r.end; i++) {
-            float* c_i = C + i * ldc;
-            if (beta == 0.f)
-                for (int j = 0; j < N; j++) c_i[j] = 0.f;
-            else if (beta != 1.f)
-                for (int j = 0; j < N; j++) c_i[j] *= beta;
-            for (int k = 0; k < K; k++) {
-                const float* b_k = B + k * ldb;
-                float aval = alpha * A[i * lda0 + k * lda1];
-                for (int j = 0; j < N; j++)
-                    c_i[j] += aval * b_k[j];
-            }
-        }
-    };
-    if (multi_thread) {
-        parallel_for_(Range(0, M), fn, (double)M * K * N * (1.0 / 1024.0));
-    } else {
-        fn(Range(0, M));
-    }
+    hal::fastGemmThin(M, N, K, alpha, A, lda0, lda1, packed_B, beta, C, ldc, multi_thread);
 }
 
 void fastGemm(bool trans_a, int M, int N, int K,
               float alpha, const float *A, int lda,
               const float *packed_B, float beta,
               float *C, int ldc, FastGemmOpt &opt) {
-    const char *a = (const char *)A;
-    const char *packed_b = (const char *)packed_B;
-    char *c = (char *)C;
-
-    int lda0 = lda, lda1 = 1;
-    if (trans_a) {
-        std::swap(lda0, lda1);
-    }
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1, packed_b, beta, c, ldc, sizeof(float), opt.multi_thread);
-    }
+    hal::fastGemm(trans_a, M, N, K, alpha, A, lda, packed_B, beta, C, ldc, opt);
 }
+
+#ifdef HAVE_MLAS
+// hal::fastGemm and hal::fastGemmBatch run these products on their own unblocked path,
+// which is faster than MLAS for them; MLAS gets the rest.
+static inline bool fast_gemm_small(int M, int N, int K) {
+    return fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000;
+}
+#endif
 
 void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
               float beta, float *C, int ldc, FastGemmOpt &opt) {
-    const char *a = (const char *)A;
-    const char *b = (const char *)B;
-    char *c = (char *)C;
-
-    int M = trans_a ? na : ma;
-    int N = trans_b ? mb : nb;
-    int K = trans_a ? ma : na;
-
-    if (trans_a) {
-        std::swap(lda0, lda1);
-    }
-    if (trans_b) {
-        std::swap(ldb0, ldb1);
-    }
-
-    if (!trans_b && ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
-        return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
-    }
-
 #ifdef HAVE_MLAS
-    const bool a_row_major = (lda0 == 1 || lda1 == 1);
-    const bool b_row_major = (ldb0 == 1 || ldb1 == 1);
-    if (!opt.use_rvv && a_row_major && b_row_major) {
-        const int phys_lda = std::max(lda0, lda1);
-        const int phys_ldb = std::max(ldb0, ldb1);
+    const int M = trans_a ? na : ma, N = trans_b ? mb : nb, K = trans_a ? ma : na;
+    const int a0 = trans_a ? lda1 : lda0, a1 = trans_a ? lda0 : lda1;
+    const int b0 = trans_b ? ldb1 : ldb0, b1 = trans_b ? ldb0 : ldb1;
+    const bool a_row_major = (a0 == 1 || a1 == 1);
+    const bool b_row_major = (b0 == 1 || b1 == 1);
+    if (!(!trans_b && b1 == 1 && fast_gemm_small(M, N, K)) &&
+        !opt.use_rvv && a_row_major && b_row_major) {
+        const int phys_lda = std::max(a0, a1);
+        const int phys_ldb = std::max(b0, b1);
         if (mlasSgemm(trans_a, trans_b, M, N, K,
                       alpha, A, phys_lda, B, phys_ldb,
                       beta, C, ldc)) {
@@ -663,47 +97,7 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
         }
     }
 #endif
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                b, ldb0, ldb1, beta,
-                                c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                 b, ldb0, ldb1, beta,
-                                 c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                 b, ldb0, ldb1, beta,
-                                 c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                 b, ldb0, ldb1, beta,
-                                 c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                 b, ldb0, ldb1, beta,
-                                 c, ldc, sizeof(float), opt.multi_thread);
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmKernel(M, N, K, alpha, a, lda0, lda1,
-                                     b, ldb0, ldb1, beta,
-                                     c, ldc, sizeof(float), opt.multi_thread);
-    }
+    hal::fastGemm(trans_a, trans_b, ma, na, mb, nb, alpha, A, lda0, lda1, B, ldb0, ldb1, beta, C, ldc, opt);
 }
 
 void fastGemm(bool trans_a, bool trans_b,
@@ -737,34 +131,6 @@ void fastGemm(bool trans_a, bool trans_b,
 void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
                    int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
                    const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt) {
-    const char *a = (const char *)A;
-    const char *b = (const char *)B;
-    char *c = (char *)C;
-
-    // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
-    if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
-        const size_t esz = sizeof(float);
-        // Parallelise over batch with single-thread inner thin gemm
-        if (opt.multi_thread && batch > 1) {
-            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
-                for (int i = r.start; i < r.end; i++) {
-                    fast_gemm_thin(alpha, beta, M, N, K,
-                                   a + A_offsets[i] * esz, lda0, lda1,
-                                   b + B_offsets[i] * esz, ldb0,
-                                   c + C_offsets[i] * esz, ldc, false);
-                }
-            }, (double)batch * M * N * K * (1.0 / 1024.0));
-        } else {
-            for (size_t i = 0; i < batch; i++) {
-                fast_gemm_thin(alpha, beta, M, N, K,
-                               a + A_offsets[i] * esz, lda0, lda1,
-                               b + B_offsets[i] * esz, ldb0,
-                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
-            }
-        }
-        return;
-    }
-
 #ifdef HAVE_MLAS
     bool a_ok = false, b_ok = false;
     bool mlas_trans_a = false, mlas_trans_b = false;
@@ -773,7 +139,7 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     else if (lda0 == 1) { a_ok = true; mlas_trans_a = true;  mlas_lda = lda1; }
     if (ldb1 == 1)      { b_ok = true; mlas_trans_b = false; mlas_ldb = ldb0; }
     else if (ldb0 == 1) { b_ok = true; mlas_trans_b = true;  mlas_ldb = ldb1; }
-    if (!opt.use_rvv && a_ok && b_ok) {
+    if (!(ldb1 == 1 && fast_gemm_small(M, N, K)) && !opt.use_rvv && a_ok && b_ok) {
         if (mlasSgemmBatch(batch, A_offsets, B_offsets, C_offsets,
                             mlas_trans_a, mlas_trans_b, M, N, K,
                             alpha, A, mlas_lda, B, mlas_ldb,
@@ -782,92 +148,15 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
         }
     }
 #endif
-
-    if (M <= FAST_GEMM_THIN_TB_MAX_M && lda1 == 1 && ldb0 == 1 && ldb1 != 1) {
-        const int nblk = std::max(4, (FAST_GEMM_THIN_TB_MIN_TASK_MACS / std::max(M * K, 1) + 3) / 4 * 4);
-        const int n_tasks = (N + nblk - 1) / nblk;
-        const int total = (int)batch * n_tasks;
-        auto fn = [&](const Range& r) {
-            for (int t = r.start; t < r.end; t++) {
-                const size_t i = (size_t)(t / n_tasks);
-                const int n0 = (t % n_tasks) * nblk;
-                fast_gemm_thin_tb(alpha, beta, M, n0, std::min(N, n0 + nblk), K,
-                                  A + A_offsets[i], lda0, B + B_offsets[i], ldb1,
-                                  C + C_offsets[i], ldc);
-            }
-        };
-        if (opt.multi_thread && total > 1)
-            parallel_for_(Range(0, total), fn);
-        else
-            fn(Range(0, total));
-        return;
-    }
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmBatchKernel(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    }
+    hal::fastGemmBatch(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha, A, lda0, lda1,
+                       B, ldb0, ldb1, beta, C, ldc, opt);
 }
 
 void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *packed_B_offsets, const size_t *C_offsets,
                    int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
                    const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt) {
-    const char *a = (const char *)A;
-    const char *b = (const char *)packed_B;
-    char *c = (char *)C;
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmBatchKernel(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, a, lda0, lda1, b, beta, c, ldc, sizeof(float));
-    }
+    hal::fastGemmBatch(batch, A_offsets, packed_B_offsets, C_offsets, M, N, K, alpha, A, lda0, lda1,
+                       packed_B, beta, C, ldc, opt);
 }
 
 void fastGemmBatch(bool trans_a, bool trans_b,
@@ -895,67 +184,14 @@ void fastGemmBatch(bool trans_a, bool trans_b,
                   helper.ldb1, beta, c, helper.ldc, opt);
 }
 
-
 void fastGemmBatch(size_t batch,
                    const std::vector<size_t> &A_offsets, const std::vector<size_t> &B_offsets, const std::vector<size_t> &C_offsets,
                    int M, int N, int K, float alpha, const Mat&A, int lda0, int lda1,
                    const Mat&B, int ldb0, int ldb1, float beta, Mat&C, int ldc, FastGemmOpt &opt){
-    const char *a = (const char *)A.ptr<const float>();
-    const char *b = (const char *)B.ptr<const float>();
-    char *c = (char *)C.ptr<float>();
-
-    if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
-        const size_t esz = sizeof(float);
-        if (opt.multi_thread && batch > 1) {
-            parallel_for_(Range(0, (int)batch), [&](const Range& r) {
-                for (int i = r.start; i < r.end; i++) {
-                    fast_gemm_thin(alpha, beta, M, N, K,
-                                   a + A_offsets[i] * esz, lda0, lda1,
-                                   b + B_offsets[i] * esz, ldb0,
-                                   c + C_offsets[i] * esz, ldc, false);
-                }
-            }, (double)batch * M * N * K * (1.0 / 1024.0));
-        } else {
-            for (size_t i = 0; i < batch; i++) {
-                fast_gemm_thin(alpha, beta, M, N, K,
-                               a + A_offsets[i] * esz, lda0, lda1,
-                               b + B_offsets[i] * esz, ldb0,
-                               c + C_offsets[i] * esz, ldc, opt.multi_thread);
-            }
-        }
-        return;
-    }
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmBatchKernel(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha, a, lda0, lda1, b, ldb0, ldb1, beta, c, ldc, sizeof(float));
-    }
+    hal::fastGemmBatch(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha,
+                       A.ptr<const float>(), lda0, lda1, B.ptr<const float>(), ldb0, ldb1,
+                       beta, C.ptr<float>(), ldc, opt);
 }
-
 
 void pagedAttnQKGemm(
     const Mat& Q,const std::vector<Mat> &K, Mat& A,
@@ -1002,60 +238,10 @@ void pagedAttnQKGemm(
 
     char*a = A.ptr<char>();
     bool isQ3D = shape_q.size() == 3;
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv)
-        opt_RVV::pagedAttnQKGemmKernel(
-            Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D, T_k,
-            sm_scale, esz, isQ3D
-        );
-    else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon)
-        opt_NEON::pagedAttnQKGemmKernel(
-            Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D, T_k,
-            sm_scale, esz, isQ3D
-        );
-    else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2)
-        opt_AVX2::pagedAttnQKGemmKernel(
-            Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D, T_k,
-            sm_scale, esz, isQ3D
-        );
-    else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx)
-        opt_AVX::pagedAttnQKGemmKernel(
-            Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D, T_k,
-            sm_scale, esz, isQ3D
-        );
-    else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx)
-        opt_LASX::pagedAttnQKGemmKernel(
-            Q.ptr<const char>(), packed_K, a,
-            B, T_q, Nq, N_k, T_s, D, T_k,
-            sm_scale, esz, isQ3D
-        );
-    else
-#endif
-    cpu_baseline::pagedAttnQKGemmKernel(
-        Q.ptr<const char>(), packed_K, a,
-        B, T_q, Nq, N_k, T_s, D, T_k,
-        sm_scale, esz, isQ3D
-    );
-
-
+    hal::fastGemmPagedQK(Q.ptr<const char>(), packed_K, a,
+                         B, T_q, Nq, N_k, T_s, D, T_k,
+                         sm_scale, esz, isQ3D, opt);
 }
-
 
 void pagedAttnAVGemm(
     const Mat& A,const std::vector<Mat> &V, Mat& Out,
@@ -1100,64 +286,9 @@ void pagedAttnAVGemm(
     }
 
     bool canonical_layout = shape(Out).size() == 3;
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv)
-        opt_RVV::pagedAttnAVGemmKernel(
-            A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D, T_v,
-            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-        );
-    else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon)
-        opt_NEON::pagedAttnAVGemmKernel(
-            A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D, T_v,
-            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-        );
-    else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::pagedAttnAVGemmKernel(
-            A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D, T_v,
-            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-        );
-    }
-    else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx){
-        opt_AVX::pagedAttnAVGemmKernel(
-            A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D, T_v,
-            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-        );
-    }
-    else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx){
-        opt_LASX::pagedAttnAVGemmKernel(
-            A.ptr<const char>(), packed_V, Out.ptr<char>(),
-            B, T_q, Nq, N_k, T_s, D, T_v,
-            esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-        );
-    }
-    else
-#endif
-    {
-        cpu_baseline::pagedAttnAVGemmKernel(
-                A.ptr<const char>(), packed_V, Out.ptr<char>(),
-                B, T_q, Nq, N_k, T_s, D, T_v,
-                esz, canonical_layout, fastGemmPackBSize(D, T_s, opt)
-            );
-
-    }
-
-
+    hal::fastGemmPagedAV(A.ptr<const char>(), packed_V, Out.ptr<char>(),
+                         B, T_q, Nq, N_k, T_s, D, T_v,
+                         esz, canonical_layout, fastGemmPackBSize(D, T_s, opt), opt);
 }
 
 }} // cv::dnn
