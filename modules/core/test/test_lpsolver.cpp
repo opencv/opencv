@@ -190,4 +190,29 @@ TEST(Core_LPSolver, small_magnitude_data)
     EXPECT_NEAR(0, z.at<double>(2), 1e-6 * scale);
 }
 
+// Negative right-hand side forces initialize_simplex through Phase I. Objective
+// restoration must snap cancellation noise so that exact-zero decisions in Phase II
+// (such as multi-solution detection) are not distorted by rounding errors.
+TEST(Core_LPSolver, negative_rhs_restore_cancellation)
+{
+    Mat A = cv::Mat_<double>({2, 1}, {-3., -1.});
+    Mat B = cv::Mat_<double>({3, 3}, {
+        -3., -1., -3.,
+        -2., -4., -3.,
+         1.,  2.,  6.
+    });
+    Mat z;
+    int result = cv::solveLP(A, B, z);
+    EXPECT_EQ(SOLVELP_MULTI, result);
+    ASSERT_EQ(2, z.rows);
+    EXPECT_NEAR(-3., A.dot(z), 1e-9);
+    // Every constraint B(i, 0:cols-1) * z <= B(i, cols-1) must hold.
+    Mat lhs = B(cv::Rect(0, 0, B.cols - 1, B.rows)) * z;
+    Mat slack = B.col(B.cols - 1) - lhs;
+    for (int i = 0; i < slack.rows; ++i)
+    {
+        EXPECT_GE(slack.at<double>(i), -1e-9) << "constraint row " << i << " violated";
+    }
+}
+
 }} // namespace
