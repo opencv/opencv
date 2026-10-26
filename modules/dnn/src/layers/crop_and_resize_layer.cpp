@@ -42,6 +42,10 @@ public:
         CV_Assert_N(inputs.size() == 2, inputs[0].size() == 4);
         if (inputs[0][0] != 1)
             CV_Error(Error::StsNotImplemented, "");
+        CV_CheckEQ(inputs[1].size(), (size_t)4, "CropAndResize: boxes must have [1, 1, N, 7] shape");
+        CV_CheckEQ(inputs[1][0], 1, "CropAndResize: boxes must have [1, 1, N, 7] shape");
+        CV_CheckEQ(inputs[1][1], 1, "CropAndResize: boxes must have [1, 1, N, 7] shape");
+        CV_CheckEQ(inputs[1][3], 7, "CropAndResize: boxes must have [1, 1, N, 7] shape");
         outputs.resize(1, MatShape(4));
         outputs[0][0] = inputs[1][2];  // Number of bounding boxes.
         outputs[0][1] = inputs[0][1];  // Number of channels.
@@ -85,21 +89,37 @@ public:
             float boxWidth = right - left;
             float boxHeight = bottom - top;
 
-            float heightScale = boxHeight * static_cast<float>(inpHeight - 1) / (outHeight - 1);
-            float widthScale = boxWidth * static_cast<float>(inpWidth - 1) / (outWidth - 1);
+            float heightScale = outHeight > 1 ? boxHeight * static_cast<float>(inpHeight - 1) / (outHeight - 1) : 0.f;
+            float widthScale = outWidth > 1 ? boxWidth * static_cast<float>(inpWidth - 1) / (outWidth - 1) : 0.f;
             for (int y = 0; y < outHeight; ++y)
             {
-                float input_y = top * (inpHeight - 1) + y * heightScale;
+                // A single output row samples the middle of the box.
+                float input_y = outHeight > 1 ? top * (inpHeight - 1) + y * heightScale
+                                              : 0.5f * (top + bottom) * (inpHeight - 1);
+                if (!(input_y >= 0.f && input_y <= inpHeight - 1))
+                {
+                    // Sample is outside the image: write the extrapolation value (0).
+                    for (int c = 0; c < numChannels; ++c)
+                        std::fill_n(outDataBox + c * outSpatialSize + y * outWidth, outWidth, 0.f);
+                    continue;
+                }
                 int y0 = static_cast<int>(input_y);
                 const float* inpData_row0 = inp.ptr<float>(0, 0, y0);
                 const float* inpData_row1 = (y0 + 1 < inpHeight) ? (inpData_row0 + inpWidth) : inpData_row0;
                 for (int x = 0; x < outWidth; ++x)
                 {
-                    float input_x = left * (inpWidth - 1) + x * widthScale;
+                    float input_x = outWidth > 1 ? left * (inpWidth - 1) + x * widthScale
+                                                 : 0.5f * (left + right) * (inpWidth - 1);
+                    float* outData = outDataBox + y * outWidth + x;
+                    if (!(input_x >= 0.f && input_x <= inpWidth - 1))
+                    {
+                        for (int c = 0; c < numChannels; ++c)
+                            outData[c * outSpatialSize] = 0.f;
+                        continue;
+                    }
                     int x0 = static_cast<int>(input_x);
                     int x1 = std::min(x0 + 1, inpWidth - 1);
 
-                    float* outData = outDataBox + y * outWidth + x;
                     const float* inpData_row0_c = inpData_row0;
                     const float* inpData_row1_c = inpData_row1;
                     for (int c = 0; c < numChannels; ++c)

@@ -4203,4 +4203,131 @@ TEST(Test_GatherND, EmptyIndicesDoNotCrash)
     }
 }
 
+static Ptr<Layer> createCropAndResize(int width, int height)
+{
+    LayerParams lp;
+    lp.type = "CropAndResize";
+    lp.name = "test_crop_and_resize";
+    lp.set("width", width);
+    lp.set("height", height);
+    return LayerFactory::createLayerInstance(lp.type, lp);
+}
+
+static Mat cropAndResizeInput()
+{
+    // 1x1x4x4 image with values 1..16 in row-major order.
+    Mat inp({1, 1, 4, 4}, CV_32F);
+    for (int i = 0; i < 16; i++)
+        inp.ptr<float>()[i] = (float)(i + 1);
+    return inp;
+}
+
+TEST(Layer_Test_CropAndResize, BoxOutsideImageAndBoxCount)
+{
+    Ptr<Layer> layer = createCropAndResize(2, 2);
+    ASSERT_TRUE(layer != nullptr);
+    Mat inp = cropAndResizeInput();
+
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,       // whole image
+                       0, 0, 0, 0.f, 50.f, 1.f, 60.f,     // rows far below the image
+                       0, 0, 0, 0.f, -0.1f, 1.f, 0.9f,    // first row just above the image
+                       0, 0, 0, 0.1f, 0.f, 1.1f, 1.f};    // last column just right of the image
+    Mat boxes({1, 1, 4, 7}, CV_32F, boxData);
+
+    std::vector<Mat> inputs = {inp, boxes}, outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({4, 1, 2, 2}));
+    const float* out = outputs[0].ptr<float>();
+    const float expected[] = {1.f, 4.f, 13.f, 16.f,
+                              0.f, 0.f, 0.f, 0.f,
+                              0.f, 0.f, 11.8f, 14.8f,
+                              1.3f, 0.f, 13.3f, 0.f};
+    for (int i = 0; i < 16; i++)
+        EXPECT_NEAR(out[i], expected[i], 1e-5) << i;
+
+    // Boxes must have [1, 1, N, 7] shape, which the output size is derived from.
+    for (const MatShape& badShape : {MatShape({1, 2, 1, 7}), MatShape({1, 2, 7}), MatShape({1, 1, 2, 14})})
+    {
+        Mat bad(badShape, CV_32F, boxData);
+        inputs = {inp, bad};
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception) << badShape;
+    }
+}
+
+TEST(Layer_Test_CropAndResize, SingletonCrop)
+{
+    Mat inp = cropAndResizeInput();
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,
+                       0, 0, 0, 0.f, 0.f, 1.f / 3, 2.f / 3};
+    Mat boxes({1, 1, 2, 7}, CV_32F, boxData);
+
+    // 1x1 crop samples the box center: (1.5, 1.5) and (1, 0.5).
+    {
+        Ptr<Layer> layer = createCropAndResize(1, 1);
+        std::vector<Mat> inputs = {inp, boxes}, outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(shape(outputs[0]), MatShape({2, 1, 1, 1}));
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], 8.5f, 1e-5);
+        EXPECT_NEAR(outputs[0].ptr<float>()[1], 5.5f, 1e-5);
+    }
+    // Width 1, height 2 on the whole image: rows 0 and 3 at column 1.5.
+    {
+        Ptr<Layer> layer = createCropAndResize(1, 2);
+        std::vector<Mat> inputs = {inp, Mat({1, 1, 1, 7}, CV_32F, boxData)}, outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(shape(outputs[0]), MatShape({1, 1, 2, 1}));
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], 2.5f, 1e-5);
+        EXPECT_NEAR(outputs[0].ptr<float>()[1], 14.5f, 1e-5);
+    }
+}
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_CropAndResize_Backends;
+TEST_P(Layer_Test_CropAndResize_Backends, BoxOutsideImage)
+{
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only OpenCV and CUDA backends implement CropAndResize extrapolation");
+
+    Mat inp({1, 8, 6, 5}, CV_32F);
+    randu(inp, -1.f, 1.f);
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,
+                       0, 0, 0, 0.f, 50.f, 1.f, 60.f,
+                       0, 0, 0, -0.2f, -0.1f, 0.9f, 1.3f,
+                       0, 0, 0, 0.25f, 0.3f, 0.75f, 0.6f};
+    Mat boxes({1, 1, 4, 7}, CV_32F, boxData);
+
+    for (int size : {1, 3})
+    {
+        Ptr<Layer> layer = createCropAndResize(size, size);
+        std::vector<Mat> inputs = {inp, boxes}, refs;
+        runLayer(layer, inputs, refs);
+
+        LayerParams lp;
+        lp.type = "CropAndResize";
+        lp.name = "crop_and_resize";
+        lp.set("width", size);
+        lp.set("height", size);
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.setInputsNames({"image", "boxes"});
+        net.setInput(inp, "image");
+        net.setInput(boxes, "boxes");
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        const bool fp16 = targetId == DNN_TARGET_CUDA_FP16 || targetId == DNN_TARGET_OPENCL_FP16 ||
+                          targetId == DNN_TARGET_CPU_FP16;
+        double l1 = fp16 ? 2e-3 : 1e-5;
+        double lInf = fp16 ? 1e-2 : 1e-4;
+        normAssert(refs[0], out, format("size=%d", size).c_str(), l1, lInf);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_CropAndResize_Backends, dnnBackendsAndTargets());
+
 }} // namespace
