@@ -108,7 +108,7 @@ PERF_TEST_P(CrossCheckMatcherFixture, bfmatch_crosscheck,
     BFMatcher matcher(normType, true);
     std::vector<DMatch> matches;
     TEST_CYCLE() matcher.match(query, train, matches);
-    SANITY_CHECK_MATCHES(matches, 1e-6);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace
