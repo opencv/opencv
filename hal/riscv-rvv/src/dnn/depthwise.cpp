@@ -36,20 +36,19 @@ namespace cv { namespace rvv_hal { namespace dnn {
 // The two produce identical results; use_fill only selects the faster path per call. Because the
 // per-pixel path is always available, a mis-tuned guard costs speed, never correctness.
 
-int depthwise_conv32f(const float* inp_data, const float* residual_data,
-                      float* out_data, const float* weights_all,
-                      const float* scale_all, const float* bias_all,
-                      int C, int C0, int C1,
-                      const int* insize, const int* outsize, const int* strides,
-                      const int* pads, const int* inner, const int* coordtab,
-                      const int* ofstab, int ksize,
-                      float maxval, float default_alpha, const float* prelu_slope,
-                      int task_start, int task_end)
+constexpr int DW_MAX_C0 = 8;
+
+static void depthwise_conv32f_planes(const float* inp_data, const float* residual_data,
+                                     float* out_data, const float* weights_all,
+                                     const float* scale_all, const float* bias_all,
+                                     int C, int C0, int C1,
+                                     const int* insize, const int* outsize, const int* strides,
+                                     const int* pads, const int* inner, const int* coordtab,
+                                     const int* ofstab, int ksize,
+                                     float maxval, float default_alpha, const float* prelu_slope,
+                                     int task_start, int task_end)
 {
     constexpr int MAX_CONV_DIMS = 3;   // coordtab/pads/inner use a fixed Z,Y,X frame
-    constexpr int MAX_C0 = 8;          // engine's fixed f32 channel block
-    if (C0 > MAX_C0)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const int Di = insize[0], Hi = insize[1], Wi = insize[2];
     const int D  = outsize[0], H = outsize[1], W = outsize[2];
@@ -62,7 +61,7 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
     const int inner_x0 = inner[2], inner_x1 = inner[MAX_CONV_DIMS + 2];
     const int* zyxtab = coordtab;
 
-    float scalebuf[MAX_C0], biasbuf[MAX_C0], alphabuf[MAX_C0];
+    float scalebuf[DW_MAX_C0], biasbuf[DW_MAX_C0], alphabuf[DW_MAX_C0];
 
     // Register-fill selection. fillw = P*C0 pixels-worth of lanes in one e32m8 group. Enable
     // only where the fill's per-block vrgather tiling pays off: a wide register (VLEN >= 512,
@@ -253,6 +252,26 @@ int depthwise_conv32f(const float* inp_data, const float* residual_data,
             }
         }
     }
+}
+
+int depthwise_conv32f(const float* inp_data, const float* residual_data,
+                      float* out_data, const float* weights_all,
+                      const float* scale_all, const float* bias_all,
+                      int C, int C0, int C1,
+                      const int* insize, const int* outsize, const int* strides,
+                      const int* pads, const int* inner, const int* coordtab,
+                      const int* ofstab, int ksize,
+                      float maxval, float default_alpha, const float* prelu_slope,
+                      int task_start, int task_end)
+{
+    if (C0 > DW_MAX_C0)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    cv::parallel_for_(cv::Range(task_start, task_end), [&](const cv::Range& r) {
+        depthwise_conv32f_planes(inp_data, residual_data, out_data, weights_all, scale_all,
+                                 bias_all, C, C0, C1, insize, outsize, strides, pads, inner,
+                                 coordtab, ofstab, ksize, maxval, default_alpha, prelu_slope,
+                                 r.start, r.end);
+    });
     return CV_HAL_ERROR_OK;
 }
 

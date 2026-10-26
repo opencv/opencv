@@ -99,9 +99,12 @@ struct ConvState
 
 AutoPadding getAutoPadding(const LayerParams& params);
 
+static constexpr double CONV_MIN_TASK_MACS = 32768.;
+
 // Extra spatial split for when total_blocks alone is too few tasks to occupy
 // every thread. Returns 1 (no-op) once total_blocks already saturates the pool.
-static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_per_chunk = 16) {
+static inline int computeSpatChunks(int total_blocks, int planeblocks, double unit_macs = 0,
+                                    int min_per_chunk = 16) {
     // Several tasks per thread let parallel_for_ even out uneven chunks.
     // Value kept from the original forward-conv tuning (#28691).
     constexpr int TASKS_PER_THREAD = 8;
@@ -111,6 +114,10 @@ static inline int computeSpatChunks(int total_blocks, int planeblocks, int min_p
     if (total_blocks < target_tasks && planeblocks > min_per_chunk) {
         nSpatChunks = (target_tasks + total_blocks - 1) / total_blocks;
         int max_chunks = planeblocks / min_per_chunk;
+        if (unit_macs > 0) {
+            double work_chunks = planeblocks * unit_macs / CONV_MIN_TASK_MACS;
+            max_chunks = (int)std::min((double)max_chunks, work_chunks);
+        }
         nSpatChunks = std::min(nSpatChunks, std::max(1, max_chunks));
     }
     return nSpatChunks;
@@ -121,6 +128,14 @@ struct SpatialDim { int ksize, inpsz, stride, dilation; };
 void getPadding(const std::vector<int>& pads,
                  int dim, int nspatialdims, AutoPadding autoPad,
                  const SpatialDim& d, int& pad0, int& pad1);
+
+static inline double convStripes(int ntasks, double total_macs) {
+    return std::max(1., std::min((double)ntasks, total_macs / CONV_MIN_TASK_MACS));
+}
+
+static inline double convBlockMacsPerPixel(const ConvState& cs) {
+    return (double)cs.wshape[2] * cs.wshape[3] * cs.wshape[4];
+}
 
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,
