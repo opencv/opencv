@@ -107,8 +107,8 @@ In addition to this instruction you can use some video guide, for example [this 
 
     ![](images/add_module_3.png)
 
-8. Before using any OpenCV function you have to load the library first. If you application includes other OpenCV-dependent native libraries you should load them ***after*** OpenCV initialization.
-    Add the folowing code to load the library at app start:
+8. Before using any OpenCV function you have to load the library first. If your application includes other OpenCV-dependent native libraries you should load them ***after*** OpenCV initialization.
+    Add the following code to load the library at app start:
     @snippet samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java ocv_loader_init
     Like this:
     ![](images/sample_code.png)
@@ -143,8 +143,8 @@ but OpenCV loading with Maven Central.
     @endcode
    `4.9.0` may be replaced by any version available as [official release](https://central.sonatype.com/artifact/org.opencv/opencv).
 
-4. Before using any OpenCV function you have to load the library first. If you application includes other
-   OpenCV-dependent native libraries you should load them ***after*** OpenCV initialization. Add the folowing
+4. Before using any OpenCV function you have to load the library first. If your application includes other
+   OpenCV-dependent native libraries you should load them ***after*** OpenCV initialization. Add the following
    code to load the library at app start:
     @snippet samples/android/tutorial-1-camerapreview/src/org/opencv/samples/tutorial1/Tutorial1Activity.java ocv_loader_init
     Like this:
