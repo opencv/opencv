@@ -117,15 +117,6 @@
 "test_optional_has_element_empty_optional_input",
 "test_optional_has_element_optional_input",
 "test_optional_has_element_tensor_input",
-"test_qlinearmatmul_2D_int8_float16",  // Float output QLinearMatMul variants not supported
-"test_qlinearmatmul_2D_int8_float32",
-"test_qlinearmatmul_2D_uint8_float16",
-"test_qlinearmatmul_2D_uint8_float32",
-"test_qlinearmatmul_3D_int8_float16",  // Float output QLinearMatMul variants not supported
-"test_qlinearmatmul_3D_int8_float32",
-"test_qlinearmatmul_3D_uint8_float16",
-"test_qlinearmatmul_3D_uint8_float32",
-"test_quantizelinear_blocked_asymmetric",
 "test_quantizelinear_blocked_symmetric",
 "test_quantizelinear_float4e2m1",
 "test_quantizelinear_int16",
