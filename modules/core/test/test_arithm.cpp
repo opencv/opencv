@@ -1855,6 +1855,35 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
+// reduceArgMax / reduceArgMin on CV_Bool and the fp8 depths, which ElemWiseTest does not generate.
+// Values: 1, -2, 3, 3, -2, 0 (CV_Bool stores every non-zero value as 1).
+typedef testing::TestWithParam<int> ReduceArgNewTypes;
+
+TEST_P(ReduceArgNewTypes, accuracy)
+{
+    const int depth = GetParam();
+    float v[] = { 1.f, -2.f, 3.f, 3.f, -2.f, 0.f };
+    Mat src;
+    Mat(1, 6, CV_32F, v).convertTo(src, depth);
+
+    // expected indices: first max, last max, first min, last min
+    const int bool_idx[] = { 0, 4, 5, 5 };
+    const int fp8_idx[]  = { 2, 3, 1, 4 };
+    const int* expected = depth == CV_Bool ? bool_idx : fp8_idx;
+
+    Mat idx;
+    cv::reduceArgMax(src, idx, 1);
+    EXPECT_EQ(expected[0], idx.at<int>(0));
+    cv::reduceArgMax(src, idx, 1, true);
+    EXPECT_EQ(expected[1], idx.at<int>(0));
+    cv::reduceArgMin(src, idx, 1);
+    EXPECT_EQ(expected[2], idx.at<int>(0));
+    cv::reduceArgMin(src, idx, 1, true);
+    EXPECT_EQ(expected[3], idx.at<int>(0));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, ReduceArgNewTypes, testing::Values(CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
 // Mixed Type Arithmetic Operations
 
 typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>, int> SomeType;
