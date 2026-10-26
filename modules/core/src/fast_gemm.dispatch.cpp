@@ -847,11 +847,7 @@ void fastGemmPagedAV(const char *A, const std::vector<const char *> &V, char *Ou
     }
 }
 
-// Below this many multiply-adds the older cv::gemm code, with its special cases for
-// 2x2..4x4 and narrow matrices, is faster than packing for the blocked kernels.
 static const int64_t FAST_GEMM_HAL_MIN_MACS = 1 << 15;
-// With fewer than 4 rows or a K below 8 the product needs this much work before packing and
-// waking the threads pay off.
 static const int64_t FAST_GEMM_HAL_MIN_THIN_MACS = 1 << 19;
 
 static bool fast_gemm_overlap(const void *p0, size_t size0, const void *p1, size_t size1) {
@@ -886,7 +882,6 @@ bool fastGemm32f(const float* src1, size_t src1_step, const float* src2, size_t 
         const int mc = trans_c ? N : M, nc = trans_c ? M : N;
         if (fast_gemm_overlap(dst, d_size, src3, (mc - 1) * src3_step + nc * esz))
             return false;
-        // dst = op(C); the product is then accumulated into dst with beta
         for (int i = 0; i < M; i++) {
             float *d = (float *)((uchar *)dst + i * dst_step);
             if (trans_c) {
@@ -903,8 +898,6 @@ bool fastGemm32f(const float* src1, size_t src1_step, const float* src2, size_t 
 
     FastGemmOpt opt;
     opt.init();
-    // B is used once, so the few-row path, which packs all of B on one thread, is skipped:
-    // the blocked kernels pack it tile by tile in parallel.
     fast_gemm(trans_a, trans_b, m_a, n_a, mb, nb, alpha,
               src1, (int)(src1_step / esz), 1, src2, (int)(src2_step / esz), 1,
               use_c ? beta : 0.f, dst, (int)(dst_step / esz), opt, false);

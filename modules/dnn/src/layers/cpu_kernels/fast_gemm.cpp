@@ -30,7 +30,6 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     auto B_shape = shape(B);
     int batch = total(B_shape, 0, B_shape.size() - 2),
         rows = B_shape[B_shape.size() - 2], cols = B_shape.back();
-    // hal::fastGemmPackB takes the stored width and height of B and transposes it when asked
     size_t size_packed_B = hal::fastGemmPackBSize(trans ? rows : cols, trans ? cols : rows, opt);
     packed_B.resize(size_packed_B * batch);
     const float *b = B.ptr<const float>();
@@ -70,8 +69,6 @@ void fastGemm(bool trans_a, int M, int N, int K,
 }
 
 #ifdef HAVE_MLAS
-// hal::fastGemm and hal::fastGemmBatch run these products on their own unblocked path,
-// which is faster than MLAS for them; MLAS gets the rest.
 static inline bool fast_gemm_small(int M, int N, int K) {
     return fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000;
 }

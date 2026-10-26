@@ -18,9 +18,6 @@
 
 namespace cv { namespace dnn {
 
-// The kernels and cv::FastGemmOpt live in core (opencv2/core/private/fast_gemm.hpp);
-// these wrappers add MLAS and the Mat-based helpers.
-
 struct MatMulHelper {
     std::vector<size_t> A_offsets;
     std::vector<size_t> B_offsets;

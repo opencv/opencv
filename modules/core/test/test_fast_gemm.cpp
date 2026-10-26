@@ -8,7 +8,6 @@
 
 namespace opencv_test { namespace {
 
-// Random matrix whose rows are padded, so that the step is larger than the row width.
 static Mat randMat(int rows, int cols, RNG& rng, int pad)
 {
     Mat m(rows, cols + pad, CV_32F);
@@ -18,8 +17,6 @@ static Mat randMat(int rows, int cols, RNG& rng, int pad)
 
 static int ld(const Mat& m) { return (int)(m.step / sizeof(float)); }
 
-// alpha * A * B + beta * C in double precision, with element (i, k) of A at a[i*a0 + k*a1]
-// (B and C likewise), and the sum of the magnitudes of all terms as the error scale.
 static void refGemm(int M, int N, int K, double alpha, const float* a, int a0, int a1,
                     const float* b, int b0, int b1, double beta, const float* c, int c0, int c1,
                     Mat& ref, Mat& scale)
@@ -56,7 +53,7 @@ static void checkGemm(const float* d, int ldd, const Mat& ref, const Mat& scale,
 
 enum { NO_C, SEPARATE_C, INPLACE_C };
 
-typedef tuple<Vec3i, int, int> GemmParams;  // (M, N, K), GEMM flags, how C is passed
+typedef tuple<Vec3i, int, int> GemmParams;
 typedef TestWithParam<GemmParams> Core_HalGemm32f;
 
 TEST_P(Core_HalGemm32f, accuracy)
@@ -85,7 +82,6 @@ TEST_P(Core_HalGemm32f, accuracy)
     ASSERT_NO_FATAL_FAILURE(checkGemm(D.ptr<float>(), ld(D), ref, scale, K));
 }
 
-// Below 32x32x32 cv::hal::gemm32f keeps its older code; most of the rest goes to fastGemm.
 static const Vec3i gemmShapes[] = {
     Vec3i(3, 3, 3), Vec3i(16, 16, 16), Vec3i(32, 32, 32), Vec3i(5, 64, 300), Vec3i(1, 64, 2500),
     Vec3i(64, 1, 256), Vec3i(130, 70, 90), Vec3i(197, 192, 576)
@@ -105,7 +101,6 @@ INSTANTIATE_TEST_CASE_P(TransposedC, Core_HalGemm32f, testing::Combine(
 TEST(Core_FastGemm32f, size_threshold)
 {
     RNG& rng = theRNG();
-    // (M, N, K) and whether fastGemm takes the product: small or few-row ones stay with the older code
     const struct { int M, N, K; bool taken; } cases[] = {
         {4, 4, 4, false}, {64, 64, 64, true}, {1, 64, 2500, false}, {1, 1024, 1024, true},
         {256, 256, 4, false}, {256, 1, 256, true}
@@ -127,8 +122,6 @@ TEST(Core_FastGemm32f, overlapping_output)
                                       A.ptr<float>(), A.step, 64, 64, 64, 0));
 }
 
-// The OpenCV-only entry points used by dnn: operands given by two strides each, packed B,
-// batches and the few-row paths, in multi- and single-threaded mode.
 class Core_FastGemm : public testing::TestWithParam<bool>
 {
 protected:
@@ -151,7 +144,6 @@ TEST_P(Core_FastGemm, strides)
         Mat C = randMat(M, N, rng, 1), ref, scale;
         refGemm(M, N, K, 0.5, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
                 B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 2., C.ptr<float>(), ld(C), 1, ref, scale);
-        // the transposes are given both as flags and as swapped strides
         cv::hal::fastGemm(ta, tb, A.rows, A.cols, B.rows, B.cols, 0.5f, A.ptr<float>(), ld(A), 1,
                           B.ptr<float>(), ld(B), 1, 2.f, C.ptr<float>(), ld(C), opt);
         ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "trans " << ta << tb;
@@ -188,7 +180,6 @@ TEST_P(Core_FastGemm, batch)
 {
     RNG& rng = theRNG();
     const int batch = 3, K = 64;
-    // M = 2 with a transposed B takes the few-row path; M = 40 the blocked kernels
     for (int M : {2, 40})
     {
         const int N = 96;
@@ -210,7 +201,6 @@ TEST_P(Core_FastGemm, batch)
         }
     }
 
-    // packed B, one packed matrix per batch item
     const int M = 33, N = 100;
     Mat A = randMat(batch * M, K, rng, 0), B = randMat(batch * K, N, rng, 0), C(batch * M, N, CV_32F);
     const size_t packed_size = cv::hal::fastGemmPackBSize(N, K, opt);
