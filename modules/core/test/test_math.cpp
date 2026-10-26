@@ -2367,6 +2367,12 @@ TEST_P(Core_CheckRange_Float, accuracy)
     case CV_32F:
         src.ptr<float>(1)[bad_scalar] = inf;
         break;
+    case CV_8F_E4M3FN: // fp8 has no infinity, NaN is out of range as well
+        src.ptr<cv::fp8_t>(1)[bad_scalar] = cv::fp8_t(std::numeric_limits<float>::quiet_NaN());
+        break;
+    case CV_8F_E4M3FNUZ:
+        src.ptr<cv::fp8a_t>(1)[bad_scalar] = cv::fp8a_t(std::numeric_limits<float>::quiet_NaN());
+        break;
     default:
         FAIL() << "Unexpected depth: " << depth;
     }
@@ -2377,7 +2383,7 @@ TEST_P(Core_CheckRange_Float, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_Float,
-    testing::Values(CV_16F, CV_16BF, CV_32F));
+    testing::Values(CV_16F, CV_16BF, CV_32F, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
 typedef testing::TestWithParam<int> Core_CheckRange_ExtendedInteger;
 

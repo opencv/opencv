@@ -1314,6 +1314,14 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             checkTypedRange<int64_t>(src, badPt, minVal, maxVal);
         }
+        else if( depth == CV_8F_E4M3FN )
+        {
+            checkTypedRange<fp8_t>(src, badPt, minVal, maxVal);
+        }
+        else if( depth == CV_8F_E4M3FNUZ )
+        {
+            checkTypedRange<fp8a_t>(src, badPt, minVal, maxVal);
+        }
         else
         {
             CV_Error(Error::StsUnsupportedFormat, "Unsupported matrix depth in checkRange");
