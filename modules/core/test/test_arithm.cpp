@@ -4333,6 +4333,8 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
             case CV_32U:  lut.at<uint32_t>(0, i) = (uint32_t)i * 16777619u; break;
             case CV_64U:  lut.at<uint64_t>(0, i) = ((uint64_t)i << 56) | (uint64_t)i; break;
             case CV_64S:  lut.at<int64_t>(0, i)  = ((int64_t)i - 128) * 1000000000LL; break;
+            case CV_8F_E4M3FN:   lut.at<cv::fp8_t>(0, i)  = cv::fp8_t((float)(i - 128) * 0.25f); break;
+            case CV_8F_E4M3FNUZ: lut.at<cv::fp8a_t>(0, i) = cv::fp8a_t((float)(i - 128) * 0.25f); break;
             default: FAIL() << "Unexpected depth " << dst_depth;
         }
     }
@@ -4364,6 +4366,9 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
                     EXPECT_EQ(lut.at<uint64_t>(0, idx), dst.at<uint64_t>(y, x)); break;
                 case CV_64S:
                     EXPECT_EQ(lut.at<int64_t>(0, idx),  dst.at<int64_t>(y, x)); break;
+                case CV_8F_E4M3FN:
+                case CV_8F_E4M3FNUZ:
+                    EXPECT_EQ(lut.at<uchar>(0, idx), dst.at<uchar>(y, x)); break;
                 default: FAIL() << "Unexpected depth " << dst_depth;
             }
         }
@@ -4373,7 +4378,7 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
 INSTANTIATE_TEST_CASE_P(
     LUTAcc,
     LUTAccuracyNewDstTypes,
-    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
 CV_ENUM(LutIdxType, CV_8U, CV_8S, CV_16U, CV_16S)
