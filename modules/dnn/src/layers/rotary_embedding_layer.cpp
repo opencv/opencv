@@ -220,6 +220,10 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
 
         const MatShape& x_input_shape = inputs[0];
         CV_CheckTrue(
+            x_input_shape.dims == 3 || x_input_shape.dims == 4,
+            "RotaryEmbeddingLayer: input must have 3 or 4 dimensions"
+        );
+        CV_CheckTrue(
             x_input_shape.dims == 4 || num_heads > -1,
             "RotaryEmbeddingLayer: input must have 4 dimensions or num_heads must be specified"
         );
@@ -281,6 +285,17 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
             CV_CheckTrue(x_input_shape[2] % num_heads == 0,
                 "RotaryEmbeddingLayer: input's last dimension must be divisible by num_heads");
         }
+
+        // forward() strides the caches by rotary_dim / 2 and indexes them by the input's (batch, seq)
+        const int dim_head = x_input_shape.dims == 4 ? x_input_shape[3] : x_input_shape[2] / num_heads;
+        const int rotary_dim = rotary_embedding_dim > 0 ? rotary_embedding_dim : dim_head;
+        CV_CheckLE(rotary_dim, dim_head, "RotaryEmbeddingLayer: rotary_embedding_dim must not exceed head size");
+        CV_CheckGE(cos_cache_shape[cos_cache_shape.dims - 1], rotary_dim / 2,
+            "RotaryEmbeddingLayer: last dimension of sin_cache and cos_cache must be at least rotary_dim / 2");
+        const int seq_len = x_input_shape.dims == 4 ? x_input_shape[2] : x_input_shape[1];
+        const MatShape& bt_shape = do_gather ? inputs[3] : cos_cache_shape;
+        CV_CheckEQ(bt_shape[0], x_input_shape[0], "RotaryEmbeddingLayer: batch size of position_ids or caches must match input");
+        CV_CheckEQ(bt_shape[1], seq_len, "RotaryEmbeddingLayer: sequence length of position_ids or caches must match input");
         return true;
     }
 
@@ -312,8 +327,8 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         if (do_gather)
         {
             const Mat& position_ids = inputs[3];
+            CV_CheckType(position_ids.type(), position_ids.type() == CV_64S, "RotaryEmbeddingLayer: position_ids must be int64");
             const int batch_size = position_ids.size[0];
-            const int seq_len = position_ids.size[1];
             const int seq_len_max = inputs[1].size[0];
             const int dhalf = rotary_dim / 2;
             const Mat* caches[2] = { &inputs[1], &inputs[2] };

@@ -1037,24 +1037,58 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
-// A negative position id must be rejected, not used as a buffer offset. The gather path
-// only bounded the id from above, so a negative one read before the cos/sin cache.
-TEST(Layer_RotaryEmbedding, rejects_negative_position_id)
+static void runRotaryEmbedding(int64_t pos0, int64_t pos1, int dim_head, int cache_width, std::vector<Mat>& outputs)
 {
-    const int B = 1, S = 2, num_heads = 1, dim_head = 4;
-    const int seq_len_max = 8, d_half = dim_head / 2;
+    const int B = 1, S = 2, num_heads = 1, seq_len_max = 8;
 
     Mat input(std::vector<int>{B, S, num_heads * dim_head}, CV_32F, Scalar(1.f));
-    Mat cos_cache(std::vector<int>{seq_len_max, d_half}, CV_32F, Scalar(0.5f));
-    Mat sin_cache(std::vector<int>{seq_len_max, d_half}, CV_32F, Scalar(0.5f));
+    Mat cos_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
     Mat pos(std::vector<int>{B, S}, CV_64S);
-    pos.ptr<int64_t>()[0] = -1;
-    pos.ptr<int64_t>()[1] = 0;
+    pos.at<int64_t>(0, 0) = pos0;
+    pos.at<int64_t>(0, 1) = pos1;
 
     LayerParams lp;
     lp.set("num_heads", num_heads);
-    std::vector<Mat> inputs{input, cos_cache, sin_cache, pos}, outputs;
-    EXPECT_THROW(runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs), cv::Exception);
+    std::vector<Mat> inputs{input, cos_cache, sin_cache, pos};
+    runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs);
+}
+
+TEST(Layer_RotaryEmbedding, gather_position_ids)
+{
+    std::vector<Mat> outputs;
+    runRotaryEmbedding(0, 1, 4, 2, outputs);
+    ASSERT_EQ(1u, outputs.size());
+    // real = 1*0.5 - 1*0.5, imag = 1*0.5 + 1*0.5
+    Mat ref(std::vector<int>{1, 2, 4}, CV_32F);
+    float* r = ref.ptr<float>();
+    for (int t = 0; t < 2; ++t)
+    {
+        r[t * 4 + 0] = r[t * 4 + 1] = 0.f;
+        r[t * 4 + 2] = r[t * 4 + 3] = 1.f;
+    }
+    normAssert(ref, outputs[0]);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_negative_position_id)
+{
+    std::vector<Mat> outputs;
+    try
+    {
+        runRotaryEmbedding(-1, 0, 4, 2, outputs);
+        FAIL() << "negative position id was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(cv::Error::StsOutOfRange, e.code);
+    }
+}
+
+TEST(Layer_RotaryEmbedding, rejects_cache_width_mismatch)
+{
+    std::vector<Mat> outputs;
+    // dim_head 8 needs caches of width 4
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 8, 2, outputs), cv::Exception);
 }
 
 TEST(Layer_Attention, rank4_input_matches_rank3)
