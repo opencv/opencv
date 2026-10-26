@@ -1642,6 +1642,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     IterShape_t shapeIt = outShapes.find(lstm_proto.input(0));
     CV_Assert(shapeIt != outShapes.end());
     const MatShape x_shape = shapeIt->second;
+    CV_CheckEQ(x_shape.size(), (size_t)3, "LSTM input must have rank 3");
 
     //if layout is 1, change batch and sequence dims
     const int layout = layerParams.get<int>("layout", 0);
@@ -2091,10 +2092,15 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
             if (padMode != "SAME" && padMode != "VALID")
                 CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
+            CV_CheckEQ(kernel.size(), strides.size(), "Kernel and stride ranks must match");
+            // Accept spatial ONNX shapes and legacy shapes with batch/channel dimensions.
+            const int spatialOffset = outShape.size() == strides.size() ? 0 : 2;
+            CV_CheckEQ(outShape.size(), strides.size() + spatialOffset, "Output shape rank must match spatial or full tensor rank");
             for (int i = 0; i < strides.size(); i++)
             {
-                int sz = outShape.get<int>(2 + i);
+                int sz = outShape.get<int>(spatialOffset + i);
                 int stride = strides.get<int>(i);
+                CV_CheckGT(stride, 0, "Stride must be positive");
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
                                                          (sz - kernel.get<int>(i)) % stride);
             }
@@ -3500,6 +3506,8 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
 
     Mat bias = (ninputs == 9) ? getBlob(node_proto, 8) : Mat::zeros(1, outCn, CV_32S);
+    CV_CheckTypeEQ(bias.depth(), CV_32S, "Quantized bias must be int32");
+    CV_CheckEQ(bias.total(), (size_t)outCn, "Quantized bias length must equal output channels");
 
     Mat weights_2d = weights.reshape(1, outCn);
     Mat biasFused(1, outCn, CV_32S);
@@ -3623,6 +3631,8 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
         bias = getBlob(node_proto, 6);
     if (bias.empty())
         bias = Mat::zeros(1, outCn, CV_32S);
+    CV_CheckTypeEQ(bias.depth(), CV_32S, "Quantized bias must be int32");
+    CV_CheckEQ(bias.total(), (size_t)outCn, "Quantized bias length must equal output channels");
 
     Mat biasFused(1, outCn, CV_32S);
     Mat outputMultiplier(1, outCn, CV_32F);

@@ -3423,6 +3423,276 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+namespace
+{
+std::string onnxVarint(uint64_t v)
+{
+    std::string s;
+    while (v >= 0x80)
+    {
+        s += static_cast<char>(0x80 | (v & 0x7f));
+        v >>= 7;
+    }
+    s += static_cast<char>(v);
+    return s;
+}
+
+std::string onnxLen(int field, const std::string& payload)
+{
+    return onnxVarint((static_cast<uint64_t>(field) << 3) | 2) + onnxVarint(payload.size()) + payload;
+}
+
+std::string onnxInt(int field, int64_t v)
+{
+    return onnxVarint(static_cast<uint64_t>(field) << 3) + onnxVarint(static_cast<uint64_t>(v));
+}
+
+template <typename T>
+std::string onnxRawBytes(const std::vector<T>& vals)
+{
+    return std::string(reinterpret_cast<const char*>(vals.data()), vals.size() * sizeof(T));
+}
+
+// TensorProto: dims=1, data_type=2 (FLOAT=1, INT8=3, INT32=6), name=8, raw_data=9
+std::string onnxTensor(const std::string& name, int dataType, const std::vector<int64_t>& dims, const std::string& rawData)
+{
+    std::string t;
+    for (size_t i = 0; i < dims.size(); ++i)
+        t += onnxInt(1, dims[i]);
+    t += onnxInt(2, dataType);
+    t += onnxLen(8, name);
+    t += onnxLen(9, rawData);
+    return t;
+}
+
+// ValueInfoProto: name=1, type=2 (TypeProto: tensor_type=1 (Tensor: elem_type=1, shape=2 (TensorShapeProto: dim=1 (Dimension: dim_value=1))))
+std::string onnxValueInfo(const std::string& name, int elemType, const std::vector<int64_t>& dims)
+{
+    std::string shape;
+    for (size_t i = 0; i < dims.size(); ++i)
+        shape += onnxLen(1, onnxInt(1, dims[i]));
+    std::string tensorType = onnxInt(1, elemType) + onnxLen(2, shape);
+    return onnxLen(1, name) + onnxLen(2, onnxLen(1, tensorType));
+}
+
+std::string onnxAttrInt(const std::string& name, int64_t val)
+{
+    return onnxLen(1, name) + onnxInt(3, val) + onnxInt(20, 2);
+}
+
+std::string onnxAttrString(const std::string& name, const std::string& val)
+{
+    return onnxLen(1, name) + onnxLen(4, val) + onnxInt(20, 3);
+}
+
+std::string onnxAttrInts(const std::string& name, const std::vector<int64_t>& vals)
+{
+    std::string a = onnxLen(1, name);
+    for (size_t i = 0; i < vals.size(); ++i)
+        a += onnxInt(8, vals[i]);
+    a += onnxInt(20, 7);
+    return a;
+}
+
+std::string onnxNode(
+    const std::string& name,
+    const std::string& opType,
+    const std::vector<std::string>& inputs,
+    const std::vector<std::string>& outputs,
+    const std::vector<std::string>& attrs,
+    const std::string& domain = std::string())
+{
+    std::string n;
+    for (size_t i = 0; i < inputs.size(); ++i)
+        n += onnxLen(1, inputs[i]);
+    for (size_t i = 0; i < outputs.size(); ++i)
+        n += onnxLen(2, outputs[i]);
+    n += onnxLen(3, name) + onnxLen(4, opType);
+    for (size_t i = 0; i < attrs.size(); ++i)
+        n += onnxLen(5, attrs[i]);
+    if (!domain.empty())
+        n += onnxLen(7, domain);
+    return n;
+}
+
+std::string onnxModel(
+    const std::vector<std::string>& inputs,
+    const std::vector<std::string>& outputs,
+    const std::vector<std::string>& initializers,
+    const std::vector<std::string>& nodes)
+{
+    std::string g;
+    for (size_t i = 0; i < nodes.size(); ++i)
+        g += onnxLen(1, nodes[i]);
+    g += onnxLen(2, "test_graph");
+    for (size_t i = 0; i < initializers.size(); ++i)
+        g += onnxLen(5, initializers[i]);
+    for (size_t i = 0; i < inputs.size(); ++i)
+        g += onnxLen(11, inputs[i]);
+    for (size_t i = 0; i < outputs.size(); ++i)
+        g += onnxLen(12, outputs[i]);
+
+    std::string opsetDefault = onnxLen(1, "") + onnxInt(2, 13);
+    std::string opsetMs = onnxLen(1, "com.microsoft") + onnxInt(2, 1);
+    return onnxInt(1, 7) + onnxLen(7, g) + onnxLen(8, opsetDefault) + onnxLen(8, opsetMs);
+}
+
+Net readOnnxFromBytes(const std::string& modelBytes)
+{
+    return readNetFromONNX(modelBytes.data(), modelBytes.size());
+}
+
+std::string buildQConvModel(int biasDataType, const std::vector<int64_t>& biasDims, const std::string& biasRaw)
+{
+    const std::string xScale = onnxTensor("x_scale", 1, {1}, onnxRawBytes<float>({0.5f}));
+    const std::string xZp = onnxTensor("x_zp", 3, {1}, onnxRawBytes<int8_t>({0}));
+    const std::string w = onnxTensor("w", 3, {2, 1, 1, 1}, onnxRawBytes<int8_t>({1, 1}));
+    const std::string wScale = onnxTensor("w_scale", 1, {2}, onnxRawBytes<float>({0.5f, 0.5f}));
+    const std::string wZp = onnxTensor("w_zp", 3, {2}, onnxRawBytes<int8_t>({0, 0}));
+    const std::string yScale = onnxTensor("y_scale", 1, {1}, onnxRawBytes<float>({0.5f}));
+    const std::string yZp = onnxTensor("y_zp", 3, {1}, onnxRawBytes<int8_t>({0}));
+    const std::string b = onnxTensor("b", biasDataType, biasDims, biasRaw);
+
+    const std::string node = onnxNode(
+        "qconv", "QLinearConv",
+        {"x", "x_scale", "x_zp", "w", "w_scale", "w_zp", "y_scale", "y_zp", "b"},
+        {"y"},
+        {onnxAttrInts("kernel_shape", {1, 1}), onnxAttrInts("strides", {1, 1})});
+    return onnxModel(
+        {onnxValueInfo("x", 3, {1, 1, 2, 2})},
+        {onnxValueInfo("y", 3, {1, 2, 2, 2})},
+        {xScale, xZp, w, wScale, wZp, yScale, yZp, b},
+        {node});
+}
+
+std::string buildQGemmModel(int biasDataType, const std::vector<int64_t>& biasDims, const std::string& biasRaw)
+{
+    const std::string aScale = onnxTensor("a_scale", 1, {1}, onnxRawBytes<float>({0.5f}));
+    const std::string aZp = onnxTensor("a_zp", 3, {1}, onnxRawBytes<int8_t>({0}));
+    const std::string b = onnxTensor("b", 3, {2, 2}, onnxRawBytes<int8_t>({1, 1, 1, 1}));
+    const std::string bScale = onnxTensor("b_scale", 1, {2}, onnxRawBytes<float>({0.5f, 0.5f}));
+    const std::string bZp = onnxTensor("b_zp", 3, {2}, onnxRawBytes<int8_t>({0, 0}));
+    const std::string c = onnxTensor("c", biasDataType, biasDims, biasRaw);
+    const std::string yScale = onnxTensor("y_scale", 1, {1}, onnxRawBytes<float>({0.5f}));
+    const std::string yZp = onnxTensor("y_zp", 3, {1}, onnxRawBytes<int8_t>({0}));
+
+    const std::string node = onnxNode(
+        "qgemm", "QGemm",
+        {"a", "a_scale", "a_zp", "b", "b_scale", "b_zp", "c", "y_scale", "y_zp"},
+        {"y"},
+        {},
+        "com.microsoft");
+    return onnxModel(
+        {onnxValueInfo("a", 3, {1, 2})},
+        {onnxValueInfo("y", 3, {1, 2})},
+        {aScale, aZp, b, bScale, bZp, c, yScale, yZp},
+        {node});
+}
+
+std::string buildLSTMModel(const std::vector<int64_t>& xDims)
+{
+    const std::string w = onnxTensor("W", 1, {1, 12, 4}, onnxRawBytes<float>(std::vector<float>(48, 0.1f)));
+    const std::string r = onnxTensor("R", 1, {1, 12, 3}, onnxRawBytes<float>(std::vector<float>(36, 0.1f)));
+    const std::string b = onnxTensor("B", 1, {1, 24}, onnxRawBytes<float>(std::vector<float>(24, 0.0f)));
+    const std::string node = onnxNode(
+        "lstm", "LSTM",
+        {"X", "W", "R", "B"},
+        {"Y"},
+        {onnxAttrInt("hidden_size", 3)});
+    return onnxModel(
+        {onnxValueInfo("X", 1, xDims)},
+        {onnxValueInfo("Y", 1, {2, 1, 1, 3})},
+        {w, r, b},
+        {node});
+}
+
+std::string buildConvTransposeModel(
+    const std::vector<int64_t>& kernelShape,
+    const std::vector<int64_t>& strides,
+    const std::vector<int64_t>& outputShape)
+{
+    size_t wTotal = 1;
+    for (size_t i = 0; i < kernelShape.size(); ++i)
+        wTotal *= static_cast<size_t>(kernelShape[i]);
+    std::vector<int64_t> wDims = {1, 1};
+    wDims.insert(wDims.end(), kernelShape.begin(), kernelShape.end());
+
+    const std::string w = onnxTensor("W", 1, wDims, onnxRawBytes<float>(std::vector<float>(wTotal, 0.5f)));
+    const std::string node = onnxNode(
+        "deconv", "ConvTranspose",
+        {"X", "W"},
+        {"Y"},
+        {
+            onnxAttrInts("kernel_shape", kernelShape),
+            onnxAttrInts("strides", strides),
+            onnxAttrInts("output_shape", outputShape),
+            onnxAttrString("auto_pad", "SAME_UPPER")
+        });
+    return onnxModel(
+        {onnxValueInfo("X", 1, {1, 1, 2, 2})},
+        {onnxValueInfo("Y", 1, {1, 1, 4, 4})},
+        {w},
+        {node});
+}
+}  // namespace
+
+TEST(Test_ONNX_Importer, QLinearConvAndQGemmBiasValidation)
+{
+    // Positive controls: int32 bias with length == outCn (2) imports cleanly.
+    Net qconvNet;
+    ASSERT_NO_THROW(qconvNet = readOnnxFromBytes(buildQConvModel(6, {2}, onnxRawBytes<int32_t>({10, -10}))));
+    EXPECT_FALSE(qconvNet.empty());
+
+    Net qgemmNet;
+    ASSERT_NO_THROW(qgemmNet = readOnnxFromBytes(buildQGemmModel(6, {2}, onnxRawBytes<int32_t>({5, -5}))));
+    EXPECT_FALSE(qgemmNet.empty());
+
+    // Negative cases (CV-O2): non-int32 bias or bias length != outCn must be rejected.
+    EXPECT_THROW(readOnnxFromBytes(buildQConvModel(1, {2}, onnxRawBytes<float>({1.0f, 2.0f}))), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildQConvModel(6, {1}, onnxRawBytes<int32_t>({10}))), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildQGemmModel(1, {2}, onnxRawBytes<float>({1.0f, 2.0f}))), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildQGemmModel(6, {1}, onnxRawBytes<int32_t>({5}))), cv::Exception);
+}
+
+TEST(Test_ONNX_Importer, LSTMInputRankValidation)
+{
+    // Positive control: rank-3 LSTM input [seq_length, batch_size, input_size] imports cleanly.
+    Net lstmNet;
+    ASSERT_NO_THROW(lstmNet = readOnnxFromBytes(buildLSTMModel({2, 1, 4})));
+    EXPECT_FALSE(lstmNet.empty());
+
+    // Negative cases (CV-O4): rank-1 and rank-2 LSTM inputs must be rejected before indexing x_shape[2].
+    EXPECT_THROW(readOnnxFromBytes(buildLSTMModel({2, 4})), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildLSTMModel({4})), cv::Exception);
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeOutputShapeAndStrideValidation)
+{
+    // Positive controls: both spatial-only output_shape {4, 4} and legacy 4D output_shape {1, 1, 4, 4} import and run.
+    Net spatialNet;
+    ASSERT_NO_THROW(spatialNet = readOnnxFromBytes(buildConvTransposeModel({3, 3}, {2, 2}, {4, 4})));
+    ASSERT_FALSE(spatialNet.empty());
+    int inpShape[] = {1, 1, 2, 2};
+    spatialNet.setInput(Mat(4, inpShape, CV_32F, Scalar(1.0f)));
+    Mat spatialOut;
+    ASSERT_NO_THROW(spatialOut = spatialNet.forward());
+    EXPECT_EQ(spatialOut.total(), (size_t)16);
+
+    Net legacyNet;
+    ASSERT_NO_THROW(legacyNet = readOnnxFromBytes(buildConvTransposeModel({3, 3}, {2, 2}, {1, 1, 4, 4})));
+    ASSERT_FALSE(legacyNet.empty());
+    legacyNet.setInput(Mat(4, inpShape, CV_32F, Scalar(1.0f)));
+    Mat legacyOut;
+    ASSERT_NO_THROW(legacyOut = legacyNet.forward());
+    EXPECT_EQ(legacyOut.total(), (size_t)16);
+
+    // Negative cases (CV-O7): mismatched kernel/stride ranks, invalid output_shape rank, and non-positive strides must be rejected.
+    EXPECT_THROW(readOnnxFromBytes(buildConvTransposeModel({3}, {2, 2}, {4, 4})), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildConvTransposeModel({3, 3}, {2, 2}, {1, 4, 4})), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildConvTransposeModel({3, 3}, {0, 0}, {4, 4})), cv::Exception);
+    EXPECT_THROW(readOnnxFromBytes(buildConvTransposeModel({3, 3}, {-1, 2}, {4, 4})), cv::Exception);
+}
+
 TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
