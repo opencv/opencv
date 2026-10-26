@@ -25,8 +25,8 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const int8_t* activLUT,
                    bool inputIsU8, bool int32Out);
 
-// AVX-VNNI kernel of the legacy int8 convolution layer (im2col + GEMM).
-// Only the AVX_VNNI build of this file defines it.
+// VNNI kernel of the legacy int8 convolution layer (im2col + GEMM).
+// Only the AVX_VNNI and AVX512_CLX builds of this file define it.
 void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
                    const uint8_t* rowbuf, int* output, const int* outShape,
                    int blockSize, int vecsize, int vecsize_aligned, int outZp,
@@ -1383,10 +1383,11 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
     });
 }
 
-#if CV_AVX_VNNI
+#if CV_AVX_VNNI || CV_AVX_512VNNI
 
-//////////////////////////// AVX-VNNI kernels ////////////////////////////
+//////////////////////////// VNNI kernels ////////////////////////////
 //
+// The same 256-bit code serves AVX-VNNI and AVX-512 VNNI, whose VL form runs VPDPBUSD on ymm.
 // VPDPBUSD multiplies unsigned activations by signed weights, so these kernels
 // consume the uint8 input directly and use the VNNI-reordered weights/bias
 // (weightsVNNI_/biasVNNI_) prepared by the layer.
@@ -2225,8 +2226,8 @@ static void convInt8BlockVNNI(const void* inp_, const void* residual_,
                                      multiplier, inp_zp, out_zp, activLUT, inputIsU8);
 }
 
-// Legacy int8 convolution (im2col + GEMM) AVX-VNNI kernel, used by
-// int8layers/convolution_layer.cpp. It lives here so that every AVX-VNNI int8
+// Legacy int8 convolution (im2col + GEMM) VNNI kernel, used by
+// int8layers/convolution_layer.cpp. It lives here so that every VNNI int8
 // code path shares a single dispatched translation unit.
 enum { FASCONV_BASE_VECSZ = 4 };
 
@@ -2451,7 +2452,7 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
     _mm256_zeroupper();
 }
 
-#endif // CV_AVX_VNNI
+#endif // CV_AVX_VNNI || CV_AVX_512VNNI
 
 template<bool INT32_OUT>
 static void convInt8BlockImpl(const void* inp_, const void* residual_,
@@ -2467,7 +2468,7 @@ static void convInt8BlockImpl(const void* inp_, const void* residual_,
     // Depthwise convolution has a dedicated kernel.
     if (cs.depthwise) {
         const int* dw_bias = biasVNNI_ ? biasVNNI_ : bias;
-#if CV_AVX_VNNI
+#if CV_AVX_VNNI || CV_AVX_512VNNI
         if (!residual_ && convInt8BlockDepthwiseVNNI<INT32_OUT>(inp_, out_, cs, weights_, dw_bias,
                                                                  multiplier, inp_zp, out_zp,
                                                                  activLUT, inputIsU8))
@@ -2478,7 +2479,7 @@ static void convInt8BlockImpl(const void* inp_, const void* residual_,
                                           activLUT, inputIsU8);
         return;
     }
-#if CV_AVX_VNNI
+#if CV_AVX_VNNI || CV_AVX_512VNNI
     bool useVNNI = weightsVNNI_ && biasVNNI_;
     if (useVNNI && cs.hasPadding()) {
         const MatShape& os = cs.outshape;

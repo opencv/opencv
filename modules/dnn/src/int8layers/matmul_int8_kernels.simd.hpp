@@ -19,8 +19,8 @@ void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const in
 static constexpr int MMI8_MR = 4, MMI8_NR = 16, MMI8_KR = 4;
 static constexpr int MMI8_PSTEP = MMI8_NR * MMI8_KR; // packed bytes per group of KR rows
 
-// dpbusd takes 256-bit registers, so only a build whose widest vectors are 256 bits uses it
-#if CV_SIMD256 && !CV_SIMD512 && CV_AVX_VNNI
+// dpbusd matches the vector width: zmm with AVX-512 VNNI, ymm with AVX-VNNI in a 256-bit build
+#if (CV_SIMD512 && CV_AVX_512VNNI) || (CV_SIMD256 && !CV_SIMD512 && CV_AVX_VNNI)
 #define MMI8_USE_VNNI 1
 #else
 #define MMI8_USE_VNNI 0
@@ -30,10 +30,12 @@ static constexpr int MMI8_PSTEP = MMI8_NR * MMI8_KR; // packed bytes per group o
 // nlanes, not vlanes(): the register arrays below need a compile-time count
 static constexpr int MMI8_NV = MMI8_PSTEP / VTraits<v_int8>::nlanes;
 
-// lane i accumulates the products of bytes 4i..4i+3; on AVX-VNNI a is read as uint8
+// lane i accumulates the products of bytes 4i..4i+3; with VNNI a is read as uint8
 static inline v_int32 dot4(const v_int8& a, const v_int8& b, const v_int32& c)
 {
-#if MMI8_USE_VNNI
+#if MMI8_USE_VNNI && CV_SIMD512
+    return v_int32(_mm512_dpbusd_epi32(c.val, a.val, b.val));
+#elif MMI8_USE_VNNI
     return v_int32(_mm256_dpbusd_epi32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand(a, b, c);

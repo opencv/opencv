@@ -36,10 +36,13 @@ void fastConvVNNI( const int8_t* weights, size_t wstep, const int* bias,
                    int blockSize, int vecsize, int vecsize_aligned, int outZp,
                    const float* multiplier, bool initOutput, bool finalOutput )
 {
+    CV_CPU_CALL_AVX512_CLX(fastConvVNNI, (weights, wstep, bias, rowbuf, output, outShape,
+                                          blockSize, vecsize, vecsize_aligned, outZp,
+                                          multiplier, initOutput, finalOutput));
     CV_CPU_CALL_AVX_VNNI(fastConvVNNI, (weights, wstep, bias, rowbuf, output, outShape,
                                         blockSize, vecsize, vecsize_aligned, outZp,
                                         multiplier, initOutput, finalOutput));
-    CV_Error(Error::StsNotImplemented, "DNN/INT8: AVX-VNNI convolution kernel is not available");
+    CV_Error(Error::StsNotImplemented, "DNN/INT8: VNNI convolution kernel is not available");
 }
 
 }
