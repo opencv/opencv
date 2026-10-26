@@ -129,6 +129,9 @@ public:
         for (int i = q - 2; i >= 0; --i)
             indices_strides[i] = indices_strides[i + 1] * indices.size[i + 1];
 
+        if (out.total() == 0)
+            return;
+
         const int outer_size = indices.total() / last_indices_dim;
         const int inner_size = out.total() / outer_size;
         const int nstripes =  outer_size * inner_size / 1024;

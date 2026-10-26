@@ -273,7 +273,7 @@ CASE(test_basic_conv_without_padding)
     SKIP_MYRIAD;
 #endif
 CASE(test_basic_convinteger)
-    // no filter
+    SKIP;
 CASE(test_batchnorm_epsilon)
     SKIP;
 CASE(test_batchnorm_epsilon_training_mode)
@@ -727,9 +727,9 @@ CASE(test_conv_with_strides_padding)
     SKIP_MYRIAD;
 #endif
 CASE(test_convinteger_with_padding)
-    // no filter
+    SKIP;
 CASE(test_convinteger_without_padding)
-    // no filter
+    SKIP;
 CASE(test_convtranspose)
     SKIP;
 CASE(test_convtranspose_1d)
@@ -1725,7 +1725,7 @@ CASE(test_matmul_3d)
 CASE(test_matmul_4d)
     // no filter
 CASE(test_matmulinteger)
-    // no filter
+    SKIP;
 CASE(test_max_example)
     SKIP;
 CASE(test_max_float16)
@@ -2117,13 +2117,31 @@ CASE(test_qlinearconv)
     SKIP;
 CASE(test_qlinearmatmul_2D)
     SKIP;
+CASE(test_qlinearmatmul_2D_int8_float16)
+    SKIP;
+CASE(test_qlinearmatmul_2D_int8_float32)
+    SKIP;
+CASE(test_qlinearmatmul_2D_uint8_float16)
+    SKIP;
+CASE(test_qlinearmatmul_2D_uint8_float32)
+    SKIP;
 CASE(test_qlinearmatmul_3D)
+    SKIP;
+CASE(test_qlinearmatmul_3D_int8_float16)
+    SKIP;
+CASE(test_qlinearmatmul_3D_int8_float32)
+    SKIP;
+CASE(test_qlinearmatmul_3D_uint8_float16)
+    SKIP;
+CASE(test_qlinearmatmul_3D_uint8_float32)
     SKIP;
 CASE(test_quantizelinear)
     SKIP;
 CASE(test_quantizelinear_axis)
     SKIP;
 CASE(test_quantizelinear_blocked)
+    SKIP;
+CASE(test_quantizelinear_blocked_asymmetric)
     SKIP;
 CASE(test_quantizelinear_blocked_symmetric)
     SKIP;

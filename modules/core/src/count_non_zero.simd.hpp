@@ -155,6 +155,9 @@ static int funcname( const void* src_ptr, int len ) \
 // 16-bit float: mask the sign bit so -0.0 (0x8000) reads as zero.
 #undef CHECK_NZ_FP16
 #define CHECK_NZ_FP16(x) (((x) & 0x7fff) != 0)
+// 8-bit float: mask the sign bit so -0.0 (0x80) reads as zero.
+#undef CHECK_NZ_FP8
+#define CHECK_NZ_FP8(x) (((x) & 0x7f) != 0)
 #undef VEC_CMP_EQ_Z_FP16
 #define VEC_CMP_EQ_Z_FP16(x, z) v_eq(v_add_wrap(x, x), z)
 #undef VEC_CMP_EQ_Z_FP
@@ -183,6 +186,7 @@ DEFINE_NONZERO_FUNC(countNonZero16u, u16, u32, s16, ushort, v_uint16, v_uint32, 
 DEFINE_NONZERO_FUNC(countNonZero32s, s32, s32, s32, int, v_int32, v_int32, v_eq, v_add, UPDATE_SUM_S32, CHECK_NZ_INT)
 DEFINE_NONZERO_FUNC(countNonZero32f, u32, u32, s32, uint, v_uint32, v_uint32, VEC_CMP_EQ_Z_FP, v_add, UPDATE_SUM_S32, CHECK_NZ_FP)
 DEFINE_NONZERO_FUNC(countNonZero16f, u16, u32, s16, ushort, v_uint16, v_uint32, VEC_CMP_EQ_Z_FP16, v_add_wrap, UPDATE_SUM_U16, CHECK_NZ_FP16)
+DEFINE_NONZERO_FUNC(countNonZero8f, u8, u32, s8, uchar, v_uint8, v_uint32, VEC_CMP_EQ_Z_FP16, v_add_wrap, UPDATE_SUM_U8, CHECK_NZ_FP8)
 
 #undef DEFINE_NONZERO_FUNC_NOSIMD
 #define DEFINE_NONZERO_FUNC_NOSIMD(funcname, T) \
@@ -237,7 +241,8 @@ CountNonZeroFunc getCountNonZeroTab(int depth)
         countNonZero64s,
         countNonZero64s,
         countNonZero32s,
-        0
+        countNonZero8f,
+        countNonZero8u
     };
 
     return countNonZeroTab[depth];

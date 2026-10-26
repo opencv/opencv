@@ -689,8 +689,10 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
         memset(out__, 0, outtotal*sizeof(float));
     }
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    const double pix_macs = convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_, pix_macs);
     int total_tasks = total_blocks * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
@@ -828,7 +830,7 @@ static void conv32fC8_1x1(const void* inp__, const void* residual__, void* out__
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
-    });
+    }, nstripes);
 }
 
 #if CV_SIMD256 && defined(__AVX2__)
@@ -856,8 +858,10 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
     int Kpair_ = Kblk_ / 2;
     int total_blocks_pair = N * cs.ngroups * Kpair_;
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_);
+    const double pix_macs = 2 * convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_, pix_macs);
     int total_tasks = total_blocks_pair * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks_pair * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 6;
@@ -1050,7 +1054,7 @@ static void conv32fC8_1x1_kpair(const void* inp__, const void* residual__, void*
                 }
             }
         }
-    });
+    }, nstripes);
 }
 #endif // CV_SIMD256 && __AVX2__
 
@@ -1080,8 +1084,10 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
         memset(out__, 0, outtotal*sizeof(float));
     }
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    const double pix_macs = convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_, pix_macs);
     int total_tasks = total_blocks * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
@@ -1331,7 +1337,7 @@ static void conv32fC8_3x3s1(const void* inp__, const void* residual__, void* out
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
-    });
+    }, nstripes);
 }
 
 #if CV_SIMD256 && defined(__AVX2__)
@@ -1358,8 +1364,10 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
     int Kpair_ = Kblk_ / 2;
     int total_blocks_pair = N * cs.ngroups * Kpair_;
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_);
+    const double pix_macs = 2 * convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks_pair, planeblocks_, pix_macs);
     int total_tasks = total_blocks_pair * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks_pair * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 6;
@@ -1636,7 +1644,7 @@ static void conv32fC8_3x3s1_kpair(const void* inp__, const void* residual__, voi
                 }
             }
         }
-    });
+    }, nstripes);
 }
 #endif // CV_SIMD256 && __AVX2__
 
@@ -1666,8 +1674,10 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
         memset(out__, 0, outtotal*sizeof(float));
     }
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    const double pix_macs = convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_, pix_macs);
     int total_tasks = total_blocks * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
@@ -1828,7 +1838,7 @@ static void conv32fC8_1x1_strided(const void* inp__, const void* residual__, voi
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
-    });
+    }, nstripes);
 }
 
 // 2D 3x3 convolution with arbitrary stride and dilation = 1.
@@ -1857,8 +1867,10 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
         memset(out__, 0, outtotal*sizeof(float));
     }
 
-    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_);
+    const double pix_macs = convBlockMacsPerPixel(cs);
+    int nSpatChunks_ = computeSpatChunks(total_blocks, planeblocks_, pix_macs);
     int total_tasks = total_blocks * nSpatChunks_;
+    const double nstripes = convStripes(total_tasks, pix_macs * total_blocks * planeblocks_);
 
     parallel_for_(Range(0, total_tasks), [&](const Range& range) {
         constexpr int SPAT_BLOCK_SIZE = 10;
@@ -2108,7 +2120,7 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
-    });
+    }, nstripes);
 }
 
 #endif  // !CV_SIMD_SCALABLE
@@ -2191,8 +2203,10 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         memset(out__, 0, outtotal*sizeof(float));
     }
 
-    int nSpatChunksGen_ = computeSpatChunks(total_blocks, planeblocks_);
+    const double pix_macs = convBlockMacsPerPixel(cs);
+    int nSpatChunksGen_ = computeSpatChunks(total_blocks, planeblocks_, pix_macs);
     int total_tasks_gen = total_blocks * nSpatChunksGen_;
+    const double nstripes = convStripes(total_tasks_gen, pix_macs * total_blocks * planeblocks_);
 
     parallel_for_(Range(0, total_tasks_gen), [&](const Range& range) {
         // Offer this task range to an accelerated HAL first, flattening the descriptor into a
@@ -2595,7 +2609,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 scatterScalarOut(aligned_k, k_base, k_count, K0shift, K0, planesize, outptr, outbuf);
             }
         }
-    });
+    }, nstripes);
 }
 #if defined(__GNUC__) && !defined(__clang__) && defined(__riscv) && __GNUC__ < 15
 #pragma GCC pop_options

@@ -25,7 +25,7 @@ void convInt8Block(const void* inp_, const void* residual_,
                    const float* multiplier,
                    int inp_zp, int out_zp,
                    const int8_t* activLUT,
-                   bool inputIsU8);
+                   bool inputIsU8, bool int32Out);
 
 // AVX-VNNI kernel of the legacy int8 convolution layer. Built only when CMake found
 // a toolchain that can encode AVX-VNNI, so ask CV_CPU_HAS_SUPPORT_AVX_VNNI before
