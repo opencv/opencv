@@ -1233,6 +1233,70 @@ TEST(Imgproc_Warping, Bicubic64F) {
     }
 }
 
+static Mat makeBicubicPrecisionSource()
+{
+    const double row[] = {0., 0., 255., 255., 0., 0., 255., 255.};
+    Mat src(8, 8, CV_64FC1);
+    for (int y = 0; y < src.rows; y++)
+        for (int x = 0; x < src.cols; x++)
+            src.at<double>(y, x) = row[x];
+    return src;
+}
+
+TEST(Imgproc_Warping, BicubicPerspectiveMatrixPrecision)
+{
+    const Mat src = makeBicubicPrecisionSource();
+    const Matx33d H(100000000.5, -100000000., 2.,
+                    0., 1., 0.,
+                    0., 0., 1.);
+    Mat dst;
+    warpPerspective(src, dst, H, src.size(), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    // (1,1) maps to (2.5,1); cubic weights give 255 * (0.59375 + 0.59375).
+    EXPECT_DOUBLE_EQ(302.8125, dst.at<double>(1, 1));
+}
+
+TEST(Imgproc_Warping, BicubicPerspectiveIntermediatePrecision)
+{
+    const Mat src = makeBicubicPrecisionSource();
+    // Every matrix entry is exactly representable as float, but the row sum needs double.
+    const Matx33d H(10000000., -10000000., 2.5,
+                    0., 1., 0.,
+                    0., 0., 1.);
+    Mat dst;
+    warpPerspective(src, dst, H, src.size(), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    EXPECT_DOUBLE_EQ(302.8125, dst.at<double>(1, 1));
+}
+
+TEST(Imgproc_Warping, BicubicAffineMatrixPrecision)
+{
+    const Mat src = makeBicubicPrecisionSource();
+    const Matx23d A(100000000.5, -100000000., 2.,
+                    0., 1., 0.);
+    Mat dst;
+    warpAffine(src, dst, A, src.size(), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    EXPECT_DOUBLE_EQ(302.8125, dst.at<double>(1, 1));
+}
+
+TEST(Imgproc_Warping, BicubicModerateMatrixPrecision)
+{
+    const Mat src = makeBicubicPrecisionSource();
+    const Matx23d A(1.5, -1., 2., 0., 1., 0.);
+    const Matx33d H(1.5, -1., 2., 0., 1., 0., 0., 0., 1.);
+    Mat affine, perspective, reference;
+    Mat mapx(src.size(), CV_32FC1), mapy(src.size(), CV_32FC1);
+    for (int y = 0; y < src.rows; y++)
+        for (int x = 0; x < src.cols; x++)
+        {
+            mapx.at<float>(y, x) = float(1.5*x - y + 2.);
+            mapy.at<float>(y, x) = float(y);
+        }
+    remap(src, reference, mapx, mapy, INTER_CUBIC, BORDER_REPLICATE);
+    warpAffine(src, affine, A, src.size(), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    warpPerspective(src, perspective, H, src.size(), INTER_CUBIC | WARP_INVERSE_MAP, BORDER_REPLICATE);
+    EXPECT_MAT_NEAR(reference, affine, 1e-12);
+    EXPECT_MAT_NEAR(reference, perspective, 1e-12);
+}
+
 TEST(Imgproc_Warping, DISABLED_playground)
 {
     int imgtype = CV_32F;
