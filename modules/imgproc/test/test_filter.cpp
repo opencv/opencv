@@ -2503,66 +2503,86 @@ TEST(Imgproc_MedianBlur, arbitrary_channel_count_29592)
     }
 }
 
-// ksize == 5 on CV_16U, CV_16S and CV_32F against a sort-based reference.
-// The 8-bit accuracy test does not cover these depths, and the OpenCL test
+// medianBlur with ksize == 5 against a sort-based reference: the border is
+// replicated and the result is the 13th smallest of the 25 window values.
+// Imgproc_MedianBlur.accuracy only covers 8-bit input, and the OpenCL test
 // compares two implementations that share the same compare-exchange network.
-// The reference replicates the border and takes the 13th smallest of the 25
-// window values.
-TEST(Imgproc_MedianBlur, ksize5_accuracy_16u_16s_32f)
+enum { MEDIAN5_RANDOM, MEDIAN5_FEW_VALUES, MEDIAN5_ROI };
+CV_ENUM(Median5Input, MEDIAN5_RANDOM, MEDIAN5_FEW_VALUES, MEDIAN5_ROI)
+
+typedef tuple<perf::MatDepth, Size, int, Median5Input> MedianBlurKsize5Params;
+typedef TestWithParam<MedianBlurKsize5Params> Imgproc_MedianBlur_Ksize5;
+
+TEST_P(Imgproc_MedianBlur_Ksize5, accuracy)
 {
-    const int depths[] = { CV_16U, CV_16S, CV_32F };
-    const Size sizes[] = { Size(1, 1), Size(2, 3), Size(1, 9), Size(9, 1), Size(4, 4),
-                           Size(7, 5), Size(33, 17), Size(61, 127), Size(97, 71) };
-    const double palette[3][5] = { { 0, 1, 2, 65534, 65535 }, { -32768, -1, 0, 1, 32767 },
-                                   { -0.0, 0.0, -1.5, 3e38, -3e38 } };
+    const int depth = get<0>(GetParam());
+    const Size sz = get<1>(GetParam());
+    const int cn = get<2>(GetParam());
+    const int mode = get<3>(GetParam());
+    const int type = CV_MAKETYPE(depth, cn);
+
+    // MEDIAN5_FEW_VALUES draws from five values, so windows hold many duplicates
+    const double palette8u[] = { 0, 1, 2, 254, 255 };
+    const double palette16u[] = { 0, 1, 2, 65534, 65535 };
+    const double palette16s[] = { -32768, -1, 0, 1, 32767 };
+    const double palette32f[] = { -0.0, 0.0, -1.5, 3e38, -3e38 };
+    const double* palette = depth == CV_8U ? palette8u : depth == CV_16U ? palette16u :
+                            depth == CV_16S ? palette16s : palette32f;
+
+    // MEDIAN5_ROI filters a submatrix, so the input is not continuous
+    const Point roi = mode == MEDIAN5_ROI ? Point(3, 2) : Point(0, 0);
+    const Size full(sz.width + roi.x*2, sz.height + roi.y*2);
+
+    // values are generated as doubles, which hold all of 8U, 16U, 16S and 32F exactly
     RNG& rng = theRNG();
+    Mat vals(full, CV_64FC(cn));
+    for (int i = 0; i < full.height; i++)
+        for (int j = 0; j < full.width*cn; j++)
+        {
+            double v;
+            if (mode == MEDIAN5_FEW_VALUES)
+                v = palette[rng.uniform(0, 5)];
+            else if (depth == CV_32F)
+                v = (double)(float)(rng.uniform(-1., 1.) * (rng.uniform(0, 4) ? 1e3 : 1e30));
+            else if (depth == CV_8U)
+                v = rng.uniform(0, 256);
+            else
+                v = depth == CV_16U ? rng.uniform(0, 65536) : rng.uniform(-32768, 32768);
+            vals.ptr<double>(i)[j] = v;
+        }
+    Mat big;
+    vals.convertTo(big, type);
+    Mat src = big(Rect(roi, sz)), s64 = vals(Rect(roi, sz));
 
-    for (int depth : depths)
-    for (int cn = 1; cn <= 4; cn++)
-    for (const Size& sz : sizes)
-    for (int mode = 0; mode < 3; mode++)  // 0: full range, 1: few distinct values, 2: full range inside an ROI
-    {
-        const Point roi = mode == 2 ? Point(3, 2) : Point(0, 0);
-        const Size full(sz.width + roi.x*2, sz.height + roi.y*2);
-        // values are generated as doubles, which hold all of 16U, 16S and 32F exactly
-        Mat vals(full, CV_64FC(cn));
-        for (int i = 0; i < full.height; i++)
-            for (int j = 0; j < full.width*cn; j++)
+    Mat expected(sz, CV_64FC(cn)), dst;
+    for (int y = 0; y < sz.height; y++)
+        for (int x = 0; x < sz.width; x++)
+            for (int c = 0; c < cn; c++)
             {
-                double v;
-                if (mode == 1)
-                    v = palette[depth == CV_16U ? 0 : depth == CV_16S ? 1 : 2][rng.uniform(0, 5)];
-                else if (depth == CV_32F)
-                    v = (double)(float)(rng.uniform(-1., 1.) * (rng.uniform(0, 4) ? 1e3 : 1e30));
-                else
-                    v = depth == CV_16U ? rng.uniform(0, 65536) : rng.uniform(-32768, 32768);
-                vals.ptr<double>(i)[j] = v;
+                double w[25];
+                for (int dy = -2; dy <= 2; dy++)
+                    for (int dx = -2; dx <= 2; dx++)
+                        w[(dy + 2)*5 + dx + 2] = s64.ptr<double>(std::min(std::max(y + dy, 0), sz.height - 1))
+                                                     [std::min(std::max(x + dx, 0), sz.width - 1)*cn + c];
+                std::nth_element(w, w + 12, w + 25);
+                expected.ptr<double>(y)[x*cn + c] = w[12];
             }
-        const int type = CV_MAKETYPE(depth, cn);
-        Mat big;
-        vals.convertTo(big, type);
-        Mat src = big(Rect(roi, sz)), s64 = vals(Rect(roi, sz));
+    expected.convertTo(expected, type);
 
-        Mat expected(sz, CV_64FC(cn)), dst;
-        for (int y = 0; y < sz.height; y++)
-            for (int x = 0; x < sz.width; x++)
-                for (int c = 0; c < cn; c++)
-                {
-                    double w[25];
-                    for (int dy = -2; dy <= 2; dy++)
-                        for (int dx = -2; dx <= 2; dx++)
-                            w[(dy + 2)*5 + dx + 2] = s64.ptr<double>(std::min(std::max(y + dy, 0), sz.height - 1))
-                                                         [std::min(std::max(x + dx, 0), sz.width - 1)*cn + c];
-                    std::nth_element(w, w + 12, w + 25);
-                    expected.ptr<double>(y)[x*cn + c] = w[12];
-                }
-        expected.convertTo(expected, type);
-
-        medianBlur(src, dst, 5);
-        EXPECT_EQ(0.0, cvtest::norm(dst, expected, NORM_INF))
-            << "type=" << typeToString(type) << " size=" << sz << " mode=" << mode;
-    }
+    medianBlur(src, dst, 5);
+    EXPECT_EQ(0.0, cvtest::norm(dst, expected, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_MedianBlur_Ksize5,
+    testing::Combine(
+        testing::Values(CV_8U, CV_16U, CV_16S, CV_32F),
+        // a single column, smaller than the kernel in both directions,
+        // an odd width that leaves a SIMD tail, and a moderate size
+        testing::Values(Size(1, 9), Size(4, 3), Size(33, 17), Size(97, 71)),
+        testing::Values(1, 2, 3, 4),
+        Median5Input::all()
+    )
+);
 
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
