@@ -1665,6 +1665,39 @@ TEST(Core_InputOutput, FileStorage_json_key_escape_in_middle)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_json_unicode_escape)
+{
+    // keys and string values decode \uXXXX (with surrogate pairs) to UTF-8
+    std::string test = R"({"¡":1,"aĠb":2,"😀":3,"s":"xé\/y"})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+
+    ASSERT_EQ(fs.root().size(), 4u);
+    EXPECT_EQ((int)fs["\xc2\xa1"], 1);
+    EXPECT_EQ((int)fs["a\xc4\xa0" "b"], 2);
+    EXPECT_EQ((int)fs["\xf0\x9f\x98\x80"], 3);
+    EXPECT_EQ(fs["s"].string(), "x\xc3\xa9/y");
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_invalid_escape)
+{
+    const char* invalid[] = {
+        R"({"a\qb":1})",          // unknown escape in a key
+        R"({"a\u12g4":1})",       // non-hex digit in a key
+        R"({"\udc00":1})",        // unpaired low surrogate in a key
+        R"({"\ud83d":1})",        // high surrogate without the low half in a key
+        R"({"\ud83dA":1})",  // high surrogate followed by a non-surrogate in a key
+        R"({"k":"a\qb"})",        // unknown escape in a value
+        R"({"k":"\u12"})",        // truncated \u in a value
+        R"({"k":"\udc00"})",      // unpaired low surrogate in a value
+    };
+    for (const char* json : invalid)
+    {
+        EXPECT_THROW(FileStorage(json, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON),
+                     cv::Exception) << json;
+    }
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =
