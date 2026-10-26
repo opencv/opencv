@@ -3043,7 +3043,20 @@ TYPED_TEST_P(Core_CheckRange, BoundsOutsideIntRange)
     ASSERT_TRUE(checkRange(src, true, NULL, -1e10, 1e10));
 }
 
-REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One, FractionalMinBound, BoundsOutsideIntRange);
+TYPED_TEST_P(Core_CheckRange, NaNBound)
+{
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    cv::Mat src = cv::Mat::ones(3, 3, cv::DataDepth<TypeParam>::value);
+
+    // no value compares as minVal <= v < maxVal against a NaN bound
+    cv::Point bad_pt(-1, -1);
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, nan, 16.0));
+    ASSERT_EQ(bad_pt, cv::Point(0, 0));
+    ASSERT_FALSE(checkRange(src, true, NULL, 0.0, nan));
+    ASSERT_FALSE(checkRange(src, true, NULL, nan, nan));
+}
+
+REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Negative3CN, Positive, Bounds, Zero, One, FractionalMinBound, BoundsOutsideIntRange, NaNBound);
 
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
