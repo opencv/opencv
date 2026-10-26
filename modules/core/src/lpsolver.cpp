@@ -235,7 +235,14 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
-        pivot(c,b,v,N,B,iterator_offset,0,indexToRow);
+        // x0 is basic at 0: pivot it out on the largest entry of its row, since a given entry may be 0.
+        int entering_index=0;
+        for(int j=1;j<b.cols-1;j++){
+            if(std::abs(b(iterator_offset,j))>std::abs(b(iterator_offset,entering_index))){
+                entering_index=j;
+            }
+        }
+        pivot(c,b,v,N,B,iterator_offset,entering_index,indexToRow);
     }
 
     vector<int>::iterator iterator;
