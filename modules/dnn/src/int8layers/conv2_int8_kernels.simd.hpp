@@ -210,6 +210,8 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
                 float32x4_t vmult_lo = vld1q_f32(multiplier + k_base);
                 float32x4_t vmult_hi = vld1q_f32(multiplier + k_base + 4);
                 float32x4_t vzp = vdupq_n_f32((float)out_zp);
+                // only the int8 store reads these
+                CV_UNUSED(resptr); CV_UNUSED(vmult_lo); CV_UNUSED(vmult_hi); CV_UNUSED(vzp);
 
                 int p = p_start;
                 for (; p <= p_end - SPAT_BLOCK_SIZE; p += SPAT_BLOCK_SIZE) {
@@ -352,6 +354,8 @@ static void convInt8BlockNEON(const void* inp_, const void* residual_,
             float32x4_t vmult_lo = vld1q_f32(multiplier + k_base);
             float32x4_t vmult_hi = vld1q_f32(multiplier + k_base + 4);
             float32x4_t vzp = vdupq_n_f32((float)out_zp);
+            // only the int8 store reads these
+            CV_UNUSED(vmult_lo); CV_UNUSED(vmult_hi); CV_UNUSED(vzp);
 
             int H_l = H, W_l = W;
             int Di_l = Di, Hi_l = Hi, Wi_l = Wi;
@@ -803,6 +807,8 @@ static void convInt8BlockRVV(const void* inp_, const void* residual_,
             typename RVV::vi32 vbias = RVV::vle32(biasbuf, vl);
             typename RVV::vf32 vmult = RVV::vle32f(multbuf, vl);
             typename RVV::vf32 vzp = RVV::vfmv((float)out_zp, vl);
+            // only the int8 store reads these
+            CV_UNUSED(vmult); CV_UNUSED(vzp);
 
             int p = 0;
             for (; p < planeblocks_l; p += SPAT_BLOCK_SIZE) {
@@ -1644,6 +1650,8 @@ static void convInt8BlockVNNI_kxk(const void* inp_, const void* residual_,
 
                 __m256 vmult = _mm256_load_ps(multbuf);
                 __m256 vzp = _mm256_set1_ps((float)out_zp);
+                // only the int8 store reads these
+                CV_UNUSED(vmult); CV_UNUSED(vzp);
 
                 #define CONV_VNNI_STORE32(j) { \
                     if (!cs.depthwise) { \
@@ -1895,6 +1903,8 @@ static void convInt8BlockVNNI_1x1(const void* inp_, const void* residual_,
 
                 __m256 vmult = _mm256_load_ps(multbuf);
                 __m256 vzp   = _mm256_set1_ps((float)out_zp);
+                // only the int8 store reads these
+                CV_UNUSED(vmult); CV_UNUSED(vzp);
 
                 #define CONV_1x1_STORE32(j) { \
                     _mm256_storeu_si256((__m256i*)(outptr + (p + (j)) * K0), s##j); \
