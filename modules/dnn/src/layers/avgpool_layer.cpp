@@ -112,6 +112,19 @@ static void avgPool32fPlain(const float* inp, float* out,
                             s = v_add(s, vx_load(inp_xi + ofstab[k]));
                         v_store(out_row + x0, v_mul(s, vscale));
                     }
+                } else if (SX == 2) {
+                    // pixel x0 + nlanes is inner too, so the odd half of each load stays in the row
+                    for (; x0 < x1 - nlanes; x0 += nlanes) {
+                        const float* inp_xi = inp_nc + (zi_*Hi + yi_)*Wi + x0*2 - padX0;
+                        v_float32 s, odd;
+                        v_load_deinterleave(inp_xi + ofstab[0], s, odd);
+                        for (int k = 1; k < ksize; k++) {
+                            v_float32 even;
+                            v_load_deinterleave(inp_xi + ofstab[k], even, odd);
+                            s = v_add(s, even);
+                        }
+                        v_store(out_row + x0, v_mul(s, vscale));
+                    }
                 }
 #endif
                 for (; x0 < x1; x0++) {
