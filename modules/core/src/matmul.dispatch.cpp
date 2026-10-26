@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/private/fast_gemm.hpp"
 
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
@@ -283,6 +284,12 @@ void gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2
 {
     CV_INSTRUMENT_REGION();
     CALL_HAL(gemm32f, cv_hal_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
+    if (fastGemm32f(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags))
+        return;
+#ifdef HAVE_LAPACK_BUILTIN
+    // products fastGemm leaves alone go to the built-in LAPACK copy as before
+    CALL_HAL(gemm32f, lapack_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
+#endif
 #ifdef CV_GEMM_BASELINE_ONLY
     CV_CPU_CALL_BASELINE(gemm32f, (src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags));
 #else
