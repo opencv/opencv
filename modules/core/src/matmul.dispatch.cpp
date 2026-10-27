@@ -973,6 +973,18 @@ static double dotProd_64f(const void* src1, const void* src2, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// Scalar dot product for the depths without a SIMD kernel.
+template<typename T>
+static double dotProdScalar(const void* src1, const void* src2, int len)
+{
+    const T* a = (const T*)src1;
+    const T* b = (const T*)src2;
+    double r = 0;
+    for (int i = 0; i < len; i++)
+        r += (double)a[i] * (double)b[i];
+    return r;
+}
+
 typedef double (*DotProdFunc)(const void* src1, const void* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
@@ -982,7 +994,11 @@ static DotProdFunc getDotProdFunc(int depth)
         dotProd_8u, dotProd_8s,
         dotProd_16u, dotProd_16s,
         dotProd_32s, dotProd_32f,
-        dotProd_64f, 0
+        dotProd_64f, dotProdScalar<hfloat>,
+        dotProdScalar<bfloat>, 0, // CV_Bool
+        dotProdScalar<uint64_t>, dotProdScalar<int64_t>,
+        dotProdScalar<uint32_t>, dotProdScalar<fp8_t>,
+        dotProdScalar<fp8a_t>
     };
 
     return dotProdTab[depth];

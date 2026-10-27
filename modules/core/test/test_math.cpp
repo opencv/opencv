@@ -2443,6 +2443,34 @@ TEST(Core_Invert, small)
 TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run(); }
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<int> Core_DotProduct_NewTypes;
+
+TEST_P(Core_DotProduct_NewTypes, accuracy)
+{
+    const int depth = GetParam();
+    // small integers: every depth stores them exactly, so the dot product is exact
+    Mat a32s(17, 41, CV_32SC2), b32s(17, 41, CV_32SC2);
+    randu(a32s, -8, 9);
+    randu(b32s, -8, 9);
+    Mat a, b;
+    a32s.convertTo(a, depth);
+    b32s.convertTo(b, depth);
+
+    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths)
+    Mat a64f, b64f;
+    a.convertTo(a64f, CV_64F);
+    b.convertTo(b64f, CV_64F);
+
+    EXPECT_EQ(a64f.dot(b64f), a.dot(b));
+    // a non-continuous ROI is processed plane by plane
+    const Rect roi(3, 2, 30, 11);
+    EXPECT_EQ(a64f(roi).dot(b64f(roi)), a(roi).dot(b(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
+    testing::Values(CV_16F, CV_16BF, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+    
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
