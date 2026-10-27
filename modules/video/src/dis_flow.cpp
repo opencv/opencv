@@ -1348,6 +1348,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
             v_float32 v_sum_Uy = vx_setzero_f32();
 
             for (int is = start_is; is <= end_is; is++)
+            {
                 for (int js = start_js_buf[0]; js <= end_js_buf[nlanes - 1]; js++)
                 {
                     float sx = Sx_ptr[is * dis->ws + js];
@@ -1406,6 +1407,7 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
                     v_sum_Uy = v_fma(v_coef, vx_setall_f32(sy), v_sum_Uy);
                     v_sum_coef = v_add(v_sum_coef, v_coef);
                 }
+            }
             v_store(Ux_ptr + i * dis->w + j0, v_div(v_sum_Ux, v_sum_coef));
             v_store(Uy_ptr + i * dis->w + j0, v_div(v_sum_Uy, v_sum_coef));
         }

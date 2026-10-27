@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 
 namespace opencv_test { namespace {
 
@@ -218,52 +217,49 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     EXPECT_EQ(flow.size(), prev.size());
 }
 
-// The SIMD densification path must match the scalar reference (selected with setUseOptimized(false))
-TEST(DenseOpticalFlow_DIS, OptimizedMatchesReference)
+typedef tuple<Size, int, bool> DISOptimizedParams; // image size, preset, large initial flow
+typedef TestWithParam<DISOptimizedParams> DenseOpticalFlow_DIS_OptimizedMatchesReference;
+
+// The optimized code paths must match the reference selected with setUseOptimized(false)
+TEST_P(DenseOpticalFlow_DIS_OptimizedMatchesReference, accuracy)
 {
-#if !CV_SIMD_SCALABLE
-    throw SkipTestException("No optimized code path to compare with");
-#else
-    const int presets[] = {DISOpticalFlow::PRESET_ULTRAFAST, DISOpticalFlow::PRESET_FAST, DISOpticalFlow::PRESET_MEDIUM};
-    const Size sizes[] = {Size(127, 61), Size(641, 480)};
+    const Size sz = get<0>(GetParam());
+    const int preset = get<1>(GetParam());
+    const bool use_initial_flow = get<2>(GetParam());
     const bool use_optimized = useOptimized();
-    RNG rng(20185);
 
-    for (size_t s = 0; s < sizeof(sizes) / sizeof(sizes[0]); s++)
+    Mat tmp(sz.height / 4, sz.width / 4, CV_8UC1), frame1, frame2;
+    theRNG().fill(tmp, RNG::UNIFORM, 0, 256);
+    resize(tmp, frame1, sz, 0.0, 0.0, INTER_LINEAR_EXACT);
+    Mat M = getRotationMatrix2D(Point2f(sz.width / 2.f, sz.height / 2.f), 3.0, 1.0);
+    M.at<double>(0, 2) += 2.5;
+    M.at<double>(1, 2) -= 1.5;
+    warpAffine(frame1, frame2, M, sz, INTER_LINEAR, BORDER_REPLICATE);
+
+    Mat flow_ref, flow_opt;
+    if (use_initial_flow)
     {
-        Mat tmp(sizes[s].height / 4, sizes[s].width / 4, CV_8UC1), frame1, frame2;
-        rng.fill(tmp, RNG::UNIFORM, 0, 256);
-        resize(tmp, frame1, sizes[s], 0.0, 0.0, INTER_LINEAR_EXACT);
-        Mat M = getRotationMatrix2D(Point2f(sizes[s].width / 2.f, sizes[s].height / 2.f), 3.0, 1.0);
-        M.at<double>(0, 2) += 2.5;
-        M.at<double>(1, 2) -= 1.5;
-        warpAffine(frame1, frame2, M, sizes[s], INTER_LINEAR, BORDER_REPLICATE);
-
-        for (size_t p = 0; p < sizeof(presets) / sizeof(presets[0]); p++)
-            for (int init = 0; init < 2; init++)
-            {
-                SCOPED_TRACE(cv::format("size=%dx%d preset=%d initial_flow=%d", sizes[s].width, sizes[s].height,
-                                        presets[p], init));
-                Mat flow_ref, flow_opt;
-                if (init)
-                {
-                    /* a large initial flow pushes the sampling positions to the clamped image borders */
-                    flow_ref.create(sizes[s], CV_32FC2);
-                    flow_ref.setTo(Scalar(60.f, 60.f));
-                    flow_ref.copyTo(flow_opt);
-                }
-                setUseOptimized(false);
-                DISOpticalFlow::create(presets[p])->calc(frame1, frame2, flow_ref);
-                setUseOptimized(true);
-                DISOpticalFlow::create(presets[p])->calc(frame1, frame2, flow_opt);
-                setUseOptimized(use_optimized);
-
-                EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_INF), 1e-2);
-                EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_L1), 1e-4 * flow_ref.total());
-            }
+        /* a large initial flow pushes the sampling positions to the clamped image borders */
+        flow_ref.create(sz, CV_32FC2);
+        flow_ref.setTo(Scalar(60.f, 60.f));
+        flow_ref.copyTo(flow_opt);
     }
-#endif
+    setUseOptimized(false);
+    DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_ref);
+    setUseOptimized(true);
+    DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_opt);
+    setUseOptimized(use_optimized);
+
+    EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_INF), 1e-2);
+    EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_L1), 1e-4 * flow_ref.total());
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, DenseOpticalFlow_DIS_OptimizedMatchesReference,
+    Combine(Values(Size(127, 61), Size(641, 480)),
+            Values((int)DISOpticalFlow::PRESET_ULTRAFAST, (int)DISOpticalFlow::PRESET_FAST,
+                   (int)DISOpticalFlow::PRESET_MEDIUM),
+            testing::Bool()));
+
 TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
 {
     cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
