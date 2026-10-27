@@ -8,6 +8,13 @@
 namespace cv {
 namespace dnn {
 
+/*
+    MeanVarianceNormalization layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__MeanVarianceNormalization.html
+
+    Opsets 9 and 13 are covered.
+*/
+
 class MeanVarianceNormalizationLayerImpl CV_FINAL : public MeanVarianceNormalizationLayer
 {
 public:
@@ -64,21 +71,14 @@ public:
         if (src.empty())
             return;
 
-        Mat src64;
-        src.convertTo(src64, CV_64F);
-
         std::vector<bool> reduced(src.dims, false);
         for (int axis : normalizedAxes)
             reduced[axis] = true;
 
-        std::vector<size_t> inputStrides(src.dims);
         std::vector<size_t> groupStrides(src.dims, 0);
-        size_t inputStride = 1;
         size_t groupCount = 1;
         for (int i = src.dims - 1; i >= 0; --i)
         {
-            inputStrides[i] = inputStride;
-            inputStride *= static_cast<size_t>(src.size[i]);
             if (!reduced[i])
             {
                 groupStrides[i] = groupCount;
@@ -86,50 +86,15 @@ public:
             }
         }
 
-        std::vector<double> sums(groupCount, 0.0), squaredSums(groupCount, 0.0);
-        std::vector<size_t> counts(groupCount, 0);
-        const double* srcData = src64.ptr<double>();
-        for (size_t offset = 0; offset < src.total(); ++offset)
+        dst.create(src.dims, src.size.p, src.type());
+        switch (src.depth())
         {
-            size_t group = 0;
-            for (int axis = 0; axis < src.dims; ++axis)
-            {
-                if (!reduced[axis])
-                {
-                    const size_t coordinate = (offset / inputStrides[axis]) % src.size[axis];
-                    group += coordinate * groupStrides[axis];
-                }
-            }
-            const double value = srcData[offset];
-            sums[group] += value;
-            squaredSums[group] += value * value;
-            ++counts[group];
+        case CV_16F: forwardTyped<hfloat>(src, dst, reduced, groupStrides, groupCount); break;
+        case CV_16BF: forwardTyped<bfloat>(src, dst, reduced, groupStrides, groupCount); break;
+        case CV_32F: forwardTyped<float>(src, dst, reduced, groupStrides, groupCount); break;
+        case CV_64F: forwardTyped<double>(src, dst, reduced, groupStrides, groupCount); break;
+        default: CV_Error(Error::StsUnsupportedFormat, "Unsupported input type");
         }
-
-        std::vector<double> means(groupCount), inverseStdDevs(groupCount);
-        for (size_t group = 0; group < groupCount; ++group)
-        {
-            means[group] = sums[group] / counts[group];
-            const double variance = squaredSums[group] / counts[group] - means[group] * means[group];
-            inverseStdDevs[group] = 1.0 / (std::sqrt(variance) + 1e-9);
-        }
-
-        Mat dst64(src.dims, src.size.p, CV_64F);
-        double* dstData = dst64.ptr<double>();
-        for (size_t offset = 0; offset < src.total(); ++offset)
-        {
-            size_t group = 0;
-            for (int axis = 0; axis < src.dims; ++axis)
-            {
-                if (!reduced[axis])
-                {
-                    const size_t coordinate = (offset / inputStrides[axis]) % src.size[axis];
-                    group += coordinate * groupStrides[axis];
-                }
-            }
-            dstData[offset] = (srcData[offset] - means[group]) * inverseStdDevs[group];
-        }
-        dst64.convertTo(dst, dst.depth());
     }
 
     static Ptr<MeanVarianceNormalizationLayer> create(const LayerParams& params)
@@ -139,6 +104,99 @@ public:
 
 private:
     std::vector<int> axes;
+
+    template<typename T>
+    static void forwardTyped(const Mat& src, Mat& dst, const std::vector<bool>& reduced,
+                             const std::vector<size_t>& groupStrides, size_t groupCount)
+    {
+        size_t reductionCount = 1;
+        for (int axis = src.dims - 1; axis >= 0; --axis)
+        {
+            if (reduced[axis]){
+                reductionCount *= static_cast<size_t>(src.size[axis]);
+            }
+        }
+
+        std::vector<double> referenceValues(groupCount), meanOffsets(groupCount);
+        std::vector<double> squaredDeviations(groupCount, 0.0);
+        std::vector<int> coordinates(src.dims, 0);
+        size_t group = 0;
+
+        for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
+        {
+            for (size_t i = 0; i < reductionCount; ++i)
+            {
+                const double value = static_cast<double>(src.ptr<T>(coordinates.data())[0]);
+                if (i == 0){
+                    referenceValues[group] = value;
+                }
+
+                const double delta = (value - referenceValues[group]) - meanOffsets[group];
+                meanOffsets[group] += delta / (i + 1);
+                const double centeredDelta = (value - referenceValues[group]) - meanOffsets[group];
+                squaredDeviations[group] += delta * centeredDelta;
+
+                for (int axis = src.dims - 1; axis >= 0; --axis)
+                {
+                    if (!reduced[axis]){
+                        continue;
+                    }
+                    if (++coordinates[axis] < src.size[axis])
+                    {
+                        break;
+                    }
+                    coordinates[axis] = 0;
+                }
+            }
+
+            if (groupIndex + 1 == groupCount)
+                break;
+            for (int axis = src.dims - 1; axis >= 0; --axis)
+            {
+                if (reduced[axis]){
+                    continue;
+                }
+                if (++coordinates[axis] < src.size[axis])
+                {
+                    group += groupStrides[axis];
+                    break;
+                }
+                coordinates[axis] = 0;
+                group -= (static_cast<size_t>(src.size[axis]) - 1) * groupStrides[axis];
+            }
+        }
+
+        std::vector<double> inverseStdDevs(groupCount);
+        for (size_t i = 0; i < groupCount; ++i)
+        {
+            const double variance = squaredDeviations[i] / reductionCount;
+            inverseStdDevs[i] = 1.0 / (std::sqrt(variance) + 1e-9);
+        }
+
+        std::fill(coordinates.begin(), coordinates.end(), 0);
+        group = 0;
+        for (size_t i = 0; i < src.total(); ++i)
+        {
+            T* output = dst.ptr<T>(coordinates.data());
+            const double centeredValue =
+                (static_cast<double>(src.ptr<T>(coordinates.data())[0]) - referenceValues[group]) - meanOffsets[group];
+            output[0] = saturate_cast<T>(centeredValue * inverseStdDevs[group]);
+
+            for (int axis = src.dims - 1; axis >= 0; --axis)
+            {
+                if (++coordinates[axis] < src.size[axis])
+                {
+                    if (!reduced[axis]){
+                        group += groupStrides[axis];
+                    }
+                    break;
+                }
+                coordinates[axis] = 0;
+                if (!reduced[axis])
+                    group -= (static_cast<size_t>(src.size[axis]) - 1) * groupStrides[axis];
+            }
+        }
+    }
 
     std::vector<int> normalizeAxes(size_t rank) const
     {

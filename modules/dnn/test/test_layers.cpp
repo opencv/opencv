@@ -4225,24 +4225,28 @@ TEST(Test_MeanVarianceNormalization, DefaultAxes)
     for (int c = 0; c < 3; ++c)
     {
         double sum = 0.0, sumSquares = 0.0;
-        for (int n = 0; n < 2; ++n)
-            for (int h = 0; h < 2; ++h)
+        for (int n = 0; n < 2; ++n){
+            for (int h = 0; h < 2; ++h){
                 for (int w = 0; w < 2; ++w)
                 {
                     const size_t idx = ((n * 3 + c) * 2 + h) * 2 + w;
                     sum += src[idx];
                     sumSquares += static_cast<double>(src[idx]) * src[idx];
                 }
+            }
+        }
         const double mean = sum / 8.0;
         const double variance = sumSquares / 8.0 - mean * mean;
         const double stddev = std::sqrt(variance) + 1e-9;
-        for (int n = 0; n < 2; ++n)
-            for (int h = 0; h < 2; ++h)
+        for (int n = 0; n < 2; ++n){
+            for (int h = 0; h < 2; ++h){
                 for (int w = 0; w < 2; ++w)
                 {
                     const size_t idx = ((n * 3 + c) * 2 + h) * 2 + w;
                     EXPECT_NEAR(dst[idx], (src[idx] - mean) / stddev, 1e-5);
                 }
+            }
+        }
     }
 }
 
@@ -4273,6 +4277,106 @@ TEST(Test_MeanVarianceNormalization, ExplicitAndNegativeAxes)
             EXPECT_NEAR(dst[col], (src[col] - mean) / stddev, 1e-5);
     }
 }
+
+TEST(Test_MeanVarianceNormalization, HighOffsetDoubleVariance)
+{
+    Mat input(1, 2, CV_64F);
+    input.ptr<double>()[0] = 100000000.00000004;
+    input.ptr<double>()[1] = 100000000.0;
+    Mat original = input.clone();
+
+    const double naiveMean = (input.ptr<double>()[0] + input.ptr<double>()[1]) / 2.0;
+    const double naiveVariance =
+        (input.ptr<double>()[0] * input.ptr<double>()[0] +
+         input.ptr<double>()[1] * input.ptr<double>()[1]) / 2.0 - naiveMean * naiveMean;
+    EXPECT_LT(naiveVariance, 0.0);
+
+    LayerParams params;
+    const int axes[] = {1};
+    params.set("axes", DictValue::arrayInt(axes, 1));
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("MeanVarianceNormalization", params);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(shape(outputs[0]), shape(input));
+    EXPECT_EQ(outputs[0].type(), CV_64F);
+    EXPECT_EQ(cv::norm(input, original, cv::NORM_INF), 0.0);
+
+    const double* output = outputs[0].ptr<double>();
+    for (int i = 0; i < 2; ++i)
+        EXPECT_TRUE(std::isfinite(output[i]));
+
+    const double halfDifference = (input.ptr<double>()[0] - input.ptr<double>()[1]) / 2.0;
+    const double variance = halfDifference * halfDifference;
+    const double denominator = std::sqrt(variance) + 1e-9;
+    EXPECT_NEAR(output[0], halfDifference / denominator, 1e-12);
+    EXPECT_NEAR(output[1], -halfDifference / denominator, 1e-12);
+}
+
+class Test_MeanVarianceNormalization_AllTypes : public testing::TestWithParam<int> {};
+
+TEST_P(Test_MeanVarianceNormalization_AllTypes, NumericalAccuracyAndTypePreservation)
+{
+    const int depth = GetParam();
+    const double tolerance = depth == CV_16BF ? 0.02 :
+                             depth == CV_16F ? 0.003 :
+                             depth == CV_32F ? 1e-6 : 1e-12;
+
+    Mat values(2, 3, CV_32F);
+    const float inputValues[] = {-3.f, -1.f, 1.f, 6.f, 8.f, 10.f};
+    std::copy(inputValues, inputValues + 6, values.ptr<float>());
+    Mat input;
+    values.convertTo(input, depth);
+    Mat original = input.clone();
+
+    LayerParams params;
+    const int axes[] = {1};
+    params.set("axes", DictValue::arrayInt(axes, 1));
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("MeanVarianceNormalization", params);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(shape(outputs[0]), shape(input));
+    EXPECT_EQ(outputs[0].type(), input.type());
+
+    Mat input64, output64, original64;
+    input.convertTo(input64, CV_64F);
+    outputs[0].convertTo(output64, CV_64F);
+    original.convertTo(original64, CV_64F);
+    EXPECT_EQ(cv::norm(input64, original64, cv::NORM_INF), 0.0);
+
+    for (int row = 0; row < input.rows; ++row)
+    {
+        const double* src = input64.ptr<double>(row);
+        const double* dst = output64.ptr<double>(row);
+        const double reference = src[0];
+        const double meanOffset = ((src[0] - reference) +
+                                   (src[1] - reference) +
+                                   (src[2] - reference)) / 3.0;
+        double squaredDeviations = 0.0;
+        for (int col = 0; col < input.cols; ++col)
+        {
+            const double deviation = (src[col] - reference) - meanOffset;
+            squaredDeviations += deviation * deviation;
+        }
+        const double denominator = std::sqrt(squaredDeviations / input.cols) + 1e-9;
+
+        for (int col = 0; col < input.cols; ++col)
+        {
+            const double expected = ((src[col] - reference) - meanOffset) / denominator;
+            EXPECT_TRUE(std::isfinite(dst[col]));
+            EXPECT_NEAR(dst[col], expected, tolerance)
+                << "depth " << depth << ", row " << row << ", column " << col;
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(AllTypes, Test_MeanVarianceNormalization_AllTypes,
+                        testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
 
 TEST(Test_MeanVarianceNormalization, RejectsInvalidAxes)
 {
