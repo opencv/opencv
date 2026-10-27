@@ -271,6 +271,44 @@ TEST_F(Test_Graph_Simplifier, TensorFlowControlPortInputsAndKerasReshapeTensorCo
     EXPECT_EQ(reshaped.size[3], 2);
 }
 
+TEST_F(Test_Graph_Simplifier, TensorFlowControlInputsAreNotDataInputs)
+{
+    // A control dependency must never provide Add's second data tensor, even
+    // when its producer is removed by the identity or training-phase rewrite.
+    const std::string producers[] = {"Identity", "Switch"};
+    const std::string suffixes[] = {"", ":0"};
+    for (const std::string& producer : producers)
+    {
+        for (const std::string& suffix : suffixes)
+        {
+            SCOPED_TRACE(producer + suffix);
+            const std::string prefix =
+                pbNodeDef("x", "Placeholder", std::vector<std::string>(), pbAttrType("dtype", 1)) +
+                (producer == "Switch" ? pbNodeDef("pred", "Placeholder", std::vector<std::string>(),
+                                                pbAttrType("dtype", 10)) : std::string()) +
+                pbNodeDef("source", producer,
+                          producer == "Switch" ? std::vector<std::string>{"x", "pred"}
+                                               : std::vector<std::string>{"x"},
+                          pbAttrType("T", 1));
+            const std::string dataGraph = prefix +
+                pbNodeDef("sum", "Add", std::vector<std::string>{"x", "source" + suffix}, pbAttrType("T", 1));
+            Net net;
+            ASSERT_NO_THROW(net = readNetFromTensorflow(dataGraph.data(), dataGraph.size()));
+            Mat input(1, 2, CV_32F);
+            input.at<float>(0, 0) = -2.0f;
+            input.at<float>(0, 1) = 3.0f;
+            net.setInput(input, "x");
+            Mat output;
+            ASSERT_NO_THROW(output = net.forward());
+            normAssert(input * 2.0f, output);
+
+            const std::string controlGraph = prefix +
+                pbNodeDef("sum", "Add", std::vector<std::string>{"x", "^source" + suffix}, pbAttrType("T", 1));
+            EXPECT_THROW(readNetFromTensorflow(controlGraph.data(), controlGraph.size()), cv::Exception);
+        }
+    }
+}
+
 TEST_F(Test_Graph_Simplifier, TensorFlowRejectsTruncatedTensorContentAndMalformedKerasReshape)
 {
     std::string truncatedBiasGraph =

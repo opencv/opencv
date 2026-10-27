@@ -841,6 +841,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
         tensorflow::NodeDef* layer = net.mutable_node(li);
         for (int input_id = 0; input_id < layer->input_size(); input_id++) {
             String input_op_name = layer->input(input_id);
+            const bool isControlInput = !input_op_name.empty() && input_op_name[0] == '^';
             input_op_name = input_op_name.substr(0, input_op_name.rfind(':'));
             input_op_name = input_op_name.substr(input_op_name.find('^') + 1);
             IdentityOpsMap::iterator it = identity_ops.find(input_op_name);
@@ -862,7 +863,14 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
                     else
                         break;
                 }
-                layer->set_input(input_id, it->second);
+                String replacement = it->second;
+                if (isControlInput)
+                {
+                    replacement = replacement.substr(0, replacement.rfind(':'));
+                    if (replacement.empty() || replacement[0] != '^')
+                        replacement = "^" + replacement;
+                }
+                layer->set_input(input_id, replacement);
             }
         }
     }
@@ -1109,7 +1117,6 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
                 {
                     std::string inpName = consumer->input(k);
                     inpName = inpName.substr(0, inpName.rfind(':'));
-                    inpName = inpName.substr(inpName.find('^') + 1);
                     if (inpName == node.name())
                     {
                         consumer->set_input(k, node.input(0));
