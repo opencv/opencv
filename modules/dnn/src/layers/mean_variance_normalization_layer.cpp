@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <climits>
 
 namespace cv {
 namespace dnn {
@@ -119,51 +120,114 @@ private:
 
         std::vector<double> referenceValues(groupCount), meanOffsets(groupCount);
         std::vector<double> squaredDeviations(groupCount, 0.0);
-        std::vector<int> coordinates(src.dims, 0);
-        size_t group = 0;
+        std::vector<size_t> srcSteps(src.dims);
+        for (int axis = 0; axis < src.dims; ++axis)
+            srcSteps[axis] = src.step.p[axis] / sizeof(T);
+        const T* srcData = src.ptr<T>();
 
-        for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
+        int statsSuffixStart = src.dims;
+        size_t statsSuffixSize = 1;
+        for (int axis = src.dims - 1; axis >= 0 && reduced[axis]; --axis)
         {
+            if ((axis == src.dims - 1 && srcSteps[axis] != 1) ||
+                (axis < src.dims - 1 &&
+                 srcSteps[axis] != srcSteps[axis + 1] * static_cast<size_t>(src.size[axis + 1])))
+                break;
+            statsSuffixStart = axis;
+            statsSuffixSize *= static_cast<size_t>(src.size[axis]);
+        }
+        const size_t outerReductionCount = reductionCount / statsSuffixSize;
+
+        const bool parallelGroups = src.total() >= 32768 &&
+                                   groupCount > 1 &&
+                                   groupCount <= static_cast<size_t>(INT_MAX);
+        const auto computeStatisticsGroup = [&](size_t groupIndex, std::vector<int>& coordinates)
+        {
+            size_t groupOffset = 0;
+            for (int axis = src.dims - 1; axis >= 0; --axis)
+            {
+                if (reduced[axis])
+                    continue;
+                coordinates[axis] =
+                    static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
+                groupOffset += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
+            }
+
+            if (statsSuffixStart < src.dims)
+            {
+                size_t offset = groupOffset;
+                for (size_t outer = 0; outer < outerReductionCount; ++outer)
+                {
+                    for (size_t inner = 0; inner < statsSuffixSize; ++inner)
+                    {
+                        const size_t i = outer * statsSuffixSize + inner;
+                        const double value = static_cast<double>(srcData[offset + inner]);
+                        if (i == 0)
+                            referenceValues[groupIndex] = value;
+
+                        const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                        meanOffsets[groupIndex] += delta / (i + 1);
+                        const double centeredDelta =
+                            (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                        squaredDeviations[groupIndex] += delta * centeredDelta;
+                    }
+
+                    for (int axis = statsSuffixStart - 1; axis >= 0; --axis)
+                    {
+                        if (!reduced[axis])
+                            continue;
+                        if (++coordinates[axis] < src.size[axis])
+                        {
+                            offset += srcSteps[axis];
+                            break;
+                        }
+                        coordinates[axis] = 0;
+                        offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
+                    }
+                }
+                return;
+            }
+
+            size_t offset = groupOffset;
             for (size_t i = 0; i < reductionCount; ++i)
             {
-                const double value = static_cast<double>(src.ptr<T>(coordinates.data())[0]);
-                if (i == 0){
-                    referenceValues[group] = value;
-                }
+                const double value = static_cast<double>(srcData[offset]);
+                if (i == 0)
+                    referenceValues[groupIndex] = value;
 
-                const double delta = (value - referenceValues[group]) - meanOffsets[group];
-                meanOffsets[group] += delta / (i + 1);
-                const double centeredDelta = (value - referenceValues[group]) - meanOffsets[group];
-                squaredDeviations[group] += delta * centeredDelta;
+                const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                meanOffsets[groupIndex] += delta / (i + 1);
+                const double centeredDelta =
+                    (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                squaredDeviations[groupIndex] += delta * centeredDelta;
 
                 for (int axis = src.dims - 1; axis >= 0; --axis)
                 {
-                    if (!reduced[axis]){
+                    if (!reduced[axis])
                         continue;
-                    }
                     if (++coordinates[axis] < src.size[axis])
                     {
+                        offset += srcSteps[axis];
                         break;
                     }
                     coordinates[axis] = 0;
+                    offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
                 }
             }
-
-            if (groupIndex + 1 == groupCount)
-                break;
-            for (int axis = src.dims - 1; axis >= 0; --axis)
-            {
-                if (reduced[axis]){
-                    continue;
-                }
-                if (++coordinates[axis] < src.size[axis])
-                {
-                    group += groupStrides[axis];
-                    break;
-                }
-                coordinates[axis] = 0;
-                group -= (static_cast<size_t>(src.size[axis]) - 1) * groupStrides[axis];
-            }
+        };
+        const auto computeStatistics = [&](const Range& range)
+        {
+            std::vector<int> coordinates(src.dims, 0);
+            for (int groupIndex = range.start; groupIndex < range.end; ++groupIndex)
+                computeStatisticsGroup(static_cast<size_t>(groupIndex), coordinates);
+        };
+        if (parallelGroups)
+            parallel_for_(Range(0, static_cast<int>(groupCount)), computeStatistics);
+        else
+        {
+            std::vector<int> coordinates(src.dims, 0);
+            for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
+                computeStatisticsGroup(groupIndex, coordinates);
         }
 
         std::vector<double> inverseStdDevs(groupCount);
@@ -173,28 +237,107 @@ private:
             inverseStdDevs[i] = 1.0 / (std::sqrt(variance) + 1e-9);
         }
 
-        std::fill(coordinates.begin(), coordinates.end(), 0);
-        group = 0;
-        for (size_t i = 0; i < src.total(); ++i)
-        {
-            T* output = dst.ptr<T>(coordinates.data());
-            const double centeredValue =
-                (static_cast<double>(src.ptr<T>(coordinates.data())[0]) - referenceValues[group]) - meanOffsets[group];
-            output[0] = saturate_cast<T>(centeredValue * inverseStdDevs[group]);
+        std::vector<size_t> dstSteps(dst.dims);
+        for (int axis = 0; axis < dst.dims; ++axis)
+            dstSteps[axis] = dst.step.p[axis] / sizeof(T);
+        T* dstData = dst.ptr<T>();
 
+        int outputSuffixStart = src.dims;
+        size_t outputSuffixSize = 1;
+        for (int axis = src.dims - 1; axis >= 0 && reduced[axis]; --axis)
+        {
+            if ((axis == src.dims - 1 && (srcSteps[axis] != 1 || dstSteps[axis] != 1)) ||
+                (axis < src.dims - 1 &&
+                 (srcSteps[axis] != srcSteps[axis + 1] * static_cast<size_t>(src.size[axis + 1]) ||
+                  dstSteps[axis] != dstSteps[axis + 1] * static_cast<size_t>(dst.size[axis + 1]))))
+                break;
+            outputSuffixStart = axis;
+            outputSuffixSize *= static_cast<size_t>(src.size[axis]);
+        }
+        const size_t outerOutputCount = reductionCount / outputSuffixSize;
+
+        const auto normalizeGroup = [&](size_t groupIndex, std::vector<int>& coordinates)
+        {
+            size_t srcBase = 0, dstBase = 0;
             for (int axis = src.dims - 1; axis >= 0; --axis)
             {
-                if (++coordinates[axis] < src.size[axis])
-                {
-                    if (!reduced[axis]){
-                        group += groupStrides[axis];
-                    }
-                    break;
-                }
-                coordinates[axis] = 0;
-                if (!reduced[axis])
-                    group -= (static_cast<size_t>(src.size[axis]) - 1) * groupStrides[axis];
+                if (reduced[axis])
+                    continue;
+                coordinates[axis] =
+                    static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
+                srcBase += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
+                dstBase += static_cast<size_t>(coordinates[axis]) * dstSteps[axis];
             }
+
+            if (outputSuffixStart < src.dims)
+            {
+                size_t srcOffset = srcBase, dstOffset = dstBase;
+                for (size_t outer = 0; outer < outerOutputCount; ++outer)
+                {
+                    for (size_t inner = 0; inner < outputSuffixSize; ++inner)
+                    {
+                        const double centeredValue =
+                            (static_cast<double>(srcData[srcOffset + inner]) - referenceValues[groupIndex]) -
+                            meanOffsets[groupIndex];
+                        dstData[dstOffset + inner] =
+                            saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
+                    }
+
+                    for (int axis = outputSuffixStart - 1; axis >= 0; --axis)
+                    {
+                        if (!reduced[axis])
+                            continue;
+                        if (++coordinates[axis] < src.size[axis])
+                        {
+                            srcOffset += srcSteps[axis];
+                            dstOffset += dstSteps[axis];
+                            break;
+                        }
+                        coordinates[axis] = 0;
+                        srcOffset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
+                        dstOffset -= static_cast<size_t>(dst.size[axis] - 1) * dstSteps[axis];
+                    }
+                }
+                return;
+            }
+
+            size_t srcOffset = srcBase, dstOffset = dstBase;
+            for (size_t i = 0; i < reductionCount; ++i)
+            {
+                const double centeredValue =
+                    (static_cast<double>(srcData[srcOffset]) - referenceValues[groupIndex]) -
+                    meanOffsets[groupIndex];
+                dstData[dstOffset] = saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
+
+                for (int axis = src.dims - 1; axis >= 0; --axis)
+                {
+                    if (!reduced[axis])
+                        continue;
+                    if (++coordinates[axis] < src.size[axis])
+                    {
+                        srcOffset += srcSteps[axis];
+                        dstOffset += dstSteps[axis];
+                        break;
+                    }
+                    coordinates[axis] = 0;
+                    srcOffset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
+                    dstOffset -= static_cast<size_t>(dst.size[axis] - 1) * dstSteps[axis];
+                }
+            }
+        };
+        const auto normalizeGroups = [&](const Range& range)
+        {
+            std::vector<int> coordinates(src.dims, 0);
+            for (int groupIndex = range.start; groupIndex < range.end; ++groupIndex)
+                normalizeGroup(static_cast<size_t>(groupIndex), coordinates);
+        };
+        if (parallelGroups)
+            parallel_for_(Range(0, static_cast<int>(groupCount)), normalizeGroups);
+        else
+        {
+            std::vector<int> coordinates(src.dims, 0);
+            for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
+                normalizeGroup(groupIndex, coordinates);
         }
     }
 
