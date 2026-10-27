@@ -1240,7 +1240,7 @@ static long writeWithEncoderParams(const std::string& file, const std::vector<in
 
     std::ifstream fs(file.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!fs)
-        return -1;
+        return -2;
     return (long)fs.tellg();
 }
 
@@ -1344,7 +1344,7 @@ TEST(videoio_ffmpeg_encoder_props, pixel_format_round_trips_with_capture_propert
     double readBack = -1;
     const long size = writeWithEncoderParams(file, {VIDEOWRITER_PROP_COLOR_SPACE, requested}, frames,
                                              &readBack, VIDEOWRITER_PROP_COLOR_SPACE);
-    if (size < 0)
+    if (size == -1)
         throw SkipTestException("Encoder does not support the requested pixel format");
 
     EXPECT_EQ(fourccToString(requested), fourccToString((int)readBack));
@@ -1375,8 +1375,7 @@ TEST(videoio_ffmpeg_encoder_props, unsupported_property_fails_open)
                                       VideoWriter::fourcc('Z', 'Z', 'Z', 'Z')}));
 }
 
-// Disabled on Windows until the prebuilt FFmpeg wrapper is rebuilt with the new encoder options
-#ifndef _WIN32
+#ifndef _WIN32 // FFmpeg for Windows does not include OpenH264 by default. It have to be installed separatelly.
 TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -1401,6 +1400,7 @@ TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 
     remove(file.c_str());
 }
+#endif
 
 // Decoded frames of an interlaced stream used to be converted silently to black by retrieveFrame().
 // Sample video/interlaced_tff_8x8_gray.mkv (opencv_extra): 8x8 gray rawvideo in Matroska, field_order=tt, generated with:
@@ -1422,6 +1422,5 @@ TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
     ASSERT_EQ(Size(8, 8), frame.size());
     EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
 }
-#endif
 
 }} // namespace
