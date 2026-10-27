@@ -373,8 +373,23 @@ DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64f, double, double)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64u, uint64, uint64)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx64s, int64, int64)
 DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx32u, unsigned, int64)
-DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx8f, fp8_t, float)
-DEFINE_MINMAXIDX_FUNC_NOSIMD(minMaxIdx8fnuz, fp8a_t, float)
+
+// fp8 values are sign-magnitude, like float: CV_TOGGLE_FP8 maps them to int8 values in the
+// same order, so the vectorized s8 kernel can find the extrema. The values it returns are
+// toggled; minMaxIdx() toggles them back and decodes them.
+static void minMaxIdx8f(const uchar* src, const uchar* mask, int* minVal, int* maxVal,
+                        size_t* minIdx, size_t* maxIdx, int len, size_t startIdx)
+{
+    const int BLOCK_SIZE = 1024;
+    schar buf[BLOCK_SIZE];
+    for (int i = 0; i < len; i += BLOCK_SIZE)
+    {
+        const int n = std::min(len - i, BLOCK_SIZE);
+        for (int j = 0; j < n; j++)
+            buf[j] = (schar)CV_TOGGLE_FP8(src[i + j]);
+        minMaxIdx8s(buf, mask ? mask + i : nullptr, minVal, maxVal, minIdx, maxIdx, n, startIdx + i);
+    }
+}
 
 MinMaxIdxFunc getMinMaxIdxFunc(int depth)
 {
@@ -393,8 +408,8 @@ MinMaxIdxFunc getMinMaxIdxFunc(int depth)
         minMaxIdxWrap<uint64, uint64, minMaxIdx64u>,
         minMaxIdxWrap<int64, int64, minMaxIdx64s>,
         minMaxIdxWrap<unsigned, int64, minMaxIdx32u>,
-        minMaxIdxWrap<fp8_t, float, minMaxIdx8f>,
-        minMaxIdxWrap<fp8a_t, float, minMaxIdx8fnuz>,
+        minMaxIdxWrap<uchar, int, minMaxIdx8f>,
+        minMaxIdxWrap<uchar, int, minMaxIdx8f>,
         0
     };
 

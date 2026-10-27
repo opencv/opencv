@@ -369,9 +369,15 @@ static void minMaxIdx_(cv::InputArray _src, double* minVal,
     double dminval, dmaxval;
     if( depth <= CV_32S || depth == CV_Bool )
         dminval = minval.i, dmaxval = maxval.i;
-    else if( depth == CV_32F || depth == CV_16F || depth == CV_16BF ||
-             depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ )
+    else if( depth == CV_32F || depth == CV_16F || depth == CV_16BF )
         dminval = minval.f, dmaxval = maxval.f;
+    else if( depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ )
+    {
+        // the fp8 kernel returns toggled values (see minMaxIdx8f): toggle them back and decode
+        const float* lut = depth == CV_8F_E4M3FN ? fp8_t::decodeLUT() : fp8a_t::decodeLUT();
+        dminval = lut[(uchar)CV_TOGGLE_FP8(minval.i)];
+        dmaxval = lut[(uchar)CV_TOGGLE_FP8(maxval.i)];
+    }
     else if( depth == CV_64F )
         dminval = minval.d, dmaxval = maxval.d;
     else if( depth == CV_64S || depth == CV_32U )
