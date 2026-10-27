@@ -14,7 +14,7 @@
 
 namespace cv { namespace dnn {
 
-static void softmaxImpl(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, bool logSoftmax){
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, bool logSoftmax){
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
     CV_Assert(src.size == dst.size);
@@ -130,16 +130,12 @@ static void softmaxImpl(Mat &dst, const Mat &src, int axis, int axisBias, int ax
     }, nstripes);
 }
 
-void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep) {
-    softmaxImpl(dst, src, axis, axisBias, axisStep, false);
-}
-
 void softmax(Mat &dst, const Mat &src, int axis) {
     softmax(dst, src, axis, 0, src.size[axis]);
 }
 
 void logSoftmax(Mat &dst, const Mat &src, int axis) {
-    softmaxImpl(dst, src, axis, 0, src.size[axis], true);
+    softmax(dst, src, axis, 0, src.size[axis], true);
 }
 
 }} // cv::dnn
