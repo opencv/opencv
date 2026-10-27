@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
 #ifndef OPENCV_DNN_HAL_REPLACEMENT_HPP
 #define OPENCV_DNN_HAL_REPLACEMENT_HPP
 
@@ -114,11 +117,37 @@ inline int hal_ni_dnn_conv32f(const float* inp_data, const float* residual_data,
                               int nspat_chunks, int task_start, int task_end)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+//! @brief Converts a batch of images to a 4D blob, see cv::dnn::blobFromImagesWithParams().
+//!
+//! Unlike the compute kernels above this hook is not task-ranged: it is called once for the
+//! whole batch and must fill the whole blob (it may use cv::parallel_for_ internally).
+//!
+//! All @c nimages images share @c width x @c height and @c src_type (interleaved HWC);
+//! image @c i starts at @c src_data[i] with row step @c src_step[i]. The blob images are
+//! @c dst_width x @c dst_height. The engine resolves the padding mode to a single geometry for the
+//! batch: each image is resized to @c resized_width x @c resized_height with the scale factors
+//! @c inv_scale_x / @c inv_scale_y (as cv::resize(src, dst, Size(), inv_scale_x, inv_scale_y) does)
+//! using @c interpolation, and the resized image is placed at (@c offset_x, @c offset_y) in the blob
+//! image: a negative offset crops it, the blob pixels it does not cover are filled with
+//! @c borderValue. The images are optionally R/B swapped (@c swapRB, 3 and 4 channels only),
+//! converted to @c ddepth (CV_8U or CV_32F) and written as @c layout (cv::DATA_LAYOUT_NCHW or
+//! cv::DATA_LAYOUT_NHWC) to the blob @c dst_data with steps @c dst_step[0..3]. For a CV_32F blob
+//! @c out = (in - mean[c]) * scalefactor[c], where @c c is the blob channel, i.e. the channel index
+//! after the swap.
+inline int hal_ni_dnn_blobFromImages(const uchar* const* src_data, const size_t* src_step, int nimages,
+                                     int width, int height, int src_type, int ddepth, int swapRB,
+                                     int dst_width, int dst_height, int resized_width, int resized_height,
+                                     double inv_scale_x, double inv_scale_y, int offset_x, int offset_y,
+                                     const double borderValue[4], const double mean[4], const double scalefactor[4],
+                                     uchar* dst_data, const size_t* dst_step, int layout, int interpolation)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_dnn_maxpool3d32f hal_ni_dnn_maxpool3d32f
 #define cv_hal_dnn_avgpool3d32f hal_ni_dnn_avgpool3d32f
 #define cv_hal_dnn_depthwise_conv32f hal_ni_dnn_depthwise_conv32f
 #define cv_hal_dnn_conv32f hal_ni_dnn_conv32f
+#define cv_hal_dnn_blobFromImages hal_ni_dnn_blobFromImages
 //! @endcond
 
 //! @}
