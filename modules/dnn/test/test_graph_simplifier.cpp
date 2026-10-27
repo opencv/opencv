@@ -150,4 +150,160 @@ TEST_F(Test_Graph_Simplifier, BiasedMatMulSubgraph) {
     test("biased_matmul", "MatMul");
 }
 
+static std::string pbLenDelimited(int fieldNum, const std::string& payload)
+{
+    CV_Assert(payload.size() < 128u);
+    std::string out;
+    out.push_back(static_cast<char>((fieldNum << 3) | 2));
+    out.push_back(static_cast<char>(payload.size()));
+    out.append(payload);
+    return out;
+}
+
+static std::string pbVarint(int fieldNum, int value)
+{
+    std::string out;
+    out.push_back(static_cast<char>((fieldNum << 3) | 0));
+    unsigned int v = static_cast<unsigned int>(value);
+    while (v >= 0x80u)
+    {
+        out.push_back(static_cast<char>((v & 0x7fu) | 0x80u));
+        v >>= 7;
+    }
+    out.push_back(static_cast<char>(v));
+    return out;
+}
+
+static std::string pbAttrType(const std::string& key, int dtype)
+{
+    std::string attrVal = pbVarint(6, dtype);
+    std::string entry = pbLenDelimited(1, key) + pbLenDelimited(2, attrVal);
+    return pbLenDelimited(5, entry);
+}
+
+static std::string pbAttrTensorContent(const std::string& key, int dtype,
+                                       const std::vector<int>& dims,
+                                       const std::string& rawContent)
+{
+    std::string shapeProto;
+    for (size_t i = 0; i < dims.size(); ++i)
+        shapeProto += pbLenDelimited(2, pbVarint(1, dims[i]));
+    std::string tensorProto = pbVarint(1, dtype) + pbLenDelimited(2, shapeProto);
+    if (!rawContent.empty())
+        tensorProto += pbLenDelimited(4, rawContent);
+    std::string attrVal = pbLenDelimited(8, tensorProto);
+    std::string entry = pbLenDelimited(1, key) + pbLenDelimited(2, attrVal);
+    return pbLenDelimited(5, entry);
+}
+
+static std::string pbNodeDef(const std::string& name, const std::string& op,
+                             const std::vector<std::string>& inputs,
+                             const std::string& attrs)
+{
+    std::string body = pbLenDelimited(1, name) + pbLenDelimited(2, op);
+    for (size_t i = 0; i < inputs.size(); ++i)
+        body += pbLenDelimited(3, inputs[i]);
+    body += attrs;
+    return pbLenDelimited(1, body);
+}
+
+static std::string pbInt32Le(int value)
+{
+    std::string out(4, '\0');
+    out[0] = static_cast<char>(value & 0xff);
+    out[1] = static_cast<char>((value >> 8) & 0xff);
+    out[2] = static_cast<char>((value >> 16) & 0xff);
+    out[3] = static_cast<char>((value >> 24) & 0xff);
+    return out;
+}
+
+TEST_F(Test_Graph_Simplifier, TensorFlowControlPortInputsAndKerasReshapeTensorContent)
+{
+    // DT_FLOAT = 1, DT_INT32 = 3
+    std::string validGraph =
+        pbNodeDef("x", "Placeholder", std::vector<std::string>(), pbAttrType("dtype", 1)) +
+        pbNodeDef("id", "Identity", std::vector<std::string>{"x"}, pbAttrType("T", 1)) +
+        pbNodeDef("y", "Relu", std::vector<std::string>{"id:0", "^id:0"}, pbAttrType("T", 1));
+
+    Net net;
+    ASSERT_NO_THROW(net = readNetFromTensorflow(validGraph.data(), validGraph.size()));
+    Mat inp(std::vector<int>{1, 1, 2, 3}, CV_32F, Scalar(3.0f));
+    net.setInput(inp);
+    Mat out = net.forward();
+    EXPECT_EQ(out.total(), (size_t)6);
+    EXPECT_FLOAT_EQ(out.at<float>(0), 3.0f);
+
+    const std::string zero4 = pbInt32Le(0);
+    const std::string one4 = pbInt32Le(1);
+    const std::string two4 = pbInt32Le(2);
+    const std::string three4 = pbInt32Le(3);
+    std::string kerasReshapeGraph =
+        pbNodeDef("x", "Placeholder", std::vector<std::string>(), pbAttrType("dtype", 1)) +
+        pbNodeDef("shape", "Shape", std::vector<std::string>{"x"}, pbAttrType("T", 1)) +
+        pbNodeDef("stack", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, zero4)) +
+        pbNodeDef("stack_1", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, one4)) +
+        pbNodeDef("stack_2", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, one4)) +
+        pbNodeDef("strided_slice", "StridedSlice",
+                  std::vector<std::string>{"shape", "stack", "stack_1", "stack_2"},
+                  pbAttrType("T", 3) + pbAttrType("Index", 3)) +
+        pbNodeDef("dim0", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{}, one4)) +
+        pbNodeDef("dim1", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{}, two4)) +
+        pbNodeDef("dim2", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{}, three4)) +
+        pbNodeDef("pack", "Pack", std::vector<std::string>{"strided_slice", "dim0", "dim1", "dim2"},
+                  pbAttrType("T", 3)) +
+        pbNodeDef("reshape", "Reshape", std::vector<std::string>{"x", "pack"},
+                  pbAttrType("T", 1));
+
+    Net reshapeNet;
+    ASSERT_NO_THROW(reshapeNet = readNetFromTensorflow(kerasReshapeGraph.data(), kerasReshapeGraph.size()));
+    reshapeNet.setInput(inp);
+    Mat reshaped = reshapeNet.forward();
+    EXPECT_EQ(reshaped.dims, 4);
+    EXPECT_EQ(reshaped.size[0], 1);
+    EXPECT_EQ(reshaped.size[1], 3);
+    EXPECT_EQ(reshaped.size[2], 1);
+    EXPECT_EQ(reshaped.size[3], 2);
+}
+
+TEST_F(Test_Graph_Simplifier, TensorFlowRejectsTruncatedTensorContentAndMalformedKerasReshape)
+{
+    std::string truncatedBiasGraph =
+        pbNodeDef("x", "Placeholder", std::vector<std::string>(), pbAttrType("dtype", 1)) +
+        pbNodeDef("b", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 1, std::vector<int>{1}, std::string("\x01\x02\x03", 3))) +
+        pbNodeDef("y", "BiasAdd", std::vector<std::string>{"x", "b"}, pbAttrType("T", 1));
+    EXPECT_THROW(readNetFromTensorflow(truncatedBiasGraph.data(), truncatedBiasGraph.size()), cv::Exception);
+
+    const std::string zero4 = pbInt32Le(0);
+    const std::string one4 = pbInt32Le(1);
+    std::string missingValueReshapeGraph =
+        pbNodeDef("x", "Placeholder", std::vector<std::string>(), pbAttrType("dtype", 1)) +
+        pbNodeDef("shape", "Shape", std::vector<std::string>{"x"}, pbAttrType("T", 1)) +
+        pbNodeDef("stack", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, zero4)) +
+        pbNodeDef("stack_1", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, one4)) +
+        pbNodeDef("stack_2", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{1}, one4)) +
+        pbNodeDef("strided_slice", "StridedSlice",
+                  std::vector<std::string>{"shape", "stack", "stack_1", "stack_2"},
+                  pbAttrType("T", 3) + pbAttrType("Index", 3)) +
+        pbNodeDef("dim0", "Const", std::vector<std::string>(), pbAttrType("dtype", 3)) +
+        pbNodeDef("dim1", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{}, one4)) +
+        pbNodeDef("dim2", "Const", std::vector<std::string>(),
+                  pbAttrTensorContent("value", 3, std::vector<int>{}, one4)) +
+        pbNodeDef("pack", "Pack", std::vector<std::string>{"strided_slice", "dim0", "dim1", "dim2"},
+                  pbAttrType("T", 3)) +
+        pbNodeDef("reshape", "Reshape", std::vector<std::string>{"x", "pack"},
+                  pbAttrType("T", 1));
+    EXPECT_THROW(readNetFromTensorflow(missingValueReshapeGraph.data(), missingValueReshapeGraph.size()), cv::Exception);
+}
+
 }}

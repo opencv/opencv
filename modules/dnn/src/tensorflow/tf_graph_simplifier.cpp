@@ -304,6 +304,8 @@ public:
         if (!Subgraph::match(net, nodeId, matchedNodesIds))
             return false;
         tensorflow::NodeDef* node = net->getNode(matchedNodesIds[maxValueId]).dynamicCast<TFNodeWrapper>()->node;
+        if (node->attr().find("value") == node->attr().end())
+            return false;
         Mat maxValue = getTensorContent(node->attr().at("value").tensor());
         return maxValue.type() == CV_32FC1 && maxValue.total() == 1 && maxValue.at<float>(0) == 6;
     }
@@ -356,13 +358,18 @@ public:
         shape[0] = -1;
         for (int i = 0; i < numOutDims; ++i)
         {
-            shape[1 + i] = inputNodes[1 + i]->attr().at("value").tensor().int_val(0);
+            CV_Assert(inputNodes[1 + i]->attr().find("value") != inputNodes[1 + i]->attr().end());
+            Mat dimMat = getTensorContent(inputNodes[1 + i]->attr().at("value").tensor());
+            CV_CheckEQ(dimMat.total(), (size_t)1, "");
+            CV_CheckTypeEQ(dimMat.type(), CV_32SC1, "");
+            shape[1 + i] = dimMat.at<int>(0);
         }
         tensorflow::TensorProto* shapeTensor = inputNodes[1]->mutable_attr()->at("value").mutable_tensor();
         fusedNode->mutable_input()->DeleteSubrange(2, numOutDims - 1);
         fusedNode->set_input(0, inpName);
 
         shapeTensor->clear_int_val();
+        shapeTensor->clear_tensor_content();
         for (int i = 0; i < shape.size(); ++i)
         {
             shapeTensor->add_int_val(shape[i]);
@@ -834,8 +841,8 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
         tensorflow::NodeDef* layer = net.mutable_node(li);
         for (int input_id = 0; input_id < layer->input_size(); input_id++) {
             String input_op_name = layer->input(input_id);
-            input_op_name = input_op_name.substr(input_op_name.find('^') + 1,
-                                                 input_op_name.rfind(':'));
+            input_op_name = input_op_name.substr(0, input_op_name.rfind(':'));
+            input_op_name = input_op_name.substr(input_op_name.find('^') + 1);
             IdentityOpsMap::iterator it = identity_ops.find(input_op_name);
 
             if (it != identity_ops.end()) {
@@ -880,7 +887,10 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
         case tensorflow::DT_FLOAT:
         {
             if (!content.empty())
+            {
+                CV_Assert(content.size() % sizeof(float) == 0);
                 m = Mat(1, content.size() / sizeof(float), CV_32FC1, (void*)content.c_str());
+            }
             else
             {
                 const RepeatedField<float>& field = tensor.float_val();
@@ -892,7 +902,10 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
         case tensorflow::DT_DOUBLE:
         {
             if (!content.empty())
+            {
+                CV_Assert(content.size() % sizeof(double) == 0);
                 m = Mat(1, content.size() / sizeof(double), CV_64FC1, (void*)content.c_str());
+            }
             else
             {
                 const RepeatedField<double>& field = tensor.double_val();
@@ -904,7 +917,10 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
         case tensorflow::DT_INT32:
         {
             if (!content.empty())
+            {
+                CV_Assert(content.size() % sizeof(int32_t) == 0);
                 m = Mat(1, content.size() / sizeof(int32_t), CV_32SC1, (void*)content.c_str());
+            }
             else
             {
                 const RepeatedField<int32_t>& field = tensor.int_val();
@@ -918,6 +934,7 @@ Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
             if (!content.empty())
             {
                 static const int kHalfSize = 2;
+                CV_Assert(content.size() % kHalfSize == 0);
                 Mat halfs(1, content.size() / kHalfSize, CV_16FC1, (void*)content.c_str());
                 halfs.convertTo(m, CV_32F);
             }
@@ -1036,8 +1053,8 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             if (node.op() == "Merge" || node.op() == "RefMerge" || node.op() == "NoOp")
             {
                 int numControlEdges = 0;
-                for (int j = 0; j < numInputsInGraph; ++j)
-                    numControlEdges += node.input(j).at(0) == '^';
+                for (int j = 0; j < node.input_size(); ++j)
+                    numControlEdges += !node.input(j).empty() && node.input(j).at(0) == '^';
                 numRefsToAdd.at(i) = numControlEdges + 1;
             }
             else
@@ -1092,6 +1109,7 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
                 {
                     std::string inpName = consumer->input(k);
                     inpName = inpName.substr(0, inpName.rfind(':'));
+                    inpName = inpName.substr(inpName.find('^') + 1);
                     if (inpName == node.name())
                     {
                         consumer->set_input(k, node.input(0));
@@ -1111,7 +1129,8 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
         for (int j = 0; j < node.input_size(); ++j)
         {
             std::string inpName = node.input(j);
-            inpName = inpName.substr(1 + (int)inpName.find('^'), inpName.rfind(':'));
+            inpName = inpName.substr(0, inpName.rfind(':'));
+            inpName = inpName.substr(inpName.find('^') + 1);
             nodesMapIt = nodesMap.find(inpName);
             CV_Assert(nodesMapIt != nodesMap.end());
             numConsumers[nodesMapIt->second] += 1;
@@ -1126,7 +1145,8 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
         for (int i = 0; i < node.input_size(); ++i)
         {
             std::string inpName = node.input(i);
-            inpName = inpName.substr(1 + (int)inpName.find('^'), inpName.rfind(':'));
+            inpName = inpName.substr(0, inpName.rfind(':'));
+            inpName = inpName.substr(inpName.find('^') + 1);
             nodesMapIt = nodesMap.find(inpName);
             CV_Assert(nodesMapIt != nodesMap.end());
             int inpNodeId = nodesMapIt->second;
