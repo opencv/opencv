@@ -2470,7 +2470,7 @@ TEST_P(Core_DotProduct_NewTypes, accuracy)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
     testing::Values(CV_16F, CV_16BF, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
-    
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
