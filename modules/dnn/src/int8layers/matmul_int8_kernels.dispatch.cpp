@@ -15,9 +15,10 @@ namespace cv
 namespace dnn
 {
 
-bool matMulInt8PairedB()
+void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum)
 {
-    CV_CPU_DISPATCH(matMulInt8PairedB, (), CV_CPU_DISPATCH_MODES_ALL);
+    CV_CPU_DISPATCH(matMulInt8PackB, (B, nb, K, N, delta, packedB, colsum),
+                    CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,

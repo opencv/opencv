@@ -34,12 +34,12 @@ struct MatMulInt8OutLayout
     }
 };
 
-// true when the kernel wants each group of KR rows of a panel as [KR/2][NR][2], pairs of k per
-// column, instead of [NR][KR]
-bool matMulInt8PairedB();
+// Packs nb [K, N] matrices of B - delta, one after another, into the panels matMulInt8Int32 reads,
+// and writes their column sums; both buffers are zeroed by the caller and padded as described below
+void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum);
 
 // Y[r,n] = sum_k (A[r,k] - a_zp) * B[k,n] + corr[n] * rowterm[r] in int32, corr may be null;
-// packedB is int8 B as [N/NR][K/KR][NR][KR] rounded up and zero-padded; colsum and corr pad N alike
+// packedB has N/NR panels (rounded up) of alignSize(K, KR) * NR bytes; colsum and corr pad N alike
 // With scale set, Y is float: Y[r,n] * scale[n] + bias[n]; scale and bias pad N alike
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,
                      const int* corr, const int* rowterm, void* Y, const MatMulInt8OutLayout& lay,

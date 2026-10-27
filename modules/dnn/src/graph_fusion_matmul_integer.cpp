@@ -9,6 +9,7 @@
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "layers/layers_common.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -259,8 +260,9 @@ struct ModelFusionMatMulIntegerDequant
                 soleConsumer(dql->outputs[0], usecounts, consumers) != (int)i)
                 continue;
             Arg yScale = dql->outputs[1], yZp = dql->outputs[2];
-            if (yZp.idx > 0 && usecounts[yZp.idx] != 0 && (layer->inputs[2].idx != yZp.idx ||
-                                            soleConsumer(yZp, usecounts, consumers) != (int)i))
+            // folded, the layer subtracts the zero point it computes: the matmul must take that one
+            if (yZp.idx <= 0 || layer->inputs[2].idx != yZp.idx ||
+                soleConsumer(yZp, usecounts, consumers) != (int)i)
                 continue;
 
             const int N = netimpl->argTensor(layer->inputs[1]).size[1];
@@ -358,12 +360,9 @@ struct ModelFusionMatMulIntegerDequant
             if (rs->inputs.size() == 2 && netimpl->isConstArg(rs->inputs[1])) {
                 // a constant shape keeps the output shape known before forward()
                 const Mat& t = netimpl->argTensor(rs->inputs[1]);
-                if (t.depth() != CV_32S && t.depth() != CV_64S)
+                if (!t.isContinuous() || (t.type() != CV_32S && t.type() != CV_64S))
                     continue;
-                vector<int> v((size_t)t.total());
-                for (size_t k = 0; k < v.size(); k++)
-                    v[k] = t.depth() == CV_32S ? t.ptr<int>()[k] : (int)t.ptr<int64_t>()[k];
-                mm->head_split_shape = MatShape(v);
+                mm->head_split_shape = tensorToShape(t);
             } else if (rs->inputs.size() == 2) {
                 vector<Arg> inputs = layer->inputs;
                 inputs.resize(6);   // an absent bias stays the empty Arg()

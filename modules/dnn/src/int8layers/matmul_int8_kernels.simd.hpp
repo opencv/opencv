@@ -12,7 +12,7 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-bool matMulInt8PairedB();
+void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum);
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,
                      const int* corr, const int* rowterm, void* Y, const MatMulInt8OutLayout& lay,
                      int M, int N, int K, int a_zp, bool aIsU8,
@@ -149,26 +149,27 @@ static void accumulateVnni6(const uchar* const (&a)[6], const int8_t* bp, int K,
 
 #if MMI8_USE_AVX2
 // AVX2 has no u8 x s8 dot product that cannot saturate, so A and B are widened to int16 for
-// vpmaddwd; B is packed as k pairs per column (see matMulInt8PairedB), two sums per row.
+// v_dotprod (vpmaddwd); B is packed as k pairs per column (see matMulInt8PackB), two sums per row.
 #define MMI8_AVX2_ROW(i) if constexpr (i < R) { \
         int p01, p23; \
         memcpy(&p01, aw[i] + k, sizeof(p01)); \
         memcpy(&p23, aw[i] + k + 2, sizeof(p23)); \
-        __m256i av = _mm256_set1_epi32(p01); \
-        c##i##0 = _mm256_add_epi32(c##i##0, _mm256_madd_epi16(av, b0)); \
-        c##i##1 = _mm256_add_epi32(c##i##1, _mm256_madd_epi16(av, b1)); \
-        av = _mm256_set1_epi32(p23); \
-        c##i##0 = _mm256_add_epi32(c##i##0, _mm256_madd_epi16(av, b2)); \
-        c##i##1 = _mm256_add_epi32(c##i##1, _mm256_madd_epi16(av, b3)); }
+        v_int16 av = v_reinterpret_as_s16(vx_setall_s32(p01)); \
+        c##i##0 = v_dotprod(av, b0, c##i##0); \
+        c##i##1 = v_dotprod(av, b1, c##i##1); \
+        av = v_reinterpret_as_s16(vx_setall_s32(p23)); \
+        c##i##0 = v_dotprod(av, b2, c##i##0); \
+        c##i##1 = v_dotprod(av, b3, c##i##1); }
 
 template<int R, bool XOR>
 static void accumulateAvx2(const uchar* const (&a)[R], const int8_t* bp, int K,
                            int (&accbuf)[R][MMI8_NR])
 {
     constexpr int KC = 256;
-    int16_t CV_DECL_ALIGNED(32) aw[R][KC];
-    const __m128i vxor = _mm_set1_epi8((char)0x80);
-    __m256i c00 = _mm256_setzero_si256(), c01 = c00, c10 = c00, c11 = c00,
+    const int VL = VTraits<v_int16>::vlanes(), VLI = VTraits<v_int32>::vlanes();
+    int16_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) aw[R][KC];
+    const v_uint16 vxor = vx_setall_u16(0x80);
+    v_int32 c00 = vx_setzero_s32(), c01 = c00, c10 = c00, c11 = c00,
             c20 = c00, c21 = c00, c30 = c00, c31 = c00;
     const int Kpad = (K + MMI8_KR - 1) & ~(MMI8_KR - 1);
     for (int k0 = 0; k0 < Kpad; k0 += KC) {
@@ -177,28 +178,32 @@ static void accumulateAvx2(const uchar* const (&a)[R], const int8_t* bp, int K,
         for (int i = 0; i < R; i++) {
             const uchar* ai = a[i] + k0;
             int k = 0;
-            for (; k + 16 <= kc && k0 + k + 16 <= K; k += 16) {
-                __m128i t = _mm_loadu_si128((const __m128i*)(ai + k));
+            for (; k + VL <= kc && k0 + k + VL <= K; k += VL) {
+                v_uint16 t = vx_load_expand(ai + k);
                 if constexpr (XOR)
-                    t = _mm_xor_si128(t, vxor);
-                _mm256_store_si256((__m256i*)(aw[i] + k), _mm256_cvtepu8_epi16(t));
+                    t = v_xor(t, vxor);
+                v_store_aligned(aw[i] + k, v_reinterpret_as_s16(t));
             }
             for (; k < kc; k++)
                 aw[i][k] = k0 + k < K ? (int16_t)(uchar)(ai[k] ^ (XOR ? 0x80 : 0)) : 0;
         }
         for (int k = 0; k < kc; k += MMI8_KR, bp += MMI8_PSTEP) {
-            __m256i b0 = _mm256_cvtepi8_epi16(_mm_loadu_si128((const __m128i*)bp));
-            __m256i b1 = _mm256_cvtepi8_epi16(_mm_loadu_si128((const __m128i*)(bp + 16)));
-            __m256i b2 = _mm256_cvtepi8_epi16(_mm_loadu_si128((const __m128i*)(bp + 32)));
-            __m256i b3 = _mm256_cvtepi8_epi16(_mm_loadu_si128((const __m128i*)(bp + 48)));
+            v_int16 b0 = vx_load_expand(bp), b1 = vx_load_expand(bp + VL);
+            v_int16 b2 = vx_load_expand(bp + 2 * VL), b3 = vx_load_expand(bp + 3 * VL);
             MMI8_AVX2_ROW(0) MMI8_AVX2_ROW(1) MMI8_AVX2_ROW(2) MMI8_AVX2_ROW(3)
         }
     }
-    __m256i* out = (__m256i*)&accbuf[0][0];
-    out[0] = c00; out[1] = c01;
-    if constexpr (R > 1) { out[2] = c10; out[3] = c11; }
-    if constexpr (R > 2) { out[4] = c20; out[5] = c21; }
-    if constexpr (R > 3) { out[6] = c30; out[7] = c31; }
+    v_store_aligned(accbuf[0], c00);
+    v_store_aligned(accbuf[0] + VLI, c01);
+    if constexpr (R > 1) {
+        v_store_aligned(accbuf[1], c10); v_store_aligned(accbuf[1] + VLI, c11);
+    }
+    if constexpr (R > 2) {
+        v_store_aligned(accbuf[2], c20); v_store_aligned(accbuf[2] + VLI, c21);
+    }
+    if constexpr (R > 3) {
+        v_store_aligned(accbuf[3], c30); v_store_aligned(accbuf[3] + VLI, c31);
+    }
 }
 #undef MMI8_AVX2_ROW
 #endif
@@ -285,10 +290,13 @@ static void gemmTile(const uchar* A, size_t lda, int r, int mr, const int8_t* bp
             s -= zp * colsum[j];
             if constexpr (CORR)
                 s += corr[j] * rt[i];
-            if constexpr (FLT)
-                yrow[j] = (float)s * scale[j] + fbias[j];
-            else
+            if constexpr (FLT) {
+                // two statements: clang's default -ffp-contract=on only fuses within one
+                float p = (float)s * scale[j];
+                yrow[j] = p + fbias[j];
+            } else {
                 yrow[j] = s;
+            }
         }
     }
 #endif
@@ -349,9 +357,31 @@ static void gemmInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, con
                                   M, N, K, zp);
 }
 
-bool matMulInt8PairedB()
+void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum)
 {
-    return MMI8_USE_AVX2 != 0;
+    // each KR rows of a panel are [NR][KR], or [KR/2][NR][2] (pairs of k) for accumulateAvx2
+    constexpr bool paired = MMI8_USE_AVX2 != 0;
+    const int Npad = (N + MMI8_NR - 1) / MMI8_NR * MMI8_NR;
+    const size_t panelSize = (size_t)((K + MMI8_KR - 1) / MMI8_KR) * MMI8_PSTEP;
+    const size_t matSize = (size_t)(Npad / MMI8_NR) * panelSize;
+    parallel_for_(Range(0, nb * N), [&](const Range& range) {
+        for (int j = range.start; j < range.end; j++) {
+            const int m = j / N, n = j % N;
+            const uchar* bm = B + (size_t)m * K * N;
+            int8_t* d = packedB + m * matSize + n / MMI8_NR * panelSize;
+            int s = 0;
+            for (int k = 0; k < K; k++) {
+                const uchar v = bm[(size_t)k * N + n];
+                int w = (delta ? (int)v : (int)(schar)v) - delta;
+                const int kk = k % MMI8_KR;
+                d[k / MMI8_KR * MMI8_PSTEP +
+                  (paired ? kk / 2 * MMI8_NR * 2 + n % MMI8_NR * 2 + kk % 2
+                          : n % MMI8_NR * MMI8_KR + kk)] = (int8_t)w;
+                s += w;
+            }
+            colsum[m * Npad + n] = s;
+        }
+    }, (double)nb * N * K / (1 << 16));
 }
 
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,

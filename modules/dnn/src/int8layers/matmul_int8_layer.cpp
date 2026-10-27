@@ -7,7 +7,6 @@
 #include "../net_impl.hpp"
 #include "../layers/cpu_kernels/fast_gemm.hpp"
 #include "matmul_int8_kernels.hpp"
-#include "../dynamic_quantize.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -88,7 +87,8 @@ public:
                          "DNN/MatMulInteger: the Reshape shape must be int32 or int64");
             std::vector<int> v((size_t)t.total());
             for (size_t i = 0; i < v.size(); i++)
-                v[i] = t.depth() == CV_32S ? t.ptr<int>()[i] : (int)t.ptr<int64_t>()[i];
+                v[i] = t.depth() == CV_32S ? t.ptr<int>()[i]
+                                           : saturate_cast<int>(t.ptr<int64_t>()[i]);
             spec = MatShape(v);
         }
         MatShape target = x.reshape(spec);
@@ -238,27 +238,7 @@ private:
         packedB.setTo(Scalar::all(0));
         colsum = Mat::zeros(1, nb * Npad, CV_32S);
         corr = Mat::zeros(1, nb * Npad, CV_32S);
-        const uchar* b = B.ptr<uchar>();
-        int8_t* dst = packedB.ptr<int8_t>();
-        int* cs = colsum.ptr<int>();
-        const bool paired = matMulInt8PairedB();
-        parallel_for_(Range(0, nb * N), [&](const Range& range) {
-            for (int j = range.start; j < range.end; j++) {
-                const int m = j / N, n = j % N;
-                const uchar* bm = b + (size_t)m * K * N;
-                int8_t* d = dst + m * matSize + n / NR * panelSize;
-                int s = 0;
-                for (int k = 0; k < K; k++) {
-                    const uchar v = bm[(size_t)k * N + n];
-                    int w = (delta ? (int)v : (int)(schar)v) - delta;
-                    const int kk = k % KR;
-                    d[k / KR * NR * KR + (paired ? kk / 2 * NR * 2 + n % NR * 2 + kk % 2
-                                                 : n % NR * KR + kk)] = (int8_t)w;
-                    s += w;
-                }
-                cs[m * Npad + n] = s;
-            }
-        }, (double)nb * N * K / (1 << 16));
+        matMulInt8PackB(B.ptr<uchar>(), nb, K, N, delta, packedB.ptr<int8_t>(), colsum.ptr<int>());
     }
 
     // ONNX MatMulInteger: https://onnx.ai/onnx/operators/onnx__MatMulInteger.html, opset 10 (its
@@ -278,11 +258,12 @@ private:
         if (quantize_input) {
             CV_Assert(dequant_output);
             CV_CheckType(A.type(), A.type() == CV_32FC1, "DNN/MatMulInteger: A must be float");
-            quantA.fit(A.shape(), CV_8U);
-            uchar zp = 0;
-            dynamicQuantizeLinearU8(A, quantA.ptr<uchar>(), aScale, zp);
-            qzp = zp;
-            A = quantA;
+            if (!quantizeLayer)
+                quantizeLayer = DynamicQuantizeLinearLayer::create(LayerParams());
+            quantizeLayer->forward(std::vector<Mat>(1, A), quantized, noArray());
+            aScale = quantized[1].ptr<float>()[0];
+            qzp = quantized[2].ptr<uchar>()[0];
+            A = quantized[0];
         }
         CV_CheckType(A.type(), A.type() == CV_8UC1 || A.type() == CV_8SC1,
                      "DNN/MatMulInteger: A must be uint8 or int8");
@@ -627,7 +608,8 @@ private:
     Mat packedB, colsum, corr; // int32 mode
     Mat epilogue;              // per-column scale and bias of the dequant_output mode
     Mat rowtermBuf;            // the per-row term when the engine gives no internals
-    Mat quantA;                // A quantized here in the quantize_input mode
+    Ptr<DynamicQuantizeLinearLayer> quantizeLayer;  // quantizes A in the quantize_input mode
+    std::vector<Mat> quantized;                     // its outputs: A, the scale and the zero point
 };
 
 Ptr<MatMulInt8Layer> MatMulInt8Layer::create(const LayerParams& params)
