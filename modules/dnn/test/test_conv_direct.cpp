@@ -8,14 +8,15 @@
 namespace opencv_test { namespace {
 
 // Exercise the blocked FP32 kernel with a scalar reference independent of the
-// SIMD tile size, including groups starting inside a channel block. Run with
-// OPENCV_DNN_NEON_PAIR_3X3=1 to also exercise the experimental AArch64 path.
-typedef TestWithParam<tuple<int, int, int, int, bool> > Conv2Direct;
+// SIMD tile size, including groups starting inside a channel block, and the
+// blocked Winograd path with partial tiles and padded channel blocks.
+typedef TestWithParam<tuple<int, int, int, int, bool, bool> > Conv2Direct;
 TEST_P(Conv2Direct, Accuracy)
 {
     const int kernel = get<0>(GetParam()), stride = get<1>(GetParam());
     const int dilation = get<2>(GetParam()), groups = get<3>(GetParam());
     const bool aligned = get<4>(GetParam());
+    const bool winograd = get<5>(GetParam());
     const int C = groups == 1 ? (aligned ? 512 : 65) : 18;
     const int K = groups == 1 ? (aligned ? 64 : 67) : 22;
     const int Cg = C / groups, Kg = K / groups;
@@ -30,6 +31,7 @@ TEST_P(Conv2Direct, Accuracy)
     lp.set("group", groups);
     Ptr<cv::dnn::Conv2Layer> layer = cv::dnn::Conv2Layer::create(lp);
     Net net;
+    net.enableWinograd(winograd);
     layer->netimpl = net.getImpl();
     Mat weights({K, Cg, kernel, kernel}, CV_32F), bias({K}, CV_32F);
     for (size_t i = 0; i < weights.total(); ++i)
@@ -40,14 +42,14 @@ TEST_P(Conv2Direct, Accuracy)
 
     // Small and resized spatial dimensions cover scalar-only output, full SIMD
     // tiles, tails crossing rows, and the interior versus padded border paths.
-    for (int width : {5, 11, 23})
+    for (int width : {5, 17, 23, 23})
     {
         if (width == 23)
         {
             weights *= 0.5f;
             layer->setWeights(weights, bias, C0, CV_32F);
         }
-        const int N = 2, H = 7, W = width;
+        const int N = 2, H = winograd ? 13 : 7, W = width;
         const int Ho = (H + 2 * pad - dilation * (kernel - 1) - 1) / stride + 1;
         const int Wo = (W + 2 * pad - dilation * (kernel - 1) - 1) / stride + 1;
         Mat input(MatShape({N, C1, H, W, C0}, DATA_LAYOUT_BLOCK, C), CV_32F, Scalar::all(0));
@@ -81,13 +83,33 @@ TEST_P(Conv2Direct, Accuracy)
         layer->forward(inputs, outputs, internals);
         ASSERT_EQ(1u, outputs.size());
         // Binary fractions keep the scalar reference exact in FP32.
-        normAssert(expected, outputs[0], "Blocked direct convolution", 0., 0.);
+        normAssert(expected, outputs[0], "Blocked convolution", winograd ? 1e-4 : 0., winograd ? 1e-3 : 0.);
         layer->forward(inputs, outputs, internals);
-        normAssert(expected, outputs[0], "Repeated direct convolution", 0., 0.);
+        normAssert(expected, outputs[0], "Repeated convolution", winograd ? 1e-4 : 0., winograd ? 1e-3 : 0.);
+        if (winograd && width == 23)
+        {
+            // A late bias fusion must update the cached Winograd object too.
+            Mat extraBias({K}, CV_32F, Scalar::all(0.125));
+            ASSERT_TRUE(layer->fuseAddBias(extraBias));
+            bias += 0.125;
+            for (int n = 0; n < N; ++n)
+                for (int k = 0; k < K; ++k)
+                    for (int p = 0; p < Ho * Wo; ++p)
+                        expected.ptr<float>()[((n * K1 + k / C0) * Ho * Wo + p) * C0 + k % C0] += 0.125f;
+            layer->forward(inputs, outputs, internals);
+            normAssert(expected, outputs[0], "Bias after cached forward", 1e-4, 1e-3);
+        }
+        if (winograd)
+        {
+            net.enableWinograd(false);
+            layer->forward(inputs, outputs, internals);
+            normAssert(expected, outputs[0], "Winograd disabled", 0., 0.);
+            net.enableWinograd(true);
+        }
     }
 }
 
 INSTANTIATE_TEST_CASE_P(DNN, Conv2Direct, Combine(
-    Values(1, 3), Values(1, 2), Values(1, 2), Values(1, 2), testing::Bool()));
+    Values(1, 3), Values(1, 2), Values(1, 2), Values(1, 2), testing::Bool(), testing::Bool()));
 
 }} // namespace opencv_test
