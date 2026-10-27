@@ -14,7 +14,7 @@
 
 namespace cv { namespace dnn {
 
-void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
+static void softmaxImpl(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, bool logSoftmax){
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
     CV_Assert(src.size == dst.size);
@@ -101,6 +101,17 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
                 s += axisBuf[cnDim];
             }
 
+            if (logSoftmax) {
+                // log(softmax(x)) underflows to -inf once x is far below the maximum,
+                // so compute x - max - log(sum(exp(x - max))) instead.
+                const float logSum = std::log(s);
+                for (_cnDim = 0; _cnDim < axisStep; _cnDim++) {
+                    const size_t idx = srcOffset + (_cnDim + axisBias) * cnStep;
+                    dstPtr[idx] = (srcPtr[idx] - maxVal) - logSum;
+                }
+                continue;
+            }
+
             s = 1.f / s;
 
             // copy back the result to src
@@ -119,13 +130,16 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
     }, nstripes);
 }
 
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep) {
+    softmaxImpl(dst, src, axis, axisBias, axisStep, false);
+}
+
 void softmax(Mat &dst, const Mat &src, int axis) {
     softmax(dst, src, axis, 0, src.size[axis]);
 }
 
 void logSoftmax(Mat &dst, const Mat &src, int axis) {
-    softmax(dst, src, axis);
-    log(dst, dst);
+    softmaxImpl(dst, src, axis, 0, src.size[axis], true);
 }
 
 }} // cv::dnn
