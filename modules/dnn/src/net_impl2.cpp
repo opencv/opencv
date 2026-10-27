@@ -469,7 +469,7 @@ Mat& Net::Impl::argTensor(Arg arg) const
 void Net::Impl::bindView(Arg view)
 {
     Mat& t = __tensors__.at(view.idx);
-    const Mat& src = argTensor(Arg(viewOf[view.idx]));
+    const Mat& src = argTensor(Arg(viewSources[view.idx]));
     // a reshape of a continuous tensor is the same bytes; fit() then only changes the header
     if (!src.empty() && src.isContinuous() && src.size.layout != DATA_LAYOUT_BLOCK)
         t = src;

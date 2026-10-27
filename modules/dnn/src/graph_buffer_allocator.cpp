@@ -80,7 +80,7 @@ struct BufferAllocator
     vector<int> freebufs;
     vector<int> buf_usecounts;
     vector<int> bufidxs;
-    vector<int> viewOf;
+    vector<int> viewSources;
     bool allowViews = false;
     int nbufs = 0;
 
@@ -200,13 +200,13 @@ struct BufferAllocator
         netimpl->useCounts(usecounts);
         size_t nargs = usecounts.size();
         bufidxs.assign(nargs, -1);
-        viewOf.assign(nargs, -1);
+        viewSources.assign(nargs, -1);
         allowViews = netimpl->preferableBackend == DNN_BACKEND_OPENCV &&
                      netimpl->preferableTarget == DNN_TARGET_CPU;
         nbufs = 0;
         assign(netimpl->mainGraph);
         netimpl->bufidxs = bufidxs;
-        netimpl->viewOf = viewOf;
+        netimpl->viewSources = viewSources;
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
             netimpl->buffers[i] = Mat();
@@ -289,8 +289,8 @@ struct BufferAllocator
                 Arg inp0 = inputs[0];
                 ArgKind k = netimpl->argKind(inp0);
                 if (k == DNN_ARG_INPUT || k == DNN_ARG_OUTPUT ||
-                    (k == DNN_ARG_TEMP && viewOf[inp0.idx] >= 0)) {
-                    viewOf[outputs[0].idx] = inp0.idx;
+                    (k == DNN_ARG_TEMP && viewSources[inp0.idx] >= 0)) {
+                    viewSources[outputs[0].idx] = inp0.idx;
                     isView = true;
                 }
             }

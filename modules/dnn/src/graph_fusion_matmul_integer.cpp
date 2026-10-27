@@ -93,6 +93,36 @@ struct ModelFusionMatMulIntegerDequant
         return it->second[0];
     }
 
+    // the op that produces each arg and the ops that read it, as indices into prog
+    static void collectUses(const vector<Ptr<LayerInfo>>& prog, std::map<int, int>& producer,
+                            std::map<int, vector<int>>& consumers)
+    {
+        for (size_t i = 0; i < prog.size(); i++) {
+            if (!prog[i]) continue;
+            for (Arg out : prog[i]->outputs)
+                producer[out.idx] = (int)i;
+            for (Arg inp : prog[i]->inputs)
+                if (inp.idx > 0)
+                    consumers[inp.idx].push_back((int)i);
+        }
+    }
+
+    // drops the absorbed ops; where emitAt[i] >= 0, the fused op prog[emitAt[i]] goes at position i
+    static void rebuildProg(Ptr<Graph>& graph, const vector<bool>& dropped,
+                            const vector<int>& emitAt = vector<int>())
+    {
+        const vector<Ptr<LayerInfo>>& prog = graph->prog();
+        vector<Ptr<LayerInfo>> newprog;
+        newprog.reserve(prog.size());
+        for (size_t i = 0; i < prog.size(); i++) {
+            if (!emitAt.empty() && emitAt[i] >= 0)
+                newprog.push_back(prog[emitAt[i]]);
+            else if (!dropped[i] && prog[i])
+                newprog.push_back(prog[i]);
+        }
+        graph->setProg(newprog);
+    }
+
     // MatMulInteger -> Cast(float) -> Mul(scale) [-> Add(bias)]  =>  MatMulInt8(dequant_output)
     bool fuseGraph(Ptr<Graph>& graph)
     {
@@ -115,14 +145,7 @@ struct ModelFusionMatMulIntegerDequant
 
         std::map<int, int> producer;
         std::map<int, vector<int>> consumers;
-        for (size_t i = 0; i < nops; i++) {
-            if (!prog[i]) continue;
-            for (Arg out : prog[i]->outputs)
-                producer[out.idx] = (int)i;
-            for (Arg inp : prog[i]->inputs)
-                if (inp.idx > 0)
-                    consumers[inp.idx].push_back((int)i);
-        }
+        collectUses(prog, producer, consumers);
 
         vector<bool> dropped(nops, false);
         vector<int> emitAt(nops, -1);
@@ -203,17 +226,8 @@ struct ModelFusionMatMulIntegerDequant
             modified = true;
         }
 
-        if (modified) {
-            vector<Ptr<LayerInfo>> newprog;
-            newprog.reserve(nops);
-            for (size_t i = 0; i < nops; i++) {
-                if (emitAt[i] >= 0)
-                    newprog.push_back(prog[emitAt[i]]);
-                else if (!dropped[i] && prog[i])
-                    newprog.push_back(prog[i]);
-            }
-            graph->setProg(newprog);
-        }
+        if (modified)
+            rebuildProg(graph, dropped, emitAt);
         return modified;
     }
 
@@ -235,14 +249,7 @@ struct ModelFusionMatMulIntegerDequant
         netimpl->useCounts(usecounts);
         std::map<int, int> producer;
         std::map<int, vector<int>> consumers;
-        for (size_t i = 0; i < nops; i++) {
-            if (!prog[i]) continue;
-            for (Arg out : prog[i]->outputs)
-                producer[out.idx] = (int)i;
-            for (Arg inp : prog[i]->inputs)
-                if (inp.idx > 0)
-                    consumers[inp.idx].push_back((int)i);
-        }
+        collectUses(prog, producer, consumers);
 
         vector<bool> dropped(nops, false);
         for (size_t i = 0; i < nops; i++) {
@@ -298,14 +305,8 @@ struct ModelFusionMatMulIntegerDequant
             modified = true;
         }
 
-        if (modified) {
-            vector<Ptr<LayerInfo>> newprog;
-            newprog.reserve(nops);
-            for (size_t i = 0; i < nops; i++)
-                if (!dropped[i] && prog[i])
-                    newprog.push_back(prog[i]);
-            graph->setProg(newprog);
-        }
+        if (modified)
+            rebuildProg(graph, dropped);
         return modified;
     }
 
@@ -324,13 +325,9 @@ struct ModelFusionMatMulIntegerDequant
 
         vector<int> usecounts;
         netimpl->useCounts(usecounts);
+        std::map<int, int> producer;
         std::map<int, vector<int>> consumers;
-        for (size_t i = 0; i < nops; i++) {
-            if (!prog[i]) continue;
-            for (Arg inp : prog[i]->inputs)
-                if (inp.idx > 0)
-                    consumers[inp.idx].push_back((int)i);
-        }
+        collectUses(prog, producer, consumers);
 
         vector<bool> dropped(nops, false);
         vector<int> emitAt(nops, -1);
@@ -379,17 +376,8 @@ struct ModelFusionMatMulIntegerDequant
             modified = true;
         }
 
-        if (modified) {
-            vector<Ptr<LayerInfo>> newprog;
-            newprog.reserve(nops);
-            for (size_t i = 0; i < nops; i++) {
-                if (emitAt[i] >= 0)
-                    newprog.push_back(prog[emitAt[i]]);
-                else if (!dropped[i] && prog[i])
-                    newprog.push_back(prog[i]);
-            }
-            graph->setProg(newprog);
-        }
+        if (modified)
+            rebuildProg(graph, dropped, emitAt);
         return modified;
     }
 

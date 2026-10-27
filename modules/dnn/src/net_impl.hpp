@@ -137,7 +137,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<int> bufidxs;
     // per arg: for a TEMP arg that views another arg's memory instead of having a buffer
     // (a Reshape of a model input or output), the arg it views; -1 otherwise
-    std::vector<int> viewOf;
+    std::vector<int> viewSources;
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     // interior tensors kept alive for forward-to-layer
@@ -462,7 +462,7 @@ struct Net::Impl : public detail::NetImplBase
     Mat& argTensor(Arg arg) const;
     bool isViewArg(Arg arg) const
     {
-        return arg.idx > 0 && (size_t)arg.idx < viewOf.size() && viewOf[arg.idx] >= 0;
+        return arg.idx > 0 && (size_t)arg.idx < viewSources.size() && viewSources[arg.idx] >= 0;
     }
     // points a view arg's tensor at the memory of the tensor it views, or, when that one
     // is in block layout, leaves it to get memory of its own
