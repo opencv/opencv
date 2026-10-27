@@ -289,6 +289,45 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
+TEST(Layer_Test_Softmax, LogSoftmaxDoesNotUnderflow)
+{
+    // log(softmax(x)) is -inf once x is about 104 below the maximum, where exp underflows.
+    // The 17-element row also goes through the SIMD loops.
+    std::vector<float> data = {1000.f, 1001.f, 1002.f, -1000.f, 0.f, 1000.f};
+    for (int i = 0; i < 17; i++)
+        data.push_back(100.f * i - 800.f);
+
+    for (int len : {3, 17})
+    {
+        SCOPED_TRACE(len);
+        const int rows = len == 3 ? 2 : 1;
+        Mat input(rows, len, CV_32F, data.data() + (len == 3 ? 0 : 6));
+
+        LayerParams lp;
+        lp.type = "Softmax";
+        lp.name = "logSoftmax";
+        lp.set("axis", 1);
+        lp.set("log_softmax", true);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        Mat out = net.forward();
+
+        Mat ref(rows, len, CV_32F);
+        for (int r = 0; r < rows; r++)
+        {
+            const float* x = input.ptr<float>(r);
+            double maxVal = *std::max_element(x, x + len), sum = 0;
+            for (int c = 0; c < len; c++)
+                sum += std::exp(x[c] - maxVal);
+            for (int c = 0; c < len; c++)
+                ref.at<float>(r, c) = static_cast<float>(x[c] - maxVal - std::log(sum));
+        }
+        normAssert(ref, out.reshape(1, rows), "", 1e-4, 1e-4);
+    }
+}
+
 static Mat runGatherElementsLayer(const Mat& data, const Mat& indices, int axis)
 {
     LayerParams params;
