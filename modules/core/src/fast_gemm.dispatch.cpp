@@ -480,7 +480,7 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
         for (int i = r.start; i < r.end; i++) {
             float* c_i = C + i * ldc;
             if (beta == 0.f)
-                for (int j = 0; j < N; j++) c_i[j] = 0.f;
+                std::fill(c_i, c_i + N, 0.f);
             else if (beta != 1.f)
                 for (int j = 0; j < N; j++) c_i[j] *= beta;
             for (int k = 0; k < K; k++) {

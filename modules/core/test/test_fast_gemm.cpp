@@ -76,9 +76,9 @@ TEST_P(Core_HalGemm32f, accuracy)
             B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1,
             beta, C.empty() ? NULL : C.ptr<float>(), tc ? 1 : ld(C), tc ? ld(C) : 1, ref, scale);
 
-    cv::hal::gemm32f(A.ptr<float>(), A.step, B.ptr<float>(), B.step, alpha,
-                     C.empty() ? NULL : C.ptr<float>(), C.empty() ? 0 : C.step, beta,
-                     D.ptr<float>(), D.step, A.rows, A.cols, N, flags);
+    cv::hal::gemm(CV_32FC1, A.data, A.step, B.data, B.step, alpha,
+                  C.data, C.empty() ? 0 : C.step, beta,
+                  D.data, D.step, A.rows, A.cols, N, flags);
     ASSERT_NO_FATAL_FAILURE(checkGemm(D.ptr<float>(), ld(D), ref, scale, K));
 }
 
@@ -97,6 +97,13 @@ INSTANTIATE_TEST_CASE_P(TransposedC, Core_HalGemm32f, testing::Combine(
     testing::Values((int)GEMM_3_T, (int)(GEMM_1_T | GEMM_3_T), (int)(GEMM_2_T | GEMM_3_T),
                     (int)(GEMM_1_T | GEMM_2_T | GEMM_3_T)),
     testing::Values((int)SEPARATE_C)));
+
+TEST(Core_HalGemm, unsupported_type)
+{
+    Mat A(4, 4, CV_32SC1, Scalar(1)), B(4, 4, CV_32SC1, Scalar(1)), D(4, 4, CV_32SC1);
+    EXPECT_THROW(cv::hal::gemm(CV_32SC1, A.data, A.step, B.data, B.step, 1., NULL, 0, 0.,
+                               D.data, D.step, 4, 4, 4, 0), cv::Exception);
+}
 
 TEST(Core_FastGemm32f, size_threshold)
 {
