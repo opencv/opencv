@@ -810,7 +810,7 @@ public:
         // dispatch to the AArch64 shapes measured against the direct kernel.
         if (netimpl_->useWinograd && !dynamicWeights && inptype == CV_32F &&
             C0 == 8 && ngroups == 1 && wshape0.dims == 4 &&
-            wshape0[1] >= 64 && wshape0[0] >= 16 &&
+            wshape0[1] >= 3 && wshape0[0] >= 16 &&
             wshape0[2] == 3 && wshape0[3] == 3 &&
             cs.strides[1] == 1 && cs.strides[2] == 1 &&
             cs.dilations[1] == 1 && cs.dilations[2] == 1 &&

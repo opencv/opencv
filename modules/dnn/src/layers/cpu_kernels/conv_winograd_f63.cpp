@@ -16,6 +16,98 @@ namespace cv { namespace dnn {
 
 enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 
+// Keep transformed input local to a spatial chunk. Besides bounding scratch
+// memory, this reuses the interleaved channel data before it leaves the cache.
+static int runWinograd63Blocked(const Mat& input, Mat& output,
+                               const Ptr<FastConv>& conv, const Winofunc& func,
+                               float minval, float maxval, bool ifMinMaxAct)
+{
+    const MatShape si = input.shape(), so = output.shape();
+    const int N = si[0], C = si.channels(), K = so.channels();
+    const int Hi = si[2], Wi = si[3], Ho = so[2], Wo = so[3];
+    const int groups = conv->ngroups, Cg = C/groups, Kg = K/groups;
+    const int iblock = func.iblock, atom = func.natom, kblock = 4;
+    const int natoms = CONV_WINO_AREA/atom;
+    const int tileCols = (Wo + CONV_WINO_STEP - 1)/CONV_WINO_STEP;
+    const int tiles = ((Ho + CONV_WINO_STEP - 1)/CONV_WINO_STEP)*tileCols;
+    // One accumulation tile keeps the transformed input in private cache.
+    const int chunkTiles = iblock;
+    const int chunks = (tiles + chunkTiles - 1)/chunkTiles;
+    const int kblocks = (Kg + kblock - 1)/kblock;
+    const float* weights = conv->getWeightsWino();
+
+    parallel_for_(Range(0, N*groups*chunks), [&](const Range& range) {
+        AutoBuffer<float> inputBuf((size_t)chunkTiles*Cg*CONV_WINO_AREA + VEC_ALIGN);
+        AutoBuffer<float> sumBuf((size_t)kblock*iblock*CONV_WINO_AREA + VEC_ALIGN);
+        float* transformed = alignPtr(inputBuf.data(), VEC_ALIGN);
+        float* sums = alignPtr(sumBuf.data(), VEC_ALIGN);
+        float tile[CONV_WINO_AREA];
+        for (int task = range.start; task < range.end; ++task)
+        {
+            const int n = task/(groups*chunks), g = (task/chunks)%groups;
+            const int first = (task%chunks)*chunkTiles;
+            const int count = std::min(chunkTiles, tiles - first);
+            const int alignedCount = (count + iblock - 1)/iblock*iblock;
+            for (int c = 0; c < Cg; ++c)
+            {
+                const int ch = g*Cg + c;
+                const float* plane = input.ptr<float>() +
+                    ((size_t)n*si[1] + ch/8)*Hi*Wi*8 + ch%8;
+                for (int b = 0; b < alignedCount; b += iblock)
+                    for (int db = 0; db < iblock; ++db)
+                    {
+                        float* dst = transformed + (size_t)b*Cg*CONV_WINO_AREA + (c*iblock + db)*atom;
+                        if (b + db >= count)
+                        {
+                            for (int a = 0; a < natoms; ++a)
+                                std::fill_n(dst + (size_t)a*Cg*iblock*atom, atom, 0.f);
+                            continue;
+                        }
+                        const int index = first + b + db;
+                        const int y0 = (index/tileCols)*CONV_WINO_STEP - conv->pad_top;
+                        const int x0 = (index%tileCols)*CONV_WINO_STEP - conv->pad_left;
+                        const int y1 = std::max(0, -y0), y2 = std::min<int>(CONV_WINO_SIZE, Hi-y0);
+                        const int x1 = std::max(0, -x0), x2 = std::min<int>(CONV_WINO_SIZE, Wi-x0);
+                        if (y1 != 0 || y2 != CONV_WINO_SIZE || x1 != 0 || x2 != CONV_WINO_SIZE)
+                            std::fill_n(tile, CONV_WINO_AREA, 0.f);
+                        for (int y = y1; y < y2; ++y)
+                            for (int x = x1; x < x2; ++x)
+                                tile[y*CONV_WINO_SIZE+x] = plane[((size_t)(y0+y)*Wi+x0+x)*8];
+                        func.BtXB_8x8(tile, CONV_WINO_SIZE, (uchar*)dst, Cg, iblock, atom);
+                    }
+            }
+            for (int kb = 0; kb < kblocks; ++kb)
+            {
+                const float* w = weights + ((size_t)g*kblocks + kb)*kblock*Cg*CONV_WINO_AREA;
+                for (int b = 0; b < count; b += iblock)
+                {
+                    const int len = std::min(iblock, count-b);
+                    func.accum((uchar*)(transformed + (size_t)b*Cg*CONV_WINO_AREA),
+                               (uchar*)w, (uchar*)sums, Cg, len, iblock, kblock, atom, natoms);
+                    for (int dk = 0; dk < std::min(kblock, Kg-kb*kblock); ++dk)
+                    {
+                        const int k = g*Kg + kb*kblock + dk;
+                        float* plane = output.ptr<float>() + ((size_t)n*so[1] + k/8)*Ho*Wo*8 + k%8;
+                        for (int db = 0; db < len; ++db)
+                        {
+                            const int index = first+b+db;
+                            const int y0 = (index/tileCols)*CONV_WINO_STEP;
+                            const int x0 = (index%tileCols)*CONV_WINO_STEP;
+                            func.AtXA_8x8((uchar*)(sums + (dk*iblock+db)*CONV_WINO_AREA),
+                                          CONV_WINO_SIZE, nullptr, CONV_WINO_SIZE, tile,
+                                          CONV_WINO_SIZE, conv->biasBuf[k], minval, maxval, ifMinMaxAct);
+                            for (int y = 0; y < std::min<int>(CONV_WINO_STEP, Ho-y0); ++y)
+                                for (int x = 0; x < std::min<int>(CONV_WINO_STEP, Wo-x0); ++x)
+                                    plane[((size_t)(y0+y)*Wo+x0+x)*8] = tile[y*CONV_WINO_SIZE+x];
+                        }
+                    }
+                }
+            }
+        }
+    });
+    return 1;
+}
+
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv,
                   int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
@@ -33,14 +125,17 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
     MatShape inputShape = shape(input);
     MatShape outputShape = shape(output);
-    const bool blocked = inputShape.layout == DATA_LAYOUT_BLOCK;
-    CV_Assert(blocked ? (inputShape.size() == 5 && outputShape.size() == 5 &&
-                        inputShape.back() == 8 && outputShape.back() == 8 &&
-                        outputShape.layout == DATA_LAYOUT_BLOCK && !conv->useFP16 &&
-                        fusedAddMat.empty() && !activ)
-                      : (inputShape.size() == 4 && outputShape.size() == 4));
+    if (inputShape.layout == DATA_LAYOUT_BLOCK)
+    {
+        CV_Assert(inputShape.size() == 5 && outputShape.size() == 5 &&
+                  inputShape.back() == 8 && outputShape.back() == 8 &&
+                  outputShape.layout == DATA_LAYOUT_BLOCK && !conv->useFP16 &&
+                  fusedAddMat.empty() && !activ);
+        return runWinograd63Blocked(input, output, conv, func, minval, maxval, ifMinMaxAct);
+    }
+    CV_Assert(inputShape.size() == 4 && outputShape.size() == 4);
 
-    int N = inputShape[0], C = blocked ? inputShape.channels() : inputShape[1], Hi = inputShape[2], Wi = inputShape[3];  // [N, C, H, W]
+    int N = inputShape[0], C = inputShape[1], Hi = inputShape[2], Wi = inputShape[3];  // [N, C, H, W]
     int K = conv->K;
     int H0 = outputShape[2], W0 = outputShape[3];
 
@@ -114,47 +209,32 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         int inpstep = Wi;
 
                         float inpbuf[CONV_WINO_AREA];
-                        float* inptr = inpbuf;
-                        if (blocked)
-                        {
-                            const int ch = g*Cg + c;
-                            const float* plane = inp + ((size_t)n*inputShape[1] + ch/8)*inp_planesize*8 + ch%8;
-                            for (int y = 0; y < CONV_WINO_SIZE; ++y)
-                                for (int x = 0; x < CONV_WINO_SIZE; ++x)
-                                    inpbuf[y*CONV_WINO_SIZE+x] =
-                                        (unsigned)(y0+y) < (unsigned)Hi && (unsigned)(x0+x) < (unsigned)Wi
-                                        ? plane[((size_t)(y0+y)*Wi+x0+x)*8] : 0.f;
-                            inpstep = CONV_WINO_SIZE;
-                        }
-                        else
-                        {
-                            float* inptr0 = (float*)inp + nc0*inp_planesize + y0*Wi + x0;
-                            inptr = inptr0;
+                        float* inptr0 = (float*)inp + nc0*inp_planesize + y0*Wi + x0;
+                        float* inptr = inptr0;
 
-                            if (partial)
+                        if (partial)
+                        {
+                            memset(inpbuf, 0, sizeof(inpbuf));
+                            dy1 = -y0 > 0 ? -y0 : 0;
+                            dy2 = Hi - y0 < CONV_WINO_SIZE ? Hi - y0 : CONV_WINO_SIZE;
+
+                            if (dy2 < dy1) {dy2 = dy1 = 0;}
+                            dx1 = -x0 > 0 ? -x0 : 0;
+                            dx2 = Wi - x0 < CONV_WINO_SIZE ? Wi - x0 : CONV_WINO_SIZE;
+
+                            if (dx2 < dx1) {dx2 = dx1 = 0;}
+                            inptr0 -= y0*Wi + x0;
+
+                            if (dx1 < dx2 && dy1 < dy2)
                             {
-                                memset(inpbuf, 0, sizeof(inpbuf));
-                                dy1 = -y0 > 0 ? -y0 : 0;
-                                dy2 = Hi - y0 < CONV_WINO_SIZE ? Hi - y0 : CONV_WINO_SIZE;
-
-                                if (dy2 < dy1) {dy2 = dy1 = 0;}
-                                dx1 = -x0 > 0 ? -x0 : 0;
-                                dx2 = Wi - x0 < CONV_WINO_SIZE ? Wi - x0 : CONV_WINO_SIZE;
-
-                                if (dx2 < dx1) {dx2 = dx1 = 0;}
-                                inptr0 -= y0*Wi + x0;
-
-                                if (dx1 < dx2 && dy1 < dy2)
-                                {
-                                    for(int dy = dy1; dy < dy2; dy++)
-                                        memcpy(&inpbuf[dy*CONV_WINO_SIZE + dx1],
-                                               inptr0 + (y0+dy)*Wi + (x0+dx1),
-                                               (dx2-dx1)*sizeof(inpbuf[0]));
-                                }
-
-                                inptr = inpbuf;
-                                inpstep = CONV_WINO_SIZE;
+                                for(int dy = dy1; dy < dy2; dy++)
+                                    memcpy(&inpbuf[dy*CONV_WINO_SIZE + dx1],
+                                           inptr0 + (y0+dy)*Wi + (x0+dx1),
+                                           (dx2-dx1)*sizeof(inpbuf[0]));
                             }
+
+                            inptr = inpbuf;
+                            inpstep = CONV_WINO_SIZE;
                         }
                         func.BtXB_8x8(inptr, inpstep, (uchar*)inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM);
                     }
@@ -244,14 +324,8 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         int dx1 = W0 - x0;
                         if (dx1 > CONV_WINO_STEP) dx1 = CONV_WINO_STEP;
                         assert(dx1 > 0 && dy1 > 0);
-                        bool partial = blocked || activ || dy1 < CONV_WINO_STEP || dx1 < CONV_WINO_STEP;
+                        bool partial = activ || dy1 < CONV_WINO_STEP || dx1 < CONV_WINO_STEP;
                         size_t outofs = (n*K + g*Kg + k)*out_planesize + y0*W0 + x0;
-                        if (blocked)
-                        {
-                            const int ch = g*Kg + k;
-                            outofs = ((size_t)n*outputShape[1] + ch/8)*out_planesize*8 +
-                                     ((size_t)y0*W0+x0)*8 + ch%8;
-                        }
                         int outstep = W0;
 
                         float* outptr0 = (float*)out + outofs;
@@ -280,11 +354,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                             if (activ)
                                 activ->forwardSlice(outptr, outptr, CONV_WINO_SIZE*CONV_WINO_STEP, 0, g*Kg + k, g*Kg + k + 1);
                             for (int y = 0; y < dy1; y++)
-                                if (blocked)
-                                    for (int x = 0; x < dx1; ++x)
-                                        outptr0[((size_t)y*W0+x)*8] = outptr[y*CONV_WINO_SIZE+x];
-                                else
-                                    memcpy(outptr0 + y*W0, outptr + y*CONV_WINO_SIZE, dx1*sizeof(outptr0[0]));
+                                memcpy(outptr0 + y*W0, outptr + y*CONV_WINO_SIZE, dx1*sizeof(outptr0[0]));
                         }
                     }
                 }
