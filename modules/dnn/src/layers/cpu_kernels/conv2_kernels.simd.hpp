@@ -4,6 +4,7 @@
 
 #include "../conv2_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 #include "../../hal_replacement.hpp"
 
 // === dispatched calls (implemented here)
@@ -2125,6 +2126,129 @@ static void conv32fC8_3x3_strided(const void* inp__, const void* residual__, voi
 
 #endif  // !CV_SIMD_SCALABLE
 
+#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
+// Compute two output channel blocks together, reusing each input vector across
+// sixteen output channels. Four spatial positions leave room for the inputs
+// and weights alongside the sixteen vector accumulators on AArch64.
+static void conv32fC8_3x3s1_neon_pair(const void* inp__, const void* residual__, void* out__,
+                                    const ConvState& cs, const void* weights__,
+                                    const float* scale__, const float* bias__)
+{
+    const MatShape& si = cs.inpshape;
+    const MatShape& so = cs.outshape;
+    const int C = si.channels(), K = so.channels(), C1 = C / 8, K1 = K / 8;
+    const int N = si[0], Hi = si[2], Wi = si[3], H = so[2], W = so[3];
+    const int HW = H * W, inPlane = Hi * Wi * 8, outPlane = HW * 8;
+    const int pairs = K1 / 2, blocks = N * pairs;
+    const double macs = 2 * convBlockMacsPerPixel(cs);
+    const int chunks = computeSpatChunks(blocks, HW, macs);
+    const int tasks = blocks * chunks;
+    parallel_for_(Range(0, tasks), [&](const Range& range) {
+        const float32x4_t zero = vdupq_n_f32(0.f);
+        FastActivation fastActivation;
+        const float* params;
+        ActivationFunc activation;
+        float maxval, defaultAlpha;
+        setupActivation(cs, K, fastActivation, params, activation, maxval, defaultAlpha);
+        float scale[16], bias[16], alpha[16];
+        const float zeros[8] = {};
+        for (int task = range.start; task < range.end; ++task) {
+            const int block = task / chunks, chunk = task % chunks;
+            const int n = block / pairs, k = (block % pairs) * 16;
+            const int p0 = chunk * HW / chunks, p1 = (chunk + 1) * HW / chunks;
+            fillCoeffBufs(fastActivation, params, defaultAlpha, 16, k,
+                          (const float*)scale__, (const float*)bias__, scale, bias, alpha, 16);
+            const float* input = (const float*)inp__ + (size_t)n * C1 * inPlane;
+            const float* waBase = (const float*)weights__ + (size_t)(k / 8) * 9 * C1 * 64;
+            const float* wbBase = waBase + (size_t)9 * C1 * 64;
+            float* output = (float*)out__ + ((size_t)n * K1 + k / 8) * outPlane;
+            const float* residual = residual__ ? (const float*)residual__ + ((size_t)n * K1 + k / 8) * outPlane : nullptr;
+            for (int p = p0; p < p1; p += 4) {
+                const int count = std::min(4, p1 - p);
+                int offsets[9][4];
+                for (int tap = 0; tap < 9; ++tap)
+                    for (int j = 0; j < 4; ++j) {
+                        const int y = (p + j) / W - cs.pads[1] + tap / 3;
+                        const int x = (p + j) % W - cs.pads[2] + tap % 3;
+                        offsets[tap][j] = j < count && (unsigned)y < (unsigned)Hi && (unsigned)x < (unsigned)Wi
+                            ? (y * Wi + x) * 8 : -1;
+                    }
+                float32x4_t s0al = zero, s0ah = zero, s0bl = zero, s0bh = zero;
+                float32x4_t s1al = zero, s1ah = zero, s1bl = zero, s1bh = zero;
+                float32x4_t s2al = zero, s2ah = zero, s2bl = zero, s2bh = zero;
+                float32x4_t s3al = zero, s3ah = zero, s3bl = zero, s3bh = zero;
+                for (int tap = 0; tap < 9; ++tap)
+                    for (int c1 = 0; c1 < C1; ++c1) {
+                        const float* ptr[4];
+                        for (int j = 0; j < 4; ++j)
+                            ptr[j] = offsets[tap][j] >= 0 ? input + (size_t)c1 * inPlane + offsets[tap][j] : zeros;
+                        const float* wa = waBase + (size_t)(tap * C1 + c1) * 64;
+                        const float* wb = wbBase + (size_t)(tap * C1 + c1) * 64;
+                        float32x4_t x0, x1, x2, x3;
+                        float32x4_t wal, wah, wbl, wbh;
+#define NEON_PAIR_UPDATE(ofs, lane) \
+                        wal = vld1q_f32(wa + (ofs)*8); \
+                        wah = vld1q_f32(wa + (ofs)*8 + 4); \
+                        wbl = vld1q_f32(wb + (ofs)*8); \
+                        wbh = vld1q_f32(wb + (ofs)*8 + 4); \
+                        s0al = vfmaq_laneq_f32(s0al, wal, x0, lane); \
+                        s0ah = vfmaq_laneq_f32(s0ah, wah, x0, lane); \
+                        s0bl = vfmaq_laneq_f32(s0bl, wbl, x0, lane); \
+                        s0bh = vfmaq_laneq_f32(s0bh, wbh, x0, lane); \
+                        s1al = vfmaq_laneq_f32(s1al, wal, x1, lane); \
+                        s1ah = vfmaq_laneq_f32(s1ah, wah, x1, lane); \
+                        s1bl = vfmaq_laneq_f32(s1bl, wbl, x1, lane); \
+                        s1bh = vfmaq_laneq_f32(s1bh, wbh, x1, lane); \
+                        s2al = vfmaq_laneq_f32(s2al, wal, x2, lane); \
+                        s2ah = vfmaq_laneq_f32(s2ah, wah, x2, lane); \
+                        s2bl = vfmaq_laneq_f32(s2bl, wbl, x2, lane); \
+                        s2bh = vfmaq_laneq_f32(s2bh, wbh, x2, lane); \
+                        s3al = vfmaq_laneq_f32(s3al, wal, x3, lane); \
+                        s3ah = vfmaq_laneq_f32(s3ah, wah, x3, lane); \
+                        s3bl = vfmaq_laneq_f32(s3bl, wbl, x3, lane); \
+                        s3bh = vfmaq_laneq_f32(s3bh, wbh, x3, lane);
+                        x0 = vld1q_f32(ptr[0] + 0);
+                        x1 = vld1q_f32(ptr[1] + 0);
+                        x2 = vld1q_f32(ptr[2] + 0);
+                        x3 = vld1q_f32(ptr[3] + 0);
+                        NEON_PAIR_UPDATE(0, 0);
+                        NEON_PAIR_UPDATE(1, 1);
+                        NEON_PAIR_UPDATE(2, 2);
+                        NEON_PAIR_UPDATE(3, 3);
+                        x0 = vld1q_f32(ptr[0] + 4);
+                        x1 = vld1q_f32(ptr[1] + 4);
+                        x2 = vld1q_f32(ptr[2] + 4);
+                        x3 = vld1q_f32(ptr[3] + 4);
+                        NEON_PAIR_UPDATE(4, 0);
+                        NEON_PAIR_UPDATE(5, 1);
+                        NEON_PAIR_UPDATE(6, 2);
+                        NEON_PAIR_UPDATE(7, 3);
+#undef NEON_PAIR_UPDATE
+                    }
+                // Keep the same scale, bias, residual and activation order as
+                // the generic blocked kernel, including arbitrary activations.
+                float32x4_t sums[4][4] = {
+                    {s0al, s0ah, s0bl, s0bh}, {s1al, s1ah, s1bl, s1bh},
+                    {s2al, s2ah, s2bl, s2bh}, {s3al, s3ah, s3bl, s3bh}};
+                for (int j = 0; j < count; ++j)
+                    for (int q = 0; q < 4; ++q) {
+                        float32x4_t v = vfmaq_f32(vld1q_f32(bias + q * 4), sums[j][q], vld1q_f32(scale + q * 4));
+                        const size_t ofs = (size_t)(q / 2) * outPlane + (p + j) * 8 + (q % 2) * 4;
+                        if (residual) v = vaddq_f32(v, vld1q_f32(residual + ofs));
+                        v = vbslq_f32(vcgeq_f32(v, zero), v, vmulq_f32(v, vld1q_f32(alpha + q * 4)));
+                        v = vminq_f32(v, vdupq_n_f32(maxval));
+                        vst1q_f32(output + ofs, v);
+                    }
+                if (activation) {
+                    activation(output + p * 8, output + p * 8, count * 8, params);
+                    activation(output + outPlane + p * 8, output + outPlane + p * 8, count * 8, params);
+                }
+            }
+        }
+    }, convStripes(tasks, macs * blocks * HW));
+}
+#endif
+
 // GCC 14.x miscompiles the scalable (RVV) blocked path of conv32fC8 at -O3 via the
 // -funswitch-loops pass: it produces grossly wrong output. Confirmed broken on GCC 14.2
 // and correct on GCC 15.2 (also correct at -O1/-O2). Disable that single pass for this one
@@ -2170,6 +2294,18 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
         int K_ = cs.outshape.channels();
         if ((Kblk & 1) == 0 && (K_ % 8) == 0 && cblocks >= 8 && cs.ngroups == 1) {
             return conv32fC8_3x3s1_kpair(inp__, residual__, out__, cs, weights__, scale__, bias__);
+        }
+    #endif
+    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
+        // Experimental: isolated wide-layer gains have not translated into
+        // an end-to-end improvement on Apple ARM64. Keep the upstream default.
+        static const bool useNeonPair = utils::getConfigurationParameterBool(
+            "OPENCV_DNN_NEON_PAIR_3X3", false);
+        if (useNeonPair && cs.outshape.dims == 5 && cs.ngroups == 1 &&
+            cs.kshape[1] == 3 && cs.kshape[2] == 3 &&
+            cs.inpshape.channels() >= 512 && cs.inpshape.channels() % 8 == 0 &&
+            cs.outshape.channels() % 16 == 0) {
+            return conv32fC8_3x3s1_neon_pair(inp__, residual__, out__, cs, weights__, scale__, bias__);
         }
     #endif
         return conv32fC8_3x3s1(inp__, residual__, out__, cs, weights__, scale__, bias__);
