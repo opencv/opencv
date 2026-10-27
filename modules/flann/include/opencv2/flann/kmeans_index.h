@@ -485,7 +485,10 @@ public:
         }
         if (root_!=NULL) {
             free_centers();
+            delete[] root_;
         }
+        indices_ = NULL;
+        root_ = NULL;
 
         load_value(stream, branching_);
         load_value(stream, iterations_);
@@ -493,7 +496,8 @@ public:
         load_value(stream, cb_index_);
         load_value(stream, trees_);
 
-        indices_ = new int*[trees_];
+        indices_ = new int*[trees_]();
+        root_ = new KMeansNodePtr[trees_]();
         for (int i=0; i<trees_; ++i) {
             indices_[i] = new int[size_];
             load_value(stream, *indices_[i], size_);

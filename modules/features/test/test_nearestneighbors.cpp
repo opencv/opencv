@@ -42,6 +42,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+#ifdef HAVE_OPENCV_FLANN
+#include "opencv2/flann.hpp"
+#endif
 
 namespace opencv_test { namespace {
 
@@ -327,6 +330,47 @@ TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.s
 TEST(Features2d_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
+
+TEST(Features2d_FLANN_KMeans, load_more_trees_than_default)
+{
+    Mat data(100, 8, CV_32FC1);
+    randu(data, 0.f, 1.f);
+    std::string filename = cv::tempfile(".fln");
+    {
+        cv::flann::Index index(data, KMeansIndexParams(), cvflann::FLANN_DIST_L2);
+        index.save(filename);
+    }
+
+    std::vector<char> buf;
+    {
+        std::ifstream f(filename.c_str(), std::ios::binary);
+        buf.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+    }
+    // header, distance type, then branching_, iterations_, memoryCounter_, cb_index_, trees_
+    const size_t trees_ofs = sizeof(cvflann::IndexHeader) + sizeof(int) + 4 * sizeof(int);
+    ASSERT_GT(buf.size(), trees_ofs + sizeof(int));
+    int trees = 0;
+    memcpy(&trees, &buf[trees_ofs], sizeof(int));
+    ASSERT_EQ(1, trees);
+
+    // store the same tree twice: valid content, but more trees than the default the index was created with
+    trees = 2;
+    memcpy(&buf[trees_ofs], &trees, sizeof(int));
+    std::vector<char> tree(buf.begin() + trees_ofs + sizeof(int), buf.end());
+    buf.insert(buf.end(), tree.begin(), tree.end());
+    {
+        std::ofstream f(filename.c_str(), std::ios::binary);
+        f.write(&buf[0], buf.size());
+    }
+
+    cv::flann::Index index;
+    ASSERT_TRUE(index.load(data, filename));
+    remove(filename.c_str());
+
+    Mat indices, dists;
+    index.knnSearch(data.row(7), indices, dists, 1, SearchParams(-1));
+    EXPECT_EQ(7, indices.at<int>(0));
+}
 
 #endif
 
