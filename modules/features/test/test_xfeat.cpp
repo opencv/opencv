@@ -186,6 +186,72 @@ TEST(Features2d_XFeat, ParametersAndMask)
     EXPECT_NO_THROW(detector->detectAndCompute(img, boolMask, keypoints, descriptors));
 }
 
+// The class letterboxes through blobFromImageWithParams(DNN_PMODE_LETTERBOX) and must map keypoints
+// back with the resize and padding dnn actually applied. 1000x901 into 640x640 gives a non-integral
+// resized height (901 * 0.64 = 576.64), which dnn truncates to 576 with a 32 px top pad.
+// Running the class on the image and on the same image letterboxed by hand with dnn's arithmetic
+// (so the class runs at scale 1 with no padding) feeds the network an identical blob, so the two
+// keypoint sets must coincide once the hand-made letterbox is undone.
+TEST(Features2d_XFeat, letterbox_inverse_mapping)
+{
+    const Size inputSize(640, 640);
+    Ptr<XFeat> detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), 1000, 0.05f, inputSize);
+    ASSERT_TRUE(detector);
+
+    Mat src = imread(cvtest::findDataFile("shared/box_in_scene.png"), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(src.empty());
+    Mat img;
+    resize(src, img, Size(1000, 901), 0, 0, INTER_LINEAR);
+
+    std::vector<KeyPoint> fromClass;
+    detector->detect(img, fromClass);
+    ASSERT_FALSE(fromClass.empty());
+
+    const float factor = std::min(inputSize.width / (float)img.cols, inputSize.height / (float)img.rows);
+    const int rw = int(img.cols * factor);
+    const int rh = int(img.rows * factor);
+    const int top = (inputSize.height - rh) / 2;
+    const int left = (inputSize.width - rw) / 2;
+    ASSERT_EQ(Size(rw, rh), Size(640, 576));
+    ASSERT_EQ(top, 32);
+
+    Mat letterboxed;
+    resize(img, letterboxed, Size(rw, rh), 0, 0, INTER_LINEAR);
+    cv::copyMakeBorder(letterboxed, letterboxed, top, inputSize.height - top - rh,
+                   left, inputSize.width - left - rw, BORDER_CONSTANT, Scalar());
+
+    std::vector<KeyPoint> byHand;
+    detector->detect(letterboxed, byHand);
+    ASSERT_FALSE(byHand.empty());
+    std::vector<Point2f> expected;
+    expected.reserve(byHand.size());
+    for (const KeyPoint& kp : byHand)
+        expected.emplace_back((kp.pt.x - left) * img.cols / (float)rw,
+                              (kp.pt.y - top) * img.rows / (float)rh);
+
+    // Detections are local maxima of a 5x5 NMS in blob space (several image pixels apart), so the
+    // nearest expected point within 2 px is the counterpart of each detection.
+    int matched = 0;
+    double maxDist = 0;
+    for (const KeyPoint& kp : fromClass)
+    {
+        float bestDistSq = 4.f;
+        for (const Point2f& p : expected)
+        {
+            const Point2f d = kp.pt - p;
+            bestDistSq = std::min(bestDistSq, d.dot(d));
+        }
+        if (bestDistSq < 4.f)
+        {
+            ++matched;
+            maxDist = std::max(maxDist, (double)std::sqrt(bestDistSq));
+        }
+    }
+    EXPECT_GE(matched, cvRound(0.95 * fromClass.size()))
+        << matched << " of " << fromClass.size() << " keypoints have a counterpart within 2 px";
+    EXPECT_LE(maxDist, 1e-3) << "keypoints are mapped back with a different letterbox than dnn applied";
+}
+
 TEST(Features2d_XFeat, InvalidInputSize)
 {
     EXPECT_THROW(XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), -1, 0.5f, Size(0, 640)), cv::Exception);

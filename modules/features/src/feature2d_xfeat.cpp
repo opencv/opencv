@@ -154,10 +154,15 @@ public:
         const float scaleX = static_cast<float>(inputSize_.width) / static_cast<float>(gray.cols);
         const float scaleY = static_cast<float>(inputSize_.height) / static_cast<float>(gray.rows);
         const float scale = std::min(scaleX, scaleY);
-        const int resizedW = std::max(1, cvRound(static_cast<float>(gray.cols) * scale));
-        const int resizedH = std::max(1, cvRound(static_cast<float>(gray.rows) * scale));
+        // Mirror the DNN_PMODE_LETTERBOX arithmetic of blobFromImageWithParams (truncation, centred
+        // padding) so the inverse mapping below uses the resized size dnn actually produced.
+        const int resizedW = std::max(1, static_cast<int>(static_cast<float>(gray.cols) * scale));
+        const int resizedH = std::max(1, static_cast<int>(static_cast<float>(gray.rows) * scale));
         const int padX = (inputSize_.width - resizedW) / 2;
         const int padY = (inputSize_.height - resizedH) / 2;
+        // Exact per-axis inverse of that resize, rather than the nominal 1 / scale.
+        const float invScaleX = static_cast<float>(gray.cols) / static_cast<float>(resizedW);
+        const float invScaleY = static_cast<float>(gray.rows) / static_cast<float>(resizedH);
 
         Mat blob;
         Image2BlobParams blobParams;
@@ -284,8 +289,8 @@ public:
                 if (score <= 0.f)
                     continue;
 
-                const float px = (xp - static_cast<float>(padX)) / scale;
-                const float py = (yp - static_cast<float>(padY)) / scale;
+                const float px = (xp - static_cast<float>(padX)) * invScaleX;
+                const float py = (yp - static_cast<float>(padY)) * invScaleY;
                 const int ix = cvFloor(px);
                 const int iy = cvFloor(py);
                 if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
