@@ -81,7 +81,7 @@ bool smeEnabled();
 // Floats per SME vector when SME is enabled, else 0.
 int smeVectorLength();
 
-// cv::gemm route for fp32; returns false when the old code path should run instead.
+// fp32 GEMM for lapack_gemm32f with the built-in LAPACK; returns false when LAPACK should run instead.
 bool gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2_step,
              float alpha, const float* src3, size_t src3_step, float beta, float* dst, size_t dst_step,
              int m_a, int n_a, int n_d, int flags);
