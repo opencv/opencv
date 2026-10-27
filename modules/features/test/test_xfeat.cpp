@@ -187,12 +187,13 @@ TEST(Features2d_XFeat, ParametersAndMask)
 }
 
 // The class letterboxes through blobFromImageWithParams(DNN_PMODE_LETTERBOX) and must map keypoints
-// back with the resize and padding dnn actually applied. 1000x901 into 640x640 gives a non-integral
-// resized height (901 * 0.64 = 576.64), which dnn truncates to 576 with a 32 px top pad.
+// back with the resize and padding dnn actually applied. 1000x901 (or 901x1000) into 640x640 gives a
+// non-integral resized size on the short axis (901 * 0.64 = 576.64), which dnn truncates to 576 with
+// a 32 px pad.
 // Running the class on the image and on the same image letterboxed by hand with dnn's arithmetic
 // (so the class runs at scale 1 with no padding) feeds the network an identical blob, so the two
 // keypoint sets must coincide once the hand-made letterbox is undone.
-TEST(Features2d_XFeat, letterbox_inverse_mapping)
+static void testXFeatLetterboxInverse(const Size& imageSize)
 {
     const Size inputSize(640, 640);
     Ptr<XFeat> detector = XFeat::create(cvtest::findDataFile("dnn/onnx/models/xfeat.onnx"), 1000, 0.05f, inputSize);
@@ -201,7 +202,7 @@ TEST(Features2d_XFeat, letterbox_inverse_mapping)
     Mat src = imread(cvtest::findDataFile("shared/box_in_scene.png"), IMREAD_GRAYSCALE);
     ASSERT_FALSE(src.empty());
     Mat img;
-    resize(src, img, Size(1000, 901), 0, 0, INTER_LINEAR);
+    resize(src, img, imageSize, 0, 0, INTER_LINEAR);
 
     std::vector<KeyPoint> fromClass;
     detector->detect(img, fromClass);
@@ -212,13 +213,13 @@ TEST(Features2d_XFeat, letterbox_inverse_mapping)
     const int rh = int(img.rows * factor);
     const int top = (inputSize.height - rh) / 2;
     const int left = (inputSize.width - rw) / 2;
-    ASSERT_EQ(Size(rw, rh), Size(640, 576));
-    ASSERT_EQ(top, 32);
+    ASSERT_EQ(std::min(rw, rh), 576);
+    ASSERT_EQ(std::max(top, left), 32);
 
     Mat letterboxed;
     resize(img, letterboxed, Size(rw, rh), 0, 0, INTER_LINEAR);
     cv::copyMakeBorder(letterboxed, letterboxed, top, inputSize.height - top - rh,
-                   left, inputSize.width - left - rw, BORDER_CONSTANT, Scalar());
+                       left, inputSize.width - left - rw, BORDER_CONSTANT, Scalar());
 
     std::vector<KeyPoint> byHand;
     detector->detect(letterboxed, byHand);
@@ -250,6 +251,16 @@ TEST(Features2d_XFeat, letterbox_inverse_mapping)
     EXPECT_GE(matched, cvRound(0.95 * fromClass.size()))
         << matched << " of " << fromClass.size() << " keypoints have a counterpart within 2 px";
     EXPECT_LE(maxDist, 1e-3) << "keypoints are mapped back with a different letterbox than dnn applied";
+}
+
+TEST(Features2d_XFeat, letterbox_inverse_mapping_vertical_pad)
+{
+    testXFeatLetterboxInverse(Size(1000, 901));
+}
+
+TEST(Features2d_XFeat, letterbox_inverse_mapping_horizontal_pad)
+{
+    testXFeatLetterboxInverse(Size(901, 1000));
 }
 
 TEST(Features2d_XFeat, InvalidInputSize)
