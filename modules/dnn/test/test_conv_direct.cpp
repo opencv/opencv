@@ -10,18 +10,19 @@ namespace opencv_test { namespace {
 // Exercise the blocked FP32 kernel with a scalar reference independent of the
 // SIMD tile size, including groups starting inside a channel block, and the
 // blocked Winograd path with partial tiles and padded channel blocks.
-typedef TestWithParam<tuple<int, int, int, int, bool, bool> > Conv2Direct;
+typedef TestWithParam<tuple<int, int, int, int, int, bool> > Conv2Direct;
 TEST_P(Conv2Direct, Accuracy)
 {
     const int kernel = get<0>(GetParam()), stride = get<1>(GetParam());
     const int dilation = get<2>(GetParam()), groups = get<3>(GetParam());
-    const bool aligned = get<4>(GetParam());
+    const int channels = get<4>(GetParam());
+    const bool aligned = channels % 8 == 0;
     const bool winograd = get<5>(GetParam());
-    const int C = groups == 1 ? (aligned ? 512 : 65) : 18;
+    const int C = groups == 1 ? channels : 18;
     const int K = groups == 1 ? (aligned ? 64 : 67) : 22;
     const int Cg = C / groups, Kg = K / groups;
     const int C0 = 8, C1 = (C + C0 - 1) / C0, K1 = (K + C0 - 1) / C0;
-    const int pad = kernel == 1 ? 0 : 1;
+    const int pad = kernel == 1 || aligned ? 0 : 1;
     LayerParams lp;
     int strides[] = {stride, stride}, dilations[] = {dilation, dilation};
     int pads[] = {pad, pad, pad, pad};
@@ -42,8 +43,11 @@ TEST_P(Conv2Direct, Accuracy)
 
     // Small and resized spatial dimensions cover scalar-only output, full SIMD
     // tiles, tails crossing rows, and the interior versus padded border paths.
-    for (int width : {5, 17, 23, 23})
+    for (int width : {5, 17, 23, 23, 155})
     {
+        // Cross the spatial chunk boundary without multiplying fallback cases.
+        if (width == 155 && !(winograd && kernel == 3 && stride == 1 && dilation == 1 && groups == 1))
+            continue;
         if (width == 23)
         {
             weights *= 0.5f;
@@ -110,6 +114,6 @@ TEST_P(Conv2Direct, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(DNN, Conv2Direct, Combine(
-    Values(1, 3), Values(1, 2), Values(1, 2), Values(1, 2), testing::Bool(), testing::Bool()));
+    Values(1, 3), Values(1, 2), Values(1, 2), Values(1, 2), Values(3, 65, 512), testing::Bool()));
 
 }} // namespace opencv_test
