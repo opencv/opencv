@@ -3477,10 +3477,10 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_AbsdiffSigned,
         testing::Values(CV_8S, CV_16S, CV_32S, CV_64S),
         testing::Values(1, 7, 8, 127)));
 
-// A 16-bit float source converting to a 64-bit integer must keep values the destination can hold,
-// at every array length. The vectorized store used to round to int32 first, which clamps at the
-// int32 range - 2147483520, the largest float below INT_MAX - so anything above it was lost while
-// the scalar tail converted correctly. Lengths straddle the vector width.
+// A 16-bit float source must keep values the destination can hold, at every array length. The
+// vectorized stores used to round to int32 first, which clamps at the int32 range - 2147483520, the
+// largest float below INT_MAX - so anything above it was lost while the scalar tail converted
+// correctly. That hit the 64-bit destinations and CV_32U alike. Lengths straddle the vector width.
 typedef testing::TestWithParam< tuple<int, int, int> > Core_Convert16FloatTo64;
 
 TEST_P(Core_Convert16FloatTo64, keeps_values_above_the_int32_range)
@@ -3507,8 +3507,10 @@ TEST_P(Core_Convert16FloatTo64, keeps_values_above_the_int32_range)
                                     srcDepth, dstDepth, stored, len, i));
             if (dstDepth == CV_64U)
                 EXPECT_EQ(saturate_cast<uint64_t>(stored), dst.ptr<uint64_t>(0)[i]);
-            else
+            else if (dstDepth == CV_64S)
                 EXPECT_EQ(saturate_cast<int64_t>(stored), dst.ptr<int64_t>(0)[i]);
+            else
+                EXPECT_EQ(saturate_cast<unsigned>(stored), dst.ptr<unsigned>(0)[i]);
         }
     }
 }
@@ -3516,7 +3518,7 @@ TEST_P(Core_Convert16FloatTo64, keeps_values_above_the_int32_range)
 INSTANTIATE_TEST_CASE_P(/**/, Core_Convert16FloatTo64,
     testing::Combine(
         testing::Values(CV_16F, CV_16BF),
-        testing::Values(CV_64U, CV_64S),
+        testing::Values(CV_64U, CV_64S, CV_32U),
         testing::Values(1, 7, 8, 127)));
 
 TEST(Core_ConvertTo, regression_12121)

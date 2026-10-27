@@ -49,6 +49,11 @@ static inline void vx_load_as(const hfloat* ptr, v_float32& a)
 static inline void vx_load_as(const bfloat* ptr, v_float32& a)
 { a = vx_load_expand(ptr); }
 
+// defined further down, next to the other v_float64 stores
+static inline void v_store_pair_as(int64_t* ptr, const v_float64& a, const v_float64& b);
+static inline void v_store_pair_as(uint64_t* ptr, const v_float64& a, const v_float64& b);
+static inline void v_store_pair_as(unsigned* ptr, const v_float64& a, const v_float64& b);
+
 static inline void v_store_as(ushort* ptr, const v_float32& a)
 { v_pack_u_store(ptr, v_round(a)); }
 
@@ -58,10 +63,12 @@ static inline void v_store_as(short* ptr, const v_float32& a)
 static inline void v_store_as(int* ptr, const v_float32& a)
 { v_store(ptr, v_round(a)); }
 
+// Same as the 64-bit stores above: v_round() narrows to int32, so [2^31, 2^32) would saturate to
+// INT32_MAX even though CV_32U holds it. v_store_pair_as(unsigned*, v_float64...) already takes
+// this route - this is the single-vector form of it.
 static inline void v_store_as(unsigned* ptr, const v_float32& a)
 {
-    v_float32 z = vx_setzero_f32();
-    v_store(ptr, v_reinterpret_as_u32(v_round(v_max(a, z))));
+    v_store_pair_as(ptr, v_cvt_f64(a), v_cvt_f64_high(a));
 }
 
 static inline void v_store_as(float* ptr, const v_float32& a)
@@ -73,9 +80,6 @@ static inline void v_store_as(hfloat* ptr, const v_float32& a)
 static inline void v_store_as(bfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
-// defined further down, next to the other v_float64 stores
-static inline void v_store_pair_as(int64_t* ptr, const v_float64& a, const v_float64& b);
-static inline void v_store_pair_as(uint64_t* ptr, const v_float64& a, const v_float64& b);
 
 // Rounding to int32 first would clamp at the int32 range - 2147483520 for a float source, the
 // largest float below INT_MAX - and lose everything above it, even though the destination holds it
