@@ -2081,8 +2081,21 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
     if (layerParams.has("output_shape"))
     {
         const DictValue& outShape = layerParams.get("output_shape");
-        DictValue strides = layerParams.get("stride");
         DictValue kernel = layerParams.get("kernel_size");
+        std::vector<int> defaultStrides(kernel.size(), 1);
+        DictValue strides = layerParams.has("stride") ? layerParams.get("stride") :
+                            DictValue::arrayInt(defaultStrides.data(), defaultStrides.size());
+
+        CV_CheckEQ(kernel.size(), strides.size(), "Kernel and stride ranks must match");
+        // Accept spatial ONNX shapes and legacy shapes with batch/channel dimensions.
+        const int spatialOffset = outShape.size() == strides.size() ? 0 : 2;
+        CV_CheckEQ(outShape.size(), strides.size() + spatialOffset, "Output shape rank must match spatial or full tensor rank");
+        for (int i = 0; i < strides.size(); i++)
+        {
+            const int stride = strides.get<int>(i);
+            CV_CheckGT(stride, 0, "Stride must be positive");
+            CV_CheckGT(outShape.get<int>(spatialOffset + i), 0, "Output shape must be positive");
+        }
 
         String padMode;
         std::vector<int> adjust_pads;
@@ -2092,18 +2105,51 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
             if (padMode != "SAME" && padMode != "VALID")
                 CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
-            CV_CheckEQ(kernel.size(), strides.size(), "Kernel and stride ranks must match");
-            // Accept spatial ONNX shapes and legacy shapes with batch/channel dimensions.
-            const int spatialOffset = outShape.size() == strides.size() ? 0 : 2;
-            CV_CheckEQ(outShape.size(), strides.size() + spatialOffset, "Output shape rank must match spatial or full tensor rank");
             for (int i = 0; i < strides.size(); i++)
             {
                 int sz = outShape.get<int>(spatialOffset + i);
                 int stride = strides.get<int>(i);
-                CV_CheckGT(stride, 0, "Stride must be positive");
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
                                                          (sz - kernel.get<int>(i)) % stride);
             }
+            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
+        }
+        else
+        {
+            const MatShape& inputShape = outShapes[node_proto.input(0)];
+            CV_CheckEQ(inputShape.size(), (size_t)(strides.size() + 2), "Input rank must match convolution rank");
+
+            if (layerParams.has("dilation"))
+                CV_CheckEQ(layerParams.get("dilation").size(), strides.size(), "Dilation and stride ranks must match");
+            if (layerParams.has("output_padding"))
+                CV_CheckEQ(layerParams.get("output_padding").size(), strides.size(), "Output padding and stride ranks must match");
+
+            std::vector<int> pads(strides.size());
+            for (int i = 0; i < strides.size(); i++)
+            {
+                const int stride = strides.get<int>(i);
+                const int dilation = layerParams.has("dilation") ? layerParams.get("dilation").get<int>(i) : 1;
+                const int outputPadding = layerParams.has("output_padding") ? layerParams.get("output_padding").get<int>(i) : 0;
+                // The deconvolution layer's shape calculation does not support dilation.
+                CV_CheckEQ(dilation, 1, "ConvTranspose output_shape requires unit dilation");
+                CV_CheckGE(outputPadding, 0, "Output padding must be non-negative");
+                CV_CheckLT(outputPadding, stride, "Output padding must be smaller than stride");
+                CV_CheckGT(inputShape[2 + i], 0, "ConvTranspose output_shape requires a known input shape");
+                CV_CheckGT(kernel.get<int>(i), 0, "Kernel size must be positive");
+
+                const int64 totalPadding = (int64)stride * (inputShape[2 + i] - 1) + outputPadding +
+                                           kernel.get<int>(i) -
+                                           outShape.get<int>(spatialOffset + i);
+                if (totalPadding < 0 || totalPadding > INT_MAX)
+                    CV_Error(Error::StsOutOfRange, "ConvTranspose output_shape requires unsupported padding");
+                // NOTSET puts an odd padding element at the beginning. The layer
+                // requires symmetric pads, so preserve the end with output adjustment.
+                pads[i] = (int)(totalPadding - totalPadding / 2);
+                const int adjustment = outputPadding + (int)(totalPadding % 2);
+                CV_CheckLT(adjustment, stride, "ConvTranspose output_shape requires unsupported asymmetric padding");
+                adjust_pads.push_back(adjustment);
+            }
+            layerParams.set("pad", DictValue::arrayInt(&pads[0], pads.size()));
             layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
         }
     }
@@ -3627,9 +3673,14 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     int8_t out_zp = ninputs == 9 ? getScalarFromMat<int8_t>(getBlob(node_proto, 8)) : 0;
 
     Mat bias;
-    if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
+    const bool hasBias = ninputs > 6 && !node_proto.input(6).empty();
+    if (hasBias)
+    {
+        if (constBlobs.find(node_proto.input(6)) == constBlobs.end())
+            CV_Error(Error::StsNotImplemented, "ONNX/QGemm: non-constant bias C is not supported");
         bias = getBlob(node_proto, 6);
-    if (bias.empty())
+    }
+    else
         bias = Mat::zeros(1, outCn, CV_32S);
     CV_CheckTypeEQ(bias.depth(), CV_32S, "Quantized bias must be int32");
     CV_CheckEQ(bias.total(), (size_t)outCn, "Quantized bias length must equal output channels");
