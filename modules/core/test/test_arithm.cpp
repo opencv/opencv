@@ -3477,6 +3477,48 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_AbsdiffSigned,
         testing::Values(CV_8S, CV_16S, CV_32S, CV_64S),
         testing::Values(1, 7, 8, 127)));
 
+// A 16-bit float source converting to a 64-bit integer must keep values the destination can hold,
+// at every array length. The vectorized store used to round to int32 first, which clamps at the
+// int32 range - 2147483520, the largest float below INT_MAX - so anything above it was lost while
+// the scalar tail converted correctly. Lengths straddle the vector width.
+typedef testing::TestWithParam< tuple<int, int, int> > Core_Convert16FloatTo64;
+
+TEST_P(Core_Convert16FloatTo64, keeps_values_above_the_int32_range)
+{
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const int len      = get<2>(GetParam());
+    const double vals[] = { 0.0, 1.0, 2147483648.0, 4294967296.0, 1e10 };
+
+    for (double v : vals)
+    {
+        // what the 16-bit float actually stores, which is the only thing the conversion can keep
+        Mat probe(1, 1, CV_64F, Scalar(v));
+        Mat one;  probe.convertTo(one, srcDepth);
+        Mat back; one.convertTo(back, CV_64F);
+        const double stored = back.at<double>(0, 0);
+
+        Mat src(1, len, srcDepth, Scalar(stored));
+        Mat dst; src.convertTo(dst, dstDepth);
+
+        for (int i = 0; i < len; i++)
+        {
+            SCOPED_TRACE(cv::format("src=%d dst=%d v=%.17g len=%d i=%d",
+                                    srcDepth, dstDepth, stored, len, i));
+            if (dstDepth == CV_64U)
+                EXPECT_EQ(saturate_cast<uint64_t>(stored), dst.ptr<uint64_t>(0)[i]);
+            else
+                EXPECT_EQ(saturate_cast<int64_t>(stored), dst.ptr<int64_t>(0)[i]);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_Convert16FloatTo64,
+    testing::Combine(
+        testing::Values(CV_16F, CV_16BF),
+        testing::Values(CV_64U, CV_64S),
+        testing::Values(1, 7, 8, 127)));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {

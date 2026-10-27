@@ -73,23 +73,22 @@ static inline void v_store_as(hfloat* ptr, const v_float32& a)
 static inline void v_store_as(bfloat* ptr, const v_float32& a)
 { v_pack_store(ptr, a); }
 
+// defined further down, next to the other v_float64 stores
+static inline void v_store_pair_as(int64_t* ptr, const v_float64& a, const v_float64& b);
+static inline void v_store_pair_as(uint64_t* ptr, const v_float64& a, const v_float64& b);
+
+// Rounding to int32 first would clamp at the int32 range - 2147483520 for a float source, the
+// largest float below INT_MAX - and lose everything above it, even though the destination holds it
+// comfortably. A float32 widens to double exactly, so round and saturate at 64 bits instead. This
+// is the same route CV_32F -> CV_64S/CV_64U already takes.
 static inline void v_store_as(int64_t* ptr, const v_float32& a)
 {
-    v_int32 ia = v_round(a);
-    v_int64 ia_0, ia_1;
-    v_expand(ia, ia_0, ia_1);
-    v_store(ptr, ia_0);
-    v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+    v_store_pair_as(ptr, v_cvt_f64(a), v_cvt_f64_high(a));
 }
 
 static inline void v_store_as(uint64_t* ptr, const v_float32& a)
 {
-    v_int32 ia = v_round(a);
-    v_uint64 ia_0, ia_1;
-    ia = v_max(ia, vx_setzero_s32());
-    v_expand(v_reinterpret_as_u32(ia), ia_0, ia_1);
-    v_store(ptr, ia_0);
-    v_store(ptr + VTraits<v_uint64>::vlanes(), ia_1);
+    v_store_pair_as(ptr, v_cvt_f64(a), v_cvt_f64_high(a));
 }
 
 static inline void vx_load_pair_as(const uchar* ptr, v_uint16& a, v_uint16& b)
