@@ -6,7 +6,7 @@
 
 #include "../../precomp.hpp"
 #include "flash_attention.hpp"
-#include "fast_gemm.hpp"
+#include "gemm_dispatch.hpp"
 
 #include "flash_attention.simd.hpp"
 #include "layers/cpu_kernels/flash_attention.simd_declarations.hpp"
@@ -82,15 +82,15 @@ void flashAttention(const float* Q, const float* K, const float* V, float* out,
             for (int k0 = 0; k0 < Skv; k0 += kb) {
                 const int nk = std::min(kb, Skv - k0);
                 if (k_transposed)
-                    fastGemm(false, false, mq, D, D, nk, scale, q, D, 1,
+                    dispatchGemm(false, false, mq, D, D, nk, scale, q, D, 1,
                              k + k0, Skv, 1, 0.f, S, nk, lopt);
                 else
-                    fastGemm(false, true, mq, D, nk, D, scale, q, D, 1,
+                    dispatchGemm(false, true, mq, D, nk, D, scale, q, D, 1,
                              k + (size_t)k0 * D, D, 1, 0.f, S, nk, lopt);
                 if (mask_bh)
                     flash_attn_add_mask(S, mq, nk, mask_bh, mask_steps, q0, k0);
                 flash_attn_softmax_block(S, mq, nk, O, Dv, m, l, k0 == 0);
-                fastGemm(false, false, mq, nk, nk, Dv, 1.f, S, nk, 1,
+                dispatchGemm(false, false, mq, nk, nk, Dv, 1.f, S, nk, 1,
                          v + (size_t)k0 * Dv, Dv, 1, k0 > 0 ? 1.f : 0.f, O, Dv, lopt);
             }
 

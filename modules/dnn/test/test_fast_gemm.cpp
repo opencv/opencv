@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#include "../src/layers/cpu_kernels/fast_gemm.hpp"
+#include "../src/layers/cpu_kernels/gemm_dispatch.hpp"
 
 namespace opencv_test { namespace {
 
@@ -204,13 +204,13 @@ TEST_P(DNN_FastGemmKernels, accuracy)
 
     auto plain = [&]() {
         Mat C = C0.rowRange(0, M).clone();
-        fastGemm(ta, tb, ar, ac, br, bc, alpha, A.ptr<float>(), ac, 1, B.ptr<float>(), bc, 1,
+        dispatchGemm(ta, tb, ar, ac, br, bc, alpha, A.ptr<float>(), ac, 1, B.ptr<float>(), bc, 1,
                  beta, C.ptr<float>(), N, opt);
         return C;
     };
     auto batched = [&]() {
         Mat C = C0.clone();
-        fastGemmBatch(batch, aofs.data(), bofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), a0, a1,
+        dispatchGemmBatch(batch, aofs.data(), bofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), a0, a1,
                       B.ptr<float>(), b0, b1, beta, C.ptr<float>(), N, opt);
         return C;
     };
@@ -249,7 +249,7 @@ TEST_P(DNN_FastGemmFewRows, transposedB)
                           beta, C0.rowRange(i * M, (i + 1) * M)).copyTo(ref.rowRange(i * M, (i + 1) * M));
         auto run = [&]() {
             Mat C = C0.clone();
-            fastGemmBatch(batch, aofs.data(), bofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), K, 1,
+            dispatchGemmBatch(batch, aofs.data(), bofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), K, 1,
                           B.ptr<float>(), 1, K, beta, C.ptr<float>(), N, opt);
             return C;
         };

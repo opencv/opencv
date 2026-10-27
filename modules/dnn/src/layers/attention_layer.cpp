@@ -3,7 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
 #include "cpu_kernels/flash_attention.hpp"
 
@@ -14,12 +15,12 @@ namespace cv { namespace dnn {
 static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_size,
                        const float *weight_data, size_t hidden_size, std::vector<float> &packed_weight, const FastGemmOpt &opt) {
     // num_heads * pack(head_size, input_hidden_size)
-    size_t pack_size = fastGemmPackBSize(head_size, input_hidden_size, opt);
+    size_t pack_size = hal::fastGemmPackBSize(head_size, input_hidden_size, opt);
     size_t packed_weight_size = num_heads * pack_size;
     packed_weight.resize(packed_weight_size, 0.f);
     auto *packed_weight_data = packed_weight.data();
     for (size_t i = 0; i < num_heads; i++) {
-        fastGemmPackB(false, head_size, input_hidden_size, weight_data, hidden_size, packed_weight_data, opt);
+        hal::fastGemmPackB(false, head_size, input_hidden_size, weight_data, hidden_size, packed_weight_data, opt);
         packed_weight_data += pack_size;
         weight_data += head_size;
     }
@@ -489,7 +490,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                         const size_t head_size = qkv_head_sizes[i % 3];
                         auto *packed_weight = packed_weights[i % 3] + packed_weights_size[i % 3] * ((i / 3) % num_heads);
                         // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
-                        fastGemm(false, seq_len, head_size, input_hidden_size,
+                        hal::fastGemm(false, seq_len, head_size, input_hidden_size,
                                 1.f, taskInput(i), input_hidden_size,
                                 packed_weight, 1.f, taskOutput(i), head_size, opt);
                         applyRotary(i);
