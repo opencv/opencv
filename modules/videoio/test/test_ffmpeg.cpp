@@ -1375,6 +1375,7 @@ TEST(videoio_ffmpeg_encoder_props, unsupported_property_fails_open)
                                       VideoWriter::fourcc('Z', 'Z', 'Z', 'Z')}));
 }
 
+#ifndef _WIN32 // FFmpeg for Windows does not include OpenH264 by default. It have to be installed separatelly.
 TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -1385,9 +1386,6 @@ TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 
     const string file = cv::tempfile(".mp4");
     const long size = writeWithEncoderParams(file, std::vector<int>(), frames);
-    if (size == -1)
-        throw SkipTestException("H264 encoder is not available");
-
     ASSERT_GT(size, 0);
 
     VideoCapture cap;
@@ -1402,6 +1400,7 @@ TEST(videoio_ffmpeg_encoder_props, no_regression_without_properties)
 
     remove(file.c_str());
 }
+#endif
 
 // Decoded frames of an interlaced stream used to be converted silently to black by retrieveFrame().
 // Sample video/interlaced_tff_8x8_gray.mkv (opencv_extra): 8x8 gray rawvideo in Matroska, field_order=tt, generated with:
