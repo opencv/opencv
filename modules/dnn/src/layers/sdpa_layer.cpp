@@ -45,7 +45,7 @@ public:
         CV_CheckEQ(v[1], H,     "DNN/SDPA: V heads");
 
         outputs.assign(1, MatShape{B, S_q, H * D_v});
-        // Scratch for K^T re-transposed to (B, H, S_kv, D).
+        // Scratch for K^T re-transposed to (B, H, S_kv, D); only the MLAS path uses it.
         internals.assign(1, MatShape{B * H * S_kv * D});
         return false;
     }
@@ -89,24 +89,6 @@ public:
         const int S_kv = V.size[2];
         const int D_v  = V.size[3];
 
-        // Re-transpose K^T (B,H,D,S_kv) -> K (B,H,S_kv,D) for MlasFlashAttention.
-        Mat &K = internals[0];
-        const float* kT_data = KT.ptr<const float>();
-        float*       k_data  = K.ptr<float>();
-        const size_t kT_bhd_stride = (size_t)D * S_kv;
-        const size_t k_bhd_stride  = (size_t)S_kv * D;
-        cv::parallel_for_(cv::Range(0, B * H), [&](const cv::Range& r) {
-            for (int bh = r.start; bh < r.end; bh++) {
-                const float* src = kT_data + (size_t)bh * kT_bhd_stride;
-                float*       dst = k_data  + (size_t)bh * k_bhd_stride;
-                for (int s = 0; s < S_kv; s++) {
-                    for (int d = 0; d < D; d++) {
-                        dst[(size_t)s * D + d] = src[(size_t)d * S_kv + s];
-                    }
-                }
-            }
-        });
-
         const int q_block  = std::min(256, S_q);
         const int kv_block = std::min(256, S_kv);
         const int threads  = std::max(1, cv::getNumThreads());
@@ -115,6 +97,24 @@ public:
         const size_t per_thread =
             mlasFlashAttentionBufferBytesPerThread(q_block, kv_block, D_v);
         if (mlasAvailable() && per_thread > 0) {
+            // MlasFlashAttention needs K as (B,H,S_kv,D), so re-transpose K^T (B,H,D,S_kv).
+            Mat &K = internals[0];
+            const float* kT_data = KT.ptr<const float>();
+            float*       k_data  = K.ptr<float>();
+            const size_t kT_bhd_stride = (size_t)D * S_kv;
+            const size_t k_bhd_stride  = (size_t)S_kv * D;
+            cv::parallel_for_(cv::Range(0, B * H), [&](const cv::Range& r) {
+                for (int bh = r.start; bh < r.end; bh++) {
+                    const float* src = kT_data + (size_t)bh * kT_bhd_stride;
+                    float*       dst = k_data  + (size_t)bh * k_bhd_stride;
+                    for (int s = 0; s < S_kv; s++) {
+                        for (int d = 0; d < D; d++) {
+                            dst[(size_t)s * D + d] = src[(size_t)d * S_kv + s];
+                        }
+                    }
+                }
+            });
+
             flash_scratch.resize((size_t)threads * per_thread);
             if (mlasFlashAttention(Q.ptr<float>(), K.ptr<float>(), V.ptr<float>(),
                                    Y.ptr<float>(),
@@ -126,8 +126,9 @@ public:
             }
         }
 
-        flashAttention(Q.ptr<float>(), K.ptr<float>(), V.ptr<float>(), Y.ptr<float>(),
-                       B, H, S_q, S_kv, D, D_v, effective_scale);
+        // flashAttention reads K^T as it is, without the re-transpose.
+        flashAttention(Q.ptr<float>(), KT.ptr<float>(), V.ptr<float>(), Y.ptr<float>(),
+                       B, H, S_q, S_kv, D, D_v, effective_scale, nullptr, nullptr, /*k_transposed=*/true);
     }
 
 private:

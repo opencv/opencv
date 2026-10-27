@@ -167,8 +167,8 @@ static void checkGemm(const Mat& ref, const Mat& single, const Mat& multi, int K
 
 static const float gemmAlpha[] = { 1.f, 0.5f, -1.5f }, gemmBeta[] = { 0.f, 1.f, 0.25f };
 
-// The blocked kernels: plain and pre-packed B, single and batched, with every transpose,
-// alpha/beta pair, and row, column and K tails. M > 12 keeps the products off the thin path.
+// The blocked kernels, single and batched, with every transpose, alpha/beta pair, and row,
+// column and K tails. M > 12 keeps the products off the thin path.
 typedef testing::TestWithParam<tuple<Vec3i, int, int> > DNN_FastGemmKernels;
 TEST_P(DNN_FastGemmKernels, accuracy)
 {
@@ -188,18 +188,13 @@ TEST_P(DNN_FastGemmKernels, accuracy)
     FastGemmOpt opt;
     opt.init();
 
-    std::vector<size_t> aofs(batch), bofs(batch), cofs(batch), pofs(batch);
+    std::vector<size_t> aofs(batch), bofs(batch), cofs(batch);
     for (int i = 0; i < batch; i++)
     {
         aofs[i] = (size_t)i * ar * ac;
         bofs[i] = (size_t)i * br * bc;
         cofs[i] = (size_t)i * M * N;
     }
-    std::vector<float> packed;
-    Mat B3 = B.reshape(1, std::vector<int>{batch, br, bc});
-    fastGemmPackB(B3, packed, tb, opt);
-    for (int i = 0; i < batch; i++)
-        pofs[i] = (size_t)i * (packed.size() / batch);
 
     Mat ref(batch * M, N, CV_32F);
     for (int i = 0; i < batch; i++)
@@ -213,29 +208,14 @@ TEST_P(DNN_FastGemmKernels, accuracy)
                  beta, C.ptr<float>(), N, opt);
         return C;
     };
-    auto prepacked = [&]() {
-        std::vector<float> p;
-        fastGemmPackB(B.rowRange(0, br), p, tb, opt);
-        Mat C = C0.rowRange(0, M).clone();
-        fastGemm(ta, M, N, K, alpha, A.ptr<float>(), ac, p.data(), beta, C.ptr<float>(), N, opt);
-        return C;
-    };
     auto batched = [&]() {
         Mat C = C0.clone();
         fastGemmBatch(batch, aofs.data(), bofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), a0, a1,
                       B.ptr<float>(), b0, b1, beta, C.ptr<float>(), N, opt);
         return C;
     };
-    auto batchedPacked = [&]() {
-        Mat C = C0.clone();
-        fastGemmBatch(batch, aofs.data(), pofs.data(), cofs.data(), M, N, K, alpha, A.ptr<float>(), a0, a1,
-                      packed.data(), beta, C.ptr<float>(), N, opt);
-        return C;
-    };
     checkGemm(ref0, runWithThreads(1, plain), runWithThreads(8, plain), K, "plain");
-    checkGemm(ref0, runWithThreads(1, prepacked), runWithThreads(8, prepacked), K, "pre-packed");
     checkGemm(ref, runWithThreads(1, batched), runWithThreads(8, batched), K, "batched");
-    checkGemm(ref, runWithThreads(1, batchedPacked), runWithThreads(8, batchedPacked), K, "batched pre-packed");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, DNN_FastGemmKernels, Combine(
