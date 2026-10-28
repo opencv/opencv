@@ -12,6 +12,7 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
+int matMulInt8PackLayout();
 void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum);
 void matMulInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, const int* colsum,
                      const int* corr, const int* rowterm, void* Y, const MatMulInt8OutLayout& lay,
@@ -359,10 +360,15 @@ static void gemmInt8Int32(const uchar* A, size_t lda, const int8_t* packedB, con
                                   M, N, K, zp);
 }
 
+int matMulInt8PackLayout()
+{
+    return MMI8_USE_AVX2;
+}
+
 void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum)
 {
     // each KR rows of a panel are [NR][KR], or [KR/2][NR][2] (pairs of k) for accumulateAvx2
-    constexpr bool paired = MMI8_USE_AVX2 != 0;
+    const bool paired = matMulInt8PackLayout() != 0;
     const int Npad = (N + MMI8_NR - 1) / MMI8_NR * MMI8_NR;
     const size_t panelSize = (size_t)((K + MMI8_KR - 1) / MMI8_KR) * MMI8_PSTEP;
     const size_t matSize = (size_t)(Npad / MMI8_NR) * panelSize;

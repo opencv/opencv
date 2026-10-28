@@ -239,6 +239,7 @@ private:
         colsum = Mat::zeros(1, nb * Npad, CV_32S);
         corr = Mat::zeros(1, nb * Npad, CV_32S);
         matMulInt8PackB(B.ptr<uchar>(), nb, K, N, delta, packedB.ptr<int8_t>(), colsum.ptr<int>());
+        packedLayout = matMulInt8PackLayout();
     }
 
     // ONNX MatMulInteger: https://onnx.ai/onnx/operators/onnx__MatMulInteger.html, opset 10 (its
@@ -337,7 +338,7 @@ private:
         }
 
         const bool dynamicWeights = !getNetImpl(this)->isConstArg(inputs[1]);
-        if (dynamicWeights || packedB.empty())
+        if (dynamicWeights || packedB.empty() || packedLayout != matMulInt8PackLayout())
             packWeightsInteger(B);
 
         // (B - zb) = (B' - zb') with B' = B - delta, so zb' leaves -zb'[n] * sum_k (A - za)
@@ -606,6 +607,7 @@ private:
     int num_output;
     Mat weightsMat, biasMat, outputMultiplier;
     Mat packedB, colsum, corr; // int32 mode
+    int packedLayout = -1;     // matMulInt8PackLayout() when packedB was packed
     Mat epilogue;              // per-column scale and bias of the dequant_output mode
     Mat rowtermBuf;            // the per-row term when the engine gives no internals
     Ptr<DynamicQuantizeLinearLayer> quantizeLayer;  // quantizes A in the quantize_input mode

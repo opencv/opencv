@@ -2452,6 +2452,27 @@ TEST_P(Test_ONNX_layers, MatMulInteger)
     }
 }
 
+// B is packed on the first forward; once setUseOptimized() selects a kernel that reads another
+// layout (AVX2 and the others differ), the next forward must pack it again
+TEST(Test_ONNX_layers_MatMulInteger, repacks_B_after_setUseOptimized)
+{
+    Net net = readNetFromONNX(_tf("models/matmulinteger_u8_per_column.onnx"), ENGINE_OPENCV);
+    ASSERT_FALSE(net.empty());
+    Mat inp = blobFromNPY(_tf("data/input_matmulinteger_u8_per_column.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_matmulinteger_u8_per_column.npy"));
+    struct RestoreUseOptimized
+    {
+        bool flag = useOptimized();
+        ~RestoreUseOptimized() { setUseOptimized(flag); }
+    } restore;
+    for (bool flag : {restore.flag, !restore.flag, restore.flag})
+    {
+        setUseOptimized(flag);
+        net.setInput(inp);
+        normAssert(ref, net.forward(), flag ? "optimized" : "not optimized");
+    }
+}
+
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
     testONNXModels("quantized_matmul_uint8_weights", npy, 0.008, 0.015);

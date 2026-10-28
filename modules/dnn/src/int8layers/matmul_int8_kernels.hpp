@@ -34,6 +34,10 @@ struct MatMulInt8OutLayout
     }
 };
 
+// The packed B layout of the kernel the dispatch selects now: 1 for pairs of k (AVX2), else 0.
+// setUseOptimized() can change it, and B packed for another layout must be packed again
+int matMulInt8PackLayout();
+
 // Packs nb [K, N] matrices of B - delta, one after another, into the panels matMulInt8Int32 reads,
 // and writes their column sums; both buffers are zeroed by the caller and padded as described below
 void matMulInt8PackB(const uchar* B, int nb, int K, int N, int delta, int8_t* packedB, int* colsum);
