@@ -2472,6 +2472,16 @@ TEST_P(Core_DotProduct_NewTypes, accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
     testing::Values(CV_16F, CV_16BF, CV_Bool, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
+TEST(Core_DotProduct, bool_nonzero_bytes)
+{
+    // any non-zero byte is true, so 2 and 255 count as 1 (dotProd_8u would give 1027)
+    uchar a[] = { 2, 255, 0, 1, 7 };
+    uchar b[] = { 255, 2, 3, 0, 1 };
+    Mat ma = Mat(1, 5, CV_8U, a).reinterpret(CV_Bool);
+    Mat mb = Mat(1, 5, CV_8U, b).reinterpret(CV_Bool);
+    EXPECT_EQ(3., ma.dot(mb));
+}
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
