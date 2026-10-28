@@ -136,8 +136,8 @@ static PyMethodDef special_methods[] = {
   {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
   {"setAllowNonConventionalDataTypes", (PyCFunction)(pycvSetAllowNonConventionalDataTypes), METH_O,
-   "setAllowNonConventionalDataTypes(allow) -> None\n. Keep bfloat16 / float8 arrays at their exact dtype "
-   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default."},
+   "setAllowNonConventionalDataTypes(allow) -> None\n. Keep output bfloat16 / float8 arrays at their exact dtype "
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default. Input arrays are accepted regardless of this flag."},
   {"getAllowNonConventionalDataTypes", (PyCFunction)(pycvGetAllowNonConventionalDataTypes), METH_NOARGS,
    "getAllowNonConventionalDataTypes() -> retval"},
 #ifdef HAVE_OPENCV_HIGHGUI

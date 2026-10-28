@@ -721,6 +721,12 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputName name for layer which output is needed to get
          *  @return blob for first output of specified layer.
          *  @details By default runs forward pass for the whole network.
+         *  @note In Python, CV_16BF / CV_8F_E4M3FN / CV_8F_E4M3FNUZ output blobs are
+         *  returned as NumPy float32 arrays by default. To preserve their exact dtypes,
+         *  import the optional ml_dtypes package and call
+         *  `cv.setAllowNonConventionalDataTypes(True)` before forward(). This process-wide
+         *  setting affects outputs only; registered bfloat16 / float8 input arrays are
+         *  accepted regardless of it. See @ref tutorial_py_bindings_basics for details.
          */
         CV_WRAP Mat forward(const String& outputName = String());
 
@@ -737,12 +743,14 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param outputBlobs contains all output blobs for specified layer.
          *  @param outputName name for layer which output is needed to get
          *  @details If @p outputName is empty, runs forward pass for the whole network.
+         *  @note Python output dtype handling is described in forward(const String&).
          */
         CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs, const String& outputName = String());
 
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains blobs for first outputs of specified layers.
          *  @param outBlobNames names for layers which outputs are needed to get
+         *  @note Python output dtype handling is described in forward(const String&).
          */
         CV_WRAP void forward(CV_ND OutputArrayOfArrays outputBlobs,
                              const std::vector<String>& outBlobNames);
@@ -750,6 +758,7 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Runs forward pass to compute outputs of layers listed in @p outBlobNames.
          *  @param outputBlobs contains all output blobs for each layer specified in @p outBlobNames.
          *  @param outBlobNames names for layers which outputs are needed to get
+         *  @note Python output dtype handling is described in forward(const String&).
          */
         CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
                                                     const std::vector<String>& outBlobNames);

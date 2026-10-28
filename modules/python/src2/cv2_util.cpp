@@ -6,6 +6,12 @@
 #include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
+// NumPy 2.x headers provide PyDataType_ELSIZE() as an inline function, not a macro;
+// 1.x headers expose the field directly.
+#if NPY_ABI_VERSION < 0x02000000
+#define PyDataType_ELSIZE(descr) ((descr)->elsize)
+#endif
+
 PyObject* opencv_error = NULL;
 cv::TLSData<std::vector<std::string> > conversionErrorsTLS;
 
@@ -68,17 +74,8 @@ PyArray_Descr* nonConventionalDescr(int idx)
             descr = nullptr;
         Py_XDECREF(name);
         PyErr_Clear();
-        // Reject a same-named dtype with another layout; itemsize is read via Python because
-        // the descriptor struct differs between NumPy 1.x and 2.x.
-        long itemsize = -1;
-        if (descr)
-        {
-            PyObject* size = PyObject_GetAttrString((PyObject*)descr, "itemsize");
-            itemsize = size ? PyLong_AsLong(size) : -1;
-            Py_XDECREF(size);
-            PyErr_Clear();
-        }
-        if (descr && (descr->type_num < NPY_USERDEF || itemsize != t.itemsize))
+        // Reject a same-named dtype with another layout.
+        if (descr && (descr->type_num < NPY_USERDEF || PyDataType_ELSIZE(descr) != t.itemsize))
         {
             Py_DECREF(descr);
             descr = nullptr;
@@ -117,7 +114,7 @@ PyArray_Descr* nonConventionalDescrForCvDepth(int depth)
 
 int nonConventionalTypeToCvDepth(int typenum)
 {
-    if (!g_allowNonConventionalDataTypes || typenum < NPY_USERDEF)
+    if (typenum < NPY_USERDEF)
         return -1;
     for (int i = 0; i < kNumNonConventionalDtypes; i++)
     {

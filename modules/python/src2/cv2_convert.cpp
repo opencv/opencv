@@ -152,7 +152,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
     if( type < 0 )
-        type = nonConventionalTypeToCvDepth(typenum);  // bfloat16 / float8, when allowed
+        type = nonConventionalTypeToCvDepth(typenum);  // bfloat16 / float8 registered by the caller
 
     if( type < 0 )
     {
@@ -287,18 +287,18 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         for(int i = 0; i < sz && filled; i++ )
         {
             PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i); // new object
-            if( PyInt_Check(oi) )
-                m.at<double>(i) = (double)PyInt_AsLong(oi);
-            else if( PyFloat_Check(oi) )
-                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
-            else
+            double v = oi ? PyFloat_AsDouble(oi) : -1.0;
+            if( v == -1.0 && PyErr_Occurred() )
             {
+                PyErr_Clear();
                 failmsg("%s has some non-numerical elements", info.name);
                 m.release();
                 filled = false;
             }
+            else
+                m.at<double>(i) = v;
 
-            Py_DECREF(oi);
+            Py_XDECREF(oi);
         }
 
         if(needcopy)
@@ -361,6 +361,13 @@ PyObject* pyopencv_from(const cv::Mat& m)
         PyArray_Descr* descr = nonConventionalDescrForCvDepth(m.depth());
         if( !descr )
         {
+            // The caller's own array (e.g. dst=) already has the exact dtype: return it as is.
+            if( m.u && m.allocator == &GetNumpyAllocator() )
+            {
+                PyObject* o = (PyObject*)m.u->userdata;
+                Py_INCREF(o);
+                return o;
+            }
             if( getAllowNonConventionalDataTypes() )
                 CV_LOG_ONCE_WARNING(NULL, "Python bindings: non-conventional data types are allowed, "
                                     "but NumPy does not know bfloat16 / float8 and they are returned as float32. "

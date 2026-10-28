@@ -33,9 +33,6 @@ class ml_dtypes_test(NewOpenCVTests):
         for depth in (cv.CV_16BF, cv.CV_8F_E4M3FN, cv.CV_8F_E4M3FNUZ):
             for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
                 self.assertEqual(m.dtype, np.float32)
-        if ml_dtypes is not None:
-            with self.assertRaises((cv.error, TypeError)):
-                cv.flip(np.zeros((2, 3), dtype=ml_dtypes.bfloat16), 1)
 
     def assertSameBits(self, actual, expected):
         self.assertEqual(actual.dtype, expected.dtype)
@@ -49,6 +46,36 @@ class ml_dtypes_test(NewOpenCVTests):
             self.assertIn("type(-1)=%sC1" % name, cv.utils.dumpInputArray(a))
             self.assertIn("type(-1)=%sC3" % name, cv.utils.dumpInputArray(np.stack([a, a, a], -1)))
             self.assertIn("type(-1)=%sC1" % name, cv.utils.dumpInputArray(np.array(1.5, dtype=dt)))
+
+    def test_inputs_accepted_with_outputs_disabled(self):
+        cv.setAllowNonConventionalDataTypes(False)
+        for dt, _, name, _ in self.cases:
+            a = np.arange(6, dtype=np.float32).reshape(2, 3).astype(dt)
+            self.assertIn("type(-1)=%sC1" % name, cv.utils.dumpInputArray(a))
+            result = cv.flip(a, 1)
+            self.assertEqual(result.dtype, np.float32)
+            np.testing.assert_array_equal(result, a[:, ::-1].astype(np.float32))
+            # The caller's own dst keeps its dtype and is returned as is.
+            d = np.empty_like(a)
+            self.assertIs(cv.flip(a, 1, dst=d), d)
+            self.assertSameBits(d, a[:, ::-1])
+
+    def test_short_array_scalar_operands(self):
+        # A float32 src keeps the result float32, so the operand is checked with the flag off too.
+        for allow in (False, True):
+            cv.setAllowNonConventionalDataTypes(allow)
+            for dt, _, _, _ in self.cases:
+                for channels in range(1, 5):
+                    src = np.zeros((2, 3, channels), dtype=np.float32)
+                    values = np.arange(channels, dtype=np.float32) - 1
+                    operand = values.astype(dt)
+                    expected = cv.add(src, tuple(float(v) for v in values))
+                    np.testing.assert_array_equal(cv.add(src, operand), expected)
+                    np.testing.assert_array_equal(cv.add(src, operand[::-1]),
+                                                  cv.add(src, tuple(float(v) for v in values[::-1])))
+        img = np.zeros((2, 3, 3), dtype=ml_dtypes.bfloat16)
+        operand = np.array([1, 2, 3], dtype=ml_dtypes.bfloat16)
+        self.assertSameBits(cv.add(img, operand), img + operand)
 
     def test_roundtrip_through_numpy_allocator(self):
         src = np.array([[0.5, -1.25, 3.0, 7.0], [448.0, -448.0, 0.0, -0.5]], dtype=np.float32)

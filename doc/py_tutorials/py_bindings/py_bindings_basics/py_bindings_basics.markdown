@@ -191,3 +191,32 @@ public:
     CV_WRAP_AS(get) Mat getMat(int flags CV_WRAP_DEFAULT(ACCESS_RW)) const;
 };
 @endcode
+
+Non-conventional NumPy data types
+---------------------------------
+
+OpenCV has three depths that NumPy does not know about: `CV_16BF`, `CV_8F_E4M3FN` and
+`CV_8F_E4M3FNUZ`. The optional [ml_dtypes](https://github.com/jax-ml/ml_dtypes) package
+registers the matching NumPy types `bfloat16`, `float8_e4m3fn` and `float8_e4m3fnuz`.
+OpenCV never imports `ml_dtypes` itself, so import it in your script before you create
+such arrays.
+
+Input arrays of these types are always accepted and become Mats of the matching depth.
+Not every OpenCV function supports these depths, though.
+
+Output Mats of these depths are returned as `float32` arrays by default, so the type of a
+result does not depend on whether some other module happened to import `ml_dtypes`. To get
+the exact type back, enable it once for the whole process:
+
+@code{.py}
+import cv2 as cv
+import ml_dtypes
+
+cv.setAllowNonConventionalDataTypes(True)
+out = net.forward()  # bfloat16 / float8 outputs keep their type
+@endcode
+
+`cv.getAllowNonConventionalDataTypes()` returns the current value, which is `False` by
+default. An array passed as an output argument, such as `dst`, is filled in place and
+returned as is, whatever the setting. If the setting is on but `ml_dtypes` has not been
+imported, outputs are still converted to `float32` and a warning is printed once.
