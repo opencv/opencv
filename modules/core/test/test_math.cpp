@@ -2457,7 +2457,8 @@ TEST_P(Core_DotProduct_NewTypes, accuracy)
     a32s.convertTo(a, depth);
     b32s.convertTo(b, depth);
 
-    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths)
+    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths,
+    // non-zero values become 1 for CV_Bool)
     Mat a64f, b64f;
     a.convertTo(a64f, CV_64F);
     b.convertTo(b64f, CV_64F);
@@ -2469,7 +2470,7 @@ TEST_P(Core_DotProduct_NewTypes, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
-    testing::Values(CV_16F, CV_16BF, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+    testing::Values(CV_16F, CV_16BF, CV_Bool, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 

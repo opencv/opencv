@@ -985,6 +985,17 @@ static double dotProdScalar(const void* src1, const void* src2, int len)
     return r;
 }
 
+// CV_Bool: any non-zero byte is true, so this counts the positions where both are true.
+static double dotProdBool(const void* src1, const void* src2, int len)
+{
+    const uchar* a = (const uchar*)src1;
+    const uchar* b = (const uchar*)src2;
+    int r = 0;
+    for (int i = 0; i < len; i++)
+        r += a[i] != 0 && b[i] != 0;
+    return r;
+}
+
 typedef double (*DotProdFunc)(const void* src1, const void* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
@@ -995,7 +1006,7 @@ static DotProdFunc getDotProdFunc(int depth)
         dotProd_16u, dotProd_16s,
         dotProd_32s, dotProd_32f,
         dotProd_64f, dotProdScalar<hfloat>,
-        dotProdScalar<bfloat>, 0, // CV_Bool
+        dotProdScalar<bfloat>, dotProdBool,
         dotProdScalar<uint64_t>, dotProdScalar<int64_t>,
         dotProdScalar<uint32_t>, dotProdScalar<fp8_t>,
         dotProdScalar<fp8a_t>
