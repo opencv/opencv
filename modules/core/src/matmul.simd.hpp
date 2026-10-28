@@ -114,6 +114,14 @@ double dotProd_16s(const short* src1, const short* src2, int len);
 double dotProd_32s(const int* src1, const int* src2, int len);
 double dotProd_32f(const float* src1, const float* src2, int len);
 double dotProd_64f(const double* src1, const double* src2, int len);
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len);
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len);
+double dotProd_bool(const uchar* src1, const uchar* src2, int len);
+double dotProd_64u(const uint64* src1, const uint64* src2, int len);
+double dotProd_64s(const int64* src1, const int64* src2, int len);
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len);
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len);
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len);
 
 
 
@@ -3699,6 +3707,50 @@ double dotProd_32f(const float* src1, const float* src2, int len)
 }
 
 double dotProd_64f(const double* src1, const double* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+// CV_Bool: any non-zero byte is true, so count the positions where both are true
+double dotProd_bool(const uchar* src1, const uchar* src2, int len)
+{
+    int r = 0;
+    for (int i = 0; i < len; i++)
+        r += src1[i] != 0 && src2[i] != 0;
+    return r;
+}
+
+double dotProd_64u(const uint64* src1, const uint64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_64s(const int64* src1, const int64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len)
 {
     return dotProd_(src1, src2, len);
 }
