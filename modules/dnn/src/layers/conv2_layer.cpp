@@ -340,25 +340,6 @@ public:
         return true;
     }
 
-    // How forwardMlasIm2col() splits the work: a few output rows per task, each task with
-    // its own im2col tile of (Cin*kh*kw) x (rows*OW) floats in the internal buffer.
-    struct Im2colTiling
-    {
-        int rowsPerTask, tasksPerImage, tasks;
-        size_t tileSize;
-    };
-
-    Im2colTiling im2colTiling(const MatShape& inpshape, const MatShape& outshape) const
-    {
-        const int OH = outshape[2], OW = outshape[3];
-        Im2colTiling t;
-        t.rowsPerTask = std::max(1, 32 / std::max(OW, 1));
-        t.tasksPerImage = (OH + t.rowsPerTask - 1) / t.rowsPerTask;
-        t.tasks = inpshape[0]*t.tasksPerImage;
-        t.tileSize = (size_t)inpshape[1]*wshape0[2]*wshape0[3]*t.rowsPerTask*OW;
-        return t;
-    }
-
     // Only with one input: constant weights taken by constArgs(), no residual. Runtime weights
     // are re-set in forward() on the block path, so a copy of them here could go stale.
     bool mlasIm2colEnabled() const
@@ -722,7 +703,7 @@ public:
         CV_Assert(ninputs >= 1);
 
         outtypes.assign(1, inferType(inptypes[0]));
-        // Only the patch embedding has an internal buffer: its FP32 im2col tiles.
+        // Only the patch embedding has an internal buffer: one image's FP32 im2col matrix.
         temptypes.assign(requiredInternals, CV_32F);
     }
 
@@ -742,9 +723,9 @@ public:
                                            pads, auto_pad, ceil_mode));
         tempshapes.clear();
         if (inpshapes[0].layout != DATA_LAYOUT_BLOCK && inpshapes[0].dims == 4 && mlasIm2colEnabled()) {
-            const Im2colTiling t = im2colTiling(inpshapes[0], outshapes[0]);
-            if (t.tasks > 0 && t.tileSize > 0)
-                tempshapes.assign(1, MatShape({t.tasks, (int)t.tileSize}));
+            const MatShape& o = outshapes[0];
+            if (o.total() > 0)
+                tempshapes.assign(1, MatShape({inpshapes[0][1]*wshape0[2]*wshape0[3], o[2]*o[3]}));
         }
         return true;
     }
@@ -908,8 +889,8 @@ public:
         }
     }
 
-    // Patch embedding on the plain NCHW tensor: for a few output rows at a time, gather the
-    // input patches (im2col), run one MLAS matrix multiply, then apply bias and activation.
+    // Patch embedding on the plain NCHW tensor: for each image, gather the input patches
+    // (im2col), run one MLAS matrix multiply, then apply bias and activation.
     void forwardMlasIm2col(const Mat& inp0, OutputArrayOfArrays output_arrs, const std::vector<Mat>& temps)
     {
         const MatShape inpshape = inp0.shape();
@@ -945,83 +926,76 @@ public:
         }
         if (out.empty())
             out.fit(outshape, CV_32F);
+        if (out.total() == 0)
+            return;  // e.g. a zero batch
 
-        const int C = inpshape[1], H = inpshape[2], W = inpshape[3];
+        const int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
         const int K = outshape[1], OH = outshape[2], OW = outshape[3];
         const int kh = cs.kshape[1], kw = cs.kshape[2];  // also the strides
         const int KD = C*kh*kw;
         const size_t P = (size_t)OH*OW;
         CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
         CV_Assert(OH*kh <= H && OW*kw <= W);
-
-        const Im2colTiling t = im2colTiling(inpshape, outshape);
-        if (t.tasks == 0)
-            return;  // an empty output, e.g. a zero batch
         CV_Assert(!temps.empty() && temps[0].type() == CV_32F && temps[0].isContinuous() &&
-                  temps[0].total() >= (size_t)t.tasks*t.tileSize);
-        const int rowsPerTask = t.rowsPerTask, tasksPerImage = t.tasksPerImage;
-        float* colbase = (float*)temps[0].data;
+                  temps[0].total() >= KD*P);
+        float* col = (float*)temps[0].data;
         const float* wptr = im2colWeights_.ptr<float>();
+        const float* inpdata = inp.ptr<float>();
+        float* outdata = out.ptr<float>();
+
+        for (int n = 0; n < N; n++) {
+            const float* x = inpdata + (size_t)n*C*H*W;
+            // im2col: row (c, ky, kx) of col holds that input value for every output pixel.
+            // Patches do not overlap or leave the image, so every read is inside the input.
+            parallel_for_(Range(0, KD), [&](const Range& r) {
+                for (int d = r.start; d < r.end; d++) {
+                    const int c = d/(kh*kw), ky = d/kw % kh, kx = d % kw;
+                    float* row = col + (size_t)d*P;
+                    for (int oy = 0; oy < OH; oy++, row += OW) {
+                        const float* src = x + ((size_t)c*H + oy*kh + ky)*W + kx;
+                        for (int ox = 0; ox < OW; ox++)
+                            row[ox] = src[(size_t)ox*kw];
+                    }
+                }
+            });
+            // One call per image, so that MLAS splits it over the threads itself.
+            bool ok = mlasSgemm(false, false, K, (int)P, KD, 1.f, wptr, KD, col, (int)P, 0.f,
+                                outdata + (size_t)n*K*P, (int)P);
+            CV_Assert(ok);
+        }
+
         const float* scale = fusedBatchNorm ? fusedScale.ptr<float>() : nullptr;
         const float* shift = fusedBatchNorm ? fusedBias.ptr<float>() :
                              bias.empty() ? nullptr : bias.ptr<float>();
         const float* prm = activParams.empty() ? nullptr : activParams.data();
         const FastActivation act = fastActivation;
-        const float* inpdata = inp.ptr<float>();
-        float* outdata = out.ptr<float>();
-
-        parallel_for_(Range(0, t.tasks), [&](const Range& r) {
-            for (int task = r.start; task < r.end; task++) {
-                const int n = task / tasksPerImage;
-                const int oy0 = (task % tasksPerImage)*rowsPerTask;
-                const int nrows = std::min(rowsPerTask, OH - oy0);
-                const int np = nrows*OW;
-                const float* x = inpdata + (size_t)n*C*H*W;
-                float* col = colbase + (size_t)task*t.tileSize;
-
-                // im2col: row (c, ky, kx) of col holds that input value for every output pixel here.
-                // Patches do not overlap or leave the image, so every read is inside the input.
-                for (int c = 0; c < C; c++)
-                for (int ky = 0; ky < kh; ky++)
-                for (int kx = 0; kx < kw; kx++) {
-                    float* row = col + (size_t)((c*kh + ky)*kw + kx)*np;
-                    for (int i = 0; i < nrows; i++, row += OW) {
-                        const float* src = x + ((size_t)c*H + (oy0 + i)*kh + ky)*W + kx;
-                        for (int ox = 0; ox < OW; ox++)
-                            row[ox] = src[(size_t)ox*kw];
-                    }
-                }
-
-                // weights x col, written straight into the NCHW output (channel planes are P apart).
-                // Single-threaded on purpose: we are already inside parallel_for_.
-                float* y = outdata + (size_t)n*K*P + (size_t)oy0*OW;
-                bool ok = mlasSgemm(false, false, K, np, KD, 1.f, wptr, KD, col, np, 0.f, y, (int)P);
-                CV_Assert(ok);
-
-                for (int k = 0; k < K; k++) {
-                    float* yk = y + (size_t)k*P;
+        if (scale || shift || act != FAST_ACTIV_NONE || activationFunc) {
+            parallel_for_(Range(0, N*K), [&](const Range& r) {
+                for (int nk = r.start; nk < r.end; nk++) {
+                    const int k = nk % K;
+                    float* yk = outdata + (size_t)nk*P;
                     const float s = scale ? scale[k] : 1.f, b = shift ? shift[k] : 0.f;
                     if (scale || shift)
-                        for (int j = 0; j < np; j++)
+                        for (size_t j = 0; j < P; j++)
                             yk[j] = yk[j]*s + b;
                     if (act == FAST_ACTIV_RELU) {
-                        for (int j = 0; j < np; j++)
+                        for (size_t j = 0; j < P; j++)
                             yk[j] = std::max(yk[j], 0.f);
                     } else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU) {
                         // PReLU has one slope per channel, LeakyReLU a single slope.
                         const float alpha = act == FAST_ACTIV_PRELU ? activParams[k] : activParams[0];
-                        for (int j = 0; j < np; j++)
+                        for (size_t j = 0; j < P; j++)
                             yk[j] = yk[j] >= 0.f ? yk[j] : yk[j]*alpha;
                     } else if (act == FAST_ACTIV_CLIP) {
                         const float lo = activParams[0], hi = activParams[1];
-                        for (int j = 0; j < np; j++)
+                        for (size_t j = 0; j < P; j++)
                             yk[j] = std::min(std::max(yk[j], lo), hi);
                     }
                     if (activationFunc)
-                        activationFunc(yk, yk, (size_t)np, prm);
+                        activationFunc(yk, yk, P, prm);
                 }
-            }
-        });
+            });
+        }
 
         if (outkind == _InputArray::STD_VECTOR_MAT) {
             Mat& dst = output_arrs.getMatVecRef()[0];

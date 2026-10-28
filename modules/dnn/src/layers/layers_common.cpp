@@ -464,30 +464,37 @@ void copyChannelBlocks(const Mat& whole, const std::vector<Mat>& parts, bool spl
     if (whole.total() == 0)
         return;
     CV_Assert(whole.isContinuous());
-    const int N = whole.size[0], C1 = whole.size[1];
+    const int N = whole.size[0], C1 = whole.size[1], nparts = (int)parts.size();
     const size_t blockBytes = whole.total() / ((size_t)N * C1) * whole.elemSize();
-    struct Piece { uchar* dst; const uchar* src; size_t len; };
-    std::vector<Piece> pieces;
+    // Each (n, part) run is cut into 64 KB pieces, so a batch of 1 with few parts still uses every
+    // thread. firstPiece[k] is the index of part k's first piece.
     constexpr size_t PIECE = 1 << 16;
-    int c1ofs = 0;
-    for (const Mat& part : parts) {
-        CV_Assert(part.isContinuous());
-        const int C1k = part.size[1];
-        CV_Assert(c1ofs + C1k <= C1);
-        const size_t len = C1k * blockBytes;
-        for (int n = 0; n < N; n++) {
-            uchar* w = whole.data + ((size_t)n * C1 + c1ofs) * blockBytes;
-            uchar* p = part.data + (size_t)n * len;
-            for (size_t ofs = 0; ofs < len; ofs += PIECE) {
-                const size_t sz = std::min(PIECE, len - ofs);
-                pieces.push_back(split ? Piece{p + ofs, w + ofs, sz} : Piece{w + ofs, p + ofs, sz});
-            }
-        }
-        c1ofs += C1k;
+    AutoBuffer<int> c1ofs(nparts), firstPiece(nparts + 1);
+    firstPiece[0] = 0;
+    int ofs = 0;
+    for (int k = 0; k < nparts; k++) {
+        CV_Assert(parts[k].isContinuous());
+        c1ofs[k] = ofs;
+        ofs += parts[k].size[1];
+        const size_t len = parts[k].size[1] * blockBytes;
+        firstPiece[k + 1] = firstPiece[k] + N * (int)((len + PIECE - 1) / PIECE);
     }
-    parallel_for_(Range(0, (int)pieces.size()), [&](const Range& r) {
-        for (int i = r.start; i < r.end; i++)
-            std::memcpy(pieces[i].dst, pieces[i].src, pieces[i].len);
+    CV_Assert(ofs <= C1);
+    parallel_for_(Range(0, firstPiece[nparts]), [&](const Range& r) {
+        int k = 0;
+        for (int i = r.start; i < r.end; i++) {
+            while (i >= firstPiece[k + 1])
+                k++;
+            const size_t len = parts[k].size[1] * blockBytes;
+            const int perImage = (int)((len + PIECE - 1) / PIECE), j = i - firstPiece[k];
+            const size_t pos = (size_t)(j % perImage) * PIECE, sz = std::min(PIECE, len - pos);
+            uchar* w = whole.data + ((size_t)(j / perImage) * C1 + c1ofs[k]) * blockBytes + pos;
+            uchar* p = parts[k].data + (size_t)(j / perImage) * len + pos;
+            if (split)
+                std::memcpy(p, w, sz);
+            else
+                std::memcpy(w, p, sz);
+        }
     });
 }
 
