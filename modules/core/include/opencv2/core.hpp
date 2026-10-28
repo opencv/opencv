@@ -2536,7 +2536,7 @@ public:
     specify the data layout (PCA::Flags)
     @param retainedVariance Percentage of variance that PCA should retain.
     Using this parameter will let the PCA decided how many components to
-    retain but it will always keep at least 2.
+    retain but it will keep at least 2 when available.
     */
     PCA(InputArray data, InputArray mean, int flags, double retainedVariance);
 
@@ -2571,7 +2571,7 @@ public:
     specify the data layout. (PCA::Flags)
     @param retainedVariance Percentage of variance that %PCA should retain.
     Using this parameter will let the %PCA decided how many components to
-    retain but it will always keep at least 2.
+    retain but it will keep at least 2 when available.
      */
     PCA& operator()(InputArray data, InputArray mean, int flags, double retainedVariance);
 

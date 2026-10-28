@@ -306,6 +306,21 @@ void Core_ReduceTest::run( int )
 
 #define CHECK_C
 
+TEST(Core_PCA, retained_variance_with_one_component)
+{
+    float values[] = { 1.f, 2.f, 3.f };
+    Mat samples(3, 1, CV_32F, values);
+
+    PCA rowPCA(samples, Mat(), PCA::DATA_AS_ROW, 0.9);
+    EXPECT_EQ(1, rowPCA.eigenvectors.rows);
+    EXPECT_EQ(1, rowPCA.eigenvalues.rows);
+
+    Mat columnSamples = samples.t();
+    PCA colPCA(columnSamples, Mat(), PCA::DATA_AS_COL, 0.9);
+    EXPECT_EQ(1, colPCA.eigenvectors.rows);
+    EXPECT_EQ(1, colPCA.eigenvalues.rows);
+}
+
 TEST(Core_PCA, accuracy)
 {
     const Size sz(200, 500);
