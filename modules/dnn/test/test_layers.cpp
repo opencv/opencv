@@ -1712,11 +1712,8 @@ TEST_P(Layer_Test_Resize, antialias_downscale_uses_given_scales)
     normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
 }
 
-// align_corners is the one coordinate transformation whose step is not 1/scale: it lines up
-// the corners of the input and the output, so its step is (in - 1) / (in * scale - 1).
-// Constant "scales" are folded into zoom_factor_* by the importer, and that source has to
-// reach the very same formula, not only a runtime "scales" input, which is what the ONNX
-// conformance data (test_resize_downsample_scales_*_align_corners) pins down.
+// align_corners lines up the corners of the input and the output, so its step is
+// (in - 1) / (out - 1) with the integer output length, not (in - 1) / (in * scale - 1).
 TEST_P(Layer_Test_Resize, align_corners_downscale)
 {
     int backendId = get<0>(GetParam());
@@ -1751,9 +1748,9 @@ TEST_P(Layer_Test_Resize, align_corners_downscale)
     ASSERT_EQ(outH, out.size[2]);
     ASSERT_EQ(outW, out.size[3]);
 
-    // src = dst * (in - 1) / (in * scale - 1), bilinear with edge clamping.
-    const float stepY = float(inH - 1) / (inH * scale - 1.f);
-    const float stepX = float(inW - 1) / (inW * scale - 1.f);
+    // src = dst * (in - 1) / (out - 1), bilinear with edge clamping.
+    const float stepY = outH > 1 ? float(inH - 1) / (outH - 1) : 0.f;
+    const float stepX = outW > 1 ? float(inW - 1) / (outW - 1) : 0.f;
     Mat ref(outH, outW, CV_32F);
     for (int i = 0; i < outH; ++i)
     {
@@ -1770,10 +1767,10 @@ TEST_P(Layer_Test_Resize, align_corners_downscale)
         }
     }
 
-    // the first corner is the one every formula agrees on; a 1/scale step would give 6 for
-    // the second column instead of the 7.2 this one asks for
+    // the corners match exactly, and the interior step is (in - 1) / (out - 1)
     const Mat out2d = out.reshape(1, std::vector<int>{outH, outW});
     EXPECT_FLOAT_EQ(inp.at<float>(0, 0), out2d.at<float>(0, 0));
+    EXPECT_FLOAT_EQ(inp.at<float>(0, inW - 1), out2d.at<float>(0, outW - 1));
     EXPECT_FLOAT_EQ(3.f * stepX, out2d.at<float>(0, 1));
     normAssert(out2d, ref);
 }

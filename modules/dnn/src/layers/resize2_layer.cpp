@@ -1230,9 +1230,8 @@ public:
             }
         }
 
-        // Resolve the ONNX "scales" once: they are either a runtime input or were folded
-        // into zoom_factor_* as constants by the importer, and both sources have to be
-        // treated the same way, so the step below uses this single value.
+        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
+        // source once so the step and the antialias filter use the same value.
         float onnxScaleH = 0.f, onnxScaleW = 0.f;
         if (!scales.empty())
         {
@@ -1247,30 +1246,15 @@ public:
             onnxScaleW = zoomFactorWidth;
         }
 
-        // The sampling step along an axis is exactly 1/scale, which is not the same as
-        // in/out unless in*scale happens to be integral.  W=5 with scale=0.5 gives out=2,
-        // so the step is 2 and not 5/2; W=7 with scale=1.5 gives out=10 and a step of 2/3
-        // and not 7/10.  align_corners is the exception: it lines up the corners of the
-        // input and the output, so its step is (in - 1) / (in * scale - 1), the value the
-        // ONNX reference implementation uses and the one the conformance data for a runtime
-        // "scales" input pins down.  "sizes" (step = in/out by definition) and the roi-based
-        // tf_crop_and_resize mode (whose grid does not use the step at all) keep the value
-        // derived from the shapes.
-        if (sizes.empty() && onnxScaleH > 0 && onnxScaleW > 0 &&
+        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
+        // align_corners maps the output corners onto the input corners, so it keeps the
+        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
+        // tf_crop_and_resize do not use the scale either.
+        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
             coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
         {
-            if (alignCorners)
-            {
-                const float lenH = inpShape[2] * onnxScaleH;
-                const float lenW = inpShape[3] * onnxScaleW;
-                if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
-                if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
-            }
-            else
-            {
-                scaleHeight = 1.f / onnxScaleH;
-                scaleWidth  = 1.f / onnxScaleW;
-            }
+            scaleHeight = 1.f / onnxScaleH;
+            scaleWidth  = 1.f / onnxScaleW;
         }
 
         auto kind = outputs_arr.kind();
@@ -1325,8 +1309,7 @@ public:
             (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
         {
             const bool cubic = (interpolation == "cubic");
-            // The filter support is the output/input ratio, which is the same "scales"
-            // resolved above; in/out only stands in for them with "sizes".
+            // Filter support, from the same scales; in/out only stands in for them with "sizes".
             const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outShape[2]) / inpShape[2];
             const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outShape[3]) / inpShape[3];
             switch (depth) {
