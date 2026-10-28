@@ -631,7 +631,9 @@ SumSqrFunc getSumSqrFunc(int depth)
         sumSqrWrap<ushort, int, double, sqsum16u>, sumSqrWrap<short, int, double, sqsum16s>,
         sumSqrWrap<int, double, double, sqsum32s>, sumSqrWrap<float, double, double, sqsum32f>,
         sumSqrWrap<double, double, double, sqsum64f>,
-        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
+        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>,
+        // 0 and 1 are their own squares, so the uchar kernel is exact for CV_Bool.
+        sumSqrWrap<uchar, int, int, sqsum8u>,
         sumSqrWrap<uint64, double, double, sqsum64u>, sumSqrWrap<int64, double, double, sqsum64s>,
         sumSqrWrap<unsigned, double, double, sqsum32u>, 0
     };

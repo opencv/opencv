@@ -51,7 +51,8 @@ static Scalar mean_(const Mat& src, const Mat& mask)
     int j, count = 0;
     int _buf[CV_CN_MAX];
     int* buf = (int*)&s[0];
-    bool partialSumIsInt = depth < CV_32S;
+    // CV_Bool sorts above CV_32S in the depth enum but accumulates into int like the 8-bit types.
+    bool partialSumIsInt = depth < CV_32S || depth == CV_Bool;
     bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
     size_t esz = 0, nz0 = 0;
 
@@ -341,9 +342,10 @@ static void meanStdDev_(InputArray _src, OutputArray _mean, OutputArray _sdv, In
     double _buf[CV_CN_MAX*4];
     double *s = _buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
-    bool partialSumIsInt = depth < CV_32S;
+    // CV_Bool sorts above CV_32S in the depth enum but accumulates into int like the 8-bit types.
+    bool partialSumIsInt = depth < CV_32S || depth == CV_Bool;
     bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
-    bool blockSqSum = depth <= CV_8S;
+    bool blockSqSum = depth <= CV_8S || depth == CV_Bool;
     size_t esz = 0;
 
     for( k = 0; k < cn; k++ )
