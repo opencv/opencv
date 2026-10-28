@@ -135,8 +135,6 @@ public:
     // Private constructor for clone() — shares the already-loaded network
     LightGlueMatcherImpl(const dnn::Net& _net, float _scoreThreshold)
         : net(_net), scoreThreshold(_scoreThreshold) {}
-    int m_prev_kpts0_rows = -1;
-    int m_prev_kpts1_rows = -1;
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
@@ -225,13 +223,6 @@ void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& t
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
-    if (m_prev_kpts0_rows != N || m_prev_kpts1_rows != M)
-    {
-        std::vector<String> inputNames = {"kpts0", "kpts1", "desc0", "desc1"};
-        net.setInputsNames(inputNames);
-        m_prev_kpts0_rows = N;
-        m_prev_kpts1_rows = M;
-    }
 
     Mat kpts0, kpts1;
     normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);

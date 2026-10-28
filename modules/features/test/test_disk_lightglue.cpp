@@ -131,6 +131,51 @@ TEST(Features2d_LightGlue_DISK, Regression)
                     << actNotFound << " actual extra (within tolerance)");
 }
 
+TEST(Features2d_LightGlue_DISK, DynamicShapes_Regression_30502)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
+    const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/disk_lightglue.onnx", false);
+    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath, 0.0f, 0, 0, LG_DISK);
+    ASSERT_FALSE(lg.empty());
+
+    const int descDim = 128;
+
+    auto run_match = [&](int n1, int n2) {
+        Mat kpts1Mat(n1, 2, CV_32F);
+        Mat kpts2Mat(n2, 2, CV_32F);
+        for (int i = 0; i < n1; ++i)
+        {
+            kpts1Mat.at<float>(i, 0) = static_cast<float>((i * 5) % 640);
+            kpts1Mat.at<float>(i, 1) = static_cast<float>((i * 3) % 480);
+        }
+        for (int i = 0; i < n2; ++i)
+        {
+            kpts2Mat.at<float>(i, 0) = static_cast<float>((i * 7) % 640);
+            kpts2Mat.at<float>(i, 1) = static_cast<float>((i * 4) % 480);
+        }
+
+        Mat desc1 = Mat::ones(n1, descDim, CV_32F);
+        Mat desc2 = Mat::ones(n2, descDim, CV_32F);
+
+        lg->setPairInfo(kpts1Mat, kpts2Mat, Size(640, 480), Size(640, 480));
+        std::vector<DMatch> matches;
+        EXPECT_NO_THROW(lg->match(desc1, desc2, matches));
+    };
+
+    // 1. Initial small shapes (8 -> 8)
+    run_match(8, 8);
+
+    // 2. Reported asymmetric expansion (50 -> 200)
+    run_match(50, 200);
+
+    // 3. Large-to-small sequence (200 -> 50)
+    run_match(200, 50);
+
+    // 4. Back to small (8 -> 8)
+    run_match(8, 8);
+}
+
 #else  // !HAVE_OPENCV_DNN
 
 TEST(Features2d_LightGlueMatcher_DISK, not_available)
