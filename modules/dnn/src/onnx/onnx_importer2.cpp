@@ -194,6 +194,7 @@ protected:
     void parseBitCast              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCompress             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScan                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2297,6 +2298,14 @@ void ONNXImporter2::parseNonZero(LayerParams& layerParams, const opencv_onnx::No
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseCompress(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Compress";
+    CV_CheckEQ(node_proto.input_size(), 2, "Compress: two inputs are required");
+    CV_CheckEQ(node_proto.output_size(), 1, "Compress: one output is required");
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseImageDecoder(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ImageDecoder";
@@ -3473,6 +3482,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
+    dispatch["Compress"] = &ONNXImporter2::parseCompress;
     dispatch["Unique"] = &ONNXImporter2::parseUnique;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
