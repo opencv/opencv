@@ -168,9 +168,11 @@ static void accumulateAvx2(const uchar* const (&a)[R], const int8_t* bp, int K,
     constexpr int KC = 256;
     const int VL = VTraits<v_int16>::vlanes(), VLI = VTraits<v_int32>::vlanes();
     int16_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) aw[R][KC];
-    const v_uint16 vxor = vx_setall_u16(0x80);
-    v_int32 c00 = vx_setzero_s32(), c01 = c00, c10 = c00, c11 = c00,
-            c20 = c00, c21 = c00, c30 = c00, c31 = c00;
+    // with R = 1 or XOR off, some of these are read only in discarded if constexpr branches,
+    // which GCC 9 reports as set but not used
+    [[maybe_unused]] const v_uint16 vxor = vx_setall_u16(0x80);
+    [[maybe_unused]] v_int32 c00 = vx_setzero_s32(), c01 = c00, c10 = c00, c11 = c00,
+                             c20 = c00, c21 = c00, c30 = c00, c31 = c00;
     const int Kpad = (K + MMI8_KR - 1) & ~(MMI8_KR - 1);
     for (int k0 = 0; k0 < Kpad; k0 += KC) {
         const int kc = std::min(KC, Kpad - k0);
