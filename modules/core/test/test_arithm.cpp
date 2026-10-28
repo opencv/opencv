@@ -3495,6 +3495,8 @@ template<typename T> static void checkMeanOf(int depth, int len, T v)
 
     SCOPED_TRACE(cv::format("depth=%d len=%d v=%.17g", depth, len, (double)v));
     EXPECT_EQ((double)v, cv::mean(src)[0]);
+    // cv::sum shares the kernel changed here, so cover it directly rather than only through mean.
+    EXPECT_DOUBLE_EQ((double)v * len, cv::sum(src)[0]);
 
     Scalar mu, sd;
     cv::meanStdDev(src, mu, sd);

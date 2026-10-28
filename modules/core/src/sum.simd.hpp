@@ -368,9 +368,9 @@ static int sum32u( const unsigned* src, const uchar* mask, double* dst, int len,
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
-// Accumulate straight into the double, as the 32-bit depths already do. The default work type is
-// the source type, and the unrolled step adds four elements together before the double accumulator
-// ever sees them - which wraps for 64-bit values, where there is no wider integer to widen into.
+// The work type is double rather than a wider integer, as used for the 32-bit depths above: the
+// unrolled step adds four elements together before the accumulator sees them, and no integer type
+// is wide enough to hold that partial sum for 64-bit inputs.
 static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<uint64, double, double>(src, mask, dst, len, cn); }
 
