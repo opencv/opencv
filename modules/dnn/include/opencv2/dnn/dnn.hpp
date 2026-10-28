@@ -1213,6 +1213,26 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
 
+    /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>, optionally
+     *  memory-mapping the weights that are held in external data files.
+     *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @param engine select DNN engine to be used, as in the overload above.
+     *  @param mapExternalData true maps each initializer's byte range into the address space with
+     *  the platform's memory-mapping call rather than reading the bytes into memory:
+     *  CreateFileMapping() with MapViewOfFile() on Windows, mmap() on Linux, Android, macOS, iOS
+     *  and other Unix-like platforms. The pages are faulted in on demand, so the data files must
+     *  stay in place and unmodified for as long as the Net is alive; the overload above reads
+     *  them, so only a caller that passes true here takes on that requirement. A platform that
+     *  supplies no mapping of its own reads the data instead and reports that in the log, as does
+     *  a file the platform refuses to map. Where OpenCV is built without filesystem support, such
+     *  as Emscripten or WinRT, external data is not supported at all, with or without this flag.
+     *  OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA, an environment variable read once when the first model
+     *  is loaded, forces reading for every model when set to 0.
+     *  @returns Network object that ready to do forward, throw an exception in failure cases.
+     */
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine,
+                                     bool mapExternalData);
+
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.

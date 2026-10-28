@@ -8,6 +8,7 @@
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
+#include "../src/mapped_file.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <numeric>
 namespace opencv_test { namespace {
@@ -2466,6 +2467,72 @@ TEST_P(Test_ONNX_layers, Quantized_Gemm)
 TEST_P(Test_ONNX_layers, Gemm_External_Data)
 {
     testONNXModels("gemm_external_data", npy);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data)
+{
+    testONNXModels("layer_norm_external_data", npy);
+}
+
+// ENGINE_ORT registers the file for ONNX Runtime without parsing it, so neither the mapping
+// nor the bounds check below is reached.
+static bool ortEngineForced()
+{
+    return static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT(
+               "OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_ORT;
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ true);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // A refused mapping copies instead and yields the same values; only the count separates them.
+    if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
+    {
+        EXPECT_GT(cv::dnn::mappedViewCount(), views);
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    // A range past the end of the file must be refused here; mapping it faults at inference.
+    EXPECT_THROW(readNetFromONNX(_tf("models/layer_norm_external_data_truncated.onnx")),
+                 cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_MappingDisabled)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ false);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // Nothing was mapped, and the copy path produces the same values.
+    EXPECT_EQ(cv::dnn::mappedViewCount(), views);
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
 }
 
 
