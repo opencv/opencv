@@ -1508,6 +1508,16 @@ class PythonWrapperGenerator(object):
         for name, constinfo in constlist:
             self.gen_const_reg(constinfo)
 
+        # step 6: add documentation signatures for the functions wrapped by hand in cv2.cpp,
+        # because they are not parsed from the headers
+        manual_signatures = [
+            ("cv::createTrackbar", "cv.createTrackbar", "trackbarName, windowName, value, count, onChange", "None"),
+            ("cv::createButton", "cv.createButton", "buttonName, onChange[, userData[, buttonType[, initialButtonState]]]", "None"),
+            ("cv::setMouseCallback", "cv.setMouseCallback", "window_name, on_mouse[, param]", "None"),
+        ]
+        for cname, py_name, arg, ret in manual_signatures:
+            self.py_signatures.setdefault(cname, []).append(dict(name=py_name, arg=arg, ret=ret))
+
         # All symbols are collected and AST is reconstructed, generating
         # typing stubs...
         self.typing_stubs_generator.generate(output_path)
