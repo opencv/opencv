@@ -1,6 +1,7 @@
 # Compilers:
 # - CV_GCC - GNU compiler (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 # - CV_CLANG - Clang-compatible compiler (CMAKE_CXX_COMPILER_ID MATCHES "Clang" - Clang or AppleClang, see CMP0025)
+# - CV_CLANG_CL - clang-cl, Clang with MSVC-compatible command line (CV_CLANG AND MSVC)
 # - CV_ICC - Intel compiler
 # - MSVC - Microsoft Visual Compiler (CMake variable)
 # - MINGW / CYGWIN / CMAKE_COMPILER_IS_MINGW / CMAKE_COMPILER_IS_CYGWIN (CMake original variables)
@@ -28,6 +29,9 @@ if(NOT DEFINED CV_GCC AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 if(NOT DEFINED CV_CLANG AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")  # Clang or AppleClang (see CMP0025)
   set(CV_CLANG 1)
+endif()
+if(NOT DEFINED CV_CLANG_CL AND CV_CLANG AND MSVC)
+  set(CV_CLANG_CL 1)
 endif()
 
 
