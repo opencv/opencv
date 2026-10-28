@@ -216,8 +216,9 @@ static void testXFeatLetterboxInverse(const Size& imageSize)
     ASSERT_EQ(std::min(rw, rh), 576);
     ASSERT_EQ(std::max(top, left), 32);
 
+    // Same interpolation as the class sets in Image2BlobParams, so the network sees an identical blob.
     Mat letterboxed;
-    resize(img, letterboxed, Size(rw, rh), 0, 0, INTER_LINEAR);
+    resize(img, letterboxed, Size(rw, rh), 0, 0, INTER_LINEAR_EXACT);
     cv::copyMakeBorder(letterboxed, letterboxed, top, inputSize.height - top - rh,
                        left, inputSize.width - left - rw, BORDER_CONSTANT, Scalar());
 
