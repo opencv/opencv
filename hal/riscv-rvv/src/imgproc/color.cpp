@@ -1539,24 +1539,27 @@ static inline void ComputeSectorAndClampedH(int vl, vfloat32m2_t& h, vint32m2_t&
 static inline void Hxx2BGR_loadtab(int vl, vfloat32m2_t tab0, vfloat32m2_t tab1, vfloat32m2_t tab2, vfloat32m2_t tab3,
                                    vint32m2_t sector, vfloat32m2_t& b, vfloat32m2_t& g, vfloat32m2_t& r)
 {
-    static const uint sector_data[3][6] =
-    {
-        {1, 1, 3, 0, 0, 2},
-        {3, 0, 0, 2, 1, 1},
-        {0, 2, 1, 1, 3, 0}
-    };
-    auto loadtab = [&](size_t p) {
-        auto sd = __riscv_vloxei32_v_u32m2(sector_data[p], __riscv_vreinterpret_v_i32m2_u32m2(sector), vl);
-        auto x = __riscv_vmerge(vfloat32m2_t(), tab0, __riscv_vmseq(sd, 0, vl), vl);
-        x = __riscv_vmerge(x, tab1, __riscv_vmseq(sd, 1, vl), vl);
-        x = __riscv_vmerge(x, tab2, __riscv_vmseq(sd, 2, vl), vl);
-        return __riscv_vmerge(x, tab3, __riscv_vmseq(sd, 3, vl), vl);
-    };
+    // sector is in [0,5], select without indexed loads:
+    //   sector: 0     1     2     3     4     5
+    //   b:      tab1  tab1  tab3  tab0  tab0  tab2
+    //   g:      tab3  tab0  tab0  tab2  tab1  tab1
+    //   r:      tab0  tab2  tab1  tab1  tab3  tab0
+    auto m1 = __riscv_vmseq(sector, 1, vl);
+    auto m2 = __riscv_vmseq(sector, 2, vl);
+    auto m3 = __riscv_vmseq(sector, 3, vl);
+    auto m4 = __riscv_vmseq(sector, 4, vl);
 
-    sector = __riscv_vmul(sector, sizeof(uint), vl);
-    b = loadtab(0);
-    g = loadtab(1);
-    r = loadtab(2);
+    b = __riscv_vmerge(tab0, tab1, __riscv_vmsle(sector, 1, vl), vl);
+    b = __riscv_vmerge(b, tab3, m2, vl);
+    b = __riscv_vmerge(b, tab2, __riscv_vmseq(sector, 5, vl), vl);
+
+    g = __riscv_vmerge(tab0, tab3, __riscv_vmseq(sector, 0, vl), vl);
+    g = __riscv_vmerge(g, tab2, m3, vl);
+    g = __riscv_vmerge(g, tab1, __riscv_vmsgt(sector, 3, vl), vl);
+
+    r = __riscv_vmerge(tab0, tab2, m1, vl);
+    r = __riscv_vmerge(r, tab1, __riscv_vmor(m2, m3, vl), vl);
+    r = __riscv_vmerge(r, tab3, m4, vl);
 }
 
 static inline void HSV2BGR_native(int vl, vfloat32m2_t h, vfloat32m2_t s, vfloat32m2_t v,

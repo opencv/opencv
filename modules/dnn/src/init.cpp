@@ -295,6 +295,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(EltwiseInt8,      EltwiseLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(Conv2Int8,        Conv2Int8Layer);
+    CV_DNN_REGISTER_LAYER_CLASS(MatMulInt8,       MatMulInt8Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Pool2Int8,        Pool2Int8Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise2Int8,     Eltwise2Int8Layer);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNormInt8,    BatchNormLayerInt8);

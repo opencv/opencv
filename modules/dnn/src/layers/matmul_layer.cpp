@@ -74,54 +74,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                backendId == DNN_BACKEND_CANN;
     }
 
-    // numpy 1-D promotion: A[K]->[1,K], B[K]->[K,1]. `out` drops the inserted 1-dims.
-    static void matmulShapes(const MatShape& rawA, const MatShape& rawB, bool trans_a, bool trans_b,
-                             MatShape& Ap, MatShape& Bp, MatShape& full, MatShape& out) {
-        const bool a1d = rawA.size() == 1, b1d = rawB.size() == 1;
-        Ap = a1d ? MatShape{1, rawA[0]} : rawA;
-        Bp = b1d ? MatShape{rawB[0], 1} : rawB;
-        CV_CheckGE(Ap.size(), (size_t)2, "DNN/MatMul: invalid shape of input A");
-        CV_CheckGE(Bp.size(), (size_t)2, "DNN/MatMul: invalid shape of input B");
-
-        int mA = Ap[Ap.size() - 2], nA = Ap.back();
-        int mB = Bp[Bp.size() - 2], nB = Bp.back();
-        int M = trans_a ? nA : mA;
-        int N = trans_b ? mB : nB;
-        int K_A = trans_a ? mA : nA;
-        int K_B = trans_b ? nB : mB;
-        CV_CheckEQ(K_A, K_B, "DNN/MatMul: invalid dimension K");
-
-        if (Ap.size() != 2 || Bp.size() != 2) {
-            const auto &more = Ap.size() > Bp.size() ? Ap : Bp;
-            const auto &less = Ap.size() > Bp.size() ? Bp : Ap;
-            size_t diff_dims = more.size() - less.size();
-            full = more;
-            for (size_t i = 0; i < less.size() - 2; i++) {
-                const auto dl = less[i], dm = more[i + diff_dims];
-                if (dl != 1 && dm != 1 && dl != dm)
-                    CV_Error(Error::StsBadSize, "DNN/MatMul: invalid shape for broadcasting");
-                if (dm == 1)
-                    full[i + diff_dims] = dl;
-            }
-            full[full.size() - 2] = M;
-            full[full.size() - 1] = N;
-        } else {
-            full = MatShape{M, N};
-        }
-
-        // both 1-D, no batch -> 0-D scalar (total 1), not empty (total 0)
-        if (a1d && b1d && full.size() == 2) {
-            out = MatShape::scalar();
-            return;
-        }
-        // drop the 1-dims inserted by promotion
-        out.clear();
-        for (size_t i = 0; i + 2 < full.size(); i++)
-            out.push_back(full[i]);
-        if (!a1d) out.push_back(M);
-        if (!b1d) out.push_back(N);
-    }
-
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,

@@ -73,6 +73,8 @@ struct ModelFusionTransposeMatMul
 
             MatMulLayer* mm = dynamic_cast<MatMulLayer*>(layer.get());
             if (!mm) continue;
+            // MatMulInt8Layer does not read trans_a/trans_b
+            if (dynamic_cast<MatMulInt8Layer*>(layer.get())) continue;
 
             if (layer->inputs.size() != 2) continue;
 

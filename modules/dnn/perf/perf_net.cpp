@@ -431,6 +431,45 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
     processNet("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
 }
 
+PERF_TEST_P_(DNNTestNetwork, YuNet_int8)
+{
+    if (target != DNN_TARGET_CPU || backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("");
+    processNet("dnn/onnx/models/face_detection_yunet_2023mar_int8.onnx", "", cv::Size(640, 640));
+}
+
+PERF_TEST_P_(DNNTestNetwork, SFace_int8)
+{
+    if (target != DNN_TARGET_CPU || backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("");
+    processNet("dnn/onnx/models/face_recognition_sface_2021dec_int8.onnx", "", cv::Size(112, 112));
+}
+
+PERF_TEST_P_(DNNTestNetwork, DenseNet_121_int8)
+{
+    if (target != DNN_TARGET_CPU || backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("");
+    processNet("dnn/onnx/models/densenet-12-int8.onnx", "", cv::Size(224, 224));
+}
+
+PERF_TEST_P_(DNNTestNetwork, EfficientNet_int8)
+{
+    if (target != DNN_TARGET_CPU || backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(224, 224), Scalar(), true);
+    transposeND(inp, {0, 2, 3, 1}, inp);
+    processNet("dnn/onnx/models/efficientnet-lite4-11-int8.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, PPOCRv3_int8)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    if (target != DNN_TARGET_CPU || backend != DNN_BACKEND_OPENCV)
+        throw SkipTestException("");
+    processNet("dnn/onnx/models/text_detection_en_ppocrv3_2023may_int8.onnx", "", cv::Size(736, 736));
+}
+
 PERF_TEST_P_(DNNTestNetwork, YOLOv8n_TFLite)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);

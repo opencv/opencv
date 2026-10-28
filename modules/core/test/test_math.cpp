@@ -2945,6 +2945,51 @@ TEST(Core_QR_Solver, accuracy64f)
     ASSERT_FALSE(solve(A, B, solutionQR, DECOMP_QR));
 }
 
+// Non-symmetric and above the HAL thresholds (LU 100, QR 30), unlike every other solve test.
+typedef testing::TestWithParam<std::tuple<cvtest::MatDepth, int> > Core_Solve_Large;
+
+TEST_P(Core_Solve_Large, nonsymmetric)
+{
+    const int depth = std::get<0>(GetParam());
+    const int method = std::get<1>(GetParam());
+    const double eps = depth == CV_32F ? 1e-4 : 1e-10;
+    const int n = 120;
+
+    RNG& rng = theRNG();
+    Mat a(n, n, depth), x0(n, 1, depth);
+    rng.fill(a, RNG::UNIFORM, -1, 1);
+    rng.fill(x0, RNG::UNIFORM, -1, 1);
+    a += Mat::eye(n, n, depth)*n;
+
+    Mat b = a*x0, x;
+    ASSERT_TRUE(solve(a, b, x, method));
+    EXPECT_LE(cvtest::norm(a*x, b, NORM_INF | NORM_RELATIVE), eps);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Solve_Large,
+                        testing::Combine(testing::Values(CV_32F, CV_64F),
+                                         testing::Values(DECOMP_LU, DECOMP_QR)));
+
+typedef testing::TestWithParam<cvtest::MatDepth> Core_Invert_Large;
+
+TEST_P(Core_Invert_Large, nonsymmetric)
+{
+    const int depth = GetParam();
+    const double eps = depth == CV_32F ? 1e-4 : 1e-10;
+    const int n = 120;
+
+    RNG& rng = theRNG();
+    Mat a(n, n, depth);
+    rng.fill(a, RNG::UNIFORM, -1, 1);
+    a += Mat::eye(n, n, depth)*n;
+
+    Mat inv;
+    ASSERT_NE(0.0, invert(a, inv, DECOMP_LU));
+    EXPECT_LE(cvtest::norm(a*inv, Mat::eye(n, n, depth), NORM_INF | NORM_RELATIVE), eps);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Invert_Large, testing::Values(CV_32F, CV_64F));
+
 TEST(Core_Solve, regression_11888)
 {
     cv::Matx<float, 3, 2> A(
