@@ -5,7 +5,7 @@
 #include <map>
 #include <atomic>
 #include <algorithm>
-#include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <memory>
 #if defined(_MSC_VER)
@@ -522,17 +522,33 @@ static void sortStripeConcat(std::vector<std::pair<int64_t, int>>& v, int width)
     }
 }
 
+static inline int popcount64(uint64_t x)
+{
+#if CV_POPCNT && defined(CV_POPCNT_U64)   // POPCNT in the baseline
+    return (int)CV_POPCNT_U64(x);
+#elif defined(__GNUC__) || defined(__clang__)
+    return __builtin_popcountll(x);
+#else
+    x = x - ((x >> 1) & 0x5555555555555555ULL);
+    x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
+    x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return (int)((x * 0x0101010101010101ULL) >> 56);
+#endif
+}
+
 // Finds the contour D of every reference (pixel, side): a (pixel, background side) pair lies on exactly
-// one border. Walks the contour points in parallel chunks and looks them up in a mask of references.
+// one border. Walks the contour points in parallel chunks and looks them up in a bitmap of references;
+// the rank of the word and a popcount give the position of the reference in the sorted list.
 class ReferenceResolver : public cv::ParallelLoopBody
 {
 public:
     enum { CHUNK = 1 << 15 };   // points per task
 
     ReferenceResolver(const std::vector<std::vector<cv::Point>>& contours, const std::vector<ContourInfo>& info,
-                      int width, const uchar* mask, const std::vector<std::pair<int64_t, int>>& refs,
+                      int width, const uint64_t* bits, const uint32_t* rank,
+                      const std::vector<std::pair<int64_t, int>>& refs,
                       const std::vector<size_t>& firstPoint, std::vector<int>& target)
-        : contours_(contours), info_(info), width_(width), mask_(mask), refs_(refs),
+        : contours_(contours), info_(info), width_(width), bits_(bits), rank_(rank), refs_(refs),
           firstPoint_(firstPoint), target_(target)
     {
         for (int din = 0; din < 8; ++din)
@@ -574,16 +590,18 @@ public:
 private:
     inline void answer(const cv::Point& pt, uchar sides, int contour) const
     {
-        const int64_t pix = (int64_t)pt.y * width_ + pt.x;
-        const uchar hit = mask_[pix] & sides;
+        const uint64_t key0 = ((uint64_t)pt.y * width_ + pt.x) * 2;   // even: both sides in the same word
+        const uint64_t word = bits_[key0 >> 6];
+        const int sh = (int)(key0 & 63);
+        const uchar hit = (uchar)((word >> sh) & 3) & sides;
         if (!hit) return;
         for (int side = REF_WEST; side <= REF_EAST; ++side)
         {
             if (!(hit & side)) continue;
-            const int64_t key = pix * 2 + (side - 1);
-            auto it = std::lower_bound(refs_.begin(), refs_.end(), std::make_pair(key, INT_MIN));
+            const int b = sh + side - 1;
+            const uint32_t k = rank_[key0 >> 6] + (uint32_t)popcount64(word & ((uint64_t(1) << b) - 1));
             // a contour may visit a pixel several times, possibly in two chunks: same value
-            storeRelaxedInt(&target_[it->second], contour);
+            storeRelaxedInt(&target_[refs_[k].second], contour);
         }
     }
     static inline void storeRelaxedInt(int* p, int v)
@@ -600,7 +618,8 @@ private:
     const std::vector<std::vector<cv::Point>>& contours_;
     const std::vector<ContourInfo>& info_;
     const int width_;
-    const uchar* mask_;
+    const uint64_t* bits_;
+    const uint32_t* rank_;
     const std::vector<std::pair<int64_t, int>>& refs_;
     const std::vector<size_t>& firstPoint_;
     std::vector<int>& target_;
@@ -698,21 +717,33 @@ void findTRUContoursImpl(cv::Mat& padded,
         // 3. references (parallel walk)
         std::vector<int> ref(n, -1);
         {
-            std::unique_ptr<uchar, void (*)(void*)> mask((uchar*)std::calloc((size_t)width * height, 1), &std::free);
-            CV_Assert(mask);
-            std::vector<std::pair<int64_t, int>> refs;   // (pixel * 2 + (side == REF_EAST), contour)
+            // bitmap of the referenced keys (pixel * 2 + (side == REF_EAST)), and for every word with a
+            // key the index of its first key in the sorted refs (the rank). calloc gives zeroed pages
+            // lazily: only the words of referenced pixels are touched
+            const size_t nwords = ((size_t)width * height * 2 + 63) / 64;
+            std::unique_ptr<uint64_t, void (*)(void*)> bitsPtr((uint64_t*)std::calloc(nwords, sizeof(uint64_t)),
+                                                               &std::free);
+            std::unique_ptr<uint32_t, void (*)(void*)> rankPtr((uint32_t*)std::calloc(nwords, sizeof(uint32_t)),
+                                                               &std::free);
+            CV_Assert(bitsPtr && rankPtr);
+            uint64_t* bits = bitsPtr.get();
+            uint32_t* rank = rankPtr.get();
+            std::vector<std::pair<int64_t, int>> refs;   // (key, contour)
             refs.reserve(n);
             std::vector<size_t> firstPoint(n + 1, 0);
             for (int i = 0; i < n; ++i)
             {
                 firstPoint[i + 1] = firstPoint[i] + contours[i].size();
                 if (info[i].refPix < 0) continue;
-                mask.get()[info[i].refPix] |= info[i].refSide;
-                refs.emplace_back(info[i].refPix * 2 + (info[i].refSide - 1), i);
+                const int64_t key = info[i].refPix * 2 + (info[i].refSide - 1);
+                bits[key >> 6] |= uint64_t(1) << (key & 63);
+                refs.emplace_back(key, i);
             }
             sortStripeConcat(refs, width);
+            for (size_t k = refs.size(); k-- > 0; )
+                rank[refs[k].first >> 6] = (uint32_t)k;
             const int nchunks = (int)((firstPoint[n] + ReferenceResolver::CHUNK - 1) / ReferenceResolver::CHUNK);
-            ReferenceResolver resolver(contours, info, width, mask.get(), refs, firstPoint, ref);
+            ReferenceResolver resolver(contours, info, width, bits, rank, refs, firstPoint, ref);
             cv::parallel_for_(cv::Range(0, nchunks), resolver);
         }
 
