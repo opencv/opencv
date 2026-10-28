@@ -53,24 +53,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
     }
 
-    /** half GEMMs accumulate in FP32 unless OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE is set */
-    inline bool allowHalfAccumulate()
-    {
-#if CUDART_VERSION >= 11000
-        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_FP16_HALF_ACCUMULATE", false);
-        return allow;
-#else
-        return true;  // the FP32-accumulate path needs CUBLAS_COMPUTE_32F (CUDA 11)
-#endif
-    }
-
-    /** FP32 GEMMs use TF32 tensor cores unless OPENCV_DNN_CUDA_ALLOW_TF32 is off, as cuDNN convolutions do */
-    inline bool allowTF32()
-    {
-        static const bool allow = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true);
-        return allow;
-    }
-
     /** non-copyable cuBLAS smart handle
      *
      * UniqueHandle is a smart non-sharable wrapper for cuBLAS handle which ensures that the handle
@@ -91,15 +73,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         /** creates a cuBLAS handle and associates it with the stream specified
          *
+         * FP32 GEMMs use TF32 tensor cores only if \p allowTF32 is set.
+         *
          * Exception Guarantee: Basic
          */
-        UniqueHandle(Stream strm) : stream(std::move(strm)) {
+        UniqueHandle(Stream strm, bool allowTF32) : stream(std::move(strm)) {
             CV_Assert(stream);
             CUDA4DNN_CHECK_CUBLAS(cublasCreate(&handle));
             try {
                 CUDA4DNN_CHECK_CUBLAS(cublasSetStream(handle, stream.get()));
 #if CUDART_VERSION >= 11000
-                CUDA4DNN_CHECK_CUBLAS(cublasSetMathMode(handle, allowTF32() ? CUBLAS_TF32_TENSOR_OP_MATH : CUBLAS_DEFAULT_MATH));
+                CUDA4DNN_CHECK_CUBLAS(cublasSetMathMode(handle, allowTF32 ? CUBLAS_TF32_TENSOR_OP_MATH : CUBLAS_DEFAULT_MATH));
 #endif
             } catch (...) {
                 /* cublasDestroy won't throw if a valid handle is passed */
@@ -159,7 +143,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
          *
          * Exception Guarantee: Basic
          */
-        Handle(Stream strm) : handle(std::make_shared<UniqueHandle>(std::move(strm))) { }
+        Handle(Stream strm, bool allowTF32) : handle(std::make_shared<UniqueHandle>(std::move(strm), allowTF32)) { }
 
         Handle& operator=(const Handle&) = default;
         Handle& operator=(Handle&&) = default;
@@ -227,20 +211,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             ildb = static_cast<int>(ldb),
             ildc = static_cast<int>(ldc);
 
-        if (allowHalfAccumulate()) {
-            CUDA4DNN_CHECK_CUBLAS(
-                cublasHgemm(
-                    handle.get(),
-                    opa, opb,
-                    irows_c, icols_c, icommon_dim,
-                    &alpha, A.get(), ilda,
-                    B.get(), ildb,
-                    &beta, C.get(), ildc
-                )
-            );
-            return;
-        }
-
 #if CUDART_VERSION >= 11000
         /* CUBLAS_COMPUTE_32F takes float scale factors */
         const float falpha = static_cast<float>(alpha), fbeta = static_cast<float>(beta);
@@ -253,6 +223,17 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 B.get(), CUDA_R_16F, ildb,
                 &fbeta, C.get(), CUDA_R_16F, ildc,
                 CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
+            )
+        );
+#else
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasHgemm(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda,
+                B.get(), ildb,
+                &beta, C.get(), ildc
             )
         );
 #endif
@@ -352,21 +333,6 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
 
-        if (allowHalfAccumulate()) {
-            CUDA4DNN_CHECK_CUBLAS(
-                cublasHgemmStridedBatched(
-                    handle.get(),
-                    opa, opb,
-                    irows_c, icols_c, icommon_dim,
-                    &alpha, A.get(), ilda, stride_a,
-                    B.get(), ildb, stride_b,
-                    &beta, C.get(), ildc, stride_c,
-                    batch_count
-                )
-            );
-            return;
-        }
-
 #if CUDART_VERSION >= 11000
         /* CUBLAS_COMPUTE_32F takes float scale factors */
         const float falpha = static_cast<float>(alpha), fbeta = static_cast<float>(beta);
@@ -380,6 +346,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &fbeta, C.get(), CUDA_R_16F, ildc, stride_c,
                 batch_count,
                 CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT
+            )
+        );
+#else
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasHgemmStridedBatched(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda, stride_a,
+                B.get(), ildb, stride_b,
+                &beta, C.get(), ildc, stride_c,
+                batch_count
             )
         );
 #endif

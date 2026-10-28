@@ -256,7 +256,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
             inputTensorDesc = TensorDescriptor(params.input_shape);
             filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups, cudnnHandle.allowTF32());
 
             std::vector<int> output_dims;
             getConvolutionForwardOutputDim(convDesc, filterDesc, inputTensorDesc, output_dims);
@@ -356,7 +356,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             cudnnHandle = std::move(handle);
 
             filterDesc = FilterDescriptor(params.filter_shape);
-            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups);
+            convDesc = ConvolutionDescriptor(params.padding, params.stride, params.dilation, params.groups, cudnnHandle.allowTF32());
 
             /* input_shape is the output shape for convolution
              * output_shape is the input shape for convolution
