@@ -75,11 +75,16 @@ public:
         const Mat& logits = inp[0];
         const Mat& labels = inp[1];
         const bool hasWeight = inp.size() >= 3;
-        const Mat& w = hasWeight ? inp[2] : Mat();
 
         CV_Assert(logits.dims >= 2);
         const int N = logits.size[0], C = logits.size[1];
         int S = 1; for (int i = 2; i < logits.dims; ++i) S *= logits.size[i];
+
+        Mat w;
+        if (hasWeight) {
+            CV_Assert(inp[2].total() == (size_t)C);
+            inp[2].reshape(1, C).convertTo(w, CV_32F);
+        }
         MatShape logitsShape = shape(logits);
         MatShape lossShape;
         bool isReduced = (reduction != LOSS_REDUCTION_NONE);
@@ -245,6 +250,7 @@ public:
         }
         else
         {
+            CV_Assert(shape(labels) == logitsShape);
             Mat labels32; labels.convertTo(labels32, CV_32F);
             const size_t sN_lab = labels32.step1(0);
             const size_t sC_lab = labels32.step1(1);
