@@ -537,7 +537,7 @@ TEST_P(Test_TFLite, hand_landmark)
 {
     Net net = readNet(findDataFile("dnn/tflite/hand_landmark_lite.tflite", false));
     Mat hand = imread(findDataFile("dnn/pose.png"))(Rect(0, 138, 140, 140));
-    Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false, /*interpolation*/cv::INTER_LINEAR_EXACT);
+    Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false, CV_32F, /*interpolation*/cv::INTER_LINEAR_EXACT);
     testModel(net, "hand_landmark_lite", input, 1e-4, 1e-2);
 }
 

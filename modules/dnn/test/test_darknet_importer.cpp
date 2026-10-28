@@ -75,8 +75,8 @@ public:
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
-        cv::resize(img1, img1, inputSize);
-        cv::resize(img2, img2, inputSize);
+        cv::resize(img1, img1, inputSize, cv::INTER_LINEAR_EXACT);
+        cv::resize(img2, img2, inputSize, cv::INTER_LINEAR_EXACT);
 
         // Pad images by black pixel at the right to test not equal width and height sizes
         if (zeroPadW) {
