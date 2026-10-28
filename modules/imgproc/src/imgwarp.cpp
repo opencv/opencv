@@ -933,7 +933,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 }
 
 
-// Dispatch shim for the single-channel non-relative bicubic in-bounds fast path (32F only).
+// Dispatch shim for the single-channel non-relative bicubic in-bounds fast path (32F, 16U, 16S).
 template<typename T, typename AT>
 struct RemapBicubicVecC1
 {
