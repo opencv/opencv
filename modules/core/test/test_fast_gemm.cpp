@@ -105,21 +105,24 @@ TEST(Core_HalGemm, unsupported_type)
                                D.data, D.step, 4, 4, 4, 0), cv::Exception);
 }
 
-TEST(Core_FastGemm32f, size_threshold)
+// (M, N, K), whether fastGemm32f takes the call
+typedef TestWithParam<tuple<Vec3i, bool> > Core_FastGemm32f_SizeThreshold;
+
+TEST_P(Core_FastGemm32f_SizeThreshold, taken)
 {
+    const Vec3i mnk = get<0>(GetParam());
+    const int M = mnk[0], N = mnk[1], K = mnk[2];
     RNG& rng = theRNG();
-    const struct { int M, N, K; bool taken; } cases[] = {
-        {4, 4, 4, false}, {64, 64, 64, true}, {1, 64, 2500, false}, {1, 1024, 1024, true},
-        {256, 256, 4, false}, {256, 1, 256, true}
-    };
-    for (const auto& c : cases)
-    {
-        Mat A = randMat(c.M, c.K, rng, 0), B = randMat(c.K, c.N, rng, 0), D(c.M, c.N, CV_32F);
-        bool taken = cv::hal::fastGemm32f(A.ptr<float>(), A.step, B.ptr<float>(), B.step, 1.f, NULL, 0, 0.f,
-                                          D.ptr<float>(), D.step, c.M, c.K, c.N, 0);
-        EXPECT_EQ(c.taken, taken) << c.M << "x" << c.N << "x" << c.K;
-    }
+    Mat A = randMat(M, K, rng, 0), B = randMat(K, N, rng, 0), D(M, N, CV_32F);
+    bool taken = cv::hal::fastGemm32f(A.ptr<float>(), A.step, B.ptr<float>(), B.step, 1.f, NULL, 0, 0.f,
+                                      D.ptr<float>(), D.step, M, K, N, 0);
+    EXPECT_EQ(get<1>(GetParam()), taken);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FastGemm32f_SizeThreshold, testing::Values(
+    make_tuple(Vec3i(4, 4, 4), false), make_tuple(Vec3i(64, 64, 64), true),
+    make_tuple(Vec3i(1, 64, 2500), false), make_tuple(Vec3i(1, 1024, 1024), true),
+    make_tuple(Vec3i(256, 256, 4), false), make_tuple(Vec3i(256, 1, 256), true)));
 
 TEST(Core_FastGemm32f, overlapping_output)
 {
@@ -129,86 +132,89 @@ TEST(Core_FastGemm32f, overlapping_output)
                                       A.ptr<float>(), A.step, 64, 64, 64, 0));
 }
 
-class Core_FastGemm : public testing::TestWithParam<bool>
+static cv::FastGemmOpt fastGemmOpt(bool multi_thread)
 {
-protected:
-    void SetUp() CV_OVERRIDE
-    {
-        opt.init();
-        opt.multi_thread = GetParam();
-    }
     cv::FastGemmOpt opt;
-};
+    opt.init();
+    opt.multi_thread = multi_thread;
+    return opt;
+}
 
-TEST_P(Core_FastGemm, strides)
+// multi_thread, transposed A, transposed B
+typedef TestWithParam<tuple<bool, bool, bool> > Core_FastGemmTrans;
+
+TEST_P(Core_FastGemmTrans, strides)
 {
+    cv::FastGemmOpt opt = fastGemmOpt(get<0>(GetParam()));
+    const bool ta = get<1>(GetParam()), tb = get<2>(GetParam());
     RNG& rng = theRNG();
     const int M = 45, N = 70, K = 93;
-    for (int t = 0; t < 4; t++)
-    {
-        const bool ta = (t & 1) != 0, tb = (t & 2) != 0;
-        Mat A = randMat(ta ? K : M, ta ? M : K, rng, 2), B = randMat(tb ? N : K, tb ? K : N, rng, 3);
-        Mat C = randMat(M, N, rng, 1), ref, scale;
-        refGemm(M, N, K, 0.5, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
-                B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 2., C.ptr<float>(), ld(C), 1, ref, scale);
-        cv::hal::fastGemm(ta, tb, A.rows, A.cols, B.rows, B.cols, 0.5f, A.ptr<float>(), ld(A), 1,
-                          B.ptr<float>(), ld(B), 1, 2.f, C.ptr<float>(), ld(C), opt);
-        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "trans " << ta << tb;
+    Mat A = randMat(ta ? K : M, ta ? M : K, rng, 2), B = randMat(tb ? N : K, tb ? K : N, rng, 3);
+    Mat C = randMat(M, N, rng, 1), ref, scale;
+    refGemm(M, N, K, 0.5, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
+            B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 2., C.ptr<float>(), ld(C), 1, ref, scale);
+    cv::hal::fastGemm(ta, tb, A.rows, A.cols, B.rows, B.cols, 0.5f, A.ptr<float>(), ld(A), 1,
+                      B.ptr<float>(), ld(B), 1, 2.f, C.ptr<float>(), ld(C), opt);
+    ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "transpose flags";
 
-        C = randMat(M, N, rng, 1);
-        refGemm(M, N, K, 0.5, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
-                B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 0., NULL, 0, 0, ref, scale);
-        cv::hal::fastGemm(false, false, M, K, K, N, 0.5f, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
-                          B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 0.f, C.ptr<float>(), ld(C), opt);
-        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "strides " << ta << tb;
-    }
+    C = randMat(M, N, rng, 1);
+    refGemm(M, N, K, 0.5, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
+            B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 0., NULL, 0, 0, ref, scale);
+    cv::hal::fastGemm(false, false, M, K, K, N, 0.5f, A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
+                      B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 0.f, C.ptr<float>(), ld(C), opt);
+    ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "explicit strides";
 }
 
-TEST_P(Core_FastGemm, packedB)
+TEST_P(Core_FastGemmTrans, packedB)
 {
+    cv::FastGemmOpt opt = fastGemmOpt(get<0>(GetParam()));
+    const bool ta = get<1>(GetParam()), tb = get<2>(GetParam());
     RNG& rng = theRNG();
     const int M = 50, N = 330, K = 140;
-    for (int t = 0; t < 4; t++)
-    {
-        const bool ta = (t & 1) != 0, tb = (t & 2) != 0;
-        Mat A = randMat(ta ? K : M, ta ? M : K, rng, 0), B = randMat(tb ? N : K, tb ? K : N, rng, 4);
-        std::vector<float> packed(cv::hal::fastGemmPackBSize(N, K, opt));
-        cv::hal::fastGemmPackB(tb, B.cols, B.rows, B.ptr<float>(), ld(B), packed.data(), opt);
+    Mat A = randMat(ta ? K : M, ta ? M : K, rng, 0), B = randMat(tb ? N : K, tb ? K : N, rng, 4);
+    std::vector<float> packed(cv::hal::fastGemmPackBSize(N, K, opt));
+    cv::hal::fastGemmPackB(tb, B.cols, B.rows, B.ptr<float>(), ld(B), packed.data(), opt);
 
-        Mat C = randMat(M, N, rng, 0), ref, scale;
-        refGemm(M, N, K, 1., A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
-                B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 1., C.ptr<float>(), ld(C), 1, ref, scale);
-        cv::hal::fastGemm(ta, M, N, K, 1.f, A.ptr<float>(), ld(A), packed.data(), 1.f, C.ptr<float>(), ld(C), opt);
-        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K)) << "trans " << ta << tb;
+    Mat C = randMat(M, N, rng, 0), ref, scale;
+    refGemm(M, N, K, 1., A.ptr<float>(), ta ? 1 : ld(A), ta ? ld(A) : 1,
+            B.ptr<float>(), tb ? 1 : ld(B), tb ? ld(B) : 1, 1., C.ptr<float>(), ld(C), 1, ref, scale);
+    cv::hal::fastGemm(ta, M, N, K, 1.f, A.ptr<float>(), ld(A), packed.data(), 1.f, C.ptr<float>(), ld(C), opt);
+    ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FastGemmTrans, testing::Combine(testing::Bool(), testing::Bool(), testing::Bool()));
+
+// multi_thread, M
+typedef TestWithParam<tuple<bool, int> > Core_FastGemmBatch;
+
+TEST_P(Core_FastGemmBatch, transposedB)
+{
+    cv::FastGemmOpt opt = fastGemmOpt(get<0>(GetParam()));
+    const int M = get<1>(GetParam()), N = 96, K = 64, batch = 3;
+    RNG& rng = theRNG();
+    Mat A = randMat(batch * M, K, rng, 0), B = randMat(batch * N, K, rng, 0), C(batch * M, N, CV_32F);
+    std::vector<size_t> a_ofs(batch), b_ofs(batch), c_ofs(batch);
+    for (int i = 0; i < batch; i++)
+    {
+        a_ofs[i] = (size_t)i * M * K;
+        b_ofs[i] = (size_t)i * N * K;
+        c_ofs[i] = (size_t)i * M * N;
+    }
+    cv::hal::fastGemmBatch(batch, a_ofs.data(), b_ofs.data(), c_ofs.data(), M, N, K, 1.f,
+                           A.ptr<float>(), K, 1, B.ptr<float>(), 1, K, 0.f, C.ptr<float>(), N, opt);
+    for (int i = 0; i < batch; i++)
+    {
+        Mat ref, scale;
+        refGemm(M, N, K, 1., A.ptr<float>(i * M), K, 1, B.ptr<float>(i * N), 1, K, 0., NULL, 0, 0, ref, scale);
+        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(i * M), N, ref, scale, K)) << "batch " << i;
     }
 }
 
-TEST_P(Core_FastGemm, batch)
+TEST_P(Core_FastGemmBatch, packedB)
 {
+    cv::FastGemmOpt opt = fastGemmOpt(get<0>(GetParam()));
+    const int M = get<1>(GetParam()), N = 100, K = 64, batch = 3;
     RNG& rng = theRNG();
-    const int batch = 3, K = 64;
-    for (int M : {2, 40})
-    {
-        const int N = 96;
-        Mat A = randMat(batch * M, K, rng, 0), B = randMat(batch * N, K, rng, 0), C(batch * M, N, CV_32F);
-        std::vector<size_t> a_ofs(batch), b_ofs(batch), c_ofs(batch);
-        for (int i = 0; i < batch; i++)
-        {
-            a_ofs[i] = (size_t)i * M * K;
-            b_ofs[i] = (size_t)i * N * K;
-            c_ofs[i] = (size_t)i * M * N;
-        }
-        cv::hal::fastGemmBatch(batch, a_ofs.data(), b_ofs.data(), c_ofs.data(), M, N, K, 1.f,
-                               A.ptr<float>(), K, 1, B.ptr<float>(), 1, K, 0.f, C.ptr<float>(), N, opt);
-        for (int i = 0; i < batch; i++)
-        {
-            Mat ref, scale;
-            refGemm(M, N, K, 1., A.ptr<float>(i * M), K, 1, B.ptr<float>(i * N), 1, K, 0., NULL, 0, 0, ref, scale);
-            ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(i * M), N, ref, scale, K)) << "M " << M << ", batch " << i;
-        }
-    }
-
-    const int M = 33, N = 100;
     Mat A = randMat(batch * M, K, rng, 0), B = randMat(batch * K, N, rng, 0), C(batch * M, N, CV_32F);
     const size_t packed_size = cv::hal::fastGemmPackBSize(N, K, opt);
     std::vector<float> packed(packed_size * batch);
@@ -226,9 +232,14 @@ TEST_P(Core_FastGemm, batch)
     {
         Mat ref, scale;
         refGemm(M, N, K, 1., A.ptr<float>(i * M), K, 1, B.ptr<float>(i * K), N, 1, 0., NULL, 0, 0, ref, scale);
-        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(i * M), N, ref, scale, K)) << "packed, batch " << i;
+        ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(i * M), N, ref, scale, K)) << "batch " << i;
     }
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FastGemmBatch, testing::Combine(testing::Bool(), testing::Values(2, 33, 40)));
+
+// multi_thread
+typedef TestWithParam<bool> Core_FastGemm;
 
 TEST_P(Core_FastGemm, thin)
 {
@@ -240,10 +251,10 @@ TEST_P(Core_FastGemm, thin)
     cv::hal::fastGemmThinPackB(N, K, B.ptr<float>(), ld(B), 1, packed.data());
     refGemm(M, N, K, 2., A.ptr<float>(), ld(A), 1, B.ptr<float>(), ld(B), 1, 0.5, C.ptr<float>(), ld(C), 1, ref, scale);
     cv::hal::fastGemmThin(M, N, K, 2.f, A.ptr<float>(), ld(A), 1, packed.data(), 0.5f, C.ptr<float>(), ld(C),
-                          opt.multi_thread);
+                          GetParam());
     ASSERT_NO_FATAL_FAILURE(checkGemm(C.ptr<float>(), ld(C), ref, scale, K));
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Core_FastGemm, testing::Values(true, false));
+INSTANTIATE_TEST_CASE_P(/**/, Core_FastGemm, testing::Bool());
 
 }} // namespace
