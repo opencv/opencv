@@ -1028,6 +1028,12 @@ CV__DNN_INLINE_NS_BEGIN
         */
         CV_WRAP void enableWinograd(bool useWinograd);
 
+        /** @brief Enables or disables TF32 Tensor Core math for FP32 convolutions and GEMMs on DNN_TARGET_CUDA.
+         * TF32 is faster on compute capability 8.0 and newer, but rounds the inputs to a 10-bit mantissa.
+        * @param useTF32 true to allow TF32 math. The default is true; set false for exact FP32 math.
+        */
+        CV_WRAP void enableTF32(bool useTF32);
+
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
@@ -1587,6 +1593,9 @@ CV__DNN_INLINE_NS_BEGIN
 
          /// @sa Net::enableWinograd
          CV_WRAP Model& enableWinograd(bool useWinograd);
+
+         /// @sa Net::enableTF32
+         CV_WRAP Model& enableTF32(bool useTF32);
 
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }

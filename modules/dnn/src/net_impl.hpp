@@ -116,6 +116,7 @@ struct Net::Impl : public detail::NetImplBase
     bool fusion;
     bool isAsync;  // FIXIT: drop
     bool useWinograd;
+    bool useTF32;
     bool useKVCache = false;
 
     std::vector<int64> layersTimings;
@@ -362,6 +363,7 @@ struct Net::Impl : public detail::NetImplBase
 
     virtual void fuseLayers(const std::vector<LayerPin>& blobsToKeep_);
     void enableWinograd(bool useWinograd_);
+    void enableTF32(bool useTF32_);
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_);
 

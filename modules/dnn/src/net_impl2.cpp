@@ -820,8 +820,8 @@ void Net::Impl::finalize()
         if (!cudaInfo) {
             cuda4dnn::csl::CSLContext context;
             context.stream = cuda4dnn::csl::Stream(true);
-            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream);
-            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream);
+            context.cublas_handle = cuda4dnn::csl::cublas::Handle(context.stream, useTF32);
+            context.cudnn_handle = cuda4dnn::csl::cudnn::Handle(context.stream, useTF32);
             cudaInfo = std::make_unique<CudaInfo_t>(std::move(context));
         }
     }
