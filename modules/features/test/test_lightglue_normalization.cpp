@@ -184,15 +184,18 @@ TEST_P(Features2d_LightGlue_PairInfo, MaxSideNormalization)
 
     for (int invalid : {-1, 2})
     {
-        try
-        {
-            matcher->setKeypointNormalization(invalid);
-            FAIL() << "Invalid keypoint normalization accepted";
-        }
-        catch (const cv::Exception& e)
-        {
-            EXPECT_EQ(e.code, Error::StsBadArg);
-        }
+        // Rethrow so EXPECT_THROW sees the exception after its error code is checked.
+        EXPECT_THROW({
+            try
+            {
+                matcher->setKeypointNormalization(invalid);
+            }
+            catch (const cv::Exception& e)
+            {
+                EXPECT_EQ(e.code, cv::Error::StsBadArg) << "normalization " << invalid;
+                throw;
+            }
+        }, cv::Exception) << "normalization " << invalid;
     }
     EXPECT_EQ(matcher->getKeypointNormalization(), (int)LG_NORM_MAX_SIDE);
 
