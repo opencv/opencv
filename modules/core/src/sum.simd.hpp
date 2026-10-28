@@ -399,7 +399,8 @@ SumFunc getSumFunc(int depth)
         sumWrap<double, double, sum64f>,
         sumWrap<hfloat, float, sum16f>,
         sumWrap<bfloat, float, sum16bf>,
-        0,
+        // CV_Bool elements are 0 or 1, so the uchar kernel sums them exactly.
+        sumWrap<uchar, int, sum8u>,
         sumWrap<uint64, double, sum64u>,
         sumWrap<int64, double, sum64s>,
         sumWrap<unsigned, double, sum32u>,
