@@ -415,7 +415,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
-    bool is_fp16 = depth == CV_16F || depth == CV_16BF;
+    bool is_fp16 = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
 
     if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_fp16)) ||
         ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_fp16)))
@@ -650,7 +650,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    bool is_fp16 = depth == CV_16F || depth == CV_16BF;
+    bool is_fp16 = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
 
     if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_fp16)) ||
         ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_fp16)))

@@ -323,6 +323,8 @@ inline unsigned cv_absdiff(unsigned x, unsigned y) { return std::max(x, y) - std
 inline uint64 cv_absdiff(uint64 x, uint64 y) { return std::max(x, y) - std::min(x, y); }
 inline float cv_absdiff(hfloat x, hfloat y) { return std::abs((float)x - (float)y); }
 inline float cv_absdiff(bfloat x, bfloat y) { return std::abs((float)x - (float)y); }
+inline float cv_absdiff(fp8_t x, fp8_t y) { return std::abs((float)x - (float)y); }
+inline float cv_absdiff(fp8a_t x, fp8a_t y) { return std::abs((float)x - (float)y); }
 
 template<typename _Tp, typename _AccTp> inline
 _AccTp normL2Sqr(const _Tp* a, int n)
