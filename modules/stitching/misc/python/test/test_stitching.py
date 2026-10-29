@@ -177,5 +177,25 @@ class stitching_seam_finder_graph_cuts(NewOpenCVTests):
         self.assertIsNotNone(masks_warped)
 
 
+class stitching_detail_default_construct_test(NewOpenCVTests):
+
+    def test_image_features(self):
+        features = cv.detail_ImageFeatures()
+        self.assertEqual(features.img_idx, 0)
+        self.assertEqual(features.keypoints, ())
+        self.assertIsInstance(features.descriptors, cv.UMat)
+
+    def test_camera_params(self):
+        camera = cv.detail_CameraParams()
+        self.assertEqual(camera.focal, 1)
+        self.assertEqual(camera.aspect, 1)
+        np.testing.assert_array_equal(camera.R, np.eye(3))
+
+    def test_matches_info(self):
+        matches_info = cv.detail_MatchesInfo()
+        self.assertEqual(matches_info.src_img_idx, -1)
+        self.assertEqual(matches_info.dst_img_idx, -1)
+
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
