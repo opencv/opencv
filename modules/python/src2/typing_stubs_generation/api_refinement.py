@@ -254,17 +254,17 @@ def refine_highgui_module(root: NamespaceNode) -> None:
     )
     """
     def setMouseCallback(
-        windowName: str,
-        onMouse: Callback[[int, int, int, int, Any | None], None],
+        window_name: str,
+        on_mouse: Callback[[int, int, int, int, Any | None], None],
         param: Any | None = ...
     ) -> None: ...
     """
     root.add_function(
         "setMouseCallback",
         [
-            FunctionNode.Arg("windowName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg("window_name", PrimitiveTypeNode.str_()),
             FunctionNode.Arg(
-                "onMouse",
+                "on_mouse",
                 CallableTypeNode("MouseCallback", [
                     PrimitiveTypeNode.int_(),
                     PrimitiveTypeNode.int_(),
