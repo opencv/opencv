@@ -24,7 +24,7 @@ class Test_TFLite : public DNNTestLayer {
 public:
     void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
     void testModel(const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
-    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 0, double lInf = 0);
+    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 0, double lInf = 0, int interpolation = cv::INTER_LINEAR);
     void testLayer(const std::string& modelName, double l1 = 0, double lInf = 0);
 };
 
@@ -75,10 +75,10 @@ void Test_TFLite::testModel(const std::string& modelName, const Mat& input, doub
     testModel(net, modelName, input, l1, lInf);
 }
 
-void Test_TFLite::testModel(const std::string& modelName, const Size& inpSize, double l1, double lInf)
+void Test_TFLite::testModel(const std::string& modelName, const Size& inpSize, double l1, double lInf, int interpolation)
 {
     Mat input = imread(findDataFile("cv/shared/lena.png"));
-    input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
+    input = blobFromImage(input, 1.0 / 255, inpSize, 0, true, true, CV_32F, interpolation);
     testModel(modelName, input, l1, lInf);
 }
 
@@ -101,7 +101,7 @@ TEST_P(Test_TFLite, face_landmark)
         l1 = 0.15;
         lInf = 0.82;
     }
-    testModel("face_landmark", Size(192, 192), l1, lInf);
+    testModel("face_landmark", Size(192, 192), l1, lInf, cv::INTER_LINEAR_EXACT);
 }
 
 // https://google.github.io/mediapipe/solutions/face_detection
@@ -537,8 +537,10 @@ TEST_P(Test_TFLite, hand_landmark)
 {
     Net net = readNet(findDataFile("dnn/tflite/hand_landmark_lite.tflite", false));
     Mat hand = imread(findDataFile("dnn/pose.png"))(Rect(0, 138, 140, 140));
-    Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false);
-    testModel(net, "hand_landmark_lite", input, 1e-4, 1e-2);
+    Mat input = blobFromImage(hand, 1.0 / 255, Size(224, 224), Scalar(), true, false, CV_32F, /*interpolation*/cv::INTER_LINEAR_EXACT);
+    // NOTE: reference coordinates were generated with INTER_LINEAR resize and a bit different from what we get with cv::INTER_LINEAR_EXACT
+    // cv::INTER_LINEAR_EXACT is used to get stable inference independently on platform optimizations and HAL for resize.
+    testModel(net, "hand_landmark_lite", input, 0.21, 0.5);
 }
 
 TEST_P(Test_TFLite, pose_landmark)

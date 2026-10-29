@@ -2721,8 +2721,8 @@ TEST_P(Test_ONNX_nets, RAFT)
     Size target_size{480, 360};
     auto img0 = imread(img0_path);
     auto img1 = imread(img1_path);
-    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
-    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
 
     auto net = readNet(weight_path);
     net.setInput(blob0, "0");
@@ -3593,7 +3593,8 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
         CV_32F,
         DNN_LAYOUT_NCHW,
         DNN_PMODE_NULL,
-        Scalar::all(0)
+        Scalar::all(0),
+        cv::INTER_LINEAR_EXACT
         );
 
     testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
