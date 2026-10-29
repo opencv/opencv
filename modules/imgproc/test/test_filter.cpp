@@ -2123,6 +2123,50 @@ TEST_P(Imgproc_CornerROI, parent_and_isolated_borders)
     EXPECT_EQ(0, cvtest::norm(original, src, NORM_INF));
 }
 
+TEST_P(Imgproc_CornerROI, nested_rois_with_padded_rows)
+{
+    const int depth = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const int apertureSize = get<2>(GetParam());
+    const int borderType = get<3>(GetParam());
+    Mat storage(31, 44, depth);
+    theRNG().fill(storage, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 1);
+    // A logical image with padding must not treat that padding as parent data.
+    Mat parent(31, 37, depth, storage.data, storage.step);
+    const Mat original = storage.clone();
+    const Rect outerRect(2, 3, 31, 25);
+    const Mat outer = parent(outerRect);
+    const Rect innerRects[] = {
+        Rect(0, 0, 1, 1), Rect(30, 24, 1, 1),
+        Rect(0, 12, 31, 1), Rect(5, 6, 13, 11)
+    };
+    for (int method = 0; method < 3; ++method)
+    {
+        SCOPED_TRACE(method);
+        Mat whole;
+        cornerResponse(parent, whole, method, blockSize, apertureSize, borderType);
+        for (size_t i = 0; i < sizeof(innerRects) / sizeof(innerRects[0]); ++i)
+        {
+            SCOPED_TRACE(innerRects[i]);
+            const Mat src = outer(innerRects[i]);
+            const Rect absolute(innerRects[i].tl() + outerRect.tl(), src.size());
+            Mat output(src.rows + 4, src.cols + 6, whole.type());
+            output.reshape(1).setTo(-100);
+            const Rect dstRect(2, 1, src.cols, src.rows);
+            Mat actual = output(dstRect), isolated, independent;
+            cornerResponse(src, actual, method, blockSize, apertureSize, borderType);
+            expectCornerResponseNear(whole(absolute), actual);
+            actual.reshape(1).setTo(-100);
+            EXPECT_EQ(0, countNonZero(output.reshape(1) != -100));
+            cornerResponse(src, isolated, method, blockSize, apertureSize,
+                           borderType | BORDER_ISOLATED);
+            cornerResponse(src.clone(), independent, method, blockSize, apertureSize, borderType);
+            expectCornerResponseNear(independent, isolated);
+        }
+    }
+    EXPECT_EQ(0, cvtest::norm(original, storage, NORM_INF));
+}
+
 INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_CornerROI,
     testing::Combine(testing::Values(CV_8U, CV_32F), testing::Values(1, 2, 3, 6),
                      testing::Values(-1, 1, 3, 5, 7),
