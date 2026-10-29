@@ -124,6 +124,10 @@ template<> struct Sum_SIMD<T, ST> \
     ST maskbuf[VTraits<VecT>::max_nlanes*9]; \
 };
 
+// The channel limit is 4 only once the vector holds at least four lanes: init_maskbuf builds
+// the cn == 4 masks under that condition, so a narrower vector would reduce against all-zero
+// masks and silently drop the vectorized elements. Every 32-bit register type has four lanes
+// or more; v_float64 on an SSE2 baseline has two.
 #undef DEFINE_SUM_SIMD_16
 #define DEFINE_SUM_SIMD_16(T, ST, iST, VecT, load_op) \
 template<> struct Sum_SIMD<T, ST> \
@@ -134,10 +138,10 @@ template<> struct Sum_SIMD<T, ST> \
     } \
     int operator ()(const T* src, const uchar* mask, ST* dst, int len, int cn) const \
     { \
-        if (mask || (cn < 1 || cn > 4)) \
+        int x = 0, simd_width = VTraits<VecT>::vlanes(); \
+        if (mask || (cn < 1 || cn > 3+(simd_width>=4))) \
             return 0; \
         len *= cn; \
-        int x = 0, simd_width = VTraits<VecT>::vlanes(); \
         VecT m0 = vx_load(maskbuf), m1, m2, m3, m4, m5, m6, m7, m8; \
         if (cn == 1) { \
             m1 = m2 = m3 = m4 = m5 = m6 = m7 = m8 = m0; \
@@ -230,50 +234,7 @@ template<> struct Sum_SIMD<T, ST> \
 DEFINE_SUM_SIMD_32(int, double, int64, v_float64)
 DEFINE_SUM_SIMD_32(float, double, int64, v_float64)
 
-// The source is already the accumulator type, so there is nothing to expand or convert and the
-// three vectors are loaded at the native width. The channel limit matches DEFINE_SUM_SIMD_32:
-// init_maskbuf can only build the cn == 4 masks once the vector holds at least four lanes.
-#undef DEFINE_SUM_SIMD_64
-#define DEFINE_SUM_SIMD_64(T, ST, iST, VecT) \
-template<> struct Sum_SIMD<T, ST> \
-{ \
-    Sum_SIMD(int cn) \
-    { \
-        init_maskbuf((iST*)maskbuf, cn, VTraits<VecT>::vlanes()); \
-    } \
-    int operator ()(const T* src, const uchar* mask, ST* dst, int len, int cn) const \
-    { \
-        int x = 0, simd_width = VTraits<VecT>::vlanes(); \
-        if (mask || (cn < 1 || cn > 3+(simd_width>=4))) \
-            return 0; \
-        len *= cn; \
-        VecT m0 = vx_load(maskbuf), m1, m2, m3, m4, m5, m6, m7, m8; \
-        if (cn == 1) { \
-            m1 = m2 = m3 = m4 = m5 = m6 = m7 = m8 = m0; \
-        } else { \
-            m1 = vx_load(maskbuf + simd_width); \
-            m2 = vx_load(maskbuf + simd_width*2); \
-            m3 = vx_load(maskbuf + simd_width*3); \
-            m4 = vx_load(maskbuf + simd_width*4); \
-            m5 = vx_load(maskbuf + simd_width*5); \
-            m6 = vx_load(maskbuf + simd_width*6); \
-            m7 = vx_load(maskbuf + simd_width*7); \
-            m8 = vx_load(maskbuf + simd_width*8); \
-        } \
-        VecT s0 = v_xor(m0, m0), s1 = s0, s2 = s0; \
-        for (; x <= len - simd_width*3; x += simd_width*3) { \
-            s0 = v_add(s0, vx_load(src + x)); \
-            s1 = v_add(s1, vx_load(src + x + simd_width)); \
-            s2 = v_add(s2, vx_load(src + x + simd_width*2)); \
-        } \
-        REDUCE_PARTIAL_SUMS(); \
-        vx_cleanup(); \
-        return x / cn; \
-    } \
-    ST maskbuf[VTraits<VecT>::max_nlanes*9]; \
-};
-
-DEFINE_SUM_SIMD_64(double, double, int64, v_float64)
+DEFINE_SUM_SIMD_16(double, double, int64, v_float64, vx_load)
 #endif
 #endif
 
