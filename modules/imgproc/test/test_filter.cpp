@@ -2162,6 +2162,32 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 }
 
+TEST(Imgproc_Blur, inplace_roi)
+{
+    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32SC1 };
+    const Rect rois[] = { Rect(0, 0, 64, 64), Rect(1, 0, 64, 64), Rect(0, 1, 64, 64), Rect(3, 2, 64, 64) };
+    for (int type : types)
+    {
+        for (int ksize = 3; ksize <= 5; ksize += 2)
+        {
+            for (const Rect& r : rois)
+            {
+                Mat img(80, 80, type);
+                randu(img, 0, 200);
+
+                Mat expected;
+                blur(img(r), expected, Size(ksize, ksize));
+
+                Mat roi = img(r);
+                blur(roi, roi, Size(ksize, ksize));
+
+                EXPECT_EQ(0, cvtest::norm(expected, roi, NORM_INF))
+                    << "type=" << typeToString(type) << " ksize=" << ksize << " roi=" << r;
+            }
+        }
+    }
+}
+
 TEST(Imgproc_GaussianBlur, borderTypes)
 {
     Size kernelSize(3, 3);

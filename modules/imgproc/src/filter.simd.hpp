@@ -366,7 +366,7 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
             brows[i] = brow;
         }
         columnFilter.reset();
-        columnFilter(brows, dst + (ptrdiff_t)dy0*dststep, dststep, nOut, width*cn, 0, true);
+        columnFilter(brows, dst + (ptrdiff_t)dy0*dststep, dststep, nOut, width*cn);
     }
 
     if( inner > 0 )
@@ -397,7 +397,7 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
                 for( int i = 0; i < nIn; i++ )
                     erows[i] = edgeSum + ((size_t)i*2 + side)*seg*bsz;
                 columnFilter.reset();
-                columnFilter(erows, dstChunk + (side ? (width - kx)*dsz : 0), dststep, nOut, kx*cn, 0, true);
+                columnFilter(erows, dstChunk + (side ? (width - kx)*dsz : 0), dststep, nOut, kx*cn);
             }
         }
 
@@ -431,14 +431,18 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
     int bufStep = this_.bufStep;
 
     src -= xofs1*esz;
-    const uchar* src_ = src;
-    uchar* dst_ = dst;
     count = std::min(count, this_.remainingInputRows());
 
     CV_Assert(src && dst && count > 0);
     bool isRowColumnSeparable = this_.isRowColumnSeparable();
 
-    if(width <= 32 || this_.roi.height <=2 || dst_ == src_ ) // in-place computation and small image size avoided.
+    // The fused path writes dst before it has finished reading src, so any overlap
+    // (in-place calls on an ROI included) must take the row-buffered path.
+    const uchar* srcEnd = src + (ptrdiff_t)srcstep*(count - 1) + (ptrdiff_t)width1*esz;
+    const uchar* dstEnd = dst + (ptrdiff_t)dststep*(this_.roi.height - 1) + (ptrdiff_t)width*getElemSize(this_.dstType);
+    bool overlap = src < dstEnd && dst < srcEnd;
+
+    if(width <= 32 || this_.roi.height <= 2 || overlap)
         isRowColumnSeparable = false;
 
     if(isRowColumnSeparable && width*cn < this_.rowColumnFilter->minWidth)
@@ -463,7 +467,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 
     if(isSep)
     {
-        // Streamlined separable path: processInnerRegion always true, no rowColumnFilter.
+        // Streamlined separable path: no rowColumnFilter.
         for(;; dst += dststep*i, dy += i)
         {
             int dcount = getNextBatchCount(this_, bufRows, kheight, ay, count);
@@ -480,7 +484,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
             if( i < kheight )
                 break;
             i -= kheight - 1;
-            (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn, 0, true);
+            (*this_.columnFilter)((const uchar**)brows, dst, dststep, i, this_.roi.width*cn);
         }
     }
     else
@@ -719,7 +723,7 @@ public:
                 for (int m = 0; m < h + kheight - 1; m++)
                     brows[m] = hbuf + m * hstep;
 
-                (*fe.columnFilter)(brows, dst_ptr, (int)dst.step, h, w * cn, cn, true);
+                (*fe.columnFilter)(brows, dst_ptr, (int)dst.step, h, w * cn);
             }
             else
             {
@@ -820,7 +824,7 @@ struct ColumnNoVec
 {
     ColumnNoVec() {}
     ColumnNoVec(const Mat&, int, int, double) {}
-    int operator()(const uchar**, uchar*, int, int, bool) const { return 0; }
+    int operator()(const uchar**, uchar*, int) const { return 0; }
 };
 
 struct SymmRowSmallNoVec
@@ -834,7 +838,7 @@ struct SymmColumnSmallNoVec
 {
     SymmColumnSmallNoVec() {}
     SymmColumnSmallNoVec(const Mat&, int, int, double) {}
-    int operator()(const uchar**, uchar*, int, int, bool) const { return 0; }
+    int operator()(const uchar**, uchar*, int) const { return 0; }
 };
 
 struct FilterNoVec
@@ -1532,7 +1536,7 @@ struct SymmColumnVec_32s8u
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -1656,7 +1660,7 @@ struct SymmColumnVec_32f8u
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -1731,7 +1735,7 @@ struct SymmColumnVec_32s16s
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -1811,7 +1815,7 @@ struct SymmColumnSmallVec_32s16s
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2064,7 +2068,7 @@ struct SymmColumnVec_32f16s
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2456,7 +2460,7 @@ struct SymmColumnVec_32f
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2662,7 +2666,7 @@ struct SymmColumnSmallVec_32f
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    int operator()(const uchar** _src, uchar* _dst, int width, int, bool) const
+    int operator()(const uchar** _src, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -3195,7 +3199,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -3208,7 +3212,7 @@ template<class CastOp, class VecOp> struct ColumnFilter : public BaseColumnFilte
         for( ; count--; dst += dststep, src++ )
         {
             DT* D = (DT*)dst;
-            i = vecOp(src, dst, width, kcn, processInnerRegion);
+            i = vecOp(src, dst, width);
             #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
@@ -3260,7 +3264,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -3277,7 +3281,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
             for( ; count--; dst += dststep, src++ )
             {
                 DT* D = (DT*)dst;
-                i = (this->vecOp)(src, dst, width, kcn, processInnerRegion);
+                i = (this->vecOp)(src, dst, width);
                 #if CV_ENABLE_UNROLLED
                 for( ; i <= width - 4; i += 4 )
                 {
@@ -3315,7 +3319,7 @@ template<class CastOp, class VecOp> struct SymmColumnFilter : public ColumnFilte
             for( ; count--; dst += dststep, src++ )
             {
                 DT* D = (DT*)dst;
-                i = this->vecOp(src, dst, width, kcn, processInnerRegion);
+                i = this->vecOp(src, dst, width);
                 #if CV_ENABLE_UNROLLED
                 for( ; i <= width - 4; i += 4 )
                 {
@@ -3368,7 +3372,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         CV_Assert( this->ksize == 3 );
     }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int kcn, bool processInnerRegion) CV_OVERRIDE
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -3387,7 +3391,7 @@ struct SymmColumnSmallFilter : public SymmColumnFilter<CastOp, VecOp>
         for( ; count--; dst += dststep, src++ )
         {
             DT* D = (DT*)dst;
-            i = (this->vecOp)(src, dst, width, kcn, processInnerRegion);
+            i = (this->vecOp)(src, dst, width);
             const ST* S0 = (const ST*)src[-1];
             const ST* S1 = (const ST*)src[0];
             const ST* S2 = (const ST*)src[1];

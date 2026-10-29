@@ -103,7 +103,7 @@ public:
     //! the destructor
     virtual ~BaseColumnFilter();
     //! the filtering operator. Must be overridden in the derived classes. The vertical border interpolation is done outside of the class.
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width, int kcn, bool processInnerRegion) = 0;
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
     //! returns true if the filter holds no mutable state between calls (safe for concurrent tile-parallel invocation)

@@ -557,7 +557,7 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width, int, bool) CV_OVERRIDE
+    void operator()(const uchar** _src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
