@@ -485,7 +485,10 @@ public:
         }
         if (root_!=NULL) {
             free_centers();
+            delete[] root_;
         }
+        indices_ = NULL;
+        root_ = NULL;
 
         load_value(stream, branching_);
         load_value(stream, iterations_);
@@ -493,7 +496,15 @@ public:
         load_value(stream, cb_index_);
         load_value(stream, trees_);
 
-        indices_ = new int*[trees_];
+        if (branching_<2) {
+            FLANN_THROW(cv::Error::StsError, "Branching factor must be at least 2");
+        }
+        if (trees_<1) {
+            FLANN_THROW(cv::Error::StsError, "Number of trees must be at least 1");
+        }
+
+        indices_ = new int*[trees_]();
+        root_ = new KMeansNodePtr[trees_]();
         for (int i=0; i<trees_; ++i) {
             indices_[i] = new int[size_];
             load_value(stream, *indices_[i], size_);
@@ -655,17 +666,27 @@ private:
 
     void load_tree(FILE* stream, KMeansNodePtr& node, int num)
     {
-        node = pool_.allocate<KMeansNode>();
-        load_value(stream, *node);
+        KMeansNodePtr loaded = pool_.allocate<KMeansNode>();
+        load_value(stream, *loaded);
+        // pivot and childs hold pointers from the saving process, clear them before the node
+        // is attached so free_centers() only sees NULL or owned memory if a later read throws
+        bool is_leaf = loaded->childs==NULL;
+        loaded->pivot = NULL;
+        loaded->childs = NULL;
+        node = loaded;
         node->pivot = new CentersType[veclen_];
         load_value(stream, *(node->pivot), (int)veclen_);
-        if (node->childs==NULL) {
+        if (is_leaf) {
             int indices_offset;
             load_value(stream, indices_offset);
             node->indices = indices_[num] + indices_offset;
         }
         else {
-            node->childs = pool_.allocate<KMeansNodePtr>(branching_);
+            KMeansNodePtr* childs = pool_.allocate<KMeansNodePtr>(branching_);
+            for(int i=0; i<branching_; ++i) {
+                childs[i] = NULL;
+            }
+            node->childs = childs;
             for(int i=0; i<branching_; ++i) {
                 load_tree(stream, node->childs[i], num);
             }
@@ -681,7 +702,9 @@ private:
         delete[] node->pivot;
         if (node->childs!=NULL) {
             for (int k=0; k<branching_; ++k) {
-                free_centers(node->childs[k]);
+                if (node->childs[k]!=NULL) {
+                    free_centers(node->childs[k]);
+                }
             }
         }
     }
