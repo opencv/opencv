@@ -9,6 +9,10 @@
 namespace cv {
 namespace dnn {
 
+// Conservative heuristic: use parallel_for_ for tensors with at least 32K elements
+// to avoid its scheduling overhead on small inputs. This cutoff is not architecture-tuned.
+static const size_t MVN_PARALLEL_MIN_TOTAL = 32 * 1024;
+
 /*
     MeanVarianceNormalization layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__MeanVarianceNormalization.html
@@ -138,97 +142,17 @@ private:
         }
         const size_t outerReductionCount = reductionCount / statsSuffixSize;
 
-        const bool parallelGroups = src.total() >= 32768 &&
+        const bool parallelGroups = src.total() >= MVN_PARALLEL_MIN_TOTAL &&
                                    groupCount > 1 &&
                                    groupCount <= static_cast<size_t>(INT_MAX);
-        const auto computeStatisticsGroup = [&](size_t groupIndex, std::vector<int>& coordinates)
-        {
-            size_t groupOffset = 0;
-            for (int axis = src.dims - 1; axis >= 0; --axis)
-            {
-                if (reduced[axis])
-                    continue;
-                coordinates[axis] =
-                    static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
-                groupOffset += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
-            }
-
-            if (statsSuffixStart < src.dims)
-            {
-                size_t offset = groupOffset;
-                for (size_t outer = 0; outer < outerReductionCount; ++outer)
-                {
-                    for (size_t inner = 0; inner < statsSuffixSize; ++inner)
-                    {
-                        const size_t i = outer * statsSuffixSize + inner;
-                        const double value = static_cast<double>(srcData[offset + inner]);
-                        if (i == 0)
-                            referenceValues[groupIndex] = value;
-
-                        const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
-                        meanOffsets[groupIndex] += delta / (i + 1);
-                        const double centeredDelta =
-                            (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
-                        squaredDeviations[groupIndex] += delta * centeredDelta;
-                    }
-
-                    for (int axis = statsSuffixStart - 1; axis >= 0; --axis)
-                    {
-                        if (!reduced[axis])
-                            continue;
-                        if (++coordinates[axis] < src.size[axis])
-                        {
-                            offset += srcSteps[axis];
-                            break;
-                        }
-                        coordinates[axis] = 0;
-                        offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
-                    }
-                }
-                return;
-            }
-
-            size_t offset = groupOffset;
-            for (size_t i = 0; i < reductionCount; ++i)
-            {
-                const double value = static_cast<double>(srcData[offset]);
-                if (i == 0)
-                    referenceValues[groupIndex] = value;
-
-                const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
-                meanOffsets[groupIndex] += delta / (i + 1);
-                const double centeredDelta =
-                    (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
-                squaredDeviations[groupIndex] += delta * centeredDelta;
-
-                for (int axis = src.dims - 1; axis >= 0; --axis)
-                {
-                    if (!reduced[axis])
-                        continue;
-                    if (++coordinates[axis] < src.size[axis])
-                    {
-                        offset += srcSteps[axis];
-                        break;
-                    }
-                    coordinates[axis] = 0;
-                    offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
-                }
-            }
-        };
-        const auto computeStatistics = [&](const Range& range)
-        {
-            std::vector<int> coordinates(src.dims, 0);
-            for (int groupIndex = range.start; groupIndex < range.end; ++groupIndex)
-                computeStatisticsGroup(static_cast<size_t>(groupIndex), coordinates);
-        };
+        StatisticsInvoker<T> statisticsInvoker(
+            src, reduced, groupStrides, srcSteps, srcData,
+            referenceValues, meanOffsets, squaredDeviations,
+            statsSuffixStart, statsSuffixSize, outerReductionCount, reductionCount);
         if (parallelGroups)
-            parallel_for_(Range(0, static_cast<int>(groupCount)), computeStatistics);
+            parallel_for_(Range(0, static_cast<int>(groupCount)), statisticsInvoker);
         else
-        {
-            std::vector<int> coordinates(src.dims, 0);
-            for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
-                computeStatisticsGroup(groupIndex, coordinates);
-        }
+            statisticsInvoker.run(0, groupCount);
 
         std::vector<double> inverseStdDevs(groupCount);
         for (size_t i = 0; i < groupCount; ++i)
@@ -256,60 +180,191 @@ private:
         }
         const size_t outerOutputCount = reductionCount / outputSuffixSize;
 
-        const auto normalizeGroup = [&](size_t groupIndex, std::vector<int>& coordinates)
+        NormalizeGroupsInvoker<T> normalizeGroups(
+            src, dst, reduced, groupStrides, srcSteps, dstSteps, srcData, dstData,
+            referenceValues, meanOffsets, inverseStdDevs,
+            outputSuffixStart, outputSuffixSize, outerOutputCount, reductionCount);
+        if (parallelGroups)
+            parallel_for_(Range(0, static_cast<int>(groupCount)), normalizeGroups);
+        else
+            normalizeGroups.run(0, groupCount);
+    }
+
+    template<typename T>
+    static void computeStatisticsGroup(size_t groupIndex, std::vector<int>& coordinates,
+                                       const Mat& src, const std::vector<bool>& reduced,
+                                       const std::vector<size_t>& groupStrides,
+                                       const std::vector<size_t>& srcSteps, const T* srcData,
+                                       std::vector<double>& referenceValues,
+                                       std::vector<double>& meanOffsets,
+                                       std::vector<double>& squaredDeviations,
+                                       int statsSuffixStart, size_t statsSuffixSize,
+                                       size_t outerReductionCount, size_t reductionCount)
+    {
+        size_t groupOffset = 0;
+        for (int axis = src.dims - 1; axis >= 0; --axis)
         {
-            size_t srcBase = 0, dstBase = 0;
+            if (reduced[axis])
+                continue;
+            coordinates[axis] =
+                static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
+            groupOffset += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
+        }
+
+        if (statsSuffixStart < src.dims)
+        {
+            size_t offset = groupOffset;
+            for (size_t outer = 0; outer < outerReductionCount; ++outer)
+            {
+                for (size_t inner = 0; inner < statsSuffixSize; ++inner)
+                {
+                    const size_t i = outer * statsSuffixSize + inner;
+                    const double value = static_cast<double>(srcData[offset + inner]);
+                    if (i == 0)
+                        referenceValues[groupIndex] = value;
+
+                    const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                    meanOffsets[groupIndex] += delta / (i + 1);
+                    const double centeredDelta =
+                        (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+                    squaredDeviations[groupIndex] += delta * centeredDelta;
+                }
+
+                for (int axis = statsSuffixStart - 1; axis >= 0; --axis)
+                {
+                    if (!reduced[axis])
+                        continue;
+                    if (++coordinates[axis] < src.size[axis])
+                    {
+                        offset += srcSteps[axis];
+                        break;
+                    }
+                    coordinates[axis] = 0;
+                    offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
+                }
+            }
+            return;
+        }
+
+        size_t offset = groupOffset;
+        for (size_t i = 0; i < reductionCount; ++i)
+        {
+            const double value = static_cast<double>(srcData[offset]);
+            if (i == 0)
+                referenceValues[groupIndex] = value;
+
+            const double delta = (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+            meanOffsets[groupIndex] += delta / (i + 1);
+            const double centeredDelta =
+                (value - referenceValues[groupIndex]) - meanOffsets[groupIndex];
+            squaredDeviations[groupIndex] += delta * centeredDelta;
+
             for (int axis = src.dims - 1; axis >= 0; --axis)
             {
-                if (reduced[axis])
+                if (!reduced[axis])
                     continue;
-                coordinates[axis] =
-                    static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
-                srcBase += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
-                dstBase += static_cast<size_t>(coordinates[axis]) * dstSteps[axis];
-            }
-
-            if (outputSuffixStart < src.dims)
-            {
-                size_t srcOffset = srcBase, dstOffset = dstBase;
-                for (size_t outer = 0; outer < outerOutputCount; ++outer)
+                if (++coordinates[axis] < src.size[axis])
                 {
-                    for (size_t inner = 0; inner < outputSuffixSize; ++inner)
-                    {
-                        const double centeredValue =
-                            (static_cast<double>(srcData[srcOffset + inner]) - referenceValues[groupIndex]) -
-                            meanOffsets[groupIndex];
-                        dstData[dstOffset + inner] =
-                            saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
-                    }
-
-                    for (int axis = outputSuffixStart - 1; axis >= 0; --axis)
-                    {
-                        if (!reduced[axis])
-                            continue;
-                        if (++coordinates[axis] < src.size[axis])
-                        {
-                            srcOffset += srcSteps[axis];
-                            dstOffset += dstSteps[axis];
-                            break;
-                        }
-                        coordinates[axis] = 0;
-                        srcOffset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
-                        dstOffset -= static_cast<size_t>(dst.size[axis] - 1) * dstSteps[axis];
-                    }
+                    offset += srcSteps[axis];
+                    break;
                 }
-                return;
+                coordinates[axis] = 0;
+                offset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
             }
+        }
+    }
 
-            size_t srcOffset = srcBase, dstOffset = dstBase;
-            for (size_t i = 0; i < reductionCount; ++i)
+    template<typename T>
+    class StatisticsInvoker : public ParallelLoopBody
+    {
+    public:
+        StatisticsInvoker(const Mat& src, const std::vector<bool>& reduced,
+                          const std::vector<size_t>& groupStrides,
+                          const std::vector<size_t>& srcSteps, const T* srcData,
+                          std::vector<double>& referenceValues,
+                          std::vector<double>& meanOffsets,
+                          std::vector<double>& squaredDeviations,
+                          int statsSuffixStart, size_t statsSuffixSize,
+                          size_t outerReductionCount, size_t reductionCount)
+            : src_(src), reduced_(reduced), groupStrides_(groupStrides), srcSteps_(srcSteps),
+              srcData_(srcData), referenceValues_(referenceValues), meanOffsets_(meanOffsets),
+              squaredDeviations_(squaredDeviations), statsSuffixStart_(statsSuffixStart),
+              statsSuffixSize_(statsSuffixSize), outerReductionCount_(outerReductionCount),
+              reductionCount_(reductionCount)
+        {
+        }
+
+        void operator()(const Range& range) const CV_OVERRIDE
+        {
+            run(static_cast<size_t>(range.start), static_cast<size_t>(range.end));
+        }
+
+        void run(size_t start, size_t end) const
+        {
+            std::vector<int> coordinates(src_.dims, 0);
+            for (size_t groupIndex = start; groupIndex < end; ++groupIndex)
             {
-                const double centeredValue =
-                    (static_cast<double>(srcData[srcOffset]) - referenceValues[groupIndex]) -
-                    meanOffsets[groupIndex];
-                dstData[dstOffset] = saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
+                MeanVarianceNormalizationLayerImpl::computeStatisticsGroup<T>(
+                    groupIndex, coordinates, src_, reduced_, groupStrides_,
+                    srcSteps_, srcData_, referenceValues_, meanOffsets_, squaredDeviations_,
+                    statsSuffixStart_, statsSuffixSize_, outerReductionCount_, reductionCount_);
+            }
+        }
 
-                for (int axis = src.dims - 1; axis >= 0; --axis)
+    private:
+        const Mat& src_;
+        const std::vector<bool>& reduced_;
+        const std::vector<size_t>& groupStrides_;
+        const std::vector<size_t>& srcSteps_;
+        const T* srcData_;
+        std::vector<double>& referenceValues_;
+        std::vector<double>& meanOffsets_;
+        std::vector<double>& squaredDeviations_;
+        int statsSuffixStart_;
+        size_t statsSuffixSize_;
+        size_t outerReductionCount_;
+        size_t reductionCount_;
+    };
+
+    template<typename T>
+    static void normalizeGroup(size_t groupIndex, std::vector<int>& coordinates,
+                               const Mat& src, const Mat& dst, const std::vector<bool>& reduced,
+                               const std::vector<size_t>& groupStrides,
+                               const std::vector<size_t>& srcSteps,
+                               const std::vector<size_t>& dstSteps,
+                               const T* srcData, T* dstData,
+                               const std::vector<double>& referenceValues,
+                               const std::vector<double>& meanOffsets,
+                               const std::vector<double>& inverseStdDevs,
+                               int outputSuffixStart, size_t outputSuffixSize,
+                               size_t outerOutputCount, size_t reductionCount)
+    {
+        size_t srcBase = 0, dstBase = 0;
+        for (int axis = src.dims - 1; axis >= 0; --axis)
+        {
+            if (reduced[axis])
+                continue;
+            coordinates[axis] =
+                static_cast<int>((groupIndex / groupStrides[axis]) % src.size[axis]);
+            srcBase += static_cast<size_t>(coordinates[axis]) * srcSteps[axis];
+            dstBase += static_cast<size_t>(coordinates[axis]) * dstSteps[axis];
+        }
+
+        if (outputSuffixStart < src.dims)
+        {
+            size_t srcOffset = srcBase, dstOffset = dstBase;
+            for (size_t outer = 0; outer < outerOutputCount; ++outer)
+            {
+                for (size_t inner = 0; inner < outputSuffixSize; ++inner)
+                {
+                    const double centeredValue =
+                        (static_cast<double>(srcData[srcOffset + inner]) - referenceValues[groupIndex]) -
+                        meanOffsets[groupIndex];
+                    dstData[dstOffset + inner] =
+                        saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
+                }
+
+                for (int axis = outputSuffixStart - 1; axis >= 0; --axis)
                 {
                     if (!reduced[axis])
                         continue;
@@ -324,22 +379,92 @@ private:
                     dstOffset -= static_cast<size_t>(dst.size[axis] - 1) * dstSteps[axis];
                 }
             }
-        };
-        const auto normalizeGroups = [&](const Range& range)
+            return;
+        }
+
+        size_t srcOffset = srcBase, dstOffset = dstBase;
+        for (size_t i = 0; i < reductionCount; ++i)
         {
-            std::vector<int> coordinates(src.dims, 0);
-            for (int groupIndex = range.start; groupIndex < range.end; ++groupIndex)
-                normalizeGroup(static_cast<size_t>(groupIndex), coordinates);
-        };
-        if (parallelGroups)
-            parallel_for_(Range(0, static_cast<int>(groupCount)), normalizeGroups);
-        else
-        {
-            std::vector<int> coordinates(src.dims, 0);
-            for (size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
-                normalizeGroup(groupIndex, coordinates);
+            const double centeredValue =
+                (static_cast<double>(srcData[srcOffset]) - referenceValues[groupIndex]) -
+                meanOffsets[groupIndex];
+            dstData[dstOffset] = saturate_cast<T>(centeredValue * inverseStdDevs[groupIndex]);
+
+            for (int axis = src.dims - 1; axis >= 0; --axis)
+            {
+                if (!reduced[axis])
+                    continue;
+                if (++coordinates[axis] < src.size[axis])
+                {
+                    srcOffset += srcSteps[axis];
+                    dstOffset += dstSteps[axis];
+                    break;
+                }
+                coordinates[axis] = 0;
+                srcOffset -= static_cast<size_t>(src.size[axis] - 1) * srcSteps[axis];
+                dstOffset -= static_cast<size_t>(dst.size[axis] - 1) * dstSteps[axis];
+            }
         }
     }
+
+    template<typename T>
+    class NormalizeGroupsInvoker : public ParallelLoopBody
+    {
+    public:
+        NormalizeGroupsInvoker(const Mat& src, Mat& dst, const std::vector<bool>& reduced,
+                               const std::vector<size_t>& groupStrides,
+                               const std::vector<size_t>& srcSteps,
+                               const std::vector<size_t>& dstSteps,
+                               const T* srcData, T* dstData,
+                               const std::vector<double>& referenceValues,
+                               const std::vector<double>& meanOffsets,
+                               const std::vector<double>& inverseStdDevs,
+                               int outputSuffixStart, size_t outputSuffixSize,
+                               size_t outerOutputCount, size_t reductionCount)
+            : src_(src), dst_(dst), reduced_(reduced), groupStrides_(groupStrides),
+              srcSteps_(srcSteps), dstSteps_(dstSteps), srcData_(srcData), dstData_(dstData),
+              referenceValues_(referenceValues), meanOffsets_(meanOffsets),
+              inverseStdDevs_(inverseStdDevs), outputSuffixStart_(outputSuffixStart),
+              outputSuffixSize_(outputSuffixSize), outerOutputCount_(outerOutputCount),
+              reductionCount_(reductionCount)
+        {
+        }
+
+        void operator()(const Range& range) const CV_OVERRIDE
+        {
+            run(static_cast<size_t>(range.start), static_cast<size_t>(range.end));
+        }
+
+        void run(size_t start, size_t end) const
+        {
+            std::vector<int> coordinates(src_.dims, 0);
+            for (size_t groupIndex = start; groupIndex < end; ++groupIndex)
+            {
+                MeanVarianceNormalizationLayerImpl::normalizeGroup<T>(
+                    groupIndex, coordinates, src_, dst_, reduced_,
+                    groupStrides_, srcSteps_, dstSteps_, srcData_, dstData_,
+                    referenceValues_, meanOffsets_, inverseStdDevs_,
+                    outputSuffixStart_, outputSuffixSize_, outerOutputCount_, reductionCount_);
+            }
+        }
+
+    private:
+        const Mat& src_;
+        Mat& dst_;
+        const std::vector<bool>& reduced_;
+        const std::vector<size_t>& groupStrides_;
+        const std::vector<size_t>& srcSteps_;
+        const std::vector<size_t>& dstSteps_;
+        const T* srcData_;
+        T* dstData_;
+        const std::vector<double>& referenceValues_;
+        const std::vector<double>& meanOffsets_;
+        const std::vector<double>& inverseStdDevs_;
+        int outputSuffixStart_;
+        size_t outputSuffixSize_;
+        size_t outerOutputCount_;
+        size_t reductionCount_;
+    };
 
     std::vector<int> normalizeAxes(size_t rank) const
     {
