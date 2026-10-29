@@ -49,6 +49,18 @@ public:
         CV_CheckEQ(inputs[0].dims, 3, "input must be [batch, channels, seq]");
         CV_CheckEQ(inputs[1].dims, 3, "weight must be [channels, 1, kernel]");
         const int B = inputs[0][0], C = inputs[0][1], T = inputs[0][2], K = inputs[1][2];
+        CV_CheckEQ(inputs[1][0], C, "weight must have one filter per input channel");
+        CV_CheckEQ(inputs[1][1], 1, "weight must be [channels, 1, kernel]");
+        CV_CheckGE(K, 1, "kernel size must be positive");
+        if (inputs.size() > 2 && !inputs[2].empty())
+            CV_CheckEQ(inputs[2].total(), (size_t)C, "bias must be [channels]");
+        if (inputs.size() > 3 && !inputs[3].empty())
+        {
+            CV_CheckEQ(inputs[3].dims, 3, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][0], B, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][1], C, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][2], K - 1, "past_state must be [batch, channels, kernel - 1]");
+        }
         outputs.assign(1, MatShape{B, C, T});
         outputs.push_back(MatShape{B, C, K - 1});
         return false;
@@ -73,6 +85,10 @@ public:
         }
         std::vector<Mat>& inputs  = fp16 ? in32  : rawIn;
         std::vector<Mat>& outputs = fp16 ? out32 : rawOut;
+        // the kernel reads weight, bias and past_state as float
+        for (size_t i = 1; i < inputs.size(); ++i)
+            if (!inputs[i].empty())
+                CV_CheckTypeEQ(inputs[i].type(), CV_32F, "weight, bias and past_state must have the input type");
 
         const Mat& input  = inputs[0];
         const Mat& weight = inputs[1];

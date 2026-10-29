@@ -4687,4 +4687,63 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
+{
+    const int B = 1, C = 64, T = 8, K = 4;
+    Mat x(std::vector<int>{B, C, T}, CV_32F);
+    randu(x, -1, 1);
+    Mat w(std::vector<int>{C, 1, K}, CV_32F);
+    randu(w, -1, 1);
+    Mat bias(std::vector<int>{C}, CV_32F);
+    randu(bias, -1, 1);
+    Mat past(std::vector<int>{B, C, K - 1}, CV_32F);
+    randu(past, -1, 1);
+
+    LayerParams lp;
+    lp.type = "CausalConvWithState";
+    lp.name = "causal_conv_with_state";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weight, bias and past_state must cover every input channel
+    std::vector<Mat> inputs{x, Mat(std::vector<int>{1, 1, K}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+    inputs = {x, w, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+    inputs = {x, w, bias, Mat(std::vector<int>{B, 1, K - 1}, CV_32F, Scalar(1))};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // weight must have the input type
+    Mat w16;
+    w.convertTo(w16, CV_16F);
+    inputs = {x, w16};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // valid inputs give the depthwise causal convolution
+    Mat ref(std::vector<int>{B, C, T}, CV_32F), refState(std::vector<int>{B, C, K - 1}, CV_32F);
+    for (int c = 0; c < C; c++)
+    {
+        std::vector<float> pad(K - 1 + T);
+        for (int j = 0; j < K - 1; j++)
+            pad[j] = past.ptr<float>(0, c)[j];
+        for (int t = 0; t < T; t++)
+            pad[K - 1 + t] = x.ptr<float>(0, c)[t];
+        for (int t = 0; t < T; t++)
+        {
+            float acc = bias.at<float>(c);
+            for (int k = 0; k < K; k++)
+                acc += w.ptr<float>(c)[k] * pad[t + k];
+            ref.ptr<float>(0, c)[t] = acc;
+        }
+        for (int j = 0; j < K - 1; j++)
+            refState.ptr<float>(0, c)[j] = pad[T + j];
+    }
+    inputs = {x, w, bias, past};
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(outputs.size(), (size_t)2);
+    normAssert(ref, outputs[0], "output");
+    normAssert(refState, outputs[1], "present_state");
+}
+
 }} // namespace
