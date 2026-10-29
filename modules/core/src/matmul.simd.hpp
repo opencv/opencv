@@ -3711,14 +3711,78 @@ double dotProd_64f(const double* src1, const double* src2, int len)
     return dotProd_(src1, src2, len);
 }
 
+// 16F / 16BF: vx_load_expand widens each 16-bit value to float32, then sum in blocks like dotProd_32f
+template<typename T> static inline
+double dotProdExpand_(const T* src1, const T* src2, int len)
+{
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    int len0 = len & -cWidth, blockSize0 = (1 << 13), blockSize;
+
+    for (; i < len0; i += blockSize)
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        v_float32 v_sum0 = vx_setzero_f32(), v_sum1 = vx_setzero_f32();
+        int j = i;
+        // two independent sums, so each multiply-add doesn't wait for the previous one
+        for (; j <= i + blockSize - cWidth * 2; j += cWidth * 2)
+        {
+            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
+            v_sum1 = v_muladd(vx_load_expand(src1 + j + cWidth), vx_load_expand(src2 + j + cWidth), v_sum1);
+        }
+        for (; j < i + blockSize; j += cWidth)
+            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
+        r += v_reduce_sum(v_add(v_sum0, v_sum1));
+    }
+    vx_cleanup();
+#endif
+    return r + dotProd_(src1 + i, src2 + i, len - i);
+}
+
+// fp8: decode through the 256-entry table (gathered with v_lut, as in cvtFp8ToF32)
+template<typename T> static inline
+double dotProdFp8_(const T* src1_, const T* src2_, int len)
+{
+    const uchar* src1 = (const uchar*)src1_;
+    const uchar* src2 = (const uchar*)src2_;
+    const float* tab = T::decodeLUT();
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    int len0 = len & -cWidth, blockSize0 = (1 << 13), blockSize;
+
+    for (; i < len0; i += blockSize)
+    {
+        blockSize = std::min(len0 - i, blockSize0);
+        v_float32 v_sum = vx_setzero_f32();
+        for (int j = i; j < i + blockSize; j += cWidth)
+        {
+            v_float32 v_src1 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src1 + j)));
+            v_float32 v_src2 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src2 + j)));
+            v_sum = v_muladd(v_src1, v_src2, v_sum);
+        }
+        r += v_reduce_sum(v_sum);
+    }
+    vx_cleanup();
+#endif
+    for (; i < len; i++)
+        r += (double)tab[src1[i]] * tab[src2[i]];
+    return r;
+}
+
 double dotProd_16f(const hfloat* src1, const hfloat* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    return dotProdExpand_(src1, src2, len);
 }
 
 double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    return dotProdExpand_(src1, src2, len);
 }
 
 // CV_Bool: any non-zero byte is true, so count the positions where both are true
@@ -3747,12 +3811,12 @@ double dotProd_32u(const unsigned* src1, const unsigned* src2, int len)
 
 double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    return dotProdFp8_(src1, src2, len);
 }
 
 double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len)
 {
-    return dotProd_(src1, src2, len);
+    return dotProdFp8_(src1, src2, len);
 }
 
 #endif
