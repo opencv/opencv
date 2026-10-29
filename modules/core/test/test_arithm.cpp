@@ -1856,18 +1856,18 @@ INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(El
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
 // reduceArgMax / reduceArgMin on CV_Bool and the fp8 depths, which ElemWiseTest does not generate.
-// Values: 1, -2, 3, 3, -2, 0 (CV_Bool stores every non-zero value as 1).
+// Values: 1, -2, 3, 3, -2, 0, -1 (CV_Bool stores every non-zero value as 1).
 typedef testing::TestWithParam<int> ReduceArgNewTypes;
 
 TEST_P(ReduceArgNewTypes, accuracy)
 {
     const int depth = GetParam();
-    float v[] = { 1.f, -2.f, 3.f, 3.f, -2.f, 0.f };
+    float v[] = { 1.f, -2.f, 3.f, 3.f, -2.f, 0.f, -1.f };
     Mat src;
-    Mat(1, 6, CV_32F, v).convertTo(src, depth);
+    Mat(1, 7, CV_32F, v).convertTo(src, depth);
 
     // expected indices: first max, last max, first min, last min
-    const int bool_idx[] = { 0, 4, 5, 5 };
+    const int bool_idx[] = { 0, 6, 5, 5 };
     const int fp8_idx[]  = { 2, 3, 1, 4 };
     const int* expected = depth == CV_Bool ? bool_idx : fp8_idx;
 
