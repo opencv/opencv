@@ -116,6 +116,9 @@ class LightGlueMatcherImpl : public LightGlueMatcher
 public:
     LightGlueMatcherImpl(const String& modelPath, float _scoreThreshold, int backend, int target)
     {
+        m_modelPath = modelPath;
+        m_backend = backend;
+        m_target = target;
         scoreThreshold = _scoreThreshold;
         net = dnn::readNet(modelPath, "", "");
         CV_Assert(!net.empty());
@@ -125,6 +128,9 @@ public:
 
     LightGlueMatcherImpl(const std::vector<uchar>& modelData, float _scoreThreshold, int backend, int target)
     {
+        m_modelData = modelData;
+        m_backend = backend;
+        m_target = target;
         scoreThreshold = _scoreThreshold;
         net = dnn::readNetFromONNX(modelData);
         CV_Assert(!net.empty());
@@ -135,6 +141,12 @@ public:
     // Private constructor for clone() — shares the already-loaded network
     LightGlueMatcherImpl(const dnn::Net& _net, float _scoreThreshold)
         : net(_net), scoreThreshold(_scoreThreshold) {}
+    String m_modelPath;
+    std::vector<uchar> m_modelData;
+    int m_backend = 0;
+    int m_target = 0;
+    int m_prev_kpts0_rows = -1;
+    int m_prev_kpts1_rows = -1;
 
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
@@ -173,6 +185,12 @@ protected:
     {
         Ptr<Derived> matcher = makePtr<Derived>(net, scoreThreshold);
         matcher->pairContext = pairContext;
+        matcher->m_modelPath = m_modelPath;
+        matcher->m_modelData = m_modelData;
+        matcher->m_backend = m_backend;
+        matcher->m_target = m_target;
+        matcher->m_prev_kpts0_rows = m_prev_kpts0_rows;
+        matcher->m_prev_kpts1_rows = m_prev_kpts1_rows;
         if (!emptyTrainData)
         {
             matcher->trainDescCollection = trainDescCollection;
@@ -223,6 +241,23 @@ void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& t
     int N = queryDesc.rows;
     int M = trainDesc.rows;
 
+    if (m_prev_kpts0_rows != -1 && (m_prev_kpts0_rows != N || m_prev_kpts1_rows != M))
+    {
+        if (!m_modelData.empty())
+        {
+            net = dnn::readNetFromONNX(m_modelData);
+            net.setPreferableBackend(m_backend);
+            net.setPreferableTarget(m_target);
+        }
+        else if (!m_modelPath.empty())
+        {
+            net = dnn::readNet(m_modelPath);
+            net.setPreferableBackend(m_backend);
+            net.setPreferableTarget(m_target);
+        }
+    }
+    m_prev_kpts0_rows = N;
+    m_prev_kpts1_rows = M;
 
     Mat kpts0, kpts1;
     normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);
