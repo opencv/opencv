@@ -2367,6 +2367,12 @@ TEST_P(Core_CheckRange_Float, accuracy)
     case CV_32F:
         src.ptr<float>(1)[bad_scalar] = inf;
         break;
+    case CV_8F_E4M3FN: // fp8 has no infinity, NaN is out of range as well
+        src.ptr<cv::fp8_t>(1)[bad_scalar] = cv::fp8_t(std::numeric_limits<float>::quiet_NaN());
+        break;
+    case CV_8F_E4M3FNUZ:
+        src.ptr<cv::fp8a_t>(1)[bad_scalar] = cv::fp8a_t(std::numeric_limits<float>::quiet_NaN());
+        break;
     default:
         FAIL() << "Unexpected depth: " << depth;
     }
@@ -2377,7 +2383,28 @@ TEST_P(Core_CheckRange_Float, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_Float,
-    testing::Values(CV_16F, CV_16BF, CV_32F));
+    testing::Values(CV_16F, CV_16BF, CV_32F, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
+// every fp8 value against the definition: in range iff minVal <= v < maxVal (NaN never is)
+typedef testing::TestWithParam<int> Core_CheckRange_FP8;
+
+TEST_P(Core_CheckRange_FP8, all_values)
+{
+    const int depth = GetParam();
+    const double ranges[][2] = { { -DBL_MAX, DBL_MAX }, { -1, 1 }, { 0, 0.3 }, { -0.3, 0 }, { 2, 2 } };
+    Mat src(1, 1, depth), f;
+    for (int b = 0; b < 256; b++)
+    {
+        src.ptr<uchar>()[0] = (uchar)b;
+        src.convertTo(f, CV_32F);
+        const float v = f.at<float>(0);
+        for (const auto& r : ranges)
+            EXPECT_EQ(v >= r[0] && v < r[1], checkRange(src, true, NULL, r[0], r[1]))
+                << "byte " << b << ", range [" << r[0] << ", " << r[1] << ")";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_CheckRange_FP8, testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
 typedef testing::TestWithParam<int> Core_CheckRange_ExtendedInteger;
 
