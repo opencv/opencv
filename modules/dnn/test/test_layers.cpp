@@ -2053,6 +2053,41 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPooling, testing::Combine(
     testing::Bool()),
     GlobalPoolingParamName());
 
+typedef testing::TestWithParam<tuple<MatShape, bool> > Layer_Test_GlobalPoolingBlock;
+TEST_P(Layer_Test_GlobalPoolingBlock, EmptyBatch)
+{
+    const MatShape sizes = std::get<0>(GetParam());
+    const bool useMax = std::get<1>(GetParam());
+    const int C0 = 8;
+    std::vector<int> blockSizes(sizes.begin(), sizes.end());
+    blockSizes[1] = (sizes[1] + C0 - 1) / C0;
+    blockSizes.push_back(C0);
+    Mat inp(MatShape(blockSizes, DATA_LAYOUT_BLOCK, sizes[1]), CV_32F);
+
+    LayerParams lp;
+    lp.name = "testGlobalPoolingBlock";
+    lp.type = "Pooling";
+    lp.set("pool", useMax ? "MAX" : "AVE");
+    lp.set("global_pooling", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+    std::vector<MatShape> inputs(1, inp.shape()), outputs, internals;
+    layer->getMemoryShapes(inputs, 1, outputs, internals);
+    std::vector<Mat> input(1, inp), output(1, Mat(outputs[0], CV_32F));
+    layer->finalize(input, output);
+    layer->forward(input, output, std::vector<Mat>());
+
+    MatShape expected = inp.shape();
+    for (int d = 2; d < expected.dims - 1; d++)
+        expected[d] = 1;
+    EXPECT_EQ(expected, output[0].shape());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPoolingBlock, testing::Combine(
+    testing::Values(MatShape{0, 16, 4, 5}),
+    testing::Bool()),
+    GlobalPoolingParamName());
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
