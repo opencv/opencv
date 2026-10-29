@@ -74,6 +74,9 @@ endforeach()
 # in directly using the globally-visible target and cache flag.
 if(OPENCV_DNN_MLAS_ENABLED AND TARGET opencv_dnn_mlas)
   list(APPEND sources_list $<TARGET_OBJECTS:opencv_dnn_mlas>)
+  if(OPENCV_DNN_MLAS_EXTERNAL_OBJECTS)
+    list(APPEND sources_list ${OPENCV_DNN_MLAS_EXTERNAL_OBJECTS})
+  endif()
 endif()
 
 ocv_glob_module_sources(HEADERS ${headers_list} SOURCES ${sources_list})
