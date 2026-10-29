@@ -148,7 +148,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return false;
     }
 
-    bool needcopy = false, needcast = false;
+    bool needcopy = !PyArray_ISNOTSWAPPED(oarr), needcast = needcopy;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
 
