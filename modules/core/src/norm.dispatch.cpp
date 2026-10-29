@@ -415,15 +415,15 @@ double norm( InputArray _src, int normType, InputArray _mask )
     result.d = 0;
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
-    bool is_fp16 = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+    bool is_small_float = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
 
-    if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_fp16)) ||
-        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_fp16)))
+    if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_small_float)) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_small_float)))
     {
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src.elemSize();
         const int total = (int)it.size;
-        const int blockSize0 = (is_fp16 ? (1 << 10) :
+        const int blockSize0 = (is_small_float ? (1 << 10) :
             depth == CV_Bool ? (1 << 30) :
             normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, blockSize0);
@@ -443,7 +443,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
                 count += bsz;
                 if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    result.d += is_small_float ? (double)blocksum.f : (double)blocksum.i;
                     blocksum.i = 0;
                     count = 0;
                 }
@@ -466,7 +466,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
     {
         if(depth <= CV_32S || depth == CV_32U || depth == CV_Bool)
             return result.u;
-        if (depth == CV_32F || is_fp16)
+        if (depth == CV_32F || is_small_float)
             return result.f;
         if (depth == CV_64U || depth == CV_64S)
             return (double)result.UL;
@@ -650,15 +650,15 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     NAryMatIterator it(arrays, ptrs);
     CV_CheckLT((size_t)it.size, (size_t)INT_MAX, "");
 
-    bool is_fp16 = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+    bool is_small_float = depth == CV_16F || depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
 
-    if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_fp16)) ||
-        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_fp16)))
+    if ((normType == NORM_L1 && (depth <= CV_16S || depth == CV_Bool || is_small_float)) ||
+        ((normType == NORM_L2 || normType == NORM_L2SQR) && (depth <= CV_8S || depth == CV_Bool || is_small_float)))
     {
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src1.elemSize();
         const int total = (int)it.size;
-        const int blockSize0 = (is_fp16 ? (1 << 10) :
+        const int blockSize0 = (is_small_float ? (1 << 10) :
             depth == CV_Bool ? (1 << 30) :
             normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, blockSize0);
@@ -678,7 +678,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                 count += bsz;
                 if (count + blockSize >= blockSize0 || (i+1 >= it.nplanes && j+bsz >= total))
                 {
-                    result.d += is_fp16 ? (double)blocksum.f : (double)blocksum.i;
+                    result.d += is_small_float ? (double)blocksum.f : (double)blocksum.i;
                     blocksum.i = 0;
                     count = 0;
                 }
@@ -702,7 +702,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     {
         if (depth <= CV_32S || depth == CV_32U || depth == CV_Bool)
             return result.u;
-        if (depth == CV_32F || is_fp16)
+        if (depth == CV_32F || is_small_float)
             return result.f;
         if (depth == CV_64U || depth == CV_64S)
             return (double)result.UL;
