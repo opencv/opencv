@@ -34,12 +34,12 @@ public:
     }
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int requiredOutputs,
+                         const int /*requiredOutputs*/,
                          std::vector<MatShape>& outputs,
                          std::vector<MatShape>& /*internals*/) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
-        outputs.resize(requiredOutputs);
+        outputs.assign(1, shape(0));
         return false;
     }
 
@@ -51,7 +51,7 @@ public:
     {
         CV_Assert(inputs.size() == 2);
         CV_CheckTypeEQ(inputs[1], CV_Bool, "Compress: condition must be a bool tensor");
-        outputs.assign(requiredOutputs, inputs[0]);
+        outputs.assign(std::max(1, requiredOutputs), inputs[0]);
     }
 
     void forward(InputArrayOfArrays inputs_arr,
@@ -141,11 +141,20 @@ public:
             CV_Error(Error::StsBadArg, cv::format("Unsupported output array kind: %d", kind));
         }
 
+        if (K == 0)
+        {
+            if (kind == _InputArray::STD_VECTOR_UMAT)
+            {
+                std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+                uouts[0].fit(outShape, data.type());
+                tmpOuts[0].copyTo(uouts[0]);
+            }
+            return;
+        }
+
         Mat& out = (*pOuts)[0];
 
         size_t totalSlices = outer * (size_t)K;
-        CV_Assert(totalSlices > 0);
-
         size_t elemSize = data.elemSize();
         size_t sliceSize = inner * elemSize;
 

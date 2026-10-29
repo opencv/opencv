@@ -4330,4 +4330,44 @@ TEST_P(Layer_Test_CropAndResize_Backends, BoxOutsideImage)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_CropAndResize_Backends, dnnBackendsAndTargets());
 
+
+TEST(Test_Compress, AllFalse_WithAxis)
+{
+    Mat data(3, 4, CV_32F);
+    randu(data, -1.0f, 1.0f);
+    Mat condition(1, 4, CV_Bool, Scalar::all(0));
+
+    LayerParams lp;
+    lp.type = "Compress";
+    lp.name = "test_compress_all_false_axis";
+    lp.set("axis", 1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, condition};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({3, 0}));
+}
+
+TEST(Test_Compress, AllFalse_WithoutAxis)
+{
+    Mat data(3, 4, CV_32F);
+    randu(data, -1.0f, 1.0f);
+    Mat condition(1, 12, CV_Bool, Scalar::all(0));
+
+    LayerParams lp;
+    lp.type = "Compress";
+    lp.name = "test_compress_all_false_no_axis";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, condition};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({0}));
+}
+
 }} // namespace
