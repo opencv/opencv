@@ -41,12 +41,9 @@ void resize(int src_type,
 
     CALL_HAL(resize, cv_hal_resize, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, inv_scale_x, inv_scale_y, interpolation);
 
-    int depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
     Size dsize = Size(saturate_cast<int>(src_width*inv_scale_x),
                         saturate_cast<int>(src_height*inv_scale_y));
     CV_Assert( !dsize.empty() );
-    CV_UNUSED(depth);
-    CV_UNUSED(cn);
 
     if (interpolation == INTER_LINEAR_EXACT)
     {

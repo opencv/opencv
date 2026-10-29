@@ -46,11 +46,11 @@ const int INTER_RESIZE_COEF_SCALE=1 << INTER_RESIZE_COEF_BITS;
 // intrinsics need cross-architecture review before being promoted into the
 // public intrin*.hpp headers. Only the x86 256/512-bit dispatch paths that
 // benefit from a hardware gather are specialized here; narrower/other targets
-// use the generic vx_lut* paths at the call sites.
+// (including LoongArch LASX) use the generic vx_lut* paths at the call sites.
 //==============================================================================
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-#if CV_SIMD256 || CV_SIMD512
+#if CV_AVX2
 // AVX2 256-bit helper: gather 16 ushort values from a uchar row using byte
 // offsets. Dual 32-bit gather + shuffle, from the legacy resizeNN2_AVX2 kernel.
 static inline __m256i resizeNN_lut_u16_byteofs_ymm(const uchar* S, const int* byte_ofs)
@@ -69,7 +69,7 @@ static inline __m256i resizeNN_lut_u16_byteofs_ymm(const uchar* S, const int* by
 }
 #endif
 
-#if CV_SIMD256 && !CV_SIMD512
+#if CV_AVX2 && !CV_SIMD512
 // AVX2 (256-bit) dispatch: return width-native (v_uint16x16 / v_uint32x8).
 static inline v_uint16 resizeNN_lut_u16_byteofs(const uchar* S, const int* byte_ofs)
 {
@@ -80,7 +80,7 @@ static inline v_uint32 resizeNN_lut_u32_byteofs(const uchar* S, const int* byte_
     return v_reinterpret_as_u32(v_int32x8(_mm256_i32gather_epi32((const int*)S,
         _mm256_loadu_si256((const __m256i*)byte_ofs), 1)));
 }
-#endif // CV_SIMD256 && !CV_SIMD512
+#endif // CV_AVX2 && !CV_SIMD512
 
 #if CV_SIMD512
 // AVX-512 dispatch. For the u16/u32 gathers we deliberately issue two 256-bit
@@ -132,7 +132,10 @@ static inline v_uint8x64 resizeNN_pack_rel64_byte_idx(__m512i r0, __m512i r1, __
     return v_uint8x64(_mm512_inserti32x4(_mm512_inserti32x4(_mm512_inserti32x4(
         _mm512_castsi128_si512(p0), p1, 1), p2, 2), p3, 3));
 }
-static inline bool resizeNN_try_lut_u8_byteofs_vbmi(const uchar* S, const int* byte_ofs, v_uint8x64& out)
+// v512_lut(uchar*, v_uint8x64) always reads 256 bytes from its table, so the window is
+// slid back to end at the row end when needed; row_bytes must be >= 256.
+static inline bool resizeNN_try_lut_u8_byteofs_vbmi(const uchar* S, const int* byte_ofs,
+                                                    int row_bytes, v_uint8x64& out)
 {
     __m512i ofs0 = _mm512_loadu_si512((const __m512i*)byte_ofs);
     __m512i ofs1 = _mm512_loadu_si512((const __m512i*)(byte_ofs + 16));
@@ -142,23 +145,150 @@ static inline bool resizeNN_try_lut_u8_byteofs_vbmi(const uchar* S, const int* b
     int max_ofs = resizeNN_hmax_epi32(_mm512_max_epi32(_mm512_max_epi32(ofs0, ofs1), _mm512_max_epi32(ofs2, ofs3)));
     if (max_ofs - min_ofs > 255)
         return false;
-    __m512i minv = _mm512_set1_epi32(min_ofs);
-    out = v512_lut(S + min_ofs, resizeNN_pack_rel64_byte_idx(
-        _mm512_sub_epi32(ofs0, minv), _mm512_sub_epi32(ofs1, minv),
-        _mm512_sub_epi32(ofs2, minv), _mm512_sub_epi32(ofs3, minv)));
+    const int base = std::min(min_ofs, row_bytes - 256);
+    __m512i basev = _mm512_set1_epi32(base);
+    out = v512_lut(S + base, resizeNN_pack_rel64_byte_idx(
+        _mm512_sub_epi32(ofs0, basev), _mm512_sub_epi32(ofs1, basev),
+        _mm512_sub_epi32(ofs2, basev), _mm512_sub_epi32(ofs3, basev)));
     return true;
-}
-static inline v_uint8 resizeNN_lut_u8_byteofs(const uchar* S, const int* byte_ofs)
-{
-    v_uint8x64 r;
-    if (resizeNN_try_lut_u8_byteofs_vbmi(S, byte_ofs, r))
-        return r;
-    return v_reinterpret_as_u8(v512_lut((const schar*)S, byte_ofs));
 }
 #endif // CV_AVX_512VBMI
 #endif // CV_SIMD512
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
+
+// [beg, end) is the pixel range whose reads [x_ofs[x] - lo_pad, x_ofs[x] + hi_pad]
+// stay inside the source row; x_ofs[] must be non-decreasing.
+static inline void resizeNN_gather_range(const int* x_ofs, int width, int row_bytes,
+                                         int lo_pad, int hi_pad, int& beg, int& end)
+{
+    beg = 0;
+    while (beg < width && x_ofs[beg] < lo_pad)
+        beg++;
+    end = width;
+    while (end > beg && x_ofs[end - 1] + hi_pad >= row_bytes)
+        end--;
+}
+
+// Vector range for resizeNN_row_u8: the AVX-512 gather reads 4 bytes per lane.
+static inline void resizeNN_vec_range_u8(const int* x_ofs, int width, int row_bytes, int& beg, int& end)
+{
+    beg = 0; end = width;
+#if CV_SIMD512
+    resizeNN_gather_range(x_ofs, width, row_bytes, 0, 3, beg, end);
+#else
+    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
+#endif
+}
+
+// Vector range for resizeNN_row_u16: the x86 byte-offset gathers read 4 bytes at
+// both S + ofs and S + ofs - 2.
+static inline void resizeNN_vec_range_u16(const int* x_ofs, int width, int row_bytes, int& beg, int& end)
+{
+    beg = 0; end = width;
+#if (CV_SIMD || CV_SIMD_SCALABLE) && CV_AVX2
+    resizeNN_gather_range(x_ofs, width, row_bytes, 2, 3, beg, end);
+#else
+    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
+#endif
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_u8(uchar* D, const uchar* S, const int* x_ofs, int width,
+                                   int row_bytes, int vbeg, int vend)
+{
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int n = VTraits<v_uint8>::vlanes();
+    for (; x < vbeg; x++)
+        D[x] = S[x_ofs[x]];
+#if CV_AVX_512VBMI
+    // Short rows are copied into a 256+ byte buffer so the VBMI window always fits.
+    CV_DECL_ALIGNED(64) uchar sbuf[320];
+    if (row_bytes < 256 && width >= n)
+    {
+        memcpy(sbuf, S, row_bytes);
+        S = sbuf;
+        row_bytes = 256;
+        vbeg = 0;
+        vend = width;
+    }
+    for (; x <= width - n; x += n)
+    {
+        v_uint8x64 r;
+        if (resizeNN_try_lut_u8_byteofs_vbmi(S, x_ofs + x, row_bytes, r))
+            v_store(D + x, r);
+        else if (x + n <= vend)
+            v_store(D + x, v_reinterpret_as_u8(v512_lut((const schar*)S, x_ofs + x)));
+        else
+            break;
+    }
+#else
+    CV_UNUSED(row_bytes);
+    for (; x <= vend - n; x += n)
+        v_store(D + x, vx_lut(S, x_ofs + x));
+#endif
+#else
+    CV_UNUSED(row_bytes); CV_UNUSED(vbeg); CV_UNUSED(vend);
+#endif
+    for (; x < width; x++)
+        D[x] = S[x_ofs[x]];
+}
+
+// Pixels below vend are copied as 16 bytes: the extra 4 bytes are overwritten by the next
+// pixel, so vend must exclude the last pixel and any x_ofs[x] + 16 > row_bytes.
+static inline int resizeNN_vec_end_px12(const int* x_ofs, int width, int row_bytes)
+{
+    int beg = 0, end = width;
+#if CV_SIMD128 && !CV_SIMD_SCALABLE
+    resizeNN_gather_range(x_ofs, width, row_bytes, 0, 15, beg, end);
+    end = std::min(end, width - 1);
+#else
+    CV_UNUSED(x_ofs); CV_UNUSED(row_bytes);
+    end = 0;
+#endif
+    return std::max(end, 0);
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_px12(uchar* D, const uchar* S, const int* x_ofs,
+                                               int width, int vend)
+{
+    int x = 0;
+#if CV_SIMD128 && !CV_SIMD_SCALABLE
+    for (; x < vend; x++, D += 12)
+        v_store(D, v_load(S + x_ofs[x]));
+#else
+    CV_UNUSED(vend);
+#endif
+    for (; x < width; x++, D += 12)
+    {
+        const int* _tS = (const int*)(S + x_ofs[x]);
+        int* _tD = (int*)D;
+        _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+    }
+}
+
+static CV_ALWAYS_INLINE void resizeNN_row_u16(uchar* D, const uchar* S, const int* x_ofs, int width,
+                                    int vbeg, int vend)
+{
+    ushort* D16 = (ushort*)D;
+    int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int n = VTraits<v_uint16>::vlanes();
+    for (; x < vbeg; x++)
+        D16[x] = *(const ushort*)(S + x_ofs[x]);
+#if CV_AVX2
+    for (; x <= vend - n; x += n)
+        v_store(D16 + x, resizeNN_lut_u16_byteofs(S, x_ofs + x));
+#else
+    for (; x <= vend - n; x += n)
+        v_store(D16 + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
+#endif
+#else
+    CV_UNUSED(vbeg); CV_UNUSED(vend);
+#endif
+    for (; x < width; x++)
+        D16[x] = *(const ushort*)(S + x_ofs[x]);
+}
 
 static inline void interpolateCubic( float x, float* coeffs )
 {
@@ -224,21 +354,29 @@ template<typename ST, typename DT, int bits> struct FixedPtCast
 
 namespace nn_rational_detail {
 
-static inline bool is_rational_up(int src_w, int dst_w, int src_h, int dst_h, int num, int den)
+// fx/fy are the requested scale factors: explicit factors that merely round to these
+// sizes (e.g. 1.34 for 10 -> 13) map pixels differently and must not take this path.
+static inline bool is_rational_up(int src_w, int dst_w, int src_h, int dst_h,
+                                  double fx, double fy, int num, int den)
 {
-    return src_w > 0 && dst_w > src_w && dst_w * den == src_w * num &&
-           src_h > 0 && dst_h > src_h && dst_h * den == src_h * num;
+    const double r = (double)num / den;
+    return fx == r && fy == r &&
+           src_w > 0 && dst_w > src_w && (int64)dst_w * den == (int64)src_w * num &&
+           src_h > 0 && dst_h > src_h && (int64)dst_h * den == (int64)src_h * num;
 }
 
 // One element T represents a whole pixel: ushort for 2x u8 channels (cn2),
 // uint32_t for 4x u8 channels (cn4). The replication pattern is identical.
-template<typename T> static inline void nn_row_up_13_10(T* D, const T* S, int sw)
+// The first pixel of each group is the only one whose exact source index is an
+// integer, so cvFloor(x*ifx) can land one below it; take it from the same
+// formula as the generic path so the output stays identical.
+template<typename T> static inline void nn_row_up_13_10(T* D, const T* S, int sw, double ifx)
 {
-    for( int sx = 0; sx < sw; sx += 10 )
+    for( int sx = 0, x = 0; sx < sw; sx += 10, x += 13 )
     {
         const T s0 = S[sx], s1 = S[sx + 1], s2 = S[sx + 2], s3 = S[sx + 3], s4 = S[sx + 4];
         const T s5 = S[sx + 5], s6 = S[sx + 6], s7 = S[sx + 7], s8 = S[sx + 8], s9 = S[sx + 9];
-        D[0] = s0; D[1] = s0;
+        D[0] = S[cvFloor(x * ifx)]; D[1] = s0;
         D[2] = s1;
         D[3] = s2;
         D[4] = s3; D[5] = s3;
@@ -252,12 +390,12 @@ template<typename T> static inline void nn_row_up_13_10(T* D, const T* S, int sw
     }
 }
 
-template<typename T> static inline void nn_row_up_12_5(T* D, const T* S, int sw)
+template<typename T> static inline void nn_row_up_12_5(T* D, const T* S, int sw, double ifx)
 {
-    for( int sx = 0; sx < sw; sx += 5 )
+    for( int sx = 0, x = 0; sx < sw; sx += 5, x += 12 )
     {
         const T v0 = S[sx], v1 = S[sx + 1], v2 = S[sx + 2], v3 = S[sx + 3], v4 = S[sx + 4];
-        D[0] = v0; D[1] = v0; D[2] = v0;
+        D[0] = S[cvFloor(x * ifx)]; D[1] = v0; D[2] = v0;
         D[3] = v1; D[4] = v1;
         D[5] = v2; D[6] = v2; D[7] = v2;
         D[8] = v3; D[9] = v3;
@@ -266,12 +404,12 @@ template<typename T> static inline void nn_row_up_12_5(T* D, const T* S, int sw)
     }
 }
 
-template<typename T> static inline void nn_row_up_17_5(T* D, const T* S, int sw)
+template<typename T> static inline void nn_row_up_17_5(T* D, const T* S, int sw, double ifx)
 {
-    for( int sx = 0; sx < sw; sx += 5 )
+    for( int sx = 0, x = 0; sx < sw; sx += 5, x += 17 )
     {
         const T v0 = S[sx], v1 = S[sx + 1], v2 = S[sx + 2], v3 = S[sx + 3], v4 = S[sx + 4];
-        D[0] = v0; D[1] = v0; D[2] = v0; D[3] = v0;
+        D[0] = S[cvFloor(x * ifx)]; D[1] = v0; D[2] = v0; D[3] = v0;
         D[4] = v1; D[5] = v1; D[6] = v1;
         D[7] = v2; D[8] = v2; D[9] = v2; D[10] = v2;
         D[11] = v3; D[12] = v3; D[13] = v3;
@@ -280,37 +418,39 @@ template<typename T> static inline void nn_row_up_17_5(T* D, const T* S, int sw)
     }
 }
 
-template<typename T, void (*RowFunc)(T*, const T*, int)>
+template<typename T, void (*RowFunc)(T*, const T*, int, double)>
 class resizeNNRationalUpInvoker_ : public ParallelLoopBody
 {
 public:
-    resizeNNRationalUpInvoker_(const Mat& _src, Mat &_dst) : src(_src), dst(_dst) {}
+    resizeNNRationalUpInvoker_(const Mat& _src, Mat &_dst, double _ifx, double _ify) :
+        src(_src), dst(_dst), ifx(_ifx), ify(_ify) {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        const int sw = src.cols, sh = src.rows, dh = dst.rows;
+        const int sw = src.cols, sh = src.rows;
         for( int y = range.start; y < range.end; y++ )
         {
             T* D = (T*)dst.ptr(y);
-            const int sy = (y * sh) / dh;
+            const int sy = std::min(cvFloor(y * ify), sh - 1);
             const T* S = (const T*)src.ptr(sy);
-            RowFunc(D, S, sw);
+            RowFunc(D, S, sw, ifx);
         }
     }
 
 private:
     const Mat& src;
     Mat& dst;
+    double ifx, ify;
 
     resizeNNRationalUpInvoker_(const resizeNNRationalUpInvoker_&);
     resizeNNRationalUpInvoker_& operator=(const resizeNNRationalUpInvoker_&);
 };
 
-template<typename T, void (*RowFunc)(T*, const T*, int)>
-static void resizeNNRationalUp_(const Mat& src, Mat& dst)
+template<typename T, void (*RowFunc)(T*, const T*, int, double)>
+static void resizeNNRationalUp_(const Mat& src, Mat& dst, double ifx, double ify)
 {
     Range range(0, dst.rows);
-    resizeNNRationalUpInvoker_<T, RowFunc> invoker(src, dst);
+    resizeNNRationalUpInvoker_<T, RowFunc> invoker(src, dst, ifx, ify);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
@@ -345,7 +485,7 @@ public:
                 const ushort* S16 = (const ushort*)S;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, vx_lut_pairs(S16, sx_ofs + x));
+                    v_store((ushort*)D + x, vx_lut(S16, sx_ofs + x));
 #endif
                 for( ; x < width; x++ )
                     ((ushort*)D)[x] = S16[sx_ofs[x]];
@@ -393,6 +533,14 @@ public:
         Size ssize = src.size(), dsize = dst.size();
         const int pix_size = (int)src.elemSize();
         const int width = dsize.width;
+        const int row_bytes = ssize.width * pix_size;
+        int vbeg = 0, vend = width;
+        if( pix_size == 1 )
+            resizeNN_vec_range_u8(x_ofs, width, row_bytes, vbeg, vend);
+        else if( pix_size == 2 )
+            resizeNN_vec_range_u16(x_ofs, width, row_bytes, vbeg, vend);
+        else if( pix_size == 12 )
+            vend = resizeNN_vec_end_px12(x_ofs, width, row_bytes);
 
         for( int y = range.start; y < range.end; y++ )
         {
@@ -404,30 +552,10 @@ public:
             switch( pix_size )
             {
             case 1:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX_512VBMI
-                for( ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
-                    v_store(D + x, resizeNN_lut_u8_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
-                    v_store(D + x, vx_lut(S, x_ofs + x));
-#endif
-#endif
-                for( ; x < width; x++ )
-                    D[x] = S[x_ofs[x]];
+                resizeNN_row_u8(D, S, x_ofs, width, row_bytes, vbeg, vend);
                 break;
             case 2:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
-                for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, resizeNN_lut_u16_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
-#endif
-#endif
-                for( ; x < width; x++ )
-                    ((ushort*)D)[x] = *(const ushort*)(S + x_ofs[x]);
+                resizeNN_row_u16(D, S, x_ofs, width, vbeg, vend);
                 break;
             case 3:
                 for( ; x < width; x++, D += 3 )
@@ -438,7 +566,7 @@ public:
                 break;
             case 4:
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
+#if CV_AVX2
                 for( ; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
                     v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
 #else
@@ -476,12 +604,7 @@ public:
                     ((uint64_t*)D)[x] = *(const uint64_t*)(S + x_ofs[x]);
                 break;
             case 12:
-                for( ; x < width; x++, D += 12 )
-                {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)D;
-                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
-                }
+                resizeNN_row_px12(D, S, x_ofs, width, vend);
                 break;
             case 16:
                 for( ; x < width; x++ )
@@ -522,37 +645,37 @@ void resizeNN_( const Mat& src, Mat& dst, double fx, double fy )
 
     if( pix_size == 2 )
     {
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 12, 5) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 12, 5) )
         {
-            resizeNNRationalUp_<ushort, nn_row_up_12_5<ushort> >(src, dst);
+            resizeNNRationalUp_<ushort, nn_row_up_12_5<ushort> >(src, dst, ifx, ify);
             return;
         }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 17, 5) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 17, 5) )
         {
-            resizeNNRationalUp_<ushort, nn_row_up_17_5<ushort> >(src, dst);
+            resizeNNRationalUp_<ushort, nn_row_up_17_5<ushort> >(src, dst, ifx, ify);
             return;
         }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 13, 10) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 13, 10) )
         {
-            resizeNNRationalUp_<ushort, nn_row_up_13_10<ushort> >(src, dst);
+            resizeNNRationalUp_<ushort, nn_row_up_13_10<ushort> >(src, dst, ifx, ify);
             return;
         }
     }
     else if( pix_size == 4 )
     {
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 12, 5) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 12, 5) )
         {
-            resizeNNRationalUp_<uint32_t, nn_row_up_12_5<uint32_t> >(src, dst);
+            resizeNNRationalUp_<uint32_t, nn_row_up_12_5<uint32_t> >(src, dst, ifx, ify);
             return;
         }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 17, 5) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 17, 5) )
         {
-            resizeNNRationalUp_<uint32_t, nn_row_up_17_5<uint32_t> >(src, dst);
+            resizeNNRationalUp_<uint32_t, nn_row_up_17_5<uint32_t> >(src, dst, ifx, ify);
             return;
         }
-        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, 13, 10) )
+        if( is_rational_up(ssize.width, dsize.width, ssize.height, dsize.height, fx, fy, 13, 10) )
         {
-            resizeNNRationalUp_<uint32_t, nn_row_up_13_10<uint32_t> >(src, dst);
+            resizeNNRationalUp_<uint32_t, nn_row_up_13_10<uint32_t> >(src, dst, ifx, ify);
             return;
         }
     }
@@ -598,7 +721,7 @@ enum NNBitexactMode { GENERIC = 0, UP_2X = 1, DOWN_2X = 2, DOWN_4X = 3 };
 
 static inline NNBitexactMode detect_h_mode(int sw, int dw, int ifx, int ifx0)
 {
-    if (dw == 2 * sw && sw > 0 && ifx == (1 << 15) && ifx0 == (1 << 15))
+    if (dw == 2 * sw && sw > 0 && ifx == (1 << 15) && ifx0 == (1 << 14) - sw % 2)
         return UP_2X;
     if (dw * 2 == sw && sw % 2 == 0 && ifx == (2 << 16) && ifx0 == (1 << 16))
         return DOWN_2X;
@@ -609,7 +732,7 @@ static inline NNBitexactMode detect_h_mode(int sw, int dw, int ifx, int ifx0)
 
 static inline NNBitexactMode detect_v_mode(int sh, int dh, int ify, int ify0)
 {
-    if (dh == 2 * sh && ify == (1 << 15) && ify0 == (1 << 15))
+    if (dh == 2 * sh && sh > 0 && ify == (1 << 15) && ify0 == (1 << 14) - sh % 2)
         return UP_2X;
     if (dh * 2 == sh && sh % 2 == 0 && ify == (2 << 16) && ify0 == (1 << 16))
         return DOWN_2X;
@@ -678,8 +801,14 @@ public:
             if (pix_size == 1)
             {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                for (; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
-                    v_store(D + x, vx_lut_pairs(S, sx_ofs + x));
+                const int vl8 = VTraits<v_uint8>::vlanes();
+                for (; x <= width - 2 * vl8; x += 2 * vl8)
+                {
+                    v_uint8 s = vx_load(S + (x >> 1)), lo, hi;
+                    v_zip(s, s, lo, hi);
+                    v_store(D + x, lo);
+                    v_store(D + x + vl8, hi);
+                }
 #endif
                 for (; x < width; x++)
                     D[x] = S[sx_ofs[x]];
@@ -688,8 +817,14 @@ public:
             {
                 const ushort* S16 = (const ushort*)S;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                    v_store((ushort*)D + x, vx_lut_pairs(S16, sx_ofs + x));
+                const int vl16 = VTraits<v_uint16>::vlanes();
+                for (; x <= width - 2 * vl16; x += 2 * vl16)
+                {
+                    v_uint16 s = vx_load(S16 + (x >> 1)), lo, hi;
+                    v_zip(s, s, lo, hi);
+                    v_store((ushort*)D + x, lo);
+                    v_store((ushort*)D + x + vl16, hi);
+                }
 #endif
                 for (; x < width; x++)
                     ((ushort*)D)[x] = S16[sx_ofs[x]];
@@ -702,8 +837,14 @@ public:
             {
                 const uint32_t* S32 = (const uint32_t*)S;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                for (; x <= width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
-                    v_store((uint32_t*)D + x, vx_lut_pairs(S32, sx_ofs + x));
+                const int vl32 = VTraits<v_uint32>::vlanes();
+                for (; x <= width - 2 * vl32; x += 2 * vl32)
+                {
+                    v_uint32 s = vx_load(S32 + (x >> 1)), lo, hi;
+                    v_zip(s, s, lo, hi);
+                    v_store((uint32_t*)D + x, lo);
+                    v_store((uint32_t*)D + x + vl32, hi);
+                }
 #endif
                 for (; x < width; x++)
                     ((uint32_t*)D)[x] = S32[sx_ofs[x]];
@@ -730,6 +871,12 @@ public:
         Size ssize = src.size(), dsize = dst.size();
         const int pix_size = (int)src.elemSize();
         const int sh = ssize.height;
+        const int row_bytes = ssize.width * pix_size;
+        int vbeg = 0, vend = dsize.width;
+        if (pix_size == 1)
+            resizeNN_vec_range_u8(x_ofs, dsize.width, row_bytes, vbeg, vend);
+        else if (pix_size == 2)
+            resizeNN_vec_range_u16(x_ofs, dsize.width, row_bytes, vbeg, vend);
 
         for (int y = range.start; y < range.end; y++)
         {
@@ -741,37 +888,17 @@ public:
             switch (pix_size)
             {
             case 1:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX_512VBMI
-                for (; x <= dsize.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
-                    v_store(D + x, resizeNN_lut_u8_byteofs(S, x_ofs + x));
-#else
-                for (; x <= dsize.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
-                    v_store(D + x, vx_lut(S, x_ofs + x));
-#endif
-#endif
-                for (; x < dsize.width; x++)
-                    D[x] = S[x_ofs[x]];
+                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vbeg, vend);
                 break;
             case 2:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
-                for (; x <= dsize.width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                    v_store((ushort*)D + x, resizeNN_lut_u16_byteofs(S, x_ofs + x));
-#else
-                for (; x <= dsize.width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
-                    v_store((ushort*)D + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
-#endif
-#endif
-                for (; x < dsize.width; x++)
-                    ((ushort*)D)[x] = *(const ushort*)(S + x_ofs[x]);
+                resizeNN_row_u16(D, S, x_ofs, dsize.width, vbeg, vend);
                 break;
             case 3:
                 nn_bitexact_row_cn3_down(D, S, dsize.width, sx_mul, sx_add, ssize.width);
                 break;
             case 4:
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
+#if CV_AVX2
                 for (; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes())
                     v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
 #else
@@ -847,6 +974,14 @@ public:
     {
         Size ssize = src.size(), dsize = dst.size();
         int pix_size = (int)src.elemSize();
+        const int row_bytes = ssize.width * pix_size;
+        int vbeg = 0, vend = dsize.width;
+        if( pix_size == 1 )
+            resizeNN_vec_range_u8(x_ofs, dsize.width, row_bytes, vbeg, vend);
+        else if( pix_size == 2 )
+            resizeNN_vec_range_u16(x_ofs, dsize.width, row_bytes, vbeg, vend);
+        else if( pix_size == 12 )
+            vend = resizeNN_vec_end_px12(x_ofs, dsize.width, row_bytes);
         for( int y = range.start; y < range.end; y++ )
         {
             uchar* D = dst.ptr(y);
@@ -858,30 +993,10 @@ public:
             switch( pix_size )
             {
             case 1:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_AVX_512VBMI
-                for( ; x <= dsize.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
-                    v_store(D + x, resizeNN_lut_u8_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= dsize.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
-                    v_store(D + x, vx_lut(S, x_ofs + x));
-#endif
-#endif
-                for( ; x < dsize.width; x++ )
-                    D[x] = S[x_ofs[x]];
+                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vbeg, vend);
                 break;
             case 2:
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
-                for( ; x <= dsize.width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, resizeNN_lut_u16_byteofs(S, x_ofs + x));
-#else
-                for( ; x <= dsize.width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes() )
-                    v_store((ushort*)D + x, v_reinterpret_as_u16(vx_lut_pairs(S, x_ofs + x)));
-#endif
-#endif
-                for( ; x < dsize.width; x++ )
-                    *((ushort*)D + x) = *(const ushort*)(S + x_ofs[x]);
+                resizeNN_row_u16(D, S, x_ofs, dsize.width, vbeg, vend);
                 break;
             case 3:
                 for( ; x < dsize.width; x++, D += 3 )
@@ -892,7 +1007,7 @@ public:
                 break;
             case 4:
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-#if CV_SIMD256 || CV_SIMD512
+#if CV_AVX2
                 for( ; x <= dsize.width - VTraits<v_uint32>::vlanes(); x += VTraits<v_uint32>::vlanes() )
                     v_store((uint32_t*)D + x, resizeNN_lut_u32_byteofs(S, x_ofs + x));
 #else
@@ -930,12 +1045,7 @@ public:
                     *((uint64_t*)D + x) = *(const uint64_t*)(S + x_ofs[x]);
                 break;
             case 12:
-                for( ; x < dsize.width; x++, D += 12 )
-                {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)D;
-                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
-                }
+                resizeNN_row_px12(D, S, x_ofs, dsize.width, vend);
                 break;
             default:
                 for( x = 0; x < dsize.width; x++, D += pix_size )
@@ -968,7 +1078,7 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
     const nn_bitexact_detail::NNBitexactMode vmode =
         nn_bitexact_detail::detect_v_mode(ssize.height, dsize.height, ify, ify0);
 
-    if (hmode == nn_bitexact_detail::UP_2X && vmode == nn_bitexact_detail::UP_2X)
+    if (hmode == nn_bitexact_detail::UP_2X && vmode == nn_bitexact_detail::UP_2X && pix_size <= 4)
     {
         nn_bitexact_detail::resizeNN_bitexact2xUp_(src, dst);
         return;
@@ -2255,8 +2365,6 @@ struct area_fast_round_helper<T, WT, true>
     {
         if (area == 4)
             return saturate_cast<T>((sum + 2) >> 2);
-        if (area == 100)
-            return saturate_cast<T>((sum + 50) / 100);
         return saturate_cast<T>(sum * (1.f / area));
     }
 };
@@ -6321,333 +6429,161 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
 
 namespace linear_up_2x_detail {
 
-static void build_linear_2x_up_tables(int src_width, int src_height, const Size& dsize, int cn,
-                                      int* xofs, int* yofs, short* ialpha, short* ibeta,
-                                      int& xmin, int& xmax)
-{
-    const double scale_x = 0.5, scale_y = 0.5;
-    const int ksize = 2, ksize2 = 1;
-    int dx, dy, sx, sy, k;
-    float fx, fy;
-    float cbuf[MAX_ESIZE] = {0};
-
-    xmin = 0;
-    xmax = dsize.width;
-
-    for( dx = 0; dx < dsize.width; dx++ )
-    {
-        fx = (float)((dx + 0.5) * scale_x - 0.5);
-        sx = cvFloor(fx);
-        fx -= sx;
-
-        if( sx < ksize2 - 1 )
-        {
-            xmin = dx + 1;
-            if( sx < 0 )
-                fx = 0, sx = 0;
-        }
-
-        if( sx + ksize2 >= src_width )
-        {
-            xmax = std::min(xmax, dx);
-            if( sx >= src_width - 1 )
-                fx = 0, sx = src_width - 1;
-        }
-
-        for( k = 0, sx *= cn; k < cn; k++ )
-            xofs[dx * cn + k] = sx + k;
-
-        cbuf[0] = 1.f - fx;
-        cbuf[1] = fx;
-        for( k = 0; k < ksize; k++ )
-            ialpha[dx * cn * ksize + k] = saturate_cast<short>(cbuf[k] * INTER_RESIZE_COEF_SCALE);
-        for( ; k < cn * ksize; k++ )
-            ialpha[dx * cn * ksize + k] = ialpha[dx * cn * ksize + k - ksize];
-    }
-
-    for( dy = 0; dy < dsize.height; dy++ )
-    {
-        fy = (float)((dy + 0.5) * scale_y - 0.5);
-        sy = cvFloor(fy);
-        fy -= sy;
-        yofs[dy] = sy;
-
-        cbuf[0] = 1.f - fy;
-        cbuf[1] = fy;
-        for( k = 0; k < ksize; k++ )
-            ibeta[dy * ksize + k] = saturate_cast<short>(cbuf[k] * INTER_RESIZE_COEF_SCALE);
-    }
-    CV_UNUSED(src_height);
-}
-
-static void build_linear_2x_up_tables_f32(int src_width, int src_height, const Size& dsize, int cn,
-                                            int* xofs, int* yofs, float* alpha, float* beta,
-                                            int& xmin, int& xmax)
-{
-    const double scale_x = 0.5, scale_y = 0.5;
-    const int ksize = 2, ksize2 = 1;
-    int dx, dy, sx, sy, k;
-    float fx, fy;
-    float cbuf[MAX_ESIZE] = {0};
-
-    xmin = 0;
-    xmax = dsize.width;
-
-    for( dx = 0; dx < dsize.width; dx++ )
-    {
-        fx = (float)((dx + 0.5) * scale_x - 0.5);
-        sx = cvFloor(fx);
-        fx -= sx;
-
-        if( sx < ksize2 - 1 )
-        {
-            xmin = dx + 1;
-            if( sx < 0 )
-                fx = 0, sx = 0;
-        }
-
-        if( sx + ksize2 >= src_width )
-        {
-            xmax = std::min(xmax, dx);
-            if( sx >= src_width - 1 )
-                fx = 0, sx = src_width - 1;
-        }
-
-        for( k = 0, sx *= cn; k < cn; k++ )
-            xofs[dx * cn + k] = sx + k;
-
-        cbuf[0] = 1.f - fx;
-        cbuf[1] = fx;
-        for( k = 0; k < ksize; k++ )
-            alpha[dx * cn * ksize + k] = cbuf[k];
-        for( ; k < cn * ksize; k++ )
-            alpha[dx * cn * ksize + k] = alpha[dx * cn * ksize + k - ksize];
-    }
-
-    for( dy = 0; dy < dsize.height; dy++ )
-    {
-        fy = (float)((dy + 0.5) * scale_y - 0.5);
-        sy = cvFloor(fy);
-        fy -= sy;
-        yofs[dy] = sy;
-
-        cbuf[0] = 1.f - fy;
-        cbuf[1] = fy;
-        for( k = 0; k < ksize; k++ )
-            beta[dy * ksize + k] = cbuf[k];
-    }
-    CV_UNUSED(src_height);
-}
-
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-static inline void linear2x_row_pair_tail_cn1(uchar* dst0, uchar* dst1,
-                                              const uchar* src0, const uchar* src1, int sx, int sw)
+// Bit-exact with the fixed-point separable INTER_LINEAR path for an exact 2x upscale.
+// The horizontal pass yields 512*E (even column, E = p[k-1] + 3*p[k]) or 512*O (odd
+// column, O = 3*p[k] + p[k+1]); VResizeLinear then truncates each weighted row before
+// summing: out = ((X_far >> 2) + ((3*X_near) >> 2) + 2) >> 2. Border neighbours clamp.
+
+static inline void linear2x_scalar_px(uchar* D0, uchar* D1, const uchar* U, const uchar* M,
+                                      const uchar* B, int k, int sw, int cn)
 {
-    for( ; sx < sw - 1; ++sx )
+    const int l = std::max(k - 1, 0) * cn, c = k * cn, r = std::min(k + 1, sw - 1) * cn;
+    uchar* e0 = D0 + 2 * c;
+    uchar* e1 = D1 + 2 * c;
+    for( int i = 0; i < cn; i++ )
     {
-        const uchar p00 = src0[sx], p01 = src0[sx + 1];
-        const uchar p10 = src1[sx], p11 = src1[sx + 1];
-        const int dx = sx << 1;
-        dst0[dx] = p00;
-        dst0[dx + 1] = (uchar)((p00 + p01 + 1) >> 1);
-        dst1[dx] = (uchar)((p00 + p10 + 1) >> 1);
-        dst1[dx + 1] = (uchar)((p00 + p01 + p10 + p11 + 2) >> 2);
+        const int Eu = U[l + i] + 3 * U[c + i], Ou = 3 * U[c + i] + U[r + i];
+        const int Em = M[l + i] + 3 * M[c + i], Om = 3 * M[c + i] + M[r + i];
+        const int Eb = B[l + i] + 3 * B[c + i], Ob = 3 * B[c + i] + B[r + i];
+        const int tE = (3 * Em) >> 2, tO = (3 * Om) >> 2;
+        e0[i]      = (uchar)(((Eu >> 2) + tE + 2) >> 2);
+        e0[i + cn] = (uchar)(((Ou >> 2) + tO + 2) >> 2);
+        e1[i]      = (uchar)(((Eb >> 2) + tE + 2) >> 2);
+        e1[i + cn] = (uchar)(((Ob >> 2) + tO + 2) >> 2);
     }
-
-    const int edx = (sw - 1) << 1;
-    const uchar p0 = src0[sw - 1], p1 = src1[sw - 1];
-    dst0[edx] = dst0[edx + 1] = p0;
-    dst1[edx] = dst1[edx + 1] = (uchar)((p0 + p1 + 1) >> 1);
 }
 
-static inline void linear2x_pack_interleaved_u8(uchar* dst, const v_uint16& even, const v_uint16& odd)
+static inline v_uint16 linear2x_tap(const v_uint16& side, const v_uint16& mid)
 {
-    v_uint16 zip0, zip1;
-    v_zip(even, odd, zip0, zip1);
-    v_pack_store(dst, zip0);
-    v_pack_store(dst + VTraits<v_uint16>::vlanes(), zip1);
+    return v_add(v_add(side, mid), v_shl<1>(mid));
 }
 
-static inline v_uint16 linear2x_avg2_u16(const v_uint16& a, const v_uint16& b)
+static inline v_uint16 linear2x_mix(const v_uint16& far_, const v_uint16& near3)
 {
-    return v_shr(v_add(v_add(a, b), vx_setall_u16(1)), 1);
+    return v_shr<2>(v_add(v_add(v_shr<2>(far_), near3), vx_setall_u16(2)));
 }
 
-static inline v_uint16 linear2x_avg4_u16(const v_uint16& a, const v_uint16& b,
-                                           const v_uint16& c, const v_uint16& d)
+static inline void linear2x_core_u16(const v_uint16& ul, const v_uint16& uc, const v_uint16& ur,
+                                     const v_uint16& ml, const v_uint16& mc, const v_uint16& mr,
+                                     const v_uint16& bl, const v_uint16& bc, const v_uint16& br,
+                                     v_uint16& e0, v_uint16& o0, v_uint16& e1, v_uint16& o1)
 {
-    return v_shr(v_add(v_add(v_add(a, b), v_add(c, d)), vx_setall_u16(2)), 2);
+    const v_uint16 Em = linear2x_tap(ml, mc), Om = linear2x_tap(mr, mc);
+    const v_uint16 tE = v_shr<2>(v_add(Em, v_shl<1>(Em)));
+    const v_uint16 tO = v_shr<2>(v_add(Om, v_shl<1>(Om)));
+    e0 = linear2x_mix(linear2x_tap(ul, uc), tE);
+    o0 = linear2x_mix(linear2x_tap(ur, uc), tO);
+    e1 = linear2x_mix(linear2x_tap(bl, bc), tE);
+    o1 = linear2x_mix(linear2x_tap(br, bc), tO);
 }
 
-static inline void linear2x_fused_pack2rows_u8(uchar* dst0, uchar* dst1,
-                                               const v_uint16& a0, const v_uint16& a1,
-                                               const v_uint16& b0, const v_uint16& b1,
-                                               const v_uint16& c0, const v_uint16& c1,
-                                               const v_uint16& d0, const v_uint16& d1)
+static inline void linear2x_core_u8(const v_uint8& ul, const v_uint8& uc, const v_uint8& ur,
+                                    const v_uint8& ml, const v_uint8& mc, const v_uint8& mr,
+                                    const v_uint8& bl, const v_uint8& bc, const v_uint8& br,
+                                    v_uint8& e0, v_uint8& o0, v_uint8& e1, v_uint8& o1)
 {
-    const int n = VTraits<v_uint8>::vlanes();
-    linear2x_pack_interleaved_u8(dst0, a0, linear2x_avg2_u16(a0, b0));
-    linear2x_pack_interleaved_u8(dst0 + n, a1, linear2x_avg2_u16(a1, b1));
-    linear2x_pack_interleaved_u8(dst1, linear2x_avg2_u16(a0, c0), linear2x_avg4_u16(a0, b0, c0, d0));
-    linear2x_pack_interleaved_u8(dst1 + n, linear2x_avg2_u16(a1, c1), linear2x_avg4_u16(a1, b1, c1, d1));
+    v_uint16 e0l, o0l, e1l, o1l, e0h, o0h, e1h, o1h;
+    linear2x_core_u16(v_expand_low(ul), v_expand_low(uc), v_expand_low(ur),
+                      v_expand_low(ml), v_expand_low(mc), v_expand_low(mr),
+                      v_expand_low(bl), v_expand_low(bc), v_expand_low(br), e0l, o0l, e1l, o1l);
+    linear2x_core_u16(v_expand_high(ul), v_expand_high(uc), v_expand_high(ur),
+                      v_expand_high(ml), v_expand_high(mc), v_expand_high(mr),
+                      v_expand_high(bl), v_expand_high(bc), v_expand_high(br), e0h, o0h, e1h, o1h);
+    e0 = v_pack(e0l, e0h); o0 = v_pack(o0l, o0h);
+    e1 = v_pack(e1l, e1h); o1 = v_pack(o1l, o1h);
 }
 
-static inline void linear2x_fused_planes_vec(uchar* dst0, uchar* dst1,
-                                             const v_uint8& s0a, const v_uint8& s0b,
-                                             const v_uint8& s1a, const v_uint8& s1b)
-{
-    v_uint16 a0, a1, b0, b1, c0, c1, d0, d1;
-    v_expand(s0a, a0, a1);
-    v_expand(s0b, b0, b1);
-    v_expand(s1a, c0, c1);
-    v_expand(s1b, d0, d1);
-    linear2x_fused_pack2rows_u8(dst0, dst1, a0, a1, b0, b1, c0, c1, d0, d1);
-}
-
-static inline void linear2x_fused_block_cn1(uchar* dst0, uchar* dst1,
-                                            const uchar* src0, const uchar* src1)
-{
-    linear2x_fused_planes_vec(dst0, dst1, vx_load(src0), vx_load(src0 + 1),
-                              vx_load(src1), vx_load(src1 + 1));
-}
-
-static inline void linear2x_fused_row_pair_cn1(uchar* dst0, uchar* dst1,
-                                               const uchar* src0, const uchar* src1, int sw)
+// Interleave even/odd output pixels of cn bytes each and store 2*vlanes bytes.
+static inline void linear2x_store_pair(uchar* D, const v_uint8& e, const v_uint8& o, int cn)
 {
     const int n = VTraits<v_uint8>::vlanes();
-    int sx = 0;
-
-    for( ; sx <= sw - (n + 1); sx += n )
-        linear2x_fused_block_cn1(dst0 + (sx << 1), dst1 + (sx << 1), src0 + sx, src1 + sx);
-
-    linear2x_row_pair_tail_cn1(dst0, dst1, src0, src1, sx, sw);
-}
-
-static inline void linear2x_fused_row_pair_cn3(uchar* dst0, uchar* dst1,
-                                               const uchar* src0, const uchar* src1, int sw)
-{
-    const int n = VTraits<v_uint8>::vlanes();
-    int sx = 0;
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) dr0[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) dr1[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) dg0[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) dg1[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) db0[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) db1[VTraits<v_uint8>::max_nlanes * 2];
-
-    for( ; sx <= sw - (n + 1); sx += n )
+    if( cn == 1 )
     {
-        v_uint8 r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11;
-        v_load_deinterleave(src0 + sx * 3, r00, g00, b00);
-        v_load_deinterleave(src0 + (sx + 1) * 3, r01, g01, b01);
-        v_load_deinterleave(src1 + sx * 3, r10, g10, b10);
-        v_load_deinterleave(src1 + (sx + 1) * 3, r11, g11, b11);
-
-        linear2x_fused_planes_vec(dr0, dr1, r00, r01, r10, r11);
-        linear2x_fused_planes_vec(dg0, dg1, g00, g01, g10, g11);
-        linear2x_fused_planes_vec(db0, db1, b00, b01, b10, b11);
-
-        v_store_interleave(dst0 + (sx << 1) * 3, vx_load(dr0), vx_load(dg0), vx_load(db0));
-        v_store_interleave(dst0 + (sx << 1) * 3 + n * 3, vx_load(dr0 + n), vx_load(dg0 + n), vx_load(db0 + n));
-        v_store_interleave(dst1 + (sx << 1) * 3, vx_load(dr1), vx_load(dg1), vx_load(db1));
-        v_store_interleave(dst1 + (sx << 1) * 3 + n * 3, vx_load(dr1 + n), vx_load(dg1 + n), vx_load(db1 + n));
+        v_uint8 lo, hi;
+        v_zip(e, o, lo, hi);
+        v_store(D, lo); v_store(D + n, hi);
     }
-
-    for( ; sx < sw - 1; ++sx )
+    else if( cn == 2 )
     {
-        const uchar* p00 = src0 + sx * 3;
-        const uchar* p01 = src0 + (sx + 1) * 3;
-        const uchar* p10 = src1 + sx * 3;
-        const uchar* p11 = src1 + (sx + 1) * 3;
-        uchar* d0 = dst0 + (sx << 1) * 3;
-        uchar* d1 = dst1 + (sx << 1) * 3;
-        for( int c = 0; c < 3; ++c )
+        v_uint16 lo, hi;
+        v_zip(v_reinterpret_as_u16(e), v_reinterpret_as_u16(o), lo, hi);
+        v_store(D, v_reinterpret_as_u8(lo)); v_store(D + n, v_reinterpret_as_u8(hi));
+    }
+    else
+    {
+        v_uint32 lo, hi;
+        v_zip(v_reinterpret_as_u32(e), v_reinterpret_as_u32(o), lo, hi);
+        v_store(D, v_reinterpret_as_u8(lo)); v_store(D + n, v_reinterpret_as_u8(hi));
+    }
+}
+
+static inline void linear2x_block_packed(v_uint8& e0, v_uint8& o0, v_uint8& e1, v_uint8& o1,
+                                         const uchar* U, const uchar* M, const uchar* B, int x, int cn)
+{
+    linear2x_core_u8(vx_load(U + x - cn), vx_load(U + x), vx_load(U + x + cn),
+                     vx_load(M + x - cn), vx_load(M + x), vx_load(M + x + cn),
+                     vx_load(B + x - cn), vx_load(B + x), vx_load(B + x + cn), e0, o0, e1, o1);
+}
+
+// Vectorizes pixels [1, sw-1); returns the first pixel left for the scalar tail. The last
+// block is shifted back to end at pixel sw-2, overlapping the previous one.
+static inline int linear2x_row_pair_packed(uchar* D0, uchar* D1, const uchar* U, const uchar* M,
+                                           const uchar* B, int sw, int cn)
+{
+    const int n = VTraits<v_uint8>::vlanes(), last = sw * cn - cn - n;
+    if( last < cn )
+        return 1;
+    for( int x = cn; ; x += n )
+    {
+        x = std::min(x, last);
+        v_uint8 e0, o0, e1, o1;
+        linear2x_block_packed(e0, o0, e1, o1, U, M, B, x, cn);
+        linear2x_store_pair(D0 + 2 * x, e0, o0, cn);
+        linear2x_store_pair(D1 + 2 * x, e1, o1, cn);
+        if( x == last )
+            break;
+    }
+    return sw - 1;
+}
+
+// Same arithmetic on packed bytes (neighbours at +-3); only the outputs are split into
+// planes so even/odd pixels can be interleaved.
+static inline int linear2x_row_pair_cn3(uchar* D0, uchar* D1, const uchar* U, const uchar* M,
+                                        const uchar* B, int sw)
+{
+    const int n = VTraits<v_uint8>::vlanes(), last = sw - 1 - n;
+    if( last < 1 )
+        return 1;
+    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[4][VTraits<v_uint8>::max_nlanes * 3];
+    for( int k = 1; ; k += n )
+    {
+        k = std::min(k, last);
+        for( int v = 0; v < 3; v++ )
         {
-            const uchar a = p00[c], b = p01[c], c0 = p10[c], d = p11[c];
-            d0[c] = a;
-            d0[c + 3] = (uchar)((a + b + 1) >> 1);
-            d1[c] = (uchar)((a + c0 + 1) >> 1);
-            d1[c + 3] = (uchar)((a + b + c0 + d + 2) >> 2);
+            v_uint8 e0, o0, e1, o1;
+            linear2x_block_packed(e0, o0, e1, o1, U, M, B, k * 3 + v * n, 3);
+            v_store(buf[0] + v * n, e0);
+            v_store(buf[1] + v * n, o0);
+            v_store(buf[2] + v * n, e1);
+            v_store(buf[3] + v * n, o1);
         }
-    }
-
-    const int edx = (sw - 1) << 1;
-    const uchar* p0 = src0 + (sw - 1) * 3;
-    const uchar* p1 = src1 + (sw - 1) * 3;
-    uchar* d0 = dst0 + edx * 3;
-    uchar* d1 = dst1 + edx * 3;
-    for( int c = 0; c < 3; ++c )
-    {
-        d0[c] = d0[c + 3] = p0[c];
-        d1[c] = d1[c + 3] = (uchar)((p0[c] + p1[c] + 1) >> 1);
-    }
-}
-
-static inline void linear2x_fused_row_pair_cn4(uchar* dst0, uchar* dst1,
-                                               const uchar* src0, const uchar* src1, int sw)
-{
-    const int n = VTraits<v_uint8>::vlanes();
-    int sx = 0;
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d00[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d01[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d02[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d03[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d10[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d11[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d12[VTraits<v_uint8>::max_nlanes * 2];
-    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) d13[VTraits<v_uint8>::max_nlanes * 2];
-
-    for( ; sx <= sw - (n + 1); sx += n )
-    {
-        v_uint8 c00, c01, c02, c03, c10, c11, c12, c13;
-        v_uint8 c20, c21, c22, c23, c30, c31, c32, c33;
-        v_load_deinterleave(src0 + (sx << 2), c00, c01, c02, c03);
-        v_load_deinterleave(src0 + ((sx + 1) << 2), c10, c11, c12, c13);
-        v_load_deinterleave(src1 + (sx << 2), c20, c21, c22, c23);
-        v_load_deinterleave(src1 + ((sx + 1) << 2), c30, c31, c32, c33);
-
-        linear2x_fused_planes_vec(d00, d10, c00, c10, c20, c30);
-        linear2x_fused_planes_vec(d01, d11, c01, c11, c21, c31);
-        linear2x_fused_planes_vec(d02, d12, c02, c12, c22, c32);
-        linear2x_fused_planes_vec(d03, d13, c03, c13, c23, c33);
-
-        v_store_interleave(dst0 + (sx << 3), vx_load(d00), vx_load(d01), vx_load(d02), vx_load(d03));
-        v_store_interleave(dst0 + (sx << 3) + (n << 2), vx_load(d00 + n), vx_load(d01 + n),
-                           vx_load(d02 + n), vx_load(d03 + n));
-        v_store_interleave(dst1 + (sx << 3), vx_load(d10), vx_load(d11), vx_load(d12), vx_load(d13));
-        v_store_interleave(dst1 + (sx << 3) + (n << 2), vx_load(d10 + n), vx_load(d11 + n),
-                           vx_load(d12 + n), vx_load(d13 + n));
-    }
-
-    for( ; sx < sw - 1; ++sx )
-    {
-        const uchar* p00 = src0 + (sx << 2);
-        const uchar* p01 = src0 + ((sx + 1) << 2);
-        const uchar* p10 = src1 + (sx << 2);
-        const uchar* p11 = src1 + ((sx + 1) << 2);
-        uchar* d0 = dst0 + (sx << 3);
-        uchar* d1 = dst1 + (sx << 3);
-        for( int c = 0; c < 4; ++c )
+        for( int r = 0; r < 2; r++ )
         {
-            const uchar a = p00[c], b = p01[c], c0 = p10[c], d = p11[c];
-            d0[(c << 1)] = a;
-            d0[(c << 1) + 1] = (uchar)((a + b + 1) >> 1);
-            d1[(c << 1)] = (uchar)((a + c0 + 1) >> 1);
-            d1[(c << 1) + 1] = (uchar)((a + b + c0 + d + 2) >> 2);
+            uchar* D = (r == 0 ? D0 : D1) + 6 * k;
+            v_uint8 e[3], o[3], lo[3], hi[3];
+            v_load_deinterleave(buf[2 * r], e[0], e[1], e[2]);
+            v_load_deinterleave(buf[2 * r + 1], o[0], o[1], o[2]);
+            for( int c = 0; c < 3; c++ )
+                v_zip(e[c], o[c], lo[c], hi[c]);
+            v_store_interleave(D, lo[0], lo[1], lo[2]);
+            v_store_interleave(D + 3 * n, hi[0], hi[1], hi[2]);
         }
+        if( k == last )
+            break;
     }
-
-    const int edx = (sw - 1) << 3;
-    const uchar* p0 = src0 + ((sw - 1) << 2);
-    const uchar* p1 = src1 + ((sw - 1) << 2);
-    uchar* d0 = dst0 + edx;
-    uchar* d1 = dst1 + edx;
-    for( int c = 0; c < 4; ++c )
-    {
-        d0[(c << 1)] = d0[(c << 1) + 1] = p0[c];
-        d1[(c << 1)] = d1[(c << 1) + 1] = (uchar)((p0[c] + p1[c] + 1) >> 1);
-    }
+    return sw - 1;
 }
 
 class resizeLinear2xFused8u_Invoker : public ParallelLoopBody
@@ -6657,24 +6593,21 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        const int cn = src.channels();
-        const int sw = src.cols;
-        const int sh = src.rows;
+        const int cn = src.channels(), sw = src.cols, sh = src.rows;
 
         for( int sy = range.start; sy < range.end; ++sy )
         {
-            const int dy = sy << 1;
-            uchar* dst0 = dst.ptr(dy);
-            uchar* dst1 = dst.ptr(dy + 1);
-            const uchar* src0 = src.ptr(sy);
-            const uchar* src1 = src.ptr(std::min(sy + 1, sh - 1));
+            uchar* D0 = dst.ptr(2 * sy);
+            uchar* D1 = dst.ptr(2 * sy + 1);
+            const uchar* U = src.ptr(std::max(sy - 1, 0));
+            const uchar* M = src.ptr(sy);
+            const uchar* B = src.ptr(std::min(sy + 1, sh - 1));
 
-            if( cn == 1 )
-                linear2x_fused_row_pair_cn1(dst0, dst1, src0, src1, sw);
-            else if( cn == 3 )
-                linear2x_fused_row_pair_cn3(dst0, dst1, src0, src1, sw);
-            else if( cn == 4 )
-                linear2x_fused_row_pair_cn4(dst0, dst1, src0, src1, sw);
+            linear2x_scalar_px(D0, D1, U, M, B, 0, sw, cn);
+            int k = cn == 3 ? linear2x_row_pair_cn3(D0, D1, U, M, B, sw)
+                            : linear2x_row_pair_packed(D0, D1, U, M, B, sw, cn);
+            for( ; k < sw; k++ )
+                linear2x_scalar_px(D0, D1, U, M, B, k, sw, cn);
         }
     }
 
@@ -6683,7 +6616,7 @@ private:
     Mat& dst;
 };
 
-static inline void resizeLinear2xUp_8u_fused(const Mat& src, Mat& dst)
+static void resizeLinear2xUp_8u(const Mat& src, Mat& dst)
 {
     Range range(0, src.rows);
     resizeLinear2xFused8u_Invoker invoker(src, dst);
@@ -6691,57 +6624,6 @@ static inline void resizeLinear2xUp_8u_fused(const Mat& src, Mat& dst)
 }
 
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
-
-static void resizeLinear2xUp_8u_generic(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    const Size& dsize = dst.size();
-    const int width = dsize.width * cn;
-    const int ksize = 2;
-    int xmin = 0, xmax = dsize.width;
-
-    AutoBuffer<uchar> _buffer((width + dsize.height) * (sizeof(int) + sizeof(short) * ksize));
-    int* xofs = (int*)_buffer.data();
-    int* yofs = xofs + width;
-    short* ialpha = (short*)(yofs + dsize.height);
-    short* ibeta = ialpha + width * ksize;
-
-    build_linear_2x_up_tables(src.cols, src.rows, dsize, cn, xofs, yofs, ialpha, ibeta, xmin, xmax);
-
-    resizeGeneric_<
-        HResizeLinear<uchar, int, short, INTER_RESIZE_COEF_SCALE, HResizeLinearVec_8u32s>,
-        VResizeLinear<uchar, int, short,
-            FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS * 2>,
-            VResizeLinearVec_32s8u> >(src, dst, xofs, ialpha, yofs, ibeta, xmin, xmax, ksize);
-}
-
-static void resizeLinear2xUp_8u(const Mat& src, Mat& dst)
-{
-    // Generic fixpt separable path is the INTER_LINEAR reference. The fused single-pass
-    // kernel remains available for follow-up once bit-exact equivalence is validated.
-    resizeLinear2xUp_8u_generic(src, dst);
-}
-
-static inline void resizeLinear2xUp_32f(const Mat& src, Mat& dst)
-{
-    const int cn = src.channels();
-    const Size& dsize = dst.size();
-    const int width = dsize.width * cn;
-    const int ksize = 2;
-    int xmin = 0, xmax = dsize.width;
-
-    AutoBuffer<uchar> _buffer((width + dsize.height) * (sizeof(int) + sizeof(float) * ksize));
-    int* xofs = (int*)_buffer.data();
-    int* yofs = xofs + width;
-    float* alpha = (float*)(yofs + dsize.height);
-    float* beta = alpha + width * ksize;
-
-    build_linear_2x_up_tables_f32(src.cols, src.rows, dsize, cn, xofs, yofs, alpha, beta, xmin, xmax);
-
-    resizeGeneric_<
-        HResizeLinear<float, float, float, 1, HResizeLinearVec_32f>,
-        VResizeLinear<float, float, float, Cast<float, float>, VResizeLinearVec_32f> >(src, dst, xofs, alpha, yofs, beta, xmin, xmax, ksize);
-}
 
 }  // namespace linear_up_2x_detail
 
@@ -6779,16 +6661,15 @@ void resize_cpu(int src_type,
         return;
     }
 
-    if( interpolation == INTER_LINEAR &&
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if( interpolation == INTER_LINEAR && depth == CV_8U && cn <= 4 &&
         linear_up_2x_detail::is_2x_up(src_width, dsize.width, src_height, dsize.height,
                                       inv_scale_x, inv_scale_y) )
     {
-        if( depth == CV_8U && cn != 2 )
-        {
-            linear_up_2x_detail::resizeLinear2xUp_8u(src, dst);
-            return;
-        }
+        linear_up_2x_detail::resizeLinear2xUp_8u(src, dst);
+        return;
     }
+#endif
 
     static ResizeFunc linear_tab[] =
     {

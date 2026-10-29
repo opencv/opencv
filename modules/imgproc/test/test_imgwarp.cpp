@@ -43,6 +43,11 @@
 #include "opencv2/ts/ts_gtest.h"
 #include "test_precomp.hpp"
 
+#if defined(__linux__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
@@ -1639,6 +1644,228 @@ TEST(Resize, horizontal_upscale_left_edge_regression)
         EXPECT_LE(maxdiff, 3.0);
     }
 }
+
+// Integer-factor INTER_AREA: 2x2 rounds as (sum + 2) >> 2, other factors as
+// saturate_cast(sum * (1.f / area)).
+template<typename T>
+static Mat resizeAreaFastRef(const Mat& src, int scale)
+{
+    const int cn = src.channels(), area = scale * scale;
+    Mat dst(src.rows / scale, src.cols / scale, src.type());
+    for (int dy = 0; dy < dst.rows; dy++)
+        for (int dx = 0; dx < dst.cols; dx++)
+            for (int c = 0; c < cn; c++)
+            {
+                int sum = 0;
+                for (int i = 0; i < scale; i++)
+                    for (int j = 0; j < scale; j++)
+                        sum += src.ptr<T>(dy * scale + i)[(dx * scale + j) * cn + c];
+                dst.ptr<T>(dy)[dx * cn + c] = scale == 2 ? (T)((sum + 2) >> 2)
+                                                         : saturate_cast<T>(sum * (1.f / area));
+            }
+    return dst;
+}
+
+TEST(Resize, area_fast_integer_rounding)
+{
+    RNG& rng = theRNG();
+    const int depths[] = { CV_8U, CV_16U, CV_16S };
+    const int scales[] = { 2, 3, 4, 10 };
+    for (int depth : depths)
+    for (int cn : { 1, 3, 4 })
+    for (int scale : scales)
+    {
+        const int type = CV_MAKETYPE(depth, cn);
+        Mat src(scale * 13, scale * 67, type);
+        if (depth == CV_16S)
+            rng.fill(src, RNG::UNIFORM, -32768, 32768);
+        else
+            rng.fill(src, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 65536);
+
+        Mat dst, ref;
+        cv::resize(src, dst, Size(src.cols / scale, src.rows / scale), 0, 0, INTER_AREA);
+        if (depth == CV_8U)       ref = resizeAreaFastRef<uchar>(src, scale);
+        else if (depth == CV_16U) ref = resizeAreaFastRef<ushort>(src, scale);
+        else                      ref = resizeAreaFastRef<short>(src, scale);
+        EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF))
+            << "depth=" << depth << " cn=" << cn << " scale=" << scale;
+    }
+}
+
+// Reference for the fixed-point INTER_LINEAR path at exact 2x: horizontal taps (1,3)/(3,1),
+// then each vertical tap is truncated separately as VResizeLinear does.
+static Mat resizeLinear2xUpRef_8u(const Mat& src)
+{
+    const int cn = src.channels(), sw = src.cols, sh = src.rows;
+    Mat dst(sh * 2, sw * 2, src.type());
+    for (int dy = 0; dy < dst.rows; dy++)
+    {
+        const int yn = dy / 2, yf = std::min(std::max((dy & 1) ? yn + 1 : yn - 1, 0), sh - 1);
+        const uchar* N = src.ptr(yn);
+        const uchar* F = src.ptr(yf);
+        for (int dx = 0; dx < dst.cols; dx++)
+        {
+            const int xn = dx / 2, xf = std::min(std::max((dx & 1) ? xn + 1 : xn - 1, 0), sw - 1);
+            for (int c = 0; c < cn; c++)
+            {
+                const int hn = 3 * N[xn * cn + c] + N[xf * cn + c];
+                const int hf = 3 * F[xn * cn + c] + F[xf * cn + c];
+                dst.ptr(dy)[dx * cn + c] = (uchar)(((hf >> 2) + ((3 * hn) >> 2) + 2) >> 2);
+            }
+        }
+    }
+    return dst;
+}
+
+TEST(Resize, linear_2x_up_8u)
+{
+    RNG& rng = theRNG();
+    const int widths[] = { 1, 2, 3, 7, 15, 16, 17, 18, 31, 33, 34, 63, 64, 65, 66, 129, 131 };
+    const int heights[] = { 1, 2, 3, 6 };
+    for (int cn = 1; cn <= 4; cn++)
+    for (int sw : widths)
+    for (int sh : heights)
+    for (int roi = 0; roi <= 1; roi++)
+    {
+        Mat big(sh + 2, sw + 3, CV_8UC(cn));
+        rng.fill(big, RNG::UNIFORM, 0, 256);
+        Mat src = roi ? big(Rect(1, 1, sw, sh)) : big(Rect(0, 0, sw, sh)).clone();
+
+        Mat dst;
+        cv::resize(src, dst, Size(), 2, 2, INTER_LINEAR);
+        EXPECT_EQ(0, cvtest::norm(dst, resizeLinear2xUpRef_8u(src), NORM_INF))
+            << "cn=" << cn << " size=" << src.size() << " roi=" << roi;
+    }
+}
+
+static Mat resizeNearestRef(const Mat& src, Size dsize, double fx, double fy)
+{
+    const double ifx = 1. / fx, ify = 1. / fy;
+    const size_t esz = src.elemSize();
+    Mat ref(dsize, src.type());
+    for (int y = 0; y < dsize.height; y++)
+    {
+        const int sy = std::min(cvFloor(y * ify), src.rows - 1);
+        for (int x = 0; x < dsize.width; x++)
+        {
+            const int sx = std::min(cvFloor(x * ifx), src.cols - 1);
+            memcpy(ref.ptr(y) + x * esz, src.ptr(sy) + sx * esz, esz);
+        }
+    }
+    return ref;
+}
+
+static Mat makeNearestRationalSrc(int sh, int sw, int type)
+{
+    Mat src(sh, sw, type);
+    for (int y = 0; y < sh; y++)
+        for (int x = 0; x < (int)(sw * src.elemSize()); x++)
+            src.ptr(y)[x] = (uchar)(y ^ (y >> 8) ^ (x * 31));
+    return src;
+}
+
+TEST(Resize, nearest_rational_up)
+{
+    const int ratios[][2] = { {13, 10}, {12, 5}, {17, 5} };
+    const int types[] = { CV_8UC2, CV_8UC4 };
+    for (const auto& r : ratios)
+    for (int type : types)
+    for (int tall = 0; tall <= 1; tall++)
+    for (int explicit_scale = 0; explicit_scale <= 1; explicit_scale++)
+    {
+        const int num = r[0], den = r[1];
+        const int sw = tall ? den : den * 1000, sh = tall ? 50000 : den * 3;
+        Mat src = makeNearestRationalSrc(sh, sw, type);
+
+        const Size dsize(sw * num / den, sh * num / den);
+        const double f = (double)num / den;
+        Mat dst;
+        if (explicit_scale)
+            cv::resize(src, dst, Size(), f, f, INTER_NEAREST);
+        else
+            cv::resize(src, dst, dsize, 0, 0, INTER_NEAREST);
+        ASSERT_EQ(dsize, dst.size());
+
+        Mat ref = resizeNearestRef(src, dsize, (double)dsize.width / sw, (double)dsize.height / sh);
+        EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF)) << "ratio " << num << "/" << den << " type " << type
+            << " size " << src.size() << " explicit " << explicit_scale;
+    }
+}
+
+// Explicit factors that only round to a rational size must keep the generic mapping.
+TEST(Resize, nearest_rational_up_inexact_scale)
+{
+    const struct { int sw, sh; double fx, fy; } cases[] = {
+        { 10, 10, 1.34, 1.3 }, { 10, 10, 1.3, 1.34 }, { 10, 10, 1.31, 1.31 },
+        { 5, 5, 2.41, 2.4 }, { 5, 5, 3.41, 3.4 }, { 1000, 30, 1.3001, 1.3 },
+    };
+    const int types[] = { CV_8UC2, CV_8UC4 };
+    for (const auto& c : cases)
+    for (int type : types)
+    {
+        Mat src = makeNearestRationalSrc(c.sh, c.sw, type);
+        Mat dst;
+        cv::resize(src, dst, Size(), c.fx, c.fy, INTER_NEAREST);
+        Mat ref = resizeNearestRef(src, dst.size(), c.fx, c.fy);
+        EXPECT_EQ(0, cvtest::norm(dst, ref, NORM_INF)) << "fx " << c.fx << " fy " << c.fy
+            << " type " << type << " size " << src.size();
+    }
+}
+
+#if defined(__linux__)
+// Source rows are placed flush against an inaccessible page (after the last byte or before
+// the first one), so any vector gather reading outside the image faults.
+class GuardedSrc
+{
+public:
+    GuardedSrc(int rows, int cols, int type, bool guard_before)
+    {
+        page = (size_t)sysconf(_SC_PAGESIZE);
+        const size_t bytes = (size_t)rows * cols * CV_ELEM_SIZE(type);
+        const size_t data_pages = (bytes + page - 1) / page;
+        total = (data_pages + 2) * page;
+        base = (uchar*)mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        CV_Assert(base != (uchar*)MAP_FAILED);
+        CV_Assert(mprotect(base, page, PROT_NONE) == 0);
+        CV_Assert(mprotect(base + total - page, page, PROT_NONE) == 0);
+        uchar* data = guard_before ? base + page : base + total - page - bytes;
+        mat = Mat(rows, cols, type, data);
+    }
+    ~GuardedSrc() { munmap(base, total); }
+    Mat mat;
+private:
+    uchar* base;
+    size_t page, total;
+};
+
+TEST(Resize, nearest_gather_stays_in_bounds)
+{
+    const int types[] = { CV_8UC1, CV_8UC2, CV_32FC3 };
+    const int interps[] = { INTER_NEAREST, INTER_NEAREST_EXACT };
+    const int widths[] = { 64, 100, 130, 257 };
+    const double scales[] = { 9.0, 2.0, 1.5, 1.3, 0.75, 0.5, 0.2 };
+    for (int type : types)
+    for (int interp : interps)
+    for (int sw : widths)
+    for (int sh : { 1, 3 })
+    for (double scale : scales)
+    for (int guard_before = 0; guard_before <= 1; guard_before++)
+    {
+        GuardedSrc g(sh, sw, type, guard_before != 0);
+        for (int y = 0; y < sh; y++)
+            for (int x = 0; x < (int)(sw * g.mat.elemSize()); x++)
+                g.mat.ptr(y)[x] = (uchar)(x * 7 + y * 13);
+        const Size dsize(cvRound(sw * scale), std::max(1, cvRound(sh * scale)));
+        Mat dst, ref;
+        cv::resize(g.mat, dst, dsize, 0, 0, interp);
+        cv::resize(g.mat.clone(), ref, dsize, 0, 0, interp);
+        const Mat dst_bytes(dst.rows, (int)(dst.cols * dst.elemSize()), CV_8U, dst.data, dst.step);
+        const Mat ref_bytes(ref.rows, (int)(ref.cols * ref.elemSize()), CV_8U, ref.data, ref.step);
+        EXPECT_EQ(0, cvtest::norm(dst_bytes, ref_bytes, NORM_INF)) << "type " << type << " interp " << interp
+            << " size " << g.mat.size() << " -> " << dsize << " guard_before " << guard_before;
+    }
+}
+#endif
 
 TEST(Imgproc_Warp, multichannel)
 {
