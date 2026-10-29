@@ -155,6 +155,10 @@ bool  BmpDecoder::readHeader()
                 }
                 else if( m_bpp == 16 && m_rle_code == BMP_BITFIELDS )
                 {
+                    // the masks follow a 40-byte BITMAPINFOHEADER,
+                    // larger headers (V2 to V5) have them at offset 40
+                    if( size >= 52 )
+                        m_strm.setPos( 14 + 40 );
                     int redmask = m_strm.getDWord();
                     int greenmask = m_strm.getDWord();
                     int bluemask = m_strm.getDWord();
