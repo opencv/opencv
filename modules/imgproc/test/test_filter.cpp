@@ -2932,6 +2932,86 @@ INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelSeparableFilter,
     )
 );
 
+typedef tuple<Size, int, int> ParallelMorphologyIterationsParams;
+typedef TestWithParam<ParallelMorphologyIterationsParams> ImgProc_ParallelMorphologyIterations;
+
+TEST_P(ImgProc_ParallelMorphologyIterations, compound_inplace_and_guards)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const Rect srcRect(7, 9, size.width, size.height);
+    Mat input(size.height + 18, size.width + 16, type);
+    theRNG().fill(input, RNG::UNIFORM, 0, 256);
+    const Mat original = input.clone();
+    const Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 5));
+    const int operations[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE };
+    const Scalar borderValue(17, 33, 49);
+    Mat guards(input.size(), CV_8U, Scalar(255));
+    guards(srcRect).setTo(0);
+    ScopedThreadsGuard threads;
+    for (size_t i = 0; i < sizeof(operations) / sizeof(operations[0]); ++i)
+    {
+        SCOPED_TRACE(operations[i]);
+        // Use the same in-place parent context for the sequential reference:
+        // compound operations read that context again in their second pass.
+        Mat expectedParent = input.clone(), expected = expectedParent(srcRect);
+        threads.set(1);
+        morphologyEx(expected, expected, operations[i], kernel, Point(0, 4),
+                     2, border, borderValue);
+        Mat actualParent = input.clone();
+        const Mat outer = actualParent(Rect(2, 3, size.width + 10, size.height + 12));
+        Mat actual = outer(Rect(5, 6, size.width, size.height));
+        threads.set(8);
+        morphologyEx(actual, actual, operations[i], kernel, Point(0, 4),
+                     2, border, borderValue);
+        EXPECT_EQ(0, cv::norm(expected, actual, NORM_INF));
+        EXPECT_EQ(0, cv::norm(original, expectedParent, NORM_INF, guards));
+        EXPECT_EQ(0, cv::norm(original, actualParent, NORM_INF, guards));
+    }
+    EXPECT_EQ(0, cv::norm(original, input, NORM_INF));
+}
+
+TEST_P(ImgProc_ParallelMorphologyIterations, backward_overlap_and_guards)
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const Rect srcRect(7, 9, size.width, size.height);
+    const Rect dstRect(3, 5, size.width, size.height);
+    Mat input(size.height + 18, size.width + 16, type);
+    theRNG().fill(input, RNG::UNIFORM, 0, 256);
+    const Mat original = input.clone();
+    const Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 5));
+    const Scalar borderValue(17, 33, 49);
+    Mat guards(input.size(), CV_8U, Scalar(255));
+    guards(dstRect).setTo(0);
+    ScopedThreadsGuard threads;
+    for (int op = MORPH_ERODE; op <= MORPH_DILATE; ++op)
+    {
+        Mat expected;
+        threads.set(1);
+        morphologyEx(input(srcRect), expected, op, kernel, Point(0, 4), 2, border, borderValue);
+        for (int workers = 2; workers <= 8; workers *= 4)
+        {
+            SCOPED_TRACE(op);
+            SCOPED_TRACE(workers);
+            Mat actualParent = input.clone();
+            Mat src = actualParent(srcRect), dst = actualParent(dstRect);
+            threads.set(workers);
+            morphologyEx(src, dst, op, kernel, Point(0, 4), 2, border, borderValue);
+            EXPECT_EQ(0, cv::norm(expected, dst, NORM_INF));
+            EXPECT_EQ(0, cv::norm(original, actualParent, NORM_INF, guards));
+        }
+    }
+    EXPECT_EQ(0, cv::norm(original, input, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, ImgProc_ParallelMorphologyIterations,
+    Combine(Values(Size(127, 8301), Size(1001, 1049)),
+            Values(CV_8UC1, CV_16UC3),
+            Values(BORDER_REFLECT_101, BORDER_REFLECT_101 | BORDER_ISOLATED)));
+
 typedef tuple<Size, tuple<int, int>, int, Point> ParallelSeparableConversionParams;
 typedef TestWithParam<ParallelSeparableConversionParams> ImgProc_ParallelSeparableConversion;
 
