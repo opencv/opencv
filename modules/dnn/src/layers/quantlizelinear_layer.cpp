@@ -240,6 +240,7 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
     // FLOAT8E8M0, plain fp16) reaches the descriptive error below instead of
     // tripping a bare assertion.
     CV_Assert(outtype == CV_8U || outtype == CV_8S ||
+              outtype == CV_16U || outtype == CV_16S ||
               outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ ||
               outtype == CV_16F || outtype == CV_32F);
     if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || wideFp8Out)
@@ -367,6 +368,54 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                          reinterpret_cast<const hfloat*>(scale.data),
                          reinterpret_cast<const int8_t*>(zp.data),
                          reinterpret_cast<int8_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16U && sctype == CV_32F && inptype == CV_32F)
+        quantizeLinear(reinterpret_cast<const float*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<uint16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16U && sctype == CV_32F && inptype == CV_16F)
+        quantizeLinear(reinterpret_cast<const hfloat*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<uint16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16U && sctype == CV_16F && inptype == CV_32F)
+        quantizeLinear(reinterpret_cast<const float*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<uint16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16U && sctype == CV_16F && inptype == CV_16F)
+        quantizeLinear(reinterpret_cast<const hfloat*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<uint16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16S && sctype == CV_32F && inptype == CV_32F)
+        quantizeLinear(reinterpret_cast<const float*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<int16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16S && sctype == CV_32F && inptype == CV_16F)
+        quantizeLinear(reinterpret_cast<const hfloat*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<int16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16S && sctype == CV_16F && inptype == CV_32F)
+        quantizeLinear(reinterpret_cast<const float*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<int16_t*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (outtype == CV_16S && sctype == CV_16F && inptype == CV_16F)
+        quantizeLinear(reinterpret_cast<const hfloat*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<int16_t*>(out.data),
                          nslices, sz_a, slice_size, block_size);
     else if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ) {
         const onnx_dtype::Fp8Fmt fmt = onnx_dtype::fp8FmtFor(outtype == CV_8F_E4M3FN ? 17 : 18);

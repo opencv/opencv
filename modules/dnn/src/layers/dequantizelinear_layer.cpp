@@ -231,7 +231,8 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp_,
     int i, ndims = inpshape.dims;
     int64_t nslices = 1, slice_size = 1;
 
-    CV_Assert(inptype == CV_8U || inptype == CV_8S || inptype == CV_32S ||
+    CV_Assert(inptype == CV_8U || inptype == CV_8S ||
+              inptype == CV_16U || inptype == CV_16S || inptype == CV_32S ||
               inptype == CV_8F_E4M3FN || inptype == CV_8F_E4M3FNUZ ||
               inptype == CV_16F || inptype == CV_32F);
     CV_Assert(sctype == CV_32F || sctype == CV_16F);
@@ -354,6 +355,54 @@ static void dequantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp_,
         dequantizeLinear(reinterpret_cast<const int8_t*>(inp.data),
                          reinterpret_cast<const hfloat*>(scale.data),
                          reinterpret_cast<const int8_t*>(zp.data),
+                         reinterpret_cast<hfloat*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16U && sctype == CV_32F && outtype == CV_32F)
+        dequantizeLinear(reinterpret_cast<const uint16_t*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<float*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16U && sctype == CV_32F && outtype == CV_16F)
+        dequantizeLinear(reinterpret_cast<const uint16_t*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<hfloat*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16U && sctype == CV_16F && outtype == CV_32F)
+        dequantizeLinear(reinterpret_cast<const uint16_t*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<float*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16U && sctype == CV_16F && outtype == CV_16F)
+        dequantizeLinear(reinterpret_cast<const uint16_t*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const uint16_t*>(zp.data),
+                         reinterpret_cast<hfloat*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16S && sctype == CV_32F && outtype == CV_32F)
+        dequantizeLinear(reinterpret_cast<const int16_t*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<float*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16S && sctype == CV_32F && outtype == CV_16F)
+        dequantizeLinear(reinterpret_cast<const int16_t*>(inp.data),
+                         reinterpret_cast<const float*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<hfloat*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16S && sctype == CV_16F && outtype == CV_32F)
+        dequantizeLinear(reinterpret_cast<const int16_t*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
+                         reinterpret_cast<float*>(out.data),
+                         nslices, sz_a, slice_size, block_size);
+    else if (inptype == CV_16S && sctype == CV_16F && outtype == CV_16F)
+        dequantizeLinear(reinterpret_cast<const int16_t*>(inp.data),
+                         reinterpret_cast<const hfloat*>(scale.data),
+                         reinterpret_cast<const int16_t*>(zp.data),
                          reinterpret_cast<hfloat*>(out.data),
                          nslices, sz_a, slice_size, block_size);
     else if (inptype == CV_32S && sctype == CV_32F && outtype == CV_32F)
