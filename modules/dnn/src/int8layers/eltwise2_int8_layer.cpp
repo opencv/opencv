@@ -18,6 +18,8 @@
 namespace cv {
 namespace dnn {
 
+// A broadcast repeats whole contiguous runs, so the index arithmetic belongs once per run
+// rather than once per element.
 static Mat broadcastExpand(const Mat& src, const MatShape& dstShape)
 {
     MatShape srcShape = src.shape();
@@ -27,27 +29,53 @@ static Mat broadcastExpand(const Mat& src, const MatShape& dstShape)
     if (srcShape == dstShape)
         return src;
 
-    MatShape outShape = dstShape;
-    Mat out(outShape, src.type());
-    const int total = (int)out.total();
+    Mat out(dstShape, src.type());
+    if (out.empty())
+        return out;
 
-    std::vector<int> dstStrides(ndst);
-    { int s = 1; for (int d = ndst-1; d >= 0; d--) { dstStrides[d] = s; s *= dstShape[d]; } }
+    // Innermost axes either all repeat one element, or all match and copy a contiguous run.
+    int d = ndst - 1;
+    int64_t inner = 1;
+    const bool repeat = srcShape[d] == 1 && dstShape[d] != 1;
+    for (; d >= 0 && (repeat ? srcShape[d] == 1 : srcShape[d] == dstShape[d]); d--)
+        inner *= dstShape[d];
 
-    std::vector<int> srcStrides(ndst, 0);
-    { int s = 1; for (int d = ndst-1; d >= 0; d--) {
-        srcStrides[d] = (srcShape[d] > 1) ? s : 0; s *= srcShape[d]; } }
+    // Axes outside that run whose source extent is 1 repeat the whole run, so it is built
+    // once and doubled. Without this a block layout's C0 axis caps the run at C0 elements.
+    int64_t rep = 1;
+    for (; d >= 0 && srcShape[d] == 1; d--)
+        rep *= dstShape[d];
+    const int64_t block = inner * rep;
 
+    const int nouter = d + 1;
+    std::vector<int64_t> srcStrides(ndst, 0), rowStrides(nouter);
+    { int64_t s = 1; for (int i = ndst-1; i >= 0; i--) {
+        srcStrides[i] = (srcShape[i] > 1) ? s : 0; s *= srcShape[i]; } }
+    { int64_t s = 1; for (int i = nouter-1; i >= 0; i--) {
+        rowStrides[i] = s; s *= dstShape[i]; } }
+
+    const int nrows = (int)((int64_t)out.total() / block);
     const uint8_t* sp = src.ptr<uint8_t>();
     uint8_t* dp = out.ptr<uint8_t>();
-    for (int i = 0; i < total; i++) {
-        int rem = i, srcIdx = 0;
-        for (int d = 0; d < ndst; d++) {
-            int coord = rem / dstStrides[d]; rem %= dstStrides[d];
-            srcIdx += coord * srcStrides[d];
+
+    parallel_for_(Range(0, nrows), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            int64_t off = 0;
+            for (int k = 0; k < nouter; k++)
+                off += (i / rowStrides[k] % dstShape[k]) * srcStrides[k];
+            uint8_t* row = dp + i * block;
+            if (repeat)
+                std::memset(row, sp[off], (size_t)inner);
+            else
+                std::memcpy(row, sp + off, (size_t)inner);
+            for (int64_t done = inner; done < block; ) {
+                const int64_t n = std::min(done, block - done);
+                std::memcpy(row + done, row, (size_t)n);
+                done += n;
+            }
         }
-        dp[i] = sp[srcIdx];
-    }
+    }, (double)std::max(1, getNumThreads() * 4));
+
     return out;
 }
 

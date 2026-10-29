@@ -13,7 +13,8 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_depthwise" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file("layers/cpu_kernels/conv2_deconv" AVX AVX2 NEON)
-ocv_add_dispatched_file("int8layers/conv2_int8_kernels" AVX2 RVV AVX_VNNI)
+ocv_add_dispatched_file("int8layers/conv2_int8_kernels" AVX2 RVV AVX_VNNI AVX512_CLX)
+ocv_add_dispatched_file("int8layers/matmul_int8_kernels" AVX2 AVX_VNNI AVX512_CLX NEON_DOTPROD)
 ocv_add_dispatched_file("layers/cpu_kernels/activation_kernels" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/gridsample_kernels" AVX AVX2 NEON RVV LASX)
 

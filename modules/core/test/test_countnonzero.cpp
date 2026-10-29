@@ -335,7 +335,43 @@ TEST_P(CountNonZero1D, /**/)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, CountNonZero1D,
-    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool)
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
+
+// -0.0 becomes 0x80 in E4M3FN (counts as zero) and NaN becomes 0x80 in E4M3FNUZ (counts as non-zero).
+// The sizes reach the scalar tail (1), the single-vector loop (100) and the unrolled loop (1031).
+typedef testing::TestWithParam<tuple<int, int> > CountNonZeroFP8;
+
+TEST_P(CountNonZeroFP8, sign_bit)
+{
+    const int depth = get<0>(GetParam());
+    const int n = get<1>(GetParam());
+
+    // random values in +-[0.5, 4): fp8 never rounds them to zero
+    Mat src(1, n, CV_32F), m;
+    randu(src, 0.5f, 4.f);
+    for (int i = 1; i < n; i += 2)
+        src.at<float>(i) = -src.at<float>(i);
+
+    // every 5th element and the last one become -0.0, NaN or +0.0
+    const float special[] = { -0.f, std::numeric_limits<float>::quiet_NaN(), 0.f };
+    int nz = n;
+    for (int i = 0; i < n; i++)
+    {
+        if (i % 5 != 0 && i != n - 1)
+            continue;
+        src.at<float>(i) = special[(i / 5) % 3];
+        nz -= src.at<float>(i) == 0.f;   // -0.0 and +0.0 are zero, NaN is not
+    }
+    src.convertTo(m, depth);
+
+    EXPECT_EQ(nz, countNonZero(m));
+    EXPECT_EQ(nz != 0, hasNonZero(m));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, CountNonZeroFP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Values(1, 100, 1031)
+));
 
 }} // namespace

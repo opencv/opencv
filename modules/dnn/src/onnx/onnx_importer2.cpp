@@ -26,6 +26,8 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <string_view>
+#include <cstring>
 #include <unordered_map>
 
 #if defined(__GNUC__)
@@ -80,9 +82,10 @@ static std::string dataType2str(int dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto,
+                             const std::string base_path="", ExternalDataCache* cache=nullptr)
 {
-    Mat m = getMatFromTensor(tensor_proto, false, base_path);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path, cache);
     m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -92,7 +95,7 @@ class ONNXImporter2
 public:
     ONNXImporter2();
 
-    Net parseFile(const char *onnxFile);
+    Net parseFile(const char *onnxFile, bool mapExternalData = true);
     Net parseBuffer(const void* buffer, size_t sizeBuffer);
 
 protected:
@@ -141,6 +144,15 @@ protected:
 
     Arg resolveConstThroughIdentity(Arg arg);
 
+    // Register an initializer, reusing the Arg of an earlier constant with the same ONNX dtype and value.
+    Arg addConstArg(const std::string& name, const Mat& t, int onnx_type);
+    // Node merging: outputs of the first node with a given signature.
+    struct FirstNodeOutputs {
+        std::vector<Arg> args;
+        std::vector<std::string> names;
+    };
+    bool aliasOutputs(const opencv_onnx::NodeProto& node_proto, const FirstNodeOutputs& prev);
+
     void raiseError() {
         have_errors = true;
     }
@@ -149,6 +161,7 @@ protected:
     Net::Impl* netimpl;
     std::string onnxFilename;
     std::string onnxBasePath;
+    ExternalDataCache externalData;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     // resolveConstThroughIdentity producer map, cached per graph (curr_graph_proto swaps per subgraph).
@@ -159,6 +172,15 @@ protected:
     // Raw ONNX dtype per produced tensor, keyed by remapped name: exports often omit
     // value_info for intermediates, and FP8 formats sharing one depth need it.
     std::unordered_map<std::string, int> produced_onnx_type;
+    // Constant sharing and node merging run on the main graph only; subgraph bodies are left as they are.
+    opencv_onnx::GraphProto* main_graph_proto = nullptr;
+    // ONNX dtype is kept next to the Arg: INT4 and INT8 (or FP8 variants) decode to the same Mat type.
+    struct ConstEntry {
+        int onnx_type;
+        Arg arg;
+    };
+    std::unordered_map<size_t, std::vector<ConstEntry> > consts_by_value;
+    std::unordered_map<std::string, FirstNodeOutputs> seen_nodes;
 
     std::string framework_name;
     std::set<std::string> missing_ops;
@@ -295,6 +317,8 @@ protected:
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDynamicQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseConvInteger          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMatMulInteger        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQMatMul              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -342,10 +366,20 @@ ONNXImporter2::ONNXImporter2() :
     netimpl = net.getImpl();
 }
 
-Net ONNXImporter2::parseFile(const char *onnxFilename_)
+// The caller asks for mapping; OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA=0 forces it off for every
+// model, the way OPENCV_FORCE_DNN_ENGINE overrides the engine argument. Read once.
+static bool resolveExternalDataMapping(bool requested)
+{
+    static const bool allowed =
+        utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true);
+    return allowed && requested;
+}
+
+Net ONNXImporter2::parseFile(const char *onnxFilename_, bool mapExternalData)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+    externalData.mappingEnabled = resolveExternalDataMapping(mapExternalData);
 
     onnxBasePath = utils::fs::getParent(onnxFilename_);
 
@@ -814,7 +848,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto, onnxBasePath);
+    return getMatFromTensor2(tensor_proto, onnxBasePath, &externalData);
 }
 
 std::string ONNXImporter2::remap(const std::string& name) const
@@ -921,14 +955,25 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     std::vector<Ptr<LayerInfo> > saved_prog;
 
     curr_graph_proto = graph_proto;
+    if (mainGraph_)
+        main_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
 
     // parse constant tensors
     int n_consts = graph_proto->initializer_size();
+    // graph outputs keep their own Arg, same rule as in aliasOutputs()
+    std::set<std::string> graph_output_names;
+    if (mainGraph_)
+        for (int i = 0; i < graph_proto->output_size(); i++)
+            graph_output_names.insert(remap(graph_proto->output(i).name()));
     for (int i = 0; i < n_consts; i++) {
         opencv_onnx::TensorProto* const_i = graph_proto->mutable_initializer(i);
         Mat t = parseTensor(*const_i);
-        netimpl->newConstArg(remap(const_i->name()), t);
+        std::string name = remap(const_i->name());
+        if (mainGraph_ && !graph_output_names.count(name))
+            addConstArg(name, t, const_i->data_type());
+        else
+            netimpl->newConstArg(name, t);
         releaseONNXTensor(*const_i);
     }
 
@@ -1035,6 +1080,109 @@ void ONNXImporter2::rememberMissingOp(const std::string& opname)
     raiseError();
 }
 
+// Constants up to this size are shared by value; larger ones are weights, which are
+// almost never repeated, and hashing them would only slow down loading.
+static const size_t MAX_SHARED_CONST_BYTES = 1 << 20;
+
+// Collisions are harmless: addConstArg() compares ONNX dtype, type, shape and bytes before sharing.
+static size_t hashConst(const Mat& m)
+{
+    std::string_view bytes((const char*)m.ptr(), m.total()*m.elemSize());
+    return std::hash<std::string_view>()(bytes) ^ (size_t)m.type();
+}
+
+static bool sameConst(const Mat& a, const Mat& b)
+{
+    return a.type() == b.type() && a.shape() == b.shape() &&
+           std::memcmp(a.ptr(), b.ptr(), a.total()*a.elemSize()) == 0;
+}
+
+Arg ONNXImporter2::addConstArg(const std::string& name, const Mat& t, int onnx_type)
+{
+    if (name.empty() || t.empty() || !t.isContinuous() ||
+        t.total()*t.elemSize() > MAX_SHARED_CONST_BYTES)
+        return netimpl->newConstArg(name, t);
+    std::vector<ConstEntry>& same = consts_by_value[hashConst(t)];
+    for (const ConstEntry& e : same) {
+        if (e.onnx_type == onnx_type && sameConst(netimpl->argTensor(e.arg), t)) {
+            netimpl->aliasArg(name, e.arg);
+            return e.arg;
+        }
+    }
+    Arg a = netimpl->newConstArg(name, t);
+    same.push_back({onnx_type, a});
+    return a;
+}
+
+// Merge a node into an earlier identical one only if it is a pure standard-domain op with no subgraphs.
+static bool canMergeWithIdenticalNode(const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& domain = node_proto.domain();
+    if (!domain.empty() && domain != "ai.onnx")
+        return false;
+    // Random ops differ per call. Q/DQ stay one per consumer: QDQ exports emit them that way
+    // and the QDQ pass matches each one with the op it quantizes.
+    static const std::set<std::string> never_merged_ops = {
+        "RandomNormal", "RandomNormalLike", "RandomUniform", "RandomUniformLike",
+        "Multinomial", "Bernoulli",
+        "QuantizeLinear", "DequantizeLinear"
+    };
+    if (never_merged_ops.count(node_proto.op_type()))
+        return false;
+    for (const auto& attr : node_proto.attribute()) {
+        if (attr.has_g() || attr.graphs_size() > 0)
+            return false;
+        if (attr.has_t() && attr.t().ByteSizeLong() > MAX_SHARED_CONST_BYTES)
+            return false;
+    }
+    return true;
+}
+
+// Op type, resolved input args (constants are already shared by value) and attributes
+// sorted by name; the node name is left out on purpose.
+static std::string makeNodeKey(const opencv_onnx::NodeProto& node_proto, const std::vector<Arg>& inputs)
+{
+    std::string key = node_proto.op_type() + "|";
+    for (Arg a : inputs)
+        key += std::to_string(a.idx) + ",";
+    std::vector<const opencv_onnx::AttributeProto*> attrs;
+    for (const auto& attr : node_proto.attribute())
+        attrs.push_back(&attr);
+    std::sort(attrs.begin(), attrs.end(),
+              [](const opencv_onnx::AttributeProto* a, const opencv_onnx::AttributeProto* b)
+              { return a->name() < b->name(); });
+    for (const auto* attr : attrs)
+        key += "|" + attr->SerializeAsString();
+    return key;
+}
+
+bool ONNXImporter2::aliasOutputs(const opencv_onnx::NodeProto& node_proto, const FirstNodeOutputs& prev)
+{
+    int n_outputs = node_proto.output_size();
+    if ((int)prev.args.size() != n_outputs)
+        return false;
+    for (int i = 0; i < n_outputs; i++) {
+        if (node_proto.output(i).empty())
+            continue;
+        // a name that already owns an Arg (e.g. a graph output) can't be redirected
+        if (net.haveArg(remap(node_proto.output(i))) || prev.args[i].idx <= 0)
+            return false;
+    }
+    for (int i = 0; i < n_outputs; i++) {
+        if (node_proto.output(i).empty())
+            continue;
+        std::string name = remap(node_proto.output(i));
+        netimpl->aliasArg(name, prev.args[i]);
+        // consumers may ask for the raw ONNX dtype of this name (Cast, QuantizeLinear)
+        auto it = produced_onnx_type.find(prev.names[i]);
+        if (it != produced_onnx_type.end()) {
+            int onnx_type = it->second;
+            produced_onnx_type[name] = onnx_type;
+        }
+    }
+    return true;
+}
+
 void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.output_size() >= 1);
@@ -1070,6 +1218,19 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         node_inputs.push_back(arg);
     }
 
+    // Node merging: a node with the same op, attributes and inputs as an earlier one computes
+    // the same values, so its outputs become names for that node's outputs.
+    std::string node_key;
+    // Only ops with a built-in parser: anything else goes to parseCustomLayer(), i.e. to a
+    // user-registered layer that may keep state.
+    if (!have_errors && curr_graph_proto == main_graph_proto &&
+        dispatch.count(layer_type) && canMergeWithIdenticalNode(node_proto)) {
+        node_key = makeNodeKey(node_proto, node_inputs);
+        auto it = seen_nodes.find(node_key);
+        if (it != seen_nodes.end() && aliasOutputs(node_proto, it->second))
+            return;
+    }
+
     int n_outputs = node_proto.output_size();
     for (int i = 0; i < n_outputs; i++) {
         std::string arg_name = remap(node_proto.output(i));
@@ -1095,6 +1256,19 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
             parseCustomLayer(layerParams, node_proto);
         } else {
             rememberMissingOp(layer_type);
+        }
+
+        // Look the outputs up by name again rather than reusing node_outputs: some parsers
+        // redirect an output name to another arg instead of adding a layer for it.
+        if (!node_key.empty() && !have_errors) {
+            FirstNodeOutputs entry;
+            for (int i = 0; i < n_outputs; i++) {
+                const std::string& raw_name = node_proto.output(i);
+                std::string name = remap(raw_name);
+                entry.names.push_back(name);
+                entry.args.push_back(!raw_name.empty() && net.haveArg(name) ? net.getArg(name) : Arg());
+            }
+            seen_nodes.emplace(node_key, std::move(entry));
         }
     }
     catch (const cv::Exception& e)
@@ -2509,6 +2683,26 @@ void ONNXImporter2::parseDynamicQuantizeLinear(LayerParams& layerParams, const o
     addLayer(layerParams, node_proto);
 }
 
+// ONNX ConvInteger (opset 10) is the int32-output mode of Conv2Int8; zero points stay inputs
+void ONNXImporter2::parseConvInteger(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int n_inputs = node_proto.input_size();
+    CV_Assert(2 <= n_inputs && n_inputs <= 4);
+    layerParams.type = "Conv2Int8";
+    layerParams.set("int32_output", true);
+    addLayer(layerParams, node_proto, n_inputs);
+}
+
+// ONNX MatMulInteger (opset 10) is MatMulInt8 in int32-output mode; B and zero points stay inputs
+void ONNXImporter2::parseMatMulInteger(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int n_inputs = node_proto.input_size();
+    CV_Assert(2 <= n_inputs && n_inputs <= 4);
+    layerParams.type = "MatMulInt8";
+    layerParams.set("int32_output", true);
+    addLayer(layerParams, node_proto, n_inputs);
+}
+
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "RMSNormalization";
@@ -3507,6 +3701,8 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["DequantizeLinear"] = &ONNXImporter2::parseDequantizeLinear;
     dispatch["QuantizeLinear"] = &ONNXImporter2::parseQuantizeLinear;
     dispatch["DynamicQuantizeLinear"] = &ONNXImporter2::parseDynamicQuantizeLinear;
+    dispatch["ConvInteger"] = &ONNXImporter2::parseConvInteger;
+    dispatch["MatMulInteger"] = &ONNXImporter2::parseMatMulInteger;
     dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
     dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 
@@ -3556,10 +3752,10 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 }
 
 
-Net readNetFromONNX2(const String& onnxFile)
+Net readNetFromONNX2(const String& onnxFile, bool mapExternalData)
 {
     ONNXImporter2 importer;
-    Net net = importer.parseFile(onnxFile.c_str());
+    Net net = importer.parseFile(onnxFile.c_str(), mapExternalData);
     if (net.getMainGraph()) {
         net.getImpl()->modelFileName = onnxFile;
         //net.setTracingMode(DNN_TRACE_ALL);
@@ -3602,7 +3798,7 @@ Net readNetFromONNX2(const std::vector<uchar>& buffer)
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
 
-Net readNetFromONNX2(const String&) {
+Net readNetFromONNX2(const String&, bool) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 

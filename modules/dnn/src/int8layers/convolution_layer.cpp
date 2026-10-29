@@ -805,7 +805,8 @@ public:
 
             p.useAVX2   = checkHardwareSupport(CPU_AVX2) && isConv2D;
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
-            p.useVNNI   = p.useAVX2 && CV_CPU_HAS_SUPPORT_AVX_VNNI && input.type() == CV_8UC1;
+            p.useVNNI   = p.useAVX2 && input.type() == CV_8UC1 &&
+                          (CV_CPU_HAS_SUPPORT_AVX_VNNI || CV_CPU_HAS_SUPPORT_AVX512_CLX);
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
             p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
@@ -1586,8 +1587,9 @@ public:
         Mat outputInt32 = outputInt32Buf_;
         if (inputs[0].type() == CV_8U)
         {
-            // AVX-VNNI path: pass uint8 input directly, skip u8→s8 conversion.
-            if (CV_CPU_HAS_SUPPORT_AVX_VNNI && inputs[0].dims == 4) {
+            // AVX-VNNI / AVX-512 VNNI path: pass uint8 input directly, skip u8→s8 conversion.
+            if ((CV_CPU_HAS_SUPPORT_AVX_VNNI || CV_CPU_HAS_SUPPORT_AVX512_CLX) &&
+                inputs[0].dims == 4) {
                 if (biasvecVNNI.empty() && !biasvec.empty()) {
                     int outCn = weightsMat.rows;
                     biasvecVNNI.resize(biasvec.size());

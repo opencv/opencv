@@ -2029,8 +2029,8 @@ public:
                 for( y1 = 0; y1 < bh; y1++ )
                 {
                     short* xy = XY + y1*bw*2;
-                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
-                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
+                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE + round_delta);
+                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE + round_delta);
 
                     if( interpolation == INTER_NEAREST )
                         hal::warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);

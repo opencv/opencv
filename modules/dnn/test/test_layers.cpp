@@ -2053,6 +2053,41 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPooling, testing::Combine(
     testing::Bool()),
     GlobalPoolingParamName());
 
+typedef testing::TestWithParam<tuple<MatShape, bool> > Layer_Test_GlobalPoolingBlock;
+TEST_P(Layer_Test_GlobalPoolingBlock, EmptyBatch)
+{
+    const MatShape sizes = std::get<0>(GetParam());
+    const bool useMax = std::get<1>(GetParam());
+    const int C0 = 8;
+    std::vector<int> blockSizes(sizes.begin(), sizes.end());
+    blockSizes[1] = (sizes[1] + C0 - 1) / C0;
+    blockSizes.push_back(C0);
+    Mat inp(MatShape(blockSizes, DATA_LAYOUT_BLOCK, sizes[1]), CV_32F);
+
+    LayerParams lp;
+    lp.name = "testGlobalPoolingBlock";
+    lp.type = "Pooling";
+    lp.set("pool", useMax ? "MAX" : "AVE");
+    lp.set("global_pooling", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+    std::vector<MatShape> inputs(1, inp.shape()), outputs, internals;
+    layer->getMemoryShapes(inputs, 1, outputs, internals);
+    std::vector<Mat> input(1, inp), output(1, Mat(outputs[0], CV_32F));
+    layer->finalize(input, output);
+    layer->forward(input, output, std::vector<Mat>());
+
+    MatShape expected = inp.shape();
+    for (int d = 2; d < expected.dims - 1; d++)
+        expected[d] = 1;
+    EXPECT_EQ(expected, output[0].shape());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPoolingBlock, testing::Combine(
+    testing::Values(MatShape{0, 16, 4, 5}),
+    testing::Bool()),
+    GlobalPoolingParamName());
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
@@ -4180,5 +4215,213 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
         normAssert(outputs[0], expected, "MatMul no-bias output mismatch", 1e-4, 1e-4);
     }
 }
+
+TEST(Test_SoftmaxCrossEntropyLoss, RejectMismatchedWeightsAndLabels)
+{
+    const int N = 2, C = 64;
+    Mat scores(std::vector<int>{N, C}, CV_32F);
+    randu(scores, -1, 1);
+    Mat labels(std::vector<int>{N}, CV_32S);
+    labels.at<int>(0) = C - 1;
+    labels.at<int>(1) = 3;
+
+    LayerParams lp;
+    lp.type = "SoftmaxCrossEntropyLoss";
+    lp.name = "sce_weights";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weights must hold one value per class
+    std::vector<Mat> inputs{scores, labels, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // probability labels must cover every sample of the scores
+    Mat probs(std::vector<int>{1, C}, CV_32F, Scalar(1.f / C));
+    inputs = {scores, probs};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // valid weights give the weighted mean loss, for both float32 and float16 weights
+    Mat weights(std::vector<int>{C}, CV_32F);
+    for (int c = 0; c < C; c++)
+        weights.at<float>(c) = 0.25f * (c % 8 + 1);
+
+    double num = 0, den = 0;
+    for (int n = 0; n < N; n++)
+    {
+        const float* x = scores.ptr<float>(n);
+        double maxv = x[0];
+        for (int c = 1; c < C; c++)
+            maxv = std::max(maxv, (double)x[c]);
+        double sumExp = 0;
+        for (int c = 0; c < C; c++)
+            sumExp += std::exp(x[c] - maxv);
+        const int y = labels.at<int>(n);
+        const double wy = weights.at<float>(y);
+        num += wy * (std::log(sumExp) + maxv - x[y]);
+        den += wy;
+    }
+    const double ref = num / den;
+
+    for (int wtype : {CV_32F, CV_16F})
+    {
+        Mat w;
+        weights.convertTo(w, wtype);
+        inputs = {scores, labels, w};
+        ASSERT_NO_THROW(runLayer(layer, inputs, outputs)) << typeToString(wtype);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(outputs[0].total(), (size_t)1);
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], ref, 1e-5) << typeToString(wtype);
+    }
+}
+
+TEST(Test_GatherND, EmptyIndicesDoNotCrash)
+{
+    for (int indicesType : {CV_32S, CV_64S})
+    {
+        Mat data(4, 5, CV_32F);
+        randu(data, -1, 1);
+        Mat indices(std::vector<int>{0, 1}, indicesType);
+
+        LayerParams lp;
+        lp.type = "GatherND";
+        lp.name = "gathernd_empty_indices";
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{data, indices};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 5}));
+    }
+}
+
+static Ptr<Layer> createCropAndResize(int width, int height)
+{
+    LayerParams lp;
+    lp.type = "CropAndResize";
+    lp.name = "test_crop_and_resize";
+    lp.set("width", width);
+    lp.set("height", height);
+    return LayerFactory::createLayerInstance(lp.type, lp);
+}
+
+static Mat cropAndResizeInput()
+{
+    // 1x1x4x4 image with values 1..16 in row-major order.
+    Mat inp({1, 1, 4, 4}, CV_32F);
+    for (int i = 0; i < 16; i++)
+        inp.ptr<float>()[i] = (float)(i + 1);
+    return inp;
+}
+
+TEST(Layer_Test_CropAndResize, BoxOutsideImageAndBoxCount)
+{
+    Ptr<Layer> layer = createCropAndResize(2, 2);
+    ASSERT_TRUE(layer != nullptr);
+    Mat inp = cropAndResizeInput();
+
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,       // whole image
+                       0, 0, 0, 0.f, 50.f, 1.f, 60.f,     // rows far below the image
+                       0, 0, 0, 0.f, -0.1f, 1.f, 0.9f,    // first row just above the image
+                       0, 0, 0, 0.1f, 0.f, 1.1f, 1.f};    // last column just right of the image
+    Mat boxes({1, 1, 4, 7}, CV_32F, boxData);
+
+    std::vector<Mat> inputs = {inp, boxes}, outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({4, 1, 2, 2}));
+    const float* out = outputs[0].ptr<float>();
+    const float expected[] = {1.f, 4.f, 13.f, 16.f,
+                              0.f, 0.f, 0.f, 0.f,
+                              0.f, 0.f, 11.8f, 14.8f,
+                              1.3f, 0.f, 13.3f, 0.f};
+    for (int i = 0; i < 16; i++)
+        EXPECT_NEAR(out[i], expected[i], 1e-5) << i;
+
+    // Boxes must have [1, 1, N, 7] shape, which the output size is derived from.
+    for (const MatShape& badShape : {MatShape({1, 2, 1, 7}), MatShape({1, 2, 7}), MatShape({1, 1, 2, 14})})
+    {
+        Mat bad(badShape, CV_32F, boxData);
+        inputs = {inp, bad};
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception) << badShape;
+    }
+}
+
+TEST(Layer_Test_CropAndResize, SingletonCrop)
+{
+    Mat inp = cropAndResizeInput();
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,
+                       0, 0, 0, 0.f, 0.f, 1.f / 3, 2.f / 3};
+    Mat boxes({1, 1, 2, 7}, CV_32F, boxData);
+
+    // 1x1 crop samples the box center: (1.5, 1.5) and (1, 0.5).
+    {
+        Ptr<Layer> layer = createCropAndResize(1, 1);
+        std::vector<Mat> inputs = {inp, boxes}, outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(shape(outputs[0]), MatShape({2, 1, 1, 1}));
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], 8.5f, 1e-5);
+        EXPECT_NEAR(outputs[0].ptr<float>()[1], 5.5f, 1e-5);
+    }
+    // Width 1, height 2 on the whole image: rows 0 and 3 at column 1.5.
+    {
+        Ptr<Layer> layer = createCropAndResize(1, 2);
+        std::vector<Mat> inputs = {inp, Mat({1, 1, 1, 7}, CV_32F, boxData)}, outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(shape(outputs[0]), MatShape({1, 1, 2, 1}));
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], 2.5f, 1e-5);
+        EXPECT_NEAR(outputs[0].ptr<float>()[1], 14.5f, 1e-5);
+    }
+}
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_CropAndResize_Backends;
+TEST_P(Layer_Test_CropAndResize_Backends, BoxOutsideImage)
+{
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only OpenCV and CUDA backends implement CropAndResize extrapolation");
+
+    Mat inp({1, 8, 6, 5}, CV_32F);
+    randu(inp, -1.f, 1.f);
+    float boxData[] = {0, 0, 0, 0.f, 0.f, 1.f, 1.f,
+                       0, 0, 0, 0.f, 50.f, 1.f, 60.f,
+                       0, 0, 0, -0.2f, -0.1f, 0.9f, 1.3f,
+                       0, 0, 0, 0.25f, 0.3f, 0.75f, 0.6f};
+    Mat boxes({1, 1, 4, 7}, CV_32F, boxData);
+
+    for (int size : {1, 3})
+    {
+        Ptr<Layer> layer = createCropAndResize(size, size);
+        std::vector<Mat> inputs = {inp, boxes}, refs;
+        runLayer(layer, inputs, refs);
+
+        LayerParams lp;
+        lp.type = "CropAndResize";
+        lp.name = "crop_and_resize";
+        lp.set("width", size);
+        lp.set("height", size);
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.setInputsNames({"image", "boxes"});
+        net.setInput(inp, "image");
+        net.setInput(boxes, "boxes");
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        Mat out = net.forward();
+
+        const bool fp16 = targetId == DNN_TARGET_CUDA_FP16 || targetId == DNN_TARGET_OPENCL_FP16 ||
+                          targetId == DNN_TARGET_CPU_FP16;
+        double l1 = fp16 ? 2e-3 : 1e-5;
+        double lInf = fp16 ? 1e-2 : 1e-4;
+        normAssert(refs[0], out, format("size=%d", size).c_str(), l1, lInf);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_CropAndResize_Backends, dnnBackendsAndTargets());
 
 }} // namespace

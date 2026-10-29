@@ -139,8 +139,11 @@ static void activationTanH(const void* input, void* output,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int vlanes = VTraits<v_float32>::vlanes();
     v_float32 one = vx_setall_f32(1.f), two = vx_setall_f32(2.f);
-    // Clamp prevents v_exp overflow turning (inf-1)/(inf+1) into NaN.
-    v_float32 min_val = vx_setall_f32(-80.f), max_val = vx_setall_f32(88.f);
+    // Clamp 2x to [-18, 18]: tanh already saturates to +-1.f in float at |x| = 9, so this
+    // costs no accuracy, and it keeps exp(2x) out of the range where v_div() breaks down.
+    // Same solution as in activationGELUApprox()
+    // see details in https://github.com/opencv/opencv/issues/30474
+    v_float32 min_val = vx_setall_f32(-18.f), max_val = vx_setall_f32(18.f);
     for (; i + vlanes <= len; i += vlanes) {
         v_float32 x = vx_load(inp + i);
         v_float32 z = v_min(v_max(v_mul(two, x), min_val), max_val);

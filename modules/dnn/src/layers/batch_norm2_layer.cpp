@@ -371,10 +371,80 @@ class BatchNorm2LayerImpl CV_FINAL : public BatchNorm2Layer
 public:
     BatchNorm2LayerImpl(const LayerParams& params) {
         registerFusionOpsOnce<BatchNorm2LayerImpl>(
-            { &BatchNorm2LayerImpl::unfoldOp, nullptr, false, nullptr,
+            { &BatchNorm2LayerImpl::unfoldOp, &BatchNorm2LayerImpl::absorbOp, false, nullptr,
               &BatchNorm2LayerImpl::ownedBuffersOp });
         setParamsFrom(params);
         epsilon = params.get<float>("epsilon", 1e-5);
+    }
+
+    static bool absorbOp(Layer* self, const Ptr<AdjacencyGraph>& expr)
+    {
+        return static_cast<BatchNorm2LayerImpl*>(self)->absorbAffine(expr);
+    }
+
+    //! Folds a following Mul/Add by constants into scale and bias.
+    bool absorbAffine(const Ptr<AdjacencyGraph>& expr)
+    {
+        const int C = (int)scale.total();
+        if (!expr || expr->size() < 2 || !expr->tensorArgs.empty() || inputs.size() != 1 ||
+            C == 0 || (int)bias.total() != C)
+            return false;
+        const std::vector<FusionNode>& nd = expr->nodes();
+        if (nd[0].op != FusionEltwiseOp::INPUT)
+            return false;
+
+        // x*a+b then *c+d is x*(a*c) + (b*c+d)
+        std::vector<float> s(C, 1.f), t(C, 0.f), v(C);
+        for (int cur = expr->outputNode(); cur != 0;) {
+            bool isMul = nd[cur].op == FusionEltwiseOp::MUL;
+            if ((!isMul && nd[cur].op != FusionEltwiseOp::ADD) || !constTerm(*expr, cur, v))
+                return false;
+            for (int c = 0; c < C; c++) {
+                if (isMul)
+                    s[c] *= v[c];
+                else
+                    t[c] += v[c]*s[c];
+            }
+        }
+        float* sc = scale.ptr<float>();
+        float* b = bias.ptr<float>();
+        for (int c = 0; c < C; c++) {
+            sc[c] *= s[c];
+            b[c] = b[c]*s[c] + t[c];
+        }
+        return true;
+    }
+
+    //! Reads the constant side of @p node, then steps to the other side.
+    bool constTerm(const AdjacencyGraph& g, int& node, std::vector<float>& v) const
+    {
+        const std::vector<FusionNode>& nd = g.nodes();
+        if (nd[node].inputs.size() != 2)
+            return false;
+        for (int k = 0; k < 2; k++) {
+            const FusionNode& c = nd[nd[node].inputs[k]];
+            if (c.op == FusionEltwiseOp::CONST)
+                std::fill(v.begin(), v.end(), c.scalar);
+            else if (c.op != FusionEltwiseOp::PER_CHANNEL_CONST ||
+                     !perChannelValues(g, c.constBufferId, v))
+                continue;
+            node = nd[node].inputs[1 - k];
+            return true;
+        }
+        return false;
+    }
+
+    //! Only buffers flagged per channel: the layer's own, or graph constants the fuser proved.
+    bool perChannelValues(const AdjacencyGraph& g, int bufId, std::vector<float>& v) const
+    {
+        if (bufId < 0 || bufId >= (int)g.constBufs.size() ||
+            bufId >= (int)g.constBufPerChannel.size() || !g.constBufPerChannel[bufId])
+            return false;
+        const Mat& c = g.constBufs[bufId];
+        if (c.type() != CV_32F || !c.isContinuous() || c.total() != v.size())
+            return false;
+        std::copy(c.ptr<float>(), c.ptr<float>() + v.size(), v.begin());
+        return true;
     }
 
     //! Only once freezeScaleBias() has run; before it the members are empty.

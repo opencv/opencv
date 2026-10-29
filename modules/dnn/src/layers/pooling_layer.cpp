@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
@@ -148,6 +149,8 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert(!inputs.empty());
+        if (inputs[0].size.layout == DATA_LAYOUT_BLOCK)
+            return;
 
         std::vector<int> inp;
         std::vector<int> out;
@@ -331,6 +334,15 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.shape(0).layout == DATA_LAYOUT_BLOCK)
+        {
+            std::vector<Mat> inputs, outputs;
+            inputs_arr.getMatVector(inputs);
+            outputs_arr.getMatVector(outputs);
+            globalPoolBlock(inputs[0], outputs[0]);
+            return;
+        }
 
         if (type == MAX || type == AVE || type == STOCHASTIC)
         {
@@ -1184,6 +1196,67 @@ public:
         PoolingInvoker::run(src, rois, dst, mask, kernel_size, strides, pads_begin, pads_end, avePoolPaddedArea, type, spatialScale, computeMaxIdx, nstripes);
     }
 
+    void globalPoolBlock(const Mat& inp, Mat& out) const
+    {
+        CV_Assert_N(inp.type() == CV_32F, inp.isContinuous(), out.isContinuous());
+        if (out.total() == 0)
+            return;
+        const int C0 = inp.size[inp.dims - 1], NC1 = inp.size[0]*inp.size[1];
+        const size_t planesize = inp.total()/((size_t)NC1*C0);
+        CV_CheckGT(planesize, (size_t)0, "Global pooling: only the batch dimension can be empty");
+        CV_Assert(out.total() == (size_t)NC1*C0);
+        const float scale = (float)(1.0/planesize);
+        const bool isMax = type == MAX;
+
+        parallel_for_(Range(0, NC1), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++) {
+                const float* x = inp.ptr<float>() + (size_t)i*planesize*C0;
+                float* y = out.ptr<float>() + (size_t)i*C0;
+                if (isMax) {
+                    reduceBlockPlane<true>(x, y, planesize, C0);
+                } else {
+                    reduceBlockPlane<false>(x, y, planesize, C0);
+                    for (int k = 0; k < C0; k++)
+                        y[k] *= scale;
+                }
+            }
+        });
+    }
+
+    // each of the C0 lanes is reduced over the plane in pixel order
+    template<bool isMax>
+    static void reduceBlockPlane(const float* x, float* y, size_t planesize, int C0)
+    {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vl = VTraits<v_float32>::vlanes();
+        if (C0 == vl*2) {
+            v_float32 a0 = vx_load(x), a1 = vx_load(x + vl);
+            for (size_t p = 1; p < planesize; p++) {
+                const float* xp = x + p*C0;
+                a0 = isMax ? v_max(a0, vx_load(xp)) : v_add(a0, vx_load(xp));
+                a1 = isMax ? v_max(a1, vx_load(xp + vl)) : v_add(a1, vx_load(xp + vl));
+            }
+            v_store(y, a0);
+            v_store(y + vl, a1);
+            return;
+        }
+        if (C0 == vl) {
+            v_float32 a0 = vx_load(x);
+            for (size_t p = 1; p < planesize; p++)
+                a0 = isMax ? v_max(a0, vx_load(x + p*C0)) : v_add(a0, vx_load(x + p*C0));
+            v_store(y, a0);
+            return;
+        }
+#endif
+        for (int k = 0; k < C0; k++)
+            y[k] = x[k];
+        for (size_t p = 1; p < planesize; p++) {
+            const float* xp = x + p*C0;
+            for (int k = 0; k < C0; k++)
+                y[k] = isMax ? std::max(y[k], xp[k]) : y[k] + xp[k];
+        }
+    }
+
     void roiPooling(const Mat &src, const Mat &rois, Mat &dst)
     {
         const int nstripes = getNumThreads();
@@ -1201,6 +1274,14 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() != 0);
+
+        if (inputs[0].layout == DATA_LAYOUT_BLOCK) {
+            MatShape outShape = inputs[0];
+            for (int i = 2; i < outShape.dims - 1; i++)
+                outShape[i] = 1;
+            outputs.assign(1, outShape);
+            return false;
+        }
 
         bool isPool1D = inputs[0].size() == 3;
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
@@ -1299,6 +1380,21 @@ public:
         if (type == MAX && requiredOutputs == 2) {
             outputs.push_back(CV_64S);
         }
+    }
+
+    // global average/max pooling reduces each channel on its own, so block input can stay
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        bool block = actualInputs.size() == 1 && actualInputs[0] == DATA_LAYOUT_BLOCK &&
+                     (type == MAX || type == AVE) && requiredOutputs == 1 &&
+                     isGlobalPooling[0] && isGlobalPooling[1] && isGlobalPooling[2];
+        DataLayout layout = block ? DATA_LAYOUT_BLOCK : DATA_LAYOUT_UNKNOWN;
+        desiredInputs.assign(actualInputs.size(), layout);
+        outputs.assign(requiredOutputs, layout);
+        return block ? getNetImpl(this)->defaultC0 : 0;
     }
 
     bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE

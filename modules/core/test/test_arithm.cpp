@@ -4167,7 +4167,7 @@ TEST_P(MinMaxSupportedMatDepth, minMaxIdx)
 INSTANTIATE_TEST_CASE_P(
     MinMaxLoc,
     MinMaxSupportedMatDepth,
-    testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+    testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
 typedef testing::TestWithParam<perf::MatDepth> MinMaxAccuracyNewTypes;
@@ -4189,6 +4189,8 @@ TEST_P(MinMaxAccuracyNewTypes, accuracy)
                       max_val = (double)std::numeric_limits<uint32_t>::max() - 1.0; break;
         case CV_64U:  fill_val = 1e15; min_val = 0.0; max_val = 1e18; break;
         case CV_64S:  fill_val = 0.0; min_val = -1e17; max_val = 1e17; break;
+        case CV_8F_E4M3FN:   fill_val = 1.5; min_val = -96.0; max_val = 448.0; break;
+        case CV_8F_E4M3FNUZ: fill_val = 1.5; min_val = -96.0; max_val = 240.0; break;
         default: FAIL() << "Unexpected depth " << depth;
     }
 
@@ -4205,6 +4207,8 @@ TEST_P(MinMaxAccuracyNewTypes, accuracy)
             case CV_32U:  src.at<uint32_t>(p.y, p.x) = (uint32_t)v; break;
             case CV_64U:  src.at<uint64_t>(p.y, p.x) = (uint64_t)v; break;
             case CV_64S:  src.at<int64_t>(p.y, p.x)  = (int64_t)v; break;
+            case CV_8F_E4M3FN:   src.at<cv::fp8_t>(p.y, p.x)  = cv::fp8_t((float)v); break;
+            case CV_8F_E4M3FNUZ: src.at<cv::fp8a_t>(p.y, p.x) = cv::fp8a_t((float)v); break;
             default: FAIL() << "Unexpected depth " << depth;
         }
     };
@@ -4270,6 +4274,10 @@ TEST_P(MinMaxAccuracyNewTypes, accuracy_with_mask)
         case CV_64S:
             fill_val = 0.0; masked_min = -1e10; masked_max = 1e10;
             outlier_min = -1e17; outlier_max = 1e17; break;
+        case CV_8F_E4M3FN:
+        case CV_8F_E4M3FNUZ:
+            fill_val = 1.0; masked_min = -10.0; masked_max = 10.0;
+            outlier_min = -200.0; outlier_max = 200.0; break;
         default: FAIL() << "Unexpected depth " << depth;
     }
 
@@ -4284,6 +4292,8 @@ TEST_P(MinMaxAccuracyNewTypes, accuracy_with_mask)
             case CV_32U:  src.at<uint32_t>(p.y, p.x) = (uint32_t)v; break;
             case CV_64U:  src.at<uint64_t>(p.y, p.x) = (uint64_t)v; break;
             case CV_64S:  src.at<int64_t>(p.y, p.x)  = (int64_t)v; break;
+            case CV_8F_E4M3FN:   src.at<cv::fp8_t>(p.y, p.x)  = cv::fp8_t((float)v); break;
+            case CV_8F_E4M3FNUZ: src.at<cv::fp8a_t>(p.y, p.x) = cv::fp8a_t((float)v); break;
             default: FAIL() << "Unexpected depth " << depth;
         }
     };
@@ -4315,7 +4325,7 @@ TEST_P(MinMaxAccuracyNewTypes, accuracy_with_mask)
 INSTANTIATE_TEST_CASE_P(
     MinMaxAcc,
     MinMaxAccuracyNewTypes,
-    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
 typedef testing::TestWithParam<perf::MatDepth> LUTAccuracyNewDstTypes;
@@ -4333,6 +4343,8 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
             case CV_32U:  lut.at<uint32_t>(0, i) = (uint32_t)i * 16777619u; break;
             case CV_64U:  lut.at<uint64_t>(0, i) = ((uint64_t)i << 56) | (uint64_t)i; break;
             case CV_64S:  lut.at<int64_t>(0, i)  = ((int64_t)i - 128) * 1000000000LL; break;
+            case CV_8F_E4M3FN:   lut.at<cv::fp8_t>(0, i)  = cv::fp8_t((float)(i - 128) * 0.25f); break;
+            case CV_8F_E4M3FNUZ: lut.at<cv::fp8a_t>(0, i) = cv::fp8a_t((float)(i - 128) * 0.25f); break;
             default: FAIL() << "Unexpected depth " << dst_depth;
         }
     }
@@ -4364,6 +4376,9 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
                     EXPECT_EQ(lut.at<uint64_t>(0, idx), dst.at<uint64_t>(y, x)); break;
                 case CV_64S:
                     EXPECT_EQ(lut.at<int64_t>(0, idx),  dst.at<int64_t>(y, x)); break;
+                case CV_8F_E4M3FN:
+                case CV_8F_E4M3FNUZ:
+                    EXPECT_EQ(lut.at<uchar>(0, idx), dst.at<uchar>(y, x)); break;
                 default: FAIL() << "Unexpected depth " << dst_depth;
             }
         }
@@ -4373,7 +4388,7 @@ TEST_P(LUTAccuracyNewDstTypes, accuracy)
 INSTANTIATE_TEST_CASE_P(
     LUTAcc,
     LUTAccuracyNewDstTypes,
-    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
+    testing::Values(CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ)
 );
 
 CV_ENUM(LutIdxType, CV_8U, CV_8S, CV_16U, CV_16S)

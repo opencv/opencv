@@ -8,6 +8,7 @@
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
+#include "../src/mapped_file.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <numeric>
 namespace opencv_test { namespace {
@@ -451,6 +452,13 @@ TEST_P(Test_ONNX_layers, Convolution3D_bias)
     }
     testONNXModels("conv3d_bias");
     testONNXModels("conv3d_depthwise_bias"); // kernel 1x1
+}
+
+TEST_P(Test_ONNX_layers, Convolution3D_depthwise_sigmoid)
+{
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    testONNXModels("conv3d_depthwise_sigmoid");
 }
 
 TEST_P(Test_ONNX_layers, Two_convolution)
@@ -2435,6 +2443,69 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
     }
 }
 
+TEST_P(Test_ONNX_layers, ConvInteger)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    testONNXModels("convinteger_u8");
+    testONNXModels("convinteger_depthwise");
+    testONNXModels("convinteger_1x1");
+    testONNXModels("convinteger_s8");
+    testONNXModels("convinteger_full_range_weights");
+    testONNXModels("convinteger_groups");
+    testONNXModels("convinteger_1d");
+    testONNXModels("convinteger_runtime_weights", npy, 0, 0, false, true, 2);
+    testONNXModels("convinteger_dynamic");
+
+    // the second input gives DynamicQuantizeLinear another zero point on the same net
+    Net net = readNetFromONNX(_tf("models/convinteger_dynamic.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    for (const String set : {"", "_set2"}) {
+        net.setInput(blobFromNPY(_tf("data/input_convinteger_dynamic" + set + ".npy")));
+        Mat ref = blobFromNPY(_tf("data/output_convinteger_dynamic" + set + ".npy"));
+        normAssert(ref, net.forward(), set.c_str());
+    }
+}
+
+TEST_P(Test_ONNX_layers, MatMulInteger)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    testONNXModels("matmulinteger_u8_per_column");
+    testONNXModels("matmulinteger_s8_weights");
+    testONNXModels("matmulinteger_full_range_weights");
+    testONNXModels("matmulinteger_s8");
+    testONNXModels("matmulinteger_runtime_weights", npy, 0, 0, false, true, 2);
+    testONNXModels("matmulinteger_b_zero_point_only");
+    testONNXModels("matmulinteger_transposed_a");
+    testONNXModels("matmulinteger_k1_n1");
+    testONNXModels("matmulinteger_extremes");
+    testONNXModels("matmulinteger_extremes_s8");
+    testONNXModels("matmulinteger_batched_b");
+    testONNXModels("matmulinteger_batched_s8");
+    testONNXModels("matmulinteger_vector_a");
+    testONNXModels("matmulinteger_b_vector");
+    testONNXModels("matmulinteger_vector_vector");
+    testONNXModels("matmulinteger_a_zp_per_row");
+    testONNXModels("matmulinteger_a_zp_per_row_nd");
+    testONNXModels("matmulinteger_dynamic");
+
+    // the second input gives DynamicQuantizeLinear another zero point on the same net
+    Net net = readNetFromONNX(_tf("models/matmulinteger_dynamic.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    for (const String set : {"", "_set2"}) {
+        net.setInput(blobFromNPY(_tf("data/input_matmulinteger_dynamic" + set + ".npy")));
+        Mat ref = blobFromNPY(_tf("data/output_matmulinteger_dynamic" + set + ".npy"));
+        normAssert(ref, net.forward(), set.c_str());
+    }
+}
+
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
     testONNXModels("quantized_matmul_uint8_weights", npy, 0.008, 0.015);
@@ -2450,6 +2521,72 @@ TEST_P(Test_ONNX_layers, Quantized_Gemm)
 TEST_P(Test_ONNX_layers, Gemm_External_Data)
 {
     testONNXModels("gemm_external_data", npy);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data)
+{
+    testONNXModels("layer_norm_external_data", npy);
+}
+
+// ENGINE_ORT registers the file for ONNX Runtime without parsing it, so neither the mapping
+// nor the bounds check below is reached.
+static bool ortEngineForced()
+{
+    return static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT(
+               "OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_ORT;
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ true);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // A refused mapping copies instead and yields the same values; only the count separates them.
+    if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
+    {
+        EXPECT_GT(cv::dnn::mappedViewCount(), views);
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    // A range past the end of the file must be refused here; mapping it faults at inference.
+    EXPECT_THROW(readNetFromONNX(_tf("models/layer_norm_external_data_truncated.onnx")),
+                 cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_MappingDisabled)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ false);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // Nothing was mapped, and the copy path produces the same values.
+    EXPECT_EQ(cv::dnn::mappedViewCount(), views);
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
 }
 
 
@@ -2473,6 +2610,11 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise_Scalar)
 TEST_P(Test_ONNX_layers, Quantized_Eltwise_Broadcast)
 {
     testONNXModels("quantized_eltwise_broadcast");
+}
+
+TEST_P(Test_ONNX_layers, Quantized_BatchNorm_Mul_Add)
+{
+    testONNXModels("quantized_bn_mul_add");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_LeakyReLU)
@@ -2633,8 +2775,8 @@ TEST_P(Test_ONNX_nets, RAFT)
     Size target_size{480, 360};
     auto img0 = imread(img0_path);
     auto img1 = imread(img1_path);
-    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
-    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
 
     auto net = readNet(weight_path);
     net.setInput(blob0, "0");
@@ -3505,7 +3647,8 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
         CV_32F,
         DNN_LAYOUT_NCHW,
         DNN_PMODE_NULL,
-        Scalar::all(0)
+        Scalar::all(0),
+        cv::INTER_LINEAR_EXACT
         );
 
     testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
@@ -4018,4 +4161,29 @@ TEST(Test_ONNX_importer, parse_qconv_empty_x_scale)
     EXPECT_TRUE(net.empty());
 }
 
+TEST(Test_ONNX_importer, parse_bool_tensor_int32)
+{
+    Mat m = readTensorFromONNX(_tf("models/bool_tensor_int32.pb"));
+
+    ASSERT_EQ(m.dims, 1);
+    ASSERT_EQ(m.size[0], 3);
+    EXPECT_EQ(m.depth(), CV_Bool);
+    EXPECT_EQ(m.ptr<bool>()[0], true);
+    EXPECT_EQ(m.ptr<bool>()[1], false);
+    EXPECT_EQ(m.ptr<bool>()[2], true);
+}
+
+TEST(Test_ONNX_importer, read_bool_tensor_int32_graph)
+{
+    Net net = readNetFromONNX(_tf("models/bool_tensor_int32.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 1);
+    ASSERT_EQ(out.size[0], 3);
+    EXPECT_EQ(out.depth(), CV_Bool);
+    EXPECT_EQ(out.ptr<bool>()[0], false);
+    EXPECT_EQ(out.ptr<bool>()[1], true);
+    EXPECT_EQ(out.ptr<bool>()[2], false);
+}
 }} // namespace

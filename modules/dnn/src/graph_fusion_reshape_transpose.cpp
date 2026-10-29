@@ -104,6 +104,11 @@ struct ModelFusionReshapeTranspose
                     redirectConsumers(prog, dropped, i + 1, out, layer->inputs[0]);
                     dropped[i] = true;
                     usecounts[out.idx] = 0;
+                    // The bypassed Transpose no longer reads its input. Without this the
+                    // producer's count never reaches 0 and it survives as a dead layer.
+                    for (Arg a : layer->inputs)
+                        if (a.idx > 0)
+                            usecounts[a.idx]--;
                     modified = true;
                     continue;
                 }
@@ -117,10 +122,7 @@ struct ModelFusionReshapeTranspose
                     if (prod_idx >= 0 && !dropped[prod_idx]) {
                         const Ptr<LayerInfo>& pl = prog[prod_idx];
                         TransposeLayer* prevTr = dynamic_cast<TransposeLayer*>(pl.get());
-                        Arg prevOut = layer->inputs[0];
-                        bool single_consumer = usecounts[prevOut.idx] == 1
-                                            && externalArgs.count(prevOut.idx) == 0;
-                        if (prevTr && pl->outputs.size() == 1 && single_consumer
+                        if (prevTr && pl->outputs.size() == 1
                             && !prevTr->perm.empty()
                             && prevTr->perm.size() == tr->perm.size())
                         {
@@ -136,9 +138,7 @@ struct ModelFusionReshapeTranspose
                             }
                             if (ok) {
                                 tr->perm = composed;
-                                layer->inputs[0] = pl->inputs[0];
-                                dropped[prod_idx] = true;
-                                usecounts[prevOut.idx] = 0;
+                                bypassProducer(layer, pl, prod_idx, dropped);
                                 producer[layer->outputs[0].idx] = (int)i;
                                 modified = true;
                                 continue;
@@ -157,14 +157,9 @@ struct ModelFusionReshapeTranspose
                     if (prod_idx >= 0 && !dropped[prod_idx]) {
                         const Ptr<LayerInfo>& pl = prog[prod_idx];
                         Reshape2Layer* prevRs = dynamic_cast<Reshape2Layer*>(pl.get());
-                        Arg prevOut = layer->inputs[0];
-                        bool single_consumer = usecounts[prevOut.idx] == 1
-                                            && externalArgs.count(prevOut.idx) == 0;
-                        if (prevRs && pl->outputs.size() == 1 && single_consumer)
+                        if (prevRs && pl->outputs.size() == 1)
                         {
-                            layer->inputs[0] = pl->inputs[0];
-                            dropped[prod_idx] = true;
-                            usecounts[prevOut.idx] = 0;
+                            bypassProducer(layer, pl, prod_idx, dropped);
                             modified = true;
                             continue;
                         }
@@ -184,6 +179,21 @@ struct ModelFusionReshapeTranspose
         }
 
         return modified;
+    }
+
+    // Feed the consumer from the producer's input; the producer goes once nothing else reads it.
+    void bypassProducer(const Ptr<LayerInfo>& consumer, const Ptr<LayerInfo>& pl,
+                        int prod_idx, vector<bool>& dropped)
+    {
+        Arg out = consumer->inputs[0], src = pl->inputs[0];
+        consumer->inputs[0] = src;
+        usecounts[src.idx]++;
+        if (--usecounts[out.idx] == 0) {
+            dropped[prod_idx] = true;
+            for (Arg a : pl->inputs)
+                if (a.idx > 0)
+                    usecounts[a.idx]--;
+        }
     }
 
     void redirectConsumers(const vector<Ptr<LayerInfo>>& prog,

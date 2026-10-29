@@ -468,6 +468,7 @@ struct Net::Impl : public detail::NetImplBase
 
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
+    void aliasArg(const std::string& name, Arg arg); // adds a name for an existing Arg, e.g. a shared constant
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
@@ -602,7 +603,7 @@ inline Net::Impl* getNetImpl(const LayerInfo* op)
     return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
 
-Net readNetFromONNX2(const String&);
+Net readNetFromONNX2(const String&, bool mapExternalData);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
 #ifdef HAVE_ONNXRUNTIME

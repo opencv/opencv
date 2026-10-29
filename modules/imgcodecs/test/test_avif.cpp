@@ -23,16 +23,24 @@ class Imgcodecs_Avif_RoundTripSuite
     } else if (channels == 4) {
       std::vector<cv::Mat> imgs;
       cv::split(img_original, imgs);
-      imgs.push_back(cv::Mat(imgs[0]));
-      imgs[imgs.size() - 1] = cv::Scalar::all(128);
+      cv::Mat alpha(imgs[0].size, CV_8UC1, cv::Scalar(128)); // Do not use opaque alpha plane. it will be dropped by libavif to optimize.
+      imgs.push_back(alpha);
       cv::merge(imgs, img);
     } else {
       img = img_original.clone();
     }
 
-    cv::Mat img_final = img;
+    cv::Mat img_final;
     // Convert image to CV_16U for some bit depths.
-    if (bit_depth > 8) img.convertTo(img_final, CV_16U, 1 << (bit_depth - 8));
+    if (bit_depth == 10) {
+      img.convertTo(img_final, CV_16U, 1023.0 / 255.0);
+    } else if (bit_depth == 12) {
+      img.convertTo(img_final, CV_16U, 4095.0 / 255.0);
+    } else if (bit_depth == 16) {
+      img.convertTo(img_final, CV_16U, 65535.0 / 255.0);
+    } else {
+      img_final = img;
+    }
 
     return img_final;
   }
@@ -46,6 +54,7 @@ class Imgcodecs_Avif_RoundTripSuite
                         cv::IMWRITE_AVIF_DEPTH, bit_depth_};
   }
 
+  // Memo: this is used only for animation test. AVIF animation does not support 16 bit_depth.
   bool IsBitDepthValid() const {
     return (bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
   }
@@ -59,13 +68,17 @@ class Imgcodecs_Avif_RoundTripSuite
       if (quality_ == 100) {
         EXPECT_EQ(0, cvtest::norm(img, img_original, NORM_INF));
       } else {
-        const float norm = cvtest::norm(img, img_original, NORM_L2) /
-                           img.channels() / img.cols / img.rows /
-                           (1 << (bit_depth_ - 8));
+        const float num_samples = static_cast<float>(img.channels() * img.cols * img.rows);
+        const float norm_ = cvtest::norm(img, img_original, NORM_L2) / std::sqrt(num_samples);
+        const float norm = (bit_depth_ == 16)? norm_ / 65535.0f * 255.0f :
+                           (bit_depth_ == 12)? norm_ / 4095.0f * 255.0f :
+                           (bit_depth_ == 10)? norm_ / 1023.0f * 255.0f :
+                                               norm_; // scale to 8 bit
+
         if (quality_ == 50) {
-          EXPECT_LE(norm, 10);
+          EXPECT_LE(norm, 20); // Maximum = 18.15 -> ceil(18.15 * 1.1) = 20
         } else if (quality_ == 0) {
-          EXPECT_LE(norm, 13);
+          EXPECT_LE(norm, 60); // Maximum = 54.0416 -> ceil(54.0416 * 1.1) = 60
         } else {
           EXPECT_FALSE(true);
         }
@@ -100,7 +113,7 @@ class Imgcodecs_Avif_Image_RoundTripSuite
     cv::Mat img_resized;
     cv::resize(img_original, img_resized, cv::Size(kWidth, kHeight), 0, 0);
     for (int channels : {1, 3, 4}) {
-      for (int bit_depth : {8, 10, 12}) {
+      for (int bit_depth : {8, 10, 12, 16}) {
         const Key key{channels, bit_depth};
         imgs_[key] = modifyImage(img_resized, channels, bit_depth);
       }
@@ -123,6 +136,12 @@ class Imgcodecs_Avif_Image_WriteReadSuite
     : public Imgcodecs_Avif_Image_RoundTripSuite {};
 
 TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
+#ifndef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+  if(bit_depth_ == 16) {
+    throw SkipTestException("Test is skipped(libavif 1.4.0+ is required to test 16 bit supporting)");
+  }
+#endif
+
   const cv::Mat& img_original = get_img_original();
   ASSERT_FALSE(img_original.empty());
 
@@ -140,7 +159,7 @@ TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
 
 INSTANTIATE_TEST_CASE_P(
     Imgcodecs_AVIF, Imgcodecs_Avif_Image_WriteReadSuite,
-    ::testing::Combine(::testing::ValuesIn({6, 8, 10, 12}),
+    ::testing::Combine(::testing::ValuesIn({6, 8, 10, 12, 16}),
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
@@ -150,6 +169,12 @@ class Imgcodecs_Avif_Image_EncodeDecodeSuite
     : public Imgcodecs_Avif_Image_RoundTripSuite {};
 
 TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
+#ifndef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+  if(bit_depth_ == 16) {
+    throw SkipTestException("Test is skipped(libavif 1.4.0+ is required to test 16 bit supporting)");
+  }
+#endif
+
   const cv::Mat& img_original = get_img_original();
   ASSERT_FALSE(img_original.empty());
 
@@ -168,7 +193,7 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
 
 INSTANTIATE_TEST_CASE_P(
     Imgcodecs_AVIF, Imgcodecs_Avif_Image_EncodeDecodeSuite,
-    ::testing::Combine(::testing::ValuesIn({6, 8, 10, 12}),
+    ::testing::Combine(::testing::ValuesIn({6, 8, 10, 12, 16}),
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
@@ -304,49 +329,160 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
                                             IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
+////////////////////////////////////////////////////////////////////////////////
 
 #ifdef OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
-class Imgcodecs_Avif_16bit : public testing::TestWithParam<int> {};
-
-TEST_P(Imgcodecs_Avif_16bit, encode_decode)
+TEST(Imgcodecs_Avif, unsupported_animation_with_16bit)
+#else
+TEST(Imgcodecs_Avif, DISABLED_unsupported_animation_with_16bit)
+#endif
 {
-  const int quality = GetParam();
-  const int bit_depth = 16;
-
-  const string root = cvtest::TS::ptr()->get_data_path();
-  const string filename = root + "../cv/features2d/tsukuba.png";
-
-  cv::Mat src;
-  EXPECT_NO_THROW(src = cv::imread(filename));
-  ASSERT_FALSE(src.empty());
-
-  EXPECT_NO_THROW(src.convertTo(src, CV_16UC3, 65536.0 / 255.0));
-
-  std::vector<uint8_t> buf;
-  EXPECT_NO_THROW(imencode(".avif", src, buf, {IMWRITE_AVIF_DEPTH, bit_depth, IMWRITE_AVIF_QUALITY, quality}));
-
-  cv::Mat dst;
-  EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_UNCHANGED));
-  ASSERT_FALSE(dst.empty());
-
-  const float norm = cvtest::norm(dst, src, NORM_L2) /
-                     src.channels() / src.cols / src.rows /
-                     (1 << (bit_depth - 8));
-
-  switch ( quality ) {
-    case 100: EXPECT_EQ(norm,  0); break; // lossless
-    case  50: EXPECT_LE(norm, 10); break;
-    case   0: EXPECT_LE(norm, 13); break;
-    default:  ADD_FAILURE() << "Unknown quality setting: " << quality; break;
-  }
+  cv::Mat frame(cv::Size(160, 120), CV_16UC3, cv::Scalar::all(32));
+  std::vector<cv::Mat> frames = {frame, frame};
+  std::vector<uchar> buf;
+  // Encoding 16-bit AVIF animations should fail due to a libavif limitation.
+  EXPECT_NO_THROW(EXPECT_FALSE(cv::imencodemulti(".avif", frames, buf, {IMWRITE_AVIF_DEPTH, 16})));
 }
 
-INSTANTIATE_TEST_CASE_P(
-  Imgcodecs_AVIF, Imgcodecs_Avif_16bit,
-  testing::Values(0, 50, 100) // Quality
-);
-#endif // OPENCV_IMGCODECS_AVIF_SUPPORT_16BIT
+class Imgcodecs_Avif_AlphaQuality : public testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    const int width = 64;
+    const int height = 64;
+    img = cv::Mat(height, width, CV_8UC4);
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        img.at<cv::Vec4b>(y, x) = cv::Vec4b(
+          static_cast<uchar>((x * 3 + y * 7) % 256),
+          static_cast<uchar>((x * 11 + y * 5) % 256),
+          static_cast<uchar>((x * 13 + y * 17) % 256),
+          static_cast<uchar>((x * 5 + y * 3) % 256)
+        );
+      }
+    }
+    cv::split(img, planes);
+  }
 
+  cv::Mat img;
+  std::vector<cv::Mat> planes;
+};
+
+// 1. Lossless color (quality=100) + Lossy alpha (alpha_quality=10)
+TEST_F(Imgcodecs_Avif_AlphaQuality, lossless_color_lossy_alpha)
+{
+  std::vector<uchar> buf;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                           {IMWRITE_AVIF_QUALITY, 100, IMWRITE_AVIF_ALPHA_QUALITY, 10}));
+  cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+  ASSERT_EQ(decoded.type(), CV_8UC4);
+
+  std::vector<cv::Mat> dec_planes;
+  cv::split(decoded, dec_planes);
+  EXPECT_EQ(0, cvtest::norm(planes[0], dec_planes[0], NORM_INF));
+  EXPECT_EQ(0, cvtest::norm(planes[1], dec_planes[1], NORM_INF));
+  EXPECT_EQ(0, cvtest::norm(planes[2], dec_planes[2], NORM_INF));
+  EXPECT_GT(cvtest::norm(planes[3], dec_planes[3], NORM_INF), 0);
+}
+
+// 2. Lossy color (quality=10) + Lossless alpha (alpha_quality=100)
+TEST_F(Imgcodecs_Avif_AlphaQuality, lossy_color_lossless_alpha)
+{
+  std::vector<uchar> buf;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                           {IMWRITE_AVIF_QUALITY, 10, IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+  cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+  ASSERT_EQ(decoded.type(), CV_8UC4);
+
+  std::vector<cv::Mat> dec_planes;
+  cv::split(decoded, dec_planes);
+  EXPECT_GT(cvtest::norm(planes[0], dec_planes[0], NORM_INF), 0);
+  EXPECT_EQ(0, cvtest::norm(planes[3], dec_planes[3], NORM_INF));
+}
+
+// 3. Both lossless (quality=100, alpha_quality=100)
+TEST_F(Imgcodecs_Avif_AlphaQuality, both_lossless)
+{
+  std::vector<uchar> buf;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                           {IMWRITE_AVIF_QUALITY, 100, IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+  cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+  ASSERT_EQ(decoded.type(), CV_8UC4);
+  EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
+}
+
+// 4. Default sync: IMWRITE_AVIF_QUALITY=100 without alpha quality syncs alpha to 100 (both lossless)
+TEST_F(Imgcodecs_Avif_AlphaQuality, default_sync_color_to_alpha)
+{
+  std::vector<uchar> buf;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                           {IMWRITE_AVIF_QUALITY, 100}));
+  cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+  ASSERT_EQ(decoded.type(), CV_8UC4);
+  EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
+}
+
+// 5. Only IMWRITE_AVIF_ALPHA_QUALITY=100 specified (color defaults to 95, alpha lossless)
+TEST_F(Imgcodecs_Avif_AlphaQuality, only_alpha_quality_specified)
+{
+  std::vector<uchar> buf;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf,
+                           {IMWRITE_AVIF_ALPHA_QUALITY, 100}));
+  cv::Mat decoded = cv::imdecode(buf, IMREAD_UNCHANGED);
+  ASSERT_EQ(decoded.type(), CV_8UC4);
+
+  std::vector<cv::Mat> dec_planes;
+  cv::split(decoded, dec_planes);
+  EXPECT_EQ(0, cvtest::norm(planes[3], dec_planes[3], NORM_INF));
+}
+
+// 6. Parameter order independence
+TEST_F(Imgcodecs_Avif_AlphaQuality, parameter_order_independence)
+{
+  std::vector<uchar> buf1, buf2;
+  EXPECT_TRUE(cv::imencode(".avif", img, buf1,
+                           {IMWRITE_AVIF_QUALITY, 80, IMWRITE_AVIF_ALPHA_QUALITY, 20}));
+  EXPECT_TRUE(cv::imencode(".avif", img, buf2,
+                           {IMWRITE_AVIF_ALPHA_QUALITY, 20, IMWRITE_AVIF_QUALITY, 80}));
+  cv::Mat dec1 = cv::imdecode(buf1, IMREAD_UNCHANGED);
+  cv::Mat dec2 = cv::imdecode(buf2, IMREAD_UNCHANGED);
+  EXPECT_EQ(0, cvtest::norm(dec1, dec2, NORM_INF));
+}
+
+// 7. Out-of-bounds parameter fallback
+TEST_F(Imgcodecs_Avif_AlphaQuality, out_of_bounds_fallback)
+{
+  std::vector<uchar> buf;
+  EXPECT_NO_THROW(cv::imencode(".avif", img, buf,
+                               {IMWRITE_AVIF_QUALITY, 150, IMWRITE_AVIF_ALPHA_QUALITY, -50}));
+  EXPECT_FALSE(buf.empty());
+}
+
+// 8. Omitted key fallback tests: default parameters match explicit 95/95
+TEST_F(Imgcodecs_Avif_AlphaQuality, omitted_params_default_95)
+{
+  std::vector<uchar> bufDefault, bufExplicit;
+  EXPECT_TRUE(cv::imencode(".avif", img, bufDefault));
+  EXPECT_TRUE(cv::imencode(".avif", img, bufExplicit,
+                           {IMWRITE_AVIF_QUALITY, 95, IMWRITE_AVIF_ALPHA_QUALITY, 95}));
+  cv::Mat decDefault = cv::imdecode(bufDefault, IMREAD_UNCHANGED);
+  cv::Mat decExplicit = cv::imdecode(bufExplicit, IMREAD_UNCHANGED);
+  EXPECT_EQ(0, cvtest::norm(decDefault, decExplicit, NORM_INF));
+}
+
+// 9. Omitted alpha quality matches explicitly synced color quality
+TEST_F(Imgcodecs_Avif_AlphaQuality, omitted_alpha_syncs_with_color)
+{
+  std::vector<uchar> bufSynced, bufExplicit;
+  EXPECT_TRUE(cv::imencode(".avif", img, bufSynced,
+                           {IMWRITE_AVIF_QUALITY, 80}));
+  EXPECT_TRUE(cv::imencode(".avif", img, bufExplicit,
+                           {IMWRITE_AVIF_QUALITY, 80, IMWRITE_AVIF_ALPHA_QUALITY, 80}));
+  cv::Mat decSynced = cv::imdecode(bufSynced, IMREAD_UNCHANGED);
+  cv::Mat decExplicit = cv::imdecode(bufExplicit, IMREAD_UNCHANGED);
+  EXPECT_EQ(0, cvtest::norm(decSynced, decExplicit, NORM_INF));
+}
 
 }  // namespace
 }  // namespace opencv_test

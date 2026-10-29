@@ -75,8 +75,8 @@ public:
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
-        cv::resize(img1, img1, inputSize);
-        cv::resize(img2, img2, inputSize);
+        cv::resize(img1, img1, inputSize, 0, 0, cv::INTER_LINEAR_EXACT);
+        cv::resize(img2, img2, inputSize, 0, 0, cv::INTER_LINEAR_EXACT);
 
         // Pad images by black pixel at the right to test not equal width and height sizes
         if (zeroPadW) {
@@ -92,7 +92,7 @@ public:
         CV_Assert(batch_size == 1 || batch_size == 2);
         samples.resize(batch_size);
 
-        Mat inp = blobFromImages(samples, 1.0/255, Size(), Scalar(), true, false);
+        Mat inp = blobFromImages(samples, 1.0/255, Size(), Scalar(), true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
 
         Net net = readNet(findDataFile("dnn/" + model, false));
         net.setPreferableBackend(backend);
