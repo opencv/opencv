@@ -548,6 +548,18 @@ struct reduceMinMaxImpl
     }
 };
 
+// fp8 values are sign-magnitude, like float: CV_TOGGLE_FP8 maps them to int8 values in the
+// same order, so reduceMinMaxImpl<ToggledFp8> compares integers instead of decoding to float.
+struct ToggledFp8
+{
+    uchar bits;
+    schar key() const { return (schar)CV_TOGGLE_FP8(bits); }
+    bool operator<(const ToggledFp8& b) const { return key() < b.key(); }
+    bool operator<=(const ToggledFp8& b) const { return key() <= b.key(); }
+    bool operator>(const ToggledFp8& b) const { return key() > b.key(); }
+    bool operator>=(const ToggledFp8& b) const { return key() >= b.key(); }
+};
+
 static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mode, int axis)
 {
     CV_INSTRUMENT_REGION();
@@ -577,7 +589,11 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
         dstMat = dstMat.clone();
     }
 
-    cv::detail::depthDispatch<reduceMinMaxImpl>(srcMat.depth(), srcMat, dstMat, mode, axis);
+    const int depth = srcMat.depth();
+    if (depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ)
+        reduceMinMaxImpl<ToggledFp8>{}(srcMat, dstMat, mode, axis);
+    else
+        cv::detail::depthDispatch<reduceMinMaxImpl>(depth, srcMat, dstMat, mode, axis);
 
     if (needs_copy)
     {
