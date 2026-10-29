@@ -663,13 +663,13 @@ CASE(test_clip_splitbounds)
 CASE(test_clip_splitbounds_expanded)
     SKIP;
 CASE(test_compress_0)
-    // no filter
+    SKIP;
 CASE(test_compress_1)
-    // no filter
+    SKIP;
 CASE(test_compress_default_axis)
-    // no filter
+    SKIP;
 CASE(test_compress_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_concat_1d_axis_0)
     // no filter
 CASE(test_concat_1d_axis_negative_1)

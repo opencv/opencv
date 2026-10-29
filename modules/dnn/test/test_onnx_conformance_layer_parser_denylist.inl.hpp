@@ -74,8 +74,6 @@
 "test_col2im_dilations",
 "test_col2im_pads",
 "test_col2im_strides",
-"test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convinteger_without_padding",  //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",

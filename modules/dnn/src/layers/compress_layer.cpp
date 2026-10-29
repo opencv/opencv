@@ -9,6 +9,10 @@
 namespace cv {
 namespace dnn {
 
+// ONNX Compress operator
+// Spec: https://onnx.ai/onnx/operators/onnx__Compress.html
+// Supported opsets: 9-24
+
 class CompressLayerImpl CV_FINAL : public CompressLayer
 {
 public:
@@ -46,6 +50,7 @@ public:
                   std::vector<MatType>& /*internals*/) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 2);
+        CV_CheckTypeEQ(inputs[1], CV_Bool, "Compress: condition must be a bool tensor");
         outputs.assign(requiredOutputs, inputs[0]);
     }
 
@@ -60,13 +65,12 @@ public:
         inputs_arr.getMatVector(inputs);
         CV_Assert(inputs.size() == 2);
 
-        Mat data = inputs[0];
-        Mat condition = inputs[1];
+        const Mat& data = inputs[0];
+        const Mat& condition = inputs[1];
 
-        if (!data.isContinuous())
-            data = data.clone();
-        if (!condition.isContinuous())
-            condition = condition.clone();
+        CV_Assert(data.isContinuous());
+        CV_Assert(condition.isContinuous());
+        CV_CheckTypeEQ(condition.type(), CV_Bool, "Compress: condition must be a bool tensor");
 
         MatShape inShape = shape(data);
         int dimAxis;
@@ -90,12 +94,13 @@ public:
 
         size_t condTotal = condition.total();
         size_t numEval = std::min((size_t)dimAxis, condTotal);
+        const uchar* cond = condition.ptr<uchar>();
 
         std::vector<int> selectedIndices;
         selectedIndices.reserve(numEval);
         for (size_t i = 0; i < numEval; ++i)
         {
-            if (isConditionTrue(condition, i))
+            if (cond[i])
                 selectedIndices.push_back((int)i);
         }
 
@@ -138,26 +143,23 @@ public:
 
         Mat& out = (*pOuts)[0];
 
-        if (K > 0)
+        size_t totalSlices = outer * (size_t)K;
+        if (totalSlices > 0)
         {
             size_t elemSize = data.elemSize();
             size_t sliceSize = inner * elemSize;
-            size_t srcStep = dimAxis * sliceSize;
-            size_t dstStep = (size_t)K * sliceSize;
 
-            for (size_t ob = 0; ob < outer; ++ob)
-            {
-                const uchar* srcSliceBase = data.data + ob * srcStep;
-                uchar* dstSliceBase = out.data + ob * dstStep;
-
-                for (int k = 0; k < K; ++k)
+            parallel_for_(Range(0, (int)totalSlices), [&](const Range& r) {
+                for (int i = r.start; i < r.end; ++i)
                 {
+                    size_t ob = (size_t)i / (size_t)K;
+                    int k = i % K;
                     int srcIndex = selectedIndices[k];
-                    memcpy(dstSliceBase + (size_t)k * sliceSize,
-                           srcSliceBase + (size_t)srcIndex * sliceSize,
-                           sliceSize);
+                    const uchar* src = data.data + (ob * (size_t)dimAxis + (size_t)srcIndex) * sliceSize;
+                    uchar* dst = out.data + (size_t)i * sliceSize;
+                    memcpy(dst, src, sliceSize);
                 }
-            }
+            });
         }
 
         if (kind == _InputArray::STD_VECTOR_UMAT)
@@ -169,23 +171,6 @@ public:
     }
 
 private:
-    static inline bool isConditionTrue(const Mat& cond, size_t i)
-    {
-        switch (cond.depth())
-        {
-        case CV_Bool:
-        case CV_8U:  return cond.ptr<const uint8_t>()[i] != 0;
-        case CV_8S:  return cond.ptr<const int8_t>()[i] != 0;
-        case CV_16U: return cond.ptr<const uint16_t>()[i] != 0;
-        case CV_16S: return cond.ptr<const int16_t>()[i] != 0;
-        case CV_32S: return cond.ptr<const int32_t>()[i] != 0;
-        case CV_64S: return cond.ptr<const int64_t>()[i] != 0;
-        case CV_32F: return cond.ptr<const float>()[i] != 0.0f;
-        case CV_64F: return cond.ptr<const double>()[i] != 0.0;
-        default:     return cond.ptr<const uint8_t>()[i] != 0;
-        }
-    }
-
     bool hasAxis_;
     int axis_;
 };
