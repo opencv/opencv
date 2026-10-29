@@ -151,6 +151,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(NegativeLogLikelihoodLoss, NegativeLogLikelihoodLossLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SoftmaxCrossEntropyLoss, SoftmaxCrossEntropyLossLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AffineGrid,     AffineGridLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ReverseSequence, ReverseSequenceLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Conv2,          Conv2Layer);
