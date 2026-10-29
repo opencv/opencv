@@ -258,7 +258,6 @@ void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& t
     }
     m_prev_kpts0_rows = N;
     m_prev_kpts1_rows = M;
-
     Mat kpts0, kpts1;
     normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);
     normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, type);
