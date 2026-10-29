@@ -144,23 +144,22 @@ public:
         Mat& out = (*pOuts)[0];
 
         size_t totalSlices = outer * (size_t)K;
-        if (totalSlices > 0)
-        {
-            size_t elemSize = data.elemSize();
-            size_t sliceSize = inner * elemSize;
+        CV_Assert(totalSlices > 0);
 
-            parallel_for_(Range(0, (int)totalSlices), [&](const Range& r) {
-                for (int i = r.start; i < r.end; ++i)
-                {
-                    size_t ob = (size_t)i / (size_t)K;
-                    int k = i % K;
-                    int srcIndex = selectedIndices[k];
-                    const uchar* src = data.data + (ob * (size_t)dimAxis + (size_t)srcIndex) * sliceSize;
-                    uchar* dst = out.data + (size_t)i * sliceSize;
-                    memcpy(dst, src, sliceSize);
-                }
-            });
-        }
+        size_t elemSize = data.elemSize();
+        size_t sliceSize = inner * elemSize;
+
+        parallel_for_(Range(0, (int)totalSlices), [&](const Range& r) {
+            for (int i = r.start; i < r.end; ++i)
+            {
+                size_t ob = (size_t)i / (size_t)K;
+                int k = i % K;
+                int srcIndex = selectedIndices[k];
+                const uchar* src = data.data + (ob * (size_t)dimAxis + (size_t)srcIndex) * sliceSize;
+                uchar* dst = out.data + (size_t)i * sliceSize;
+                memcpy(dst, src, sliceSize);
+            }
+        });
 
         if (kind == _InputArray::STD_VECTOR_UMAT)
         {
