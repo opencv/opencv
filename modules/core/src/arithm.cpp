@@ -606,6 +606,41 @@ static bool outArrayMatches(const _OutputArray& a, const MatShape& shp, int type
     return true;
 }
 
+// Same non-singleton extents in the same order, e.g. [128] vs [1,128] or [128,1].
+static bool sameUpToSingletons(const int* a, int na, const MatShape& b)
+{
+    int i = 0, j = 0, nb = (int)b.size();
+    for (;;)
+    {
+        while (i < na && a[i] == 1) i++;
+        while (j < nb && b[j] == 1) j++;
+        if (i == na || j == nb)
+            return i == na && j == nb;
+        if (a[i] != b[j])
+            return false;
+        i++; j++;
+    }
+}
+
+// A plain (non-fixed) Mat destination whose shape differs from the broadcast result only by
+// singleton dims (e.g. a 1D vector-backed Mat vs a 1xN result) keeps its storage: only the header
+// is reshaped, so create() below becomes a no-op instead of reallocating.
+static void reshapeDstInPlace(OutputArray dst, const MatShape& oshape, int otype)
+{
+    if (dst.kind() != _InputArray::MAT)
+        return;
+    Mat* d = (Mat*)dst.getObj();
+    // common case first: same dims, 0-dim result, empty or different-type dst -> nothing to do
+    if (d->dims == (int)oshape.size() || oshape.size() == 0 || d->empty() ||
+        d->type() != otype || dst.fixedSize() || dst.fixedType() || !d->isContinuous())
+        return;
+    int sz[MatShape::MAX_DIMS];
+    int nd = dst.sizend(sz);
+    if (!sameUpToSingletons(sz, nd, oshape))
+        return;
+    *d = d->reshape(CV_MAT_CN(otype), oshape);   // header only, same data pointer
+}
+
 // Are two operands' iteration shapes (spatial dims + channels innermost, exactly how the engine
 // iterates) numpy-broadcast-compatible? Powers the scalar-like-Mat compat fallback in arithm_op.
 // Cheap by design: sizend copies the dim arrays inline - no Mat headers, no allocations.
@@ -805,6 +840,7 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     MatShape oshape; int ocn;
     p.outputShape(inputs, oshape, ocn);
     const int otype = CV_MAKETYPE(rdepth, ocn);
+    reshapeDstInPlace(dst, oshape, otype);
     const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
     dst.create(oshape, otype);
     Mat dstloc;
@@ -866,6 +902,7 @@ static void unary_op(ew::TOp op, InputArray src, OutputArray dst, InputArray mas
     MatShape oshape; int ocn;
     p.outputShape(inputs, oshape, ocn);
     const int otype = CV_MAKETYPE(rdepth, ocn);
+    reshapeDstInPlace(dst, oshape, otype);
     const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
     dst.create(oshape, otype);
     Mat dstloc;
