@@ -92,13 +92,17 @@ TEST_P(Imgproc_HalfColor, accuracy_and_storage)
             dst = src;
             cvtColor(dst, dst, c.code, c.dcn);
             if (c.scn == c.dcn)
+            {
                 EXPECT_EQ(src.data, dst.data);
+            }
         }
         else
         {
             cvtColor(src, dst, c.code, c.dcn);
             if (layout == 1)
+            {
                 EXPECT_EQ(storage, dst.data);
+            }
         }
         expectHalfColorNear(dst, expected);
         if (layout != 2 || c.scn != c.dcn)
@@ -171,7 +175,7 @@ TEST(Imgproc_HalfColor, channel_copy_all_encodings)
     for (int x = 0; x < gray.cols; ++x)
     {
         ushort bits = static_cast<ushort>(x);
-        memcpy(gray.ptr<hfloat>() + x, &bits, sizeof(bits));
+        memcpy(gray.data + static_cast<size_t>(x) * sizeof(bits), &bits, sizeof(bits));
     }
     Mat rgba, bgra, restored;
     cvtColor(gray, rgba, COLOR_GRAY2RGBA);
