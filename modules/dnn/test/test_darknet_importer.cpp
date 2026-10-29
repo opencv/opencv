@@ -1144,4 +1144,196 @@ TEST_P(Test_Darknet_layers, sam)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
+TEST(Test_Darknet, readNetFromDarknet_in_memory_valid_control)
+{
+    const std::string cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=1\n"
+        "[convolutional]\n"
+        "filters=1\n"
+        "groups=1\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+
+    std::vector<char> weights(20 + 2 * sizeof(float), 0);
+    int32_t major = 0, minor = 2, revision = 0;
+    uint64_t seen = 0;
+    std::memcpy(weights.data() + 0, &major, sizeof(int32_t));
+    std::memcpy(weights.data() + 4, &minor, sizeof(int32_t));
+    std::memcpy(weights.data() + 8, &revision, sizeof(int32_t));
+    std::memcpy(weights.data() + 12, &seen, sizeof(uint64_t));
+    const float bias = 0.5f;
+    const float kernel = 2.0f;
+    std::memcpy(weights.data() + 20, &bias, sizeof(float));
+    std::memcpy(weights.data() + 24, &kernel, sizeof(float));
+
+    Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+
+    const int inpSz[] = {1, 1, 4, 4};
+    Mat inp(4, inpSz, CV_32F, Scalar(1.0f));
+    net.setInput(inp);
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 4);
+    EXPECT_EQ(out.size[0], 1);
+    EXPECT_EQ(out.size[1], 1);
+    EXPECT_EQ(out.size[2], 4);
+    EXPECT_EQ(out.size[3], 4);
+    EXPECT_NEAR(out.ptr<float>()[0], 2.5f, 1e-5f);
+}
+
+TEST(Test_Darknet, readNetFromDarknet_rejects_malformed_cfg_and_truncated_weights)
+{
+    const std::string conv_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=1\n"
+        "[convolutional]\n"
+        "filters=1\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+    std::vector<char> header_only_weights(20, 0);
+    int32_t minor = 2;
+    std::memcpy(header_only_weights.data() + 4, &minor, sizeof(int32_t));
+    EXPECT_THROW(
+        readNetFromDarknet(conv_cfg.data(), conv_cfg.size(),
+                           header_only_weights.data(), header_only_weights.size()),
+        cv::Exception);
+
+    const std::string bad_conv_groups_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[convolutional]\n"
+        "filters=4\n"
+        "groups=-2\n"
+        "size=1\n"
+        "stride=1\n"
+        "pad=0\n"
+        "activation=linear\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_conv_groups_cfg.data(), bad_conv_groups_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_route_group_id_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[maxpool]\n"
+        "size=2\n"
+        "stride=2\n"
+        "[route]\n"
+        "layers=-1\n"
+        "groups=2\n"
+        "group_id=2\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_route_group_id_cfg.data(), bad_route_group_id_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_route_layers_list_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=4\n"
+        "[maxpool]\n"
+        "size=2\n"
+        "stride=2\n"
+        "[route]\n"
+        "layers=invalid_index\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_route_layers_list_cfg.data(), bad_route_layers_list_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_maxpool_pad_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=2\n"
+        "[maxpool]\n"
+        "size=3\n"
+        "stride=2\n"
+        "padding=-10\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_maxpool_pad_cfg.data(), bad_maxpool_pad_cfg.size()),
+        cv::Exception);
+
+    const std::string bad_upsample_stride_cfg =
+        "[net]\n"
+        "width=4\n"
+        "height=4\n"
+        "channels=2\n"
+        "[upsample]\n"
+        "stride=0\n";
+    EXPECT_THROW(
+        readNetFromDarknet(bad_upsample_stride_cfg.data(), bad_upsample_stride_cfg.size()),
+        cv::Exception);
+}
+
+typedef testing::TestWithParam<std::string> Test_Darknet_from;
+
+static std::string darknetFromCfg(const std::string& layer, const std::string& from)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[maxpool]\nsize=1\nstride=1\nactivation=logistic\n[" + layer +
+           "]\nfrom=" + from + "\n";
+}
+
+TEST_P(Test_Darknet_from, rejects_invalid_from)
+{
+    const char* invalid[] = {"-5", "-3", "2", "5", "-2147483648", "2147483647",
+                             "", "invalid", "1x", "2147483648"};
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
+    {
+        SCOPED_TRACE(invalid[i]);
+        const std::string cfg = darknetFromCfg(GetParam(), invalid[i]);
+        try
+        {
+            readNetFromDarknet(cfg.data(), cfg.size());
+            FAIL() << "Invalid from index was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+        }
+    }
+}
+
+TEST_P(Test_Darknet_from, accepts_valid_from)
+{
+    const char* valid[] = {"-2", "-1", "0", "1"};
+    for (size_t i = 0; i < sizeof(valid) / sizeof(valid[0]); ++i)
+    {
+        SCOPED_TRACE(valid[i]);
+        const std::string cfg = darknetFromCfg(GetParam(), valid[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(2.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(static_cast<size_t>(1), out.total());
+        const float previous = 1.0f / (1.0f + std::exp(-2.0f));
+        const float from = i % 2 == 0 ? 2.0f : previous;
+        const float expected = GetParam() == "shortcut" ? previous + from : previous * from;
+        EXPECT_NEAR(expected, out.ptr<float>()[0], 1e-5f);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_from,
+                       testing::Values(std::string("shortcut"), std::string("scale_channels"),
+                                       std::string("sam")));
+
 }} // namespace
