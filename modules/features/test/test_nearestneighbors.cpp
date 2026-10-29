@@ -370,6 +370,9 @@ TEST(Features2d_FLANN_KMeans, load_more_trees_than_default)
     Mat indices, dists;
     index.knnSearch(data.row(7), indices, dists, 1, SearchParams(-1));
     EXPECT_EQ(7, indices.at<int>(0));
+    // enough checks to go through every tree, not just root_[0]
+    index.knnSearch(data.row(7), indices, dists, 1, SearchParams(2 * data.rows));
+    EXPECT_EQ(7, indices.at<int>(0));
 }
 
 #endif

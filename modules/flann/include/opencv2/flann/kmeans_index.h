@@ -496,6 +496,13 @@ public:
         load_value(stream, cb_index_);
         load_value(stream, trees_);
 
+        if (branching_<2) {
+            FLANN_THROW(cv::Error::StsError, "Branching factor must be at least 2");
+        }
+        if (trees_<1) {
+            FLANN_THROW(cv::Error::StsError, "Number of trees must be at least 1");
+        }
+
         indices_ = new int*[trees_]();
         root_ = new KMeansNodePtr[trees_]();
         for (int i=0; i<trees_; ++i) {
