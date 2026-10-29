@@ -5190,4 +5190,31 @@ TEST(Core_BoolReductionsUniform, equal_elements_have_no_deviation)
         }
 }
 
+// A Mat that wraps an external buffer performs no conversion, so saturate_cast<bool> never runs
+// and a CV_Bool byte can hold any value. norm and countNonZero already read such a byte as one;
+// sum, mean and meanStdDev have to agree with them rather than with the raw byte.
+TEST(Core_BoolReductionsRaw, non_canonical_bytes_count_as_one)
+{
+    for (int len : {1, 7, 64, 1000})
+        for (int cn : {1, 2, 3, 4})
+            for (uchar raw : {(uchar)1, (uchar)2, (uchar)127, (uchar)255})
+            {
+                SCOPED_TRACE(cv::format("len=%d cn=%d raw=%d", len, cn, (int)raw));
+                std::vector<uchar> buf((size_t)len * cn, raw);
+                cv::Mat b(1, len, CV_BoolC(cn), buf.data());
+
+                cv::Scalar s = cv::sum(b);
+                cv::Scalar mu, sd;
+                cv::meanStdDev(b, mu, sd);
+                for (int k = 0; k < cn; k++)
+                {
+                    EXPECT_DOUBLE_EQ((double)len, s[k]) << "channel " << k;
+                    EXPECT_DOUBLE_EQ(1.0, mu[k]) << "channel " << k;
+                    EXPECT_DOUBLE_EQ(0.0, sd[k]) << "channel " << k;
+                }
+                EXPECT_DOUBLE_EQ((double)len * cn, cv::norm(b, cv::NORM_L1))
+                    << "sum must agree with norm on the same bytes";
+            }
+}
+
 }} // namespace
