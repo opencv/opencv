@@ -857,15 +857,74 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     const double* _uniranges = uniform ? &uniranges[0] : 0;
 
     int depth = images[0].depth();
-
-    if( depth == CV_8U )
-        calcHist_8u(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
-    else if( depth == CV_16U )
-        calcHist_<ushort>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
-    else if( depth == CV_32F )
-        calcHist_<float>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
-    else
+    if( depth != CV_8U && depth != CV_16U && depth != CV_32F )
         CV_Error(cv::Error::StsUnsupportedFormat, "");
+    int esz1 = images[0].elemSize1();
+
+    bool splitByWidth = (imsize.height == 1);
+    int totalWork = splitByWidth ? imsize.width : imsize.height;
+
+    int nstripes = std::min(totalWork, cv::getNumThreads());
+    int hist_bytes = (int)(ihist.total() * sizeof(int));
+    nstripes = std::min(nstripes, std::max(1, (4 << 20) / std::max(1, hist_bytes)));
+
+    if( nstripes > 1 )
+    {
+        std::vector<Mat> phists(nstripes);
+        for( int s = 0; s < nstripes; s++ )
+            phists[s] = Mat::zeros(ihist.dims, ihist.size, CV_32S);
+
+        parallel_for_(Range(0, nstripes), [&](const Range& range)
+        {
+            for( int s = range.start; s < range.end; s++ )
+            {
+                int wstart = (int)((int64)s * totalWork / nstripes);
+                int wend   = (int)((int64)(s + 1) * totalWork / nstripes);
+
+                std::vector<uchar*> sptrs = ptrs;
+                Size ssize;
+
+                if( splitByWidth )
+                {
+                    ssize = Size(wend - wstart, 1);
+                    for( int i = 0; i < dims; i++ )
+                        sptrs[i] += (ptrdiff_t)wstart * deltas[i*2] * esz1;
+                    if( sptrs[dims] )
+                        sptrs[dims] += (ptrdiff_t)wstart * deltas[dims*2];
+                }
+                else
+                {
+                    ssize = Size(imsize.width, wend - wstart);
+                    for( int i = 0; i < dims; i++ )
+                    {
+                        int row_stride = (imsize.width * deltas[i*2] + deltas[i*2+1]) * esz1;
+                        sptrs[i] += (ptrdiff_t)wstart * row_stride;
+                    }
+                    if( sptrs[dims] )
+                        sptrs[dims] += (ptrdiff_t)wstart * deltas[dims*2+1];
+                }
+
+                if( depth == CV_8U )
+                    calcHist_8u(sptrs, deltas, ssize, phists[s], dims, ranges, _uniranges, uniform);
+                else if( depth == CV_16U )
+                    calcHist_<ushort>(sptrs, deltas, ssize, phists[s], dims, ranges, _uniranges, uniform);
+                else
+                    calcHist_<float>(sptrs, deltas, ssize, phists[s], dims, ranges, _uniranges, uniform);
+            }
+        });
+
+        for( int s = 0; s < nstripes; s++ )
+            ihist += phists[s];
+    }
+    else
+    {
+        if( depth == CV_8U )
+            calcHist_8u(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform);
+        else if( depth == CV_16U )
+            calcHist_<ushort>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform);
+        else
+            calcHist_<float>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform);
+    }
 
     ihist.convertTo(hist, CV_32F);
 }
