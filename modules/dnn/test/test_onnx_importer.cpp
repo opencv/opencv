@@ -2556,7 +2556,14 @@ TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
     {
         EXPECT_GT(cv::dnn::mappedViewCount(), views);
     }
-    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
+    double l1 = 1e-5, lInf = 1e-4;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // FP16 output rounding at |ref| ~ 9.2; measured 3.0e-4 / 4.8e-3 over 100 runs
+        l1 = 5e-4;
+        lInf = 8e-3;
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out, "", l1, lInf);
 }
 
 TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
@@ -2586,7 +2593,14 @@ TEST_P(Test_ONNX_layers, LayerNorm_External_Data_MappingDisabled)
 
     // Nothing was mapped, and the copy path produces the same values.
     EXPECT_EQ(cv::dnn::mappedViewCount(), views);
-    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out);
+    double l1 = 1e-5, lInf = 1e-4;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // FP16 output rounding at |ref| ~ 9.2; measured 3.0e-4 / 4.8e-3 over 100 runs
+        l1 = 5e-4;
+        lInf = 8e-3;
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out, "", l1, lInf);
 }
 
 
