@@ -783,8 +783,12 @@ struct TorchImporter
                 if (scalarParams.has("nInputDim"))
                     layerParams.set("input_dims", scalarParams.get<int>("nInputDim"));
 
-                int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
+                int rawDim = scalarParams.get<int>("dim");
+                CV_CheckGT(rawDim, 0, "DNN/Torch: Padding dim must be positive");
+                CV_CheckLE(rawDim, CV_MAX_DIM, "DNN/Torch: Padding dim exceeds CV_MAX_DIM");
+                int dim = rawDim - 1;  // In Lua we start from 1.
                 int pad = scalarParams.get<int>("pad");
+                CV_CheckGT(pad, INT_MIN, "DNN/Torch: Padding pad magnitude overflows int");
 
                 AutoBuffer<int> paddingsBuf((dim + 1) * 2);
                 int *paddings = paddingsBuf.data();
