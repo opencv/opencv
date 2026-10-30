@@ -235,13 +235,22 @@ class Bindings(NewOpenCVTests):
             cv.CV_32SC1: [cv.CV_32S, 1, cv.CV_32SC],
             cv.CV_16FC3: [cv.CV_16F, 3, cv.CV_16FC],
             cv.CV_BoolC1: [cv.CV_Bool, 1, cv.CV_BoolC],
-            cv.CV_16BFC2: [cv.CV_16BF, 2, cv.CV_16BFC],
-            cv.CV_8F_E4M3FNC3: [cv.CV_8F_E4M3FN, 3, cv.CV_8F_E4M3FNC],
-            cv.CV_8F_E4M3FNUZC4: [cv.CV_8F_E4M3FNUZ, 4, cv.CV_8F_E4M3FNUZC],
         }
         for ref, (depth, channels, func) in data.items():
             self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))
             self.assertEqual(ref, func(channels))
+
+    def test_type_constants_for_all_depths(self):
+        # Same depth list as export_matrix_type_constants() in api_refinement.py.
+        depths = ("CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F",
+                  "CV_16BF", "CV_Bool", "CV_64U", "CV_64S", "CV_32U", "CV_8F_E4M3FN", "CV_8F_E4M3FNUZ")
+        for name in depths:
+            depth = getattr(cv, name)
+            make_type = getattr(cv, name + "C")
+            for channels in range(1, 5):
+                ref = cv.CV_MAKETYPE(depth, channels)
+                self.assertEqual(getattr(cv, "%sC%d" % (name, channels)), ref, name)
+                self.assertEqual(make_type(channels), ref, name)
 
 
 class Arguments(NewOpenCVTests):

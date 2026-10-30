@@ -30,8 +30,6 @@ int cvDepthToNumpyType(int depth)
     case CV_32F:  return NPY_FLOAT;
     case CV_64F:  return NPY_DOUBLE;
     case CV_16F:  return NPY_HALF;
-    // NumPy has no native bfloat16; pyopencv_from() widens it to float32 unless allowed.
-    case CV_16BF: return NPY_FLOAT;
     case CV_Bool: return NPY_BOOL;
     default:
         CV_Error(cv::Error::StsNotImplemented,
@@ -85,6 +83,14 @@ PyArray_Descr* nonConventionalDescr(int idx)
     return g_nonConventionalDescrs[idx];
 }
 
+int nonConventionalIndex(int depth)
+{
+    for (int i = 0; i < kNumNonConventionalDtypes; i++)
+        if (kNonConventionalDtypes[i].depth == depth)
+            return i;
+    return -1;
+}
+
 }  // namespace
 
 void setAllowNonConventionalDataTypes(bool allow)
@@ -99,17 +105,15 @@ bool getAllowNonConventionalDataTypes()
 
 bool isNonConventionalDepth(int depth)
 {
-    return depth == CV_16BF || depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
+    return nonConventionalIndex(depth) >= 0;
 }
 
 PyArray_Descr* nonConventionalDescrForCvDepth(int depth)
 {
-    if (!g_allowNonConventionalDataTypes)
+    const int idx = nonConventionalIndex(depth);
+    if (!g_allowNonConventionalDataTypes || idx < 0)
         return nullptr;
-    for (int i = 0; i < kNumNonConventionalDtypes; i++)
-        if (kNonConventionalDtypes[i].depth == depth)
-            return nonConventionalDescr(i);
-    return nullptr;
+    return nonConventionalDescr(idx);
 }
 
 int nonConventionalTypeToCvDepth(int typenum)

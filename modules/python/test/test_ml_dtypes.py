@@ -10,17 +10,51 @@ except ImportError:
 
 from tests_common import NewOpenCVTests
 
+NON_CONVENTIONAL_DEPTHS = (cv.CV_16BF, cv.CV_8F_E4M3FN, cv.CV_8F_E4M3FNUZ)
+
+
+class non_conventional_dtypes_test(NewOpenCVTests):
+    # Runs with or without ml_dtypes.
+
+    def setUp(self):
+        super(non_conventional_dtypes_test, self).setUp()
+        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
+        cv.setAllowNonConventionalDataTypes(False)
+
+    def test_flag_roundtrip(self):
+        cv.setAllowNonConventionalDataTypes(True)
+        self.assertTrue(cv.getAllowNonConventionalDataTypes())
+        cv.setAllowNonConventionalDataTypes(False)
+        self.assertFalse(cv.getAllowNonConventionalDataTypes())
+
+    def test_disallowed_widens_to_float32(self):
+        for depth in NON_CONVENTIONAL_DEPTHS:
+            for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
+                self.assertEqual(m.dtype, np.float32)
+
+    def test_allowed_without_ml_dtypes_widens_to_float32(self):
+        if ml_dtypes is not None:
+            self.skipTest("ml_dtypes is installed")
+        cv.setAllowNonConventionalDataTypes(True)
+        for depth in NON_CONVENTIONAL_DEPTHS:
+            for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
+                self.assertEqual(m.dtype, np.float32)
+
+    def test_short_bool_array_scalar_operands(self):
+        for channels in range(1, 5):
+            src = np.zeros((2, 3, channels), dtype=np.float32)
+            operand = np.array([True, False, True, True][:channels])
+            np.testing.assert_array_equal(cv.add(src, operand),
+                                          cv.add(src, tuple(float(v) for v in operand)))
+
 
 class ml_dtypes_test(NewOpenCVTests):
 
     def setUp(self):
         super(ml_dtypes_test, self).setUp()
-        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
-        cv.setAllowNonConventionalDataTypes(False)
-        if self._testMethodName == "test_disallowed_widens_to_float32":
-            return
         if ml_dtypes is None:
             self.skipTest("ml_dtypes is not installed")
+        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
         cv.setAllowNonConventionalDataTypes(True)
         # (numpy dtype, OpenCV depth, typeToString prefix, relative half-ULP)
         self.cases = [
@@ -28,11 +62,6 @@ class ml_dtypes_test(NewOpenCVTests):
             (ml_dtypes.float8_e4m3fn, cv.CV_8F_E4M3FN, "CV_8F", 2.0 ** -4),
             (ml_dtypes.float8_e4m3fnuz, cv.CV_8F_E4M3FNUZ, "CV_8FNUZ", 2.0 ** -4),
         ]
-
-    def test_disallowed_widens_to_float32(self):
-        for depth in (cv.CV_16BF, cv.CV_8F_E4M3FN, cv.CV_8F_E4M3FNUZ):
-            for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
-                self.assertEqual(m.dtype, np.float32)
 
     def assertSameBits(self, actual, expected):
         self.assertEqual(actual.dtype, expected.dtype)
@@ -78,9 +107,11 @@ class ml_dtypes_test(NewOpenCVTests):
         self.assertSameBits(cv.add(img, operand), img + operand)
 
     def test_roundtrip_through_numpy_allocator(self):
-        src = np.array([[0.5, -1.25, 3.0, 7.0], [448.0, -448.0, 0.0, -0.5]], dtype=np.float32)
+        # 240 is the largest finite float8_e4m3fnuz value, so every case keeps these values exactly.
+        src = np.array([[0.5, -1.25, 3.0, 7.0], [240.0, -240.0, 0.0, -0.5]], dtype=np.float32)
         for dt, _, _, _ in self.cases:
             a = src.astype(dt)
+            np.testing.assert_array_equal(a.astype(np.float32), src)
             self.assertSameBits(cv.flip(a, 1), a[:, ::-1])
             self.assertSameBits(cv.transpose(a), a.T)
             strided = a[:, ::2]

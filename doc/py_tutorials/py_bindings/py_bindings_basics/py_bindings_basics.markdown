@@ -220,3 +220,7 @@ out = net.forward()  # bfloat16 / float8 outputs keep their type
 default. An array passed as an output argument, such as `dst`, is filled in place and
 returned as is, whatever the setting. If the setting is on but `ml_dtypes` has not been
 imported, outputs are still converted to `float32` and a warning is printed once.
+
+The setting is global, so it changes the outputs of every piece of code in the process that
+calls OpenCV. Turn it on in your application. A library should not change it, because the
+application that imports the library may expect `float32` outputs.

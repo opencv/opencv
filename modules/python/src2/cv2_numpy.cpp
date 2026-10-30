@@ -53,10 +53,12 @@ UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, void* 
             CV_Error_(Error::StsError, ("The numpy array of depth=%d, ndims=%d can not be created", depth, dims));
         return allocate(eo, dims0, sizes, type, step);
     }
+    // Mat::create() falls back to the default allocator on this error; pyopencv_from() then widens to float32.
     if( isNonConventionalDepth(depth) )
-        CV_Error(Error::StsNotImplemented,
-                 "bfloat16 / float8 arrays cannot be allocated through the NumPy allocator: "
-                 "call cv.setAllowNonConventionalDataTypes(True) and import ml_dtypes first");
+        CV_Error(Error::StsNotImplemented, getAllowNonConventionalDataTypes()
+                 ? "bfloat16 / float8 arrays cannot be allocated through the NumPy allocator: import ml_dtypes first"
+                 : "bfloat16 / float8 arrays cannot be allocated through the NumPy allocator: "
+                   "call cv.setAllowNonConventionalDataTypes(True) first");
 
     int typenum = cvDepthToNumpyType(depth);
     PyObject* o = PyArray_SimpleNew(dims, _sizes.data(), typenum);

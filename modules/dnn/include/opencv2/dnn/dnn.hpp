@@ -726,7 +726,8 @@ CV__DNN_INLINE_NS_BEGIN
          *  import the optional ml_dtypes package and call
          *  `cv.setAllowNonConventionalDataTypes(True)` before forward(). This process-wide
          *  setting affects outputs only; registered bfloat16 / float8 input arrays are
-         *  accepted regardless of it. See @ref tutorial_py_bindings_basics for details.
+         *  accepted regardless of it. It belongs to the application: libraries should not
+         *  change it. See @ref tutorial_py_bindings_basics for details.
          */
         CV_WRAP Mat forward(const String& outputName = String());
 

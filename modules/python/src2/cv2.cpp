@@ -137,7 +137,8 @@ static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
   {"setAllowNonConventionalDataTypes", (PyCFunction)(pycvSetAllowNonConventionalDataTypes), METH_O,
    "setAllowNonConventionalDataTypes(allow) -> None\n. Keep output bfloat16 / float8 arrays at their exact dtype "
-   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default. Input arrays are accepted regardless of this flag."},
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default. Input arrays are accepted regardless of this flag. "
+   "The flag is process-wide: set it in the application, libraries should not change it."},
   {"getAllowNonConventionalDataTypes", (PyCFunction)(pycvGetAllowNonConventionalDataTypes), METH_NOARGS,
    "getAllowNonConventionalDataTypes() -> retval"},
 #ifdef HAVE_OPENCV_HIGHGUI
@@ -620,14 +621,14 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_16BFC4);
     PUBLISH(CV_8F_E4M3FN);
     PUBLISH(CV_8F_E4M3FNC1);
-    PUBLISH_(CV_8F_E4M3FNC(2), "CV_8F_E4M3FNC2", CV_8F_E4M3FNC2_obj);
-    PUBLISH_(CV_8F_E4M3FNC(3), "CV_8F_E4M3FNC3", CV_8F_E4M3FNC3_obj);
-    PUBLISH_(CV_8F_E4M3FNC(4), "CV_8F_E4M3FNC4", CV_8F_E4M3FNC4_obj);
+    PUBLISH(CV_8F_E4M3FNC2);
+    PUBLISH(CV_8F_E4M3FNC3);
+    PUBLISH(CV_8F_E4M3FNC4);
     PUBLISH(CV_8F_E4M3FNUZ);
     PUBLISH(CV_8F_E4M3FNUZC1);
-    PUBLISH_(CV_8F_E4M3FNUZC(2), "CV_8F_E4M3FNUZC2", CV_8F_E4M3FNUZC2_obj);
-    PUBLISH_(CV_8F_E4M3FNUZC(3), "CV_8F_E4M3FNUZC3", CV_8F_E4M3FNUZC3_obj);
-    PUBLISH_(CV_8F_E4M3FNUZC(4), "CV_8F_E4M3FNUZC4", CV_8F_E4M3FNUZC4_obj);
+    PUBLISH(CV_8F_E4M3FNUZC2);
+    PUBLISH(CV_8F_E4M3FNUZC3);
+    PUBLISH(CV_8F_E4M3FNUZC4);
 #undef PUBLISH_
 #undef PUBLISH
 
