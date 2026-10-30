@@ -679,7 +679,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
 
-        CV_OCL_RUN(_dst.isUMat(),
+        CV_OCL_RUN(_dst.isUMat() && sdepth != CV_16F && ddepth != CV_16F,
                    ocl_Laplacian5(_src, _dst, kd, ks, scale,
                                   delta, borderType, wdepth, ddepth))
 

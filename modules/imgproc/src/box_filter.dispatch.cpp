@@ -122,6 +122,9 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if (ddepth < 0)
         ddepth = sdepth;
 
+    if (sdepth == CV_16F || ddepth == CV_16F)
+        return false;
+
     if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;

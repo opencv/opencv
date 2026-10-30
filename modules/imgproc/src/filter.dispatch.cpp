@@ -564,6 +564,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 {
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     ddepth = ddepth < 0 ? sdepth : ddepth;
+    if (sdepth == CV_16F || ddepth == CV_16F)
+        return false;
     int dtype = CV_MAKE_TYPE(ddepth, cn), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
             wtype = CV_MAKE_TYPE(wdepth, cn);
     if (cn > 4)
@@ -967,6 +969,9 @@ bool ocl_sepFilter2D(
 
     if (ddepth < 0)
         ddepth = sdepth;
+
+    if (sdepth == CV_16F || ddepth == CV_16F)
+        return false;
 
     if (anchor.x < 0)
         anchor.x = kernelX.cols >> 1;
