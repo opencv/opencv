@@ -82,6 +82,24 @@ public:
         }
     }
 
+    // True when sizes known before shape inference (attribute or constant input) put a part
+    // boundary inside a channel block. forward() would then convert the input to NCHW and every
+    // part back to block, and plain consumers convert them back again; the plain tensor is cheaper.
+    bool hasUnalignedChannelSplit(int C0) const
+    {
+        std::vector<int> sizes = split;
+        if (inputs.size() == 2) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_->isConstArg(inputs[1]))
+                return true;
+            tensorToIntVec(netimpl_->argTensor(inputs[1]), sizes);
+        }
+        for (size_t k = 0; k + 1 < sizes.size(); k++)
+            if (sizes[k] % C0 != 0)
+                return true;
+        return false;  // also the default split, whose sizes depend on the channel count
+    }
+
     int getLayouts(const std::vector<DataLayout>& actualInputs,
                    std::vector<DataLayout>& desiredInputs,
                    const int requiredOutputs,
@@ -90,8 +108,9 @@ public:
         auto* netimpl_ = getNetImpl(this);
         desiredInputs.assign(actualInputs.size(), DATA_LAYOUT_UNKNOWN);
         // Stay in block layout for a non-negative axis (negative axes count from the end, which
-        // differs between layouts). Splits not on multiples of 8 channels are repacked in forward().
-        if (!actualInputs.empty() && actualInputs[0] == DATA_LAYOUT_BLOCK && axis >= 0) {
+        // differs between layouts), unless the sizes already show an unaligned channel split.
+        if (!actualInputs.empty() && actualInputs[0] == DATA_LAYOUT_BLOCK && axis >= 0 &&
+            !(axis == 1 && hasUnalignedChannelSplit(netimpl_->defaultC0))) {
             desiredInputs[0] = DATA_LAYOUT_BLOCK;
             outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
             return netimpl_->defaultC0;
@@ -245,7 +264,8 @@ public:
     }
 
     // Channel split in block layout, like Concat's: if every part starts on a multiple of 8
-    // channels, split the channel blocks directly; otherwise go through NCHW.
+    // channels, split the channel blocks directly; otherwise (only a default split, whose sizes
+    // getLayouts() could not see) go through NCHW.
     void runOpBlockAxis1(const Mat& inp, std::vector<Mat>& outs)
     {
         const int C0 = inp.size[inp.dims - 1];

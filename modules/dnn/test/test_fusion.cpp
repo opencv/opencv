@@ -1106,11 +1106,7 @@ static Mat silu(const Mat& x)
 
 static Mat relu(const Mat& x)
 {
-    Mat y = x.clone();
-    float* p = y.ptr<float>();
-    for (size_t i = 0; i < y.total(); i++)
-        p[i] = std::max(p[i], 0.f);
-    return y;
+    return cv::max(x, 0.0);
 }
 
 // A patch embedding with 3 input channels reads the plain input, so it needs no layout conversion.
@@ -1182,7 +1178,8 @@ static Mat concat(const std::vector<Mat>& parts, int axis)
     return out;
 }
 
-// Split of a conv output stays in block layout, aligned or not; only the network input is converted.
+// Split of a conv output stays in block layout when its parts start on block boundaries; the
+// unaligned split takes the plain tensor, so its input is converted once more.
 TEST(Fusion, SplitKeepsBlockLayout)
 {
     Net net = loadModel("split_block_layout");
@@ -1201,7 +1198,7 @@ TEST(Fusion, SplitKeepsBlockLayout)
     normAssert(concat({slice(c1, 1, 12, 32), slice(c1, 1, 0, 12)}, 1), outs[1], "unaligned split");
     normAssert(concat({slice(c1, 2, 0, 5), slice(c1, 2, 5, 10)}, 3), outs[2], "split along H");
     normAssert(concat({b, a}, 1), outs[3], "split without sizes");
-    EXPECT_EQ(1, fusedCount(net, "TransformLayout"));
+    EXPECT_EQ(2, fusedCount(net, "TransformLayout"));
 }
 
 // A zero batch: the block-layout Split and Concat copies must give empty outputs, not divide by zero.
@@ -1217,7 +1214,7 @@ TEST(Fusion, SplitAndConcatInBlockLayoutWithZeroBatch)
     EXPECT_EQ(MatShape({0, 32, 10, 12}), outs[1].shape());
     EXPECT_EQ(MatShape({0, 32, 5, 24}), outs[2].shape());
     EXPECT_EQ(MatShape({0, 32, 10, 12}), outs[3].shape());
-    EXPECT_EQ(1, fusedCount(net, "TransformLayout"));
+    EXPECT_EQ(2, fusedCount(net, "TransformLayout"));
 }
 
 }} // namespace opencv_test
