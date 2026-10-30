@@ -257,18 +257,36 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
             double v0_lo = _ranges[0][0];
             double v0_hi = _ranges[0][1];
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // Scaling uint16 values by a power of two in [2^-16, 1] is exact in float.
+            // Other mappings must retain the double precision of the scalar loop.
+            int scaleExponent = 0;
+            const bool exactFloatMapping = d0 == 1 && sizeof(T) == 2 && b == 0 &&
+                                           std::frexp(a, &scaleExponent) == 0.5 &&
+                                           scaleExponent >= -15 && scaleExponent <= 1;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+            const bool useSIMD = d0 == 1 && sizeof(T) == 2;
+#else
+            const bool useSIMD = exactFloatMapping;
+#endif
+#endif
+
             for( ; imsize.height--; p0 += step0, mask += mstep )
             {
                 if( !mask )
                 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                    if( d0 == 1 && sizeof(T) == 2 )
+                    if( useSIMD )
                     {
                         const ushort* p  = (const ushort*)p0;
                         const int nlanes = VTraits<v_uint16>::vlanes();
 
                         const v_float32 va   = vx_setall_f32((float)a);
                         const v_float32 vb   = vx_setall_f32((float)b);
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+                        const v_float64 vda  = vx_setall_f64(a);
+                        const v_float64 vdb  = vx_setall_f64(b);
+#endif
                         const v_float32 vlo  = vx_setall_f32((float)v0_lo);
                         const v_float32 vhi  = vx_setall_f32((float)v0_hi);
                         const v_int32   vi0  = vx_setall_s32(0);
@@ -285,8 +303,25 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                             v_uint32 rlo = v_reinterpret_as_u32(v_and(v_ge(flo, vlo), v_lt(flo, vhi)));
                             v_uint32 rhi = v_reinterpret_as_u32(v_and(v_ge(fhi, vlo), v_lt(fhi, vhi)));
 
-                            v_int32 idx_lo = v_max(vi0, v_min(visz, v_floor(v_fma(flo, va, vb))));
-                            v_int32 idx_hi = v_max(vi0, v_min(visz, v_floor(v_fma(fhi, va, vb))));
+                            v_int32 idx_lo, idx_hi;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+                            if( !exactFloatMapping )
+                            {
+                                idx_lo = v_combine_low(
+                                    v_floor(v_add(v_mul(v_cvt_f64(flo), vda), vdb)),
+                                    v_floor(v_add(v_mul(v_cvt_f64_high(flo), vda), vdb)));
+                                idx_hi = v_combine_low(
+                                    v_floor(v_add(v_mul(v_cvt_f64(fhi), vda), vdb)),
+                                    v_floor(v_add(v_mul(v_cvt_f64_high(fhi), vda), vdb)));
+                            }
+                            else
+#endif
+                            {
+                                idx_lo = v_floor(v_fma(flo, va, vb));
+                                idx_hi = v_floor(v_fma(fhi, va, vb));
+                            }
+                            idx_lo = v_max(vi0, v_min(visz, idx_lo));
+                            idx_hi = v_max(vi0, v_min(visz, idx_hi));
 
                             int idxbuf[2 * VTraits<v_int32>::max_nlanes];
                             v_store(idxbuf, idx_lo);
