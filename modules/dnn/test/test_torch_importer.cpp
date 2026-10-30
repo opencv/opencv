@@ -302,6 +302,82 @@ TEST_P(Test_Torch_layers, net_padding)
     runTorchNet("net_spatial_reflection_padding", "", false, true);
 }
 
+TEST(Test_Torch, padding_rejects_invalid_dim_and_min_pad)
+{
+    auto appendInt32 = [](std::string& out, int32_t v) {
+        out.append(reinterpret_cast<const char*>(&v), sizeof(v));
+    };
+    auto appendFloat64 = [](std::string& out, double v) {
+        out.append(reinterpret_cast<const char*>(&v), sizeof(v));
+    };
+    auto appendString = [&](std::string& out, const std::string& s) {
+        appendInt32(out, static_cast<int32_t>(s.size()));
+        out.append(s);
+    };
+    auto makePaddingT7 = [&](int32_t dimVal, int32_t padVal, int32_t nInputDim) {
+        std::string buf;
+        appendInt32(buf, 4);  // TYPE_TORCH
+        appendInt32(buf, 1);  // object index
+        appendString(buf, "V 1");
+        appendString(buf, "nn.Padding");
+        appendInt32(buf, 3);  // TYPE_TABLE
+        appendInt32(buf, 2);  // table index
+        appendInt32(buf, 4);  // 4 pairs
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "dim");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(dimVal));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "pad");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(padVal));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "nInputDim");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(nInputDim));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "value");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, 0.0);
+        return buf;
+    };
+    auto loadPaddingBytes = [](const std::string& bytes) {
+        const std::string path = cv::tempfile(".t7");
+        FILE* fp = fopen(path.c_str(), "wb");
+        CV_Assert(fp != NULL);
+        const size_t written = fwrite(bytes.data(), 1, bytes.size(), fp);
+        fclose(fp);
+        CV_Assert(written == bytes.size());
+        try
+        {
+            Net net = readNetFromTorch(path);
+            std::remove(path.c_str());
+            return net;
+        }
+        catch (...)
+        {
+            std::remove(path.c_str());
+            throw;
+        }
+    };
+
+    Net validNet;
+    ASSERT_NO_THROW(validNet = loadPaddingBytes(makePaddingT7(2, 1, 2)));
+    validNet.setInput(Mat(1, 3, CV_32F, Scalar(2.0f)));
+    Mat out = validNet.forward();
+    ASSERT_EQ(out.dims, 2);
+    EXPECT_EQ(out.rows, 1);
+    EXPECT_EQ(out.cols, 4);
+    EXPECT_FLOAT_EQ(out.at<float>(0, 0), 2.0f);
+    EXPECT_FLOAT_EQ(out.at<float>(0, 3), 0.0f);
+
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(0, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(-1, -1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(INT_MIN, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(CV_MAX_DIM + 1, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(2, INT_MIN, 2)), cv::Exception);
+}
+
 TEST_P(Test_Torch_layers, net_non_spatial)
 {
 #if defined(INF_ENGINE_RELEASE) && ( \
