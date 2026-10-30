@@ -254,10 +254,25 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
-    Mat Dx, Dy;
-    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+    Mat gradientSrc = src;
+    Point offset;
+    if( src.isSubmatrix() && !(borderType & BORDER_ISOLATED) && block_size > 1 )
+    {
+        Size wholeSize;
+        Point srcOffset, gradientOffset;
+        src.locateROI(wholeSize, srcOffset);
+        const int radius = block_size / 2;
+        // The box filter needs covariances outside the requested ROI as well.
+        // Symmetric padding also covers reflected samples for even block sizes.
+        gradientSrc.adjustROI(radius, radius, radius, radius);
+        gradientSrc.locateROI(wholeSize, gradientOffset);
+        offset = srcOffset - gradientOffset;
+    }
 
-    Size size = src.size();
+    Mat Dx, Dy;
+    spatialGradient( gradientSrc, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+
+    Size size = gradientSrc.size();
     Mat cov( size, CV_32FC3 );
     int i, j;
 
@@ -304,6 +319,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
     boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
         Point(-1,-1), false, borderType );
+    cov = cov(Rect(offset, src.size()));
 
     if( op_type == MINEIGENVAL )
         calcMinEigenVal( cov, eigenv );
@@ -388,8 +404,22 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         scale *= 255.0;
     scale = 1.0 / scale;
 
+    UMat gradientSrc = _src.getUMat();
+    const Size size = gradientSrc.size();
+    Point offset;
+    if (gradientSrc.isSubmatrix() && block_size > 1)
+    {
+        Size wholeSize;
+        Point srcOffset, gradientOffset;
+        gradientSrc.locateROI(wholeSize, srcOffset);
+        const int radius = block_size / 2;
+        gradientSrc.adjustROI(radius, radius, radius, radius);
+        gradientSrc.locateROI(wholeSize, gradientOffset);
+        offset = srcOffset - gradientOffset;
+    }
+
     UMat Dx, Dy;
-    if (!extractCovData(_src, Dx, Dy, depth, (float)scale, aperture_size, borderType))
+    if (!extractCovData(gradientSrc, Dx, Dy, depth, (float)scale, aperture_size, borderType))
         return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
@@ -400,7 +430,11 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         return false;
 
     _dst.createSameSize(_src, CV_32FC1);
-    UMat dst = _dst.getUMat();
+    UMat dst;
+    if (gradientSrc.size() == size)
+        dst = _dst.getUMat();
+    else
+        dst.create(gradientSrc.size(), CV_32FC1);
 
     cornelKernel.args(ocl::KernelArg::ReadOnly(Dx), ocl::KernelArg::ReadOnly(Dy),
                       ocl::KernelArg::WriteOnly(dst), (float)k);
@@ -414,7 +448,11 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
                          (((Dx.rows + rows_per_thread - 1) / rows_per_thread) / blockSizeY + 1) * blockSizeY;
 
     size_t globalsize[2] = { globalSizeX, globalSizeY }, localsize[2] = { blockSizeX, blockSizeY };
-    return cornelKernel.run(2, globalsize, localsize, false);
+    if (!cornelKernel.run(2, globalsize, localsize, false))
+        return false;
+    if (gradientSrc.size() != size)
+        dst(Rect(offset, size)).copyTo(_dst);
+    return true;
 }
 
 static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType, int depth )
@@ -627,7 +665,8 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
 #endif
-    CV_IPP_RUN(((ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
+    // IPP uses a different covariance anchor for even block sizes.
+    CV_IPP_RUN(((blockSize & 1) && (ksize == 3 || ksize == 5) && (_src.type() == CV_8UC1 || _src.type() == CV_32FC1) &&
         (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && CV_MAT_CN(_src.type()) == 1 &&
         (!_src.isSubmatrix() || isolated)) && IPP_VERSION_X100 >= 810, ipp_cornerHarris( src, dst, blockSize, ksize, k, borderType ));
 
