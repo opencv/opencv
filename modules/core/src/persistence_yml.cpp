@@ -158,7 +158,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", (uchar)c );
                         data += 3;
                     }
                 }
@@ -631,14 +631,14 @@ public:
                             int val, is_hex = d == 'x';
                             c = ptr[3];
                             ptr[3] = '\0';
-                            val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
+                            val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 16:8 );
                             ptr[3] = c;
                             if( endptr == ptr + is_hex )
                                 buf[len++] = 'x';
                             else
                             {
                                 buf[len++] = (char)val;
-                                ptr = endptr;
+                                ptr = endptr-1;
                             }
                         }
                     }
