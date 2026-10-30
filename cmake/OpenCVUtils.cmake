@@ -1577,7 +1577,7 @@ function(ocv_add_executable target)
 endfunction()
 
 function(ocv_add_library target)
-  if(NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA AND ARGN MATCHES "\\.cu")
+  if(NOT HAVE_HIP AND NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA AND ARGN MATCHES "\\.cu")
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
     ocv_cuda_compile(cuda_objs ${ARGN})
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
