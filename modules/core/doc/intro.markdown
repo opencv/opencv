@@ -25,11 +25,11 @@ libraries. The following modules are available:
     faces, eyes, mugs, people, cars, and so on).
 -   @ref calib (**calib**) - single and stereo camera calibration
 -   @ref stereo (**stereo**) - stereo correspondence algorithms
--   @ref highgui (**highgui**) - an easy-to-use interface to simple UI capabilities.
--   @ref videoio (**videoio**) - an easy-to-use interface to video capturing and video codecs.
 -   @ref dnn (**dnn**) - Deep Neural Network module.
 -   @ref photo (**photo**) - advanced photo processing techniques like denoising, inpainting.
 -   @ref stitching (**stitching**) - functions for image stitching and panorama creation.
+-   @ref geometry (**geometry**) - Coordinate geometry: 2D shape analysis and fitting, planar subdivision, multi-view 3D vision, and geometric sampling and segmentation.
+-   @ref ptcloud (**ptcloud**) - Point-cloud and mesh processing: reading/writing point clouds and meshes, triangle rasterization, octree partitioning, and RGB-D / volumetric 3D reconstruction (odometry, TSDF volumes).
 -   ... some other helper modules, such as FLANN and Google test wrappers, Python bindings, and
     others.
 
@@ -228,6 +228,8 @@ is, array elements should have one of the following types:
 -   32-bit signed integer (int32_t, int)
 -   64-bit unsigned integer (uint64_t, unsigned long) *1
 -   64-bit signed integer (int64_t, long) *1
+-   8-bit precision floating-point number (FLOAT8E4M3FN fp8) *2
+-   8-bit precision floating-point number (FLOAT8E4M3FNUZ fp8) *2
 -   16-bit brain floating point number / bfloat16 (bfloat) *1
 -   16-bit half precision floating-point / hfloat16 (hfloat)
 -   32-bit single precision floating-point number (float)
@@ -238,7 +240,8 @@ is, array elements should have one of the following types:
     single-channel arrays, whose elements are scalar values. The maximum possible number of
     channels is defined by the #CV_CN_MAX constant, which is currently set to 128.
 
-@note *1) Supported from OpenCV5.
+@note *1) Available in OpenCV 5.0 and later.
+@note *2) Available in OpenCV 5.1 and later.
 
 For these basic types, the following definition is applied:
 ```.cpp
@@ -255,6 +258,9 @@ For these basic types, the following definition is applied:
 #define CV_64U  10
 #define CV_64S  11
 #define CV_32U  12
+#define CV_8F_E4M3FN   13  // OCP/ONNX FLOAT8E4M3FN  (1-4-3, bias 7, no inf, max 448)
+#define CV_8F_E4M3FNUZ 14  // FLOAT8E4M3FNUZ         (1-4-3, bias 8, no inf, single NaN, no -0)
+#define CV_8F          CV_8F_E4M3FN  // alias for the main 8-bit floating-point type
 ```
 Multi-channel (n-channel) types can be specified using the following options:
 
