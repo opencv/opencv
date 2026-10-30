@@ -244,36 +244,48 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
         s = std::sqrt((r.x*r.x + r.y*r.y + r.z*r.z)*0.25);
         c = (R(0, 0) + R(1, 1) + R(2, 2) - 1)*0.5;
         c = c > 1. ? 1. : c < -1. ? -1. : c;
-        theta = std::acos(c);
+        // atan2 keeps full accuracy near 0 and pi, where acos(c) loses up to half of the digits
+        theta = std::atan2(s, c);
 
         if( s < 1e-5 )
         {
-            double t;
-
             if( c > 0 )
-                r = Point3d(0, 0, 0);
+            {
+                // small angle: (R - R^T)/2 = sin(theta)*[n]_x and theta/sin(theta) = 1 + theta^2/6 + O(theta^4)
+                r *= 0.5*(1. + s*s/6.);
+            }
             else
             {
-                t = (R(0, 0) + 1)*0.5;
-                r.x = std::sqrt(MAX(t,0.));
-                t = (R(1, 1) + 1)*0.5;
-                r.y = std::sqrt(MAX(t,0.))*(R(0, 1) < 0 ? -1. : 1.);
-                t = (R(2, 2) + 1)*0.5;
-                r.z = std::sqrt(MAX(t,0.))*(R(0, 2) < 0 ? -1. : 1.);
-                if( fabs(r.x) < fabs(r.y) && fabs(r.x) < fabs(r.z) && (R(1, 2) > 0) != (r.y*r.z > 0) )
-                    r.z = -r.z;
-                theta /= norm(r);
-                r *= theta;
+                // angle close to pi: the axis is read from the symmetric part
+                // (R + R^T)/2 - cos(theta)*I = (1 - cos(theta))*n*n^T,
+                // its sign from the skew-symmetric part R - R^T = 2*sin(theta)*[n]_x
+                Matx33d B = (R + R.t())*0.5 - c*Matx33d::eye();
+                int k = B(0, 0) >= B(1, 1) ? (B(0, 0) >= B(2, 2) ? 0 : 2) : (B(1, 1) >= B(2, 2) ? 1 : 2);
+                Point3d n(B(0, k), B(1, k), B(2, k));
+                n *= 1./norm(n);
+                if( n.dot(r) < 0 )
+                    n = -n;
+                r = n*theta;
             }
 
             if( jacobian.data )
             {
-                memset( J, 0, sizeof(J) );
-                if( c > 0 )
+                // dr = Jl^-1(r) * vee(dR*R^T), with the inverse left Jacobian of SO(3)
+                // Jl^-1(r) = I - [r]_x/2 + (1/theta^2 - sin(theta)/(2*theta*(1 - cos(theta))))*[r]_x^2
+                double beta = c > 0 ? 1./12 : 1./(theta*theta) - s/(2*theta*(1 - c));
+                Matx33d rx(0, -r.z, r.y, r.z, 0, -r.x, -r.y, r.x, 0);
+                Matx33d Jinv = Matx33d::eye() - 0.5*rx + beta*(rx*rx);
+                // D(i, 3*a + b) = d vee(dR*R^T)_i / d R(a, b)
+                double D[3][9] = {{0}};
+                for( int b = 0; b < 3; b++ )
                 {
-                    J[5] = J[15] = J[19] = -0.5;
-                    J[7] = J[11] = J[21] = 0.5;
+                    D[0][3*2 + b] =  0.5*R(1, b); D[0][3*1 + b] = -0.5*R(2, b);
+                    D[1][3*0 + b] =  0.5*R(2, b); D[1][3*2 + b] = -0.5*R(0, b);
+                    D[2][3*1 + b] =  0.5*R(0, b); D[2][3*0 + b] = -0.5*R(1, b);
                 }
+                for( int i = 0; i < 3; i++ )
+                    for( int m = 0; m < 9; m++ )
+                        J[i*9 + m] = Jinv(i, 0)*D[0][m] + Jinv(i, 1)*D[1][m] + Jinv(i, 2)*D[2][m];
             }
         }
         else
