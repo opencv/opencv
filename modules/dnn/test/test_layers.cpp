@@ -4687,4 +4687,197 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+
+TEST(Test_Col2Im, EmptyInput)
+{
+    for (int shapeType : {CV_32S, CV_64S})
+    {
+        Mat data(std::vector<int>{0, 4, 9}, CV_32F);
+        Mat image_shape(std::vector<int>{2}, shapeType);
+        if (shapeType == CV_32S)
+        {
+            image_shape.at<int32_t>(0) = 4;
+            image_shape.at<int32_t>(1) = 4;
+        }
+        else
+        {
+            image_shape.at<int64_t>(0) = 4;
+            image_shape.at<int64_t>(1) = 4;
+        }
+        Mat block_shape(std::vector<int>{2}, shapeType);
+        if (shapeType == CV_32S)
+        {
+            block_shape.at<int32_t>(0) = 2;
+            block_shape.at<int32_t>(1) = 2;
+        }
+        else
+        {
+            block_shape.at<int64_t>(0) = 2;
+            block_shape.at<int64_t>(1) = 2;
+        }
+
+        LayerParams lp;
+        lp.type = "Col2Im";
+        lp.name = "test_col2im_empty";
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{data, image_shape, block_shape};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 1, 4, 4}));
+    }
+}
+
+TEST(Test_Col2Im, OversizedShape)
+{
+    Mat data(std::vector<int>{1, 4, 9}, CV_32F, Scalar(1.0f));
+    Mat block_shape(std::vector<int>{2}, CV_64S);
+    block_shape.at<int64_t>(0) = 2;
+    block_shape.at<int64_t>(1) = 2;
+
+    Mat image_shape_oversized(std::vector<int>{2}, CV_64S);
+    image_shape_oversized.at<int64_t>(0) = (int64_t)std::numeric_limits<int>::max() + 100LL;
+    image_shape_oversized.at<int64_t>(1) = 4;
+
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_oversized_img";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, image_shape_oversized, block_shape};
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    Mat image_shape_valid(std::vector<int>{2}, CV_64S);
+    image_shape_valid.at<int64_t>(0) = 4;
+    image_shape_valid.at<int64_t>(1) = 4;
+
+    Mat block_shape_oversized(std::vector<int>{2}, CV_64S);
+    block_shape_oversized.at<int64_t>(0) = (int64_t)std::numeric_limits<int>::max() + 100LL;
+    block_shape_oversized.at<int64_t>(1) = 2;
+
+    inputs = {data, image_shape_valid, block_shape_oversized};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+}
+
+TEST(Test_Col2Im, MalformedAttributes)
+{
+    Mat data(std::vector<int>{1, 4, 9}, CV_32F, Scalar(1.0f));
+    Mat image_shape(std::vector<int>{2}, CV_32S);
+    image_shape.at<int32_t>(0) = 4;
+    image_shape.at<int32_t>(1) = 4;
+    Mat block_shape(std::vector<int>{2}, CV_32S);
+    block_shape.at<int32_t>(0) = 2;
+    block_shape.at<int32_t>(1) = 2;
+
+    std::vector<Mat> inputs{data, image_shape, block_shape};
+    std::vector<Mat> outputs;
+
+    // Zero stride
+    {
+        LayerParams lp;
+        lp.type = "Col2Im";
+        const int s[2] = {0, 1};
+        lp.set("strides", DictValue::arrayInt(s, 2));
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    }
+
+    // Mismatched strides length
+    {
+        LayerParams lp;
+        lp.type = "Col2Im";
+        const int s[1] = {1};
+        lp.set("strides", DictValue::arrayInt(s, 1));
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    }
+
+    // Negative dilation
+    {
+        LayerParams lp;
+        lp.type = "Col2Im";
+        const int d[2] = {-1, 1};
+        lp.set("dilations", DictValue::arrayInt(d, 2));
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    }
+
+    // Negative pad
+    {
+        LayerParams lp;
+        lp.type = "Col2Im";
+        const int p[4] = {-1, 0, 0, 0};
+        lp.set("pads", DictValue::arrayInt(p, 4));
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    }
+
+    // 1-D spatial dimension (D < 2 must be rejected per ONNX spec)
+    {
+        Mat img1d(std::vector<int>{1}, CV_32S);
+        img1d.at<int32_t>(0) = 4;
+        Mat blk1d(std::vector<int>{1}, CV_32S);
+        blk1d.at<int32_t>(0) = 2;
+        Mat data1d(std::vector<int>{1, 2, 3}, CV_32F, Scalar(1.0f));
+        std::vector<Mat> inputs1d{data1d, img1d, blk1d};
+        LayerParams lp;
+        lp.type = "Col2Im";
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        EXPECT_THROW(runLayer(layer, inputs1d, outputs), cv::Exception);
+    }
+}
+
+TEST(Test_Col2Im, Spatial4DWithAttributes)
+{
+    // Minimal serialized ONNX model with a 4-D spatial Col2Im operator (D=4)
+    // image_shape = [2, 2, 2, 2], block_shape = [2, 2, 2, 2]
+    // strides = [1, 1, 1, 1], dilations = [1, 1, 1, 1], pads = [0, 0, 0, 0, 0, 0, 0, 0]
+    // data = [1, 16, 1], output = [1, 1, 2, 2, 2, 2]
+    static const uint8_t onnx_4d_model[] = {
+        0x08, 0x0e, 0x3a, 0x84, 0x02, 0x0a, 0x79, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x0a, 0x0b, 0x69,
+        0x6d, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x68, 0x61, 0x70, 0x65, 0x0a, 0x0b, 0x62, 0x6c, 0x6f, 0x63,
+        0x6b, 0x5f, 0x73, 0x68, 0x61, 0x70, 0x65, 0x12, 0x06, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x22,
+        0x06, 0x43, 0x6f, 0x6c, 0x32, 0x49, 0x6d, 0x2a, 0x16, 0x0a, 0x09, 0x64, 0x69, 0x6c, 0x61, 0x74,
+        0x69, 0x6f, 0x6e, 0x73, 0x40, 0x01, 0x40, 0x01, 0x40, 0x01, 0x40, 0x01, 0xa0, 0x01, 0x07, 0x2a,
+        0x19, 0x0a, 0x04, 0x70, 0x61, 0x64, 0x73, 0x40, 0x00, 0x40, 0x00, 0x40, 0x00, 0x40, 0x00, 0x40,
+        0x00, 0x40, 0x00, 0x40, 0x00, 0x40, 0x00, 0xa0, 0x01, 0x07, 0x2a, 0x14, 0x0a, 0x07, 0x73, 0x74,
+        0x72, 0x69, 0x64, 0x65, 0x73, 0x40, 0x01, 0x40, 0x01, 0x40, 0x01, 0x40, 0x01, 0xa0, 0x01, 0x07,
+        0x12, 0x0f, 0x63, 0x6f, 0x6c, 0x32, 0x69, 0x6d, 0x5f, 0x34, 0x64, 0x5f, 0x67, 0x72, 0x61, 0x70,
+        0x68, 0x2a, 0x17, 0x08, 0x04, 0x10, 0x07, 0x3a, 0x04, 0x02, 0x02, 0x02, 0x02, 0x42, 0x0b, 0x69,
+        0x6d, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x68, 0x61, 0x70, 0x65, 0x2a, 0x17, 0x08, 0x04, 0x10, 0x07,
+        0x3a, 0x04, 0x02, 0x02, 0x02, 0x02, 0x42, 0x0b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x73, 0x68,
+        0x61, 0x70, 0x65, 0x5a, 0x1a, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x10, 0x08,
+        0x01, 0x12, 0x0c, 0x0a, 0x02, 0x08, 0x01, 0x0a, 0x02, 0x08, 0x10, 0x0a, 0x02, 0x08, 0x01, 0x62,
+        0x28, 0x0a, 0x06, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x12, 0x1e, 0x0a, 0x1c, 0x08, 0x01, 0x12,
+        0x18, 0x0a, 0x02, 0x08, 0x01, 0x0a, 0x02, 0x08, 0x01, 0x0a, 0x02, 0x08, 0x02, 0x0a, 0x02, 0x08,
+        0x02, 0x0a, 0x02, 0x08, 0x02, 0x0a, 0x02, 0x08, 0x02, 0x42, 0x04, 0x0a, 0x00, 0x10, 0x12
+    };
+
+    Net net = readNetFromONNX((const char*)onnx_4d_model, sizeof(onnx_4d_model));
+    ASSERT_FALSE(net.empty());
+
+    Mat data(std::vector<int>{1, 16, 1}, CV_32F);
+    for (int i = 0; i < 16; ++i)
+        data.at<float>(0, i, 0) = (float)(i + 1);
+
+    net.setInput(data, "data");
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 6);
+    EXPECT_EQ(out.size[0], 1);
+    EXPECT_EQ(out.size[1], 1);
+    EXPECT_EQ(out.size[2], 2);
+    EXPECT_EQ(out.size[3], 2);
+    EXPECT_EQ(out.size[4], 2);
+    EXPECT_EQ(out.size[5], 2);
+}
+
 }} // namespace
