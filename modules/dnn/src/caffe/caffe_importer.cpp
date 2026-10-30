@@ -127,8 +127,12 @@ public:
             const google::protobuf::UnknownField& field = unknownFields.field(i);
             CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
             CV_CheckGE(field.group().field_count(), 2, "UnknownField should have at least 2 items: name and value");
-            std::string fieldName(field.group().field(0).length_delimited());
-            std::string fieldValue(field.group().field(1).length_delimited());
+            const google::protobuf::UnknownField& nameField = field.group().field(0);
+            const google::protobuf::UnknownField& valueField = field.group().field(1);
+            CV_Assert(nameField.type() == google::protobuf::UnknownField::TYPE_LENGTH_DELIMITED);
+            CV_Assert(valueField.type() == google::protobuf::UnknownField::TYPE_LENGTH_DELIMITED);
+            std::string fieldName(nameField.length_delimited());
+            std::string fieldValue(valueField.length_delimited());
             params.set(fieldName, fieldValue);
         }
     }
@@ -218,15 +222,12 @@ public:
             if (!isInternal && !ends_with_param(std::string(fd->name())))
                 continue;
 
-            const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
                             (!fd->is_repeated() && !fd->is_required() && msgRefl->HasField(msg, fd)) ||
-                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
-                            !unknownFields.empty();
+                            (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0);
             if (!hasData)
                 continue;
 
-            extractCustomParams(unknownFields, params);
             if (fd->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE)
             {
                 if (fd->is_repeated()) //Extract only first item!
@@ -239,6 +240,10 @@ public:
                 addParam(msg, fd, params);
             }
         }
+
+        const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
+        if (!unknownFields.empty())
+            extractCustomParams(unknownFields, params);
     }
 
     template<class MSG>
@@ -450,6 +455,7 @@ public:
                 if (!layerParams.get<bool>("use_global_stats", true))
                 {
                     CV_Assert_N(layer.bottom_size() == 1, layer.top_size() == 1);
+                    CV_CheckGE(layerParams.blobs.size(), (size_t)2, "BatchNorm conversion requires mean and variance blobs");
 
                     LayerParams mvnParams;
                     mvnParams.set("eps", layerParams.get<float>("eps", 1e-5));

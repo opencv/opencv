@@ -866,4 +866,87 @@ TEST_P(Test_Caffe_nets, RFCN)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Caffe_nets, dnnBackendsAndTargets());
 
+TEST(Test_Caffe, custom_params_and_unknown_field_types)
+{
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
+    // Positive control: custom scalar parameter inside pooling_param does not force unset
+    // optional kernel_h/stride_h fields or empty repeated submessages to be read.
+    const std::string validPoolPrototxt =
+        "input: \"data\"\n"
+        "input_shape { dim: 1 dim: 1 dim: 2 dim: 2 }\n"
+        "layer {\n"
+        "  name: \"pool1\"\n"
+        "  type: \"Pooling\"\n"
+        "  bottom: \"data\"\n"
+        "  top: \"pool1\"\n"
+        "  pooling_param {\n"
+        "    pool: AVE\n"
+        "    kernel_size: 2\n"
+        "    custom_scalar_param: 1\n"
+        "  }\n"
+        "}\n";
+    Net poolNet;
+    ASSERT_NO_THROW(poolNet = readNetFromCaffe(validPoolPrototxt.data(), validPoolPrototxt.size()));
+    ASSERT_FALSE(poolNet.empty());
+    int poolShape[] = {1, 1, 2, 2};
+    poolNet.setInput(Mat(4, poolShape, CV_32F, Scalar(2.0f)));
+    Mat poolOut;
+    ASSERT_NO_THROW(poolOut = poolNet.forward());
+    EXPECT_EQ(poolOut.total(), (size_t)1);
+    EXPECT_NEAR(poolOut.at<float>(0), 2.0f, 1e-5f);
+
+    // Negative case (CV-C2): unknown field whose value entry is a nested group rather than
+    // a length-delimited token must be rejected before calling length_delimited().
+    const std::string nonStringUnknownGroupPrototxt =
+        "input: \"data\"\n"
+        "input_shape { dim: 1 dim: 1 dim: 2 dim: 2 }\n"
+        "layer {\n"
+        "  name: \"relu1\"\n"
+        "  type: \"ReLU\"\n"
+        "  bottom: \"data\"\n"
+        "  top: \"relu1\"\n"
+        "  custom_group_param: [ { nested_field: 1 } ]\n"
+        "}\n";
+    EXPECT_THROW(readNetFromCaffe(nonStringUnknownGroupPrototxt.data(), nonStringUnknownGroupPrototxt.size()), cv::Exception);
+
+    // Regression case (CV-C1): unknown field on a message with an empty repeated submessage
+    // (InputParameter.shape) must not index element 0 of the empty RepeatedPtrField.
+    const std::string emptyRepeatedSubmessagePrototxt =
+        "input: \"data\"\n"
+        "input_shape { dim: 1 dim: 1 dim: 2 dim: 2 }\n"
+        "layer {\n"
+        "  name: \"relu1\"\n"
+        "  type: \"ReLU\"\n"
+        "  bottom: \"data\"\n"
+        "  top: \"relu1\"\n"
+        "  input_param {\n"
+        "    custom_input_tag: 7\n"
+        "  }\n"
+        "}\n";
+    Net reluNet;
+    ASSERT_NO_THROW(reluNet = readNetFromCaffe(emptyRepeatedSubmessagePrototxt.data(), emptyRepeatedSubmessagePrototxt.size()));
+    ASSERT_FALSE(reluNet.empty());
+#endif
+}
+
+TEST(Test_Caffe, batchnorm_training_mode_blob_count_validation)
+{
+    const std::string bnTrainingPrototxt =
+        "input: \"data\"\n"
+        "input_shape { dim: 1 dim: 2 dim: 2 dim: 2 }\n"
+        "layer {\n"
+        "  name: \"bn1\"\n"
+        "  type: \"BatchNorm\"\n"
+        "  bottom: \"data\"\n"
+        "  top: \"bn1\"\n"
+        "  batch_norm_param {\n"
+        "    use_global_stats: false\n"
+        "  }\n"
+        "}\n";
+
+    EXPECT_THROW(readNetFromCaffe(bnTrainingPrototxt.data(), bnTrainingPrototxt.size()), cv::Exception);
+}
+
 }} // namespace
