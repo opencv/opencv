@@ -99,9 +99,9 @@ class ml_dtypes_test(NewOpenCVTests):
                     values = np.arange(channels, dtype=np.float32) - 1
                     operand = values.astype(dt)
                     expected = cv.add(src, tuple(float(v) for v in values))
+                    reversed_expected = cv.add(src, tuple(float(v) for v in values[::-1]))
                     np.testing.assert_array_equal(cv.add(src, operand), expected)
-                    np.testing.assert_array_equal(cv.add(src, operand[::-1]),
-                                                  cv.add(src, tuple(float(v) for v in values[::-1])))
+                    np.testing.assert_array_equal(cv.add(src, operand[::-1]), reversed_expected)
         img = np.zeros((2, 3, 3), dtype=ml_dtypes.bfloat16)
         operand = np.array([1, 2, 3], dtype=ml_dtypes.bfloat16)
         self.assertSameBits(cv.add(img, operand), img + operand)

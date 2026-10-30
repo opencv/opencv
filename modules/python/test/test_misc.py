@@ -243,7 +243,8 @@ class Bindings(NewOpenCVTests):
     def test_type_constants_for_all_depths(self):
         # Same depth list as export_matrix_type_constants() in api_refinement.py.
         depths = ("CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S", "CV_32F", "CV_64F", "CV_16F",
-                  "CV_16BF", "CV_Bool", "CV_64U", "CV_64S", "CV_32U", "CV_8F_E4M3FN", "CV_8F_E4M3FNUZ")
+                  "CV_16BF", "CV_Bool", "CV_64U", "CV_64S", "CV_32U",
+                  "CV_8F_E4M3FN", "CV_8F_E4M3FNUZ")
         for name in depths:
             depth = getattr(cv, name)
             make_type = getattr(cv, name + "C")

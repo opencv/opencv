@@ -372,7 +372,8 @@ PyObject* pyopencv_from(const cv::Mat& m)
             }
             if( useExactNumpyDtypes() )
                 CV_LOG_ONCE_WARNING(NULL, "Python bindings: setUseExactNumpyDtypes(True) is set, "
-                                    "but NumPy does not know bfloat16 / float8 and they are returned as float32. "
+                                    "but NumPy does not know bfloat16 / float8 and they are "
+                                    "returned as float32. "
                                     "Import ml_dtypes to keep the exact dtype.");
             // NumPy alone cannot name these; widen to float32 (lossless).
             cv::Mat m32f;

@@ -53,7 +53,8 @@ const NonConventionalDtype kNonConventionalDtypes[] = {
     { CV_8F_E4M3FN,    "float8_e4m3fn",   1 },
     { CV_8F_E4M3FNUZ,  "float8_e4m3fnuz", 1 },
 };
-const int kNumNonConventionalDtypes = sizeof(kNonConventionalDtypes) / sizeof(kNonConventionalDtypes[0]);
+const int kNumNonConventionalDtypes =
+    sizeof(kNonConventionalDtypes) / sizeof(kNonConventionalDtypes[0]);
 
 bool g_useExactNumpyDtypes = false;
 

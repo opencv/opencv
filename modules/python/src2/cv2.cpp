@@ -137,7 +137,8 @@ static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
   {"setUseExactNumpyDtypes", (PyCFunction)(pycvSetUseExactNumpyDtypes), METH_O,
    "setUseExactNumpyDtypes(flag) -> None\n. Keep output bfloat16 / float8 arrays at their exact dtype "
-   "(registered by the ml_dtypes package, which must be imported) instead of widening them to float32. Off by default. Input arrays are accepted regardless of this flag. "
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them "
+   "to float32. Off by default. Input arrays are accepted regardless of this flag. "
    "The flag is process-wide: set it in the application, libraries should not change it."},
   {"useExactNumpyDtypes", (PyCFunction)(pycvUseExactNumpyDtypes), METH_NOARGS,
    "useExactNumpyDtypes() -> retval"},
