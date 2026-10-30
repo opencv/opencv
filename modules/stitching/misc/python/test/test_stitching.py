@@ -196,6 +196,28 @@ class stitching_detail_default_construct_test(NewOpenCVTests):
         self.assertEqual(matches_info.src_img_idx, -1)
         self.assertEqual(matches_info.dst_img_idx, -1)
 
+    def test_matcher_apply(self):
+        orb = cv.ORB_create()
+        features = []
+        for idx, name in enumerate(('stitching/a1.png', 'stitching/a2.png')):
+            img = self.get_sample(name)
+            keypoints, descriptors = orb.detectAndCompute(img, None)
+            feat = cv.detail_ImageFeatures()
+            feat.img_idx = idx
+            feat.img_size = (img.shape[1], img.shape[0])
+            feat.keypoints = keypoints
+            feat.descriptors = cv.UMat(descriptors)
+            features.append(feat)
+
+        matcher = cv.detail_BestOf2NearestMatcher()
+        matches_info = matcher.apply(features[0], features[1])
+
+        self.assertGreater(len(matches_info.matches), 0)
+        self.assertGreater(matches_info.num_inliers, 0)
+        self.assertLessEqual(matches_info.num_inliers, len(matches_info.matches))
+        self.assertEqual(matches_info.H.shape, (3, 3))
+        self.assertGreater(matches_info.confidence, 0)
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
