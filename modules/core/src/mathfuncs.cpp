@@ -1271,8 +1271,14 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
     if (depth < CV_32F)
     {
-        int minVali = minVal <= INT_MIN ? INT_MIN : cvFloor(minVal);
-        int maxVali = maxVal > INT_MAX ? INT_MAX : cvCeil(maxVal) - 1;
+        // an integer v satisfies minVal <= v < maxVal iff ceil(minVal) <= v <= ceil(maxVal) - 1
+        double minValCeil = std::ceil(minVal), maxValCeil = std::ceil(maxVal) - 1;
+        int minVali = INT_MAX, maxVali = INT_MIN; // empty range: every element is out of range
+        if (minValCeil <= maxValCeil && minValCeil <= INT_MAX && maxValCeil >= INT_MIN)
+        {
+            minVali = minValCeil <= INT_MIN ? INT_MIN : (int)minValCeil;
+            maxVali = maxValCeil >= INT_MAX ? INT_MAX : (int)maxValCeil;
+        }
 
         (check_range_functions[depth])(src, badPt, minVali, maxVali);
     }
