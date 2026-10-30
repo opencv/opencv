@@ -4687,4 +4687,47 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+
+TEST(Test_Col2Im, EmptyInput)
+{
+    for (int shapeType : {CV_32S, CV_64S})
+    {
+        Mat data(std::vector<int>{0, 4, 9}, CV_32F);
+        Mat image_shape(std::vector<int>{2}, shapeType);
+        if (shapeType == CV_32S)
+        {
+            image_shape.at<int32_t>(0) = 4;
+            image_shape.at<int32_t>(1) = 4;
+        }
+        else
+        {
+            image_shape.at<int64_t>(0) = 4;
+            image_shape.at<int64_t>(1) = 4;
+        }
+        Mat block_shape(std::vector<int>{2}, shapeType);
+        if (shapeType == CV_32S)
+        {
+            block_shape.at<int32_t>(0) = 2;
+            block_shape.at<int32_t>(1) = 2;
+        }
+        else
+        {
+            block_shape.at<int64_t>(0) = 2;
+            block_shape.at<int64_t>(1) = 2;
+        }
+
+        LayerParams lp;
+        lp.type = "Col2Im";
+        lp.name = "test_col2im_empty";
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+        std::vector<Mat> inputs{data, image_shape, block_shape};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 1, 4, 4}));
+    }
+}
+
 }} // namespace
