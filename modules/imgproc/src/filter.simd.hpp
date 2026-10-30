@@ -401,8 +401,17 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
             }
         }
 
-        const uchar* srcInner = src + (ptrdiff_t)(this_.roi.y + top - kx - y0)*srcstep;
-        (*this_.rowColumnFilter)(srcInner, dst, srcstep, dststep, width, height, this_.roi.y, wholeHeight, cn);
+        // The fused filter walks each column strip down all its rows. On wide rows that thrashes
+        // the caches and hardware prefetchers, so it runs on bands of rows of about 256 KB.
+        const size_t rowBytes = (size_t)width*(esz + dsz);
+        const int band = std::max(8, (int)std::min((size_t)inner, ((size_t)256 << 10) / rowBytes));
+        for( int y = 0; y < inner; y += band )
+        {
+            const int yd = top + y;
+            const uchar* srcBand = src + (ptrdiff_t)(this_.roi.y + yd - kx - y0)*srcstep;
+            (*this_.rowColumnFilter)(srcBand, dst + (ptrdiff_t)yd*dststep, srcstep, dststep, width,
+                                     std::min(band, inner - y), this_.roi.y + yd, wholeHeight, cn);
+        }
     }
     return height;
 }
