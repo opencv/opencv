@@ -41,6 +41,11 @@ public:
         const int axis = normalize_axis(m_axis, inpShape);
         if (!inpShape.empty())
             inpShape.erase(inpShape.begin() + axis);
+        if (m_real_ndims != -1)
+        {
+            CV_CheckGE(m_real_ndims, 0, "GatherLayer: invalid real_ndims");
+            CV_CheckLE(m_real_ndims, static_cast<int>(inputs[1].size()), "GatherLayer: real_ndims exceeds index shape rank");
+        }
         auto end = m_real_ndims == -1 ? inputs[1].end() : inputs[1].begin() + m_real_ndims;
         inpShape.insert(inpShape.begin() + axis, inputs[1].begin(), end);
         outputs.assign(1, inpShape);
@@ -92,6 +97,11 @@ public:
 
         // FIXIT: why should we work with non-normalized input? it should be handled in importer or layers's output generator
         const int axis_size = (int)inp.size[axis];
+        if (inp.total() == 0 || indices_total == 0)
+        {
+            CV_CheckEQ(out.total(), (size_t)0, "");
+            return;
+        }
 
         const size_t outer_size = axis == 0 ? inp.total() : inp.step1(axis - 1);
         const size_t outer_dims = inp.total() / outer_size;
@@ -110,9 +120,13 @@ public:
             const size_t src_offset = i * outer_size;
             for (size_t j = 0 ; j < indices_total; ++j)
             {
-                const int index = normalize_axis(idx[j], axis_size);
-                CV_DbgCheck(index, index >= 0 && index < axis_size, "");
-                const size_t new_offset = src_offset + index * inner_size;
+                T_INDEX raw_idx = idx[j];
+                if (raw_idx < 0)
+                    raw_idx += static_cast<T_INDEX>(axis_size);
+                if (raw_idx < 0 || raw_idx >= static_cast<T_INDEX>(axis_size))
+                    CV_Error(Error::StsOutOfRange, "GatherLayer: index out of range");
+                const int index = static_cast<int>(raw_idx);
+                const size_t new_offset = src_offset + static_cast<size_t>(index) * inner_size;
                 std::memcpy(dst, src + new_offset * es, inner_bytes);
                 dst += inner_bytes;
             }
