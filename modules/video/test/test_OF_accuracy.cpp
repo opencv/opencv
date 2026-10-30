@@ -226,7 +226,6 @@ TEST_P(DenseOpticalFlow_DIS_OptimizedMatchesReference, accuracy)
     const Size sz = get<0>(GetParam());
     const int preset = get<1>(GetParam());
     const bool use_initial_flow = get<2>(GetParam());
-    const bool use_optimized = useOptimized();
 
     Mat tmp(sz.height / 4, sz.width / 4, CV_8UC1), frame1, frame2;
     theRNG().fill(tmp, RNG::UNIFORM, 0, 256);
@@ -244,11 +243,19 @@ TEST_P(DenseOpticalFlow_DIS_OptimizedMatchesReference, accuracy)
         flow_ref.setTo(Scalar(60.f, 60.f));
         flow_ref.copyTo(flow_opt);
     }
-    setUseOptimized(false);
-    DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_ref);
-    setUseOptimized(true);
-    DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_opt);
-    setUseOptimized(use_optimized);
+    {
+        /* restores the global flag even if calc() throws, so later tests are not affected */
+        struct UseOptimizedGuard
+        {
+            const bool saved;
+            UseOptimizedGuard() : saved(useOptimized()) {}
+            ~UseOptimizedGuard() { setUseOptimized(saved); }
+        } guard;
+        setUseOptimized(false);
+        DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_ref);
+        setUseOptimized(true);
+        DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_opt);
+    }
 
     EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_INF), 1e-2);
     EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_L1), 1e-4 * flow_ref.total());
