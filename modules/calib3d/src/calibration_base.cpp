@@ -1043,6 +1043,9 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Mat Mmat = _Marr.getMat();
     int depth = Mmat.depth();
     Mmat.convertTo(M, CV_64F);
+    // the entries zeroed by the Givens rotations keep a rounding residue proportional to the
+    // magnitude of the input, so the sanity checks below use a relative tolerance
+    const double zeroTol = FLT_EPSILON*std::max(1., norm(M, NORM_INF));
 
     /* Find Givens rotation Q_x for x axis (left multiplication). */
     /*
@@ -1059,7 +1062,7 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Matx33d Qx(1, 0, 0, 0, c, s, 0, -s, c);
     Matx33d R = M*Qx;
 
-    assert(fabs(R(2, 1)) < FLT_EPSILON);
+    assert(fabs(R(2, 1)) < zeroTol);
     R(2, 1) = 0;
 
     /* Find Givens rotation for y axis. */
@@ -1077,7 +1080,7 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Matx33d Qy(c, 0, -s, 0, 1, 0, s, 0, c);
     M = R*Qy;
 
-    CV_Assert(fabs(M(2, 0)) < FLT_EPSILON);
+    CV_Assert(fabs(M(2, 0)) < zeroTol);
     M(2, 0) = 0;
 
     /* Find Givens rotation for z axis. */
@@ -1096,7 +1099,7 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Matx33d Qz(c, s, 0, -s, c, 0, 0, 0, 1);
     R = M*Qz;
 
-    CV_Assert(fabs(R(1, 0)) < FLT_EPSILON);
+    CV_Assert(fabs(R(1, 0)) < zeroTol);
     R(1, 0) = 0;
 
     // Solve the decomposition ambiguity.
