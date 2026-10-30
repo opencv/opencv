@@ -9,4 +9,11 @@ if(HAVE_KLEIDICV)
       $<TARGET_PROPERTY:kleidicv,COMPILE_OPTIONS>
       "-Wno-old-style-cast" "-Wno-unused-function"
   )
+  if(CV_CLANG_CL)
+    foreach(_kleidicv_tgt kleidicv kleidicv_neon kleidicv_thread kleidicv_sve2 kleidicv_sme kleidicv_sme2 kleidicv_hal)
+      if(TARGET ${_kleidicv_tgt})
+        target_compile_options(${_kleidicv_tgt} PRIVATE "-Wno-everything")
+      endif()
+    endforeach()
+  endif()
 endif()
