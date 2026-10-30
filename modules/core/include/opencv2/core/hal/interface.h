@@ -216,6 +216,7 @@ typedef int16_t cv_hal_bf16;
 #define CV_HAL_GEMM_1_T 1
 #define CV_HAL_GEMM_2_T 2
 #define CV_HAL_GEMM_3_T 4
+#define CV_HAL_GEMM_SINGLE_THREAD 256 //!< run on the calling thread only
 //! @}
 
 //! @}

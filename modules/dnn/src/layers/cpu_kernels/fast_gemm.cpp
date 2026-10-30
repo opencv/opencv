@@ -18,8 +18,34 @@
 #include "layers/cpu_kernels/fast_gemm_kernels.simd_declarations.hpp"
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "fast_gemm_kernels.default.hpp"
+#include "opencv2/core/hal/hal.hpp"
+#include "gemm_select.hpp"
 
 namespace cv { namespace dnn {
+
+#if CV_NEON && CV_NEON_AARCH64
+// Arm: runs the product on the core GEMM engine; returns false if the strides do not fit cv::hal.
+static bool fastGemmBatchArm(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                             int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                             const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, bool multi_thread) {
+    int flags = multi_thread ? 0 : CV_HAL_GEMM_SINGLE_THREAD;
+    int lda = lda0, ldb = ldb0;
+    if (lda1 != 1) {
+        if (lda0 != 1) return false;
+        lda = lda1;
+        flags |= CV_HAL_GEMM_1_T;
+    }
+    if (ldb1 != 1) {
+        if (ldb0 != 1) return false;
+        ldb = ldb1;
+        flags |= CV_HAL_GEMM_2_T;
+    }
+    hal::gemm32fBatch((int)batch, A, A_offsets, (size_t)lda * sizeof(float),
+                      B, B_offsets, (size_t)ldb * sizeof(float),
+                      C, C_offsets, (size_t)ldc * sizeof(float), M, N, K, alpha, beta, flags);
+    return true;
+}
+#endif
 
 int fastGemmMC(const FastGemmOpt &opt) {
 #if CV_TRY_RVV && CV_RVV
@@ -501,6 +527,14 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
     const float* B = (const float*)b_;
     float* C = (float*)c_;
 
+#if CV_NEON && CV_NEON_AARCH64
+    // Arm: core's small-M kernel reads B in place, so B is not packed on every call.
+    const size_t zero_offset = 0;
+    if (M <= FAST_GEMM_THIN_MAX_M &&
+        fastGemmBatchArm(1, &zero_offset, &zero_offset, &zero_offset, M, N, K, alpha,
+                         A, lda0, lda1, B, ldb, 1, beta, C, ldc, multi_thread))
+        return;
+#endif
     if (fastGemmThinEligible(M, N, K)) {
         AutoBuffer<float> packed(fastGemmThinPackBSize(N, K));
         fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data());
@@ -590,6 +624,14 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     if (trans_b) {
         std::swap(ldb0, ldb1);
     }
+
+#if CV_NEON && CV_NEON_AARCH64
+    const size_t zero_offset = 0;
+    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+        fastGemmBatchArm(1, &zero_offset, &zero_offset, &zero_offset, M, N, K, alpha,
+                         A, lda0, lda1, B, ldb0, ldb1, beta, C, ldc, opt.multi_thread))
+        return;
+#endif
 
     if (!trans_b && ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc, opt.multi_thread);
@@ -685,6 +727,13 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     const char *a = (const char *)A;
     const char *b = (const char *)B;
     char *c = (char *)C;
+
+#if CV_NEON && CV_NEON_AARCH64
+    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+        fastGemmBatchArm(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha,
+                         A, lda0, lda1, B, ldb0, ldb1, beta, C, ldc, opt.multi_thread))
+        return;
+#endif
 
     // Below ~10K MACs (M*N*K) the blocked SIMD kernel's pack/tile overhead outweighs its speedup, so route tiny problems through the unblocked thin path.
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
@@ -828,6 +877,14 @@ void fastGemmBatch(size_t batch,
     const char *a = (const char *)A.ptr<const float>();
     const char *b = (const char *)B.ptr<const float>();
     char *c = (char *)C.ptr<float>();
+
+#if CV_NEON && CV_NEON_AARCH64
+    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+        fastGemmBatchArm(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha,
+                         (const float *)a, lda0, lda1, (const float *)b, ldb0, ldb1,
+                         beta, (float *)c, ldc, opt.multi_thread))
+        return;
+#endif
 
     if (ldb1 == 1 && (fastGemmThinEligible(M, N, K) || (uint64_t)M * N * K <= 10000)) {
         const size_t esz = sizeof(float);

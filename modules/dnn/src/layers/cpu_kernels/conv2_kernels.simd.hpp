@@ -476,47 +476,6 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 #endif
 
-static void setupActivation(const ConvState& cs, int K,
-                             FastActivation& fastActivation, const float*& activParams,
-                             ActivationFunc& activation, float& maxval, float& defaultAlpha) {
-    fastActivation = cs.fastActivation;
-    activParams = cs.activParams.data();
-    activation = cs.activation;
-    maxval = FLT_MAX;
-    defaultAlpha = 0.f;
-    if (fastActivation == FAST_ACTIV_CLIP) {
-        CV_Assert(cs.activParams.size() == 2u);
-        maxval = activParams[1];
-    } else if (fastActivation == FAST_ACTIV_RELU) {
-        CV_Assert(!activParams);
-    } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
-        CV_Assert(cs.activParams.size() == 1u);
-        defaultAlpha = activParams[0];
-    } else if (fastActivation == FAST_ACTIV_PRELU) {
-        CV_Assert(cs.activParams.size() == size_t(K));
-    } else {
-        // FAST_ACTIV_NONE: activation (if any) is handled via function pointer
-        defaultAlpha = 1.f;
-    }
-}
-
-static void fillCoeffBufs(FastActivation fastActivation, const float* activParams, float defaultAlpha,
-                           int k_count, int k_base,
-                           const float* scaleptr, const float* biasptr,
-                           float* scalebuf, float* biasbuf, float* alphabuf, int K0) {
-    int kk = 0;
-    for (; kk < k_count; kk++) {
-        scalebuf[kk] = scaleptr ? scaleptr[k_base + kk] : 1.f;
-        biasbuf[kk] = biasptr ? biasptr[k_base + kk] : 0.f;
-        alphabuf[kk] = fastActivation == FAST_ACTIV_PRELU ? activParams[k_base + kk] : defaultAlpha;
-    }
-    for (; kk < K0; kk++) {
-        scalebuf[kk] = 0.f;
-        biasbuf[kk] = 0.f;
-        alphabuf[kk] = 0.f;
-    }
-}
-
 #ifdef CONV_ENABLE_SIMD
 static bool simdTailAdjust(int spat_block_size, int& p, int p0, int p1, int K0,
                             float*& outptr, const float*& resptr) {

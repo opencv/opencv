@@ -1099,6 +1099,84 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
 #define cv_hal_gemm64fc hal_ni_gemm64fc
 //! @endcond
 
+//! @addtogroup core_hal_interface_matrix_multiplication
+//! @{
+
+/**
+@brief Size of B packed by cv_hal_gemm32f_packb, in bytes.
+@param n number of columns of op(B)
+@param k number of rows of op(B)
+@param flags CV_HAL_GEMM_2_T if B is stored as an n x k matrix
+@param size output size in bytes
+*/
+inline int hal_ni_gemm32f_packb_size(int n, int k, int flags, size_t* size) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+@brief Packs op(B) for cv_hal_gemm32f_packed.
+
+A buffer packed here is read only by cv_hal_gemm32f_packed, so that hook must accept it later.
+@param B matrix B, k x n (or n x k with CV_HAL_GEMM_2_T)
+@param B_step bytes between rows of B
+@param n number of columns of op(B)
+@param k number of rows of op(B)
+@param flags CV_HAL_GEMM_2_T if B is stored as an n x k matrix, CV_HAL_GEMM_SINGLE_THREAD
+@param packedB output, at least the size reported by cv_hal_gemm32f_packb_size
+*/
+inline int hal_ni_gemm32f_packb(const float* B, size_t B_step, int n, int k, int flags, void* packedB) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+@brief Computes C = alpha*op(A)*B + beta*C with B packed by cv_hal_gemm32f_packb.
+@param A matrix A, m x k (or k x m with CV_HAL_GEMM_1_T)
+@param A_step bytes between rows of A
+@param packedB buffer written by cv_hal_gemm32f_packb
+@param C matrix C, m x n
+@param C_step bytes between rows of C
+@param m number of rows of C
+@param n number of columns of C
+@param k number of columns of op(A)
+@param alpha multiplier of op(A)*B
+@param beta multiplier of C
+@param flags CV_HAL_GEMM_1_T, CV_HAL_GEMM_SINGLE_THREAD
+*/
+inline int hal_ni_gemm32f_packed(const float* A, size_t A_step, const void* packedB,
+                                 float* C, size_t C_step, int m, int n, int k,
+                                 float alpha, float beta, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+@brief Computes C_i = alpha*op(A_i)*op(B_i) + beta*C_i for i = 0..batch-1.
+
+Matrix i starts at A + A_offsets[i], B + B_offsets[i] and C + C_offsets[i]; offsets are in elements.
+@param batch number of products
+@param A matrices A, m x k (or k x m with CV_HAL_GEMM_1_T)
+@param A_offsets element offsets of the A matrices
+@param A_step bytes between rows of A
+@param B matrices B, k x n (or n x k with CV_HAL_GEMM_2_T)
+@param B_offsets element offsets of the B matrices
+@param B_step bytes between rows of B
+@param C matrices C, m x n
+@param C_offsets element offsets of the C matrices
+@param C_step bytes between rows of C
+@param m number of rows of C
+@param n number of columns of C
+@param k number of columns of op(A)
+@param alpha multiplier of op(A)*op(B)
+@param beta multiplier of C
+@param flags CV_HAL_GEMM_1_T, CV_HAL_GEMM_2_T, CV_HAL_GEMM_SINGLE_THREAD
+*/
+inline int hal_ni_gemm32f_batch(int batch,
+                                const float* A, const size_t* A_offsets, size_t A_step,
+                                const float* B, const size_t* B_offsets, size_t B_step,
+                                float* C, const size_t* C_offsets, size_t C_step,
+                                int m, int n, int k, float alpha, float beta, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_gemm32f_packb_size hal_ni_gemm32f_packb_size
+#define cv_hal_gemm32f_packb hal_ni_gemm32f_packb
+#define cv_hal_gemm32f_packed hal_ni_gemm32f_packed
+#define cv_hal_gemm32f_batch hal_ni_gemm32f_batch
+//! @endcond
+
 /**
    @brief Finds the global minimum and maximum in an array.
    @param src_data Source image

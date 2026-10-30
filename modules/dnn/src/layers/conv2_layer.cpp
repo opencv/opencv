@@ -8,6 +8,7 @@
 #include "layers_common.hpp"
 #include "conv2_common.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/conv2_gemm.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <algorithm>
 #include <cstring>
@@ -134,6 +135,8 @@ public:
         if (!plain.empty() &&
             !mlasSgemmPackB(false, true, K, Cg, plain.ptr<float>(), Cg, mlas_packed_B_.data))
             mlas_packed_B_.release();
+        // Weights changed, so the GEMM-path copy is repacked on next use.
+        conv_gemm_B_.release();
 
         // The CUDA path reads this plain copy instead of the packed one.
         if (!origWeights.empty() && origWeights.type() == CV_32F) {
@@ -262,12 +265,16 @@ public:
             bias_.convertTo(bias, CV_32F);
         }
 
+        conv_gemm_B_.release();
+        conv_gemm_mode_ = conv2GemmMode();
+
         // Pre-pack for MLAS 1x1 SGEMM (1x1 dense, stride-1, FP32, Cout*Cin
-        // >= 256*256 so the reorder cost is amortized).
+        // >= 256*256 so the reorder cost is amortized). Kept unless the im2col + GEMM path is forced:
+        // by default that path decides per call from the output size (see conv2GemmSizeOk()).
         mlas_packed_B_.release();
         mlas_packed_M_ = mlas_packed_K_ = 0;
         if (!depthwise && ngroups == 1 && weights_.type() == CV_32F &&
-            wtype == CV_32F && mlasAvailable())
+            wtype == CV_32F && mlasAvailable() && conv_gemm_mode_ != CONV2_GEMM_FORCED)
         {
             bool ksize_all_one = wshape0.dims >= 3;
             for (int k = 2; k < wshape0.dims; k++)
@@ -784,6 +791,22 @@ public:
         void* outptr = out.data;
         const void* wptr = weights.data;
 
+#if CV_NEON && CV_NEON_AARCH64
+        // Arm: im2col + core GEMM engine (on by default where the engine uses SME).
+        if (conv2GemmEligible(inptype, C0, inpshape)) {
+            if (conv_gemm_B_.empty())
+                conv2GemmPackWeights(weights, wshape0, packC0, conv_gemm_B_);
+            conv2GemmForward(inp, out, (const float*)resptr, cs, conv_gemm_B_, wshape0[0], wshape0[1],
+                             scale_data, bias_data, scratch_A_, scratch_C_);
+            if (uouts) out.copyTo(uouts->at(0));
+            if (dynamicWeights) {
+                weights.release();
+                conv_gemm_B_.release();
+            }
+            return;
+        }
+#endif
+
         // MLAS 1x1 SGEMM path. Skipped for small spatial: the gather/scatter
         // tax exceeds MLAS's SGEMM speedup over the in-place NCHWc8 kernel.
         if (mlas1x1Enabled() && inptype == CV_32F &&
@@ -815,6 +838,29 @@ public:
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
         }
+    }
+
+    // Convs the im2col + GEMM path is used for. By default only those with at least 64 output channels,
+    // a reduction (Cin * kh * kw) of at least 256 and at least 1e8 multiply-adds: below that the NCHWc
+    // kernels (or MLAS 1x1) are faster, and a small GEMM on SME also slows down the NEON layers that run
+    // next by more than it saves (measured inside 22 CNNs on Apple M5). Forced mode takes every conv so
+    // tests cover small ones.
+    bool conv2GemmSizeOk(Conv2GemmMode mode) const {
+        if (mode != CONV2_GEMM_AUTO)
+            return mode == CONV2_GEMM_FORCED;
+        if (wshape0.dims != 4 || cs.outshape.dims != 5)
+            return false;
+        const int Cout = wshape0[0], K = wshape0[1] * wshape0[2] * wshape0[3];
+        const double macs = (double)cs.outshape[0] * cs.outshape[2] * cs.outshape[3] * Cout * K;
+        return Cout >= 64 && K >= 256 && macs >= 1e8;
+    }
+
+    // im2col + GEMM conv path: FP32, 2D, not grouped, block size 8 (see conv2GemmMode()).
+    bool conv2GemmEligible(int inptype, int C0, const MatShape& inpshape) const {
+        if (!conv2GemmSizeOk(conv_gemm_mode_))
+            return false;
+        return inptype == CV_32F && C0 == 8 && inpshape.dims == 5 && !cs.depthwise && ngroups == 1 &&
+               wshape0.dims == 4 && weights.type() == CV_32F && packC0 == 8;
     }
 
     // True iff setWeights() armed the MLAS 1x1 SGEMM path for this conv.
@@ -1126,6 +1172,10 @@ public:
     Mat scratch_C_;
     int mlas_packed_M_ = 0;   // == Cout
     int mlas_packed_K_ = 0;   // == Cin
+
+    // im2col + GEMM conv path: weights packed on first use; the mode is read once in setWeights().
+    EngineGemmB conv_gemm_B_;
+    Conv2GemmMode conv_gemm_mode_ = CONV2_GEMM_OFF;
 };
 
 Ptr<Conv2Layer> Conv2Layer::create(const LayerParams& params)
