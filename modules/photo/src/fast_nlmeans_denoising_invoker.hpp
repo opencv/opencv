@@ -205,11 +205,32 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
                         const T * b_up_ptr = extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
                         const T * b_down_ptr = extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
 
+                        int x = 0;
+#if CV_SIMD128
+                        if (nlmLanes_<T>::supported)
+                        {
+                            const v_int32x4 v_a_up = nlmLanes_<T>::setall(a_up);
+                            const v_int32x4 v_a_down = nlmLanes_<T>::setall(a_down);
+                            for (; x <= search_window_size - VTraits<v_int32x4>::nlanes; x += VTraits<v_int32x4>::nlanes)
+                            {
+                                int bx = start_bx + x;
+                                v_int32x4 v_col = v_add(v_load(up_col_dist_sums_row + x),
+                                    D::calcUpDownDistLanes(v_a_up, v_a_down,
+                                                           nlmLanes_<T>::load(b_up_ptr + bx),
+                                                           nlmLanes_<T>::load(b_down_ptr + bx)));
+                                v_int32x4 v_dist = v_sub(v_load(dist_sums_row + x), v_load(col_dist_sums_row + x));
+                                v_store(dist_sums_row + x, v_add(v_dist, v_col));
+                                v_store(col_dist_sums_row + x, v_col);
+                                v_store(up_col_dist_sums_row + x, v_col);
+                            }
+                        }
+#endif
+
 // MSVC 2015 generates unaligned destination for "movaps" instruction for 32-bit builds
 #if defined _MSC_VER && _MSC_VER == 1900 && !defined _WIN64
 #pragma loop(no_vector)
 #endif
-                        for (int x = 0; x < search_window_size; x++)
+                        for (; x < search_window_size; x++)
                         {
                             // remove from current pixel sum column sum with index "first_col_num"
                             dist_sums_row[x] -= col_dist_sums_row[x];
@@ -237,7 +258,15 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
             {
                 const T* cur_row_ptr = extended_src_.ptr<T>(border_size_ + search_window_y + y);
                 int* dist_sums_row = dist_sums.row_ptr(y);
-                for (int x = 0; x < search_window_size_; x++)
+                int x = 0;
+#if CV_SIMD128
+                x = incWithWeightLanes_<T, IT, WT>::f(estimation, weights_sum, dist_sums_row,
+                                                      &almost_dist2weight_[0],
+                                                      almost_template_window_size_sq_bin_shift_,
+                                                      cur_row_ptr + border_size_ + search_window_x,
+                                                      search_window_size_);
+#endif
+                for (; x < search_window_size_; x++)
                 {
                     int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
                     WT weight = almost_dist2weight_[almostAvgDist];
@@ -263,7 +292,39 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForFirst
     int j = 0;
 
     for (int y = 0; y < search_window_size_; y++)
-        for (int x = 0; x < search_window_size_; x++)
+    {
+        int x = 0;
+#if CV_SIMD128
+        if (nlmLanes_<T>::supported)
+        {
+            for (; x <= search_window_size_ - VTraits<v_int32x4>::nlanes; x += VTraits<v_int32x4>::nlanes)
+            {
+                int start_y = i + y - search_window_half_size_;
+                int start_x = j + x - search_window_half_size_;
+
+                v_int32x4 v_dist_sum = v_setzero_s32(), v_col = v_setzero_s32();
+                for (int tx = -template_window_half_size_; tx <= template_window_half_size_; tx++)
+                {
+                    v_col = v_setzero_s32();
+                    for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++)
+                    {
+                        v_int32x4 v_a = nlmLanes_<T>::setall(
+                            extended_src_.at<T>(border_size_ + i + ty, border_size_ + j + tx));
+                        v_int32x4 v_b = nlmLanes_<T>::load(
+                            extended_src_.ptr<T>(border_size_ + start_y + ty) + border_size_ + start_x + tx);
+                        v_col = v_add(v_col, D::calcDistLanes(v_a, v_b));
+                    }
+                    v_store(col_dist_sums.row_ptr(tx + template_window_half_size_, y) + x, v_col);
+                    v_dist_sum = v_add(v_dist_sum, v_col);
+                }
+
+                v_store(dist_sums.row_ptr(y) + x, v_dist_sum);
+                // v_col holds the last template column
+                v_store(up_col_dist_sums.row_ptr(j, y) + x, v_col);
+            }
+        }
+#endif
+        for (; x < search_window_size_; x++)
         {
             dist_sums[y][x] = 0;
             for (int tx = 0; tx < template_window_size_; tx++)
@@ -285,6 +346,7 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForFirst
 
             up_col_dist_sums[j][y][x] = col_dist_sums[template_window_size_ - 1][y][x];
         }
+    }
 }
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
@@ -303,7 +365,36 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForEleme
     int new_last_col_num = first_col_num;
 
     for (int y = 0; y < search_window_size_; y++)
-        for (int x = 0; x < search_window_size_; x++)
+    {
+        int x = 0;
+#if CV_SIMD128
+        if (nlmLanes_<T>::supported)
+        {
+            int by = start_by + y;
+            int* dist_sums_row = dist_sums.row_ptr(y);
+            int* col_dist_sums_row = col_dist_sums.row_ptr(first_col_num, y);
+            int* new_col_dist_sums_row = col_dist_sums.row_ptr(new_last_col_num, y);
+            int* up_col_dist_sums_row = up_col_dist_sums.row_ptr(j, y);
+            for (; x <= search_window_size_ - VTraits<v_int32x4>::nlanes; x += VTraits<v_int32x4>::nlanes)
+            {
+                int bx = start_bx + x;
+                v_int32x4 v_dist = v_sub(v_load(dist_sums_row + x), v_load(col_dist_sums_row + x));
+
+                v_int32x4 v_col = v_setzero_s32();
+                for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++)
+                {
+                    v_int32x4 v_a = nlmLanes_<T>::setall(extended_src_.at<T>(ay + ty, ax));
+                    v_int32x4 v_b = nlmLanes_<T>::load(extended_src_.ptr<T>(by + ty) + bx);
+                    v_col = v_add(v_col, D::calcDistLanes(v_a, v_b));
+                }
+
+                v_store(new_col_dist_sums_row + x, v_col);
+                v_store(dist_sums_row + x, v_add(v_dist, v_col));
+                v_store(up_col_dist_sums_row + x, v_col);
+            }
+        }
+#endif
+        for (; x < search_window_size_; x++)
         {
             dist_sums[y][x] -= col_dist_sums[first_col_num][y][x];
 
@@ -316,6 +407,7 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForEleme
             dist_sums[y][x] += col_dist_sums[new_last_col_num][y][x];
             up_col_dist_sums[j][y][x] = col_dist_sums[new_last_col_num][y][x];
         }
+    }
 }
 
 #endif
