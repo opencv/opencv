@@ -384,7 +384,8 @@ void testECCProperties(Mat x, float eps) {
     Mat O = Mat::ones(x.size(), y.type());
 
     EXPECT_NEAR(computeECC(x, y), 0.0, eps);
-    if (x.type() != CV_8U && x.type() != CV_8U) {
+    if (x.depth() != CV_8U && x.depth() != CV_16U) {
+        // x - y saturates for unsigned input, so the operands are no longer orthogonal
         EXPECT_NEAR(computeECC(x + y, x - y), 0.0, eps);
     }
 
@@ -413,7 +414,7 @@ void testECCProperties(Mat x, float eps) {
 
     // 3. The coefficient is invariant with respect to the offset of channels
     EXPECT_NEAR(computeECC(X - R + 2 * G + B, X), 1.0, eps);
-    if (x.type() != CV_8U && x.type() != CV_8U) {
+    if (x.depth() != CV_8U && x.depth() != CV_16U) {
         EXPECT_NEAR(computeECC(X + R - 2 * G + B, Y), 0.0, eps);
     }
 
@@ -436,8 +437,88 @@ TEST(Video_ECC_Test_Compute, properties) {
 
     testECCProperties(x, 1e-5f);
     testECCProperties(x_f64, 1e-5f);
-    testECCProperties(x_u8, 1);
-    testECCProperties(x_u16, 1);
+    // The former tolerance of 1 masked deviations as large as 0.51, and for the identities
+    // whose expected value is zero it accepted the whole documented range of ECC. What is
+    // left below comes from the saturation of the operands this test builds -- 2 * Y + X
+    // and X - R overflow the storage range -- rather than from the mean subtraction:
+    // 5.8e-3 for CV_8U and 2.0e-6 for CV_16U.
+    testECCProperties(x_u8, 1e-2f);
+    testECCProperties(x_u16, 1e-5f);
+}
+
+// A triangle wave, so that the test data is integer valued and every storage type below
+// holds exactly the same numbers.
+static int triangleWave(int position, int period) {
+    position = ((position % period) + period) % period;
+    return position < period / 2 ? position : period - position;
+}
+
+// The coefficient must not depend on how the same pixel values are stored. Unsigned
+// multi-channel input used to skip the promotion that protected the mean subtraction and
+// returned roughly half of the correct coefficient (see the comment in computeECC).
+TEST(Video_ECC_Test_Compute, storage_type_invariance) {
+    const int channelCounts[2] = {1, 3};
+    const int storageDepths[3] = {CV_8U, CV_16U, CV_32F};
+
+    for (int channelIndex = 0; channelIndex < 2; ++channelIndex) {
+        const int channels = channelCounts[channelIndex];
+        Mat templateImage(64, 64, CV_MAKETYPE(CV_64F, channels));
+        Mat inputImage(64, 64, CV_MAKETYPE(CV_64F, channels));
+
+        for (int y = 0; y < templateImage.rows; ++y) {
+            for (int x = 0; x < templateImage.cols; ++x) {
+                for (int channel = 0; channel < channels; ++channel) {
+                    templateImage.ptr<double>(y)[x * channels + channel] =
+                        20 + 8 * triangleWave(x + 5 * channel, 26) + 5 * triangleWave(y, 18);
+                    inputImage.ptr<double>(y)[x * channels + channel] =
+                        20 + 8 * triangleWave(x + 1 + 5 * channel, 26) + 5 * triangleWave(y + 1, 18);
+                }
+            }
+        }
+
+        // CV_64F avoids the unsigned saturation and integer-mean rounding paths
+        const double expected = computeECC(templateImage, inputImage);
+
+        for (int depthIndex = 0; depthIndex < 3; ++depthIndex) {
+            const int storedType = CV_MAKETYPE(storageDepths[depthIndex], channels);
+            Mat storedTemplate, storedInput;
+            templateImage.convertTo(storedTemplate, storedType);
+            inputImage.convertTo(storedInput, storedType);
+            EXPECT_NEAR(computeECC(storedTemplate, storedInput), expected, 1e-5)
+                << "channels = " << channels << ", depth = " << storageDepths[depthIndex];
+        }
+    }
+}
+
+// computeECC(x, x) is 1 by definition, and the coefficient is bounded by [-1, 1].
+// Subtracting a mean that had been rounded to an integer work depth broke both: the
+// coefficient came out at 2.0 for this image.
+TEST(Video_ECC_Test_Compute, self_correlation_unsigned) {
+    const int channelCounts[2] = {1, 3};
+    const int storageDepths[2] = {CV_8U, CV_16U};
+
+    for (int channelIndex = 0; channelIndex < 2; ++channelIndex) {
+        for (int depthIndex = 0; depthIndex < 2; ++depthIndex) {
+            const int channels = channelCounts[channelIndex];
+            const int depth = storageDepths[depthIndex];
+            Mat image(64, 64, CV_MAKETYPE(depth, channels));
+
+            for (int y = 0; y < image.rows; ++y) {
+                for (int x = 0; x < image.cols; ++x) {
+                    for (int channel = 0; channel < channels; ++channel) {
+                        // two adjacent levels, so the mean lands halfway between them
+                        const int value = 100 + ((x + y + channel) & 1);
+                        if (depth == CV_8U)
+                            image.ptr<uchar>(y)[x * channels + channel] = (uchar)value;
+                        else
+                            image.ptr<ushort>(y)[x * channels + channel] = (ushort)value;
+                    }
+                }
+            }
+            EXPECT_NEAR(computeECC(image, image), 1.0, 1e-6)
+                << "channels = " << channels << ", depth = " << depth;
+        }
+    }
 }
 
 TEST(Video_ECC_Test_Compute, accuracy) {

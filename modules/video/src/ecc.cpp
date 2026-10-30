@@ -300,34 +300,25 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
     Scalar meanTemplate, sdTemplate;
 
     int active_pixels = inputMask.empty() ? templateImage.size().area() : countNonZero(inputMask);
-    int type = templateImage.type();
-    meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
-    Mat templateImage_zeromean = Mat::zeros(templateImage.size(), templateImage.type());
-    Mat templateMat = templateImage.getMat();
-    Mat inputMat = inputImage.getMat();
 
     /*
-     * For unsigned ints, when the mean is computed and subtracted, any values less than the mean
-     * will be set to 0 (since there are no negatives values). This impacts the norm and dot product, which
-     * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
-     * we convert them to a signed ints with larger resolution for the subtraction step.
+     * Form the zero-mean images in floating point: an integer destination rounds the mean
+     * that is subtracted, and an unsigned one also clamps every value below it to zero,
+     * while the norms below come from meanStdDev and are not rounded.
      */
-    if (type == CV_8U || type == CV_16U) {
-        int newType = type == CV_8U ? CV_16S : CV_32S;
-        Mat templateMatConverted, inputMatConverted;
-        templateMat.convertTo(templateMatConverted, newType);
-        cv::swap(templateMat, templateMatConverted);
-        inputMat.convertTo(inputMatConverted, newType);
-        cv::swap(inputMat, inputMatConverted);
-    }
-    subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
+    const int workDepth = templateImage.depth() == CV_64F ? CV_64F : CV_32F;
+    const int workType = CV_MAKETYPE(workDepth, templateImage.channels());
+
+    meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
+    Mat templateImage_zeromean = Mat::zeros(templateImage.size(), workType);
+    subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask, workDepth);
     double templateImagenorm = std::sqrt(active_pixels * cv::norm(sdTemplate, NORM_L2SQR));
 
     Scalar meanInput, sdInput;
 
-    Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
+    Mat inputImage_zeromean = Mat::zeros(inputImage.size(), workType);
     meanStdDev(inputImage, meanInput, sdInput, inputMask);
-    subtract(inputMat, meanInput, inputImage_zeromean, inputMask);
+    subtract(inputImage, meanInput, inputImage_zeromean, inputMask, workDepth);
     double inputImagenorm = std::sqrt(active_pixels * norm(sdInput, NORM_L2SQR));
 
     return templateImage_zeromean.dot(inputImage_zeromean) / (templateImagenorm * inputImagenorm);
