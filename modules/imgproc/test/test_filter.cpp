@@ -3023,4 +3023,56 @@ TEST_F(FastFilterEngineTest, FullImage) {
 }
 
 
+TEST(Imgproc_BoxFilter, small_roi_parent_border)
+{
+    const int borders[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101 };
+    const Rect rois[] = { Rect(7, 4, 1, 4), Rect(0, 6, 2, 2), Rect(6, 7, 2, 1), Rect(3, 3, 2, 4) };
+    const Size ksizes[] = { Size(5, 3), Size(3, 5), Size(5, 5), Size(2, 4) };
+    for (int type : { CV_32FC1, CV_32FC3, CV_64FC1 })
+    for (int border : borders)
+    for (const Rect& r : rois)
+    for (const Size& k : ksizes)
+    for (int ay = 0; ay < k.height; ay++)
+    for (int ax = 0; ax < k.width; ax++)
+    for (int inplace = 0; inplace < 2; inplace++)
+    {
+        Mat img(8, 8, type);
+        randu(img, 0, 100);
+        const int cn = img.channels();
+        Mat img64;
+        img.convertTo(img64, CV_64F);
+        Mat expected(r.size(), CV_MAKETYPE(CV_64F, cn));
+        for (int y = 0; y < r.height; y++)
+        for (int x = 0; x < r.width; x++)
+        for (int c = 0; c < cn; c++)
+        {
+            double s = 0;
+            for (int i = 0; i < k.height; i++)
+            for (int j = 0; j < k.width; j++)
+            {
+                int py = borderInterpolate(r.y + y - ay + i, img.rows, border);
+                int px = borderInterpolate(r.x + x - ax + j, img.cols, border);
+                if (py >= 0 && px >= 0)
+                    s += img64.ptr<double>(py)[px*cn + c];
+            }
+            expected.ptr<double>(y)[x*cn + c] = s;
+        }
+
+        Mat dst;
+        if (inplace)
+        {
+            dst = img(r);
+            boxFilter(dst, dst, -1, k, Point(ax, ay), false, border);
+        }
+        else
+            boxFilter(img(r), dst, -1, k, Point(ax, ay), false, border);
+        Mat dst64;
+        dst.convertTo(dst64, CV_64F);
+        EXPECT_LE(cvtest::norm(expected, dst64, NORM_INF), 1e-3)
+            << "type=" << typeToString(type) << " border=" << border << " roi=" << r << " ksize=" << k
+            << " anchor=" << Point(ax, ay) << " inplace=" << inplace;
+    }
+}
+
+
 }} // namespace
