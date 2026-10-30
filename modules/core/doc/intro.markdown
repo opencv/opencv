@@ -273,10 +273,6 @@ Multi-channel (n-channel) types can be specified using the following options:
 the constant type is formed from the depth, taking the lowest CV_CN_SHIFT bits, which is currently set to 5,
 and the number of channels minus 1, taking the next `log2(CV_CN_MAX)` bits.
 
-@attention `CV_8F_E4M3FNC1` is available, but multi-channel variants (`CV_8F_E4M3FNC2` ... `CV_8F_E4M3FNC4`) are not supported.
-Use `CV_8F_E4M3FNC(2)` ... `CV_8F_E4M3FNC(4)` instead. The same restriction applies to `CV_8F_E4M3FNUZ`.
-
-
 Examples:
 ```.cpp
     Mat mtx(3, 3, CV_32F); // make a 3x3 floating-point matrix
