@@ -3423,6 +3423,130 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+TEST(Test_ONNX_Importer, QuantizedBiasFixtures)
+{
+    const char* models[] = {
+        "importer_qconv_bias", "importer_qgemm_constant", "importer_qgemm_omitted",
+        "importer_qgemm_omitted_no_output_zp"
+    };
+    for (size_t i = 0; i < sizeof(models) / sizeof(models[0]); ++i)
+    {
+        SCOPED_TRACE(models[i]);
+        const std::string path = findDataFile(std::string("dnn/onnx/models/") + models[i] + ".onnx", false);
+        Net net;
+        ASSERT_NO_THROW(net = readNetFromONNX(path));
+        EXPECT_FALSE(net.empty());
+    }
+
+    const char* invalidModels[] = {
+        "importer_qconv_float_bias", "importer_qconv_short_bias",
+        "importer_qgemm_float_bias", "importer_qgemm_short_bias"
+    };
+    for (size_t i = 0; i < sizeof(invalidModels) / sizeof(invalidModels[0]); ++i)
+    {
+        SCOPED_TRACE(invalidModels[i]);
+        const std::string path = findDataFile(std::string("dnn/onnx/models/") + invalidModels[i] + ".onnx", false);
+        EXPECT_THROW(readNetFromONNX(path), cv::Exception);
+    }
+}
+
+TEST(Test_ONNX_Importer, QGemmVariableBiasRejected)
+{
+    const std::string path = findDataFile("dnn/onnx/models/importer_qgemm_variable.onnx", false);
+    try
+    {
+        readNetFromONNX(path);
+        FAIL() << "QGemm must reject a supplied non-constant C input";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string::npos, std::string(e.what()).find("non-constant bias C is not supported"));
+    }
+}
+
+TEST(Test_ONNX_Importer, LSTMRank3Fixture)
+{
+    const std::string path = findDataFile("dnn/onnx/models/importer_lstm_rank3.onnx", false);
+    Net net;
+    ASSERT_NO_THROW(net = readNetFromONNX(path));
+    EXPECT_FALSE(net.empty());
+
+    EXPECT_THROW(readNetFromONNX(findDataFile("dnn/onnx/models/importer_lstm_rank2.onnx", false)), cv::Exception);
+    EXPECT_THROW(readNetFromONNX(findDataFile("dnn/onnx/models/importer_lstm_rank1.onnx", false)), cv::Exception);
+}
+
+namespace {
+void testConvTransposeOutputShapeFixture(const char* model, int extent, const float* values)
+{
+    SCOPED_TRACE(model);
+    const std::string path = findDataFile(std::string("dnn/onnx/models/") + model + ".onnx", false);
+    Net net;
+    ASSERT_NO_THROW(net = readNetFromONNX(path));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    const int inputShape[] = {1, 1, 2, 2};
+    net.setInput(Mat(4, inputShape, CV_32F, Scalar(1)));
+    Mat output;
+    ASSERT_NO_THROW(output = net.forward());
+    ASSERT_EQ(output.dims, 4);
+    EXPECT_EQ(output.size[0], 1);
+    EXPECT_EQ(output.size[1], 1);
+    ASSERT_EQ(output.size[2], extent);
+    ASSERT_EQ(output.size[3], extent);
+    Mat expected(extent, extent, CV_32F, const_cast<float*>(values));
+    EXPECT_EQ(0.0, cv::norm(output.reshape(1, extent), expected, NORM_INF));
+}
+}  // namespace
+
+TEST(Test_ONNX_Importer, ConvTransposeSameOutputShapeFixtures)
+{
+    const float expected[] = {0.5f, 0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f,
+                              1, 1, 2, 1, 0.5f, 0.5f, 1, 0.5f};
+    testConvTransposeOutputShapeFixture("importer_deconv_same", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_legacy", 4, expected);
+
+    const char* invalidModels[] = {
+        "importer_deconv_kernel_stride_mismatch", "importer_deconv_output_shape_rank3",
+        "importer_deconv_zero_stride_same", "importer_deconv_negative_stride"
+    };
+    for (size_t i = 0; i < sizeof(invalidModels) / sizeof(invalidModels[0]); ++i)
+    {
+        SCOPED_TRACE(invalidModels[i]);
+        const std::string path = findDataFile(std::string("dnn/onnx/models/") + invalidModels[i] + ".onnx", false);
+        EXPECT_THROW(readNetFromONNX(path), cv::Exception);
+    }
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeNotsetOutputShapeFixtures)
+{
+    const float expected[] = {0.5f, 1, 0.5f, 0.5f, 1, 2, 1, 1,
+                              0.5f, 1, 0.5f, 0.5f, 0.5f, 1, 0.5f, 0.5f};
+    testConvTransposeOutputShapeFixture("importer_deconv_no_auto_pad", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_notset", 4, expected);
+    testConvTransposeOutputShapeFixture("importer_deconv_override_pads", 4, expected);
+
+    const float defaultStride[] = {2, 2, 2, 2};
+    testConvTransposeOutputShapeFixture("importer_deconv_default_stride", 2, defaultStride);
+    testConvTransposeOutputShapeFixture("importer_deconv_output_padding", 4, expected);
+
+    EXPECT_THROW(readNetFromONNX(findDataFile("dnn/onnx/models/importer_deconv_zero_stride_notset.onnx", false)), cv::Exception);
+}
+
+TEST(Test_ONNX_Importer, ConvTransposeUnsupportedAsymmetricPadding)
+{
+    const std::string path = findDataFile("dnn/onnx/models/importer_deconv_unsupported_asymmetric.onnx", false);
+    try
+    {
+        readNetFromONNX(path);
+        FAIL() << "Unrepresentable asymmetric padding must be rejected";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string::npos, std::string(e.what()).find("unsupported asymmetric padding"));
+    }
+}
+
 TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 {
     Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
