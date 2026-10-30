@@ -1367,6 +1367,13 @@ enum LightGlueType
     LG_DISK = 1     //!< DISK model:  keypoints normalized to [ 0, 1]
 };
 
+//! Keypoint normalization applied by LightGlueMatcher to pixel coordinates, see LightGlueMatcher::setKeypointNormalization()
+enum LightGlueNormalization
+{
+    LG_NORM_MODEL = 0,    //!< Per-axis mapping implied by the LightGlueType given at creation (default)
+    LG_NORM_MAX_SIDE = 1  //!< LightGlue reference mapping \f$(p - size / 2) / (\max(W, H) / 2)\f$, keeps the image aspect ratio
+};
+
 /** @brief LightGlue feature matcher.
 
 LightGlue is an attention-based feature matcher, as described in @cite Lindenberger23 . It takes
@@ -1409,7 +1416,8 @@ public:
 
     This provides the spatial context that LightGlue needs in addition to descriptors.
     Must be called before match()/knnMatch(), or use setImagePairInfo().
-    Pixel coordinates are normalized according to the LightGlueType selected at creation.
+    Pixel coordinates are normalized according to the LightGlueType selected at creation, or as
+    selected by setKeypointNormalization().
     For keypoints already normalized for that model, leave the corresponding image size empty.
 
     @param queryKpts Query image keypoints (Nx2 float matrix with x,y coordinates).
@@ -1423,6 +1431,23 @@ public:
     /** @brief Clears stored pair context information.
     */
     CV_WRAP virtual void clearPairInfo() = 0;
+
+    /** @brief Selects how pixel keypoints passed with an image size are normalized.
+
+    The default, LG_NORM_MODEL, keeps the per-axis mapping implied by the LightGlueType given at
+    creation. LG_NORM_MAX_SIDE applies the mapping of the LightGlue reference implementation, which
+    shifts by half the image size and divides both axes by half the longer side. Use it for models
+    exported from the reference forward without their own normalization, e.g. XFeat's LighterGlue.
+    For square images the two mappings coincide for LG_ALIKED.
+
+    The setting does not affect keypoints passed with an empty image size, and it is kept by clone().
+    @param normalization One of LightGlueNormalization.
+    */
+    CV_WRAP virtual void setKeypointNormalization(int normalization) = 0;
+
+    /** @brief Returns the keypoint normalization, one of LightGlueNormalization.
+    */
+    CV_WRAP virtual int getKeypointNormalization() const = 0;
 
     /** @brief Convenience overload of setPairInfo() taking keypoints directly.
     Uses the same model-specific normalization and image size convention as setPairInfo().

@@ -37,7 +37,7 @@ void LightGlueMatcher::setImagePairInfo(const std::vector<KeyPoint>& queryKpts, 
 #ifdef HAVE_OPENCV_DNN
 
 static void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _normalizedKeypoints,
-                                        Size imageSize, int type)
+                                        Size imageSize, int type, int normalization)
 {
     CV_INSTRUMENT_REGION();
 
@@ -46,7 +46,17 @@ static void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _norm
     CV_CheckEQ(keypoints.cols, 2, "LightGlue keypoints must be an Nx2 CV_32F matrix");
 
     float sx = 0.0f, sy = 0.0f, ox = 0.0f, oy = 0.0f;
-    switch (type)
+    if (normalization == LG_NORM_MAX_SIDE)
+    {
+        // LightGlue reference: (p - size / 2) / (max(W, H) / 2), the same scale on both axes.
+        CV_CheckGT(imageSize.width, 0, "LightGlue keypoint normalization requires a valid image width");
+        CV_CheckGT(imageSize.height, 0, "LightGlue keypoint normalization requires a valid image height");
+        const float half = 0.5f * (float)std::max(imageSize.width, imageSize.height);
+        sx = sy = 1.0f / half;
+        ox = -0.5f * (float)imageSize.width / half;
+        oy = -0.5f * (float)imageSize.height / half;
+    }
+    else switch (type)
     {
     case LG_ALIKED:
         CV_CheckGT(imageSize.width, 0, "LightGlue keypoint normalization requires a valid image width");
@@ -77,10 +87,10 @@ static void normalizeLightGlueKeypoints(InputArray _keypoints, OutputArray _norm
 }
 
 static void normalizeMatcherKeypoints(InputArray keypoints, OutputArray normalizedKeypoints,
-                                      Size imageSize, int type)
+                                      Size imageSize, int type, int normalization)
 {
     if (imageSize.width > 0 && imageSize.height > 0)
-        normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, type);
+        normalizeLightGlueKeypoints(keypoints, normalizedKeypoints, imageSize, type, normalization);
     else
     {
         // Preserve the existing convention for already-normalized coordinates.
@@ -136,6 +146,15 @@ public:
     LightGlueMatcherImpl(const dnn::Net& _net, float _scoreThreshold)
         : net(_net), scoreThreshold(_scoreThreshold) {}
 
+    void setKeypointNormalization(int _normalization) CV_OVERRIDE
+    {
+        if (_normalization != LG_NORM_MODEL && _normalization != LG_NORM_MAX_SIDE)
+            CV_Error(Error::StsBadArg, "Unsupported LightGlue keypoint normalization");
+        normalization = _normalization;
+    }
+
+    int getKeypointNormalization() const CV_OVERRIDE { return normalization; }
+
     // DescriptorMatcher interface
     bool isMaskSupported() const CV_OVERRIDE { return false; }
 
@@ -173,6 +192,7 @@ protected:
     {
         Ptr<Derived> matcher = makePtr<Derived>(net, scoreThreshold);
         matcher->pairContext = pairContext;
+        matcher->normalization = normalization;
         if (!emptyTrainData)
         {
             matcher->trainDescCollection = trainDescCollection;
@@ -183,6 +203,7 @@ protected:
 
     dnn::Net net;
     float scoreThreshold;
+    int normalization = LG_NORM_MODEL;
     LightGluePairContext pairContext;
 };
 
@@ -224,8 +245,8 @@ void LightGlueMatcherImpl::setLightGlueInputs(const Mat& queryDesc, const Mat& t
     int M = trainDesc.rows;
 
     Mat kpts0, kpts1;
-    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type);
-    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, type);
+    normalizeMatcherKeypoints(queryKpts, kpts0, queryImgSize, type, normalization);
+    normalizeMatcherKeypoints(trainKpts, kpts1, trainImgSize, type, normalization);
 
     // Prepare blobs: [1, N, 2] and [1, N, D]
     int descDim = queryDesc.cols;
