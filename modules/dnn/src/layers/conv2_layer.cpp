@@ -899,15 +899,6 @@ public:
                                                  ngroups, strides, dilations,
                                                  pads, auto_pad, ceil_mode);
         const int outtype = inferType(inp0.type());
-        if (inpshape != prevInpshape) {
-            // The input may be tagged with an unknown layout; on this path it is always NCHW.
-            MatShape inpNCHW = inpshape, outNCHW = outshape;
-            inpNCHW.layout = outNCHW.layout = DATA_LAYOUT_NCHW;
-            cs.initConv(inpNCHW, wshape0, outNCHW, ngroups,
-                        strides, dilations, pads, auto_pad, ceil_mode,
-                        fastActivation, activationFunc, activParams);
-            prevInpshape = inpshape;
-        }
 
         Mat inp = inp0, out;
         if (inp.type() != CV_32F)
@@ -931,7 +922,7 @@ public:
 
         const int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
         const int K = outshape[1], OH = outshape[2], OW = outshape[3];
-        const int kh = cs.kshape[1], kw = cs.kshape[2];  // also the strides
+        const int kh = wshape0[2], kw = wshape0[3];  // also the strides
         const int KD = C*kh*kw;
         const size_t P = (size_t)OH*OW;
         CV_Assert(im2colWeights_.rows == K && im2colWeights_.cols == KD);
@@ -969,27 +960,22 @@ public:
                              bias.empty() ? nullptr : bias.ptr<float>();
         const float* prm = activParams.empty() ? nullptr : activParams.data();
         const FastActivation act = fastActivation;
+        // Every fast activation is a slope for v < 0 and a clamp: alpha is 0 for ReLU, the slope
+        // for LeakyReLU, per channel for PReLU, 1 otherwise; lo/hi are Clip's bounds or +-FLT_MAX.
+        const float defAlpha = act == FAST_ACTIV_RELU ? 0.f :
+                               act == FAST_ACTIV_LEAKY_RELU ? activParams[0] : 1.f;
+        const float lo = act == FAST_ACTIV_CLIP ? activParams[0] : -FLT_MAX;
+        const float hi = act == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
         if (scale || shift || act != FAST_ACTIV_NONE || activationFunc) {
             parallel_for_(Range(0, N*K), [&](const Range& r) {
                 for (int nk = r.start; nk < r.end; nk++) {
                     const int k = nk % K;
                     float* yk = outdata + (size_t)nk*P;
                     const float s = scale ? scale[k] : 1.f, b = shift ? shift[k] : 0.f;
-                    if (scale || shift)
-                        for (size_t j = 0; j < P; j++)
-                            yk[j] = yk[j]*s + b;
-                    if (act == FAST_ACTIV_RELU) {
-                        for (size_t j = 0; j < P; j++)
-                            yk[j] = std::max(yk[j], 0.f);
-                    } else if (act == FAST_ACTIV_LEAKY_RELU || act == FAST_ACTIV_PRELU) {
-                        // PReLU has one slope per channel, LeakyReLU a single slope.
-                        const float alpha = act == FAST_ACTIV_PRELU ? activParams[k] : activParams[0];
-                        for (size_t j = 0; j < P; j++)
-                            yk[j] = yk[j] >= 0.f ? yk[j] : yk[j]*alpha;
-                    } else if (act == FAST_ACTIV_CLIP) {
-                        const float lo = activParams[0], hi = activParams[1];
-                        for (size_t j = 0; j < P; j++)
-                            yk[j] = std::min(std::max(yk[j], lo), hi);
+                    const float alpha = act == FAST_ACTIV_PRELU ? activParams[k] : defAlpha;
+                    for (size_t j = 0; j < P; j++) {
+                        const float v = yk[j]*s + b;
+                        yk[j] = std::min(std::max(v >= 0.f ? v : v*alpha, lo), hi);
                     }
                     if (activationFunc)
                         activationFunc(yk, yk, P, prm);

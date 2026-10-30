@@ -193,8 +193,6 @@ public:
                 runOpBlockAxis1Misaligned(inps, out);
                 return;
             }
-            copyChannelBlocks(out, inps, false);
-            return;
         }
         cv::concat(inps, axis_, out);
     }

@@ -245,7 +245,7 @@ public:
     }
 
     // Channel split in block layout, like Concat's: if every part starts on a multiple of 8
-    // channels, copy the channel blocks directly; otherwise go through NCHW.
+    // channels, split the channel blocks directly; otherwise go through NCHW.
     void runOpBlockAxis1(const Mat& inp, std::vector<Mat>& outs)
     {
         const int C0 = inp.size[inp.dims - 1];
@@ -254,7 +254,17 @@ public:
         for (size_t k = 0; k + 1 < nout; k++)
             aligned = aligned && (outs[k].size.C % C0) == 0;
         if (aligned) {
-            copyChannelBlocks(inp, outs, true);
+            // Only the last part may end inside a block, so this is a split of the C1 axis. Empty
+            // parts are left out: Mat::create() would reallocate them and drop the block layout.
+            std::vector<int> blocks;
+            std::vector<Mat> parts;
+            for (const Mat& out : outs) {
+                if (out.size[1] > 0) {
+                    blocks.push_back(out.size[1]);
+                    parts.push_back(out);
+                }
+            }
+            cv::split(inp, 1, blocks, parts);
             return;
         }
 

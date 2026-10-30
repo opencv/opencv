@@ -458,45 +458,5 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     }
 }
 
-void copyChannelBlocks(const Mat& whole, const std::vector<Mat>& parts, bool split)
-{
-    // Nothing to copy for an empty tensor (e.g. a zero batch), and N*C1 below would be 0.
-    if (whole.total() == 0)
-        return;
-    CV_Assert(whole.isContinuous());
-    const int N = whole.size[0], C1 = whole.size[1], nparts = (int)parts.size();
-    const size_t blockBytes = whole.total() / ((size_t)N * C1) * whole.elemSize();
-    // Each (n, part) run is cut into 64 KB pieces, so a batch of 1 with few parts still uses every
-    // thread. firstPiece[k] is the index of part k's first piece.
-    constexpr size_t PIECE = 1 << 16;
-    AutoBuffer<int> c1ofs(nparts), firstPiece(nparts + 1);
-    firstPiece[0] = 0;
-    int ofs = 0;
-    for (int k = 0; k < nparts; k++) {
-        CV_Assert(parts[k].isContinuous());
-        c1ofs[k] = ofs;
-        ofs += parts[k].size[1];
-        const size_t len = parts[k].size[1] * blockBytes;
-        firstPiece[k + 1] = firstPiece[k] + N * (int)((len + PIECE - 1) / PIECE);
-    }
-    CV_Assert(ofs <= C1);
-    parallel_for_(Range(0, firstPiece[nparts]), [&](const Range& r) {
-        int k = 0;
-        for (int i = r.start; i < r.end; i++) {
-            while (i >= firstPiece[k + 1])
-                k++;
-            const size_t len = parts[k].size[1] * blockBytes;
-            const int perImage = (int)((len + PIECE - 1) / PIECE), j = i - firstPiece[k];
-            const size_t pos = (size_t)(j % perImage) * PIECE, sz = std::min(PIECE, len - pos);
-            uchar* w = whole.data + ((size_t)(j / perImage) * C1 + c1ofs[k]) * blockBytes + pos;
-            uchar* p = parts[k].data + (size_t)(j / perImage) * len + pos;
-            if (split)
-                std::memcpy(p, w, sz);
-            else
-                std::memcpy(w, p, sz);
-        }
-    });
-}
-
 }
 }

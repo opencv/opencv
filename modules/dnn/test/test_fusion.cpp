@@ -1177,20 +1177,8 @@ static Mat slice(const Mat& m, int axis, int start, int end)
 
 static Mat concat(const std::vector<Mat>& parts, int axis)
 {
-    std::vector<int> shape(parts[0].size.p, parts[0].size.p + parts[0].dims);
-    shape[axis] = 0;
-    for (const Mat& p : parts)
-        shape[axis] += p.size[axis];
-    Mat out(shape, CV_32F);
-    int ofs = 0;
-    for (const Mat& p : parts)
-    {
-        std::vector<Range> r(out.dims, Range::all());
-        r[axis] = Range(ofs, ofs + p.size[axis]);
-        Mat dst = out(r);
-        p.copyTo(dst);
-        ofs += p.size[axis];
-    }
+    Mat out;
+    cv::concat(parts, axis, out);
     return out;
 }
 
