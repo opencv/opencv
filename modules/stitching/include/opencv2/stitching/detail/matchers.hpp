@@ -57,6 +57,8 @@ namespace detail {
 /** @brief Structure containing image keypoints and descriptors. */
 struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
+    CV_WRAP ImageFeatures() : img_idx(0) {}
+
     CV_PROP_RW int img_idx;
     CV_PROP_RW Size img_size;
     CV_PROP_RW std::vector<KeyPoint> keypoints;
@@ -98,7 +100,7 @@ homography or affine transformation based on selected matcher.
 */
 struct CV_EXPORTS_W_SIMPLE MatchesInfo
 {
-    MatchesInfo();
+    CV_WRAP MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
     MatchesInfo& operator =(const MatchesInfo &other);
 
