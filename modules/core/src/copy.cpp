@@ -337,6 +337,58 @@ copyMask_<int>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep,
     }
 }
 
+template<> void
+copyMask_<Vec2i>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const Vec2i* src = (const Vec2i*)_src;
+        Vec2i* dst = (Vec2i*)_dst;
+        int x = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vlanes = VTraits<v_uint8>::vlanes();
+        for (; x <= size.width - vlanes; x += vlanes)
+        {
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+            const uchar* s = (const uchar*)(src + x);
+            uchar* d = (uchar*)(dst + x);
+            if (v_check_all(v_nmask))       // no pixel selected: leave dst untouched
+                continue;
+            if (!v_check_any(v_nmask))      // all pixels selected: plain copy, dst is not read
+            {
+                for (int i = 0; i < 8; i++)
+                    vx_store(d + i * vlanes, vx_load(s + i * vlanes));
+                continue;
+            }
+            // mixed: expand each mask byte to the 8 bytes of its element (1 -> 2 -> 4 -> 8) and blend
+            v_uint8 v_nmask0, v_nmask1;
+            v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
+            v_uint8 v_nmask00, v_nmask01, v_nmask10, v_nmask11;
+            v_zip(v_nmask0, v_nmask0, v_nmask00, v_nmask01);
+            v_zip(v_nmask1, v_nmask1, v_nmask10, v_nmask11);
+            v_uint8 v_nm0, v_nm1, v_nm2, v_nm3, v_nm4, v_nm5, v_nm6, v_nm7;
+            v_zip(v_nmask00, v_nmask00, v_nm0, v_nm1);
+            v_zip(v_nmask01, v_nmask01, v_nm2, v_nm3);
+            v_zip(v_nmask10, v_nmask10, v_nm4, v_nm5);
+            v_zip(v_nmask11, v_nmask11, v_nm6, v_nm7);
+            vx_store(d,              v_select(v_nm0, vx_load(d),              vx_load(s)));
+            vx_store(d +     vlanes, v_select(v_nm1, vx_load(d +     vlanes), vx_load(s +     vlanes)));
+            vx_store(d + 2 * vlanes, v_select(v_nm2, vx_load(d + 2 * vlanes), vx_load(s + 2 * vlanes)));
+            vx_store(d + 3 * vlanes, v_select(v_nm3, vx_load(d + 3 * vlanes), vx_load(s + 3 * vlanes)));
+            vx_store(d + 4 * vlanes, v_select(v_nm4, vx_load(d + 4 * vlanes), vx_load(s + 4 * vlanes)));
+            vx_store(d + 5 * vlanes, v_select(v_nm5, vx_load(d + 5 * vlanes), vx_load(s + 5 * vlanes)));
+            vx_store(d + 6 * vlanes, v_select(v_nm6, vx_load(d + 6 * vlanes), vx_load(s + 6 * vlanes)));
+            vx_store(d + 7 * vlanes, v_select(v_nm7, vx_load(d + 7 * vlanes), vx_load(s + 7 * vlanes)));
+        }
+        vx_cleanup();
+#endif
+        for (; x < size.width; x++)
+            if ( mask[x] )
+                dst[x] = src[x];
+    }
+}
+
 static void
 copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
 {

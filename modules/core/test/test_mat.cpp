@@ -1452,6 +1452,49 @@ TEST(Core_Mat, copyNx1ToVector)
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
 
+typedef testing::TestWithParam<perf::MatType> Core_Mat_mask_8byte;
+
+// 8-byte elements: the mask has all-zero, all-set and mixed runs of pixels,
+// so every branch of the vectorized copyMask_<Vec2i> is used
+TEST_P(Core_Mat_mask_8byte, copyTo_setTo)
+{
+    int type = GetParam();
+    Mat mask(61, 127, CV_8UC1, Scalar(0));      // columns 0..39: nothing selected
+    mask.colRange(40, 80).setTo(255);           // columns 40..79: all selected
+    randu(mask.colRange(80, 127), 0, 2);        // columns 80..126: random 0/1
+
+    Mat src(mask.size(), type), dst0(mask.size(), type);
+    randu(src, 0, 100);
+    randu(dst0, 0, 100);
+    Mat value(1, 1, type, Scalar::all(3));
+
+    Mat expectedCopy = dst0.clone(), expectedSet = dst0.clone();
+    for (int y = 0; y < mask.rows; y++)
+    {
+        for (int x = 0; x < mask.cols; x++)
+        {
+            if (mask.at<uchar>(y, x))
+            {
+                memcpy(expectedCopy.ptr(y, x), src.ptr(y, x), src.elemSize());
+                memcpy(expectedSet.ptr(y, x), value.ptr(), src.elemSize());
+            }
+        }
+    }
+
+    Mat dst = dst0.clone();
+    src.copyTo(dst, mask);
+    EXPECT_EQ(0, cvtest::norm(dst, expectedCopy, NORM_INF));
+
+    dst = dst0.clone();
+    dst.setTo(Scalar::all(3), mask);
+    EXPECT_EQ(0, cvtest::norm(dst, expectedSet, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_mask_8byte, testing::Values(
+    perf::MatType(CV_64FC1),
+    perf::MatType(CV_16UC4)
+));
+
 TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
 {
     Mat1b src(4, 4), dst;
