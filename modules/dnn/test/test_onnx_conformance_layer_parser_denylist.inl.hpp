@@ -74,10 +74,6 @@
 "test_col2im_dilations",
 "test_col2im_pads",
 "test_col2im_strides",
-"test_compress_0",  // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
-"test_compress_1",  // ---- same as above ---
-"test_compress_default_axis",  // ---- same as above ---
-"test_compress_negative_axis",  // ---- same as above ---
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",
