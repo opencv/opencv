@@ -1647,6 +1647,57 @@ TEST(Core_InputOutput, FileStorage_json_key_backslash)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_json_key_escape_in_middle)
+{
+    // the character following an escape sequence must not be dropped
+    std::string test = R"({"\".":1,"\",":2,"a\\b":3,".\"x\"":4,"a\nb\tc":5,"\/":6})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+
+    FileNode root = fs.root();
+    ASSERT_EQ(root.size(), 6u);
+
+    EXPECT_EQ((int)root[R"(".)"], 1);
+    EXPECT_EQ((int)root[R"(",)"], 2);
+    EXPECT_EQ((int)root[R"(a\b)"], 3);
+    EXPECT_EQ((int)root[R"(."x")"], 4);
+    EXPECT_EQ((int)root["a\nb\tc"], 5);
+    EXPECT_EQ((int)root["/"], 6);
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_unicode_escape)
+{
+    // keys and string values decode \uXXXX (with surrogate pairs) to UTF-8
+    std::string test = R"({"\u00a1":1,"a\u0120b":2,"\ud83d\ude00":3,"s":"x\u00e9\/y"})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON);
+
+    ASSERT_EQ(fs.root().size(), 4u);
+    EXPECT_EQ((int)fs["\xc2\xa1"], 1);
+    EXPECT_EQ((int)fs["a\xc4\xa0" "b"], 2);
+    EXPECT_EQ((int)fs["\xf0\x9f\x98\x80"], 3);
+    EXPECT_EQ(fs["s"].string(), "x\xc3\xa9/y");
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_invalid_escape)
+{
+    const char* invalid[] = {
+        R"({"a\qb":1})",          // unknown escape in a key
+        R"({"a\u12g4":1})",       // non-hex digit in a key
+        R"({"\udc00":1})",        // unpaired low surrogate in a key
+        R"({"\ud83d":1})",        // high surrogate without the low half in a key
+        R"({"\ud83d\u0041":1})",  // high surrogate followed by a non-surrogate in a key
+        R"({"k":"a\qb"})",        // unknown escape in a value
+        R"({"k":"\u12"})",        // truncated \u in a value
+        R"({"k":"\udc00"})",      // unpaired low surrogate in a value
+    };
+    for (const char* json : invalid)
+    {
+        EXPECT_THROW(FileStorage(json, FileStorage::READ | FileStorage::MEMORY | FileStorage::FORMAT_JSON),
+                     cv::Exception) << json;
+    }
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =
