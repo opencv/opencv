@@ -645,6 +645,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_FilterSupportedFormats,
         make_pair( CV_16S, CV_16S),
         make_pair( CV_16S, CV_32F),
         make_pair( CV_16S, CV_64F),
+        make_pair( CV_16F, CV_16F),
+        make_pair( CV_16F, CV_32F),
+        make_pair( CV_16F, CV_64F),
         make_pair( CV_32F, CV_32F),
         make_pair( CV_64F, CV_64F)
     )
@@ -1892,6 +1895,33 @@ TEST(Imgproc_Linear16f, floating_output_depths)
             ASSERT_EQ(expected.size(), actual.size());
             ASSERT_EQ(expected.type(), actual.type());
             EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), depth == CV_64F ? 1e-12 : 1e-6);
+        }
+}
+
+TEST(Imgproc_Linear16f, laplacian_kernel_depths)
+{
+    Mat values(17, 19, CV_32FC3), source, wide;
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+
+    for (int ksize : {1, 3})
+        for (int ddepth : {CV_16F, CV_32F, CV_64F})
+        {
+            const int referenceDepth = ddepth == CV_16F ? CV_32F : ddepth;
+            Mat reference, expected, actual;
+            cv::Laplacian(wide, reference, referenceDepth, ksize);
+            if (ddepth == CV_16F)
+                reference.convertTo(expected, CV_16F);
+            else
+                expected = reference;
+
+            cv::Laplacian(source, actual, ddepth, ksize);
+            if (ddepth == CV_16F)
+                expectLinear16fClose(expected, actual);
+            else
+                EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), ddepth == CV_64F ? 1e-12 : 1e-6);
         }
 }
 

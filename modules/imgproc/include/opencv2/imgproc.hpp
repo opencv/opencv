@@ -78,7 +78,7 @@ This module offers a comprehensive suite of image processing functions, enabling
     --------------------------|----------------------
     CV_8U                     | -1/CV_16S/CV_32F/CV_64F
     CV_16U/CV_16S             | -1/CV_32F/CV_64F
-    CV_16F                    | -1/CV_32F/CV_64F (filter2D, sepFilter2D, boxFilter)
+    CV_16F                    | -1/CV_32F/CV_64F (filter2D, sepFilter2D, boxFilter, Sobel, Scharr, Laplacian)
     CV_32F                    | -1/CV_32F
     CV_64F                    | -1/CV_64F
 
