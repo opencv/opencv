@@ -370,8 +370,8 @@ PyObject* pyopencv_from(const cv::Mat& m)
                 Py_INCREF(o);
                 return o;
             }
-            if( getAllowNonConventionalDataTypes() )
-                CV_LOG_ONCE_WARNING(NULL, "Python bindings: non-conventional data types are allowed, "
+            if( useExactNumpyDtypes() )
+                CV_LOG_ONCE_WARNING(NULL, "Python bindings: setUseExactNumpyDtypes(True) is set, "
                                     "but NumPy does not know bfloat16 / float8 and they are returned as float32. "
                                     "Import ml_dtypes to keep the exact dtype.");
             // NumPy alone cannot name these; widen to float32 (lossless).

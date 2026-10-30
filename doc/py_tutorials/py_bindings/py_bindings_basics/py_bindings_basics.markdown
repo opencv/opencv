@@ -212,14 +212,14 @@ the exact type back, enable it once for the whole process:
 import cv2 as cv
 import ml_dtypes
 
-cv.setAllowNonConventionalDataTypes(True)
+cv.setUseExactNumpyDtypes(True)
 out = net.forward()  # bfloat16 / float8 outputs keep their type
 @endcode
 
-`cv.getAllowNonConventionalDataTypes()` returns the current value, which is `False` by
-default. An array passed as an output argument, such as `dst`, is filled in place and
-returned as is, whatever the setting. If the setting is on but `ml_dtypes` has not been
-imported, outputs are still converted to `float32` and a warning is printed once.
+`cv.useExactNumpyDtypes()` returns the current value, which is `False` by default. An
+array passed as an output argument, such as `dst`, is filled in place and returned as is,
+whatever the setting. If the setting is on but `ml_dtypes` has not been imported, outputs
+are still converted to `float32` and a warning is printed once.
 
 The setting is global, so it changes the outputs of every piece of code in the process that
 calls OpenCV. Turn it on in your application. A library should not change it, because the

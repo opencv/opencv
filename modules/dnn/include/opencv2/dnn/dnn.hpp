@@ -724,7 +724,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @note In Python, CV_16BF / CV_8F_E4M3FN / CV_8F_E4M3FNUZ output blobs are
          *  returned as NumPy float32 arrays by default. To preserve their exact dtypes,
          *  import the optional ml_dtypes package and call
-         *  `cv.setAllowNonConventionalDataTypes(True)` before forward(). This process-wide
+         *  `cv.setUseExactNumpyDtypes(True)` before forward(). This process-wide
          *  setting affects outputs only; registered bfloat16 / float8 input arrays are
          *  accepted regardless of it. It belongs to the application: libraries should not
          *  change it. See @ref tutorial_py_bindings_basics for details.

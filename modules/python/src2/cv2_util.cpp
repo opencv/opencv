@@ -55,7 +55,7 @@ const NonConventionalDtype kNonConventionalDtypes[] = {
 };
 const int kNumNonConventionalDtypes = sizeof(kNonConventionalDtypes) / sizeof(kNonConventionalDtypes[0]);
 
-bool g_allowNonConventionalDataTypes = false;
+bool g_useExactNumpyDtypes = false;
 
 // Process-lifetime cache, accessed under the GIL. Misses are not cached, so a later
 // `import ml_dtypes` still takes effect.
@@ -93,14 +93,14 @@ int nonConventionalIndex(int depth)
 
 }  // namespace
 
-void setAllowNonConventionalDataTypes(bool allow)
+void setUseExactNumpyDtypes(bool flag)
 {
-    g_allowNonConventionalDataTypes = allow;
+    g_useExactNumpyDtypes = flag;
 }
 
-bool getAllowNonConventionalDataTypes()
+bool useExactNumpyDtypes()
 {
-    return g_allowNonConventionalDataTypes;
+    return g_useExactNumpyDtypes;
 }
 
 bool isNonConventionalDepth(int depth)
@@ -111,7 +111,7 @@ bool isNonConventionalDepth(int depth)
 PyArray_Descr* nonConventionalDescrForCvDepth(int depth)
 {
     const int idx = nonConventionalIndex(depth);
-    if (!g_allowNonConventionalDataTypes || idx < 0)
+    if (!g_useExactNumpyDtypes || idx < 0)
         return nullptr;
     return nonConventionalDescr(idx);
 }

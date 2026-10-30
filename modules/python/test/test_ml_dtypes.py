@@ -18,24 +18,24 @@ class non_conventional_dtypes_test(NewOpenCVTests):
 
     def setUp(self):
         super(non_conventional_dtypes_test, self).setUp()
-        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
-        cv.setAllowNonConventionalDataTypes(False)
+        self.addCleanup(cv.setUseExactNumpyDtypes, cv.useExactNumpyDtypes())
+        cv.setUseExactNumpyDtypes(False)
 
     def test_flag_roundtrip(self):
-        cv.setAllowNonConventionalDataTypes(True)
-        self.assertTrue(cv.getAllowNonConventionalDataTypes())
-        cv.setAllowNonConventionalDataTypes(False)
-        self.assertFalse(cv.getAllowNonConventionalDataTypes())
+        cv.setUseExactNumpyDtypes(True)
+        self.assertTrue(cv.useExactNumpyDtypes())
+        cv.setUseExactNumpyDtypes(False)
+        self.assertFalse(cv.useExactNumpyDtypes())
 
-    def test_disallowed_widens_to_float32(self):
+    def test_disabled_widens_to_float32(self):
         for depth in NON_CONVENTIONAL_DEPTHS:
             for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
                 self.assertEqual(m.dtype, np.float32)
 
-    def test_allowed_without_ml_dtypes_widens_to_float32(self):
+    def test_enabled_without_ml_dtypes_widens_to_float32(self):
         if ml_dtypes is not None:
             self.skipTest("ml_dtypes is installed")
-        cv.setAllowNonConventionalDataTypes(True)
+        cv.setUseExactNumpyDtypes(True)
         for depth in NON_CONVENTIONAL_DEPTHS:
             for m in cv.utils.generateVectorOfMat(1, 3, 4, depth):
                 self.assertEqual(m.dtype, np.float32)
@@ -54,8 +54,8 @@ class ml_dtypes_test(NewOpenCVTests):
         super(ml_dtypes_test, self).setUp()
         if ml_dtypes is None:
             self.skipTest("ml_dtypes is not installed")
-        self.addCleanup(cv.setAllowNonConventionalDataTypes, cv.getAllowNonConventionalDataTypes())
-        cv.setAllowNonConventionalDataTypes(True)
+        self.addCleanup(cv.setUseExactNumpyDtypes, cv.useExactNumpyDtypes())
+        cv.setUseExactNumpyDtypes(True)
         # (numpy dtype, OpenCV depth, typeToString prefix, relative half-ULP)
         self.cases = [
             (ml_dtypes.bfloat16, cv.CV_16BF, "CV_16BF", 2.0 ** -8),
@@ -77,7 +77,7 @@ class ml_dtypes_test(NewOpenCVTests):
             self.assertIn("type(-1)=%sC1" % name, cv.utils.dumpInputArray(np.array(1.5, dtype=dt)))
 
     def test_inputs_accepted_with_outputs_disabled(self):
-        cv.setAllowNonConventionalDataTypes(False)
+        cv.setUseExactNumpyDtypes(False)
         for dt, _, name, _ in self.cases:
             a = np.arange(6, dtype=np.float32).reshape(2, 3).astype(dt)
             self.assertIn("type(-1)=%sC1" % name, cv.utils.dumpInputArray(a))
@@ -91,8 +91,8 @@ class ml_dtypes_test(NewOpenCVTests):
 
     def test_short_array_scalar_operands(self):
         # A float32 src keeps the result float32, so the operand is checked with the flag off too.
-        for allow in (False, True):
-            cv.setAllowNonConventionalDataTypes(allow)
+        for exact in (False, True):
+            cv.setUseExactNumpyDtypes(exact)
             for dt, _, _, _ in self.cases:
                 for channels in range(1, 5):
                     src = np.zeros((2, 3, channels), dtype=np.float32)
