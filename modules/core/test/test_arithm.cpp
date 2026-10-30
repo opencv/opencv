@@ -2673,9 +2673,10 @@ TEST(Core_Arithm, dst_reuse_unrelated_shape_reallocates)
     std::vector<float> s(12, 10.f), o(12, 2.f);
     Mat a = dstReuseVecMat(s), b = dstReuseVecMat(o);
     Mat dst(3, 4, CV_32F, Scalar(0));             // same element count, different extents
-    const uchar* p = dst.data;
+    Mat keep = dst;                               // extra header keeps the old buffer alive
     cv::subtract(a, b, dst);
-    EXPECT_NE(p, dst.data);
+    EXPECT_NE(keep.data, dst.data);               // really a new allocation, not an in-place reshape
+    EXPECT_EQ(0, cv::countNonZero(keep));         // the old buffer was not written to
     ASSERT_EQ(1, dst.dims);
     EXPECT_EQ(12, dst.size[0]);
 
