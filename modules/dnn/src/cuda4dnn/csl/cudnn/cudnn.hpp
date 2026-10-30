@@ -135,9 +135,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         /** creates a cuDNN handle and associates it with the stream specified
          *
+         * FP32 convolutions built with this handle use TF32 tensor cores only if \p allowTF32 is set.
+         *
          * Exception Guarantee: Basic
          */
-        Handle(Stream strm) : handle(std::make_shared<UniqueHandle>(std::move(strm))) { }
+        Handle(Stream strm, bool allowTF32)
+            : handle(std::make_shared<UniqueHandle>(std::move(strm))), tf32(allowTF32) { }
 
         Handle& operator=(const Handle&) = default;
         Handle& operator=(Handle&&) = default;
@@ -151,8 +154,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             return handle->get();
         }
 
+        /** returns true if FP32 convolutions may use TF32 tensor cores */
+        bool allowTF32() const noexcept { return tf32; }
+
     private:
         std::shared_ptr<UniqueHandle> handle;
+        bool tf32 = true;
     };
 
     /** describe a tensor

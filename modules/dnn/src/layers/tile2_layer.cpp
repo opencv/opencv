@@ -5,6 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/broadcast_copy.hpp"
+#endif
 
 namespace cv
 {
@@ -30,8 +34,31 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || this->inputs.empty() || this->outputs.empty())
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            if (t >= 0 && !isCudaNodeType(t, false))
+                return false;
+            return netimpl_->argData(this->outputs[0]).shape.dims <= cuda4dnn::kernels::kMaxBroadcastRank;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        return make_cuda_node_with_type<cuda4dnn::BroadcastCopyOp>(preferableTarget, inputs_arr.type(0),
+                                                                   std::move(context->stream));
+    }
+#endif
 
     bool isDataShuffling() const CV_OVERRIDE { return true; }
 
@@ -110,8 +137,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!dynamicOutputShapes());
-
         size_t ninputs = inputs.size();
         CV_Assert(ninputs == (size_t)2 || ninputs == (size_t)3);
         Net::Impl* netimpl_ = getNetImpl(this);
@@ -122,6 +147,8 @@ public:
         Mat axesTensor;
         if (ninputs > 2)
             axesTensor = netimpl_->argTensor(this->inputs[2]);
+        // dynamic repeats/axes are readable once their values are on the host (CUDA downloads them first)
+        CV_Assert(!dynamicOutputShapes() || (!repeatsTensor.empty() && (ninputs < 3 || !axesTensor.empty())));
 
         int ndims = inputs[0].dims;
         getRepeats(repeatsTensor, axesTensor, ndims, repeats);

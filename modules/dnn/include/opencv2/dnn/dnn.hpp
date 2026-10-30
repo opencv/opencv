@@ -713,6 +713,10 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void setInputsNames(const std::vector<String> &inputBlobNames);
 
         /** @brief Specify shape of network input.
+         *
+         * Must be called before the first forward(). With the new engine, shape computations that depend
+         * on a pinned input are folded into constants; on the CUDA backend a model left with no dynamic
+         * shapes then runs each forward() as one replayed CUDA Graph instead of one launch per layer.
          */
         CV_WRAP void setInputShape(const String &inputName, const MatShape& shape);
 
@@ -1023,6 +1027,12 @@ CV__DNN_INLINE_NS_BEGIN
         * @param useWinograd true to enable the Winograd compute branch. The default is true.
         */
         CV_WRAP void enableWinograd(bool useWinograd);
+
+        /** @brief Enables or disables TF32 Tensor Core math for FP32 convolutions and GEMMs on DNN_TARGET_CUDA.
+         * TF32 is faster on compute capability 8.0 and newer, but rounds the inputs to a 10-bit mantissa.
+        * @param useTF32 true to allow TF32 math. The default is true; set false for exact FP32 math.
+        */
+        CV_WRAP void enableTF32(bool useTF32);
 
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
@@ -1608,6 +1618,9 @@ CV__DNN_INLINE_NS_BEGIN
 
          /// @sa Net::enableWinograd
          CV_WRAP Model& enableWinograd(bool useWinograd);
+
+         /// @sa Net::enableTF32
+         CV_WRAP Model& enableTF32(bool useTF32);
 
          CV_DEPRECATED_EXTERNAL
          operator Net&() const { return getNetwork_(); }

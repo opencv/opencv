@@ -1022,7 +1022,12 @@ public:
     {
         if (origWeights.empty() || wshape0.dims != 4)  // [Cout, Cin/group, kh, kw] (2D conv)
             return false;
-        if (activationFunc != nullptr || !activ.empty())
+        if (!activ.empty())
+            return false;
+        // a fused kernel activation runs on CUDA only if ConvolutionOp has the same one
+        if (activationFunc != nullptr &&
+            activationFunc != getActivationFunc(ACTIV_SIGMOID) && activationFunc != getActivationFunc(ACTIV_SWISH) &&
+            activationFunc != getActivationFunc(ACTIV_MISH) && activationFunc != getActivationFunc(ACTIV_TANH))
             return false;
         if (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
             fastActivation != FAST_ACTIV_LEAKY_RELU && fastActivation != FAST_ACTIV_CLIP)
@@ -1080,8 +1085,16 @@ public:
         config.relu_negative_slope = 0.f;
         config.crelu_floor = 0.f; config.crelu_ceil = 0.f;
         config.power_exp = 1.f; config.power_scale = 1.f; config.power_shift = 0.f;
-        bool hasAct = fastActivation != FAST_ACTIV_NONE;
-        if (fastActivation == FAST_ACTIV_RELU) {
+        bool hasAct = fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr;
+        if (activationFunc == getActivationFunc(ACTIV_SIGMOID)) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::SIGMOID;
+        } else if (activationFunc == getActivationFunc(ACTIV_SWISH)) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::SWISH;
+        } else if (activationFunc == getActivationFunc(ACTIV_MISH)) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::MISH;
+        } else if (activationFunc == getActivationFunc(ACTIV_TANH)) {
+            config.activation_type = ConvolutionConfiguration::ActivationType::TANH;
+        } else if (fastActivation == FAST_ACTIV_RELU) {
             config.activation_type = ConvolutionConfiguration::ActivationType::RELU;
         } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
             config.activation_type = ConvolutionConfiguration::ActivationType::RELU;
@@ -1150,6 +1163,13 @@ public:
         layer->inputs = conv->inputs;
         layer->outputs = conv->outputs;
         return layer;
+    }
+
+    void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        // the node bakes in the input/output shapes; rebuild it for a new input signature
+        node.release();
+        cudaNode.release();
     }
 
     void forwardCUDA(InputArrayOfArrays inputs_,

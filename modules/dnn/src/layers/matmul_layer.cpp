@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 
 #include <type_traits>
@@ -20,6 +21,7 @@
 // CUDA backend
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/matmul_broadcast.hpp"
+#include "fusion_cuda.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -65,12 +67,54 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
-        if (fusion.expr)
+#ifdef HAVE_CUDA
+        // CUDA runs a fused activation or scale/shift after the MatMul; N is known for a constant B
+        const int N = (blobs.empty() || blobs[0].dims < 2) ? -1
+                      : blobs[0].size[blobs[0].dims - (trans_b ? 2 : 1)];
+        const bool cudaFusion = backendId == DNN_BACKEND_CUDA && cudaSupportsFusion(fusion, N);
+#else
+        const bool cudaFusion = false;
+#endif
+        if (fusion.expr && !cudaFusion)
             return backendId == DNN_BACKEND_OPENCV;
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            // classic-engine nets carry no graph args to inspect; keep their previous answer
+            if (inputs.empty())
+                return true;
+            // MatMulBroadcastOp applies neither alpha nor a scaled bias, and adds the bias without broadcasting
+            if (alpha != 1.f || beta != 1.f)
+                return false;
+            const bool constB = inputs.size() == 1 && (blobs.size() == 1 || blobs.size() == 2);
+            const bool inputB = blobs.empty() && inputs.size() == 2;
+            if (!constB && !inputB)
+                return false;
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known non-float one
+            for (const Arg& a : inputs) {
+                const int t = netimpl_->argData(a).type;
+                if (t >= 0 && t != CV_32F)
+                    return false;
+            }
+            for (const Mat& b : blobs)
+                if (b.type() != CV_32F)
+                    return false;
+            // gemmBatched reads the last two axes of A, B and Y; 1-D operands stay on CPU
+            for (const Arg& a : inputs) {
+                const int dims = netimpl_->argData(a).shape.dims;
+                if (dims >= 0 && dims < 2)
+                    return false;
+            }
+            if (!blobs.empty() && blobs[0].dims < 2)
+                return false;
+            return true;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !trans_a && !trans_b) ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -649,8 +693,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_,
-                              const std::vector<Ptr<BackendWrapper>>& inputs,
-                              const std::vector<Ptr<BackendWrapper>>& outputs) override {
+                              InputArrayOfArrays,
+                              InputArrayOfArrays outputs) override {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto input_B = Mat(), bias = Mat();
         if (!blobs.empty()) {
@@ -662,7 +706,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         CV_CheckFalse(helper.empty(), "DNN/MatMul/CUDA: MatMulHelper is not initialized");
 
-        return make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, bias, beta, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
+        // the fused math runs on the same stream, right after the MatMul
+        csl::Stream stream = context->stream;
+        Ptr<BackendNode> matmulNode = make_cuda_node<cuda4dnn::MatMulBroadcastOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), input_B, bias, beta, trans_a, trans_b, helper.A_offsets, helper.B_offsets, helper.C_offsets, helper.batch);
+        return makeFusedCudaNode(fusion, matmulNode, preferableTarget, stream, outputs.shape(0));
     }
 #endif // HAVE_CUDA
 

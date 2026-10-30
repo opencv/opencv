@@ -50,38 +50,44 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
 
         template <class T, int TILE_SIZE, int ROWS_PER_THREAD>
-        __global__ void transpose(Span<T> output, View<T> input, size_type in_width, size_type out_width)
+        __global__ void transpose(Span<T> output, View<T> input, size_type in_width, size_type out_width, size_type num_tiles_y)
         {
             __shared__ T tile[TILE_SIZE][TILE_SIZE + 1];
 
             /* blockDim.y = TILE_SIZE / ROWS_PER_THREAD, blockDim.x = TILE_SIZE */
             const index_type in_x = blockIdx.x * TILE_SIZE + threadIdx.x;
-            const index_type in_y_begin = blockIdx.y * TILE_SIZE + threadIdx.y;
-
-            /* Every valid input location has a corresponding output location and vice versa.
-             * Hence, if we do not load values into the shared memory for a given location, we
-             * also won't read them for storing in the output.
-             */
-            for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
-            {
-                const auto in_y_current = in_y_begin + j;
-                if (in_x < in_width && in_y_current < out_width)
-                    tile[threadIdx.y + j][threadIdx.x] = input[in_y_current * in_width + in_x];
-            }
-
-            __syncthreads();
-
-            /* We interchange `threadIdx.x` and `threadIdx.y` so that consecutive output indices map to
-             * consecutive threads. This would allow writes across threads in a warp to be coalesced.
-             */
-            const index_type out_x = blockIdx.y * TILE_SIZE + threadIdx.x;
             const index_type out_y_begin = blockIdx.x * TILE_SIZE + threadIdx.y;
 
-            for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
+            for (size_type tile_y = blockIdx.y; tile_y < num_tiles_y; tile_y += gridDim.y)
             {
-                const auto out_y_current = out_y_begin + j;
-                if (out_x < out_width && out_y_current < in_width)
-                    output[out_y_current * out_width + out_x] = tile[threadIdx.x][threadIdx.y + j];
+                const index_type in_y_begin = tile_y * TILE_SIZE + threadIdx.y;
+
+                /* Every valid input location has a corresponding output location and vice versa.
+                 * Hence, if we do not load values into the shared memory for a given location, we
+                 * also won't read them for storing in the output.
+                 */
+                for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
+                {
+                    const auto in_y_current = in_y_begin + j;
+                    if (in_x < in_width && in_y_current < out_width)
+                        tile[threadIdx.y + j][threadIdx.x] = input[in_y_current * in_width + in_x];
+                }
+
+                __syncthreads();
+
+                /* We interchange `threadIdx.x` and `threadIdx.y` so that consecutive output indices map to
+                 * consecutive threads. This would allow writes across threads in a warp to be coalesced.
+                 */
+                const index_type out_x = tile_y * TILE_SIZE + threadIdx.x;
+
+                for (int j = 0; j < TILE_SIZE; j += TILE_SIZE / ROWS_PER_THREAD)
+                {
+                    const auto out_y_current = out_y_begin + j;
+                    if (out_x < out_width && out_y_current < in_width)
+                        output[out_y_current * out_width + out_x] = tile[threadIdx.x][threadIdx.y + j];
+                }
+
+                __syncthreads();
             }
         }
     }
@@ -97,12 +103,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
          */
         constexpr int ROWS_PER_THREAD = 4;
 
-        dim3 grid_size((in_width + TILE_SIZE - 1) / TILE_SIZE, (out_width + TILE_SIZE - 1) / TILE_SIZE);
+        constexpr std::size_t max_blocks = 65535;
+
+        const std::size_t num_tiles_y = (out_width + TILE_SIZE - 1) / TILE_SIZE;
+        dim3 grid_size((in_width + TILE_SIZE - 1) / TILE_SIZE, std::min(num_tiles_y, max_blocks));
         dim3 block_size(TILE_SIZE, TILE_SIZE / ROWS_PER_THREAD);
         auto policy = execution_policy(grid_size, block_size, stream);
 
         auto kernel = raw::transpose<T, TILE_SIZE, ROWS_PER_THREAD>;
-        launch_kernel(kernel, policy, output, input, in_width, out_width);
+        launch_kernel(kernel, policy, output, input, in_width, out_width, num_tiles_y);
     }
 
     template void transpose(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t);
@@ -246,6 +255,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 CV_Assert(outShape.size() == order.size());
                 CV_Assert(input.size() == output.size());
             }
+        }
+
+        if (rank == 0) {
+            kernels::copy<T>(stream, output, input);
+            return;
         }
 
         std::vector<std::size_t> inStride(rank), outStride(rank);

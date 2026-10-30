@@ -60,6 +60,30 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             }
         }
 
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(inputs.size() == outputs.size());
+
+            bool needsPermute = false;
+            for (std::size_t i = 0; i < order.size(); i++)
+                needsPermute = needsPermute || order[i] != i;
+
+            for (std::size_t i = 0; i < inputs.size(); i++)
+            {
+                auto input = csl::viewOf<T>(inputs[i]);
+                auto output = csl::spanOf<T>(outputs[i]);
+
+                if (needsPermute)
+                    kernels::permute(stream, output, input, order);
+                else if (input.get() != output.get())
+                    csl::tensor_ops::copy(stream, output, input);
+            }
+        }
+
     private:
         csl::Stream stream;
         std::vector<std::size_t> order;

@@ -17,8 +17,6 @@
 "test_einsum_batch_matmul",
 "test_einsum_sum",
 "test_einsum_transpose",
-"test_logsoftmax_large_number", // fp16 accuracy issue
-"test_logsoftmax_large_number_expanded", // fp16 accuracy issue
 "test_lppool_1d_default",
 "test_lppool_2d_default",
 "test_lppool_2d_dilations",
@@ -35,9 +33,13 @@
 "test_reduce_sum_square_keepdims_random", // fallback to cpu, accuracy
 "test_reduce_sum_square_negative_axes_keepdims_random", // fallback to cpu, accuracy
 "test_pow", // fp16 accuracy issue
+"test_tan", // fp16 accuracy issue
+"test_logsoftmax_large_number", // fp16 accuracy issue: 10001 is not representable in half
+"test_logsoftmax_large_number_expanded", // fp16 accuracy issue
 "test_softmax_large_number", // fp16 accuracy issue
 "test_softmax_large_number_expanded", // fp16 accuracy issue
-"test_tan", // fp16 accuracy issue
+"test_logsoftmax_large_number_expanded_ver18", // fp16 accuracy issue
+"test_softmax_large_number_expanded_ver18", // fp16 accuracy issue
 "test_dequantizelinear_blocked", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear_axis", // Issue https://github.com/opencv/opencv/issues/25999
