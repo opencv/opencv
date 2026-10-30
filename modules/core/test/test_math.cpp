@@ -4657,5 +4657,37 @@ TEST(Core_PatchNaNs_UnsupportedDepth, accuracy)
 
 INSTANTIATE_TEST_CASE_P(/* */, Core_PatchNaNs, testing::Values(CV_32F, CV_64F));
 
+typedef testing::TestWithParam<std::tuple<MatDepth, double> > Core_Pow_NonIntegerPower;
+
+TEST_P(Core_Pow_NonIntegerPower, integer_depths)
+{
+    const int depth = std::get<0>(GetParam());
+    const double power = std::get<1>(GetParam());
+
+    Mat src64f(1, 100, CV_64F), src;
+    randu(src64f, 0, 100);
+    src64f.convertTo(src, depth);
+
+    // dst is a view on the start of a larger buffer: anything written past
+    // the end of dst would change the rest of the buffer.
+    Mat guard(1, 1000, depth, Scalar(7));
+    Mat dst = guard.colRange(0, src.cols);
+    cv::pow(src, power, dst);
+
+    ASSERT_EQ(guard.data, dst.data) << "dst must not be reallocated";
+    EXPECT_EQ(0, cvtest::norm(guard.colRange(src.cols, guard.cols), Mat(1, guard.cols - src.cols, depth, Scalar(7)), NORM_INF));
+
+    // Reference: the same power computed in double precision, then rounded to depth.
+    Mat srcRef, ref64f, ref;
+    src.convertTo(srcRef, CV_64F);
+    cv::pow(srcRef, power, ref64f);
+    ref64f.convertTo(ref, depth);
+    EXPECT_LE(cvtest::norm(dst, ref, NORM_INF), 1);
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Pow_NonIntegerPower, testing::Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S),
+    testing::Values(0.5, 1.5, 1.0/3)));
+
 }} // namespace
 /* End of file. */
