@@ -228,8 +228,8 @@ static void testXFeatLetterboxInverse(const Size& imageSize)
     std::vector<Point2f> expected;
     expected.reserve(byHand.size());
     for (const KeyPoint& kp : byHand)
-        expected.emplace_back((kp.pt.x - left) * img.cols / (float)rw,
-                              (kp.pt.y - top) * img.rows / (float)rh);
+        expected.emplace_back((kp.pt.x - left + 0.5f) * img.cols / (float)rw - 0.5f,
+                              (kp.pt.y - top + 0.5f) * img.rows / (float)rh - 0.5f);
 
     // Detections are local maxima of a 5x5 NMS in blob space (several image pixels apart), so the
     // nearest expected point within 2 px is the counterpart of each detection.

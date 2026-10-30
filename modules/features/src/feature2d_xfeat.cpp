@@ -289,8 +289,8 @@ public:
                 if (score <= 0.f)
                     continue;
 
-                const float px = (xp - static_cast<float>(padX)) * invScaleX;
-                const float py = (yp - static_cast<float>(padY)) * invScaleY;
+                const float px = (xp - static_cast<float>(padX) + 0.5f) * invScaleX - 0.5f;
+                const float py = (yp - static_cast<float>(padY) + 0.5f) * invScaleY - 0.5f;
                 const int ix = cvFloor(px);
                 const int iy = cvFloor(py);
                 if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
