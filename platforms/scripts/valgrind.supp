@@ -287,3 +287,31 @@
    fun:allocate_dtv
    fun:_dl_allocate_tls
 }
+
+{
+   OpenCV-TBB-arena-leak
+   Memcheck:Leak
+   ...
+   fun:*getArena*
+}
+
+{
+   OpenCV-TBB-scheduler-leak
+   Memcheck:Leak
+   ...
+   fun:*getScheduler*
+}
+
+{
+   OpenCV-TBB-arena-singleton-leak
+   Memcheck:Leak
+   ...
+   fun:*getTbbArena*
+}
+
+{
+   OpenCV-TBB-scheduler-singleton-leak
+   Memcheck:Leak
+   ...
+   fun:*getTbbScheduler*
+}
