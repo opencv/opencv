@@ -1022,8 +1022,32 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         Mat undistortedPoints;
         undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
 
+        // SQPnP builds Omega from raw squared object coordinates and compares its singular
+        // values with absolute thresholds, so its result depends on the origin and on the length
+        // unit of the object frame. Solve in a centred, unit-RMS frame (X' = (X - c) / s) and map
+        // the pose back: R X + t = R X' * s + (R c + t)  =>  t = s * t' - R c.
+        Mat opoints64;
+        opoints.convertTo(opoints64, CV_64F);
+        Scalar c = mean(opoints64);
+        Mat opointsCentred = opoints64 - c;
+        double s = norm(opointsCentred, NORM_L2) / std::sqrt((double)npoints);
+        if (s <= 0)
+            s = 1;
+        Mat opointsNormalized = opointsCentred / s;
+
         sqpnp::PoseSolver solver;
-        solver.solve(opoints, undistortedPoints, vec_rvecs, vec_tvecs);
+        solver.solve(opointsNormalized, undistortedPoints, vec_rvecs, vec_tvecs);
+
+        const Vec3d centre(c[0], c[1], c[2]);
+        for (size_t i = 0; i < vec_rvecs.size(); i++)
+        {
+            Matx33d R;
+            Rodrigues(vec_rvecs[i], R);
+            Mat t64;
+            vec_tvecs[i].convertTo(t64, CV_64F);
+            const Vec3d t(t64.at<double>(0), t64.at<double>(1), t64.at<double>(2));
+            vec_tvecs[i] = Mat(Vec3d(s * t - R * centre), true);
+        }
     }
     /*else if (flags == SOLVEPNP_DLS)
     {

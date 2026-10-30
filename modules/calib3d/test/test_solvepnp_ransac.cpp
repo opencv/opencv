@@ -2430,4 +2430,60 @@ TEST(Calib3d_SolvePnP, regression_30402)
     EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1e-6);
 }
 
+static std::vector<Point3d> pnpTestCube(double scale, const Point3d& offset)
+{
+    const double c[12][3] = {
+        {-.5, -.5, -.5}, {.5, -.5, -.5}, {.5, .5, -.5}, {-.5, .5, -.5},
+        {-.5, -.5,  .5}, {.5, -.5,  .5}, {.5, .5,  .5}, {-.5, .5,  .5},
+        {.1, .2, -.3}, {-.2, .1, .25}, {.3, -.15, .05}, {-.35, -.25, -.1}
+    };
+    std::vector<Point3d> pts;
+    for (int i = 0; i < 12; i++)
+        pts.push_back(Point3d(c[i][0]*scale, c[i][1]*scale, c[i][2]*scale) + offset);
+    return pts;
+}
+
+static double rotationDistanceInf(InputArray r1, InputArray r2)
+{
+    Mat R1, R2;
+    Rodrigues(r1, R1);
+    Rodrigues(r2, R2);
+    return cvtest::norm(R1, R2, NORM_INF);
+}
+
+// Finding C/E: SQPnP depended on the length unit (assertion / wrong pose for small objects)
+// and on the origin of the object frame.
+TEST(Calib3d_SolvePnP, sqpnp_units_and_origin)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    const Vec3d rGT(0.3, 0.2, -0.1), tGT(0.05, -0.05, 4.0);
+    const std::vector<Point3d> unit = pnpTestCube(1.0, Point3d(0, 0, 0));
+    std::vector<Point2d> img;
+    projectPoints(unit, rGT, tGT, K, noArray(), img);
+
+    const double units[] = { 1.0, 1e-3, 3e-4, 1e-4 };
+    for (double L : units)
+    {
+        SCOPED_TRACE(cv::format("L=%g", L));
+        const std::vector<Point3d> obj = pnpTestCube(L, Point3d(0, 0, 0));  // same image for every L
+        Mat rvec, tvec;
+        ASSERT_NO_THROW(solvePnP(obj, img, K, noArray(), rvec, tvec, false, SOLVEPNP_SQPNP));
+        EXPECT_LE(rotationDistanceInf(rvec, rGT), 1e-6);
+        EXPECT_LE(cvtest::norm(Mat(tvec / L), Mat(tGT), NORM_INF), 1e-6);
+    }
+
+    const Point3d off(3e5, 9e5, 8e5);
+    const std::vector<Point3d> far = pnpTestCube(20.0, off);
+    Matx33d R;
+    Rodrigues(rGT, R);
+    const Vec3d t2 = Vec3d(0.5, -0.3, 80.0) - R * Vec3d(off);
+    std::vector<Point2d> img2, proj;
+    projectPoints(far, rGT, t2, K, noArray(), img2);
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnP(far, img2, K, noArray(), rvec, tvec, false, SOLVEPNP_SQPNP));
+    projectPoints(far, rvec, tvec, K, noArray(), proj);
+    EXPECT_LE(cvtest::norm(proj, img2, NORM_L2) / std::sqrt((double)proj.size()), 1e-3);
+}
+
+
 }} // namespace
