@@ -2566,6 +2566,15 @@ TEST(Imgproc, filter_empty_src_16857)
     EXPECT_TRUE(dst2.empty());
 }
 
+TEST(Imgproc_Laplacian, regression_16F_kernel_overflow)
+{
+    // the 3x3 kernel used to be created as CV_16F and then filled with 9 doubles,
+    // writing past its end; now it is CV_32F and filter2D rejects the CV_16F input
+    Mat src(8, 8, CV_16FC1, Scalar(1)), dst;
+    EXPECT_THROW(Laplacian(src, dst, -1, 1), cv::Exception);
+    EXPECT_THROW(Laplacian(src, dst, -1, 3), cv::Exception);
+}
+
 TEST(Imgproc_GaussianBlur, regression_11303)
 {
     cv::Mat dst;

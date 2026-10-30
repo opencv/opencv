@@ -619,7 +619,9 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    // the kernel is filled as float or double below, so it must be CV_32F or CV_64F
+    // (std::max over the depths picked CV_16F, since CV_16F > CV_64F)
+    int ktype = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
 
     if( ksize == 1 || ksize == 3 )
