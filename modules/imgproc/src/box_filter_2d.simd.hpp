@@ -64,13 +64,128 @@ static inline v_float64 scaleSameType(const v_float64& s, double scale, const v_
 #endif
 
 // scalar tails scale floating-point sums in ET, as the vector loops do
-template<typename ET>
+template<typename ET, typename AT>
 static inline typename std::enable_if<std::is_floating_point<ET>::value, ET>::type
-scaleSum(ET s, double scale) { return s * (ET)scale; }
+scaleSum(AT s, double scale) { return s * (ET)scale; }
 
-template<typename ET>
+template<typename ET, typename AT>
 static inline typename std::enable_if<!std::is_floating_point<ET>::value, ET>::type
-scaleSum(ET s, double scale) { return saturate_cast<ET>(s * scale); }
+scaleSum(AT s, double scale) { return saturate_cast<ET>(s * scale); }
+
+// Rows and x range of one call for a (2R+1)x(2R+1) kernel: output rows start at dstRow0
+// (src row 0 is the first tap row), and the first/last R columns are left to the caller.
+template<int R>
+struct BoxFilter2DRange
+{
+    BoxFilter2DRange( int width, int height, int yidx, int wholeHeight, int cn )
+    {
+        int yTopOffset = yidx > R - 1 ? 0 : R;
+        int yBottomOffset = yidx + height + R - 1 < wholeHeight ? 0 : R;
+        rows = height - yTopOffset - yBottomOffset;
+        dstRow0 = yTopOffset;
+        xbegin = R*cn;
+        xend = (width - R)*cn;
+    }
+    int rows, dstRow0, xbegin, xend;
+};
+
+// Moves the last vector strip back so it ends at xend. It then overlaps the previous strip,
+// which is only allowed when there is one and the filter is not running in place.
+template<int R>
+static inline bool boxFilter2DStrip( int& x, int step, const BoxFilter2DRange<R>& r, bool inplace )
+{
+    if( x > r.xend - step )
+    {
+        if( x == r.xbegin || inplace )
+            return false;
+        x = r.xend - step;
+    }
+    return true;
+}
+
+// Horizontal sum of the 2R+1 taps around p. Floating-point sums depend on the association,
+// so the scalar and vector versions add in the same order.
+template<int R> struct BoxTaps;
+
+template<> struct BoxTaps<1>
+{
+    template<typename WT, typename T> static inline WT sum( const T* p, int cn )
+    { return ((WT)p[-cn] + (WT)p[0]) + (WT)p[cn]; }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    template<class L, typename T> static inline auto vsum( const T* p, int cn ) -> decltype(L::ld(p))
+    { return v_add(v_add(L::ld(p - cn), L::ld(p)), L::ld(p + cn)); }
+#endif
+};
+
+template<> struct BoxTaps<2>
+{
+    template<typename WT, typename T> static inline WT sum( const T* p, int cn )
+    { return (((WT)p[-cn*2] + (WT)p[-cn]) + ((WT)p[0] + (WT)p[cn])) + (WT)p[cn*2]; }
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    template<class L, typename T> static inline auto vsum( const T* p, int cn ) -> decltype(L::ld(p))
+    { return v_add(v_add(v_add(L::ld(p - cn*2), L::ld(p - cn)), v_add(L::ld(p), L::ld(p + cn))), L::ld(p + cn*2)); }
+#endif
+};
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+struct BoxLoad
+{
+    template<typename T> static inline auto ld( const T* p ) -> decltype(vx_load(p)) { return vx_load(p); }
+};
+struct BoxLoadExpand
+{
+    template<typename T> static inline auto ld( const T* p ) -> decltype(vx_load_expand(p)) { return vx_load_expand(p); }
+};
+
+// Widened row sums of one vector of ET pixels, split into its low and high halves.
+template<int R, typename ET, typename VFT>
+static inline void boxRowSumExpand( const ET* p, int cn, VFT& lo, VFT& hi )
+{
+    lo = BoxTaps<R>::template vsum<BoxLoadExpand>(p, cn);
+    hi = BoxTaps<R>::template vsum<BoxLoadExpand>(p + VTraits<VFT>::vlanes(), cn);
+}
+#endif
+
+template<int SCALE_T, typename ET>
+struct BoxTailOut
+{
+    explicit BoxTailOut( double _scale ) : scale(_scale) {}
+    template<typename AT> inline ET operator()( AT s ) const
+    { return SCALE_T == APPLY_SCALING ? scaleSum<ET>(s, scale) : saturate_cast<ET>(s); }
+    double scale;
+};
+
+// round(s/25) for the normalized 8u 5x5 kernel
+struct BoxTailDiv25
+{
+    inline uchar operator()( int s ) const { return (uchar)((s + 12) / 25); }
+};
+
+// Scalar columns [x, r.xend): row sums in WT, the column sum in WT's arithmetic type.
+template<int R, typename WT, typename ET, class Out>
+static inline void boxFilter2DTail( const uchar* src, uchar* dst, int src_stride, int dst_stride,
+                                    const BoxFilter2DRange<R>& r, int x, int cn, const Out& out )
+{
+    typedef decltype(WT() + WT()) AT;
+    const int src_inc = src_stride / (int)sizeof(ET);
+    for( ; x < r.xend; x++ )
+    {
+        const ET* s = (const ET*)src + x;
+        WT b[2*R + 1];
+        for( int k = 0; k < 2*R; k++, s += src_inc )
+            b[k] = BoxTaps<R>::template sum<WT>(s, cn);
+        for( int j = 0; j < r.rows; j++, s += src_inc )
+        {
+            b[2*R] = BoxTaps<R>::template sum<WT>(s, cn);
+            AT sum = b[1] + b[0];
+            for( int k = 2; k <= 2*R; k++ )
+                sum += b[k];
+            ((ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride))[x] = out(sum);
+            for( int k = 0; k < 2*R; k++ )
+                b[k] = b[k + 1];
+        }
+    }
+}
 
 template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
 struct Sum3x3 :
@@ -87,59 +202,15 @@ struct Sum3x3 :
     }
     virtual void reset() CV_OVERRIDE { }
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    void inline loadRow(const ET* src, int cn, VFT &a0, VFT &a1, VFT &b0, VFT &b1, VFT &c0, VFT &c1)
-    {
-        const ET* src_ptr = src - cn;
-        const int half = VTraits<VFT>::vlanes();
-        a0 = vx_load_expand(src_ptr);
-        a1 = vx_load_expand(src_ptr + half);
-        b0 = vx_load_expand(src_ptr + cn);
-        b1 = vx_load_expand(src_ptr + cn + half);
-        c0 = vx_load_expand(src_ptr + cn*2);
-        c1 = vx_load_expand(src_ptr + cn*2 + half);
-    }
-    void inline addRow(const VFT &a0, const VFT &a1, const VFT &b0, const VFT &b1, VFT &r0, VFT &r1)
-    {
-        r0 = v_add(r0,  v_add(a0, b0));
-        r1 = v_add(r1,  v_add(a1, b1));
-    }
-    void inline loadRowAdd(const ET* src, int VECSZ,
-                           int cn, VFT &r0, VFT &r1, VFT &r0v1, VFT &r1v1)
-    {
-        VFT a0, a1, b0, b1;
-        VFT a0v1, a1v1, b0v1, b1v1;
-        loadRow(src, cn, a0, a1, b0, b1, r0, r1);
-        loadRow(src+VECSZ, cn, a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
-        addRow(a0, a1, b0, b1, r0, r1);
-        addRow(a0v1, a1v1, b0v1, b1v1, r0v1, r1v1);
-    }
-#endif
-
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
-        int yTopOffset = 1;
-        int yBottomOffset = 1;
-        if(yidx >0)
-            yTopOffset = 0;
-        if( (yidx + height) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
-        int idst = yTopOffset;
-
-        int xoffset = 1;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        int j = v;
-        const ET* src_ptr = (const ET*)(src + j * src_stride);
+        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int src_inc = src_stride / (int)sizeof(ET);
+        const ET* src_ptr = (const ET*)src;
         v_float32 v_scale = vx_setall_f32((float)scale);
         const int VECSZ = VTraits<VET>::vlanes();
         const int VECSZ_2 = VECSZ << 1;
@@ -148,34 +219,31 @@ struct Sum3x3 :
         VFT b10, b11, b10v1, b11v1;
         VFT b20, b21, b20v1, b21v1;
 
-        for (; x < len; x += (VECSZ_2))
+        for (; x < r.xend; x += (VECSZ_2))
         {
-            if ( x > len - VECSZ_2 )
-            {
-                if (x == cn*xoffset || src == dst)
-                    break;
-                x = len - VECSZ_2;
-            }
-            int idst_ = idst;
-            j = v;
+            if( !boxFilter2DStrip(x, VECSZ_2, r, src == dst) )
+                break;
             const ET* src_0 = src_ptr + x ;
             const ET* src_1 = src_0 + src_inc;
             const ET* src_2 = src_1 + src_inc;
 
             //row 0 and 1
-            loadRowAdd(src_0, VECSZ, cn, b00, b01, b00v1, b01v1);
-            loadRowAdd(src_1, VECSZ, cn, b10, b11, b10v1, b11v1);
+            boxRowSumExpand<1>(src_0, cn, b00, b01);
+            boxRowSumExpand<1>(src_0 + VECSZ, cn, b00v1, b01v1);
+            boxRowSumExpand<1>(src_1, cn, b10, b11);
+            boxRowSumExpand<1>(src_1 + VECSZ, cn, b10v1, b11v1);
 
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
+                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
                 dstx += x;
                 b00   = v_add(b00, b10);
                 b00v1 = v_add(b00v1, b10v1);
                 b01   = v_add(b01, b11);
                 b01v1 = v_add(b01v1, b11v1);
 
-                loadRowAdd(src_2, VECSZ, cn, b20, b21, b20v1, b21v1);
+                boxRowSumExpand<1>(src_2, cn, b20, b21);
+                boxRowSumExpand<1>(src_2 + VECSZ, cn, b20v1, b21v1);
                 src_2 += src_inc;
 
                 b00   = v_add(b20, b00);
@@ -200,34 +268,7 @@ struct Sum3x3 :
             }
         }
 #endif
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            WET b0, b1, b2;
-            const ET* src_0 = src_ptr + x ;
-            const ET* src_1 = src_0 + src_inc;
-            const ET* src_2 = src_1 + src_inc;
-            b0 = src_0[-cn] + src_0[0] + src_0[cn];
-            b1 = src_1[-cn] + src_1[0] + src_1[cn];
-
-            for (; j < maxRow; j++, idst_++)
-            {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-                b2 = src_2[-cn] + src_2[0] + src_2[cn];
-                src_2 += src_inc;
-                if (SCALE_T==APPLY_SCALING)
-                {
-                    dstx[x] = saturate_cast<ET>((b1 + b0 + b2 )* _scale);
-                }
-                else
-                {
-                    dstx[x] = saturate_cast<ET>(b1 + b0 + b2);
-                }
-                b0 = b1;
-                b1 = b2;
-            }
-        }
+        boxFilter2DTail<1, WET, ET>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailOut<SCALE_T, ET>(scale));
     }
 
     double scale;
@@ -252,61 +293,35 @@ struct Sum3x3_8u :
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
-        int yTopOffset = 1;
-        int yBottomOffset = 1;
-        if(yidx > 0)
-            yTopOffset = 0;
-        if( (yidx + height) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height - yTopOffset - yBottomOffset;
-        int idst = yTopOffset;
-
-        int xoffset = 1;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int src_inc = src_stride;
-        int j = v;
-        const uchar* src_ptr = src + j * src_inc;
+        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int VECSZ16 = VTraits<v_uint16>::vlanes();
+        const int src_inc = src_stride;
         const int VECSZ8 = VTraits<v_uint8>::vlanes();
 
         // mul_hi(s + 4, 7282) == round(s/9) exactly for every s <= 9*255
         v_uint16 v_4 = vx_setall_u16(4);
         v_uint16 v_mulFactor = vx_setall_u16(7282);
 
-        for (; x < len; x += VECSZ8)
+        for (; x < r.xend; x += VECSZ8)
         {
-            if ( x > len - VECSZ8 )
-            {
-                if (x == cn * xoffset || src == dst)
-                    break;
-                x = len - VECSZ8;
-            }
-            int idst_ = idst;
-            j = v;
-            const uchar* src_0 = src_ptr + x;
+            if( !boxFilter2DStrip(x, VECSZ8, r, src == dst) )
+                break;
+            const uchar* src_0 = src + x;
             const uchar* src_1 = src_0 + src_inc;
             const uchar* src_2 = src_1 + src_inc;
 
-            // Row sums for row 0
-            v_uint16 r0_lo = v_add(v_add(vx_load_expand(src_0 - cn), vx_load_expand(src_0)), vx_load_expand(src_0 + cn));
-            v_uint16 r0_hi = v_add(v_add(vx_load_expand(src_0 - cn + VECSZ16), vx_load_expand(src_0 + VECSZ16)), vx_load_expand(src_0 + cn + VECSZ16));
-            // Row sums for row 1
-            v_uint16 r1_lo = v_add(v_add(vx_load_expand(src_1 - cn), vx_load_expand(src_1)), vx_load_expand(src_1 + cn));
-            v_uint16 r1_hi = v_add(v_add(vx_load_expand(src_1 - cn + VECSZ16), vx_load_expand(src_1 + VECSZ16)), vx_load_expand(src_1 + cn + VECSZ16));
+            v_uint16 r0_lo, r0_hi, r1_lo, r1_hi;
+            boxRowSumExpand<1>(src_0, cn, r0_lo, r0_hi);
+            boxRowSumExpand<1>(src_1, cn, r1_lo, r1_hi);
 
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
-                uchar* dstx = dst + idst_ * dst_stride + x;
+                uchar* dstx = dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride + x;
 
-                // Row sums for row 2
-                v_uint16 r2_lo = v_add(v_add(vx_load_expand(src_2 - cn), vx_load_expand(src_2)), vx_load_expand(src_2 + cn));
-                v_uint16 r2_hi = v_add(v_add(vx_load_expand(src_2 - cn + VECSZ16), vx_load_expand(src_2 + VECSZ16)), vx_load_expand(src_2 + cn + VECSZ16));
+                v_uint16 r2_lo, r2_hi;
+                boxRowSumExpand<1>(src_2, cn, r2_lo, r2_hi);
                 src_2 += src_inc;
 
                 // Column sums (3x3 box sum)
@@ -324,28 +339,7 @@ struct Sum3x3_8u :
             }
         }
 #endif
-        // Scalar tail
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            ushort b0, b1, b2;
-            const uchar* src_0 = src_ptr + x;
-            const uchar* src_1 = src_0 + src_inc;
-            const uchar* src_2 = src_1 + src_inc;
-            b0 = src_0[-cn] + src_0[0] + src_0[cn];
-            b1 = src_1[-cn] + src_1[0] + src_1[cn];
-
-            for (; j < maxRow; j++, idst_++)
-            {
-                uchar* dstx = dst + idst_ * dst_stride;
-                b2 = src_2[-cn] + src_2[0] + src_2[cn];
-                src_2 += src_inc;
-                dstx[x] = saturate_cast<uchar>((b1 + b0 + b2) * _scale);
-                b0 = b1;
-                b1 = b2;
-            }
-        }
+        boxFilter2DTail<1, int, uchar>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailOut<APPLY_SCALING, uchar>(scale));
     }
 
     double scale;
@@ -367,59 +361,24 @@ struct Sum3x3sameType :
     virtual void reset() CV_OVERRIDE { }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    void inline loadRow(const ET* src, int cn, VET &a,  VET &b,  VET &c)
+    static inline void loadRowAdd(const ET* src, int VECSZ, int cn, VET &r, VET &rv1, VET &rv2, VET &rv3)
     {
-        a = vx_load(src - cn);
-        b = vx_load(src);
-        c = vx_load(src + cn);
+        r   = BoxTaps<1>::vsum<BoxLoad>(src, cn);
+        rv1 = BoxTaps<1>::vsum<BoxLoad>(src + VECSZ, cn);
+        rv2 = BoxTaps<1>::vsum<BoxLoad>(src + VECSZ*2, cn);
+        rv3 = BoxTaps<1>::vsum<BoxLoad>(src + VECSZ*3, cn);
     }
-    void inline addRow(const VET &a, const VET &b, VET &r)
-    {
-        r = v_add(r, v_add(a, b));
-    }
-    void inline loadRowAdd(const ET* src_0, const ET* src_0v1, const ET* src_0v2, const ET* src_0v3,
-                           int cn, VET &r, VET &rv1, VET &rv2, VET &rv3)
-    {
-        VET a, b;
-        VET av1, bv1;
-        VET av2, bv2;
-        VET av3, bv3;
-        loadRow(src_0, cn, a, b, r);
-        loadRow(src_0v1, cn, av1, bv1, rv1);
-        loadRow(src_0v2, cn, av2, bv2, rv2);
-        loadRow(src_0v3, cn, av3, bv3, rv3);
-        addRow(a, b, r);
-        addRow(av1, bv1, rv1);
-        addRow(av2, bv2, rv2);
-        addRow(av3, bv3, rv3);
-    }
-
 #endif
 
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
-
-        int yTopOffset = 1;
-        int yBottomOffset = 1;
-        if(yidx >0)
-            yTopOffset = 0;
-        if( (yidx + height) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
-        int idst = yTopOffset;
-
-        int xoffset = 1;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        int j = v;
+        const BoxFilter2DRange<1> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        double _scale = scale;
+        const int src_inc = src_stride / (int)sizeof(ET);
         v_float32 _v_scale = vx_setall_f32((float)_scale);
         const int VECSZ = VTraits<VET>::vlanes();
         const int VECSZ_2 = VECSZ<<1;
@@ -431,42 +390,24 @@ struct Sum3x3sameType :
         VET b0v2, b1v2, b2v2;
         VET b0v3, b1v3, b2v3;
 
-        const ET* src_ptr = (const ET*)(src + j * src_stride);
-        for (; x < len; x += (VECSZ_4))
+        const ET* src_ptr = (const ET*)src;
+        for (; x < r.xend; x += (VECSZ_4))
         {
-            if ( x > len - VECSZ_4 )
-            {
-                if (x == cn*xoffset || src == dst)
-                    break;
-                x = len - VECSZ_4;
-            }
-            int idst_ = idst;
-            j = v;
+            if( !boxFilter2DStrip(x, VECSZ_4, r, src == dst) )
+                break;
             const ET* src_0 = src_ptr +x ;
             const ET* src_1 = src_0 + src_inc;
             const ET* src_2 = src_1 + src_inc;
-            const ET* src_0v1 = src_0 + VECSZ;
-            const ET* src_1v1 = src_1 + VECSZ;
-            const ET* src_2v1 = src_2 + VECSZ;
-            const ET* src_0v2 = src_0 + VECSZ_2;
-            const ET* src_1v2 = src_1 + VECSZ_2;
-            const ET* src_2v2 = src_2 + VECSZ_2;
-            const ET* src_0v3 = src_0 + VECSZ_3;
-            const ET* src_1v3 = src_1 + VECSZ_3;
-            const ET* src_2v3 = src_2 + VECSZ_3;
 
             //row 0 and 1
-            loadRowAdd(src_0, src_0v1, src_0v2, src_0v3, cn, b0, b0v1, b0v2, b0v3);
-            loadRowAdd(src_1, src_1v1, src_1v2, src_1v3, cn, b1, b1v1, b1v2, b1v3);
+            loadRowAdd(src_0, VECSZ, cn, b0, b0v1, b0v2, b0v3);
+            loadRowAdd(src_1, VECSZ, cn, b1, b1v1, b1v2, b1v3);
 
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-                loadRowAdd(src_2, src_2v1, src_2v2, src_2v3, cn, b2, b2v1, b2v2, b2v3);
+                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
+                loadRowAdd(src_2, VECSZ, cn, b2, b2v1, b2v2, b2v3);
                 src_2 += src_inc;
-                src_2v1 += src_inc;
-                src_2v2 += src_inc;
-                src_2v3 += src_inc;
 
                 b0   = v_add(b2, v_add(b0, b1));
                 b0v1 = v_add(b2v1, v_add(b0v1, b1v1));
@@ -488,30 +429,7 @@ struct Sum3x3sameType :
             }
         }
 #endif
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            ET a0, a1, a2;
-            const ET* src_0 = ((const ET*)(src + j * src_stride))+x ;
-            const ET* src_1 = src_0 + src_inc;
-            const ET* src_2 = src_1 + src_inc;
-            a0 = src_0[-cn] + src_0[0] + src_0[cn];
-            a1 = src_1[-cn] + src_1[0] + src_1[cn];
-
-            for (; j < maxRow; j++, idst_++)
-            {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-                a2 = src_2[-cn] + src_2[0] + src_2[cn];
-                src_2 += src_inc;
-                if (SCALE_T==APPLY_SCALING)
-                    dstx[x] = scaleSum<ET>(a1 + a0 + a2, _scale);
-                else
-                    dstx[x] = saturate_cast<ET>(a1 + a0 + a2);
-                a0 = a1;
-                a1 = a2;
-            }
-        }
+        boxFilter2DTail<1, ET, ET>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailOut<SCALE_T, ET>(scale));
     }
 
     double scale;
@@ -532,99 +450,46 @@ struct Sum5x5 :
 #endif
     }
     virtual void reset() CV_OVERRIDE { }
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    void inline loadRow(const ET* src, int cn, VFT &a0, VFT &a1, VFT &b0, VFT &b1,
-                            VFT &c0, VFT &c1, VFT &d0, VFT &d1, VFT &e0, VFT &e1)
-    {
-        const ET* src_ptr = src - cn*2;
-        const int half = VTraits<VFT>::vlanes();
-        a0 = vx_load_expand(src_ptr);
-        a1 = vx_load_expand(src_ptr + half);
-        b0 = vx_load_expand(src_ptr + cn);
-        b1 = vx_load_expand(src_ptr + cn + half);
-        c0 = vx_load_expand(src_ptr + cn*2);
-        c1 = vx_load_expand(src_ptr + cn*2 + half);
-        d0 = vx_load_expand(src_ptr + cn*3);
-        d1 = vx_load_expand(src_ptr + cn*3 + half);
-        e0 = vx_load_expand(src_ptr + cn*4);
-        e1 = vx_load_expand(src_ptr + cn*4 + half);
-    }
-    void inline addRow(const VFT &a0, const VFT &a1, const VFT &b0, const VFT &b1,
-                          const VFT &c0, const VFT &c1, const VFT &d0, const VFT &d1, VFT &r0, VFT &r1)
-    {
-        r0 = v_add(r0, v_add(d0, v_add(c0, v_add(a0, b0))));
-        r1 = v_add(r1, v_add(d1, v_add(c1, v_add(a1, b1))));
-    }
-    void inline loadRowAdd(const ET* src_0, int cn, VFT &r0, VFT &r1)
-    {
-        VFT a0, a1, b0, b1, c0, c1, d0, d1;
-        loadRow(src_0, cn, a0, a1, b0, b1, c0, c1, d0, d1, r0, r1);
-        addRow(a0, a1, b0, b1, c0, c1, d0, d1, r0, r1);
-    }
-#endif
 
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
-        int yTopOffset = 2;
-        int yBottomOffset = 2;
-        if(yidx >1)
-            yTopOffset = 0;
-        if( (yidx + height+1) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
-        int idst = yTopOffset;
-
-
-        int xoffset = 2;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        const int dst_inc = dst_stride / ETSZ;
-        int cn2 = cn*2;
-        int j = v;
+        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int src_inc = src_stride / (int)sizeof(ET);
+        const int dst_inc = dst_stride / (int)sizeof(ET);
         v_float32 v_scale = vx_setall_f32((float)scale);
 
-        const ET* src_ptr = (const ET*)(src + j * src_stride);
+        const ET* src_ptr = (const ET*)src;
         const int VECSZ = VTraits<VET>::vlanes();
 
         VFT b00, b01, b10, b11, b20, b21, b30, b31, b40, b41;
 
-        for (; x < len; x += VECSZ)
+        for (; x < r.xend; x += VECSZ)
         {
-            if (x > len - VECSZ)
-            {
-                if (x == cn*xoffset || src == dst)
-                    break;
-                x = len - VECSZ;
-            }
-            int idst_ = idst;
-            j = v;
+            if( !boxFilter2DStrip(x, VECSZ, r, src == dst) )
+                break;
             const ET* src_0 = src_ptr + x;
             const ET* src_1 = src_0 + src_inc;
             const ET* src_2 = src_1 + src_inc;
             const ET* src_3 = src_2 + src_inc;
             const ET* src_4 = src_3 + src_inc;
 
-            loadRowAdd(src_0, cn, b00, b01);
-            loadRowAdd(src_1, cn, b10, b11);
-            loadRowAdd(src_2, cn, b20, b21);
-            loadRowAdd(src_3, cn, b30, b31);
-            ET* dstx = (ET*)(dst + (idst_ * dst_stride));
+            boxRowSumExpand<2>(src_0, cn, b00, b01);
+            boxRowSumExpand<2>(src_1, cn, b10, b11);
+            boxRowSumExpand<2>(src_2, cn, b20, b21);
+            boxRowSumExpand<2>(src_3, cn, b30, b31);
+            ET* dstx = (ET*)(dst + (ptrdiff_t)r.dstRow0*dst_stride);
             dstx += x;
 
             VFT bsum0, bsum1, b0, b1;
             bsum0   = v_add(v_add(b10, b00), v_add(b20, b30));
             bsum1   = v_add(v_add(b11, b01), v_add(b21, b31));
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
-                loadRowAdd(src_4, cn, b40, b41);
+                boxRowSumExpand<2>(src_4, cn, b40, b41);
                 src_4 += src_inc;
                 b0 = bsum0 = v_add(bsum0, b40);
                 b1 = bsum1 = v_add(bsum1, b41);
@@ -645,41 +510,7 @@ struct Sum5x5 :
             }
         }
 #endif
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            const ET* src_0 = ((const ET*)(src + j * src_stride))+x ;
-            const ET* src_1 = src_0 + src_inc;
-            const ET* src_2 = src_1 + src_inc;
-            const ET* src_3 = src_2 + src_inc;
-            const ET* src_4 = src_3 + src_inc;
-            WET b0, b1, b2, b3, b4;
-            b0 = (WET)src_0[-cn2] + (WET)src_0[-cn] + (WET)src_0[0] + (WET)src_0[cn] + (WET)src_0[cn2];
-            b1 = (WET)src_1[-cn2] + (WET)src_1[-cn] + (WET)src_1[0] + (WET)src_1[cn] + (WET)src_1[cn2];
-            b2 = (WET)src_2[-cn2] + (WET)src_2[-cn] + (WET)src_2[0] + (WET)src_2[cn] + (WET)src_2[cn2];
-            b3 = (WET)src_3[-cn2] + (WET)src_3[-cn] + (WET)src_3[0] + (WET)src_3[cn] + (WET)src_3[cn2];
-            ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-            dstx += x;
-
-            WET bsum = b0 + b1 + b2 + b3;
-            for (; j < maxRow; j++, idst_++)
-            {
-                b4 = (WET)src_4[-cn2] + (WET)src_4[-cn] + (WET)src_4[0] + (WET)src_4[cn] + (WET)src_4[cn2];
-                src_4 += src_inc;
-                bsum = bsum + b4;
-                if (SCALE_T)
-                    *dstx = saturate_cast<ET>(bsum * _scale);
-                else
-                    *dstx = saturate_cast<ET>(bsum);
-                bsum = bsum - b0;
-                b0 = b1;
-                b1 = b2;
-                b2 = b3;
-                b3 = b4;
-                dstx += dst_inc;
-            }
-        }
+        boxFilter2DTail<2, WET, ET>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailOut<SCALE_T, ET>(scale));
     }
     double scale;
 };
@@ -699,42 +530,14 @@ struct Sum5x5_8u :
     }
     virtual void reset() CV_OVERRIDE { }
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    static inline void rowSum(const uchar* p, int cn, v_uint16& lo, v_uint16& hi)
-    {
-        const int half = VTraits<v_uint16>::vlanes();
-        const uchar* q = p - cn*2;
-        lo = v_add(v_add(v_add(vx_load_expand(q), vx_load_expand(q + cn)),
-                         v_add(vx_load_expand(q + cn*2), vx_load_expand(q + cn*3))), vx_load_expand(q + cn*4));
-        q += half;
-        hi = v_add(v_add(v_add(vx_load_expand(q), vx_load_expand(q + cn)),
-                         v_add(vx_load_expand(q + cn*2), vx_load_expand(q + cn*3))), vx_load_expand(q + cn*4));
-    }
-#endif
-
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        int yTopOffset = 2;
-        int yBottomOffset = 2;
-        if(yidx > 1)
-            yTopOffset = 0;
-        if( (yidx + height + 1) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height - yTopOffset - yBottomOffset;
-        int idst = yTopOffset;
-
-        int xoffset = 2;
-        int v = idst - yTopOffset;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-        int cn2 = cn*2;
-
-        const int src_inc = src_stride;
-        int j = v;
-        const uchar* src_ptr = src + j * src_inc;
+        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int src_inc = src_stride;
         const int VECSZ8 = VTraits<v_uint8>::vlanes();
 
         // mul_hi(s + 12, 5243) >> 1 == round(s/25) exactly for every s <= 25*255;
@@ -742,32 +545,26 @@ struct Sum5x5_8u :
         v_uint16 v_12 = vx_setall_u16(12);
         v_uint16 v_mulFactor = vx_setall_u16(5243);
 
-        for (; x < len; x += VECSZ8)
+        for (; x < r.xend; x += VECSZ8)
         {
-            if ( x > len - VECSZ8 )
-            {
-                if (x == cn * xoffset || src == dst)
-                    break;
-                x = len - VECSZ8;
-            }
-            int idst_ = idst;
-            j = v;
-            const uchar* src_0 = src_ptr + x;
+            if( !boxFilter2DStrip(x, VECSZ8, r, src == dst) )
+                break;
+            const uchar* src_0 = src + x;
             const uchar* src_4 = src_0 + src_inc*4;
-            uchar* dstx = dst + idst_ * dst_stride + x;
+            uchar* dstx = dst + (ptrdiff_t)r.dstRow0*dst_stride + x;
 
             v_uint16 r0_lo, r0_hi, r1_lo, r1_hi, r2_lo, r2_hi, r3_lo, r3_hi;
-            rowSum(src_0, cn, r0_lo, r0_hi);
-            rowSum(src_0 + src_inc, cn, r1_lo, r1_hi);
-            rowSum(src_0 + src_inc*2, cn, r2_lo, r2_hi);
-            rowSum(src_0 + src_inc*3, cn, r3_lo, r3_hi);
+            boxRowSumExpand<2>(src_0, cn, r0_lo, r0_hi);
+            boxRowSumExpand<2>(src_0 + src_inc, cn, r1_lo, r1_hi);
+            boxRowSumExpand<2>(src_0 + src_inc*2, cn, r2_lo, r2_hi);
+            boxRowSumExpand<2>(src_0 + src_inc*3, cn, r3_lo, r3_hi);
             v_uint16 s_lo = v_add(v_add(r0_lo, r1_lo), v_add(r2_lo, r3_lo));
             v_uint16 s_hi = v_add(v_add(r0_hi, r1_hi), v_add(r2_hi, r3_hi));
 
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
                 v_uint16 r4_lo, r4_hi;
-                rowSum(src_4, cn, r4_lo, r4_hi);
+                boxRowSumExpand<2>(src_4, cn, r4_lo, r4_hi);
                 src_4 += src_inc;
 
                 s_lo = v_add(s_lo, r4_lo);
@@ -786,29 +583,7 @@ struct Sum5x5_8u :
             }
         }
 #endif
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            const uchar* src_0 = src_ptr + x;
-            const uchar* src_4 = src_0 + src_inc*4;
-            int b[5];
-            for (int r = 0; r < 4; r++)
-            {
-                const uchar* p = src_0 + r*src_inc;
-                b[r] = p[-cn2] + p[-cn] + p[0] + p[cn] + p[cn2];
-            }
-            int bsum = b[0] + b[1] + b[2] + b[3];
-            for (; j < maxRow; j++, idst_++)
-            {
-                b[4] = src_4[-cn2] + src_4[-cn] + src_4[0] + src_4[cn] + src_4[cn2];
-                src_4 += src_inc;
-                bsum += b[4];
-                dst[idst_ * dst_stride + x] = (uchar)((bsum + 12) / 25);
-                bsum -= b[0];
-                b[0] = b[1]; b[1] = b[2]; b[2] = b[3]; b[3] = b[4];
-            }
-        }
+        boxFilter2DTail<2, int, uchar>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailDiv25());
     }
 
     double scale;
@@ -829,80 +604,33 @@ struct Sum5x5sameType :
     }
     virtual void reset() CV_OVERRIDE { }
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    void inline loadRow(const ET* src, int cn, VET &a, VET &b, VET &c, VET &d, VET &e)
+    static inline void loadRowAdd(const ET* src, int VECSZ, int cn, VET &r, VET &rv1, VET &rv2, VET &rv3)
     {
-        a = vx_load(src - cn*2);
-        b = vx_load(src - cn);
-        c = vx_load(src);
-        d = vx_load(src + cn);
-        e = vx_load(src + cn*2);
+        r   = BoxTaps<2>::vsum<BoxLoad>(src, cn);
+        rv1 = BoxTaps<2>::vsum<BoxLoad>(src + VECSZ, cn);
+        rv2 = BoxTaps<2>::vsum<BoxLoad>(src + VECSZ*2, cn);
+        rv3 = BoxTaps<2>::vsum<BoxLoad>(src + VECSZ*3, cn);
     }
-
-    void inline loadRowAdd(const ET* src, int cn, VET &r)
-    {
-        VET a, b, c, d, e;
-        loadRow(src, cn, a, b, c, d, e);
-        r = v_add(v_add(v_add(a, b), v_add(c, d)), e);
-    }
-
-    void inline loadRowAdd(const ET* src_0, int VECSZ, int cn, VET &r, VET &r_v1, VET &r_v2, VET &r_v3)
-    {
-        VET a, b, c, d, e;
-        VET a_v1, b_v1, c_v1, d_v1, e_v1;
-        VET a_v2, b_v2, c_v2, d_v2, e_v2;
-        VET a_v3, b_v3, c_v3, d_v3, e_v3;
-
-        loadRow(src_0, cn, a, b, c, d, e);
-        loadRow(src_0 + VECSZ, cn, a_v1, b_v1, c_v1, d_v1, e_v1);
-        loadRow(src_0 + VECSZ*2, cn, a_v2, b_v2, c_v2, d_v2, e_v2);
-        loadRow(src_0 + VECSZ*3, cn, a_v3, b_v3, c_v3, d_v3, e_v3);
-
-        r = v_add(v_add(v_add(a, b), v_add(c, d)), e);
-        r_v1 = v_add(v_add(v_add(a_v1, b_v1), v_add(c_v1, d_v1)), e_v1);
-        r_v2 = v_add(v_add(v_add(a_v2, b_v2), v_add(c_v2, d_v2)), e_v2);
-        r_v3 = v_add(v_add(v_add(a_v3, b_v3), v_add(c_v3, d_v3)), e_v3);
-    }
-
 #endif
     virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int yidx, int wholeHeight, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
-        double _scale = scale;
-        int yTopOffset = 2;
-        int yBottomOffset = 2;
-        if(yidx >1)
-            yTopOffset = 0;
-        if( (yidx + height+1) < wholeHeight)
-            yBottomOffset = 0;
-        int maxRow = height-yTopOffset-yBottomOffset;
-        int idst = yTopOffset;
+        const BoxFilter2DRange<2> r(width, height, yidx, wholeHeight, cn);
+        int x = r.xbegin;
 
-        int xoffset = 2;
-        int v = idst - yTopOffset;
-        int j = v;
-        int len = (width - xoffset) * cn;
-        int x = xoffset * cn;
-
-        const int ETSZ = sizeof(ET);
-        const int src_inc = src_stride / ETSZ;
-        int cn2 = cn*2;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        double _scale = scale;
+        const int src_inc = src_stride / (int)sizeof(ET);
         v_float32 _v_scale = vx_setall_f32((float)_scale);
         const int VECSZ = VTraits<VET>::vlanes();
         const int VECSZ_2 = VECSZ<<1;
         const int VECSZ_3 = VECSZ*3;
         const int VECSZ_4 = VECSZ<<2;
-        for (; x < len; x += VECSZ_4)
+        for (; x < r.xend; x += VECSZ_4)
         {
-            if (x > len - VECSZ_4)
-            {
-                if (x == cn*xoffset || src == dst)
-                    break;
-                x = len - VECSZ_4;
-            }
-            int idst_ = idst;
-            j = v;
-            const ET* src_0 = ((const ET*)(src + j * src_stride)) + x;
+            if( !boxFilter2DStrip(x, VECSZ_4, r, src == dst) )
+                break;
+            const ET* src_0 = ((const ET*)src) + x;
             const ET* src_1 = src_0 + src_inc;
             const ET* src_2 = src_1 + src_inc;
             const ET* src_3 = src_2 + src_inc;
@@ -925,9 +653,9 @@ struct Sum5x5sameType :
             sumv2 = v_add(v_add(b1v2, b0v2), v_add(b2v2, b3v2));
             sumv3 = v_add(v_add(b1v3, b0v3), v_add(b2v3, b3v3));
 
-            for (; j < maxRow; j++, idst_++)
+            for (int j = 0; j < r.rows; j++)
             {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
+                ET* dstx = (ET*)(dst + (ptrdiff_t)(r.dstRow0 + j)*dst_stride);
                 VET b4, b4v1, b4v2, b4v3;
                 // row 4
                 loadRowAdd(src_4, VECSZ, cn, b4, b4v1, b4v2, b4v3);
@@ -976,42 +704,7 @@ struct Sum5x5sameType :
             }
         }
 #endif
-        for (; x < len; x++)
-        {
-            int idst_ = idst;
-            j = v;
-            const ET* src_0 = ((const ET*)(src + j * src_stride))+x ;
-            const ET* src_1 = src_0 + src_inc;
-            const ET* src_2 = src_1 + src_inc;
-            const ET* src_3 = src_2 + src_inc;
-            const ET* src_4 = src_3 + src_inc;
-
-            ET b0, b1, b2, b3, b4;
-            // same association as the vector loadRowAdd, so float results do not depend on x
-            b0 = ((src_0[-cn2] + src_0[-cn]) + (src_0[0] + src_0[cn])) + src_0[cn2];
-            b1 = ((src_1[-cn2] + src_1[-cn]) + (src_1[0] + src_1[cn])) + src_1[cn2];
-            b2 = ((src_2[-cn2] + src_2[-cn]) + (src_2[0] + src_2[cn])) + src_2[cn2];
-            b3 = ((src_3[-cn2] + src_3[-cn]) + (src_3[0] + src_3[cn])) + src_3[cn2];
-
-            for (; j < maxRow; j++, idst_++)
-            {
-                ET* dstx = (ET*)(dst + (idst_ * dst_stride));
-                b4 = ((src_4[-cn2] + src_4[-cn]) + (src_4[0] + src_4[cn])) + src_4[cn2];
-                src_4 += src_inc;
-                if (SCALE_T)
-                {
-                    dstx[x] = scaleSum<ET>(b1 + b0 + b2 + b3 + b4, _scale);
-                }
-                else
-                {
-                    dstx[x] = saturate_cast<ET>(b1 + b0 + b2 + b3 + b4 );
-                }
-                b0 = b1;
-                b1 = b2;
-                b2 = b3;
-                b3 = b4;
-            }
-        }
+        boxFilter2DTail<2, ET, ET>(src, dst, src_stride, dst_stride, r, x, cn, BoxTailOut<SCALE_T, ET>(scale));
     }
     double scale;
 };
