@@ -208,6 +208,30 @@ TEST_P(Features2d_LightGlue_PairInfo, MaxSideNormalization)
     expectSameMatches(expected, actual);
 }
 
+TEST_P(Features2d_LightGlue_PairInfo, EmptyTrainDescriptors)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    const int type = GetParam();
+    Ptr<LightGlueMatcher> matcher = LightGlueMatcher::create(lightGlueModelPath(type), 0.0f, 0, 0, type);
+
+    Mat keypoints(16, 2, CV_32F), descriptors(16, 128, CV_32F);
+    randu(keypoints, 0.0f, 1.0f);
+    randn(descriptors, 0.0f, 1.0f);
+    const Mat noKeypoints(0, 2, CV_32F), noDescriptors(0, 128, CV_32F);
+
+    std::vector<DMatch> matches;
+    matcher->setPairInfo(keypoints, noKeypoints);
+    ASSERT_NO_THROW(matcher->match(descriptors, noDescriptors, matches));
+    EXPECT_TRUE(matches.empty());
+
+    std::vector<std::vector<DMatch> > knnMatches;
+    matcher->setPairInfo(keypoints, noKeypoints);
+    ASSERT_NO_THROW(matcher->knnMatch(descriptors, noDescriptors, knnMatches, 1));
+    ASSERT_EQ(knnMatches.size(), (size_t)descriptors.rows);
+    for (const auto& m : knnMatches)
+        EXPECT_TRUE(m.empty());
+}
+
 INSTANTIATE_TEST_CASE_P(Models, Features2d_LightGlue_PairInfo, testing::Values(LG_ALIKED, LG_DISK));
 
 TEST(Features2d_LightGlue_PairInfo, InvalidModelType)
