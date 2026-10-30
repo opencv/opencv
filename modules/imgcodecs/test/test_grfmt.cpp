@@ -565,6 +565,25 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile_no_param.c_str());
 }
 
+// PAM files written without IMWRITE_PAM_TUPLETYPE have no TUPLTYPE line;
+// the reader must still accept 4-channel and 16-bit ones
+TEST(Imgcodecs_Pam, read_write_without_tupltype)
+{
+    for (int type : {CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4})
+    {
+        Mat img(4, 5, type);
+        randu(img, 0, CV_MAT_DEPTH(type) == CV_8U ? 256 : 65536);
+
+        std::vector<uchar> buf;
+        ASSERT_TRUE(imencode(".pam", img, buf)) << typeToString(type);
+        Mat decoded = imdecode(buf, IMREAD_UNCHANGED);
+
+        ASSERT_FALSE(decoded.empty()) << typeToString(type);
+        EXPECT_EQ(type, decoded.type());
+        EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF)) << typeToString(type);
+    }
+}
+
 // Regression test: a 2-channel (GRAYSCALE_ALPHA) PAM decoded as single channel
 // used to overflow the output row in basic_conversion() (3 bytes written per
 // source pixel into a 1-channel row). Verify it decodes safely and correctly.
