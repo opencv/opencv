@@ -49,7 +49,11 @@ __kernel void kernel_channel_subtract(const int count,
   if(index < count) {
     int n = index / channels / spatial_dim;
     int s = index % spatial_dim;
+#ifdef LOG_SOFTMAX
+    data[index] = src[index] - channel_max[n * spatial_dim + s];
+#else
     data[index] = exp(src[index] - channel_max[n * spatial_dim + s]);
+#endif
   }
 }
 
@@ -61,7 +65,11 @@ __kernel void kernel_channel_sum(const int num, const int channels,
     int s = index % spatial_dim;
     T sum = 0;
     for (int c = 0; c < channels; ++c) {
+#ifdef LOG_SOFTMAX
+      sum += exp(data[(n * channels + c) * spatial_dim + s]);
+#else
       sum += data[(n * channels + c) * spatial_dim + s];
+#endif
     }
     channel_sum[index] = sum;
   }
@@ -74,9 +82,10 @@ __kernel void kernel_channel_div(const int count,
   if(index < count) {
     int n = index / channels / spatial_dim;
     int s = index % spatial_dim;
-    T v = data[index] / channel_sum[n * spatial_dim + s];
 #ifdef LOG_SOFTMAX
-    v = log(v);
+    T v = data[index] - log(channel_sum[n * spatial_dim + s]);
+#else
+    T v = data[index] / channel_sum[n * spatial_dim + s];
 #endif
     data[index] = v;
   }
