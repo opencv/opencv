@@ -289,8 +289,12 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
-TEST(Layer_Test_Softmax, LogSoftmaxDoesNotUnderflow)
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_LogSoftmax;
+TEST_P(Layer_Test_LogSoftmax, DoesNotUnderflow)
 {
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+
     // log(softmax(x)) is -inf once x is about 104 below the maximum, where exp underflows.
     // The 17-element row also goes through the SIMD loops.
     std::vector<float> data = {1000.f, 1001.f, 1002.f, -1000.f, 0.f, 1000.f};
@@ -310,7 +314,8 @@ TEST(Layer_Test_Softmax, LogSoftmaxDoesNotUnderflow)
         lp.set("log_softmax", true);
         Net net;
         net.addLayerToPrev(lp.name, lp.type, lp);
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
         net.setInput(input);
         Mat out = net.forward();
 
@@ -324,9 +329,15 @@ TEST(Layer_Test_Softmax, LogSoftmaxDoesNotUnderflow)
             for (int c = 0; c < len; c++)
                 ref.at<float>(r, c) = static_cast<float>(x[c] - maxVal - std::log(sum));
         }
-        normAssert(ref, out.reshape(1, rows), "", 1e-4, 1e-4);
+        double l1 = 1e-4, lInf = 1e-4;
+        if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16)
+            DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+        normAssert(ref, out.reshape(1, rows), "", l1, lInf);
     }
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_LogSoftmax,
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false));
 
 static Mat runGatherElementsLayer(const Mat& data, const Mat& indices, int axis)
 {
