@@ -54,6 +54,10 @@
 #include <unistd.h>
 #endif
 
+#if defined(__linux__)
+#include <dlfcn.h>
+#endif
+
 // Get GL_PERSPECTIVE_CORRECTION_HINT definition, not available in GLES 2 or
 // OpenGL 3 core profile or later
 #ifdef HAVE_QT_OPENGL
@@ -532,6 +536,30 @@ static int icvInitSystem(int* c, char** v)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
         QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
+
+        // Attempt to call XInitThreads() via dlopen to enable X11 thread-safety
+        // before Qt initializes the display. This prevents a deadlock when libraries
+        // like PyAV have already loaded a conflicting FFmpeg version into the process,
+        // corrupting XCB internal lock state. Using dlopen avoids a hard dependency
+        // on libX11, making this a safe no-op on pure Wayland builds.
+        // See: https://github.com/opencv/opencv/issues/29195
+        //      https://github.com/opencv/opencv/issues/21952
+        #if defined(__linux__)
+        {
+            void* x11 = NULL;
+            #ifdef RTLD_NOLOAD
+            x11 = dlopen("libX11.so.6", RTLD_LAZY | RTLD_NOLOAD);
+            #endif
+            if (!x11) x11 = dlopen("libX11.so", RTLD_LAZY);
+            if (x11)
+            {
+                typedef int (*fn_t)(void);
+                fn_t fn = (fn_t)dlsym(x11, "XInitThreads");
+                if (fn) fn();
+            }
+        }
+        #endif
+
         new QApplication(*c, v);
         setlocale(LC_NUMERIC,"C");
 
