@@ -3187,9 +3187,11 @@ TEST_P(Core_Norm_FP8, accuracy)
     a32f.convertTo(a, depth);
     b32f.convertTo(b, depth);
 
-    EXPECT_EQ(cv::norm(a32f, normType), cv::norm(a, normType));
-    EXPECT_EQ(cv::norm(a32f, b32f, normType), cv::norm(a, b, normType));
-    EXPECT_EQ(cv::norm(a32f, normType, mask), cv::norm(a, normType, mask));
+    // EXPECT_DOUBLE_EQ: with IPP, the CV_32F NORM_L2SQR reference is computed as (NORM_L2)^2,
+    // which can be off by 1 ulp
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType), cv::norm(a, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, b32f, normType), cv::norm(a, b, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType, mask), cv::norm(a, normType, mask));
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_Norm_FP8, testing::Combine(
