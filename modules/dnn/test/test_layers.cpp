@@ -289,6 +289,56 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_LogSoftmax;
+TEST_P(Layer_Test_LogSoftmax, DoesNotUnderflow)
+{
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+
+    // log(softmax(x)) is -inf once x is about 104 below the maximum, where exp underflows.
+    // The 17-element row also goes through the SIMD loops.
+    std::vector<float> data = {1000.f, 1001.f, 1002.f, -1000.f, 0.f, 1000.f};
+    for (int i = 0; i < 17; i++)
+        data.push_back(100.f * i - 800.f);
+
+    for (int len : {3, 17})
+    {
+        SCOPED_TRACE(len);
+        const int rows = len == 3 ? 2 : 1;
+        Mat input(rows, len, CV_32F, data.data() + (len == 3 ? 0 : 6));
+
+        LayerParams lp;
+        lp.type = "Softmax";
+        lp.name = "logSoftmax";
+        lp.set("axis", 1);
+        lp.set("log_softmax", true);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(input);
+        Mat out = net.forward();
+
+        Mat ref(rows, len, CV_32F);
+        for (int r = 0; r < rows; r++)
+        {
+            const float* x = input.ptr<float>(r);
+            double maxVal = *std::max_element(x, x + len), sum = 0;
+            for (int c = 0; c < len; c++)
+                sum += std::exp(x[c] - maxVal);
+            for (int c = 0; c < len; c++)
+                ref.at<float>(r, c) = static_cast<float>(x[c] - maxVal - std::log(sum));
+        }
+        double l1 = 1e-4, lInf = 1e-4;
+        if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16)
+            DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+        normAssert(ref, out.reshape(1, rows), "", l1, lInf);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_LogSoftmax,
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false));
+
 static Mat runGatherElementsLayer(const Mat& data, const Mat& indices, int axis)
 {
     LayerParams params;
