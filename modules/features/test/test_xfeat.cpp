@@ -143,10 +143,10 @@ TEST(Features2d_XFeat, Basic)
 
     for (const KeyPoint& kp : keypoints)
     {
-        EXPECT_GE(kp.pt.x, 0.f);
-        EXPECT_GE(kp.pt.y, 0.f);
-        EXPECT_LT(kp.pt.x, static_cast<float>(img.cols));
-        EXPECT_LT(kp.pt.y, static_cast<float>(img.rows));
+        EXPECT_GE(kp.pt.x, -0.5f);
+        EXPECT_GE(kp.pt.y, -0.5f);
+        EXPECT_LT(kp.pt.x, img.cols - 0.5f);
+        EXPECT_LT(kp.pt.y, img.rows - 0.5f);
         EXPECT_GT(kp.response, 0.f);
     }
 }
@@ -178,7 +178,7 @@ TEST(Features2d_XFeat, ParametersAndMask)
     ASSERT_EQ(descriptors.rows, static_cast<int>(keypoints.size()));
 
     for (const KeyPoint& kp : keypoints){
-        EXPECT_TRUE(roi.contains(Point(cvFloor(kp.pt.x), cvFloor(kp.pt.y))));
+        EXPECT_TRUE(roi.contains(Point(cvRound(kp.pt.x), cvRound(kp.pt.y))));
     }
 
     Mat boolMask = Mat::zeros(img.size(), CV_BoolC1);

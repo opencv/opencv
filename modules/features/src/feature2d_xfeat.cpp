@@ -291,8 +291,9 @@ public:
 
                 const float px = (xp - static_cast<float>(padX) + 0.5f) * invScaleX - 0.5f;
                 const float py = (yp - static_cast<float>(padY) + 0.5f) * invScaleY - 0.5f;
-                const int ix = cvFloor(px);
-                const int iy = cvFloor(py);
+                // Pixel i covers [i - 0.5, i + 0.5), so the pixel containing (px, py) is the rounded one.
+                const int ix = cvRound(px);
+                const int iy = cvRound(py);
                 if (ix < 0 || iy < 0 || ix >= image.cols || iy >= image.rows)
                     continue;
                 if (!mask.empty() && mask.at<uchar>(iy, ix) == 0)
