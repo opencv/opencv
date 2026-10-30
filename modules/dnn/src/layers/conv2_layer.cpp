@@ -8,6 +8,7 @@
 #include "layers_common.hpp"
 #include "conv2_common.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/convolution.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include <algorithm>
 #include <cstring>
@@ -83,6 +84,7 @@ public:
         if (!bias.empty() && (bias.type() != CV_32F || (int)bias.total() != K))
             return false;
 
+        winogradConv.release();
         const float* sc = scale.ptr<float>();
         const float* sh = shift.ptr<float>();
         std::vector<float> adj(K, 0.f);
@@ -226,6 +228,7 @@ public:
     virtual void setWeights(InputArray weights_arr, InputArray bias_arr,
                             int C0, int accuracy) CV_OVERRIDE
     {
+        winogradConv.release();
         Mat weights_ = weights_arr.getMat();
         Mat bias_ = bias_arr.getMat();
         CV_Assert(!weights_.empty());
@@ -750,6 +753,7 @@ public:
         CV_Assert(wshape0.dims == nspatialdims+2);
 
         if (inpshape != prevInpshape) {
+            winogradConv.release();
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
                         fastActivation, activationFunc, activParams);
@@ -801,6 +805,27 @@ public:
             }
         }
 
+#if CV_NEON_AARCH64
+        // Reuse the Winograd transforms directly on NCHWc8 tiles. Restrict the
+        // dispatch to the AArch64 shapes measured against the direct kernel.
+        if (netimpl_->useWinograd && !dynamicWeights && inptype == CV_32F &&
+            C0 == 8 && ngroups == 1 && wshape0.dims == 4 &&
+            wshape0[1] >= 3 && wshape0[0] >= 16 &&
+            wshape0[2] == 3 && wshape0[3] == 3 &&
+            cs.strides[1] == 1 && cs.strides[2] == 1 &&
+            cs.dilations[1] == 1 && cs.dilations[2] == 1 &&
+            inpshape.dims == 5 && inpshape[2] >= 12 && inpshape[3] >= 12 &&
+            !fusedBatchNorm && !addResidual && !activationFunc && activ.empty() &&
+            (fastActivation == FAST_ACTIV_NONE || fastActivation == FAST_ACTIV_RELU))
+        {
+            if (forwardWinograd(inp, out)) {
+                if (uouts) out.copyTo(uouts->at(0));
+                return;
+            }
+        }
+
+#endif
+
         ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
         CV_Assert(func != nullptr);
         func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
@@ -815,6 +840,37 @@ public:
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
         }
+    }
+
+    Ptr<FastConv> winogradConv;
+
+    bool forwardWinograd(const Mat& inp, Mat& out)
+    {
+        const MatShape si = inp.shape(), so = out.shape();
+        const int C = si.channels(), K = so.channels();
+        if (winogradConv.empty()) {
+            Mat plain(wshape0, CV_32F);
+            const ConvWeightPack pack = ConvWeightPack::forConv(wshape0, weights.shape(), 1, 8);
+            for (int k = 0; k < K; ++k)
+                for (int c = 0; c < C; ++c)
+                    for (int tap = 0; tap < 9; ++tap)
+                        plain.ptr<float>()[((size_t)k*C+c)*9+tap] =
+                            weights.ptr<float>()[pack.offset(k,c)+tap*pack.tapStride()];
+            winogradConv = initFastConv(plain, bias.empty() ? nullptr : bias.ptr<float>(),
+                1, K, C, {3,3}, {1,1}, {1,1},
+                {(size_t)cs.pads[1], (size_t)cs.pads[2]},
+                {(size_t)cs.pads[4], (size_t)cs.pads[5]}, CONV_2D, false, true);
+        }
+        if (winogradConv->conv_type != CONV_TYPE_WINOGRAD3X3)
+            return false;
+        // Bias can be fused after weights have been prepared.
+        for (int k = 0; k < K; ++k)
+            winogradConv->biasBuf[k] = bias.empty() ? 0.f : bias.ptr<float>()[k];
+        if (K % 8) out.setZero();
+        const bool relu = fastActivation == FAST_ACTIV_RELU;
+        return runWinograd63(inp, Mat(), out, winogradConv,
+                            std::max(getNumThreads(), 1), relu ? 0.f : -FLT_MAX,
+                            FLT_MAX, nullptr, relu) != 0;
     }
 
     // True iff setWeights() armed the MLAS 1x1 SGEMM path for this conv.
