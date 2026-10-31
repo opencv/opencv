@@ -1832,9 +1832,9 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
 /** @brief Replaces NaNs (Not-a-Number values) in a matrix with the specified value.
 
 This function modifies the input matrix in-place.
-The input matrix must be of type `CV_32F` or `CV_64F`; other types are not supported.
+The input matrix must be of type `CV_16F`, `CV_16BF`, `CV_32F` or `CV_64F`; other types are not supported.
 
-@param a Input/output matrix (CV_32F or CV_64F type).
+@param a Input/output matrix (CV_16F, CV_16BF, CV_32F or CV_64F type).
 @param val Value used to replace NaNs (defaults to 0).
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
