@@ -286,6 +286,13 @@ void LightGlueMatcherImpl::knnMatchImpl(InputArray _queryDescriptors,
     const Mat& trainDesc = trainDescCollection[0];
     Mat queryDesc = _queryDescriptors.getMat();
 
+    if (trainDesc.empty())
+    {
+        matches.assign(queryDesc.rows, std::vector<DMatch>());
+        clearPairInfo();
+        return;
+    }
+
     std::vector<DMatch> flatMatches;
     lightglueMatch(queryDesc, trainDesc, queryKpts, trainKpts,
                    queryImgSize, trainImgSize, flatMatches);
