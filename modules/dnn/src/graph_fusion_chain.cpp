@@ -197,7 +197,7 @@ private:
     //! The slot @p a occupies in the chain's per-channel buffer list, adding it if new.
     int bufferSlotFor(Arg a, uchar perChannel, ChainCandidate& c) const
     {
-        // Owned buffers park Arg() in the table, so a real input must never match one.
+    // Owned buffers park Arg() in the table, so a real input must never match one.
         CV_DbgAssert(a.idx != 0);
         for (size_t k = 0; k < c.constSlots.size(); k++) {
             if (c.constSlots[k].arg.idx == a.idx && c.constSlots[k].perChannel == perChannel)
