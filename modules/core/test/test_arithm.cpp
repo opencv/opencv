@@ -2652,6 +2652,27 @@ TEST(Core_Arithm, dst_reuse_vector_vs_1xN_separate_src)
         ASSERT_EQ(8.f, d[i]) << i;
 }
 
+TEST(Core_Arithm, dst_reuse_vector_temporary_output)
+{
+    const int N = 128;
+    std::vector<float> d(N, 10.f);
+    Mat offsets(1, N, CV_32F, Scalar(2.f));
+
+    const float* p = d.data();
+
+    cv::subtract(
+        dstReuseVecMat(d),
+        offsets,
+        dstReuseVecMat(d)
+    );
+
+    EXPECT_EQ(p, d.data());
+
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(8.f, d[i]) << i;
+}
+}
+
 TEST(Core_Arithm, dst_reuse_vector_vs_Nx1)
 {
     const int N = 128;
@@ -2711,6 +2732,35 @@ TEST(Core_Arithm, dst_reuse_unary_vector)
     EXPECT_EQ(p, dst.data);
     for (int i = 0; i < N; i++)
         ASSERT_EQ(255, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_vector_fast_path_boundary)
+{
+    const int lengths[] = { 100000, 100001 };
+
+    for (size_t n = 0; n < 2; n++)
+    {
+        const int N = lengths[n];
+
+        std::vector<float> d(N, 0.f);
+
+        Mat dst = dstReuseVecMat(d);
+        Mat src(1, N, CV_32F, Scalar(10.f));
+        Mat offsets(1, N, CV_32F, Scalar(2.f));
+
+        const uchar* p = dst.data;
+
+        cv::subtract(src, offsets, dst);
+
+        EXPECT_EQ(p, dst.data) << "N=" << N;
+
+        ASSERT_EQ(2, dst.dims);
+        EXPECT_EQ(1, dst.size[0]);
+        EXPECT_EQ(N, dst.size[1]);
+
+        EXPECT_EQ(8.f, d.front());
+        EXPECT_EQ(8.f, d.back());
+    }
 }
 
 TEST(Compare, regression_16F_do_not_crash)
@@ -5076,4 +5126,4 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
     }
 }
 
-}} // namespace
+} // namespace

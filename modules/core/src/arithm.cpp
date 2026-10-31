@@ -622,23 +622,31 @@ static bool sameUpToSingletons(const int* a, int na, const MatShape& b)
     }
 }
 
-// A plain (non-fixed) Mat destination whose shape differs from the broadcast result only by
-// singleton dims (e.g. a 1D vector-backed Mat vs a 1xN result) keeps its storage: only the header
-// is reshaped, so create() below becomes a no-op instead of reallocating.
-static void reshapeDstInPlace(OutputArray dst, const MatShape& oshape, int otype)
+// Reuse a Mat destination when its shape differs from the output only by singleton dims
+// (e.g. [N] vs [1,N] or [N,1]). Mutable Mat headers are reshaped in place. For fixed-size/type
+// OutputArrays (notably a temporary Mat passed as OutputArray), keep the caller's header unchanged
+// and return a local reshaped header over the same storage instead. In both cases create() must
+// not be allowed to replace the existing buffer.
+static bool reshapeDstInPlace(OutputArray dst, const MatShape& oshape, int otype, Mat& dstView)
 {
     if (dst.kind() != _InputArray::MAT)
-        return;
+        return false;
     Mat* d = (Mat*)dst.getObj();
     // common case first: same dims, 0-dim result, empty or different-type dst -> nothing to do
     if (d->dims == (int)oshape.size() || oshape.size() == 0 || d->empty() ||
-        d->type() != otype || dst.fixedSize() || dst.fixedType() || !d->isContinuous())
-        return;
+        d->type() != otype || !d->isContinuous())
+        return false;
     int sz[MatShape::MAX_DIMS];
     int nd = dst.sizend(sz);
     if (!sameUpToSingletons(sz, nd, oshape))
-        return;
-    *d = d->reshape(CV_MAT_CN(otype), oshape);   // header only, same data pointer
+        return false;
+
+    Mat reshaped = d->reshape(CV_MAT_CN(otype), oshape);
+    if (dst.fixedSize() || dst.fixedType())
+        dstView = reshaped;                       // preserve the fixed output's header
+    else
+        *d = reshaped;                            // header only, same data pointer
+    return true;
 }
 
 // Are two operands' iteration shapes (spatial dims + channels innermost, exactly how the engine
@@ -774,9 +782,14 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
         ew::TKernel k = ew::getElemwiseFunc(op, rdepth, rdepth, ew::EW_DEPTH_NONE, rdepth);
         if (k.fptr)
         {
-            dst.createSameSize(src1, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
+            Mat dstView;
+            const MatShape directShape = src1.shape();
+            reshapeDstInPlace(dst, directShape, pm1->type(), dstView);
+            if (dstView.empty())
+                dst.createSameSize(src1, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
             Mat dloc;
-            Mat* pd = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dloc = dst.getMat());
+            Mat* pd = !dstView.empty() ? &dstView :
+                      (dst.kind() == _InputArray::MAT ? (Mat*)dst.getObj() : &(dloc = dst.getMat()));
             if (pd->isContinuous())     // a reused non-continuous dst view falls through to the engine
             {
                 k.fptr(pm1->data, 0, 1, pm2->data, 0, 1, nullptr, 0, 0,
@@ -828,23 +841,25 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     if (!s2) inputs[ni++] = pm2;
     if (haveMask) inputs[ni++] = pmask;
 
-    // Pre-create the output at the broadcast shape, ALWAYS via dst.create() - never hand exec a raw
-    // dst Mat. Routing through the _OutputArray is what enforces its contract: a FIXED_SIZE/FIXED_TYPE
-    // dst (in-place 'a += b' passes '(const Mat&)a') throws here if a broadcast would change its shape
-    // or type (Mat(1x1) += Mat(1x4)), instead of silently reallocating - exec sees only a Mat and has
-    // no view of the array's fixed flags. Cost over a direct exec is negligible: exec keeps its own
-    // fast path for a matching-shape op, and dst.create() with an unchanged shape/type is a no-op.
+    // Prepare the output at the broadcast shape through _OutputArray, so its fixed-size/type
+    // contract is enforced for ordinary shape/type changes. The one exception is a continuous Mat
+    // whose shape differs only by singleton dimensions: reshapeDstInPlace() supplies a local view
+    // for fixed outputs, preserving their header while writing the same logical element sequence.
     // With a mask, a freshly (re)allocated dst is zeroed so mask==0 reads 0 (matches arithm_op); a
-    // reused dst keeps its prior content there - detect reuse by shape+type BEFORE create (correct for
-    // a reused UMat dst too).
+    // reused dst keeps its prior content there - detect reuse before create (correct for a reused UMat
+    // dst too).
     MatShape oshape; int ocn;
     p.outputShape(inputs, oshape, ocn);
     const int otype = CV_MAKETYPE(rdepth, ocn);
-    reshapeDstInPlace(dst, oshape, otype);
-    const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
-    dst.create(oshape, otype);
+    Mat dstView;
+    const bool reshaped = reshapeDstInPlace(dst, oshape, otype, dstView);
+    const bool usingDstView = !dstView.empty();
+    const bool reused = haveMask && (reshaped || outArrayMatches(dst, oshape, otype));
+    if (!usingDstView)
+        dst.create(oshape, otype);
     Mat dstloc;
-    Mat* pdst = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dstloc = dst.getMat());
+    Mat* pdst = usingDstView ? &dstView :
+                (dst.kind() == _InputArray::MAT ? (Mat*)dst.getObj() : &(dstloc = dst.getMat()));
     if (haveMask && !reused)
         pdst->setZero();                          // setZero (not setTo, which caps at 4 channels)
     p.exec(inputs, pdst);
@@ -902,11 +917,15 @@ static void unary_op(ew::TOp op, InputArray src, OutputArray dst, InputArray mas
     MatShape oshape; int ocn;
     p.outputShape(inputs, oshape, ocn);
     const int otype = CV_MAKETYPE(rdepth, ocn);
-    reshapeDstInPlace(dst, oshape, otype);
-    const bool reused = haveMask && outArrayMatches(dst, oshape, otype);
-    dst.create(oshape, otype);
+    Mat dstView;
+    const bool reshaped = reshapeDstInPlace(dst, oshape, otype, dstView);
+    const bool usingDstView = !dstView.empty();
+    const bool reused = haveMask && (reshaped || outArrayMatches(dst, oshape, otype));
+    if (!usingDstView)
+        dst.create(oshape, otype);
     Mat dstloc;
-    Mat* pdst = (dst.kind() == _InputArray::MAT) ? (Mat*)dst.getObj() : &(dstloc = dst.getMat());
+    Mat* pdst = usingDstView ? &dstView :
+                (dst.kind() == _InputArray::MAT ? (Mat*)dst.getObj() : &(dstloc = dst.getMat()));
     if (haveMask && !reused)
         pdst->setZero();
     p.exec(inputs, pdst);
