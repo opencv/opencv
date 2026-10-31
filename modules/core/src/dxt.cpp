@@ -415,6 +415,45 @@ void DftPlan::fillTables(size_t ntw, bool need_rtw, bool need_dct)
     }
 }
 
+static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* dst, size_t dstep,
+                   bool complex_io);
+
+template<typename T>
+void DftPlan::initBluestein(int convolution_size)
+{
+    // The inner smooth plan can need two complex workspace pairs. Check bytes
+    // before building it as well, including on 32-bit hosts.
+    CV_Assert((size_t)convolution_size <= (std::numeric_limits<size_t>::max() - 64)/(4*sizeof(T)));
+    convolution = makePtr<DftPlan>();
+    convolution->build(DFT_KIND_C2C, convolution_size, depth, vl);
+    size_t storage_size = (size_t)(nc + convolution_size)*(2*sizeof(T)/sizeof(double));
+    CV_Assert(storage_size <= std::numeric_limits<size_t>::max()/sizeof(double));
+    chirp.allocate(storage_size);
+    Complex<T>* w = (Complex<T>*)chirp.data();
+    Complex<T>* spectrum = w + nc;
+    std::fill(spectrum, spectrum + convolution_size, Complex<T>(0, 0));
+    for (int j = 0; j < nc; j++)
+    {
+        // Reduce j^2 modulo 2*nc before converting to floating point. The existing
+        // length bound (nc < 2^28) keeps this product within int64.
+        double angle = CV_PI*(double)(((int64)j*j) % (2*(int64)nc))/nc;
+        w[j] = Complex<T>((T)std::cos(angle), (T)-std::sin(angle));
+        spectrum[j] = Complex<T>(w[j].re, -w[j].im);
+        if (j != 0)
+            spectrum[convolution_size - j] = spectrum[j];
+    }
+    AutoBuffer<uchar> workspace(convolution->ws_bytes);
+    OcvDftOptions c;
+    c.n = convolution_size;
+    // Normalize the fixed spectrum, rather than the inverse result, to avoid
+    // an extra factor of convolution_size in intermediate signal amplitudes.
+    c.scale = 1./convolution_size;
+    c.plan = convolution.get();
+    c.kernels = &getDFTKernels(depth);
+    c.workspace = workspace.data();
+    runDft(c, spectrum, 1, spectrum, 1, false);
+}
+
 // See dxt.hpp for the contract (in particular where `vl` must come from).
 void DftPlan::build(int _kind, int _n, int _depth, int _vl)
 {
@@ -432,6 +471,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
     p.real_input = kind == DFT_KIND_R2C && (n & 1) != 0;
     p.need_tmp = kind == DFT_KIND_C2R || kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
     p.pingpong = false;
+    p.convolution.release();
 
     // factorization: 2^k part first (fused first stage r0 + radix-4 stages), then 3s, 5s, other odd.
     // (A radix-8 middle stage was tried and measured slower on NEON: with per-leg twiddle tables it
@@ -454,6 +494,24 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
             break;
         }
         while (rest % f == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = f; rest /= f; }
+    }
+    // Large odd butterflies otherwise need quadratic tables and work. Bluestein
+    // uses 2*j*k = j*j + k*k - (j-k)*(j-k) to turn the complex DFT into a
+    // convolution, retaining the real/DCT packing passes.
+    int convolution_size = 0;
+    if (nst > 0 && radices[nst - 1] >= 127 && nc <= ((1 << 28) - 1)/2)
+    {
+        int size = getOptimalDFTSize(2*nc - 1);
+        int h = (radices[nst - 1] - 1)/2;
+        // Preparing a full convolution can lose on long mixed lengths. Use a
+        // conservative crossover between the quadratic table size and the
+        // padded convolution length.
+        if (size > 0 && size < (1 << 28) && (int64)h*h >= 4*(int64)size)
+        {
+            convolution_size = size;
+            p.first_radix = r0 = 1;
+            nst = 0;
+        }
     }
     p.nstages = nst;
 
@@ -486,7 +544,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
         }
         L *= r;
     }
-    CV_Assert(L == nc);
+    CV_Assert(convolution_size != 0 || L == nc);
 
     // digit-reversal: position p = sum_s d_s*L_s holds input element sum_s d_s*M_s, M_s = nc/(L_s*r_s);
     // the radix sequence is r0 (if > 1) followed by the stage radices.
@@ -507,7 +565,9 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
             Ls *= seq[s];
         }
     }
-    if (r0 == 1)
+    if (convolution_size != 0)
+        p.itab.deallocate();
+    else if (r0 == 1)
     {
         p.itab.allocate(nc*2);
         int* it_all = p.itab.data();
@@ -603,7 +663,85 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
     p.pair1_ofs = two_pairs ? pair_bytes : 0;
     p.scratch_ofs = pair_bytes*(two_pairs ? 2 : 1);
     size_t scratch_bytes = 4*(size_t)max_h*std::max(vl, 1)*esz;
+    if (convolution_size != 0)
+    {
+        if (depth == CV_32F)
+            initBluestein<float>(convolution_size);
+        else
+            initBluestein<double>(convolution_size);
+        size_t buffer_bytes = 2*(size_t)convolution_size*esz;
+        size_t max_size = std::numeric_limits<size_t>::max();
+        CV_Assert(convolution->ws_bytes <= max_size - buffer_bytes);
+        scratch_bytes = buffer_bytes + convolution->ws_bytes;
+        CV_Assert(scratch_bytes <= max_size - 64 && p.scratch_ofs <= max_size - 64 - scratch_bytes);
+    }
     p.ws_bytes = p.scratch_ofs + scratch_bytes + 64;
+}
+
+template<typename T>
+static void runBluestein(const OcvDftOptions& c, const void* src, size_t sstep,
+                        void* re, void* im, void* scratch, bool conjugate)
+{
+    const DftPlan& p = *c.plan;
+    const DftPlan& conv = *p.convolution;
+    const Complex<T>* w = (const Complex<T>*)p.chirp.data();
+    const Complex<T>* spectrum = w + p.nc;
+    Complex<T>* buffer = (Complex<T>*)scratch;
+    const T* input = (const T*)src;
+    T max_input = 0;
+    for (int j = 0; j < p.nc; j++)
+    {
+        T ar = input[(p.real_input ? j : 2*j)*sstep];
+        T ai = p.real_input ? (T)0 : input[(2*j + 1)*sstep];
+        if (conjugate)
+            ai = -ai;
+        max_input = std::max(max_input, std::max(std::abs(ar), std::abs(ai)));
+        buffer[j] = Complex<T>(ar*w[j].re - ai*w[j].im, ar*w[j].im + ai*w[j].re);
+    }
+    int input_exponent = 0;
+    if (max_input > 0 && max_input < std::numeric_limits<T>::min()*conv.n)
+    {
+        // The normalized spectrum must not erase an entirely tiny signal.
+        // A power-of-two shift preserves its bits until the final rounding.
+        std::frexp(max_input, &input_exponent);
+        for (int j = 0; j < p.nc; j++)
+        {
+            T ar = std::ldexp(input[(p.real_input ? j : 2*j)*sstep], -input_exponent);
+            T ai = p.real_input ? (T)0 : std::ldexp(input[(2*j + 1)*sstep], -input_exponent);
+            if (conjugate)
+                ai = -ai;
+            buffer[j] = Complex<T>(ar*w[j].re - ai*w[j].im, ar*w[j].im + ai*w[j].re);
+        }
+    }
+    std::fill(buffer + p.nc, buffer + conv.n, Complex<T>(0, 0));
+    OcvDftOptions inner;
+    inner.n = conv.n;
+    inner.scale = 1;
+    inner.plan = &conv;
+    inner.kernels = c.kernels;
+    inner.workspace = (uchar*)(buffer + conv.n);
+    runDft(inner, buffer, 1, buffer, 1, false);
+    for (int j = 0; j < conv.n; j++)
+    {
+        T ar = buffer[j].re, ai = buffer[j].im;
+        buffer[j] = Complex<T>(ar*spectrum[j].re - ai*spectrum[j].im,
+                               ar*spectrum[j].im + ai*spectrum[j].re);
+    }
+    inner.isInverse = true;
+    inner.scale = 1;
+    runDft(inner, buffer, 1, buffer, 1, false);
+    T* dst_re = (T*)re;
+    T* dst_im = (T*)im;
+    for (int j = 0; j < p.nc; j++)
+    {
+        T ar = buffer[j].re, ai = buffer[j].im;
+        T vr = ar*w[j].re - ai*w[j].im;
+        T vi = ar*w[j].im + ai*w[j].re;
+        dst_re[j] = input_exponent == 0 ? vr : std::ldexp(vr, input_exponent);
+        dst_im[j] = input_exponent == 0 ? vi : std::ldexp(vi, input_exponent);
+    }
+    if (p.real_input)
+        dst_im[0] = 0;
 }
 
 // Runs the transform described by c.plan: A (preproc) -> B stages (ping-pong) -> C (postproc).
@@ -644,9 +782,19 @@ static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* 
         conj = c.isInverse;
     CV_DbgAssert(astep == 1 || p.first_radix == 1);
 
-    DftPreprocFunc pre = p.first_radix == 1 ? k.preprocRadix0 : p.first_radix == 2 ? k.preprocRadix2 :
-                         p.first_radix == 4 ? k.preprocRadix4 : k.preprocRadix8;
-    pre(p, asrc, astep, re0, im0, conj);
+    if (p.convolution)
+    {
+        if (p.depth == CV_32F)
+            runBluestein<float>(c, asrc, astep, re0, im0, scratch, conj);
+        else
+            runBluestein<double>(c, asrc, astep, re0, im0, scratch, conj);
+    }
+    else
+    {
+        DftPreprocFunc pre = p.first_radix == 1 ? k.preprocRadix0 : p.first_radix == 2 ? k.preprocRadix2 :
+                             p.first_radix == 4 ? k.preprocRadix4 : k.preprocRadix8;
+        pre(p, asrc, astep, re0, im0, conj);
+    }
 
     uchar *sre = re0, *sim = im0, *dre = re1, *dim = im1;
     for (int i = 0; i < p.nstages; i++)
@@ -827,16 +975,15 @@ CopyColumn( const uchar* _src, size_t src_step,
 
 // Copies `ncols` adjacent columns of `src` (element size elem_size, row step src_step in bytes)
 // into `ncols` contiguous column buffers of `len` elements each: dst + k*len*elem_size holds
-// column k. Row-wise: each source row is read once, sequentially. (Row steps are only
-// guaranteed to be multiples of the element size, hence the byte arithmetic.)
+// column k. Row-wise: each source row is read once, sequentially. Packed float
+// spectra can start at a four-byte offset, so eight-byte elements need unaligned copies.
 template<typename T> static inline void
 copyFromColumns_( const uchar* src, size_t src_step, T* dst, int ncols, int len )
 {
     for( int i = 0; i < len; i++, src += src_step )
     {
-        const T* s = (const T*)src;
         for( int k = 0; k < ncols; k++ )
-            dst[(size_t)k*len + i] = s[k];
+            memcpy((uchar*)dst + ((size_t)k*len + i)*sizeof(T), src + k*sizeof(T), sizeof(T));
     }
 }
 
@@ -861,9 +1008,8 @@ copyToColumns_( const T* src, uchar* dst, size_t dst_step, int ncols, int len )
 {
     for( int i = 0; i < len; i++, dst += dst_step )
     {
-        T* d = (T*)dst;
         for( int k = 0; k < ncols; k++ )
-            d[k] = src[(size_t)k*len + i];
+            memcpy(dst + k*sizeof(T), (const uchar*)src + ((size_t)k*len + i)*sizeof(T), sizeof(T));
     }
 }
 
