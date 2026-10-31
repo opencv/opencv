@@ -1,5 +1,6 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <atomic>
 
 namespace cv { namespace dnn {
 
@@ -48,11 +49,14 @@ public:
 
         int r = data.size();
         int q = indices.size();
-        int last_indices_dim = indices[q - 1];
 
         CV_CheckGE(r, 1, "GatherND: data rank must be >= 1");
         CV_CheckGE(q, 1, "GatherND: indices rank must be >= 1");
-        CV_CheckLE(batch_dims, std::min(q, r), "GatherND: batch_dims must be <= min(q, r)");
+        int last_indices_dim = indices[q - 1];
+        CV_CheckGE(batch_dims, 0, "GatherND: batch_dims must be >= 0");
+        CV_CheckLT(batch_dims, std::min(q, r), "GatherND: batch_dims must be < min(q, r)");
+        for (int i = 0; i < batch_dims; ++i)
+            CV_CheckEQ(data[i], indices[i], "GatherND: batch dimensions of data and indices must match");
         CV_CheckGE(last_indices_dim, 1, "GatherND: last dimension of indices must be >= 1");
         CV_CheckLE(last_indices_dim, r - batch_dims, "GatherND: last dimension of indices must be <= r - batch_dims");
 
@@ -140,7 +144,10 @@ public:
         for (int d = batch_dims; d < static_cast<int>(q) - 1; ++d)
             num_slices_per_batch *= indices.size[d];
 
+        std::atomic<bool> globOutOfRangeIdx(false);
+
         parallel_for_(Range(0, outer_size), [&](const Range& range) {
+            bool outOfRangeIdx = globOutOfRangeIdx.load(std::memory_order_relaxed);
             for (size_t i = range.start; i < range.end; ++i)
             {
                 const iT* sliced_indices = indices_ptr + i * last_indices_dim;
@@ -148,8 +155,17 @@ public:
                 size_t offset = 0;
                 for (size_t j = 0; j < last_indices_dim; ++j)
                 {
-                    offset += sliced_indices[j] * data_strides[batch_dims + j];
+                    int64_t dim = data.size[batch_dims + j];
+                    int64_t k = (int64_t)sliced_indices[j];
+                    k += k < 0 ? dim : 0;
+                    if (k < 0 || k >= dim) {
+                        outOfRangeIdx = true;
+                        break;
+                    }
+                    offset += (size_t)k * data_strides[batch_dims + j];
                 }
+                if (outOfRangeIdx)
+                    break;
 
                 if (batch_dims > 0)
                 {
@@ -159,7 +175,13 @@ public:
                 // copy data from data to out
                 std::memcpy(out_ptr + i * inner_size, data_ptr + offset, inner_size * sizeof(dT));
             }
+            if (outOfRangeIdx)
+                globOutOfRangeIdx.store(true, std::memory_order_relaxed);
         }, nstripes);
+
+        if (globOutOfRangeIdx.load()) {
+            CV_Error(Error::StsOutOfRange, "GatherND: some of indices are outside of range");
+        }
     }
 
 private:
