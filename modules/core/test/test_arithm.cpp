@@ -3201,6 +3201,32 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_Signed,
         testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
         testing::Bool()));
 
+// norm on the fp8 depths, compared with the same values in CV_32F
+typedef testing::TestWithParam< tuple<int, int> > Core_Norm_FP8;
+
+TEST_P(Core_Norm_FP8, accuracy)
+{
+    const int depth = get<0>(GetParam());
+    const int normType = get<1>(GetParam());
+    // every value is exact in both fp8 formats, but some differences are not (7 - 0.125 = 6.875)
+    float va[] = { 1.f, -2.f, 3.5f, 0.5f, 7.f, -0.25f };
+    float vb[] = { 0.25f, 1.f, -3.f, 0.5f, 0.125f, -6.f };
+    uchar vm[] = { 1, 0, 1, 1, 1, 0 };
+    Mat a32f(2, 3, CV_32F, va), b32f(2, 3, CV_32F, vb), mask(2, 3, CV_8U, vm), a, b;
+    a32f.convertTo(a, depth);
+    b32f.convertTo(b, depth);
+
+    // EXPECT_DOUBLE_EQ: with IPP, the CV_32F NORM_L2SQR reference is computed as (NORM_L2)^2,
+    // which can be off by 1 ulp
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType), cv::norm(a, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, b32f, normType), cv::norm(a, b, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType, mask), cv::norm(a, normType, mask));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_Norm_FP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Values(NORM_INF, NORM_L1, NORM_L2, NORM_L2SQR)));
+
 TEST(Core_Norm, NORM_L2SQR_16SC4_large)
 {
     const int sizes[] = {1, 116, 40};
