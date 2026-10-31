@@ -943,7 +943,14 @@ class Arguments(NewOpenCVTests):
                 expected = numpy_op(src, val)
                 # Temporarily allows a difference of 1 for arm64 workaround.
                 self.assertLess(np.max(np.abs(dst - expected)), 2,
-                  msg="Saturated Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
+                  msg="Saturated Operation '{}' is failed for {} , {}: \nGot: {}\nExpected: {}".format(ocv_op.__name__, src, val, dst, expected ) )
+
+    def test_arithm_op_0d_with_saturation(self):
+        x = np.uint8([250])
+        y = np.uint8([10])
+        sum = cv.add(x, y)
+        self.assertEqual(sum.shape, (1,))
+        self.assertEqual(sum[0], 255)
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):
