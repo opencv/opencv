@@ -829,6 +829,103 @@ TEST(Fusion, BatchNormKeepsPerRowMul)
     checkBatchNormAbsorbs("batchnorm_mul_rows", 1);
 }
 
+// counts: the number of layers of each type expected after fusion
+static void checkMatMulIntegerFusion(const std::string& name,
+                                     const std::vector<std::pair<const char*, int> >& counts)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+    ASSERT_TRUE(net.getMainGraph());
+
+    net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+    Mat out = net.forward();
+
+    for (const auto& c : counts)
+        EXPECT_EQ(c.second, fusedCount(net, c.first)) << name << ": " << c.first;
+    normAssert(blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy")), out,
+               name.c_str());
+}
+
+// Cast -> Mul [-> Add(bias)] folds into each MatMulInteger and so does the DynamicQuantizeLinear
+// that feeds only one of them; the shared one, its two scale Muls and the Add of two matmuls stay
+TEST(Fusion, MatMulIntegerDequantization)
+{
+    checkMatMulIntegerFusion("matmulinteger_dynamic", {{"MatMulInt8", 3}, {"Cast2", 0},
+                             {"NaryEltwise", 3}, {"DynamicQuantizeLinear", 1}});
+}
+
+// Without DynamicQuantizeLinear, a constant per-column scale and the bias fold in too
+TEST(Fusion, MatMulIntegerConstantScale)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_const_scale",
+                             {{"MatMulInt8", 1}, {"Cast2", 0}, {"NaryEltwise", 0}});
+}
+
+// DynamicQuantizeLinear -> MatMulInteger -> Cast -> Mul -> Add -> Reshape -> Transpose(0, 2, 1, 3)
+// becomes one MatMulInt8 that writes the heads directly
+static const std::vector<std::pair<const char*, int> > matMulIntegerHeadSplitFused = {
+    {"MatMulInt8", 1}, {"Cast2", 0}, {"NaryEltwise", 0}, {"DynamicQuantizeLinear", 0},
+    {"Reshape2", 0}, {"Transpose", 0}};
+
+TEST(Fusion, MatMulIntegerHeadSplit)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split", matMulIntegerHeadSplitFused);
+}
+
+TEST(Fusion, MatMulIntegerHeadSplitRuntimeShape)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split_runtime_shape",
+                             matMulIntegerHeadSplitFused);
+}
+
+TEST(Fusion, MatMulIntegerHeadSplitZeroDims)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split_zero_dims",
+                             matMulIntegerHeadSplitFused);
+}
+
+// The Mul takes the DynamicQuantizeLinear scale alone and there is no bias
+TEST(Fusion, MatMulIntegerHeadSplitDqlScaleNoBias)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split_dql_scale_no_bias",
+                             matMulIntegerHeadSplitFused);
+}
+
+// These still fuse, but the product goes to a temporary that is then transposed
+TEST(Fusion, MatMulIntegerHeadSplitD8)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split_d8", matMulIntegerHeadSplitFused);
+}
+
+TEST(Fusion, MatMulIntegerHeadSplitNotASplit)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_head_split_not_a_split",
+                             matMulIntegerHeadSplitFused);
+}
+
+// A per-row A zero point is applied after the int32 store, so the dequantization stays unfused
+TEST(Fusion, MatMulIntegerPerRowZeroPointIsNotFused)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_per_row_zero_point",
+                             {{"MatMulInt8", 1}, {"Cast2", 1}, {"NaryEltwise", 2}});
+}
+
+// MatMulInteger takes its own a_zero_point, a constant or none, not the DynamicQuantizeLinear one:
+// the dequantization folds in, but the DynamicQuantizeLinear and its scale product must stay
+static const std::vector<std::pair<const char*, int> > matMulIntegerKeepsDynamicQuantize = {
+    {"MatMulInt8", 1}, {"Cast2", 0}, {"NaryEltwise", 1}, {"DynamicQuantizeLinear", 1}};
+
+TEST(Fusion, MatMulIntegerConstZeroPointKeepsDynamicQuantize)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_dql_const_zero_point",
+                             matMulIntegerKeepsDynamicQuantize);
+}
+
+TEST(Fusion, MatMulIntegerNoZeroPointKeepsDynamicQuantize)
+{
+    checkMatMulIntegerFusion("matmulinteger_fusion_dql_no_zero_point",
+                             matMulIntegerKeepsDynamicQuantize);
+}
+
 // ConvTranspose2d(8->16) -> Add(residual): the Add fuses into TransformLayout.
 TEST(Fusion, TransformLayoutAddFusedMatchesUnfusedComputation)
 {
