@@ -216,6 +216,57 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     ASSERT_NO_THROW(dis->calc(prev, next, flow));
     EXPECT_EQ(flow.size(), prev.size());
 }
+
+typedef tuple<Size, int, bool> DISOptimizedParams; // image size, preset, large initial flow
+typedef TestWithParam<DISOptimizedParams> DenseOpticalFlow_DIS_OptimizedMatchesReference;
+
+// The optimized code paths must match the reference selected with setUseOptimized(false)
+TEST_P(DenseOpticalFlow_DIS_OptimizedMatchesReference, accuracy)
+{
+    const Size sz = get<0>(GetParam());
+    const int preset = get<1>(GetParam());
+    const bool use_initial_flow = get<2>(GetParam());
+
+    Mat tmp(sz.height / 4, sz.width / 4, CV_8UC1), frame1, frame2;
+    theRNG().fill(tmp, RNG::UNIFORM, 0, 256);
+    resize(tmp, frame1, sz, 0.0, 0.0, INTER_LINEAR_EXACT);
+    Mat M = getRotationMatrix2D(Point2f(sz.width / 2.f, sz.height / 2.f), 3.0, 1.0);
+    M.at<double>(0, 2) += 2.5;
+    M.at<double>(1, 2) -= 1.5;
+    warpAffine(frame1, frame2, M, sz, INTER_LINEAR, BORDER_REPLICATE);
+
+    Mat flow_ref, flow_opt;
+    if (use_initial_flow)
+    {
+        /* a large initial flow pushes the sampling positions to the clamped image borders */
+        flow_ref.create(sz, CV_32FC2);
+        flow_ref.setTo(Scalar(60.f, 60.f));
+        flow_ref.copyTo(flow_opt);
+    }
+    {
+        /* restores the global flag even if calc() throws, so later tests are not affected */
+        struct UseOptimizedGuard
+        {
+            const bool saved;
+            UseOptimizedGuard() : saved(useOptimized()) {}
+            ~UseOptimizedGuard() { setUseOptimized(saved); }
+        } guard;
+        setUseOptimized(false);
+        DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_ref);
+        setUseOptimized(true);
+        DISOpticalFlow::create(preset)->calc(frame1, frame2, flow_opt);
+    }
+
+    EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_INF), 1e-2);
+    EXPECT_LE(cvtest::norm(flow_ref, flow_opt, NORM_L1), 1e-4 * flow_ref.total());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, DenseOpticalFlow_DIS_OptimizedMatchesReference,
+    Combine(Values(Size(127, 61), Size(641, 480)),
+            Values((int)DISOpticalFlow::PRESET_ULTRAFAST, (int)DISOpticalFlow::PRESET_FAST,
+                   (int)DISOpticalFlow::PRESET_MEDIUM),
+            testing::Bool()));
+
 TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
 {
     cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
