@@ -151,6 +151,8 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     bool needcopy = !PyArray_ISNOTSWAPPED(oarr), needcast = needcopy;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = numpyTypeToCvDepth(typenum);
+    if( type < 0 )
+        type = nonConventionalTypeToCvDepth(typenum);  // bfloat16 / float8 registered by the caller
 
     if( type < 0 )
     {
@@ -285,18 +287,18 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         for(int i = 0; i < sz && filled; i++ )
         {
             PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i); // new object
-            if( PyInt_Check(oi) )
-                m.at<double>(i) = (double)PyInt_AsLong(oi);
-            else if( PyFloat_Check(oi) )
-                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
-            else
+            double v = oi ? PyFloat_AsDouble(oi) : -1.0;
+            if( v == -1.0 && PyErr_Occurred() )
             {
+                PyErr_Clear();
                 failmsg("%s has some non-numerical elements", info.name);
                 m.release();
                 filled = false;
             }
+            else
+                m.at<double>(i) = v;
 
-            Py_DECREF(oi);
+            Py_XDECREF(oi);
         }
 
         if(needcopy)
@@ -332,42 +334,67 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     return true;
 }
 
+// Copies an empty or 0-D Mat into a new array of dtype `descr`, which must match m.depth().
+// Steals the reference to `descr`. Channels become the last axis, so a 0-D Mat has shape (cn,).
+static PyObject* pyopencv_from_new_array(const cv::Mat& m, PyArray_Descr* descr)
+{
+    const int cn = m.channels();
+    int dims = m.dims;
+    cv::AutoBuffer<npy_intp> _sizes(dims + 1);
+    for( int i = 0; i < dims; i++ )
+        _sizes[i] = (npy_intp)m.size[i];
+    if( cn > 1 )
+        _sizes[dims++] = cn;
+
+    PyObject* o = PyArray_NewFromDescr(&PyArray_Type, descr, dims, _sizes.data(),
+                                       nullptr, nullptr, 0, nullptr);
+    if( o && !m.empty() )
+        memcpy(PyArray_DATA((PyArrayObject*)o), m.data, m.elemSize());
+    return o;
+}
+
 template<>
 PyObject* pyopencv_from(const cv::Mat& m)
 {
-    // NumPy has no bfloat16 or float8 dtype: widen these to float32 (lossless).
-    if( m.depth() == CV_16BF || m.depth() == CV_8F_E4M3FN || m.depth() == CV_8F_E4M3FNUZ )
+    PyArray_Descr* exotic = nullptr;
+    if( isNonConventionalDepth(m.depth()) )
     {
-        cv::Mat m32f;
-        ERRWRAP2(m.convertTo(m32f, CV_32F));
-        return pyopencv_from(m32f);
-    }
-    if( m.empty() )
-    {
-        // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
-        if( m.dims >= 1 )
+        exotic = nonConventionalDescrForCvDepth(m.depth());
+        if( !exotic )
         {
-            int cn = m.channels();
-            int typenum = cvDepthToNumpyType(m.depth());
-            int dims = m.dims;
-            cv::AutoBuffer<npy_intp> _sizes(dims + 1);
-            for( int i = 0; i < dims; i++ )
-                _sizes[i] = (npy_intp)m.size[i];
-            if( cn > 1 )
-                _sizes[dims++] = cn;
-            return PyArray_SimpleNew(dims, _sizes.data(), typenum);
+            // The caller's own array (e.g. dst=) already has the exact dtype: return it as is.
+            // Like the shared path below, this assumes m spans the whole array, not a ROI of it.
+            if( m.u && m.allocator == &GetNumpyAllocator() )
+            {
+                PyObject* o = (PyObject*)m.u->userdata;
+                Py_INCREF(o);
+                return o;
+            }
+            if( useExactNumpyDtypes() )
+                CV_LOG_ONCE_WARNING(NULL, "Python bindings: setUseExactNumpyDtypes(True) is set, "
+                                    "but NumPy does not know bfloat16 / float8 and they are "
+                                    "returned as float32. "
+                                    "Import ml_dtypes to keep the exact dtype.");
+            // NumPy alone cannot name these; widen to float32 (lossless).
+            cv::Mat m32f;
+            ERRWRAP2(m.convertTo(m32f, CV_32F));
+            return pyopencv_from(m32f);
         }
+    }
+    if( m.empty() && m.dims == 0 )
         Py_RETURN_NONE;
-    }
-    // 0D (scalar) Mat: return a true 0D numpy array.
-    if( m.dims == 0 )
+    // empty() also catches a live buffer with a zero-length dim: return an empty array, not None.
+    // A 0D (scalar) Mat becomes a true 0D numpy array.
+    if( m.empty() || m.dims == 0 )
     {
-        int typenum = cvDepthToNumpyType(CV_MAT_DEPTH(m.type()));
-        PyObject* o = PyArray_SimpleNew(0, nullptr, typenum);
-        if( o )
-            memcpy(PyArray_DATA((PyArrayObject*)o), m.data, CV_ELEM_SIZE(m.type()));
-        return o;
+        PyArray_Descr* descr = exotic;
+        if( descr )
+            Py_INCREF(descr);
+        else
+            descr = PyArray_DescrFromType(cvDepthToNumpyType(m.depth()));
+        return pyopencv_from_new_array(m, descr);
     }
+    // NumpyAllocator gives bfloat16 / float8 arrays their exact dtype here too.
     cv::Mat temp, *p = (cv::Mat*)&m;
     if(!p->u || p->allocator != &GetNumpyAllocator())
     {
