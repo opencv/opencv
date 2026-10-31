@@ -26,11 +26,14 @@ import org.opencv.core.Size;
 import org.opencv.dnn.Net;
 import org.opencv.dnn.Dnn;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.core.CvType;
 
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class MainActivity extends CameraActivity implements CvCameraViewListener2 {
 
@@ -104,11 +107,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     }
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        final int IN_WIDTH = 300;
-        final int IN_HEIGHT = 300;
-        final float WH_RATIO = (float)IN_WIDTH / IN_HEIGHT;
-        final double IN_SCALE_FACTOR = 0.007843;
-        final double MEAN_VAL = 127.5;
         final double THRESHOLD = 0.2;
 
         if (net == null) {
@@ -118,47 +116,146 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         Log.d(TAG, "handle new frame!");
         Mat frame = inputFrame.rgba();
         Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2RGB);
-
         // Forward image through network.
         //! [mobilenet_handle_frame]
-        Mat blob = Dnn.blobFromImage(frame, IN_SCALE_FACTOR,
-                new Size(IN_WIDTH, IN_HEIGHT),
-                new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), /*swapRB*/false, /*crop*/false);
-        net.setInput(blob);
-        Mat detections = net.forward();
 
-        int cols = frame.cols();
+        // Model input: uint8 RGB, NHWC layout [1, height, width, 3].
         int rows = frame.rows();
+        int cols = frame.cols();
 
-        detections = detections.reshape(1, (int)detections.total() / 7);
+        byte[] inputData = new byte[(int)(frame.total() * frame.channels())];
+        frame.get(0, 0, inputData);
 
-        for (int i = 0; i < detections.rows(); ++i) {
-            double confidence = detections.get(i, 2)[0];
+        Mat blob = new Mat(
+            new int[]{1, rows, cols, 3},
+            CvType.CV_8UC1
+        );
+
+        blob.put(new int[]{0, 0, 0, 0}, inputData);
+
+        net.setInput(blob);
+
+        // Retrieve the four named model outputs.
+        List<Mat> outputs = new ArrayList<>();
+
+        List<String> outputNames = Arrays.asList(
+            "num_detections:0",
+            "detection_boxes:0",
+            "detection_scores:0",
+            "detection_classes:0"
+        );
+
+        net.forward(outputs, outputNames);
+
+        if (outputs.size() != 4) {
+            Log.e(TAG, "Unexpected number of model outputs: " + outputs.size());
+
+            for (Mat output : outputs)
+                output.release();
+
+            blob.release();
+            return frame;
+        }
+
+        // Reshape outputs for convenient indexing.
+        Mat numDetections = outputs.get(0).reshape(1, 1);
+
+        Mat boxes = outputs.get(1).reshape(
+            1, (int)(outputs.get(1).total() / 4)
+        );
+
+        Mat scores = outputs.get(2).reshape(1, 1);
+        Mat classes = outputs.get(3).reshape(1, 1);
+
+        int maxDetections = Math.min(
+            boxes.rows(),
+            Math.min((int)scores.total(), (int)classes.total())
+        );
+
+        int count = Math.min(
+            (int)Math.round(numDetections.get(0, 0)[0]),
+            maxDetections
+        );
+
+        count = Math.max(0, count);
+
+        for (int i = 0; i < count; i++) {
+
+            double confidence = scores.get(0, i)[0];
+
             if (confidence > THRESHOLD) {
-                int classId = (int)detections.get(i, 1)[0];
 
-                int left   = (int)(detections.get(i, 3)[0] * cols);
-                int top    = (int)(detections.get(i, 4)[0] * rows);
-                int right  = (int)(detections.get(i, 5)[0] * cols);
-                int bottom = (int)(detections.get(i, 6)[0] * rows);
+                int classId = (int)Math.round(classes.get(0, i)[0]);
 
-                // Draw rectangle around detected object.
-                Imgproc.rectangle(frame, new Point(left, top), new Point(right, bottom),
-                                  new Scalar(0, 255, 0));
-                String label = classNames[classId] + ": " + confidence;
+                // Model returns normalized coordinates:
+                // top, left, bottom, right.
+
+                int top = (int)Math.round(boxes.get(i, 0)[0] * rows);
+                int left = (int)Math.round(boxes.get(i, 1)[0] * cols);
+                int bottom = (int)Math.round(boxes.get(i, 2)[0] * rows);
+                int right = (int)Math.round(boxes.get(i, 3)[0] * cols);
+
+                // Clamp coordinates to image boundaries.
+                top = Math.max(0, Math.min(rows, top));
+                left = Math.max(0, Math.min(cols, left));
+                bottom = Math.max(0, Math.min(rows, bottom));
+                right = Math.max(0, Math.min(cols, right));
+
+                if (right <= left || bottom <= top)
+                    continue;
+
+                Imgproc.rectangle(
+                    frame,
+                    new Point(left, top),
+                    new Point(right, bottom),
+                    new Scalar(0, 255, 0)
+                );
+
+                // Model uses COCO classes, not PASCAL VOC.
+                String label = "COCO #" + classId + ": " + confidence;
+
                 int[] baseLine = new int[1];
-                Size labelSize = Imgproc.getTextSize(label, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
 
-                // Draw background for label.
-                Imgproc.rectangle(frame, new Point(left, top - labelSize.height),
-                                  new Point(left + labelSize.width, top + baseLine[0]),
-                                  new Scalar(255, 255, 255), Imgproc.FILLED);
-                // Write class name and confidence.
-                Imgproc.putText(frame, label, new Point(left, top),
-                        Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
+                Size labelSize = Imgproc.getTextSize(
+                    label,
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    1,
+                    baseLine
+                );
+
+                Imgproc.rectangle(
+                    frame,
+                    new Point(left, Math.max(0, top - labelSize.height)),
+                    new Point(left + labelSize.width, top + baseLine[0]),
+                    new Scalar(255, 255, 255),
+                    Imgproc.FILLED
+                );
+
+                Imgproc.putText(
+                    frame,
+                    label,
+                    new Point(left, top),
+                    Imgproc.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    new Scalar(0, 0, 0)
+                );
             }
         }
+
+        // Release native memory.
+        numDetections.release();
+        boxes.release();
+        scores.release();
+        classes.release();
+
+        for (Mat output : outputs)
+            output.release();
+
+        blob.release();
+
         //! [mobilenet_handle_frame]
+
 
         return frame;
     }
@@ -188,12 +285,6 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
     //! [mobilenet_tutorial_resource]
 
     private static final String TAG = "OpenCV-MobileNet";
-    private static final String[] classNames = {"background",
-            "aeroplane", "bicycle", "bird", "boat",
-            "bottle", "bus", "car", "cat", "chair",
-            "cow", "diningtable", "dog", "horse",
-            "motorbike", "person", "pottedplant",
-            "sheep", "sofa", "train", "tvmonitor"};
 
     private MatOfByte            mModelBuffer;
     private Net                  net;
