@@ -1388,6 +1388,16 @@ CV__DNN_INLINE_NS_BEGIN
          *  of the first image, so set the member to that size before mapping rects of the other images.
          */
         CV_WRAP void blobRectsToImageRects(const std::vector<Rect> &rBlob, CV_OUT std::vector<Rect>& rImg, const Size& size);
+
+        /** @brief Get points coordinates in original image system from points in blob coordinates.
+         *  @param pBlob points in blob coordinates.
+         *  @param pImg result points in image coordinates.
+         *  @param size original input image size.
+         *  @note If the `size` member is empty, the @p size argument is used as the blob size, as in
+         *  @ref blobFromImagesWithParams. For a batch created with an empty `size` member, the blob size is the size
+         *  of the first image, so set the member to that size before mapping points of the other images.
+         */
+        CV_WRAP void blobPointsToImagePoints(const std::vector<Point2f> &pBlob, CV_OUT std::vector<Point2f>& pImg, const Size& size);
     };
 
     /** @brief Creates 4-dimensional blob from image with given params.
@@ -1508,6 +1518,77 @@ CV__DNN_INLINE_NS_BEGIN
                                    SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
 
 
+    /**
+     * @brief How a detection row encodes its box.
+     * @see DetectionOutputParams
+     */
+    enum BoxForm
+    {
+        DNN_BOX_AUTO = 0,   //!< Default. Infer from the values.
+        DNN_BOX_CENTER = 1, //!< cx, cy, w, h.
+        DNN_BOX_CORNER = 2, //!< x1, y1, x2, y2.
+    };
+
+    /**
+     * @brief How a detection row encodes its class.
+     * @see DetectionOutputParams
+     */
+    enum ClassForm
+    {
+        DNN_CLS_AUTO = 0,   //!< Default. Infer from the values.
+        DNN_CLS_SCORES = 1, //!< One score per class; the winner is the argmax.
+        DNN_CLS_INDEX = 2,  //!< One score followed by one class index.
+    };
+
+    /**
+     * @brief The space box coordinates are written in.
+     * @see DetectionOutputParams
+     */
+    enum CoordSpace
+    {
+        DNN_COORD_AUTO = 0,       //!< Default. Infer from the values.
+        DNN_COORD_PIXELS = 1,     //!< Pixels of the network input blob.
+        DNN_COORD_NORMALIZED = 2, //!< Fractions of the network input blob.
+    };
+
+    /**
+     * @brief Whether class scores still need an activation.
+     * @see DetectionOutputParams
+     */
+    enum ScoreActivation
+    {
+        DNN_ACT_AUTO = 0,    //!< Default. Infer from the values.
+        DNN_ACT_NONE = 1,    //!< Scores are already in [0, 1].
+        DNN_ACT_SIGMOID = 2, //!< Scores are logits. Applies to split outputs only.
+    };
+
+    /** @brief How a detection network writes one row of its output.
+     *
+     * Each field is an independent property of the export, and each defaults to inferring itself
+     * from the values. Declare only the ones you know. The output is 3D, [B, C, N] or [B, N, C],
+     * and the anchor axis must be the longer one.
+     *
+     * A split head gives boxes and class scores as two outputs. The 4-wide one is the boxes; if
+     * both are 4 wide, as in a four-class detector, the first is the boxes and
+     * @ref Model::setOutputNames fixes that order. Its scores are taken for logits and passed
+     * through sigmoid when a value falls outside [0, 1]; declare @ref ScoreActivation for
+     * logits that stay inside it.
+     *
+     * @see Model::setOutputParams
+     */
+    struct CV_EXPORTS_W_SIMPLE DetectionOutputParams
+    {
+        CV_WRAP DetectionOutputParams();
+        CV_WRAP DetectionOutputParams(BoxForm boxForm, ClassForm classForm = DNN_CLS_AUTO,
+                                      CoordSpace coordSpace = DNN_COORD_AUTO,
+                                      ScoreActivation activation = DNN_ACT_AUTO);
+
+        CV_PROP_RW BoxForm boxForm;             //!< Box encoding. @see BoxForm
+        CV_PROP_RW ClassForm classForm;         //!< Class encoding. @see ClassForm
+        CV_PROP_RW CoordSpace coordSpace;       //!< Coordinate space. @see CoordSpace
+        CV_PROP_RW ScoreActivation activation;  //!< Score activation. @see ScoreActivation
+    };
+
      /** @brief This class is presented high-level API for neural networks.
       *
       * Model allows to set params for preprocessing input image.
@@ -1572,6 +1653,20 @@ CV__DNN_INLINE_NS_BEGIN
          */
          CV_WRAP Model& setInputSwapRB(bool swapRB);
 
+         /** @brief Set the image padding mode used when resizing the frame to the network input size.
+          *  @param[in] mode Padding mode, @see ImagePaddingMode. Defaults to DNN_PMODE_NULL.
+          *  @note This, setInputCrop() and setInputParams() all write the same setting, so the
+          *  last call wins. YOLOv8-family exports expect DNN_PMODE_LETTERBOX.
+         */
+         CV_WRAP Model& setPaddingMode(ImagePaddingMode mode);
+
+         /** @brief Declare how the network writes a detection row, instead of inferring it.
+          *  @param[in] params Output encoding, @see DetectionOutputParams. Fields left at their
+          *  AUTO default are still inferred from the values.
+          *  @note Applies to detect(), estimatePoses() and segmentInstances().
+         */
+         CV_WRAP Model& setOutputParams(const DetectionOutputParams& params);
+
          /** @brief Set output names for frame.
           *  @param[in] outNames Names for output layers.
          */
@@ -1593,6 +1688,15 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] outs Allocated output blobs, which will store results of the computation.
           */
          CV_WRAP void predict(InputArray frame, OutputArrayOfArrays outs) const;
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] outs Allocated output blobs. The images are run as one batch, so each
+          *  blob carries them in its first dimension.
+          */
+         CV_WRAP_AS(predictBatch) void predict(InputArrayOfArrays frames,
+                                               CV_OUT std::vector<Mat>& outs) const;
 
 
          // ============================== Net proxy methods ==============================
@@ -1674,6 +1778,16 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @overload */
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
+
+         /** @brief Given a batch of @p frames, run net once and return the top-1 prediction
+          *  of each of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] classIds Top-1 class index per image.
+          *  @param[out] confs Confidence of the top-1 class per image.
+          */
+         CV_WRAP void classify(InputArrayOfArrays frames, CV_OUT std::vector<int>& classIds,
+                               CV_OUT std::vector<float>& confs);
      };
 
      /** @brief This class represents high-level API for keypoints models
@@ -1706,6 +1820,54 @@ CV__DNN_INLINE_NS_BEGIN
           *
           */
          CV_WRAP std::vector<Point2f> estimate(InputArray frame, float thresh=0.5);
+
+         /** @brief Given a batch of @p frames, run net once and return the keypoints of each
+          *  of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] keypoints x and y coordinates of each detected keypoint, per image
+          *  @param thresh minimum confidence threshold to select a keypoint
+          */
+         CV_WRAP void estimate(InputArrayOfArrays frames,
+                               CV_OUT std::vector< std::vector<Point2f> >& keypoints,
+                               float thresh=0.5);
+
+         /** @brief Given the @p input frame, create input blob, run net and return multi-person
+          *  pose estimation results (YOLOv8-pose-style decoding).
+          *
+          *  Requires a network with a single output whose rows end with `numKeypoints`
+          *  `(x, y, visibility)` triples. @ref DetectionOutputParams covers how the rest of a
+          *  row is read.
+          *
+          *  @param[in]  frame  The input image.
+          *  @param[out] keypoints One entry per detected person, each holding `numKeypoints`
+          *  points; `Point3f::z` carries the per-keypoint visibility/confidence.
+          *  @param[out] boxes A set of per-person bounding boxes.
+          *  @param[out] confidences A set of corresponding person-detection confidences.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void estimatePoses(InputArray frame, CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                     CV_OUT std::vector<Rect>& boxes, CV_OUT std::vector<float>& confidences,
+                                     float confThreshold = 0.5f, float nmsThreshold = 0.45f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] keypoints One entry per detected person across all images.
+          *  @param[out] boxes Per-person bounding boxes, parallel to @p keypoints.
+          *  @param[out] confidences Person-detection confidences, parallel to @p keypoints.
+          *  @param[out] frameIds Index into @p frames of the image each person came from,
+          *  parallel to @p keypoints and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void estimatePoses(InputArrayOfArrays frames,
+                                     CV_OUT std::vector<std::vector<Point3f>>& keypoints,
+                                     CV_OUT std::vector<Rect>& boxes,
+                                     CV_OUT std::vector<float>& confidences,
+                                     CV_OUT std::vector<int>& frameIds,
+                                     float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for segmentation  models
@@ -1736,6 +1898,56 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] mask Allocated class prediction for each pixel
           */
          CV_WRAP void segment(InputArray frame, OutputArray mask);
+
+         /** @brief Given a batch of @p frames, run net once and return the class prediction
+          *  of every pixel of each of them.
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] masks Allocated class prediction for each pixel, one mask per input image.
+          */
+         CV_WRAP void segment(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks);
+
+         /** @brief Given the @p input frame, create input blob, run net and return per-instance
+          *  segmentation results (YOLOv8-seg-style mask-prototype decoding).
+          *
+          *  Requires a network with two outputs: a detect head whose rows end with `nm` mask
+          *  coefficients, and mask prototypes shaped `[B, nm, maskH, maskW]`.
+          *  @ref DetectionOutputParams covers how the rest of a row is read.
+          *
+          *  @param[in]  frame  The input image.
+          *  @param[out] masks A set of per-detection binary masks (CV_8U, 0 or 255), each sized
+          *  to its corresponding entry in @p boxes.
+          *  @param[out] classIds Class indexes in result detection.
+          *  @param[out] confidences A set of corresponding confidences.
+          *  @param[out] boxes A set of bounding boxes.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void segmentInstances(InputArray frame, CV_OUT std::vector<Mat>& masks,
+                                        CV_OUT std::vector<int>& classIds,
+                                        CV_OUT std::vector<float>& confidences,
+                                        CV_OUT std::vector<Rect>& boxes,
+                                        float confThreshold = 0.5f, float nmsThreshold = 0.45f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] masks One binary mask per detection across all images, each sized to its
+          *  corresponding entry in @p boxes.
+          *  @param[out] classIds Class indexes, parallel to @p masks.
+          *  @param[out] confidences Confidences, parallel to @p masks.
+          *  @param[out] boxes Bounding boxes, parallel to @p masks.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p masks and non-decreasing.
+          *  @param[in] confThreshold A threshold used to filter detections by confidence.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it.
+          */
+         CV_WRAP void segmentInstances(InputArrayOfArrays frames, CV_OUT std::vector<Mat>& masks,
+                                        CV_OUT std::vector<int>& classIds,
+                                        CV_OUT std::vector<float>& confidences,
+                                        CV_OUT std::vector<Rect>& boxes,
+                                        CV_OUT std::vector<int>& frameIds,
+                                        float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
      /** @brief This class represents high-level API for object detection networks.
@@ -1743,7 +1955,15 @@ CV__DNN_INLINE_NS_BEGIN
       * DetectionModel allows to set params for preprocessing input image.
       * DetectionModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and return result detections.
-      * For DetectionModel SSD, Faster R-CNN, YOLO topologies are supported.
+      * For DetectionModel SSD, Faster R-CNN and YOLOv2-v4 (Region layer) topologies are
+      * supported, as well as anchor-free heads, given either as one 3D tensor or as a split
+      * pair of boxes `[B, N, 4]` and class scores `[B, N, numClasses]`.
+      * @ref DetectionOutputParams covers how a row is read.
+      * @note Not for YOLOv5-style heads with a separate objectness channel, or for
+      * YOLOv8-seg/-pose outputs -- see SegmentationModel::segmentInstances() and
+      * KeypointsModel::estimatePoses().
+      * @note Call Model::setPaddingMode(DNN_PMODE_LETTERBOX) for models trained with letterbox
+      * preprocessing, so boxes map back to the input frame correctly.
       */
      class CV_EXPORTS_W_SIMPLE DetectionModel : public Model
      {
@@ -1785,11 +2005,36 @@ CV__DNN_INLINE_NS_BEGIN
           *  @param[out] confidences A set of corresponding confidences.
           *  @param[out] boxes A set of bounding boxes.
           *  @param[in] confThreshold A threshold used to filter boxes by confidences.
-          *  @param[in] nmsThreshold A threshold used in non maximum suppression.
+          *  @param[in] nmsThreshold A threshold used in non maximum suppression. Zero disables it,
+          *  which suits an SSD output because the network suppresses internally. An anchor-free
+          *  head emits one box per grid cell and needs a non-zero threshold, 0.45 conventionally.
           */
          CV_WRAP void detect(InputArray frame, CV_OUT std::vector<int>& classIds,
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
+
+         /** @overload
+          *  @param[in]  frames The input images. They must share one type; sizes may differ,
+          *  each is resized to the network input size.
+          *  @param[out] classIds Class indexes of every detection across all images.
+          *  @param[out] confidences Confidences, parallel to @p classIds.
+          *  @param[out] boxes Bounding boxes, parallel to @p classIds.
+          *  @param[out] frameIds Index into @p frames of the image each detection came from,
+          *  parallel to @p classIds and non-decreasing.
+          *  @param[in]  confThreshold A threshold used to filter boxes by confidences.
+          *  @param[in]  nmsThreshold A threshold used in non maximum suppression. Zero disables
+          *  it. This overload defaults to 0.45 rather than to the zero the single-image one
+          *  keeps for SSD, because only anchor-free heads reach it and they emit one box per
+          *  grid cell.
+          *
+          *  Only anchor-free heads are supported; SSD and Darknet outputs have no batched form.
+          */
+         CV_WRAP void detect(InputArrayOfArrays frames,
+                             CV_OUT std::vector<int>& classIds,
+                             CV_OUT std::vector<float>& confidences,
+                             CV_OUT std::vector<Rect>& boxes,
+                             CV_OUT std::vector<int>& frameIds,
+                             float confThreshold = 0.5f, float nmsThreshold = 0.45f);
      };
 
 

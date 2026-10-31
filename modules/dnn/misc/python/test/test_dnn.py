@@ -469,6 +469,135 @@ class dnn_test(NewOpenCVTests):
 
         self.assertTrue(np.all(out == o))
 
+    def get_batch_frames(self):
+        return [cv.imread(self.find_dnn_file("dnn/dog416.png")),
+                cv.imread(self.find_dnn_file("dnn/street.png"))]
+
+    def test_model_batch_predict_and_classify(self):
+        weights = self.find_dnn_file("dnn/onnx/models/mobilenet_v2_dynbatch.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/mobilenet_v2_dynbatch.onnx)")
+
+        frames = self.get_batch_frames()
+        model = cv.dnn_ClassificationModel(weights)
+        model.setInputParams(size=(224, 224), scale=1.0 / 255)
+
+        # predict() and its batched overload share a name in C++, so the bindings rename the
+        # second one and no C++ test can reach it.
+        outs = model.predictBatch(frames)
+        self.assertEqual(outs[0].shape[0], len(frames))
+
+        classIds, confidences = model.classify(frames)
+        self.assertEqual(len(classIds), len(frames))
+        self.assertEqual(len(confidences), len(frames))
+
+        # Batching changes the blob shape, so the same frame re-blocks and rounds differently.
+        for i, frame in enumerate(frames):
+            normAssert(self, outs[0][i], model.predict(frame)[0][0], lInf=1e-3)
+            refId, refConf = model.classify(frame)
+            self.assertEqual(classIds[i], refId)
+            self.assertAlmostEqual(confidences[i], refConf, places=3)
+
+    def test_detection_model_batch(self):
+        weights = self.find_dnn_file("dnn/onnx/models/yolo26n_dynbatch.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/yolo26n_dynbatch.onnx)")
+
+        frames = self.get_batch_frames()
+        model = cv.dnn_DetectionModel(weights)
+        model.setInputParams(size=(640, 640), scale=1.0 / 255, swapRB=True)
+
+        classIds, _, boxes, frameIds = model.detect(frames, 0.3, 0.45)
+        self.assertEqual(list(frameIds), sorted(frameIds))
+        # Both frames must contribute, or the per-frame comparison below compares nothing.
+        self.assertEqual(sorted(set(int(f) for f in frameIds)), [0, 1])
+
+        for b, frame in enumerate(frames):
+            refIds, _, refBoxes = model.detect(frame, 0.3, 0.45)
+            mine = [i for i in range(len(frameIds)) if frameIds[i] == b]
+            self.assertEqual(len(mine), len(refIds), "image %d" % b)
+            for k, i in enumerate(mine):
+                self.assertEqual(classIds[i], refIds[k])
+                self.assertEqual(tuple(boxes[i]), tuple(refBoxes[k]))
+
+    def test_segmentation_model_batch(self):
+        weights = self.find_dnn_file("dnn/onnx/models/segformer_b3_ade_dynbatch.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/segformer_b3_ade_dynbatch.onnx)")
+
+        frames = self.get_batch_frames()
+        model = cv.dnn_SegmentationModel(weights)
+        model.setInputParams(size=(256, 256), scale=1.0 / 255, swapRB=True)
+
+        masks = model.segment(frames)
+        self.assertEqual(len(masks), len(frames))
+        for b, frame in enumerate(frames):
+            self.assertGreater(masks[b].max(), masks[b].min(), "image %d holds one class" % b)
+            self.assertTrue(np.array_equal(masks[b], model.segment(frame)), "image %d" % b)
+
+    def test_segment_instances_batch(self):
+        weights = self.find_dnn_file("dnn/onnx/models/dynbatch_seg.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/dynbatch_seg.onnx)")
+
+        # Opposite aspect ratios, so a per-frame mapping that ignores the frame shows up.
+        frames = [np.zeros((50, 100, 3), np.uint8), np.full((100, 50, 3), 255, np.uint8)]
+        model = cv.dnn_SegmentationModel(weights)
+        model.setInputParams(size=(64, 64), scale=1.0 / 255)
+        model.setPaddingMode(cv.dnn.DNN_PMODE_LETTERBOX)
+
+        masks, classIds, _, boxes, frameIds = model.segmentInstances(frames, None, 0.5, 0.45)
+        self.assertEqual(list(frameIds), [0, 0, 1, 1])
+        # Each box runs off a letterbox edge before clipping, so these pin the padding mode too.
+        self.assertEqual([tuple(b) for b in boxes],
+                         [(15, 0, 31, 22), (62, 37, 31, 13), (0, 15, 28, 31), (43, 62, 7, 31)])
+        for i in range(len(masks)):
+            self.assertEqual(masks[i].shape[:2], (boxes[i][3], boxes[i][2]))
+
+        for b, frame in enumerate(frames):
+            refMasks, refIds, _, refBoxes = model.segmentInstances(frame, None, 0.5, 0.45)
+            self.assertEqual(len(refBoxes), 2, "image %d" % b)
+            for k in range(len(refBoxes)):
+                i = 2 * b + k
+                self.assertEqual(classIds[i], refIds[k])
+                self.assertEqual(tuple(boxes[i]), tuple(refBoxes[k]))
+                self.assertTrue(np.array_equal(masks[i], refMasks[k]), "image %d mask %d" % (b, k))
+
+    def test_keypoints_model_batch(self):
+        weights = self.find_dnn_file("dnn/onnx/models/vitpose_plus_small_dynbatch.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/vitpose_plus_small_dynbatch.onnx)")
+
+        frames = self.get_batch_frames()
+        model = cv.dnn_KeypointsModel(weights)
+        model.setInputParams(size=(192, 256), scale=1.0 / 255, swapRB=True)
+
+        keypoints = model.estimate(frames, 0.0)
+        self.assertEqual(len(keypoints), len(frames))
+        for b, frame in enumerate(frames):
+            normAssert(self, np.array(keypoints[b]), np.array(model.estimate(frame, 0.0)),
+                       lInf=1e-3)
+
+    def test_estimate_poses_batch(self):
+        weights = self.find_dnn_file("dnn/onnx/models/yolo26n_pose_dynbatch.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test file (dnn/onnx/models/yolo26n_pose_dynbatch.onnx)")
+
+        frames = self.get_batch_frames()
+        model = cv.dnn_KeypointsModel(weights)
+        model.setInputParams(size=(640, 640), scale=1.0 / 255, swapRB=True)
+
+        keypoints, boxes, confidences, frameIds = model.estimatePoses(frames, 0.3, 0.45)
+        self.assertEqual(list(frameIds), sorted(frameIds))
+
+        for b, frame in enumerate(frames):
+            refKeypoints, refBoxes, refConfs = model.estimatePoses(frame, 0.3, 0.45)
+            mine = [i for i in range(len(frameIds)) if frameIds[i] == b]
+            self.assertEqual(len(mine), len(refBoxes), "image %d" % b)
+            for k, i in enumerate(mine):
+                self.assertEqual(tuple(boxes[i]), tuple(refBoxes[k]))
+                normAssert(self, np.array(keypoints[i]), np.array(refKeypoints[k]), lInf=1e-3)
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
