@@ -27,13 +27,15 @@ import org.opencv.dnn.Net;
 import org.opencv.dnn.Dnn;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.core.CvType;
+import org.opencv.core.CvException;
 
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Locale;
+import java.io.ByteArrayOutputStream;
 
 public class MainActivity extends CameraActivity implements CvCameraViewListener2 {
 
@@ -68,7 +70,15 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             Log.e(TAG, "MobileNet ONNX model (res/raw/mobilenet.onnx) not found - object detection disabled");
         } else {
             net = Dnn.readNetFromONNX(mModelBuffer);
+
+            outputNames = new ArrayList<>(net.getUnconnectedOutLayersNames());
+
             Log.i(TAG, "Network loaded successfully");
+            Log.i(TAG, "OpenCV output layer names: " + outputNames);
+
+            if (outputNames.size() != 4) {
+                Log.w(TAG, "Expected 4 output layers, found " + outputNames.size());
+            }
         }
         //! [init_model_from_memory]
 
@@ -127,13 +137,13 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         int cols = frame.cols();
 
         byte[] inputData = new byte[
-            (int)(rgb.total() * rgb.channels())
-        ];
+                (int)(rgb.total() * rgb.channels())
+                ];
         rgb.get(0, 0, inputData);
 
         Mat blob = new Mat(
-            new int[]{1, rows, cols, 3},
-            CvType.CV_8UC1
+                new int[]{1, rows, cols, 3},
+                CvType.CV_8UC1
         );
 
         blob.put(new int[]{0, 0, 0, 0}, inputData);
@@ -141,45 +151,97 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         net.setInput(blob);
 
         // Retrieve the four named model outputs.
-        List<Mat> outputs = new ArrayList<>();
+        // Retrieve outputs using the names exposed by OpenCV.
+        ArrayList<Mat> outputs = new ArrayList<>();
 
-        List<String> outputNames = Arrays.asList(
-            "num_detections:0",
-            "detection_boxes:0",
-            "detection_scores:0",
-            "detection_classes:0"
-        );
+        try {
+            if (outputNames.size() != 4) {
+                Log.e(TAG, "Cannot run inference: expected 4 output layers, got "
+                        + outputNames.size());
 
-        net.forward(outputs, outputNames);
+                blob.release();
+                rgb.release();
+                return frame;
+            }
+            net.forward(outputs, outputNames);
+        } catch (CvException e) {
+            Log.e(TAG, "DNN forward failed. Output names: " + outputNames, e);
 
-        if (outputs.size() != 4) {
-            Log.e(TAG, "Unexpected number of model outputs: " + outputs.size());
-
-            for (Mat output : outputs)
+            for (Mat output : outputs) {
                 output.release();
+            }
 
             blob.release();
+            rgb.release();
             return frame;
         }
 
-        // Reshape outputs for convenient indexing.
-        Mat numDetections = outputs.get(0).reshape(1, 1);
+        if (outputs.size() != outputNames.size()) {
+            Log.e(TAG, "Output count mismatch: expected "
+                    + outputNames.size() + ", got " + outputs.size());
 
-        Mat boxes = outputs.get(1).reshape(
-            1, (int)(outputs.get(1).total() / 4)
+            for (Mat output : outputs) {
+                output.release();
+            }
+
+            blob.release();
+            rgb.release();
+            return frame;
+        }
+
+// Log actual output names and shapes.
+        for (int i = 0; i < outputs.size(); i++) {
+            Mat out = outputs.get(i);
+
+            Log.i(TAG, "Output[" + i + "] name=" + outputNames.get(i)
+                    + ", dims=" + out.dims()
+                    + ", rows=" + out.rows()
+                    + ", cols=" + out.cols()
+                    + ", total=" + out.total());
+        }
+
+// Identify outputs by their names, not by assumed order.
+        int numIndex = findOutputIndex("num_detections");
+        int boxesIndex = findOutputIndex("detection_boxes");
+        int scoresIndex = findOutputIndex("detection_scores");
+        int classesIndex = findOutputIndex("detection_classes");
+
+        if (numIndex < 0 || boxesIndex < 0 ||
+                scoresIndex < 0 || classesIndex < 0) {
+
+            Log.e(TAG, "Could not map all detection outputs. "
+                    + "Available names: " + outputNames);
+
+            for (Mat output : outputs) {
+                output.release();
+            }
+
+            blob.release();
+            rgb.release();
+            return frame;
+        }
+
+        Log.i(TAG, "Successfully mapped all four detection outputs.");
+
+
+        // Reshape outputs for convenient indexing.
+        Mat numDetections = outputs.get(numIndex).reshape(1, 1);
+
+        Mat boxes = outputs.get(boxesIndex).reshape(
+                1, (int)(outputs.get(boxesIndex).total() / 4)
         );
 
-        Mat scores = outputs.get(2).reshape(1, 1);
-        Mat classes = outputs.get(3).reshape(1, 1);
+        Mat scores = outputs.get(scoresIndex).reshape(1, 1);
+        Mat classes = outputs.get(classesIndex).reshape(1, 1);
 
         int maxDetections = Math.min(
-            boxes.rows(),
-            Math.min((int)scores.total(), (int)classes.total())
+                boxes.rows(),
+                Math.min((int)scores.total(), (int)classes.total())
         );
 
         int count = Math.min(
-            (int)Math.round(numDetections.get(0, 0)[0]),
-            maxDetections
+                (int)Math.round(numDetections.get(0, 0)[0]),
+                maxDetections
         );
 
         count = Math.max(0, count);
@@ -210,10 +272,10 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
                     continue;
 
                 Imgproc.rectangle(
-                    frame,
-                    new Point(left, top),
-                    new Point(right, bottom),
-                    new Scalar(0, 255, 0)
+                        frame,
+                        new Point(left, top),
+                        new Point(right, bottom),
+                        new Scalar(0, 255, 0)
                 );
 
                 // Model uses COCO classes, not PASCAL VOC.
@@ -222,28 +284,28 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
                 int[] baseLine = new int[1];
 
                 Size labelSize = Imgproc.getTextSize(
-                    label,
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    1,
-                    baseLine
+                        label,
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        1,
+                        baseLine
                 );
 
                 Imgproc.rectangle(
-                    frame,
-                    new Point(left, Math.max(0, top - labelSize.height)),
-                    new Point(left + labelSize.width, top + baseLine[0]),
-                    new Scalar(255, 255, 255),
-                    Imgproc.FILLED
+                        frame,
+                        new Point(left, Math.max(0, top - labelSize.height)),
+                        new Point(left + labelSize.width, top + baseLine[0]),
+                        new Scalar(255, 255, 255),
+                        Imgproc.FILLED
                 );
 
                 Imgproc.putText(
-                    frame,
-                    label,
-                    new Point(left, top),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    new Scalar(0, 0, 0)
+                        frame,
+                        label,
+                        new Point(left, top),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        new Scalar(0, 0, 0)
                 );
             }
         }
@@ -265,27 +327,50 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         return frame;
     }
 
+    private int findOutputIndex(String expectedName) {
+        for (int i = 0; i < outputNames.size(); i++) {
+            String actualName = outputNames.get(i).toLowerCase(Locale.ROOT);
+
+            if (actualName.contains(expectedName.toLowerCase(Locale.ROOT))) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     public void onCameraViewStopped() {}
 
     //! [mobilenet_tutorial_resource]
     private MatOfByte loadFileFromResource(int id) {
-       byte[] buffer;
-        try {
-            // load cascade file from application resources
-            InputStream is = getResources().openRawResource(id);
+        try (InputStream is = getResources().openRawResource(id);
+             ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
 
-            int size = is.available();
-            buffer = new byte[size];
-            int bytesRead = is.read(buffer);
-            is.close();
+            byte[] data = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = is.read(data)) != -1) {
+                buffer.write(data, 0, bytesRead);
+            }
+
+            byte[] modelData = buffer.toByteArray();
+
+            Log.i(TAG, "Loaded ONNX model resource: "
+                    + modelData.length + " bytes");
+
+            return new MatOfByte(modelData);
+
         } catch (IOException e) {
-            e.printStackTrace();
-            Log.e(TAG, "Failed to ONNX model from resources! Exception thrown: " + e);
-            (Toast.makeText(this, "Failed to ONNX model from resources!", Toast.LENGTH_LONG)).show();
+            Log.e(TAG, "Failed to load ONNX model from resources", e);
+
+            Toast.makeText(
+                    this,
+                    "Failed to load ONNX model!",
+                    Toast.LENGTH_LONG
+            ).show();
+
             return null;
         }
-
-        return new MatOfByte(buffer);
     }
     //! [mobilenet_tutorial_resource]
 
@@ -293,6 +378,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
 
     private MatOfByte            mModelBuffer;
     private Net                  net;
+    private ArrayList<String> outputNames = new ArrayList<>();
     private CameraBridgeViewBase mOpenCvCameraView;
 }
 //! [mobilenet_tutorial]
