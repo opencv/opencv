@@ -1884,6 +1884,25 @@ TEST_P(ReduceArgNewTypes, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core, ReduceArgNewTypes, testing::Values(CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
+// bitwise_not and operator~ on CV_Bool are a logical NOT: 0/1 -> 1/0, not 255/254
+TEST(Core_Bitwise, not_bool)
+{
+    Mat src(1, 67, CV_Bool);   // wide enough for the SIMD loop, odd for the scalar tail
+    for (int i = 0; i < src.cols; i++)
+        src.at<uchar>(i) = (uchar)(i % 3 == 0);
+
+    Mat dst1, dst2 = ~src;
+    cv::bitwise_not(src, dst1);
+
+    ASSERT_EQ(CV_Bool, dst1.type());
+    ASSERT_EQ(CV_Bool, dst2.type());
+    for (int i = 0; i < src.cols; i++)
+    {
+        EXPECT_EQ(i % 3 != 0, dst1.at<uchar>(i)) << i;
+        EXPECT_EQ(i % 3 != 0, dst2.at<uchar>(i)) << i;
+    }
+}
+
 // Mixed Type Arithmetic Operations
 
 typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>, int> SomeType;

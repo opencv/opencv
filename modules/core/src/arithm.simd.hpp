@@ -308,7 +308,7 @@ TKernel getHypotFunc_(int T, int R);         // hypot = sqrt(x^2+y^2), float dep
 TKernel getAtan2Func_(int T, int R);         // atan2(y, x), radians (-pi, pi], float depths
 TKernel getCmpFunc_(TOp op, int T);
 TKernel getBitwiseFunc_(TOp op, int esz);                    // OP_AND / OP_OR / OP_XOR, by element size
-TKernel getNotFunc_(int esz);                                // OP_NOT, by element size
+TKernel getNotFunc_(int depth);                              // OP_NOT, by element size (CV_Bool: logical NOT)
 TKernel getAddWeightedFunc_(int T, int R);                   // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 TKernel getSelectFunc_(int mdepth, int T);   // OP_SELECT: 1-byte mask, a/b/dst of T (by esz)
 TKernel getClampFunc_(int T);                // OP_CLAMP: min(max(x, lo), hi), all operands of T
@@ -1401,7 +1401,8 @@ TKernel getCmpFunc_(TOp op, int T)
 
 // bitwise NOT: ~x. Single operand -> always a full contiguous array (no broadcast), so just a flat
 // per-row complement. SIMD for 1/2/4-byte elements; 8-byte uses the scalar tail (Vvec unused there).
-template<typename T, typename Vvec>
+// CV_Bool holds 0/1, so its NOT only flips the lowest bit (a full ~x would give 255/254).
+template<typename T, typename Vvec, bool isBool = false>
 static int notKernel(const void* src0_, size_t s0y, size_t s0x,
                      const void*, size_t, size_t, const void*, size_t, size_t,
                      void* dst_, size_t dsty, int width, int height,
@@ -1421,11 +1422,20 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
         if constexpr (sizeof(T) <= 4)
         {
             const int VECSZ = VTraits<Vvec>::vlanes();
-            for (; x <= width - VECSZ; x += VECSZ)
-                v_store(dst + x, v_not(vx_load(src0 + x)));
+            if constexpr (isBool)
+            {
+                const v_uint8 one = vx_setall_u8(1);
+                for (; x <= width - VECSZ; x += VECSZ)
+                    v_store(dst + x, v_xor(vx_load(src0 + x), one));
+            }
+            else
+            {
+                for (; x <= width - VECSZ; x += VECSZ)
+                    v_store(dst + x, v_not(vx_load(src0 + x)));
+            }
         }
     #endif
-        for (; x < width; x++) dst[x] = (T)~src0[x];
+        for (; x < width; x++) dst[x] = isBool ? (T)(src0[x] ^ 1) : (T)~src0[x];
     }
     return 0;
 }
@@ -1456,10 +1466,12 @@ TKernel getBitwiseFunc_(TOp op, int esz)
     return {f, nullptr, 0};
 }
 
-TKernel getNotFunc_(int esz)
+TKernel getNotFunc_(int depth)
 {
     KernelFunc f = nullptr;
-    switch (esz)
+    if (depth == CV_Bool)
+        return {notKernel<uint8_t, v_uint8, true>, nullptr, 0};
+    switch (CV_ELEM_SIZE1(depth))
     {
     case 1: f = notKernel<uint8_t,  v_uint8 >; break;
     case 2: f = notKernel<uint16_t, v_uint16>; break;
