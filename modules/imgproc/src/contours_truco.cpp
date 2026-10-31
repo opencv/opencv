@@ -626,6 +626,41 @@ private:
     uchar sides_[8][8];
 };
 
+// Binarized copy (0 / 255) of src with a frame of background pixels, in a single pass. Made in
+// parallel by row blocks on large images: one thread does not saturate the memory bandwidth.
+static void padBinary(const cv::Mat& src, cv::Mat& padded)
+{
+    const int H = src.rows, W = src.cols;
+    padded.create(H + 2, W + 2, CV_8UC1);
+    auto body = [&](const cv::Range& rows) {
+        for (int y = rows.start; y < rows.end; ++y)
+        {
+            uchar* d = padded.ptr<uchar>(y);
+            if (y == 0 || y == H + 1)
+            {
+                memset(d, 0, W + 2);
+                continue;
+            }
+            const uchar* s = src.ptr<uchar>(y - 1);   // ROI: the pixels outside it are ignored
+            d[0] = d[W + 1] = 0;
+            ++d;
+            int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const cv::v_uint8 v_zero = cv::vx_setzero_u8();
+            for (; x <= W - cv::VTraits<cv::v_uint8>::vlanes(); x += cv::VTraits<cv::v_uint8>::vlanes())
+                cv::v_store(d + x, cv::v_ne(cv::vx_load(s + x), v_zero));
+#endif
+            for (; x < W; ++x)
+                d[x] = s[x] ? 255 : 0;
+        }
+    };
+    const int nstripes = (int)std::min<int64_t>(cv::getNumThreads(), (int64_t)padded.total() >> 18);
+    if (nstripes > 1)
+        cv::parallel_for_(cv::Range(0, H + 2), body, nstripes);
+    else
+        body(cv::Range(0, H + 2));
+}
+
 // Contours and hierarchy in the layout of cv::findContours: each contour, in Suzuki-Abe order, is
 // added as the first child of its parent, and the output is the pre-order traversal of the tree.
 void findTRUContoursImpl(cv::Mat& padded,
@@ -839,8 +874,7 @@ void findTRUContours(InputArray _src, OutputArrayOfArrays _contours, OutputArray
     CV_Assert(mode == RETR_LIST || mode == RETR_CCOMP || mode == RETR_TREE);
 
     cv::Mat padded;
-    cv::copyMakeBorder(src, padded, 1, 1, 1, 1, cv::BORDER_CONSTANT | cv::BORDER_ISOLATED, 0);   // ISOLATED: ignore the pixels outside a ROI
-    cv::threshold(padded, padded, 0, 255, cv::THRESH_BINARY);
+    padBinary(src, padded);
 
     // a std::vector<std::vector<Point>> output is filled directly; any other element type goes
     // through create(), which rejects it as Suzuki-Abe does
