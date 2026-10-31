@@ -1884,22 +1884,29 @@ TEST_P(ReduceArgNewTypes, accuracy)
 
 INSTANTIATE_TEST_CASE_P(Core, ReduceArgNewTypes, testing::Values(CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
-// bitwise_not and operator~ on CV_Bool are a logical NOT: 0/1 -> 1/0, not 255/254
+// bitwise_not and operator~ on CV_Bool are a logical NOT: 0 -> 1, non-zero -> 0 (not 255/254)
 TEST(Core_Bitwise, not_bool)
 {
     Mat src(1, 67, CV_Bool);   // wide enough for the SIMD loop, odd for the scalar tail
     for (int i = 0; i < src.cols; i++)
         src.at<uchar>(i) = (uchar)(i % 3 == 0);
+    src.at<uchar>(3) = 255;    // a non-0/1 byte is still true, in the SIMD part...
+    src.at<uchar>(66) = 255;   // ...and in the scalar tail
 
-    Mat dst1, dst2 = ~src;
+    Mat dst1, dst2 = ~src, dst3;
     cv::bitwise_not(src, dst1);
+    UMat usrc = src.getUMat(ACCESS_READ), udst;
+    cv::bitwise_not(usrc, udst);
+    udst.copyTo(dst3);
 
     ASSERT_EQ(CV_Bool, dst1.type());
     ASSERT_EQ(CV_Bool, dst2.type());
+    ASSERT_EQ(CV_Bool, dst3.type());
     for (int i = 0; i < src.cols; i++)
     {
         EXPECT_EQ(i % 3 != 0, dst1.at<uchar>(i)) << i;
         EXPECT_EQ(i % 3 != 0, dst2.at<uchar>(i)) << i;
+        EXPECT_EQ(i % 3 != 0, dst3.at<uchar>(i)) << i;
     }
 }
 

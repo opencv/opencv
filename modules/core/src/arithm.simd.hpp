@@ -1401,7 +1401,7 @@ TKernel getCmpFunc_(TOp op, int T)
 
 // bitwise NOT: ~x. Single operand -> always a full contiguous array (no broadcast), so just a flat
 // per-row complement. SIMD for 1/2/4-byte elements; 8-byte uses the scalar tail (Vvec unused there).
-// CV_Bool holds 0/1, so its NOT only flips the lowest bit (a full ~x would give 255/254).
+// CV_Bool: any non-zero byte is true (as in convertTo), so its NOT is x == 0 (a full ~x would give 255/254).
 template<typename T, typename Vvec, bool isBool = false>
 static int notKernel(const void* src0_, size_t s0y, size_t s0x,
                      const void*, size_t, size_t, const void*, size_t, size_t,
@@ -1424,9 +1424,9 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
             const int VECSZ = VTraits<Vvec>::vlanes();
             if constexpr (isBool)
             {
-                const v_uint8 one = vx_setall_u8(1);
+                const v_uint8 zero = vx_setzero_u8(), one = vx_setall_u8(1);
                 for (; x <= width - VECSZ; x += VECSZ)
-                    v_store(dst + x, v_xor(vx_load(src0 + x), one));
+                    v_store(dst + x, v_and(v_eq(vx_load(src0 + x), zero), one));
             }
             else
             {
@@ -1435,7 +1435,7 @@ static int notKernel(const void* src0_, size_t s0y, size_t s0x,
             }
         }
     #endif
-        for (; x < width; x++) dst[x] = isBool ? (T)(src0[x] ^ 1) : (T)~src0[x];
+        for (; x < width; x++) dst[x] = isBool ? (T)(src0[x] == 0) : (T)~src0[x];
     }
     return 0;
 }
