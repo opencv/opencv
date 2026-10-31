@@ -11,6 +11,7 @@
 
 #include <opencv2/core/hal/intrin.hpp>
 #include <opencv2/core/utility.hpp> // parallel_for_
+#include "fast_gemm.hpp" // FAST_GEMM_THIN_NEON_W
 
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
 #define FAST_GEMM_MAX_STACKBUF (1 << 13)
@@ -158,6 +159,13 @@ void pagedAttnAVGemmKernel(
     size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D, size_t T_v,
     size_t esz, bool canonical_layout, size_t packed_stride
 );
+
+#if CV_NEON && CV_NEON_AARCH64
+// C = alpha * A * B + beta * C for up to 12 rows. B is packed by fastGemmThinPackB, or row-major
+// with row stride ldb and read in place.
+void fastGemmThinKernel(int M, int N, int K, float alpha, const float* A, int lda0, int lda1,
+                        const float* B, int ldb, bool packed, float beta, float* C, int ldc, bool multi_thread);
+#endif
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -1278,6 +1286,175 @@ void pagedAttnAVGemmKernel(
     double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
 }
+
+#if CV_NEON && CV_NEON_AARCH64
+// fastGemmThinKernel: one call computes up to 5 rows x 16 columns, or 2 rows x 32 columns.
+static constexpr int FAST_GEMM_THIN_NEON_MAX_ROWS = 5;
+static constexpr int FAST_GEMM_THIN_NEON_TASK_MACS = 1 << 16;
+
+template<int MR, int NV, int Q>
+static inline void fast_gemm_thin_neon_step(float32x4_t (&acc)[MR][NV], const float32x4_t (&a)[MR], const float* b) {
+    float32x4_t bv[NV];
+    for (int v = 0; v < NV; v++)
+        bv[v] = vld1q_f32(b + v * 4);
+    for (int r = 0; r < MR; r++)
+        for (int v = 0; v < NV; v++)
+            acc[r][v] = vfmaq_laneq_f32(acc[r][v], bv[v], a[r], Q);
+}
+
+// C(MR x cols) = alpha * A * B + beta * C, cols <= 4*NV, summed in increasing k like the generic strip.
+// A rows are contiguous; B rows are ldb floats apart and readable for 4*NV columns.
+template<int MR, int NV>
+static void fast_gemm_thin_neon_block(int K, const float* A, int lda, const float* b, int ldb,
+                                      float alpha, float beta, float* c, int ldc, int cols) {
+    float32x4_t acc[MR][NV];
+    for (int r = 0; r < MR; r++)
+        for (int v = 0; v < NV; v++)
+            acc[r][v] = vdupq_n_f32(0.f);
+
+    int k = 0;
+    for (; k + 4 <= K; k += 4, b += 4 * ldb) {
+        float32x4_t a[MR];
+        for (int r = 0; r < MR; r++)
+            a[r] = vld1q_f32(A + r * lda + k);
+        fast_gemm_thin_neon_step<MR, NV, 0>(acc, a, b);
+        fast_gemm_thin_neon_step<MR, NV, 1>(acc, a, b + ldb);
+        fast_gemm_thin_neon_step<MR, NV, 2>(acc, a, b + 2 * ldb);
+        fast_gemm_thin_neon_step<MR, NV, 3>(acc, a, b + 3 * ldb);
+    }
+    for (; k < K; k++, b += ldb) {
+        float32x4_t a[MR];
+        for (int r = 0; r < MR; r++)
+            a[r] = vdupq_n_f32(A[r * lda + k]);
+        fast_gemm_thin_neon_step<MR, NV, 0>(acc, a, b);
+    }
+
+    const float32x4_t va = vdupq_n_f32(alpha), vb = vdupq_n_f32(beta);
+    for (int r = 0; r < MR; r++) {
+        float* cr = c + r * ldc;
+        if (cols == NV * 4) {
+            for (int v = 0; v < NV; v++) {
+                float32x4_t res = vmulq_f32(acc[r][v], va);
+                if (beta == 1.f)
+                    res = vfmaq_f32(vld1q_f32(cr + v * 4), acc[r][v], va);
+                else if (beta != 0.f)
+                    res = vfmaq_f32(vmulq_f32(vld1q_f32(cr + v * 4), vb), acc[r][v], va);
+                vst1q_f32(cr + v * 4, res);
+            }
+        } else {
+            float t[NV * 4];
+            for (int v = 0; v < NV; v++)
+                vst1q_f32(t + v * 4, acc[r][v]);
+            for (int j = 0; j < cols; j++)
+                cr[j] = beta == 0.f ? alpha * t[j] : beta * cr[j] + alpha * t[j];
+        }
+    }
+}
+
+// Picks the kernel for mr rows: 1..5 rows of 4 or 16 columns, or 1..2 rows of 32 columns.
+static void fast_gemm_thin_neon_rows(int mr, int W, int K, const float* A, int lda, const float* b, int ldb,
+                                     float alpha, float beta, float* c, int ldc, int cols) {
+    if (W == 32) {
+        if (mr == 1) fast_gemm_thin_neon_block<1, 8>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols);
+        else         fast_gemm_thin_neon_block<2, 8>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols);
+        return;
+    }
+    if (W == 4) {
+        switch (mr) {
+            case 1: fast_gemm_thin_neon_block<1, 1>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+            case 2: fast_gemm_thin_neon_block<2, 1>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+            case 3: fast_gemm_thin_neon_block<3, 1>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+            case 4: fast_gemm_thin_neon_block<4, 1>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+            default: fast_gemm_thin_neon_block<5, 1>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+        }
+        return;
+    }
+    switch (mr) {
+        case 1: fast_gemm_thin_neon_block<1, 4>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+        case 2: fast_gemm_thin_neon_block<2, 4>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+        case 3: fast_gemm_thin_neon_block<3, 4>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+        case 4: fast_gemm_thin_neon_block<4, 4>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+        default: fast_gemm_thin_neon_block<5, 4>(K, A, lda, b, ldb, alpha, beta, c, ldc, cols); break;
+    }
+}
+
+// All M rows for one block of W columns of B, in even passes of at most max_rows rows;
+// the B block stays in cache between the passes.
+static void fast_gemm_thin_neon_cols(int M, int max_rows, int W, int K, const float* A, int lda,
+                                     const float* b, int ldb, float alpha, float beta,
+                                     float* C, int ldc, int cols) {
+    const int passes = (M + max_rows - 1) / max_rows;
+    for (int q = 0, r0 = 0; q < passes; q++) {
+        const int mr = (M - r0) / (passes - q);
+        fast_gemm_thin_neon_rows(mr, W, K, A + r0 * lda, lda, b, ldb, alpha, beta, C + r0 * ldc, ldc, cols);
+        r0 += mr;
+    }
+}
+
+// Same for row-major B, read in place 32, 16 or 4 columns at a time (at most W).
+// Only the last 1-3 columns are copied, zero-padded to 4 to keep the loads in bounds.
+static void fast_gemm_thin_neon_rowmajor(int M, int max_rows, int W, int K, const float* A, int lda,
+                                         const float* B, int ldb, float alpha, float beta,
+                                         float* C, int ldc, int cols) {
+    int c = 0;
+    for (int w : {32, 16, 4})
+        for (; w <= W && c + w <= cols; c += w)
+            fast_gemm_thin_neon_cols(M, max_rows, w, K, A, lda, B + c, ldb, alpha, beta, C + c, ldc, w);
+    if (c < cols) {
+        AutoBuffer<float> tail((size_t)K * 4);
+        for (int k = 0; k < K; k++)
+            for (int i = 0; i < 4; i++)
+                tail[(size_t)k * 4 + i] = c + i < cols ? B[(size_t)k * ldb + c + i] : 0.f;
+        fast_gemm_thin_neon_cols(M, max_rows, 4, K, A, lda, tail.data(), 4, alpha, beta, C + c, ldc, cols - c);
+    }
+}
+
+// Columns are split into tasks of at least 64K multiply-adds, about 4 per thread.
+void fastGemmThinKernel(int M, int N, int K, float alpha, const float* A, int lda0, int lda1,
+                        const float* B, int ldb, bool packed, float beta, float* C, int ldc, bool multi_thread) {
+    if (M <= 0 || N <= 0)
+        return; // empty C; with K == 0 the kernel below already writes beta * C
+    AutoBuffer<float> a_buf;
+    if (lda1 != 1) {
+        // Transposed A: copy the few rows once so they are contiguous.
+        a_buf.allocate((size_t)M * K);
+        for (int m = 0; m < M; m++)
+            for (int k = 0; k < K; k++)
+                a_buf[(size_t)m * K + k] = A[m * lda0 + k * lda1];
+        A = a_buf.data();
+        lda0 = K;
+    }
+
+    // With 1-2 rows and row-major B, 32 columns per block read whole 128-byte cache lines.
+    const int W = !packed && M <= 2 ? 32 : FAST_GEMM_THIN_NEON_W;
+    const int max_rows = W == 32 ? 2 : FAST_GEMM_THIN_NEON_MAX_ROWS;
+    const int n_blocks = (N + W - 1) / W;
+    const int nthreads = multi_thread ? getNumThreads() : 1;
+    const double by_work = std::max(1., (double)M * N * K / FAST_GEMM_THIN_NEON_TASK_MACS);
+    int n_tasks = (int)std::min(std::min((double)(nthreads > 1 ? 4 * nthreads : 1), by_work), (double)n_blocks);
+    const int blocks_per_task = (n_blocks + n_tasks - 1) / n_tasks;
+    n_tasks = (n_blocks + blocks_per_task - 1) / blocks_per_task;
+
+    auto fn = [&](const Range& r) {
+        for (int t = r.start; t < r.end; t++) {
+            const int blk_end = std::min(n_blocks, (t + 1) * blocks_per_task);
+            for (int blk = t * blocks_per_task; blk < blk_end; blk++) {
+                const int j = blk * W, cols = std::min(W, N - j);
+                if (packed)
+                    fast_gemm_thin_neon_cols(M, max_rows, W, K, A, lda0, B + (size_t)blk * W * K, W,
+                                             alpha, beta, C + j, ldc, cols);
+                else
+                    fast_gemm_thin_neon_rowmajor(M, max_rows, W, K, A, lda0, B + j, ldb,
+                                                 alpha, beta, C + j, ldc, cols);
+            }
+        }
+    };
+    if (n_tasks > 1)
+        parallel_for_(Range(0, n_tasks), fn, n_tasks);
+    else
+        fn(Range(0, 1));
+}
+#endif // CV_NEON && CV_NEON_AARCH64
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
