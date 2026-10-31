@@ -2643,6 +2643,155 @@ TEST(Core_Arithm, scalar_vs_4x1_64F_array)
     EXPECT_EQ(0, cvtest::norm(d, Mat(2, 2, CV_8UC3, Scalar(99, 108, 117)), NORM_INF));
 }
 
+// Destination handling in broadcasting element-wise ops: a plain Mat destination whose shape
+// differs from the broadcast result only by singleton dims (e.g. a 1D vector-backed Mat vs a
+// 1xN result) keeps its storage; unrelated shapes still reallocate.
+// See https://github.com/opencv/opencv/issues/30574
+static Mat dstReuseVecMat(std::vector<float>& v)
+{
+    Mat m(v, false);
+    CV_Assert(m.dims == 1);
+    return m;
+}
+
+TEST(Core_Arithm, dst_reuse_vector_vs_1xN_aliased)
+{
+    const int N = 128;
+    std::vector<float> d(N, 10.f);
+    Mat dst = dstReuseVecMat(d), offsets(1, N, CV_32F, Scalar(2.f));
+    const uchar* p = dst.data;
+    cv::subtract(dst, offsets, dst);
+    EXPECT_EQ(p, dst.data);
+    ASSERT_EQ(2, dst.dims);
+    EXPECT_EQ(1, dst.size[0]);
+    EXPECT_EQ(N, dst.size[1]);
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(8.f, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_vector_vs_1xN_separate_src)
+{
+    const int N = 128;
+    std::vector<float> d(N, 0.f), s(N, 10.f);
+    Mat dst = dstReuseVecMat(d), src = dstReuseVecMat(s), offsets(1, N, CV_32F, Scalar(2.f));
+    const uchar* p = dst.data;
+    cv::subtract(src, offsets, dst);
+    EXPECT_EQ(p, dst.data);
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(8.f, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_vector_temporary_output)
+{
+    const int N = 128;
+    std::vector<float> d(N, 10.f);
+    Mat offsets(1, N, CV_32F, Scalar(2.f));
+
+    const float* p = d.data();
+
+    cv::subtract(
+        dstReuseVecMat(d),
+        offsets,
+        dstReuseVecMat(d)
+    );
+
+    EXPECT_EQ(p, d.data());
+
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(8.f, d[i]) << i;
+}
+}
+
+TEST(Core_Arithm, dst_reuse_vector_vs_Nx1)
+{
+    const int N = 128;
+    std::vector<float> d(N, 0.f);
+    Mat dst = dstReuseVecMat(d);
+    Mat src(N, 1, CV_32F, Scalar(10.f)), offsets(N, 1, CV_32F, Scalar(2.f));
+    const uchar* p = dst.data;
+    cv::subtract(src, offsets, dst);              // result is [N,1]
+    EXPECT_EQ(p, dst.data);
+    ASSERT_EQ(2, dst.dims);
+    EXPECT_EQ(N, dst.size[0]);
+    EXPECT_EQ(1, dst.size[1]);
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(8.f, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_unrelated_shape_reallocates)
+{
+    std::vector<float> s(12, 10.f), o(12, 2.f);
+    Mat a = dstReuseVecMat(s), b = dstReuseVecMat(o);
+    Mat dst(3, 4, CV_32F, Scalar(0));             // same element count, different extents
+    Mat keep = dst;                               // extra header keeps the old buffer alive
+    cv::subtract(a, b, dst);
+    EXPECT_NE(keep.data, dst.data);               // really a new allocation, not an in-place reshape
+    EXPECT_EQ(0, cv::countNonZero(keep));         // the old buffer was not written to
+    ASSERT_EQ(1, dst.dims);
+    EXPECT_EQ(12, dst.size[0]);
+
+    Mat small(2, 2, CV_32F, Scalar(0));           // different element count
+    cv::subtract(a, b, small);
+    EXPECT_EQ(12, (int)small.total());
+}
+
+TEST(Core_Arithm, dst_reuse_vector_with_mask_keeps_old_values)
+{
+    const int N = 8;
+    std::vector<float> d(N, 10.f);
+    Mat dst = dstReuseVecMat(d), offsets(1, N, CV_32F, Scalar(2.f));
+    Mat mask(1, N, CV_8U, Scalar(0));
+    for (int i = 0; i < N; i += 2)
+        mask.at<uchar>(0, i) = 255;
+    const uchar* p = dst.data;
+    cv::subtract(dst, offsets, dst, mask);
+    EXPECT_EQ(p, dst.data);
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(i % 2 == 0 ? 8.f : 10.f, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_unary_vector)
+{
+    const int N = 16;
+    std::vector<uchar> d(N, 0);
+    Mat dst(d, false), src(1, N, CV_8U, Scalar(0));
+    ASSERT_EQ(1, dst.dims);
+    const uchar* p = dst.data;
+    cv::bitwise_not(src, dst);
+    EXPECT_EQ(p, dst.data);
+    for (int i = 0; i < N; i++)
+        ASSERT_EQ(255, d[i]) << i;
+}
+
+TEST(Core_Arithm, dst_reuse_vector_fast_path_boundary)
+{
+    const int lengths[] = { 100000, 100001 };
+
+    for (size_t n = 0; n < 2; n++)
+    {
+        const int N = lengths[n];
+
+        std::vector<float> d(N, 0.f);
+
+        Mat dst = dstReuseVecMat(d);
+        Mat src(1, N, CV_32F, Scalar(10.f));
+        Mat offsets(1, N, CV_32F, Scalar(2.f));
+
+        const uchar* p = dst.data;
+
+        cv::subtract(src, offsets, dst);
+
+        EXPECT_EQ(p, dst.data) << "N=" << N;
+
+        ASSERT_EQ(2, dst.dims);
+        EXPECT_EQ(1, dst.size[0]);
+        EXPECT_EQ(N, dst.size[1]);
+
+        EXPECT_EQ(8.f, d.front());
+        EXPECT_EQ(8.f, d.back());
+    }
+}
+
 TEST(Compare, regression_16F_do_not_crash)
 {
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
@@ -5050,4 +5199,4 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
     }
 }
 
-}} // namespace
+} // namespace
