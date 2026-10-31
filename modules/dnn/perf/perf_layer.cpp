@@ -733,7 +733,7 @@ PERF_TEST_P_(Layer_InstanceNorm, InstanceNorm)
 
 struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
     void test_layer(const std::vector<int> x_shape, const std::vector<int> qkv_hidden_sizes, const int num_heads,
-                    bool const_weights = false) {
+                    bool const_weights = false, const std::vector<int>& mask_shape = std::vector<int>()) {
         int backendId = get<0>(GetParam());
         int targetId = get<1>(GetParam());
 
@@ -762,8 +762,20 @@ struct Layer_Attention : public TestBaseWithParam<tuple<Backend, Target>> {
             // Weights as blobs: packed once, then every forward() takes the prepacked path.
             lp.blobs.push_back(weight);
             lp.blobs.push_back(bias);
-            net.addLayerToPrev(lp.name, lp.type, lp);
-            net.setInput(x);
+            if (mask_shape.empty()) {
+                net.addLayerToPrev(lp.name, lp.type, lp);
+                net.setInput(x);
+            } else {
+                // Additive attention mask as the second input.
+                Mat mask(mask_shape, CV_32F);
+                randu(mask, -1.f, 1.f);
+                int id = net.addLayerToPrev(lp.name, lp.type, lp);
+                net.connect(0, 1, id, 1);
+                std::vector<std::string> input_names{"x", "mask"};
+                net.setInputsNames(input_names);
+                net.setInput(x, input_names[0]);
+                net.setInput(mask, input_names[1]);
+            }
         } else {
             int id = net.addLayerToPrev(lp.name, lp.type, lp);
             net.connect(0, 0, id, 0);
@@ -809,6 +821,22 @@ PERF_TEST_P_(Layer_Attention, LongSequence_1024) {
 
 PERF_TEST_P_(Layer_Attention, LongSequence_4096) {
     test_layer({1, 4096, 192}, {192, 192, 192}, 12, /*const_weights=*/true);
+}
+
+PERF_TEST_P_(Layer_Attention, FewHeads_197) {
+    test_layer({1, 197, 192}, {192, 192, 192}, 3, /*const_weights=*/true);
+}
+
+PERF_TEST_P_(Layer_Attention, FewHeads_1024) {
+    test_layer({1, 1024, 192}, {192, 192, 192}, 3, /*const_weights=*/true);
+}
+
+PERF_TEST_P_(Layer_Attention, Masked_197) {
+    test_layer({1, 197, 768}, {768, 768, 768}, 12, /*const_weights=*/true, {197, 197});
+}
+
+PERF_TEST_P_(Layer_Attention, Masked_1024) {
+    test_layer({1, 1024, 192}, {192, 192, 192}, 12, /*const_weights=*/true, {1, 1, 1, 1024});
 }
 
 // GroupQueryAttention runs on AttentionOnnxAi; these flags are what the ONNX importer sets.

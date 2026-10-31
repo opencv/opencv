@@ -4,8 +4,8 @@
 
 #include "../precomp.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
-#include "cpu_kernels/softmax.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/flash_attention.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -211,23 +211,13 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         }
 
         const int batch_size_ = batch, seq_len_ = seq,
-                  hidden_size_ = weight_shape.back(),
-                  num_heads_ = static_cast<int>(num_heads),
-                  v_head_size_ = v_hidden / num_heads_;
+                  hidden_size_ = weight_shape.back();
 
-        MatShape gemm_buffer_shape{batch_size_, seq_len_, hidden_size_},
-                 attention_prob_shape{batch_size_ * num_heads_, seq_len_, seq_len_},
-                 output_buffer_shape{batch_size_ * num_heads_, seq_len_, v_head_size_};
-        if (useFlashAttention(inputs.size(), batch_size_, seq_len_, v_head_size_))
-        {
-            // FlashAttention writes directly to the output and never uses either
-            // dense workspace. Keep their slots so the RoPE table index is stable.
-            attention_prob_shape = MatShape{1};
-            output_buffer_shape = MatShape{1};
-        }
-        internals.assign(1, gemm_buffer_shape);
-        internals.push_back(attention_prob_shape);
-        internals.push_back(output_buffer_shape);
+        // FlashAttention writes directly to the output, with or without a mask, so the former
+        // score matrix and output buffer are not needed. Keep their slots so the RoPE table index is stable.
+        internals.assign(1, MatShape{batch_size_, seq_len_, hidden_size_});
+        internals.push_back(MatShape{1});
+        internals.push_back(MatShape{1});
 
         if (do_rotary)
         {
@@ -395,6 +385,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
+        if (outputs[0].empty())
+            return;
 
         // Dynamic weight (blobs empty) may change each call, so repack it.
         if (blobs.empty())
@@ -427,7 +419,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             const auto *input_data = input.ptr<const float>();
             const auto *bias_data = bias.ptr<const float>();
 
-            // When do_rotary is false, internals.back() aliases output_buffer; harmless because rope_table is then unused.
+            // When do_rotary is false, internals.back() is an unused size-1 slot; harmless because rope_table is then unused.
             const auto &rope_table = internals.back();
 
             // Task i projects head (i / 3) % num_heads of batch (i / 3) / num_heads onto Q, K or V (i % 3).
@@ -506,7 +498,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
         }
 
-        if (useFlashAttention(inputs.size(), (int)batch_size, (int)seq_len, (int)qkv_head_sizes[2]))
+        // MLAS flash attention has no mask input.
+        if (mlasAvailable() && !hasMask(inputs.size()))
         {
             const int B   = (int)batch_size;
             const int H   = (int)num_heads;
@@ -532,158 +525,74 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             }
         }
 
-        // Compute Softmax(scale * MatMul(Q, K))
-        auto &attention_prob = internals[1];
-        // getMemoryShapes() plans dense buffers whenever FlashAttention is not used
-        CV_CheckEQ(attention_prob.total(), (size_t)(batch_size * num_heads * seq_len * seq_len), "");
-        {
-            auto *output = attention_prob.ptr<float>();
-
-            auto loops = batch_size * num_heads;
-            auto seq_len_square = seq_len * seq_len;
-            auto qk_head_size = qkv_head_sizes[0];
-            auto qk_inner_size = seq_len * qk_head_size;
-
-            // One batched fastGemmBatch call over all (batch, head) pairs — wrapping per-head fastGemm in parallel_for_ caused nested parallelism (inner MLAS gemm issued its own parallel_for_, serializing on most threads).
-            std::vector<size_t> qk_a_offs(loops), qk_b_offs(loops), qk_c_offs(loops);
-            for (int i = 0; i < (int)loops; i++) {
-                qk_a_offs[i] = (size_t)i * qk_inner_size;
-                qk_b_offs[i] = (size_t)i * qk_inner_size;
-                qk_c_offs[i] = (size_t)i * seq_len_square;
-            }
-            opt.multi_thread = true;
-            // ldb0=1, ldb1=qk_head_size signals trans_b for K (stored as [seq_len, qk_head_size]) to fastGemmBatch.
-            fastGemmBatch(loops, qk_a_offs.data(), qk_b_offs.data(), qk_c_offs.data(),
-                          (int)seq_len, (int)seq_len, (int)qk_head_size,
-                          scale, Q, (int)qk_head_size, 1,
-                          K, 1, (int)qk_head_size, 0.f,
-                          output, (int)seq_len, opt);
-
-            // Additive mask broadcast-aligned right to [B,H,S,S] (size-1 dims broadcast); only present when the fusion pass attached an external mask input.
-            int num_non_blob_inputs = (int)inputs.size();
-            bool has_mask = (!blobs.empty() && num_non_blob_inputs >= 2) ||
-                            (blobs.empty() && num_non_blob_inputs >= 4);
-            if (has_mask) {
-                const Mat &mask_mat = blobs.empty() ? inputs[3] : inputs[1];
-                CV_CheckTypeEQ(mask_mat.type(), CV_32F,
-                               "DNN/Attention: mask must be float32");
-
-                const auto mask_shape = shape(mask_mat);
-                const int mask_ndim = mask_shape.dims;
-                auto fmt_shape = [&]() {
-                    std::ostringstream ss;
-                    for (int d = 0; d < mask_ndim; d++) { if (d) ss << ","; ss << mask_shape[d]; }
-                    return ss.str();
-                };
-                // Right-align mask dims to (B, H, Q=S, K=S); missing leading dims default to 1.
-                auto get_dim = [&](int t) -> int {
-                    int md = mask_ndim - 4 + t;
-                    return (md >= 0) ? mask_shape[md] : 1;
-                };
-                // Extra leading dims beyond rank 4 must all be 1 (no broadcasting beyond [B,H,S,S]).
-                for (int d = 0; d < mask_ndim - 4; d++) {
-                    if (mask_shape[d] != 1)
-                        CV_Error(Error::StsNotImplemented,
-                                 cv::format("DNN/Attention: unsupported mask shape [%s] (B=%d, H=%d, S=%d)",
-                                            fmt_shape().c_str(), (int)batch_size, (int)num_heads, (int)seq_len));
-                }
-                const int dim_b = get_dim(0);
-                const int dim_h = get_dim(1);
-                const int dim_q = get_dim(2);
-                const int dim_k = get_dim(3);
-                auto check_bcast = [&](int md, int td, const char* axis) {
-                    if (md != 1 && md != td)
-                        CV_Error(Error::StsNotImplemented,
-                                 cv::format("DNN/Attention: mask shape [%s] not broadcastable to [%d,%d,%d,%d] (axis %s)",
-                                            fmt_shape().c_str(), (int)batch_size, (int)num_heads,
-                                            (int)seq_len, (int)seq_len, axis));
-                };
-                check_bcast(dim_b, (int)batch_size, "batch");
-                check_bcast(dim_h, (int)num_heads, "head");
-                check_bcast(dim_q, (int)seq_len,   "query");
-                check_bcast(dim_k, (int)seq_len,   "key");
-
-                const size_t mask_b_stride = (dim_b == 1) ? 0 : (size_t)dim_h * dim_q * dim_k;
-                const size_t mask_h_stride = (dim_h == 1) ? 0 : (size_t)dim_q * dim_k;
-                const size_t mask_q_stride = (dim_q == 1) ? 0 : (size_t)dim_k;
-                const bool   mask_k_bcast  = (dim_k == 1);
-
-                const float *mask_data = mask_mat.ptr<const float>();
-                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
-                    for (int i = r.start; i < r.end; i++) {
-                        const int b = i / (int)num_heads;
-                        const int h = i % (int)num_heads;
-                        const float *m_bh = mask_data + b * mask_b_stride + h * mask_h_stride;
-                        float *prob = output + i * seq_len_square;
-                        for (size_t row = 0; row < seq_len; row++) {
-                            const float *m = m_bh + row * mask_q_stride;
-                            float *p = prob + row * seq_len;
-                            if (mask_k_bcast) {
-                                float v = m[0];
-                                for (size_t j = 0; j < seq_len; j++) p[j] += v;
-                            } else {
-                                for (size_t j = 0; j < seq_len; j++) p[j] += m[j];
-                            }
-                        }
-                    }
-                }, loops * seq_len * (1 / 1024.0));
-            }
-
-            softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
+        const float* mask = nullptr;
+        size_t mask_steps[4] = {0, 0, 0, 0};
+        if (hasMask(inputs.size())) {
+            const Mat& mask_mat = maskInput(inputs);
+            getMaskSteps(mask_mat, mask_steps);
+            mask = mask_mat.ptr<const float>();
         }
-
-        // output = attention_prob @ V, then transpose back to [B, S, H*D]
-        auto &output_buffer = internals[2];
-        CV_CheckEQ(output_buffer.total(), (size_t)(batch_size * num_heads * seq_len * qkv_head_sizes[2]), "");
-        {
-            auto *output = outputs[0].ptr<float>();
-            auto *output_buff = output_buffer.ptr<float>();
-            const auto *prob = attention_prob.ptr<const float>();
-
-            auto loops = batch_size * num_heads;
-            auto prob_inner_size = seq_len * seq_len;
-            auto v_head_size = qkv_head_sizes[2];
-            auto v_inner_size = seq_len * v_head_size;
-
-            // Batched fastGemmBatch over (batch, head) — same nested-parallelism rationale as QK^T above.
-            std::vector<size_t> av_a_offs(loops), av_b_offs(loops), av_c_offs(loops);
-            for (int i = 0; i < (int)loops; i++) {
-                av_a_offs[i] = (size_t)i * prob_inner_size;
-                av_b_offs[i] = (size_t)i * v_inner_size;
-                av_c_offs[i] = (size_t)i * v_inner_size;
-            }
-            opt.multi_thread = true;
-            fastGemmBatch(loops, av_a_offs.data(), av_b_offs.data(), av_c_offs.data(),
-                          (int)seq_len, (int)v_head_size, (int)seq_len,
-                          1.f, prob, (int)seq_len, 1,
-                          V, (int)v_head_size, 1, 0.f,
-                          output_buff, (int)v_head_size, opt);
-
-            // Transpose [B*H, S, D] -> [B, S, H*D] in place via per-(batch, head) memcpy strips.
-            parallel_for_(Range(0, (int)loops), [&] (const Range &r) {
-                for (int i = r.start; i < r.end; i++) {
-                    const int output_offset = i * (int)v_inner_size;
-                    const int batch_index = static_cast<int>(i / num_heads);
-                    const int head_index  = static_cast<int>(i % num_heads);
-                    const float *src = output_buff + output_offset;
-                    float *dst = output + (batch_index * (int)seq_len * (int)num_heads + head_index) * (int)v_head_size;
-                    for (int j = 0; j < (int)seq_len; j++) {
-                        std::memcpy(dst, src, v_head_size * sizeof(float));
-                        src += v_head_size;
-                        dst += qkv_hidden_sizes[2];
-                    }
-                }
-            }, loops * seq_len * v_head_size * (1 / 1024.0));
-        }
+        flashAttention(Q, K, V, outputs[0].ptr<float>(),
+                       (int)batch_size, (int)num_heads, (int)seq_len, (int)seq_len,
+                       (int)qkv_head_sizes[0], (int)qkv_head_sizes[2], scale, mask, mask_steps);
     }
 
  private:
-    bool useFlashAttention(size_t inputCount, int batch, int sequence, int valueHeadSize) const
+    // The optional additive mask is the last input: after the data, or after data, weight and bias.
+    bool hasMask(size_t inputCount) const
     {
-        const bool hasMask = (!blobs.empty() && inputCount >= 2) ||
-                             (blobs.empty() && inputCount >= 4);
-        return mlasAvailable() && !hasMask && batch > 0 && num_heads > 0 && sequence > 0 &&
-               qkv_head_sizes[0] > 0 && valueHeadSize > 0;
+        return (!blobs.empty() && inputCount >= 2) || (blobs.empty() && inputCount >= 4);
+    }
+
+    const Mat& maskInput(const std::vector<Mat>& inputs) const
+    {
+        return blobs.empty() ? inputs[3] : inputs[1];
+    }
+
+    // Element steps of the mask over (batch, head, query, key), 0 for a broadcast axis.
+    void getMaskSteps(const Mat& mask_mat, size_t steps[4]) const
+    {
+        CV_CheckTypeEQ(mask_mat.type(), CV_32F, "DNN/Attention: mask must be float32");
+
+        const auto mask_shape = shape(mask_mat);
+        const int mask_ndim = mask_shape.dims;
+        auto fmt_shape = [&]() {
+            std::ostringstream ss;
+            for (int d = 0; d < mask_ndim; d++) { if (d) ss << ","; ss << mask_shape[d]; }
+            return ss.str();
+        };
+        // Right-align mask dims to (B, H, Q=S, K=S); missing leading dims default to 1.
+        auto get_dim = [&](int t) -> int {
+            int md = mask_ndim - 4 + t;
+            return (md >= 0) ? mask_shape[md] : 1;
+        };
+        // Extra leading dims beyond rank 4 must all be 1 (no broadcasting beyond [B,H,S,S]).
+        for (int d = 0; d < mask_ndim - 4; d++) {
+            if (mask_shape[d] != 1)
+                CV_Error(Error::StsNotImplemented,
+                         cv::format("DNN/Attention: unsupported mask shape [%s] (B=%d, H=%d, S=%d)",
+                                    fmt_shape().c_str(), (int)batch_size, (int)num_heads, (int)seq_len));
+        }
+        const int dim_b = get_dim(0);
+        const int dim_h = get_dim(1);
+        const int dim_q = get_dim(2);
+        const int dim_k = get_dim(3);
+        auto check_bcast = [&](int md, int td, const char* axis) {
+            if (md != 1 && md != td)
+                CV_Error(Error::StsNotImplemented,
+                         cv::format("DNN/Attention: mask shape [%s] not broadcastable to [%d,%d,%d,%d] (axis %s)",
+                                    fmt_shape().c_str(), (int)batch_size, (int)num_heads,
+                                    (int)seq_len, (int)seq_len, axis));
+        };
+        check_bcast(dim_b, (int)batch_size, "batch");
+        check_bcast(dim_h, (int)num_heads, "head");
+        check_bcast(dim_q, (int)seq_len,   "query");
+        check_bcast(dim_k, (int)seq_len,   "key");
+
+        steps[0] = (dim_b == 1) ? 0 : (size_t)dim_h * dim_q * dim_k;
+        steps[1] = (dim_h == 1) ? 0 : (size_t)dim_q * dim_k;
+        steps[2] = (dim_q == 1) ? 0 : (size_t)dim_k;
+        steps[3] = (dim_k == 1) ? 0 : 1;
     }
 
     size_t num_heads;
