@@ -151,8 +151,8 @@ TEST(Core_LPSolver, issue_12337)
     EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
-// NOTE: Test parameters found experimentally to get numerically inaccurate result.
-// The test behaviour may change after algorithm tuning and may removed.
+// Degenerate problem: the first ratio test is a three-way tie.
+// The optimum is unique: z = (16, 15, 0, 24) / 37, objective 189 / 37.
 TEST(Core_LPSolver, issue_12343)
 {
     Mat A = cv::Mat_<double>({4, 1}, {3., 3., 3., 4.});
@@ -163,8 +163,58 @@ TEST(Core_LPSolver, issue_12343)
             4., 0., 4., 1., 4.
     });
     Mat z;
-    int result = cv::solveLP(A, B, z);
-    EXPECT_EQ(SOLVELP_LOST, result);
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({4, 1}, {16. / 37, 15. / 37, 0., 24. / 37});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+}
+
+// Cormen's example #1 from regression_basic with the right-hand side scaled by 1e-14.
+// The solution scales with the data: nothing may be treated as zero because it is small.
+TEST(Core_LPSolver, small_magnitude_data)
+{
+    const double scale = 1e-14;
+    Mat A = cv::Mat_<double>({3, 1}, {3, 1, 2});
+    Mat B = cv::Mat_<double>({3, 4}, {1, 1, 3, 30 * scale,
+                                      2, 2, 5, 24 * scale,
+                                      4, 1, 2, 36 * scale});
+    Mat z;
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({3, 1}, {8 * scale, 4 * scale, 0});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12 * scale);
+}
+
+// A negative right-hand side makes solveLP start with Phase I. The objective is parallel to
+// the first constraint, so the optimal points are z = (t, 3 - 3t) for 0 <= t <= 0.9.
+TEST(Core_LPSolver, negative_rhs_restore_cancellation)
+{
+    Mat A = cv::Mat_<double>({2, 1}, {-3., -1.});
+    Mat B = cv::Mat_<double>({3, 3}, {
+        -3., -1., -3.,
+        -2., -4., -3.,
+         1.,  2.,  6.
+    });
+    Mat z;
+    ASSERT_EQ(SOLVELP_MULTI, cv::solveLP(A, B, z));
+    ASSERT_EQ(2, z.rows);
+    const double t = z.at<double>(0);
+    EXPECT_GE(t, -1e-12);
+    EXPECT_LE(t, 0.9 + 1e-12);
+    EXPECT_NEAR(3 - 3 * t, z.at<double>(1), 1e-12);
+}
+
+// x1 must be 0 and x2 >= 2/3, so the optimum is unique: z = (0, 2/3), objective -8/3.
+// Phase I ends with its auxiliary variable basic at 0 and a 0 in the first column of its row.
+TEST(Core_LPSolver, phase1_auxiliary_basic_at_zero)
+{
+    Mat A = cv::Mat_<double>({2, 1}, {1., -4.});
+    Mat B = cv::Mat_<double>({2, 3}, {
+        -4., -3., -2.,
+         2.,  0.,  0.
+    });
+    Mat z;
+    ASSERT_EQ(SOLVELP_SINGLE, cv::solveLP(A, B, z));
+    Mat etalon_z = cv::Mat_<double>({2, 1}, {0., 2. / 3});
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 }
 
 }} // namespace

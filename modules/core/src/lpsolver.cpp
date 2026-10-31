@@ -41,6 +41,7 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
+#include <cmath>
 
 #define dprintf(x)
 #define print_matrix(x)
@@ -162,6 +163,16 @@ int solveLP(InputArray Func, InputArray Constr, OutputArray z)
     return solveLP(Func, Constr, z, 1e-12);
 }
 
+// Returns a-b, or exactly 0 when the result is only rounding noise of the operands.
+// The simplex logic compares tableau entries with exactly 0, so the noise that a cancellation
+// leaves behind would be taken as a real value. The threshold is relative to the operands,
+// so it does not depend on the scale of the problem.
+static inline double sub_snap_zero(double a,double b){
+    const double rel_eps=1e-12;
+    double d=a-b;
+    return std::abs(d)<=rel_eps*std::max(std::abs(a),std::abs(b))?0.0:d;
+}
+
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
     N.resize(c.cols);
     N[0]=0;
@@ -224,7 +235,14 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
-        pivot(c,b,v,N,B,iterator_offset,0,indexToRow);
+        // x0 is basic at 0: pivot it out on the largest entry of its row, since a given entry may be 0.
+        int entering_index=0;
+        for(int j=1;j<b.cols-1;j++){
+            if(std::abs(b(iterator_offset,j))>std::abs(b(iterator_offset,entering_index))){
+                entering_index=j;
+            }
+        }
+        pivot(c,b,v,N,B,iterator_offset,entering_index,indexToRow);
     }
 
     vector<int>::iterator iterator;
@@ -247,13 +265,16 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
-            c(0,iterator_offset)+=old_c(0,I);
+            c(0,iterator_offset)=sub_snap_zero(c(0,iterator_offset),-old_c(0,I));
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
             int iterator_offset=indexToRow[I]-nsize;
-            c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
-            v+=old_c(0,I)*b(iterator_offset,b.cols-1);
+            double coef=old_c(0,I);
+            for(int j=0;j<c.cols;j++){
+                c(0,j)=sub_snap_zero(c(0,j),coef*b(iterator_offset,j));
+            }
+            v+=coef*b(iterator_offset,b.cols-1);
             print_matrix(c);
         }
     }
@@ -349,7 +370,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
                 if(j==entering_index){
                     b(i,j)=-coef*b(leaving_index,j);
                 }else{
-                    b(i,j)-=(coef*b(leaving_index,j));
+                    b(i,j)=sub_snap_zero(b(i,j),coef*b(leaving_index,j));
                 }
             }
         }
@@ -361,7 +382,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         if(i==entering_index){
             c(0,i)=-Coef*b(leaving_index,i);
         }else{
-            c(0,i)-=Coef*b(leaving_index,i);
+            c(0,i)=sub_snap_zero(c(0,i),Coef*b(leaving_index,i));
         }
     }
     dprintf(("v was %g\n",v));
