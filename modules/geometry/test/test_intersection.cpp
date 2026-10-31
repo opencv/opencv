@@ -469,6 +469,72 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_18520)
     }
 }
 
+TEST(Imgproc_RotatedRectangleIntersection, regression_large_disjoint_rectangles)
+{
+    const RotatedRect r1(
+        Point2f(0, 0),
+        Size2f(10000000.f, 10000000.f),
+        0);
+    const RotatedRect r2(
+        Point2f(11000000.f, 0),
+        Size2f(10000000.f, 10000000.f),
+        0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_NONE, interType);
+    EXPECT_TRUE(intersections.empty());
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_large_partial_rectangles)
+{
+    const RotatedRect r1(Point2f(0, 0), Size2f(10000000.f, 10000000.f), 0);
+    const RotatedRect r2(Point2f(5000000.f, 0), Size2f(10000000.f, 10000000.f), 0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_EQ((size_t)4, intersections.size());
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_large_touching_rectangles)
+{
+    const RotatedRect r1(Point2f(0, 0), Size2f(10000000.f, 10000000.f), 0);
+    const RotatedRect r2(Point2f(10000000.f, 0), Size2f(10000000.f, 10000000.f), 0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_EQ((size_t)2, intersections.size());
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_small_disjoint_rectangles)
+{
+    const RotatedRect r1(Point2f(0, 0), Size2f(1e-7f, 1e-7f), 0);
+    const RotatedRect r2(Point2f(2e-7f, 0), Size2f(1e-7f, 1e-7f), 0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_NONE, interType);
+    EXPECT_TRUE(intersections.empty());
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_tiny_disjoint_rectangles)
+{
+    const RotatedRect r1(Point2f(0, 0), Size2f(1e-9f, 1e-9f), 0);
+    const RotatedRect r2(Point2f(2e-9f, 0), Size2f(1e-9f, 1e-9f), 0);
+
+    std::vector<Point2f> intersections;
+    const int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+
+    EXPECT_EQ(INTERSECT_NONE, interType);
+    EXPECT_TRUE(intersections.empty());
+}
+
 TEST(Imgproc_RotatedRectangleIntersection, regression_19824)
 {
     RotatedRect r1(
