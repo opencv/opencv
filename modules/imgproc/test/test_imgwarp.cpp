@@ -1425,6 +1425,69 @@ TEST_P(Imgproc_GetRectSubPix_Border, regression_30301)
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_GetRectSubPix_Border, testing::Values(
     testing::make_tuple(CV_8U, CV_8U), testing::make_tuple(CV_8U, CV_32F), testing::make_tuple(CV_32F, CV_32F)));
 
+typedef testing::TestWithParam<int> Imgproc_WarpAffine_Regression_30459;
+
+TEST_P(Imgproc_WarpAffine_Regression_30459, accuracy)
+{
+    const int depth = GetParam();
+    Mat base(480, 640, CV_8UC1);
+    randu(base, 0, 120);
+    double m[] = { 0.877, 0.2025, -1.5, -0.2025, 0.877, 6.2 };
+    Mat M(2, 3, CV_64F, m), ref;
+    warpAffine(base, ref, M, base.size(), INTER_NEAREST);
+
+    Mat src, dst, dst8u;
+    base.convertTo(src, depth);
+    warpAffine(src, dst, M, base.size(), INTER_NEAREST);
+    dst.convertTo(dst8u, CV_8U);
+    EXPECT_EQ(0, countNonZero(dst8u != ref))
+        << "Failed for depth " << typeToString(src.type());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_WarpAffine_Regression_30459, testing::Values(
+    CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F));
+
+typedef testing::TestWithParam<testing::tuple<int, int> > Imgproc_WarpAffine_NearestConsistency;
+
+TEST_P(Imgproc_WarpAffine_NearestConsistency, accuracy)
+{
+    const int cn = testing::get<0>(GetParam());
+    const int depth = testing::get<1>(GetParam());
+
+    const Size srcSize(120, 80);
+    const Size dstSize(130, 90);
+
+    Mat base(srcSize, CV_32SC1);
+    for (int y = 0; y < base.rows; y++)
+        for (int x = 0; x < base.cols; x++)
+            base.at<int>(y, x) = 1 + ((x * 7 + y * 13) % 80);
+
+    Mat M = getRotationMatrix2D(Point2f(60.f, 40.f), 13.7, 1.0);
+    M.at<double>(0, 2) += 5.3;
+    M.at<double>(1, 2) += -3.2;
+
+    std::vector<Mat> planes(cn);
+    for (int c = 0; c < cn; c++)
+        planes[c] = base + c * 10;
+    Mat srcInt;
+    merge(planes, srcInt);
+
+    Mat srcRef;
+    srcInt.convertTo(srcRef, CV_MAKETYPE(CV_32F, cn));
+    Mat dstRef;
+    warpAffine(srcRef, dstRef, M, dstSize, INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
+
+    Mat src, dst, dstF;
+    srcInt.convertTo(src, CV_MAKETYPE(depth, cn));
+    warpAffine(src, dst, M, dstSize, INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
+    dst.convertTo(dstF, CV_MAKETYPE(CV_32F, cn));
+    EXPECT_EQ(0.0, cv::norm(dstRef, dstF, NORM_INF))
+        << "Failed for depth " << typeToString(src.type());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_WarpAffine_NearestConsistency, testing::Combine(
+    testing::Values(1, 2, 3, 4),
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_64F)));
 
 }} // namespace
 /* End of file. */
