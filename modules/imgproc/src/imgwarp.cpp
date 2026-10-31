@@ -72,6 +72,100 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
     return (ImgWarpFunc)nullptr;
 }
 
+// Rows [range.start, range.end) of genericWarp(); Mrows is 2 or 3 for a warp and 0 for a remap.
+static void genericWarpRows(const Mat& src, const Matx33f& M, int Mrows, const Mat& mapx, const Mat& mapy,
+                            Mat& dst, ImgWarpFunc func, int borderType, const uint8_t* borderValBuf,
+                            bool relativeMap_, const Range& range)
+{
+    constexpr float FIXPT_SCALE = 1.f/32;
+    constexpr int BLOCK_SIZE = 128;
+    const uint8_t* srcdata = src.data;
+    const float* fparams = nullptr;
+    size_t srcstep = src.step;
+    Size srcsize = src.size();
+    int dstcols = dst.cols;
+    size_t bpp = src.elemSize();
+
+    bool warping = Mrows != 0;
+    bool warpAffine = Mrows == 2;
+    bool warpPerspective = Mrows == 3;
+
+    bool relativeMap = relativeMap_ && !warping;
+    float relscale = relativeMap ? 1.f : 0.f;
+    bool interleavedmap = !warping && (mapx.type() == CV_32FC2);
+    bool planarmap = !warping && (mapx.type() == mapy.type());
+    bool fixedmap = !warping && (mapx.type() == CV_16SC2);
+
+    CV_Assert(warping || interleavedmap || planarmap || fixedmap);
+
+    float M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
+    float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
+    const float* xbufptr = xbuf;
+    const float* ybufptr = ybuf;
+
+    for (int y = range.start; y < range.end; y++) {
+        uint8_t* dstptr = dst.ptr(y);
+        float M_x = float(y)*M(0, 1) + M(0, 2);
+        float M_y = float(y)*M(1, 1) + M(1, 2);
+        float M_z = float(y)*M(2, 1) + M(2, 2);
+        const Vec2s* xysptr = fixedmap ? mapx.ptr<Vec2s>(y) : nullptr;
+        const ushort* idxptr = fixedmap ? mapy.ptr<ushort>(y) : nullptr;
+        const Vec2f* xyfptr = interleavedmap ? mapx.ptr<Vec2f>(y) : nullptr;
+        const float* xfptr = planarmap ? mapx.ptr<float>(y) : nullptr;
+        const float* yfptr = planarmap ? mapy.ptr<float>(y) : nullptr;
+        float y0 = relativeMap ? float(y) : 0.f;
+
+        for (int x = 0; x < dstcols; x += BLOCK_SIZE) {
+            int blocksize = std::min(BLOCK_SIZE, dstcols - x);
+            if (warpAffine) {
+                for (int dx = 0; dx < blocksize; dx++) {
+                    float xf = float(x + dx);
+                    xbuf[dx] = M_x + M_xx*xf;
+                    ybuf[dx] = M_y + M_yx*xf;
+                }
+            } else if (warpPerspective) {
+                for (int dx = 0; dx < blocksize; dx++) {
+                    double xf = double(x + dx);
+                    double invz = 1./(M_z + M_zx*xf);
+                    xbuf[dx] = float((M_x + M_xx*xf)*invz);
+                    ybuf[dx] = float((M_y + M_yx*xf)*invz);
+                }
+            } else if (fixedmap) {
+                for (int dx = 0; dx < blocksize; dx++) {
+                    Vec2s xy = xysptr[x + dx];
+                    ushort idx = idxptr[x + dx];
+                    float xf = float(xy[0]) + (idx & 31)*FIXPT_SCALE + (x + dx)*relscale;
+                    float yf = float(xy[1]) + ((idx >> 5) & 31)*FIXPT_SCALE + y0;
+                    xbuf[dx] = xf;
+                    ybuf[dx] = yf;
+                }
+            } else if (interleavedmap) {
+                for (int dx = 0; dx < blocksize; dx++) {
+                    Vec2f xy = xyfptr[x + dx];
+                    float xf = xy[0] + (x + dx)*relscale;
+                    float yf = xy[1] + y0;
+                    xbuf[dx] = xf;
+                    ybuf[dx] = yf;
+                }
+            } else if (relativeMap) {
+                for (int dx = 0; dx < blocksize; dx++) {
+                    float xf = xfptr[x + dx] + (x + dx)*relscale;
+                    float yf = yfptr[x + dx] + y0;
+                    xbuf[dx] = xf;
+                    ybuf[dx] = yf;
+                }
+            } else {
+                // planar absolute map — just use it as-is without copying
+                xbufptr = xfptr + x;
+                ybufptr = yfptr + x;
+            }
+
+            func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
+                 dstptr + x*bpp, fparams, borderType, borderValBuf);
+        }
+    }
+}
+
 static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Mat& mapy, Mat& dst,
                         int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
 {
@@ -115,97 +209,10 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
     int64_t borderValBuf_[MAX_CHANNELS];
     scalarToRawData(borderValue, borderValBuf_, src.type());
 
+    const int Mrows = M_.empty() ? 0 : M_.rows;
     parallel_for_(Range(0, dst.rows), [&](const Range& range) {
-        constexpr float FIXPT_SCALE = 1.f/32;
-        constexpr int BLOCK_SIZE = 128;
-        const uint8_t* srcdata = src.data;
-        const float* fparams = nullptr;
-        size_t srcstep = src.step;
-        Size srcsize = src.size();
-        int dstcols = dst.cols;
-        int borderType = borderType_;
-        size_t bpp = src.elemSize();
-
-        bool warping = !M_.empty();
-        bool warpAffine = warping && M_.rows == 2;
-        bool warpPerspective = warping && M_.rows == 3;
-
-        bool relativeMap = relativeMap_ && !warping;
-        float relscale = relativeMap ? 1.f : 0.f;
-        bool interleavedmap = !warping && (mapx.type() == CV_32FC2);
-        bool planarmap = !warping && (mapx.type() == mapy.type());
-        bool fixedmap = !warping && (mapx.type() == CV_16SC2);
-
-        CV_Assert(warping || interleavedmap || planarmap || fixedmap);
-
-        Matx33f M = Mdata;
-        const uint8_t* borderValBuf = (const uint8_t*)borderValBuf_;
-        float M_xx = M(0, 0), M_yx = M(1, 0), M_zx = M(2, 0);
-        float xbuf[BLOCK_SIZE], ybuf[BLOCK_SIZE];
-        const float* xbufptr = xbuf;
-        const float* ybufptr = ybuf;
-
-        for (int y = range.start; y < range.end; y++) {
-            uint8_t* dstptr = dst.ptr(y);
-            float M_x = float(y)*M(0, 1) + M(0, 2);
-            float M_y = float(y)*M(1, 1) + M(1, 2);
-            float M_z = float(y)*M(2, 1) + M(2, 2);
-            const Vec2s* xysptr = fixedmap ? mapx.ptr<Vec2s>(y) : nullptr;
-            const ushort* idxptr = fixedmap ? mapy.ptr<ushort>(y) : nullptr;
-            const Vec2f* xyfptr = interleavedmap ? mapx.ptr<Vec2f>(y) : nullptr;
-            const float* xfptr = planarmap ? mapx.ptr<float>(y) : nullptr;
-            const float* yfptr = planarmap ? mapy.ptr<float>(y) : nullptr;
-            float y0 = relativeMap ? float(y) : 0.f;
-
-            for (int x = 0; x < dstcols; x += BLOCK_SIZE) {
-                int blocksize = std::min(BLOCK_SIZE, dstcols - x);
-                if (warpAffine) {
-                    for (int dx = 0; dx < blocksize; dx++) {
-                        float xf = float(x + dx);
-                        xbuf[dx] = M_x + M_xx*xf;
-                        ybuf[dx] = M_y + M_yx*xf;
-                    }
-                } else if (warpPerspective) {
-                    for (int dx = 0; dx < blocksize; dx++) {
-                        double xf = double(x + dx);
-                        double invz = 1./(M_z + M_zx*xf);
-                        xbuf[dx] = float((M_x + M_xx*xf)*invz);
-                        ybuf[dx] = float((M_y + M_yx*xf)*invz);
-                    }
-                } else if (fixedmap) {
-                    for (int dx = 0; dx < blocksize; dx++) {
-                        Vec2s xy = xysptr[x + dx];
-                        ushort idx = idxptr[x + dx];
-                        float xf = float(xy[0]) + (idx & 31)*FIXPT_SCALE + (x + dx)*relscale;
-                        float yf = float(xy[1]) + ((idx >> 5) & 31)*FIXPT_SCALE + y0;
-                        xbuf[dx] = xf;
-                        ybuf[dx] = yf;
-                    }
-                } else if (interleavedmap) {
-                    for (int dx = 0; dx < blocksize; dx++) {
-                        Vec2f xy = xyfptr[x + dx];
-                        float xf = xy[0] + (x + dx)*relscale;
-                        float yf = xy[1] + y0;
-                        xbuf[dx] = xf;
-                        ybuf[dx] = yf;
-                    }
-                } else if (relativeMap) {
-                    for (int dx = 0; dx < blocksize; dx++) {
-                        float xf = xfptr[x + dx] + (x + dx)*relscale;
-                        float yf = yfptr[x + dx] + y0;
-                        xbuf[dx] = xf;
-                        ybuf[dx] = yf;
-                    }
-                } else {
-                    // planar absolute map — just use it as-is without copying
-                    xbufptr = xfptr + x;
-                    ybufptr = yfptr + x;
-                }
-
-                func(xbufptr, ybufptr, blocksize, srcdata, srcstep, srcsize,
-                     dstptr + x*bpp, fparams, borderType, borderValBuf);
-            }
-        }
+        genericWarpRows(src, Mdata, Mrows, mapx, mapy, dst, func, borderType_,
+                        (const uint8_t*)borderValBuf_, relativeMap_, range);
     });
 
     return true;
@@ -2247,54 +2254,60 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
-namespace hal {
+namespace {
 
-static void warpAffine(int src_type,
-                       const uchar * src_data, size_t src_step, int src_width, int src_height,
-                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                       const double M[6], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
+enum { WARP_OP_AFFINE = 0, WARP_OP_PERSPECTIVE = 1 };
+
+// Types and interpolations the SIMD row kernels of warp_kernels.simd.hpp cover.
+bool hasWarpKernel(int type, int interpolation)
 {
-    CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    return (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR) &&
+           (depth == CV_8U || depth == CV_16U || depth == CV_32F) && (cn == 1 || cn == 3 || cn == 4);
+}
 
-    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
-    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
-
+void warpAffineKernel(int src_type,
+                      const uchar * src_data, size_t src_step, int src_width, int src_height,
+                      uchar * dst_data, size_t dst_step, int dst_width,
+                      const double M[6], int interpolation, int borderType, const double borderValue[4],
+                      AlgorithmHint hint, const Range& range)
+{
     if (interpolation == INTER_NEAREST) {
         switch (src_type) {
             case CV_8UC1: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_8UC3: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_8UC4: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC1: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC3: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC4: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC1: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC3: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
-                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             // no default
@@ -2305,73 +2318,496 @@ static void warpAffine(int src_type,
         switch (src_type) {
             case CV_8UC1: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 } else {
-                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 }
                 break;
             }
             case CV_8UC3: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 } else {
-                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 }
                 break;
             }
             case CV_8UC4: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 } else {
-                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 }
                 break;
             }
             case CV_16UC1: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC3: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC4: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC1: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC3: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
-                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             // no default
         }
     }
+}
 
-    int x;
-    AutoBuffer<int> _abdelta(dst.cols*2);
-    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
+void warpPerspectiveKernel(int src_type,
+                           const uchar * src_data, size_t src_step, int src_width, int src_height,
+                           uchar * dst_data, size_t dst_step, int dst_width,
+                           const double M[9], int interpolation, int borderType, const double borderValue[4],
+                           AlgorithmHint hint, const Range& range);
 
-    for( x = 0; x < dst.cols; x++ )
+// One image of a batch; M is its inverse map (dst -> src).
+struct WarpItem
+{
+    const double* M;
+    const uchar* srcData;
+    size_t srcStep;
+    Size ssize;
+    uchar* dstData;
+    size_t dstStep;
+    Size dsize;
+    int firstRow;   // first dst row in the batch-wide row list
+};
+
+// State shared by all images of a call; the kernel depends on type and interpolation, not on M.
+class WarpKernel
+{
+public:
+    WarpKernel(int op, int type, int interpolation, int borderType, const Scalar& borderValue,
+               AlgorithmHint hint);
+
+    // Fills dst rows of one image serially.
+    void run(const WarpItem& it, const Range& rows) const;
+
+    // False when the HAL does not take the image.
+    bool callHal(const WarpItem& it) const;
+
+    // Cubic goes through genericWarp() before the HAL, as for a single image.
+    bool usesHal() const;
+
+    // nstripes the kernel used for a single image.
+    double stripes(Size dsize) const { return kind == KIND_BLOCK ? dsize.area()/(double)(1 << 16) : -1.; }
+
+private:
+    enum Kind { KIND_GENERIC, KIND_SIMD, KIND_BLOCK };
+
+    Kind kind;
+    int op, type, interpolation, borderType;
+    Scalar borderValue;
+    AlgorithmHint hint;
+    ImgWarpFunc genericFunc;
+    int64_t borderBuf[4];
+};
+
+WarpKernel::WarpKernel(int _op, int _type, int _interpolation, int _borderType,
+                       const Scalar& _borderValue, AlgorithmHint _hint)
+    : op(_op), type(_type), interpolation(_interpolation), borderType(_borderType),
+      borderValue(_borderValue), hint(_hint), genericFunc(getImgWarpFunc(_type, _interpolation)),
+      borderBuf()
+{
+    if (genericFunc)
     {
-        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
-        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
+        CV_Assert(CV_MAT_CN(type) <= 4);
+        scalarToRawData(borderValue, borderBuf, type);
+        kind = KIND_GENERIC;
+    }
+    else
+        kind = hasWarpKernel(type, interpolation) ? KIND_SIMD : KIND_BLOCK;
+}
+
+bool WarpKernel::usesHal() const
+{
+    // the default entries are inline stubs, so this folds to false without a HAL
+    const bool installed = op == WARP_OP_AFFINE ? &cv_hal_warpAffine != &hal_ni_warpAffine
+                                                : &cv_hal_warpPerspective != &hal_ni_warpPerspective;
+    return installed && kind != KIND_GENERIC;
+}
+
+bool WarpKernel::callHal(const WarpItem& it) const
+{
+    int res = op == WARP_OP_AFFINE
+        ? cv_hal_warpAffine(type, it.srcData, it.srcStep, it.ssize.width, it.ssize.height, it.dstData, it.dstStep,
+                            it.dsize.width, it.dsize.height, it.M, interpolation, borderType, borderValue.val)
+        : cv_hal_warpPerspective(type, it.srcData, it.srcStep, it.ssize.width, it.ssize.height, it.dstData, it.dstStep,
+                                 it.dsize.width, it.dsize.height, it.M, interpolation, borderType, borderValue.val);
+    if (res == CV_HAL_ERROR_OK)
+        return true;
+    if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation of warp returned %d (0x%08x)", res, res));
+    return false;
+}
+
+bool rowBeforeItem(int row, const WarpItem& item)
+{
+    return row < item.firstRow;
+}
+
+// Chunks are cut from the dst rows of all images as one list, so a chunk may span several images.
+class WarpBatchInvoker : public ParallelLoopBody
+{
+public:
+    WarpBatchInvoker(const WarpKernel& _kernel, const WarpItem* _items, size_t _count)
+        : kernel(_kernel), items(_items), count(_count) {}
+
+    void operator()(const Range& chunk) const CV_OVERRIDE
+    {
+        size_t i = (size_t)(std::upper_bound(items, items + count, chunk.start, rowBeforeItem) - items) - 1;
+        for (; i < count && items[i].firstRow < chunk.end; i++)
+        {
+            const WarpItem& it = items[i];
+            kernel.run(it, Range(std::max(chunk.start - it.firstRow, 0),
+                                 std::min(chunk.end - it.firstRow, it.dsize.height)));
+        }
     }
 
-    Range range(0, dst.rows);
-    WarpAffineInvoker invoker(src, dst, interpolation, borderType,
-                              Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]),
-                              adelta, bdelta, M);
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+private:
+    const WarpKernel& kernel;
+    const WarpItem* items;
+    size_t count;
+};
+
+// done[i] records whether the HAL took image i.
+class WarpHalInvoker : public ParallelLoopBody
+{
+public:
+    WarpHalInvoker(const WarpKernel& _kernel, const WarpItem* _items, uchar* _done)
+        : kernel(_kernel), items(_items), done(_done) {}
+
+    void operator()(const Range& r) const CV_OVERRIDE
+    {
+        for (int i = r.start; i < r.end; i++)
+            done[i] = kernel.callHal(items[i]);
+    }
+
+private:
+    const WarpKernel& kernel;
+    const WarpItem* items;
+    uchar* done;
+};
+
+// The only parallel loop of a batch.
+void runWarp(const WarpKernel& kernel, std::vector<WarpItem>& items)
+{
+    if (kernel.usesHal())
+    {
+        // whole images per task; with fewer images than threads each call keeps the HAL's threading
+        const int n = (int)items.size();
+        std::vector<uchar> done(n, 0);
+        WarpHalInvoker hal(kernel, items.data(), done.data());
+        if (n >= getNumThreads())
+            parallel_for_(Range(0, n), hal);
+        else
+            hal(Range(0, n));
+        size_t k = 0;
+        for (int i = 0; i < n; i++)
+            if (!done[i])
+                items[k++] = items[i];
+        items.resize(k);
+    }
+    if (items.empty())
+        return;
+
+    int totalRows = 0;
+    double totalPixels = 0;
+    for (size_t i = 0; i < items.size(); i++)
+    {
+        CV_Assert((int64)totalRows + items[i].dsize.height <= INT_MAX);
+        items[i].firstRow = totalRows;
+        totalRows += items[i].dsize.height;
+        totalPixels += items[i].dsize.area();
+    }
+
+    // ~64K output pixels per chunk, but at least 4 chunks per thread
+    double nstripes = kernel.stripes(items[0].dsize);
+    if (items.size() > 1)
+        nstripes = std::min((double)totalRows, std::max(totalPixels/(double)(1 << 16), 4.0*getNumThreads()));
+    parallel_for_(Range(0, totalRows), WarpBatchInvoker(kernel, items.data(), items.size()), nstripes);
+}
+
+void invertAffine(double* M)
+{
+    double D = M[0]*M[4] - M[1]*M[3];
+    D = D != 0 ? 1./D : 0;
+    double A11 = M[4]*D, A22=M[0]*D;
+    M[0] = A11; M[1] *= -D;
+    M[3] *= -D; M[4] = A22;
+    double b1 = -M[0]*M[2] - M[1]*M[5];
+    double b2 = -M[3]*M[2] - M[4]*M[5];
+    M[2] = b1; M[5] = b2;
+}
+
+template<typename T>
+void readWarpMatrix(const uchar* data, size_t step, int Mrows, double* dst)
+{
+    for (int i = 0; i < Mrows; i++, data += step)
+        for (int j = 0; j < 3; j++)
+            dst[i*3 + j] = (double)((const T*)data)[j];
+}
+
+// Reads matrices [r.start, r.end) as doubles, inverted on request.
+class WarpMatrixReader : public ParallelLoopBody
+{
+public:
+    WarpMatrixReader(int _op, const std::vector<Mat>* _mv, const Mat& _m, bool _stacked,
+                     bool _toInverse, double* _out)
+        : op(_op), mv(_mv), m(_m), stacked(_stacked), toInverse(_toInverse), out(_out) {}
+
+    void operator()(const Range& r) const CV_OVERRIDE
+    {
+        const int Mrows = op == WARP_OP_AFFINE ? 2 : 3, nM = Mrows*3;
+        for (int k = r.start; k < r.end; k++)
+        {
+            const Mat& src = mv ? (*mv)[k] : m;
+            const uchar* data = stacked ? m.data + (size_t)k*nM*m.elemSize1() : src.data;
+            const size_t step = stacked ? 3*m.elemSize1() : src.step[0];
+            double* M = out + (size_t)k*nM;
+            if (src.depth() == CV_64F)
+                readWarpMatrix<double>(data, step, Mrows, M);
+            else
+                readWarpMatrix<float>(data, step, Mrows, M);
+
+            if (!toInverse)
+                continue;
+            if (op == WARP_OP_AFFINE)
+                invertAffine(M);
+            else
+            {
+                Mat matM(3, 3, CV_64F, M);
+                invert(matM, matM);
+            }
+        }
+    }
+
+private:
+    int op;
+    const std::vector<Mat>* mv;
+    const Mat& m;
+    bool stacked;   // m holds K matrices back to back
+    bool toInverse;
+    double* out;
+};
+
+// One shared matrix or `count` stacked ones (vector<Mat>, K x R x 3 Mat, or the K x R 3-channel
+// Mat Python makes of a (K, R, 3) array), as doubles, optionally turned into inverse maps.
+std::vector<double> getWarpMatrices(int op, InputArray _M, int count, bool toInverse)
+{
+    const int Mrows = op == WARP_OP_AFFINE ? 2 : 3, nM = Mrows*3;
+    const std::vector<Mat>* mv = _M.isMatVector() ? (const std::vector<Mat>*)_M.getObj() : 0;
+    Mat m;
+    int K;
+    bool stacked = false;
+    if (mv)
+    {
+        K = (int)mv->size();
+        for (int k = 0; k < K; k++)
+        {
+            const Mat& mk = (*mv)[k];
+            CV_Assert((mk.type() == CV_32F || mk.type() == CV_64F) && mk.rows == Mrows && mk.cols == 3);
+        }
+    }
+    else
+    {
+        m = _M.getMat();
+        const bool single = m.dims == 2 && m.channels() == 1 && m.rows == Mrows && m.cols == 3;
+        stacked = !single && ((m.dims == 3 && m.channels() == 1 && m.size[1] == Mrows && m.size[2] == 3) ||
+                              (m.dims == 2 && m.channels() == 3 && m.cols == Mrows));
+        CV_CheckTrue(single || stacked, "M must be one transformation matrix or a stack of them, one per image");
+        CV_Assert(m.depth() == CV_32F || m.depth() == CV_64F);
+        if (stacked && !m.isContinuous())
+            m = m.clone();
+        K = single ? 1 : m.size[0];
+    }
+    CV_CheckTrue(K == 1 || K == count, "M must hold one transformation matrix, or one per image");
+
+    // ~64 matrices per task, so a few are read inline
+    std::vector<double> Ms((size_t)K*nM);
+    parallel_for_(Range(0, K), WarpMatrixReader(op, mv, m, stacked, toInverse, Ms.data()), K/64.);
+    return Ms;
+}
+
+// (N, H, W) tensor with channels in the type; matrix k applies to image k.
+void warpTensorBatch(const WarpKernel& kernel, const Mat& _src, OutputArray _dst,
+                     const std::vector<double>& Ms, int nM, Size dsize)
+{
+    const int N = _src.size[0];
+    const Size ssize(_src.size[2], _src.size[1]);
+    CV_Assert(N > 0 && !ssize.empty());
+    if (dsize.empty())
+        dsize = ssize;
+    CV_Assert((int64)N * dsize.height <= INT_MAX);
+    const bool shared = Ms.size() == (size_t)nM;
+
+    const int dstShape[] = { N, dsize.height, dsize.width };
+    _dst.create(3, dstShape, _src.type());
+    Mat dst = _dst.getMat();
+    Mat src = _src;
+    if (dst.data == src.data)
+        src = src.clone();
+
+    std::vector<WarpItem> items(N);
+    for (int n = 0; n < N; n++)
+    {
+        WarpItem& it = items[n];
+        it.M = &Ms[shared ? 0 : (size_t)n*nM];
+        it.srcData = src.ptr(n);
+        it.srcStep = src.step[1];
+        it.ssize = ssize;
+        it.dstData = dst.ptr(n);
+        it.dstStep = dst.step[1];
+        it.dsize = dsize;
+    }
+    runWarp(kernel, items);
+}
+
+// vector<Mat> batch: the elements may differ in size; an empty dsize keeps each one's own.
+void warpMatVectorBatch(const WarpKernel& kernel, const std::vector<Mat>& srcs, OutputArray _dst,
+                        const std::vector<double>& Ms, int nM, Size dsize)
+{
+    const size_t n = srcs.size();
+    CV_Assert((int64)n <= INT_MAX);
+    const int type = srcs[0].type();
+    const bool shared = Ms.size() == (size_t)nM;
+
+    _dst.create((int)n, 1, 0);
+    // avoids an out-of-line getMatRef() call per element
+    std::vector<Mat>* dstv = _dst.kind() == _InputArray::STD_VECTOR_MAT
+                           ? (std::vector<Mat>*)_dst.getObj() : 0;
+
+    std::vector<WarpItem> items(n);
+    std::vector<Mat> clones;   // sources whose dst shares their pixels
+    for (size_t i = 0; i < n; i++)
+    {
+        const Mat* src = &srcs[i];
+        CV_Assert(src->dims == 2 && !src->empty() && src->type() == type);
+        const Size dsz = dsize.empty() ? src->size() : dsize;
+        Mat& dst = dstv ? (*dstv)[i] : _dst.getMatRef((int)i);
+        dst.create(dsz, type);
+        if (dst.data == src->data)
+        {
+            clones.push_back(src->clone());
+            src = &clones.back();
+        }
+
+        WarpItem& it = items[i];
+        it.M = &Ms[shared ? 0 : i*nM];
+        it.srcData = src->data;
+        it.srcStep = src->step;
+        it.ssize = src->size();
+        it.dstData = dst.data;
+        it.dstStep = dst.step;
+        it.dsize = dsz;
+    }
+    runWarp(kernel, items);
+}
+
+// Entry point for every batch kind: (N, H, W) tensors, vector<Mat> and vector<UMat>.
+void warpBatch(int op, InputArray _src, OutputArray _dst, InputArray _M, Size dsize,
+               int flags, int borderType, const Scalar& borderValue, AlgorithmHint hint)
+{
+    const int Mrows = op == WARP_OP_AFFINE ? 2 : 3, nM = Mrows*3;
+
+    if (_src.isUMatVector())
+    {
+        // UMat elements go one at a time through the OpenCL path
+        std::vector<UMat> srcs;
+        _src.getUMatVector(srcs);
+        CV_Assert(!srcs.empty());
+        std::vector<double> Ms = getWarpMatrices(op, _M, (int)srcs.size(), false);
+        const bool shared = Ms.size() == (size_t)nM;
+        _dst.create((int)srcs.size(), 1, 0);
+        for (size_t i = 0; i < srcs.size(); i++)
+        {
+            Mat Mi(Mrows, 3, CV_64F, &Ms[shared ? 0 : i*nM]);
+            if (op == WARP_OP_AFFINE)
+                warpAffine(srcs[i], _dst.getUMatRef((int)i), Mi, dsize, flags, borderType, borderValue, hint);
+            else
+                warpPerspective(srcs[i], _dst.getUMatRef((int)i), Mi, dsize, flags, borderType, borderValue, hint);
+        }
+        return;
+    }
+
+    int interpolation = flags & INTER_MAX;
+    if (interpolation == INTER_AREA)
+        interpolation = INTER_LINEAR;
+
+    // copy the headers only when src is also dst, whose create() could free a source
+    std::vector<Mat> srcCopy;
+    const std::vector<Mat>* srcs = 0;
+    Mat src;
+    if (_src.isMatVector())
+    {
+        if (_src.getObj() == _dst.getObj())
+        {
+            _src.getMatVector(srcCopy);
+            srcs = &srcCopy;
+        }
+        else
+            srcs = (const std::vector<Mat>*)_src.getObj();
+        CV_Assert(!srcs->empty());
+    }
+    else
+    {
+        src = _src.getMat();
+        CV_Assert(src.dims == 3);
+    }
+    const int type = srcs ? (*srcs)[0].type() : src.type();
+    CV_Assert(CV_MAT_CN(type) <= 4 || (interpolation != INTER_LANCZOS4 && interpolation != INTER_CUBIC));
+
+    const std::vector<double> Ms = getWarpMatrices(op, _M, srcs ? (int)srcs->size() : src.size[0],
+                                                     !(flags & WARP_INVERSE_MAP));
+    const WarpKernel kernel(op, type, interpolation, borderType, borderValue, hint);
+    if (srcs)
+        warpMatVectorBatch(kernel, *srcs, _dst, Ms, nM, dsize);
+    else
+        warpTensorBatch(kernel, src, _dst, Ms, nM, dsize);
+}
+
+// One image, after the caller's HAL call.
+void warpSingle(int op, int src_type,
+                const uchar * src_data, size_t src_step, int src_width, int src_height,
+                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                const double* M, int interpolation, int borderType, const double borderValue[4],
+                AlgorithmHint hint)
+{
+    const WarpKernel kernel(op, src_type, interpolation, borderType,
+                            Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]), hint);
+    const WarpItem it = { M, src_data, src_step, Size(src_width, src_height),
+                          dst_data, dst_step, Size(dst_width, dst_height), 0 };
+    parallel_for_(Range(0, dst_height), WarpBatchInvoker(kernel, &it, 1), kernel.stripes(it.dsize));
+}
+
+} // namespace
+
+namespace hal {
+
+static void warpAffine(int src_type,
+                       const uchar * src_data, size_t src_step, int src_width, int src_height,
+                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                       const double M[6], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
+{
+    CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    warpSingle(WARP_OP_AFFINE, src_type, src_data, src_step, src_width, src_height,
+               dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue, hint);
 }
 
 CV_DISABLE_UBSAN
@@ -2472,7 +2908,13 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
-    CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
+    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() == 3)
+    {
+        warpBatch(WARP_OP_AFFINE, _src, _dst, _M0, dsize, flags, borderType, borderValue, hint);
+        return;
+    }
+    CV_CheckLE(_src.dims(), 2, "N-D input is ambiguous (NCHW vs NHWC); pass an (N, H, W) batch with channels in the type, "
+                               "e.g. cv.Mat(batch, wrap_channels=True) from Python, or a vector of images");
 
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
@@ -2503,16 +2945,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     M0.convertTo(matM, matM.type());
 
     if( !(flags & WARP_INVERSE_MAP) )
-    {
-        double D = M[0]*M[4] - M[1]*M[3];
-        D = D != 0 ? 1./D : 0;
-        double A11 = M[4]*D, A22=M[0]*D;
-        M[0] = A11; M[1] *= -D;
-        M[3] *= -D; M[4] = A22;
-        double b1 = -M[0]*M[2] - M[1]*M[5];
-        double b2 = -M[3]*M[2] - M[4]*M[5];
-        M[2] = b1; M[5] = b2;
-    }
+        invertAffine(M);
 
     if (genericWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
         return;
@@ -2840,51 +3273,50 @@ private:
     Scalar borderValue;
 };
 
-namespace hal {
+namespace {
 
-static void warpPerspective(int src_type,
-                    const uchar * src_data, size_t src_step, int src_width, int src_height,
-                    uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                    const double M[9], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
+void warpPerspectiveKernel(int src_type,
+                           const uchar * src_data, size_t src_step, int src_width, int src_height,
+                           uchar * dst_data, size_t dst_step, int dst_width,
+                           const double M[9], int interpolation, int borderType, const double borderValue[4],
+                           AlgorithmHint hint, const Range& range)
 {
-    CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
-
     if (interpolation == INTER_NEAREST) {
         switch (src_type) {
             case CV_8UC1: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_8UC3: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_8UC4: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC1: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC3: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC4: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC1: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC3: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
-                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
         }
@@ -2894,65 +3326,122 @@ static void warpPerspective(int src_type,
         switch (src_type) {
             case CV_8UC1: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 } else {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
             }
             case CV_8UC3: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 } else {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
             }
             case CV_8UC4: {
                 if (hint == cv::ALGO_HINT_APPROX) {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 } else {
-                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                     break;
                 }
             }
             case CV_16UC1: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC3: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_16UC4: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC1: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC3: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             case CV_32FC4: {
-                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_width, M, borderType, borderValue, range), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
             // no default
         }
     }
+}
 
-    Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
-    Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+void WarpKernel::run(const WarpItem& it, const Range& rows) const
+{
+    if (rows.start >= rows.end)
+        return;
 
-    Range range(0, dst.rows);
-    WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]));
-    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+    // SIMD runs one row per call on a single image, so it skips the Mat headers
+    const double* M = it.M;
+    if (kind == KIND_SIMD)
+    {
+        if (op == WARP_OP_AFFINE)
+            warpAffineKernel(type, it.srcData, it.srcStep, it.ssize.width, it.ssize.height, it.dstData, it.dstStep,
+                             it.dsize.width, M, interpolation, borderType, borderValue.val, hint, rows);
+        else
+            warpPerspectiveKernel(type, it.srcData, it.srcStep, it.ssize.width, it.ssize.height, it.dstData, it.dstStep,
+                                  it.dsize.width, M, interpolation, borderType, borderValue.val, hint, rows);
+        return;
+    }
+
+    Mat src(it.ssize, type, const_cast<uchar*>(it.srcData), it.srcStep);
+    Mat dst(it.dsize, type, it.dstData, it.dstStep);
+    if (kind == KIND_GENERIC)
+    {
+        Matx33f Mf = Matx33f::eye();
+        for (int i = 0; i < (op == WARP_OP_AFFINE ? 6 : 9); i++)
+            Mf.val[i] = (float)M[i];
+        genericWarpRows(src, Mf, op == WARP_OP_AFFINE ? 2 : 3, Mat(), Mat(), dst, genericFunc,
+                        borderType, (const uint8_t*)borderBuf, false, rows);
+    }
+    else if (op == WARP_OP_AFFINE)
+    {
+        // per-column fixed-point source steps
+        const int AB_SCALE = 1 << MAX(10, (int)INTER_BITS);
+        AutoBuffer<int> abdelta(it.dsize.width*2);
+        int* adelta = abdelta.data(), *bdelta = adelta + it.dsize.width;
+        for (int x = 0; x < it.dsize.width; x++)
+        {
+            adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
+            bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
+        }
+        WarpAffineInvoker invoker(src, dst, interpolation, borderType, borderValue, adelta, bdelta, M);
+        invoker(rows);
+    }
+    else
+    {
+        WarpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
+        invoker(rows);
+    }
+}
+
+} // namespace
+
+namespace hal {
+
+static void warpPerspective(int src_type,
+                    const uchar * src_data, size_t src_step, int src_width, int src_height,
+                    uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                    const double M[9], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
+{
+    CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    warpSingle(WARP_OP_PERSPECTIVE, src_type, src_data, src_step, src_width, src_height,
+               dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue, hint);
 }
 
 void warpPerspectiveBlocklineNN(const double *M, short* xy, double X0, double Y0, double W0, int bw)
@@ -3035,7 +3524,13 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     if (hint == cv::ALGO_HINT_DEFAULT)
         hint = cv::getDefaultAlgorithmHint();
 
-    CV_CheckLE(_src.dims(), 2, "Only 2D images are supported, N-D input (e.g. a batch of images) must be processed image by image");
+    if (_src.isMatVector() || _src.isUMatVector() || _src.dims() == 3)
+    {
+        warpBatch(WARP_OP_PERSPECTIVE, _src, _dst, _M0, dsize, flags, borderType, borderValue, hint);
+        return;
+    }
+    CV_CheckLE(_src.dims(), 2, "N-D input is ambiguous (NCHW vs NHWC); pass an (N, H, W) batch with channels in the type, "
+                               "e.g. cv.Mat(batch, wrap_channels=True) from Python, or a vector of images");
 
     CV_Assert( _src.total() > 0 );
 
