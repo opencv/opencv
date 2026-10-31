@@ -81,6 +81,12 @@ CV_EXPORTS void gemm32fc(const float* src1, size_t src1_step, const float* src2,
 CV_EXPORTS void gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t src2_step,
                         double alpha, const double* src3, size_t src3_step, double beta, double* dst, size_t dst_step,
                         int m_a, int n_a, int n_d, int flags);
+/** @brief Generic matrix multiplication: calls gemm32f, gemm64f, gemm32fc or gemm64fc depending on type
+(CV_32FC1, CV_64FC1, CV_32FC2 or CV_64FC2). The other arguments are the same as in those functions.
+*/
+CV_EXPORTS void gemm(int type, const void* src1, size_t src1_step, const void* src2, size_t src2_step,
+                     double alpha, const void* src3, size_t src3_step, double beta, void* dst, size_t dst_step,
+                     int m_a, int n_a, int n_d, int flags);
 
 CV_EXPORTS int normL1_(const uchar* a, const uchar* b, int n);
 CV_EXPORTS float normL1_(const float* a, const float* b, int n);

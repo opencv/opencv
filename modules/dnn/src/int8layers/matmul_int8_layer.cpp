@@ -5,7 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-#include "../layers/cpu_kernels/fast_gemm.hpp"
+#include "../layers/cpu_kernels/gemm_dispatch.hpp"
 #include "matmul_int8_kernels.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>

@@ -10,7 +10,7 @@ typedef tuple<tuple<int, int, int>, MatType, GemmFlag> GemmTestParams_t;
 class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
 {
     public:
-    void runGemmTest(const GemmTestParams_t& params)
+    void runGemmTest(const GemmTestParams_t& params, bool checkSanity = true)
     {
         int M = get<0>(get<0>(params));
         int N = get<1>(get<0>(params));
@@ -26,7 +26,7 @@ class GemmTest : public perf::TestBaseWithParam<GemmTestParams_t>
 
         TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);
 
-        if (dst.total() * dst.channels() < 26)
+        if (!checkSanity || dst.total() * dst.channels() < 26)
             SANITY_CHECK_NOTHING();
         else
             SANITY_CHECK(dst, (CV_MAT_DEPTH(type) == CV_32F) ? 1e-4 : 1e-6, ERROR_RELATIVE);
@@ -112,6 +112,21 @@ PERF_TEST_P(GemmTest, gemmN1,
             ))
 {
     GemmTest::runGemmTest(GetParam());
+}
+
+PERF_TEST_P(GemmTest, gemmTransformer,
+            testing::Combine(
+                testing::Values(
+                    make_tuple(197, 576, 192),
+                    make_tuple(197, 768, 192),
+                    make_tuple(197, 192, 768),
+                    make_tuple(197, 197, 64)
+                ),
+                testing::Values(CV_32FC1),
+                testing::Values(0, (int)GEMM_2_T)
+            ))
+{
+    GemmTest::runGemmTest(GetParam(), false);
 }
 
 } // namespace

@@ -6,12 +6,13 @@
 
 #include "../precomp.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/flash_attention.hpp"
 
 namespace cv { namespace dnn {
 
 // Scaled-Dot-Product Attention on pre-projected Q, K^T, V. Fuses
 // QK^T -> [scale] -> softmax -> ·V -> Transpose -> Reshape into one
-// MlasFlashAttention call. Used by the SR-attention fusion pass.
+// flash attention call. Used by the SR-attention fusion pass.
 class SDPALayerImpl CV_FINAL : public SDPALayer {
 public:
     SDPALayerImpl(const LayerParams &params) {
@@ -44,7 +45,7 @@ public:
         CV_CheckEQ(v[1], H,     "DNN/SDPA: V heads");
 
         outputs.assign(1, MatShape{B, S_q, H * D_v});
-        // Scratch for K^T re-transposed to (B, H, S_kv, D).
+        // Scratch for K^T re-transposed to (B, H, S_kv, D); only the MLAS path uses it.
         internals.assign(1, MatShape{B * H * S_kv * D});
         return false;
     }
@@ -88,33 +89,33 @@ public:
         const int S_kv = V.size[2];
         const int D_v  = V.size[3];
 
-        // Re-transpose K^T (B,H,D,S_kv) -> K (B,H,S_kv,D) for MlasFlashAttention.
-        Mat &K = internals[0];
-        const float* kT_data = KT.ptr<const float>();
-        float*       k_data  = K.ptr<float>();
-        const size_t kT_bhd_stride = (size_t)D * S_kv;
-        const size_t k_bhd_stride  = (size_t)S_kv * D;
-        cv::parallel_for_(cv::Range(0, B * H), [&](const cv::Range& r) {
-            for (int bh = r.start; bh < r.end; bh++) {
-                const float* src = kT_data + (size_t)bh * kT_bhd_stride;
-                float*       dst = k_data  + (size_t)bh * k_bhd_stride;
-                for (int s = 0; s < S_kv; s++) {
-                    for (int d = 0; d < D; d++) {
-                        dst[(size_t)s * D + d] = src[(size_t)d * S_kv + s];
-                    }
-                }
-            }
-        });
-
         const int q_block  = std::min(256, S_q);
         const int kv_block = std::min(256, S_kv);
         const int threads  = std::max(1, cv::getNumThreads());
 
+        const float effective_scale = (scale > 0.f) ? (1.f / scale) : 1.f;
         const size_t per_thread =
             mlasFlashAttentionBufferBytesPerThread(q_block, kv_block, D_v);
         if (mlasAvailable() && per_thread > 0) {
+            // MlasFlashAttention needs K as (B,H,S_kv,D), so re-transpose K^T (B,H,D,S_kv).
+            Mat &K = internals[0];
+            const float* kT_data = KT.ptr<const float>();
+            float*       k_data  = K.ptr<float>();
+            const size_t kT_bhd_stride = (size_t)D * S_kv;
+            const size_t k_bhd_stride  = (size_t)S_kv * D;
+            cv::parallel_for_(cv::Range(0, B * H), [&](const cv::Range& r) {
+                for (int bh = r.start; bh < r.end; bh++) {
+                    const float* src = kT_data + (size_t)bh * kT_bhd_stride;
+                    float*       dst = k_data  + (size_t)bh * k_bhd_stride;
+                    for (int s = 0; s < S_kv; s++) {
+                        for (int d = 0; d < D; d++) {
+                            dst[(size_t)s * D + d] = src[(size_t)d * S_kv + s];
+                        }
+                    }
+                }
+            });
+
             flash_scratch.resize((size_t)threads * per_thread);
-            const float effective_scale = (scale > 0.f) ? (1.f / scale) : 1.f;
             if (mlasFlashAttention(Q.ptr<float>(), K.ptr<float>(), V.ptr<float>(),
                                    Y.ptr<float>(),
                                    B, H, S_q, S_kv, D, D_v, effective_scale,
@@ -125,63 +126,12 @@ public:
             }
         }
 
-        forward_fallback_impl(Q, K, V, Y, B, H, S_q, S_kv, D, D_v);
+        // flashAttention reads K^T as it is, without the re-transpose.
+        flashAttention(Q.ptr<float>(), KT.ptr<float>(), V.ptr<float>(), Y.ptr<float>(),
+                       B, H, S_q, S_kv, D, D_v, effective_scale, nullptr, nullptr, /*k_transposed=*/true);
     }
 
 private:
-    // Unfused SDPA, used when MLAS isn't available. Not perf-critical.
-    void forward_fallback_impl(const Mat& Q, const Mat& K, const Mat& V, Mat& Y,
-                               int B, int H, int S_q, int S_kv, int D, int D_v) const
-    {
-        const float* q_p = Q.ptr<const float>();
-        const float* k_p = K.ptr<const float>();
-        const float* v_p = V.ptr<const float>();
-        float*       y_p = Y.ptr<float>();
-        const float inv_scale = (scale > 0.f) ? (1.f / scale) : 1.f;
-
-        cv::parallel_for_(cv::Range(0, B * H), [&](const cv::Range& r) {
-            std::vector<float> attn((size_t)S_q * S_kv);
-            for (int bh = r.start; bh < r.end; bh++) {
-                const int b = bh / H, h = bh % H;
-                const float* Q_bh = q_p + (size_t)bh * S_q  * D;
-                const float* K_bh = k_p + (size_t)bh * S_kv * D;
-                const float* V_bh = v_p + (size_t)bh * S_kv * D_v;
-                float*       Y_b  = y_p + (size_t)b * S_q * H * D_v;
-
-                for (int i = 0; i < S_q; i++) {
-                    for (int j = 0; j < S_kv; j++) {
-                        float s = 0.f;
-                        for (int d = 0; d < D; d++)
-                            s += Q_bh[(size_t)i * D + d] * K_bh[(size_t)j * D + d];
-                        attn[(size_t)i * S_kv + j] = s * inv_scale;
-                    }
-                    float mx = attn[(size_t)i * S_kv];
-                    for (int j = 1; j < S_kv; j++)
-                        if (attn[(size_t)i * S_kv + j] > mx) mx = attn[(size_t)i * S_kv + j];
-                    float sum = 0.f;
-                    for (int j = 0; j < S_kv; j++) {
-                        float e = std::exp(attn[(size_t)i * S_kv + j] - mx);
-                        attn[(size_t)i * S_kv + j] = e;
-                        sum += e;
-                    }
-                    float inv_sum = 1.f / sum;
-                    for (int j = 0; j < S_kv; j++)
-                        attn[(size_t)i * S_kv + j] *= inv_sum;
-
-                    // out[b, i, h, :] = attn[i, :] @ V_bh
-                    float* out_row = Y_b + ((size_t)i * H + h) * D_v;
-                    for (int d = 0; d < D_v; d++) out_row[d] = 0.f;
-                    for (int j = 0; j < S_kv; j++) {
-                        float a = attn[(size_t)i * S_kv + j];
-                        const float* V_row = V_bh + (size_t)j * D_v;
-                        for (int d = 0; d < D_v; d++)
-                            out_row[d] += a * V_row[d];
-                    }
-                }
-            }
-        });
-    }
-
     float scale;
     std::vector<unsigned char> flash_scratch;
 };

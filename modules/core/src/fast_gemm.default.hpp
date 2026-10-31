@@ -22,23 +22,23 @@
 #define FAST_GEMM_F32_PACKED_STRIDE_K 64
 
 #define FAST_GEMM_IMPLEMENT_PACK(N, suffix, styp, dtyp) \
-static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
-                                      int lda0, int lda1, void* packA_ ) \
+static void fast_gemm_pack##N##suffix( size_t m, size_t k, const void* A_, \
+                                      size_t lda0, size_t lda1, void* packA_ ) \
 { \
     const styp* A = (const styp*)A_; \
     dtyp* packA = (dtyp*)packA_; \
-    for( int i = 0; i < m; i += N ) { \
+    for( size_t i = 0; i < m; i += N ) { \
         if (i + N-1 < m) { \
             const styp* a_ptr = A + lda0*i; \
-            for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
+            for( size_t j = 0; j < k*lda1; packA += N, j += lda1 ) \
             { \
                 FAST_GEMM_LOAD_TO_BUF_##N(styp); \
                 FAST_GEMM_PACK##suffix##_##N(buf, packA); \
             } \
         } else { \
             const styp* a_ptr[N]; \
-            for (int k = 0; k < N; k++) a_ptr[k] = A + lda0*(i+k < m ? i+k : i); \
-            for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
+            for (size_t r = 0; r < N; r++) a_ptr[r] = A + lda0*(i+r < m ? i+r : i); \
+            for( size_t j = 0; j < k*lda1; packA += N, j += lda1 ) \
             { \
                 FAST_GEMM_LOAD_TO_BUF_BORDERS_##N(styp); \
                 FAST_GEMM_PACK##suffix##_##N(buf, packA); \
@@ -74,7 +74,7 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 #define FAST_GEMM_PACK_f32_8(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 8)
 #define FAST_GEMM_PACK_f32_12(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 12)
 
-namespace cv { namespace dnn { namespace cpu_baseline {
+namespace cv { namespace hal { namespace cpu_baseline {
 
 size_t fastGemmPackBSize(int N, int K);
 
@@ -98,6 +98,9 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
 void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
                          size_t M, size_t N, size_t K, float alpha, const char *A, size_t lda0, size_t lda1,
                          const char *packed_B, float beta, char *C, size_t ldc, size_t esz);
+void fastGemmThinTBKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                          int M, int N, int K, float alpha, const float *A, int lda,
+                          const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread);
 void pagedAttnAVGemmKernel(
     const char* A, const std::vector<const char *> &V, char*Out,
     size_t B, size_t T_a, size_t Nq, size_t N_k, size_t T_s, size_t D, size_t T_v,
@@ -113,7 +116,7 @@ FAST_GEMM_IMPLEMENT_PACK(12, _f32, float, float)
 
 size_t fastGemmPackBSize(int N, int K) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
-    size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    size_t NC = (((GEMM_NC < (size_t)N ? GEMM_NC : (size_t)N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
 
     return static_cast<size_t>((N + NC - 1) / NC) * NC * K;
 }
@@ -256,7 +259,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
                 size_t kc = K - k0 < KC ? K - k0 : KC;
                 fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
                 fast_gemm_pack12_f32(nc, kc, B + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel((int)mc, (int)nc, (int)kc, packed_a, packed_b, alpha, c_block, (int)ldc_block, (int)esz);
             }
         }
 
@@ -268,9 +271,9 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     if (multi_thread) {
         int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
         double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
-        parallel_for_(Range(0, total_tiles), fn, nstripes);
+        parallel_for_(Range(0, (int)total_tiles), fn, nstripes);
     } else {
-        fn(Range(0, total_tiles));
+        fn(Range(0, (int)total_tiles));
     }
 }
 
@@ -308,12 +311,12 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
             packed_b_ = packed_B + j0 * K * esz;
 
             if (beta == 0.f) {
-                for(int i = 0; i < mc; i++)
+                for(size_t i = 0; i < mc; i++)
                     memset(c_block + i * ldc_block * esz, 0, nc * esz);
             } else if (beta != 1.f) {
-                for(int i = 0; i < mc; i++) {
+                for(size_t i = 0; i < mc; i++) {
                     float* c_i = (float*)c_block + i * ldc_block;
-                    for(int j = 0; j < nc; j++)
+                    for(size_t j = 0; j < nc; j++)
                         c_i[j] *= beta;
                 }
             }
@@ -323,7 +326,7 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
             {
                 size_t kc = K - k0 < KC ? K - k0 : KC;
                 fast_gemm_pack8_f32(mc, kc, A + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel((int)mc, (int)nc, (int)kc, packed_a, packed_b_, alpha, c_block, (int)ldc_block, (int)esz);
                 packed_b_ += _nc * kc;
             }
         }
@@ -336,9 +339,9 @@ void fastGemmKernel(size_t M, size_t N, size_t K,
     if (multi_thread) {
         int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
         double nstripes = (size_t)total_tiles * cost_per_thread * (1 / 1024.0);
-        parallel_for_(Range(0, total_tiles), fn, nstripes);
+        parallel_for_(Range(0, (int)total_tiles), fn, nstripes);
     } else {
-        fn(Range(0, total_tiles));
+        fn(Range(0, (int)total_tiles));
     }
 }
 
@@ -381,19 +384,19 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
             char* c_block = C + C_offsets[batch_index] * esz + (i0 * ldc + j0) * esz;
 
             if (beta == 0.f) {
-                for(int i = 0; i < mc; i++)
+                for(size_t i = 0; i < mc; i++)
                     memset(c_block + i * ldc_block * esz, 0, nc * esz);
             } else if (beta != 1.f) {
-                for(int i = 0; i < mc; i++) {
+                for(size_t i = 0; i < mc; i++) {
                     float* c_i = (float*)c_block + i * ldc_block;
-                    for(int j = 0; j < nc; j++)
+                    for(size_t j = 0; j < nc; j++)
                         c_i[j] *= beta;
                 }
             }
 
-            for(int k0 = 0; k0 < K; k0 += KC)
+            for(size_t k0 = 0; k0 < K; k0 += KC)
             {
-                int kc = K - k0 < KC ? K - k0 : KC;
+                size_t kc = K - k0 < KC ? K - k0 : KC;
                 // pack a
                 fast_gemm_pack8_f32(mc, kc, a_block + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
 
@@ -401,7 +404,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
                 fast_gemm_pack12_f32(nc, kc, b_block + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel((int)mc, (int)nc, (int)kc, packed_a, packed_b, alpha, c_block, (int)ldc_block, (int)esz);
             }
         }
 
@@ -410,7 +413,7 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
         }
     };
 
-    int total = batch * total_tiles;
+    int total = (int)(batch * total_tiles);
     int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
     double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
@@ -456,26 +459,26 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
             char* c_block = C + C_offsets[batch_index] * esz + (i0 * ldc + j0) * esz;
 
             if (beta == 0.f) {
-                for(int i = 0; i < mc; i++)
+                for(size_t i = 0; i < mc; i++)
                     memset(c_block + i * ldc_block * esz, 0, nc * esz);
             } else if (beta != 1.f) {
-                for(int i = 0; i < mc; i++) {
+                for(size_t i = 0; i < mc; i++) {
                     float* c_i = (float*)c_block + i * ldc_block;
-                    for(int j = 0; j < nc; j++)
+                    for(size_t j = 0; j < nc; j++)
                         c_i[j] *= beta;
                 }
             }
 
-            int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
-            for(int k0 = 0; k0 < K; k0 += KC)
+            size_t _nc = (nc + GEMM_NR - 1) / GEMM_NR * GEMM_NR * esz;
+            for(size_t k0 = 0; k0 < K; k0 += KC)
             {
-                int kc = K - k0 < KC ? K - k0 : KC;
+                size_t kc = K - k0 < KC ? K - k0 : KC;
                 // pack a
                 size_t step_a =  (i0 * lda0 + k0 * lda1) * esz;
                 fast_gemm_pack8_f32(mc, kc, a_block + step_a, lda0, lda1, packed_a);
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b, alpha, c_block, ldc_block, esz);
+                fast_gemm_macro_kernel((int)mc, (int)nc, (int)kc, packed_a, packed_b, alpha, c_block, (int)ldc_block, (int)esz);
                 packed_b += _nc * kc;
             }
         }
@@ -485,10 +488,86 @@ void fastGemmBatchKernel(size_t batch, const size_t *A_offsets, const size_t *B_
         }
     };
 
-    int total = batch * total_tiles;
+    int total = (int)(batch * total_tiles);
     int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
     double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
+}
+
+// Same code as the dispatched copy: universal intrinsics keep the baseline SIMD width here.
+static constexpr int FAST_GEMM_THIN_TB_MIN_TASK_MACS = 1 << 15;
+
+static inline void fast_gemm_thin_tb_store(float* c, float d, float alpha, float beta) {
+    *c = beta == 0.f ? alpha * d : alpha * d + beta * *c;
+}
+
+static void fast_gemm_thin_tb(float alpha, float beta, int M, int n0, int n1, int K,
+                              const float* A, int lda, const float* B, int ldb,
+                              float* C, int ldc) {
+    for (int m = 0; m < M; m++) {
+        const float* a = A + (size_t)m * lda;
+        float* c = C + (size_t)m * ldc;
+        int n = n0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int VL = VTraits<v_float32>::vlanes();
+        for (; n + 4 <= n1; n += 4) {
+            const float* b0 = B + (size_t)n * ldb;
+            const float* b1 = b0 + ldb;
+            const float* b2 = b1 + ldb;
+            const float* b3 = b2 + ldb;
+            v_float32 s0 = vx_setzero_f32(), s1 = vx_setzero_f32();
+            v_float32 s2 = vx_setzero_f32(), s3 = vx_setzero_f32();
+            int k = 0;
+            for (; k + VL <= K; k += VL) {
+                v_float32 av = vx_load(a + k);
+                s0 = v_fma(av, vx_load(b0 + k), s0);
+                s1 = v_fma(av, vx_load(b1 + k), s1);
+                s2 = v_fma(av, vx_load(b2 + k), s2);
+                s3 = v_fma(av, vx_load(b3 + k), s3);
+            }
+            float d0 = v_reduce_sum(s0), d1 = v_reduce_sum(s1);
+            float d2 = v_reduce_sum(s2), d3 = v_reduce_sum(s3);
+            for (; k < K; k++) {
+                d0 += a[k] * b0[k];
+                d1 += a[k] * b1[k];
+                d2 += a[k] * b2[k];
+                d3 += a[k] * b3[k];
+            }
+            fast_gemm_thin_tb_store(c + n, d0, alpha, beta);
+            fast_gemm_thin_tb_store(c + n + 1, d1, alpha, beta);
+            fast_gemm_thin_tb_store(c + n + 2, d2, alpha, beta);
+            fast_gemm_thin_tb_store(c + n + 3, d3, alpha, beta);
+        }
+#endif
+        for (; n < n1; n++) {
+            const float* b = B + (size_t)n * ldb;
+            float d = 0.f;
+            for (int k = 0; k < K; k++)
+                d += a[k] * b[k];
+            fast_gemm_thin_tb_store(c + n, d, alpha, beta);
+        }
+    }
+}
+
+void fastGemmThinTBKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                          int M, int N, int K, float alpha, const float *A, int lda,
+                          const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread) {
+    const int nblk = std::max(4, (FAST_GEMM_THIN_TB_MIN_TASK_MACS / std::max(M * K, 1) + 3) / 4 * 4);
+    const int n_tasks = (N + nblk - 1) / nblk;
+    const int total = (int)batch * n_tasks;
+    auto fn = [&](const Range& r) {
+        for (int t = r.start; t < r.end; t++) {
+            const size_t i = (size_t)(t / n_tasks);
+            const int n0 = (t % n_tasks) * nblk;
+            fast_gemm_thin_tb(alpha, beta, M, n0, std::min(N, n0 + nblk), K,
+                              A + A_offsets[i], lda, B + B_offsets[i], ldb,
+                              C + C_offsets[i], ldc);
+        }
+    };
+    if (multi_thread && total > 1)
+        parallel_for_(Range(0, total), fn);
+    else
+        fn(Range(0, total));
 }
 
 
@@ -519,12 +598,12 @@ void pagedAttnQKGemmKernel(
     const size_t S = K.size();
     const size_t T = S * T_s;
     const size_t T_r = T_s - (T - T_k);
-    const int n_kq_groups = Nq / N_k;
+    const int n_kq_groups = (int)(Nq / N_k);
     size_t batch = Nq * B;
     // batch = B x N_q
-    int total = S *  batch * tiles_per_mat;
+    int total = (int)(S * batch * tiles_per_mat);
 
-    size_t packed_stride = fastGemmPackBSize(T_s, D);
+    size_t packed_stride = fastGemmPackBSize((int)T_s, (int)D);
 
     auto fn = [&](const Range &r) {
         cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_q_buff;
@@ -576,15 +655,15 @@ void pagedAttnQKGemmKernel(
                 memset(a_block + i * T_k * esz, 0, rc * esz);
             }
 
-            int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
-            for(int k0 = 0; k0 < (int)D; k0 += (int)KC)
+            size_t _nc = (nc + GEMM_NR - 1) / GEMM_NR * GEMM_NR * esz;
+            for(size_t k0 = 0; k0 < D; k0 += KC)
             {
-                int kc = D - k0 < (int)KC ? (int)D - k0 : (int)KC;
+                size_t kc = D - k0 < KC ? D - k0 : KC;
                 // pack q
                 size_t step_q = (i0 * ldq0 + k0) * esz;
                 fast_gemm_pack8_f32(mc, kc, q_block + step_q, ldq0, 1, packed_q);
                 // run kernel
-                fast_gemm_macro_kernel(mc, rc, kc, packed_q, k_block, sm_scale, a_block, T_k, esz);
+                fast_gemm_macro_kernel((int)mc, (int)rc, (int)kc, packed_q, k_block, sm_scale, a_block, (int)T_k, (int)esz);
                 k_block += _nc * kc;
             }
         }
@@ -624,9 +703,9 @@ void pagedAttnAVGemmKernel(
     const size_t m_tiles = (T_a + MC - 1) / MC;
     const size_t n_tiles = (D + NC - 1) / NC;
     const size_t tiles_per_mat = m_tiles * n_tiles;
-    const int n_kq_groups = Nq / N_k;
+    const int n_kq_groups = (int)(Nq / N_k);
     size_t batch = Nq * B;
-    int total = batch * tiles_per_mat;
+    int total = (int)(batch * tiles_per_mat);
 
     auto fn = [&](const Range &r) {
         cv::AutoBuffer<char, FAST_GEMM_MAX_STACKBUF> packed_a_buff;
@@ -704,7 +783,7 @@ void pagedAttnAVGemmKernel(
                 }
 
                 // run kernel
-                fast_gemm_macro_kernel(mc, nc, kc, packed_a, v_block_to_use, 1.f, out_block, ldc0, esz);
+                fast_gemm_macro_kernel((int)mc, (int)nc, kc, packed_a, v_block_to_use, 1.f, out_block, (int)ldc0, (int)esz);
                 k0 += kc;
             }
         }
@@ -717,7 +796,7 @@ void pagedAttnAVGemmKernel(
 }
 
 
-}}} // cv::dnn::cpu_baseline
+}}} // cv::hal::cpu_baseline
 
 #undef FAST_GEMM_STORAGE
 #undef FAST_GEMM_MAX_STACKBUF
