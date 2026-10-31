@@ -20,7 +20,7 @@ namespace cv {
 namespace hal
 {
 
-// 8u, 32f
+// 8u, 16f, 32f
 void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -34,7 +34,7 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-// 8u, 32f
+// 8u, 16f, 32f
 void cvtHSVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -182,7 +182,7 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
 void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {
-    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F, CV_16F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, fullRange, false);
@@ -190,7 +190,7 @@ void cvtColorBGR2HLS( InputArray _src, OutputArray _dst, bool swapb, bool fullRa
 
 void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRange )
 {
-    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
+    CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F, CV_16F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoHSV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, swapb, fullRange, true);
@@ -199,7 +199,7 @@ void cvtColorBGR2HSV( InputArray _src, OutputArray _dst, bool swapb, bool fullRa
 void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F, CV_16F> > h(_src, _dst, dcn);
 
     hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, fullRange, false);
@@ -208,7 +208,7 @@ void cvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool fullRange)
 {
     if(dcn <= 0) dcn = 3;
-    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F, CV_16F> > h(_src, _dst, dcn);
 
     hal::cvtHSVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, dcn, swapb, fullRange, true);
