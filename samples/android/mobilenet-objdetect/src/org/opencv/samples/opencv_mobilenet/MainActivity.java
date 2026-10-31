@@ -114,8 +114,11 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         }
 
         Log.d(TAG, "handle new frame!");
-        Mat frame = inputFrame.rgba();
-        Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2RGB);
+        Mat frame = inputFrame.rgba();  // Keep RGBA for display
+        Mat rgb = new Mat();
+
+        // Separate RGB image for model input
+        Imgproc.cvtColor(frame, rgb, Imgproc.COLOR_RGBA2RGB);
         // Forward image through network.
         //! [mobilenet_handle_frame]
 
@@ -123,8 +126,10 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
         int rows = frame.rows();
         int cols = frame.cols();
 
-        byte[] inputData = new byte[(int)(frame.total() * frame.channels())];
-        frame.get(0, 0, inputData);
+        byte[] inputData = new byte[
+            (int)(rgb.total() * rgb.channels())
+        ];
+        rgb.get(0, 0, inputData);
 
         Mat blob = new Mat(
             new int[]{1, rows, cols, 3},
@@ -253,7 +258,7 @@ public class MainActivity extends CameraActivity implements CvCameraViewListener
             output.release();
 
         blob.release();
-
+        rgb.release();
         //! [mobilenet_handle_frame]
 
 
