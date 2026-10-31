@@ -1781,6 +1781,45 @@ static inline int clip(int x, int a, int b)
 
 static const int MAX_ESIZE=16;
 
+// Convert only the source rows needed by the separable filter. The invoker's
+// row cache also reuses their filtered results, including during upsampling.
+// HAL conversion dispatches to hardware FP16 conversion where available.
+template<class FloatHResize>
+struct HResizeHalf
+{
+    typedef hfloat value_type;
+    typedef float buf_type;
+    typedef float alpha_type;
+    AutoBuffer<float> buffer;
+
+    void operator()(const hfloat** src, float** dst, int count, const int* xofs,
+                    const float* alpha, int swidth, int dwidth, int cn, int xmin, int xmax)
+    {
+        buffer.allocate(static_cast<size_t>(count) * swidth);
+        const float* rows[MAX_ESIZE];
+        for (int k = 0; k < count; ++k)
+        {
+            float* row = buffer.data() + static_cast<size_t>(k) * swidth;
+            hal::cvt16f32f(src[k], row, swidth);
+            rows[k] = row;
+        }
+        FloatHResize()(rows, dst, count, xofs, alpha, swidth, dwidth, cn, xmin, xmax);
+    }
+};
+
+template<class FloatVResize>
+struct VResizeHalf
+{
+    AutoBuffer<float> buffer;
+
+    void operator()(const float** src, hfloat* dst, const float* beta, int width)
+    {
+        buffer.allocate(width);
+        FloatVResize()(src, buffer.data(), beta, width);
+        hal::cvt32f16f(buffer.data(), dst, width);
+    }
+};
+
 template <typename HResize, typename VResize>
 class resizeGeneric_Invoker :
     public ParallelLoopBody
@@ -2507,6 +2546,69 @@ typedef ResizeAreaFastNoVec<float, float> ResizeAreaFastVec_SIMD_32f;
 
 #endif
 
+struct ResizeAreaFastVec_16f
+{
+    const int cn, step, scaleX, scaleY;
+    AutoBuffer<float> buffer;
+
+    ResizeAreaFastVec_16f(int sx, int sy, int channels, int sourceStep)
+        : cn(channels), step(sourceStep), scaleX(sx), scaleY(sy) {}
+
+    int operator()(const hfloat* src, hfloat* dst, int width)
+    {
+        if (width == 0)
+            return 0;
+        if (scaleX != 2 || scaleY != 2)
+        {
+            // Convert each source row once, including for larger integer scales.
+            // A scalar half-to-float conversion per sample is considerably slower
+            // on CPUs which provide hardware conversion through the HAL.
+            const int sourceWidth = width * scaleX;
+            buffer.allocate(static_cast<size_t>(sourceWidth) + width);
+            float* row = buffer.data();
+            float* sum = row + sourceWidth;
+            std::fill(sum, sum + width, 0.f);
+            for (int y = 0; y < scaleY; ++y)
+            {
+                const hfloat* source = reinterpret_cast<const hfloat*>(
+                    reinterpret_cast<const uchar*>(src) + static_cast<size_t>(y) * step);
+                hal::cvt16f32f(source, row, sourceWidth);
+                for (int x = 0; x < width; x += cn)
+                    for (int c = 0; c < cn; ++c)
+                    {
+                        float value = 0.f;
+                        const float* pixel = row + x * scaleX + c;
+                        for (int k = 0; k < scaleX; ++k)
+                            value += pixel[k * cn];
+                        sum[x + c] += value;
+                    }
+            }
+            const float scale = 1.f / (scaleX * scaleY);
+            for (int x = 0; x < width; ++x)
+                sum[x] *= scale;
+            hal::cvt32f16f(sum, dst, width);
+            return width;
+        }
+        // Two input rows and one output row, independent of image height.
+        buffer.allocate(static_cast<size_t>(width) * 5);
+        float* first = buffer.data();
+        float* second = first + width * 2;
+        float* result = second + width * 2;
+        hal::cvt16f32f(src, first, width * 2);
+        hal::cvt16f32f(reinterpret_cast<const hfloat*>(reinterpret_cast<const uchar*>(src) + step),
+                      second, width * 2);
+        ResizeAreaFastVec_SIMD_32f vec(2, 2, cn, width * 2 * sizeof(float));
+        int x = vec(first, result, width);
+        for (; x < width; ++x)
+        {
+            const int sx = (x / cn) * (2 * cn) + x % cn;
+            result[x] = (first[sx] + first[sx + cn] + second[sx] + second[sx + cn]) * 0.25f;
+        }
+        hal::cvt32f16f(result, dst, width);
+        return width;
+    }
+};
+
 template<typename T, typename SIMDVecOp>
 struct ResizeAreaFastVec
 {
@@ -2596,7 +2698,7 @@ public:
             if( sy0 >= ssize.height )
             {
                 for( dx = 0; dx < dsize.width; dx++ )
-                    D[dx] = 0;
+                    D[dx] = T(0);
                 continue;
             }
 
@@ -2621,7 +2723,7 @@ public:
                 WT sum = 0;
                 int count = 0, sx0 = xofs[dx];
                 if( sx0 >= ssize.width )
-                    D[dx] = 0;
+                    D[dx] = T(0);
 
                 for( int sy = 0; sy < scale_y; sy++ )
                 {
@@ -2741,6 +2843,10 @@ inline void saturate_store(const WT* sum, int width, WT* D) {
     std::copy(sum, sum + width, D);
 }
 
+inline void saturate_store(const float* sum, int width, hfloat* dst) {
+    hal::cvt32f16f(sum, dst, width);
+}
+
 template <typename WT>
 inline void mul(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
@@ -2771,6 +2877,24 @@ inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
 
 }  // namespace inter_area
 
+template<typename T> struct ResizeAreaSource
+{
+    explicit ResizeAreaSource(int) {}
+    const T* get(const T* src) { return src; }
+};
+
+template<> struct ResizeAreaSource<hfloat>
+{
+    AutoBuffer<float> buffer;
+    const int width;
+    explicit ResizeAreaSource(int width_) : buffer(width_), width(width_) {}
+    const float* get(const hfloat* src)
+    {
+        hal::cvt16f32f(src, buffer.data(), width);
+        return buffer.data();
+    }
+};
+
 template<typename T, typename WT> class ResizeArea_Invoker :
     public ParallelLoopBody
 {
@@ -2795,6 +2919,7 @@ public:
         int cn = dst->channels();
         dsize.width *= cn;
         AutoBuffer<WT> _buffer(dsize.width*2);
+        ResizeAreaSource<T> sourceRow(src->cols * cn);
         const DecimateAlpha* xtab = xtab0;
         int xtab_size = xtab_size0;
         WT *buf = _buffer.data(), *sum = buf + dsize.width;
@@ -2810,7 +2935,7 @@ public:
             int sy = ytab[j].si;
 
             {
-                const T* S = src->template ptr<T>(sy);
+                const auto* S = sourceRow.get(src->template ptr<T>(sy));
                 for( dx = 0; dx < dsize.width; dx++ )
                     buf[dx] = (WT)0;
 
@@ -3256,7 +3381,10 @@ void resize(int src_type,
                 HResizeNoVec>,
             VResizeLinear<double, double, float, Cast<double, double>,
                 VResizeNoVec> >,
-        0
+        resizeGeneric_<
+            HResizeHalf<HResizeLinear<float, float, float, 1, HResizeLinearVec_32f> >,
+            VResizeHalf<VResizeLinear<float, float, float, Cast<float, float>,
+                VResizeLinearVec_32f> > >
     };
 
     static ResizeFunc cubic_tab[CV_DEPTH_MAX] =
@@ -3284,7 +3412,10 @@ void resize(int src_type,
             HResizeCubic<double, double, float>,
             VResizeCubic<double, double, float, Cast<double, double>,
             VResizeNoVec> >,
-        0
+        resizeGeneric_<
+            HResizeHalf<HResizeCubic<float, float, float> >,
+            VResizeHalf<VResizeCubic<float, float, float, Cast<float, float>,
+                VResizeCubicVec_32f> > >
     };
 
     static ResizeFunc lanczos4_tab[CV_DEPTH_MAX] =
@@ -3307,7 +3438,10 @@ void resize(int src_type,
         resizeGeneric_<HResizeLanczos4<double, double, float>,
             VResizeLanczos4<double, double, float, Cast<double, double>,
             VResizeNoVec> >,
-        0
+        resizeGeneric_<
+            HResizeHalf<HResizeLanczos4<float, float, float> >,
+            VResizeHalf<VResizeLanczos4<float, float, float, Cast<float, float>,
+                VResizeLanczos4Vec_32f> > >
     };
 
     static ResizeAreaFastFunc areafast_tab[CV_DEPTH_MAX] =
@@ -3319,14 +3453,14 @@ void resize(int src_type,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
-        0
+        resizeAreaFast_<hfloat, float, ResizeAreaFastVec_16f>
     };
 
     static ResizeAreaFunc area_tab[CV_DEPTH_MAX] =
     {
         resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
         resizeArea_<short, float>, 0, resizeArea_<float, float>,
-        resizeArea_<double, double>, 0
+        resizeArea_<double, double>, resizeArea_<hfloat, float>
     };
 
     static be_resize_func linear_exact_tab[CV_DEPTH_MAX] =
@@ -3599,7 +3733,8 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
     }
 
-    if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
+    if (interpolation == INTER_LINEAR_EXACT &&
+        (_src.depth() == CV_16F || _src.depth() == CV_32F || _src.depth() == CV_64F))
         interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
