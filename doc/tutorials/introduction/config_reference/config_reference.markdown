@@ -290,6 +290,18 @@ Many algorithms have been implemented using CUDA acceleration, these functions a
 
 TODO: other options: `WITH_CUFFT`, `WITH_CUBLAS`, `WITH_NVCUVID`?
 
+### ROCm/HIP support
+
+`WITH_HIP` (default: _OFF_)
+
+The CUDA-accelerated modules can also be built for AMD GPUs through HIP, AMD's CUDA-compatible kernel language and runtime. The ROCm toolkit (compiler, runtime, and the roc*/hip* libraries) must be installed from the official AMD site as a prerequisite, and it must be discoverable by CMake: pass `-DCMAKE_PREFIX_PATH=/opt/rocm` (or put `/opt/rocm/bin` on `PATH`) so `find_package(hip)` and the hip* libraries are located. If the ROCm packages are not found, `WITH_HIP` is reported as disabled and the build proceeds without GPU support, so check the configure log for `HIP:` status lines. Enabling `WITH_HIP` compiles the CUDA module sources (in `opencv_contrib`) with the ROCm HIP compiler instead of nvcc; the same `cv::cuda` API is exposed. `CMAKE_HIP_ARCHITECTURES` selects the target GPU architectures (e.g. `gfx90a;gfx1100`); when left unset it is auto-detected from the GPUs present at configure time. `WITH_HIP` and `WITH_CUDA` are mutually exclusive: a given build targets either NVIDIA or AMD GPUs.
+
+The cuBLAS and cuFFT dependencies of the `cudaarithm` module map to the ROCm hipBLAS and hipFFT libraries automatically when present. `WITH_ROCDECODE` (default: _ON_ when `WITH_HIP`) enables the rocDecode video-decode backend used by the `cudacodec` module; when rocDecode or a working AMD video engine is unavailable, hardware decode is reported as not implemented and video I/O falls back to the FFmpeg `videoio` backend (which exposes the AMF h264/hevc/av1 encoders for writing).
+
+A small set of entry points have no ROCm analog and report `cv::Error::StsNotImplemented` on the HIP build: the NVIDIA hardware optical-flow classes (`cv::cuda::NvidiaOpticalFlowImpl`) and the `cudalegacy` graph-cut stereo (graph-cut was dropped from NPP at CUDA 8.0, so it is already a no-op on a current CUDA build). The PyrLK/Brox/Farneback/TV-L1 software optical flows remain available.
+
+@see https://rocm.docs.amd.com/projects/HIP/
+
 ### OpenCL support
 
 `WITH_OPENCL` (default: _ON_)

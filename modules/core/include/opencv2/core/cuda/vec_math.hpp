@@ -55,8 +55,8 @@
 
 namespace cv { namespace cuda { namespace device
 {
-    using cv::cuda::device::compat::double4;
-    using cv::cuda::device::compat::make_double4;
+    using ::cv::cuda::device::compat::double4;
+    using ::cv::cuda::device::compat::make_double4;
 
 // saturate_cast
 
