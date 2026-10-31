@@ -8,6 +8,7 @@
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
+#include "cpu_kernels/recurrent_activations.hpp"
 #include "../net_impl.hpp"
 
 namespace cv
@@ -110,6 +111,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
     float forgetBias, cellClip;
+    float clipValue;     // ONNX `clip`: bounds the input of the activations; off when <= 0
+    bool inputForget;    // ONNX `input_forget`: f_t = 1 - i_t
     layout_t layout;  // If layout == BATCH_SEQ_HID, uses batch_size x seq_length x num_hidden for input and output
                       // else uses seq_length x batch_size x num_hidden
 
@@ -147,6 +150,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             forgetBias = params.get<float>("forget_bias", 0.0f);
             cellClip = params.get<float>("cell_clip", 0.0f);
+            clipValue = params.get<float>("clip", 0.0f);
+            inputForget = params.get<int>("input_forget", 0) != 0;
 
             CV_Assert(!reverse || !bidirectional);
 
@@ -231,7 +236,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
 
             outResShape.push_back(_hidSize);
-            outputs.assign(1, outResShape);
 
             // Yh / Yc: ONNX layout=0 -> (dirs, batch, hid), layout=1 -> (batch, dirs, hid)
             int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
@@ -239,16 +243,12 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
-            // compute output shape of yc
-            if (produceCellOutput)
-            {
-                outputs.push_back(newShape);
-            }
-            // compute output shape of yh
-            if (produceOutputYh)
-            {
-                outputs.push_back(newShape);
-            }
+            // Output slots are positional (Y, Y_h, Y_c) and an output the node leaves empty still
+            // occupies its slot, so the count comes from the node, not from the produce_* flags.
+            // forward() only writes the slots that exist, so nothing is written past this vector.
+            const int outCount = std::max(requiredOutputs, 1);
+            outputs.assign(outCount, newShape);
+            outputs[0] = outResShape;   // slot #0 -> Y
 
             // forward() allocates its own per-direction scratch, so no engine internals are needed
             internals.clear();
@@ -284,6 +284,14 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                                                    CV_BIG_INT(2) * _hidSize * _hidSize +
                                                    _hidSize);
             return (int64)numDirs * _seqLen * _batchSize * flopsPerStep;
+        }
+
+        // The fast gate kernels below implement plain sigmoid/tanh only: clip, input_forget and
+        // sequence_lens need the generic per-row path.
+        bool plainGates(bool noSeqLens) const
+        {
+            return defaultActivations && !usePeephole && !useCellClip && !inputForget &&
+                   clipValue <= 0.f && noSeqLens;
         }
 
         // Batched projection Wx*x + bias for one direction's whole sequence; runs outside the direction loop so the GEMM can use all threads.
@@ -347,13 +355,12 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
         // Batch-1 fp32 recurrence, one parallel_for_ per timestep; each task owns a hidden-unit chunk of one direction (its four gate rows, c and h).
         void forwardStepParallel(int numDirs, int chunksPerDir, std::vector<Mat>& gatesAll, const Mat& h0All,
-                                 const Mat& c0All, Mat& hOutAll, Mat& cOut) const
+                                 const Mat& c0All, Mat& hOutAll, Mat& hFinal, Mat& cFinal) const
         {
             const int H = numHidden, T = seqLenth;
             const int chunk = ((H + chunksPerDir - 1) / chunksPerDir + 7) & ~7;  // multiple of fastGEMM1T's 8-row block
             const int ntasks = numDirs * chunksPerDir;
             Mat cState = c0All.clone();                                 // numDirs x H, each task updates its own slice
-            Mat cOutRows = produceCellOutput ? cOut.reshape(1, T) : Mat();  // T x (numDirs*H)
 
             for (int t = 0; t < T; t++)
             {
@@ -377,17 +384,26 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                         lstmCellFp32(g, H, j0, nj, forgetBias, sigmoidFn, tanhFn,
                                      cState.ptr<float>(d) + j0, hOutAll.ptr<float>(ts) + d*H + j0, tanhC.data());
-                        if (produceCellOutput)
-                            memcpy(cOutRows.ptr<float>(ts) + d*H + j0, cState.ptr<float>(d) + j0, nj * sizeof(float));
                     }
                 }, ntasks);
+            }
+
+            // The whole sequence ran, so each direction's final state is its last written row.
+            for (int d = 0; d < numDirs; d++)
+            {
+                const int lastTs = (reverse || d == 1) ? 0 : T - 1;
+                hOutAll.rowRange(lastTs, lastTs + 1).colRange(d*H, (d + 1)*H)
+                    .copyTo(hFinal.rowRange(d * batchSize, (d + 1) * batchSize));
+                if (!cFinal.empty())
+                    cState.rowRange(d, d + 1).copyTo(cFinal.rowRange(d * batchSize, (d + 1) * batchSize));
             }
         }
 
         // Run one direction's recurrence into its own scratch so both directions run concurrently.
-        // Writes hOutAll columns [i*H, (i+1)*H) and the matching cOut slice.
+        // Writes hOutAll columns [i*H, (i+1)*H) and, when the graph asks for it, the final state.
         void forwardDirection(int i, int numDirs, Mat gatesAll, const Mat& h0All, const Mat& c0All,
-                              Mat& hOutAll, Mat& cOut, bool parallelInside) const
+                              Mat& hOutAll, bool parallelInside, const Mat& seqLens,
+                              Mat& hFinal, Mat& cFinal) const
         {
             const int batchSizeTotal = seqLenth * batchSize;
             const int dtype = gatesAll.type();
@@ -407,15 +423,11 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             c0All.rowRange(i * batchSize, (i + 1) * batchSize).copyTo(cInternal);
 
             Mat hOutTs(batchSizeTotal, numHidden, dtype);
-            Mat cOutTs;
-            if (produceCellOutput)
-            {
-                cOutTs = cOut.reshape(1, batchSizeTotal);
-                cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
-            }
+            const Range dirRows(i * batchSize, (i + 1) * batchSize);
 
-            // sigmoid/tanh/tanh without peephole or clip: gate math on raw rows with the dispatched kernels
-            const bool fastGates = dtype == CV_32F && defaultActivations && !usePeephole && !useCellClip;
+            // sigmoid/tanh/tanh without peephole, clip, input_forget or sequence_lens: gate math on
+            // raw rows with the dispatched kernels
+            const bool fastGates = dtype == CV_32F && plainGates(seqLens.empty());
             // batch > 1: one GEMM per step reads Wh once instead of once per batch row
             const bool batchedH = dtype == CV_32F && batchSize > 1 && (int)packedWh.size() == numDirs
                 && hInternal.isContinuous() && gatesAll.isContinuous();
@@ -434,10 +446,16 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 tsInc = 1;
             }
 
+            Mat hPrev, cPrev;   // the state before this step, for the samples that already finished
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
                 Range curRowRange(ts*batchSize, (ts + 1)*batchSize);
                 Mat gates = gatesAll.rowRange(curRowRange);  // already holds Wx * x_t + b
+                if (!seqLens.empty())
+                {
+                    hInternal.copyTo(hPrev);
+                    cInternal.copyTo(cPrev);
+                }
 
                 // gates += Wh * h_{t-1}
                 if (batchedH)
@@ -472,8 +490,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     else
                         gateRows(Range(0, batchSize));
                     hInternal.copyTo(hOutTs.rowRange(curRowRange));
-                    if (produceCellOutput)
-                        cInternal.copyTo(cOutTs.rowRange(curRowRange));
                     continue;
                 }
 
@@ -491,15 +507,22 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     Mat gatesIF = gates.colRange(0, 2*numHidden);
                     gemm(cInternal, pI, 1, gateI, 1, gateI);
                     gemm(cInternal, pF, 1, gateF, 1, gateF);
+                    recurrent::clipToThreshold(gatesIF, clipValue);
                     f_activation(gatesIF, gatesIF);
                 }
                 else
                 {
                     Mat gatesIFO = gates.colRange(0, 3*numHidden);
+                    recurrent::clipToThreshold(gatesIFO, clipValue);
                     f_activation(gatesIFO, gatesIFO);
                 }
 
+                recurrent::clipToThreshold(gateG, clipValue);
                 g_activation(gateG, gateG);
+
+                // Coupled gates: f_t = 1 - i_t.
+                if (inputForget)
+                    subtract(1.0, gateI, gateF);
 
                 //compute c_t
                 multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
@@ -515,6 +538,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 if (usePeephole)
                 {
                     gemm(cInternal, pO, 1, gateO, 1, gateO);
+                    recurrent::clipToThreshold(gateO, clipValue);
                     f_activation(gateO, gateO);
                 }
 
@@ -522,14 +546,23 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 h_activation(cInternal, hInternal);
                 multiply(gateO, hInternal, hInternal);
 
-                hInternal.copyTo(hOutTs.rowRange(curRowRange));
-
-                if (produceCellOutput)
-                    cInternal.copyTo(cOutTs.rowRange(curRowRange));
+                // A sample past its length keeps the state it finished with, and Y gets zeros.
+                if (!seqLens.empty())
+                {
+                    recurrent::holdFinishedRows(seqLens, ts, cPrev, cInternal);
+                    recurrent::holdFinishedRows(seqLens, ts, hPrev, hInternal);
+                }
+                writeYStep(hOutTs.rowRange(curRowRange), ts, hInternal, seqLens);
             }
 
             // slice this direction's result into the assembly buffer
             hOutTs.copyTo(hOutAll.colRange(i * numHidden, (i + 1) * numHidden));
+
+            // The state this direction's scan finished on, not a slice of Y: for a truncated sample
+            // Y's last row is zero, and for direction=reverse the scan ends at t=0.
+            hInternal.copyTo(hFinal.rowRange(dirRows));
+            if (!cFinal.empty())
+                cInternal.copyTo(cFinal.rowRange(dirRows));
         }
 
         void forward(InputArrayOfArrays inputs_arr,
@@ -585,13 +618,24 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             Mat c0All = hasInput(6) ? input[6].reshape(1, input[6].size[0] * input[6].size[1])
                                     : Mat::zeros(numDirs * batchSize, numHidden, input[0].type());
 
+            // ONNX sequence_lens: each entry stops at its own length and keeps the state it finished with.
+            Mat seqLens;
+            if (hasInput(4))
+            {
+                input[4].convertTo(seqLens, CV_32S);
+                CV_CheckEQ((int)seqLens.total(), batchSize, "LSTM: sequence_lens must have one entry per sample");
+            }
+
             // set outputs to 0
             for (auto& out : output)
                 out.setTo(0);
 
-            // seq-major cell-state scratch: (seq, batch, dirs, hid), matching the recurrence.
-            int cOutShape[] = {seqLenth, batchSize, numDirs, numHidden};
-            Mat cOut = produceCellOutput ? Mat::zeros(4, cOutShape, output[0].type()) : Mat();
+            // Final states come from the recurrence, not from a slice of Y, and only slots the graph
+            // declared are written.
+            const bool wantYh = produceOutputYh && output.size() > 1;
+            const bool wantYc = produceCellOutput && output.size() > 2;
+            Mat hFinal(numDirs * batchSize, numHidden, output[0].type());
+            Mat cFinal = wantYc ? Mat(numDirs * batchSize, numHidden, output[0].type()) : Mat();
 
             // the recurrence below slices X by timestep, so it needs the seq-major order;
             // under ONNX layout=1 the input arrives as (batch, seq, ...)
@@ -615,14 +659,14 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 gatesAll[i] = projectInput(i, numDirs, xTs);
 
             const bool fp32 = input[0].type() == CV_32F && h0All.isContinuous() && c0All.isContinuous();
-            const bool fastGates = fp32 && defaultActivations && !usePeephole && !useCellClip;
+            const bool fastGates = fp32 && plainGates(seqLens.empty());
 
             // Batch 1 with enough hidden units: split each direction across threads at every timestep.
             int chunksPerDir = 1;
             if (fastGates && batchSize == 1 && numHidden >= 128)
                 chunksPerDir = std::min(numHidden / 64, std::max(1, std::min(getNumThreads(), 8) / numDirs));
             if (chunksPerDir >= 2)
-                forwardStepParallel(numDirs, chunksPerDir, gatesAll, h0All, c0All, hOutAll, cOut);
+                forwardStepParallel(numDirs, chunksPerDir, gatesAll, h0All, c0All, hOutAll, hFinal, cFinal);
             else if (batchSize > 1)
             {
                 // Pack Wh once for the batched recurrent GEMM; packWeights clears it when the weights change.
@@ -635,7 +679,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 }
                 // One direction at a time, so each step's GEMM and gate rows can use all threads.
                 for (int i = 0; i < numDirs; i++)
-                    forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, cOut, true);
+                    forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, true, seqLens,
+                                     hFinal, cFinal);
             }
             else
             {
@@ -643,130 +688,54 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 parallel_for_(Range(0, numDirs), [&](const Range& r)
                 {
                     for (int i = r.start; i < r.end; i++)
-                        forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, cOut, false);
+                        forwardDirection(i, numDirs, gatesAll[i], h0All, c0All, hOutAll, false, seqLens,
+                                         hFinal, cFinal);
                 }, numDirs);
             }
 
             // Reshape to (seq, batch, dirs, hid), then transpose into output[0] per `layout`.
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
             Mat y4d = hOutAll.reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
-            Mat ySeqFirst;   // (seq, dirs, batch, hid): the layout=0 Y; Yh sliced from it
-            if (layout == SEQ_BATCH_HID) {
+            if (layout == SEQ_BATCH_HID)
                 cv::transpose(y4d, {0, 2, 1, 3}, output[0]);
-                ySeqFirst = output[0];
-            } else {
-                cv::transpose(y4d, {0, 2, 1, 3}, ySeqFirst);
-                cv::transpose(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
-            }
-
-            if (produceOutputYh){
-                getCellStateYh(ySeqFirst, output[1], numDirs);
-            }
-
-            if (produceCellOutput){
-                getCellStateYc(cOut, output[2], numDirs);
-            }
-        }
-
-        void getCellStateYh(Mat& scr, Mat& dst, int numDirs)
-        {
-            // TODO: implement
-            if (numDirs == 1){
-                // Last step processed: Y[-1] going forward, Y[0] going in reverse.
-                const int lastTs = reverse ? 0 : scr.size[0] - 1;
-                Mat hOut = scr.rowRange(lastTs, lastTs + 1);
-
-                // reshape 1x1xBxH -> 1xBxH
-                int shp[] = {1, batchSize, numHidden};
-                hOut = hOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
-                if (layout == BATCH_SEQ_HID){
-                    cv::transpose(hOut, {1, 0, 2}, dst);
-                }
-                else{
-                    hOut.copyTo(dst);
-                }
-
-            } else {
-                // Slice: SxDxBxH -> last sequence, first direction
-                Range ranges1[] = {cv::Range(scr.size[0] - 1, scr.size[0]), cv::Range(0, 1), cv::Range::all(), cv::Range::all()};
-                Mat part1 = scr(ranges1);
-
-                // Slice: SxDxBxH -> first sequence, last direction
-                Range ranges2[] = {cv::Range(0, 1), cv::Range(scr.size[1] - 1, scr.size[1]), cv::Range::all(), cv::Range::all()};
-                Mat part2 = scr(ranges2);
-
-                int shp[] = {1, part1.size[2] * part1.size[3]};
-                part1 = part1.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-                part2 = part2.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
-                // build into a temp, then write into the preallocated dst in place (vconcat straight
-                // into dst would replace its header and detach it from the graph's output tensor)
-                Mat tmp;
-                vconcat(part1, part2, tmp);
-
-                int finalShape[] = {2, batchSize, numHidden};
-                tmp = tmp.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
-
-                if (layout == BATCH_SEQ_HID){
-                    cv::transpose(tmp, {1, 0, 2}, dst);
-                } else {
-                    tmp.copyTo(dst);
-                }
-            }
-        }
-
-
-        void getCellStateYc(Mat& cOut, Mat& dst, int numDirs)
-        {
-            // seq, batch, dirs, hidden
-            int shp[] = {0, batchSize, numDirs, numHidden};
-            cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
-            // permute to (seq, dirs, batch, hidden); the `layout` only affects the FINAL Yc order
-            // below, the last-timestep/last-direction slicing is layout-independent
-            cv::Mat newCellState;
-            cv::transpose(cOut, {0, 2, 1, 3}, newCellState);
-            cOut = newCellState;
-
-            if (numDirs == 1)
-            {
-                // Last step processed: Y[-1] going forward, Y[0] going in reverse.
-                const int lastTs = reverse ? 0 : cOut.size[0] - 1;
-                Range ranges[] = {cv::Range(lastTs, lastTs + 1), cv::Range::all(), cv::Range::all(), cv::Range::all()};
-                cOut = cOut(ranges);
-                // Reshape: 1x1xBxH -> 1xBxH
-                int shp[] = {1, batchSize, numHidden};
-                cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-            }
             else
+                cv::transpose(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
+
+            if (wantYh)
+                writeFinalStates(hFinal, output[1], numDirs);
+
+            if (wantYc)
+                writeFinalStates(cFinal, output[2], numDirs);
+        }
+
+        // One timestep of Y; a sample past its length contributes zeros.
+        static void writeYStep(Mat dst, int ts, const Mat& h, const Mat& seqLens)
+        {
+            if (seqLens.empty())
             {
-                // Slice: SxDxBxH -> last sequence, first direction
-                Range ranges1[] = {cv::Range(cOut.size[0] - 1, cOut.size[0]), cv::Range(0, 1), cv::Range::all(), cv::Range::all()};
-                Mat part1 = cOut(ranges1);
-
-                // Slice: SxDxBxH -> first sequence, last direction
-                Range ranges2[] = {cv::Range(0, 1), cv::Range(cOut.size[1] - 1, cOut.size[1]), cv::Range::all(), cv::Range::all()};
-                Mat part2 = cOut(ranges2);
-
-                int shp[] = {1, part1.size[2] * part1.size[3]};
-                part1 = part1.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-                part2 = part2.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
-                vconcat(part1, part2, cOut);
-
-                // Reshape: 1x2xBxH -> 2xBxH
-                int finalShape[] = {2, batchSize, numHidden};
-                cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
+                h.copyTo(dst);
+                return;
             }
-
-            // (dirs, batch, hid), or (batch, dirs, hid) for the batch-first layout - written into the
-            // preallocated dst in place
-            if (layout == BATCH_SEQ_HID){
-                cv::transpose(cOut, {1, 0, 2}, dst);
-            } else {
-                cOut.copyTo(dst);
+            const int* lens = seqLens.ptr<int>();
+            for (int n = 0; n < h.rows; n++)
+            {
+                if (ts < lens[n])
+                    h.row(n).copyTo(dst.row(n));
+                else
+                    dst.row(n).setTo(0);
             }
+        }
+
+        // Write the per-direction final states as Y_h/Y_c into the preallocated dst in place.
+        void writeFinalStates(const Mat& scr, Mat& dst, int numDirs) const
+        {
+            int shp[] = {numDirs, batchSize, numHidden};
+            Mat s = scr.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+
+            if (layout == BATCH_SEQ_HID)
+                cv::transpose(s, {1, 0, 2}, dst);
+            else
+                s.copyTo(dst);
         }
 
         // Fill weightBlobs: [0]=Wx, [1]=Wh, [2]=bias, and (peephole) [3]=pI, [4]=pF, [5]=pO.
