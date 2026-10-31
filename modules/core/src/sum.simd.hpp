@@ -368,11 +368,14 @@ static int sum32u( const unsigned* src, const uchar* mask, double* dst, int len,
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
+// The work type is double rather than a wider integer, as used for the 32-bit depths above: the
+// unrolled step adds four elements together before the accumulator sees them, and no integer type
+// is wide enough to hold that partial sum for 64-bit inputs.
 static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<uint64, double, double>(src, mask, dst, len, cn); }
 
 static int sum64s( const int64* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<int64, double, double>(src, mask, dst, len, cn); }
 
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }

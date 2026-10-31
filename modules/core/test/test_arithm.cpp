@@ -3576,6 +3576,58 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_AbsdiffSigned,
         testing::Values(CV_8S, CV_16S, CV_32S, CV_64S),
         testing::Values(1, 7, 8, 127)));
 
+// The mean of equal elements is that element, whatever the depth or the array length. For the
+// 64-bit depths the sum feeding cv::mean accumulated in the source type, so four elements were
+// added together before the double accumulator saw them, and large values wrapped - the mean of
+// INT64_MAX came back as -1. meanStdDev, which accumulates in double, was already right, so the
+// two disagreed on the same array. Lengths straddle the unrolled step.
+typedef testing::TestWithParam<int> Core_MeanWide;
+
+// Fills len elements with v, then checks mean() and meanStdDev() both return it exactly. The value
+// is passed in its own type throughout: a double -> integer cast is undefined once the value leaves
+// the integer's range, which would test the harness rather than the library.
+template<typename T> static void checkMeanOf(int depth, int len, T v)
+{
+    Mat src(1, len, depth);
+    for (int i = 0; i < len; i++)
+        src.ptr<T>(0)[i] = v;
+
+    SCOPED_TRACE(cv::format("depth=%d len=%d v=%.17g", depth, len, (double)v));
+    EXPECT_EQ((double)v, cv::mean(src)[0]);
+    // cv::sum shares the kernel changed here, so cover it directly rather than only through mean.
+    EXPECT_DOUBLE_EQ((double)v * len, cv::sum(src)[0]);
+
+    Scalar mu, sd;
+    cv::meanStdDev(src, mu, sd);
+    EXPECT_EQ((double)v, mu[0]) << "meanStdDev must agree with mean";
+    EXPECT_EQ(0.0, sd[0])       << "equal elements have no deviation";
+}
+
+TEST_P(Core_MeanWide, equal_elements_give_that_element)
+{
+    const int len = GetParam();
+
+    checkMeanOf<unsigned>(CV_32U, len, 0u);
+    checkMeanOf<unsigned>(CV_32U, len, 2147483648u);
+    checkMeanOf<unsigned>(CV_32U, len, UINT_MAX);
+
+    checkMeanOf<int>(CV_32S, len, 0);
+    checkMeanOf<int>(CV_32S, len, INT_MAX);
+    checkMeanOf<int>(CV_32S, len, INT_MIN);
+
+    checkMeanOf<uint64_t>(CV_64U, len, 0ull);
+    checkMeanOf<uint64_t>(CV_64U, len, 1ull << 62);
+    checkMeanOf<uint64_t>(CV_64U, len, 1ull << 63);
+    checkMeanOf<uint64_t>(CV_64U, len, UINT64_MAX);
+
+    checkMeanOf<int64_t>(CV_64S, len, 0ll);
+    checkMeanOf<int64_t>(CV_64S, len, 1ll << 62);
+    checkMeanOf<int64_t>(CV_64S, len, INT64_MAX);
+    checkMeanOf<int64_t>(CV_64S, len, INT64_MIN);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MeanWide, testing::Values(1, 7, 8, 127));
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
