@@ -662,6 +662,16 @@ CASE(test_clip_splitbounds)
     SKIP;
 CASE(test_clip_splitbounds_expanded)
     SKIP;
+CASE(test_col2im)
+    SKIP;
+CASE(test_col2im_5d)
+    SKIP;
+CASE(test_col2im_dilations)
+    SKIP;
+CASE(test_col2im_pads)
+    SKIP;
+CASE(test_col2im_strides)
+    SKIP;
 CASE(test_compress_0)
     SKIP;
 CASE(test_compress_1)
