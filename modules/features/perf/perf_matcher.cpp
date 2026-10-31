@@ -88,4 +88,27 @@ PERF_TEST_P(DescriptorMatcherFixture, bfmatch_knn_Hamming_binary,
     SANITY_CHECK_NOTHING();
 }
 
+// Include unequal sets: cross-check needs nearest neighbors in both directions.
+typedef tuple<Size, int> CrossCheck_Counts_Norm_t;
+typedef TestBaseWithParam<CrossCheck_Counts_Norm_t> CrossCheckMatcherFixture;
+
+PERF_TEST_P(CrossCheckMatcherFixture, bfmatch_crosscheck,
+            testing::Combine(
+                testing::Values(Size(16, 16), Size(1024, 1024), Size(4096, 4096),
+                                Size(32, 4096), Size(4096, 32)),
+                testing::Values(NORM_HAMMING, NORM_L2)))
+{
+    const Size counts = get<0>(GetParam());
+    const int normType = get<1>(GetParam());
+    const int type = normType == NORM_HAMMING ? CV_8U : CV_32F;
+    const int dim = type == CV_8U ? 32 : 128;
+    Mat query(counts.width, dim, type), train(counts.height, dim, type);
+    declare.in(query, train, WARMUP_RNG);
+
+    BFMatcher matcher(normType, true);
+    std::vector<DMatch> matches;
+    TEST_CYCLE() matcher.match(query, train, matches);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

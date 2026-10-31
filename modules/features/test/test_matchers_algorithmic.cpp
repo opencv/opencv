@@ -637,6 +637,175 @@ TEST(Features2d_DMatch, issue_17771)
     EXPECT_NO_THROW(ubf->knnMatch(usources, utargets, match, 1, mask, true));
 }
 
+// Reconstruct the two-search implementation, including distances retained for
+// rejected matches. Keeping the searches separate makes this a dispatch-independent reference.
+static void crossCheckReference(const Mat& query, const Mat& train, int dtype, int normType,
+                                Mat& dist, Mat& indices)
+{
+    Mat qdist, qidx, tdist, tidx;
+    batchDistance(query, train, qdist, dtype, qidx, normType, 1);
+    batchDistance(train, query, tdist, dtype, tidx, normType, 1);
+    dist = Mat(query.rows, 1, dtype, Scalar::all(dtype == CV_32S ? INT_MAX : FLT_MAX));
+    indices = Mat(query.rows, 1, CV_32S, Scalar::all(-1));
+    for (int t = 0; t < train.rows; ++t)
+    {
+        const int q = tidx.at<int>(t);
+        ASSERT_GE(q, 0);
+        if (dtype == CV_32S)
+        {
+            if (tdist.at<int>(t) < dist.at<int>(q))
+            {
+                dist.at<int>(q) = tdist.at<int>(t);
+                indices.at<int>(q) = t;
+            }
+        }
+        else if (tdist.at<float>(t) < dist.at<float>(q))
+        {
+            dist.at<float>(q) = tdist.at<float>(t);
+            indices.at<int>(q) = t;
+        }
+    }
+    for (int q = 0; q < query.rows; ++q)
+    {
+        ASSERT_GE(qidx.at<int>(q), 0);
+        if (tidx.at<int>(qidx.at<int>(q)) != q)
+            indices.at<int>(q) = -1;
+    }
+}
+
+typedef testing::TestWithParam<Vec3i> Features2d_BatchDistance_CrossCheck;
+
+TEST_P(Features2d_BatchDistance_CrossCheck, two_searches)
+{
+    const int type = GetParam()[0], dtype = GetParam()[1], normType = GetParam()[2];
+    RNG rng(0x37c204);
+    for (int iteration = 0; iteration < 40; ++iteration)
+    {
+        const int nq = iteration % 10 == 0 ? 1 : rng.uniform(2, 100);
+        const int nt = iteration % 10 == 1 ? 1 : rng.uniform(2, 100);
+        const int dim = rng.uniform(1, 130);
+        Mat queryBuffer(nq + 2, dim + 5, type), trainBuffer(nt + 2, dim + 7, type);
+        rng.fill(queryBuffer, RNG::UNIFORM, type == CV_8U ? 0 : -2, type == CV_8U ? 256 : 2);
+        rng.fill(trainBuffer, RNG::UNIFORM, type == CV_8U ? 0 : -2, type == CV_8U ? 256 : 2);
+        Mat query = queryBuffer(Rect(1, 1, dim, nq));
+        Mat train = trainBuffer(Rect(2, 1, dim, nt));
+        if (iteration % 4 == 0)
+        {
+            query.row(0).copyTo(query.row(nq - 1));
+            query.row(0).copyTo(train.row(nt - 1));
+            train.row(0).copyTo(train.row(nt / 2));
+        }
+        if (iteration % 9 == 0)
+        {
+            query.setTo(0);
+            train.setTo(0);
+        }
+        Mat expectedDist, expectedIdx;
+        crossCheckReference(query, train, dtype, normType, expectedDist, expectedIdx);
+        // Exercise strided output as well as strided descriptors.
+        Mat distBuffer(nq, 3, dtype, Scalar::all(-1)), idxBuffer(nq, 3, CV_32S, Scalar::all(-2));
+        Mat dist = distBuffer.col(1), indices = idxBuffer.col(1);
+        batchDistance(query, train, dist, dtype, indices, normType, 1, noArray(), 0, true);
+        EXPECT_EQ(0, countNonZero(dist != expectedDist)) << iteration;
+        EXPECT_EQ(0, countNonZero(indices != expectedIdx)) << iteration;
+        EXPECT_EQ(0, countNonZero(distBuffer.col(0) != -1));
+        EXPECT_EQ(0, countNonZero(idxBuffer.col(2) != -2));
+
+        const int defaultDepth = normType == NORM_HAMMING || normType == NORM_HAMMING2 ? CV_32S : CV_32F;
+        if (dtype == defaultDepth)
+        {
+            batchDistance(query, train, dist, -1, indices, normType, 1, noArray(), 0, true);
+            EXPECT_EQ(0, countNonZero(dist != expectedDist));
+            EXPECT_EQ(0, countNonZero(indices != expectedIdx));
+        }
+
+        // BFMatcher chooses its own output depth. The other combinations above
+        // are supported by the public batchDistance API as well.
+        const int matcherDepth = type == CV_8U &&
+            (normType == NORM_L1 || normType == NORM_HAMMING || normType == NORM_HAMMING2) ? CV_32S : CV_32F;
+        if (dtype == matcherDepth)
+        {
+            std::vector<DMatch> matches;
+            BFMatcher(normType, true).match(query, train, matches);
+            size_t k = 0;
+            for (int q = 0; q < nq; ++q)
+            {
+                if (expectedIdx.at<int>(q) < 0)
+                    continue;
+                ASSERT_LT(k, matches.size());
+                EXPECT_EQ(q, matches[k].queryIdx);
+                EXPECT_EQ(expectedIdx.at<int>(q), matches[k].trainIdx);
+                EXPECT_EQ(dtype == CV_32S ? (float)expectedDist.at<int>(q) : expectedDist.at<float>(q),
+                          matches[k].distance);
+                ++k;
+            }
+            EXPECT_EQ(k, matches.size());
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Features2d, Features2d_BatchDistance_CrossCheck, testing::Values(
+    Vec3i(CV_8U, CV_32S, NORM_L1), Vec3i(CV_8U, CV_32F, NORM_L1),
+    Vec3i(CV_8U, CV_32S, NORM_L2SQR), Vec3i(CV_8U, CV_32F, NORM_L2SQR),
+    Vec3i(CV_8U, CV_32F, NORM_L2), Vec3i(CV_8U, CV_32S, NORM_HAMMING),
+    Vec3i(CV_8U, CV_32S, NORM_HAMMING2), Vec3i(CV_32F, CV_32F, NORM_L1),
+    Vec3i(CV_32F, CV_32F, NORM_L2SQR), Vec3i(CV_32F, CV_32F, NORM_L2)));
+
+TEST(Features2d_BFMatcher_CrossCheck, large_integer_distances)
+{
+    Mat query(2, 32768, CV_8U, Scalar::all(0));
+    Mat train(3, 32768, CV_8U, Scalar::all(255));
+    Mat dist, indices;
+    batchDistance(query, train, dist, CV_32S, indices, NORM_L2SQR, 1, noArray(), 0, true);
+    EXPECT_EQ(32768 * 255 * 255, dist.at<int>(0));
+    EXPECT_EQ(0, indices.at<int>(0));
+    EXPECT_EQ(INT_MAX, dist.at<int>(1));
+    EXPECT_EQ(-1, indices.at<int>(1));
+}
+
+TEST(Features2d_BFMatcher_CrossCheck, unrepresentable_distances)
+{
+    const int norms[] = {NORM_L1, NORM_L2, NORM_L2SQR};
+    for (int normType : norms)
+    {
+        Mat query(3, 16, CV_32F, Scalar::all(0));
+        Mat train(4, 16, CV_32F, Scalar::all(1));
+        query.row(0).setTo(std::numeric_limits<float>::quiet_NaN());
+        query.row(1).setTo(std::numeric_limits<float>::infinity());
+        train.row(0).setTo(-std::numeric_limits<float>::quiet_NaN());
+        train.row(1).setTo(-std::numeric_limits<float>::infinity());
+        train.row(2).setTo(FLT_MAX);
+        std::vector<DMatch> matches;
+        BFMatcher(normType, true).match(query, train, matches);
+        ASSERT_EQ(1u, matches.size());
+        EXPECT_EQ(2, matches[0].queryIdx);
+        EXPECT_EQ(3, matches[0].trainIdx);
+        EXPECT_EQ(normType == NORM_L2 ? 4.f : 16.f, matches[0].distance);
+        train.setTo(std::numeric_limits<float>::quiet_NaN());
+        BFMatcher(normType, true).match(query, train, matches);
+        EXPECT_TRUE(matches.empty());
+    }
+}
+
+TEST(Features2d_BFMatcher_CrossCheck, batch_distance_preconditions)
+{
+    Mat query(3, 16, CV_8U, Scalar::all(0)), train(4, 16, CV_8U, Scalar::all(1));
+    Mat dist, indices, mask(3, 4, CV_8U, Scalar::all(1));
+    std::vector<DMatch> matches;
+    BFMatcher matcher(NORM_HAMMING, true);
+    matcher.match(Mat(), train, matches);
+    EXPECT_TRUE(matches.empty());
+    EXPECT_THROW(matcher.match(query, Mat(), matches), cv::Exception);
+    EXPECT_THROW(batchDistance(query, train, dist, CV_32S, indices, NORM_HAMMING, 2,
+                               noArray(), 0, true), cv::Exception);
+    EXPECT_THROW(batchDistance(query, train, dist, CV_32S, indices, NORM_HAMMING, 1,
+                               mask, 0, true), cv::Exception);
+    EXPECT_THROW(batchDistance(query, train, dist, CV_32S, indices, NORM_HAMMING, 1,
+                               noArray(), 1, true), cv::Exception);
+    EXPECT_THROW(batchDistance(query, train, dist, CV_32S, indices, NORM_INF, 1,
+                               noArray(), 0, true), cv::Exception);
+}
+
 // Verify that cross-check BFMatcher gives identical results via Mat (CPU) and UMat (OCL or CPU).
 // When OpenCL is active the UMat path exercises ocl_matchWithCrossCheck; when it is not,
 // both paths fall through to the same CPU code — either way the results must match.
