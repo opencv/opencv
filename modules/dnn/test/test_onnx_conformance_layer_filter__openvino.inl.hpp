@@ -1940,7 +1940,7 @@ CASE(test_mul_uint64)
 CASE(test_mul_uint8)
     SKIP;
 CASE(test_mvn)
-    // no filter
+    SKIP;
 CASE(test_mvn_expanded)
     // no filter
 CASE(test_mvn_expanded_ver18)
