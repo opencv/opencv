@@ -11,6 +11,7 @@
 #include "opencv2/core/types.hpp"
 
 #include <map>
+#include <set>
 #include <vector>
 
 namespace cv {
@@ -38,6 +39,7 @@ struct CV_EXPORTS MapPoint
     Mat refDesc;
 
     std::map<KeyFrame*, size_t> observations; // kf -> keypoint index
+    KeyFrame* refKf = nullptr; // reference keyframe (for Stage C map point correction)
 
     int visibleCount = 0;
     int foundCount = 0;
@@ -61,7 +63,13 @@ struct CV_EXPORTS KeyFrame
     std::vector<std::pair<KeyFrame*, int>> orderedCovisibility; // sorted descending by count
 
     KeyFrame* parent = nullptr;
+    std::set<KeyFrame*> children;
+    std::set<KeyFrame*> loopEdges;
+
     Mat globalDesc;
+    std::vector<uint8_t> globalHash; //!< Binary LSH code for Hamming pre-filter; empty until hash projection is built.
+
+    bool bad = false; // soft-delete; check before use
 };
 
 //! @}
