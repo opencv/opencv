@@ -2470,6 +2470,45 @@ TEST(Core_Invert, small)
 TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run(); }
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<int> Core_DotProduct_NewTypes;
+
+TEST_P(Core_DotProduct_NewTypes, accuracy)
+{
+    const int depth = GetParam();
+    // small integers: every depth stores them exactly, so the dot product is exact
+    Mat a32s(17, 41, CV_32SC2), b32s(17, 41, CV_32SC2);
+    randu(a32s, -8, 9);
+    randu(b32s, -8, 9);
+    Mat a, b;
+    a32s.convertTo(a, depth);
+    b32s.convertTo(b, depth);
+
+    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths,
+    // non-zero values become 1 for CV_Bool)
+    Mat a64f, b64f;
+    a.convertTo(a64f, CV_64F);
+    b.convertTo(b64f, CV_64F);
+
+    EXPECT_EQ(a64f.dot(b64f), a.dot(b));
+    // a non-continuous ROI is processed plane by plane
+    const Rect roi(3, 2, 30, 11);
+    EXPECT_EQ(a64f(roi).dot(b64f(roi)), a(roi).dot(b(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
+    testing::Values(CV_16F, CV_16BF, CV_Bool, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
+TEST(Core_DotProduct, bool_nonzero_bytes)
+{
+    // any non-zero byte is true, so 2 and 255 count as 1 (dotProd_8u would give 1027)
+    uchar a[] = { 2, 255, 0, 1, 7 };
+    uchar b[] = { 255, 2, 3, 0, 1 };
+    Mat ma = Mat(1, 5, CV_8U, a).reinterpret(CV_Bool);
+    Mat mb = Mat(1, 5, CV_8U, b).reinterpret(CV_Bool);
+    EXPECT_EQ(3., ma.dot(mb));
+}
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
