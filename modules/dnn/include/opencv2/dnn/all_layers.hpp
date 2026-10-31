@@ -2085,6 +2085,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RMSNormLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ReverseSequenceLayer : public Layer
+    {
+    public:
+        static Ptr<ReverseSequenceLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END

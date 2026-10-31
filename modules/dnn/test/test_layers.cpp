@@ -4687,4 +4687,162 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+static Mat reverseSequenceReference(const Mat& X, const std::vector<int64_t>& lensData,
+                                    int timeAxis, int batchAxis)
+{
+    Mat ref = X.clone();
+    CV_CheckTrue(X.isContinuous(), "reverseSequenceReference requires a continuous input");
+
+    const int nB = X.size[batchAxis], nT = X.size[timeAxis];
+    const size_t batchStep = X.step[batchAxis];
+    const size_t timeStep = X.step[timeAxis];
+    const size_t blockSize = X.step[std::max(timeAxis, batchAxis)];
+
+    const uchar* s = X.ptr();
+    uchar* d = ref.ptr();
+    for (int b = 0; b < nB; ++b)
+    {
+        const int64_t L = lensData[b];
+        for (int t = 0; t < nT; ++t)
+        {
+            const int srcT = (t < L) ? (int)(L - 1 - t) : t;
+            std::memcpy(d + b * batchStep + t * timeStep,
+                        s + b * batchStep + srcT * timeStep,
+                        blockSize);
+        }
+    }
+    return ref;
+}
+
+static std::vector<Mat> makeReverseSequenceInputs(const MatShape& xShape,
+                                                  const std::vector<int64_t>& lensData,
+                                                  int lensType, int dataType)
+{
+    Mat X(xShape, dataType);
+    if (dataType == CV_32F || dataType == CV_64F)
+    {
+        randu(X, -1.0, 1.0);
+    }
+    else
+    {
+        for (size_t i = 0; i < X.total() * X.elemSize(); ++i)
+            X.ptr<uchar>()[i] = (uchar)((i * 37 + 11) & 0xff);
+    }
+
+    Mat lens({(int)lensData.size()}, lensType);
+    for (size_t i = 0; i < lensData.size(); ++i)
+    {
+        if (lensType == CV_32S)
+            lens.ptr<int32_t>()[i] = (int32_t)lensData[i];
+        else
+        {
+            CV_Assert(lensType == CV_64S);
+            lens.ptr<int64_t>()[i] = lensData[i];
+        }
+    }
+    return {X, lens};
+}
+
+static Ptr<Layer> makeReverseSequenceLayer(int timeAxis, int batchAxis)
+{
+    LayerParams lp;
+    lp.type = "ReverseSequence";
+    lp.name = "reverse_sequence";
+    lp.set("time_axis", timeAxis);
+    lp.set("batch_axis", batchAxis);
+    return LayerFactory::createLayerInstance(lp.type, lp);
+}
+
+static void checkReverseSequence(const MatShape& xShape, const std::vector<int64_t>& lensData,
+                                 int lensType, int timeAxis, int batchAxis, int dataType)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(timeAxis, batchAxis);
+    ASSERT_TRUE(layer) << "ReverseSequence layer is not registered";
+
+    std::vector<Mat> inputs = makeReverseSequenceInputs(xShape, lensData, lensType, dataType);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), xShape);
+
+    const Mat ref = reverseSequenceReference(inputs[0], lensData, timeAxis, batchAxis);
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, Reference)
+{
+    // int16, rank 2, batch-first layout.
+    checkReverseSequence(MatShape{4, 4}, {4, 3, 2, 1}, CV_64S, 1, 0, CV_16S);
+
+    // int16, rank 3: each step is a contiguous block of 2 elements.
+    checkReverseSequence(MatShape{2, 3, 2}, {3, 1}, CV_64S, 1, 0, CV_16S);
+
+    // time-first layout with int32 sequence_lens.
+    checkReverseSequence(MatShape{3, 2, 2}, {3, 3}, CV_32S, 0, 1, CV_16S);
+
+    // float32 with L == 0, L == 1 and L == nTimeStep.
+    checkReverseSequence(MatShape{4, 4}, {0, 1, 4, 2}, CV_64S, 1, 0, CV_32F);
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, LensOutOfRangeThrows)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> outputs;
+    std::vector<Mat> tooLong = makeReverseSequenceInputs(MatShape{2, 3}, {4, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, tooLong, outputs));   // L > nTimeStep
+
+    std::vector<Mat> negative = makeReverseSequenceInputs(MatShape{2, 3}, {-1, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, negative, outputs));  // L < 0
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, LensLengthMismatchThrows)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
+    ASSERT_TRUE(layer);
+
+    // 3 batch elements, but only 2 sequence lengths.
+    std::vector<Mat> inputs = makeReverseSequenceInputs(MatShape{3, 4}, {2, 4}, CV_64S, CV_32F), outputs;
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, InvalidAxesThrow)
+{
+    // time_axis and batch_axis must both be 0 or 1 and must differ.
+    EXPECT_ANY_THROW(makeReverseSequenceLayer(0, 0));
+    EXPECT_ANY_THROW(makeReverseSequenceLayer(2, 0));
+    EXPECT_ANY_THROW(makeReverseSequenceLayer(0, 2));
+}
+
+TEST(Layer_ReverseSequence_Test_Contract_, NoInPlaceAndInputUnchanged)
+{
+    // runLayer() clones the inputs and ignores the value returned by getMemoryShapes(),
+    // so this test drives the layer by hand to check two things it cannot: the layer does
+    // not claim in-place support, and forward() leaves its input untouched.
+    std::vector<Mat> inputs = makeReverseSequenceInputs(MatShape{2, 3}, {2, 3}, CV_64S, CV_32F);
+    const Mat Xcopy = inputs[0].clone();
+
+    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
+    ASSERT_TRUE(layer);
+
+    std::vector<MatShape> inShapes = {shape(inputs[0]), shape(inputs[1])}, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes = {inputs[0].type(), inputs[1].type()}, outTypes, internalTypes;
+
+    EXPECT_FALSE(layer->getMemoryShapes(inShapes, 1, outShapes, internalShapes));
+    ASSERT_EQ(outShapes.size(), (size_t)1);
+    ASSERT_EQ(outShapes[0], inShapes[0]);
+
+    layer->getTypes(inTypes, (int)outShapes.size(), (int)internalShapes.size(),
+                    outTypes, internalTypes);
+
+    std::vector<Mat> outputs = { Mat(outShapes[0], outTypes[0]) };
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+
+    layer->forward(inputs, outputs, internals);
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(inputs[0], Xcopy, NORM_INF)) << "forward() must not modify its input";
+}
+
 }} // namespace
