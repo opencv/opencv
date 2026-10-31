@@ -137,8 +137,6 @@ static Scalar sum_(const Mat& src)
     int k, depth = src.depth();
     SumFunc func = getSumFunc(depth);
     if (func == nullptr) {
-        if (depth == CV_Bool && cn == 1)
-            return Scalar((double)countNonZero(src));
         CV_Error_(Error::StsNotImplemented, ("sum: %s input is not supported, convert the input to another type (e.g. CV_32F) first",
                                             typeToString(src.type()).c_str()));
     }
@@ -151,7 +149,8 @@ static Scalar sum_(const Mat& src)
     int _buf[CV_CN_MAX];
     int* buf = (int*)&_res[0];
     size_t esz = 0;
-    bool partialSumIsInt = depth < CV_32S;
+    // CV_Bool sorts above CV_32S in the depth enum but accumulates into int like the 8-bit types.
+    bool partialSumIsInt = depth < CV_32S || depth == CV_Bool;
     bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
 
     if( blockSum )

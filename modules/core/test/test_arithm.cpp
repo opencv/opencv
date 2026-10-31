@@ -4964,12 +4964,10 @@ TEST(Core_Arithm, inRange_unsupported_depth_30153)
 
 TEST(Core_Arithm, sum_unsupported_depth)
 {
-    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    for (int depth : {CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
     {
         for (int cn : {1, 3})
         {
-            if (depth == CV_Bool && cn == 1)
-                continue; // single-channel CV_Bool is supported by cv::sum
             cv::Mat src(4, 4, CV_MAKETYPE(depth, cn), cv::Scalar::all(0));
             try
             {
@@ -5074,6 +5072,69 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
         cv::addWeighted(a, 600.0, b, -599.0, 0.0, dst);
         EXPECT_EQ(0, cv::countNonZero(dst != 127));
     }
+}
+
+// CV_Bool reductions must agree with a CV_8U matrix holding the same 0/1 bytes.
+typedef testing::TestWithParam< tuple<int, int> > Core_BoolReductions;
+
+TEST_P(Core_BoolReductions, match_uchar_reference)
+{
+    const int len = get<0>(GetParam());
+    const int cn  = get<1>(GetParam());
+    SCOPED_TRACE(cv::format("len=%d cn=%d", len, cn));
+
+    cv::RNG rng(0x5eed + len * 31 + cn);
+    cv::Mat b(1, len, CV_MAKETYPE(CV_Bool, cn));
+    cv::Mat u(1, len, CV_MAKETYPE(CV_8U, cn));
+    for (int i = 0; i < len * cn; i++)
+    {
+        const uchar v = (uchar)rng.uniform(0, 2);
+        b.data[i] = v;
+        u.data[i] = v;
+    }
+    cv::Mat mask(1, len, CV_8U);
+    for (int i = 0; i < len; i++)
+        mask.data[i] = (uchar)(rng.uniform(0, 2) ? 255 : 0);
+
+    const cv::Scalar sb = cv::sum(b), su = cv::sum(u);
+    for (int c = 0; c < cn; c++)
+        EXPECT_DOUBLE_EQ(su[c], sb[c]) << "sum, channel " << c;
+
+    for (int withMask = 0; withMask < 2; withMask++)
+    {
+        const cv::Mat m = withMask ? mask : cv::Mat();
+        const cv::Scalar mb = cv::mean(b, m), mu = cv::mean(u, m);
+        cv::Scalar eb, db, eu, du;
+        cv::meanStdDev(b, eb, db, m);
+        cv::meanStdDev(u, eu, du, m);
+        for (int c = 0; c < cn; c++)
+        {
+            EXPECT_DOUBLE_EQ(mu[c], mb[c]) << "mean, mask=" << withMask << ", channel " << c;
+            EXPECT_DOUBLE_EQ(eu[c], eb[c]) << "meanStdDev mean, mask=" << withMask << ", channel " << c;
+            EXPECT_DOUBLE_EQ(du[c], db[c]) << "meanStdDev stddev, mask=" << withMask << ", channel " << c;
+        }
+    }
+}
+
+// Lengths cover the vector body, the scalar tail and the partial-sum block boundary.
+INSTANTIATE_TEST_CASE_P(/**/, Core_BoolReductions, testing::Combine(
+    testing::Values(1, 7, 8, 127, 1000, (1 << 15) + 1),
+    testing::Values(1, 2, 3, 4)));
+
+TEST(Core_BoolReductionsUniform, equal_elements_have_no_deviation)
+{
+    for (int len : {1, 64, 100000})
+        for (int val = 0; val <= 1; val++)
+        {
+            SCOPED_TRACE(cv::format("len=%d val=%d", len, val));
+            cv::Mat b(1, len, CV_BoolC1, cv::Scalar(val));
+            EXPECT_DOUBLE_EQ((double)val * len, cv::sum(b)[0]);
+            EXPECT_DOUBLE_EQ((double)val, cv::mean(b)[0]);
+            cv::Scalar mu, sd;
+            cv::meanStdDev(b, mu, sd);
+            EXPECT_DOUBLE_EQ((double)val, mu[0]);
+            EXPECT_DOUBLE_EQ(0.0, sd[0]) << "equal elements have no deviation";
+        }
 }
 
 }} // namespace
