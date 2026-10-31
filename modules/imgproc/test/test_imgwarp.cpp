@@ -1139,6 +1139,61 @@ TEST(Imgproc_Remap, lanczos4_unsupported_depth)
     }
 }
 
+typedef testing::TestWithParam<int> Imgproc_Warp_NearestNewDepths;
+
+TEST_P(Imgproc_Warp_NearestNewDepths, accuracy)
+{
+    const int depth = GetParam();
+    Mat_<float> mapx(9, 11), mapy(9, 11);
+    randu(mapx, -3, 15);
+    randu(mapy, -3, 12);
+    Mat_<double> M({2, 3}, {0.9, 0.2, -2, -0.15, 1.1, 1.5});
+    Mat_<double> P({3, 3}, {0.9, 0.2, -2, -0.15, 1.1, 1.5, 0.001, 0.002, 1});
+    const Scalar border(2, 3, 4, 5);
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        // small integers: every depth stores them exactly, so the result must match CV_64F
+        Mat src32s(10, 12, CV_32SC(cn)), src, src64;
+        randu(src32s, 0, 6);
+        src32s.convertTo(src, depth);
+        src.convertTo(src64, CV_64F);
+        for (int op = 0; op < 4; op++)
+        {
+            Mat dst, ref;
+            if (op == 0)
+            {
+                remap(src, dst, mapx, mapy, INTER_NEAREST, BORDER_CONSTANT, border);
+                remap(src64, ref, mapx, mapy, INTER_NEAREST, BORDER_CONSTANT, border);
+            }
+            else if (op == 1)
+            {
+                remap(src, dst, mapx, mapy, INTER_NEAREST | WARP_RELATIVE_MAP, BORDER_REFLECT_101);
+                remap(src64, ref, mapx, mapy, INTER_NEAREST | WARP_RELATIVE_MAP, BORDER_REFLECT_101);
+            }
+            else if (op == 2)
+            {
+                warpAffine(src, dst, M, Size(11, 9), INTER_NEAREST, BORDER_CONSTANT, border);
+                warpAffine(src64, ref, M, Size(11, 9), INTER_NEAREST, BORDER_CONSTANT, border);
+            }
+            else
+            {
+                warpPerspective(src, dst, P, Size(11, 9), INTER_NEAREST, BORDER_REPLICATE);
+                warpPerspective(src64, ref, P, Size(11, 9), INTER_NEAREST, BORDER_REPLICATE);
+            }
+            ASSERT_EQ(src.type(), dst.type());
+            // round the reference to the depth the same way (CV_Bool: non-zero becomes 1)
+            Mat refd, ref64, dst64;
+            ref.convertTo(refd, depth);
+            refd.convertTo(ref64, CV_64F);
+            dst.convertTo(dst64, CV_64F);
+            EXPECT_EQ(0, cvtest::norm(ref64, dst64, NORM_INF)) << "cn=" << cn << " op=" << op;
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Warp_NearestNewDepths,
+    testing::Values(CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
 // https://github.com/opencv/opencv/issues/29589
 TEST(Imgproc_Warp, reject_nd_input)
 {

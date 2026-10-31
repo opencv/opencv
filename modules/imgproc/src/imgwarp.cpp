@@ -1588,11 +1588,17 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         {
             remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
-            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
+            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>,
+            remapNearest<hfloat, false>, remapNearest<bfloat, false>, remapNearest<bool, false>,
+            remapNearest<uint64, false>, remapNearest<int64, false>, remapNearest<unsigned, false>,
+            remapNearest<fp8_t, false>, remapNearest<fp8a_t, false>, 0
         },
         {
             remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
-            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
+            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>,
+            remapNearest<hfloat, true>, remapNearest<bfloat, true>, remapNearest<bool, true>,
+            remapNearest<uint64, true>, remapNearest<int64, true>, remapNearest<unsigned, true>,
+            remapNearest<fp8_t, true>, remapNearest<fp8a_t, true>, 0
         }
     };
 
