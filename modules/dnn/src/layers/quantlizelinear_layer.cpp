@@ -245,6 +245,11 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
               outtype == CV_16F || outtype == CV_32F);
     if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || wideFp8Out)
         CV_Assert(block_size == 0);  // block-wise FP8 quantization not yet supported
+    // INT4/UINT4 travel unpacked in CV_8S/CV_8U. QuantizeLinear saturates to the
+    // 4-bit range, which saturate_cast to the 8-bit storage type does not do.
+    const bool int4Out = onnx_dtype::isInt4(outputOnnxDtype) || onnx_dtype::isUint4(outputOnnxDtype);
+    if (int4Out)
+        CV_Assert(outtype == (onnx_dtype::isInt4(outputOnnxDtype) ? CV_8S : CV_8U));
 
     if (!zp.empty()) {
         CV_Assert(zp.isContinuous());
@@ -476,6 +481,19 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                    typeToString(sctype).c_str(),
                    typeToString(outtype).c_str(),
                    outputOnnxDtype));
+    }
+
+    if (int4Out) {
+        const int64_t total = (int64_t)out.total();
+        if (outtype == CV_8S) {
+            int8_t* d = out.ptr<int8_t>();
+            for (int64_t j = 0; j < total; j++)
+                d[j] = (int8_t)std::min(std::max((int)d[j], -8), 7);
+        } else {
+            uint8_t* d = out.ptr<uint8_t>();
+            for (int64_t j = 0; j < total; j++)
+                d[j] = (uint8_t)std::min((int)d[j], 15);
+        }
     }
 }
 
