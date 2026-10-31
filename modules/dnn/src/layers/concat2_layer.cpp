@@ -175,6 +175,9 @@ public:
 
     void runOp(const std::vector<Mat>& inps, Mat& out, int axis_)
     {
+        // An empty output (e.g. a zero batch) has nothing to copy; cv::concat would also drop its layout.
+        if (out.total() == 0)
+            return;
         // Byte-level BLOCK concat needs every input's C to be a multiple of
         // C0; misaligned inputs (YOLOX 80+4+1) route through NCHW.
         if (axis_ == 1 && out.size.layout == DATA_LAYOUT_BLOCK) {
