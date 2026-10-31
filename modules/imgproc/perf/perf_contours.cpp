@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
+#include "opencv2/imgproc/detail/legacy.hpp"
 
 namespace opencv_test { namespace {
 
@@ -142,8 +143,24 @@ PERF_TEST_P(TestMinEnclosingCircleWorstCase, minEnclosingCircle_sequential,
 }
 
 // ============================================================
-// findTRUContours performance tests
+// TRUCO (findContours with RETR_LIST, RETR_CCOMP, RETR_TREE on 8-bit images)
 // ============================================================
+
+static Mat trucoPerfImage(Size img_size, int num_circles)
+{
+    RNG rng(12345);
+    Mat img = Mat::zeros(img_size, CV_8UC1);
+    for (int i = 0; i < num_circles; ++i)
+    {
+        Point center(rng.uniform(50, img_size.width  - 50),
+                     rng.uniform(50, img_size.height - 50));
+        int radius = rng.uniform(10, 200);
+        circle(img, center, radius, Scalar::all(255), FILLED);
+    }
+    Mat binary;
+    adaptiveThreshold(img, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
+    return binary;
+}
 
 typedef TestBaseWithParam< tuple<Size, int, int> > TestFindTRUContours;
 
@@ -155,22 +172,8 @@ PERF_TEST_P(TestFindTRUContours, findTRUContours,
     )
 )
 {
-    Size img_size  = get<0>(GetParam());
-    int num_circles = get<1>(GetParam());
-    int nthreads   = get<2>(GetParam());
-
-    RNG rng(12345);
-    Mat img = Mat::zeros(img_size, CV_8UC1);
-    for (int i = 0; i < num_circles; ++i)
-    {
-        Point center(rng.uniform(50, img_size.width  - 50),
-                     rng.uniform(50, img_size.height - 50));
-        int radius = rng.uniform(10, 200);
-        circle(img, center, radius, Scalar::all(255), FILLED);
-    }
-
-    Mat binary;
-    adaptiveThreshold(img, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
+    Mat binary = trucoPerfImage(get<0>(GetParam()), get<1>(GetParam()));
+    int nthreads = get<2>(GetParam());
 
     vector<vector<Point>> contours;
     int prev_nthreads=cv::getNumThreads();
@@ -181,36 +184,51 @@ PERF_TEST_P(TestFindTRUContours, findTRUContours,
     SANITY_CHECK_NOTHING();
 }
 
-// Baseline: same image, findContours(RETR_LIST, CHAIN_APPROX_NONE) for direct comparison
-typedef TestBaseWithParam< tuple<Size, int> > TestFindContoursBaseline;
+CV_ENUM(TrucoRetrMode, RETR_LIST, RETR_CCOMP, RETR_TREE)
+
+typedef TestBaseWithParam< tuple<Size, int, TrucoRetrMode, int> > TestFindTRUContoursHierarchy;
+
+PERF_TEST_P(TestFindTRUContoursHierarchy, findTRUContours_hierarchy,
+    Combine(
+        Values(sz1080p, sz2160p),   // image size
+        Values(128, 2048),          // circle count
+        TrucoRetrMode::all(),       // retrieval mode
+        Values(1, 0)                // nthreads: 1=single-thread baseline, 0=all available
+    )
+)
+{
+    Mat binary = trucoPerfImage(get<0>(GetParam()), get<1>(GetParam()));
+    int mode = get<2>(GetParam());
+    int nthreads = get<3>(GetParam());
+
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    int prev_nthreads=cv::getNumThreads();
+    cv::setNumThreads(nthreads);
+    TEST_CYCLE() findContours(binary, contours, hierarchy, mode, CHAIN_APPROX_NONE);
+    cv::setNumThreads(prev_nthreads);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// Baseline: same images with the Suzuki-Abe implementation (findContours uses TRUCO in these modes)
+typedef TestBaseWithParam< tuple<Size, int, TrucoRetrMode> > TestFindContoursBaseline;
 
 PERF_TEST_P(TestFindContoursBaseline, findContours_baseline_for_TRUCO,
     Combine(
         Values(sz1080p, sz2160p),
-        Values(128, 512, 2048)
+        Values(128, 2048),
+        TrucoRetrMode::all()
     )
 )
 {
-    Size img_size   = get<0>(GetParam());
-    int num_circles = get<1>(GetParam());
-
-    RNG rng(12345);
-    Mat img = Mat::zeros(img_size, CV_8UC1);
-    for (int i = 0; i < num_circles; ++i)
-    {
-        Point center(rng.uniform(50, img_size.width  - 50),
-                     rng.uniform(50, img_size.height - 50));
-        int radius = rng.uniform(10, 200);
-        circle(img, center, radius, Scalar::all(255), FILLED);
-    }
-
-    Mat binary;
-    adaptiveThreshold(img, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 0);
+    Mat binary = trucoPerfImage(get<0>(GetParam()), get<1>(GetParam()));
+    int mode = get<2>(GetParam());
 
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
-    TEST_CYCLE() findContours(binary, contours, hierarchy, RETR_LIST, CHAIN_APPROX_NONE);
+    TEST_CYCLE() findContours_legacy(binary, contours, hierarchy, mode, CHAIN_APPROX_NONE);
 
     SANITY_CHECK_NOTHING();
 }
