@@ -31,14 +31,15 @@ public:
     }
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
-                         const int requiredOutputs,
+                         const int /*requiredOutputs*/,
                          std::vector<MatShape>& outputs,
-                         std::vector<MatShape>& internals) const CV_OVERRIDE
+                         std::vector<MatShape>& /*internals*/) const CV_OVERRIDE
     {
         CV_Assert(inputs.size()==2);
         CV_Assert(inputs[0].size()>=2);
         CV_Assert(inputs[1].size()==1);
-        CV_Assert(requiredOutputs==1);
+        CV_CheckEQ(inputs[1][0], inputs[0][batch_axis],
+                   "ReverseSequence: sequence_lens must contain one length per batch element");
         outputs.assign(1, inputs[0]);
         return false;
     }
@@ -49,19 +50,10 @@ public:
                   std::vector<MatType>& outputs,
                   std::vector<MatType>& /*internals*/) const CV_OVERRIDE
     {
-        CV_Assert(!inputs.empty());
         CV_Assert(inputs.size()==2);
-        const int t = inputs[0];
-        CV_CheckType(
-            t,
-            t==CV_16F || t==CV_32F || t==CV_64F|| t==CV_16BF ||
-            t==CV_8U || t==CV_16U || t==CV_32U || t==CV_64U ||
-            t==CV_8S || t==CV_16S || t==CV_32S || t==CV_64S ||
-            t==CV_Bool,
-            "ReverseSequence: unsupported input type");
         CV_CheckType(inputs[1], inputs[1]==CV_32S||inputs[1]==CV_64S,
                      "ReverseSequence: sequence_lens must be int64 or int32");
-        outputs.assign(requiredOutputs, MatType(t));
+        outputs.assign(max(1, requiredOutputs), inputs[0]);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,
@@ -83,60 +75,36 @@ public:
         CV_Assert(X.isContinuous() && Y.isContinuous());
 
         const int batchAxis = batch_axis, timeAxis = time_axis;
-        std::vector<size_t> stride(rank, 1);
-        for (int i = rank - 2; i >= 0; --i)
+        const int nBatch = X.size[batchAxis], nTimeStep = X.size[timeAxis];
+
+        std::vector<int64_t> seqLen(nBatch);
+        const int lensDepth = lens.depth();
+        for (int b = 0; b < nBatch; ++b)
         {
-            stride[i] = stride[i + 1] * X.size[i + 1];
+            seqLen[b] = lensDepth == CV_32S ? (int64_t) lens.ptr<int32_t>()[b] : lens.ptr<int64_t>()[b];
+            CV_CheckTrue(seqLen[b] >= 0 && seqLen[b] <= (int64_t) nTimeStep,
+                         "ReverseSequence: sequence_lens values must be in [0, nTimeStep]");
         }
 
         const uchar* src = X.ptr();
         uchar* dst = Y.ptr();
-        const int nBatch = X.size[batchAxis];
-        const int nTimeStep = X.size[timeAxis];
-        const size_t elemSize = X.elemSize();
-        const size_t block_size = stride[max(timeAxis, batchAxis)] * elemSize;
-        const size_t timeStepSize = stride[timeAxis] * elemSize;
-        const size_t batchStepSize = stride[batchAxis] * elemSize;
+        const size_t batchStep = X.step[batchAxis];
+        const size_t timeStep = X.step[timeAxis];
+        const size_t blockSize = X.step[1];
+        const int nTasks = nBatch * nTimeStep;
 
-        CV_Assert(lens.dims==1);
-        CV_Assert(lens.total()==(size_t)nBatch);
-
-        parallel_for_(Range(0, nBatch), [&](const Range& r)
+        parallel_for_(Range(0, nTasks), [&](const Range& r)
         {
-            for (int b = r.start; b < r.end; ++b)
+            for (int i = r.start; i < r.end; ++i)
             {
-                const int64_t reverseT = seqLenAt(lens, b);
-                const size_t batchOffset = b * batchStepSize;
-                CV_CheckTrue(0<=reverseT && reverseT <= nTimeStep, "ReverseSequence: sequence lens out of range");
-                for (int64_t t = 0; t < reverseT; ++t)
-                {
-                    memcpy(dst + batchOffset + (reverseT - 1 - t) * timeStepSize,
-                           src + batchOffset + t * timeStepSize, block_size);
-                }
-                for (int64_t t = reverseT; t < nTimeStep; ++t)
-                {
-                    memcpy(dst + batchOffset + t * timeStepSize,
-                           src + batchOffset + t * timeStepSize, block_size);
-                }
+                const int b = i / nTimeStep, t = i % nTimeStep;
+                const int L = seqLen[b];
+                const size_t dstT = (t < L ? L - 1 - t : t);
+                memcpy(dst + (size_t) b * batchStep + dstT * timeStep,
+                       src + (size_t) b * batchStep + (size_t) t * timeStep,
+                       blockSize);
             }
         });
-    }
-
-    static int64_t seqLenAt(const Mat& lens, const int i)
-    {
-        if (lens.depth() == CV_32S)
-        {
-            return (int64_t) lens.ptr<int32_t>()[i];
-        }
-        if (lens.depth() == CV_64S)
-        {
-            return lens.ptr<int64_t>()[i];
-        }
-
-        CV_Error_(Error::StsNotImplemented,
-                  ("ReverseSequence: unsupported sequence_lens depth %d (expected int64)", lens.depth()));
-
-        return 0;
     }
 
 private:
