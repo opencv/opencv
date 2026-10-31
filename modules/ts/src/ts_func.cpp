@@ -1829,7 +1829,11 @@ void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
 
-        logicOpS_(sptr, (uchar*)&buf[0], dptr, total, op);
+        if (op == '~' && src.depth() == CV_Bool)   // logical NOT: 0 -> 1, non-zero -> 0
+            for (size_t j = 0; j < total; j++)
+                dptr[j] = (uchar)(sptr[j] == 0);
+        else
+            logicOpS_(sptr, (uchar*)&buf[0], dptr, total, op);
     }
 }
 

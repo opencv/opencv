@@ -230,7 +230,8 @@ void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_OCL_RUN((a.isUMat() || c.isUMat()) && a.dims() <= 2,
+    // CV_Bool has no OpenCL type and needs a logical NOT, so it always uses the CPU kernel
+    CV_OCL_RUN((a.isUMat() || c.isUMat()) && a.dims() <= 2 && a.depth() != CV_Bool,
                bitwise_op_ocl(a, a, c, mask, OCL_OP_NOT))
     unary_op(ew::OP_NOT, a, c, mask, -1);
 }
