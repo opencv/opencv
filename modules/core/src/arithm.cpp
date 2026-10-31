@@ -50,6 +50,8 @@
 #include "precomp.hpp"
 #include "arithm_expr.hpp"   // the new element-wise engine (cv::ew)
 #include "opencl_kernels_core.hpp"
+#include <cmath>
+#include <limits>
 
 namespace cv
 {
@@ -1559,6 +1561,169 @@ static InRangeFunc getInRangeFunc(int depth)
     return inRangeTab[depth];
 }
 
+template<typename T> static bool inRangeConvertScalarBound(double value, bool lower, T& result)
+{
+    if (std::isnan(value))
+        return false;
+
+    const double minval = static_cast<double>(std::numeric_limits<T>::min());
+    // The exclusive upper limit remains exact in double for 64-bit integers.
+    const double maxvalExclusive = std::ldexp(1.0, std::numeric_limits<T>::digits);
+    if (lower)
+    {
+        if (value >= maxvalExclusive)
+            return false;
+        if (value <= minval)
+            result = std::numeric_limits<T>::min();
+        else
+        {
+            const double rounded = std::ceil(value);
+            if (rounded >= maxvalExclusive)
+                return false;
+            result = static_cast<T>(rounded);
+        }
+    }
+    else
+    {
+        if (value < minval)
+            return false;
+        if (value >= maxvalExclusive)
+            result = std::numeric_limits<T>::max();
+        else
+            result = static_cast<T>(std::floor(value));
+    }
+    return true;
+}
+
+template<typename T> static bool inRangePrepareScalarBounds_(const Mat& lower64, const Mat& upper64,
+                                                               int cn, Mat& lower, Mat& upper,
+                                                               uchar* lowerData, uchar* upperData)
+{
+    lower = Mat(cn, 1, DataType<T>::type, lowerData);
+    upper = Mat(cn, 1, DataType<T>::type, upperData);
+    const double* l = lower64.ptr<double>();
+    const double* u = upper64.ptr<double>();
+    const bool broadcastLower = lower64.total() * lower64.channels() < static_cast<size_t>(cn);
+    const bool broadcastUpper = upper64.total() * upper64.channels() < static_cast<size_t>(cn);
+    T* il = lower.ptr<T>();
+    T* iu = upper.ptr<T>();
+    for (int k = 0; k < cn; k++)
+    {
+        if (!inRangeConvertScalarBound(l[broadcastLower ? 0 : k], true, il[k]) ||
+            !inRangeConvertScalarBound(u[broadcastUpper ? 0 : k], false, iu[k]) || il[k] > iu[k])
+            return false;
+    }
+    return true;
+}
+
+static bool inRangePrepareScalarBounds(Mat& lower, Mat& upper, int depth, int cn,
+                                       uchar* lowerData, uchar* upperData)
+{
+    if (depth != CV_8U && depth != CV_8S && depth != CV_16U && depth != CV_16S &&
+        depth != CV_32S && depth != CV_32U && depth != CV_64S && depth != CV_64U)
+        return true;
+
+    const int scalarDepth = lower.depth();
+    if (scalarDepth == depth)
+    {
+        // Convert 1x1 bounds to a one-channel vector for both CPU and OpenCL.
+        const size_t elemSize = CV_ELEM_SIZE1(depth);
+        if (lower.total() == 1 && cn > 1)
+        {
+            for (int k = 0; k < cn; k++)
+                memcpy(lowerData + k * elemSize,
+                       lower.ptr() + (lower.channels() >= cn ? k * elemSize : 0), elemSize);
+            lower = Mat(cn, 1, CV_MAKETYPE(depth, 1), lowerData);
+        }
+        if (upper.total() == 1 && cn > 1)
+        {
+            for (int k = 0; k < cn; k++)
+                memcpy(upperData + k * elemSize,
+                       upper.ptr() + (upper.channels() >= cn ? k * elemSize : 0), elemSize);
+            upper = Mat(cn, 1, CV_MAKETYPE(depth, 1), upperData);
+        }
+        return true; // Same-depth integer bounds already represent the exact endpoints.
+    }
+
+    // Keep integer endpoints exact when the two 64-bit types have different signedness.
+    if (depth == CV_64S && scalarDepth == CV_64U)
+    {
+        Mat l(cn, 1, CV_64S, lowerData), u(cn, 1, CV_64S, upperData);
+        const bool broadcastLower = lower.total() * lower.channels() < static_cast<size_t>(cn);
+        const bool broadcastUpper = upper.total() * upper.channels() < static_cast<size_t>(cn);
+        for (int k = 0; k < cn; k++)
+        {
+            const uint64 lv = lower.ptr<uint64>()[broadcastLower ? 0 : k];
+            const uint64 uv = upper.ptr<uint64>()[broadcastUpper ? 0 : k];
+            if (lv > static_cast<uint64>(INT64_MAX))
+                return false;
+            l.ptr<int64>()[k] = static_cast<int64>(lv);
+            u.ptr<int64>()[k] = uv > static_cast<uint64>(INT64_MAX) ? INT64_MAX : static_cast<int64>(uv);
+            if (l.ptr<int64>()[k] > u.ptr<int64>()[k])
+                return false;
+        }
+        lower = l;
+        upper = u;
+        return true;
+    }
+    if (depth == CV_64U && scalarDepth == CV_64S)
+    {
+        Mat l(cn, 1, CV_64U, lowerData), u(cn, 1, CV_64U, upperData);
+        const bool broadcastLower = lower.total() * lower.channels() < static_cast<size_t>(cn);
+        const bool broadcastUpper = upper.total() * upper.channels() < static_cast<size_t>(cn);
+        for (int k = 0; k < cn; k++)
+        {
+            const int64 lv = lower.ptr<int64>()[broadcastLower ? 0 : k];
+            const int64 uv = upper.ptr<int64>()[broadcastUpper ? 0 : k];
+            if (uv < 0)
+                return false;
+            l.ptr<uint64>()[k] = lv < 0 ? 0 : static_cast<uint64>(lv);
+            u.ptr<uint64>()[k] = static_cast<uint64>(uv);
+            if (l.ptr<uint64>()[k] > u.ptr<uint64>()[k])
+                return false;
+        }
+        lower = l;
+        upper = u;
+        return true;
+    }
+
+    // Integer bounds of up to 32 bits are exactly representable as double,
+    // including for 64-bit source images.
+    Mat lower64, upper64, l, u;
+    if (scalarDepth == CV_64F)
+    {
+        lower64 = lower;
+        upper64 = upper;
+    }
+    else
+    {
+        lower.convertTo(lower64, CV_64F);
+        upper.convertTo(upper64, CV_64F);
+    }
+    bool nonempty = false;
+    switch (depth)
+    {
+    case CV_8U:  nonempty = inRangePrepareScalarBounds_<uchar>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_8S:  nonempty = inRangePrepareScalarBounds_<schar>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_16U:
+        nonempty = inRangePrepareScalarBounds_<ushort>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_16S: nonempty = inRangePrepareScalarBounds_<short>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_32S: nonempty = inRangePrepareScalarBounds_<int>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_32U:
+        nonempty = inRangePrepareScalarBounds_<unsigned>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_64S: nonempty = inRangePrepareScalarBounds_<int64>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    case CV_64U:
+        nonempty = inRangePrepareScalarBounds_<uint64>(lower64, upper64, cn, l, u, lowerData, upperData); break;
+    default: CV_Error(Error::StsUnsupportedFormat, "Unsupported integer depth in inRange");
+    }
+    if (nonempty)
+    {
+        lower = l;
+        upper = u;
+    }
+    return nonempty;
+}
+
 #ifdef HAVE_OPENCL
 
 static bool ocl_inRange( InputArray _src, InputArray _lowerb,
@@ -1616,35 +1781,22 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     _dst.create(ssize, CV_8UC1);
     UMat src = _src.getUMat(), dst = _dst.getUMat(), lscalaru, uscalaru;
     Mat lscalar, uscalar;
+    AutoBuffer<uchar> scalarStorage(2 * src.elemSize() + 16);
 
     if (lbScalar && ubScalar)
     {
         lscalar = _lowerb.getMat();
         uscalar = _upperb.getMat();
 
-        size_t esz = src.elemSize();
-        size_t blocksize = 36;
+        if (lscalar.type() != uscalar.type())
+            return false;
 
-        AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
-        uchar *buf = alignPtr(_buf.data() + blocksize*cn, 16);
-
-        if( ldepth != sdepth && sdepth < CV_32S )
+        uchar* lowerData = alignPtr(scalarStorage.data(), 8);
+        uchar* upperData = alignPtr(lowerData + src.elemSize(), 8);
+        if (!inRangePrepareScalarBounds(lscalar, uscalar, sdepth, cn, lowerData, upperData))
         {
-            int* ilbuf = (int*)alignPtr(buf + blocksize*esz, 16);
-            int* iubuf = ilbuf + cn;
-
-            BinaryFunc sccvtfunc = getConvertFunc(ldepth, CV_32S);
-            sccvtfunc(lscalar.ptr(), 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
-            sccvtfunc(uscalar.ptr(), 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
-            int minval = cvRound(getMinVal(sdepth)), maxval = cvRound(getMaxVal(sdepth));
-
-            for( int k = 0; k < cn; k++ )
-            {
-                if( ilbuf[k] > iubuf[k] || ilbuf[k] > maxval || iubuf[k] < minval )
-                    ilbuf[k] = minval+1, iubuf[k] = minval;
-            }
-            lscalar = Mat(cn, 1, CV_32S, ilbuf);
-            uscalar = Mat(cn, 1, CV_32S, iubuf);
+            dst.setTo(Scalar::all(0));
+            return true;
         }
 
         lscalar.convertTo(lscalar, stype);
@@ -1744,36 +1896,24 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         ubuf = buf = alignPtr(buf + blocksize*esz, 16);
 
         CV_Assert( lb.type() == ub.type() );
-        int scdepth = lb.depth();
-
-        if( scdepth != depth && depth < CV_32S )
+        AutoBuffer<uchar> scalarStorage(2 * esz + 16);
+        uchar* lowerData = alignPtr(scalarStorage.data(), 8);
+        uchar* upperData = alignPtr(lowerData + esz, 8);
+        if (!inRangePrepareScalarBounds(lb, ub, depth, cn, lowerData, upperData))
         {
-            int* ilbuf = (int*)alignPtr(buf + blocksize*esz, 16);
-            int* iubuf = ilbuf + cn;
-
-            BinaryFunc sccvtfunc = getConvertFunc(scdepth, CV_32S);
-            sccvtfunc(lb.ptr(), 1, 0, 1, (uchar*)ilbuf, 1, Size(cn, 1), 0);
-            sccvtfunc(ub.ptr(), 1, 0, 1, (uchar*)iubuf, 1, Size(cn, 1), 0);
-            int minval = cvRound(getMinVal(depth)), maxval = cvRound(getMaxVal(depth));
-
-            for( int k = 0; k < cn; k++ )
-            {
-                if( ilbuf[k] > iubuf[k] || ilbuf[k] > maxval || iubuf[k] < minval )
-                    ilbuf[k] = minval+1, iubuf[k] = minval;
-            }
-            lb = Mat(cn, 1, CV_32S, ilbuf);
-            ub = Mat(cn, 1, CV_32S, iubuf);
+            dst.setTo(Scalar::all(0));
+            return;
         }
 
         convertAndUnrollScalar( lb, src.type(), lbuf, blocksize );
         convertAndUnrollScalar( ub, src.type(), ubuf, blocksize );
 
-        if (depth == CV_8U && src.dims <= 2) {
+        if (depth == CV_8U && cn == 1 && src.dims <= 2) {
             uint8_t lb_scalar = lbuf[0];
             uint8_t ub_scalar = ubuf[0];
             CALL_HAL(inRange_u8, cv_hal_inRange8u, src.data, src.step, dst.data, dst.step, dst.depth(), src.cols, src.rows, src.channels(),
                 lb_scalar, ub_scalar);
-        } else if (depth == CV_32F && src.dims <= 2) {
+        } else if (depth == CV_32F && cn == 1 && lb.depth() == CV_64F && src.dims <= 2) {
             double lb_scalar = lb.ptr<double>(0)[0];
             double ub_scalar = ub.ptr<double>(0)[0];
             CALL_HAL(inRange_f32, cv_hal_inRange32f, src.data, src.step, dst.data, dst.step, dst.depth(), src.cols, src.rows, src.channels(),
