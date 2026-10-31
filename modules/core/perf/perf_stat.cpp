@@ -4,11 +4,12 @@ namespace opencv_test
 {
 using namespace perf;
 
-// The 32-bit integer depths are not in TYPICAL_MAT_TYPES, so they were not measured; they are the
-// ones whose scalar accumulation step this touches.
+// The wide depths are not in TYPICAL_MAT_TYPES, so they were not measured; they are the ones
+// whose scalar accumulation step this touches.
 PERF_TEST_P(Size_MatType, sum_wide,
             testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
-                             testing::Values(CV_32SC1, CV_32UC1, CV_32SC3)))
+                             testing::Values(CV_32SC1, CV_32UC1, CV_32SC3,
+                                             CV_64FC1, CV_64FC3)))
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
