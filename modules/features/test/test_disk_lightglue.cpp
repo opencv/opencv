@@ -131,6 +131,77 @@ TEST(Features2d_LightGlue_DISK, Regression)
                     << actNotFound << " actual extra (within tolerance)");
 }
 
+TEST(Features2d_LightGlue_DISK, DynamicShapes_Regression_30502)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+
+    const std::string lgPath = cvtest::findDataFile("dnn/onnx/models/disk_lightglue.onnx", false);
+    Ptr<LightGlueMatcher> lg = LightGlueMatcher::create(lgPath, 0.0f, 0, 0, LG_DISK);
+    ASSERT_FALSE(lg.empty());
+
+    const int descDim = 128;
+    RNG rng(42);
+
+    auto generate_descriptors = [&](int count, int dim) {
+        Mat desc(count, dim, CV_32F);
+        rng.fill(desc, RNG::UNIFORM, -1.0f, 1.0f);
+        for (int i = 0; i < count; ++i) {
+            Mat row = desc.row(i);
+            normalize(row, row, 1.0, 0.0, NORM_L2);
+        }
+        return desc;
+    };
+
+    auto generate_keypoints = [&](int count, int seed_offset) {
+        Mat kpts(count, 2, CV_32F);
+        for (int i = 0; i < count; ++i) {
+            kpts.at<float>(i, 0) = static_cast<float>((i * 5 + seed_offset) % 640);
+            kpts.at<float>(i, 1) = static_cast<float>((i * 3 + seed_offset) % 480);
+        }
+        return kpts;
+    };
+
+    auto run_match = [&](int n1, int n2) {
+        Mat kpts1Mat = generate_keypoints(n1, 0);
+        Mat kpts2Mat = generate_keypoints(n2, 10);
+
+        Mat desc1 = generate_descriptors(n1, descDim);
+        Mat desc2 = generate_descriptors(n2, descDim);
+
+        lg->setPairInfo(kpts1Mat, kpts2Mat, Size(640, 480), Size(640, 480));
+        std::vector<DMatch> matches;
+        EXPECT_NO_THROW(lg->match(desc1, desc2, matches));
+
+        // Ensure that sequential inferences with varying shapes yield identical
+        // distances to a clean, fresh matcher instance (no state pollution).
+        Ptr<LightGlueMatcher> fresh_lg = LightGlueMatcher::create(lgPath, 0.0f, 0, 0, LG_DISK);
+        ASSERT_FALSE(fresh_lg.empty());
+        fresh_lg->setPairInfo(kpts1Mat, kpts2Mat, Size(640, 480), Size(640, 480));
+        std::vector<DMatch> fresh_matches;
+        EXPECT_NO_THROW(fresh_lg->match(desc1, desc2, fresh_matches));
+
+        ASSERT_EQ(matches.size(), fresh_matches.size());
+        for (size_t i = 0; i < matches.size(); ++i)
+        {
+            EXPECT_EQ(matches[i].queryIdx, fresh_matches[i].queryIdx);
+            EXPECT_EQ(matches[i].trainIdx, fresh_matches[i].trainIdx);
+            EXPECT_NEAR(matches[i].distance, fresh_matches[i].distance, 1e-5f);
+        }
+    };
+
+    // 1. Initial small shapes (8 -> 8)
+    run_match(8, 8);
+
+    // 2. Reported asymmetric expansion (50 -> 200)
+    run_match(50, 200);
+
+    // 3. Large-to-small sequence (200 -> 50)
+    run_match(200, 50);
+
+    // 4. Back to small (8 -> 8)
+    run_match(8, 8);
+}
+
 #else  // !HAVE_OPENCV_DNN
 
 TEST(Features2d_LightGlueMatcher_DISK, not_available)
