@@ -66,23 +66,25 @@ inline v_float64 v_signmask_(bool neg, double) { return v_reinterpret_as_f64(vx_
 //////////////////////////////// group A: gather + first stage ////////////////////////////////
 //
 // Two flavours:
-//  - preprocRadix0 (first radix 1, odd nc): table-driven scalar gather, plan.itab holds two
-//    element indices (re, im) per complex element; im = 0 gather when plan.real_input;
-//  - preprocRadix2/4/8: "transposed" first stage. The r0 inputs of group g are the elements
+//  - preprocRadix0 (first radix 1: odd nc without a factor 3 or 5): table-driven scalar gather,
+//    plan.itab holds two element indices (re, im) per complex element; im = 0 gather when
+//    plan.real_input;
+//  - preprocRadix2/3/4/5/8: "transposed" first stage. The r0 inputs of group g are the elements
 //    x[j + q*M], M = nc/r0, q = 0..r0-1, where j = base(g) runs over [0, M) in digit-reversed
 //    order. Iterating over j instead of g makes the loads contiguous: VL lanes load the r0 legs
 //    with v_load_deinterleave, the r0-point DFT runs in registers, and the r0 outputs of every
-//    lane are stored contiguously at plan.itab[j] (= g*r0) through a 4-channel
+//    lane are stored contiguously at plan.itab[j] (= g*r0) through a multi-channel
 //    v_store_interleave into a small stack buffer + short copies. plan.itab has M entries.
-//    The source must be interleaved complex with sstep == 1; DCT input goes through
-//    preprocDCT (Makhoul permutation into the temp) first.
+//    The source must be interleaved complex with sstep == 1 (or real samples with sstep == 1
+//    when plan.real_input: R2C with odd n and r0 in {3, 5}); DCT input goes through preprocDCT
+//    (Makhoul permutation into the temp) first.
 
 template<typename T>
 void preprocRadix0_(const DftPlan& plan, const void* _src, size_t sstep, void* _re, void* _im, bool conj)
 {
     const T* src = (const T*)_src;
     T* re = (T*)_re; T* im = (T*)_im;
-    const int* itab = plan.itab.data();
+    const int* itab = plan.itab;
     int nc = plan.nc;
     if (plan.real_input)
     {
@@ -117,6 +119,60 @@ static inline void firstStage2_scalar(const T* x, int M, int j, T* re, T* im, T 
     T x0r = x[j*2], x0i = conjsign*x[j*2+1], x1r = x[(j+M)*2], x1i = conjsign*x[(j+M)*2+1];
     re[0] = x0r + x1r; im[0] = x0i + x1i;
     re[1] = x0r - x1r; im[1] = x0i - x1i;
+}
+
+// radix-3 and radix-5 first stages also serve R2C with odd n (real samples: x[j + q*M], im = 0)
+template<typename T>
+static inline void firstStage3_scalar(const T* x, int M, int j, T* re, T* im, T conjsign, bool realInput)
+{
+    const T s120 = DftConst<T>::sin120;
+    T x0r, x0i, x1r, x1i, x2r, x2i;
+    if (realInput)
+    {
+        x0r = x[j]; x1r = x[j+M]; x2r = x[j+2*M]; x0i = x1i = x2i = 0;
+    }
+    else
+    {
+        x0r = x[j*2]; x0i = conjsign*x[j*2+1];
+        x1r = x[(j+M)*2]; x1i = conjsign*x[(j+M)*2+1];
+        x2r = x[(j+2*M)*2]; x2i = conjsign*x[(j+2*M)*2+1];
+    }
+    T sr = x1r + x2r, si = x1i + x2i;
+    T dr = s120*(x1r - x2r), di = s120*(x1i - x2i);
+    T mr = x0r - (T)0.5*sr, mi = x0i - (T)0.5*si;
+    re[0] = x0r + sr; im[0] = x0i + si;
+    re[1] = mr + di; im[1] = mi - dr;
+    re[2] = mr - di; im[2] = mi + dr;
+}
+
+template<typename T>
+static inline void firstStage5_scalar(const T* x, int M, int j, T* re, T* im, T conjsign, bool realInput)
+{
+    const T c5 = DftConst<T>::fft5_2, s1 = DftConst<T>::sin72, s2 = DftConst<T>::sin144;
+    T xr[5], xi[5];
+    for (int q = 0; q < 5; q++)
+    {
+        if (realInput)
+        {
+            xr[q] = x[j + q*M]; xi[q] = 0;
+        }
+        else
+        {
+            xr[q] = x[(j + q*M)*2]; xi[q] = conjsign*x[(j + q*M)*2 + 1];
+        }
+    }
+    T a1r = xr[1] + xr[4], a1i = xi[1] + xi[4], b1r = xr[1] - xr[4], b1i = xi[1] - xi[4];
+    T a2r = xr[2] + xr[3], a2i = xi[2] + xi[3], b2r = xr[2] - xr[3], b2i = xi[2] - xi[3];
+    T tr = xr[0] - (T)0.25*(a1r + a2r), ti = xi[0] - (T)0.25*(a1i + a2i);
+    T ur = c5*(a1r - a2r), ui = c5*(a1i - a2i);
+    T v1r = s1*b1r + s2*b2r, v1i = s1*b1i + s2*b2i;
+    T v2r = s2*b1r - s1*b2r, v2i = s2*b1i - s1*b2i;
+    T pr = tr + ur, pi = ti + ui, qr = tr - ur, qi = ti - ui;
+    re[0] = xr[0] + a1r + a2r; im[0] = xi[0] + a1i + a2i;
+    re[1] = pr + v1i; im[1] = pi - v1r;
+    re[4] = pr - v1i; im[4] = pi + v1r;
+    re[2] = qr + v2i; im[2] = qi - v2r;
+    re[3] = qr - v2i; im[3] = qi + v2r;
 }
 
 template<typename T>
@@ -202,6 +258,98 @@ static void firstStage2_vec(const T* x, int M, const int* gtab, T* re, T* im, bo
         firstStage2_scalar(x, M, j, re + gtab[j], im + gtab[j], conjsign);
 }
 
+// real samples (plan.real_input): leg q of lanes j..j+VL-1 is x[j + q*M], im = 0
+#define DFT_LOAD_LEG_REAL(q, xr, xi) \
+    xr = vx_load(x + j + (q)*M); xi = zero;
+
+template<typename T, typename VT, bool realInput>
+static void firstStage3_vec(const T* x, int M, const int* gtab, T* re, T* im, bool conj)
+{
+    const int VL = VTraits<VT>::vlanes();
+    const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0);
+    const VT s120 = v_setall_((T)DftConst<T>::sin120), half = v_setall_((T)0.5);
+    T bufr[3*VTraits<VT>::max_nlanes], bufi[3*VTraits<VT>::max_nlanes];
+    int j = 0;
+    for (; j + VL <= M; j += VL)
+    {
+        VT x0r, x0i, x1r, x1i, x2r, x2i;
+        if constexpr (realInput)
+        {
+            DFT_LOAD_LEG_REAL(0, x0r, x0i)
+            DFT_LOAD_LEG_REAL(1, x1r, x1i)
+            DFT_LOAD_LEG_REAL(2, x2r, x2i)
+        }
+        else
+        {
+            DFT_LOAD_LEG(0, x0r, x0i)
+            DFT_LOAD_LEG(1, x1r, x1i)
+            DFT_LOAD_LEG(2, x2r, x2i)
+        }
+        VT sr = v_add(x1r, x2r), si = v_add(x1i, x2i);
+        VT dr = v_mul(s120, v_sub(x1r, x2r)), di = v_mul(s120, v_sub(x1i, x2i));
+        VT mr = v_sub(x0r, v_mul(half, sr)), mi = v_sub(x0i, v_mul(half, si));
+        v_store_interleave(bufr, v_add(x0r, sr), v_add(mr, di), v_sub(mr, di));
+        v_store_interleave(bufi, v_add(x0i, si), v_sub(mi, dr), v_add(mi, dr));
+        scatterLanes<T, 3>(bufr, bufi, re, im, gtab + j, VL);
+    }
+    T conjsign = conj ? (T)-1 : (T)1;
+    for (; j < M; j++)
+        firstStage3_scalar(x, M, j, re + gtab[j], im + gtab[j], conjsign, realInput);
+}
+
+template<typename T, typename VT, bool realInput>
+static void firstStage5_vec(const T* x, int M, const int* gtab, T* re, T* im, bool conj)
+{
+    const int VL = VTraits<VT>::vlanes();
+    const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0);
+    const VT c5 = v_setall_((T)DftConst<T>::fft5_2), s1 = v_setall_((T)DftConst<T>::sin72);
+    const VT s2 = v_setall_((T)DftConst<T>::sin144), quarter = v_setall_((T)0.25);
+    // outputs 0..3 lane-major in buf (4 per lane), output 4 in buf4
+    T bufr[4*VTraits<VT>::max_nlanes], bufi[4*VTraits<VT>::max_nlanes];
+    T buf4r[VTraits<VT>::max_nlanes], buf4i[VTraits<VT>::max_nlanes];
+    int j = 0;
+    for (; j + VL <= M; j += VL)
+    {
+        VT x0r, x0i, x1r, x1i, x2r, x2i, x3r, x3i, x4r, x4i;
+        if constexpr (realInput)
+        {
+            DFT_LOAD_LEG_REAL(0, x0r, x0i)
+            DFT_LOAD_LEG_REAL(1, x1r, x1i)
+            DFT_LOAD_LEG_REAL(2, x2r, x2i)
+            DFT_LOAD_LEG_REAL(3, x3r, x3i)
+            DFT_LOAD_LEG_REAL(4, x4r, x4i)
+        }
+        else
+        {
+            DFT_LOAD_LEG(0, x0r, x0i)
+            DFT_LOAD_LEG(1, x1r, x1i)
+            DFT_LOAD_LEG(2, x2r, x2i)
+            DFT_LOAD_LEG(3, x3r, x3i)
+            DFT_LOAD_LEG(4, x4r, x4i)
+        }
+        VT a1r = v_add(x1r, x4r), a1i = v_add(x1i, x4i), b1r = v_sub(x1r, x4r), b1i = v_sub(x1i, x4i);
+        VT a2r = v_add(x2r, x3r), a2i = v_add(x2i, x3i), b2r = v_sub(x2r, x3r), b2i = v_sub(x2i, x3i);
+        VT sar = v_add(a1r, a2r), sai = v_add(a1i, a2i);
+        VT tr = v_sub(x0r, v_mul(quarter, sar)), ti = v_sub(x0i, v_mul(quarter, sai));
+        VT ur = v_mul(c5, v_sub(a1r, a2r)), ui = v_mul(c5, v_sub(a1i, a2i));
+        VT v1r = v_fma(s1, b1r, v_mul(s2, b2r)), v1i = v_fma(s1, b1i, v_mul(s2, b2i));
+        VT v2r = v_sub(v_mul(s2, b1r), v_mul(s1, b2r)), v2i = v_sub(v_mul(s2, b1i), v_mul(s1, b2i));
+        VT pr = v_add(tr, ur), pi = v_add(ti, ui), qr = v_sub(tr, ur), qi = v_sub(ti, ui);
+        v_store_interleave(bufr, v_add(x0r, sar), v_add(pr, v1i), v_add(qr, v2i), v_sub(qr, v2i));
+        v_store_interleave(bufi, v_add(x0i, sai), v_sub(pi, v1r), v_sub(qi, v2r), v_add(qi, v2r));
+        v_store(buf4r, v_sub(pr, v1i)); v_store(buf4i, v_add(pi, v1r));
+        for (int l = 0; l < VL; l++)
+        {
+            int base = gtab[j + l];
+            memcpy(re + base, bufr + l*4, 4*sizeof(T)); re[base + 4] = buf4r[l];
+            memcpy(im + base, bufi + l*4, 4*sizeof(T)); im[base + 4] = buf4i[l];
+        }
+    }
+    T conjsign = conj ? (T)-1 : (T)1;
+    for (; j < M; j++)
+        firstStage5_scalar(x, M, j, re + gtab[j], im + gtab[j], conjsign, realInput);
+}
+
 template<typename T, typename VT>
 static void firstStage4_vec(const T* x, int M, const int* gtab, T* re, T* im, bool conj)
 {
@@ -272,6 +420,7 @@ static void firstStage8_vec(const T* x, int M, const int* gtab, T* re, T* im, bo
 }
 
 #undef DFT_LOAD_LEG
+#undef DFT_LOAD_LEG_REAL
 #undef DFT4_VEC
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
@@ -282,7 +431,7 @@ void preprocRadix2_(const DftPlan& plan, const void* _src, size_t sstep, void* _
     CV_DbgAssert(sstep == 1); CV_UNUSED(sstep);
     const T* x = (const T*)_src;
     T* re = (T*)_re; T* im = (T*)_im;
-    const int* gtab = plan.itab.data();
+    const int* gtab = plan.itab;
     int M = plan.nc/2;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if constexpr (haveSIMD)
@@ -297,12 +446,62 @@ void preprocRadix2_(const DftPlan& plan, const void* _src, size_t sstep, void* _
 }
 
 template<typename T, typename VT, bool haveSIMD>
+void preprocRadix3_(const DftPlan& plan, const void* _src, size_t sstep, void* _re, void* _im, bool conj)
+{
+    CV_DbgAssert(sstep == 1); CV_UNUSED(sstep);
+    const T* x = (const T*)_src;
+    T* re = (T*)_re; T* im = (T*)_im;
+    const int* gtab = plan.itab;
+    int M = plan.nc/3;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if constexpr (haveSIMD)
+    {
+        if (plan.real_input)
+            firstStage3_vec<T, VT, true>(x, M, gtab, re, im, conj);
+        else
+            firstStage3_vec<T, VT, false>(x, M, gtab, re, im, conj);
+    }
+    else
+#endif
+    {
+        T conjsign = conj ? (T)-1 : (T)1;
+        for (int j = 0; j < M; j++)
+            firstStage3_scalar(x, M, j, re + gtab[j], im + gtab[j], conjsign, plan.real_input);
+    }
+}
+
+template<typename T, typename VT, bool haveSIMD>
+void preprocRadix5_(const DftPlan& plan, const void* _src, size_t sstep, void* _re, void* _im, bool conj)
+{
+    CV_DbgAssert(sstep == 1); CV_UNUSED(sstep);
+    const T* x = (const T*)_src;
+    T* re = (T*)_re; T* im = (T*)_im;
+    const int* gtab = plan.itab;
+    int M = plan.nc/5;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if constexpr (haveSIMD)
+    {
+        if (plan.real_input)
+            firstStage5_vec<T, VT, true>(x, M, gtab, re, im, conj);
+        else
+            firstStage5_vec<T, VT, false>(x, M, gtab, re, im, conj);
+    }
+    else
+#endif
+    {
+        T conjsign = conj ? (T)-1 : (T)1;
+        for (int j = 0; j < M; j++)
+            firstStage5_scalar(x, M, j, re + gtab[j], im + gtab[j], conjsign, plan.real_input);
+    }
+}
+
+template<typename T, typename VT, bool haveSIMD>
 void preprocRadix4_(const DftPlan& plan, const void* _src, size_t sstep, void* _re, void* _im, bool conj)
 {
     CV_DbgAssert(sstep == 1); CV_UNUSED(sstep);
     const T* x = (const T*)_src;
     T* re = (T*)_re; T* im = (T*)_im;
-    const int* gtab = plan.itab.data();
+    const int* gtab = plan.itab;
     int M = plan.nc/4;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if constexpr (haveSIMD)
@@ -322,7 +521,7 @@ void preprocRadix8_(const DftPlan& plan, const void* _src, size_t sstep, void* _
     CV_DbgAssert(sstep == 1); CV_UNUSED(sstep);
     const T* x = (const T*)_src;
     T* re = (T*)_re; T* im = (T*)_im;
-    const int* gtab = plan.itab.data();
+    const int* gtab = plan.itab;
     int M = plan.nc/8;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     if constexpr (haveSIMD)
@@ -571,6 +770,32 @@ void radix4_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* di
     }
 }
 
+// last radix-4 stage fused with the output interleave and scaling (C2C, even C2R)
+template<typename T>
+void radix4Last_scalar(const DftStage& st, const T* sre, const T* sim, T* dst, T rs, T is)
+{
+    const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
+    int L = st.span, G = st.ngroups, ts = st.tw_stride;
+    for (int g = 0; g < G; g++)
+    {
+        int base = g*4*L;
+        for (int j = 0; j < L; j++)
+        {
+            int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L;
+            T x0r = sre[i0], x0i = sim[i0], x1r, x1i, x2r, x2i, x3r, x3i;
+            T y0r, y0i, y1r, y1i, y2r, y2i, y3r, y3i;
+            DFT_CMUL(x1r, x1i, sre[i1], sim[i1], twr[j], twi[j]);
+            DFT_CMUL(x2r, x2i, sre[i2], sim[i2], twr[ts + j], twi[ts + j]);
+            DFT_CMUL(x3r, x3i, sre[i3], sim[i3], twr[ts*2 + j], twi[ts*2 + j]);
+            DFT4_SCALAR(x0r,x0i,x1r,x1i,x2r,x2i,x3r,x3i, y0r,y0i,y1r,y1i,y2r,y2i,y3r,y3i);
+            dst[i0*2] = y0r*rs; dst[i0*2+1] = y0i*is;
+            dst[i1*2] = y1r*rs; dst[i1*2+1] = y1i*is;
+            dst[i2*2] = y2r*rs; dst[i2*2+1] = y2i*is;
+            dst[i3*2] = y3r*rs; dst[i3*2+1] = y3i*is;
+        }
+    }
+}
+
 template<typename T>
 void radix5_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
 {
@@ -635,9 +860,10 @@ void radixOdd_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* 
             for (int k = 1; k <= h; k++)
             {
                 T sr = x0r, si = x0i, tr = 0, ti = 0;
-                for (int p = 1; p <= h; p++)
+                for (int p = 1, m = 0; p <= h; p++)
                 {
-                    T c = cs[(p-1)*h + (k-1)], s = sn[(p-1)*h + (k-1)];
+                    m += k; m -= m >= r ? r : 0;    // m = p*k mod r
+                    T c = cs[m], s = sn[m];
                     sr += c*ar[p-1]; si += c*ai[p-1];
                     tr += s*br[p-1]; ti += s*bi[p-1];
                 }
@@ -652,9 +878,47 @@ void radixOdd_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* 
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
+// The stage kernels are instantiated for the widest vectors (v_float32/v_float64, DFT_STAGE_FULL)
+// and, on ISAs wider than 128 bits, for the 128-bit vectors too (DFT_STAGE_SIMD128: spans that
+// are shorter than the wide vector but not than the narrow one). Load/broadcast by vector type:
+#if CV_SIMD128 && !CV_SIMD_SCALABLE
+inline v_float32x4 dft_vload(const float* p, const v_float32x4*) { return v_load(p); }
+inline v_float32x4 dft_vsetall(float x, const v_float32x4*) { return v_setall_f32(x); }
+#if CV_SIMD128_64F
+inline v_float64x2 dft_vload(const double* p, const v_float64x2*) { return v_load(p); }
+inline v_float64x2 dft_vsetall(double x, const v_float64x2*) { return v_setall_f64(x); }
+#endif
+#endif
+#if CV_SIMD256
+inline v_float32x8 dft_vload(const float* p, const v_float32x8*) { return v256_load(p); }
+inline v_float32x8 dft_vsetall(float x, const v_float32x8*) { return v256_setall_f32(x); }
+#if CV_SIMD256_64F
+inline v_float64x4 dft_vload(const double* p, const v_float64x4*) { return v256_load(p); }
+inline v_float64x4 dft_vsetall(double x, const v_float64x4*) { return v256_setall_f64(x); }
+#endif
+#endif
+#if CV_SIMD512
+inline v_float32x16 dft_vload(const float* p, const v_float32x16*) { return v512_load(p); }
+inline v_float32x16 dft_vsetall(float x, const v_float32x16*) { return v512_setall_f32(x); }
+#if CV_SIMD512_64F
+inline v_float64x8 dft_vload(const double* p, const v_float64x8*) { return v512_load(p); }
+inline v_float64x8 dft_vsetall(double x, const v_float64x8*) { return v512_setall_f64(x); }
+#endif
+#endif
+#if CV_SIMD_SCALABLE
+inline v_float32 dft_vload(const float* p, const v_float32*) { return vx_load(p); }
+inline v_float32 dft_vsetall(float x, const v_float32*) { return vx_setall_f32(x); }
+#if CV_SIMD_SCALABLE_64F
+inline v_float64 dft_vload(const double* p, const v_float64*) { return vx_load(p); }
+inline v_float64 dft_vsetall(double x, const v_float64*) { return vx_setall_f64(x); }
+#endif
+#endif
+#define VLOAD(p) dft_vload((p), (const VT*)0)
+#define VSETALL(x) dft_vsetall((x), (const VT*)0)
+
 // dst = a*s + c, s is a scalar constant of the stage (the compiler hoists the broadcast)
 template<typename VT, typename T>
-inline VT v_fma_n(const VT& a, T s, const VT& c) { return v_fma(a, v_setall_(s), c); }
+inline VT v_fma_n(const VT& a, T s, const VT& c) { return v_fma(a, dft_vsetall(s, (const VT*)0), c); }
 
 // (xr, xi) = (ar, ai) * (wr, wi)
 #define DFT_VCMUL(xr, xi, ar, ai, wr, wi) \
@@ -678,12 +942,12 @@ void radix3_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
 {
     const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
     const int L = st.span, ts = st.tw_stride, VL = VTraits<VT>::vlanes();
-    const VT s120 = v_setall_((T)DftConst<T>::sin120), half = v_setall_((T)0.5);
+    const VT s120 = VSETALL((T)DftConst<T>::sin120), half = VSETALL((T)0.5);
     DFT_VLOOP_BEGIN(3)
         int i0 = base + j, i1 = i0 + L, i2 = i1 + L;
-        VT x0r = vx_load(sre + i0), x0i = vx_load(sim + i0), x1r, x1i, x2r, x2i;
-        DFT_VCMUL(x1r, x1i, vx_load(sre + i1), vx_load(sim + i1), vx_load(twr + j), vx_load(twi + j));
-        DFT_VCMUL(x2r, x2i, vx_load(sre + i2), vx_load(sim + i2), vx_load(twr + ts + j), vx_load(twi + ts + j));
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0), x1r, x1i, x2r, x2i;
+        DFT_VCMUL(x1r, x1i, VLOAD(sre + i1), VLOAD(sim + i1), VLOAD(twr + j), VLOAD(twi + j));
+        DFT_VCMUL(x2r, x2i, VLOAD(sre + i2), VLOAD(sim + i2), VLOAD(twr + ts + j), VLOAD(twi + ts + j));
         VT sr = v_add(x1r, x2r), si = v_add(x1i, x2i);
         VT dr = v_mul(s120, v_sub(x1r, x2r)), di = v_mul(s120, v_sub(x1i, x2i));
         VT mr = v_sub(x0r, v_mul(half, sr)), mi = v_sub(x0i, v_mul(half, si));
@@ -700,10 +964,10 @@ void radix4_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
     const int L = st.span, ts = st.tw_stride, VL = VTraits<VT>::vlanes();
     DFT_VLOOP_BEGIN(4)
         int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L;
-        VT x0r = vx_load(sre + i0), x0i = vx_load(sim + i0), x1r, x1i, x2r, x2i, x3r, x3i;
-        DFT_VCMUL(x1r, x1i, vx_load(sre + i1), vx_load(sim + i1), vx_load(twr + j), vx_load(twi + j));
-        DFT_VCMUL(x2r, x2i, vx_load(sre + i2), vx_load(sim + i2), vx_load(twr + ts + j), vx_load(twi + ts + j));
-        DFT_VCMUL(x3r, x3i, vx_load(sre + i3), vx_load(sim + i3), vx_load(twr + ts*2 + j), vx_load(twi + ts*2 + j));
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0), x1r, x1i, x2r, x2i, x3r, x3i;
+        DFT_VCMUL(x1r, x1i, VLOAD(sre + i1), VLOAD(sim + i1), VLOAD(twr + j), VLOAD(twi + j));
+        DFT_VCMUL(x2r, x2i, VLOAD(sre + i2), VLOAD(sim + i2), VLOAD(twr + ts + j), VLOAD(twi + ts + j));
+        DFT_VCMUL(x3r, x3i, VLOAD(sre + i3), VLOAD(sim + i3), VLOAD(twr + ts*2 + j), VLOAD(twi + ts*2 + j));
         VT y0r = v_add(x0r, x2r), y0i = v_add(x0i, x2i), y1r = v_sub(x0r, x2r), y1i = v_sub(x0i, x2i);
         VT y2r = v_add(x1r, x3r), y2i = v_add(x1i, x3i), y3r = v_sub(x1r, x3r), y3i = v_sub(x1i, x3i);
         v_store(dre + i0, v_add(y0r, y2r)); v_store(dim + i0, v_add(y0i, y2i));
@@ -713,27 +977,50 @@ void radix4_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
     DFT_VLOOP_END(4)
 }
 
+// last radix-4 stage + interleave + scale into the (interleaved complex) output; always
+// out-of-place, so the back-off clamp is harmless (overlapping lanes store identical values)
+template<typename T, typename VT>
+void radix4Last_vec(const DftStage& st, const T* sre, const T* sim, T* dst, T rs, T is)
+{
+    const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
+    const int L = st.span, ts = st.tw_stride, VL = VTraits<VT>::vlanes();
+    const VT vrs = VSETALL(rs), vis = VSETALL(is);
+    DFT_VLOOP_BEGIN(4)
+        int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L;
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0), x1r, x1i, x2r, x2i, x3r, x3i;
+        DFT_VCMUL(x1r, x1i, VLOAD(sre + i1), VLOAD(sim + i1), VLOAD(twr + j), VLOAD(twi + j));
+        DFT_VCMUL(x2r, x2i, VLOAD(sre + i2), VLOAD(sim + i2), VLOAD(twr + ts + j), VLOAD(twi + ts + j));
+        DFT_VCMUL(x3r, x3i, VLOAD(sre + i3), VLOAD(sim + i3), VLOAD(twr + ts*2 + j), VLOAD(twi + ts*2 + j));
+        VT y0r = v_add(x0r, x2r), y0i = v_add(x0i, x2i), y1r = v_sub(x0r, x2r), y1i = v_sub(x0i, x2i);
+        VT y2r = v_add(x1r, x3r), y2i = v_add(x1i, x3i), y3r = v_sub(x1r, x3r), y3i = v_sub(x1i, x3i);
+        v_store_interleave(dst + i0*2, v_mul(v_add(y0r, y2r), vrs), v_mul(v_add(y0i, y2i), vis));
+        v_store_interleave(dst + i2*2, v_mul(v_sub(y0r, y2r), vrs), v_mul(v_sub(y0i, y2i), vis));
+        v_store_interleave(dst + i1*2, v_mul(v_add(y1r, y3i), vrs), v_mul(v_sub(y1i, y3r), vis));
+        v_store_interleave(dst + i3*2, v_mul(v_sub(y1r, y3i), vrs), v_mul(v_add(y1i, y3r), vis));
+    DFT_VLOOP_END(4)
+}
+
 template<typename T, typename VT>
 void radix5_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
 {
     const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
     const int L = st.span, ts = st.tw_stride, VL = VTraits<VT>::vlanes();
     const T c5 = DftConst<T>::fft5_2, s1 = DftConst<T>::sin72, s2 = DftConst<T>::sin144;
-    const VT quarter = v_setall_((T)0.25);
+    const VT quarter = VSETALL((T)0.25);
     DFT_VLOOP_BEGIN(5)
         int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L, i4 = i3 + L;
-        VT x0r = vx_load(sre + i0), x0i = vx_load(sim + i0), x1r, x1i, x2r, x2i, x3r, x3i, x4r, x4i;
-        DFT_VCMUL(x1r, x1i, vx_load(sre + i1), vx_load(sim + i1), vx_load(twr + j), vx_load(twi + j));
-        DFT_VCMUL(x2r, x2i, vx_load(sre + i2), vx_load(sim + i2), vx_load(twr + ts + j), vx_load(twi + ts + j));
-        DFT_VCMUL(x3r, x3i, vx_load(sre + i3), vx_load(sim + i3), vx_load(twr + ts*2 + j), vx_load(twi + ts*2 + j));
-        DFT_VCMUL(x4r, x4i, vx_load(sre + i4), vx_load(sim + i4), vx_load(twr + ts*3 + j), vx_load(twi + ts*3 + j));
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0), x1r, x1i, x2r, x2i, x3r, x3i, x4r, x4i;
+        DFT_VCMUL(x1r, x1i, VLOAD(sre + i1), VLOAD(sim + i1), VLOAD(twr + j), VLOAD(twi + j));
+        DFT_VCMUL(x2r, x2i, VLOAD(sre + i2), VLOAD(sim + i2), VLOAD(twr + ts + j), VLOAD(twi + ts + j));
+        DFT_VCMUL(x3r, x3i, VLOAD(sre + i3), VLOAD(sim + i3), VLOAD(twr + ts*2 + j), VLOAD(twi + ts*2 + j));
+        DFT_VCMUL(x4r, x4i, VLOAD(sre + i4), VLOAD(sim + i4), VLOAD(twr + ts*3 + j), VLOAD(twi + ts*3 + j));
         VT a1r = v_add(x1r, x4r), a1i = v_add(x1i, x4i), b1r = v_sub(x1r, x4r), b1i = v_sub(x1i, x4i);
         VT a2r = v_add(x2r, x3r), a2i = v_add(x2i, x3i), b2r = v_sub(x2r, x3r), b2i = v_sub(x2i, x3i);
         VT sar = v_add(a1r, a2r), sai = v_add(a1i, a2i);
         VT tr = v_sub(x0r, v_mul(quarter, sar)), ti = v_sub(x0i, v_mul(quarter, sai));
-        VT ur = v_mul(v_setall_(c5), v_sub(a1r, a2r)), ui = v_mul(v_setall_(c5), v_sub(a1i, a2i));
-        VT v1r = v_fma_n(b1r, s1, v_mul(v_setall_(s2), b2r)), v1i = v_fma_n(b1i, s1, v_mul(v_setall_(s2), b2i));
-        VT v2r = v_fma_n(b1r, s2, v_mul(v_setall_(-s1), b2r)), v2i = v_fma_n(b1i, s2, v_mul(v_setall_(-s1), b2i));
+        VT ur = v_mul(VSETALL(c5), v_sub(a1r, a2r)), ui = v_mul(VSETALL(c5), v_sub(a1i, a2i));
+        VT v1r = v_fma_n(b1r, s1, v_mul(VSETALL(s2), b2r)), v1i = v_fma_n(b1i, s1, v_mul(VSETALL(s2), b2i));
+        VT v2r = v_fma_n(b1r, s2, v_mul(VSETALL(-s1), b2r)), v2i = v_fma_n(b1i, s2, v_mul(VSETALL(-s1), b2i));
         VT pr = v_add(tr, ur), pi = v_add(ti, ui), qr = v_sub(tr, ur), qi = v_sub(ti, ui);
         v_store(dre + i0, v_add(x0r, sar)); v_store(dim + i0, v_add(x0i, sai));
         v_store(dre + i1, v_add(pr, v1i)); v_store(dim + i1, v_sub(pi, v1r));
@@ -754,16 +1041,16 @@ void radixOdd_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim
     T* ar = scratch; T* ai = ar + h*VL; T* br = ai + h*VL; T* bi = br + h*VL;
     DFT_VLOOP_BEGIN(r)
         int i0 = base + j;
-        VT x0r = vx_load(sre + i0), x0i = vx_load(sim + i0);
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0);
         VT X0r = x0r, X0i = x0i;
         for (int p = 1; p <= h; p++)
         {
             int ip = i0 + p*L, iq = i0 + (r-p)*L;
             VT xpr, xpi, xqr, xqi;
-            DFT_VCMUL(xpr, xpi, vx_load(sre + ip), vx_load(sim + ip),
-                      vx_load(twr + (p-1)*ts + j), vx_load(twi + (p-1)*ts + j));
-            DFT_VCMUL(xqr, xqi, vx_load(sre + iq), vx_load(sim + iq),
-                      vx_load(twr + (r-p-1)*ts + j), vx_load(twi + (r-p-1)*ts + j));
+            DFT_VCMUL(xpr, xpi, VLOAD(sre + ip), VLOAD(sim + ip),
+                      VLOAD(twr + (p-1)*ts + j), VLOAD(twi + (p-1)*ts + j));
+            DFT_VCMUL(xqr, xqi, VLOAD(sre + iq), VLOAD(sim + iq),
+                      VLOAD(twr + (r-p-1)*ts + j), VLOAD(twi + (r-p-1)*ts + j));
             VT apr = v_add(xpr, xqr), api = v_add(xpi, xqi);
             v_store(ar + (p-1)*VL, apr); v_store(ai + (p-1)*VL, api);
             v_store(br + (p-1)*VL, v_sub(xpr, xqr)); v_store(bi + (p-1)*VL, v_sub(xpi, xqi));
@@ -772,12 +1059,13 @@ void radixOdd_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim
         v_store(dre + i0, X0r); v_store(dim + i0, X0i);
         for (int k = 1; k <= h; k++)
         {
-            VT sr = x0r, si = x0i, tr = v_setall_((T)0), ti = tr;
-            for (int p = 1; p <= h; p++)
+            VT sr = x0r, si = x0i, tr = VSETALL((T)0), ti = tr;
+            for (int p = 1, m = 0; p <= h; p++)
             {
-                T c = cs[(p-1)*h + (k-1)], s = sn[(p-1)*h + (k-1)];
-                sr = v_fma_n(vx_load(ar + (p-1)*VL), c, sr); si = v_fma_n(vx_load(ai + (p-1)*VL), c, si);
-                tr = v_fma_n(vx_load(br + (p-1)*VL), s, tr); ti = v_fma_n(vx_load(bi + (p-1)*VL), s, ti);
+                m += k; m -= m >= r ? r : 0;    // m = p*k mod r
+                T c = cs[m], s = sn[m];
+                sr = v_fma_n(VLOAD(ar + (p-1)*VL), c, sr); si = v_fma_n(VLOAD(ai + (p-1)*VL), c, si);
+                tr = v_fma_n(VLOAD(br + (p-1)*VL), s, tr); ti = v_fma_n(VLOAD(bi + (p-1)*VL), s, ti);
             }
             v_store(dre + i0 + k*L, v_add(sr, ti)); v_store(dim + i0 + k*L, v_sub(si, tr));
             v_store(dre + i0 + (r-k)*L, v_sub(sr, ti)); v_store(dim + i0 + (r-k)*L, v_add(si, tr));
@@ -788,11 +1076,13 @@ void radixOdd_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim
 #undef DFT_VLOOP_BEGIN
 #undef DFT_VLOOP_END
 #undef DFT_VCMUL
+#undef VLOAD
+#undef VSETALL
 
 #endif // CV_SIMD || CV_SIMD_SCALABLE
 
 // entry points: the plan's stage mode selects the body; VT = T (no SIMD for this type) means scalar only
-template<typename T, typename VT, bool haveSIMD>
+template<typename T, typename VT, typename VT128, bool haveSIMD>
 void radix3_(const DftStage& st, const void* sre, const void* sim, void* dre, void* dim, void*)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -803,12 +1093,17 @@ void radix3_(const DftStage& st, const void* sre, const void* sim, void* dre, vo
             radix3_vec<T, VT>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
             return;
         }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix3_vec<T, VT128>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
+            return;
+        }
     }
 #endif
     radix3_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
 }
 
-template<typename T, typename VT, bool haveSIMD>
+template<typename T, typename VT, typename VT128, bool haveSIMD>
 void radix4_(const DftStage& st, const void* sre, const void* sim, void* dre, void* dim, void*)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -819,12 +1114,17 @@ void radix4_(const DftStage& st, const void* sre, const void* sim, void* dre, vo
             radix4_vec<T, VT>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
             return;
         }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix4_vec<T, VT128>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
+            return;
+        }
     }
 #endif
     radix4_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
 }
 
-template<typename T, typename VT, bool haveSIMD>
+template<typename T, typename VT, typename VT128, bool haveSIMD>
 void radix5_(const DftStage& st, const void* sre, const void* sim, void* dre, void* dim, void*)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -835,13 +1135,18 @@ void radix5_(const DftStage& st, const void* sre, const void* sim, void* dre, vo
             radix5_vec<T, VT>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
             return;
         }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix5_vec<T, VT128>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
+            return;
+        }
     }
 #endif
     radix5_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim);
 }
 
 
-template<typename T, typename VT, bool haveSIMD>
+template<typename T, typename VT, typename VT128, bool haveSIMD>
 void radixOdd_(const DftStage& st, const void* sre, const void* sim, void* dre, void* dim, void* scratch)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -852,9 +1157,37 @@ void radixOdd_(const DftStage& st, const void* sre, const void* sim, void* dre, 
             radixOdd_vec<T, VT>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, (T*)scratch);
             return;
         }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            // the scratch is sized for the wide lanes, which is enough for the narrow ones
+            radixOdd_vec<T, VT128>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, (T*)scratch);
+            return;
+        }
     }
 #endif
     radixOdd_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, (T*)scratch);
+}
+
+template<typename T, typename VT, typename VT128, bool haveSIMD>
+void radix4Last_(const DftStage& st, const void* sre, const void* sim, void* dst, double re_scale, double im_scale)
+{
+    T rs = (T)re_scale, is = (T)im_scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if constexpr (haveSIMD)
+    {
+        if (st.mode == DFT_STAGE_FULL)
+        {
+            radix4Last_vec<T, VT>(st, (const T*)sre, (const T*)sim, (T*)dst, rs, is);
+            return;
+        }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix4Last_vec<T, VT128>(st, (const T*)sre, (const T*)sim, (T*)dst, rs, is);
+            return;
+        }
+    }
+#endif
+    radix4Last_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dst, rs, is);
 }
 
 
@@ -1108,30 +1441,36 @@ void postprocIDCT_(const DftPlan& plan, const void* _re, const void* _im, void* 
 
 #undef DFT4_SCALAR
 
-template<typename T, typename VT, bool haveSIMD>
+template<typename T, typename VT, typename VT128, bool haveSIMD>
 DFTKernels makeKernels()
 {
     DFTKernels k;
     k.preprocRadix0 = preprocRadix0_<T>;
     k.preprocRadix2 = preprocRadix2_<T, VT, haveSIMD>;
+    k.preprocRadix3 = preprocRadix3_<T, VT, haveSIMD>;
     k.preprocRadix4 = preprocRadix4_<T, VT, haveSIMD>;
+    k.preprocRadix5 = preprocRadix5_<T, VT, haveSIMD>;
     k.preprocRadix8 = preprocRadix8_<T, VT, haveSIMD>;
     k.preprocDCT = preprocDCT_<T, VT, haveSIMD>;
     k.preprocCCS = preprocCCS_<T, VT, haveSIMD>;
     k.preprocIDCT = preprocIDCT_<T, VT, haveSIMD>;
-    k.radix3 = radix3_<T, VT, haveSIMD>;
-    k.radix4 = radix4_<T, VT, haveSIMD>;
-    k.radix5 = radix5_<T, VT, haveSIMD>;
-    k.radixOdd = radixOdd_<T, VT, haveSIMD>;
+    k.radix3 = radix3_<T, VT, VT128, haveSIMD>;
+    k.radix4 = radix4_<T, VT, VT128, haveSIMD>;
+    k.radix5 = radix5_<T, VT, VT128, haveSIMD>;
+    k.radixOdd = radixOdd_<T, VT, VT128, haveSIMD>;
+    k.radix4Last = radix4Last_<T, VT, VT128, haveSIMD>;
     k.postprocDFT = postprocDFT_<T, VT, haveSIMD>;
     k.postprocRealDFT = postprocRealDFT_<T, VT, haveSIMD>;
     k.postprocReal = postprocReal_<T, VT, haveSIMD>;
     k.postprocDCT = postprocDCT_<T, VT, haveSIMD>;
     k.postprocIDCT = postprocIDCT_<T, VT, haveSIMD>;
     if constexpr (haveSIMD)
+    {
         k.vlanes = VTraits<VT>::vlanes();
+        k.vlanes128 = VTraits<VT128>::vlanes();
+    }
     else
-        k.vlanes = 1;
+        k.vlanes = k.vlanes128 = 1;
     return k;
 }
 
@@ -1139,19 +1478,29 @@ DFTKernels makeKernels()
 
 DFTKernels getDFTKernels_(int depth)
 {
+    // the 128-bit types exist alongside the wide ones on all fixed-width ISAs (not with scalable
+    // vectors); they are the same type as the wide ones on 128-bit ISAs
     if (depth == CV_32F)
     {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        return makeKernels<float, v_float32, true>();
+#if CV_SIMD128 && !CV_SIMD_SCALABLE
+        return makeKernels<float, v_float32, v_float32x4, true>();
 #else
-        return makeKernels<float, float, false>();
+        return makeKernels<float, v_float32, v_float32, true>();
+#endif
+#else
+        return makeKernels<float, float, float, false>();
 #endif
     }
     CV_Assert(depth == CV_64F);
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    return makeKernels<double, v_float64, true>();
+#if CV_SIMD128_64F && !CV_SIMD_SCALABLE
+    return makeKernels<double, v_float64, v_float64x2, true>();
 #else
-    return makeKernels<double, double, false>();
+    return makeKernels<double, v_float64, v_float64, true>();
+#endif
+#else
+    return makeKernels<double, double, double, false>();
 #endif
 }
 

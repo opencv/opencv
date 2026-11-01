@@ -232,6 +232,8 @@ static const DFTKernels& getDFTKernels(int depth)
     return depth == CV_32F ? k32 : k64;
 }
 
+/////////////////////////////// twiddle generation ///////////////////////////////
+
 // exp(-2*pi*i*m/M) in double precision, m in [0, M): m = B*a + b -> hi[a]*lo[b] with B a power of
 // two ~ sqrt(M). Both small tables are built by the rotation recurrence, re-seeded with exact
 // sin/cos every 16 entries, so the error stays within a few ulps while only ~(B + M/B)/16 + 4
@@ -292,157 +294,77 @@ struct DftTwiddleGen
     }
 };
 
+// Stage twiddles of a radix-r (r <= 8) stage with span L, leg-major: twr/twi[(q-1)*ts + j] =
+// W_{rL}^{q*j} = gen(q*j*step), step = gen.M/(r*L). Leg 1 (W_{rL}^j) by K independent interleaved
+// rotation recurrences (a single chain is latency-bound), each re-seeded from the exact generator
+// every 16 of its steps; legs q >= 2 as t_q(j) = t_{q-1}(j)*t_1(j), independent per entry
+// (error <= q ulps). twd is a scratch of 2*L doubles.
 template<typename T>
-void DftPlan::fillTables(size_t ntw, bool need_rtw, bool need_dct)
+static void fillStageTwiddles(const DftTwiddleGen& gen, int r, int L, int ts, T* twr, T* twi, double* twd)
 {
-    DftPlan& p = *this;
-    // all angles come from one base table exp(-2*pi*i*m/M), M a multiple of every angle grid used:
-    // C2C: M = nc; real kinds with even n: M = n (=2nc) or 4n for DCT (W_4n^k); odd real: M = n = nc.
-    int M = nc*(need_dct ? 8 : need_rtw ? 2 : 1);
-    DftTwiddleGen gen;
-    gen.init(M);
-    p.tw.allocate((ntw*sizeof(T) + sizeof(double) - 1)/sizeof(double) + 1);
-    T* cur = (T*)p.tw.data();
-    int maxL = 1;
-    for (int s = 0; s < p.nstages; s++)
-        if (p.stages[s].radix <= 8) maxL = std::max(maxL, p.stages[s].span);
-    AutoBuffer<double, 2048> twd_buf(2*maxL);     // leg-1 twiddles of the current stage in double
-    double* twd = twd_buf.data();
-    for (int s = 0; s < p.nstages; s++)
+    int step = gen.M/(r*L);
+    constexpr int K = 8;
+    double cr[K], ci[K], wr, wi;
+    gen.get(K*step, wr, wi);
+    double* t1r = twd; double* t1i = twd + L;      // leg 1 kept in double for the products
+    for (int j0 = 0; j0 < L; j0 += 16*K)           // blocks of 16 steps per chain
     {
-        DftStage& st = p.stages[s];
-        int r = st.radix, L = st.span, ts = st.tw_stride;
-        T* twr = cur; T* twi = cur + (r - 1)*ts;
-        cur = twi + (r - 1)*ts;
-        int step = M/(r*L);
-        if (r <= 8)
-        {
-            // Leg 1 (W_{rL}^j) by K independent interleaved rotation recurrences (a single chain is
-            // latency-bound), each re-seeded from the exact generator every 16 of its steps; legs
-            // q >= 2 as t_q(j) = t_{q-1}(j)*t_1(j), independent per entry (error <= q ulps).
-            constexpr int K = 8;
-            double cr[K], ci[K], wr, wi;
-            gen.get(K*step, wr, wi);
-            double* t1r = twd; double* t1i = twd + L;      // leg 1 kept in double for the products
-            for (int j0 = 0; j0 < L; j0 += 16*K)           // blocks of 16 steps per chain
+        for (int k = 0; k < K; k++)
+            gen.get(std::min(j0 + k, L - 1)*step, cr[k], ci[k]);
+        int j1 = std::min(j0 + 16*K, L);
+        for (int j = j0; j < j1; j += K)
+            for (int k = 0; k < K && j + k < L; k++)
             {
-                for (int k = 0; k < K; k++)
-                    gen.get(std::min(j0 + k, L - 1)*step, cr[k], ci[k]);
-                int j1 = std::min(j0 + 16*K, L);
-                for (int j = j0; j < j1; j += K)
-                    for (int k = 0; k < K && j + k < L; k++)
-                    {
-                        t1r[j+k] = cr[k]; t1i[j+k] = ci[k];
-                        double t = cr[k]*wr - ci[k]*wi;
-                        ci[k] = cr[k]*wi + ci[k]*wr;
-                        cr[k] = t;
-                    }
+                t1r[j+k] = cr[k]; t1i[j+k] = ci[k];
+                double t = cr[k]*wr - ci[k]*wi;
+                ci[k] = cr[k]*wi + ci[k]*wr;
+                cr[k] = t;
             }
-            for (int j = 0; j < L; j++)     // separate pass: vectorizes, the recurrence loop does not
-            {
-                twr[j] = (T)t1r[j]; twi[j] = (T)t1i[j];
-            }
-            for (int q = 2; q < r; q++)
-            {
-                const T* pr = twr + (q-2)*ts; const T* pi = twi + (q-2)*ts;
-                T* tr = twr + (q-1)*ts; T* ti = twi + (q-1)*ts;
-                for (int j = 0; j < L; j++)
-                {
-                    double ar = pr[j], ai = pi[j], br = t1r[j], bi = t1i[j];
-                    tr[j] = (T)(ar*br - ai*bi);
-                    ti[j] = (T)(ar*bi + ai*br);
-                }
-            }
-        }
-        else
-        {
-            // large odd radix: exact-ish generator lookup per entry
-            for (int q = 1; q < r; q++)
-                for (int j = 0; j < L; j++)
-                {
-                    double re, im;
-                    gen.get(q*j*step, re, im);
-                    twr[(q-1)*ts + j] = (T)re;
-                    twi[(q-1)*ts + j] = (T)im;
-                }
-        }
-        st.tw_re = twr; st.tw_im = twi;
-        st.cs = st.sn = 0;
-        if (r >= 7)
-        {
-            int h = (r - 1)/2;
-            T* cs = cur; T* sn = cur + h*h;
-            cur = sn + h*h;
-            for (int pp = 1; pp <= h; pp++)
-                for (int k = 1; k <= h; k++)
-                {
-                    double t = 2*CV_PI*((double)pp*k/r);
-                    cs[(pp-1)*h + (k-1)] = (T)cos(t);
-                    sn[(pp-1)*h + (k-1)] = (T)sin(t);
-                }
-            st.cs = cs; st.sn = sn;
-        }
     }
-    p.rtw_re = p.rtw_im = p.dct_re = p.dct_im = 0;
-    if (need_rtw)
+    for (int j = 0; j < L; j++)     // separate pass: vectorizes, the recurrence loop does not
     {
-        // W_n^k, k in [0, nc]
-        T* wr = cur; T* wi = cur + (nc + 1);
-        cur = wi + (nc + 1);
-        int step = M/n;
-        for (int k = 0; k <= nc; k++)
-        {
-            double re, im;
-            gen.get(k*step, re, im);
-            wr[k] = (T)re; wi[k] = (T)im;
-        }
-        p.rtw_re = wr; p.rtw_im = wi;
+        twr[j] = (T)t1r[j]; twi[j] = (T)t1i[j];
     }
-    if (need_dct)
+    for (int q = 2; q < r; q++)
     {
-        // s*W_4n^k, k in [0, nc]; s = 2*sqrt(1/(2n)) forward, sqrt(1/(2n)) inverse (the original normalization)
-        T* wr = cur; T* wi = cur + (nc + 1);
-        cur = wi + (nc + 1);
-        double scale = (p.kind == DFT_KIND_DCT ? 2 : 1)*std::sqrt(1./(2*n));
-        int step = M/(4*n);
-        for (int k = 0; k <= nc; k++)
+        const T* pr = twr + (q-2)*ts; const T* pi = twi + (q-2)*ts;
+        T* tr = twr + (q-1)*ts; T* ti = twi + (q-1)*ts;
+        for (int j = 0; j < L; j++)
         {
-            double re, im;
-            gen.get(k*step, re, im);
-            wr[k] = (T)(re*scale); wi[k] = (T)(im*scale);
+            double ar = pr[j], ai = pi[j], br = t1r[j], bi = t1i[j];
+            tr[j] = (T)(ar*br - ai*bi);
+            ti[j] = (T)(ar*bi + ai*br);
         }
-        p.dct_re = wr; p.dct_im = wi;
     }
 }
 
-// See dxt.hpp for the contract (in particular where `vl` must come from).
-void DftPlan::build(int _kind, int _n, int _depth, int _vl)
+// W_n^k, k in [0, nc] (n = 2*nc), scaled by `scale`, from gen with M a multiple of n
+template<typename T>
+static void fillRealTwiddles(const DftTwiddleGen& gen, int n, int nc, double scale, T* wr, T* wi)
 {
-    DftPlan& p = *this;
-    CV_Assert(_n >= 1 && _vl >= 1);
-    CV_Assert(_depth == CV_32F || _depth == CV_64F);
-    bool real_kind = _kind != DFT_KIND_C2C;
-    bool dct_kind = _kind == DFT_KIND_DCT || _kind == DFT_KIND_IDCT;
-    if (dct_kind)
-        CV_Assert(_n % 2 == 0);   // cv::dct() supports even n only (n == 1 is handled by the caller)
-    p.kind = _kind; p.n = _n; p.depth = _depth; p.vl = _vl;
-    p.nc = real_kind && _n % 2 == 0 ? _n/2 : _n;
-    CV_Assert(nc < (1 << 28));
-    size_t esz = depth == CV_32F ? sizeof(float) : sizeof(double);
-    p.real_input = kind == DFT_KIND_R2C && (n & 1) != 0;
-    p.need_tmp = kind == DFT_KIND_C2R || kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
-    p.pingpong = false;
+    int step = gen.M/n;
+    for (int k = 0; k <= nc; k++)
+    {
+        double re, im;
+        gen.get(k*step, re, im);
+        wr[k] = (T)(re*scale); wi[k] = (T)(im*scale);
+    }
+}
 
-    // factorization: 2^k part first (fused first stage r0 + radix-4 stages), then 3s, 5s, other odd.
-    // (A radix-8 middle stage was tried and measured slower on NEON: with per-leg twiddle tables it
-    // does not save loads over two radix-4 stages and keeps 16 data vectors live.)
+// The radix sequence of a length nc: the fused first stage r0 (1, 2, 3, 4, 5 or 8), then the
+// radix-4 stages of the remaining 2^k part, then 3s, 5s and the other odd factors ascending.
+// Even nc: r0 from the power of two. Odd nc: r0 = 5 or 3 when available (a vectorized,
+// twiddle-free first stage; it also makes the spans of the following stages larger), else 1.
+// (A radix-8 middle stage was tried and measured slower on NEON: with per-leg twiddle tables it
+// does not save loads over two radix-4 stages and keeps 16 data vectors live.)
+static int dftFactorize(int nc, int radices[DFT_MAX_STAGES], int& nst)
+{
     int k2 = 0, rest = nc;
     while ((rest & 1) == 0) { rest >>= 1; k2++; }
-    int r0 = k2 == 0 ? 1 : k2 == 1 ? 2 : (k2 & 1) ? 8 : 4;
-    p.first_radix = r0;
-    int radices[DFT_MAX_STAGES], nst = 0;
-    for (int m = k2 - (r0 == 1 ? 0 : r0 == 2 ? 1 : r0 == 4 ? 2 : 3); m > 0; m -= 2) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 4; }
-    rest = nc >> k2;
+    int r0 = k2 == 0 ? (rest % 5 == 0 ? 5 : rest % 3 == 0 ? 3 : 1) : k2 == 1 ? 2 : (k2 & 1) ? 8 : 4;
+    nst = 0;
+    for (int m = k2 - (r0 == 2 ? 1 : r0 == 4 ? 2 : r0 == 8 ? 3 : 0); m > 0; m -= 2) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 4; }
+    if (r0 == 3 || r0 == 5) rest /= r0;
     while (rest % 3 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 3; rest /= 3; }
     while (rest % 5 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 5; rest /= 5; }
     for (int f = 7; rest > 1; f += 2)
@@ -455,48 +377,18 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
         }
         while (rest % f == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = f; rest /= f; }
     }
-    p.nstages = nst;
+    return r0;
+}
 
-    // stages
-    int L = r0, max_h = 0;
-    size_t ntw = 0;
-    for (int s = 0; s < nst; s++)
-    {
-        DftStage& st = p.stages[s];
-        int r = radices[s];
-        st.radix = r; st.span = L; st.ngroups = nc/(r*L); st.tw_stride = L;
-        if (vl > 1 && L >= vl)
-        {
-            st.mode = DFT_STAGE_FULL;
-            st.nsteps = st.ngroups*((L + vl - 1)/vl);
-            if (L % vl != 0)
-                p.pingpong = true;   // back-off clamp => overlapping stores => must be out-of-place
-        }
-        else
-        {
-            st.mode = DFT_STAGE_SCALAR;
-            st.nsteps = st.ngroups*L;
-        }
-        ntw += 2*(size_t)(r - 1)*st.tw_stride;
-        if (r >= 7)
-        {
-            int h = (r - 1)/2;
-            ntw += 2*(size_t)h*h;
-            max_h = std::max(max_h, h);
-        }
-        L *= r;
-    }
-    CV_Assert(L == nc);
-
-    // digit-reversal: position p = sum_s d_s*L_s holds input element sum_s d_s*M_s, M_s = nc/(L_s*r_s);
-    // the radix sequence is r0 (if > 1) followed by the stage radices.
-    //  - r0 == 1 (odd nc): itab holds two element indices (re, im) per complex element for the
-    //    scalar gather (im index unused when real_input);
-    //  - r0 > 1: the r0 inputs of group g are the column x[base(g) + q*nc/r0]; itab[base(g)] = g*r0
-    //    tells the transposed first stage where the outputs of column base(g) go.
-    int seq[DFT_MAX_STAGES + 1], nseq = 0;
-    if (r0 > 1) seq[nseq++] = r0;
-    for (int s = 0; s < nst; s++) seq[nseq++] = radices[s];
+// Digit-reversal permutation for the radix sequence seq[0..nseq) (seq[0] = r0 when r0 > 1):
+// position p = sum_s d_s*L_s holds input element sum_s d_s*M_s, M_s = nc/(L_s*r_s).
+//  - r0 == 1 (odd nc without 3 or 5): itab holds two element indices (re, im) per complex element
+//    for the scalar gather (im index == re index when real_input, i.e. a real source);
+//  - r0 > 1: the r0 inputs of group g are the column x[base(g) + q*nc/r0]; gtab[base(g)] = g*r0
+//    tells the transposed first stage where the outputs of column base(g) go. nc/r0 entries.
+static void dftBuildPermutation(int nc, const int* seq, int nseq, bool real_input, int* itab)
+{
+    int r0 = nseq > 0 ? seq[0] : 1;
     int digits[DFT_MAX_STAGES + 1], weights[DFT_MAX_STAGES + 1];
     {
         int Ls = 1;
@@ -507,10 +399,10 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
             Ls *= seq[s];
         }
     }
-    if (r0 == 1)
+    bool first_fused = r0 == 2 || r0 == 3 || r0 == 4 || r0 == 5 || r0 == 8;
+    if (!first_fused)
     {
-        p.itab.allocate(nc*2);
-        int* it_all = p.itab.data();
+        int* it_all = itab;
         // the two lowest digits are enumerated by plain nested loops, the higher ones by a counter
         int n_in = std::min(nseq, 2);
         int r_0 = n_in > 0 ? seq[0] : 1, w_0 = n_in > 0 ? weights[0] : 0;
@@ -521,7 +413,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
             {
                 int rev = rev_hi + d1*w_1;
                 int* it = it_all + pos*2;
-                if (p.real_input)
+                if (real_input)
                 {
                     for (int d0 = 0; d0 < r_0; d0++, rev += w_0)
                     {
@@ -554,8 +446,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
         // g follows incrementally with the digit weights gw[s] = L_s/r0. The two fastest digits
         // are enumerated by plain nested loops.
         int M = nc/r0;
-        p.itab.allocate(M);
-        int* gtab = p.itab.data();
+        int* gtab = itab;
         int gw[DFT_MAX_STAGES + 1];
         {
             int Ls = 1;
@@ -586,15 +477,254 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
             }
         }
     }
+}
 
-    // twiddle tables
+/////////////////////////////// static tables for 2^k lengths <= 1024 ///////////////////////////////
+//
+// The power-of-two lengths are the common case (matchTemplate/filter2D tiles, 256/512/1024 rows),
+// and cv::dft() builds a plan per call, so their tables are built once per process and shared:
+//  - radix-4 stage twiddles W_{4L}^{q*j} for every span L = 2^k, 4 <= L <= 256 (they depend on
+//    (radix, span) only, not on the transform length);
+//  - the permutation gtab of nc = 2^k, 4 <= nc <= 1024 (r0 in {4, 8});
+//  - W_n^k, k in [0, nc], of the even real kinds (R2C/C2R) with nc = 2^k <= 1024.
+// ~90 KB for both depths. DCT tables are kind- and length-specific and stay per plan.
+enum { DFT_STATIC_MAX_LOG2 = 10, DFT_STATIC_MAX_NC = 1 << DFT_STATIC_MAX_LOG2 };
+
+template<typename T> struct DftStaticTables
+{
+    AutoBuffer<T> tw;                           // stage tables, then the real twiddles
+    AutoBuffer<int> itab;
+    const T* tw_re[DFT_STATIC_MAX_LOG2];        // [log2(L)], L in [4, 256]
+    const T* tw_im[DFT_STATIC_MAX_LOG2];
+    const T* rtw_re[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
+    const T* rtw_im[DFT_STATIC_MAX_LOG2 + 1];
+    const int* gtab[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
+
+    DftStaticTables()
+    {
+        size_t ntw = 0, nitab = 0;
+        for (int k = 2; k <= DFT_STATIC_MAX_LOG2; k++)
+        {
+            int nc = 1 << k;
+            if (k <= 8) ntw += 6*(size_t)nc;        // radix-4 stage with L = nc: 3 legs x (re, im) x L
+            ntw += 2*(size_t)(nc + 1);              // W_{2nc}^k, k in [0, nc]
+            nitab += nc/(k & 1 ? 8 : 4);
+        }
+        tw.allocate(ntw);
+        itab.allocate(nitab);
+        T* cur = tw.data();
+        int* icur = itab.data();
+        AutoBuffer<double> twd(2*256);
+        for (int k = 2; k <= DFT_STATIC_MAX_LOG2; k++)
+        {
+            int nc = 1 << k;
+            if (k <= 8)
+            {
+                int L = nc;
+                DftTwiddleGen gen;
+                gen.init(4*L);
+                tw_re[k] = cur; tw_im[k] = cur + 3*L;
+                fillStageTwiddles<T>(gen, 4, L, L, cur, cur + 3*L, twd.data());
+                cur += 6*L;
+            }
+            {
+                DftTwiddleGen gen;
+                gen.init(2*nc);
+                rtw_re[k] = cur; rtw_im[k] = cur + nc + 1;
+                fillRealTwiddles<T>(gen, 2*nc, nc, 1., cur, cur + nc + 1);
+                cur += 2*(nc + 1);
+            }
+            {
+                int radices[DFT_MAX_STAGES], nst;
+                int r0 = dftFactorize(nc, radices, nst);
+                int seq[DFT_MAX_STAGES + 1], nseq = 0;
+                seq[nseq++] = r0;
+                for (int s = 0; s < nst; s++) seq[nseq++] = radices[s];
+                gtab[k] = icur;
+                dftBuildPermutation(nc, seq, nseq, false, icur);
+                icur += nc/r0;
+            }
+        }
+        CV_Assert(cur == tw.data() + ntw && icur == itab.data() + nitab);
+    }
+};
+
+template<typename T> static const DftStaticTables<T>& getDftStaticTables()
+{
+    static const DftStaticTables<T> tables;
+    return tables;
+}
+
+static inline bool dftIsPow2(int x) { return x > 0 && (x & (x - 1)) == 0; }
+static inline int dftLog2(int x) { int k = 0; while ((1 << k) < x) k++; return k; }
+
+template<typename T>
+void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool static_stages, bool static_rtw)
+{
+    DftPlan& p = *this;
+    // all angles come from one base table exp(-2*pi*i*m/M), M a multiple of every angle grid used:
+    // C2C: M = nc; real kinds with even n: M = n (=2nc) or 4n for DCT (W_4n^k); odd real: M = n = nc.
+    int M = nc*(need_dct ? 8 : need_rtw ? 2 : 1);
+    DftTwiddleGen gen;
+    if (ntw > 0)
+        gen.init(M);
+    T* cur = dst;
+    const DftStaticTables<T>* st_tables = static_stages || static_rtw ? &getDftStaticTables<T>() : 0;
+    int maxL = 1;
+    for (int s = 0; s < p.nstages; s++)
+        if (p.stages[s].radix <= 8 && !static_stages) maxL = std::max(maxL, p.stages[s].span);
+    AutoBuffer<double, 2048> twd_buf(2*maxL);     // leg-1 twiddles of the current stage in double
+    double* twd = twd_buf.data();
+    for (int s = 0; s < p.nstages; s++)
+    {
+        DftStage& st = p.stages[s];
+        int r = st.radix, L = st.span, ts = st.tw_stride;
+        st.cs = st.sn = 0;
+        if (static_stages)
+        {
+            CV_DbgAssert(r == 4 && dftIsPow2(L) && L >= 4 && L <= 256);
+            int k = dftLog2(L);
+            st.tw_re = st_tables->tw_re[k]; st.tw_im = st_tables->tw_im[k];
+            continue;
+        }
+        T* twr = cur; T* twi = cur + (r - 1)*ts;
+        cur = twi + (r - 1)*ts;
+        if (r <= 8)
+            fillStageTwiddles<T>(gen, r, L, ts, twr, twi, twd);
+        else
+        {
+            // large odd radix: exact-ish generator lookup per entry
+            int step = M/(r*L);
+            for (int q = 1; q < r; q++)
+                for (int j = 0; j < L; j++)
+                {
+                    double re, im;
+                    gen.get(q*j*step, re, im);
+                    twr[(q-1)*ts + j] = (T)re;
+                    twi[(q-1)*ts + j] = (T)im;
+                }
+        }
+        st.tw_re = twr; st.tw_im = twi;
+        if (r >= 7)
+        {
+            // r entries (not h*h): the butterfly walks them with the cyclic index p*k mod r
+            T* cs = cur; T* sn = cur + r;
+            cur = sn + r;
+            for (int m = 0; m < r; m++)
+            {
+                double t = 2*CV_PI*((double)m/r);
+                cs[m] = (T)cos(t);
+                sn[m] = (T)sin(t);
+            }
+            st.cs = cs; st.sn = sn;
+        }
+    }
+    p.rtw_re = p.rtw_im = p.dct_re = p.dct_im = 0;
+    if (need_rtw)
+    {
+        if (static_rtw)
+        {
+            int k = dftLog2(nc);
+            p.rtw_re = st_tables->rtw_re[k]; p.rtw_im = st_tables->rtw_im[k];
+        }
+        else
+        {
+            // W_n^k, k in [0, nc]
+            T* wr = cur; T* wi = cur + (nc + 1);
+            cur = wi + (nc + 1);
+            fillRealTwiddles<T>(gen, n, nc, 1., wr, wi);
+            p.rtw_re = wr; p.rtw_im = wi;
+        }
+    }
+    if (need_dct)
+    {
+        // s*W_4n^k, k in [0, nc]; s = 2*sqrt(1/(2n)) forward, sqrt(1/(2n)) inverse (the original normalization)
+        T* wr = cur; T* wi = cur + (nc + 1);
+        cur = wi + (nc + 1);
+        double scale = (p.kind == DFT_KIND_DCT ? 2 : 1)*std::sqrt(1./(2*n));
+        fillRealTwiddles<T>(gen, 4*n, nc, scale, wr, wi);
+        p.dct_re = wr; p.dct_im = wi;
+    }
+    CV_Assert((size_t)(cur - dst) == ntw);
+}
+
+// Leading stages whose groups (radix*span elements) fit into a chunk of DFT_CHUNK_BYTES per array
+// are run chunk by chunk (depth-first) by the driver: the chunk stays in L2 across those stages
+// instead of streaming the whole array through the cache once per stage.
+enum { DFT_CHUNK_BYTES = 1 << 15 };
+
+// See dxt.hpp for the contract (in particular where `vl` and `vl128` must come from).
+void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool with_workspace)
+{
+    DftPlan& p = *this;
+    CV_Assert(_n >= 1 && _vl >= 1 && _vl128 >= 1 && _vl128 <= _vl);
+    CV_Assert(_depth == CV_32F || _depth == CV_64F);
+    bool real_kind = _kind != DFT_KIND_C2C;
+    bool dct_kind = _kind == DFT_KIND_DCT || _kind == DFT_KIND_IDCT;
+    if (dct_kind)
+        CV_Assert(_n % 2 == 0);   // cv::dct() supports even n only (n == 1 is handled by the caller)
+    p.kind = _kind; p.n = _n; p.depth = _depth; p.vl = _vl;
+    p.nc = real_kind && _n % 2 == 0 ? _n/2 : _n;
+    CV_Assert(nc < (1 << 28));
+    size_t esz = depth == CV_32F ? sizeof(float) : sizeof(double);
+    p.real_input = kind == DFT_KIND_R2C && (n & 1) != 0;
+    p.need_tmp = kind == DFT_KIND_C2R || kind == DFT_KIND_DCT || kind == DFT_KIND_IDCT;
+    p.pingpong = false;
+
+    int radices[DFT_MAX_STAGES], nst = 0;
+    int r0 = dftFactorize(nc, radices, nst);
+    p.first_radix = r0;
+    p.nstages = nst;
+
+    // stages
+    int L = r0, max_h = 0;
+    size_t ntw = 0;
+    int vl128 = _vl128;
+    for (int s = 0; s < nst; s++)
+    {
+        DftStage& st = p.stages[s];
+        int r = radices[s];
+        st.radix = r; st.span = L; st.ngroups = nc/(r*L); st.tw_stride = L;
+        if (vl > 1 && L >= vl)
+        {
+            st.mode = DFT_STAGE_FULL;
+            st.steps_per_group = (L + vl - 1)/vl;
+            if (L % vl != 0)
+                p.pingpong = true;   // back-off clamp => overlapping stores => must be out-of-place
+        }
+        else if (vl128 > 1 && vl128 < vl && L >= vl128)
+        {
+            st.mode = DFT_STAGE_SIMD128;
+            st.steps_per_group = (L + vl128 - 1)/vl128;
+            if (L % vl128 != 0)
+                p.pingpong = true;
+        }
+        else
+        {
+            st.mode = DFT_STAGE_SCALAR;
+            st.steps_per_group = L;
+        }
+        st.nsteps = st.ngroups*st.steps_per_group;
+        ntw += 2*(size_t)(r - 1)*st.tw_stride;
+        if (r >= 7)
+        {
+            ntw += 2*(size_t)r;
+            max_h = std::max(max_h, (r - 1)/2);
+        }
+        L *= r;
+    }
+    CV_Assert(L == nc);
+
+    // the static tables cover the stage twiddles of nc = 2^k <= 1024 (all stages radix 4,
+    // L <= 256), the permutation of 4 <= nc = 2^k <= 1024 and W_n^k of the even real kinds
+    bool static_pow2 = dftIsPow2(nc) && nc >= 4 && nc <= DFT_STATIC_MAX_NC;
     bool need_rtw = real_kind && n % 2 == 0;
-    if (need_rtw) ntw += 2*(size_t)(nc + 1);
+    bool static_stages = static_pow2;
+    bool static_rtw = static_pow2 && need_rtw && !dct_kind;
+    if (static_stages)
+        ntw = 0;
+    if (need_rtw && !static_rtw) ntw += 2*(size_t)(nc + 1);
     if (dct_kind) ntw += 2*(size_t)(nc + 1);
-    if (depth == CV_32F)
-        fillTables<float>(ntw, need_rtw, dct_kind);
-    else
-        fillTables<double>(ntw, need_rtw, dct_kind);
 
     // workspace layout (from the 64-byte aligned base): pair0 (re, im), optional pair1 (re, im) or
     // the interleaved temp, radix-odd scratch (a[h], b[h] complex per lane).
@@ -604,6 +734,67 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl)
     p.scratch_ofs = pair_bytes*(two_pairs ? 2 : 1);
     size_t scratch_bytes = 4*(size_t)max_h*std::max(vl, 1)*esz;
     p.ws_bytes = p.scratch_ofs + scratch_bytes + 64;
+
+    // ONE allocation for the generated tables, the permutation and (optionally) the owner's
+    // workspace (see the note in dxt.hpp)
+    size_t nitab = static_pow2 ? 0 : r0 == 1 ? 2*(size_t)nc : (size_t)nc/r0;
+    size_t itab_ofs = ntw*esz;
+    size_t ws_ofs = alignSize(itab_ofs + nitab*sizeof(int), 64);
+    size_t total_bytes = ws_ofs + (with_workspace ? p.ws_bytes : 0);
+    p.buf.allocate(total_bytes/sizeof(double) + 1);
+    uchar* base = (uchar*)p.buf.data();
+    p.workspace = with_workspace ? base + ws_ofs : 0;
+
+    // digit-reversal permutation (see dftBuildPermutation)
+    int seq[DFT_MAX_STAGES + 1], nseq = 0;
+    if (r0 > 1) seq[nseq++] = r0;
+    for (int s = 0; s < nst; s++) seq[nseq++] = radices[s];
+    if (static_pow2)
+        p.itab = depth == CV_32F ? getDftStaticTables<float>().gtab[dftLog2(nc)]
+                                 : getDftStaticTables<double>().gtab[dftLog2(nc)];
+    else
+    {
+        int* itab_ = (int*)(base + itab_ofs);
+        dftBuildPermutation(nc, seq, nseq, p.real_input, itab_);
+        p.itab = itab_;
+    }
+
+    // twiddle tables
+    if (depth == CV_32F)
+        fillTables<float>((float*)base, ntw, need_rtw, dct_kind, static_stages, static_rtw);
+    else
+        fillTables<double>((double*)base, ntw, need_rtw, dct_kind, static_stages, static_rtw);
+
+    // the last radix-4 stage of C2C / even C2R can write the interleaved scaled output directly
+    p.fused_last = nst > 0 && radices[nst - 1] == 4 &&
+                   (kind == DFT_KIND_C2C || (kind == DFT_KIND_C2R && nc < n));
+
+    // depth-first chunking of the leading stages (see DFT_CHUNK_BYTES)
+    p.nchunk_stages = 0;
+    {
+        int chunk = (int)(DFT_CHUNK_BYTES/esz);
+        if (nc > chunk)
+        {
+            int m = 0, avail = nst - (p.fused_last ? 1 : 0);   // the fused last stage never runs chunked
+            while (m < avail && p.stages[m].radix*p.stages[m].span <= chunk) m++;
+            // chunking pays off only if at least two stages are grouped
+            if (m >= 2)
+                p.nchunk_stages = m;
+        }
+    }
+}
+
+// one stage over [i0, i0 + len) elements of the arrays (len a multiple of radix*span)
+static inline void runStage(const DFTKernels& k, const DftStage& st0, int i0, int len, size_t esz,
+                            const uchar* sre, const uchar* sim, uchar* dre, uchar* dim, uchar* scratch)
+{
+    DftStage st = st0;
+    st.ngroups = len/(st.radix*st.span);
+    st.nsteps = st.ngroups*st.steps_per_group;
+    DftStageFunc fn = st.radix == 4 ? k.radix4 : st.radix == 3 ? k.radix3 :
+                      st.radix == 5 ? k.radix5 : k.radixOdd;
+    size_t ofs = (size_t)i0*esz;
+    fn(st, sre + ofs, sim + ofs, dre + ofs, dim + ofs, scratch);
 }
 
 // Runs the transform described by c.plan: A (preproc) -> B stages (ping-pong) -> C (postproc).
@@ -645,25 +836,56 @@ static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* 
     CV_DbgAssert(astep == 1 || p.first_radix == 1);
 
     DftPreprocFunc pre = p.first_radix == 1 ? k.preprocRadix0 : p.first_radix == 2 ? k.preprocRadix2 :
-                         p.first_radix == 4 ? k.preprocRadix4 : k.preprocRadix8;
+                         p.first_radix == 3 ? k.preprocRadix3 : p.first_radix == 4 ? k.preprocRadix4 :
+                         p.first_radix == 5 ? k.preprocRadix5 : k.preprocRadix8;
     pre(p, asrc, astep, re0, im0, conj);
 
     uchar *sre = re0, *sim = im0, *dre = re1, *dim = im1;
-    for (int i = 0; i < p.nstages; i++)
+    int nstages = p.nstages - (p.fused_last ? 1 : 0);
+    int s = 0;
+    if (p.nchunk_stages > 0)
     {
-        const DftStage& st = p.stages[i];
-        DftStageFunc fn = st.radix == 4 ? k.radix4 : st.radix == 3 ? k.radix3 :
-                          st.radix == 5 ? k.radix5 : k.radixOdd;
+        // the leading stages chunk by chunk; every chunk runs the same number of stages, so the
+        // ping-pong parity after them is the same for all chunks
+        int chunk = p.stages[p.nchunk_stages].span;
+        for (int i0 = 0; i0 < p.nc; i0 += chunk)
+        {
+            uchar *csre = sre, *csim = sim, *cdre = dre, *cdim = dim;
+            for (int i = 0; i < p.nchunk_stages; i++)
+            {
+                if (p.pingpong)
+                {
+                    runStage(k, p.stages[i], i0, chunk, esz, csre, csim, cdre, cdim, scratch);
+                    std::swap(csre, cdre); std::swap(csim, cdim);
+                }
+                else
+                    runStage(k, p.stages[i], i0, chunk, esz, csre, csim, csre, csim, scratch);
+            }
+        }
+        if (p.pingpong && (p.nchunk_stages & 1))
+        {
+            std::swap(sre, dre); std::swap(sim, dim);
+        }
+        s = p.nchunk_stages;
+    }
+    for (; s < nstages; s++)
+    {
         if (p.pingpong)
         {
-            fn(st, sre, sim, dre, dim, scratch);
+            runStage(k, p.stages[s], 0, p.nc, esz, sre, sim, dre, dim, scratch);
             std::swap(sre, dre); std::swap(sim, dim);
         }
         else
-            fn(st, sre, sim, sre, sim, scratch);
+            runStage(k, p.stages[s], 0, p.nc, esz, sre, sim, sre, sim, scratch);
     }
 
     double scale = c.scale;
+    if (p.fused_last)
+    {
+        // C2C or even C2R: last radix-4 stage + interleave + scale, straight into dst
+        k.radix4Last(p.stages[p.nstages - 1], sre, sim, dst, scale, c.isInverse || p.kind == DFT_KIND_C2R ? -scale : scale);
+        return;
+    }
     switch (p.kind)
     {
     case DFT_KIND_C2C:
@@ -2016,10 +2238,9 @@ class OcvDftBasicImpl CV_FINAL : public hal::DFT1D
 {
 public:
     OcvDftOptions opt;
-    // the plan is built once in init(), the workspace is allocated once here and reused by
+    // the plan (with the workspace inside its block) is built once in init() and reused by
     // every apply() (zero allocations per transform)
     DftPlan plan;
-    AutoBuffer<uchar> ws;
 #ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     AutoBuffer<uchar> ippworkbuf;
@@ -2104,11 +2325,10 @@ public:
             const DFTKernels& kernels = getDFTKernels(depth);
             int kind = stage == 0 && real_transform ? (opt.isInverse ? DFT_KIND_C2R : DFT_KIND_R2C)
                                                     : DFT_KIND_C2C;
-            plan.build(kind, len, depth, kernels.vlanes);
-            ws.allocate(plan.ws_bytes);
+            plan.build(kind, len, depth, kernels.vlanes, kernels.vlanes128, true);
             opt.plan = &plan;
             opt.kernels = &kernels;
-            opt.workspace = ws.data();
+            opt.workspace = plan.workspace;
             if (needBuffer)
                 *needBuffer = false;   // the engine supports in-place for every kind
         }
@@ -3641,9 +3861,8 @@ class OcvDctImpl CV_FINAL : public hal::DCT2D
 public:
     OcvDftOptions opt;
     DCTFunc dct_func;
-    // per-stage plan + workspace, (re)built once per stage length, never per row
+    // per-stage plan (+ workspace inside), (re)built once per stage length, never per row
     DftPlan plan;
-    AutoBuffer<uchar> ws;
     bool isRowTransform;
     bool isInverse;
     bool isContinuous;
@@ -3727,13 +3946,10 @@ public:
                 if( len > 1 && (len & 1) )
                     CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
                 if( len > 1 )
-                {
-                    plan.build(isInverse ? DFT_KIND_IDCT : DFT_KIND_DCT, len, depth, kernels.vlanes);
-                    ws.allocate(plan.ws_bytes);
-                }
+                    plan.build(isInverse ? DFT_KIND_IDCT : DFT_KIND_DCT, len, depth, kernels.vlanes, kernels.vlanes128, true);
                 opt.plan = &plan;
                 opt.kernels = &kernels;
-                opt.workspace = ws.data();
+                opt.workspace = plan.workspace;
                 prev_len = len;
             }
             // otherwise reuse the plan built on the previous stage (same length, only the steps differ)
