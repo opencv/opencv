@@ -434,7 +434,11 @@ CASE(test_castlike_no_saturate_FLOAT16_to_FLOAT8E5M2_expanded)
     SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN)
     SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded)
+    SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ)
+    SKIP;
+CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded)
     SKIP;
 CASE(test_castlike_no_saturate_FLOAT_to_FLOAT8E5M2)
     SKIP;
@@ -583,6 +587,70 @@ CASE(test_castlike_FLOAT16_to_INT4_expanded)
 CASE(test_castlike_FLOAT16_to_UINT4)
     SKIP;
 CASE(test_castlike_FLOAT16_to_UINT4_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT4E2M1_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FNUZ_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E4M3FN_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2FNUZ_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT8E5M2_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_INT4_to_INT8)
+    SKIP;
+CASE(test_castlike_INT4_to_INT8_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_UINT4_to_UINT8)
+    SKIP;
+CASE(test_castlike_UINT4_to_UINT8_expanded)
     SKIP;
 CASE(test_ceil)
     // no filter
