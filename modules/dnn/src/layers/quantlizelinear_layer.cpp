@@ -308,7 +308,7 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
     // Fast path: per-tensor quantization float to uint8 or int8 with AVX2 + parallelism
 #if defined(__x86_64__) || defined(_M_X64)
     if (block_size == 0 && sz_a == 1 && inptype == CV_32F && sctype == CV_32F
-        && (outtype == CV_8U || outtype == CV_8S) && checkHardwareSupport(CV_CPU_AVX2)) {
+        && (outtype == CV_8U || outtype == CV_8S) && !int4Out && checkHardwareSupport(CV_CPU_AVX2)) {
         float scale_f32 = reinterpret_cast<const float*>(scale.data)[0];
         int64_t total = nslices * slice_size;
         if (outtype == CV_8U) {
