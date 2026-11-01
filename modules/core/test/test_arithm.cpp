@@ -4164,6 +4164,34 @@ TEST_P(FiniteMaskFixture, flags)
 INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
 
+// finiteMask on every float depth, including CV_16F and CV_16BF: a pixel is finite if no channel is NaN or infinity
+typedef testing::TestWithParam<std::tuple<int, int> > Core_FiniteMask_depths;
+
+TEST_P(Core_FiniteMask_depths, accuracy)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam());
+    Mat src64(3, 37, CV_64FC(cn));
+    double* p = src64.ptr<double>();
+    for (int i = 0; i < (int)src64.total() * cn; i++)
+        p[i] = i % 11 == 0 ? NAN : i % 13 == 0 ? (i % 2 ? INFINITY : -INFINITY) : i - 50.0;
+
+    Mat src, mask;
+    src64.convertTo(src, depth);
+    cv::finiteMask(src, mask);
+    ASSERT_EQ(CV_8UC1, mask.type());
+
+    for (int i = 0; i < (int)src64.total(); i++)
+    {
+        bool finite = true;
+        for (int c = 0; c < cn; c++)
+            finite = finite && std::isfinite(p[i * cn + c]);
+        EXPECT_EQ(finite ? 255 : 0, mask.at<uchar>(i)) << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_depths,
+    testing::Combine(testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F), testing::Range(1, 5)));
+
 ///////////////////////////////////////////////////////////////////////////////////
 typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 

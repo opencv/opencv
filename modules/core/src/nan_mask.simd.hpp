@@ -13,7 +13,7 @@ typedef void (*FiniteMaskFunc)(const uchar *src, uchar *dst, size_t total);
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 PatchNanFunc getPatchNanFunc(int depth);
-FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn);
+FiniteMaskFunc getFiniteMaskFunc(int depth, int cn);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -453,7 +453,23 @@ void finiteMask_(const uchar *src, uchar *dst, size_t total)
     }
 }
 
-FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
+// CV_16F and CV_16BF: a value is finite unless its exponent bits are all 1 (infinity or NaN)
+template <ushort expMask, int cn>
+void finiteMask16_(const uchar *src, uchar *dst, size_t total)
+{
+    CV_INSTRUMENT_REGION();
+    const ushort* tsrc = (const ushort*)src;
+
+    for (size_t i = 0; i < total; i++)
+    {
+        bool finite = true;
+        for (int c = 0; c < cn; c++)
+            finite = finite && (tsrc[i * cn + c] & expMask) != expMask;
+        dst[i] = finite ? 255 : 0;
+    }
+}
+
+FiniteMaskFunc getFiniteMaskFunc(int depth, int cn)
 {
     static FiniteMaskFunc tab[CV_DEPTH_MAX] =
     {
@@ -465,9 +481,17 @@ FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
         finiteMask_<double, 2>,
         finiteMask_<double, 3>,
         finiteMask_<double, 4>,
+        finiteMask16_<0x7c00, 1>,
+        finiteMask16_<0x7c00, 2>,
+        finiteMask16_<0x7c00, 3>,
+        finiteMask16_<0x7c00, 4>,
+        finiteMask16_<0x7f80, 1>,
+        finiteMask16_<0x7f80, 2>,
+        finiteMask16_<0x7f80, 3>,
+        finiteMask16_<0x7f80, 4>,
     };
 
-    int idx = (isDouble ? 4 : 0) + cn - 1;
+    int idx = (depth == CV_64F ? 4 : depth == CV_16F ? 8 : depth == CV_16BF ? 12 : 0) + cn - 1;
     return tab[idx];
 }
 
