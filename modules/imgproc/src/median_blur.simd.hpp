@@ -622,8 +622,8 @@ typedef MinMax32f MinMaxVec32f;
 template<class Op, class VecOp>
 static CV_ALWAYS_INLINE void
 medianBlur3Row(const typename Op::value_type* src, typename Op::value_type* dst_row,
-                const typename Op::value_type* row0, const typename Op::value_type* row1,
-                const typename Op::value_type* row2, int cn, int width, Op& op, VecOp& vop)
+               const typename Op::value_type* row0, const typename Op::value_type* row1,
+               const typename Op::value_type* row2, int cn, int width, Op& op, VecOp& vop)
 {
     typedef typename Op::value_type T;
     typedef typename Op::arg_type WT;
@@ -676,7 +676,6 @@ medianBlur3Row(const typename Op::value_type* src, typename Op::value_type* dst_
             vop(p3, p6); vop(p1, p4); vop(p2, p5); vop(p4, p7);
             vop(p4, p2); vop(p6, p4); vop(p4, p2);
             vop.store(dst_row+j, p4);
-
         }
 
         limit = width;
@@ -686,14 +685,13 @@ medianBlur3Row(const typename Op::value_type* src, typename Op::value_type* dst_
 template<class Op, class VecOp>
 static CV_ALWAYS_INLINE void
 medianBlur5Row(const typename Op::value_type* src, typename Op::value_type* dst_row,
-                const typename Op::value_type* const row[5], int cn, int width, Op& op, VecOp& vop)
+               const typename Op::value_type* const row[5], int cn, int width, Op& op, VecOp& vop)
 {
     typedef typename Op::value_type T;
     typedef typename Op::arg_type WT;
     typedef typename VecOp::arg_type VT;
 
-    int limit = cn*2, j, k;
-
+    int limit = cn*2, j;
     for(j = 0;; )
     {
         for( ; j < limit; j++ )
@@ -703,7 +701,7 @@ medianBlur5Row(const typename Op::value_type* src, typename Op::value_type* dst_
             int j0 = j >= cn*2 ? j - cn*2 : j1;
             int j3 = j < width - cn ? j + cn : j;
             int j4 = j < width - cn*2 ? j + cn*2 : j3;
-            for( k = 0; k < 5; k++ )
+            for( int k = 0; k < 5; k++ )
             {
                 const T* rowk = row[k];
                 p[k*5] = rowk[j0]; p[k*5+1] = rowk[j1];
@@ -783,7 +781,6 @@ medianBlur5Row(const typename Op::value_type* src, typename Op::value_type* dst_
             vop(p13, p17); vop(p3, p15); vop(p11, p23); vop(p11, p15); vop(p7, p19);
             vop(p7, p11); vop(p11, p13); vop(p11, p12);
             vop.store(dst_row+j, p12);
-
         }
 
         limit = width;
@@ -807,8 +804,6 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     int cn = _src.channels();
     Op op;
     VecOp vop;
-    const bool useParallel = m == 3 ? (size.area() >= 320 * 240)
-                                     : (size.area() >= 64 * 64);
 
     if( m == 3 )
     {
@@ -833,16 +828,30 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         }
 
         size.width *= cn;
-        parallel_for_(Range(0, size.height), [&](const Range& range) {
-            for( int i = range.start; i < range.end; i++ )
+        const bool useParallel = (size.height * (size.width / cn) >= 320 * 240);
+        if( useParallel )
+        {
+            parallel_for_(Range(0, size.height), [&](const Range& range)
             {
-                T* dst_row = dst + (size_t)i*dstep;
+                for( int i = range.start; i < range.end; i++ )
+                {
+                    const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
+                    const T* row1 = src + (size_t)i*sstep;
+                    const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
+                    medianBlur3Row(src, dst + (size_t)i*dstep, row0, row1, row2, cn, size.width, op, vop);
+                }
+            }, -1.);
+        }
+        else
+        {
+            for( int i = 0; i < size.height; i++, dst += dstep )
+            {
                 const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
                 const T* row1 = src + (size_t)i*sstep;
                 const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
-                medianBlur3Row(src, dst_row, row0, row1, row2, cn, size.width, op, vop);
+                medianBlur3Row(src, dst, row0, row1, row2, cn, size.width, op, vop);
             }
-        }, useParallel ? -1. : 1.);
+        }
     }
     else if( m == 5 )
     {
@@ -870,19 +879,36 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         }
 
         size.width *= cn;
-        parallel_for_(Range(0, size.height), [&](const Range& range) {
-            for( int i = range.start; i < range.end; i++ )
+        const bool useParallel = (size.height * (size.width / cn) >= 64 * 64);
+        if( useParallel )
+        {
+            parallel_for_(Range(0, size.height), [&](const Range& range)
             {
-                T* dst_row = dst + (size_t)i*dstep;
+                for( int i = range.start; i < range.end; i++ )
+                {
+                    const T* row[5];
+                    row[0] = src + (size_t)std::max(i - 2, 0)*sstep;
+                    row[1] = src + (size_t)std::max(i - 1, 0)*sstep;
+                    row[2] = src + (size_t)i*sstep;
+                    row[3] = src + (size_t)std::min(i + 1, size.height-1)*sstep;
+                    row[4] = src + (size_t)std::min(i + 2, size.height-1)*sstep;
+                    medianBlur5Row(src, dst + (size_t)i*dstep, row, cn, size.width, op, vop);
+                }
+            }, -1.);
+        }
+        else
+        {
+            for( int i = 0; i < size.height; i++, dst += dstep )
+            {
                 const T* row[5];
                 row[0] = src + (size_t)std::max(i - 2, 0)*sstep;
                 row[1] = src + (size_t)std::max(i - 1, 0)*sstep;
                 row[2] = src + (size_t)i*sstep;
                 row[3] = src + (size_t)std::min(i + 1, size.height-1)*sstep;
                 row[4] = src + (size_t)std::min(i + 2, size.height-1)*sstep;
-                medianBlur5Row(src, dst_row, row, cn, size.width, op, vop);
+                medianBlur5Row(src, dst, row, cn, size.width, op, vop);
             }
-        }, useParallel ? -1. : 1.);
+        }
     }
 }
 
