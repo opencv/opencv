@@ -14,7 +14,7 @@
 //                 For long transforms the leading stages run chunk by chunk (depth-first) so
 //                 that their data stays in L2.
 //   C (postproc): interleave / CCS packing / DCT ordering with fused scaling into the user output.
-//                 For C2C (and even C2R) the last radix-4 stage writes the interleaved, scaled
+//                 For C2C (and even C2R) the last radix-4/8 stage writes the interleaved, scaled
 //                 output itself (fused last stage), saving one pass over the data.
 //
 // Inverse transforms use the conjugation trick: conj() on the gather, im_scale = -scale on output.
@@ -55,13 +55,14 @@ enum { DFT_MAX_STAGES = 40 };
 
 struct DftStage
 {
-    int radix;          // 3, 4, 5 or an odd number >= 7
+    int radix;          // 3, 4, 5, 8 or an odd number >= 7
     int span;           // L: length of the sub-DFTs combined by this stage
     int ngroups;        // G = nc / (radix*span)
     int nsteps;         // number of (vector) iterations of the flat loop, precomputed by the plan
     int steps_per_group; // nsteps / ngroups (the driver re-derives nsteps for chunked runs)
     int mode;           // DftStageMode
-    int tw_stride;      // per-leg twiddle table length (== span for now)
+    int tw_stride;      // per-leg twiddle table length: span, plus one cache line of padding when
+                        // span*esz is a multiple of 4 KB (the legs must not share one cache set)
     // Per-stage twiddles, split layout, leg-major: tw_re[(q-1)*tw_stride + j] = cos(-2*pi*q*j/(radix*span)),
     // q in [1, radix), j in [0, span). Type T of the plan.
     const void* tw_re;
@@ -83,7 +84,7 @@ struct DftPlan
     bool real_input;    // R2C with odd n: gather real samples, im = 0
     bool pingpong;      // stages must alternate between two workspace pairs
     bool need_tmp;      // C2R / DCT / IDCT: a temp of 2*nc elements (interleaved complex or the Makhoul-permuted reals)
-    bool fused_last;    // the last stage is radix 4 and writes the interleaved scaled output itself (C2C, even C2R)
+    bool fused_last;    // the last stage is radix 4 or 8 and writes the interleaved scaled output itself (C2C, even C2R)
     int nchunk_stages;  // leading stages run chunk by chunk (chunk = stages[nchunk_stages].span); 0 = none
     int nstages;
     DftStage stages[DFT_MAX_STAGES];
@@ -100,13 +101,15 @@ struct DftPlan
     const void* dct_re;         // s*W_4n^k, k in [0, n/2]; DCT/IDCT (s = DCT normalization)
     const void* dct_im;
     size_t ws_bytes;            // workspace size (incl. 64 bytes for alignment)
+    size_t im_ofs;              // byte offset of im from re inside a pair: nc*esz plus one cache line when
+                                // nc*esz is a multiple of 4 KB (keeps the re and im streams out of one cache set)
     size_t pair1_ofs;           // byte offset of the second (re, im) pair or of the temp, from the aligned base
     size_t scratch_ofs;         // byte offset of the radix-odd scratch area
 
     DftPlan() : kind(0), n(0), nc(0), depth(0), vl(0), first_radix(1), real_input(false),
                 pingpong(false), need_tmp(false), fused_last(false), nchunk_stages(0), nstages(0),
                 itab(0), workspace(0), rtw_re(0), rtw_im(0), dct_re(0), dct_im(0), ws_bytes(0),
-                pair1_ofs(0), scratch_ofs(0) {}
+                im_ofs(0), pair1_ofs(0), scratch_ofs(0) {}
 
     // Builds the plan for a 1D transform of the given kind (DftKind) and length.
     //
@@ -151,8 +154,9 @@ struct DFTKernels
     // IDCT: pre-twiddle + CCS untangle -> interleaved temp
     void (*preprocIDCT)(const DftPlan& plan, const void* src, size_t sstep, void* tmp);
     // group B
-    DftStageFunc radix3, radix4, radix5, radixOdd;
+    DftStageFunc radix3, radix4, radix5, radix8, radixOdd;
     DftLastStageFunc radix4Last;    // radix-4 stage + interleave + scale into the user output
+    DftLastStageFunc radix8Last;    // the same for a radix-8 last stage
     // group C
     void (*postprocDFT)(const DftPlan& plan, const void* re, const void* im, void* dst,
                         double re_scale, double im_scale);          // split -> interleaved complex

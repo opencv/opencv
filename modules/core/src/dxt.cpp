@@ -352,18 +352,24 @@ static void fillRealTwiddles(const DftTwiddleGen& gen, int n, int nc, double sca
 }
 
 // The radix sequence of a length nc: the fused first stage r0 (1, 2, 3, 4, 5 or 8), then the
-// radix-4 stages of the remaining 2^k part, then 3s, 5s and the other odd factors ascending.
-// Even nc: r0 from the power of two. Odd nc: r0 = 5 or 3 when available (a vectorized,
+// radix-8 and radix-4 stages of the remaining 2^k part, then 3s, 5s and the other odd factors
+// ascending. Even nc: r0 from the power of two. Odd nc: r0 = 5 or 3 when available (a vectorized,
 // twiddle-free first stage; it also makes the spans of the following stages larger), else 1.
-// (A radix-8 middle stage was tried and measured slower on NEON: with per-leg twiddle tables it
-// does not save loads over two radix-4 stages and keeps 16 data vectors live.)
 static int dftFactorize(int nc, int radices[DFT_MAX_STAGES], int& nst)
 {
     int k2 = 0, rest = nc;
     while ((rest & 1) == 0) { rest >>= 1; k2++; }
-    int r0 = k2 == 0 ? (rest % 5 == 0 ? 5 : rest % 3 == 0 ? 3 : 1) : k2 == 1 ? 2 : (k2 & 1) ? 8 : 4;
+    // 2^k2 = r0 * 8^a * 4^b: the twiddle-free first stage takes 8 whenever the rest can still be
+    // covered (k2 - 3 is 0 or >= 2), then as many radix-8 stages as possible, radix-4 stages last
+    int r0 = k2 == 0 ? (rest % 5 == 0 ? 5 : rest % 3 == 0 ? 3 : 1) : k2 == 1 ? 2 : (k2 == 2 || k2 == 4) ? 4 : 8;
     nst = 0;
-    for (int m = k2 - (r0 == 2 ? 1 : r0 == 4 ? 2 : r0 == 8 ? 3 : 0); m > 0; m -= 2) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 4; }
+    {
+        int m = k2 - (r0 == 2 ? 1 : r0 == 4 ? 2 : r0 == 8 ? 3 : 0);
+        int b = m % 3 == 0 ? 0 : m % 3 == 2 ? 1 : 2, a = (m - 2*b)/3;
+        CV_Assert(m - 2*b >= 0 && nst + a + b <= DFT_MAX_STAGES);
+        for (int i = 0; i < a; i++) radices[nst++] = 8;
+        for (int i = 0; i < b; i++) radices[nst++] = 4;
+    }
     if (r0 == 3 || r0 == 5) rest /= r0;
     while (rest % 3 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 3; rest /= 3; }
     while (rest % 5 == 0) { CV_Assert(nst < DFT_MAX_STAGES); radices[nst++] = 5; rest /= 5; }
@@ -483,8 +489,9 @@ static void dftBuildPermutation(int nc, const int* seq, int nseq, bool real_inpu
 //
 // The power-of-two lengths are the common case (matchTemplate/filter2D tiles, 256/512/1024 rows),
 // and cv::dft() builds a plan per call, so their tables are built once per process and shared:
-//  - radix-4 stage twiddles W_{4L}^{q*j} for every span L = 2^k, 4 <= L <= 256 (they depend on
-//    (radix, span) only, not on the transform length);
+//  - radix-4 stage twiddles W_{4L}^{q*j} for every span L = 2^k, 4 <= L <= 256, and radix-8
+//    stage twiddles W_{8L}^{q*j} for 4 <= L <= 128 (they depend on (radix, span) only, not on
+//    the transform length);
 //  - the permutation gtab of nc = 2^k, 4 <= nc <= 1024 (r0 in {4, 8});
 //  - W_n^k, k in [0, nc], of the even real kinds (R2C/C2R) with nc = 2^k <= 1024.
 // ~90 KB for both depths. DCT tables are kind- and length-specific and stay per plan.
@@ -494,8 +501,10 @@ template<typename T> struct DftStaticTables
 {
     AutoBuffer<T> tw;                           // stage tables, then the real twiddles
     AutoBuffer<int> itab;
-    const T* tw_re[DFT_STATIC_MAX_LOG2];        // [log2(L)], L in [4, 256]
+    const T* tw_re[DFT_STATIC_MAX_LOG2];        // radix 4: [log2(L)], L in [4, 256]
     const T* tw_im[DFT_STATIC_MAX_LOG2];
+    const T* tw8_re[DFT_STATIC_MAX_LOG2];       // radix 8: [log2(L)], L in [4, 128]
+    const T* tw8_im[DFT_STATIC_MAX_LOG2];
     const T* rtw_re[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
     const T* rtw_im[DFT_STATIC_MAX_LOG2 + 1];
     const int* gtab[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
@@ -507,8 +516,10 @@ template<typename T> struct DftStaticTables
         {
             int nc = 1 << k;
             if (k <= 8) ntw += 6*(size_t)nc;        // radix-4 stage with L = nc: 3 legs x (re, im) x L
+            if (k <= 7) ntw += 14*(size_t)nc;       // radix-8 stage with L = nc: 7 legs x (re, im) x L
             ntw += 2*(size_t)(nc + 1);              // W_{2nc}^k, k in [0, nc]
-            nitab += nc/(k & 1 ? 8 : 4);
+            int radices[DFT_MAX_STAGES], nst;
+            nitab += nc/dftFactorize(nc, radices, nst);
         }
         tw.allocate(ntw);
         itab.allocate(nitab);
@@ -526,6 +537,15 @@ template<typename T> struct DftStaticTables
                 tw_re[k] = cur; tw_im[k] = cur + 3*L;
                 fillStageTwiddles<T>(gen, 4, L, L, cur, cur + 3*L, twd.data());
                 cur += 6*L;
+            }
+            if (k <= 7)
+            {
+                int L = nc;
+                DftTwiddleGen gen;
+                gen.init(8*L);
+                tw8_re[k] = cur; tw8_im[k] = cur + 7*L;
+                fillStageTwiddles<T>(gen, 8, L, L, cur, cur + 7*L, twd.data());
+                cur += 14*L;
             }
             {
                 DftTwiddleGen gen;
@@ -582,9 +602,10 @@ void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool 
         st.cs = st.sn = 0;
         if (static_stages)
         {
-            CV_DbgAssert(r == 4 && dftIsPow2(L) && L >= 4 && L <= 256);
+            CV_DbgAssert((r == 4 || r == 8) && dftIsPow2(L) && L >= 4 && L*r <= 1024 && ts == L);
             int k = dftLog2(L);
-            st.tw_re = st_tables->tw_re[k]; st.tw_im = st_tables->tw_im[k];
+            if (r == 4) { st.tw_re = st_tables->tw_re[k]; st.tw_im = st_tables->tw_im[k]; }
+            else        { st.tw_re = st_tables->tw8_re[k]; st.tw_im = st_tables->tw8_im[k]; }
             continue;
         }
         T* twr = cur; T* twi = cur + (r - 1)*ts;
@@ -684,7 +705,10 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool wit
     {
         DftStage& st = p.stages[s];
         int r = radices[s];
-        st.radix = r; st.span = L; st.ngroups = nc/(r*L); st.tw_stride = L;
+        st.radix = r; st.span = L; st.ngroups = nc/(r*L);
+        // 4K-aliasing: with a span of a 4 KB multiple all r-1 leg tables (and the r data legs)
+        // of one butterfly map to the same L1 set; one line of padding per leg spreads them
+        st.tw_stride = L + ((L*esz & 4095) == 0 ? (int)(64/esz) : 0);
         if (vl > 1 && L >= vl)
         {
             st.mode = DFT_STAGE_FULL;
@@ -715,8 +739,8 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool wit
     }
     CV_Assert(L == nc);
 
-    // the static tables cover the stage twiddles of nc = 2^k <= 1024 (all stages radix 4,
-    // L <= 256), the permutation of 4 <= nc = 2^k <= 1024 and W_n^k of the even real kinds
+    // the static tables cover the stage twiddles of nc = 2^k <= 1024 (stages of radix 4 and 8,
+    // r*L <= 1024), the permutation of 4 <= nc = 2^k <= 1024 and W_n^k of the even real kinds
     bool static_pow2 = dftIsPow2(nc) && nc >= 4 && nc <= DFT_STATIC_MAX_NC;
     bool need_rtw = real_kind && n % 2 == 0;
     bool static_stages = static_pow2;
@@ -728,7 +752,9 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool wit
 
     // workspace layout (from the 64-byte aligned base): pair0 (re, im), optional pair1 (re, im) or
     // the interleaved temp, radix-odd scratch (a[h], b[h] complex per lane).
-    size_t pair_bytes = 2*(size_t)nc*esz;
+    size_t pad = ((size_t)nc*esz & 4095) == 0 ? 64 : 0;   // see im_ofs
+    p.im_ofs = (size_t)nc*esz + pad;
+    size_t pair_bytes = alignSize(2*(size_t)nc*esz + 2*pad, 64);
     bool two_pairs = p.pingpong || p.need_tmp;
     p.pair1_ofs = two_pairs ? pair_bytes : 0;
     p.scratch_ofs = pair_bytes*(two_pairs ? 2 : 1);
@@ -765,8 +791,8 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool wit
     else
         fillTables<double>((double*)base, ntw, need_rtw, dct_kind, static_stages, static_rtw);
 
-    // the last radix-4 stage of C2C / even C2R can write the interleaved scaled output directly
-    p.fused_last = nst > 0 && radices[nst - 1] == 4 &&
+    // the last radix-4/8 stage of C2C / even C2R can write the interleaved scaled output directly
+    p.fused_last = nst > 0 && (radices[nst - 1] == 4 || radices[nst - 1] == 8) &&
                    (kind == DFT_KIND_C2C || (kind == DFT_KIND_C2R && nc < n));
 
     // depth-first chunking of the leading stages (see DFT_CHUNK_BYTES)
@@ -791,7 +817,7 @@ static inline void runStage(const DFTKernels& k, const DftStage& st0, int i0, in
     DftStage st = st0;
     st.ngroups = len/(st.radix*st.span);
     st.nsteps = st.ngroups*st.steps_per_group;
-    DftStageFunc fn = st.radix == 4 ? k.radix4 : st.radix == 3 ? k.radix3 :
+    DftStageFunc fn = st.radix == 4 ? k.radix4 : st.radix == 8 ? k.radix8 : st.radix == 3 ? k.radix3 :
                       st.radix == 5 ? k.radix5 : k.radixOdd;
     size_t ofs = (size_t)i0*esz;
     fn(st, sre + ofs, sim + ofs, dre + ofs, dim + ofs, scratch);
@@ -808,9 +834,9 @@ static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* 
     size_t esz = p.depth == CV_32F ? sizeof(float) : sizeof(double);
     uchar* base = alignPtr(c.workspace, 64);
     uchar* re0 = base;
-    uchar* im0 = re0 + p.nc*esz;
+    uchar* im0 = re0 + p.im_ofs;
     uchar* re1 = base + p.pair1_ofs;
-    uchar* im1 = re1 + p.nc*esz;
+    uchar* im1 = re1 + p.im_ofs;
     uchar* scratch = base + p.scratch_ofs;
 
     const void* asrc = src;
@@ -882,8 +908,9 @@ static void runDft(const OcvDftOptions& c, const void* src, size_t sstep, void* 
     double scale = c.scale;
     if (p.fused_last)
     {
-        // C2C or even C2R: last radix-4 stage + interleave + scale, straight into dst
-        k.radix4Last(p.stages[p.nstages - 1], sre, sim, dst, scale, c.isInverse || p.kind == DFT_KIND_C2R ? -scale : scale);
+        // C2C or even C2R: last radix-4/8 stage + interleave + scale, straight into dst
+        const DftStage& last = p.stages[p.nstages - 1];
+        (last.radix == 8 ? k.radix8Last : k.radix4Last)(last, sre, sim, dst, scale, c.isInverse || p.kind == DFT_KIND_C2R ? -scale : scale);
         return;
     }
     switch (p.kind)

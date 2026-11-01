@@ -796,6 +796,58 @@ void radix4Last_scalar(const DftStage& st, const T* sre, const T* sim, T* dst, T
     }
 }
 
+// radix-8 DIT stage, scalar. The odd legs (1,3,5,7) are combined first: their 4-point DFT needs
+// the W8 rotations (the costly part); the even legs (0,2,4,6) are pure additions and are merged
+// into the outputs as they are produced. LAST: write the interleaved, scaled output (fused last).
+template<typename T, bool LAST>
+void radix8_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim, T* dst, T rs, T is)
+{
+    const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
+    int L = st.span, G = st.ngroups, ts = st.tw_stride;
+    const T c = DftConst<T>::sin45;
+    for (int g = 0; g < G; g++)
+    {
+        int base = g*8*L;
+        for (int j = 0; j < L; j++)
+        {
+            int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L, i4 = i3 + L, i5 = i4 + L, i6 = i5 + L, i7 = i6 + L;
+            T x1r, x1i, x3r, x3i, x5r, x5i, x7r, x7i;
+            DFT_CMUL(x1r, x1i, sre[i1], sim[i1], twr[j], twi[j]);
+            DFT_CMUL(x5r, x5i, sre[i5], sim[i5], twr[ts*4 + j], twi[ts*4 + j]);
+            DFT_CMUL(x3r, x3i, sre[i3], sim[i3], twr[ts*2 + j], twi[ts*2 + j]);
+            DFT_CMUL(x7r, x7i, sre[i7], sim[i7], twr[ts*6 + j], twi[ts*6 + j]);
+            T o0r, o0i, o1r, o1i, o2r, o2i, o3r, o3i;
+            DFT4_SCALAR(x1r,x1i,x3r,x3i,x5r,x5i,x7r,x7i, o0r,o0i,o1r,o1i,o2r,o2i,o3r,o3i);
+            // O1*W8 = c*((o1r + o1i) + i(o1i - o1r)), O3*W8^3 = c*((o3i - o3r) - i(o3r + o3i)), O2*W8^2 = (o2i, -o2r)
+            T s1r = o1r + o1i, s1i = o1i - o1r, s3r = o3i - o3r, s3i = o3r + o3i;
+            T x0r = sre[i0], x0i = sim[i0], x2r, x2i, x4r, x4i, x6r, x6i;
+            DFT_CMUL(x4r, x4i, sre[i4], sim[i4], twr[ts*3 + j], twi[ts*3 + j]);
+            DFT_CMUL(x2r, x2i, sre[i2], sim[i2], twr[ts + j], twi[ts + j]);
+            DFT_CMUL(x6r, x6i, sre[i6], sim[i6], twr[ts*5 + j], twi[ts*5 + j]);
+            T e0r, e0i, e1r, e1i, e2r, e2i, e3r, e3i;
+            DFT4_SCALAR(x0r,x0i,x2r,x2i,x4r,x4i,x6r,x6i, e0r,e0i,e1r,e1i,e2r,e2i,e3r,e3i);
+            T y0r = e0r + o0r, y0i = e0i + o0i, y4r = e0r - o0r, y4i = e0i - o0i;
+            T y2r = e2r + o2i, y2i = e2i - o2r, y6r = e2r - o2i, y6i = e2i + o2r;
+            T y1r = e1r + c*s1r, y1i = e1i + c*s1i, y5r = e1r - c*s1r, y5i = e1i - c*s1i;
+            T y3r = e3r + c*s3r, y3i = e3i - c*s3i, y7r = e3r - c*s3r, y7i = e3i + c*s3i;
+            if constexpr (LAST)
+            {
+                dst[i0*2] = y0r*rs; dst[i0*2+1] = y0i*is; dst[i1*2] = y1r*rs; dst[i1*2+1] = y1i*is;
+                dst[i2*2] = y2r*rs; dst[i2*2+1] = y2i*is; dst[i3*2] = y3r*rs; dst[i3*2+1] = y3i*is;
+                dst[i4*2] = y4r*rs; dst[i4*2+1] = y4i*is; dst[i5*2] = y5r*rs; dst[i5*2+1] = y5i*is;
+                dst[i6*2] = y6r*rs; dst[i6*2+1] = y6i*is; dst[i7*2] = y7r*rs; dst[i7*2+1] = y7i*is;
+            }
+            else
+            {
+                dre[i0] = y0r; dim[i0] = y0i; dre[i1] = y1r; dim[i1] = y1i;
+                dre[i2] = y2r; dim[i2] = y2i; dre[i3] = y3r; dim[i3] = y3i;
+                dre[i4] = y4r; dim[i4] = y4i; dre[i5] = y5r; dim[i5] = y5i;
+                dre[i6] = y6r; dim[i6] = y6i; dre[i7] = y7r; dim[i7] = y7i;
+            }
+        }
+    }
+}
+
 template<typename T>
 void radix5_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
 {
@@ -1000,6 +1052,68 @@ void radix4Last_vec(const DftStage& st, const T* sre, const T* sim, T* dst, T rs
     DFT_VLOOP_END(4)
 }
 
+// radix-8 DIT stage, vector (see radix8_scalar for the structure). Odd legs first (4-point DFT +
+// W8 rotations: the rotated values are kept as the sums s = (o1r+o1i, ...) and folded into the
+// outputs with FMAs by +-sin45, as in FFTW's t1fv_8), then the even legs, whose pure additions
+// go straight into the outputs. Peak live set is ~18 vectors (odd results 8 + even inputs 8 +
+// temporaries), so a couple of spills are expected on 16-register ISAs; still one pass over the
+// data instead of two radix-4 passes. LAST: fused interleave + scale into the user output.
+template<typename T, typename VT, bool LAST>
+void radix8_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim, T* dst, T rs, T is)
+{
+    const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
+    const int L = st.span, ts = st.tw_stride, VL = VTraits<VT>::vlanes();
+    const VT c = VSETALL((T)DftConst<T>::sin45), nc = VSETALL((T)-DftConst<T>::sin45);
+    const VT vrs = VSETALL(rs), vis = VSETALL(is);
+    auto store = [&](int i, const VT& yr, const VT& yi)
+    {
+        if constexpr (LAST)
+            v_store_interleave(dst + i*2, v_mul(yr, vrs), v_mul(yi, vis));
+        else
+        {
+            v_store(dre + i, yr); v_store(dim + i, yi);
+        }
+    };
+    DFT_VLOOP_BEGIN(8)
+        int i0 = base + j, i1 = i0 + L, i2 = i1 + L, i3 = i2 + L, i4 = i3 + L, i5 = i4 + L, i6 = i5 + L, i7 = i6 + L;
+        // odd legs: b1 = x1 + x5, b5 = x1 - x5, b3 = x3 + x7, b7 = x3 - x7
+        VT x1r, x1i, x5r, x5i, x3r, x3i, x7r, x7i;
+        DFT_VCMUL(x1r, x1i, VLOAD(sre + i1), VLOAD(sim + i1), VLOAD(twr + j), VLOAD(twi + j));
+        DFT_VCMUL(x5r, x5i, VLOAD(sre + i5), VLOAD(sim + i5), VLOAD(twr + ts*4 + j), VLOAD(twi + ts*4 + j));
+        VT b1r = v_add(x1r, x5r), b1i = v_add(x1i, x5i), b5r = v_sub(x1r, x5r), b5i = v_sub(x1i, x5i);
+        DFT_VCMUL(x3r, x3i, VLOAD(sre + i3), VLOAD(sim + i3), VLOAD(twr + ts*2 + j), VLOAD(twi + ts*2 + j));
+        DFT_VCMUL(x7r, x7i, VLOAD(sre + i7), VLOAD(sim + i7), VLOAD(twr + ts*6 + j), VLOAD(twi + ts*6 + j));
+        VT b3r = v_add(x3r, x7r), b3i = v_add(x3i, x7i), b7r = v_sub(x3r, x7r), b7i = v_sub(x3i, x7i);
+        // 4-point DFT of the odd legs: O0 = b1 + b3, O2 = b1 - b3, O1 = b5 - i*b7, O3 = b5 + i*b7;
+        // O1*W8 = c*(s1r + i*s1i), O3*W8^3 = c*(s3r - i*s3i), O2*W8^2 = (o2i, -o2r)
+        VT o0r = v_add(b1r, b3r), o0i = v_add(b1i, b3i), o2r = v_sub(b1r, b3r), o2i = v_sub(b1i, b3i);
+        VT o1r = v_add(b5r, b7i), o1i = v_sub(b5i, b7r), o3r = v_sub(b5r, b7i), o3i = v_add(b5i, b7r);
+        VT s1r = v_add(o1r, o1i), s1i = v_sub(o1i, o1r), s3r = v_sub(o3i, o3r), s3i = v_add(o3r, o3i);
+        // even legs: a0 = x0 + x4, a4 = x0 - x4, a2 = x2 + x6, a6 = x2 - x6
+        VT x0r = VLOAD(sre + i0), x0i = VLOAD(sim + i0), x4r, x4i;
+        DFT_VCMUL(x4r, x4i, VLOAD(sre + i4), VLOAD(sim + i4), VLOAD(twr + ts*3 + j), VLOAD(twi + ts*3 + j));
+        VT a0r = v_add(x0r, x4r), a0i = v_add(x0i, x4i), a4r = v_sub(x0r, x4r), a4i = v_sub(x0i, x4i);
+        VT x2r, x2i, x6r, x6i;
+        DFT_VCMUL(x2r, x2i, VLOAD(sre + i2), VLOAD(sim + i2), VLOAD(twr + ts + j), VLOAD(twi + ts + j));
+        DFT_VCMUL(x6r, x6i, VLOAD(sre + i6), VLOAD(sim + i6), VLOAD(twr + ts*5 + j), VLOAD(twi + ts*5 + j));
+        VT a2r = v_add(x2r, x6r), a2i = v_add(x2i, x6i), a6r = v_sub(x2r, x6r), a6i = v_sub(x2i, x6i);
+        // E0 = a0 + a2 -> y0, y4; E2 = a0 - a2 -> y2, y6 (with O2*W8^2)
+        VT e0r = v_add(a0r, a2r), e0i = v_add(a0i, a2i);
+        store(i0, v_add(e0r, o0r), v_add(e0i, o0i));
+        store(i4, v_sub(e0r, o0r), v_sub(e0i, o0i));
+        VT e2r = v_sub(a0r, a2r), e2i = v_sub(a0i, a2i);
+        store(i2, v_add(e2r, o2i), v_sub(e2i, o2r));
+        store(i6, v_sub(e2r, o2i), v_add(e2i, o2r));
+        // E1 = a4 - i*a6 -> y1, y5 (+- c*s1); E3 = a4 + i*a6 -> y3, y7 (+- c*(s3r, -s3i))
+        VT e1r = v_add(a4r, a6i), e1i = v_sub(a4i, a6r);
+        store(i1, v_fma(s1r, c, e1r), v_fma(s1i, c, e1i));
+        store(i5, v_fma(s1r, nc, e1r), v_fma(s1i, nc, e1i));
+        VT e3r = v_sub(a4r, a6i), e3i = v_add(a4i, a6r);
+        store(i3, v_fma(s3r, c, e3r), v_fma(s3i, nc, e3i));
+        store(i7, v_fma(s3r, nc, e3r), v_fma(s3i, c, e3i));
+    DFT_VLOOP_END(8)
+}
+
 template<typename T, typename VT>
 void radix5_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim)
 {
@@ -1190,6 +1304,49 @@ void radix4Last_(const DftStage& st, const void* sre, const void* sim, void* dst
     radix4Last_scalar<T>(st, (const T*)sre, (const T*)sim, (T*)dst, rs, is);
 }
 
+
+template<typename T, typename VT, typename VT128, bool haveSIMD>
+void radix8_(const DftStage& st, const void* sre, const void* sim, void* dre, void* dim, void*)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if constexpr (haveSIMD)
+    {
+        if (st.mode == DFT_STAGE_FULL)
+        {
+            radix8_vec<T, VT, false>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, 0, (T)0, (T)0);
+            return;
+        }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix8_vec<T, VT128, false>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, 0, (T)0, (T)0);
+            return;
+        }
+    }
+#endif
+    radix8_scalar<T, false>(st, (const T*)sre, (const T*)sim, (T*)dre, (T*)dim, 0, (T)0, (T)0);
+}
+
+template<typename T, typename VT, typename VT128, bool haveSIMD>
+void radix8Last_(const DftStage& st, const void* sre, const void* sim, void* dst, double re_scale, double im_scale)
+{
+    T rs = (T)re_scale, is = (T)im_scale;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if constexpr (haveSIMD)
+    {
+        if (st.mode == DFT_STAGE_FULL)
+        {
+            radix8_vec<T, VT, true>(st, (const T*)sre, (const T*)sim, 0, 0, (T*)dst, rs, is);
+            return;
+        }
+        if (st.mode == DFT_STAGE_SIMD128)
+        {
+            radix8_vec<T, VT128, true>(st, (const T*)sre, (const T*)sim, 0, 0, (T*)dst, rs, is);
+            return;
+        }
+    }
+#endif
+    radix8_scalar<T, true>(st, (const T*)sre, (const T*)sim, 0, 0, (T*)dst, rs, is);
+}
 
 //////////////////////////////// group C: postprocessing ////////////////////////////////
 //
@@ -1459,6 +1616,8 @@ DFTKernels makeKernels()
     k.radix5 = radix5_<T, VT, VT128, haveSIMD>;
     k.radixOdd = radixOdd_<T, VT, VT128, haveSIMD>;
     k.radix4Last = radix4Last_<T, VT, VT128, haveSIMD>;
+    k.radix8 = radix8_<T, VT, VT128, haveSIMD>;
+    k.radix8Last = radix8Last_<T, VT, VT128, haveSIMD>;
     k.postprocDFT = postprocDFT_<T, VT, haveSIMD>;
     k.postprocRealDFT = postprocRealDFT_<T, VT, haveSIMD>;
     k.postprocReal = postprocReal_<T, VT, haveSIMD>;
