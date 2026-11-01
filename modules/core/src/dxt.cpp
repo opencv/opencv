@@ -235,31 +235,71 @@ static const DFTKernels& getDFTKernels(int depth)
 /////////////////////////////// twiddle generation ///////////////////////////////
 
 // exp(-2*pi*i*m/M) in double precision, m in [0, M): m = B*a + b -> hi[a]*lo[b] with B a power of
-// two ~ sqrt(M). Both small tables are built by the rotation recurrence, re-seeded with exact
-// sin/cos every 16 entries, so the error stays within a few ulps while only ~(B + M/B)/16 + 4
-// trigonometric calls are made (4 for small M). Cheap to build, which matters because cv::dft()
+// two ~ sqrt(M). The two small tables hold exact values (~0.5 ulp, see exact()), so every product
+// is within ~3 ulps. Cheap to build (~2*sqrt(M) points at ~1.5 ns), which matters because cv::dft()
 // builds a fresh plan on every call.
 struct DftTwiddleGen
 {
-    int M, logB, maskB;
+    int M, logB, maskB, nhi;
     AutoBuffer<double, 1024> buf;
     double *hi_re, *hi_im, *lo_re, *lo_im;
 
-    // re[i] + i*im[i] = w^i, i in [0, count), w = (wr, wi) = exp(i*stepAngle); the rotation
-    // recurrence is re-seeded with exact sin/cos every 16 entries
-    static void fillTable(double* re, double* im, int count, double wr, double wi, double stepAngle)
+    // exp(-2*pi*i*m/M) to ~0.5 ulp for m = m0, m0 + d, ..., m0 + (count-1)*d (all < M). The angle
+    // is reduced to [0, pi/4] in exact integer arithmetic (octant o = floor(8m/M), remainder
+    // (8m - oM)/M), so the only roundings are the final rational -> double conversion and the two
+    // Cephes polynomials (|x| <= pi/4, ~1e-16 relative): x = rem * (pi/4)/M, one rounding of the
+    // constant and one of the product. Two points per iteration (~1.5 ns each).
+    static void exact(int m0, int d, int count, int M, double* re, double* im)
     {
-        for (int i0 = 0; i0 < count; i0 += 16)
+        CV_DbgAssert(m0 >= 0 && d > 0 && count > 0 && (int64)m0 + (int64)(count - 1)*d < M);
+        int64 rem = 8*(int64)m0, d8 = 8*(int64)d;
+        int o = 0;
+        while (rem >= M) { rem -= M; o++; }
+        const double S1 = 1.58962301576546568060e-10, S2 = -2.50507477628578072866e-8, S3 = 2.75573136213857245213e-6,
+                     S4 = -1.98412698295895385996e-4, S5 = 8.33333333332211858878e-3, S6 = -1.66666666666666307295e-1,
+                     C1 = -1.13585365213876817300e-11, C2 = 2.08757008419747316778e-9, C3 = -2.75573141792967388112e-7,
+                     C4 = 2.48015872888517045348e-5, C5 = -1.38888888888730564116e-3, C6 = 4.16666666666665929218e-2;
+        const double scale = (CV_PI/4)/M;
+        for (int i = 0; i < count; i += 2)
         {
-            double t0 = stepAngle*i0;
-            double cr = i0 == 0 ? 1 : cos(t0), ci = i0 == 0 ? 0 : sin(t0);
-            int i1 = std::min(i0 + 16, count);
-            for (int i = i0; i < i1; i++)
+            int oct[2]; double r[2], sn[2], cs[2];
+            for (int k = 0; k < 2; k++)
             {
-                re[i] = cr; im[i] = ci;
-                double t = cr*wr - ci*wi;
-                ci = cr*wi + ci*wr;
-                cr = t;
+                oct[k] = o;
+                r[k] = (double)((o & 1) ? M - rem : rem);      // odd octant: angle = (o+1)*pi/4 - x
+                rem += d8;
+                while (rem >= M) { rem -= M; o++; }            // runs past the end on the padding point: harmless
+            }
+#if CV_SIMD128_64F
+            {
+                v_float64x2 x = v_mul(v_float64x2(r[0], r[1]), v_setall_f64(scale));
+                v_float64x2 z = v_mul(x, x), z2 = v_mul(z, z);
+                v_float64x2 ps = v_add(v_add(v_setall_f64(S6), v_mul(v_setall_f64(S5), z)),
+                                       v_mul(z2, v_add(v_add(v_setall_f64(S4), v_mul(v_setall_f64(S3), z)),
+                                                       v_mul(z2, v_add(v_setall_f64(S2), v_mul(v_setall_f64(S1), z))))));
+                v_float64x2 pc = v_add(v_add(v_setall_f64(C6), v_mul(v_setall_f64(C5), z)),
+                                       v_mul(z2, v_add(v_add(v_setall_f64(C4), v_mul(v_setall_f64(C3), z)),
+                                                       v_mul(z2, v_add(v_setall_f64(C2), v_mul(v_setall_f64(C1), z))))));
+                v_store(sn, v_add(v_mul(v_mul(ps, z), x), x));
+                v_store(cs, v_add(v_mul(pc, z2), v_sub(v_setall_f64(1.), v_mul(v_setall_f64(0.5), z))));
+            }
+#else
+            for (int k = 0; k < 2; k++)
+            {
+                double x = r[k]*scale, z = x*x, z2 = z*z;
+                double ps = (S6 + S5*z) + z2*((S4 + S3*z) + z2*(S2 + S1*z));
+                double pc = (C6 + C5*z) + z2*((C4 + C3*z) + z2*(C2 + C1*z));
+                sn[k] = ps*z*x + x; cs[k] = pc*z2 + (1 - 0.5*z);
+            }
+#endif
+            for (int k = 0; k < 2 && i + k < count; k++)
+            {
+                int ok = oct[k];
+                bool swap = ((ok + 1) & 2) != 0;               // octants 1, 2, 5, 6: (cos, sin) = (sin x, cos x) up to signs
+                double c = swap ? sn[k] : cs[k], s = swap ? cs[k] : sn[k];
+                if (ok >= 2 && ok <= 5) c = -c;                // quadrants 2, 3
+                if (ok >= 4) s = -s;                           // lower half
+                re[i + k] = c; im[i + k] = -s;
             }
         }
     }
@@ -271,14 +311,30 @@ struct DftTwiddleGen
         while ((1LL << (2*logB)) < M) logB++;   // B = 2^logB >= sqrt(M)
         int B = 1 << logB;
         maskB = B - 1;
-        int nhi = (M + B - 1)/B;
+        nhi = (M + B - 1)/B;
         buf.allocate(2*(B + nhi));
         hi_re = buf.data(); hi_im = hi_re + nhi;
         lo_re = hi_im + nhi; lo_im = lo_re + B;
-        double a = -2*CV_PI/M;
-        // the two step angles are computed exactly (4 trigonometric calls in total for small M)
-        fillTable(lo_re, lo_im, B, cos(a), sin(a), a);
-        fillTable(hi_re, hi_im, nhi, cos(a*B), sin(a*B), a*B);
+        exact(0, 1, B, M, lo_re, lo_im);
+        if (M % (8*B) == 0)
+        {
+            // hi covers the whole circle in 8 symmetric octants: evaluate the first one, reflect the rest
+            int n8 = M/(8*B);
+            CV_DbgAssert(nhi == 8*n8);
+            exact(0, B, n8 + 1, M, hi_re, hi_im);
+            for (int a = n8 + 1; a < nhi; a++)
+            {
+                int q = a/(2*n8), rq = a - q*2*n8;             // quadrant q, position within it
+                double c0, s0;                                 // (cos, sin) of the angle reduced to [0, pi/2]
+                if (rq <= n8) { c0 = hi_re[rq]; s0 = -hi_im[rq]; }
+                else          { c0 = -hi_im[2*n8 - rq]; s0 = hi_re[2*n8 - rq]; }
+                double c = q == 0 ? c0 : q == 1 ? -s0 : q == 2 ? -c0 : s0;
+                double s = q == 0 ? s0 : q == 1 ? c0 : q == 2 ? -s0 : -c0;
+                hi_re[a] = c; hi_im[a] = -s;
+            }
+        }
+        else
+            exact(0, B, nhi, M, hi_re, hi_im);
     }
 
     // exp(-2*pi*i*m/M) for any m >= 0 (the angle is periodic: only m mod M matters; callers may
@@ -294,61 +350,92 @@ struct DftTwiddleGen
     }
 };
 
-// Stage twiddles of a radix-r (r <= 8) stage with span L, leg-major: twr/twi[(q-1)*ts + j] =
-// W_{rL}^{q*j} = gen(q*j*step), step = gen.M/(r*L). Leg 1 (W_{rL}^j) by K independent interleaved
-// rotation recurrences (a single chain is latency-bound), each re-seeded from the exact generator
-// every 16 of its steps; legs q >= 2 as t_q(j) = t_{q-1}(j)*t_1(j), independent per entry
-// (error <= q ulps). twd is a scratch of 2*L doubles.
+static inline void dftStoreTw(double* dst, double v) { *dst = v; }
+static inline void dftStoreTw(float* dst, double v) { *dst = (float)v; }
+#if (CV_SIMD || CV_SIMD_SCALABLE) && CV_SIMD_64F
+static inline void dftStoreTw(double* dst, const v_float64& v) { v_store(dst, v); }
+static inline void dftStoreTw(float* dst, const v_float64& v) { v_store_low(dst, v_cvt_f32(v)); }
+#endif
+
+// dre[j] + i*dim[j] = scale*W_M^(j*stride), j in [0, count), W_M = exp(-2*pi*i/M), M = gen.M.
+// Two-level product over j = a*B + b: lo[b] = W^(stride*b), hi[a] = W^(stride*B*a), B ~ sqrt(count).
+// For stride == 1 the generator's exact seed tables serve as lo/hi (error <= ~4 ulps); otherwise
+// the ~3*sqrt(count) seeds are looked up from the generator (one more product: <= ~7 ulps). The
+// products themselves are vectorized, so the cost is ~0.3 ns per entry.
 template<typename T>
-static void fillStageTwiddles(const DftTwiddleGen& gen, int r, int L, int ts, T* twr, T* twi, double* twd)
+static void fillTwiddles(const DftTwiddleGen& gen, int stride, int count, double scale, T* dre, T* dim)
 {
-    int step = gen.M/(r*L);
-    constexpr int K = 8;
-    double cr[K], ci[K], wr, wi;
-    gen.get(K*step, wr, wi);
-    double* t1r = twd; double* t1i = twd + L;      // leg 1 kept in double for the products
-    for (int j0 = 0; j0 < L; j0 += 16*K)           // blocks of 16 steps per chain
+    CV_DbgAssert(count <= gen.M + 1 && stride >= 1);
+    const double *lr, *li, *hr, *hi;
+    int B;
+    AutoBuffer<double, 512> seeds;
+    if (stride == 1)
     {
-        for (int k = 0; k < K; k++)
-            gen.get(std::min(j0 + k, L - 1)*step, cr[k], ci[k]);
-        int j1 = std::min(j0 + 16*K, L);
-        for (int j = j0; j < j1; j += K)
-            for (int k = 0; k < K && j + k < L; k++)
-            {
-                t1r[j+k] = cr[k]; t1i[j+k] = ci[k];
-                double t = cr[k]*wr - ci[k]*wi;
-                ci[k] = cr[k]*wi + ci[k]*wr;
-                cr[k] = t;
-            }
+        B = gen.maskB + 1;
+        lr = gen.lo_re; li = gen.lo_im; hr = gen.hi_re; hi = gen.hi_im;
+        CV_DbgAssert((count + B - 1)/B <= gen.nhi);
     }
-    for (int j = 0; j < L; j++)     // separate pass: vectorizes, the recurrence loop does not
+    else
     {
-        twr[j] = (T)t1r[j]; twi[j] = (T)t1i[j];
+        int logB = 0;
+        while ((1 << (2*logB)) < count) logB++;
+        B = 1 << logB;
+        int nhi = (count + B - 1)/B;
+        seeds.allocate(2*(B + nhi));
+        double* lr_ = seeds.data(); double* li_ = lr_ + B;
+        double* hr_ = li_ + B; double* hi_ = hr_ + nhi;
+        int M = gen.M, m = 0, sB = (int)((int64)stride*B % M);
+        CV_DbgAssert(stride < M);
+        for (int b = 0; b < B; b++, m = m + stride < M ? m + stride : m + stride - M)
+            gen.get(m, lr_[b], li_[b]);
+        m = 0;
+        for (int a = 0; a < nhi; a++, m = m + sB < M ? m + sB : m + sB - M)
+            gen.get(m, hr_[a], hi_[a]);
+        lr = lr_; li = li_; hr = hr_; hi = hi_;
     }
-    for (int q = 2; q < r; q++)
+    for (int a = 0, j0 = 0; j0 < count; a++, j0 += B)
     {
-        const T* pr = twr + (q-2)*ts; const T* pi = twi + (q-2)*ts;
-        T* tr = twr + (q-1)*ts; T* ti = twi + (q-1)*ts;
-        for (int j = 0; j < L; j++)
+        int cnt = std::min(B, count - j0), b = 0;
+        double ar = hr[a]*scale, ai = hi[a]*scale;
+        T* re = dre + j0; T* im = dim + j0;
+#if (CV_SIMD || CV_SIMD_SCALABLE) && CV_SIMD_64F
+        const int VL = VTraits<v_float64>::vlanes();
+        v_float64 var = vx_setall_f64(ar), vai = vx_setall_f64(ai);
+        for (; b + VL <= cnt; b += VL)
         {
-            double ar = pr[j], ai = pi[j], br = t1r[j], bi = t1i[j];
-            tr[j] = (T)(ar*br - ai*bi);
-            ti[j] = (T)(ar*bi + ai*br);
+            v_float64 xr = vx_load(lr + b), xi = vx_load(li + b);
+            dftStoreTw(re + b, v_sub(v_mul(var, xr), v_mul(vai, xi)));
+            dftStoreTw(im + b, v_add(v_mul(var, xi), v_mul(vai, xr)));
+        }
+#endif
+        for (; b < cnt; b++)
+        {
+            dftStoreTw(re + b, ar*lr[b] - ai*li[b]);
+            dftStoreTw(im + b, ar*li[b] + ai*lr[b]);
         }
     }
 }
 
-// W_n^k, k in [0, nc] (n = 2*nc), scaled by `scale`, from gen with M a multiple of n
+// Stage twiddles of a radix-r stage with span L, leg-major: twr/twi[(q-1)*ts + j] = W_{rL}^{q*j}
+// = gen(q*j*step), step = gen.M/(r*L)
 template<typename T>
-static void fillRealTwiddles(const DftTwiddleGen& gen, int n, int nc, double scale, T* wr, T* wi)
+static void fillStageTwiddles(const DftTwiddleGen& gen, int r, int L, int ts, T* twr, T* twi)
 {
-    int step = gen.M/n;
-    for (int k = 0; k <= nc; k++)
-    {
-        double re, im;
-        gen.get(k*step, re, im);
-        wr[k] = (T)(re*scale); wi[k] = (T)(im*scale);
-    }
+    int step = gen.M/(r*L);
+    for (int q = 1; q < r; q++)
+        fillTwiddles<T>(gen, q*step, L, 1., twr + (q-1)*ts, twi + (q-1)*ts);
+}
+
+// The real-transform twiddles W_n^k = exp(-2*pi*i*k/n), n = 2*nc, as ONE table of nc + 1 entries:
+// t[k] = cos(2*pi*k/n) for k in [0, nc], and since -sin(2*pi*k/n) = cos(2*pi*(k + nc/2)/n), the
+// imaginary parts are the same table shifted by nc/2 (nc even). The kernels only read k in
+// [0, nc/2]. gen.M must be a multiple of n.
+template<typename T>
+static void fillRealTwiddles(const DftTwiddleGen& gen, int n, int nc, T* t)
+{
+    CV_DbgAssert(nc % 2 == 0);
+    fillTwiddles<T>(gen, gen.M/n, nc/2, 1., t, t + nc/2);
+    t[nc] = (T)-1;      // -sin(pi/2): the im part of k = nc/2
 }
 
 // The radix sequence of a length nc: the fused first stage r0 (1, 2, 3, 4, 5 or 8), then the
@@ -505,7 +592,7 @@ template<typename T> struct DftStaticTables
     const T* tw_im[DFT_STATIC_MAX_LOG2];
     const T* tw8_re[DFT_STATIC_MAX_LOG2];       // radix 8: [log2(L)], L in [4, 128]
     const T* tw8_im[DFT_STATIC_MAX_LOG2];
-    const T* rtw_re[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
+    const T* rtw_re[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]; rtw_im = rtw_re + nc/2
     const T* rtw_im[DFT_STATIC_MAX_LOG2 + 1];
     const int* gtab[DFT_STATIC_MAX_LOG2 + 1];   // [log2(nc)], nc in [4, 1024]
 
@@ -517,7 +604,7 @@ template<typename T> struct DftStaticTables
             int nc = 1 << k;
             if (k <= 8) ntw += 6*(size_t)nc;        // radix-4 stage with L = nc: 3 legs x (re, im) x L
             if (k <= 7) ntw += 14*(size_t)nc;       // radix-8 stage with L = nc: 7 legs x (re, im) x L
-            ntw += 2*(size_t)(nc + 1);              // W_{2nc}^k, k in [0, nc]
+            ntw += (size_t)nc + 1;                  // W_{2nc}^k, k in [0, nc], one table (see fillRealTwiddles)
             int radices[DFT_MAX_STAGES], nst;
             nitab += nc/dftFactorize(nc, radices, nst);
         }
@@ -525,7 +612,6 @@ template<typename T> struct DftStaticTables
         itab.allocate(nitab);
         T* cur = tw.data();
         int* icur = itab.data();
-        AutoBuffer<double> twd(2*256);
         for (int k = 2; k <= DFT_STATIC_MAX_LOG2; k++)
         {
             int nc = 1 << k;
@@ -535,7 +621,7 @@ template<typename T> struct DftStaticTables
                 DftTwiddleGen gen;
                 gen.init(4*L);
                 tw_re[k] = cur; tw_im[k] = cur + 3*L;
-                fillStageTwiddles<T>(gen, 4, L, L, cur, cur + 3*L, twd.data());
+                fillStageTwiddles<T>(gen, 4, L, L, cur, cur + 3*L);
                 cur += 6*L;
             }
             if (k <= 7)
@@ -544,15 +630,15 @@ template<typename T> struct DftStaticTables
                 DftTwiddleGen gen;
                 gen.init(8*L);
                 tw8_re[k] = cur; tw8_im[k] = cur + 7*L;
-                fillStageTwiddles<T>(gen, 8, L, L, cur, cur + 7*L, twd.data());
+                fillStageTwiddles<T>(gen, 8, L, L, cur, cur + 7*L);
                 cur += 14*L;
             }
             {
                 DftTwiddleGen gen;
                 gen.init(2*nc);
-                rtw_re[k] = cur; rtw_im[k] = cur + nc + 1;
-                fillRealTwiddles<T>(gen, 2*nc, nc, 1., cur, cur + nc + 1);
-                cur += 2*(nc + 1);
+                rtw_re[k] = cur; rtw_im[k] = cur + nc/2;
+                fillRealTwiddles<T>(gen, 2*nc, nc, cur);
+                cur += nc + 1;
             }
             {
                 int radices[DFT_MAX_STAGES], nst;
@@ -590,11 +676,6 @@ void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool 
         gen.init(M);
     T* cur = dst;
     const DftStaticTables<T>* st_tables = static_stages || static_rtw ? &getDftStaticTables<T>() : 0;
-    int maxL = 1;
-    for (int s = 0; s < p.nstages; s++)
-        if (p.stages[s].radix <= 8 && !static_stages) maxL = std::max(maxL, p.stages[s].span);
-    AutoBuffer<double, 2048> twd_buf(2*maxL);     // leg-1 twiddles of the current stage in double
-    double* twd = twd_buf.data();
     for (int s = 0; s < p.nstages; s++)
     {
         DftStage& st = p.stages[s];
@@ -610,21 +691,7 @@ void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool 
         }
         T* twr = cur; T* twi = cur + (r - 1)*ts;
         cur = twi + (r - 1)*ts;
-        if (r <= 8)
-            fillStageTwiddles<T>(gen, r, L, ts, twr, twi, twd);
-        else
-        {
-            // large odd radix: exact-ish generator lookup per entry
-            int step = M/(r*L);
-            for (int q = 1; q < r; q++)
-                for (int j = 0; j < L; j++)
-                {
-                    double re, im;
-                    gen.get(q*j*step, re, im);
-                    twr[(q-1)*ts + j] = (T)re;
-                    twi[(q-1)*ts + j] = (T)im;
-                }
-        }
+        fillStageTwiddles<T>(gen, r, L, ts, twr, twi);
         st.tw_re = twr; st.tw_im = twi;
         if (r >= 7)
         {
@@ -648,12 +715,20 @@ void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool 
             int k = dftLog2(nc);
             p.rtw_re = st_tables->rtw_re[k]; p.rtw_im = st_tables->rtw_im[k];
         }
+        else if (nc % 2 == 0)
+        {
+            // W_n^k, k in [0, nc], one table (see fillRealTwiddles)
+            T* w = cur;
+            cur = w + (nc + 1);
+            fillRealTwiddles<T>(gen, n, nc, w);
+            p.rtw_re = w; p.rtw_im = w + nc/2;
+        }
         else
         {
-            // W_n^k, k in [0, nc]
+            // odd nc: separate re/im tables
             T* wr = cur; T* wi = cur + (nc + 1);
             cur = wi + (nc + 1);
-            fillRealTwiddles<T>(gen, n, nc, 1., wr, wi);
+            fillTwiddles<T>(gen, M/n, nc + 1, 1., wr, wi);
             p.rtw_re = wr; p.rtw_im = wi;
         }
     }
@@ -663,7 +738,7 @@ void DftPlan::fillTables(T* dst, size_t ntw, bool need_rtw, bool need_dct, bool 
         T* wr = cur; T* wi = cur + (nc + 1);
         cur = wi + (nc + 1);
         double scale = (p.kind == DFT_KIND_DCT ? 2 : 1)*std::sqrt(1./(2*n));
-        fillRealTwiddles<T>(gen, 4*n, nc, scale, wr, wi);
+        fillTwiddles<T>(gen, M/(4*n), nc + 1, scale, wr, wi);
         p.dct_re = wr; p.dct_im = wi;
     }
     CV_Assert((size_t)(cur - dst) == ntw);
@@ -747,7 +822,7 @@ void DftPlan::build(int _kind, int _n, int _depth, int _vl, int _vl128, bool wit
     bool static_rtw = static_pow2 && need_rtw && !dct_kind;
     if (static_stages)
         ntw = 0;
-    if (need_rtw && !static_rtw) ntw += 2*(size_t)(nc + 1);
+    if (need_rtw && !static_rtw) ntw += nc % 2 == 0 ? (size_t)nc + 1 : 2*(size_t)(nc + 1);
     if (dct_kind) ntw += 2*(size_t)(nc + 1);
 
     // workspace layout (from the 64-byte aligned base): pair0 (re, im), optional pair1 (re, im) or

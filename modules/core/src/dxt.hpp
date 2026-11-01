@@ -96,8 +96,8 @@ struct DftPlan
                                 // when requested, the owner's workspace; the stage/rtw tables of
                                 // 2^k lengths <= 1024 are static and not stored here
     uchar* workspace;           // ws_bytes inside `buf` when built with with_workspace, else 0
-    const void* rtw_re;         // W_n^k = exp(-2*pi*i*k/n), k in [0, n/2]; R2C/C2R/DCT/IDCT with even n
-    const void* rtw_im;
+    const void* rtw_re;         // W_n^k = exp(-2*pi*i*k/n); R2C/C2R/DCT/IDCT with even n. Only k in
+    const void* rtw_im;         // [0, nc/2] may be read: for even nc rtw_im is rtw_re + nc/2 (one table)
     const void* dct_re;         // s*W_4n^k, k in [0, n/2]; DCT/IDCT (s = DCT normalization)
     const void* dct_im;
     size_t ws_bytes;            // workspace size (incl. 64 bytes for alignment)
