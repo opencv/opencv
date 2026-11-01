@@ -1219,6 +1219,20 @@ static bool ocl_computeGradient(InputArray img, UMat grad, UMat qangle, int nbin
 #define CELLS_PER_BLOCK_X 2
 #define CELLS_PER_BLOCK_Y 2
 
+/** @brief Whether the OpenCL kernels implement the block layout.
+
+The kernels are specialized for blocks of 2x2 cells of 8x8 pixels on a regular
+grid that every window shares, so the window stride must be a multiple of the
+block stride.
+*/
+static bool ocl_supportsBlockLayout(Size blockSize, Size blockStride, Size cellSize, Size winStride)
+{
+    return blockSize == Size(CELLS_PER_BLOCK_X * CELL_WIDTH, CELLS_PER_BLOCK_Y * CELL_HEIGHT) &&
+        cellSize == Size(CELL_WIDTH, CELL_HEIGHT) &&
+        winStride.width % blockStride.width == 0 &&
+        winStride.height % blockStride.height == 0;
+}
+
 static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y, int height, int width,
                               UMat grad, UMat qangle, UMat gauss_w_lut, UMat block_hists, size_t block_hist_size)
 {
@@ -1476,7 +1490,10 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
-    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
+    // The OpenCL implementation describes all windows of the unpadded image.
+    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat() &&
+        padding == Size() && locations.empty() &&
+        ocl_supportsBlockLayout(blockSize, blockStride, cellSize, winStride),
         ocl_compute(_img, winStride, descriptors, HOGDescriptor::DESCR_FORMAT_COL_BY_COL, blockSize,
         cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold, signedGradient))
 
@@ -1753,7 +1770,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.area());
-        idx = k.set(idx, descr_size.height);
+        idx = k.set(idx, descr_size.width);
     }
 
     int win_block_stride_x = win_stride_x / block_stride_x;
@@ -1848,7 +1865,7 @@ static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_thre
     return true;
 }
 
-static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locations, std::vector<double>& level_scale,
+static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locations, const std::vector<double>& level_scale,
                                               double hit_threshold, Size win_stride, double group_threshold,
                                               const UMat& oclSvmDetector, Size blockSize, Size cellSize,
                                               int nbins, Size blockStride, Size winSize, bool gammaCorrection,
@@ -1890,17 +1907,12 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
 }
 #endif //HAVE_OPENCL
 
-void HOGDescriptor::detectMultiScale(
-    InputArray _img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
-    double hitThreshold, Size winStride, Size padding,
-    double scale0, double groupThreshold, bool useMeanshiftGrouping) const
+//! Scales of the image pyramid levels that still contain a window.
+static std::vector<double> pyramidScales(Size imgSize, Size winSize, int nlevels, double scale0)
 {
-    CV_INSTRUMENT_REGION();
-
     double scale = 1.;
     int levels = 0;
 
-    Size imgSize = _img.size();
     std::vector<double> levelScale;
     for( levels = 0; levels < nlevels; levels++ )
     {
@@ -1913,14 +1925,21 @@ void HOGDescriptor::detectMultiScale(
     }
     levels = std::max(levels, 1);
     levelScale.resize(levels);
+    return levelScale;
+}
+
+void HOGDescriptor::detectMultiScale(
+    InputArray _img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
+    double hitThreshold, Size winStride, Size padding,
+    double scale0, double groupThreshold, bool useMeanshiftGrouping) const
+{
+    CV_INSTRUMENT_REGION();
+
+    Size imgSize = _img.size();
+    std::vector<double> levelScale = pyramidScales(imgSize, winSize, nlevels, scale0);
 
     if(winStride == Size())
         winStride = blockStride;
-
-    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
-        winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
-        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, groupThreshold, oclSvmDetector,
-        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef, signedGradient));
 
     std::vector<Rect> allCandidates;
     std::vector<double> tempScales;
@@ -1951,6 +1970,19 @@ void HOGDescriptor::detectMultiScale(InputArray img, std::vector<Rect>& foundLoc
     double scale0, double groupThreshold, bool useMeanshiftGrouping) const
 {
     CV_INSTRUMENT_REGION();
+
+    if(winStride == Size())
+        winStride = blockStride;
+
+    // The OpenCL implementation classifies windows without computing their
+    // weights and groups them only by rectangles.
+    CV_OCL_RUN(img.dims() <= 2 && img.type() == CV_8UC1 && img.isUMat() && scale0 > 1 &&
+        padding == Size() && !useMeanshiftGrouping &&
+        ocl_supportsBlockLayout(blockSize, blockStride, cellSize, winStride),
+        ocl_detectMultiScale(img, foundLocations, pyramidScales(img.size(), winSize, nlevels, scale0),
+        hitThreshold, winStride, groupThreshold, oclSvmDetector,
+        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold,
+        (float)getWinSigma(), free_coef, signedGradient));
 
     std::vector<double> foundWeights;
     detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride,

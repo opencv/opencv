@@ -142,12 +142,16 @@ __kernel void compute_hists_lut_kernel(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
+    // The 48 threads of a block copy its histogram in turns, since it holds
+    // more than 48 values for more than 12 bins.
+    const int nthreads = CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12;
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
-    if ((tid < cblock_hist_size) && (gid < blocks_total))
+    if (gid < blocks_total)
     {
         __global float* block_hist = block_hists +
             (gidY * img_block_width + gidX) * cblock_hist_size;
-        block_hist[tid] = final_hist[tid];
+        for (; tid < cblock_hist_size; tid += nthreads)
+            block_hist[tid] = final_hist[tid];
     }
 }
 
@@ -229,7 +233,9 @@ inline float reduce_smem(volatile __local float* smem, int size)
     if (size >= 2) { if (tid < 1) smem[tid] = sum = sum + smem[tid + 1];
         barrier(CLK_LOCAL_MEM_FENCE); }
 
-    return sum;
+    // Only the first element holds the sum of all elements. The partial sum
+    // of the other threads covers only part of them.
+    return smem[0];
 }
 
 __kernel void normalize_hists_kernel(
@@ -620,7 +626,13 @@ __kernel void compute_gradients_8UC1_kernel(
         }
         float mag = hypot(dx, dy);
 
-        float ang = (atan2(dy, dx) + CV_PI_F) * angle_scale - 0.5f;
+        // Map the angle to [0, 2*pi) like the CPU implementation does. Shifting
+        // atan2() by pi instead rotates the bins of signed gradients by half
+        // a turn.
+        float ang = atan2(dy, dx);
+        if (ang < 0.f)
+            ang += 2.f * CV_PI_F;
+        ang = ang * angle_scale - 0.5f;
         int hidx = (int)floor(ang);
         ang -= hidx;
         hidx = (hidx + cnbins) % cnbins;
