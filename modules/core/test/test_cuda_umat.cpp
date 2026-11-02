@@ -226,6 +226,44 @@ TEST(Core_CudaUMat, op_addWeighted_host_fallback)
     EXPECT_LE(cvtest::norm(got, expected, NORM_INF), 1e-4);
 }
 
+// a write through a read view must not reach the device, so nothing is uploaded
+TEST(Core_CudaUMat, read_view_is_not_uploaded)
+{
+    skipIfNoCudaDevice();
+    Mat src(16, 24, CV_8UC3);
+    randu(src, 0, 255);
+    UMat u = makeCudaUMat();
+    src.copyTo(u);
+    {
+        Mat r = u.getMat(ACCESS_READ);
+        EXPECT_EQ(0.0, cvtest::norm(src, r, NORM_INF));
+        EXPECT_FALSE(u.u->deviceCopyObsolete());
+        r.setTo(Scalar::all(1));
+    }
+    Mat back;
+    u.copyTo(back);
+    EXPECT_EQ(0.0, cvtest::norm(src, back, NORM_INF));
+}
+
+TEST(Core_CudaUMat, write_view_after_read_view_is_uploaded)
+{
+    skipIfNoCudaDevice();
+    Mat src(16, 24, CV_8UC3);
+    randu(src, 0, 255);
+    UMat u = makeCudaUMat();
+    src.copyTo(u);
+    {
+        Mat r = u.getMat(ACCESS_READ);
+        Mat w = u.getMat(ACCESS_WRITE);
+        EXPECT_TRUE(u.u->deviceCopyObsolete());
+        w.setTo(Scalar::all(7));
+    }
+    EXPECT_FALSE(u.u->deviceCopyObsolete());
+    Mat back;
+    u.copyTo(back);
+    EXPECT_EQ(0.0, cvtest::norm(Mat(src.size(), src.type(), Scalar::all(7)), back, NORM_INF));
+}
+
 #ifdef HAVE_OPENCL
 // turns OpenCL on for one test and restores the previous state afterwards
 struct WithOpenCL
