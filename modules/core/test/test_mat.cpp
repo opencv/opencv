@@ -1550,6 +1550,40 @@ TEST(Core_Mat, extractChannel_inplace_29568)
     EXPECT_EQ(0, cv::norm(mat, Mat(3, 3, CV_8UC1, Scalar(2)), NORM_INF));
 }
 
+// insertChannel and extractChannel on every depth: only the chosen channel changes
+typedef testing::TestWithParam<std::tuple<int, int> > Core_InsertExtractChannel;
+TEST_P(Core_InsertExtractChannel, accuracy)
+{
+    const int depth = std::get<0>(GetParam());
+    const int cn = std::get<1>(GetParam());
+
+    for (int coi = 0; coi < cn; coi++)
+    {
+        Mat dst(5, 7, CV_MAKETYPE(depth, cn), Scalar::all(1));
+        Mat channel(5, 7, depth, Scalar::all(0));
+
+        insertChannel(channel, dst, coi);
+
+        std::vector<Mat> planes;
+        split(dst, planes);
+        for (int c = 0; c < cn; c++)
+        {
+            Mat expected(5, 7, depth, Scalar::all(c == coi ? 0 : 1));
+            EXPECT_EQ(0, cv::norm(planes[c], expected, NORM_INF)) << "coi=" << coi << " c=" << c;
+        }
+
+        Mat extracted;
+        extractChannel(dst, extracted, coi);
+        EXPECT_EQ(depth, extracted.type());
+        EXPECT_EQ(0, cv::norm(extracted, channel, NORM_INF)) << "coi=" << coi;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_InsertExtractChannel, testing::Combine(
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F, CV_16BF,
+                    CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Range(2, 5)));
+
 TEST(Core_Mat, empty)
 {
     // Should not crash.
