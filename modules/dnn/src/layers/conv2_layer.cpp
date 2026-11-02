@@ -818,7 +818,6 @@ public:
         CV_Assert(wshape0.dims == nspatialdims+2);
 
         if (inpshape != prevInpshape) {
-            winogradConv.release();
             cs.initConv(inpshape, wshape0, outshape, ngroups,
                         strides, dilations, pads, auto_pad, ceil_mode,
                         fastActivation, activationFunc, activParams);
@@ -877,7 +876,7 @@ public:
             }
         }
 
-#if CV_NEON_AARCH64
+#if CV_NEON && CV_NEON_AARCH64
         // Reuse the Winograd transforms directly on NCHWc8 tiles. Restrict the
         // dispatch to the AArch64 shapes measured against the direct kernel.
         if (netimpl_->useWinograd && !dynamicWeights && inptype == CV_32F &&
@@ -1017,15 +1016,13 @@ public:
         }
     }
 
-    Ptr<FastConv> winogradConv;
-
     bool forwardWinograd(const Mat& inp, Mat& out)
     {
         const MatShape si = inp.shape(), so = out.shape();
         const int C = si.channels(), K = so.channels();
         if (winogradConv.empty()) {
             Mat plain(wshape0, CV_32F);
-            const ConvWeightPack pack = ConvWeightPack::forConv(wshape0, weights.shape(), 1, 8);
+            const ConvWeightPack pack = ConvWeightPack::forConv(wshape0, weights.shape(), ngroups, packC0);
             for (int k = 0; k < K; ++k)
                 for (int c = 0; c < C; ++c)
                     for (int tap = 0; tap < 9; ++tap)
@@ -1038,7 +1035,9 @@ public:
         }
         if (winogradConv->conv_type != CONV_TYPE_WINOGRAD3X3)
             return false;
-        // Bias can be fused after weights have been prepared.
+        // Only pads follow the input shape; bias can be fused after weights were prepared.
+        winogradConv->pad_top = cs.pads[1];
+        winogradConv->pad_left = cs.pads[2];
         for (int k = 0; k < K; ++k)
             winogradConv->biasBuf[k] = bias.empty() ? 0.f : bias.ptr<float>()[k];
         if (K % 8) out.setZero();
@@ -1350,6 +1349,9 @@ public:
     ActivationFunc activationFunc;
     std::vector<float> activParams;
     bool addResidual;
+
+    // Winograd-transformed weights for the AArch64 3x3 path, dropped whenever weights change.
+    Ptr<FastConv> winogradConv;
 
     // MLAS 1x1 fast path: prepacked weight + per-layer scratch.
     Mat mlas_packed_B_;
