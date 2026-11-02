@@ -522,6 +522,27 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 
 TEST(Imgproc_GoodFeatureToT, accuracy) { CV_GoodFeatureToTTest test; test.safe_run(); }
 
+// ksize 0 selects the Scharr kernel with half the scale of FILTER_SCHARR, so the gradients are
+// twice as large: the minimal eigenvalue is 4 times larger and the Harris response 16 times.
+TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
+{
+    Mat src(64, 64, CV_8UC1);
+    RNG rng(0);
+    rng.fill(src, RNG::UNIFORM, 0, 256);
+    const int blockSize = 3;
+    const double k = 0.04;
+
+    Mat minEigen, minEigenScharr;
+    cornerMinEigenVal(src, minEigen, blockSize, 0);
+    cornerMinEigenVal(src, minEigenScharr, blockSize, FILTER_SCHARR);
+    EXPECT_LE(cv::norm(minEigen, 4 * minEigenScharr, NORM_INF), 1e-4);
+
+    Mat harris, harrisScharr;
+    cornerHarris(src, harris, blockSize, 0, k);
+    cornerHarris(src, harrisScharr, blockSize, FILTER_SCHARR, k);
+    EXPECT_LE(cv::norm(harris, 16 * harrisScharr, NORM_INF), 1e-4);
+}
+
 
 }} // namespace
 /* End of file. */

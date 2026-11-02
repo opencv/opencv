@@ -255,7 +255,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
     Mat Dx, Dy;
-    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+    spatialGradient( src, Dx, Dy, aperture_size > 0 ? aperture_size : FILTER_SCHARR, borderType, CV_32F, scale );
 
     Size size = src.size();
     Mat cov( size, CV_32FC3 );
