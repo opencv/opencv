@@ -324,6 +324,12 @@ public:
     }
 };
 
+static bool isOrientationTransposed(uint16_t orientation)
+{
+    return orientation == ORIENTATION_LEFTTOP || orientation == ORIENTATION_RIGHTTOP ||
+           orientation == ORIENTATION_RIGHTBOT || orientation == ORIENTATION_LEFTBOT;
+}
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
@@ -361,6 +367,8 @@ bool TiffDecoder::readHeader()
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &wdth));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &hght));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
+        uint16_t orientation = ORIENTATION_TOPLEFT;
+        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &orientation));
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
@@ -374,6 +382,8 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+            if (isOrientationTransposed(orientation))
+                std::swap(m_width, m_height);
             m_frame_count = TIFFNumberOfDirectories(tif);
             if (ncn == 3 && photometric == PHOTOMETRIC_LOGLUV)
             {
@@ -753,13 +763,26 @@ static void readSeparatePlanesBand(TIFF* tif, int band_x, int band_y, int rows,
     }
 }
 
-bool  TiffDecoder::readData( Mat& img )
+bool  TiffDecoder::readData( Mat& _img )
 {
-    int type = img.type();
+    int type = _img.type();
     int depth = CV_MAT_DEPTH(type);
 
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
+
+    uint16_t img_orientation = ORIENTATION_TOPLEFT;
+    CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
+    bool transposed = isOrientationTransposed(img_orientation);
+
+    uint32_t image_width = 0, image_height = 0;
+    // Re-read stored dimensions because readHeader() reports oriented dimensions.
+    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_width));
+    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_height));
+    m_width = image_width;
+    m_height = image_height;
+
+    Mat img = transposed ? Mat(m_height, m_width, _img.type()) : _img;
 
     uint16_t photometric = (uint16_t)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
@@ -787,8 +810,6 @@ bool  TiffDecoder::readData( Mat& img )
         uint16_t planar_config = PLANARCONFIG_CONTIG;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planar_config));
         const bool is_planar = ncn > 1 && planar_config == PLANARCONFIG_SEPARATE;
-        uint16_t img_orientation = ORIENTATION_TOPLEFT;
-        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
         constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         bool vert_flip = dst_bpp == 8 &&
@@ -1327,6 +1348,8 @@ bool  TiffDecoder::readData( Mat& img )
         else
             cvtColor(img, img, COLOR_XYZ2BGR);
     }
+    if (transposed)
+        img.copyTo(_img);
     return true;
 }
 
