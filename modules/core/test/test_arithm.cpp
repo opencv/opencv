@@ -2726,7 +2726,6 @@ TEST(Core_Arithm, dst_reuse_vector_temporary_output)
     for (int i = 0; i < N; i++)
         ASSERT_EQ(8.f, d[i]) << i;
 }
-}
 
 TEST(Core_Arithm, dst_reuse_vector_vs_Nx1)
 {
