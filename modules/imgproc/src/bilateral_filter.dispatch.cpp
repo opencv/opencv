@@ -270,7 +270,6 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     // initialize the exp LUT
     i = 0;
-    bool expLUTReachedZero = false;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int nlanes = VTraits<v_float32>::vlanes();
     v_float32 v_scale_index = vx_setall_f32((float)scale_index);
@@ -287,21 +286,18 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         v_store(expLUT + i, v_exp_val);
         if( v_reduce_max(v_exp_val) <= 0.f )
         {
-            i += nlanes;
-            expLUTReachedZero = true;
+            memset(expLUT + i + nlanes, 0, (kExpNumBins + 2 - i - nlanes) * sizeof(float));
+            i = kExpNumBins + 2;
             break;
         }
         v_i = v_add(v_i, v_inc);
     }
 #endif
-    if( expLUTReachedZero )
-        memset(expLUT + i, 0, (kExpNumBins + 2 - i) * sizeof(float));
-    else
-        for( ; i < kExpNumBins+2; i++ )
-        {
-            double val =  i / scale_index;
-            expLUT[i] = (float)std::exp(val * val * gauss_color_coeff);
-        }
+    for( ; i < kExpNumBins+2; i++ )
+    {
+        double val =  i / scale_index;
+        expLUT[i] = (float)std::exp(val * val * gauss_color_coeff);
+    }
 
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )

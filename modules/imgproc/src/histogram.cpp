@@ -225,11 +225,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
 // Unsaturated floor: safe only once the caller has confirmed v0 is within [v0_lo, v0_hi).
 static inline int histBinFloor(double value)
 {
-#if defined CV__FASTMATH_HAVE_MSVC_ARM64
-    return (int)vcvtmd_s64_f64(value);
-#else
-    return cvFloor(value);
-#endif
+    return cv::detail::cvFloorUnsaturated(value);
 }
 
 template<typename T> static void
