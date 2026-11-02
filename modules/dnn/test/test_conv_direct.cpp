@@ -74,8 +74,11 @@ static void testBlockedConv2(int kernel, int stride, int dilation, int groups, i
 
     // Small and resized spatial dimensions cover scalar-only output, full SIMD
     // tiles, tails crossing rows, and the interior versus padded border paths.
-    for (int width : {5, 17, 23, 23})
+    for (int width : {5, 17, 23, 23, 101})
     {
+        // Wide enough for 512 channels to span several Winograd superchunks.
+        if (width == 101 && !winograd)
+            continue;
         if (width == 23)
         {
             weights *= 0.5f;
