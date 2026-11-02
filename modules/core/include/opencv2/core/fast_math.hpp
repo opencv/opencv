@@ -335,18 +335,6 @@ inline int cvFloor( double value )
 #endif
 }
 
-namespace cv { namespace detail {
-// Same as cvFloor without the saturation check. Safe only if the caller validated the range.
-inline int cvFloorUnsaturated(double value)
-{
-#if defined CV__FASTMATH_HAVE_MSVC_ARM64
-    return (int)vcvtmd_s64_f64(value);
-#else
-    return cvFloor(value);
-#endif
-}
-}} // namespace cv::detail
-
 /** @brief Rounds floating-point number to the nearest integer not smaller than the original.
 
  The function computes an integer i such that:
@@ -505,6 +493,18 @@ inline int cvIsInf( double value )
 }
 
 #ifdef __cplusplus
+
+namespace cv { namespace detail {
+// Same as cvFloor without the saturation check. Safe only if the caller validated the range.
+inline int cvFloorUnsaturated(double value)
+{
+#if defined CV__FASTMATH_HAVE_MSVC_ARM64
+    return (int)vcvtmd_s64_f64(value);
+#else
+    return cvFloor(value);
+#endif
+}
+}} // namespace cv::detail
 
 /** @overload
 

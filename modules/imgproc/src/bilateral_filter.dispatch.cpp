@@ -282,14 +282,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     for( ; i < (kExpNumBins+2) - nlanes; i += nlanes )
     {
         v_float32 v_val = v_div(v_i, v_scale_index);
-        v_float32 v_exp_val = v_exp(v_mul(v_mul(v_val, v_val), v_gauss_color_coeff));
-        v_store(expLUT + i, v_exp_val);
-        if( v_reduce_max(v_exp_val) <= 0.f )
-        {
-            memset(expLUT + i + nlanes, 0, (kExpNumBins + 2 - i - nlanes) * sizeof(float));
-            i = kExpNumBins + 2;
-            break;
-        }
+        v_store(expLUT + i, v_exp(v_mul(v_mul(v_val, v_val), v_gauss_color_coeff)));
         v_i = v_add(v_i, v_inc);
     }
 #endif
