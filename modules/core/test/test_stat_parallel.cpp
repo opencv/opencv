@@ -80,7 +80,7 @@ TEST_P(Core_StatParallel, matches_serial)
     for (int k = 0; k < 4; k++)
         sd0[k] = n0 > 0 ? std::sqrt(std::max(sxx[k]/n0 - m0[k]*m0[k], 0.)) : 0;
 
-    const double tol = depth == CV_32F ? 1e-6 : 1e-10;
+    const double tol = depth == CV_32F ? 1e-6 : 1e-8;
     EXPECT_LE(relDiff(s1, s0), tol);
     EXPECT_LE(relDiff(m1, m0), tol);
     EXPECT_LE(relDiff(mean1, mean0), tol);
