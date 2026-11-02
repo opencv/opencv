@@ -34,7 +34,7 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
 
     // In-place processing is not allowed
     if (src_data == dst_data) {
-        dst = cv::AutoBuffer<uchar>(width * height * elem_size);
+        dst.allocate(width * height * elem_size);
         _dst_step = width * elem_size;
         _dst_data = dst.data();
     }
