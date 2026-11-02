@@ -460,7 +460,7 @@ void fastGemmThin(int M, int N, int K, float alpha,
                   const float* A, int lda0, int lda1,
                   const float* packed_B, float beta,
                   float* C, int ldc, bool multi_thread) {
-    CV_Assert(M <= FAST_GEMM_THIN_MAX_M);
+    CV_CheckLE(M, static_cast<int>(FAST_GEMM_THIN_MAX_M), "fastGemmThin requires M <= FAST_GEMM_THIN_MAX_M");
     const int NR = fast_gemm_thin_lanes();
     const int n_full_strips = N / NR;
     const int n_tail = N - n_full_strips * NR;

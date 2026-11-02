@@ -186,26 +186,36 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             B_mat = &promoted_B;
         }
 
-        if (B_mat && helper.N > 0 && helper.K > 0 && B_mat->data != last_packed_input_B_data) {
-            packed_input_B.clear();
-            packed_input_B.shrink_to_fit();
-            thin_packed_B.clear();
-            thin_packed_B.shrink_to_fit();
-
-            fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
-
-            if (B_mat->type() == CV_32F && fastGemmThinEligible(1, helper.N, helper.K)) {
-                thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
-                fastGemmThinPackB(helper.N, helper.K,
-                                  B_mat->ptr<const float>(),
-                                  (size_t)helper.ldb0, (size_t)helper.ldb1,
-                                  thin_packed_B.data());
+        if (B_mat && helper.N > 0 && helper.K > 0) {
+            if (B_mat->data != last_packed_input_B_data) {
+                packed_input_B.clear();
+                packed_input_B.shrink_to_fit();
+                thin_packed_B.clear();
+                thin_packed_B.shrink_to_fit();
+                last_packed_input_B_data = B_mat->data;
             }
-            last_packed_input_B_data = B_mat->data;
-        }
 
-        if (!packed_input_B.empty()) {
-            helper.updatePackedBOffsets(packed_input_B.size());
+            if (helper.batch == 1 && B_mat->type() == CV_32F &&
+                fastGemmThinEligible(helper.M, helper.N, helper.K)) {
+                if (thin_packed_B.empty()) {
+                    thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
+                    fastGemmThinPackB(helper.N, helper.K,
+                                      B_mat->ptr<const float>(),
+                                      (size_t)helper.ldb0, (size_t)helper.ldb1,
+                                      thin_packed_B.data());
+                }
+            } else {
+                bool need_update_offsets = false;
+                if (packed_input_B.empty()) {
+                    fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
+                    need_update_offsets = true;
+                } else if (helper.packed_B_offsets.size() != helper.B_offsets.size()) {
+                    need_update_offsets = true;
+                }
+                if (need_update_offsets) {
+                    helper.updatePackedBOffsets(packed_input_B.size());
+                }
+            }
         }
 
         // broadcast bias if needed

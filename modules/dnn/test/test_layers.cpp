@@ -4406,9 +4406,7 @@ TEST_P(Test_MatMul_BiasBeta, Accuracy)
 }
 INSTANTIATE_TEST_CASE_P(/**/, Test_MatMul_BiasBeta, dnnBackendsAndTargets());
 
-// Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
-// M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
-// B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.
+// Verify layer reuse across dynamic shapes switching between thin and standard kernels.
 TEST(Test_MatMul, DynamicShapes_ReuseLayerInstance)
 {
     const int K = 53, N = 67;
@@ -4474,6 +4472,9 @@ TEST(Test_Gemm, DynamicShapes_ReuseLayerInstance)
     }
 }
 
+// Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
+// M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
+// B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.
 TEST(Test_MatMul, NoBiasIgnoresOutputContents)
 {
     const int K = 53, N = 67;
