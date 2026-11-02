@@ -74,17 +74,9 @@
 "test_col2im_dilations",
 "test_col2im_pads",
 "test_col2im_strides",
-"test_compress_0",  // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
-"test_compress_1",  // ---- same as above ---
-"test_compress_default_axis",  // ---- same as above ---
-"test_compress_negative_axis",  // ---- same as above ---
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",
-"test_dequantizelinear_int16",
-"test_dequantizelinear_int4",
-"test_dequantizelinear_uint16",
-"test_dequantizelinear_uint4",
 "test_dft_axis",
 "test_equal_string",
 "test_equal_string_broadcast",
@@ -113,12 +105,7 @@
 "test_optional_has_element_empty_optional_input",
 "test_optional_has_element_optional_input",
 "test_optional_has_element_tensor_input",
-"test_quantizelinear_blocked_symmetric",
 "test_quantizelinear_float4e2m1",
-"test_quantizelinear_int16",
-"test_quantizelinear_int4",
-"test_quantizelinear_uint16",
-"test_quantizelinear_uint4",
 "test_regex_full_match_basic",
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",

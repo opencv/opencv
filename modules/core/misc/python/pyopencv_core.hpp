@@ -244,7 +244,9 @@ static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
   {"CV_32UC", (PyCFunction)(pycvMakeTypeCh<CV_32U>), METH_O, "CV_32UC(channels) -> retval"}, \
   {"CV_64UC", (PyCFunction)(pycvMakeTypeCh<CV_64U>), METH_O, "CV_64UC(channels) -> retval"}, \
   {"CV_64SC", (PyCFunction)(pycvMakeTypeCh<CV_64S>), METH_O, "CV_64SC(channels) -> retval"}, \
-  {"CV_16BFC", (PyCFunction)(pycvMakeTypeCh<CV_16BF>), METH_O, "CV_16BFC(channels) -> retval"},
+  {"CV_16BFC", (PyCFunction)(pycvMakeTypeCh<CV_16BF>), METH_O, "CV_16BFC(channels) -> retval"}, \
+  {"CV_8F_E4M3FNC", (PyCFunction)(pycvMakeTypeCh<CV_8F_E4M3FN>), METH_O, "CV_8F_E4M3FNC(channels) -> retval"}, \
+  {"CV_8F_E4M3FNUZC", (PyCFunction)(pycvMakeTypeCh<CV_8F_E4M3FNUZ>), METH_O, "CV_8F_E4M3FNUZC(channels) -> retval"},
 
 #endif  // HAVE_OPENCV_CORE
 #endif  // OPENCV_CORE_PYOPENCV_CORE_HPP

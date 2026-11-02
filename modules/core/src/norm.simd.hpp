@@ -2829,6 +2829,8 @@ CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
 CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
 CV_DEF_NORM_ALL(16f, hfloat, float, float, float)
 CV_DEF_NORM_ALL(16bf, bfloat, float, float, float)
+CV_DEF_NORM_ALL(8f, fp8_t, float, float, float)
+CV_DEF_NORM_ALL(8fnuz, fp8a_t, float, float, float)
 
 NormFunc getNormFunc(int normType, int depth)
 {
@@ -2850,6 +2852,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, uint64, normInf_64u>,
             normWrap<int64, uint64, normInf_64s>,
             normWrap<unsigned, unsigned, normInf_32u>,
+            normWrap<fp8_t, float, normInf_8f>,
+            normWrap<fp8a_t, float, normInf_8fnuz>,
             0
         },
         {
@@ -2866,6 +2870,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, double, normL1_64u>,
             normWrap<int64, double, normL1_64s>,
             normWrap<unsigned, double, normL1_32u>,
+            normWrap<fp8_t, float, normL1_8f>,
+            normWrap<fp8a_t, float, normL1_8fnuz>,
             0
         },
         {
@@ -2882,6 +2888,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, double, normL2_64u>,
             normWrap<int64, double, normL2_64s>,
             normWrap<unsigned, double, normL2_32u>,
+            normWrap<fp8_t, float, normL2_8f>,
+            normWrap<fp8a_t, float, normL2_8fnuz>,
             0
         }
     };
@@ -2909,6 +2917,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, uint64, normDiffInf_64u>,
             normDiffWrap<int64, uint64, normDiffInf_64s>,
             normDiffWrap<unsigned, unsigned, normDiffInf_32u>,
+            normDiffWrap<fp8_t, float, normDiffInf_8f>,
+            normDiffWrap<fp8a_t, float, normDiffInf_8fnuz>,
             0
         },
         {
@@ -2925,6 +2935,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, double, normDiffL1_64u>,
             normDiffWrap<int64, double, normDiffL1_64s>,
             normDiffWrap<unsigned, double, normDiffL1_32u>,
+            normDiffWrap<fp8_t, float, normDiffL1_8f>,
+            normDiffWrap<fp8a_t, float, normDiffL1_8fnuz>,
             0
         },
         {
@@ -2941,6 +2953,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, double, normDiffL2_64u>,
             normDiffWrap<int64, double, normDiffL2_64s>,
             normDiffWrap<unsigned, double, normDiffL2_32u>,
+            normDiffWrap<fp8_t, float, normDiffL2_8f>,
+            normDiffWrap<fp8a_t, float, normDiffL2_8fnuz>,
             0
         },
     };

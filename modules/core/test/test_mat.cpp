@@ -151,6 +151,10 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     {
         if( srcType == CV_8U && (dstType == CV_32S || dstType == CV_32F || dstType == CV_64F) )
             support = true;
+        if( srcType == CV_8S && (dstType == CV_32S || dstType == CV_32F || dstType == CV_64F) )
+            support = true;
+        if( srcType == CV_32S && dstType == CV_64F )
+            support = true;
         if( srcType == CV_16U && (dstType == CV_32F || dstType == CV_64F) )
             support = true;
         if( srcType == CV_16S && (dstType == CV_32F || dstType == CV_64F) )
@@ -164,6 +168,14 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     {
         if( srcType == CV_8U && dstType == CV_8U )
             support = true;
+        if( srcType == CV_8S && dstType == CV_8S )
+            support = true;
+        if( srcType == CV_16U && dstType == CV_16U )
+            support = true;
+        if( srcType == CV_16S && dstType == CV_16S )
+            support = true;
+        if( srcType == CV_32S && dstType == CV_32S )
+            support = true;
         if( srcType == CV_32F && dstType == CV_32F )
             support = true;
         if( srcType == CV_64F && dstType == CV_64F )
@@ -172,6 +184,14 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     else if( opType == REDUCE_MIN )
     {
         if( srcType == CV_8U && dstType == CV_8U)
+            support = true;
+        if( srcType == CV_8S && dstType == CV_8S )
+            support = true;
+        if( srcType == CV_16U && dstType == CV_16U )
+            support = true;
+        if( srcType == CV_16S && dstType == CV_16S )
+            support = true;
+        if( srcType == CV_32S && dstType == CV_32S )
             support = true;
         if( srcType == CV_32F && dstType == CV_32F)
             support = true;
@@ -289,6 +309,26 @@ int Core_ReduceTest::checkDim( int dim, Size sz )
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     tempCode = checkCase( CV_8UC1, CV_64FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    // CV_8SC1
+    tempCode = checkCase( CV_8SC1, CV_8SC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_8SC1, CV_32SC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_8SC1, CV_32FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_8SC1, CV_64FC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    // CV_32SC1
+    tempCode = checkCase( CV_32SC1, CV_32SC1, dim, sz );
+    code = tempCode != cvtest::TS::OK ? tempCode : code;
+
+    tempCode = checkCase( CV_32SC1, CV_64FC1, dim, sz );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // CV_16UC1
@@ -1142,6 +1182,61 @@ protected:
 };
 
 TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
+
+// Core_ReduceTest fills with randu(0, 100), so it never reaches the range where a 32-bit
+// accumulator would overflow. CV_32S reduces through a double accumulator for that reason.
+TEST(Core_Reduce, int32_accumulator_does_not_overflow)
+{
+    const int n = 64;
+    for (int dim = 0; dim <= 1; dim++)
+    {
+        for (int v : {INT_MAX, INT_MIN})
+        {
+            SCOPED_TRACE(cv::format("dim=%d v=%d", dim, v));
+            const cv::Mat src = dim == 0 ? cv::Mat(n, 1, CV_32SC1, cv::Scalar(v))
+                                         : cv::Mat(1, n, CV_32SC1, cv::Scalar(v));
+            cv::Mat res;
+
+            cv::reduce(src, res, dim, cv::REDUCE_SUM, CV_64F);
+            EXPECT_DOUBLE_EQ((double)v * n, res.at<double>(0, 0));
+
+            cv::reduce(src, res, dim, cv::REDUCE_AVG, CV_64F);
+            EXPECT_DOUBLE_EQ((double)v, res.at<double>(0, 0));
+
+            cv::reduce(src, res, dim, cv::REDUCE_SUM2, CV_64F);
+            EXPECT_DOUBLE_EQ((double)v * (double)v * n, res.at<double>(0, 0));
+
+            cv::reduce(src, res, dim, cv::REDUCE_MAX, -1);
+            EXPECT_EQ(v, res.at<int>(0, 0));
+        }
+    }
+}
+
+// CV_8S reduces through an int accumulator, like CV_8U; check the signed extremes survive it.
+TEST(Core_Reduce, int8_signed_extremes)
+{
+    for (int dim = 0; dim <= 1; dim++)
+    {
+        SCOPED_TRACE(cv::format("dim=%d", dim));
+        const schar vals[4] = { -128, 127, -1, 0 };
+        cv::Mat src = dim == 0 ? cv::Mat(4, 1, CV_8SC1) : cv::Mat(1, 4, CV_8SC1);
+        for (int i = 0; i < 4; i++)
+            src.ptr<schar>(dim == 0 ? i : 0)[dim == 0 ? 0 : i] = vals[i];
+        cv::Mat res;
+
+        cv::reduce(src, res, dim, cv::REDUCE_SUM, CV_32S);
+        EXPECT_EQ(-2, res.at<int>(0, 0));
+
+        cv::reduce(src, res, dim, cv::REDUCE_SUM2, CV_64F);
+        EXPECT_DOUBLE_EQ(128.0 * 128 + 127.0 * 127 + 1.0, res.at<double>(0, 0));
+
+        cv::reduce(src, res, dim, cv::REDUCE_MAX, -1);
+        EXPECT_EQ(127, res.at<schar>(0, 0));
+
+        cv::reduce(src, res, dim, cv::REDUCE_MIN, -1);
+        EXPECT_EQ(-128, res.at<schar>(0, 0));
+    }
+}
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 
 TEST(Core_Merge, shape_operations) { Core_MergeTest test; test.safe_run(); }

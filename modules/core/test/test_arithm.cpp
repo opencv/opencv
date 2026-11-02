@@ -1855,6 +1855,61 @@ INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWise
 INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
+// reduceArgMax / reduceArgMin on CV_Bool and the fp8 depths, which ElemWiseTest does not generate.
+// Values: 1, -2, 3, 3, -2, 0, -1 (CV_Bool stores every non-zero value as 1).
+typedef testing::TestWithParam<int> ReduceArgNewTypes;
+
+TEST_P(ReduceArgNewTypes, accuracy)
+{
+    const int depth = GetParam();
+    float v[] = { 1.f, -2.f, 3.f, 3.f, -2.f, 0.f, -1.f };
+    Mat src;
+    Mat(1, 7, CV_32F, v).convertTo(src, depth);
+
+    // expected indices: first max, last max, first min, last min
+    const int bool_idx[] = { 0, 6, 5, 5 };
+    const int fp8_idx[]  = { 2, 3, 1, 4 };
+    const int* expected = depth == CV_Bool ? bool_idx : fp8_idx;
+
+    Mat idx;
+    cv::reduceArgMax(src, idx, 1);
+    EXPECT_EQ(expected[0], idx.at<int>(0));
+    cv::reduceArgMax(src, idx, 1, true);
+    EXPECT_EQ(expected[1], idx.at<int>(0));
+    cv::reduceArgMin(src, idx, 1);
+    EXPECT_EQ(expected[2], idx.at<int>(0));
+    cv::reduceArgMin(src, idx, 1, true);
+    EXPECT_EQ(expected[3], idx.at<int>(0));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, ReduceArgNewTypes, testing::Values(CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
+// bitwise_not and operator~ on CV_Bool are a logical NOT: 0 -> 1, non-zero -> 0 (not 255/254)
+TEST(Core_Bitwise, not_bool)
+{
+    Mat src(1, 67, CV_Bool);   // wide enough for the SIMD loop, odd for the scalar tail
+    for (int i = 0; i < src.cols; i++)
+        src.at<uchar>(i) = (uchar)(i % 3 == 0);
+    src.at<uchar>(3) = 255;    // a non-0/1 byte is still true, in the SIMD part...
+    src.at<uchar>(66) = 255;   // ...and in the scalar tail
+
+    Mat dst1, dst2 = ~src, dst3;
+    cv::bitwise_not(src, dst1);
+    UMat usrc = src.getUMat(ACCESS_READ), udst;
+    cv::bitwise_not(usrc, udst);
+    udst.copyTo(dst3);
+
+    ASSERT_EQ(CV_Bool, dst1.type());
+    ASSERT_EQ(CV_Bool, dst2.type());
+    ASSERT_EQ(CV_Bool, dst3.type());
+    for (int i = 0; i < src.cols; i++)
+    {
+        EXPECT_EQ(i % 3 != 0, dst1.at<uchar>(i)) << i;
+        EXPECT_EQ(i % 3 != 0, dst2.at<uchar>(i)) << i;
+        EXPECT_EQ(i % 3 != 0, dst3.at<uchar>(i)) << i;
+    }
+}
+
 // Mixed Type Arithmetic Operations
 
 typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>, int> SomeType;
@@ -3321,6 +3376,32 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_NormL1_Signed,
         testing::Values(1, 7, 8, 15, 16, 17, 33, 127),
         testing::Bool()));
 
+// norm on the fp8 depths, compared with the same values in CV_32F
+typedef testing::TestWithParam< tuple<int, int> > Core_Norm_FP8;
+
+TEST_P(Core_Norm_FP8, accuracy)
+{
+    const int depth = get<0>(GetParam());
+    const int normType = get<1>(GetParam());
+    // every value is exact in both fp8 formats, but some differences are not (7 - 0.125 = 6.875)
+    float va[] = { 1.f, -2.f, 3.5f, 0.5f, 7.f, -0.25f };
+    float vb[] = { 0.25f, 1.f, -3.f, 0.5f, 0.125f, -6.f };
+    uchar vm[] = { 1, 0, 1, 1, 1, 0 };
+    Mat a32f(2, 3, CV_32F, va), b32f(2, 3, CV_32F, vb), mask(2, 3, CV_8U, vm), a, b;
+    a32f.convertTo(a, depth);
+    b32f.convertTo(b, depth);
+
+    // EXPECT_DOUBLE_EQ: with IPP, the CV_32F NORM_L2SQR reference is computed as (NORM_L2)^2,
+    // which can be off by 1 ulp
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType), cv::norm(a, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, b32f, normType), cv::norm(a, b, normType));
+    EXPECT_DOUBLE_EQ(cv::norm(a32f, normType, mask), cv::norm(a, normType, mask));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_Norm_FP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Values(NORM_INF, NORM_L1, NORM_L2, NORM_L2SQR)));
+
 TEST(Core_Norm, NORM_L2SQR_16SC4_large)
 {
     const int sizes[] = {1, 116, 40};
@@ -3578,6 +3659,50 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertFrom64U,
     testing::Combine(
         testing::Values(CV_64S, CV_64F, CV_32F, CV_16F, CV_16BF),
         testing::Values(1, 7, 8, 127)));
+
+// Converting floating-point depths to 64-bit integer depths (CV_64U, CV_64S) must preserve the full
+// 64-bit destination range without truncating to 32 bits on the vector path, across lengths that
+// straddle the vector width.
+typedef testing::TestWithParam< tuple<int, int, int> > Core_ConvertTo64Int;
+
+TEST_P(Core_ConvertTo64Int, preserves_range_across_lengths)
+{
+    const int srcDepth = get<0>(GetParam());
+    const int dstDepth = get<1>(GetParam());
+    const int len      = get<2>(GetParam());
+
+    const double vals[] = { -4000000000.0, -2147483648.0, -1.0, 0.0, 1.0, 1000.0, 2147483647.0, 2147483648.0, 4000000000.0 };
+
+    for (double v : vals)
+    {
+        Mat src(1, len, srcDepth, Scalar(v));
+        Mat dst;
+        src.convertTo(dst, dstDepth);
+
+        for (int i = 0; i < len; i++)
+        {
+            SCOPED_TRACE(cv::format("srcDepth=%d dstDepth=%d value=%f len=%d i=%d",
+                                    srcDepth, dstDepth, v, len, i));
+            const float fv = static_cast<float>(v);
+            if (dstDepth == CV_64U)
+            {
+                uint64_t expected = saturate_cast<uint64_t>(srcDepth == CV_16BF ? (float)(bfloat)fv : (float)(hfloat)fv);
+                EXPECT_EQ(expected, dst.ptr<uint64_t>(0)[i]);
+            }
+            else // CV_64S
+            {
+                int64_t expected = saturate_cast<int64_t>(srcDepth == CV_16BF ? (float)(bfloat)fv : (float)(hfloat)fv);
+                EXPECT_EQ(expected, dst.ptr<int64_t>(0)[i]);
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertTo64Int,
+    testing::Combine(
+        testing::Values(CV_16BF, CV_16F),
+        testing::Values(CV_64U, CV_64S),
+        testing::Values(1, 4, 7, 8, 9, 32, 127)));
 
 // absdiff keeps the signed depth, so the result has to be the magnitude clamped into that depth:
 // never negative, and saturating at the depth's maximum when |a - b| does not fit. Checked across
@@ -5126,4 +5251,31 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
     }
 }
 
-} // namespace
+// patchNaNs replaces every NaN (either sign) and keeps numbers and infinities, including the 16-bit float depths
+typedef testing::TestWithParam<int> Core_PatchNaNs;
+
+TEST_P(Core_PatchNaNs, replaces_only_nans)
+{
+    const int depth = GetParam();
+    Mat src64(3, 37, CV_64F);   // 111 values: wide enough for the SIMD loop, odd for the scalar tail
+    for (int i = 0; i < (int)src64.total(); i++)
+        src64.at<double>(i) = i % 5 == 0 ? (i % 2 ? NAN : -NAN) :
+                              i % 7 == 0 ? (i % 2 ? INFINITY : -INFINITY) : i - 50.0;
+
+    Mat a;
+    src64.convertTo(a, depth);
+    cv::patchNaNs(a, 7.5);
+    ASSERT_EQ(depth, a.depth());
+
+    Mat res;
+    a.convertTo(res, CV_64F);
+    for (int i = 0; i < (int)src64.total(); i++)
+    {
+        double expected = cvIsNaN(src64.at<double>(i)) ? 7.5 : src64.at<double>(i);
+        EXPECT_EQ(expected, res.at<double>(i)) << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
+
+}} // namespace

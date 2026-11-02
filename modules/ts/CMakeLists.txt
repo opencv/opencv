@@ -22,6 +22,10 @@ ocv_glob_module_sources()
 ocv_module_include_directories()
 ocv_create_module()
 
+if(CV_CLANG_CL AND AARCH64)
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/ts_gtest.cpp" PROPERTIES COMPILE_OPTIONS "/O1")
+endif()
+
 # generate config file
 set(OPENCV_TESTS_CONFIG_FILE "${CMAKE_BINARY_DIR}/opencv_tests_config.hpp")
 set(OPENCV_TESTS_CONFIG_STR "")

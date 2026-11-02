@@ -1230,21 +1230,31 @@ public:
             }
         }
 
-        if (sizes.empty() && !scales.empty() && halfPixelCenters)
+        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
+        // source once so the step and the antialias filter use the same value.
+        float onnxScaleH = 0.f, onnxScaleW = 0.f;
+        if (!scales.empty())
         {
             int hIdx, wIdx;
             spatialIndices(scales.size(), hIdx, wIdx);
-            scaleHeight = 1.f / scales[hIdx];
-            scaleWidth  = 1.f / scales[wIdx];
+            onnxScaleH = scales[hIdx];
+            onnxScaleW = scales[wIdx];
         }
-        else if (sizes.empty() && !scales.empty() && alignCorners)
+        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
         {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            float lenH = inpShape[2] * scales[hIdx];
-            float lenW = inpShape[3] * scales[wIdx];
-            if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
-            if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
+            onnxScaleH = zoomFactorHeight;
+            onnxScaleW = zoomFactorWidth;
+        }
+
+        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
+        // align_corners maps the output corners onto the input corners, so it keeps the
+        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
+        // tf_crop_and_resize do not use the scale either.
+        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
+            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        {
+            scaleHeight = 1.f / onnxScaleH;
+            scaleWidth  = 1.f / onnxScaleW;
         }
 
         auto kind = outputs_arr.kind();
@@ -1299,15 +1309,9 @@ public:
             (interpolation == "bilinear" || interpolation == "opencv_linear" || interpolation == "cubic"))
         {
             const bool cubic = (interpolation == "cubic");
-            float xsH, xsW;
-            if (!scales.empty()) {
-                int hIdx, wIdx;
-                spatialIndices(scales.size(), hIdx, wIdx);
-                xsH = scales[hIdx]; xsW = scales[wIdx];
-            } else {
-                xsH = float(outShape[2]) / inpShape[2];
-                xsW = float(outShape[3]) / inpShape[3];
-            }
+            // Filter support, from the same scales; in/out only stands in for them with "sizes".
+            const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outShape[2]) / inpShape[2];
+            const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outShape[3]) / inpShape[3];
             switch (depth) {
             case CV_8S:  resizeAntialias<int8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;
             case CV_8U:  resizeAntialias<uint8_t>(inp, out, xsH, xsW, cubic, cubicCoeffA, coordTransModeE); break;

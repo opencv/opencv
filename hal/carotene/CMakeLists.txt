@@ -44,7 +44,7 @@ if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
 endif()
 
- if(MINGW)
+ if(MINGW OR CV_CLANG_CL)
     target_compile_definitions(carotene_objs PRIVATE "-D_USE_MATH_DEFINES=1")
  endif()
 

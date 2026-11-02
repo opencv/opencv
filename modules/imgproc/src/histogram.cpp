@@ -951,6 +951,86 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 }
 #endif
 
+namespace cv
+{
+
+// Splits the image across threads, each accumulating into a private histogram
+// that is summed at the end. nstripes = cvRound(N*0.001/M), at least 1 and
+// capped by getNumThreads(); inputs below 256K elements stay single-threaded.
+template<typename CalcFunc>
+static void calcHistRunParallel( std::vector<uchar*>& ptrs, const std::vector<int>& deltas,
+                                 Size imsize, Mat& hist, int dims, const float** ranges,
+                                 const double* uniranges, bool uniform, int esz1, CalcFunc calcFunc )
+{
+    const int64 N = (int64)imsize.width * imsize.height;
+    const size_t M = hist.total();
+
+    if( N < (int64)256 * 1024 )
+    {
+        calcFunc( ptrs, deltas, imsize, hist, dims, ranges, uniranges, uniform );
+        return;
+    }
+
+    int nstripes = M > 0 ? std::max(1, std::min(8, cvRound((double)N * 1e-3 / (double)M))) : 1;
+    nstripes = std::min( nstripes, getNumThreads() );
+    if( nstripes <= 1 )
+    {
+        calcFunc( ptrs, deltas, imsize, hist, dims, ranges, uniranges, uniform );
+        return;
+    }
+
+    const bool splitByRows = imsize.height > 1;
+    const int splitDim = splitByRows ? imsize.height : imsize.width;
+    nstripes = std::min( nstripes, splitDim );
+
+    std::vector<Mat> local_hists( nstripes );
+
+    parallel_for_( Range( 0, nstripes ), [&]( const Range& r )
+    {
+        for( int s = r.start; s < r.end; s++ )
+        {
+            const int start = (int)((int64)s * splitDim / nstripes);
+            const int end   = (int)((int64)(s + 1) * splitDim / nstripes);
+            if( start >= end )
+                continue;
+
+            std::vector<uchar*> local_ptrs = ptrs;
+            Size local_size;
+
+            if( splitByRows )
+            {
+                for( int i = 0; i < dims; i++ )
+                {
+                    size_t row_step = ((size_t)imsize.width * deltas[i*2] + deltas[i*2 + 1]) * esz1;
+                    local_ptrs[i] = (uchar*)((const uchar*)local_ptrs[i] + (size_t)start * row_step);
+                }
+                if( local_ptrs[dims] )
+                    local_ptrs[dims] = (uchar*)((const uchar*)local_ptrs[dims] + (size_t)start * deltas[dims*2 + 1]);
+                local_size = Size( imsize.width, end - start );
+            }
+            else
+            {
+                for( int i = 0; i < dims; i++ )
+                    local_ptrs[i] = (uchar*)((const uchar*)local_ptrs[i] + (size_t)start * deltas[i*2] * esz1);
+                if( local_ptrs[dims] )
+                    local_ptrs[dims] = (uchar*)((const uchar*)local_ptrs[dims] + (size_t)start * deltas[dims*2]);
+                local_size = Size( end - start, 1 );
+            }
+
+            local_hists[s] = Mat::zeros( hist.size, hist.type() );
+            calcFunc( local_ptrs, deltas, local_size, local_hists[s], dims, ranges, uniranges, uniform );
+        }
+    });
+
+    for( int s = 0; s < nstripes; s++ )
+    {
+        if( !local_hists[s].empty() )
+            hist += local_hists[s];
+    }
+}
+
+} // namespace cv
+
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
                    InputArray _mask, OutputArray _hist, int dims, const int* histSize,
                    const float** ranges, bool uniform, bool accumulate )
@@ -999,13 +1079,14 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     const double* _uniranges = uniform ? &uniranges[0] : 0;
 
     int depth = images[0].depth();
+    int esz1 = (int)images[0].elemSize1();
 
     if( depth == CV_8U )
-        calcHist_8u(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
+        calcHistRunParallel( ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform, esz1, &calcHist_8u );
     else if( depth == CV_16U )
-        calcHist_<ushort>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
+        calcHistRunParallel( ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform, esz1, &calcHist_<ushort> );
     else if( depth == CV_32F )
-        calcHist_<float>(ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform );
+        calcHistRunParallel( ptrs, deltas, imsize, ihist, dims, ranges, _uniranges, uniform, esz1, &calcHist_<float> );
     else
         CV_Error(cv::Error::StsUnsupportedFormat, "");
 

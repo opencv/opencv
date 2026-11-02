@@ -472,6 +472,11 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceSumR32f32f reduceR_<float, float, OpAdd<float> >
 #define reduceSumR32f64f reduceR_<float, double,OpAdd<double> >
 #define reduceSumR64f64f reduceR_<double,double,OpAdd<double> >
+#define reduceSumR8s32s  reduceR_<schar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumR8s32f  reduceR_<schar, float, OpAdd<int>, OpNop<int> >
+#define reduceSumR8s64f  reduceR_<schar, double,OpAdd<int>, OpNop<int> >
+// CV_32S accumulates in double: int would overflow before OpAdd's saturate_cast could clamp it.
+#define reduceSumR32s64f reduceR_<int,   double,OpAdd<double> >
 
 #define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
 #define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
@@ -483,6 +488,10 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float>, OpSqr<float> >
 #define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double>,OpSqr<double> >
 #define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R8s32s  reduceR_<schar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8s32f  reduceR_<schar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8s64f  reduceR_<schar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R32s64f reduceR_<int,   double,OpAddSqr<double>,OpSqr<double> >
 
 #define reduceMaxR8u  reduceR_<uchar, uchar, OpMax<uchar> >
 #define reduceMaxR16u reduceR_<ushort,ushort,OpMax<ushort> >
@@ -495,6 +504,10 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinR16s reduceR_<short, short, OpMin<short> >
 #define reduceMinR32f reduceR_<float, float, OpMin<float> >
 #define reduceMinR64f reduceR_<double,double,OpMin<double> >
+#define reduceMaxR8s  reduceR_<schar, schar, OpMax<schar> >
+#define reduceMaxR32s reduceR_<int,   int,   OpMax<int> >
+#define reduceMinR8s  reduceR_<schar, schar, OpMin<schar> >
+#define reduceMinR32s reduceR_<int,   int,   OpMin<int> >
 
 #if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
@@ -577,6 +590,10 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16s32f reduceC_<short, float, OpAdd<float> >
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
+#define reduceSumC8s32s  reduceC_<schar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumC8s32f  reduceC_<schar, float, OpAdd<int>, OpNop<int> >
+#define reduceSumC8s64f  reduceC_<schar, double,OpAdd<int>, OpNop<int> >
+#define reduceSumC32s64f reduceC_<int,   double,OpAdd<double> >
 
 #define reduceSum2C8u32s  reduceC_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
 #define reduceSum2C8u32f  reduceC_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
@@ -584,6 +601,10 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSum2C16s32f reduceC_<short, float, OpAddSqr<float>, OpSqr<float> >
 #define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
 #define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C8s32s  reduceC_<schar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C8s32f  reduceC_<schar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C8s64f  reduceC_<schar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C32s64f reduceC_<int,   double,OpAddSqr<double>,OpSqr<double> >
 
 #if defined(HAVE_IPP) && !IPP_DISABLE_REDUCE
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
@@ -652,6 +673,10 @@ REDUCE_OP(32f, Min, float, float)
 #define reduceMinC32f reduceC_<float, float, OpMin<float> >
 #endif
 #define reduceMinC64f reduceC_<double,double,OpMin<double> >
+#define reduceMaxC8s  reduceC_<schar, schar, OpMax<schar> >
+#define reduceMaxC32s reduceC_<int,   int,   OpMax<int> >
+#define reduceMinC8s  reduceC_<schar, schar, OpMin<schar> >
+#define reduceMinC32s reduceC_<int,   int,   OpMin<int> >
 
 #ifdef HAVE_OPENCL
 
@@ -843,6 +868,14 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceSumR32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumR64f64f;
+            else if(sdepth == CV_8S && ddepth == CV_32S)
+                func = reduceSumR8s32s;
+            else if(sdepth == CV_8S && ddepth == CV_32F)
+                func = reduceSumR8s32f;
+            else if(sdepth == CV_8S && ddepth == CV_64F)
+                func = reduceSumR8s64f;
+            else if(sdepth == CV_32S && ddepth == CV_64F)
+                func = reduceSumR32s64f;
         }
         else if(op == REDUCE_MAX)
         {
@@ -856,6 +889,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceMaxR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxR64f;
+            else if(sdepth == CV_8S && ddepth == CV_8S)
+                func = reduceMaxR8s;
+            else if(sdepth == CV_32S && ddepth == CV_32S)
+                func = reduceMaxR32s;
         }
         else if(op == REDUCE_MIN)
         {
@@ -869,6 +906,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceMinR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinR64f;
+            else if(sdepth == CV_8S && ddepth == CV_8S)
+                func = reduceMinR8s;
+            else if(sdepth == CV_32S && ddepth == CV_32S)
+                func = reduceMinR32s;
         }
         else if( op == REDUCE_SUM2 )
         {
@@ -895,6 +936,14 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceSum2R32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSum2R64f64f;
+            else if(sdepth == CV_8S && ddepth == CV_32S)
+                func = reduceSum2R8s32s;
+            else if(sdepth == CV_8S && ddepth == CV_32F)
+                func = reduceSum2R8s32f;
+            else if(sdepth == CV_8S && ddepth == CV_64F)
+                func = reduceSum2R8s64f;
+            else if(sdepth == CV_32S && ddepth == CV_64F)
+                func = reduceSum2R32s64f;
         }
     }
     else
@@ -924,6 +973,14 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceSumC32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumC64f64f;
+            else if(sdepth == CV_8S && ddepth == CV_32S)
+                func = reduceSumC8s32s;
+            else if(sdepth == CV_8S && ddepth == CV_32F)
+                func = reduceSumC8s32f;
+            else if(sdepth == CV_8S && ddepth == CV_64F)
+                func = reduceSumC8s64f;
+            else if(sdepth == CV_32S && ddepth == CV_64F)
+                func = reduceSumC32s64f;
         }
         else if(op == REDUCE_MAX)
         {
@@ -937,6 +994,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceMaxC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxC64f;
+            else if(sdepth == CV_8S && ddepth == CV_8S)
+                func = reduceMaxC8s;
+            else if(sdepth == CV_32S && ddepth == CV_32S)
+                func = reduceMaxC32s;
         }
         else if(op == REDUCE_MIN)
         {
@@ -950,6 +1011,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceMinC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinC64f;
+            else if(sdepth == CV_8S && ddepth == CV_8S)
+                func = reduceMinC8s;
+            else if(sdepth == CV_32S && ddepth == CV_32S)
+                func = reduceMinC32s;
         }
         else if(op == REDUCE_SUM2)
         {
@@ -973,6 +1038,14 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
                 func = reduceSum2C32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSum2C64f64f;
+            else if(sdepth == CV_8S && ddepth == CV_32S)
+                func = reduceSum2C8s32s;
+            else if(sdepth == CV_8S && ddepth == CV_32F)
+                func = reduceSum2C8s32f;
+            else if(sdepth == CV_8S && ddepth == CV_64F)
+                func = reduceSum2C8s64f;
+            else if(sdepth == CV_32S && ddepth == CV_64F)
+                func = reduceSum2C32s64f;
         }
     }
 

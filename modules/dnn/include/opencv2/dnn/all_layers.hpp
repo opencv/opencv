@@ -1955,6 +1955,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<NonZeroLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CompressLayer : public Layer
+    {
+    public:
+        static Ptr<CompressLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ImageDecoderLayer : public Layer
     {
     public:
