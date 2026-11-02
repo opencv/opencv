@@ -30,14 +30,14 @@ struct CompositeTerm<1, 0>
 };
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-static inline v_uint16 v_mulDiv255(const v_uint16& cf)
+static CV_ALWAYS_INLINE v_uint16 v_mulDiv255(const v_uint16& cf)
 {
     v_uint16 t = v_add_wrap(cf, vx_setall_u16(128));
     return v_shr<8>(v_add_wrap(v_add_wrap(t, v_shr<8>(t)), vx_setall_u16(1)));
 }
 
 template<int K0, int K1>
-static inline v_uint8 compositeWeight(const v_uint8& a)
+static CV_ALWAYS_INLINE v_uint8 compositeWeight(const v_uint8& a)
 {
     if (K1 == 0)
         return vx_setall_u8((uchar)(K0 * 255));
@@ -49,7 +49,7 @@ static inline v_uint8 compositeWeight(const v_uint8& a)
 template<int K0, int K1>
 struct CompositeTermVec
 {
-    static inline void apply(const v_uint8& c, const v_uint8& f, v_uint16& lo, v_uint16& hi)
+    static CV_ALWAYS_INLINE void apply(const v_uint8& c, const v_uint8& f, v_uint16& lo, v_uint16& hi)
     {
         v_mul_expand(c, f, lo, hi);
         lo = v_mulDiv255(lo);
@@ -60,7 +60,7 @@ struct CompositeTermVec
 template<>
 struct CompositeTermVec<1, 0>
 {
-    static inline void apply(const v_uint8& c, const v_uint8&, v_uint16& lo, v_uint16& hi)
+    static CV_ALWAYS_INLINE void apply(const v_uint8& c, const v_uint8&, v_uint16& lo, v_uint16& hi)
     {
         v_expand(c, lo, hi);
     }
@@ -69,14 +69,14 @@ struct CompositeTermVec<1, 0>
 template<>
 struct CompositeTermVec<0, 0>
 {
-    static inline void apply(const v_uint8&, const v_uint8&, v_uint16& lo, v_uint16& hi)
+    static CV_ALWAYS_INLINE void apply(const v_uint8&, const v_uint8&, v_uint16& lo, v_uint16& hi)
     {
         lo = hi = vx_setzero_u16();
     }
 };
 
 template<int A0, int A1, int B0, int B1>
-static inline v_uint8 compositeChannel(const v_uint8& cs, const v_uint8& cd, const v_uint8& fa, const v_uint8& fb)
+static CV_ALWAYS_INLINE v_uint8 compositeChannel(const v_uint8& cs, const v_uint8& cd, const v_uint8& fa, const v_uint8& fb)
 {
     v_uint16 s0, s1, d0, d1;
     CompositeTermVec<A0, A1>::apply(cs, fa, s0, s1);
