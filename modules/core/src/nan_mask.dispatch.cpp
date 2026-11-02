@@ -18,7 +18,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, double value )
 
     const ocl::Device d = ocl::Device::getDefault();
     bool doubleSupport = d.doubleFPConfig() > 0;
-    if (!doubleSupport && ftype == CV_64F)
+    if ((ftype != CV_32F && ftype != CV_64F) || (!doubleSupport && ftype == CV_64F))
     {
         return false;
     }
@@ -50,16 +50,16 @@ static bool ocl_patchNaNs( InputOutputArray _a, double value )
 
 #endif
 
-static PatchNanFunc getPatchNanFunc(bool isDouble)
+static PatchNanFunc getPatchNanFunc(int depth)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(getPatchNanFunc, (isDouble), CV_CPU_DISPATCH_MODES_ALL);
+    CV_CPU_DISPATCH(getPatchNanFunc, (depth), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
     CV_INSTRUMENT_REGION();
-    CV_Assert( _a.depth() == CV_32F || _a.depth() == CV_64F);
+    CV_Assert( _a.depth() == CV_16F || _a.depth() == CV_16BF || _a.depth() == CV_32F || _a.depth() == CV_64F);
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
                ocl_patchNaNs(_a, _val))
@@ -70,7 +70,7 @@ void patchNaNs( InputOutputArray _a, double _val )
     NAryMatIterator it(arrays, ptrs);
     size_t len = it.size*a.channels();
 
-    PatchNanFunc func = getPatchNanFunc(_a.depth() == CV_64F);
+    PatchNanFunc func = getPatchNanFunc(_a.depth());
 
     for (size_t i = 0; i < it.nplanes; i++, ++it)
     {

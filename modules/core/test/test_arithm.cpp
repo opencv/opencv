@@ -5076,4 +5076,31 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
     }
 }
 
+// patchNaNs replaces every NaN (either sign) and keeps numbers and infinities, including the 16-bit float depths
+typedef testing::TestWithParam<int> Core_PatchNaNs;
+
+TEST_P(Core_PatchNaNs, replaces_only_nans)
+{
+    const int depth = GetParam();
+    Mat src64(3, 37, CV_64F);   // 111 values: wide enough for the SIMD loop, odd for the scalar tail
+    for (int i = 0; i < (int)src64.total(); i++)
+        src64.at<double>(i) = i % 5 == 0 ? (i % 2 ? NAN : -NAN) :
+                              i % 7 == 0 ? (i % 2 ? INFINITY : -INFINITY) : i - 50.0;
+
+    Mat a;
+    src64.convertTo(a, depth);
+    cv::patchNaNs(a, 7.5);
+    ASSERT_EQ(depth, a.depth());
+
+    Mat res;
+    a.convertTo(res, CV_64F);
+    for (int i = 0; i < (int)src64.total(); i++)
+    {
+        double expected = cvIsNaN(src64.at<double>(i)) ? 7.5 : src64.at<double>(i);
+        EXPECT_EQ(expected, res.at<double>(i)) << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
+
 }} // namespace
