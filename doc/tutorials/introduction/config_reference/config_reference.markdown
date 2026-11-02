@@ -317,7 +317,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PFM` | _ON_ |
 | [GIF](https://en.wikipedia.org/wiki/GIF) | `WITH_IMGCODEC_GIF` | _ON_ |
 
-### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL, AVIF support
+### PNG, JPEG, TIFF, WEBP, JPEG 2000, HTJ2K, EXR, JPEG XL, AVIF support
 
 | Formats | Library | Option | Default | Force build own |
 | --------| ------- | ------ | ------- | --------------- |
@@ -329,6 +329,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [WebP](https://en.wikipedia.org/wiki/WebP) || `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
 | [JPEG 2000](https://en.wikipedia.org/wiki/JPEG_2000) | [OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
 |^| [JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
+| [HTJ2K](https://jpeg.org/jpeg2000/htj2k.html) | [OpenHTJ2K](https://github.com/osamu620/OpenHTJ2K) | `WITH_OPENHTJ2K` | _OFF_ | Not supported. (see note) |
 | [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
 | [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) || `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
 | [AVIF](https://en.wikipedia.org/wiki/AVIF) || `WITH_AVIF` | _ON_ | Not supported. (see note) |
@@ -339,6 +340,7 @@ Corresponding BUILD_* options will force building and using the bundled librarie
 
 @note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
 @note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
+@note (HTJ2K) OpenCV doesn't contain OpenHTJ2K source code, so `BUILD_OPENHTJ2K` is not supported. Users must provide a system-wide installation of OpenHTJ2K 0.25.0 or later. It reads and writes \*.jph files and \*.jhc codestreams, and decodes only High-Throughput (Part 15) content: other JPEG 2000 files are still decoded by OpenJPEG or JasPer.
 @note (JPEG) OpenCV 5 doesn't contain libjpeg source code, so `BUILD_JPEG_TURBO_DISABLE` is not supported. Users can use a system-wide installed libjpeg instead of libjpeg-turbo.
 @note (EXR) OpenCV 5 doesn't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported. Users must provide a system-wide installation of libopenexr.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported. Users must provide a system-wide installation of libjxl.

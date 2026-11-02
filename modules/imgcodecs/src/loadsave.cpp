@@ -217,6 +217,12 @@ struct ImageCodecInitializer
     #ifdef HAVE_GDCM
         decoders.push_back( makePtr<DICOMDecoder>() );
     #endif
+    #ifdef HAVE_OPENHTJ2K
+        // Before the JPEG 2000 codecs: it claims only HT content, which they would also accept.
+        decoders.push_back( makePtr<HTJ2KDecoder>() );
+        encoders.push_back( makePtr<HTJ2KEncoder>(true) );   // .jph
+        encoders.push_back( makePtr<HTJ2KEncoder>(false) );  // .jhc
+    #endif
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );

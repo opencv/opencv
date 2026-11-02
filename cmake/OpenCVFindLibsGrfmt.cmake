@@ -244,6 +244,25 @@ if(WITH_JPEGXL)
   endif()
 endif()
 
+# --- OpenHTJ2K (optional) ---
+if(WITH_OPENHTJ2K)
+  ocv_clear_vars(HAVE_OPENHTJ2K)
+  ocv_clear_internal_cache_vars(OPENHTJ2K_LIBRARIES OPENHTJ2K_VERSION)
+  # The package declares SameMinorVersion compatibility, so the minimum version
+  # is checked here rather than passed to find_package().
+  find_package(openhtj2k CONFIG QUIET)
+  if(openhtj2k_FOUND AND TARGET openhtj2k::openhtj2k)
+    if(openhtj2k_VERSION VERSION_LESS "0.25.0")
+      message(STATUS "OpenHTJ2K ${openhtj2k_VERSION} is too old (0.25.0 or later is required)")
+    else()
+      set(HAVE_OPENHTJ2K YES)
+      set(OPENHTJ2K_LIBRARIES openhtj2k::openhtj2k)
+      set(OPENHTJ2K_VERSION "${openhtj2k_VERSION}")
+      message(STATUS "Found system OpenHTJ2K: ver ${OPENHTJ2K_VERSION}")
+    endif()
+  endif()
+endif()
+
 # --- libopenjp2 (optional, check before libjasper) ---
 if(WITH_OPENJPEG)
   if(BUILD_OPENJPEG)

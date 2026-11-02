@@ -2173,6 +2173,9 @@ static void showSaveDialog(CvWindow& window)
 #if defined(HAVE_JASPER) || defined(HAVE_OPENJPEG)
                       "JPEG-2000 files (*.jp2)\0*.jp2\0"
 #endif
+#ifdef HAVE_OPENHTJ2K
+                      "HTJ2K files (*.jph;*.jhc)\0*.jph;*.jhc\0"
+#endif
 #ifdef HAVE_WEBP
                       "WebP files (*.webp)\0*.webp\0"
 #endif
