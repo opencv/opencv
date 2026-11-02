@@ -4,6 +4,7 @@
 
 #include "perf_precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
 
 namespace opencv_test {
@@ -996,6 +997,53 @@ ConvParamGenerator conv_3x3S1D1_params(testConvolution_3x3S1D1_Configs, sizeof(t
 INSTANTIATE_TEST_CASE_P(/**/, Conv_3x3S1D1, Combine(
     conv_3x3S1D1_params.all(),
     dnnBackendsAndTargets(false, false),  // defined in ../test/test_common.hpp
+    testing::Values(true, false)  // enable Winograd or not
+));
+
+// Conv2 on NCHWc8 input, as the graph engine runs it; Conv_3x3S1D1 measures the legacy layer.
+typedef TestBaseWithParam<tuple<ConvParam_t, bool> > Conv2_3x3S1D1;
+PERF_TEST_P_(Conv2_3x3S1D1, conv)
+{
+    const ConvParam_t& params = get<0>(GetParam());
+    const bool winograd = get<1>(GetParam());
+    if (params.declared_flops >= 6e9)
+        applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+    else if (params.declared_flops >= 2e9)
+        applyTestTag(CV_TEST_TAG_DEBUG_LONG);
+
+    const int C = params.shapeIn.dims[1], H = params.shapeIn.dims[2], W = params.shapeIn.dims[3];
+    const int K = params.outCN, groups = params.groups, C0 = 8;
+    const Size pad = std::string(params.padMode) == "SAME" ? Size(1, 1) : (Size)params.pad;
+    int strides[] = {1, 1}, dilations[] = {1, 1};
+    int pads[] = {pad.height, pad.width, pad.height, pad.width};
+    LayerParams lp;
+    lp.set("stride", DictValue::arrayInt(strides, 2));
+    lp.set("dilation", DictValue::arrayInt(dilations, 2));
+    lp.set("pad", DictValue::arrayInt(pads, 4));
+    lp.set("group", groups);
+    Ptr<Conv2Layer> layer = Conv2Layer::create(lp);
+    Net net;
+    net.enableWinograd(winograd);
+    layer->netimpl = net.getImpl();
+
+    Mat weights({K, C / groups, 3, 3}, CV_32F), bias({K}, CV_32F);
+    randu(weights, -1.0f, 1.0f);
+    randu(bias, -1.0f, 1.0f);
+    layer->setWeights(weights, bias, C0, CV_32F);
+    Mat input(MatShape({1, (C + C0 - 1) / C0, H, W, C0}, DATA_LAYOUT_BLOCK, C), CV_32F);
+    randu(input, -1.0f, 1.0f);
+    std::vector<Mat> inputs(1, input), outputs, internals;
+    layer->forward(inputs, outputs, internals);  // warmup, also prepares the Winograd weights
+
+    TEST_CYCLE()
+    {
+        layer->forward(inputs, outputs, internals);
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Conv2_3x3S1D1, Combine(
+    conv_3x3S1D1_params.all(),
     testing::Values(true, false)  // enable Winograd or not
 ));
 
