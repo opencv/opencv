@@ -3591,4 +3591,32 @@ TEST(Core_Arithm, mul_overflow_28557)
     }
 }
 
+TEST(Core_Set, multi_channel_mat_value)
+{
+    Mat value(1, 1, CV_8UC3, Scalar(4, 5, 6));
+    Mat dst(2, 2, CV_8UC3, Scalar::all(0));
+    const Mat expected(2, 2, CV_8UC3, Scalar(4, 5, 6));
+    dst.setTo(value);
+    EXPECT_EQ(0.0, cv::norm(dst, expected, NORM_INF));
+
+    UMat udst(2, 2, CV_8UC3, Scalar::all(0));
+    udst.setTo(value);
+    EXPECT_EQ(0.0, cv::norm(udst.getMat(ACCESS_READ), expected, NORM_INF));
+
+    Mat mask = (Mat_<uchar>(2, 2) << 1, 0, 0, 1);
+    Mat floatValue(1, 1, CV_32FC3, Scalar(7, 8, 9));
+    Mat masked(2, 2, CV_8UC3, Scalar::all(1));
+    Mat maskedExpected = masked.clone();
+    maskedExpected.at<Vec3b>(0, 0) = Vec3b(7, 8, 9);
+    maskedExpected.at<Vec3b>(1, 1) = Vec3b(7, 8, 9);
+    masked.setTo(floatValue, mask);
+    EXPECT_EQ(0.0, cv::norm(masked, maskedExpected, NORM_INF));
+    UMat umasked(2, 2, CV_8UC3, Scalar::all(1));
+    umasked.setTo(floatValue, mask);
+    EXPECT_EQ(0.0, cv::norm(umasked.getMat(ACCESS_READ), maskedExpected, NORM_INF));
+
+    dst.setTo(Scalar(2, 3, 4));
+    EXPECT_EQ(0.0, cv::norm(dst, Mat(2, 2, CV_8UC3, Scalar(2, 3, 4)), NORM_INF));
+}
+
 }} // namespace

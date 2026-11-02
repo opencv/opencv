@@ -835,6 +835,9 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     int cn = channels(), mcn = mask.channels();
     CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
+    if (value.total() == 1 && value.channels() == cn && cn > 1)
+        value = value.reshape(1, 1);
+
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
     size_t esz = mcn > 1 ? elemSize1() : elemSize();

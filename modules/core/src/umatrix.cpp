@@ -1295,6 +1295,8 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
+        if (value.total() == 1 && value.channels() == cn && cn > 1)
+            value = value.reshape(1, 1);
         int kercn = haveMask || cn == 3 ? cn : std::max(cn, ocl::predictOptimalVectorWidth(*this)),
                 kertp = CV_MAKE_TYPE(d, kercn);
 
