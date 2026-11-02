@@ -18,12 +18,6 @@
 "test_ai_onnx_ml_tree_ensemble_single_tree",
 "test_attention_4d_diff_heads_mask4d_padded_kv", // needs the nonpad_kv_seqlen input (padded-KV variant) which is not supported yet
 "test_averagepool_2d_ceil_last_window_starts_on_pad",
-"test_averagepool_2d_dilations",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_True",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True",
-"test_averagepool_3d_dilations_small",
 "test_basic_deform_conv_with_padding",
 "test_basic_deform_conv_without_padding",
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
