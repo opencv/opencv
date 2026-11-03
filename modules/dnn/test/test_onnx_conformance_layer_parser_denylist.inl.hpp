@@ -113,9 +113,6 @@
 "test_strnormalizer_export_monday_empty_output",  // ---- same as above ---
 "test_strnormalizer_export_monday_insensintive_upper_twodim",  // ---- same as above ---
 "test_strnormalizer_nostopwords_nochangecase",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "StringNormalizer" in function 'getLayerInstance'
-"test_tensorscatter",
-"test_tensorscatter_3d",
-"test_tensorscatter_circular",
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip0",  // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip5",  // ---- same as above ---
 "test_tfidfvectorizer_tf_batch_uniandbigrams_skip5",  // ---- same as above ---
