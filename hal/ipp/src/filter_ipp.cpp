@@ -133,7 +133,7 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
         /* 16U */ {{1, 1}, {0, 0}, {1, 1}, {1, 1}},
         /* 16S */ {{1, 1}, {0, 0}, {1, 1}, {1, 1}},
         /* 32S */ {{0, 0}, {0, 0}, {0, 0}, {0, 0}},
-        /* 32F */ {{0, 1}, {0, 0}, {0, 0}, {0, 1}},
+        /* 32F */ {{0, 1}, {0, 0}, {0, 0}, {0, 0}},   // 32FC3/C4: small gain, slower with zeros in the kernel
         /* 64F */ {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
 #endif // IPP_CALLS_ENFORCED
 
@@ -167,10 +167,10 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
     }
 
 #if !defined(IPP_CALLS_ENFORCED)
-    // Stay consistent with OpenCV, which switches to FFT-based dftFilter2D for big kernels on whole (non-ROI)
-    // images. Mirrors the threshold in dftFilter2D() (modules/imgproc/src/filter.dispatch.cpp) and uses the
-    // original kernel size. Besides different results, the OpenCV DFT path is multi-threaded and much faster
-    // there (16u/16s 1080p 9x9/11x11, 80 threads: IPP 0.09-0.16x).
+    // OpenCV switches to FFT-based dftFilter2D for big kernels on whole (non-ROI) images. That path is
+    // multi-threaded and much faster there.
+    // Results of IPP match it within the usual tolerance (checked with WITH_IPP_CALLS_ENFORCED).
+    // Mirrors the threshold in dftFilter2D() (modules/imgproc/src/filter.dispatch.cpp), original kernel size.
     {
         const bool isROI = offset_x != 0 || offset_y != 0 || width != full_width || height != full_height;
         const int  dftFilterSize = cv::checkHardwareSupport(CV_CPU_SSE3) && (depth == CV_8U || depth == CV_32F) ? 130 : 50;
@@ -178,23 +178,13 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    // Performance. The cases below are slower with IPP.
-    // All other types are 1.3-12x faster up to 13x13 (the 2017 "poor optimization" 7x7 limit no longer holds).
+    // Performance: the cases below are slower with IPP than with OpenCV.
     {
         const int kernelArea    = kernel_width * kernel_height;
         const int ippKernelArea = ipp_kernel_width * ipp_kernel_height;
 
-        // 16S kernels converted to 32F: 32F images 0.64-0.96x, 8UC4 3x3 0.71-0.81x
-        if(kdepth == CV_16S && !useKernel16s && (depth == CV_32F || ippKernelArea <= 9))
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-        // 32FC4: 3x3 0.88-0.93x, bigger than 7x7 0.91-1.16x (Xeon 6148)
-        if(depth == CV_32F && channels == 4 && (ippKernelArea <= 9 || ipp_kernel_width > 7 || ipp_kernel_height > 7))
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
-        // Zero-padding for off-center anchors / even kernel sizes, 8U and 32F: padded/original kernel area
-        // up to 1.56x is faster, 1.96x and more is slower except for 8UC4, which is faster.
-        // 16U and 16S are faster with any padding.
+        // Zero-padding for off-center anchors / even kernel sizes, 8U and 32F: slower when the padded kernel
+        // is much bigger than the original one (8UC4 tolerates more padding). 16U and 16S are faster with any padding.
         if((depth == CV_8U || depth == CV_32F) && ippKernelArea > kernelArea)
         {
             const double maxPaddingRatio = depth == CV_8U && channels == 4 ? 2.3 : 1.6;
@@ -202,8 +192,15 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
                 return CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
 
-        // 32F with an extra full-image pass (copy of the source for in-place calls, adding delta) and a 3x3 kernel
-        if(depth == CV_32F && (src_data == dst_data || addDelta) && ippKernelArea <= 9)
+        // 32F 3x3 with an extra full-image pass (copy of the source for in-place calls, adding delta)
+        if(depth == CV_32F && ippKernelArea <= 9 && (src_data == dst_data || addDelta))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        // Sparse kernels (sharpen, Laplacian, cross shapes): OpenCV skips zero coefficients.
+        // 8U/32F with a 32F kernel and less than 60% non-zero coefficients are slower;
+        // the native 16S path, 16U and 16S are faster with any kernel.
+        if(!useKernel16s && (depth == CV_8U || depth == CV_32F) &&
+           cv::countNonZero(cv::Mat(kernel_height, kernel_width, kernel_type, (void*)kernel_data, kernel_step)) < 0.6 * kernelArea)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
