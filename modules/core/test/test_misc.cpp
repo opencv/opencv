@@ -356,6 +356,38 @@ TEST(Core_Repeat, empty_and_overflow)
     EXPECT_THROW(cv::repeat(src, 1, INT_MAX, dst), cv::Exception);
 }
 
+// repeat on every depth: each tile of the result must match the source
+typedef testing::TestWithParam<std::tuple<perf::MatType, int> > Core_Repeat_depths;
+TEST_P(Core_Repeat_depths, accuracy)
+{
+    const int type = CV_MAKETYPE(std::get<0>(GetParam()), std::get<1>(GetParam()));
+    const int rows = 3, cols = 4, ny = 2, nx = 3;
+
+    // part of a bigger Mat, so the rows are not next to each other in memory
+    Mat big(rows + 2, cols + 2, type, Scalar::all(0));
+    Mat src = big(Rect(1, 1, cols, rows));
+    randu(src, Scalar::all(0), Scalar::all(2));
+
+    Mat dst;
+    cv::repeat(src, ny, nx, dst);
+
+    ASSERT_EQ(type, dst.type());
+    ASSERT_EQ(Size(cols * nx, rows * ny), dst.size());
+
+    for (int y = 0; y < ny; y++)
+    {
+        for (int x = 0; x < nx; x++)
+        {
+            Mat tile = dst(Rect(x * cols, y * rows, cols, rows));
+            EXPECT_EQ(0, cv::norm(tile, src, NORM_INF)) << "x=" << x << " y=" << y;
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_Repeat_depths, testing::Combine(
+    testing::Range(perf::MatType(CV_8U), perf::MatType(CV_DEPTH_CURR_MAX)),
+    testing::Range(1, 5)));
+
 class ThrowErrorParallelLoopBody : public cv::ParallelLoopBody
 {
 public:
