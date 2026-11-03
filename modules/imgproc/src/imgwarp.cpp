@@ -1736,9 +1736,11 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    // Single-channel cubic stays on the table remap. The generic bicubic warp is
-    // several times slower on the C1 cases the 4.x SIMD path covers.
-    const bool cubicC1 = interpolation == INTER_CUBIC && src.channels() == 1;
+    // Single-channel cubic stays on the table remap for the fast in-bounds cases
+    // covered by the 4.x SIMD path. BORDER_TRANSPARENT must keep the generic
+    // path because the table remap converts it to reflected borders internally.
+    const bool cubicC1 = interpolation == INTER_CUBIC && src.channels() == 1 &&
+                         borderType != BORDER_TRANSPARENT;
     if (!cubicC1 && genericWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
         return;
     }

@@ -1127,6 +1127,20 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_Remap, cubic_c1_border_transparent_preserves_edge_dst)
+{
+    Mat src(5, 5, CV_32FC1);
+    randu(src, Scalar::all(-1), Scalar::all(1));
+
+    Mat_<float> mapx(3, 3, -1.f);
+    Mat_<float> mapy(3, 3, -1.f);
+    Mat dst(3, 3, CV_32FC1, Scalar::all(123));
+    Mat ref = dst.clone();
+
+    remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF));
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
