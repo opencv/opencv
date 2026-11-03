@@ -432,4 +432,25 @@ TEST(Core_EW_AddSub, saturation_s32_u32)
     }
 }
 
+TEST(Core_EW_MulDiv, result_64f_is_computed_in_64f)
+{
+    const int W = 37;   // odd width: SIMD body + scalar tail both covered
+    Mat dst;
+
+    // 65535*65535 needs more digits than CV_32F has
+    Mat a(1, W, CV_16U, Scalar(65535));
+    cv::multiply(a, a, dst, 1, CV_64F);
+    EXPECT_EQ(CV_64F, dst.type());
+    EXPECT_EQ(0, cv::norm(dst, Mat(1, W, CV_64F, Scalar(65535.0 * 65535.0)), NORM_INF));
+
+    // 1/3 has no exact value, so a CV_32F calculation gives different digits
+    for (int depth : {CV_8U, CV_16U, CV_32F})
+    {
+        Mat one(1, W, depth, Scalar(1)), three(1, W, depth, Scalar(3));
+        cv::divide(one, three, dst, 1, CV_64F);
+        EXPECT_EQ(CV_64F, dst.type());
+        EXPECT_EQ(0, cv::norm(dst, Mat(1, W, CV_64F, Scalar(1.0 / 3.0)), NORM_INF)) << "depth=" << depth;
+    }
+}
+
 }} // namespace

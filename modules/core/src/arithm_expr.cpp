@@ -597,6 +597,9 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
     case OP_MUL: case OP_DIV:
     {
         depth = base;
+        // a CV_64F result needs a CV_64F calculation: CV_32F has already lost the digits
+        if (result == CV_64F)
+            depth = CV_64F;
         const bool w = (depth==CV_32U || depth==CV_32S || depth==CV_64U ||
                         depth==CV_64S || depth==CV_64F);
         wide = w ? CV_64F : CV_32F;
