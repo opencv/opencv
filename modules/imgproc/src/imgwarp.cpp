@@ -1101,35 +1101,8 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 }
 
 
-// Single-channel non-relative bicubic fast path. Dispatched from its own TU
-// because imgwarp.cpp already owns the warp_kernels dispatch mode list.
-template<typename T, typename AT>
-struct RemapBicubicVecC1
-{
-    int operator()(const T*, size_t, T*, const short*, const ushort*, const AT*,
-                   int, int, unsigned, unsigned, int) const { return 0; }
-};
-
 using RemapWideC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, unsigned, unsigned, int);
-RemapWideC1Fn remapBicubicC1wp_fn();
 RemapWideC1Fn remapLanczos4C1_fn();
-
-#define CV_REMAP_BICUBIC_SHIM(T, DEPTH)                                              \
-template<> struct RemapBicubicVecC1<T, float>                                        \
-{                                                                                    \
-    int operator()(const T* S0, size_t sstep, T* D, const short* XY,                 \
-                   const ushort* FXY, const float* wtab, int dx, int dwidth,         \
-                   unsigned width1, unsigned height1, int off_y) const               \
-    {                                                                                \
-        static const RemapWideC1Fn fn = remapBicubicC1wp_fn();                       \
-        return fn(DEPTH, (const uchar*)S0, sstep, (uchar*)D,                         \
-                  XY, FXY, wtab, dx, dwidth, width1, height1, off_y);                \
-    }                                                                                \
-};
-CV_REMAP_BICUBIC_SHIM(float, CV_32F)
-CV_REMAP_BICUBIC_SHIM(ushort, CV_16U)
-CV_REMAP_BICUBIC_SHIM(short, CV_16S)
-#undef CV_REMAP_BICUBIC_SHIM
 
 template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
@@ -1167,12 +1140,6 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
         const int off_y = isRelative ? (_offset.y+dy) : 0;
         for(int dx = 0; dx < dsize.width; dx++, D += cn )
         {
-            if( cn == 1 && !isRelative )
-            {
-                int n = RemapBicubicVecC1<T, AT>()(S0, sstep, D, XY, FXY, wtab, dx,
-                                                   dsize.width, width1, height1, off_y);
-                if( n > 0 ) { D += (n - 1)*cn; dx += n - 1; continue; }
-            }
             const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-1+off_x, sy = XY[dx*2+1]-1+off_y;
             const AT* w = wtab + FXY[dx]*16;
@@ -1756,12 +1723,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
-    // Single-channel cubic stays on the table remap for the fast in-bounds cases
-    // covered by the 4.x SIMD path. BORDER_TRANSPARENT must keep the generic
-    // path because the table remap converts it to reflected borders internally.
-    const bool cubicC1 = interpolation == INTER_CUBIC && src.channels() == 1 &&
-                         borderType != BORDER_TRANSPARENT;
-    if (!cubicC1 && genericWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
+    if (genericWarp(src, Mat(), map1, map2, dst, interpolation, borderType, borderValue, hasRelativeFlag)) {
         return;
     }
 
@@ -1817,14 +1779,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
     }
 
-    // UMat fallback uses the legacy table remap path. The 5.x float-map
-    // linear invokers are faster for regular CPU tests, but regress the
-    // T-API remap fixture, especially C3, when OpenCL falls back to CPU.
-    const bool umatLinearLegacy = (_src.isUMat() || _map1.isUMat() || _map2.isUMat()) &&
-            (src.type() == CV_8UC1 || src.type() == CV_8UC3 ||
-             src.type() == CV_8UC4 || src.type() == CV_32FC3);
-
-    if (interpolation == INTER_LINEAR && !umatLinearLegacy) {
+    if (interpolation == INTER_LINEAR) {
         if (map1.depth() == CV_32F) {
             const auto *src_data = src.ptr<const uint8_t>();
             auto *dst_data = dst.ptr<uint8_t>();
