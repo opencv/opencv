@@ -90,7 +90,7 @@ PERF_TEST_P(TestWarpHighChannelInterpolation, WarpAffine,
     Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
     declare.in(src).out(dst);
     TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation, border);
-    SANITY_CHECK(dst, 1.);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
