@@ -410,6 +410,16 @@ static inline int clip(int x, int a, int b)
 *                       General warping (affine, perspective, remap)                     *
 \****************************************************************************************/
 
+#if CV_SIMD || CV_SIMD_SCALABLE
+static inline v_float32 loadHalfChannels(const hfloat* src)
+{
+    // Some half expansions read a full vector register.
+    alignas(64) hfloat values[2*VTraits<v_float32>::max_nlanes] = {};
+    std::memcpy(values, src, VTraits<v_float32>::vlanes()*sizeof(hfloat));
+    return vx_load_expand(values);
+}
+#endif
+
 template<typename T, bool isRelative>
 static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
                           int borderType, const Scalar& _borderValue, const Point& _offset )
@@ -869,7 +879,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                             const v_float32 w2 = vx_setall_f32(w[2]), w3 = vx_setall_f32(w[3]);
                             const auto load = [](const T* ptr) {
                                 if constexpr (std::is_same_v<T, hfloat>)
-                                    return vx_load_expand(ptr);
+                                    return loadHalfChannels(ptr);
                                 else
                                     return vx_load(ptr);
                             };
@@ -1067,9 +1077,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                         for (int row = 0; row < 8; ++row)
                         {
                             const T* ptr = S + size_t(row)*sstep + k;
-                            v_float32 horizontal = v_mul(vx_load_expand(ptr), vx_setall_f32(w[row*8]));
+                            v_float32 horizontal = v_mul(loadHalfChannels(ptr), vx_setall_f32(w[row*8]));
                             for (int column = 1; column < 8; ++column)
-                                horizontal = v_add(horizontal, v_mul(vx_load_expand(ptr + column*cn),
+                                horizontal = v_add(horizontal, v_mul(loadHalfChannels(ptr + column*cn),
                                                                       vx_setall_f32(w[row*8 + column])));
                             sum = v_add(sum, horizontal);
                         }

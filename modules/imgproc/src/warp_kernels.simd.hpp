@@ -8683,53 +8683,118 @@ static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
 }
 #endif
 
+struct BilinearHalfAxis
+{
+    int first;
+    int second;
+    float fraction;
+};
+
+static inline BilinearHalfAxis bilinearHalfAxis(float value, int length, int borderType)
+{
+    double position = value;
+    if (!std::isfinite(position))
+        position = borderType == BORDER_REPLICATE && !std::isnan(position) ?
+                   (position > 0 ? double(length) : -1.) : 0.;
+    const double base = std::floor(position);
+    const float fraction = float(position - base);
+    if (base >= 0 && base + 1 < length)
+        return {int(base), int(base + 1), fraction};
+    if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        return {base >= 0 && base < length ? int(base) : -1,
+                base + 1 >= 0 && base + 1 < length ? int(base + 1) : -1, fraction};
+    if (borderType == BORDER_REPLICATE)
+    {
+        const auto clampIndex = [length](double index) {
+            return index < 0 ? 0 : index >= length ? length - 1 : int(index);
+        };
+        return {clampIndex(base), clampIndex(base + 1), fraction};
+    }
+    if (length == 1)
+        return {0, 0, 0.f};
+    if (borderType != BORDER_WRAP && borderType != BORDER_REFLECT && borderType != BORDER_REFLECT_101)
+        CV_Error(Error::StsBadArg, "Unsupported border mode");
+    if (base >= std::numeric_limits<int>::min()/2 && base <= std::numeric_limits<int>::max()/2 &&
+        length <= std::numeric_limits<int>::max()/2)
+    {
+        const int index = int(base);
+        return {borderInterpolate_fast(index, length, borderType),
+                borderInterpolate_fast(index + 1, length, borderType), fraction};
+    }
+    const int delta = borderType == BORDER_REFLECT_101;
+    const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
+    double phase = std::fmod(base, period);
+    if (phase < 0)
+        phase += period;
+    const auto borderIndex = [=](double index) {
+        if (index >= period)
+            index -= period;
+        return int(index < length ? index : period - index - 1 + delta);
+    };
+    return {borderIndex(phase), borderIndex(phase + 1), fraction};
+}
+
 static void bilinearWarpHalf(const float* x, const float* y, int len,
                               const void* source, size_t step, Size size, void* destination,
                               const float*, int borderType, const void* borderValue, int channels)
 {
     const hfloat* fill = static_cast<const hfloat*>(borderValue);
     hfloat* dst = static_cast<hfloat*>(destination);
-    const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
     for (int i = 0; i < len; ++i, dst += channels)
     {
         const float sx = x[i], sy = y[i];
-        const int left = cvFloor(sx), top = cvFloor(sy);
-        const float alpha = sx - left, beta = sy - top;
+        if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        {
+            const float lower = borderType == BORDER_TRANSPARENT ? 0.f : -1.f;
+            const bool outside = !std::isfinite(sx) || !std::isfinite(sy) ||
+                                 (borderType == BORDER_TRANSPARENT ? sx < lower || sy < lower : sx <= lower || sy <= lower) ||
+                                 double(sx) >= size.width || double(sy) >= size.height;
+            if (outside)
+            {
+                if (borderType == BORDER_CONSTANT)
+                    std::copy(fill, fill + channels, dst);
+                continue;
+            }
+        }
+        const BilinearHalfAxis horizontal = bilinearHalfAxis(sx, size.width, borderType);
+        const BilinearHalfAxis vertical = bilinearHalfAxis(sy, size.height, borderType);
+        const float alpha = horizontal.fraction, beta = vertical.fraction;
         const float weights[] = {(1.f - alpha)*(1.f - beta), alpha*(1.f - beta),
                                  (1.f - alpha)*beta, alpha*beta};
+        const int columns[] = {horizontal.first, horizontal.second};
+        const int rows[] = {vertical.first, vertical.second};
         const hfloat* pixels[4];
-        if (left >= 0 && left + 1 < size.width && top >= 0 && top + 1 < size.height)
+        for (int row = 0; row < 2; ++row)
         {
-            pixels[0] = reinterpret_cast<const hfloat*>(static_cast<const uchar*>(source) + size_t(top)*step)
-                        + left*channels;
-            pixels[1] = pixels[0] + channels;
-            pixels[2] = reinterpret_cast<const hfloat*>(reinterpret_cast<const uchar*>(pixels[0]) + step);
-            pixels[3] = pixels[2] + channels;
+            const hfloat* rowData = rows[row] < 0 ? nullptr : reinterpret_cast<const hfloat*>(
+                static_cast<const uchar*>(source) + size_t(rows[row])*step);
+            for (int column = 0; column < 2; ++column)
+                pixels[row*2 + column] = rowData && columns[column] >= 0 ?
+                                         rowData + size_t(columns[column])*channels : nullptr;
         }
-        else
+        float scale = 1.f;
+        if (borderType == BORDER_TRANSPARENT && !(pixels[0] && pixels[1] && pixels[2] && pixels[3]))
         {
-            const int columns[] = {borderInterpolate(left, size.width, sampleBorder),
-                                   borderInterpolate(left + 1, size.width, sampleBorder)};
-            for (int row = 0; row < 2; ++row)
-            {
-                const int sourceRow = borderInterpolate(top + row, size.height, sampleBorder);
-                const hfloat* rowData = sourceRow < 0 ? nullptr : reinterpret_cast<const hfloat*>(
-                    static_cast<const uchar*>(source) + size_t(sourceRow)*step);
-                for (int column = 0; column < 2; ++column)
-                    pixels[row*2 + column] = rowData && columns[column] >= 0 ? rowData + columns[column]*channels : nullptr;
-            }
+            float weightSum = 0.f;
+            for (int tap = 0; tap < 4; ++tap)
+                if (pixels[tap])
+                    weightSum += weights[tap];
+            if (weightSum == 0.f)
+                continue;
+            scale = 1.f/weightSum;
         }
         for (int channel = 0; channel < channels; ++channel)
         {
-            const float border = float(borderType == BORDER_TRANSPARENT ? dst[channel] : fill[channel]);
+            const float border = borderType == BORDER_CONSTANT ? float(fill[channel]) : 0.f;
             const float v0 = pixels[0] ? float(pixels[0][channel]) : border;
             const float v1 = pixels[1] ? float(pixels[1][channel]) : border;
             const float v2 = pixels[2] ? float(pixels[2][channel]) : border;
             const float v3 = pixels[3] ? float(pixels[3][channel]) : border;
-            dst[channel] = hfloat(v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3]);
+            dst[channel] = hfloat((v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3])*scale);
         }
     }
 }
+
 
 ImgWarpFunc getBilinearHalfWarpFunc_()
 {
