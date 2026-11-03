@@ -181,13 +181,16 @@ static Mat runQuantizeLinear(LayerParams& lp, std::vector<Mat>& inputs)
     return outputs[0];
 }
 
-// Per-tensor INT4/UINT4 quantization takes the AVX2 fast path on x86;
-// the result still has to saturate to the 4-bit range, not the 8-bit storage.
+// Regression test for per-tensor INT4/UINT4 output (#30596 review): the result has to
+// saturate to the 4-bit range on every path, including the x86 AVX2 per-tensor one,
+// so the input is long enough for its 8-lane loop and its scalar tail.
 TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
 {
-    Mat x(1, 6, CV_32F);
-    x.at<float>(0, 0) = -100.f; x.at<float>(0, 1) = -7.f; x.at<float>(0, 2) = 0.f;
-    x.at<float>(0, 3) = 6.f; x.at<float>(0, 4) = 40.f; x.at<float>(0, 5) = 1000.f;
+    const int n = 35;
+    const float vals[6] = {-100.f, -7.f, 0.f, 6.f, 40.f, 1000.f};
+    Mat x(1, n, CV_32F);
+    for (int i = 0; i < n; i++)
+        x.at<float>(0, i) = vals[i % 6];
     const int one = 1;
     Mat scale(1, &one, CV_32F, Scalar(1.f));  // rank-1 per-tensor scale, as ONNX exports it
 
@@ -199,9 +202,9 @@ TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
         std::vector<Mat> inputs{x, scale, zp};
         Mat out = runQuantizeLinear(lp, inputs);
         ASSERT_EQ(CV_8S, out.type());
-        const schar expected[] = {-8, -6, 1, 7, 7, 7};
-        for (int i = 0; i < 6; i++)
-            EXPECT_EQ((int)expected[i], (int)out.at<schar>(0, i)) << "i=" << i;
+        const int expected[6] = {-8, -6, 1, 7, 7, 7};
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(expected[i % 6], (int)out.at<schar>(0, i)) << "i=" << i;
     }
     {
         LayerParams lp;
@@ -211,9 +214,9 @@ TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
         std::vector<Mat> inputs{x, scale, zp};
         Mat out = runQuantizeLinear(lp, inputs);
         ASSERT_EQ(CV_8U, out.type());
-        const uchar expected[] = {0, 0, 2, 8, 15, 15};
-        for (int i = 0; i < 6; i++)
-            EXPECT_EQ((int)expected[i], (int)out.at<uchar>(0, i)) << "i=" << i;
+        const int expected[6] = {0, 0, 2, 8, 15, 15};
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(expected[i % 6], (int)out.at<uchar>(0, i)) << "i=" << i;
     }
 }
 
