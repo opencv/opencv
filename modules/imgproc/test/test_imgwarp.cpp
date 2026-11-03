@@ -1509,6 +1509,202 @@ TEST(Imgproc_Warp, float16_linear_extreme_coordinates)
         EXPECT_EQ(float(dst.at<hfloat>(0, column)), 0.25f);
 }
 
+TEST(Imgproc_Warp, per_channel_border_values)
+{
+    RNG rng(137);
+    for (int depth : {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F})
+    for (int channels : {1, 2, 3, 4, 5, 9, 20, CV_CN_MAX})
+    for (int interpolation : {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
+    {
+        if (depth == CV_16F && interpolation == INTER_NEAREST)
+            continue;
+        SCOPED_TRACE(depth);
+        SCOPED_TRACE(channels);
+        SCOPED_TRACE(interpolation);
+        const bool floating = depth == CV_32F || depth == CV_64F || depth == CV_16F;
+        Mat wide(17, 23, CV_MAKETYPE(CV_32F, channels)), storage;
+        rng.fill(wide, RNG::UNIFORM, 0.f, floating ? 1.f : 255.f);
+        wide.convertTo(storage, depth);
+        Mat src = storage(Rect(2, 1, 17, 13));
+        Mat valueStorage(channels, 2, CV_64F);
+        for (int channel = 0; channel < channels; ++channel)
+            valueStorage.at<double>(channel, 0) = floating ? channel/137. - 0.25 : channel*13. - 17.;
+        Mat values = valueStorage.col(0);
+        const Size outputSize(11, 9);
+        Mat affine = getRotationMatrix2D(Point2f(3.5f, 4.5f), 17., 1.1);
+        Mat perspective = Mat::eye(3, 3, CV_64F);
+        affine.copyTo(perspective.rowRange(0, 2));
+        perspective.at<double>(2, 0) = 0.001;
+        Mat mapx(outputSize, CV_32F), mapy(outputSize, CV_32F), fixed, fractions;
+        rng.fill(mapx, RNG::UNIFORM, -5.f, 22.f);
+        rng.fill(mapy, RNG::UNIFORM, -5.f, 18.f);
+        convertMaps(mapx, mapy, fixed, fractions, CV_16SC2, interpolation == INTER_NEAREST);
+        for (int operation = 0; operation < 5; ++operation)
+        {
+            SCOPED_TRACE(operation);
+            const Mat& firstMap = operation == 3 ? fixed : mapx;
+            const Mat& secondMap = operation == 3 ? fractions : mapy;
+            const int flags = interpolation | (operation == 4 ? WARP_RELATIVE_MAP : 0);
+            // Fix the reference grid to avoid HAL float-map rounding differences.
+            const bool fixedReference = channels > 4 && operation >= 2 &&
+                                        (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR);
+            const Mat& referenceMap1 = fixedReference ? fixed : firstMap;
+            const Mat& referenceMap2 = fixedReference ? fractions : secondMap;
+            const auto scalarWarp = [&](const Mat& input, Mat& output, const Scalar& fill) {
+                if (operation == 0)
+                    warpAffine(input, output, affine, outputSize, interpolation | WARP_INVERSE_MAP, BORDER_CONSTANT, fill);
+                else if (operation == 1)
+                    warpPerspective(input, output, perspective, outputSize, interpolation, BORDER_CONSTANT, fill);
+                else
+                    remap(input, output, referenceMap1, referenceMap2, flags, BORDER_CONSTANT, fill);
+            };
+            Mat resultStorage(outputSize.height + 2, outputSize.width + 3, src.type());
+            Mat result = resultStorage(Rect(1, 1, outputSize.width, outputSize.height));
+            if (operation == 0)
+                warpAffineWithBorderValues(src, result, affine, outputSize, values, interpolation | WARP_INVERSE_MAP);
+            else if (operation == 1)
+                warpPerspectiveWithBorderValues(src, result, perspective, outputSize, values, interpolation);
+            else
+                remapWithBorderValues(src, result, firstMap, secondMap, flags, values);
+            if (channels <= 4)
+            {
+                Scalar fill;
+                for (int channel = 0; channel < channels; ++channel)
+                    fill[channel] = values.at<double>(channel);
+                Mat expected;
+                scalarWarp(src, expected, fill);
+                Mat reference, actual;
+                expected.convertTo(reference, CV_64F);
+                result.convertTo(actual, CV_64F);
+                EXPECT_EQ(cvtest::norm(reference, actual, NORM_INF), 0.);
+            }
+            else
+                for (int channel = 0; channel < channels; ++channel)
+                {
+                    Mat plane, referenceInput, expected;
+                    extractChannel(src, plane, channel);
+                    const Mat planes[] = {plane, plane};
+                    merge(planes, 2, referenceInput);
+                    scalarWarp(referenceInput, expected, Scalar::all(values.at<double>(channel)));
+                    Mat expectedPlane, actualPlane, reference, actual;
+                    extractChannel(expected, expectedPlane, 0);
+                    extractChannel(result, actualPlane, channel);
+                    expectedPlane.convertTo(reference, CV_64F);
+                    actualPlane.convertTo(actual, CV_64F);
+                    const double tolerance = depth == CV_16F ? 1./1024. : floating ? 3e-5 : 1.;
+                    ASSERT_LE(cvtest::norm(reference, actual, NORM_INF), tolerance) << "channel=" << channel;
+                }
+        }
+    }
+}
+
+TEST(Imgproc_Warp, scalar_border_source_compatibility)
+{
+    Mat src(5, 7, CV_32FC3, Scalar::all(1)), dst;
+    Mat affine = Mat_<float>({2, 3}, {1, 0, 137, 0, 1, 137});
+    Mat perspective = Mat::eye(3, 3, CV_32F);
+    affine.copyTo(perspective.rowRange(0, 2));
+    Mat mapx(src.size(), CV_32F, Scalar(-137)), mapy = mapx.clone();
+    Mat expected(src.size(), src.type(), Scalar(0.5));
+    warpAffine(src, dst, affine, src.size(), INTER_LINEAR, BORDER_CONSTANT, 0.5);
+    EXPECT_EQ(cvtest::norm(expected, dst, NORM_INF), 0.);
+    warpPerspective(src, dst, perspective, src.size(), INTER_LINEAR, BORDER_CONSTANT, 0.5);
+    EXPECT_EQ(cvtest::norm(expected, dst, NORM_INF), 0.);
+    remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_CONSTANT, 0.5);
+    EXPECT_EQ(cvtest::norm(expected, dst, NORM_INF), 0.);
+    warpAffine(src, dst, affine, src.size(), INTER_LINEAR, BORDER_CONSTANT, 0);
+    EXPECT_EQ(cvtest::norm(dst, NORM_INF), 0.);
+    warpPerspective(src, dst, perspective, src.size(), INTER_LINEAR, BORDER_CONSTANT, {});
+    EXPECT_EQ(cvtest::norm(dst, NORM_INF), 0.);
+    remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_CONSTANT, {});
+    EXPECT_EQ(cvtest::norm(dst, NORM_INF), 0.);
+}
+
+TEST(Imgproc_Warp, border_values_validation)
+{
+    Mat src(5, 7, CV_32FC(20)), dst;
+    Mat affine = Mat::eye(2, 3, CV_32F), perspective = Mat::eye(3, 3, CV_32F);
+    Mat mapx(src.size(), CV_32F, Scalar(0)), mapy = mapx.clone();
+    const Mat invalid[] = {Mat(), Mat(1, 19, CV_64F), Mat(2, 10, CV_64F), Mat(1, 10, CV_64FC2)};
+    for (const Mat& values : invalid)
+    {
+        EXPECT_THROW(warpAffineWithBorderValues(src, dst, affine, src.size(), values), cv::Exception);
+        EXPECT_THROW(warpPerspectiveWithBorderValues(src, dst, perspective, src.size(), values), cv::Exception);
+        EXPECT_THROW(remapWithBorderValues(src, dst, mapx, mapy, INTER_LINEAR, values), cv::Exception);
+    }
+}
+
+TEST(Imgproc_Warp, border_values_nonconstant)
+{
+    RNG rng(137);
+    Mat src(13, 17, CV_32FC(20)), values(1, 20, CV_64F);
+    rng.fill(src, RNG::UNIFORM, 0.f, 1.f);
+    rng.fill(values, RNG::UNIFORM, -1., 1.);
+    Mat affine = getRotationMatrix2D(Point2f(7.5f, 5.5f), 17., 1.);
+    Mat perspective = Mat::eye(3, 3, CV_64F);
+    affine.copyTo(perspective.rowRange(0, 2));
+    Mat mapx(src.size(), CV_32F), mapy(src.size(), CV_32F);
+    rng.fill(mapx, RNG::UNIFORM, -5.f, 22.f);
+    rng.fill(mapy, RNG::UNIFORM, -5.f, 18.f);
+    for (int interpolation : {INTER_LINEAR, INTER_CUBIC})
+    for (int border : {BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101, BORDER_WRAP, BORDER_TRANSPARENT})
+    for (int operation = 0; operation < 3; ++operation)
+    {
+        Mat expected(src.size(), src.type()), result;
+        expected.reshape(1).setTo(0.125);
+        expected.copyTo(result);
+        if (operation == 0)
+        {
+            warpAffine(src, expected, affine, src.size(), interpolation, border);
+            warpAffineWithBorderValues(src, result, affine, src.size(), values, interpolation, border);
+        }
+        else if (operation == 1)
+        {
+            warpPerspective(src, expected, perspective, src.size(), interpolation, border);
+            warpPerspectiveWithBorderValues(src, result, perspective, src.size(), values, interpolation, border);
+        }
+        else
+        {
+            remap(src, expected, mapx, mapy, interpolation, border);
+            remapWithBorderValues(src, result, mapx, mapy, interpolation, values, border);
+        }
+        EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
+    }
+}
+
+TEST(Imgproc_Warp, border_values_nan)
+{
+    Mat src(5, 7, CV_32FC(20)), values(1, 20, CV_64F), dst;
+    src.reshape(1).setTo(0.);
+    for (int channel = 0; channel < 20; ++channel)
+        values.at<double>(channel) = channel == 5 || channel == 17 ? std::numeric_limits<double>::quiet_NaN()
+                                                                 : channel*0.125;
+    Mat affine = Mat_<float>({2, 3}, {1, 0, 137, 0, 1, 137});
+    Mat perspective = Mat::eye(3, 3, CV_32F);
+    affine.copyTo(perspective.rowRange(0, 2));
+    Mat mapx(2, 3, CV_32F, Scalar(-137)), mapy = mapx.clone();
+    for (int interpolation : {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
+    for (int operation = 0; operation < 3; ++operation)
+    {
+        if (operation == 0)
+            warpAffineWithBorderValues(src, dst, affine, mapx.size(), values, interpolation);
+        else if (operation == 1)
+            warpPerspectiveWithBorderValues(src, dst, perspective, mapx.size(), values, interpolation);
+        else
+            remapWithBorderValues(src, dst, mapx, mapy, interpolation, values);
+        for (int row = 0; row < dst.rows; ++row)
+        for (int column = 0; column < dst.cols; ++column)
+        for (int channel = 0; channel < 20; ++channel)
+        {
+            const float actual = dst.ptr<float>(row, column)[channel];
+            if (channel == 5 || channel == 17)
+                EXPECT_TRUE(std::isnan(actual));
+            else
+                EXPECT_EQ(actual, float(values.at<double>(channel)));
+        }
+    }
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});

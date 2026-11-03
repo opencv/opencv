@@ -17,6 +17,7 @@ typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWar
 typedef TestBaseWithParam< tuple<Size, InterTypeExtended, BorderMode, MatType> > TestRemap;
 typedef TestBaseWithParam< tuple<Size, HighChannelInterType, BorderMode, MatType> > TestWarpHighChannelInterpolation;
 typedef TestBaseWithParam< tuple<Size, HalfInterType, int> > TestWarpHalf;
+typedef TestBaseWithParam< tuple<Size, MatType> > TestWarpBorderValues;
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, bool relative = false );
 
@@ -108,6 +109,26 @@ PERF_TEST_P(TestWarpHalf, WarpAffine,
     declare.in(src).out(dst);
     TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation);
     SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(TestWarpBorderValues, WarpAffine,
+            Combine(Values(Size(256, 256), Size(512, 512), Size(1024, 1024)),
+                    Values(CV_8UC(5), CV_8UC(20), CV_32FC(5), CV_32FC(20), CV_16FC(20))))
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    const int channels = CV_MAT_CN(type);
+    Mat wide(size, CV_MAKETYPE(CV_32F, channels)), src, dst(size, type), values(1, channels, CV_64F);
+    theRNG().fill(wide, RNG::UNIFORM, 0.f, 1.f);
+    wide.convertTo(src, CV_MAT_DEPTH(type), CV_MAT_DEPTH(type) == CV_8U ? 255. : 1.);
+    for (int channel = 0; channel < channels; ++channel)
+        values.at<double>(channel) = channel*(CV_MAT_DEPTH(type) == CV_8U ? 3. : 1./32.);
+    Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
+    declare.in(src).out(dst);
+    TEST_CYCLE() warpAffineWithBorderValues(src, dst, matrix, size, values);
+    Mat check;
+    dst.convertTo(check, CV_32F);
+    SANITY_CHECK(check, 1./1024.);
 }
 
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,

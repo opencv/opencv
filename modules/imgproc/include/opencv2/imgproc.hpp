@@ -2172,6 +2172,27 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               const Scalar& borderValue = Scalar(),
                               AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
+/** @brief Applies an affine transformation with one border value per channel.
+
+The transformation and border modes match #warpAffine. borderValues is used for #BORDER_CONSTANT;
+it is a single-channel row or column vector containing exactly src.channels() values.
+Values are converted to the source depth before interpolation.
+
+@param src Input image.
+@param dst Output image with the same type as src.
+@param M 2-by-3 transformation matrix.
+@param dsize Output image size.
+@param borderValues Vector of constant border values, one per source channel.
+@param flags Interpolation method and optional #WARP_INVERSE_MAP flag.
+@param borderMode Pixel extrapolation method from #BorderTypes.
+@param hint Implementation modification flags from #AlgorithmHint.
+@sa warpAffine, remapWithBorderValues
+*/
+CV_EXPORTS_W void warpAffineWithBorderValues(InputArray src, OutputArray dst, InputArray M, Size dsize,
+                                             InputArray borderValues, int flags = INTER_LINEAR,
+                                             int borderMode = BORDER_CONSTANT,
+                                             AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
+
 /** @example samples/cpp/snippets/warpPerspective_demo.cpp
 An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
 */
@@ -2209,6 +2230,27 @@ CV_EXPORTS_W void warpPerspective( InputArray src, OutputArray dst,
                                    int borderMode = BORDER_CONSTANT,
                                    const Scalar& borderValue = Scalar(),
                                    AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
+
+/** @brief Applies a perspective transformation with one border value per channel.
+
+The transformation and border modes match #warpPerspective. borderValues is used for #BORDER_CONSTANT;
+it is a single-channel row or column vector containing exactly src.channels() values.
+Values are converted to the source depth before interpolation.
+
+@param src Input image.
+@param dst Output image with the same type as src.
+@param M 3-by-3 transformation matrix.
+@param dsize Output image size.
+@param borderValues Vector of constant border values, one per source channel.
+@param flags Interpolation method and optional #WARP_INVERSE_MAP flag.
+@param borderMode Pixel extrapolation method from #BorderTypes.
+@param hint Implementation modification flags from #AlgorithmHint.
+@sa warpPerspective, remapWithBorderValues
+*/
+CV_EXPORTS_W void warpPerspectiveWithBorderValues(InputArray src, OutputArray dst, InputArray M, Size dsize,
+                                             InputArray borderValues, int flags = INTER_LINEAR,
+                                             int borderMode = BORDER_CONSTANT,
+                                             AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Applies a generic geometrical transformation to an image.
 
@@ -2260,6 +2302,27 @@ CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          int interpolation, int borderMode = BORDER_CONSTANT,
                          const Scalar& borderValue = Scalar(),
                          AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
+
+/** @brief Remaps an image with one border value per channel.
+
+The interpolation, map layouts, and border modes match #remap. borderValues is used for #BORDER_CONSTANT;
+it is a single-channel row or column vector containing exactly src.channels() values.
+Values are converted to the source depth before interpolation.
+
+@param src Input image.
+@param dst Output image with the same type as src and the same size as map1.
+@param map1 First coordinate map, as in #remap.
+@param map2 Second coordinate map, as in #remap.
+@param interpolation Interpolation method, optionally combined with #WARP_RELATIVE_MAP.
+@param borderValues Vector of constant border values, one per source channel.
+@param borderMode Pixel extrapolation method from #BorderTypes.
+@param hint Implementation modification flags from #AlgorithmHint.
+@sa remap, warpAffineWithBorderValues, warpPerspectiveWithBorderValues
+*/
+CV_EXPORTS_W void remapWithBorderValues(InputArray src, OutputArray dst, InputArray map1, InputArray map2,
+                                       int interpolation, InputArray borderValues,
+                                       int borderMode = BORDER_CONSTANT,
+                                       AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Converts image transformation maps from one representation to another.
 
