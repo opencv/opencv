@@ -6,6 +6,8 @@
 
 #include "opencv2/core/hal/intrin.hpp"
 
+#include <climits>
+
 namespace cv {
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -56,6 +58,15 @@ static inline v_float32 remapGatherF32(const short* base, const int* ofs)
     for (int k = 0; k < n; k++)
         buf[k] = (float)base[ofs[k]];
     return vx_load(buf);
+}
+
+static CV_ALWAYS_INLINE bool remapOffset32(int sy, int sx, size_t sstep, int& offset)
+{
+    const size_t uoff = (size_t)sy * sstep + (size_t)sx;
+    if (uoff > (size_t)INT_MAX)
+        return false;
+    offset = (int)uoff;
+    return true;
 }
 
 static CV_ALWAYS_INLINE void remapCorners(const short* S0, size_t sstep, const int* ofs,
@@ -153,12 +164,15 @@ static int remapBilinearC1_run(const T* S0, size_t sstep, T* D,
             }
             continue;
         }
+        bool offsetsFit = true;
         for( int k = 0; k < vlanes; k++ )
         {
             const int sx = XY[(dx + k) * 2];
             const int sy = XY[(dx + k) * 2 + 1] + off_y;
-            ofs[k] = sy * (int)sstep + sx;
+            offsetsFit = offsetsFit && remapOffset32(sy, sx, sstep, ofs[k]);
         }
+        if( !offsetsFit )
+            break;
         v_float32 s0, s1, s2, s3;
         remapCorners(S0, sstep, ofs, s0, s1, s2, s3);
 
@@ -213,12 +227,15 @@ static int remapBilinearF32_run(const float* S0, size_t sstep, float* D,
             }
             continue;
         }
+        bool offsetsFit = true;
         for( int k = 0; k < vlanes; k++ )
         {
             const int sx = XY[(dx + k) * 2];
             const int sy = XY[(dx + k) * 2 + 1] + off_y;
-            ofs[k] = sy * (int)sstep + sx;
+            offsetsFit = offsetsFit && remapOffset32(sy, sx, sstep, ofs[k]);
         }
+        if( !offsetsFit )
+            break;
         v_float32 s0 = remapGatherF32(S0,     ofs);
         v_float32 s1 = remapGatherF32(S0 + 1, ofs);
         v_float32 s2 = remapGatherF32(S1,     ofs);
@@ -281,7 +298,7 @@ static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
     const int dx0 = dx;
     const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
     const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
+    size_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
     float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];
     for( ; dx <= dwidth - vlanes; dx += vlanes )
     {
@@ -291,8 +308,8 @@ static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
             const unsigned sx = (unsigned)(XY[(dx + k) * 2] - 1);
             const unsigned sy = (unsigned)(XY[(dx + k) * 2 + 1] - 1 + off_y);
             if( sx >= width1 || sy >= height1 ) { allIn = false; break; }
-            ofs[k] = (int)((XY[(dx + k) * 2 + 1] - 1 + off_y) * (int)sstep
-                          + (XY[(dx + k) * 2] - 1));
+            ofs[k] = (size_t)(XY[(dx + k) * 2 + 1] - 1 + off_y) * sstep
+                   + (size_t)(XY[(dx + k) * 2] - 1);
         }
         if( !allIn )
             break;
@@ -307,7 +324,7 @@ static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
         v_float32 acc = vx_setzero_f32();
         for( int r = 0; r < 4; r++ )
         {
-            const int roff = r * (int)sstep;
+            const size_t roff = (size_t)r * sstep;
             const v_float32 vyr = selectV4(r, vy0, vy1, vy2, vy3);
             for( int c = 0; c < 4; c++ )
             {
