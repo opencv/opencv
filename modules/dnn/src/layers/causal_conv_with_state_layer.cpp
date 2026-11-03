@@ -32,7 +32,9 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE { return backendId == DNN_BACKEND_OPENCV; }
 
-    static bool present(const std::vector<Mat>& in, size_t i) { return in.size() > i && !in[i].empty(); }
+    // optional inputs arrive as empty Mats / MatShapes
+    template<typename T>
+    static bool present(const std::vector<T>& in, size_t i) { return in.size() > i && !in[i].empty(); }
 
     void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int,
                   std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
@@ -52,9 +54,12 @@ public:
         CV_CheckEQ(inputs[1][0], C, "weight must have one filter per input channel");
         CV_CheckEQ(inputs[1][1], 1, "weight must be [channels, 1, kernel]");
         CV_CheckGE(K, 1, "kernel size must be positive");
-        if (inputs.size() > 2 && !inputs[2].empty())
-            CV_CheckEQ(inputs[2].total(), (size_t)C, "bias must be [channels]");
-        if (inputs.size() > 3 && !inputs[3].empty())
+        if (present(inputs, 2))
+        {
+            CV_CheckEQ(inputs[2].dims, 1, "bias must be [channels]");
+            CV_CheckEQ(inputs[2][0], C, "bias must be [channels]");
+        }
+        if (present(inputs, 3))
         {
             CV_CheckEQ(inputs[3].dims, 3, "past_state must be [batch, channels, kernel - 1]");
             CV_CheckEQ(inputs[3][0], B, "past_state must be [batch, channels, kernel - 1]");
@@ -72,6 +77,11 @@ public:
         inputs_arr.getMatVector(rawIn);
         outputs_arr.getMatVector(rawOut);
 
+        // weight, bias and past_state share the input type, checked before the fp16 conversion below
+        for (size_t i = 1; i < rawIn.size(); ++i)
+            if (!rawIn[i].empty())
+                CV_CheckTypeEQ(rawIn[i].type(), rawIn[0].type(), "weight, bias and past_state must have the input type");
+
         const bool fp16 = rawIn[0].depth() == CV_16F;
         std::vector<Mat> in32, out32;
         if (fp16)
@@ -85,10 +95,6 @@ public:
         }
         std::vector<Mat>& inputs  = fp16 ? in32  : rawIn;
         std::vector<Mat>& outputs = fp16 ? out32 : rawOut;
-        // the kernel reads weight, bias and past_state as float
-        for (size_t i = 1; i < inputs.size(); ++i)
-            if (!inputs[i].empty())
-                CV_CheckTypeEQ(inputs[i].type(), CV_32F, "weight, bias and past_state must have the input type");
 
         const Mat& input  = inputs[0];
         const Mat& weight = inputs[1];
