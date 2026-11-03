@@ -3898,6 +3898,12 @@ CASE(test_dft_irfft)
     SKIP;
 CASE(test_dft_irfft_opset19)
     SKIP;
+CASE(test_tensorscatter)
+    SKIP;
+CASE(test_tensorscatter_3d)
+    SKIP;
+CASE(test_tensorscatter_circular)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH
