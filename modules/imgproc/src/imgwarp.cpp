@@ -851,7 +851,24 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*cn;
-                        for(int k = 0; k < cn; k++ )
+                        int k = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+                        if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
+                        {
+                            const int lanes = VTraits<v_float32>::vlanes();
+                            const v_float32 w0 = vx_setall_f32(w[0]), w1 = vx_setall_f32(w[1]);
+                            const v_float32 w2 = vx_setall_f32(w[2]), w3 = vx_setall_f32(w[3]);
+                            for (; k <= cn - lanes; k += lanes)
+                            {
+                                v_float32 sum = v_add(v_mul(vx_load(S + k), w0),
+                                                     v_mul(vx_load(S + cn + k), w1));
+                                sum = v_add(sum, v_mul(vx_load(S + sstep + k), w2));
+                                sum = v_add(sum, v_mul(vx_load(S + sstep + cn + k), w3));
+                                vx_store(D + k, sum);
+                            }
+                        }
+#endif
+                        for(; k < cn; k++ )
                         {
                             WT t0 = S[k]*w[0] + S[k+cn]*w[1] + S[sstep+k]*w[2] + S[sstep+k+cn]*w[3];
                             D[k] = castOp(t0);
