@@ -266,7 +266,7 @@ template<typename T, typename VT, bool realInput>
 static void firstStage3_vec(const T* x, int M, const int* gtab, T* re, T* im, bool conj)
 {
     const int VL = VTraits<VT>::vlanes();
-    const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0);
+    [[maybe_unused]] const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0); // one is unused depending on realInput
     const VT s120 = v_setall_((T)DftConst<T>::sin120), half = v_setall_((T)0.5);
     T bufr[3*VTraits<VT>::max_nlanes], bufi[3*VTraits<VT>::max_nlanes];
     int j = 0;
@@ -301,7 +301,7 @@ template<typename T, typename VT, bool realInput>
 static void firstStage5_vec(const T* x, int M, const int* gtab, T* re, T* im, bool conj)
 {
     const int VL = VTraits<VT>::vlanes();
-    const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0);
+    [[maybe_unused]] const VT imsign = v_signmask_(conj, (T)0), zero = v_setall_((T)0); // one is unused depending on realInput
     const VT c5 = v_setall_((T)DftConst<T>::fft5_2), s1 = v_setall_((T)DftConst<T>::sin72);
     const VT s2 = v_setall_((T)DftConst<T>::sin144), quarter = v_setall_((T)0.25);
     // outputs 0..3 lane-major in buf (4 per lane), output 4 in buf4
@@ -800,7 +800,8 @@ void radix4Last_scalar(const DftStage& st, const T* sre, const T* sim, T* dst, T
 // the W8 rotations (the costly part); the even legs (0,2,4,6) are pure additions and are merged
 // into the outputs as they are produced. LAST: write the interleaved, scaled output (fused last).
 template<typename T, bool LAST>
-void radix8_scalar(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim, T* dst, T rs, T is)
+void radix8_scalar(const DftStage& st, const T* sre, const T* sim, [[maybe_unused]] T* dre, [[maybe_unused]] T* dim,
+                   [[maybe_unused]] T* dst, [[maybe_unused]] T rs, [[maybe_unused]] T is)
 {
     const T* twr = (const T*)st.tw_re; const T* twi = (const T*)st.tw_im;
     int L = st.span, G = st.ngroups, ts = st.tw_stride;
