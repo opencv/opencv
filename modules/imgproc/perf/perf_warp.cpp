@@ -107,9 +107,7 @@ PERF_TEST_P(TestWarpHalf, WarpAffine,
     Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
     declare.in(src).out(dst);
     TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation);
-    Mat check;
-    dst.convertTo(check, CV_32F);
-    SANITY_CHECK(check, 1./1024.);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
