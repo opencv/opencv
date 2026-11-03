@@ -227,9 +227,6 @@ static short BilinearTab_iC4_buf[INTER_TAB_SIZE2+2][2][8];
 static short (*BilinearTab_iC4)[2][8] = (short (*)[2][8])alignPtr(BilinearTab_iC4_buf, 16);
 #endif
 
-static float BicubicTab_f[INTER_TAB_SIZE2][4][4];
-static short BicubicTab_i[INTER_TAB_SIZE2][4][4];
-
 static float Lanczos4Tab_f[INTER_TAB_SIZE2][8][8];
 static short Lanczos4Tab_i[INTER_TAB_SIZE2][8][8];
 
@@ -237,16 +234,6 @@ static inline void interpolateLinear( float x, float* coeffs )
 {
     coeffs[0] = 1.f - x;
     coeffs[1] = x;
-}
-
-static inline void interpolateCubic( float x, float* coeffs )
-{
-    const float A = -0.75f;
-
-    coeffs[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
-    coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
-    coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
 }
 
 static inline void interpolateLanczos4( float x, float* coeffs )
@@ -285,11 +272,6 @@ static void initInterTab1D(int method, float* tab, int tabsz)
         for( int i = 0; i < tabsz; i++, tab += 2 )
             interpolateLinear( i*scale, tab );
     }
-    else if( method == INTER_CUBIC )
-    {
-        for( int i = 0; i < tabsz; i++, tab += 4 )
-            interpolateCubic( i*scale, tab );
-    }
     else if( method == INTER_LANCZOS4 )
     {
         for( int i = 0; i < tabsz; i++, tab += 8 )
@@ -309,8 +291,6 @@ static const void* initInterTab2D( int method, bool fixpt )
     int ksize = 0;
     if( method == INTER_LINEAR )
         tab = BilinearTab_f[0][0], itab = BilinearTab_i[0][0], ksize=2;
-    else if( method == INTER_CUBIC )
-        tab = BicubicTab_f[0][0], itab = BicubicTab_i[0][0], ksize=4;
     else if( method == INTER_LANCZOS4 )
         tab = Lanczos4Tab_f[0][0], itab = Lanczos4Tab_i[0][0], ksize=8;
     else
@@ -382,8 +362,6 @@ static bool initAllInterTab2D()
 {
     return  initInterTab2D( INTER_LINEAR, false ) &&
             initInterTab2D( INTER_LINEAR, true ) &&
-            initInterTab2D( INTER_CUBIC, false ) &&
-            initInterTab2D( INTER_CUBIC, true ) &&
             initInterTab2D( INTER_LANCZOS4, false ) &&
             initInterTab2D( INTER_LANCZOS4, true );
 }
@@ -773,36 +751,17 @@ struct RemapBilinearVecC1
 using RemapBilinearC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, int);
 RemapBilinearC1Fn remapBilinearC1_fn();
 
-template<>
-struct RemapBilinearVecC1<float, float>
+template<typename T>
+struct RemapBilinearVecC1<T, float>
 {
-    int operator()(const float* S0, size_t sstep, float* D, const short* XY,
+    int operator()(const T* S0, size_t sstep, T* D, const short* XY,
                    const ushort* FXY, const float* wtab, int dx, int X1, int off_y) const
     {
+        const int depth = DataType<T>::depth;
+        if (depth != CV_32F && depth != CV_16U && depth != CV_16S)
+            return 0;
         static const RemapBilinearC1Fn fn = remapBilinearC1_fn();
-        return fn(CV_32F, (const uchar*)S0, sstep, (uchar*)D, XY, FXY, wtab, dx, X1, off_y);
-    }
-};
-
-template<>
-struct RemapBilinearVecC1<ushort, float>
-{
-    int operator()(const ushort* S0, size_t sstep, ushort* D, const short* XY,
-                   const ushort* FXY, const float* wtab, int dx, int X1, int off_y) const
-    {
-        static const RemapBilinearC1Fn fn = remapBilinearC1_fn();
-        return fn(CV_16U, (const uchar*)S0, sstep, (uchar*)D, XY, FXY, wtab, dx, X1, off_y);
-    }
-};
-
-template<>
-struct RemapBilinearVecC1<short, float>
-{
-    int operator()(const short* S0, size_t sstep, short* D, const short* XY,
-                   const ushort* FXY, const float* wtab, int dx, int X1, int off_y) const
-    {
-        static const RemapBilinearC1Fn fn = remapBilinearC1_fn();
-        return fn(CV_16S, (const uchar*)S0, sstep, (uchar*)D, XY, FXY, wtab, dx, X1, off_y);
+        return fn(depth, (const uchar*)S0, sstep, (uchar*)D, XY, FXY, wtab, dx, X1, off_y);
     }
 };
 
@@ -1083,111 +1042,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
 
 using RemapWideC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, unsigned, unsigned, int);
 RemapWideC1Fn remapLanczos4C1_fn();
-
-template<class CastOp, typename AT, int ONE, bool isRelative>
-static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
-                          const Mat& _fxy, const void* _wtab,
-                          int borderType, const Scalar& _borderValue, const Point& _offset )
-{
-    typedef typename CastOp::rtype T;
-    typedef typename CastOp::type1 WT;
-    Size ssize = _src.size(), dsize = _dst.size();
-    const int cn = _src.channels();
-    const AT* wtab = (const AT*)_wtab;
-    const T* S0 = _src.ptr<T>();
-    size_t sstep = _src.step/sizeof(S0[0]);
-    T cval[CV_CN_MAX];
-    CastOp castOp;
-
-    for(int k = 0; k < cn; k++ )
-        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
-
-    int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
-
-    unsigned width1 = std::max(ssize.width-3, 0), height1 = std::max(ssize.height-3, 0);
-
-    if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
-    {
-        dsize.width *= dsize.height;
-        dsize.height = 1;
-    }
-
-    for(int dy = 0; dy < dsize.height; dy++ )
-    {
-        T* D = _dst.ptr<T>(dy);
-        const short* XY = _xy.ptr<short>(dy);
-        const ushort* FXY = _fxy.ptr<ushort>(dy);
-        const int off_y = isRelative ? (_offset.y+dy) : 0;
-        for(int dx = 0; dx < dsize.width; dx++, D += cn )
-        {
-            const int off_x = isRelative ? (_offset.x+dx) : 0;
-            int sx = XY[dx*2]-1+off_x, sy = XY[dx*2+1]-1+off_y;
-            const AT* w = wtab + FXY[dx]*16;
-            if( (unsigned)sx < width1 && (unsigned)sy < height1 )
-            {
-                const T* S = S0 + sy*sstep + sx*cn;
-                for(int k = 0; k < cn; k++ )
-                {
-                    WT sum = S[0]*w[0] + S[cn]*w[1] + S[cn*2]*w[2] + S[cn*3]*w[3];
-                    S += sstep;
-                    sum += S[0]*w[4] + S[cn]*w[5] + S[cn*2]*w[6] + S[cn*3]*w[7];
-                    S += sstep;
-                    sum += S[0]*w[8] + S[cn]*w[9] + S[cn*2]*w[10] + S[cn*3]*w[11];
-                    S += sstep;
-                    sum += S[0]*w[12] + S[cn]*w[13] + S[cn*2]*w[14] + S[cn*3]*w[15];
-                    S -= sstep * 3 - 1;
-                    D[k] = castOp(sum);
-                }
-            }
-            else
-            {
-                int x[4], y[4];
-                if( borderType == BORDER_TRANSPARENT &&
-                    ((unsigned)(sx+1) >= (unsigned)ssize.width ||
-                    (unsigned)(sy+1) >= (unsigned)ssize.height) )
-                    continue;
-
-                if( borderType1 == BORDER_CONSTANT &&
-                    (sx >= ssize.width || sx+4 <= 0 ||
-                    sy >= ssize.height || sy+4 <= 0))
-                {
-                    for(int k = 0; k < cn; k++ )
-                        D[k] = cval[k];
-                    continue;
-                }
-
-                for(int i = 0; i < 4; i++ )
-                {
-                    x[i] = borderInterpolate(sx + i, ssize.width, borderType1)*cn;
-                    y[i] = borderInterpolate(sy + i, ssize.height, borderType1);
-                }
-
-                for(int k = 0; k < cn; k++, S0++, w -= 16 )
-                {
-                    WT cv = cval[k], sum = cv*ONE;
-                    for(int i = 0; i < 4; i++, w += 4 )
-                    {
-                        int yi = y[i];
-                        if( yi < 0 )
-                            continue;
-                        const T* S = S0 + yi*sstep;
-                        if( x[0] >= 0 )
-                            sum += (S[x[0]] - cv)*w[0];
-                        if( x[1] >= 0 )
-                            sum += (S[x[1]] - cv)*w[1];
-                        if( x[2] >= 0 )
-                            sum += (S[x[2]] - cv)*w[2];
-                        if( x[3] >= 0 )
-                            sum += (S[x[3]] - cv)*w[3];
-                    }
-                    D[k] = castOp(sum);
-                }
-                S0 -= cn;
-            }
-        }
-    }
-}
-
 
 template<typename T, typename AT>
 struct RemapLanczos4VecC1
@@ -1859,24 +1713,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
         }
     };
 
-    static RemapFunc cubic_tab[2][CV_DEPTH_MAX] =
-    {
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, false>,
-            remapBicubic<Cast<float, short>, float, 1, false>, 0,
-            remapBicubic<Cast<float, float>, float, 1, false>,
-            remapBicubic<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, true>,
-            remapBicubic<Cast<float, short>, float, 1, true>, 0,
-            remapBicubic<Cast<float, float>, float, 1, true>,
-            remapBicubic<Cast<double, double>, float, 1, true>, 0
-        }
-    };
-
     static RemapFunc lanczos4_tab[2][CV_DEPTH_MAX] =
     {
         {
@@ -1905,10 +1741,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         if( interpolation == INTER_LINEAR )
             ifunc = linear_tab[relativeOptionIndex][depth];
-        else if( interpolation == INTER_CUBIC ){
-            ifunc = cubic_tab[relativeOptionIndex][depth];
-            CV_Assert( _src.channels() <= 4 );
-        }
+        else if( interpolation == INTER_CUBIC )
+            CV_Error(Error::StsBadArg, "Unsupported source type for INTER_CUBIC");
         else if( interpolation == INTER_LANCZOS4 ){
             ifunc = lanczos4_tab[relativeOptionIndex][depth];
             CV_Assert( _src.channels() <= 4 );

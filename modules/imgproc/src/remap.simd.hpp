@@ -33,15 +33,6 @@ int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
-static inline v_float32 remapGatherF32(const float* base, const int* ofs)
-{
-    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];
-    const int n = VTraits<v_float32>::vlanes();
-    for (int k = 0; k < n; k++)
-        buf[k] = base[ofs[k]];
-    return vx_load(buf);
-}
-
 static CV_ALWAYS_INLINE bool remapOffset32(int sy, int sx, size_t sstep, int& offset)
 {
     const size_t uoff = (size_t)sy * sstep + (size_t)sx;
@@ -99,10 +90,9 @@ static CV_ALWAYS_INLINE void remapCorners(const float* S0, size_t sstep, const i
                                           v_float32& s2, v_float32& s3)
 {
     const float* S1 = S0 + sstep;
-    s0 = remapGatherF32(S0,     ofs);
-    s1 = remapGatherF32(S0 + 1, ofs);
-    s2 = remapGatherF32(S1,     ofs);
-    s3 = remapGatherF32(S1 + 1, ofs);
+    const v_int32 vofs = vx_load(ofs);
+    v_lut_deinterleave(S0, vofs, s0, s1);
+    v_lut_deinterleave(S1, vofs, s2, s3);
 }
 
 static inline void remapStoreC1(float* D, const v_float32& res)
@@ -202,13 +192,8 @@ static inline void remapLoad8(const short* S, v_float32x4& lo, v_float32x4& hi)
     lo = v_cvt_f32(a); hi = v_cvt_f32(b);
 }
 
-static inline void remapStoreScalar(float* D, float v) { *D = v; }
 static inline void remapStoreScalar(ushort* D, float v) { *D = saturate_cast<ushort>(v); }
 static inline void remapStoreScalar(short* D, float v) { *D = saturate_cast<short>(v); }
-
-static inline v_float32x4 remapLoad4(const float* S)  { return v_load(S); }
-static inline v_float32x4 remapLoad4(const ushort* S) { return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(S))); }
-static inline v_float32x4 remapLoad4(const short* S)  { return v_cvt_f32(v_load_expand(S)); }
 
 template<typename T>
 static int remapLanczos4C1_run(const T* S0, size_t sstep, T* D, const short* XY,
