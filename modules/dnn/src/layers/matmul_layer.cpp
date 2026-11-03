@@ -7,7 +7,7 @@
 
 #include <type_traits>
 #include <opencv2/dnn/shape_utils.hpp>
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
 
 // OpenVINO backend
@@ -192,9 +192,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             thin_packed_B.clear();
 
             if (helper.batch == 1 && B_mat->type() == CV_32F &&
-                fastGemmThinEligible(helper.M, helper.N, helper.K)) {
-                thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
-                fastGemmThinPackB(helper.N, helper.K,
+                hal::fastGemmThinEligible(helper.M, helper.N, helper.K)) {
+                thin_packed_B.resize(hal::fastGemmThinPackBSize(helper.N, helper.K));
+                hal::fastGemmThinPackB(helper.N, helper.K,
                                   B_mat->ptr<const float>(),
                                   (size_t)helper.ldb0, (size_t)helper.ldb1,
                                   thin_packed_B.data());
@@ -357,24 +357,24 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                                       alpha, a, lda_mem, b, ldb_mem, gemm_beta, y, helper.ldc);
             }
             if (!done) {
-                fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+                dispatchGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                               helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                               b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
             }
         } else if (!thin_packed_B.empty()) {
-            fastGemmThin(helper.M, helper.N, helper.K, alpha,
+            hal::fastGemmThin(helper.M, helper.N, helper.K, alpha,
                          a, helper.lda0, helper.lda1,
                          thin_packed_B.data(), gemm_beta,
                          y, helper.ldc, opt.multi_thread);
         } else if (!packed_input_B.empty()) {
-            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
+            hal::fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.packed_B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           packed_input_B.data(), gemm_beta, y, helper.ldc, opt);
         } else {
             // truly dynamic B (changes every call — no packing cache available)
             const auto &B = inputs[1];
             const auto *b = B.ptr<const float>();
-            fastGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
+            dispatchGemmBatch(helper.batch, helper.A_offsets.data(), helper.B_offsets.data(), helper.C_offsets.data(),
                           helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                           b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
         }

@@ -18,7 +18,7 @@ using namespace cv::dnn::cuda4dnn;
 #include "../op_vkcom.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
 
 namespace cv { namespace dnn {
@@ -363,11 +363,11 @@ public:
                         const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
                         const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
                                                         : (int)(Y.total() / (size_t)N);
-                        if (fastGemmThinEligible(rows_thin, N, K)) {
-                            thin_packed_B.resize(fastGemmThinPackBSize(N, K));
+                        if (hal::fastGemmThinEligible(rows_thin, N, K)) {
+                            thin_packed_B.resize(hal::fastGemmThinPackBSize(N, K));
                             const size_t ldb_K = trans_b ? 1 : N;
                             const size_t ldb_N = trans_b ? K : 1;
-                            fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
+                            hal::fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
                                               ldb_K, ldb_N, thin_packed_B.data());
                         }
                     }
@@ -540,13 +540,13 @@ public:
 #endif
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             if (!thin_packed_B.empty()) {
-                fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
+                hal::fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
                              thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
             } else {
-                fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
+                hal::fastGemm(trans_a, rows, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
             }
         } else {
-            fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
+            dispatchGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
         fusion.run(Y);
     }

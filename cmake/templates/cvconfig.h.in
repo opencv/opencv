@@ -141,6 +141,9 @@
 /* Lapack */
 #cmakedefine HAVE_LAPACK
 
+/* Lapack is the built-in reference copy (3rdparty/clapack) */
+#cmakedefine HAVE_LAPACK_BUILTIN
+
 /* Library was compiled with functions instrumentation */
 #cmakedefine ENABLE_INSTRUMENTATION
 

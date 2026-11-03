@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/private/fast_gemm.hpp"
 
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
@@ -283,6 +284,11 @@ void gemm32f(const float* src1, size_t src1_step, const float* src2, size_t src2
 {
     CV_INSTRUMENT_REGION();
     CALL_HAL(gemm32f, cv_hal_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
+    if (fastGemm32f(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags))
+        return;
+#ifdef HAVE_LAPACK_BUILTIN
+    CALL_HAL(gemm32f, lapack_gemm32f, src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags)
+#endif
 #ifdef CV_GEMM_BASELINE_ONLY
     CV_CPU_CALL_BASELINE(gemm32f, (src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags));
 #else
@@ -331,6 +337,33 @@ void gemm64fc(const double* src1, size_t src1_step, const double* src2, size_t s
     CV_CPU_DISPATCH(gemm64fc, (src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m_a, n_a, n_d, flags),
         CV_CPU_DISPATCH_MODES_ALL);
 #endif
+}
+
+void gemm(int type, const void* src1, size_t src1_step, const void* src2, size_t src2_step,
+          double alpha, const void* src3, size_t src3_step, double beta, void* dst, size_t dst_step,
+          int m_a, int n_a, int n_d, int flags)
+{
+    switch (type)
+    {
+    case CV_32FC1:
+        gemm32f((const float*)src1, src1_step, (const float*)src2, src2_step, (float)alpha,
+                (const float*)src3, src3_step, (float)beta, (float*)dst, dst_step, m_a, n_a, n_d, flags);
+        break;
+    case CV_64FC1:
+        gemm64f((const double*)src1, src1_step, (const double*)src2, src2_step, alpha,
+                (const double*)src3, src3_step, beta, (double*)dst, dst_step, m_a, n_a, n_d, flags);
+        break;
+    case CV_32FC2:
+        gemm32fc((const float*)src1, src1_step, (const float*)src2, src2_step, (float)alpha,
+                 (const float*)src3, src3_step, (float)beta, (float*)dst, dst_step, m_a, n_a, n_d, flags);
+        break;
+    case CV_64FC2:
+        gemm64fc((const double*)src1, src1_step, (const double*)src2, src2_step, alpha,
+                 (const double*)src3, src3_step, beta, (double*)dst, dst_step, m_a, n_a, n_d, flags);
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "gemm supports only CV_32FC1, CV_64FC1, CV_32FC2 and CV_64FC2");
+    }
 }
 
 } // namespace hal
@@ -401,29 +434,8 @@ void gemm(InputArray matA, InputArray matB, double alpha,
         DProxyPtr = &DProxy;
     }
 
-    if( type == CV_32FC1 )
-        hal::gemm32f(A.ptr<float>(), A.step, B.ptr<float>(), B.step, static_cast<float>(alpha),
-                     C.ptr<float>(), C.step, static_cast<float>(beta),
-                     DProxyPtr->ptr<float>(), DProxyPtr->step,
-                     a_size.height, a_size.width, DProxyPtr->cols, flags);
-    else if( type == CV_64FC1 )
-        hal::gemm64f(A.ptr<double>(), A.step, B.ptr<double>(), B.step, alpha,
-                     C.ptr<double>(), C.step, beta,
-                     DProxyPtr->ptr<double>(), DProxyPtr->step,
-                     a_size.height, a_size.width, DProxyPtr->cols, flags);
-    else if( type == CV_32FC2 )
-        hal::gemm32fc(A.ptr<float>(), A.step, B.ptr<float>(), B.step, static_cast<float>(alpha),
-                      C.ptr<float>(), C.step, static_cast<float>(beta),
-                      DProxyPtr->ptr<float>(), DProxyPtr->step,
-                      a_size.height, a_size.width, DProxyPtr->cols, flags);
-    else
-    {
-        CV_Assert( type == CV_64FC2 );
-        hal::gemm64fc(A.ptr<double>(), A.step, B.ptr<double>(), B.step, alpha,
-                      C.ptr<double>(), C.step, beta,
-                      DProxyPtr->ptr<double>(), DProxyPtr->step,
-                      a_size.height, a_size.width, DProxyPtr->cols, flags);
-    }
+    hal::gemm(type, A.data, A.step, B.data, B.step, alpha, C.data, C.step, beta,
+              DProxyPtr->data, DProxyPtr->step, a_size.height, a_size.width, DProxyPtr->cols, flags);
 
     if(DProxyPtr != &D)
         DProxyPtr->copyTo(D);
