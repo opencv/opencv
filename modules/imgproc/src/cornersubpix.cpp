@@ -100,8 +100,10 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
         for( int pt_i = range.start; pt_i < range.end; pt_i++ )
         {
             Point2f cT = corners[pt_i], cI = cT;
-            if( !Rect2f(0, 0, (float)src.cols, (float)src.rows).contains(cT) )
+            if (!Rect(0, 0, src.cols, src.rows).contains(cT))
+            {
                 CV_Error(Error::StsOutOfRange, "cornerSubPix: initial corner is outside the image.");
+            }
             int iter = 0;
             double err = 0;
 
