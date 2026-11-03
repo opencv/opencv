@@ -8627,14 +8627,179 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 
 }
 
+#if CV_SIMD128
+template<typename T>
+static inline v_float32x4 bicubicLoadChannels(const T* src)
+{
+    if constexpr (std::is_same_v<T, uchar>)
+        return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src)));
+    else if constexpr (std::is_same_v<T, ushort>)
+        return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src)));
+    else if constexpr (std::is_same_v<T, short>)
+        return v_cvt_f32(v_load_expand(src));
+    else
+        return v_load(src);
+}
+
+template<typename T>
+static inline void bicubicStoreChannels(T* dst, const v_float32x4& value)
+{
+    if constexpr (std::is_same_v<T, float>)
+        v_store(dst, value);
+    else
+    {
+        const v_int32x4 rounded = v_round(value);
+        if constexpr (std::is_same_v<T, uchar>)
+        {
+            const v_uint16x8 words = v_pack_u(rounded, rounded);
+            const unsigned packed = v_extract_n<0>(v_reinterpret_as_u32(v_pack(words, words)));
+            std::memcpy(dst, &packed, sizeof(packed));
+        }
+        else if constexpr (std::is_same_v<T, ushort>)
+            v_store_low(dst, v_pack_u(rounded, rounded));
+        else
+            v_store_low(dst, v_pack(rounded, rounded));
+    }
+}
+#endif
+
+template<typename T>
+static void bicubicWarpChannels(const float* x, const float* y, int len,
+                                const void* source, size_t step, Size size, void* destination,
+                                const float* params, int borderType, const void* borderValue, int channels)
+{
+    using Acc = std::conditional_t<std::is_same_v<T, double>, double, float>;
+    const float coefficient = params ? *params : -0.75f;
+    const T* fill = static_cast<const T*>(borderValue);
+    T* dst = static_cast<T*>(destination);
+    const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
+    for (int i = 0; i < len; ++i, dst += channels)
+    {
+        const float sx = std::clamp(x[i], float(-std::max(size.width, 16)), float(std::max(size.width, 16)*2));
+        const float sy = std::clamp(y[i], float(-std::max(size.height, 16)), float(std::max(size.height, 16)*2));
+        const int left = cvFloor(sx) - 1, top = cvFloor(sy) - 1;
+        if ((left >= size.width || left + 4 <= 0 || top >= size.height || top + 4 <= 0) &&
+            (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
+        {
+            if (borderType == BORDER_CONSTANT)
+                std::copy(fill, fill + channels, dst);
+            continue;
+        }
+        float wx[4], wy[4];
+        bicubicWeights(sx - (left + 1), coefficient, wx[0], wx[1], wx[2], wx[3]);
+        bicubicWeights(sy - (top + 1), coefficient, wy[0], wy[1], wy[2], wy[3]);
+        if (left >= 0 && left + 3 < size.width && top >= 0 && top + 3 < size.height)
+        {
+            const T* rows[4];
+            for (int row = 0; row < 4; ++row)
+                rows[row] = reinterpret_cast<const T*>(static_cast<const uchar*>(source) + size_t(top + row)*step)
+                            + left*channels;
+            int channel = 0;
+#if CV_SIMD_FP16
+            if constexpr (std::is_same_v<T, uchar>)
+            {
+                const v_float16x8 w0 = v_setall_f16(hfloat(wx[0])), w1 = v_setall_f16(hfloat(wx[1]));
+                const v_float16x8 w2 = v_setall_f16(hfloat(wx[2])), w3 = v_setall_f16(hfloat(wx[3]));
+                for (; channel <= channels - 8; channel += 8)
+                {
+                    v_float16x8 sum = v_setall_f16(hfloat(0.f));
+                    for (int row = 0; row < 4; ++row)
+                    {
+                        const uchar* ptr = rows[row] + channel;
+                        v_float16x8 horizontal = v_mul(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr))), w0);
+                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels))), w1, horizontal);
+                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels*2))), w2, horizontal);
+                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels*3))), w3, horizontal);
+                        sum = v_fma(horizontal, v_setall_f16(hfloat(wy[row])), sum);
+                    }
+                    const v_int16x8 rounded = v_round(sum);
+                    v_store_low(dst + channel, v_pack_u(rounded, rounded));
+                }
+            }
+#endif
+#if CV_SIMD128
+            if constexpr (!std::is_same_v<T, double>)
+            {
+                const v_float32x4 w0 = v_setall_f32(wx[0]), w1 = v_setall_f32(wx[1]);
+                const v_float32x4 w2 = v_setall_f32(wx[2]), w3 = v_setall_f32(wx[3]);
+                for (; channel <= channels - 4; channel += 4)
+                {
+                    v_float32x4 sum = v_setzero_f32();
+                    for (int row = 0; row < 4; ++row)
+                    {
+                        const T* ptr = rows[row] + channel;
+                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels(ptr), w0),
+                                                      v_mul(bicubicLoadChannels(ptr + channels), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3), w3));
+                        sum = v_add(sum, v_mul(horizontal, v_setall_f32(wy[row])));
+                    }
+                    bicubicStoreChannels(dst + channel, sum);
+                }
+            }
+#endif
+            for (; channel < channels; ++channel)
+            {
+                Acc sum = 0;
+                for (int row = 0; row < 4; ++row)
+                {
+                    const T* ptr = rows[row] + channel;
+                    sum += (Acc(ptr[0])*wx[0] + Acc(ptr[channels])*wx[1] +
+                            Acc(ptr[channels*2])*wx[2] + Acc(ptr[channels*3])*wx[3])*wy[row];
+                }
+                dst[channel] = saturate_cast<T>(sum);
+            }
+            continue;
+        }
+        int columns[4];
+        for (int column = 0; column < 4; ++column)
+            columns[column] = borderInterpolate(left + column, size.width, sampleBorder);
+        const T* pixels[4][4];
+        for (int row = 0; row < 4; ++row)
+        {
+            const int sourceRow = borderInterpolate(top + row, size.height, sampleBorder);
+            const T* rowData = sourceRow < 0 ? nullptr : reinterpret_cast<const T*>(
+                static_cast<const uchar*>(source) + size_t(sourceRow)*step);
+            for (int column = 0; column < 4; ++column)
+                pixels[row][column] = rowData && columns[column] >= 0 ? rowData + columns[column]*channels : nullptr;
+        }
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            const Acc border = Acc(borderType == BORDER_TRANSPARENT ? dst[channel] : fill[channel]);
+            Acc sum = 0;
+            for (int row = 0; row < 4; ++row)
+            {
+                const Acc v0 = pixels[row][0] ? Acc(pixels[row][0][channel]) : border;
+                const Acc v1 = pixels[row][1] ? Acc(pixels[row][1][channel]) : border;
+                const Acc v2 = pixels[row][2] ? Acc(pixels[row][2][channel]) : border;
+                const Acc v3 = pixels[row][3] ? Acc(pixels[row][3][channel]) : border;
+                sum += (v0*wx[0] + v1*wx[1] + v2*wx[2] + v3*wx[3])*wy[row];
+            }
+            dst[channel] = saturate_cast<T>(sum);
+        }
+    }
+}
+
 template<typename T, void (*fn)(const float*, const float*, int, const void*, size_t, Size, T*, const float*, int, T*)>
-static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval)
+static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval, int)
 {
     fn(x, y, len, src, srcstep, srcsize, (T*)dst, coeffs, flags, (T*)fillval);
 }
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
+    if (CV_MAT_CN(type) > 4)
+    {
+        switch (CV_MAT_DEPTH(type))
+        {
+        case CV_8U: return bicubicWarpChannels<uchar>;
+        case CV_16U: return bicubicWarpChannels<ushort>;
+        case CV_16S: return bicubicWarpChannels<short>;
+        case CV_32F: return bicubicWarpChannels<float>;
+        case CV_64F: return bicubicWarpChannels<double>;
+        default: return nullptr;
+        }
+    }
     if (type == CV_8UC1) {
         return bicubicWarpWrap<uint8_t, bicubic8uC1>;
     }

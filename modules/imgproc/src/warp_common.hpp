@@ -13,7 +13,7 @@ namespace cv {
 typedef void (*ImgWarpFunc)(const float* x, const float* y, int len,
                             const void* src, size_t srcstep, Size size,
                             void* dst, const float* params,
-                            int borderType, const void* borderVal);
+                            int borderType, const void* borderVal, int channels);
 
 ImgWarpFunc getImgWarpFunc(int type, int interpolation);
 

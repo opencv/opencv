@@ -941,8 +941,6 @@ TEST(Imgproc_Warp, multichannel)
         int width = rng.uniform(3, 333);
         int height = rng.uniform(3, 333);
         int cn = rng.uniform(1, 15);
-        if(inter == INTER_CUBIC || inter == INTER_LANCZOS4)
-            cn = rng.uniform(1, 5);
         Mat src(height, width, CV_8UC(cn)), dst;
         //randu(src, 0, 256);
         src.setTo(0.);
@@ -1160,6 +1158,71 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapManyChannels, testing::Combine(
     testing::Values(5, 7, 9, 20, 31, 33, CV_CN_MAX),
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT,
                     (int)BORDER_REFLECT_101, (int)BORDER_WRAP, (int)BORDER_TRANSPARENT)));
+
+TEST(Imgproc_Warp, cubic_lanczos_many_channels)
+{
+    RNG rng(137);
+    for (int depth : {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F})
+    for (int channels : {5, 9, 20, CV_CN_MAX})
+    for (Size size : {Size(1, 1), Size(17, 13)})
+    for (int interpolation : {INTER_CUBIC, INTER_LANCZOS4})
+    for (int border : {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+                       BORDER_WRAP, BORDER_TRANSPARENT})
+    {
+        SCOPED_TRACE(depth);
+        SCOPED_TRACE(channels);
+        SCOPED_TRACE(interpolation);
+        SCOPED_TRACE(border);
+        Mat storage(size.height + 4, size.width + 6, CV_MAKETYPE(depth, channels));
+        const double low = depth == CV_16S ? -32768. : 0.;
+        const double high = depth == CV_8U ? 256. : depth == CV_16U ? 65536. : depth == CV_16S ? 32768. : 64.;
+        rng.fill(storage, RNG::UNIFORM, low, high);
+        Mat src = storage(Rect(2, 1, size.width, size.height));
+        const Size outputSize(11, 9);
+        Mat affine = getRotationMatrix2D(Point2f(3.5f, 4.5f), 17., 1.1);
+        Mat perspective = Mat::eye(3, 3, CV_64F);
+        affine.copyTo(perspective.rowRange(0, 2));
+        perspective.at<double>(2, 0) = 0.001;
+        Mat mapx(outputSize, CV_32F), mapy(outputSize, CV_32F), fixed, fractions;
+        rng.fill(mapx, RNG::UNIFORM, -5.f, float(size.width + 5));
+        rng.fill(mapy, RNG::UNIFORM, -5.f, float(size.height + 5));
+        convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
+        const Scalar fill(3., 11., 29., 47.);
+        for (int operation = 0; operation < 5; ++operation)
+        {
+            SCOPED_TRACE(operation);
+            const auto warp = [&](const Mat& input, Mat& output, const Scalar& value) {
+                if (operation == 0)
+                    warpAffine(input, output, affine, outputSize, interpolation | WARP_INVERSE_MAP, border, value);
+                else if (operation == 1)
+                    warpPerspective(input, output, perspective, outputSize, interpolation, border, value);
+                else if (operation == 2)
+                    remap(input, output, mapx, mapy, interpolation, border, value);
+                else if (operation == 3)
+                    remap(input, output, fixed, fractions, interpolation, border, value);
+                else
+                    remap(input, output, mapx, mapy, interpolation | WARP_RELATIVE_MAP, border, value);
+            };
+            Mat resultStorage(outputSize.height + 3, outputSize.width + 4, src.type());
+            resultStorage.reshape(1).setTo(17.);
+            Mat result = resultStorage(Rect(1, 2, outputSize.width, outputSize.height));
+            warp(src, result, fill);
+            for (int channel = 0; channel < channels; ++channel)
+            {
+                Mat plane, referenceInput, expected(outputSize, CV_MAKETYPE(depth, 2), Scalar::all(17.));
+                extractChannel(src, plane, channel);
+                const Mat planes[] = {plane, plane};
+                merge(planes, 2, referenceInput);
+                warp(referenceInput, expected, Scalar::all(fill[channel & 3]));
+                Mat expectedPlane, actualPlane;
+                extractChannel(expected, expectedPlane, 0);
+                extractChannel(result, actualPlane, channel);
+                const double tolerance = depth == CV_32F || depth == CV_64F ? 3e-5 : 1.;
+                ASSERT_LE(cvtest::norm(expectedPlane, actualPlane, NORM_INF), tolerance) << "channel=" << channel;
+            }
+        }
+    }
+}
 
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
