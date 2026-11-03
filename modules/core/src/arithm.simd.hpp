@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <type_traits>
 
 namespace cv {
 
@@ -383,7 +384,7 @@ struct EwMul {
 #endif
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
-    template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * b * s; }
+    template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s * b; }
 };
 // div has two variants by the COMMON INPUT type (matching cv::'s per-type kernel choice): integer
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
@@ -573,6 +574,11 @@ static int scalarBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     s1y /= sizeof(T);
     dsty /= sizeof(Tr);
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
+    if constexpr (std::is_same_v<Op, EwMul>) {
+        if ((s1x == 0 && s0x != 0) || (s1y == 0 && s0y != 0 && s0x == s1x)) {
+            std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x);
+        }
+    }
 
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
@@ -916,6 +922,11 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     dsty /= sizeof(Tr);
 
     CV_Assert((s0x|s1x) == 1u || (s0x|s1x) + (size_t)width == 1u);
+    if constexpr (std::is_same_v<Op, EwMul>) {
+        if ((s1x == 0 && s0x != 0) || (s1y == 0 && s0y != 0 && s0x == s1x)) {
+            std::swap(src0_, src1_); std::swap(s0y, s1y); std::swap(s0x, s1x);
+        }
+    }
 
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;

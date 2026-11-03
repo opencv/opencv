@@ -5129,4 +5129,14 @@ TEST_P(Core_PatchNaNs, replaces_only_nans)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
 
+TEST(Core_Multiply, scale_simd_scalar_consistency)
+{
+    const float big = std::ldexp(1.0f, 80);   // exact power of 2 (< FLT_MAX = 2^128)
+    Mat a(1, 65, CV_32F, Scalar(big));
+    Mat b(1, 65, CV_32F, Scalar(big));
+    cv::multiply(a, b, a, std::ldexp(1.0, -80));  // in-place -> tail element 64 uses EwMul::scl
+    EXPECT_EQ(a.at<float>(0),  big);  // SIMD:   (2^80 * 2^-80) * 2^80 = 2^80
+    EXPECT_EQ(a.at<float>(64), big);  // Scalar shouldn't do a*b*s: (2^80 * 2^80) * 2^-80 = +inf
+}
+
 }} // namespace
