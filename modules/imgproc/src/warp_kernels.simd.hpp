@@ -8631,14 +8631,20 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 template<typename T>
 static inline v_float32x4 bicubicLoadChannels(const T* src)
 {
-    if constexpr (std::is_same_v<T, uchar>)
-        return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src)));
-    else if constexpr (std::is_same_v<T, ushort>)
-        return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src)));
-    else if constexpr (std::is_same_v<T, short>)
-        return v_cvt_f32(v_load_expand(src));
-    else
+    if constexpr (std::is_same_v<T, float>)
         return v_load(src);
+    else
+    {
+        // Expanding loads on some backends read a full 16-byte register.
+        alignas(16) T values[16/sizeof(T)] = {};
+        std::memcpy(values, src, 4*sizeof(T));
+        if constexpr (std::is_same_v<T, uchar>)
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(values)));
+        else if constexpr (std::is_same_v<T, ushort>)
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(values)));
+        else
+            return v_cvt_f32(v_load_expand(values));
+    }
 }
 
 template<typename T>
@@ -8663,6 +8669,15 @@ static inline void bicubicStoreChannels(T* dst, const v_float32x4& value)
 }
 #endif
 
+#if CV_SIMD_FP16
+static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
+{
+    alignas(16) uchar values[16] = {};
+    std::memcpy(values, src, 8);
+    return v_cvt_f16(v_reinterpret_as_s16(v_load_expand(values)));
+}
+#endif
+
 template<typename T>
 static void bicubicWarpChannels(const float* x, const float* y, int len,
                                 const void* source, size_t step, Size size, void* destination,
@@ -8673,10 +8688,11 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const T* fill = static_cast<const T*>(borderValue);
     T* dst = static_cast<T*>(destination);
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
+    const float minX = -float(std::max(size.width, 16)), minY = -float(std::max(size.height, 16));
     for (int i = 0; i < len; ++i, dst += channels)
     {
-        const float sx = std::clamp(x[i], float(-std::max(size.width, 16)), float(std::max(size.width, 16)*2));
-        const float sy = std::clamp(y[i], float(-std::max(size.height, 16)), float(std::max(size.height, 16)*2));
+        const float sx = std::isnan(x[i]) ? minX : std::clamp(x[i], minX, -2.f*minX);
+        const float sy = std::isnan(y[i]) ? minY : std::clamp(y[i], minY, -2.f*minY);
         const int left = cvFloor(sx) - 1, top = cvFloor(sy) - 1;
         if ((left >= size.width || left + 4 <= 0 || top >= size.height || top + 4 <= 0) &&
             (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
@@ -8706,10 +8722,10 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const uchar* ptr = rows[row] + channel;
-                        v_float16x8 horizontal = v_mul(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr))), w0);
-                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels))), w1, horizontal);
-                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels*2))), w2, horizontal);
-                        horizontal = v_fma(v_cvt_f16(v_reinterpret_as_s16(v_load_expand(ptr + channels*3))), w3, horizontal);
+                        v_float16x8 horizontal = v_mul(bicubicLoad8uHalf(ptr), w0);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels), w1, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*2), w2, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*3), w3, horizontal);
                         sum = v_fma(horizontal, v_setall_f16(hfloat(wy[row])), sum);
                     }
                     const v_int16x8 rounded = v_round(sum);

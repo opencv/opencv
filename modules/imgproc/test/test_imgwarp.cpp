@@ -1224,6 +1224,48 @@ TEST(Imgproc_Warp, cubic_lanczos_many_channels)
     }
 }
 
+TEST(Imgproc_Warp, cubic_tight_channel_storage)
+{
+    RNG rng(137);
+    for (int depth : {CV_8U, CV_16U, CV_16S})
+    {
+        std::vector<uchar> storage(4*4*5*CV_ELEM_SIZE1(depth));
+        Mat src(4, 4, CV_MAKETYPE(depth, 5), storage.data()), result;
+        rng.fill(src, RNG::UNIFORM, 0., 64.);
+        Mat mapx(1, 1, CV_32F, Scalar(1.25)), mapy = mapx.clone();
+        remap(src, result, mapx, mapy, INTER_CUBIC);
+        for (int channel = 0; channel < 5; ++channel)
+        {
+            Mat plane, referenceInput, expected, actual;
+            extractChannel(src, plane, channel);
+            const Mat planes[] = {plane, plane};
+            merge(planes, 2, referenceInput);
+            remap(referenceInput, expected, mapx, mapy, INTER_CUBIC);
+            extractChannel(expected, plane, 0);
+            extractChannel(result, actual, channel);
+            EXPECT_LE(cvtest::norm(plane, actual, NORM_INF), 1.);
+        }
+    }
+}
+
+TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
+{
+    Mat src(4, 4, CV_32FC(5)), result(1, 3, CV_32FC(5));
+    src.reshape(1).setTo(1.f);
+    Mat mapx = Mat_<float>({1, 3}, {std::numeric_limits<float>::quiet_NaN(),
+                                   std::numeric_limits<float>::infinity(),
+                                   -std::numeric_limits<float>::infinity()});
+    Mat mapy(1, 3, CV_32F, Scalar(1.25));
+    result.reshape(1).setTo(0.75);
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    Mat expected(result.size(), result.type());
+    expected.reshape(1).setTo(0.75);
+    EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_CONSTANT, Scalar::all(0.25));
+    expected.reshape(1).setTo(0.25);
+    EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
