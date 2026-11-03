@@ -527,8 +527,7 @@ TEST(Imgproc_GoodFeatureToT, accuracy) { CV_GoodFeatureToTTest test; test.safe_r
 TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
 {
     Mat src(64, 64, CV_8UC1);
-    RNG rng(0);
-    rng.fill(src, RNG::UNIFORM, 0, 256);
+    randu(src, 0, 256);
     const int blockSize = 3;
     const double k = 0.04;
 
@@ -541,6 +540,39 @@ TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
     cornerHarris(src, harris, blockSize, 0, k);
     cornerHarris(src, harrisScharr, blockSize, FILTER_SCHARR, k);
     EXPECT_LE(cv::norm(harris, 16 * harrisScharr, NORM_INF), 1e-4);
+}
+
+// spatialGradient() takes ksize 1, 3, 5 and 7 only, but Sobel() takes any odd size up to 31.
+TEST(Imgproc_Corner, ksize_above_7_uses_Sobel)
+{
+    Mat src(64, 64, CV_8UC1);
+    randu(src, 0, 256);
+    const int blockSize = 3;
+    const double k = 0.04;
+
+    for (int ksize = 9; ksize <= 31; ksize += 2)
+    {
+        SCOPED_TRACE(cv::format("ksize=%d", ksize));
+
+        const double scale = 1.0 / ((double)(1 << (ksize - 1)) * blockSize * 255.0);
+        Mat dx, dy, a, b, c;
+        Sobel(src, dx, CV_32F, 1, 0, ksize, scale);
+        Sobel(src, dy, CV_32F, 0, 1, ksize, scale);
+        boxFilter(dx.mul(dx), a, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+        boxFilter(dx.mul(dy), b, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+        boxFilter(dy.mul(dy), c, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+
+        Mat trace = a + c, diff = a - c, root;
+        sqrt(0.25 * diff.mul(diff) + b.mul(b), root);
+        Mat minEigenExpected = 0.5 * trace - root;
+        Mat harrisExpected = a.mul(c) - b.mul(b) - k * trace.mul(trace);
+
+        Mat minEigen, harris;
+        ASSERT_NO_THROW(cornerMinEigenVal(src, minEigen, blockSize, ksize));
+        ASSERT_NO_THROW(cornerHarris(src, harris, blockSize, ksize, k));
+        EXPECT_LE(cv::norm(minEigen, minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
+        EXPECT_LE(cv::norm(harris, harrisExpected, NORM_INF), 1e-4 * cv::norm(harrisExpected, NORM_INF));
+    }
 }
 
 
