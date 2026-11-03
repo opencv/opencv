@@ -1141,6 +1141,50 @@ TEST(Imgproc_Remap, cubic_c1_border_transparent_preserves_edge_dst)
     ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF));
 }
 
+TEST(Imgproc_Remap, bilinear_c1_16bit_fixed_map_sample_order)
+{
+    const Size srcSize(64, 16), dstSize(32, 8);
+    const ushort fxy = (24 << INTER_BITS) | 8; // x = 1/4, y = 3/4
+
+    Mat map1(dstSize, CV_16SC2), map2(dstSize, CV_16UC1, Scalar::all(fxy));
+    for (int y = 0; y < dstSize.height; ++y)
+    {
+        for (int x = 0; x < dstSize.width; ++x)
+            map1.at<Vec2s>(y, x) = Vec2s((short)(2 + x), (short)(2 + y));
+    }
+
+    for (int type : {CV_16SC1, CV_16UC1})
+    {
+        Mat src(srcSize, type), dst;
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                const int value = y * 128 + x * 32 + (type == CV_16SC1 ? -2000 : 2000);
+                if (type == CV_16SC1)
+                    src.at<short>(y, x) = (short)value;
+                else
+                    src.at<ushort>(y, x) = (ushort)value;
+            }
+        }
+
+        remap(src, dst, map1, map2, INTER_LINEAR);
+        for (int y = 0; y < dst.rows; ++y)
+        {
+            for (int x = 0; x < dst.cols; ++x)
+            {
+                const Vec2s xy = map1.at<Vec2s>(y, x);
+                const int expected = xy[1] * 128 + xy[0] * 32 + 104 +
+                                     (type == CV_16SC1 ? -2000 : 2000);
+                if (type == CV_16SC1)
+                    EXPECT_EQ(expected, dst.at<short>(y, x));
+                else
+                    EXPECT_EQ(expected, dst.at<ushort>(y, x));
+            }
+        }
+    }
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});

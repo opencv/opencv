@@ -55,18 +55,17 @@ static CV_ALWAYS_INLINE void remapCorners(const short* S0, size_t sstep, const i
                                 v_float32& s0, v_float32& s1,
                                 v_float32& s2, v_float32& s3)
 {
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) topbuf[VTraits<v_float32>::max_nlanes];
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) botbuf[VTraits<v_float32>::max_nlanes];
+    unsigned int CV_DECL_ALIGNED(CV_SIMD_WIDTH) topbuf[VTraits<v_float32>::max_nlanes];
+    unsigned int CV_DECL_ALIGNED(CV_SIMD_WIDTH) botbuf[VTraits<v_float32>::max_nlanes];
     const int n = VTraits<v_float32>::vlanes();
     for (int k = 0; k < n; k++)
     {
         const short* p = S0 + ofs[k];
-        int t, b;
-        memcpy(&t, p, sizeof(t));
-        memcpy(&b, p + sstep, sizeof(b));
-        topbuf[k] = t; botbuf[k] = b;
+        topbuf[k] = (unsigned int)(ushort)p[0] | ((unsigned int)(ushort)p[1] << 16);
+        botbuf[k] = (unsigned int)(ushort)p[sstep] | ((unsigned int)(ushort)p[sstep + 1] << 16);
     }
-    v_int32 top = vx_load(topbuf), bot = vx_load(botbuf);
+    v_int32 top = v_reinterpret_as_s32(vx_load(topbuf));
+    v_int32 bot = v_reinterpret_as_s32(vx_load(botbuf));
     s0 = v_cvt_f32(v_shr<16>(v_shl<16>(top)));   // low 16 bits (sign-extended)
     s1 = v_cvt_f32(v_shr<16>(top));              // high 16 bits (sign-extended)
     s2 = v_cvt_f32(v_shr<16>(v_shl<16>(bot)));
@@ -77,20 +76,18 @@ static CV_ALWAYS_INLINE void remapCorners(const ushort* S0, size_t sstep, const 
                                 v_float32& s0, v_float32& s1,
                                 v_float32& s2, v_float32& s3)
 {
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) topbuf[VTraits<v_float32>::max_nlanes];
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) botbuf[VTraits<v_float32>::max_nlanes];
+    unsigned int CV_DECL_ALIGNED(CV_SIMD_WIDTH) topbuf[VTraits<v_float32>::max_nlanes];
+    unsigned int CV_DECL_ALIGNED(CV_SIMD_WIDTH) botbuf[VTraits<v_float32>::max_nlanes];
     const int n = VTraits<v_float32>::vlanes();
     for (int k = 0; k < n; k++)
     {
         const ushort* p = S0 + ofs[k];
-        int t, b;
-        memcpy(&t, p, sizeof(t));
-        memcpy(&b, p + sstep, sizeof(b));
-        topbuf[k] = t; botbuf[k] = b;
+        topbuf[k] = (unsigned int)p[0] | ((unsigned int)p[1] << 16);
+        botbuf[k] = (unsigned int)p[sstep] | ((unsigned int)p[sstep + 1] << 16);
     }
     const v_uint32 lo16 = vx_setall_u32(0xffff);
-    v_uint32 top = v_reinterpret_as_u32(vx_load(topbuf));
-    v_uint32 bot = v_reinterpret_as_u32(vx_load(botbuf));
+    v_uint32 top = vx_load(topbuf);
+    v_uint32 bot = vx_load(botbuf);
     s0 = v_cvt_f32(v_reinterpret_as_s32(v_and(top, lo16)));  // low 16 (zero-ext)
     s1 = v_cvt_f32(v_reinterpret_as_s32(v_shr<16>(top)));    // high 16 (zero-ext)
     s2 = v_cvt_f32(v_reinterpret_as_s32(v_and(bot, lo16)));
