@@ -10,24 +10,24 @@
 
 namespace cv {
 
+using RemapBilinearC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, int);
+using RemapWideC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, unsigned, unsigned, int);
+
+RemapBilinearC1Fn remapBilinearC1_fn();
+RemapWideC1Fn remapLanczos4C1_fn();
+
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+RemapBilinearC1Fn getRemapBilinearC1Fn_();
+RemapWideC1Fn getRemapLanczos4C1Fn_();
 
 int remapBilinearC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
                          const short* XY, const ushort* FXY, const float* wtab,
                          int dx, int X1, int off_y);
 
-int remapBicubicC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
-                        const short* XY, const ushort* FXY,
-                        int dx, int dwidth, unsigned width1, unsigned height1, int off_y);
-
 int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
                          const short* XY, const ushort* FXY, const float* wtab,
                          int dx, int dwidth, unsigned width1, unsigned height1, int off_y);
-
-
-int remapBicubicC1wp_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
-                          const short* XY, const ushort* FXY, const float* wtab,
-                          int dx, int dwidth, unsigned width1, unsigned height1, int off_y);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -39,24 +39,6 @@ static inline v_float32 remapGatherF32(const float* base, const int* ofs)
     const int n = VTraits<v_float32>::vlanes();
     for (int k = 0; k < n; k++)
         buf[k] = base[ofs[k]];
-    return vx_load(buf);
-}
-
-static inline v_float32 remapGatherF32(const ushort* base, const int* ofs)
-{
-    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];
-    const int n = VTraits<v_float32>::vlanes();
-    for (int k = 0; k < n; k++)
-        buf[k] = (float)base[ofs[k]];
-    return vx_load(buf);
-}
-
-static inline v_float32 remapGatherF32(const short* base, const int* ofs)
-{
-    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];
-    const int n = VTraits<v_float32>::vlanes();
-    for (int k = 0; k < n; k++)
-        buf[k] = (float)base[ofs[k]];
     return vx_load(buf);
 }
 
@@ -113,6 +95,17 @@ static CV_ALWAYS_INLINE void remapCorners(const ushort* S0, size_t sstep, const 
     s1 = v_cvt_f32(v_reinterpret_as_s32(v_shr<16>(top)));    // high 16 (zero-ext)
     s2 = v_cvt_f32(v_reinterpret_as_s32(v_and(bot, lo16)));
     s3 = v_cvt_f32(v_reinterpret_as_s32(v_shr<16>(bot)));
+}
+
+static CV_ALWAYS_INLINE void remapCorners(const float* S0, size_t sstep, const int* ofs,
+                                          v_float32& s0, v_float32& s1,
+                                          v_float32& s2, v_float32& s3)
+{
+    const float* S1 = S0 + sstep;
+    s0 = remapGatherF32(S0,     ofs);
+    s1 = remapGatherF32(S0 + 1, ofs);
+    s2 = remapGatherF32(S1,     ofs);
+    s3 = remapGatherF32(S1 + 1, ofs);
 }
 
 static inline void remapStoreC1(float* D, const v_float32& res)
@@ -193,152 +186,6 @@ static int remapBilinearC1_run(const T* S0, size_t sstep, T* D,
     return dx - dx0;
 }
 
-static int remapBilinearF32_run(const float* S0, size_t sstep, float* D,
-                                const short* XY, const ushort* FXY,
-                                const float* wtab, int dx, int X1, int off_y)
-{
-    CV_UNUSED(wtab);
-    const int vlanes = VTraits<v_float32>::vlanes();
-    const int dx0 = dx;
-    const float* S1 = S0 + sstep;
-    const v_float32 vone   = vx_setall_f32(1.f);
-    const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
-    const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
-    for( ; dx < X1 && FXY[dx] == 0; dx++ )
-    {
-        const int sx = XY[dx * 2];
-        const int sy = XY[dx * 2 + 1] + off_y;
-        D[dx - dx0] = S0[(size_t)sy * sstep + sx];
-    }
-
-    for( ; dx <= X1 - vlanes; dx += vlanes )
-    {
-        bool zeroFrac = true;
-        for( int k = 0; k < vlanes; k++ )
-            zeroFrac = zeroFrac && FXY[dx + k] == 0;
-        if( zeroFrac )
-        {
-            for( int k = 0; k < vlanes; k++ )
-            {
-                const int sx = XY[(dx + k) * 2];
-                const int sy = XY[(dx + k) * 2 + 1] + off_y;
-                D[dx - dx0 + k] = S0[(size_t)sy * sstep + sx];
-            }
-            continue;
-        }
-        bool offsetsFit = true;
-        for( int k = 0; k < vlanes; k++ )
-        {
-            const int sx = XY[(dx + k) * 2];
-            const int sy = XY[(dx + k) * 2 + 1] + off_y;
-            offsetsFit = offsetsFit && remapOffset32(sy, sx, sstep, ofs[k]);
-        }
-        if( !offsetsFit )
-            break;
-        v_float32 s0 = remapGatherF32(S0,     ofs);
-        v_float32 s1 = remapGatherF32(S0 + 1, ofs);
-        v_float32 s2 = remapGatherF32(S1,     ofs);
-        v_float32 s3 = remapGatherF32(S1 + 1, ofs);
-
-        v_int32 fxy = v_reinterpret_as_s32(vx_load_expand(FXY + dx));
-        v_float32 fx = v_mul(v_cvt_f32(v_and(fxy, vmask)),    vscale);
-        v_float32 fy = v_mul(v_cvt_f32(v_shr<INTER_BITS>(fxy)), vscale);
-        v_float32 cx0 = v_sub(vone, fx);
-        v_float32 cy0 = v_sub(vone, fy);
-        v_float32 w0 = v_mul(cx0, cy0);
-        v_float32 w1 = v_mul(fx,  cy0);
-        v_float32 w2 = v_mul(cx0, fy);
-        v_float32 w3 = v_mul(fx,  fy);
-
-        v_float32 res = v_fma(s0, w0, v_fma(s1, w1, v_fma(s2, w2, v_mul(s3, w3))));
-        v_store(D + (dx - dx0), res);
-    }
-    vx_cleanup();
-    return dx - dx0;
-}
-
-// Evaluate the four cubic interpolation coefficients for a vector of fractional
-// positions, matching interpolateCubic() (A = -0.75). The strict remap test
-// tolerates an absolute error of 1.0 for bicubic, so FMA contraction is fine.
-static inline void interpolateCubicV(const v_float32& x,
-                                     v_float32& c0, v_float32& c1,
-                                     v_float32& c2, v_float32& c3)
-{
-    const v_float32 A    = vx_setall_f32(-0.75f);
-    const v_float32 A5   = vx_setall_f32(-3.75f);  // 5*A
-    const v_float32 A8   = vx_setall_f32(-6.0f);   // 8*A
-    const v_float32 A4   = vx_setall_f32(-3.0f);   // 4*A
-    const v_float32 Ap2  = vx_setall_f32(1.25f);   // A+2
-    const v_float32 Ap3  = vx_setall_f32(2.25f);   // A+3
-    const v_float32 one  = vx_setall_f32(1.f);
-
-    v_float32 xp1 = v_add(x, one);
-    c0 = v_sub(v_mul(v_add(v_mul(v_sub(v_mul(A, xp1), A5), xp1), A8), xp1), A4);
-    c1 = v_add(v_mul(v_mul(v_sub(v_mul(Ap2, x), Ap3), x), x), one);
-    v_float32 u = v_sub(one, x);
-    c2 = v_add(v_mul(v_mul(v_sub(v_mul(Ap2, u), Ap3), u), u), one);
-    c3 = v_sub(v_sub(v_sub(one, c0), c1), c2);
-}
-
-// Select one of four vectors by runtime index. Used instead of an array of
-// vector types, which is not valid for sizeless RVV vector types.
-static inline v_float32 selectV4(int i, const v_float32& a, const v_float32& b,
-                                 const v_float32& c, const v_float32& d)
-{
-    return i == 0 ? a : (i == 1 ? b : (i == 2 ? c : d));
-}
-
-template<typename T>
-static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
-                              const ushort* FXY, int dx, int dwidth,
-                              unsigned width1, unsigned height1, int off_y)
-{
-    const int vlanes = VTraits<v_float32>::vlanes();
-    const int dx0 = dx;
-    const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
-    const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
-    size_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
-    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];
-    for( ; dx <= dwidth - vlanes; dx += vlanes )
-    {
-        bool allIn = true;
-        for( int k = 0; k < vlanes; k++ )
-        {
-            const unsigned sx = (unsigned)(XY[(dx + k) * 2] - 1);
-            const unsigned sy = (unsigned)(XY[(dx + k) * 2 + 1] - 1 + off_y);
-            if( sx >= width1 || sy >= height1 ) { allIn = false; break; }
-            ofs[k] = (size_t)(XY[(dx + k) * 2 + 1] - 1 + off_y) * sstep
-                   + (size_t)(XY[(dx + k) * 2] - 1);
-        }
-        if( !allIn )
-            break;
-
-        v_int32 fxy = v_reinterpret_as_s32(vx_load_expand(FXY + dx));
-        v_float32 fx = v_mul(v_cvt_f32(v_and(fxy, vmask)),    vscale);
-        v_float32 fy = v_mul(v_cvt_f32(v_shr<INTER_BITS>(fxy)), vscale);
-        v_float32 vx0, vx1, vx2, vx3, vy0, vy1, vy2, vy3;
-        interpolateCubicV(fx, vx0, vx1, vx2, vx3);
-        interpolateCubicV(fy, vy0, vy1, vy2, vy3);
-
-        v_float32 acc = vx_setzero_f32();
-        for( int r = 0; r < 4; r++ )
-        {
-            const size_t roff = (size_t)r * sstep;
-            const v_float32 vyr = selectV4(r, vy0, vy1, vy2, vy3);
-            for( int c = 0; c < 4; c++ )
-            {
-                for( int k = 0; k < vlanes; k++ )
-                    buf[k] = (float)S0[ofs[k] + roff + c];
-                acc = v_fma(vx_load(buf), v_mul(vyr, selectV4(c, vx0, vx1, vx2, vx3)), acc);
-            }
-        }
-        remapStoreC1(D + (dx - dx0), acc);
-    }
-    vx_cleanup();
-    return dx - dx0;
-}
-
 #if CV_SIMD128
 static inline void remapLoad8(const float* S, v_float32x4& lo, v_float32x4& hi)
 {
@@ -365,34 +212,6 @@ static inline void remapStoreScalar(short* D, float v) { *D = saturate_cast<shor
 static inline v_float32x4 remapLoad4(const float* S)  { return v_load(S); }
 static inline v_float32x4 remapLoad4(const ushort* S) { return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(S))); }
 static inline v_float32x4 remapLoad4(const short* S)  { return v_cvt_f32(v_load_expand(S)); }
-
-template<typename T>
-static int remapBicubicC1wp_run(const T* S0, size_t sstep, T* D, const short* XY,
-                                const ushort* FXY, const float* wtab, int dx,
-                                int dwidth, unsigned width1, unsigned height1, int off_y)
-{
-    const int dx0 = dx;
-    for( ; dx < dwidth; dx++ )
-    {
-        const unsigned sx = (unsigned)(XY[dx * 2] - 1);
-        const unsigned sy = (unsigned)(XY[dx * 2 + 1] - 1 + off_y);
-        if( sx >= width1 || sy >= height1 )
-            break;
-        if( FXY[dx] == 0 )
-        {
-            D[dx - dx0] = S0[(size_t)(sy + 1) * sstep + (sx + 1)];
-            continue;
-        }
-        const float* w = wtab + FXY[dx] * 16;
-        const T* S = S0 + (size_t)sy * sstep + sx;
-        v_float32x4 acc = v_setzero_f32();
-        for( int r = 0; r < 4; r++, S += sstep, w += 4 )
-            acc = v_fma(remapLoad4(S), v_load(w), acc);
-        remapStoreScalar(D + (dx - dx0), v_reduce_sum(acc));
-    }
-    vx_cleanup();
-    return dx - dx0;
-}
 
 template<typename T>
 static int remapLanczos4C1_run(const T* S0, size_t sstep, T* D, const short* XY,
@@ -438,8 +257,8 @@ int remapBilinearC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
     switch (depth)
     {
     case CV_32F:
-        return remapBilinearF32_run((const float*)S0, sstep, (float*)D,
-                                    XY, FXY, wtab, dx, X1, off_y);
+        return remapBilinearC1_run<float>((const float*)S0, sstep, (float*)D,
+                                          XY, FXY, wtab, dx, X1, off_y);
     case CV_16U:
         return remapBilinearC1_run<ushort>((const ushort*)S0, sstep, (ushort*)D,
                                            XY, FXY, wtab, dx, X1, off_y);
@@ -457,31 +276,9 @@ int remapBilinearC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
 #endif
 }
 
-int remapBicubicC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
-                        const short* XY, const ushort* FXY,
-                        int dx, int dwidth, unsigned width1, unsigned height1, int off_y)
+RemapBilinearC1Fn getRemapBilinearC1Fn_()
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    switch (depth)
-    {
-    case CV_32F:
-        return remapBicubicC1_run<float>((const float*)S0, sstep, (float*)D,
-                                         XY, FXY, dx, dwidth, width1, height1, off_y);
-    case CV_16U:
-        return remapBicubicC1_run<ushort>((const ushort*)S0, sstep, (ushort*)D,
-                                          XY, FXY, dx, dwidth, width1, height1, off_y);
-    case CV_16S:
-        return remapBicubicC1_run<short>((const short*)S0, sstep, (short*)D,
-                                         XY, FXY, dx, dwidth, width1, height1, off_y);
-    default:
-        return 0;
-    }
-#else
-    CV_UNUSED(depth); CV_UNUSED(S0); CV_UNUSED(sstep); CV_UNUSED(D);
-    CV_UNUSED(XY); CV_UNUSED(FXY); CV_UNUSED(dx); CV_UNUSED(dwidth);
-    CV_UNUSED(width1); CV_UNUSED(height1); CV_UNUSED(off_y);
-    return 0;
-#endif
+    return remapBilinearC1_simd;
 }
 
 int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
@@ -511,31 +308,9 @@ int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
 #endif
 }
 
-int remapBicubicC1wp_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
-                          const short* XY, const ushort* FXY, const float* wtab,
-                          int dx, int dwidth, unsigned width1, unsigned height1, int off_y)
+RemapWideC1Fn getRemapLanczos4C1Fn_()
 {
-#if CV_SIMD128
-    switch (depth)
-    {
-    case CV_32F:
-        return remapBicubicC1wp_run<float>((const float*)S0, sstep, (float*)D,
-                                           XY, FXY, wtab, dx, dwidth, width1, height1, off_y);
-    case CV_16U:
-        return remapBicubicC1wp_run<ushort>((const ushort*)S0, sstep, (ushort*)D,
-                                            XY, FXY, wtab, dx, dwidth, width1, height1, off_y);
-    case CV_16S:
-        return remapBicubicC1wp_run<short>((const short*)S0, sstep, (short*)D,
-                                           XY, FXY, wtab, dx, dwidth, width1, height1, off_y);
-    default:
-        return 0;
-    }
-#else
-    CV_UNUSED(depth); CV_UNUSED(S0); CV_UNUSED(sstep); CV_UNUSED(D);
-    CV_UNUSED(XY); CV_UNUSED(FXY); CV_UNUSED(wtab); CV_UNUSED(dx); CV_UNUSED(dwidth);
-    CV_UNUSED(width1); CV_UNUSED(height1); CV_UNUSED(off_y);
-    return 0;
-#endif
+    return remapLanczos4C1_simd;
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
