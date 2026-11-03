@@ -350,6 +350,32 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 }
 
 
+// CV_Bool stores one byte per element, but only its zero/non-zero state carries meaning: a Mat
+// that wraps an external buffer never passes through saturate_cast<bool>, so the byte can hold any
+// value. Summing it raw would make a 255 byte count as 255 while norm and countNonZero count it as
+// one. This mirrors normL1_Bool so the three agree.
+static int sumBool( const uchar* src, const uchar* mask, int* dst, int len, int cn )
+{
+    CV_INSTRUMENT_REGION();
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src += cn )
+            for( int k = 0; k < cn; k++ )
+                dst[k] += (int)(src[k] != 0);
+        return len;
+    }
+
+    int nzm = 0;
+    for( int i = 0; i < len; i++, src += cn )
+        if( mask[i] )
+        {
+            for( int k = 0; k < cn; k++ )
+                dst[k] += (int)(src[k] != 0);
+            nzm++;
+        }
+    return nzm;
+}
+
 static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
@@ -399,7 +425,7 @@ SumFunc getSumFunc(int depth)
         sumWrap<double, double, sum64f>,
         sumWrap<hfloat, float, sum16f>,
         sumWrap<bfloat, float, sum16bf>,
-        0,
+        sumWrap<uchar, int, sumBool>,
         sumWrap<uint64, double, sum64u>,
         sumWrap<int64, double, sum64s>,
         sumWrap<unsigned, double, sum32u>,

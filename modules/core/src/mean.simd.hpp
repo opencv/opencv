@@ -586,6 +586,38 @@ static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int le
 }
 
 
+// See sumBool in sum.simd.hpp: only the zero/non-zero state of a CV_Bool byte is meaningful, so
+// the value counted is one, and one is its own square.
+static int sqsumBool( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
+{
+    CV_INSTRUMENT_REGION();
+    if( !mask )
+    {
+        for( int i = 0; i < len; i++, src += cn )
+            for( int k = 0; k < cn; k++ )
+            {
+                int v = (int)(src[k] != 0);
+                sum[k] += v;
+                sqsum[k] += v;
+            }
+        return len;
+    }
+
+    int nzm = 0;
+    for( int i = 0; i < len; i++, src += cn )
+        if( mask[i] )
+        {
+            for( int k = 0; k < cn; k++ )
+            {
+                int v = (int)(src[k] != 0);
+                sum[k] += v;
+                sqsum[k] += v;
+            }
+            nzm++;
+        }
+    return nzm;
+}
+
 static int sqsum8u( const uchar* src, const uchar* mask, int* sum, int* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
@@ -631,7 +663,8 @@ SumSqrFunc getSumSqrFunc(int depth)
         sumSqrWrap<ushort, int, double, sqsum16u>, sumSqrWrap<short, int, double, sqsum16s>,
         sumSqrWrap<int, double, double, sqsum32s>, sumSqrWrap<float, double, double, sqsum32f>,
         sumSqrWrap<double, double, double, sqsum64f>,
-        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
+        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>,
+        sumSqrWrap<uchar, int, int, sqsumBool>,
         sumSqrWrap<uint64, double, double, sqsum64u>, sumSqrWrap<int64, double, double, sqsum64s>,
         sumSqrWrap<unsigned, double, double, sqsum32u>, 0
     };
