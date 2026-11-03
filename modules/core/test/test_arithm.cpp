@@ -3358,6 +3358,48 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace,
     )
 );
 
+PARAM_TEST_CASE(Core_CartToPolar_inplace_mag, int, int)
+{
+    int depth;
+    int len;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        len = GET_PARAM(1);
+    }
+};
+
+// only the magnitude overwrites an input, so the last elements must not be processed twice
+TEST_P(Core_CartToPolar_inplace_mag, accuracy)
+{
+    cv::Mat x(1, len, depth), y(1, len, depth);
+    cv::randu(x, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+    cv::randu(y, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+
+    cv::Mat expectedMag, expectedAngle;
+    cv::cartToPolar(x, y, expectedMag, expectedAngle);
+
+    // magnitude into x
+    cv::Mat x1 = x.clone(), angle1;
+    cv::cartToPolar(x1, y, x1, angle1);
+    EXPECT_MAT_NEAR(expectedMag, x1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle1, 1e-2);
+
+    // magnitude into y
+    cv::Mat y1 = y.clone(), angle2;
+    cv::cartToPolar(x, y1, y1, angle2);
+    EXPECT_MAT_NEAR(expectedMag, y1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle2, 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace_mag,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Range(1, 40)
+    )
+);
+
 PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
 {
     int  depth;
