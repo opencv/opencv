@@ -161,37 +161,74 @@ TEST(Features2d_LightGlue_DISK, DynamicShapes_Regression_30502)
         return kpts;
     };
 
-    auto run_match = [&](int n1, int n2) {
-        Mat kpts1Mat = generate_keypoints(n1, 0);
-        Mat kpts2Mat = generate_keypoints(n2, 10);
+    // Step 1: Initial small shape (8 -> 8)
+    Mat kpts1_8 = generate_keypoints(8, 0);
+    Mat kpts2_8 = generate_keypoints(8, 10);
+    Mat desc1_8 = generate_descriptors(8, descDim);
+    Mat desc2_8 = generate_descriptors(8, descDim);
 
-        Mat desc1 = generate_descriptors(n1, descDim);
-        Mat desc2 = generate_descriptors(n2, descDim);
+    lg->setPairInfo(kpts1_8, kpts2_8, Size(640, 480), Size(640, 480));
+    std::vector<DMatch> initial_matches_8_8;
+    EXPECT_NO_THROW(lg->match(desc1_8, desc2_8, initial_matches_8_8));
+    EXPECT_GT(initial_matches_8_8.size(), 0u);
+    for (const auto& m : initial_matches_8_8) {
+        EXPECT_GE(m.queryIdx, 0);
+        EXPECT_LT(m.queryIdx, 8);
+        EXPECT_GE(m.trainIdx, 0);
+        EXPECT_LT(m.trainIdx, 8);
+    }
 
-        lg->setPairInfo(kpts1Mat, kpts2Mat, Size(640, 480), Size(640, 480));
-        std::vector<DMatch> matches;
-        EXPECT_NO_THROW(lg->match(desc1, desc2, matches));
+    // Step 2: Expanded asymmetric shape (50 -> 200)
+    Mat kpts1_50 = generate_keypoints(50, 0);
+    Mat kpts2_200 = generate_keypoints(200, 10);
+    Mat desc1_50 = generate_descriptors(50, descDim);
+    Mat desc2_200 = generate_descriptors(200, descDim);
+    for (int i = 0; i < 5; ++i) {
+        desc1_50.row(i).copyTo(desc2_200.row(i));
+    }
 
-        for (const auto& m : matches)
-        {
-            EXPECT_GE(m.queryIdx, 0);
-            EXPECT_LT(m.queryIdx, n1);
-            EXPECT_GE(m.trainIdx, 0);
-            EXPECT_LT(m.trainIdx, n2);
-        }
-    };
+    lg->setPairInfo(kpts1_50, kpts2_200, Size(640, 480), Size(640, 480));
+    std::vector<DMatch> matches_50_200;
+    EXPECT_NO_THROW(lg->match(desc1_50, desc2_200, matches_50_200));
+    EXPECT_GT(matches_50_200.size(), 0u);
+    for (const auto& m : matches_50_200) {
+        EXPECT_GE(m.queryIdx, 0);
+        EXPECT_LT(m.queryIdx, 50);
+        EXPECT_GE(m.trainIdx, 0);
+        EXPECT_LT(m.trainIdx, 200);
+    }
 
-    // 1. Initial small shapes (8 -> 8)
-    run_match(8, 8);
+    // Step 3: Large-to-small asymmetric shape (200 -> 50)
+    Mat kpts1_200 = generate_keypoints(200, 0);
+    Mat kpts2_50 = generate_keypoints(50, 10);
+    Mat desc1_200 = generate_descriptors(200, descDim);
+    Mat desc2_50 = generate_descriptors(50, descDim);
+    for (int i = 0; i < 5; ++i) {
+        desc2_50.row(i).copyTo(desc1_200.row(i));
+    }
 
-    // 2. Reported asymmetric expansion (50 -> 200)
-    run_match(50, 200);
+    lg->setPairInfo(kpts1_200, kpts2_50, Size(640, 480), Size(640, 480));
+    std::vector<DMatch> matches_200_50;
+    EXPECT_NO_THROW(lg->match(desc1_200, desc2_50, matches_200_50));
+    EXPECT_GT(matches_200_50.size(), 0u);
+    for (const auto& m : matches_200_50) {
+        EXPECT_GE(m.queryIdx, 0);
+        EXPECT_LT(m.queryIdx, 200);
+        EXPECT_GE(m.trainIdx, 0);
+        EXPECT_LT(m.trainIdx, 50);
+    }
 
-    // 3. Large-to-small sequence (200 -> 50)
-    run_match(200, 50);
+    // Step 4: Back to initial small shape (8 -> 8)
+    lg->setPairInfo(kpts1_8, kpts2_8, Size(640, 480), Size(640, 480));
+    std::vector<DMatch> final_matches_8_8;
+    EXPECT_NO_THROW(lg->match(desc1_8, desc2_8, final_matches_8_8));
 
-    // 4. Back to small (8 -> 8)
-    run_match(8, 8);
+    ASSERT_EQ(final_matches_8_8.size(), initial_matches_8_8.size());
+    for (size_t i = 0; i < initial_matches_8_8.size(); ++i) {
+        EXPECT_EQ(final_matches_8_8[i].queryIdx, initial_matches_8_8[i].queryIdx);
+        EXPECT_EQ(final_matches_8_8[i].trainIdx, initial_matches_8_8[i].trainIdx);
+        EXPECT_NEAR(final_matches_8_8[i].distance, initial_matches_8_8[i].distance, 1e-5f);
+    }
 }
 
 #else  // !HAVE_OPENCV_DNN
