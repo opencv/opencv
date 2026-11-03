@@ -2147,6 +2147,7 @@ with #invertAffineTransform and then put in the formula above instead of M. The 
 operate in-place.
 
 Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
 
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
@@ -2186,6 +2187,7 @@ when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first i
 and then put in the formula above instead of M. The function cannot operate in-place.
 
 Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
 
 @param src input image.
 @param dst output image that has the size dsize and the same type as src .
@@ -2231,6 +2233,7 @@ cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coeffic
 This function cannot operate in-place.
 
 Each channel is interpolated independently, including images with more than four channels.
+CPU CV_16F images support linear, cubic, and Lanczos interpolation with float32 accumulation.
 
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .

@@ -72,6 +72,10 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
     if (interpolation == INTER_CUBIC) {
         CV_CPU_DISPATCH(getBicubicWarpFunc_, (type), CV_CPU_DISPATCH_MODES_ALL);
     }
+    if (interpolation == INTER_LINEAR && CV_MAT_DEPTH(type) == CV_16F &&
+        (CV_MAT_CN(type) == 1 || CV_MAT_CN(type) == 3 || CV_MAT_CN(type) == 4)) {
+        CV_CPU_DISPATCH(getBilinearHalfWarpFunc_, (), CV_CPU_DISPATCH_MODES_ALL);
+    }
     return (ImgWarpFunc)nullptr;
 }
 
@@ -79,6 +83,8 @@ static bool genericWarp(const Mat& src, const Mat& M_, const Mat& mapx, const Ma
                         int interpolation, int borderType_, const Scalar& borderValue, bool relativeMap_)
 {
     int srctype = src.type();
+    if (interpolation == INTER_LINEAR && M_.empty() && mapx.depth() != CV_32F)
+        return false;
 
     ImgWarpFunc func = getImgWarpFunc(srctype, interpolation);
     if (!func) {
@@ -856,18 +862,27 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         const T* S = S0 + sy*sstep + sx*cn;
                         int k = 0;
 #if CV_SIMD || CV_SIMD_SCALABLE
-                        if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
+                        if constexpr ((std::is_same_v<T, float> || std::is_same_v<T, hfloat>) && std::is_same_v<AT, float>)
                         {
                             const int lanes = VTraits<v_float32>::vlanes();
                             const v_float32 w0 = vx_setall_f32(w[0]), w1 = vx_setall_f32(w[1]);
                             const v_float32 w2 = vx_setall_f32(w[2]), w3 = vx_setall_f32(w[3]);
+                            const auto load = [](const T* ptr) {
+                                if constexpr (std::is_same_v<T, hfloat>)
+                                    return vx_load_expand(ptr);
+                                else
+                                    return vx_load(ptr);
+                            };
                             for (; k <= cn - lanes; k += lanes)
                             {
-                                v_float32 sum = v_add(v_mul(vx_load(S + k), w0),
-                                                     v_mul(vx_load(S + cn + k), w1));
-                                sum = v_add(sum, v_mul(vx_load(S + sstep + k), w2));
-                                sum = v_add(sum, v_mul(vx_load(S + sstep + cn + k), w3));
-                                vx_store(D + k, sum);
+                                v_float32 sum = v_add(v_mul(load(S + k), w0),
+                                                     v_mul(load(S + cn + k), w1));
+                                sum = v_add(sum, v_mul(load(S + sstep + k), w2));
+                                sum = v_add(sum, v_mul(load(S + sstep + cn + k), w3));
+                                if constexpr (std::is_same_v<T, hfloat>)
+                                    v_pack_store(D + k, sum);
+                                else
+                                    vx_store(D + k, sum);
                             }
                         }
 #endif
@@ -1041,7 +1056,29 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-                for(int k = 0; k < cn; k++ )
+                int k = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+                if constexpr (std::is_same_v<T, hfloat>)
+                {
+                    const int lanes = VTraits<v_float32>::vlanes();
+                    for (; k <= cn - lanes; k += lanes)
+                    {
+                        v_float32 sum = vx_setzero_f32();
+                        for (int row = 0; row < 8; ++row)
+                        {
+                            const T* ptr = S + size_t(row)*sstep + k;
+                            v_float32 horizontal = v_mul(vx_load_expand(ptr), vx_setall_f32(w[row*8]));
+                            for (int column = 1; column < 8; ++column)
+                                horizontal = v_add(horizontal, v_mul(vx_load_expand(ptr + column*cn),
+                                                                      vx_setall_f32(w[row*8 + column])));
+                            sum = v_add(sum, horizontal);
+                        }
+                        v_pack_store(D + k, sum);
+                    }
+                    S += k;
+                }
+#endif
+                for(; k < cn; k++ )
                 {
                     WT sum = 0;
                     for( int r = 0; r < 8; r++, S += sstep, w += 8 )
@@ -1623,14 +1660,16 @@ void cv::remap( InputArray _src, OutputArray _dst,
             remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
             remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
             remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, hfloat>, RemapNoVec<false>, float, false>
         },
         {
             remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
             remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
             remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
             remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, hfloat>, RemapNoVec<true>, float, true>
         }
     };
 
@@ -1641,14 +1680,16 @@ void cv::remap( InputArray _src, OutputArray _dst,
             remapLanczos4<Cast<float, ushort>, float, 1, false>,
             remapLanczos4<Cast<float, short>, float, 1, false>, 0,
             remapLanczos4<Cast<float, float>, float, 1, false>,
-            remapLanczos4<Cast<double, double>, float, 1, false>, 0
+            remapLanczos4<Cast<double, double>, float, 1, false>,
+            remapLanczos4<Cast<float, hfloat>, float, 1, false>
         },
         {
             remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
             remapLanczos4<Cast<float, ushort>, float, 1, true>,
             remapLanczos4<Cast<float, short>, float, 1, true>, 0,
             remapLanczos4<Cast<float, float>, float, 1, true>,
-            remapLanczos4<Cast<double, double>, float, 1, true>, 0
+            remapLanczos4<Cast<double, double>, float, 1, true>,
+            remapLanczos4<Cast<float, hfloat>, float, 1, true>
         }
     };
 

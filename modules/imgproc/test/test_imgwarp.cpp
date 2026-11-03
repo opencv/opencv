@@ -1329,6 +1329,75 @@ TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
     EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
 }
 
+TEST(Imgproc_Warp, float16_interpolation)
+{
+    RNG rng(137);
+    for (int channels : {1, 2, 3, 4, 5, 9, 20, 33, CV_CN_MAX})
+    for (Size size : {Size(1, 1), Size(71, 53)})
+    for (int interpolation : {INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
+    for (int border : {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+                       BORDER_WRAP, BORDER_TRANSPARENT})
+    {
+        SCOPED_TRACE(channels);
+        SCOPED_TRACE(interpolation);
+        SCOPED_TRACE(border);
+        Mat wideStorage(size.height + 3, size.width + 5, CV_MAKETYPE(CV_32F, channels)), storage;
+        rng.fill(wideStorage, RNG::UNIFORM, -1.f, 1.f);
+        wideStorage.convertTo(storage, CV_16F);
+        Mat src = storage(Rect(2, 1, size.width, size.height)), wide;
+        src.convertTo(wide, CV_32F);
+        const Size outputSize(19, 13);
+        Mat affine = getRotationMatrix2D(Point2f(7.5f, 5.5f), 17., 1.1);
+        Mat perspective = Mat::eye(3, 3, CV_64F);
+        affine.copyTo(perspective.rowRange(0, 2));
+        perspective.at<double>(2, 0) = 0.001;
+        Mat mapx(outputSize, CV_32F), mapy(outputSize, CV_32F), fixed, fractions, combined;
+        rng.fill(mapx, RNG::UNIFORM, -2.f, float(size.width + 2));
+        rng.fill(mapy, RNG::UNIFORM, -2.f, float(size.height + 2));
+        mapx.at<float>(0, 0) = 1370.25f;
+        mapy.at<float>(0, 0) = -937.5f;
+        convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
+        const Mat maps[] = {mapx, mapy};
+        merge(maps, 2, combined);
+        for (int operation = 0; operation < 7; ++operation)
+        {
+            SCOPED_TRACE(operation);
+            const Scalar fill(0.125, 0.25, 0.5, 0.75);
+            const auto warp = [&](const Mat& input, Mat& output) {
+                if (operation <= 1)
+                    warpAffine(input, output, affine, outputSize,
+                               interpolation | (operation == 1 ? WARP_INVERSE_MAP : 0), border, fill);
+                else if (operation == 2)
+                    warpPerspective(input, output, perspective, outputSize, interpolation, border, fill);
+                else if (operation == 3)
+                    remap(input, output, mapx, mapy, interpolation, border, fill);
+                else if (operation == 4)
+                    remap(input, output, fixed, fractions, interpolation, border, fill);
+                else if (operation == 5)
+                    remap(input, output, combined, Mat(), interpolation, border, fill);
+                else
+                    remap(input, output, mapx, mapy, interpolation | WARP_RELATIVE_MAP, border, fill);
+            };
+            Mat resultStorage(outputSize.height + 2, outputSize.width + 4, src.type());
+            resultStorage.reshape(1).setTo(0.125);
+            Mat result = resultStorage(Rect(1, 1, outputSize.width, outputSize.height));
+            Mat expected(outputSize, wide.type());
+            expected.reshape(1).setTo(0.125);
+            warp(src, result);
+            warp(wide, expected);
+            ASSERT_EQ(result.type(), src.type());
+            Mat rounded, reference, actual;
+            expected.convertTo(rounded, CV_16F);
+            rounded.convertTo(reference, CV_32F);
+            result.convertTo(actual, CV_32F);
+            ASSERT_LE(cvtest::norm(actual, reference, NORM_INF), 1./1024.);
+        }
+        Mat unchanged;
+        src.convertTo(unchanged, CV_32F);
+        ASSERT_EQ(cvtest::norm(wide, unchanged, NORM_INF), 0.);
+    }
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
