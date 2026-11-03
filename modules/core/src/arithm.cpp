@@ -2084,6 +2084,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     _dst.create(src.dims, src.size, CV_8UC1);
     Mat dst = _dst.getMat();
     InRangeFunc func = getInRangeFunc(depth);
+    CV_Assert( func != 0 );
 
     const Mat* arrays_sc[] = { &src, &dst, 0 };
     const Mat* arrays_nosc[] = { &src, &dst, &lb, &ub, 0 };
