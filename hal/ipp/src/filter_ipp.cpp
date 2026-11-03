@@ -126,8 +126,6 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
         /* 32F */ {{0, 1}, {0, 0}, {0, 1}, {0, 1}},
         /* 64F */ {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
-    // 8UC4 with a native 16S kernel is slower than OpenCV (1080p, 1 thread: 3x3 0.63x, 7x7 0.80x),
-    // with the kernel converted to 32F it is 1.6-2.1x faster.
                                                    /*  kernel: 16S 32F */
     static const char impl[CV_DEPTH_MAX][4][2] = { /* C1     C2     C3     C4   */
         /* 8U  */ {{1, 1}, {0, 0}, {1, 1}, {0, 1}},
@@ -135,7 +133,7 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
         /* 16U */ {{1, 1}, {0, 0}, {1, 1}, {1, 1}},
         /* 16S */ {{1, 1}, {0, 0}, {1, 1}, {1, 1}},
         /* 32S */ {{0, 0}, {0, 0}, {0, 0}, {0, 0}},
-        /* 32F */ {{0, 1}, {0, 0}, {0, 1}, {0, 1}},
+        /* 32F */ {{0, 1}, {0, 0}, {0, 0}, {0, 1}},
         /* 64F */ {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
 #endif // IPP_CALLS_ENFORCED
 
@@ -180,11 +178,34 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    // Performance: for multi-channel 32f IPP is not faster than OpenCV with kernels bigger than 7x7
-    // (1080p, 1 thread: 32FC3 9x9 0.70-0.80x, 11x11 0.76-0.94x; 32FC4 0.91-1.16x).
-    // All other types are 1.3-17x faster up to 13x13 (the 2017 "poor optimization" 7x7 limit no longer holds).
-    if(depth == CV_32F && channels > 1 && (ipp_kernel_width > 7 || ipp_kernel_height > 7))
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    // Performance. The cases below are slower with IPP.
+    // All other types are 1.3-12x faster up to 13x13 (the 2017 "poor optimization" 7x7 limit no longer holds).
+    {
+        const int kernelArea    = kernel_width * kernel_height;
+        const int ippKernelArea = ipp_kernel_width * ipp_kernel_height;
+
+        // 16S kernels converted to 32F: 32F images 0.64-0.96x, 8UC4 3x3 0.71-0.81x
+        if(kdepth == CV_16S && !useKernel16s && (depth == CV_32F || ippKernelArea <= 9))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        // 32FC4: 3x3 0.88-0.93x, bigger than 7x7 0.91-1.16x (Xeon 6148)
+        if(depth == CV_32F && channels == 4 && (ippKernelArea <= 9 || ipp_kernel_width > 7 || ipp_kernel_height > 7))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        // Zero-padding for off-center anchors / even kernel sizes, 8U and 32F: padded/original kernel area
+        // up to 1.56x is faster, 1.96x and more is slower except for 8UC4, which is faster.
+        // 16U and 16S are faster with any padding.
+        if((depth == CV_8U || depth == CV_32F) && ippKernelArea > kernelArea)
+        {
+            const double maxPaddingRatio = depth == CV_8U && channels == 4 ? 2.3 : 1.6;
+            if(ippKernelArea > maxPaddingRatio * kernelArea)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+
+        // 32F with an extra full-image pass (copy of the source for in-place calls, adding delta) and a 3x3 kernel
+        if(depth == CV_32F && (src_data == dst_data || addDelta) && ippKernelArea <= 9)
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
 
     // ippBorderTransp does not reproduce OpenCV behavior
     if((borderType & ~cv::BORDER_ISOLATED) == cv::BORDER_TRANSPARENT)
