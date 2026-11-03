@@ -1551,7 +1551,7 @@ TEST(Core_Mat, extractChannel_inplace_29568)
 }
 
 // insertChannel and extractChannel on every depth: only the chosen channel changes
-typedef testing::TestWithParam<std::tuple<int, int> > Core_InsertExtractChannel;
+typedef testing::TestWithParam<std::tuple<perf::MatType, int> > Core_InsertExtractChannel;
 TEST_P(Core_InsertExtractChannel, accuracy)
 {
     const int depth = std::get<0>(GetParam());
@@ -1580,8 +1580,7 @@ TEST_P(Core_InsertExtractChannel, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_InsertExtractChannel, testing::Combine(
-    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F, CV_16BF,
-                    CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Range(perf::MatType(CV_8U), perf::MatType(CV_DEPTH_CURR_MAX)),
     testing::Range(2, 5)));
 
 TEST(Core_Mat, empty)
