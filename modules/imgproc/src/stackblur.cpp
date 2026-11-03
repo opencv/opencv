@@ -96,6 +96,12 @@ inline int opRow(const T* , T* , const std::vector<ushort>& , const float , cons
     return radius * CN;
 }
 
+// A 16-bit sum times stackblurMul doesn't fit in 32 bits, so 16-bit data divides as the scalar loops do.
+inline v_int32 stackblurDivide(const v_int32& sum, const v_float32& mulVal)
+{
+    return v_trunc(v_mul(v_cvt_f32(sum), mulVal));
+}
+
 template<>
 inline int opRow<uchar>(const uchar* srcPtr, uchar* dstPtr, const std::vector<ushort>& kVec, const float , const int radius, const int CN, const int widthCN)
 {
@@ -195,7 +201,7 @@ inline int opRow<uchar>(const uchar* srcPtr, uchar* dstPtr, const std::vector<us
 }
 
 template<>
-inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector<ushort>& kVec, const float , const int radius, const int CN, const int widthCN)
+inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector<ushort>& kVec, const float mulVal, const int radius, const int CN, const int widthCN)
 {
     int kernelSize = (int)kVec.size();
 
@@ -203,12 +209,9 @@ inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector
     if (radius > STACKBLUR_MAX_RADIUS)
         return i;
 
-    const int mulValTab= stackblurMul[radius];
-    const int shrValTab= stackblurShr[radius];
-
     const int VEC_LINE = VTraits<v_uint16>::vlanes();
 
-    v_uint32 v_mulVal = vx_setall_u32(mulValTab);
+    v_float32 v_mulVal = vx_setall_f32(mulVal);
     if (kernelSize == 3)
     {
         for (; i <= widthCN - VEC_LINE; i += VEC_LINE)
@@ -221,7 +224,7 @@ inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector
             x1l = v_add(v_add(x1l, x1l), v_add(x0l, x2l));
             x1h = v_add(v_add(x1h, x1h), v_add(x0h, x2h));
 
-            v_store(dstPtr + i, v_pack(v_shr(v_mul(x1l, v_mulVal), shrValTab), v_shr(v_mul(x1h, v_mulVal), shrValTab)));
+            v_store(dstPtr + i, v_pack_u(stackblurDivide(v_reinterpret_as_s32(x1l), v_mulVal), stackblurDivide(v_reinterpret_as_s32(x1h), v_mulVal)));
         }
     }
     else
@@ -243,11 +246,18 @@ inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector
                 v_uint16 k1 = vx_setall_u16(kx[k]);
                 v_uint16 k2 = vx_setall_u16(kx[k + 1]);
 
+                // Adding two 16-bit values first would saturate, so each one is multiplied on its own.
                 v_uint32 y0, y1;
-                v_mul_expand(v_add(vx_load(srcPtr - j), vx_load(srcPtr + j)), k1, y0, y1);
+                v_mul_expand(vx_load(srcPtr - j), k1, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
-                v_mul_expand(v_add(vx_load(srcPtr - j - CN), vx_load(srcPtr + j + CN)), k2, y0, y1);
+                v_mul_expand(vx_load(srcPtr + j), k1, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr - j - CN), k2, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr + j + CN), k2, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
             }
@@ -256,15 +266,15 @@ inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector
                 v_uint16 k1 = vx_setall_u16(kx[k]);
 
                 v_uint32 y0, y1;
-                v_mul_expand(v_add(vx_load(srcPtr - j), vx_load(srcPtr + j)), k1, y0, y1);
+                v_mul_expand(vx_load(srcPtr - j), k1, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr + j), k1, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
             }
 
-            s0 = v_shr(v_mul(s0, v_mulVal), shrValTab);
-            s1 = v_shr(v_mul(s1, v_mulVal), shrValTab);
-
-            v_store(dstPtr + i, v_pack(s0, s1));
+            v_store(dstPtr + i, v_pack_u(stackblurDivide(v_reinterpret_as_s32(s0), v_mulVal), stackblurDivide(v_reinterpret_as_s32(s1), v_mulVal)));
         }
     }
 
@@ -272,7 +282,7 @@ inline int opRow<ushort>(const ushort* srcPtr, ushort* dstPtr, const std::vector
 }
 
 template<>
-inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<ushort>& kVec, const float , const int radius, const int CN, const int widthCN)
+inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<ushort>& kVec, const float mulVal, const int radius, const int CN, const int widthCN)
 {
     int kernelSize = (int)kVec.size();
     int i = radius * CN;
@@ -280,11 +290,8 @@ inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<us
     if (radius > STACKBLUR_MAX_RADIUS)
         return i;
 
-    const int mulValTab= stackblurMul[radius];
-    const int shrValTab= stackblurShr[radius];
-
     const int VEC_LINE = VTraits<v_int16>::vlanes();
-    v_int32 v_mulVal = vx_setall_s32(mulValTab);
+    v_float32 v_mulVal = vx_setall_f32(mulVal);
 
     if (kernelSize == 3)
     {
@@ -298,7 +305,7 @@ inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<us
             x1l = v_add(v_add(x1l, x1l), v_add(x0l, x2l));
             x1h = v_add(v_add(x1h, x1h), v_add(x0h, x2h));
 
-            v_store(dstPtr + i, v_pack(v_shr(v_mul(x1l, v_mulVal), shrValTab), v_shr(v_mul(x1h, v_mulVal), shrValTab)));
+            v_store(dstPtr + i, v_pack(stackblurDivide(x1l, v_mulVal), stackblurDivide(x1h, v_mulVal)));
         }
     }
     else
@@ -319,12 +326,19 @@ inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<us
                 v_int16 k1 = vx_setall_s16((short)kx[k]);
                 v_int16 k2 = vx_setall_s16((short)kx[k + 1]);
 
+                // Adding two 16-bit values first would saturate, so each one is multiplied on its own.
                 v_int32 y0, y1;
 
-                v_mul_expand(v_add(vx_load(srcPtr - j), vx_load(srcPtr + j)), k1, y0, y1);
+                v_mul_expand(vx_load(srcPtr - j), k1, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
-                v_mul_expand(v_add(vx_load(srcPtr - j - CN), vx_load(srcPtr + j + CN)), k2, y0, y1);
+                v_mul_expand(vx_load(srcPtr + j), k1, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr - j - CN), k2, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr + j + CN), k2, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
             }
@@ -332,15 +346,15 @@ inline int opRow<short>(const short* srcPtr, short* dstPtr, const std::vector<us
             {
                 v_int16 k1 = vx_setall_s16((short)kx[k]);
                 v_int32 y0, y1;
-                v_mul_expand(v_add(vx_load(srcPtr - j), vx_load(srcPtr + j)), k1, y0, y1);
+                v_mul_expand(vx_load(srcPtr - j), k1, y0, y1);
+                s0 = v_add(s0, y0);
+                s1 = v_add(s1, y1);
+                v_mul_expand(vx_load(srcPtr + j), k1, y0, y1);
                 s0 = v_add(s0, y0);
                 s1 = v_add(s1, y1);
             }
 
-            s0 = v_shr(v_mul(s0, v_mulVal), shrValTab);
-            s1 = v_shr(v_mul(s1, v_mulVal), shrValTab);
-
-            v_store(dstPtr + i, v_pack(s0, s1));
+            v_store(dstPtr + i, v_pack(stackblurDivide(s0, v_mulVal), stackblurDivide(s1, v_mulVal)));
         }
     }
     return i;
@@ -917,7 +931,7 @@ inline int opColumn<uchar, int>(const uchar* srcPtr, uchar* dstPtr, uchar* stack
 
 template<>
 inline int opColumn<short, int>(const short* srcPtr, short* dstPtr, short* stack, int* sum, int* sumIn,
-                                int* sumOut, const float , const int mulValTab, const int shrValTab,
+                                int* sumOut, const float mulVal, const int mulValTab, const int shrValTab,
                                 const int widthLen, const int ss, const int sp1)
 {
     int k = 0;
@@ -925,7 +939,7 @@ inline int opColumn<short, int>(const short* srcPtr, short* dstPtr, short* stack
     {
         const int VEC_LINE_16 = VTraits<v_int16>::vlanes();
         const int VEC_LINE_32 = VTraits<v_int32>::vlanes();
-        v_int32 v_mulVal = vx_setall_s32(mulValTab);
+        v_float32 v_mulVal = vx_setall_f32(mulVal);
 
         auto stackStartPtr = stack + ss * widthLen;
         auto stackSp1Ptr = stack + sp1 * widthLen;
@@ -944,7 +958,7 @@ inline int opColumn<short, int>(const short* srcPtr, short* dstPtr, short* stack
             v_sumOut0 = vx_load(sumOut + k);
             v_sumOut1 = vx_load(sumOut + k + VEC_LINE_32);
 
-            v_store(dstPtr + k,v_pack(v_shr(v_mul(v_sum0, v_mulVal), shrValTab), v_shr(v_mul(v_sum1, v_mulVal), shrValTab)));
+            v_store(dstPtr + k, v_pack(stackblurDivide(v_sum0, v_mulVal), stackblurDivide(v_sum1, v_mulVal)));
 
             v_sum0 = v_sub(v_sum0, v_sumOut0);
             v_sum1 = v_sub(v_sum1, v_sumOut1);
@@ -987,7 +1001,7 @@ inline int opColumn<short, int>(const short* srcPtr, short* dstPtr, short* stack
 
 template<>
 inline int opColumn<ushort, int>(const ushort* srcPtr, ushort* dstPtr, ushort* stack, int* sum, int* sumIn,
-                                int* sumOut, const float , const int mulValTab, const int shrValTab,
+                                int* sumOut, const float mulVal, const int mulValTab, const int shrValTab,
                                 const int widthLen, const int ss, const int sp1)
 {
     int k = 0;
@@ -995,7 +1009,7 @@ inline int opColumn<ushort, int>(const ushort* srcPtr, ushort* dstPtr, ushort* s
     {
         const int VEC_LINE_16 = VTraits<v_uint16>::vlanes();
         const int VEC_LINE_32 = VTraits<v_int32>::vlanes();
-        v_uint32 v_mulVal = vx_setall_u32((uint32_t)mulValTab);
+        v_float32 v_mulVal = vx_setall_f32(mulVal);
 
         auto stackStartPtr = stack + ss * widthLen;
         auto stackSp1Ptr = stack + sp1 * widthLen;
@@ -1014,7 +1028,7 @@ inline int opColumn<ushort, int>(const ushort* srcPtr, ushort* dstPtr, ushort* s
             v_sumOut0 = vx_load(sumOut + k);
             v_sumOut1 = vx_load(sumOut + k + VEC_LINE_32);
 
-            v_store(dstPtr + k, v_pack(v_shr(v_mul(v_reinterpret_as_u32(v_sum0), v_mulVal), shrValTab), v_shr(v_mul(v_reinterpret_as_u32(v_sum1), v_mulVal), shrValTab)));
+            v_store(dstPtr + k, v_pack_u(stackblurDivide(v_sum0, v_mulVal), stackblurDivide(v_sum1, v_mulVal)));
 
             v_sum0 = v_sub(v_sum0, v_sumOut0);
             v_sum1 = v_sub(v_sum1, v_sumOut1);
