@@ -42,6 +42,9 @@ Net::Impl::~Impl()
     if (context)
         context->reset();
 #endif
+#ifdef HAVE_CUDA
+    cudaGraphReset();
+#endif
 }
 
 
@@ -65,6 +68,7 @@ Net::Impl::Impl()
     preferableTarget = DNN_TARGET_CPU;
     hasDynamicShapes = false;
     useWinograd = true;
+    useTF32 = true;
 
     ////////////// extra initialization for the new engine /////////////////
 
@@ -3019,6 +3023,20 @@ void Net::Impl::enableWinograd(bool useWinograd_)
     }
 }
 
+void Net::Impl::enableTF32(bool useTF32_)
+{
+    if (useTF32 != useTF32_)
+    {
+        useTF32 = useTF32_;
+#ifdef HAVE_CUDA
+        cudaInfo.reset();  // the cuBLAS/cuDNN handles carry the math mode
+#endif
+        if (mainGraph)
+            finalized = false;  // re-select per-op executors on next finalize()
+        else
+            clear();
+    }
+}
 
 // TODO drop?
 void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const

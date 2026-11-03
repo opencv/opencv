@@ -79,6 +79,45 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             }
         }
 
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(outputs.size() == 1);
+
+            auto output = csl::spanOf<T>(outputs[0]);
+            const MatShape output_shape = cv::dnn::shape(outputs[0]);
+
+            if (zero_padding)
+                kernels::fill<T>(stream, output, 0.0);
+
+            std::size_t output_axis_offset = 0;
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                // the engine leaves an empty input unallocated; it adds nothing to the concat
+                if (inputs[i].empty() || inputs[i].total() == 0)
+                    continue;
+
+                auto input = csl::viewOf<T>(inputs[i]);
+                if (zero_padding)
+                {
+                    const MatShape input_shape = cv::dnn::shape(inputs[i]);
+                    std::vector<std::size_t> offsets(input_shape.dims);
+                    for (int j = 0; j < input_shape.dims; j++)
+                        offsets[j] = (output_shape[j] - input_shape[j]) / 2;
+                    offsets[concat_axis] = output_axis_offset;
+                    kernels::concat_with_offsets(stream, output, input, offsets);
+                }
+                else
+                {
+                    kernels::concat(stream, output, output_axis_offset, input, concat_axis);
+                }
+                output_axis_offset += input.get_axis_size(concat_axis);
+            }
+        }
+
     private:
         csl::Stream stream;
         std::size_t concat_axis;

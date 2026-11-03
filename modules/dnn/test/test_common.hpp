@@ -170,8 +170,8 @@ public:
     static bool cudaTF32Enabled()
     {
 #ifdef HAVE_CUDA
-        static const bool enabled = cv::utils::getConfigurationParameterBool("OPENCV_DNN_CUDA_ALLOW_TF32", true) &&
-                                    cv::cuda::getCudaEnabledDeviceCount() > 0 &&
+        // Net::enableTF32 defaults to true, so FP32 math on CUDA is TF32 on compute capability 8.0+
+        static const bool enabled = cv::cuda::getCudaEnabledDeviceCount() > 0 &&
                                     cv::cuda::DeviceInfo().majorVersion() >= 8;
         return enabled;
 #else

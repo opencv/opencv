@@ -83,11 +83,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
+                // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops);
-                kernels::fill<float>(stream, mean, 0.f);
-
                 auto inv_stddev = ws_allocator.get_span<float>(loops);
-                kernels::fill<float>(stream, inv_stddev, 0.f);
 
                 kernels::reduce_mean_sqr_sum<T>(stream, mean, inv_stddev, input, norm_size);
                 kernels::compute_normalization_scale(stream, inv_stddev, mean, inv_stddev, norm_size, epsilon);
@@ -97,6 +95,42 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, inv_stddev, norm_size);
                 }
             }
+        }
+
+        void forward(const std::vector<UMat>& inputs,
+                     const std::vector<UMat>& outputs,
+                     csl::Workspace& workspace) override {
+            auto input = csl::viewOf<T>(inputs[0]);
+
+            csl::TensorView<T> scale = input_scale_tensor.empty() ? csl::viewOf<T>(inputs[1])
+                                                                  : csl::TensorView<T>(input_scale_tensor);
+            csl::TensorView<T> bias;
+            if (!input_bias_tensor.empty())
+                bias = csl::TensorView<T>(input_bias_tensor);
+            else if (input_scale_tensor.empty() && inputs.size() >= 3)
+                bias = csl::viewOf<T>(inputs[2]);
+
+            auto output = csl::spanOf<T>(outputs[0]);
+
+            auto loops = input.size_range(0, axis);
+            auto norm_size = input.size_range(axis, input.rank());
+            if (norm_size == 1) {
+                kernels::fill<T>(stream, output, 0.f);
+                return;
+            }
+
+            auto ws_allocator = csl::WorkspaceAllocator(workspace);
+
+            // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
+            auto mean = ws_allocator.get_span<float>(loops);
+            auto inv_stddev = ws_allocator.get_span<float>(loops);
+
+            kernels::reduce_mean_sqr_sum<T>(stream, mean, inv_stddev, input, norm_size);
+            kernels::compute_normalization_scale(stream, inv_stddev, mean, inv_stddev, norm_size, epsilon);
+            if (!bias.empty())
+                kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, bias, mean, inv_stddev, norm_size);
+            else
+                kernels::normalize_mean_variance_layernorm<T>(stream, output, input, scale, mean, inv_stddev, norm_size);
         }
 
         std::size_t get_workspace_memory_in_bytes() const noexcept override { return scratch_mem_in_bytes; }

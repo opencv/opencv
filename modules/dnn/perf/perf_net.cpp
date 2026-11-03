@@ -36,7 +36,11 @@ public:
         if (!proto.empty())
             proto = findDataFile(proto);
         net = readNet(weights, proto);
-        if (!pinnedInput.empty())
+        // "*" pins every named input to the shape it is fed
+        if (pinnedInput == "*")
+            for (auto& inp : inputs)
+                net.setInputShape(std::get<1>(inp), shape(std::get<0>(inp)));
+        else if (!pinnedInput.empty())
             net.setInputShape(pinnedInput, shape(std::get<0>(inputs[0])));
         // Set multiple inputs
         for(auto &inp: inputs){
@@ -930,6 +934,88 @@ PERF_TEST_P_(DNNTestNetwork, DINOv2_Small)
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     processNet("dnn/onnx/models/dinov2_small.onnx", "",
                {std::make_tuple(inp, "pixel_values")});
+}
+
+// CUDA only: dynamic-shape models with their inputs pinned, so Shape chains fold and forward() replays as a CUDA Graph
+PERF_TEST_P_(DNNTestNetwork, YOLOv3_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cv::resize(sample, sample, Size(416, 416));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    pinnedInput = "input";
+    processNet("dnn/yolov3-converted.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    cv::resize(sample, sample, Size(608, 608));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    pinnedInput = "input";
+    processNet("dnn/yolov4.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(), Scalar(), true);
+    pinnedInput = "input";
+    processNet("dnn/yolov4-tiny.onnx", "", inp);
+}
+
+PERF_TEST_P_(DNNTestNetwork, BEiT_Base_Patch16_224_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    pinnedInput = "x";
+    processNet("dnn/beit_base_patch16_224_Opset16.onnx", "", cv::Size(224, 224));
+}
+
+PERF_TEST_P_(DNNTestNetwork, BERT_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    const int seq_len = 9;
+    int64_t input_ids_data[seq_len] = {101, 1996, 103, 2938, 2006, 1996, 13523, 1012, 102};
+    int64_t attention_mask_data[seq_len] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int64_t token_type_ids_data[seq_len] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int shp[2] = {1, seq_len};
+    Mat input_ids(2, shp, CV_64S, input_ids_data);
+    Mat attention_mask(2, shp, CV_64S, attention_mask_data);
+    Mat token_type_ids(2, shp, CV_64S, token_type_ids_data);
+    pinnedInput = "*";
+    processNet("dnn/onnx/models/bert.onnx", "",
+               {std::make_tuple(input_ids, "input_ids"),
+                std::make_tuple(attention_mask, "attention_mask"),
+                std::make_tuple(token_type_ids, "token_type_ids")});
+}
+
+PERF_TEST_P_(DNNTestNetwork, SigLIP_CUDA_pinned)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("CUDA only");
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    Mat sample = imread(findDataFile("dnn/dog416.png"));
+    Mat pixel_values = blobFromImage(sample, 1.0 / 255.0, Size(224, 224), Scalar(0.5, 0.5, 0.5), true);
+    pixel_values = (pixel_values - 0.5f) / 0.5f;
+    const int seq_len = 64;
+    int shp[2] = {1, seq_len};
+    Mat input_ids(2, shp, CV_64S, Scalar(0));
+    int64_t* ids = input_ids.ptr<int64_t>();
+    ids[0] = 1; ids[1] = 263; ids[2] = 2514; ids[3] = 275; ids[4] = 262; ids[5] = 3914; ids[6] = 2;
+    pinnedInput = "*";
+    processNet("dnn/onnx/models/siglip_base_patch16_224.onnx", "",
+               {std::make_tuple(input_ids,    "input_ids"),
+                std::make_tuple(pixel_values, "pixel_values")});
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());

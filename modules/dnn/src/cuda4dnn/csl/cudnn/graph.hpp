@@ -13,9 +13,12 @@
 #include "../workspace.hpp"
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include <cstdint>
+#include <algorithm>
 #include <array>
+#include <type_traits>
 #include <vector>
 
 #ifdef HAVE_CUDNNJIT
@@ -96,8 +99,25 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         return stride;
     }
 
-    /** wraps one finalized op in an op graph and keeps the first heuristic engine config whose plan compiles */
-    inline void buildExecutionPlan(const Handle& handle, const BackendDescriptor& op, const char* what,
+    /** packed strides for a tensor in [N, C, spatial...] order, i.e. the NCHW layout the engine keeps */
+    inline std::vector<int64_t> packedStrides(const std::vector<int64_t>& shape) {
+        const int64_t rank = static_cast<int64_t>(shape.size());
+        CV_Assert(rank >= 3);
+        std::vector<int64_t> stride(rank);
+        int64_t running = 1;
+        for (int64_t k = rank - 1; k >= 0; k--) {
+            stride[k] = running;
+            running *= shape[k];
+        }
+        return stride;
+    }
+
+    /** wraps one finalized op in an op graph and keeps the first heuristic engine config whose plan compiles
+     *
+     * With \p strictFP32 set, engines that run FP32 on tensor cores (TF32) are skipped; the fallback heuristic
+     * is tried next, and TF32 is used (with a one-time warning) only when no exact FP32 engine exists.
+     */
+    inline void buildExecutionPlan(const Handle& handle, const BackendDescriptor& op, const char* what, bool strictFP32,
                                    BackendDescriptor& opGraph, BackendDescriptor& engineConfig,
                                    BackendDescriptor& executionPlan, int64_t& workspace_size)
     {
@@ -110,41 +130,59 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             opGraph.finalize();
         }
 
-        BackendDescriptor heuristics(CUDNN_BACKEND_ENGINEHEUR_DESCRIPTOR);
-        {
+        /* keep the first engine config whose plan finalizes (i.e. compiles) */
+        auto pick = [&](cudnnBackendHeurMode_t mode, bool strict) {
+            BackendDescriptor heuristics(CUDNN_BACKEND_ENGINEHEUR_DESCRIPTOR);
             cudnnBackendDescriptor_t g = opGraph.get();
-            cudnnBackendHeurMode_t mode = CUDNN_HEUR_MODE_A;
             heuristics.set(CUDNN_ATTR_ENGINEHEUR_OPERATION_GRAPH, CUDNN_TYPE_BACKEND_DESCRIPTOR, 1, &g);
             heuristics.set(CUDNN_ATTR_ENGINEHEUR_MODE,            CUDNN_TYPE_HEUR_MODE,          1, &mode);
-            heuristics.finalize();
-        }
+            if (cudnnBackendFinalize(heuristics.get()) != CUDNN_STATUS_SUCCESS)
+                return false;
 
-        constexpr int max_configs = 32;
-        std::vector<BackendDescriptor> configs;
-        configs.reserve(max_configs);
-        std::array<cudnnBackendDescriptor_t, max_configs> configHandles{};
-        for (int c = 0; c < max_configs; c++) {
-            configs.emplace_back(CUDNN_BACKEND_ENGINECFG_DESCRIPTOR);
-            configHandles[c] = configs.back().get();
-        }
-
-        int64_t returned = 0;
-        CUDA4DNN_CHECK_CUDNN(cudnnBackendGetAttribute(
-            heuristics.get(), CUDNN_ATTR_ENGINEHEUR_RESULTS, CUDNN_TYPE_BACKEND_DESCRIPTOR,
-            max_configs, &returned, configHandles.data()));
-
-        /* keep the first engine config whose plan finalizes (i.e. compiles) */
-        for (int c = 0; c < returned; c++) {
-            BackendDescriptor plan(CUDNN_BACKEND_EXECUTION_PLAN_DESCRIPTOR);
-            cudnnHandle_t h = handle.get();
-            plan.set(CUDNN_ATTR_EXECUTION_PLAN_HANDLE,        CUDNN_TYPE_HANDLE,             1, &h);
-            plan.set(CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG, CUDNN_TYPE_BACKEND_DESCRIPTOR, 1, &configHandles[c]);
-            if (cudnnBackendFinalize(plan.get()) == CUDNN_STATUS_SUCCESS) {
-                engineConfig = std::move(configs[c]);
-                executionPlan = std::move(plan);
-                break;
+            constexpr int max_configs = 32;
+            std::vector<BackendDescriptor> configs;
+            configs.reserve(max_configs);
+            std::array<cudnnBackendDescriptor_t, max_configs> configHandles{};
+            for (int c = 0; c < max_configs; c++) {
+                configs.emplace_back(CUDNN_BACKEND_ENGINECFG_DESCRIPTOR);
+                configHandles[c] = configs.back().get();
             }
-        }
+
+            int64_t returned = 0;
+            if (cudnnBackendGetAttribute(heuristics.get(), CUDNN_ATTR_ENGINEHEUR_RESULTS, CUDNN_TYPE_BACKEND_DESCRIPTOR,
+                                         max_configs, &returned, configHandles.data()) != CUDNN_STATUS_SUCCESS)
+                return false;
+
+            for (int c = 0; c < returned; c++) {
+                if (strict) {
+                    BackendDescriptor engine(CUDNN_BACKEND_ENGINE_DESCRIPTOR);
+                    cudnnBackendDescriptor_t e = engine.get();
+                    int64_t n = 0;
+                    CUDA4DNN_CHECK_CUDNN(cudnnBackendGetAttribute(
+                        configHandles[c], CUDNN_ATTR_ENGINECFG_ENGINE, CUDNN_TYPE_BACKEND_DESCRIPTOR, 1, &n, &e));
+                    std::array<cudnnBackendNumericalNote_t, CUDNN_NUMERICAL_NOTE_TYPE_COUNT> notes{};
+                    CUDA4DNN_CHECK_CUDNN(cudnnBackendGetAttribute(
+                        e, CUDNN_ATTR_ENGINE_NUMERICAL_NOTE, CUDNN_TYPE_NUMERICAL_NOTE, notes.size(), &n, notes.data()));
+                    if (std::find(notes.begin(), notes.begin() + n, CUDNN_NUMERICAL_NOTE_TENSOR_CORE) != notes.begin() + n)
+                        continue;
+                }
+
+                BackendDescriptor plan(CUDNN_BACKEND_EXECUTION_PLAN_DESCRIPTOR);
+                cudnnHandle_t h = handle.get();
+                plan.set(CUDNN_ATTR_EXECUTION_PLAN_HANDLE,        CUDNN_TYPE_HANDLE,             1, &h);
+                plan.set(CUDNN_ATTR_EXECUTION_PLAN_ENGINE_CONFIG, CUDNN_TYPE_BACKEND_DESCRIPTOR, 1, &configHandles[c]);
+                if (cudnnBackendFinalize(plan.get()) == CUDNN_STATUS_SUCCESS) {
+                    engineConfig = std::move(configs[c]);
+                    executionPlan = std::move(plan);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        bool found = pick(CUDNN_HEUR_MODE_A, strictFP32) || (strictFP32 && pick(CUDNN_HEUR_MODE_FALLBACK, true));
+        if (!found && strictFP32 && pick(CUDNN_HEUR_MODE_A, false))
+            CV_LOG_ONCE_WARNING(NULL, "DNN/CUDA: cuDNN JIT has no exact FP32 engine for some " << what << " layers, using TF32 for them");
 
         if (!executionPlan)
             CV_Error(cv::Error::GpuApiCallError, cv::format("cuDNN JIT did not produce an execution plan for the %s.", what));
@@ -155,7 +193,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             1, &count, &workspace_size));
     }
 
-    /** cuDNN graph convolution (NHWC data, KRSC filter); the plan is built once at construction */
+    /** cuDNN graph convolution (NCHW data and OIHW filter, or NHWC/KRSC with channels_last); the plan is built once at construction */
     template <class T>
     class ConvolutionGraph {
     public:
@@ -164,6 +202,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             std::vector<int64_t> output_shape;  /* N, C, spatial... */
             std::vector<int64_t> filter_shape;  /* OC, IC, kernel... */
             std::vector<int64_t> padding_pre, padding_post, stride, dilation; /* one entry per spatial dim */
+            bool channels_last = false;          /* NHWC data and KRSC filter instead of NCHW/OIHW */
         };
 
         ConvolutionGraph() = default;
@@ -187,10 +226,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             CV_Assert(params.stride.size() == static_cast<std::size_t>(spatial_dims));
             CV_Assert(params.dilation.size() == static_cast<std::size_t>(spatial_dims));
 
-            /* channel-last strides, e.g. NHWC: {C*H*W, 1, W*C, C} */
-            const std::vector<int64_t> xStride = channelLastStrides(i);
-            const std::vector<int64_t> yStride = channelLastStrides(o);
-            const std::vector<int64_t> wStride = channelLastStrides(f);
+            /* packed strides read the engine's NCHW buffers and OIHW weights in place */
+            auto strides = params.channels_last ? channelLastStrides : packedStrides;
+            const std::vector<int64_t> xStride = strides(i);
+            const std::vector<int64_t> yStride = strides(o);
+            const std::vector<int64_t> wStride = strides(f);
 
             xDesc = makeTensorDescriptor<T>('x', i, xStride);
             yDesc = makeTensorDescriptor<T>('y', o, yStride);
@@ -223,7 +263,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 convOp.finalize();
             }
 
-            buildExecutionPlan(handle, convOp, "convolution", opGraph, engineConfig, executionPlan, workspace_size);
+            const bool strictFP32 = std::is_same<T, float>::value && !handle.allowTF32();
+            buildExecutionPlan(handle, convOp, "convolution", strictFP32, opGraph, engineConfig, executionPlan, workspace_size);
         }
 
         std::size_t get_workspace_size() const noexcept { return static_cast<std::size_t>(workspace_size); }

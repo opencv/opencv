@@ -39,6 +39,7 @@ public:
     virtual void setPreferableBackend(Backend backendId) { net.setPreferableBackend(backendId); }
     virtual void setPreferableTarget(Target targetId) { net.setPreferableTarget(targetId); }
     virtual void enableWinograd(bool useWinograd) { net.enableWinograd(useWinograd); }
+    virtual void enableTF32(bool useTF32) { net.enableTF32(useTF32); }
 
     virtual
     void initNet(const Net& network)
@@ -202,6 +203,13 @@ Model& Model::enableWinograd(bool useWinograd)
 {
     CV_DbgAssert(impl);
     impl->enableWinograd(useWinograd);
+    return *this;
+}
+
+Model& Model::enableTF32(bool useTF32)
+{
+    CV_DbgAssert(impl);
+    impl->enableTF32(useTF32);
     return *this;
 }
 
