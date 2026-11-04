@@ -10,6 +10,7 @@
 #include "precomp_ipp.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <climits>
 #include <cmath>
 
@@ -245,15 +246,61 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
         if(!iwBorderType)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, ::ipp::IwiFilterParams(1, ippOffset, ippAlgHintNone, roundMode), iwBorderType);
+        const ::ipp::IwiFilterParams iwParams(1, ippOffset, ippAlgHintNone, roundMode);
 
-        if(addDelta)
+        // Same condition as OpenCV's tiled parallel path in FilterEngine__apply() (filter.simd.hpp, keep in sync):
+        // filter in parallel horizontal stripes exactly when OpenCV itself would run in parallel.
+        const int nthreads = cv::getNumThreads();
+        if(nthreads > 1 && (size_t)width * height >= std::max((size_t)1024 * 1024, (size_t)nthreads * 64 * 1024))
         {
-            // the same value for every channel: process C3/C4 as C1 (ICV has only ippiAddC_32f_C1IR)
-            const IppiSize roi = { width * channels, height };
-            IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiAddC_32f_C1IR, (Ipp32f)delta, (Ipp32f*)dst_data, (int)dst_step, roi);
-            if(status < 0) // dst is already written (and may alias src), so a fallback is not possible
-                return CV_HAL_ERROR_UNKNOWN;
+            // A stripe can't be lower than the kernel radius: otherwise the next stripe has a mixed top border
+            // (pixels from both memory and outside of the image), which IPP does not support.
+            int numTiles = nthreads * 4;
+            if(radius_y > 0)
+                numTiles = std::max(1, std::min(numTiles, height / radius_y));
+
+            // Exception safe: a failure in any stripe sets 'ok' to false, the other stripes are skipped then
+            std::atomic_bool ok{true};
+            const Ipp32f     deltaValue = (Ipp32f)delta;
+            auto filterStripe = [&iwSrc, &iwDst, &iwKernel, &iwParams, &iwBorderType, addDelta, deltaValue, &ok](const cv::Range& range)
+            {
+                if(!ok.load(std::memory_order_relaxed))
+                    return;
+                try
+                {
+                    ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, iwDst.m_size.width, range.end - range.start);
+                    CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, iwParams, iwBorderType, tile);
+
+                    if(addDelta)
+                    {
+                        // the same value for every channel: process C3/C4 as C1 (ICV has only ippiAddC_32f_C1IR)
+                        const IppiSize roi = { (int)iwDst.m_size.width * iwDst.m_channels, range.end - range.start };
+                        Ipp32f* rows = (Ipp32f*)((Ipp8u*)iwDst.m_ptr + (size_t)range.start * (size_t)iwDst.m_step);
+                        if(CV_INSTRUMENT_FUN_IPP(ippiAddC_32f_C1IR, deltaValue, rows, (int)iwDst.m_step, roi) < 0)
+                            ok.store(false, std::memory_order_relaxed);
+                    }
+                }
+                catch(const ::ipp::IwException &)
+                {
+                    ok.store(false, std::memory_order_relaxed);
+                }
+            };
+            cv::parallel_for_(cv::Range(0, height), filterStripe, numTiles);
+            if(!ok) // in-place: dst (= src) may be partially written, so a fallback is not possible
+                return src_data == dst_data ? CV_HAL_ERROR_UNKNOWN : CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
+        else
+        {
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, iwParams, iwBorderType);
+
+            if(addDelta)
+            {
+                // the same value for every channel: process C3/C4 as C1 (ICV has only ippiAddC_32f_C1IR)
+                const IppiSize roi = { width * channels, height };
+                IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiAddC_32f_C1IR, (Ipp32f)delta, (Ipp32f*)dst_data, (int)dst_step, roi);
+                if(status < 0) // dst is already written (and may alias src), so a fallback is not possible
+                    return CV_HAL_ERROR_UNKNOWN;
+            }
         }
     }
     catch(const ::ipp::IwException& ex)
