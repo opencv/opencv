@@ -451,6 +451,19 @@ TEST(Core_EW_MulDiv, result_64f_is_computed_in_64f)
         EXPECT_EQ(CV_64F, dst.type());
         EXPECT_EQ(0, cv::norm(dst, Mat(1, W, CV_64F, Scalar(1.0 / 3.0)), NORM_INF)) << "depth=" << depth;
     }
+
+    // dividing by zero gives 0 for integer inputs, even though the calculation runs in CV_64F
+    for (int depth : {CV_8U, CV_16U})
+    {
+        Mat five(1, W, depth, Scalar(5)), zero(1, W, depth, Scalar(0));
+        cv::divide(five, zero, dst, 1, CV_64F);
+        EXPECT_EQ(0, cv::countNonZero(dst)) << "depth=" << depth;
+    }
+
+    // and it gives infinity for float inputs
+    Mat five32f(1, W, CV_32F, Scalar(5)), zero32f(1, W, CV_32F, Scalar(0));
+    cv::divide(five32f, zero32f, dst, 1, CV_64F);
+    EXPECT_EQ(W, cv::countNonZero(dst == std::numeric_limits<double>::infinity()));
 }
 
 }} // namespace
