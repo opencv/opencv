@@ -2084,7 +2084,9 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     _dst.create(src.dims, src.size, CV_8UC1);
     Mat dst = _dst.getMat();
     InRangeFunc func = getInRangeFunc(depth);
-    CV_Assert( func != 0 );
+    if( !func )
+        CV_Error( cv::Error::StsNotImplemented,
+                  "inRange: CV_16F input is not supported, convert the input to another type first" );
 
     const Mat* arrays_sc[] = { &src, &dst, 0 };
     const Mat* arrays_nosc[] = { &src, &dst, &lb, &ub, 0 };
