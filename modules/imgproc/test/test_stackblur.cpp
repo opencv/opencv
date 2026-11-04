@@ -368,18 +368,30 @@ INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_FullRange,
                         )
 );
 
-// The result doesn't depend on how the image is split between threads.
+class ScopedThreadsGuard
+{
+public:
+    ScopedThreadsGuard() : old_threads(getNumThreads()) {}
+    ~ScopedThreadsGuard() { setNumThreads(old_threads); }
+    void set(int n) { setNumThreads(n); }
+private:
+    int old_threads;
+};
+
+// The result doesn't depend on how the image is split between threads. The width is
+// odd so that some stripe leaves pixels to the scalar loop at any thread count.
 TEST(Imgproc_StackBlur, full_range_thread_invariance)
 {
-    Mat noise(120, 160, CV_16UC3), single, multi;
+    Mat noise(120, 161, CV_16UC3), single, multi;
     randu(noise, Scalar::all(0), Scalar::all(65535));
-    const int threads = getNumThreads();
 
-    setNumThreads(1);
+    ScopedThreadsGuard threadsGuard;
+    const int threads = std::max(2, getNumThreads());
+
+    threadsGuard.set(1);
     stackBlur(noise, single, Size(5, 5));
-    setNumThreads(8);
+    threadsGuard.set(threads);
     stackBlur(noise, multi, Size(5, 5));
-    setNumThreads(threads);
 
     EXPECT_EQ(cvtest::norm(single, multi, NORM_INF), 0.);
 }
