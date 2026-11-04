@@ -888,7 +888,7 @@ OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int64x8,   epi64, epi64, (int64)-1)
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(_Tpvec, sufcmp, sufset, tval)           \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, sufcmp, sufset, tval)  \
-    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, sufcmp, sufset, tval)  \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_ne, _CMP_NEQ_UQ, _Tpvec, sufcmp, sufset, tval)  \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_lt,  _CMP_LT_OQ,  _Tpvec, sufcmp, sufset, tval) \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_gt,  _CMP_GT_OQ,  _Tpvec, sufcmp, sufset, tval) \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, sufcmp, sufset, tval)  \
