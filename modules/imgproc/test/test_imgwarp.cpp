@@ -1309,7 +1309,8 @@ TEST_P(Imgproc_CubicPeriodicCoordinates, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicPeriodicCoordinates, testing::Values(
-    CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9)));
+    CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9),
+    CV_16FC(1), CV_16FC(2), CV_16FC(3), CV_16FC(4), CV_16FC(5), CV_16FC(9)));
 
 TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
 {
@@ -1354,8 +1355,12 @@ TEST(Imgproc_Warp, float16_interpolation)
         Mat mapx(outputSize, CV_32F), mapy(outputSize, CV_32F), fixed, fractions, combined;
         rng.fill(mapx, RNG::UNIFORM, -2.f, float(size.width + 2));
         rng.fill(mapy, RNG::UNIFORM, -2.f, float(size.height + 2));
-        mapx.at<float>(0, 0) = 1370.25f;
-        mapy.at<float>(0, 0) = -937.5f;
+        // Far C1-C4 cubic coordinates use the periodic oracle above instead of the clamping float32 kernels.
+        if (interpolation != INTER_CUBIC || channels > 4)
+        {
+            mapx.at<float>(0, 0) = 1370.25f;
+            mapy.at<float>(0, 0) = -937.5f;
+        }
         convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
         const Mat maps[] = {mapx, mapy};
         merge(maps, 2, combined);
