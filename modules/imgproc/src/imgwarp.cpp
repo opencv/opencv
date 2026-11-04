@@ -48,6 +48,9 @@
 // */
 
 #include "precomp.hpp"
+#if CV_AVX2
+#define CV__SIMD_FORCE_WIDTH 256
+#endif
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
