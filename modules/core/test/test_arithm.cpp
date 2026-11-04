@@ -4022,22 +4022,14 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace,
     )
 );
 
-PARAM_TEST_CASE(Core_CartToPolar_inplace_mag, int, int)
-{
-    int depth;
-    int len;
+typedef testing::TestWithParam<int> Core_CartToPolar_inplace_mag;
 
-    virtual void SetUp()
-    {
-        depth = GET_PARAM(0);
-        len = GET_PARAM(1);
-    }
-};
-
-// only the magnitude overwrites an input, so the last elements must not be processed twice
+// only the magnitude overwrites an input, so the last elements must not be processed twice.
+// CV_64F is not tested: it works on separate float buffers, so it can't hit this.
 TEST_P(Core_CartToPolar_inplace_mag, accuracy)
 {
-    cv::Mat x(1, len, depth), y(1, len, depth);
+    const int len = GetParam();
+    cv::Mat x(1, len, CV_32F), y(1, len, CV_32F);
     cv::randu(x, cv::Scalar::all(-1000), cv::Scalar::all(1000));
     cv::randu(y, cv::Scalar::all(-1000), cv::Scalar::all(1000));
 
@@ -4057,12 +4049,7 @@ TEST_P(Core_CartToPolar_inplace_mag, accuracy)
     EXPECT_MAT_NEAR(expectedAngle, angle2, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace_mag,
-    testing::Combine(
-        testing::Values(CV_32F, CV_64F),
-        testing::Range(1, 40)
-    )
-);
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace_mag, testing::Range(1, 40));
 
 PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
 {
