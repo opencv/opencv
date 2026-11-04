@@ -3270,12 +3270,16 @@ TEST_P(Core_Sum_FP8, accuracy)
     const int cn = get<1>(GetParam());
     const float vals[] = { 1.f, -2.f, 3.5f, 0.5f, 7.f, -0.25f };   // exact in both fp8 formats
 
-    Mat a32f(1, 37, CV_MAKETYPE(CV_32F, cn)), a;
-    for (int i = 0; i < 37 * cn; i++)
-        a32f.ptr<float>()[i] = vals[i % 6];
-    a32f.convertTo(a, depth);
+    // (1 << 15) + 1 needs a second block, so the float total gets moved to the result and reset
+    for (int len : { 37, (1 << 15) + 1 })
+    {
+        Mat a32f(1, len, CV_MAKETYPE(CV_32F, cn)), a;
+        for (int i = 0; i < len * cn; i++)
+            a32f.ptr<float>()[i] = vals[i % 6];
+        a32f.convertTo(a, depth);
 
-    EXPECT_EQ(cv::sum(a32f), cv::sum(a));
+        EXPECT_EQ(cv::sum(a32f), cv::sum(a)) << "len=" << len;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_Sum_FP8, testing::Combine(
