@@ -800,8 +800,8 @@ OPENCV_HAL_IMPL_LSX_CMP_OP_64BIT(v_int64x2, d)
     { return _Tpvec(__lsx_##suffix##_##ssuffix(a.val, b.val)); }           \
 
 #define OPENCV_HAL_IMPL_LSX_CMP_OP_FLT(_Tpvec, ssuffix)                    \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_eq, vfcmp_ceq, _Tpvec, ssuffix)          \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_ne, vfcmp_cne, _Tpvec, ssuffix)          \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_eq, vfcmp_ceq,  _Tpvec, ssuffix)         \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_ne, vfcmp_cune, _Tpvec, ssuffix)         \
     OPENCV_HAL_IMPL_LSX_CMP_FLT(v_lt,  vfcmp_clt, _Tpvec, ssuffix)         \
     OPENCV_HAL_IMPL_LSX_CMP_FLT(v_le, vfcmp_cle, _Tpvec, ssuffix)          \
 

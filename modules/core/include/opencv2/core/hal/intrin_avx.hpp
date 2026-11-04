@@ -951,7 +951,7 @@ OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
 
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(_Tpvec, suffix)               \
     OPENCV_HAL_IMPL_AVX_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, suffix)   \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, suffix)   \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_ne, _CMP_NEQ_UQ, _Tpvec, suffix)   \
     OPENCV_HAL_IMPL_AVX_CMP_FLT(v_lt,  _CMP_LT_OQ,  _Tpvec, suffix)  \
     OPENCV_HAL_IMPL_AVX_CMP_FLT(v_gt,  _CMP_GT_OQ,  _Tpvec, suffix)  \
     OPENCV_HAL_IMPL_AVX_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, suffix)   \
