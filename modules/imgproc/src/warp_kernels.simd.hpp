@@ -8678,6 +8678,32 @@ static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
 }
 #endif
 
+static inline void bicubicWarpIndices(double base, int length, int borderType, int indices[4])
+{
+    if (length > 1 && (borderType == BORDER_WRAP || borderType == BORDER_REFLECT ||
+                       borderType == BORDER_REFLECT_101))
+    {
+        const int delta = borderType == BORDER_REFLECT_101;
+        const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
+        const double phase = std::fmod(base, period);
+        for (int tap = 0; tap < 4; ++tap)
+        {
+            double index = phase + tap - 1;
+            if (index < 0)
+                index += period;
+            else if (index >= period)
+                index -= period;
+            indices[tap] = int(index < length ? index : period - index - 1 + delta);
+        }
+    }
+    else
+    {
+        for (int tap = 0; tap < 4; ++tap)
+            indices[tap] = borderInterpolate(int(std::clamp(base + tap - 1, -1., double(length))),
+                                             length, borderType);
+    }
+}
+
 template<typename T>
 static void bicubicWarpChannels(const float* x, const float* y, int len,
                                 const void* source, size_t step, Size size, void* destination,
@@ -8688,13 +8714,13 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const T* fill = static_cast<const T*>(borderValue);
     T* dst = static_cast<T*>(destination);
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
-    const float minX = -float(std::max(size.width, 16)), minY = -float(std::max(size.height, 16));
+    const double minX = -double(std::max(size.width, 16)), minY = -double(std::max(size.height, 16));
     for (int i = 0; i < len; ++i, dst += channels)
     {
-        const float sx = std::isnan(x[i]) ? minX : std::clamp(x[i], minX, -2.f*minX);
-        const float sy = std::isnan(y[i]) ? minY : std::clamp(y[i], minY, -2.f*minY);
-        const int left = cvFloor(sx) - 1, top = cvFloor(sy) - 1;
-        if ((left >= size.width || left + 4 <= 0 || top >= size.height || top + 4 <= 0) &&
+        const double sx = std::isfinite(x[i]) ? double(x[i]) : x[i] > 0 ? -2.*minX : minX;
+        const double sy = std::isfinite(y[i]) ? double(y[i]) : y[i] > 0 ? -2.*minY : minY;
+        const double baseX = std::floor(sx), baseY = std::floor(sy);
+        if ((baseX - 1 >= size.width || baseX + 3 <= 0 || baseY - 1 >= size.height || baseY + 3 <= 0) &&
             (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
         {
             if (borderType == BORDER_CONSTANT)
@@ -8702,10 +8728,11 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
             continue;
         }
         float wx[4], wy[4];
-        bicubicWeights(sx - (left + 1), coefficient, wx[0], wx[1], wx[2], wx[3]);
-        bicubicWeights(sy - (top + 1), coefficient, wy[0], wy[1], wy[2], wy[3]);
-        if (left >= 0 && left + 3 < size.width && top >= 0 && top + 3 < size.height)
+        bicubicWeights(float(sx - baseX), coefficient, wx[0], wx[1], wx[2], wx[3]);
+        bicubicWeights(float(sy - baseY), coefficient, wy[0], wy[1], wy[2], wy[3]);
+        if (baseX >= 1 && baseX + 2 < size.width && baseY >= 1 && baseY + 2 < size.height)
         {
+            const int left = int(baseX) - 1, top = int(baseY) - 1;
             const T* rows[4];
             for (int row = 0; row < 4; ++row)
                 rows[row] = reinterpret_cast<const T*>(static_cast<const uchar*>(source) + size_t(top + row)*step)
@@ -8767,13 +8794,13 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
             }
             continue;
         }
-        int columns[4];
-        for (int column = 0; column < 4; ++column)
-            columns[column] = borderInterpolate(left + column, size.width, sampleBorder);
+        int columns[4], rows[4];
+        bicubicWarpIndices(baseX, size.width, sampleBorder, columns);
+        bicubicWarpIndices(baseY, size.height, sampleBorder, rows);
         const T* pixels[4][4];
         for (int row = 0; row < 4; ++row)
         {
-            const int sourceRow = borderInterpolate(top + row, size.height, sampleBorder);
+            const int sourceRow = rows[row];
             const T* rowData = sourceRow < 0 ? nullptr : reinterpret_cast<const T*>(
                 static_cast<const uchar*>(source) + size_t(sourceRow)*step);
             for (int column = 0; column < 4; ++column)
