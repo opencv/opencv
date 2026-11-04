@@ -135,6 +135,14 @@ static Scalar sum_(const Mat& src)
     }
 
     int k, depth = src.depth();
+
+    // For a single channel the logical sum of a CV_Bool matrix is its non-zero count, and
+    // countNonZero reaches a vectorized kernel where sumBool is a scalar loop. Keeping this
+    // path is what stops single-channel sums regressing; the multi-channel case below has no
+    // countNonZero equivalent, since those kernels do not carry a channel count.
+    if (depth == CV_Bool && cn == 1)
+        return Scalar((double)countNonZero(src));
+
     SumFunc func = getSumFunc(depth);
     if (func == nullptr) {
         CV_Error_(Error::StsNotImplemented, ("sum: %s input is not supported, convert the input to another type (e.g. CV_32F) first",
