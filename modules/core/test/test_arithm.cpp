@@ -5129,4 +5129,65 @@ TEST_P(Core_PatchNaNs, replaces_only_nans)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
 
+TEST(Core_Multiply, scale_simd_scalar_consistency)
+{
+    const float big = std::ldexp(1.0f, 80);    // exact power of 2 (< FLT_MAX = 2^128)
+    const float small = std::ldexp(1.0f, -80);
+
+    // Two contiguous inputs: (a * s) * b = 2^80 vs (a * b) * s = +inf.
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        Mat b(1, 65, CV_32F, Scalar(big));
+        cv::multiply(a, b, a, small);   // in-place -> tail element 64 uses EwMul::scl
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+
+    // src1 scalar/column broadcast (s1x == 0): SIMD folds scale into src1, computing (b * s) * a = 2^80;
+    // without canonicalizing src1 onto src0, the scalar tail would compute (a * s) * b = +inf.
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        Mat b(1, 1, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+    {
+        Mat a(1, 65, CV_32F, Scalar(big));
+        cv::multiply(a, Scalar(small), a, big);
+        EXPECT_EQ(a.at<float>(0),  big);
+        EXPECT_EQ(a.at<float>(64), big);
+    }
+
+    // src1 short-row broadcast (s1y == 0, width <= 4): short-row SIMD processes full row blocks and
+    // leaves row 64 for the scalar loop.
+    {
+        Mat a(65, 3, CV_32F, Scalar(big));
+        Mat b(1, 3, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0, 0),  big);
+        EXPECT_EQ(a.at<float>(64, 0), big);
+    }
+
+    // src1 wide-row broadcast (s1y == 0, width > 4):
+    {
+        Mat a(2, 65, CV_32F, Scalar(big));
+        Mat b(1, 65, CV_32F, Scalar(small));
+        cv::multiply(a, b, a, big);
+        EXPECT_EQ(a.at<float>(0, 0),  big);
+        EXPECT_EQ(a.at<float>(1, 64), big);
+    }
+
+    // CV_64F broadcast (covers v_float64 SIMD and scalarBinaryKernel fallback):
+    {
+        const double big64 = std::ldexp(1.0, 600);
+        const double small64 = std::ldexp(1.0, -600);
+        Mat a(1, 65, CV_64F, Scalar(big64));
+        Mat b(1, 1, CV_64F, Scalar(small64));
+        cv::multiply(a, b, a, big64);
+        EXPECT_EQ(a.at<double>(0),  big64);
+        EXPECT_EQ(a.at<double>(64), big64);
+    }
+}
+
 }} // namespace
