@@ -1692,6 +1692,62 @@ TEST(Resize, area_fast_integer_rounding)
     }
 }
 
+// Fractional INTER_AREA: a cell that runs past the image edge is clipped and its
+// weights are renormalized over the covered width.
+static Mat resizeAreaRef_8u(const Mat& src, Size dsize, double scale_x, double scale_y)
+{
+    const int cn = src.channels();
+    Mat dst(dsize, src.type());
+    for (int dy = 0; dy < dsize.height; dy++)
+    {
+        const double y0 = dy * scale_y, y1 = std::min(y0 + scale_y, (double)src.rows);
+        for (int dx = 0; dx < dsize.width; dx++)
+        {
+            const double x0 = dx * scale_x, x1 = std::min(x0 + scale_x, (double)src.cols);
+            for (int c = 0; c < cn; c++)
+            {
+                double sum = 0;
+                for (int sy = cvFloor(y0); sy < y1; sy++)
+                {
+                    const double wy = std::min(y1, sy + 1.) - std::max(y0, (double)sy);
+                    for (int sx = cvFloor(x0); sx < x1; sx++)
+                    {
+                        const double wx = std::min(x1, sx + 1.) - std::max(x0, (double)sx);
+                        sum += wy * wx * src.ptr<uchar>(sy)[sx * cn + c];
+                    }
+                }
+                dst.ptr<uchar>(dy)[dx * cn + c] = saturate_cast<uchar>(sum / ((y1 - y0) * (x1 - x0)));
+            }
+        }
+    }
+    return dst;
+}
+
+TEST(Resize, area_fractional_clipped_edge_8u)
+{
+    Mat ramp(31, 33, CV_8UC1);
+    for (int y = 0; y < ramp.rows; y++)
+        for (int x = 0; x < ramp.cols; x++)
+            ramp.at<uchar>(y, x) = (uchar)(x * 3 + y * 5);
+    Mat dst;
+    cv::resize(ramp, dst, Size(), 7.0 / 18, 7.0 / 18, INTER_AREA);
+    ASSERT_EQ(Size(13, 12), dst.size());
+    EXPECT_LE(cvtest::norm(dst, resizeAreaRef_8u(ramp, dst.size(), 18.0 / 7, 18.0 / 7), NORM_INF), 1.);
+
+    RNG& rng = theRNG();
+    for (int cn : { 1, 3, 4 })
+    for (int iter = 0; iter < 40; iter++)
+    {
+        Mat big(rng.uniform(40, 300), rng.uniform(40, 300), CV_8UC(cn));
+        rng.fill(big, RNG::UNIFORM, 0, 256);
+        const Mat src = big(Rect(1, 1, big.cols - 2, big.rows - 1));
+        const double f = rng.uniform(0.1, 0.95);
+        cv::resize(src, dst, Size(), f, f, INTER_AREA);
+        EXPECT_LE(cvtest::norm(dst, resizeAreaRef_8u(src, dst.size(), 1. / f, 1. / f), NORM_INF), 1.)
+            << "cn=" << cn << " src=" << src.size() << " f=" << f;
+    }
+}
+
 // Reference for the fixed-point INTER_LINEAR path at exact 2x: horizontal taps (1,3)/(3,1),
 // then each vertical tap is truncated separately as VResizeLinear does.
 static Mat resizeLinear2xUpRef_8u(const Mat& src)

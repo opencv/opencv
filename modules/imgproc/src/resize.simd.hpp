@@ -5669,7 +5669,6 @@ static bool buildAreaHCol3Plan( const AreaHCol* plan, int ncols,
     if( ncols <= 0 )
         return false;
 
-    const float a_mid = plan[0].a_mid;
     int prev_base = -1;
 
     for( int c = 0; c < ncols; c++ )
@@ -5685,7 +5684,7 @@ static bool buildAreaHCol3Plan( const AreaHCol* plan, int ncols,
         int n = 0;
 
         if( p.a_left > 0.f )  { idx[n] = p.si_left;  wt[n] = p.a_left;  n++; }
-        if( p.sx2 > p.sx1 )   { idx[n] = p.sx1;      wt[n] = a_mid;     n++; }
+        if( p.sx2 > p.sx1 )   { idx[n] = p.sx1;      wt[n] = p.a_mid;   n++; }
         if( p.a_right > 0.f ) { idx[n] = p.si_right; wt[n] = p.a_right; n++; }
 
         if( n == 0 )
@@ -5749,8 +5748,6 @@ static bool buildAreaHColRunPlan( const AreaHCol* plan, int ncols,
     if( ncols <= 0 )
         return false;
 
-    const float a_mid0 = plan[0].a_mid;
-
     for( int c = 0; c < ncols; c++ )
     {
         const AreaHCol& p = plan[c];
@@ -5766,7 +5763,7 @@ static bool buildAreaHColRunPlan( const AreaHCol* plan, int ncols,
         si_right[c] = p.a_right > 0.f ? p.si_right : 0;
         a_left[c]   = p.a_left;
         a_right[c]  = p.a_right;
-        w_mid[c]    = (len == 1) ? a_mid0 : (len > 1 ? p.a_mid : 0.f);
+        w_mid[c]    = len > 0 ? p.a_mid : 0.f;
     }
 
     int g = 0;
@@ -6013,7 +6010,6 @@ static void fill_row_buf_hcol_u8c1(float* buf, int width_cn, const uchar* S,
                                    const AreaHColRun* hrun)
 {
     CV_UNUSED(width_cn);
-    const float a_mid = plan[0].a_mid;
 
     int c0 = 0, c1 = ncols;
 #if CV_AVX_512VBMI
@@ -6047,7 +6043,7 @@ static void fill_row_buf_hcol_u8c1(float* buf, int width_cn, const uchar* S,
         if( p.sx2 > p.sx1 )
         {
             if( p.sx2 == p.sx1 + 1 )
-                b += (float)S[p.sx1] * a_mid;
+                b += (float)S[p.sx1] * p.a_mid;
             else
             {
                 float mid = 0.f;
