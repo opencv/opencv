@@ -1178,9 +1178,12 @@ void radixOdd_vec(const DftStage& st, const T* sre, const T* sim, T* dre, T* dim
             for (int p = 1, m = 0; p <= h; p++)
             {
                 m += k; m -= m >= r ? r : 0;    // m = p*k mod r
-                T c = cs[m], s = sn[m];
-                sr = v_fma_n(VLOAD(ar + (p-1)*VL), c, sr); si = v_fma_n(VLOAD(ai + (p-1)*VL), c, si);
-                tr = v_fma_n(VLOAD(br + (p-1)*VL), s, tr); ti = v_fma_n(VLOAD(bi + (p-1)*VL), s, ti);
+                // explicit VT broadcasts rather than v_fma_n(.., cs[m], ..): MSVC 19.29 (VS 2019 16.11)
+                // with /arch:AVX2 unrolls this loop by 4 and then feeds two of the four accumulators
+                // with the broadcast of the last unrolled iteration only (wrong results for h >= 4)
+                VT c = VSETALL(cs[m]), s = VSETALL(sn[m]);
+                sr = v_fma(VLOAD(ar + (p-1)*VL), c, sr); si = v_fma(VLOAD(ai + (p-1)*VL), c, si);
+                tr = v_fma(VLOAD(br + (p-1)*VL), s, tr); ti = v_fma(VLOAD(bi + (p-1)*VL), s, ti);
             }
             v_store(dre + i0 + k*L, v_add(sr, ti)); v_store(dim + i0 + k*L, v_sub(si, tr));
             v_store(dre + i0 + (r-k)*L, v_sub(sr, ti)); v_store(dim + i0 + (r-k)*L, v_add(si, tr));

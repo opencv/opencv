@@ -1312,7 +1312,7 @@ static std::vector<int> dxtSweepSizes()
             sizes.push_back(n);
     }
     // odd and prime lengths (generic odd radix, r0 = 1/3/5 first stages, radix >= 127 tables)
-    static const int extra[] = { 7, 11, 13, 14, 21, 22, 26, 49, 77, 98, 121, 143, 154, 242, 257, 338, 1001, 1009, 2018 };
+    static const int extra[] = { 7, 11, 13, 14, 21, 22, 26, 49, 57, 77, 98, 121, 143, 154, 242, 257, 284, 338, 1001, 1009, 1136, 2018 };
     for (size_t i = 0; i < sizeof(extra)/sizeof(extra[0]); i++)
         sizes.push_back(extra[i]);
     return sizes;

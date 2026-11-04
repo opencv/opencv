@@ -1164,17 +1164,19 @@ copyFromColumns_( const uchar* src, size_t src_step, T* dst, int ncols, int len 
     }
 }
 
+// The rows are only 4-byte aligned in general (e.g. a 32FC2 ROI starting at an odd column),
+// so the 8- and 16-byte elements are copied as pairs/quads of ints, not as int64.
 static void
 CopyFromColumns( const uchar* src, size_t src_step, uchar* dst, int ncols, int len, size_t elem_size )
 {
     if( elem_size == sizeof(int) )
         copyFromColumns_(src, src_step, (int*)dst, ncols, len);
-    else if( elem_size == sizeof(int64) )
-        copyFromColumns_(src, src_step, (int64*)dst, ncols, len);
+    else if( elem_size == sizeof(int)*2 )
+        copyFromColumns_(src, src_step, (Vec<int, 2>*)dst, ncols, len);
     else
     {
-        CV_Assert( elem_size == sizeof(int64)*2 );
-        copyFromColumns_(src, src_step, (Vec<int64, 2>*)dst, ncols, len);
+        CV_Assert( elem_size == sizeof(int)*4 );
+        copyFromColumns_(src, src_step, (Vec<int, 4>*)dst, ncols, len);
     }
 }
 
@@ -1196,12 +1198,12 @@ CopyToColumns( const uchar* src, uchar* dst, size_t dst_step, int ncols, int len
 {
     if( elem_size == sizeof(int) )
         copyToColumns_((const int*)src, dst, dst_step, ncols, len);
-    else if( elem_size == sizeof(int64) )
-        copyToColumns_((const int64*)src, dst, dst_step, ncols, len);
+    else if( elem_size == sizeof(int)*2 )
+        copyToColumns_((const Vec<int, 2>*)src, dst, dst_step, ncols, len);
     else
     {
-        CV_Assert( elem_size == sizeof(int64)*2 );
-        copyToColumns_((const Vec<int64, 2>*)src, dst, dst_step, ncols, len);
+        CV_Assert( elem_size == sizeof(int)*4 );
+        copyToColumns_((const Vec<int, 4>*)src, dst, dst_step, ncols, len);
     }
 }
 
