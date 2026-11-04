@@ -368,6 +368,61 @@ INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_FullRange,
                         )
 );
 
+typedef testing::TestWithParam<tuple<int, int> > StackBlur_LargeKernel;
+
+// The sum no longer fits 32 bits from radius 181 for CV_16U and radius 255 for CV_16S.
+TEST_P(StackBlur_LargeKernel, regression)
+{
+    const int depth = get<0>(GetParam());
+    const int kernel = get<1>(GetParam());
+    const double maxVal = depth == CV_16U ? 65535 : 32767;
+    const double minVal = depth == CV_16U ? 0 : -32768;
+    const int side = kernel + 32;
+
+    for (double value : {maxVal, minVal, maxVal / 2})
+    {
+        Mat constant(side, side, CV_MAKETYPE(depth, 3), Scalar::all(value)), dst;
+        for (const Size& ksize : {Size(kernel, kernel), Size(kernel, 1), Size(1, kernel)})
+        {
+            stackBlur(constant, dst, ksize);
+            EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.) << "value=" << value << " ksize=" << ksize;
+        }
+    }
+
+    const int radius = kernel / 2;
+    Mat tri(kernel, 1, CV_64F);
+    for (int i = 0; i < kernel; i++)
+        tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+    Mat noise(side, side, depth), dst, ref, dst64;
+    randu(noise, Scalar::all(minVal), Scalar::all(maxVal));
+    sepFilter2D(noise, ref, CV_64F, tri, tri, Point(-1, -1), 0, BORDER_REPLICATE);
+    stackBlur(noise, dst, Size(kernel, kernel));
+    dst.convertTo(dst64, CV_64F);
+    const Rect inner(radius, radius, noise.cols - 2 * radius, noise.rows - 2 * radius);
+    EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 2.);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_LargeKernel,
+                        testing::Combine(
+                                testing::Values(CV_16U, CV_16S),
+                                testing::Values(361, 363, 509, 511, 513)
+                        )
+);
+
+// (radius + 1)^2 itself doesn't fit 32 bits here.
+TEST(Imgproc_StackBlur, full_range_huge_kernel)
+{
+    const int kernel = 92681;
+    for (int depth : {CV_16U, CV_16S})
+    {
+        const double value = depth == CV_16U ? 65535 : -32768;
+        Mat constant(1, kernel + 2, depth, Scalar::all(value)), dst;
+        stackBlur(constant, dst, Size(kernel, 1));
+        EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.) << "depth=" << depth;
+    }
+}
+
 class ScopedThreadsGuard
 {
 public:
