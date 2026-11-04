@@ -80,7 +80,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             const int w = inputs[0].size[shape_input.size() - 1];
             const int h = shape_input.size() >= 2 ? inputs[0].size[shape_input.size() - 2] : 1;
 
-            const int m = std::min(h,w);
             int loops = 1;
             for (int i = 0; i < cdims; ++i)
                 loops *= shape_input[i];
@@ -89,7 +88,7 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             uchar *dst = outputs[0].ptr<uchar>();
             auto fn = [&](const Range &r) {
                 for (int i = r.start; i < r.end; i++) {
-                    for(int l=0; l < m; l+=1) {
+                    for(int l=0; l < h; l+=1) {
                         int cmin = upperTri ? 0 : (l + k + 1);
                         cmin = std::max(cmin, 0);
                         const int cmax = upperTri ? min(l + k -1, w-1) : w-1;

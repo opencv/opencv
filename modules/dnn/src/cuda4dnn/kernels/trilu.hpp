@@ -11,12 +11,7 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
-/* ONNX Trilu over the trailing [height, width] of each of `loops` matrices.
- *
- * Mirrors trilu_layer.cpp, including one quirk worth stating: the CPU only rewrites
- * rows below min(height, width) and leaves any row past that as a straight copy. This
- * reproduces that rather than zeroing the full triangle.
- */
+// ONNX Trilu over the trailing [height, width] of each of `loops` matrices
 template <class T>
 void trilu(const csl::Stream& stream,
     csl::Span<T> output, csl::View<T> input,

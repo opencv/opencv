@@ -57,8 +57,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class ClipOp final : public CUDABackendNode {
     public:
-        ClipOp(csl::Stream stream_, float min_, float max_)
-            : stream(std::move(stream_)), min{ static_cast<T>(min_) }, max{ static_cast<T>(max_) } { }
+        ClipOp(csl::Stream stream_, double min_, double max_)
+            : stream(std::move(stream_)), min{ toT(min_) }, max{ toT(max_) } { }
 
         void forward(
             const std::vector<UMat>& inputs,
@@ -73,6 +73,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
     private:
+        // integers convert straight from double so int64 bounds keep their precision; half goes through float
+        static T toT(double v)
+        {
+            using U = typename std::conditional<std::is_integral<T>::value, double, float>::type;
+            return static_cast<T>(static_cast<U>(v));
+        }
+
         csl::Stream stream;
         const T min, max;
     };

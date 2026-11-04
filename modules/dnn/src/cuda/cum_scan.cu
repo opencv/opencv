@@ -61,13 +61,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const std::int64_t target_offset = outer_idx * outer_step_length;
                 const std::int64_t first = target_offset + target_start * inner_size + inner_idx;
 
-                dst[first] = exclusive ? static_cast<T>(is_prod ? W(1) : W(0)) : src[first];
+                // the running value stays in W, so fp16 really accumulates in fp32
+                W acc = exclusive ? (is_prod ? W(1) : W(0)) : static_cast<W>(src[first]);
+                dst[first] = static_cast<T>(acc);
 
                 for (std::int64_t t = target_start + target_delta; t != target_stop; t += target_delta) {
                     const std::int64_t off = target_offset + t * inner_size + inner_idx;
-                    const W prev = static_cast<W>(dst[off - target_step]);
-                    const W cur  = static_cast<W>(src[off - exclusive_delta]);
-                    dst[off] = static_cast<T>(is_prod ? (prev * cur) : (prev + cur));
+                    const W cur = static_cast<W>(src[off - exclusive_delta]);
+                    acc = static_cast<W>(is_prod ? acc * cur : acc + cur);
+                    dst[off] = static_cast<T>(acc);
                 }
             }
         }

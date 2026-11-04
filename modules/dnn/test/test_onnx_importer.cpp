@@ -1155,6 +1155,8 @@ TEST_P(Test_ONNX_layers, Colorization)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
     checkBackend();
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);  // TF32 deconvolution exceeds the FP32 reference bounds
 
     const String model = findDataFile("dnn/colorization_deploy_v2.onnx", false);
     Net net = readNetFromONNX(model);

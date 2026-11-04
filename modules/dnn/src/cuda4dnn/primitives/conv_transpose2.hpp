@@ -64,18 +64,30 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
+        // constant weights and bias the graph packed into the layer, uploaded once and owned by the node
+        ConvTranspose2Op(csl::Stream stream_, csl::cublas::Handle handle, const ConvTranspose2Configuration& config,
+                         const Mat& weights, const Mat& bias)
+            : ConvTranspose2Op(std::move(stream_), std::move(handle), config)
+        {
+            ownedWeights = upload(weights);
+            if (!bias.empty())
+                ownedBias = upload(bias);
+        }
+
         void forward(
             const std::vector<UMat>& inputs,
             const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() >= 2 && outputs.size() == 1);
+            const bool owned = !ownedWeights.empty();
+            CV_Assert(inputs.size() >= (owned ? 1u : 2u) && outputs.size() == 1);
 
             auto x = csl::viewOf<T>(inputs[0]);
-            auto w = csl::viewOf<T>(inputs[1]);
+            auto w = csl::viewOf<T>(owned ? ownedWeights : inputs[1]);
             csl::View<T> bias;
-            if (inputs.size() >= 3 && !inputs[2].empty()) {
-                auto b = csl::viewOf<T>(inputs[2]);
+            const UMat& biasMat = owned ? ownedBias : (inputs.size() >= 3 ? inputs[2] : UMat());
+            if (!biasMat.empty()) {
+                auto b = csl::viewOf<T>(biasMat);
                 bias = csl::View<T>(b.get(), b.size());
             }
             auto y = csl::spanOf<T>(outputs[0]);
@@ -111,6 +123,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     private:
         std::size_t colsSize() const { return (std::size_t)batch * cout_g * kernel_h * kernel_w * in_h * in_w; }
 
+        // FP32 host data -> device buffer in the node's element type
+        static UMat upload(const Mat& host32)
+        {
+            Mat host;
+            host32.convertTo(host, std::is_same<T, half>::value ? CV_16F : CV_32F);
+            UMat u;
+            u.allocator = cv::cuda::getCudaAllocator();
+            u.fitSameSize(host, host.type());
+            checkCudaAllocated(u);
+            host.copyTo(u);
+            return u;
+        }
+
+        UMat ownedWeights, ownedBias;
         csl::Stream stream;
         csl::cublas::Handle cublasHandle;
         int groups, batch, cin, cin_g, cout, cout_g;

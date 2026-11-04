@@ -1687,8 +1687,12 @@ static void forwardOpCUDA(Net::Impl* netimpl, GraphImpl* gimpl, size_t opidx,
     }
     std::vector<UMat> inpG(inputs.size()), outG(outputs.size());
     for (size_t i = 0; i < inputs.size(); i++) {
-        if (inpMats[i].empty())
+        if (inpMats[i].empty()) {
+            // a zero-element tensor still has a shape (Shape reads it); this header allocates nothing
+            if (inpMats[i].dims > 0 && inpMats[i].total() == 0)
+                inpG[i] = UMat(inpMats[i].dims, inpMats[i].size.p, inpMats[i].type());
             continue;
+        }
         netimpl->cudaUploadArg(inputs[i], inpMats[i]);   // H2D only if host-authoritative
         inpG[i] = netimpl->cudaDeviceBuffer(inputs[i]);
     }

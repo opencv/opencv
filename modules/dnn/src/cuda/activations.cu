@@ -347,6 +347,11 @@ template void reciprocal<__half>(const Stream&, Span<__half>, View<__half>);
 
 template void relu<float>(const Stream&, Span<float>, View<float>, float);
 template void clipped_relu<float>(const Stream&, Span<float>, View<float>, float, float);
+// integer Clip (e.g. index arithmetic clamped to a valid range)
+template void clipped_relu<int8_t>(const Stream&, Span<int8_t>, View<int8_t>, int8_t, int8_t);
+template void clipped_relu<uint8_t>(const Stream&, Span<uint8_t>, View<uint8_t>, uint8_t, uint8_t);
+template void clipped_relu<int32_t>(const Stream&, Span<int32_t>, View<int32_t>, int32_t, int32_t);
+template void clipped_relu<int64_t>(const Stream&, Span<int64_t>, View<int64_t>, int64_t, int64_t);
 template void tanh<float>(const Stream&, Span<float>, View<float>);
 template void swish<float>(const Stream&, Span<float>, View<float>);
 template void mish<float>(const Stream&, Span<float>, View<float>);

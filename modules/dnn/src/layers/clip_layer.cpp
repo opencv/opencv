@@ -128,22 +128,25 @@ public:
             for (size_t i = 1; i < inputs.size(); i++)
                 if (!inputs[i].empty() && !netimpl_->isConstArg(inputs[i]))
                     return false;
-            // clipped_relu is float/half only; an intermediate arg has no type until the first forward
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
             const int t = netimpl_->argData(inputs[0]).type;
-            return t < 0 || t == CV_32F || t == CV_16F;
+            return t < 0 || isCudaNodeType(t, false);
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
 #ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays, InputArrayOfArrays) CV_OVERRIDE
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
         Net::Impl* netimpl_ = getNetImpl(this);
         CV_Assert(netimpl_);
+        const int type = inputs_arr.type(0);
+        // a half device tensor holds FP32 data, so it takes the float range
+        const int depth = CV_MAT_DEPTH(type) == CV_16F ? CV_32F : CV_MAT_DEPTH(type);
 
-        // same bounds as forward(): const inputs win over attributes, then the float range
+        // same bounds as forward(): const inputs win over attributes, then the type's range
         auto constScalar = [&](size_t i, double& v) {
             if (inputs.size() <= i || inputs[i].empty())
                 return false;
@@ -153,11 +156,11 @@ public:
             v = tmp.at<double>(0);
             return true;
         };
-        double lo = hasMin ? minValue : -FLT_MAX, hi = hasMax ? maxValue : FLT_MAX;
+        double lo = hasMin ? minValue : typeMin(depth), hi = hasMax ? maxValue : typeMax(depth);
         constScalar(1, lo);
         constScalar(2, hi);
         CV_Assert(lo <= hi);
-        return make_cuda_node<cuda4dnn::ClipOp>(preferableTarget, std::move(context->stream), (float)lo, (float)hi);
+        return make_cuda_node_with_type<cuda4dnn::ClipOp>(preferableTarget, type, std::move(context->stream), lo, hi);
     }
 #endif
 

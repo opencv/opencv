@@ -30,7 +30,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <class T>
         __global__ void trilu(Span<T> output, View<T> input,
-                              int height, int width, int m, int k, bool upper)
+                              int height, int width, int k, bool upper)
         {
             const T* in = input.data().get();
             T* out = output.data().get();
@@ -39,19 +39,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const int c = id % width;
                 const int l = (id / width) % height;
 
-                bool zero = false;
-                /* Rows at or past min(height, width) are untouched by the CPU path. */
-                if (l < m) {
-                    if (upper) {
-                        // zeroes columns [0, min(l + k - 1, width - 1)]
-                        const int cmax = device::min<int>(l + k - 1, width - 1);
-                        zero = (c <= cmax);
-                    } else {
-                        // zeroes columns [max(l + k + 1, 0), width - 1]
-                        const int cmin = device::max<int>(l + k + 1, 0);
-                        zero = (c >= cmin);
-                    }
-                }
+                // ONNX keeps c - l >= k (upper) or c - l <= k (lower) on every row, tall matrices included
+                const bool zero = upper ? (c - l < k) : (c - l > k);
 
                 out[id] = zero ? static_cast<T>(0.f) : in[id];
             }
@@ -69,11 +58,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         if (output.size() == 0)
             return;
 
-        const int m = std::min(height, width);
-
         auto kernel = raw::trilu<T>;
         auto policy = make_policy(kernel, output.size(), 0, stream);
-        launch_kernel(kernel, policy, output, input, height, width, m, k, upper);
+        launch_kernel(kernel, policy, output, input, height, width, k, upper);
     }
 
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)

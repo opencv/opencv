@@ -15,7 +15,13 @@
 #ifdef HAVE_CUDA
 #include "opencv2/core/cuda.hpp"
 #endif
-#include "../src/dnn_common.hpp"  // cudaFallbackOps()
+
+namespace cv { namespace dnn {
+CV__DNN_INLINE_NS_BEGIN
+// defined in src/net_impl2.cpp and declared in src/dnn_common.hpp, which tests cannot include
+CV_EXPORTS std::vector<std::string> cudaFallbackOps(const Net& net);
+CV__DNN_INLINE_NS_END
+}}
 
 // src/op_inf_engine.hpp
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))

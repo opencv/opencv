@@ -84,11 +84,14 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void* context_,
                               InputArrayOfArrays inputs_arr,
-                              InputArrayOfArrays) CV_OVERRIDE
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const MatShape inShape = inputs_arr.shape(0);
+        // K as shape inference resolved it (attribute or constant input)
+        const int k = outputs_arr.shape(0)[normalize_axis(axis, inShape.dims)];
         return make_cuda_node_with_type<cuda4dnn::TopKOp>(preferableTarget, inputs_arr.type(0),
-                                                          std::move(context->stream), axis, largest);
+                                                          std::move(context->stream), axis, largest, inShape, k);
     }
 #endif
 

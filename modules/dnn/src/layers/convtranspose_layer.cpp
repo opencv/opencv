@@ -131,14 +131,15 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
             Net::Impl* netimpl_ = getNetImpl(this);
-            // ConvTranspose2Op reads weights and bias as device inputs
-            if (!netimpl_ || inputs.size() < 2 || inputs.size() > 3)
+            // weights and bias come as device inputs, or packed into the layer (constant ones)
+            const bool packed = inputs.size() == 1 && !origWeights.empty();
+            if (!netimpl_ || (!packed && (inputs.size() < 2 || inputs.size() > 3)))
                 return false;
             // 2-D and FP32 only; the FP16 target keeps the CPU path
             if (netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
                 return false;
             const int xdims = netimpl_->argData(inputs[0]).shape.dims;
-            const int wdims = netimpl_->argData(inputs[1]).shape.dims;
+            const int wdims = packed ? origWeights.dims : netimpl_->argData(inputs[1]).shape.dims;
             if ((xdims >= 0 && xdims != 4) || (wdims >= 0 && wdims != 4))
                 return false;
             // an intermediate arg has no type until the first forward; refuse only a known unsupported one
@@ -159,9 +160,10 @@ public:
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
         const int nsd = 2;
 
+        const bool packed = inputs_arr.total() == 1;
         cuda4dnn::ConvTranspose2Configuration config;
         config.input_shape = inputs_arr.shape(0);
-        config.weight_shape = inputs_arr.shape(1);
+        config.weight_shape = packed ? origWeights.shape() : inputs_arr.shape(1);
         config.output_shape = outputs_arr.shape(0);
         config.groups = ngroups;
         // same pads as the CPU path; output_padding only grows the end, which the output shape carries
@@ -171,6 +173,9 @@ public:
             config.dilations.push_back(dilations.empty() ? 1 : dilations[i]);
             config.pads_begin.push_back(pads_resolved.empty() ? 0 : pads_resolved[i]);
         }
+        if (packed)
+            return make_cuda_node<cuda4dnn::ConvTranspose2Op>(preferableTarget, std::move(context->stream),
+                                                              std::move(context->cublas_handle), config, origWeights, bias);
         return make_cuda_node<cuda4dnn::ConvTranspose2Op>(preferableTarget, std::move(context->stream),
                                                           std::move(context->cublas_handle), config);
     }
@@ -190,6 +195,7 @@ public:
             rawWeights.convertTo(wfloat, CV_32F);
         else
             wfloat = rawWeights;
+        origWeights = wfloat.clone();  // the unpacked [Cin, Cout/g, kh, kw] filter the CUDA path reads
         packGemmWeights(wfloat, C0);
         weights.release();
         if (gemmWeights.empty())
@@ -656,6 +662,7 @@ public:
     std::vector<int> emptyKernelShape;
     std::vector<int> explicit_out_shape;
     Mat weights, bias;
+    Mat origWeights;  // unpacked FP32 filter from setWeights(), kept for the CUDA path
     Mat gemmWeights;  // MLAS-packed B per (group, channel chunk), empty without MLAS
     size_t gemmChunkStep = 0;
     int gemmCg = 0, gemmKg = 0, gemmKgp = 0, gemmKC = 0, gemmChunks = 0, gemmKsize = 0, gemmC0 = 0;
