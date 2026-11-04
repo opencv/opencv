@@ -4,7 +4,7 @@
 
 #include <numeric>
 #include "precomp.hpp"
-#if CV_AVX2
+#if CV_AVX512_SKX
 #define CV__SIMD_FORCE_WIDTH 256
 #endif
 #include "warp_common.hpp"
