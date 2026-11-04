@@ -28,17 +28,21 @@ static void makeFramePair(Size sz, Mat& frame1, Mat& frame2)
     frame2f.convertTo(frame2, CV_8U);
 }
 
-typedef tuple<Size, int> FarnebackParams;
+CV_ENUM(FarnebackFlags, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+
+typedef tuple<Size, int, FarnebackFlags> FarnebackParams;
 typedef TestBaseWithParam<FarnebackParams> DenseOpticalFlow_Farneback;
 
 PERF_TEST_P(DenseOpticalFlow_Farneback, calcOpticalFlowFarneback,
             Combine(
                 Values(szVGA, sz720p),
-                Values(5, 7)          // polyN
+                Values(5, 7),         // polyN
+                FarnebackFlags::all()
             ))
 {
     Size sz    = get<0>(GetParam());
     int polyN  = get<1>(GetParam());
+    int flags  = get<2>(GetParam());
 
     double polySigma = polyN == 5 ? 1.1 : 1.5;
 
@@ -48,14 +52,14 @@ PERF_TEST_P(DenseOpticalFlow_Farneback, calcOpticalFlowFarneback,
 
     Mat flow;
 
-    TEST_CYCLE_N(10)
+    TEST_CYCLE()
     {
         calcOpticalFlowFarneback(frame1, frame2, flow,
                                  0.5,  // pyr_scale
                                  3,    // levels
                                  15,   // winsize
                                  3,    // iterations
-                                 polyN, polySigma, 0);
+                                 polyN, polySigma, flags);
     }
 
     SANITY_CHECK_NOTHING();

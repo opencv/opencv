@@ -221,7 +221,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
     const int BORDER = 5;
     static const float border[BORDER] = {0.14f, 0.14f, 0.4472f, 0.4472f, 0.4472f};
 
-    int x, width = _flow.cols, height = _flow.rows;
+    int width = _flow.cols, height = _flow.rows;
     const float* R1 = _R1.ptr<float>();
     size_t step1 = _R1.step/sizeof(R1[0]);
 
@@ -311,7 +311,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
                 M[x*5+4] = r6*r2 + r5*r3; // h(2)
             }
         }
-    });
+    }, (_y1 - _y0)*width/(double)(1 << 16));
 }
 
 
