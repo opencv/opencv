@@ -507,13 +507,17 @@ void finiteMask16_(const uchar *src, uchar *dst, size_t total)
     size_t i = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    const v_uint16 vmaskExp = vx_setall_u16(expMask);
-    const size_t nlanes = VTraits<v_uint16>::vlanes();
-    for (; i + 2 * nlanes <= total; i += 2 * nlanes)
+    // with 1 channel, the compiler vectorizes the scalar loop below, and it runs faster than this path
+    if (cn > 1)
     {
-        v_uint16 finite0 = finiteLanes16<cn>(tsrc + i * cn, vmaskExp);
-        v_uint16 finite1 = finiteLanes16<cn>(tsrc + (i + nlanes) * cn, vmaskExp);
-        v_store(dst + i, v_pack_b(finite0, finite1));
+        const v_uint16 vmaskExp = vx_setall_u16(expMask);
+        const size_t nlanes = VTraits<v_uint16>::vlanes();
+        for (; i + 2 * nlanes <= total; i += 2 * nlanes)
+        {
+            v_uint16 finite0 = finiteLanes16<cn>(tsrc + i * cn, vmaskExp);
+            v_uint16 finite1 = finiteLanes16<cn>(tsrc + (i + nlanes) * cn, vmaskExp);
+            v_store(dst + i, v_pack_b(finite0, finite1));
+        }
     }
 #endif
 
