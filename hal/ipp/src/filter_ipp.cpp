@@ -190,10 +190,14 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
         // Sparse kernels (sharpen, Laplacian, cross shapes) and zero-padded kernels (off-center anchors, even
         // kernel sizes): IPP processes every coefficient of the padded kernel, OpenCV skips zero coefficients.
         // 8U/32F with a kernel passed as 32F and less than 60% non-zero coefficients in the padded kernel are
-        // slower; the native 16S path, 16U and 16S are faster with any kernel.
-        if(!useKernel16s && (depth == CV_8U || depth == CV_32F) &&
-           cv::countNonZero(cv::Mat(kernel_height, kernel_width, kernel_type, (void*)kernel_data, kernel_step)) < 0.6 * ippKernelArea)
-            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        // slower; 32F with a 3x3 kernel is slower with any zero coefficient. The native 16S path, 16U and 16S are
+        // faster with any kernel.
+        if(!useKernel16s && (depth == CV_8U || depth == CV_32F))
+        {
+            const int nonZero = cv::countNonZero(cv::Mat(kernel_height, kernel_width, kernel_type, (void*)kernel_data, kernel_step));
+            if((depth == CV_32F && ippKernelArea <= 9) ? nonZero < ippKernelArea : nonZero < 0.6 * ippKernelArea)
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        }
     }
 
     // ippBorderTransp does not reproduce OpenCV behavior
