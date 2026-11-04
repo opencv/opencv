@@ -59,6 +59,22 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     SANITY_CHECK(dst, 1);
 }
 
+PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
+            Combine(Values(Size(256, 256), Size(512, 512), Size(1024, 1024)),
+                    Values(INTER_LINEAR), BorderMode::all(),
+                    Values(CV_32FC(5), CV_32FC(20), CV_32FC(33))))
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<3>(GetParam());
+    const int border = get<2>(GetParam());
+    Mat src(size, type), dst(size, type);
+    theRNG().fill(src, RNG::UNIFORM, 0.f, 1.f);
+    Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
+    declare.in(src).out(dst);
+    TEST_CYCLE() warpAffine(src, dst, matrix, size, INTER_LINEAR, border);
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
