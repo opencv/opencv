@@ -1231,6 +1231,122 @@ static constexpr int LOCAL_HDRS = 3;
 static constexpr int LOCAL_CONSTS = 4;
 static constexpr int LOCAL_OPS = 16;
 
+#if defined(__GNUC__)
+#define CV_EW_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#define CV_EW_NOINLINE __declspec(noinline)
+#else
+#define CV_EW_NOINLINE
+#endif
+
+// Outlined from TExpr::exec() so the ~4KB inline scratchBuf is not hoisted into TExpr::exec()'s
+// stack frame when execution takes the broadcastOp path instead.
+CV_EW_NOINLINE static void execFastStripWithTemps(
+    const TExpr& expr, const Mat* const* inputs, Mat* outputs, size_t total)
+{
+    const int ninsn = (int)expr.prog.size();
+    const int totalEsz = expr.bufEszPrefix[expr.nbuffers];
+    const int wf0 = std::min((int)total, expr.capElems);
+    const size_t region = alignSize((size_t)wf0, 8);
+    // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
+    // buffer is free (we only WRITE to it); the inline 4KB covers the L1-capped size, heap backs
+    // the rare larger case. uint64_t is used for memory alignment on the worst case.
+    AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> scratchBuf(
+        divUp((size_t)totalEsz * region, (unsigned)sizeof(uint64_t)));
+    uchar* scratch = (uchar*)scratchBuf.data();
+    for (int x0 = 0; x0 < (int)total; x0 += wf0)
+    {
+        const int wf = std::min(wf0, (int)total - x0);
+        auto ptrOf = [&](int s) -> void* {
+            if (s <= 0) return nullptr;
+            const TExpr::Arg& ai = expr.arginfo[s];
+            size_t esz = CV_ELEM_SIZE1(ai.depth);
+            if (ai.kind == TExpr::INPUT)  return (uchar*)inputs[ai.index]->data  + (size_t)x0 * esz;
+            if (ai.kind == TExpr::OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
+            if (ai.kind != TExpr::TEMP)   return nullptr;                                         // NONE: moved-from
+            const int b = expr.bufferOfTemp.empty() ? ai.index : expr.bufferOfTemp[ai.index];     // TEMP
+            return scratch + (size_t)expr.bufEszPrefix[b] * region;                               // fragment-local
+        };
+        for (int n = 0; n < ninsn; n++)
+        {
+            const TExpr::Insn& ins = expr.prog[n];
+            runInsn(ins, ptrOf(ins.arg0), 0, 1, ptrOf(ins.arg1), 0, 1,
+                    ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, wf, 1);
+        }
+    }
+}
+
+// Outlined from the broadcastOp body so single-op calls (nbuffers == 0) do not reserve ~4KB of
+// unused tstoreBuf stack space in the closure frame.
+CV_EW_NOINLINE static void execTileWithTemps(
+    const EwBody& bc, const TExpr::Arg* arginfo, const BroadcastOp::Tile& tile)
+{
+    using BrSlice = BroadcastOp::Slice;
+    const TExpr::Insn* insns = bc.prog;
+    const int* const smap  = bc.slotMap;
+    const signed char* const skind = bc.slotKind;
+    const int nin = bc.ninsn, nsl = bc.nslots;
+    const int w = tile.width, h = tile.height;
+
+    // Run the program over L1-sized 2D blocks so the intermediates stay in cache. ONE rule covers
+    // every tile shape: keep the strip as WIDE as fits L1 (long inner loop => good SIMD + hits the
+    // kernels' width-specific branches), then add as many rows as still fit (bw*bh <= capElems).
+    // For the dominant 1D tile (w huge, h==1) this is a column strip; for a tall-thin tile
+    // (w==channels, h huge - e.g. a masked op) it instead splits the LONG axis (height), so the
+    // temp block stays contiguous and the kernels keep full width. Each temp buffer occupies
+    // [bufEszPrefix[buf]*region, ...) bytes in tstore; region = alignSize(bw*bh, 8).
+    const int* const eszPrefix = bc.bufEszPrefix;
+    const int bw = std::min(w, bc.capElems);
+    const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
+    const size_t region = alignSize((size_t)bw * bh, 8);
+    // uint64_t elements (see the note on scratchBuf above): keeps the block-local temp store
+    // 8-byte aligned, which the 64-bit-lane kernels require on 32-bit ABIs.
+    AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
+        divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~4KB)
+    uchar* tstore = (uchar*)tstoreBuf.data();
+
+    AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
+    for (int y0 = 0; y0 < h; y0 += bh)
+    {
+        const int hf = std::min(bh, h - y0);
+        for (int x0 = 0; x0 < w; x0 += bw)
+        {
+            const int wf = std::min(bw, w - x0);
+            for (int s = 1; s < nsl; s++)
+            {
+                BrSlice& a = args[s];
+                const int k = skind[s];
+                if (k == TExpr::NONE) continue;
+                size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
+                if (k == TExpr::TEMP)                      // contiguous block-local buffer
+                {
+                    a.ptr = tstore + (size_t)eszPrefix[smap[s]] * region;
+                    a.stepy = (size_t)wf*esz; a.stepx = 1;
+                }
+                else                                       // array operand (incl. 0-dim consts): this
+                                                           // block of the broadcast slice
+                {
+                    const BrSlice& sl = tile.slices[smap[s]];
+                    a.ptr = (uchar*)sl.ptr +
+                        ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * esz;
+                    a.stepy = sl.stepy*esz; a.stepx = sl.stepx;
+                }
+            }
+
+            for (int n = 0; n < nin; n++)
+            {
+                const TExpr::Insn& ins = insns[n];
+                const BrSlice& a0 = args[ins.arg0]; const BrSlice& a1 = args[ins.arg1];
+                const BrSlice& a2 = args[ins.arg2]; const BrSlice& rr = args[ins.result];
+                runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                        a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, hf);
+            }
+        }
+    }
+}
+
+#undef CV_EW_NOINLINE
+
 void TExpr::exec(const Mat* const* inputs, Mat* outputs)
 {
     using BrTile = BroadcastOp::Tile;
@@ -1301,38 +1417,7 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
             }
 
             // Temps present: walk the strip in L1-sized fragments so the intermediates stay hot.
-            // Byte layout (bufEszPrefix) and the fragment cap (capElems) both come from compile();
-            // scratch is totalEsz*wf0 (<= ~4KB).
-            const int totalEsz = bufEszPrefix[nbuffers];
-            const int wf0 = std::min((int)total, capElems);
-
-            const size_t region = alignSize((size_t)wf0, 8);
-            // Scratch for the temp buffers. AutoBuffer no longer value-inits its tail, so a fresh per-call
-            // buffer is free (we only WRITE to it); the inline 4KB covers the L1-capped size, heap backs
-            // the rare larger case. uint64_t is used for memory alignment on the worst case.
-            AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> scratchBuf(
-                divUp((size_t)totalEsz * region, (unsigned)sizeof(uint64_t)));
-            uchar* scratch = (uchar*)scratchBuf.data();
-            for (int x0 = 0; x0 < (int)total; x0 += wf0)
-            {
-                const int wf = std::min(wf0, (int)total - x0);
-                auto ptrOf = [&](int s) -> void* {
-                    if (s <= 0) return nullptr;
-                    const Arg& ai = arginfo[s];
-                    size_t esz = CV_ELEM_SIZE1(ai.depth);
-                    if (ai.kind == INPUT)  return (uchar*)inputs[ai.index]->data  + (size_t)x0 * esz;
-                    if (ai.kind == OUTPUT) return (uchar*)outputs[ai.index].data + (size_t)x0 * esz;
-                    if (ai.kind != TEMP)   return nullptr;                                    // NONE: moved-from
-                    const int b = bufferOfTemp.empty() ? ai.index : bufferOfTemp[ai.index];  // TEMP
-                    return scratch + (size_t)bufEszPrefix[b] * region;                        // fragment-local
-                };
-                for (int n = 0; n < ninsn; n++)
-                {
-                    const Insn& ins = prog[n];
-                    runInsn(ins, ptrOf(ins.arg0), 0, 1, ptrOf(ins.arg1), 0, 1,
-                            ptrOf(ins.arg2), 0, 1, ptrOf(ins.result), 0, wf, 1);
-                }
-            }
+            execFastStripWithTemps(*this, inputs, outputs, total);
             return;
         }
     }
@@ -1466,70 +1551,38 @@ void TExpr::exec(const Mat* const* inputs, Mat* outputs)
     body.nbuffers = nbuffers;
     body.capElems = capElems;
 
-    broadcastOp(arr.data(), narr, [&](const BrTile& tile)
+    broadcastOp(arr.data(), narr, [&bc=body, this](const BrTile& tile)
     {
-        EwBody& bc = body;
+        if (bc.nbuffers != 0)
+        {
+            execTileWithTemps(bc, arginfo.data(), tile);
+            return;
+        }
+
+        // No temps: one block over the whole tile, no scratch buffer on the stack, and each
+        // operand slot is re-pointed once straight at its tile slice.
         const TExpr::Insn* insns = bc.prog;            // hot fields -> locals (registers/stack)
         const int* const smap  = bc.slotMap;
         const signed char* const skind = bc.slotKind;
         const int nin = bc.ninsn, nsl = bc.nslots;
         const int w = tile.width, h = tile.height;
 
-        // Run the program over L1-sized 2D blocks so the intermediates stay in cache. ONE rule covers
-        // every tile shape: keep the strip as WIDE as fits L1 (long inner loop => good SIMD + hits the
-        // kernels' width-specific branches), then add as many rows as still fit (bw*bh <= capElems).
-        // For the dominant 1D tile (w huge, h==1) this is a column strip; for a tall-thin tile
-        // (w==channels, h huge - e.g. a masked op) it instead splits the LONG axis (height), so the
-        // temp block stays contiguous and the kernels keep full width. With NO temps capElems==INT_MAX
-        // => bw=w, bh=h: one block over the whole tile, region temp store is empty (zero bytes), and
-        // each operand slot is re-pointed once straight at its tile slice. Each temp buffer occupies
-        // [bufEszPrefix[buf]*region, ...) bytes in tstore; region = bw*bh.
-        const int* const eszPrefix = bc.bufEszPrefix;
-        const int bw = std::min(w, bc.capElems);
-        const int bh = std::min(h, std::max(1, bc.capElems / std::max(1, bw)));
-        const size_t region = alignSize((size_t)bw * bh, 8);
-        // uint64_t elements (see the note on scratchBuf above): keeps the block-local temp store
-        // 8-byte aligned, which the 64-bit-lane kernels require on 32-bit ABIs.
-        AutoBuffer<uint64_t, (4*1024 + 256)/sizeof(uint64_t)> tstoreBuf(
-            divUp((size_t)eszPrefix[bc.nbuffers] * region, (unsigned)sizeof(uint64_t)));  // inline (<= ~4KB)
-        uchar* tstore = (uchar*)tstoreBuf.data();
-
         AutoBuffer<BrSlice, LOCAL_OPS> args(nsl);
-        for (int y0 = 0; y0 < h; y0 += bh)
+        for (int s = 1; s < nsl; s++)
         {
-            const int hf = std::min(bh, h - y0);
-            for (int x0 = 0; x0 < w; x0 += bw)
-            {
-                const int wf = std::min(bw, w - x0);
-                for (int s = 1; s < nsl; s++)
-                {
-                    BrSlice& a = args[s];
-                    const int k = skind[s];
-                    size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
-                    if (k == TExpr::TEMP)                      // contiguous block-local buffer
-                    {
-                        a.ptr = tstore + (size_t)eszPrefix[smap[s]] * region;
-                        a.stepy = (size_t)wf*esz; a.stepx = 1;
-                    }
-                    else                                    // array operand (incl. 0-dim consts): this
-                                                            // block of the broadcast slice
-                    {
-                        const BrSlice& sl = tile.slices[smap[s]];
-                        a.ptr = (uchar*)sl.ptr +
-                            ((size_t)y0 * sl.stepy + (size_t)x0 * sl.stepx) * esz;
-                        a.stepy = sl.stepy*esz; a.stepx = sl.stepx;
-                    }
-                }
+            if (skind[s] == TExpr::NONE) continue;
+            const BrSlice& sl = tile.slices[smap[s]];
+            size_t esz = CV_ELEM_SIZE1(arginfo[s].depth);
+            args[s] = { sl.ptr, sl.stepy * esz, sl.stepx };
+        }
 
-                for (int n = 0; n < nin; n++)
-                {
-                    const TExpr::Insn& ins = insns[n];
-                    const BrSlice& a0 = args[ins.arg0]; const BrSlice& a1 = args[ins.arg1];
-                    const BrSlice& a2 = args[ins.arg2]; const BrSlice& rr = args[ins.result];
-                    runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
-                            a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, wf, hf);
-                }
-            }
+        for (int n = 0; n < nin; n++)
+        {
+            const TExpr::Insn& ins = insns[n];
+            const BrSlice& a0 = args[ins.arg0]; const BrSlice& a1 = args[ins.arg1];
+            const BrSlice& a2 = args[ins.arg2]; const BrSlice& rr = args[ins.result];
+            runInsn(ins, a0.ptr, a0.stepy, a0.stepx, a1.ptr, a1.stepy, a1.stepx,
+                    a2.ptr, a2.stepy, a2.stepx, (void*)rr.ptr, rr.stepy, w, h);
         }
     }, true, nstripes);
 }
