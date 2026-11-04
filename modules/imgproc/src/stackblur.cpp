@@ -42,6 +42,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include <iostream>
 #include <algorithm>
+#include <climits>
+#include <limits>
 
 using namespace std;
 
@@ -470,7 +472,7 @@ public:
     {
         width= dst.cols;
         wm = width - 1;
-        mulVal = 1.0f / ((radius + 1) * (radius + 1));
+        mulVal = 1.0f / ((float)(radius + 1) * (radius + 1));
         CN = src.channels();
     }
 
@@ -579,9 +581,9 @@ public:
                 const T* srcPtr = src.ptr<T>(row);
                 T* dstPtr = dst.ptr<T>(row);
 
-                int radiusMul = (radius + 2) * (radius + 1) / 2;
+                const int64_t radiusMul = (int64_t)(radius + 2) * (radius + 1) / 2;
                 for (int ci = 0; ci < CN; ci++)
-                    sum[ci] += (TBuf)srcPtr[ci] * radiusMul;
+                    sum[ci] += (TBuf)srcPtr[ci] * (TBuf)radiusMul;
 
                 // compute diff
                 const T* srcPtr0 = srcPtr;
@@ -594,7 +596,7 @@ public:
                     {
                         diff[i*CN + ci] = (TBuf)srcPtr0[ci] - (TBuf)srcPtr[ci];
                         diffVal[ci] += diff[i*CN + ci];
-                        sum[ci] += srcPtr0[ci] * (radius - i);
+                        sum[ci] += (TBuf)srcPtr0[ci] * (radius - i);
                     }
                 }
 
@@ -1082,7 +1084,7 @@ public:
         widthElem = CN * src.cols;
         height = src.rows;
         hm = src.rows - 1;
-        mulVal = 1.0f / ((radius + 1)*(radius + 1));
+        mulVal = 1.0f / ((float)(radius + 1) * (radius + 1));
         if (radius <= STACKBLUR_MAX_RADIUS)
         {
             shrValTab = stackblurShr[radius];
@@ -1125,7 +1127,7 @@ public:
             for (int k = 0; k < widthLen; k++)
             {
                 stack[i * widthLen + k] = *(srcPtr + k);
-                sum[k] += *(srcPtr + k) * (i + 1);
+                sum[k] += (TBuf)*(srcPtr + k) * (i + 1);
                 sumOut[k] += *(srcPtr + k);
             }
         }
@@ -1137,7 +1139,7 @@ public:
             {
                 T tmp = *(srcPtr + k);
                 stack[(i + radius) * widthLen + k] = tmp;
-                sum[k] += tmp * (radius - i + 1);
+                sum[k] += (TBuf)tmp * (radius - i + 1);
                 sumIn[k] += tmp;
             }
         }
@@ -1206,6 +1208,34 @@ private:
     int shrValTab;
 };
 
+// The largest sum is the largest absolute value times (radius + 1)^2.
+template<typename T>
+static inline bool stackBlurSumFitsInt(int radius)
+{
+    const int64_t maxAbs = std::max(-(int64_t)std::numeric_limits<T>::min(), (int64_t)std::numeric_limits<T>::max());
+    return (int64_t)(radius + 1) * (radius + 1) <= INT_MAX / maxAbs;
+}
+
+// The SIMD paths need 32-bit sums, so larger kernels take the scalar loops with 64-bit sums.
+template<typename T>
+static void stackBlur16Bit(const Mat& src, Mat& dst, int radiusW, int radiusH, int widthElem, int numOfThreads)
+{
+    if (radiusW != 0)
+    {
+        if (stackBlurSumFitsInt<T>(radiusW))
+            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<T, int>(src, dst, radiusW), numOfThreads);
+        else
+            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<T, int64_t>(src, dst, radiusW), numOfThreads);
+    }
+    if (radiusH != 0)
+    {
+        if (stackBlurSumFitsInt<T>(radiusH))
+            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<T, int>(dst, dst, radiusH), numOfThreads);
+        else
+            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<T, int64_t>(dst, dst, radiusH), numOfThreads);
+    }
+}
+
 void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
 {
     CV_INSTRUMENT_REGION();
@@ -1253,17 +1283,11 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
     }
     else if (sdepth == CV_16S)
     {
-        if (ksize.width != 1)
-            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<short, int>(src, dst, radiusW), numOfThreads);
-        if (ksize.height != 1)
-            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<short, int>(dst, dst, radiusH), numOfThreads);
+        stackBlur16Bit<short>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else if (sdepth == CV_16U)
     {
-        if (ksize.width != 1)
-            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<ushort, int>(src, dst, radiusW), numOfThreads);
-        if (ksize.height != 1)
-            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<ushort, int>(dst, dst, radiusH), numOfThreads);
+        stackBlur16Bit<ushort>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else if (sdepth == CV_32F)
     {
