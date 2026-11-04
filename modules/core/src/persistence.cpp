@@ -1914,7 +1914,7 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         ival = (short) base64decoder.getUInt16();
                         break;
                     case CV_32U:
-                        ival = base64decoder.getInt32();
+                        ival = (unsigned) base64decoder.getInt32();
                         break;
                     case CV_32S:
                         ival = base64decoder.getInt32();
@@ -2743,7 +2743,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     FileNode node = *(*this);
                     if( node.isInt() )
                     {
-                        int64_t ival = static_cast<int64_t>(elem_size == 8 ? (int64_t)node : (int)node);
+                        int64_t ival = (int64_t)node;
                         switch( elem_type )
                         {
                         case CV_8U:
