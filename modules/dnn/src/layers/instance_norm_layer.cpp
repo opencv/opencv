@@ -290,8 +290,9 @@ public:
 
         const MatShape input_shape = inputs_arr.shape(0);
         size_t loops = static_cast<size_t>(total(input_shape, 0, 2));
+        size_t norm_size = static_cast<size_t>(total(input_shape, 2));
 
-        return make_cuda_node<cuda4dnn::InstanceNormOp>(preferableTarget, std::move(context->stream), epsilon, loops);
+        return make_cuda_node<cuda4dnn::InstanceNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, norm_size);
     }
 #endif // HAVE_CUDA
 

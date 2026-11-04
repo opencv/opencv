@@ -148,6 +148,7 @@ void registerCudaCommonExecs()
     CV_DNN_REGISTER_EXEC_CLASS(RoiAlign,            DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(QuantizeLinear,      DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(DequantizeLinear,    DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(DynamicQuantizeLinear, DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(TopK2,               DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(OneHot,              DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(PReLU,               DNN_BACKEND_CUDA, CUDALegacyExec);
@@ -156,6 +157,8 @@ void registerCudaCommonExecs()
     CV_DNN_REGISTER_EXEC_CLASS(GroupNormalization,    DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Identity,              DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Dropout,               DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(DropoutMask,           DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Einsum,                DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Resize2,               DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(DepthToSpace,          DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(SpaceToDepth,          DNN_BACKEND_CUDA, CUDALegacyExec);

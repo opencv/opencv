@@ -180,7 +180,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
             return false;
         };
 
-        bool found = pick(CUDNN_HEUR_MODE_A, strictFP32) || (strictFP32 && pick(CUDNN_HEUR_MODE_FALLBACK, true));
+        // mode B ranks engines more accurately than mode A, still deterministically; if it does not
+        // finalize (e.g. its heuristics library is not loaded), pick() returns false and mode A decides
+        bool found = pick(CUDNN_HEUR_MODE_B, strictFP32) || pick(CUDNN_HEUR_MODE_A, strictFP32) ||
+                     (strictFP32 && pick(CUDNN_HEUR_MODE_FALLBACK, true));
         if (!found && strictFP32 && pick(CUDNN_HEUR_MODE_A, false))
             CV_LOG_ONCE_WARNING(NULL, "DNN/CUDA: cuDNN JIT has no exact FP32 engine for some " << what << " layers, using TF32 for them");
 

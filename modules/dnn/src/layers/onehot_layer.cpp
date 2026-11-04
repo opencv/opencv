@@ -46,7 +46,7 @@ public:
             if (it >= 0 && it != CV_32S && it != CV_64S)
                 return false;
             const int t = netimpl_->argData(this->inputs[2]).type;
-            return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+            return t < 0 || isCudaNodeType(t, false);
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV;

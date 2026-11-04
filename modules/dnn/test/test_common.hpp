@@ -15,6 +15,7 @@
 #ifdef HAVE_CUDA
 #include "opencv2/core/cuda.hpp"
 #endif
+#include "../src/dnn_common.hpp"  // cudaFallbackOps()
 
 // src/op_inf_engine.hpp
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -215,8 +216,17 @@ public:
     {
         // The new DNN engine does not support back-ends for now
         // bug: https://github.com/opencv/opencv/issues/26198
-        if (net.getMainGraph())
+        if (net.getMainGraph()) {
+            // except CUDA, where an op left on the CPU sends the whole graph there
+            if (backend != DNN_BACKEND_CUDA)
+                return;
+            const std::vector<std::string> cpuOps = cudaFallbackOps(net);
+            for (const std::string& op : cpuOps)
+                std::cout << "FALLBACK: " << op << " runs on the CPU instead of CUDA" << std::endl;
+            if (!cpuOps.empty() && raiseError)
+                CV_Error(Error::StsNotImplemented, "Implementation fallbacks are not expected in this test");
             return;
+        }
 
         // Check if all the layers are supported with current backend and target.
         // Some layers might be fused so their timings equal to zero.

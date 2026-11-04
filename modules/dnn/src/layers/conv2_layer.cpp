@@ -547,6 +547,20 @@ public:
         return absorbAffine(expr) || absorbKernel(expr);
     }
 
+    //! The kernel activations ConvolutionOp applies itself.
+    static bool cudaConvKernel(ActivationFunc fn)
+    {
+        return fn == getActivationFunc(ACTIV_SIGMOID) || fn == getActivationFunc(ACTIV_SWISH) ||
+               fn == getActivationFunc(ACTIV_MISH) || fn == getActivationFunc(ACTIV_TANH);
+    }
+
+    //! On CUDA an activation ConvolutionOp lacks must stay its own op, or the conv loses its CUDA exec.
+    bool targetsCuda() const
+    {
+        Net::Impl* netimpl_ = getNetImpl(this);
+        return netimpl_ && netimpl_->preferableBackend == DNN_BACKEND_CUDA;
+    }
+
     //! Takes an expression the layer has a kernel for. Only a one-layer chain carries
     //! one, so this cannot swallow math absorbAffine() just turned down.
     bool absorbKernel(const Ptr<AdjacencyGraph>& expr)
@@ -554,6 +568,8 @@ public:
         if (!expr || !expr->kernel.fn || !expr->tensorArgs.empty())
             return false;
         if (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr || !activ.empty())
+            return false;
+        if (targetsCuda() && !cudaConvKernel(expr->kernel.fn))
             return false;
 
         activationFunc = expr->kernel.fn;
@@ -606,6 +622,9 @@ public:
         int activOperand = -1;
         if (splitActivation(*expr, cur, K, activOperand, act, ap))
             cur = activOperand;
+        // ConvolutionOp has no per-channel PReLU
+        if (act == FAST_ACTIV_PRELU && targetsCuda())
+            return false;
         if (act == FAST_ACTIV_CLIP)
             ap[1] *= postScale;
 
@@ -1200,9 +1219,7 @@ public:
         if (!activ.empty())
             return false;
         // a fused kernel activation runs on CUDA only if ConvolutionOp has the same one
-        if (activationFunc != nullptr &&
-            activationFunc != getActivationFunc(ACTIV_SIGMOID) && activationFunc != getActivationFunc(ACTIV_SWISH) &&
-            activationFunc != getActivationFunc(ACTIV_MISH) && activationFunc != getActivationFunc(ACTIV_TANH))
+        if (activationFunc != nullptr && !cudaConvKernel(activationFunc))
             return false;
         if (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
             fastActivation != FAST_ACTIV_LEAKY_RELU && fastActivation != FAST_ACTIV_CLIP)

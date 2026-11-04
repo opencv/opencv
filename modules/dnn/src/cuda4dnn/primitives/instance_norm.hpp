@@ -28,11 +28,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
      public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops)
+        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t norm_size)
             : stream(std::move(stream_)), epsilon(epsilon_) {
+            reduce_scratch = kernels::reduce_mean_sqr_sum_scratch(loops, norm_size);
             csl::WorkspaceBuilder builder;
             builder.require<float>(loops);
             builder.require<float>(loops);
+            if (reduce_scratch)
+                builder.require<float>(reduce_scratch);
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
@@ -59,8 +62,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops);
                 auto stdev = ws_allocator.get_span<float>(loops);
+                auto partials = reduce_scratch ? ws_allocator.get_span<float>(reduce_scratch) : csl::Span<float>();
 
-                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size, partials);
                 kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size, epsilon);
                 kernels::normalize_mean_variance_channelwise<T>(stream, output, input, scale, bias, mean, stdev, norm_size, C);
             }
@@ -73,6 +77,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         float epsilon;
 
+        std::size_t reduce_scratch;
         std::size_t scratch_mem_in_bytes;
     };
 

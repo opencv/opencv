@@ -965,6 +965,9 @@ public:
         Net::Impl* netimpl_ = getNetImpl(this);
         if (!netimpl_)
             return true;
+        // a second input of rank 4 or more (5 in block layout) is a reference tensor: only its shape sizes the output
+        if (ninputs == 2 && netimpl_->argData(inputs[1]).shape.dims >= 4)
+            return false;
         for (size_t i = 1; i < ninputs; i++) {
             if (!netimpl_->isConstArg(inputs[i]))
                 return true;
@@ -1070,7 +1073,7 @@ public:
         if (ninputs == 1) {
             outputs[0][2] = zoomFactorHeight > 0 ? cvFloor(inputs[0][2] * zoomFactorHeight) : outHeight0;
             outputs[0][3] = zoomFactorWidth > 0 ? cvFloor(inputs[0][3] * zoomFactorWidth) : outWidth0;
-        } else if (ninputs == 2 && inputs[1].dims == 4) {
+        } else if (ninputs == 2 && inputs[1].dims >= 4) {
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
         } else {
@@ -1206,7 +1209,7 @@ public:
 #ifdef HAVE_CUDA
     // per-axis taps for the CUDA gather, from the same builders forward() runs
     cuda4dnn::ResizeTables buildCudaTables(const MatShape& inpShape, const MatShape& outShape,
-                                           const std::vector<float>& scales) const
+                                           float onnxScaleH, float onnxScaleW) const
     {
         const int inH = inpShape[2], inW = inpShape[3], outH = outShape[2], outW = outShape[3];
         const bool tfCrop = coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE;
@@ -1229,15 +1232,8 @@ public:
         }
 
         if (antialias && (linear || cubic)) {
-            float xsH, xsW;
-            if (!scales.empty()) {
-                int hIdx, wIdx;
-                spatialIndices(scales.size(), hIdx, wIdx);
-                xsH = scales[hIdx]; xsW = scales[wIdx];
-            } else {
-                xsH = float(outH) / inH;
-                xsW = float(outW) / inW;
-            }
+            const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outH) / inH;
+            const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outW) / inW;
             auto fromAA = [](const AAWeights& p, int len, int& taps, std::vector<int>& idx,
                              std::vector<float>& w, std::vector<int>& oob) {
                 taps = 1;
@@ -1322,23 +1318,35 @@ public:
 #endif
 
     // given scales (not sizes) define the source step, not the rounded output size
-    void updateScaleFromScales(const MatShape& inpShape, const std::vector<int>& sizes, const std::vector<float>& scales)
+    void updateScaleFromScales(const std::vector<int>& sizes, const std::vector<float>& scales,
+                               float& onnxScaleH, float& onnxScaleW)
     {
-        if (sizes.empty() && !scales.empty() && halfPixelCenters)
+        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
+        // source once so the step and the antialias filter use the same value.
+        onnxScaleH = 0.f;
+        onnxScaleW = 0.f;
+        if (!scales.empty())
         {
             int hIdx, wIdx;
             spatialIndices(scales.size(), hIdx, wIdx);
-            scaleHeight = 1.f / scales[hIdx];
-            scaleWidth  = 1.f / scales[wIdx];
+            onnxScaleH = scales[hIdx];
+            onnxScaleW = scales[wIdx];
         }
-        else if (sizes.empty() && !scales.empty() && alignCorners)
+        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
         {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            float lenH = inpShape[2] * scales[hIdx];
-            float lenW = inpShape[3] * scales[wIdx];
-            if (lenH > 1.f) scaleHeight = float(inpShape[2] - 1) / (lenH - 1.f);
-            if (lenW > 1.f) scaleWidth  = float(inpShape[3] - 1) / (lenW - 1.f);
+            onnxScaleH = zoomFactorHeight;
+            onnxScaleW = zoomFactorWidth;
+        }
+
+        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
+        // align_corners maps the output corners onto the input corners, so it keeps the
+        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
+        // tf_crop_and_resize do not use the scale either.
+        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
+            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        {
+            scaleHeight = 1.f / onnxScaleH;
+            scaleWidth  = 1.f / onnxScaleW;
         }
     }
 
@@ -1375,7 +1383,8 @@ public:
             outShape = inpShape;
             outShape[2] = zoomFactorHeight > 0 ? cvFloor(inpShape[2] * zoomFactorHeight) : outHeight0;
             outShape[3] = zoomFactorWidth > 0 ? cvFloor(inpShape[3] * zoomFactorWidth) : outWidth0;
-        } else if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
+        } else if (ninputs == 2 && inputs[1].dims >= 4) {
+            // a reference tensor (rank 5 in block layout); H and W sit at axes 2 and 3 either way
             outShape = inpShape;
             outShape[2] = inputs[1].size[2];
             outShape[3] = inputs[1].size[3];
@@ -1397,32 +1406,8 @@ public:
         if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
             updateRoi(inputs[1]);
 
-        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
-        // source once so the step and the antialias filter use the same value.
-        float onnxScaleH = 0.f, onnxScaleW = 0.f;
-        if (!scales.empty())
-        {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            onnxScaleH = scales[hIdx];
-            onnxScaleW = scales[wIdx];
-        }
-        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
-        {
-            onnxScaleH = zoomFactorHeight;
-            onnxScaleW = zoomFactorWidth;
-        }
-
-        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
-        // align_corners maps the output corners onto the input corners, so it keeps the
-        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
-        // tf_crop_and_resize do not use the scale either.
-        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
-            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
-        {
-            scaleHeight = 1.f / onnxScaleH;
-            scaleWidth  = 1.f / onnxScaleW;
-        }
+        float onnxScaleH, onnxScaleW;
+        updateScaleFromScales(sizes, scales, onnxScaleH, onnxScaleW);
 
         auto kind = outputs_arr.kind();
         Mat out_;
@@ -1685,7 +1670,7 @@ public:
             const size_t ninputs = inputs.size();
             std::vector<int> sizes;
             std::vector<float> scales;
-            if (ninputs >= 3 || (ninputs == 2 && netimpl_->argData(inputs[1]).shape.dims != 4)) {
+            if (ninputs >= 3 || (ninputs == 2 && netimpl_->argData(inputs[1]).shape.dims < 4)) {
                 if (ninputs >= 4)
                     tensorToIntVec(netimpl_->argTensor(inputs[3]), sizes);
                 tensorToFloatVec(netimpl_->argTensor(inputs[(ninputs == 2) ? 1 : 2]), scales);
@@ -1693,10 +1678,11 @@ public:
             updateOutSizeAndScale(inpShape, outShape);
             if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
                 updateRoi(netimpl_->argTensor(inputs[1]));
-            updateScaleFromScales(inpShape, sizes, scales);
+            float onnxScaleH, onnxScaleW;
+            updateScaleFromScales(sizes, scales, onnxScaleH, onnxScaleW);
             return make_cuda_node_with_type<cuda4dnn::ResizeTablesOp>(preferableTarget, inputs_arr.depth(0),
                                                                       std::move(context->stream),
-                                                                      buildCudaTables(inpShape, outShape, scales));
+                                                                      buildCudaTables(inpShape, outShape, onnxScaleH, onnxScaleW));
         }
 
         cuda4dnn::ResizeConfiguration config;

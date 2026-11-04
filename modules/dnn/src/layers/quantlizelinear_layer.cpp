@@ -686,8 +686,34 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || this->inputs.size() != 1)
+                return false;
+            // the kernel reads x as float32, which the FP16 target stores as half
+            if (netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int xt = netimpl_->argData(this->inputs[0]).type;
+            return xt < 0 || xt == CV_32F;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        CV_UNUSED(outputs_arr);
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        CV_CheckDepthEQ(inputs_arr.depth(0), CV_32F, "DynamicQuantizeLinear: CUDA reads x as float");
+        return Ptr<BackendNode>(new cuda4dnn::DynamicQuantizeLinearOp(std::move(context->stream),
+                                                                     inputs_arr.total(0)));
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,

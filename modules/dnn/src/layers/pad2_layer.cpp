@@ -545,7 +545,7 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
             Net::Impl* netimpl_ = getNetImpl(this);
-            if (!netimpl_ || this->inputs.empty() || this->inputs.size() > 4 || dynamicOutputShapes())
+            if (!netimpl_ || this->inputs.empty() || this->inputs.size() > 4)
                 return false;
             // initCUDA reads the pad value on the host
             if (this->inputs.size() >= 3 && !this->inputs[2].empty() && !netimpl_->isConstArg(this->inputs[2]))
@@ -555,8 +555,7 @@ public:
             if (inp.shape.dims > CSL_MAX_TENSOR_RANK)
                 return false;
             const int t = inp.type;
-            return t < 0 || t == CV_Bool || t == CV_32F || t == CV_16F || t == CV_8S ||
-                   t == CV_8U || t == CV_32S || t == CV_64S;
+            return t < 0 || isCudaNodeType(t);
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV;
@@ -569,8 +568,12 @@ public:
         Net::Impl* netimpl_ = getNetImpl(this);
 
         std::vector<int> pads;
-        CV_Assert(getConstSemanticPads(pads));
         const int ndims = inputs_arr.shape(0).dims;
+        if (!getConstSemanticPads(pads)) {
+            // dynamic pads: the engine has downloaded this forward's values, and rebuilds the node each forward
+            Mat axesTensor = this->inputs.size() >= 4 ? netimpl_->argTensor(this->inputs[3]) : Mat();
+            getPads(ndims, netimpl_->argTensor(this->inputs[1]), axesTensor, pads);
+        }
         CV_CheckEQ((int)pads.size(), ndims*2, "Pad2: pads must cover every axis");
         std::vector<int> pads_begin(pads.begin(), pads.begin() + ndims);
 
@@ -767,8 +770,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!dynamicOutputShapes());
-
+        // dynamic pads are read below from the host copies the engine downloads before a CUDA forward
         size_t ninputs = inputs.size();
         CV_Assert(1 <= ninputs && ninputs <= 4);
         Net::Impl* netimpl_ = getNetImpl(this);

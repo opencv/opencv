@@ -201,8 +201,9 @@ public:
     size_t N = input_shape[0];
     size_t num_groups = this->num_groups;
     size_t loops = N * num_groups;
+    size_t group_elems = static_cast<size_t>(total(input_shape, 1)) / num_groups;
 
-    return make_cuda_node<cuda4dnn::GroupNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, num_groups);
+    return make_cuda_node<cuda4dnn::GroupNormOp>(preferableTarget, std::move(context->stream), epsilon, loops, num_groups, group_elems);
 }
 #endif // HAVE_CUDA
 

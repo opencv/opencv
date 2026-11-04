@@ -2135,6 +2135,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
         }
+        if (name == "test_nllloss_NCd1d2_with_weight_reduction_sum_expanded" && target == DNN_TARGET_CUDA_FP16) {
+            default_l1 = 0.016; // one scalar of -34.3, where half steps are 0.03125; actual: 0.0148354 vs 0.007 (both builds, 10 runs)
+        }
         if (name == "test_gridsample_bicubic") {
             default_l1 = 4e-5; // GridSample falls back to CPU; same actual: 3.61577e-05 vs 1e-05 as the OpenCV backend
         }

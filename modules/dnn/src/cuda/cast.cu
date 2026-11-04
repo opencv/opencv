@@ -57,7 +57,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         template <class TIn>
         struct Converter<std::uint8_t, TIn> {
             __device__ static std::uint8_t apply(TIn v) {
-                const long long x = static_cast<long long>(v);
+                const std::int64_t x = static_cast<std::int64_t>(v);
                 return static_cast<std::uint8_t>(x < 0 ? 0 : (x > 255 ? 255 : x));
             }
         };
@@ -65,7 +65,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         template <class TIn>
         struct Converter<std::int8_t, TIn> {
             __device__ static std::int8_t apply(TIn v) {
-                const long long x = static_cast<long long>(v);
+                const std::int64_t x = static_cast<std::int64_t>(v);
                 return static_cast<std::int8_t>(x < -128 ? -128 : (x > 127 ? 127 : x));
             }
         };

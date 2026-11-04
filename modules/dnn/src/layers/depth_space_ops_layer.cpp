@@ -70,7 +70,7 @@ struct DepthSpaceOps {
         if (inp.shape.dims >= 0 && inp.shape.dims != 4)
             return false;
         const int t = inp.type;
-        return t < 0 || t == CV_32F || t == CV_16F || t == CV_8S || t == CV_8U || t == CV_32S || t == CV_64S;
+        return t < 0 || isCudaNodeType(t, false);
     }
 #endif
 

@@ -28,11 +28,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        GroupNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t num_groups)
+        GroupNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t num_groups, size_t group_elems)
             : stream(std::move(stream_)), epsilon(epsilon_), num_groups(num_groups) {
+            reduce_scratch = kernels::reduce_mean_sqr_sum_scratch(loops, group_elems);
             csl::WorkspaceBuilder builder;
             builder.require<float>(loops * num_groups); // mean and stdev for each group
             builder.require<float>(loops * num_groups);
+            if (reduce_scratch)
+                builder.require<float>(reduce_scratch);
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
@@ -61,8 +64,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops / group_size);
                 auto stdev = ws_allocator.get_span<float>(loops / group_size);
+                auto partials = reduce_scratch ? ws_allocator.get_span<float>(reduce_scratch) : csl::Span<float>();
 
-                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size * group_size);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size * group_size, partials);
                 kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size * group_size, epsilon);
                 kernels::normalize_mean_variance_groupwise<T>(stream, output, input, scale, bias, mean, stdev, norm_size, C, num_groups, group_size);
             }
@@ -74,6 +78,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         float epsilon;
         std::size_t num_groups;
+        std::size_t reduce_scratch;
         std::size_t scratch_mem_in_bytes;
     };
 
