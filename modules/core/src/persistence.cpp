@@ -80,6 +80,13 @@ char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed)
     return ptr;
 }
 
+int64_t strToInt64( const char* str, char** endptr )
+{
+    if( *str == '-' )
+        return strtoll( str, endptr, 0 );
+    return (int64_t)strtoull( str, endptr, 0 );
+}
+
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
 {
     Cv64suf val;
