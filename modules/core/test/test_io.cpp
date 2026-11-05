@@ -2662,4 +2662,28 @@ TEST(Core_InputOutput, filestorage_read_uppercase_exponent)
     }
 }
 
+// CV_32U values above INT_MAX must survive saving and loading, in every format
+TEST(Core_InputOutput, filestorage_32u_large_values)
+{
+    const unsigned values[] = { 0u, 1u, 2147483647u, 2147483648u, 4294967295u };
+    const Mat src(1, 5, CV_32U, (void*)values);
+
+    for (const char* ext : { ".yml", ".xml", ".json" })
+    {
+        for (int base64 : { 0, (int)FileStorage::WRITE_BASE64 })
+        {
+            FileStorage writer(ext, FileStorage::WRITE | FileStorage::MEMORY | base64);
+            writer << "m" << src;
+            const std::string text = writer.releaseAndGetString();
+
+            FileStorage reader(text, FileStorage::READ | FileStorage::MEMORY);
+            Mat dst;
+            reader["m"] >> dst;
+
+            EXPECT_EQ(CV_32U, dst.type()) << ext << " base64=" << base64;
+            EXPECT_EQ(0, cv::norm(src, dst, NORM_INF)) << ext << " base64=" << base64;
+        }
+    }
+}
+
 }} // namespace
