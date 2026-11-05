@@ -3261,7 +3261,7 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
-// sum on the fp8 depths, compared with the same values in CV_32F
+// sum and mean on the fp8 depths, compared with the same values in CV_32F
 typedef testing::TestWithParam< tuple<int, int> > Core_Sum_FP8;
 
 TEST_P(Core_Sum_FP8, accuracy)
@@ -3279,6 +3279,7 @@ TEST_P(Core_Sum_FP8, accuracy)
         a32f.convertTo(a, depth);
 
         EXPECT_EQ(cv::sum(a32f), cv::sum(a)) << "len=" << len;
+        EXPECT_EQ(cv::mean(a32f), cv::mean(a)) << "len=" << len;
     }
 }
 
