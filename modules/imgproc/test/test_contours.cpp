@@ -148,6 +148,10 @@ TEST(Imgproc_FindContours, empty_input)
     findContours(empty32s, contours, hierarchy, RETR_FLOODFILL, CHAIN_APPROX_SIMPLE);
     EXPECT_TRUE(contours.empty());
     EXPECT_TRUE(hierarchy.empty());
+
+    // Empty input still goes through type/mode validation
+    EXPECT_THROW(findContours(Mat(0, 0, CV_32FC1), contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE), cv::Exception);
+    EXPECT_THROW(findContours(empty, contours, hierarchy, RETR_FLOODFILL, CHAIN_APPROX_SIMPLE), cv::Exception);
 }
 
 TEST(Imgproc_FindContours, regression_4363_shared_nbd)
