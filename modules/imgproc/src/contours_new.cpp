@@ -698,6 +698,12 @@ void cv::findContours(InputArray _image,
     if (_hierarchy.needed())
         _hierarchy.clear();
 
+    if (_image.empty())
+    {
+        _contours.clear();
+        return;
+    }
+
     // preprocess
     Mat image;
     copyMakeBorder(_image, image, 1, 1, 1, 1, BORDER_CONSTANT | BORDER_ISOLATED, Scalar(0));
