@@ -1139,7 +1139,7 @@ TEST(Imgproc_Remap, lanczos4_unsupported_depth)
     }
 }
 
-typedef testing::TestWithParam<int> Imgproc_Warp_NearestNewDepths;
+typedef testing::TestWithParam<MatDepth> Imgproc_Warp_NearestNewDepths;
 
 TEST_P(Imgproc_Warp_NearestNewDepths, accuracy)
 {
