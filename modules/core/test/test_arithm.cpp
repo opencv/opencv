@@ -3280,6 +3280,12 @@ TEST_P(Core_Sum_FP8, accuracy)
 
         EXPECT_EQ(cv::sum(a32f), cv::sum(a)) << "len=" << len;
         EXPECT_EQ(cv::mean(a32f), cv::mean(a)) << "len=" << len;
+
+        // every third element is left out, so the mean divides by the selected count
+        Mat mask(1, len, CV_8U);
+        for (int i = 0; i < len; i++)
+            mask.at<uchar>(i) = i % 3 != 0;
+        EXPECT_EQ(cv::mean(a32f, mask), cv::mean(a, mask)) << "len=" << len;
     }
 }
 
