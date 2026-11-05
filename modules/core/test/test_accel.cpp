@@ -1359,6 +1359,70 @@ TEST_F(Core_Accel, imports_are_released_with_their_buffer)
 
 #endif // __linux__
 
+#ifdef HAVE_CUDA
+
+accel::Device cudaDevice()
+{
+    accel::Device d = accel::Device::find("cuda:0");
+    if (d.empty())
+        throw SkipTestException("no CUDA device");
+    return d;
+}
+
+TEST(Core_Accel_CUDA, flip_and_transpose)
+{
+    const accel::Device d = cudaDevice();
+    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC2, CV_32FC1, CV_32FC4, CV_64FC3 };
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+    {
+        const Mat src = randomMat(Size(1923, 1081), types[t]);
+        UMat u = onDevice(d, src), f, tr;
+        accel::resetTransferStats();
+        cv::flip(u, f, -1);
+        cv::transpose(u, tr);
+        EXPECT_EQ(2u, accel::getTransferStats().deviceOps) << typeToString(types[t]);
+        Mat ef, et;
+        cv::flip(src, ef, -1);
+        cv::transpose(src, et);
+        EXPECT_EQ(0, cvtest::norm(ef, toHost(f), NORM_INF)) << typeToString(types[t]);
+        EXPECT_EQ(0, cvtest::norm(et, toHost(tr), NORM_INF)) << typeToString(types[t]);
+        EXPECT_EQ(d, accel::getDevice(f));
+    }
+}
+
+TEST(Core_Accel_CUDA, unsupported_element_size_falls_back)
+{
+    const accel::Device d = cudaDevice();
+    const Mat src = randomMat(Size(33, 21), CV_8UC(5));    // 5-byte elements: no kernel
+    UMat u = onDevice(d, src), dst;
+    accel::resetTransferStats();
+    cv::flip(u, dst, 1);
+    EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
+    EXPECT_EQ(d, accel::getDevice(dst));
+    Mat expected;
+    cv::flip(src, expected, 1);
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
+}
+
+TEST(Core_Accel_CUDA, region_and_chain)
+{
+    const accel::Device d = cudaDevice();
+    const Mat src = randomMat(Size(640, 480), CV_8UC3);
+    UMat u = onDevice(d, src), a, b;
+    UMat big = onDevice(d, Mat::zeros(500, 700, CV_8UC3));
+    for (int i = 0; i < 20; i++)
+    {
+        cv::flip(u, a, 1);
+        cv::flip(a, b, 1);
+    }
+    cv::flip(b, big(Rect(30, 10, 640, 480)), 0);
+    Mat expected = Mat::zeros(500, 700, CV_8UC3);
+    cv::flip(src, expected(Rect(30, 10, 640, 480)), 0);
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
+}
+
+#endif // HAVE_CUDA
+
 // ---- memory kinds and the policy that picks one -----------------------------------------
 
 namespace {

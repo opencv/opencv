@@ -102,6 +102,21 @@ public:
     void loadBuiltins()
     {
         std::call_once(builtinsOnce_, [this]() {
+#ifdef HAVE_CUDA
+            if (utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA", true))
+            {
+                try
+                {
+                    Ptr<Backend> cuda = cuda_impl::createCudaBackend();
+                    if (cuda && cuda->deviceCount() > 0)
+                        add(cuda);
+                }
+                catch (const cv::Exception& e)
+                {
+                    CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
+                }
+            }
+#endif
             if (utils::getConfigurationParameterBool("OPENCV_ACCEL_PLUGINS_ENABLE", true))
             {
                 std::vector<std::string> plugins = pluginCandidates();

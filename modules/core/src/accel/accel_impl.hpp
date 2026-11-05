@@ -20,6 +20,13 @@ namespace cv { namespace accel {
 
 namespace detail { class DeviceAllocator; }
 
+#ifdef HAVE_CUDA
+namespace cuda_impl {
+//! the built-in CUDA backend (backend_cuda.cpp)
+Ptr<Backend> createCudaBackend();
+}
+#endif
+
 struct Device::Impl
 {
     Impl(const Ptr<Backend>& b, int i);
