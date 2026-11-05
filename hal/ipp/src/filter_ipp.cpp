@@ -209,6 +209,17 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
     // ippRndFinancial (round half away from zero) gives +-1 differences on exact .5 results.
     const IppRoundMode roundMode = ippRndNear;
 
+    cv::Mat  srcCopy;      // in-place calls only: copy of the source ROI and the margins IPP reads
+    cv::Rect srcCopyRoi;   // the source ROI inside srcCopy
+    // Any failure after IPP may have written dst: for in-place calls dst (= src) is restored from the copy,
+    // so OpenCV can always recompute the result from a valid source
+    auto fallback = [&]() -> int
+    {
+        if(!srcCopy.empty())
+            srcCopy(srcCopyRoi).copyTo(cv::Mat(height, width, src_type, dst_data, dst_step));
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    };
+
     try
     {
         // Kernel for IPP: always a continuous, centered copy (16S as is, anything else converted to 32F)
@@ -225,7 +236,6 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
 
         const uchar* srcPtr  = src_data;
         size_t       srcStep = src_step;
-        cv::Mat      srcCopy;
         if(src_data == dst_data)
         {
             // iwiFilter cannot run in place: filter from a copy of the source and the margins it needs
@@ -236,6 +246,7 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
             const size_t esz = CV_ELEM_SIZE(src_type);
             cv::Mat(height + margin_top + margin_bottom, width + margin_left + margin_right, src_type,
                     (void*)(src_data - margin_top * src_step - margin_left * esz), src_step).copyTo(srcCopy);
+            srcCopyRoi = cv::Rect(margin_left, margin_top, width, height);
             srcPtr  = srcCopy.ptr(margin_top) + margin_left * esz;
             srcStep = srcCopy.step;
         }
@@ -290,8 +301,8 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
                 }
             };
             cv::parallel_for_(cv::Range(0, height), filterStripe, numTiles);
-            if(!ok) // in-place: dst (= src) may be partially written, so a fallback is not possible
-                return src_data == dst_data ? CV_HAL_ERROR_UNKNOWN : CV_HAL_ERROR_NOT_IMPLEMENTED;
+            if(!ok)
+                return fallback();
         }
         else
         {
@@ -302,15 +313,14 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
                 // the same value for every channel: process C3/C4 as C1 (ICV has only ippiAddC_32f_C1IR)
                 const IppiSize roi = { width * channels, height };
                 IppStatus status = CV_INSTRUMENT_FUN_IPP(ippiAddC_32f_C1IR, (Ipp32f)delta, (Ipp32f*)dst_data, (int)dst_step, roi);
-                if(status < 0) // dst is already written (and may alias src), so a fallback is not possible
-                    return CV_HAL_ERROR_UNKNOWN;
+                if(status < 0)
+                    return fallback();
             }
         }
     }
-    catch(const ::ipp::IwException& ex)
+    catch(const ::ipp::IwException&)
     {
-        CV_UNUSED(ex);
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        return fallback();
     }
 
     CV_IMPL_ADD(CV_IMPL_IPP);
