@@ -125,7 +125,7 @@ TEST_P(Imgproc_CornerSubPix_Parallel, many_corners_roi_single_vs_multi_thread)
 
     cv::setNumThreads(1);
     cv::cornerSubPix(image, ref, win, zeroZone, criteria);
-    cv::setNumThreads(nthreads);
+    cv::setNumThreads(std::max(2, nthreads));
     cv::cornerSubPix(image, dst, win, zeroZone, criteria);
 
     ASSERT_EQ(ref.size(), dst.size());
