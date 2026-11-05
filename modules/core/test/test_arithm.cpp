@@ -3591,13 +3591,11 @@ TEST(Core_Arithm, mul_overflow_28557)
     }
 }
 
-#if CV_VERSION_MAJOR < 5  // 5.x supports CV_16F in inRange
 TEST(Core_InRange, unsupported_depth_throws)
 {
     Mat src(1, 4, CV_16F, Scalar(1)), lower(1, 4, CV_16F, Scalar(0)), upper(1, 4, CV_16F, Scalar(2)), dst;
     EXPECT_THROW(cv::inRange(src, Scalar(0), Scalar(2), dst), cv::Exception);
     EXPECT_THROW(cv::inRange(src, lower, upper, dst), cv::Exception);
 }
-#endif
 
 }} // namespace
