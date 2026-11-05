@@ -28,40 +28,8 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed",  // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_castlike_FLOAT4E2M1_to_FLOAT",  // opencv_extra stores empty input data for these from-exotic CastLike cases
-"test_castlike_FLOAT4E2M1_to_FLOAT16",
-"test_castlike_FLOAT4E2M1_to_FLOAT16_expanded",
-"test_castlike_FLOAT4E2M1_to_FLOAT_expanded",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT_expanded",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT16",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT_expanded",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT_expanded",
-"test_castlike_FLOAT8E5M2_to_FLOAT",
-"test_castlike_FLOAT8E5M2_to_FLOAT16",
-"test_castlike_FLOAT8E5M2_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E5M2_to_FLOAT_expanded",
 "test_castlike_FLOAT_to_STRING",
-"test_castlike_INT4_to_FLOAT",
-"test_castlike_INT4_to_FLOAT16",
-"test_castlike_INT4_to_FLOAT16_expanded",
-"test_castlike_INT4_to_FLOAT_expanded",
-"test_castlike_INT4_to_INT8",
-"test_castlike_INT4_to_INT8_expanded",
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_UINT4_to_FLOAT",
-"test_castlike_UINT4_to_FLOAT16",
-"test_castlike_UINT4_to_FLOAT16_expanded",
-"test_castlike_UINT4_to_FLOAT_expanded",
-"test_castlike_UINT4_to_UINT8",
-"test_castlike_UINT4_to_UINT8_expanded",
 "test_clip_min_greater_than_max",
 "test_col2im",
 "test_col2im_5d",
@@ -197,8 +165,6 @@
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
 // misc unsupported (expanded subgraphs / new ops)
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded",
 "test_range_bfloat16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
 // Attention softcap accuracy
