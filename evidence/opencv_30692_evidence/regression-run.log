@@ -1,0 +1,10 @@
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from Imgproc_GetRectSubPix
+[ RUN      ] Imgproc_GetRectSubPix.floatVectorTailsAndRoi
+[       OK ] Imgproc_GetRectSubPix.floatVectorTailsAndRoi (38 ms)
+[----------] 1 test from Imgproc_GetRectSubPix (38 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (39 ms total)
+[  PASSED  ] 1 test.

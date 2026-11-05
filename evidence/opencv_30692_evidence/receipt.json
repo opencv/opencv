@@ -1,0 +1,47 @@
+{
+  "pass_all": true,
+  "source_sha256": "f13f8de0f5a86324e60cac5f43d48c05f793385f79ad152a2bee4344e4c349c3",
+  "records_per_mode": 7776,
+  "total_records": 23328,
+  "compiler": "Ubuntu clang version 17.0.2 (1~exp1ubuntu2.1-bb1 56277be0dfab53becb87b035a858df5a10632457)\nTarget: riscv64-unknown-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "affinity": [
+    2
+  ],
+  "supporting_library_commit": "1e21d6ed7d44c4f7ae9efd4acf302d6cbdf32bff",
+  "benchmark_rounds": 7,
+  "comparisons": {
+    "rvv-default": {
+      "records": 7776,
+      "values": 3193344,
+      "mismatches": 0,
+      "max_absolute_error": 0.0001220703125,
+      "bit_exact": false,
+      "records_by_channels": {
+        "1": 3888,
+        "3": 3888
+      }
+    },
+    "rvv-strict": {
+      "records": 7776,
+      "values": 3193344,
+      "mismatches": 0,
+      "max_absolute_error": 0.0,
+      "bit_exact": true,
+      "records_by_channels": {
+        "1": 3888,
+        "3": 3888
+      }
+    },
+    "scalar": {
+      "records": 7776,
+      "values": 3193344,
+      "mismatches": 0,
+      "max_absolute_error": 0.0,
+      "bit_exact": true,
+      "records_by_channels": {
+        "1": 3888,
+        "3": 3888
+      }
+    }
+  }
+}

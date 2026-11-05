@@ -1,0 +1,11 @@
+{
+  "records": 7776,
+  "values": 3193344,
+  "mismatches": 0,
+  "max_absolute_error": 0.0,
+  "bit_exact": true,
+  "records_by_channels": {
+    "1": 3888,
+    "3": 3888
+  }
+}
