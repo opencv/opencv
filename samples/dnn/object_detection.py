@@ -38,8 +38,7 @@ parser.add_argument('--backend', default="default", type=str, choices=backends,
                     "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                     "opencv: OpenCV implementation, "
                     "vkcom: VKCOM, "
-                    "cuda: CUDA, "
-                    "webnn: WebNN")
+                    "cuda: CUDA")
 parser.add_argument('--target', default="cpu", type=str, choices=targets,
                     help="Choose one of target computation devices: "
                     "cpu: CPU target (by default), "
@@ -189,8 +188,8 @@ def postprocess(frame, outs):
         exit()
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
-    # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or args.postprocessing == 'yolov4' or (args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    # or NMS is required if number of outputs > 1 or for YOLO models without embedded NMS
+    if len(outNames) > 1 or args.postprocessing in ('yolov4', 'yolov8', 'yolov5'):
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
@@ -201,7 +200,8 @@ def postprocess(frame, outs):
             conf = confidences[class_indices]
             box  = boxes[class_indices].tolist()
             nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
-            indices.extend(class_indices[nms_indices])
+            if len(nms_indices) > 0:
+                indices.extend(class_indices[nms_indices])
     else:
         indices = np.arange(0, len(classIds))
 
