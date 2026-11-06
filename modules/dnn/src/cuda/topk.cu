@@ -32,22 +32,41 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     namespace raw {
 
+        /* float is exact for __half, float, int8 and uint8; int32/int64 compare in
+         * their own type, since float holds integers exactly only up to 2^24. */
+        template <class T> struct TopKCompare { using type = float; };
+        template <> struct TopKCompare<std::int32_t> { using type = std::int32_t; };
+        template <> struct TopKCompare<std::int64_t> { using type = std::int64_t; };
+
+        /* Starting value that any real element beats: infinity for float types,
+         * and the lowest or highest integer for int32/int64. */
+        template <class C>
+        __device__ inline C topk_worst(bool largest) {
+            using limits = ::cuda::std::numeric_limits<C>;
+            if (limits::has_infinity)
+                return largest ? -limits::infinity() : limits::infinity();
+            return largest ? limits::lowest() : limits::max();
+        }
+
+        template <class C>
         struct Candidate {
-            float value;
+            C value;
             int index;
         };
 
         /* Strict weak ordering matching topk2_layer.cpp's comparators: better value
          * first, and on an exact tie the smaller index. */
-        __device__ __forceinline__ bool better_than(const Candidate& a, const Candidate& b, bool largest) {
+        template <class C>
+        __device__ inline bool better_than(const Candidate<C>& a, const Candidate<C>& b, bool largest) {
             if (a.value == b.value)
                 return a.index < b.index;
             return largest ? (a.value > b.value) : (a.value < b.value);
         }
 
+        template <class C>
         struct MergeCandidate {
             bool largest;
-            __device__ __forceinline__ Candidate operator()(const Candidate& a, const Candidate& b) const {
+            __device__ inline Candidate<C> operator()(const Candidate<C>& a, const Candidate<C>& b) const {
                 return better_than(a, b, largest) ? a : b;
             }
         };
@@ -56,13 +75,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         __global__ void topk(Span<T> values, Span<std::int64_t> indices, View<T> input,
                              int outer, int dim_axis, int inner, int k, bool largest)
         {
-            using BlockReduce = cub::BlockReduce<Candidate, BlockSize>;
+            using C = typename TopKCompare<T>::type;
+            using Cand = Candidate<C>;
+            using BlockReduce = cub::BlockReduce<Cand, BlockSize>;
             __shared__ typename BlockReduce::TempStorage reduce_storage;
-            __shared__ Candidate selected;
+            __shared__ Cand selected;
 
             const int nslices = outer * inner;
-            const float worst = largest ? -::cuda::std::numeric_limits<float>::infinity()
-                                        :  ::cuda::std::numeric_limits<float>::infinity();
+            const C worst = topk_worst<C>(largest);
 
             for (int slice = blockIdx.x; slice < nslices; slice += gridDim.x) {
                 const int b = slice / inner;
@@ -72,11 +92,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const std::int64_t out_base = static_cast<std::int64_t>(b) * k * inner + j;
 
                 for (int rank = 0; rank < k; ++rank) {
-                    Candidate best{worst, ::cuda::std::numeric_limits<int>::max()};
+                    Cand best{worst, ::cuda::std::numeric_limits<int>::max()};
 
                     for (int u = threadIdx.x; u < dim_axis; u += BlockSize) {
-                        const float v = static_cast<float>(input.data().get()[in_base + static_cast<std::int64_t>(u) * inner]);
-                        const Candidate cand{v, u};
+                        const C v = static_cast<C>(input.data().get()[in_base + static_cast<std::int64_t>(u) * inner]);
+                        const Cand cand{v, u};
 
                         /* Everything at or before the previous pick is spent. Ordering
                          * strictly means no element can be chosen twice, and duplicates
@@ -88,7 +108,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                             best = cand;
                     }
 
-                    const Candidate winner = BlockReduce(reduce_storage).Reduce(best, MergeCandidate{largest});
+                    const Cand winner = BlockReduce(reduce_storage).Reduce(best, MergeCandidate<C>{largest});
 
                     if (threadIdx.x == 0) {
                         selected = winner;

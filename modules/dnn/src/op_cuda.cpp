@@ -163,6 +163,8 @@ void registerCudaCommonExecs()
     CV_DNN_REGISTER_EXEC_CLASS(DepthToSpace,          DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(SpaceToDepth,          DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(NormalizeBBox,         DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(Normalize,             DNN_BACKEND_CUDA, CUDALegacyExec);
+    CV_DNN_REGISTER_EXEC_CLASS(MatMulNBits,           DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Pad2,                  DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(Clip,                  DNN_BACKEND_CUDA, CUDALegacyExec);
     CV_DNN_REGISTER_EXEC_CLASS(ConvTranspose2,        DNN_BACKEND_CUDA, CUDALegacyExec);

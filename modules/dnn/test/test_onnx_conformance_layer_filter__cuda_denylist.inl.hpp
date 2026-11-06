@@ -6,6 +6,16 @@
 "test_max_float64",
 "test_min_float64",
 "test_mod_mixed_sign_float64",
+// New-engine CUDA: supportBackend() turns down Scatter/ScatterND reductions and blocked Q/DQ,
+// so the whole graph would run on the CPU.
+"test_scatter_elements_with_reduction_max",
+"test_scatter_elements_with_reduction_min",
+"test_scatternd_add",
+"test_scatternd_max",
+"test_scatternd_min",
+"test_scatternd_multiply",
+"test_dequantizelinear_blocked",
+"test_quantizelinear_blocked",
 // New-engine CUDA: arithmetic ops lack integer (int16/uint16/uint32/uint64) support and
 // standalone BatchNorm with non-const params; denylisted for now (pass on CPU, wrong on CUDA).
 "test_add_int16",

@@ -35,7 +35,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 std::int64_t best_index = 0;
                 for (int k = 1; k < axis_size; ++k) {
                     const T value = p_input[base + static_cast<std::int64_t>(k) * inner_size];
-                    if constexpr (IsArgMax) {
+                    if (IsArgMax) {
                         if (SelectLast ? value >= best_value : value > best_value) {
                             best_value = value;
                             best_index = k;

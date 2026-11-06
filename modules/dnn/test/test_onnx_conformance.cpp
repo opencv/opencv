@@ -1897,6 +1897,18 @@ public:
 
     bool checkFallbacks(Net& net) const
     {
+        // the check below reads the classic engine's layer list; for the new engine,
+        // ask which ops it actually placed on the CPU
+        if (net.getMainGraph())
+        {
+            if (backend != DNN_BACKEND_CUDA)
+                return false;
+            const std::vector<std::string> cpuOps = cudaFallbackOps(net);
+            for (const std::string& op : cpuOps)
+                std::cout << "FALLBACK: " << op << " runs on the CPU instead of CUDA" << endl;
+            return !cpuOps.empty();
+        }
+
         // Check if all the layers are supported with current backend and target.
         // Some layers might be fused so their timings equal to zero.
         std::vector<double> timings;

@@ -31,12 +31,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         __device__ inline double as_double(std::int64_t v)  { return static_cast<double>(v); }
 
         template <class T>
+        __device__ inline T range_value(T start, T delta, std::size_t i) {
+            return static_cast<T>(as_double(start) + static_cast<double>(i) * as_double(delta));
+        }
+
+        // int64 stays in integer arithmetic: double holds integers exactly only up to 2^53
+        __device__ inline std::int64_t range_value(std::int64_t start, std::int64_t delta, std::size_t i) {
+            return start + static_cast<std::int64_t>(i) * delta;
+        }
+
+        template <class T>
         __global__ void range(Span<T> output, const T* start_p, const T* delta_p)
         {
-            const double start = as_double(*start_p);
-            const double delta = as_double(*delta_p);
+            const T start = *start_p;
+            const T delta = *delta_p;
             for (auto i : grid_stride_range(output.size()))
-                output[i] = static_cast<T>(start + static_cast<double>(i) * delta);
+                output[i] = range_value(start, delta, static_cast<std::size_t>(i));
         }
     }
 

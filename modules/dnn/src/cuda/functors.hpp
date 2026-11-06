@@ -864,12 +864,13 @@ struct PReluFunctor {
     CUDA4DNN_DEVICE PReluFunctor(const Params& params) { }
 
     CUDA4DNN_DEVICE T operator()(T x, T y) {
-        // an unsigned value is never negative, so PRelu passes it through
-        if constexpr (std::is_unsigned<T>::value)
-            return x;
-        else
-            return x >= T(0) ? x : T(x * y);
+        return apply(x, y, std::is_unsigned<T>{});
     }
+
+    // an unsigned value is never negative, so PRelu passes it through; an overload
+    // instead of if constexpr (C++17), which .cu files built as C++14 can't use
+    CUDA4DNN_DEVICE static T apply(T x, T, std::true_type) { return x; }
+    CUDA4DNN_DEVICE static T apply(T x, T y, std::false_type) { return x >= T(0) ? x : T(x * y); }
 };
 
 // bitwise functors are instantiated for integer types only

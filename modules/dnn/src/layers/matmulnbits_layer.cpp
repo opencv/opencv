@@ -5,6 +5,12 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/inner_product.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/intrin.hpp>
@@ -33,6 +39,15 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.size() != 1 || blobs.size() != 2)
+                return false;
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || t == CV_32F;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -168,6 +183,41 @@ class MatMulNBitsLayerImpl CV_FINAL : public MatMulNBitsLayer {
             default: runImpl<8>(A, B, scales, Y); break;
         }
     }
+
+#ifdef HAVE_CUDA
+    template<int BITS>
+    Mat dequantWeights() const {
+        const int n_blk = (K + block_size - 1) / block_size;
+        const int blob_bytes = block_size * BITS / 8;
+        const uchar* bq = blobs[0].ptr<const uchar>();
+        const float* sc = blobs[1].ptr<const float>();
+        Mat W(N, K, CV_32F);
+        parallel_for_(Range(0, N), [&](const Range& r) {
+            AutoBuffer<float, 1024> wcol(n_blk * block_size);
+            for (int n = r.start; n < r.end; n++) {
+                for (int blk = 0; blk < n_blk; blk++) {
+                    const size_t b = static_cast<size_t>(n) * n_blk + blk;
+                    dequantBlock<BITS>(bq + b * blob_bytes, blob_bytes, sc[b], wcol.data() + blk * block_size);
+                }
+                std::copy(wcol.data(), wcol.data() + K, W.ptr<float>(n));
+            }
+        });
+        return W;
+    }
+
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_, InputArrayOfArrays) CV_OVERRIDE {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        std::vector<UMat> inps;
+        inputs_.getUMatVector(inps);
+        if (dequantW.empty())
+            dequantW = bits == 4 ? dequantWeights<4>() : dequantWeights<8>();
+        const std::size_t axis = inps[0].dims - 1;
+        return make_cuda_node<InnerProductOp>(preferableTarget, std::move(context->stream),
+                                              std::move(context->cublas_handle), axis, dequantW, Mat());
+    }
+
+    Mat dequantW;
+#endif
 };
 
 Ptr<MatMulNBitsLayer> MatMulNBitsLayer::create(const LayerParams& params)

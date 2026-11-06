@@ -559,7 +559,7 @@ public:
     static bool cudaPostKernel(ActivationFunc fn)
     {
         return fn == getActivationFunc(ACTIV_HARDSWISH) || fn == getActivationFunc(ACTIV_GELU) ||
-               fn == getActivationFunc(ACTIV_GELU_APPROX);
+               fn == getActivationFunc(ACTIV_GELU_APPROX) || fn == getActivationFunc(ACTIV_EXP);
     }
 
     //! Takes an expression the layer has a kernel for. Only a one-layer chain carries
@@ -1281,6 +1281,10 @@ public:
             post = make_cuda_node<cuda4dnn::GeluOp>(targetId, context.stream);
         } else if (activationFunc == getActivationFunc(ACTIV_GELU_APPROX)) {
             post = make_cuda_node<cuda4dnn::GeluApproximationOp>(targetId, context.stream);
+        } else if (activationFunc == getActivationFunc(ACTIV_EXP)) {
+            const float scale = activParams.size() > 0 ? activParams[0] : 1.f;
+            const float shift = activParams.size() > 1 ? activParams[1] : 0.f;
+            post = make_cuda_node<cuda4dnn::ExpOp>(targetId, context.stream, scale, shift);
         }
 
         config.activation_type = ConvolutionConfiguration::ActivationType::IDENTITY;

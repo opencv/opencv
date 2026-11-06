@@ -45,7 +45,7 @@ inline bool cudaSupportsFusion(const PreparedFusion& fusion, int channels)
         return fn == getActivationFunc(ACTIV_GELU) || fn == getActivationFunc(ACTIV_GELU_APPROX) ||
                fn == getActivationFunc(ACTIV_RELU) || fn == getActivationFunc(ACTIV_SWISH) ||
                fn == getActivationFunc(ACTIV_SIGMOID) || fn == getActivationFunc(ACTIV_TANH) ||
-               fn == getActivationFunc(ACTIV_MISH);
+               fn == getActivationFunc(ACTIV_MISH) || fn == getActivationFunc(ACTIV_HARDSIGMOID);
     if (channels < 0)
         return true;
     return (fusion.scaleBuf.empty() || (int)fusion.scaleBuf.total() == channels) &&
@@ -92,6 +92,10 @@ inline Ptr<BackendNode> makeFusedCudaNode(const PreparedFusion& fusion, const Pt
         postNode = make_cuda_node<cuda4dnn::TanHOp>(target, stream);
     } else if (fn == getActivationFunc(ACTIV_MISH)) {
         postNode = make_cuda_node<cuda4dnn::MishOp>(target, stream);
+    } else if (fn == getActivationFunc(ACTIV_HARDSIGMOID)) {
+        const float alpha = fusion.activationParams.size() > 0 ? fusion.activationParams[0] : 0.2f;
+        const float beta = fusion.activationParams.size() > 1 ? fusion.activationParams[1] : 0.5f;
+        postNode = make_cuda_node<cuda4dnn::HardSigmoidOp>(target, stream, alpha, beta);
     } else {
         const float slope = fusion.activationParams.empty() ? 0.f : fusion.activationParams[0];
         postNode = make_cuda_node<cuda4dnn::ReLUOp>(target, stream, slope);

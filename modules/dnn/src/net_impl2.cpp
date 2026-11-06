@@ -600,6 +600,13 @@ void Net::Impl::prepareForInference()
     }
 }
 
+#ifdef HAVE_CUDA
+static bool sizedFromHostInput(const std::string& type, size_t j, size_t ninp)
+{
+    return j > 0 || ninp == 1 || type == "Range";
+}
+#endif
+
 void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
 {
     GraphImpl* g = static_cast<GraphImpl*>(graph.get());
@@ -678,7 +685,7 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
                 const bool sizedOnHost = op->dynamicOutputShapes() && hostSizedDynamicOps.count(op->type);
                 for (size_t j = 0; j < ninp; j++) {
                     Arg inp = op->inputs[j];
-                    if (inp.empty() || !hostArg[inp.idx] || (sizedOnHost && (j > 0 || ninp == 1)))
+                    if (inp.empty() || !hostArg[inp.idx] || (sizedOnHost && sizedFromHostInput(op->type, j, ninp)))
                         continue;
                     unmarkHostOp((size_t)producer[inp.idx]);
                     changed = true;
@@ -1858,7 +1865,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         outOrigData.clear();
 
         // a dynamic op on CUDA is sized from its value inputs, read on the host: all but the
-        // first, or the only one of a single-input op such as ConstantOfShape
+        // first, the only one of a single-input op such as ConstantOfShape, or all of Range's
         const bool dynamicOnCuda = opBackend == DNN_BACKEND_CUDA && op->dynamicOutputShapes();
 
         for (i = 0; i < ninputs; i++) {
@@ -1870,7 +1877,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             // A host Shape op reads only the header, which the host shadow already carries.
             const bool headerOnly = opidx < gimpl->hostShapeOp_.size() && gimpl->hostShapeOp_[opidx] &&
                                     op->type == "Shape";
-            if (!headerOnly && (opBackend != DNN_BACKEND_CUDA || (dynamicOnCuda && (i > 0 || ninputs == 1))))
+            if (!headerOnly && (opBackend != DNN_BACKEND_CUDA || (dynamicOnCuda && sizedFromHostInput(op->type, i, ninputs))))
                 cudaDownloadArg(inp, argTensor(inp));
 #endif
             const Mat& m = argTensor(inp);
