@@ -125,6 +125,27 @@ inline bool canRetryInvalidFrame(std::size_t invalidFrameCount, std::size_t maxI
     return invalidFrameCount < maxInvalidFrameCount;
 }
 
+template<typename Dequeue, typename Validate, typename Requeue>
+inline bool dequeueValidFrame(std::size_t maxInvalidFrameCount, std::size_t& invalidFrameCount,
+                              Dequeue dequeue, Validate validate, Requeue requeue)
+{
+    invalidFrameCount = 0;
+    if (maxInvalidFrameCount == 0)
+        return false;
+
+    while (dequeue())
+    {
+        if (validate())
+            return true;
+        if (!requeue())
+            return false;
+        ++invalidFrameCount;
+        if (!canRetryInvalidFrame(invalidFrameCount, maxInvalidFrameCount))
+            return false;
+    }
+    return false;
+}
+
 inline bool isFrameValid(bool errorFlagSet, std::size_t payloadSize, std::size_t minimumPayloadSize)
 {
     return !errorFlagSet && payloadSize > 0 && payloadSize >= minimumPayloadSize;

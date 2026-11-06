@@ -109,12 +109,62 @@ TEST(videoio_v4l2_payload, copies_multiplanar_payload_with_checked_offsets)
     EXPECT_EQ(0u, destinationOffset);
 }
 
-TEST(videoio_v4l2_payload, bounds_invalid_frame_retries)
+TEST(videoio_v4l2_payload, requeues_invalid_buffer_before_accepting_valid_buffer)
 {
-    EXPECT_TRUE(v4l2_internal::canRetryInvalidFrame(0, 4));
-    EXPECT_TRUE(v4l2_internal::canRetryInvalidFrame(3, 4));
-    EXPECT_FALSE(v4l2_internal::canRetryInvalidFrame(4, 4));
-    EXPECT_FALSE(v4l2_internal::canRetryInvalidFrame(0, 0));
+    const bool validFrames[] = { false, true };
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_TRUE(v4l2_internal::dequeueValidFrame(
+        4, invalidFrameCount,
+        [&]()
+        {
+            if (dequeuedFrames == 2)
+                return false;
+            ++dequeuedFrames;
+            return true;
+        },
+        [&]() { return validFrames[dequeuedFrames - 1]; },
+        [&]() { ++requeuedFrames; return true; }));
+    EXPECT_EQ(2u, dequeuedFrames);
+    EXPECT_EQ(1u, requeuedFrames);
+    EXPECT_EQ(1u, invalidFrameCount);
+}
+
+TEST(videoio_v4l2_payload, stops_if_invalid_buffer_cannot_be_requeued)
+{
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
+        4, invalidFrameCount,
+        [&]() { ++dequeuedFrames; return true; },
+        []() { return false; },
+        [&]() { ++requeuedFrames; return false; }));
+    EXPECT_EQ(1u, dequeuedFrames);
+    EXPECT_EQ(1u, requeuedFrames);
+    EXPECT_EQ(0u, invalidFrameCount);
+}
+
+TEST(videoio_v4l2_payload, stops_after_invalid_buffer_retry_limit)
+{
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
+        3, invalidFrameCount,
+        [&]()
+        {
+            if (dequeuedFrames == 3)
+                return false;
+            ++dequeuedFrames;
+            return true;
+        },
+        []() { return false; },
+        [&]() { ++requeuedFrames; return true; }));
+    EXPECT_EQ(3u, dequeuedFrames);
+    EXPECT_EQ(3u, requeuedFrames);
+    EXPECT_EQ(3u, invalidFrameCount);
 }
 
 struct Format_Channels_Depth
