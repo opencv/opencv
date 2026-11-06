@@ -287,6 +287,8 @@ typedef uint32_t __u32;
 #define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
 #endif
 
+#include "cap_v4l_internal.hpp"
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
@@ -951,21 +953,63 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
         buf.length = VIDEO_MAX_PLANES;
     }
 
-    while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
-        int err = errno;
-        if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
-            // Maybe buffer not in the queue? Try to put there
+    while (true)
+    {
+        while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
+            int err = errno;
+            if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
+                // Maybe buffer not in the queue? Try to put there
+                if (!tryIoctl(VIDIOC_QBUF, &buf))
+                    return false;
+                continue;
+            }
+            /* display the error and stop processing */
+            returnFrame = false;
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
+            return false;
+        }
+
+        CV_Assert(buf.index < req.count);
+
+        size_t payloadSize = 0;
+        bool validPayload = true;
+        if (V4L2_TYPE_IS_MULTIPLANAR(type))
+        {
+            for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++)
+            {
+                const v4l2_plane& plane = buf.m.planes[n_planes];
+                if (!v4l2_internal::addPlanePayload(payloadSize, plane.bytesused, plane.data_offset))
+                {
+                    validPayload = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            payloadSize = buf.bytesused;
+        }
+
+        const size_t frameWidth = V4L2_TYPE_IS_MULTIPLANAR(type) ? form.fmt.pix_mp.width : form.fmt.pix.width;
+        const size_t frameHeight = V4L2_TYPE_IS_MULTIPLANAR(type) ? form.fmt.pix_mp.height : form.fmt.pix.height;
+        const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(palette, frameWidth, frameHeight);
+        const bool errorFlagSet = (buf.flags & V4L2_BUF_FLAG_ERROR) != 0;
+        if (!validPayload || !v4l2_internal::isFrameValid(errorFlagSet, payloadSize, minimumPayloadSize))
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): dropping incomplete or errored frame"
+                         << " (flags=" << buf.flags << ", payload=" << payloadSize
+                         << ", minimum=" << minimumPayloadSize << ")");
             if (!tryIoctl(VIDIOC_QBUF, &buf))
-                return false;
+            {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed to requeue invalid frame: errno="
+                             << errno << " (" << strerror(errno) << ")");
+            }
+            bufferIndex = -1;
             continue;
         }
-        /* display the error and stop processing */
-        returnFrame = false;
-        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
-        return false;
-    }
 
-    CV_Assert(buf.index < req.count);
+        break;
+    }
 
     if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
         for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++)

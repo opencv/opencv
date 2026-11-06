@@ -33,23 +33,58 @@
 #ifndef V4L2_PIX_FMT_Y12
 #define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
 #endif
-#ifndef V4L2_PIX_FMT_ABGR32
-#define V4L2_PIX_FMT_ABGR32  v4l2_fourcc('A', 'R', '2', '4')
-#endif
-#ifndef V4L2_PIX_FMT_XBGR32
-#define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
-#endif
 #ifndef V4L2_PIX_FMT_Y16
 #define V4L2_PIX_FMT_Y16 v4l2_fourcc('Y', '1', '6', ' ')
 #endif
 #ifndef V4L2_PIX_FMT_Y16_BE
 #define V4L2_PIX_FMT_Y16_BE v4l2_fourcc_be('Y', '1', '6', ' ')
 #endif
+#ifndef V4L2_PIX_FMT_ABGR32
+#define V4L2_PIX_FMT_ABGR32 v4l2_fourcc('A', 'R', '2', '4')
+#endif
+#ifndef V4L2_PIX_FMT_XBGR32
+#define V4L2_PIX_FMT_XBGR32 v4l2_fourcc('X', 'R', '2', '4')
+#endif
+
+#include "../src/cap_v4l_internal.hpp"
 
 
 using namespace cv;
 
 namespace opencv_test { namespace {
+
+TEST(videoio_v4l2_payload, minimum_payload_size)
+{
+    const size_t pixels = 640u * 480u;
+    EXPECT_EQ(pixels * 2, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480));
+    EXPECT_EQ(pixels, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_GREY, 640, 480));
+    EXPECT_EQ(pixels * 3 / 2, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV420, 640, 480));
+    EXPECT_EQ(17u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV420, 3, 3));
+    EXPECT_EQ(18u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV411P, 5, 2));
+    EXPECT_EQ(0u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_MJPEG, 640, 480));
+    EXPECT_EQ(0u, v4l2_internal::minimumPayloadSize(0, 640, 480));
+}
+
+TEST(videoio_v4l2_payload, rejects_incomplete_or_error_flagged_frames)
+{
+    const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480);
+    EXPECT_TRUE(v4l2_internal::isFrameValid(false, minimumPayloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, minimumPayloadSize - 1, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(true, minimumPayloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, 0, 0)); // empty variable-size frame
+    EXPECT_TRUE(v4l2_internal::isFrameValid(false, 1, 0)); // nonempty variable-size frame
+}
+
+TEST(videoio_v4l2_payload, validates_multiplanar_data_offsets)
+{
+    size_t payloadSize = 0;
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 128, 16));
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 256, 32));
+    EXPECT_EQ(336u, payloadSize);
+
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 8, 16));
+    EXPECT_EQ(336u, payloadSize);
+}
 
 struct Format_Channels_Depth
 {
