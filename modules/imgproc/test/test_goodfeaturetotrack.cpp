@@ -540,6 +540,15 @@ TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
     cornerHarris(src, harris, blockSize, 0, k);
     cornerHarris(src, harrisScharr, blockSize, FILTER_SCHARR, k);
     EXPECT_LE(cv::norm(harris, 16 * harrisScharr, NORM_INF), 1e-4);
+
+    Mat eigenVecs, eigenVecsScharr;
+    cornerEigenValsAndVecs(src, eigenVecs, blockSize, 0);
+    cornerEigenValsAndVecs(src, eigenVecsScharr, blockSize, FILTER_SCHARR);
+    std::vector<Mat> eigenCh, eigenChScharr;
+    split(eigenVecs, eigenCh);
+    split(eigenVecsScharr, eigenChScharr);
+    EXPECT_LE(cv::norm(eigenCh[0], 4 * eigenChScharr[0], NORM_INF), 1e-4);
+    EXPECT_LE(cv::norm(eigenCh[1], 4 * eigenChScharr[1], NORM_INF), 1e-4);
 }
 
 // spatialGradient() takes ksize 1, 3, 5 and 7 only, but Sobel() takes any odd size up to 31.
@@ -564,14 +573,20 @@ TEST(Imgproc_Corner, ksize_above_7_uses_Sobel)
 
         Mat trace = a + c, diff = a - c, root;
         sqrt(0.25 * diff.mul(diff) + b.mul(b), root);
+        Mat maxEigenExpected = 0.5 * trace + root;
         Mat minEigenExpected = 0.5 * trace - root;
         Mat harrisExpected = a.mul(c) - b.mul(b) - k * trace.mul(trace);
 
-        Mat minEigen, harris;
+        Mat minEigen, harris, eigenVecs;
         ASSERT_NO_THROW(cornerMinEigenVal(src, minEigen, blockSize, ksize));
         ASSERT_NO_THROW(cornerHarris(src, harris, blockSize, ksize, k));
+        ASSERT_NO_THROW(cornerEigenValsAndVecs(src, eigenVecs, blockSize, ksize));
         EXPECT_LE(cv::norm(minEigen, minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
         EXPECT_LE(cv::norm(harris, harrisExpected, NORM_INF), 1e-4 * cv::norm(harrisExpected, NORM_INF));
+        std::vector<Mat> eigenCh;
+        split(eigenVecs, eigenCh);
+        EXPECT_LE(cv::norm(eigenCh[0], maxEigenExpected, NORM_INF), 1e-4 * cv::norm(maxEigenExpected, NORM_INF));
+        EXPECT_LE(cv::norm(eigenCh[1], minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
     }
 }
 
