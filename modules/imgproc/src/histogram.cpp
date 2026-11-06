@@ -3157,7 +3157,6 @@ public:
 
     void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
-#if CV_SIMD128
         int subHist[4][HIST_SZ] = {{0, }};
         const size_t sstep = src_.step;
         int width = src_.cols;
@@ -3174,8 +3173,9 @@ public:
             int x = 0;
             for (; x <= width - 16; x += 16)
             {
-                cv::v_uint64x2 v = cv::v_reinterpret_as_u64(cv::v_load(ptr + x));
-                uint64 lo = cv::v_extract_n<0>(v), hi = cv::v_extract_n<1>(v);
+                uint64 lo, hi;
+                memcpy(&lo, ptr + x, sizeof(lo));
+                memcpy(&hi, ptr + x + 8, sizeof(hi));
                 for (int k = 0; k < 2; k++, lo >>= 32, hi >>= 32)
                 {
                     subHist[0][lo & 0xFF]++;
@@ -3194,46 +3194,8 @@ public:
 
         cv::AutoLock lock(*histogramLock_);
 
-        for( int i = 0; i < HIST_SZ; i += 4 )
-        {
-            cv::v_int32x4 s = cv::v_add(cv::v_add(cv::v_load(subHist[0] + i), cv::v_load(subHist[1] + i)),
-                                        cv::v_add(cv::v_load(subHist[2] + i), cv::v_load(subHist[3] + i)));
-            cv::v_store(globalHistogram_ + i, cv::v_add(cv::v_load(globalHistogram_ + i), s));
-        }
-#else
-        int localHistogram[HIST_SZ] = {0, };
-
-        const size_t sstep = src_.step;
-
-        int width = src_.cols;
-        int height = rowRange.end - rowRange.start;
-
-        if (src_.isContinuous())
-        {
-            width *= height;
-            height = 1;
-        }
-
-        for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
-        {
-            int x = 0;
-            for (; x <= width - 4; x += 4)
-            {
-                int t0 = ptr[x], t1 = ptr[x+1];
-                localHistogram[t0]++; localHistogram[t1]++;
-                t0 = ptr[x+2]; t1 = ptr[x+3];
-                localHistogram[t0]++; localHistogram[t1]++;
-            }
-
-            for (; x < width; ++x)
-                localHistogram[ptr[x]]++;
-        }
-
-        cv::AutoLock lock(*histogramLock_);
-
         for( int i = 0; i < HIST_SZ; i++ )
-            globalHistogram_[i] += localHistogram[i];
-#endif
+            globalHistogram_[i] += subHist[0][i] + subHist[1][i] + subHist[2][i] + subHist[3][i];
     }
 
     static bool isWorthParallel( const cv::Mat& src )
@@ -3377,7 +3339,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
-    int lut[hist_sz] = {0,};
+    uchar lut_u8[hist_sz] = {0,};
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     cv::Range heightRange(0, src.rows);
@@ -3401,25 +3363,11 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     float scale = (hist_sz - 1.f)/(total - hist[i]);
     int sum = 0;
 
-    for (lut[i++] = 0; i < hist_sz; ++i)
+    for (lut_u8[i++] = 0; i < hist_sz; ++i)
     {
         sum += hist[i];
-        lut[i] = saturate_cast<uchar>(sum * scale);
+        lut_u8[i] = saturate_cast<uchar>(sum * scale);
     }
-
-    uchar lut_u8[hist_sz];
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int n8 = VTraits<v_uint8>::vlanes(), n32 = VTraits<v_int32>::vlanes();
-    for (int j = 0; j < hist_sz; j += n8)
-    {
-        v_uint16 a = v_pack_u(vx_load(lut + j), vx_load(lut + j + n32));
-        v_uint16 b = v_pack_u(vx_load(lut + j + 2*n32), vx_load(lut + j + 3*n32));
-        v_store(lut_u8 + j, v_pack(a, b));
-    }
-#else
-    for (int j = 0; j < hist_sz; ++j)
-        lut_u8[j] = (uchar)lut[j];
-#endif
 
     EqualizeHistLut_Invoker lutBody(src, dst, lut_u8);
 
