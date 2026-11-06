@@ -78,12 +78,43 @@ TEST(videoio_v4l2_payload, rejects_incomplete_or_error_flagged_frames)
 TEST(videoio_v4l2_payload, validates_multiplanar_data_offsets)
 {
     size_t payloadSize = 0;
-    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 128, 16));
-    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 256, 32));
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 128, 16, 128, 128));
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 256, 32, 256, 256));
     EXPECT_EQ(336u, payloadSize);
 
-    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 8, 16));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 8, 16, 64, 64));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 129, 16, 128, 128));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 64, 16, 128, 64));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 80, 16, 128, 64));
     EXPECT_EQ(336u, payloadSize);
+}
+
+TEST(videoio_v4l2_payload, copies_multiplanar_payload_with_checked_offsets)
+{
+    const unsigned char source[] = { 0xFF, 1, 2, 3 };
+    unsigned char destination[4] = {};
+    size_t destinationOffset = 0;
+    EXPECT_TRUE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
+                                                source, sizeof(source), sizeof(source), 4, 1));
+    EXPECT_EQ(3u, destinationOffset);
+    EXPECT_EQ(1, destination[0]);
+    EXPECT_EQ(2, destination[1]);
+    EXPECT_EQ(3, destination[2]);
+
+    destinationOffset = 0;
+    EXPECT_FALSE(v4l2_internal::copyPlanePayload(destination, 2, destinationOffset,
+                                                 source, sizeof(source), sizeof(source), 4, 1));
+    EXPECT_FALSE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
+                                                 source, sizeof(source), sizeof(source), 5, 1));
+    EXPECT_EQ(0u, destinationOffset);
+}
+
+TEST(videoio_v4l2_payload, bounds_invalid_frame_retries)
+{
+    EXPECT_TRUE(v4l2_internal::canRetryInvalidFrame(0, 4));
+    EXPECT_TRUE(v4l2_internal::canRetryInvalidFrame(3, 4));
+    EXPECT_FALSE(v4l2_internal::canRetryInvalidFrame(4, 4));
+    EXPECT_FALSE(v4l2_internal::canRetryInvalidFrame(0, 0));
 }
 
 struct Format_Channels_Depth

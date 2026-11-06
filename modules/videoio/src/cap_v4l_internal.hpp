@@ -6,6 +6,7 @@
 #define OPENCV_VIDEOIO_CAP_V4L_INTERNAL_HPP
 
 #include <cstddef>
+#include <cstring>
 #include <limits>
 
 namespace cv { namespace v4l2_internal {
@@ -80,12 +81,48 @@ inline std::size_t minimumPayloadSize(unsigned int pixelFormat, std::size_t widt
     return pixels * bytesPerPixel;
 }
 
-inline bool addPlanePayload(std::size_t& payloadSize, std::size_t bytesUsed, std::size_t dataOffset)
+inline bool getPlanePayloadSize(std::size_t bytesUsed, std::size_t dataOffset,
+                                std::size_t planeLength, std::size_t mappedLength,
+                                std::size_t& payloadSize)
 {
-    if (bytesUsed < dataOffset || payloadSize > std::numeric_limits<std::size_t>::max() - (bytesUsed - dataOffset))
+    if (planeLength != mappedLength || bytesUsed < dataOffset || bytesUsed > planeLength)
         return false;
-    payloadSize += bytesUsed - dataOffset;
+    payloadSize = bytesUsed - dataOffset;
     return true;
+}
+
+inline bool addPlanePayload(std::size_t& payloadSize, std::size_t bytesUsed, std::size_t dataOffset,
+                            std::size_t planeLength, std::size_t mappedLength)
+{
+    std::size_t planePayloadSize = 0;
+    if (!getPlanePayloadSize(bytesUsed, dataOffset, planeLength, mappedLength, planePayloadSize) ||
+        payloadSize > std::numeric_limits<std::size_t>::max() - planePayloadSize)
+        return false;
+    payloadSize += planePayloadSize;
+    return true;
+}
+
+inline bool copyPlanePayload(void* destination, std::size_t destinationLength,
+                             std::size_t& destinationOffset, const void* source,
+                             std::size_t planeLength, std::size_t mappedLength,
+                             std::size_t bytesUsed, std::size_t dataOffset)
+{
+    std::size_t planePayloadSize = 0;
+    if (!destination || !source ||
+        !getPlanePayloadSize(bytesUsed, dataOffset, planeLength, mappedLength, planePayloadSize) ||
+        destinationOffset > destinationLength ||
+        planePayloadSize > destinationLength - destinationOffset)
+        return false;
+
+    std::memcpy(static_cast<unsigned char*>(destination) + destinationOffset,
+                static_cast<const unsigned char*>(source) + dataOffset, planePayloadSize);
+    destinationOffset += planePayloadSize;
+    return true;
+}
+
+inline bool canRetryInvalidFrame(std::size_t invalidFrameCount, std::size_t maxInvalidFrameCount)
+{
+    return invalidFrameCount < maxInvalidFrameCount;
 }
 
 inline bool isFrameValid(bool errorFlagSet, std::size_t payloadSize, std::size_t minimumPayloadSize)
