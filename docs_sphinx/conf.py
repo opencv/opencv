@@ -24,7 +24,7 @@ from conf_helpers.postprocess import _inline_coll_graphs_on_finish
 # -- Project ----------------------------------------------------------------
 project = "OpenCV"
 author = "OpenCV Team"
-release = "5.0"
+release = "5.1"
 
 # -- Sphinx core ------------------------------------------------------------
 extensions = ["myst_parser"]
