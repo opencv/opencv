@@ -241,14 +241,20 @@ static void
 cornerGradients( InputArray src, OutputArray dx, OutputArray dy,
                  int aperture_size, int borderType, double scale )
 {
-    if( aperture_size > 7 )
+    if( !src.isUMat() && aperture_size <= 7 )
+        spatialGradient( src, dx, dy, aperture_size == 0 ? FILTER_SCHARR : aperture_size,
+                         borderType, CV_32F, scale );
+    else if( aperture_size > 0 )
     {
         Sobel( src, dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
         Sobel( src, dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
     }
     else
-        spatialGradient( src, dx, dy, aperture_size > 0 ? aperture_size : FILTER_SCHARR,
-                         borderType, CV_32F, scale );
+    {
+        CV_Assert( aperture_size == 0 || aperture_size == FILTER_SCHARR );
+        Scharr( src, dx, CV_32F, 1, 0, scale, 0, borderType );
+        Scharr( src, dy, CV_32F, 0, 1, scale, 0, borderType );
+    }
 }
 
 
