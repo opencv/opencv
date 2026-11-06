@@ -120,13 +120,13 @@ int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_, double constr_
     vector<int> N,B;
     vector<unsigned int> indexToRow;
 
-    if(initialize_simplex(bigC,bigB,v,N,B,indexToRow)==SOLVELP_UNFEASIBLE){
-        return SOLVELP_UNFEASIBLE;
+    int res=initialize_simplex(bigC,bigB,v,N,B,indexToRow);
+    if(res!=0){
+        return res;
     }
     Mat_<double> c=bigC.colRange(1,bigC.cols),
         b=bigB.colRange(1,bigB.cols);
 
-    int res=0;
     if((res=inner_simplex(c,b,v,N,B,indexToRow))==SOLVELP_UNBOUNDED){
         return SOLVELP_UNBOUNDED;
     }
@@ -242,6 +242,9 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
                 entering_index=j;
             }
         }
+        if(b(iterator_offset,entering_index)==0){
+            return SOLVELP_LOST;
+        }
         pivot(c,b,v,N,B,iterator_offset,entering_index,indexToRow);
     }
 
@@ -274,7 +277,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
             for(int j=0;j<c.cols;j++){
                 c(0,j)=sub_snap_zero(c(0,j),coef*b(iterator_offset,j));
             }
-            v+=coef*b(iterator_offset,b.cols-1);
+            v=sub_snap_zero(v,-coef*b(iterator_offset,b.cols-1));
             print_matrix(c);
         }
     }
@@ -386,7 +389,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         }
     }
     dprintf(("v was %g\n",v));
-    v+=Coef*b(leaving_index,b.cols-1);
+    v=sub_snap_zero(v,-Coef*b(leaving_index,b.cols-1));
 
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
