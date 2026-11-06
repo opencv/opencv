@@ -45,6 +45,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              * per-run fields are filled here and the attribute-derived ones come from
              * the layer. */
             kernels::RoiAlignParams p = params;
+            p.batch_size = inShape[0];
             p.channels = inShape[1];
             p.height   = inShape[2];
             p.width    = inShape[3];

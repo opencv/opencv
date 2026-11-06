@@ -75,6 +75,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 const float step_x = bin_size_w / gw;
 
                 const std::int64_t b = read_batch_index(batch_indices, batch_index_element_size, r);
+                // a kernel can't raise the CPU path's error for an index outside the batch,
+                // so it writes 0 instead of reading outside the input
+                if (b < 0 || b >= p.batch_size) {
+                    output[id] = static_cast<T>(0.f);
+                    continue;
+                }
                 const T* img = input.data().get() +
                                ((b * p.channels) + c) * static_cast<std::int64_t>(p.height) * p.width;
 
@@ -133,7 +139,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(batch_index_element_size == sizeof(std::int32_t) ||
                   batch_index_element_size == sizeof(std::int64_t));
         CV_Assert(params.output_height > 0 && params.output_width > 0);
-        CV_Assert(params.height > 0 && params.width > 0 && params.channels > 0);
+        CV_Assert(params.batch_size > 0 && params.height > 0 && params.width > 0 && params.channels > 0);
 
         if (output.size() == 0)
             return;

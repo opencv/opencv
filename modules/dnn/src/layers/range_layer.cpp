@@ -82,9 +82,6 @@ public:
             Net::Impl* netimpl_ = getNetImpl(this);
             if (!netimpl_ || this->inputs.size() != 3)
                 return false;
-            // a dynamic op on CUDA gets inputs 1.. downloaded before sizing; start must already be on the host
-            if (!netimpl_->isConstArg(this->inputs[0]))
-                return false;
             // an intermediate arg has no type until the first forward; refuse only a known unsupported one
             const int t = netimpl_->argData(this->inputs[0]).type;
             return t < 0 || isCudaNodeType(t, false);

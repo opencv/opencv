@@ -53,7 +53,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             for (auto i : grid_stride_range(n)) {
                 std::size_t a_idx = (i / slice_size) % sz_a;
                 int zp = zero_point ? static_cast<int>(zero_point[a_idx]) : 0;
-                int rounded = __float2int_rn(input[i] / scale[a_idx]);
+                // clamp before converting: __float2int_rn turns +Inf or a huge value into
+                // INT_MIN, which would saturate to qmin instead of qmax
+                float scaled = input[i] / scale[a_idx];
+                scaled = (scaled != scaled) ? 0.f : fminf(fmaxf(scaled, -1024.f), 1024.f);
+                int rounded = __float2int_rn(scaled);
                 output[i] = saturate_quantized<T>(rounded + zp);
             }
         }

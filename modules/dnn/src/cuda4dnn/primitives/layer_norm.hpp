@@ -77,7 +77,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto loops = input.size_range(0, axis);
             auto norm_size = input.size_range(axis, input.rank());
-            if (norm_size == 1) {
+            // with a size-one axis the result is 0, or the bias when there is one
+            if (norm_size == 1 && bias.empty()) {
                 kernels::fill<T>(stream, output, 0.f);
                 return;
             } else {
@@ -114,8 +115,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto loops = input.size_range(0, axis);
             auto norm_size = input.size_range(axis, input.rank());
+            // with a size-one axis the result is 0, or the bias when there is one;
             // the optional Mean/InvStdDev outputs still need the statistics
-            if (norm_size == 1 && outputs.size() == 1) {
+            if (norm_size == 1 && outputs.size() == 1 && bias.empty()) {
                 kernels::fill<T>(stream, output, 0.f);
                 return;
             }

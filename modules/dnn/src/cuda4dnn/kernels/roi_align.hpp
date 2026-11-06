@@ -15,7 +15,7 @@
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
 struct RoiAlignParams {
-    int channels{}, height{}, width{};
+    int batch_size{}, channels{}, height{}, width{};
     int output_height{}, output_width{};
     int sampling_ratio{};
     float spatial_scale{1.f};

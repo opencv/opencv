@@ -2446,9 +2446,11 @@ void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::N
             layerParams.set("zoom_factor_y", scales.at<float>(2));
             layerParams.set("zoom_factor_x", scales.at<float>(3));
             n_inputs = 1;
-        } else if (layerParams.get<String>("mode", "nearest") != "nearest") {
-            // runtime scales, or a 4-D tensor whose H and W the output takes (the simplifier's
-            // resize-to-reference subgraph); Resize2 handles both, the legacy Resize neither on CUDA
+        } else if (layerParams.get<String>("mode", "nearest") != "nearest" ||
+                   (!layerParams.get<bool>("align_corners", false) &&
+                    !layerParams.get<bool>("half_pixel_centers", false))) {
+            // runtime scales go to Resize2, which can stay on CUDA; nearest only in its plain
+            // asymmetric form, since that is the one Resize2 can match exactly
             layerParams.type = "Resize2";
             // keep the legacy layer's sampling, which only the two flags selected
             if (!layerParams.has("coordinate_transformation_mode")) {
@@ -2458,6 +2460,9 @@ void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::N
                                 halfPixel ? "half_pixel" :
                                 layerParams.get<bool>("align_corners", false) ? "align_corners" : "asymmetric");
             }
+            // the legacy nearest path (cv::resize INTER_NEAREST) rounds down
+            if (layerParams.get<String>("mode", "nearest") == "nearest" && !layerParams.has("nearest_mode"))
+                layerParams.set("nearest_mode", "floor");
         }
     }
     replaceLayerParam(layerParams, "mode", "interpolation");

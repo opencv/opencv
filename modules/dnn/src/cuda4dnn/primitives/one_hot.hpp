@@ -25,7 +25,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         OneHotOp(csl::Stream stream_, int axis_, double off_, double on_, bool runtimeValues_)
             : stream(std::move(stream_)), axis(axis_),
-              offValue(static_cast<T>(static_cast<float>(off_))), onValue(static_cast<T>(static_cast<float>(on_))),
+              offValue(static_cast<T>(off_)), onValue(static_cast<T>(on_)),
               runtimeValues(runtimeValues_)
         {
         }
@@ -50,8 +50,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 inputs[2].copyTo(values);
                 CV_Assert(values.total() == 2);
                 values.convertTo(values64, CV_64F);
-                offValue = static_cast<T>(static_cast<float>(values64.ptr<double>()[0]));
-                onValue = static_cast<T>(static_cast<float>(values64.ptr<double>()[1]));
+                offValue = static_cast<T>(values64.ptr<double>()[0]);
+                onValue = static_cast<T>(values64.ptr<double>()[1]);
             }
 
             std::size_t inner = 1;
