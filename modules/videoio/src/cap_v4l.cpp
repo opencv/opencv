@@ -1457,7 +1457,10 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     case V4L2_PIX_FMT_JPEG:
         CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): decoding JPEG frame: size=" << currentBuffer.bytesused);
         if (cv::imdecode(Mat(1, currentBuffer.bytesused, CV_8U, start), IMREAD_COLOR, &frame).empty())
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't decode JPEG frame: size=" << currentBuffer.bytesused);
             frame.release();
+        }
         return;
 #endif
     case V4L2_PIX_FMT_YUYV:
