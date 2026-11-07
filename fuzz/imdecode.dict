@@ -1,0 +1,21 @@
+# JPEG
+"\xFF\xD8\xFF\xE0"
+"\xFF\xD8\xFF\xE1"
+
+# PNG
+"\x89PNG\x0D\x0A\x1A\x0A"
+
+# GIF
+"GIF87a"
+"GIF89a"
+
+# BMP
+"BM"
+
+# TIFF
+"II\x2A\x00"
+"MM\x00\x2A"
+
+# WebP
+"RIFF"
+"WEBP"
