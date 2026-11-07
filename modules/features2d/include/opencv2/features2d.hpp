@@ -1377,6 +1377,11 @@ DrawMatchesFlags. See details above in drawMatches .
 For Python API, flags are modified as cv.DRAW_MATCHES_FLAGS_DEFAULT,
 cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG,
 cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
+
+@note
+For Python API, `outImage` is a mandatory argument, but `None` can be passed instead of a
+pre-allocated image to let the function allocate and return it:
+`img2 = cv.drawKeypoints(image, keypoints, None)`.
  */
 CV_EXPORTS_W void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
                                const Scalar& color=Scalar::all(-1), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
@@ -1402,6 +1407,11 @@ DrawMatchesFlags.
 
 This function draws matches of keypoints from two images in the output image. Match is a line
 connecting two keypoints (circles). See cv::DrawMatchesFlags.
+
+@note
+For Python API, `outImg` is a mandatory argument, but `None` can be passed instead of a
+pre-allocated image to let the function allocate and return it:
+`img3 = cv.drawMatches(img1, keypoints1, img2, keypoints2, matches1to2, None)`.
  */
 CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
@@ -1417,6 +1427,13 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              const Scalar& singlePointColor=Scalar::all(-1), const std::vector<char>& matchesMask=std::vector<char>(),
                              DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
+/** @overload
+
+@note
+For Python API, `outImg` is a mandatory argument, but `None` can be passed instead of a
+pre-allocated image to let the function allocate and return it:
+`img3 = cv.drawMatchesKnn(img1, keypoints1, img2, keypoints2, matches1to2, None)`.
+ */
 CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
