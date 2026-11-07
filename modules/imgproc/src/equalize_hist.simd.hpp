@@ -35,6 +35,17 @@ void equalizeHistLut_( const uchar* src, uchar* dst, int len, const uchar* lut )
     int x = 0;
 #if CV_EQUALIZE_HIST_SIMD
     const int nlanes = VTraits<v_uint8>::vlanes();
+    uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) tab[256];
+    if( len >= 2*nlanes )
+        for( int i = 0; i < 256; i += nlanes )
+            v_store_aligned(tab + i, vx_load(lut + i));
+    for( ; x <= len - 2*nlanes; x += 2*nlanes )
+    {
+        v_uint8 r0 = v_lut(tab, vx_load(src + x));
+        v_uint8 r1 = v_lut(tab, vx_load(src + x + nlanes));
+        v_store(dst + x, r0);
+        v_store(dst + x + nlanes, r1);
+    }
     for( ; x <= len - nlanes; x += nlanes )
     {
         v_uint8 idx = vx_load(src + x);
