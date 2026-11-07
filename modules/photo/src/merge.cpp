@@ -48,6 +48,17 @@
 
 namespace cv
 {
+
+void mertensWeightRow(const float* grayUp, const float* grayMid, const float* grayDn,
+                      const float* src, float* dst, int cols, int channels,
+                      float wcon, float wsat, float wexp, float* sum);
+void mertensConvertGray(const uchar* src, size_t srcStep, float* img, size_t imgStep,
+                        float* gray, size_t grayStep, int rows, int cols);
+void mertensPyrUpSub(const float* src, size_t srcStep, float* dst, size_t dstStep,
+                     int srcRows, int srcCols, int dstRows, int dstCols, int channels);
+void mertensBlendAcc(const float* img, size_t imgStep, const float* weight, size_t weightStep,
+                     float* acc, size_t accStep, int rows, int cols, int channels, bool accumulate);
+
 namespace
 {
 
@@ -313,6 +324,41 @@ static void debevecFinalizeC3(const Mat& s0, const Mat& s1, const Mat& s2, const
     });
 }
 
+// BORDER_REFLECT_101, matching cv::Laplacian's default border.
+static int mertensReflect101(int p, int len)
+{
+    if ((unsigned)p < (unsigned)len)
+        return p;
+    if (len == 1)
+        return 0;
+    do
+    {
+        if (p < 0)
+            p = -p;
+        else
+            p = 2 * len - 2 - p;
+    }
+    while ((unsigned)p >= (unsigned)len);
+    return p;
+}
+
+// Dispatched row (baseline and AVX512_ICL). Fuses Laplacian ksize=1, abs, and the weight.
+// (1, 1, 0) on 3 channels is the fast case inside the row.
+static void mertensWeight(const Mat& img, const Mat& gray, Mat& weight, int channels,
+                          float wcon, float wsat, float wexp, Mat& weightSum)
+{
+    weight.create(img.size(), CV_32F);
+    const int rows = img.rows;
+    for (int y = 0; y < rows; y++)
+    {
+        const float* up = gray.ptr<float>(mertensReflect101(y - 1, rows));
+        const float* mid = gray.ptr<float>(y);
+        const float* dn = gray.ptr<float>(mertensReflect101(y + 1, rows));
+        mertensWeightRow(up, mid, dn, img.ptr<float>(y), weight.ptr<float>(y),
+                         img.cols, channels, wcon, wsat, wexp, weightSum.ptr<float>(y));
+    }
+}
+
 } // namespace
 
 class MergeDebevecImpl CV_FINAL : public MergeDebevec
@@ -484,56 +530,28 @@ public:
 
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
-                Mat img, gray, contrast, saturation, wellexp;
-                std::vector<Mat> splitted(channels);
-
-                images[i].convertTo(img, CV_32F, 1.0f/255.0f);
-                if(channels == 3) {
-                    cvtColor(img, gray, COLOR_RGB2GRAY);
-                } else {
-                    img.copyTo(gray);
+                Mat img, gray;
+                weights[i].create(size, CV_32F);
+                if (channels == 3 && images[i].depth() == CV_8U)
+                {
+                    img.create(images[i].size(), CV_32FC3);
+                    gray.create(images[i].size(), CV_32F);
+                    mertensConvertGray(images[i].ptr<uchar>(), images[i].step,
+                                       img.ptr<float>(), img.step, gray.ptr<float>(), gray.step,
+                                       img.rows, img.cols);
+                }
+                else
+                {
+                    images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+                    if(channels == 3)
+                        cvtColor(img, gray, COLOR_RGB2GRAY);
+                    else
+                        gray = img;
                 }
                 images[i] = img;
-                split(img, splitted);
-
-                Laplacian(gray, contrast, CV_32F);
-                contrast = abs(contrast);
-
-                Mat mean = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    mean += splitted[c];
-                }
-                mean /= channels;
-
-                saturation = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels;  c++) {
-                    Mat deviation = splitted[c] - mean;
-                    pow(deviation, 2.0f, deviation);
-                    saturation += deviation;
-                }
-                sqrt(saturation, saturation);
-
-                wellexp = Mat::ones(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    Mat expo = splitted[c] - 0.5f;
-                    pow(expo, 2.0f, expo);
-                    expo = -expo / 0.08f;
-                    exp(expo, expo);
-                    wellexp = wellexp.mul(expo);
-                }
-
-                pow(contrast, wcon, contrast);
-                pow(saturation, wsat, saturation);
-                pow(wellexp, wexp, wellexp);
-
-                weights[i] = contrast;
-                if(channels == 3) {
-                    weights[i] = weights[i].mul(saturation);
-                }
-                weights[i] = weights[i].mul(wellexp) + 1e-12f;
-
+                // weight_sum is shared. The add happens in the weight store, under this lock.
                 AutoLock lock(weight_sum_mutex);
-                weight_sum += weights[i];
+                mertensWeight(img, gray, weights[i], channels, wcon, wsat, wexp, weight_sum);
             }
         });
 
@@ -544,30 +562,27 @@ public:
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
                 weights[i] /= weight_sum;
-
-                std::vector<Mat> img_pyr, weight_pyr;
-                buildPyramid(images[i], img_pyr, maxlevel);
-                buildPyramid(weights[i], weight_pyr, maxlevel);
-
+                std::vector<Mat> img_pyr(maxlevel + 1), weight_pyr(maxlevel + 1);
+                img_pyr[0] = images[i];
+                weight_pyr[0] = weights[i];
                 for(int lvl = 0; lvl < maxlevel; lvl++) {
-                    Mat up;
-                    pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
-                    img_pyr[lvl] -= up;
+                    // Laplacian of this color level once its coarser Gaussian exists, before the next coarser color level.
+                    pyrDown(img_pyr[lvl], img_pyr[lvl + 1]);
+                    mertensPyrUpSub(img_pyr[lvl + 1].ptr<float>(), img_pyr[lvl + 1].step,
+                                    img_pyr[lvl].ptr<float>(), img_pyr[lvl].step,
+                                    img_pyr[lvl + 1].rows, img_pyr[lvl + 1].cols,
+                                    img_pyr[lvl].rows, img_pyr[lvl].cols, channels);
+                    pyrDown(weight_pyr[lvl], weight_pyr[lvl + 1]);
                 }
                 for(int lvl = 0; lvl <= maxlevel; lvl++) {
-                    std::vector<Mat> splitted(channels);
-                    split(img_pyr[lvl], splitted);
-                    for(int c = 0; c < channels; c++) {
-                        splitted[c] = splitted[c].mul(weight_pyr[lvl]);
-                    }
-                    merge(splitted, img_pyr[lvl]);
-
                     AutoLock lock(res_pyr_mutexes[lvl]);
-                    if(res_pyr[lvl].empty()) {
-                        res_pyr[lvl] = img_pyr[lvl];
-                    } else {
-                        res_pyr[lvl] += img_pyr[lvl];
-                    }
+                    const bool accumulate = !res_pyr[lvl].empty();
+                    if (!accumulate)
+                        res_pyr[lvl].create(img_pyr[lvl].size(), img_pyr[lvl].type());
+                    mertensBlendAcc(img_pyr[lvl].ptr<float>(), img_pyr[lvl].step,
+                                    weight_pyr[lvl].ptr<float>(), weight_pyr[lvl].step,
+                                    res_pyr[lvl].ptr<float>(), res_pyr[lvl].step,
+                                    img_pyr[lvl].rows, img_pyr[lvl].cols, channels, accumulate);
                 }
             }
         });
