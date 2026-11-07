@@ -27,7 +27,7 @@ static void gather(
         const int b = i / seq_len;
 
         int64_t pos_id = pos_ids[b * seq_len + t];
-        if (pos_id >= seq_len_max)
+        if (pos_id < 0 || pos_id >= seq_len_max)
         {
             outOfRangeIdx = true;
             break;
@@ -202,7 +202,14 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
                               const int requiredInternals,
                               std::vector<MatType>&outputs,
                               std::vector<MatType>&internals) const CV_OVERRIDE {
+        CV_CheckTrue(inputs.size() >= 3, "RotaryEmbeddingLayer: at least three inputs are required");
         const bool do_gather = inputs.size() > 3;
+        // the kernels compute in float32 and read position_ids as int64
+        CV_CheckType(inputs[0], inputs[0] == CV_32F, "RotaryEmbeddingLayer: input must be float32");
+        CV_CheckType(inputs[1], inputs[1] == CV_32F, "RotaryEmbeddingLayer: cos_cache must be float32");
+        CV_CheckType(inputs[2], inputs[2] == CV_32F, "RotaryEmbeddingLayer: sin_cache must be float32");
+        if (do_gather)
+            CV_CheckType(inputs[3], inputs[3] == CV_64S, "RotaryEmbeddingLayer: position_ids must be int64");
         outputs.assign(1, inputs[0]);
         if (do_gather)
         {
@@ -219,6 +226,10 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         CV_CheckTrue(inputs.size() >= 3, "RotaryEmbeddingLayer: at least three inputs are required");
 
         const MatShape& x_input_shape = inputs[0];
+        CV_CheckTrue(
+            x_input_shape.dims == 3 || x_input_shape.dims == 4,
+            "RotaryEmbeddingLayer: input must have 3 or 4 dimensions"
+        );
         CV_CheckTrue(
             x_input_shape.dims == 4 || num_heads > -1,
             "RotaryEmbeddingLayer: input must have 4 dimensions or num_heads must be specified"
@@ -276,11 +287,24 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         {
             CV_CheckTrue(x_input_shape[3] % 2 == 0,
                 "RotaryEmbeddingLayer: head size must be even");
+            CV_CheckTrue(num_heads <= 0 || num_heads == x_input_shape[1],
+                "RotaryEmbeddingLayer: num_heads must match the input's second dimension for 4d input");
         } else if( x_input_shape.dims == 3 ) {
             CV_CheckTrue(num_heads > 0, "RotaryEmbeddingLayer: num_heads must be provided for 3d input");
             CV_CheckTrue(x_input_shape[2] % num_heads == 0,
                 "RotaryEmbeddingLayer: input's last dimension must be divisible by num_heads");
         }
+
+        // forward() strides the caches by rotary_dim / 2 and indexes them by the input's (batch, seq)
+        const int dim_head = x_input_shape.dims == 4 ? x_input_shape[3] : x_input_shape[2] / num_heads;
+        const int rotary_dim = rotary_embedding_dim > 0 ? rotary_embedding_dim : dim_head;
+        CV_CheckLE(rotary_dim, dim_head, "RotaryEmbeddingLayer: rotary_embedding_dim must not exceed head size");
+        CV_CheckEQ(cos_cache_shape[cos_cache_shape.dims - 1], rotary_dim / 2,
+            "RotaryEmbeddingLayer: last dimension of sin_cache and cos_cache must be rotary_dim / 2");
+        const int seq_len = x_input_shape.dims == 4 ? x_input_shape[2] : x_input_shape[1];
+        const MatShape& bt_shape = do_gather ? inputs[3] : cos_cache_shape;
+        CV_CheckEQ(bt_shape[0], x_input_shape[0], "RotaryEmbeddingLayer: batch size of position_ids or caches must match input");
+        CV_CheckEQ(bt_shape[1], seq_len, "RotaryEmbeddingLayer: sequence length of position_ids or caches must match input");
         return true;
     }
 
@@ -291,12 +315,6 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         internals_arr.getMatVector(internals);
         const bool do_gather = inputs.size() > 3;
 
-        if (num_heads == -1)
-            // if input is 3d and num_heads is not given (-1),
-            // getMemoryShapes throws error
-            // so here input must be 4d
-            num_heads = inputs[0].size[1];
-
         const Mat& input = inputs[0];
         Mat& output = outputs[0];
 
@@ -304,7 +322,9 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         const Mat& sin_cache = do_gather ? internals[1] : inputs[2];
 
         const bool is_data_4d = input.dims == 4;
-        const int dim_head = is_data_4d ? input.size[3] : (input.size[2] / num_heads);
+        // getMemoryShapes requires num_heads for 3d input and checks it against 4d input
+        const int n_heads = is_data_4d ? input.size[1] : num_heads;
+        const int dim_head = is_data_4d ? input.size[3] : (input.size[2] / n_heads);
         const int rotary_dim = rotary_embedding_dim > 0 ? rotary_embedding_dim : dim_head;
         CV_CheckTrue(rotary_dim % 2 == 0, "RotaryEmbeddingLayer: rotary_dim must be even");
         const int seq_len = is_data_4d ? input.size[2] : input.size[1];
@@ -313,7 +333,6 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
         {
             const Mat& position_ids = inputs[3];
             const int batch_size = position_ids.size[0];
-            const int seq_len = position_ids.size[1];
             const int seq_len_max = inputs[1].size[0];
             const int dhalf = rotary_dim / 2;
             const Mat* caches[2] = { &inputs[1], &inputs[2] };
@@ -333,7 +352,7 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
             rotate_interleaved(
                 input.ptr<const float>(), output.ptr<float>(),
                 cos_cache.ptr<const float>(), sin_cache.ptr<const float>(),
-                input.size[0], seq_len, num_heads, dim_head,
+                input.size[0], seq_len, n_heads, dim_head,
                 rotary_dim, is_data_4d
             );
         }
@@ -342,7 +361,7 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
             rotate(
                 input.ptr<const float>(), output.ptr<float>(),
                 cos_cache.ptr<const float>(), sin_cache.ptr<const float>(),
-                input.size[0], seq_len, num_heads, dim_head,
+                input.size[0], seq_len, n_heads, dim_head,
                 rotary_dim, is_data_4d
             );
         }
