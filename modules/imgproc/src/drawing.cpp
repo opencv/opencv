@@ -1660,10 +1660,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
         p1 -= offset;
     }
 
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-    p1.x <<= XY_SHIFT - shift;
-    p1.y <<= XY_SHIFT - shift;
+    p0.x = (int64)((uint64_t)p0.x << (XY_SHIFT - shift));
+    p0.y = (int64)((uint64_t)p0.y << (XY_SHIFT - shift));
+    p1.x = (int64)((uint64_t)p1.x << (XY_SHIFT - shift));
+    p1.y = (int64)((uint64_t)p1.y << (XY_SHIFT - shift));
 
     if( thickness <= 1 )
     {
