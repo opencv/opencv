@@ -17,6 +17,8 @@
 
 #include <opencv2/imgproc.hpp>
 
+#include <chrono>
+
 #ifdef HAVE_GSTREAMER
 #include <gst/app/gstappsink.h>
 #include <gst/gstbuffer.h>
@@ -205,7 +207,7 @@ void GStreamerSource::Priv::prepareVideoMeta()
                         break;
                     }
                     default: {
-                        GAPI_Assert(false && "Unsupported GStreamerSource FRAME type.");
+                        GAPI_Error("Unsupported GStreamerSource FRAME type.");
                     }
                 }
                 break;
@@ -317,7 +319,7 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
                 break;
             }
             default: {
-                GAPI_Assert(false && "retrieveFrame - unsupported GStreamerSource FRAME type.");
+                GAPI_Error("retrieveFrame - unsupported GStreamerSource FRAME type.");
             }
         }
     }
@@ -354,13 +356,13 @@ GStreamerSource::Priv::~Priv() { }
 
 GStreamerSource::Priv::Priv(const std::string&, const GStreamerSource::OutputType)
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 GStreamerSource::Priv::Priv(std::shared_ptr<GStreamerPipelineFacade>, const std::string&,
                             const GStreamerSource::OutputType)
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 bool GStreamerSource::Priv::pull(cv::gapi::wip::Data&)

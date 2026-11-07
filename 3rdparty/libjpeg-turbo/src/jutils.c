@@ -3,8 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * It was modified by The libjpeg-turbo Project to include only code
- * relevant to libjpeg-turbo.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -17,7 +17,10 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+#include "jsamplecomp.h"
 
+
+#if BITS_IN_JSAMPLE == 8
 
 /*
  * jpeg_zigzag_order[i] is the zigzag-order position of the i'th element
@@ -89,19 +92,24 @@ jround_up(long a, long b)
   return a - (a % b);
 }
 
+#endif /* BITS_IN_JSAMPLE == 8 */
+
+
+#if BITS_IN_JSAMPLE != 16 || \
+    defined(C_LOSSLESS_SUPPORTED) || defined(D_LOSSLESS_SUPPORTED)
 
 GLOBAL(void)
-jcopy_sample_rows(JSAMPARRAY input_array, int source_row,
-                  JSAMPARRAY output_array, int dest_row, int num_rows,
-                  JDIMENSION num_cols)
+_jcopy_sample_rows(_JSAMPARRAY input_array, int source_row,
+                   _JSAMPARRAY output_array, int dest_row, int num_rows,
+                   JDIMENSION num_cols)
 /* Copy some rows of samples from one place to another.
  * num_rows rows are copied from input_array[source_row++]
  * to output_array[dest_row++]; these areas may overlap for duplication.
  * The source and destination arrays must be at least as wide as num_cols.
  */
 {
-  register JSAMPROW inptr, outptr;
-  register size_t count = (size_t)(num_cols * sizeof(JSAMPLE));
+  register _JSAMPROW inptr, outptr;
+  register size_t count = (size_t)(num_cols * sizeof(_JSAMPLE));
   register int row;
 
   input_array += source_row;
@@ -110,17 +118,22 @@ jcopy_sample_rows(JSAMPARRAY input_array, int source_row,
   for (row = num_rows; row > 0; row--) {
     inptr = *input_array++;
     outptr = *output_array++;
-    MEMCOPY(outptr, inptr, count);
+    memcpy(outptr, inptr, count);
   }
 }
 
+#endif /* BITS_IN_JSAMPLE != 16 ||
+          defined(C_LOSSLESS_SUPPORTED) || defined(D_LOSSLESS_SUPPORTED) */
+
+
+#if BITS_IN_JSAMPLE == 8
 
 GLOBAL(void)
 jcopy_block_row(JBLOCKROW input_row, JBLOCKROW output_row,
                 JDIMENSION num_blocks)
 /* Copy a row of coefficient blocks from one place to another. */
 {
-  MEMCOPY(output_row, input_row, num_blocks * (DCTSIZE2 * sizeof(JCOEF)));
+  memcpy(output_row, input_row, num_blocks * (DCTSIZE2 * sizeof(JCOEF)));
 }
 
 
@@ -129,5 +142,7 @@ jzero_far(void *target, size_t bytestozero)
 /* Zero out a chunk of memory. */
 /* This might be sample-array data, block-array data, or alloc_large data. */
 {
-  MEMZERO(target, bytestozero);
+  memset(target, 0, bytestozero);
 }
+
+#endif /* BITS_IN_JSAMPLE == 8 */

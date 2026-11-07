@@ -12,7 +12,10 @@
 // Author: Skal (pascal.massimino@gmail.com)
 
 #include <assert.h>
+#include <stddef.h>
 
+#include "src/dsp/cpu.h"
+#include "src/webp/types.h"
 #include "src/dsp/dsp.h"
 #include "src/utils/rescaler_utils.h"
 
@@ -26,8 +29,8 @@
 //------------------------------------------------------------------------------
 // Row import
 
-void WebPRescalerImportRowExpand_C(WebPRescaler* const wrk,
-                                   const uint8_t* src) {
+void WebPRescalerImportRowExpand_C(WebPRescaler* WEBP_RESTRICT const wrk,
+                                   const uint8_t* WEBP_RESTRICT src) {
   const int x_stride = wrk->num_channels;
   const int x_out_max = wrk->dst_width * wrk->num_channels;
   int channel;
@@ -38,8 +41,9 @@ void WebPRescalerImportRowExpand_C(WebPRescaler* const wrk,
     int x_out = channel;
     // simple bilinear interpolation
     int accum = wrk->x_add;
-    int left = src[x_in];
-    int right = (wrk->src_width > 1) ? src[x_in + x_stride] : left;
+    rescaler_t left = (rescaler_t)src[x_in];
+    rescaler_t right =
+        (wrk->src_width > 1) ? (rescaler_t)src[x_in + x_stride] : left;
     x_in += x_stride;
     while (1) {
       wrk->frow[x_out] = right * wrk->x_add + (left - right) * accum;
@@ -50,7 +54,7 @@ void WebPRescalerImportRowExpand_C(WebPRescaler* const wrk,
         left = right;
         x_in += x_stride;
         assert(x_in < wrk->src_width * x_stride);
-        right = src[x_in];
+        right = (rescaler_t)src[x_in];
         accum += wrk->x_add;
       }
     }
@@ -58,8 +62,8 @@ void WebPRescalerImportRowExpand_C(WebPRescaler* const wrk,
   }
 }
 
-void WebPRescalerImportRowShrink_C(WebPRescaler* const wrk,
-                                   const uint8_t* src) {
+void WebPRescalerImportRowShrink_C(WebPRescaler* WEBP_RESTRICT const wrk,
+                                   const uint8_t* WEBP_RESTRICT src) {
   const int x_stride = wrk->num_channels;
   const int x_out_max = wrk->dst_width * wrk->num_channels;
   int channel;
@@ -157,7 +161,8 @@ void WebPRescalerExportRowShrink_C(WebPRescaler* const wrk) {
 //------------------------------------------------------------------------------
 // Main entry calls
 
-void WebPRescalerImportRow(WebPRescaler* const wrk, const uint8_t* src) {
+void WebPRescalerImportRow(WebPRescaler* WEBP_RESTRICT const wrk,
+                           const uint8_t* WEBP_RESTRICT src) {
   assert(!WebPRescalerInputDone(wrk));
   if (!wrk->x_expand) {
     WebPRescalerImportRowShrink(wrk, src);
@@ -196,6 +201,7 @@ WebPRescalerImportRowFunc WebPRescalerImportRowShrink;
 WebPRescalerExportRowFunc WebPRescalerExportRowExpand;
 WebPRescalerExportRowFunc WebPRescalerExportRowShrink;
 
+extern VP8CPUInfo VP8GetCPUInfo;
 extern void WebPRescalerDspInitSSE2(void);
 extern void WebPRescalerDspInitMIPS32(void);
 extern void WebPRescalerDspInitMIPSdspR2(void);
@@ -213,7 +219,7 @@ WEBP_DSP_INIT_FUNC(WebPRescalerDspInit) {
   WebPRescalerImportRowShrink = WebPRescalerImportRowShrink_C;
 
   if (VP8GetCPUInfo != NULL) {
-#if defined(WEBP_USE_SSE2)
+#if defined(WEBP_HAVE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       WebPRescalerDspInitSSE2();
     }
@@ -235,7 +241,7 @@ WEBP_DSP_INIT_FUNC(WebPRescalerDspInit) {
 #endif
   }
 
-#if defined(WEBP_USE_NEON)
+#if defined(WEBP_HAVE_NEON)
   if (WEBP_NEON_OMIT_C_CODE ||
       (VP8GetCPUInfo != NULL && VP8GetCPUInfo(kNEON))) {
     WebPRescalerDspInitNEON();

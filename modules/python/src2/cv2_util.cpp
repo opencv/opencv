@@ -54,12 +54,24 @@ PyObject* failmsgp(const char *fmt, ...)
 
 void pyRaiseCVException(const cv::Exception &e)
 {
-    PyObject_SetAttrString(opencv_error, "file", PyString_FromString(e.file.c_str()));
-    PyObject_SetAttrString(opencv_error, "func", PyString_FromString(e.func.c_str()));
-    PyObject_SetAttrString(opencv_error, "line", PyInt_FromLong(e.line));
-    PyObject_SetAttrString(opencv_error, "code", PyInt_FromLong(e.code));
-    PyObject_SetAttrString(opencv_error, "msg", PyString_FromString(e.msg.c_str()));
-    PyObject_SetAttrString(opencv_error, "err", PyString_FromString(e.err.c_str()));
+    PyObject* temp_obj = PyString_FromString(e.file.c_str());
+    PyObject_SetAttrString(opencv_error, "file", temp_obj);
+    Py_DECREF(temp_obj);
+    temp_obj = PyString_FromString(e.func.c_str());
+    PyObject_SetAttrString(opencv_error, "func", temp_obj);
+    Py_DECREF(temp_obj);
+    temp_obj = PyInt_FromLong(e.line);
+    PyObject_SetAttrString(opencv_error, "line", temp_obj);
+    Py_DECREF(temp_obj);
+    temp_obj = PyInt_FromLong(e.code);
+    PyObject_SetAttrString(opencv_error, "code", temp_obj);
+    Py_DECREF(temp_obj);
+    temp_obj = PyString_FromString(e.msg.c_str());
+    PyObject_SetAttrString(opencv_error, "msg", temp_obj);
+    Py_DECREF(temp_obj);
+    temp_obj = PyString_FromString(e.err.c_str());
+    PyObject_SetAttrString(opencv_error, "err", temp_obj);
+    Py_DECREF(temp_obj);
     PyErr_SetString(opencv_error, e.what());
 }
 
@@ -116,11 +128,7 @@ void pyPopulateArgumentConversionErrors()
         PySafeObject exception_message(PyObject_Str(exception_value));
         std::string message;
         getUnicodeString(exception_message, message);
-#ifdef CV_CXX11
         conversionErrorsTLS.getRef().push_back(std::move(message));
-#else
-        conversionErrorsTLS.getRef().push_back(message);
-#endif
     }
 }
 

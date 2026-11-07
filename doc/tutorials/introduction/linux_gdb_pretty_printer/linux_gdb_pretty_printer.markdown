@@ -1,7 +1,7 @@
 Using OpenCV with gdb-powered IDEs {#tutorial_linux_gdb_pretty_printer}
 =====================
 
-@prev_tutorial{tutorial_linux_install}
+@prev_tutorial{tutorial_oneapi_install}
 @next_tutorial{tutorial_linux_gcc_cmake}
 
 |    |    |

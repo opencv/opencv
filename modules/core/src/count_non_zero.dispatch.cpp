@@ -62,10 +62,6 @@ static bool ipp_countNonZero( Mat &src, int &res )
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    // see https://github.com/opencv/opencv/issues/17453
-    if (src.dims <= 2 && src.step > 520000 && cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)
-        return false;
-
 #if IPP_VERSION_X100 < 201801
     // Poor performance of SSE42
     if(cv::ipp::getIppTopFeatures() == ippCPUID_SSE42)

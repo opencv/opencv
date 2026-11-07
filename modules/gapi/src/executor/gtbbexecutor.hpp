@@ -12,6 +12,9 @@
 #endif
 
 #ifdef HAVE_TBB
+#ifndef TBB_SUPPRESS_DEPRECATED_MESSAGES
+#define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
+#endif
 #include <tbb/tbb.h>
 #include <tbb/task.h>
 #if TBB_INTERFACE_VERSION < 12000

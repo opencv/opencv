@@ -175,7 +175,7 @@ RUN_MEDBLUR3X3_IMPL( float)
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename SRC>
 static inline v_float32 vx_load_f32(const SRC* ptr)
 {
@@ -228,8 +228,8 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
     GAPI_Assert(rc + gc + bc <= unity);
     GAPI_Assert(rc + gc + bc >= USHRT_MAX);
 
-#if CV_SIMD
-    constexpr int nlanes = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int nlanes = VTraits<v_uint8>::vlanes();
     if (width >= nlanes)
     {
         for (int w=0; w < width; )
@@ -247,14 +247,8 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
 
                 v_uint16 y0, y1;
                 static const ushort half = 1 << 7; // Q0.8.8
-                y0 = (v_mul_hi(r0 << 8, vx_setall_u16(rc)) +
-                      v_mul_hi(g0 << 8, vx_setall_u16(gc)) +
-                      v_mul_hi(b0 << 8, vx_setall_u16(bc)) +
-                                        vx_setall_u16(half)) >> 8;
-                y1 = (v_mul_hi(r1 << 8, vx_setall_u16(rc)) +
-                      v_mul_hi(g1 << 8, vx_setall_u16(gc)) +
-                      v_mul_hi(b1 << 8, vx_setall_u16(bc)) +
-                                        vx_setall_u16(half)) >> 8;
+                y0 = v_shr<8>(v_add(v_add(v_add(v_mul_hi(v_shl<8>(r0), vx_setall_u16(rc)), v_mul_hi(v_shl<8>(g0), vx_setall_u16(gc))), v_mul_hi(v_shl<8>(b0), vx_setall_u16(bc))), vx_setall_u16(half)));
+                y1 = v_shr<8>(v_add(v_add(v_add(v_mul_hi(v_shl<8>(r1), vx_setall_u16(rc)), v_mul_hi(v_shl<8>(g1), vx_setall_u16(gc))), v_mul_hi(v_shl<8>(b1), vx_setall_u16(bc))), vx_setall_u16(half)));
 
                 v_uint8 y;
                 y = v_pack(y0, y1);
@@ -316,10 +310,10 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             v_uint8x16 v_min_rgb = v_min(v_min(r, g), b);
             v_uint8x16 v_max_rgb = v_max(v_max(r, g), b);
 
-            v_uint8x16 v_diff = v_max_rgb - v_min_rgb;
+            v_uint8x16 v_diff = v_sub(v_max_rgb, v_min_rgb);
 
-            v_uint8x16 v_r_eq_max = (r == v_max_rgb);
-            v_uint8x16 v_g_eq_max = (g == v_max_rgb);
+            v_uint8x16 v_r_eq_max = (v_eq(r, v_max_rgb));
+            v_uint8x16 v_g_eq_max = (v_eq(g, v_max_rgb));
 
             v_uint8x16 v;
             // get V-ch
@@ -327,10 +321,10 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
 
             // divide v into 4x4 vectors because later int32 required
             v_uint32x4 v_idx[4];
-            v_idx[0] = v_reinterpret_as_u32(v & mask1);
-            v_idx[1] = v_reinterpret_as_u32(v & mask2) >> 8;
-            v_idx[2] = v_reinterpret_as_u32(v & mask3) >> 16;
-            v_idx[3] = v_reinterpret_as_u32(v & mask4) >> 24;
+            v_idx[0] = v_reinterpret_as_u32(v_and(v, mask1));
+            v_idx[1] = v_shr<8>(v_reinterpret_as_u32(v_and(v, mask2)));
+            v_idx[2] = v_shr<16>(v_reinterpret_as_u32(v_and(v, mask3)));
+            v_idx[3] = v_shr<24>(v_reinterpret_as_u32(v_and(v, mask4)));
 
             v_uint32x4 sv_elems_32[4];
             sv_elems_32[0] = v_reinterpret_as_u32(v_lut(sdiv_table, v_reinterpret_as_s32(v_idx[0])));
@@ -341,19 +335,19 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             // divide and calculate s according to above feature
             v_uint32x4 ss[4];
 
-            v_uint32x4 v_add = v_setall_u32(1) << (hsv_shift - 1);
+            v_uint32x4 vadd = v_shl(v_setall_u32(1), (hsv_shift - 1));
 
             v_uint32x4 v_diff_exp[4];
-            v_diff_exp[0] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask1);
-            v_diff_exp[1] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask2) >> 8;
-            v_diff_exp[2] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask3) >> 16;
-            v_diff_exp[3] = v_reinterpret_as_u32(v_reinterpret_as_u8(v_diff) & mask4) >> 24;
+            v_diff_exp[0] = v_reinterpret_as_u32(v_and(v_reinterpret_as_u8(v_diff), mask1));
+            v_diff_exp[1] = v_shr<8>(v_reinterpret_as_u32(v_and(v_reinterpret_as_u8(v_diff), mask2)));
+            v_diff_exp[2] = v_shr<16>(v_reinterpret_as_u32(v_and(v_reinterpret_as_u8(v_diff), mask3)));
+            v_diff_exp[3] = v_shr<24>(v_reinterpret_as_u32(v_and(v_reinterpret_as_u8(v_diff), mask4)));
 
             // s = (diff * sdiv_table[v] + (1 << (hsv_shift-1))) >> hsv_shift;
-            ss[0] = (v_diff_exp[0] * sv_elems_32[0] + v_add) >> hsv_shift;
-            ss[1] = (v_diff_exp[1] * sv_elems_32[1] + v_add) >> hsv_shift;
-            ss[2] = (v_diff_exp[2] * sv_elems_32[2] + v_add) >> hsv_shift;
-            ss[3] = (v_diff_exp[3] * sv_elems_32[3] + v_add) >> hsv_shift;
+            ss[0] = v_shr<hsv_shift>(v_add(v_mul(v_diff_exp[0], sv_elems_32[0]), vadd));
+            ss[1] = v_shr<hsv_shift>(v_add(v_mul(v_diff_exp[1], sv_elems_32[1]), vadd));
+            ss[2] = v_shr<hsv_shift>(v_add(v_mul(v_diff_exp[2], sv_elems_32[2]), vadd));
+            ss[3] = v_shr<hsv_shift>(v_add(v_mul(v_diff_exp[3], sv_elems_32[3]), vadd));
 
             // reconstruct order of S-ch
             v_uint32x4 zip[8];
@@ -412,18 +406,18 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             // start computing H-ch
             //h = (_vr & (g - b)) + (~_vr & ((_vg & (b - r + 2 * diff)) + ((~_vg) & (r - g + 4 * diff))));
             v_int32x4 hh[4];
-            hh[0] = v_reinterpret_as_s32(v_select(e[0], v_reinterpret_as_s32(gg[0] - bb[0]),
-                                         v_select(p[0], v_reinterpret_as_s32(bb[0] - rr[0] + v_setall_u32(2) * vdd[0]),
-                                                        v_reinterpret_as_s32(rr[0] - gg[0] + v_setall_u32(4) * vdd[0]))));
-            hh[1] = v_reinterpret_as_s32(v_select(e[1], v_reinterpret_as_s32(gg[1] - bb[1]),
-                                         v_select(p[1], v_reinterpret_as_s32(bb[1] - rr[1] + v_setall_u32(2) * vdd[1]),
-                                                        v_reinterpret_as_s32(rr[1] - gg[1] + v_setall_u32(4) * vdd[1]))));
-            hh[2] = v_reinterpret_as_s32(v_select(e[2], v_reinterpret_as_s32(gg[2] - bb[2]),
-                                         v_select(p[2], v_reinterpret_as_s32(bb[2] - rr[2] + v_setall_u32(2) * vdd[2]),
-                                                        v_reinterpret_as_s32(rr[2] - gg[2] + v_setall_u32(4) * vdd[2]))));
-            hh[3] = v_reinterpret_as_s32(v_select(e[3], v_reinterpret_as_s32(gg[3] - bb[3]),
-                                         v_select(p[3], v_reinterpret_as_s32(bb[3] - rr[3] + v_setall_u32(2) * vdd[3]),
-                                                        v_reinterpret_as_s32(rr[3] - gg[3] + v_setall_u32(4) * vdd[3]))));
+            hh[0] = v_reinterpret_as_s32(v_select(e[0], v_reinterpret_as_s32(v_sub(gg[0], bb[0])),
+                                         v_select(p[0], v_reinterpret_as_s32(v_add(v_sub(bb[0], rr[0]), v_mul(v_setall_u32(2), vdd[0]))),
+                                                        v_reinterpret_as_s32(v_add(v_sub(rr[0], gg[0]), v_mul(v_setall_u32(4), vdd[0]))))));
+            hh[1] = v_reinterpret_as_s32(v_select(e[1], v_reinterpret_as_s32(v_sub(gg[1], bb[1])),
+                                         v_select(p[1], v_reinterpret_as_s32(v_add(v_sub(bb[1], rr[1]), v_mul(v_setall_u32(2), vdd[1]))),
+                                                        v_reinterpret_as_s32(v_add(v_sub(rr[1], gg[1]), v_mul(v_setall_u32(4), vdd[1]))))));
+            hh[2] = v_reinterpret_as_s32(v_select(e[2], v_reinterpret_as_s32(v_sub(gg[2], bb[2])),
+                                         v_select(p[2], v_reinterpret_as_s32(v_add(v_sub(bb[2], rr[2]), v_mul(v_setall_u32(2), vdd[2]))),
+                                                        v_reinterpret_as_s32(v_add(v_sub(rr[2], gg[2]), v_mul(v_setall_u32(4), vdd[2]))))));
+            hh[3] = v_reinterpret_as_s32(v_select(e[3], v_reinterpret_as_s32(v_sub(gg[3], bb[3])),
+                                         v_select(p[3], v_reinterpret_as_s32(v_add(v_sub(bb[3], rr[3]), v_mul(v_setall_u32(2), vdd[3]))),
+                                                        v_reinterpret_as_s32(v_add(v_sub(rr[3], gg[3]), v_mul(v_setall_u32(4), vdd[3]))))));
 
             //h = (h * hdiv_table[diff] + (1 << (hsv_shift-1))) >> hsv_shift;
             v_uint32x4 h_elems_32[4];
@@ -432,23 +426,23 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
             h_elems_32[2] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[2])));
             h_elems_32[3] = v_reinterpret_as_u32(v_lut(hdiv_table, v_reinterpret_as_s32(vdd[3])));
 
-            hh[0] = (hh[0] * v_reinterpret_as_s32(h_elems_32[0]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
-            hh[1] = (hh[1] * v_reinterpret_as_s32(h_elems_32[1]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
-            hh[2] = (hh[2] * v_reinterpret_as_s32(h_elems_32[2]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
-            hh[3] = (hh[3] * v_reinterpret_as_s32(h_elems_32[3]) + v_reinterpret_as_s32(v_add)) >> hsv_shift;
+            hh[0] = v_shr(v_add(v_mul(hh[0], v_reinterpret_as_s32(h_elems_32[0])), v_reinterpret_as_s32(vadd)), hsv_shift);
+            hh[1] = v_shr(v_add(v_mul(hh[1], v_reinterpret_as_s32(h_elems_32[1])), v_reinterpret_as_s32(vadd)), hsv_shift);
+            hh[2] = v_shr(v_add(v_mul(hh[2], v_reinterpret_as_s32(h_elems_32[2])), v_reinterpret_as_s32(vadd)), hsv_shift);
+            hh[3] = v_shr(v_add(v_mul(hh[3], v_reinterpret_as_s32(h_elems_32[3])), v_reinterpret_as_s32(vadd)), hsv_shift);
 
             // check for negative H
             v_int32x4 v_h_less_0[4];
-            v_h_less_0[0] = (hh[0] < v_setall_s32(0));
-            v_h_less_0[1] = (hh[1] < v_setall_s32(0));
-            v_h_less_0[2] = (hh[2] < v_setall_s32(0));
-            v_h_less_0[3] = (hh[3] < v_setall_s32(0));
+            v_h_less_0[0] = (v_lt(hh[0], v_setall_s32(0)));
+            v_h_less_0[1] = (v_lt(hh[1], v_setall_s32(0)));
+            v_h_less_0[2] = (v_lt(hh[2], v_setall_s32(0)));
+            v_h_less_0[3] = (v_lt(hh[3], v_setall_s32(0)));
 
             v_int32x4 v_h_180[4];
-            v_h_180[0] = hh[0] + v_setall_s32(180);
-            v_h_180[1] = hh[1] + v_setall_s32(180);
-            v_h_180[2] = hh[2] + v_setall_s32(180);
-            v_h_180[3] = hh[3] + v_setall_s32(180);
+            v_h_180[0] = v_add(hh[0], v_setall_s32(180));
+            v_h_180[1] = v_add(hh[1], v_setall_s32(180));
+            v_h_180[2] = v_add(hh[2], v_setall_s32(180));
+            v_h_180[3] = v_add(hh[3], v_setall_s32(180));
 
             hh[0] = v_select(v_h_less_0[0], v_h_180[0], hh[0]);
             hh[1] = v_select(v_h_less_0[1], v_h_180[1], hh[1]);
@@ -534,7 +528,7 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
             // calculate b-channel
             v_expand(b2, l_1, r_1);
             v_expand(b2_offset, l_2, r_2);
-            v_uint8x16 b2_sum = v_rshr_pack<1>(l_1 + l_2, r_1 + r_2);
+            v_uint8x16 b2_sum = v_rshr_pack<1>(v_add(l_1, l_2), v_add(r_1, r_2));
 
             v_uint8x16 b_low, b_high;
             v_zip(b2_sum, b2_offset, b_low, b_high);
@@ -547,9 +541,9 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
             v_expand(r3_offset, l_4, r_4);
 
             v_uint8x16 r13offset_sum, r13_sum;
-            r13offset_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
-                                           r_1 + r_2 + r_3 + r_4);
-            r13_sum = v_rshr_pack<1>(l_1 + l_3, r_1 + r_3);
+            r13offset_sum = v_rshr_pack<2>(v_add(v_add(v_add(l_1, l_2), l_3), l_4),
+                                           v_add(v_add(v_add(r_1, r_2), r_3), r_4));
+            r13_sum = v_rshr_pack<1>(v_add(l_1, l_3), v_add(r_1, r_3));
 
             v_uint8x16 r_low, r_high;
             v_zip(r13_sum, r13offset_sum, r_low, r_high);
@@ -561,8 +555,8 @@ void run_bayergr2rgb_bg_impl(uchar out[], const uchar **in, int width)
             v_expand(g2, l_3, r_3);
             v_expand(g2_offset, l_4, r_4);
 
-            v_uint8x16 g_out_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
-                                                  r_1 + r_2 + r_3 + r_4);
+            v_uint8x16 g_out_sum = v_rshr_pack<2>(v_add(v_add(v_add(l_1, l_2), l_3), l_4),
+                                                  v_add(v_add(v_add(r_1, r_2), r_3), r_4));
 
             v_uint8x16 g_low, g_high;
             v_zip(g2, g_out_sum, g_low, g_high);
@@ -646,7 +640,7 @@ void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
             // calculate r-channel
             v_expand(r2, l_1, r_1);
             v_expand(r2_offset, l_2, r_2);
-            v_uint8x16 r2_sum = v_rshr_pack<1>(l_1 + l_2, r_1 + r_2);
+            v_uint8x16 r2_sum = v_rshr_pack<1>(v_add(l_1, l_2), v_add(r_1, r_2));
 
             v_uint8x16 r_low, r_high;
             v_zip(r2, r2_sum, r_low, r_high);
@@ -659,9 +653,9 @@ void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
             v_expand(b3_offset, l_4, r_4);
 
             v_uint8x16 b13offset_sum, b13_sum;
-            b13offset_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
-                                           r_1 + r_2 + r_3 + r_4);
-            b13_sum = v_rshr_pack<1>(l_2 + l_4, r_2 + r_4);
+            b13offset_sum = v_rshr_pack<2>(v_add(v_add(v_add(l_1, l_2), l_3), l_4),
+                                           v_add(v_add(v_add(r_1, r_2), r_3), r_4));
+            b13_sum = v_rshr_pack<1>(v_add(l_2, l_4), v_add(r_2, r_4));
 
             v_uint8x16 b_low, b_high;
             v_zip(b13offset_sum, b13_sum, b_low, b_high);
@@ -673,8 +667,8 @@ void run_bayergr2rgb_gr_impl(uchar out[], const uchar **in, int width)
             v_expand(g2, l_3, r_3);
             v_expand(g2_offset, l_4, r_4);
 
-            v_uint8x16 g_out_sum = v_rshr_pack<2>(l_1 + l_2 + l_3 + l_4,
-                                                  r_1 + r_2 + r_3 + r_4);
+            v_uint8x16 g_out_sum = v_rshr_pack<2>(v_add(v_add(v_add(l_1, l_2), l_3), l_4),
+                                                  v_add(v_add(v_add(r_1, r_2), r_3), r_4));
 
             v_uint8x16 g_low, g_high;
             v_zip(g_out_sum, g2_offset, g_low, g_high);
@@ -749,8 +743,8 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
 
     int w = 0;
 
-#if CV_SIMD
-    static const int nlanes = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    static const int nlanes = VTraits<v_uint8>::vlanes();
     for ( ; w <= width - nlanes; w += nlanes)
     {
         v_uint8 r, g, b;
@@ -761,20 +755,16 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
         v_expand(g, _g0, _g1);
         v_expand(b, _b0, _b1);
 
-        _r0 = _r0 << 7;                         // Q0.9.7 un-signed
-        _r1 = _r1 << 7;
-        _g0 = _g0 << 7;
-        _g1 = _g1 << 7;
-        _b0 = _b0 << 7;
-        _b1 = _b1 << 7;
+        _r0 = v_shl<7>(_r0);                         // Q0.9.7 un-signed
+        _r1 = v_shl<7>(_r1);
+        _g0 = v_shl<7>(_g0);
+        _g1 = v_shl<7>(_g1);
+        _b0 = v_shl<7>(_b0);
+        _b1 = v_shl<7>(_b1);
 
         v_uint16 _y0, _y1;
-        _y0 = v_mul_hi(vx_setall_u16(c0), _r0)  // Q0.9.7
-            + v_mul_hi(vx_setall_u16(c1), _g0)
-            + v_mul_hi(vx_setall_u16(c2), _b0);
-        _y1 = v_mul_hi(vx_setall_u16(c0), _r1)
-            + v_mul_hi(vx_setall_u16(c1), _g1)
-            + v_mul_hi(vx_setall_u16(c2), _b1);
+        _y0 = v_add(v_add(v_mul_hi(vx_setall_u16(c0), _r0), v_mul_hi(vx_setall_u16(c1), _g0)), v_mul_hi(vx_setall_u16(c2), _b0));
+        _y1 = v_add(v_add(v_mul_hi(vx_setall_u16(c0), _r1), v_mul_hi(vx_setall_u16(c1), _g1)), v_mul_hi(vx_setall_u16(c2), _b1));
 
         v_int16 r0, r1, b0, b1, y0, y1;
         r0 = v_reinterpret_as_s16(_r0);         // Q1.8.7 signed
@@ -785,18 +775,18 @@ void run_rgb2yuv_impl(uchar out[], const uchar in[], int width, const float coef
         y1 = v_reinterpret_as_s16(_y1);
 
         v_int16 u0, u1, v0, v1;
-        u0 = v_mul_hi(vx_setall_s16(c3), b0 - y0);  // Q1.12.3
-        u1 = v_mul_hi(vx_setall_s16(c3), b1 - y1);
-        v0 = v_mul_hi(vx_setall_s16(c4), r0 - y0);
-        v1 = v_mul_hi(vx_setall_s16(c4), r1 - y1);
+        u0 = v_mul_hi(vx_setall_s16(c3), v_sub(b0, y0));  // Q1.12.3
+        u1 = v_mul_hi(vx_setall_s16(c3), v_sub(b1, y1));
+        v0 = v_mul_hi(vx_setall_s16(c4), v_sub(r0, y0));
+        v1 = v_mul_hi(vx_setall_s16(c4), v_sub(r1, y1));
 
         v_uint8 y, u, v;
-        y = v_pack((_y0 + vx_setall_u16(1 << 6)) >> 7,
-                   (_y1 + vx_setall_u16(1 << 6)) >> 7);
-        u = v_pack_u((u0 + vx_setall_s16(257 << 2)) >> 3,  // 257 << 2 = 128.5 * (1 << 3)
-                     (u1 + vx_setall_s16(257 << 2)) >> 3);
-        v = v_pack_u((v0 + vx_setall_s16(257 << 2)) >> 3,
-                     (v1 + vx_setall_s16(257 << 2)) >> 3);
+        y = v_pack(v_shr<7>(v_add(_y0, vx_setall_u16(1 << 6))),
+                   v_shr<7>(v_add(_y1, vx_setall_u16(1 << 6))));
+        u = v_pack_u(v_shr<3>(v_add(u0, vx_setall_s16(257 << 2))),  // 257 << 2 = 128.5 * (1 << 3)
+                     v_shr<3>(v_add(u1, vx_setall_s16(257 << 2))));
+        v = v_pack_u(v_shr<3>(v_add(v0, vx_setall_s16(257 << 2))),
+                     v_shr<3>(v_add(v1, vx_setall_s16(257 << 2))));
 
         v_store_interleave(&out[3*w], y, u, v);
     }
@@ -825,8 +815,8 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
 
     int w = 0;
 
-#if CV_SIMD
-    static const int nlanes = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    static const int nlanes = VTraits<v_uint8>::vlanes();
     for ( ; w <= width - nlanes; w += nlanes)
     {
         v_uint8 y, u, v;
@@ -845,30 +835,28 @@ void run_yuv2rgb_impl(uchar out[], const uchar in[], int width, const float coef
         v0 = v_reinterpret_as_s16(_v0);
         v1 = v_reinterpret_as_s16(_v1);
 
-        y0 =  y0 << 3;                              // Q1.12.3
-        y1 =  y1 << 3;
-        u0 = (u0 - vx_setall_s16(128)) << 7;        // Q1.8.7
-        u1 = (u1 - vx_setall_s16(128)) << 7;
-        v0 = (v0 - vx_setall_s16(128)) << 7;
-        v1 = (v1 - vx_setall_s16(128)) << 7;
+        y0 =  v_shl<3>(y0);                              // Q1.12.3
+        y1 =  v_shl<3>(y1);
+        u0 = v_shl<7>(v_sub(u0, vx_setall_s16(128)));        // Q1.8.7
+        u1 = v_shl<7>(v_sub(u1, vx_setall_s16(128)));
+        v0 = v_shl<7>(v_sub(v0, vx_setall_s16(128)));
+        v1 = v_shl<7>(v_sub(v1, vx_setall_s16(128)));
 
         v_int16 r0, r1, g0, g1, b0, b1;
-        r0 = y0 + v_mul_hi(vx_setall_s16(c0), v0);  // Q1.12.3
-        r1 = y1 + v_mul_hi(vx_setall_s16(c0), v1);
-        g0 = y0 + v_mul_hi(vx_setall_s16(c1), u0)
-                + v_mul_hi(vx_setall_s16(c2), v0);
-        g1 = y1 + v_mul_hi(vx_setall_s16(c1), u1)
-                + v_mul_hi(vx_setall_s16(c2), v1);
-        b0 = y0 + v_mul_hi(vx_setall_s16(c3), u0);
-        b1 = y1 + v_mul_hi(vx_setall_s16(c3), u1);
+        r0 = v_add(y0, v_mul_hi(vx_setall_s16(c0), v0));  // Q1.12.3
+        r1 = v_add(y1, v_mul_hi(vx_setall_s16(c0), v1));
+        g0 = v_add(v_add(y0, v_mul_hi(vx_setall_s16(c1), u0)), v_mul_hi(vx_setall_s16(c2), v0));
+        g1 = v_add(v_add(y1, v_mul_hi(vx_setall_s16(c1), u1)), v_mul_hi(vx_setall_s16(c2), v1));
+        b0 = v_add(y0, v_mul_hi(vx_setall_s16(c3), u0));
+        b1 = v_add(y1, v_mul_hi(vx_setall_s16(c3), u1));
 
         v_uint8 r, g, b;
-        r = v_pack_u((r0 + vx_setall_s16(1 << 2)) >> 3,
-                     (r1 + vx_setall_s16(1 << 2)) >> 3);
-        g = v_pack_u((g0 + vx_setall_s16(1 << 2)) >> 3,
-                     (g1 + vx_setall_s16(1 << 2)) >> 3);
-        b = v_pack_u((b0 + vx_setall_s16(1 << 2)) >> 3,
-                     (b1 + vx_setall_s16(1 << 2)) >> 3);
+        r = v_pack_u(v_shr<3>(v_add(r0, vx_setall_s16(1 << 2))),
+                     v_shr<3>(v_add(r1, vx_setall_s16(1 << 2))));
+        g = v_pack_u(v_shr<3>(v_add(g0, vx_setall_s16(1 << 2))),
+                     v_shr<3>(v_add(g1, vx_setall_s16(1 << 2))));
+        b = v_pack_u(v_shr<3>(v_add(b0, vx_setall_s16(1 << 2))),
+                     v_shr<3>(v_add(b1, vx_setall_s16(1 << 2))));
 
         v_store_interleave(&out[3*w], r, g, b);
     }
@@ -920,41 +908,37 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
             v_expand(g, gg1, gg2);
             v_expand(b, bb1, bb2);
 
-            rr1 = rr1 << 7;
-            rr2 = rr2 << 7;
-            gg1 = gg1 << 7;
-            gg2 = gg2 << 7;
-            bb1 = bb1 << 7;
-            bb2 = bb2 << 7;
+            rr1 = v_shl<7>(rr1);
+            rr2 = v_shl<7>(rr2);
+            gg1 = v_shl<7>(gg1);
+            gg2 = v_shl<7>(gg2);
+            bb1 = v_shl<7>(bb1);
+            bb2 = v_shl<7>(bb2);
 
             v_uint16x8 yy1, yy2;
 
-            yy1 = v_mul_hi(v_setall_u16(c0), rr1) +
-                  v_mul_hi(v_setall_u16(c1), gg1) +
-                  v_mul_hi(v_setall_u16(c2), bb1);
+            yy1 = v_add(v_add(v_mul_hi(v_setall_u16(c0), rr1), v_mul_hi(v_setall_u16(c1), gg1)), v_mul_hi(v_setall_u16(c2), bb1));
 
-            yy2 = v_mul_hi(v_setall_u16(c0), rr2) +
-                  v_mul_hi(v_setall_u16(c1), gg2) +
-                  v_mul_hi(v_setall_u16(c2), bb2);
+            yy2 = v_add(v_add(v_mul_hi(v_setall_u16(c0), rr2), v_mul_hi(v_setall_u16(c1), gg2)), v_mul_hi(v_setall_u16(c2), bb2));
 
             v_int16x8 u1, u2, v1, v2;
 
-            u1 = v_mul_hi(v_setall_s16(c3), v_reinterpret_as_s16(bb1) - v_reinterpret_as_s16(yy1));
-            u2 = v_mul_hi(v_setall_s16(c3), v_reinterpret_as_s16(bb2) - v_reinterpret_as_s16(yy2));
-            v1 = v_mul_hi(v_setall_s16(c4), v_reinterpret_as_s16(rr1) - v_reinterpret_as_s16(yy1));
-            v2 = v_mul_hi(v_setall_s16(c4), v_reinterpret_as_s16(rr2) - v_reinterpret_as_s16(yy2));
+            u1 = v_mul_hi(v_setall_s16(c3), v_sub(v_reinterpret_as_s16(bb1), v_reinterpret_as_s16(yy1)));
+            u2 = v_mul_hi(v_setall_s16(c3), v_sub(v_reinterpret_as_s16(bb2), v_reinterpret_as_s16(yy2)));
+            v1 = v_mul_hi(v_setall_s16(c4), v_sub(v_reinterpret_as_s16(rr1), v_reinterpret_as_s16(yy1)));
+            v2 = v_mul_hi(v_setall_s16(c4), v_sub(v_reinterpret_as_s16(rr2), v_reinterpret_as_s16(yy2)));
 
-            y = v_pack((yy1 + v_setall_u16(1 << 6)) >> 7,
-                       (yy2 + v_setall_u16(1 << 6)) >> 7);
-            u = v_pack_u((u1 + v_setall_s16(257 << 2)) >> 3,
-                         (u2 + v_setall_s16(257 << 2)) >> 3);
-            v = v_pack_u((v1 + v_setall_s16(257 << 2)) >> 3,
-                         (v2 + v_setall_s16(257 << 2)) >> 3);
+            y = v_pack(v_shr<7>(v_add(yy1, v_setall_u16(1 << 6))),
+                       v_shr<7>(v_add(yy2, v_setall_u16(1 << 6))));
+            u = v_pack_u(v_shr<3>(v_add(u1, v_setall_s16(257 << 2))),
+                         v_shr<3>(v_add(u2, v_setall_s16(257 << 2))));
+            v = v_pack_u(v_shr<3>(v_add(v1, v_setall_s16(257 << 2))),
+                         v_shr<3>(v_add(v2, v_setall_s16(257 << 2))));
 
             uint8_t ff = 0xff;
             v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
-            v_uint8x16 uu = u & mask;
-            v_uint8x16 vv = v & mask;
+            v_uint8x16 uu = v_and(u, mask);
+            v_uint8x16 vv = v_and(v, mask);
             // extract even u and v
             v_uint8x16 u_low = v_pack(v_reinterpret_as_u16(uu), v_reinterpret_as_u16(uu));
             v_uint8x16 v_low = v_pack(v_reinterpret_as_u16(vv), v_reinterpret_as_u16(vv));
@@ -1001,7 +985,7 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
 //
 //-----------------------------
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 // this variant not using buf[] appears 15% faster than reference any-2-float code below
 template<bool noscale, typename SRC>
 static void run_sepfilter3x3_any2float(float out[], const SRC *in[], int width, int chan,
@@ -1016,7 +1000,7 @@ static void run_sepfilter3x3_any2float(float out[], const SRC *in[], int width, 
 
     for (int l=0; l < length; )
     {
-        static const int nlanes = v_float32::nlanes;
+        static const int nlanes = VTraits<v_float32>::vlanes();
 
         // main part
         for ( ; l <= length - nlanes; l += nlanes)
@@ -1026,7 +1010,7 @@ static void run_sepfilter3x3_any2float(float out[], const SRC *in[], int width, 
                 v_float32 t0 = vx_load_f32(&i[l - shift]);
                 v_float32 t1 = vx_load_f32(&i[l        ]);
                 v_float32 t2 = vx_load_f32(&i[l + shift]);
-                v_float32 t = t0 * vx_setall_f32(kx0);
+                v_float32 t = v_mul(t0, vx_setall_f32(kx0));
                     t = v_fma(t1,  vx_setall_f32(kx1), t);
                     t = v_fma(t2,  vx_setall_f32(kx2), t);
                 return t;
@@ -1035,7 +1019,7 @@ static void run_sepfilter3x3_any2float(float out[], const SRC *in[], int width, 
             v_float32 s0 = xsum(in[0]);
             v_float32 s1 = xsum(in[1]);
             v_float32 s2 = xsum(in[2]);
-            v_float32 s = s0 * vx_setall_f32(ky0);
+            v_float32 s = v_mul(s0, vx_setall_f32(ky0));
                 s = v_fma(s1,  vx_setall_f32(ky1), s);
                 s = v_fma(s2,  vx_setall_f32(ky2), s);
 
@@ -1097,16 +1081,16 @@ static void run_sepfilter3x3_any2short(DST out[], const SRC *in[], int width, in
 
     for (int l=0; l < length;)
     {
-        constexpr int nlanes = v_int16::nlanes;
+        const int nlanes = VTraits<v_int16>::vlanes();
 
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
         {
-            v_float32 sum0 = vx_load(&buf[r0][l])            * vx_setall_f32(ky0);
+            v_float32 sum0 = v_mul(vx_load(&buf[r0][l]), vx_setall_f32(ky0));
                 sum0 = v_fma(vx_load(&buf[r1][l]),             vx_setall_f32(ky1), sum0);
                 sum0 = v_fma(vx_load(&buf[r2][l]),             vx_setall_f32(ky2), sum0);
 
-            v_float32 sum1 = vx_load(&buf[r0][l + nlanes/2]) * vx_setall_f32(ky0);
+            v_float32 sum1 = v_mul(vx_load(&buf[r0][l + nlanes / 2]), vx_setall_f32(ky0));
                 sum1 = v_fma(vx_load(&buf[r1][l + nlanes/2]),  vx_setall_f32(ky1), sum1);
                 sum1 = v_fma(vx_load(&buf[r2][l + nlanes/2]),  vx_setall_f32(ky2), sum1);
 
@@ -1181,24 +1165,24 @@ static void run_sepfilter3x3_any2char(uchar out[], const SRC *in[], int width, i
 
     for (int l=0; l < length;)
     {
-        constexpr int nlanes = v_uint8::nlanes;
+        const int nlanes = VTraits<v_uint8>::vlanes();
 
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
         {
-            v_float32 sum0 = vx_load(&buf[r0][l])              * vx_setall_f32(ky0);
+            v_float32 sum0 = v_mul(vx_load(&buf[r0][l]), vx_setall_f32(ky0));
                 sum0 = v_fma(vx_load(&buf[r1][l]),               vx_setall_f32(ky1), sum0);
                 sum0 = v_fma(vx_load(&buf[r2][l]),               vx_setall_f32(ky2), sum0);
 
-            v_float32 sum1 = vx_load(&buf[r0][l +   nlanes/4]) * vx_setall_f32(ky0);
+            v_float32 sum1 = v_mul(vx_load(&buf[r0][l + nlanes / 4]), vx_setall_f32(ky0));
                 sum1 = v_fma(vx_load(&buf[r1][l +   nlanes/4]),  vx_setall_f32(ky1), sum1);
                 sum1 = v_fma(vx_load(&buf[r2][l +   nlanes/4]),  vx_setall_f32(ky2), sum1);
 
-            v_float32 sum2 = vx_load(&buf[r0][l + 2*nlanes/4]) * vx_setall_f32(ky0);
+            v_float32 sum2 = v_mul(vx_load(&buf[r0][l + 2 * nlanes / 4]), vx_setall_f32(ky0));
                 sum2 = v_fma(vx_load(&buf[r1][l + 2*nlanes/4]),  vx_setall_f32(ky1), sum2);
                 sum2 = v_fma(vx_load(&buf[r2][l + 2*nlanes/4]),  vx_setall_f32(ky2), sum2);
 
-            v_float32 sum3 = vx_load(&buf[r0][l + 3*nlanes/4]) * vx_setall_f32(ky0);
+            v_float32 sum3 = v_mul(vx_load(&buf[r0][l + 3 * nlanes / 4]), vx_setall_f32(ky0));
                 sum3 = v_fma(vx_load(&buf[r1][l + 3*nlanes/4]),  vx_setall_f32(ky1), sum3);
                 sum3 = v_fma(vx_load(&buf[r2][l + 3*nlanes/4]),  vx_setall_f32(ky2), sum3);
 
@@ -1284,7 +1268,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
     {
         for (int l=0; l < length;)
         {
-            constexpr int nlanes = v_int16::nlanes;
+            const int nlanes = VTraits<v_int16>::vlanes();
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -1292,9 +1276,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
                 v_uint16 t0 = vx_load_expand(&in[k][l - shift]);  // previous
                 v_uint16 t1 = vx_load_expand(&in[k][l        ]);  // current
                 v_uint16 t2 = vx_load_expand(&in[k][l + shift]);  // next pixel
-                v_int16 t = v_reinterpret_as_s16(t0) * vx_setall_s16(ikx0) +
-                            v_reinterpret_as_s16(t1) * vx_setall_s16(ikx1) +
-                            v_reinterpret_as_s16(t2) * vx_setall_s16(ikx2);
+                v_int16 t = v_add(v_add(v_mul(v_reinterpret_as_s16(t0), vx_setall_s16(ikx0)), v_mul(v_reinterpret_as_s16(t1), vx_setall_s16(ikx1))), v_mul(v_reinterpret_as_s16(t2), vx_setall_s16(ikx2)));
                 v_store(&ibuf[r[k]][l], t);
             }
 
@@ -1311,7 +1293,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
 
     for (int l=0; l < length;)
     {
-        constexpr int nlanes = v_int16::nlanes;
+        const int nlanes = VTraits<v_int16>::vlanes();
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
@@ -1319,13 +1301,11 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
             v_int16 s0 = vx_load(&ibuf[r[0]][l]);  // previous
             v_int16 s1 = vx_load(&ibuf[r[1]][l]);  // current
             v_int16 s2 = vx_load(&ibuf[r[2]][l]);  // next row
-            v_int16 s = s0 * vx_setall_s16(iky0) +
-                        s1 * vx_setall_s16(iky1) +
-                        s2 * vx_setall_s16(iky2);
+            v_int16 s = v_add(v_add(v_mul(s0, vx_setall_s16(iky0)), v_mul(s1, vx_setall_s16(iky1))), v_mul(s2, vx_setall_s16(iky2)));
 
             if (!noscale)
             {
-                s = v_mul_hi(s << 1, vx_setall_s16(iscale)) + vx_setall_s16(idelta);
+                s = v_add(v_mul_hi(v_shl<1>(s), vx_setall_s16(iscale)), vx_setall_s16(idelta));
             }
 
             v_store(&out[l], s);
@@ -1399,7 +1379,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
                                   float scale, float delta,
                                   float *buf[], int y, int y0)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
@@ -1407,7 +1387,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
 
 #if USE_SEPFILTER3X3_CHAR2SHORT
     if (std::is_same<DST, short>::value && std::is_same<SRC, uchar>::value &&
-        length >= v_int16::nlanes)
+        length >= VTraits<v_int16>::vlanes())
     {
         // only slightly faster than more generic any-to-short (see below)
         run_sepfilter3x3_char2short<noscale>(reinterpret_cast<short*>(out),
@@ -1419,7 +1399,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
 #endif
 
     if (std::is_same<DST, float>::value && std::is_same<SRC, float>::value &&
-        length >= v_float32::nlanes)
+        length >= VTraits<v_float32>::vlanes())
     {
         // appears 15% faster than reference any-to-float code (called below)
         run_sepfilter3x3_any2float<noscale>(reinterpret_cast<float*>(out), in,
@@ -1427,7 +1407,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
         return;
     }
 
-    if (std::is_same<DST, short>::value && length >= v_int16::nlanes)
+    if (std::is_same<DST, short>::value && length >= VTraits<v_int16>::vlanes())
     {
         // appears 10-40x faster than reference due to much faster rounding
         run_sepfilter3x3_any2short<noscale>(reinterpret_cast<short*>(out), in,
@@ -1436,7 +1416,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
         return;
     }
 
-    if (std::is_same<DST, ushort>::value && length >= v_uint16::nlanes)
+    if (std::is_same<DST, ushort>::value && length >= VTraits<v_uint16>::vlanes())
     {
         // appears 10-40x faster than reference due to much faster rounding
         run_sepfilter3x3_any2short<noscale>(reinterpret_cast<ushort*>(out), in,
@@ -1445,7 +1425,7 @@ static void run_sepfilter3x3_code(DST out[], const SRC *in[], int width, int cha
         return;
     }
 
-    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    if (std::is_same<DST, uchar>::value && length >= VTraits<v_uint8>::vlanes())
     {
         // appears 10-40x faster than reference due to much faster rounding
         run_sepfilter3x3_any2char<noscale>(reinterpret_cast<uchar*>(out), in,
@@ -1499,7 +1479,7 @@ RUN_SEPFILTER3X3_IMPL(float, float)
 //
 //-----------------------------
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 // this code with manually vectored rounding to uchar
 template<bool noscale, typename SRC>
@@ -1549,17 +1529,17 @@ static void run_sepfilter5x5_any2char(uchar out[], const SRC *in[], int width, i
 
     // vertical pass
 
-    constexpr int nlanes = v_uint8::nlanes;
+    const int nlanes = VTraits<v_uint8>::vlanes();
 
     for (int l = 0; l < length;)
     {
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
         {
-            v_float32 sum0 = vx_load(&buf[r[0]][l]) * vx_setall_f32(ky[0]);
-            v_float32 sum1 = vx_load(&buf[r[0]][l + nlanes / 4]) * vx_setall_f32(ky[0]);
-            v_float32 sum2 = vx_load(&buf[r[0]][l + 2 * nlanes / 4]) * vx_setall_f32(ky[0]);
-            v_float32 sum3 = vx_load(&buf[r[0]][l + 3 * nlanes / 4]) * vx_setall_f32(ky[0]);
+            v_float32 sum0 = v_mul(vx_load(&buf[r[0]][l]), vx_setall_f32(ky[0]));
+            v_float32 sum1 = v_mul(vx_load(&buf[r[0]][l + nlanes / 4]), vx_setall_f32(ky[0]));
+            v_float32 sum2 = v_mul(vx_load(&buf[r[0]][l + 2 * nlanes / 4]), vx_setall_f32(ky[0]));
+            v_float32 sum3 = v_mul(vx_load(&buf[r[0]][l + 3 * nlanes / 4]), vx_setall_f32(ky[0]));
 
             for (int n = 1; n < kyLen; ++n)
             {
@@ -1647,15 +1627,15 @@ static void run_sepfilter5x5_any2short(DST out[], const SRC *in[], int width, in
 
     // vertical pass
 
-    constexpr int nlanes = v_int16::nlanes;
+    const int nlanes = VTraits<v_int16>::vlanes();
     for (int l = 0; l < length;)
     {
         //GAPI_Assert(length >= nlanes);
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
         {
-            v_float32 sum0 = vx_load(&buf[r[0]][l]) * vx_setall_f32(ky[0]);
-            v_float32 sum1 = vx_load(&buf[r[0]][l + nlanes / 2]) * vx_setall_f32(ky[0]);
+            v_float32 sum0 = v_mul(vx_load(&buf[r[0]][l]), vx_setall_f32(ky[0]));
+            v_float32 sum1 = v_mul(vx_load(&buf[r[0]][l + nlanes / 2]), vx_setall_f32(ky[0]));
 
             for (int j = 1; j < kyLen; ++j)
             {
@@ -1702,14 +1682,10 @@ static void run_sepfilter5x5_any2float(float out[], const SRC *in[], int width, 
                                        const float kx[], const float ky[], int border,
                                        float scale, float delta)
 {
-    constexpr int kxLen = 5;
-    constexpr int kyLen = kxLen;
-    constexpr int buffSize = 5;
-
     const int length = width * chan;
     const int shift = chan;
 
-    static const int nlanes = v_float32::nlanes;
+    static const int nlanes = VTraits<v_float32>::vlanes();
     for (int l = 0; l < length; )
     {
         //GAPI_Assert(length >= nlanes);
@@ -1717,33 +1693,33 @@ static void run_sepfilter5x5_any2float(float out[], const SRC *in[], int width, 
         for (; l <= length - nlanes; l += nlanes)
         {
             auto xsum = [l, border, shift, kx](const SRC inp[])
-            {
-                v_float32 t[5];
-                for (int i = 0; i < 5; ++i)
-                {
-                    t[i] = vx_load_f32(&inp[l + (i - border)*shift]);
-                }
+            { //buffSize = 5
+                v_float32 t0 = vx_load_f32(&inp[l + (0 - border)*shift]);
+                v_float32 t1 = vx_load_f32(&inp[l + (1 - border)*shift]);
+                v_float32 t2 = vx_load_f32(&inp[l + (2 - border)*shift]);
+                v_float32 t3 = vx_load_f32(&inp[l + (3 - border)*shift]);
+                v_float32 t4 = vx_load_f32(&inp[l + (4 - border)*shift]);
 
-                v_float32 sum = t[0] * vx_setall_f32(kx[0]);
-                for (int j = 1; j < 5; ++j)
-                {
-                    sum = v_fma(t[j], vx_setall_f32(kx[j]), sum);
-                }
+                v_float32 sum = v_mul(t0, vx_setall_f32(kx[0]));
+                sum = v_fma(t1, vx_setall_f32(kx[1]), sum);
+                sum = v_fma(t2, vx_setall_f32(kx[2]), sum);
+                sum = v_fma(t3, vx_setall_f32(kx[3]), sum);
+                sum = v_fma(t4, vx_setall_f32(kx[4]), sum);
 
                 return sum;
             };
 
-            v_float32 s[buffSize];
-            for (int m = 0; m < buffSize; ++m)
-            {
-                s[m] = xsum(in[m]);
-            }
+            v_float32 s0 = xsum(in[0]);
+            v_float32 s1 = xsum(in[1]);
+            v_float32 s2 = xsum(in[2]);
+            v_float32 s3 = xsum(in[3]);
+            v_float32 s4 = xsum(in[4]);
 
-            v_float32 sum = s[0] * vx_setall_f32(ky[0]);
-            for (int n = 1; n < kyLen; ++n)
-            {
-                sum = v_fma(s[n], vx_setall_f32(ky[n]), sum);
-            }
+            v_float32 sum = v_mul(s0, vx_setall_f32(ky[0]));
+            sum = v_fma(s1, vx_setall_f32(ky[1]), sum);
+            sum = v_fma(s2, vx_setall_f32(ky[2]), sum);
+            sum = v_fma(s3, vx_setall_f32(ky[3]), sum);
+            sum = v_fma(s4, vx_setall_f32(ky[4]), sum);
 
             if (!noscale)
             {
@@ -1819,7 +1795,7 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
     // this kernel (Fluid does rows consequently: y=y0, y0+1, ...)
     int k0 = (y == y0) ? 0 : 4;
 
-    constexpr int nlanes = v_int16::nlanes;
+    const int nlanes = VTraits<v_int16>::vlanes();
 
     for (int k = k0; k < kyLen; ++k)
     {
@@ -1830,16 +1806,18 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
             {
-                v_uint16 t[kxLen];
                 v_int16 sum = vx_setzero_s16();
 
-                for (int i = 0; i < kxLen; ++i)
-                {
-                    // previous, current, next pixels
-                    t[i] = vx_load_expand(&in[k][l + (i - border)*shift]);
+                auto process = [&](int i) {
+                    v_uint16 t = vx_load_expand(&in[k][l + (i - border)*shift]);
+                    return v_add(sum, v_mul(v_reinterpret_as_s16(t), vx_setall_s16(ikx[i])));
+                };
 
-                    sum += v_reinterpret_as_s16(t[i]) * vx_setall_s16(ikx[i]);
-                }
+                sum = process(0);
+                sum = process(1);
+                sum = process(2);
+                sum = process(3);
+                sum = process(4);
 
                 v_store(&ibuf[r[k]][l], sum);
             }
@@ -1861,20 +1839,21 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
         {
-            v_int16 s[buffSize];
             v_int16 sum = vx_setzero_s16();
 
-            for (int i = 0; i < kyLen; ++i)
-            {
-                // previous, current, next rows
-                s[i] = vx_load(&ibuf[r[i]][l]);
-
-                sum += s[i] * vx_setall_s16(iky[i]);
-            }
+            auto process = [&](int i) {
+                v_int16 s = vx_load(&ibuf[r[i]][l]);
+                return v_add(sum, v_mul(s, vx_setall_s16(iky[i])));
+            };
+            sum = process(0);
+            sum = process(1);
+            sum = process(2);
+            sum = process(3);
+            sum = process(4);
 
             if (!noscale)
             {
-                sum = v_mul_hi(sum << 1, vx_setall_s16(iscale)) + vx_setall_s16(idelta);
+                sum = v_add(v_mul_hi(v_shl<1>(sum), vx_setall_s16(iscale)), vx_setall_s16(idelta));
             }
 
             v_store(&out[l], sum);
@@ -1965,14 +1944,14 @@ static void run_sepfilter5x5_code(DST out[], const SRC *in[], int width, int cha
                                   const float kx[], const float ky[], int border,
                                   float scale, float delta, float *buf[], int y, int y0)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
     (void)length;
 
     if (std::is_same<DST, short>::value && std::is_same<SRC, uchar>::value &&
-        length >= v_int16::nlanes)
+        length >= VTraits<v_int16>::vlanes())
     {
         run_sepfilter5x5_char2short<noscale>(reinterpret_cast<short*>(out),
                                              reinterpret_cast<const uchar**>(in),
@@ -1982,14 +1961,14 @@ static void run_sepfilter5x5_code(DST out[], const SRC *in[], int width, int cha
     }
 
     if (std::is_same<DST, float>::value && std::is_same<SRC, float>::value &&
-        length >= v_float32::nlanes)
+        length >= VTraits<v_float32>::vlanes())
     {
         run_sepfilter5x5_any2float<noscale>(reinterpret_cast<float*>(out), in, width,
                                             chan, kx, ky, border, scale, delta);
         return;
     }
 
-    if (std::is_same<DST, short>::value && length >= v_int16::nlanes)
+    if (std::is_same<DST, short>::value && length >= VTraits<v_int16>::vlanes())
     {
         run_sepfilter5x5_any2short<noscale>(reinterpret_cast<short*>(out), in, width,
                                             chan, kx, ky, border, scale, delta,
@@ -1997,7 +1976,7 @@ static void run_sepfilter5x5_code(DST out[], const SRC *in[], int width, int cha
         return;
     }
 
-    if (std::is_same<DST, ushort>::value && length >= v_uint16::nlanes)
+    if (std::is_same<DST, ushort>::value && length >= VTraits<v_uint16>::vlanes())
     {
         run_sepfilter5x5_any2short<noscale>(reinterpret_cast<ushort*>(out), in, width,
                                             chan, kx, ky, border, scale, delta,
@@ -2005,7 +1984,7 @@ static void run_sepfilter5x5_code(DST out[], const SRC *in[], int width, int cha
         return;
     }
 
-    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    if (std::is_same<DST, uchar>::value && length >= VTraits<v_uint8>::vlanes())
     {
         run_sepfilter5x5_any2char<noscale>(reinterpret_cast<uchar*>(out), in, width,
                                            chan, kx, ky, border, scale, delta,
@@ -2086,7 +2065,7 @@ static void run_filter2d_3x3_reference(DST out[], const SRC *in[], int width, in
     }
 }
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 // assume DST is short or ushort
 template<bool noscale, typename DST, typename SRC>
 static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, int chan,
@@ -2106,14 +2085,14 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
 
     for (int l=0; l < length;)
     {
-        static constexpr int nlanes = v_int16::nlanes;
+        static const int nlanes = VTraits<v_int16>::vlanes();
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
         {
             auto sumx = [in, shift, &k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                v_float32 s = v_mul(vx_load_f32(&in[i][j - shift]), vx_setall_f32(k[i][0]));
                     s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
                     s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
                 return s;
@@ -2121,8 +2100,8 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
 
             int l0 = l;
             int l1 = l + nlanes/2;
-            v_float32 sum0 = sumx(0, l0) + sumx(1, l0) + sumx(2, l0);
-            v_float32 sum1 = sumx(0, l1) + sumx(1, l1) + sumx(2, l1);
+            v_float32 sum0 = v_add(sumx(0, l0), sumx(1, l0), sumx(2, l0));
+            v_float32 sum1 = v_add(sumx(0, l1), sumx(1, l1), sumx(2, l1));
 
             if (!noscale)
             {
@@ -2172,14 +2151,14 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
 
     for (int l=0; l < length;)
     {
-        static constexpr int nlanes = v_uint8::nlanes;
+        static const int nlanes = VTraits<v_uint8>::vlanes();
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
         {
             auto sumx = [in, shift, &k](int i, int j)
             {
-                v_float32 s = vx_load_f32(&in[i][j - shift]) * vx_setall_f32(k[i][0]);
+                v_float32 s = v_mul(vx_load_f32(&in[i][j - shift]), vx_setall_f32(k[i][0]));
                     s = v_fma(vx_load_f32(&in[i][j        ]),  vx_setall_f32(k[i][1]), s);
                     s = v_fma(vx_load_f32(&in[i][j + shift]),  vx_setall_f32(k[i][2]), s);
                 return s;
@@ -2189,10 +2168,10 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
             int l1 = l +   nlanes/4;
             int l2 = l + 2*nlanes/4;
             int l3 = l + 3*nlanes/4;
-            v_float32 sum0 = sumx(0, l0) + sumx(1, l0) + sumx(2, l0);
-            v_float32 sum1 = sumx(0, l1) + sumx(1, l1) + sumx(2, l1);
-            v_float32 sum2 = sumx(0, l2) + sumx(1, l2) + sumx(2, l2);
-            v_float32 sum3 = sumx(0, l3) + sumx(1, l3) + sumx(2, l3);
+            v_float32 sum0 = v_add(sumx(0, l0), sumx(1, l0), sumx(2, l0));
+            v_float32 sum1 = v_add(sumx(0, l1), sumx(1, l1), sumx(2, l1));
+            v_float32 sum2 = v_add(sumx(0, l2), sumx(1, l2), sumx(2, l2));
+            v_float32 sum3 = v_add(sumx(0, l3), sumx(1, l3), sumx(2, l3));
 
             if (!noscale)
             {
@@ -2228,20 +2207,20 @@ template<bool noscale, typename DST, typename SRC>
 static void run_filter2d_3x3_code(DST out[], const SRC *in[], int width, int chan,
                                   const float kernel[], float scale, float delta)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
     (void) length;
 
-    if (std::is_same<DST, short>::value && length >= v_int16::nlanes)
+    if (std::is_same<DST, short>::value && length >= VTraits<v_int16>::vlanes())
     {
         run_filter2d_3x3_any2short<noscale>(reinterpret_cast<short*>(out), in,
                                             width, chan, kernel, scale, delta);
         return;
     }
 
-    if (std::is_same<DST, ushort>::value && length >= v_uint16::nlanes)
+    if (std::is_same<DST, ushort>::value && length >= VTraits<v_uint16>::vlanes())
     {
         run_filter2d_3x3_any2short<noscale>(reinterpret_cast<ushort*>(out), in,
                                             width, chan, kernel, scale, delta);
@@ -2249,7 +2228,7 @@ static void run_filter2d_3x3_code(DST out[], const SRC *in[], int width, int cha
     }
 
 
-    if (std::is_same<DST, uchar>::value && length >= v_uint8::nlanes)
+    if (std::is_same<DST, uchar>::value && length >= VTraits<v_uint8>::vlanes())
     {
         run_filter2d_3x3_any2char<noscale>(reinterpret_cast<uchar*>(out), in,
                                            width, chan, kernel, scale, delta);
@@ -2446,7 +2425,7 @@ static void run_morphology3x3_reference(T out[], const T *in[], int width, int c
     CV_Error(cv::Error::StsBadArg, "unsupported morphology");
 }
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename T, typename VT, typename S>
 static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
                                    const uchar k[], MorphShape k_type,
@@ -2467,7 +2446,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                constexpr int nlanes = VT::nlanes;
+                const int nlanes = VTraits<VT>::vlanes();
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2503,7 +2482,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                constexpr int nlanes = VT::nlanes;
+                const int nlanes = VTraits<VT>::vlanes();
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2537,7 +2516,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
 
         for (int l=0; l < length;)
         {
-            constexpr int nlanes = VT::nlanes;
+            const int nlanes = VTraits<VT>::vlanes();
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -2575,7 +2554,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                constexpr int nlanes = VT::nlanes;
+                const int nlanes = VTraits<VT>::vlanes();
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2611,7 +2590,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                constexpr int nlanes = VT::nlanes;
+                const int nlanes = VTraits<VT>::vlanes();
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2645,7 +2624,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
 
         for (int l=0; l < length;)
         {
-            constexpr int nlanes = VT::nlanes;
+            const int nlanes = VTraits<VT>::vlanes();
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -2686,13 +2665,13 @@ static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
                                    const uchar k[], MorphShape k_type,
                                    Morphology morphology)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
     (void) length;
 
-    if (std::is_same<T, float>::value && length >= v_float32::nlanes)
+    if (std::is_same<T, float>::value && length >= VTraits<v_float32>::vlanes())
     {
         run_morphology3x3_simd<float, v_float32>(reinterpret_cast<float*>(out),
                                                  reinterpret_cast<const float**>(in),
@@ -2701,7 +2680,7 @@ static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
         return;
     }
 
-    if (std::is_same<T, short>::value && length >= v_int16::nlanes)
+    if (std::is_same<T, short>::value && length >= VTraits<v_int16>::vlanes())
     {
         run_morphology3x3_simd<short, v_int16>(reinterpret_cast<short*>(out),
                                                reinterpret_cast<const short**>(in),
@@ -2710,7 +2689,7 @@ static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
         return;
     }
 
-    if (std::is_same<T, ushort>::value && length >= v_uint16::nlanes)
+    if (std::is_same<T, ushort>::value && length >= VTraits<v_uint16>::vlanes())
     {
         run_morphology3x3_simd<ushort, v_uint16>(reinterpret_cast<ushort*>(out),
                                                  reinterpret_cast<const ushort**>(in),
@@ -2719,7 +2698,7 @@ static void run_morphology3x3_code(T out[], const T *in[], int width, int chan,
         return;
     }
 
-    if (std::is_same<T, uchar>::value && length >= v_uint8::nlanes)
+    if (std::is_same<T, uchar>::value && length >= VTraits<v_uint8>::vlanes())
     {
         run_morphology3x3_simd<uchar, v_uint8>(reinterpret_cast<uchar*>(out),
                                                reinterpret_cast<const uchar**>(in),
@@ -2796,7 +2775,7 @@ static void run_medblur3x3_reference(T out[], const T *in[], int width, int chan
     }
 }
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename VT, typename T>
 static void run_medblur3x3_simd(T out[], const T *in[], int width, int chan)
 {
@@ -2808,7 +2787,7 @@ static void run_medblur3x3_simd(T out[], const T *in[], int width, int chan)
 
     for (int l=0; l < length;)
     {
-        constexpr int nlanes = VT::nlanes;
+        const int nlanes = VTraits<VT>::vlanes();
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
@@ -2866,13 +2845,13 @@ static void run_medblur3x3_simd(T out[], const T *in[], int width, int chan)
 template<typename T>
 static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int length = width * chan;
 
     // length variable may be unused if types do not match at 'if' statements below
     (void) length;
 
-    if (std::is_same<T, float>::value && length >= v_float32::nlanes)
+    if (std::is_same<T, float>::value && length >= VTraits<v_float32>::vlanes())
     {
         run_medblur3x3_simd<v_float32>(reinterpret_cast<float*>(out),
                                        reinterpret_cast<const float**>(in),
@@ -2880,7 +2859,7 @@ static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
         return;
     }
 
-    if (std::is_same<T, short>::value && length >= v_int16::nlanes)
+    if (std::is_same<T, short>::value && length >= VTraits<v_int16>::vlanes())
     {
         run_medblur3x3_simd<v_int16>(reinterpret_cast<short*>(out),
                                      reinterpret_cast<const short**>(in),
@@ -2888,7 +2867,7 @@ static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
         return;
     }
 
-    if (std::is_same<T, ushort>::value && length >= v_uint16::nlanes)
+    if (std::is_same<T, ushort>::value && length >= VTraits<v_uint16>::vlanes())
     {
         run_medblur3x3_simd<v_uint16>(reinterpret_cast<ushort*>(out),
                                       reinterpret_cast<const ushort**>(in),
@@ -2896,7 +2875,7 @@ static void run_medblur3x3_code(T out[], const T *in[], int width, int chan)
         return;
     }
 
-    if (std::is_same<T, uchar>::value && length >= v_uint8::nlanes)
+    if (std::is_same<T, uchar>::value && length >= VTraits<v_uint8>::vlanes())
     {
         run_medblur3x3_simd<v_uint8>(reinterpret_cast<uchar*>(out),
                                      reinterpret_cast<const uchar**>(in),

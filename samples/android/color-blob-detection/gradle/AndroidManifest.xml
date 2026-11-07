@@ -8,7 +8,9 @@
         android:icon="@drawable/icon"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
 
-        <activity android:name="ColorBlobDetectionActivity"
+        <activity
+                  android:exported="true"
+                  android:name="ColorBlobDetectionActivity"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">

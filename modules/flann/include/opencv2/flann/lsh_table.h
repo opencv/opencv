@@ -1,4 +1,4 @@
-/***********************************************************************
+/*M*********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -214,8 +214,6 @@ public:
     }
 
     /** Get a bucket given the key
-     * @param key
-     * @return
      */
     inline const Bucket* getBucketFromKey(BucketKey key) const
     {
@@ -253,7 +251,6 @@ public:
     }
 
     /** Get statistics about the table
-     * @return
      */
     LshStats getStats() const;
 
@@ -427,7 +424,7 @@ inline size_t LshTable<unsigned char>::getKey(const unsigned char* feature) cons
         size_t mask_block = mask_[i / sizeof(size_t)];
         while (mask_block) {
             // Get the lowest set bit in the mask block
-            size_t lowest_bit = mask_block & (-(ptrdiff_t)mask_block);
+            size_t lowest_bit = mask_block & ~(mask_block - 1);
             // Add it to the current subsignature if necessary
             subsignature += (feature_block & lowest_bit) ? bit_index : 0;
             // Reset the bit in the mask block
@@ -493,7 +490,7 @@ inline LshStats LshTable<unsigned char>::getStats() const
          != end; )
         if (*iterator < bin_end) {
             if (is_new_bin) {
-                stats.size_histogram_.push_back(std::vector<unsigned int>(3, 0));
+                stats.size_histogram_.emplace_back(3, 0);
                 stats.size_histogram_.back()[0] = bin_start;
                 stats.size_histogram_.back()[1] = bin_end - 1;
                 is_new_bin = false;

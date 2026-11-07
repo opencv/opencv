@@ -74,6 +74,8 @@ public:
     virtual ~BaseRowFilter();
     //! the filtering operator. Must be overridden in the derived classes. The horizontal border interpolation is done outside of the class.
     virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
+    //! returns true if the filter holds no mutable state between calls (safe for concurrent tile-parallel invocation)
+    virtual bool isStateless() const { return false; }
 
     int ksize;
     int anchor;
@@ -104,6 +106,8 @@ public:
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
+    //! returns true if the filter holds no mutable state between calls (safe for concurrent tile-parallel invocation)
+    virtual bool isStateless() const { return false; }
 
     int ksize;
     int anchor;
@@ -132,6 +136,8 @@ public:
     virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width, int cn) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
+    //! returns true if the filter holds no mutable state between calls (safe for concurrent tile-parallel invocation)
+    virtual bool isStateless() const { return false; }
 
     Size ksize;
     Point anchor;
@@ -250,6 +256,9 @@ public:
     //! returns the number
     int remainingInputRows() const;
     int remainingOutputRows() const;
+
+    //! returns true if the engine's filters are entirely stateless and thus safe for 2D parallel block chunking
+    bool isStateless() const;
 
     int srcType;
     int dstType;

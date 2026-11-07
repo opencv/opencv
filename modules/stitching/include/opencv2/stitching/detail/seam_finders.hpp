@@ -235,7 +235,7 @@ public:
     enum CostType { COST_COLOR, COST_COLOR_GRAD };
 };
 
-/** @brief Minimum graph cut-based seam estimator. See details in @cite V03 .
+/** @brief Minimum graph cut-based seam estimator. See details in @cite Kwatra03 .
  */
 class CV_EXPORTS_W GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {
@@ -248,7 +248,7 @@ public:
     ~GraphCutSeamFinder();
 
     CV_WRAP void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-              std::vector<UMat> &masks) CV_OVERRIDE;
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     // To avoid GCGraph dependency

@@ -84,7 +84,7 @@ protected:
     RMByteStream    m_strm;
     PaletteEntry    m_palette[256];
     int             m_bpp;
-    int             m_offset;
+    int64_t         m_offset;
     SunRasType      m_encoding;
     SunRasMapType   m_maptype;
     int             m_maplength;

@@ -420,6 +420,11 @@ void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
     throw_no_cuda();
 }
 
+GpuMat::Allocator* cv::cuda::GpuMat::getStdAllocator()
+{
+    return 0;
+}
+
 void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {
     CV_UNUSED(_rows);

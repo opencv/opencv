@@ -344,11 +344,17 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     _dst.create( src0.size(), src0.type() );
     Mat dst0 = _dst.getMat();
 
+    Mat srcCopy;
+    if( src0.data != dst0.data )
+        srcCopy = src0;
+    else
+        src0.copyTo(srcCopy);
+
     const int cn = 3;
     const int MAX_LEVELS = 8;
 
     if( (unsigned)max_level > (unsigned)MAX_LEVELS )
-        CV_Error( CV_StsOutOfRange, "The number of pyramid levels is too large or negative" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of pyramid levels is too large or negative" );
 
     std::vector<cv::Mat> src_pyramid(max_level+1);
     std::vector<cv::Mat> dst_pyramid(max_level+1);
@@ -365,19 +371,19 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
 
 
     if( src0.type() != CV_8UC3 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
 
     if( src0.type() != dst0.type() )
-        CV_Error( CV_StsUnmatchedFormats, "The input and output images must have the same type" );
+        CV_Error( cv::Error::StsUnmatchedFormats, "The input and output images must have the same type" );
 
     if( src0.size() != dst0.size() )
-        CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The input and output images must have the same size" );
 
-    if( !(termcrit.type & CV_TERMCRIT_ITER) )
+    if( !(termcrit.type & TermCriteria::MAX_ITER) )
         termcrit.maxCount = 5;
     termcrit.maxCount = MAX(termcrit.maxCount,1);
     termcrit.maxCount = MIN(termcrit.maxCount,100);
-    if( !(termcrit.type & CV_TERMCRIT_EPS) )
+    if( !(termcrit.type & TermCriteria::EPS) )
         termcrit.epsilon = 1.f;
     termcrit.epsilon = MAX(termcrit.epsilon, 0.f);
 
@@ -385,7 +391,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         tab[i] = (i - 255)*(i - 255);
 
     // 1. construct pyramid
-    src_pyramid[0] = src0;
+    src_pyramid[0] = srcCopy;
     dst_pyramid[0] = dst0;
     for( level = 1; level <= max_level; level++ )
     {
@@ -394,11 +400,11 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         dst_pyramid[level].create( src_pyramid[level].rows,
                         src_pyramid[level].cols, src_pyramid[level].type() );
         cv::pyrDown( src_pyramid[level-1], src_pyramid[level], src_pyramid[level].size() );
-        //CV_CALL( cvResize( src_pyramid[level-1], src_pyramid[level], CV_INTER_AREA ));
     }
 
     mask0.create(src0.rows, src0.cols, CV_8UC1);
     //CV_CALL( submask = (uchar*)cvAlloc( (sp+2)*(sp+2) ));
+    const double nstripes = (src0.total() >= 640 * 480) ? -1. : 1.;
 
     // 2. apply meanshift, starting from the pyramid top (i.e. the smallest layer)
     for( level = max_level; level >= 0; level-- )
@@ -419,7 +425,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
             m = cv::Mat(size.height, size.width, CV_8UC1, mask0.ptr());
             dstep = (int)dst_pyramid[level+1].step;
             dptr = dst_pyramid[level+1].ptr() + dstep + cn;
-            //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
             cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level], dst_pyramid[level].size() );
             m.setTo(cv::Scalar::all(0));
 
@@ -440,110 +445,112 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         dptr = dst_pyramid[level].ptr();
         dstep = (int)dst_pyramid[level].step;
 
-        for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
-                                          dptr += dstep - size.width*3
-        )
-        {
-            uchar* mask = m.empty() ? NULL : m.ptr(i);
-            for( j = 0; j < size.width; j++, sptr += 3, dptr += 3 )
+        const uchar* sptr_base = sptr;
+        uchar* dptr_base = dptr;
+        parallel_for_(Range(0, size.height), [&](const Range& range) {
+            for( int py = range.start; py < range.end; py++ )
             {
-                int x0 = j, y0 = i, x1, y1, iter;
-                int c0, c1, c2;
-
-                if( mask && !mask[j] )
-                    continue;
-
-                c0 = sptr[0], c1 = sptr[1], c2 = sptr[2];
-
-                // iterate meanshift procedure
-                for( iter = 0; iter < termcrit.maxCount; iter++ )
+                const uchar* psptr = sptr_base + (size_t)py * sstep;
+                uchar* pdptr = dptr_base + (size_t)py * dstep;
+                uchar* mask = m.empty() ? NULL : m.ptr(py);
+                for( int px = 0; px < size.width; px++, psptr += 3, pdptr += 3 )
                 {
-                    const uchar* ptr;
-                    int x, y, count = 0;
-                    int minx, miny, maxx, maxy;
-                    int s0 = 0, s1 = 0, s2 = 0, sx = 0, sy = 0;
-                    double icount;
-                    int stop_flag;
+                    int x0 = px, y0 = py, x1, y1, iter;
+                    int c0, c1, c2;
 
-                    //mean shift: process pixels in window (p-sigmaSp)x(p+sigmaSp)
-                    minx = cvRound(x0 - sp); minx = MAX(minx, 0);
-                    miny = cvRound(y0 - sp); miny = MAX(miny, 0);
-                    maxx = cvRound(x0 + sp); maxx = MIN(maxx, size.width-1);
-                    maxy = cvRound(y0 + sp); maxy = MIN(maxy, size.height-1);
-                    ptr = sptr + (miny - i)*sstep + (minx - j)*3;
+                    if( mask && !mask[px] )
+                        continue;
 
-                    for( y = miny; y <= maxy; y++, ptr += sstep - (maxx-minx+1)*3 )
+                    c0 = psptr[0], c1 = psptr[1], c2 = psptr[2];
+
+                    for( iter = 0; iter < termcrit.maxCount; iter++ )
                     {
-                        int row_count = 0;
-                        x = minx;
-                        #if CV_ENABLE_UNROLLED
-                        for( ; x + 3 <= maxx; x += 4, ptr += 12 )
+                        const uchar* ptr;
+                        int x, y, count = 0;
+                        int minx, miny, maxx, maxy;
+                        int s0 = 0, s1 = 0, s2 = 0, sx = 0, sy = 0;
+                        double icount;
+                        int stop_flag;
+
+                        minx = cvRound(x0 - sp); minx = MAX(minx, 0);
+                        miny = cvRound(y0 - sp); miny = MAX(miny, 0);
+                        maxx = cvRound(x0 + sp); maxx = MIN(maxx, size.width-1);
+                        maxy = cvRound(y0 + sp); maxy = MIN(maxy, size.height-1);
+                        ptr = psptr + (miny - py)*sstep + (minx - px)*3;
+
+                        for( y = miny; y <= maxy; y++, ptr += sstep - (maxx-minx+1)*3 )
                         {
-                            int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
-                            if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                            int row_count = 0;
+                            x = minx;
+                            #if CV_ENABLE_UNROLLED
+                            for( ; x + 3 <= maxx; x += 4, ptr += 12 )
                             {
-                                s0 += t0; s1 += t1; s2 += t2;
-                                sx += x; row_count++;
+                                int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
+                                if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                                {
+                                    s0 += t0; s1 += t1; s2 += t2;
+                                    sx += x; row_count++;
+                                }
+                                t0 = ptr[3], t1 = ptr[4], t2 = ptr[5];
+                                if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                                {
+                                    s0 += t0; s1 += t1; s2 += t2;
+                                    sx += x+1; row_count++;
+                                }
+                                t0 = ptr[6], t1 = ptr[7], t2 = ptr[8];
+                                if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                                {
+                                    s0 += t0; s1 += t1; s2 += t2;
+                                    sx += x+2; row_count++;
+                                }
+                                t0 = ptr[9], t1 = ptr[10], t2 = ptr[11];
+                                if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                                {
+                                    s0 += t0; s1 += t1; s2 += t2;
+                                    sx += x+3; row_count++;
+                                }
                             }
-                            t0 = ptr[3], t1 = ptr[4], t2 = ptr[5];
-                            if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                            #endif
+                            for( ; x <= maxx; x++, ptr += 3 )
                             {
-                                s0 += t0; s1 += t1; s2 += t2;
-                                sx += x+1; row_count++;
+                                int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
+                                if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
+                                {
+                                    s0 += t0; s1 += t1; s2 += t2;
+                                    sx += x; row_count++;
+                                }
                             }
-                            t0 = ptr[6], t1 = ptr[7], t2 = ptr[8];
-                            if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {
-                                s0 += t0; s1 += t1; s2 += t2;
-                                sx += x+2; row_count++;
-                            }
-                            t0 = ptr[9], t1 = ptr[10], t2 = ptr[11];
-                            if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {
-                                s0 += t0; s1 += t1; s2 += t2;
-                                sx += x+3; row_count++;
-                            }
+                            count += row_count;
+                            sy += y*row_count;
                         }
-                        #endif
-                        for( ; x <= maxx; x++, ptr += 3 )
-                        {
-                            int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
-                            if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {
-                                s0 += t0; s1 += t1; s2 += t2;
-                                sx += x; row_count++;
-                            }
-                        }
-                        count += row_count;
-                        sy += y*row_count;
+
+                        if( count == 0 )
+                            break;
+
+                        icount = 1./count;
+                        x1 = cvRound(sx*icount);
+                        y1 = cvRound(sy*icount);
+                        s0 = cvRound(s0*icount);
+                        s1 = cvRound(s1*icount);
+                        s2 = cvRound(s2*icount);
+
+                        stop_flag = (x0 == x1 && y0 == y1) || std::abs(x1-x0) + std::abs(y1-y0) +
+                            tab[s0 - c0 + 255] + tab[s1 - c1 + 255] +
+                            tab[s2 - c2 + 255] <= termcrit.epsilon;
+
+                        x0 = x1; y0 = y1;
+                        c0 = s0; c1 = s1; c2 = s2;
+
+                        if( stop_flag )
+                            break;
                     }
 
-                    if( count == 0 )
-                        break;
-
-                    icount = 1./count;
-                    x1 = cvRound(sx*icount);
-                    y1 = cvRound(sy*icount);
-                    s0 = cvRound(s0*icount);
-                    s1 = cvRound(s1*icount);
-                    s2 = cvRound(s2*icount);
-
-                    stop_flag = (x0 == x1 && y0 == y1) || std::abs(x1-x0) + std::abs(y1-y0) +
-                        tab[s0 - c0 + 255] + tab[s1 - c1 + 255] +
-                        tab[s2 - c2 + 255] <= termcrit.epsilon;
-
-                    x0 = x1; y0 = y1;
-                    c0 = s0; c1 = s1; c2 = s2;
-
-                    if( stop_flag )
-                        break;
+                    pdptr[0] = (uchar)c0;
+                    pdptr[1] = (uchar)c1;
+                    pdptr[2] = (uchar)c2;
                 }
-
-                dptr[0] = (uchar)c0;
-                dptr[1] = (uchar)c1;
-                dptr[2] = (uchar)c2;
             }
-        }
+        }, nstripes);
     }
 }
 

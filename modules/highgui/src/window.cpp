@@ -217,9 +217,9 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     switch(prop_id)
     {
     //change between fullscreen or not.
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
-        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
+        if ((int)prop_value != cv::WINDOW_NORMAL && (int)prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
@@ -236,13 +236,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
         #if defined (HAVE_QT)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
@@ -305,7 +305,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #else
     switch(prop_id)
     {
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
@@ -322,7 +322,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
 
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
@@ -335,7 +335,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
@@ -348,7 +348,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_OPENGL:
+    case cv::WND_PROP_OPENGL:
 
         #if defined (HAVE_QT)
             return cvGetOpenGlProp_QT(name);
@@ -361,11 +361,13 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_VISIBLE:
+    case cv::WND_PROP_VISIBLE:
         #if defined (HAVE_QT)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropVisible_W32(name);
+        #elif defined(HAVE_COCOA)
+            return cvGetPropVisible_COCOA(name);
         #else
             return -1;
         #endif
@@ -434,6 +436,8 @@ cv::Rect cv::getWindowImageRect(const String& winname)
         return cvGetWindowRect_GTK(winname.c_str());
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(winname.c_str());
+    #elif defined (HAVE_WAYLAND)
+        return cvGetWindowRect_WAYLAND(winname.c_str());
     #else
         return Rect(-1, -1, -1, -1);
     #endif
@@ -613,6 +617,8 @@ void cv::setWindowTitle(const String& winname, const String& title)
     return setWindowTitle_QT(winname, title);
 #elif defined (HAVE_COCOA)
     return setWindowTitle_COCOA(winname, title);
+#elif defined (HAVE_WAYLAND)
+    return setWindowTitle_WAYLAND(winname, title);
 #else
     CV_Error(Error::StsNotImplemented, "The function is not implemented. "
         "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
@@ -656,7 +662,7 @@ int cv::waitKey(int delay)
     static int use_legacy = -1;
     if (use_legacy < 0)
     {
-        use_legacy = getenv("OPENCV_LEGACY_WAITKEY") != NULL ? 1 : 0;
+        use_legacy = utils::getConfigurationParameterBool("OPENCV_LEGACY_WAITKEY");
     }
     if (use_legacy > 0)
         return code;
@@ -1087,23 +1093,50 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 #endif
 }
 
+const std::string cv::currentUIFramework()
+{
+    CV_TRACE_FUNCTION();
+
+    // plugin and backend-compatible implementations
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        return backend->getName();
+    }
+
+    // builtin backends
+#if defined(HAVE_WIN32UI)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_GTK)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_QT)
+    return std::string("QT");
+#elif defined (HAVE_COCOA)
+    return std::string("COCOA");
+#elif defined (HAVE_WAYLAND)
+    return std::string("WAYLAND");
+#endif
+
+    return std::string();
+}
+
 // Without OpenGL
 
 #ifndef HAVE_OPENGL
 
 CV_IMPL void cvSetOpenGlDrawCallback(const char*, CvOpenGlDrawCallback, void*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 CV_IMPL void cvSetOpenGlContext(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 CV_IMPL void cvUpdateWindow(const char*)
 {
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
 #endif // !HAVE_OPENGL
@@ -1172,52 +1205,52 @@ static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
 
 cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText( const Mat&, const String&, Point, const QtFont&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::addText(const Mat&, const String&, Point, const String&, int, Scalar, int, int, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayStatusBar(const String&,  const String&, int)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::displayOverlay(const String&,  const String&, int )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::stopLoop()
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::saveWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 void cv::loadWindowParameters(const String&)
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 {
-    CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
+    CV_Error(cv::Error::StsNotImplemented, NO_QT_ERR_MSG);
 }
 
 #endif
@@ -1226,6 +1259,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
 #elif defined (HAVE_QT)       // see window_QT.cpp
+#elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
 #elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
 #else

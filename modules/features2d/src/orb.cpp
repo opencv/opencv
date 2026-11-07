@@ -666,6 +666,9 @@ public:
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
     {}
 
+    void read( const FileNode& fn) CV_OVERRIDE;
+    void write( FileStorage& fs) const CV_OVERRIDE;
+
     void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
     int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
 
@@ -716,6 +719,45 @@ protected:
     int patchSize;
     int fastThreshold;
 };
+
+void ORB_Impl::read( const FileNode& fn)
+{
+  // if node is empty, keep previous value
+  if (!fn["nfeatures"].empty())
+    fn["nfeatures"] >> nfeatures;
+  if (!fn["scaleFactor"].empty())
+    fn["scaleFactor"] >> scaleFactor;
+  if (!fn["nlevels"].empty())
+    fn["nlevels"] >> nlevels;
+  if (!fn["edgeThreshold"].empty())
+    fn["edgeThreshold"] >> edgeThreshold;
+  if (!fn["firstLevel"].empty())
+    fn["firstLevel"] >> firstLevel;
+  if (!fn["wta_k"].empty())
+    fn["wta_k"] >> wta_k;
+  if (!fn["scoreType"].empty())
+    fn["scoreType"] >> scoreType;
+  if (!fn["patchSize"].empty())
+    fn["patchSize"] >> patchSize;
+  if (!fn["fastThreshold"].empty())
+    fn["fastThreshold"] >> fastThreshold;
+}
+void ORB_Impl::write( FileStorage& fs) const
+{
+  if(fs.isOpened())
+  {
+    fs << "name" << getDefaultName();
+    fs << "nfeatures" << nfeatures;
+    fs << "scaleFactor" << scaleFactor;
+    fs << "nlevels" << nlevels;
+    fs << "edgeThreshold" << edgeThreshold;
+    fs << "firstLevel" << firstLevel;
+    fs << "wta_k" << wta_k;
+    fs << "scoreType" << scoreType;
+    fs << "patchSize" << patchSize;
+    fs << "fastThreshold" << fastThreshold;
+  }
+}
 
 int ORB_Impl::descriptorSize() const
 {
@@ -797,7 +839,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 #endif
 
     int i, nkeypoints, level, nlevels = (int)layerInfo.size();
-    std::vector<int> nfeaturesPerLevel(nlevels);
+    AutoBuffer<int> nfeaturesPerLevel(nlevels);
 
     // fill the extractors and descriptors for the corresponding scales
     float factor = (float)(1.0 / scaleFactor);
@@ -835,7 +877,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
     allKeypoints.clear();
     std::vector<KeyPoint> keypoints;
-    std::vector<int> counters(nlevels);
+    AutoBuffer<int> counters(nlevels);
     keypoints.reserve(nfeaturesPerLevel[0]*2);
 
     for( level = 0; level < nlevels; level++ )
@@ -994,7 +1036,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     bool useOCL = false;
 #endif
 
-    Mat image = _image.getMat(), mask = _mask.getMat();
+    Mat image = _image.getMat(), mask;
+    if (!_mask.empty())
+    {
+        threshold(_mask, mask, 0, 255, THRESH_BINARY);
+    }
     if( image.type() != CV_8UC1 )
         cvtColor(_image, image, COLOR_BGR2GRAY);
 
@@ -1092,7 +1138,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             }
 
             copyMakeBorder(currImg, extImg, border, border, border, border,
-                           BORDER_REFLECT_101+BORDER_ISOLATED);
+                           BORDER_REFLECT_101 + BORDER_ISOLATED);
             if (!mask.empty())
                 copyMakeBorder(currMask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
@@ -1220,7 +1266,25 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
            int firstLevel, int wta_k, ORB::ScoreType scoreType, int patchSize, int fastThreshold)
 {
-    CV_Assert(firstLevel >= 0);
+    CV_CheckGE(nfeatures, 0, "nfeatures must be non-negative");
+    CV_CheckGT(scaleFactor, 1.f, "scaleFactor must be greater than 1");
+    CV_CheckGT(nlevels, 0, "nlevels must be positive");
+    CV_CheckGE(edgeThreshold, 0, "edgeThreshold must be non-negative");
+    CV_CheckGE(firstLevel, 0, "firstLevel must be non-negative");
+    CV_CheckGE(patchSize, 2, "patchSize must be at least 2");
+
+    if (wta_k != 2 && wta_k != 3 && wta_k != 4)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("wta_k must be 2, 3, or 4, but got %d", wta_k));
+    }
+
+    if (scoreType != ORB::HARRIS_SCORE && scoreType != ORB::FAST_SCORE)
+    {
+        CV_Error_(Error::StsBadArg,
+                  ("Unknown ORB score type: %d", static_cast<int>(scoreType)));
+    }
+
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,
                              firstLevel, wta_k, scoreType, patchSize, fastThreshold);
 }

@@ -490,7 +490,7 @@ void rhoSeed(Ptr<RHO_HEST> p, uint64_t seed){
  * Estimates the homography using the given context, matches and parameters to
  * PROSAC.
  *
- * @param [in/out] p       The context to use for homography estimation. Must
+ * @param [in,out] p       The context to use for homography estimation. Must
  *                             be already initialized. Cannot be NULL.
  * @param [in]     src     The pointer to the source points of the matches.
  *                             Must be aligned to 4 bytes. Cannot be NULL.
@@ -1744,7 +1744,7 @@ static inline unsigned sacCalcIterBound(double   confidence,
      * \[ k = \frac{\log{(1-confidence)}}{\log{(1-inlierRate**sampleSize)}} \]
      */
 
-    double atLeastOneOutlierProbability = 1.-pow(inlierRate, (double)sampleSize);
+    double atLeastOneOutlierProbability = 1.-std::pow(inlierRate, (double)sampleSize);
 
     /**
      * There are two special cases: When argument to log() is 0 and when it is 1.

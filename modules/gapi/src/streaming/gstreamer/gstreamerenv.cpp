@@ -36,7 +36,7 @@ GStreamerEnv::GStreamerEnv()
         if (err)
         {
             cv::util::throw_error(
-                std::runtime_error(std::string("GStreamer initializaton error! Details: ") +
+                std::runtime_error(std::string("GStreamer initialization error! Details: ") +
                                    err->message));
         }
     }
@@ -69,12 +69,12 @@ GStreamerEnv::~GStreamerEnv()
 
 const GStreamerEnv& GStreamerEnv::init()
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 GStreamerEnv::GStreamerEnv()
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 GStreamerEnv::~GStreamerEnv()

@@ -69,6 +69,8 @@ public:
 
     void write( const String& key, int value );
 
+    void write( const String& key, int64_t value );
+
     void write( const String& key, double value );
 
     void write( const String& key, const String& value );

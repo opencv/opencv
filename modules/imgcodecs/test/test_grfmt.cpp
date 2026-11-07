@@ -87,11 +87,17 @@ const string all_images[] =
     "readwrite/uint16-mono2.dcm",
     "readwrite/uint8-rgb.dcm",
 #endif
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     "readwrite/color_palette_alpha.png",
+#endif
+#ifdef HAVE_TIFF
     "readwrite/multipage.tif",
+#endif
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
+#ifdef HAVE_JPEG
     "readwrite/test_1_c1.jpg",
+#endif
 #ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
 #endif
@@ -102,6 +108,7 @@ const int basic_modes[] =
     IMREAD_UNCHANGED,
     IMREAD_GRAYSCALE,
     IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
     IMREAD_ANYDEPTH,
     IMREAD_ANYCOLOR
 };
@@ -157,6 +164,10 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             continue;
         if (cn != 3 && ext == ".ppm")
             continue;
+        if (cn == 1 && ext == ".gif")
+            continue;
+        if (cn == 1 && ext == ".webp")
+            continue;
         string filename = cv::tempfile(format("%d%s", cn, ext.c_str()).c_str());
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
@@ -172,8 +183,14 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
         ASSERT_TRUE(imwrite(filename, img_gt, parameters));
         Mat img = imread(filename, IMREAD_UNCHANGED);
         ASSERT_FALSE(img.empty());
-        EXPECT_EQ(img.size(), img.size());
-        EXPECT_EQ(img.type(), img.type());
+        EXPECT_EQ(img_gt.size(), img.size());
+        EXPECT_EQ(img_gt.channels(), img.channels());
+        if (ext == ".pfm") {
+            EXPECT_EQ(img_gt.depth(), CV_8U);
+            EXPECT_EQ(img.depth(),    CV_32F);
+        } else {
+            EXPECT_EQ(img_gt.depth(), img.depth());
+        }
         EXPECT_EQ(cn, img.channels());
 
 
@@ -193,6 +210,14 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+        else if (ext == ".gif")
+        {
+            // GIF encoder will reduce the number of colors to 256.
+            // It is hard to compare image comparison by pixel unit.
+            double n = cvtest::norm(img, img_gt, NORM_L1);
+            double expected = 0.03 * img.size().area();
+            EXPECT_LT(n, expected);
+        }
         else
         {
             double n = cvtest::norm(img, img_gt, NORM_L2);
@@ -211,7 +236,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
 
 const string all_exts[] =
 {
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     ".png",
 #endif
 #ifdef HAVE_TIFF
@@ -230,6 +255,12 @@ const string all_exts[] =
 #endif
 #ifdef HAVE_IMGCODEC_PFM
     ".pfm",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
+#endif
+#ifdef HAVE_WEBP
+    ".webp",
 #endif
 };
 
@@ -281,6 +312,35 @@ TEST_P(Imgcodecs_pbm, write_read)
 INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
 #endif
 
+// See https://github.com/opencv/opencv/issues/27557
+typedef testing::TestWithParam<string> Imgcodecs_invalid_key;
+
+TEST_P(Imgcodecs_invalid_key, encode_regression27557)
+{
+    const string ext = GetParam();
+    const int matType = ((ext == ".pbm") || (ext == ".pgm"))? CV_8UC1 : CV_8UC3;
+    Mat src(100, 100, matType, Scalar(0, 255, 0));
+    std::vector<uchar> buf;
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(ext, src, buf, { -1, -1 }));
+    EXPECT_TRUE(status);
+}
+
+TEST_P(Imgcodecs_invalid_key, write_regression27557)
+{
+    const string ext = GetParam();
+    string fname = tempfile(ext.c_str());
+
+    const int matType = ((ext == ".pbm") || (ext == ".pgm"))? CV_8UC1 : CV_8UC3;
+    Mat src(100, 100, matType, Scalar(0, 255, 0));
+    std::vector<uchar> buf;
+    bool status = false;
+    EXPECT_NO_THROW(status = imwrite(fname, src, { -1, -1 }));
+    EXPECT_TRUE(status);
+    remove(fname.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_invalid_key, testing::ValuesIn(all_exts));
 
 //==================================================================================================
 
@@ -300,7 +360,16 @@ TEST(Imgcodecs_Bmp, read_32bit_rgb)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test_32bit_rgb.bmp";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput));
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -331,6 +400,90 @@ TEST(Imgcodecs_Bmp, read_32bit_xrgb)
     ASSERT_EQ(data[3], 255);
 }
 
+TEST(Imgcodecs_Bmp, rgba_scale)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_scale.bmp";
+
+    Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    uchar* data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+    ASSERT_EQ(data[3], 255);
+
+    img = cv::imread(filenameInput, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    img = cv::imread(filenameInput, IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+
+    img = cv::imread(filenameInput, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC1, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+}
+
+typedef testing::TestWithParam<ImwriteBMPCompressionFlags> Imgcodecs_bmp_compress;
+TEST_P(Imgcodecs_bmp_compress, rgba32bpp)
+{
+    const ImwriteBMPCompressionFlags comp = GetParam();
+
+    RNG rng = theRNG();
+    Mat src(256, 256, CV_8UC4);
+    rng.fill(src, RNG::UNIFORM, Scalar(0,0,0,0), Scalar(255,255,255,255));
+
+    vector<uint8_t> buf;
+    bool ret = false;
+    ASSERT_NO_THROW(ret = cv::imencode(".bmp", src, buf, {IMWRITE_BMP_COMPRESSION, static_cast<int>(comp)}));
+    ASSERT_TRUE(ret);
+
+    ASSERT_EQ(buf[0x0e], comp == IMWRITE_BMP_COMPRESSION_RGB ? 40 : 124 ); // the size of header
+    ASSERT_EQ(buf[0x0f],  0);
+    ASSERT_EQ(buf[0x1c], 32); // the number of bits per pixel = 32
+    ASSERT_EQ(buf[0x1d],  0);
+    ASSERT_EQ(buf[0x1e], static_cast<int>(comp)); // the compression method
+    ASSERT_EQ(buf[0x1f],  0);
+    ASSERT_EQ(buf[0x20],  0);
+    ASSERT_EQ(buf[0x21],  0);
+
+    Mat dst;
+    ASSERT_NO_THROW(dst = cv::imdecode(buf, IMREAD_UNCHANGED));
+    ASSERT_FALSE(dst.empty());
+
+    if(comp == IMWRITE_BMP_COMPRESSION_RGB)
+    {
+        // If BI_RGB is used, output BMP file stores RGB image.
+        ASSERT_EQ(CV_8UC3, dst.type());
+        Mat srcBGR;
+        cv::cvtColor(src, srcBGR, cv::COLOR_BGRA2BGR);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), srcBGR, dst);
+    }
+    else
+    {
+        // If BI_BITFIELDS is used, output BMP file stores RGBA image.
+        ASSERT_EQ(CV_8UC4, dst.type());
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+    }
+
+}
+INSTANTIATE_TEST_CASE_P(All,
+    Imgcodecs_bmp_compress,
+    testing::Values(
+        IMWRITE_BMP_COMPRESSION_RGB,
+        IMWRITE_BMP_COMPRESSION_BITFIELDS));
 
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
@@ -343,21 +496,45 @@ TEST(Imgcodecs_Hdr, regression)
     Mat img_no_rle = imread(name_no_rle, -1);
     ASSERT_FALSE(img_no_rle.empty()) << "Could not open " << name_no_rle;
 
-    double min = 0.0, max = 1.0;
-    minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
-    ASSERT_FALSE(max > DBL_EPSILON);
+    EXPECT_EQ(cvtest::norm(img_rle, img_no_rle, NORM_INF), 0.0);
+
     string tmp_file_name = tempfile(".hdr");
-    vector<int>param(1);
+    vector<int> param(2);
+    param[0] = IMWRITE_HDR_COMPRESSION;
     for(int i = 0; i < 2; i++) {
-        param[0] = i;
+        param[1] = i;
         imwrite(tmp_file_name, img_rle, param);
         Mat written_img = imread(tmp_file_name, -1);
-        ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
-        minMaxLoc(abs(img_rle - written_img), &min, &max);
-        ASSERT_FALSE(max > DBL_EPSILON);
+        EXPECT_EQ(cvtest::norm(written_img, img_rle, NORM_INF), 0.0);
     }
     remove(tmp_file_name.c_str());
 }
+
+TEST(Imgcodecs_Hdr, regression_imencode)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
+    string name = folder + "rle.hdr";
+    Mat img_ref = imread(name, -1);
+    ASSERT_FALSE(img_ref.empty()) << "Could not open " << name;
+
+    vector<int> params(2);
+    params[0] = IMWRITE_HDR_COMPRESSION;
+    {
+        vector<uchar> buf;
+        params[1] = IMWRITE_HDR_COMPRESSION_NONE;
+        imencode(".hdr", img_ref, buf, params);
+        Mat img = imdecode(buf, -1);
+        EXPECT_EQ(cvtest::norm(img_ref, img, NORM_INF), 0.0);
+    }
+    {
+        vector<uchar> buf;
+        params[1] = IMWRITE_HDR_COMPRESSION_RLE;
+        imencode(".hdr", img_ref, buf, params);
+        Mat img = imdecode(buf, -1);
+        EXPECT_EQ(cvtest::norm(img_ref, img, NORM_INF), 0.0);
+    }
+}
+
 #endif
 
 #ifdef HAVE_IMGCODEC_PXM
@@ -387,9 +564,85 @@ TEST(Imgcodecs_Pam, read_write)
     remove(writefile.c_str());
     remove(writefile_no_param.c_str());
 }
+
+// Regression test: a 2-channel (GRAYSCALE_ALPHA) PAM decoded as single channel
+// used to overflow the output row in basic_conversion() (3 bytes written per
+// source pixel into a 1-channel row). Verify it decodes safely and correctly.
+TEST(Imgcodecs_Pam, decode_graya_as_gray)
+{
+    const int width = 9, height = 3;  // odd width to expose off-by-row overflow
+    std::string header = cv::format(
+        "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 2\nMAXVAL 255\n"
+        "TUPLTYPE GRAYSCALE_ALPHA\nENDHDR\n", width, height);
+
+    std::vector<uchar> buf(header.begin(), header.end());
+    Mat gray_ref(height, width, CV_8UC1);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            uchar gray  = (uchar)((y * width + x) * 7 + 1);
+            uchar alpha = (uchar)(255 - gray);
+            gray_ref.at<uchar>(y, x) = gray;
+            buf.push_back(gray);   // channel 0: gray
+            buf.push_back(alpha);  // channel 1: alpha (must be ignored)
+        }
+
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecode(buf, IMREAD_GRAYSCALE));
+    ASSERT_FALSE(decoded.empty());
+    EXPECT_EQ(width, decoded.cols);
+    EXPECT_EQ(height, decoded.rows);
+    EXPECT_EQ(1, decoded.channels());
+    EXPECT_EQ(0, cvtest::norm(gray_ref, decoded, NORM_INF));
+}
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
+typedef testing::TestWithParam<tuple<int, int> > Imgcodecs_Pfm_ReadMode;
+
+TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
+{
+    const int channels = get<0>(GetParam());
+    const int flags = get<1>(GetParam());
+    Mat image(3, 5, CV_MAKETYPE(CV_32F, channels));
+    RNG& rng = theRNG();
+    rng.fill(image, RNG::UNIFORM, 0, 255);
+
+    const int outputChannels = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYCOLOR)
+        ? channels : (flags & (IMREAD_COLOR | IMREAD_COLOR_RGB)) ? 3 : 1;
+    const int outputDepth = flags == IMREAD_UNCHANGED || (flags & IMREAD_ANYDEPTH)
+        ? CV_32F : CV_8U;
+    Mat expected;
+    if (channels == 3 && outputChannels == 1)
+        cvtColor(image, expected, COLOR_BGR2GRAY);
+    else if (channels == 1 && outputChannels == 3)
+        cvtColor(image, expected, COLOR_GRAY2BGR);
+    else if (channels == 3 && flags != IMREAD_UNCHANGED && (flags & IMREAD_COLOR_RGB))
+        cvtColor(image, expected, COLOR_BGR2RGB);
+    else
+        image.copyTo(expected);
+    expected.convertTo(expected, outputDepth);
+
+    vector<uchar> encoded;
+    ASSERT_TRUE(imencode(".pfm", image, encoded));
+    Mat decoded(expected.size(), expected.type());
+    const uchar* originalData = decoded.data;
+    Mat result = imdecode(encoded, flags, &decoded);
+    EXPECT_EQ(originalData, decoded.data);
+    EXPECT_EQ(decoded.data, result.data);
+
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(expected.type(), decoded.type());
+    ASSERT_EQ(expected.size(), decoded.size());
+    EXPECT_EQ(0, cvtest::norm(expected, decoded, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_ReadMode, testing::Combine(
+    testing::Values(1, 3),
+    testing::Values(IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB,
+                    IMREAD_ANYDEPTH | IMREAD_GRAYSCALE, IMREAD_ANYDEPTH | IMREAD_COLOR,
+                    IMREAD_ANYDEPTH | IMREAD_COLOR_RGB, IMREAD_ANYDEPTH | IMREAD_ANYCOLOR)));
+
 TEST(Imgcodecs_Pfm, read_write)
 {
   Mat img = imread(findDataFile("readwrite/lena.pam"));
@@ -425,6 +678,19 @@ TEST(Imgcodecs, write_parameter_type)
     cv::Matx<uchar, 10, 10> matx;
     EXPECT_NO_THROW(cv::imwrite(tmp_file, matx)) << "* Failed with cv::Matx";
     EXPECT_EQ(0, remove(tmp_file.c_str()));
+}
+
+TEST(Imgcodecs, imdecode_user_buffer)
+{
+    cv::Mat encoded = cv::Mat::zeros(1, 1024, CV_8UC1);
+    cv::Mat user_buffer(1, 1024, CV_8UC1);
+    cv::Mat result = cv::imdecode(encoded, IMREAD_ANYCOLOR, &user_buffer);
+    EXPECT_TRUE(result.empty());
+    // the function does not release user-provided buffer
+    EXPECT_FALSE(user_buffer.empty());
+
+    result = cv::imdecode(encoded, IMREAD_ANYCOLOR);
+    EXPECT_TRUE(result.empty());
 }
 
 }} // namespace

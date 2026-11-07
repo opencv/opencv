@@ -56,6 +56,24 @@ elseif(WIN32 AND CMAKE_HOST_SYSTEM_NAME MATCHES Windows)
   ocv_update(OPENCV_JNI_INSTALL_PATH           "java${_jni_suffix}")
   ocv_update(OPENCV_JNI_BIN_INSTALL_PATH       "${OPENCV_JNI_INSTALL_PATH}")
 
+elseif(QNX)
+  ocv_update(OPENCV_BIN_INSTALL_PATH         "${CPUVARDIR}/usr/bin")
+  ocv_update(OPENCV_TEST_INSTALL_PATH        "${OPENCV_BIN_INSTALL_PATH}")
+  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
+  ocv_update(OPENCV_LIB_INSTALL_PATH         "${CPUVARDIR}/usr/lib")
+  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH "${OPENCV_LIB_INSTALL_PATH}")
+  ocv_update(OPENCV_3P_LIB_INSTALL_PATH      "${CPUVARDIR}/usr/lib")
+  ocv_update(OPENCV_CONFIG_INSTALL_PATH      "${CPUVARDIR}/usr/share/OpenCV")
+  ocv_update(OPENCV_INCLUDE_INSTALL_PATH     "usr/include/OpenCV/opencv4")
+  ocv_update(OPENCV_OTHER_INSTALL_PATH       "usr/share/OpenCV")
+  ocv_update(OPENCV_SAMPLES_SRC_INSTALL_PATH "samples/native")
+  ocv_update(OPENCV_LICENSES_INSTALL_PATH    "${OPENCV_OTHER_INSTALL_PATH}/licenses")
+  ocv_update(OPENCV_TEST_DATA_INSTALL_PATH   "${OPENCV_OTHER_INSTALL_PATH}/testdata")
+  ocv_update(OPENCV_DOC_INSTALL_PATH         "doc")
+  ocv_update(OPENCV_JAR_INSTALL_PATH         "${CMAKE_INSTALL_DATAROOTDIR}/java/opencv4")
+  ocv_update(OPENCV_JNI_INSTALL_PATH         "${OPENCV_JAR_INSTALL_PATH}")
+  ocv_update(OPENCV_JNI_BIN_INSTALL_PATH     "${OPENCV_JNI_INSTALL_PATH}")
+
 else() # UNIX
 
   include(GNUInstallDirs)
@@ -78,7 +96,11 @@ else() # UNIX
 
 endif()
 
-ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+  ocv_update(CMAKE_INSTALL_RPATH "@executable_path/Frameworks;@loader_path/Frameworks;@executable_path/../${OPENCV_3P_LIB_INSTALL_PATH}")
+else()
+  ocv_update(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
+endif()
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if(INSTALL_TO_MANGLED_PATHS)

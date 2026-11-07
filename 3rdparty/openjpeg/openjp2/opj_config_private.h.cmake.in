@@ -1,5 +1,4 @@
 /* create opj_config_private.h for CMake */
-#cmakedefine OPJ_HAVE_INTTYPES_H 	@OPJ_HAVE_INTTYPES_H@
 
 #define OPJ_PACKAGE_VERSION "@PACKAGE_VERSION@"
 
@@ -11,6 +10,8 @@
 /*#cmakedefine HAVE_SYS_STAT_H @HAVE_SYS_STAT_H@*/
 /*#cmakedefine HAVE_SYS_TYPES_H @HAVE_SYS_TYPES_H@ */
 /*#cmakedefine HAVE_UNISTD_H @HAVE_UNISTD_H@*/
+/*#cmakedefine HAVE_INTTYPES_H @HAVE_INTTYPES_H@ */
+/*#cmakedefine HAVE_STDINT_H @HAVE_STDINT_H@ */
 
 #cmakedefine _LARGEFILE_SOURCE
 #cmakedefine _LARGE_FILES

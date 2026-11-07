@@ -238,9 +238,9 @@ void Video::CopyOutput() {
         auto inAr = VideoioBridge::getInstance().frontInputPtr;
         auto outAr = GetData(VideoioBridge::getInstance().frontOutputBuffer->PixelBuffer);
 
-        const unsigned int bytesPerPixel = 3;
+        const unsigned int bytesPerPixel_ = 3;
         auto pbScanline = inAr;
-        auto plPitch = width * bytesPerPixel;
+        auto plPitch = width * bytesPerPixel_;
 
         auto buf = outAr;
         unsigned int colBytes = width * 4;
@@ -254,7 +254,7 @@ void Video::CopyOutput() {
 
             // used for RGB24:
             // nb. alpha is set to full opaque
-            for (unsigned int i = 0, j = 0; i < plPitch; i += bytesPerPixel, j += 4)
+            for (unsigned int i = 0, j = 0; i < plPitch; i += bytesPerPixel_, j += 4)
             {
                 // swizzle the R and B values (RGB24 to Bgr8)
                 buf[j] = pbScanline[i + 2];

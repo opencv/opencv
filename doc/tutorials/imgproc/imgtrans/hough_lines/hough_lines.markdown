@@ -83,7 +83,7 @@ Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
 
 ### Standard and Probabilistic Hough Line Transform
 
-OpenCV implements two kind of Hough Line Transforms:
+OpenCV implements three kind of Hough Line Transforms:
 
 a.  **The Standard Hough Transform**
 
@@ -96,6 +96,12 @@ b.  **The Probabilistic Hough Line Transform**
 -   A more efficient implementation of the Hough Line Transform. It gives as output the extremes
     of the detected lines \f$(x_{0}, y_{0}, x_{1}, y_{1})\f$
 -   In OpenCV it is implemented with the function **HoughLinesP()**
+
+c.  **The Weighted Hough Transform**
+
+-   Uses edge intensity instead binary 0 or 1 values in standard Hough transform.
+-   In OpenCV it is implemented with the function **HoughLines()** with use_edgeval=true.
+-   See the example in samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp.
 
 ###  What does this program do?
     -   Loads an image
@@ -129,7 +135,7 @@ The sample code that we will explain can be downloaded from
 Explanation
 -----------
 
-#### Load an image:
+### Load an image:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp load
@@ -143,7 +149,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py load
 @end_toggle
 
-#### Detect the edges of the image by using a Canny detector:
+### Detect the edges of the image by using a Canny detector:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp edge_detection
@@ -160,7 +166,7 @@ Explanation
 Now we will apply the Hough Line Transform. We will explain how to use both OpenCV functions
 available for this purpose.
 
-#### Standard Hough Line Transform:
+### Standard Hough Line Transform:
 First, you apply the Transform:
 
 @add_toggle_cpp
@@ -199,7 +205,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines
 @end_toggle
 
-#### Probabilistic Hough Line Transform
+### Probabilistic Hough Line Transform
 First you apply the transform:
 
 @add_toggle_cpp
@@ -242,7 +248,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines_p
 @end_toggle
 
-#### Display the original image and the detected lines:
+### Display the original image and the detected lines:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp imshow
@@ -256,7 +262,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py imshow
 @end_toggle
 
-#### Wait until the user exits the program
+### Wait until the user exits the program
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp exit

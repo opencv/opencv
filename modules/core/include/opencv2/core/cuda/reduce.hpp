@@ -64,6 +64,12 @@ namespace cv { namespace cuda { namespace device
     {
         reduce_detail::Dispatcher<N>::reductor::template reduce<volatile T*, T&, const Op&>(smem, val, tid, op);
     }
+    template <unsigned int N, typename K, typename V, class Cmp>
+    __device__ __forceinline__ void reduceKeyVal(volatile K* skeys, K& key, volatile V* svals, V& val, unsigned int tid, const Cmp& cmp)
+    {
+        reduce_key_val_detail::Dispatcher<N>::reductor::template reduce<volatile K*, K&, volatile V*, V&, const Cmp&>(skeys, key, svals, val, tid, cmp);
+    }
+#if (CUDART_VERSION < 12040) // details: https://github.com/opencv/opencv_contrib/issues/3690
     template <int N,
               typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9,
               typename R0, typename R1, typename R2, typename R3, typename R4, typename R5, typename R6, typename R7, typename R8, typename R9,
@@ -79,11 +85,6 @@ namespace cv { namespace cuda { namespace device
                 const thrust::tuple<Op0, Op1, Op2, Op3, Op4, Op5, Op6, Op7, Op8, Op9>&>(smem, val, tid, op);
     }
 
-    template <unsigned int N, typename K, typename V, class Cmp>
-    __device__ __forceinline__ void reduceKeyVal(volatile K* skeys, K& key, volatile V* svals, V& val, unsigned int tid, const Cmp& cmp)
-    {
-        reduce_key_val_detail::Dispatcher<N>::reductor::template reduce<volatile K*, K&, volatile V*, V&, const Cmp&>(skeys, key, svals, val, tid, cmp);
-    }
     template <unsigned int N,
               typename K,
               typename VP0, typename VP1, typename VP2, typename VP3, typename VP4, typename VP5, typename VP6, typename VP7, typename VP8, typename VP9,
@@ -99,6 +100,7 @@ namespace cv { namespace cuda { namespace device
                 const thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9>&,
                 const Cmp&>(skeys, key, svals, val, tid, cmp);
     }
+
     template <unsigned int N,
               typename KP0, typename KP1, typename KP2, typename KP3, typename KP4, typename KP5, typename KP6, typename KP7, typename KP8, typename KP9,
               typename KR0, typename KR1, typename KR2, typename KR3, typename KR4, typename KR5, typename KR6, typename KR7, typename KR8, typename KR9,
@@ -120,6 +122,25 @@ namespace cv { namespace cuda { namespace device
                 const thrust::tuple<Cmp0, Cmp1, Cmp2, Cmp3, Cmp4, Cmp5, Cmp6, Cmp7, Cmp8, Cmp9>&
                 >(skeys, key, svals, val, tid, cmp);
     }
+#else
+    template <int N, typename... P, typename... R, class... Op>
+    __device__ __forceinline__ void reduce(const thrust::tuple<P...>& smem, const thrust::tuple<R...>& val, unsigned int tid, const thrust::tuple<Op...>& op)
+    {
+        reduce_detail::Dispatcher<N>::reductor::template reduce<const thrust::tuple<P...>&, const thrust::tuple<R...>&, const thrust::tuple<Op...>&>(smem, val, tid, op);
+    }
+
+    template <unsigned int N, typename K, typename... VP, typename... VR, class Cmp>
+    __device__ __forceinline__ void reduceKeyVal(volatile K* skeys, K& key, const thrust::tuple<VP...>& svals, const thrust::tuple<VR...>& val, unsigned int tid, const Cmp& cmp)
+    {
+        reduce_key_val_detail::Dispatcher<N>::reductor::template reduce<volatile K*, K&, const thrust::tuple<VP...>&, const thrust::tuple<VR...>&, const Cmp&>(skeys, key, svals, val, tid, cmp);
+    }
+
+    template <unsigned int N, typename... KP, typename... KR, typename... VP, typename... VR, class... Cmp>
+    __device__ __forceinline__ void reduceKeyVal(const thrust::tuple<KP...>& skeys, const thrust::tuple<KR...>& key, const thrust::tuple<VP...>& svals, const thrust::tuple<VR...>& val, unsigned int tid, const thrust::tuple<Cmp...>& cmp)
+    {
+        reduce_key_val_detail::Dispatcher<N>::reductor::template reduce<const thrust::tuple<KP...>&, const thrust::tuple<KR...>&, const thrust::tuple<VP...>&, const thrust::tuple<VR...>&, const thrust::tuple<Cmp...>&>(skeys, key, svals, val, tid, cmp);
+    }
+#endif
 
     // smem_tuple
 

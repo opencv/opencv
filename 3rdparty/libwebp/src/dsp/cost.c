@@ -9,8 +9,15 @@
 //
 // Author: Skal (pascal.massimino@gmail.com)
 
+#include <assert.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+#include "src/dsp/cpu.h"
+#include "src/webp/types.h"
 #include "src/dsp/dsp.h"
 #include "src/enc/cost_enc.h"
+#include "src/enc/vp8i_enc.h"
 
 //------------------------------------------------------------------------------
 // Boolean-cost cost table
@@ -354,8 +361,8 @@ static int GetResidualCost_C(int ctx0, const VP8Residual* const res) {
   return cost;
 }
 
-static void SetResidualCoeffs_C(const int16_t* const coeffs,
-                                VP8Residual* const res) {
+static void SetResidualCoeffs_C(const int16_t* WEBP_RESTRICT const coeffs,
+                                VP8Residual* WEBP_RESTRICT const res) {
   int n;
   res->last = -1;
   assert(res->first == 0 || coeffs[0] == 0);
@@ -374,6 +381,7 @@ static void SetResidualCoeffs_C(const int16_t* const coeffs,
 VP8GetResidualCostFunc VP8GetResidualCost;
 VP8SetResidualCoeffsFunc VP8SetResidualCoeffs;
 
+extern VP8CPUInfo VP8GetCPUInfo;
 extern void VP8EncDspCostInitMIPS32(void);
 extern void VP8EncDspCostInitMIPSdspR2(void);
 extern void VP8EncDspCostInitSSE2(void);
@@ -395,12 +403,12 @@ WEBP_DSP_INIT_FUNC(VP8EncDspCostInit) {
       VP8EncDspCostInitMIPSdspR2();
     }
 #endif
-#if defined(WEBP_USE_SSE2)
+#if defined(WEBP_HAVE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       VP8EncDspCostInitSSE2();
     }
 #endif
-#if defined(WEBP_USE_NEON)
+#if defined(WEBP_HAVE_NEON)
     if (VP8GetCPUInfo(kNEON)) {
       VP8EncDspCostInitNEON();
     }

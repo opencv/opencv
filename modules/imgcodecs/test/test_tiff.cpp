@@ -2,15 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace opencv_test { namespace {
 
 #ifdef HAVE_TIFF
-
-// these defines are used to resolve conflict between tiff.h and opencv2/core/types_c.h
-#define uint64 uint64_hack_
-#define int64 int64_hack_
-#include "tiff.h"
 
 #ifdef __ANDROID__
 // Test disabled as it uses a lot of memory.
@@ -26,7 +23,7 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
     string file4 = cv::tempfile(".tiff");
 
     std::vector<int> params;
-    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(IMWRITE_TIFF_ROWSPERSTRIP);
     params.push_back(big.rows);
     EXPECT_NO_THROW(cv::imwrite(file4, big, params));
     EXPECT_NO_THROW(cv::imwrite(file3, big.colRange(0, big.cols - 1), params));
@@ -45,6 +42,414 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
     EXPECT_EQ(0, remove(file3.c_str()));
     EXPECT_EQ(0, remove(file4.c_str()));
 }
+
+//==================================================================================================
+// See https://github.com/opencv/opencv/issues/22388
+
+typedef tuple< uint64_t, perf::MatType, ImreadModes > Bufsize_and_Type;
+typedef testing::TestWithParam<Bufsize_and_Type> Imgcodecs_Tiff_decode_Huge;
+
+TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
+{
+    // Get test parameters
+    const uint64_t buffer_size   = get<0>(GetParam());
+    const perf::MatType mat_type = get<1>(GetParam());
+    const int imread_mode        = get<2>(GetParam());
+
+    // Detect data file
+    const string req_filename = cv::format("readwrite/huge-tiff/%s_%zu.tif", typeToString(mat_type).c_str(), (size_t)buffer_size);
+    const string filename = findDataFile( req_filename );
+
+    // Preparation process for test
+    {
+        // Convert from mat_type and buffer_size to tiff file information.
+        const uint64_t width  = 32768;
+        int ncn          = CV_MAT_CN(mat_type);
+        int depth        = ( CV_MAT_DEPTH(mat_type) == CV_16U) ? 2 : 1; // 16bit or 8 bit
+        const uint64_t height = (uint64_t) buffer_size / width / ncn / depth;
+        const uint64_t base_scanline_size  = (uint64_t) width * ncn  * depth;
+        const uint64_t base_strip_size     = (uint64_t) base_scanline_size * height;
+
+        // To avoid exception about pixel size, check it.
+        static const size_t CV_IO_MAX_IMAGE_PIXELS = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_PIXELS", 1 << 30);
+        uint64_t pixels = (uint64_t) width * height;
+        if ( pixels > CV_IO_MAX_IMAGE_PIXELS )
+        {
+            throw SkipTestException( cv::format("Test is skipped( pixels(%zu) > CV_IO_MAX_IMAGE_PIXELS(%zu) )",
+                (size_t)pixels, CV_IO_MAX_IMAGE_PIXELS) );
+        }
+
+        // If buffer_size >= 1GB * 95%, TIFFReadScanline() is used.
+        const uint64_t BUFFER_SIZE_LIMIT_FOR_READS_CANLINE = (uint64_t) 1024*1024*1024*95/100;
+        const bool doReadScanline = ( base_strip_size >= BUFFER_SIZE_LIMIT_FOR_READS_CANLINE );
+
+        // Update ncn and depth for destination Mat.
+        switch ( imread_mode )
+        {
+            case IMREAD_UNCHANGED:
+                break;
+            case IMREAD_GRAYSCALE:
+                ncn = 1;
+                depth = 1;
+                break;
+            case IMREAD_GRAYSCALE | IMREAD_ANYDEPTH:
+                ncn = 1;
+                break;
+            case IMREAD_GRAYSCALE | IMREAD_ANYCOLOR:
+                ncn = (ncn == 1)?1:3;
+                depth = 1;
+                break;
+            case IMREAD_GRAYSCALE | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH:
+                ncn = (ncn == 1)?1:3;
+                break;
+            case IMREAD_COLOR:
+                ncn = 3;
+                depth = 1;
+                break;
+            case IMREAD_COLOR | IMREAD_ANYDEPTH:
+                ncn = 3;
+                break;
+            case IMREAD_COLOR | IMREAD_ANYCOLOR:
+                ncn = 3;
+                depth = 1;
+                break;
+            case IMREAD_COLOR | IMREAD_ANYDEPTH | IMREAD_ANYCOLOR:
+                ncn = 3;
+                break;
+            default:
+                break;
+        }
+
+        // Memory usage for Destination Mat
+        const uint64_t memory_usage_cvmat = (uint64_t) width * ncn * depth * height;
+
+        // Memory usage for Work memory in libtiff.
+        uint64_t memory_usage_tiff = 0;
+        if ( ( depth == 1 ) && ( !doReadScanline ) )
+        {
+            // TIFFReadRGBA*() request to allocate RGBA(32bit) buffer.
+            memory_usage_tiff = (uint64_t)
+                width *
+                4 *      // ncn     = RGBA
+                1 *      // dst_bpp = 8 bpp
+                height;
+        }
+        else
+        {
+            // TIFFReadEncodedStrip() or TIFFReadScanline() request to allocate strip memory.
+            memory_usage_tiff = base_strip_size;
+        }
+
+        // Memory usage for Work memory in imgcodec/grfmt_tiff.cpp
+        const uint64_t memory_usage_work =
+            ( doReadScanline ) ? base_scanline_size // for TIFFReadScanline()
+                               : base_strip_size;   // for TIFFReadRGBA*() or TIFFReadEncodedStrip()
+
+        // Total memory usage.
+        const uint64_t memory_usage_total =
+            memory_usage_cvmat + // Destination Mat
+            memory_usage_tiff  + // Work memory in libtiff
+            memory_usage_work;   // Work memory in imgcodecs
+
+        // Output memory usage log.
+        CV_LOG_DEBUG(NULL, cv::format("OpenCV TIFF-test: memory usage info : mat(%zu), libtiff(%zu), work(%zu) -> total(%zu)",
+                     (size_t)memory_usage_cvmat, (size_t)memory_usage_tiff, (size_t)memory_usage_work, (size_t)memory_usage_total) );
+
+        // Add test tags.
+        if ( memory_usage_total >= (uint64_t) 6144 * 1024 * 1024 )
+        {
+            applyTestTag( CV_TEST_TAG_MEMORY_14GB, CV_TEST_TAG_VERYLONG );
+        }
+        else if ( memory_usage_total >= (uint64_t) 2048 * 1024 * 1024 )
+        {
+            applyTestTag( CV_TEST_TAG_MEMORY_6GB, CV_TEST_TAG_VERYLONG );
+        }
+        else if ( memory_usage_total >= (uint64_t) 1024  * 1024 * 1024 )
+        {
+            applyTestTag( CV_TEST_TAG_MEMORY_2GB, CV_TEST_TAG_LONG );
+        }
+        else if ( memory_usage_total >= (uint64_t)  512  * 1024 * 1024 )
+        {
+            applyTestTag( CV_TEST_TAG_MEMORY_1GB );
+        }
+        else if ( memory_usage_total >= (uint64_t)  200  * 1024 * 1024 )
+        {
+            applyTestTag( CV_TEST_TAG_MEMORY_512MB );
+        }
+        else
+        {
+            // do nothing.
+        }
+    }
+
+    // TEST Main
+
+    cv::Mat img;
+    ASSERT_NO_THROW( img = cv::imread(filename, imread_mode) );
+    ASSERT_FALSE(img.empty());
+
+    /**
+     * Test marker pixels at each corners.
+     *
+     *   0xAn,0x00 ... 0x00, 0xBn
+     *   0x00,0x00 ... 0x00, 0x00
+     *   :    :         :     :
+     *   0x00,0x00 ... 0x00, 0x00
+     *   0xCn,0x00 .., 0x00, 0xDn
+     *
+     */
+
+#define MAKE_FLAG(from_type, to_type) (((uint64_t)from_type << 32 ) | to_type )
+
+    switch ( MAKE_FLAG(mat_type, img.type() ) )
+    {
+    // GRAY TO GRAY
+    case MAKE_FLAG(CV_8UC1, CV_8UC1):
+    case MAKE_FLAG(CV_16UC1, CV_8UC1):
+        EXPECT_EQ( 0xA0,   img.at<uchar>(0,          0)          );
+        EXPECT_EQ( 0xB0,   img.at<uchar>(0,          img.cols-1) );
+        EXPECT_EQ( 0xC0,   img.at<uchar>(img.rows-1, 0)          );
+        EXPECT_EQ( 0xD0,   img.at<uchar>(img.rows-1, img.cols-1) );
+        break;
+
+    // RGB/RGBA TO BGR
+    case MAKE_FLAG(CV_8UC3, CV_8UC3):
+    case MAKE_FLAG(CV_8UC4, CV_8UC3):
+    case MAKE_FLAG(CV_16UC3, CV_8UC3):
+    case MAKE_FLAG(CV_16UC4, CV_8UC3):
+        EXPECT_EQ( 0xA2,   img.at<Vec3b>(0,          0)         [0] );
+        EXPECT_EQ( 0xA1,   img.at<Vec3b>(0,          0)         [1] );
+        EXPECT_EQ( 0xA0,   img.at<Vec3b>(0,          0)         [2] );
+        EXPECT_EQ( 0xB2,   img.at<Vec3b>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xB1,   img.at<Vec3b>(0,          img.cols-1)[1] );
+        EXPECT_EQ( 0xB0,   img.at<Vec3b>(0,          img.cols-1)[2] );
+        EXPECT_EQ( 0xC2,   img.at<Vec3b>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xC1,   img.at<Vec3b>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( 0xC0,   img.at<Vec3b>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( 0xD2,   img.at<Vec3b>(img.rows-1, img.cols-1)[0] );
+        EXPECT_EQ( 0xD1,   img.at<Vec3b>(img.rows-1, img.cols-1)[1] );
+        EXPECT_EQ( 0xD0,   img.at<Vec3b>(img.rows-1, img.cols-1)[2] );
+        break;
+
+    // RGBA TO BGRA
+    case MAKE_FLAG(CV_8UC4, CV_8UC4):
+    case MAKE_FLAG(CV_16UC4, CV_8UC4):
+        EXPECT_EQ( 0xA2,   img.at<Vec4b>(0,          0)         [0] );
+        EXPECT_EQ( 0xA1,   img.at<Vec4b>(0,          0)         [1] );
+        EXPECT_EQ( 0xA0,   img.at<Vec4b>(0,          0)         [2] );
+        EXPECT_EQ( 0xA3,   img.at<Vec4b>(0,          0)         [3] );
+        EXPECT_EQ( 0xB2,   img.at<Vec4b>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xB1,   img.at<Vec4b>(0,          img.cols-1)[1] );
+        EXPECT_EQ( 0xB0,   img.at<Vec4b>(0,          img.cols-1)[2] );
+        EXPECT_EQ( 0xB3,   img.at<Vec4b>(0,          img.cols-1)[3] );
+        EXPECT_EQ( 0xC2,   img.at<Vec4b>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xC1,   img.at<Vec4b>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( 0xC0,   img.at<Vec4b>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( 0xC3,   img.at<Vec4b>(img.rows-1, 0)         [3] );
+        EXPECT_EQ( 0xD2,   img.at<Vec4b>(img.rows-1, img.cols-1)[0] );
+        EXPECT_EQ( 0xD1,   img.at<Vec4b>(img.rows-1, img.cols-1)[1] );
+        EXPECT_EQ( 0xD0,   img.at<Vec4b>(img.rows-1, img.cols-1)[2] );
+        EXPECT_EQ( 0xD3,   img.at<Vec4b>(img.rows-1, img.cols-1)[3] );
+        break;
+
+    // RGB/RGBA to GRAY
+    case MAKE_FLAG(CV_8UC3, CV_8UC1):
+    case MAKE_FLAG(CV_8UC4, CV_8UC1):
+    case MAKE_FLAG(CV_16UC3, CV_8UC1):
+    case MAKE_FLAG(CV_16UC4, CV_8UC1):
+        EXPECT_LE( 0xA0,   img.at<uchar>(0,          0)          );
+        EXPECT_GE( 0xA2,   img.at<uchar>(0,          0)          );
+        EXPECT_LE( 0xB0,   img.at<uchar>(0,          img.cols-1) );
+        EXPECT_GE( 0xB2,   img.at<uchar>(0,          img.cols-1) );
+        EXPECT_LE( 0xC0,   img.at<uchar>(img.rows-1, 0)          );
+        EXPECT_GE( 0xC2,   img.at<uchar>(img.rows-1, 0)          );
+        EXPECT_LE( 0xD0,   img.at<uchar>(img.rows-1, img.cols-1) );
+        EXPECT_GE( 0xD2,   img.at<uchar>(img.rows-1, img.cols-1) );
+        break;
+
+    // GRAY to BGR
+    case MAKE_FLAG(CV_8UC1, CV_8UC3):
+    case MAKE_FLAG(CV_16UC1, CV_8UC3):
+        EXPECT_EQ( 0xA0,   img.at<Vec3b>(0,          0)         [0] );
+        EXPECT_EQ( 0xB0,   img.at<Vec3b>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xC0,   img.at<Vec3b>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xD0,   img.at<Vec3b>(img.rows-1, img.cols-1)[0] );
+        // R==G==B
+        EXPECT_EQ( img.at<Vec3b>(0,          0)          [0], img.at<Vec3b>(0,          0)         [1] );
+        EXPECT_EQ( img.at<Vec3b>(0,          0)          [0], img.at<Vec3b>(0,          0)         [2] );
+        EXPECT_EQ( img.at<Vec3b>(0,          img.cols-1) [0], img.at<Vec3b>(0,          img.cols-1)[1] );
+        EXPECT_EQ( img.at<Vec3b>(0,          img.cols-1) [0], img.at<Vec3b>(0,          img.cols-1)[2] );
+        EXPECT_EQ( img.at<Vec3b>(img.rows-1,          0) [0], img.at<Vec3b>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( img.at<Vec3b>(img.rows-1,          0) [0], img.at<Vec3b>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( img.at<Vec3b>(img.rows-1, img.cols-1) [0], img.at<Vec3b>(img.rows-1, img.cols-1)[1] );
+        EXPECT_EQ( img.at<Vec3b>(img.rows-1, img.cols-1) [0], img.at<Vec3b>(img.rows-1, img.cols-1)[2] );
+        break;
+
+    // GRAY TO GRAY
+    case MAKE_FLAG(CV_16UC1, CV_16UC1):
+        EXPECT_EQ( 0xA090, img.at<ushort>(0,          0)          );
+        EXPECT_EQ( 0xB080, img.at<ushort>(0,          img.cols-1) );
+        EXPECT_EQ( 0xC070, img.at<ushort>(img.rows-1, 0)          );
+        EXPECT_EQ( 0xD060, img.at<ushort>(img.rows-1, img.cols-1) );
+        break;
+
+    // RGB/RGBA TO BGR
+    case MAKE_FLAG(CV_16UC3, CV_16UC3):
+    case MAKE_FLAG(CV_16UC4, CV_16UC3):
+        EXPECT_EQ( 0xA292, img.at<Vec3w>(0,          0)         [0] );
+        EXPECT_EQ( 0xA191, img.at<Vec3w>(0,          0)         [1] );
+        EXPECT_EQ( 0xA090, img.at<Vec3w>(0,          0)         [2] );
+        EXPECT_EQ( 0xB282, img.at<Vec3w>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xB181, img.at<Vec3w>(0,          img.cols-1)[1] );
+        EXPECT_EQ( 0xB080, img.at<Vec3w>(0,          img.cols-1)[2] );
+        EXPECT_EQ( 0xC272, img.at<Vec3w>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xC171, img.at<Vec3w>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( 0xC070, img.at<Vec3w>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( 0xD262, img.at<Vec3w>(img.rows-1, img.cols-1)[0] );
+        EXPECT_EQ( 0xD161, img.at<Vec3w>(img.rows-1, img.cols-1)[1] );
+        EXPECT_EQ( 0xD060, img.at<Vec3w>(img.rows-1, img.cols-1)[2] );
+        break;
+
+    // RGBA TO RGBA
+    case MAKE_FLAG(CV_16UC4, CV_16UC4):
+        EXPECT_EQ( 0xA292, img.at<Vec4w>(0,          0)         [0] );
+        EXPECT_EQ( 0xA191, img.at<Vec4w>(0,          0)         [1] );
+        EXPECT_EQ( 0xA090, img.at<Vec4w>(0,          0)         [2] );
+        EXPECT_EQ( 0xA393, img.at<Vec4w>(0,          0)         [3] );
+        EXPECT_EQ( 0xB282, img.at<Vec4w>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xB181, img.at<Vec4w>(0,          img.cols-1)[1] );
+        EXPECT_EQ( 0xB080, img.at<Vec4w>(0,          img.cols-1)[2] );
+        EXPECT_EQ( 0xB383, img.at<Vec4w>(0,          img.cols-1)[3] );
+        EXPECT_EQ( 0xC272, img.at<Vec4w>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xC171, img.at<Vec4w>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( 0xC070, img.at<Vec4w>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( 0xC373, img.at<Vec4w>(img.rows-1, 0)         [3] );
+        EXPECT_EQ( 0xD262, img.at<Vec4w>(img.rows-1,img.cols-1) [0] );
+        EXPECT_EQ( 0xD161, img.at<Vec4w>(img.rows-1,img.cols-1) [1] );
+        EXPECT_EQ( 0xD060, img.at<Vec4w>(img.rows-1,img.cols-1) [2] );
+        EXPECT_EQ( 0xD363, img.at<Vec4w>(img.rows-1,img.cols-1) [3] );
+        break;
+
+    // RGB/RGBA to GRAY
+    case MAKE_FLAG(CV_16UC3, CV_16UC1):
+    case MAKE_FLAG(CV_16UC4, CV_16UC1):
+        EXPECT_LE( 0xA090, img.at<ushort>(0,          0) );
+        EXPECT_GE( 0xA292, img.at<ushort>(0,          0) );
+        EXPECT_LE( 0xB080, img.at<ushort>(0,          img.cols-1) );
+        EXPECT_GE( 0xB282, img.at<ushort>(0,          img.cols-1) );
+        EXPECT_LE( 0xC070, img.at<ushort>(img.rows-1, 0) );
+        EXPECT_GE( 0xC272, img.at<ushort>(img.rows-1, 0) );
+        EXPECT_LE( 0xD060, img.at<ushort>(img.rows-1, img.cols-1) );
+        EXPECT_GE( 0xD262, img.at<ushort>(img.rows-1, img.cols-1) );
+        break;
+
+    // GRAY to RGB
+    case MAKE_FLAG(CV_16UC1, CV_16UC3):
+        EXPECT_EQ( 0xA090,   img.at<Vec3w>(0,          0)         [0] );
+        EXPECT_EQ( 0xB080,   img.at<Vec3w>(0,          img.cols-1)[0] );
+        EXPECT_EQ( 0xC070,   img.at<Vec3w>(img.rows-1, 0)         [0] );
+        EXPECT_EQ( 0xD060,   img.at<Vec3w>(img.rows-1, img.cols-1)[0] );
+        // R==G==B
+        EXPECT_EQ( img.at<Vec3w>(0,          0)          [0], img.at<Vec3w>(0,          0)         [1] );
+        EXPECT_EQ( img.at<Vec3w>(0,          0)          [0], img.at<Vec3w>(0,          0)         [2] );
+        EXPECT_EQ( img.at<Vec3w>(0,          img.cols-1) [0], img.at<Vec3w>(0,          img.cols-1)[1] );
+        EXPECT_EQ( img.at<Vec3w>(0,          img.cols-1) [0], img.at<Vec3w>(0,          img.cols-1)[2] );
+        EXPECT_EQ( img.at<Vec3w>(img.rows-1,          0) [0], img.at<Vec3w>(img.rows-1, 0)         [1] );
+        EXPECT_EQ( img.at<Vec3w>(img.rows-1,          0) [0], img.at<Vec3w>(img.rows-1, 0)         [2] );
+        EXPECT_EQ( img.at<Vec3w>(img.rows-1, img.cols-1) [0], img.at<Vec3w>(img.rows-1, img.cols-1)[1] );
+        EXPECT_EQ( img.at<Vec3w>(img.rows-1, img.cols-1) [0], img.at<Vec3w>(img.rows-1, img.cols-1)[2] );
+        break;
+
+    // No supported.
+    // (1) 8bit to 16bit
+    case MAKE_FLAG(CV_8UC1, CV_16UC1):
+    case MAKE_FLAG(CV_8UC1, CV_16UC3):
+    case MAKE_FLAG(CV_8UC1, CV_16UC4):
+    case MAKE_FLAG(CV_8UC3, CV_16UC1):
+    case MAKE_FLAG(CV_8UC3, CV_16UC3):
+    case MAKE_FLAG(CV_8UC3, CV_16UC4):
+    case MAKE_FLAG(CV_8UC4, CV_16UC1):
+    case MAKE_FLAG(CV_8UC4, CV_16UC3):
+    case MAKE_FLAG(CV_8UC4, CV_16UC4):
+    // (2) GRAY/RGB TO RGBA
+    case MAKE_FLAG(CV_8UC1, CV_8UC4):
+    case MAKE_FLAG(CV_8UC3, CV_8UC4):
+    case MAKE_FLAG(CV_16UC1, CV_8UC4):
+    case MAKE_FLAG(CV_16UC3, CV_8UC4):
+    case MAKE_FLAG(CV_16UC1, CV_16UC4):
+    case MAKE_FLAG(CV_16UC3, CV_16UC4):
+    default:
+        FAIL() << cv::format("Unknown test pattern: from = ( %d, %d) to = ( %d, %d )",
+                              (int)CV_MAT_CN(mat_type   ), ( CV_MAT_DEPTH(mat_type   )==CV_16U)?16:8,
+                              (int)CV_MAT_CN(img.type() ), ( CV_MAT_DEPTH(img.type() )==CV_16U)?16:8);
+        break;
+    }
+
+#undef MAKE_FLAG
+}
+
+// Basic Test
+const Bufsize_and_Type Imgcodecs_Tiff_decode_Huge_list_basic[] =
+{
+    make_tuple<uint64_t, perf::MatType, ImreadModes>( 1073479680ull, CV_8UC1,  IMREAD_COLOR ),
+    make_tuple<uint64_t, perf::MatType, ImreadModes>( 2147483648ull, CV_16UC4, IMREAD_COLOR ),
+};
+
+INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_decode_Huge,
+        testing::ValuesIn( Imgcodecs_Tiff_decode_Huge_list_basic )
+);
+
+// Full Test
+//  This full test is disabled in default, following steps are required to run.
+//  (1) replace "DISABLED_Imgcodecs_Tiff_Full" to "Imgcodecs_Tiff_Full" and rebuild opencv_test_imgcodecs.
+//  (2) set "OPENCV_IO_MAX_IMAGE_PIXELS=2147483648" in environment variable.
+//  (3) run "./bin/opencv_test_imgcodecs --test_tag_enable=mem_6gb,verylong,debug_verylong" .
+
+/**
+ * Test lists for combination of IMREAD_*.
+ */
+const ImreadModes all_modes_Huge_Full[] =
+{
+    static_cast<ImreadModes>(IMREAD_UNCHANGED                                     ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE                                     ) ,
+    static_cast<ImreadModes>(IMREAD_COLOR                                         ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE | IMREAD_ANYDEPTH                   ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE                    | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_COLOR     | IMREAD_ANYDEPTH                   ) ,
+    static_cast<ImreadModes>(IMREAD_COLOR                        | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_COLOR     | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR)
+};
+
+const uint64_t huge_buffer_sizes_decode_Full[] =
+{
+    1048576ull,    // 1 * 1024 * 1024
+    1073479680ull, // 1024 * 1024 * 1024 - 32768 * 4 * 2
+    1073741824ull, // 1024 * 1024 * 1024
+    2147483648ull, // 2048 * 1024 * 1024
+};
+
+const perf::MatType mat_types_Full[] =
+{
+    CV_8UC1,  // 8bit  GRAY
+    CV_8UC3,  // 24bit RGB
+    CV_8UC4,  // 32bit RGBA
+    CV_16UC1, // 16bit GRAY
+    CV_16UC3, // 48bit RGB
+    CV_16UC4, // 64bit RGBA
+};
+
+// INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff_Full, Imgcodecs_Tiff_decode_Huge,
+INSTANTIATE_TEST_CASE_P(DISABLED_Imgcodecs_Tiff_Full, Imgcodecs_Tiff_decode_Huge,
+        testing::Combine(
+            testing::ValuesIn(huge_buffer_sizes_decode_Full),
+            testing::ValuesIn(mat_types_Full),
+            testing::ValuesIn(all_modes_Huge_Full)
+        )
+);
+
+
+//==================================================================================================
 
 TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
 {
@@ -262,19 +667,48 @@ TEST(Imgcodecs_Tiff, readWrite_unsigned)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/gray_8u.tif";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC1, img.type());
 
     Mat matS8;
     img.convertTo(matS8, CV_8SC1);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, matS8));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, matS8));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), matS8.type());
     ASSERT_EQ(img2.size(), matS8.size());
     EXPECT_LE(cvtest::norm(matS8, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+// See https://github.com/opencv/opencv/issues/29615
+// Decoding a 16-bit 4-channel TIFF used to form an out of range pointer in
+// icvCvt_BGRA2RGBA_16u_C4R because the byte step was divided by an unsigned
+// sizeof and then had size.width*4 subtracted, which wraps around for a zero
+// step. This just checks that a 16UC4 TIFF round-trips correctly; the value is
+// mainly that the sanitizer builds no longer report the pointer overflow.
+TEST(Imgcodecs_Tiff, regression_29615_16UC4)
+{
+    Mat img(4, 3, CV_16UC4);
+    randu(img, Scalar::all(0), Scalar::all(65535));
+
+    vector<uchar> buf;
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", img, buf)));
+
+    Mat decoded;
+    ASSERT_NO_THROW(decoded = imdecode(buf, IMREAD_UNCHANGED));
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(CV_16UC4, decoded.type());
+    ASSERT_EQ(img.size(), decoded.size());
+    EXPECT_EQ(0, cvtest::norm(img, decoded, NORM_INF));
 }
 
 TEST(Imgcodecs_Tiff, readWrite_32FC1)
@@ -282,12 +716,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC1,img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -299,12 +740,19 @@ TEST(Imgcodecs_Tiff, readWrite_64FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test64FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_64FC1, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -316,12 +764,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_SGILOG)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_sgilog.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 0.01);
@@ -333,16 +788,23 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_raw.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
     std::vector<int> params;
     params.push_back(IMWRITE_TIFF_COMPRESSION);
-    params.push_back(1/*COMPRESSION_NONE*/);
+    params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img, params));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -354,7 +816,37 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test_palette_color_image.tif";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
+TEST(Imgcodecs_Tiff, read_palette_color_image_rgb_and_bgr)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    Mat img_rgb, img_bgr;
+    ASSERT_NO_THROW(img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB));
+    ASSERT_NO_THROW(img_bgr = cv::imread(filenameInput, IMREAD_COLOR_BGR));
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    ASSERT_FALSE(img_bgr.empty());
+    ASSERT_EQ(CV_8UC3, img_bgr.type());
+
+    EXPECT_EQ(img_rgb.at<Vec3b>(32, 24), Vec3b(255, 0, 0));
+    EXPECT_EQ(img_bgr.at<Vec3b>(32, 24), Vec3b(0, 0, 255));
+}
+
+TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/4-bit_palette_color.tif";
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -378,22 +870,26 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
 
     cv::Mat mat(10, 16, CV_8UC1, (void*)sample_data);
     int methods[] = {
-        COMPRESSION_NONE,     COMPRESSION_LZW,
-        COMPRESSION_PACKBITS, COMPRESSION_DEFLATE,  COMPRESSION_ADOBE_DEFLATE
+        IMWRITE_TIFF_COMPRESSION_NONE,     IMWRITE_TIFF_COMPRESSION_LZW,
+        IMWRITE_TIFF_COMPRESSION_PACKBITS, IMWRITE_TIFF_COMPRESSION_DEFLATE,
+        IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE
     };
     for (size_t i = 0; i < sizeof(methods) / sizeof(int); i++)
     {
         string out = cv::tempfile(".tif");
 
         std::vector<int> params;
-        params.push_back(TIFFTAG_COMPRESSION);
+        params.push_back(IMWRITE_TIFF_COMPRESSION);
         params.push_back(methods[i]);
-        params.push_back(TIFFTAG_PREDICTOR);
-        params.push_back(PREDICTOR_HORIZONTAL);
+        params.push_back(IMWRITE_TIFF_PREDICTOR);
+        params.push_back(IMWRITE_TIFF_PREDICTOR_HORIZONTAL);
 
-        EXPECT_NO_THROW(cv::imwrite(out, mat, params));
+        bool ret_imwrite = false;
+        ASSERT_NO_THROW(ret_imwrite = cv::imwrite(out, mat, params));
+        ASSERT_TRUE(ret_imwrite);
 
-        const Mat img = cv::imread(out, IMREAD_UNCHANGED);
+        Mat img;
+        ASSERT_NO_THROW(img = cv::imread(out, IMREAD_UNCHANGED));
         ASSERT_FALSE(img.empty());
 
         ASSERT_EQ(0, cv::norm(mat, img, cv::NORM_INF));
@@ -402,6 +898,69 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/23416
+
+typedef std::pair<perf::MatType,bool> Imgcodes_Tiff_TypeAndComp;
+typedef testing::TestWithParam< Imgcodes_Tiff_TypeAndComp > Imgcodecs_Tiff_Types;
+
+TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
+{
+    const int mat_types = static_cast<int>(get<0>(GetParam()));
+    const bool isCompAvailable = get<1>(GetParam());
+
+    // Create a test image.
+    const Mat src = cv::Mat::zeros( 120, 160, mat_types );
+    {
+        // Add noise to test compression.
+        cv::Mat roi = cv::Mat(src, cv::Rect(0, 0, src.cols, src.rows/2));
+        cv::randu(roi, cv::Scalar(0), cv::Scalar(256));
+    }
+
+    // Try to encode/decode the test image with LZW compression.
+    std::vector<uchar> bufLZW;
+    {
+        std::vector<int> params;
+        params.push_back(IMWRITE_TIFF_COMPRESSION);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_LZW);
+        ASSERT_NO_THROW(cv::imencode(".tiff", src, bufLZW, params));
+
+        Mat dstLZW;
+        ASSERT_NO_THROW(cv::imdecode( bufLZW, IMREAD_UNCHANGED, &dstLZW));
+        ASSERT_EQ(dstLZW.type(), src.type());
+        ASSERT_EQ(dstLZW.size(), src.size());
+        ASSERT_LE(cvtest::norm(dstLZW, src, NORM_INF | NORM_RELATIVE), 1e-3);
+    }
+
+    // Try to encode/decode the test image with RAW.
+    std::vector<uchar> bufRAW;
+    {
+        std::vector<int> params;
+        params.push_back(IMWRITE_TIFF_COMPRESSION);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
+        ASSERT_NO_THROW(cv::imencode(".tiff", src, bufRAW, params));
+
+        Mat dstRAW;
+        ASSERT_NO_THROW(cv::imdecode( bufRAW, IMREAD_UNCHANGED, &dstRAW));
+        ASSERT_EQ(dstRAW.type(), src.type());
+        ASSERT_EQ(dstRAW.size(), src.size());
+        ASSERT_LE(cvtest::norm(dstRAW, src, NORM_INF | NORM_RELATIVE), 1e-3);
+    }
+
+    // Compare LZW and RAW streams.
+    EXPECT_EQ(bufLZW == bufRAW, !isCompAvailable);
+}
+
+Imgcodes_Tiff_TypeAndComp all_types[] = {
+    { CV_8UC1,  true  }, { CV_8UC3,  true  }, { CV_8UC4,  true  },
+    { CV_8SC1,  true  }, { CV_8SC3,  true  }, { CV_8SC4,  true  },
+    { CV_16UC1, true  }, { CV_16UC3, true  }, { CV_16UC4, true  },
+    { CV_16SC1, true  }, { CV_16SC3, true  }, { CV_16SC4, true  },
+    { CV_32SC1, true  }, { CV_32SC3, true  }, { CV_32SC4, true  },
+    { CV_32FC1, true  }, { CV_32FC3, true  }, { CV_32FC4, true  },
+    { CV_64FC1, false }, { CV_64FC3, false }, { CV_64FC4, false }  // No compression
+};
+
+INSTANTIATE_TEST_CASE_P(AllTypes, Imgcodecs_Tiff_Types, testing::ValuesIn(all_types));
 
 //==================================================================================================
 
@@ -432,21 +991,9 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage)
     }
 }
 
-const int all_modes[] =
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_all_pages)
 {
-    IMREAD_UNCHANGED,
-    IMREAD_GRAYSCALE,
-    IMREAD_COLOR,
-    IMREAD_ANYDEPTH,
-    IMREAD_ANYCOLOR
-};
-
-INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_modes));
-
-//==================================================================================================
-
-TEST(Imgcodecs_Tiff_Modes, write_multipage)
-{
+    const int mode = GetParam();
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
     const string page_files[] = {
@@ -459,9 +1006,113 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     };
     const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
     vector<Mat> pages;
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    ASSERT_TRUE(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    const size_t file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
+    fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
+
+    bool res = imdecodemulti(buf, mode, pages);
+    ASSERT_TRUE(res == true);
+    ASSERT_EQ(page_count, pages.size());
     for (size_t i = 0; i < page_count; i++)
     {
-        const Mat page = imread(root + page_files[i]);
+        const Mat page = imread(root + page_files[i], mode);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page, pages[i]);
+    }
+}
+
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_selected_pages)
+{
+    const int mode = GetParam();
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    ASSERT_TRUE(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    const size_t file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
+    fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
+
+    const Range range(1, page_count - 1);
+    ASSERT_GE(range.size(), 1);
+
+    vector<Mat> middle_pages_from_imread;
+    for (int page_i = range.start; page_i < range.end; page_i++)
+    {
+        const Mat page = imread(root + page_files[page_i], mode);
+        middle_pages_from_imread.push_back(page);
+    }
+    ASSERT_EQ(
+        static_cast<size_t>(range.size()),
+        static_cast<size_t>(middle_pages_from_imread.size())
+    );
+
+    vector<Mat> middle_pages_from_imdecodemulti;
+    const bool res = imdecodemulti(buf, mode, middle_pages_from_imdecodemulti, range);
+    ASSERT_TRUE(res == true);
+    EXPECT_EQ(middle_pages_from_imread.size(), middle_pages_from_imdecodemulti.size());
+
+    for (int i = 0, e = range.size(); i < e; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0),
+            middle_pages_from_imread[i],
+            middle_pages_from_imdecodemulti[i]);
+    }
+}
+
+const int all_modes[] =
+{
+    IMREAD_UNCHANGED,
+    IMREAD_GRAYSCALE,
+    IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
+    IMREAD_ANYDEPTH,
+    IMREAD_ANYCOLOR
+};
+
+INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_modes));
+
+//==================================================================================================
+
+TEST(Imgcodecs_Tiff_Modes, write_multipage)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> pages;
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i], IMREAD_REDUCED_GRAYSCALE_8 + (int)i);
         pages.push_back(page);
     }
 
@@ -475,6 +1126,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
     }
+    EXPECT_EQ(0, remove(tmp_filename.c_str()));
 }
 
 //==================================================================================================
@@ -651,6 +1303,655 @@ TEST(Imgcodecs_Tiff, read_bigtiff_images)
         ASSERT_EQ(CV_8UC3, bigtiff_img.type());
     }
 }
+
+TEST(Imgcodecs_Tiff, read_junk) {
+    // Test exercises the tiff error handler integration.
+    // Error messages can be seen with OPENCV_LOG_LEVEL=DEBUG
+    const char junk[] = "II\x2a\x00\x08\x00\x00\x00\x00\x00\x00\x00";
+    cv::Mat junkInputArray(1, sizeof(junk) - 1, CV_8UC1, (void*)junk);
+
+    cv::Mat img;
+    ASSERT_NO_THROW(img = cv::imdecode(junkInputArray, IMREAD_UNCHANGED));
+    ASSERT_TRUE(img.empty());
+}
+
+TEST(Imgcodecs_Tiff, read_multi_channel_tiff_26771)
+{
+    // Minimal 4x4, 8-bit, uncompressed, contiguous TIFF with 5 samples per pixel
+    // (PHOTOMETRIC_SEPARATED / CMYK + one extra sample), reproducing issue #26771.
+    // libtiff collapses the samples to RGBA, so the image must be readable via the
+    // usual color/grayscale/unchanged paths instead of throwing on the channel count.
+    const unsigned char tiff[] = {
+        0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x02, 0x01,
+        0x03, 0x00, 0x05, 0x00, 0x00, 0x00, 0x92, 0x00, 0x00, 0x00, 0x03, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x11, 0x01,
+        0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x9c, 0x00, 0x00, 0x00, 0x15, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x16, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x17, 0x01,
+        0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x50, 0x00, 0x00, 0x00, 0x1c, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x52, 0x01,
+        0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00,
+        0x00, 0x00, 0x00, 0x0a, 0xff, 0x28, 0x00, 0x14, 0x0a, 0xff, 0x50, 0x00,
+        0x28, 0x0a, 0xff, 0x78, 0x00, 0x3c, 0x0a, 0xff, 0x00, 0x28, 0x14, 0x0a,
+        0xff, 0x28, 0x28, 0x28, 0x0a, 0xff, 0x50, 0x28, 0x3c, 0x0a, 0xff, 0x78,
+        0x28, 0x50, 0x0a, 0xff, 0x00, 0x50, 0x28, 0x0a, 0xff, 0x28, 0x50, 0x3c,
+        0x0a, 0xff, 0x50, 0x50, 0x50, 0x0a, 0xff, 0x78, 0x50, 0x64, 0x0a, 0xff,
+        0x00, 0x78, 0x3c, 0x0a, 0xff, 0x28, 0x78, 0x50, 0x0a, 0xff, 0x50, 0x78,
+        0x64, 0x0a, 0xff, 0x78, 0x78, 0x78, 0x0a, 0xff
+    };
+    const Mat buf(1, (int)sizeof(tiff), CV_8UC1, (void*)tiff);
+
+    Mat color;
+    ASSERT_NO_THROW(color = imdecode(buf, IMREAD_COLOR));
+    ASSERT_FALSE(color.empty());
+    EXPECT_EQ(4, color.cols);
+    EXPECT_EQ(4, color.rows);
+    EXPECT_EQ(3, color.channels());
+
+    Mat gray;
+    ASSERT_NO_THROW(gray = imdecode(buf, IMREAD_GRAYSCALE));
+    ASSERT_FALSE(gray.empty());
+    EXPECT_EQ(Size(4, 4), gray.size());
+    EXPECT_EQ(1, gray.channels());
+
+    Mat unchanged;
+    ASSERT_NO_THROW(unchanged = imdecode(buf, IMREAD_UNCHANGED));
+    ASSERT_FALSE(unchanged.empty());
+    EXPECT_EQ(Size(4, 4), unchanged.size());
+    // A >4-channel TIFF is decoded via libtiff's RGBA reader, so the result has 4 channels.
+    EXPECT_EQ(4, unchanged.channels());
+    double mn = 0.0, mx = 0.0;
+    minMaxLoc(unchanged, &mn, &mx);
+    EXPECT_LT(mn, mx);
+}
+
+
+typedef int Imgcodecs_Tiff_32F_Compressions_32F_Values;
+typedef testing::TestWithParam<Imgcodecs_Tiff_32F_Compressions_32F_Values> Imgcodecs_Tiff_32F_Compressions_32F;
+
+TEST_P(Imgcodecs_Tiff_32F_Compressions_32F, compressions_32F)
+{
+    const int compression = GetParam();
+
+    const Size size(64, 64);
+    Mat src = Mat(size, CV_32FC1);
+    cv::randu(src, cv::Scalar::all(0.), cv::Scalar::all(1.));
+
+    std::vector<int> params;
+    if (compression > 0)
+    {
+      params.push_back(IMWRITE_TIFF_COMPRESSION);
+      params.push_back(compression);
+    }
+
+    std::vector<unsigned char> encoded_data;
+    imencode(".tiff", src, encoded_data, params);
+
+    Mat dst;
+    imdecode(encoded_data, IMREAD_UNCHANGED, &dst);
+
+    EXPECT_LE(cvtest::norm(src, dst, NORM_INF), 1e-6);
+}
+
+const int Imgcodecs_Tiff_32F_Compressions_32F_All_Values[] =
+{
+    -1,//will mean "default"
+    IMWRITE_TIFF_COMPRESSION_NONE,
+    IMWRITE_TIFF_COMPRESSION_LZW,
+    //IMWRITE_TIFF_COMPRESSION_LZMA,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_ZSTD,//might not be configured
+    //IMWRITE_TIFF_COMPRESSION_DEFLATE,//deprecated
+    IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE,
+};
+
+INSTANTIATE_TEST_CASE_P(compressions_32F, Imgcodecs_Tiff_32F_Compressions_32F, testing::ValuesIn(Imgcodecs_Tiff_32F_Compressions_32F_All_Values));
+
+//==================================================================================================
+// See https://github.com/opencv/opencv/issues/28717
+// In PLANARCONFIG_SEPARATE files all strips (or tiles) of the first sample are stored first,
+// then all strips of the second sample, and so on. OpenCV always writes PLANARCONFIG_CONTIG,
+// so the fixtures below are assembled byte by byte.
+
+static const uint16_t TIFF_PLANARCONFIG_CONTIG = 1;
+static const uint16_t TIFF_PLANARCONFIG_SEPARATE = 2;
+
+static void putLE16(std::vector<uchar>& buf, uint32_t v)
+{
+    buf.push_back((uchar)(v & 0xff));
+    buf.push_back((uchar)((v >> 8) & 0xff));
+}
+
+static void putLE32(std::vector<uchar>& buf, uint32_t v)
+{
+    putLE16(buf, v & 0xffff);
+    putLE16(buf, v >> 16);
+}
+
+static void patchLE32(std::vector<uchar>& buf, size_t pos, uint32_t v)
+{
+    for (int i = 0; i < 4; i++)
+        buf[pos + i] = (uchar)((v >> (8 * i)) & 0xff);
+}
+
+static uint64_t sampleBitsAt(const Mat& img, int y, int x, int ch)
+{
+    const size_t esz = img.elemSize1();
+    const uchar* p = img.ptr(y) + (static_cast<size_t>(x) * img.channels() + ch) * esz;
+    if (esz == 1)
+    {
+        uchar v;
+        memcpy(&v, p, 1);
+        return v;
+    }
+    if (esz == 2)
+    {
+        ushort v;
+        memcpy(&v, p, 2);
+        return v;
+    }
+    if (esz == 4)
+    {
+        uint32_t v;
+        memcpy(&v, p, 4);
+        return v;
+    }
+    uint64_t v;
+    memcpy(&v, p, 8);
+    return v;
+}
+
+// Appends one page to an uncompressed little-endian TIFF. The image is written in R,G,B(,A)
+// sample order while img is B,G,R(,A). ifdLinkPos tracks the IFD chain across pages and must
+// start at 0 with an empty file.
+static void appendTiffPage(std::vector<uchar>& file, size_t& ifdLinkPos, const Mat& img,
+                           uint16_t planarConfig, int rowsPerStrip, Size tileSize = Size(),
+                           int bitsOverride = 0)
+{
+    const int w = img.cols, h = img.rows, spp = img.channels();
+    const bool tiled = tileSize.width > 0;
+    CV_Assert(tiled || rowsPerStrip > 0);
+    const int bits = bitsOverride ? bitsOverride : (int)(img.elemSize1() * 8);
+    const uint16_t sampleFormat = (img.depth() == CV_32F || img.depth() == CV_64F) ? 3 : 1;
+    const int planes = planarConfig == TIFF_PLANARCONFIG_SEPARATE ? spp : 1;
+    const int samplesPerBlockPixel = planarConfig == TIFF_PLANARCONFIG_SEPARATE ? 1 : spp;
+
+    if (file.empty())
+    {
+        file.push_back('I');
+        file.push_back('I');
+        putLE16(file, 42);
+        ifdLinkPos = file.size();
+        putLE32(file, 0);
+    }
+
+    const auto fileChannel = [spp](int s)
+    {
+        return spp >= 3 ? (s == 0 ? 2 : (s == 2 ? 0 : s)) : s;
+    };
+
+    // plane < 0 emits all samples interleaved (contiguous); rows are byte-aligned
+    const auto putRow = [&](int y, int x0, int cols, int plane)
+    {
+        std::vector<uint64_t> vals;
+        for (int x = x0; x < x0 + cols; x++)
+        {
+            if (plane < 0)
+                for (int s = 0; s < spp; s++)
+                    vals.push_back(sampleBitsAt(img, y, x, fileChannel(s)));
+            else
+                vals.push_back(sampleBitsAt(img, y, x, fileChannel(plane)));
+        }
+        if (bits % 8 == 0)
+        {
+            for (size_t i = 0; i < vals.size(); i++)
+                for (int b = 0; b < bits / 8; b++)
+                    file.push_back((uchar)((vals[i] >> (8 * b)) & 0xff));
+        }
+        else
+        {
+            uint32_t acc = 0;
+            int nbits = 0;
+            for (size_t i = 0; i < vals.size(); i++)
+            {
+                CV_Assert(vals[i] < ((uint64_t)1 << bits));
+                acc = (acc << bits) | (uint32_t)vals[i];
+                nbits += bits;
+                while (nbits >= 8)
+                {
+                    nbits -= 8;
+                    file.push_back((uchar)((acc >> nbits) & 0xff));
+                }
+            }
+            if (nbits > 0)
+                file.push_back((uchar)((acc << (8 - nbits)) & 0xff));
+        }
+    };
+
+    std::vector<uint32_t> blockOffsets, blockCounts;
+    const auto alignEven = [&]() { if (file.size() % 2) file.push_back(0); };
+    const auto beginBlock = [&]() { alignEven(); blockOffsets.push_back((uint32_t)file.size()); };
+    const auto endBlock = [&]()
+    {
+        blockCounts.push_back((uint32_t)file.size() - blockOffsets.back());
+    };
+    const auto padZeros = [&](size_t n) { file.insert(file.end(), n, (uchar)0); };
+
+    if (tiled)
+    {
+        // packed rows can only be zero-padded at byte granularity, so packed tiled
+        // fixtures need the width to be a whole number of tiles
+        CV_Assert(bits % 8 == 0 || w % tileSize.width == 0);
+        const int tw = tileSize.width, th = tileSize.height;
+        const size_t fullRowBytes = (size_t)divUp(tw * samplesPerBlockPixel * bits, 8);
+        for (int plane = 0; plane < planes; plane++)
+        {
+            for (int ty = 0; ty < h; ty += th)
+            {
+                for (int tx = 0; tx < w; tx += tw)
+                {
+                    beginBlock();
+                    const int cols = std::min(tw, w - tx);
+                    const size_t colsBytes = (size_t)divUp(cols * samplesPerBlockPixel * bits, 8);
+                    for (int row = 0; row < th; row++)
+                    {
+                        const int y = ty + row;
+                        if (y < h)
+                        {
+                            putRow(y, tx, cols,
+                                   planarConfig == TIFF_PLANARCONFIG_SEPARATE ? plane : -1);
+                            padZeros(fullRowBytes - colsBytes);
+                        }
+                        else
+                        {
+                            padZeros(fullRowBytes);
+                        }
+                    }
+                    endBlock();
+                }
+            }
+        }
+    }
+    else
+    {
+        for (int plane = 0; plane < planes; plane++)
+        {
+            for (int y0 = 0; y0 < h; y0 += rowsPerStrip)
+            {
+                beginBlock();
+                for (int y = y0; y < std::min(h, y0 + rowsPerStrip); y++)
+                    putRow(y, 0, w, planarConfig == TIFF_PLANARCONFIG_SEPARATE ? plane : -1);
+                endBlock();
+            }
+        }
+    }
+
+    const auto putShortArray = [&](const std::vector<uint16_t>& v) -> uint32_t
+    {
+        alignEven();
+        const uint32_t off = (uint32_t)file.size();
+        for (size_t i = 0; i < v.size(); i++)
+            putLE16(file, v[i]);
+        return off;
+    };
+    const auto putLongArray = [&](const std::vector<uint32_t>& v) -> uint32_t
+    {
+        alignEven();
+        const uint32_t off = (uint32_t)file.size();
+        for (size_t i = 0; i < v.size(); i++)
+            putLE32(file, v[i]);
+        return off;
+    };
+
+    struct IfdEntry
+    {
+        uint16_t tag, type;
+        uint32_t count, value;
+    };
+    std::vector<IfdEntry> entries;
+    const auto add = [&entries](uint16_t tag, uint16_t type, uint32_t count, uint32_t value)
+    {
+        IfdEntry e = {tag, type, count, value};
+        entries.push_back(e);
+    };
+
+    add(256, 4, 1, (uint32_t)w);
+    add(257, 4, 1, (uint32_t)h);
+    if (spp == 1)
+        add(258, 3, 1, (uint32_t)bits);
+    else if (spp == 2)
+        add(258, 3, 2, (uint32_t)bits | ((uint32_t)bits << 16));
+    else
+        add(258, 3, (uint32_t)spp, putShortArray(std::vector<uint16_t>(spp, (uint16_t)bits)));
+    add(259, 3, 1, 1);
+    add(262, 3, 1, spp >= 3 ? 2 : 1);
+    const uint32_t nblocks = (uint32_t)blockOffsets.size();
+    if (tiled)
+    {
+        add(322, 4, 1, (uint32_t)tileSize.width);
+        add(323, 4, 1, (uint32_t)tileSize.height);
+        add(324, 4, nblocks, nblocks == 1 ? blockOffsets[0] : putLongArray(blockOffsets));
+        add(325, 4, nblocks, nblocks == 1 ? blockCounts[0] : putLongArray(blockCounts));
+    }
+    else
+    {
+        add(273, 4, nblocks, nblocks == 1 ? blockOffsets[0] : putLongArray(blockOffsets));
+        add(278, 4, 1, (uint32_t)rowsPerStrip);
+        add(279, 4, nblocks, nblocks == 1 ? blockCounts[0] : putLongArray(blockCounts));
+    }
+    add(277, 3, 1, (uint32_t)spp);
+    add(284, 3, 1, planarConfig);
+    if (spp == 2 || spp == 4)
+        add(338, 3, 1, 2);   // one extra sample, unassociated alpha
+    if (spp == 1)
+        add(339, 3, 1, sampleFormat);
+    else if (spp == 2)
+        add(339, 3, 2, (uint32_t)sampleFormat | ((uint32_t)sampleFormat << 16));
+    else
+        add(339, 3, (uint32_t)spp, putShortArray(std::vector<uint16_t>(spp, sampleFormat)));
+
+    std::sort(entries.begin(), entries.end(),
+              [](const IfdEntry& a, const IfdEntry& b) { return a.tag < b.tag; });
+
+    alignEven();
+    patchLE32(file, ifdLinkPos, (uint32_t)file.size());
+    putLE16(file, (uint32_t)entries.size());
+    for (size_t i = 0; i < entries.size(); i++)
+    {
+        putLE16(file, entries[i].tag);
+        putLE16(file, entries[i].type);
+        putLE32(file, entries[i].count);
+        putLE32(file, entries[i].value);
+    }
+    ifdLinkPos = file.size();
+    putLE32(file, 0);
+}
+
+static Mat makePlanarTestMat(int type, Size size)
+{
+    Mat img(size, type);
+    const int cn = img.channels();
+    for (int y = 0; y < size.height; y++)
+    {
+        for (int x = 0; x < size.width; x++)
+        {
+            for (int c = 0; c < cn; c++)
+            {
+                const int seed = x * 619 + y * 131 + c * 21845;
+                switch (img.depth())
+                {
+                case CV_8U:  img.ptr<uchar>(y)[x * cn + c] = (uchar)(seed % 256); break;
+                case CV_16U: img.ptr<ushort>(y)[x * cn + c] = (ushort)(seed % 65536); break;
+                case CV_32F:
+                    img.ptr<float>(y)[x * cn + c] = (float)x + y * 0.25f + c * 1000.5f;
+                    break;
+                case CV_64F: img.ptr<double>(y)[x * cn + c] = x + y * 0.25 + c * 1000.5; break;
+                default: CV_Assert(0);
+                }
+            }
+        }
+    }
+    return img;
+}
+
+typedef tuple<perf::MatType, int> PlanarSeparateParams;   // rowsPerStrip > 0, or 0 for 16x16 tiles
+typedef testing::TestWithParam<PlanarSeparateParams> Imgcodecs_Tiff_PlanarSeparate;
+
+TEST_P(Imgcodecs_Tiff_PlanarSeparate, decode_matches_contig)
+{
+    const int type = get<0>(GetParam());
+    const int rowsPerStrip = get<1>(GetParam());
+    const Size tileSize = rowsPerStrip > 0 ? Size() : Size(16, 16);
+    const Mat truth = makePlanarTestMat(type, Size(21, 13));
+
+    std::vector<uchar> contig, separate;
+    size_t link = 0;
+    appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, rowsPerStrip, tileSize);
+    link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, rowsPerStrip, tileSize);
+
+    // the contiguous file also validates the fixture builder itself
+    Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, decodedContig);
+
+    Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+    ASSERT_FALSE(decodedSeparate.empty());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, decodedSeparate);
+
+    if (truth.depth() == CV_16U && truth.channels() >= 3)
+    {
+        Mat grayContig = imdecode(contig, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+        Mat graySeparate = imdecode(separate, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), grayContig, graySeparate);
+    }
+}
+
+const perf::MatType planar_mat_types[] = { CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC3, CV_64FC3 };
+// single-row strips, partial last strip, one strip, tiles
+const int planar_layouts[] = { 1, 2, 13, 0 };
+
+INSTANTIATE_TEST_CASE_P(Layouts, Imgcodecs_Tiff_PlanarSeparate,
+        testing::Combine(
+            testing::ValuesIn(planar_mat_types),
+            testing::ValuesIn(planar_layouts)
+        )
+);
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_8bit)
+{
+    const Mat truth = makePlanarTestMat(CV_8UC3, Size(21, 13));
+    std::vector<uchar> separate;
+    size_t link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 4);
+
+    Mat unchanged = imdecode(separate, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, unchanged);
+    Mat color = imdecode(separate, IMREAD_COLOR);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), truth, color);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_gray_alpha_16bit)
+{
+    const Mat samples = makePlanarTestMat(CV_16UC2, Size(21, 13));
+    Mat expected;
+    extractChannel(samples, expected, 0);
+
+    std::vector<uchar> separate;
+    size_t link = 0;
+    appendTiffPage(separate, link, samples, TIFF_PLANARCONFIG_SEPARATE, 2);
+
+    Mat decoded = imdecode(separate, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+    ASSERT_EQ(CV_16UC1, decoded.type());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decoded);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_packed)
+{
+    const int packed_bpps[] = { 10, 12, 14 };
+    for (int i = 0; i < 3; i++)
+    {
+        const int bpp = packed_bpps[i];
+        SCOPED_TRACE(cv::format("bpp=%d", bpp));
+        const Mat truth = makePlanarTestMat(CV_16UC3, Size(21, 13)) &
+                          Scalar::all((1 << bpp) - 1);
+        // The decoder scales packed samples up to 16 bits.
+        const Mat expected = truth * (1 << (16 - bpp));
+
+        std::vector<uchar> contig, separate;
+        size_t link = 0;
+        appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, 2, Size(), bpp);
+        link = 0;
+        appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 2, Size(), bpp);
+
+        Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+        ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedContig);
+
+        Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+        ASSERT_FALSE(decodedSeparate.empty());
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedSeparate);
+    }
+
+    // tiled variant, width is a whole number of tiles so packed rows stay byte-aligned
+    const Mat truth = makePlanarTestMat(CV_16UC3, Size(32, 13)) & Scalar::all(0x0fff);
+    const Mat expected = truth * 16;
+
+    std::vector<uchar> contig, separate;
+    size_t link = 0;
+    appendTiffPage(contig, link, truth, TIFF_PLANARCONFIG_CONTIG, 0, Size(16, 16), 12);
+    link = 0;
+    appendTiffPage(separate, link, truth, TIFF_PLANARCONFIG_SEPARATE, 0, Size(16, 16), 12);
+
+    Mat decodedContig = imdecode(contig, IMREAD_UNCHANGED);
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedContig);
+
+    Mat decodedSeparate = imdecode(separate, IMREAD_UNCHANGED);
+    ASSERT_FALSE(decodedSeparate.empty());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedSeparate);
+}
+
+TEST(Imgcodecs_Tiff, decode_planar_separate_multipage)
+{
+    const Mat page0 = makePlanarTestMat(CV_16UC3, Size(21, 13));
+    Mat page1;
+    bitwise_not(page0, page1);
+
+    std::vector<uchar> file;
+    size_t link = 0;
+    appendTiffPage(file, link, page0, TIFF_PLANARCONFIG_SEPARATE, 1);
+    appendTiffPage(file, link, page1, TIFF_PLANARCONFIG_SEPARATE, 3);
+
+    std::vector<Mat> pages;
+    ASSERT_TRUE(imdecodemulti(file, IMREAD_UNCHANGED, pages));
+    ASSERT_EQ((size_t)2, pages.size());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page0, pages[0]);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page1, pages[1]);
+}
+
+// https://github.com/opencv/opencv/pull/30165
+
+typedef tuple< int, int, int > Method_minLevel_maxLevel;
+typedef testing::TestWithParam<Method_minLevel_maxLevel> Imgcodecs_Tiff_compress_level;
+
+TEST_P(Imgcodecs_Tiff_compress_level, normal)
+{
+    // Get test parameters
+    const int compressMethod     = get<0>(GetParam());
+    const int minLevel           = get<1>(GetParam());
+    const int maxLevel           = get<2>(GetParam());
+
+    //build a dummy image that can be heavily compressed
+    cv::Mat src = cv::Mat(cv::Size(640, 480), CV_8UC3);
+    src.forEach<cv::Vec3b>([&](cv::Vec3b& pixel, const int* pos) {
+      const int y = pos[0];
+      const int x = pos[1];
+      const uchar value = static_cast<uchar>(y*src.cols+x);
+      pixel = cv::Vec3b(value, value, value);
+    });
+
+    std::vector<uint8_t> bufNone;
+    std::vector<int> paramsNone = { IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_NONE};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufNone, paramsNone)));
+
+    std::vector<uint8_t> bufDef;
+    std::vector<int> paramsDef = {IMWRITE_TIFF_COMPRESSION, compressMethod};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufDef, paramsDef)));
+
+    std::vector<uint8_t> bufMin;
+    std::vector<int> paramsMin = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, minLevel};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMin, paramsMin)));
+
+    std::vector<uint8_t> bufMax;
+    std::vector<int> paramsMax = {IMWRITE_TIFF_COMPRESSION, compressMethod, IMWRITE_TIFF_COMPRESSION_LEVEL, maxLevel};
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tiff", src, bufMax, paramsMax)));
+
+    ASSERT_LT(bufDef.size(), bufNone.size());
+    ASSERT_LE(bufDef.size(), bufMin.size());
+    ASSERT_LE(bufMax.size(), bufDef.size());
+    ASSERT_NE(bufMax.size(), bufMin.size());
+}
+
+const Method_minLevel_maxLevel supportedMethod_minLevel_maxLevel[] =
+{
+    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_DEFLATE, 1, 9),
+    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE, 1, 9),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_LZMA, 0, 9),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_ZSTD, 1, 22),
+//    make_tuple<int, int, int>(IMWRITE_TIFF_COMPRESSION_WEBP, 1, 100),
+};
+
+INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_compress_level,
+    testing::ValuesIn(supportedMethod_minLevel_maxLevel)
+);
+
+TEST(Imgcodecs_Tiff, support_webp)
+{
+    //build a dummy image that can be heavily compressed
+    cv::Mat src(cv::Size(640, 480), CV_8UC3);
+    src.forEach<cv::Vec3b>([&](cv::Vec3b& pixel, const int* pos) {
+      const int y = pos[0];
+      const int x = pos[1];
+      const uchar value = static_cast<uchar>(y*src.cols+x);
+      pixel = cv::Vec3b(value, value, value);
+    });
+
+    vector<uint8_t> bufNone;
+    vector<uint8_t> bufWebP;
+    vector<uint8_t> bufLZW;
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufNone, {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_NONE})));
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufWebP, {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_WEBP})));
+    ASSERT_NO_THROW(ASSERT_TRUE(imencode(".tif", src, bufLZW,  {IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_COMPRESSION_LZW})));
+
+    std::cout << "TIFF-None: " << bufNone.size() << " bytes" << std::endl;
+    std::cout << "TIFF-LZW:  " << bufLZW.size()  << " bytes" << std::endl;
+    std::cout << "TIFF-WebP: " << bufWebP.size() << " bytes" << std::endl;
+
+    // If the size of the TIFF file compressed with WebP matches
+    // the size compressed with LZW, it indicates that the underlying
+    // libtiff configuration does not support TIFF-WebP, and OpenCV
+    // has fallen back to LZW. This is an expected environment-dependent
+    // behavior rather than a test failure, so we gracefully skip the test.
+    if (bufWebP.size() == bufLZW.size()) {
+        throw SkipTestException("TIFF-WebP appears to be unsupported (compressed size is identical to LZW).");
+    }
+
+    // We expect WebP compressed size must be smaller than None.
+    ASSERT_LE(bufWebP.size(), bufNone.size());
+}
+
+typedef testing::TestWithParam<ImwriteTiffCompressionFlags> Imgcodecs_Tiff_compression_schema;
+
+TEST_P(Imgcodecs_Tiff_compression_schema, normal)
+{
+    const ImwriteTiffCompressionFlags compression = GetParam();
+    cv::Mat src(cv::Size(320,240), CV_8UC3, cv::Scalar(45,167,56));
+    std::vector<uint8_t> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".tif", src, buf, {IMWRITE_TIFF_COMPRESSION, compression}));
+    EXPECT_TRUE(ret);
+    EXPECT_FALSE(buf.empty());
+}
+
+const ImwriteTiffCompressionFlags Imgcodecs_Tiff_compression_schema_list[] =
+{
+    static_cast<ImwriteTiffCompressionFlags>(0), // Expected it is not defined
+    IMWRITE_TIFF_COMPRESSION_NONE,
+    IMWRITE_TIFF_COMPRESSION_LZW,
+    IMWRITE_TIFF_COMPRESSION_DEFLATE,
+    IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE,
+    IMWRITE_TIFF_COMPRESSION_LZMA,
+    IMWRITE_TIFF_COMPRESSION_ZSTD,
+    IMWRITE_TIFF_COMPRESSION_WEBP,
+    IMWRITE_TIFF_COMPRESSION_JXL,
+    IMWRITE_TIFF_COMPRESSION_PIXARFILM, // Expected it is not supported.
+};
+
+INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_compression_schema,
+        testing::ValuesIn(Imgcodecs_Tiff_compression_schema_list),
+        testing::PrintToStringParamName()
+);
 
 #endif
 

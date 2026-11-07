@@ -8,9 +8,8 @@
 #include <map> // map
 #include <ade/util/zip_range.hpp> // indexed
 
-#define NOMINMAX
-
 #ifdef _WIN32
+#define NOMINMAX
 #include <winsock.h>      // htonl, ntohl
 #else
 #include <netinet/in.h>   // htonl, ntohl
@@ -176,6 +175,13 @@ IIStream& operator>> (IIStream& is, cv::Point2f& pt) {
     return is >> pt.x >> pt.y;
 }
 
+IOStream& operator<< (IOStream& os, const cv::Point3f &pt) {
+    return os << pt.x << pt.y << pt.z;
+}
+IIStream& operator>> (IIStream& is, cv::Point3f& pt) {
+    return is >> pt.x >> pt.y >> pt.z;
+}
+
 IOStream& operator<< (IOStream& os, const cv::Size &sz) {
     return os << sz.width << sz.height;
 }
@@ -200,22 +206,20 @@ IOStream& operator<< (IOStream& os, const cv::RMat& mat) {
     mat.serialize(os);
     return os;
 }
-IIStream& operator>> (IIStream& is, cv::RMat&) {
+IIStream& operator>> (IIStream&, cv::RMat&) {
     util::throw_error(std::logic_error("operator>> for RMat should never be called. "
                                         "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
                                         "should be used"));
-    return is;
 }
 
 IOStream& operator<< (IOStream& os, const cv::MediaFrame &frame) {
     frame.serialize(os);
     return os;
 }
-IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
+IIStream& operator>> (IIStream&, cv::MediaFrame &) {
     util::throw_error(std::logic_error("operator>> for MediaFrame should never be called. "
                                         "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
                                         "should be used"));
-    return is;
 }
 
 namespace
@@ -283,7 +287,7 @@ IOStream& operator<< (IOStream& os, const cv::Mat &m) {
     case CV_32S: write_mat_data< int32_t>(os, m); break;
     case CV_32F: write_mat_data<   float>(os, m); break;
     case CV_64F: write_mat_data<  double>(os, m); break;
-    default: GAPI_Assert(false && "Unsupported Mat depth");
+    default: GAPI_Error("Unsupported Mat depth");
     }
     return os;
 }
@@ -299,7 +303,7 @@ IIStream& operator>> (IIStream& is, cv::Mat& m) {
     case CV_32S: read_mat_data< int32_t>(is, m); break;
     case CV_32F: read_mat_data<   float>(is, m); break;
     case CV_64F: read_mat_data<  double>(is, m); break;
-    default: GAPI_Assert(false && "Unsupported Mat depth");
+    default: GAPI_Error("Unsupported Mat depth");
     }
     return is;
 }
@@ -312,10 +316,10 @@ IIStream& operator>> (IIStream& is,       cv::gapi::wip::draw::Text &t) {
 }
 
 IOStream& operator<< (IOStream&, const cv::gapi::wip::draw::FText &) {
-    GAPI_Assert(false && "Serialization: Unsupported << for FText");
+    GAPI_Error("Serialization: Unsupported << for FText");
 }
 IIStream& operator>> (IIStream&,       cv::gapi::wip::draw::FText &) {
-    GAPI_Assert(false && "Serialization: Unsupported >> for FText");
+    GAPI_Error("Serialization: Unsupported >> for FText");
 }
 
 IOStream& operator<< (IOStream& os, const cv::gapi::wip::draw::Circle &c) {
@@ -389,27 +393,23 @@ IOStream& operator<< (IOStream& os, const cv::GArrayDesc &) {return os;}
 IIStream& operator>> (IIStream& is,       cv::GArrayDesc &) {return is;}
 
 #if !defined(GAPI_STANDALONE)
-IOStream& operator<< (IOStream& os, const cv::UMat &)
+IOStream& operator<< (IOStream&, const cv::UMat &)
 {
-    GAPI_Assert(false && "Serialization: Unsupported << for UMat");
-    return os;
+    GAPI_Error("Serialization: Unsupported << for UMat");
 }
-IIStream& operator >> (IIStream& is, cv::UMat &)
+IIStream& operator >> (IIStream&, cv::UMat &)
 {
-    GAPI_Assert(false && "Serialization: Unsupported >> for UMat");
-    return is;
+    GAPI_Error("Serialization: Unsupported >> for UMat");
 }
 #endif // !defined(GAPI_STANDALONE)
 
-IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
+IOStream& operator<< (IOStream&, const cv::gapi::wip::IStreamSource::Ptr &)
 {
-    GAPI_Assert(false && "Serialization: Unsupported << for IStreamSource::Ptr");
-    return os;
+    GAPI_Error("Serialization: Unsupported << for IStreamSource::Ptr");
 }
-IIStream& operator >> (IIStream& is, cv::gapi::wip::IStreamSource::Ptr &)
+IIStream& operator >> (IIStream&, cv::gapi::wip::IStreamSource::Ptr &)
 {
-    GAPI_Assert("Serialization: Unsupported >> for IStreamSource::Ptr");
-    return is;
+    GAPI_Error("Serialization: Unsupported >> for IStreamSource::Ptr");
 }
 
 namespace
@@ -422,7 +422,7 @@ struct putToStream<Ref, std::tuple<>>
 {
     static void put(IOStream&, const Ref &)
     {
-        GAPI_Assert(false && "Unsupported type for GArray/GOpaque serialization");
+        GAPI_Error("Unsupported type for GArray/GOpaque serialization");
     }
 };
 
@@ -447,7 +447,7 @@ struct getFromStream<Ref, std::tuple<>>
 {
     static void get(IIStream&, Ref &, cv::detail::OpaqueKind)
     {
-        GAPI_Assert(false && "Unsupported type for GArray/GOpaque deserialization");
+        GAPI_Error("Unsupported type for GArray/GOpaque deserialization");
     }
 };
 
@@ -553,7 +553,7 @@ IOStream& operator<< (IOStream& os, const cv::GArg &arg) {
         case cv::detail::OpaqueKind::CV_RECT:    os << arg.get<cv::Rect>();     break;
         case cv::detail::OpaqueKind::CV_SCALAR:  os << arg.get<cv::Scalar>();   break;
         case cv::detail::OpaqueKind::CV_MAT:     os << arg.get<cv::Mat>();      break;
-        default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
+        default: GAPI_Error("GArg: Unsupported (unknown?) opaque value type");
         }
     }
     return os;
@@ -584,12 +584,13 @@ IIStream& operator>> (IIStream& is, cv::GArg &arg) {
             HANDLE_CASE(STRING  , std::string);
             HANDLE_CASE(POINT   , cv::Point);
             HANDLE_CASE(POINT2F , cv::Point2f);
+            HANDLE_CASE(POINT3F , cv::Point3f);
             HANDLE_CASE(SIZE    , cv::Size);
             HANDLE_CASE(RECT    , cv::Rect);
             HANDLE_CASE(SCALAR  , cv::Scalar);
             HANDLE_CASE(MAT     , cv::Mat);
 #undef HANDLE_CASE
-        default: GAPI_Assert(false && "GArg: Unsupported (unknown?) opaque value type");
+        default: GAPI_Error("GArg: Unsupported (unknown?) opaque value type");
         }
     }
     return is;
@@ -657,7 +658,7 @@ struct initCtor<Ref, std::tuple<>>
 {
     static void init(cv::gimpl::Data&)
     {
-        GAPI_Assert(false && "Unsupported type for GArray/GOpaque deserialization");
+        GAPI_Error("Unsupported type for GArray/GOpaque deserialization");
     }
 };
 

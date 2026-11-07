@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, 2020, D. R. Commander.
+ * Copyright (C) 2015, 2020, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -140,7 +140,7 @@
  */
 
 GLOBAL(void)
-jpeg_fdct_islow(DCTELEM *data)
+_jpeg_fdct_islow(DCTELEM *data)
 {
   JLONG tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   JLONG tmp10, tmp11, tmp12, tmp13;

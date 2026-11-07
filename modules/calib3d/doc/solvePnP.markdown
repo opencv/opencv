@@ -4,9 +4,9 @@
 
 The pose computation problem @cite Marchand16 consists in solving for the rotation and translation that minimizes the reprojection error from 3D-2D point correspondences.
 
-The `solvePnP` and related functions estimate the object pose given a set of object points, their corresponding image projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below (more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward and the Z-axis forward).
+The `solvePnP` and related functions estimate the object pose given a set of object points, their corresponding image projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below (more precisely, the convention in the computer vision field is to have the X-axis of the camera frame pointing to the right, the Y-axis downward and the Z-axis forward).
 
-![](pnp.jpg)
+![Top: the 6 dof pose computed from a list of 3D-2D point correspondences. Bottom: the considered perspective projection model.](pnp.jpg)
 
 Points expressed in the world frame \f$ \bf{X}_w \f$ are projected into the image plane \f$ \left[ u, v \right] \f$
 using the perspective projection model \f$ \Pi \f$ and the camera intrinsic parameters matrix \f$ \bf{A} \f$ (also denoted \f$ \bf{K} \f$ in the literature):
@@ -104,8 +104,8 @@ this case the function finds such a pose that minimizes reprojection error, that
 of squared distances between the observed projections "imagePoints" and the projected (using
 cv::projectPoints ) "objectPoints". Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm.
 Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
--   cv::SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   cv::SOLVEPNP_P3P Method is based on the paper of Ding, Y., Yang, J., Larsson, V., Olsson, C., & Åstrom, K.
+"Revisiting the P3P Problem" (@cite ding2023revisiting).
 In this case the function requires exactly four object and image points.
 -   cv::SOLVEPNP_AP3P Method is based on the paper of T. Ke, S. Roumeliotis
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).

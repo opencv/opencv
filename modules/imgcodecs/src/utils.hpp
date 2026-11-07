@@ -115,6 +115,8 @@ void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
                                  uchar* bgr, int bgr_step, Size size );
 void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
                                uchar* bgr, int bgr_step, Size size );
+void icvCvt_CMYK2RGB_8u_C4C3R( const uchar* cmyk, int cmyk_step,
+                               uchar* rgb, int rgb_step, Size size );
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* ycck, int ycck_step,
                                 uchar* gray, int gray_step, Size size );
 
@@ -122,9 +124,9 @@ void  FillGrayPalette( PaletteEntry* palette, int bpp, bool negative = false );
 bool  IsColorPalette( PaletteEntry* palette, int bpp );
 void  CvtPaletteToGray( const PaletteEntry* palette, uchar* grayPalette, int entries );
 uchar* FillUniColor( uchar* data, uchar*& line_end, int step, int width3,
-                     int& y, int height, int count3, PaletteEntry clr );
+                     int& y, int height, ptrdiff_t count3, PaletteEntry clr );
 uchar* FillUniGray( uchar* data, uchar*& line_end, int step, int width3,
-                     int& y, int height, int count3, uchar clr );
+                     int& y, int height, ptrdiff_t count3, uchar clr );
 
 uchar* FillColorRow8( uchar* data, uchar* indices, int len, PaletteEntry* palette );
 uchar* FillGrayRow8( uchar* data, uchar* indices, int len, uchar* palette );
@@ -133,9 +135,23 @@ uchar* FillGrayRow4( uchar* data, uchar* indices, int len, uchar* palette );
 uchar* FillColorRow1( uchar* data, uchar* indices, int len, PaletteEntry* palette );
 uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette );
 
+static const size_t MAX_IMAGE_ROW_SIZE = static_cast<size_t>(1) << 28;  // 256 MB
+
+struct RowPitchParams {
+    int src_pitch;
+    size_t bytes_per_row;
+};
+
+RowPitchParams calculateRowPitch(int width, int bpp, int alignment, const char* format_name);
+int calculateRowSize(int width, int nch, const char* format_name);
+
 CV_INLINE bool  isBigEndian( void )
 {
-    return (((const int*)"\0\x1\x2\x3\x4\x5\x6\x7")[0] & 255) != 0;
+#ifdef WORDS_BIGENDIAN
+    return true;
+#else
+    return false;
+#endif
 }
 
 }  // namespace

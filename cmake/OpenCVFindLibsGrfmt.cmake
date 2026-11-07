@@ -3,15 +3,34 @@
 # ----------------------------------------------------------------------------
 
 # --- zlib (required) ---
-if(BUILD_ZLIB)
-  ocv_clear_vars(ZLIB_FOUND)
+if(WITH_ZLIB_NG)
+  ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+  set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib-ng")
+  set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+  set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
+  set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+
+  ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIB_VERSION)
+  ocv_parse_header_version(ZLIBNG "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIBNG_VERSION)
+
+  set(HAVE_ZLIB_NG YES)
 else()
-  ocv_clear_internal_cache_vars(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
+  if(BUILD_ZLIB)
+    ocv_clear_vars(ZLIB_FOUND)
+  else()
+    ocv_clear_internal_cache_vars(ZLIB_LIBRARY ZLIB_INCLUDE_DIR)
   if(ANDROID)
     set(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
   endif()
-  find_package(ZLIB "${MIN_VER_ZLIB}")
+  if(QNX)
+    set(ZLIB_FOUND TRUE)
+    set(ZLIB_LIBRARY z)
+    set(ZLIB_LIBRARIES z)
+  else()
+    find_package(ZLIB "${MIN_VER_ZLIB}")
+  endif()
   if(ANDROID)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -23,18 +42,34 @@ else()
       set(ZLIB_LIBRARY_RELEASE z)
     endif()
   endif()
+  endif()
+
+  if(NOT ZLIB_FOUND)
+    if(NOT BUILD_ZLIB)
+      message(WARNING "ZLIB library has not been found, falling back to built-in version. "
+              "Set ZLIB_ROOT or ZLIB_DIR variable so that find_package(ZLIB) would be able to find it. "
+              "See find_package and FindZLIB cmake documentation for details.")
+    endif()
+    ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+
+    set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib")
+    set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_SOURCE_DIR}" "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+    set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
+    set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+
+    ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
+  endif()
 endif()
 
-if(NOT ZLIB_FOUND)
-  ocv_clear_vars(ZLIB_LIBRARY ZLIB_LIBRARIES ZLIB_INCLUDE_DIR)
+# --- libavif (optional) ---
 
-  set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
-  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib")
-  set(ZLIB_INCLUDE_DIR "${${ZLIB_LIBRARY}_SOURCE_DIR}" "${${ZLIB_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
-  set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIR})
-  set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
-
-  ocv_parse_header2(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h" ZLIB_VERSION)
+if(WITH_AVIF)
+  ocv_clear_internal_cache_vars(AVIF_LIBRARIES AVIF_INCLUDE_DIRS)
+  include(cmake/OpenCVFindAVIF.cmake)
+  if(AVIF_FOUND)
+    set(HAVE_AVIF 1)
+  endif()
 endif()
 
 # --- libjpeg (optional) ---
@@ -43,10 +78,22 @@ if(WITH_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
     ocv_clear_internal_cache_vars(JPEG_LIBRARY JPEG_INCLUDE_DIR)
-    include(FindJPEG)
+    if(QNX)
+      set(JPEG_LIBRARY jpeg)
+      set(JPEG_LIBRARIES jpeg)
+      set(JPEG_FOUND TRUE)
+    else()
+      include(FindJPEG)
+    endif()
   endif()
 
   if(NOT JPEG_FOUND)
+    if(NOT BUILD_JPEG)
+      message(WARNING "JPEG library has not been found, falling back to built-in version. "
+              "Add the external installation prefix to CMAKE_PREFIX_PATH, or set JPEG_INCLUDE_DIR "
+              "and JPEG_LIBRARY, so that FindJPEG can locate it. "
+              "See FindJPEG cmake documentation for details.")
+    endif()
     ocv_clear_vars(JPEG_LIBRARY JPEG_INCLUDE_DIR)
 
     if(NOT BUILD_JPEG_TURBO_DISABLE)
@@ -66,8 +113,23 @@ if(WITH_JPEG)
   macro(ocv_detect_jpeg_version header_file)
     if(NOT DEFINED JPEG_LIB_VERSION AND EXISTS "${header_file}")
       ocv_parse_header("${header_file}" JPEG_VERSION_LINES JPEG_LIB_VERSION)
+
+      if(DEFINED JPEG_LIB_VERSION)
+        # Extract libjpeg-turbo version from the header file if JPEG_LIB_VERSION is found.
+        file(STRINGS "${header_file}" JPEG_TURBO_VERSION_LINE REGEX "^#define[\t ]+LIBJPEG_TURBO_VERSION[\t ]")
+
+        if(JPEG_TURBO_VERSION_LINE)
+          # Support both raw values (e.g., 3.1.2) and quoted strings (e.g., "3.1.2").
+          string(REGEX REPLACE "^#define[\t ]+LIBJPEG_TURBO_VERSION[\t ]+\"?([^\"]+)\"?.*" "\\1" JPEG_TURBO_VERSION_STRING "${JPEG_TURBO_VERSION_LINE}")
+          if(JPEG_TURBO_VERSION_STRING)
+            string(STRIP "${JPEG_TURBO_VERSION_STRING}" JPEG_TURBO_VERSION_STRING)
+            set(JPEG_LIB_VERSION "${JPEG_TURBO_VERSION_STRING}-${JPEG_LIB_VERSION}")
+          endif()
+        endif()
+      endif()
     endif()
   endmacro()
+
   ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/jpeglib.h")
   if(DEFINED CMAKE_CXX_LIBRARY_ARCHITECTURE)
     ocv_detect_jpeg_version("${JPEG_INCLUDE_DIR}/${CMAKE_CXX_LIBRARY_ARCHITECTURE}/jconfig.h")
@@ -81,49 +143,6 @@ if(WITH_JPEG)
     set(JPEG_LIB_VERSION "unknown")
   endif()
   set(HAVE_JPEG YES)
-endif()
-
-# --- libtiff (optional, should be searched after zlib and libjpeg) ---
-if(WITH_TIFF)
-  if(BUILD_TIFF)
-    ocv_clear_vars(TIFF_FOUND)
-  else()
-    ocv_clear_internal_cache_vars(TIFF_LIBRARY TIFF_INCLUDE_DIR)
-    include(FindTIFF)
-    if(TIFF_FOUND)
-      ocv_parse_header("${TIFF_INCLUDE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
-    endif()
-  endif()
-
-  if(NOT TIFF_FOUND)
-    ocv_clear_vars(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
-
-    set(TIFF_LIBRARY libtiff CACHE INTERNAL "")
-    set(TIFF_LIBRARIES ${TIFF_LIBRARY})
-    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libtiff")
-    set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}" "${${TIFF_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
-    ocv_parse_header("${${TIFF_LIBRARY}_SOURCE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
-  endif()
-
-  if(TIFF_VERSION_CLASSIC AND NOT TIFF_VERSION)
-    set(TIFF_VERSION ${TIFF_VERSION_CLASSIC})
-  endif()
-
-  if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
-    set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
-  endif()
-
-  if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
-    list(GET TIFF_INCLUDE_DIR 0 _TIFF_INCLUDE_DIR)
-    if(EXISTS "${_TIFF_INCLUDE_DIR}/tiffvers.h")
-      file(STRINGS "${_TIFF_INCLUDE_DIR}/tiffvers.h" tiff_version_str REGEX "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version .*")
-      string(REGEX REPLACE "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version +([^ \\n]*).*" "\\1" TIFF_VERSION_STRING "${tiff_version_str}")
-      unset(tiff_version_str)
-    endif()
-    unset(_TIFF_INCLUDE_DIR)
-  endif()
-
-  set(HAVE_TIFF YES)
 endif()
 
 # --- libwebp (optional) ---
@@ -144,6 +163,11 @@ endif()
 if(WITH_WEBP AND NOT WEBP_FOUND
     AND (NOT ANDROID OR HAVE_CPUFEATURES)
 )
+  if(NOT BUILD_WEBP)
+    message(WARNING "WebP library has not been found, falling back to built-in version. "
+            "Set WEBP_INCLUDE_DIR and WEBP_LIBRARY, or add the external installation prefix to "
+            "CMAKE_PREFIX_PATH, so that the external WebP can be located.")
+  endif()
   ocv_clear_vars(WEBP_LIBRARY WEBP_INCLUDE_DIR)
   set(WEBP_LIBRARY libwebp CACHE INTERNAL "")
   set(WEBP_LIBRARIES ${WEBP_LIBRARY})
@@ -154,18 +178,99 @@ if(WITH_WEBP AND NOT WEBP_FOUND
 endif()
 
 if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
-  ocv_clear_vars(ENC_MAJ_VERSION ENC_MIN_VERSION ENC_REV_VERSION)
-  if(EXISTS "${WEBP_INCLUDE_DIR}/enc/vp8enci.h")
-    ocv_parse_header("${WEBP_INCLUDE_DIR}/enc/vp8enci.h" WEBP_VERSION_LINES ENC_MAJ_VERSION ENC_MIN_VERSION ENC_REV_VERSION)
-    set(WEBP_VERSION "${ENC_MAJ_VERSION}.${ENC_MIN_VERSION}.${ENC_REV_VERSION}")
-  elseif(EXISTS "${WEBP_INCLUDE_DIR}/webp/encode.h")
+  if(EXISTS "${WEBP_INCLUDE_DIR}/webp/encode.h")
     file(STRINGS "${WEBP_INCLUDE_DIR}/webp/encode.h" WEBP_ENCODER_ABI_VERSION REGEX "#define[ \t]+WEBP_ENCODER_ABI_VERSION[ \t]+([x0-9a-f]+)" )
     if(WEBP_ENCODER_ABI_VERSION MATCHES "#define[ \t]+WEBP_ENCODER_ABI_VERSION[ \t]+([x0-9a-f]+)")
         set(WEBP_ENCODER_ABI_VERSION "${CMAKE_MATCH_1}")
-        set(WEBP_VERSION "encoder: ${WEBP_ENCODER_ABI_VERSION}")
     else()
       unset(WEBP_ENCODER_ABI_VERSION)
     endif()
+  endif()
+
+  if(EXISTS "${WEBP_INCLUDE_DIR}/webp/decode.h")
+    file(STRINGS "${WEBP_INCLUDE_DIR}/webp/decode.h" WEBP_DECODER_ABI_VERSION REGEX "#define[ \t]+WEBP_DECODER_ABI_VERSION[ \t]+([x0-9a-f]+)" )
+    if(WEBP_DECODER_ABI_VERSION MATCHES "#define[ \t]+WEBP_DECODER_ABI_VERSION[ \t]+([x0-9a-f]+)")
+        set(WEBP_DECODER_ABI_VERSION "${CMAKE_MATCH_1}")
+    else()
+      unset(WEBP_DECODER_ABI_VERSION)
+    endif()
+  endif()
+
+  if(EXISTS "${WEBP_INCLUDE_DIR}/webp/demux.h")
+    file(STRINGS "${WEBP_INCLUDE_DIR}/webp/demux.h" WEBP_DEMUX_ABI_VERSION REGEX "#define[ \t]+WEBP_DEMUX_ABI_VERSION[ \t]+([x0-9a-f]+)" )
+    if(WEBP_DEMUX_ABI_VERSION MATCHES "#define[ \t]+WEBP_DEMUX_ABI_VERSION[ \t]+([x0-9a-f]+)")
+        set(WEBP_DEMUX_ABI_VERSION "${CMAKE_MATCH_1}")
+    else()
+      unset(WEBP_DEMUX_ABI_VERSION)
+    endif()
+  endif()
+
+set(WEBP_VERSION "decoder: ${WEBP_DECODER_ABI_VERSION}, encoder: ${WEBP_ENCODER_ABI_VERSION}, demux: ${WEBP_DEMUX_ABI_VERSION}")
+endif()
+
+# --- libtiff (optional, should be searched after zlib, libjpeg and libwebp) ---
+if(WITH_TIFF)
+  if(BUILD_TIFF)
+    ocv_clear_vars(TIFF_FOUND)
+  else()
+    ocv_clear_internal_cache_vars(TIFF_LIBRARY TIFF_INCLUDE_DIR)
+    if(QNX)
+      set(TIFF_LIBRARY tiff)
+      set(TIFF_LIBRARIES tiff)
+      set(TIFF_FOUND TRUE)
+    else()
+      include(FindTIFF)
+    endif()
+    if(TIFF_FOUND)
+      ocv_parse_header("${TIFF_INCLUDE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
+    endif()
+  endif()
+
+  if(NOT TIFF_FOUND)
+    if(NOT BUILD_TIFF)
+      message(WARNING "TIFF library has not been found, falling back to built-in version. "
+              "Add the external installation prefix to CMAKE_PREFIX_PATH, or set TIFF_INCLUDE_DIR "
+              "and TIFF_LIBRARY, so that FindTIFF can locate it. "
+              "See FindTIFF cmake documentation for details.")
+    endif()
+    ocv_clear_vars(TIFF_LIBRARY TIFF_LIBRARIES TIFF_INCLUDE_DIR)
+
+    set(TIFF_LIBRARY libtiff CACHE INTERNAL "")
+    set(TIFF_LIBRARIES ${TIFF_LIBRARY})
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libtiff")
+    set(TIFF_INCLUDE_DIR "${${TIFF_LIBRARY}_SOURCE_DIR}" "${${TIFF_LIBRARY}_BINARY_DIR}" CACHE INTERNAL "")
+    ocv_parse_header("${${TIFF_LIBRARY}_SOURCE_DIR}/tiff.h" TIFF_VERSION_LINES TIFF_VERSION_CLASSIC TIFF_VERSION_BIG TIFF_VERSION TIFF_BIGTIFF_VERSION)
+  endif()
+
+  if(TIFF_VERSION_CLASSIC AND NOT TIFF_VERSION)
+    set(TIFF_VERSION ${TIFF_VERSION_CLASSIC})
+  endif()
+
+  if(TIFF_BIGTIFF_VERSION AND NOT TIFF_VERSION_BIG)
+    set(TIFF_VERSION_BIG ${TIFF_BIGTIFF_VERSION})
+  endif()
+
+  if(NOT TIFF_VERSION_STRING AND TIFF_INCLUDE_DIR)
+    foreach(_TIFF_INCLUDE_DIR IN LISTS TIFF_INCLUDE_DIR)
+      if(EXISTS "${_TIFF_INCLUDE_DIR}/tiffvers.h")
+        file(STRINGS "${_TIFF_INCLUDE_DIR}/tiffvers.h" tiff_version_str REGEX "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version .*")
+        string(REGEX REPLACE "^#define[\t ]+TIFFLIB_VERSION_STR[\t ]+\"LIBTIFF, Version +([^ \\n]*).*" "\\1" TIFF_VERSION_STRING "${tiff_version_str}")
+        unset(tiff_version_str)
+      endif()
+    endforeach()
+  endif()
+
+  set(HAVE_TIFF YES)
+endif()
+
+# --- libjxl (optional) ---
+if(WITH_JPEGXL)
+  ocv_clear_vars(HAVE_JPEGXL)
+  ocv_clear_internal_cache_vars(JPEGXL_INCLUDE_PATHS JPEGXL_LIBRARIES JPEGXL_VERSION)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindJPEGXL.cmake")
+  if(JPEGXL_FOUND)
+    set(HAVE_JPEGXL YES)
+    message(STATUS "Found system JPEG-XL: ver ${JPEGXL_VERSION}")
   endif()
 endif()
 
@@ -192,6 +297,7 @@ if(WITH_OPENJPEG)
     endif()
   else()
     set(HAVE_OPENJPEG YES)
+    set(OPENJPEG_VERSION "${OPENJPEG_MAJOR_VERSION}.${OPENJPEG_MINOR_VERSION}.${OPENJPEG_BUILD_VERSION}")
     message(STATUS "Found system OpenJPEG: ${OPENJPEG_LIBRARIES} "
             "(found version \"${OPENJPEG_VERSION}\")")
   endif()
@@ -221,38 +327,84 @@ if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   endif()
 endif()
 
+if(WITH_SPNG)
+  if(BUILD_SPNG)
+    ocv_clear_vars(PNG_FOUND)
+  else()
+    # CMakeConfig bug in SPNG, include is missing there in version 0.7.4 and older
+    # See https://github.com/randy408/libspng/pull/264
+    include(CMakeFindDependencyMacro)
+    find_package(SPNG QUIET)
+    if(SPNG_FOUND)
+      set(SPNG_LIBRARY "spng::spng" CACHE INTERNAL "")
+      set(SPNG_LIBRARIES ${SPNG_LIBRARY})
+    else()
+      if(PkgConfig_FOUND)
+        pkg_check_modules(SPNG QUIET spng)
+        if(SPNG_FOUND)
+          set(SPNG_LIBRARY ${SPNG_LIBRARIES} CACHE INTERNAL "")
+        endif()
+      endif()
+    endif()
+    if(SPNG_FOUND)
+      set(HAVE_SPNG YES)
+      message(STATUS "imgcodecs: PNG codec will use SPNG, version: ${SPNG_VERSION}")
+    endif()
+  endif()
+  if(NOT SPNG_FOUND)
+    set(SPNG_LIBRARY libspng CACHE INTERNAL "")
+    set(SPNG_LIBRARIES ${SPNG_LIBRARY})
+    add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libspng")
+    set(SPNG_INCLUDE_DIR "${${SPNG_LIBRARY}_SOURCE_DIR}" CACHE INTERNAL "")
+    set(SPNG_DEFINITIONS "")
+    ocv_parse_header("${SPNG_INCLUDE_DIR}/spng.h" SPNG_VERSION_LINES SPNG_VERSION_MAJOR SPNG_VERSION_MINOR SPNG_VERSION_PATCH)
+
+    set(HAVE_SPNG YES)
+    set(SPNG_VERSION "${SPNG_VERSION_MAJOR}.${SPNG_VERSION_MINOR}.${SPNG_VERSION_PATCH}")
+    message(STATUS "imgcodecs: PNG codec will use SPNG, version: ${SPNG_VERSION} ")
+  endif()
+endif()
+
 # --- libpng (optional, should be searched after zlib) ---
-if(WITH_PNG)
+if(NOT HAVE_SPNG AND WITH_PNG)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
-    ocv_clear_internal_cache_vars(PNG_LIBRARY PNG_INCLUDE_DIR)
-    include(FindPNG)
-    if(PNG_FOUND)
-      include(CheckIncludeFile)
-      check_include_file("${PNG_PNG_INCLUDE_DIR}/libpng/png.h" HAVE_LIBPNG_PNG_H)
-      if(HAVE_LIBPNG_PNG_H)
-        ocv_parse_header("${PNG_PNG_INCLUDE_DIR}/libpng/png.h" PNG_VERSION_LINES PNG_LIBPNG_VER_MAJOR PNG_LIBPNG_VER_MINOR PNG_LIBPNG_VER_RELEASE)
-      else()
-        ocv_parse_header("${PNG_PNG_INCLUDE_DIR}/png.h" PNG_VERSION_LINES PNG_LIBPNG_VER_MAJOR PNG_LIBPNG_VER_MINOR PNG_LIBPNG_VER_RELEASE)
-      endif()
-    endif()
+    ocv_clear_internal_cache_vars(PNG_LIBRARY PNG_INCLUDE_DIR PNG_PNG_INCLUDE_DIR)
+    find_package(PNG QUIET)
   endif()
 
   if(NOT PNG_FOUND)
-    ocv_clear_vars(PNG_LIBRARY PNG_LIBRARIES PNG_INCLUDE_DIR PNG_PNG_INCLUDE_DIR HAVE_LIBPNG_PNG_H PNG_DEFINITIONS)
+    if(NOT BUILD_PNG)
+      message(WARNING "PNG library has not been found, falling back to built-in version. "
+              "Set PNG_ROOT or PNG_DIR variable so that find_package(PNG) would be able to find it. "
+              "See find_package and FindPNG cmake documentation for details.")
+    endif()
+    ocv_clear_vars(PNG_LIBRARY PNG_LIBRARIES PNG_INCLUDE_DIR PNG_DEFINITIONS)
 
     set(PNG_LIBRARY libpng CACHE INTERNAL "")
     set(PNG_LIBRARIES ${PNG_LIBRARY})
     add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libpng")
     set(PNG_INCLUDE_DIR "${${PNG_LIBRARY}_SOURCE_DIR}" CACHE INTERNAL "")
     set(PNG_DEFINITIONS "")
-    ocv_parse_header("${PNG_INCLUDE_DIR}/png.h" PNG_VERSION_LINES PNG_LIBPNG_VER_MAJOR PNG_LIBPNG_VER_MINOR PNG_LIBPNG_VER_RELEASE)
+    ocv_parse_header_version(PNG "${PNG_INCLUDE_DIR}/png.h" PNG_LIBPNG_VER_STRING)
+  endif()
+
+  if(BUILD_PNG)
+    # Downstream find_package(PNG) calls from transitive dependencies
+    # (included via include() in the same scope) may overwrite PNG_FOUND
+    # and related variables. PNG_LIBRARY is naturally protected by
+    # FindPNG's "if(NOT PNG_LIBRARY)" guard, but PNG_PNG_INCLUDE_DIR
+    # (searched via find_path without a guard) and its derived variables
+    # (PNG_INCLUDE_DIR, PNG_LIBRARIES, PNG_VERSION_STRING) are not.
+    # Lock PNG_PNG_INCLUDE_DIR so that find_path() respects the cached
+    # bundled path and skips the system search.
+    set(PNG_PNG_INCLUDE_DIR "${PNG_INCLUDE_DIR}" CACHE INTERNAL "PNG include dir (bundled)")
   endif()
 
   set(HAVE_PNG YES)
-  set(PNG_VERSION "${PNG_LIBPNG_VER_MAJOR}.${PNG_LIBPNG_VER_MINOR}.${PNG_LIBPNG_VER_RELEASE}")
 endif()
+
 
 # --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
@@ -287,6 +439,16 @@ if(WITH_GDAL)
     else()
         set(HAVE_GDAL YES)
         ocv_include_directories(${GDAL_INCLUDE_DIR})
+
+        # GDAL_VERSION requires CMake 3.14 or later, if not found, GDAL_RELEASE_NAME is used instead.
+        # See https://cmake.org/cmake/help/latest/module/FindGDAL.html
+        if(NOT GDAL_VERSION)
+            if(EXISTS "${GDAL_INCLUDE_DIR}/gdal_version.h")
+                file(STRINGS "${GDAL_INCLUDE_DIR}/gdal_version.h" gdal_version_str REGEX "^#[\t ]+define[\t ]+GDAL_RELEASE_NAME[\t ]*")
+                string(REGEX REPLACE "^#\[\t ]+define[\t ]+GDAL_RELEASE_NAME[\t ]+\"([^ \\n]*)\"" "\\1" GDAL_VERSION "${gdal_version_str}")
+                unset(gdal_version_str)
+            endif()
+        endif()
     endif()
 endif()
 
@@ -302,6 +464,11 @@ if(WITH_GDCM)
   endif()
 endif()
 
+if(WITH_IMGCODEC_GIF)
+  set(HAVE_IMGCODEC_GIF ON)
+elseif(DEFINED WITH_IMGCODEC_GIF)
+  set(HAVE_IMGCODEC_GIF OFF)
+endif()
 if(WITH_IMGCODEC_HDR)
   set(HAVE_IMGCODEC_HDR ON)
 elseif(DEFINED WITH_IMGCODEC_HDR)

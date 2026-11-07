@@ -157,6 +157,104 @@ void CV_DefaultNewCameraMatrixTest::prepare_to_validation( int /*test_case_idx*/
 
 //---------
 
+class CV_GetOptimalNewCameraMatrixNoDistortionTest : public cvtest::ArrayTest
+{
+public:
+    CV_GetOptimalNewCameraMatrixNoDistortionTest();
+protected:
+    int prepare_test_case (int test_case_idx);
+    void prepare_to_validation(int test_case_idx);
+    void get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types);
+    void run_func();
+
+private:
+    cv::Mat camera_mat;
+    cv::Mat distortion_coeffs;
+    cv::Mat new_camera_mat;
+
+    cv::Size img_size;
+    double alpha;
+    bool center_principal_point;
+
+    int matrix_type;
+
+    static const int MAX_X = 2048;
+    static const int MAX_Y = 2048;
+};
+
+CV_GetOptimalNewCameraMatrixNoDistortionTest::CV_GetOptimalNewCameraMatrixNoDistortionTest()
+{
+    test_array[INPUT].push_back(NULL); // camera_mat
+    test_array[INPUT].push_back(NULL); // distortion_coeffs
+    test_array[OUTPUT].push_back(NULL); // new_camera_mat
+    test_array[REF_OUTPUT].push_back(NULL);
+
+    alpha = 0.0;
+    center_principal_point = false;
+    matrix_type = 0;
+}
+
+void CV_GetOptimalNewCameraMatrixNoDistortionTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
+{
+    cvtest::ArrayTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
+    RNG& rng = ts->get_rng();
+    matrix_type = types[INPUT][0] = types[INPUT][1] = types[OUTPUT][0] = types[REF_OUTPUT][0] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    sizes[INPUT][0] = sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(3,3);
+    sizes[INPUT][1] = cvSize(1,4);
+}
+
+int CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_test_case(int test_case_idx)
+{
+    int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
+
+    if (code <= 0)
+        return code;
+
+    RNG& rng = ts->get_rng();
+
+    alpha = cvtest::randReal(rng);
+    center_principal_point = ((cvtest::randInt(rng) % 2)!=0);
+
+    // Generate random camera matrix. Use floating point precision for source to avoid precision loss
+    img_size.width = cvtest::randInt(rng) % MAX_X + 1;
+    img_size.height = cvtest::randInt(rng) % MAX_Y + 1;
+    const float aspect_ratio = static_cast<float>(img_size.width) / img_size.height;
+    float cam_array[9] = {0,0,0,0,0,0,0,0,1};
+    cam_array[2] = static_cast<float>((img_size.width - 1)*0.5);  // center
+    cam_array[5] = static_cast<float>((img_size.height - 1)*0.5); // center
+    cam_array[0] = static_cast<float>(MAX(img_size.width, img_size.height)/(0.9 - cvtest::randReal(rng)*0.6));
+    cam_array[4] = aspect_ratio*cam_array[0];
+
+    Mat& input_camera_mat = test_mat[INPUT][0];
+    cvtest::convert(Mat(3, 3, CV_32F, cam_array), input_camera_mat, input_camera_mat.type());
+    camera_mat = input_camera_mat;
+
+    // Generate zero distortion matrix
+    const Mat zero_dist_coeffs = Mat::zeros(1, 4, CV_32F);
+    Mat& input_dist_coeffs = test_mat[INPUT][1];
+    cvtest::convert(zero_dist_coeffs, input_dist_coeffs, input_dist_coeffs.type());
+    distortion_coeffs = input_dist_coeffs;
+
+    return code;
+}
+
+void CV_GetOptimalNewCameraMatrixNoDistortionTest::run_func()
+{
+    new_camera_mat = cv::getOptimalNewCameraMatrix(camera_mat, distortion_coeffs, img_size, alpha, img_size, NULL, center_principal_point);
+}
+
+void CV_GetOptimalNewCameraMatrixNoDistortionTest::prepare_to_validation(int /*test_case_idx*/)
+{
+    const Mat& src = test_mat[INPUT][0];
+    Mat& dst = test_mat[REF_OUTPUT][0];
+    cvtest::copy(src, dst);
+
+    Mat& output = test_mat[OUTPUT][0];
+    cvtest::convert(new_camera_mat, output, output.type());
+}
+
+//---------
+
 class CV_UndistortPointsTest : public cvtest::ArrayTest
 {
 public:
@@ -991,6 +1089,7 @@ double CV_InitInverseRectificationMapTest::get_success_error_level( int /*test_c
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Calib3d_DefaultNewCameraMatrix, accuracy) { CV_DefaultNewCameraMatrixTest test; test.safe_run(); }
+TEST(Calib3d_GetOptimalNewCameraMatrixNoDistortion, accuracy) { CV_GetOptimalNewCameraMatrixNoDistortionTest test; test.safe_run(); }
 TEST(Calib3d_UndistortPoints, accuracy) { CV_UndistortPointsTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortRectifyMap, accuracy) { CV_InitUndistortRectifyMapTest test; test.safe_run(); }
 TEST(DISABLED_Calib3d_InitInverseRectificationMap, accuracy) { CV_InitInverseRectificationMapTest test; test.safe_run(); }
@@ -998,7 +1097,7 @@ TEST(DISABLED_Calib3d_InitInverseRectificationMap, accuracy) { CV_InitInverseRec
 ////////////////////////////// undistort /////////////////////////////////
 
 static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& mapy,
-                        Mat* mask=0, int interpolation=CV_INTER_LINEAR )
+                        Mat* mask=0, int interpolation=cv::INTER_LINEAR )
 {
     int x, y, k;
     int drows = dst.rows, dcols = dst.cols;
@@ -1009,7 +1108,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     int step = (int)(src.step / CV_ELEM_SIZE(depth));
     int delta;
 
-    if( interpolation != CV_INTER_CUBIC )
+    if( interpolation != cv::INTER_CUBIC )
     {
         delta = 0;
         scols -= 1; srows -= 1;
@@ -1318,7 +1417,7 @@ void CV_UndistortTest::get_test_array_types_and_sizes( int test_case_idx, vector
     sizes[INPUT][2] = cvtest::randInt(rng)%2 ? cvSize(4,1) : cvSize(1,4);
     types[INPUT][3] =  types[INPUT][1];
     sizes[INPUT][3] = sizes[INPUT][1];
-    interpolation = CV_INTER_LINEAR;
+    interpolation = cv::INTER_LINEAR;
 }
 
 

@@ -36,7 +36,7 @@ public:
     /**
    * \brief Destructor
    */
-    ~TrackerMILModel() {};
+    ~TrackerMILModel() {}
 
     /**
    * \brief Set the mode

@@ -438,7 +438,7 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
 
     //This condition need to workaround the #21044 issue in the OpenCV.
     //It reinitializes divider matrix without zero values for CV_16S DST type.
-    if (dtype == CV_16S && dtype != type)
+    if (dtype != type)
         cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
 
     // OpenCV code ///////////////////////////////////////////////////////////
@@ -530,8 +530,7 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
     initMatsRandU(type, sz, dtype, false);
     //This condition need to workaround the #21044 issue in the OpenCV.
     //It reinitializes divider matrix without zero values for CV_16S DST type.
-    if (dtype == CV_16S || (type == CV_16S && dtype == -1))
-        cv::randu(in_mat1, cv::Scalar::all(1), cv::Scalar::all(255));
+    cv::randu(in_mat1, cv::Scalar::all(1), cv::Scalar::all(255));
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(sc, in_mat1, out_mat_ocv, scale, dtype);
@@ -1577,11 +1576,12 @@ PERF_TEST_P_(Merge3PerfTest, TestPerformance)
 {
     compare_f cmpF;
     cv::Size sz;
+    MatType type = -1;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, sz, compile_args) = GetParam();
+    std::tie(cmpF, sz, type, compile_args) = GetParam();
 
-    initMatsRandU(CV_8UC1, sz, CV_8UC3);
-    cv::Mat in_mat3(sz, CV_8UC1);
+    initMatsRandU(type, sz, CV_MAKETYPE(type, 3));
+    cv::Mat in_mat3(sz, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat3, mean, stddev);

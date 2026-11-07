@@ -172,4 +172,65 @@ TEST(DenseOpticalFlow_VariationalRefinement, ReferenceAccuracy)
     EXPECT_LE(calcRMSE(GT, flow), target_RMSE);
 }
 
+TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
+{
+    Mat prev = Mat::zeros(Size(320, 240), CV_8UC1);
+    Mat next = Mat::zeros(Size(320, 240), CV_8UC1);
+    randu(prev, 0, 255);
+    randu(next, 0, 255);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+
+    EXPECT_EQ(dis->getCoarsestScale(), -1);
+
+    Mat flow;
+    dis->calc(prev, next, flow);
+    EXPECT_FALSE(flow.empty());
+    int manual_scale = 3;
+    dis->setCoarsestScale(manual_scale);
+    EXPECT_EQ(dis->getCoarsestScale(), manual_scale);
+
+    dis->calc(prev, next, flow);
+    EXPECT_FALSE(flow.empty());
+
+    dis->setCoarsestScale(-1);
+    EXPECT_EQ(dis->getCoarsestScale(), -1);
+}
+
+// See https://github.com/opencv/opencv/issues/20185
+TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
+{
+    Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
+    theRNG().fill(prev, RNG::UNIFORM, 0, 256);
+    theRNG().fill(next, RNG::UNIFORM, 0, 256);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->setPatchStride(10);
+
+    Mat flow(prev.size(), CV_32FC2, Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+
+    dis->setPatchSize(25);
+    flow.setTo(Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+}
+TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
+{
+    cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat frame2 = cv::Mat::zeros(100, 100, CV_8UC1);
+    cv::Mat flow;
+
+    // Test 1: Empty flow with OPTFLOW_USE_INITIAL_FLOW flag
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 2: Mismatched size (image is 100x100, but flow is 50x50)
+    cv::Mat wrong_size_flow = cv::Mat::zeros(50, 50, CV_32FC2);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_size_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+
+    // Test 3: Mismatched type (CV_8UC1 instead of CV_32FC2)
+    cv::Mat wrong_type_flow = cv::Mat::zeros(100, 100, CV_8UC1);
+    EXPECT_ANY_THROW(cv::calcOpticalFlowFarneback(frame1, frame2, wrong_type_flow, 0.5, 3, 15, 3, 5, 1.2, cv::OPTFLOW_USE_INITIAL_FLOW));
+}
 }} // namespace

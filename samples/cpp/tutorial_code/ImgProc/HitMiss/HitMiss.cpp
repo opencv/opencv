@@ -5,7 +5,7 @@
 using namespace cv;
 
 int main(){
-    Mat input_image = (Mat_<uchar>(8, 8) <<
+    Mat input_image = Mat_<uchar>({8, 8}, {
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 255, 255, 255, 0, 0, 0, 255,
         0, 255, 255, 255, 0, 0, 0, 0,
@@ -13,12 +13,14 @@ int main(){
         0, 0, 255, 0, 0, 0, 0, 0,
         0, 0, 255, 0, 0, 255, 255, 0,
         0, 255, 0, 255, 0, 0, 255, 0,
-        0, 255, 255, 255, 0, 0, 0, 0);
+        0, 255, 255, 255, 0, 0, 0, 0
+    });
 
-    Mat kernel = (Mat_<int>(3, 3) <<
+    Mat kernel = Mat_<int>({3, 3}, {
         0, 1, 0,
         1, -1, 1,
-        0, 1, 0);
+        0, 1, 0
+    });
 
     Mat output_image;
     morphologyEx(input_image, output_image, MORPH_HITMISS, kernel);

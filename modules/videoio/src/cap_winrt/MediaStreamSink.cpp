@@ -35,7 +35,7 @@ MediaStreamSink::MediaStreamSink(
     __in MediaSampleHandler^ sampleHandler
     )
     : _shutdown(false)
-    , _id(-1)
+    , _id((DWORD)-1)
     , _width(0)
     , _height(0)
 {
@@ -207,16 +207,16 @@ HRESULT MediaStreamSink::QueueEvent(
     __in MediaEventType met,
     __in REFGUID extendedType,
     __in HRESULT status,
-    __in_opt const PROPVARIANT *value
+    __in_opt const PROPVARIANT *value_
     )
 {
-    return ExceptionBoundary([this, met, extendedType, status, value]()
+    return ExceptionBoundary([this, met, extendedType, status, value_]()
     {
         auto lock = _lock.LockExclusive();
 
         _VerifyNotShutdown();
 
-        CHK(_eventQueue->QueueEventParamVar(met, extendedType, status, value));
+        CHK(_eventQueue->QueueEventParamVar(met, extendedType, status, value_));
     });
 }
 

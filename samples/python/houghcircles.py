@@ -27,7 +27,7 @@ def main():
     img = cv.medianBlur(img, 5)
     cimg = src.copy() # numpy function
 
-    circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)
+    circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 200, 30, 5, 30)
 
     if circles is not None: # Check if circles have been found and only then iterate over these and add them to the image
         circles = np.uint16(np.around(circles))

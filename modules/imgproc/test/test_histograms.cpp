@@ -142,7 +142,7 @@ void CV_BaseHistTest::get_hist_params( int /*test_case_idx*/ )
 
     cdims = cvtest::randInt(rng) % max_cdims + 1;
     hist_size = exp(cvtest::randReal(rng)*max_log_size*CV_LOG2);
-    max_dim_size = cvRound(pow(hist_size,1./cdims));
+    max_dim_size = cvRound(std::pow(hist_size,1./cdims));
     total_size = 1;
     uniform = cvtest::randInt(rng) % 2;
     hist_type = cvtest::randInt(rng) % 2 ? CV_HIST_SPARSE : CV_HIST_ARRAY;
@@ -208,7 +208,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
             for( j = 0; j < 10; j++ )
             {
                 q = 1. + (j+1)*0.1;
-                if( (pow(q,(double)n)-1)/(q-1.) >= _high-_low )
+                if( (std::pow(q,n)-1)/(q-1.) >= _high-_low )
                     break;
             }
 
@@ -220,7 +220,7 @@ float** CV_BaseHistTest::get_hist_ranges( int /*test_case_idx*/ )
             else
             {
                 q = 1 + j*0.1;
-                delta = cvFloor((_high-_low)*(q-1)/(pow(q,(double)n) - 1));
+                delta = cvFloor((_high-_low)*(q-1)/(std::pow(q,n) - 1));
                 delta = MAX(delta, 1.);
             }
             val = _low;
@@ -1034,7 +1034,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             if( fabs(v0) > DBL_EPSILON )
                 result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
             if( fabs(v0 + v1) > DBL_EPSILON )
-                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
+                result0[CV_COMP_CHISQR_ALT] += v0*v1/(v0 + v1);
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
@@ -1056,7 +1056,12 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         }
     }
 
-    result0[CV_COMP_CHISQR_ALT] *= 2;
+    if( hist_type == CV_HIST_ARRAY )
+        result0[CV_COMP_CHISQR_ALT] *= 2;
+    else
+        // Generated counts are nonnegative; tiny denominators are tested separately below.
+        // (a-b)^2/(a+b) = a+b - 4ab/(a+b), including bins missing from either histogram.
+        result0[CV_COMP_CHISQR_ALT] = 2*(s0 + s1) - 8*result0[CV_COMP_CHISQR_ALT];
 
     t = (sq0 - s0*s0/total_size)*(sq1 - s1*s1/total_size);
     result0[CV_COMP_CORREL] = fabs(t) > DBL_EPSILON ?
@@ -1078,6 +1083,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" :
             i == CV_COMP_KL_DIV ? "Kullback-Leibler" : "Unknown";
 
+        const auto thresh = FLT_EPSILON*14*MAX(fabs(v0),0.17);
         if( cvIsNaN(v) || cvIsInf(v) )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s) is invalid (=%g)\n",
@@ -1085,7 +1091,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             break;
         }
-        else if( fabs(v0 - v) > FLT_EPSILON*14*MAX(fabs(v0),0.1) )
+        else if( fabs(v0 - v) > thresh )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s)\n\tis inaccurate (=%g, should be =%g)\n",
                 i, method_name, v, v0 );
@@ -1198,7 +1204,7 @@ void CV_CalcHistTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(cdims);
-    copy(images.begin(), images.begin() + cdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + cdims, imagesv.begin());
 
     Mat mask = images[CV_MAX_DIM];
     if( !CV_IS_SPARSE_HIST(hist[0]) )
@@ -1493,7 +1499,7 @@ void CV_CalcBackProjectTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(hdims);
-    copy(images.begin(), images.begin() + hdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + hdims, imagesv.begin());
 
     cv::Mat dst = images[CV_MAX_DIM+1];
 
@@ -2025,6 +2031,159 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
+
+////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
+
+void equalizeHistReference(const Mat& src, Mat& dst)
+{
+    std::vector<int> hist(256, 0);
+    for (int y = 0; y < src.rows; y++)
+    {
+        const uchar* srow = src.ptr(y);
+        for (int x = 0; x < src.cols; x++)
+        {
+            hist[srow[x]]++;
+        }
+    }
+
+    int first = 0;
+    while (!hist[first]) ++first;
+
+    int total = (int)src.total();
+    if (hist[first] == total)
+    {
+        dst.setTo(first);
+        return;
+    }
+
+    std::vector<uchar> lut(256);
+    lut[first] = 0;
+    float scale = (255.f)/(total - hist[first]);
+
+    int sum = 0;
+    for (int i = first + 1; i < 256; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
+
+    cv::LUT(src, lut, dst);
+}
+
+typedef ::testing::TestWithParam<std::tuple<cv::Size, int>> Imgproc_Equalize_Hist;
+
+TEST_P(Imgproc_Equalize_Hist, accuracy)
+{
+    auto p = GetParam();
+    cv::Size size = std::get<0>(p);
+    int idx = std::get<1>(p);
+
+    RNG &rng = cvtest::TS::ptr()->get_rng();
+    rng.state += idx;
+
+    cv::Mat src(size, CV_8U);
+    cvtest::randUni(rng, src, Scalar::all(0), Scalar::all(255));
+
+    cv::Mat dst, gold;
+
+    equalizeHistReference(src, gold);
+
+    cv::equalizeHist(src, dst);
+
+    ASSERT_EQ(CV_8UC1, dst.type());
+    ASSERT_EQ(gold.size(), dst.size());
+
+    EXPECT_MAT_NEAR(dst, gold, 1);
+    EXPECT_MAT_N_DIFF(dst, gold, 0.05 * size.area()); // The 5% range could be accomodated to HAL
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
+                        ::testing::Values(cv::Size(123, 321), cv::Size(256, 256), cv::Size(1024, 768)),
+                        ::testing::Range(0, 10)));
+
+// See https://github.com/opencv/opencv/issues/24757
+TEST(Imgproc_Hist_Compare, intersect_regression_24757)
+{
+    cv::Mat src1 = cv::Mat::zeros(128,1, CV_32FC1);
+    cv::Mat src2 = cv::Mat(128,1, CV_32FC1, cv::Scalar(std::numeric_limits<double>::max()));
+
+                                             // Ideal result        Wrong result
+    src1.at<float>(32 * 0,0) = +1.0f;        // work = +1.0         +1.0
+    src1.at<float>(32 * 1,0) = +55555555.5f; // work = +55555556.5  +55555555.5
+    src1.at<float>(32 * 2,0) = -55555555.5f; // work = +1.0         0.0
+    src1.at<float>(32 * 3,0) = -1.0f;        // work = 0.0          -1.0
+
+    EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
+}
+
+typedef testing::TestWithParam<std::tuple<int, bool> > Imgproc_Hist_CompareSparseChiSquare;
+
+TEST_P(Imgproc_Hist_CompareSparseChiSquare, accuracy)
+{
+    const int dims = std::get<0>(GetParam());
+    const bool explicitZeros = std::get<1>(GetParam());
+    int sizes[] = {2, 2, 2};
+    const float histograms[][2][4] = {
+        {{1, 0, 0, 0}, {1, 2, 0, 0}}, // second histogram has an additional bin
+        {{1, 0, 0, 0}, {0, 3, 0, 0}}, // disjoint support
+        {{1, 2, 0, 0}, {3, 0, 4, 0}}, // partially overlapping support
+        {{0, 0, 0, 0}, {1, 3, 0, 0}}, // empty first histogram
+        {{0, 0, 0, 0}, {0, 0, 0, 0}}, // both empty
+        {{1, 2, 0, 0}, {1, 2, 0, 0}}, // identical histograms
+        {{0, 0, 0, 0}, {1e-20f, 0, 0, 0}} // denominator below the comparison threshold
+    };
+    const double expected[] = {4, 8, 14, 8, 0, 0, 0};
+
+    for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); ++i)
+    {
+        SCOPED_TRACE(i);
+        Mat dense1(dims, sizes, CV_32F, Scalar(0));
+        Mat dense2(dims, sizes, CV_32F, Scalar(0));
+        for (int j = 0; j < 4; ++j)
+        {
+            dense1.ptr<float>()[j] = histograms[i][0][j];
+            dense2.ptr<float>()[j] = histograms[i][1][j];
+        }
+        SparseMat sparse1(dense1), sparse2(dense2);
+        CvHistogram* legacy1 = cvCreateHist(dims, sizes, CV_HIST_SPARSE);
+        CvHistogram* legacy2 = cvCreateHist(dims, sizes, CV_HIST_SPARSE);
+        for (int j = 0; j < 4; ++j)
+        {
+            const int idx[] = {0, j / 2, j % 2};
+            if (explicitZeros || histograms[i][0][j] != 0)
+                cvSetRealND(legacy1->bins, idx + (3 - dims), histograms[i][0][j]);
+            if (explicitZeros || histograms[i][1][j] != 0)
+                cvSetRealND(legacy2->bins, idx + (3 - dims), histograms[i][1][j]);
+        }
+        if (explicitZeros)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                const int idx[] = {0, j / 2, j % 2};
+                sparse1.ref<float>(idx + (3 - dims)) = histograms[i][0][j];
+                sparse2.ref<float>(idx + (3 - dims)) = histograms[i][1][j];
+            }
+        }
+        const size_t count1 = sparse1.nzcount(), count2 = sparse2.nzcount();
+
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(dense1, dense2, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(sparse1, sparse2, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], compareHist(sparse2, sparse1, HISTCMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], cvCompareHist(legacy1, legacy2, CV_COMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(expected[i], cvCompareHist(legacy2, legacy1, CV_COMP_CHISQR_ALT));
+        EXPECT_DOUBLE_EQ(compareHist(dense1, dense2, HISTCMP_CHISQR),
+                         compareHist(sparse1, sparse2, HISTCMP_CHISQR));
+        EXPECT_DOUBLE_EQ(compareHist(dense2, dense1, HISTCMP_CHISQR),
+                         compareHist(sparse2, sparse1, HISTCMP_CHISQR));
+        EXPECT_EQ(count1, sparse1.nzcount());
+        EXPECT_EQ(count2, sparse2.nzcount());
+        cvReleaseHist(&legacy1);
+        cvReleaseHist(&legacy2);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Hist_CompareSparseChiSquare,
+                       testing::Combine(testing::Values(2, 3), testing::Bool()));
 
 }} // namespace
 /* End Of File */

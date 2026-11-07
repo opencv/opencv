@@ -110,6 +110,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -W
                                      -Wreorder
                                      -Wunused-result
                                      -Wimplicit-const-int-float-conversion  # clang
+                                     -Wno-nontrivial-memcall # for clang 21
 )
 if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)
@@ -120,6 +121,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4334) # vs2005 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456) # vs2015
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4819) # vs2019 Win64
 
 if(MSVC AND CV_ICC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Qrestrict")

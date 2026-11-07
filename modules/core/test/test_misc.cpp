@@ -8,10 +8,8 @@
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 
-#ifdef CV_CXX11
 #include <chrono>
 #include <thread>
-#endif
 
 namespace opencv_test { namespace {
 
@@ -37,6 +35,74 @@ TEST(Core_SaturateCast, NegativeNotClipped)
     unsigned int val = cv::saturate_cast<unsigned int>(d);
 
     ASSERT_EQ(0xffffffff, val);
+}
+
+// See https://github.com/opencv/opencv/issues/29736
+static int borderReflectReference(int p, int len, int borderType)
+{
+    const int delta = borderType == BORDER_REFLECT_101;
+    if( len == 1 )
+        return 0;
+    while( p < 0 || p >= len )
+    {
+        if( p < 0 )
+            p = -p - 1 + delta;
+        else
+            p = len - 1 - (p - len) - delta;
+    }
+    return p;
+}
+
+TEST(Core_BorderInterpolate, ReflectCompatibility)
+{
+    const int borderTypes[] = { BORDER_REFLECT, BORDER_REFLECT_101 };
+    const int lengths[] = { 1, 2, 3, 5, 17 };
+    for( size_t i = 0; i < sizeof(borderTypes) / sizeof(borderTypes[0]); i++ )
+    {
+        for( size_t j = 0; j < sizeof(lengths) / sizeof(lengths[0]); j++ )
+        {
+            for( int p = -1000; p <= 1000; p++ )
+            {
+                EXPECT_EQ(borderReflectReference(p, lengths[j], borderTypes[i]),
+                          cv::borderInterpolate(p, lengths[j], borderTypes[i]))
+                    << "p=" << p << ", len=" << lengths[j]
+                    << ", borderType=" << borderTypes[i];
+            }
+        }
+    }
+}
+
+TEST(Core_BorderInterpolate, ReflectExtremeCoordinates)
+{
+    struct TestCase
+    {
+        int p;
+        int len;
+        int borderType;
+        int expected;
+    };
+    const TestCase cases[] = {
+        { INT_MIN, 2, BORDER_REFLECT, 0 },
+        { INT_MAX, 2, BORDER_REFLECT, 0 },
+        { INT_MIN, 3, BORDER_REFLECT, 1 },
+        { INT_MAX, 3, BORDER_REFLECT, 1 },
+        { INT_MIN, INT_MAX, BORDER_REFLECT, INT_MAX - 1 },
+        { INT_MAX, INT_MAX, BORDER_REFLECT, INT_MAX - 1 },
+        { INT_MIN, 2, BORDER_REFLECT_101, 0 },
+        { INT_MAX, 2, BORDER_REFLECT_101, 1 },
+        { INT_MIN, 3, BORDER_REFLECT_101, 0 },
+        { INT_MAX, 3, BORDER_REFLECT_101, 1 },
+        { INT_MIN, INT_MAX, BORDER_REFLECT_101, INT_MAX - 3 },
+        { INT_MAX, INT_MAX, BORDER_REFLECT_101, INT_MAX - 2 },
+    };
+
+    for( size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++ )
+    {
+        EXPECT_EQ(cases[i].expected,
+                  cv::borderInterpolate(cases[i].p, cases[i].len, cases[i].borderType))
+            << "p=" << cases[i].p << ", len=" << cases[i].len
+            << ", borderType=" << cases[i].borderType;
+    }
 }
 
 template<typename T, typename U>
@@ -282,9 +348,7 @@ public:
             // FP state is not supported
             // no checks
         }
-#ifdef CV_CXX11
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#endif
     }
 
     cv::details::FPDenormalsModeState base_state;
@@ -886,6 +950,58 @@ TEST(Core_Types, trivially_copyable_extra)
 }
 #endif
 
+TEST(Core_KeyPoint, convert_rejects_negative_index)
+{
+    const std::vector<KeyPoint> keypoints(1, KeyPoint(1, 2, 1));
+    const std::vector<int> indexes(1, -1);
+    std::vector<Point2f> points;
+
+    EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+}
+
+TEST(Core_KeyPoint, convert_rejects_index_for_empty_input)
+{
+    const std::vector<KeyPoint> keypoints;
+    const std::vector<int> indexes(1, 0);
+    std::vector<Point2f> points;
+
+    EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+}
+
+TEST(Core_KeyPoint, convert_rejects_out_of_range_indexes)
+{
+    const std::vector<KeyPoint> keypoints(1, KeyPoint(1, 2, 1));
+    std::vector<Point2f> points;
+
+    const int invalidIndexes[] = { 1, 100 };
+    for( size_t i = 0; i < sizeof(invalidIndexes) / sizeof(invalidIndexes[0]); i++ )
+    {
+        const std::vector<int> indexes(1, invalidIndexes[i]);
+        EXPECT_THROW(KeyPoint::convert(keypoints, points, indexes), cv::Exception);
+    }
+}
+
+TEST(Core_KeyPoint, convert_preserves_index_order_and_duplicates)
+{
+    const std::vector<KeyPoint> keypoints = {
+        KeyPoint(1, 2, 1), KeyPoint(3, 4, 1), KeyPoint(5, 6, 1)
+    };
+    const std::vector<int> indexes = { 2, 0, 2, 1 };
+    std::vector<Point2f> points;
+
+    KeyPoint::convert(keypoints, points, indexes);
+
+    const Point2f expected[] = { Point2f(5, 6), Point2f(1, 2), Point2f(5, 6), Point2f(3, 4) };
+    ASSERT_EQ(sizeof(expected) / sizeof(expected[0]), points.size());
+    for( size_t i = 0; i < points.size(); i++ )
+        EXPECT_EQ(expected[i], points[i]);
+
+    KeyPoint::convert(keypoints, points);
+    ASSERT_EQ(keypoints.size(), points.size());
+    for( size_t i = 0; i < points.size(); i++ )
+        EXPECT_EQ(keypoints[i].pt, points[i]);
+}
+
 template <typename T> class Rect_Test : public testing::Test {};
 
 TYPED_TEST_CASE_P(Rect_Test);
@@ -912,10 +1028,59 @@ TYPED_TEST_P(Rect_Test, Overflows) {
   EXPECT_EQ(R(), R(20, 0, 10, 10) & R(0, num_lowest, 10, 10));
   EXPECT_EQ(R(), R(num_lowest, 0, 10, 10) & R(0, num_lowest, 10, 10));
 }
-REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows);
+
+// See https://github.com/opencv/opencv/issues/26016
+// Rect_<int>.contains(Point_<float/double>) needs template specialization.
+// This is test for a point on the edge and its nearest points.
+template<typename T> T cv_nexttoward(T v, T v2);
+template<> int cv_nexttoward<int>(int v, int v2) { CV_UNUSED(v); return v2; }
+template<> float cv_nexttoward<float>(float v, float v2) { return std::nextafter(v,v2); }
+template<> double cv_nexttoward<double>(double v, double v2) { return std::nexttoward(v,v2); }
+TYPED_TEST_P(Rect_Test, OnTheEdge) {
+  Rect_<int> rect(0,0,500,500);
+  TypeParam h = static_cast<TypeParam>(rect.height);
+  ASSERT_TRUE ( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h - 1))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h    ))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h + 1))));
+}
+REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+TEST(Core_Rect, test_unsigned_overflow_11988)
+{
+    typedef Rect_<unsigned> R;
+    R r1(0, 0, 1u, 1u);
+    R r2(2u, 2u, 1u, 1u);
+    auto inter = r1 & r2;
+    EXPECT_EQ(R(), inter);
+    EXPECT_EQ(0u, inter.area());
+    EXPECT_TRUE(inter.empty());
+}
+
+// Expected that SkipTestException thrown in the constructor should skip test but not fail
+struct TestFixtureSkip: public ::testing::Test {
+    TestFixtureSkip(bool throwEx = true) {
+        if (throwEx) {
+            throw SkipTestException("Skip test at constructor");
+        }
+    }
+};
+
+TEST_F(TestFixtureSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
+
+// Expected that SkipTestException thrown in SetUp method should skip test but not fail
+struct TestSetUpSkip: public ::testing::Test {
+    virtual void SetUp() CV_OVERRIDE {
+        throw SkipTestException("Skip test at SetUp");
+    }
+};
+
+TEST_F(TestSetUpSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
 
 }} // namespace

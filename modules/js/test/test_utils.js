@@ -67,10 +67,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
 QUnit.module('Utils', {});
 QUnit.test('Test vectors', function(assert) {
     {
@@ -249,5 +245,8 @@ QUnit.test('test_rotated_rect', function(assert) {
 
         assert.equal(points[0].x, cv.RotatedRect.boundingRect2f(rect).x);
         assert.equal(points[1].y, cv.RotatedRect.boundingRect2f(rect).y);
+
+        let points1 = cv.boxPoints(rect);
+        assert.deepEqual(points, points1);
     }
 });

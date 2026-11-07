@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -132,8 +133,8 @@ void convertMaps_32f1c16s_SSE41(const float* src1f, const float* src2f, short* d
     }
     for (; x < width; x++)
     {
-        int ix = saturate_cast<int>(src1f[x] * INTER_TAB_SIZE);
-        int iy = saturate_cast<int>(src2f[x] * INTER_TAB_SIZE);
+        int ix = saturate_cast<int>(src1f[x] * static_cast<float>(INTER_TAB_SIZE));
+        int iy = saturate_cast<int>(src2f[x] * static_cast<float>(INTER_TAB_SIZE));
         dst1[x * 2] = saturate_cast<short>(ix >> INTER_BITS);
         dst1[x * 2 + 1] = saturate_cast<short>(iy >> INTER_BITS);
         dst2[x] = (ushort)((iy & (INTER_TAB_SIZE - 1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE - 1)));
@@ -165,49 +166,13 @@ void convertMaps_32f2c16s_SSE41(const float* src1f, short* dst1, ushort* dst2, i
     }
     for (; x < width; x++)
     {
-        int ix = saturate_cast<int>(src1f[x * 2] * INTER_TAB_SIZE);
-        int iy = saturate_cast<int>(src1f[x * 2 + 1] * INTER_TAB_SIZE);
+        int ix = saturate_cast<int>(src1f[x * 2] * static_cast<float>(INTER_TAB_SIZE));
+        int iy = saturate_cast<int>(src1f[x * 2 + 1] * static_cast<float>(INTER_TAB_SIZE));
         dst1[x * 2] = saturate_cast<short>(ix >> INTER_BITS);
         dst1[x * 2 + 1] = saturate_cast<short>(iy >> INTER_BITS);
         dst2[x] = (ushort)((iy & (INTER_TAB_SIZE - 1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE - 1)));
     }
 }
-
-void WarpAffineInvoker_Blockline_SSE41(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw)
-{
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    int x1 = 0;
-
-    __m128i v_X0 = _mm_set1_epi32(X0);
-    __m128i v_Y0 = _mm_set1_epi32(Y0);
-    for (; x1 <= bw - 16; x1 += 16)
-    {
-        __m128i v_x0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 4))), AB_BITS));
-        __m128i v_x1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 8))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 12))), AB_BITS));
-
-        __m128i v_y0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 4))), AB_BITS));
-        __m128i v_y1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 8))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 12))), AB_BITS));
-
-        _mm_interleave_epi16(v_x0, v_x1, v_y0, v_y1);
-
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_x0);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_x1);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_y0);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_y1);
-    }
-    for (; x1 < bw; x1++)
-    {
-        int X = (X0 + adelta[x1]) >> AB_BITS;
-        int Y = (Y0 + bdelta[x1]) >> AB_BITS;
-        xy[x1 * 2] = saturate_cast<short>(X);
-        xy[x1 * 2 + 1] = saturate_cast<short>(Y);
-    }
-}
-
 
 class WarpPerspectiveLine_SSE4_Impl CV_FINAL : public WarpPerspectiveLine_SSE4
 {
@@ -480,7 +445,7 @@ public:
         for (; x1 < bw; x1++)
         {
             double W = W0 + M[6] * x1;
-            W = W ? INTER_TAB_SIZE / W : 0;
+            W = W ? static_cast<double>(INTER_TAB_SIZE) / W : 0;
             double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0] * x1)*W));
             double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3] * x1)*W));
             int X = saturate_cast<int>(fX);
@@ -492,7 +457,7 @@ public:
                 (X & (INTER_TAB_SIZE - 1)));
         }
     }
-    virtual ~WarpPerspectiveLine_SSE4_Impl() CV_OVERRIDE {};
+    virtual ~WarpPerspectiveLine_SSE4_Impl() CV_OVERRIDE {}
 };
 
 Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)
@@ -502,4 +467,7 @@ Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)
 
 }
 }
+
+#include "imgwarp.simd.hpp"
+
 /* End of file. */

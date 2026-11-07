@@ -128,8 +128,48 @@ template<> inline Type2Vec512_Traits<double>::vec_type v512_setall<double>(const
 
 #endif  // SIMD512
 
+#if CV_SIMD_SCALABLE
+template<typename _T> struct Type2Vec_Traits;
+#define CV_INTRIN_DEF_TYPE2VEC_TRAITS(type_, vec_type_) \
+    template<> struct Type2Vec_Traits<type_> \
+    { \
+        typedef vec_type_ vec_type; \
+    }
 
-#if CV_SIMD_WIDTH == 16
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(uchar, v_uint8);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(schar, v_int8);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(ushort, v_uint16);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(short, v_int16);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(unsigned, v_uint32);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(int, v_int32);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(float, v_float32);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(uint64, v_uint64);
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(int64, v_int64);
+#if CV_SIMD_SCALABLE_64F
+CV_INTRIN_DEF_TYPE2VEC_TRAITS(double, v_float64);
+#endif
+template<typename _T> static inline
+typename Type2Vec_Traits<_T>::vec_type v_setall(const _T& a);
+
+template<> inline Type2Vec_Traits< uchar>::vec_type v_setall< uchar>(const  uchar& a) { return v_setall_u8(a); }
+template<> inline Type2Vec_Traits< schar>::vec_type v_setall< schar>(const  schar& a) { return v_setall_s8(a); }
+template<> inline Type2Vec_Traits<ushort>::vec_type v_setall<ushort>(const ushort& a) { return v_setall_u16(a); }
+template<> inline Type2Vec_Traits< short>::vec_type v_setall< short>(const  short& a) { return v_setall_s16(a); }
+template<> inline Type2Vec_Traits<  uint>::vec_type v_setall<  uint>(const   uint& a) { return v_setall_u32(a); }
+template<> inline Type2Vec_Traits<   int>::vec_type v_setall<   int>(const    int& a) { return v_setall_s32(a); }
+template<> inline Type2Vec_Traits<uint64>::vec_type v_setall<uint64>(const uint64& a) { return v_setall_u64(a); }
+template<> inline Type2Vec_Traits< int64>::vec_type v_setall< int64>(const  int64& a) { return v_setall_s64(a); }
+template<> inline Type2Vec_Traits< float>::vec_type v_setall< float>(const  float& a) { return v_setall_f32(a); }
+#if CV_SIMD_SCALABLE_64F
+template<> inline Type2Vec_Traits<double>::vec_type v_setall<double>(const double& a) { return v_setall_f64(a); }
+#endif
+#endif
+
+
+#if CV_SIMD_SCALABLE
+template<typename _T> static inline
+typename Type2Vec_Traits<_T>::vec_type vx_setall(const _T& a) { return v_setall(a); }
+#elif CV_SIMD_WIDTH == 16
 template<typename _T> static inline
 typename Type2Vec128_Traits<_T>::vec_type vx_setall(const _T& a) { return v_setall(a); }
 #elif CV_SIMD_WIDTH == 32

@@ -35,8 +35,7 @@ cv::gapi::GBackend::Priv::compile(const ade::Graph&,
                                   const std::vector<ade::NodeHandle> &) const
 {
     // ...and this method is here for the same reason!
-    GAPI_Assert(false);
-    return {};
+    GAPI_Error("InternalError");
 }
 
 std::unique_ptr<cv::gimpl::GIslandExecutable>
@@ -81,6 +80,9 @@ bool cv::gapi::GBackend::Priv::allowsMerge(const cv::gimpl::GIslandModel::Graph 
     return true;
 }
 
+bool cv::gapi::GBackend::Priv::supportsConst(cv::GShape) const {
+    return false;
+}
 
 // GBackend public implementation //////////////////////////////////////////////
 cv::gapi::GBackend::GBackend()
@@ -224,7 +226,6 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, HandleRMat hand
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
     }
 }
 
@@ -256,7 +257,6 @@ void resetInternalData(Mag& mag, const Data &d)
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
     }
 }
 
@@ -284,7 +284,6 @@ cv::GRunArg getArg(const Mag& mag, const RcDesc &ref)
                        mag.meta<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
     }
 }
 
@@ -327,7 +326,6 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
     }
 }
 
@@ -359,7 +357,6 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
     }
 }
 
@@ -391,7 +388,7 @@ void unbind(Mag& mag, const RcDesc &rc)
         break;
 
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 

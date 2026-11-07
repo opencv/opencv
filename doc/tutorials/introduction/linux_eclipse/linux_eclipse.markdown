@@ -9,6 +9,8 @@ Using OpenCV with Eclipse (plugin CDT) {#tutorial_linux_eclipse}
 | Original author | Ana Huamán |
 | Compatibility | OpenCV >= 3.0 |
 
+@tableofcontents
+
 @warning
 This tutorial can contain obsolete information.
 
@@ -63,7 +65,7 @@ Making a project
     int main( int argc, char** argv )
     {
       Mat image;
-      image = imread( argv[1], 1 );
+      image = imread( argv[1], IMREAD_COLOR );
 
       if( argc != 2 || !image.data )
         {

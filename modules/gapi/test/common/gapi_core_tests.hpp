@@ -41,7 +41,7 @@ inline std::ostream& operator<<(std::ostream& os, mathOp op)
         CASE(SUB);
         CASE(MUL);
         CASE(DIV);
-        default: GAPI_Assert(false && "unknown mathOp value");
+        default: GAPI_Error("unknown mathOp value");
     }
 #undef CASE
     return os;
@@ -57,7 +57,7 @@ inline std::ostream& operator<<(std::ostream& os, bitwiseOp op)
         CASE(OR);
         CASE(XOR);
         CASE(NOT);
-        default: GAPI_Assert(false && "unknown bitwiseOp value");
+        default: GAPI_Error("unknown bitwiseOp value");
     }
 #undef CASE
     return os;

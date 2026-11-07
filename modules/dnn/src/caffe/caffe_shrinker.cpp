@@ -44,8 +44,8 @@ void shrinkCaffeModel(const String& src, const String& dst, const std::vector<St
             CV_Assert(blob->data_size() != 0);  // float32 array.
 
             Mat floats(1, blob->data_size(), CV_32FC1, (void*)blob->data().data());
-            Mat halfs(1, blob->data_size(), CV_16SC1);
-            convertFp16(floats, halfs);  // Convert to float16.
+            Mat halfs(1, blob->data_size(), CV_16FC1);
+            floats.convertTo(halfs, CV_16F);  // Convert to float16.
 
             blob->clear_data();  // Clear float32 data.
 

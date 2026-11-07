@@ -23,7 +23,7 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
 {
 #if GST_VERSION_MINOR >= 10
     // Check that GstBuffer has mono-view, so we can retrieve only one video-meta
-    GAPI_Assert((gst_buffer_get_flags(m_buffer) & GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW) == 0);
+    GAPI_Assert((gst_buffer_get_flags(m_buffer) & static_cast<GstBufferFlags>(GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW)) == 0);
 #endif // GST_VERSION_MINOR >= 10
 
     GstVideoMeta* videoMeta = gst_buffer_get_video_meta(m_buffer);
@@ -40,7 +40,7 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 break;
             }
             default: {
-                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                GAPI_Error("Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -59,7 +59,7 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 break;
             }
             default: {
-                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                GAPI_Error("Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -160,7 +160,7 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
             break;
         }
         default: {
-            GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+            GAPI_Error("Non NV12 or GRAY Media format is not expected here");
             break;
         }
     }
@@ -171,7 +171,7 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
 }
 
 cv::util::any GStreamerMediaAdapter::blobParams() const {
-    GAPI_Assert(false && "No implementation for GStreamerMediaAdapter::blobParams()");
+    GAPI_Error("No implementation for GStreamerMediaAdapter::blobParams()");
 }
 
 } // namespace gst

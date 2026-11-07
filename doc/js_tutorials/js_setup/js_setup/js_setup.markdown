@@ -16,7 +16,7 @@ To Install Emscripten, follow instructions of [Emscripten SDK](https://emscripte
 
 For example:
 @code{.bash}
-./emsdk update
+git pull # Note: ./emsdk update is deprecated in modern emsdk; use git pull to update the repository.
 ./emsdk install latest
 ./emsdk activate latest
 @endcode
@@ -37,13 +37,14 @@ emcmake sh -c 'echo ${EMSCRIPTEN}'
 @endcode
 
 
-The version 2.0.10 of emscripten is verified for latest WebAssembly. Please check the version of Emscripten to use the newest features of WebAssembly.
+The Emscripten SDK is continuously updated. If you encounter build errors with the latest version, please install and activate a specific version explicitly.
 
 For example:
 @code{.bash}
-./emsdk update
-./emsdk install 2.0.10
-./emsdk activate 2.0.10
+git pull
+./emsdk list # to show available versions. v6.0.9 is used in the following steps.
+./emsdk install 6.0.9
+./emsdk activate 6.0.9
 @endcode
 
 Obtaining OpenCV Source Code
@@ -54,7 +55,7 @@ repository](https://github.com/opencv/opencv.git).
 
 ### Obtaining the Latest Stable OpenCV Version
 
--   Go to our [releases page](http://opencv.org/releases.html).
+-   Go to our [releases page](https://opencv.org/releases).
 -   Download the source archive and unpack it.
 
 ### Obtaining the Cutting-edge OpenCV from the Git Repository
@@ -73,6 +74,10 @@ Building OpenCV.js from Source
 ---------------------------------------
 
 -#  To build `opencv.js`, execute python script `<opencv_src_dir>/platforms/js/build_js.py <build_dir>`.
+    The build script builds WebAssembly version by default(`--build_wasm` switch is kept by back-compatibility reason).
+    By default everything is bundled into one JavaScript file by `base64` encoding the WebAssembly code. For production
+    builds you can add `--disable_single_file` which will reduce total size by writing the WebAssembly code
+    to a dedicated `.wasm` file which the generated JavaScript file will automatically load.
 
     For example, to build in `build_js` directory:
     @code{.bash}
@@ -80,14 +85,12 @@ Building OpenCV.js from Source
     @endcode
 
     @note
-    It requires `python` and `cmake` installed in your development environment.
-
--#  The build script builds asm.js version by default. To build WebAssembly version, append `--build_wasm` switch.
-
-    For example, to build wasm version in `build_wasm` directory:
-    @code{.bash}
-    emcmake python ./opencv/platforms/js/build_js.py build_wasm --build_wasm
-    @endcode
+    - It requires `python` and `cmake` installed in your development environment.
+    - To build with Emscripten 4.0.20 or later, append --cmake_option="-DCMAKE_CXX_STANDARD=17" .
+      Embind requires C++17 or later since Emscripten 4.0.20.
+      @code{.bash}
+      emcmake python ./opencv/platforms/js/build_js.py build_js --cmake_option="-DCMAKE_CXX_STANDARD=17"
+      @endcode
 
 -#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
 
@@ -135,14 +138,7 @@ Building OpenCV.js from Source
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
-    @endcode
-
--#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
-
-    For example:
-    @code{.bash}
-    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
+    emcmake python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
     @endcode
 
 -#  [optional] To enable WebNN backend, append `--webnn` option.

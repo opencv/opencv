@@ -61,7 +61,7 @@ namespace cv
     {
     public:
         AKAZE_Impl(DescriptorType _descriptor_type, int _descriptor_size, int _descriptor_channels,
-                 float _threshold, int _octaves, int _sublevels, KAZE::DiffusivityType _diffusivity)
+                 float _threshold, int _octaves, int _sublevels, KAZE::DiffusivityType _diffusivity, int _max_points)
         : descriptor(_descriptor_type)
         , descriptor_channels(_descriptor_channels)
         , descriptor_size(_descriptor_size)
@@ -69,6 +69,7 @@ namespace cv
         , octaves(_octaves)
         , sublevels(_sublevels)
         , diffusivity(_diffusivity)
+        , max_points(_max_points)
         {
         }
 
@@ -97,6 +98,9 @@ namespace cv
 
         void setDiffusivity(KAZE::DiffusivityType diff_) CV_OVERRIDE{ diffusivity = diff_; }
         KAZE::DiffusivityType getDiffusivity() const CV_OVERRIDE{ return diffusivity; }
+
+        void setMaxPoints(int max_points_) CV_OVERRIDE { max_points = max_points_; }
+        int getMaxPoints() const CV_OVERRIDE { return max_points; }
 
         // returns the descriptor size in bytes
         int descriptorSize() const CV_OVERRIDE
@@ -183,11 +187,36 @@ namespace cv
             options.diffusivity = diffusivity;
 
             AKAZEFeatures impl(options);
-            impl.Create_Nonlinear_Scale_Space(image);
 
-            if (!useProvidedKeypoints)
+            UMatPyramid uPyr;
+#ifdef HAVE_OPENCL
+            // NOTE: The AKAZE kernels use excessive private memory 336 bytes per work-item:
+            // float histogram[36] and float values[48] arrays. On 32-bit Windows, this
+            // exceeds the driver's private memory limits, causing SEH exception (0xc0000005).
+#if defined(_M_IX86) || defined(__i386__)
+            bool use_opencl = false;
+#else
+            bool use_opencl = cv::ocl::useOpenCL() && image.isUMat() && descriptor == DESCRIPTOR_MLDB_UPRIGHT
+                              && !ocl::Device::getDefault().hostUnifiedMemory();
+#endif
+            if (use_opencl)
             {
-                impl.Feature_Detection(keypoints);
+                impl.GetEvolutionPyramid(uPyr); // Get initialized pyramid
+                impl.Create_Nonlinear_Scale_Space_UMat(image, uPyr);
+                if (!useProvidedKeypoints)
+                {
+                    impl.Feature_Detection_UMat(uPyr, keypoints);
+                }
+            }
+            else
+#endif
+            {
+                impl.Create_Nonlinear_Scale_Space(image);
+
+                if (!useProvidedKeypoints)
+                {
+                    impl.Feature_Detection(keypoints);
+                }
             }
 
             if (!mask.empty())
@@ -195,9 +224,24 @@ namespace cv
                 KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
             }
 
+            if (max_points > 0 && (int)keypoints.size() > max_points) {
+                std::partial_sort(keypoints.begin(), keypoints.begin() + max_points, keypoints.end(),
+                    [](const cv::KeyPoint& k1, const cv::KeyPoint& k2) {return k1.response > k2.response;});
+                keypoints.erase(keypoints.begin() + max_points, keypoints.end());
+            }
+
             if(descriptors.needed())
             {
-                impl.Compute_Descriptors(keypoints, descriptors);
+#ifdef HAVE_OPENCL
+                if (use_opencl)
+                {
+                    impl.Compute_Descriptors_UMat(keypoints, descriptors, uPyr);
+                }
+                else
+#endif
+                {
+                    impl.Compute_Descriptors(keypoints, descriptors);
+                }
 
                 CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
                 CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));
@@ -207,6 +251,7 @@ namespace cv
         void write(FileStorage& fs) const CV_OVERRIDE
         {
             writeFormat(fs);
+            fs << "name" << getDefaultName();
             fs << "descriptor" << descriptor;
             fs << "descriptor_channels" << descriptor_channels;
             fs << "descriptor_size" << descriptor_size;
@@ -214,17 +259,28 @@ namespace cv
             fs << "octaves" << octaves;
             fs << "sublevels" << sublevels;
             fs << "diffusivity" << diffusivity;
+            fs << "max_points" << max_points;
         }
 
         void read(const FileNode& fn) CV_OVERRIDE
         {
-            descriptor = static_cast<DescriptorType>((int)fn["descriptor"]);
-            descriptor_channels = (int)fn["descriptor_channels"];
-            descriptor_size = (int)fn["descriptor_size"];
-            threshold = (float)fn["threshold"];
-            octaves = (int)fn["octaves"];
-            sublevels = (int)fn["sublevels"];
-            diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
+            // if node is empty, keep previous value
+            if (!fn["descriptor"].empty())
+                descriptor = static_cast<DescriptorType>((int)fn["descriptor"]);
+            if (!fn["descriptor_channels"].empty())
+                descriptor_channels = (int)fn["descriptor_channels"];
+            if (!fn["descriptor_size"].empty())
+                descriptor_size = (int)fn["descriptor_size"];
+            if (!fn["threshold"].empty())
+                threshold = (float)fn["threshold"];
+            if (!fn["octaves"].empty())
+                octaves = (int)fn["octaves"];
+            if (!fn["sublevels"].empty())
+                sublevels = (int)fn["sublevels"];
+            if (!fn["diffusivity"].empty())
+                diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
+            if (!fn["max_points"].empty())
+                max_points = (int)fn["max_points"];
         }
 
         DescriptorType descriptor;
@@ -234,15 +290,16 @@ namespace cv
         int octaves;
         int sublevels;
         KAZE::DiffusivityType diffusivity;
+        int max_points;
     };
 
     Ptr<AKAZE> AKAZE::create(DescriptorType descriptor_type,
                              int descriptor_size, int descriptor_channels,
                              float threshold, int octaves,
-                             int sublevels, KAZE::DiffusivityType diffusivity)
+                             int sublevels, KAZE::DiffusivityType diffusivity, int max_points)
     {
         return makePtr<AKAZE_Impl>(descriptor_type, descriptor_size, descriptor_channels,
-                                   threshold, octaves, sublevels, diffusivity);
+                                   threshold, octaves, sublevels, diffusivity, max_points);
     }
 
     String AKAZE::getDefaultName() const

@@ -41,7 +41,7 @@ int main(int, char**)
     {
         for (int j = 0; j < image.cols; j++)
         {
-            Mat sampleMat = (Mat_<float>(1,2) << j,i);
+            Mat sampleMat = Mat_<float>({1,2}, {(float)j,(float)i});
             float response = svm->predict(sampleMat);
 
             if (response == 1)

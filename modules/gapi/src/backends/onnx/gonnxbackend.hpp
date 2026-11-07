@@ -39,11 +39,12 @@ class GONNXExecutable final: public GIslandExecutable
 
 public:
     GONNXExecutable(const ade::Graph                   &graph,
-                    const std::vector<ade::NodeHandle> &nodes);
+                    const std::vector<ade::NodeHandle> &nodes,
+                    const cv::GCompileArgs             &compileArgs);
 
     virtual inline bool canReshape() const override { return false; }
     virtual inline void reshape(ade::Graph&, const GCompileArgs&) override {
-        GAPI_Assert(false); // Not implemented yet
+        GAPI_Error("InternalError"); // Not implemented yet
     }
 
     virtual void run(std::vector<InObj>  &&input_objs,

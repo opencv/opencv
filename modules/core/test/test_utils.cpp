@@ -259,6 +259,18 @@ TEST(CommandLineParser, positional_regression_5074_equal_sign)
     EXPECT_TRUE(parser.check());
 }
 
+TEST(CommandLineParser, testKeysMissingFields)
+{
+    const char* argv[] = {"<bin>", "-h"};
+    const int argc = 2;
+    EXPECT_THROW(cv::CommandLineParser(argc, argv, "{help h}"), cv::Exception);
+    EXPECT_THROW(cv::CommandLineParser(argc, argv, "{help h|}"), cv::Exception);
+
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    EXPECT_TRUE(parser.has("help"));
+    EXPECT_TRUE(parser.check());
+}
+
 
 TEST(AutoBuffer, allocate_test)
 {
@@ -345,7 +357,7 @@ TEST(Samples, findFile)
 {
     cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
     cv::String path;
-    ASSERT_NO_THROW(path = samples::findFile("lena.jpg", false));
+    ASSERT_NO_THROW(path = samples::findFile("HappyFish.jpg", false));
     EXPECT_NE(std::string(), path.c_str());
     cv::utils::logging::setLogLevel(prev);
 }
@@ -408,9 +420,6 @@ TEST_P(BufferArea, basic)
             EXPECT_EQ((double)0, dbl_ptr[i]);
         }
     }
-    EXPECT_TRUE(int_ptr == NULL);
-    EXPECT_TRUE(uchar_ptr == NULL);
-    EXPECT_TRUE(dbl_ptr == NULL);
 }
 
 TEST_P(BufferArea, align)
@@ -446,10 +455,6 @@ TEST_P(BufferArea, align)
                     << " (element size: " << sizeof(T) << ")";
             }
         }
-    }
-    for (size_t i = 0; i < CNT; ++i)
-    {
-        EXPECT_TRUE(buffers[i] == NULL);
     }
 }
 

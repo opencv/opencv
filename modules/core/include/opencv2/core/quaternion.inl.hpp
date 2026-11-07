@@ -28,7 +28,7 @@
 #define OPENCV_CORE_QUATERNION_INL_HPP
 
 #ifndef OPENCV_CORE_QUATERNION_HPP
-#erorr This is not a standalone header. Include quaternion.hpp instead.
+#error This is not a standalone header. Include quaternion.hpp instead.
 #endif
 
 //@cond IGNORE
@@ -494,7 +494,9 @@ inline Quat<T> Quat<T>::sinh() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::cosh(w) * std::sin(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::cosh(w))
+        : std::cosh(w) * std::sin(vNorm) / vNorm;
     return Quat<T>(std::sinh(w) * std::cos(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -511,7 +513,9 @@ inline Quat<T> Quat<T>::cosh() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::sinh(w) * std::sin(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::sinh(w))
+        : std::sinh(w) * std::sin(vNorm) / vNorm;
     return Quat<T>(std::cosh(w) * std::cos(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -540,7 +544,9 @@ inline Quat<T> Quat<T>::sin() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::cos(w) * std::sinh(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::cos(w))
+        : std::cos(w) * std::sinh(vNorm) / vNorm;
     return Quat<T>(std::sin(w) * std::cosh(vNorm), v[0] * k, v[1] * k, v[2] * k);
 }
 
@@ -555,7 +561,9 @@ inline Quat<T> Quat<T>::cos() const
 {
     Vec<T, 3> v{x, y ,z};
     T vNorm = std::sqrt(v.dot(v));
-    T k = vNorm < CV_QUAT_EPS ? 1 : std::sin(w) * std::sinh(vNorm) / vNorm;
+    T k = vNorm < CV_QUAT_EPS
+        ? (x == 0 && y == 0 && z == 0 ? T(1) : std::sin(w))
+        : std::sin(w) * std::sinh(vNorm) / vNorm;
     return Quat<T>(std::cos(w) * std::cosh(vNorm), -v[0] * k, -v[1] * k, -v[2] * k);
 }
 
@@ -745,8 +753,8 @@ Quat<T> Quat<T>::lerp(const Quat<T> &q0, const Quat<T> &q1, const T t)
 template <typename T>
 Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, QuatAssumeType assumeUnit, bool directChange)
 {
-    Quatd v0(q0);
-    Quatd v1(q1);
+    Quat<T> v0(q0);
+    Quat<T> v1(q1);
     if (!assumeUnit)
     {
         v0 = v0.normalize();
@@ -754,7 +762,7 @@ Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, QuatAssu
     }
     T cosTheta = v0.dot(v1);
     constexpr T DOT_THRESHOLD = 0.995;
-    if (cosTheta > DOT_THRESHOLD)
+    if (std::abs(cosTheta) > DOT_THRESHOLD)
     {
         return nlerp(v0, v1, t, QUAT_ASSUME_UNIT);
     }
@@ -843,7 +851,7 @@ Quat<T> Quat<T>::interPoint(const Quat<T> &q0, const Quat<T> &q1,
 template <typename T>
 Quat<T> Quat<T>::spline(const Quat<T> &q0, const Quat<T> &q1, const Quat<T> &q2, const Quat<T> &q3, const T t, QuatAssumeType assumeUnit)
 {
-    Quatd v0(q0), v1(q1), v2(q2), v3(q3);
+    Quat<T> v0(q0), v1(q1), v2(q2), v3(q3);
     if (!assumeUnit)
     {
         v0 = v0.normalize();

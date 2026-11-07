@@ -1,0 +1,11 @@
+{
+    "ManualFuncs" : {
+        "QRCodeDetectorAruco": {
+            "getDetectorParameters": { "declaration" : [""], "implementation" : [""] }
+        },
+        "CharucoBoard": {
+            "getNearestMarkerIdx"     : { "declaration" : [""], "implementation" : [""] },
+            "getNearestMarkerCorners" : { "declaration" : [""], "implementation" : [""] }
+        }
+    }
+}

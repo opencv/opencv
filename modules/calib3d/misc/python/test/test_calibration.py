@@ -67,7 +67,110 @@ class calibration_test(NewOpenCVTests):
         self.assertLess(cv.norm(camera_matrix - cameraMatrixTest, cv.NORM_L1), normCamEps)
         self.assertLess(cv.norm(dist_coefs - distCoeffsTest, cv.NORM_L1), normDistEps)
 
+    def test_projectPoints(self):
+        objectPoints = np.array([[181.24588 ,  87.80361 ,  11.421074],
+            [ 87.17948 , 184.75563 ,  37.223446],
+            [ 22.558456,  45.495266, 246.05797 ]], dtype=np.float32)
+        rvec = np.array([[ 0.9357548 , -0.28316498,  0.21019171],
+            [ 0.30293274,  0.9505806 , -0.06803132],
+            [-0.18054008,  0.12733458,  0.9752903 ]], dtype=np.float32)
+        tvec = np.array([ 69.32692 ,  17.602057, 135.77672 ], dtype=np.float32)
+        cameraMatrix = np.array([[214.0047  ,  26.98735 , 253.37799 ],
+            [189.8172  ,  10.038101,  18.862494],
+            [114.07123 , 200.87277 , 194.56332 ]], dtype=np.float32)
+        distCoeffs = distCoeffs = np.zeros((4, 1), dtype=np.float32)
 
+        imagePoints, jacobian = cv.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
+        self.assertTrue(imagePoints is not None)
+        self.assertTrue(jacobian is not None)
+
+    def test_sampsonDistance_valid2D(self):
+        pt1 = (np.random.rand(3, 10) * 256).astype(np.float64)
+        pt2 = (np.random.rand(3, 10) * 256).astype(np.float64)
+        F = (np.random.rand(3, 3) * 256).astype(np.float64)
+        dist = cv.sampsonDistance(pt1, pt2, F)
+        self.assertTrue(isinstance(dist, (float, np.floating)))
+        self.assertGreaterEqual(dist, 0.0)
+
+    @staticmethod
+    def _random_rt():
+        # random rotation (axis-angle) + random translation
+        axis = np.random.uniform(-1, 1, 3)
+        axis /= np.linalg.norm(axis)
+        angle = np.random.uniform(0.2, 1.0) * (1 if np.random.rand() > 0.5 else -1)
+        rvec = (axis * angle).astype(np.float64)
+        R, _ = cv.Rodrigues(rvec)
+        t = np.random.uniform(-100, 100, 3).astype(np.float64)
+        return R, t
+
+    @staticmethod
+    def _to_T(R, t):
+        T = np.eye(4)
+        T[:3, :3] = R
+        T[:3, 3] = t
+        return T
+
+    def test_calibrateHandEye(self):
+        # Ground truth camera-to-gripper transform (what calibrateHandEye should recover)
+        R_cam2gripper_gt, t_cam2gripper_gt = self._random_rt()
+        X = self._to_T(R_cam2gripper_gt, t_cam2gripper_gt)
+
+        # Arbitrary fixed target-to-base transform (the calibration board doesn't move)
+        R_target2base, t_target2base = self._random_rt()
+        Wt = self._to_T(R_target2base, t_target2base)
+
+        n_poses = 10
+        Rs_gripper2base, ts_gripper2base = [], []
+        Rs_target2cam, ts_target2cam = [], []
+        for _ in range(n_poses):
+            R_g2b, t_g2b = self._random_rt()
+            G = self._to_T(R_g2b, t_g2b)
+            # Consistent synthetic data: Wt == G @ X @ T_target2cam for every pose
+            T_target2cam = np.linalg.inv(X) @ np.linalg.inv(G) @ Wt
+
+            Rs_gripper2base.append(R_g2b)
+            ts_gripper2base.append(t_g2b)
+            Rs_target2cam.append(T_target2cam[:3, :3])
+            ts_target2cam.append(T_target2cam[:3, 3])
+
+        R_cam2gripper, t_cam2gripper = cv.calibrateHandEye(
+            Rs_gripper2base, ts_gripper2base, Rs_target2cam, ts_target2cam)
+
+        self.assertLess(cv.norm(R_cam2gripper - R_cam2gripper_gt, cv.NORM_L1), 1e-3)
+        self.assertLess(cv.norm(t_cam2gripper.flatten() - t_cam2gripper_gt, cv.NORM_L1), 1e-3)
+
+    def test_calibrateRobotWorldHandEye(self):
+        # Ground truth outputs (what calibrateRobotWorldHandEye should recover)
+        R_base2world_gt, t_base2world_gt = self._random_rt()
+        X = self._to_T(R_base2world_gt, t_base2world_gt)
+
+        R_gripper2cam_gt, t_gripper2cam_gt = self._random_rt()
+        Z = self._to_T(R_gripper2cam_gt, t_gripper2cam_gt)
+
+        n_poses = 10
+        Rs_world2cam, ts_world2cam = [], []
+        Rs_base2gripper, ts_base2gripper = [], []
+        for _ in range(n_poses):
+            R_b2g, t_b2g = self._random_rt()
+            B = self._to_T(R_b2g, t_b2g)
+            # Consistent synthetic data: A_i @ X == Z @ B_i  =>  A_i = Z @ B_i @ inv(X)
+            A = Z @ B @ np.linalg.inv(X)
+
+            Rs_world2cam.append(A[:3, :3])
+            # NOTE: unlike calibrateHandEye, calibrateRobotWorldHandEye's Shah/Li
+            # solvers require translations as explicit (3,1) column vectors, not
+            # flat (3,) arrays -- passing (3,) raises a gemm shape-assertion error.
+            ts_world2cam.append(A[:3, 3].reshape(3, 1))
+            Rs_base2gripper.append(R_b2g)
+            ts_base2gripper.append(t_b2g.reshape(3, 1))
+
+        R_base2world, t_base2world, R_gripper2cam, t_gripper2cam = cv.calibrateRobotWorldHandEye(
+            Rs_world2cam, ts_world2cam, Rs_base2gripper, ts_base2gripper)
+
+        self.assertLess(cv.norm(R_base2world - R_base2world_gt, cv.NORM_L1), 1e-3)
+        self.assertLess(cv.norm(t_base2world.flatten() - t_base2world_gt, cv.NORM_L1), 1e-3)
+        self.assertLess(cv.norm(R_gripper2cam - R_gripper2cam_gt, cv.NORM_L1), 1e-3)
+        self.assertLess(cv.norm(t_gripper2cam.flatten() - t_gripper2cam_gt, cv.NORM_L1), 1e-3)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

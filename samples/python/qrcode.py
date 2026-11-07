@@ -21,6 +21,18 @@ PY3 = sys.version_info[0] == 3
 if PY3:
     xrange = range
 
+# Colors for distinguishing multiple QR codes visually
+QR_COLORS = [
+    (0, 255, 0),    # green
+    (255, 0, 0),    # blue
+    (0, 0, 255),    # red
+    (255, 255, 0),  # cyan
+    (0, 255, 255),  # yellow
+    (255, 0, 255),  # magenta
+    (128, 255, 0),  # lime
+    (255, 128, 0),  # orange
+]
+
 
 class QrSample:
     def __init__(self, args):
@@ -33,6 +45,7 @@ class QrSample:
         self.multi = args.multi
         self.saveDetections = args.save_detections
         self.saveAll = args.save_all
+        self.arucoBased = args.aruco_based
 
     def getQRModeString(self):
         msg1 = "multi " if self.multi else ""
@@ -45,15 +58,14 @@ class QrSample:
         cv.putText(result, message, (20, 20), 1,
                    cv.FONT_HERSHEY_DUPLEX, (0, 0, 255))
 
-    def drawQRCodeContours(self, image, cnt):
+    def drawQRCodeContours(self, image, cnt, color=(0, 255, 0)):
         if cnt.size != 0:
             rows, cols, _ = image.shape
             show_radius = 2.813 * ((rows / cols) if rows > cols else (cols / rows))
             contour_radius = show_radius * 0.4
-            cv.drawContours(image, [cnt], 0, (0, 255, 0), int(round(contour_radius)))
+            cv.drawContours(image, [cnt], 0, color, int(round(contour_radius)))
             tpl = cnt.reshape((-1, 2))
             for x in tuple(tpl.tolist()):
-                color = (255, 0, 0)
                 cv.circle(image, tuple(x), int(round(contour_radius)), color, -1)
 
     def drawQRCodeResults(self, result, points, decode_info, fps):
@@ -63,7 +75,8 @@ class QrSample:
         if n > 0:
             for i in range(n):
                 cnt = np.array(points[i]).reshape((-1, 1, 2)).astype(np.int32)
-                self.drawQRCodeContours(result, cnt)
+                color = QR_COLORS[i % len(QR_COLORS)]
+                self.drawQRCodeContours(result, cnt, color)
                 msg = 'QR[{:d}]@{} : '.format(i, *(cnt.reshape(1, -1).tolist()))
                 print(msg, end="")
                 if len(decode_info) > i:
@@ -104,7 +117,12 @@ class QrSample:
             return
         print('Run {:s} on image [{:d}x{:d}]'.format(
             self.getQRModeString(), inputimg.shape[1], inputimg.shape[0]))
-        qrCode = cv.QRCodeDetector()
+
+        if self.arucoBased:
+            qrCode = cv.QRCodeDetectorAruco()
+        else:
+            qrCode = cv.QRCodeDetector()
+
         count = 10
         timer = cv.TickMeter()
         for _ in range(count):
@@ -152,7 +170,10 @@ class QrSample:
         print("Press ' ' (space) to save result into images")
         print("Press 'ESC' to exit")
 
-        qrcode = cv.QRCodeDetector()
+        if self.arucoBased:
+            qrcode = cv.QRCodeDetectorAruco()
+        else:
+            qrcode = cv.QRCodeDetector()
 
         while True:
             ret, frame = cap.read()
@@ -204,6 +225,10 @@ def main():
         help="input image path (for example, 'opencv_extra/testdata/cv/qrcode/multiple/*_qrcodes.png)",
         default="",
         metavar="")
+    parser.add_argument(
+        '--aruco_based',
+        help="use aruco-based detector",
+        action='store_true')
     parser.add_argument(
         '-d',
         '--detect',

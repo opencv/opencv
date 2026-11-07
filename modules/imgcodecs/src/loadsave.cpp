@@ -54,6 +54,8 @@
 #include <cerrno>
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/imgcodecs.hpp>
+
 
 
 /****************************************************************************************\
@@ -78,6 +80,35 @@ static Size validateInputImageSize(const Size& size)
     return size;
 }
 
+
+static inline int calcType(int type, int flags)
+{
+    if(flags != IMREAD_UNCHANGED)
+    {
+        CV_CheckNE(flags & (IMREAD_COLOR_BGR | IMREAD_COLOR_RGB),
+                   IMREAD_COLOR_BGR | IMREAD_COLOR_RGB,
+                   "IMREAD_COLOR_BGR (IMREAD_COLOR) and IMREAD_COLOR_RGB can not be set at the same time.");
+    }
+
+    if ( (flags & (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH)) == (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH))
+        return type;
+
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+    {
+        if( (flags & IMREAD_ANYDEPTH) == 0 )
+            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+        //if( (flags & IMREAD_ANYCOLOR) != 0 /*&& CV_MAT_CN(type) > 1*/ )
+        //    type = CV_MAKETYPE(CV_MAT_DEPTH(type), CV_MAT_CN(type));
+        //else if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 )
+        if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 ||
+           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+        else
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    }
+    return type;
+}
 
 namespace {
 
@@ -134,6 +165,14 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
+    #ifdef HAVE_IMGCODEC_GIF
+        decoders.push_back( makePtr<GifDecoder>() );
+        encoders.push_back( makePtr<GifEncoder>() );
+    #endif
+    #ifdef HAVE_AVIF
+        decoders.push_back(makePtr<AvifDecoder>());
+        encoders.push_back(makePtr<AvifEncoder>());
+    #endif
     #ifdef HAVE_IMGCODEC_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );
@@ -167,7 +206,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
     #endif
-    #ifdef HAVE_PNG
+    #ifdef HAVE_SPNG
+        decoders.push_back( makePtr<SPngDecoder>() );
+        encoders.push_back( makePtr<SPngEncoder>() );
+    #elif defined(HAVE_PNG)
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
     #endif
@@ -177,6 +219,10 @@ struct ImageCodecInitializer
     #ifdef HAVE_JASPER
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
+    #endif
+    #ifdef HAVE_JPEGXL
+        decoders.push_back( makePtr<JpegXLDecoder>() );
+        encoders.push_back( makePtr<JpegXLEncoder>() );
     #endif
     #ifdef HAVE_OPENJPEG
         decoders.push_back( makePtr<Jpeg2KJP2OpjDecoder>() );
@@ -201,15 +247,8 @@ struct ImageCodecInitializer
 static
 ImageCodecInitializer& getCodecs()
 {
-#ifdef CV_CXX11
     static ImageCodecInitializer g_codecs;
     return g_codecs;
-#else
-    // C++98 doesn't guarantee correctness of multi-threaded initialization of static global variables
-    // (memory leak here is not critical, use C++11 to avoid that)
-    static ImageCodecInitializer* g_codecs = new ImageCodecInitializer();
-    return *g_codecs;
-#endif
 }
 
 /**
@@ -325,8 +364,22 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+static bool isValidEncodeKeyAtAll(const int key)
+{
+    bool ret = false;
+    ImageCodecInitializer& codecs = getCodecs();
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        if( codecs.encoders[i]->isValidEncodeKey(key) == true )
+        {
+            ret = true;
+            break;
+        }
+    }
+    return ret;
+}
 
-static void ExifTransform(int orientation, Mat& img)
+static void ExifTransform(int orientation, OutputArray img)
 {
     switch( orientation )
     {
@@ -363,7 +416,7 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
+static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
@@ -371,6 +424,77 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
     {
         orientation = orientationTag.field_u16; //orientation is unsigned short, so check field_u16
         ExifTransform(orientation, img);
+    }
+}
+
+static void readMetadata(ImageDecoder& decoder,
+                         std::vector<int>* metadata_types,
+                         OutputArrayOfArrays metadata)
+{
+    if (!metadata_types)
+        return;
+    int kind = metadata.kind();
+    void* obj = metadata.getObj();
+    std::vector<Mat>* matvector = nullptr;
+    std::vector<std::vector<uchar> >* vecvector = nullptr;
+    if (kind == _InputArray::STD_VECTOR_MAT) {
+        matvector = (std::vector<Mat>*)obj;
+    } else if (kind == _InputArray::STD_VECTOR_VECTOR) {
+        int elemtype = metadata.type(0);
+        CV_Assert(elemtype == CV_8UC1 || elemtype == CV_8SC1);
+        vecvector = (std::vector<std::vector<uint8_t> >*)obj;
+    } else {
+        CV_Error(Error::StsBadArg,
+                 "unsupported metadata type, should be a vector of matrices or vector of byte vectors");
+    }
+    std::vector<Mat> src_metadata;
+    for (int m = (int)IMAGE_METADATA_EXIF; m <= (int)IMAGE_METADATA_MAX; m++) {
+        Mat mm = decoder->getMetadata((ImageMetadataType)m);
+        if (!mm.empty()) {
+            CV_Assert(mm.isContinuous());
+            CV_Assert(mm.elemSize() == 1u);
+            metadata_types->push_back(m);
+            src_metadata.push_back(mm);
+        }
+    }
+    size_t nmetadata = metadata_types->size();
+    if (matvector) {
+        matvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++)
+            src_metadata[m].copyTo(matvector->at(m));
+    } else {
+        vecvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++) {
+            const Mat& mm = src_metadata[m];
+            const uchar* data = (uchar*)mm.data;
+            vecvector->at(m).assign(data, data + mm.total());
+        }
+    }
+}
+
+static const char* metadataTypeToString(ImageMetadataType type)
+{
+    return type == IMAGE_METADATA_EXIF ? "Exif" :
+           type == IMAGE_METADATA_XMP ? "XMP" :
+           type == IMAGE_METADATA_ICCP ? "ICC Profile" :
+           type == IMAGE_METADATA_CICP ? "cICP" : "???";
+}
+
+static void addMetadata(ImageEncoder& encoder,
+                        const std::vector<int>& metadata_types,
+                        InputArrayOfArrays metadata)
+{
+    size_t nmetadata_chunks = metadata_types.size();
+    for (size_t i = 0; i < nmetadata_chunks; i++) {
+        ImageMetadataType metadata_type = (ImageMetadataType)metadata_types[i];
+        bool ok = encoder->addMetadata(metadata_type, metadata.getMat((int)i));
+        if (!ok) {
+            std::string desc = encoder->getDescription();
+            CV_LOG_WARNING(NULL, "Imgcodecs: metadata of type '"
+                           << metadataTypeToString(metadata_type)
+                           << "' is not supported when encoding '"
+                           << desc << "'");
+        }
     }
 }
 
@@ -383,7 +507,8 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
  *
 */
 static bool
-imread_( const String& filename, int flags, Mat& mat )
+imread_( const String& filename, int flags, OutputArray mat,
+         std::vector<int>* metadata_types, OutputArrayOfArrays metadata)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -414,11 +539,23 @@ imread_( const String& filename, int flags, Mat& mat )
             scale_denom = 8;
     }
 
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
     /// set the filename in the driver
     decoder->setSource( filename );
+
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
 
     try
     {
@@ -428,12 +565,12 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: " << e.what());
         return 0;
     }
     catch (...)
     {
-        std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
 
@@ -442,35 +579,41 @@ imread_( const String& filename, int flags, Mat& mat )
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
     // grab the decoded type
-    int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
-    {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+    const int type = calcType(decoder->type(), flags);
 
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-        else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    if (mat.empty())
+    {
+        mat.create( size.height, size.width, type );
+    }
+    else
+    {
+        CV_CheckEQ(size, mat.size(), "");
+        CV_CheckTypeEQ(type, mat.type(), "");
+        CV_Assert(mat.isContinuous());
     }
 
-    mat.create( size.height, size.width, type );
-
     // read the image data
+    Mat real_mat = mat.getMat();
+    const void * original_ptr = real_mat.data;
     bool success = false;
+    decoder->resetFrameCount(); // this is needed for PngDecoder. it should be called before decoder->readData()
     try
     {
-        if (decoder->readData(mat))
+        if (decoder->readData(real_mat))
+        {
+            CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
+        }
+
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: unknown exception");
     }
     if (!success)
     {
@@ -521,6 +664,9 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         count = std::numeric_limits<int>::max();
     }
 
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+        decoder->setRGB(true);
+
     /// set the filename in the driver
     decoder->setSource(filename);
 
@@ -533,12 +679,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
         return 0;
     }
     catch (...)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
 
@@ -556,18 +702,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     while (current < count)
     {
         // grab the decoded type
-        int type = decoder->type();
-        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
-        {
-            if ((flags & IMREAD_ANYDEPTH) == 0)
-                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-            if ((flags & IMREAD_COLOR) != 0 ||
-                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-            else
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-        }
+        const int type = calcType(decoder->type(), flags);
 
         // established the required input image size
         Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
@@ -582,11 +717,11 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         }
         catch (const cv::Exception& e)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
         }
         catch (...)
         {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
         }
         if (!success)
             break;
@@ -624,10 +759,35 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img );
+    imread_( filename, flags, img, nullptr, noArray() );
 
     /// return a reference to the data
     return img;
+}
+
+Mat imreadWithMetadata( const String& filename,
+                        std::vector<int>& metadata_types,
+                        OutputArrayOfArrays metadata,
+                        int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    /// create the basic container
+    Mat img;
+
+    /// load the data
+    imread_( filename, flags, img, &metadata_types, metadata );
+
+    /// return a reference to the data
+    return img;
+}
+
+void imread( const String& filename, OutputArray dst, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    /// load the data
+    imread_(filename, flags, dst, nullptr, noArray());
 }
 
 /**
@@ -655,60 +815,240 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
     return imreadmulti_(filename, flags, mats, start, count);
 }
 
-static
-size_t imcount_(const String& filename, int flags)
+static bool
+imreadanimation_(const String& filename, int flags, int start, int count, Animation& animation)
 {
+    bool success = false;
+    if (start < 0) {
+        start = 0;
+    }
+    if (count < 0) {
+        count = INT16_MAX;
+    }
+
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
+    decoder = findDecoder(filename);
 
-#ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#else
-        CV_UNUSED(flags);
-#endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    /// if no decoder was found, return nothing.
+    /// if no decoder was found, return false.
     if (!decoder) {
-        return 0;
+        CV_LOG_WARNING(NULL, "Decoder for " << filename << " not found!\n");
+        return false;
     }
 
     /// set the filename in the driver
     decoder->setSource(filename);
-
     // read the header to make sure it succeeds
     try
     {
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
-            return 0;
+            return false;
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imcount_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-        return 0;
+        CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: " << e.what());
+        return false;
     }
     catch (...)
     {
-        std::cerr << "imcount_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
-        return 0;
+        CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: unknown exception");
+        return false;
     }
 
-    size_t result = 1;
+    int current = 0;
+    int frame_count = (int)decoder->getFrameCount();
+    count = count + start > frame_count ? frame_count - start : count;
 
+    uint64 pixels = (uint64)decoder->width() * (uint64)decoder->height() * (uint64)(count + 4);
+    if (pixels > CV_IO_MAX_IMAGE_PIXELS) {
+        CV_LOG_WARNING(NULL, "\nyou are trying to read " << pixels <<
+            " bytes that exceed CV_IO_MAX_IMAGE_PIXELS.\n");
+        return false;
+    }
 
-    while (decoder->nextPage())
+    while (current < start + count)
     {
-        ++result;
+        // grab the decoded type
+        const int type = calcType(decoder->type(), flags);
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: unknown exception");
+        }
+        if (!success)
+            break;
+
+        // optionally rotate the data if EXIF' orientation flag says so
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+        {
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        }
+
+        if (current >= start)
+        {
+            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
+            animation.durations.push_back(duration);
+            animation.frames.push_back(mat);
+        }
+
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+    animation.bgcolor = decoder->animation().bgcolor;
+    animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
+
+    return success;
+}
+
+bool imreadanimation(const String& filename, CV_OUT Animation& animation, int start, int count)
+{
+    CV_TRACE_FUNCTION();
+
+    return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, animation);
+}
+
+static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation& animation)
+{
+    bool success = false;
+    if (start < 0) {
+        start = 0;
+    }
+    if (count < 0) {
+        count = INT16_MAX;
     }
 
-    return result;
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+    decoder = findDecoder(buf.getMat());
+
+    /// if no decoder was found, return false.
+    if (!decoder) {
+        CV_LOG_WARNING(NULL, "Decoder for buffer not found!\n");
+        return false;
+    }
+
+    /// set the filename in the driver
+    decoder->setSource(buf.getMat());
+    // read the header to make sure it succeeds
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return false;
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: unknown exception");
+        return false;
+    }
+
+    int current = 0;
+    int frame_count = (int)decoder->getFrameCount();
+    count = count + start > frame_count ? frame_count - start : count;
+
+    uint64 pixels = (uint64)decoder->width() * (uint64)decoder->height() * (uint64)(count + 4);
+    if (pixels > CV_IO_MAX_IMAGE_PIXELS) {
+        CV_LOG_WARNING(NULL, "\nyou are trying to read " << pixels <<
+            " bytes that exceed CV_IO_MAX_IMAGE_PIXELS.\n");
+        return false;
+    }
+
+    while (current < start + count)
+    {
+        // grab the decoded type
+        const int type = calcType(decoder->type(), flags);
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: unknown exception");
+        }
+        if (!success)
+            break;
+
+        // optionally rotate the data if EXIF' orientation flag says so
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+        {
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        }
+
+        if (current >= start)
+        {
+            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
+            animation.durations.push_back(duration);
+            animation.frames.push_back(mat);
+        }
+
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+    animation.bgcolor = decoder->animation().bgcolor;
+    animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
+
+    return success;
+}
+
+bool imdecodeanimation(InputArray buf, Animation& animation, int start, int count)
+{
+    CV_TRACE_FUNCTION();
+
+    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, animation);
+}
+
+static
+size_t imcount_(const String& filename, int flags)
+{
+    try{
+        ImageCollection collection(filename, flags);
+        return collection.size();
+    } catch(cv::Exception const& e) {
+        // Reading header or finding decoder for the filename is failed
+        CV_LOG_ERROR(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
+    }
+    return 0;
 }
 
 size_t imcount(const String& filename, int flags)
@@ -720,7 +1060,9 @@ size_t imcount(const String& filename, int flags)
 
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
-                      const std::vector<int>& params, bool flipv )
+                      const std::vector<int>& metadata_types,
+                      InputArrayOfArrays metadata,
+                      const std::vector<int>& params_, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
     std::vector<Mat> write_vec;
@@ -734,11 +1076,17 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         Mat image = img_vec[page];
         CV_Assert(!image.empty());
 
+#ifdef HAVE_OPENEXR
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+#endif
+
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
         {
+            CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
             CV_Assert( encoder->isFormatSupported(CV_8U) );
             image.convertTo( temp, CV_8U );
             image = temp;
@@ -754,7 +1102,50 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
-    CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
+    addMetadata(encoder, metadata_types, metadata);
+
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
+
     bool code = false;
     try
     {
@@ -782,14 +1173,15 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imwrite_('" << filename << "'): can't write data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
+        code = false;
     }
     catch (...)
     {
-        std::cerr << "imwrite_('" << filename << "'): can't write data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
+        code = false;
     }
 
-    //    CV_Assert( code );
     return code;
 }
 
@@ -807,11 +1199,117 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, params, false);
+    return imwrite_(filename, img_vec, {}, noArray(), params, false);
+}
+
+bool imwriteWithMetadata( const String& filename, InputArray _img,
+                          const std::vector<int>& metadata_types,
+                          InputArrayOfArrays metadata,
+                          const std::vector<int>& params )
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
+    std::vector<Mat> img_vec;
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
+
+    CV_Assert(!img_vec.empty());
+    return imwrite_(filename, img_vec, metadata_types, metadata, params, false);
+}
+
+static bool imwriteanimation_(const String& filename, const Animation& animation, const std::vector<int>& params)
+{
+    ImageEncoder encoder = findEncoder(filename);
+    if (!encoder)
+        CV_Error(Error::StsError, "could not find a writer for the specified extension");
+
+    encoder->setDestination(filename);
+
+    bool code = false;
+    try
+    {
+        code = encoder->writeanimation(animation, params);
+
+        if (!code)
+        {
+            FILE* f = fopen(filename.c_str(), "wb");
+            if (!f)
+            {
+                if (errno == EACCES)
+                {
+                    CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't open file for writing: permission denied");
+                }
+            }
+            else
+            {
+                fclose(f);
+                remove(filename.c_str());
+            }
+        }
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't write data: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't write data: unknown exception");
+    }
+
+    return code;
+}
+
+bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params)
+{
+    CV_Assert(!animation.frames.empty());
+    CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+    return imwriteanimation_(filename, animation, params);
+}
+
+static bool imencodeanimation_(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    ImageEncoder encoder = findEncoder(ext);
+    if (!encoder)
+        CV_Error(Error::StsError, "could not find a writer for the specified extension");
+
+    encoder->setDestination(buf);
+
+    bool code = false;
+    try
+    {
+        code = encoder->writeanimation(animation, params);
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: unknown exception");
+    }
+
+    return code;
+}
+
+bool imencodeanimation(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    CV_Assert(!animation.frames.empty());
+    CV_Assert(animation.frames.size() == animation.durations.size());
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+    return imencodeanimation_(ext, animation, buf, params);
 }
 
 static bool
-imdecode_( const Mat& buf, int flags, Mat& mat )
+imdecode_( const Mat& buf, int flags, Mat& mat,
+           std::vector<int>* metadata_types,
+           OutputArrayOfArrays metadata )
 {
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
@@ -822,7 +1320,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
 
     ImageDecoder decoder = findDecoder(buf_row);
     if( !decoder )
-        return 0;
+        return false;
 
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
@@ -835,6 +1333,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
             scale_denom = 8;
     }
 
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
     /// set the scale_denom in the driver
     decoder->setScale( scale_denom );
 
@@ -843,7 +1347,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
-            return 0;
+            return false;
         size_t bufSize = buf_row.total()*buf.elemSize();
         if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
@@ -857,6 +1361,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         decoder->setSource(filename);
     }
 
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
+
     bool success = false;
     try
     {
@@ -865,11 +1375,11 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: unknown exception");
     }
     if (!success)
     {
@@ -878,27 +1388,16 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         {
             if (0 != remove(filename.c_str()))
             {
-                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+                CV_LOG_WARNING(NULL, "unable to remove temporary file:" << filename);
             }
         }
-        return 0;
+        return false;
     }
 
     // established the required input image size
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
-    int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
-    {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
-            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-        else
-            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-    }
+    const int type = calcType(decoder->type(), flags);
 
     mat.create( size.height, size.width, type );
 
@@ -907,27 +1406,27 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     {
         if (decoder->readData(mat))
             success = true;
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: " << e.what());
     }
     catch (...)
     {
-        std::cerr << "imdecode_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: unknown exception");
     }
 
     if (!filename.empty())
     {
         if (0 != remove(filename.c_str()))
         {
-            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
         }
     }
 
     if (!success)
     {
-        mat.release();
         return false;
     }
 
@@ -951,7 +1450,8 @@ Mat imdecode( InputArray _buf, int flags )
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat(), img;
-    imdecode_( buf, flags, img );
+    if (!imdecode_(buf, flags, img, nullptr, noArray()))
+        img.release();
 
     return img;
 }
@@ -962,51 +1462,299 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
-    imdecode_( buf, flags, *dst );
-
-    return *dst;
+    if (imdecode_(buf, flags, *dst, nullptr, noArray()))
+        return *dst;
+    else
+        return cv::Mat();
 }
 
-bool imencode( const String& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
+Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
+                          OutputArrayOfArrays metadata, int flags )
 {
     CV_TRACE_FUNCTION();
 
-    Mat image = _image.getMat();
-    CV_Assert(!image.empty());
+    Mat buf = _buf.getMat(), img;
+    if (!imdecode_(buf, flags, img, &metadata_types, metadata))
+        img.release();
 
-    int channels = image.channels();
-    CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+    return img;
+}
+
+static bool
+imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int count)
+{
+    CV_Assert(!buf.empty());
+    CV_Assert(buf.isContinuous());
+    CV_Assert(buf.checkVector(1, CV_8U) > 0);
+    Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
+
+    String filename;
+
+    ImageDecoder decoder = findDecoder(buf_row);
+    if (!decoder)
+        return false;
+
+    // Try to decode image by RGB instead of BGR.
+    if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
+    {
+        decoder->setRGB(true);
+    }
+
+    if (count < 0) {
+        count = std::numeric_limits<int>::max();
+    }
+
+    if (!decoder->setSource(buf_row))
+    {
+        filename = tempfile();
+        FILE* f = fopen(filename.c_str(), "wb");
+        if (!f)
+            return false;
+        size_t bufSize = buf_row.total() * buf.elemSize();
+        if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
+        {
+            fclose(f);
+            CV_Error(Error::StsError, "failed to write image data to temporary file");
+        }
+        if (fclose(f) != 0)
+        {
+            CV_Error(Error::StsError, "failed to write image data to temporary file");
+        }
+        decoder->setSource(filename);
+    }
+
+    // read the header to make sure it succeeds
+    bool success = false;
+    try
+    {
+        // read the header to make sure it succeeds
+        if (decoder->readHeader())
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
+    }
+
+    int current = start;
+    while (success && current > 0)
+    {
+        if (!decoder->nextPage())
+        {
+            success = false;
+            break;
+        }
+        --current;
+    }
+
+    if (!success)
+    {
+        decoder.release();
+        if (!filename.empty())
+        {
+            if (0 != remove(filename.c_str()))
+            {
+                CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
+            }
+        }
+        return 0;
+    }
+
+    while (current < count)
+    {
+        // grab the decoded type
+        const int type = calcType(decoder->type(), flags);
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
+        }
+        if (!success)
+            break;
+
+        // optionally rotate the data if EXIF' orientation flag says so
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+        {
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        }
+
+        mats.push_back(mat);
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+
+    if (!filename.empty())
+    {
+        if (0 != remove(filename.c_str()))
+        {
+            CV_LOG_WARNING(NULL, "unable to remove temporary file: " << filename);
+        }
+    }
+
+    if (!success)
+        mats.clear();
+    return !mats.empty();
+}
+
+bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, const Range& range)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat();
+    if (range == Range::all())
+    {
+        return imdecodemulti_(buf, flags, mats, 0, -1);
+    }
+    else
+    {
+        CV_CheckGE(range.start, 0, "Range start cannot be negative.");
+        CV_CheckGT(range.size(), 0, "Range cannot be empty.");
+        return imdecodemulti_(buf, flags, mats, range.start, range.size());
+    }
+}
+
+bool imencodeWithMetadata( const String& ext, InputArray _img,
+                           const std::vector<int>& metadata_types,
+                           InputArrayOfArrays metadata,
+                           std::vector<uchar>& buf, const std::vector<int>& params_ )
+{
+    CV_TRACE_FUNCTION();
 
     ImageEncoder encoder = findEncoder( ext );
     if( !encoder )
         CV_Error( Error::StsError, "could not find encoder for the specified extension" );
 
-    if( !encoder->isFormatSupported(image.depth()) )
+    std::vector<Mat> img_vec;
+    CV_Assert(!_img.empty());
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
+
+    CV_Assert(!img_vec.empty());
+    const bool isMultiImg = img_vec.size() > 1;
+
+    std::vector<Mat> write_vec;
+    for (size_t page = 0; page < img_vec.size(); page++)
     {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
+        Mat image = img_vec[page];
+        CV_Assert(!image.empty());
+
+        const int channels = image.channels();
+#ifdef HAVE_OPENEXR
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+#endif
+
         Mat temp;
-        image.convertTo(temp, CV_8U);
-        image = temp;
+        if( !encoder->isFormatSupported(image.depth()) )
+        {
+            CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
+            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            image.convertTo( temp, CV_8U );
+            image = temp;
+        }
+
+        write_vec.push_back(image);
     }
 
-    bool code;
-    if( encoder->setDestination(buf) )
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
     {
-        code = encoder->write(image, params);
-        encoder->throwOnEror();
-        CV_Assert( code );
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
     }
-    else
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
     {
-        String filename = tempfile();
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
+
+    bool code = false;
+    String filename;
+    if( !encoder->setDestination(buf) )
+    {
+        filename = tempfile();
         code = encoder->setDestination(filename);
         CV_Assert( code );
+    }
+    addMetadata(encoder, metadata_types, metadata);
 
-        code = encoder->write(image, params);
-        encoder->throwOnEror();
+    try {
+        if (!isMultiImg)
+            code = encoder->write(write_vec[0], params);
+        else
+            code = encoder->writemulti(write_vec, params);
+
+        encoder->throwOnError();
         CV_Assert( code );
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imencode(): can't encode data: " << e.what());
+        code = false;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imencode(): can't encode data: unknown exception");
+        code = false;
+    }
 
+    if( !filename.empty() && code )
+    {
         FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
@@ -1020,6 +1768,18 @@ bool imencode( const String& ext, InputArray _image,
     return code;
 }
 
+bool imencode( const String& ext, InputArray img,
+               std::vector<uchar>& buf, const std::vector<int>& params_ )
+{
+    return imencodeWithMetadata(ext, img, {}, noArray(), buf, params_);
+}
+
+bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
+                    std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    return imencode(ext, imgs, buf, params);
+}
+
 bool haveImageReader( const String& filename )
 {
     ImageDecoder decoder = cv::findDecoder(filename);
@@ -1030,6 +1790,226 @@ bool haveImageWriter( const String& filename )
 {
     cv::ImageEncoder encoder = cv::findEncoder(filename);
     return !encoder.empty();
+}
+
+class ImageCollection::Impl {
+public:
+    Impl() = default;
+    Impl(const std::string&  filename, int flags);
+    void init(String const& filename, int flags);
+    size_t size() const;
+    Mat& at(int index);
+    Mat& operator[](int index);
+    void releaseCache(int index);
+    ImageCollection::iterator begin(ImageCollection* ptr);
+    ImageCollection::iterator end(ImageCollection* ptr);
+    Mat read();
+    int width() const;
+    int height() const;
+    bool readHeader();
+    Mat readData();
+    bool advance();
+    int currentIndex() const;
+    void reset();
+
+private:
+    String m_filename;
+    int m_flags{};
+    std::size_t m_size{};
+    int m_width{};
+    int m_height{};
+    int m_current{};
+    std::vector<cv::Mat> m_pages;
+    ImageDecoder m_decoder;
+};
+
+ImageCollection::Impl::Impl(std::string const& filename, int flags) {
+    this->init(filename, flags);
+}
+
+void ImageCollection::Impl::init(String const& filename, int flags) {
+    m_filename = filename;
+    m_flags = flags;
+
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
+    m_decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+
+    CV_Assert(m_decoder);
+    m_decoder->setSource(filename);
+    CV_Assert(m_decoder->readHeader());
+
+    m_size = m_decoder->getFrameCount();
+    m_pages.resize(m_size);
+}
+
+size_t ImageCollection::Impl::size() const { return m_size; }
+
+Mat ImageCollection::Impl::read() {
+    auto result = this->readHeader();
+    if(!result) {
+        return {};
+    }
+    return this->readData();
+}
+
+int ImageCollection::Impl::width() const {
+    return m_width;
+}
+
+int ImageCollection::Impl::height() const {
+    return m_height;
+}
+
+bool ImageCollection::Impl::readHeader() {
+    bool status = m_decoder->readHeader();
+    m_width = m_decoder->width();
+    m_height = m_decoder->height();
+    return status;
+}
+
+// readHeader must be called before calling this method
+Mat ImageCollection::Impl::readData() {
+    const int type = calcType(m_decoder->type(), m_flags);
+
+    // established the required input image size
+    Size size = validateInputImageSize(Size(m_width, m_height));
+
+    Mat mat(size.height, size.width, type);
+    bool success = false;
+    try {
+        if (m_decoder->readData(mat))
+            success = true;
+    }
+    catch (const cv::Exception &e) {
+        CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
+    }
+    catch (...) {
+        CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
+    }
+    if (!success)
+        return cv::Mat();
+
+    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
+        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+    }
+
+    return mat;
+}
+
+bool ImageCollection::Impl::advance() {  ++m_current; return m_decoder->nextPage(); }
+
+int ImageCollection::Impl::currentIndex() const { return m_current; }
+
+ImageCollection::iterator ImageCollection::Impl::begin(ImageCollection* ptr) { return ImageCollection::iterator(ptr); }
+
+ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { return ImageCollection::iterator(ptr, static_cast<int>(this->size())); }
+
+void ImageCollection::Impl::reset() {
+    m_current = 0;
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
+    m_decoder = findDecoder(m_filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    m_decoder->setSource(m_filename);
+    m_decoder->readHeader();
+}
+
+Mat& ImageCollection::Impl::at(int index) {
+    CV_Assert(index >= 0 && size_t(index) < m_size);
+    return operator[](index);
+}
+
+Mat& ImageCollection::Impl::operator[](int index) {
+    if(m_pages.at(index).empty()) {
+        // We can't go backward in multi images. If the page is not in vector yet,
+        // go back to first page and advance until the desired page and read it into memory
+        if(m_current != index) {
+            reset();
+            for(int i = 0; i != index && advance(); ++i) {}
+        }
+        m_pages[index] = read();
+    }
+    return m_pages[index];
+}
+
+void ImageCollection::Impl::releaseCache(int index) {
+    CV_Assert(index >= 0 && size_t(index) < m_size);
+    m_pages[index].release();
+}
+
+/* ImageCollection API*/
+
+ImageCollection::ImageCollection() : pImpl(new Impl()) {}
+
+ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
+
+void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
+
+size_t ImageCollection::size() const { return pImpl->size(); }
+
+const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
+
+const Mat& ImageCollection::operator[](int index) { return pImpl->operator[](index); }
+
+void ImageCollection::releaseCache(int index) { pImpl->releaseCache(index); }
+
+Ptr<ImageCollection::Impl> ImageCollection::getImpl() { return pImpl; }
+
+/* Iterator API */
+
+ImageCollection::iterator ImageCollection::begin() { return pImpl->begin(this); }
+
+ImageCollection::iterator ImageCollection::end() { return pImpl->end(this); }
+
+ImageCollection::iterator::iterator(ImageCollection* col) : m_pCollection(col), m_curr(0) {}
+
+ImageCollection::iterator::iterator(ImageCollection* col, int end) : m_pCollection(col), m_curr(end) {}
+
+Mat& ImageCollection::iterator::operator*() {
+    CV_Assert(m_pCollection);
+    return m_pCollection->getImpl()->operator[](m_curr);
+}
+
+Mat* ImageCollection::iterator::operator->() {
+    CV_Assert(m_pCollection);
+    return &m_pCollection->getImpl()->operator[](m_curr);
+}
+
+ImageCollection::iterator& ImageCollection::iterator::operator++() {
+    if(m_pCollection->pImpl->currentIndex() == m_curr) {
+        m_pCollection->pImpl->advance();
+    }
+    m_curr++;
+    return *this;
+}
+
+ImageCollection::iterator ImageCollection::iterator::operator++(int) {
+    iterator tmp = *this;
+    ++(*this);
+    return tmp;
+}
+
+Animation::Animation(int loopCount, Scalar bgColor)
+    : loop_count(loopCount), bgcolor(bgColor)
+{
+    if (loopCount < 0 || loopCount > 0xffff)
+        this->loop_count = 0; // loop_count should be non-negative
 }
 
 }

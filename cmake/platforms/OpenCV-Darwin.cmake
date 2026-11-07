@@ -1,1 +1,8 @@
-# empty
+# Additional flags for dynamic framework (macOS)
+if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -rpath @executable_path/Frameworks -rpath @loader_path/Frameworks")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS " -rpath @executable_path/Frameworks -rpath @loader_path/Frameworks")
+  string(APPEND CMAKE_EXE_LINKER_FLAGS   " -rpath @executable_path/Frameworks -rpath @loader_path/Frameworks")
+  set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
+  set(CMAKE_INSTALL_NAME_DIR "@rpath")
+endif()

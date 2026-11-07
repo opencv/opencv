@@ -55,7 +55,7 @@ int main(void)
     thrust::sequence(idxBegin, idxEnd);
     // Fill the key channel with random numbers between 0 and 10.  A counting iterator is used here to give an integer value for each location as an input to prg::operator()
     thrust::transform(thrust::make_counting_iterator(0), thrust::make_counting_iterator(d_data.cols), keyBegin, prg(0, 10));
-    // Sort the key channel and index channel such that the keys and indecies stay together
+    // Sort the key channel and index channel such that the keys and indices stay together
     thrust::sort_by_key(keyBegin, keyEnd, idxBegin);
 
     cv::Mat h_idx(d_data);

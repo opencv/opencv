@@ -65,6 +65,7 @@ struct CheckContext {
     static const cv::detail::CheckContext CV__CHECK_LOCATION_VARNAME(id) = \
             { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, "" message, "" p1_str, "" p2_str }
 
+CV_EXPORTS void CV_NORETURN check_failed_auto(const bool v1, const bool v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v1, const float v2, const CheckContext& ctx);
@@ -73,6 +74,9 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v1, const Size_<i
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx);
+
+CV_EXPORTS void CV_NORETURN check_failed_true(const bool v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_false(const bool v, const CheckContext& ctx);
 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext& ctx);
@@ -131,8 +135,17 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 /// Example: depth == CV_32F || depth == CV_64F
 #define CV_CheckDepth(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatDepth, t, (test_expr), #t, #test_expr, msg)
 
+/// Example: channel == 1 || channel == 3
+#define CV_CheckChannels(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatChannels, t, (test_expr), #t, #test_expr, msg)
+
 /// Example: v == A || v == B
 #define CV_Check(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
+
+/// Example: v == true
+#define CV_CheckTrue(v, msg)  CV__CHECK_CUSTOM_TEST(_, true, v, v, #v, "", msg)
+
+/// Example: v == false
+#define CV_CheckFalse(v, msg)  CV__CHECK_CUSTOM_TEST(_, false, v, (!(v)), #v, "", msg)
 
 /// Some complex conditions: CV_Check(src2, src2.empty() || (src2.type() == src1.type() && src2.size() == src1.size()), "src2 should have same size/type as src1")
 // TODO define pretty-printers

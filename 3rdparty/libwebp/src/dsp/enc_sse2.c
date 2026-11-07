@@ -14,20 +14,178 @@
 #include "src/dsp/dsp.h"
 
 #if defined(WEBP_USE_SSE2)
-#include <assert.h>
-#include <stdlib.h>  // for abs()
 #include <emmintrin.h>
 
+#include <assert.h>
+#include <stdlib.h>  // for abs()
+#include <string.h>
+
 #include "src/dsp/common_sse2.h"
+#include "src/dsp/cpu.h"
 #include "src/enc/cost_enc.h"
 #include "src/enc/vp8i_enc.h"
+#include "src/utils/utils.h"
+#include "src/webp/types.h"
 
 //------------------------------------------------------------------------------
 // Transforms (Paragraph 14.4)
 
-// Does one or two inverse transforms.
-static void ITransform_SSE2(const uint8_t* ref, const int16_t* in, uint8_t* dst,
-                            int do_two) {
+// Does one inverse transform.
+static void ITransform_One_SSE2(const uint8_t* WEBP_RESTRICT ref,
+                                const int16_t* WEBP_RESTRICT in,
+                                uint8_t* WEBP_RESTRICT dst) {
+  // This implementation makes use of 16-bit fixed point versions of two
+  // multiply constants:
+  //    K1 = sqrt(2) * cos (pi/8) ~= 85627 / 2^16
+  //    K2 = sqrt(2) * sin (pi/8) ~= 35468 / 2^16
+  //
+  // To be able to use signed 16-bit integers, we use the following trick to
+  // have constants within range:
+  // - Associated constants are obtained by subtracting the 16-bit fixed point
+  //   version of one:
+  //      k = K - (1 << 16)  =>  K = k + (1 << 16)
+  //      K1 = 85267  =>  k1 =  20091
+  //      K2 = 35468  =>  k2 = -30068
+  // - The multiplication of a variable by a constant become the sum of the
+  //   variable and the multiplication of that variable by the associated
+  //   constant:
+  //      (x * K) >> 16 = (x * (k + (1 << 16))) >> 16 = ((x * k ) >> 16) + x
+  const __m128i k1k2 = _mm_set_epi16(-30068, -30068, -30068, -30068,
+                                     20091, 20091, 20091, 20091);
+  const __m128i k2k1 = _mm_set_epi16(20091, 20091, 20091, 20091,
+                                     -30068, -30068, -30068, -30068);
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i zero_four = _mm_set_epi16(0, 0, 0, 0, 4, 4, 4, 4);
+  __m128i T01, T23;
+
+  // Load and concatenate the transform coefficients.
+  const __m128i in01 = _mm_loadu_si128((const __m128i*)&in[0]);
+  const __m128i in23 = _mm_loadu_si128((const __m128i*)&in[8]);
+  // a00 a10 a20 a30   a01 a11 a21 a31
+  // a02 a12 a22 a32   a03 a13 a23 a33
+
+  // Vertical pass and subsequent transpose.
+  {
+    const __m128i in1 = _mm_unpackhi_epi64(in01, in01);
+    const __m128i in3 = _mm_unpackhi_epi64(in23, in23);
+
+    // First pass, c and d calculations are longer because of the "trick"
+    // multiplications.
+    // c = MUL(in1, K2) - MUL(in3, K1) = MUL(in1, k2) - MUL(in3, k1) + in1 - in3
+    // d = MUL(in1, K1) + MUL(in3, K2) = MUL(in1, k1) + MUL(in3, k2) + in1 + in3
+    const __m128i a_d3 = _mm_add_epi16(in01, in23);
+    const __m128i b_c3 = _mm_sub_epi16(in01, in23);
+    const __m128i c1d1 = _mm_mulhi_epi16(in1, k2k1);
+    const __m128i c2d2 = _mm_mulhi_epi16(in3, k1k2);
+    const __m128i c3 = _mm_unpackhi_epi64(b_c3, b_c3);
+    const __m128i c4 = _mm_sub_epi16(c1d1, c2d2);
+    const __m128i c = _mm_add_epi16(c3, c4);
+    const __m128i d4u = _mm_add_epi16(c1d1, c2d2);
+    const __m128i du = _mm_add_epi16(a_d3, d4u);
+    const __m128i d = _mm_unpackhi_epi64(du, du);
+
+    // Second pass.
+    const __m128i comb_ab = _mm_unpacklo_epi64(a_d3, b_c3);
+    const __m128i comb_dc = _mm_unpacklo_epi64(d, c);
+
+    const __m128i tmp01 = _mm_add_epi16(comb_ab, comb_dc);
+    const __m128i tmp32 = _mm_sub_epi16(comb_ab, comb_dc);
+    const __m128i tmp23 = _mm_shuffle_epi32(tmp32, _MM_SHUFFLE(1, 0, 3, 2));
+
+    const __m128i transpose_0 = _mm_unpacklo_epi16(tmp01, tmp23);
+    const __m128i transpose_1 = _mm_unpackhi_epi16(tmp01, tmp23);
+    // a00 a20 a01 a21   a02 a22 a03 a23
+    // a10 a30 a11 a31   a12 a32 a13 a33
+
+    T01 = _mm_unpacklo_epi16(transpose_0, transpose_1);
+    T23 = _mm_unpackhi_epi16(transpose_0, transpose_1);
+    // a00 a10 a20 a30   a01 a11 a21 a31
+    // a02 a12 a22 a32   a03 a13 a23 a33
+  }
+
+  // Horizontal pass and subsequent transpose.
+  {
+    const __m128i T1 = _mm_unpackhi_epi64(T01, T01);
+    const __m128i T3 = _mm_unpackhi_epi64(T23, T23);
+
+    // First pass, c and d calculations are longer because of the "trick"
+    // multiplications.
+    const __m128i dc = _mm_add_epi16(T01, zero_four);
+
+    // c = MUL(T1, K2) - MUL(T3, K1) = MUL(T1, k2) - MUL(T3, k1) + T1 - T3
+    // d = MUL(T1, K1) + MUL(T3, K2) = MUL(T1, k1) + MUL(T3, k2) + T1 + T3
+    const __m128i a_d3 = _mm_add_epi16(dc, T23);
+    const __m128i b_c3 = _mm_sub_epi16(dc, T23);
+    const __m128i c1d1 = _mm_mulhi_epi16(T1, k2k1);
+    const __m128i c2d2 = _mm_mulhi_epi16(T3, k1k2);
+    const __m128i c3 = _mm_unpackhi_epi64(b_c3, b_c3);
+    const __m128i c4 = _mm_sub_epi16(c1d1, c2d2);
+    const __m128i c = _mm_add_epi16(c3, c4);
+    const __m128i d4u = _mm_add_epi16(c1d1, c2d2);
+    const __m128i du = _mm_add_epi16(a_d3, d4u);
+    const __m128i d = _mm_unpackhi_epi64(du, du);
+
+    // Second pass.
+    const __m128i comb_ab = _mm_unpacklo_epi64(a_d3, b_c3);
+    const __m128i comb_dc = _mm_unpacklo_epi64(d, c);
+
+    const __m128i tmp01 = _mm_add_epi16(comb_ab, comb_dc);
+    const __m128i tmp32 = _mm_sub_epi16(comb_ab, comb_dc);
+    const __m128i tmp23 = _mm_shuffle_epi32(tmp32, _MM_SHUFFLE(1, 0, 3, 2));
+
+    const __m128i shifted01 = _mm_srai_epi16(tmp01, 3);
+    const __m128i shifted23 = _mm_srai_epi16(tmp23, 3);
+    // a00 a01 a02 a03   a10 a11 a12 a13
+    // a20 a21 a22 a23   a30 a31 a32 a33
+
+    const __m128i transpose_0 = _mm_unpacklo_epi16(shifted01, shifted23);
+    const __m128i transpose_1 = _mm_unpackhi_epi16(shifted01, shifted23);
+    // a00 a20 a01 a21   a02 a22 a03 a23
+    // a10 a30 a11 a31   a12 a32 a13 a33
+
+    T01 = _mm_unpacklo_epi16(transpose_0, transpose_1);
+    T23 = _mm_unpackhi_epi16(transpose_0, transpose_1);
+    // a00 a10 a20 a30   a01 a11 a21 a31
+    // a02 a12 a22 a32   a03 a13 a23 a33
+  }
+
+  // Add inverse transform to 'ref' and store.
+  {
+    // Load the reference(s).
+    __m128i ref01, ref23, ref0123;
+    int32_t buf[4];
+
+    // Load four bytes/pixels per line.
+    const __m128i ref0 = _mm_cvtsi32_si128(WebPMemToInt32(&ref[0 * BPS]));
+    const __m128i ref1 = _mm_cvtsi32_si128(WebPMemToInt32(&ref[1 * BPS]));
+    const __m128i ref2 = _mm_cvtsi32_si128(WebPMemToInt32(&ref[2 * BPS]));
+    const __m128i ref3 = _mm_cvtsi32_si128(WebPMemToInt32(&ref[3 * BPS]));
+    ref01 = _mm_unpacklo_epi32(ref0, ref1);
+    ref23 = _mm_unpacklo_epi32(ref2, ref3);
+
+    // Convert to 16b.
+    ref01 = _mm_unpacklo_epi8(ref01, zero);
+    ref23 = _mm_unpacklo_epi8(ref23, zero);
+    // Add the inverse transform(s).
+    ref01 = _mm_add_epi16(ref01, T01);
+    ref23 = _mm_add_epi16(ref23, T23);
+    // Unsigned saturate to 8b.
+    ref0123 = _mm_packus_epi16(ref01, ref23);
+
+    _mm_storeu_si128((__m128i *)buf, ref0123);
+
+    // Store four bytes/pixels per line.
+    WebPInt32ToMem(&dst[0 * BPS], buf[0]);
+    WebPInt32ToMem(&dst[1 * BPS], buf[1]);
+    WebPInt32ToMem(&dst[2 * BPS], buf[2]);
+    WebPInt32ToMem(&dst[3 * BPS], buf[3]);
+  }
+}
+
+// Does two inverse transforms.
+static void ITransform_Two_SSE2(const uint8_t* WEBP_RESTRICT ref,
+                                const int16_t* WEBP_RESTRICT in,
+                                uint8_t* WEBP_RESTRICT dst) {
   // This implementation makes use of 16-bit fixed point versions of two
   // multiply constants:
   //    K1 = sqrt(2) * cos (pi/8) ~= 85627 / 2^16
@@ -49,33 +207,21 @@ static void ITransform_SSE2(const uint8_t* ref, const int16_t* in, uint8_t* dst,
   __m128i T0, T1, T2, T3;
 
   // Load and concatenate the transform coefficients (we'll do two inverse
-  // transforms in parallel). In the case of only one inverse transform, the
-  // second half of the vectors will just contain random value we'll never
-  // use nor store.
+  // transforms in parallel).
   __m128i in0, in1, in2, in3;
   {
-    in0 = _mm_loadl_epi64((const __m128i*)&in[0]);
-    in1 = _mm_loadl_epi64((const __m128i*)&in[4]);
-    in2 = _mm_loadl_epi64((const __m128i*)&in[8]);
-    in3 = _mm_loadl_epi64((const __m128i*)&in[12]);
-    // a00 a10 a20 a30   x x x x
-    // a01 a11 a21 a31   x x x x
-    // a02 a12 a22 a32   x x x x
-    // a03 a13 a23 a33   x x x x
-    if (do_two) {
-      const __m128i inB0 = _mm_loadl_epi64((const __m128i*)&in[16]);
-      const __m128i inB1 = _mm_loadl_epi64((const __m128i*)&in[20]);
-      const __m128i inB2 = _mm_loadl_epi64((const __m128i*)&in[24]);
-      const __m128i inB3 = _mm_loadl_epi64((const __m128i*)&in[28]);
-      in0 = _mm_unpacklo_epi64(in0, inB0);
-      in1 = _mm_unpacklo_epi64(in1, inB1);
-      in2 = _mm_unpacklo_epi64(in2, inB2);
-      in3 = _mm_unpacklo_epi64(in3, inB3);
-      // a00 a10 a20 a30   b00 b10 b20 b30
-      // a01 a11 a21 a31   b01 b11 b21 b31
-      // a02 a12 a22 a32   b02 b12 b22 b32
-      // a03 a13 a23 a33   b03 b13 b23 b33
-    }
+    const __m128i tmp0 = _mm_loadu_si128((const __m128i*)&in[0]);
+    const __m128i tmp1 = _mm_loadu_si128((const __m128i*)&in[8]);
+    const __m128i tmp2 = _mm_loadu_si128((const __m128i*)&in[16]);
+    const __m128i tmp3 = _mm_loadu_si128((const __m128i*)&in[24]);
+    in0 = _mm_unpacklo_epi64(tmp0, tmp2);
+    in1 = _mm_unpackhi_epi64(tmp0, tmp2);
+    in2 = _mm_unpacklo_epi64(tmp1, tmp3);
+    in3 = _mm_unpackhi_epi64(tmp1, tmp3);
+    // a00 a10 a20 a30   b00 b10 b20 b30
+    // a01 a11 a21 a31   b01 b11 b21 b31
+    // a02 a12 a22 a32   b02 b12 b22 b32
+    // a03 a13 a23 a33   b03 b13 b23 b33
   }
 
   // Vertical pass and subsequent transpose.
@@ -148,19 +294,11 @@ static void ITransform_SSE2(const uint8_t* ref, const int16_t* in, uint8_t* dst,
     const __m128i zero = _mm_setzero_si128();
     // Load the reference(s).
     __m128i ref0, ref1, ref2, ref3;
-    if (do_two) {
-      // Load eight bytes/pixels per line.
-      ref0 = _mm_loadl_epi64((const __m128i*)&ref[0 * BPS]);
-      ref1 = _mm_loadl_epi64((const __m128i*)&ref[1 * BPS]);
-      ref2 = _mm_loadl_epi64((const __m128i*)&ref[2 * BPS]);
-      ref3 = _mm_loadl_epi64((const __m128i*)&ref[3 * BPS]);
-    } else {
-      // Load four bytes/pixels per line.
-      ref0 = _mm_cvtsi32_si128(WebPMemToUint32(&ref[0 * BPS]));
-      ref1 = _mm_cvtsi32_si128(WebPMemToUint32(&ref[1 * BPS]));
-      ref2 = _mm_cvtsi32_si128(WebPMemToUint32(&ref[2 * BPS]));
-      ref3 = _mm_cvtsi32_si128(WebPMemToUint32(&ref[3 * BPS]));
-    }
+    // Load eight bytes/pixels per line.
+    ref0 = _mm_loadl_epi64((const __m128i*)&ref[0 * BPS]);
+    ref1 = _mm_loadl_epi64((const __m128i*)&ref[1 * BPS]);
+    ref2 = _mm_loadl_epi64((const __m128i*)&ref[2 * BPS]);
+    ref3 = _mm_loadl_epi64((const __m128i*)&ref[3 * BPS]);
     // Convert to 16b.
     ref0 = _mm_unpacklo_epi8(ref0, zero);
     ref1 = _mm_unpacklo_epi8(ref1, zero);
@@ -176,20 +314,23 @@ static void ITransform_SSE2(const uint8_t* ref, const int16_t* in, uint8_t* dst,
     ref1 = _mm_packus_epi16(ref1, ref1);
     ref2 = _mm_packus_epi16(ref2, ref2);
     ref3 = _mm_packus_epi16(ref3, ref3);
-    // Store the results.
-    if (do_two) {
-      // Store eight bytes/pixels per line.
-      _mm_storel_epi64((__m128i*)&dst[0 * BPS], ref0);
-      _mm_storel_epi64((__m128i*)&dst[1 * BPS], ref1);
-      _mm_storel_epi64((__m128i*)&dst[2 * BPS], ref2);
-      _mm_storel_epi64((__m128i*)&dst[3 * BPS], ref3);
-    } else {
-      // Store four bytes/pixels per line.
-      WebPUint32ToMem(&dst[0 * BPS], _mm_cvtsi128_si32(ref0));
-      WebPUint32ToMem(&dst[1 * BPS], _mm_cvtsi128_si32(ref1));
-      WebPUint32ToMem(&dst[2 * BPS], _mm_cvtsi128_si32(ref2));
-      WebPUint32ToMem(&dst[3 * BPS], _mm_cvtsi128_si32(ref3));
-    }
+    // Store eight bytes/pixels per line.
+    _mm_storel_epi64((__m128i*)&dst[0 * BPS], ref0);
+    _mm_storel_epi64((__m128i*)&dst[1 * BPS], ref1);
+    _mm_storel_epi64((__m128i*)&dst[2 * BPS], ref2);
+    _mm_storel_epi64((__m128i*)&dst[3 * BPS], ref3);
+  }
+}
+
+// Does one or two inverse transforms.
+static void ITransform_SSE2(const uint8_t* WEBP_RESTRICT ref,
+                            const int16_t* WEBP_RESTRICT in,
+                            uint8_t* WEBP_RESTRICT dst,
+                            int do_two) {
+  if (do_two) {
+    ITransform_Two_SSE2(ref, in, dst);
+  } else {
+    ITransform_One_SSE2(ref, in, dst);
   }
 }
 
@@ -241,7 +382,7 @@ static void FTransformPass1_SSE2(const __m128i* const in01,
 
 static void FTransformPass2_SSE2(const __m128i* const v01,
                                  const __m128i* const v32,
-                                 int16_t* out) {
+                                 int16_t* WEBP_RESTRICT out) {
   const __m128i zero = _mm_setzero_si128();
   const __m128i seven = _mm_set1_epi16(7);
   const __m128i k5352_2217 = _mm_set_epi16(5352,  2217, 5352,  2217,
@@ -292,8 +433,9 @@ static void FTransformPass2_SSE2(const __m128i* const v01,
   _mm_storeu_si128((__m128i*)&out[8], d2_f3);
 }
 
-static void FTransform_SSE2(const uint8_t* src, const uint8_t* ref,
-                            int16_t* out) {
+static void FTransform_SSE2(const uint8_t* WEBP_RESTRICT src,
+                            const uint8_t* WEBP_RESTRICT ref,
+                            int16_t* WEBP_RESTRICT out) {
   const __m128i zero = _mm_setzero_si128();
   // Load src.
   const __m128i src0 = _mm_loadl_epi64((const __m128i*)&src[0 * BPS]);
@@ -336,8 +478,9 @@ static void FTransform_SSE2(const uint8_t* src, const uint8_t* ref,
   FTransformPass2_SSE2(&v01, &v32, out);
 }
 
-static void FTransform2_SSE2(const uint8_t* src, const uint8_t* ref,
-                             int16_t* out) {
+static void FTransform2_SSE2(const uint8_t* WEBP_RESTRICT src,
+                             const uint8_t* WEBP_RESTRICT ref,
+                             int16_t* WEBP_RESTRICT out) {
   const __m128i zero = _mm_setzero_si128();
 
   // Load src and convert to 16b.
@@ -385,7 +528,8 @@ static void FTransform2_SSE2(const uint8_t* src, const uint8_t* ref,
   FTransformPass2_SSE2(&v01h, &v32h, out + 16);
 }
 
-static void FTransformWHTRow_SSE2(const int16_t* const in, __m128i* const out) {
+static void FTransformWHTRow_SSE2(const int16_t* WEBP_RESTRICT const in,
+                                  __m128i* const out) {
   const __m128i kMult = _mm_set_epi16(-1, 1, -1, 1, 1, 1, 1, 1);
   const __m128i src0 = _mm_loadl_epi64((__m128i*)&in[0 * 16]);
   const __m128i src1 = _mm_loadl_epi64((__m128i*)&in[1 * 16]);
@@ -401,7 +545,8 @@ static void FTransformWHTRow_SSE2(const int16_t* const in, __m128i* const out) {
   *out = _mm_madd_epi16(D, kMult);
 }
 
-static void FTransformWHT_SSE2(const int16_t* in, int16_t* out) {
+static void FTransformWHT_SSE2(const int16_t* WEBP_RESTRICT in,
+                               int16_t* WEBP_RESTRICT out) {
   // Input is 12b signed.
   __m128i row0, row1, row2, row3;
   // Rows are 14b signed.
@@ -434,9 +579,10 @@ static void FTransformWHT_SSE2(const int16_t* in, int16_t* out) {
 // Compute susceptibility based on DCT-coeff histograms:
 // the higher, the "easier" the macroblock is to compress.
 
-static void CollectHistogram_SSE2(const uint8_t* ref, const uint8_t* pred,
+static void CollectHistogram_SSE2(const uint8_t* WEBP_RESTRICT ref,
+                                  const uint8_t* WEBP_RESTRICT pred,
                                   int start_block, int end_block,
-                                  VP8Histogram* const histo) {
+                                  VP8Histogram* WEBP_RESTRICT const histo) {
   const __m128i zero = _mm_setzero_si128();
   const __m128i max_coeff_thresh = _mm_set1_epi16(MAX_COEFF_THRESH);
   int j;
@@ -481,7 +627,7 @@ static void CollectHistogram_SSE2(const uint8_t* ref, const uint8_t* pred,
 // helper for chroma-DC predictions
 static WEBP_INLINE void Put8x8uv_SSE2(uint8_t v, uint8_t* dst) {
   int j;
-  const __m128i values = _mm_set1_epi8(v);
+  const __m128i values = _mm_set1_epi8((char)v);
   for (j = 0; j < 8; ++j) {
     _mm_storel_epi64((__m128i*)(dst + j * BPS), values);
   }
@@ -489,7 +635,7 @@ static WEBP_INLINE void Put8x8uv_SSE2(uint8_t v, uint8_t* dst) {
 
 static WEBP_INLINE void Put16_SSE2(uint8_t v, uint8_t* dst) {
   int j;
-  const __m128i values = _mm_set1_epi8(v);
+  const __m128i values = _mm_set1_epi8((char)v);
   for (j = 0; j < 16; ++j) {
     _mm_store_si128((__m128i*)(dst + j * BPS), values);
   }
@@ -508,7 +654,8 @@ static WEBP_INLINE void Fill_SSE2(uint8_t* dst, int value, int size) {
   }
 }
 
-static WEBP_INLINE void VE8uv_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void VE8uv_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                   const uint8_t* WEBP_RESTRICT top) {
   int j;
   const __m128i top_values = _mm_loadl_epi64((const __m128i*)top);
   for (j = 0; j < 8; ++j) {
@@ -516,7 +663,8 @@ static WEBP_INLINE void VE8uv_SSE2(uint8_t* dst, const uint8_t* top) {
   }
 }
 
-static WEBP_INLINE void VE16_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void VE16_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                  const uint8_t* WEBP_RESTRICT top) {
   const __m128i top_values = _mm_load_si128((const __m128i*)top);
   int j;
   for (j = 0; j < 16; ++j) {
@@ -524,8 +672,9 @@ static WEBP_INLINE void VE16_SSE2(uint8_t* dst, const uint8_t* top) {
   }
 }
 
-static WEBP_INLINE void VerticalPred_SSE2(uint8_t* dst,
-                                          const uint8_t* top, int size) {
+static WEBP_INLINE void VerticalPred_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                          const uint8_t* WEBP_RESTRICT top,
+                                          int size) {
   if (top != NULL) {
     if (size == 8) {
       VE8uv_SSE2(dst, top);
@@ -537,26 +686,29 @@ static WEBP_INLINE void VerticalPred_SSE2(uint8_t* dst,
   }
 }
 
-static WEBP_INLINE void HE8uv_SSE2(uint8_t* dst, const uint8_t* left) {
+static WEBP_INLINE void HE8uv_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                   const uint8_t* WEBP_RESTRICT left) {
   int j;
   for (j = 0; j < 8; ++j) {
-    const __m128i values = _mm_set1_epi8(left[j]);
+    const __m128i values = _mm_set1_epi8((char)left[j]);
     _mm_storel_epi64((__m128i*)dst, values);
     dst += BPS;
   }
 }
 
-static WEBP_INLINE void HE16_SSE2(uint8_t* dst, const uint8_t* left) {
+static WEBP_INLINE void HE16_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                  const uint8_t* WEBP_RESTRICT left) {
   int j;
   for (j = 0; j < 16; ++j) {
-    const __m128i values = _mm_set1_epi8(left[j]);
+    const __m128i values = _mm_set1_epi8((char)left[j]);
     _mm_store_si128((__m128i*)dst, values);
     dst += BPS;
   }
 }
 
-static WEBP_INLINE void HorizontalPred_SSE2(uint8_t* dst,
-                                            const uint8_t* left, int size) {
+static WEBP_INLINE void HorizontalPred_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                            const uint8_t* WEBP_RESTRICT left,
+                                            int size) {
   if (left != NULL) {
     if (size == 8) {
       HE8uv_SSE2(dst, left);
@@ -568,8 +720,9 @@ static WEBP_INLINE void HorizontalPred_SSE2(uint8_t* dst,
   }
 }
 
-static WEBP_INLINE void TM_SSE2(uint8_t* dst, const uint8_t* left,
-                                const uint8_t* top, int size) {
+static WEBP_INLINE void TM_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                const uint8_t* WEBP_RESTRICT left,
+                                const uint8_t* WEBP_RESTRICT top, int size) {
   const __m128i zero = _mm_setzero_si128();
   int y;
   if (size == 8) {
@@ -596,8 +749,10 @@ static WEBP_INLINE void TM_SSE2(uint8_t* dst, const uint8_t* left,
   }
 }
 
-static WEBP_INLINE void TrueMotion_SSE2(uint8_t* dst, const uint8_t* left,
-                                        const uint8_t* top, int size) {
+static WEBP_INLINE void TrueMotion_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                        const uint8_t* WEBP_RESTRICT left,
+                                        const uint8_t* WEBP_RESTRICT top,
+                                        int size) {
   if (left != NULL) {
     if (top != NULL) {
       TM_SSE2(dst, left, top, size);
@@ -617,8 +772,9 @@ static WEBP_INLINE void TrueMotion_SSE2(uint8_t* dst, const uint8_t* left,
   }
 }
 
-static WEBP_INLINE void DC8uv_SSE2(uint8_t* dst, const uint8_t* left,
-                                   const uint8_t* top) {
+static WEBP_INLINE void DC8uv_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                   const uint8_t* WEBP_RESTRICT left,
+                                   const uint8_t* WEBP_RESTRICT top) {
   const __m128i top_values = _mm_loadl_epi64((const __m128i*)top);
   const __m128i left_values = _mm_loadl_epi64((const __m128i*)left);
   const __m128i combined = _mm_unpacklo_epi64(top_values, left_values);
@@ -626,7 +782,8 @@ static WEBP_INLINE void DC8uv_SSE2(uint8_t* dst, const uint8_t* left,
   Put8x8uv_SSE2(DC >> 4, dst);
 }
 
-static WEBP_INLINE void DC8uvNoLeft_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void DC8uvNoLeft_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                         const uint8_t* WEBP_RESTRICT top) {
   const __m128i zero = _mm_setzero_si128();
   const __m128i top_values = _mm_loadl_epi64((const __m128i*)top);
   const __m128i sum = _mm_sad_epu8(top_values, zero);
@@ -634,7 +791,8 @@ static WEBP_INLINE void DC8uvNoLeft_SSE2(uint8_t* dst, const uint8_t* top) {
   Put8x8uv_SSE2(DC >> 3, dst);
 }
 
-static WEBP_INLINE void DC8uvNoTop_SSE2(uint8_t* dst, const uint8_t* left) {
+static WEBP_INLINE void DC8uvNoTop_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                        const uint8_t* WEBP_RESTRICT left) {
   // 'left' is contiguous so we can reuse the top summation.
   DC8uvNoLeft_SSE2(dst, left);
 }
@@ -643,8 +801,9 @@ static WEBP_INLINE void DC8uvNoTopLeft_SSE2(uint8_t* dst) {
   Put8x8uv_SSE2(0x80, dst);
 }
 
-static WEBP_INLINE void DC8uvMode_SSE2(uint8_t* dst, const uint8_t* left,
-                                       const uint8_t* top) {
+static WEBP_INLINE void DC8uvMode_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                       const uint8_t* WEBP_RESTRICT left,
+                                       const uint8_t* WEBP_RESTRICT top) {
   if (top != NULL) {
     if (left != NULL) {  // top and left present
       DC8uv_SSE2(dst, left, top);
@@ -658,8 +817,9 @@ static WEBP_INLINE void DC8uvMode_SSE2(uint8_t* dst, const uint8_t* left,
   }
 }
 
-static WEBP_INLINE void DC16_SSE2(uint8_t* dst, const uint8_t* left,
-                                  const uint8_t* top) {
+static WEBP_INLINE void DC16_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                  const uint8_t* WEBP_RESTRICT left,
+                                  const uint8_t* WEBP_RESTRICT top) {
   const __m128i top_row = _mm_load_si128((const __m128i*)top);
   const __m128i left_row = _mm_load_si128((const __m128i*)left);
   const int DC =
@@ -667,13 +827,15 @@ static WEBP_INLINE void DC16_SSE2(uint8_t* dst, const uint8_t* left,
   Put16_SSE2(DC >> 5, dst);
 }
 
-static WEBP_INLINE void DC16NoLeft_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void DC16NoLeft_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                        const uint8_t* WEBP_RESTRICT top) {
   const __m128i top_row = _mm_load_si128((const __m128i*)top);
   const int DC = VP8HorizontalAdd8b(&top_row) + 8;
   Put16_SSE2(DC >> 4, dst);
 }
 
-static WEBP_INLINE void DC16NoTop_SSE2(uint8_t* dst, const uint8_t* left) {
+static WEBP_INLINE void DC16NoTop_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                       const uint8_t* WEBP_RESTRICT left) {
   // 'left' is contiguous so we can reuse the top summation.
   DC16NoLeft_SSE2(dst, left);
 }
@@ -682,8 +844,9 @@ static WEBP_INLINE void DC16NoTopLeft_SSE2(uint8_t* dst) {
   Put16_SSE2(0x80, dst);
 }
 
-static WEBP_INLINE void DC16Mode_SSE2(uint8_t* dst, const uint8_t* left,
-                                      const uint8_t* top) {
+static WEBP_INLINE void DC16Mode_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                      const uint8_t* WEBP_RESTRICT left,
+                                      const uint8_t* WEBP_RESTRICT top) {
   if (top != NULL) {
     if (left != NULL) {  // top and left present
       DC16_SSE2(dst, left, top);
@@ -712,8 +875,9 @@ static WEBP_INLINE void DC16Mode_SSE2(uint8_t* dst, const uint8_t* left,
 //   where: AC = (a + b + 1) >> 1,   BC = (b + c + 1) >> 1
 //   and ab = a ^ b, bc = b ^ c, lsb = (AC^BC)&1
 
-static WEBP_INLINE void VE4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // vertical
+// vertical
+static WEBP_INLINE void VE4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i one = _mm_set1_epi8(1);
   const __m128i ABCDEFGH = _mm_loadl_epi64((__m128i*)(top - 1));
   const __m128i BCDEFGH0 = _mm_srli_si128(ABCDEFGH, 1);
@@ -722,15 +886,16 @@ static WEBP_INLINE void VE4_SSE2(uint8_t* dst,
   const __m128i lsb = _mm_and_si128(_mm_xor_si128(ABCDEFGH, CDEFGH00), one);
   const __m128i b = _mm_subs_epu8(a, lsb);
   const __m128i avg = _mm_avg_epu8(b, BCDEFGH0);
-  const uint32_t vals = _mm_cvtsi128_si32(avg);
+  const int vals = _mm_cvtsi128_si32(avg);
   int i;
   for (i = 0; i < 4; ++i) {
-    WebPUint32ToMem(dst + i * BPS, vals);
+    WebPInt32ToMem(dst + i * BPS, vals);
   }
 }
 
-static WEBP_INLINE void HE4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // horizontal
+// horizontal
+static WEBP_INLINE void HE4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const int X = top[-1];
   const int I = top[-2];
   const int J = top[-3];
@@ -742,15 +907,17 @@ static WEBP_INLINE void HE4_SSE2(uint8_t* dst,
   WebPUint32ToMem(dst + 3 * BPS, 0x01010101U * AVG3(K, L, L));
 }
 
-static WEBP_INLINE void DC4_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void DC4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   uint32_t dc = 4;
   int i;
   for (i = 0; i < 4; ++i) dc += top[i] + top[-5 + i];
   Fill_SSE2(dst, dc >> 3, 4);
 }
 
-static WEBP_INLINE void LD4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // Down-Left
+// Down-Left
+static WEBP_INLINE void LD4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i one = _mm_set1_epi8(1);
   const __m128i ABCDEFGH = _mm_loadl_epi64((const __m128i*)top);
   const __m128i BCDEFGH0 = _mm_srli_si128(ABCDEFGH, 1);
@@ -760,14 +927,15 @@ static WEBP_INLINE void LD4_SSE2(uint8_t* dst,
   const __m128i lsb = _mm_and_si128(_mm_xor_si128(ABCDEFGH, CDEFGHH0), one);
   const __m128i avg2 = _mm_subs_epu8(avg1, lsb);
   const __m128i abcdefg = _mm_avg_epu8(avg2, BCDEFGH0);
-  WebPUint32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               abcdefg    ));
-  WebPUint32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 1)));
-  WebPUint32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 2)));
-  WebPUint32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 3)));
+  WebPInt32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               abcdefg    ));
+  WebPInt32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 1)));
+  WebPInt32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 2)));
+  WebPInt32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 3)));
 }
 
-static WEBP_INLINE void VR4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // Vertical-Right
+// Vertical-Right
+static WEBP_INLINE void VR4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i one = _mm_set1_epi8(1);
   const int I = top[-2];
   const int J = top[-3];
@@ -782,18 +950,19 @@ static WEBP_INLINE void VR4_SSE2(uint8_t* dst,
   const __m128i lsb = _mm_and_si128(_mm_xor_si128(IXABCD, ABCD0), one);
   const __m128i avg2 = _mm_subs_epu8(avg1, lsb);
   const __m128i efgh = _mm_avg_epu8(avg2, XABCD);
-  WebPUint32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               abcd    ));
-  WebPUint32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(               efgh    ));
-  WebPUint32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_slli_si128(abcd, 1)));
-  WebPUint32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_slli_si128(efgh, 1)));
+  WebPInt32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               abcd    ));
+  WebPInt32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(               efgh    ));
+  WebPInt32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_slli_si128(abcd, 1)));
+  WebPInt32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_slli_si128(efgh, 1)));
 
   // these two are hard to implement in SSE2, so we keep the C-version:
   DST(0, 2) = AVG3(J, I, X);
   DST(0, 3) = AVG3(K, J, I);
 }
 
-static WEBP_INLINE void VL4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // Vertical-Left
+// Vertical-Left
+static WEBP_INLINE void VL4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i one = _mm_set1_epi8(1);
   const __m128i ABCDEFGH = _mm_loadl_epi64((const __m128i*)top);
   const __m128i BCDEFGH_ = _mm_srli_si128(ABCDEFGH, 1);
@@ -807,19 +976,21 @@ static WEBP_INLINE void VL4_SSE2(uint8_t* dst,
   const __m128i abbc = _mm_or_si128(ab, bc);
   const __m128i lsb2 = _mm_and_si128(abbc, lsb1);
   const __m128i avg4 = _mm_subs_epu8(avg3, lsb2);
-  const uint32_t extra_out = _mm_cvtsi128_si32(_mm_srli_si128(avg4, 4));
-  WebPUint32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               avg1    ));
-  WebPUint32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(               avg4    ));
-  WebPUint32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(avg1, 1)));
-  WebPUint32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(avg4, 1)));
+  const uint32_t extra_out =
+      (uint32_t)_mm_cvtsi128_si32(_mm_srli_si128(avg4, 4));
+  WebPInt32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(               avg1    ));
+  WebPInt32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(               avg4    ));
+  WebPInt32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(avg1, 1)));
+  WebPInt32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(avg4, 1)));
 
   // these two are hard to get and irregular
   DST(3, 2) = (extra_out >> 0) & 0xff;
   DST(3, 3) = (extra_out >> 8) & 0xff;
 }
 
-static WEBP_INLINE void RD4_SSE2(uint8_t* dst,
-                                 const uint8_t* top) {  // Down-right
+// Down-right
+static WEBP_INLINE void RD4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i one = _mm_set1_epi8(1);
   const __m128i LKJIXABC = _mm_loadl_epi64((const __m128i*)(top - 5));
   const __m128i LKJIXABCD = _mm_insert_epi16(LKJIXABC, top[3], 4);
@@ -829,13 +1000,14 @@ static WEBP_INLINE void RD4_SSE2(uint8_t* dst,
   const __m128i lsb = _mm_and_si128(_mm_xor_si128(JIXABCD__, LKJIXABCD), one);
   const __m128i avg2 = _mm_subs_epu8(avg1, lsb);
   const __m128i abcdefg = _mm_avg_epu8(avg2, KJIXABCD_);
-  WebPUint32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(               abcdefg    ));
-  WebPUint32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 1)));
-  WebPUint32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 2)));
-  WebPUint32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 3)));
+  WebPInt32ToMem(dst + 3 * BPS, _mm_cvtsi128_si32(               abcdefg    ));
+  WebPInt32ToMem(dst + 2 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 1)));
+  WebPInt32ToMem(dst + 1 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 2)));
+  WebPInt32ToMem(dst + 0 * BPS, _mm_cvtsi128_si32(_mm_srli_si128(abcdefg, 3)));
 }
 
-static WEBP_INLINE void HU4_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void HU4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const int I = top[-2];
   const int J = top[-3];
   const int K = top[-4];
@@ -850,7 +1022,8 @@ static WEBP_INLINE void HU4_SSE2(uint8_t* dst, const uint8_t* top) {
   DST(0, 3) = DST(1, 3) = DST(2, 3) = DST(3, 3) = L;
 }
 
-static WEBP_INLINE void HD4_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void HD4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const int X = top[-1];
   const int I = top[-2];
   const int J = top[-3];
@@ -873,16 +1046,17 @@ static WEBP_INLINE void HD4_SSE2(uint8_t* dst, const uint8_t* top) {
   DST(1, 3)             = AVG3(L, K, J);
 }
 
-static WEBP_INLINE void TM4_SSE2(uint8_t* dst, const uint8_t* top) {
+static WEBP_INLINE void TM4_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                 const uint8_t* WEBP_RESTRICT top) {
   const __m128i zero = _mm_setzero_si128();
-  const __m128i top_values = _mm_cvtsi32_si128(WebPMemToUint32(top));
+  const __m128i top_values = _mm_cvtsi32_si128(WebPMemToInt32(top));
   const __m128i top_base = _mm_unpacklo_epi8(top_values, zero);
   int y;
   for (y = 0; y < 4; ++y, dst += BPS) {
     const int val = top[-2 - y] - top[-1];
     const __m128i base = _mm_set1_epi16(val);
     const __m128i out = _mm_packus_epi16(_mm_add_epi16(base, top_base), zero);
-    WebPUint32ToMem(dst, _mm_cvtsi128_si32(out));
+    WebPInt32ToMem(dst, _mm_cvtsi128_si32(out));
   }
 }
 
@@ -895,7 +1069,8 @@ static WEBP_INLINE void TM4_SSE2(uint8_t* dst, const uint8_t* top) {
 
 // Left samples are top[-5 .. -2], top_left is top[-1], top are
 // located at top[0..3], and top right is top[4..7]
-static void Intra4Preds_SSE2(uint8_t* dst, const uint8_t* top) {
+static void Intra4Preds_SSE2(uint8_t* WEBP_RESTRICT dst,
+                             const uint8_t* WEBP_RESTRICT top) {
   DC4_SSE2(I4DC4 + dst, top);
   TM4_SSE2(I4TM4 + dst, top);
   VE4_SSE2(I4VE4 + dst, top);
@@ -911,8 +1086,9 @@ static void Intra4Preds_SSE2(uint8_t* dst, const uint8_t* top) {
 //------------------------------------------------------------------------------
 // Chroma 8x8 prediction (paragraph 12.2)
 
-static void IntraChromaPreds_SSE2(uint8_t* dst, const uint8_t* left,
-                                  const uint8_t* top) {
+static void IntraChromaPreds_SSE2(uint8_t* WEBP_RESTRICT dst,
+                                  const uint8_t* WEBP_RESTRICT left,
+                                  const uint8_t* WEBP_RESTRICT top) {
   // U block
   DC8uvMode_SSE2(C8DC8 + dst, left, top);
   VerticalPred_SSE2(C8VE8 + dst, top, 8);
@@ -931,8 +1107,9 @@ static void IntraChromaPreds_SSE2(uint8_t* dst, const uint8_t* left,
 //------------------------------------------------------------------------------
 // luma 16x16 prediction (paragraph 12.3)
 
-static void Intra16Preds_SSE2(uint8_t* dst,
-                              const uint8_t* left, const uint8_t* top) {
+static void Intra16Preds_SSE2(uint8_t* WEBP_RESTRICT dst,
+                              const uint8_t* WEBP_RESTRICT left,
+                              const uint8_t* WEBP_RESTRICT top) {
   DC16Mode_SSE2(I16DC16 + dst, left, top);
   VerticalPred_SSE2(I16VE16 + dst, top, 16);
   HorizontalPred_SSE2(I16HE16 + dst, left, 16);
@@ -959,7 +1136,8 @@ static WEBP_INLINE void SubtractAndAccumulate_SSE2(const __m128i a,
   *sum = _mm_add_epi32(sum1, sum2);
 }
 
-static WEBP_INLINE int SSE_16xN_SSE2(const uint8_t* a, const uint8_t* b,
+static WEBP_INLINE int SSE_16xN_SSE2(const uint8_t* WEBP_RESTRICT a,
+                                     const uint8_t* WEBP_RESTRICT b,
                                      int num_pairs) {
   __m128i sum = _mm_setzero_si128();
   int32_t tmp[4];
@@ -981,18 +1159,21 @@ static WEBP_INLINE int SSE_16xN_SSE2(const uint8_t* a, const uint8_t* b,
   return (tmp[3] + tmp[2] + tmp[1] + tmp[0]);
 }
 
-static int SSE16x16_SSE2(const uint8_t* a, const uint8_t* b) {
+static int SSE16x16_SSE2(const uint8_t* WEBP_RESTRICT a,
+                         const uint8_t* WEBP_RESTRICT b) {
   return SSE_16xN_SSE2(a, b, 8);
 }
 
-static int SSE16x8_SSE2(const uint8_t* a, const uint8_t* b) {
+static int SSE16x8_SSE2(const uint8_t* WEBP_RESTRICT a,
+                        const uint8_t* WEBP_RESTRICT b) {
   return SSE_16xN_SSE2(a, b, 4);
 }
 
 #define LOAD_8x16b(ptr) \
   _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i*)(ptr)), zero)
 
-static int SSE8x8_SSE2(const uint8_t* a, const uint8_t* b) {
+static int SSE8x8_SSE2(const uint8_t* WEBP_RESTRICT a,
+                       const uint8_t* WEBP_RESTRICT b) {
   const __m128i zero = _mm_setzero_si128();
   int num_pairs = 4;
   __m128i sum = zero;
@@ -1019,7 +1200,8 @@ static int SSE8x8_SSE2(const uint8_t* a, const uint8_t* b) {
 }
 #undef LOAD_8x16b
 
-static int SSE4x4_SSE2(const uint8_t* a, const uint8_t* b) {
+static int SSE4x4_SSE2(const uint8_t* WEBP_RESTRICT a,
+                       const uint8_t* WEBP_RESTRICT b) {
   const __m128i zero = _mm_setzero_si128();
 
   // Load values. Note that we read 8 pixels instead of 4,
@@ -1056,7 +1238,7 @@ static int SSE4x4_SSE2(const uint8_t* a, const uint8_t* b) {
 
 //------------------------------------------------------------------------------
 
-static void Mean16x4_SSE2(const uint8_t* ref, uint32_t dc[4]) {
+static void Mean16x4_SSE2(const uint8_t* WEBP_RESTRICT ref, uint32_t dc[4]) {
   const __m128i mask = _mm_set1_epi16(0x00ff);
   const __m128i a0 = _mm_loadu_si128((const __m128i*)&ref[BPS * 0]);
   const __m128i a1 = _mm_loadu_si128((const __m128i*)&ref[BPS * 1]);
@@ -1094,8 +1276,9 @@ static void Mean16x4_SSE2(const uint8_t* ref, uint32_t dc[4]) {
 // Hadamard transform
 // Returns the weighted sum of the absolute value of transformed coefficients.
 // w[] contains a row-major 4 by 4 symmetric matrix.
-static int TTransform_SSE2(const uint8_t* inA, const uint8_t* inB,
-                           const uint16_t* const w) {
+static int TTransform_SSE2(const uint8_t* WEBP_RESTRICT inA,
+                           const uint8_t* WEBP_RESTRICT inB,
+                           const uint16_t* WEBP_RESTRICT const w) {
   int32_t sum[4];
   __m128i tmp_0, tmp_1, tmp_2, tmp_3;
   const __m128i zero = _mm_setzero_si128();
@@ -1195,14 +1378,16 @@ static int TTransform_SSE2(const uint8_t* inA, const uint8_t* inB,
   return sum[0] + sum[1] + sum[2] + sum[3];
 }
 
-static int Disto4x4_SSE2(const uint8_t* const a, const uint8_t* const b,
-                         const uint16_t* const w) {
+static int Disto4x4_SSE2(const uint8_t* WEBP_RESTRICT const a,
+                         const uint8_t* WEBP_RESTRICT const b,
+                         const uint16_t* WEBP_RESTRICT const w) {
   const int diff_sum = TTransform_SSE2(a, b, w);
   return abs(diff_sum) >> 5;
 }
 
-static int Disto16x16_SSE2(const uint8_t* const a, const uint8_t* const b,
-                           const uint16_t* const w) {
+static int Disto16x16_SSE2(const uint8_t* WEBP_RESTRICT const a,
+                           const uint8_t* WEBP_RESTRICT const b,
+                           const uint16_t* WEBP_RESTRICT const w) {
   int D = 0;
   int x, y;
   for (y = 0; y < 16 * BPS; y += 4 * BPS) {
@@ -1217,9 +1402,10 @@ static int Disto16x16_SSE2(const uint8_t* const a, const uint8_t* const b,
 // Quantization
 //
 
-static WEBP_INLINE int DoQuantizeBlock_SSE2(int16_t in[16], int16_t out[16],
-                                            const uint16_t* const sharpen,
-                                            const VP8Matrix* const mtx) {
+static WEBP_INLINE int DoQuantizeBlock_SSE2(
+    int16_t in[16], int16_t out[16],
+    const uint16_t* WEBP_RESTRICT const sharpen,
+    const VP8Matrix* WEBP_RESTRICT const mtx) {
   const __m128i max_coeff_2047 = _mm_set1_epi16(MAX_LEVEL);
   const __m128i zero = _mm_setzero_si128();
   __m128i coeff0, coeff8;
@@ -1229,10 +1415,10 @@ static WEBP_INLINE int DoQuantizeBlock_SSE2(int16_t in[16], int16_t out[16],
   // Load all inputs.
   __m128i in0 = _mm_loadu_si128((__m128i*)&in[0]);
   __m128i in8 = _mm_loadu_si128((__m128i*)&in[8]);
-  const __m128i iq0 = _mm_loadu_si128((const __m128i*)&mtx->iq_[0]);
-  const __m128i iq8 = _mm_loadu_si128((const __m128i*)&mtx->iq_[8]);
-  const __m128i q0 = _mm_loadu_si128((const __m128i*)&mtx->q_[0]);
-  const __m128i q8 = _mm_loadu_si128((const __m128i*)&mtx->q_[8]);
+  const __m128i iq0 = _mm_loadu_si128((const __m128i*)&mtx->iq[0]);
+  const __m128i iq8 = _mm_loadu_si128((const __m128i*)&mtx->iq[8]);
+  const __m128i q0 = _mm_loadu_si128((const __m128i*)&mtx->q[0]);
+  const __m128i q8 = _mm_loadu_si128((const __m128i*)&mtx->q[8]);
 
   // extract sign(in)  (0x0000 if positive, 0xffff if negative)
   const __m128i sign0 = _mm_cmpgt_epi16(zero, in0);
@@ -1265,10 +1451,10 @@ static WEBP_INLINE int DoQuantizeBlock_SSE2(int16_t in[16], int16_t out[16],
     __m128i out_08 = _mm_unpacklo_epi16(coeff_iQ8L, coeff_iQ8H);
     __m128i out_12 = _mm_unpackhi_epi16(coeff_iQ8L, coeff_iQ8H);
     // out = (coeff * iQ + B)
-    const __m128i bias_00 = _mm_loadu_si128((const __m128i*)&mtx->bias_[0]);
-    const __m128i bias_04 = _mm_loadu_si128((const __m128i*)&mtx->bias_[4]);
-    const __m128i bias_08 = _mm_loadu_si128((const __m128i*)&mtx->bias_[8]);
-    const __m128i bias_12 = _mm_loadu_si128((const __m128i*)&mtx->bias_[12]);
+    const __m128i bias_00 = _mm_loadu_si128((const __m128i*)&mtx->bias[0]);
+    const __m128i bias_04 = _mm_loadu_si128((const __m128i*)&mtx->bias[4]);
+    const __m128i bias_08 = _mm_loadu_si128((const __m128i*)&mtx->bias[8]);
+    const __m128i bias_12 = _mm_loadu_si128((const __m128i*)&mtx->bias[12]);
     out_00 = _mm_add_epi32(out_00, bias_00);
     out_04 = _mm_add_epi32(out_04, bias_04);
     out_08 = _mm_add_epi32(out_08, bias_08);
@@ -1330,19 +1516,19 @@ static WEBP_INLINE int DoQuantizeBlock_SSE2(int16_t in[16], int16_t out[16],
 }
 
 static int QuantizeBlock_SSE2(int16_t in[16], int16_t out[16],
-                              const VP8Matrix* const mtx) {
-  return DoQuantizeBlock_SSE2(in, out, &mtx->sharpen_[0], mtx);
+                              const VP8Matrix* WEBP_RESTRICT const mtx) {
+  return DoQuantizeBlock_SSE2(in, out, &mtx->sharpen[0], mtx);
 }
 
 static int QuantizeBlockWHT_SSE2(int16_t in[16], int16_t out[16],
-                                 const VP8Matrix* const mtx) {
+                                 const VP8Matrix* WEBP_RESTRICT const mtx) {
   return DoQuantizeBlock_SSE2(in, out, NULL, mtx);
 }
 
 static int Quantize2Blocks_SSE2(int16_t in[32], int16_t out[32],
-                                const VP8Matrix* const mtx) {
+                                const VP8Matrix* WEBP_RESTRICT const mtx) {
   int nz;
-  const uint16_t* const sharpen = &mtx->sharpen_[0];
+  const uint16_t* const sharpen = &mtx->sharpen[0];
   nz  = DoQuantizeBlock_SSE2(in + 0 * 16, out + 0 * 16, sharpen, mtx) << 0;
   nz |= DoQuantizeBlock_SSE2(in + 1 * 16, out + 1 * 16, sharpen, mtx) << 1;
   return nz;

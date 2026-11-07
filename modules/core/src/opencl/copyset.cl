@@ -98,6 +98,50 @@ __kernel void copyToMask(__global const uchar * srcptr, int src_step, int src_of
     }
 }
 
+#elif defined(SET_DIAG)
+
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
+__kernel void setDiag(__global uchar* dst, int dst_step, int dst_offset,
+                      int dst_rows, int dst_cols,
+                      __global const uchar* src, int src_step, int src_offset,
+                      int len)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        int elem_size = (int)sizeof(T1) * cn;
+        int dst_idx = mad24(y, dst_step, mad24(x, elem_size, dst_offset));
+
+        if (x == y && x < len)
+        {
+#if IS_ROW_VECTOR
+            int src_idx = src_offset + x * elem_size;
+#else
+            int src_idx = mad24(x, src_step, src_offset);
+#endif
+            __global T1* dst_ptr = (__global T1*)(dst + dst_idx);
+            __global const T1* src_ptr = (__global const T1*)(src + src_idx);
+
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+                dst_ptr[c] = src_ptr[c];
+        }
+        else
+        {
+            __global T1* dst_ptr = (__global T1*)(dst + dst_idx);
+
+            #pragma unroll
+            for (int c = 0; c < cn; ++c)
+                dst_ptr[c] = (T1)0;
+        }
+    }
+}
+
 #else
 
 #ifndef dstST

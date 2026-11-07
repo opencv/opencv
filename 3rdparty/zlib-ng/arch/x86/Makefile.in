@@ -1,0 +1,140 @@
+# Makefile for zlib
+# Copyright (C) 1995-2013 Jean-loup Gailly, Mark Adler
+# For conditions of distribution and use, see copyright notice in zlib.h
+
+CC=
+CFLAGS=
+SFLAGS=
+INCLUDES=
+SUFFIX=
+
+AVX512FLAG=-mavx512f -mavx512dq -mavx512vl -mavx512bw
+AVX512VNNIFLAG=-mavx512vnni
+AVX2FLAG=-mavx2
+SSE2FLAG=-msse2
+SSSE3FLAG=-mssse3
+SSE42FLAG=-msse4.2
+PCLMULFLAG=-mpclmul
+VPCLMULFLAG=-mvpclmulqdq
+XSAVEFLAG=-mxsave
+NOLTOFLAG=
+
+SRCDIR=.
+SRCTOP=../..
+TOPDIR=$(SRCTOP)
+
+all: \
+	x86_features.o x86_features.lo \
+	adler32_avx2.o adler32_avx2.lo \
+	adler32_avx512.o adler32_avx512.lo \
+	adler32_avx512_vnni.o adler32_avx512_vnni.lo \
+	adler32_sse42.o adler32_sse42.lo \
+	adler32_ssse3.o adler32_ssse3.lo \
+	chunkset_avx2.o chunkset_avx2.lo \
+	chunkset_sse2.o chunkset_sse2.lo \
+	chunkset_ssse3.o chunkset_ssse3.lo \
+	compare256_avx2.o compare256_avx2.lo \
+	compare256_sse2.o compare256_sse2.lo \
+	crc32_pclmulqdq.o crc32_pclmulqdq.lo \
+	crc32_vpclmulqdq.o crc32_vpclmulqdq.lo \
+	slide_hash_avx2.o slide_hash_avx2.lo \
+	slide_hash_sse2.o slide_hash_sse2.lo
+
+x86_features.o:
+	$(CC) $(CFLAGS) $(XSAVEFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/x86_features.c
+
+x86_features.lo:
+	$(CC) $(SFLAGS) $(XSAVEFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/x86_features.c
+
+chunkset_avx2.o:
+	$(CC) $(CFLAGS) $(AVX2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_avx2.c
+
+chunkset_avx2.lo:
+	$(CC) $(SFLAGS) $(AVX2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_avx2.c
+
+chunkset_sse2.o:
+	$(CC) $(CFLAGS) $(SSE2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_sse2.c
+
+chunkset_sse2.lo:
+	$(CC) $(SFLAGS) $(SSE2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_sse2.c
+
+chunkset_ssse3.o:
+	$(CC) $(CFLAGS) $(SSSE3FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_ssse3.c
+
+chunkset_ssse3.lo:
+	$(CC) $(SFLAGS) $(SSSE3FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/chunkset_ssse3.c
+
+compare256_avx2.o:
+	$(CC) $(CFLAGS) $(AVX2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/compare256_avx2.c
+
+compare256_avx2.lo:
+	$(CC) $(SFLAGS) $(AVX2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/compare256_avx2.c
+
+compare256_sse2.o:
+	$(CC) $(CFLAGS) $(SSE2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/compare256_sse2.c
+
+compare256_sse2.lo:
+	$(CC) $(SFLAGS) $(SSE2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/compare256_sse2.c
+
+crc32_pclmulqdq.o:
+	$(CC) $(CFLAGS) $(PCLMULFLAG) $(SSE42FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/crc32_pclmulqdq.c
+
+crc32_pclmulqdq.lo:
+	$(CC) $(SFLAGS) $(PCLMULFLAG) $(SSE42FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/crc32_pclmulqdq.c
+
+crc32_vpclmulqdq.o:
+	$(CC) $(CFLAGS) $(PCLMULFLAG) $(VPCLMULFLAG) $(AVX512FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/crc32_vpclmulqdq.c
+
+crc32_vpclmulqdq.lo:
+	$(CC) $(SFLAGS) $(PCLMULFLAG) $(VPCLMULFLAG) $(AVX512FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/crc32_vpclmulqdq.c
+
+slide_hash_avx2.o:
+	$(CC) $(CFLAGS) $(AVX2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/slide_hash_avx2.c
+
+slide_hash_avx2.lo:
+	$(CC) $(SFLAGS) $(AVX2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/slide_hash_avx2.c
+
+slide_hash_sse2.o:
+	$(CC) $(CFLAGS) $(SSE2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/slide_hash_sse2.c
+
+slide_hash_sse2.lo:
+	$(CC) $(SFLAGS) $(SSE2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/slide_hash_sse2.c
+
+adler32_avx2.o: $(SRCDIR)/adler32_avx2.c
+	$(CC) $(CFLAGS) $(AVX2FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx2.c
+
+adler32_avx2.lo: $(SRCDIR)/adler32_avx2.c
+	$(CC) $(SFLAGS) $(AVX2FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx2.c
+
+adler32_avx512.o: $(SRCDIR)/adler32_avx512.c
+	$(CC) $(CFLAGS) $(AVX512FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx512.c
+
+adler32_avx512.lo: $(SRCDIR)/adler32_avx512.c
+	$(CC) $(SFLAGS) $(AVX512FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx512.c
+
+adler32_avx512_vnni.o: $(SRCDIR)/adler32_avx512_vnni.c
+	$(CC) $(CFLAGS) $(AVX512VNNIFLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx512_vnni.c
+
+adler32_avx512_vnni.lo: $(SRCDIR)/adler32_avx512_vnni.c
+	$(CC) $(SFLAGS) $(AVX512VNNIFLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_avx512_vnni.c
+
+adler32_ssse3.o: $(SRCDIR)/adler32_ssse3.c
+	$(CC) $(CFLAGS) $(SSSE3FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_ssse3.c
+
+adler32_ssse3.lo: $(SRCDIR)/adler32_ssse3.c
+	$(CC) $(SFLAGS) $(SSSE3FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_ssse3.c
+
+adler32_sse42.o: $(SRCDIR)/adler32_sse42.c
+	$(CC) $(CFLAGS) $(SSE42FLAG) $(NOLTOFLAG) $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_sse42.c
+
+adler32_sse42.lo: $(SRCDIR)/adler32_sse42.c
+	$(CC) $(SFLAGS) $(SSE42FLAG) $(NOLTOFLAG) -DPIC $(INCLUDES) -c -o $@ $(SRCDIR)/adler32_sse42.c
+
+mostlyclean: clean
+clean:
+	rm -f *.o *.lo *~
+	rm -rf objs
+	rm -f *.gcda *.gcno *.gcov
+
+distclean: clean
+	rm -f Makefile

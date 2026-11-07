@@ -5,6 +5,7 @@
 
 #include "cv2_convert.hpp"
 #include "cv2_numpy.hpp"
+#include "cv2_util.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
@@ -24,6 +25,26 @@ static std::string pycv_dumpArray(const T* arr, int n)
     return out.str();
 }
 
+static inline std::string getArrayTypeName(PyArrayObject* arr)
+{
+    PyArray_Descr* dtype = PyArray_DESCR(arr);
+    PySafeObject dtype_str(PyObject_Str(reinterpret_cast<PyObject*>(dtype)));
+    if (!dtype_str)
+    {
+        // Fallback to typenum value
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    std::string type_name;
+    if (!getUnicodeString(dtype_str, type_name))
+    {
+        // Failed to get string from bytes object - clear set TypeError and
+        // fallback to typenum value
+        PyErr_Clear();
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    return type_name;
+}
+
 //======================================================================================================================
 
 // --- Mat
@@ -35,27 +56,46 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if(!o || o == Py_None)
     {
         if( !m.data )
-            m.allocator = &g_numpyAllocator;
+            m.allocator = &GetNumpyAllocator();
         return true;
     }
 
     if( PyInt_Check(o) )
     {
         double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
+        if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyFloat_Check(o) )
     {
         double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
+
+       if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyTuple_Check(o) )
     {
-        int i, sz = (int)PyTuple_Size((PyObject*)o);
-        m = Mat(sz, 1, CV_64F);
-        for( i = 0; i < sz; i++ )
+        // see https://github.com/opencv/opencv/issues/24057
+        const int sz  = (int)PyTuple_Size((PyObject*)o);
+        const int sz2 = info.arithm_op_src ? std::max(4, sz) : sz; // Scalar has 4 elements.
+        m = Mat::zeros(sz2, 1, CV_64F);
+        for( int i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
             if( PyInt_Check(oi) )
@@ -80,7 +120,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     PyArrayObject* oarr = (PyArrayObject*) o;
 
-    bool needcopy = false, needcast = false;
+    if (info.outputarg && !PyArray_ISWRITEABLE(oarr))
+    {
+        failmsg("%s marked as output argument, but provided NumPy array "
+                "marked as readonly", info.name);
+        return false;
+    }
+
+    bool needcopy = !PyArray_ISNOTSWAPPED(oarr), needcast = needcopy;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
                typenum == NPY_BYTE ? CV_8S :
@@ -88,6 +135,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
+               typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
@@ -101,7 +149,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         }
         else
         {
-            failmsg("%s data type = %d is not supported", info.name, typenum);
+            const std::string dtype_name = getArrayTypeName(oarr);
+            failmsg("%s data type = %s is not supported", info.name,
+                    dtype_name.c_str());
             return false;
         }
     }
@@ -123,7 +173,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
 
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    bool ismultichannel = ndims == 3 && !info.nd_mat;
     if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
     {
         bool wrapChannels = false;
@@ -156,9 +206,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if (ismultichannel)
     {
         int channels = ndims >= 1 ? (int)_sizes[ndims - 1] : 1;
-        if (channels > CV_CN_MAX)
+        if (channels < 1 || channels > CV_CN_MAX)
         {
-            failmsg("%s unable to wrap channels, too high (%d > CV_CN_MAX=%d)", info.name, (int)channels, (int)CV_CN_MAX);
+            failmsg("%s unable to wrap channels, invalid count (%d, must be in [1, %d])", info.name, (int)channels, (int)CV_CN_MAX);
             return false;
         }
         ndims--;
@@ -210,6 +260,39 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         }
     }
 
+    // see https://github.com/opencv/opencv/issues/24057
+    if ( ( info.arithm_op_src ) && ( ndims == 1 ) && ( size[0] <= 4 ) )
+    {
+        const int sz  = size[0]; // Real Data Length(1, 2, 3 or 4)
+        const int sz2 = 4;       // Scalar has 4 elements.
+        m = Mat::zeros(sz2, 1, CV_64F);
+
+        // Fill the Mat with array elements
+        bool filled = true;
+        const char *base_ptr = PyArray_BYTES(oarr);
+        for(int i = 0; i < sz && filled; i++ )
+        {
+            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i); // new object
+            if( PyInt_Check(oi) )
+                m.at<double>(i) = (double)PyInt_AsLong(oi);
+            else if( PyFloat_Check(oi) )
+                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s has some non-numerical elements", info.name);
+                m.release();
+                filled = false;
+            }
+
+            Py_DECREF(oi);
+        }
+
+        if(needcopy)
+            Py_DECREF(o);
+
+        return filled;
+    }
+
     // handle degenerate case
     // FIXIT: Don't force 1D for Scalars
     if( ndims == 0) {
@@ -223,14 +306,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 #endif
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
-    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.u = GetNumpyAllocator().allocate(o, ndims, size, type, step);
     m.addref();
 
     if( !needcopy )
     {
         Py_INCREF(o);
     }
-    m.allocator = &g_numpyAllocator;
+    m.allocator = &GetNumpyAllocator();
 
     return true;
 }
@@ -241,9 +324,9 @@ PyObject* pyopencv_from(const cv::Mat& m)
     if( !m.data )
         Py_RETURN_NONE;
     cv::Mat temp, *p = (cv::Mat*)&m;
-    if(!p->u || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &GetNumpyAllocator())
     {
-        temp.allocator = &g_numpyAllocator;
+        temp.allocator = &GetNumpyAllocator();
         ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
@@ -326,7 +409,7 @@ bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
         }
     } else {
         if (PyFloat_Check(o) || PyInt_Check(o)) {
-            s[0] = PyFloat_AsDouble(o);
+            s = PyFloat_AsDouble(o);
         } else {
             failmsg("Scalar value for argument '%s' is not numeric", info.name);
             return false;
@@ -443,6 +526,30 @@ PyObject* pyopencv_from(const int& value)
 }
 
 // --- int64
+
+template<>
+bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyLong_AsLongLong(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
+}
 
 template<>
 PyObject* pyopencv_from(const int64& value)
@@ -602,18 +709,31 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
         return true;
     }
     std::string str;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    PyObject* path_obj = NULL;
+    if (info.pathlike)
+    {
+        path_obj = PyOS_FSPath(obj);
+        if (PyErr_Occurred())
+        {
+            failmsg("Expected '%s' to be a str or path-like object", info.name);
+            return false;
+        }
+        obj = path_obj;
+    }
+#endif
+
+    bool result = false;
     if (getUnicodeString(obj, str))
     {
         value = str;
-        return true;
+        result = true;
     }
     else
     {
-        // If error hasn't been already set by Python conversion functions
         if (!PyErr_Occurred())
         {
-            // Direct access to underlying slots of PyObjectType is not allowed
-            // when limited API is enabled
 #ifdef Py_LIMITED_API
             failmsg("Can't convert object to 'str' for '%s'", info.name);
 #else
@@ -622,7 +742,12 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
 #endif
         }
     }
-    return false;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    Py_XDECREF(path_obj);
+#endif
+
+    return result;
 }
 
 template<>
@@ -687,6 +812,21 @@ PyObject* pyopencv_from(const Rect& r)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, Rect2f& r, const ArgInfo& info)
+{
+    RefWrapper<float> values[] = {
+        RefWrapper<float>(r.x), RefWrapper<float>(r.y),
+        RefWrapper<float>(r.width), RefWrapper<float>(r.height)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Rect2f& r)
+{
+    return Py_BuildValue("(ffff)", r.x, r.y, r.width, r.height);
+}
+
+template<>
 bool pyopencv_to(PyObject* obj, Rect2d& r, const ArgInfo& info)
 {
     RefWrapper<double> values[] = {
@@ -703,10 +843,36 @@ PyObject* pyopencv_from(const Rect2d& r)
 
 // --- RotatedRect
 
+static inline bool convertToRotatedRect(PyObject* obj, RotatedRect& dst)
+{
+    PyObject* type = PyObject_Type(obj);
+    if (getPyObjectAttr(type, "__module__") == MODULESTR &&
+        getPyObjectNameAttr(type) == "RotatedRect")
+    {
+        struct pyopencv_RotatedRect_t
+        {
+            PyObject_HEAD
+            cv::RotatedRect v;
+        };
+        dst = reinterpret_cast<pyopencv_RotatedRect_t*>(obj)->v;
+
+        Py_DECREF(type);
+        return true;
+    }
+    Py_DECREF(type);
+    return false;
+}
+
 template<>
 bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
 {
     if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    // This is a workaround for compatibility with an initialization from tuple.
+    // Allows import RotatedRect as an object.
+    if (convertToRotatedRect(obj, dst))
     {
         return true;
     }
@@ -726,7 +892,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String centerItemName = format("'%s' center point", info.name);
-        const ArgInfo centerItemInfo(centerItemName.c_str(), false);
+        const ArgInfo centerItemInfo(centerItemName.c_str(), 0);
         SafeSeqItem centerItem(obj, 0);
         if (!pyopencv_to(centerItem.item, dst.center, centerItemInfo))
         {
@@ -735,7 +901,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String sizeItemName = format("'%s' size", info.name);
-        const ArgInfo sizeItemInfo(sizeItemName.c_str(), false);
+        const ArgInfo sizeItemInfo(sizeItemName.c_str(), 0);
         SafeSeqItem sizeItem(obj, 1);
         if (!pyopencv_to(sizeItem.item, dst.size, sizeItemInfo))
         {
@@ -744,7 +910,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String angleItemName = format("'%s' angle", info.name);
-        const ArgInfo angleItemInfo(angleItemName.c_str(), false);
+        const ArgInfo angleItemInfo(angleItemName.c_str(), 0);
         SafeSeqItem angleItem(obj, 2);
         if (!pyopencv_to(angleItem.item, dst.angle, angleItemInfo))
         {
@@ -825,6 +991,21 @@ template<>
 PyObject* pyopencv_from(const Point2d& p)
 {
     return Py_BuildValue("(dd)", p.x, p.y);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Point3i& p, const ArgInfo& info)
+{
+    RefWrapper<int> values[] = {RefWrapper<int>(p.x),
+                                RefWrapper<int>(p.y),
+                                RefWrapper<int>(p.z)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Point3i& p)
+{
+    return Py_BuildValue("(iii)", p.x, p.y, p.z);
 }
 
 template<>
@@ -994,7 +1175,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String typeItemName = format("'%s' criteria type", info.name);
-        const ArgInfo typeItemInfo(typeItemName.c_str(), false);
+        const ArgInfo typeItemInfo(typeItemName.c_str(), 0);
         SafeSeqItem typeItem(obj, 0);
         if (!pyopencv_to(typeItem.item, dst.type, typeItemInfo))
         {
@@ -1003,7 +1184,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String maxCountItemName = format("'%s' max count", info.name);
-        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), false);
+        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), 0);
         SafeSeqItem maxCountItem(obj, 1);
         if (!pyopencv_to(maxCountItem.item, dst.maxCount, maxCountItemInfo))
         {
@@ -1012,7 +1193,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String epsilonItemName = format("'%s' epsilon", info.name);
-        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), false);
+        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), 0);
         SafeSeqItem epsilonItem(obj, 2);
         if (!pyopencv_to(epsilonItem.item, dst.epsilon, epsilonItemInfo))
         {

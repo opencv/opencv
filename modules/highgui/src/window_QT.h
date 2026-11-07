@@ -349,6 +349,7 @@ public:
 
 protected:
     virtual void keyPressEvent(QKeyEvent* event) CV_OVERRIDE;
+    virtual void closeEvent(QCloseEvent* event) CV_OVERRIDE;
 
 private:
 

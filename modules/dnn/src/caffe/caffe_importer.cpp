@@ -46,6 +46,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <type_traits>
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -97,11 +98,11 @@ class CaffeImporter
 
 public:
 
-    CaffeImporter(const char *pototxt, const char *caffeModel)
+    CaffeImporter(const char *prototxt, const char *caffeModel)
     {
         CV_TRACE_FUNCTION();
 
-        ReadNetParamsFromTextFileOrDie(pototxt, &net);
+        ReadNetParamsFromTextFileOrDie(prototxt, &net);
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
@@ -125,8 +126,9 @@ public:
         {
             const google::protobuf::UnknownField& field = unknownFields.field(i);
             CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
-            std::string fieldName = field.group().field(0).length_delimited();
-            std::string fieldValue = field.group().field(1).length_delimited();
+            CV_CheckGE(field.group().field_count(), 2, "UnknownField should have at least 2 items: name and value");
+            std::string fieldName(field.group().field(0).length_delimited());
+            std::string fieldValue(field.group().field(1).length_delimited());
             params.set(fieldName, fieldValue);
         }
     }
@@ -136,7 +138,7 @@ public:
         const Reflection *refl = msg.GetReflection();
         int type = field->cpp_type();
         bool isRepeated = field->is_repeated();
-        const std::string &name = field->name();
+        const std::string name(field->name());
 
         #define SET_UP_FILED(getter, arrayConstr, gtype)                                    \
             if (isRepeated) {                                                               \
@@ -188,12 +190,11 @@ public:
                 params.set(name, DictValue::arrayString(buf.begin(), size));
             }
             else {
-                params.set(name, refl->GetEnum(msg, field)->name());
+                params.set(name, std::string(refl->GetEnum(msg, field)->name()));
             }
             break;
         default:
             CV_Error(Error::StsError, "Unknown type \"" + String(field->type_name()) + "\" in prototxt");
-            break;
         }
     }
 
@@ -203,7 +204,9 @@ public:
         return (str.size() >= _param.size()) && str.compare(str.size() - _param.size(), _param.size(), _param) == 0;
     }
 
-    void extractLayerParams(const Message &msg, cv::dnn::LayerParams &params, bool isInternal = false)
+    template<class MSG>
+    typename std::enable_if<std::is_base_of<Message, MSG>::value, void>::type
+    extractLayerParams(const MSG &msg, cv::dnn::LayerParams &params, bool isInternal = false)
     {
         const Descriptor *msgDesc = msg.GetDescriptor();
         const Reflection *msgRefl = msg.GetReflection();
@@ -212,12 +215,12 @@ public:
         {
             const FieldDescriptor *fd = msgDesc->field(fieldId);
 
-            if (!isInternal && !ends_with_param(fd->name()))
+            if (!isInternal && !ends_with_param(std::string(fd->name())))
                 continue;
 
             const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
-                            (fd->is_optional() && msgRefl->HasField(msg, fd)) ||
+                            (!fd->is_repeated() && !fd->is_required() && msgRefl->HasField(msg, fd)) ||
                             (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
                             !unknownFields.empty();
             if (!hasData)
@@ -238,6 +241,13 @@ public:
         }
     }
 
+    template<class MSG>
+    typename std::enable_if<!std::is_base_of<Message, MSG>::value, void>::type
+    extractLayerParams(const MSG &msg, cv::dnn::LayerParams &params, bool isInternal = false)
+    {
+        CV_Error(Error::StsError, "DNN/CAFFE: do not have your message be a MessageLite");
+    }
+
     void blobShapeFromProto(const caffe::BlobProto &pbBlob, MatShape& shape)
     {
         shape.clear();
@@ -256,6 +266,18 @@ public:
             shape.resize(1, 1);  // Is a scalar.
     }
 
+    template<class BLOB_PROTO>
+    typename std::enable_if<std::is_base_of<Message, BLOB_PROTO>::value, void>::type
+    AssertBlobProtoIsFloat(const BLOB_PROTO &pbBlob) {
+        CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+    }
+
+    template<class BLOB_PROTO>
+    typename std::enable_if<!std::is_base_of<Message, BLOB_PROTO>::value, void>::type
+    AssertBlobProtoIsFloat(const BLOB_PROTO &pbBlob) {
+        CV_Error(Error::StsError, "DNN/CAFFE: do not have your message be a MessageLite");
+    }
+
     void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
     {
         MatShape shape;
@@ -267,7 +289,7 @@ public:
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
-            CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+            AssertBlobProtoIsFloat(pbBlob);
             Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else
@@ -279,8 +301,8 @@ public:
                 // Half precision floats.
                 CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-                convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16FC1, (void*)raw_data.c_str());
+                halfs.convertTo(dstBlob, CV_32F);
             }
             else if (pbBlob.raw_data_type() == caffe::FLOAT)
             {
@@ -499,6 +521,11 @@ public:
             {
                 type = "Convolution";
             }
+            else if (type == "Softmax"){
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
+            }
 
             int id = dstNet.addLayer(name, type, layerParams);
 
@@ -556,7 +583,6 @@ public:
         if (idx < 0)
         {
             CV_Error(Error::StsObjectNotFound, "Can't find output blob \"" + name + "\"");
-            return;
         }
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
@@ -591,7 +617,23 @@ Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uc
                             bufferModelPtr, bufferModel.size());
 }
 
-#endif //HAVE_PROTOBUF
+#else  // HAVE_PROTOBUF
+
+#define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/Caffe: Build OpenCV with Protobuf to import Caffe models")
+
+Net readNetFromCaffe(const String &, const String &) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const char *, size_t, const char *, size_t) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+#endif  // HAVE_PROTOBUF
 
 CV__DNN_INLINE_NS_END
 }} // namespace

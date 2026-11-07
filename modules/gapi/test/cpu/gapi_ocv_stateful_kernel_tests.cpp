@@ -37,7 +37,7 @@ namespace cv
         {
             static const char* tag()
             {
-                return "org.opencv.test.background_substractor_state_params";
+                return "org.opencv.test.background_subtractor_state_params";
             }
         };
 
@@ -103,8 +103,10 @@ namespace
     GAPI_OCV_KERNEL_ST(GOCVStInvalidResize, GStInvalidResize, int)
     {
         static void setup(const cv::GMatDesc, cv::Size, double, double, int,
-                          std::shared_ptr<int> &/* state */)
-        {  }
+                          std::shared_ptr<int> &state)
+        {
+            state = std::make_shared<int>();
+        }
 
         static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp,
                         cv::Mat &out, int& /* state */)
@@ -113,7 +115,7 @@ namespace
         }
     };
 
-    G_TYPED_KERNEL(GBackSub, <GMat(GMat)>, "org.opencv.test.background_substractor")
+    G_TYPED_KERNEL(GBackSub, <GMat(GMat)>, "org.opencv.test.background_subtractor")
     {
          static GMatDesc outMeta(GMatDesc in) { return in.withType(CV_8U, 1); }
     };
@@ -150,9 +152,10 @@ namespace
 
     GAPI_OCV_KERNEL_ST(GOCVCountStateSetups, GCountStateSetups, int)
     {
-        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &,
+        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &state,
                           const cv::GCompileArgs &compileArgs)
         {
+            state = std::make_shared<int>();
             auto params = cv::gapi::getCompileArg<CountStateSetupsParams>(compileArgs)
                 .value_or(CountStateSetupsParams { });
             if (params.pSetupsCount != nullptr) {
@@ -165,7 +168,7 @@ namespace
             out = true;
         }
     };
-};
+}
 
 TEST(StatefulKernel, StateInitOnceInRegularMode)
 {
@@ -190,7 +193,7 @@ TEST(StatefulKernel, StateInitOnceInRegularMode)
         EXPECT_TRUE(params.pSetupsCount != nullptr);
         EXPECT_EQ(1, *params.pSetupsCount);
     }
-};
+}
 
 struct StateInitOnce : public ::testing::TestWithParam<bool>{};
 TEST_P(StateInitOnce, StreamingCompiledWithMeta)
@@ -435,10 +438,10 @@ namespace
         gapiBackSub.start();
         EXPECT_TRUE(gapiBackSub.running());
 
-        // OpenCV reference substractor
+        // OpenCV reference subtractor
         auto pOCVBackSub = createBackgroundSubtractorKNN();
 
-        // Comparison of G-API and OpenCV substractors
+        // Comparison of G-API and OpenCV subtractors
         std::size_t frames = 0u;
         while (gapiBackSub.pull(cv::gout(frame, gapiForeground))) {
             pOCVBackSub->apply(frame, ocvForeground, -1);
@@ -454,6 +457,13 @@ namespace
 
 TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
 {
+    // This test is long as it runs BG subtractor (a) twice
+    // (in G-API + for reference) over (b) two files. In fact
+    // it is one more BG Subtractor accuracy test, but not
+    // a stateful initialization test -- the latter must be
+    // done through a light-weight mock object. So for now:
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+
     // G-API graph declaration
     cv::GMat in;
     cv::GMat out = GBackSub::on(in);
@@ -493,7 +503,7 @@ TEST(StatefulKernel, StateIsChangedViaCompArgsOnReshape)
 
     const auto pkg = cv::gapi::kernels<GOCVBackSub>();
 
-    // OpenCV reference substractor
+    // OpenCV reference subtractor
     auto pOCVBackSubKNN = createBackgroundSubtractorKNN();
     auto pOCVBackSubMOG2 = createBackgroundSubtractorMOG2();
 
@@ -565,7 +575,7 @@ TEST(StatefulKernel, StateIsResetOnceOnReshapeInStreaming)
 
     run("cv/video/768x576.avi", 1);
     // FIXME: it should be 2, not 3 for expectedSetupsCount here.
-    // With current implemention both GCPUExecutable reshape() and
+    // With current implementation both GCPUExecutable reshape() and
     // handleNewStream() call setupKernelStates()
     run("cv/video/1920x1080.avi", 3);
 }

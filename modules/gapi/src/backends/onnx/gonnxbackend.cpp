@@ -9,6 +9,9 @@
 
 #ifdef HAVE_ONNX
 
+#include "backends/onnx/dml_ep.hpp"
+#include "backends/onnx/coreml_ep.hpp"
+
 #include <ade/util/algorithm.hpp> // any_of
 #include <ade/util/zip_range.hpp>
 #include <opencv2/gapi/infer.hpp>
@@ -44,7 +47,8 @@ static std::string pdims(const std::vector<int64_t> &dims) {
 
 struct TensorInfo {
     TensorInfo() = default;
-    explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
+
+    explicit TensorInfo(const Ort::ConstTensorTypeAndShapeInfo &info)
         : dims(info.GetShape())
         , type(info.GetElementType())
         , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
@@ -119,11 +123,17 @@ class ONNXCompiled {
     std::vector<cv::Mat> out_data;
 
     void Run(const std::vector<cv::Mat>& ins,
-             const std::vector<cv::Mat>& outs);
+             std::vector<cv::Mat>& outs);
 
     std::vector<std::string> in_names_without_const;
+
+    cv::gapi::onnx::WorkloadTypeONNXPtr m_workload_type;
+    uint64_t m_workload_listener_id = 0;
+    void setWorkloadType(const std::string &type);
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
+    ~ONNXCompiled();
+    void listenToWorkloadType(cv::gapi::onnx::WorkloadTypeONNXPtr workload);
 
     // Extract the information about output layer #i
     cv::GMatDesc outMeta(int i) const;
@@ -141,6 +151,106 @@ public:
     // Run with the assigned inputs/outputs
     void run();
 };
+
+static void addCUDAExecutionProvider(Ort::SessionOptions *session_options,
+                                     const cv::gapi::onnx::ep::CUDA &cuda_ep) {
+     OrtCUDAProviderOptions options{};
+     options.device_id = cuda_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_CUDA(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable CUDA"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::TensorRT &trt_ep) {
+     OrtTensorRTProviderOptions options{};
+     options.device_id = trt_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_TensorRT(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable TensorRT"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
+     std::unordered_map<std::string, std::string> options;
+
+     try {
+        // If the OpenVINO Execution Provider object was initialized with a parameters map,
+        // those parameters are used directly.
+        // Otherwise, the function constructs the options map from the individual member
+        // variables of the OpenVINO object.
+        if (ov_ep.params_map.empty()) {
+            options = {
+                {"device_type", ov_ep.device_type},
+                {"cache_dir", ov_ep.cache_dir},
+                {"num_of_threads", ov_ep.num_of_threads > 0 ? std::to_string(ov_ep.num_of_threads) : ""},
+                {"enable_opencl_throttling", ov_ep.enable_opencl_throttling ? "True" : "False"},
+                {"enable_dynamic_shapes", ov_ep.enable_dynamic_shapes ? "True" : "False"},
+            };
+        } else {
+            options.insert(ov_ep.params_map.begin(), ov_ep.params_map.end());
+        }
+        //  AppendExecutionProvider function expects a const std::unordered_map as its second argument
+        session_options->AppendExecutionProvider("OpenVINO", options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable OpenVINO"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addExecutionProvider(Ort::SessionOptions          *session_options,
+                                 const cv::gapi::onnx::ep::EP &execution_provider) {
+    namespace ep = cv::gapi::onnx::ep;
+    switch (execution_provider.index()) {
+        case ep::EP::index_of<ep::OpenVINO>(): {
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is added.");
+             const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
+             addOpenVINOExecutionProvider(session_options, ov_ep);
+             break;
+        }
+        case ep::EP::index_of<ep::DirectML>(): {
+            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
+            const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
+            addDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CoreML>(): {
+            GAPI_LOG_INFO(NULL, "CoreML Execution Provider is added.");
+            const auto &coreml_ep = cv::util::get<ep::CoreML>(execution_provider);
+            addCoreMLExecutionProvider(session_options, coreml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CUDA>(): {
+            GAPI_LOG_INFO(NULL, "CUDA Execution Provider is added.");
+            const auto &cuda_ep = cv::util::get<ep::CUDA>(execution_provider);
+            addCUDAExecutionProvider(session_options, cuda_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::TensorRT>(): {
+            GAPI_LOG_INFO(NULL, "TensorRT Execution Provider is added.");
+            const auto &trt_ep = cv::util::get<ep::TensorRT>(execution_provider);
+            addTensorRTExecutionProvider(session_options, trt_ep);
+            break;
+        }
+        default:
+            GAPI_LOG_INFO(NULL, "CPU Execution Provider is added.");
+            break;
+    }
+}
 
 } // namespace onnx
 } // namespace gimpl
@@ -171,7 +281,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -207,7 +317,7 @@ inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                                            mat.total());
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 
@@ -218,22 +328,21 @@ inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
 inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
-    GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
     // CNN input type
     const auto type = toCV(ti.type);
-    if (src.depth() == CV_32F) {
+
+    if (src.depth() != CV_8U || src.dims > 2) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F input data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
                 GAPI_Assert((ti.dims[i] == -1 || ti.dims[i] == tensor_dims[i]) &&
-                            "32F tensor dimensions should match with all non-dynamic NN input dimensions");
+                            "Tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Assert(false && "32F tensor size should match with NN input");
+            GAPI_Error("Tensor size should match with NN input");
         }
 
         dst = src;
@@ -283,6 +392,7 @@ inline void preprocess(const cv::Mat& src,
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && type == CV_32F) {
             rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
+
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -338,7 +448,7 @@ void preprocess(const cv::MediaFrame::View& view,
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for ONNX backend");
+            GAPI_Error("Unsupported media format for ONNX backend");
     }
 }
 
@@ -366,8 +476,27 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         return createTensor<float>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:{
+        // cv::Mat does not support int64 data directly.
+        // Following steps are applied to create an ONNX tensor from cv::Mat data:
+        // - First create a new ONNX tensor 'i64_tensor' with data type int64_t using the default allocator
+        // - Next retrieve a pointer to the mutable data buffer of 'i64_tensor'
+        // - Convert the data from int32 (see toCV function) to int64 and deep copy it into 'i64_tensor'
+        auto ort_dims = toORT(data.size);
+
+        Ort::AllocatorWithDefaultOptions allocator;
+        Ort::Value i64_tensor = Ort::Value::CreateTensor<int64_t>(allocator,
+                                                                  ort_dims.data(),
+                                                                  ort_dims.size());
+        int64_t* tensor_data = i64_tensor.GetTensorMutableData<int64_t>();
+
+        cv::gimpl::convertInt32ToInt64(data.ptr<int>(),
+                                       tensor_data,
+                                       data.total());
+        return i64_tensor;
+    }
     default:
-        GAPI_Assert(false && "ONNX. Unsupported data type");
+        GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -455,8 +584,10 @@ using GConstGONNXModel = ade::ConstTypedGraph
 } // anonymous namespace
 
 // GCPUExcecutable implementation //////////////////////////////////////////////
-cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph &g,
-                                                  const std::vector<ade::NodeHandle> &nodes)
+cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph                   &g,
+                                                  const std::vector<ade::NodeHandle> &nodes,
+                                                  const cv::GCompileArgs             &compileArgs)
+
     : m_g(g), m_gm(m_g) {
     // FIXME: Currently this backend is capable to run a single inference node only.
     // Need to extend our island fusion with merge/not-to-merge decision making parametrization
@@ -467,6 +598,11 @@ cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph &g,
         case NodeType::OP:
             if (this_nh == nullptr) {
                 this_nh = nh;
+                auto workload_arg = cv::gapi::getCompileArg<cv::gapi::onnx::WorkloadTypeONNXPtr>(compileArgs);
+                if(workload_arg.has_value()) {
+                    const auto &onnx_unit = iem.metadata(nh).get<ONNXUnit>();
+                    onnx_unit.oc->listenToWorkloadType(workload_arg.value());
+                }
             }
             else {
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -579,6 +715,26 @@ namespace cv {
 namespace gimpl {
 namespace onnx {
 
+static GraphOptimizationLevel convertToGraphOptimizationLevel(const int opt_level) {
+    switch (opt_level) {
+    case ORT_DISABLE_ALL:
+        return ORT_DISABLE_ALL;
+    case ORT_ENABLE_BASIC:
+        return ORT_ENABLE_BASIC;
+    case ORT_ENABLE_EXTENDED:
+        return ORT_ENABLE_EXTENDED;
+    case ORT_ENABLE_ALL:
+        return ORT_ENABLE_ALL;
+    default:
+        if (opt_level > ORT_ENABLE_ALL) {  // relax constraint
+            return ORT_ENABLE_ALL;
+        }
+        else {
+            cv::util::throw_error(std::invalid_argument("Invalid argument opt_level = " + std::to_string(opt_level)));
+        }
+    }
+}
+
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
     // Validate input parameters before allocating any resources
@@ -590,10 +746,29 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
-
+    // WA: Some ONNX Runtime + OVEP libraries don't allow
+    //     creation of environment after addition of OpenVINO
+    //     Execution Provider.
+    // Create and initialize the ONNX environment
+    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
-    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+    GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
+    for (const auto &ep : pp.execution_providers) {
+        cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
+    }
+
+    for (const auto &option : pp.session_options) {
+        session_options.AddConfigEntry(option.first.c_str(), option.second.c_str());
+    }
+
+    if (pp.disable_mem_pattern) {
+        session_options.DisableMemPattern();
+    }
+
+    if (pp.opt_level.has_value()) {
+        session_options.SetGraphOptimizationLevel(convertToGraphOptimizationLevel(pp.opt_level.value()));
+    }
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
 #else
@@ -631,9 +806,11 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
                             in_tensor_info.end(),
                             [](const cv::gimpl::onnx::TensorInfo &p) {
                                 return p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
-                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8;
+                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8
+                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32
+                                    || p.type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64;
                             })
-                && "Only FP32 and U8 inputs for NN are supported");
+                && "Only FP32, INT32, INT64 and U8 inputs for NN are supported");
 
     // Put mean and std in appropriate tensor params
     if (!params.mean.empty() || !params.stdev.empty()) {
@@ -671,6 +848,23 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     out_data.resize(params.num_out);
 }
 
+ONNXCompiled::~ONNXCompiled() {
+    if (m_workload_type) {
+        m_workload_type->removeListener(m_workload_listener_id);
+    }
+}
+
+void ONNXCompiled::setWorkloadType(const std::string &type) {
+    const char* keys[] = {"ep.dynamic.workload_type"};
+    const char* values[] = {type.c_str()};
+    this_session.SetEpDynamicOptions(keys, values, 1);
+}
+
+void ONNXCompiled::listenToWorkloadType(cv::gapi::onnx::WorkloadTypeONNXPtr workload) {
+    m_workload_type = workload;
+    m_workload_listener_id = m_workload_type->addListener(std::bind(&ONNXCompiled::setWorkloadType, this, std::placeholders::_1));
+}
+
 std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
     GAPI_Assert(pos == INPUT || pos == OUTPUT);
 
@@ -688,11 +882,10 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
             : this_session.GetOutputTypeInfo(i);
         tensor_info.emplace_back(info.GetTensorTypeAndShapeInfo());
 
-        char *name_p = pos == INPUT
-            ? this_session.GetInputName(i, allocator)
-            : this_session.GetOutputName(i, allocator);
-        tensor_info.back().name = name_p;
-        allocator.Free(name_p);
+        Ort::AllocatedStringPtr name_p = pos == INPUT
+            ? this_session.GetInputNameAllocated(i, allocator)
+            : this_session.GetOutputNameAllocated(i, allocator);
+        tensor_info.back().name = std::string(name_p.get());
     }
 
     return tensor_info;
@@ -735,7 +928,8 @@ void ONNXCompiled::extractMat(ONNXCallContext &ctx, const size_t in_idx, Views& 
     }
 }
 
-void ONNXCompiled::setOutput(int i, cv::Mat &m) {
+void ONNXCompiled::setOutput(int i, cv::Mat &m)
+{
     // FIXME: No need in double-indexing?
     out_data[i] = m;
 }
@@ -748,7 +942,7 @@ cv::Mat ONNXCompiled::allocOutput(int i) const {
 }
 
 void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
-                       const std::vector<cv::Mat>& outs) {
+                       std::vector<cv::Mat>& outs) {
     std::vector<Ort::Value> in_tensors, out_tensors;
 
     // Layer names order for run
@@ -793,6 +987,17 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
+        if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
+            // cv::Mat does not support int64 output data.
+            // Conversion from int 64 to int 32 is carried in the copyFromONNX function
+            // The output is written to out_mat
+            for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
+                                              ade::util::toRange(outs))) {
+                auto &out_tensor = std::get<0>(iter);
+                auto &out_mat = std::get<1>(iter);
+                copyFromONNX(out_tensor, out_mat);
+            }
+        }
     } else {
         // Hard path - run session & user-defined post-processing
         // NOTE: use another list of output names here
@@ -857,7 +1062,7 @@ static void checkInputMeta(const cv::GMetaArg mm) {
                 case cv::MediaFormat::NV12: break;
                 case cv::MediaFormat::BGR:  break;
                 default:
-                    GAPI_Assert(false && "Unsupported media format for ONNX backend");
+                    GAPI_Error("Unsupported media format for ONNX backend");
             } break;
         } break;
         default:
@@ -1100,7 +1305,7 @@ struct InferList2: public cv::detail::KernelTag {
                     const auto &vec = this_vec.rref<cv::Mat>();
                     uu.oc->setInput(in_idx, vec[list_idx]);
                 } else {
-                    GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
+                    GAPI_Error("Only Rect and Mat types are supported for infer list 2!");
                 }
                 // }}} (Prepare input)
             } // }}} (For every input of the net)
@@ -1133,18 +1338,50 @@ namespace {
             // FIXME: Introduce a DNNBackend interface which'd specify
             // the framework for this???
             GONNXModel gm(gr);
-            const auto &np = gm.metadata(nh).get<NetworkParams>();
-            const auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
+            auto &np = gm.metadata(nh).get<NetworkParams>();
+            auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
+
+            GModel::Graph model(gr);
+            auto& op = model.metadata(nh).get<Op>();
+            if (pp.is_generic) {
+                auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
+
+                for (const auto& layer_name : info.in_names)
+                {
+                    pp.input_names.push_back(layer_name);
+                    if (!pp.generic_mstd.empty()) {
+                        const auto &ms = pp.generic_mstd.at(layer_name);
+                        pp.mean.push_back(ms.first);
+                        pp.stdev.push_back(ms.second);
+                    }
+                    if (!pp.generic_norm.empty()) {
+                        pp.normalize.push_back(pp.generic_norm.at(layer_name));
+                    }
+                }
+                pp.num_in = info.in_names.size();
+
+                // Incorporate extra parameters associated with input layer names
+                // FIXME(DM): The current form assumes ALL input layers require
+                // this information, this is obviously not correct
+
+                for (const auto& a : info.out_names)
+                {
+                    pp.output_names.push_back(a);
+                }
+                pp.num_out = info.out_names.size();
+            } // if(is_generic) -- note, the structure is already filled at the user
+              // end when a non-generic Params are used
+
             gm.metadata(nh).set(ONNXUnit{pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});
             gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
-                             const cv::GCompileArgs &,
+                             const cv::GCompileArgs &compileArgs,
                              const std::vector<ade::NodeHandle> &nodes) const override {
-            return EPtr{new cv::gimpl::onnx::GONNXExecutable(graph, nodes)};
+            return EPtr{new cv::gimpl::onnx::GONNXExecutable(graph, nodes, compileArgs)};
         }
 
         virtual cv::GKernelPackage auxiliaryKernels() const override {

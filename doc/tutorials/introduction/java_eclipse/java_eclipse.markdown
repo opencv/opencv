@@ -9,6 +9,8 @@ Using OpenCV Java with Eclipse {#tutorial_java_eclipse}
 | Original author | Barış Evrim Demiröz |
 | Compatibility | OpenCV >= 3.0 |
 
+@tableofcontents
+
 @warning
 This tutorial can contain obsolete information.
 
@@ -21,7 +23,7 @@ less mistakes. Here we go.
 Configuring Eclipse
 -------------------
 
-First, obtain a fresh release of OpenCV [from download page](http://opencv.org/releases.html) and
+First, obtain a fresh release of OpenCV [from download page](https://opencv.org/releases) and
 extract it under a simple location like `C:\OpenCV-2.4.6\`. I am using version 2.4.6, but the steps
 are more or less the same for other versions.
 

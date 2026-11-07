@@ -170,27 +170,29 @@ endmacro()  # ocv_detect_android_sdk_build_tools
 
 if(BUILD_ANDROID_PROJECTS)
   ocv_detect_android_sdk()
-  ocv_detect_android_sdk_tools()
   ocv_detect_android_sdk_build_tools()
 
-  if(ANDROID_SDK_TOOLS_VERSION VERSION_LESS 14)
-    message(FATAL_ERROR "Android SDK Tools: OpenCV requires Android SDK Tools revision 14 or newer.\n"
-                        "${__msg_BUILD_ANDROID_PROJECTS}")
-  endif()
-
-  if(NOT ANDROID_SDK_TOOLS_VERSION VERSION_LESS 25.3.0)
-    message(STATUS "Android SDK Tools: Ant (Eclipse) builds are NOT supported by Android SDK")
-    ocv_update(ANDROID_PROJECTS_SUPPORT_ANT OFF)
-    if(NOT ANDROID_SDK_BUILD_TOOLS_VERSION VERSION_LESS 26.0.2)
-      # https://developer.android.com/studio/releases/gradle-plugin.html
-      message(STATUS "Android SDK Build Tools: Gradle 3.0.0+ builds support is available")
-      ocv_update(ANDROID_PROJECTS_SUPPORT_GRADLE ON)
-    endif()
+  if(NOT ANDROID_SDK_BUILD_TOOLS_VERSION VERSION_LESS 26.0.2)
+    # https://developer.android.com/studio/releases/gradle-plugin.html
+    message(STATUS "Android SDK Build Tools: Gradle 3.0.0+ builds support is available")
+    ocv_update(ANDROID_PROJECTS_SUPPORT_GRADLE ON)
   else()
-    include(${CMAKE_CURRENT_LIST_DIR}/../OpenCVDetectApacheAnt.cmake)
-    if(ANT_EXECUTABLE AND NOT ANT_VERSION VERSION_LESS 1.7)
-      message(STATUS "Android SDK Tools: Ant (Eclipse) builds are supported")
-      ocv_update(ANDROID_PROJECTS_SUPPORT_ANT ON)
+    ocv_detect_android_sdk_tools()
+
+    if(ANDROID_SDK_TOOLS_VERSION VERSION_LESS 14)
+      message(FATAL_ERROR "Android SDK Tools: OpenCV requires Android SDK Tools revision 14 or newer.\n"
+                          "${__msg_BUILD_ANDROID_PROJECTS}")
+    endif()
+
+    if(NOT ANDROID_SDK_TOOLS_VERSION VERSION_LESS 25.3.0)
+      message(STATUS "Android SDK Tools: Ant (Eclipse) builds are NOT supported by Android SDK")
+      ocv_update(ANDROID_PROJECTS_SUPPORT_ANT OFF)
+    else()
+      include(${CMAKE_CURRENT_LIST_DIR}/../OpenCVDetectApacheAnt.cmake)
+      if(ANT_EXECUTABLE AND NOT ANT_VERSION VERSION_LESS 1.7)
+        message(STATUS "Android SDK Tools: Ant (Eclipse) builds are supported")
+        ocv_update(ANDROID_PROJECTS_SUPPORT_ANT ON)
+      endif()
     endif()
   endif()
 
@@ -218,8 +220,10 @@ else()
 endif()  # BUILD_ANDROID_PROJECTS
 
 if(ANDROID_PROJECTS_BUILD_TYPE STREQUAL "ANT")
+  ocv_update(OPENCV_JAVA_SDK_BUILD_TYPE "ANT")
   include(${CMAKE_CURRENT_LIST_DIR}/android_ant_projects.cmake)
 elseif(ANDROID_PROJECTS_BUILD_TYPE STREQUAL "GRADLE")
+  ocv_update(OPENCV_JAVA_SDK_BUILD_TYPE "GRADLE")
   include(${CMAKE_CURRENT_LIST_DIR}/android_gradle_projects.cmake)
 elseif(BUILD_ANDROID_PROJECTS)
   message(FATAL_ERROR "Internal error")

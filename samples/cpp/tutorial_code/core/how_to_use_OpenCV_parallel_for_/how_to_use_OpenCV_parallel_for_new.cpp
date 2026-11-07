@@ -4,6 +4,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+#define PARALLEL_FOR_LAMBDA
+
 using namespace std;
 using namespace cv;
 
@@ -47,7 +49,8 @@ void conv_seq(Mat src, Mat &dst, Mat kernel)
 }
 //! [convolution-sequential]
 
-#ifdef CV_CXX11
+#ifdef PARALLEL_FOR_LAMBDA
+
 void conv_parallel(Mat src, Mat &dst, Mat kernel)
 {
     int rows = src.rows, cols = src.cols;
@@ -118,7 +121,8 @@ void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
                     });
     //! [convolution-parallel-cxx11-row-split]
 }
-#else
+
+#else // PARALLEL_FOR_LAMBDA
 
 //! [convolution-parallel]
 class parallelConvolution : public ParallelLoopBody
@@ -235,7 +239,7 @@ void conv_parallel_row_split(Mat src, Mat &dst, Mat kernel)
     //! [convolution-parallel-function-row]
 }
 
-#endif
+#endif // PARALLEL_FOR_LAMBDA
 
 static void help(char *progName)
 {
@@ -269,9 +273,11 @@ int main(int argc, char *argv[])
     namedWindow("Output3", 1);
     imshow("Input", src);
 
-    kernel = (Mat_<double>(3, 3) << 1, 0, -1,
-              1, 0, -1,
-              1, 0, -1);
+    kernel = Mat_<double>({3, 3}, {
+        1, 0, -1,
+        1, 0, -1,
+        1, 0, -1
+    });
 
     /*
     Uncomment the kernels you want to use or write your own kernels to test out

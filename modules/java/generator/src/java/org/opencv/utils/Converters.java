@@ -7,6 +7,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDMatch;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -514,6 +515,41 @@ public class Converters {
         }
     }
 
+    // vector_vector_Mat
+    public static Mat vector_vector_Mat_to_Mat(List<List<Mat>> vecMats, List<Mat> mats) {
+        Mat res;
+        int lCount = (vecMats != null) ? vecMats.size() : 0;
+        if (lCount > 0) {
+            for (List<Mat> matList : vecMats) {
+                Mat mat = vector_Mat_to_Mat(matList);
+                mats.add(mat);
+            }
+            res = vector_Mat_to_Mat(mats);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    public static void Mat_to_vector_vector_Mat(Mat m, List<List<Mat>> vecMats) {
+        if (vecMats == null)
+            throw new IllegalArgumentException("Output List can't be null");
+
+        if (m == null)
+            throw new IllegalArgumentException("Input Mat can't be null");
+
+        vecMats.clear();
+        List<Mat> mats = new ArrayList<Mat>(m.rows());
+        Mat_to_vector_Mat(m, mats);
+        for (Mat mi : mats) {
+            List<Mat> rowList = new ArrayList<Mat>(mi.rows());
+            Mat_to_vector_Mat(mi, rowList);
+            vecMats.add(rowList);
+            mi.release();
+        }
+        mats.clear();
+    }
+
     // vector_vector_Point
     public static Mat vector_vector_Point_to_Mat(List<MatOfPoint> pts, List<Mat> mats) {
         Mat res;
@@ -802,5 +838,76 @@ public class Converters {
         for (int i = 0; i < count; i++) {
             rs.add(new RotatedRect(new Point(buff[5 * i], buff[5 * i + 1]), new Size(buff[5 * i + 2], buff[5 * i + 3]), buff[5 * i + 4]));
         }
+    }
+
+    // vector_MatShape
+    public static Mat vector_MatShape_to_Mat(List<MatOfInt> matOfInts) {
+        Mat res;
+        int count = (matOfInts != null) ? matOfInts.size() : 0;
+        if (count > 0) {
+            res = new Mat(count, 1, CvType.CV_32SC2);
+            int[] buff = new int[count * 2];
+            for (int i = 0; i < count; i++) {
+                long addr = matOfInts.get(i).nativeObj;
+                buff[i * 2] = (int) (addr >> 32);
+                buff[i * 2 + 1] = (int) (addr & 0xffffffff);
+            }
+            res.put(0, 0, buff);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    public static void Mat_to_vector_MatShape(Mat m, List<MatOfInt> matOfInts) {
+        if (matOfInts == null)
+            throw new IllegalArgumentException("matOfInts == null");
+        int count = m.rows();
+        if (CvType.CV_32SC2 != m.type() || m.cols() != 1)
+            throw new IllegalArgumentException(
+                    "CvType.CV_32SC2 != m.type() ||  m.cols()!=1\n" + m);
+
+        matOfInts.clear();
+        int[] buff = new int[count * 2];
+        m.get(0, 0, buff);
+        for (int i = 0; i < count; i++) {
+            long addr = (((long) buff[i * 2]) << 32) | (((long) buff[i * 2 + 1]) & 0xffffffffL);
+            matOfInts.add(MatOfInt.fromNativeAddr(addr));
+        }
+    }
+
+    // vector_vector_MatShape
+    public static Mat vector_vector_MatShape_to_Mat(List<List<MatOfInt>> vecMatOfInts, List<Mat> mats) {
+        Mat res;
+        int lCount = (vecMatOfInts != null) ? vecMatOfInts.size() : 0;
+        if (lCount > 0) {
+            for (List<MatOfInt> matList : vecMatOfInts) {
+                Mat mat = vector_MatShape_to_Mat(matList);
+                mats.add(mat);
+            }
+            res = vector_Mat_to_Mat(mats);
+        } else {
+            res = new Mat();
+        }
+        return res;
+    }
+
+    public static void Mat_to_vector_vector_MatShape(Mat m, List<List<MatOfInt>> vecMatOfInts) {
+        if (vecMatOfInts == null)
+            throw new IllegalArgumentException("Output List can't be null");
+
+        if (m == null)
+            throw new IllegalArgumentException("Input Mat can't be null");
+
+        vecMatOfInts.clear();
+        List<Mat> mats = new ArrayList<Mat>(m.rows());
+        Mat_to_vector_Mat(m, mats);
+        for (Mat mi : mats) {
+            List<MatOfInt> rowList = new ArrayList<MatOfInt>(mi.rows());
+            Mat_to_vector_MatShape(mi, rowList);
+            vecMatOfInts.add(rowList);
+            mi.release();
+        }
+        mats.clear();
     }
 }

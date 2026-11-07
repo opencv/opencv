@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "armv7,arm64"')
     parser.add_argument('--iphonesimulator_archs', default=None, help='select iPhoneSimulator target ARCHS. Default is "x86_64,arm64"')
+    parser.add_argument('--visionos_archs', default=None, help='select visionOS target ARCHS. Default is "arm64"')
+    parser.add_argument('--visionsimulator_archs', default=None, help='select visionSimulator target ARCHS. Default is "arm64"')
     parser.add_argument('--macos_archs', default=None, help='Select MacOS ARCHS. Default is "x86_64,arm64"')
     parser.add_argument('--catalyst_archs', default=None, help='Select Catalyst ARCHS. Default is "x86_64,arm64"')
     parser.add_argument('--build_only_specified_archs', default=False, action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
@@ -52,6 +54,13 @@ if __name__ == "__main__":
         iphonesimulator_archs = "x86_64,arm64"
     print('Using iPhoneSimulator ARCHS={}'.format(iphonesimulator_archs))
 
+    # Parse architectures from args
+    visionos_archs = args.visionos_archs
+    print('Using visionOS ARCHS={}'.format(visionos_archs))
+
+    visionsimulator_archs = args.visionsimulator_archs
+    print('Using visionSimulator ARCHS={}'.format(visionsimulator_archs))
+
     macos_archs = args.macos_archs
     if not macos_archs and not args.build_only_specified_archs:
         # Supply defaults
@@ -70,8 +79,10 @@ if __name__ == "__main__":
         # Phase 1: build .frameworks for each platform
         osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
         ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
+        visionos_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_visionos_framework.py')
 
         build_folders = []
+        docs_build_folder_dict = {}
 
         def get_or_create_build_folder(base_dir, platform):
             build_folder = "{}/{}".format(base_dir, platform).replace(" ", "\\ ")  # Escape spaces in output path
@@ -81,6 +92,7 @@ if __name__ == "__main__":
         if iphoneos_archs:
             build_folder = get_or_create_build_folder(args.out, "iphoneos")
             build_folders.append(build_folder)
+            docs_build_folder_dict["ios"] = build_folder
             command = ["python3", ios_script_path, build_folder, "--iphoneos_archs", iphoneos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
             print_header("Building iPhoneOS frameworks")
             print(command)
@@ -88,18 +100,38 @@ if __name__ == "__main__":
         if iphonesimulator_archs:
             build_folder = get_or_create_build_folder(args.out, "iphonesimulator")
             build_folders.append(build_folder)
+            if not iphoneos_archs:
+                docs_build_folder_dict["ios"] = build_folder
             command = ["python3", ios_script_path, build_folder, "--iphonesimulator_archs", iphonesimulator_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
             print_header("Building iPhoneSimulator frameworks")
+            execute(command, cwd=os.getcwd())
+        if visionos_archs:
+            build_folder = get_or_create_build_folder(args.out, "visionos")
+            build_folders.append(build_folder)
+            docs_build_folder_dict["visionos"] = build_folder
+            command = ["python3", visionos_script_path, build_folder, "--visionos_archs", visionos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
+            print_header("Building visionOS frameworks")
+            print(command)
+            execute(command, cwd=os.getcwd())
+        if visionsimulator_archs:
+            build_folder = get_or_create_build_folder(args.out, "visionsimulator")
+            build_folders.append(build_folder)
+            if not visionos_archs:
+                docs_build_folder_dict["visionos"] = build_folder
+            command = ["python3", visionos_script_path, build_folder, "--visionsimulator_archs", visionsimulator_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
+            print_header("Building visionSimulator frameworks")
             execute(command, cwd=os.getcwd())
         if macos_archs:
             build_folder = get_or_create_build_folder(args.out, "macos")
             build_folders.append(build_folder)
+            docs_build_folder_dict["macos"] = build_folder
             command = ["python3", osx_script_path, build_folder, "--macos_archs", macos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
             print_header("Building MacOS frameworks")
             execute(command, cwd=os.getcwd())
         if catalyst_archs:
             build_folder = get_or_create_build_folder(args.out, "catalyst")
             build_folders.append(build_folder)
+            docs_build_folder_dict["catalyst"] = build_folder
             command = ["python3", osx_script_path, build_folder, "--catalyst_archs", catalyst_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
             print_header("Building Catalyst frameworks")
             execute(command, cwd=os.getcwd())
@@ -127,6 +159,23 @@ if __name__ == "__main__":
 
         print("")
         print_header("Finished building {}".format(xcframework_path))
+
+        # Phase 3: copy documentation
+
+        print_header("Copying documentation")
+
+        for platform, build_folder in docs_build_folder_dict.items():
+            docs_src = "{}/docs".format(build_folder)
+            docs_dst = "{}/docs_{}".format(args.out, platform)
+            # Remove the docs folder if it exists
+            with contextlib.suppress(FileNotFoundError):
+                shutil.rmtree(docs_dst)
+                print("Removed existing documentation at {}".format(docs_dst))
+            shutil.copytree(docs_src, docs_dst)
+
+        print("")
+        print_header("Finished copying documentation")
+
     except Exception as e:
         print_error(e)
         traceback.print_exc(file=sys.stderr)

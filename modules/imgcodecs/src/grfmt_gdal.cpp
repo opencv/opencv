@@ -54,6 +54,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <opencv2/core/utils/logger.hpp>
+
 
 namespace cv{
 
@@ -239,7 +241,7 @@ void write_pixel( const double& pixelValue,
         else if( image.depth() == CV_32S ){  image.ptr<Vec3i>(row)[col] = Vec3i(newValue,newValue,newValue); }
         else if( image.depth() == CV_32F ){  image.ptr<Vec3f>(row)[col] = Vec3f(newValue,newValue,newValue); }
         else if( image.depth() == CV_64F ){  image.ptr<Vec3d>(row)[col] = Vec3d(newValue,newValue,newValue); }
-        else{                          throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
+        else{ throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
     }
 
     // input: 3 channel, output: 1 channel
@@ -397,19 +399,30 @@ bool GdalDecoder::readData( Mat& img ){
         case GCI_PaletteIndex:
         case GCI_GrayIndex:
         case GCI_BlueBand:
-            color = 0;
+            color = m_use_rgb ? 2 : 0;
             break;
         case GCI_GreenBand:
             color = 1;
             break;
         case GCI_RedBand:
-            color = 2;
+            color = m_use_rgb ? 0 : 2;
             break;
         case GCI_AlphaBand:
             color = 3;
             break;
+        case GCI_Undefined:
+            color = c;
+            break;
         default:
             CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
+        }
+
+        // an out-of-range color index (e.g. an alpha band mapped to index 3
+        // with a 3-channel image) would write past the pixel in write_pixel
+        if( color >= img.channels() ){
+            CV_LOG_WARNING(NULL, "GDAL: band " << (c+1) << " maps to channel " << color <<
+                ", which is out of range for the " << img.channels() << "-channel image; skipping the band");
+            continue;
         }
 
         // make sure the image band has the same dimensions as the image
@@ -422,8 +435,18 @@ bool GdalDecoder::readData( Mat& img ){
         // create a temporary scanline pointer to store data
         double* scanline = new double[nCols];
 
+#if GDAL_VERSION_NUM < GDAL_COMPUTE_VERSION(3,3,0)
+        // FITS drivers on version GDAL prior to v3.3.0 return vertically mirrored results.
+        // See https://github.com/OSGeo/gdal/pull/3520
+        // See https://github.com/OSGeo/gdal/commit/ef0f86696d163e065943b27f50dcff77790a1311
+        const bool isNeedVerticallyFlip = strncmp(m_dataset->GetDriverName(), "FITS", 4) == 0;
+#else
+        const bool isNeedVerticallyFlip = false;
+#endif
+
         // iterate over each row and column
-        for( int y=0; y<nRows; y++ ){
+        for( int y=0; y<nRows; y++ ){ // for GDAL
+            const int yCv = isNeedVerticallyFlip ? (nRows - 1) - y : y ; // for OpenCV
 
             // get the entire row
             CPLErr err = band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
@@ -435,10 +458,10 @@ bool GdalDecoder::readData( Mat& img ){
                 // set depending on image types
                 //   given boost, I would use enable_if to speed up.  Avoid for now.
                 if( hasColorTable == false ){
-                    write_pixel( scanline[x], gdalType, nChannels, img, y, x, color );
+                    write_pixel( scanline[x], gdalType, nChannels, img, yCv, x, color );
                 }
                 else{
-                    write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, y, x, color );
+                    write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, yCv, x, color );
                 }
             }
         }

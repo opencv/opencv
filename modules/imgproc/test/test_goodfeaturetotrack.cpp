@@ -509,7 +509,8 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         EXPECT_LE(e, eps); // never true
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
-        for(int i = 0; i < (int)std::min((unsigned int)(cornersQuality.size()), (unsigned int)(cornersQuality.size())); i++) {
+        int min_size = (int)std::min(cornersQuality.size(), RefcornersQuality.size());
+        for(int i = 0; i < min_size; i++) {
             if (std::abs(cornersQuality[i] - RefcornersQuality[i]) > eps * std::max(cornersQuality[i], RefcornersQuality[i]))
                 printf("i = %i Quality %2.6f Quality ref %2.6f\n", i, cornersQuality[i], RefcornersQuality[i]);
         }

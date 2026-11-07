@@ -9,14 +9,14 @@
 #define OPENCV_GAPI_GSTREAMING_COMPILED_PRIV_HPP
 
 #include <memory> // unique_ptr
-#include "executor/gstreamingexecutor.hpp"
+#include "executor/gabstractstreamingexecutor.hpp"
 
 namespace cv {
 
 namespace gimpl
 {
     struct GRuntimeArgs;
-};
+}
 
 // FIXME: GAPI_EXPORTS is here only due to tests and Windows linker issues
 // FIXME: It seems it clearly duplicates the GStreamingCompiled and
@@ -26,7 +26,7 @@ class GAPI_EXPORTS GStreamingCompiled::Priv
 {
     GMetaArgs  m_metas;    // passed by user
     GMetaArgs  m_outMetas; // inferred by compiler
-    std::unique_ptr<cv::gimpl::GStreamingExecutor> m_exec;
+    std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> m_exec;
 
     // NB: Used by python wrapper to clarify input/output types
     GTypesInfo m_out_info;
@@ -35,8 +35,8 @@ class GAPI_EXPORTS GStreamingCompiled::Priv
 public:
     void setup(const GMetaArgs &metaArgs,
                const GMetaArgs &outMetas,
-               std::unique_ptr<cv::gimpl::GStreamingExecutor> &&pE);
-    void setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&pE);
+               std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&pE);
+    void setup(std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&pE);
     bool isEmpty() const;
 
     const GMetaArgs& metas() const;

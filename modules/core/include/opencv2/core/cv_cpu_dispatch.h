@@ -24,6 +24,13 @@
 #define __CV_CPU_DISPATCH_EXPAND(fn, args, ...) __CV_EXPAND(__CV_CPU_DISPATCH(fn, args, __VA_ARGS__))
 #define CV_CPU_DISPATCH(fn, args, ...) __CV_CPU_DISPATCH_EXPAND(fn, args, __VA_ARGS__, END) // expand macros
 
+// Same as CV_CPU_DISPATCH, but returns a pointer to the selected implementation
+// instead of calling it. Use it to resolve a function pointer once and cache it.
+#define __CV_CPU_DISPATCH_CHAIN_FN_END(fn, mode, ...)  /* done */
+#define __CV_CPU_DISPATCH_FN(fn, mode, ...) __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_FN_ ## mode(fn, __VA_ARGS__))
+#define __CV_CPU_DISPATCH_FN_EXPAND(fn, ...) __CV_EXPAND(__CV_CPU_DISPATCH_FN(fn, __VA_ARGS__))
+#define CV_CPU_DISPATCH_FN(fn, ...) __CV_CPU_DISPATCH_FN_EXPAND(fn, __VA_ARGS__, END) // expand macros
+
 
 #if defined CV_ENABLE_INTRINSICS \
     && !defined CV_DISABLE_OPTIMIZATION \
@@ -72,12 +79,16 @@
 #  define CV_AVX 1
 #endif
 #ifdef CV_CPU_COMPILE_FP16
-#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
+#  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #    include <arm_neon.h>
 #  else
 #    include <immintrin.h>
 #  endif
 #  define CV_FP16 1
+#endif
+#ifdef CV_CPU_COMPILE_NEON_DOTPROD
+#  include <arm_neon.h>
+#  define CV_NEON_DOT 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
 #  include <immintrin.h>
@@ -133,22 +144,32 @@
 #  define CV_FMA3 1
 #endif
 
-#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
-# include <Intrin.h>
+#if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
+# include <intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
 
-#if defined(__riscv) && defined(__riscv_vector) && defined(__riscv_vector_071)
-# include<riscv-vector.h>
-# define CV_RVV071 1
-#endif
-
-#if defined(__ARM_NEON__) || defined(__aarch64__)
-#  include <arm_neon.h>
+/* RVV-related macro states with different compiler
+// +--------------------+----------+----------+
+// | Macro              | Upstream | XuanTie  |
+// +--------------------+----------+----------+
+// | CV_CPU_COMPILE_RVV | defined  | defined  |
+// | CV_RVV             | 1        | 0        |
+// | CV_RVV071          | 0        | 1        |
+// | CV_TRY_RVV         | 1        | 1        |
+// +--------------------+----------+----------+
+*/
+#ifdef CV_CPU_COMPILE_RVV
+#  ifdef __riscv_vector_071
+#    define CV_RVV071 1
+#  else
+#    define CV_RVV 1
+#  endif
+#include <riscv_vector.h>
 #endif
 
 #ifdef CV_CPU_COMPILE_VSX
@@ -168,14 +189,19 @@
 #  define CV_MSA 1
 #endif
 
+#ifdef CV_CPU_COMPILE_LSX
+#  include <lsxintrin.h>
+#  define CV_LSX 1
+#endif
+
+#ifdef CV_CPU_COMPILE_LASX
+#  include <lasxintrin.h>
+#  define CV_LASX 1
+#endif
+
 #ifdef __EMSCRIPTEN__
 #  define CV_WASM_SIMD 1
 #  include <wasm_simd128.h>
-#endif
-
-#if defined CV_CPU_COMPILE_RVV
-#  define CV_RVV 1
-#  include <riscv_vector.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -211,13 +237,17 @@ struct VZeroUpperGuard {
 #  define CV_MMX 1
 #  define CV_SSE 1
 #  define CV_SSE2 1
-#elif defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
-# include <Intrin.h>
+#elif defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)) && (defined(CV_CPU_COMPILE_NEON) || !defined(_MSC_VER))
+# include <intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
+#ifdef __ARM_FEATURE_SVE
+# include<arm_sve.h>
+# define CV_SVE 1
+#endif
 #elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
 #  include <altivec.h>
 #  undef vector
@@ -343,6 +373,10 @@ struct VZeroUpperGuard {
 #  define CV_NEON 0
 #endif
 
+#ifndef CV_SVE
+#  define CV_SVE 0
+#endif
+
 #ifndef CV_RVV071
 #  define CV_RVV071 0
 #endif
@@ -365,4 +399,12 @@ struct VZeroUpperGuard {
 
 #ifndef CV_RVV
 #  define CV_RVV 0
+#endif
+
+#ifndef CV_LSX
+#  define CV_LSX 0
+#endif
+
+#ifndef CV_LASX
+#  define CV_LASX 0
 #endif

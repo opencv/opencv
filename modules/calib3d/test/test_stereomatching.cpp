@@ -219,7 +219,7 @@ void computeOcclusionBasedMasks( const Mat& leftDisp, const Mat& _rightDisp,
 }
 
 /*
-  Calculate depth discontinuty regions: pixels whose neiboring disparities differ by more than
+  Calculate depth discontinuity regions: pixels whose neighboring disparities differ by more than
   dispGap, dilated by window of width discontWidth.
 */
 void computeDepthDiscontMask( const Mat& disp, Mat& depthDiscontMask, const Mat& unknDispMask = Mat(),
@@ -456,8 +456,8 @@ void CV_StereoMatchingTest::run(int)
         string datasetFullDirName = dataPath + DATASETS_DIR + datasetName + "/";
         Mat leftImg = imread(datasetFullDirName + LEFT_IMG_NAME);
         Mat rightImg = imread(datasetFullDirName + RIGHT_IMG_NAME);
-        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, 0);
-        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, 0);
+        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, IMREAD_GRAYSCALE);
+        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, IMREAD_GRAYSCALE);
         Rect calcROI;
 
         if( leftImg.empty() || rightImg.empty() || trueLeftDisp.empty() )
@@ -740,8 +740,8 @@ public:
     CV_StereoBMTest()
     {
         name = "stereobm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.4f);
-        fill(fracEps.begin(), fracEps.end(), 0.022f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.4f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.022f);
     }
 
 protected:
@@ -789,7 +789,7 @@ protected:
         calcROI = getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
 
         bm->compute( leftImg, rightImg, tempDisp );
-        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+        tempDisp.convertTo(leftDisp, CV_32F, 1./static_cast<double>(StereoMatcher::DISP_SCALE));
 
         //check for fixed-type disparity data type
         Mat_<float> fixedFloatDisp;
@@ -802,7 +802,7 @@ protected:
                 for (int x = 0; x < leftDisp.cols; x++)
                 {
                     if (leftDisp.at<float>(y, x) < params.mindisp)
-                        leftDisp.at<float>(y, x) = -1./StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
+                        leftDisp.at<float>(y, x) = -1./static_cast<double>(StereoMatcher::DISP_SCALE); // treat disparity < mindisp as no disparity
                 }
 
         return params.winSize/2;
@@ -835,9 +835,9 @@ TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
     const int SADWindowSize = get<1>(get<1>(GetParam()));
 
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat leftDisp;
     {
@@ -866,8 +866,8 @@ public:
     CV_StereoSGBMTest()
     {
         name = "stereosgbm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.25f);
-        fill(fracEps.begin(), fracEps.end(), 0.01f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.25f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.01f);
     }
 
 protected:
@@ -920,12 +920,111 @@ protected:
 
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
 
+TEST(Calib3d_StereoSGBM, deterministic) {
+    cv::Ptr<cv::StereoSGBM> matcher = cv::StereoSGBM::create(16, 11);
+
+    // Expect throw error (non-determinism case)
+    int widthNarrow = 28;
+    int height = 15;
+
+    cv::Mat leftNarrow(height, widthNarrow, CV_8UC1);
+    cv::Mat rightNarrow(height, widthNarrow, CV_8UC1);
+    randu(leftNarrow, cv::Scalar(0), cv::Scalar(255));
+    randu(rightNarrow, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp;
+
+    EXPECT_THROW(matcher->compute(leftNarrow, rightNarrow, disp), cv::Exception);
+
+    // Deterministic case, image is sufficiently large for StereSGBM parameters
+    int widthWide = 40;
+    cv::Mat leftWide(height, widthWide, CV_8UC1);
+    cv::Mat rightWide(height, widthWide, CV_8UC1);
+    randu(leftWide, cv::Scalar(0), cv::Scalar(255));
+    randu(rightWide, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp1, disp2;
+    for (int i = 0; i < 10; i++) {
+        matcher->compute(leftWide, rightWide, disp1);
+        matcher->compute(leftWide, rightWide, disp2);
+        cv::Mat dst;
+        cv::bitwise_xor(disp1, disp2, dst);
+        EXPECT_EQ(cv::countNonZero(dst), 0);
+    }
+
+}
+
+TEST(Calib3d_StereoSGBM, regression_29761)
+{
+    Mat leftImg(256, 256, CV_8UC1), rightImg(256, 256, CV_8UC1);
+    randu(leftImg, Scalar(0), Scalar(255));
+    randu(rightImg, Scalar(0), Scalar(255));
+
+    Ptr<StereoSGBM> sgbm = StereoSGBM::create( 0, 64, 5, 100, 200, 1, 31, 100, 0, 0, StereoSGBM::MODE_SGBM_3WAY);
+    Mat leftDisp;
+    sgbm->compute( leftImg, rightImg, leftDisp);
+    EXPECT_EQ(countNonZero(leftDisp != -StereoMatcher::DISP_SCALE), 0);
+}
+
+/* < cost type, x2 is past the last column (otherwise it is before the first one) > */
+typedef tuple < int, bool > ValidateDisparity_Params_t;
+
+typedef testing::TestWithParam< ValidateDisparity_Params_t > Calib3d_ValidateDisparity;
+
+TEST_P(Calib3d_ValidateDisparity, out_of_range_disparity)
+{
+    const int costType = get<0>(GetParam());
+    const bool pastEnd = get<1>(GetParam());
+
+    // The row is wide enough for validateDisparity to allocate its work buffer on the heap.
+    const int cols = 160, numberOfDisparities = 16, disp12MaxDiff = 0;
+    const int minDisparity = pastEnd ? 0 : 2;
+    const short invalid = (short)((minDisparity - 1)*16);
+
+    struct Px { int x; short d; int cost; short expected; };
+    std::vector<Px> pixels;
+    if( pastEnd )
+    {
+        // disparity -2 at x = 159 gives x2 = 161 >= cols
+        pixels.push_back({100, 80, 0, 80});
+        pixels.push_back({159, -32, 0, -32});
+    }
+    else
+    {
+        // x = 154 and x = 155 both map to slot 152, 154 has the lower cost, so 155 fails the cross-check.
+        // x = 159 gives x2 = -8, which is outside the buffer and used to overwrite the cost of slot 152.
+        pixels.push_back({154, 32, 0, 32});
+        pixels.push_back({155, 48, 10, invalid});
+        pixels.push_back({159, 2672, 0, 2672});
+    }
+
+    Mat1s disp(1, cols, invalid), expected(1, cols, invalid);
+    Mat1i cost32(1, cols, 0);
+    for( size_t i = 0; i < pixels.size(); i++ )
+    {
+        disp(0, pixels[i].x) = pixels[i].d;
+        cost32(0, pixels[i].x) = pixels[i].cost;
+        expected(0, pixels[i].x) = pixels[i].expected;
+    }
+    Mat cost;
+    cost32.convertTo(cost, costType);
+
+    validateDisparity(disp, cost, minDisparity, numberOfDisparities, disp12MaxDiff);
+
+    EXPECT_EQ(0, cvtest::norm(disp, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Calib3d_ValidateDisparity,
+        testing::Combine(
+            testing::Values(CV_16S, CV_32S),
+            testing::Bool()
+            )
+        );
+
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat testData = imread(path + "disp2_hh4.png",-1);
     ASSERT_FALSE(testData.empty());

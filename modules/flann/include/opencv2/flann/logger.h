@@ -1,4 +1,4 @@
-/***********************************************************************
+/*M*********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -101,7 +101,6 @@ public:
      * Print log message
      * @param level Log level
      * @param fmt Message format
-     * @return
      */
     static int log(int level, const char* fmt, ...)
     {

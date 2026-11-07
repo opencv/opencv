@@ -240,10 +240,11 @@ INSTANTIATE_TEST_CASE_P(DISABLED_CropTestFluid, CropTest,
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
 INSTANTIATE_TEST_CASE_P(SelectTestFluid, SelectTest,
-                        Combine(Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1),
-                                ValuesIn(in_sizes),
-                                Values(-1),
-                                Values(CORE_FLUID)));
+                        Combine(Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                CV_16UC1, CV_16UC3, CV_16SC1, CV_16SC3),
+                        ValuesIn(in_sizes),
+                        Values(-1),
+                        Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartFluid, Polar2CartTest,
                         Combine(Values(CV_32FC1),

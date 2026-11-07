@@ -54,7 +54,7 @@ namespace cv
 class BRISK_Impl CV_FINAL : public BRISK
 {
 public:
-    explicit BRISK_Impl(int thresh=30, int octaves=3, float patternScale=1.0f);
+    explicit BRISK_Impl(int _threshold=30, int _octaves=3, float _patternScale=1.0f);
     // custom setup
     explicit BRISK_Impl(const std::vector<float> &radiusList, const std::vector<int> &numberList,
         float dMax=5.85f, float dMin=8.2f, const std::vector<int> indexChange=std::vector<int>());
@@ -64,6 +64,9 @@ public:
         const std::vector<int> indexChange=std::vector<int>());
 
     virtual ~BRISK_Impl();
+
+    void read( const FileNode& fn) CV_OVERRIDE;
+    void write( FileStorage& fs) const CV_OVERRIDE;
 
     int descriptorSize() const CV_OVERRIDE
     {
@@ -99,6 +102,37 @@ public:
     {
         return octaves;
     }
+    virtual void setPatternScale(float _patternScale) CV_OVERRIDE
+    {
+      CV_CheckGT(_patternScale, 0.f, "patternScale must be positive");
+
+      patternScale = _patternScale;
+      std::vector<float> rList;
+      std::vector<int> nList;
+
+      // this is the standard pattern found to be suitable also
+      rList.resize(5);
+      nList.resize(5);
+      const double f = 0.85 * patternScale;
+
+      rList[0] = (float)(f * 0.);
+      rList[1] = (float)(f * 2.9);
+      rList[2] = (float)(f * 4.9);
+      rList[3] = (float)(f * 7.4);
+      rList[4] = (float)(f * 10.8);
+
+      nList[0] = 1;
+      nList[1] = 10;
+      nList[2] = 14;
+      nList[3] = 15;
+      nList[4] = 20;
+
+      generateKernel(rList, nList, (float)(5.85 * patternScale), (float)(8.2 * patternScale));
+    }
+    virtual float getPatternScale() const  CV_OVERRIDE
+    {
+      return patternScale;
+    }
 
     // call this to generate the kernel:
     // circle of radius r (pixels), with n points;
@@ -122,6 +156,7 @@ protected:
     // Feature parameters
     CV_PROP_RW int threshold;
     CV_PROP_RW int octaves;
+    CV_PROP_RW float patternScale;
 
     // some helper structures for the Brisk pattern representation
     struct BriskPatternPoint{
@@ -309,32 +344,12 @@ const float BriskScaleSpace::safetyFactor_ = 1.0f;
 const float BriskScaleSpace::basicSize_ = 12.0f;
 
 // constructors
-BRISK_Impl::BRISK_Impl(int thresh, int octaves_in, float patternScale)
+BRISK_Impl::BRISK_Impl(int _threshold, int _octaves, float _patternScale)
 {
-  threshold = thresh;
-  octaves = octaves_in;
+  threshold = _threshold;
+  octaves = _octaves;
 
-  std::vector<float> rList;
-  std::vector<int> nList;
-
-  // this is the standard pattern found to be suitable also
-  rList.resize(5);
-  nList.resize(5);
-  const double f = 0.85 * patternScale;
-
-  rList[0] = (float)(f * 0.);
-  rList[1] = (float)(f * 2.9);
-  rList[2] = (float)(f * 4.9);
-  rList[3] = (float)(f * 7.4);
-  rList[4] = (float)(f * 10.8);
-
-  nList[0] = 1;
-  nList[1] = 10;
-  nList[2] = 14;
-  nList[3] = 15;
-  nList[4] = 20;
-
-  generateKernel(rList, nList, (float)(5.85 * patternScale), (float)(8.2 * patternScale));
+  setPatternScale(_patternScale);
 }
 
 BRISK_Impl::BRISK_Impl(const std::vector<float> &radiusList,
@@ -357,6 +372,31 @@ BRISK_Impl::BRISK_Impl(int thresh,
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
   threshold = thresh;
   octaves = octaves_in;
+}
+
+void BRISK_Impl::read( const FileNode& fn)
+{
+  // if node is empty, keep previous value
+  if (!fn["threshold"].empty())
+    fn["threshold"] >> threshold;
+  if (!fn["octaves"].empty())
+    fn["octaves"] >> octaves;
+  if (!fn["patternScale"].empty())
+  {
+    float _patternScale;
+    fn["patternScale"] >> _patternScale;
+    setPatternScale(_patternScale);
+  }
+}
+void BRISK_Impl::write( FileStorage& fs) const
+{
+  if(fs.isOpened())
+  {
+    fs << "name" << getDefaultName();
+    fs << "threshold" << threshold;
+    fs << "octaves" << octaves;
+    fs << "patternScale" << patternScale;
+  }
 }
 
 void
@@ -408,7 +448,7 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
   const float sigma_scale = 1.3f;
 
   for (unsigned int scale = 0; scale < scales_; ++scale) {
-      scaleList_[scale] = (float) std::pow((double) 2.0, (double) (scale * lb_scale_step));
+      scaleList_[scale] = (float) std::pow(2, scale * lb_scale_step);
       sizeList_[scale] = 0;
       BriskPatternPoint *patternIteratorOuter = patternPoints_ + (scale * n_rot_ * points_);
       // generate the pattern points look-up
@@ -588,7 +628,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
     ret_val = A * int(*ptr);
     ptr += dx + 1;
     ret_val += B * int(*ptr);
-    ptr += dy * imagecols + 1;
+    ptr += (dy + 1) * imagecols;
     ret_val += C * int(*ptr);
     ptr -= dx + 1;
     ret_val += D * int(*ptr);
@@ -1996,8 +2036,8 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
   int tmp4 = tmp3 - 2 * tmp2;
   int coeff3 = -3 * (tmp3 + s_0_1 - s_2_1);
   int coeff4 = -3 * (tmp4 + s_1_0 - s_1_2);
-  int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) << 2;
-  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) << 1) - 5 * s_1_1 + s_2_0 + s_2_2) << 1;
+  int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) * 4;
+  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) * 2) - 5 * s_1_1 + s_2_0 + s_2_2) * 2;
 
   // 2nd derivative test:
   int H_det = 4 * coeff1 * coeff2 - coeff5 * coeff5;

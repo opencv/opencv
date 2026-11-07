@@ -2,7 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
-#include "opencv2/imgproc/types_c.h"
 
 namespace opencv_test {
 
@@ -26,7 +25,7 @@ PERF_TEST(PerfHoughCircles, Basic)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();
@@ -50,7 +49,7 @@ PERF_TEST(PerfHoughCircles2, ManySmallCircles)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();
@@ -76,7 +75,7 @@ PERF_TEST(PerfHoughCircles4f, Basic)
 
     TEST_CYCLE()
     {
-        HoughCircles(img, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(img, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     }
 
     SANITY_CHECK_NOTHING();

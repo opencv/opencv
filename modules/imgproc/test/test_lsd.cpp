@@ -402,4 +402,18 @@ TEST_F(Imgproc_LSD_Common, compareSegmentsVec4i)
     ASSERT_EQ(result2, 11);
 }
 
+TEST_F(Imgproc_LSD_Common, drawSegmentsEmpty)
+{
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+    Mat1b img = Mat1b::zeros(240, 320);
+
+    std::vector<Vec4i> lines_4i;
+    detector->detect(img, lines_4i);
+
+    Mat3b img_color = Mat3b::zeros(240, 320);
+    ASSERT_NO_THROW(
+        detector->drawSegments(img_color, lines_4i);
+    );
+}
+
 }} // namespace

@@ -13,6 +13,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 namespace cv {
 namespace dnn {
@@ -23,7 +24,7 @@ BackendNode::BackendNode(int backendId)
     : backendId(backendId)
 {}
 
-BackendNode::~BackendNode() {};
+BackendNode::~BackendNode() {}
 
 BackendWrapper::BackendWrapper(int backendId, int targetId)
     : backendId(backendId)
@@ -75,11 +76,7 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
-        return Ptr<BackendWrapper>(new NgraphBackendWrapper(targetId, m));
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of OpenVINO / Inference Engine + nGraph");
-#endif
+        CV_Assert(0 && "Internal error: DNN_BACKEND_INFERENCE_ENGINE_NGRAPH must be implemented through inheritance");
     }
     else if (backendId == DNN_BACKEND_WEBNN)
     {
@@ -118,6 +115,10 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #ifdef HAVE_TIMVX
         return Ptr<BackendWrapper>(new TimVXBackendWrapper(m));
 #endif  // HAVE_TIMVX
+    }
+    else if (backendId == DNN_BACKEND_CANN)
+    {
+        CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");

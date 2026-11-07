@@ -13,8 +13,10 @@ NSImage* MatToNSImage(const cv::Mat& image) {
     CGImageRef imageRef = MatToCGImage(image);
 
     // Getting NSImage from CGImage
-    NSImage *nsImage = [[NSImage alloc] initWithCGImage:imageRef size:CGSizeMake(CGImageGetWidth(imageRef), CGImageGetHeight(imageRef))];
+    NSSize imageSize = NSMakeSize(CGImageGetWidth(imageRef), CGImageGetHeight(imageRef));
+    NSImage *nsImage = [[NSImage alloc] initWithCGImage:imageRef size:imageSize];
     CGImageRelease(imageRef);
+
 
     return nsImage;
 }

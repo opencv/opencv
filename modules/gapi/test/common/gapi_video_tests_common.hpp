@@ -381,7 +381,7 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
 
     compare_f cmpF = AbsSimilarPoints(tolerance, numDiff).to_compare_f();
 
-    // Comparison of G-API and OpenCV substractors
+    // Comparison of G-API and OpenCV subtractors
     std::size_t frames = 0u;
     while (frames <= testNumFrames && gapiBackSub.pull(cv::gout(frame, gapiForeground)))
     {
@@ -435,7 +435,7 @@ inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
                                                        BuildOpticalFlowPyramidTestOutput&,
                                                        BuildOpticalFlowPyramidTestOutput&)
 {
-    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+    GAPI_Error("This function shouldn't be called without opencv_video");
 }
 
 inline cv::GComputation runOCVnGAPIOptFlowLK(TestFunctional&,
@@ -444,7 +444,7 @@ inline cv::GComputation runOCVnGAPIOptFlowLK(TestFunctional&,
                                              OptFlowLKTestOutput&,
                                              OptFlowLKTestOutput&)
 {
-    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+    GAPI_Error("This function shouldn't be called without opencv_video");
 }
 
 inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional&,
@@ -454,7 +454,7 @@ inline cv::GComputation runOCVnGAPIOptFlowLKForPyr(TestFunctional&,
                                                    OptFlowLKTestOutput&,
                                                    OptFlowLKTestOutput&)
 {
-    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+    GAPI_Error("This function shouldn't be called without opencv_video");
 }
 
 inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
@@ -463,7 +463,7 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
                                                OptFlowLKTestOutput&,
                                                std::vector<Point2f>&)
 {
-    GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
+    GAPI_Error("This function shouldn't be called without opencv_video");
 }
 
 #endif // HAVE_OPENCV_VIDEO
@@ -481,7 +481,7 @@ inline std::ostream& operator<<(std::ostream& os, const BackgroundSubtractorType
     {
         CASE(TYPE_BS_MOG2);
         CASE(TYPE_BS_KNN);
-        default: GAPI_Assert(false && "unknown BackgroundSubtractor type");
+        default: GAPI_Error("unknown BackgroundSubtractor type");
     }
 #undef CASE
     return os;

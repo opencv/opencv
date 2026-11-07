@@ -13,6 +13,14 @@ if(IOS)
     configure_file("${OpenCV_SOURCE_DIR}/platforms/ios/Info.plist.in"
                    "${CMAKE_BINARY_DIR}/ios/Info.plist")
   endif()
+elseif(XROS)
+  if(APPLE_FRAMEWORK AND DYNAMIC_PLIST)
+    configure_file("${OpenCV_SOURCE_DIR}/platforms/ios/Info.Dynamic.plist.in"
+                   "${CMAKE_BINARY_DIR}/visionos/Info.plist")
+  else()
+    configure_file("${OpenCV_SOURCE_DIR}/platforms/ios/Info.plist.in"
+                   "${CMAKE_BINARY_DIR}/visionos/Info.plist")
+  endif()
 elseif(APPLE)
   configure_file("${OpenCV_SOURCE_DIR}/platforms/osx/Info.plist.in"
                  "${CMAKE_BINARY_DIR}/osx/Info.plist")

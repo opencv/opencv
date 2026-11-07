@@ -9,8 +9,7 @@ namespace opencv_test { namespace {
 TEST(Features2d_AKAZE, detect_and_compute_split)
 {
     Mat testImg(100, 100, CV_8U);
-    RNG rng(101);
-    rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
+    theRNG().fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
 
     Ptr<Feature2D> ext = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, 1, 1, KAZE::DIFF_PM_G2);
     vector<KeyPoint> detAndCompKps;
@@ -43,6 +42,63 @@ TEST(Features2d_AKAZE, uninitialized_and_nans)
     Mat desc;
     Ptr<Feature2D> akaze = AKAZE::create();
     akaze->detectAndCompute(b1, noArray(), keypoints, desc);
+}
+
+// Test for https://github.com/opencv/opencv/issues/27134
+TEST(Features2d_KAZE, diffusivity_charbonnier)
+{
+    Mat testImg(200, 200, CV_8U);
+    theRNG().fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
+
+    // KAZE with DIFF_CHARBONNIER
+    Ptr<KAZE> kaze_charbonnier = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_CHARBONNIER);
+    vector<KeyPoint> kps_charbonnier;
+    Mat desc_charbonnier;
+    kaze_charbonnier->detectAndCompute(testImg, noArray(), kps_charbonnier, desc_charbonnier);
+
+    // KAZE with DIFF_PM_G2 (default)
+    Ptr<KAZE> kaze_pm_g2 = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_PM_G2);
+    vector<KeyPoint> kps_pm_g2;
+    Mat desc_pm_g2;
+    kaze_pm_g2->detectAndCompute(testImg, noArray(), kps_pm_g2, desc_pm_g2);
+
+    // Both should detect keypoints
+    ASSERT_FALSE(kps_charbonnier.empty());
+    ASSERT_FALSE(kps_pm_g2.empty());
+
+    // Check subpixel accuracy for DIFF_CHARBONNIER (issue #27134)
+    bool hasSubpixel = false;
+    for (size_t i = 0; i < kps_charbonnier.size(); i++)
+    {
+        float fx = kps_charbonnier[i].pt.x - std::floor(kps_charbonnier[i].pt.x);
+        float fy = kps_charbonnier[i].pt.y - std::floor(kps_charbonnier[i].pt.y);
+        if (fx > 1e-5f || fy > 1e-5f)
+        {
+            hasSubpixel = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(hasSubpixel) << "KAZE with DIFF_CHARBONNIER should have subpixel keypoint coordinates";
+
+    // Descriptor dimensions should match
+    ASSERT_EQ(desc_charbonnier.cols, desc_pm_g2.cols);
+}
+
+TEST(Features2d_AKAZE, generateDescriptorSubsample_channels_overflow_29613)
+{
+    Mat img(48, 48, CV_8UC1);
+    randu(img, 0, 256);
+
+    for (int channels = 1; channels <= 3; channels++)
+    {
+        Ptr<AKAZE> akaze = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 32, channels);
+        std::vector<KeyPoint> kpts;
+        Mat desc;
+        ASSERT_NO_THROW(akaze->detectAndCompute(img, noArray(), kpts, desc)) << "channels=" << channels;
+        if (!kpts.empty()) {
+            EXPECT_EQ(desc.cols, divUp(32, 8)) << "channels=" << channels; // 32-bit descriptor -> 4 bytes
+        }
+    }
 }
 
 }} // namespace

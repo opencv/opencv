@@ -370,10 +370,10 @@ public:
             initMatByPointsVectorRandU<Pt<double>>(sz_in);
             break;
         case CV_16F:
-            initMatByPointsVectorRandU<Pt<cv::float16_t>>(sz_in);
+            initMatByPointsVectorRandU<Pt<cv::hfloat>>(sz_in);
             break;
         default:
-            GAPI_Assert(false && "Unsupported depth");
+            GAPI_Error("Unsupported depth");
             break;
         }
     }
@@ -1065,7 +1065,7 @@ inline std::ostream& operator<<(std::ostream& os, CmpTypes op)
         CASE(CMP_LT);
         CASE(CMP_LE);
         CASE(CMP_NE);
-        default: GAPI_Assert(false && "unknown CmpTypes value");
+        default: GAPI_Error("unknown CmpTypes value");
     }
 #undef CASE
     return os;
@@ -1084,7 +1084,7 @@ inline std::ostream& operator<<(std::ostream& os, NormTypes op)
         CASE(NORM_HAMMING2);
         CASE(NORM_RELATIVE);
         CASE(NORM_MINMAX);
-        default: GAPI_Assert(false && "unknown NormTypes value");
+        default: GAPI_Error("unknown NormTypes value");
     }
 #undef CASE
     return os;
@@ -1100,7 +1100,7 @@ inline std::ostream& operator<<(std::ostream& os, RetrievalModes op)
         CASE(RETR_CCOMP);
         CASE(RETR_TREE);
         CASE(RETR_FLOODFILL);
-        default: GAPI_Assert(false && "unknown RetrievalModes value");
+        default: GAPI_Error("unknown RetrievalModes value");
     }
 #undef CASE
     return os;
@@ -1115,7 +1115,7 @@ inline std::ostream& operator<<(std::ostream& os, ContourApproximationModes op)
         CASE(CHAIN_APPROX_SIMPLE);
         CASE(CHAIN_APPROX_TC89_L1);
         CASE(CHAIN_APPROX_TC89_KCOS);
-        default: GAPI_Assert(false && "unknown ContourApproximationModes value");
+        default: GAPI_Error("unknown ContourApproximationModes value");
     }
 #undef CASE
     return os;
@@ -1134,7 +1134,7 @@ inline std::ostream& operator<<(std::ostream& os, MorphTypes op)
         CASE(MORPH_TOPHAT);
         CASE(MORPH_BLACKHAT);
         CASE(MORPH_HITMISS);
-        default: GAPI_Assert(false && "unknown MorphTypes value");
+        default: GAPI_Error("unknown MorphTypes value");
     }
 #undef CASE
     return os;
@@ -1153,7 +1153,7 @@ inline std::ostream& operator<<(std::ostream& os, DistanceTypes op)
         CASE(DIST_FAIR);
         CASE(DIST_WELSCH);
         CASE(DIST_HUBER);
-        default: GAPI_Assert(false && "unknown DistanceTypes value");
+        default: GAPI_Error("unknown DistanceTypes value");
     }
 #undef CASE
     return os;
@@ -1176,7 +1176,7 @@ inline std::ostream& operator<<(std::ostream& os, KmeansFlags op)
     case KmeansFlags::KMEANS_PP_CENTERS | KmeansFlags::KMEANS_USE_INITIAL_LABELS:
         os << "KMEANS_PP_CENTERS | KMEANS_USE_INITIAL_LABELS";
         break;
-    default: GAPI_Assert(false && "unknown KmeansFlags value");
+    default: GAPI_Error("unknown KmeansFlags value");
     }
     return os;
 }

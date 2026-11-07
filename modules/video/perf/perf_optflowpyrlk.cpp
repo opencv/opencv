@@ -82,7 +82,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
 
     declare.in(frame1, frame2, inPoints).out(outPoints);
 
-    TEST_CYCLE_N(30)
+    TEST_CYCLE()
     {
         calcOpticalFlowPyrLK(frame1, frame2, inPoints, outPoints, status, err,
                              Size(winSize, winSize), maxLevel, criteria,
@@ -133,7 +133,7 @@ PERF_TEST_P(Path_Idx_NPoints_WSize, DISABLED_OpticalFlowPyrLK_ovx, testing::Comb
 
     declare.in(frame1, frame2, inPoints).out(outPoints);
 
-    TEST_CYCLE_N(30)
+    TEST_CYCLE()
     {
         calcOpticalFlowPyrLK(frame1, frame2, inPoints, outPoints, status, cv::noArray(),
                              Size(winSize, winSize), maxLevel, criteria,

@@ -42,16 +42,20 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/core/utility.hpp"
 
 #include "opencv2/core/private.hpp"
 
 #include "opencv2/calib3d.hpp"
+#include "opencv2/calib3d/private.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 
 
 #include "opencv2/core/ocl.hpp"
+
+#include <set>
 
 #define GET_OPTIMIZED(func) (func)
 
@@ -67,7 +71,7 @@ namespace cv
  * @param ep outlier ratio
  * @param modelPoints number of model points required for estimation
  * @param maxIters maximum number of iterations
- * @return
+ * @return The number of iterations according to the formula
  * \f[
  * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
  * \f]
@@ -134,6 +138,27 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
     }
     return false;
 }
+
+void findExtrinsicCameraParams2( const Mat& objectPoints,
+                  const Mat& imagePoints, const Mat& A,
+                  const Mat& distCoeffs, Mat& rvec, Mat& tvec,
+                  int useExtrinsicGuess );
+
+void projectPoints( InputArray objectPoints,
+                    InputArray rvec, InputArray tvec,
+                    InputArray cameraMatrix, InputArray distCoeffs,
+                    OutputArray imagePoints, OutputArray dpdr,
+                    OutputArray dpdt, OutputArray dpdf=noArray(),
+                    OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
+                    OutputArray dpdo=noArray(), double aspectRatio=0.);
+
+void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+              InputArray R, InputArray newCameraMatrix, Size imgSize,
+              Rect_<double>& inner, Rect_<double>& outer );
+
+// cols and rows contains masks to use to get the sub-matrix.
+void subMatrixWithMasks(const Mat& src, Mat& dst, const std::vector<uchar>& cols,
+                        const std::vector<uchar>& rows, bool resize_dst);
 
 } // namespace cv
 

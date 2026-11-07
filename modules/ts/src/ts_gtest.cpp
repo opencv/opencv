@@ -10452,20 +10452,41 @@ class CapturedStream {
   // The ctor redirects the stream to a temporary file.
   explicit CapturedStream(int fd) : fd_(fd), uncaptured_fd_(dup(fd)) {
 # if GTEST_OS_WINDOWS
-    char temp_dir_path[MAX_PATH + 1] = { '\0' };  // NOLINT
-    char temp_file_path[MAX_PATH + 1] = { '\0' };  // NOLINT
+    wchar_t temp_dir_path_w[MAX_PATH + 1] = { L'\0' };
+    wchar_t temp_file_path_w[MAX_PATH + 1] = { L'\0' };
 
-    ::GetTempPathA(sizeof(temp_dir_path), temp_dir_path);
-    const UINT success = ::GetTempFileNameA(temp_dir_path,
-                                            "gtest_redir",
+    ::GetTempPathW(sizeof(temp_dir_path_w)/sizeof(wchar_t), temp_dir_path_w);
+    // Convert to UTF-8 to support Unicode paths
+    int len = WideCharToMultiByte(CP_UTF8, 0, temp_dir_path_w, -1, NULL, 0, NULL, NULL);
+    std::string temp_dir_path;
+    if (len > 0)
+    {
+        std::vector<char> utf8_buf(len);
+        WideCharToMultiByte(CP_UTF8, 0, temp_dir_path_w, -1, utf8_buf.data(), len, NULL, NULL);
+        temp_dir_path = std::string(utf8_buf.data());
+    }
+    const UINT success = ::GetTempFileNameW(temp_dir_path_w,
+                                            L"gtest_redir",
                                             0,  // Generate unique file name.
-                                            temp_file_path);
-    GTEST_CHECK_(success != 0)
-        << "Unable to create a temporary file in " << temp_dir_path;
-    const int captured_fd = creat(temp_file_path, _S_IREAD | _S_IWRITE);
-    GTEST_CHECK_(captured_fd != -1) << "Unable to open temporary file "
-                                    << temp_file_path;
-    filename_ = temp_file_path;
+                                            temp_file_path_w);
+    // Convert filename back to UTF-8
+    std::string temp_file_path;
+    int captured_fd = -1;
+    if (success != 0)
+    {
+        len = WideCharToMultiByte(CP_UTF8, 0, temp_file_path_w, -1, NULL, 0, NULL, NULL);
+        if (len > 0)
+        {
+            std::vector<char> utf8_buf(len);
+            WideCharToMultiByte(CP_UTF8, 0, temp_file_path_w, -1, utf8_buf.data(), len, NULL, NULL);
+            temp_file_path = std::string(utf8_buf.data());
+        }
+        // Create file and get fd for redirect
+        captured_fd = _open(temp_file_path.c_str(), _O_CREAT | _O_WRONLY | _O_TRUNC, _S_IREAD | _S_IWRITE);
+        GTEST_CHECK_(captured_fd != -1) << "Unable to open temporary file "
+        << temp_file_path;
+        filename_ = temp_file_path;
+    }
 # else
     // There's no guarantee that a test has write access to the current
     // directory, so we create the temporary file in the /tmp directory

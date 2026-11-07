@@ -1641,7 +1641,7 @@ int  Core_GraphTest::test_graph_ops( int iters )
             edge = (CvGraphEdge*)&elem_buf[0];
 
             // assign some default weight that is easy to check for
-            // consistensy, 'cause an edge weight is not stored
+            // consistency, 'cause an edge weight is not stored
             // in the simple graph
             edge->weight = (float)(v_idx[0] + v_idx[1]);
             pass_data = cvtest::randInt(rng) % 2;

@@ -138,7 +138,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
                 String filename;
                 it >> filename;
                 imageFilenames.push_back(filename);
-                Mat img = imread( dataPath+filename, 1 );
+                Mat img = imread( dataPath+filename, IMREAD_COLOR );
                 images.push_back( img );
             }
         }
@@ -204,12 +204,13 @@ void CV_DetectorTest::run( int )
 
         // write image filenames
         validationFS << IMAGE_FILENAMES << "[";
-        vector<string>::const_iterator it = imageFilenames.begin();
-        for( int ii = 0; it != imageFilenames.end(); ++it, ii++ )
+        // int ii = 0;
+        for( const auto& filename : imageFilenames )
         {
             //String buf = cv::format("img_%d", ii);
             //cvWriteComment( validationFS.fs, buf, 0 );
-            validationFS << *it;
+            validationFS << filename;
+            //ii++;
         }
         validationFS << "]"; // IMAGE_FILENAMES
 
@@ -355,7 +356,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
                     map[minIdx] = 1;
             }
         }
-        noPair += (int)count_if( map.begin(), map.end(), isZero );
+        noPair += (int)std::count_if( map.begin(), map.end(), isZero );
         totalNoPair += noPair;
 
         /*if( noPair > cvRound(valRects.size()*eps.noPair)+1 )
@@ -1361,6 +1362,24 @@ TEST(Objdetect_CascadeDetector, small_img)
             cascade.detectMultiScale(img, objects);
         }
     }
+}
+
+// See https://github.com/opencv/opencv/issues/23580
+// HOGDescriptor::compute() overflowed the gaussian weights buffer when the block
+// was taller than it was wide: the SIMD store loop for the width buffer (_dj) was
+// bounded by blockSize.height instead of blockSize.width. The block is chosen wide
+// enough that the buffer is heap allocated, so the overflow is a real out-of-bounds
+// write. "Done" is simply that compute() runs without crashing.
+TEST(Objdetect_HOGDescriptor, issue_23580_tall_block_no_overflow)
+{
+    Size winSize(272, 2048); // height > width, width > AutoBuffer stack size
+    HOGDescriptor hog(winSize, /*blockSize*/ winSize, /*blockStride*/ Size(8, 8),
+                      /*cellSize*/ Size(8, 8), /*nbins*/ 9);
+
+    Mat src(winSize, CV_8UC1, Scalar::all(0));
+    std::vector<float> descriptors;
+    ASSERT_NO_THROW(hog.compute(src, descriptors));
+    EXPECT_FALSE(descriptors.empty());
 }
 
 }} // namespace

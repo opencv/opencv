@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
+    <!-- [camera_view] -->
     <org.opencv.android.JavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
@@ -11,5 +12,6 @@
         android:id="@+id/tutorial1_activity_java_surface_view"
         opencv:show_fps="true"
         opencv:camera_id="any" />
+    <!-- [camera_view] -->
 
 </FrameLayout>

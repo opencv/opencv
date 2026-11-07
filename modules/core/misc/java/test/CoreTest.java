@@ -947,11 +947,11 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMahalanobis() {
-        Mat src = new Mat(matSize, matSize, CvType.CV_32F);
+        Mat src = new Mat(matSize + 1, matSize, CvType.CV_32F);
         Core.randu(src, -128, 128);
 
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
-        Mat mean = new Mat(1, matSize, CvType.CV_32F);
+        Mat mean = new Mat(1, matSize + 1, CvType.CV_32F);
         Core.calcCovarMatrix(src, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
         covar = covar.inv();
 
@@ -963,7 +963,6 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(0.0, d);
 
         d = Core.Mahalanobis(line1, line2, covar);
-
         assertTrue(d > 0.0);
     }
 
@@ -1821,12 +1820,18 @@ public class CoreTest extends OpenCVTestCase {
 
         assertGE(1e-6, Math.abs(Core.solvePoly(coeffs, roots)));
 
-        truth = new Mat(3, 1, CvType.CV_32FC2) {
+        List<Mat> rootsReIm = new ArrayList<Mat>();
+        Core.split(roots, rootsReIm);
+        Core.sort(rootsReIm.get(0), dst, Core.SORT_EVERY_COLUMN);
+
+        Mat truthRe = new Mat(3, 1, CvType.CV_32F) {
             {
-                put(0, 0, 1, 0, 2, 0, 3, 0);
+                put(0, 0, 1, 2, 3);
             }
         };
-        assertMatEqual(truth, roots, EPS);
+        Mat truthIm = Mat.zeros(3, 1, CvType.CV_32F);
+        assertMatEqual(truthRe, dst, EPS);
+        assertMatEqual(truthIm, rootsReIm.get(1), EPS);
     }
 
     public void testSolvePolyMatMatInt() {
@@ -1837,14 +1842,20 @@ public class CoreTest extends OpenCVTestCase {
         };
         Mat roots = new Mat();
 
-        assertEquals(10.198039027185569, Core.solvePoly(coeffs, roots, 1));
+        assertGE(1e-6, Core.solvePoly(coeffs, roots, 10));
 
-        truth = new Mat(3, 1, CvType.CV_32FC2) {
+        List<Mat> rootsReIm = new ArrayList<Mat>();
+        Core.split(roots, rootsReIm);
+        Core.sort(rootsReIm.get(0), dst, Core.SORT_EVERY_COLUMN);
+
+        Mat truthRe = new Mat(3, 1, CvType.CV_32F) {
             {
-                put(0, 0, 1, 0, -1, 2, -2, 12);
+                put(0, 0, 1, 2, 3);
             }
         };
-        assertMatEqual(truth, roots, EPS);
+        Mat truthIm = Mat.zeros(3, 1, CvType.CV_32F);
+        assertMatEqual(truthRe, dst, EPS);
+        assertMatEqual(truthIm, rootsReIm.get(1), EPS);
     }
 
     public void testSort() {
@@ -2059,4 +2070,12 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(Core.VERSION, Core.getVersionString());
     }
 
+    public void testHardwareOptions() {
+        Core.checkHardwareSupport(0);
+        boolean original_status = Core.useOptimized();
+        Core.setUseOptimized(!original_status);
+        assertEquals(!original_status, Core.useOptimized());
+        Core.setUseOptimized(original_status);
+        assertEquals(original_status, Core.useOptimized());
+    }
 }

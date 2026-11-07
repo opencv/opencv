@@ -89,8 +89,8 @@ public:
         s2(_s2),
         s3(_s3),
         s4(_s4) {
-#if CV_SIMD_64F
-        for (int i = 0; i < 2 * v_float64::nlanes; ++i)
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        for (int i = 0; i < 2 * VTraits<v_float64>::vlanes(); ++i)
         {
             s_x[i] = ir[0] * i;
             s_y[i] = ir[3] * i;
@@ -123,26 +123,26 @@ public:
             else
                 CV_Assert(m1 != NULL);
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
             const v_float64 v_one = vx_setall_f64(1.0);
-            for (; j <= size.width - 2*v_float64::nlanes; j += 2*v_float64::nlanes, _x += 2*v_float64::nlanes * ir[0], _y += 2*v_float64::nlanes * ir[3], _w += 2*v_float64::nlanes * ir[6])
+            for (; j <= size.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes(), _x += 2*VTraits<v_float64>::vlanes() * ir[0], _y += 2*VTraits<v_float64>::vlanes() * ir[3], _w += 2*VTraits<v_float64>::vlanes() * ir[6])
             {
                 v_float64 m_0, m_1, m_2, m_3;
-                m_2 = v_one / (vx_setall_f64(_w) + vx_load(s_w));
-                m_3 = v_one / (vx_setall_f64(_w) + vx_load(s_w + v_float64::nlanes));
+                m_2 = v_div(v_one, v_add(vx_setall_f64(_w), vx_load(this->s_w)));
+                m_3 = v_div(v_one, v_add(vx_setall_f64(_w), vx_load(this->s_w + VTraits<v_float64>::vlanes())));
                 m_0 = vx_setall_f64(_x); m_1 = vx_setall_f64(_y);
-                v_float64 x_0 = (m_0 + vx_load(s_x)) * m_2;
-                v_float64 x_1 = (m_0 + vx_load(s_x + v_float64::nlanes)) * m_3;
-                v_float64 y_0 = (m_1 + vx_load(s_y)) * m_2;
-                v_float64 y_1 = (m_1 + vx_load(s_y + v_float64::nlanes)) * m_3;
+                v_float64 x_0 = v_mul(v_add(m_0, vx_load(this->s_x)), m_2);
+                v_float64 x_1 = v_mul(v_add(m_0, vx_load(this->s_x + VTraits<v_float64>::vlanes())), m_3);
+                v_float64 y_0 = v_mul(v_add(m_1, vx_load(this->s_y)), m_2);
+                v_float64 y_1 = v_mul(v_add(m_1, vx_load(this->s_y + VTraits<v_float64>::vlanes())), m_3);
 
-                v_float64 xd_0 = x_0 * x_0;
-                v_float64 yd_0 = y_0 * y_0;
-                v_float64 xd_1 = x_1 * x_1;
-                v_float64 yd_1 = y_1 * y_1;
+                v_float64 xd_0 = v_mul(x_0, x_0);
+                v_float64 yd_0 = v_mul(y_0, y_0);
+                v_float64 xd_1 = v_mul(x_1, x_1);
+                v_float64 yd_1 = v_mul(y_1, y_1);
 
-                v_float64 r2_0 = xd_0 + yd_0;
-                v_float64 r2_1 = xd_1 + yd_1;
+                v_float64 r2_0 = v_add(xd_0, yd_0);
+                v_float64 r2_1 = v_add(xd_1, yd_1);
 
                 m_1 = vx_setall_f64(k3);
                 m_2 = vx_setall_f64(k2);
@@ -151,18 +151,18 @@ public:
                 m_1 = v_muladd(v_muladd(v_muladd(m_1, r2_1, m_2), r2_1, m_3), r2_1, v_one);
                 m_3 = vx_setall_f64(k6);
                 m_2 = vx_setall_f64(k5);
-                m_0 /= v_muladd(v_muladd(v_muladd(m_3, r2_0, m_2), r2_0, vx_setall_f64(k4)), r2_0, v_one);
-                m_1 /= v_muladd(v_muladd(v_muladd(m_3, r2_1, m_2), r2_1, vx_setall_f64(k4)), r2_1, v_one);
+                m_0 = v_div(m_0, v_muladd(v_muladd(v_muladd(m_3, r2_0, m_2), r2_0, vx_setall_f64(this->k4)), r2_0, v_one));
+                m_1 = v_div(m_1, v_muladd(v_muladd(v_muladd(m_3, r2_1, m_2), r2_1, vx_setall_f64(this->k4)), r2_1, v_one));
 
                 m_3 = vx_setall_f64(2.0);
                 xd_0 = v_muladd(m_3, xd_0, r2_0);
                 yd_0 = v_muladd(m_3, yd_0, r2_0);
                 xd_1 = v_muladd(m_3, xd_1, r2_1);
                 yd_1 = v_muladd(m_3, yd_1, r2_1);
-                m_2 = x_0 * y_0 * m_3;
-                m_3 = x_1 * y_1 * m_3;
+                m_2 = v_mul(v_mul(x_0, y_0), m_3);
+                m_3 = v_mul(v_mul(x_1, y_1), m_3);
 
-                x_0 *= m_0; y_0 *= m_0; x_1 *= m_1; y_1 *= m_1;
+                x_0 = v_mul(x_0, m_0); y_0 = v_mul(y_0, m_0); x_1 = v_mul(x_1, m_1); y_1 = v_mul(y_1, m_1);
 
                 m_0 = vx_setall_f64(p1);
                 m_1 = vx_setall_f64(p2);
@@ -176,8 +176,8 @@ public:
                 xd_1 = v_muladd(m_0, m_3, xd_1);
                 yd_1 = v_muladd(m_1, m_3, yd_1);
 
-                m_0 = r2_0 * r2_0;
-                m_1 = r2_1 * r2_1;
+                m_0 = v_mul(r2_0, r2_0);
+                m_1 = v_mul(r2_1, r2_1);
                 m_2 = vx_setall_f64(s2);
                 m_3 = vx_setall_f64(s1);
                 xd_0 = v_muladd(m_3, r2_0, v_muladd(m_2, m_0, xd_0));
@@ -203,17 +203,17 @@ public:
                 r2_0 = v_muladd(m_0, xd_0, v_muladd(m_1, yd_0, m_2));
                 r2_1 = v_muladd(m_0, xd_1, v_muladd(m_1, yd_1, m_2));
                 m_0 = vx_setzero_f64();
-                r2_0 = v_select(r2_0 == m_0, v_one, v_one / r2_0);
-                r2_1 = v_select(r2_1 == m_0, v_one, v_one / r2_1);
+                r2_0 = v_select(v_eq(r2_0, m_0), v_one, v_div(v_one, r2_0));
+                r2_1 = v_select(v_eq(r2_1, m_0), v_one, v_div(v_one, r2_1));
 
                 m_0 = vx_setall_f64(fx);
                 m_1 = vx_setall_f64(u0);
                 m_2 = vx_setall_f64(fy);
                 m_3 = vx_setall_f64(v0);
-                x_0 = v_muladd(m_0 * r2_0, x_0, m_1);
-                y_0 = v_muladd(m_2 * r2_0, y_0, m_3);
-                x_1 = v_muladd(m_0 * r2_1, x_1, m_1);
-                y_1 = v_muladd(m_2 * r2_1, y_1, m_3);
+                x_0 = v_muladd(v_mul(m_0, r2_0), x_0, m_1);
+                y_0 = v_muladd(v_mul(m_2, r2_0), y_0, m_3);
+                x_1 = v_muladd(v_mul(m_0, r2_1), x_1, m_1);
+                y_1 = v_muladd(v_mul(m_2, r2_1), y_1, m_3);
 
                 if (m1type == CV_32FC1)
                 {
@@ -225,20 +225,20 @@ public:
                     v_float32 mf0, mf1;
                     v_zip(v_cvt_f32(x_0, x_1), v_cvt_f32(y_0, y_1), mf0, mf1);
                     v_store(&m1f[j * 2], mf0);
-                    v_store(&m1f[j * 2 + v_float32::nlanes], mf1);
+                    v_store(&m1f[j * 2 + VTraits<v_float32>::vlanes()], mf1);
                 }
                 else // m1type == CV_16SC2
                 {
                     m_0 = vx_setall_f64(INTER_TAB_SIZE);
-                    x_0 *= m_0; x_1 *= m_0; y_0 *= m_0; y_1 *= m_0;
+                    x_0 = v_mul(x_0, m_0); x_1 = v_mul(x_1, m_0); y_0 = v_mul(y_0, m_0); y_1 = v_mul(y_1, m_0);
 
                     v_int32 mask = vx_setall_s32(INTER_TAB_SIZE - 1);
                     v_int32 iu = v_round(x_0, x_1);
                     v_int32 iv = v_round(y_0, y_1);
 
-                    v_pack_u_store(&m2[j], (iu & mask) + (iv & mask) * vx_setall_s32(INTER_TAB_SIZE));
+                    v_pack_u_store(&m2[j], v_add(v_and(iu, mask), v_mul(v_and(iv, mask), vx_setall_s32(INTER_TAB_SIZE))));
                     v_int32 out0, out1;
-                    v_zip(iu >> INTER_BITS, iv >> INTER_BITS, out0, out1);
+                    v_zip(v_shr<INTER_BITS>(iu), v_shr<INTER_BITS>(iv), out0, out1);
                     v_store(&m1[j * 2], v_pack(out0, out1));
                 }
             }
@@ -259,8 +259,8 @@ public:
                 double v = fy*invProj*vecTilt(1) + v0;
                 if( m1type == CV_16SC2 )
                 {
-                    int iu = saturate_cast<int>(u*INTER_TAB_SIZE);
-                    int iv = saturate_cast<int>(v*INTER_TAB_SIZE);
+                    int iu = saturate_cast<int>(u*static_cast<double>(INTER_TAB_SIZE));
+                    int iv = saturate_cast<int>(v*static_cast<double>(INTER_TAB_SIZE));
                     m1[j*2] = (short)(iu >> INTER_BITS);
                     m1[j*2+1] = (short)(iv >> INTER_BITS);
                     m2[j] = (ushort)((iv & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (iu & (INTER_TAB_SIZE-1)));
@@ -302,10 +302,10 @@ private:
     double s2;
     double s3;
     double s4;
-#if CV_SIMD_64F
-    double s_x[2*v_float64::nlanes];
-    double s_y[2*v_float64::nlanes];
-    double s_w[2*v_float64::nlanes];
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    double s_x[2*VTraits<v_float64>::max_nlanes];
+    double s_y[2*VTraits<v_float64>::max_nlanes];
+    double s_w[2*VTraits<v_float64>::max_nlanes];
 #endif
 };
 }

@@ -41,9 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
-#include "opencv2/core/cvdef.h"
+#include "opencv2/calib3d/private.hpp"
 
 using namespace cv;
 using namespace cv::detail;
@@ -254,46 +252,40 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ +
                                                                 edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * num_params_per_cam_,
-                     total_num_matches_ * num_errs_per_measurement_,
-                     cvTermCriteria(term_criteria_));
+    LevMarq solver(num_images_ * num_params_per_cam_,
+                   total_num_matches_ * num_errs_per_measurement_, term_criteria_);
 
     Mat err, jac;
-    CvMat matParams = cvMat(cam_params_);
-    cvCopy(&matParams, solver.param);
+    cam_params_.copyTo(solver.param);
 
 #if ENABLE_LOG
     int iter = 0;
 #endif
     for(;;)
     {
-        const CvMat* _param = 0;
-        CvMat* _jac = 0;
-        CvMat* _err = 0;
+        Mat1d _param, _jac, _err;
 
         bool proceed = solver.update(_param, _jac, _err);
 
-        cvCopy(_param, &matParams);
+        _param.copyTo(cam_params_);
 
-        if (!proceed || !_err)
+        if (!proceed || _err.empty())
             break;
 
-        if (_jac)
+        if (!_jac.empty())
         {
             calcJacobian(jac);
-            CvMat tmp = cvMat(jac);
-            cvCopy(&tmp, _jac);
+            jac.copyTo(_jac);
         }
 
-        if (_err)
+        if (!_err.empty())
         {
             calcError(err);
             LOG_CHAT(".");
 #if ENABLE_LOG
             iter++;
 #endif
-            CvMat tmp = cvMat(err);
-            cvCopy(&tmp, _err);
+            err.copyTo(_err);
         }
     }
 
@@ -962,7 +954,7 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
     else if (kind == WAVE_CORRECT_VERT)
         rg1 = eigen_vecs.row(0).t();
     else
-        CV_Error(CV_StsBadArg, "unsupported kind of wave correction");
+        CV_Error(cv::Error::StsBadArg, "unsupported kind of wave correction");
 
     Mat img_k = Mat::zeros(3, 1, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
@@ -1018,13 +1010,13 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 
 //////////////////////////////////////////////////////////////////////////////
 
-String matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
-                                float conf_threshold)
+String matchesGraphAsString(std::vector<String> &paths, std::vector<MatchesInfo> &pairwise_matches,
+                            float conf_threshold)
 {
     std::stringstream str;
     str << "graph matches_graph{\n";
 
-    const int num_images = static_cast<int>(pathes.size());
+    const int num_images = static_cast<int>(paths.size());
     std::set<std::pair<int,int> > span_tree_edges;
     DisjointSets comps(num_images);
 
@@ -1050,12 +1042,12 @@ String matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo
         std::pair<int,int> edge = *itr;
         if (span_tree_edges.find(edge) != span_tree_edges.end())
         {
-            String name_src = pathes[edge.first];
+            String name_src = paths[edge.first];
             size_t prefix_len = name_src.find_last_of("/\\");
             if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_src = name_src.substr(prefix_len, name_src.size() - prefix_len);
 
-            String name_dst = pathes[edge.second];
+            String name_dst = paths[edge.second];
             prefix_len = name_dst.find_last_of("/\\");
             if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name_dst = name_dst.substr(prefix_len, name_dst.size() - prefix_len);
@@ -1072,7 +1064,7 @@ String matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo
     {
         if (comps.size[comps.findSetByElem((int)i)] == 1)
         {
-            String name = pathes[i];
+            String name = paths[i];
             size_t prefix_len = name.find_last_of("/\\");
             if (prefix_len != String::npos) prefix_len++; else prefix_len = 0;
             name = name.substr(prefix_len, name.size() - prefix_len);

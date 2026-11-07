@@ -241,6 +241,39 @@ CV__DNN_INLINE_NS_BEGIN
 
     };
 
+    /** @brief This function performs array summation based
+    * on the Einstein summation convention. The function
+    * allows for concise expressions of various mathematical
+    * operations using subscripts.
+    *
+    * By default, the labels are placed in alphabetical
+    * order at the end of the output.
+    * For example:
+    * if `c = einsum("i,j", a, b)`, then `c[i,j] == a[i]*b[j]`.
+    * However, if `c = einsum("j,i", a, b)`, then `c[i,j] = a[j]*b[i]`.
+    * Alternatively, you can control the output order or prevent
+    * an axis from being summed/force an axis to be summed
+    * by providing indices for the output.
+    * For example:
+    * `diag(a)`         -> `einsum("ii->i", a)`
+    * `sum(a, axis=0)`  -> `einsum("i...->", a)`
+    * Subscripts at the beginning and end may be specified
+    * by putting an ellipsis "..." in the middle.
+    * For instance, the function `einsum("i...i", a)` takes
+    * the diagonal of the first and last dimensions of
+    * the operand, and `einsum("ij...,jk...->ik...")` performs
+    * the matrix product using the first two indices
+    * of each operand instead of the last two.
+    * When there is only one operand, no axes being summed,
+    *  and no output parameter, this function returns
+    * a view into the operand instead of creating a copy.
+     */
+    class CV_EXPORTS EinsumLayer : public Layer
+    {
+    public:
+        static Ptr<EinsumLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
@@ -256,6 +289,9 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
+        bool fusedActivation = false;
+        bool fusedAdd = false;
+        bool useWinograd = true; // Flag whether to use Winograd to speed up 3x3 convolution.
     };
 
     class CV_EXPORTS ConvolutionLayerInt8 : public BaseConvolutionLayer
@@ -263,6 +299,11 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
+        bool useWinograd = false; // Flag whether to use Winograd to speed up 3x3 convolution.
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
@@ -292,6 +333,30 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<ArgLayer> create(const LayerParams& params);
+    };
+
+    /** @brief Gather layer
+     */
+    class CV_EXPORTS GatherLayer : public Layer
+    {
+    public:
+        static Ptr<GatherLayer> create(const LayerParams& params);
+    };
+
+    /** @brief GatherElements layer
+    * GatherElements takes two inputs data and indices of the same rank r >= 1 and an optional attribute axis and works such that:
+    *   output[i][j][k] = data[index[i][j][k]][j][k] if axis = 0 and r = 3
+    *   output[i][j][k] = data[i][index[i][j][k]][k] if axis = 1 and r = 3
+    *   output[i][j][k] = data[i][j][index[i][j][k]] if axis = 2 and r = 3
+    *
+    * Gather, on the other hand, takes a data tensor of rank r >= 1, and indices tensor of rank q, and works such that:
+    *   it gathers the enteries along axis dimension of the input data indexed by indices and concatenates them in an output tensor of rank q + (r - 1)
+    *   e.g. If axis = 0, let k = indices[i_{0}, ..., i_{q-1}] then output[i_{0}, ..., i_{q-1}, j_{0}, ..., j_{r-2}] = input[k , j_{0}, ..., j_{r-2}]:
+     **/
+    class CV_EXPORTS GatherElementsLayer : public Layer
+    {
+    public:
+        static Ptr<GatherElementsLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS PoolingLayer : public Layer
@@ -329,15 +394,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ReduceLayer : public Layer
     {
     public:
-        int reduceType;
-        std::vector<size_t> reduceDims;
         static Ptr<ReduceLayer> create(const LayerParams& params);
-    };
-
-    class CV_EXPORTS ReduceLayerInt8 : public ReduceLayer
-    {
-    public:
-        static Ptr<ReduceLayerInt8> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SoftmaxLayer : public Layer
@@ -356,6 +413,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SoftmaxLayerInt8> create(const LayerParams& params);
     };
 
+    /**
+     * `InnerProduct`, `MatMul` and `Gemm` operations are all implemented by Fully Connected Layer.
+     * Parameter `is_matmul` is used to distinguish `MatMul` and `Gemm` from `InnerProduct`.
+     */
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
@@ -368,6 +429,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
         static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
     };
 
@@ -400,16 +465,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS QuantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<QuantizeLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
@@ -418,6 +483,24 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         float scale, shift;
         static Ptr<RequantizeLayer> create(const LayerParams &params);
+    };
+
+    /** @brief Dynamic quantization layer that computes scale and zero point at runtime
+     *  from activation min/max values. Outputs quantized data plus scale/zp tensors.
+     */
+    class CV_EXPORTS QuantizeDynamicLayer : public QuantizeLayer
+    {
+    public:
+        static Ptr<QuantizeDynamicLayer> create(const LayerParams &params);
+    };
+
+    /** @brief Dynamic dequantization layer that reads scale and zero point from
+     *  input tensors (produced by QuantizeDynamicLayer) rather than from fixed parameters.
+     */
+    class CV_EXPORTS DequantizeDynamicLayer : public DequantizeLayer
+    {
+    public:
+        static Ptr<DequantizeDynamicLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS ConcatLayer : public Layer
@@ -539,11 +622,11 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
         virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
         virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {};
+                                  size_t outPlaneSize, int cn0, int cn1) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
@@ -780,6 +863,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SeluLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS GeluLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS GeluApproximationLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluApproximationLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ThresholdedReluLayer : public ActivationLayer
     {
     public:
@@ -839,6 +934,12 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NaryEltwiseLayer : public Layer
+    {
+    public:
+        static Ptr<NaryEltwiseLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS BatchNormLayer : public ActivationLayer
@@ -1037,6 +1138,94 @@ CV__DNN_INLINE_NS_BEGIN
         int reverse;
 
         static Ptr<CumSumLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ScatterLayer : public Layer
+    {
+    public:
+        static Ptr<ScatterLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ScatterNDLayer : public Layer
+    {
+    public:
+        static Ptr<ScatterNDLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TileLayer : public Layer
+    {
+    public:
+        static Ptr<TileLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LayerNormLayer : public Layer
+    {
+    public:
+        CV_DEPRECATED_EXTERNAL bool hasBias; // Deprecated, preserve for compatibility
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS GemmLayer : public Layer {
+    public:
+        bool trans_a;
+        bool trans_b;
+        float alpha;
+        float beta;
+
+        static Ptr<GemmLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS MatMulLayer : public Layer {
+     public:
+        static Ptr<MatMulLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ExpandLayer : public Layer
+    {
+    public:
+        static Ptr<ExpandLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS InstanceNormLayer : public Layer {
+    public:
+        float epsilon;
+
+        static Ptr<InstanceNormLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AttentionLayer : public Layer {
+     public:
+        static Ptr<AttentionLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS GroupNormLayer : public Layer {
+    public:
+        static Ptr<GroupNormLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS DepthToSpaceLayer : public Layer {
+    public:
+        static Ptr<DepthToSpaceLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SpaceToDepthLayer : public Layer {
+    public:
+        static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        static Ptr<TopKLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RandomNormalLikeLayer : public Layer
+    {
+    public:
+        static Ptr<RandomNormalLikeLayer> create(const LayerParams& params);
     };
 
 //! @}

@@ -1,4 +1,4 @@
-if(MSVC OR IOS)
+if(MSVC OR IOS OR XROS)
   return()
 endif()
 
@@ -103,14 +103,14 @@ add_custom_target(gen-pkgconfig ALL SOURCES "${CMAKE_BINARY_DIR}/unix-install/${
 add_dependencies(developer_scripts gen-pkgconfig)
 
 
-if(UNIX AND NOT ANDROID)
+if((UNIX AND NOT ANDROID) OR MINGW)
   install(FILES ${CMAKE_BINARY_DIR}/unix-install/${OPENCV_PC_FILE_NAME} DESTINATION ${OPENCV_LIB_INSTALL_PATH}/pkgconfig COMPONENT dev)
 endif()
 
 # =============================================================================
 else() # DEFINED CMAKE_HELPER_SCRIPT
 
-cmake_minimum_required(VERSION 2.8.12.2)
+cmake_minimum_required(VERSION 3.5)
 cmake_policy(SET CMP0012 NEW)
 include("${CMAKE_HELPER_SCRIPT}")
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake")

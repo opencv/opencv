@@ -42,6 +42,7 @@ struct {
     { VIDEO_ACCELERATION_D3D11, "d3d11" },
     { VIDEO_ACCELERATION_VAAPI, "vaapi" },
     { VIDEO_ACCELERATION_MFX, "mfx" },
+    { VIDEO_ACCELERATION_DRM, "drm" },
 };
 
 class FPSCounter {

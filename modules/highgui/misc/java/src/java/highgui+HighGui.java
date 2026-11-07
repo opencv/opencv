@@ -43,8 +43,7 @@ public final class HighGui {
 
     public static void imshow(String winname, Mat img) {
         if (img.empty()) {
-            System.err.println("Error: Empty image in imshow");
-            System.exit(-1);
+            throw new IllegalArgumentException("Image is empty");
         } else {
             ImageWindow tmpWindow = windows.get(winname);
             if (tmpWindow == null) {
@@ -62,14 +61,9 @@ public final class HighGui {
         if (m.channels() > 1) {
             type = BufferedImage.TYPE_3BYTE_BGR;
         }
-
-        int bufferSize = m.channels() * m.cols() * m.rows();
-        byte[] b = new byte[bufferSize];
-        m.get(0, 0, b); // get all the pixels
         BufferedImage image = new BufferedImage(m.cols(), m.rows(), type);
-
         final byte[] targetPixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-        System.arraycopy(b, 0, targetPixels, 0, b.length);
+        m.get(0, 0, targetPixels);
 
         return image;
     }
@@ -118,8 +112,7 @@ public final class HighGui {
 
         // If there are no windows to be shown return
         if (windows.isEmpty()) {
-            System.err.println("Error: waitKey must be used after an imshow");
-            System.exit(-1);
+            throw new IllegalStateException("No windows created. Call imshow() first");
         }
 
         // Remove the unused windows
@@ -150,8 +143,7 @@ public final class HighGui {
                     win.lbl.setIcon(icon);
                 }
             } else {
-                System.err.println("Error: no imshow associated with" + " namedWindow: \"" + win.name + "\"");
-                System.exit(-1);
+                throw new IllegalStateException("No image set for window: \"" + win.name + "\". Call imshow() first");
             }
         }
 
@@ -163,6 +155,7 @@ public final class HighGui {
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
         }
 
         // Set all windows as already used

@@ -40,6 +40,7 @@
 //M*/
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/imgproc/detail/legacy.hpp"
 
 using namespace cv;
 
@@ -59,10 +60,10 @@ cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
     int i;
 
     if( !chain || !reader )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( chain->elem_size != 1 || chain->header_size < (int)sizeof(CvChain))
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     cvStartReadSeq( (CvSeq *) chain, (CvSeqReader *) reader, 0 );
 
@@ -80,7 +81,7 @@ CV_IMPL CvPoint
 cvReadChainPoint( CvChainPtReader * reader )
 {
     if( !reader )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     cv::Point2i pt = reader->pt;
 
@@ -170,12 +171,9 @@ typedef struct _CvContourScanner
 }
 _CvContourScanner;
 
-#define _CV_FIND_CONTOURS_FLAGS_EXTERNAL_ONLY    1
-#define _CV_FIND_CONTOURS_FLAGS_HIERARCHIC       2
-
 /*
    Initializes scanner structure.
-   Prepare image for scanning ( clear borders and convert all pixels to 0-1.
+   Prepare image for scanning ( clear borders and convert all pixels to 0-1 ).
 */
 static CvContourScanner
 cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
@@ -183,7 +181,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
                      int  method, CvPoint offset, int needFillBorder )
 {
     if( !storage )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     CvMat stub, *mat = cvGetMat( _img, &stub );
 
@@ -192,7 +190,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     if( !((CV_IS_MASK_ARR( mat ) && mode < CV_RETR_FLOODFILL) ||
           (CV_MAT_TYPE(mat->type) == CV_32SC1 && mode == CV_RETR_FLOODFILL)) )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
                   "[Start]FindContours supports only CV_8UC1 images when mode != CV_RETR_FLOODFILL "
                   "otherwise supports CV_32SC1 images only" );
 
@@ -201,10 +199,10 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     uchar* img = (uchar*)(mat->data.ptr);
 
     if( method < 0 || method > CV_CHAIN_APPROX_TC89_KCOS )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     if( header_size < (int) (method == CV_CHAIN_CODE ? sizeof( CvChain ) : sizeof( CvContour )))
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     CvContourScanner scanner = (CvContourScanner)cvAlloc( sizeof( *scanner ));
     memset( scanner, 0, sizeof(*scanner) );
@@ -214,7 +212,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     scanner->img = (schar *) (img + step);
     scanner->img_step = step;
     scanner->img_size.width = size.width - 1;   /* exclude rightest column */
-    scanner->img_size.height = size.height - 1; /* exclude bottomost row */
+    scanner->img_size.height = size.height - 1; /* exclude bottommost row */
     scanner->mode = mode;
     scanner->offset = offset;
     scanner->pt.x = scanner->pt.y = 1;
@@ -304,7 +302,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     /* converts all pixels to 0 or 1 */
     if( CV_MAT_TYPE(mat->type) != CV_32S )
-        cvThreshold( mat, mat, 0, 1, CV_THRESH_BINARY );
+        cvThreshold( mat, mat, 0, 1, cv::THRESH_BINARY );
 
     return scanner;
 }
@@ -490,7 +488,7 @@ cvSubstituteContour( CvContourScanner scanner, CvSeq * new_contour )
     _CvContourInfo *l_cinfo;
 
     if( !scanner )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     l_cinfo = scanner->l_cinfo;
     if( l_cinfo && l_cinfo->contour && l_cinfo->contour != new_contour )
@@ -1032,7 +1030,7 @@ CvSeq *
 cvFindNextContour( CvContourScanner scanner )
 {
     if( !scanner )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     CV_Assert(scanner->img_step >= 0);
 
@@ -1080,7 +1078,7 @@ cvFindNextContour( CvContourScanner scanner )
             }
             else
             {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 if ((p = img[x]) != prev)
                 {
                     goto _next_contour;
@@ -1088,9 +1086,9 @@ cvFindNextContour( CvContourScanner scanner )
                 else
                 {
                     v_uint8 v_prev = vx_setall_u8((uchar)prev);
-                    for (; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
+                    for (; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
                     {
-                        v_uint8 vmask = (vx_load((uchar*)(img + x)) != v_prev);
+                        v_uint8 vmask = (v_ne(vx_load((uchar *)(img + x)), v_prev));
                         if (v_check_any(vmask))
                         {
                             p = img[(x += v_scan_forward(vmask))];
@@ -1105,7 +1103,7 @@ cvFindNextContour( CvContourScanner scanner )
 
             if( x >= width )
                 break;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         _next_contour:
 #endif
             {
@@ -1316,7 +1314,7 @@ cvEndFindContours( CvContourScanner * _scanner )
     CvSeq *first = 0;
 
     if( !_scanner )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     scanner = *_scanner;
 
     if( scanner )
@@ -1353,11 +1351,11 @@ CvLinkedRunPoint;
 
 inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_uint8 v_zero = vx_setzero_u8();
-    for (; j <= img_size.width - v_uint8::nlanes; j += v_uint8::nlanes)
+    for (; j <= img_size.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
     {
-        v_uint8 vmask = (vx_load((uchar*)(src_data + j)) != v_zero);
+        v_uint8 vmask = (v_ne(vx_load((uchar *)(src_data + j)), v_zero));
         if (v_check_any(vmask))
         {
             j += v_scan_forward(vmask);
@@ -1372,7 +1370,7 @@ inline int findStartContourPoint(uchar *src_data, CvSize img_size, int j)
 
 inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j)
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     if (j < img_size.width && !src_data[j])
     {
         return j;
@@ -1380,9 +1378,9 @@ inline int findEndContourPoint(uchar *src_data, CvSize img_size, int j)
     else
     {
         v_uint8 v_zero = vx_setzero_u8();
-        for (; j <= img_size.width - v_uint8::nlanes; j += v_uint8::nlanes)
+        for (; j <= img_size.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
         {
-            v_uint8 vmask = (vx_load((uchar*)(src_data + j)) == v_zero);
+            v_uint8 vmask = (v_eq(vx_load((uchar *)(src_data + j)), v_zero));
             if (v_check_any(vmask))
             {
                 j += v_scan_forward(vmask);
@@ -1441,13 +1439,13 @@ icvFindContoursInInterval( const CvArr* src,
     CvSeq* prev = 0;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL storage pointer" );
 
     if( !result )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL double CvSeq pointer" );
 
     if( contourHeaderSize < (int)sizeof(CvContour))
-        CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
+        CV_Error( cv::Error::StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
 
     storage00.reset(cvCreateChildMemStorage(storage));
     storage01.reset(cvCreateChildMemStorage(storage));
@@ -1456,7 +1454,7 @@ icvFindContoursInInterval( const CvArr* src,
 
     mat = cvGetMat( src, &stub );
     if( !CV_IS_MASK_ARR(mat))
-        CV_Error( CV_StsBadArg, "Input array must be 8uC1 or 8sC1" );
+        CV_Error( cv::Error::StsBadArg, "Input array must be 8uC1 or 8sC1" );
     src_data = mat->data.ptr;
     img_step = mat->step;
     img_size = cvGetMatSize(mat);
@@ -1748,14 +1746,14 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     int count = -1;
 
     if( !firstContour )
-        CV_Error( CV_StsNullPtr, "NULL double CvSeq pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL double CvSeq pointer" );
 
     *firstContour = 0;
 
     if( method == CV_LINK_RUNS )
     {
         if( offset.x != 0 || offset.y != 0 )
-            CV_Error( CV_StsOutOfRange,
+            CV_Error( cv::Error::StsOutOfRange,
             "Nonzero offset is not supported in CV_LINK_RUNS yet" );
 
         count = icvFindContoursInInterval( img, storage, firstContour, cntHeaderSize );
@@ -1816,7 +1814,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     CV_INSTRUMENT_REGION();
@@ -1881,12 +1879,12 @@ void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
     }
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();
 
-    findContours(_image, _contours, noArray(), mode, method, offset);
+    findContours_legacy(_image, _contours, noArray(), mode, method, offset);
 }
 
 /* End of file. */

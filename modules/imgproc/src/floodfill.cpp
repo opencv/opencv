@@ -283,7 +283,7 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
                    Diff diff, ConnectedComp* region, int flags,
                    std::vector<FFillSegment>* buffer )
 {
-    int step = (int)image.step, maskStep = (int)msk.step;
+    auto step = static_cast<std::ptrdiff_t>(image.step), maskStep = static_cast<std::ptrdiff_t>(msk.step);
     uchar* pImage = image.ptr();
     _Tp* img = (_Tp*)(pImage + step*seed.y);
     uchar* pMask = msk.ptr() + maskStep + sizeof(_MTp);
@@ -487,14 +487,15 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
 
     if ( (cn != 1) && (cn != 3) )
     {
-        CV_Error( CV_StsBadArg, "Number of channels in input image must be 1 or 3" );
+        CV_Error( cv::Error::StsBadArg, "Number of channels in input image must be 1 or 3" );
     }
 
     const int connectivity = flags & 255;
     if( connectivity != 0 && connectivity != 4 && connectivity != 8 )
-        CV_Error( CV_StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
+        CV_Error( cv::Error::StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
 
-    if( _mask.empty() )
+    bool noUserMask = _mask.empty();
+    if( noUserMask )
     {
         _mask.create( size.height + 2, size.width + 2, CV_8UC1 );
         _mask.setTo(0);
@@ -508,18 +509,18 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     Mat mask_inner = mask( Rect(1, 1, mask.cols - 2, mask.rows - 2) );
     copyMakeBorder( mask_inner, mask, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(1) );
 
-    bool is_simple = mask.empty() && (flags & FLOODFILL_MASK_ONLY) == 0;
+    bool is_simple = noUserMask && (flags & FLOODFILL_MASK_ONLY) == 0;
 
     for( i = 0; i < cn; i++ )
     {
         if( loDiff[i] < 0 || upDiff[i] < 0 )
-            CV_Error( CV_StsBadArg, "lo_diff and up_diff must be non-negative" );
+            CV_Error( cv::Error::StsBadArg, "lo_diff and up_diff must be non-negative" );
         is_simple = is_simple && fabs(loDiff[i]) < DBL_EPSILON && fabs(upDiff[i]) < DBL_EPSILON;
     }
 
     if( (unsigned)seedPoint.x >= (unsigned)size.width ||
        (unsigned)seedPoint.y >= (unsigned)size.height )
-        CV_Error( CV_StsOutOfRange, "Seed point is outside of image" );
+        CV_Error( cv::Error::StsOutOfRange, "Seed point is outside of image" );
 
     scalarToRawData( newVal, &nv_buf, type, 0);
     size_t buffer_size = MAX( size.width, size.height ) * 2;
@@ -550,7 +551,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
             else if( type == CV_32FC3 )
                 floodFill_CnIR(img, seedPoint, Vec3f(nv_buf.f), &comp, flags, &buffer);
             else
-                CV_Error( CV_StsUnsupportedFormat, "" );
+                CV_Error( cv::Error::StsUnsupportedFormat, "" );
             if( rect )
                 *rect = comp.rect;
             return comp.area;
@@ -560,8 +561,15 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     if( depth == CV_8U )
         for( i = 0; i < cn; i++ )
         {
+#if defined(__GNUC__) && (__GNUC__ == 12)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
             ld_buf.b[i] = saturate_cast<uchar>(cvFloor(loDiff[i]));
             ud_buf.b[i] = saturate_cast<uchar>(cvFloor(upDiff[i]));
+#if defined(__GNUC__) && (__GNUC__ == 12)
+#pragma GCC diagnostic pop
+#endif
         }
     else if( depth == CV_32S )
         for( i = 0; i < cn; i++ )
@@ -576,7 +584,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
             ud_buf.f[i] = (float)upDiff[i];
         }
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     uchar newMaskVal = (uchar)((flags & 0xff00) == 0 ? 1 : ((flags >> 8) & 255));
 
@@ -611,7 +619,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                 Diff32fC3(ld_buf.f, ud_buf.f),
                 &comp, flags, &buffer);
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 
     if( rect )
         *rect = comp.rect;

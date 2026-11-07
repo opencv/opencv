@@ -65,20 +65,16 @@ TEST(Objdetect_face_detection, regression)
 {
     // Pre-set params
     float scoreThreshold = 0.7f;
-    float matchThreshold = 0.9f;
-    float l2disThreshold = 5.0f;
+    float matchThreshold = 0.7f;
+    float l2disThreshold = 15.0f;
     int numLM = 5;
     int numCoords = 4 + 2 * numLM;
 
     // Load ground truth labels
     std::map<std::string, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt"), numCoords);
-    // for (auto item: gt)
-    // {
-    //     std::cout << item.first << " " << item.second.size() << std::endl;
-    // }
 
     // Initialize detector
-    std::string model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
+    std::string model = findDataFile("dnn/onnx/models/yunet-202303.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
@@ -137,6 +133,7 @@ TEST(Objdetect_face_detection, regression)
                         lmMatched[lmIdx] = true;
                     }
                 }
+                break;
             }
             EXPECT_TRUE(boxMatched) << "In image " << item.first << ", cannot match resBox " << resBox << " with any ground truth.";
             if (boxMatched)
@@ -178,7 +175,7 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
+    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202303.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
     std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
@@ -214,6 +211,27 @@ TEST(Objdetect_face_recognition, regression)
         EXPECT_TRUE(label == 0 ? cos_score <= cosine_similar_thresh : cos_score > cosine_similar_thresh) << "Cosine match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< cos_score <<";Thresh: "<< cosine_similar_thresh <<").";
         EXPECT_TRUE(label == 0 ? L2_score > l2norm_similar_thresh : L2_score <= l2norm_similar_thresh) << "L2norm match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< L2_score <<";Thresh: "<< l2norm_similar_thresh <<").";
     }
+}
+
+TEST(Objdetect_face_recognition, match_does_not_modify_input)
+{
+    std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
+    Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
+
+    // match() is declared const and takes both features as InputArray, so it must leave
+    // the caller's data untouched.
+    Mat feature1(1, 128, CV_32F), feature2(1, 128, CV_32F);
+    randu(feature1, Scalar::all(-10), Scalar::all(10));
+    randu(feature2, Scalar::all(-10), Scalar::all(10));
+    Mat expected1 = feature1.clone(), expected2 = feature2.clone();
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_COSINE);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_COSINE changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_COSINE changed input 2";
+
+    faceRecognizer->match(feature1, feature2, FaceRecognizerSF::DisType::FR_NORM_L2);
+    EXPECT_EQ(0, cvtest::norm(expected1, feature1, NORM_INF)) << "FR_NORM_L2 changed input 1";
+    EXPECT_EQ(0, cvtest::norm(expected2, feature2, NORM_INF)) << "FR_NORM_L2 changed input 2";
 }
 
 }} // namespace

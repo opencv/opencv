@@ -1,4 +1,41 @@
 #!/usr/bin/env python
+""" Test runner and results collector for OpenCV
+
+This script abstracts execution procedure for OpenCV tests. Target scenario: running automated tests
+in a continuous integration system.
+See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+### Main features
+
+- Collect test executables, distinguish between accuracy and performance, main and contrib test sets
+- Pass through common GTest and OpenCV test options and handle some of them internally
+- Set up testing environment and handle some OpenCV-specific environment variables
+- Test Java and Python bindings
+- Test on remote android device
+- Support valgrind, qemu wrapping and trace collection
+
+### Main options
+
+-t MODULES, --tests MODULES         - Comma-separated list of modules to test (example: -t core,imgproc,java)
+-b MODULES, --blacklist MODULES     - Comma-separated list of modules to exclude from test (example: -b java)
+-a, --accuracy                      - Look for accuracy tests instead of performance tests
+--check                             - Shortcut for '--perf_min_samples=1 --perf_force_samples=1'
+-w PATH, --cwd PATH                 - Working directory for tests (default is current)
+-n, --dry_run                       - Do not run anything
+-v, --verbose                       - Print more debug information
+
+### Example
+
+./run.py -a -t core --gtest_filter=*CopyTo*
+
+Run: /work/build-opencv/bin/opencv_test_core --gtest_filter=*CopyTo* --gtest_output=xml:core_20221017-195300.xml --gtest_color=yes
+CTEST_FULL_OUTPUT
+...
+regular test output
+...
+[  PASSED  ] 113 tests.
+Collected: ['core_20221017-195300.xml']
+"""
 
 import os
 import argparse

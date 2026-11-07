@@ -56,6 +56,30 @@ foreach(m ${OPENCV_JAVA_MODULES})
   ocv_remap_files(misc_files)
 endforeach(m)
 
+include("${OpenCV_SOURCE_DIR}/cmake/OpenCVBindingsPreprocessorDefinitions.cmake")
+ocv_bindings_generator_populate_preprocessor_definitions(
+  OPENCV_MODULES_BUILD
+  opencv_preprocessor_defs
+)
+
+if(OPENCV_JAVA_CLEANING_API)
+  if(OPENCV_JAVA_CLEANING_API STREQUAL "finalize")
+    set(opencv_supported_cleaners "false")
+  elseif(OPENCV_JAVA_CLEANING_API STREQUAL "cleaner")
+    set(opencv_supported_cleaners "true")
+  else()
+    message(FATAL_ERROR "OPENCV_JAVA_CLEANING_API should be one of \"finalize\" or \"cleaner\"")
+  endif()
+else()
+  if(ANDROID OR (Java_VERSION VERSION_LESS 9))
+    message(STATUS "Set Cleaners to False")
+    set(opencv_supported_cleaners "false")
+  else()
+  message(STATUS "Set Cleaners to True")
+    set(opencv_supported_cleaners "true")
+  endif()
+endif(OPENCV_JAVA_CLEANING_API)
+
 set(CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/gen_java.json")
 set(__config_str
 "{
@@ -63,9 +87,13 @@ set(__config_str
   \"modules\": [
 ${__modules_config}
   ],
+  \"preprocessor_definitions\": {
+${opencv_preprocessor_defs}
+  },
   \"files_remap\": [
 ${__remap_config}
-  ]
+  ],
+  \"support_cleaners\": ${opencv_supported_cleaners}
 }
 ")
 if(EXISTS "${CONFIG_FILE}")

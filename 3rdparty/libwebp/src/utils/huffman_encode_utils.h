@@ -35,10 +35,10 @@ typedef struct {
 
 // Struct to represent the Huffman tree.
 typedef struct {
-  uint32_t total_count_;   // Symbol frequency.
-  int value_;              // Symbol value.
-  int pool_index_left_;    // Index for the left sub-tree.
-  int pool_index_right_;   // Index for the right sub-tree.
+  uint32_t total_count;   // Symbol frequency.
+  int value;              // Symbol value.
+  int pool_index_left;    // Index for the left sub-tree.
+  int pool_index_right;   // Index for the right sub-tree.
 } HuffmanTree;
 
 // Turn the Huffman tree into a token sequence.
@@ -51,7 +51,7 @@ int VP8LCreateCompressedHuffmanTree(const HuffmanTreeCode* const tree,
 // huffman code tree.
 void VP8LCreateHuffmanTree(uint32_t* const histogram, int tree_depth_limit,
                            uint8_t* const buf_rle, HuffmanTree* const huff_tree,
-                           HuffmanTreeCode* const tree);
+                           HuffmanTreeCode* const huff_code);
 
 #ifdef __cplusplus
 }

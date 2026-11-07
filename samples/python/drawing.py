@@ -58,7 +58,7 @@ def ellipse():
     for i in range(NUMBER*2):
         center = []
         center.append(np.random.randint(x1, x2))
-        center.append(np.random.randint(x1, x2))
+        center.append(np.random.randint(y1, y2))
         axes = []
         axes.append(np.random.randint(0, 200))
         axes.append(np.random.randint(0, 200))
@@ -136,7 +136,7 @@ def circles():
     for i in range(NUMBER):
         center = []
         center.append(np.random.randint(x1, x2))
-        center.append(np.random.randint(x1, x2))
+        center.append(np.random.randint(y1, y2))
         color = "%06x" % np.random.randint(0, 0xFFFFFF)
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
         cv.circle(image, tuple(center), np.random.randint(0, 300), color, np.random.randint(-1, 9), lineType)
@@ -149,7 +149,7 @@ def string():
     for i in range(NUMBER):
         org = []
         org.append(np.random.randint(x1, x2))
-        org.append(np.random.randint(x1, x2))
+        org.append(np.random.randint(y1, y2))
         color = "%06x" % np.random.randint(0, 0xFFFFFF)
         color = tuple(int(color[i:i+2], 16) for i in (0, 2 ,4))
         cv.putText(image, "Testing text rendering", tuple(org), np.random.randint(0, 8), np.random.randint(0, 100)*0.05+0.1, color, np.random.randint(1, 10), lineType)

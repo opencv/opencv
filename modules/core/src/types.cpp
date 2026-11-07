@@ -79,12 +79,11 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
         for( size_t i = 0; i < keypointIndexes.size(); i++ )
         {
             int idx = keypointIndexes[i];
-            if( idx >= 0 )
+            if( idx >= 0 && static_cast<size_t>(idx) < keypoints.size() )
                 points2f[i] = keypoints[idx].pt;
             else
             {
-                CV_Error( CV_StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
-                //points2f[i] = Point2f(-1, -1);
+                CV_Error( cv::Error::StsBadArg, "keypointIndexes has element out of range" );
             }
         }
     }
@@ -176,14 +175,23 @@ void RotatedRect::points(Point2f pt[]) const
     float b = (float)cos(_angle)*0.5f;
     float a = (float)sin(_angle)*0.5f;
 
-    pt[0].x = center.x - a*size.height - b*size.width;
-    pt[0].y = center.y + b*size.height - a*size.width;
-    pt[1].x = center.x + a*size.height - b*size.width;
-    pt[1].y = center.y - b*size.height - a*size.width;
-    pt[2].x = 2*center.x - pt[0].x;
-    pt[2].y = 2*center.y - pt[0].y;
-    pt[3].x = 2*center.x - pt[1].x;
-    pt[3].y = 2*center.y - pt[1].y;
+    const float ah = a*size.height;
+    const float aw = a*size.width;
+    const float bh = b*size.height;
+    const float bw = b*size.width;
+    pt[0].x = center.x - ah - bw;
+    pt[0].y = center.y + bh - aw;
+    pt[1].x = center.x + ah - bw;
+    pt[1].y = center.y - bh - aw;
+    pt[2].x = center.x + ah + bw;
+    pt[2].y = center.y - bh + aw;
+    pt[3].x = center.x - ah + bw;
+    pt[3].y = center.y + bh + aw;
+}
+
+void RotatedRect::points(std::vector<Point2f>& pts) const {
+    pts.resize(4);
+    points(pts.data());
 }
 
 Rect RotatedRect::boundingRect() const

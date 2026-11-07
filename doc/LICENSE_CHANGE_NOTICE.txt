@@ -1,4 +1,4 @@
-Starting from OpenCV 4.5-pre (2020 August) OpenCV has changed the license from BSD to Apache 2. See https://opencv.org/opencv-is-to-change-the-license-to-apache-2/ and https://github.com/opencv/opencv/wiki/OE-32.--Change-OpenCV-License-to-Apache-2 for details.
+Starting from OpenCV 4.5-pre (2020 August) OpenCV has changed the license from BSD to Apache 2. See https://opencv.org/blog/opencv-is-to-change-the-license-to-apache-2/ and https://github.com/opencv/opencv/wiki/OE-32.--Change-OpenCV-License-to-Apache-2 for details.
 
 Here is the original OpenCV license:
 ------------------------------------------------------------------------------------

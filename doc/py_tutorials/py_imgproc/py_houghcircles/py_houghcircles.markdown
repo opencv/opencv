@@ -23,7 +23,8 @@ explained in the documentation. So we directly go to the code.
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('opencv-logo-white.png',0)
+img = cv.imread('opencv-logo-white.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 img = cv.medianBlur(img,5)
 cimg = cv.cvtColor(img,cv.COLOR_GRAY2BGR)
 
@@ -44,9 +45,3 @@ cv.destroyAllWindows()
 Result is shown below:
 
 ![image](images/houghcircles2.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

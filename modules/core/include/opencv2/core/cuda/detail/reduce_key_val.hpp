@@ -177,6 +177,8 @@ namespace cv { namespace cuda { namespace device
         {
             data = smem[tid];
         }
+
+#if (CUDART_VERSION < 12040)
         template <typename VP0, typename VP1, typename VP2, typename VP3, typename VP4, typename VP5, typename VP6, typename VP7, typename VP8, typename VP9,
                   typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9>
         __device__ __forceinline__ void loadToSmem(const thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9>& smem,
@@ -193,9 +195,18 @@ namespace cv { namespace cuda { namespace device
         {
             For<0, thrust::tuple_size<thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9> >::value>::loadFromSmem(smem, data, tid);
         }
-
-        //////////////////////////////////////////////////////
-        // copyVals
+#else
+        template <typename... VP, typename... VR>
+        __device__ __forceinline__ void loadToSmem(const thrust::tuple<VP...>& smem, const thrust::tuple<VR...>& data, unsigned int tid)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VP...> >::value>::loadToSmem(smem, data, tid);
+        }
+        template <typename... VP, typename... VR>
+        __device__ __forceinline__ void loadFromSmem(const thrust::tuple<VP...>& smem, const thrust::tuple<VR...>& data, unsigned int tid)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VP...> >::value>::loadFromSmem(smem, data, tid);
+        }
+#endif
 
         template <typename V>
         __device__ __forceinline__ void copyValsShfl(V& val, unsigned int delta, int width)
@@ -207,24 +218,6 @@ namespace cv { namespace cuda { namespace device
         {
             svals[tid] = val = svals[tid + delta];
         }
-        template <typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9>
-        __device__ __forceinline__ void copyValsShfl(const thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9>& val,
-                                                     unsigned int delta,
-                                                     int width)
-        {
-            For<0, thrust::tuple_size<thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9> >::value>::copyShfl(val, delta, width);
-        }
-        template <typename VP0, typename VP1, typename VP2, typename VP3, typename VP4, typename VP5, typename VP6, typename VP7, typename VP8, typename VP9,
-                  typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9>
-        __device__ __forceinline__ void copyVals(const thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9>& svals,
-                                                 const thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9>& val,
-                                                 unsigned int tid, unsigned int delta)
-        {
-            For<0, thrust::tuple_size<thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9> >::value>::copy(svals, val, tid, delta);
-        }
-
-        //////////////////////////////////////////////////////
-        // merge
 
         template <typename K, typename V, class Cmp>
         __device__ __forceinline__ void mergeShfl(K& key, V& val, const Cmp& cmp, unsigned int delta, int width)
@@ -248,6 +241,24 @@ namespace cv { namespace cuda { namespace device
                 copyVals(svals, val, tid, delta);
             }
         }
+
+#if (CUDART_VERSION < 12040) // details: https://github.com/opencv/opencv_contrib/issues/3690
+        template <typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9>
+        __device__ __forceinline__ void copyValsShfl(const thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9>& val,
+                                                     unsigned int delta,
+                                                     int width)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9> >::value>::copyShfl(val, delta, width);
+        }
+        template <typename VP0, typename VP1, typename VP2, typename VP3, typename VP4, typename VP5, typename VP6, typename VP7, typename VP8, typename VP9,
+                  typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9>
+        __device__ __forceinline__ void copyVals(const thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9>& svals,
+                                                 const thrust::tuple<VR0, VR1, VR2, VR3, VR4, VR5, VR6, VR7, VR8, VR9>& val,
+                                                 unsigned int tid, unsigned int delta)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9> >::value>::copy(svals, val, tid, delta);
+        }
+
         template <typename K,
                   typename VR0, typename VR1, typename VR2, typename VR3, typename VR4, typename VR5, typename VR6, typename VR7, typename VR8, typename VR9,
                   class Cmp>
@@ -305,7 +316,61 @@ namespace cv { namespace cuda { namespace device
         {
             For<0, thrust::tuple_size<thrust::tuple<VP0, VP1, VP2, VP3, VP4, VP5, VP6, VP7, VP8, VP9> >::value>::merge(skeys, key, svals, val, cmp, tid, delta);
         }
+#else
+        template <typename... VR>
+        __device__ __forceinline__ void copyValsShfl(const thrust::tuple<VR...>& val, unsigned int delta, int width)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VR...> >::value>::copyShfl(val, delta, width);
+        }
+        template <typename... VP, typename... VR>
+        __device__ __forceinline__ void copyVals(const thrust::tuple<VP...>& svals, const thrust::tuple<VR...>& val, unsigned int tid, unsigned int delta)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VP...> >::value>::copy(svals, val, tid, delta);
+        }
 
+        template <typename K, typename... VR, class Cmp>
+        __device__ __forceinline__ void mergeShfl(K& key, const thrust::tuple<VR...>& val, const Cmp& cmp, unsigned int delta, int width)
+        {
+            K reg = shfl_down(key, delta, width);
+
+            if (cmp(reg, key))
+            {
+                key = reg;
+                copyValsShfl(val, delta, width);
+            }
+        }
+        template <typename K, typename... VP, typename... VR, class Cmp>
+        __device__ __forceinline__ void merge(volatile K* skeys, K& key, const thrust::tuple<VP...>& svals,
+                                              const thrust::tuple<VR...>& val, const Cmp& cmp, unsigned int tid, unsigned int delta)
+        {
+            K reg = skeys[tid + delta];
+
+            if (cmp(reg, key))
+            {
+                skeys[tid] = key = reg;
+                copyVals(svals, val, tid, delta);
+            }
+        }
+        template <typename... KR, typename... VR, class... Cmp>
+        __device__ __forceinline__ void mergeShfl(const thrust::tuple<KR...>& key,
+                                                  const thrust::tuple<VR...>& val,
+                                                  const thrust::tuple<Cmp...>& cmp,
+                                                  unsigned int delta, int width)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<KR...> >::value>::mergeShfl(key, val, cmp, delta, width);
+        }
+        template <typename... KP, typename... KR, typename... VP, typename... VR, class... Cmp>
+        __device__ __forceinline__ void merge(const thrust::tuple<KP...>& skeys,
+                                              const thrust::tuple<KR...>& key,
+                                              const thrust::tuple<VP...>& svals,
+                                              const thrust::tuple<VR...>& val,
+                                              const thrust::tuple<Cmp...>& cmp,
+                                              unsigned int tid, unsigned int delta)
+        {
+            For<0, thrust::tuple_size<thrust::tuple<VP...> >::value>::merge(skeys, key, svals, val, cmp, tid, delta);
+        }
+
+#endif
         //////////////////////////////////////////////////////
         // Generic
 

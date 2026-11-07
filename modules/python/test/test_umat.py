@@ -107,11 +107,18 @@ class UMat(NewOpenCVTests):
 
         images, _ = load_exposure_seq(os.path.join(test_data_path, 'exposures'))
 
+        # As we want to test mat vs. umat here, we temporarily set only one worker-thread to achieve
+        # deterministic summations inside mertens' parallelized process.
+        num_threads = cv.getNumThreads()
+        cv.setNumThreads(1)
+
         merge = cv.createMergeMertens()
         mat_result = merge.process(images)
 
         umat_images = [cv.UMat(img) for img in images]
         umat_result = merge.process(umat_images)
+
+        cv.setNumThreads(num_threads)
 
         self.assertTrue(np.allclose(umat_result.get(), mat_result))
 

@@ -91,8 +91,8 @@ TEST(Calib3d_EstimateTranslation3D, testNPoints)
         << "aff est: " << trans_est << endl
         << "aff ref: " << trans;
 
-    bool outl_good = count(outl.begin(), outl.end(), 1) == m &&
-        m == accumulate(outl.begin(), outl.begin() + m, 0);
+    bool outl_good = std::count(outl.begin(), outl.end(), 1) == m &&
+        m == std::accumulate(outl.begin(), outl.begin() + m, 0);
 
     EXPECT_TRUE(outl_good);
 }

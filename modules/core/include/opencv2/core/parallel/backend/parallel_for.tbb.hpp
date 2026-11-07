@@ -13,7 +13,7 @@
 #endif
 #include "tbb/tbb.h"
 #if !defined(TBB_INTERFACE_VERSION)
-#error "Unknows/unsupported TBB version"
+#error "Unknown/unsupported TBB version"
 #endif
 
 #if TBB_INTERFACE_VERSION >= 8000

@@ -18,6 +18,7 @@
 
 #include <windows.h>
 #include <guiddef.h>
+#include <initguid.h>
 #include <mfidl.h>
 #include <mfapi.h>
 #include <mfplay.h>
@@ -29,6 +30,7 @@
 #ifdef HAVE_MSMF_DXVA
 #include <d3d11.h>
 #include <d3d11_4.h>
+#include <locale>
 #endif
 #include <new>
 #include <map>
@@ -37,6 +39,7 @@
 #include <string>
 #include <algorithm>
 #include <deque>
+#include <iterator>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -157,6 +160,11 @@ private:
 #define _ComPtr ComPtr
 
 template <typename T> inline T absDiff(T a, T b) { return a >= b ? a - b : b - a; }
+
+// synonym for system MFVideoFormat_D16. D3DFMT_D16 = 80
+// added to fix builds with old MSVS and platform SDK
+// see https://learn.microsoft.com/en-us/windows/win32/medfound/video-subtype-guids#luminance-and-depth-formats
+DEFINE_MEDIATYPE_GUID( OCV_MFVideoFormat_D16, 80 );
 
 //==================================================================================================
 
@@ -347,6 +355,10 @@ struct MediaType
         }
         return false;
     }
+    bool VideoIsAvailable() const
+    {
+        return (subType != OCV_MFVideoFormat_D16);
+    }
 };
 
 void printFormat(std::ostream& out, const GUID& fmt)
@@ -436,50 +448,68 @@ public:
 
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
     {
-        HRESULT hr = 0;
-        cv::AutoLock lock(m_mutex);
-
-        if (SUCCEEDED(hrStatus))
+        HRESULT hr = S_OK;
+        try
         {
-            if (pSample)
+            cv::AutoLock lock(m_mutex);
+
+            if (SUCCEEDED(hrStatus))
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
-                if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                if (pSample)
                 {
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+                    if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                    {
 #if 0
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
-                    m_capturedFrames.pop();
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
+                        m_capturedFrames.pop();
 #else
-                    // this branch reduces latency if we drop frames due to slow processing.
-                    // avoid fetching of already outdated frames from the queue's front.
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
-                    std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
+
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
+                        std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
 #endif
+                    }
+                    m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
                 }
-                m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            }
+            if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+            {
+                // Reached the end of the stream.
+                m_bEOS = true;
+            }
+            m_hrStatus = hrStatus;
+
+            if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+                m_bEOS = true;
+            }
+
+            if (pSample || m_bEOS)
+            {
+                SetEvent(m_hEvent);
             }
         }
-        else
+        catch (const _com_error& e)
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            std::string msg;
+#ifdef _UNICODE
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+            msg = conv.to_bytes(e.ErrorMessage());
+#else
+            msg = std::string(e.ErrorMessage());
+#endif
+            CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error in OnReadSample: " << msg);
+            return S_OK; // Keep callback alive
         }
-
-        if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+        catch (...)
         {
-            // Reached the end of the stream.
-            m_bEOS = true;
-        }
-        m_hrStatus = hrStatus;
-
-        if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
-            m_bEOS = true;
-        }
-
-        if (pSample || m_bEOS)
-        {
-            SetEvent(m_hEvent);
+            CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception in OnReadSample");
+            return S_OK;
         }
         return S_OK;
     }
@@ -536,6 +566,8 @@ private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
     {
+        if (m_hEvent)
+            CloseHandle(m_hEvent);
         CV_LOG_INFO(NULL, "terminating async callback");
     }
 
@@ -627,7 +659,7 @@ public:
         {
             if (i->second.majorType == MFMediaType_Video)
             {
-                if (best.second.isEmpty() || i->second.VideoIsBetterThan(best.second, newType))
+                if (best.second.isEmpty() || (i->second.VideoIsBetterThan(best.second, newType) && i->second.VideoIsAvailable()))
                 {
                     best = *i;
                 }
@@ -695,7 +727,7 @@ public:
         if (FAILED(MFCreateAttributes(&attr, 1)) ||
             FAILED(attr->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, sourceType)))
         {
-            CV_Error(CV_StsError, "Failed to create attributes");
+            CV_Error(cv::Error::StsError, "Failed to create attributes");
         }
         if (FAILED(MFEnumDeviceSources(attr.Get(), &devices, &count)))
         {
@@ -734,7 +766,7 @@ public:
     virtual ~CvCapture_MSMF();
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
-    virtual bool open(const cv::String&, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, const Ptr<IStreamReader>&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -746,7 +778,7 @@ public:
     bool retrieveVideoFrame(OutputArray);
     virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
+    virtual int getCaptureDomain() CV_OVERRIDE { return CAP_MSMF; }
 protected:
     bool configureOutput();
     bool configureAudioOutput(MediaType newType);
@@ -759,7 +791,7 @@ protected:
     bool checkAudioProperties();
 
     template <typename CtrlT>
-    bool readComplexPropery(long prop, long& val) const;
+    bool readComplexProperty(long prop, long& val) const;
     template <typename CtrlT>
     bool writeComplexProperty(long prop, double val, long flags);
     _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
@@ -777,6 +809,7 @@ protected:
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
+    _ComPtr<IMFByteStream> byteStream;
     _ComPtr<IMFSourceReader> videoFileSource;
     _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
     std::vector<DWORD> dwStreamIndices;
@@ -949,14 +982,14 @@ _ComPtr<IMFAttributes> CvCapture_MSMF::getDefaultSourceConfig(UINT32 num)
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
         )
     {
-        CV_Error(CV_StsError, "Failed to create attributes");
+        CV_Error(cv::Error::StsError, "Failed to create attributes");
     }
 #ifdef HAVE_MSMF_DXVA
     if (D3DMgr)
     {
         if (FAILED(res->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get())))
         {
-            CV_Error(CV_StsError, "Failed to create attributes");
+            CV_Error(cv::Error::StsError, "Failed to create attributes");
         }
     }
 #endif
@@ -1022,7 +1055,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
                             }
                         }
                         // Reopen if needed
-                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
+                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
                     }
                     D3DMgr.Release();
                 }
@@ -1038,7 +1071,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Release();
         captureMode = MODE_SW;
-        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
     }
 #else
     return !enable;
@@ -1152,7 +1185,12 @@ bool CvCapture_MSMF::configureVideoOutput(MediaType newType, cv::uint32_t outFor
     {
         initStream(dwVideoStreamIndex, nativeFormat);
     }
-    return initStream(dwVideoStreamIndex, newFormat);
+    if (!initStream(dwVideoStreamIndex, newFormat))
+    {
+        return false;
+    }
+    outputVideoFormat = outFormat;
+    return true;
 }
 
 bool CvCapture_MSMF::configureOutput()
@@ -1232,10 +1270,10 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCaptureParameters* params)
+bool CvCapture_MSMF::open(const cv::String& _filename, const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters* params)
 {
     close();
-    if (_filename.empty())
+    if (_filename.empty() && !stream)
         return false;
 
     if (params)
@@ -1246,9 +1284,34 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
     }
     // Set source reader parameters
     _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
-    cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
-    MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
-    if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource)))
+    bool succeeded = false;
+    if (!_filename.empty())
+    {
+        cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
+        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
+        succeeded = SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource));
+    }
+    else if (stream)
+    {
+        // TODO: implement read by chunks
+        // FIXIT: save stream in field
+        std::vector<char> data;
+        data.resize((size_t)stream->seek(0, SEEK_END));
+        stream->seek(0, SEEK_SET);
+        stream->read(data.data(), data.size());
+        IStream* s = SHCreateMemStream(reinterpret_cast<const BYTE*>(data.data()), static_cast<UINT32>(data.size()));
+        if (!s)
+            return false;
+
+        succeeded = SUCCEEDED(MFCreateMFByteStreamOnStream(s, &byteStream));
+        if (!succeeded)
+            return false;
+        if (!SUCCEEDED(MFStartup(MF_VERSION)))
+            return false;
+        succeeded = SUCCEEDED(MFCreateSourceReaderFromByteStream(byteStream.Get(), attr.Get(), &videoFileSource));
+    }
+
+    if (succeeded)
     {
         isOpen = true;
         usedVideoSampleTime = 0;
@@ -1327,9 +1390,9 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
 {
     if (params.has(CAP_PROP_VIDEO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_VIDEO_STREAM);
+        int value = params.get<int>(CAP_PROP_VIDEO_STREAM);
         if (value == -1 || value == 0)
-            videoStream = static_cast<int>(value);
+            videoStream = value;
         else
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
@@ -1338,8 +1401,8 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
     }
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
+        int value = params.get<int>(CAP_PROP_AUDIO_STREAM);
+        if (value == -1 || value >= 0)
             audioStream = static_cast<int>(value);
         else
         {
@@ -1353,7 +1416,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
 {
     if (params.has(CAP_PROP_AUDIO_DATA_DEPTH))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
+        int value = params.get<int>(CAP_PROP_AUDIO_DATA_DEPTH);
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
@@ -1366,10 +1429,11 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
-        if (value < 0)
+        static const int MSMF_MAX_AUDIO_SAMPLES_PER_SECOND = 384000; // highest rate used by real PCM audio hardware
+        int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
+        if (value < 0 || value > MSMF_MAX_AUDIO_SAMPLES_PER_SECOND)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << value);
             return false;
         }
         else
@@ -1379,8 +1443,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
     {
-        int value = static_cast<UINT32>(params.get<double>(CAP_PROP_AUDIO_SYNCHRONIZE));
-        syncLastFrame = (value != 0) ? true : false;
+        syncLastFrame = params.get<bool>(CAP_PROP_AUDIO_SYNCHRONIZE);
     }
     return true;
 }
@@ -1526,6 +1589,7 @@ bool CvCapture_MSMF::configureAudioFrame()
 {
     if (!audioSamples.empty() || !bufferAudioData.empty() && aEOS)
     {
+        const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
         _ComPtr<IMFMediaBuffer> buf = NULL;
         std::vector<BYTE> audioDataInUse;
         BYTE* ptr = NULL;
@@ -1558,22 +1622,23 @@ bool CvCapture_MSMF::configureAudioFrame()
         }
         audioSamples.clear();
 
-        audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
-        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*captureAudioFormat.nChannels*(captureAudioFormat.bit_per_sample)/8)/1e7) : cursize;
-        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
+        audioSamplePos += chunkLengthOfBytes/bytesPerSample;
+        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*bytesPerSample)/1e7) : cursize;
+        if ((videoStream != -1) && (chunkLengthOfBytes % bytesPerSample != 0))
         {
             if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
                 chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
-            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
-                                        - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
+                numberOfAdditionalAudioBytes = bytesPerSample - chunkLengthOfBytes % bytesPerSample;
             chunkLengthOfBytes += numberOfAdditionalAudioBytes;
         }
         if (lastFrame && !syncLastFrame || aEOS && !vEOS)
         {
             chunkLengthOfBytes = bufferAudioData.size();
-            audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
+            audioSamplePos += chunkLengthOfBytes/bytesPerSample;
         }
-        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
+        if ((LONGLONG)bufferAudioData.size() < chunkLengthOfBytes)
+            chunkLengthOfBytes = (LONGLONG)bufferAudioData.size();
+        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN && chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
         copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
         bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
         if (audioFrame.empty())
@@ -1665,7 +1730,7 @@ bool CvCapture_MSMF::grabAudioFrame()
             else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
             {
                 aEOS = true;
-                if (videoStream != -1 && !vEOS)
+                if (videoStream != -1)
                     returnFlag = true;
                 if (videoStream == -1)
                     audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
@@ -1715,81 +1780,108 @@ bool CvCapture_MSMF::grabFrame()
 {
     CV_TRACE_FUNCTION();
 
-    if (grabIsDone)
+    try
     {
-        grabIsDone = false;
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-
-    audioFrame = Mat();
-    if (readCallback)  // async "live" capture mode
-    {
-        audioSamples.push_back(NULL);
-        HRESULT hr = 0;
-        SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
-        DWORD dwStreamIndex = 0;
-        if (videoStream != -1)
-            dwStreamIndex = dwVideoStreamIndex;
-        if (audioStream != -1)
-            dwStreamIndex = dwAudioStreamIndex;
-        if (!reader->m_reader)
+        if (grabIsDone)
         {
-            // Initiate capturing with async callback
-            reader->m_reader = videoFileSource.Get();
-            reader->m_dwStreamIndex = dwStreamIndex;
-            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            grabIsDone = false;
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+
+        audioFrame = Mat();
+        if (readCallback)  // async "live" capture mode
+        {
+            audioSamples.push_back(NULL);
+            HRESULT hr = 0;
+            SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
+            DWORD dwStreamIndex = 0;
+            if (videoStream != -1)
+                dwStreamIndex = dwVideoStreamIndex;
+            if (audioStream != -1)
+                dwStreamIndex = dwAudioStreamIndex;
+            if (!reader->m_reader)
             {
-                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
-                reader->m_reader = NULL;
+                // Initiate capturing with async callback
+                reader->m_reader = videoFileSource.Get();
+                reader->m_dwStreamIndex = dwStreamIndex;
+                if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+                {
+                    CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                    reader->m_reader = NULL;
+                    return false;
+                }
+            }
+            BOOL bEOS = false;
+            LONGLONG timestamp = 0;
+            if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
                 return false;
             }
-        }
-        BOOL bEOS = false;
-        LONGLONG timestamp = 0;
-        if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
-            return false;
-        }
-        if (bEOS)
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
-            return false;
-        }
-        if (videoStream != -1)
-            usedVideoSampleTime = timestamp;
-        if (audioStream != -1)
-            return configureAudioFrame();
-
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-    else if (isOpen)
-    {
-        if (vEOS)
-            return false;
-
-        bool returnFlag = true;
-
-        if (videoStream != -1)
-        {
-            if (!vEOS)
-                returnFlag &= grabVideoFrame();
-            if (!returnFlag)
+            if (bEOS)
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
                 return false;
-        }
+            }
+            if (videoStream != -1)
+                usedVideoSampleTime = timestamp;
+            if (audioStream != -1)
+                return configureAudioFrame();
 
-        if (audioStream != -1)
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+        else if (isOpen)
         {
-            bufferedAudioDuration = (double)(bufferAudioData.size()/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels))/captureAudioFormat.nSamplesPerSec;
-            audioFrame.release();
-            if (!aEOS)
-                returnFlag &= grabAudioFrame();
-        }
+            if (vEOS)
+                return false;
 
-        return returnFlag;
+            bool returnFlag = true;
+
+            if (videoStream != -1)
+            {
+                if (!vEOS)
+                    returnFlag &= grabVideoFrame();
+                if (!returnFlag)
+                    return false;
+            }
+
+            if (audioStream != -1)
+            {
+                const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
+                bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
+                audioFrame.release();
+                if (!aEOS)
+                    returnFlag &= grabAudioFrame();
+            }
+
+            return returnFlag;
+        }
     }
+    catch (const _com_error& e)
+    {
+        std::string msg;
+#ifdef _UNICODE
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+        msg = conv.to_bytes(e.ErrorMessage());
+#else
+        msg = std::string(e.ErrorMessage());
+#endif
+        CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error caught in grabFrame: " << msg);
+        return false;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): std::exception caught in grabFrame: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception caught in grabFrame");
+        return false;
+    }
+
     return false;
 }
 
@@ -2032,7 +2124,7 @@ bool CvCapture_MSMF::setTime(int numberFrame)
 }
 
 template <typename CtrlT>
-bool CvCapture_MSMF::readComplexPropery(long prop, long & val) const
+bool CvCapture_MSMF::readComplexProperty(long prop, long & val) const
 {
     _ComPtr<CtrlT> ctrl;
     if (FAILED(videoFileSource->GetServiceForStream((DWORD)MF_SOURCE_READER_MEDIASOURCE, GUID_NULL, IID_PPV_ARGS(&ctrl))))
@@ -2063,131 +2155,131 @@ double CvCapture_MSMF::getProperty( int property_id ) const
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_MODE:
+        case CAP_PROP_MODE:
             return captureMode;
         case cv::CAP_PROP_HW_DEVICE:
             return hwDeviceIndex;
         case cv::CAP_PROP_HW_ACCELERATION:
             return static_cast<double>(va_type);
-        case CV_CAP_PROP_CONVERT_RGB:
+        case CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
-        case CV_CAP_PROP_SAR_NUM:
+        case CAP_PROP_SAR_NUM:
                 return captureVideoFormat.aspectRatioNum;
-        case CV_CAP_PROP_SAR_DEN:
+        case CAP_PROP_SAR_DEN:
                 return captureVideoFormat.aspectRatioDenom;
-        case CV_CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_WIDTH:
             return captureVideoFormat.width;
-        case CV_CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FRAME_HEIGHT:
             return captureVideoFormat.height;
-        case CV_CAP_PROP_FOURCC:
+        case CAP_PROP_FOURCC:
             return captureVideoFormat.subType.Data1;
-        case CV_CAP_PROP_FPS:
+        case CAP_PROP_FPS:
             return captureVideoFormat.getFramerate();
-        case CV_CAP_PROP_FRAME_COUNT:
+        case CAP_PROP_FRAME_COUNT:
             if (duration != 0)
                 return floor(((double)duration / 1e7)* captureVideoFormat.getFramerate() + 0.5);
             else
                 break;
-        case CV_CAP_PROP_POS_FRAMES:
+        case CAP_PROP_POS_FRAMES:
             return (double)nFrame;
-        case CV_CAP_PROP_POS_MSEC:
+        case CAP_PROP_POS_MSEC:
             return (double)usedVideoSampleTime / 1e4;
         case CAP_PROP_AUDIO_POS:
             return (double)audioSamplePos;
-        case CV_CAP_PROP_POS_AVI_RATIO:
+        case CAP_PROP_POS_AVI_RATIO:
             if (duration != 0)
                 return (double)usedVideoSampleTime / duration;
             else
                 break;
-        case CV_CAP_PROP_BRIGHTNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
+        case CAP_PROP_BRIGHTNESS:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_CONTRAST:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
+        case CAP_PROP_CONTRAST:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_SATURATION:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
+        case CAP_PROP_SATURATION:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_HUE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
+        case CAP_PROP_HUE:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_GAIN:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
+        case CAP_PROP_GAIN:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_SHARPNESS:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
+        case CAP_PROP_SHARPNESS:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_GAMMA:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
+        case CAP_PROP_GAMMA:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_BACKLIGHT:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
+        case CAP_PROP_BACKLIGHT:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_MONOCHROME:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
+        case CAP_PROP_MONOCHROME:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
                 return cVal == 0 ? 1 : 0;
             break;
-        case CV_CAP_PROP_TEMPERATURE:
-            if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
+        case CAP_PROP_TEMPERATURE:
+            if (readComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_PAN:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Pan, cVal))
+        case CAP_PROP_PAN:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Pan, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_TILT:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Tilt, cVal))
+        case CAP_PROP_TILT:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Tilt, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_ROLL:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Roll, cVal))
+        case CAP_PROP_ROLL:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Roll, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_IRIS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Iris, cVal))
+        case CAP_PROP_IRIS:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Iris, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_EXPOSURE:
-        case CV_CAP_PROP_AUTO_EXPOSURE:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Exposure, cVal))
+        case CAP_PROP_EXPOSURE:
+        case CAP_PROP_AUTO_EXPOSURE:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Exposure, cVal))
             {
-                if (property_id == CV_CAP_PROP_EXPOSURE)
+                if (property_id == CAP_PROP_EXPOSURE)
                     return cVal;
                 else
                     return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
-        case CV_CAP_PROP_ZOOM:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Zoom, cVal))
+        case CAP_PROP_ZOOM:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Zoom, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_FOCUS:
-        case CV_CAP_PROP_AUTOFOCUS:
-            if (readComplexPropery<IAMCameraControl>(CameraControl_Focus, cVal))
+        case CAP_PROP_FOCUS:
+        case CAP_PROP_AUTOFOCUS:
+            if (readComplexProperty<IAMCameraControl>(CameraControl_Focus, cVal))
             {
-                if (property_id == CV_CAP_PROP_FOCUS)
+                if (property_id == CAP_PROP_FOCUS)
                     return cVal;
                 else
                     return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
-        case CV_CAP_PROP_RECTIFICATION:
-        case CV_CAP_PROP_TRIGGER:
-        case CV_CAP_PROP_TRIGGER_DELAY:
-        case CV_CAP_PROP_GUID:
-        case CV_CAP_PROP_ISO_SPEED:
-        case CV_CAP_PROP_SETTINGS:
-        case CV_CAP_PROP_BUFFERSIZE:
+        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CAP_PROP_WHITE_BALANCE_RED_V:
+        case CAP_PROP_RECTIFICATION:
+        case CAP_PROP_TRIGGER:
+        case CAP_PROP_TRIGGER_DELAY:
+        case CAP_PROP_GUID:
+        case CAP_PROP_ISO_SPEED:
+        case CAP_PROP_SETTINGS:
+        case CAP_PROP_BUFFERSIZE:
         case CAP_PROP_AUDIO_BASE_INDEX:
             return audioBaseIndex;
         case CAP_PROP_AUDIO_TOTAL_STREAMS:
@@ -2229,7 +2321,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_MODE:
+        case CAP_PROP_MODE:
             switch ((MSMFCapture_Mode)((int)value))
             {
             case MODE_SW:
@@ -2239,107 +2331,107 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
             default:
                 return false;
             }
-        case CV_CAP_PROP_FOURCC:
+        case CAP_PROP_FOURCC:
             return configureVideoOutput(newFormat, (int)cvRound(value));
-        case CV_CAP_PROP_FORMAT:
+        case CAP_PROP_FORMAT:
             return configureVideoOutput(newFormat, (int)cvRound(value));
-        case CV_CAP_PROP_CONVERT_RGB:
+        case CAP_PROP_CONVERT_RGB:
             convertFormat = (value != 0);
             return configureVideoOutput(newFormat, outputVideoFormat);
-        case CV_CAP_PROP_SAR_NUM:
+        case CAP_PROP_SAR_NUM:
             if (value > 0)
             {
                 newFormat.aspectRatioNum = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_SAR_DEN:
+        case CAP_PROP_SAR_DEN:
             if (value > 0)
             {
                 newFormat.aspectRatioDenom = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_WIDTH:
             if (value >= 0)
             {
                 newFormat.width = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FRAME_HEIGHT:
             if (value >= 0)
             {
                 newFormat.height = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FPS:
+        case CAP_PROP_FPS:
             if (value >= 0)
             {
                 newFormat.setFramerate(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_COUNT:
+        case CAP_PROP_FRAME_COUNT:
             break;
-        case CV_CAP_PROP_POS_AVI_RATIO:
+        case CAP_PROP_POS_AVI_RATIO:
             if (duration != 0)
                 return setTime(duration * value, true);
             break;
-        case CV_CAP_PROP_POS_FRAMES:
+        case CAP_PROP_POS_FRAMES:
             if (std::fabs(captureVideoFormat.getFramerate()) > 0)
                 return setTime((int)value);
             break;
-        case CV_CAP_PROP_POS_MSEC:
+        case CAP_PROP_POS_MSEC:
                 return setTime(value  * 1e4, false);
-        case CV_CAP_PROP_BRIGHTNESS:
+        case CAP_PROP_BRIGHTNESS:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_CONTRAST:
+        case CAP_PROP_CONTRAST:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_SATURATION:
+        case CAP_PROP_SATURATION:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_HUE:
+        case CAP_PROP_HUE:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_GAIN:
+        case CAP_PROP_GAIN:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_SHARPNESS:
+        case CAP_PROP_SHARPNESS:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_GAMMA:
+        case CAP_PROP_GAMMA:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_BACKLIGHT:
+        case CAP_PROP_BACKLIGHT:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_MONOCHROME:
+        case CAP_PROP_MONOCHROME:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_TEMPERATURE:
+        case CAP_PROP_TEMPERATURE:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_PAN:
+        case CAP_PROP_PAN:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Pan, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_TILT:
+        case CAP_PROP_TILT:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Tilt, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_ROLL:
+        case CAP_PROP_ROLL:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Roll, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_IRIS:
+        case CAP_PROP_IRIS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Iris, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_EXPOSURE:
+        case CAP_PROP_EXPOSURE:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_AUTO_EXPOSURE:
+        case CAP_PROP_AUTO_EXPOSURE:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, value != 0 ? VideoProcAmp_Flags_Auto : VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_ZOOM:
+        case CAP_PROP_ZOOM:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Zoom, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_FOCUS:
+        case CAP_PROP_FOCUS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_AUTOFOCUS:
+        case CAP_PROP_AUTOFOCUS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, value != 0 ? CameraControl_Flags_Auto : CameraControl_Flags_Manual);
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
-        case CV_CAP_PROP_RECTIFICATION:
-        case CV_CAP_PROP_TRIGGER:
-        case CV_CAP_PROP_TRIGGER_DELAY:
-        case CV_CAP_PROP_GUID:
-        case CV_CAP_PROP_ISO_SPEED:
-        case CV_CAP_PROP_SETTINGS:
-        case CV_CAP_PROP_BUFFERSIZE:
+        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CAP_PROP_WHITE_BALANCE_RED_V:
+        case CAP_PROP_RECTIFICATION:
+        case CAP_PROP_TRIGGER:
+        case CAP_PROP_TRIGGER_DELAY:
+        case CAP_PROP_GUID:
+        case CAP_PROP_ISO_SPEED:
+        case CAP_PROP_SETTINGS:
+        case CAP_PROP_BUFFERSIZE:
         default:
             break;
         }
@@ -2358,12 +2450,24 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index, const cv::VideoC
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const cv::String& filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(filename, &params);
+        capture->open(filename, nullptr, &params);
+        if (capture->isOpened())
+            return capture;
+    }
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(std::string(), stream, &params);
         if (capture->isOpened())
             return capture;
     }
@@ -2462,6 +2566,12 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 #endif
         case CV_FOURCC_MACRO('H', '2', '6', '4'):
                 return MFVideoFormat_H264; break;
+#if defined(NTDDI_WIN10)
+        case CV_FOURCC_MACRO('H', '2', '6', '5'):
+                return MFVideoFormat_H265;  break;
+        case CV_FOURCC_MACRO('H', 'E', 'V', 'C'):
+                return MFVideoFormat_HEVC;  break;
+#endif
         case CV_FOURCC_MACRO('M', '4', 'S', '2'):
                 return MFVideoFormat_M4S2; break;
         case CV_FOURCC_MACRO('M', 'J', 'P', 'G'):
@@ -2684,7 +2794,7 @@ cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filen
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 1
+#define CAPTURE_API_VERSION 2
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -2706,8 +2816,6 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
-        return CV_ERROR_FAIL;
     CaptureT* cap = 0;
     try
     {
@@ -2715,9 +2823,49 @@ CvResult CV_API_CALL cv_capture_open_with_params(
         cap = new CaptureT();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename), &parameters);
+        {
+            res = cap->open(std::string(filename), nullptr, &parameters);
+        }
         else
             res = cap->open(camera_index, &parameters);
+        if (res)
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_buffer(
+    void* opaque,
+    long long(*read)(void* opaque, char* buffer, long long size),
+    long long(*seek)(void* opaque, long long offset, int way),
+    int* params, unsigned n_params,
+    CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+
+    *handle = NULL;
+    CaptureT* cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CaptureT();
+        bool res = cap->open(std::string(), makePtr<PluginStreamReader>(opaque, read, seek), &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;
@@ -3006,6 +3154,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
     },
     {
         /*  8*/cv::cv_capture_open_with_params,
+    },
+    {
+        /*  9*/cv::cv_capture_open_buffer,
     }
 };
 

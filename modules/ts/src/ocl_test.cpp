@@ -81,7 +81,7 @@ double TestUtils::checkNorm2(InputArray m1, InputArray m2, InputArray mask)
 double TestUtils::checkSimilarity(InputArray m1, InputArray m2)
 {
     Mat diff;
-    matchTemplate(m1.getMat(), m2.getMat(), diff, CV_TM_CCORR_NORMED);
+    matchTemplate(m1.getMat(), m2.getMat(), diff, cv::TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 
@@ -104,7 +104,6 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
-            cpu_result.copyTo(cpu_result);
         }
         int cpu_area = cv::countNonZero(cpu_result > 0);
 
@@ -114,7 +113,6 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         {
             cv::Mat gpu_result_roi(gpu_result, *r2);
             gpu_result_roi.setTo(1);
-            gpu_result.copyTo(gpu_result);
         }
 
         cv::Mat result_;

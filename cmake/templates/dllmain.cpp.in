@@ -9,6 +9,8 @@
 #error "Build configuration error"
 #endif
 
+#pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 

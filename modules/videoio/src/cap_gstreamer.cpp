@@ -55,6 +55,9 @@
 #include <iostream>
 #include <string.h>
 #include <thread>
+#include <queue>
+#include <deque>
+#include <cstddef>
 
 #include <gst/gst.h>
 #include <gst/gstbuffer.h>
@@ -77,6 +80,8 @@
 #define COLOR_ELEM_NAME COLOR_ELEM
 
 #define CV_GST_FORMAT(format) (format)
+#define GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS (30 * GST_SECOND)
+#define GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS (30 * GST_SECOND)
 
 
 namespace cv {
@@ -109,6 +114,7 @@ template<> inline void GSafePtr_release<GstBuffer>(GstBuffer** pPtr) { if (pPtr)
 template<> inline void GSafePtr_release<GstSample>(GstSample** pPtr) { if (pPtr) { gst_sample_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstBus>(GstBus** pPtr) { if (pPtr) { gst_object_unref(G_OBJECT(*pPtr)); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GstMessage>(GstMessage** pPtr) { if (pPtr) { gst_message_unref(*pPtr); *pPtr = NULL; } }
+template<> inline void GSafePtr_release<GstQuery>(GstQuery** pPtr) { if (pPtr) { gst_query_unref(*pPtr); *pPtr = NULL; } }
 template<> inline void GSafePtr_release<GMainLoop>(GMainLoop** pPtr) { if (pPtr) { g_main_loop_unref(*pPtr); *pPtr = NULL; } }
 
 template<> inline void GSafePtr_release<GstEncodingVideoProfile>(GstEncodingVideoProfile** pPtr) { if (pPtr) { gst_encoding_profile_unref(*pPtr); *pPtr = NULL; } }
@@ -128,6 +134,7 @@ protected:
     T* ptr;
 public:
     inline GSafePtr() CV_NOEXCEPT : ptr(NULL) { }
+    inline GSafePtr(T* p) : ptr(p) { }
     inline ~GSafePtr() CV_NOEXCEPT { release(); }
     inline void release() CV_NOEXCEPT
     {
@@ -189,6 +196,19 @@ public:
     ~ScopeGuardGstMapInfo()
     {
         gst_buffer_unmap(buf_, info_);
+    }
+};
+
+class ScopeGuardGstVideoFrame
+{
+    GstVideoFrame* frame_;
+public:
+    ScopeGuardGstVideoFrame(GstVideoFrame* frame)
+        : frame_(frame)
+    {}
+    ~ScopeGuardGstVideoFrame()
+    {
+        gst_video_frame_unmap(frame_);
     }
 };
 
@@ -267,10 +287,10 @@ std::string get_gst_propname(int propId)
 {
     switch (propId)
     {
-    case CV_CAP_PROP_BRIGHTNESS: return "brightness";
-    case CV_CAP_PROP_CONTRAST: return "contrast";
-    case CV_CAP_PROP_SATURATION: return "saturation";
-    case CV_CAP_PROP_HUE: return "hue";
+    case CAP_PROP_BRIGHTNESS: return "brightness";
+    case CAP_PROP_CONTRAST: return "contrast";
+    case CAP_PROP_SATURATION: return "saturation";
+    case CAP_PROP_HUE: return "hue";
     default: return std::string();
     }
 }
@@ -303,27 +323,55 @@ static void find_hw_element(const GValue *item, gpointer va_type)
 class GStreamerCapture CV_FINAL : public IVideoCapture
 {
 private:
+    GSafePtr<GstElement> audiopipeline;
     GSafePtr<GstElement> pipeline;
     GSafePtr<GstElement> v4l2src;
     GSafePtr<GstElement> sink;
-    GSafePtr<GstSample> sample;
-    GSafePtr<GstCaps> caps;
+    GSafePtr<GstElement> audiosink;
+    GSafePtr<GstSample>  impendingVideoSample;
+    GSafePtr<GstSample>  usedVideoSample;
+    GSafePtr<GstSample>  audioSample;
+    GSafePtr<GstCaps>    caps;
+    GSafePtr<GstCaps>    audiocaps;
 
+    gint64        bufferedAudioDurationNS;
+    gint64        requiredAudioTimeNS;
+    gint64        impendingVideoSampleTimeNS;
+    gint64        usedVideoSampleTimeNS;
+    gint64        videoSampleDurationNS;
+    gint64        audioSampleDurationNS;
+    gint64        audioSampleTimeNS;
+    gint64        chunkLengthOfBytes;
+    gint64        givenAudioTimeNS;
+    gint64        numberOfAdditionalAudioBytes;
+    gint64        audioSamplePosInSamples;
     gint          videoStream;
     gint          audioStream;
     gint64        duration;
     gint          width;
     gint          height;
     double        fps;
+    GstClockTime  openTimeout; // measured in nanoseconds
+    GstClockTime  readTimeout; // measured in nanoseconds
     bool          isPosFramesSupported;
     bool          isPosFramesEmulated;
+    bool          vEOS;
+    bool          aEOS;
+    bool          syncLastFrame;
+    bool          lastFrame;
     gint64        emulatedFrameNumber;
     gint          outputAudioFormat;
+    gint          audioBitPerSample;
     gint          audioBaseIndex;
     gint          nAudioChannels;
     gint          audioSamplesPerSecond;
+    gint          audioBitPerFrame;
+    gint          audioSampleSize;
+    std::string   audioFormat;
+    guint64       timestamp;
 
     Mat audioFrame;
+    std::deque<uint8_t> bufferAudioData;
 
     VideoAccelerationType va_type;
     int hw_device;
@@ -332,6 +380,8 @@ public:
     virtual ~GStreamerCapture() CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
+    bool configureAudioFrame();
+    bool grabVideoFrame();
     bool grabAudioFrame();
     bool retrieveVideoFrame(int /*unused*/, OutputArray dst);
     bool retrieveAudioFrame(int /*unused*/, OutputArray dst);
@@ -343,7 +393,7 @@ public:
     bool open(const String &filename_, const cv::VideoCaptureParameters& params);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
     bool configureHW(const cv::VideoCaptureParameters&);
-    bool configureStreams(const cv::VideoCaptureParameters&);
+    bool configureStreamsProperty(const cv::VideoCaptureParameters&);
     bool setAudioProperties(const cv::VideoCaptureParameters&);
 
 protected:
@@ -356,20 +406,40 @@ protected:
 };
 
 GStreamerCapture::GStreamerCapture() :
+    bufferedAudioDurationNS(0),
+    requiredAudioTimeNS(0),
+    impendingVideoSampleTimeNS(0),
+    usedVideoSampleTimeNS(0),
+    videoSampleDurationNS(0), audioSampleDurationNS(0),
+    audioSampleTimeNS(0),
+    chunkLengthOfBytes(0),
+    givenAudioTimeNS(0),
+    numberOfAdditionalAudioBytes(0),
+    audioSamplePosInSamples(0),
     videoStream(0),
     audioStream(-1),
     duration(-1), width(-1), height(-1), fps(-1),
+    openTimeout(GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS),
+    readTimeout(GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS),
     isPosFramesSupported(false),
     isPosFramesEmulated(false),
+    vEOS(false),
+    aEOS(false),
+    syncLastFrame(true),
+    lastFrame(false),
     emulatedFrameNumber(-1),
     outputAudioFormat(CV_16S),
+    audioBitPerSample(16),
     audioBaseIndex(1),
     nAudioChannels(0),
-    audioSamplesPerSecond(44100)
+    audioSamplesPerSecond(44100),
+    audioBitPerFrame(0),
+    audioSampleSize(0),
+    audioFormat("S16LE"),
+    timestamp(0)
     , va_type(VIDEO_ACCELERATION_NONE)
     , hw_device(-1)
-{
-}
+{}
 
 /*!
  * \brief CvCapture_GStreamer::close
@@ -414,27 +484,27 @@ bool GStreamerCapture::configureHW(const cv::VideoCaptureParameters& params)
     return true;
 }
 
-bool GStreamerCapture::configureStreams(const cv::VideoCaptureParameters& params)
+bool GStreamerCapture::configureStreamsProperty(const cv::VideoCaptureParameters& params)
 {
     if (params.has(CAP_PROP_VIDEO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_VIDEO_STREAM);
+        gint value = params.get<gint>(CAP_PROP_VIDEO_STREAM);
         if (value == -1 || value == 0)
-            videoStream = static_cast<gint>(value);
+            videoStream = value;
         else
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
             return false;
         }
     }
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
-        double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
-            audioStream = static_cast<gint>(value);
+        gint value = params.get<gint>(CAP_PROP_AUDIO_STREAM);
+        if (value == -1 || value >= 0)
+            audioStream = value;
         else
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_STREAM parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_STREAM parameter value is invalid/unsupported: " << value);
             return false;
         }
     }
@@ -445,10 +515,10 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
 {
     if (params.has(CAP_PROP_AUDIO_DATA_DEPTH))
     {
-        gint value = static_cast<gint>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
+        gint value = params.get<gint>(CAP_PROP_AUDIO_DATA_DEPTH);
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
             return false;
         }
         else
@@ -458,16 +528,20 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
     }
     if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+        int value = params.get<int>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
         if (value < 0)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
             return false;
         }
         else
         {
             audioSamplesPerSecond = value;
         }
+    }
+    if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
+    {
+        syncLastFrame = params.get<bool>(CAP_PROP_AUDIO_SYNCHRONIZE);
     }
     return true;
 }
@@ -486,112 +560,335 @@ bool GStreamerCapture::grabFrame()
     // start the pipeline if it was not in playing state yet
     if (!this->isPipelinePlaying())
         this->startPipeline();
-
     // bail out if EOS
-    if (gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
-        return false;
 
-    sample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
-    if (!sample)
+    if (vEOS)
+    {
         return false;
+    }
 
-    if (isPosFramesEmulated)
-        emulatedFrameNumber++;
+    bool returnFlag = true;
+    if (videoStream >= 0)
+    {
+        if (!vEOS)
+            returnFlag &= grabVideoFrame();
+        if (!returnFlag)
+        {
+            return false;
+        }
+    }
 
     if (audioStream >= 0)
-        return grabAudioFrame();
+    {
+        bufferedAudioDurationNS = (gint64)(1e9*(((double)bufferAudioData.size()/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond));
+        audioFrame.release();
+        if (!aEOS)
+            returnFlag &= grabAudioFrame();
+    }
 
-    return true;
+    return returnFlag;
+}
+
+bool GStreamerCapture::grabVideoFrame()
+{
+    usedVideoSample.release();
+
+    bool returnFlag = false;
+    bool stopFlag = false;
+
+    if (audioStream != -1)
+    {
+        usedVideoSample.swap(impendingVideoSample);
+        std::swap(usedVideoSampleTimeNS, impendingVideoSampleTimeNS);
+    }
+
+    while (!stopFlag)
+    {
+        if (gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
+        {
+            vEOS = true;
+            lastFrame = true;
+            stopFlag = true;
+            if (audioStream == -1)
+            {
+                returnFlag = false;
+            }
+            else if (usedVideoSample)
+            {
+                gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTimeNS);
+                videoSampleDurationNS = impendingVideoSampleTimeNS - usedVideoSampleTimeNS;
+                requiredAudioTimeNS = impendingVideoSampleTimeNS - givenAudioTimeNS;
+                givenAudioTimeNS += requiredAudioTimeNS;
+                returnFlag = true;
+            }
+        }
+        else
+        {
+            #if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
+                impendingVideoSample.attach(gst_app_sink_try_pull_sample(GST_APP_SINK(sink.get()), readTimeout));
+            #else
+                impendingVideoSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
+            #endif
+            if (!impendingVideoSample)
+            {
+                if (!gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
+                {
+                    CV_LOG_DEBUG(NULL, "videoio(Gstreamer): gst_app_sink_pull_sample() method is not succeeded");
+                }
+                else
+                {
+                    vEOS = true;
+                    lastFrame = true;
+                    stopFlag = true;
+                    if (audioStream == -1)
+                    {
+                        return false;
+                    }
+                    else if (usedVideoSample)
+                    {
+                        gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTimeNS);
+                        videoSampleDurationNS = impendingVideoSampleTimeNS - usedVideoSampleTimeNS;
+                        requiredAudioTimeNS = impendingVideoSampleTimeNS - givenAudioTimeNS;
+                        givenAudioTimeNS += requiredAudioTimeNS;
+                        returnFlag = true;
+                    }
+                }
+            }
+            gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTimeNS);
+
+            if (audioStream != -1)
+            {
+                if (!usedVideoSample)
+                {
+                    usedVideoSample.swap(impendingVideoSample);
+                    std::swap(usedVideoSampleTimeNS, impendingVideoSampleTimeNS);
+                }
+                else
+                {
+                    stopFlag = true;
+                }
+                if (impendingVideoSample)
+                {
+                    emulatedFrameNumber++;
+                }
+                videoSampleDurationNS = impendingVideoSampleTimeNS - usedVideoSampleTimeNS;
+                requiredAudioTimeNS = impendingVideoSampleTimeNS - givenAudioTimeNS;
+                givenAudioTimeNS += requiredAudioTimeNS;
+            }
+            else
+            {
+                usedVideoSample.swap(impendingVideoSample);
+                std::swap(usedVideoSampleTimeNS, impendingVideoSampleTimeNS);
+                stopFlag = true;
+                emulatedFrameNumber++;
+            }
+            if (usedVideoSample)
+            {
+                auto *buffer = gst_sample_get_buffer((GstSample*)usedVideoSample);
+                timestamp = GST_BUFFER_PTS(buffer);
+            }
+            returnFlag = true;
+        }
+    }
+    return returnFlag;
 }
 
 bool GStreamerCapture::grabAudioFrame()
 {
-    GstCaps* frame_caps = gst_sample_get_caps(sample);  // no lifetime transfer
-    if (!frame_caps)
+    audioSample.reset(NULL);
+
+    bool returnFlag = false;
+    gint64 audioTimeNS = bufferedAudioDurationNS;
+
+    if (bufferedAudioDurationNS > requiredAudioTimeNS)
     {
-        CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
-        return false;
+        return true;
     }
 
-    if (!GST_CAPS_IS_SIMPLE(frame_caps))
+    while ((!vEOS) ? audioTimeNS <= requiredAudioTimeNS : !aEOS)
     {
-        // bail out in no caps
-        CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
-        return false;
-    }
-
-    GstAudioInfo info = {};
-    gboolean audio_info_res = gst_audio_info_from_caps(&info, frame_caps);
-    if (!audio_info_res)
-    {
-        CV_Error(Error::StsError, "GStreamer: gst_audio_info_from_caps() is failed. Can't handle unknown layout");
-    }
-    int bpf = GST_AUDIO_INFO_BPF(&info);
-    CV_CheckGT(bpf, 0, "");
-
-    GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
-    if (!structure)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
-        return false;
-    }
-
-    const gchar* name_ = gst_structure_get_name(structure);
-    if (!name_)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
-        return false;
-    }
-    std::string name = toLowerCase(std::string(name_));
-
-    GstBuffer* buf = gst_sample_get_buffer(sample);
-    if (!buf)
-        return false;
-    GstMapInfo map_info = {};
-    if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
-        return false;
-    }
-    ScopeGuardGstMapInfo map_guard(buf, &map_info);
-    if (name == "audio/x-raw")
-    {
-        const gchar* format_ = gst_structure_get_string(structure, "format");
-        if (!format_)
+        if (gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
         {
-            CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'video/x-raw'");
-            return false;
+            aEOS = true;
+            if (videoStream != -1 && !vEOS)
+                returnFlag = true;
+            if (videoStream == -1)
+                audioSamplePosInSamples += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+            break;
         }
-        std::string format = toUpperCase(std::string(format_));
-        cv::Mat data;
-        if (format == "S8")
+        else
         {
-            Mat(map_info.size/bpf, nAudioChannels, CV_8S, map_info.data).copyTo(audioFrame);
-            return true;
+            audioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
+            if (!audioSample)
+            {
+                if (!gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
+                {
+                    CV_LOG_ERROR(NULL, "videoio(Gstreamer): gst_app_sink_pull_sample() method is not succeeded");
+                    return false;
+                }
+                else
+                {
+                    aEOS = true;
+                    break;
+                }
+            }
+            gst_element_query_position(audiosink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &audioSampleTimeNS);
+
+            GstMapInfo map_info = {};
+            GstCaps* frame_caps = gst_sample_get_caps(audioSample.get());  // no lifetime transfer
+            if (!frame_caps)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
+                return false;
+            }
+            if (!GST_CAPS_IS_SIMPLE(frame_caps))
+            {
+                // bail out in no caps
+                CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
+                return false;
+            }
+            GstAudioInfo info = {};
+            gboolean audio_info_res = gst_audio_info_from_caps(&info, frame_caps);
+            if (!audio_info_res)
+            {
+                CV_Error(Error::StsError, "GStreamer: gst_audio_info_from_caps() is failed. Can't handle unknown layout");
+            }
+            audioBitPerFrame = GST_AUDIO_INFO_BPF(&info);
+            CV_CheckGT(audioBitPerFrame, 0, "");
+
+            GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
+            if (!structure)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
+                return false;
+            }
+
+            const gchar* name_ = gst_structure_get_name(structure);
+            if (!name_)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
+                return false;
+            }
+            std::string name = toLowerCase(std::string(name_));
+            if (name != "audio/x-raw")
+            {
+                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
+                return false;
+            }
+
+            const gchar* format_ = gst_structure_get_string(structure, "format");
+            if (!format_)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'audio/x-raw'");
+                return false;
+            }
+            std::string format = toUpperCase(std::string(format_));
+            if (format != "S8" && format != "S16LE" && format != "S32LE" && format != "F32LE")
+            {
+                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
+                return false;
+            }
+            if (format != audioFormat)
+            {
+                return false;
+            }
+
+            GstBuffer* buf = gst_sample_get_buffer(audioSample);
+            if (!buf)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Failed. Buffer is empty");
+                return false;
+            }
+            timestamp = GST_BUFFER_PTS(buf);
+            if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
+                return false;
+            }
+            ScopeGuardGstMapInfo map_guard(buf, &map_info);
+            gsize lastSize = bufferAudioData.size();
+            audioSampleSize = map_info.size;
+            bufferAudioData.resize(lastSize+audioSampleSize);
+            for (gint j = 0; j < audioSampleSize; j++)
+            {
+                bufferAudioData[lastSize+j]=*(map_info.data + j);
+            }
+            audioSampleDurationNS = 1e9*(((double)audioSampleSize/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
+
+            CV_LOG_DEBUG(NULL, "videoio(Gstreamer): got audio frame with timestamp=" << audioSampleTimeNS << "  duration=" << audioSampleDurationNS);
+            audioTimeNS += (int64_t)(audioSampleDurationNS);
+
+            returnFlag = true;
         }
-        if (format == "S16LE")
-        {
-            Mat(map_info.size/bpf, nAudioChannels, CV_16S, map_info.data).copyTo(audioFrame);
-            return true;
-        }
-        if (format == "S32LE")
-        {
-            Mat(map_info.size/bpf, nAudioChannels, CV_32S, map_info.data).copyTo(audioFrame);
-            return true;
-        }
-        if (format == "F32LE")
-        {
-            Mat(map_info.size/bpf, nAudioChannels, CV_32F, map_info.data).copyTo(audioFrame);
-            return true;
-        }
-        CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
     }
 
-    CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
+    returnFlag &= configureAudioFrame();
+    return returnFlag;
+}
+
+bool GStreamerCapture::configureAudioFrame()
+{
+    if (bufferAudioData.empty() && aEOS)
+    {
+        return false;
+    }
+    std::vector<uint8_t> audioDataInUse;
+
+    audioSamplePosInSamples += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+    chunkLengthOfBytes = (videoStream != -1) ? (int64_t)((requiredAudioTimeNS * 1e-9 * audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)) : audioSampleSize;
+    if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels) != 0))
+    {
+        if ( (double)audioSamplePosInSamples/audioSamplesPerSecond - usedVideoSampleTimeNS * 1e-9 >= 0 )
+            chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
+        numberOfAdditionalAudioBytes = ((int)(audioBitPerSample)/8* (int)nAudioChannels)
+                                    - chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels);
+        chunkLengthOfBytes += numberOfAdditionalAudioBytes;
+    }
+    if ((lastFrame && !syncLastFrame) || (aEOS && !vEOS))
+    {
+        chunkLengthOfBytes = bufferAudioData.size();
+        audioSamplePosInSamples += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+    }
+    CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "GSTREAMER: The chunkLengthOfBytes is out of the allowed range");
+    copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
+    bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
+
+    cv::Mat data;
+
+    if (audioFormat == "S8")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "S16LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "S32LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "F32LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+
+    audioDataInUse.clear();
+    audioDataInUse.shrink_to_fit();
+    return true;
 }
 
 bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 {
+    if (audioFrame.empty())
+    {
+        dst.release();
+        if (aEOS)
+            return true;
+    }
     CV_Check(index, index >= audioBaseIndex && index < audioBaseIndex + nAudioChannels, "");
     index -= audioBaseIndex;
 
@@ -630,7 +927,7 @@ bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 
 bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
 {
-    GstCaps* frame_caps = gst_sample_get_caps(sample);  // no lifetime transfer
+    GstCaps* frame_caps = gst_sample_get_caps(usedVideoSample);  // no lifetime transfer
     if (!frame_caps)
     {
         CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
@@ -651,8 +948,33 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
         CV_Error(Error::StsError, "GStreamer: gst_video_info_from_caps() is failed. Can't handle unknown layout");
     }
 
-    int frame_width = GST_VIDEO_INFO_WIDTH(&info);
-    int frame_height = GST_VIDEO_INFO_HEIGHT(&info);
+    // gstreamer expects us to handle the memory at this point
+    // so we can just wrap the raw buffer and be done with it
+    GstBuffer* buf = gst_sample_get_buffer(usedVideoSample);  // no lifetime transfer
+    if (!buf)
+        return false;
+
+    // at this point, the gstreamer buffer may contain a video meta with special
+    // stride and plane locations. We __must__ consider in order to correctly parse
+    // the data. The gst_video_frame_map will parse the meta for us, or default to
+    // regular strides/offsets if no meta is present.
+    GstVideoFrame frame = {};
+#if FULL_GST_VERSION >= VERSION_NUM(1,6,0)
+    GstMapFlags flags = static_cast<GstMapFlags>(+GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF);
+#else
+    GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READ);
+#endif
+
+    if (!gst_video_frame_map(&frame, &info, buf, flags))
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
+        return false;
+    }
+
+    ScopeGuardGstVideoFrame frame_guard(&frame);  // call gst_video_frame_unmap(&frame) on scope leave
+
+    int frame_width = GST_VIDEO_FRAME_COMP_WIDTH(&frame, 0);
+    int frame_height = GST_VIDEO_FRAME_COMP_HEIGHT(&frame, 0);
     if (frame_width <= 0 || frame_height <= 0)
     {
         CV_LOG_ERROR(NULL, "GStreamer: Can't query frame size from GStreamer sample");
@@ -674,19 +996,6 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
     }
     std::string name = toLowerCase(std::string(name_));
 
-    // gstreamer expects us to handle the memory at this point
-    // so we can just wrap the raw buffer and be done with it
-    GstBuffer* buf = gst_sample_get_buffer(sample);  // no lifetime transfer
-    if (!buf)
-        return false;
-    GstMapInfo map_info = {};
-    if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
-        return false;
-    }
-    ScopeGuardGstMapInfo map_guard(buf, &map_info);  // call gst_buffer_unmap(buf, &map_info) on scope leave
-
     // we support these types of data:
     //     video/x-raw, format=BGR   -> 8bit, 3 channels
     //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
@@ -703,10 +1012,11 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
     //     video/x-raw, format={BGRA, RGBA, BGRx, RGBx} -> 8bit, 4 channels
     // bayer data is never decoded, the user is responsible for that
     Size sz = Size(frame_width, frame_height);
-    guint n_planes = GST_VIDEO_INFO_N_PLANES(&info);
+    guint n_planes = GST_VIDEO_FRAME_N_PLANES(&frame);
+
     if (name == "video/x-raw")
     {
-        const gchar* format_ = gst_structure_get_string(structure, "format");
+        const gchar* format_ = frame.info.finfo->name;
         if (!format_)
         {
             CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'video/x-raw'");
@@ -717,97 +1027,83 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
         if (format == "BGR")
         {
             CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step, (size_t)frame_width * 3, "");
-            Mat src(sz, CV_8UC3, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            Mat src(sz, CV_8UC3, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
             src.copyTo(dst);
             return true;
         }
         else if (format == "GRAY8")
         {
             CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_8UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            Mat src(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
             src.copyTo(dst);
             return true;
         }
         else if (format == "GRAY16_LE" || format == "GRAY16_BE")
         {
             CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_16UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            Mat src(sz, CV_16UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
             src.copyTo(dst);
             return true;
         }
         else if (format == "BGRA" || format == "RGBA" || format == "BGRX" || format == "RGBX")
         {
             CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_8UC4, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            Mat src(sz, CV_8UC4, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
             src.copyTo(dst);
             return true;
         }
         else if (format == "UYVY" || format == "YUY2" || format == "YVYU")
         {
             CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step, (size_t)frame_width * 2, "");
-            Mat src(sz, CV_8UC2, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            Mat src(sz, CV_8UC2, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
             src.copyTo(dst);
             return true;
         }
         else if (format == "NV12" || format == "NV21")
         {
             CV_CheckEQ((int)n_planes, 2, "");
-            size_t stepY = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t stepY = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(stepY, (size_t)frame_width, "");
-            size_t stepUV = GST_VIDEO_INFO_PLANE_STRIDE(&info, 1);
+            size_t stepUV = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
             CV_CheckGE(stepUV, (size_t)frame_width, "");
-            size_t offsetY = GST_VIDEO_INFO_PLANE_OFFSET(&info, 0);
-            size_t offsetUV = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
-            if (stepY != stepUV || (offsetUV - offsetY) != (stepY * frame_height))
-            {
-                dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
-                Mat dst_ = dst.getMat();
-                Mat srcY(sz, CV_8UC1, map_info.data + offsetY, stepY);
-                Mat srcUV(Size(frame_width, frame_height / 2), CV_8UC1, map_info.data + offsetUV, stepUV);
-                srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
-                srcUV.copyTo(dst_(Rect(0, frame_height, frame_width, frame_height / 2)));
-            }
-            else
-            {
-                Mat src(Size(frame_width, frame_height * 3 / 2), CV_8UC1, map_info.data + offsetY, stepY);
-                src.copyTo(dst);
-            }
+
+            dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
+            Mat dst_ = dst.getMat();
+            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,0), stepY);
+            Mat srcUV(Size(frame_width, frame_height / 2), CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,1), stepUV);
+            srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
+            srcUV.copyTo(dst_(Rect(0, frame_height, frame_width, frame_height / 2)));
             return true;
         }
         else if (format == "YV12" || format == "I420")
         {
             CV_CheckEQ((int)n_planes, 3, "");
-            size_t step0 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            size_t step0 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
             CV_CheckGE(step0, (size_t)frame_width, "");
-            size_t step1 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 1);
+            size_t step1 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
             CV_CheckGE(step1, (size_t)frame_width / 2, "");
-            size_t step2 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 2);
+            size_t step2 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 2);
             CV_CheckGE(step2, (size_t)frame_width / 2, "");
 
-            size_t offset0 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 0);
-            size_t offset1 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
-            size_t offset2 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 2);
-            {
-                dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
-                Mat dst_ = dst.getMat();
-                Mat srcY(sz, CV_8UC1, map_info.data + offset0, step0);
-                Size sz2(frame_width / 2, frame_height / 2);
-                Mat src1(sz2, CV_8UC1, map_info.data + offset1, step1);
-                Mat src2(sz2, CV_8UC1, map_info.data + offset2, step2);
-                srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
-                src1.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height)));
-                src2.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height) + src1.total()));
-            }
+            dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
+            Mat dst_ = dst.getMat();
+            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,0), step0);
+            Size sz2(frame_width / 2, frame_height / 2);
+            Mat src1(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,1), step1);
+            Mat src2(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,2), step2);
+            srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
+            src1.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height)));
+            src2.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height) + src1.total()));
             return true;
         }
         else
@@ -818,14 +1114,14 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
     else if (name == "video/x-bayer")
     {
         CV_CheckEQ((int)n_planes, 0, "");
-        Mat src = Mat(sz, CV_8UC1, map_info.data);
+        Mat src(sz, CV_8UC1, frame.map[0].data);
         src.copyTo(dst);
         return true;
     }
     else if (name == "image/jpeg")
     {
         CV_CheckEQ((int)n_planes, 0, "");
-        Mat src = Mat(Size(map_info.size, 1), CV_8UC1, map_info.data);
+        Mat src(Size(frame.map[0].size, 1), CV_8UC1, frame.map[0].data);
         src.copyTo(dst);
         return true;
     }
@@ -837,21 +1133,35 @@ bool GStreamerCapture::retrieveFrame(int index, OutputArray dst)
 {
     if (index < 0)
         return false;
-    if (!sample)
-        return false;
 
-    if (index == 0)
+    if ((gint)index < audioBaseIndex)
     {
-        CV_CheckGE(videoStream, 0, "No video stream configured");
-        return retrieveVideoFrame(index, dst);
+        if (videoStream == -1)
+        {
+            dst.release();
+            return false;
+        }
+        else
+        {
+            CV_CheckGE(videoStream, 0, "No video stream configured");
+            return retrieveVideoFrame(index, dst);
+        }
     }
-    else if (index >= audioBaseIndex)
+    else
     {
-        CV_CheckGE(audioStream, 0, "No audio stream configured");
-        return retrieveAudioFrame(index, dst);
+        if (audioStream == -1)
+        {
+            dst.release();
+            return false;
+        }
+        else
+        {
+            CV_CheckGE(audioStream, 0, "No audio stream configured");
+            return retrieveAudioFrame(index, dst);
+        }
     }
 
-    CV_LOG_ERROR(NULL, "GStreamer(retrive): unrecognized index=" << index);
+    CV_LOG_ERROR(NULL, "GStreamer(retrieve): unrecognized index=" << index);
     return false;
 }
 
@@ -888,11 +1198,12 @@ void GStreamerCapture::startPipeline()
     if (status == GST_STATE_CHANGE_ASYNC)
     {
         // wait for status update
-        status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+        status = gst_element_get_state(pipeline, NULL, NULL, openTimeout);
     }
     if (status == GST_STATE_CHANGE_FAILURE)
     {
         handleMessage(pipeline);
+        gst_element_set_state(pipeline, GST_STATE_NULL);
         pipeline.release();
         CV_WARN("unable to start pipeline");
         return;
@@ -1015,7 +1326,7 @@ void GStreamerCapture::newPad(GstElement *, GstPad *pad, gpointer data)
 
 /*!
  * \brief Create GStreamer pipeline
- * \param filename Filename to open in case of CV_CAP_GSTREAMER_FILE
+ * \param filename Filename to open in case of CAP_GSTREAMER_FILE
  * \return boolean. Specifies if opening was successful.
  *
  * In case of camera 'index', a pipeline is constructed as follows:
@@ -1062,17 +1373,12 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         return false;
     }
 
-    if (!configureStreams(params))
+    if (!configureStreamsProperty(params))
     {
         CV_LOG_WARNING(NULL, "GStreamer: can't configure streams");
         return false;
     }
 
-    if ((videoStream >= 0 && audioStream >= 0) || (videoStream < 0 && audioStream < 0))
-    {
-        CV_LOG_ERROR(NULL, "GStreamer backend supports audio-only or video-only capturing. Only one of the properties CAP_PROP_AUDIO_STREAM=" << audioStream << " and CAP_PROP_VIDEO_STREAM=" <<  videoStream << " should be >= 0");
-        return false;
-    }
     if (audioStream > 0)
     {
         CV_LOG_ERROR(NULL, "GStreamer backend supports the first audio stream only. CAP_PROP_AUDIO_STREAM=" << audioStream);
@@ -1090,12 +1396,15 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     bool file = false;
     bool manualpipeline = false;
     GSafePtr<char> uri;
+    GSafePtr<GstBus> bus;
+
+    GSafePtr<GstElement> queue;
     GSafePtr<GstElement> uridecodebin;
     GSafePtr<GstElement> color;
-    GstStateChangeReturn status;
-
     GSafePtr<GstElement> convert;
     GSafePtr<GstElement> resample;
+
+    GstStateChangeReturn status;
 
     // test if we have a valid uri. If so, open it with an uridecodebin
     // else, we might have a file or a manual pipeline.
@@ -1159,18 +1468,17 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                 CV_Assert(uridecodebin);
                 g_object_set(G_OBJECT(uridecodebin.get()), "uri", uri.get(), NULL);
             }
+            if (!uridecodebin)
+            {
+                CV_WARN("Can not parse GStreamer URI bin");
+                return false;
+            }
         }
         else if (audioStream >= 0)
         {
             uridecodebin.reset(gst_element_factory_make("uridecodebin", NULL));
             CV_Assert(uridecodebin);
             g_object_set(G_OBJECT(uridecodebin.get()), "uri", uri.get(), NULL);
-        }
-
-        if (!uridecodebin)
-        {
-            CV_WARN("Can not parse GStreamer URI bin");
-            return false;
         }
     }
 
@@ -1195,6 +1503,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                     if (strstr(name, "opencvsink") != NULL || strstr(name, "appsink") != NULL)
                     {
                         sink.attach(GST_ELEMENT(gst_object_ref(element)));
+                        audiosink.attach(GST_ELEMENT(gst_object_ref(element)));
                     }
                     else if (strstr(name, COLOR_ELEM_NAME) != NULL)
                     {
@@ -1234,16 +1543,18 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         pipeline.reset(gst_pipeline_new(NULL));
         CV_Assert(pipeline);
 
-        sink.reset(gst_element_factory_make("appsink", NULL));
-        CV_Assert(sink);
         if (videoStream >= 0)
         {
+            queue.reset(gst_element_factory_make("queue", NULL));
+            CV_Assert(queue);
+            sink.reset(gst_element_factory_make("appsink", NULL));
+            CV_Assert(sink);
             // videoconvert (in 0.10: ffmpegcolorspace, in 1.x autovideoconvert)
             //automatically selects the correct colorspace conversion based on caps.
             color.reset(gst_element_factory_make(COLOR_ELEM, NULL));
             CV_Assert(color);
 
-            gst_bin_add_many(GST_BIN(pipeline.get()), uridecodebin.get(), color.get(), sink.get(), NULL);
+            gst_bin_add_many(GST_BIN(pipeline.get()), queue.get(), uridecodebin.get(), color.get(), sink.get(), NULL);
 
             if (element_from_uri)
             {
@@ -1266,13 +1577,19 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                 return false;
             }
         }
-        else if (audioStream >= 0)
+        if (audioStream >= 0)
         {
+            queue.reset(gst_element_factory_make("queue", NULL));
+            CV_Assert(queue);
             convert.reset(gst_element_factory_make("audioconvert", NULL));
             resample.reset(gst_element_factory_make("audioresample", NULL));
+            audiosink.reset(gst_element_factory_make("appsink", NULL));
+            CV_Assert(convert);
+            CV_Assert(resample);
+            CV_Assert(audiosink);
 
-            gst_bin_add_many (GST_BIN (pipeline.get()), uridecodebin.get(), convert.get(), resample.get(), sink.get(), NULL);
-            if (!gst_element_link_many (convert.get(), resample.get(), sink.get(), NULL))
+            gst_bin_add_many (GST_BIN (pipeline.get()), queue.get(), uridecodebin.get(), convert.get(), resample.get(), audiosink.get(), NULL);
+            if (!gst_element_link_many (convert.get(), resample.get(), audiosink.get(), NULL))
             {
                 CV_WARN("GStreamer(audio): cannot link convert -> resample -> sink");
                 pipeline.release();
@@ -1285,97 +1602,111 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     if (!manualpipeline || strstr(filename, " max-buffers=") == NULL)
     {
         //TODO: is 1 single buffer really high enough?
-        gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), 1);
+        if (videoStream >= 0)
+            gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), 1);
+        if (audioStream >= 0)
+            gst_app_sink_set_max_buffers(GST_APP_SINK(audiosink.get()), 1);
     }
     if (!manualpipeline)
     {
-        gst_base_sink_set_sync(GST_BASE_SINK(sink.get()), FALSE);
+        if (videoStream >= 0)
+            gst_base_sink_set_sync(GST_BASE_SINK(sink.get()), FALSE);
+        if (audioStream >= 0)
+            gst_base_sink_set_sync(GST_BASE_SINK(audiosink.get()), FALSE);
     }
-    //do not emit signals: all calls will be synchronous and blocking
-    gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
-
     if (videoStream >= 0)
     {
-        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+        //do not emit signals: all calls will be synchronous and blocking
+        gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
+        caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR}; video/x-raw, format=(string){BGRx, BGRA}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; video/x-raw, format=(string){GRAY8}; image/jpeg"));
     }
-    else if (audioStream >= 0)
+    if (audioStream >= 0)
     {
-        std::string audioFormat;
+        gst_app_sink_set_emit_signals(GST_APP_SINK(audiosink.get()), FALSE);
         switch (outputAudioFormat)
         {
         case CV_8S:
+        {
+            audioBitPerSample = 8;
             audioFormat = "S8";
             break;
+        }
         case CV_16S:
+        {
+            audioBitPerSample = 16;
             audioFormat = "S16LE";
             break;
+        }
         case CV_32S:
+        {
+            audioBitPerSample = 32;
             audioFormat = "S32LE";
             break;
+        }
         case CV_32F:
+        {
+            audioBitPerSample = 32;
             audioFormat = "F32LE";
             break;
+        }
         default:
             audioFormat = "S16LE";
             break;
         }
         std::string stringCaps = "audio/x-raw, format=(string)" + audioFormat + ", rate=(int)" + std::to_string(audioSamplesPerSecond) + ", channels=(int){1, 2}, layout=(string)interleaved";
-        caps.attach(gst_caps_from_string(stringCaps.c_str()));
-    }
+        audiocaps.attach(gst_caps_from_string(stringCaps.c_str()));
 
+        gst_app_sink_set_caps(GST_APP_SINK(audiosink.get()), audiocaps);
+        audiocaps.release();
+    }
     if (manualpipeline)
     {
-        GSafePtr<GstCaps> peer_caps;
-        GSafePtr<GstPad> sink_pad;
-        sink_pad.attach(gst_element_get_static_pad(sink, "sink"));
-        peer_caps.attach(gst_pad_peer_query_caps(sink_pad, NULL));
-        if (!gst_caps_can_intersect(caps, peer_caps)) {
-            caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420,BGRA,RGBA,BGRx,RGBx,GRAY16_LE,GRAY16_BE}"));
-            CV_Assert(caps);
+        if (videoStream >= 0)
+        {
+            GSafePtr<GstCaps> peer_caps;
+            GSafePtr<GstPad> sink_pad;
+            sink_pad.attach(gst_element_get_static_pad(sink, "sink"));
+            peer_caps.attach(gst_pad_peer_query_caps(sink_pad, NULL));
+            if (!gst_caps_can_intersect(caps, peer_caps))
+            {
+                caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420,BGRA,RGBA,BGRx,RGBx,GRAY16_LE,GRAY16_BE}"));
+                CV_Assert(caps);
+            }
         }
     }
-
-    gst_app_sink_set_caps(GST_APP_SINK(sink.get()), caps);
-    caps.release();
+    if (videoStream >= 0)
+    {
+        gst_app_sink_set_caps(GST_APP_SINK(sink.get()), caps);
+        caps.release();
+    }
 
     {
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-init");
 
         status = gst_element_set_state(GST_ELEMENT(pipeline.get()),
-                                       file ? GST_STATE_PAUSED : GST_STATE_PLAYING);
+                                    file ? GST_STATE_PAUSED : GST_STATE_PLAYING);
         if (status == GST_STATE_CHANGE_ASYNC)
         {
             // wait for status update
-            status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+            status = gst_element_get_state(pipeline, NULL, NULL, openTimeout);
         }
         if (status == GST_STATE_CHANGE_FAILURE)
         {
             GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-error");
             handleMessage(pipeline);
+            gst_element_set_state(pipeline, GST_STATE_NULL);
             pipeline.release();
             CV_WARN("unable to start pipeline");
             return false;
         }
 
-        GSafePtr<GstPad> pad;
-        pad.attach(gst_element_get_static_pad(sink, "sink"));
-
-        GSafePtr<GstCaps> buffer_caps;
-        buffer_caps.attach(gst_pad_get_current_caps(pad));
-
         if (videoStream >= 0)
         {
-            GstFormat format;
+            GSafePtr<GstPad> pad;
+            pad.attach(gst_element_get_static_pad(sink, "sink"));
 
-            format = GST_FORMAT_DEFAULT;
-            if(!gst_element_query_duration(sink, format, &duration))
-            {
-                handleMessage(pipeline);
-                CV_WARN("unable to query duration of stream");
-                duration = -1;
-            }
-
-            handleMessage(pipeline);
+            GSafePtr<GstCaps> buffer_caps;
+            buffer_caps.attach(gst_pad_get_current_caps(pad));
 
             const GstStructure *structure = gst_caps_get_structure(buffer_caps, 0);  // no lifetime transfer
             if (!gst_structure_get_int (structure, "width", &width) ||
@@ -1385,12 +1716,54 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
             }
 
             gint num = 0, denom=1;
+            bool fps_query_success = true;
+
             if (!gst_structure_get_fraction(structure, "framerate", &num, &denom))
             {
                 CV_WARN("cannot query video fps");
+                fps_query_success = false;
             }
 
             fps = (double)num/(double)denom;
+
+            // If num == 0 and denom == 1 -> variable frame rate video.
+            if (fps_query_success && !(num == 0 && denom == 1))
+            {
+                GSafePtr<GstQuery> query;
+                query.attach(gst_query_new_duration(GST_FORMAT_DEFAULT));
+
+                gboolean res = gst_element_query(pipeline.get(), query);
+
+                if (res)
+                {
+                    gst_query_parse_duration(query, NULL, &duration);
+                }
+                else if (fps != 0)
+                {
+                    GSafePtr<GstQuery> query2;
+                    query2.attach(gst_query_new_duration(GST_FORMAT_TIME));
+                    gboolean res2 = gst_element_query(pipeline.get(), query2);
+
+                    if (res2)
+                    {
+                        gst_query_parse_duration(query2, NULL, &duration);
+                        duration = static_cast<gint64>((float)duration / GST_SECOND * fps);
+                        CV_WARN("frame count is estimated by duration and fps");
+                    }
+                    else
+                    {
+                        CV_WARN("unable to query duration of stream");
+                        duration = -1;
+                    }
+                }
+                else
+                {
+                    CV_WARN("unable to query frame count of stream and fps are not available to estimate it");
+                    duration = -1;
+                }
+            }
+
+            handleMessage(pipeline);
 
             {
                 GstFormat format_;
@@ -1411,8 +1784,15 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                     isPosFramesSupported = true;
             }
         }
-        else if (audioStream >= 0)
+
+        if (audioStream >= 0)
         {
+            GSafePtr<GstPad> pad;
+            pad.attach(gst_element_get_static_pad(audiosink, "sink"));
+
+            GSafePtr<GstCaps> buffer_caps;
+            buffer_caps.attach(gst_pad_get_current_caps(pad));
+
             GstAudioInfo info = {};
             if (gst_audio_info_from_caps(&info, buffer_caps))
             {
@@ -1428,8 +1808,10 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     }
 
     std::vector<int> unused_params = params.getUnused();
-    for (int key : unused_params) {
-        if (!setProperty(key, params.get<double>(key))) {
+    for (int key : unused_params)
+    {
+        if (!setProperty(key, params.get<double>(key)))
+        {
             CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: can't set property " << key);
             return false;
         }
@@ -1481,18 +1863,9 @@ double GStreamerCapture::getProperty(int propId) const
 
     switch(propId)
     {
-    case CV_CAP_PROP_POS_MSEC:
-        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_POS_MSEC property result may be unrealiable: "
-                                  "https://github.com/opencv/opencv/issues/19025");
-        format = GST_FORMAT_TIME;
-        status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
-        if(!status) {
-            handleMessage(pipeline);
-            CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
-        }
-        return value * 1e-6; // nano seconds to milli seconds
-    case CV_CAP_PROP_POS_FRAMES:
+    case CAP_PROP_POS_MSEC:
+        return double(timestamp) / GST_MSECOND;
+    case CAP_PROP_POS_FRAMES:
         if (!isPosFramesSupported)
         {
             if (isPosFramesEmulated)
@@ -1507,7 +1880,7 @@ double GStreamerCapture::getProperty(int propId) const
             return 0;
         }
         return value;
-    case CV_CAP_PROP_POS_AVI_RATIO:
+    case CAP_PROP_POS_AVI_RATIO:
         format = GST_FORMAT_PERCENT;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
@@ -1516,18 +1889,18 @@ double GStreamerCapture::getProperty(int propId) const
             return 0;
         }
         return ((double) value) / GST_FORMAT_PERCENT_MAX;
-    case CV_CAP_PROP_FRAME_WIDTH:
+    case CAP_PROP_FRAME_WIDTH:
         return width;
-    case CV_CAP_PROP_FRAME_HEIGHT:
+    case CAP_PROP_FRAME_HEIGHT:
         return height;
-    case CV_CAP_PROP_FPS:
+    case CAP_PROP_FPS:
         return fps;
-    case CV_CAP_PROP_FRAME_COUNT:
-        return duration;
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_HUE:
+    case CAP_PROP_FRAME_COUNT:
+        return (double)duration;
+    case CAP_PROP_BRIGHTNESS:
+    case CAP_PROP_CONTRAST:
+    case CAP_PROP_SATURATION:
+    case CAP_PROP_HUE:
         if (v4l2src)
         {
             std::string propName = get_gst_propname(propId);
@@ -1543,7 +1916,7 @@ double GStreamerCapture::getProperty(int propId) const
         return static_cast<double>(va_type);
     case CAP_PROP_HW_DEVICE:
         return static_cast<double>(hw_device);
-    case CV_CAP_GSTREAMER_QUEUE_LENGTH:
+    case CAP_PROP_GSTREAMER_QUEUE_LENGTH:
         if(!sink)
         {
             CV_WARN("there is no sink yet");
@@ -1558,6 +1931,22 @@ double GStreamerCapture::getProperty(int propId) const
         return outputAudioFormat;
     case CAP_PROP_AUDIO_BASE_INDEX:
         return audioBaseIndex;
+    case CAP_PROP_AUDIO_TOTAL_STREAMS:
+        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_AUDIO_TOTAL_STREAMS property is not supported");
+        return 0;
+    case CAP_PROP_AUDIO_POS:
+        return audioSamplePosInSamples;
+    case CAP_PROP_AUDIO_SHIFT_NSEC:
+        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_AUDIO_SHIFT_NSEC property is not supported");
+        return 0;
+    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+        return GST_TIME_AS_MSECONDS(openTimeout);
+    case CAP_PROP_READ_TIMEOUT_MSEC:
+#if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
+        return GST_TIME_AS_MSECONDS(readTimeout);
+#else
+        return 0;
+#endif
     default:
         CV_WARN("unhandled property: " << propId);
         break;
@@ -1584,13 +1973,15 @@ bool GStreamerCapture::setProperty(int propId, double value)
         return false;
     }
 
-    bool wasPlaying = this->isPipelinePlaying();
-    if (wasPlaying)
+    bool needRestart = this->isPipelinePlaying() && (propId == CAP_PROP_FRAME_WIDTH || propId == CAP_PROP_FRAME_HEIGHT || propId == CAP_PROP_FPS);
+    if (needRestart) {
         this->stopPipeline();
+    }
 
     switch(propId)
     {
-    case CV_CAP_PROP_POS_MSEC:
+    case CAP_PROP_POS_MSEC:
+    {
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline.get()), GST_FORMAT_TIME,
                                     flags, (gint64) (value * GST_MSECOND))) {
             handleMessage(pipeline);
@@ -1598,6 +1989,9 @@ bool GStreamerCapture::setProperty(int propId, double value)
         }
         else
         {
+            // Optimistically caching the target timestamp before reading the first frame from the new position since
+            // the timestamp in GStreamer can be reliable extracted from the read frames.
+            timestamp = (gint64)value;
             if (isPosFramesEmulated)
             {
                 if (value == 0)
@@ -1611,8 +2005,9 @@ bool GStreamerCapture::setProperty(int propId, double value)
                 }
             }
         }
-        break;
-    case CV_CAP_PROP_POS_FRAMES:
+        return true;
+    }
+    case CAP_PROP_POS_FRAMES:
     {
         if (!isPosFramesSupported)
         {
@@ -1625,24 +2020,34 @@ bool GStreamerCapture::setProperty(int propId, double value)
                     return true;
                 }
             }
-            return false;
             CV_WARN("unable to seek");
+            return false;
         }
+        // Certain mov and mp4 files seek incorrectly if the pipeline is not stopped before.
+        if (this->isPipelinePlaying()) {
+            this->stopPipeline();
+        }
+
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline.get()), GST_FORMAT_DEFAULT,
                                     flags, (gint64) value)) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to seek");
-            break;
+            return false;
         }
         // wait for status update
         gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
         return true;
     }
-    case CV_CAP_PROP_POS_AVI_RATIO:
+    case CAP_PROP_POS_AVI_RATIO:
+    {
+        // https://stackoverflow.com/questions/31290315
+        // GStreamer docs: GST_FORMAT_PERCENT (5) – percentage of stream (few, if any, elements implement this as of May 2009)
+        CV_WARN("GStreamer: seeking by file percent are not supported by most GStreamer elements");
         if(!gst_element_seek_simple(GST_ELEMENT(pipeline.get()), GST_FORMAT_PERCENT,
                                     flags, (gint64) (value * GST_FORMAT_PERCENT_MAX))) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to seek");
+            return false;
         }
         else
         {
@@ -1659,20 +2064,21 @@ bool GStreamerCapture::setProperty(int propId, double value)
                 }
             }
         }
-        break;
-    case CV_CAP_PROP_FRAME_WIDTH:
+        return true;
+    }
+    case CAP_PROP_FRAME_WIDTH:
         if(value > 0)
             setFilter("width", G_TYPE_INT, (int) value, 0);
         else
             removeFilter("width");
         break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
+    case CAP_PROP_FRAME_HEIGHT:
         if(value > 0)
             setFilter("height", G_TYPE_INT, (int) value, 0);
         else
             removeFilter("height");
         break;
-    case CV_CAP_PROP_FPS:
+    case CAP_PROP_FPS:
         if(value > 0) {
             int num = 0, denom = 1;
             toFraction(value, num, denom);
@@ -1680,10 +2086,10 @@ bool GStreamerCapture::setProperty(int propId, double value)
         } else
             removeFilter("framerate");
         break;
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_HUE:
+    case CAP_PROP_BRIGHTNESS:
+    case CAP_PROP_CONTRAST:
+    case CAP_PROP_SATURATION:
+    case CAP_PROP_HUE:
         if (v4l2src)
         {
             std::string propName = get_gst_propname(propId);
@@ -1695,14 +2101,14 @@ bool GStreamerCapture::setProperty(int propId, double value)
             }
         }
         return false;
-    case CV_CAP_PROP_GAIN:
-    case CV_CAP_PROP_CONVERT_RGB:
+    case CAP_PROP_GAIN:
+    case CAP_PROP_CONVERT_RGB:
         break;
     case cv::CAP_PROP_HW_ACCELERATION:
         return false; // open-only
     case cv::CAP_PROP_HW_DEVICE:
         return false; // open-only
-    case CV_CAP_GSTREAMER_QUEUE_LENGTH:
+    case CAP_PROP_GSTREAMER_QUEUE_LENGTH:
     {
         if(!sink)
         {
@@ -1712,12 +2118,44 @@ bool GStreamerCapture::setProperty(int propId, double value)
         gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), (guint) value);
         return true;
     }
+    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+    {
+        if(value > 0)
+        {
+            openTimeout = GstClockTime(value * GST_MSECOND); // convert from ms to ns
+            return true;
+        }
+        else
+        {
+            CV_WARN("GStreamer open timeout should be positive");
+            return false;
+        }
+    }
+    case CAP_PROP_READ_TIMEOUT_MSEC:
+    {
+#if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
+        if(value > 0)
+        {
+            readTimeout = GstClockTime(value * GST_MSECOND); // convert from ms to ns
+            return true;
+        }
+        else
+        {
+            CV_WARN("GStreamer read timeout should be positive");
+            return false;
+        }
+#else
+        CV_WARN("GStreamer before 1.10 does not support read timeout");
+        return false;
+#endif
+    }
     default:
         CV_WARN("GStreamer: unhandled property");
     }
 
-    if (wasPlaying)
+    if (needRestart) {
         this->startPipeline();
+    }
 
     return false;
 }
@@ -1745,7 +2183,7 @@ Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureP
  * \brief The CvVideoWriter_GStreamer class
  * Use GStreamer to write video
  */
-class CvVideoWriter_GStreamer : public CvVideoWriter
+class CvVideoWriter_GStreamer : public IVideoWriter
 {
 public:
     CvVideoWriter_GStreamer()
@@ -1775,11 +2213,12 @@ public:
     bool open(const std::string &filename, int fourcc,
               double fps, const Size &frameSize, const VideoWriterParameters& params );
     void close();
-    bool writeFrame( const IplImage* image ) CV_OVERRIDE;
+    void write(InputArray) CV_OVERRIDE;
 
     int getIplDepth() const { return ipl_depth; }
 
-    virtual double getProperty(int) const CV_OVERRIDE;
+    double getProperty(int) const CV_OVERRIDE;
+    bool isOpened() const CV_OVERRIDE { return pipeline && source; }
 
 protected:
     const char* filenameToMimetype(const char* filename);
@@ -2075,25 +2514,43 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
             CV_WARN("OpenCV backend does not support this file type (extension): " << filename);
             return false;
         }
-
-        //create pipeline elements
         encodebin.reset(gst_element_factory_make("encodebin", NULL));
-
+        if (!encodebin)
+        {
+            CV_WARN("GStreamer: cannot create encodebin element");
+            return false;
+        }
         GSafePtr<GstCaps> containercaps;
         GSafePtr<GstEncodingContainerProfile> containerprofile;
         GSafePtr<GstEncodingVideoProfile> videoprofile;
 
         containercaps.attach(gst_caps_from_string(mime));
-
-        //create encodebin profile
         containerprofile.attach(gst_encoding_container_profile_new("container", "container", containercaps.get(), NULL));
-        videoprofile.reset(gst_encoding_video_profile_new(videocaps.get(), NULL, NULL, 1));
-        gst_encoding_container_profile_add_profile(containerprofile.get(), (GstEncodingProfile*)videoprofile.get());
-
+        unsigned int colorspace_fourcc = (unsigned int)params.get(VIDEOWRITER_PROP_COLOR_SPACE, CV_FOURCC('I', '4', '2', '0'));
+        const char* colorspace = gst_video_format_to_string(gst_video_format_from_fourcc(colorspace_fourcc));
+        GSafePtr<GstCaps> prof_caps;
+        std::string caps_str = std::string("video/x-raw, format=") + std::string(colorspace);
+        prof_caps.attach(gst_caps_from_string(caps_str.c_str()));
+        videoprofile.attach(gst_encoding_video_profile_new(prof_caps.get(), NULL, NULL, 1));
+        // Transfer ownership to the container profile
+        gst_encoding_container_profile_add_profile(
+            containerprofile.get(),
+            (GstEncodingProfile*)videoprofile.detach()
+        );
         g_object_set(G_OBJECT(encodebin.get()), "profile", containerprofile.get(), NULL);
 
         source.reset(gst_element_factory_make("appsrc", NULL));
+        if (!source)
+        {
+            CV_WARN("GStreamer: cannot create appsrc element");
+            return false;
+        }
         file.reset(gst_element_factory_make("filesink", NULL));
+        if (!file)
+        {
+            CV_WARN("GStreamer: cannot create filesink element");
+            return false;
+        }
         g_object_set(G_OBJECT(file.get()), "location", (const char*)filename.c_str(), NULL);
     }
 
@@ -2103,7 +2560,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     if (fourcc == CV_FOURCC('M','J','P','G') && frameSize.height == 1)
     {
         CV_Assert(depth == CV_8U);
-        ipl_depth = IPL_DEPTH_8U;
+        ipl_depth = CV_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_ENCODED;
         caps.attach(gst_caps_new_simple("image/jpeg",
                                         "framerate", GST_TYPE_FRACTION, int(fps_num), int(fps_denom),
@@ -2113,7 +2570,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     else if (is_color)
     {
         CV_Assert(depth == CV_8U);
-        ipl_depth = IPL_DEPTH_8U;
+        ipl_depth = CV_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_BGR;
         bufsize = frameSize.width * frameSize.height * 3;
 
@@ -2129,7 +2586,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     }
     else if (!is_color && depth == CV_8U)
     {
-        ipl_depth = IPL_DEPTH_8U;
+        ipl_depth = CV_8U;
         input_pix_fmt = GST_VIDEO_FORMAT_GRAY8;
         bufsize = frameSize.width * frameSize.height;
 
@@ -2143,7 +2600,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     }
     else if (!is_color && depth == CV_16U)
     {
-        ipl_depth = IPL_DEPTH_16U;
+        ipl_depth = CV_16U;
         input_pix_fmt = GST_VIDEO_FORMAT_GRAY16_LE;
         bufsize = frameSize.width * frameSize.height * 2;
 
@@ -2189,7 +2646,7 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     if (stateret == GST_STATE_CHANGE_FAILURE)
     {
         handleMessage(pipeline);
-        CV_WARN("GStreamer: cannot put pipeline to play\n");
+        CV_WARN("GStreamer: cannot put pipeline to play");
         pipeline.release();
         return false;
     }
@@ -2233,72 +2690,71 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
  * The timestamp for the buffer is generated from the framerate set in open
  * and ensures a smooth video
  */
-bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
+void CvVideoWriter_GStreamer::write(InputArray image)
 {
     GstClockTime duration, timestamp;
     GstFlowReturn ret;
-    int size;
 
     handleMessage(pipeline);
 
     if (input_pix_fmt == GST_VIDEO_FORMAT_ENCODED) {
-        if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U || image->height != 1) {
-            CV_WARN("cvWriteFrame() needs images with depth = IPL_DEPTH_8U, nChannels = 1 and height = 1.");
-            return false;
+        if (image.type() != CV_8UC1 || image.size().height != 1) {
+            CV_WARN("write frame skipped - expected CV_8UC1, height==1");
+            return;
         }
     }
     else
     if(input_pix_fmt == GST_VIDEO_FORMAT_BGR) {
-        if (image->nChannels != 3 || image->depth != IPL_DEPTH_8U) {
-            CV_WARN("cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 3.");
-            return false;
+        if (image.type() != CV_8UC3) {
+            CV_WARN("write frame skipped - expected CV_8UC3");
+            return;
         }
     }
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY8) {
-        if (image->nChannels != 1 || image->depth != IPL_DEPTH_8U) {
-            CV_WARN("cvWriteFrame() needs images with depth = IPL_DEPTH_8U and nChannels = 1.");
-            return false;
+        if (image.type() != CV_8UC1) {
+            CV_WARN("write frame skipped - expected CV_8UC1");
+            return;
         }
     }
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY16_LE) {
-        if (image->nChannels != 1 || image->depth != IPL_DEPTH_16U) {
-            CV_WARN("cvWriteFrame() needs images with depth = IPL_DEPTH_16U and nChannels = 1.");
-            return false;
+        if (image.type() != CV_16UC1) {
+            CV_WARN("write frame skipped - expected CV_16UC1");
+            return;
         }
     }
     else {
-        CV_WARN("cvWriteFrame() needs BGR or grayscale images\n");
-        return false;
+        CV_WARN("write frame skipped - unsupported format");
+        return;
     }
 
-    size = image->imageSize;
-    duration = ((double)1/framerate) * GST_SECOND;
-    timestamp = num_frames * duration;
+    Mat imageMat = image.getMat();
+    const size_t buf_size = imageMat.total() * imageMat.elemSize();
+    duration = gst_util_uint64_scale_int(GST_SECOND, 1, framerate);
+    timestamp = gst_util_uint64_scale_int(num_frames, GST_SECOND, framerate);
 
     //gst_app_src_push_buffer takes ownership of the buffer, so we need to supply it a copy
-    GstBuffer *buffer = gst_buffer_new_allocate(NULL, size, NULL);
+    GstBuffer *buffer = gst_buffer_new_allocate(NULL, buf_size, NULL);
     GstMapInfo info;
-    gst_buffer_map(buffer, &info, (GstMapFlags)GST_MAP_READ);
-    memcpy(info.data, (guint8*)image->imageData, size);
-    gst_buffer_unmap(buffer, &info);
+    if (gst_buffer_map(buffer, &info, (GstMapFlags)GST_MAP_WRITE)) {
+        memcpy(info.data, (guint8*)imageMat.data, buf_size);
+        gst_buffer_unmap(buffer, &info);
+    }
     GST_BUFFER_DURATION(buffer) = duration;
     GST_BUFFER_PTS(buffer) = timestamp;
     GST_BUFFER_DTS(buffer) = timestamp;
     //set the current number in the frame
     GST_BUFFER_OFFSET(buffer) = num_frames;
-
+    GST_BUFFER_OFFSET_END(buffer) = num_frames + 1;
     ret = gst_app_src_push_buffer(GST_APP_SRC(source.get()), buffer);
     if (ret != GST_FLOW_OK)
     {
         CV_WARN("Error pushing buffer to GStreamer pipeline");
-        return false;
+        return;
     }
 
     //GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
 
     ++num_frames;
-
-    return true;
 }
 
 
@@ -2318,18 +2774,9 @@ double CvVideoWriter_GStreamer::getProperty(int propId) const
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,
                                           const cv::Size& frameSize, const VideoWriterParameters& params)
 {
-    CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    try
-    {
-        if (wrt->open(filename, fourcc, fps, frameSize, params))
-            return makePtr<LegacyWriter>(wrt);
-        delete wrt;
-    }
-    catch (...)
-    {
-        delete wrt;
-        throw;
-    }
+    Ptr<CvVideoWriter_GStreamer> ret = makePtr<CvVideoWriter_GStreamer>();
+    if (ret->open(filename, fourcc, fps, frameSize, params))
+        return ret;
     return 0;
 }
 
@@ -2383,7 +2830,8 @@ void handleMessage(GstElement * pipeline)
 
         if (gst_is_missing_plugin_message(msg))
         {
-            CV_WARN("your GStreamer installation is missing a required plugin");
+            CV_WARN("your GStreamer installation is missing a required plugin: " <<
+                    gst_missing_plugin_message_get_description(msg));
         }
         else
         {
@@ -2442,8 +2890,6 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
-        return CV_ERROR_FAIL;
     GStreamerCapture *cap = 0;
     try
     {
@@ -2594,7 +3040,7 @@ CvResult CV_API_CALL cv_writer_open_with_params(
     CvVideoWriter_GStreamer* wrt = 0;
     try
     {
-        CvSize sz = { width, height };
+        cv::Size sz { width, height };
         VideoWriterParameters parameters(params, n_params);
         wrt = new CvVideoWriter_GStreamer();
         if (wrt && wrt->open(filename, fourcc, fps, sz, parameters))
@@ -2668,11 +3114,11 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
     try
     {
         CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
-        CvSize sz = { width, height };
-        IplImage img;
-        cvInitImageHeader(&img, sz, instance->getIplDepth(), cn);
-        cvSetData(&img, const_cast<unsigned char*>(data), step);
-        return instance->writeFrame(&img) ? CV_ERROR_OK : CV_ERROR_FAIL;
+        const cv::Size sz = { width, height };
+        const int image_type = CV_MAKE_TYPE(instance->getIplDepth(), cn);
+        cv::Mat img(sz, image_type, (void*)data, step);
+        instance->write(img);
+        return CV_ERROR_OK;
     }
     catch (const std::exception& e)
     {

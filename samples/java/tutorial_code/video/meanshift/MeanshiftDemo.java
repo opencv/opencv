@@ -34,7 +34,7 @@ class Meanshift {
         Imgproc.calcHist(Arrays.asList(hsv_roi), channels, mask, roi_hist, histSize, range);
         Core.normalize(roi_hist, roi_hist, 0, 255, Core.NORM_MINMAX);
 
-        // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+        // Setup the termination criteria, either 10 iteration or move by at least 1 pt
         TermCriteria term_crit = new TermCriteria(TermCriteria.EPS | TermCriteria.COUNT, 10, 1);
 
         while (true) {

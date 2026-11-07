@@ -101,8 +101,12 @@ int App::run()
             element_shape = MORPH_CROSS;
             break;
 
+        case 'd':
+            element_shape = MORPH_DIAMOND;
+            break;
+
         case ' ':
-            element_shape = (element_shape + 1) % 3;
+            element_shape = (element_shape + 1) % 4;
             break;
         }
     }
@@ -113,13 +117,14 @@ void App::help()
     cout << "Show off image morphology: erosion, dialation, open and close \n";
     cout << "Call: \n";
     cout << "   gpu-example-morphology [image] \n";
-    cout << "This program also shows use of rect, ellipse and cross kernels \n" << endl;
+    cout << "This program also shows use of rect, ellipse, cross and diamond kernels \n" << endl;
 
     cout << "Hot keys: \n";
     cout << "\tESC - quit the program \n";
     cout << "\tr - use rectangle structuring element \n";
     cout << "\te - use elliptic structuring element \n";
     cout << "\tc - use cross-shaped structuring element \n";
+    cout << "\td - use diamond-shaped structuring element \n";
     cout << "\tSPACE - loop through all the options \n" << endl;
 }
 

@@ -1,9 +1,10 @@
-How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_new}
+How to use the OpenCV parallel_for_ function to parallelize your code (convolution example) {#tutorial_how_to_use_OpenCV_parallel_for_new}
 ==================================================================
 
 @tableofcontents
 
 @prev_tutorial{tutorial_file_input_output_with_xml_yml}
+@prev_tutorial{tutorial_how_to_use_OpenCV_parallel_for_}
 @next_tutorial{tutorial_univ_intrin}
 
 |    |    |
@@ -122,7 +123,7 @@ For example, we can either
 
 To set the number of threads, you can use: @ref cv::setNumThreads. You can also specify the number of splitting using the nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)` or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the workload only on two threads.
 
-@note C++ 11 standard allows to simplify the parallel implementation by get rid of the `parallelConvolution` class and replacing it with lambda expression:
+@note C++ 11 standard allows simplifying the parallel implementation by getting rid of the `parallelConvolution` class and replacing it with lambda expression:
 
 @snippet how_to_use_OpenCV_parallel_for_new.cpp convolution-parallel-cxx11
 

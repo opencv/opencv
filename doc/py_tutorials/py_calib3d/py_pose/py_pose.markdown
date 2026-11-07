@@ -36,7 +36,8 @@ Now let's create a function, draw which takes the corners in the chessboard (obt
 **cv.findChessboardCorners()**) and **axis points** to draw a 3D axis.
 @code{.py}
 def draw(img, corners, imgpts):
-    corner = tuple(corners[0].ravel())
+    corner = tuple(corners[0].ravel().astype("int32"))
+    imgpts = imgpts.astype("int32")
     img = cv.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
     img = cv.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
     img = cv.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
@@ -49,22 +50,24 @@ our X axis is drawn from (0,0,0) to (3,0,0), so for Y axis. For Z axis, it is dr
 (0,0,-3). Negative denotes it is drawn towards the camera.
 @code{.py}
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-objp = np.zeros((6*7,3), np.float32)
-objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+cols = 6
+rows = 7
+objp = np.zeros((cols*rows,3), np.float32)
+objp[:,:2] = np.mgrid[0:cols,0:rows].T.reshape(-1,2)
 
 axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
 @endcode
-Now, as usual, we load each image. Search for 7x6 grid. If found, we refine it with subcorner
+Now, as usual, we load each image. Search for 6x7 grid. If found, we refine it with subcorner
 pixels. Then to calculate the rotation and translation, we use the function,
 **cv.solvePnPRansac()**. Once we those transformation matrices, we use them to project our **axis
 points** to the image plane. In simple words, we find the points on image plane corresponding to
 each of (3,0,0),(0,3,0),(0,0,3) in 3D space. Once we get them, we draw lines from the first corner
-to each of these points using our draw() function. Done !!!
+to each of these points using our generateImage() function. Done !!!
 @code{.py}
 for fname in glob.glob('left*.jpg'):
     img = cv.imread(fname)
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    ret, corners = cv.findChessboardCorners(gray, (7,6),None)
+    ret, corners = cv.findChessboardCorners(gray, (cols, rows), None)
 
     if ret == True:
         corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
@@ -89,9 +92,9 @@ See some results below. Notice that each axis is 3 squares long.:
 
 ### Render a Cube
 
-If you want to draw a cube, modify the draw() function and axis points as follows.
+If you want to draw a cube, modify the generateImage() function and axis points as follows.
 
-Modified draw() function:
+Modified generateImage() function:
 @code{.py}
 def draw(img, corners, imgpts):
     imgpts = np.int32(imgpts).reshape(-1,2)
@@ -119,9 +122,3 @@ And look at the result below:
 
 If you are interested in graphics, augmented reality etc, you can use OpenGL to render more
 complicated figures.
-
-Additional Resources
---------------------
-
-Exercises
----------

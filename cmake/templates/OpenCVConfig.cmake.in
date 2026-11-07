@@ -99,6 +99,8 @@ endif()
 @IPPICV_CONFIGCMAKE@
 @IPPIW_CONFIGCMAKE@
 
+@FASTCV_CONFIGCMAKE@
+
 # Some additional settings are required if OpenCV is built as static libs
 set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
 

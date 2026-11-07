@@ -6,9 +6,9 @@
 
 namespace opencv_test { namespace {
 
-CV_ENUM(MatchTemplType, CV_TM_CCORR,  CV_TM_CCORR_NORMED,
-                        CV_TM_SQDIFF, CV_TM_SQDIFF_NORMED,
-                        CV_TM_CCOEFF, CV_TM_CCOEFF_NORMED)
+CV_ENUM(MatchTemplType, cv::TM_CCORR,  cv::TM_CCORR_NORMED,
+                        cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED,
+                        cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
 
 class Imgproc_MatchTemplateWithMask : public TestWithParam<std::tuple<MatType,MatType>>
 {
@@ -76,7 +76,7 @@ void Imgproc_MatchTemplateWithMask::SetUp()
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplSQDIFF)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_SQDIFF, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_SQDIFF, mask_testtype_);
     // Naive implementation for one point
     Mat temp = img_roi_masked_ - templ_masked_;
     Scalar temp_s = sum(temp.mul(temp));
@@ -87,7 +87,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplSQDIFF)
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplSQDIFF_NORMED)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_SQDIFF_NORMED, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_SQDIFF_NORMED, mask_testtype_);
     // Naive implementation for one point
     Mat temp = img_roi_masked_ - templ_masked_;
     Scalar temp_s = sum(temp.mul(temp));
@@ -106,7 +106,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplSQDIFF_NORMED)
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCORR)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_CCORR, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_CCORR, mask_testtype_);
     // Naive implementation for one point
     Scalar temp_s = sum(templ_masked_.mul(img_roi_masked_));
     double val = temp_s[0] + temp_s[1] + temp_s[2] + temp_s[3];
@@ -116,7 +116,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCORR)
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCORR_NORMED)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_CCORR_NORMED, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_CCORR_NORMED, mask_testtype_);
     // Naive implementation for one point
     Scalar temp_s = sum(templ_masked_.mul(img_roi_masked_));
     double val = temp_s[0] + temp_s[1] + temp_s[2] + temp_s[3];
@@ -134,7 +134,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCORR_NORMED)
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCOEFF)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_CCOEFF, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_CCOEFF, mask_testtype_);
     // Naive implementation for one point
     Scalar temp_s = sum(mask_);
     for (int i = 0; i < 4; i++)
@@ -157,7 +157,7 @@ TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCOEFF)
 
 TEST_P(Imgproc_MatchTemplateWithMask, CompareNaiveImplCCOEFF_NORMED)
 {
-    matchTemplate(img_testtype_, templ_testtype_, result_, CV_TM_CCOEFF_NORMED, mask_testtype_);
+    matchTemplate(img_testtype_, templ_testtype_, result_, cv::TM_CCOEFF_NORMED, mask_testtype_);
     // Naive implementation for one point
     Scalar temp_s = sum(mask_);
     for (int i = 0; i < 4; i++)
@@ -265,14 +265,67 @@ INSTANTIATE_TEST_CASE_P(SingleChannelMask, Imgproc_MatchTemplateWithMask2,
     Combine(
         Values(CV_32FC1, CV_32FC3, CV_8UC1, CV_8UC3),
         Values(CV_32FC1, CV_8UC1),
-        Values(CV_TM_SQDIFF, CV_TM_SQDIFF_NORMED, CV_TM_CCORR, CV_TM_CCORR_NORMED,
-               CV_TM_CCOEFF, CV_TM_CCOEFF_NORMED)));
+        Values(cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED,
+               cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)));
 
 INSTANTIATE_TEST_CASE_P(MultiChannelMask, Imgproc_MatchTemplateWithMask2,
     Combine(
         Values(CV_32FC3, CV_8UC3),
         Values(CV_32FC3, CV_8UC3),
-        Values(CV_TM_SQDIFF, CV_TM_SQDIFF_NORMED, CV_TM_CCORR, CV_TM_CCORR_NORMED,
-               CV_TM_CCOEFF, CV_TM_CCOEFF_NORMED)));
+        Values(cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED,
+               cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)));
+
+TEST(Imgproc_MatchTemplateWithMask, bug_26389) {
+    const Mat image = Mat::ones(Size(10, 10), CV_8UC1);
+    const Mat templ = Mat::ones(Size(10, 7), CV_8UC1);
+    const Mat mask = Mat::ones(Size(10, 7), CV_8UC1);
+
+    for (const int method : {TM_CCOEFF, TM_CCOEFF_NORMED})
+    {
+        Mat result;
+        matchTemplate(image, templ, result, method, mask);
+    }
+}
+
+typedef testing::tuple<MatType, MatType, Scalar> ConstantTemplateParams;
+
+typedef testing::TestWithParam<ConstantTemplateParams> ConstantTemplateWithMask;
+
+TEST_P(ConstantTemplateWithMask, regression_23257)
+{
+    int type = std::get<0>(GetParam());
+    int maskType = std::get<1>(GetParam());
+    Scalar templValue = std::get<2>(GetParam());
+
+    Mat image(Size(16, 16), type);
+    randu(image, 0, 255);
+
+    const Mat templ(Size(3, 3), type, templValue);
+    Mat mask = Mat::ones(templ.size(), maskType);
+    mask(Rect(1, 0, 1, 3)) = Scalar::all(0);
+
+    Mat result;
+    matchTemplate(image, templ, result, TM_CCOEFF_NORMED, mask);
+
+    for (int y = 0; y < result.rows; ++y)
+    {
+        for (int x = 0; x < result.cols; ++x)
+        {
+            const float value = result.at<float>(y, x);
+            EXPECT_FALSE(cvIsNaN(value));
+            EXPECT_FALSE(cvIsInf(value));
+            EXPECT_EQ(1.0f, value);
+        }
+    }
+}
+
+std::vector<ConstantTemplateParams> ctparams = {
+    {CV_8UC1, CV_8UC1, Scalar::all(1)},
+    {CV_32FC1, CV_32FC1, Scalar::all(3.5)},
+    {CV_8UC3, CV_8UC1, Scalar(1, 2, 3)},
+    {CV_32FC3, CV_32FC3, Scalar(1.5, 2.5, 3.5)}
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, ConstantTemplateWithMask, testing::ValuesIn(ctparams));
 
 }} // namespace

@@ -155,6 +155,21 @@ class DnnCaffeModel(Framework):
         self.net.setInput(input_blob, self.in_blob_name)
         return self.net.forward(self.out_blob_name)
 
+class DNNOnnxModel(Framework):
+    net = object
+
+    def __init__(self, onnx_file, in_blob_name, out_blob_name):
+        self.net = cv.dnn.readNetFromONNX(onnx_file)
+        self.in_blob_name = in_blob_name
+        self.out_blob_name = out_blob_name
+
+    def get_name(self):
+        return 'DNN (ONNX)'
+
+    def get_output(self, input_blob):
+        self.net.setInput(input_blob, self.in_blob_name)
+        return self.net.forward(self.out_blob_name)
+
 
 class ClsAccEvaluation:
     log = sys.stdout

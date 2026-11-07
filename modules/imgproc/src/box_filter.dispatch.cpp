@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, 2018, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -48,8 +49,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 #include "box_filter.simd.hpp"
 #include "box_filter.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
@@ -61,7 +60,6 @@ namespace cv {
 static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
                                    Size ksize, Point anchor, int borderType, bool normalize )
 {
-    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if (ddepth < 0)
@@ -72,7 +70,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     if (anchor.y < 0)
         anchor.y = ksize.height / 2;
 
-    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+    if ( !(type == CV_8UC1 &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
          (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
          (anchor.x == 1) && (anchor.y == 1) &&
@@ -89,7 +87,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     globalsize[1] = size.height / 2;
 
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
 
     ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, build_opts);
     if (kernel.empty())
@@ -160,7 +158,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     ocl::Kernel kernel;
 
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+    if (!(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
@@ -195,8 +193,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         const int wgRound = 256;
         globalsize[0] = roundUp(globalsize[0], wgRound);
 
-        char build_options[1024], cvt[2][40];
-        sprintf(build_options, "-D cn=%d "
+        char build_options[1024], cvt[2][50];
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
@@ -210,8 +208,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                 normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
                 ocl::typeToStr(CV_MAKE_TYPE(wdepth, pxLoadVecSize)) //PX_LOAD_FLOAT_VEC_CONV
                 );
@@ -241,8 +239,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                                  " -D ST1=%s -D DT1=%s -D cn=%d",
                                  BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
                                  ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1], sizeof(cvt[1])),
                                  anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                                  isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                  normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
@@ -315,126 +313,6 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-#ifdef HAVE_OPENVX
-    namespace ovx {
-        template <> inline bool skipSmallImages<VX_KERNEL_BOX_3x3>(int w, int h) { return w*h < 640 * 480; }
-    }
-    static bool openvx_boxfilter(InputArray _src, OutputArray _dst, int ddepth,
-                                 Size ksize, Point anchor,
-                                 bool normalize, int borderType)
-    {
-        if (ddepth < 0)
-            ddepth = CV_8UC1;
-        if (_src.type() != CV_8UC1 || ddepth != CV_8U || !normalize ||
-            _src.cols() < 3 || _src.rows() < 3 ||
-            ksize.width != 3 || ksize.height != 3 ||
-            (anchor.x >= 0 && anchor.x != 1) ||
-            (anchor.y >= 0 && anchor.y != 1) ||
-            ovx::skipSmallImages<VX_KERNEL_BOX_3x3>(_src.cols(), _src.rows()))
-            return false;
-
-        Mat src = _src.getMat();
-
-        if ((borderType & BORDER_ISOLATED) == 0 && src.isSubmatrix())
-            return false; //Process isolated borders only
-        vx_enum border;
-        switch (borderType & ~BORDER_ISOLATED)
-        {
-        case BORDER_CONSTANT:
-            border = VX_BORDER_CONSTANT;
-            break;
-        case BORDER_REPLICATE:
-            border = VX_BORDER_REPLICATE;
-            break;
-        default:
-            return false;
-        }
-
-        _dst.create(src.size(), CV_8UC1);
-        Mat dst = _dst.getMat();
-
-        try
-        {
-            ivx::Context ctx = ovx::getOpenVXContext();
-
-            Mat a;
-            if (dst.data != src.data)
-                a = src;
-            else
-                src.copyTo(a);
-
-            ivx::Image
-                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                                                  ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-                ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                                                  ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-            //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-            //since OpenVX standard says nothing about thread-safety for now
-            ivx::border_t prevBorder = ctx.immediateBorder();
-            ctx.setImmediateBorder(border, (vx_uint8)(0));
-            ivx::IVX_CHECK_STATUS(vxuBox3x3(ctx, ia, ib));
-            ctx.setImmediateBorder(prevBorder);
-        }
-        catch (const ivx::RuntimeError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-        catch (const ivx::WrapperError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-
-        return true;
-    }
-#endif
-
-#if 0 //defined(HAVE_IPP)
-static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_VERSION_X100 < 201801
-    // Problem with SSE42 optimization for 16s and some 8u modes
-    if(ipp::getIppTopFeatures() == ippCPUID_SSE42 && (((src.depth() == CV_16S || src.depth() == CV_16U) && (src.channels() == 3 || src.channels() == 4)) || (src.depth() == CV_8U && src.channels() == 3 && (ksize.width > 5 || ksize.height > 5))))
-        return false;
-
-    // Other optimizations has some degradations too
-    if((((src.depth() == CV_16S || src.depth() == CV_16U) && (src.channels() == 4)) || (src.depth() == CV_8U && src.channels() == 1 && (ksize.width > 5 || ksize.height > 5))))
-        return false;
-#endif
-
-    if(!normalize)
-        return false;
-
-    if(!ippiCheckAnchor(anchor, ksize))
-        return false;
-
-    try
-    {
-        ::ipp::IwiImage       iwSrc      = ippiGetImage(src);
-        ::ipp::IwiImage       iwDst      = ippiGetImage(dst);
-        ::ipp::IwiSize        iwKSize    = ippiGetSize(ksize);
-        ::ipp::IwiBorderSize  borderSize(iwKSize);
-        ::ipp::IwiBorderType  ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder)
-            return false;
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBox, iwSrc, iwDst, iwKSize, ::ipp::IwDefault(), ippBorder);
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(ksize); CV_UNUSED(anchor); CV_UNUSED(normalize); CV_UNUSED(borderType);
-    return false;
-#endif
-}
-#endif
 
 
 void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
@@ -444,6 +322,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
     CV_INSTRUMENT_REGION();
 
     CV_Assert(!_src.empty());
+    CV_Assert(ksize.width > 0 && ksize.height > 0);
 
     CV_OCL_RUN(_dst.isUMat() &&
                (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
@@ -475,12 +354,15 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              anchor.x, anchor.y, normalize, borderType&~BORDER_ISOLATED);
 
-    CV_OVX_RUN(true,
-               openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
-
-    //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     borderType = (borderType&~BORDER_ISOLATED);
+
+    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
+    {
+        CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
+            CV_CPU_DISPATCH_MODES_ALL);
+        return;
+    }
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
                         ksize, anchor, normalize, borderType );

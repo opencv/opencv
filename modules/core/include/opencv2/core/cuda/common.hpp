@@ -65,8 +65,10 @@
 namespace cv { namespace cuda {
     static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
-        if (cudaSuccess != err)
+        if (cudaSuccess != err) {
+            cudaGetLastError(); // reset the last stored error to cudaSuccess
             cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
+        }
     }
 }}
 
@@ -96,6 +98,11 @@ namespace cv { namespace cuda
             return (total + grain - 1) / grain;
         }
 
+#if (CUDART_VERSION >= 12000)
+        template<class T> inline void createTextureObjectPitch2D(cudaTextureObject_t*, PtrStepSz<T>&, const cudaTextureDesc&) {
+            CV_Error(cv::Error::GpuNotSupported, "Function removed in CUDA SDK 12"); }
+#else
+        //TODO: remove from OpenCV 5.x
         template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
@@ -115,6 +122,7 @@ namespace cv { namespace cuda
 
             cudaSafeCall( cudaCreateTextureObject(tex, &resDesc, &texDesc, NULL) );
         }
+#endif
     }
 }}
 

@@ -36,6 +36,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ float min(float x, float y) { return fminf(x, y); }
     template <> inline __device__ double min(double x, double y) { return fmin(x, y); }
 
+    template <class T> __device__ T fmod(T x, T y) { return x % y; }
+    template <> inline __device__ float fmod(float x, float y) { return fmodf(x, y); }
+    template <> inline __device__ double fmod(double x, double y) { return fmod(x, y); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ half fmod(half x, half y) { return fmodf((float)x, (float)y); }
+#endif
+
     template <class T> __device__ T log1p(T val);
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template <> inline __device__ __half log1p(__half val) { return hlog(__half(1) + val); }

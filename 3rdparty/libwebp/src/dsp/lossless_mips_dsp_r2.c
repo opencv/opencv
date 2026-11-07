@@ -188,46 +188,51 @@ static WEBP_INLINE uint32_t Average4(uint32_t a0, uint32_t a1,
   return Average2(Average2(a0, a1), Average2(a2, a3));
 }
 
-static uint32_t Predictor5_MIPSdspR2(uint32_t left, const uint32_t* const top) {
-  return Average3(left, top[0], top[1]);
+static uint32_t Predictor5_MIPSdspR2(const uint32_t* const left,
+                                     const uint32_t* const top) {
+  return Average3(*left, top[0], top[1]);
 }
 
-static uint32_t Predictor6_MIPSdspR2(uint32_t left, const uint32_t* const top) {
-  return Average2(left, top[-1]);
+static uint32_t Predictor6_MIPSdspR2(const uint32_t* const left,
+                                     const uint32_t* const top) {
+  return Average2(*left, top[-1]);
 }
 
-static uint32_t Predictor7_MIPSdspR2(uint32_t left, const uint32_t* const top) {
-  return Average2(left, top[0]);
+static uint32_t Predictor7_MIPSdspR2(const uint32_t* const left,
+                                     const uint32_t* const top) {
+  return Average2(*left, top[0]);
 }
 
-static uint32_t Predictor8_MIPSdspR2(uint32_t left, const uint32_t* const top) {
+static uint32_t Predictor8_MIPSdspR2(const uint32_t* const left,
+                                     const uint32_t* const top) {
   (void)left;
   return Average2(top[-1], top[0]);
 }
 
-static uint32_t Predictor9_MIPSdspR2(uint32_t left, const uint32_t* const top) {
+static uint32_t Predictor9_MIPSdspR2(const uint32_t* const left,
+                                     const uint32_t* const top) {
   (void)left;
   return Average2(top[0], top[1]);
 }
 
-static uint32_t Predictor10_MIPSdspR2(uint32_t left,
+static uint32_t Predictor10_MIPSdspR2(const uint32_t* const left,
                                       const uint32_t* const top) {
-  return Average4(left, top[-1], top[0], top[1]);
+  return Average4(*left, top[-1], top[0], top[1]);
 }
 
-static uint32_t Predictor11_MIPSdspR2(uint32_t left,
+static uint32_t Predictor11_MIPSdspR2(const uint32_t* const left,
                                       const uint32_t* const top) {
-  return Select(top[0], left, top[-1]);
+  return Select(top[0], *left, top[-1]);
 }
 
-static uint32_t Predictor12_MIPSdspR2(uint32_t left,
+static uint32_t Predictor12_MIPSdspR2(const uint32_t* const left,
                                       const uint32_t* const top) {
-  return ClampedAddSubtractFull(left, top[0], top[-1]);
+  return ClampedAddSubtractFull(*left, top[0], top[-1]);
 }
 
-static uint32_t Predictor13_MIPSdspR2(uint32_t left,
+static uint32_t Predictor13_MIPSdspR2(const uint32_t* const left,
                                       const uint32_t* const top) {
-  return ClampedAddSubtractHalf(left, top[0], top[-1]);
+  return ClampedAddSubtractHalf(*left, top[0], top[-1]);
 }
 
 // Add green to blue and red channels (i.e. perform the inverse transform of
@@ -294,9 +299,9 @@ static void TransformColorInverse_MIPSdspR2(const VP8LMultipliers* const m,
                                             uint32_t* dst) {
   int temp0, temp1, temp2, temp3, temp4, temp5;
   uint32_t argb, argb1, new_red;
-  const uint32_t G_to_R = m->green_to_red_;
-  const uint32_t G_to_B = m->green_to_blue_;
-  const uint32_t R_to_B = m->red_to_blue_;
+  const uint32_t G_to_R = m->green_to_red;
+  const uint32_t G_to_B = m->green_to_blue;
+  const uint32_t R_to_B = m->red_to_blue;
   const uint32_t* const p_loop_end = src + (num_pixels & ~1);
   __asm__ volatile (
     ".set            push                                    \n\t"

@@ -111,7 +111,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              * or there might be several weights
              * or we don't have to scale
              */
-            if (weight != 1.0)
+            if (weight != static_cast<T>(1.0f))
             {
                 kernels::scale1_with_bias1<T>(stream, output, input, weight, 1.0);
             }

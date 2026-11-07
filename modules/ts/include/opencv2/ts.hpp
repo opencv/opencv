@@ -116,16 +116,21 @@
 # endif
 #endif
 
-#if defined(__OPENCV_BUILD) && defined(__clang__)
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
 #include "opencv2/ts/ts_gtest.h"
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
+#endif
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic pop
 #endif
 #include "opencv2/ts/ts_ext.hpp"
 
@@ -295,8 +300,8 @@ Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool 
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
-void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
-void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
+void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
+void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
 
 void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
@@ -606,7 +611,7 @@ public:
     };
 
     // get RNG to generate random input data for a test
-    RNG& get_rng() { return rng; }
+    RNG& get_rng() { return cv::theRNG(); }
 
     // returns the current error code
     TS::FailureCode get_err_code() { return TS::FailureCode(current_test_info.code); }
@@ -624,7 +629,6 @@ public:
 protected:
 
     // these are allocated within a test to try to keep them valid in case of stack corruption
-    RNG rng;
 
     // information about the current test
     TestInfo current_test_info;
@@ -750,6 +754,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 // Utility functions
 
 void addDataSearchPath(const std::string& path);
+void addDataSearchEnv(const std::string& env_name);
 void addDataSearchSubDirectory(const std::string& subdir);
 
 /*! @brief Try to find requested data file
@@ -936,13 +941,9 @@ namespace opencv_test {
 using namespace cvtest;
 using namespace cv;
 
-#ifdef CV_CXX11
 #define CVTEST_GUARD_SYMBOL(name) \
     class required_namespace_specificatin_here_for_symbol_ ## name {}; \
     using name = required_namespace_specificatin_here_for_symbol_ ## name;
-#else
-#define CVTEST_GUARD_SYMBOL(name) /* nothing */
-#endif
 
 CVTEST_GUARD_SYMBOL(norm)
 CVTEST_GUARD_SYMBOL(add)

@@ -78,7 +78,7 @@ AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          |
 ```
 
 ## References
-* [Models downloading script](https://github.com/opencv/opencv/samples/dnn/download_models.py)
+* [Models downloading script](https://github.com/opencv/opencv/blob/4.x/samples/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/4.x/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
 * [Names of classes from different datasets](https://github.com/opencv/opencv/tree/4.x/samples/data/dnn)

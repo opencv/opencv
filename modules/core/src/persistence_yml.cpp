@@ -40,7 +40,7 @@ public:
         {
             /* reset struct flag. in order not to print ']' */
             struct_flags = FileNode::SEQ;
-            sprintf(buf, "!!binary |");
+            snprintf(buf, sizeof(buf), "!!binary |");
             data = buf;
         }
         else if( FileNode::isFlow(struct_flags))
@@ -49,7 +49,7 @@ public:
             struct_flags |= FileNode::FLOW;
 
             if( type_name )
-                sprintf( buf, "!!%s %c", type_name, c );
+                snprintf( buf, sizeof(buf), "!!%s %c", type_name, c );
             else
             {
                 buf[0] = c;
@@ -59,7 +59,7 @@ public:
         }
         else if( type_name )
         {
-            sprintf( buf, "!!%s", type_name );
+            snprintf( buf, sizeof(buf), "!!%s", type_name );
             data = buf;
         }
 
@@ -107,10 +107,16 @@ public:
         writeScalar( key, fs::itoa( value, buf, 10 ));
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10, true ));
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, value, false ));
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ));
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -152,7 +158,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        sprintf( data, "x%02x", c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
                         data += 3;
                     }
                 }
@@ -426,12 +432,13 @@ public:
             CV_PARSE_ERROR_CPP( "Missing \':\'" );
 
         saveptr = endptr + 1;
+        if( endptr == ptr )
+            CV_PARSE_ERROR_CPP( "An empty key" );
+
         do c = *--endptr;
         while( c == ' ' );
 
         ++endptr;
-        if( endptr == ptr )
-            CV_PARSE_ERROR_CPP( "An empty key" );
 
         value_placeholder = fs->addNode(map_node, std::string(ptr, endptr - ptr), FileNode::NONE);
         ptr = saveptr;
@@ -558,7 +565,7 @@ public:
             endptr = ptr + (c == '-' || c == '+');
             while( cv_isdigit(*endptr) )
                 endptr++;
-            if( *endptr == '.' || *endptr == 'e' )
+            if( *endptr == '.' || *endptr == 'e' || *endptr == 'E' )
             {
             force_real:
                 double fval = fs->strtod( ptr, &endptr );
@@ -567,7 +574,7 @@ public:
             else
             {
             force_int:
-                int ival = (int)strtol( ptr, &endptr, 0 );
+                int64_t ival = strtoll( ptr, &endptr, 0 );
                 node.setValue(FileNode::INT, &ival);
             }
 

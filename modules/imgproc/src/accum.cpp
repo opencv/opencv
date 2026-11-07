@@ -126,13 +126,13 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
     const char * const opMap[4] = { "ACCUMULATE", "ACCUMULATE_SQUARE", "ACCUMULATE_PRODUCT",
                                    "ACCUMULATE_WEIGHTED" };
 
-    char cvt[40];
+    char cvt[50];
     ocl::Kernel k("accumulate", ocl::imgproc::accumulate_oclsrc,
                   format("-D %s%s -D srcT1=%s -D cn=%d -D dstT1=%s%s -D rowsPerWI=%d -D convertToDT=%s",
                          opMap[op_type], haveMask ? " -D HAVE_MASK" : "",
                          ocl::typeToStr(sdepth), kercn, ocl::typeToStr(ddepth),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI,
-                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt)));
+                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt, sizeof(cvt))));
     if (k.empty())
         return false;
 

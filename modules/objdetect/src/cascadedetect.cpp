@@ -1063,9 +1063,9 @@ public:
                         if( classifier->data.stages.size() + result == 0 )
                         {
                             mtx->lock();
-                            rectangles->push_back(Rect(cvRound(x*scalingFactor),
-                                                       cvRound(y*scalingFactor),
-                                                       winSize.width, winSize.height));
+                            rectangles->emplace_back(cvRound(x*scalingFactor),
+                                                     cvRound(y*scalingFactor),
+                                                     winSize.width, winSize.height);
                             rejectLevels->push_back(-result);
                             levelWeights->push_back(gypWeight);
                             mtx->unlock();
@@ -1074,9 +1074,9 @@ public:
                     else if( result > 0 )
                     {
                         mtx->lock();
-                        rectangles->push_back(Rect(cvRound(x*scalingFactor),
-                                                   cvRound(y*scalingFactor),
-                                                   winSize.width, winSize.height));
+                        rectangles->emplace_back(cvRound(x*scalingFactor),
+                                                 cvRound(y*scalingFactor),
+                                                 winSize.width, winSize.height);
                         mtx->unlock();
                     }
                     if( result == 0 )
@@ -1222,10 +1222,10 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         for( int i = 0; i < nfaces; i++ )
         {
             const FeatureEvaluator::ScaleData& s = featureEvaluator->getScaleData(fptr[i*3 + 1]);
-            candidates.push_back(Rect(cvRound(fptr[i*3 + 2]*s.scale),
-                                      cvRound(fptr[i*3 + 3]*s.scale),
-                                      cvRound(data.origWinSize.width*s.scale),
-                                      cvRound(data.origWinSize.height*s.scale)));
+            candidates.emplace_back(cvRound(fptr[i*3 + 2]*s.scale),
+                                    cvRound(fptr[i*3 + 3]*s.scale),
+                                    cvRound(data.origWinSize.width*s.scale),
+                                    cvRound(data.origWinSize.height*s.scale));
         }
     }
     return ok;
@@ -1570,8 +1570,8 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
             for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
             {
                 const DTreeNode& node = nodes[nodeOfs];
-                stumps.push_back(Stump(node.featureIdx, node.threshold,
-                                       leaves[leafOfs], leaves[leafOfs+1]));
+                stumps.emplace_back(node.featureIdx, node.threshold,
+                                    leaves[leafOfs], leaves[leafOfs+1]);
             }
         }
     }

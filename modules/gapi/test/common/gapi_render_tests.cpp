@@ -92,6 +92,6 @@ void blendImageRef(cv::Mat& mat, const cv::Point& org, const cv::Mat& img, const
     roi32f += img32f;
 
     roi32f.convertTo(roi, CV_8U, 255.0);
-};
+}
 
 } // namespace opencv_test

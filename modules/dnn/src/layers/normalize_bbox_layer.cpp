@@ -112,7 +112,7 @@ public:
         std::vector<UMat> outputs;
         std::vector<UMat> internals;
 
-        if (inputs_.depth() == CV_16S)
+        if (inputs_.depth() == CV_16F)
             return false;
 
         inputs_.getUMatVector(inputs);
@@ -147,7 +147,7 @@ public:
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
-                float norm = pow(absSum, 1.0f / pnorm);
+                float norm = std::pow(absSum, 1.0f / pnorm);
                 multiply(src, 1.0f / norm, dst);
             }
             else
@@ -193,7 +193,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -215,8 +215,8 @@ public:
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();
 
-        size_t num = total(shape(inp0.size), 0, startAxis);
-        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t num = total(inp0, 0, startAxis);
+        size_t numPlanes = total(inp0, startAxis, endAxis + 1);
         CV_Assert(num * numPlanes != 0);
         size_t planeSize = inp0.total() / (num * numPlanes);
         for (size_t n = 0; n < num; ++n)
@@ -229,7 +229,7 @@ public:
             {
                 // add eps to avoid overflow
                 float absSum = sum(buffer)[0] + epsilon;
-                float norm = pow(absSum, 1.0f / pnorm);
+                float norm = std::pow(absSum, 1.0f / pnorm);
                 multiply(src, 1.0f / norm, dst);
             }
             else
@@ -273,32 +273,28 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        const size_t batch = ieInpNode->get_shape()[0];
-        const size_t numChannels = ieInpNode->get_shape()[1];
+        const size_t batch = ieInpNode.get_shape()[0];
+        const size_t numChannels = ieInpNode.get_shape()[1];
 
         std::vector<int64_t> axes_data;
         if (!acrossSpatial) {
             axes_data.push_back(1);
         } else {
-            axes_data.resize(ieInpNode->get_shape().size() - 1);
+            axes_data.resize(ieInpNode.get_shape().size() - 1);
             std::iota(axes_data.begin(), axes_data.end(), 1);
         }
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
-        auto norm = std::make_shared<ngraph::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes_data.size()}, axes_data);
+        auto norm = std::make_shared<ov::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ov::op::EpsMode::ADD);
 
         CV_Assert(blobs.empty() || numChannels == blobs[0].total());
-        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        std::vector<size_t> shape(ieInpNode.get_shape().size(), 1);
         shape[0] = blobs.empty() ? 1 : batch;
         shape[1] = numChannels;
         if (!blobs.empty())
         {
-            auto weight = std::make_shared<ngraph::op::Constant>(
-                                      ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#else
-            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#endif
+            auto weight = std::make_shared<ov::op::v0::Constant>(
+                                      ov::element::f32, ov::Shape(shape), blobs[0].data);
+            auto mul = std::make_shared<ov::op::v1::Multiply>(norm, weight, ov::op::AutoBroadcastType::NUMPY);
             return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(norm));

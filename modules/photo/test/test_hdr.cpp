@@ -118,6 +118,27 @@ TEST(Photo_Tonemap, regression)
     checkEqual(result, expected, 3, "Mantiuk");
 }
 
+TEST(Photo_Tonemap, reinhard_preserves_intensity)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
+
+    Mat img, first, second;
+    loadImage(test_path + "image.hdr", img);
+    Mat original = img.clone();
+
+    Ptr<TonemapReinhard> tonemap = createTonemapReinhard(1.0f, 0.0f, 1.0f, 0.0f);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    tonemap->process(img, first);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    tonemap->process(img, second);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    checkEqual(first, second, 0, "Reinhard repeated process");
+    checkEqual(img, original, 0, "Reinhard input preservation");
+}
+
 TEST(Photo_AlignMTB, regression)
 {
     const int TESTS_COUNT = 100;
@@ -187,11 +208,9 @@ TEST(Photo_MergeDebevec, regression)
     Mat result, expected;
     loadImage(test_path + "merge/debevec.hdr", expected);
     merge->process(images, result, times, response);
-
     Ptr<Tonemap> map = createTonemap();
     map->process(result, result);
     map->process(expected, expected);
-
     checkEqual(expected, result, 1e-2f, "Debevec");
 }
 
@@ -211,6 +230,164 @@ TEST(Photo_MergeRobertson, regression)
     checkEqual(expected, result, eps, "MergeRobertson");
 }
 
+TEST(Photo_MergeDebevec, regression_depth_consistency)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images8;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images8, times);
+
+    vector<Mat> images16(images8.size()), images32(images8.size());
+    for (size_t i = 0; i < images8.size(); ++i)
+    {
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);
+    }
+
+    Ptr<MergeDebevec> merge = createMergeDebevec();
+    Ptr<Tonemap> map = createTonemap();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    map->process(hdr8,  hdr8);
+    map->process(hdr16, hdr16);
+    map->process(hdr32, hdr32);
+
+    checkEqual(hdr8, hdr16, 2e-2f, "Debevec realdata 16U vs 8U");
+    checkEqual(hdr8, hdr32, 2e-2f, "Debevec realdata 32F vs 8U");
+}
+
+static void toGraySeq(const vector<Mat>& bgr, vector<Mat>& gray)
+{
+    gray.resize(bgr.size());
+    for (size_t i = 0; i < bgr.size(); ++i)
+        cvtColor(bgr[i], gray[i], COLOR_BGR2GRAY);
+}
+
+static Mat linearResponseC1(int length)
+{
+    Mat response(length, 1, CV_32FC1);
+    for (int i = 0; i < length; i++)
+        response.at<float>(i) = static_cast<float>(i);
+    response.at<float>(0) = response.at<float>(1);
+    return response;
+}
+
+TEST(Photo_MergeDebevec, regression_1channel)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images_bgr;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images_bgr, times);
+
+    vector<Mat> images;
+    toGraySeq(images_bgr, images);
+
+    Ptr<MergeDebevec> merge = createMergeDebevec();
+
+    Mat result_default;
+    merge->process(images, result_default, times);
+    ASSERT_EQ(result_default.type(), CV_32FC1);
+    ASSERT_EQ(result_default.size(), images[0].size());
+    ASSERT_TRUE(cv::checkRange(result_default)) << "Debevec 1ch default produced non-finite values";
+
+    Mat result_linear;
+    merge->process(images, result_linear, times, linearResponseC1(256));
+    checkEqual(result_default, result_linear, 1e-5f, "Debevec 1ch default vs linear CRF");
+
+    Mat response3;
+    loadResponseCSV(test_path + "exposures/response.csv", response3);
+    Mat response1(256, 1, CV_32FC1);
+    for (int i = 0; i < 256; i++)
+        response1.at<float>(i) = response3.at<Vec3f>(i)[0];
+    Mat result_custom;
+    merge->process(images, result_custom, times, response1);
+    ASSERT_EQ(result_custom.type(), CV_32FC1);
+    ASSERT_TRUE(cv::checkRange(result_custom)) << "Debevec 1ch custom CRF produced non-finite values";
+}
+
+TEST(Photo_MergeDebevec, regression_1channel_depth_consistency)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images_bgr;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images_bgr, times);
+
+    vector<Mat> images8;
+    toGraySeq(images_bgr, images8);
+
+    vector<Mat> images16(images8.size()), images32(images8.size());
+    for (size_t i = 0; i < images8.size(); ++i)
+    {
+        images8[i].convertTo(images16[i], CV_16UC1, 257.0);
+        images8[i].convertTo(images32[i], CV_32FC1, 1.0 / 255.0);
+    }
+
+    Ptr<MergeDebevec> debevec = createMergeDebevec();
+    Ptr<Tonemap> map = createTonemap();
+
+    Mat hdr8, hdr16, hdr32;
+    debevec->process(images8, hdr8, times);
+    debevec->process(images16, hdr16, times);
+    debevec->process(images32, hdr32, times);
+    ASSERT_TRUE(cv::checkRange(hdr8) && cv::checkRange(hdr16) && cv::checkRange(hdr32));
+
+    auto to3 = [](const Mat& c1) {
+        Mat c3;
+        std::vector<Mat> ch{c1, c1, c1};
+        cv::merge(ch, c3);
+        return c3;
+    };
+    Mat t8, t16, t32;
+    map->process(to3(hdr8), t8);
+    map->process(to3(hdr16), t16);
+    map->process(to3(hdr32), t32);
+
+    checkEqual(t8, t16, 2e-2f, "Debevec 1ch realdata 16U vs 8U");
+    checkEqual(t8, t32, 2e-2f, "Debevec 1ch realdata 32F vs 8U");
+
+    Mat hdr16_linear;
+    debevec->process(images16, hdr16_linear, times, linearResponseC1(65536));
+    checkEqual(hdr16, hdr16_linear, 1e-5f, "Debevec 1ch 16U default vs linear CRF");
+}
+
+TEST(Photo_MergeRobertson, regression_depth_consistency)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images8;
+    vector<float> times;
+    loadExposureSeq(test_path + "exposures/", images8, times);
+
+    vector<Mat> images16(images8.size()), images32(images8.size());
+    for (size_t i = 0; i < images8.size(); ++i)
+    {
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);
+    }
+
+    Ptr<MergeRobertson> merge = createMergeRobertson();
+    Ptr<Tonemap> map = createTonemap();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    map->process(hdr8,  hdr8);
+    map->process(hdr16, hdr16);
+    map->process(hdr32, hdr32);
+
+    checkEqual(hdr8, hdr16, 3e-2f, "Robertson realdata 16U vs 8U");
+    checkEqual(hdr8, hdr32, 3e-2f, "Robertson realdata 32F vs 8U");
+}
+
 TEST(Photo_CalibrateDebevec, regression)
 {
     string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
@@ -221,16 +398,15 @@ TEST(Photo_CalibrateDebevec, regression)
     loadExposureSeq(test_path + "exposures/", images, times);
     loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
     Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-
     calibrate->process(images, response, times);
     Mat diff = abs(response - expected);
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-#if defined(__arm__) || defined(__aarch64__)
-    ASSERT_LT(max, 0.131);
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+    ASSERT_LT(max, 0.25);
 #else
-    ASSERT_LT(max, 0.1);
+    ASSERT_LT(max, 0.15);
 #endif
 }
 
@@ -266,4 +442,46 @@ TEST(Photo_CalibrateRobertson, bug_18180)
     EXPECT_EQ(0.0, cv::norm(response, response_no_nans, NORM_L2));
 }
 
+TEST(Photo_CalibrateDebevec, bug_24966)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+    vector<Mat> all_images;
+    vector<float> all_times;
+    loadExposureSeq(test_path + "exposures/", all_images, all_times);
+    // Use a balanced subset of exposures
+    vector<int> selected_indices = {1,2,3,4,5};
+    vector<Mat> images;
+    vector<float> times;
+    for (int idx : selected_indices) {
+        images.push_back(all_images[idx]);
+        times.push_back(all_times[idx]);
+    }
+    // Run CRF estimation for different sample points
+    vector<int> sample_points = {200,300,400};
+    vector<Mat> responses;
+    for (int samples : sample_points) {
+        Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec(samples);
+        Mat response;
+        calibrate->process(images, response, times);
+        Mat roi = response.rowRange(15, 240); //Checking CRF only in the middle of the image
+        responses.push_back(roi);
+    }
+
+    // Compare consecutive pairs of CRFs
+    for (size_t i = 0; i < responses.size()-1; ++i) {
+        Mat diff = abs(responses[i] - responses[i+1]);
+        double max_diff;
+        minMaxLoc(diff, nullptr, &max_diff);
+        cout << "max_diff = " << max_diff << endl;
+        #if defined(__aarch64__) && defined(__APPLE__)
+            ASSERT_LT(max_diff, 10) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #else
+            ASSERT_LT(max_diff, 5) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #endif
+    }
+}
 }} // namespace

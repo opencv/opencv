@@ -25,12 +25,29 @@ typedef HMODULE VulkanHandle;
 #include <dlfcn.h>
 #include <stdio.h>
 typedef void* VulkanHandle;
-#define DEFAULT_VK_LIBRARY_PATH "libvulkan.so.1"
+#define DEFAULT_VK_LIBRARY_PATH "libvulkan.so"
 #define LOAD_VK_LIBRARY(path) dlopen(path, RTLD_LAZY | RTLD_GLOBAL)
 #define FREE_VK_LIBRARY(handle) dlclose(handle)
 #define GET_VK_ENTRY_POINT(handle) \
         (PFN_vkGetInstanceProcAddr)dlsym(handle, "vkGetInstanceProcAddr");
 #endif // __linux__
+
+#if defined(__APPLE__)
+#include <dlfcn.h>
+#include <stdio.h>
+typedef void* VulkanHandle;
+
+#if defined(__x86_64__)
+#define DEFAULT_VK_LIBRARY_PATH "libvulkan.dylib"
+#else // For Apple ARM chip, we use MoltenVK lib.
+#define DEFAULT_VK_LIBRARY_PATH "libMoltenVK.dylib"
+#endif
+
+#define LOAD_VK_LIBRARY(path) dlopen(path, RTLD_LAZY | RTLD_GLOBAL)
+#define FREE_VK_LIBRARY(handle) dlclose(handle)
+#define GET_VK_ENTRY_POINT(handle) \
+        (PFN_vkGetInstanceProcAddr)dlsym(handle, "vkGetInstanceProcAddr");
+#endif // Macos
 
 #ifndef DEFAULT_VK_LIBRARY_PATH
 #define DEFAULT_VK_LIBRARY_PATH ""
@@ -98,21 +115,21 @@ bool loadVulkanLibrary()
     if (handle != nullptr)
         return true;
 
-    const char* path;
-    const char* envPath = getenv("OPENCV_VULKAN_RUNTIME");
-    if (envPath)
-    {
-        path = envPath;
-    }
-    else
-    {
-        path = DEFAULT_VK_LIBRARY_PATH;
-    }
+    const std::string path = cv::utils::getConfigurationParameterString("OPENCV_VULKAN_RUNTIME", DEFAULT_VK_LIBRARY_PATH);
 
-    handle = LOAD_VK_LIBRARY(path);
+    handle = LOAD_VK_LIBRARY(path.c_str());
     if( handle == nullptr )
     {
-        fprintf(stderr, "Could not load Vulkan library: %s!\n", path);
+        fprintf(stderr, "Could not load Vulkan library: %s!\n", path.c_str());
+        fprintf(stderr, "Please download the Vulkan SDK and set the environment variable of OPENCV_VULKAN_RUNTIME according "
+                        "to your system environment.\n");
+        fprintf(stderr, "For M1 Mac and IOS, we use MoltenVK to map the Vulkan code to native apple Metal code.\n");
+        fprintf(stderr, "You can download the SDK from https://vulkan.lunarg.com/sdk/home.\n");
+        fprintf(stderr, "The following are some examples:\n");
+        fprintf(stderr, "For Windows, OPENCV_VULKAN_RUNTIME=D:\\VulkanSDK\\1.3.236.0\\Bin\\vulkan-1.dll\n");
+        fprintf(stderr, "For Linux, OPENCV_VULKAN_RUNTIME=/opt/vulkan/1.3.236.0/x86_64/libvulkan.so\n");
+        fprintf(stderr, "For MacOS of x86, OPENCV_VULKAN_RUNTIME=/opt/vulkan/1.3.236.0/x86_64/libvulkan.dylib\n");
+        fprintf(stderr, "For MacOS of M1 or IOS, OPENCV_VULKAN_RUNTIME=/opt/VulkanSDK/1.3.231.1/MoltenVK/dylib/macOS/libMoltenVK.dylib\n");
         return false;
     }
 

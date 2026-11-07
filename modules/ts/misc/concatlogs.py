@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+""" Combines multiple uniform HTML documents with tables into a single one.
+
+HTML header from the first document will be used in the output document. Largest
+`<tbody>...</tbody>` part from each document will be joined together.
+"""
 
 from optparse import OptionParser
 import glob, sys, os, re

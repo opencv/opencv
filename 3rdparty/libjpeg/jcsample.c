@@ -2,6 +2,7 @@
  * jcsample.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
+ * Modified 2003-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -200,7 +201,7 @@ fullsize_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 		     JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
   /* Copy the data */
-  jcopy_sample_rows(input_data, 0, output_data, 0,
+  jcopy_sample_rows(input_data, output_data,
 		    cinfo->max_v_samp_factor, cinfo->image_width);
   /* Edge-expand */
   expand_right_edge(output_data, cinfo->max_v_samp_factor, cinfo->image_width,
@@ -483,10 +484,9 @@ jinit_downsampler (j_compress_ptr cinfo)
   boolean smoothok = TRUE;
   int h_in_group, v_in_group, h_out_group, v_out_group;
 
-  downsample = (my_downsample_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_downsampler));
-  cinfo->downsample = (struct jpeg_downsampler *) downsample;
+  downsample = (my_downsample_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_downsampler));
+  cinfo->downsample = &downsample->pub;
   downsample->pub.start_pass = start_pass_downsample;
   downsample->pub.downsample = sep_downsample;
   downsample->pub.need_context_rows = FALSE;

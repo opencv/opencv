@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+#define CV_DXT_MUL_CONJ 8
+
 namespace opencv_test { namespace {
 
 /// phase correlation
@@ -66,8 +68,8 @@ void CV_PhaseCorrelatorTest::run( int )
     double expectedShiftY = -20.0;
 
     // draw 10x10 rectangles @ (100, 100) and (90, 80) should see ~(-10, -20) shift here...
-    cv::rectangle(r1, Point(100, 100), Point(110, 110), Scalar(0, 0, 0), CV_FILLED);
-    cv::rectangle(r2, Point(90, 80), Point(100, 90), Scalar(0, 0, 0), CV_FILLED);
+    cv::rectangle(r1, Point(100, 100), Point(110, 110), Scalar(0, 0, 0), cv::FILLED);
+    cv::rectangle(r2, Point(90, 80), Point(100, 90), Scalar(0, 0, 0), cv::FILLED);
 
     Mat hann;
     createHanningWindow(hann, r1.size(), CV_64F);
@@ -120,6 +122,97 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+typedef testing::TestWithParam<tuple<int, int, int> > Imgproc_PhaseCorrelatorTest_Inputs;
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
+{
+    const int type = get<0>(GetParam());
+    const int n = get<1>(GetParam());
+    const int layout = get<2>(GetParam());
+    ASSERT_EQ(32, getOptimalDFTSize(n));
+    const bool roi = layout == 1;
+    const bool sameSource = layout == 2;
+
+    const Size parentSize(n + (roi ? 4 : 0), n + (roi ? 4 : 0));
+    const Rect rect(roi ? 1 : 0, roi ? 1 : 0, n, n);
+    Mat parent1(parentSize, type, Scalar::all(-1));
+    Mat parent2(parentSize, type, Scalar::all(-2));
+    Mat windowParent(parentSize, type, Scalar::all(-3));
+    Mat src1 = parent1(rect);
+    Mat src2 = sameSource ? src1 : parent2(rect);
+    Mat window = windowParent(rect);
+    RNG& rng = theRNG();
+    rng.fill(src1, RNG::UNIFORM, 0.0, 1.0);
+    if (!sameSource)
+        warpAffine(src1, src2, Matx23d(1, 0, 3, 0, 1, -2), src1.size(),
+                   INTER_NEAREST, BORDER_WRAP);
+    createHanningWindow(window, src1.size(), type);
+
+    const Mat src1Before = src1.clone(), src2Before = src2.clone();
+    const Mat parent1Before = parent1.clone(), parent2Before = parent2.clone();
+    const Mat windowBefore = windowParent.clone();
+
+    phaseCorrelate(src1, src2);
+    EXPECT_EQ(0, cv::norm(parent1Before, parent1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent2Before, parent2, NORM_INF));
+
+    Mat windowed1, windowed2;
+    cv::multiply(window, src1Before, windowed1);
+    cv::multiply(window, src2Before, windowed2);
+    double referenceResponse = 0, response = 0;
+    const Point2d reference = phaseCorrelate(windowed1, windowed2, noArray(),
+                                            &referenceResponse);
+    const Point2d shift = phaseCorrelate(src1, src2, window, &response);
+
+    EXPECT_EQ(0, cv::norm(src1Before, src1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(src2Before, src2, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent1Before, parent1, NORM_INF));
+    EXPECT_EQ(0, cv::norm(parent2Before, parent2, NORM_INF));
+    EXPECT_EQ(0, cv::norm(windowBefore, windowParent, NORM_INF));
+    EXPECT_NEAR(reference.x, shift.x, 1e-5);
+    EXPECT_NEAR(reference.y, shift.y, 1e-5);
+    EXPECT_NEAR(referenceResponse, response, 1e-5);
+    EXPECT_NEAR(sameSource ? 0.0 : 3.0, shift.x, 1.0);
+    EXPECT_NEAR(sameSource ? 0.0 : -2.0, shift.y, 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(FullImage, Imgproc_PhaseCorrelatorTest_Inputs,
+    testing::Combine(testing::Values(CV_32F, CV_64F), testing::Values(32, 31),
+                     testing::Values(0, 2)));
+
+INSTANTIATE_TEST_CASE_P(ROI, Imgproc_PhaseCorrelatorTest_Inputs,
+    testing::Combine(testing::Values(CV_32F, CV_64F), testing::Values(32),
+                     testing::Values(1)));
+
+TEST(Imgproc_PhaseCorrelatorTest, float32_overflow) {
+    // load
+    Mat im = imread(cvtest::TS::ptr()->get_data_path() + "shared/baboon.png", IMREAD_GRAYSCALE);
+    ASSERT_EQ(im.type(), CV_8UC1);
+
+    // convert to 32F, scale values as if original image was 16U
+    constexpr auto u8Max = std::numeric_limits<std::uint8_t>::max();
+    constexpr auto u16Max = std::numeric_limits<std::uint16_t>::max();
+    im.convertTo(im, CV_32FC1, double(u16Max) / double(u8Max));
+
+    // enlarge and create ROIs
+    const auto w = im.cols * 5;
+    const auto h = im.rows * 5;
+    const auto roiW = (w * 2) / 3; // 50% overlap
+    Mat imLarge;
+    resize(im, imLarge, { w, h });
+    const auto roiLeft = imLarge(Rect(0, 0, roiW, h));
+    const auto roiRight = imLarge(Rect(w - roiW, 0, roiW, h));
+
+    // correlate
+    double response = 0.0;
+    Point2d phaseShift = phaseCorrelate(roiLeft, roiRight, cv::noArray(), &response);
+    ASSERT_TRUE(std::isnormal(phaseShift.x) || 0.0 == phaseShift.x);
+    ASSERT_TRUE(std::isnormal(phaseShift.y) || 0.0 == phaseShift.y);
+    ASSERT_TRUE(std::isnormal(response) || 0.0 == response);
+    EXPECT_NEAR(std::abs(phaseShift.x), w / 3.0, 1.0);
+    EXPECT_NEAR(std::abs(phaseShift.y), 0.0, 1.0);
+}
+
 ////////////////////// DivSpectrums ////////////////////////
 class CV_DivSpectrumsTest : public cvtest::ArrayTest
 {
@@ -152,7 +245,7 @@ void CV_DivSpectrumsTest::get_test_array_types_and_sizes( int test_case_idx, vec
 
     // Get the flag of the input.
     const int rand_int_flags = cvtest::randInt(rng);
-    flags = rand_int_flags & (CV_DXT_MUL_CONJ | CV_DXT_ROWS);
+    flags = rand_int_flags & (CV_DXT_MUL_CONJ | DFT_ROWS);
 
     // Get input type.
     const int rand_int_type = cvtest::randInt(rng);
@@ -301,7 +394,7 @@ static std::pair<double, double> divide_complex_numbers( const double nu_re, con
     const double result_re = nu_re * de_re + nu_im * de_im;
     const double result_im = nu_re * (-de_im) + nu_im * de_re;
     return std::pair<double, double>(result_re / result_de, result_im / result_de);
-};
+}
 
 /// Helper function to divide a DFT in src1 by a DFT in src2 with depths depth_t.  The DFTs are
 /// complex matrices.

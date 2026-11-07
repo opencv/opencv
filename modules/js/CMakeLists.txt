@@ -34,11 +34,62 @@ if(NOT EMSCRIPTEN_INCLUDE_DIR OR NOT PYTHON_DEFAULT_AVAILABLE)
   ocv_module_disable(js)
 endif()
 
+# Get Emscripten version from emscripten/version.h
+unset(EMSCRIPTEN_VERSION)
+unset(EMSCRIPTEN_VERSION_CONTENTS)
+unset(EMSCRIPTEN_VERSION_MAJOR)
+unset(EMSCRIPTEN_VERSION_MINOR)
+unset(EMSCRIPTEN_VERSION_TINY)
+
+set(EMSCRIPTEN_VERSION_PATH "${EMSCRIPTEN_INCLUDE_DIR}/emscripten/version.h")
+if(NOT EXISTS "${EMSCRIPTEN_VERSION_PATH}")
+  message(STATUS "${EMSCRIPTEN_INCLUDE_DIR}/emscripten/version.h is missing")
+else()
+  file(STRINGS "${EMSCRIPTEN_VERSION_PATH}" EMSCRIPTEN_VERSION_CONTENTS REGEX "^#define[ \t]+__EMSCRIPTEN_[a-zA-Z]+__[ \t][0-9]+")
+  if(NOT EMSCRIPTEN_VERSION_CONTENTS)
+    message(STATUS "${EMSCRIPTEN_INCLUDE_DIR}/emscripten/version.h is exists, but is not readable")
+  else()
+    if(EMSCRIPTEN_VERSION_CONTENTS MATCHES "__EMSCRIPTEN_[mM][aA][jJ][oO][rR]__[ \t]+([0-9]+)")
+      set(EMSCRIPTEN_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    endif()
+    if(EMSCRIPTEN_VERSION_CONTENTS MATCHES "__EMSCRIPTEN_[mM][iI][nN][oO][rR]__[ \t]+([0-9]+)")
+      set(EMSCRIPTEN_VERSION_MINOR "${CMAKE_MATCH_1}")
+    endif()
+    if(EMSCRIPTEN_VERSION_CONTENTS MATCHES "__EMSCRIPTEN_[tT][iI][nN][yY]__[ \t]+([0-9]+)")
+      set(EMSCRIPTEN_VERSION_TINY "${CMAKE_MATCH_1}")
+    endif()
+
+    # When version(major/minor/tiny) is 0, "if(version)" is failed.
+    # "if(version GREATER_EQUAL 0)" can compare version as numeric.
+    if( (EMSCRIPTEN_VERSION_MAJOR GREATER_EQUAL "0") AND
+        (EMSCRIPTEN_VERSION_MINOR GREATER_EQUAL "0") AND
+        (EMSCRIPTEN_VERSION_TINY  GREATER_EQUAL "0")
+    )
+      set(EMSCRIPTEN_VERSION "${EMSCRIPTEN_VERSION_MAJOR}.${EMSCRIPTEN_VERSION_MINOR}.${EMSCRIPTEN_VERSION_TINY}")
+      message(STATUS "js: Emscripten version = ${EMSCRIPTEN_VERSION}")
+    else()
+      message(STATUS "js: Emscripten version is not able to parsed")
+      message(AUTHOR_WARNING "EMSCRIPTEN_VERSION_CONTENTS = ${EMSCRIPTEN_VERSION_CONTENTS}")
+    endif()
+  endif()
+endif()
+
+# Embind requires C++17 or newer from Emscripten 4.0.20.
+# See https://github.com/emscripten-core/emscripten/blob/main/ChangeLog.md#4020---111825
+if(EMSCRIPTEN_VERSION VERSION_GREATER_EQUAL "4.0.20")
+  if(NOT CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD STREQUAL "98"
+     OR CMAKE_CXX_STANDARD STREQUAL "11" OR CMAKE_CXX_STANDARD STREQUAL "14")
+
+    message(FATAL_ERROR "[OpenCV.js Build Error] "
+      "Emscripten ${EMSCRIPTEN_VERSION} requires C++17 or newer for Embind, "
+      "but CMAKE_CXX_STANDARD is set to '${CMAKE_CXX_STANDARD}'.\n"
+      "Please re-run emcmake with --cmake_option=\"-DCMAKE_CXX_STANDARD=17\"\n")
+  endif()
+endif()
+
 ocv_add_module(js BINDINGS PRIVATE_REQUIRED opencv_js_bindings_generator)
 
 ocv_module_include_directories(${EMSCRIPTEN_INCLUDE_DIR})
-
-add_definitions("-std=c++11")
 
 set(deps ${OPENCV_MODULE_${the_module}_DEPS})
 list(REMOVE_ITEM deps opencv_js_bindings_generator)  # don't add dummy module
@@ -69,9 +120,14 @@ if(COMPILE_FLAGS)
     set_target_properties(${the_module} PROPERTIES COMPILE_FLAGS ${COMPILE_FLAGS})
 endif()
 
-set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} --memory-init-file 0 -s TOTAL_MEMORY=128MB -s WASM_MEM_MAX=1GB -s ALLOW_MEMORY_GROWTH=1")
-set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s MODULARIZE=1 -s SINGLE_FILE=1")
-set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s EXPORT_NAME=\"'cv'\" -s DEMANGLE_SUPPORT=1")
+set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s TOTAL_MEMORY=128MB -s WASM_MEM_MAX=1GB -s ALLOW_MEMORY_GROWTH=1")
+set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s MODULARIZE=1")
+set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s EXPORT_NAME=\"'cv'\"")
+# See https://github.com/opencv/opencv/issues/27513
+# DEMANGLE_SUPPRT is deprecated at Emscripten 3.1.54 and later.
+if(NOT EMSCRIPTEN_VERSION OR EMSCRIPTEN_VERSION VERSION_LESS "3.1.54")
+    set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s DEMANGLE_SUPPORT=1")
+endif()
 set(EMSCRIPTEN_LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS} -s FORCE_FILESYSTEM=1 --use-preload-plugins --bind --post-js ${JS_HELPER} ${COMPILE_FLAGS}")
 set_target_properties(${the_module} PROPERTIES LINK_FLAGS "${EMSCRIPTEN_LINK_FLAGS}")
 

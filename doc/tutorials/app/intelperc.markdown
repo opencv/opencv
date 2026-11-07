@@ -3,7 +3,13 @@ Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#t
 
 @tableofcontents
 
-@prev_tutorial{tutorial_orbbec_astra}
+@prev_tutorial{tutorial_orbbec_uvc}
+@next_tutorial{tutorial_wayland_ubuntu}
+
+|    |    |
+| -: | :- |
+| Original author | Alessandro de Oliveira Faria |
+| Compatibility | OpenCV >= 4.5.5 |
 
 ![hardwares](images/realsense.jpg)
 

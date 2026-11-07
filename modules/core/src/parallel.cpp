@@ -72,6 +72,10 @@
     #endif
 #endif
 
+#if defined (__QNX__)
+    #include <sys/syspage.h>
+#endif
+
 #ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
@@ -128,6 +132,8 @@
     #include <ppltasks.h>
 #elif defined HAVE_CONCURRENCY
     #include <ppl.h>
+#elif defined HAVE_PTHREADS_PF
+    #include <pthread.h>
 #endif
 
 
@@ -275,7 +281,9 @@ namespace {
         void recordException(const cv::String& msg)
 #endif
         {
+#ifndef CV_THREAD_SANITIZER
             if (!hasException)
+#endif
             {
                 cv::AutoLock lock(cv::getInitializationMutex());
                 if (!hasException)
@@ -441,6 +449,18 @@ namespace {
             this->ParallelLoopBodyWrapper::operator()(cv::Range(i, i + 1));
         }
     };
+
+    // PPL's default auto_partitioner silently skips whole chunks of the range on
+    // ARM64 (unfixed MSVC bug, developercommunity.visualstudio.com/t/1027444).
+    template <typename Body>
+    static inline void pplParallelFor(int first, int last, const Body& body)
+    {
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+        Concurrency::parallel_for(first, last, body, Concurrency::static_partitioner());
+#else
+        Concurrency::parallel_for(first, last, body);
+#endif
+    }
 #else
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #endif
@@ -457,10 +477,6 @@ namespace {
 static inline int _initMaxThreads()
 {
     int maxThreads = omp_get_max_threads();
-    if (!utils::getConfigurationParameterBool("OPENCV_FOR_OPENMP_DYNAMIC_DISABLE", false))
-    {
-        omp_set_dynamic(1);
-    }
     return maxThreads;
 }
 static int numThreadsMax = _initMaxThreads();
@@ -589,18 +605,18 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 
 #elif defined WINRT
 
-        Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+        pplParallelFor(stripeRange.start, stripeRange.end, pbody);
 
 #elif defined HAVE_CONCURRENCY
 
         if(!pplScheduler || pplScheduler->Id() == Concurrency::CurrentScheduler::Id())
         {
-            Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+            pplParallelFor(stripeRange.start, stripeRange.end, pbody);
         }
         else
         {
             pplScheduler->Attach();
-            Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
+            pplParallelFor(stripeRange.start, stripeRange.end, pbody);
             Concurrency::CurrentScheduler::Detach();
         }
 
@@ -787,7 +803,7 @@ int getThreadNum()
         return 0;
     #endif
 #elif defined HAVE_HPX
-        return (int)(hpx::get_num_worker_threads());
+    return (int)(hpx::get_num_worker_threads());
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();
 #elif defined HAVE_GCD
@@ -866,7 +882,22 @@ int getNumberOfCPUsImpl(const char *filename)
 
 #if defined CV_HAVE_CGROUPS
 static inline
-unsigned getNumberOfCPUsCFS()
+unsigned getNumberOfCPUsCFSv2()
+{
+    int cfs_quota = 0;
+    int cfs_period = 0;
+
+    std::ifstream ss_cpu_max("/sys/fs/cgroup/cpu.max", std::ios::in | std::ios::binary);
+    ss_cpu_max >> cfs_quota >> cfs_period;
+
+    if (ss_cpu_max.fail() || cfs_quota < 1 || cfs_period < 1) /* values must not be 0 or negative */
+        return 0;
+
+    return (unsigned)max(1, cfs_quota/cfs_period);
+}
+
+static inline
+unsigned getNumberOfCPUsCFSv1()
 {
     int cfs_quota = 0;
     {
@@ -908,8 +939,7 @@ int getNumberOfCPUs_()
      * the minimum most value as it has high probablity of being right and safe.
      * Return 1 if we get 0 or not found on all methods.
     */
-#if defined CV_CXX11 \
-    && !defined(__MINGW32__) /* not implemented (2020-03) */ \
+#if !defined(__MINGW32__) /* not implemented (2020-03) */
 
     /*
      * Check for this standard C++11 way, we do not return directly because
@@ -925,7 +955,7 @@ int getNumberOfCPUs_()
 #if defined _WIN32
 
     SYSTEM_INFO sysinfo = {};
-#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
+#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );
@@ -963,8 +993,11 @@ int getNumberOfCPUs_()
     static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
     ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
 
-    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
-    ncpus = minNonZero(ncpus, ncpus_impl_cfs);
+    static unsigned ncpus_impl_cfs_v1 = getNumberOfCPUsCFSv1();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs_v1);
+
+    static unsigned ncpus_impl_cfs_v2 = getNumberOfCPUsCFSv2();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs_v2);
 #endif
 
     static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
@@ -990,7 +1023,9 @@ int getNumberOfCPUs_()
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
-
+#elif defined (__QNX__)
+    static unsigned cpu_count_sysconf = _syspage_ptr->num_cpu;
+    ncpus = minNonZero(ncpus, cpu_count_sysconf);
 #endif
 
     return ncpus != 0 ? ncpus : 1;

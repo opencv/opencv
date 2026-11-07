@@ -145,7 +145,7 @@ int main( int argc, const char** argv )
                         len--;
                     buf[len] = '\0';
                     cout << "file " << buf << endl;
-                    image = imread( buf, 1 );
+                    image = imread( buf, IMREAD_COLOR );
                     if( !image.empty() )
                     {
                         detectAndDraw( image, cascade, nestedCascade, scale, tryflip );

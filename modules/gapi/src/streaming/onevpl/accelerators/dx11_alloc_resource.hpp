@@ -13,7 +13,6 @@
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-#pragma comment(lib,"d3d11.lib")
 
 #define D3D11_NO_HELPERS
 #define NOMINMAX

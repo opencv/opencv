@@ -13,6 +13,7 @@ import android.view.SurfaceHolder;
 import android.widget.TextView;
 import android.widget.Toast;
 
+//![minimal_surface_view]
 public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurfaceView.CameraTextureListener {
 
     static final String LOGTAG = "MyGLSurfaceView";
@@ -65,7 +66,8 @@ public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurf
                 Toast.makeText(getContext(), "onCameraViewStarted", Toast.LENGTH_SHORT).show();
             }
         });
-        NativePart.initCL();
+        if (NativePart.builtWithOpenCL())
+            NativePart.initCL();
         frameCounter = 0;
         lastNanoTime = System.nanoTime();
     }
@@ -110,3 +112,4 @@ public class MyGLSurfaceView extends CameraGLSurfaceView implements CameraGLSurf
         return true;
     }
 }
+//![minimal_surface_view]

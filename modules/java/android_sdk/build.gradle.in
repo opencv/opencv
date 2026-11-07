@@ -89,7 +89,13 @@
 //
 
 apply plugin: 'com.android.library'
-@KOTLIN_PLUGIN_DECLARATION@
+@MAVEN_PUBLISH_PLUGIN_DECLARATION@
+try {
+    @KOTLIN_PLUGIN_DECLARATION@
+    println "Configure OpenCV with Kotlin"
+} catch (Exception e) {
+    println "Configure OpenCV without Kotlin"
+}
 
 def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
@@ -97,6 +103,7 @@ def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) 
 println "OpenCV: " +openCVersionName + " " + project.buildscript.sourceFile
 
 android {
+    @OPENCV_ANDROID_NAMESPACE_DECLARATION@
     compileSdkVersion @ANDROID_COMPILE_SDK_VERSION@
 
     defaultConfig {
@@ -113,7 +120,7 @@ android {
             }
         }
     }
-
+    @BUILD_GRADLE_COMPILE_OPTIONS@
     buildTypes {
         debug {
             packagingOptions {
@@ -131,11 +138,10 @@ android {
 
     sourceSets {
         main {
-            jniLibs.srcDirs = ['native/libs']
-            java.srcDirs = ['java/src']
-            aidl.srcDirs = ['java/src']
-            res.srcDirs = ['java/res']
-            manifest.srcFile 'java/AndroidManifest.xml'
+            jniLibs.srcDirs = [@SOURSE_SETS_JNI_LIBS_SRC_DIRS@]
+            java.srcDirs = [@SOURSE_SETS_JAVA_SRC_DIRS@]
+            res.srcDirs = [@SOURSE_SETS_RES_SRC_DIRS@]
+            manifest.srcFile @SOURSE_SETS_MANIFEST_SRC_FILE@
         }
     }
 
@@ -144,7 +150,8 @@ android {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
+    @BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG@
 }
-
+@BUILD_GRADLE_PUBLISHING_CONFIG@
 dependencies {
 }

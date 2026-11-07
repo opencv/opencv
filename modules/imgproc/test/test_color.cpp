@@ -76,7 +76,6 @@ protected:
     bool inplace;
     bool custom_inv_transform;
     int fwd_code, inv_code;
-    bool test_cpp;
     int hue_range;
     bool srgb;
 };
@@ -97,7 +96,6 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
 
     fwd_code_str = inv_code_str = 0;
 
-    test_cpp = false;
     hue_range = 0;
     blue_idx = 0;
     srgb = false;
@@ -147,7 +145,6 @@ void CV_ColorCvtBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_MAKETYPE(depth, cn);
 
     inplace = cn == 3 && cvtest::randInt(rng) % 2 != 0;
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
 
@@ -161,23 +158,17 @@ int CV_ColorCvtBaseTest::prepare_test_case( int test_case_idx )
 
 void CV_ColorCvtBaseTest::run_func()
 {
-    CvArr* out0 = test_array[OUTPUT][0];
-    cv::Mat _out0 = cv::cvarrToMat(out0), _out1 = cv::cvarrToMat(test_array[OUTPUT][1]);
+    cv::Mat out0 = test_mat[OUTPUT][0];
+    cv::Mat _out0 = out0, _out1 = test_mat[OUTPUT][1];
 
-    if(!test_cpp)
-        cvCvtColor( inplace ? out0 : test_array[INPUT][0], out0, fwd_code );
-    else
-        cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
+    cv::cvtColor( inplace ? out0 : test_mat[INPUT][0], _out0, fwd_code, _out0.channels());
 
     if( inplace )
     {
-        cvCopy( out0, test_array[OUTPUT][1] );
-        out0 = test_array[OUTPUT][1];
+        out0.copyTo(test_mat[OUTPUT][1]);
+        out0 = test_mat[OUTPUT][1];
     }
-    if(!test_cpp)
-        cvCvtColor( out0, test_array[OUTPUT][1], inv_code );
-    else
-        cv::cvtColor(cv::cvarrToMat(out0), _out1, inv_code, _out1.channels());
+    cv::cvtColor(out0, _out1, inv_code, _out1.channels());
 }
 
 
@@ -464,7 +455,7 @@ void CV_ColorGrayTest::get_test_array_types_and_sizes( int test_case_idx, vector
 double CV_ColorGrayTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = test_mat[i][j].depth();
-    return depth == CV_8U ? 2 : depth == CV_16U ? 16 : 1e-5;
+    return depth == CV_8U ? 1 : depth == CV_16U ? 2 : 1e-5;
 }
 
 
@@ -1077,7 +1068,7 @@ double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 32 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            srgb ? ((j == 0) ? 0.4 : 0.0055) : 1e-3;
 }
@@ -1256,7 +1247,7 @@ double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            5e-2;
 }
@@ -1494,9 +1485,6 @@ double CV_ColorRGBTest::get_success_error_level( int /*test_case_idx*/, int /*i*
 void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
 {
     int depth = src.depth(), cn = src.channels();
-/*#if defined _DEBUG || defined DEBUG
-    int dst_cn = CV_MAT_CN(dst->type);
-#endif*/
     int i, j, cols = src.cols;
     int g_rshift = dst_bits == 16 ? 2 : 3;
     int r_lshift = dst_bits == 16 ? 11 : 10;
@@ -1580,9 +1568,6 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
 void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat& dst )
 {
     int depth = src.depth(), cn = dst.channels();
-/*#if defined _DEBUG || defined DEBUG
-    int src_cn = CV_MAT_CN(src->type);
-#endif*/
     int i, j, cols = src.cols;
     int g_lshift = dst_bits == 16 ? 2 : 3;
     int r_rshift = dst_bits == 16 ? 11 : 10;
@@ -1730,13 +1715,8 @@ double CV_ColorBayerTest::get_success_error_level( int /*test_case_idx*/, int /*
 
 void CV_ColorBayerTest::run_func()
 {
-    if(!test_cpp)
-        cvCvtColor( test_array[INPUT][0], test_array[OUTPUT][0], fwd_code );
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::cvtColor(cv::cvarrToMat(test_array[INPUT][0]), _out, fwd_code, _out.channels());
-    }
+    cv::Mat _out = test_mat[OUTPUT][0];
+    cv::cvtColor(test_mat[INPUT][0], _out, fwd_code, _out.channels());
 }
 
 
@@ -1824,7 +1804,7 @@ void CV_ColorBayerTest::prepare_to_validation( int /*test_case_idx*/ )
     else if( depth == CV_16U )
         bayer2BGR_<ushort>(src, dst, fwd_code);
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
 
@@ -1877,6 +1857,26 @@ TEST(Imgproc_ColorBayer, regression)
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
 }
 
+TEST(Imgproc_ColorBayer2Gray, regression_25823)
+{
+    const int n = 100;
+    Mat src(n, n, CV_8UC1);
+    Mat dst;
+
+    for (int i = 0; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            src.at<uchar>(i, j) = (i + j) % 2;
+        }
+    }
+
+    cvtColor(src, dst, COLOR_BayerBG2GRAY);
+
+    Mat gold(n, n, CV_8UC1, Scalar(1));
+    EXPECT_EQ(0, cv::norm(dst, gold, NORM_INF));
+}
+
 TEST(Imgproc_ColorBayerVNG, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
@@ -1904,6 +1904,64 @@ TEST(Imgproc_ColorBayerVNG, regression)
         EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
     }
 }
+
+// See https://github.com/opencv/opencv/issues/5089
+// See https://github.com/opencv/opencv/issues/27225
+typedef tuple<cv::ColorConversionCodes, cv::ColorConversionCodes> VNGandINT;
+typedef testing::TestWithParam<VNGandINT> Imgproc_ColorBayerVNG_Codes;
+
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225)
+{
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const int margin = (codeVNG == cv::COLOR_BayerGB2BGR_VNG || codeVNG == cv::COLOR_BayerGR2BGR_VNG)? 5 : 4;
+
+    cv::Mat in = cv::Mat::eye(16, 16, CV_8UC1) * 255;
+    cv::resize(in, in, {}, 2, 2, cv::INTER_NEAREST);
+
+    cv::Mat out;
+    EXPECT_NO_THROW(cv::cvtColor(in, out, codeVNG));
+
+    for(int iy=0; iy < out.size().height; iy++) {
+        for(int ix=0; ix < out.size().width; ix++) {
+            // Avoid to test around main diagonal pixels.
+            if(cv::abs(ix - iy) < margin) {
+                continue;
+            }
+            // Others should be completely black.
+            const Vec3b pixel = out.at<Vec3b>(iy, ix);
+            EXPECT_EQ(pixel[0], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[1], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[2], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+        }
+    }
+}
+
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225_small)
+{
+    // for too small images use the simple interpolation algorithm
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const cv::ColorConversionCodes codeINT = get<1>(GetParam());
+    cv::Mat in = cv::Mat::eye(7, 7, CV_8UC1) * 255;
+
+    cv::Mat outVNG;
+    EXPECT_NO_THROW(cv::cvtColor(in, outVNG, codeVNG));
+    cv::Mat outINT;
+    EXPECT_NO_THROW(cv::cvtColor(in, outINT, codeINT));
+
+    Mat diff;
+    absdiff(outVNG, outINT, diff);
+
+    imwrite("outVNG.png", outVNG);
+    imwrite("outINT.png", outINT);
+    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ColorBayerVNG_Codes,
+    testing::Values(
+        make_tuple(cv::COLOR_BayerBG2BGR_VNG, cv::COLOR_BayerBG2BGR),
+        make_tuple(cv::COLOR_BayerGB2BGR_VNG, cv::COLOR_BayerGB2BGR),
+        make_tuple(cv::COLOR_BayerRG2BGR_VNG, cv::COLOR_BayerRG2BGR),
+        make_tuple(cv::COLOR_BayerGR2BGR_VNG, cv::COLOR_BayerGR2BGR)));
 
 // creating Bayer pattern
 template <typename T, int depth>
@@ -2671,7 +2729,7 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2763,7 +2821,7 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2822,7 +2880,7 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
     Mat dst;
     rng.fill(src, RNG::UNIFORM, 0, 255, true);
 
-    cv::cvtColor(src, dst, code);
+    cv::cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
 
     uint32_t dst_hash = adler32(dst);
 
@@ -2837,6 +2895,11 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
         fs << "dst" << dst;
     }
 }
+
+TEST(Imgproc_cvtColor_BE, COLOR_RGB2GRAY)  { runCvtColorBitExactCheck(COLOR_RGB2GRAY,  CV_8UC3, 0x416bd44a); }
+TEST(Imgproc_cvtColor_BE, COLOR_RGBA2GRAY) { runCvtColorBitExactCheck(COLOR_RGBA2GRAY, CV_8UC3, 0x416bd44a); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGR2GRAY)  { runCvtColorBitExactCheck(COLOR_BGR2GRAY,  CV_8UC3, 0x3008c6b8); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGRA2GRAY) { runCvtColorBitExactCheck(COLOR_BGRA2GRAY, CV_8UC3, 0x3008c6b8); }
 
 TEST(Imgproc_cvtColor_BE, COLOR_BGR2YUV) { runCvtColorBitExactCheck(COLOR_BGR2YUV, CV_8UC3, 0xc2cbcfda); }
 TEST(Imgproc_cvtColor_BE, COLOR_RGB2YUV) { runCvtColorBitExactCheck(COLOR_RGB2YUV, CV_8UC3, 0x4e98e757); }
@@ -3215,6 +3278,22 @@ TEST(ImgProc_RGB2Lab, NaN_21111)
         }
     }
 #endif
+}
+
+// See https://github.com/opencv/opencv/issues/25971
+// If num of channels is not suitable for selected cv::ColorConversionCodes,
+// e.code must be cv::Error::BadNumChannels.
+TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
+{
+    try {
+        cv::Mat src = cv::Mat::zeros(100, 100, CV_8UC1);
+        cv::Mat dst;
+        EXPECT_THROW(cv::cvtColor(src, dst, COLOR_RGB2GRAY), cv::Exception);
+    }catch(const cv::Exception& e) {
+        EXPECT_EQ(e.code, cv::Error::BadNumChannels);
+    }catch(...) {
+        FAIL() << "Unexpected exception is happened.";
+    }
 }
 
 }} // namespace

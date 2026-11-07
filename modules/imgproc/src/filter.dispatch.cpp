@@ -63,14 +63,14 @@
 
 namespace cv {
 
-BaseRowFilter::BaseRowFilter() { ksize = anchor = -1; }
+BaseRowFilter::BaseRowFilter() : ksize(-1), anchor(-1) {}
 BaseRowFilter::~BaseRowFilter() {}
 
-BaseColumnFilter::BaseColumnFilter() { ksize = anchor = -1; }
+BaseColumnFilter::BaseColumnFilter() : ksize(-1), anchor(-1) {}
 BaseColumnFilter::~BaseColumnFilter() {}
 void BaseColumnFilter::reset() {}
 
-BaseFilter::BaseFilter() { ksize = Size(-1,-1); anchor = Point(-1,-1); }
+BaseFilter::BaseFilter() : ksize(-1, -1), anchor(-1, -1) {}
 BaseFilter::~BaseFilter() {}
 void BaseFilter::reset() {}
 
@@ -163,8 +163,6 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-#define VEC_ALIGN CV_MALLOC_ALIGN
-
 int FilterEngine::start(const Size& _wholeSize, const Size& sz, const Point& ofs)
 {
     CV_INSTRUMENT_REGION();
@@ -207,6 +205,14 @@ int FilterEngine::proceed(const uchar* src, int srcstep, int count,
 
     CV_CPU_DISPATCH(FilterEngine__proceed, (*this, src, srcstep, count, dst, dststep),
         CV_CPU_DISPATCH_MODES_ALL);
+}
+
+bool FilterEngine::isStateless() const
+{
+    bool s2d = !filter2D    || filter2D->isStateless();
+    bool sr  = !rowFilter   || rowFilter->isStateless();
+    bool sc  = !columnFilter || columnFilter->isStateless();
+    return s2d && sr && sc;
 }
 
 void FilterEngine::apply(const Mat& src, Mat& dst, const Size& wsz, const Point& ofs)
@@ -457,16 +463,18 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         vecOp = _vecOp;
         CV_Assert( _kernel.type() == DataType<KT>::type );
         preprocess2DKernel( _kernel, coords, coeffs );
-        ptrs.resize( coords.size() );
     }
+
+    bool isStateless() const CV_OVERRIDE { return true; }
 
     void operator()(const uchar** src, uchar* dst, int dststep, int count, int width, int cn) CV_OVERRIDE
     {
         KT _delta = delta;
         const Point* pt = &coords[0];
         const KT* kf = (const KT*)&coeffs[0];
-        const ST** kp = (const ST**)&ptrs[0];
         int i, k, nz = (int)coords.size();
+        AutoBuffer<const ST*> _kp(nz);
+        const ST** kp = _kp.data();
         CastOp castOp = castOp0;
 
         width *= cn;
@@ -509,7 +517,6 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
 
     std::vector<Point> coords;
     std::vector<uchar> coeffs;
-    std::vector<uchar*> ptrs;
     KT delta;
     CastOp castOp0;
     VecOp vecOp;
@@ -590,11 +597,10 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t tryWorkItems = device.maxWorkGroupSize();
     if (device.isIntel() && 128 < tryWorkItems)
         tryWorkItems = 128;
-    char cvt[2][40];
+    char cvt[2][50];
 
     // For smaller filter kernels, there is a special kernel that is more
     // efficient than the general one.
-    UMat kernalDataUMat;
     if (device.isIntel() && (device.type() & ocl::Device::TYPE_GPU) &&
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
@@ -637,7 +643,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[0] = ROUNDUP(globalsize[0], wgRound);
 
         char build_options[1024];
-        sprintf(build_options, "-D cn=%d "
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
@@ -651,8 +657,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), kerStr.c_str());
 
         if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
@@ -696,8 +702,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                                  doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
                                  ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                                  ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])));
 
             localsize[0] = BLOCK_SIZE;
             globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
@@ -764,14 +770,14 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
     extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
 
-    char cvt[40];
+    char cvt[50];
     cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s"
                                           " -D srcT=%s -D dstT=%s -D convertToDstT=%s -D srcT1=%s -D dstT1=%s%s%s",
                                           radiusX, (int)localsize[0], (int)localsize[1], cn, btype,
                                           extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
                                           isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
                                           ocl::typeToStr(type), ocl::typeToStr(buf_type),
-                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt),
+                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt, sizeof(cvt)),
                                           ocl::typeToStr(sdepth), ocl::typeToStr(bdepth),
                                           doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -825,16 +831,16 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
     globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
 
-    char cvt[2][40];
+    char cvt[2][50];
     int floatT = std::max(CV_32F, bdepth);
     cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d"
                                           " -D srcT=%s -D dstT=%s -D convertToFloatT=%s -D floatT=%s -D convertToDstT=%s"
                                           " -D srcT1=%s -D dstT1=%s -D SHIFT_BITS=%d%s%s",
                                           anchor, (int)localsize[0], (int)localsize[1], cn,
                                           ocl::typeToStr(buf_type), ocl::typeToStr(dtype),
-                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0]),
+                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0], sizeof(cvt[0])),
                                           ocl::typeToStr(CV_MAKETYPE(floatT, cn)),
-                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1]),
+                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                                           ocl::typeToStr(bdepth), ocl::typeToStr(ddepth),
                                           2*shift_bits, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -891,7 +897,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
     size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1]};
 
-    char cvt[2][40];
+    char cvt[2][50];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                        "BORDER_REFLECT_101" };
 
@@ -901,9 +907,9 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                              (int)lt2[0], (int)lt2[1], kernelX.cols / 2, kernelY.cols / 2,
                              ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                              ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
-                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), borderMap[borderType],
                              ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
                              cn, 2*shift_bits, int_arithm ? " -D INTEGER_ARITHMETIC" : "");
 
@@ -940,7 +946,6 @@ bool ocl_sepFilter2D(
         double delta, int borderType
 )
 {
-    const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -1002,8 +1007,7 @@ bool ocl_sepFilter2D(
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
             (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
-            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
-            OCL_PERFORMANCE_CHECK(d.isIntel()),  // TODO FIXIT
+            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,
                    borderType & ~BORDER_ISOLATED, ddepth,
@@ -1046,7 +1050,6 @@ bool ocl_sepFilter2D_BitExact(
         int shift_bits
 )
 {
-    const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -1076,8 +1079,7 @@ bool ocl_sepFilter2D_BitExact(
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
             (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
-            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
-            OCL_PERFORMANCE_CHECK(d.isIntel()),  // TODO FIXIT
+            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,
                    borderType & ~BORDER_ISOLATED, ddepth, bdepth,
@@ -1174,105 +1176,52 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
                                 int anchor_x, int anchor_y,
                                 double delta, int borderType, bool isSubmatrix)
 {
+    // Prioritize stateless implementation
+    int res = cv_hal_filter_stateless(src_data, src_step, stype,
+                                      dst_data, dst_step, dtype, width, height,
+                                      full_width, full_height, offset_x, offset_y,
+                                      kernel_data, kernel_step, kernel_type,
+                                      kernel_width, kernel_height, anchor_x, anchor_y,
+                                      delta, borderType, isSubmatrix, src_data == dst_data);
+    if (res == CV_HAL_ERROR_OK)
+    {
+        return true;
+    } else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filter_stateless ==> " CVAUX_STR(cv_hal_filter_stateless) " returned %d (0x%08x)", res, res));
+    }
+
     cvhalFilter2D* ctx;
-    int res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, width, height,
+    res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, width, height,
                                 stype, dtype, borderType, delta, anchor_x, anchor_y, isSubmatrix, src_data == dst_data);
-    if (res != CV_HAL_ERROR_OK)
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
         return false;
+    } else if (res != CV_HAL_ERROR_OK)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filterInit ==> " CVAUX_STR(cv_hal_filterInit) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_filter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     bool success = (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filter ==> " CVAUX_STR(cv_hal_filter) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_filterFree(ctx);
-    if (res != CV_HAL_ERROR_OK)
-        return false;
+    success &= (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filterFree ==> " CVAUX_STR(cv_hal_filterFree) " returned %d (0x%08x)", res, res));
+    }
+
     return success;
 }
-
-#if 0 //defined HAVE_IPP
-static bool ippFilter2D(int stype, int dtype, int kernel_type,
-              uchar * src_data, size_t src_step,
-              uchar * dst_data, size_t dst_step,
-              int width, int height,
-              int full_width, int full_height,
-              int offset_x, int offset_y,
-              uchar * kernel_data, size_t kernel_step,
-              int kernel_width, int kernel_height,
-              int anchor_x, int anchor_y,
-              double delta, int borderType,
-              bool isSubmatrix)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    ::ipp::IwiSize  iwSize(width, height);
-    ::ipp::IwiSize  kernelSize(kernel_width, kernel_height);
-    IppDataType     type        = ippiGetDataType(CV_MAT_DEPTH(stype));
-    int             channels    = CV_MAT_CN(stype);
-
-    CV_UNUSED(isSubmatrix);
-
-#if IPP_VERSION_X100 >= 201700 && IPP_VERSION_X100 <= 201702 // IPP bug with 1x1 kernel
-    if(kernel_width == 1 && kernel_height == 1)
-        return false;
-#endif
-
-#if IPP_DISABLE_FILTER2D_BIG_MASK
-    // Too big difference compared to OpenCV FFT-based convolution
-    if(kernel_type == CV_32FC1 && (type == ipp16s || type == ipp16u) && (kernel_width > 7 || kernel_height > 7))
-        return false;
-
-    // Poor optimization for big kernels
-    if(kernel_width > 7 || kernel_height > 7)
-        return false;
-#endif
-
-    if(src_data == dst_data)
-        return false;
-
-    if(stype != dtype)
-        return false;
-
-    if(kernel_type != CV_16SC1 && kernel_type != CV_32FC1)
-        return false;
-
-    // TODO: Implement offset for 8u, 16u
-    if(std::fabs(delta) >= DBL_EPSILON)
-        return false;
-
-    if(!ippiCheckAnchor(anchor_x, anchor_y, kernel_width, kernel_height))
-        return false;
-
-    try
-    {
-        ::ipp::IwiBorderSize    iwBorderSize;
-        ::ipp::IwiBorderType    iwBorderType;
-        ::ipp::IwiImage         iwKernel(ippiSize(kernel_width, kernel_height), ippiGetDataType(CV_MAT_DEPTH(kernel_type)), CV_MAT_CN(kernel_type), 0, (void*)kernel_data, kernel_step);
-        ::ipp::IwiImage         iwSrc(iwSize, type, channels, ::ipp::IwiBorderSize(offset_x, offset_y, full_width-offset_x-width, full_height-offset_y-height), (void*)src_data, src_step);
-        ::ipp::IwiImage         iwDst(iwSize, type, channels, ::ipp::IwiBorderSize(offset_x, offset_y, full_width-offset_x-width, full_height-offset_y-height), (void*)dst_data, dst_step);
-
-        iwBorderSize = ::ipp::iwiSizeToBorderSize(kernelSize);
-        iwBorderType = ippiGetBorder(iwSrc, borderType, iwBorderSize);
-        if(!iwBorderType)
-            return false;
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilter, iwSrc, iwDst, iwKernel, ::ipp::IwiFilterParams(1, 0, ippAlgHintNone, ippRndFinancial), iwBorderType);
-    }
-    catch(const ::ipp::IwException& ex)
-    {
-        CV_UNUSED(ex);
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(stype); CV_UNUSED(dtype); CV_UNUSED(kernel_type); CV_UNUSED(src_data); CV_UNUSED(src_step);
-    CV_UNUSED(dst_data); CV_UNUSED(dst_step); CV_UNUSED(width); CV_UNUSED(height); CV_UNUSED(full_width);
-    CV_UNUSED(full_height); CV_UNUSED(offset_x); CV_UNUSED(offset_y); CV_UNUSED(kernel_data); CV_UNUSED(kernel_step);
-    CV_UNUSED(kernel_width); CV_UNUSED(kernel_height); CV_UNUSED(anchor_x); CV_UNUSED(anchor_y); CV_UNUSED(delta);
-    CV_UNUSED(borderType); CV_UNUSED(isSubmatrix);
-    return false;
-#endif
-}
-#endif
 
 static bool dftFilter2D(int stype, int dtype, int kernel_type,
                         uchar * src_data, size_t src_step,
@@ -1370,18 +1319,51 @@ static bool replacementSepFilter(int stype, int dtype, int ktype,
                                  uchar * kernely_data, int kernely_len,
                                  int anchor_x, int anchor_y, double delta, int borderType)
 {
+    // Prioritize stateless implementation
+    int res = cv_hal_sepFilter_stateless(src_data, src_step, stype,
+                                         dst_data, dst_step, dtype,
+                                         width, height, full_width, full_height, offset_x, offset_y,
+                                         kernelx_data, kernelx_len, kernely_data, kernely_len, ktype,
+                                         anchor_x, anchor_y, delta, borderType);
+    if (res == CV_HAL_ERROR_OK)
+    {
+        return true;
+    } else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilter_stateless ==> " CVAUX_STR(cv_hal_sepFilter_stateless) " returned %d (0x%08x)", res, res));
+    }
+
     cvhalFilter2D *ctx;
-    int res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
+    res = cv_hal_sepFilterInit(&ctx, stype, dtype, ktype,
                                    kernelx_data, kernelx_len,
                                    kernely_data, kernely_len,
                                    anchor_x, anchor_y, delta, borderType);
-    if (res != CV_HAL_ERROR_OK)
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
         return false;
+    } else if (res != CV_HAL_ERROR_OK)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilterInit ==> " CVAUX_STR(cv_hal_sepFilterInit) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_sepFilter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     bool success = (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilter ==> " CVAUX_STR(cv_hal_sepFilter) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_sepFilterFree(ctx);
-    if (res != CV_HAL_ERROR_OK)
-        return false;
+    success &= (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilterFree ==> " CVAUX_STR(cv_hal_sepFilterFree) " returned %d (0x%08x)", res, res));
+    }
+
     return success;
 }
 
@@ -1401,7 +1383,7 @@ static void ocvSepFilter(int stype, int dtype, int ktype,
     Mat src(Size(width, height), stype, src_data, src_step);
     Mat dst(Size(width, height), dtype, dst_data, dst_step);
     f->apply(src, dst, Size(full_width, full_height), Point(offset_x, offset_y));
-};
+}
 
 //===================================================================
 //       HAL functions
@@ -1450,17 +1432,6 @@ void filter2D(int stype, int dtype, int kernel_type,
                               delta, borderType, isSubmatrix);
     if (res)
         return;
-
-    /*CV_IPP_RUN_FAST(ippFilter2D(stype, dtype, kernel_type,
-                              src_data, src_step,
-                              dst_data, dst_step,
-                              width, height,
-                              full_width, full_height,
-                              offset_x, offset_y,
-                              kernel_data, kernel_step,
-                              kernel_width, kernel_height,
-                              anchor_x, anchor_y,
-                              delta, borderType, isSubmatrix))*/
 
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,

@@ -44,12 +44,6 @@
 /*@{*/
 
 /**
-Write a bit
-@param bio BIO handle
-@param b Bit to write (0 or 1)
-*/
-static void opj_bio_putbit(opj_bio_t *bio, OPJ_UINT32 b);
-/**
 Read a bit
 @param bio BIO handle
 @return Returns the read bit
@@ -98,16 +92,6 @@ static OPJ_BOOL opj_bio_bytein(opj_bio_t *bio)
     }
     bio->buf |= *bio->bp++;
     return OPJ_TRUE;
-}
-
-static void opj_bio_putbit(opj_bio_t *bio, OPJ_UINT32 b)
-{
-    if (bio->ct == 0) {
-        opj_bio_byteout(
-            bio); /* MSD: why not check the return value of this function ? */
-    }
-    bio->ct--;
-    bio->buf |= b << bio->ct;
 }
 
 static OPJ_UINT32 opj_bio_getbit(opj_bio_t *bio)
@@ -160,6 +144,16 @@ void opj_bio_init_dec(opj_bio_t *bio, OPJ_BYTE *bp, OPJ_UINT32 len)
     bio->bp = bp;
     bio->buf = 0;
     bio->ct = 0;
+}
+
+void opj_bio_putbit(opj_bio_t *bio, OPJ_UINT32 b)
+{
+    if (bio->ct == 0) {
+        opj_bio_byteout(
+            bio); /* MSD: why not check the return value of this function ? */
+    }
+    bio->ct--;
+    bio->buf |= b << bio->ct;
 }
 
 void opj_bio_write(opj_bio_t *bio, OPJ_UINT32 v, OPJ_UINT32 n)

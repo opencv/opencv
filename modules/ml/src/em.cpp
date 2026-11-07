@@ -446,7 +446,7 @@ public:
             CV_Assert(!clusterSamples.empty());
 
             calcCovarMatrix(clusterSamples, covs[clusterIndex], means.row(clusterIndex),
-                CV_COVAR_NORMAL + CV_COVAR_ROWS + CV_COVAR_USE_AVG + CV_COVAR_SCALE, CV_64FC1);
+                COVAR_NORMAL | COVAR_ROWS | COVAR_USE_AVG | COVAR_SCALE, CV_64FC1);
             weights.at<double>(clusterIndex) = static_cast<double>(clusterSamples.rows)/static_cast<double>(nsamples);
         }
 

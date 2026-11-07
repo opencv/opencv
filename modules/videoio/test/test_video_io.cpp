@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
 
 namespace opencv_test
 {
@@ -47,6 +48,14 @@ public:
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
             throw SkipTestException("Unstable MSMF test");
+#ifdef __linux__
+        if (cvtest::skipUnstableTests && apiPref == CAP_GSTREAMER &&
+            (ext == "avi" || ext == "mkv") &&
+            (video_file.find("MPEG") != std::string::npos))
+        {
+            throw SkipTestException("Unstable GSTREAMER test");
+        }
+#endif
         writeVideo();
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
@@ -66,6 +75,11 @@ public:
         {
             std::cout << "CAP_PROP_FRAME_COUNT is not supported by backend. Assume 50 frames." << std::endl;
             n_frames = 50;
+        }
+        // GStreamer can't read frame count of big_buck_bunny.wmv
+        if (apiPref == CAP_GSTREAMER && ext == "wmv")
+        {
+            n_frames = 125;
         }
 
         {
@@ -166,7 +180,7 @@ public:
         EXPECT_NO_THROW(count_prop = (int)cap.get(CAP_PROP_FRAME_COUNT));
         // mpg file reports 5.08 sec * 24 fps => property returns 122 frames
         // but actual number of frames returned is 125
-        if (ext != "mpg")
+        if (ext != "mpg" && !(apiPref == CAP_GSTREAMER && ext == "wmv"))
         {
             if (count_prop > 0)
             {
@@ -200,12 +214,11 @@ public:
         if (!isBackendAvailable(apiPref, cv::videoio_registry::getStreamBackends()))
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
 
-        // GStreamer: https://github.com/opencv/opencv/issues/19025
-        if (apiPref == CAP_GSTREAMER)
+        if (((apiPref == CAP_GSTREAMER) && (ext == "avi")))
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
-                    cv::String(" does not return reliable values for CAP_PROP_POS_MSEC property"));
+                    cv::String(" does not support CAP_PROP_POS_MSEC option"));
 
-        if (((apiPref == CAP_FFMPEG) && ((ext == "h264") || (ext == "h265"))))
+        if (((apiPref == CAP_FFMPEG || apiPref == CAP_GSTREAMER) && ((ext == "h264") || (ext == "h265"))))
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" does not support CAP_PROP_POS_MSEC option"));
 
@@ -215,8 +228,24 @@ public:
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" can't open the video: ")  + video_file);
 
+        int frame_count = (int)cap.get(CAP_PROP_FRAME_COUNT);
+
+        // HACK: Video consists of 125 frames, but cv::VideoCapture with FFmpeg reports only 122 frames for mpg video.
+        // mpg file reports 5.08 sec * 24 fps => property returns 122 frames,but actual number of frames returned is 125
+        // HACK: CAP_PROP_FRAME_COUNT is not supported for vmw + MSMF. Just force check for all 125 frames
+        if (ext == "mpg")
+            EXPECT_GE(frame_count, 114);
+        else if ((ext == "wmv") && (apiPref == CAP_MSMF || apiPref == CAP_GSTREAMER))
+            frame_count = 125;
+        else
+            EXPECT_EQ(frame_count, 125);
         Mat img;
-        for(int i = 0; i < 10; i++)
+
+        // HACK: FFmpeg reports picture_pts = AV_NOPTS_VALUE_ for the last frame for AVI container by some reason
+        if ((ext == "avi") && (apiPref == CAP_FFMPEG))
+            frame_count--;
+
+        for (int i = 0; i < frame_count; i++)
         {
             double timestamp = 0;
             ASSERT_NO_THROW(cap >> img);
@@ -224,6 +253,9 @@ public:
             if (cvtest::debugLevel > 0)
                 std::cout << "i = " << i << ": timestamp = " << timestamp << std::endl;
             const double frame_period = 1000.f/bunny_param.getFps();
+            // big_buck_bunny.mpg starts at 0.500 msec
+            if ((ext == "mpg") && (apiPref == CAP_GSTREAMER))
+                timestamp -= 500.0;
             // NOTE: eps == frame_period, because videoCapture returns frame beginning timestamp or frame end
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
             EXPECT_NEAR(timestamp, i*frame_period, frame_period) << "i=" << i;
@@ -303,7 +335,10 @@ public:
 
         // Workaround for some gstreamer pipelines
         if (apiPref == CAP_GSTREAMER)
+        {
             expected_frame_count.start -= 1;
+            expected_frame_count.end += 1;
+        }
 
         ASSERT_LE(expected_frame_count.start, actual);
         ASSERT_GE(expected_frame_count.end, actual);
@@ -351,10 +386,20 @@ TEST_P(videoio_bunny, frame_count) { doFrameCountTest(); }
 
 TEST_P(videoio_bunny, frame_timestamp) { doTimestampTest(); }
 
+inline static std::string videoio_bunny_name_printer(const testing::TestParamInfo<videoio_bunny::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(get<0>(info.param)) << "_"
+        << getBackendNameSafe(get<1>(info.param));
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videoio_bunny,
                           testing::Combine(
                               testing::ValuesIn(bunny_params),
-                              testing::ValuesIn(backend_params)));
+                              testing::ValuesIn(backend_params)),
+                          videoio_bunny_name_printer);
+
 
 
 inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR &p)
@@ -372,6 +417,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     {"wmv", "WMV3", 30.f, CAP_MSMF},
     {"wmv", "WVC1", 30.f, CAP_MSMF},
     {"mov", "H264", 30.f, CAP_MSMF},
+ // {"mov", "HEVC", 30.f, CAP_MSMF},  // excluded due to CI issue: https://github.com/opencv/opencv/pull/23172
 #endif
 
 #ifdef HAVE_AVFOUNDATION
@@ -391,6 +437,8 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     {"mkv", "XVID", 30.f, CAP_FFMPEG},
     {"mkv", "MPEG", 30.f, CAP_FFMPEG},
     {"mkv", "MJPG", 30.f, CAP_FFMPEG},
+    {"avi", "FFV1", 30.f, CAP_FFMPEG},
+    {"mkv", "FFV1", 30.f, CAP_FFMPEG},
 
     {"avi", "MPEG", 28.f, CAP_GSTREAMER},
     {"avi", "MJPG", 30.f, CAP_GSTREAMER},
@@ -411,10 +459,23 @@ Size all_sizes[] = {
 
 TEST_P(videoio_synthetic, write_read_position) { doTest(); }
 
+inline static std::string videoio_synthetic_name_printer(const testing::TestParamInfo<videoio_synthetic::ParamType>& info)
+{
+    std::ostringstream os;
+    const Size sz = get<0>(info.param);
+    const Ext_Fourcc_PSNR & param = get<1>(info.param);
+    os << sz.height << "p" << "_"
+        << param.ext << "_"
+        << param.fourcc << "_"
+        << getBackendNameSafe(param.api);
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
-                            testing::ValuesIn(synthetic_params)));
+                            testing::ValuesIn(synthetic_params)),
+                        videoio_synthetic_name_printer);
 
 struct Ext_Fourcc_API
 {
@@ -496,7 +557,19 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API()
     return result;
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()));
+inline static std::string Videoio_Writer_name_printer(const testing::TestParamInfo<Videoio_Writer::ParamType>& info)
+{
+    std::ostringstream os;
+    std::string ext(info.param.ext);
+    if (info.param.api == CAP_GSTREAMER && info.param.fourcc[0] == '\0') // gstreamer pipeline instead of extension
+        os << getExtensionSafe(info.param.ext) << "_" << "NONE";
+    else
+        os << info.param.ext << "_" << info.param.fourcc;
+    os << "_" << getBackendNameSafe(info.param.api);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()), Videoio_Writer_name_printer);
 
 
 TEST(Videoio, exceptions)
@@ -575,7 +648,7 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
     return result;
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()), Videoio_Writer_name_printer);
 
 typedef testing::TestWithParam<VideoCaptureAPIs> safe_capture;
 
@@ -608,7 +681,15 @@ TEST_P(safe_capture, frames_independency)
 }
 
 static VideoCaptureAPIs safe_apis[] = {CAP_FFMPEG, CAP_GSTREAMER, CAP_MSMF,CAP_AVFOUNDATION};
-INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
+
+inline static std::string safe_capture_name_printer(const testing::TestParamInfo<safe_capture::ParamType>& info)
+{
+    std::ostringstream os;
+    os << getBackendNameSafe(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis), safe_capture_name_printer);
 
 //==================================================================================================
 // TEST_P(videocapture_acceleration, ...)
@@ -709,7 +790,7 @@ TEST_P(videocapture_acceleration, read)
             {
                 if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
                     throw SkipTestException("Unable to read the first frame with VP9 codec (media stack misconfiguration / bug)");
-                // FFMPEG: [av1 @ 0000027ac07d1340] Your platform doesn't suppport hardware accelerated AV1 decoding.
+                // FFMPEG: [av1 @ 0000027ac07d1340] Your platform doesn't support hardware accelerated AV1 decoding.
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
@@ -731,7 +812,7 @@ TEST_P(videocapture_acceleration, read)
             {
                 if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
                     throw SkipTestException("Unable to read the first frame with VP9 codec (media stack misconfiguration / bug)");
-                // FFMPEG: [av1 @ 0000027ac07d1340] Your platform doesn't suppport hardware accelerated AV1 decoding.
+                // FFMPEG: [av1 @ 0000027ac07d1340] Your platform doesn't support hardware accelerated AV1 decoding.
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
@@ -771,9 +852,9 @@ static const VideoCaptureAccelerationInput hw_filename[] = {
         { "sample_322x242_15frames.yuv420p.libxvid.mp4", 28.0 },
         { "sample_322x242_15frames.yuv420p.mjpeg.mp4", 20.0 },
         { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
-        { "sample_322x242_15frames.yuv420p.libx264.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
-        { "sample_322x242_15frames.yuv420p.libx265.mp4", 30.0 },
-        { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libx264.mp4", 20.0 },  // 20 - D3D11 (i7-11800H), 23 - D3D11 on GHA/Windows, GSTREAMER on Ubuntu 18.04
+        { "sample_322x242_15frames.yuv420p.libx265.mp4", 20.0 },  // 20 - D3D11 (i7-11800H), 23 - D3D11 on GHA/Windows
+        { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", 29.0 }, // 29 - MSMF i5-1135G7
         { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", 30.0 }
 };
 
@@ -793,6 +874,7 @@ static const VideoAccelerationType hw_types[] = {
         VIDEO_ACCELERATION_D3D11,
 #else
         VIDEO_ACCELERATION_VAAPI,
+        VIDEO_ACCELERATION_DRM,
 #endif
 };
 
@@ -801,12 +883,22 @@ static bool hw_use_umat[] = {
         true
 };
 
+inline static std::string videocapture_acceleration_name_printer(const testing::TestParamInfo<videocapture_acceleration::ParamType>& info)
+{
+    std::ostringstream os;
+    os << getExtensionSafe(get<0>(info.param).filename) << "_"
+        << getBackendNameSafe(get<1>(info.param)) << "_"
+        << get<2>(info.param) << "_"
+        << (get<3>(info.param) ? "UMAT" : "MAT");
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videocapture_acceleration, testing::Combine(
     testing::ValuesIn(hw_filename),
     testing::ValuesIn(hw_backends),
     testing::ValuesIn(hw_types),
     testing::ValuesIn(hw_use_umat)
-));
+), videocapture_acceleration_name_printer);
 
 ////////////////////////////////////////// TEST_P(video_acceleration, write_read)
 
@@ -826,6 +918,13 @@ TEST_P(videowriter_acceleration, write)
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
+#ifdef __linux__
+    if (cvtest::skipUnstableTests && backend == CAP_GSTREAMER &&
+        (extension == "mkv") && (codecid == "MPEG" || codecid == "H264"))
+    {
+        throw SkipTestException("Unstable GSTREAMER test");
+    }
+#endif
 
     const Size sz(640, 480);
     const int frameNum = 15;
@@ -973,13 +1072,229 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
 #ifdef _WIN32
         {"mp4", "MPEG", 29.f, CAP_MSMF},
         {"mp4", "H264", 29.f, CAP_MSMF},
+        {"mp4", "HEVC", 29.f, CAP_MSMF},
 #endif
 };
+
+inline static std::string videowriter_acceleration_name_printer(const testing::TestParamInfo<videowriter_acceleration::ParamType>& info)
+{
+    std::ostringstream os;
+    const Ext_Fourcc_PSNR & param = get<0>(info.param);
+    os << extToStringSafe(param.ext) << "_"
+        << param.fourcc << "_"
+        << getBackendNameSafe(param.api) << "_"
+        << get<1>(info.param) << "_"
+        << (get<2>(info.param) ? "UMAT" : "MAT");
+    return os.str();
+}
 
 INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
         testing::ValuesIn(hw_codecs),
         testing::ValuesIn(hw_types),
         testing::ValuesIn(hw_use_umat)
-));
+), videowriter_acceleration_name_printer);
+
+class BufferStream : public cv::IStreamReader
+{
+public:
+    BufferStream(const std::string& filename)
+    {
+        Ptr<std::filebuf> file = makePtr<std::filebuf>();
+        file->open(filename.c_str(), std::ios::in | std::ios::binary);
+        stream = file;
+    }
+
+    BufferStream(const Ptr<std::stringbuf>& _stream) : stream(_stream) {}
+
+    long long read(char* buffer, long long size) CV_OVERRIDE
+    {
+        auto result = stream->sgetn(buffer, size);
+        return result;
+    }
+
+    long long seek(long long offset, int way) CV_OVERRIDE
+    {
+        auto result = stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+        return result;
+    }
+
+private:
+    Ptr<std::streambuf> stream;
+};
+
+typedef testing::TestWithParam<tuple<std::string, VideoCaptureAPIs>> stream_capture;
+TEST_P(stream_capture, read)
+{
+    std::string ext = get<0>(GetParam());
+    VideoCaptureAPIs apiPref = get<1>(GetParam());
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+        throw SkipTestException("Unstable MSMF test");
+
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
+    VideoCapture cap;
+    String video_file = BunnyParameters::getFilename(String(".") + ext);
+    ASSERT_TRUE(utils::fs::exists(video_file));
+    EXPECT_NO_THROW(cap.open(makePtr<BufferStream>(video_file), apiPref, {}));
+    ASSERT_TRUE(cap.isOpened());
+
+    const int numFrames = 10;
+    Mat frames[numFrames];
+    Mat hardCopies[numFrames];
+    for(int i = 0; i < numFrames; i++)
+    {
+        ASSERT_NO_THROW(cap >> frames[i]);
+        EXPECT_FALSE(frames[i].empty());
+        hardCopies[i] = frames[i].clone();
+    }
+
+    for(int i = 0; i < numFrames; i++)
+        EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
+}
+
+inline static std::string stream_capture_name_printer(const testing::TestParamInfo<stream_capture::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(get<0>(info.param)) << "_"
+        << getBackendNameSafe(get<1>(info.param));
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, stream_capture,
+                          testing::Combine(
+                              testing::ValuesIn(bunny_params),
+                              testing::ValuesIn(backend_params)),
+                          stream_capture_name_printer);
+
+// This test for stream input for container format (See test_ffmpeg/videoio_container.read test)
+typedef testing::TestWithParam<std::string> stream_capture_ffmpeg;
+TEST_P(stream_capture_ffmpeg, raw)
+{
+    std::string ext = GetParam();
+    VideoCaptureAPIs apiPref = CAP_FFMPEG;
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
+    VideoCapture container;
+    String video_file = BunnyParameters::getFilename(String(".") + ext);
+    ASSERT_TRUE(utils::fs::exists(video_file));
+    EXPECT_NO_THROW(container.open(video_file, apiPref, {CAP_PROP_FORMAT, -1}));
+    ASSERT_TRUE(container.isOpened());
+    ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));
+
+    auto stream = std::make_shared<std::stringbuf>();
+    Mat keyFrame;
+    while (true)
+    {
+        container >> keyFrame;
+        if (keyFrame.empty())
+            break;
+        stream->sputn(keyFrame.ptr<char>(), keyFrame.total());
+    }
+
+    VideoCapture capRef(video_file);
+    VideoCapture capStream;
+    EXPECT_NO_THROW(capStream.open(makePtr<BufferStream>(stream), apiPref, {}));
+    ASSERT_TRUE(capStream.isOpened());
+
+    const int numFrames = 10;
+    Mat frameRef, frame;
+    for (int i = 0; i < numFrames; ++i)
+    {
+        capRef >> frameRef;
+        ASSERT_NO_THROW(capStream >> frame);
+        EXPECT_FALSE(frame.empty());
+        EXPECT_EQ(0, cv::norm(frame, frameRef, NORM_INF)) << i;
+    }
+}
+
+inline static std::string stream_capture_ffmpeg_name_printer(const testing::TestParamInfo<stream_capture_ffmpeg::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"), stream_capture_ffmpeg_name_printer);
+
+// Seek by frame index must be accurate on non-integer frame rates.
+typedef testing::TestWithParam<VideoCaptureAPIs> PreciseSeekingTest;
+
+TEST_P(PreciseSeekingTest, seek_nonInteger_fps_frame_accurate)
+{
+    VideoCaptureAPIs apiPref = GetParam();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    const std::string file = findDataFile("video/sample_23976fps.mp4");
+
+    VideoCapture cap;
+    ASSERT_TRUE(cap.open(file, apiPref))
+        << "AVFoundation could not open " << file;
+
+    const double fps_num = 24000.0;
+    const double fps_den = 1001.0;
+    const double frame_period_ms = fps_den * 1000.0 / fps_num;  // ~41.7083
+    const double tol_ms = frame_period_ms * 0.5;
+
+    const int targets[] = { 0, 1, 24, 50, 99 };
+    for (int N : targets)
+    {
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, N))
+            << "seek to frame " << N << " failed";
+        Mat img;
+        ASSERT_TRUE(cap.read(img))
+            << "read after seek to frame " << N << " failed";
+        const double got_ms    = cap.get(CAP_PROP_POS_MSEC);
+        const double expect_ms = N * frame_period_ms;
+        EXPECT_NEAR(got_ms, expect_ms, tol_ms)
+            << "non-integer fps seek drifted at frame N=" << N;
+    }
+}
+
+VideoCaptureAPIs seekable_backeinds[] = {CAP_FFMPEG, CAP_MSMF, CAP_AVFOUNDATION};
+
+INSTANTIATE_TEST_CASE_P(videoio, PreciseSeekingTest, testing::ValuesIn(seekable_backeinds), safe_capture_name_printer);
+
+// Regression test for heap-buffer-overflow in mjpeg_buffer::put_bits (GitHub issue #29112).
+// When len == bits_free the old guard used strict '>' and skipped the resize, causing
+// an out-of-bounds write after '++m_pos' advanced past data.size().
+TEST(Videoio_MJPEG, put_bits_no_heap_overflow)
+{
+    const std::string filename = cv::tempfile(".avi");
+    cv::Mat frame(1, 1, CV_8UC1, cv::Scalar::all(255));
+    int fourcc = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+    {
+        cv::VideoWriter writer;
+        ASSERT_NO_THROW(writer.open(filename, CAP_OPENCV_MJPEG, fourcc, 25.0, cv::Size(1, 1), false));
+        ASSERT_TRUE(writer.isOpened());
+        EXPECT_NO_THROW(writer.write(frame));
+    }
+    remove(filename.c_str());
+}
 
 } // namespace

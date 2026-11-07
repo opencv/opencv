@@ -376,36 +376,10 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     _patch.create(patchSize, CV_MAKETYPE(ddepth, cn));
     Mat patch = _patch.getMat();
 
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-    CV_IPP_CHECK()
-    {
-        typedef IppStatus (CV_STDCALL *ippiGetRectSubPixFunc)( const void* src, int src_step,
-                                                                IppiSize src_size, void* dst,
-                                                                int dst_step, IppiSize win_size,
-                                                                IppiPoint_32f center,
-                                                                IppiPoint* minpt, IppiPoint* maxpt );
-
-        IppiPoint minpt={0,0}, maxpt={0,0};
-        IppiPoint_32f icenter = {center.x, center.y};
-        IppiSize src_size={image.cols, image.rows}, win_size={patch.cols, patch.rows};
-        int srctype = image.type();
-        ippiGetRectSubPixFunc ippiCopySubpixIntersect =
-            srctype == CV_8UC1 && ddepth == CV_8U ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u_C1R :
-            srctype == CV_8UC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_8u32f_C1R :
-            srctype == CV_32FC1 && ddepth == CV_32F ? (ippiGetRectSubPixFunc)ippiCopySubpixIntersect_32f_C1R : 0;
-
-        if( ippiCopySubpixIntersect)
-        {
-            if (CV_INSTRUMENT_FUN_IPP(ippiCopySubpixIntersect, image.ptr(), (int)image.step, src_size, patch.ptr(),
-                        (int)patch.step, win_size, icenter, &minpt, &maxpt) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
+    CALL_HAL(getRectSubPix, cv_hal_getRectSubPix,
+             image.type(), image.data, image.step, image.cols, image.rows,
+             patch.type(), patch.data, patch.step, patch.cols, patch.rows,
+             center.x, center.y);
 
     if( depth == CV_8U && ddepth == CV_8U )
         getRectSubPix_Cn_<uchar, uchar, int, scale_fixpt, cast_8u>
@@ -417,7 +391,7 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
         (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
     else
-        CV_Error( CV_StsUnsupportedFormat, "Unsupported combination of input and output formats");
+        CV_Error( cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output formats");
 }
 
 
@@ -473,7 +447,7 @@ cvSampleLine( const void* _img, CvPoint pt1, CvPoint pt2,
     size_t pixsize = img.elemSize();
 
     if( !buffer )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     for( int i = 0; i < li.count; i++, ++li )
     {

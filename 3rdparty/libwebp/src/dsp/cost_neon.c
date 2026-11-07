@@ -19,8 +19,8 @@
 static const uint8_t position[16] = { 1, 2,  3,  4,  5,  6,  7,  8,
                                       9, 10, 11, 12, 13, 14, 15, 16 };
 
-static void SetResidualCoeffs_NEON(const int16_t* const coeffs,
-                                   VP8Residual* const res) {
+static void SetResidualCoeffs_NEON(const int16_t* WEBP_RESTRICT const coeffs,
+                                   VP8Residual* WEBP_RESTRICT const res) {
   const int16x8_t minus_one = vdupq_n_s16(-1);
   const int16x8_t coeffs_0 = vld1q_s16(coeffs);
   const int16x8_t coeffs_1 = vld1q_s16(coeffs + 8);
@@ -29,7 +29,7 @@ static void SetResidualCoeffs_NEON(const int16_t* const coeffs,
   const uint8x16_t eob = vcombine_u8(vqmovn_u16(eob_0), vqmovn_u16(eob_1));
   const uint8x16_t masked = vandq_u8(eob, vld1q_u8(position));
 
-#ifdef __aarch64__
+#if WEBP_AARCH64
   res->last = vmaxvq_u8(masked) - 1;
 #else
   const uint8x8_t eob_8x8 = vmax_u8(vget_low_u8(masked), vget_high_u8(masked));
@@ -43,7 +43,7 @@ static void SetResidualCoeffs_NEON(const int16_t* const coeffs,
 
   vst1_lane_s32(&res->last, vreinterpret_s32_u32(eob_32x2), 0);
   --res->last;
-#endif  // __aarch64__
+#endif  // WEBP_AARCH64
 
   res->coeffs = coeffs;
 }

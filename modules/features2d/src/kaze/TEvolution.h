@@ -13,9 +13,10 @@ namespace cv
 
 /* ************************************************************************* */
 /// KAZE/A-KAZE nonlinear diffusion filtering evolution
-struct TEvolution
+template <typename MatType>
+struct TEvolutionT
 {
-  TEvolution() {
+  TEvolutionT() {
     etime = 0.0f;
     esigma = 0.0f;
     octave = 0;
@@ -23,11 +24,11 @@ struct TEvolution
     sigma_size = 0;
   }
 
-  Mat Lx, Ly;           ///< First order spatial derivatives
-  Mat Lxx, Lxy, Lyy;    ///< Second order spatial derivatives
-  Mat Lt;               ///< Evolution image
-  Mat Lsmooth;          ///< Smoothed image
-  Mat Ldet;             ///< Detector response
+  MatType Lx, Ly;           ///< First order spatial derivatives
+  MatType Lxx, Lxy, Lyy;    ///< Second order spatial derivatives
+  MatType Lt;               ///< Evolution image
+  MatType Lsmooth;          ///< Smoothed image
+  MatType Ldet;             ///< Detector response
 
   float etime;              ///< Evolution time
   float esigma;             ///< Evolution sigma. For linear diffusion t = sigma^2 / 2
@@ -35,6 +36,11 @@ struct TEvolution
   int sublevel;             ///< Image sublevel in each octave
   int sigma_size;           ///< Integer esigma. For computing the feature detector responses
 };
+
+typedef TEvolutionT<Mat> TEvolution;
+typedef TEvolutionT<UMat> UTEvolution;
+typedef std::vector<TEvolution> TPyramid;
+typedef std::vector<UTEvolution> UTPyramid;
 
 }
 

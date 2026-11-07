@@ -13,6 +13,11 @@
 #import "CvType.h"
 #import "CVObjcUtil.h"
 
+#ifdef AVAILABLE_IMGCODECS
+#import "MatConverters.h"
+#import "MatQuickLook.h"
+#endif
+
 static int idx2Offset(cv::Mat* mat, std::vector<int>& indices) {
     int offset = indices[0];
     for (int dim=1; dim < mat->dims; dim++) {
@@ -98,7 +103,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
 - (instancetype)initWithSize:(Size2i*)size type:(int)type {
     self = [super init];
     if (self) {
-        _nativePtr = new cv::Mat(size.width, size.height, type);
+        _nativePtr = new cv::Mat(size.height, size.width, type);
     }
     return self;
 }
@@ -128,7 +133,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-        _nativePtr = new cv::Mat(size.width, size.height, type, scalerTemp);
+        _nativePtr = new cv::Mat(size.height, size.width, type, scalerTemp);
     }
     return self;
 }
@@ -931,5 +936,55 @@ template<typename T> int putData(NSArray<NSNumber*>* indices, cv::Mat* mat, int 
 - (int)width {
     return [self cols];
 }
+
+#ifdef AVAILABLE_IMGCODECS
+
+-(CGImageRef)toCGImage {
+    return [MatConverters convertMatToCGImageRef:self];
+}
+
+-(instancetype)initWithCGImage:(CGImageRef)image {
+    return [MatConverters convertCGImageRefToMat:image];
+}
+
+-(instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertCGImageRefToMat:image alphaExist:alphaExist];
+}
+
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
+
+-(UIImage*)toUIImage {
+    return [MatConverters converMatToUIImage:self];
+}
+
+-(instancetype)initWithUIImage:(UIImage*)image {
+    return [MatConverters convertUIImageToMat:image];
+}
+
+-(instancetype)initWithUIImage:(UIImage*)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertUIImageToMat:image alphaExist:alphaExist];
+}
+
+#elif TARGET_OS_MAC
+
+-(NSImage*)toNSImage {
+    return [MatConverters converMatToNSImage:self];
+}
+
+-(instancetype)initWithNSImage:(NSImage*)image {
+    return [MatConverters convertNSImageToMat:image];
+}
+
+-(instancetype)initWithNSImage:(NSImage*)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertNSImageToMat:image alphaExist:alphaExist];
+}
+
+#endif
+
+- (id)debugQuickLookObject {
+    return [MatQuickLook matDebugQuickLookObject:self];
+}
+
+#endif
 
 @end

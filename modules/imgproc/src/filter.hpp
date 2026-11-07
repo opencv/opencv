@@ -43,8 +43,13 @@
 #ifndef OPENCV_IMGPROC_FILTER_HPP
 #define OPENCV_IMGPROC_FILTER_HPP
 
+#include <opencv2/core.hpp>
+#include <vector>
+
 namespace cv
 {
+
+
 #ifdef HAVE_OPENCL
 bool ocl_sepFilter2D(
         InputArray _src, OutputArray _dst, int ddepth,

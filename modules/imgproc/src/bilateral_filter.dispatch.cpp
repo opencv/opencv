@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, 2018, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -75,10 +76,12 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     if (depth != CV_8U || cn > 4)
         return false;
 
-    if (sigma_color <= 0)
-        sigma_color = 1;
-    if (sigma_space <= 0)
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
     double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
     double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
@@ -95,8 +98,8 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
         return false;
 
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
-    std::vector<float> _space_weight(d * d);
-    std::vector<int> _space_ofs(d * d);
+    AutoBuffer<float> _space_weight(d * d);
+    AutoBuffer<int> _space_ofs(d * d);
     float * const space_weight = &_space_weight[0];
     int * const space_ofs = &_space_ofs[0];
 
@@ -111,7 +114,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-    char cvt[3][40];
+    char cvt[3][50];
     String cnstr = cn > 1 ? format("%d", cn) : "";
     String kernelName("bilateral");
     size_t sizeDiv = 1;
@@ -129,10 +132,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
             " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=(float)%f",
             radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
-            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0], sizeof(cvt[0])),
             ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
-            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
-            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
+            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1], sizeof(cvt[1])),
+            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2], sizeof(cvt[2])), gauss_color_coeff));
     if (k.empty())
         return false;
 
@@ -165,13 +168,15 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
-    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
-    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
+    float gauss_color_coeff = (float)(-0.5/(sigma_color*sigma_color));
+    float gauss_space_coeff = (float)(-0.5/(sigma_space*sigma_space));
 
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
@@ -183,23 +188,39 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-    std::vector<float> _color_weight(cn*256);
-    std::vector<float> _space_weight(d*d);
-    std::vector<int> _space_ofs(d*d);
+    AutoBuffer<float> _color_weight(cn*256);
+    AutoBuffer<float> _space_weight(d*d);
+    AutoBuffer<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
 
     // initialize color-related bilateral filter coefficients
+    i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int nlanes = VTraits<v_float32>::vlanes();
+    v_float32 v_gauss_color_coeff = vx_setall_f32(gauss_color_coeff);
+    float counter[16] = {0.0, 1., 2., 3., 4., 5., 6., 7.,
+                    8., 9., 10., 11., 12., 13., 14., 15.};
+    v_float32 v_i = vx_load(counter);
+    v_float32 v_inc = vx_setall_f32(float(nlanes));
 
-    for( i = 0; i < 256*cn; i++ )
+    for( ; i < (256*cn) - nlanes; i += nlanes )
+    {
+        v_float32 v_color_weight = v_mul(v_mul(v_i,v_i), v_gauss_color_coeff);
+        v_store(color_weight + i, v_exp(v_color_weight));
+        v_i = v_add(v_i, v_inc);
+    }
+#endif
+    for(; i < 256*cn; i++ )
+    {
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
+    }
 
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
     {
         j = -radius;
-
         for( ; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);
@@ -232,10 +253,12 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -260,15 +283,15 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
     // allocate lookup tables
-    std::vector<float> _space_weight(d*d);
-    std::vector<int> _space_ofs(d*d);
+    AutoBuffer<float> _space_weight(d*d);
+    AutoBuffer<int> _space_ofs(d*d);
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
 
     // assign a length which is slightly more than needed
     len = (float)(maxValSrc - minValSrc) * cn;
     kExpNumBins = kExpNumBinsPerChannel * cn;
-    std::vector<float> _expLUT(kExpNumBins+2);
+    AutoBuffer<float> _expLUT(kExpNumBins+2);
     float* expLUT = &_expLUT[0];
 
     scale_index = kExpNumBins/len;
@@ -298,107 +321,9 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
         }
 
     // parallel_for usage
-    CV_CPU_DISPATCH(bilateralFilterInvoker_32f, (cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT),
+    CV_CPU_DISPATCH(bilateralFilterInvoker_32f, (cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT, kExpNumBins),
         CV_CPU_DISPATCH_MODES_ALL);
 }
-
-#ifdef HAVE_IPP
-#define IPP_BILATERAL_PARALLEL 1
-
-#ifdef HAVE_IPP_IW
-class ipp_bilateralFilterParallel: public ParallelLoopBody
-{
-public:
-    ipp_bilateralFilterParallel(::ipp::IwiImage &_src, ::ipp::IwiImage &_dst, int _radius, Ipp32f _valSquareSigma, Ipp32f _posSquareSigma, ::ipp::IwiBorderType _borderType, bool *_ok):
-        src(_src), dst(_dst)
-    {
-        pOk = _ok;
-
-        radius          = _radius;
-        valSquareSigma  = _valSquareSigma;
-        posSquareSigma  = _posSquareSigma;
-        borderType      = _borderType;
-
-        *pOk = true;
-    }
-    ~ipp_bilateralFilterParallel() {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        if(*pOk == false)
-            return;
-
-        try
-        {
-            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, dst.m_size.width, range.end - range.start);
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, src, dst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), borderType, tile);
-        }
-        catch(const ::ipp::IwException &)
-        {
-            *pOk = false;
-            return;
-        }
-    }
-private:
-    ::ipp::IwiImage &src;
-    ::ipp::IwiImage &dst;
-
-    int                  radius;
-    Ipp32f               valSquareSigma;
-    Ipp32f               posSquareSigma;
-    ::ipp::IwiBorderType borderType;
-
-    bool  *pOk;
-    const ipp_bilateralFilterParallel& operator= (const ipp_bilateralFilterParallel&);
-};
-#endif
-
-static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, double sigmaSpace, int borderType)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    int         radius         = IPP_MAX(((d <= 0)?cvRound(sigmaSpace*1.5):d/2), 1);
-    Ipp32f      valSquareSigma = (Ipp32f)((sigmaColor <= 0)?1:sigmaColor*sigmaColor);
-    Ipp32f      posSquareSigma = (Ipp32f)((sigmaSpace <= 0)?1:sigmaSpace*sigmaSpace);
-
-    // Acquire data and begin processing
-    try
-    {
-        ::ipp::IwiImage      iwSrc = ippiGetImage(src);
-        ::ipp::IwiImage      iwDst = ippiGetImage(dst);
-        ::ipp::IwiBorderSize borderSize(radius);
-        ::ipp::IwiBorderType ippBorder(ippiGetBorder(iwSrc, borderType, borderSize));
-        if(!ippBorder)
-            return false;
-
-        const int threads = ippiSuggestThreadsNum(iwDst, 2);
-        if(IPP_BILATERAL_PARALLEL && threads > 1) {
-            bool  ok      = true;
-            Range range(0, (int)iwDst.m_size.height);
-            ipp_bilateralFilterParallel invoker(iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ippBorder, &ok);
-            if(!ok)
-                return false;
-
-            parallel_for_(range, invoker, threads*4);
-
-            if(!ok)
-                return false;
-        } else {
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterBilateral, iwSrc, iwDst, radius, valSquareSigma, posSquareSigma, ::ipp::IwDefault(), ippBorder);
-        }
-    }
-    catch (const ::ipp::IwException &)
-    {
-        return false;
-    }
-    return true;
-#else
-    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(d); CV_UNUSED(sigmaColor); CV_UNUSED(sigmaSpace); CV_UNUSED(borderType);
-    return false;
-#endif
-}
-#endif
 
 void bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
@@ -415,14 +340,27 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
-    CV_IPP_RUN_FAST(ipp_bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType));
+    {
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        if( !(borderType & BORDER_ISOLATED) )
+            src.locateROI( wsz, ofs );
+
+        CALL_HAL(bilateralFilter, cv_hal_bilateralFilter_offset, src.data, src.step, dst.data, dst.step,
+                 src.cols, src.rows, src.depth(), src.channels(),
+                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y,
+                 d, sigmaColor, sigmaSpace, borderType & (~BORDER_ISOLATED));
+    }
+
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step,
+             src.cols, src.rows, src.depth(), src.channels(), d, sigmaColor, sigmaSpace, borderType);
 
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else if( src.depth() == CV_32F )
         bilateralFilter_32f( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
 }
 

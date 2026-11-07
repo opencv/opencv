@@ -116,4 +116,36 @@ public class DnnListRegressionTest extends OpenCVTestCase {
             fail("Net getFLOPS failed: " + e.getMessage());
         }
     }
+
+    public void testGetLayersShapes() {
+        List<MatOfInt> netInputShapes = new ArrayList();
+        netInputShapes.add(new MatOfInt(1, 3, 224, 224));
+
+        MatOfInt layersIds = new MatOfInt();
+        List<List<MatOfInt>> inLayersShapes = new ArrayList();
+        List<List<MatOfInt>> outLayersShapes = new ArrayList();
+        try {
+            net.getLayersShapes(netInputShapes, layersIds, inLayersShapes, outLayersShapes);
+
+            assertEquals(layersIds.total(), inLayersShapes.size());
+            assertEquals(layersIds.total(), outLayersShapes.size());
+
+            // Layer ID for "conv2d0_pre_relu/conv"
+            int layerId = 1;
+
+            MatOfInt expectedInShape = new MatOfInt(1, 3, 224, 224);
+            MatOfInt expectedOutShape = new MatOfInt(1, 64, 112, 112);
+
+            // Test inLayersShapes
+            MatOfInt actualInShape = inLayersShapes.get(layerId).get(0);
+            assertMatEqual(expectedInShape, actualInShape);
+
+            // Test outLayersShapes
+            MatOfInt actualOutShape = outLayersShapes.get(layerId).get(0);
+            assertMatEqual(expectedOutShape, actualOutShape);
+
+        } catch(Exception e) {
+            fail("Net getLayersShapes failed: " + e.getMessage());
+        }
+    }
 }

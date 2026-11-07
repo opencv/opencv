@@ -2,7 +2,7 @@
  * jdatasrc.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2009-2019 by Guido Vollbeding.
+ * Modified 2009-2022 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -23,17 +23,17 @@
 
 /* Expanded data source object for stdio input */
 
+#define INPUT_BUF_SIZE  4096	/* choose an efficiently fread'able size */
+
 typedef struct {
   struct jpeg_source_mgr pub;	/* public fields */
 
   FILE * infile;		/* source stream */
-  JOCTET * buffer;		/* start of buffer */
+  JOCTET buffer[INPUT_BUF_SIZE]; /* input buffer */
   boolean start_of_file;	/* have we gotten any data yet? */
 } my_source_mgr;
 
 typedef my_source_mgr * my_src_ptr;
-
-#define INPUT_BUF_SIZE  4096	/* choose an efficiently fread'able size */
 
 
 /*
@@ -204,8 +204,8 @@ term_source (j_decompress_ptr cinfo)
 
 /*
  * Prepare for input from a stdio stream.
- * The caller must have already opened the stream, and is responsible
- * for closing it after finishing decompression.
+ * The caller must have already opened the stream,
+ * and is responsible for closing it after finishing decompression.
  */
 
 GLOBAL(void)
@@ -213,19 +213,16 @@ jpeg_stdio_src (j_decompress_ptr cinfo, FILE * infile)
 {
   my_src_ptr src;
 
-  /* The source object and input buffer are made permanent so that a series
-   * of JPEG images can be read from the same file by calling jpeg_stdio_src
-   * only before the first one.  (If we discarded the buffer at the end of
-   * one image, we'd likely lose the start of the next one.)
+  /* The source object including the input buffer is made permanent so that
+   * a series of JPEG images can be read from the same file by calling
+   * jpeg_stdio_src only before the first one.  (If we discarded the buffer
+   * at the end of one image, we'd likely lose the start of the next one.)
    * This makes it unsafe to use this manager and a different source
    * manager serially with the same JPEG object.  Caveat programmer.
    */
   if (cinfo->src == NULL) {	/* first time for this JPEG object? */
     cinfo->src = (struct jpeg_source_mgr *) (*cinfo->mem->alloc_small)
       ((j_common_ptr) cinfo, JPOOL_PERMANENT, SIZEOF(my_source_mgr));
-    src = (my_src_ptr) cinfo->src;
-    src->buffer = (JOCTET *) (*cinfo->mem->alloc_small)
-      ((j_common_ptr) cinfo, JPOOL_PERMANENT, INPUT_BUF_SIZE * SIZEOF(JOCTET));
   }
 
   src = (my_src_ptr) cinfo->src;

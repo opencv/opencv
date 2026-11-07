@@ -28,6 +28,7 @@ import numpy as np
 import cv2 as cv
 
 img = cv.imread('messi5.jpg')
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 res = cv.resize(img,None,fx=2, fy=2, interpolation = cv.INTER_CUBIC)
 
@@ -49,7 +50,8 @@ function. See the below example for a shift of (100,50):
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 rows,cols = img.shape
 
 M = np.float32([[1,0,100],[0,1,50]])
@@ -87,7 +89,8 @@ where:
 To find this transformation matrix, OpenCV provides a function, **cv.getRotationMatrix2D**. Check out the
 below example which rotates the image by 90 degree with respect to center without any scaling.
 @code{.py}
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 rows,cols = img.shape
 
 # cols-1 and rows-1 are the coordinate limits.
@@ -108,6 +111,7 @@ which is to be passed to **cv.warpAffine**.
 Check the below example, and also look at the points I selected (which are marked in green color):
 @code{.py}
 img = cv.imread('drawing.png')
+assert img is not None, "file could not be read, check with os.path.exists()"
 rows,cols,ch = img.shape
 
 pts1 = np.float32([[50,50],[200,50],[50,200]])
@@ -137,6 +141,7 @@ matrix.
 See the code below:
 @code{.py}
 img = cv.imread('sudoku.png')
+assert img is not None, "file could not be read, check with os.path.exists()"
 rows,cols,ch = img.shape
 
 pts1 = np.float32([[56,65],[368,52],[28,387],[389,390]])
@@ -158,6 +163,3 @@ Additional Resources
 --------------------
 
 -#  "Computer Vision: Algorithms and Applications", Richard Szeliski
-
-Exercises
----------

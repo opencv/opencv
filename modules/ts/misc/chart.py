@@ -1,4 +1,46 @@
 #!/usr/bin/env python
+""" OpenCV performance test results charts generator.
+
+This script formats results of a performance test as a table or a series of tables according to test
+parameters.
+
+### Description
+
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+Script accepts an XML with performance test results as an input. Only one test (aka testsuite)
+containing multiple cases (aka testcase) with different parameters can be used. Test should have 2
+or more parameters, for example resolution (640x480), data type (8UC1), mode (NORM_TYPE), etc.
+Parameters #2 and #1 will be used as table row and column by default, this mapping can be changed
+with `-x` and `-y` options. Parameter combination besides the two selected for row and column will
+be represented as a separate table. I.e. one table (RES x TYPE) for `NORM_L1`, another for
+`NORM_L2`, etc.
+
+Test can be selected either by using `--gtest_filter` option when running the test, or by using the
+`--filter` script option.
+
+### Options:
+
+-f REGEX, --filter=REGEX    - regular expression used to select a test
+-x ROW, -y COL              - choose different parameters for rows and columns
+-u UNITS, --units=UNITS     - units for output values (s, ms (default), us, ns or ticks)
+-m NAME, --metric=NAME      - output metric (mean, median, stddev, etc.)
+-o FMT, --output=FMT        - output format ('txt', 'html' or 'auto')
+
+### Example:
+
+./chart.py -f sum opencv_perf_core.xml
+
+Geometric mean for
+sum::Size_MatType::(Y, X)
+
+ X\Y  127x61  640x480 1280x720 1920x1080
+8UC1  0.03 ms 1.21 ms 3.61 ms   8.11 ms
+8UC4  0.10 ms 3.56 ms 10.67 ms 23.90 ms
+32FC1 0.05 ms 1.77 ms 5.23 ms  11.72 ms
+"""
 
 from __future__ import print_function
 import testlog_parser, sys, os, xml, re
@@ -180,7 +222,7 @@ if __name__ == "__main__":
         exit(1)
 
     for i in range(argsnum):
-        arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=alphanum_keyselector)
+        arglists[i] = sorted([str(key) for key in arglists[i].keys()], key=alphanum_keyselector)
 
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))

@@ -22,6 +22,7 @@
  * because of this file.
  */
 #include <chrono>
+#include <map>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/gapi/garg.hpp>
@@ -47,8 +48,16 @@ namespace wip {
 class GCaptureSource: public IStreamSource
 {
 public:
-    explicit GCaptureSource(int id) : cap(id) { prep(); }
-    explicit GCaptureSource(const std::string &path) : cap(path) { prep(); }
+    explicit GCaptureSource(int id, const std::map<int, double> &properties = {})
+        : cap(id) { prep(properties); }
+
+    explicit GCaptureSource(const std::string &path,
+                            const std::map<int, double> &properties = {})
+        : cap(path) { prep(properties); }
+
+    void set(int propid, double value) {
+        cap.set(propid, value);
+    }
 
     // TODO: Add more constructor overloads to make it
     // fully compatible with VideoCapture's interface.
@@ -59,15 +68,19 @@ protected:
     bool first_pulled = false;
     int64_t counter = 0;
 
-    void prep()
+    void prep(const std::map<int, double> &properties)
     {
+        for (const auto &it : properties) {
+            cap.set(it.first, it.second);
+        }
+
         // Prepare first frame to report its meta to engine
         // when needed
         GAPI_Assert(first.empty());
         cv::Mat tmp;
         if (!cap.read(tmp))
         {
-            GAPI_Assert(false && "Couldn't grab the very first frame");
+            GAPI_Error("Couldn't grab the very first frame");
         }
         // NOTE: Some decode/media VideoCapture backends continue
         // owning the video buffer under cv::Mat so in order to
@@ -114,15 +127,19 @@ protected:
 };
 
 // NB: Overload for using from python
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string& path)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const std::string& path,
+                        const std::map<int, double>& properties = {})
 {
-    return make_src<GCaptureSource>(path);
+    return make_src<GCaptureSource>(path, properties);
 }
 
 // NB: Overload for using from python
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const int id)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const int id,
+                        const std::map<int, double>& properties = {})
 {
-    return make_src<GCaptureSource>(id);
+    return make_src<GCaptureSource>(id, properties);
 }
 
 } // namespace wip

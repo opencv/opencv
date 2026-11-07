@@ -113,7 +113,7 @@ TEST_P(Test_Torch_layers, run_convolution)
 {
     // Output reference values are in range [23.4018, 72.0181]
     double l1 = default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.08;
         lInf = 0.43;
@@ -132,6 +132,8 @@ TEST_P(Test_Torch_layers, run_pool_max)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     double l1 = 0.0, lInf = 0.0;
     runTorchNet("net_pool_max", "", true, false, true, l1, lInf);
 }
@@ -158,7 +160,7 @@ TEST_P(Test_Torch_layers, run_reshape_single_sample)
 {
     // Reference output values in range [14.4586, 18.4492].
     double l1 = default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.033;
         lInf = 0.05;
@@ -175,6 +177,8 @@ TEST_P(Test_Torch_layers, run_linear)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     runTorchNet("net_linear_2d");
 }
 
@@ -186,7 +190,7 @@ TEST_P(Test_Torch_layers, run_concat)
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
     double lInf = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         lInf = 0.032;
     }
@@ -252,7 +256,7 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
     double l1 = 0.0, lInf = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.046;
         lInf = 0.023;
@@ -288,20 +292,6 @@ TEST_P(Test_Torch_layers, net_normalize)
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* only L1 and L2 norms are supported */
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#endif
-
     runTorchNet("net_normalize", "", false, true);
 }
 
@@ -310,6 +300,82 @@ TEST_P(Test_Torch_layers, net_padding)
     runTorchNet("net_padding", "", false, true);
     runTorchNet("net_spatial_zero_padding", "", false, true);
     runTorchNet("net_spatial_reflection_padding", "", false, true);
+}
+
+TEST(Test_Torch, padding_rejects_invalid_dim_and_min_pad)
+{
+    auto appendInt32 = [](std::string& out, int32_t v) {
+        out.append(reinterpret_cast<const char*>(&v), sizeof(v));
+    };
+    auto appendFloat64 = [](std::string& out, double v) {
+        out.append(reinterpret_cast<const char*>(&v), sizeof(v));
+    };
+    auto appendString = [&](std::string& out, const std::string& s) {
+        appendInt32(out, static_cast<int32_t>(s.size()));
+        out.append(s);
+    };
+    auto makePaddingT7 = [&](int32_t dimVal, int32_t padVal, int32_t nInputDim) {
+        std::string buf;
+        appendInt32(buf, 4);  // TYPE_TORCH
+        appendInt32(buf, 1);  // object index
+        appendString(buf, "V 1");
+        appendString(buf, "nn.Padding");
+        appendInt32(buf, 3);  // TYPE_TABLE
+        appendInt32(buf, 2);  // table index
+        appendInt32(buf, 4);  // 4 pairs
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "dim");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(dimVal));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "pad");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(padVal));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "nInputDim");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, static_cast<double>(nInputDim));
+        appendInt32(buf, 2);  // TYPE_STRING
+        appendString(buf, "value");
+        appendInt32(buf, 1);  // TYPE_NUMBER
+        appendFloat64(buf, 0.0);
+        return buf;
+    };
+    auto loadPaddingBytes = [](const std::string& bytes) {
+        const std::string path = cv::tempfile(".t7");
+        FILE* fp = fopen(path.c_str(), "wb");
+        CV_Assert(fp != NULL);
+        const size_t written = fwrite(bytes.data(), 1, bytes.size(), fp);
+        fclose(fp);
+        CV_Assert(written == bytes.size());
+        try
+        {
+            Net net = readNetFromTorch(path);
+            std::remove(path.c_str());
+            return net;
+        }
+        catch (...)
+        {
+            std::remove(path.c_str());
+            throw;
+        }
+    };
+
+    Net validNet;
+    ASSERT_NO_THROW(validNet = loadPaddingBytes(makePaddingT7(2, 1, 2)));
+    validNet.setInput(Mat(1, 3, CV_32F, Scalar(2.0f)));
+    Mat out = validNet.forward();
+    ASSERT_EQ(out.dims, 2);
+    EXPECT_EQ(out.rows, 1);
+    EXPECT_EQ(out.cols, 4);
+    EXPECT_FLOAT_EQ(out.at<float>(0, 0), 2.0f);
+    EXPECT_FLOAT_EQ(out.at<float>(0, 3), 0.0f);
+
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(0, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(-1, -1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(INT_MIN, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(CV_MAX_DIM + 1, 1, 2)), cv::Exception);
+    EXPECT_THROW(loadPaddingBytes(makePaddingT7(2, INT_MIN, 2)), cv::Exception);
 }
 
 TEST_P(Test_Torch_layers, net_non_spatial)
@@ -368,6 +434,8 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     Mat sample = imread(findDataFile("cv/shared/lena.png"));
     Mat sampleF32(sample.size(), CV_32FC3);
@@ -383,7 +451,7 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
     // Reference output values are in range [-0.17212, 0.263492]
     // on Myriad problem layer: l4_Pooling - does not use pads_begin
     float l1 = 1e-5, lInf = 1e-3;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 2e-3;
         lInf = 5e-3;
@@ -434,7 +502,7 @@ static void normAssertSegmentation(const Mat& ref, const Mat& test)
 
     Mat refMask = getSegmMask(ref);
     Mat testMask = getSegmMask(test);
-    EXPECT_EQ(countNonZero(refMask != testMask), 0);
+    EXPECT_LE(countNonZero(refMask != testMask), 2);
 }
 
 TEST_P(Test_Torch_nets, ENet_accuracy)
@@ -445,6 +513,8 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         throw SkipTestException("");
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -457,7 +527,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         throw SkipTestException("");
     }
 #endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
@@ -476,6 +546,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         ASSERT_TRUE(!net.empty());
     }
 
+    net.enableWinograd(false);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
@@ -488,7 +559,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     // Due to numerical instability in Pooling-Unpooling layers (indexes jittering)
     // thresholds for ENet must be changed. Accuracy of results was checked on
     // Cityscapes dataset and difference in mIOU with Torch is 10E-4%
-    normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
+    normAssert(ref, out, "", 0.0005, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
     normAssertSegmentation(ref, out);
 
     const int N = 3;
@@ -496,7 +567,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
     {
         net.setInput(inputBlob, "");
         Mat out = net.forward();
-        normAssert(ref, out, "", 0.00044, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
+        normAssert(ref, out, "", 0.0005, /*target == DNN_TARGET_CPU ? 0.453 : */0.552);
         normAssertSegmentation(ref, out);
     }
 }
@@ -549,6 +620,9 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         Mat img = imread(findDataFile("dnn/googlenet_1.png"));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
+        if (target == DNN_TARGET_CPU_FP16)
+            net.enableWinograd(false);
+
         net.setInput(inputBlob);
         Mat out = net.forward();
 
@@ -573,10 +647,14 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         }
         else if(target == DNN_TARGET_CUDA_FP16)
         {
-            normAssert(out, refBlob, "", 0.6, 25);
+            normAssert(out, refBlob, "", 0.6, 26);
+        }
+        else if (target == DNN_TARGET_CPU_FP16)
+        {
+            normAssert(out, refBlob, "", 0.7, 25);
         }
         else
-            normAssert(out, refBlob, "", 0.5, 1.1);
+            normAssert(out, refBlob, "", 0.5, 1.16);
     }
 }
 

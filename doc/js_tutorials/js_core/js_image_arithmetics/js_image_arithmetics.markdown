@@ -4,9 +4,9 @@ Arithmetic Operations on Images {#tutorial_js_image_arithmetics}
 Goal
 ----
 
--   Learn several arithmetic operations on images like addition, subtraction, bitwise operations
+-   Learn several arithmetic operations on images like addition, subtraction, bitwise operations,
     etc.
--   You will learn these functions : **cv.add()**, **cv.subtract()**  etc.
+-   You will learn these functions : **cv.add()**, **cv.subtract()**,  etc.
 
 Image Addition
 --------------

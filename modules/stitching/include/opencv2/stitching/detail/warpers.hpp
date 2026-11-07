@@ -503,6 +503,11 @@ class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 public:
     PlaneWarperGpu(float scale = 1.f) : PlaneWarper(scale) {}
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
     {
         Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
@@ -536,6 +541,9 @@ public:
         d_dst_.download(dst);
         return result;
     }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     Rect buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap);
 
@@ -557,6 +565,11 @@ class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
 public:
     SphericalWarperGpu(float scale) : SphericalWarper(scale) {}
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
     {
         Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
@@ -573,6 +586,9 @@ public:
         d_dst_.download(dst);
         return result;
     }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     Rect buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap);
 
@@ -589,6 +605,11 @@ class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 public:
     CylindricalWarperGpu(float scale) : CylindricalWarper(scale) {}
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
     {
         Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
@@ -605,6 +626,9 @@ public:
         d_dst_.download(dst);
         return result;
     }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     Rect buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap);
 

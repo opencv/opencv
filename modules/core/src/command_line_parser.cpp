@@ -226,6 +226,10 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     for (size_t i = 0; i < k.size(); i++)
     {
         std::vector<String> l = impl->split_string(k[i], '|', true);
+        if (l.size() < 3)
+            CV_Error_(Error::StsParseError,
+                      ("invalid key description '{%s}': expected 'names | default | help'",
+                       k[i].c_str()));
         CommandLineParserParams p;
         p.keys = impl->split_string(l[0]);
         p.def_value = l[1];
@@ -464,7 +468,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == true)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -484,7 +488,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == false)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -508,7 +512,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
 
     if (begin == true)
     {
-        throw cv::Exception(CV_StsParseError,
+        throw cv::Exception(cv::Error::StsParseError,
                  String("error in split_range_string(")
                  + str
                  + String(", ")

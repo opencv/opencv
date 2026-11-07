@@ -17,6 +17,7 @@
 
 #if defined(_MSC_VER)
    // disable MSVC warning on "multiple copy constructors specified"
+   #pragma warning(push)
 #  pragma warning(disable: 4521)
 #endif
 
@@ -184,7 +185,7 @@ namespace util
 
 #if defined(_MSC_VER)
    // Enable "multiple copy constructors specified" back
-#  pragma warning(default: 4521)
+#  pragma warning(pop)
 #endif
 
 #endif // OPENCV_GAPI_UTIL_ANY_HPP

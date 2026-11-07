@@ -54,23 +54,23 @@ namespace cv { namespace cuda { namespace device
     {
         // TODO use intrinsics like __sinf and so on
 
-        namespace build_warp_maps
+        struct WarpParams
         {
-
-            __constant__ float ck_rinv[9];
-            __constant__ float cr_kinv[9];
-            __constant__ float ct[3];
-            __constant__ float cscale;
-        }
-
+            float k_rinv[9];
+            float r_kinv[9];
+            float t[3];
+            float scale;
+        };
 
         class PlaneMapper
         {
         public:
-            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y,
+                                                               const WarpParams& params)
             {
-                using namespace build_warp_maps;
-
+                const float *ck_rinv = params.k_rinv;
+                const float *ct = params.t;
+                const float cscale = params.scale;
                 float x_ = u / cscale - ct[0];
                 float y_ = v / cscale - ct[1];
 
@@ -88,10 +88,11 @@ namespace cv { namespace cuda { namespace device
         class CylindricalMapper
         {
         public:
-            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y,
+                                                               const WarpParams& params)
             {
-                using namespace build_warp_maps;
-
+                const float *ck_rinv = params.k_rinv;
+                const float cscale = params.scale;
                 u /= cscale;
                 float x_ = ::sinf(u);
                 float y_ = v / cscale;
@@ -111,10 +112,11 @@ namespace cv { namespace cuda { namespace device
         class SphericalMapper
         {
         public:
-            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y)
+            static __device__ __forceinline__ void mapBackward(float u, float v, float &x, float &y,
+                                                               const WarpParams& params)
             {
-                using namespace build_warp_maps;
-
+                const float *ck_rinv = params.k_rinv;
+                const float cscale = params.scale;
                 v /= cscale;
                 u /= cscale;
 
@@ -136,7 +138,8 @@ namespace cv { namespace cuda { namespace device
 
         template <typename Mapper>
         __global__ void buildWarpMapsKernel(int tl_u, int tl_v, int cols, int rows,
-                                            PtrStepf map_x, PtrStepf map_y)
+                                            PtrStepf map_x, PtrStepf map_y,
+                                            const WarpParams params)
         {
             int du = blockIdx.x * blockDim.x + threadIdx.x;
             int dv = blockIdx.y * blockDim.y + threadIdx.y;
@@ -145,7 +148,7 @@ namespace cv { namespace cuda { namespace device
                 float u = tl_u + du;
                 float v = tl_v + dv;
                 float x, y;
-                Mapper::mapBackward(u, v, x, y);
+                Mapper::mapBackward(u, v, x, y, params);
                 map_x.ptr(dv)[du] = x;
                 map_y.ptr(dv)[du] = y;
             }
@@ -156,10 +159,16 @@ namespace cv { namespace cuda { namespace device
                                 const float k_rinv[9], const float r_kinv[9], const float t[3],
                                 float scale, cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ct, t, 3*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            WarpParams params;
+            for (int i = 0; i < 9; ++i)
+            {
+                params.k_rinv[i] = k_rinv[i];
+                params.r_kinv[i] = r_kinv[i];
+            }
+            params.t[0] = t[0];
+            params.t[1] = t[1];
+            params.t[2] = t[2];
+            params.scale = scale;
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -167,7 +176,8 @@ namespace cv { namespace cuda { namespace device
             dim3 threads(32, 8);
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-            buildWarpMapsKernel<PlaneMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+            buildWarpMapsKernel<PlaneMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows,
+                                                               map_x, map_y, params);
             cudaSafeCall(cudaGetLastError());
             if (stream == 0)
                 cudaSafeCall(cudaDeviceSynchronize());
@@ -178,9 +188,16 @@ namespace cv { namespace cuda { namespace device
                                       const float k_rinv[9], const float r_kinv[9], float scale,
                                       cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            WarpParams params;
+            for (int i = 0; i < 9; ++i)
+            {
+                params.k_rinv[i] = k_rinv[i];
+                params.r_kinv[i] = r_kinv[i];
+            }
+            params.t[0] = 0.f;
+            params.t[1] = 0.f;
+            params.t[2] = 0.f;
+            params.scale = scale;
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -188,7 +205,8 @@ namespace cv { namespace cuda { namespace device
             dim3 threads(32, 8);
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-            buildWarpMapsKernel<CylindricalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+            buildWarpMapsKernel<CylindricalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows,
+                                                                     map_x, map_y, params);
             cudaSafeCall(cudaGetLastError());
             if (stream == 0)
                 cudaSafeCall(cudaDeviceSynchronize());
@@ -199,9 +217,16 @@ namespace cv { namespace cuda { namespace device
                                     const float k_rinv[9], const float r_kinv[9], float scale,
                                     cudaStream_t stream)
         {
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::ck_rinv, k_rinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cr_kinv, r_kinv, 9*sizeof(float)));
-            cudaSafeCall(cudaMemcpyToSymbol(build_warp_maps::cscale, &scale, sizeof(float)));
+            WarpParams params;
+            for (int i = 0; i < 9; ++i)
+            {
+                params.k_rinv[i] = k_rinv[i];
+                params.r_kinv[i] = r_kinv[i];
+            }
+            params.t[0] = 0.f;
+            params.t[1] = 0.f;
+            params.t[2] = 0.f;
+            params.scale = scale;
 
             int cols = map_x.cols;
             int rows = map_x.rows;
@@ -209,7 +234,8 @@ namespace cv { namespace cuda { namespace device
             dim3 threads(32, 8);
             dim3 grid(divUp(cols, threads.x), divUp(rows, threads.y));
 
-            buildWarpMapsKernel<SphericalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows, map_x, map_y);
+            buildWarpMapsKernel<SphericalMapper><<<grid,threads>>>(tl_u, tl_v, cols, rows,
+                                                                   map_x, map_y, params);
             cudaSafeCall(cudaGetLastError());
             if (stream == 0)
                 cudaSafeCall(cudaDeviceSynchronize());

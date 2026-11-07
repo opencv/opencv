@@ -30,7 +30,7 @@ if(TIMVX_INSTALL_DIR AND NOT BUILD_TIMVX)
     set(BUILD_TIMVX OFF)
 
     set(TIMVX_INC_DIR "${TIMVX_INSTALL_DIR}/include" CACHE INTERNAL "TIM-VX include directory")
-    find_library(TIMVX_LIB "tim-vx" PATHS "${TIMVX_INSTALL_DIR}/lib")
+    find_library(TIMVX_LIB "tim-vx" PATHS "${TIMVX_INSTALL_DIR}/lib" NO_DEFAULT_PATH)
     if(TIMVX_LIB)
         set(TIMVX_FOUND ON)
     else()

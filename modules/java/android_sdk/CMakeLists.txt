@@ -15,6 +15,64 @@ file(MAKE_DIRECTORY "${java_src_dir}")
 
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/java" "${java_src_dir}")
 
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'native/libs'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'java/src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'java/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'java/AndroidManifest.xml'")
+set(BUILD_GRADLE_COMPILE_OPTIONS "
+    android {
+        buildFeatures {
+            buildConfig true
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_${ANDROID_GRADLE_JAVA_VERSION_INIT}
+        targetCompatibility JavaVersion.VERSION_${ANDROID_GRADLE_JAVA_VERSION_INIT}
+    }
+")
+set(MAVEN_PUBLISH_PLUGIN_DECLARATION "apply plugin: 'maven-publish'")
+set(BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG "
+    buildFeatures {
+        prefabPublishing true
+        buildConfig true
+    }
+
+    prefab {
+        opencv_jni_shared {
+            headers 'native/jni/include'
+        }
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+")
+
+set(BUILD_GRADLE_PUBLISHING_CONFIG "
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'org.opencv'
+            artifactId = 'opencv'
+            version = '${OPENCV_VERSION_PLAIN}'
+
+            afterEvaluate {
+               from components.release
+           }
+        }
+    }
+    repositories {
+        maven {
+            name = 'myrepo'
+            url = \"\${project.buildDir}/repo\"
+        }
+    }
+}
+")
+
 if(ANDROID_EXECUTABLE)
 
 ocv_assert(ANDROID_TOOLS_Pkg_Revision GREATER 13)
@@ -27,10 +85,17 @@ if(ANDROID_SDK_COMPATIBLE_TARGET)
   set(ANDROID_SDK_COMPATIBLE_TARGET "${ANDROID_SDK_COMPATIBLE_TARGET}" CACHE INTERNAL "")
 endif()
 string(REGEX REPLACE "android-" "" android_sdk_target_num ${ANDROID_SDK_COMPATIBLE_TARGET})
+
 if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 21) OR (android_sdk_target_num LESS 21) )
   message(STATUS "[OpenCV for Android SDK]: A new OpenGL Camera Bridge (CameraGLSurfaceView, CameraGLRendererBase, CameraRenderer, Camera2Renderer) is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 21")
 else()
   ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-21/java" "${java_src_dir}")
+endif()
+
+if( (ANDROID_SDK_TARGET AND ANDROID_SDK_TARGET LESS 24) OR (android_sdk_target_num LESS 24) )
+  message(STATUS "[OpenCV for Android SDK]: An experiemntal Native Camera is disabled, because ANDROID_SDK_TARGET (${android_sdk_target_num}) < 24")
+else()
+  ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 endif()
 
 # copy boilerplate
@@ -101,6 +166,7 @@ if(ANDROID_NATIVE_API_LEVEL GREATER 21)
 else()
   ocv_update(ANDROID_TARGET_SDK_VERSION "21")
 endif()
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
@@ -110,11 +176,22 @@ else()  # gradle build
 # Android Gradle-based project
 #
 
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" @ONLY)
+
 #TODO: INSTALL ONLY
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android/java" "${java_src_dir}")
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-21/java" "${java_src_dir}")
+ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/android-24/java" "${java_src_dir}")
 
 # copy boilerplate
+set(SOURSE_SETS_JNI_LIBS_SRC_DIRS "'../../jni'")
+set(SOURSE_SETS_JAVA_SRC_DIRS "'src'")
+set(SOURSE_SETS_RES_SRC_DIRS "'${OpenCV_SOURCE_DIR}/modules/java/android_sdk/android_gradle_lib/res'")
+set(SOURSE_SETS_MANIFEST_SRC_FILE "'AndroidManifest.xml'")
+set(MAVEN_PUBLISH_PLUGIN_DECLARATION "")
+set(BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG "")
+set(BUILD_GRADLE_PUBLISHING_CONFIG "")
+
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/android_gradle_lib/")
 file(GLOB_RECURSE seed_project_files_rel RELATIVE "${__base_dir}/" "${__base_dir}/*")
 list(REMOVE_ITEM seed_project_files_rel "${ANDROID_MANIFEST_FILE}")
@@ -126,6 +203,7 @@ foreach(file ${seed_project_files_rel})
     install(FILES "${OPENCV_JAVA_DIR}/${file}" DESTINATION "${JAVA_INSTALL_ROOT}/${install_subdir}" COMPONENT java)
   endif()
 endforeach()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${OPENCV_JAVA_DIR}/build.gradle" @ONLY)
 
 # copy libcxx_helper
 set(__base_dir "${CMAKE_CURRENT_SOURCE_DIR}/")
@@ -145,7 +223,6 @@ set(depends ${the_module}_android_source_copy "${OPENCV_DEPHELPER}/${the_module}
 
 # build jar
 set(AAR_FILE "${OPENCV_JAVA_DIR}/build/outputs/aar/opencv-release.aar")
-ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
 add_custom_command(
     OUTPUT "${AAR_FILE}" "${OPENCV_DEPHELPER}/${the_module}_android"
     COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "opencv:assemble"
@@ -158,7 +235,6 @@ file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android")  # force rebuild after 
 
 add_custom_target(${the_module}_android ALL DEPENDS "${OPENCV_DEPHELPER}/${the_module}_android" SOURCES "${__base_dir}/${ANDROID_MANIFEST_FILE}")
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/opencv/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
 install(DIRECTORY "${java_src_dir}" DESTINATION "${JAVA_INSTALL_ROOT}" COMPONENT java)

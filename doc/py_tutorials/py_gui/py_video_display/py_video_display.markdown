@@ -111,7 +111,7 @@ frames per second (fps) and frame size should be passed. And the last one is the
 `True`, the encoder expect color frame, otherwise it works with grayscale frame.
 
 [FourCC](http://en.wikipedia.org/wiki/FourCC) is a 4-byte code used to specify the video codec. The
-list of available codes can be found in [fourcc.org](http://www.fourcc.org/codecs.php). It is
+list of available codes can be found in [fourcc.org](https://fourcc.org/codecs.php). It is
 platform dependent. The following codecs work fine for me.
 
 -   In Fedora: DIVX, XVID, MJPG, X264, WMV1, WMV2. (XVID is more preferable. MJPG results in high
@@ -123,15 +123,22 @@ FourCC code is passed as `cv.VideoWriter_fourcc('M','J','P','G')` or
 `cv.VideoWriter_fourcc(*'MJPG')` for MJPG.
 
 The below code captures from a camera, flips every frame in the vertical direction, and saves the video.
+
+@note The frame size passed to `cv.VideoWriter` must match the resolution of the captured frames; otherwise, frame writing will fail.
+
 @code{.py}
 import numpy as np
 import cv2 as cv
 
 cap = cv.VideoCapture(0)
 
+# Get camera frame resolution
+frame_width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+
 # Define the codec and create VideoWriter object
 fourcc = cv.VideoWriter_fourcc(*'XVID')
-out = cv.VideoWriter('output.avi', fourcc, 20.0, (640,  480))
+out = cv.VideoWriter('output.avi', fourcc, 20.0, (frame_width, frame_height))
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -152,9 +159,3 @@ cap.release()
 out.release()
 cv.destroyAllWindows()
 @endcode
-
-Additional Resources
---------------------
-
-Exercises
----------

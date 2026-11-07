@@ -2,7 +2,7 @@
  * jdmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2002-2019 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -103,10 +103,8 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
  * This function is used for full decompression.
  */
 {
-#ifdef IDCT_SCALING_SUPPORTED
-  int ci, ssize;
+  int ci, i;
   jpeg_component_info *compptr;
-#endif
 
   /* Prevent application from calling me at wrong times */
   if (cinfo->global_state != DSTATE_READY)
@@ -124,7 +122,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
    */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    ssize = 1;
+    int ssize = 1;
     if (! cinfo->raw_data_out)
       while (cinfo->min_DCT_h_scaled_size * ssize <=
 	     (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
@@ -166,27 +164,22 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
 #endif /* IDCT_SCALING_SUPPORTED */
 
   /* Report number of components in selected colorspace. */
-  /* Probably this should be in the color conversion module... */
+  /* This should correspond to the actual code in the color conversion module. */
   switch (cinfo->out_color_space) {
   case JCS_GRAYSCALE:
     cinfo->out_color_components = 1;
     break;
   case JCS_RGB:
   case JCS_BG_RGB:
-#if RGB_PIXELSIZE != 3
     cinfo->out_color_components = RGB_PIXELSIZE;
     break;
-#endif /* else share code with YCbCr */
-  case JCS_YCbCr:
-  case JCS_BG_YCC:
-    cinfo->out_color_components = 3;
-    break;
-  case JCS_CMYK:
-  case JCS_YCCK:
-    cinfo->out_color_components = 4;
-    break;
-  default:			/* else must be same colorspace as in file */
-    cinfo->out_color_components = cinfo->num_components;
+  default:	/* YCCK <=> CMYK conversion or same colorspace as in file */
+    i = 0;
+    for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
+	 ci++, compptr++)
+      if (compptr->component_needed)
+	i++;	/* count output color components */
+    cinfo->out_color_components = i;
   }
   cinfo->output_components = (cinfo->quantize_colors ? 1 :
 			      cinfo->out_color_components);

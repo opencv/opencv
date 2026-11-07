@@ -2,6 +2,7 @@ import cv2 as cv
 import argparse
 import numpy as np
 import sys
+import copy
 import time
 from threading import Thread
 if sys.version_info[0] == 2:
@@ -27,7 +28,7 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
                          'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt'],
+parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet', 'dldt', 'onnx'],
                     help='Optional name of an origin framework of the model. '
                          'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
@@ -86,7 +87,7 @@ if args.classes:
         classes = f.read().rstrip('\n').split('\n')
 
 # Load a network
-net = cv.dnn.readNet(cv.samples.findFile(args.model), cv.samples.findFile(args.config), args.framework)
+net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 outNames = net.getUnconnectedOutLayersNames()
@@ -145,20 +146,32 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region':
+    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
+        if args.postprocessing == 'yolov8':
+            box_scale_w = frameWidth / args.width
+            box_scale_h = frameHeight / args.height
+        else:
+            box_scale_w = frameWidth
+            box_scale_h = frameHeight
+
         for out in outs:
+            if args.postprocessing == 'yolov8':
+                out = out[0].transpose(1, 0)
+
             for detection in out:
-                scores = detection[5:]
+                scores = detection[4:]
+                if args.background_label_id >= 0:
+                    scores = np.delete(scores, args.background_label_id)
                 classId = np.argmax(scores)
                 confidence = scores[classId]
                 if confidence > confThreshold:
-                    center_x = int(detection[0] * frameWidth)
-                    center_y = int(detection[1] * frameHeight)
-                    width = int(detection[2] * frameWidth)
-                    height = int(detection[3] * frameHeight)
+                    center_x = int(detection[0] * box_scale_w)
+                    center_y = int(detection[1] * box_scale_h)
+                    width = int(detection[2] * box_scale_w)
+                    height = int(detection[3] * box_scale_h)
                     left = int(center_x - width / 2)
                     top = int(center_y - height / 2)
                     classIds.append(classId)
@@ -170,7 +183,7 @@ def postprocess(frame, outs):
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or lastLayer.type == 'Region' and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
@@ -181,7 +194,6 @@ def postprocess(frame, outs):
             conf = confidences[class_indices]
             box  = boxes[class_indices].tolist()
             nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
-            nms_indices = nms_indices[:, 0] if len(nms_indices) else []
             indices.extend(class_indices[nms_indices])
     else:
         indices = np.arange(0, len(classIds))
@@ -282,11 +294,11 @@ def processingThreadBody():
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)
-                predictionsQueue.put(np.copy(outs))
+                predictionsQueue.put(copy.deepcopy(outs))
 
         while futureOutputs and futureOutputs[0].wait_for(0):
             out = futureOutputs[0].get()
-            predictionsQueue.put(np.copy([out]))
+            predictionsQueue.put(copy.deepcopy([out]))
 
             del futureOutputs[0]
 

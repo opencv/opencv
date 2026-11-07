@@ -8,9 +8,9 @@
 #ifndef OPENCV_GAPI_GCPUKERNEL_HPP
 #define OPENCV_GAPI_GCPUKERNEL_HPP
 
-#ifdef _MSC_VER
-#pragma warning(disable: 4702)  // "Unreachable code"
-// on postprocess(...) call inside OCVCallHelper
+#if defined _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4702)  // "Unreachable code" on postprocess(...) call inside OCVCallHelper
 #endif
 
 #include <functional>
@@ -443,7 +443,12 @@ struct OCVStCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>> :
     template<int... IIs, int... OIs>
     static void call_impl(GCPUContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        auto& st = *ctx.state().get<std::shared_ptr<typename Impl::State>>();
+        auto state_ptr = ctx.state().get<std::shared_ptr<typename Impl::State>>();
+        if (state_ptr == nullptr) {
+            CV_Error(cv::Error::StsNullPtr, "Stateful kernel's state is not initialized. "
+                     "Make sure the setup() function properly initializes the state.");
+        }
+        auto& st = *state_ptr;
         call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>
             ::call(st, get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
     }
@@ -534,5 +539,9 @@ gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 //! @endcond
 
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_GCPUKERNEL_HPP

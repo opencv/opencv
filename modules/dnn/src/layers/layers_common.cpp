@@ -149,10 +149,11 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
                             std::vector<size_t>& strides, cv::String &padMode)
 {
     bool is_global = params.get<bool>("global_pooling", false);
-    globalPooling.resize(3);
-    globalPooling[0] = params.get<bool>("global_pooling_d", is_global);
-    globalPooling[1] = params.get<bool>("global_pooling_h", is_global);
-    globalPooling[2] = params.get<bool>("global_pooling_w", is_global);
+    globalPooling.assign({
+        params.get<bool>("global_pooling_d", is_global),
+        params.get<bool>("global_pooling_h", is_global),
+        params.get<bool>("global_pooling_w", is_global)
+    });
 
     if (globalPooling[0] || globalPooling[1] || globalPooling[2])
     {
@@ -187,12 +188,14 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides,
-                                std::vector<size_t>& dilations, cv::String &padMode, std::vector<size_t>& adjust_pads)
+                                std::vector<size_t>& dilations, cv::String &padMode, std::vector<size_t>& adjust_pads,
+                                bool& useWinograd)
 {
     util::getKernelSize(params, kernel);
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
     util::getParameter(params, "dilation", "dilation", dilations, true, std::vector<size_t>(kernel.size(), 1));
     util::getParameter(params, "adj", "adj", adjust_pads, true, std::vector<size_t>(kernel.size(), 0));
+    useWinograd = params.get<bool>("use_winograd", useWinograd);
 
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
@@ -248,6 +251,17 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
             }
         }
     }
+}
+
+double getWeightScale(const Mat& weightsMat)
+{
+    double realMin, realMax;
+
+    cv::minMaxIdx(weightsMat, &realMin, &realMax);
+    realMin = std::min(realMin, 0.0);
+    realMax = std::max(realMax, 0.0);
+
+    return (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
 }
 
 }

@@ -10,14 +10,14 @@ namespace cv
 
 void write( FileStorage& fs, const String& name, const Mat& m )
 {
-    char dt[16];
+    char dt[22];
 
-    if( m.dims <= 2 )
+    if( m.dims == 2 || m.empty() )
     {
         fs.startWriteStruct(name, FileNode::MAP, String("opencv-matrix"));
         fs << "rows" << m.rows;
         fs << "cols" << m.cols;
-        fs << "dt" << fs::encodeFormat( m.type(), dt );
+        fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
         fs << "data" << "[:";
         for( int i = 0; i < m.rows; i++ )
             fs.writeRaw(dt, m.ptr(i), m.cols*m.elemSize());
@@ -30,7 +30,7 @@ void write( FileStorage& fs, const String& name, const Mat& m )
         fs << "sizes" << "[:";
         fs.writeRaw( "i", m.size.p, m.dims*sizeof(int) );
         fs << "]";
-        fs << "dt" << fs::encodeFormat( m.type(), dt );
+        fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
         fs << "data" << "[:";
         const Mat* arrays[] = {&m, 0};
         uchar* ptrs[1] = {};
@@ -63,7 +63,7 @@ struct SparseNodeCmp
 
 void write( FileStorage& fs, const String& name, const SparseMat& m )
 {
-    char dt[16];
+    char dt[22];
 
     fs.startWriteStruct(name, FileNode::MAP, String("opencv-sparse-matrix"));
     fs << "sizes" << "[:";
@@ -71,11 +71,11 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
     if( dims > 0 )
         fs.writeRaw("i", m.hdr->size, dims*sizeof(int) );
     fs << "]";
-    fs << "dt" << fs::encodeFormat( m.type(), dt );
+    fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
     fs << "data" << "[:";
 
     size_t i = 0, n = m.nzcount();
-    std::vector<const SparseMat::Node*> elems(n);
+    AutoBuffer<const SparseMat::Node*> elems(n);
     SparseMatConstIterator it = m.begin(), it_end = m.end();
 
     for( ; it != it_end; ++it )
@@ -142,6 +142,7 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
         CV_Assert( !sizes_node.empty() );
 
         dims = (int)sizes_node.size();
+        CV_Assert( dims > 0 && dims <= CV_MAX_DIM );
         sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
         m.create(dims, sizes, elem_type);
@@ -151,6 +152,11 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
     CV_Assert(!data_node.empty());
 
     size_t nelems = data_node.size();
+    if (nelems == 0)
+    {
+        m = Mat();
+        return;
+    }
     CV_Assert(nelems == m.total()*m.channels());
 
     data_node.readRaw(dt, (uchar*)m.ptr(), m.total()*m.elemSize());
@@ -175,6 +181,7 @@ void read( const FileNode& node, SparseMat& m, const SparseMat& default_mat )
     CV_Assert( !sizes_node.empty() );
 
     int dims = (int)sizes_node.size();
+    CV_Assert( dims > 0 && dims <= CV_MAX_DIM );
     sizes_node.readRaw("i", sizes, dims*sizeof(sizes[0]));
 
     m.create(dims, sizes, elem_type);

@@ -96,7 +96,7 @@ GMM::GMM( Mat& _model )
         _model.setTo(Scalar(0));
     }
     else if( (_model.type() != CV_64FC1) || (_model.rows != 1) || (_model.cols != modelSize*componentsCount) )
-        CV_Error( CV_StsBadArg, "_model must have CV_64FC1 type, rows == 1 and cols == 13*componentsCount" );
+        CV_Error( cv::Error::StsBadArg, "_model must have CV_64FC1 type, rows == 1 and cols == 13*componentsCount" );
 
     model = _model;
 
@@ -329,18 +329,18 @@ static void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Ma
 static void checkMask( const Mat& img, const Mat& mask )
 {
     if( mask.empty() )
-        CV_Error( CV_StsBadArg, "mask is empty" );
+        CV_Error( cv::Error::StsBadArg, "mask is empty" );
     if( mask.type() != CV_8UC1 )
-        CV_Error( CV_StsBadArg, "mask must have CV_8UC1 type" );
+        CV_Error( cv::Error::StsBadArg, "mask must have CV_8UC1 type" );
     if( mask.cols != img.cols || mask.rows != img.rows )
-        CV_Error( CV_StsBadArg, "mask must have as many rows and cols as img" );
+        CV_Error( cv::Error::StsBadArg, "mask must have as many rows and cols as img" );
     for( int y = 0; y < mask.rows; y++ )
     {
         for( int x = 0; x < mask.cols; x++ )
         {
             uchar val = mask.at<uchar>(y,x);
             if( val!=GC_BGD && val!=GC_FGD && val!=GC_PR_BGD && val!=GC_PR_FGD )
-                CV_Error( CV_StsBadArg, "mask element value must be equal "
+                CV_Error( cv::Error::StsBadArg, "mask element value must be equal "
                     "GC_BGD or GC_FGD or GC_PR_BGD or GC_PR_FGD" );
         }
     }
@@ -371,42 +371,44 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
     const int kMeansType = KMEANS_PP_CENTERS;
 
     Mat bgdLabels, fgdLabels;
-    std::vector<Vec3f> bgdSamples, fgdSamples;
+    std::vector<Vec3b> bgdSamples, fgdSamples;
     Point p;
     for( p.y = 0; p.y < img.rows; p.y++ )
     {
         for( p.x = 0; p.x < img.cols; p.x++ )
         {
             if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
-                bgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+                bgdSamples.push_back( img.at<Vec3b>(p) );
             else // GC_FGD | GC_PR_FGD
-                fgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+                fgdSamples.push_back( img.at<Vec3b>(p) );
         }
     }
     CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
     {
-        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
+        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_8UC1, &bgdSamples[0][0] );
+        _bgdSamples.convertTo(_bgdSamples, CV_32FC1);
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)bgdSamples.size());
         kmeans( _bgdSamples, num_clusters, bgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
     {
-        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
+        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_8UC1, &fgdSamples[0][0] );
+        _fgdSamples.convertTo(_fgdSamples, CV_32FC1);
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)fgdSamples.size());
         kmeans( _fgdSamples, num_clusters, fgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
 
     bgdGMM.initLearning();
     for( int i = 0; i < (int)bgdSamples.size(); i++ )
-        bgdGMM.addSample( bgdLabels.at<int>(i,0), bgdSamples[i] );
+        bgdGMM.addSample( bgdLabels.at<int>(i,0), Vec3d(bgdSamples[i]) );
     bgdGMM.endLearning();
 
     fgdGMM.initLearning();
     for( int i = 0; i < (int)fgdSamples.size(); i++ )
-        fgdGMM.addSample( fgdLabels.at<int>(i,0), fgdSamples[i] );
+        fgdGMM.addSample( fgdLabels.at<int>(i,0), Vec3d(fgdSamples[i]) );
     fgdGMM.endLearning();
 }
 
@@ -552,9 +554,9 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     Mat& fgdModel = _fgdModel.getMatRef();
 
     if( img.empty() )
-        CV_Error( CV_StsBadArg, "image is empty" );
+        CV_Error( cv::Error::StsBadArg, "image is empty" );
     if( img.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "image must have CV_8UC3 type" );
+        CV_Error( cv::Error::StsBadArg, "image must have CV_8UC3 type" );
 
     GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
     Mat compIdxs( img.size(), CV_32SC1 );

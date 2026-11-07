@@ -232,7 +232,7 @@ The following is an adaptation of @ref tutorial_js_face_detection.
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
-const { writeFileSync, readFileSync } = require('fs');
+const { writeFileSync, existsSync, mkdirSync } = require('fs');
 
 (async () => {
   await loadOpenCV();
@@ -336,7 +336,7 @@ function installDOM(){
 -   Make sure the files `aarcascade_frontalface_default.xml` and `haarcascade_eye.xml` are present in project's directory. They can be obtained from [OpenCV sources](https://github.com/opencv/opencv/tree/4.x/data/haarcascades).
 -   Make sure a sample image file `lena.jpg` exists in project's directory. It should display people's faces for this example to make sense. The following image is known to work:
 
-![image](lena.jpg)
+![image](js_assets/lena.jpg)
 
 The following command should generate the file `output3.jpg`:
 

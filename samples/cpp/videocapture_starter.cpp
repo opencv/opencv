@@ -57,7 +57,7 @@ namespace {
             case 27: //escape key
                 return 0;
             case ' ': //Save an image
-                sprintf(filename,"filename%.3d.jpg",n++);
+                snprintf(filename,sizeof(filename),"filename%.3d.jpg",n++);
                 imwrite(filename,frame);
                 cout << "Saved " << filename << endl;
                 break;

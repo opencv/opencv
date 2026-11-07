@@ -39,12 +39,34 @@
 //
 //M*/
 
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
+
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
+
+typedef void (*MomentsInTileFunc)(const Mat& img, double* moments);
+MomentsInTileFunc getMomentsInTileFunc(int depth);
+
+template<typename T, typename WT, typename MT>
+#if defined(__GNUC__) && __GNUC__ >= 4 && (__GNUC__ > 4 || __GNUC_MINOR__ >= 5)
+__attribute__((optimize("no-tree-vectorize")))
+#endif
+void momentsInTileAccumulateRow(const T* ptr, int x0, int len, WT& s0, WT& s1, WT& s2, MT& s3)
+{
+    for (int x = x0; x < len; ++x)
+    {
+        WT p = ptr[x];
+        WT xp = x * p, xxp;
+        s0 += p;
+        s1 += xp;
+        xxp = xp * x;
+        s2 += xxp;
+        s3 += xxp * x;
+    }
+}
 
 // The function calculates center of gravity and the central second order moments
 static void completeMomentState( Moments* moments )
@@ -200,163 +222,6 @@ static Moments contourMoments( const Mat& contour )
 }
 
 
-/****************************************************************************************\
-*                                Spatial Raster Moments                                  *
-\****************************************************************************************/
-
-template<typename T, typename WT, typename MT>
-struct MomentsInTile_SIMD
-{
-    int operator() (const T *, int, WT &, WT &, WT &, MT &)
-    {
-        return 0;
-    }
-};
-
-#if CV_SIMD128
-
-template <>
-struct MomentsInTile_SIMD<uchar, int, int>
-{
-    MomentsInTile_SIMD()
-    {
-        // nothing
-    }
-
-    int operator() (const uchar * ptr, int len, int & x0, int & x1, int & x2, int & x3)
-    {
-        int x = 0;
-
-        {
-            v_int16x8 dx = v_setall_s16(8), qx = v_int16x8(0, 1, 2, 3, 4, 5, 6, 7);
-            v_uint32x4 z = v_setzero_u32(), qx0 = z, qx1 = z, qx2 = z, qx3 = z;
-
-            for( ; x <= len - 8; x += 8 )
-            {
-                v_int16x8 p = v_reinterpret_as_s16(v_load_expand(ptr + x));
-                v_int16x8 sx = v_mul_wrap(qx, qx);
-
-                qx0 += v_reinterpret_as_u32(p);
-                qx1 = v_reinterpret_as_u32(v_dotprod(p, qx, v_reinterpret_as_s32(qx1)));
-                qx2 = v_reinterpret_as_u32(v_dotprod(p, sx, v_reinterpret_as_s32(qx2)));
-                qx3 = v_reinterpret_as_u32(v_dotprod(v_mul_wrap(p, qx), sx, v_reinterpret_as_s32(qx3)));
-
-                qx += dx;
-            }
-
-            x0 = v_reduce_sum(qx0);
-            x0 = (x0 & 0xffff) + (x0 >> 16);
-            x1 = v_reduce_sum(qx1);
-            x2 = v_reduce_sum(qx2);
-            x3 = v_reduce_sum(qx3);
-        }
-
-        return x;
-    }
-};
-
-template <>
-struct MomentsInTile_SIMD<ushort, int, int64>
-{
-    MomentsInTile_SIMD()
-    {
-        // nothing
-    }
-
-    int operator() (const ushort * ptr, int len, int & x0, int & x1, int & x2, int64 & x3)
-    {
-        int x = 0;
-
-        {
-            v_int32x4 v_delta = v_setall_s32(4), v_ix0 = v_int32x4(0, 1, 2, 3);
-            v_uint32x4 z = v_setzero_u32(), v_x0 = z, v_x1 = z, v_x2 = z;
-            v_uint64x2 v_x3 = v_reinterpret_as_u64(z);
-
-            for( ; x <= len - 4; x += 4 )
-            {
-                v_int32x4 v_src = v_reinterpret_as_s32(v_load_expand(ptr + x));
-
-                v_x0 += v_reinterpret_as_u32(v_src);
-                v_x1 += v_reinterpret_as_u32(v_src * v_ix0);
-
-                v_int32x4 v_ix1 = v_ix0 * v_ix0;
-                v_x2 += v_reinterpret_as_u32(v_src * v_ix1);
-
-                v_ix1 = v_ix0 * v_ix1;
-                v_src = v_src * v_ix1;
-                v_uint64x2 v_lo, v_hi;
-                v_expand(v_reinterpret_as_u32(v_src), v_lo, v_hi);
-                v_x3 += v_lo + v_hi;
-
-                v_ix0 += v_delta;
-            }
-
-            x0 = v_reduce_sum(v_x0);
-            x1 = v_reduce_sum(v_x1);
-            x2 = v_reduce_sum(v_x2);
-            v_store_aligned(buf64, v_reinterpret_as_s64(v_x3));
-            x3 = buf64[0] + buf64[1];
-        }
-
-        return x;
-    }
-
-    int64 CV_DECL_ALIGNED(16) buf64[2];
-};
-
-#endif
-
-template<typename T, typename WT, typename MT>
-#if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
-// Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60196
-__attribute__((optimize("no-tree-vectorize")))
-#endif
-static void momentsInTile( const Mat& img, double* moments )
-{
-    Size size = img.size();
-    int x, y;
-    MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
-    MomentsInTile_SIMD<T, WT, MT> vop;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const T* ptr = img.ptr<T>(y);
-        WT x0 = 0, x1 = 0, x2 = 0;
-        MT x3 = 0;
-        x = vop(ptr, size.width, x0, x1, x2, x3);
-
-        for( ; x < size.width; x++ )
-        {
-            WT p = ptr[x];
-            WT xp = x * p, xxp;
-
-            x0 += p;
-            x1 += xp;
-            xxp = xp * x;
-            x2 += xxp;
-            x3 += xxp * x;
-        }
-
-        WT py = y * x0, sy = y*y;
-
-        mom[9] += ((MT)py) * sy;  // m03
-        mom[8] += ((MT)x1) * sy;  // m12
-        mom[7] += ((MT)x2) * y;  // m21
-        mom[6] += x3;             // m30
-        mom[5] += x0 * sy;        // m02
-        mom[4] += x1 * y;         // m11
-        mom[3] += x2;             // m20
-        mom[2] += py;             // m01
-        mom[1] += x1;             // m10
-        mom[0] += x0;             // m00
-    }
-
-    for( x = 0; x < 10; x++ )
-        moments[x] = (double)mom[x];
-}
-
-typedef void (*MomentsInTileFunc)(const Mat& img, double* moments);
-
 Moments::Moments()
 {
     m00 = m10 = m01 = m20 = m11 = m02 = m30 = m21 = m12 = m03 =
@@ -401,7 +266,7 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     const int TILE_SIZE = 32;
     const int K = 10;
 
-    Size sz = _src.getSz();
+    Size sz = _src.size();
     int xtiles = divUp(sz.width, TILE_SIZE);
     int ytiles = divUp(sz.height, TILE_SIZE);
     int ntiles = xtiles*ytiles;
@@ -559,7 +424,101 @@ static bool ipp_moments(Mat &src, Moments &m )
 }
 #endif
 
+template void momentsInTileAccumulateRow<uchar, int, int>(const uchar*, int, int, int&, int&, int&, int&);
+template void momentsInTileAccumulateRow<ushort, int, int64>(const ushort*, int, int, int&, int&, int&, int64&);
+template void momentsInTileAccumulateRow<float, double, double>(const float*, int, int, double&, double&, double&, double&);
+template void momentsInTileAccumulateRow<double, double, double>(const double*, int, int, double&, double&, double&, double&);
+
+template<typename T, typename WT, typename MT>
+struct MomentsInTile_SIMD
+{
+    int operator() (const T *, int, WT &, WT &, WT &, MT &)
+    {
+        return 0;
+    }
+};
+
+template<typename T, typename WT, typename MT>
+#if defined __GNUC__ && __GNUC__ == 4 && __GNUC_MINOR__ >= 5 && __GNUC_MINOR__ < 9
+// Workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=60196
+__attribute__((optimize("no-tree-vectorize")))
+#endif
+static void momentsInTile( const Mat& img, double* moments )
+{
+    Size size = img.size();
+    int x, y;
+    MT mom[10] = {0,0,0,0,0,0,0,0,0,0};
+    MomentsInTile_SIMD<T, WT, MT> vop;
+
+    for( y = 0; y < size.height; y++ )
+    {
+        const T* ptr = img.ptr<T>(y);
+        WT x0 = 0, x1 = 0, x2 = 0;
+        MT x3 = 0;
+        x = vop(ptr, size.width, x0, x1, x2, x3);
+
+        for( ; x < size.width; x++ )
+        {
+            WT p = ptr[x];
+            WT xp = x * p, xxp;
+
+            x0 += p;
+            x1 += xp;
+            xxp = xp * x;
+            x2 += xxp;
+            x3 += xxp * x;
+        }
+
+        WT py = y * x0, sy = y*y;
+
+        mom[9] += ((MT)py) * sy;  // m03
+        mom[8] += ((MT)x1) * sy;  // m12
+        mom[7] += ((MT)x2) * y;  // m21
+        mom[6] += x3;             // m30
+        mom[5] += x0 * sy;        // m02
+        mom[4] += x1 * y;         // m11
+        mom[3] += x2;             // m20
+        mom[2] += py;             // m01
+        mom[1] += x1;             // m10
+        mom[0] += x0;             // m00
+    }
+
+    for( x = 0; x < 10; x++ )
+        moments[x] = (double)mom[x];
 }
+
+}
+
+namespace cv { namespace hal {
+
+static int moments(const cv::Mat& src, bool binary, cv::Moments& m)
+{
+    CV_INSTRUMENT_REGION();
+
+    double m_data[10];
+    int status = 0;
+    int type = src.type();
+    int depth = CV_MAT_DEPTH(type);
+
+    if( src.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
+        status = cv_hal_polygonMoments(src.data, src.total()/2, src.type(), m_data);
+    else
+        status = cv_hal_imageMoments(src.data, src.step, src.type(), src.cols, src.rows, binary, m_data);
+
+    if (status == CV_HAL_ERROR_OK)
+    {
+        m = cv::Moments(m_data[0], m_data[1], m_data[2], m_data[3], m_data[4],
+                        m_data[5], m_data[6], m_data[7], m_data[8], m_data[9]);
+    }
+    else if (status != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation moments ==> " CVAUX_STR(cv_hal_imageMoments) " returned %d (0x%08x)", status, status));
+    }
+
+    return status;
+}
+}}
 
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
@@ -580,26 +539,30 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 #endif
 
     Mat mat = _src.getMat();
+
+    if (hal::moments(mat, binary, m) == CV_HAL_ERROR_OK)
+        return m;
+
     if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
         return contourMoments(mat);
 
     if( cn > 1 )
-        CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
+        CV_Error( cv::Error::StsBadArg, "Invalid image type (must be single-channel)" );
 
     CV_IPP_RUN(!binary, ipp_moments(mat, m), m);
 
     if( binary || depth == CV_8U )
-        func = momentsInTile<uchar, int, int>;
+        func = getMomentsInTileFunc(CV_8U);
     else if( depth == CV_16U )
-        func = momentsInTile<ushort, int, int64>;
+        func = getMomentsInTileFunc(CV_16U);
     else if( depth == CV_16S )
         func = momentsInTile<short, int, int64>;
     else if( depth == CV_32F )
-        func = momentsInTile<float, double, double>;
+        func = getMomentsInTileFunc(CV_32F);
     else if( depth == CV_64F )
-        func = momentsInTile<double, double, double>;
+        func = getMomentsInTileFunc(CV_64F);
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     Mat src0(mat);
 
@@ -616,7 +579,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             if( binary )
             {
                 cv::Mat tmp(tileSize, CV_8U, nzbuf);
-                cv::compare( src, 0, tmp, CV_CMP_NE );
+                cv::compare( src, 0, tmp, cv::CMP_NE );
                 src = tmp;
             }
 
@@ -730,9 +693,9 @@ CV_IMPL double cvGetSpatialMoment( CvMoments * moments, int x_order, int y_order
     int order = x_order + y_order;
 
     if( !moments )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     if( (x_order | y_order) < 0 || order > 3 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     return (&(moments->m00))[order + (order >> 1) + (order > 2) * 2 + y_order];
 }
@@ -743,9 +706,9 @@ CV_IMPL double cvGetCentralMoment( CvMoments * moments, int x_order, int y_order
     int order = x_order + y_order;
 
     if( !moments )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     if( (x_order | y_order) < 0 || order > 3 )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     return order >= 2 ? (&(moments->m00))[4 + order * 3 + y_order] :
     order == 0 ? moments->m00 : 0;
@@ -768,7 +731,7 @@ CV_IMPL double cvGetNormalizedCentralMoment( CvMoments * moments, int x_order, i
 CV_IMPL void cvGetHuMoments( CvMoments * mState, CvHuMoments * HuState )
 {
     if( !mState || !HuState )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     double m00s = mState->inv_sqrt_m00, m00 = m00s * m00s, s2 = m00 * m00, s3 = s2 * m00s;
 

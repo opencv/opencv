@@ -209,9 +209,3 @@ plt.imshow(img3,),plt.show()
 See the result below:
 
 ![image](images/matcher_flann.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

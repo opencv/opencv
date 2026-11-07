@@ -49,6 +49,8 @@ except AttributeError:
     print("AKAZE not available")
 
 SEAM_FIND_CHOICES = OrderedDict()
+SEAM_FIND_CHOICES['gc_color'] = cv.detail_GraphCutSeamFinder('COST_COLOR')
+SEAM_FIND_CHOICES['gc_colorgrad'] = cv.detail_GraphCutSeamFinder('COST_COLOR_GRAD')
 SEAM_FIND_CHOICES['dp_color'] = cv.detail_DpSeamFinder('COLOR')
 SEAM_FIND_CHOICES['dp_colorgrad'] = cv.detail_DpSeamFinder('COLOR_GRAD')
 SEAM_FIND_CHOICES['voronoi'] = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_VORONOI_SEAM)
@@ -93,10 +95,8 @@ parser.add_argument(
 )
 parser.add_argument(
     '--try_cuda',
-    action='store',
-    default=False,
+    action='store_true',
     help="Try to use CUDA. The default value is no. All default values are for CPU mode.",
-    type=bool, dest='try_cuda'
 )
 parser.add_argument(
     '--work_megapix', action='store', default=0.6,
@@ -368,7 +368,7 @@ def main():
         cam.R = cam.R.astype(np.float32)
 
     adjuster = BA_COST_CHOICES[args.ba]()
-    adjuster.setConfThresh(1)
+    adjuster.setConfThresh(conf_thresh)
     refine_mask = np.zeros((3, 3), np.uint8)
     if ba_refine_mask[0] == 'x':
         refine_mask[0, 0] = 1

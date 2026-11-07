@@ -106,6 +106,14 @@ Write bits
 @param n Number of bits to write
 */
 void opj_bio_write(opj_bio_t *bio, OPJ_UINT32 v, OPJ_UINT32 n);
+
+/**
+Write a bit
+@param bio BIO handle
+@param b Bit to write (0 or 1)
+*/
+void opj_bio_putbit(opj_bio_t *bio, OPJ_UINT32 b);
+
 /**
 Read bits
 @param bio BIO handle

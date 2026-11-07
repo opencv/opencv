@@ -66,7 +66,6 @@ opj_image_t* OPJ_CALLCONV opj_image_create(OPJ_UINT32 numcmpts,
             comp->x0 = cmptparms[compno].x0;
             comp->y0 = cmptparms[compno].y0;
             comp->prec = cmptparms[compno].prec;
-            comp->bpp = cmptparms[compno].bpp;
             comp->sgnd = cmptparms[compno].sgnd;
             if (comp->h != 0 &&
                     (OPJ_SIZE_T)comp->w > SIZE_MAX / comp->h / sizeof(OPJ_INT32)) {

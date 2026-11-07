@@ -197,8 +197,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
 #define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results
 #define IPP_DISABLE_PYRAMIDS_BUILD      1 // Different results
-#define IPP_DISABLE_WARPAFFINE          1 // Different results
-#define IPP_DISABLE_WARPPERSPECTIVE     1 // Different results
 #define IPP_DISABLE_REMAP               1 // Different results
 #define IPP_DISABLE_YUV_RGB             1 // accuracy difference
 #define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
@@ -212,9 +210,7 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
-#define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
-#define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
 
 #ifdef HAVE_IPP
 #include "ippversion.h"
@@ -235,6 +231,10 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wstrict-prototypes"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -245,6 +245,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic pop
 #  endif
 #endif
 
@@ -687,22 +690,12 @@ public:
     TLSData<InstrTLSStruct> tlsStruct;
 };
 
-class CV_EXPORTS IntrumentationRegion
-{
-public:
-    IntrumentationRegion(const char* funName, const char* fileName, int lineNum, void *retAddress, bool alwaysExpand, TYPE instrType = TYPE_GENERAL, IMPL implType = IMPL_PLAIN);
-    ~IntrumentationRegion();
-
-private:
-    bool    m_disabled; // region status
-    uint64  m_regionTicks;
-};
-
 CV_EXPORTS InstrStruct& getInstrumentStruct();
 InstrTLSStruct&         getInstrumentTLSStruct();
-CV_EXPORTS InstrNode*   getCurrentNode();
 }
 }
+
+#include "opencv2/core/utils/instrumentation.private.hpp"
 
 #ifdef _WIN32
 #define CV_INSTRUMENT_GET_RETURN_ADDRESS _ReturnAddress()
@@ -715,45 +708,6 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
     void *CVAUX_CONCAT(__curr_address__, __LINE__) = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
     ::cv::instr::IntrumentationRegion CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CVAUX_CONCAT(__curr_address__, __LINE__), false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
-// Instrument functions with non-void return type
-#define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
-{\
-    if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
-        try{\
-            auto instrStatus = ((FUN)(__VA_ARGS__));\
-            if(ERROR_COND){\
-                ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-                CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
-            }\
-            return instrStatus;\
-        }catch(...){\
-            ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, #FUN " - BadExit");\
-            throw;\
-        }\
-    }else{\
-        return ((FUN)(__VA_ARGS__));\
-    }\
-}())
-// Instrument functions with void return type
-#define CV_INSTRUMENT_FUN_RV_META(TYPE, IMPL, FUN, ...) ([&]()\
-{\
-    if(::cv::instr::useInstrumentation()){\
-        ::cv::instr::IntrumentationRegion __instr__(#FUN, __FILE__, __LINE__, NULL, false, TYPE, IMPL);\
-        try{\
-            (FUN)(__VA_ARGS__);\
-        }catch(...){\
-            ::cv::instr::getCurrentNode()->m_payload.m_funError = true;\
-            CV_INSTRUMENT_MARK_META(IMPL, #FUN "- BadExit");\
-            throw;\
-        }\
-    }else{\
-        (FUN)(__VA_ARGS__);\
-    }\
-}())
-// Instrumentation information marker
-#define CV_INSTRUMENT_MARK_META(IMPL, NAME, ...) {::cv::instr::IntrumentationRegion __instr_mark__(NAME, __FILE__, __LINE__, NULL, false, ::cv::instr::TYPE_MARKER, IMPL);}
 
 ///// General instrumentation
 // General OpenCV region instrumentation macro
@@ -766,10 +720,6 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 ///// IPP instrumentation
 // Wrapper region instrumentation macro
 #define CV_INSTRUMENT_REGION_IPP();          CV_INSTRUMENT_REGION_META(__FUNCTION__, false, ::cv::instr::TYPE_WRAPPER, ::cv::instr::IMPL_IPP)
-// Function instrumentation macro
-#define CV_INSTRUMENT_FUN_IPP(FUN, ...)     CV_INSTRUMENT_FUN_RT_META(::cv::instr::TYPE_FUN, ::cv::instr::IMPL_IPP, instrStatus < 0, FUN, __VA_ARGS__)
-// Diagnostic markers
-#define CV_INSTRUMENT_MARK_IPP(NAME)        CV_INSTRUMENT_MARK_META(::cv::instr::IMPL_IPP, NAME)
 
 ///// OpenCL instrumentation
 // Wrapper region instrumentation macro

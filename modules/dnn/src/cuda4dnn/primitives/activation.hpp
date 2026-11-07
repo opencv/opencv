@@ -538,6 +538,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     };
 
     template <class T>
+    class GeluOp final : public BaseOp<GeluOp, T> {
+    public:
+        GeluOp(csl::Stream stream_) : stream(std::move(stream_)) { }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            kernels::gelu<T>(stream, output, input);
+        }
+
+    private:
+        csl::Stream stream;
+    };
+
+    template <class T>
     class ThresholdedReluOp final : public BaseOp<ThresholdedReluOp, T> {
     public:
         ThresholdedReluOp(csl::Stream stream_, T alpha_) : stream(std::move(stream_)), alpha{ alpha_ } { }

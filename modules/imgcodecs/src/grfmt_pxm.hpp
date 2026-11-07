@@ -79,7 +79,7 @@ protected:
     RLByteStream    m_strm;
     PaletteEntry    m_palette[256];
     int             m_bpp;
-    int             m_offset;
+    int64_t         m_offset;
     bool            m_binary;
     int             m_maxval;
 };

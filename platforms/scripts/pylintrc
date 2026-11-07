@@ -6,7 +6,7 @@ disable=all
 # Tests
 enable=bad-indentation,       # Used when an unexpected number of indentation’s tabulations or spaces has been found.
        mixed-indentation,     # Used when there are some mixed tabs and spaces in a module.
-       unnecessary-semicolon, # Used when a statement is ended by a semi-colon (”;”), which isn’t necessary.
+       unnecessary-semicolon, # Used when a statement is ended by a semi-colon (";"), which isn’t necessary.
        unused-variable        # Used when a variable is defined but not used. (Use _var to ignore var).
 
 

@@ -9,6 +9,8 @@ Introduction to OpenCV Development with Clojure {#tutorial_clojure_dev_intro}
 | Original author | Mimmo Cosenza |
 | Compatibility | OpenCV >= 3.0 |
 
+@tableofcontents
+
 @warning
 This tutorial can contain obsolete information.
 
@@ -35,11 +37,11 @@ issue the following command to run the sample from the command line.
 cd path/to/samples/java/clojure/simple-sample
 lein run
 @endcode
+
 Preamble
 --------
 
-For detailed instruction on installing OpenCV with desktop Java support refer to the @ref tutorial_java_dev_intro "corresponding
-tutorial".
+For detailed instruction on installing OpenCV with desktop Java support refer to the @ref tutorial_java_dev_intro "corresponding tutorial".
 
 If you are in hurry, here is a minimum quick start guide to install OpenCV on Mac OS X:
 
@@ -63,6 +65,7 @@ make -j8
 # optional
 # make install
 @endcode
+
 Install Leiningen
 -----------------
 
@@ -170,6 +173,7 @@ i386     -> x86
 arm      -> arm
 sparc    -> sparc
 @endcode
+
 ### Package the native lib as a jar
 
 Next you need to package the native lib in a jar file by using the jar command to create a new jar
@@ -193,6 +197,7 @@ tree
 
 3 directories, 3 files
 @endcode
+
 ### Locally install the jars
 
 We are now ready to add the two jars as artifacts to the local maven repository with the help of the
@@ -402,6 +407,7 @@ Let's now try to port to Clojure the @ref tutorial_java_dev_intro "OpenCV Java t
 Instead of writing it in a source file we're going to evaluate it at the REPL.
 
 Following is the original Java source code of the cited sample.
+
 @code{.java}
 import org.opencv.core.Mat;
 import org.opencv.core.CvType;
@@ -430,20 +436,25 @@ Before start coding, we'd like to eliminate the boring need of interactively loa
 opencv lib any time we start a new REPL to interact with it.
 
 First, stop the REPL by evaluating the (exit) expression at the REPL prompt.
+
 @code{.clojure}
 user=> (exit)
 Bye for now!
 @endcode
+
 Then open your project.clj file and edit it as follows:
+
 @code{.clojure}
 (defproject simple-sample "0.1.0-SNAPSHOT"
   ...
 injections [(clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)])
 @endcode
+
 Here we're saying to load the opencv native lib anytime we run the REPL in such a way that we have
 not anymore to remember to manually do it.
 
 Rerun the lein repl task
+
 @code{.bash}
 lein repl
 nREPL server started on port 51645 on host 127.0.0.1
@@ -458,11 +469,14 @@ Clojure 1.5.1
 
 user=>
 @endcode
+
 Import the interested OpenCV java interfaces.
+
 @code{.clojure}
 user=> (import '[org.opencv.core Mat CvType Scalar])
 org.opencv.core.Scalar
 @endcode
+
 We're going to mimic almost verbatim the original OpenCV java tutorial to:
 
 -   create a 5x10 matrix with all its elements initialized to 0

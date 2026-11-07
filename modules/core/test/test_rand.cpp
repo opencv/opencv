@@ -48,7 +48,7 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
         sum += H[i];
     CV_Assert( fabs(1./sum - scale) < FLT_EPSILON );
 
-    if( dist_type == CV_RAND_UNI )
+    if( dist_type == RNG::UNIFORM )
     {
         float scale0 = (float)(1./hsz);
         for( i = 0; i < hsz; i++ )
@@ -79,7 +79,7 @@ bool Core_RandTest::check_pdf(const Mat& hist, double scale,
     }
     realval = chi2;
 
-    double chi2_pval = chi2_p95(hsz - 1 - (dist_type == CV_RAND_NORMAL ? 2 : 0));
+    double chi2_pval = chi2_p95(hsz - 1 - (dist_type == RNG::NORMAL ? 2 : 0));
     refval = chi2_pval*0.01;
     return realval <= refval;
 }
@@ -108,7 +108,7 @@ void Core_RandTest::run( int )
         int depth = cvtest::randInt(rng) % (CV_64F+1);
         int c, cn = (cvtest::randInt(rng) % 4) + 1;
         int type = CV_MAKETYPE(depth, cn);
-        int dist_type = cvtest::randInt(rng) % (CV_RAND_NORMAL+1);
+        int dist_type = cvtest::randInt(rng) % (RNG::NORMAL+1);
         int i, k, SZ = N/cn;
         Scalar A, B;
 
@@ -116,18 +116,18 @@ void Core_RandTest::run( int )
         if (depth == CV_64F)
             eps = 1.e-7;
 
-        bool do_sphere_test = dist_type == CV_RAND_UNI;
+        bool do_sphere_test = dist_type == RNG::UNIFORM;
         Mat arr[2], hist[4];
         int W[] = {0,0,0,0};
 
         arr[0].create(1, SZ, type);
         arr[1].create(1, SZ, type);
-        bool fast_algo = dist_type == CV_RAND_UNI && depth < CV_32F;
+        bool fast_algo = dist_type == RNG::UNIFORM && depth < CV_32F;
 
         for( c = 0; c < cn; c++ )
         {
             int a, b, hsz;
-            if( dist_type == CV_RAND_UNI )
+            if( dist_type == RNG::UNIFORM )
             {
                 a = (int)(cvtest::randInt(rng) % (_ranges[depth][1] -
                                               _ranges[depth][0])) + _ranges[depth][0];
@@ -188,8 +188,8 @@ void Core_RandTest::run( int )
             const uchar* data = arr[0].ptr();
             int* H = hist[c].ptr<int>();
             int HSZ = hist[c].cols;
-            double minVal = dist_type == CV_RAND_UNI ? A[c] : A[c] - B[c]*4;
-            double maxVal = dist_type == CV_RAND_UNI ? B[c] : A[c] + B[c]*4;
+            double minVal = dist_type == RNG::UNIFORM ? A[c] : A[c] - B[c]*4;
+            double maxVal = dist_type == RNG::UNIFORM ? B[c] : A[c] + B[c]*4;
             double scale = HSZ/(maxVal - minVal);
             double delta = -minVal*scale;
 
@@ -210,7 +210,7 @@ void Core_RandTest::run( int )
                     H[ival]++;
                     W[c]++;
                 }
-                else if( dist_type == CV_RAND_UNI )
+                else if( dist_type == RNG::UNIFORM )
                 {
                     if( (minVal <= val && val < maxVal) || (depth >= CV_32F && val == maxVal) )
                     {
@@ -224,14 +224,14 @@ void Core_RandTest::run( int )
                 }
             }
 
-            if( dist_type == CV_RAND_UNI && W[c] != SZ )
+            if( dist_type == RNG::UNIFORM && W[c] != SZ )
             {
                 ts->printf( cvtest::TS::LOG, "Uniform RNG gave values out of the range [%g,%g) on channel %d/%d\n",
                            A[c], B[c], c, cn);
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }
-            if( dist_type == CV_RAND_NORMAL && W[c] < SZ*.90)
+            if( dist_type == RNG::NORMAL && W[c] < SZ*.90)
             {
                 ts->printf( cvtest::TS::LOG, "Normal RNG gave too many values out of the range (%g+4*%g,%g+4*%g) on channel %d/%d\n",
                            A[c], B[c], A[c], B[c], c, cn);

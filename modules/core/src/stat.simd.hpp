@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #include "opencv2/core/hal/intrin.hpp"
 
@@ -8,11 +10,17 @@ namespace cv { namespace hal {
 
 extern const uchar popCountTable[256];
 
+typedef int (*NormHammingFunc)(const uchar*, int);
+typedef int (*NormHammingDiffFunc)(const uchar*, const uchar*, int);
+
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
 int normHamming(const uchar* a, int n);
 int normHamming(const uchar* a, const uchar* b, int n);
+
+NormHammingFunc getNormHammingFunc();
+NormHammingDiffFunc getNormHammingDiffFunc();
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -33,11 +41,11 @@ int normHamming(const uchar* a, int n)
     int i = 0;
     int result = 0;
 
-#if CV_SIMD && CV_SIMD_WIDTH > 16
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
         v_uint64 t = vx_setzero_u64();
-        for (; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
-            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i)));
+        for (; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(vx_load(a + i))));
         result = (int)v_reduce_sum(t);
         vx_cleanup();
     }
@@ -48,20 +56,17 @@ int normHamming(const uchar* a, int n)
 #  if defined CV_POPCNT_U64
         for(; i <= n - 8; i += 8)
         {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i));
+            uint64_t val;
+            std::memcpy(&val, a + i, sizeof(val));
+            result += (int)CV_POPCNT_U64(val);
         }
 #  endif
         for(; i <= n - 4; i += 4)
         {
-            result += CV_POPCNT_U32(*(uint*)(a + i));
+            uint32_t val;
+            std::memcpy(&val, a + i, sizeof(val));
+            result += CV_POPCNT_U32(val);
         }
-    }
-#elif CV_SIMD
-    {
-        v_uint64x2 t = v_setzero_u64();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-            t += v_popcount(v_reinterpret_as_u64(v_load(a + i)));
-        result += (int)v_reduce_sum(t);
     }
 #endif
 #if CV_ENABLE_UNROLLED
@@ -85,11 +90,11 @@ int normHamming(const uchar* a, const uchar* b, int n)
     int i = 0;
     int result = 0;
 
-#if CV_SIMD && CV_SIMD_WIDTH > 16
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
         v_uint64 t = vx_setzero_u64();
-        for (; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
-            t += v_popcount(v_reinterpret_as_u64(vx_load(a + i) ^ vx_load(b + i)));
+        for (; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(v_xor(vx_load(a + i), vx_load(b + i)))));
         result += (int)v_reduce_sum(t);
     }
 #endif
@@ -99,20 +104,19 @@ int normHamming(const uchar* a, const uchar* b, int n)
 #  if defined CV_POPCNT_U64
         for(; i <= n - 8; i += 8)
         {
-            result += (int)CV_POPCNT_U64(*(uint64*)(a + i) ^ *(uint64*)(b + i));
+            uint64_t val_a, val_b;
+            std::memcpy(&val_a, a + i, sizeof(val_a));
+            std::memcpy(&val_b, b + i, sizeof(val_b));
+            result += (int)CV_POPCNT_U64(val_a ^ val_b);
         }
 #  endif
         for(; i <= n - 4; i += 4)
         {
-            result += CV_POPCNT_U32(*(uint*)(a + i) ^ *(uint*)(b + i));
+            uint32_t val_a, val_b;
+            std::memcpy(&val_a, a + i, sizeof(val_a));
+            std::memcpy(&val_b, b + i, sizeof(val_b));
+            result += (int)CV_POPCNT_U32(val_a ^ val_b);
         }
-    }
-#elif CV_SIMD
-    {
-        v_uint64x2 t = v_setzero_u64();
-        for(; i <= n - v_uint8x16::nlanes; i += v_uint8x16::nlanes)
-            t += v_popcount(v_reinterpret_as_u64(v_load(a + i) ^ v_load(b + i)));
-        result += (int)v_reduce_sum(t);
     }
 #endif
 #if CV_ENABLE_UNROLLED
@@ -127,6 +131,17 @@ int normHamming(const uchar* a, const uchar* b, int n)
         result += popCountTable[a[i] ^ b[i]];
     }
     return result;
+}
+
+NormHammingFunc getNormHammingFunc()
+{
+    NormHammingFunc f = &normHamming; // disambiguate the (a,n) overload
+    return f;
+}
+NormHammingDiffFunc getNormHammingDiffFunc()
+{
+    NormHammingDiffFunc f = &normHamming; // disambiguate the (a,b,n) overload
+    return f;
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

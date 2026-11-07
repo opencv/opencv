@@ -114,17 +114,24 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
     }
 }
 
-cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
-    /*GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully integrated"
-                         "in OpenVINO InferenceEngine and would be temporary disable.");*/
-#ifdef HAVE_INF_ENGINE
+mfxHDLPair VPLMediaFrameDX11Adapter::getHandle() const {
     auto surface_ptr_copy = get_surface();
-    Surface::data_t& data = surface_ptr_copy->get_data();
-    const Surface::info_t& info = surface_ptr_copy->get_info();
+    const Surface::data_t& data = surface_ptr_copy->get_data();
     NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);
 
     mfxHDLPair handle{};
     native_handle_getter->get_handle(data.MemId, reinterpret_cast<mfxHDL&>(handle));
+    return handle;
+}
+
+cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
+    /*GAPI_Error("VPLMediaFrameDX11Adapter::blobParams() is not fully integrated"
+                         "in OpenVINO InferenceEngine and would be temporary disable.");*/
+#ifdef HAVE_INF_ENGINE
+    mfxHDLPair handle = getHandle();
+
+    auto surface_ptr_copy = get_surface();
+    const Surface::info_t& info = surface_ptr_copy->get_info();
 
     GAPI_Assert(frame_desc.fmt == MediaFormat::NV12 &&
                 "blobParams() for VPLMediaFrameDX11Adapter supports NV12 only");
@@ -155,16 +162,16 @@ cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
     return std::make_pair(std::make_pair(y_tdesc, y_params),
                           std::make_pair(uv_tdesc, uv_params));
 #else
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
+    GAPI_Error("VPLMediaFrameDX11Adapter::blobParams() is not implemented");
 #endif // HAVE_INF_ENGINE
 }
 
 void VPLMediaFrameDX11Adapter::serialize(cv::gapi::s11n::IOStream&) {
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::serialize() is not implemented");
+    GAPI_Error("VPLMediaFrameDX11Adapter::serialize() is not implemented");
 }
 
 void VPLMediaFrameDX11Adapter::deserialize(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::deserialize() is not implemented");
+    GAPI_Error("VPLMediaFrameDX11Adapter::deserialize() is not implemented");
 }
 
 DXGI_FORMAT VPLMediaFrameDX11Adapter::get_dx11_color_format(uint32_t mfx_fourcc) {

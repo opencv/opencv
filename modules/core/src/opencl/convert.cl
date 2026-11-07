@@ -49,14 +49,21 @@
 #endif
 #endif
 
+#ifdef HALF_SUPPORT
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16:enable
+#endif
+#endif
+
+
 #define noconvert
 
 __kernel void convertTo(__global const uchar * srcptr, int src_step, int src_offset,
-                        __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                        __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols
 #ifndef NO_SCALE
-                        WT alpha, WT beta,
+                        , WT alpha, WT beta
 #endif
-                        int rowsPerWI)
+)
 {
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;

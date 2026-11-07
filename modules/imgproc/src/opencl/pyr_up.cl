@@ -58,7 +58,7 @@
 #endif
 #endif
 
-#if cn != 3
+#if CN != 3
 #define loadpix(addr)  *(__global const T*)(addr)
 #define storepix(val, addr)  *(__global T*)(addr) = (val)
 #define PIXSIZE ((int)sizeof(T))
@@ -92,7 +92,7 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
         int srcx = EXTRAPOLATE(mad24((int)get_group_id(0), LOCAL_SIZE/2, tidx) - 1, src_cols);
         int srcy = EXTRAPOLATE(mad24((int)get_group_id(1), LOCAL_SIZE/2, tidy) - 1, src_rows);
 
-        s_srcPatch[tidy][tidx] = convertToFT(loadpix(srcData + srcy * src_step + srcx * PIXSIZE));
+        s_srcPatch[tidy][tidx] = CONVERT_TO_FT(loadpix(srcData + srcy * src_step + srcx * PIXSIZE));
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -124,7 +124,7 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
     sum = mad(coefy2, s_dstPatch[1 + ((tidy + 2) >> 1)][tidx], sum);
 
     if ((x < dst_cols) && (y < dst_rows))
-        storepix(convertToT(sum), dstData + y * dst_step + x * PIXSIZE);
+        storepix(CONVERT_TO_T(sum), dstData + y * dst_step + x * PIXSIZE);
 }
 
 
@@ -149,10 +149,10 @@ __kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_o
         int srcx2 = EXTRAPOLATE(srcx+1, src_cols);
         int srcy1 = EXTRAPOLATE(srcy, src_rows);
         int srcy2 = EXTRAPOLATE(srcy+1, src_rows);
-        s_srcPatch[ly][lx] = convertToFT(loadpix(srcData + srcy1 * src_step + srcx1 * PIXSIZE));
-        s_srcPatch[ly+1][lx] = convertToFT(loadpix(srcData + srcy2 * src_step + srcx1 * PIXSIZE));
-        s_srcPatch[ly][lx+1] = convertToFT(loadpix(srcData + srcy1 * src_step + srcx2 * PIXSIZE));
-        s_srcPatch[ly+1][lx+1] = convertToFT(loadpix(srcData + srcy2 * src_step + srcx2 * PIXSIZE));
+        s_srcPatch[ly][lx] = CONVERT_TO_FT(loadpix(srcData + srcy1 * src_step + srcx1 * PIXSIZE));
+        s_srcPatch[ly+1][lx] = CONVERT_TO_FT(loadpix(srcData + srcy2 * src_step + srcx1 * PIXSIZE));
+        s_srcPatch[ly][lx+1] = CONVERT_TO_FT(loadpix(srcData + srcy1 * src_step + srcx2 * PIXSIZE));
+        s_srcPatch[ly+1][lx+1] = CONVERT_TO_FT(loadpix(srcData + srcy2 * src_step + srcx2 * PIXSIZE));
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -213,22 +213,22 @@ __kernel void pyrUp_unrolled(__global const uchar * src, int src_step, int src_o
         sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx];
         sum = mad(co1, s_dstPatch[1 + get_local_id(1)    ][lx], sum);
         sum = mad(co3, s_dstPatch[1 + get_local_id(1) + 1][lx], sum);
-        storepix(convertToT(sum), dstData + dst_y * dst_step + dst_x * PIXSIZE);
+        storepix(CONVERT_TO_T(sum), dstData + dst_y * dst_step + dst_x * PIXSIZE);
 
         // (x+1,y)
         sum =       co3 * s_dstPatch[1 + get_local_id(1) - 1][lx+1];
         sum = mad(co1, s_dstPatch[1 + get_local_id(1)    ][lx+1], sum);
         sum = mad(co3, s_dstPatch[1 + get_local_id(1) + 1][lx+1], sum);
-        storepix(convertToT(sum), dstData + dst_y * dst_step + (dst_x+1) * PIXSIZE);
+        storepix(CONVERT_TO_T(sum), dstData + dst_y * dst_step + (dst_x+1) * PIXSIZE);
 
         // (x,y+1)
         sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx];
         sum = mad(co2, s_dstPatch[1 + get_local_id(1) + 1][lx], sum);
-        storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + dst_x * PIXSIZE);
+        storepix(CONVERT_TO_T(sum), dstData + (dst_y+1) * dst_step + dst_x * PIXSIZE);
 
         // (x+1,y+1)
         sum =       co2 * s_dstPatch[1 + get_local_id(1)    ][lx+1];
         sum = mad(co2, s_dstPatch[1 + get_local_id(1) + 1][lx+1], sum);
-        storepix(convertToT(sum), dstData + (dst_y+1) * dst_step + (dst_x+1) * PIXSIZE);
+        storepix(CONVERT_TO_T(sum), dstData + (dst_y+1) * dst_step + (dst_x+1) * PIXSIZE);
     }
 }

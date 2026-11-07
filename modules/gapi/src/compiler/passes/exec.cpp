@@ -9,7 +9,7 @@
 
 #include <string>
 #include <list> // list
-#include <iomanip>  // setw, etc
+#include <iomanip> // setw, etc
 #include <fstream> // ofstream
 #include <memory>
 #include <functional>
@@ -85,7 +85,7 @@ namespace
 
         const auto& backend = *src_g.metadata().get<ActiveBackends>().backends.cbegin();
         const auto& proto = src_g.metadata().get<Protocol>();
-        GIsland::node_set all, in_ops, out_ops;
+        GIsland::node_set all, in_ops, out_ops, in_cvals;
 
         all.insert(src_g.nodes().begin(), src_g.nodes().end());
 
@@ -99,7 +99,22 @@ namespace
             all.erase(nh);
             out_ops.insert(nh->inNodes().begin(), nh->inNodes().end());
         }
-
+        for (const auto& nh : src_g.nodes())
+        {
+            if (src_g.metadata(nh).get<NodeType>().t == NodeType::DATA)
+            {
+                const auto &d = src_g.metadata(nh).get<Data>();
+                if (d.storage == Data::Storage::CONST_VAL
+                    && !backend.priv().supportsConst(d.shape)) {
+                    // don't put this node into the island's graph - so the island
+                    // executable don't need to handle value-initialized G-type manually.
+                    // Still mark its readers as inputs
+                    all.erase(nh);
+                    in_cvals.insert(nh);
+                    in_ops.insert(nh->outNodes().begin(), nh->outNodes().end());
+                }
+            }
+        }
         auto isl = std::make_shared<GIsland>(backend,
                                              std::move(all),
                                              std::move(in_ops),
@@ -108,7 +123,8 @@ namespace
 
         auto ih = GIslandModel::mkIslandNode(g, std::move(isl));
 
-        for (const auto& nh : proto.in_nhs)
+        for (const auto& nh : ade::util::chain(ade::util::toRange(proto.in_nhs),
+                                               ade::util::toRange(in_cvals)))
         {
             auto slot = GIslandModel::mkSlotNode(g, nh);
             g.link(slot, ih);
@@ -141,6 +157,11 @@ namespace
         // still be alive as included into this set.
         std::unordered_set<CycleCausers, CycleHasher> cycle_causers;
     };
+
+#if defined(__GNUC__) && (__GNUC__ >= 13)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+#endif
 
     bool canMerge(const GIslandModel::Graph &g,
                   const ade::NodeHandle &a_nh,
@@ -190,6 +211,10 @@ namespace
         }
         return true;
     }
+
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic pop
+#endif
 
     inline bool isProducedBy(const ade::NodeHandle &slot,
                              const ade::NodeHandle &island)

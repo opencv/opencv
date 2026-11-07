@@ -47,7 +47,7 @@
 //International Conference Pattern Recognition, UK, August, 2004
 //http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 //The code is very fast and performs also shadow detection.
-//Number of Gausssian components is adapted per pixel.
+//Number of Gaussian components is adapted per pixel.
 //
 // and
 //
@@ -97,7 +97,7 @@ namespace cv
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 
  Advantages:
- -fast - number of Gausssian components is constantly adapted per pixel.
+ -fast - number of Gaussian components is constantly adapted per pixel.
  -performs also shadow detection (see bgfg_segm_test.cpp example)
 
 */
@@ -177,6 +177,8 @@ public:
     ~BackgroundSubtractorMOG2Impl() CV_OVERRIDE {}
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
+
+    void apply(InputArray image, InputArray knownForegroundMask, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
@@ -546,7 +548,8 @@ public:
                 float _Tb, float _TB, float _Tg,
                 float _varInit, float _varMin, float _varMax,
                 float _prune, float _tau, bool _detectShadows,
-                uchar _shadowVal)
+                uchar _shadowVal, const Mat& _knownForegroundMask)
+            :   knownForegroundMask(_knownForegroundMask)
     {
         src = &_src;
         dst = &_dst;
@@ -590,6 +593,18 @@ public:
 
             for( int x = 0; x < ncols; x++, data += nchannels, gmm += nmixtures, mean += nmixtures*nchannels )
             {
+
+                // Check that foreground mask exists
+                if (!knownForegroundMask.empty())
+                {
+                    // If input mask states pixel is foreground
+                    if (knownForegroundMask.at<uchar>(y, x) > 0)
+                    {
+                        mask[x] = 255; // ensure output mask marks this pixel as FG
+                        continue;
+                    }
+                }
+
                 //calculate distances to the modes (+ sort)
                 //here we need to go in descending order!!!
                 bool background = false;//return value -> true - the pixel classified as background
@@ -766,6 +781,7 @@ public:
 
     bool detectShadows;
     uchar shadowVal;
+    const Mat& knownForegroundMask;
 };
 
 #ifdef HAVE_OPENCL
@@ -844,7 +860,12 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 #endif
 
-void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
+// Base 3 version class
+void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate) {
+    apply(_image,  noArray(), _fgmask, learningRate);
+}
+
+void BackgroundSubtractorMOG2Impl::apply(InputArray _image, InputArray _knownForegroundMask, OutputArray _fgmask, double learningRate)
 {
     CV_INSTRUMENT_REGION();
 
@@ -867,6 +888,14 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
+    Mat knownForegroundMask = _knownForegroundMask.getMat();
+
+    if(!knownForegroundMask.empty())
+    {
+    CV_Assert(knownForegroundMask.type() == CV_8UC1);
+    CV_Assert(knownForegroundMask.size() == image.size());
+    }
+
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
@@ -879,7 +908,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               (float)varThreshold,
                               backgroundRatio, varThresholdGen,
                               fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                              bShadowDetection, nShadowDetection),
+                              bShadowDetection, nShadowDetection, knownForegroundMask),
                               image.total()/(double)(1 << 16));
 }
 

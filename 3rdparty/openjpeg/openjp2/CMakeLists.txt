@@ -5,6 +5,7 @@ set(OPENJPEG_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/cio.c
   ${CMAKE_CURRENT_SOURCE_DIR}/dwt.c
   ${CMAKE_CURRENT_SOURCE_DIR}/event.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ht_dec.c
   ${CMAKE_CURRENT_SOURCE_DIR}/image.c
   ${CMAKE_CURRENT_SOURCE_DIR}/invert.c
   ${CMAKE_CURRENT_SOURCE_DIR}/j2k.c
@@ -38,6 +39,8 @@ ocv_warnings_disable(CMAKE_C_FLAGS
     -Wshadow   # v2.4.0: GCC
     -Wunused-function   # v2.4.0: Clang
 )
+
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4819) # vs2019 Win64
 
 add_library(${OPENJPEG_LIBRARY_NAME} STATIC ${OPENJPEG_SRCS})
 

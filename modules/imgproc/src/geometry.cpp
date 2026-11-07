@@ -39,7 +39,9 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
+using namespace cv;
 
 CV_IMPL CvRect
 cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
@@ -87,7 +89,7 @@ CV_IMPL void
 cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 {
     if( !pt )
-        CV_Error( CV_StsNullPtr, "NULL vertex array pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL vertex array pointer" );
     cv::RotatedRect(box).points((cv::Point2f*)pt);
 }
 
@@ -146,7 +148,6 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     else
     {
         Point2f v0, v;
-        Point iv;
 
         if( is_float )
         {
@@ -329,21 +330,20 @@ static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Poi
 static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
                                                       Point2f d, Point2f& p, Point2f& q )
 {
-    double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
-                   d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
+    double denom = ((double)a.x - b.x) * ((double)d.y - c.y) - ((double)a.y - b.y) * ((double)d.x - c.x);
 
     // If denom is zero, then segments are parallel: handle separately.
     if( denom == 0. )
         return parallelInt(a, b, c, d, p, q);
 
-    double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
+    double num = ((double)d.y - a.y) * ((double)a.x - c.x) + ((double)a.x - d.x) * ((double)a.y - c.y);
     double s = num / denom;
 
-    num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
+    num = ((double)b.y - a.y) * ((double)a.x - c.x) + ((double)c.y - a.y) * ((double)b.x - a.x);
     double t = num / denom;
 
-    p.x = (float)(a.x + s*(b.x - a.x));
-    p.y = (float)(a.y + s*(b.y - a.y));
+    p.x = (float)(a.x + s*((double)b.x - a.x));
+    p.y = (float)(a.y + s*((double)b.y - a.y));
     q = p;
 
     return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
@@ -377,9 +377,12 @@ static void addSharedSeg( Point2f p, Point2f q, Point2f*& result )
         *result++ = q;
 }
 
-
+// Note: The function and subroutings use direct pointer arithmetics instead of arrays indexing.
+// Each loop iteration may push to result array up to 3 times.
+// It means that we need +3 spare result elements against result_size
+// to catch agorithmic overflow and prevent actual result array overflow.
 static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, int m,
-                                   Point2f* result, float* _area )
+                                   Point2f* result, int result_size, float* _area )
 {
     Point2f* result0 = result;
     // P has n vertices, Q has m vertices.
@@ -457,7 +460,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         }
         // Quit when both adv. indices have cycled, or one has cycled twice.
     }
-    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) );
+    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) && ((int)(result - result0) <= result_size) );
 
     // Deal with special cases: not implemented.
     if( inflag == Unknown )
@@ -466,10 +469,16 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         // ...
     }
 
-    int i, nr = (int)(result - result0);
+    int nr = (int)(result - result0);
+    if (nr > result_size)
+    {
+        *_area = -1.f;
+        return -1;
+    }
+
     double area = 0;
     Point2f prev = result0[nr-1];
-    for( i = 1; i < nr; i++ )
+    for(int i = 1; i < nr; i++ )
     {
         result0[i-1] = result0[i];
         area += (double)prev.x*result0[i].y - (double)prev.y*result0[i].x;
@@ -504,9 +513,11 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         return 0.f;
     }
 
-    AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
-    Point2f *fp1 = _result.data(), *fp2 = fp1 + n;
+    AutoBuffer<Point2f> _result(n + m + n+m+1+3);
+    Point2f* fp1 = _result.data();
+    Point2f* fp2 = fp1 + n;
     Point2f* result = fp2 + m;
+
     int orientation = 0;
 
     for( int k = 1; k <= 2; k++ )
@@ -535,7 +546,15 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
 
     float area = 0.f;
-    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, &area);
+    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, n+m+1, &area);
+
+    if (nr < 0)
+    {
+        // The algorithm did not converge, e.g. some of inputs is not convex
+        _p12.release();
+        return -1.f;
+    }
+
     if( nr == 0 )
     {
         if( !handleNested )
@@ -593,4 +612,299 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         temp.copyTo(_p12);
     }
     return (float)fabs(area);
+}
+
+static Rect maskBoundingRect( const Mat& img )
+{
+    CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
+
+    Size size = img.size();
+    int xmin = size.width, ymin = -1, xmax = -1, ymax = -1, i, j, k;
+
+    for( i = 0; i < size.height; i++ )
+    {
+        const uchar* _ptr = img.ptr(i);
+        const uchar* ptr = (const uchar*)alignPtr(_ptr, 4);
+        int have_nz = 0, k_min, offset = (int)(ptr - _ptr);
+        j = 0;
+        offset = MIN(offset, size.width);
+        for( ; j < offset; j++ )
+            if( _ptr[j] )
+            {
+                if( j < xmin )
+                    xmin = j;
+                if( j > xmax )
+                    xmax = j;
+                have_nz = 1;
+            }
+        if( offset < size.width )
+        {
+            xmin -= offset;
+            xmax -= offset;
+            size.width -= offset;
+            j = 0;
+            for( ; j <= xmin - 4; j += 4 )
+                if( *((int*)(ptr+j)) )
+                    break;
+            for( ; j < xmin; j++ )
+                if( ptr[j] )
+                {
+                    xmin = j;
+                    if( j > xmax )
+                        xmax = j;
+                    have_nz = 1;
+                    break;
+                }
+            k_min = MAX(j-1, xmax);
+            k = size.width - 1;
+            for( ; k > k_min && (k&3) != 3; k-- )
+                if( ptr[k] )
+                    break;
+            if( k > k_min && (k&3) == 3 )
+            {
+                for( ; k > k_min+3; k -= 4 )
+                    if( *((int*)(ptr+k-3)) )
+                        break;
+            }
+            for( ; k > k_min; k-- )
+                if( ptr[k] )
+                {
+                    xmax = k;
+                    have_nz = 1;
+                    break;
+                }
+            if( !have_nz )
+            {
+                j &= ~3;
+                for( ; j <= k - 3; j += 4 )
+                    if( *((int*)(ptr+j)) )
+                        break;
+                for( ; j <= k; j++ )
+                    if( ptr[j] )
+                    {
+                        have_nz = 1;
+                        break;
+                    }
+            }
+            xmin += offset;
+            xmax += offset;
+            size.width += offset;
+        }
+        if( have_nz )
+        {
+            if( ymin < 0 )
+                ymin = i;
+            ymax = i;
+        }
+    }
+
+    if( xmin >= size.width )
+        xmin = ymin = 0;
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+// Converts an extremum of a CV_32F point set to an int coordinate of a Rect, flooring it and
+// clamping it to the range a Rect can represent. cvFloor() is undefined outside of that range, so
+// a coordinate beyond it used to leak the raw conversion result into the rectangle: 1e10 floored
+// to INT_MIN, and +inf/-inf gave INT_MIN and INT_MAX, inverting it.
+// See https://github.com/opencv/opencv/issues/29837
+static inline int floorSaturate( float value )
+{
+    // the clamp is in double, where the bounds are exact - INT_MAX is not representable in float -
+    // and it cannot be left to saturate_cast<int>(), which rounds but does not clip 32-bit
+    // integers. Reversing the first comparison keeps a NaN out of the undefined conversion too.
+    const double v = std::floor((double)value);
+    if( !(v > (double)INT_MIN) )
+        return INT_MIN;
+    if( v >= (double)INT_MAX )
+        return INT_MAX;
+    return saturate_cast<int>(v);
+}
+
+// Calculates bounding rectangle of a point set or retrieves already calculated
+static Rect pointSetBoundingRect( const Mat& points )
+{
+    int npoints = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i = 0;
+    bool is_float = depth == CV_32F;
+
+    if( npoints == 0 )
+        return Rect();
+
+    if( !is_float )
+    {
+        const int32_t* pts = points.ptr<int32_t>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        xmin = xmax = pts[0];
+        ymin = ymax = pts[1];
+#if CV_SIMD || CV_SIMD_SCALABLE
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        const int nlanes = VTraits<v_int32>::vlanes()/2;
+        for (; i < npoints; i += nlanes)
+        {
+            if (i > npoints - nlanes)
+            {
+                if (i == 0)
+                    break;
+                i = npoints - nlanes;
+            }
+            v_int32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
+        int arr_minval[max_nlanes], arr_maxval[max_nlanes];
+        vx_store(arr_minval, minval);
+        vx_store(arr_maxval, maxval);
+        for (int j = 0; j < nlanes; j++)
+        {
+            xmin = std::min(xmin, arr_minval[2*j]);
+            ymin = std::min(ymin, arr_minval[2*j+1]);
+            xmax = std::max(xmax, arr_maxval[2*j]);
+            ymax = std::max(ymax, arr_maxval[2*j+1]);
+        }
+#endif
+        for( ; i < npoints; i++ )
+        {
+            int pt_x = pts[2*i];
+            int pt_y = pts[2*i+1];
+
+            xmin = std::min(xmin, pt_x);
+            xmax = std::max(xmax, pt_x);
+            ymin = std::min(ymin, pt_y);
+            ymax = std::max(ymax, pt_y);
+        }
+    }
+    else
+    {
+        const float* pts = points.ptr<float>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        // the extrema are searched for in floats and converted to int once, below
+        float xmin_f = pts[0], xmax_f = pts[0];
+        float ymin_f = pts[1], ymax_f = pts[1];
+#if CV_SIMD || CV_SIMD_SCALABLE
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        const int nlanes = VTraits<v_float32>::vlanes()/2;
+        for (; i < npoints; i += nlanes)
+        {
+            if (i > npoints - nlanes)
+            {
+                if (i == 0)
+                    break;
+                i = npoints - nlanes;
+            }
+            v_float32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
+        float arr_minval[max_nlanes], arr_maxval[max_nlanes];
+        vx_store(arr_minval, minval);
+        vx_store(arr_maxval, maxval);
+        for (int j = 0; j < nlanes; j++)
+        {
+            xmin_f = std::min(xmin_f, arr_minval[2*j]);
+            ymin_f = std::min(ymin_f, arr_minval[2*j+1]);
+            xmax_f = std::max(xmax_f, arr_maxval[2*j]);
+            ymax_f = std::max(ymax_f, arr_maxval[2*j+1]);
+        }
+#endif
+        for( ; i < npoints; i++ )
+        {
+            float pt_x = pts[2*i];
+            float pt_y = pts[2*i+1];
+
+            xmin_f = std::min(xmin_f, pt_x);
+            xmax_f = std::max(xmax_f, pt_x);
+            ymin_f = std::min(ymin_f, pt_y);
+            ymax_f = std::max(ymax_f, pt_y);
+        }
+
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), the extrema are floored, not rounded
+        xmin = floorSaturate(xmin_f);
+        xmax = floorSaturate(xmax_f);
+        ymin = floorSaturate(ymin_f);
+        ymax = floorSaturate(ymax_f);
+    }
+
+    // xmax - xmin overflows int once the extrema saturate, so the sides are computed in int64
+    const int64_t width  = (int64_t)xmax - (int64_t)xmin + 1;
+    const int64_t height = (int64_t)ymax - (int64_t)ymin + 1;
+    return Rect(xmin, ymin, (int)std::min<int64_t>(width, INT_MAX), (int)std::min<int64_t>(height, INT_MAX));
+}
+
+
+cv::Rect cv::boundingRect(InputArray array)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat m = array.getMat();
+    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+}
+
+
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
+CV_IMPL  CvRect
+cvBoundingRect( CvArr* array, int update )
+{
+    cv::Rect rect;
+    CvContour contour_header;
+    CvSeq* ptseq = 0;
+    CvSeqBlock block;
+
+    CvMat stub, *mat = 0;
+    int calculate = update;
+
+    if( CV_IS_SEQ( array ))
+    {
+        ptseq = (CvSeq*)array;
+        if( !CV_IS_SEQ_POINT_SET( ptseq ))
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
+
+        if( ptseq->header_size < (int)sizeof(CvContour))
+        {
+            update = 0;
+            calculate = 1;
+        }
+    }
+    else
+    {
+        mat = cvGetMat( array, &stub );
+        if( CV_MAT_TYPE(mat->type) == CV_32SC2 ||
+            CV_MAT_TYPE(mat->type) == CV_32FC2 )
+        {
+            ptseq = cvPointSeqFromMat(CV_SEQ_KIND_GENERIC, mat, &contour_header, &block);
+            mat = 0;
+        }
+        else if( CV_MAT_TYPE(mat->type) != CV_8UC1 &&
+                CV_MAT_TYPE(mat->type) != CV_8SC1 )
+            CV_Error( cv::Error::StsUnsupportedFormat,
+                "The image/matrix format is not supported by the function" );
+        update = 0;
+        calculate = 1;
+    }
+
+    if( !calculate )
+        return ((CvContour*)ptseq)->rect;
+
+    if( mat )
+    {
+        rect = cvRect(maskBoundingRect(cv::cvarrToMat(mat)));
+    }
+    else if( ptseq->total )
+    {
+        cv::AutoBuffer<double> abuf;
+        rect = cvRect(pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
+    }
+    if( update )
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
 }

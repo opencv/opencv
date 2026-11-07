@@ -45,6 +45,9 @@ typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
 typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
+#ifdef HAVE_OPENCV_OBJDETECT
+typedef std::vector<aruco::Dictionary> vector_Dictionary;
+#endif // HAVE_OPENCV_OBJDETECT
 
 typedef std::vector<std::vector<char> > vector_vector_char;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
@@ -112,7 +115,7 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
-  {"setMouseCallback", CV_PY_FN_WITH_KW(pycvSetMouseCallback), "setMouseCallback(windowName, onMouse [, param]) -> None"},
+  {"setMouseCallback", CV_PY_FN_WITH_KW(pycvSetMouseCallback), "setMouseCallback(window_name, on_mouse [, param]) -> None"},
 #endif
 #ifdef HAVE_OPENCV_DNN
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
@@ -223,7 +226,7 @@ static PyObject* createSubmodule(PyObject* parent_module, const std::string& nam
             }
             /// Populates parent module dictionary. Submodule lifetime should be managed
             /// by the global modules dictionary and parent module dictionary, so Py_DECREF after
-            /// successfull call to the `PyDict_SetItemString` is redundant.
+            /// successful call to the `PyDict_SetItemString` is redundant.
             if (PyDict_SetItemString(parent_module_dict, submodule_name.c_str(), submodule) < 0) {
                 return PyErr_Format(PyExc_ImportError,
                     "Can't register a submodule '%s' (full name: '%s')",
@@ -252,9 +255,18 @@ static bool init_submodule(PyObject * root, const char * name, PyMethodDef * met
     }
     // populate module's dict
     PyObject * d = PyModule_GetDict(submodule);
+    PySafeObject module_name(PyString_FromString(name));
+    if (!module_name)
+    {
+        return false;
+    }
     for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
     {
-        PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+        PyObject * method_obj = PyCFunction_NewEx(m, NULL, module_name);
+        if (!method_obj)
+        {
+            return false;
+        }
         if (PyDict_SetItemString(d, m->ml_name, method_obj) < 0)
         {
             PyErr_Format(PyExc_ImportError,
@@ -284,6 +296,7 @@ static bool init_submodule(PyObject * root, const char * name, PyMethodDef * met
 static inline
 bool registerTypeInModuleScope(PyObject* module, const char* type_name, PyObject* type_obj)
 {
+    Py_INCREF(type_obj); /// Give PyModule_AddObject a reference to steal.
     if (PyModule_AddObject(module, type_name, type_obj) < 0)
     {
         PyErr_Format(PyExc_ImportError,
@@ -556,6 +569,11 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_64FC2);
     PUBLISH(CV_64FC3);
     PUBLISH(CV_64FC4);
+    PUBLISH(CV_16F);
+    PUBLISH(CV_16FC1);
+    PUBLISH(CV_16FC2);
+    PUBLISH(CV_16FC3);
+    PUBLISH(CV_16FC4);
 #undef PUBLISH_
 #undef PUBLISH
 

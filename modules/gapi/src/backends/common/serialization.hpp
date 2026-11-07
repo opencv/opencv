@@ -18,7 +18,8 @@
 #include "opencv2/gapi/render/render_types.hpp"
 #include "opencv2/gapi/s11n.hpp" // basic interfaces
 
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined _MSC_VER
+#pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
 
@@ -194,7 +195,7 @@ class GAPI_EXPORTS ByteMemoryInStream final: public IIStream {
     size_t m_idx = 0u;
 
     void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
-    uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
+    uint32_t getU32() { uint32_t v{}; *this >> v; return v; }
 
     //virtual IIStream& operator>> (uint32_t &) final;
 
@@ -231,5 +232,9 @@ GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_COMMON_SERIALIZATION_HPP

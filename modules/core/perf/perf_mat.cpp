@@ -99,7 +99,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
 
 PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
             testing::Combine(testing::Values(::perf::sz1080p, ::perf::szODD),
-                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_32SC1, CV_32FC4))
+                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_16UC3, CV_32SC1, CV_32SC2, CV_32FC3, CV_32FC4))
             )
 {
     const Size_MatType_t params = GetParam();
@@ -119,7 +119,7 @@ PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
 
 PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
             testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
-                             testing::Values(CV_8UC1, CV_8UC2))
+                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, CV_16UC3, CV_16UC4, CV_32FC3, CV_32FC4))
             )
 {
     const Size_MatType_t params = GetParam();
@@ -136,6 +136,61 @@ PERF_TEST_P(Size_MatType, Mat_SetToWithMask,
     }
 
     SANITY_CHECK(src);
+}
+
+enum { MASK_RANDOM, MASK_BLOCKS, MASK_ZERO };
+CV_ENUM(MaskPattern, MASK_RANDOM, MASK_BLOCKS, MASK_ZERO)
+
+typedef tuple<MatType, MaskPattern> MatType_MaskPattern_t;
+typedef TestBaseWithParam<MatType_MaskPattern_t> MatType_MaskPattern;
+
+static Mat makeMaskPattern(Size size, int pattern)
+{
+    Mat mask(size, CV_8UC1, Scalar(0));
+    RNG& rng = theRNG();
+    if (pattern == MASK_RANDOM)
+        rng.fill(mask, RNG::UNIFORM, 0, 2);
+    else if (pattern == MASK_BLOCKS)
+        for (int y = 0; y < size.height; y += 64)
+            for (int x = 0; x < size.width; x += 64)
+                if (rng.uniform(0, 2))
+                    mask(Rect(x, y, std::min(64, size.width - x), std::min(64, size.height - y))).setTo(255);
+    return mask;
+}
+
+PERF_TEST_P(MatType_MaskPattern, Mat_CopyToWithMaskPattern,
+            testing::Combine(testing::Values(CV_64FC1, CV_32FC2, CV_16UC4),
+                             MaskPattern::all()))
+{
+    const int type = get<0>(GetParam());
+    const int pattern = get<1>(GetParam());
+    const Size size = sz1080p;
+
+    Mat src(size, type), dst(size, type, Scalar::all(0));
+    randu(src, 0, 100);
+    Mat mask = makeMaskPattern(size, pattern);
+    declare.in(src, mask).out(dst);
+
+    TEST_CYCLE() src.copyTo(dst, mask);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(MatType_MaskPattern, Mat_SetToWithMaskPattern,
+            testing::Combine(testing::Values(CV_64FC1, CV_32FC2, CV_16UC4),
+                             MaskPattern::all()))
+{
+    const int type = get<0>(GetParam());
+    const int pattern = get<1>(GetParam());
+    const Size size = sz1080p;
+
+    Mat dst(size, type, Scalar::all(0));
+    Mat mask = makeMaskPattern(size, pattern);
+    declare.in(mask).out(dst);
+
+    TEST_CYCLE() dst.setTo(Scalar::all(27), mask);
+
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// Transform ////////////////////////

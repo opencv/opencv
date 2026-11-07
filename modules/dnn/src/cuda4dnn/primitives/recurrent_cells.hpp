@@ -55,9 +55,6 @@ public:
 
         c0Tensor = csl::makeTensorHeader<T>(c0);
         csl::copyMatToTensor<T>(c0, c0Tensor, stream);
-
-        csl::WorkspaceBuilder builder;
-        builder.require<T>(lstm.get_workspace_memory_in_bytes());
     }
 
     void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
@@ -75,8 +72,7 @@ public:
         Ptr<wrapper_type> yc_output_wrapper = outputs.size() == 2 ? outputs[1].dynamicCast<wrapper_type>() : Ptr<wrapper_type>();
         csl::TensorSpan<T> yc_output = yc_output_wrapper.empty() ? csl::TensorSpan<T>() : yc_output_wrapper->getSpan();
 
-        csl::WorkspaceAllocator allocator(workspace);
-        lstm.inference(input, y_output, yc_output, filtersTensor, h0Tensor, c0Tensor, allocator.get_instance());
+        lstm.inference(input, y_output, yc_output, filtersTensor, h0Tensor, c0Tensor, workspace);
     }
 
     std::size_t get_workspace_memory_in_bytes() const noexcept override

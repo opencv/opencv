@@ -12,6 +12,12 @@
 #define CV_HAL_INTER_CUBIC 2
 #define CV_HAL_INTER_AREA 3
 #define CV_HAL_INTER_LANCZOS4 4
+#define CV_HAL_INTER_LINEAR_EXACT 5
+#define CV_HAL_INTER_NEAREST_EXACT 6
+#define CV_HAL_INTER_MAX 7
+#define CV_HAL_WARP_FILL_OUTLIERS 8
+#define CV_HAL_WARP_INVERSE_MAP 16
+#define CV_HAL_WARP_RELATIVE_MAP 32
 //! @}
 
 //! @name Morphology operations

@@ -14,7 +14,7 @@ So in this chapter, you will learn:
 Apart from OpenCV, Python also provides a module **time** which is helpful in measuring the time of
 execution. Another module **profile** helps to get a detailed report on the code, like how much time
 each function in the code took, how many times the function was called, etc. But, if you are using
-IPython, all these features are integrated in an user-friendly manner. We will see some important
+IPython, all these features are integrated in a user-friendly manner. We will see some important
 ones, and for more details, check links in the **Additional Resources** section.
 
 Measuring Performance with OpenCV
@@ -37,6 +37,7 @@ of odd sizes ranging from 5 to 49. (Don't worry about what the result will look 
 goal):
 @code{.py}
 img1 = cv.imread('messi5.jpg')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
 
 e1 = cv.getTickCount()
 for i in range(5,49,2):
@@ -162,6 +163,3 @@ Additional Resources
 2.  Scipy Lecture Notes - [Advanced
     Numpy](http://scipy-lectures.github.io/advanced/advanced_numpy/index.html#advanced-numpy)
 3.  [Timing and Profiling in IPython](http://pynash.org/2013/03/06/timing-and-profiling/)
-
-Exercises
----------

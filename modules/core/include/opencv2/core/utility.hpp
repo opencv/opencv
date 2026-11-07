@@ -102,11 +102,18 @@ template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 {
 public:
     typedef _Tp value_type;
+    typedef  std::size_t size_type;
+    typedef  std::ptrdiff_t difference_type;
+    typedef const _Tp* const_iterator;
+    typedef _Tp* iterator;
+    typedef const _Tp& const_reference;
+    typedef _Tp& reference;
 
     //! the default constructor
     AutoBuffer();
     //! constructor taking the real buffer size
     explicit AutoBuffer(size_t _size);
+    AutoBuffer(size_t _size, const _Tp& value);
 
     //! the copy constructor
     AutoBuffer(const AutoBuffer<_Tp, fixed_size>& buf);
@@ -140,7 +147,25 @@ public:
     //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
     inline const _Tp& operator[] (size_t i) const { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
 #endif
-
+public:
+    inline iterator begin() { return data(); }
+    inline const_iterator begin() const { return data(); }
+    inline const_iterator cbegin() const { return begin(); }
+    inline iterator end() { return data()+size(); }
+    inline const_iterator end() const { return data()+size(); }
+    inline const_iterator cend() const { return end(); }
+public:
+    inline bool empty() const { return !size(); }
+    inline void clear() {resize(0);}
+    inline const_reference front() const { return (*this)[0] ;}
+    inline reference front() { return (*this)[0] ;}
+    inline const_reference back() const { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
+    inline reference back() { CV_DbgCheckGT(sz, (size_t)0, "out of range"); return (*this)[size()-1] ;}
+public:
+    inline void push_back( const _Tp& value ) {resize(size()+1); back() = value;}
+    inline void push_back( _Tp&& value ) {resize(size()+1); back() = std::move(value);}
+    inline void emplace_back( _Tp&& value ) {push_back(value);}
+    inline void pop_back() {CV_DbgCheckGT(sz, (size_t)0, "out of range"); resize(size()-1);}
 protected:
     //! pointer to the real buffer, can point to buf if the buffer is small enough
     _Tp* ptr;
@@ -176,14 +201,45 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+/** @brief Generates a unique temporary file name.
+
+This function generates a full, unique file path for a temporary file,
+which can be used to create temporary files for various purposes.
+
+@param suffix (optional) The desired file extension or suffix for the temporary file (e.g., ".png", ".txt").
+If no suffix is provided (suffix = 0), the file will not have a specific extension.
+
+@return cv::String A full unique path for the temporary file.
+
+@note
+- The function does not create the file, it only generates the name.
+- The file name is unique for the system session.
+- Works cross-platform (Windows, Linux, macOS).
+ */
 CV_EXPORTS String tempfile( const char* suffix = 0);
+
+/** @brief Searches for files matching the specified pattern in a directory.
+
+This function searches for files that match a given pattern (e.g., `*.jpg`)
+in the specified directory. The search can be limited to the directory itself
+or be recursive, including subdirectories.
+
+@param pattern The file search pattern, which can include wildcards like `*`
+(for matching multiple characters) or `?` (for matching a single character).
+
+@param result  Output vector where the file paths matching the search
+pattern will be stored.
+@param recursive (optional) Boolean flag indicating whether to search
+subdirectories recursively. If true, the search will include all subdirectories.
+The default value is `false`.
+ */
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
-/** @brief OpenCV will try to set the number of threads for the next parallel region.
+/** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
 
-If threads == 0, OpenCV will disable threading optimizations and run all it's functions
-sequentially. Passing threads \< 0 will reset threads number to system default. This function must
-be called outside of parallel region.
+If threads == 1, OpenCV will disable threading optimizations and run all it's functions
+sequentially. Passing threads \< 0 will reset threads number to system default.
+The function is not thread-safe. It must not be called in parallel region or concurrent threads.
 
 OpenCV will try to run its functions with specified threads number, but some behaviour differs from
 framework:
@@ -309,11 +365,12 @@ public:
     //! stops counting ticks.
     CV_WRAP void stop()
     {
-        int64 time = cv::getTickCount();
+        const int64 time = cv::getTickCount();
         if (startTime == 0)
             return;
         ++counter;
-        sumTime += (time - startTime);
+        lastTime = time - startTime;
+        sumTime += lastTime;
         startTime = 0;
     }
 
@@ -336,9 +393,33 @@ public:
     }
 
     //! returns passed time in seconds.
-    CV_WRAP double getTimeSec()   const
+    CV_WRAP double getTimeSec() const
     {
         return (double)getTimeTicks() / getTickFrequency();
+    }
+
+    //! returns counted ticks of the last iteration.
+    CV_WRAP int64 getLastTimeTicks() const
+    {
+        return lastTime;
+    }
+
+    //! returns passed time of the last iteration in microseconds.
+    CV_WRAP double getLastTimeMicro() const
+    {
+        return getLastTimeMilli()*1e3;
+    }
+
+    //! returns passed time of the last iteration in milliseconds.
+    CV_WRAP double getLastTimeMilli() const
+    {
+        return getLastTimeSec()*1e3;
+    }
+
+    //! returns passed time of the last iteration in seconds.
+    CV_WRAP double getLastTimeSec() const
+    {
+        return (double)getLastTimeTicks() / getTickFrequency();
     }
 
     //! returns internal counter value.
@@ -373,15 +454,17 @@ public:
     //! resets internal values.
     CV_WRAP void reset()
     {
-        startTime = 0;
-        sumTime = 0;
         counter = 0;
+        sumTime = 0;
+        startTime = 0;
+        lastTime = 0;
     }
 
 private:
     int64 counter;
     int64 sumTime;
     int64 startTime;
+    int64 lastTime;
 };
 
 /** @brief output operator
@@ -543,6 +626,18 @@ bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
 {
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
 }
+
+/*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
+*/
+enum AlgorithmHint {
+    ALGO_HINT_DEFAULT = 0, //!< Default algorithm behaviour defined during OpenCV build
+    ALGO_HINT_ACCURATE = 1, //!< Use generic portable implementation
+    ALGO_HINT_APPROX = 2, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
+};
+
+/*! @brief Returns AlgorithmHint defined during OpenCV compilation. Defines #ALGO_HINT_DEFAULT behavior.
+ */
+CV_EXPORTS_W AlgorithmHint getDefaultAlgorithmHint();
 
 /** @brief Enables or disables the optimized code.
 
@@ -773,7 +868,7 @@ The sample below demonstrates how to use CommandLineParser:
 The keys parameter is a string containing several blocks, each one is enclosed in curly braces and
 describes one argument. Each argument contains three parts separated by the `|` symbol:
 
--# argument names is a space-separated list of option synonyms (to mark argument as positional, prefix it with the `@` symbol)
+-# argument names is a list of option synonyms separated by standard space characters ' ' (to mark argument as positional, prefix it with the `@` symbol)
 -# default value will be used if the argument was not provided (can be empty)
 -# help message (can be empty)
 
@@ -796,6 +891,8 @@ For example:
 Note that there are no default values for `help` and `timestamp` so we can check their presence using the `has()` method.
 Arguments with default values are considered to be always present. Use the `get()` method in these cases to check their
 actual value instead.
+Note that whitespace characters other than standard spaces are considered part of the string.
+Additionally, leading and trailing standard spaces around the help messages are ignored.
 
 String keys like `get<String>("@image1")` return the empty string `""` by default - even with an empty default value.
 Use the special `<none>` default value to enforce that the returned string must not be empty. (like in `get<String>("@image2")`)
@@ -980,6 +1077,13 @@ AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size)
     ptr = buf;
     sz = fixed_size;
     allocate(_size);
+}
+
+template<typename _Tp, size_t fixed_size> inline
+AutoBuffer<_Tp, fixed_size>::AutoBuffer(size_t _size, const _Tp& value)
+                            :AutoBuffer<_Tp, fixed_size>(_size)
+{
+    std::fill(begin(), end(), value);
 }
 
 template<typename _Tp, size_t fixed_size> inline

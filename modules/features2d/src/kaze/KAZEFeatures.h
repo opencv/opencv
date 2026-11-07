@@ -28,7 +28,7 @@ private:
 
     /// Parameters of the Nonlinear diffusion class
     KAZEOptions options_;               ///< Configuration options for KAZE
-    std::vector<TEvolution> evolution_;    ///< Vector of nonlinear diffusion evolution
+    TPyramid evolution_;    ///< Vector of nonlinear diffusion evolution
 
     /// Vector of keypoint vectors for finding extrema in multiple threads
     std::vector<std::vector<cv::KeyPoint> > kpts_par_;
@@ -49,7 +49,13 @@ public:
     int Create_Nonlinear_Scale_Space(const cv::Mat& img);
     void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
     void Feature_Description(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
-    static void Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_, const KAZEOptions& options);
+    static void Compute_Main_Orientation(cv::KeyPoint& kpt, const TPyramid& evolution_, const KAZEOptions& options);
+
+#ifdef HAVE_OPENCL
+    void Create_Nonlinear_Scale_Space_UMat(InputArray img, UTPyramid& uPyr);
+    void Feature_Detection_UMat(UTPyramid& uPyr, std::vector<cv::KeyPoint>& kpts);
+    void Compute_Descriptors_UMat(std::vector<cv::KeyPoint>& kpts, OutputArray desc, UTPyramid& uPyr);
+#endif
 
     /// Feature Detection Methods
     void Compute_KContrast(const cv::Mat& img, const float& kper);

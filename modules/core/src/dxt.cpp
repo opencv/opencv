@@ -60,11 +60,17 @@ namespace cv
 #undef USE_IPP_DFT
 #endif
 
+#if defined USE_IPP_DFT
+#if IPP_VERSION_X100 >= 202220
+#define IPP_DISABLE_DFT32F ((depth == CV_32F) && (ippCPUID_AVX512F&cv::ipp::getIppFeatures()))
+#else
+#define IPP_DISABLE_DFT32F false
+#endif
+#endif
+
 /****************************************************************************************\
                                Discrete Fourier Transform
 \****************************************************************************************/
-
-#define CV_MAX_LOCAL_DFT_SIZE  (1 << 15)
 
 static unsigned char bitrevTab[] =
 {
@@ -845,6 +851,17 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
     int i, j, k;
     Complex<T> t;
     T scale = (T)c.scale;
+
+    if(typeid(T) == typeid(float))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_32F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+    if(typeid(T) == typeid(double))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_64F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
 
     if( c.useIpp )
     {
@@ -3005,7 +3022,31 @@ public:
             return;
         }
 #endif
+        uchar* work = dst;
+        size_t work_step = dst_step;
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+        // Fix for CPU cache thrashing on Windows-ARM64 when stride is a power of 2.
+        // Column-wise access with power-of-2 stride maps to very few cache sets,
+        // causing ~97% cache miss rate. Adding one cache line (64 bytes) to the
+        // stride distributes accesses across all cache sets.
+        static const size_t DFT_CACHE_LINE_PAD = 64;
+        static const size_t DFT_PAD_THRESHOLD = 96 * 1024;
 
+        AutoBuffer<uchar> padded_buf;
+
+        if (stages.size() == 2 &&
+            dst_step > 0 && (dst_step & (dst_step - 1)) == 0 &&
+            dst_step * (size_t)height > DFT_PAD_THRESHOLD)
+        {
+            work_step = dst_step + DFT_CACHE_LINE_PAD;
+            if ((work_step & (work_step - 1)) == 0)
+                work_step += DFT_CACHE_LINE_PAD;
+            padded_buf.allocate(work_step * height);
+            work = padded_buf.data();
+        }
+#endif
+
+        bool prevInWork = false;
         for(uint stageIndex = 0; stageIndex < stages.size(); ++stageIndex)
         {
             int stage_src_channels = src_channels;
@@ -3013,19 +3054,30 @@ public:
 
             if (stageIndex == 1)
             {
-                src = dst;
-                src_step = dst_step;
+                src = prevInWork ? work : dst;
+                src_step = prevInWork ? work_step : dst_step;
                 stage_src_channels = stage_dst_channels;
             }
 
             int stage = stages[stageIndex];
             bool isLastStage = (stageIndex + 1 == stages.size());
             bool isComplex = stage_src_channels != stage_dst_channels;
+            bool needsWorkBuffer = (stage == 1) || (!isLastStage && stages[stageIndex + 1] == 1);
+            uchar* out = needsWorkBuffer ? work : dst;
+            size_t out_step = needsWorkBuffer ? work_step : dst_step;
 
             if( stage == 0 )
-                rowDft(src, src_step, dst, dst_step, isComplex, isLastStage);
+                rowDft(src, src_step, out, out_step, isComplex, isLastStage);
             else
-                colDft(src, src_step, dst, dst_step, stage_src_channels, stage_dst_channels, isLastStage);
+                colDft(src, src_step, out, out_step, stage_src_channels, stage_dst_channels, isLastStage);
+
+            prevInWork = needsWorkBuffer;
+        }
+
+        if (prevInWork && work != dst)
+        {
+            for (int i = 0; i < height; i++)
+                memcpy(dst + dst_step * i, work + work_step * i, dst_step);
         }
     }
 
@@ -3249,7 +3301,7 @@ public:
         opt.ipp_spec = 0;
         opt.ipp_work = 0;
 
-        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) ) // use IPP DFT if available
+        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) && !IPP_DISABLE_DFT32F) // use IPP DFT if available
         {
             int ipp_norm_flag = (flags & CV_HAL_DFT_SCALE) == 0 ? 8 : opt.isInverse ? 2 : 1;
             int specsize=0, initsize=0, worksize=0;
@@ -3471,7 +3523,7 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
     {
         if(width == 1 && nonzero_rows > 0 )
         {
-            CV_Error( CV_StsNotImplemented,
+            CV_Error( cv::Error::StsNotImplemented,
             "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
             "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
         }
@@ -4319,7 +4371,7 @@ public:
             if( len != prev_len )
             {
                 if( len > 1 && (len & 1) )
-                    CV_Error( CV_StsNotImplemented, "Odd-size DCT\'s are not implemented" );
+                    CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
 
                 opt.nf = DFTFactorize( len, opt.factors );
                 bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
@@ -4365,7 +4417,7 @@ struct ReplacementDCT2D : public hal::DCT2D
     ReplacementDCT2D() : context(0), isInitialized(false) {}
     bool init(int width, int height, int depth, int flags)
     {
-        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        int res = cv_hal_dctInit2D(&context, width, height, depth, flags);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }

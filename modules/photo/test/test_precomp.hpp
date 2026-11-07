@@ -5,6 +5,7 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/photo.hpp"
 
 #endif

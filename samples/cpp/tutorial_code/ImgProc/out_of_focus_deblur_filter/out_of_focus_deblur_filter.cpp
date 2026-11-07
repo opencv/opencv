@@ -1,8 +1,9 @@
-﻿/**
+/**
 * @brief You will learn how to recover an out-of-focus image by Wiener filter
 * @author Karpushin Vladislav, karpushin@ngs.ru, https://github.com/VladKarpushin
 */
 #include <iostream>
+#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 
@@ -17,9 +18,9 @@ void calcWnrFilter(const Mat& input_h_PSF, Mat& output_G, double nsr);
 
 const String keys =
 "{help h usage ? |             | print this message   }"
-"{image          |original.JPG | input image name     }"
-"{R              |53           | radius               }"
-"{SNR            |5200         | signal to noise ratio}"
+"{image          |original.jpg | input image name     }"
+"{R              |5           | radius               }"
+"{SNR            |100         | signal to noise ratio}"
 ;
 
 int main(int argc, char *argv[])
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     int R = parser.get<int>("R");
     int snr = parser.get<int>("SNR");
     string strInFileName = parser.get<String>("image");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/out_of_focus_deblur_filter/images");
 
     if (!parser.check())
     {
@@ -43,7 +45,7 @@ int main(int argc, char *argv[])
     }
 
     Mat imgIn;
-    imgIn = imread(strInFileName, IMREAD_GRAYSCALE);
+    imgIn = imread(samples::findFile( strInFileName ), IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
         cout << "ERROR : Image cannot be loaded..!!" << endl;
@@ -69,7 +71,10 @@ int main(int argc, char *argv[])
 
     imgOut.convertTo(imgOut, CV_8U);
     normalize(imgOut, imgOut, 0, 255, NORM_MINMAX);
+    imshow("Original", imgIn);
+    imshow("Debluring", imgOut);
     imwrite("result.jpg", imgOut);
+    waitKey(0);
     return 0;
 }
 

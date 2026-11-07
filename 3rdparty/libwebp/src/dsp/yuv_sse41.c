@@ -14,10 +14,17 @@
 #include "src/dsp/yuv.h"
 
 #if defined(WEBP_USE_SSE41)
+#include <emmintrin.h>
+#include <smmintrin.h>
+
+#include <stdlib.h>
 
 #include "src/dsp/common_sse41.h"
-#include <stdlib.h>
-#include <smmintrin.h>
+#include "src/dsp/cpu.h"
+#include "src/dsp/dsp.h"
+#include "src/utils/utils.h"
+#include "src/webp/decode.h"
+#include "src/webp/types.h"
 
 //-----------------------------------------------------------------------------
 // Convert spans of 32 pixels to various RGB formats for the fancy upsampler.
@@ -74,15 +81,15 @@ static WEBP_INLINE __m128i Load_HI_16_SSE41(const uint8_t* src) {
 // Load and replicate the U/V samples
 static WEBP_INLINE __m128i Load_UV_HI_8_SSE41(const uint8_t* src) {
   const __m128i zero = _mm_setzero_si128();
-  const __m128i tmp0 = _mm_cvtsi32_si128(*(const uint32_t*)src);
+  const __m128i tmp0 = _mm_cvtsi32_si128(WebPMemToInt32(src));
   const __m128i tmp1 = _mm_unpacklo_epi8(zero, tmp0);
   return _mm_unpacklo_epi16(tmp1, tmp1);   // replicate samples
 }
 
 // Convert 32 samples of YUV444 to R/G/B
-static void YUV444ToRGB_SSE41(const uint8_t* const y,
-                              const uint8_t* const u,
-                              const uint8_t* const v,
+static void YUV444ToRGB_SSE41(const uint8_t* WEBP_RESTRICT const y,
+                              const uint8_t* WEBP_RESTRICT const u,
+                              const uint8_t* WEBP_RESTRICT const v,
                               __m128i* const R, __m128i* const G,
                               __m128i* const B) {
   const __m128i Y0 = Load_HI_16_SSE41(y), U0 = Load_HI_16_SSE41(u),
@@ -91,9 +98,9 @@ static void YUV444ToRGB_SSE41(const uint8_t* const y,
 }
 
 // Convert 32 samples of YUV420 to R/G/B
-static void YUV420ToRGB_SSE41(const uint8_t* const y,
-                              const uint8_t* const u,
-                              const uint8_t* const v,
+static void YUV420ToRGB_SSE41(const uint8_t* WEBP_RESTRICT const y,
+                              const uint8_t* WEBP_RESTRICT const u,
+                              const uint8_t* WEBP_RESTRICT const v,
                               __m128i* const R, __m128i* const G,
                               __m128i* const B) {
   const __m128i Y0 = Load_HI_16_SSE41(y), U0 = Load_UV_HI_8_SSE41(u),
@@ -107,7 +114,7 @@ static void YUV420ToRGB_SSE41(const uint8_t* const y,
 static WEBP_INLINE void PlanarTo24b_SSE41(
     __m128i* const in0, __m128i* const in1, __m128i* const in2,
     __m128i* const in3, __m128i* const in4, __m128i* const in5,
-    uint8_t* const rgb) {
+    uint8_t* WEBP_RESTRICT const rgb) {
   // The input is 6 registers of sixteen 8b but for the sake of explanation,
   // let's take 6 registers of four 8b values.
   // To pack, we will keep taking one every two 8b integer and move it
@@ -130,8 +137,10 @@ static WEBP_INLINE void PlanarTo24b_SSE41(
   _mm_storeu_si128((__m128i*)(rgb + 80), *in5);
 }
 
-void VP8YuvToRgb32_SSE41(const uint8_t* y, const uint8_t* u, const uint8_t* v,
-                         uint8_t* dst) {
+void VP8YuvToRgb32_SSE41(const uint8_t* WEBP_RESTRICT y,
+                         const uint8_t* WEBP_RESTRICT u,
+                         const uint8_t* WEBP_RESTRICT v,
+                         uint8_t* WEBP_RESTRICT dst) {
   __m128i R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
   __m128i rgb0, rgb1, rgb2, rgb3, rgb4, rgb5;
 
@@ -152,8 +161,10 @@ void VP8YuvToRgb32_SSE41(const uint8_t* y, const uint8_t* u, const uint8_t* v,
   PlanarTo24b_SSE41(&rgb0, &rgb1, &rgb2, &rgb3, &rgb4, &rgb5, dst);
 }
 
-void VP8YuvToBgr32_SSE41(const uint8_t* y, const uint8_t* u, const uint8_t* v,
-                         uint8_t* dst) {
+void VP8YuvToBgr32_SSE41(const uint8_t* WEBP_RESTRICT y,
+                         const uint8_t* WEBP_RESTRICT u,
+                         const uint8_t* WEBP_RESTRICT v,
+                         uint8_t* WEBP_RESTRICT dst) {
   __m128i R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
   __m128i bgr0, bgr1, bgr2, bgr3, bgr4, bgr5;
 
@@ -177,9 +188,10 @@ void VP8YuvToBgr32_SSE41(const uint8_t* y, const uint8_t* u, const uint8_t* v,
 //-----------------------------------------------------------------------------
 // Arbitrary-length row conversion functions
 
-static void YuvToRgbRow_SSE41(const uint8_t* y,
-                              const uint8_t* u, const uint8_t* v,
-                              uint8_t* dst, int len) {
+static void YuvToRgbRow_SSE41(const uint8_t* WEBP_RESTRICT y,
+                              const uint8_t* WEBP_RESTRICT u,
+                              const uint8_t* WEBP_RESTRICT v,
+                              uint8_t* WEBP_RESTRICT dst, int len) {
   int n;
   for (n = 0; n + 32 <= len; n += 32, dst += 32 * 3) {
     __m128i R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
@@ -214,9 +226,10 @@ static void YuvToRgbRow_SSE41(const uint8_t* y,
   }
 }
 
-static void YuvToBgrRow_SSE41(const uint8_t* y,
-                              const uint8_t* u, const uint8_t* v,
-                              uint8_t* dst, int len) {
+static void YuvToBgrRow_SSE41(const uint8_t* WEBP_RESTRICT y,
+                              const uint8_t* WEBP_RESTRICT u,
+                              const uint8_t* WEBP_RESTRICT v,
+                              uint8_t* WEBP_RESTRICT dst, int len) {
   int n;
   for (n = 0; n + 32 <= len; n += 32, dst += 32 * 3) {
     __m128i R0, R1, R2, R3, G0, G1, G2, G3, B0, B1, B2, B3;
@@ -288,7 +301,7 @@ WEBP_TSAN_IGNORE_FUNCTION void WebPInitSamplersSSE41(void) {
 // rrrr... rrrr... gggg... gggg... bbbb... bbbb....
 // Similar to PlanarTo24bHelper(), but in reverse order.
 static WEBP_INLINE void RGB24PackedToPlanar_SSE41(
-    const uint8_t* const rgb, __m128i* const out /*out[6]*/) {
+    const uint8_t* WEBP_RESTRICT const rgb, __m128i* const out /*out[6]*/) {
   const __m128i A0 = _mm_loadu_si128((const __m128i*)(rgb +  0));
   const __m128i A1 = _mm_loadu_si128((const __m128i*)(rgb + 16));
   const __m128i A2 = _mm_loadu_si128((const __m128i*)(rgb + 32));
@@ -332,7 +345,7 @@ static WEBP_INLINE void RGB24PackedToPlanar_SSE41(
 
 // Convert 8 packed ARGB to r[], g[], b[]
 static WEBP_INLINE void RGB32PackedToPlanar_SSE41(
-    const uint32_t* const argb, __m128i* const rgb /*in[6]*/) {
+    const uint32_t* WEBP_RESTRICT const argb, __m128i* const rgb /*in[6]*/) {
   const __m128i zero = _mm_setzero_si128();
   __m128i a0 = LOAD_16(argb + 0);
   __m128i a1 = LOAD_16(argb + 4);
@@ -405,7 +418,8 @@ static WEBP_INLINE void ConvertRGBToUV_SSE41(const __m128i* const R,
 #undef MK_CST_16
 #undef TRANSFORM
 
-static void ConvertRGB24ToY_SSE41(const uint8_t* rgb, uint8_t* y, int width) {
+static void ConvertRGB24ToY_SSE41(const uint8_t* WEBP_RESTRICT rgb,
+                                  uint8_t* WEBP_RESTRICT y, int width) {
   const int max_width = width & ~31;
   int i;
   for (i = 0; i < max_width; rgb += 3 * 16 * 2) {
@@ -439,7 +453,8 @@ static void ConvertRGB24ToY_SSE41(const uint8_t* rgb, uint8_t* y, int width) {
   }
 }
 
-static void ConvertBGR24ToY_SSE41(const uint8_t* bgr, uint8_t* y, int width) {
+static void ConvertBGR24ToY_SSE41(const uint8_t* WEBP_RESTRICT bgr,
+                                  uint8_t* WEBP_RESTRICT y, int width) {
   const int max_width = width & ~31;
   int i;
   for (i = 0; i < max_width; bgr += 3 * 16 * 2) {
@@ -473,7 +488,8 @@ static void ConvertBGR24ToY_SSE41(const uint8_t* bgr, uint8_t* y, int width) {
   }
 }
 
-static void ConvertARGBToY_SSE41(const uint32_t* argb, uint8_t* y, int width) {
+static void ConvertARGBToY_SSE41(const uint32_t* WEBP_RESTRICT argb,
+                                 uint8_t* WEBP_RESTRICT y, int width) {
   const int max_width = width & ~15;
   int i;
   for (i = 0; i < max_width; i += 16) {
@@ -501,8 +517,9 @@ static void HorizontalAddPack_SSE41(const __m128i* const A,
   *out = _mm_packs_epi32(C, D);
 }
 
-static void ConvertARGBToUV_SSE41(const uint32_t* argb,
-                                  uint8_t* u, uint8_t* v,
+static void ConvertARGBToUV_SSE41(const uint32_t* WEBP_RESTRICT argb,
+                                  uint8_t* WEBP_RESTRICT u,
+                                  uint8_t* WEBP_RESTRICT v,
                                   int src_width, int do_store) {
   const int max_width = src_width & ~31;
   int i;
@@ -538,7 +555,7 @@ static void ConvertARGBToUV_SSE41(const uint32_t* argb,
 
 // Convert 16 packed ARGB 16b-values to r[], g[], b[]
 static WEBP_INLINE void RGBA32PackedToPlanar_16b_SSE41(
-    const uint16_t* const rgbx,
+    const uint16_t* WEBP_RESTRICT const rgbx,
     __m128i* const r, __m128i* const g, __m128i* const b) {
   const __m128i in0 = LOAD_16(rgbx +  0);  // r0 | g0 | b0 |x| r1 | g1 | b1 |x
   const __m128i in1 = LOAD_16(rgbx +  8);  // r2 | g2 | b2 |x| r3 | g3 | b3 |x
@@ -568,8 +585,9 @@ static WEBP_INLINE void RGBA32PackedToPlanar_16b_SSE41(
   *b = _mm_unpackhi_epi64(B1, B3);
 }
 
-static void ConvertRGBA32ToUV_SSE41(const uint16_t* rgb,
-                                    uint8_t* u, uint8_t* v, int width) {
+static void ConvertRGBA32ToUV_SSE41(const uint16_t* WEBP_RESTRICT rgb,
+                                    uint8_t* WEBP_RESTRICT u,
+                                    uint8_t* WEBP_RESTRICT v, int width) {
   const int max_width = width & ~15;
   const uint16_t* const last_rgb = rgb + 4 * max_width;
   while (rgb < last_rgb) {

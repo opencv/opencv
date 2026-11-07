@@ -5,6 +5,7 @@ import numpy as np
 import cv2 as cv
 import os
 import datetime
+import tempfile
 
 from tests_common import NewOpenCVTests
 
@@ -19,7 +20,8 @@ class get_cache_dir_test(NewOpenCVTests):
         path = cv.utils.fs.getCacheDirectoryForDownloads()
         gold_image = np.ones((16, 16, 3), np.uint8)
         read_from_file = np.zeros((16, 16, 3), np.uint8)
-        test_file_name = os.path.join(path, "test." + ext)
+        fd, test_file_name = tempfile.mkstemp(suffix="." + ext, dir=path)
+        os.close(fd)
         try:
             cv.imwrite(test_file_name, gold_image)
             read_from_file = cv.imread(test_file_name)

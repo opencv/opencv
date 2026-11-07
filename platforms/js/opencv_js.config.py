@@ -9,90 +9,112 @@ core = {
         'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed',
         'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat',
         'setLogLevel', 'getLogLevel',
+        'LUT',
     ],
     'Algorithm': [],
 }
 
 imgproc = {
     '': [
-        'Canny',
-        'GaussianBlur',
-        'Laplacian',
-        'HoughLines',
-        'HoughLinesP',
-        'HoughCircles',
-        'Scharr',
-        'Sobel',
         'adaptiveThreshold',
+        'applyColorMap',
         'approxPolyDP',
+        'approxPolyN',
         'arcLength',
+        'arrowedLine',
         'bilateralFilter',
+        'blendLinear',
         'blur',
         'boundingRect',
         'boxFilter',
         'calcBackProject',
         'calcHist',
+        'Canny',
         'circle',
+        'clipLine',
         'compareHist',
         'connectedComponents',
         'connectedComponentsWithStats',
         'contourArea',
+        'convertMaps',
         'convexHull',
         'convexityDefects',
         'cornerHarris',
         'cornerMinEigenVal',
         'createCLAHE',
+        'createHanningWindow',
         'createLineSegmentDetector',
         'cvtColor',
         'demosaicing',
         'dilate',
         'distanceTransform',
         'distanceTransformWithLabels',
+        'divSpectrums',
         'drawContours',
+        'drawMarker',
         'ellipse',
         'ellipse2Poly',
         'equalizeHist',
         'erode',
+        'fillConvexPoly',
+        'fillPoly',
         'filter2D',
         'findContours',
+        'findContoursLinkRuns',
         'fitEllipse',
+        'fitEllipseAMS',
+        'fitEllipseDirect',
         'fitLine',
         'floodFill',
+        'GaussianBlur',
         'getAffineTransform',
+        'getFontScaleFromHeight',
         'getPerspectiveTransform',
+        'getRectSubPix',
         'getRotationMatrix2D',
         'getStructuringElement',
         'goodFeaturesToTrack',
         'grabCut',
-        #'initUndistortRectifyMap',  # 4.x: moved to calib3d
+        'HoughLines',
+        'HoughLinesP',
+        'HoughCircles',
+        'HuMoments',
         'integral',
         'integral2',
+        'intersectConvexConvex',
+        'invertAffineTransform',
         'isContourConvex',
+        'Laplacian',
         'line',
         'matchShapes',
         'matchTemplate',
         'medianBlur',
         'minAreaRect',
         'minEnclosingCircle',
+        'minEnclosingTriangle',
         'moments',
         'morphologyEx',
         'pointPolygonTest',
+        'polylines',
+        'preCornerDetect',
         'putText',
         'pyrDown',
         'pyrUp',
         'rectangle',
         'remap',
         'resize',
+        'rotatedRectangleIntersection',
+        'Scharr',
         'sepFilter2D',
+        'Sobel',
+        'spatialGradient',
+        'sqrBoxFilter',
+        'stackBlur',
         'threshold',
-        #'undistort',  # 4.x: moved to calib3d
         'warpAffine',
         'warpPerspective',
         'warpPolar',
         'watershed',
-        'fillPoly',
-        'fillConvexPoly',
-        'polylines',
     ],
     'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize'],
     'segmentation_IntelligentScissorsMB': [
@@ -108,10 +130,29 @@ imgproc = {
     ],
 }
 
-objdetect = {'': ['groupRectangles'],
+objdetect = {'': ['groupRectangles', 'getPredefinedDictionary', 'extendDictionary',
+                  'drawDetectedMarkers', 'generateImageMarker', 'drawDetectedCornersCharuco',
+                  'drawDetectedDiamonds'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
-             'QRCodeDetector': ['QRCodeDetector', 'decode', 'decodeCurved', 'detect', 'detectAndDecode', 'detectMulti', 'setEpsX', 'setEpsY']}
+             'GraphicalCodeDetector': ['decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti'],
+             'QRCodeDetector': ['QRCodeDetector', 'decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti', 'decodeCurved', 'detectAndDecodeCurved', 'setEpsX', 'setEpsY'],
+             'aruco_PredefinedDictionaryType': [],
+             'aruco_Dictionary': ['Dictionary', 'getDistanceToId', 'generateImageMarker', 'getByteListFromBits', 'getBitsFromByteList'],
+             'aruco_Board': ['Board', 'matchImagePoints', 'generateImage'],
+             'aruco_GridBoard': ['GridBoard', 'generateImage', 'getGridSize', 'getMarkerLength', 'getMarkerSeparation', 'matchImagePoints'],
+             'aruco_CharucoParameters': ['CharucoParameters'],
+             'aruco_CharucoBoard': ['CharucoBoard', 'generateImage', 'getChessboardCorners', 'getNearestMarkerCorners', 'checkCharucoCornersCollinear', 'matchImagePoints', 'getLegacyPattern', 'setLegacyPattern'],
+             'aruco_DetectorParameters': ['DetectorParameters'],
+             'aruco_RefineParameters': ['RefineParameters'],
+             'aruco_ArucoDetector': ['ArucoDetector', 'detectMarkers', 'refineDetectedMarkers', 'setDictionary', 'setDetectorParameters', 'setRefineParameters'],
+             'aruco_CharucoDetector': ['CharucoDetector', 'setBoard', 'setCharucoParameters', 'setDetectorParameters', 'setRefineParameters', 'detectBoard', 'detectDiamonds'],
+             'QRCodeDetectorAruco_Params': ['Params'],
+             'QRCodeDetectorAruco': ['QRCodeDetectorAruco', 'decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti', 'setDetectorParameters', 'setArucoParameters'],
+             'barcode_BarcodeDetector': ['BarcodeDetector', 'decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti', 'decodeWithType', 'detectAndDecodeWithType'],
+             'FaceDetectorYN': ['setInputSize', 'getInputSize', 'setScoreThreshold', 'getScoreThreshold', 'setNMSThreshold', 'getNMSThreshold',
+                                'setTopK', 'getTopK', 'detect', 'create'],
+}
 
 video = {
     '': [
@@ -129,18 +170,19 @@ video = {
     'TrackerMIL_Params': [],
 }
 
-dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend'],
+dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend','getUnconnectedOutLayersNames'],
        '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
-            'readNetFromONNX', 'readNet', 'blobFromImage']}
+            'readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
 
 features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
               'BRISK': ['create', 'getDefaultName'],
-              'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],
+              'ORB': ['create', 'setMaxFeatures', 'setScaleFactor', 'setNLevels', 'setEdgeThreshold', 'setFastThreshold', 'setFirstLevel', 'setWTA_K', 'setScoreType', 'setPatchSize', 'getFastThreshold', 'getDefaultName'],
               'MSER': ['create', 'detectRegions', 'setDelta', 'getDelta', 'setMinArea', 'getMinArea', 'setMaxArea', 'getMaxArea', 'setPass2Only', 'getPass2Only', 'getDefaultName'],
               'FastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
               'AgastFeatureDetector': ['create', 'setThreshold', 'getThreshold', 'setNonmaxSuppression', 'getNonmaxSuppression', 'setType', 'getType', 'getDefaultName'],
               'GFTTDetector': ['create', 'setMaxFeatures', 'getMaxFeatures', 'setQualityLevel', 'getQualityLevel', 'setMinDistance', 'getMinDistance', 'setBlockSize', 'getBlockSize', 'setHarrisDetector', 'getHarrisDetector', 'setK', 'getK', 'getDefaultName'],
-              # 'SimpleBlobDetector': ['create'],
+              'SimpleBlobDetector': ['create', 'setParams', 'getParams', 'getDefaultName'],
+              'SimpleBlobDetector_Params': [],
               'KAZE': ['create', 'setExtended', 'getExtended', 'setUpright', 'getUpright', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
               'AKAZE': ['create', 'setDescriptorType', 'getDescriptorType', 'setDescriptorSize', 'getDescriptorSize', 'setDescriptorChannels', 'getDescriptorChannels', 'setThreshold', 'getThreshold', 'setNOctaves', 'getNOctaves', 'setNOctaveLayers', 'getNOctaveLayers', 'setDiffusivity', 'getDiffusivity', 'getDefaultName'],
               'DescriptorMatcher': ['add', 'clear', 'empty', 'isMaskSupported', 'train', 'match', 'knnMatch', 'radiusMatch', 'clone', 'create'],
@@ -151,6 +193,7 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
               'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
         'CalibrateCRF': ['process'],
+        'AlignExposures': ['process'],
         'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
                       'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
         'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
@@ -166,14 +209,6 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
         'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
         'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
                              'getColorAdaptation', 'setColorAdaptation']
-        }
-
-aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'estimatePoseCharucoBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
-        'aruco_Dictionary': ['get', 'drawMarker'],
-        'aruco_Board': ['create'],
-        'aruco_GridBoard': ['create', 'draw'],
-        'aruco_CharucoBoard': ['create', 'draw'],
-        'aruco_DetectorParameters': ['create']
         }
 
 calib3d = {
@@ -195,9 +230,10 @@ calib3d = {
         'fisheye_initUndistortRectifyMap',
         'fisheye_projectPoints',
     ],
+    'UsacParams': ['UsacParams']
 }
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, calib3d])
 
 # namespace_prefix_override['dnn'] = ''  # compatibility stuff (enabled by default)
 # namespace_prefix_override['aruco'] = ''  # compatibility stuff (enabled by default)

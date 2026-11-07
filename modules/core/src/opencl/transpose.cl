@@ -53,9 +53,9 @@
 #define TSIZE ((int)sizeof(T1)*3)
 #endif
 
-#ifndef INPLACE
-
 #define LDS_STEP      (TILE_DIM + 1)
+
+#ifndef INPLACE
 
 __kernel void transpose(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                         __global uchar * dstptr, int dst_step, int dst_offset)
@@ -120,6 +120,7 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
 
 __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_offset, int src_rows)
 {
+#ifdef INTEL_GPU
     int x = get_global_id(0);
     int y = get_global_id(1) * rowsPerWI;
 
@@ -141,6 +142,70 @@ __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_o
                 storepix(tmp, src);
             }
     }
+#else
+    int gp_x = get_group_id(0);
+    int gp_y = get_group_id(1);
+    int lx = get_local_id(0);
+    int ly = get_local_id(1);
+
+    __local T tile_a[TILE_DIM * LDS_STEP];
+    __local T tile_b[TILE_DIM * LDS_STEP];
+
+    if (gp_x > gp_y)
+    {
+        int x_a = gp_x * TILE_DIM + lx;
+        int y_a = gp_y * TILE_DIM + ly;
+        int x_b = gp_y * TILE_DIM + lx;
+        int y_b = gp_x * TILE_DIM + ly;
+
+        // Load
+        #pragma unroll
+        for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
+        {
+            if (y_a + i < src_rows && x_a < src_rows)
+                tile_a[mad24(ly + i, LDS_STEP, lx)] =
+                    loadpix(srcptr + mad24(y_a + i, src_step, mad24(x_a, TSIZE, src_offset)));
+
+            if (y_b + i < src_rows && x_b < src_rows)
+                tile_b[mad24(ly + i, LDS_STEP, lx)] =
+                    loadpix(srcptr + mad24(y_b + i, src_step, mad24(x_b, TSIZE, src_offset)));
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        // Store (transposed)
+        #pragma unroll
+        for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
+        {
+            if (y_b + i < src_rows && x_b < src_rows)
+                storepix(tile_a[mad24(lx, LDS_STEP, ly + i)],
+                        srcptr + mad24(y_b + i, src_step, mad24(x_b, TSIZE, src_offset)));
+
+            if (y_a + i < src_rows && x_a < src_rows)
+                storepix(tile_b[mad24(lx, LDS_STEP, ly + i)],
+                        srcptr + mad24(y_a + i, src_step, mad24(x_a, TSIZE, src_offset)));
+        }
+    }
+    else if (gp_x == gp_y)
+    {
+        int x = gp_x * TILE_DIM + lx;
+        int y = gp_y * TILE_DIM + ly;
+
+        #pragma unroll
+        for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
+            if (y + i < src_rows && x < src_rows)
+                tile_a[mad24(ly + i, LDS_STEP, lx)] =
+                    loadpix(srcptr + mad24(y + i, src_step, mad24(x, TSIZE, src_offset)));
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        #pragma unroll
+        for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
+            if (y + i < src_rows && x < src_rows)
+                storepix(tile_a[mad24(lx, LDS_STEP, ly + i)],
+                        srcptr + mad24(y + i, src_step, mad24(x, TSIZE, src_offset)));
+    }
+#endif
 }
 
 #endif // INPLACE

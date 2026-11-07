@@ -37,7 +37,7 @@ cv::detail::GCompoundContext::GCompoundContext(const cv::GArgs& in_args)
                     // do nothing - as handled in a special way, see gcompoundkernel.hpp for details
                     // same applies to GMatP
                     break;
-                default: GAPI_Assert(false);
+                default: GAPI_Error("InternalError");
             }
         }
     }

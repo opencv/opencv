@@ -328,6 +328,42 @@ TEST(Features2d_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; 
 TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
 TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
 
+// A saved KD-tree index whose serialized leaf node carries a point index
+// outside the dataset must be rejected on load. Before the added validation
+// the malformed index loaded silently and the out-of-range index was
+// dereferenced during search (heap out-of-bounds access).
+TEST(Features2d_FLANN_KDTree, load_rejects_out_of_range_leaf_index)
+{
+    Mat features(1, 4, CV_32F);
+    features.at<float>(0, 0) = 1.f; features.at<float>(0, 1) = 2.f;
+    features.at<float>(0, 2) = 3.f; features.at<float>(0, 3) = 4.f;
+
+    const String filename = tempfile();
+    {
+        Index index(features, KDTreeIndexParams(1));
+        index.save(filename);
+    }
+
+    // Overwrite the single leaf node's divfeat (the first int of the last
+    // serialized Node record) with an index far outside the 1-row dataset.
+    {
+        FILE* f = fopen(filename.c_str(), "r+b");
+        ASSERT_TRUE(f != NULL);
+        ASSERT_EQ(0, fseek(f, 0, SEEK_END));
+        const long node_size = (long)(sizeof(int) + sizeof(float) + 2 * sizeof(void*));
+        const long size = ftell(f);
+        ASSERT_GT(size, node_size);
+        ASSERT_EQ(0, fseek(f, size - node_size, SEEK_SET));
+        const int out_of_range = 1 << 28;
+        ASSERT_EQ((size_t)1, fwrite(&out_of_range, sizeof(int), 1, f));
+        fclose(f);
+    }
+
+    Index loaded;
+    EXPECT_THROW(loaded.load(features, filename), cv::Exception);
+    remove(filename.c_str());
+}
+
 #endif
 
 }} // namespace

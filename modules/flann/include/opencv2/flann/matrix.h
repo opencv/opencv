@@ -1,4 +1,4 @@
-/***********************************************************************
+/*M*********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -34,6 +34,9 @@
 //! @cond IGNORED
 
 #include <stdio.h>
+
+#include "opencv2/core/cvdef.h"
+#include "opencv2/flann/defines.h"
 
 namespace cvflann
 {

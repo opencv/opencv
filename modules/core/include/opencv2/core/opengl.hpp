@@ -57,7 +57,7 @@ This section describes OpenGL interoperability.
 
 To enable OpenGL support, configure OpenCV using CMake with WITH_OPENGL=ON . Currently OpenGL is
 supported only with WIN32, GTK and Qt backends on Windows and Linux (MacOS and Android are not
-supported). For GTK backend gtkglext-1.0 library is required.
+supported). For GTK-2.0 backend gtkglext-1.0 library is required.
 
 To use OpenGL functionality you should first create OpenGL context (window or frame buffer). You can
 do this with namedWindow function or with other OpenGL toolkit (GLUT, for example).
@@ -703,10 +703,18 @@ cv::ogl::Texture2D::Format cv::ogl::Texture2D::format() const
 
 ///////
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
 inline
 cv::ogl::Arrays::Arrays() : size_(0)
 {
 }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
 inline
 int cv::ogl::Arrays::size() const

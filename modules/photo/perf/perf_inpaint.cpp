@@ -6,6 +6,7 @@ namespace opencv_test
 CV_ENUM(InpaintingMethod, INPAINT_NS, INPAINT_TELEA)
 typedef tuple<Size, InpaintingMethod> InpaintArea_InpaintingMethod_t;
 typedef perf::TestBaseWithParam<InpaintArea_InpaintingMethod_t> InpaintArea_InpaintingMethod;
+typedef perf::TestBaseWithParam<InpaintingMethod> Perf_InpaintingMethod;
 
 
 PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
@@ -32,6 +33,28 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
 
     Mat inpaintedArea = result(inpaintArea);
     SANITY_CHECK(inpaintedArea);
+}
+
+PERF_TEST_P(Perf_InpaintingMethod, inpaintDots, InpaintingMethod::all())
+{
+    Mat src = imread(getDataPath("gpu/hog/road.png"));
+
+    int inpaintingMethod = GetParam();
+
+    Mat mask(src.size(), CV_8UC1, Scalar(0));
+    Mat result(src.size(), src.type());
+
+    for (int i = 0; i < src.size().height; i += 16) {
+        for (int j = 0; j < src.size().width; j += 16) {
+            mask.at<unsigned char>(i, j) = 255;
+        }
+    }
+
+    declare.in(src, mask).out(result).time(120);
+
+    TEST_CYCLE() inpaint(src, mask, result, 10.0, inpaintingMethod);
+
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

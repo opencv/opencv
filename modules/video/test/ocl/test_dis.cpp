@@ -46,7 +46,7 @@
 
 namespace opencv_test { namespace {
 
-CV_ENUM(DIS_TestPresets, DISOpticalFlow::PRESET_ULTRAFAST, DISOpticalFlow::PRESET_FAST, DISOpticalFlow::PRESET_MEDIUM);
+CV_ENUM(DIS_TestPresets, DISOpticalFlow::PRESET_ULTRAFAST, DISOpticalFlow::PRESET_FAST, DISOpticalFlow::PRESET_MEDIUM)
 
 typedef ocl::TSTestWithParam<DIS_TestPresets> OCL_DenseOpticalFlow_DIS;
 

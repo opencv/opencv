@@ -1,4 +1,4 @@
-/***********************************************************************
+/*M*********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -46,6 +46,11 @@
 #include "random.h"
 #include "saving.h"
 
+#if defined(__clang__) || defined(__GNUC__)
+#define CV_RESTRICT __restrict__
+#else
+#define CV_RESTRICT
+#endif
 
 namespace cvflann
 {
@@ -261,11 +266,25 @@ private:
     {
         tree = pool_.allocate<Node>();
         load_value(stream, *tree);
-        if (tree->child1!=NULL) {
-            load_tree(stream, tree->child1);
+        if (tree->child1!=NULL || tree->child2!=NULL) {
+            // Internal node: divfeat is the split dimension and is used to index
+            // the query vector during search, so it must be a valid dimension.
+            if (tree->divfeat < 0 || (size_t)tree->divfeat >= veclen_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree index: split dimension is out of range");
+            }
+            if (tree->child1!=NULL) {
+                load_tree(stream, tree->child1);
+            }
+            if (tree->child2!=NULL) {
+                load_tree(stream, tree->child2);
+            }
         }
-        if (tree->child2!=NULL) {
-            load_tree(stream, tree->child2);
+        else {
+            // Leaf node: divfeat is a dataset point index dereferenced during
+            // search, so it must fall inside the dataset.
+            if (tree->divfeat < 0 || (size_t)tree->divfeat >= size_) {
+                FLANN_THROW(cv::Error::StsParseError, "FLANN kd-tree index: leaf feature index is out of range");
+            }
         }
     }
 
@@ -320,9 +339,7 @@ private:
         int cnt = std::min((int)SAMPLE_MEAN+1, count);
         for (int j = 0; j < cnt; ++j) {
             ElementType* v = dataset_[ind[j]];
-            for (size_t k=0; k<veclen_; ++k) {
-                mean_[k] += v[k];
-            }
+            Sum(v, veclen_, mean_);
         }
         for (size_t k=0; k<veclen_; ++k) {
             mean_[k] /= cnt;
@@ -331,10 +348,7 @@ private:
         /* Compute variances (no need to divide by count). */
         for (int j = 0; j < cnt; ++j) {
             ElementType* v = dataset_[ind[j]];
-            for (size_t k=0; k<veclen_; ++k) {
-                DistanceType dist = v[k] - mean_[k];
-                var_[k] += dist * dist;
-            }
+            Var(v, mean_, veclen_, var_);
         }
         /* Select one of the highest variance indices at random. */
         cutfeat = selectDivision(var_);
@@ -449,7 +463,11 @@ private:
         DynamicBitset checked(size_);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
+        // Kept in thread_local storage so each thread owns an independent heap
+        // and no process-wide lock is taken on the search hot path (issue #25281).
+        thread_local cv::Ptr<Heap<BranchSt>> heap = cv::makePtr<Heap<BranchSt>>((int)size_);
+        heap->clear();
+        heap->reserve((int)size_);
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
@@ -584,6 +602,18 @@ private:
         RAND_DIM=5
     };
 
+    void Sum(const ElementType* CV_RESTRICT data, size_t len, DistanceType* CV_RESTRICT mean) {
+        for (size_t k=0; k<len; ++k) {
+            mean[k] += data[k];
+        }
+    }
+
+    void Var(const ElementType* CV_RESTRICT data, const DistanceType* CV_RESTRICT mean, size_t len, DistanceType*CV_RESTRICT var) {
+        for (size_t k=0; k<len; ++k) {
+            DistanceType dist = data[k] - mean[k];
+            var[k] += dist * dist;
+        }
+    }
 
     /**
      * Number of randomized trees that are used

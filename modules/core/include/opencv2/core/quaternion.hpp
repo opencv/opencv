@@ -31,7 +31,7 @@
 #include <iostream>
 namespace cv
 {
-//! @addtogroup core
+//! @addtogroup core_quaternion
 //! @{
 
 //! Unit quaternion flag
@@ -57,7 +57,7 @@ class QuatEnum
 public:
     /** @brief Enum of Euler angles type.
      *
-     * Without considering the possibility of using two different convertions for the definition of the rotation axes ,
+     * Without considering the possibility of using two different conversions for the definition of the rotation axes ,
      * there exists twelve possible sequences of rotation axes, divided into two groups:
      * - Proper Euler angles (Z-X-Z, X-Y-X, Y-Z-Y, Z-Y-Z, X-Z-X, Y-X-Y)
      * - Tait–Bryan angles (X-Y-Z, Y-Z-X, Z-X-Y, X-Z-Y, Z-Y-X, Y-X-Z).
@@ -77,9 +77,9 @@ public:
      * For intrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =X(\theta_1) Y(\theta_2) Z(\theta_3) \f]
      * For extrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =Z({\theta_3}) Y({\theta_2}) X({\theta_1})\f]
      * where
-     * \f[X({\theta})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
-     * Y({\theta})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
-     * Z({\theta})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
+     * \f[X({\theta_1})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
+     * Y({\theta_2})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
+     * Z({\theta_3})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
      * \f]
      *
      * The function is designed according to this set of conventions:
@@ -273,7 +273,7 @@ public:
      * where \f$ q_{X, \theta_1} \f$ is created from @ref createFromXRot,  \f$ q_{Y, \theta_2} \f$ is created from @ref createFromYRot,
      *  \f$ q_{Z, \theta_3} \f$ is created from @ref createFromZRot.
      * @param angles the Euler angles in a vector of length 3
-     * @param eulerAnglesType the convertion Euler angles type
+     * @param eulerAnglesType the conversion Euler angles type
      */
     static Quat<_Tp> createFromEulerAngles(const Vec<_Tp, 3> &angles, QuatEnum::EulerAnglesType eulerAnglesType);
 
@@ -1610,7 +1610,7 @@ public:
      * EXT_ZXZ| \f$ \theta_1 = \arctan2(m_{31},m_{32}) \\\theta_2 = \arccos(m_{33}) \\\theta_3 = \arctan2(-m_{13},m_{23})\f$| \f$ \theta_1=0\\ \theta_2=0\\ \theta_3=\arctan2(m_{21},m_{22}) \f$| \f$ \theta_1= 0\\ \theta_2=\pi\\ \theta_3=\arctan2(m_{21},m_{11}) \f$
      * EXT_ZYZ| \f$ \theta_1 = \arctan2(m_{32},-m_{31})\\\theta_2 = \arccos(m_{33}) \\\theta_3 = \arctan2(m_{23},m_{13}) \f$| \f$ \theta_1=0\\ \theta_2=0\\ \theta_3=\arctan2(m_{21},m_{11}) \f$| \f$ \theta_1= 0\\ \theta_2=\pi\\ \theta_3=\arctan2(m_{21},m_{11}) \f$
      *
-     * @param eulerAnglesType the convertion Euler angles type
+     * @param eulerAnglesType the conversion Euler angles type
      */
 
     Vec<_Tp, 3> toEulerAngles(QuatEnum::EulerAnglesType eulerAnglesType);

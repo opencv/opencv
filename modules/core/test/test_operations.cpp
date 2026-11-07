@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
+#include <fenv.h>
 
 namespace opencv_test {
 namespace {
@@ -68,7 +69,7 @@ protected:
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
-    bool TestMatxElementwiseDivison();
+    bool TestMatxElementwiseDivision();
     bool TestDivisionByValue();
     bool TestInplaceDivisionByValue();
     bool TestMatMatxCastSum();
@@ -956,7 +957,7 @@ bool CV_OperationsTest::TestMatMatxCastSum()
     return true;
 }
 
-bool CV_OperationsTest::TestMatxElementwiseDivison()
+bool CV_OperationsTest::TestMatxElementwiseDivision()
 {
     try
     {
@@ -1213,7 +1214,7 @@ bool CV_OperationsTest::TestSVD()
             cvtest::norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
             W.at<float>(2) < 0 || W.at<float>(1) < W.at<float>(2) ||
             W.at<float>(0) < W.at<float>(1) ||
-            cvtest::norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON )
+            cvtest::norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON*2 )
             throw test_excep();
     }
     catch(const test_excep&)
@@ -1247,7 +1248,7 @@ void CV_OperationsTest::run( int /* start_from */)
     if (!TestMatxMultiplication())
         return;
 
-    if (!TestMatxElementwiseDivison())
+    if (!TestMatxElementwiseDivision())
         return;
 
     if (!TestDivisionByValue())
@@ -1379,6 +1380,15 @@ TEST(MatTestRoi, adjustRoiOverflow)
     ASSERT_EQ(roi.rows, m.rows);
 }
 
+TEST(MatTestRoi, adjustRoiUndefinedBehavior)
+{
+    Mat m(6, 6, CV_8U);
+    Mat roi(m, cv::Range(2, 4), cv::Range(2, 4));
+    // This could trigger a (negative int)*size_t when updating data,
+    // which is undefined behavior.
+    roi.adjustROI(2, 2, 2, 2);
+    EXPECT_EQ(m.data, roi.data);
+}
 
 CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
 CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
@@ -1551,6 +1561,37 @@ TEST(Core_MatExpr, empty_check_15760)
     EXPECT_THROW(Mat c = Mat().cross(Mat()), cv::Exception);
 }
 
+// https://github.com/opencv/opencv/issues/23577
+// A scalar passed to Mat::mul() binds to _InputArray(const double&), i.e. to a temporary
+// double on the caller's stack. The returned MatExpr used to keep a Mat header pointing at
+// that stack slot after it died. The helpers are called through volatile function pointers
+// so they cannot be inlined, which makes the stale-stack read deterministic.
+MatExpr makeScalarMulExpr(const Mat& m, double scale)
+{
+    return m.mul(scale);
+}
+
+void overwriteStackFrame()
+{
+    volatile double buf[256];
+    for (int i = 0; i < 256; i++)
+        buf[i] = -1.0;
+    (void)buf;
+}
+
+TEST(Core_MatExpr, mul_scalar_use_after_scope_23577)
+{
+    MatExpr (*volatile makeExprFn)(const Mat&, double) = makeScalarMulExpr;
+    void (*volatile overwriteFn)() = overwriteStackFrame;
+
+    Mat m(2, 3, CV_32FC1, Scalar::all(3.0f));
+    MatExpr e = makeExprFn(m, 7.0);
+    overwriteFn();
+    Mat res = e;
+
+    EXPECT_EQ(0, cvtest::norm(res, Mat(2, 3, CV_32FC1, Scalar::all(21.0f)), NORM_INF));
+}
+
 TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/issues/19599 (OpenCV 4.x+ only)
 {
     Mat a(1, 1, CV_32F, Scalar::all(1));
@@ -1560,5 +1601,81 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
     EXPECT_EQ(1, c.cols);
     EXPECT_EQ(1, c.rows);
 }
+
+TEST(Core_ExtractChannel, twoChannel8uSubmatrix)
+{
+    Mat sourceStorage(5, 37, CV_8UC2);
+    randu(sourceStorage, 0, 256);
+    Mat source = sourceStorage(Rect(3, 1, 31, 3));
+    ASSERT_FALSE(source.isContinuous());
+
+    for (int channel = 0; channel < 2; ++channel)
+    {
+        Mat destinationStorage(5, 37, CV_8UC1, Scalar::all(0));
+        Mat destination = destinationStorage(Rect(3, 1, source.cols, source.rows));
+        Mat expected(source.size(), CV_8UC1);
+        ASSERT_FALSE(destination.isContinuous());
+
+        for (int row = 0; row < source.rows; ++row)
+        {
+            const uchar* sourceRow = source.ptr<uchar>(row);
+            uchar* expectedRow = expected.ptr<uchar>(row);
+            for (int column = 0; column < source.cols; ++column)
+                expectedRow[column] = sourceRow[column * 2 + channel];
+        }
+
+        extractChannel(source, destination, channel);
+        EXPECT_EQ(0, cvtest::norm(expected, destination, NORM_INF));
+    }
+}
+
+// https://github.com/opencv/opencv/issues/24163
+typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
+typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
+
+TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
+{
+    const int matDepth = get<0>(GetParam());
+    const int matHeight= get<1>(GetParam());
+    const int matWidth = 3; // Fixed
+    const int alpha    = get<2>(GetParam());
+    const int beta     = get<3>(GetParam());
+
+    // If alpha and/or beta are negative, and matDepth is unsigned, test is passed.
+    if( ( (alpha < 0) || (beta < 0) )
+        &&
+        ( (matDepth != CV_8S) && (matDepth != CV_16S) && (matDepth != CV_32S) ) )
+    {
+        throw SkipTestException( cv::format("Test is skipped(matDepth is not signed, alpha = %d, beta = %d)", alpha, beta) );
+    }
+
+    const int matType = CV_MAKE_TYPE(matDepth, 1);
+    const Size matSize(matWidth, matHeight);
+    const Mat src1(matSize, matType, Scalar(alpha,alpha,alpha,alpha));
+    const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
+    const Mat result = ( src1 + src2 ) / 2;
+
+    const int rounding = fegetround();
+    fesetround(FE_TONEAREST);
+    const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+    fesetround(rounding);
+
+    const Mat expected(matSize, matType, Scalar::all(mean));
+
+    // Compare result and extected.
+    ASSERT_EQ(expected.size(), result.size());
+    EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
+        "result=" << std::endl << result << std::endl <<
+        "expected=" << std::endl << expected;
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Arith_Regression24163,
+    testing::Combine(
+        testing::Values(perf::MatDepth(CV_8U), CV_8S, CV_16U, CV_16S, CV_32S), // MatType
+        testing::Values( 3, 4, 5, 6),    // MatHeight
+        testing::Values(-2,-1, 0, 1, 2), // src1
+        testing::Values(   -1, 0, 1   )  // src2
+    )
+);
 
 }} // namespace

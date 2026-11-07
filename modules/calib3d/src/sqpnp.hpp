@@ -1,3 +1,10 @@
+// Implementation of SQPnP as described in the paper:
+//
+// "A Consistently Fast and Globally Optimal Solution to the Perspective-n-Point Problem" by G. Terzakis and M. Lourakis
+//     a) Paper:         https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+//     b) Supplementary: https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460-supp.pdf
+
+
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
@@ -157,6 +164,13 @@ private:
     * @param delta          The next step down the gradient.
     */
     void solveSQPSystem(const cv::Matx<double, 9, 1>& r, cv::Matx<double, 9, 1>& delta);
+
+    /*
+    * @brief                Inverse of SPD 3x3 A via lower triangular sqrt-free Cholesky: A = L*D*L'
+    * @param A              The input matrix
+    * @param A1             The inverse
+    */
+    static bool invertSPD3x3(const cv::Matx<double, 3, 3>& A, cv::Matx<double, 3, 3>& A1);
 
     /*
     * @brief                Analytically computes the inverse of a symmetric 3x3 matrix using the

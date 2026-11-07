@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * Modified 2009-2011 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2013, 2016, D. R. Commander.
+ * Copyright (C) 2013, 2016, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -56,13 +56,11 @@ init_source(j_decompress_ptr cinfo)
   src->start_of_file = TRUE;
 }
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 METHODDEF(void)
 init_mem_source(j_decompress_ptr cinfo)
 {
   /* no work necessary here */
 }
-#endif
 
 
 /*
@@ -104,7 +102,7 @@ fill_input_buffer(j_decompress_ptr cinfo)
   my_src_ptr src = (my_src_ptr)cinfo->src;
   size_t nbytes;
 
-  nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
+  nbytes = fread(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
 
   if (nbytes <= 0) {
     if (src->start_of_file)     /* Treat empty input file as fatal error */
@@ -123,7 +121,6 @@ fill_input_buffer(j_decompress_ptr cinfo)
   return TRUE;
 }
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 METHODDEF(boolean)
 fill_mem_input_buffer(j_decompress_ptr cinfo)
 {
@@ -144,7 +141,6 @@ fill_mem_input_buffer(j_decompress_ptr cinfo)
 
   return TRUE;
 }
-#endif
 
 
 /*
@@ -253,7 +249,6 @@ jpeg_stdio_src(j_decompress_ptr cinfo, FILE *infile)
 }
 
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 /*
  * Prepare for input from a supplied memory buffer.
  * The buffer must contain the whole JPEG data.
@@ -292,4 +287,3 @@ jpeg_mem_src(j_decompress_ptr cinfo, const unsigned char *inbuffer,
   src->bytes_in_buffer = (size_t)insize;
   src->next_input_byte = (const JOCTET *)inbuffer;
 }
-#endif

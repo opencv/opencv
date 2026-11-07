@@ -10,7 +10,7 @@ Goal
 ----
 
 Thrust is an extremely powerful library for various cuda accelerated algorithms.  However thrust is designed
-to work with vectors and not pitched matricies.  The following tutorial will discuss wrapping cv::cuda::GpuMat's
+to work with vectors and not pitched matrices.  The following tutorial will discuss wrapping cv::cuda::GpuMat's
 into thrust iterators that can be used with thrust algorithms.
 
 This tutorial should show you how to:

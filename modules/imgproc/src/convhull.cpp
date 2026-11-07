@@ -76,12 +76,16 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
         if( CV_SIGN( by ) != nsign )
         {
-            _Tp ax = array[pcur]->x - array[pprev]->x;
-            _Tp bx = array[pnext]->x - array[pcur]->x;
-            _Tp ay = cury - array[pprev]->y;
-            _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
+            Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
+            Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
+            if (std::is_floating_point<_Tp>::value)
+            {
+                a = normalize(a);
+                b = normalize(b);
+            }
+            _DotTp convexity = (_DotTp)a[1]*b[0] - (_DotTp)a[0]*b[1]; // if >0 then convex angle
 
-            if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
+            if( CV_SIGN( convexity ) == sign2 && (a[0] != 0 || a[1] != 0) )
             {
                 pprev = pcur;
                 pcur = pnext;
@@ -215,9 +219,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[tl_stack[i]] - data0);
+            hullbuf[nout++] = tl_stack[i];
         for( i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[tr_stack[i]] - data0);
+            hullbuf[nout++] = tr_stack[i];
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
@@ -253,9 +257,43 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
+            hullbuf[nout++] = bl_stack[i];
         for( i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
+            hullbuf[nout++] = br_stack[i];
+
+        if (!returnPoints)
+        {
+            // Try keep monotonous indices in case of self-intersection.
+            for (i = 0; i < nout; ++i)
+            {
+                auto prev = pointer[hullbuf[(i == 0 ? nout : i) - 1]];
+                auto next = pointer[hullbuf[(i + 1) % nout]];
+                auto cur = pointer[hullbuf[i]];
+                if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                {
+                    continue;
+                }
+                for (int j = hullbuf[i] + 1; j < total; ++j)
+                {
+                    cur = pointer[j];
+                    if (*pointer[hullbuf[i]] == *cur)
+                    {
+                        if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                        {
+                            hullbuf[i] = j;
+                            break;
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
+
+        }
+        for (i = 0; i < nout; ++i)
+        {
+            hullbuf[i] = int(pointer[hullbuf[i]] - data0);
+        }
 
         // try to make the convex hull indices form
         // an ascending or descending sequence by the cyclic
@@ -471,7 +509,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     {
         ptseq = (CvSeq*)array;
         if( !CV_IS_SEQ_POINT_SET( ptseq ))
-            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
         if( hull_storage == 0 )
             hull_storage = ptseq->storage;
     }
@@ -503,15 +541,15 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         mat = (CvMat*)hull_storage;
 
         if( (mat->cols != 1 && mat->rows != 1) || !CV_IS_MAT_CONT(mat->type))
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "The hull matrix should be continuous and have a single row or a single column" );
 
         if( mat->cols + mat->rows - 1 < ptseq->total )
-            CV_Error( CV_StsBadSize, "The hull matrix size might be not enough to fit the hull" );
+            CV_Error( cv::Error::StsBadSize, "The hull matrix size might be not enough to fit the hull" );
 
         if( CV_MAT_TYPE(mat->type) != CV_SEQ_ELTYPE(ptseq) &&
            CV_MAT_TYPE(mat->type) != CV_32SC1 )
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                      "The hull matrix must have the same type as input or 32sC1 (integers)" );
 
         hullseq = cvMakeSeqHeaderForArray(
@@ -526,7 +564,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     if( total == 0 )
     {
         if( !isStorage )
-            CV_Error( CV_StsBadSize,
+            CV_Error( cv::Error::StsBadSize,
                      "Point sequence can not be empty if the output is matrix" );
         return 0;
     }
@@ -592,7 +630,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
     if( CV_IS_SEQ( ptseq ))
     {
         if( !CV_IS_SEQ_POINT_SET( ptseq ))
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                      "Input sequence is not a sequence of points" );
         if( !storage )
             storage = ptseq->storage;
@@ -603,13 +641,13 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
     }
 
     if( CV_SEQ_ELTYPE( ptseq ) != CV_32SC2 )
-        CV_Error( CV_StsUnsupportedFormat, "Floating-point coordinates are not supported here" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Floating-point coordinates are not supported here" );
 
     if( CV_IS_SEQ( hull ))
     {
         int hulltype = CV_SEQ_ELTYPE( hull );
         if( hulltype != CV_SEQ_ELTYPE_PPOINT && hulltype != CV_SEQ_ELTYPE_INDEX )
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                      "Convex hull must represented as a sequence "
                      "of indices or sequence of pointers" );
         if( !storage )
@@ -620,15 +658,15 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
         CvMat* mat = (CvMat*)hull;
 
         if( !CV_IS_MAT( hull ))
-            CV_Error(CV_StsBadArg, "Convex hull is neither sequence nor matrix");
+            CV_Error(cv::Error::StsBadArg, "Convex hull is neither sequence nor matrix");
 
         if( (mat->cols != 1 && mat->rows != 1) ||
            !CV_IS_MAT_CONT(mat->type) || CV_MAT_TYPE(mat->type) != CV_32SC1 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "The matrix should be 1-dimensional and continuous array of int's" );
 
         if( mat->cols + mat->rows - 1 > ptseq->total )
-            CV_Error( CV_StsBadSize, "Convex hull is larger than the point sequence" );
+            CV_Error( cv::Error::StsBadSize, "Convex hull is larger than the point sequence" );
 
         hull = cvMakeSeqHeaderForArray(
                                        CV_SEQ_KIND_CURVE|CV_MAT_TYPE(mat->type)|CV_SEQ_FLAG_CLOSED,
@@ -639,13 +677,13 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
     is_index = CV_SEQ_ELTYPE(hull) == CV_SEQ_ELTYPE_INDEX;
 
     if( !storage )
-        CV_Error( CV_StsNullPtr, "NULL storage pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL storage pointer" );
 
     defects = cvCreateSeq( CV_SEQ_KIND_GENERIC, sizeof(CvSeq), sizeof(CvConvexityDefect), storage );
 
     if( ptseq->total < 4 || hull->total < 3)
     {
-        //CV_ERROR( CV_StsBadSize,
+        //CV_ERROR( cv::Error::StsBadSize,
         //    "point seq size must be >= 4, convex hull size must be >= 3" );
         return defects;
     }
@@ -779,7 +817,7 @@ cvCheckContourConvexity( const CvArr* array )
     if( CV_IS_SEQ(contour) )
     {
         if( !CV_IS_SEQ_POINT_SET(contour))
-            CV_Error( CV_StsUnsupportedFormat,
+            CV_Error( cv::Error::StsUnsupportedFormat,
                      "Input sequence must be polygon (closed 2d curve)" );
     }
     else

@@ -621,9 +621,9 @@ void CV_RodriguesTest::get_test_array_types_and_sizes(
 }
 
 
-double CV_RodriguesTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int j )
+double CV_RodriguesTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    return j == 4 ? 1e-2 : 1e-2;
+    return 1e-2;
 }
 
 
@@ -1671,6 +1671,14 @@ TEST(Calib3d_FindFundamentalMat, correctMatches)
 
     cout << np1 << endl;
     cout << np2 << endl;
+}
+
+TEST(Calib3d_FindFundamentalMat, Crash)
+{
+    vector<Point2f> m1 = {{245, 128},{284, 226},{140, 60},{133, 127},{71, 218},{152, 138},{181, 106}};
+    vector<Point2f> m2 = m1;
+    vector<uchar> mask;
+    findFundamentalMat(m1, m2, mask, FM_LMEDS, 1, 0.99);
 }
 
 }} // namespace

@@ -7,6 +7,7 @@
 
 #ifndef __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__
 #define __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__
+#ifdef HAVE_PROTOBUF
 
 #if defined(__GNUC__) && __GNUC__ >= 5
 #pragma GCC diagnostic push
@@ -36,4 +37,5 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto);
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv
 
+#endif  // HAVE_PROTOBUF
 #endif  // __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__

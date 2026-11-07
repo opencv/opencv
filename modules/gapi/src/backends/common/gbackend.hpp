@@ -227,6 +227,12 @@ inline void convertInt64ToInt32(const int64_t* src, int* dst, size_t size)
                    [](int64_t el) { return static_cast<int>(el); });
 }
 
+inline void convertInt32ToInt64(const int* src, int64_t* dst, size_t size)
+{
+    std::transform(src, src + size, dst,
+                   [](int el) { return static_cast<int64_t>(el); });
+}
+
 }} // cv::gimpl
 
 #endif // OPENCV_GAPI_GBACKEND_HPP

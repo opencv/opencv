@@ -558,3 +558,137 @@ __kernel void BruteForceMatch_knnMatch(
         bestDistance[queryIdx] = (float2)(myBestDistance1, myBestDistance2);
     }
 }
+
+#ifdef HAVE_INT64_ATOMICS
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+
+__kernel void BruteForceMatch_CrossCheckMatch(
+    __global T *query,
+    __global T *train,
+    __global int *bestTrainIdx,
+    __global float *bestDistance,
+    __global ulong *revBest,
+    int query_rows,
+    int query_cols,
+    int train_rows,
+    int train_cols,
+    int step
+)
+{
+    const int lidx = get_local_id(0);
+    const int lidy = get_local_id(1);
+    const int groupidx = get_group_id(0);
+
+    const int queryIdx = mad24(BLOCK_SIZE, groupidx, lidy);
+    const int queryOffset = min(queryIdx, query_rows - 1) * step;
+    __global TN *query_vec = (__global TN *)(query + queryOffset);
+    query_cols /= kercn;
+
+    __local float sharebuffer[SHARED_MEM_SZ];
+    __local value_type *s_query = (__local value_type *)sharebuffer;
+
+#if 0 < MAX_DESC_LEN
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE * MAX_DESC_LEN;
+    #pragma unroll
+    for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; i++)
+    {
+        const int loadx = mad24(BLOCK_SIZE, i, lidx);
+        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? query_vec[loadx] : 0;
+    }
+#else
+    __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
+    const int s_query_i = mad24(BLOCK_SIZE_ODD, lidy, lidx);
+    const int s_train_i = mad24(BLOCK_SIZE_ODD, lidx, lidy);
+#endif
+
+    float myBestDistance = MAX_FLOAT;
+    int myBestTrainIdx = -1;
+
+    for (int t = 0, endt = (train_rows + BLOCK_SIZE - 1) / BLOCK_SIZE; t < endt; t++)
+    {
+        result_type result = 0;
+
+        const int trainOffset = min(mad24(BLOCK_SIZE, t, lidy), train_rows - 1) * step;
+        __global TN *train_vec = (__global TN *)(train + trainOffset);
+#if 0 < MAX_DESC_LEN
+        #pragma unroll
+        for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; i++)
+        {
+            const int loadx = mad24(BLOCK_SIZE, i, lidx);
+            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? train_vec[loadx] : 0;
+
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            result += reduce_multi_block(s_query, s_train, i, lidx, lidy);
+
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+#else
+        for (int i = 0, endq = (query_cols + BLOCK_SIZE - 1) / BLOCK_SIZE; i < endq; i++)
+        {
+            const int loadx = mad24(BLOCK_SIZE, i, lidx);
+            if (loadx < query_cols)
+            {
+                s_query[s_query_i] = query_vec[loadx];
+                s_train[s_train_i] = train_vec[loadx];
+            }
+            else
+            {
+                s_query[s_query_i] = 0;
+                s_train[s_train_i] = 0;
+            }
+
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            result += reduce_block_match(s_query, s_train, lidx, lidy);
+
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+#endif
+        result = DIST_RES(result);
+
+        const int trainIdx = mad24(BLOCK_SIZE, t, lidx);
+
+        if (queryIdx < query_rows && trainIdx < train_rows)
+        {
+            if (result < myBestDistance)
+            {
+                myBestDistance = result;
+                myBestTrainIdx = trainIdx;
+            }
+
+            uint dist_bits = as_uint(result);
+            ulong packed = ((ulong)dist_bits << 32) | (ulong)queryIdx;
+            atom_min(&revBest[trainIdx], packed);
+        }
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    __local float *s_distance = (__local float *)sharebuffer;
+    __local int *s_trainIdx = (__local int *)(sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE);
+
+    s_distance += lidy * BLOCK_SIZE_ODD;
+    s_trainIdx += lidy * BLOCK_SIZE_ODD;
+    s_distance[lidx] = myBestDistance;
+    s_trainIdx[lidx] = myBestTrainIdx;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    #pragma unroll
+    for (int k = 0; k < BLOCK_SIZE; k++)
+    {
+        if (myBestDistance > s_distance[k])
+        {
+            myBestDistance = s_distance[k];
+            myBestTrainIdx = s_trainIdx[k];
+        }
+    }
+
+    if (queryIdx < query_rows && lidx == 0)
+    {
+        bestTrainIdx[queryIdx] = myBestTrainIdx;
+        bestDistance[queryIdx] = myBestDistance;
+    }
+}
+#endif

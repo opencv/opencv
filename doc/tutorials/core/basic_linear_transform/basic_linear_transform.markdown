@@ -27,7 +27,7 @@ Theory
 
 @note
    The explanation below belongs to the book [Computer Vision: Algorithms and
-    Applications](http://szeliski.org/Book/) by Richard Szeliski
+    Applications](https://szeliski.org/Book/) by Richard Szeliski
 
 ### Image Processing
 
@@ -266,14 +266,14 @@ be the opposite with \f$ \gamma > 1 \f$.
 
 The following image has been corrected with: \f$ \alpha = 1.3 \f$ and \f$ \beta = 40 \f$.
 
-![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_linear_transform_correction.jpg)
+![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_linear_transform_correction.jpg) { width=90% }
 
 The overall brightness has been improved but you can notice that the clouds are now greatly saturated due to the numerical saturation
 of the implementation used ([highlight clipping](https://en.wikipedia.org/wiki/Clipping_(photography)) in photography).
 
 The following image has been corrected with: \f$ \gamma = 0.4 \f$.
 
-![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_gamma_correction.jpg)
+![By Visem (Own work) [CC BY-SA 3.0], via Wikimedia Commons](images/Basic_Linear_Transform_Tutorial_gamma_correction.jpg) { width=90% }
 
 The gamma correction should tend to add less saturation effect as the mapping is non linear and there is no numerical saturation possible as in the previous method.
 

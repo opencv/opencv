@@ -119,6 +119,18 @@ Context create_dx11_context(Context::Ptr ctx_ptr) {
                                                                 AccelType::DX11);
 }
 
+Device create_vaapi_device(Device::Ptr device_ptr,
+                           const std::string& device_name) {
+    return detail::DeviceContextCreator::create_entity<Device>(device_ptr,
+                                                               device_name,
+                                                               AccelType::VAAPI);
+}
+
+Context create_vaapi_context(Context::Ptr ctx_ptr) {
+    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr,
+                                                                AccelType::VAAPI);
+}
+
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

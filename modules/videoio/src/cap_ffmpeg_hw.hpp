@@ -21,6 +21,7 @@
 #define D3D11_NO_HELPERS
 #include <d3d11.h>
 #include <codecvt>
+#include <locale>
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>
@@ -56,6 +57,9 @@ extern "C" {
 #ifdef HAVE_MFX // dependency only on MFX header files, no linkage dependency
 #include <libavutil/hwcontext_qsv.h>
 #endif
+#ifdef HAVE_DRM
+#include <libavutil/hwcontext_drm.h>
+#endif
 }
 
 #define HW_DEFAULT_POOL_SIZE    32
@@ -80,6 +84,7 @@ const char* getVideoAccelerationName(VideoAccelerationType va_type)
     case VIDEO_ACCELERATION_D3D11: return "d3d11";
     case VIDEO_ACCELERATION_VAAPI: return "vaapi";
     case VIDEO_ACCELERATION_MFX: return "mfx";
+    case VIDEO_ACCELERATION_DRM : return "drm";
     }
     return "unknown";
 }
@@ -118,6 +123,7 @@ std::string getDecoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     case VIDEO_ACCELERATION_D3D11: return "";
     case VIDEO_ACCELERATION_VAAPI: return "vaapi.iHD";
     case VIDEO_ACCELERATION_MFX: return "qsv.iHD";
+    case VIDEO_ACCELERATION_DRM: return "drm";
     }
     return "";
 #endif
@@ -157,6 +163,8 @@ std::string getEncoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     case VIDEO_ACCELERATION_D3D11: return "";
     case VIDEO_ACCELERATION_VAAPI: return "vaapi.iHD";
     case VIDEO_ACCELERATION_MFX: return "qsv.iHD";
+    case VIDEO_ACCELERATION_DRM: return "";
+    // Raspberry Pi 5 has no encoders, so we don't support it
     }
     return "unknown";
 #endif
@@ -233,6 +241,18 @@ bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string
                 adapter->Release();
             }
             dxgiDevice->Release();
+        }
+    }
+#endif
+#if defined(HAVE_DRM)
+    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_DRM) {
+        AVDRMDeviceContext *drm_ctx = (AVDRMDeviceContext *)hw_device_ctx->hwctx;
+        if (drm_ctx->fd >= 0) {
+            drmVersionPtr drm_version = drmGetVersion(drm_ctx->fd);
+            if (drm_version) {
+                device_name = drm_version->name;
+                drmFreeVersion(drm_version);
+            }
         }
     }
 #endif
@@ -737,6 +757,30 @@ AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_categor
 #endif
             if (hw_type == AV_HWDEVICE_TYPE_CUDA) // CUDA encoders don't support avcodec_get_hw_config()
                 hw_native_fmt = AV_PIX_FMT_CUDA;
+#if LIBAVCODEC_BUILD >= AV_VERSION_INT(61, 13, 100)
+            if (av_codec_is_encoder(c) && hw_native_fmt != AV_PIX_FMT_NONE) {
+                const AVPixelFormat *pix_fmts = NULL;
+                int num_pix_fmts = 0;
+
+                int ret = avcodec_get_supported_config(
+                    NULL,
+                    c,
+                    AV_CODEC_CONFIG_PIX_FORMAT,
+                    0,
+                    (const void **)&pix_fmts,
+                    &num_pix_fmts);
+
+                if (ret >= 0 && pix_fmts && num_pix_fmts > 0) {
+                        for (int i = 0; i < num_pix_fmts; i++) {
+                            if (pix_fmts[i] == hw_native_fmt) {
+                                *hw_pix_fmt = hw_native_fmt;
+                                if (hw_check_codec(c, hw_type, disabled_codecs))
+                                    return c;
+                            }
+                        }
+                    }
+            }
+#else
             if (av_codec_is_encoder(c) && hw_native_fmt != AV_PIX_FMT_NONE && c->pix_fmts) {
                 for (int i = 0; c->pix_fmts[i] != AV_PIX_FMT_NONE; i++) {
                     if (c->pix_fmts[i] == hw_native_fmt) {
@@ -746,6 +790,7 @@ AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_categor
                     }
                 }
             }
+#endif
             for (int i = 0;; i++) {
                 const AVCodecHWConfig *hw_config = avcodec_get_hw_config(c, i);
                 if (!hw_config)
@@ -907,6 +952,7 @@ VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type) {
             { AV_HWDEVICE_TYPE_VAAPI, VIDEO_ACCELERATION_VAAPI },
             { AV_HWDEVICE_TYPE_QSV, VIDEO_ACCELERATION_MFX },
             { AV_HWDEVICE_TYPE_CUDA, (VideoAccelerationType)(1 << 11) },
+            { AV_HWDEVICE_TYPE_DRM, VIDEO_ACCELERATION_DRM }
     };
     for (const HWTypeFFMPEG& hw : known_hw_types) {
         if (hw_type == hw.hw_type)

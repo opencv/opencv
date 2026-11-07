@@ -60,6 +60,7 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
 
   protected: //!< algorithm parameters
     int finest_scale, coarsest_scale;
+    int user_coarsest_scale;
     int patch_size;
     int patch_stride;
     int grad_descent_iter;
@@ -67,6 +68,7 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     float variational_refinement_alpha;
     float variational_refinement_gamma;
     float variational_refinement_delta;
+    float variational_refinement_epsilon;
     bool use_mean_normalization;
     bool use_spatial_propagation;
 
@@ -78,6 +80,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
   public:
     int getFinestScale() const CV_OVERRIDE { return finest_scale; }
     void setFinestScale(int val) CV_OVERRIDE { finest_scale = val; }
+    int getCoarsestScale() const CV_OVERRIDE { return user_coarsest_scale; }
+    void setCoarsestScale(int val) CV_OVERRIDE { user_coarsest_scale = val; }
     int getPatchSize() const CV_OVERRIDE { return patch_size; }
     void setPatchSize(int val) CV_OVERRIDE { patch_size = val; }
     int getPatchStride() const CV_OVERRIDE { return patch_stride; }
@@ -92,6 +96,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     void setVariationalRefinementDelta(float val) CV_OVERRIDE { variational_refinement_delta = val; }
     float getVariationalRefinementGamma() const CV_OVERRIDE { return variational_refinement_gamma; }
     void setVariationalRefinementGamma(float val) CV_OVERRIDE { variational_refinement_gamma = val; }
+    float getVariationalRefinementEpsilon() const CV_OVERRIDE { return variational_refinement_epsilon; }
+    void setVariationalRefinementEpsilon(float val) CV_OVERRIDE { variational_refinement_epsilon = val; }
 
     bool getUseMeanNormalization() const CV_OVERRIDE { return use_mean_normalization; }
     void setUseMeanNormalization(bool val) CV_OVERRIDE { use_mean_normalization = val; }
@@ -219,11 +225,13 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     variational_refinement_alpha = 20.f;
     variational_refinement_gamma = 10.f;
     variational_refinement_delta = 5.f;
+    variational_refinement_epsilon = 0.01f;
 
     border_size = 16;
     use_mean_normalization = true;
     use_spatial_propagation = true;
     coarsest_scale = 10;
+    user_coarsest_scale = -1;
 
     /* Use separate variational refinement instances for different scales to avoid repeated memory allocation: */
     int max_possible_scales = 10;
@@ -306,6 +314,7 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
             variational_refinement_processors[i]->setAlpha(variational_refinement_alpha);
             variational_refinement_processors[i]->setDelta(variational_refinement_delta);
             variational_refinement_processors[i]->setGamma(variational_refinement_gamma);
+            variational_refinement_processors[i]->setEpsilon(variational_refinement_epsilon);
             variational_refinement_processors[i]->setSorIterations(5);
             variational_refinement_processors[i]->setFixedPointIterations(variational_refinement_iter);
 
@@ -520,16 +529,16 @@ DISOpticalFlowImpl::PatchInverseSearch_ParBody::PatchInverseSearch_ParBody(DISOp
     v_expand(I0_row_8, I0_row_4_left, I0_row_4_right);                                                                 \
                                                                                                                        \
     /* Compute diffs between I0 and bilinearly interpolated I1: */                                                     \
-    I_diff_left = w00v * v_cvt_f32(v_reinterpret_as_s32(I1_row_4_left)) +                                              \
-                  w01v * v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_left)) +                                      \
-                  w10v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_left)) +                                         \
-                  w11v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_left)) -                                 \
-                  v_cvt_f32(v_reinterpret_as_s32(I0_row_4_left));                                                      \
-    I_diff_right = w00v * v_cvt_f32(v_reinterpret_as_s32(I1_row_4_right)) +                                            \
-                   w01v * v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_right)) +                                    \
-                   w10v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_right)) +                                       \
-                   w11v * v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_right)) -                               \
-                   v_cvt_f32(v_reinterpret_as_s32(I0_row_4_right));
+    I_diff_left = v_sub(v_add(v_mul(w00v, v_cvt_f32(v_reinterpret_as_s32(I1_row_4_left))),                             \
+                  v_mul(w01v, v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_left))),                                 \
+                  v_mul(w10v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_left))),                                    \
+                  v_mul(w11v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_left)))),                           \
+                  v_cvt_f32(v_reinterpret_as_s32(I0_row_4_left)));                                                     \
+    I_diff_right = v_sub(v_add(v_mul(w00v, v_cvt_f32(v_reinterpret_as_s32(I1_row_4_right))),                           \
+                   v_mul(w01v, v_cvt_f32(v_reinterpret_as_s32(I1_row_shifted_4_right))),                               \
+                   v_mul(w10v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_4_right))),                                  \
+                   v_mul(w11v, v_cvt_f32(v_reinterpret_as_s32(I1_row_next_shifted_4_right)))),                         \
+                   v_cvt_f32(v_reinterpret_as_s32(I0_row_4_right)));
 
 #define HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW                                                                     \
     I0_ptr += I0_stride;                                                                                               \
@@ -572,9 +581,9 @@ inline float processPatch(float &dst_dUx, float &dst_dUy, uchar *I0_ptr, uchar *
             v_expand(I0y_row, I0y_row_4_left, I0y_row_4_right);
 
             /* Update the sums: */
-            Ux_vec += I_diff_left * v_cvt_f32(I0x_row_4_left) + I_diff_right * v_cvt_f32(I0x_row_4_right);
-            Uy_vec += I_diff_left * v_cvt_f32(I0y_row_4_left) + I_diff_right * v_cvt_f32(I0y_row_4_right);
-            SSD_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
+            Ux_vec = v_add(Ux_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0x_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0x_row_4_right))));
+            Uy_vec = v_add(Uy_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0y_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0y_row_4_right))));
+            SSD_vec = v_add(SSD_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
 
             I0x_ptr += I0_stride;
             I0y_ptr += I0_stride;
@@ -640,10 +649,10 @@ inline float processPatchMeanNorm(float &dst_dUx, float &dst_dUy, uchar *I0_ptr,
             v_expand(I0y_row, I0y_row_4_left, I0y_row_4_right);
 
             /* Update the sums: */
-            sum_I0x_mul_vec += I_diff_left * v_cvt_f32(I0x_row_4_left) + I_diff_right * v_cvt_f32(I0x_row_4_right);
-            sum_I0y_mul_vec += I_diff_left * v_cvt_f32(I0y_row_4_left) + I_diff_right * v_cvt_f32(I0y_row_4_right);
-            sum_diff_sq_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
-            sum_diff_vec += I_diff_left + I_diff_right;
+            sum_I0x_mul_vec = v_add(sum_I0x_mul_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0x_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0x_row_4_right))));
+            sum_I0y_mul_vec = v_add(sum_I0y_mul_vec, v_add(v_mul(I_diff_left, v_cvt_f32(I0y_row_4_left)), v_mul(I_diff_right, v_cvt_f32(I0y_row_4_right))));
+            sum_diff_sq_vec = v_add(sum_diff_sq_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
+            sum_diff_vec = v_add(sum_diff_vec, v_add(I_diff_left, I_diff_right));
 
             I0x_ptr += I0_stride;
             I0y_ptr += I0_stride;
@@ -692,7 +701,7 @@ inline float computeSSD(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int I1_stri
         for (int row = 0; row < 8; row++)
         {
             HAL_PROCESS_BILINEAR_8x8_PATCH_EXTRACTION;
-            SSD_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
+            SSD_vec = v_add(SSD_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
             HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW;
         }
         SSD = v_reduce_sum(SSD_vec);
@@ -728,8 +737,8 @@ inline float computeSSDMeanNorm(uchar *I0_ptr, uchar *I1_ptr, int I0_stride, int
         for (int row = 0; row < 8; row++)
         {
             HAL_PROCESS_BILINEAR_8x8_PATCH_EXTRACTION;
-            sum_diff_sq_vec += I_diff_left * I_diff_left + I_diff_right * I_diff_right;
-            sum_diff_vec += I_diff_left + I_diff_right;
+            sum_diff_sq_vec = v_add(sum_diff_sq_vec, v_add(v_mul(I_diff_left, I_diff_left), v_mul(I_diff_right, I_diff_right)));
+            sum_diff_vec = v_add(sum_diff_vec, v_add(I_diff_left, I_diff_right));
             HAL_BILINEAR_8x8_PATCH_EXTRACTION_NEXT_ROW;
         }
         sum_diff = v_reduce_sum(sum_diff_vec);
@@ -809,10 +818,12 @@ void DISOpticalFlowImpl::PatchInverseSearch_ParBody::operator()(const Range &ran
     int i, j, dir;
     int start_is, end_is, start_js, end_js;
     int start_i, start_j;
-    float i_lower_limit = bsz - psz + 1.0f;
-    float i_upper_limit = bsz + dis->h - 1.0f;
-    float j_lower_limit = bsz - psz + 1.0f;
-    float j_upper_limit = bsz + dis->w - 1.0f;
+    // Clamp so the psz+1 (bilinear) read stays inside the padded I1_ext buffer even when
+    // psz > bsz; unchanged for psz <= bsz (the common case). See #20185.
+    float i_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float i_upper_limit = std::min(bsz + dis->h - 1.0f, dis->h + 2.0f * bsz - 1.0f - psz);
+    float j_lower_limit = std::max(bsz - psz + 1.0f, 0.0f);
+    float j_upper_limit = std::min(bsz + dis->w - 1.0f, dis->w + 2.0f * bsz - 1.0f - psz);
     float dUx, dUy, i_I1, j_I1, w00, w01, w10, w11, dx, dy;
 
 #define INIT_BILINEAR_WEIGHTS(Ux, Uy) \
@@ -1274,6 +1285,7 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, InputArray flow,
             variational_refinement_processors[i]->setAlpha(variational_refinement_alpha);
             variational_refinement_processors[i]->setDelta(variational_refinement_delta);
             variational_refinement_processors[i]->setGamma(variational_refinement_gamma);
+            variational_refinement_processors[i]->setEpsilon(variational_refinement_epsilon);
             variational_refinement_processors[i]->setSorIterations(5);
             variational_refinement_processors[i]->setFixedPointIterations(variational_refinement_iter);
 
@@ -1361,8 +1373,14 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     bool use_input_flow = false;
     if (flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2)
         use_input_flow = true;
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                         (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (user_coarsest_scale != -1)
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+    else
+        coarsest_scale = max_possible_scale;
 
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
@@ -1443,9 +1461,14 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     else
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
-    coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                         (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
 
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (user_coarsest_scale != -1)
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+    else
+        coarsest_scale = max_possible_scale;
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
 

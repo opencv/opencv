@@ -38,10 +38,12 @@ import cv2 as cvfrom matplotlib import pyplot as plt
 
 #roi is the object or region of object we need to find
 roi = cv.imread('rose_red.png')
+assert roi is not None, "file could not be read, check with os.path.exists()"
 hsv = cv.cvtColor(roi,cv.COLOR_BGR2HSV)
 
 #target is the image we search in
 target = cv.imread('rose.png')
+assert target is not None, "file could not be read, check with os.path.exists()"
 hsvt = cv.cvtColor(target,cv.COLOR_BGR2HSV)
 
 # Find the histograms using calcHist. Can be done with np.histogram2d also
@@ -85,9 +87,11 @@ import numpy as np
 import cv2 as cv
 
 roi = cv.imread('rose_red.png')
+assert roi is not None, "file could not be read, check with os.path.exists()"
 hsv = cv.cvtColor(roi,cv.COLOR_BGR2HSV)
 
 target = cv.imread('rose.png')
+assert target is not None, "file could not be read, check with os.path.exists()"
 hsvt = cv.cvtColor(target,cv.COLOR_BGR2HSV)
 
 # calculating object histogram
@@ -119,6 +123,3 @@ Additional Resources
 
 -#  "Indexing via color histograms", Swain, Michael J. , Third international conference on computer
     vision,1990.
-
-Exercises
----------

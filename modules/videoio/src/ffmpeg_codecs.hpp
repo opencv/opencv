@@ -60,6 +60,7 @@ extern "C" {
 #include <errno.h>
 #endif
 
+#include <libavcodec/version.h>
 #include <libavformat/avformat.h>
 
 #ifdef __cplusplus

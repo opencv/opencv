@@ -58,7 +58,7 @@ Theory
     gradient of an image intensity function.
 -#  The Sobel Operator combines Gaussian smoothing and differentiation.
 
-#### Formulation
+### Formulation
 
 Assuming that the image to be operated is \f$I\f$:
 
@@ -140,23 +140,23 @@ You can also download it from
 Explanation
 -----------
 
-#### Declare variables
+### Declare variables
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp variables
 
-#### Load source image
+### Load source image
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp load
 
-#### Reduce noise
+### Reduce noise
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp reduce_noise
 
-#### Grayscale
+### Grayscale
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert_to_gray
 
-#### Sobel Operator
+### Sobel Operator
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp sobel
 
@@ -174,18 +174,18 @@ Explanation
     Notice that to calculate the gradient in *x* direction we use: \f$x_{order}= 1\f$ and
     \f$y_{order} = 0\f$. We do analogously for the *y* direction.
 
-#### Convert output to a CV_8U image
+### Convert output to a CV_8U image
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert
 
-#### Gradient
+### Gradient
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp blend
 
 We try to approximate the *gradient* by adding both directional gradients (note that
 this is not an exact calculation at all! but it is good for our purposes).
 
-#### Show results
+### Show results
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp display
 

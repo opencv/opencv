@@ -81,11 +81,11 @@ void VideoioBridge::allocateOutputBuffers()
 }
 
 // performed on UI thread
-void VideoioBridge::allocateBuffers(int width, int height)
+void VideoioBridge::allocateBuffers(int width_, int height_)
 {
     // allocate input Mats (bgra8 = CV_8UC4, RGB24 = CV_8UC3)
-    frontInputMat.create(height, width, CV_8UC3);
-    backInputMat.create(height, width, CV_8UC3);
+    frontInputMat.create(height_, width_, CV_8UC3);
+    backInputMat.create(height_, width_, CV_8UC3);
 
     frontInputPtr = frontInputMat.ptr(0);
     backInputPtr = backInputMat.ptr(0);

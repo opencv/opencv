@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 set(PROJECT_NAME "c_hal")
 set(HAL_LIB_NAME "c_hal")

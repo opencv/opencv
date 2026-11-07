@@ -26,8 +26,9 @@ void Hist_and_Backproj(int, void* );
 int main( int argc, char* argv[] )
 {
     //! [Read the image]
-    CommandLineParser parser( argc, argv, "{@input |  | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input |Back_Projection_Theory0.jpg| input image}" );
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/histograms/back_projection/images");
+    Mat src = imread(samples::findFile(parser.get<String>( "@input" )) );
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

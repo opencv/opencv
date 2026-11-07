@@ -3,8 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1997, Thomas G. Lane.
- * It was modified by The libjpeg-turbo Project to include only code relevant
- * to libjpeg-turbo.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -51,6 +51,7 @@ jpeg_abort(j_common_ptr cinfo)
      * A bit kludgy to do it here, but this is the most central place.
      */
     ((j_decompress_ptr)cinfo)->marker_list = NULL;
+    ((j_decompress_ptr)cinfo)->master->marker_list_end = NULL;
   } else {
     cinfo->global_state = CSTATE_START;
   }

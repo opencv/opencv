@@ -230,7 +230,7 @@ static void filterEllipticKeyPointsByImageSize( std::vector<EllipticKeyPoint>& k
         std::vector<EllipticKeyPoint> filtered;
         filtered.reserve(keypoints.size());
         std::vector<EllipticKeyPoint>::const_iterator it = keypoints.begin();
-        for( int i = 0; it != keypoints.end(); ++it, i++ )
+        for( ; it != keypoints.end(); ++it )
         {
             if( it->center.x + it->boundingBox.width < imgSize.width &&
                 it->center.x - it->boundingBox.width > 0 &&

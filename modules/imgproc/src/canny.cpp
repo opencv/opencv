@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2014, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -42,92 +43,11 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
-#include "opencv2/core/hal/intrin.hpp"
+#include "canny.hpp"
 #include <deque>
-
-#include "opencv2/core/openvx/ovx_defs.hpp"
 
 namespace cv
 {
-
-#ifdef HAVE_IPP
-static bool ipp_Canny(const Mat& src , const Mat& dx_, const Mat& dy_, Mat& dst, float low,  float high, bool L2gradient, int aperture_size)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_DISABLE_PERF_CANNY_MT
-    if(cv::getNumThreads()>1)
-        return false;
-#endif
-
-    ::ipp::IwiSize size(dst.cols, dst.rows);
-    IppDataType    type     = ippiGetDataType(dst.depth());
-    int            channels = dst.channels();
-    IppNormType    norm     = (L2gradient)?ippNormL2:ippNormL1;
-
-    if(size.width <= 3 || size.height <= 3)
-        return false;
-
-    if(channels != 1)
-        return false;
-
-    if(type != ipp8u)
-        return false;
-
-    if(src.empty())
-    {
-        try
-        {
-            ::ipp::IwiImage iwSrcDx;
-            ::ipp::IwiImage iwSrcDy;
-            ::ipp::IwiImage iwDst;
-
-            ippiGetImage(dx_, iwSrcDx);
-            ippiGetImage(dy_, iwSrcDy);
-            ippiGetImage(dst, iwDst);
-
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCannyDeriv, iwSrcDx, iwSrcDy, iwDst, low, high, ::ipp::IwiFilterCannyDerivParams(norm));
-        }
-        catch (const ::ipp::IwException &)
-        {
-            return false;
-        }
-    }
-    else
-    {
-        IppiMaskSize kernel;
-
-        if(aperture_size == 3)
-            kernel = ippMskSize3x3;
-        else if(aperture_size == 5)
-            kernel = ippMskSize5x5;
-        else
-            return false;
-
-        try
-        {
-            ::ipp::IwiImage iwSrc;
-            ::ipp::IwiImage iwDst;
-
-            ippiGetImage(src, iwSrc);
-            ippiGetImage(dst, iwDst);
-
-            CV_INSTRUMENT_FUN_IPP(::ipp::iwiFilterCanny, iwSrc, iwDst, low, high, ::ipp::IwiFilterCannyParams(ippFilterSobel, kernel, norm), ippBorderRepl);
-        }
-        catch (const ::ipp::IwException &)
-        {
-            return false;
-        }
-    }
-
-    return true;
-#else
-    CV_UNUSED(src); CV_UNUSED(dx_); CV_UNUSED(dy_); CV_UNUSED(dst); CV_UNUSED(low); CV_UNUSED(high); CV_UNUSED(L2gradient); CV_UNUSED(aperture_size);
-    return false;
-#endif
-}
-#endif
 
 #ifdef HAVE_OPENCL
 
@@ -183,11 +103,11 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
                 Non maxima suppression
                 Double thresholding
         */
-        char cvt[40];
+        char cvt[50];
         ocl::Kernel with_sobel("stage1_with_sobel", ocl::imgproc::canny_oclsrc,
                                format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_floatN=%s -D floatN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
                                       cn, ocl::memopTypeToStr(_src.depth()),
-                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt),
+                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt, sizeof(cvt)),
                                       ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)),
                                       lSizeX, lSizeY,
                                       L2gradient ? " -D L2GRAD" : ""));
@@ -304,19 +224,10 @@ public:
     parallelCanny(const Mat &_src, Mat &_map, std::deque<uchar*> &borderPeaksParallel,
                   int _low, int _high, int _aperture_size, bool _L2gradient) :
         src(_src), src2(_src), map(_map), _borderPeaksParallel(borderPeaksParallel),
-        low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient)
+        low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient),
+        simdWidth(canny_simd_width())
     {
-#if CV_SIMD
-        for(int i = 0; i < v_int8::nlanes; ++i)
-        {
-            smask[i] = 0;
-            smask[i + v_int8::nlanes] = (schar)-1;
-        }
-        if (true)
-            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
-        else
-#endif
-            _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
+        _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + simdWidth + 1), simdWidth), CV_8UC1);
         map = _map;
         map.row(0).setTo(1);
         map.row(src.rows + 1).setTo(1);
@@ -328,19 +239,10 @@ public:
     parallelCanny(const Mat &_dx, const Mat &_dy, Mat &_map, std::deque<uchar*> &borderPeaksParallel,
                   int _low, int _high, bool _L2gradient) :
         src(_dx), src2(_dy), map(_map), _borderPeaksParallel(borderPeaksParallel),
-        low(_low), high(_high), aperture_size(0), L2gradient(_L2gradient)
+        low(_low), high(_high), aperture_size(0), L2gradient(_L2gradient),
+        simdWidth(canny_simd_width())
     {
-#if CV_SIMD
-        for(int i = 0; i < v_int8::nlanes; ++i)
-        {
-            smask[i] = 0;
-            smask[i + v_int8::nlanes] = (schar)-1;
-        }
-        if (true)
-            _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
-        else
-#endif
-            _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
+        _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + simdWidth + 1), simdWidth), CV_8UC1);
         map = _map;
         map.row(0).setTo(1);
         map.row(src.rows + 1).setTo(1);
@@ -371,12 +273,8 @@ public:
         CV_TRACE_REGION("gradient")
         if(needGradient)
         {
-            if (aperture_size == 7)
-            {
-                scale = 1 / 16.0;
-            }
-            Sobel(src.rowRange(rowStart, rowEnd), dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
-            Sobel(src.rowRange(rowStart, rowEnd), dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
+            scale = (aperture_size == 7) ? (1 / 16.0) : 1.0;
+            spatialGradient(src.rowRange(rowStart, rowEnd), dx, dy, aperture_size, BORDER_REPLICATE, CV_16S, scale);
         }
         else
         {
@@ -396,17 +294,10 @@ public:
         }
 
         // _mag_p: previous row, _mag_a: actual row, _mag_n: next row
-#if CV_SIMD
-        AutoBuffer<int> buffer(3 * (mapstep * cn + CV_SIMD_WIDTH));
-        _mag_p = alignPtr(buffer.data() + 1, CV_SIMD_WIDTH);
-        _mag_a = alignPtr(_mag_p + mapstep * cn, CV_SIMD_WIDTH);
-        _mag_n = alignPtr(_mag_a + mapstep * cn, CV_SIMD_WIDTH);
-#else
-        AutoBuffer<int> buffer(3 * (mapstep * cn));
-        _mag_p = buffer.data() + 1;
-        _mag_a = _mag_p + mapstep * cn;
-        _mag_n = _mag_a + mapstep * cn;
-#endif
+        AutoBuffer<int> buffer(3 * (mapstep * cn + simdWidth));
+        _mag_p = alignPtr(buffer.data() + 1, simdWidth);
+        _mag_a = alignPtr(_mag_p + mapstep * cn, simdWidth);
+        _mag_n = alignPtr(_mag_a + mapstep * cn, simdWidth);
 
         // For the first time when just 2 rows are filled and for left and right borders
         if(rowStart == boundaries.start)
@@ -433,50 +324,7 @@ public:
                 _dx = dx.ptr<short>(i - rowStart);
                 _dy = dy.ptr<short>(i - rowStart);
 
-                if (L2gradient)
-                {
-                    int j = 0, width = src.cols * cn;
-#if CV_SIMD
-                    for ( ; j <= width - v_int16::nlanes; j += v_int16::nlanes)
-                    {
-                        v_int16 v_dx = vx_load((const short*)(_dx + j));
-                        v_int16 v_dy = vx_load((const short*)(_dy + j));
-
-                        v_int32 v_dxp_low, v_dxp_high;
-                        v_int32 v_dyp_low, v_dyp_high;
-                        v_expand(v_dx, v_dxp_low, v_dxp_high);
-                        v_expand(v_dy, v_dyp_low, v_dyp_high);
-
-                        v_store_aligned((int *)(_mag_n + j), v_dxp_low*v_dxp_low+v_dyp_low*v_dyp_low);
-                        v_store_aligned((int *)(_mag_n + j + v_int32::nlanes), v_dxp_high*v_dxp_high+v_dyp_high*v_dyp_high);
-                    }
-#endif
-                    for ( ; j < width; ++j)
-                        _mag_n[j] = int(_dx[j])*_dx[j] + int(_dy[j])*_dy[j];
-                }
-                else
-                {
-                    int j = 0, width = src.cols * cn;
-#if CV_SIMD
-                    for(; j <= width - v_int16::nlanes; j += v_int16::nlanes)
-                    {
-                        v_int16 v_dx = vx_load((const short *)(_dx + j));
-                        v_int16 v_dy = vx_load((const short *)(_dy + j));
-
-                        v_dx = v_reinterpret_as_s16(v_abs(v_dx));
-                        v_dy = v_reinterpret_as_s16(v_abs(v_dy));
-
-                        v_int32 v_dx_ml, v_dy_ml, v_dx_mh, v_dy_mh;
-                        v_expand(v_dx, v_dx_ml, v_dx_mh);
-                        v_expand(v_dy, v_dy_ml, v_dy_mh);
-
-                        v_store_aligned((int *)(_mag_n + j), v_dx_ml + v_dy_ml);
-                        v_store_aligned((int *)(_mag_n + j + v_int32::nlanes), v_dx_mh + v_dy_mh);
-                    }
-#endif
-                    for ( ; j < width; ++j)
-                        _mag_n[j] = std::abs(int(_dx[j])) + std::abs(int(_dy[j]));
-                }
+                canny_calc_magnitude(_dx, _dy, _mag_n, src.cols * cn, L2gradient);
 
                 if(cn > 1)
                 {
@@ -515,12 +363,7 @@ public:
 
             // From here actual src row is (i - 1)
             // Set left and right border to 1
-#if CV_SIMD
-            if (true)
-                _pmap = map.ptr<uchar>(i) + CV_SIMD_WIDTH;
-            else
-#endif
-                _pmap = map.ptr<uchar>(i) + 1;
+            _pmap = map.ptr<uchar>(i) + simdWidth;
 
             _pmap[src.cols] =_pmap[-1] = 1;
 
@@ -535,109 +378,7 @@ public:
                 _dy = _dy_a;
             }
 
-            const int TG22 = 13573;
-            int j = 0;
-#if CV_SIMD
-            {
-                const v_int32 v_low = vx_setall_s32(low);
-                const v_int8 v_one = vx_setall_s8(1);
-
-                for (; j <= src.cols - v_int8::nlanes; j += v_int8::nlanes)
-                {
-                    v_store_aligned((signed char*)(_pmap + j), v_one);
-                    v_int8 v_cmp = v_pack(v_pack(vx_load_aligned((const int*)(_mag_a + j                    )) > v_low,
-                                                 vx_load_aligned((const int*)(_mag_a + j +   v_int32::nlanes)) > v_low),
-                                          v_pack(vx_load_aligned((const int*)(_mag_a + j + 2*v_int32::nlanes)) > v_low,
-                                                 vx_load_aligned((const int*)(_mag_a + j + 3*v_int32::nlanes)) > v_low));
-                    while (v_check_any(v_cmp))
-                    {
-                        int l = v_scan_forward(v_cmp);
-                        v_cmp &= vx_load(smask + v_int8::nlanes - 1 - l);
-                        int k = j + l;
-
-                        int m = _mag_a[k];
-                        short xs = _dx[k];
-                        short ys = _dy[k];
-                        int x = (int)std::abs(xs);
-                        int y = (int)std::abs(ys) << 15;
-
-                        int tg22x = x * TG22;
-
-                        if (y < tg22x)
-                        {
-                            if (m > _mag_a[k - 1] && m >= _mag_a[k + 1])
-                            {
-                                CANNY_CHECK(m, high, (_pmap+k), stack);
-                            }
-                        }
-                        else
-                        {
-                            int tg67x = tg22x + (x << 16);
-                            if (y > tg67x)
-                            {
-                                if (m > _mag_p[k] && m >= _mag_n[k])
-                                {
-                                    CANNY_CHECK(m, high, (_pmap+k), stack);
-                                }
-                            }
-                            else
-                            {
-                                int s = (xs ^ ys) < 0 ? -1 : 1;
-                                if(m > _mag_p[k - s] && m > _mag_n[k + s])
-                                {
-                                    CANNY_CHECK(m, high, (_pmap+k), stack);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-#endif
-            for (; j < src.cols; j++)
-            {
-                int m = _mag_a[j];
-
-                if (m > low)
-                {
-                    short xs = _dx[j];
-                    short ys = _dy[j];
-                    int x = (int)std::abs(xs);
-                    int y = (int)std::abs(ys) << 15;
-
-                    int tg22x = x * TG22;
-
-                    if (y < tg22x)
-                    {
-                        if (m > _mag_a[j - 1] && m >= _mag_a[j + 1])
-                        {
-                            CANNY_CHECK(m, high, (_pmap+j), stack);
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        int tg67x = tg22x + (x << 16);
-                        if (y > tg67x)
-                        {
-                            if (m > _mag_p[j] && m >= _mag_n[j])
-                            {
-                                CANNY_CHECK(m, high, (_pmap+j), stack);
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            int s = (xs ^ ys) < 0 ? -1 : 1;
-                            if(m > _mag_p[j - s] && m > _mag_n[j + s])
-                            {
-                                CANNY_CHECK(m, high, (_pmap+j), stack);
-                                continue;
-                            }
-                        }
-                    }
-                }
-                _pmap[j] = 1;
-            }
+            canny_nms_row(_mag_a, _mag_p, _mag_n, _dx, _dy, _pmap, src.cols, low, high, stack);
         }
 
         // Not for first row of first slice or last row of last slice
@@ -692,10 +433,8 @@ private:
     bool L2gradient, needGradient;
     ptrdiff_t mapstep;
     int cn;
+    int simdWidth;
     mutable Mutex mutex;
-#if CV_SIMD
-    schar smask[2*v_int8::nlanes];
-#endif
 };
 
 class finalPass : public ParallelLoopBody
@@ -712,44 +451,14 @@ public:
 
     void operator()(const Range &boundaries) const CV_OVERRIDE
     {
-        // the final pass, form the final image
+        // the final pass, form the final image. The map's left padding matches the
+        // width used by parallelCanny when it was allocated (same dispatched value).
+        const int simdWidth = canny_simd_width();
         for (int i = boundaries.start; i < boundaries.end; i++)
         {
-            int j = 0;
             uchar *pdst = dst.ptr<uchar>(i);
-            const uchar *pmap = map.ptr<uchar>(i + 1);
-#if CV_SIMD
-            if (true)
-                pmap += CV_SIMD_WIDTH;
-            else
-#endif
-                pmap += 1;
-#if CV_SIMD
-            {
-                const v_uint8 v_zero = vx_setzero_u8();
-                const v_uint8 v_ff = ~v_zero;
-                const v_uint8 v_two = vx_setall_u8(2);
-
-                for (; j <= dst.cols - v_uint8::nlanes; j += v_uint8::nlanes)
-                {
-                    v_uint8 v_pmap = vx_load_aligned((const unsigned char*)(pmap + j));
-                    v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
-                    v_store((pdst + j), v_pmap);
-                }
-
-                if (j <= dst.cols - v_uint8::nlanes/2)
-                {
-                    v_uint8 v_pmap = vx_load_low((const unsigned char*)(pmap + j));
-                    v_pmap = v_select(v_pmap == v_two, v_ff, v_zero);
-                    v_store_low((pdst + j), v_pmap);
-                    j += v_uint8::nlanes/2;
-                }
-            }
-#endif
-            for (; j < dst.cols; j++)
-            {
-                pdst[j] = (uchar)-(pmap[j] >> 1);
-            }
+            const uchar *pmap = map.ptr<uchar>(i + 1) + simdWidth;
+            canny_finalize_row(pmap, pdst, dst.cols);
         }
     }
 
@@ -760,65 +469,6 @@ private:
     finalPass(const finalPass&); // = delete
     finalPass& operator=(const finalPass&); // = delete
 };
-
-#ifdef HAVE_OPENVX
-namespace ovx {
-    template <> inline bool skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(int w, int h) { return w*h < 640 * 480; }
-}
-static bool openvx_canny(const Mat& src, Mat& dst, int loVal, int hiVal, int kSize, bool useL2)
-{
-    using namespace ivx;
-
-    Context context = ovx::getOpenVXContext();
-    try
-    {
-    Image _src = Image::createFromHandle(
-                context,
-                Image::matTypeToFormat(src.type()),
-                Image::createAddressing(src),
-                src.data );
-    Image _dst = Image::createFromHandle(
-                context,
-                Image::matTypeToFormat(dst.type()),
-                Image::createAddressing(dst),
-                dst.data );
-    Threshold threshold = Threshold::createRange(context, VX_TYPE_UINT8, saturate_cast<uchar>(loVal), saturate_cast<uchar>(hiVal));
-
-#if 0
-    // the code below is disabled because vxuCannyEdgeDetector()
-    // ignores context attribute VX_CONTEXT_IMMEDIATE_BORDER
-
-    // FIXME: may fail in multithread case
-    border_t prevBorder = context.immediateBorder();
-    context.setImmediateBorder(VX_BORDER_REPLICATE);
-    IVX_CHECK_STATUS( vxuCannyEdgeDetector(context, _src, threshold, kSize, (useL2 ? VX_NORM_L2 : VX_NORM_L1), _dst) );
-    context.setImmediateBorder(prevBorder);
-#else
-    // alternative code without vxuCannyEdgeDetector()
-    Graph graph = Graph::create(context);
-    ivx::Node node = ivx::Node(vxCannyEdgeDetectorNode(graph, _src, threshold, kSize, (useL2 ? VX_NORM_L2 : VX_NORM_L1), _dst) );
-    node.setBorder(VX_BORDER_REPLICATE);
-    graph.verify();
-    graph.process();
-#endif
-
-#ifdef VX_VERSION_1_1
-    _src.swapHandle();
-    _dst.swapHandle();
-#endif
-    }
-    catch(const WrapperError& e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch(const RuntimeError& e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-#endif // HAVE_OPENVX
 
 void Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
@@ -835,15 +485,16 @@ void Canny( InputArray _src, OutputArray _dst,
 
     _dst.create(size, CV_8U);
 
+    // backward compatibility
+    const int CV_CANNY_L2_GRADIENT = (1 << 31);
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
-        // backward compatibility
         aperture_size &= ~CV_CANNY_L2_GRADIENT;
         L2gradient = true;
     }
 
     if ((aperture_size & 1) == 0 || (aperture_size != -1 && (aperture_size < 3 || aperture_size > 7)))
-        CV_Error(CV_StsBadFlag, "Aperture size should be odd between 3 and 7");
+        CV_Error(cv::Error::StsBadFlag, "Aperture size should be odd between 3 and 7");
 
     if (aperture_size == 7)
     {
@@ -862,23 +513,6 @@ void Canny( InputArray _src, OutputArray _dst,
 
     CALL_HAL(canny, cv_hal_canny, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.channels(),
              low_thresh, high_thresh, aperture_size, L2gradient);
-
-    CV_OVX_RUN(
-        false && /* disabling due to accuracy issues */
-            src.type() == CV_8UC1 &&
-            !src.isSubmatrix() &&
-            src.cols >= aperture_size &&
-            src.rows >= aperture_size &&
-            !ovx::skipSmallImages<VX_KERNEL_CANNY_EDGE_DETECTOR>(src.cols, src.rows),
-        openvx_canny(
-            src,
-            dst,
-            cvFloor(low_thresh),
-            cvFloor(high_thresh),
-            aperture_size,
-            L2gradient ) )
-
-    CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
 
     if (L2gradient)
     {
@@ -954,7 +588,8 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
     Mat dx = _dx.getMat();
     Mat dy = _dy.getMat();
 
-    CV_IPP_RUN_FAST(ipp_Canny(Mat(), dx, dy, dst, (float)low_thresh, (float)high_thresh, L2gradient, 0))
+    CALL_HAL(canny_deriv, cv_hal_canny_deriv, dx.ptr<short>(), dx.step, dy.ptr<short>(), dy.step,
+             dst.data, dst.step, dx.cols, dx.rows, dx.channels(), low_thresh, high_thresh, L2gradient);
 
     if (L2gradient)
     {

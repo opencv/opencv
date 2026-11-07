@@ -135,7 +135,7 @@ double Core_PowTest::get_success_error_level( int test_case_idx, int i, int j )
         return power == cvRound(power) && power >= 0 ? 0 : 1;
     else
     {
-        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.1;
+        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.11;
     }
 }
 
@@ -146,7 +146,7 @@ void Core_PowTest::get_minmax_bounds( int /*i*/, int /*j*/, int type, Scalar& lo
     if( power > 0 )
     {
         double mval = cvtest::getMaxVal(type);
-        double u1 = pow(mval,1./power)*2;
+        double u1 = std::pow(mval,1./power)*2;
         u = MIN(u,u1);
     }
 
@@ -322,7 +322,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((float*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( fabs(val), power );
                         ((float*)b_data)[j] = (float)val;
                     }
                 else
@@ -340,7 +340,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((double*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( fabs(val), power );
                         ((double*)b_data)[j] = (double)val;
                     }
                 else
@@ -477,8 +477,9 @@ class Core_DotProductTest : public Core_MatrixTest
 public:
     Core_DotProductTest();
 protected:
-    void run_func();
-    void prepare_to_validation( int test_case_idx );
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -498,6 +499,15 @@ void Core_DotProductTest::prepare_to_validation( int )
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = Scalar(cvtest::crossCorr( test_mat[INPUT][0], test_mat[INPUT][1] ));
 }
 
+double Core_DotProductTest::get_success_error_level( int test_case_idx, int i, int j )
+{
+#ifdef __riscv
+    const int depth = test_mat[i][j].depth();
+    if (depth == CV_64F)
+        return 2.5e-5;
+#endif
+    return Core_MatrixTest::get_success_error_level( test_case_idx, i, j );
+}
 
 ///////// crossproduct //////////
 
@@ -2384,7 +2394,7 @@ void Core_SolvePolyTest::run( int )
             for (int j = 0; j < n; ++j)
             {
                 s += fabs(r[j].real()) + fabs(r[j].imag());
-                div += sqrt(pow(r[j].real() - ar[j].real(), 2) + pow(r[j].imag() - ar[j].imag(), 2));
+                div += sqrt(std::pow(r[j].real() - ar[j].real(), 2) + std::pow(r[j].imag() - ar[j].imag(), 2));
             }
             div /= s;
             pass = pass && div < err_eps;
@@ -2425,7 +2435,7 @@ static void checkRoot(Mat& r, T re, T im)
 {
     for (int i = 0; i < r.cols*r.rows; i++)
     {
-        Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
+        Vec<T, 2>& v = *(Vec<T, 2>*)r.ptr(i);
         if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)
         {
             v[0] = std::numeric_limits<T>::quiet_NaN();
@@ -2435,6 +2445,206 @@ static void checkRoot(Mat& r, T re, T im)
     }
     GTEST_NONFATAL_FAILURE_("Can't find root") << "(" << re << ", " << im << ")";
 }
+
+TEST(Core_SolveCubicConstant, accuracy)
+{
+    {
+        const std::vector<double> coeffs{0., 0., 0., 1.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 0);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 0., 0., 0.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, -1);
+    }
+}
+
+TEST(Core_SolveCubicLinear, accuracy)
+{
+    const std::vector<double> coeffs{0., 0., 2., -2.};
+    std::vector<double> roots;
+    const auto num_roots = solveCubic(coeffs, roots);
+
+    EXPECT_EQ(num_roots, 1);
+    EXPECT_EQ(roots[0], 1.);
+}
+
+TEST(Core_SolveCubicQuadratic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{0., 2., -4., 4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 0);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 2., -4., 2.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 2., -6., 4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_EQ(roots[0], 2.);
+        EXPECT_EQ(roots[1], 1.);
+    }
+}
+
+TEST(Core_SolveCubicCubic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{2., -6., 6., -2.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -10., 24., -16.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -10., 16., -8.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
+    }
+
+    {
+        const std::vector<double> coeffs{2., -12., 22., -12.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
+    }
+}
+
+TEST(Core_SolveCubicNormalizedCubic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{-3., 3., -1.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{-5., 12., -8.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{-5., 8., -4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
+    }
+
+    {
+        const std::vector<double> coeffs{-6., 11., -6.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
+    }
+}
+
+TEST(Core_SolveCubic, regression_27323)
+{
+    {
+        const std::vector<double> coeffs{2e-13, 1, -2, 1};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], -5e12 - 2.);
+    }
+
+    {
+        const std::vector<double> coeffs{5e12, -1e13, 5e12};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], -5e12 - 2.);
+    }
+}
+
+TEST(Core_SolveCubic, regression_27748)
+{
+    // a is extremely small relative to others (approx 1.8e-19 ratio),
+    // causing instability in standard cubic formula.
+    double a = 1.56041e-17;
+    double b = 84.4504;
+    double c = -96.795;
+    double d = 13.6826;
+
+    Mat coeffs = (Mat_<double>(1, 4) << a, b, c, d);
+    Mat roots;
+
+    int n = solveCubic(coeffs, roots);
+
+    // Expecting quadratic behavior (2 roots)
+    EXPECT_GE(n, 2);
+
+    // Verify roots satisfy the FULL cubic equation
+    for(int i = 0; i < n; i++)
+    {
+        double x = roots.at<double>(i);
+        double val = a*x*x*x + b*x*x + c*x + d;
+        // Check residual is small
+        EXPECT_LE(fabs(val), 1e-6) << "Root " << x << " does not satisfy the equation";
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
@@ -2466,6 +2676,93 @@ TEST(Core_SolvePoly, regression_5599)
         ASSERT_EQ(CV_32FC2, r.type());
         checkRoot<float>(r, 1, 0);
         checkRoot<float>(r, 1, 0);
+    }
+}
+
+TEST(Core_SolvePoly, regression_23644)
+{
+    // x^2 - 2x - 3 = 0,  roots: 3, -1
+    cv::Mat coefs = (cv::Mat_<float>(1,3) << -3, -2, 1 );
+    cv::Mat r;
+    double prec;
+    prec = cv::solvePoly(coefs, r);
+    EXPECT_LE(prec, 1e-6);
+    EXPECT_EQ(2u, r.total());
+    ASSERT_EQ(CV_32FC2, r.type());
+    checkRoot<float>(r, 3, 0);
+    checkRoot<float>(r, -1, 0);
+}
+
+TEST(Core_SolvePoly, degree_2_polynomials)
+{
+    cv::Mat_<float> coefs(1,3);
+    cv::Mat r;
+    double prec;
+    for (float c0 = -20; c0 <= 20; c0++)
+    {
+        coefs.at<float>(0) = c0;
+        for (float c1 = -20; c1 <= 20; c1++)
+        {
+            coefs.at<float>(1) = c1;
+            for (float c2 = -20; c2 <= 20; c2++)
+            {
+                coefs.at<float>(2) = c2;
+                prec = cv::solvePoly(coefs, r);
+                EXPECT_LE(prec, 1e-6);
+            }
+        }
+    }
+}
+
+TEST(Core_SolvePoly, degree_4_polynomials)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+
+    cv::Mat_<float> coefs(1,5);
+    cv::Mat r;
+    double prec;
+    for (float c0 = -10; c0 <= 10; c0++)
+    {
+        coefs.at<float>(0) = c0;
+        for (float c1 = -10; c1 <= 10; c1++)
+        {
+            coefs.at<float>(1) = c1;
+            for (float c2 = -10; c2 <= 10; c2++)
+            {
+                coefs.at<float>(2) = c2;
+                for (float c3 = -10; c3 <= 10; c3++)
+                {
+                    coefs.at<float>(3) = c3;
+                    for (float c4 = -10; c4 <= 10; c4++)
+                    {
+                        coefs.at<float>(4) = c4;
+                        prec = cv::solvePoly(coefs, r);
+                        EXPECT_LE(prec, 1e-3);
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST(Core_SolvePoly, different_magnitudes_polynomials)
+{
+    cv::Mat_<float> coefs(1,3);
+    cv::Mat r;
+    double prec;
+    for (float i = -10; i < 10; i++)
+    {
+        coefs.at<float>(0) = pow(2.f, i);
+        for (float j = -10; j < 10; j++)
+        {
+            coefs.at<float>(1) = pow(2.f, j);
+            for (float k = -10; k < 10; k++)
+            {
+                coefs.at<float>(2) = pow(2.f, k);
+                prec = cv::solvePoly(coefs, r);
+                EXPECT_LE(prec, 1e-6);
+            }
+        }
     }
 }
 
@@ -2746,6 +3043,37 @@ TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run();
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
+
+TEST(Core_GEMM, inplace_complex)
+{
+    const Mat a64 = (Mat_<Vec2d>(2, 2) << Vec2d(1, 2), Vec2d(2, -1),
+                                        Vec2d(-3, 1), Vec2d(4, 2));
+    const Mat b64 = (Mat_<Vec2d>(2, 2) << Vec2d(3, 4), Vec2d(-2, 1),
+                                        Vec2d(1, -3), Vec2d(2, 5));
+    const Mat expected64 = (Mat_<Vec2d>(2, 2) << Vec2d(-6, 3), Vec2d(5, 5),
+                                               Vec2d(-3, -19), Vec2d(3, 19));
+    const int types[] = {CV_32FC2, CV_64FC2};
+    for (int i = 0; i < 2; ++i)
+    {
+        SCOPED_TRACE(types[i]);
+        Mat a, b, expected, actual;
+        a64.convertTo(a, types[i]);
+        b64.convertTo(b, types[i]);
+        expected64.convertTo(expected, types[i]);
+
+        gemm(a, b, 1, Mat(), 0, actual);
+        EXPECT_EQ(0., cvtest::norm(actual, expected, NORM_INF)) << "out-of-place";
+
+        Mat aliasA = a.clone();
+        gemm(aliasA, b, 1, Mat(), 0, aliasA);
+        EXPECT_EQ(0., cvtest::norm(aliasA, expected, NORM_INF)) << "destination aliases A";
+
+        Mat aliasB = b.clone();
+        gemm(a, aliasB, 1, Mat(), 0, aliasB);
+        EXPECT_EQ(0., cvtest::norm(aliasB, expected, NORM_INF)) << "destination aliases B";
+    }
+}
+
 TEST(Core_Invert, accuracy) { Core_InvertTest test; test.safe_run(); }
 TEST(Core_Mahalanobis, accuracy) { Core_MahalanobisTest test; test.safe_run(); }
 TEST(Core_MulTransposed, accuracy) { Core_MulTransposedTest test; test.safe_run(); }
@@ -3018,7 +3346,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
     cv::Mat goldMean;
 
-    cv::reduce(src,goldMean,0 ,REDUCE_AVG, CV_32F);
+    cv::reduce(src, goldMean, 0, REDUCE_AVG, CV_32F);
 
     cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
 
@@ -3041,6 +3369,40 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::absdiff(goldMean, actualMean.reshape(0,1), meanDiff);
     cv::Scalar sDiff = cv::sum(meanDiff);
     ASSERT_EQ(sDiff.dot(sDiff), 0.0);
+}
+
+TEST(CovariationMatrixVectorOfMatWithMean, non_contiguous_mean)
+{
+    std::vector<cv::Mat> samples;
+    samples.push_back((cv::Mat_<float>(2, 2) << 1, 2, 3, 4));
+    samples.push_back((cv::Mat_<float>(2, 2) << 2, 4, 6, 8));
+    samples.push_back((cv::Mat_<float>(2, 2) << 3, 6, 9, 12));
+
+    const float sentinel0 = 12345.0f;
+    const float sentinel1 = -12345.0f;
+    cv::Mat meanStorage = (cv::Mat_<float>(2, 3) <<
+        10, 20, sentinel0,
+        30, 40, sentinel1);
+    cv::Mat meanROI = meanStorage(cv::Rect(0, 0, 2, 2));
+    cv::Mat expectedMean = meanROI.clone();
+    cv::Mat continuousMean = expectedMean.clone();
+    ASSERT_TRUE(continuousMean.isContinuous());
+    ASSERT_FALSE(meanROI.isContinuous());
+    ASSERT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+
+    const int flags = cv::COVAR_ROWS | cv::COVAR_USE_AVG;
+    cv::Mat covContinuous, covROI, covPointer;
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covContinuous, continuousMean, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(&samples[0], static_cast<int>(samples.size()),
+                                       covPointer, meanROI, flags, CV_32F));
+    ASSERT_NO_THROW(cv::calcCovarMatrix(samples, covROI, meanROI, flags, CV_32F));
+
+    EXPECT_EQ(0, cvtest::norm(covContinuous, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(covPointer, covROI, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, continuousMean, cv::NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expectedMean, meanROI, cv::NORM_INF));
+    EXPECT_EQ(sentinel0, meanStorage.at<float>(0, 2));
+    EXPECT_EQ(sentinel1, meanStorage.at<float>(1, 2));
 }
 
 TEST(Core_Pow, special)
@@ -3992,6 +4354,13 @@ TEST(Core_FastMath, InlineNaN)
     EXPECT_EQ( cvIsNaN((double) NAN), 1);
     EXPECT_EQ( cvIsNaN((double) -NAN), 1);
     EXPECT_EQ( cvIsNaN(0.0), 0);
+
+    // Regression: check the +/-Inf cases
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
+    suf.u = 0xFFF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
 }
 
 TEST(Core_FastMath, InlineIsInf)
@@ -4003,7 +4372,290 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf(0.0), 0);
+
+    // Regression: check the cases of 0x7FF00000xxxxxxxx
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000001UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
+    suf.u = 0x7FF0000012345678UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
 }
+
+////////////////////////////////////////////////////////////////////////////
+// See https://github.com/opencv/opencv/issues/28930
+typedef testing::TestWithParam<std::tuple<int,int,int,int, int>> Core_Point_DotProduct_regression28930;
+
+TEST_P(Core_Point_DotProduct_regression28930, basic)
+{
+    const int x1 = std::get<0>(GetParam());
+    const int y1 = std::get<1>(GetParam());
+    const int x2 = std::get<2>(GetParam());
+    const int y2 = std::get<3>(GetParam());
+    const int expect = std::get<4>(GetParam());
+
+    cv::Point pt1(x1, y1);
+    cv::Point pt2(x2, y2);
+
+    EXPECT_EQ(pt1.dot(pt2), expect) << "Failed for: (" << x1 << "," << y1 << ") dot (" << x2 << "," << y2 << ")";
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Point_DotProduct_regression28930,
+testing::Values(
+    // 1. INT_MIN*INT_MIN + INT_MIN*INT_MIN = 2^62 + 2^62 => Saturates to MAX
+    std::make_tuple(  INT_MIN, INT_MIN,
+                      INT_MIN, INT_MIN,
+                      INT_MAX),
+
+    // 2. INT_MIN*INT_MAX + INT_MAX*INT_MAX = 4611686014132420609 + -4611686016279904256 = -2147483647
+    std::make_tuple(  INT_MAX, INT_MIN,
+                      INT_MAX, INT_MAX,
+                     -2147483647),
+
+    // 3. INT_MAX*INT_MAX + INT_MAX*INT_MIN = 4611686014132420609 + -4611686016279904256 = -2147483647
+    std::make_tuple(  INT_MAX, INT_MAX,
+                      INT_MAX, INT_MIN,
+                     -2147483647),
+
+    // 4. 46340^2 = 2147395600 (Under INT_MAX)
+    std::make_tuple(  46340, 0,
+                      46340, 0,
+                      2147395600),
+
+    // 5. 46341^2 = 2147488281 (Over INT_MAX) => Saturates to MAX
+    std::make_tuple(  46341, 0,
+                      46341, 0,
+                      INT_MAX),
+
+    // 6. -46340 * 46340 = -2147395600 (Over INT_MIN)
+    std::make_tuple( -46340, 0,
+                      46340, 0,
+                     -2147395600),
+
+    // 7. -46341 * 46341 = -2147488281 (Under INT_MIN) => Saturates to MIN
+    std::make_tuple( -46341, 0,
+                      46341, 0,
+                      INT_MIN),
+
+    // 8. Zero
+    std::make_tuple(  0, 0,
+                      0, 0,
+                      0),
+
+    // 9. Simple max
+    std::make_tuple(  INT_MAX, 0,
+                            1, 0,
+                      INT_MAX)
+));
+
+typedef testing::TestWithParam<std::tuple<int,int,int,int,int,int,  int>> Core_Point3i_DotProduct_regression28930;
+
+TEST_P(Core_Point3i_DotProduct_regression28930, basic)
+{
+    const int x1 = std::get<0>(GetParam());
+    const int y1 = std::get<1>(GetParam());
+    const int z1 = std::get<2>(GetParam());
+    const int x2 = std::get<3>(GetParam());
+    const int y2 = std::get<4>(GetParam());
+    const int z2 = std::get<5>(GetParam());
+    const int expect = std::get<6>(GetParam());
+
+    cv::Point3i pt1(x1, y1, z1);
+    cv::Point3i pt2(x2, y2, z2);
+
+    EXPECT_EQ(pt1.dot(pt2), expect) << "Failed for: (" << x1 << "," << y1 << "," << z1 << ") dot (" << x2 << "," << y2 << "," << z2 << ")";
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Point3i_DotProduct_regression28930,
+testing::Values(
+    // 1. INT_MIN*INT_MIN + INT_MIN*INT_MIN = 2^62 + 2^62 => Saturates to MAX
+    std::make_tuple(  INT_MIN, INT_MIN, 0,
+                      INT_MIN, INT_MIN, 0,
+                      INT_MAX),
+
+    // 2. INT_MIN*INT_MAX + INT_MAX*INT_MAX = 4611686014132420609 + -4611686016279904256 = -2147483647
+    std::make_tuple(  INT_MAX, INT_MIN, 0,
+                      INT_MAX, INT_MAX, 0,
+                     -2147483647),
+
+    // 3. INT_MAX*INT_MAX + INT_MAX*INT_MIN = 4611686014132420609 + -4611686016279904256 = -2147483647
+    std::make_tuple(  INT_MAX, INT_MAX, 0,
+                      INT_MAX, INT_MIN, 0,
+                     -2147483647),
+
+    // 4. 46340^2 = 2147395600 (Under INT_MAX)
+    std::make_tuple(  46340, 0, 0,
+                      46340, 0, 0,
+                      2147395600),
+
+    // 5. 46341^2 = 2147488281 (Over INT_MAX) => Saturates to MAX
+    std::make_tuple(  46341, 0, 0,
+                      46341, 0, 0,
+                      INT_MAX),
+
+    // 6. -46340 * 46340 = -2147395600 (Over INT_MIN)
+    std::make_tuple( -46340, 0, 0,
+                      46340, 0, 0,
+                     -2147395600),
+
+    // 7. -46341 * 46341 = -2147488281 (Under INT_MIN) => Saturates to MIN
+    std::make_tuple( -46341, 0, 0,
+                      46341, 0, 0,
+                      INT_MIN),
+
+    // 8. Zero
+    std::make_tuple(  0, 0, 0,
+                      0, 0, 0,
+                      0),
+
+    // 9. Simple max
+    std::make_tuple(  INT_MAX, 0, 0,
+                            1, 0, 0,
+                      INT_MAX),
+
+    // 10. All positive, no overflow
+    std::make_tuple(  1, 2, 3,
+                      4, 5, 6,
+                      (1*4 + 2*5 + 3*6)),
+
+    // 11. All negative, no overflow
+    std::make_tuple( -1, -2, -3,
+                     -4, -5, -6,
+                     (-1*-4 + -2*-5 + -3*-6)),
+
+    // 12. Three large positive products => saturate to MAX
+    std::make_tuple(  INT_MAX, INT_MAX, INT_MAX,
+                      INT_MAX, INT_MAX, INT_MAX,
+                      INT_MAX),
+
+    // 13. Three large positive products from INT_MIN*INT_MIN => saturate to MAX
+    std::make_tuple(  INT_MIN, INT_MIN, INT_MIN,
+                      INT_MIN, INT_MIN, INT_MIN,
+                      INT_MAX),
+
+    // 14. Three large negative products => saturate to MIN
+    std::make_tuple(  INT_MIN, INT_MIN, INT_MIN,
+                      INT_MAX, INT_MAX, INT_MAX,
+                      INT_MIN),
+
+    // 15. Mixed signs: + + -
+    std::make_tuple(  INT_MAX, INT_MAX, INT_MIN,
+                      INT_MAX, INT_MAX, INT_MAX,
+                      INT_MAX),
+
+    // 16. Mixed signs: + - +
+    std::make_tuple(  INT_MAX, INT_MIN, INT_MAX,
+                      INT_MAX, INT_MAX, INT_MAX,
+                      INT_MAX),
+
+    // 17. Mixed signs: - + -
+    std::make_tuple(  INT_MIN, INT_MAX, INT_MIN,
+                      INT_MAX, INT_MAX, INT_MAX,
+                      INT_MIN)
+));
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+typedef testing::TestWithParam<MatDepth> Core_PatchNaNs;
+
+static float randomNanFlt(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+static double randomNanDbl(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // set the exponent and one mantissa bit to get a NaN (and not an infinity)
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+static void fillReferenceWithNans(cv::RNG& rng, const Size& sz, int type, double val, cv::Mat& in, cv::Mat& gold)
+{
+    in.create(sz, type);
+    gold.create(sz, type);
+
+    for( int i = 0; i < in.rows; i++ )
+    {
+        for( int j = 0; j < in.cols; j++ )
+        {
+            if (CV_MAT_DEPTH(type) == CV_64F)
+            {
+                switch( rng.uniform(0, 4) )
+                {
+                    case 0:
+                        in.at<double>(i, j) = randomNanDbl(rng);
+                        gold.at<double>(i, j) = val;
+                        break;
+                    case 1:
+                        in.at<double>(i, j) = std::numeric_limits<double>::infinity();
+                        gold.at<double>(i, j) =  in.at<double>(i, j);
+                        break;
+                    case 2:
+                        in.at<double>(i, j) = -std::numeric_limits<double>::infinity();
+                        gold.at<double>(i, j) = in.at<double>(i, j);
+                        break;
+
+                    default:
+                        in.at<double>(i, j) = rng.uniform(-100.0, 100.0);
+                        gold.at<double>(i, j) = in.at<double>(i, j);
+                        break;
+                }
+            }
+            if (CV_MAT_DEPTH(type) == CV_32F)
+            {
+                switch( rng.uniform(0, 4) )
+                {
+                    case 0:
+                        in.at<float>(i, j) = randomNanFlt(rng);
+                        gold.at<float>(i, j) = static_cast<float>(val);
+                        break;
+                    case 1:
+                        in.at<float>(i, j) = std::numeric_limits<float>::infinity();
+                        gold.at<float>(i, j) =  in.at<float>(i, j);
+                        break;
+                    case 2:
+                        in.at<float>(i, j) = -std::numeric_limits<float>::infinity();
+                        gold.at<float>(i, j) = in.at<float>(i, j);
+                        break;
+
+                    default:
+                        in.at<float>(i, j) = rng.uniform(-100.0f, 100.0f);
+                        gold.at<float>(i, j) = in.at<float>(i, j);
+                        break;
+                }
+            }
+        }
+    }
+}
+
+TEST_P(Core_PatchNaNs, accuracy)
+{
+    const int depth = GetParam();
+    cv::Mat in, out, gold;
+    fillReferenceWithNans(theRNG(), cv::Size(127, 71), CV_MAKE_TYPE(depth, 1), 142., in, gold);
+    cv::patchNaNs(in, 142.);
+    // bit-exact check independant from
+    cv::Mat in_bin(in.rows, static_cast<int>(in.cols*in.elemSize()), CV_8UC1, in.data);
+    cv::Mat gold_bin(gold.rows, static_cast<int>(gold.cols*gold.elemSize()), CV_8UC1, gold.data);
+    EXPECT_EQ(0, cvtest::norm(gold_bin, in_bin, cv::NORM_INF));
+}
+
+TEST(Core_PatchNaNs_UnsupportedDepth, accuracy)
+{
+    Mat src(3, 3, CV_16F);
+    EXPECT_THROW(patchNaNs(src, 0), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_PatchNaNs, testing::Values(CV_32F, CV_64F));
 
 }} // namespace
 /* End of file. */

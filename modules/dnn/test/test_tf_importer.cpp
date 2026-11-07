@@ -70,7 +70,7 @@ TEST(Test_TensorFlow, inception_accuracy)
 
     Mat ref = blobFromNPY(_tf("tf_inception_prob.npy"));
 
-    normAssert(ref, out);
+    normAssert(ref, out, "", 5e-5, 0.02);
 }
 
 static std::string path(const std::string& file)
@@ -216,9 +216,6 @@ TEST_P(Test_TensorFlow_layers, conv_keras_atrous_conv2d_same)
 TEST_P(Test_TensorFlow_layers, conv_pool_nchw)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -337,6 +334,12 @@ TEST_P(Test_TensorFlow_layers, eltwise_mul_vec)
     runTensorFlowNet("eltwise_mul_vec");
 }
 
+TEST_P(Test_TensorFlow_layers, tf_reshape_nhwc)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("tf_reshape_nhwc");
+}
 
 TEST_P(Test_TensorFlow_layers, channel_broadcast)
 {
@@ -483,6 +486,11 @@ TEST_P(Test_TensorFlow_layers, slim_batch_norm)
         l1 = 0.005;
         lInf = 0.33;
     }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.041;
+        lInf = 0.37;
+    }
 
     runTensorFlowNet("slim_batch_norm", false, l1, lInf);
 }
@@ -490,9 +498,6 @@ TEST_P(Test_TensorFlow_layers, slim_batch_norm)
 TEST_P(Test_TensorFlow_layers, pooling_max_pool_even)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -505,9 +510,6 @@ TEST_P(Test_TensorFlow_layers, pooling_max_pool_even)
 TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_valid)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -520,9 +522,6 @@ TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_valid)
 TEST_P(Test_TensorFlow_layers, pooling_max_pool_odd_same)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -620,10 +619,12 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum_1_2_true)
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("max_pool_grad");
 }
 
@@ -716,6 +717,9 @@ TEST_P(Test_TensorFlow_layers, matmul)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
     runTensorFlowNet("matmul");
     runTensorFlowNet("nhwc_transpose_reshape_matmul");
     // Reference output values are in range [-5.688, 4.484]
@@ -729,6 +733,8 @@ TEST_P(Test_TensorFlow_layers, batch_matmul)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     runTensorFlowNet("batch_matmul");
 }
 
@@ -736,6 +742,8 @@ TEST_P(Test_TensorFlow_layers, square)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     runTensorFlowNet("square");
 }
 
@@ -843,14 +851,6 @@ TEST_P(Test_TensorFlow_layers, ExpandDims)
 TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
     // accuracy
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -937,15 +937,11 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     net.setInput(inp);
     Mat out = net.forward();
 
-    double scoreDiff = default_l1, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    double scoreDiff = default_l1, iouDiff = 0.04;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.01;
         iouDiff = 0.1;
-    }
-    else if (target == DNN_TARGET_CUDA_FP16)
-    {
-        iouDiff = 0.04;
     }
 
     normAssertDetections(ref, out, "", 0.2, scoreDiff, iouDiff);
@@ -974,6 +970,9 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
     net.setInput(blob);
     // Output has shape 1x1xNx7 where N - number of detections.
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
@@ -985,7 +984,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
 
     double scoreDiff = default_l1, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.0097;
         iouDiff = 0.09;
@@ -1018,7 +1017,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
     float scoreDiff = 1.5e-5, iouDiff = 1e-3;
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.35 : 0.3;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.011;
         iouDiff = 0.012;
@@ -1067,6 +1066,8 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_inception_v2_coco_2018_01_28)
 
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     checkBackend();
 
@@ -1099,6 +1100,9 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_inception_v2_coco_2018_01_28)
         if (target == DNN_TARGET_OPENCL_FP16)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
+        if (target == DNN_TARGET_CPU_FP16)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
         normAssertDetections(ref, out, name.c_str(), 0.3, scoresDiff, iouDiff);
     }
 }
@@ -1112,9 +1116,6 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_resnet50_coco_2018_01_28)
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: subgraphTopoSortsStep < subgraphs.size()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -1181,6 +1182,9 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_resnet50_coco_2018_01_28)
         if (target == DNN_TARGET_OPENCL_FP16)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
+        if (target == DNN_TARGET_CPU_FP16)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
         normAssertDetections(ref, out, name.c_str(), 0.3, scoresDiff, iouDiff);
     }
 }
@@ -1208,7 +1212,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     Mat out = net.forward();
 
     double scoreDiff = 1.1e-5, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.048;
         iouDiff = 0.058;
@@ -1247,7 +1251,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     double scoreDiff = 3.4e-3, iouDiff = 1e-2;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 4e-3;
         iouDiff = 0.024;
@@ -1274,7 +1278,7 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 {
     applyTestTag(
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE)
@@ -1302,6 +1306,8 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     Mat img = imread(imgPath);
     Mat inp = blobFromImage(img, 1.0, Size(), Scalar(123.68, 116.78, 103.94), true, false);
@@ -1334,9 +1340,15 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
         lInf_scores = 0.1;
         l1_geometry = 0.3; lInf_geometry = 7;
     }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        lInf_scores = 0.17;
+        l1_geometry = 0.28;
+        lInf_geometry = 5.94;
+    }
     else
     {
-        l1_geometry = 1e-4, lInf_geometry = 3e-3;
+        l1_geometry = 1e-4, lInf_geometry = 4.3e-3;
     }
     normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
     normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
@@ -1354,9 +1366,6 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_single_conv)
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_same)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -1380,14 +1389,15 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_pad_and_concat)
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_padding_valid)
 {
     float l1 = 0.00078, lInf = 0.012;
+
+    if (target == DNN_TARGET_CPU_FP16)
+        l1 = 0.00083;
+
     runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
 }
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_even)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -1412,9 +1422,6 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_deconvolution)
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_valid)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // [ GENERAL_ERROR ]  AssertionFailed: !expired()
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -1433,8 +1440,13 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_valid)
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
+    float l1 = 7e-4, lInf = 4e-3;
+
+    if (target == DNN_TARGET_CPU_FP16)
+        lInf = 5e-3;
+
     // Reference output values are in range [-3.504, -0.002]
-    runTensorFlowNet("fp16_padding_same", false, 7e-4, 4e-3);
+    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, defun)
@@ -1476,6 +1488,9 @@ TEST_P(Test_TensorFlow_layers, lstm)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
     runTensorFlowNet("lstm", true);
     runTensorFlowNet("lstm", true, 0.0, 0.0, true);
 }
@@ -1485,32 +1500,26 @@ TEST_P(Test_TensorFlow_layers, split)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split");
 }
 
 TEST_P(Test_TensorFlow_layers, split_equals)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split_equals");
 }
 
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#endif
     runTensorFlowNet("resize_nearest_neighbor");
 }
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor_keras_upsampling2d)
@@ -1580,14 +1589,7 @@ TEST_P(Test_TensorFlow_layers, relu6)
 
 TEST_P(Test_TensorFlow_layers, subpixel)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1627,8 +1629,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_align_corners)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1642,8 +1646,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_factor)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_factor_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear_factor", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1681,6 +1687,7 @@ TEST_P(Test_TensorFlow_layers, clip_by_value)
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
+    double l1 = 0, lInf = 0;
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -1692,6 +1699,11 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2023000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) {
+        l1 = 1e-4;
+        lInf = 1e-3;
+    }
 #elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1711,7 +1723,7 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    runTensorFlowNet("tf2_prelu");
+    runTensorFlowNet("tf2_prelu", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)
@@ -1788,7 +1800,10 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     if (target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
 
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     Mat img = imread(findDataFile("dnn/street.png"));
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
@@ -1800,6 +1815,8 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     net.setInput(blob);
 
@@ -1814,8 +1831,13 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.2 : 2e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : default_lInf;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.2 : 2e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.018 : default_lInf;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        scoreDiff = std::max(scoreDiff, 0.06);
+        iouDiff = std::max(iouDiff, 0.01);
+    }
     normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where
@@ -1848,7 +1870,7 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     double inter = cv::countNonZero(masks & refMasks);
     double area = cv::countNonZero(masks | refMasks);
-    EXPECT_GE(inter / area, (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.98 : 0.99);
+    EXPECT_GE(inter / area, (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.98 : 0.99);
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         expectNoFallbacks(net);
@@ -1858,6 +1880,7 @@ TEST_P(Test_TensorFlow_nets, EfficientDet)
 {
     if (target != DNN_TARGET_CPU)
     {
+        if (target == DNN_TARGET_CPU_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
         if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
         if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);

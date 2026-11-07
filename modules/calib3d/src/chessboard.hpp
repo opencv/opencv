@@ -43,7 +43,7 @@ class FastX : public cv::Feature2D
 
     public:
         FastX(const Parameters &config = Parameters());
-        virtual ~FastX(){};
+        virtual ~FastX(){}
 
         void reconfigure(const Parameters &para);
 
@@ -74,8 +74,8 @@ class FastX : public cv::Feature2D
         std::vector<std::vector<float> > calcAngles(const std::vector<cv::Mat> &rotated_images,
                                                             std::vector<cv::KeyPoint> &keypoints)const;
         // define pure virtual methods
-        virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual int descriptorSize()const override{return 0;}
+        virtual int descriptorType()const override{return 0;}
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();
@@ -149,7 +149,7 @@ class Chessboard: public cv::Feature2D
             int max_tests;            //!< maximal number of tested hypothesis
             bool super_resolution;    //!< use super-repsolution for chessboard detection
             bool larger;              //!< indicates if larger boards should be returned
-            bool marker;              //!< indicates that valid boards must have a white and black cirlce marker used for orientation
+            bool marker;              //!< indicates that valid boards must have a white and black circle marker used for orientation
 
             Parameters()
             {
@@ -203,12 +203,12 @@ class Chessboard: public cv::Feature2D
                  * d12/d34 = d13/d24
                  *
                  * point order on the line:
-                 * pt1 --> pt2 --> pt3 --> pt4
+                 * p0 --> p1 --> p2 --> p3
                  *
-                 * \param[in] pt1 First point coordinate
-                 * \param[in] pt2 Second point coordinate
-                 * \param[in] pt3 Third point coordinate
-                 * \param[out] pt4 Forth point coordinate
+                 * \param[in] p0 First point coordinate
+                 * \param[in] p1 Second point coordinate
+                 * \param[in] p2 Third point coordinate
+                 * \param[out] p3 Forth point coordinate
                  *
                  */
                 static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,cv::Point2f &p3);
@@ -309,7 +309,7 @@ class Chessboard: public cv::Feature2D
                  * \brief Draws the corners into the given image
                  *
                  * \param[in] m The image
-                 * \param[out] m The resulting image
+                 * \param[out] out The resulting image
                  * \param[in] H optional homography to calculate search area
                  *
                  */
@@ -620,10 +620,10 @@ class Chessboard: public cv::Feature2D
                  */
                 void swap(Chessboard::Board &other);
 
-                bool operator==(const Chessboard::Board& other) const {return rows*cols == other.rows*other.cols;};
-                bool operator< (const Chessboard::Board& other) const {return rows*cols < other.rows*other.cols;};
-                bool operator> (const Chessboard::Board& other) const {return rows*cols > other.rows*other.cols;};
-                bool operator>= (const cv::Size& size)const { return rows*cols >= size.width*size.height; };
+                bool operator==(const Chessboard::Board& other) const {return rows*cols == other.rows*other.cols;}
+                bool operator< (const Chessboard::Board& other) const {return rows*cols < other.rows*other.cols;}
+                bool operator> (const Chessboard::Board& other) const {return rows*cols > other.rows*other.cols;}
+                bool operator>= (const cv::Size& size)const { return rows*cols >= size.width*size.height; }
 
                 /**
                  * \brief Returns a specific corner
@@ -668,7 +668,7 @@ class Chessboard: public cv::Feature2D
                   * \brief Calculates the average edge sharpness for the chessboard
                   *
                   * \param[in] image The image where the chessboard was detected
-                  * \param[in] rise_distante Rise distance 0.8 means 10% ... 90%
+                  * \param[in] rise_distance Rise distance 0.8 means 10% ... 90%
                   * \param[in] vertical by default only edge response for horiontal lines are calculated
                   *
                   * \returns Scalar(sharpness, average min_val, average max_val)
@@ -824,8 +824,8 @@ class Chessboard: public cv::Feature2D
         Chessboard::Board detectImpl(const cv::Mat& image,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
 
         // define pure virtual methods
-        virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual int descriptorSize()const override{return 0;}
+        virtual int descriptorType()const override{return 0;}
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();

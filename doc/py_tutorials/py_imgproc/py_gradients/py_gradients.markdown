@@ -17,7 +17,7 @@ We will see each one of them.
 
 ### 1. Sobel and Scharr Derivatives
 
-Sobel operators is a joint Gausssian smoothing plus differentiation operation, so it is more
+Sobel operators is a joint Gaussian smoothing plus differentiation operation, so it is more
 resistant to noise. You can specify the direction of derivatives to be taken, vertical or horizontal
 (by the arguments, yorder and xorder respectively). You can also specify the size of kernel by the
 argument ksize. If ksize = -1, a 3x3 Scharr filter is used which gives better results than 3x3 Sobel
@@ -42,7 +42,8 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('dave.jpg',0)
+img = cv.imread('dave.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 laplacian = cv.Laplacian(img,cv.CV_64F)
 sobelx = cv.Sobel(img,cv.CV_64F,1,0,ksize=5)
@@ -79,7 +80,8 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('box.png',0)
+img = cv.imread('box.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 # Output dtype = cv.CV_8U
 sobelx8u = cv.Sobel(img,cv.CV_8U,1,0,ksize=5)
@@ -101,9 +103,3 @@ plt.show()
 Check the result below:
 
 ![image](images/double_edge.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

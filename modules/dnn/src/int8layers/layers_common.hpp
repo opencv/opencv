@@ -13,6 +13,8 @@
 #include "int8layers/layers_common.simd_declarations.hpp"
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#include "./layers_rvp052.hpp"
+
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/ocl4dnn.hpp"
 #endif
@@ -23,7 +25,7 @@ namespace dnn
 {
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations,
-                                cv::String &padMode, std::vector<size_t>& adjust_pads);
+                                cv::String &padMode, std::vector<size_t>& adjust_pads, bool& useWinograd);
 
 void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<bool>& globalPooling,
                             std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end, std::vector<size_t>& strides, cv::String &padMode);

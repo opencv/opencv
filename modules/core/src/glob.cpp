@@ -66,7 +66,7 @@ namespace
 #endif
         HANDLE handle;
         dirent ent;
-#ifdef WINRT
+#if defined(WINRT) || defined(_WIN32_WCE)
         DIR() { }
         ~DIR()
         {
@@ -113,6 +113,7 @@ namespace
         char* aname = new char[asize+1];
         aname[asize] = 0;
         wcstombs(aname, dir->data.cFileName, asize);
+        delete[] dir->ent.d_name;
         dir->ent.d_name = aname;
 #else
         if (dir->ent.d_name != 0)
@@ -276,7 +277,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     }
     else
     {
-        CV_Error_(CV_StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
+        CV_Error_(cv::Error::StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
     }
 }
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT

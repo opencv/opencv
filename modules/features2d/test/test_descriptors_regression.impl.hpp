@@ -7,6 +7,34 @@ namespace opencv_test { namespace {
 /****************************************************************************************\
 *                     Regression tests for descriptor extractors.                        *
 \****************************************************************************************/
+static void double_image(Mat& src, Mat& dst) {
+
+    dst.create(Size(src.cols*2, src.rows*2), src.type());
+
+    Mat H = Mat::zeros(2, 3, CV_32F);
+    H.at<float>(0, 0) = 0.5f;
+    H.at<float>(1, 1) = 0.5f;
+    cv::warpAffine(src, dst, H, dst.size(), INTER_LINEAR | WARP_INVERSE_MAP, BORDER_REFLECT);
+
+}
+
+static Mat prepare_img(bool rows_indexed) {
+    int rows = 5;
+    int columns = 5;
+    Mat img(rows, columns, CV_32F);
+
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < columns; j++) {
+            if (rows_indexed) {
+                img.at<float>(i, j) = (float)i;
+            } else {
+                img.at<float>(i, j) = (float)j;
+            }
+        }
+    }
+    return img;
+}
+
 static void writeMatInBin( const Mat& mat, const string& filename )
 {
     FILE* f = fopen( filename.c_str(), "wb");
@@ -142,6 +170,25 @@ protected:
         catch(...)
         {
             ts->printf( cvtest::TS::LOG, "compute() on nonempty image and empty keypoints must not generate exception (1).\n");
+            ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
+        }
+
+        image = prepare_img(false);
+        Mat dbl;
+        try
+        {
+            double_image(image, dbl);
+
+            Mat downsized_back(dbl.rows/2, dbl.cols/2, CV_32F);
+            resize(dbl, downsized_back, Size(dbl.cols/2, dbl.rows/2), 0, 0, INTER_NEAREST);
+
+            cv::Mat diff = (image != downsized_back);
+            ASSERT_EQ(0, cv::norm(image, downsized_back, NORM_INF));
+        }
+        catch(...)
+        {
+            ts->printf( cvtest::TS::LOG, "double_image() must not generate exception (1).\n");
+            ts->printf( cvtest::TS::LOG, "double_image() when downsized back by NEAREST must generate the same original image (1).\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         }
 

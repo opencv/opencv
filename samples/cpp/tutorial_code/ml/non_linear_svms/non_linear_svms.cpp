@@ -96,7 +96,7 @@ int main()
     {
         for (int j = 0; j < I.cols; j++)
         {
-            Mat sampleMat = (Mat_<float>(1,2) << j, i);
+            Mat sampleMat = Mat_<float>({1,2}, {(float)j, (float)i});
             float response = svm->predict(sampleMat);
 
             if      (response == 1) I.at<Vec3b>(i,j) = green;

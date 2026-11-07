@@ -29,6 +29,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('opencv_logo.png')
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 kernel = np.ones((5,5),np.float32)/25
 dst = cv.filter2D(img,-1,kernel)
@@ -70,6 +71,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 img = cv.imread('opencv-logo-white.png')
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 blur = cv.blur(img,(5,5))
 
@@ -148,6 +150,3 @@ Additional Resources
 --------------------
 
 -#  Details about the [bilateral filtering](http://people.csail.mit.edu/sparis/bf_course/)
-
-Exercises
----------

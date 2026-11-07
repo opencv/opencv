@@ -1,0 +1,11 @@
+# $framework Documentation - How To View
+
+## View Locally
+
+* Start a web server in the directory where this HowTo file is located. For example ``python3 -m http.server 8000``
+* In a browser navigate to URL http://127.0.0.1:8000/$hosting_base_path/documentation/$framework/
+
+## Deploying to a server
+
+* Upload the content of the directory where this HowTo file is located to the document root of the web server maintaining the same folder hierarchy
+* In a browser navigate to URL https://{server-domain}/$hosting_base_path/documentation/$framework/

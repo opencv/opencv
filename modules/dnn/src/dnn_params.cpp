@@ -36,8 +36,8 @@ bool getParam_DNN_OPENCL_ALLOW_ALL_DEVICES()
 int getParam_DNN_BACKEND_DEFAULT()
 {
     static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSizeT("OPENCV_DNN_BACKEND_DEFAULT",
-#ifdef HAVE_INF_ENGINE
-            (size_t)DNN_BACKEND_INFERENCE_ENGINE
+#ifdef OPENCV_DNN_BACKEND_DEFAULT
+            (size_t)OPENCV_DNN_BACKEND_DEFAULT
 #else
             (size_t)DNN_BACKEND_OPENCV
 #endif

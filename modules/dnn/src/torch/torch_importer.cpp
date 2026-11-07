@@ -84,7 +84,7 @@ enum TorchType
     TYPE_FLOAT  = CV_32F,
     TYPE_BYTE   = CV_8U,
     TYPE_CHAR   = CV_8S,
-    TYPE_SHORT  = CV_16S,
+    TYPE_SHORT  = CV_16F,
     TYPE_INT    = CV_32S,
     TYPE_LONG   = CV_32SC2
 };
@@ -255,6 +255,10 @@ struct TorchImporter
     void readTorchStorage(int index, int type = -1)
     {
         long size = readLong();
+        // size is read as a 64-bit value but Mat::create() takes int columns, so a
+        // value above INT_MAX is truncated for the allocation while the THFile_read*Raw
+        // calls below still consume the full 64-bit count, overflowing the buffer.
+        CV_Assert(size >= 0 && size <= INT_MAX);
         Mat storageMat;
 
         switch (type)
@@ -276,7 +280,7 @@ struct TorchImporter
             THFile_readByteRaw(file, (uchar*)storageMat.data, size);
             break;
         case TYPE_SHORT:
-            storageMat.create(1, size, CV_16S);
+            storageMat.create(1, size, CV_16F);
             THFile_readShortRaw(file, (short*)storageMat.data, size);
             break;
         case TYPE_INT:
@@ -598,7 +602,7 @@ struct TorchImporter
                 readTorchTable(scalarParams, tensorParams);
 
                 CV_Assert(tensorParams.count("weight"));
-                Mat weightBlob = tensorParams["weight"].second;
+                const Mat& weightBlob = tensorParams["weight"].second;
                 layerParams.blobs.push_back(weightBlob);
 
                 bool bias = tensorParams.count("bias") != 0;
@@ -779,15 +783,23 @@ struct TorchImporter
                 if (scalarParams.has("nInputDim"))
                     layerParams.set("input_dims", scalarParams.get<int>("nInputDim"));
 
-                int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
+                int rawDim = scalarParams.get<int>("dim");
+                CV_CheckGT(rawDim, 0, "DNN/Torch: Padding dim must be positive");
+                CV_CheckLE(rawDim, CV_MAX_DIM, "DNN/Torch: Padding dim exceeds CV_MAX_DIM");
+                int dim = rawDim - 1;  // In Lua we start from 1.
                 int pad = scalarParams.get<int>("pad");
+                CV_CheckGT(pad, INT_MIN, "DNN/Torch: Padding pad magnitude overflows int");
 
-                std::vector<int> paddings((dim + 1) * 2, 0);
+                AutoBuffer<int> paddingsBuf((dim + 1) * 2);
+                int *paddings = paddingsBuf.data();
+                int paddingsSize = (dim + 1) * 2;
+                for (int i = 0; i < paddingsSize; ++i) paddings[i] = 0;
                 if (pad > 0)
-                    paddings[dim * 2 + 1] = pad;  // Pad after (right).
+                    paddings[dim * 2 + 1] = pad;
                 else
-                    paddings[dim * 2] = -pad;  // Pad before (left).
-                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+                    paddings[dim * 2] = -pad;
+                layerParams.set("paddings", DictValue::arrayInt<int*>(paddings, paddingsSize));
+
 
                 curModule->modules.push_back(newModule);
             }
@@ -874,6 +886,9 @@ struct TorchImporter
             {
                 newModule->apiType = "Softmax";
                 layerParams.set("log_softmax", nnName == "LogSoftMax");
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
                 curModule->modules.push_back(newModule);
             }
             else if (nnName == "SpatialCrossMapLRN")
@@ -899,7 +914,7 @@ struct TorchImporter
             {
                 readTorchTable(scalarParams, tensorParams);
 
-                float power;
+                float power = 1.0f;
                 if (nnName == "Square") power = 2.0f;
                 else if (nnName == "Sqrt") power = 0.5f;
                 else if (nnName == "Power") power = scalarParams.get<float>("pow", 1.0f);
@@ -932,12 +947,14 @@ struct TorchImporter
 
                 // Torch's SpatialZeroPadding works with 3- or 4-dimensional input.
                 // So we add parameter input_dims=3 to ignore batch dimension if it will be.
-                std::vector<int> paddings(6, 0);  // CHW
+                int paddings[6] = {0, 0, 0, 0, 0, 0};
+
                 paddings[2] = padTop;
                 paddings[3] = padBottom;
                 paddings[4] = padLeft;
                 paddings[5] = padRight;
-                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+
+                layerParams.set("paddings", DictValue::arrayInt(paddings, 6));
                 layerParams.set("input_dims", 3);
 
                 if (nnName == "SpatialReflectionPadding")

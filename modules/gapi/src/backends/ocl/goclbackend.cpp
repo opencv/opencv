@@ -62,6 +62,17 @@ namespace
         {
             return EPtr{new cv::gimpl::GOCLExecutable(graph, nodes)};
         }
+
+        virtual bool supportsConst(cv::GShape shape) const override
+        {
+            // Supports all types of const values
+            return shape == cv::GShape::GOPAQUE
+                || shape == cv::GShape::GSCALAR
+                || shape == cv::GShape::GARRAY;
+            // yes, value-initialized GMats are not supported currently
+            // as in-island data -- compiler will lift these values to the
+            // GIslandModel's SLOT level (will be handled uniformly)
+        }
    };
 }
 
@@ -114,7 +125,8 @@ cv::GArg cv::gimpl::GOCLExecutable::packArg(const GArg &arg)
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
               && arg.kind != cv::detail::ArgKind::GSCALAR
               && arg.kind != cv::detail::ArgKind::GARRAY
-              && arg.kind != cv::detail::ArgKind::GOPAQUE);
+              && arg.kind != cv::detail::ArgKind::GOPAQUE
+              && arg.kind != cv::detail::ArgKind::GFRAME);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {
@@ -136,6 +148,7 @@ cv::GArg cv::gimpl::GOCLExecutable::packArg(const GArg &arg)
     // Note: .at() is intentional for GOpaque as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME: return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;

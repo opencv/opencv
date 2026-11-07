@@ -70,6 +70,15 @@ void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
 int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width);
 #endif
 }
+
+namespace opt_LASX
+{
+#if CV_TRY_LASX
+void resizeNN2_LASX(const Range&, const Mat&, Mat&, int*, double);
+void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, double);
+#endif
+}
+
 }
 #endif
 /* End of file. */

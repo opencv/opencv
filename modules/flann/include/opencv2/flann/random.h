@@ -1,4 +1,4 @@
-/***********************************************************************
+/*M*********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -106,7 +106,6 @@ public:
     /**
      * Constructor.
      * @param n Size of the interval from which to generate
-     * @return
      */
     UniqueRandom(int n)
     {

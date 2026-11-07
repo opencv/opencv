@@ -2,7 +2,7 @@
  * jccolor.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2011-2019 by Guido Vollbeding.
+ * Modified 2011-2023 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -40,10 +40,10 @@ typedef my_color_converter * my_cconvert_ptr;
  * Note that the derived conversion coefficients given in some of these
  * documents are imprecise.  The general conversion equations are
  *	Y  = Kr * R + (1 - Kr - Kb) * G + Kb * B
- *	Cb = 0.5 * (B - Y) / (1 - Kb)
- *	Cr = 0.5 * (R - Y) / (1 - Kr)
+ *	Cb = (B - Y) / (1 - Kb) / K
+ *	Cr = (R - Y) / (1 - Kr) / K
  * With Kr = 0.299 and Kb = 0.114 (derived according to SMPTE RP 177-1993
- * from the 1953 FCC NTSC primaries and CIE Illuminant C),
+ * from the 1953 FCC NTSC primaries and CIE Illuminant C), K = 2 for sYCC,
  * the conversion equations to be implemented are therefore
  *	Y  =  0.299 * R + 0.587 * G + 0.114 * B
  *	Cb = -0.168735892 * R - 0.331264108 * G + 0.5 * B + CENTERJSAMPLE
@@ -62,8 +62,8 @@ typedef my_color_converter * my_cconvert_ptr;
  * by precalculating the constants times R,G,B for all possible values.
  * For 8-bit JSAMPLEs this is very reasonable (only 256 entries per table);
  * for 9-bit to 12-bit samples it is still acceptable.  It's not very
- * reasonable for 16-bit samples, but if you want lossless storage you
- * shouldn't be changing colorspace anyway.
+ * reasonable for 16-bit samples, but if you want lossless storage
+ * you shouldn't be changing colorspace anyway.
  * The CENTERJSAMPLE offsets and the rounding fudge-factor of 0.5 are included
  * in the tables to save adding them separately in the inner loop.
  */
@@ -110,16 +110,16 @@ rgb_ycc_start (j_compress_ptr cinfo)
   for (i = 0; i <= MAXJSAMPLE; i++) {
     rgb_ycc_tab[i+R_Y_OFF] = FIX(0.299) * i;
     rgb_ycc_tab[i+G_Y_OFF] = FIX(0.587) * i;
-    rgb_ycc_tab[i+B_Y_OFF] = FIX(0.114) * i   + ONE_HALF;
+    rgb_ycc_tab[i+B_Y_OFF] = FIX(0.114) * i + ONE_HALF;
     rgb_ycc_tab[i+R_CB_OFF] = (- FIX(0.168735892)) * i;
     rgb_ycc_tab[i+G_CB_OFF] = (- FIX(0.331264108)) * i;
     /* We use a rounding fudge-factor of 0.5-epsilon for Cb and Cr.
      * This ensures that the maximum output will round to MAXJSAMPLE
      * not MAXJSAMPLE+1, and thus that we don't have to range-limit.
      */
-    rgb_ycc_tab[i+B_CB_OFF] = FIX(0.5) * i    + CBCR_OFFSET + ONE_HALF-1;
+    rgb_ycc_tab[i+B_CB_OFF] = (i << (SCALEBITS-1)) + CBCR_OFFSET + ONE_HALF-1;
 /*  B=>Cb and R=>Cr tables are the same
-    rgb_ycc_tab[i+R_CR_OFF] = FIX(0.5) * i    + CBCR_OFFSET + ONE_HALF-1;
+    rgb_ycc_tab[i+R_CR_OFF] = (i << (SCALEBITS-1)) + CBCR_OFFSET + ONE_HALF-1;
 */
     rgb_ycc_tab[i+G_CR_OFF] = (- FIX(0.418687589)) * i;
     rgb_ycc_tab[i+B_CR_OFF] = (- FIX(0.081312411)) * i;
@@ -190,8 +190,8 @@ rgb_ycc_convert (j_compress_ptr cinfo,
 
 /*
  * Convert some rows of samples to the JPEG colorspace.
- * This version handles RGB->grayscale conversion, which is the same
- * as the RGB->Y portion of RGB->YCbCr.
+ * This version handles RGB->grayscale conversion,
+ * which is the same as the RGB->Y portion of RGB->YCbCr.
  * We assume rgb_ycc_start has been called (we only use the Y tables).
  */
 
@@ -201,7 +201,7 @@ rgb_gray_convert (j_compress_ptr cinfo,
 		  JDIMENSION output_row, int num_rows)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
-  register int r, g, b;
+  register INT32 y;
   register INT32 * ctab = cconvert->rgb_ycc_tab;
   register JSAMPROW inptr;
   register JSAMPROW outptr;
@@ -212,14 +212,11 @@ rgb_gray_convert (j_compress_ptr cinfo,
     inptr = *input_buf++;
     outptr = output_buf[0][output_row++];
     for (col = 0; col < num_cols; col++) {
-      r = GETJSAMPLE(inptr[RGB_RED]);
-      g = GETJSAMPLE(inptr[RGB_GREEN]);
-      b = GETJSAMPLE(inptr[RGB_BLUE]);
+      y  = ctab[R_Y_OFF + GETJSAMPLE(inptr[RGB_RED])];
+      y += ctab[G_Y_OFF + GETJSAMPLE(inptr[RGB_GREEN])];
+      y += ctab[B_Y_OFF + GETJSAMPLE(inptr[RGB_BLUE])];
       inptr += RGB_PIXELSIZE;
-      /* Y */
-      outptr[col] = (JSAMPLE)
-		((ctab[r+R_Y_OFF] + ctab[g+G_Y_OFF] + ctab[b+B_Y_OFF])
-		 >> SCALEBITS);
+      outptr[col] = (JSAMPLE) (y >> SCALEBITS);
     }
   }
 }

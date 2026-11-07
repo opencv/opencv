@@ -835,10 +835,10 @@ public class Calib3dTest extends OpenCVTestCase {
         D.put(2,0,-0.021509225493198905);
         D.put(3,0,0.0043378096628297145);
 
-        K_new_truth.put(0,0, 387.4809086880343);
-        K_new_truth.put(0,2, 1036.669802754649);
-        K_new_truth.put(1,1, 373.6375700303157);
-        K_new_truth.put(1,2, 538.8373261247601);
+        K_new_truth.put(0,0, 387.5118215642316);
+        K_new_truth.put(0,2, 1033.936556777084);
+        K_new_truth.put(1,1, 373.6673784974842);
+        K_new_truth.put(1,2, 538.794152656429);
 
         Calib3d.fisheye_estimateNewCameraMatrixForUndistortRectify(K,D,new Size(1920,1080),
                     new Mat().eye(3, 3, CvType.CV_64F), K_new, 0.0, new Size(1920,1080));

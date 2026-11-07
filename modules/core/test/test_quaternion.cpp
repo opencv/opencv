@@ -166,6 +166,59 @@ TEST_F(QuatTest, basicfuns)
     EXPECT_EQ(tan(atan(q1)), q1);
 }
 
+template <typename T>
+void testSmallVectorTrigonometric()
+{
+    const T realParts[] = {T(-10), T(-3), T(0), T(3), T(10)};
+    const T vectorScales[] =
+        {T(0), T(1e-30), T(1e-12), T(1e-8), T(1e-7), T(9.9e-7), T(1.01e-6)};
+    const double eps = std::max(1e-12, 32.0 * std::numeric_limits<T>::epsilon());
+    for (size_t i = 0; i < sizeof(realParts) / sizeof(realParts[0]); ++i)
+    {
+        const T w = realParts[i];
+        const T derivatives[] = {std::cos(w), -std::sin(w), std::cosh(w), std::sinh(w)};
+        for (size_t j = 0; j < sizeof(vectorScales) / sizeof(vectorScales[0]); ++j)
+        {
+            const T scale = vectorScales[j];
+            const Vec<T, 3> v(scale / 3, -2 * scale / 3, 2 * scale / 3);
+            const Quat<T> q(w, v[0], v[1], v[2]);
+            const Quat<T> results[] = {cv::sin(q), cv::cos(q), cv::sinh(q), cv::cosh(q)};
+            for (int f = 0; f < 4; ++f)
+            {
+                SCOPED_TRACE(::testing::Message() << "real=" << w << " scale=" << scale
+                             << " function=" << f);
+                const double tolerance = eps * std::max(1.0, std::abs(double(derivatives[f])));
+                // The vector coefficient tends to the real function's derivative.
+                EXPECT_NEAR(results[f].x, v[0] * derivatives[f],
+                            tolerance * std::abs(double(v[0])));
+                EXPECT_NEAR(results[f].y, v[1] * derivatives[f],
+                            tolerance * std::abs(double(v[1])));
+                EXPECT_NEAR(results[f].z, v[2] * derivatives[f],
+                            tolerance * std::abs(double(v[2])));
+            }
+        }
+    }
+    const Quat<T> realOnly(T(1000), T(0), T(0), T(0));
+    const Quat<T> largeResults[] = {cv::sinh(realOnly), cv::cosh(realOnly)};
+    for (int f = 0; f < 2; ++f)
+    {
+        EXPECT_EQ(largeResults[f].w, std::numeric_limits<T>::infinity());
+        EXPECT_EQ(largeResults[f].x, T(0));
+        EXPECT_EQ(largeResults[f].y, T(0));
+        EXPECT_EQ(largeResults[f].z, T(0));
+    }
+}
+
+TEST(Core_Quat, smallVectorTrigonometric32f)
+{
+    testSmallVectorTrigonometric<float>();
+}
+
+TEST(Core_Quat, smallVectorTrigonometric64f)
+{
+    testSmallVectorTrigonometric<double>();
+}
+
 TEST_F(QuatTest, test_operator)
 {
     Quatd minusQ{-1, -2, -3, -4};

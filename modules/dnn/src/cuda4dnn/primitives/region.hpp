@@ -121,7 +121,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 new_coords
             );
 
-            if (nms_iou_threshold > 0) {
+            if (nms_iou_threshold > static_cast<T>(0.0f)) {
                 auto output_mat = output_wrapper->getMutableHostMat();
                 CV_Assert(output_mat.type() == CV_32F);
                 for (int i = 0; i < input.get_axis_size(0); i++) {

@@ -45,7 +45,7 @@ cv.cvtColor(dst, dst, cv.COLOR_***2RGBA);
 
 Then, new an ImageData obj from dst:
 @code{.js}
-let imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows);
+let imgData = new ImageData(new Uint8ClampedArray(dst.data), dst.cols, dst.rows);
 @endcode
 
 Finally, display it:

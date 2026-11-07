@@ -1,0 +1,45 @@
+diff --git forkSrcPrefix/3rdparty/zlib/gzlib.c forkDstPrefix/3rdparty/zlib/gzlib.c
+index 7a37a96cf0a32c907678967f5acc51e2280f24c6..15c7ce3b2492f944864a62c78e877577a2a4d58b 100644
+--- forkSrcPrefix/3rdparty/zlib/gzlib.c
++++ forkDstPrefix/3rdparty/zlib/gzlib.c
+@@ -5,6 +5,10 @@
+
+ #include "gzguts.h"
+
++#ifdef HAVE_UNISTD_H
++    #include <unistd.h>
++#endif
++
+ #if defined(__DJGPP__)
+ #  define LSEEK llseek
+ #elif defined(_WIN32) && !defined(__BORLANDC__) && !defined(UNDER_CE)
+diff --git forkSrcPrefix/3rdparty/zlib/gzwrite.c forkDstPrefix/3rdparty/zlib/gzwrite.c
+index 13a3700a83c7ca7f35608eda1f68b933c8e2e343..e7553eb16079a7ef075d84de9a04c9528bbf8d58 100644
+--- forkSrcPrefix/3rdparty/zlib/gzwrite.c
++++ forkDstPrefix/3rdparty/zlib/gzwrite.c
+@@ -5,6 +5,10 @@
+
+ #include "gzguts.h"
+
++#ifdef HAVE_UNISTD_H
++    #include <unistd.h>
++#endif
++
+ /* Initialize state for writing a gzip file.  Mark initialization by setting
+    state->size to non-zero.  Return -1 on a memory allocation failure, or 0 on
+    success. */
+diff --git forkSrcPrefix/3rdparty/zlib/gzread.c forkDstPrefix/3rdparty/zlib/gzread.c
+index 8b3e369dac10575de9467e13bf6d964cdc07aeba..c73ee29bdb99cc4a78ca1dd2011ef186dbc100b8 100644
+--- forkSrcPrefix/3rdparty/zlib/gzread.c
++++ forkDstPrefix/3rdparty/zlib/gzread.c
+@@ -5,6 +5,10 @@
+
+ #include "gzguts.h"
+
++#ifdef HAVE_UNISTD_H
++    #include <unistd.h>
++#endif
++
+ /* Use read() to load a buffer -- return -1 on error, otherwise 0.  Read from
+    state->fd, and update state->eof, state->err, and state->msg as appropriate.
+    This function needs to loop on read(), since read() is not guaranteed to

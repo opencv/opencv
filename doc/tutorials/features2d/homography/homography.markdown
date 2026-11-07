@@ -16,9 +16,11 @@ Introduction {#tutorial_homography_Introduction}
 
 This tutorial will demonstrate the basic concepts of the homography with some codes.
 For detailed explanations about the theory, please refer to a computer vision course or a computer vision book, e.g.:
-*   Multiple View Geometry in Computer Vision, @cite HartleyZ00.
-*   An Invitation to 3-D Vision: From Images to Geometric Models, @cite Ma:2003:IVI
-*   Computer Vision: Algorithms and Applications, @cite RS10
+*   Multiple View Geometry in Computer Vision, Richard Hartley and Andrew Zisserman, @cite HartleyZ00 (some sample chapters are available [here](https://www.robots.ox.ac.uk/~vgg/hzbook/), CVPR Tutorials are available [here](https://www.robots.ox.ac.uk/~az/tutorials/))
+*   An Invitation to 3-D Vision: From Images to Geometric Models, Yi Ma, Stefano Soatto, Jana Kosecka, and S. Shankar Sastry, @cite Ma:2003:IVI (a computer vision book handout is available [here](https://cs.gmu.edu/%7Ekosecka/cs685/VisionBookHandout.pdf))
+*   Computer Vision: Algorithms and Applications, Richard Szeliski, @cite RS10 (an electronic version is available [here](https://szeliski.org/Book/))
+*   Deeper understanding of the homography decomposition for vision-based control, Ezio Malis, Manuel Vargas, @cite Malis2007 (open access [here](https://hal.inria.fr/inria-00174036))
+*   Pose Estimation for Augmented Reality: A Hands-On Survey, Eric Marchand, Hideaki Uchiyama, Fabien Spindler, @cite Marchand16 (open access [here](https://hal.inria.fr/hal-01246370))
 
 The tutorial code can be found here [C++](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/features2D/Homography),
 [Python](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/features2D/Homography),
@@ -38,7 +40,7 @@ Briefly, the planar homography relates the transformation between two planes (up
   x^{'} \\
   y^{'} \\
   1
-  \end{bmatrix} = H
+  \end{bmatrix} = \mathbf{H}
   \begin{bmatrix}
   x \\
   y \\
@@ -129,22 +131,22 @@ A quick solution to retrieve the pose from the homography matrix is (see \ref po
 
 \f[
   \begin{align*}
-  \boldsymbol{X} &= \left( X, Y, 0, 1 \right ) \\
-  \boldsymbol{x} &= \boldsymbol{P}\boldsymbol{X} \\
-                 &= \boldsymbol{K} \left[ \boldsymbol{r_1} \hspace{0.5em} \boldsymbol{r_2} \hspace{0.5em} \boldsymbol{r_3} \hspace{0.5em} \boldsymbol{t} \right ]
+  \mathbf{X} &= \left( X, Y, 0, 1 \right ) \\
+  \mathbf{x} &= \mathbf{P}\mathbf{X} \\
+                 &= \mathbf{K} \left[ \mathbf{r_1} \hspace{0.5em} \mathbf{r_2} \hspace{0.5em} \mathbf{r_3} \hspace{0.5em} \mathbf{t} \right ]
   \begin{pmatrix}
   X \\
   Y \\
   0 \\
   1
   \end{pmatrix} \\
-             &= \boldsymbol{K} \left[ \boldsymbol{r_1} \hspace{0.5em} \boldsymbol{r_2} \hspace{0.5em} \boldsymbol{t} \right ]
+             &= \mathbf{K} \left[ \mathbf{r_1} \hspace{0.5em} \mathbf{r_2} \hspace{0.5em} \mathbf{t} \right ]
   \begin{pmatrix}
   X \\
   Y \\
   1
   \end{pmatrix} \\
-  &= \boldsymbol{H}
+  &= \mathbf{H}
   \begin{pmatrix}
   X \\
   Y \\
@@ -155,16 +157,16 @@ A quick solution to retrieve the pose from the homography matrix is (see \ref po
 
 \f[
   \begin{align*}
-  \boldsymbol{H} &= \lambda \boldsymbol{K} \left[ \boldsymbol{r_1} \hspace{0.5em} \boldsymbol{r_2} \hspace{0.5em} \boldsymbol{t} \right ] \\
-  \boldsymbol{K}^{-1} \boldsymbol{H} &= \lambda \left[ \boldsymbol{r_1} \hspace{0.5em} \boldsymbol{r_2} \hspace{0.5em} \boldsymbol{t} \right ] \\
-  \boldsymbol{P} &= \boldsymbol{K} \left[ \boldsymbol{r_1} \hspace{0.5em} \boldsymbol{r_2} \hspace{0.5em} \left( \boldsymbol{r_1} \times \boldsymbol{r_2} \right ) \hspace{0.5em} \boldsymbol{t} \right ]
+  \mathbf{H} &= \lambda \mathbf{K} \left[ \mathbf{r_1} \hspace{0.5em} \mathbf{r_2} \hspace{0.5em} \mathbf{t} \right ] \\
+  \mathbf{K}^{-1} \mathbf{H} &= \lambda \left[ \mathbf{r_1} \hspace{0.5em} \mathbf{r_2} \hspace{0.5em} \mathbf{t} \right ] \\
+  \mathbf{P} &= \mathbf{K} \left[ \mathbf{r_1} \hspace{0.5em} \mathbf{r_2} \hspace{0.5em} \left( \mathbf{r_1} \times \mathbf{r_2} \right ) \hspace{0.5em} \mathbf{t} \right ]
   \end{align*}
 \f]
 
 This is a quick solution (see also \ref projective_transformations "2") as this does not ensure that the resulting rotation matrix will be orthogonal and the scale is estimated roughly by normalize the first column to 1.
 
-A solution to have a proper rotation matrix (with the properties of a rotation matrix) consists to apply a polar decomposition
-(see \ref polar_decomposition "6" or \ref polar_decomposition_svd "7" for some information):
+A solution to have a proper rotation matrix (with the properties of a rotation matrix) consists to apply a polar decomposition, or orthogonalization of the rotation matrix
+(see \ref polar_decomposition "6" or \ref polar_decomposition_svd "7" or \ref polar_decomposition_svd_2 "8" or \ref Kabsch_algorithm "9" for some information):
 
 @snippet pose_from_homography.cpp polar-decomposition-of-the-rotation-matrix
 
@@ -245,7 +247,7 @@ To check the correctness of the calculation, the matching lines are displayed:
 
 ### Demo 3: Homography from the camera displacement {#tutorial_homography_Demo3}
 
-The homography relates the transformation between two planes and it is possible to retrieve the corresponding camera displacement that allows to go from the first to the second plane view (see @cite Malis for more information).
+The homography relates the transformation between two planes and it is possible to retrieve the corresponding camera displacement that allows to go from the first to the second plane view (see @cite Malis2007 for more information).
 Before going into the details that allow to compute the homography from the camera displacement, some recalls about camera pose and homogeneous transformation.
 
 The function @ref cv::solvePnP allows to compute the camera pose from the correspondences 3D object points (points expressed in the object frame) and the projected 2D image points (object points viewed in the image).
@@ -275,7 +277,7 @@ The intrinsic parameters and the distortion coefficients are required (see the c
   Z_o \\
   1
   \end{bmatrix} \\
-  &= \boldsymbol{K} \hspace{0.2em} ^{c}\textrm{M}_o
+  &= \mathbf{K} \hspace{0.2em} ^{c}\mathbf{M}_o
   \begin{bmatrix}
   X_o \\
   Y_o \\
@@ -285,9 +287,9 @@ The intrinsic parameters and the distortion coefficients are required (see the c
   \end{align*}
 \f]
 
-\f$ \boldsymbol{K} \f$ is the intrinsic matrix and \f$ ^{c}\textrm{M}_o \f$ is the camera pose. The output of @ref cv::solvePnP is exactly this: `rvec` is the Rodrigues rotation vector and `tvec` the translation vector.
+\f$ \mathbf{K} \f$ is the intrinsic matrix and \f$ ^{c}\mathbf{M}_o \f$ is the camera pose. The output of @ref cv::solvePnP is exactly this: `rvec` is the Rodrigues rotation vector and `tvec` the translation vector.
 
-\f$ ^{c}\textrm{M}_o \f$ can be represented in a homogeneous form and allows to transform a point expressed in the object frame into the camera frame:
+\f$ ^{c}\mathbf{M}_o \f$ can be represented in a homogeneous form and allows to transform a point expressed in the object frame into the camera frame:
 
 \f[
   \begin{align*}
@@ -297,7 +299,7 @@ The intrinsic parameters and the distortion coefficients are required (see the c
   Z_c \\
   1
   \end{bmatrix} &=
-  \hspace{0.2em} ^{c}\textrm{M}_o
+  \hspace{0.2em} ^{c}\mathbf{M}_o
   \begin{bmatrix}
   X_o \\
   Y_o \\
@@ -306,7 +308,7 @@ The intrinsic parameters and the distortion coefficients are required (see the c
   \end{bmatrix} \\
   &=
   \begin{bmatrix}
-  ^{c}\textrm{R}_o & ^{c}\textrm{t}_o \\
+  ^{c}\mathbf{R}_o & ^{c}\mathbf{t}_o \\
   0_{1\times3} & 1
   \end{bmatrix}
   \begin{bmatrix}
@@ -333,19 +335,19 @@ The intrinsic parameters and the distortion coefficients are required (see the c
 
 Transform a point expressed in one frame to another frame can be easily done with matrix multiplication:
 
-*   \f$ ^{c_1}\textrm{M}_o \f$ is the camera pose for the camera 1
-*   \f$ ^{c_2}\textrm{M}_o \f$ is the camera pose for the camera 2
+*   \f$ ^{c_1}\mathbf{M}_o \f$ is the camera pose for the camera 1
+*   \f$ ^{c_2}\mathbf{M}_o \f$ is the camera pose for the camera 2
 
 To transform a 3D point expressed in the camera 1 frame to the camera 2 frame:
 
 \f[
-  ^{c_2}\textrm{M}_{c_1} = \hspace{0.2em} ^{c_2}\textrm{M}_{o} \cdot \hspace{0.1em} ^{o}\textrm{M}_{c_1} = \hspace{0.2em} ^{c_2}\textrm{M}_{o} \cdot \hspace{0.1em} \left( ^{c_1}\textrm{M}_{o} \right )^{-1} =
+  ^{c_2}\mathbf{M}_{c_1} = \hspace{0.2em} ^{c_2}\mathbf{M}_{o} \cdot \hspace{0.1em} ^{o}\mathbf{M}_{c_1} = \hspace{0.2em} ^{c_2}\mathbf{M}_{o} \cdot \hspace{0.1em} \left( ^{c_1}\mathbf{M}_{o} \right )^{-1} =
   \begin{bmatrix}
-  ^{c_2}\textrm{R}_{o} & ^{c_2}\textrm{t}_{o} \\
+  ^{c_2}\mathbf{R}_{o} & ^{c_2}\mathbf{t}_{o} \\
   0_{3 \times 1} & 1
   \end{bmatrix} \cdot
   \begin{bmatrix}
-  ^{c_1}\textrm{R}_{o}^T & - \hspace{0.2em} ^{c_1}\textrm{R}_{o}^T \cdot \hspace{0.2em} ^{c_1}\textrm{t}_{o} \\
+  ^{c_1}\mathbf{R}_{o}^T & - \hspace{0.2em} ^{c_1}\mathbf{R}_{o}^T \cdot \hspace{0.2em} ^{c_1}\mathbf{t}_{o} \\
   0_{1 \times 3} & 1
   \end{bmatrix}
 \f]
@@ -368,11 +370,11 @@ On this figure, `n` is the normal vector of the plane and `d` the distance betwe
 The [equation](https://en.wikipedia.org/wiki/Homography_(computer_vision)#3D_plane_to_plane_equation) to compute the homography from the camera displacement is:
 
 \f[
-  ^{2}\textrm{H}_{1} = \hspace{0.2em} ^{2}\textrm{R}_{1} - \hspace{0.1em} \frac{^{2}\textrm{t}_{1} \cdot n^T}{d}
+  ^{2}\mathbf{H}_{1} = \hspace{0.2em} ^{2}\mathbf{R}_{1} - \hspace{0.1em} \frac{^{2}\mathbf{t}_{1} \cdot \hspace{0.1em} ^{1}\mathbf{n}^\top}{^1d}
 \f]
 
-Where \f$ ^{2}\textrm{H}_{1} \f$ is the homography matrix that maps the points in the first camera frame to the corresponding points in the second camera frame, \f$ ^{2}\textrm{R}_{1} = \hspace{0.2em} ^{c_2}\textrm{R}_{o} \cdot \hspace{0.1em} ^{c_1}\textrm{R}_{o}^{T} \f$
-is the rotation matrix that represents the rotation between the two camera frames and \f$ ^{2}\textrm{t}_{1} = \hspace{0.2em} ^{c_2}\textrm{R}_{o} \cdot \left( - \hspace{0.1em} ^{c_1}\textrm{R}_{o}^{T} \cdot \hspace{0.1em} ^{c_1}\textrm{t}_{o} \right ) + \hspace{0.1em} ^{c_2}\textrm{t}_{o} \f$
+Where \f$ ^{2}\mathbf{H}_{1} \f$ is the homography matrix that maps the points in the first camera frame to the corresponding points in the second camera frame, \f$ ^{2}\mathbf{R}_{1} = \hspace{0.2em} ^{c_2}\mathbf{R}_{o} \cdot \hspace{0.1em} ^{c_1}\mathbf{R}_{o}^{\top} \f$
+is the rotation matrix that represents the rotation between the two camera frames and \f$ ^{2}\mathbf{t}_{1} = \hspace{0.2em} ^{c_2}\mathbf{R}_{o} \cdot \left( - \hspace{0.1em} ^{c_1}\mathbf{R}_{o}^{\top} \cdot \hspace{0.1em} ^{c_1}\mathbf{t}_{o} \right ) + \hspace{0.1em} ^{c_2}\mathbf{t}_{o} \f$
 the translation vector between the two camera frames.
 
 Here the normal vector `n` is the plane normal expressed in the camera frame 1 and can be computed as the cross product of 2 vectors (using 3 non collinear points that lie on the plane) or in our case directly with:
@@ -383,7 +385,7 @@ The distance `d` can be computed as the dot product between the plane normal and
 
 @snippet homography_from_camera_displacement.cpp compute-plane-distance-to-the-camera-frame-1
 
-The projective homography matrix \f$ \textbf{G} \f$ can be computed from the Euclidean homography \f$ \textbf{H} \f$ using the intrinsic matrix \f$ \textbf{K} \f$ (see @cite Malis), here assuming the same camera between the two plane views:
+The projective homography matrix \f$ \textbf{G} \f$ can be computed from the Euclidean homography \f$ \textbf{H} \f$ using the intrinsic matrix \f$ \textbf{K} \f$ (see @cite Malis2007), here assuming the same camera between the two plane views:
 
 \f[
   \textbf{G} = \gamma \textbf{K} \textbf{H} \textbf{K}^{-1}
@@ -394,7 +396,7 @@ The projective homography matrix \f$ \textbf{G} \f$ can be computed from the Euc
 In our case, the Z-axis of the chessboard goes inside the object whereas in the homography figure it goes outside. This is just a matter of sign:
 
 \f[
-  ^{2}\textrm{H}_{1} = \hspace{0.2em} ^{2}\textrm{R}_{1} + \hspace{0.1em} \frac{^{2}\textrm{t}_{1} \cdot n^T}{d}
+  ^{2}\mathbf{H}_{1} = \hspace{0.2em} ^{2}\mathbf{R}_{1} + \hspace{0.1em} \frac{^{2}\mathbf{t}_{1} \cdot \hspace{0.1em} ^{1}\mathbf{n}^\top}{^1d}
 \f]
 
 @snippet homography_from_camera_displacement.cpp compute-homography-from-camera-displacement
@@ -416,9 +418,17 @@ homography from camera displacement:
 
 The homography matrices are similar. If we compare the image 1 warped using both homography matrices:
 
-![Left: image warped using the homography estimated. Right: using the homography computed from the camera displacement](images/homography_camera_displacement_compare.jpg)
+![Left: image warped using the estimated homography. Right: using the homography computed from the camera displacement.](images/homography_camera_displacement_compare.jpg)
 
 Visually, it is hard to distinguish a difference between the result image from the homography computed from the camera displacement and the one estimated with @ref cv::findHomography function.
+
+#### Exercise
+
+This demo shows you how to compute the homography transformation from two camera poses. Try to perform the same operations, but by computing N inter homography this time. Instead of computing one homography to directly warp the source image to the desired camera viewpoint, perform N warping operations to see the different transformations operating.
+
+You should get something similar to the following:
+
+![The first three images show the source image warped at three different interpolated camera viewpoints. The 4th image shows the "error image" between the warped source image at the final camera viewpoint and the desired image.](images/homography_camera_poses_interpolation.jpg)
 
 ### Demo 4: Decompose the homography matrix {#tutorial_homography_Demo4}
 
@@ -472,8 +482,8 @@ As you can see, there is one solution that matches almost perfectly with the com
 At least two of the solutions may further be invalidated if point correspondences are available by applying positive depth constraint (all points must be in front of the camera).
 ```
 
-As the result of the decomposition is a camera displacement, if we have the initial camera pose \f$ ^{c_1}\textrm{M}_{o} \f$, we can compute the current camera pose
-\f$ ^{c_2}\textrm{M}_{o} = \hspace{0.2em} ^{c_2}\textrm{M}_{c_1} \cdot \hspace{0.1em} ^{c_1}\textrm{M}_{o} \f$ and test if the 3D object points that belong to the plane are projected in front of the camera or not.
+As the result of the decomposition is a camera displacement, if we have the initial camera pose \f$ ^{c_1}\mathbf{M}_{o} \f$, we can compute the current camera pose
+\f$ ^{c_2}\mathbf{M}_{o} = \hspace{0.2em} ^{c_2}\mathbf{M}_{c_1} \cdot \hspace{0.1em} ^{c_1}\mathbf{M}_{o} \f$ and test if the 3D object points that belong to the plane are projected in front of the camera or not.
 Another solution could be to retain the solution with the closest normal if we know the plane normal expressed at the camera 1 pose.
 
 The same thing but with the homography matrix estimated with @ref cv::findHomography
@@ -522,7 +532,7 @@ The [stitching module](@ref stitching) provides a complete pipeline to stitch im
 The homography transformation applies only for planar structure. But in the case of a rotating camera (pure rotation around the camera axis of projection, no translation), an arbitrary world can be considered
 ([see previously](@ref tutorial_homography_What_is_the_homography_matrix)).
 
-The homography can then be computed using the rotation transformation and the camera intrinsic parameters as (see for instance \ref homography_course "8"):
+The homography can then be computed using the rotation transformation and the camera intrinsic parameters as (see for instance \ref homography_course "10"):
 
 \f[
   s
@@ -540,7 +550,7 @@ The homography can then be computed using the rotation transformation and the ca
 \f]
 
 To illustrate, we used Blender, a free and open-source 3D computer graphics software, to generate two camera views with only a rotation transformation between each other.
-More information about how to retrieve the camera intrinsic parameters and the `3x4` extrinsic matrix with respect to the world can be found in \ref answer_blender "9" (an additional transformation
+More information about how to retrieve the camera intrinsic parameters and the `3x4` extrinsic matrix with respect to the world can be found in \ref answer_blender "11" (an additional transformation
 is needed to get the transformation between the camera and the object frames) with Blender.
 
 The figure below shows the two generated views of the Suzanne model, with only a rotation transformation:
@@ -609,11 +619,13 @@ Additional references {#tutorial_homography_Additional_references}
 ---------------------
 
 *   \anchor lecture_16 1. [Lecture 16: Planar Homographies](http://www.cse.psu.edu/~rtc12/CSE486/lecture16.pdf), Robert Collins
-*   \anchor projective_transformations 2. [2D projective transformations (homographies)](https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws11-12/3DCV_WS11-12_lec04.pdf), Christiano Gava, Gabriele Bleser
-*   \anchor szeliski 3. [Computer Vision: Algorithms and Applications](http://szeliski.org/Book/drafts/SzeliskiBook_20100903_draft.pdf), Richard Szeliski
+*   \anchor projective_transformations 2. [2D projective transformations (homographies)](https://web.archive.org/web/20171226115739/https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws11-12/3DCV_WS11-12_lec04.pdf), Christiano Gava, Gabriele Bleser
+*   \anchor szeliski 3. [Computer Vision: Algorithms and Applications](https://szeliski.org/Book/), Richard Szeliski
 *   \anchor answer_dsp 4. [Step by Step Camera Pose Estimation for Visual Tracking and Planar Markers](https://dsp.stackexchange.com/a/2737)
-*   \anchor pose_ar 5. [Pose from homography estimation](https://team.inria.fr/lagadic/camera_localization/tutorial-pose-dlt-planar-opencv.html)
+*   \anchor pose_ar 5. [Pose from homography estimation](https://visp-doc.inria.fr/doxygen/camera_localization/tutorial-pose-dlt-planar-opencv.html)
 *   \anchor polar_decomposition 6. [Polar Decomposition (in Continuum Mechanics)](http://www.continuummechanics.org/polardecomposition.html)
-*   \anchor polar_decomposition_svd 7. [A Personal Interview with the Singular Value Decomposition](https://web.stanford.edu/~gavish/documents/SVD_ans_you.pdf), Matan Gavish
-*   \anchor homography_course 8. [Homography](http://people.scs.carleton.ca/~c_shu/Courses/comp4900d/notes/homography.pdf), Dr. Gerhard Roth
-*   \anchor answer_blender 9. [3x4 camera matrix from blender camera](https://blender.stackexchange.com/a/38210)
+*   \anchor polar_decomposition_svd 7. [Chapter 3 - 3.1.2 From matrices to rotations - Theorem 3.1 (Least-squares estimation of a rotation from a matrix K)](https://www-sop.inria.fr/asclepios/cours/MVA/Rotations.pdf)
+*   \anchor polar_decomposition_svd_2 8. [A Personal Interview with the Singular Value Decomposition](https://web.stanford.edu/~gavish/documents/SVD_ans_you.pdf), Matan Gavish
+*   \anchor Kabsch_algorithm 9. [Kabsch algorithm, Computation of the optimal rotation matrix](https://en.wikipedia.org/wiki/Kabsch_algorithm#Computation_of_the_optimal_rotation_matrix)
+*   \anchor homography_course 10. [Homography](http://people.scs.carleton.ca/~c_shu/Courses/comp4900d/notes/homography.pdf), Dr. Gerhard Roth
+*   \anchor answer_blender 11. [3x4 camera matrix from blender camera](https://blender.stackexchange.com/a/38210)

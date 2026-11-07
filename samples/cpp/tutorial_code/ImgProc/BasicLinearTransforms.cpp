@@ -30,6 +30,12 @@ int main( int argc, char** argv )
       cout << "Usage: " << argv[0] << " <Input image>" << endl;
       return -1;
     }
+    if (image.channels() != 3)
+    {
+        cout << "The tutorial expects 3 channel image as input!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
+        return -1;
+    }
     //! [basic-linear-transform-load]
 
     //! [basic-linear-transform-output]
@@ -54,7 +60,7 @@ int main( int argc, char** argv )
     //! [basic-linear-transform-operation]
     for( int y = 0; y < image.rows; y++ ) {
         for( int x = 0; x < image.cols; x++ ) {
-            for( int c = 0; c < image.channels(); c++ ) {
+            for( int c = 0; c < 3; c++ ) {
                 new_image.at<Vec3b>(y,x)[c] =
                   saturate_cast<uchar>( alpha*image.at<Vec3b>(y,x)[c] + beta );
             }

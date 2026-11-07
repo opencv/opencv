@@ -1,7 +1,8 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
-@next_tutorial{tutorial_linux_gdb_pretty_printer}
+@prev_tutorial{tutorial_env_reference}
+@next_tutorial{tutorial_oneapi_install}
 
 |    |    |
 | -: | :- |
@@ -65,7 +66,7 @@ There are two methods of getting OpenCV sources:
 
 
 @note
-Snapshots of other branches, releases or commits can be found on the [GitHub](https://github.com/opencv/opencv) and the [official download page](https://opencv.org/releases.html).
+Snapshots of other branches, releases or commits can be found on the [GitHub](https://github.com/opencv/opencv) and the [official download page](https://opencv.org/releases).
 
 
 ## Configure and build {#tutorial_linux_install_detailed_basic_build}

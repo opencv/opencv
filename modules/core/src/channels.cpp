@@ -46,44 +46,44 @@ mixChannels_( const T** src, const int* sdelta,
 }
 
 
-static void mixChannels8u( const uchar** src, const int* sdelta,
-                           uchar** dst, const int* ddelta,
+static void mixChannels8u( const void** src, const int* sdelta,
+                           void** dst, const int* ddelta,
                            int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const uchar**)src, sdelta, (uchar**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels16u( const ushort** src, const int* sdelta,
-                            ushort** dst, const int* ddelta,
+static void mixChannels16u( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const ushort**)src, sdelta, (ushort**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels32s( const int** src, const int* sdelta,
-                            int** dst, const int* ddelta,
+static void mixChannels32s( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int**)src, sdelta, (int**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels64s( const int64** src, const int* sdelta,
-                            int64** dst, const int* ddelta,
+static void mixChannels64s( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int64**)src, sdelta, (int64**)dst, ddelta, len, npairs);
 }
 
-typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
-        uchar** dst, const int* ddelta, int len, int npairs );
+typedef void (*MixChannelsFunc)( const void** src, const int* sdelta,
+        void** dst, const int* ddelta, int len, int npairs );
 
 static MixChannelsFunc getMixchFunc(int depth)
 {
-    static MixChannelsFunc mixchTab[] =
+    static MixChannelsFunc mixchTab[CV_DEPTH_MAX] =
     {
-        (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
-        (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
-        (MixChannelsFunc)mixChannels64s, 0
+        mixChannels8u, mixChannels8u, mixChannels16u,
+        mixChannels16u, mixChannels32s, mixChannels32s,
+        mixChannels64s, 0
     };
 
     return mixchTab[depth];
@@ -146,6 +146,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     NAryMatIterator it(arrays, ptrs, (int)(nsrcs + ndsts));
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = getMixchFunc(depth);
+    CV_Assert(func);
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
@@ -158,7 +159,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
         for( int t = 0; t < total; t += blocksize )
         {
             int bsz = std::min(total - t, blocksize);
-            func( srcs, sdelta, dsts, ddelta, bsz, (int)npairs );
+            func( (const void**)srcs, sdelta, (void **)dsts, ddelta, bsz, (int)npairs );
 
             if( t + blocksize < total )
                 for( k = 0; k < npairs; k++ )
@@ -417,6 +418,35 @@ static bool ipp_insertChannel(const Mat &src, Mat &dst, int channel)
 }
 #endif
 
+namespace cv
+{
+template<int channel> static void extractChannel8uC2_(const Mat& src, Mat& dst)
+{
+    for (int row = 0; row < src.rows; ++row)
+    {
+        const uchar* source = src.ptr<uchar>(row);
+        uchar* destination = dst.ptr<uchar>(row);
+        int column = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int lanes = VTraits<v_uint8>::vlanes();
+        for (; column <= src.cols - lanes; column += lanes)
+        {
+            v_uint8 channel0, channel1;
+            v_load_deinterleave(source + column * 2, channel0, channel1);
+            v_store(destination + column, channel == 0 ? channel0 : channel1);
+        }
+#endif
+        for (; column < src.cols; ++column)
+            destination[column] = source[column * 2 + channel];
+    }
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    vx_cleanup();
+#endif
+}
+}
+
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
     CV_INSTRUMENT_REGION();
@@ -441,6 +471,15 @@ void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
     Mat dst = _dst.getMat();
 
     CV_IPP_RUN_FAST(ipp_extractChannel(src, dst, coi))
+
+    if (src.dims <= 2 && src.type() == CV_8UC2)
+    {
+        if (coi == 0)
+            extractChannel8uC2_<0>(src, dst);
+        else
+            extractChannel8uC2_<1>(src, dst);
+        return;
+    }
 
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }

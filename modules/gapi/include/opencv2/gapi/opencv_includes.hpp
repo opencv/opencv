@@ -31,6 +31,7 @@ namespace cv {
     using Size    = gapi::own::Size;
     using Point   = gapi::own::Point;
     using Point2f = gapi::own::Point2f;
+    using Point3f = gapi::own::Point3f;
     using Scalar  = gapi::own::Scalar;
     using Mat     = gapi::own::Mat;
 }  // namespace cv

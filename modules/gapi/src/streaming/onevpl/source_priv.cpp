@@ -94,12 +94,12 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
          GAPI_Assert(cfg_inst && "MFXCreateConfig failed");
 
         if (!cfg_param_it->is_major()) {
-            GAPI_LOG_DEBUG(nullptr, "Skip not major param: " << cfg_param_it->get_name());
+            GAPI_LOG_DEBUG(nullptr, "Skip not major param: " << cfg_param_it->to_string());
             ++cfg_param_it;
             continue;
         }
 
-        GAPI_LOG_DEBUG(nullptr, "Apply major param: " << cfg_param_it->get_name());
+        GAPI_LOG_DEBUG(nullptr, "Apply major param: " << cfg_param_it->to_string());
         mfxVariant mfx_param = cfg_param_to_mfx_variant(*cfg_param_it);
         mfxStatus sts = MFXSetConfigFilterProperty(cfg_inst,
                                                    (mfxU8 *)cfg_param_it->get_name().c_str(),
@@ -109,7 +109,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
                                       mfxstatus_to_string(sts) <<
                                       " - for \"" << cfg_param_it->get_name() << "\"");
-            GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
+            GAPI_Error("MFXSetConfigFilterProperty failed");
         }
 
         mfx_param.Type     = MFX_VARIANT_TYPE_U32;
@@ -123,7 +123,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
                                       mfxstatus_to_string(sts) <<
                                       " - for \"mfxImplDescription.mfxVPPDescription.filter.FilterFourCC\"");
-            GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
+            GAPI_Error("MFXSetConfigFilterProperty failed");
         }
 
         ++cfg_param_it;
@@ -189,8 +189,14 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // Extract the most suitable VPL implementation by max score
     auto max_match_it = matches_count.rbegin();
-    GAPI_Assert(max_match_it != matches_count.rend() &&
-                "Cannot find matched MFX implementation for requested configuration");
+    if (max_match_it == matches_count.rend()) {
+        std::stringstream ss;
+        for (const auto &p : cfg_params) {
+            ss << p.to_string() << std::endl;
+        }
+        GAPI_LOG_WARNING(nullptr, "No one suitable MFX implementation is found, requested params:\n" << ss.str());
+        throw std::runtime_error("Cannot find any suitable MFX implementation for requested configuration");
+    }
 
     // TODO impl_number is global for now
     impl_number = max_match_it->second;
@@ -221,16 +227,15 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
         // TODO  Add factory static method in ProcessingEngineBase
         if (mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION) {
-            GAPI_Assert(false &&
+            GAPI_LOG_WARNING(NULL,
                         "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
-                        " - is not implemented");
+                        " - is not implemented. Rollback to MFX implementation");
+        }
+        const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
+        if (!transcode_params.empty()) {
+            engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
         } else {
-            const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
-            if (!transcode_params.empty()) {
-                engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
-            } else {
-                engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
-            }
+            engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
         }
     }
 
@@ -312,7 +317,7 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
             GAPI_LOG_WARNING(nullptr, "Cannot initialize HW Accel: "
                                       "invalid accelerator type: " <<
                                       std::to_string(accel_mode.Data.U32));
-            GAPI_Assert(false && "Cannot initialize HW Accel");
+            GAPI_Error("Cannot initialize HW Accel");
         }
     }
 
@@ -321,11 +326,16 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
 
 const std::vector<CfgParam>& GSource::Priv::getDefaultCfgParams()
 {
+#ifdef __WIN32__
     static const std::vector<CfgParam> def_params =
         get_params_from_string<CfgParam>(
                     "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n"
                     "mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\n");
-
+#else
+    static const std::vector<CfgParam> def_params =
+        get_params_from_string<CfgParam>(
+                    "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n");
+#endif
     return def_params;
 }
 

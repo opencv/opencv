@@ -10,6 +10,7 @@
 
 #if !defined(GAPI_STANDALONE)
 #  include <opencv2/core.hpp>
+#  include <opencv2/core/utils/configuration.private.hpp>
 #  include <opencv2/imgproc.hpp>
 #  include <opencv2/gapi/core.hpp>
 #  include <opencv2/gapi/imgproc.hpp>

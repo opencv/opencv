@@ -149,7 +149,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
 
         rgbLena = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH);
-        grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, 0);
+        grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, Imgcodecs.IMREAD_GRAYSCALE);
 
         gray255_32f_3d = new Mat(new int[]{matSize, matSize, matSize}, CvType.CV_32F, new Scalar(255.0));
 
@@ -292,6 +292,13 @@ public class OpenCVTestCase extends TestCase {
         for (int i = 0; i < ar1.length; i++)
             assertEquals(ar1[i], ar2[i]);
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
+    }
+
+    public static void assertArrayEquals(byte[] ar1, byte[] ar2) {
+        assertEquals(ar1.length, ar2.length);
+
+        for (int i = 0; i < ar1.length; i++)
+            assertEquals(ar1[i], ar2[i]);
     }
 
     public static void assertArrayEquals(double[] ar1, double[] ar2, double epsilon) {

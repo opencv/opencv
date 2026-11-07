@@ -1,6 +1,8 @@
 Install OpenCV-Python in Fedora {#tutorial_py_setup_in_fedora}
 ===============================
 
+@note: Please prefer binaries distributed with PyPI, if possible. See @ref tutorial_py_pip_install for details.
+
 Goals
 -----
 
@@ -236,9 +238,6 @@ To build the documentation, just enter following commands:
 make doxygen
 @endcode
 Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
-
-Additional Resources
---------------------
 
 Exercises
 ---------

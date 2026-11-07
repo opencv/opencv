@@ -221,7 +221,7 @@ struct opj_thread_t {
     HANDLE hThread;
 };
 
-unsigned int __stdcall opj_thread_callback_adapter(void *info)
+static unsigned int __stdcall opj_thread_callback_adapter(void *info)
 {
     opj_thread_t* thread = (opj_thread_t*) info;
     HANDLE hEvent = NULL;

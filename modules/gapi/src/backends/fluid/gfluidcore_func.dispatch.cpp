@@ -6,6 +6,8 @@
 
 #if !defined(GAPI_STANDALONE)
 
+#include <opencv2/core/hal/intrin.hpp>
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #include "gfluidcore_func.hpp"
 #include "gfluidcore_func.simd.hpp"
 
@@ -14,7 +16,6 @@
 #include "gfluidutils.hpp"
 
 #include <opencv2/core/cvdef.h>
-#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -276,12 +277,20 @@ int split4_simd(const uchar in[], uchar out1[], uchar out2[],
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
-int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
-                uchar out[], const int width)
-{
-    CV_CPU_DISPATCH(merge3_simd, (in1, in2, in3, out, width),
-                    CV_CPU_DISPATCH_MODES_ALL);
+#define MERGE3_SIMD(T)                                              \
+int merge3_simd(const T in1[], const T in2[], const T in3[],        \
+                T out[], const int width)                           \
+{                                                                   \
+    CV_CPU_DISPATCH(merge3_simd, (in1, in2, in3, out, width),       \
+                    CV_CPU_DISPATCH_MODES_ALL);                     \
 }
+
+MERGE3_SIMD(uchar)
+MERGE3_SIMD(short)
+MERGE3_SIMD(ushort)
+MERGE3_SIMD(float)
+
+#undef MERGE3_SIMD
 
 int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width)
@@ -391,8 +400,50 @@ CONVERTTO_SCALED_SIMD(float, float)
 
 #undef CONVERTTO_SCALED_SIMD
 
+//-------------------------
+//
+// Fluid kernels: InRange
+//
+//-------------------------
+
+#define INRANGE_SIMD(SRC)                                                    \
+int inrange_simd(const SRC in[], const SRC lower[], const SRC upper[],       \
+                 uchar out[], const int length, const int chan)              \
+{                                                                            \
+    CV_CPU_DISPATCH(inrange_simd, (in, lower, upper, out, length, chan),     \
+                    CV_CPU_DISPATCH_MODES_ALL);                              \
+}
+
+INRANGE_SIMD(uchar)
+INRANGE_SIMD(ushort)
+INRANGE_SIMD(short)
+
+#undef INRANGE_SIMD
+
+//-----------------------------------
+//
+// Fluid kernels: Select
+//
+//-----------------------------------
+
+#define DISPATCH_SELECT_SIMD(SRC)                                                   \
+int select_simd(const SRC in1[], const SRC in2[], const uchar in3[],                \
+                SRC out[], const int length, const int chan)                        \
+{                                                                                   \
+    CV_CPU_DISPATCH(select_simd, (in1, in2, in3, out, length, chan),                \
+                    CV_CPU_DISPATCH_MODES_ALL);                                     \
+}
+
+DISPATCH_SELECT_SIMD(uchar)
+DISPATCH_SELECT_SIMD(ushort)
+DISPATCH_SELECT_SIMD(short)
+
+#undef DISPATCH_SELECT_SIMD
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
 
+
+#endif // CV_SIMD
 #endif // !defined(GAPI_STANDALONE)

@@ -51,6 +51,37 @@ int validateToInt(size_t sz)
     return valueInt;
 }
 
+RowPitchParams calculateRowPitch(int width, int bpp, int alignment, const char* format_name)
+{
+    CV_Assert(width > 0 && bpp > 0 && alignment > 0);
+    CV_Assert((alignment & (alignment - 1)) == 0);  // must be power of 2
+
+    const size_t bits_per_row = static_cast<size_t>(width) * static_cast<size_t>(bpp);
+    const size_t bytes_per_row = (bits_per_row + 7) / 8;
+    const size_t aligned_pitch = (bytes_per_row + alignment - 1) & ~static_cast<size_t>(alignment - 1);
+
+    if (aligned_pitch >= MAX_IMAGE_ROW_SIZE)
+        CV_Error(cv::Error::StsOutOfRange,
+                 cv::format("%s: src_pitch exceeds maximum allowed size", format_name));
+
+    RowPitchParams result;
+    result.src_pitch = validateToInt(aligned_pitch);
+    result.bytes_per_row = bytes_per_row;
+    return result;
+}
+
+int calculateRowSize(int width, int nch, const char* format_name)
+{
+    CV_Assert(width > 0 && nch > 0);
+
+    const size_t row_size = static_cast<size_t>(width) * static_cast<size_t>(nch);
+    if (row_size >= MAX_IMAGE_ROW_SIZE)
+        CV_Error(cv::Error::StsOutOfRange,
+                 cv::format("%s: row size exceeds maximum allowed size", format_name));
+
+    return validateToInt(row_size);
+}
+
 #define  SCALE  14
 #define  cR  (int)(0.299*(1 << SCALE) + 0.5)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
@@ -138,13 +169,13 @@ void icvCvt_Gray2BGR_16u_C1C3R( const ushort* gray, int gray_step,
                               ushort* bgr, int bgr_step, Size size )
 {
     int i;
-    for( ; size.height--; gray += gray_step/sizeof(gray[0]) )
+    for( ; size.height--; gray += gray_step/(int)sizeof(gray[0]) )
     {
         for( i = 0; i < size.width; i++, bgr += 3 )
         {
             bgr[0] = bgr[1] = bgr[2] = gray[i];
         }
-        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
+        bgr += bgr_step/(int)sizeof(bgr[0]) - size.width*3;
     }
 }
 
@@ -183,8 +214,8 @@ void icvCvt_BGRA2BGR_16u_C4C3R( const ushort* bgra, int bgra_step,
             bgr[0] = t0; bgr[1] = t1;
             t0 = bgra[swap_rb^2]; bgr[2] = t0;
         }
-        bgr += bgr_step/sizeof(bgr[0]) - size.width*3;
-        bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
+        bgr += bgr_step/(int)sizeof(bgr[0]) - size.width*3;
+        bgra += bgra_step/(int)sizeof(bgra[0]) - size.width*4;
     }
 }
 
@@ -221,8 +252,8 @@ void icvCvt_BGRA2RGBA_16u_C4R( const ushort* bgra, int bgra_step,
          rgba[0] = t2; rgba[1] = t1;
          rgba[2] = t0; rgba[3] = t3;
      }
-     bgra += bgra_step/sizeof(bgra[0]) - size.width*4;
-     rgba += rgba_step/sizeof(rgba[0]) - size.width*4;
+     bgra += bgra_step/(int)sizeof(bgra[0]) - size.width*4;
+     rgba += rgba_step/(int)sizeof(rgba[0]) - size.width*4;
  }
 }
 
@@ -352,6 +383,25 @@ void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
     }
 }
 
+void icvCvt_CMYK2RGB_8u_C4C3R( const uchar* cmyk, int cmyk_step,
+                               uchar* rgb, int rgb_step, Size size )
+{
+    int i;
+    for( ; size.height--; )
+    {
+        for( i = 0; i < size.width; i++, rgb += 3, cmyk += 4 )
+        {
+            int c = cmyk[0], m = cmyk[1], y = cmyk[2], k = cmyk[3];
+            c = k - ((255 - c)*k>>8);
+            m = k - ((255 - m)*k>>8);
+            y = k - ((255 - y)*k>>8);
+            rgb[0] = (uchar)c; rgb[1] = (uchar)m; rgb[2] = (uchar)y;
+        }
+        rgb += rgb_step - size.width*3;
+        cmyk += cmyk_step - size.width*4;
+    }
+}
+
 
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* cmyk, int cmyk_step,
                                 uchar* gray, int gray_step, Size size )
@@ -416,7 +466,7 @@ bool  IsColorPalette( PaletteEntry* palette, int bpp )
 uchar* FillUniColor( uchar* data, uchar*& line_end,
                      int step, int width3,
                      int& y, int height,
-                     int count3, PaletteEntry clr )
+                     ptrdiff_t count3, PaletteEntry clr )
 {
     do
     {
@@ -425,7 +475,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count3 -= (int)(end - data);
+        count3 -= end - data;
 
         for( ; data < end; data += 3 )
         {
@@ -448,7 +498,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
 uchar* FillUniGray( uchar* data, uchar*& line_end,
                     int step, int width,
                     int& y, int height,
-                    int count, uchar clr )
+                    ptrdiff_t count, uchar clr )
 {
     do
     {
@@ -457,7 +507,7 @@ uchar* FillUniGray( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count -= (int)(end - data);
+        count -= end - data;
 
         for( ; data < end; data++ )
         {

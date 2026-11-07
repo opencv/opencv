@@ -124,17 +124,17 @@ elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL 8)
 endif()
 
 if(SIZEOF_UNSIGNED_INT EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned int")
+  set(TIFF_SIZE_T "uint32_t")
   set(TIFF_SIZE_FORMAT "%u")
-  set(TIFF_SSIZE_T "signed int")
+  set(TIFF_SSIZE_T "int32_t")
   set(TIFF_SSIZE_FORMAT "%d")
 elseif(SIZEOF_UNSIGNED_LONG EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned long")
+  set(TIFF_SIZE_T "uint64_t")
   set(TIFF_SIZE_FORMAT "%lu")
-  set(TIFF_SSIZE_T "signed long")
+  set(TIFF_SSIZE_T "int64_t")
   set(TIFF_SSIZE_FORMAT "%ld")
 elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL SIZEOF_SIZE_T)
-  set(TIFF_SIZE_T "unsigned long")
+  set(TIFF_SIZE_T "uint64_t")
   if(MINGW)
     set(TIFF_SIZE_FORMAT "%I64u")
     set(TIFF_SSIZE_FORMAT "%I64d")
@@ -197,20 +197,6 @@ check_function_exists(strtol     HAVE_STRTOL)
 check_function_exists(strtol     HAVE_STRTOUL)
 check_function_exists(strtoull   HAVE_STRTOULL)
 check_function_exists(lfind      HAVE_LFIND)
-
-# May be inlined, so check it compiles:
-check_c_source_compiles("
-#include <stdio.h>
-int main(void) {
-  char buf[10];
-  snprintf(buf, 10, \"Test %d\", 1);
-  return 0;
-}"
-  HAVE_SNPRINTF)
-
-if(NOT HAVE_SNPRINTF)
-  add_definitions(-DNEED_LIBPORT)
-endif()
 
 # CPU bit order
 set(fillorder FILLORDER_MSB2LSB)
@@ -311,6 +297,16 @@ if(JPEG_SUPPORT AND old-jpeg)
   set(OJPEG_SUPPORT TRUE)
 endif()
 
+# WEBP
+set(WEBP_SUPPORT FALSE)
+if(HAVE_WEBP)
+  set(WEBP_SUPPORT TRUE)
+  if(TARGET ${WEBP_LIBRARY} AND DEFINED ${WEBP_LIBRARY}_BINARY_DIR)
+    include_directories("${${WEBP_LIBRARY}_BINARY_DIR}")
+  endif()
+  include_directories(${WEBP_INCLUDE_DIR})
+endif()
+
 # OpenCV: turned off
 set(JBIG_SUPPORT 0)
 set(LZMA_SUPPORT 0)  # OpenCV: turned off
@@ -343,6 +339,9 @@ endif()
 if(JPEG12_INCLUDE_DIR)
   list(APPEND TIFF_INCLUDES ${JPEG12_INCLUDE_DIR})
 endif()
+if(WEBP_INCLUDE_DIR)
+  list(APPEND TIFF_INCLUDES ${WEBP_INCLUDE_DIR})
+endif()
 if(JBIG_INCLUDE_DIR)
   list(APPEND TIFF_INCLUDES ${JBIG_INCLUDE_DIR})
 endif()
@@ -361,6 +360,9 @@ endif()
 if(JPEG_LIBRARIES)
   list(APPEND TIFF_LIBRARY_DEPS ${JPEG_LIBRARIES})
 endif()
+if(WEBP_LIBRARIES)
+  list(APPEND TIFF_LIBRARY_DEPS ${WEBP_LIBRARIES})
+endif()
 if(JPEG12_LIBRARIES)
   list(APPEND TIFF_LIBRARY_DEPS ${JPEG12_LIBRARIES})
 endif()
@@ -371,13 +373,22 @@ if(LIBLZMA_LIBRARIES)
   list(APPEND TIFF_LIBRARY_DEPS ${LIBLZMA_LIBRARIES})
 endif()
 
+set(LIBTIFF_MAJOR_VERSION "4")
+set(LIBTIFF_MINOR_VERSION "7")
+set(LIBTIFF_MICRO_VERSION "2")
+set(LIBTIFF_VERSION "${LIBTIFF_MAJOR_VERSION}.${LIBTIFF_MINOR_VERSION}.${LIBTIFF_MICRO_VERSION}")
+file(READ "RELEASE-DATE" LIBTIFF_RELEASE_DATE content)
 
+set(TIFF_MAX_DIR_COUNT "1048576")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
                @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffconf.h.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
+               @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tiffvers.h.cmake.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h"
                @ONLY)
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS})
@@ -399,6 +410,7 @@ set(lib_srcs
     tif_fax3sm.c
     tif_flush.c
     tif_getimage.c
+    tif_hash_set.c
     tif_jbig.c
     tif_jpeg_12.c
     tif_jpeg.c
@@ -427,20 +439,17 @@ set(lib_srcs
     t4.h
     tif_dir.h
     tif_fax3.h
+    tif_hash_set.h
+    tif_predict.h
     tiff.h
     tiffio.h
     tiffiop.h
-    tiffvers.h
-    tif_predict.h
+    "${CMAKE_CURRENT_BINARY_DIR}/tiffvers.h"
     uvcode.h
     tiffio.hxx
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
     "${CMAKE_CURRENT_BINARY_DIR}/tiffconf.h"
     )
-
-if(WIN32 AND NOT HAVE_SNPRINTF)
-  list(APPEND lib_srcs snprintf.c libport.h)
-endif()
 
 if(WIN32 AND NOT WINRT)
   list(APPEND lib_srcs tif_win32.c)
@@ -469,6 +478,9 @@ ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018 /wd4311 /wd4312)
 
 add_library(${TIFF_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
+if(HAVE_WEBP)
+  target_link_libraries(${TIFF_LIBRARY} ${WEBP_LIBRARY})
+endif()
 
 set_target_properties(${TIFF_LIBRARY}
     PROPERTIES
@@ -487,4 +499,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
-ocv_install_3rdparty_licenses(libtiff COPYRIGHT)
+ocv_install_3rdparty_licenses(libtiff LICENSE.md)
