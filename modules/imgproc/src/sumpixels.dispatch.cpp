@@ -362,6 +362,47 @@ static bool integral_SIMD(
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// --- Autotuned single-channel (cn==1) sqsum path selection --------------------
+// On wide out-of-order cores (e.g. Cortex-A76) the scalar single-channel sqsum
+// integral outruns the universal-intrinsic SIMD path: the per-row prefix is a
+// serial recurrence such cores already pipeline at high IPC, and the kernel is
+// store-bandwidth-bound, so the extra SIMD work is pure overhead. On in-order
+// cores (Cortex-A55) and Apple Silicon the SIMD path wins. These cannot be told
+// apart by CPU feature flags, so on first use we time both paths once on a
+// representative buffer and cache the faster choice (process-global, thread-safe).
+static bool tune_cn1_sqsum_prefer_scalar()
+{
+    const int W = 1280, H = 720, cn = 1;
+    std::vector<uchar>  src((size_t)W * H);
+    for (size_t i = 0; i < src.size(); ++i)
+        src[i] = (uchar)((i * 1103515245u + 12345u) >> 16);
+    std::vector<int>    sumb((size_t)(W + 1) * (H + 1));
+    std::vector<double> sqb ((size_t)(W + 1) * (H + 1));
+    const size_t srcstep = (size_t)W;
+    const size_t sumstep = (size_t)(W + 1) * sizeof(int);
+    const size_t sqstep  = (size_t)(W + 1) * sizeof(double);
+    auto run_simd = [&]{
+        integral_SIMD(CV_8U, CV_32S, CV_64F, src.data(), srcstep,
+            (uchar*)sumb.data(), sumstep, (uchar*)sqb.data(), sqstep,
+            (uchar*)0, 0, W, H, cn);
+    };
+    auto run_scalar = [&]{
+        integral_<uchar, int, double>(src.data(), srcstep, sumb.data(), sumstep,
+            sqb.data(), sqstep, (int*)0, 0, W, H, cn);
+    };
+    run_simd(); run_scalar();   // warmup (page-in + frequency ramp)
+    double tsimd = DBL_MAX, tscal = DBL_MAX;
+    for (int k = 0; k < 4; ++k) { int64 t = cv::getTickCount(); run_simd();   tsimd = std::min(tsimd, (double)(cv::getTickCount() - t)); }
+    for (int k = 0; k < 4; ++k) { int64 t = cv::getTickCount(); run_scalar(); tscal = std::min(tscal, (double)(cv::getTickCount() - t)); }
+    return tscal < tsimd;
+}
+
+static inline bool cn1_sqsum_prefer_scalar()
+{
+    static const bool prefer = tune_cn1_sqsum_prefer_scalar();
+    return prefer;
+}
+
 void integral(
         int depth, int sdepth, int sqdepth,
         const uchar* src, size_t srcstep,
@@ -375,7 +416,14 @@ void integral(
     CALL_HAL(integral, cv_hal_integral, depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn);
     CV_IPP_RUN_FAST(ipp_integral(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn));
 
-    if (integral_SIMD(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn))
+    // Single-channel 8-bit sqsum: let the one-time autotune decide SIMD vs scalar
+    // (the SIMD path regresses on wide OoO cores like Cortex-A76 but wins on A55 /
+    // Apple Silicon; CPU feature flags can't distinguish them).
+    bool useSimd = true;
+    if (depth == CV_8U && sqsum && cn == 1 && tilted == 0)
+        useSimd = !cn1_sqsum_prefer_scalar();
+
+    if (useSimd && integral_SIMD(depth, sdepth, sqdepth, src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tstep, width, height, cn))
         return;
 
 #define ONE_CALL(A, B, C) integral_<A, B, C>((const A*)src, srcstep, (B*)sum, sumstep, (C*)sqsum, sqsumstep, (B*)tilted, tstep, width, height, cn)
