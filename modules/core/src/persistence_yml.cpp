@@ -577,7 +577,7 @@ public:
             else
             {
             force_int:
-                int64_t ival = strtoll( ptr, &endptr, 0 );
+                int64_t ival = fs::strToInt64( ptr, &endptr );
                 node.setValue(FileNode::INT, &ival);
             }
 

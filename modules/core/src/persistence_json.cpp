@@ -693,7 +693,7 @@ public:
             }
             else
             {
-                int64_t ival = strtoll( beg, &ptr, 0 );
+                int64_t ival = fs::strToInt64( beg, &ptr );
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
 
                 node.setValue(FileNode::INT, &ival);
