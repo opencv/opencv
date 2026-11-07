@@ -5190,4 +5190,58 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
     }
 }
 
+// bfloat keeps float's exponent range in 8 bits of mantissa, so its maximum is about 3.39e38.
+// sum16bf accumulated into float, and so did its vector path, so two maximal values saturated
+// to infinity although the double result holds the true sum. norm stayed finite on the same
+// data, and sum, mean and meanStdDev did not. hfloat is left on the float accumulator on
+// purpose: it maxes at 65504, which no reachable length can push past FLT_MAX.
+TEST(Core_SumBF16, large_values_do_not_saturate_the_accumulator)
+{
+    const float big = 3.3e38f;          // representable in bfloat; 2*big is not a float
+    for (int len : {1, 2, 3, 4, 8, 64, 1000})
+        for (int cn = 1; cn <= 4; cn++)
+        {
+            SCOPED_TRACE(cv::format("len=%d cn=%d", len, cn));
+            cv::Mat ref(1, len, CV_MAKETYPE(CV_32F, cn), cv::Scalar::all(big));
+            cv::Mat m;
+            ref.convertTo(m, CV_16BF);
+
+            // the value bfloat actually stored, so the reference is the data, not our intent
+            cv::Mat back;
+            m.convertTo(back, CV_64F);
+            const double stored = back.at<double>(0, 0);
+            const double expected = stored * len;
+
+            const cv::Scalar s = cv::sum(m);
+            const cv::Scalar mn = cv::mean(m);
+            cv::Scalar mu, sd;
+            cv::meanStdDev(m, mu, sd);
+
+            for (int k = 0; k < cn; k++)
+            {
+                ASSERT_FALSE(cvIsInf(s[k])) << "sum saturated, channel " << k;
+                EXPECT_NEAR(expected, s[k], expected * 1e-12) << "channel " << k;
+                EXPECT_NEAR(stored, mn[k], stored * 1e-12) << "mean, channel " << k;
+                EXPECT_DOUBLE_EQ(mu[k], mn[k]) << "mean disagrees with meanStdDev, channel " << k;
+                EXPECT_NEAR(0.0, sd[k], stored * 1e-12) << "equal elements, channel " << k;
+            }
+        }
+}
+
+// Ordinary bfloat values must be unaffected by the wider accumulator, and CV_16F must not move.
+TEST(Core_SumBF16, ordinary_values_and_the_hfloat_path_are_unchanged)
+{
+    for (int len : {7, 1000, 100000})
+    {
+        SCOPED_TRACE(cv::format("len=%d", len));
+        const cv::Mat bf(1, len, CV_16BFC1, cv::Scalar(1));
+        EXPECT_DOUBLE_EQ((double)len, cv::sum(bf)[0]);
+        EXPECT_DOUBLE_EQ(1.0, cv::mean(bf)[0]);
+
+        const cv::Mat hf(1, len, CV_16FC1, cv::Scalar(2));
+        EXPECT_DOUBLE_EQ(2.0 * len, cv::sum(hf)[0]);
+        EXPECT_DOUBLE_EQ(2.0, cv::mean(hf)[0]);
+    }
+}
+
 }} // namespace

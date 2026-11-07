@@ -610,7 +610,10 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 static int sqsum16f( const hfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum16bf( const bfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+// The running sum is double, not float: bfloat shares float's exponent range, so a float
+// accumulator saturates after two maximal values while the double result stays finite. See
+// sum16bf in sum.simd.hpp. hfloat keeps float, since it cannot reach that range.
+static int sqsum16bf( const bfloat* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum64u( const uint64* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
@@ -631,7 +634,7 @@ SumSqrFunc getSumSqrFunc(int depth)
         sumSqrWrap<ushort, int, double, sqsum16u>, sumSqrWrap<short, int, double, sqsum16s>,
         sumSqrWrap<int, double, double, sqsum32s>, sumSqrWrap<float, double, double, sqsum32f>,
         sumSqrWrap<double, double, double, sqsum64f>,
-        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, float, double, sqsum16bf>, 0,
+        sumSqrWrap<hfloat, float, double, sqsum16f>, sumSqrWrap<bfloat, double, double, sqsum16bf>, 0,
         sumSqrWrap<uint64, double, double, sqsum64u>, sumSqrWrap<int64, double, double, sqsum64s>,
         sumSqrWrap<unsigned, double, double, sqsum32u>, 0
     };
