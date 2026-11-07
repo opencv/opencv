@@ -5414,6 +5414,7 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
         EXPECT_EQ(a.at<double>(0),  big64);
         EXPECT_EQ(a.at<double>(64), big64);
     }
+}
 
 // sum_ takes its work type as a defaulted template parameter, and the unrolled step adds four
 // elements together in that type before the accumulator sees them. With the default the work type
