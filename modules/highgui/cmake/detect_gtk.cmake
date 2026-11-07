@@ -4,6 +4,11 @@ if(WITH_GTK)
   if(NOT WITH_GTK_2_X)
     ocv_check_modules(GTK3 gtk+-3.0)
     if(HAVE_GTK3)
+      # Avoid mixing system HarfBuzz from GTK3/Pango with bundled HarfBuzz.
+      # Leave every other GTK3 dependency intact.
+      if(HARFBUZZ_IS_BUNDLED)
+        list(FILTER GTK3_LIBRARIES EXCLUDE REGEX "(^|/)(lib)?harfbuzz(\\.so(\\.[0-9]+)*|\\.a)?$")
+      endif()
       ocv_add_external_target(gtk3 "${GTK3_INCLUDE_DIRS}" "${GTK3_LIBRARIES}" "HAVE_GTK3;HAVE_GTK")
       set(HAVE_GTK TRUE)
     endif()
