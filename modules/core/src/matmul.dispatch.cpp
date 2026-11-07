@@ -393,6 +393,8 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 
     _matD.create( d_size.height, d_size.width, type );
     Mat D = _matD.getMat();
+    // A preallocated 1D output keeps its 1D header after create(), so normalize it like A, B and C.
+    if (D.dims == 1) D = D.reshape(0, 1);
     if( (flags & GEMM_3_T) != 0 && C.data == D.data )
     {
         transpose( C, C );

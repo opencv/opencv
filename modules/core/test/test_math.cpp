@@ -2529,6 +2529,13 @@ TEST(Core_GEMM, input_1d)
         gemm(v, I, 1, v, 1, withC);
         gemm(row, I, 1, row, 1, expectedWithC);
         EXPECT_EQ(0., cvtest::norm(withC, expectedWithC, NORM_INF)) << "1D C";
+
+        Mat preallocated({5}, type);                        // 1D output that already has the right size
+        const uchar* oldData = preallocated.data;
+        gemm(v, I, 1, noArray(), 0, preallocated);          // v * I = v
+        EXPECT_EQ(1, preallocated.dims) << "preallocated 1D D";
+        EXPECT_EQ(oldData, preallocated.data) << "preallocated 1D D";
+        EXPECT_EQ(0., cvtest::norm(preallocated, v, NORM_INF)) << "preallocated 1D D";
     }
 }
 
