@@ -324,5 +324,160 @@ TEST(Imgproc_StackBlur, regression_28233)
     EXPECT_NO_THROW(stackBlur(src2, dst2, Size(11, 11)));
     EXPECT_EQ(dst2.at<uchar>(1, 1), 50);
 }
+
+typedef testing::TestWithParam<tuple<int, int, int> > StackBlur_FullRange;
+
+// A constant image stays constant, however large its values, and full-range noise matches the reference.
+TEST_P(StackBlur_FullRange, regression)
+{
+    const int depth = get<0>(GetParam());
+    const int cn = get<1>(GetParam());
+    const int kernel = get<2>(GetParam());
+    const Size ksize(kernel, kernel);
+    const double maxVal = depth == CV_16U ? 65535 : 32767;
+    const double minVal = depth == CV_16U ? 0 : -32768;
+
+    for (double value : {maxVal, minVal, maxVal / 2})
+    {
+        Mat constant(64, 96, CV_MAKETYPE(depth, cn), Scalar::all(value)), dst;
+        stackBlur(constant, dst, ksize);
+        EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.) << "value=" << value;
+    }
+
+    // stackBlurRef accumulates in float, which drifts at this range, so the reference is the
+    // triangular kernel stackBlur stands for, computed in double.
+    const int radius = kernel / 2;
+    Mat tri(kernel, 1, CV_64F);
+    for (int i = 0; i < kernel; i++)
+        tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+    Mat noise(64, 96, CV_MAKETYPE(depth, cn)), dst, ref, dst64;
+    randu(noise, Scalar::all(minVal), Scalar::all(maxVal));
+    sepFilter2D(noise, ref, CV_64F, tri, tri, Point(-1, -1), 0, BORDER_REPLICATE);
+    stackBlur(noise, dst, ksize);
+    dst.convertTo(dst64, CV_64F);
+    const Rect inner(radius, radius, noise.cols - 2 * radius, noise.rows - 2 * radius);
+    EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 2.);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_FullRange,
+                        testing::Combine(
+                                testing::Values(CV_16U, CV_16S),
+                                testing::Values(1, 3, 4),
+                                testing::Values(3, 5, 7, 15, 51)
+                        )
+);
+
+typedef testing::TestWithParam<tuple<int, int> > StackBlur_LargeKernel;
+
+// The sum no longer fits 32 bits from radius 181 for CV_16U and radius 255 for CV_16S.
+TEST_P(StackBlur_LargeKernel, regression)
+{
+    const int depth = get<0>(GetParam());
+    const int kernel = get<1>(GetParam());
+    const double maxVal = depth == CV_16U ? 65535 : 32767;
+    const double minVal = depth == CV_16U ? 0 : -32768;
+    const int side = kernel + 32;
+
+    for (double value : {maxVal, minVal, maxVal / 2})
+    {
+        Mat constant(side, side, CV_MAKETYPE(depth, 3), Scalar::all(value)), dst;
+        for (const Size& ksize : {Size(kernel, kernel), Size(kernel, 1), Size(1, kernel)})
+        {
+            stackBlur(constant, dst, ksize);
+            EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.) << "value=" << value << " ksize=" << ksize;
+        }
+    }
+
+    const int radius = kernel / 2;
+    Mat tri(kernel, 1, CV_64F);
+    for (int i = 0; i < kernel; i++)
+        tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+    Mat noise(side, side, depth), dst, ref, dst64;
+    randu(noise, Scalar::all(minVal), Scalar::all(maxVal));
+    sepFilter2D(noise, ref, CV_64F, tri, tri, Point(-1, -1), 0, BORDER_REPLICATE);
+    stackBlur(noise, dst, Size(kernel, kernel));
+    dst.convertTo(dst64, CV_64F);
+    const Rect inner(radius, radius, noise.cols - 2 * radius, noise.rows - 2 * radius);
+    EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 2.);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_LargeKernel,
+                        testing::Combine(
+                                testing::Values(CV_16U, CV_16S),
+                                testing::Values(361, 363, 509, 511, 513)
+                        )
+);
+
+// For CV_8U the sum no longer fits 32 bits from radius 2901.
+TEST(Imgproc_StackBlur, large_kernel_8u)
+{
+    for (int kernel : {5801, 5803})
+    {
+        const int radius = kernel / 2;
+        for (double value : {255., 128.})
+        {
+            Mat row(3, kernel + 32, CV_8UC1, Scalar::all(value)), col(kernel + 32, 3, CV_8UC1, Scalar::all(value)), dst;
+            stackBlur(row, dst, Size(kernel, 1));
+            EXPECT_LE(cvtest::norm(row, dst, NORM_INF), 1.) << "value=" << value << " kernel=" << kernel;
+            stackBlur(col, dst, Size(1, kernel));
+            EXPECT_LE(cvtest::norm(col, dst, NORM_INF), 1.) << "value=" << value << " kernel=" << kernel;
+        }
+
+        Mat tri(1, kernel, CV_64F), one(1, 1, CV_64F, Scalar::all(1.));
+        for (int i = 0; i < kernel; i++)
+            tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+        Mat noise(3, 2 * kernel, CV_8UC1), dst, ref, dst64;
+        randu(noise, Scalar::all(0), Scalar::all(256));
+        sepFilter2D(noise, ref, CV_64F, tri, one, Point(-1, -1), 0, BORDER_REPLICATE);
+        stackBlur(noise, dst, Size(kernel, 1));
+        dst.convertTo(dst64, CV_64F);
+        const Rect inner(radius, 0, noise.cols - 2 * radius, noise.rows);
+        EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 1.) << "kernel=" << kernel;
+    }
+}
+
+// (radius + 1)^2 itself doesn't fit 32 bits here.
+TEST(Imgproc_StackBlur, full_range_huge_kernel)
+{
+    const int kernel = 92681;
+    for (int depth : {CV_16U, CV_16S})
+    {
+        const double value = depth == CV_16U ? 65535 : -32768;
+        Mat constant(1, kernel + 2, depth, Scalar::all(value)), dst;
+        stackBlur(constant, dst, Size(kernel, 1));
+        EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.) << "depth=" << depth;
+    }
+}
+
+class ScopedThreadsGuard
+{
+public:
+    ScopedThreadsGuard() : old_threads(getNumThreads()) {}
+    ~ScopedThreadsGuard() { setNumThreads(old_threads); }
+    void set(int n) { setNumThreads(n); }
+private:
+    int old_threads;
+};
+
+// The result doesn't depend on how the image is split between threads. The width is
+// odd so that some stripe leaves pixels to the scalar loop at any thread count.
+TEST(Imgproc_StackBlur, full_range_thread_invariance)
+{
+    Mat noise(120, 161, CV_16UC3), single, multi;
+    randu(noise, Scalar::all(0), Scalar::all(65535));
+
+    ScopedThreadsGuard threadsGuard;
+    const int threads = std::max(2, getNumThreads());
+
+    threadsGuard.set(1);
+    stackBlur(noise, single, Size(5, 5));
+    threadsGuard.set(threads);
+    stackBlur(noise, multi, Size(5, 5));
+
+    EXPECT_EQ(cvtest::norm(single, multi, NORM_INF), 0.);
+}
 }
 }
