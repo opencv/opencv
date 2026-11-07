@@ -50,7 +50,9 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         norm_type == cv::NORM_INF ?
         (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_8u_C3CMR :
         type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_16u_C3CMR :
+        #if (!IPP_DISABLE_NORM_INF_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_Inf_32f_C3CMR :
+        #endif
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8u_C3CMR :
@@ -265,7 +267,9 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
         norm_type == cv::NORM_INF ?
         (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_8u_C3CMR :
         type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_16u_C3CMR :
+        #if (!IPP_DISABLE_NORM_INF_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_Inf_32f_C3CMR :
+        #endif
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
