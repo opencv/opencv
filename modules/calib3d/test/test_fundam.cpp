@@ -1651,6 +1651,49 @@ void CV_ComputeEpilinesTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Calib3d_Rodrigues, accuracy) { CV_RodriguesTest test; test.safe_run(); }
+
+// Inverse transform inside the band sin(theta) < 1e-5: it used to return the zero vector
+// for small angles, a tilted / sign-flipped axis near pi, and a zero jacobian near pi.
+TEST(Calib3d_Rodrigues, small_and_near_pi_angles)
+{
+    const double d = 5e-6;
+    const Vec3d cases[] = {
+        Vec3d(9e-6, 0, 0), Vec3d(1e-6, -2e-6, 3e-6), Vec3d(0, 5e-6, -5e-6),
+        Vec3d(CV_PI - d, 0, 0), Vec3d(-(CV_PI - d), 0, 0), Vec3d(0, CV_PI - d, 0), Vec3d(0, 0, -(CV_PI - d)),
+        Vec3d(0, 1, 1)*((CV_PI - d)/std::sqrt(2.)), Vec3d(1, -2, 3)*((CV_PI - 1e-7)/std::sqrt(14.)),
+        Vec3d(CV_PI - 2e-8, 0, 0)
+    };
+    const Vec3d dirs[] = { Vec3d(1, 0, 0), Vec3d(0, 1, 0), Vec3d(0, 0, 1), Vec3d(0.36, -0.48, 0.8) };
+    for (const Vec3d& r0 : cases)
+    {
+        Matx33d R;
+        Rodrigues(r0, R);
+        Vec3d r1;
+        Mat J;
+        Rodrigues(R, r1, J);
+        EXPECT_LE(cv::norm(r1 - r0), 1e-12) << "r0 = " << r0 << ", r1 = " << r1;
+
+        if (CV_PI - cv::norm(r0) < 1e-6)
+            continue;  // too close to pi for central differences without crossing the branch cut
+        ASSERT_EQ(J.size(), Size(3, 9));
+        const double h = 1e-8;
+        for (const Vec3d& w : dirs)
+        {
+            Matx33d Ep, Em;
+            Rodrigues(w*h, Ep);
+            Rodrigues(-w*h, Em);
+            Vec3d rp, rm;
+            Rodrigues(Matx33d(R*Ep), rp);
+            Rodrigues(Matx33d(R*Em), rm);
+            Vec3d dr_num = (rp - rm)*(0.5/h);
+            Matx33d wx(0, -w[2], w[1], w[2], 0, -w[0], -w[1], w[0], 0);
+            Matx33d dR = R*wx;
+            Mat dr = J.t()*Mat(9, 1, CV_64F, dR.val);
+            EXPECT_LE(cv::norm(Vec3d(dr.ptr<double>()) - dr_num), 1e-5*cv::norm(dr_num))
+                << "r0 = " << r0 << ", w = " << w;
+        }
+    }
+}
 TEST(Calib3d_FindFundamentalMat, accuracy) { CV_FundamentalMatTest test; test.safe_run(); }
 TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; test.safe_run(); }
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
