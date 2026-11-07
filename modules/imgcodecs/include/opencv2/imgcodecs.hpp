@@ -123,6 +123,7 @@ enum ImwriteFlags {
        IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
        IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
        IMWRITE_BMP_COMPRESSION     = 768,  //!< For BMP, use to specify compress parameter for 32bpp image. Default is IMWRITE_BMP_COMPRESSION_BITFIELDS. See cv::ImwriteBMPCompressionFlags.
+       IMWRITE_HTJ2K_QUALITY       = 896,  //!< For HTJ2K, it can be a quality from 0 to 100 (the higher is the better). 100 is lossless (reversible 5/3 wavelet); lower values are lossy (irreversible 9/7 wavelet). Default value is 100.
        IMWRITE_GIF_LOOP            = 1024, //!< Not functional since 4.12.0. Replaced by cv::Animation::loop_count.
        IMWRITE_GIF_SPEED           = 1025, //!< Not functional since 4.12.0. Replaced by cv::Animation::durations.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
@@ -345,6 +346,7 @@ Currently, the following file formats are supported:
 -   GIF files - \*.gif (always supported)
 -   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Note* section)
 -   JPEG 2000 files - \*.jp2 (see the *Note* section)
+-   HTJ2K files - \*.jph, \*.jhc (see the *Note* section)
 -   Portable Network Graphics - \*.png (see the *Note* section)
 -   WebP - \*.webp (see the *Note* section)
 -   AVIF - \*.avif (see the *Note* section)
@@ -529,6 +531,8 @@ can be saved using this function, with these exceptions:
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
   - All images will be converted to 32-bit float (CV_32F).
 - With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With HTJ2K encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S), 16-bit unsigned (CV_16U) and 16-bit signed (CV_16S)
+  images with 1, 3 or 4 (BGRA) channels can be saved. See @ref IMWRITE_HTJ2K_QUALITY.
 - With JPEG XL encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U) and 32-bit float(CV_32F) images can be saved.
   - JPEG XL images with an alpha channel can be saved using this function.
     To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) / 32-bit float 4-channel (CV_32FC4) BGRA image, ensuring the alpha channel is the last component.
