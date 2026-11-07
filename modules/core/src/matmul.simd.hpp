@@ -3029,15 +3029,21 @@ double dotProd_16s(const short* src1, const short* src2, int len)
         blockSize = std::min(len0 - i, blockSize0);
         v_int64 v_sum = vx_setzero_s64();
         const int cWidth = VTraits<v_int16>::vlanes();
+        // a0*b0 + a1*b1 lies in (-2^31, 2^31] for int16 inputs. Only 2^31 (all four values
+        // are -32768) does not fit into the int32 pairwise sum, and it wraps to INT_MIN.
+        // Take 1 off every pairwise sum so that the whole range fits, and add it back below.
+        const v_int32 v_one = vx_setall_s32(1);
 
         int j = 0;
         for (; j <= blockSize - cWidth; j += cWidth)
         {
             v_int16 v_src1 = vx_load(src1 + j);
             v_int16 v_src2 = vx_load(src2 + j);
-            v_sum = v_dotprod_expand_fast(v_src1, v_src2, v_sum);
+            v_int64 v_lo, v_hi;
+            v_expand(v_sub(v_dotprod(v_src1, v_src2), v_one), v_lo, v_hi);
+            v_sum = v_add(v_sum, v_add(v_lo, v_hi));
         }
-        r += (double)v_reduce_sum(v_sum);
+        r += (double)v_reduce_sum(v_sum) + blockSize / 2;
 
         src1 += blockSize;
         src2 += blockSize;

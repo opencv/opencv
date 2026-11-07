@@ -3044,6 +3044,20 @@ TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
+TEST(Core_DotProduct, 16S_min_value)
+{
+    // (-32768) * (-32768) + (-32768) * (-32768) = 2^31 does not fit into int32
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat a(4, 64, CV_16SC(cn), Scalar::all(SHRT_MIN));
+        Mat b(4, 64, CV_16SC(cn), Scalar::all(SHRT_MAX));
+        const double n = static_cast<double>(a.total()) * cn;
+        EXPECT_EQ(n * 32768.0 * 32768.0, a.dot(a)) << "cn=" << cn;
+        EXPECT_EQ(n * -32768.0 * 32767.0, a.dot(b)) << "cn=" << cn;
+        EXPECT_EQ(n * 32767.0 * 32767.0, b.dot(b)) << "cn=" << cn;
+    }
+}
+
 TEST(Core_GEMM, inplace_complex)
 {
     const Mat a64 = (Mat_<Vec2d>(2, 2) << Vec2d(1, 2), Vec2d(2, -1),
