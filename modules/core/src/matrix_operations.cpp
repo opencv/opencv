@@ -1156,28 +1156,23 @@ public:
     const _Tp* arr;
 };
 
-template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
+template<typename T> static void sortIdxRange_( const Mat& src, Mat& dst, int flags, const Range& range )
 {
-    AutoBuffer<T> buf;
-    AutoBuffer<int> ibuf;
     bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool sortDescending = (flags & SORT_DESCENDING) != 0;
+    int len = sortRows ? src.cols : src.rows;
 
-    CV_Assert( src.data != dst.data );
-
-    int n, len;
-    if( sortRows )
-        n = src.rows, len = src.cols;
-    else
+    AutoBuffer<T> buf;
+    AutoBuffer<int> ibuf;
+    if( !sortRows )
     {
-        n = src.cols, len = src.rows;
         buf.allocate(len);
         ibuf.allocate(len);
     }
     T* bptr = buf.data();
     int* _iptr = ibuf.data();
 
-    for( int i = 0; i < n; i++ )
+    for( int i = range.start; i < range.end; i++ )
     {
         T* ptr = bptr;
         int* iptr = _iptr;
@@ -1206,6 +1201,28 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
             for( int j = 0; j < len; j++ )
                 dst.ptr<int>(j)[i] = iptr[j];
     }
+}
+
+template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
+{
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
+    CV_Assert( src.data != dst.data );
+    int n, len;
+    if( sortRows )
+        n = src.rows, len = src.cols;
+    else
+        n = src.cols, len = src.rows;
+
+    double nstripes = (double)n * len * std::log2((double)std::max(len, 2)) / (1 << 16);
+    if( nstripes <= 1 )
+    {
+        sortIdxRange_<T>(src, dst, flags, Range(0, n));
+        return;
+    }
+    parallel_for_(Range(0, n), [&](const Range& range)
+    {
+        sortIdxRange_<T>(src, dst, flags, range);
+    }, nstripes);
 }
 
 #if defined(HAVE_IPP) && !IPP_DISABLE_SORT
