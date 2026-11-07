@@ -5,6 +5,8 @@
 #include "../precomp.hpp"
 #include "../usac.hpp"
 #include <atomic>
+#include <iostream>
+#include <thread>
 
 namespace cv {
 UsacParams::UsacParams() {
@@ -1137,6 +1139,7 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
     }
 
     params->maskRequired(mask_needed);
+    params->setRandomGeneratorState(cv::theRNG().next());
 }
 
 Mat findHomography (InputArray srcPoints, InputArray dstPoints, int method, double thr,
