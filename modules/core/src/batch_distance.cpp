@@ -233,6 +233,122 @@ struct BatchDistInvoker : public ParallelLoopBody
     BatchDistFunc func;
 };
 
+// Both nearest-neighbor searches use the same symmetric pairwise distances.
+// Split the larger descriptor set so the partial minima occupy the smaller side.
+template<typename T>
+struct BatchDistCrossCheckInvoker : public ParallelLoopBody
+{
+    BatchDistCrossCheckInvoker(const Mat& _src1, const Mat& _src2,
+                              Mat& _qdist, Mat& _qidx, Mat& _tdist, Mat& _tidx,
+                              BatchDistFunc _func, bool _splitQueries)
+        : src1(_src1), src2(_src2), qdist(_qdist), qidx(_qidx),
+          tdist(_tdist), tidx(_tidx), func(_func), splitQueries(_splitQueries)
+    {}
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        const int stripes = splitQueries ? tdist.rows : qdist.rows;
+        AutoBuffer<T> buf(splitQueries ? src2.rows : (src2.rows - 1) / stripes + 1);
+        for (int stripe = range.start; stripe < range.end; ++stripe)
+        {
+            const int qbegin = splitQueries ? (int)((int64)src1.rows * stripe / stripes) : 0;
+            const int qend = splitQueries ? (int)((int64)src1.rows * (stripe + 1) / stripes) : src1.rows;
+            const int tbegin = splitQueries ? 0 : (int)((int64)src2.rows * stripe / stripes);
+            const int tend = splitQueries ? src2.rows : (int)((int64)src2.rows * (stripe + 1) / stripes);
+            T* qd = qdist.ptr<T>(splitQueries ? 0 : stripe);
+            int* qi = qidx.ptr<int>(splitQueries ? 0 : stripe);
+            T* td = tdist.ptr<T>(splitQueries ? stripe : 0);
+            int* ti = tidx.ptr<int>(splitQueries ? stripe : 0);
+
+            for (int q = qbegin; q < qend; ++q)
+            {
+                func(src1.ptr(q), src2.ptr(tbegin), src2.step, tend - tbegin,
+                     src1.cols, buf.data(), 0);
+                T best = qd[q];
+                int bestIdx = qi[q];
+                for (int t = tbegin; t < tend; ++t)
+                {
+                    const T d = buf[t - tbegin];
+                    if (d < best)
+                    {
+                        best = d;
+                        bestIdx = t;
+                    }
+                    if (d < td[t])
+                    {
+                        td[t] = d;
+                        ti[t] = q;
+                    }
+                }
+                qd[q] = best;
+                qi[q] = bestIdx;
+            }
+        }
+    }
+
+    const Mat& src1;
+    const Mat& src2;
+    Mat& qdist;
+    Mat& qidx;
+    Mat& tdist;
+    Mat& tidx;
+    BatchDistFunc func;
+    bool splitQueries;
+};
+
+template<typename T>
+static void batchDistCrossCheck(const Mat& src1, const Mat& src2,
+                               Mat& dist, Mat& nidx, BatchDistFunc func)
+{
+    const bool splitQueries = src1.rows >= src2.rows;
+    const int stripes = std::min(std::max(src1.rows, src2.rows), std::max(1, getNumThreads()));
+    const T maxDist = std::numeric_limits<T>::max();
+    Mat qdist(splitQueries ? 1 : stripes, src1.rows, dist.type(), Scalar::all(maxDist));
+    Mat qidx(qdist.size(), CV_32S, Scalar::all(-1));
+    Mat tdist(splitQueries ? stripes : 1, src2.rows, dist.type(), Scalar::all(maxDist));
+    Mat tidx(tdist.size(), CV_32S, Scalar::all(-1));
+    parallel_for_(Range(0, stripes),
+                  BatchDistCrossCheckInvoker<T>(src1, src2, qdist, qidx, tdist, tidx, func, splitQueries));
+
+    Mat& partialDist = splitQueries ? tdist : qdist;
+    Mat& partialIdx = splitQueries ? tidx : qidx;
+    T* best = partialDist.ptr<T>();
+    int* bestIdx = partialIdx.ptr<int>();
+    // Ordered stripes and strict comparisons retain the first index on ties.
+    for (int stripe = 1; stripe < stripes; ++stripe)
+    {
+        const T* pd = partialDist.ptr<T>(stripe);
+        const int* pi = partialIdx.ptr<int>(stripe);
+        for (int j = 0; j < partialDist.cols; ++j)
+        {
+            if (pd[j] < best[j])
+            {
+                best[j] = pd[j];
+                bestIdx[j] = pi[j];
+            }
+        }
+    }
+
+    // Preserve the distances of rejected matches as well as the mutual indices.
+    const T* td = tdist.ptr<T>();
+    const int* ti = tidx.ptr<int>();
+    const int* qi = qidx.ptr<int>();
+    for (int t = 0; t < src2.rows; ++t)
+    {
+        const int q = ti[t];
+        if (q >= 0 && td[t] < dist.at<T>(q))
+        {
+            dist.at<T>(q) = td[t];
+            nidx.at<int>(q) = t;
+        }
+    }
+    for (int q = 0; q < src1.rows; ++q)
+    {
+        if (qi[q] < 0 || ti[qi[q]] != q)
+            nidx.at<int>(q) = -1;
+    }
+}
+
 }
 
 void cv::batchDistance( InputArray _src1, InputArray _src2,
@@ -275,50 +391,6 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
     {
         CV_Assert( K == 1 && update == 0 && mask.empty() );
         CV_Assert(!nidx.empty());
-        Mat tdist, tidx, sdist, sidx;
-        batchDistance(src2, src1, tdist, dtype, tidx, normType, K, mask, 0, false);
-        batchDistance(src1, src2, sdist, dtype, sidx, normType, K, mask, 0, false);
-
-        // if an idx-th element from src1 appeared to be the nearest to i-th element of src2,
-        // we update the minimum mutual distance between idx-th element of src1 and the whole src2 set.
-        // As a result, if nidx[idx] = i*, it means that idx-th element of src1 is the nearest
-        // to i*-th element of src2 and i*-th element of src2 is the closest to idx-th element of src1.
-        // If nidx[idx] = -1, it means that there is no such ideal couple for it in src2.
-        // This O(2N) procedure is called cross-check and it helps to eliminate some false matches.
-        if( dtype == CV_32S )
-        {
-            for( int i = 0; i < tdist.rows; i++ )
-            {
-                int idx = tidx.at<int>(i);
-                int d = tdist.at<int>(i), d0 = dist.at<int>(idx);
-                if( d < d0 )
-                {
-                    dist.at<int>(idx) = d;
-                    nidx.at<int>(idx) = i + update;
-                }
-            }
-        }
-        else
-        {
-            for( int i = 0; i < tdist.rows; i++ )
-            {
-                int idx = tidx.at<int>(i);
-                float d = tdist.at<float>(i), d0 = dist.at<float>(idx);
-                if( d < d0 )
-                {
-                    dist.at<float>(idx) = d;
-                    nidx.at<int>(idx) = i + update;
-                }
-            }
-        }
-        for( int i = 0; i < sdist.rows; i++ )
-        {
-            if( tidx.at<int>(sidx.at<int>(i)) != i )
-            {
-                nidx.at<int>(i) = -1;
-            }
-        }
-        return;
     }
 
     BatchDistFunc func = 0;
@@ -353,6 +425,15 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
         CV_Error_(cv::Error::StsUnsupportedFormat,
                   ("The combination of type=%d, dtype=%d and normType=%d is not supported",
                    type, dtype, normType));
+
+    if (crosscheck)
+    {
+        if (dtype == CV_32S)
+            batchDistCrossCheck<int>(src1, src2, dist, nidx, func);
+        else
+            batchDistCrossCheck<float>(src1, src2, dist, nidx, func);
+        return;
+    }
 
     parallel_for_(Range(0, src1.rows),
                   BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
