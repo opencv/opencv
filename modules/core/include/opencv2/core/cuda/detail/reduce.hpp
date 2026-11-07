@@ -328,7 +328,15 @@ namespace cv { namespace cuda { namespace device
                 const unsigned int laneId = Warp::laneId();
 
             #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
+#if defined(__HIP_DEVICE_COMPILE__)
+                // Reduce within a 32-lane logical warp. On wave64 (gfx90a) the
+                // builtin warpSize is 64, which would shuffle across the per-32
+                // partition; use the logical width 32 so the reduction matches
+                // the smem fallback on both wave32 and wave64.
+                Unroll<16, Pointer, Reference, Op>::loopShfl(val, op, 32);
+#else
                 Unroll<16, Pointer, Reference, Op>::loopShfl(val, op, warpSize);
+#endif
 
                 if (laneId == 0)
                     loadToSmem(smem, val, tid / 32);
