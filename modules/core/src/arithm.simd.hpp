@@ -335,9 +335,17 @@ struct EwAdd {
     template<typename V> static V preproc(const V& a, const V&) { return a; }
     // Accumulate in the promoted type, NOT in W: for the native saturating path W is the narrow
     // lane type (schar/short/...), and (W)(a+b) would wrap in 8/16 bits before saturate_cast<Tr>
-    // could clamp. Letting a+b promote (narrow -> int) keeps saturation for 8/16-bit outputs and
-    // the natural wrap for 32/64-bit (both matching cv::add). The SIMD path already saturates.
+    // could clamp. Letting a+b promote (narrow -> int) keeps saturation for 8/16-bit outputs, and
+    // 32-bit outputs clamp from their int64 W. The SIMD path already saturates.
     template<typename W, typename ST> static W scl(W a, W b, ST) { return W(a + b); }
+    // 64-bit has no wider WT to hold a+b, so the generic path would overflow. Saturate to match
+    // the smaller depths.
+    static uint64_t scl(uint64_t a, uint64_t b, uint64_t) { uint64_t s = a + b; return s < a ? UINT64_MAX : s; }
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        return b > 0 ? (a > INT64_MAX - b ? INT64_MAX : a + b)
+                     : (a < INT64_MIN - b ? INT64_MIN : a + b);
+    }
 };
 
 struct EwSub {
@@ -354,6 +362,12 @@ struct EwSub {
     // 64-bit unsigned has no wider WT to hold a-b, so the generic path would wrap on underflow.
     // Saturate at 0 to match cv::subtract (8/16/32-bit already saturate via SIMD floor / wide WT).
     static uint64_t scl(uint64_t a, uint64_t b, uint64_t) { return uint64_t(a >= b)*(a - b); }
+    // 64-bit signed has no wider WT either, so saturate at both ends.
+    static int64_t scl(int64_t a, int64_t b, int64_t)
+    {
+        return b > 0 ? (a < INT64_MIN + b ? INT64_MIN : a - b)
+                     : (a > INT64_MAX + b ? INT64_MAX : a - b);
+    }
 };
 
 // mul/div compute in a wide FLOAT work type (W = float for <=16-bit/f16/bf/f32, double for
