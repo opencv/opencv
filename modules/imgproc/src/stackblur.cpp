@@ -1218,7 +1218,7 @@ static inline bool stackBlurSumFitsInt(int radius)
 
 // The SIMD paths need 32-bit sums, so larger kernels take the scalar loops with 64-bit sums.
 template<typename T>
-static void stackBlur16Bit(const Mat& src, Mat& dst, int radiusW, int radiusH, int widthElem, int numOfThreads)
+static void stackBlurInteger(const Mat& src, Mat& dst, int radiusW, int radiusH, int widthElem, int numOfThreads)
 {
     if (radiusW != 0)
     {
@@ -1276,18 +1276,15 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
 
     if (sdepth == CV_8U)
     {
-        if (ksize.width != 1)
-            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<uchar, int>(src, dst, radiusW), numOfThreads);
-        if (ksize.height != 1)
-            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<uchar, int>(dst, dst, radiusH), numOfThreads);
+        stackBlurInteger<uchar>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else if (sdepth == CV_16S)
     {
-        stackBlur16Bit<short>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
+        stackBlurInteger<short>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else if (sdepth == CV_16U)
     {
-        stackBlur16Bit<ushort>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
+        stackBlurInteger<ushort>(src, dst, radiusW, radiusH, widthElem, numOfThreads);
     }
     else if (sdepth == CV_32F)
     {
