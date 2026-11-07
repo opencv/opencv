@@ -39,6 +39,13 @@ template<> struct ColorChannel<float>
     static inline float half() { return 0.5f; }
 };
 
+template<> struct ColorChannel<hfloat>
+{
+    typedef float worktype_f;
+    static inline hfloat max() { return hfloat(1.f); }
+    static inline hfloat half() { return hfloat(0.5f); }
+};
+
 // in-place swap; works for sizeless scalable vector types, where std::swap may not compile
 template<typename _Tp> static inline void v_swap(_Tp& a, _Tp& b)
 {
@@ -53,12 +60,12 @@ template<typename _Tp> static inline void v_swap(_Tp& a, _Tp& b)
 };*/
 
 
-template<int i0, int i1 = -1, int i2 = -1>
+template<int i0, int i1 = -1, int i2 = -1, int i3 = -1>
 struct Set
 {
     static inline bool contains(int i)
     {
-        return (i == i0 || i == i1 || i == i2);
+        return (i == i0 || i == i1 || i == i2 || i == i3);
     }
 };
 

@@ -107,7 +107,6 @@ template<typename _Tp>
 struct RGB2RGB
 {
     typedef _Tp channel_type;
-    typedef typename v_type<_Tp>::t vt;
 
     RGB2RGB(int _srccn, int _dstcn, int _blueIdx) :
         srccn(_srccn), dstcn(_dstcn), blueIdx(_blueIdx)
@@ -123,44 +122,48 @@ struct RGB2RGB
         _Tp alphav = ColorChannel<_Tp>::max();
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vsize = VTraits<vt>::vlanes();
-
-        for(; i < n;
-            i += vsize, src += vsize*scn, dst += vsize*dcn)
+        if constexpr (!std::is_same<_Tp, hfloat>::value)
         {
-            if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
-                    break;
-                }
-                int backup = i - (n - vsize);
-                i = n - vsize;
-                src -= backup * scn;
-                dst -= backup * dcn;
-            }
-            vt a, b, c, d;
-            if(scn == 4)
-            {
-                v_load_deinterleave(src, a, b, c, d);
-            }
-            else
-            {
-                v_load_deinterleave(src, a, b, c);
-                d = v_set<_Tp>::set(alphav);
-            }
-            if(bi == 2) {
-                v_swap(a, c);
-            }
+            typedef typename v_type<_Tp>::t vt;
+            const int vsize = VTraits<vt>::vlanes();
 
-            if(dcn == 4)
+            for(; i < n;
+                i += vsize, src += vsize*scn, dst += vsize*dcn)
             {
-                v_store_interleave(dst, a, b, c, d);
+                if ( i > n - vsize ) {
+                    if (i == 0 || src == dst) {
+                        break;
+                    }
+                    int backup = i - (n - vsize);
+                    i = n - vsize;
+                    src -= backup * scn;
+                    dst -= backup * dcn;
+                }
+                vt a, b, c, d;
+                if(scn == 4)
+                {
+                    v_load_deinterleave(src, a, b, c, d);
+                }
+                else
+                {
+                    v_load_deinterleave(src, a, b, c);
+                    d = v_set<_Tp>::set(alphav);
+                }
+                if(bi == 2) {
+                    v_swap(a, c);
+                }
+
+                if(dcn == 4)
+                {
+                    v_store_interleave(dst, a, b, c, d);
+                }
+                else
+                {
+                    v_store_interleave(dst, a, b, c);
+                }
             }
-            else
-            {
-                v_store_interleave(dst, a, b, c);
-            }
+            vx_cleanup();
         }
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src += scn, dst += dcn )
         {
@@ -402,7 +405,6 @@ template<typename _Tp>
 struct Gray2RGB
 {
     typedef _Tp channel_type;
-    typedef typename v_type<_Tp>::t vt;
 
     Gray2RGB(int _dstcn) : dstcn(_dstcn) {}
     void operator()(const _Tp* src, _Tp* dst, int n) const
@@ -412,32 +414,36 @@ struct Gray2RGB
         _Tp alpha = ColorChannel<_Tp>::max();
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vsize = VTraits<vt>::vlanes();
-        vt valpha = v_set<_Tp>::set(alpha);
-        for(; i < n;
-            i += vsize, src += vsize, dst += vsize*dcn)
+        if constexpr (!std::is_same<_Tp, hfloat>::value)
         {
-            if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
-                    break;
+            typedef typename v_type<_Tp>::t vt;
+            const int vsize = VTraits<vt>::vlanes();
+            vt valpha = v_set<_Tp>::set(alpha);
+            for(; i < n;
+                i += vsize, src += vsize, dst += vsize*dcn)
+            {
+                if ( i > n - vsize ) {
+                    if (i == 0 || src == dst) {
+                        break;
+                    }
+                    int backup = i - (n - vsize);
+                    i = n - vsize;
+                    src -= backup;
+                    dst -= backup * dcn;
                 }
-                int backup = i - (n - vsize);
-                i = n - vsize;
-                src -= backup;
-                dst -= backup * dcn;
-            }
-            vt g = vx_load(src);
+                vt g = vx_load(src);
 
-            if(dcn == 3)
-            {
-                v_store_interleave(dst, g, g, g);
+                if(dcn == 3)
+                {
+                    v_store_interleave(dst, g, g, g);
+                }
+                else
+                {
+                    v_store_interleave(dst, g, g, g, valpha);
+                }
             }
-            else
-            {
-                v_store_interleave(dst, g, g, g, valpha);
-            }
+            vx_cleanup();
         }
-        vx_cleanup();
 #endif
         for ( ; i < n; i++, src++, dst += dcn )
         {
@@ -1184,7 +1190,7 @@ struct mRGBA2RGBA<uchar>
 };
 } // namespace anon
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -1193,8 +1199,11 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
-                      [&](auto t){ using T = decltype(t); return RGB2RGB<T>(scn, dcn, blueIdx); });
+    if (depth == CV_16F)
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<hfloat>(scn, dcn, blueIdx));
+    else
+        CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                          [&](auto t){ using T = decltype(t); return RGB2RGB<T>(scn, dcn, blueIdx); });
 }
 
 // only 8u
@@ -1219,7 +1228,7 @@ void cvtBGR5x5toBGR(const uchar * src_data, size_t src_step,
     CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB5x52RGB(dcn, swapBlue ? 2 : 0, greenBits));
 }
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtBGRtoGray(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
@@ -1228,11 +1237,14 @@ void cvtBGRtoGray(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
-                      [&](auto t){ using T = decltype(t); return RGB2Gray<T>(scn, blueIdx, 0); });
+    if (depth == CV_16F)
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2Gray<hfloat>(scn, blueIdx, 0));
+    else
+        CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                          [&](auto t){ using T = decltype(t); return RGB2Gray<T>(scn, blueIdx, 0); });
 }
 
-// 8u, 16u, 32f
+// 8u, 16u, 16f, 32f
 void cvtGraytoBGR(const uchar * src_data, size_t src_step,
                   uchar * dst_data, size_t dst_step,
                   int width, int height,
@@ -1240,8 +1252,11 @@ void cvtGraytoBGR(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
-                      [&](auto t){ using T = decltype(t); return Gray2RGB<T>(dcn); });
+    if (depth == CV_16F)
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, Gray2RGB<hfloat>(dcn));
+    else
+        CvtColorLoopDepth(src_data, src_step, dst_data, dst_step, width, height, depth,
+                          [&](auto t){ using T = decltype(t); return Gray2RGB<T>(dcn); });
 }
 
 // only 8u
