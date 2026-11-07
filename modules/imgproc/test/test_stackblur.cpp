@@ -410,6 +410,35 @@ INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_LargeKernel,
                         )
 );
 
+// For CV_8U the sum no longer fits 32 bits from radius 2901.
+TEST(Imgproc_StackBlur, large_kernel_8u)
+{
+    for (int kernel : {5801, 5803})
+    {
+        const int radius = kernel / 2;
+        for (double value : {255., 128.})
+        {
+            Mat row(3, kernel + 32, CV_8UC1, Scalar::all(value)), col(kernel + 32, 3, CV_8UC1, Scalar::all(value)), dst;
+            stackBlur(row, dst, Size(kernel, 1));
+            EXPECT_LE(cvtest::norm(row, dst, NORM_INF), 1.) << "value=" << value << " kernel=" << kernel;
+            stackBlur(col, dst, Size(1, kernel));
+            EXPECT_LE(cvtest::norm(col, dst, NORM_INF), 1.) << "value=" << value << " kernel=" << kernel;
+        }
+
+        Mat tri(1, kernel, CV_64F), one(1, 1, CV_64F, Scalar::all(1.));
+        for (int i = 0; i < kernel; i++)
+            tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+        Mat noise(3, 2 * kernel, CV_8UC1), dst, ref, dst64;
+        randu(noise, Scalar::all(0), Scalar::all(256));
+        sepFilter2D(noise, ref, CV_64F, tri, one, Point(-1, -1), 0, BORDER_REPLICATE);
+        stackBlur(noise, dst, Size(kernel, 1));
+        dst.convertTo(dst64, CV_64F);
+        const Rect inner(radius, 0, noise.cols - 2 * radius, noise.rows);
+        EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 1.) << "kernel=" << kernel;
+    }
+}
+
 // (radius + 1)^2 itself doesn't fit 32 bits here.
 TEST(Imgproc_StackBlur, full_range_huge_kernel)
 {
