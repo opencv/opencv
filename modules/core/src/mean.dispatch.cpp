@@ -52,7 +52,8 @@ static Scalar mean_(const Mat& src, const Mat& mask)
     int _buf[CV_CN_MAX];
     int* buf = (int*)&s[0];
     bool partialSumIsInt = depth < CV_32S;
-    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    // CV_16BF is absent: its running sum is double now, so it needs no float partial buffer.
+    bool blockSum = partialSumIsInt || depth == CV_16F;
     size_t esz = 0, nz0 = 0;
 
     if( blockSum )
@@ -342,7 +343,8 @@ static void meanStdDev_(InputArray _src, OutputArray _mean, OutputArray _sdv, In
     double *s = _buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
     bool partialSumIsInt = depth < CV_32S;
-    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    // CV_16BF is absent: its running sum is double now, so it needs no float partial buffer.
+    bool blockSum = partialSumIsInt || depth == CV_16F;
     bool blockSqSum = depth <= CV_8S;
     size_t esz = 0;
 

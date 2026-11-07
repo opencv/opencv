@@ -177,12 +177,11 @@ DEFINE_SUM_SIMD_8(schar, int, int, v_int32, vx_load_expand)
 DEFINE_SUM_SIMD_16(ushort, int, int, v_int32, load_u16_as_s32)
 DEFINE_SUM_SIMD_16(short, int, int, v_int32, vx_load_expand)
 DEFINE_SUM_SIMD_16(hfloat, float, int, v_float32, vx_load_expand)
-DEFINE_SUM_SIMD_16(bfloat, float, int, v_float32, vx_load_expand)
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 #undef DEFINE_SUM_SIMD_32
-#define DEFINE_SUM_SIMD_32(T, ST, iST, VecT) \
+#define DEFINE_SUM_SIMD_32(T, ST, iST, VecT, load_op) \
 template<> struct Sum_SIMD<T, ST> \
 { \
     Sum_SIMD(int cn) \
@@ -210,9 +209,9 @@ template<> struct Sum_SIMD<T, ST> \
         } \
         VecT s0 = v_xor(m0, m0), s1 = s0, s2 = s0; \
         for (; x <= len - simd_width*6; x += simd_width*6) { \
-            auto v0 = vx_load(src + x); \
-            auto v1 = vx_load(src + x + simd_width*2); \
-            auto v2 = vx_load(src + x + simd_width*4); \
+            auto v0 = load_op(src + x); \
+            auto v1 = load_op(src + x + simd_width*2); \
+            auto v2 = load_op(src + x + simd_width*4); \
             s0 = v_add(s0, v_cvt_f64(v0)); \
             s1 = v_add(s1, v_cvt_f64_high(v0)); \
             s2 = v_add(s2, v_cvt_f64(v1)); \
@@ -227,8 +226,14 @@ template<> struct Sum_SIMD<T, ST> \
     ST maskbuf[VTraits<VecT>::max_nlanes*9]; \
 };
 
-DEFINE_SUM_SIMD_32(int, double, int64, v_float64)
-DEFINE_SUM_SIMD_32(float, double, int64, v_float64)
+DEFINE_SUM_SIMD_32(int, double, int64, v_float64, vx_load)
+DEFINE_SUM_SIMD_32(float, double, int64, v_float64, vx_load)
+
+// bfloat carries float's exponent range, so a float accumulator overflows after two
+// maximal values. It expands to v_float32 on load and widens to v_float64 from there,
+// exactly as the int and float sources above do. hfloat keeps the float accumulator:
+// it maxes at 65504, far enough from FLT_MAX that no reachable length overflows.
+DEFINE_SUM_SIMD_32(bfloat, double, int64, v_float64, vx_load_expand)
 #endif
 #endif
 
@@ -383,8 +388,8 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 static int sum16f( const hfloat* src, const uchar* mask, float* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<hfloat, float, float>(src, mask, dst, len, cn); }
 
-static int sum16bf( const bfloat* src, const uchar* mask, float* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_<bfloat, float, float>(src, mask, dst, len, cn); }
+static int sum16bf( const bfloat* src, const uchar* mask, double* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<bfloat, double, double>(src, mask, dst, len, cn); }
 
 SumFunc getSumFunc(int depth)
 {
@@ -398,7 +403,7 @@ SumFunc getSumFunc(int depth)
         sumWrap<float, double, sum32f>,
         sumWrap<double, double, sum64f>,
         sumWrap<hfloat, float, sum16f>,
-        sumWrap<bfloat, float, sum16bf>,
+        sumWrap<bfloat, double, sum16bf>,
         0,
         sumWrap<uint64, double, sum64u>,
         sumWrap<int64, double, sum64s>,

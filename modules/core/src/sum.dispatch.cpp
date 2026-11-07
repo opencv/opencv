@@ -152,7 +152,9 @@ static Scalar sum_(const Mat& src)
     int* buf = (int*)&_res[0];
     size_t esz = 0;
     bool partialSumIsInt = depth < CV_32S;
-    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    // CV_16BF is absent here: it now accumulates straight into double, like CV_32F, so it
+    // needs no float partial-sum buffer. CV_16F still uses one.
+    bool blockSum = partialSumIsInt || depth == CV_16F;
 
     if( blockSum )
     {
