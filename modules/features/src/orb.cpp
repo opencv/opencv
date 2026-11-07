@@ -37,6 +37,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_features.hpp"
 #include <iterator>
+#include "opencv2/core/hal/intrin.hpp"
 
 #ifndef CV_IMPL_ADD
 #define CV_IMPL_ADD(x)
@@ -178,9 +179,122 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if CV_RVV && CV_SIMD_SCALABLE
+static inline int icAnglesWeightedRowSum(const uchar* pixels, int u0, int count,
+                                         const int* column_weights)
+{
+    int weighted_total = 0;
+    int offset = 0;
+
+
+    const int lane_count = VTraits<v_int32>::vlanes();
+    for (; offset + lane_count <= count; offset += lane_count)
+    {
+        v_int32 pixel_values = v_reinterpret_as_s32(vx_load_expand_q(pixels + offset));
+        v_int32 weight_values = vx_load(column_weights + u0 + offset);
+        weighted_total += v_reduce_sum(v_mul(weight_values, pixel_values));
+    }
+
+
+    for (; offset < count; ++offset)
+        weighted_total += column_weights[u0 + offset] * pixels[offset];
+
+    return weighted_total;
+}
+
+static inline void icAnglesRowPairMoments(const uchar* plus_row, const uchar* minus_row,
+                                          int u0, int count, const int* column_weights,
+                                          int& difference_total, int& weighted_total)
+{
+    difference_total = 0;
+    weighted_total = 0;
+    int offset = 0;
+
+
+    const int lane_count = VTraits<v_int32>::vlanes();
+    if (count >= lane_count)
+    {
+        v_int32 difference_accumulator = vx_setzero_s32();
+        v_int32 weighted_accumulator = vx_setzero_s32();
+        for (; offset + lane_count <= count; offset += lane_count)
+        {
+            v_int32 plus_values = v_reinterpret_as_s32(vx_load_expand_q(plus_row + offset));
+            v_int32 minus_values = v_reinterpret_as_s32(vx_load_expand_q(minus_row + offset));
+
+            difference_accumulator = v_add(difference_accumulator, v_sub(plus_values, minus_values));
+
+            v_int32 weight_values = vx_load(column_weights + u0 + offset);
+            weighted_accumulator = v_add(weighted_accumulator,
+                                         v_mul(weight_values, v_add(plus_values, minus_values)));
+        }
+        difference_total += v_reduce_sum(difference_accumulator);
+        weighted_total += v_reduce_sum(weighted_accumulator);
+    }
+
+
+    for (; offset < count; ++offset)
+    {
+        int plus_value = plus_row[offset];
+        int minus_value = minus_row[offset];
+        difference_total += plus_value - minus_value;
+        weighted_total += column_weights[u0 + offset] * (plus_value + minus_value);
+    }
+}
+
+static void ICAnglesRVV(const Mat& img, const std::vector<Rect>& layerinfo,
+                     std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
+{
+
+    int step = (int)img.step1();
+    size_t ptidx, ptsize = pts.size();
+
+
+    AutoBuffer<int> column_weights_buffer(2 * half_k + 1);
+    int* column_weights = column_weights_buffer.data() + half_k;
+    for (int u = -half_k; u <= half_k; ++u)
+        column_weights[u] = u;
+
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        const Rect& layer = layerinfo[pts[ptidx].octave];
+
+        const uchar* center = &img.at<uchar>(cvRound(pts[ptidx].pt.y) + layer.y, cvRound(pts[ptidx].pt.x) + layer.x);
+
+        int m_01 = 0, m_10 = 0;
+
+        m_10 += icAnglesWeightedRowSum(center - half_k, -half_k, 2 * half_k + 1, column_weights);
+
+        for (int v = 1; v <= half_k; ++v)
+        {
+            int v_sum = 0;
+            int weighted_sum = 0;
+            int d = u_max[v];
+
+            icAnglesRowPairMoments(center + v * step - d, center - v * step - d,
+                                   -d, 2 * d + 1, column_weights,
+                                   v_sum, weighted_sum);
+
+            m_10 += weighted_sum;
+            m_01 += v * v_sum;
+        }
+
+        pts[ptidx].angle = fastAtan2((float)m_01, (float)m_10);
+    }
+}
+#endif
+
 static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
                      std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
 {
+#if CV_RVV && CV_SIMD_SCALABLE
+    if (2 * half_k + 1 >= VTraits<v_int32>::vlanes())
+    {
+        ICAnglesRVV(img, layerinfo, pts, u_max, half_k);
+        return;
+    }
+#endif
+
     int step = (int)img.step1();
     size_t ptidx, ptsize = pts.size();
 
