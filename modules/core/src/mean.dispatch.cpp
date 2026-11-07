@@ -52,7 +52,8 @@ static Scalar mean_(const Mat& src, const Mat& mask)
     int _buf[CV_CN_MAX];
     int* buf = (int*)&s[0];
     bool partialSumIsInt = depth < CV_32S;
-    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF ||
+                    depth == CV_8F_E4M3FN || depth == CV_8F_E4M3FNUZ;
     size_t esz = 0, nz0 = 0;
 
     if( blockSum )
