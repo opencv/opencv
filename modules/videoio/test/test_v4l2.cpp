@@ -33,23 +33,139 @@
 #ifndef V4L2_PIX_FMT_Y12
 #define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
 #endif
-#ifndef V4L2_PIX_FMT_ABGR32
-#define V4L2_PIX_FMT_ABGR32  v4l2_fourcc('A', 'R', '2', '4')
-#endif
-#ifndef V4L2_PIX_FMT_XBGR32
-#define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
-#endif
 #ifndef V4L2_PIX_FMT_Y16
 #define V4L2_PIX_FMT_Y16 v4l2_fourcc('Y', '1', '6', ' ')
 #endif
 #ifndef V4L2_PIX_FMT_Y16_BE
 #define V4L2_PIX_FMT_Y16_BE v4l2_fourcc_be('Y', '1', '6', ' ')
 #endif
+#ifndef V4L2_PIX_FMT_ABGR32
+#define V4L2_PIX_FMT_ABGR32 v4l2_fourcc('A', 'R', '2', '4')
+#endif
+#ifndef V4L2_PIX_FMT_XBGR32
+#define V4L2_PIX_FMT_XBGR32 v4l2_fourcc('X', 'R', '2', '4')
+#endif
+
+#include "../src/cap_v4l_internal.hpp"
 
 
 using namespace cv;
 
 namespace opencv_test { namespace {
+
+TEST(videoio_v4l2_payload, minimum_payload_size)
+{
+    const size_t pixels = 640u * 480u;
+    EXPECT_EQ(pixels * 2, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480));
+    EXPECT_EQ(pixels, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_GREY, 640, 480));
+    EXPECT_EQ(pixels * 3 / 2, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV420, 640, 480));
+    EXPECT_EQ(17u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV420, 3, 3));
+    EXPECT_EQ(18u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUV411P, 5, 2));
+    EXPECT_EQ(0u, v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_MJPEG, 640, 480));
+    EXPECT_EQ(0u, v4l2_internal::minimumPayloadSize(0, 640, 480));
+}
+
+TEST(videoio_v4l2_payload, rejects_incomplete_or_error_flagged_frames)
+{
+    const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480);
+    EXPECT_TRUE(v4l2_internal::isFrameValid(false, minimumPayloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, minimumPayloadSize - 1, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(true, minimumPayloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, 0, 0)); // empty variable-size frame
+    EXPECT_TRUE(v4l2_internal::isFrameValid(false, 1, 0)); // nonempty variable-size frame
+}
+
+TEST(videoio_v4l2_payload, validates_multiplanar_data_offsets)
+{
+    size_t payloadSize = 0;
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 128, 16, 128, 128));
+    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 256, 32, 256, 256));
+    EXPECT_EQ(336u, payloadSize);
+
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 8, 16, 64, 64));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 129, 16, 128, 128));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 64, 16, 128, 64));
+    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 80, 16, 128, 64));
+    EXPECT_EQ(336u, payloadSize);
+}
+
+TEST(videoio_v4l2_payload, copies_multiplanar_payload_with_checked_offsets)
+{
+    const unsigned char source[] = { 0xFF, 1, 2, 3 };
+    unsigned char destination[4] = {};
+    size_t destinationOffset = 0;
+    EXPECT_TRUE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
+                                                source, sizeof(source), sizeof(source), 4, 1));
+    EXPECT_EQ(3u, destinationOffset);
+    EXPECT_EQ(1, destination[0]);
+    EXPECT_EQ(2, destination[1]);
+    EXPECT_EQ(3, destination[2]);
+
+    destinationOffset = 0;
+    EXPECT_FALSE(v4l2_internal::copyPlanePayload(destination, 2, destinationOffset,
+                                                 source, sizeof(source), sizeof(source), 4, 1));
+    EXPECT_FALSE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
+                                                 source, sizeof(source), sizeof(source), 5, 1));
+    EXPECT_EQ(0u, destinationOffset);
+}
+
+TEST(videoio_v4l2_payload, requeues_invalid_buffer_before_accepting_valid_buffer)
+{
+    const bool validFrames[] = { false, true };
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_TRUE(v4l2_internal::dequeueValidFrame(
+        4, invalidFrameCount,
+        [&]()
+        {
+            if (dequeuedFrames == 2)
+                return false;
+            ++dequeuedFrames;
+            return true;
+        },
+        [&]() { return validFrames[dequeuedFrames - 1]; },
+        [&]() { ++requeuedFrames; return true; }));
+    EXPECT_EQ(2u, dequeuedFrames);
+    EXPECT_EQ(1u, requeuedFrames);
+    EXPECT_EQ(1u, invalidFrameCount);
+}
+
+TEST(videoio_v4l2_payload, stops_if_invalid_buffer_cannot_be_requeued)
+{
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
+        4, invalidFrameCount,
+        [&]() { ++dequeuedFrames; return true; },
+        []() { return false; },
+        [&]() { ++requeuedFrames; return false; }));
+    EXPECT_EQ(1u, dequeuedFrames);
+    EXPECT_EQ(1u, requeuedFrames);
+    EXPECT_EQ(0u, invalidFrameCount);
+}
+
+TEST(videoio_v4l2_payload, stops_after_invalid_buffer_retry_limit)
+{
+    size_t dequeuedFrames = 0;
+    size_t requeuedFrames = 0;
+    size_t invalidFrameCount = 0;
+    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
+        3, invalidFrameCount,
+        [&]()
+        {
+            if (dequeuedFrames == 3)
+                return false;
+            ++dequeuedFrames;
+            return true;
+        },
+        []() { return false; },
+        [&]() { ++requeuedFrames; return true; }));
+    EXPECT_EQ(3u, dequeuedFrames);
+    EXPECT_EQ(3u, requeuedFrames);
+    EXPECT_EQ(3u, invalidFrameCount);
+}
 
 struct Format_Channels_Depth
 {
