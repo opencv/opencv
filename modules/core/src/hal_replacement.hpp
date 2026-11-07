@@ -1250,6 +1250,27 @@ inline int hal_ni_copyToMasked(const uchar* src_data, size_t src_step, uchar* ds
 //! @endcond
 
 /**
+   @brief copyMakeBorder
+   @param src_data, src_step Source image after OpenCV ROI adjustment
+   @param src_type Type of source and destination images, for example CV_8UC1 or CV_32FC3
+   @param src_width, src_height Source dimensions after OpenCV ROI adjustment
+   @param dst_data, dst_step Destination image
+   @param top, bottom, left, right Border sizes after OpenCV ROI adjustment
+   @param border_type Border processing mode
+   @param border_value Border value in OpenCV Scalar(double[4]) form
+*/
+inline int hal_ni_copyMakeBorder(const uchar* src_data, size_t src_step, int src_type,
+                                 int src_width, int src_height,
+                                 uchar* dst_data, size_t dst_step,
+                                 int top, int bottom, int left, int right,
+                                 int border_type, const double border_value[4])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_copyMakeBorder hal_ni_copyMakeBorder
+//! @endcond
+
+/**
  @ brief sum
  @param src_data Source image data
  @param src_step Source image step
