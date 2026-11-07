@@ -247,7 +247,8 @@ Net readNetFromDarknet(const char *bufferCfg, size_t lenCfg, const char *bufferM
 
 Net readNetFromDarknet(const std::vector<uchar>& bufferCfg, const std::vector<uchar>& bufferModel)
 {
-    const char* bufferCfgPtr = reinterpret_cast<const char*>(&bufferCfg[0]);
+    const char* bufferCfgPtr = bufferCfg.empty() ? "" :
+                                 reinterpret_cast<const char*>(&bufferCfg[0]);
     const char* bufferModelPtr = bufferModel.empty() ? NULL :
                                  reinterpret_cast<const char*>(&bufferModel[0]);
     return readNetFromDarknet(bufferCfgPtr, bufferCfg.size(),
