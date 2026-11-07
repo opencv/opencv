@@ -73,17 +73,14 @@ enum Kind
     KIND_MERGE      // 2..4 planes are written into one interleaved stream (e.g. NCHW -> NHWC)
 };
 
-enum
-{
-    TRANSPOSE_TILE = 64,                // in elements
-    SPLIT_CHUNK = 1024,                 // in elements
-    ROW_CHUNK_BYTES = 64*1024,
-    GATHER_BLOCK_BYTES = 8*1024,
-    // costs are bytes weighted by the kernel; the copies are memory-bound,
-    // so small stripes only add overhead
-    PARALLEL_MIN_COST = 1024*1024,
-    STRIPE_COST = 1024*1024
-};
+constexpr int TRANSPOSE_TILE = 64;                // in elements
+constexpr int SPLIT_CHUNK = 1024;                 // in elements
+constexpr int ROW_CHUNK_BYTES = 64*1024;
+constexpr double GATHER_BLOCK_BYTES = 8*1024;
+// costs are bytes weighted by the kernel; the copies are memory-bound,
+// so small stripes only add overhead
+constexpr double PARALLEL_MIN_COST = 1024*1024;
+constexpr double STRIPE_COST = 1024*1024;
 
 struct Plan
 {
