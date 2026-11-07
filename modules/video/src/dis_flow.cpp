@@ -1303,12 +1303,116 @@ void DISOpticalFlowImpl::Densification_ParBody::operator()(const Range &range) c
     {
         UPDATE_SPARSE_I_COORDINATES;
     }
+#if CV_SIMD_SCALABLE
+    const bool use_simd = useOptimized();
+    const int nlanes = VTraits<v_float32>::vlanes();
+    int start_js_buf[VTraits<v_int32>::max_nlanes], end_js_buf[VTraits<v_int32>::max_nlanes];
+    int j_l_buf[VTraits<v_int32>::max_nlanes];
+    int I1_ll_buf[VTraits<v_int32>::max_nlanes], I1_lu_buf[VTraits<v_int32>::max_nlanes];
+    int I1_ul_buf[VTraits<v_int32>::max_nlanes], I1_uu_buf[VTraits<v_int32>::max_nlanes];
+    for (int k = 0; k < nlanes; k++)
+        j_l_buf[k] = k;
+    const v_int32 v_iota = vx_load(j_l_buf);
+    const v_int32 v_one_s32 = vx_setall_s32(1);
+    const v_float32 v_one_f32 = vx_setall_f32(1.0f);
+    const v_float32 v_zero_f32 = vx_setzero_f32();
+    const v_float32 v_j_max = vx_setall_f32(dis->w - 1.0f - EPS);
+#endif
     for (int i = start_i; i < end_i; i++)
     {
         UPDATE_SPARSE_I_COORDINATES;
         start_js = 0;
         end_js = -1;
-        for (int j = 0; j < dis->w; j++)
+        int j = 0;
+#if CV_SIMD_SCALABLE
+        /* Process nlanes consecutive locations (i,j) at once. Each lane accumulates the contributions of its own
+         * overlapping patches in the same order as the scalar loop below; patches from the union of the lanes' ranges
+         * that do not overlap a given lane get zero weight in it, so results match the scalar loop up to FMA rounding.
+         * i_m does not depend on j, so I1 can usually be read with contiguous loads instead of gathers. */
+        for (; use_simd && j <= dis->w - nlanes;)
+        {
+            const int j0 = j;
+            for (int k = 0; k < nlanes; k++, j++)
+            {
+                UPDATE_SPARSE_J_COORDINATES;
+                start_js_buf[k] = start_js;
+                end_js_buf[k] = end_js;
+            }
+            v_int32 v_start_js = vx_load(start_js_buf);
+            v_int32 v_end_js = vx_load(end_js_buf);
+            v_int32 v_j = v_add(vx_setall_s32(j0), v_iota);
+            v_float32 v_j_f = v_cvt_f32(v_j);
+            v_float32 v_I0 = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(I0_ptr + i * dis->w + j0)));
+            v_float32 v_sum_coef = vx_setzero_f32();
+            v_float32 v_sum_Ux = vx_setzero_f32();
+            v_float32 v_sum_Uy = vx_setzero_f32();
+
+            for (int is = start_is; is <= end_is; is++)
+            {
+                for (int js = start_js_buf[0]; js <= end_js_buf[nlanes - 1]; js++)
+                {
+                    float sx = Sx_ptr[is * dis->ws + js];
+                    float sy = Sy_ptr[is * dis->ws + js];
+                    i_m = min(max(i + sy, 0.0f), dis->h - 1.0f - EPS);
+                    i_l = (int)i_m;
+                    i_u = i_l + 1;
+                    v_float32 v_wi_u = vx_setall_f32(i_m - i_l);
+                    v_float32 v_wi_l = vx_setall_f32(i_u - i_m);
+                    const uchar *I1_row_l = I1_ptr + i_l * dis->w;
+                    const uchar *I1_row_u = I1_ptr + i_u * dis->w;
+
+                    v_float32 v_j_m = v_min(v_max(v_add(v_j_f, vx_setall_f32(sx)), v_zero_f32), v_j_max);
+                    v_int32 v_j_l = v_trunc(v_j_m);
+                    v_float32 v_wj_u = v_sub(v_j_m, v_cvt_f32(v_j_l));
+                    v_float32 v_wj_l = v_sub(v_cvt_f32(v_add(v_j_l, v_one_s32)), v_j_m);
+
+                    v_float32 v_I1_ll, v_I1_lu, v_I1_ul, v_I1_uu;
+                    v_int32 v_dj = v_sub(v_j_l, v_j);
+                    int dj0 = v_get0(v_dj);
+                    if (v_check_all(v_eq(v_dj, vx_setall_s32(dj0))))
+                    {
+                        const int jl0 = j0 + dj0;
+                        v_I1_ll = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(I1_row_l + jl0)));
+                        v_I1_lu = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(I1_row_l + jl0 + 1)));
+                        v_I1_ul = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(I1_row_u + jl0)));
+                        v_I1_uu = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(I1_row_u + jl0 + 1)));
+                    }
+                    else
+                    {
+                        v_store(j_l_buf, v_j_l);
+                        for (int k = 0; k < nlanes; k++)
+                        {
+                            I1_ll_buf[k] = I1_row_l[j_l_buf[k]];
+                            I1_lu_buf[k] = I1_row_l[j_l_buf[k] + 1];
+                            I1_ul_buf[k] = I1_row_u[j_l_buf[k]];
+                            I1_uu_buf[k] = I1_row_u[j_l_buf[k] + 1];
+                        }
+                        v_I1_ll = v_cvt_f32(vx_load(I1_ll_buf));
+                        v_I1_lu = v_cvt_f32(vx_load(I1_lu_buf));
+                        v_I1_ul = v_cvt_f32(vx_load(I1_ul_buf));
+                        v_I1_uu = v_cvt_f32(vx_load(I1_uu_buf));
+                    }
+
+                    v_float32 v_diff = v_mul(v_mul(v_wj_u, v_wi_u), v_I1_uu);
+                    v_diff = v_fma(v_mul(v_wj_l, v_wi_u), v_I1_ul, v_diff);
+                    v_diff = v_fma(v_mul(v_wj_u, v_wi_l), v_I1_lu, v_diff);
+                    v_diff = v_fma(v_mul(v_wj_l, v_wi_l), v_I1_ll, v_diff);
+                    v_diff = v_sub(v_diff, v_I0);
+                    v_float32 v_coef = v_div(v_one_f32, v_max(v_one_f32, v_abs(v_diff)));
+
+                    v_int32 v_js = vx_setall_s32(js);
+                    v_int32 v_mask = v_and(v_ge(v_js, v_start_js), v_le(v_js, v_end_js));
+                    v_coef = v_select(v_reinterpret_as_f32(v_mask), v_coef, v_zero_f32);
+                    v_sum_Ux = v_fma(v_coef, vx_setall_f32(sx), v_sum_Ux);
+                    v_sum_Uy = v_fma(v_coef, vx_setall_f32(sy), v_sum_Uy);
+                    v_sum_coef = v_add(v_sum_coef, v_coef);
+                }
+            }
+            v_store(Ux_ptr + i * dis->w + j0, v_div(v_sum_Ux, v_sum_coef));
+            v_store(Uy_ptr + i * dis->w + j0, v_div(v_sum_Uy, v_sum_coef));
+        }
+#endif
+        for (; j < dis->w; j++)
         {
             UPDATE_SPARSE_J_COORDINATES;
             float coef, sum_coef = 0.0f;
