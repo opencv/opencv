@@ -28,6 +28,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/threshold_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/distancetransform_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/bilateral_filter_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/pyramids_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/samplers_ipp.cpp"
 )
 
