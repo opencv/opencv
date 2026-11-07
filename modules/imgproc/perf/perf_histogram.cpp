@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
@@ -39,6 +40,49 @@ PERF_TEST_P(Size_Source, calcHist1d,
     }
 
     SANITY_CHECK(hist);
+}
+
+typedef tuple<Size, MatType, bool, bool> Size_Source_Uniform_Accum_t;
+typedef TestBaseWithParam<Size_Source_Uniform_Accum_t> Size_Source_Uniform_Accum;
+
+PERF_TEST_P(Size_Source_Uniform_Accum, calcHist1d_mode,
+            testing::Combine(testing::Values(sz3MP, sz5MP),
+                             testing::Values(CV_8U, CV_16U, CV_32F),
+                             testing::Bool(),   // uniform
+                             testing::Bool()) ) // accumulate
+{
+    Size size = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    bool uniform = get<2>(GetParam());
+    bool accumulate = get<3>(GetParam());
+
+    Mat source(size.height, size.width, type);
+    Mat hist;
+    int channels [] = {0};
+    const int bins = 256;
+    int histSize [] = {bins};
+    int dims = 1;
+    int numberOfImages = 1;
+
+    randu(source, rangeLow, rangeHight);
+
+    // Uniform ranges use the {low, high} form; non-uniform needs explicit bin edges.
+    const float uni[] = {rangeLow, rangeHight};
+    std::vector<float> edges(bins + 1);
+    for (int i = 0; i <= bins; ++i)
+        edges[i] = rangeLow + (rangeHight - rangeLow) * i / bins;
+    const float* ranges[] = { uniform ? uni : edges.data() };
+
+    declare.in(source);
+
+    // With accumulate=true, calcHist adds into the existing hist, so the result
+    // compounds across timing iterations and is not a stable value to baseline.
+    TEST_CYCLE_MULTIRUN(3)
+    {
+        cv::calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges, uniform, accumulate);
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_Source, calcHist2d,
