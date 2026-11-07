@@ -772,6 +772,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BitShiftLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS TensorScatterLayer : public Layer
+    {
+    public:
+        static Ptr<TensorScatterLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS SqueezeLayer : public Layer
     {
     public:
