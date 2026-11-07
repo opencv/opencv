@@ -1143,4 +1143,64 @@ TEST(Calib3d_initInverseRectificationMap, regression_20165)
     EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
+TEST(Calib3d_initInverseRectificationMap, regression_22262_matrix_order)
+{
+    // Regression test for #22262. The function description historically swapped the roles of
+    // cameraMatrix and newCameraMatrix. The implementation:
+    //   1. normalizes destination pixels with cameraMatrix,
+    //   2. undistorts,
+    //   3. rectifies with R,
+    //   4. projects with newCameraMatrix.
+    // regression_20165 above passes the same matrix for both arguments, which cannot detect
+    // such a swap. Here a clearly distinct newCameraMatrix is used so the order is pinned.
+    Size size_w_h(800, 600);
+    Mat dst(size_w_h, CV_32FC2); // Reference for validation
+    Mat mapxy;                   // Output of initInverseRectificationMap()
+
+    // Camera Matrix
+    double k[9] = {
+        8.0000000000000000e+02, 0., 3.2000000000000000e+02,
+        0., 8.0000000000000000e+02, 2.4000000000000000e+02,
+        0., 0., 1.
+    };
+    Mat _K(3, 3, CV_64F, k);
+
+    // New camera matrix (half scale, clearly distinct from cameraMatrix)
+    double kn[9] = {
+        4.0000000000000000e+02, 0., 1.6000000000000000e+02,
+        0., 4.0000000000000000e+02, 1.2000000000000000e+02,
+        0., 0., 1.
+    };
+    Mat _Kn(3, 3, CV_64F, kn);
+
+    // Zero distortion keeps the reference closed-form exact
+    double d[5] = {0., 0., 0., 0., 0.};
+    Mat _d(1, 5, CV_64F, d);
+
+    // Identity rotation
+    double R[9] = {1., 0., 0., 0., 1., 0., 0., 0., 1.};
+    Mat _R(3, 3, CV_64F, R);
+
+    // --- Validation --- //
+    initInverseRectificationMap(_K, _d, _R, _Kn, size_w_h, CV_32FC2, mapxy, noArray());
+
+    double fx = k[0], fy = k[4], cx = k[2], cy = k[5];         // cameraMatrix
+    double ifx = kn[0], ify = kn[4], cxn = kn[2], cyn = kn[5]; // newCameraMatrix
+
+    for (int v = 0; v < size_w_h.height; v++)
+    {
+        for (int u = 0; u < size_w_h.width; u++)
+        {
+            // Normalize with cameraMatrix, undistort (zero), rectify (identity),
+            // then project with newCameraMatrix
+            double x = (u - cx) / fx;
+            double y = (v - cy) / fy;
+            dst.at<Vec2f>(v, u) = Vec2f((float)(x * ifx + cxn), (float)(y * ify + cyn));
+        }
+    }
+
+    // Check Result
+    EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 1e-3);
+}
+
 }} // namespace
