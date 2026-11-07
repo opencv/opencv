@@ -645,6 +645,8 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if (!a)
+            a = getDeviceScopeAllocator();
+        if (!a)
         {
             a = a0;
             a0 = Mat::getDefaultAllocator();
@@ -1164,16 +1166,25 @@ UMat UMat::reshape(int _cn, const MatShape& _newshape) const
     return reshape(_cn, _newshape.dims, _newshape.p);
 }
 
+/** @brief True for allocators whose map() honors the access flags and is safe to call per view. */
+static bool mapsEachView(const MatAllocator* a)
+{
+    return a != 0 && a == cuda::getCudaAllocator();
+}
+
 Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)
         return Mat();
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
-    accessFlags |= ACCESS_RW;
+    const bool mapEachView = mapsEachView(u->currAllocator);
+    if (!mapEachView || !(accessFlags & ACCESS_RW))
+        accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
     try
     {
-        if(CV_XADD(&u->refcount, 1) == 0)
+        // so a write view after read views still marks the device copy stale
+        if(CV_XADD(&u->refcount, 1) == 0 || mapEachView)
             u->currAllocator->map(u, accessFlags);
         if (u->data != 0)
         {
