@@ -2430,4 +2430,70 @@ TEST(Calib3d_SolvePnP, regression_30402)
     EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1e-6);
 }
 
+static std::vector<Point3d> extrinsicGuessTestCube(double scale, const Point3d& offset)
+{
+    const double c[12][3] = {
+        {-.5, -.5, -.5}, {.5, -.5, -.5}, {.5, .5, -.5}, {-.5, .5, -.5},
+        {-.5, -.5,  .5}, {.5, -.5,  .5}, {.5, .5,  .5}, {-.5, .5,  .5},
+        {.1, .2, -.3}, {-.2, .1, .25}, {.3, -.15, .05}, {-.35, -.25, -.1}
+    };
+    std::vector<Point3d> pts;
+    for (int i = 0; i < 12; i++)
+        pts.push_back(Point3d(c[i][0]*scale, c[i][1]*scale, c[i][2]*scale) + offset);
+    return pts;
+}
+
+static double extrinsicGuessRotationDistanceInf(InputArray r1, InputArray r2)
+{
+    Mat R1, R2;
+    Rodrigues(r1, R1);
+    Rodrigues(r2, R2);
+    return cvtest::norm(R1, R2, NORM_INF);
+}
+
+// Finding A: the initial guess was read after _rvec.create(3, 1, CV_64FC1), which reallocates a
+// CV_32F or 1x3 guess (both accepted by solvePnP), so RANSAC refined from uninitialized memory.
+TEST(Calib3d_SolvePnPRansac, extrinsicGuess_layout)
+{
+    const Matx33d K(800, 0, 320, 0, 800, 240, 0, 0, 1);
+    const std::vector<Point3d> obj = extrinsicGuessTestCube(1.0, Point3d(0, 0, 0));
+    const Vec3d rGT(0.3, -0.2, 0.1), tGT(0.1, -0.2, 6.0);
+    std::vector<Point2d> img;
+    projectPoints(obj, rGT, tGT, K, noArray(), img);
+
+    std::vector<Point2d> noisy = img;  // no consensus with a 1e-6 px threshold
+    for (size_t i = 0; i < noisy.size(); i++)
+    {
+        if (i % 2 == 0) noisy[i].x += 3.0;
+        else            noisy[i].y -= 3.0;
+    }
+    const Vec3d gR(0.11, 0.22, 0.33), gT(1.5, 2.5, 3.5);
+
+    const int depths[] = { CV_64F, CV_32F, CV_64F, CV_32F };
+    const bool rowVec[] = { false, false, true, true };
+    for (int k = 0; k < 4; k++)
+    {
+        SCOPED_TRACE(cv::format("depth=%d row=%d", depths[k], (int)rowVec[k]));
+        Mat rvec, tvec;
+        Mat(rGT).convertTo(rvec, depths[k]);
+        Mat(tGT).convertTo(tvec, depths[k]);
+        if (rowVec[k]) { rvec = rvec.reshape(1, 1); tvec = tvec.reshape(1, 1); }
+        ASSERT_TRUE(solvePnPRansac(obj, img, K, noArray(), rvec, tvec, true, 100, 2.f, 0.99,
+                                   noArray(), SOLVEPNP_ITERATIVE));
+        EXPECT_LE(extrinsicGuessRotationDistanceInf(rvec, rGT), 1e-5);
+        EXPECT_LE(cvtest::norm(tvec.reshape(1, 3), Mat(tGT), NORM_INF), 1e-4);
+
+        Mat rguess, tguess;
+        Mat(gR).convertTo(rguess, depths[k]);
+        Mat(gT).convertTo(tguess, depths[k]);
+        if (rowVec[k]) { rguess = rguess.reshape(1, 1); tguess = tguess.reshape(1, 1); }
+        EXPECT_FALSE(solvePnPRansac(obj, noisy, K, noArray(), rguess, tguess, true, 20, 1e-6f, 0.99,
+                                    noArray(), SOLVEPNP_ITERATIVE));
+        // on failure the function returns the initial guess
+        EXPECT_LE(cvtest::norm(rguess.reshape(1, 3), Mat(gR), NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(tguess.reshape(1, 3), Mat(gT), NORM_INF), 1e-6);
+    }
+}
+
+
 }} // namespace
