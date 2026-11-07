@@ -41,6 +41,7 @@
 
 #ifndef __OPENCV_FAST_NLMEANS_DENOISING_INVOKER_COMMONS_HPP__
 #define __OPENCV_FAST_NLMEANS_DENOISING_INVOKER_COMMONS_HPP__
+#include "opencv2/core/hal/intrin.hpp"
 
 using namespace cv;
 
@@ -50,6 +51,29 @@ using namespace cv;
 namespace std {
 template <typename T> bool isnan(T value) { return _isnan(value) != 0; }
 }
+#endif
+
+#if CV_SIMD128
+template <typename T> struct nlmLanes_
+{
+    static const bool supported = false;
+    static inline v_int32x4 setall(const T&) { return v_setzero_s32(); }
+    static inline v_int32x4 load(const T*) { return v_setzero_s32(); }
+};
+
+template <> struct nlmLanes_<uchar>
+{
+    static const bool supported = true;
+    static inline v_int32x4 setall(uchar v) { return v_setall_s32(v); }
+    static inline v_int32x4 load(const uchar* p) { return v_reinterpret_as_s32(v_load_expand_q(p)); }
+};
+
+template <> struct nlmLanes_<ushort>
+{
+    static const bool supported = true;
+    static inline v_int32x4 setall(ushort v) { return v_setall_s32(v); }
+    static inline v_int32x4 load(const ushort* p) { return v_reinterpret_as_s32(v_load_expand(p)); }
+};
 #endif
 
 template <typename T> struct pixelInfo_
@@ -176,6 +200,19 @@ public:
         return calcDist<T>(a_down, b_down) - calcDist<T>(a_up, b_up);
     }
 
+#if CV_SIMD128
+    static inline v_int32x4 calcDistLanes(v_int32x4 a, v_int32x4 b)
+    {
+        return v_reinterpret_as_s32(v_abs(v_sub(a, b)));
+    }
+
+    static inline v_int32x4 calcUpDownDistLanes(v_int32x4 a_up, v_int32x4 a_down,
+                                                v_int32x4 b_up, v_int32x4 b_down)
+    {
+        return v_sub(calcDistLanes(a_down, b_down), calcDistLanes(a_up, b_up));
+    }
+#endif
+
     template <typename T, typename WT>
     static inline WT calcWeight(double dist, const float *h,
                                 typename pixelInfo<WT>::sampleType fixed_point_mult)
@@ -298,6 +335,22 @@ public:
         return calcUpDownDist_<T>::f(a_up, a_down, b_up, b_down);
     }
 
+#if CV_SIMD128
+    static inline v_int32x4 calcDistLanes(v_int32x4 a, v_int32x4 b)
+    {
+        v_int32x4 d = v_sub(a, b);
+        return v_mul(d, d);
+    }
+
+    static inline v_int32x4 calcUpDownDistLanes(v_int32x4 a_up, v_int32x4 a_down,
+                                                v_int32x4 b_up, v_int32x4 b_down)
+    {
+        v_int32x4 A = v_sub(a_down, b_down);
+        v_int32x4 B = v_sub(a_up, b_up);
+        return v_mul(v_sub(A, B), v_add(A, B));
+    }
+#endif
+
     template <typename T, typename WT>
     static inline WT calcWeight(double dist, const float *h,
                                 typename pixelInfo<WT>::sampleType fixed_point_mult)
@@ -399,6 +452,43 @@ static inline void incWithWeight(IT* estimation, IT* weights_sum, WT weight, T p
 {
     incWithWeight_<T, IT, WT>::f(estimation, weights_sum, weight, p);
 }
+
+#if CV_SIMD128
+template <typename T, typename IT, typename WT> struct incWithWeightLanes_
+{
+    static inline int f(IT*, IT*, const int*, const WT*, int, const T*, int)
+    {
+        return 0;
+    }
+};
+
+// integer sums, so partial lane sums give the same result as the scalar order
+template <typename T> struct incWithWeightLanes_<T, int, int>
+{
+    static inline int f(int* estimation, int* weights_sum, const int* dist_sums_row,
+                        const int* dist2weight, int dist_shift, const T* p, int n)
+    {
+        if (!nlmLanes_<T>::supported)
+            return 0;
+
+        v_int32x4 v_est = v_setzero_s32(), v_wsum = v_setzero_s32();
+        int idx[VTraits<v_int32x4>::nlanes], w[VTraits<v_int32x4>::nlanes];
+        int x = 0;
+        for (; x <= n - VTraits<v_int32x4>::nlanes; x += VTraits<v_int32x4>::nlanes)
+        {
+            v_store(idx, v_shr(v_load(dist_sums_row + x), dist_shift));
+            for (int k = 0; k < VTraits<v_int32x4>::nlanes; k++)
+                w[k] = dist2weight[idx[k]];
+            v_int32x4 v_w = v_load(w);
+            v_est = v_add(v_est, v_mul(v_w, nlmLanes_<T>::load(p + x)));
+            v_wsum = v_add(v_wsum, v_w);
+        }
+        estimation[0] += v_reduce_sum(v_est);
+        weights_sum[0] += v_reduce_sum(v_wsum);
+        return x;
+    }
+};
+#endif
 
 template <typename IT, typename UIT, int nc, int nw> struct divByWeightsSum_
 {
