@@ -518,9 +518,12 @@ This latter conversion can be useful when using a rendering software to mimic a 
 
     \f[\begin{array}{l} x = Xc_1 \\ y = Xc_2 \\ z = Xc_3 \end{array} \f]
 
-    The pinhole projection coordinates of P is [a; b] where
+    The ray angle is measured from the positive optical axis:
 
-    \f[\begin{array}{l} a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r) \end{array} \f]
+    \f[\rho = \sqrt{x^2 + y^2}, \qquad
+       \theta = \operatorname{atan2}(\rho, z)\f]
+
+    This definition preserves the ray direction at and beyond 90 degrees.
 
     Fisheye distortion:
 
@@ -528,7 +531,7 @@ This latter conversion can be useful when using a rendering software to mimic a 
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[\begin{array}{l} x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \end{array} \f]
+    \f[\begin{array}{l} x' = (\theta_d / \rho) x \\ y' = (\theta_d / \rho) y \end{array} \f]
 
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
@@ -4121,6 +4124,8 @@ namespace fisheye
     camera parameters. Optionally, the function computes Jacobians - matrices of partial derivatives of
     image points coordinates (as functions of all the input parameters) with respect to the particular
     parameters, intrinsic and/or extrinsic.
+    The ray angle uses \f$\operatorname{atan2}(\sqrt{x^2 + y^2}, z)\f$ in camera
+    coordinates, so rays at and beyond 90 degrees retain their direction.
      */
     CV_EXPORTS void projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
         InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
