@@ -106,6 +106,9 @@
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
 
+/* GTK support */
+#cmakedefine HAVE_GTK4
+
 /* PNG codec */
 #cmakedefine HAVE_PNG
 

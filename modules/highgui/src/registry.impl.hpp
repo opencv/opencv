@@ -29,7 +29,9 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
 {
     static std::vector<BackendInfo> g_backends
     {
-#ifdef HAVE_GTK
+#ifdef HAVE_GTK4
+        DECLARE_STATIC_BACKEND("GTK4", createUIBackendGTK4)
+#elif defined(HAVE_GTK)
         DECLARE_STATIC_BACKEND("GTK", createUIBackendGTK)
 #if defined(HAVE_GTK3)
         DECLARE_STATIC_BACKEND("GTK3", createUIBackendGTK)
@@ -39,10 +41,12 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
 #warning "HAVE_GTK definition issue. Register new GTK backend"
 #endif
 #elif defined(ENABLE_PLUGINS)
+        DECLARE_DYNAMIC_BACKEND("GTK4")
         DECLARE_DYNAMIC_BACKEND("GTK")
         DECLARE_DYNAMIC_BACKEND("GTK3")
         DECLARE_DYNAMIC_BACKEND("GTK2")
 #endif
+
 
 #ifdef HAVE_FRAMEBUFFER
         DECLARE_STATIC_BACKEND("FB", createUIBackendFramebuffer)
