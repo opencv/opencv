@@ -2146,10 +2146,29 @@ when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first i
 with #invertAffineTransform and then put in the formula above instead of M. The function cannot
 operate in-place.
 
-@param src input image.
-@param dst output image that has the size dsize and the same type as src .
-@param M \f$2\times 3\f$ transformation matrix.
-@param dsize size of the output image.
+Besides a single 2D image, `src` may hold a batch of images, picked at runtime from `src.kind()`:
+
+- a 3D tensor of shape \f$(N, H, W)\f$ with the channels held in its type, `dst` being of shape
+  \f$(N, dsize.height, dsize.width)\f$. From Python, wrap an NHWC array as
+  `cv.Mat(batch, wrap_channels=True)`. Tensors with more dimensions are rejected, since NCHW and
+  NHWC layouts cannot be told apart;
+- a `std::vector<Mat>`/`std::vector<UMat>` of images of one type, which may differ in size.
+  C++ only, not usable from Python.
+
+`M` then either is one matrix shared by every image, or holds one matrix per image: a
+`std::vector<Mat>`, a \f$K\times 2\times 3\f$ Mat, or a \f$(K, 2, 3)\f$ numpy array, with
+\f$K\f$ equal to the number of images. A batch is scheduled as one unit rather than image by image,
+so the threads are used evenly whether it holds two large images or hundreds of small ones, and
+each image comes out exactly as it would from its own call.
+
+@note A `std::vector<UMat>` is warped element by element on the OpenCL device; the single parallel
+loop applies to the two host-memory kinds.
+
+@param src input image, \f$(N, H, W)\f$ batch tensor, or `std::vector<Mat>`/`std::vector<UMat>` (see above).
+@param dst output image or batch that has the size dsize and the same type as src .
+@param M \f$2\times 3\f$ transformation matrix, or one per image of a batch (see above).
+@param dsize size of the output image; for a batch, the size of every output image. When empty,
+each output image keeps the size of its source image.
 @param flags combination of interpolation methods (see #InterpolationFlags) and the optional
 flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
@@ -2183,10 +2202,14 @@ The function warpPerspective transforms the source image using the specified mat
 when the flag #WARP_INVERSE_MAP is set. Otherwise, the transformation is first inverted with invert
 and then put in the formula above instead of M. The function cannot operate in-place.
 
-@param src input image.
-@param dst output image that has the size dsize and the same type as src .
-@param M \f$3\times 3\f$ transformation matrix.
-@param dsize size of the output image.
+`src` may also be a batch of images, an \f$(N, H, W)\f$ tensor or a `std::vector<Mat>`/`std::vector<UMat>`, with
+`M` holding one matrix for all of them or one per image, exactly as for #warpAffine.
+
+@param src input image, \f$(N, H, W)\f$ batch tensor, or `std::vector<Mat>`/`std::vector<UMat>`.
+@param dst output image or batch that has the size dsize and the same type as src .
+@param M \f$3\times 3\f$ transformation matrix, or one per image of a batch.
+@param dsize size of the output image; for a batch, the size of every output image. When empty,
+each output image keeps the size of its source image.
 @param flags combination of interpolation methods (#INTER_LINEAR or #INTER_NEAREST) and the
 optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
