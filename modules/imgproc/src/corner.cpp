@@ -235,6 +235,29 @@ static void calcEigenValsVecs( const Mat& _cov, Mat& _dst )
 enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
 
+// spatialGradient() takes only the Scharr kernel (-1) and the Sobel sizes 1, 3, 5 and 7.
+// An aperture of 0 or less selects Scharr, and Sobel() takes the odd sizes up to 31.
+static void
+cornerGradients( InputArray src, OutputArray dx, OutputArray dy,
+                 int aperture_size, int borderType, double scale )
+{
+    if( !src.isUMat() && aperture_size <= 7 )
+        spatialGradient( src, dx, dy, aperture_size == 0 ? FILTER_SCHARR : aperture_size,
+                         borderType, CV_32F, scale );
+    else if( aperture_size > 0 )
+    {
+        Sobel( src, dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
+        Sobel( src, dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
+    }
+    else
+    {
+        CV_Assert( aperture_size == 0 || aperture_size == FILTER_SCHARR );
+        Scharr( src, dx, CV_32F, 1, 0, scale, 0, borderType );
+        Scharr( src, dy, CV_32F, 0, 1, scale, 0, borderType );
+    }
+}
+
+
 static void
 cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
@@ -255,7 +278,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
     Mat Dx, Dy;
-    spatialGradient( src, Dx, Dy, aperture_size, borderType, CV_32F, scale );
+    cornerGradients( src, Dx, Dy, aperture_size, borderType, scale );
 
     Size size = src.size();
     Mat cov( size, CV_32FC3 );
@@ -358,7 +381,7 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
         return k.run(2, globalsize, localsize, false);
     }
     else
-        spatialGradient(_src, Dx, Dy, aperture_size, borderType, CV_32F, scale);
+        cornerGradients(_src, Dx, Dy, aperture_size, borderType, scale);
 
     return true;
 }
