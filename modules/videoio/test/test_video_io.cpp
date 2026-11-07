@@ -65,7 +65,7 @@ public:
             return;
         }
 
-        EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
+        EXPECT_EQ(static_cast<double>(CAP_PROP_UNKNOWN), cap.get(CV__CAP_PROP_LATEST));
 
         int n_frames = -1;
         EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
@@ -535,7 +535,7 @@ TEST_P(Videoio_Writer, write_nothing)
     EXPECT_NO_THROW(writer.open(video_file, apiPref, fourcc, fps, frame_size, true));
     ASSERT_TRUE(writer.isOpened());
 
-    EXPECT_EQ(cv::VIDEOWRITER_PROP_UNKNOWN, writer.get(CV__CAP_PROP_LATEST));
+    EXPECT_EQ(static_cast<double>(cv::VIDEOWRITER_PROP_UNKNOWN), writer.get(CV__CAP_PROP_LATEST));
 
 #if 0  // no frames
     cv::Mat m(frame_size, CV_8UC3, Scalar::all(127));

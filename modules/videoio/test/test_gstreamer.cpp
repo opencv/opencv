@@ -26,7 +26,7 @@ TEST_P(videoio_gstreamer, read_check)
     ASSERT_NO_THROW(cap.open(pipeline.str(), CAP_GSTREAMER));
     ASSERT_TRUE(cap.isOpened());
 
-    EXPECT_EQ(CAP_PROP_UNKNOWN, cap.get(CV__CAP_PROP_LATEST));
+    EXPECT_EQ(static_cast<double>(CAP_PROP_UNKNOWN), cap.get(CV__CAP_PROP_LATEST));
 
     Mat buffer, decode_frame, gray_frame, rgb_frame;
     for (int i = 0; i < count_frames; ++i)
