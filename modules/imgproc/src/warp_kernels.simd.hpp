@@ -110,6 +110,7 @@ namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 ImgWarpFunc getBicubicWarpFunc_(int type);
+ImgWarpFunc getBilinearHalfWarpFunc_();
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -8627,14 +8628,346 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 
 }
 
+#if CV_SIMD128
+template<typename T>
+static inline v_float32x4 bicubicLoadChannels(const T* src)
+{
+    if constexpr (std::is_same_v<T, float>)
+        return v_load(src);
+    else
+    {
+        // Expanding loads on some backends read a full 16-byte register.
+        alignas(16) T values[16/sizeof(T)] = {};
+        std::memcpy(values, src, 4*sizeof(T));
+        if constexpr (std::is_same_v<T, uchar>)
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(values)));
+        else if constexpr (std::is_same_v<T, ushort>)
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(values)));
+        else if constexpr (std::is_same_v<T, hfloat>)
+            return v_load_expand(values);
+        else
+            return v_cvt_f32(v_load_expand(values));
+    }
+}
+
+template<typename T>
+static inline void bicubicStoreChannels(T* dst, const v_float32x4& value)
+{
+    if constexpr (std::is_same_v<T, float>)
+        v_store(dst, value);
+    else if constexpr (std::is_same_v<T, hfloat>)
+        v_pack_store(dst, value);
+    else
+    {
+        const v_int32x4 rounded = v_round(value);
+        if constexpr (std::is_same_v<T, uchar>)
+        {
+            const v_uint16x8 words = v_pack_u(rounded, rounded);
+            const unsigned packed = v_extract_n<0>(v_reinterpret_as_u32(v_pack(words, words)));
+            std::memcpy(dst, &packed, sizeof(packed));
+        }
+        else if constexpr (std::is_same_v<T, ushort>)
+            v_store_low(dst, v_pack_u(rounded, rounded));
+        else
+            v_store_low(dst, v_pack(rounded, rounded));
+    }
+}
+#endif
+
+#if CV_SIMD_FP16
+static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
+{
+    alignas(16) uchar values[16] = {};
+    std::memcpy(values, src, 8);
+    return v_cvt_f16(v_reinterpret_as_s16(v_load_expand(values)));
+}
+#endif
+
+struct BilinearHalfAxis
+{
+    int first;
+    int second;
+    float fraction;
+};
+
+static inline BilinearHalfAxis bilinearHalfAxis(float value, int length, int borderType)
+{
+    double position = value;
+    if (!std::isfinite(position))
+        position = borderType == BORDER_REPLICATE && !std::isnan(position) ?
+                   (position > 0 ? double(length) : -1.) : 0.;
+    const double base = std::floor(position);
+    const float fraction = float(position - base);
+    if (base >= 0 && base + 1 < length)
+        return {int(base), int(base + 1), fraction};
+    if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        return {base >= 0 && base < length ? int(base) : -1,
+                base + 1 >= 0 && base + 1 < length ? int(base + 1) : -1, fraction};
+    if (borderType == BORDER_REPLICATE)
+    {
+        const auto clampIndex = [length](double index) {
+            return index < 0 ? 0 : index >= length ? length - 1 : int(index);
+        };
+        return {clampIndex(base), clampIndex(base + 1), fraction};
+    }
+    if (length == 1)
+        return {0, 0, 0.f};
+    if (borderType != BORDER_WRAP && borderType != BORDER_REFLECT && borderType != BORDER_REFLECT_101)
+        CV_Error(Error::StsBadArg, "Unsupported border mode");
+    if (base >= std::numeric_limits<int>::min()/2 && base <= std::numeric_limits<int>::max()/2 &&
+        length <= std::numeric_limits<int>::max()/2)
+    {
+        const int index = int(base);
+        return {borderInterpolate_fast(index, length, borderType),
+                borderInterpolate_fast(index + 1, length, borderType), fraction};
+    }
+    const int delta = borderType == BORDER_REFLECT_101;
+    const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
+    double phase = std::fmod(base, period);
+    if (phase < 0)
+        phase += period;
+    const auto borderIndex = [=](double index) {
+        if (index >= period)
+            index -= period;
+        return int(index < length ? index : period - index - 1 + delta);
+    };
+    return {borderIndex(phase), borderIndex(phase + 1), fraction};
+}
+
+static void bilinearWarpHalf(const float* x, const float* y, int len,
+                              const void* source, size_t step, Size size, void* destination,
+                              const float*, int borderType, const void* borderValue, int channels)
+{
+    const hfloat* fill = static_cast<const hfloat*>(borderValue);
+    hfloat* dst = static_cast<hfloat*>(destination);
+    for (int i = 0; i < len; ++i, dst += channels)
+    {
+        const float sx = x[i], sy = y[i];
+        if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        {
+            const float lower = borderType == BORDER_TRANSPARENT ? 0.f : -1.f;
+            const bool outside = !std::isfinite(sx) || !std::isfinite(sy) ||
+                                 (borderType == BORDER_TRANSPARENT ? sx < lower || sy < lower : sx <= lower || sy <= lower) ||
+                                 double(sx) >= size.width || double(sy) >= size.height;
+            if (outside)
+            {
+                if (borderType == BORDER_CONSTANT)
+                    std::copy(fill, fill + channels, dst);
+                continue;
+            }
+        }
+        const BilinearHalfAxis horizontal = bilinearHalfAxis(sx, size.width, borderType);
+        const BilinearHalfAxis vertical = bilinearHalfAxis(sy, size.height, borderType);
+        const float alpha = horizontal.fraction, beta = vertical.fraction;
+        const float weights[] = {(1.f - alpha)*(1.f - beta), alpha*(1.f - beta),
+                                 (1.f - alpha)*beta, alpha*beta};
+        const int columns[] = {horizontal.first, horizontal.second};
+        const int rows[] = {vertical.first, vertical.second};
+        const hfloat* pixels[4];
+        for (int row = 0; row < 2; ++row)
+        {
+            const hfloat* rowData = rows[row] < 0 ? nullptr : reinterpret_cast<const hfloat*>(
+                static_cast<const uchar*>(source) + size_t(rows[row])*step);
+            for (int column = 0; column < 2; ++column)
+                pixels[row*2 + column] = rowData && columns[column] >= 0 ?
+                                         rowData + size_t(columns[column])*channels : nullptr;
+        }
+        float scale = 1.f;
+        if (borderType == BORDER_TRANSPARENT && !(pixels[0] && pixels[1] && pixels[2] && pixels[3]))
+        {
+            float weightSum = 0.f;
+            for (int tap = 0; tap < 4; ++tap)
+                if (pixels[tap])
+                    weightSum += weights[tap];
+            if (weightSum == 0.f)
+                continue;
+            scale = 1.f/weightSum;
+        }
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            const float border = borderType == BORDER_CONSTANT ? float(fill[channel]) : 0.f;
+            const float v0 = pixels[0] ? float(pixels[0][channel]) : border;
+            const float v1 = pixels[1] ? float(pixels[1][channel]) : border;
+            const float v2 = pixels[2] ? float(pixels[2][channel]) : border;
+            const float v3 = pixels[3] ? float(pixels[3][channel]) : border;
+            dst[channel] = hfloat((v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3])*scale);
+        }
+    }
+}
+
+
+ImgWarpFunc getBilinearHalfWarpFunc_()
+{
+    return bilinearWarpHalf;
+}
+
+static inline void bicubicWarpIndices(double base, int length, int borderType, int indices[4])
+{
+    if (length > 1 && (borderType == BORDER_WRAP || borderType == BORDER_REFLECT ||
+                       borderType == BORDER_REFLECT_101))
+    {
+        const int delta = borderType == BORDER_REFLECT_101;
+        const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
+        const double phase = std::fmod(base, period);
+        for (int tap = 0; tap < 4; ++tap)
+        {
+            double index = phase + tap - 1;
+            if (index < 0)
+                index += period;
+            else if (index >= period)
+                index -= period;
+            indices[tap] = int(index < length ? index : period - index - 1 + delta);
+        }
+    }
+    else
+    {
+        for (int tap = 0; tap < 4; ++tap)
+            indices[tap] = borderInterpolate(int(std::clamp(base + tap - 1, -1., double(length))),
+                                             length, borderType);
+    }
+}
+
+template<typename T>
+static void bicubicWarpChannels(const float* x, const float* y, int len,
+                                const void* source, size_t step, Size size, void* destination,
+                                const float* params, int borderType, const void* borderValue, int channels)
+{
+    using Acc = std::conditional_t<std::is_same_v<T, double>, double, float>;
+    const float coefficient = params ? *params : -0.75f;
+    const T* fill = static_cast<const T*>(borderValue);
+    T* dst = static_cast<T*>(destination);
+    const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
+    const double minX = -double(std::max(size.width, 16)), minY = -double(std::max(size.height, 16));
+    for (int i = 0; i < len; ++i, dst += channels)
+    {
+        const double sx = std::isfinite(x[i]) ? double(x[i]) : x[i] > 0 ? -2.*minX : minX;
+        const double sy = std::isfinite(y[i]) ? double(y[i]) : y[i] > 0 ? -2.*minY : minY;
+        const double baseX = std::floor(sx), baseY = std::floor(sy);
+        if ((baseX - 1 >= size.width || baseX + 3 <= 0 || baseY - 1 >= size.height || baseY + 3 <= 0) &&
+            (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
+        {
+            if (borderType == BORDER_CONSTANT)
+                std::copy(fill, fill + channels, dst);
+            continue;
+        }
+        float wx[4], wy[4];
+        bicubicWeights(float(sx - baseX), coefficient, wx[0], wx[1], wx[2], wx[3]);
+        bicubicWeights(float(sy - baseY), coefficient, wy[0], wy[1], wy[2], wy[3]);
+        if (baseX >= 1 && baseX + 2 < size.width && baseY >= 1 && baseY + 2 < size.height)
+        {
+            const int left = int(baseX) - 1, top = int(baseY) - 1;
+            const T* rows[4];
+            for (int row = 0; row < 4; ++row)
+                rows[row] = reinterpret_cast<const T*>(static_cast<const uchar*>(source) + size_t(top + row)*step)
+                            + left*channels;
+            int channel = 0;
+#if CV_SIMD_FP16
+            if constexpr (std::is_same_v<T, uchar>)
+            {
+                const v_float16x8 w0 = v_setall_f16(hfloat(wx[0])), w1 = v_setall_f16(hfloat(wx[1]));
+                const v_float16x8 w2 = v_setall_f16(hfloat(wx[2])), w3 = v_setall_f16(hfloat(wx[3]));
+                for (; channel <= channels - 8; channel += 8)
+                {
+                    v_float16x8 sum = v_setall_f16(hfloat(0.f));
+                    for (int row = 0; row < 4; ++row)
+                    {
+                        const uchar* ptr = rows[row] + channel;
+                        v_float16x8 horizontal = v_mul(bicubicLoad8uHalf(ptr), w0);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels), w1, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*2), w2, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*3), w3, horizontal);
+                        sum = v_fma(horizontal, v_setall_f16(hfloat(wy[row])), sum);
+                    }
+                    const v_int16x8 rounded = v_round(sum);
+                    v_store_low(dst + channel, v_pack_u(rounded, rounded));
+                }
+            }
+#endif
+#if CV_SIMD128
+            if constexpr (!std::is_same_v<T, double>)
+            {
+                const v_float32x4 w0 = v_setall_f32(wx[0]), w1 = v_setall_f32(wx[1]);
+                const v_float32x4 w2 = v_setall_f32(wx[2]), w3 = v_setall_f32(wx[3]);
+                for (; channel <= channels - 4; channel += 4)
+                {
+                    v_float32x4 sum = v_setzero_f32();
+                    for (int row = 0; row < 4; ++row)
+                    {
+                        const T* ptr = rows[row] + channel;
+                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels(ptr), w0),
+                                                      v_mul(bicubicLoadChannels(ptr + channels), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3), w3));
+                        sum = v_add(sum, v_mul(horizontal, v_setall_f32(wy[row])));
+                    }
+                    bicubicStoreChannels(dst + channel, sum);
+                }
+            }
+#endif
+            for (; channel < channels; ++channel)
+            {
+                Acc sum = 0;
+                for (int row = 0; row < 4; ++row)
+                {
+                    const T* ptr = rows[row] + channel;
+                    sum += (Acc(ptr[0])*wx[0] + Acc(ptr[channels])*wx[1] +
+                            Acc(ptr[channels*2])*wx[2] + Acc(ptr[channels*3])*wx[3])*wy[row];
+                }
+                dst[channel] = saturate_cast<T>(sum);
+            }
+            continue;
+        }
+        int columns[4], rows[4];
+        bicubicWarpIndices(baseX, size.width, sampleBorder, columns);
+        bicubicWarpIndices(baseY, size.height, sampleBorder, rows);
+        const T* pixels[4][4];
+        for (int row = 0; row < 4; ++row)
+        {
+            const int sourceRow = rows[row];
+            const T* rowData = sourceRow < 0 ? nullptr : reinterpret_cast<const T*>(
+                static_cast<const uchar*>(source) + size_t(sourceRow)*step);
+            for (int column = 0; column < 4; ++column)
+                pixels[row][column] = rowData && columns[column] >= 0 ? rowData + columns[column]*channels : nullptr;
+        }
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            const Acc border = Acc(borderType == BORDER_TRANSPARENT ? dst[channel] : fill[channel]);
+            Acc sum = 0;
+            for (int row = 0; row < 4; ++row)
+            {
+                const Acc v0 = pixels[row][0] ? Acc(pixels[row][0][channel]) : border;
+                const Acc v1 = pixels[row][1] ? Acc(pixels[row][1][channel]) : border;
+                const Acc v2 = pixels[row][2] ? Acc(pixels[row][2][channel]) : border;
+                const Acc v3 = pixels[row][3] ? Acc(pixels[row][3][channel]) : border;
+                sum += (v0*wx[0] + v1*wx[1] + v2*wx[2] + v3*wx[3])*wy[row];
+            }
+            dst[channel] = saturate_cast<T>(sum);
+        }
+    }
+}
+
 template<typename T, void (*fn)(const float*, const float*, int, const void*, size_t, Size, T*, const float*, int, T*)>
-static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval)
+static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval, int)
 {
     fn(x, y, len, src, srcstep, srcsize, (T*)dst, coeffs, flags, (T*)fillval);
 }
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
+    if (CV_MAT_DEPTH(type) == CV_16F)
+        return bicubicWarpChannels<hfloat>;
+    if (CV_MAT_CN(type) > 4)
+    {
+        switch (CV_MAT_DEPTH(type))
+        {
+        case CV_8U: return bicubicWarpChannels<uchar>;
+        case CV_16U: return bicubicWarpChannels<ushort>;
+        case CV_16S: return bicubicWarpChannels<short>;
+        case CV_32F: return bicubicWarpChannels<float>;
+        case CV_64F: return bicubicWarpChannels<double>;
+        default: return nullptr;
+        }
+    }
     if (type == CV_8UC1) {
         return bicubicWarpWrap<uint8_t, bicubic8uC1>;
     }

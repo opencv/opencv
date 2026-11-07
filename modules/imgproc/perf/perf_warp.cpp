@@ -8,11 +8,15 @@ namespace opencv_test {
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE)
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 CV_ENUM(InterTypeExtended, INTER_NEAREST, INTER_LINEAR, WARP_RELATIVE_MAP)
+CV_ENUM(HighChannelInterType, INTER_CUBIC, INTER_LANCZOS4)
+CV_ENUM(HalfInterType, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)
 
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpAffine;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspective;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
 typedef TestBaseWithParam< tuple<Size, InterTypeExtended, BorderMode, MatType> > TestRemap;
+typedef TestBaseWithParam< tuple<Size, HighChannelInterType, BorderMode, MatType> > TestWarpHighChannelInterpolation;
+typedef TestBaseWithParam< tuple<Size, HalfInterType, int> > TestWarpHalf;
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, bool relative = false );
 
@@ -72,6 +76,37 @@ PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
     Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
     declare.in(src).out(dst);
     TEST_CYCLE() warpAffine(src, dst, matrix, size, INTER_LINEAR, border);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(TestWarpHighChannelInterpolation, WarpAffine,
+            Combine(Values(Size(256, 256), Size(512, 512)),
+                    HighChannelInterType::all(), BorderMode::all(),
+                    Values(CV_8UC(5), CV_8UC(20), CV_32FC(5), CV_32FC(20))))
+{
+    const Size size = get<0>(GetParam());
+    const int interpolation = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    Mat src(size, get<3>(GetParam())), dst(size, src.type());
+    theRNG().fill(src, RNG::UNIFORM, 0., 64.);
+    Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
+    declare.in(src).out(dst);
+    TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation, border);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(TestWarpHalf, WarpAffine,
+            Combine(Values(Size(256, 256), Size(512, 512)), HalfInterType::all(), Values(1, 3, 5, 20)))
+{
+    const Size size = get<0>(GetParam());
+    const int interpolation = get<1>(GetParam());
+    const int channels = get<2>(GetParam());
+    Mat wide(size, CV_MAKETYPE(CV_32F, channels)), src, dst(size, CV_MAKETYPE(CV_16F, channels));
+    theRNG().fill(wide, RNG::UNIFORM, 0.f, 1.f);
+    wide.convertTo(src, CV_16F);
+    Mat matrix = getRotationMatrix2D(Point2f((size.width - 1)*0.5f, (size.height - 1)*0.5f), 17., 1.);
+    declare.in(src).out(dst);
+    TEST_CYCLE() warpAffine(src, dst, matrix, size, interpolation);
     SANITY_CHECK_NOTHING();
 }
 
