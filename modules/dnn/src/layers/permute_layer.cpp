@@ -96,7 +96,7 @@ public:
         for (size_t i = 0; i < _numAxes; i++)
         {
             int currentOrder = paramOrder.get<int>(i);
-            if (currentOrder < 0 || currentOrder > _numAxes)
+            if (currentOrder < 0 || static_cast<size_t>(currentOrder) >= _numAxes)
             {
                 CV_Error(Error::StsBadArg,
                          format("Orders of dimensions in Permute layer parameter"
