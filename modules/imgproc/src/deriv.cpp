@@ -254,7 +254,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     int dtype = CV_MAKE_TYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
 
     Mat kx, ky;
     getDerivKernels( kx, ky, dx, dy, ksize, false, ktype );
@@ -303,7 +303,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     int dtype = CV_MAKETYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
 
     Mat kx, ky;
     getScharrKernels( kx, ky, dx, dy, false, ktype );
@@ -619,7 +619,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
 
     if( ksize == 1 || ksize == 3 )
@@ -679,7 +679,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
 
-        CV_OCL_RUN(_dst.isUMat(),
+        CV_OCL_RUN(_dst.isUMat() && sdepth != CV_16F && ddepth != CV_16F,
                    ocl_Laplacian5(_src, _dst, kd, ks, scale,
                                   delta, borderType, wdepth, ddepth))
 
