@@ -88,4 +88,94 @@ TEST(Imgproc_Moments, degenerateContours)
     EXPECT_EQ(m2.m00, 0);
 }
 
+// Evaluate the defining polynomials separately from HuMoments' factored form.
+static void referenceHuMoments(const Moments& m, double hu[7])
+{
+    const long double a = m.nu20, b = m.nu11, c = m.nu02;
+    const long double d = m.nu30, e = m.nu21, f = m.nu12, g = m.nu03;
+    hu[0] = static_cast<double>(a + c);
+    hu[1] = static_cast<double>((a - c)*(a - c) + 4*b*b);
+    hu[2] = static_cast<double>((d - 3*f)*(d - 3*f) + (3*e - g)*(3*e - g));
+    hu[3] = static_cast<double>((d + f)*(d + f) + (e + g)*(e + g));
+    hu[4] = static_cast<double>((d - 3*f)*(d + f)*((d + f)*(d + f) - 3*(e + g)*(e + g)) +
+                               (3*e - g)*(e + g)*(3*(d + f)*(d + f) - (e + g)*(e + g)));
+    hu[5] = static_cast<double>((a - c)*((d + f)*(d + f) - (e + g)*(e + g)) +
+                               4*b*(d + f)*(e + g));
+    hu[6] = static_cast<double>((3*e - g)*(d + f)*((d + f)*(d + f) - 3*(e + g)*(e + g)) -
+                               (d - 3*f)*(e + g)*(3*(d + f)*(d + f) - (e + g)*(e + g)));
+}
+
+TEST(Imgproc_HuMoments, accuracy)
+{
+    // Restore the polynomial accuracy coverage removed with the C API (#24957).
+    RNG rng(0x24957);
+    for (int sample = 0; sample < 256; ++sample)
+    {
+        SCOPED_TRACE(sample);
+        Moments m;
+        double* normalized[] = { &m.nu20, &m.nu11, &m.nu02, &m.nu30,
+                                 &m.nu21, &m.nu12, &m.nu03 };
+        for (int i = 0; i < 7; ++i)
+        {
+            // Zero input and individual basis inputs also exercise sparse cases.
+            if (sample <= 7)
+                *normalized[i] = sample == i + 1 ? 1. : 0.;
+            else
+                *normalized[i] = rng.uniform(-1., 1.);
+        }
+
+        double expected[7], actual[7];
+        referenceHuMoments(m, expected);
+        HuMoments(m, actual);
+        Mat output;
+        HuMoments(m, output);
+        ASSERT_EQ(Size(1, 7), output.size());
+        ASSERT_EQ(CV_64FC1, output.type());
+        for (int i = 0; i < 7; ++i)
+        {
+            SCOPED_TRACE(i);
+            const double tolerance = 1e-12 * std::max(1., std::abs(expected[i]));
+            EXPECT_NEAR(expected[i], actual[i], tolerance);
+            EXPECT_NEAR(expected[i], output.at<double>(i), tolerance);
+        }
+    }
+}
+
+TEST(Imgproc_HuMoments, similarityInvariance)
+{
+    const Point2f vertices[] = { Point2f(0, 0), Point2f(7, 1), Point2f(6, 5),
+                                 Point2f(2, 8), Point2f(-1, 3) };
+    const std::vector<Point2f> contour(vertices, vertices + 5);
+    double expected[7];
+    HuMoments(moments(contour), expected);
+    // An asymmetric contour is needed to detect a missing reflection sign.
+    ASSERT_GT(std::abs(expected[6]), 1e-12);
+
+    for (int transform = 0; transform < 4; ++transform)
+    {
+        SCOPED_TRACE(transform);
+        std::vector<Point2f> transformed;
+        for (size_t i = 0; i < contour.size(); ++i)
+        {
+            const Point2f& p = contour[i];
+            if (transform == 0)
+                transformed.push_back(p + Point2f(16, -8));
+            else if (transform == 1)
+                transformed.push_back(p * 4.f);
+            else if (transform == 2)
+                transformed.push_back(Point2f(-p.y, p.x));
+            else
+                transformed.push_back(Point2f(-p.x, p.y));
+        }
+        double actual[7];
+        HuMoments(moments(transformed), actual);
+        for (int i = 0; i < 7; ++i)
+        {
+            SCOPED_TRACE(i);
+            const double value = transform == 3 && i == 6 ? -expected[i] : expected[i];
+            EXPECT_NEAR(value, actual[i], 1e-9 * std::max(std::abs(value), 1e-15));
+        }
+    }
+}
+
 }} // namespace
