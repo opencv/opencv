@@ -942,5 +942,48 @@ INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Values(
     RenderTestParamType { std::make_tuple(700, 700), RASTERIZE_SHADING_WHITE,  RASTERIZE_CULLING_NONE, ModelType::File,      CV_32F, CV_32S }
 ));
 
+
+TEST(Rendering, outOfRangeIndices)
+{
+    std::vector<Vec3f> verts  = { {0.f, 0.f, -1.f}, {1.f, 0.f, -1.f}, {0.f, 1.f, -1.f} };
+    std::vector<Vec3f> colors = { {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f} };
+    Matx44f cameraPose = Matx44f::eye();
+    double fovY = CV_PI / 2, zNear = 0.1, zFar = 10.0;
+    TriangleRasterizeSettings settings;
+    settings.setCullingMode(RASTERIZE_CULLING_NONE);
+
+    {
+        std::vector<Vec3i> indices = { {0, 1, 2} };
+        Mat colorBuf(32, 32, CV_32FC3, Scalar::all(0)), depthBuf(32, 32, CV_32FC1, Scalar(zFar));
+        triangleRasterize(verts, indices, colors, colorBuf, depthBuf, cameraPose, fovY, zNear, zFar, settings);
+        EXPECT_GT(countNonZero(depthBuf < zFar), 0);
+    }
+
+    const std::vector<Vec3i> badTriangles = { {0, 1, 3}, {0, -1, 2}, {1000, 1, 2} };
+    for (const Vec3i& badTri : badTriangles)
+    {
+        // the valid first triangle should not be drawn either
+        std::vector<Vec3i> indices = { {0, 1, 2}, badTri };
+        Mat colorBuf(32, 32, CV_32FC3, Scalar::all(0)), depthBuf(32, 32, CV_32FC1, Scalar(zFar));
+
+        int code = 0;
+        try { triangleRasterize(verts, indices, colors, colorBuf, depthBuf, cameraPose, fovY, zNear, zFar, settings); }
+        catch (const cv::Exception& e) { code = e.code; }
+        EXPECT_EQ(Error::StsOutOfRange, code) << badTri;
+        EXPECT_EQ(0, countNonZero(colorBuf.reshape(1))) << badTri;
+        EXPECT_EQ(0, countNonZero(depthBuf != zFar)) << badTri;
+
+        code = 0;
+        try { triangleRasterizeColor(verts, indices, colors, colorBuf, cameraPose, fovY, zNear, zFar, settings); }
+        catch (const cv::Exception& e) { code = e.code; }
+        EXPECT_EQ(Error::StsOutOfRange, code) << badTri;
+
+        code = 0;
+        try { triangleRasterizeDepth(verts, indices, depthBuf, cameraPose, fovY, zNear, zFar, settings); }
+        catch (const cv::Exception& e) { code = e.code; }
+        EXPECT_EQ(Error::StsOutOfRange, code) << badTri;
+    }
+}
+
 } // namespace ::
 } // namespace opencv_test

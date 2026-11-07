@@ -229,6 +229,20 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
     triangles = triangles.reshape(3, 1).t();
     nTriangles = (int)triangles.total();
 
+    // indices are used to read vertices and colors, check them all before anything is drawn
+    for (int t = 0; t < nTriangles; t++)
+    {
+        const Vec3i& tri = triangles.at<Vec3i>(t);
+        for (int i = 0; i < 3; i++)
+        {
+            if (tri[i] < 0 || tri[i] >= nVerts)
+            {
+                CV_Error(Error::StsOutOfRange, cv::format("Triangle %d has vertex index %d, expected [0, %d)",
+                                                          t, tri[i], nVerts));
+            }
+        }
+    }
+
     if (!_colors.empty())
     {
         int colorType = _colors.type();
@@ -308,8 +322,6 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
         for (int i = 0; i < 3; i++)
         {
             int idx = tri[i];
-            CV_DbgAssert(idx >= 0 && idx < nVerts);
-
             col[i] = colors.empty() ? Vec3f::all(0) : colors.at<Vec3f>(idx);
             ver[i] = screenVertices.at<Vec4f>(idx);
         }
