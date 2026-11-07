@@ -303,7 +303,8 @@ struct CV_EXPORTS TExpr
     // compute depth, then emits `op` (direct when a kernel exists, else compute wide and cast down).
     // Returns the slot holding the result. `rdepth` EW_DEPTH_NONE = auto.
     int  emitUnary(TOp op, int a, int rdepth = EW_DEPTH_NONE, const Scalar& params = Scalar(1));
-    int  emitBinary(TOp op, int a, int b, int rdepth = EW_DEPTH_NONE, const Scalar& params = Scalar(1));
+    int  emitBinary(TOp op, int a, int b, int rdepth = EW_DEPTH_NONE, const Scalar& params = Scalar(1),
+                    bool computeInResult = false);
     int  emitTernary(TOp op, int a, int b, int c, int rdepth = EW_DEPTH_NONE);
 
     // Land `temp` in the existing slot `out`: redirect temp's single producer to write `out` directly
