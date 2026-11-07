@@ -512,6 +512,7 @@ void Net::Impl::fuseChains()
     fuseReshapeTranspose();
     fuseTransposeMatMul();
     fuseScaleSoftmax();
+    fuseMatMulIntegerDequant();
 
     // A sink runs the math it absorbs in its own CPU kernel. setPreferableTarget resolves
     // only CPU and CUDA while mainGraph is set, so nothing reaches here on OpenCL today.
