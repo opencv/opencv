@@ -1897,6 +1897,18 @@ public:
 
     bool checkFallbacks(Net& net) const
     {
+        // the check below reads the classic engine's layer list; for the new engine,
+        // ask which ops it actually placed on the CPU
+        if (net.getMainGraph())
+        {
+            if (backend != DNN_BACKEND_CUDA)
+                return false;
+            const std::vector<std::string> cpuOps = cudaFallbackOps(net);
+            for (const std::string& op : cpuOps)
+                std::cout << "FALLBACK: " << op << " runs on the CPU instead of CUDA" << endl;
+            return !cpuOps.empty();
+        }
+
         // Check if all the layers are supported with current backend and target.
         // Some layers might be fused so their timings equal to zero.
         std::vector<double> timings;
@@ -2134,6 +2146,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         }
         if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true") {
             default_l1 = 3e-5;
+        }
+        if (name == "test_nllloss_NCd1d2_with_weight_reduction_sum_expanded" && target == DNN_TARGET_CUDA_FP16) {
+            default_l1 = 0.016; // one scalar of -34.3, where half steps are 0.03125; actual: 0.0148354 vs 0.007 (both builds, 10 runs)
         }
         if (name == "test_gridsample_bicubic") {
             default_l1 = 4e-5; // GridSample falls back to CPU; same actual: 3.61577e-05 vs 1e-05 as the OpenCV backend

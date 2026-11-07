@@ -219,31 +219,43 @@ public:
     }
 
     // forward() #1 runs eagerly, #2 records a CUDA Graph and #3 replays it; each must match the reference
-    void testONNXModelsRepeatedForward(const String& basename, bool changeBatch = false)
+    void testONNXModelsRepeatedForward(const String& basename, bool changeBatch = false, int numInps = 1)
     {
-        Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+        ASSERT_TRUE(numInps >= 1 && (numInps == 1 || !changeBatch));
+        std::vector<Mat> inps(numInps), inps2(numInps);
+        std::vector<String> names(numInps);
+        for (int k = 0; k < numInps; k++) {
+            inps[k] = blobFromNPY(_tf("data/input_" + basename + (numInps > 1 ? format("_%d", k) : "") + ".npy"));
+            names[k] = format("%d", k);
+        }
         Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
-        checkBackend(&inp, &ref);
+        checkBackend(&inps[0], &ref);
         Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
         ASSERT_FALSE(net.empty());
+        net.setInputsNames(names);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        // the replay gets a new same-shaped input: replaying stale device data would fail here
-        Mat inp2;
-        inp.convertTo(inp2, -1, 0.5, 1.0);
+        // the replay gets new same-shaped inputs: replaying stale device data would fail here
+        for (int k = 0; k < numInps; k++)
+            inps[k].convertTo(inps2[k], -1, 0.5, 1.0);
         Net refNet = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        refNet.setInputsNames(names);
         refNet.setPreferableBackend(DNN_BACKEND_OPENCV);
-        refNet.setInput(inp2);
+        for (int k = 0; k < numInps; k++)
+            refNet.setInput(inps2[k], names[k]);
         Mat ref2 = refNet.forward();
         const int forwards = 3;
         for (int i = 1; i <= forwards; i++) {
-            net.setInput(i < forwards ? inp : inp2);
+            for (int k = 0; k < numInps; k++)
+                net.setInput(i < forwards ? inps[k] : inps2[k], names[k]);
             Mat out = net.forward();
             normAssert(i < forwards ? ref : ref2, out, format("%s, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
         }
         if (!changeBatch)
             return;
         // a doubled batch resets the recorded graph and re-sizes every dynamic op
+        const Mat& inp = inps[0];
+        const Mat& inp2 = inps2[0];
         const int n = inp.size[0];
         const int rowLen = (int)(inp.total() / n);
         Mat rows;
@@ -258,6 +270,14 @@ public:
             Mat out = net.forward();
             normAssert(ref3, out, format("%s, doubled batch, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
         }
+    }
+
+    // only the CUDA backend records and replays a CUDA Graph, so the other backends skip
+    void testCUDARepeatedForward(const String& basename, int numInps = 1)
+    {
+        if (backend != DNN_BACKEND_CUDA)
+            throw SkipTestException("CUDA Graph record and replay");
+        testONNXModelsRepeatedForward(basename, false, numInps);
     }
 
     // Runs an SDPA ONNX model through the importer + SDPALayer and checks the
@@ -1135,6 +1155,8 @@ TEST_P(Test_ONNX_layers, Colorization)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
     checkBackend();
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);  // TF32 deconvolution exceeds the FP32 reference bounds
 
     const String model = findDataFile("dnn/colorization_deploy_v2.onnx", false);
     Net net = readNetFromONNX(model);
@@ -1265,6 +1287,80 @@ TEST_P(Test_ONNX_layers, Shape_repeated_forward)
 TEST_P(Test_ONNX_layers, Shape_reshape_dynamic_repeated_forward)
 {
     testONNXModelsRepeatedForward("shape_reshape_dynamic", true);
+}
+
+// Range sized on the host from its value inputs
+TEST_P(Test_ONNX_layers, Range_repeated_forward)
+{
+    testCUDARepeatedForward("range_float");
+}
+TEST_P(Test_ONNX_layers, Range_negative_repeated_forward)
+{
+    testCUDARepeatedForward("range_float_negative");
+}
+// Expand sized on the host from its shape input
+TEST_P(Test_ONNX_layers, Expand_repeated_forward)
+{
+    testCUDARepeatedForward("expand");
+}
+// Resize2 tables built from scales
+TEST_P(Test_ONNX_layers, Resize_opset11_repeated_forward)
+{
+    testCUDARepeatedForward("resize_opset11_torch1.6");
+}
+// Upsample through the importer's Resize2 path
+TEST_P(Test_ONNX_layers, Upsample_unfused_repeated_forward)
+{
+    testCUDARepeatedForward("upsample_unfused_opset9_torch1.4");
+}
+// InstanceNorm statistics through reduce_mean_sqr_sum
+TEST_P(Test_ONNX_layers, InstanceNorm_repeated_forward)
+{
+    testCUDARepeatedForward("instancenorm");
+}
+// Pad2 on the device
+TEST_P(Test_ONNX_layers, Padding_repeated_forward)
+{
+    testCUDARepeatedForward("padding");
+}
+// AveragePool through the window kernel or the global-mean reduction
+TEST_P(Test_ONNX_layers, AveragePooling_repeated_forward)
+{
+    testCUDARepeatedForward("average_pooling");
+}
+TEST_P(Test_ONNX_layers, AveragePooling_dynamic_axes_repeated_forward)
+{
+    testCUDARepeatedForward("average_pooling_dynamic_axes");
+}
+// Dropout (and DropoutMask when the mask output is kept)
+TEST_P(Test_ONNX_layers, Dropout_repeated_forward)
+{
+    testCUDARepeatedForward("dropout");
+}
+TEST_P(Test_ONNX_layers, Clip_init_min_max_repeated_forward)
+{
+    testCUDARepeatedForward("clip_init_min_max");
+}
+// Einsum as permute + strided batched GEMM + permute, from rank 1 up
+TEST_P(Test_ONNX_layers, Einsum_1D_repeated_forward)
+{
+    testCUDARepeatedForward("einsum_1d", 2);
+}
+TEST_P(Test_ONNX_layers, Einsum_2D_repeated_forward)
+{
+    testCUDARepeatedForward("einsum_2d", 2);
+}
+TEST_P(Test_ONNX_layers, Einsum_3D_repeated_forward)
+{
+    testCUDARepeatedForward("einsum_3d", 2);
+}
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses_repeated_forward)
+{
+    testCUDARepeatedForward("einsum_2d_ellipses", 2);
+}
+TEST_P(Test_ONNX_layers, Einsum_HadamardProduct_repeated_forward)
+{
+    testCUDARepeatedForward("einsum_hadamard", 2);
 }
 
 // forwardInt<T> integer-accumulation path.

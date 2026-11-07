@@ -10,8 +10,11 @@
 #include "../csl/cudnn.hpp"
 #include "../csl/tensor_ops.hpp"
 
+#include "../kernels/normalize.hpp"
+
 #include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
@@ -68,6 +71,38 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     private:
         csl::LRN<T> lrn;
         std::size_t scratch_mem_in_bytes;
+    };
+
+    // across-channel LRN without legacy cuDNN; matches the CPU ChannelLRN
+    template <class T>
+    class LRNAcrossChannelsOp final : public CUDABackendNode {
+    public:
+        LRNAcrossChannelsOp(csl::Stream stream_, int local_size, float alpha_scaled_, float beta_, float bias_)
+            : stream(std::move(stream_)), radius((local_size - 1) / 2), alpha_scaled(alpha_scaled_), beta(beta_), bias(bias_) { }
+
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(inputs.size() == outputs.size());
+            for (size_t i = 0; i < inputs.size(); i++) {
+                auto input = csl::viewOf<T>(inputs[i]);
+                auto output = csl::spanOf<T>(outputs[i]);
+                CV_Assert(input.rank() >= 2);
+                const std::size_t batch = input.get_axis_size(0), channels = input.get_axis_size(1);
+                const std::size_t plane = input.size_range(2, input.rank());
+                kernels::lrn_across_channels<T>(stream, csl::Span<T>(output.get(), output.size()),
+                                                csl::View<T>(input.get(), input.size()),
+                                                batch, channels, plane, radius, alpha_scaled, bias, beta);
+            }
+        }
+
+    private:
+        csl::Stream stream;
+        int radius;
+        float alpha_scaled, beta, bias;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

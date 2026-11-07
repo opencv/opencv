@@ -24,8 +24,14 @@ static inline void clampFloatChunkDispatch(const float* src, float* dst,
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/interface.h>
+
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/activation.hpp"
+#endif
 #include <limits>
 #include <cfloat>
 #include <cmath>
@@ -113,8 +119,50 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty() || inputs.size() > 3)
+                return false;
+            // initCUDA reads min/max on the host
+            for (size_t i = 1; i < inputs.size(); i++)
+                if (!inputs[i].empty() && !netimpl_->isConstArg(inputs[i]))
+                    return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || isCudaNodeType(t, false);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Net::Impl* netimpl_ = getNetImpl(this);
+        CV_Assert(netimpl_);
+        const int type = inputs_arr.type(0);
+        // a half device tensor holds FP32 data, so it takes the float range
+        const int depth = CV_MAT_DEPTH(type) == CV_16F ? CV_32F : CV_MAT_DEPTH(type);
+
+        // same bounds as forward(): const inputs win over attributes, then the type's range
+        auto constScalar = [&](size_t i, double& v) {
+            if (inputs.size() <= i || inputs[i].empty())
+                return false;
+            Mat tmp;
+            netimpl_->argTensor(inputs[i]).convertTo(tmp, CV_64F);
+            CV_Assert(tmp.total() == 1);
+            v = tmp.at<double>(0);
+            return true;
+        };
+        double lo = hasMin ? minValue : typeMin(depth), hi = hasMax ? maxValue : typeMax(depth);
+        constScalar(1, lo);
+        constScalar(2, hi);
+        CV_Assert(lo <= hi);
+        return make_cuda_node_with_type<cuda4dnn::ClipOp>(preferableTarget, type, std::move(context->stream), lo, hi);
+    }
+#endif
 
     // Clip rewrites values in place of the input layout.
     virtual bool alwaysSupportInplace() const CV_OVERRIDE { return true; }

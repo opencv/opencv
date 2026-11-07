@@ -28,6 +28,10 @@ public:
     {
         backend = (dnn::Backend)(int)get<0>(GetParam());
         target = (dnn::Target)(int)get<1>(GetParam());
+        // OPENCV_DNN_PERF_PIN_INPUTS=1 pins every test's inputs, to compare with the default unpinned run
+        static const bool pinAll = utils::getConfigurationParameterBool("OPENCV_DNN_PERF_PIN_INPUTS", false);
+        if (pinAll)
+            pinnedInput = "*";
     }
 
     void processNet(std::string weights, std::string proto,
@@ -36,10 +40,14 @@ public:
         if (!proto.empty())
             proto = findDataFile(proto);
         net = readNet(weights, proto);
-        // "*" pins every named input to the shape it is fed
-        if (pinnedInput == "*")
-            for (auto& inp : inputs)
-                net.setInputShape(std::get<1>(inp), shape(std::get<0>(inp)));
+        // "*" pins every input to the shape it is fed; an unnamed one is the graph input at its position
+        if (pinnedInput == "*" && net.getMainGraph()) {
+            const std::vector<Arg>& graphInputs = net.getMainGraph()->inputs();
+            for (size_t i = 0; i < inputs.size() && i < graphInputs.size(); i++) {
+                const std::string& name = std::get<1>(inputs[i]);
+                net.setInputShape(name.empty() ? net.argName(graphInputs[i]) : name, shape(std::get<0>(inputs[i])));
+            }
+        }
         else if (!pinnedInput.empty())
             net.setInputShape(pinnedInput, shape(std::get<0>(inputs[0])));
         // Set multiple inputs

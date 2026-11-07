@@ -965,6 +965,9 @@ public:
         Net::Impl* netimpl_ = getNetImpl(this);
         if (!netimpl_)
             return true;
+        // a second input of rank 4 or more (5 in block layout) is a reference tensor: only its shape sizes the output
+        if (ninputs == 2 && netimpl_->argData(inputs[1]).shape.dims >= 4)
+            return false;
         for (size_t i = 1; i < ninputs; i++) {
             if (!netimpl_->isConstArg(inputs[i]))
                 return true;
@@ -1039,7 +1042,8 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         size_t ninputs = inputs.size();
-        CV_Assert(ninputs == 1 || ninputs == 2 || ninputs >= 4);
+        // 3 inputs is ONNX (X, roi, scales); the scales branch below reads index 2
+        CV_Assert(ninputs >= 1);
         outputs.resize(1, inputs[0]);
 
         // Rank-3 (N,C,W): 1-D resize of the W axis; width baked into params, stays rank-3.
@@ -1069,7 +1073,7 @@ public:
         if (ninputs == 1) {
             outputs[0][2] = zoomFactorHeight > 0 ? cvFloor(inputs[0][2] * zoomFactorHeight) : outHeight0;
             outputs[0][3] = zoomFactorWidth > 0 ? cvFloor(inputs[0][3] * zoomFactorWidth) : outWidth0;
-        } else if (ninputs == 2 && inputs[1].dims == 4) {
+        } else if (ninputs == 2 && inputs[1].dims >= 4) {
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
         } else {
@@ -1107,8 +1111,32 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_CUDA)
-            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // classic-engine nets carry no graph args to inspect
+            if (!netimpl_ || inputs.empty())
+                return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+            // ResizeTablesOp runs every mode through the CPU's own per-axis tap builders
+            if (outputs.size() != 1)
+                return false;
+            // an intermediate arg has no type or shape until the first forward; refuse only a known unsupported one
+            const ArgData& inp = netimpl_->argData(inputs[0]);
+            const ArgData& out = netimpl_->argData(outputs[0]);
+            // the CPU rounds interpolated integers with saturate_cast, so integers stay nearest-only
+            const bool intOk = interpolation == "nearest" &&
+                               (inp.type == CV_8S || inp.type == CV_8U || inp.type == CV_32S);
+            if (inp.type >= 0 && inp.type != CV_32F && inp.type != CV_16F && !intOk)
+                return false;
+            if (inp.shape.dims >= 0 && inp.shape.dims != 4)
+                return false;
+            // the kernel resizes H and W only; N and C must pass through
+            if (inp.shape.dims == 4 && out.shape.dims == 4 &&
+                (inp.shape[0] != out.shape[0] || inp.shape[1] != out.shape[1]))
+                return false;
+            return true;
+        }
+#endif
 
         if (backendId == DNN_BACKEND_CANN)
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
@@ -1137,6 +1165,189 @@ public:
             scaleWidth = float(inpShape[3] - 1) / (outWidth - 1);
         else
             scaleWidth = float(inpShape[3]) / outWidth;
+    }
+
+    // tf_crop_and_resize ROI from the runtime roi input
+    void updateRoi(const Mat& roiTensor)
+    {
+        std::vector<float> roi;
+        tensorToFloatVec(roiTensor, roi);
+        if (axesAttr.size() == 2 && roi.size() == 4)
+        {
+            // ROI given per "axes": [start_axes[0], start_axes[1], end_axes[0], end_axes[1]]
+            float start[4] = {0.f, 0.f, 0.f, 0.f};
+            float end[4]   = {1.f, 1.f, 1.f, 1.f};
+            for (int k = 0; k < 2; k++) {
+                int ax = axesAttr[k] < 0 ? axesAttr[k] + 4 : axesAttr[k];
+                start[ax] = roi[k];
+                end[ax]   = roi[2 + k];
+            }
+            roi_start_y = start[2]; roi_start_x = start[3];
+            roi_end_y   = end[2];   roi_end_x   = end[3];
+        }
+        else if (roi.size() >= 4)
+        {
+            if (roi.size() == 4) {
+                roi_start_y = roi[0];
+                roi_start_x = roi[1];
+                roi_end_y = roi[2];
+                roi_end_x = roi[3];
+            } else if (roi.size() == 6) {
+                roi_start_y = roi[1];
+                roi_start_x = roi[2];
+                roi_end_y = roi[4];
+                roi_end_x = roi[5];
+            } else if (roi.size() == 8) {
+                roi_start_y = roi[2];
+                roi_start_x = roi[3];
+                roi_end_y = roi[6];
+                roi_end_x = roi[7];
+            }
+        }
+    }
+
+#ifdef HAVE_CUDA
+    // per-axis taps for the CUDA gather, from the same builders forward() runs
+    cuda4dnn::ResizeTables buildCudaTables(const MatShape& inpShape, const MatShape& outShape,
+                                           float onnxScaleH, float onnxScaleW) const
+    {
+        const int inH = inpShape[2], inW = inpShape[3], outH = outShape[2], outW = outShape[3];
+        const bool tfCrop = coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE;
+        const bool linear = interpolation == "bilinear" || interpolation == "opencv_linear";
+        const bool cubic = interpolation == "cubic";
+
+        cuda4dnn::ResizeTables t;
+        t.extrapolation_value = extrapolation_value;
+
+        // forward() copies the input through unchanged when the shape does not change
+        auto identity = [](int len, int& taps, std::vector<int>& idx, std::vector<float>& w, std::vector<int>& oob) {
+            taps = 1;
+            idx.resize(len); w.assign(len, 1.f); oob.assign(len, 0);
+            for (int i = 0; i < len; i++) idx[i] = i;
+        };
+        if (inpShape == outShape) {
+            identity(outH, t.taps_y, t.idx_y, t.w_y, t.oob_y);
+            identity(outW, t.taps_x, t.idx_x, t.w_x, t.oob_x);
+            return t;
+        }
+
+        if (antialias && (linear || cubic)) {
+            const float xsH = onnxScaleH > 0.f ? onnxScaleH : float(outH) / inH;
+            const float xsW = onnxScaleW > 0.f ? onnxScaleW : float(outW) / inW;
+            auto fromAA = [](const AAWeights& p, int len, int& taps, std::vector<int>& idx,
+                             std::vector<float>& w, std::vector<int>& oob) {
+                taps = 1;
+                for (int c : p.cnt) taps = std::max(taps, c);
+                idx.assign((size_t)len * taps, -1); w.assign((size_t)len * taps, 0.f); oob.assign(len, 0);
+                for (int o = 0; o < len; o++)
+                    for (int k = 0; k < p.cnt[o]; k++) {
+                        idx[(size_t)o * taps + k] = p.lo[o] + k;
+                        w[(size_t)o * taps + k] = p.w[p.ofs[o] + k];
+                    }
+            };
+            AAWeights py, px;
+            buildAAWeights(py, inH, outH, xsH, cubic, cubicCoeffA, coordTransModeE);
+            buildAAWeights(px, inW, outW, xsW, cubic, cubicCoeffA, coordTransModeE);
+            fromAA(py, outH, t.taps_y, t.idx_y, t.w_y, t.oob_y);
+            fromAA(px, outW, t.taps_x, t.idx_x, t.w_x, t.oob_x);
+        } else if (interpolation == "nearest") {
+            auto fromMap = [](const std::vector<int>& map, int& taps, std::vector<int>& idx,
+                              std::vector<float>& w, std::vector<int>& oob) {
+                taps = 1;
+                idx = map; w.assign(map.size(), 1.f); oob.assign(map.size(), 0);
+                for (size_t i = 0; i < map.size(); i++)
+                    if (map[i] < 0) oob[i] = 1;
+            };
+            std::vector<int> mapY, mapX;
+            buildNearestIndexMap(mapY, outH, inH, scaleHeight, outH, roi_start_y, roi_end_y,
+                                 coordTransModeE, nearestModeE, halfPixelCenters);
+            buildNearestIndexMap(mapX, outW, inW, scaleWidth, outW, roi_start_x, roi_end_x,
+                                 coordTransModeE, nearestModeE, halfPixelCenters);
+            fromMap(mapY, t.taps_y, t.idx_y, t.w_y, t.oob_y);
+            fromMap(mapX, t.taps_x, t.idx_x, t.w_x, t.oob_x);
+        } else if (linear) {
+            auto fromLerp = [](const std::vector<int>& i0, const std::vector<int>& i1, const std::vector<float>& f,
+                               const std::vector<uint8_t>& ob, int& taps, std::vector<int>& idx,
+                               std::vector<float>& w, std::vector<int>& oob) {
+                taps = 2;
+                const size_t len = i0.size();
+                idx.resize(len * 2); w.resize(len * 2); oob.resize(len);
+                for (size_t o = 0; o < len; o++) {
+                    idx[o * 2] = i0[o]; idx[o * 2 + 1] = i1[o];
+                    w[o * 2] = 1.f - f[o]; w[o * 2 + 1] = f[o];
+                    oob[o] = ob[o];
+                }
+            };
+            std::vector<int> y0, y1, x0, x1;
+            std::vector<float> ly, lx;
+            std::vector<uint8_t> oy, ox;
+            buildBilinearIndexAndLerp(y0, y1, ly, oy, outH, inH, scaleHeight, outH, roi_start_y, roi_end_y,
+                                      coordTransModeE, halfPixelCenters, tfCrop);
+            buildBilinearIndexAndLerp(x0, x1, lx, ox, outW, inW, scaleWidth, outW, roi_start_x, roi_end_x,
+                                      coordTransModeE, halfPixelCenters, tfCrop);
+            fromLerp(y0, y1, ly, oy, t.taps_y, t.idx_y, t.w_y, t.oob_y);
+            fromLerp(x0, x1, lx, ox, t.taps_x, t.idx_x, t.w_x, t.oob_x);
+        } else {
+            CV_Assert(cubic);
+            auto fromCubic = [](const std::vector<std::array<int,4>>& ids, const std::vector<std::array<float,4>>& ws,
+                                const std::vector<uint8_t>& ob, int& taps, std::vector<int>& idx,
+                                std::vector<float>& w, std::vector<int>& oob) {
+                taps = 4;
+                const size_t len = ids.size();
+                idx.resize(len * 4); w.resize(len * 4); oob.resize(len);
+                for (size_t o = 0; o < len; o++) {
+                    for (int k = 0; k < 4; k++) {
+                        idx[o * 4 + k] = ids[o][k];
+                        w[o * 4 + k] = ws[o][k];
+                    }
+                    oob[o] = ob[o];
+                }
+            };
+            std::vector<std::array<int,4>> yid, xid;
+            std::vector<std::array<float,4>> yw, xw;
+            std::vector<uint8_t> oy, ox;
+            buildCubicIndexAndWeights(yid, yw, oy, outH, inH, scaleHeight, outH, roi_start_y, roi_end_y,
+                                      coordTransModeE, halfPixelCenters, tfCrop, excludeOutside, cubicCoeffA);
+            buildCubicIndexAndWeights(xid, xw, ox, outW, inW, scaleWidth, outW, roi_start_x, roi_end_x,
+                                      coordTransModeE, halfPixelCenters, tfCrop, excludeOutside, cubicCoeffA);
+            fromCubic(yid, yw, oy, t.taps_y, t.idx_y, t.w_y, t.oob_y);
+            fromCubic(xid, xw, ox, t.taps_x, t.idx_x, t.w_x, t.oob_x);
+        }
+        return t;
+    }
+#endif
+
+    // given scales (not sizes) define the source step, not the rounded output size
+    void updateScaleFromScales(const std::vector<int>& sizes, const std::vector<float>& scales,
+                               float& onnxScaleH, float& onnxScaleW)
+    {
+        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
+        // source once so the step and the antialias filter use the same value.
+        onnxScaleH = 0.f;
+        onnxScaleW = 0.f;
+        if (!scales.empty())
+        {
+            int hIdx, wIdx;
+            spatialIndices(scales.size(), hIdx, wIdx);
+            onnxScaleH = scales[hIdx];
+            onnxScaleW = scales[wIdx];
+        }
+        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
+        {
+            onnxScaleH = zoomFactorHeight;
+            onnxScaleW = zoomFactorWidth;
+        }
+
+        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
+        // align_corners maps the output corners onto the input corners, so it keeps the
+        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
+        // tf_crop_and_resize do not use the scale either.
+        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
+            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
+        {
+            scaleHeight = 1.f / onnxScaleH;
+            scaleWidth  = 1.f / onnxScaleW;
+        }
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,
@@ -1172,7 +1383,8 @@ public:
             outShape = inpShape;
             outShape[2] = zoomFactorHeight > 0 ? cvFloor(inpShape[2] * zoomFactorHeight) : outHeight0;
             outShape[3] = zoomFactorWidth > 0 ? cvFloor(inpShape[3] * zoomFactorWidth) : outWidth0;
-        } else if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
+        } else if (ninputs == 2 && inputs[1].dims >= 4) {
+            // a reference tensor (rank 5 in block layout); H and W sit at axes 2 and 3 either way
             outShape = inpShape;
             outShape[2] = inputs[1].size[2];
             outShape[3] = inputs[1].size[3];
@@ -1192,70 +1404,10 @@ public:
 
         // Read ROI if dynamicROI is enabled
         if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
-        {
-            Mat roiTensor = inputs[1];
-            std::vector<float> roi;
-            tensorToFloatVec(roiTensor, roi);
-            if (axesAttr.size() == 2 && roi.size() == 4)
-            {
-                // ROI given per "axes": [start_axes[0], start_axes[1], end_axes[0], end_axes[1]]
-                float start[4] = {0.f, 0.f, 0.f, 0.f};
-                float end[4]   = {1.f, 1.f, 1.f, 1.f};
-                for (int k = 0; k < 2; k++) {
-                    int ax = axesAttr[k] < 0 ? axesAttr[k] + 4 : axesAttr[k];
-                    start[ax] = roi[k];
-                    end[ax]   = roi[2 + k];
-                }
-                roi_start_y = start[2]; roi_start_x = start[3];
-                roi_end_y   = end[2];   roi_end_x   = end[3];
-            }
-            else if (roi.size() >= 4)
-            {
-                if (roi.size() == 4) {
-                    roi_start_y = roi[0];
-                    roi_start_x = roi[1];
-                    roi_end_y = roi[2];
-                    roi_end_x = roi[3];
-                } else if (roi.size() == 6) {
-                    roi_start_y = roi[1];
-                    roi_start_x = roi[2];
-                    roi_end_y = roi[4];
-                    roi_end_x = roi[5];
-                } else if (roi.size() == 8) {
-                    roi_start_y = roi[2];
-                    roi_start_x = roi[3];
-                    roi_end_y = roi[6];
-                    roi_end_x = roi[7];
-                }
-            }
-        }
+            updateRoi(inputs[1]);
 
-        // Constant "scales" are folded into zoom_factor_* by the importer; resolve either
-        // source once so the step and the antialias filter use the same value.
-        float onnxScaleH = 0.f, onnxScaleW = 0.f;
-        if (!scales.empty())
-        {
-            int hIdx, wIdx;
-            spatialIndices(scales.size(), hIdx, wIdx);
-            onnxScaleH = scales[hIdx];
-            onnxScaleW = scales[wIdx];
-        }
-        else if (zoomFactorHeight > 0 && zoomFactorWidth > 0)
-        {
-            onnxScaleH = zoomFactorHeight;
-            onnxScaleW = zoomFactorWidth;
-        }
-
-        // The step is 1/scale, not in/out: they differ whenever in*scale is not integral.
-        // align_corners maps the output corners onto the input corners, so it keeps the
-        // shape-derived (in - 1) / (out - 1) set by updateOutSizeAndScale(); "sizes" and
-        // tf_crop_and_resize do not use the scale either.
-        if (sizes.empty() && !alignCorners && onnxScaleH > 0 && onnxScaleW > 0 &&
-            coordTransModeE != CoordTransMode::TF_CROP_AND_RESIZE)
-        {
-            scaleHeight = 1.f / onnxScaleH;
-            scaleWidth  = 1.f / onnxScaleW;
-        }
+        float onnxScaleH, onnxScaleW;
+        updateScaleFromScales(sizes, scales, onnxScaleH, onnxScaleW);
 
         auto kind = outputs_arr.kind();
         Mat out_;
@@ -1505,11 +1657,33 @@ public:
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_arr,
+        InputArrayOfArrays outputs_arr
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (netimpl_ && !inputs.empty()) {
+            // replay forward(): scales/sizes/roi values are on the host (const or downloaded for a dynamic op)
+            const MatShape inpShape = inputs_arr.shape(0), outShape = outputs_arr.shape(0);
+            const size_t ninputs = inputs.size();
+            std::vector<int> sizes;
+            std::vector<float> scales;
+            if (ninputs >= 3 || (ninputs == 2 && netimpl_->argData(inputs[1]).shape.dims < 4)) {
+                if (ninputs >= 4)
+                    tensorToIntVec(netimpl_->argTensor(inputs[3]), sizes);
+                tensorToFloatVec(netimpl_->argTensor(inputs[(ninputs == 2) ? 1 : 2]), scales);
+            }
+            updateOutSizeAndScale(inpShape, outShape);
+            if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
+                updateRoi(netimpl_->argTensor(inputs[1]));
+            float onnxScaleH, onnxScaleW;
+            updateScaleFromScales(sizes, scales, onnxScaleH, onnxScaleW);
+            return make_cuda_node_with_type<cuda4dnn::ResizeTablesOp>(preferableTarget, inputs_arr.depth(0),
+                                                                      std::move(context->stream),
+                                                                      buildCudaTables(inpShape, outShape, onnxScaleH, onnxScaleW));
+        }
 
         cuda4dnn::ResizeConfiguration config;
         if (interpolation == "nearest")

@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -99,9 +100,18 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
-        if (backendId == DNN_BACKEND_CUDA)
-            return false;  // csl::LRN needs the legacy cuDNN API, absent in a JIT-only build
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA && useHandKernelCUDA()) {
+            // the hand kernel covers across-channel LRN (ONNX); within-channel needs legacy cuDNN
+            if (type != CHANNEL_NRM)
+                return false;
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty())
+                return true;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F;
+        }
 #endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -324,13 +334,33 @@ public:
     }
 
 #ifdef HAVE_CUDA
+    // new-engine graphs and JIT-only builds use the hand kernel; classic full-cuDNN keeps csl::LRN
+    bool useHandKernelCUDA()
+    {
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+        return true;
+#else
+        return getNetImpl(this) != nullptr && !inputs.empty();
+#endif
+    }
+
     Ptr<BackendNode> initCUDA(
         void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
+        InputArrayOfArrays inputs_arr,
+        InputArrayOfArrays
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        if (useHandKernelCUDA()) {
+            CV_Assert(type == CHANNEL_NRM);
+            const float alphaScaled = normBySize ? (float)(alpha / size) : (float)alpha;
+            return make_cuda_node<cuda4dnn::LRNAcrossChannelsOp>(preferableTarget, std::move(context->stream),
+                                                                 size, alphaScaled, (float)beta, (float)bias);
+        }
+#if !defined(HAVE_CUDNNJIT) || defined(HAVE_CUDNN)
+        std::vector<UMat> inputs;
+        inputs_arr.getUMatVector(inputs);
 
         cuda4dnn::LRNType type_;
         if (type == CHANNEL_NRM)
@@ -349,17 +379,14 @@ public:
         }
 
         std::size_t largestInputSize = 0;
-        for(auto& wrapper : inputs) {
-            auto input_wrapper = wrapper.dynamicCast<CUDABackendWrapper>();
-            auto shape = input_wrapper->getShape();
-            largestInputSize = std::max<std::size_t>(
-                largestInputSize,
-                std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int>())
-            );
-        }
+        for (const UMat& u : inputs)
+            largestInputSize = std::max<std::size_t>(largestInputSize, u.total());
 
         return make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
             std::move(context->cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
+#else
+        CV_Error(Error::StsNotImplemented, "LRN: within-channel normalization needs the legacy cuDNN API");
+#endif
     }
 #endif
 

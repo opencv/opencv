@@ -16,6 +16,7 @@
 #include <opencv2/core.hpp>
 
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 #include <utility>
 
@@ -31,6 +32,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         MOD,
         FMOD,
         POW,
+        PRELU,
+        BIT_AND,
+        BIT_OR,
+        BIT_XOR,
     };
 
     class EltwiseOpBase : public CUDABackendNode {
@@ -89,6 +94,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 case EltwiseOpType::MOD: kernels::eltwise_mod_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::FMOD: kernels::eltwise_fmod_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::POW: kernels::eltwise_pow_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::PRELU: kernels::eltwise_prelu_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::BIT_AND:
+                case EltwiseOpType::BIT_OR:
+                case EltwiseOpType::BIT_XOR: bitwise(output, input_x, input_y); break;
                 }
             } else if (inputs.size() == 1) {
                 auto input_0 = csl::viewOf<T>(inputs[0]);
@@ -123,8 +132,29 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     case EltwiseOpType::MOD: kernels::eltwise_mod_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::FMOD: kernels::eltwise_fmod_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::POW: kernels::eltwise_pow_2<T>(stream, output, output, input); break;
+                    case EltwiseOpType::PRELU: CV_Error(Error::StsBadArg, "PRelu takes exactly two inputs");
+                    case EltwiseOpType::BIT_AND:
+                    case EltwiseOpType::BIT_OR:
+                    case EltwiseOpType::BIT_XOR: bitwise(output, output, input); break;
                     }
                 }
+            }
+        }
+
+    private:
+        // the bitwise kernels exist for integer element types only
+        void bitwise(csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y)
+        {
+            if constexpr (std::is_integral<T>::value && !std::is_same<T, bool>::value) {
+                if (op == EltwiseOpType::BIT_AND)
+                    kernels::eltwise_bitand_2<T>(stream, output, x, y);
+                else if (op == EltwiseOpType::BIT_OR)
+                    kernels::eltwise_bitor_2<T>(stream, output, x, y);
+                else
+                    kernels::eltwise_bitxor_2<T>(stream, output, x, y);
+            } else {
+                CV_UNUSED(output); CV_UNUSED(x); CV_UNUSED(y);
+                CV_Error(Error::StsNotImplemented, "bitwise ops need integer tensors");
             }
         }
     };

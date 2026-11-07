@@ -10,8 +10,10 @@
 #include "../csl/stream.hpp"
 
 #include "../kernels/resize.hpp"
+#include "../csl/span.hpp"
 
 #include <utility>
+#include <vector>
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
@@ -40,18 +42,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
 
         void forward(
-            const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-            const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
             csl::Workspace& workspace) override
         {
-            // sometimes the target shape is taken from the second input; we don't use it however
-            CV_Assert((inputs.size() == 1 || inputs.size() == 2) && outputs.size() == 1);
+            // roi/scales/sizes may follow the data input; the output shape already carries them
+            CV_Assert(inputs.size() >= 1 && outputs.size() == 1);
 
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto input = input_wrapper->getView();
-
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto output = csl::spanOf<T>(outputs[0]);
 
             const auto compute_scale = [this](std::size_t input_size, std::size_t output_size) {
                 return (align_corners && output_size > 1) ?
@@ -74,6 +73,63 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         InterpolationType type;
         bool align_corners, half_pixel_centers;
+    };
+
+    // per-axis taps built on the host by the CPU Resize2 builders; idx -1 skips a tap
+    struct ResizeTables {
+        int taps_y = 1, taps_x = 1;
+        std::vector<int> idx_y, idx_x, oob_y, oob_x;
+        std::vector<float> w_y, w_x;
+        float extrapolation_value = 0.f;
+    };
+
+    // every ONNX Resize mode as one gather; the tables carry the coordinate and filter math
+    template <class T>
+    class ResizeTablesOp final : public CUDABackendNode {
+    public:
+        ResizeTablesOp(csl::Stream stream_, const ResizeTables& t)
+            : stream(std::move(stream_)), taps_y(t.taps_y), taps_x(t.taps_x), extrapolation(t.extrapolation_value)
+        {
+            idx_y = upload(t.idx_y); w_y = upload(t.w_y); oob_y = upload(t.oob_y);
+            idx_x = upload(t.idx_x); w_x = upload(t.w_x); oob_x = upload(t.oob_x);
+        }
+
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(inputs.size() >= 1 && outputs.size() == 1);
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto output = csl::spanOf<T>(outputs[0]);
+            kernels::resize_separable<T>(stream, output, input,
+                                         view<int>(idx_y), view<float>(w_y), view<int>(oob_y), taps_y,
+                                         view<int>(idx_x), view<float>(w_x), view<int>(oob_x), taps_x, extrapolation);
+        }
+
+    private:
+        // device copy on the CUDA UMat allocator, like every other device tensor
+        template <class V>
+        static UMat upload(const std::vector<V>& v)
+        {
+            CV_Assert(!v.empty());
+            Mat host(1, (int)v.size(), DataType<V>::type, const_cast<V*>(v.data()));
+            UMat u;
+            u.allocator = cv::cuda::getCudaAllocator();
+            u.fitSameSize(host, host.type());
+            checkCudaAllocated(u);
+            host.copyTo(u);
+            return u;
+        }
+
+        template <class V>
+        static csl::View<V> view(const UMat& u) { return csl::View<V>(csl::viewOf<V>(u).get(), u.total()); }
+
+        csl::Stream stream;
+        int taps_y, taps_x;
+        float extrapolation;
+        UMat idx_y, oob_y, idx_x, oob_x, w_y, w_x;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

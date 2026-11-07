@@ -28,27 +28,27 @@ namespace cv { namespace dnn { namespace cuda4dnn {
      public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops)
+        InstanceNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t norm_size)
             : stream(std::move(stream_)), epsilon(epsilon_) {
+            reduce_scratch = kernels::reduce_mean_sqr_sum_scratch(loops, norm_size);
             csl::WorkspaceBuilder builder;
             builder.require<float>(loops);
             builder.require<float>(loops);
+            if (reduce_scratch)
+                builder.require<float>(reduce_scratch);
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
-        void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-                     const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        void forward(const std::vector<UMat>& inputs,
+                     const std::vector<UMat>& outputs,
                      csl::Workspace& workspace) override {
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto scale_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
+            CV_Assert(inputs.size() == 3 && outputs.size() == 1);
 
-            auto input = input_wrapper->getView();
-            auto scale = scale_wrapper->getView();
-            auto bias = bias_wrapper->getView();
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto scale = csl::viewOf<T>(inputs[1]);
+            auto bias = csl::viewOf<T>(inputs[2]);
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs[0]);
 
             auto C = input.get_axis_size(1);
             auto loops = input.size_range(0, 2);
@@ -62,8 +62,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops);
                 auto stdev = ws_allocator.get_span<float>(loops);
+                auto partials = reduce_scratch ? ws_allocator.get_span<float>(reduce_scratch) : csl::Span<float>();
 
-                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size, partials);
                 kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size, epsilon);
                 kernels::normalize_mean_variance_channelwise<T>(stream, output, input, scale, bias, mean, stdev, norm_size, C);
             }
@@ -76,6 +77,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
         float epsilon;
 
+        std::size_t reduce_scratch;
         std::size_t scratch_mem_in_bytes;
     };
 
