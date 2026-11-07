@@ -2944,6 +2944,35 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     EXPECT_NO_THROW(m.create(dims, depth));
 }
 
+TEST(Mat1D, reserve_resize_push_back_pop_back)
+{
+    int n = 3;
+    Mat m(1, &n, CV_32S, Scalar(1));
+    std::vector<int> v;
+
+    m.reserve(10);
+    ASSERT_EQ(1, m.dims);
+    m.copyTo(v);
+    EXPECT_EQ(std::vector<int>({1, 1, 1}), v);
+
+    m.resize(5, Scalar(9));
+    ASSERT_EQ(1, m.dims);
+    m.copyTo(v);
+    EXPECT_EQ(std::vector<int>({1, 1, 1, 9, 9}), v);
+
+    int k = 2;
+    m.push_back(Mat(1, &k, CV_32S, Scalar(7)));
+    ASSERT_EQ(1, m.dims);
+    m.copyTo(v);
+    EXPECT_EQ(std::vector<int>({1, 1, 1, 9, 9, 7, 7}), v);
+
+    Mat part = m.colRange(0, 4);
+    part.pop_back();
+    ASSERT_EQ(1, part.dims);
+    part.copyTo(v);
+    EXPECT_EQ(std::vector<int>({1, 1, 1}), v);
+}
+
 TEST(InputArray, dumpEmpty)
 {
     std::string s;
