@@ -1581,7 +1581,7 @@ void Mat::pop_back(size_t nelems)
     CV_Assert( dims >= 1 );
 
     if( isSubmatrix() )
-        *this = rowRange(0, size.p[0] - (int)nelems);
+        *this = dims == 1 ? colRange(0, size.p[0] - (int)nelems) : rowRange(0, size.p[0] - (int)nelems);
     else
     {
         size.p[0] -= (int)nelems;
@@ -1644,7 +1644,7 @@ void Mat::reserve(size_t nelems)
     Mat m(newsize, type());
     if( r > 0)
     {
-        Mat mpart = m.rowRange(0, r);
+        Mat mpart = dims == 1 ? m.colRange(0, r) : m.rowRange(0, r);
         copyTo(mpart);
     }
 
@@ -1714,7 +1714,7 @@ void Mat::resize(size_t nelems, const Scalar& s)
 
     if( size.p[0] > saveRows )
     {
-        Mat part = rowRange(saveRows, size.p[0]);
+        Mat part = dims == 1 ? colRange(saveRows, size.p[0]) : rowRange(saveRows, size.p[0]);
         part = s;
     }
 }
