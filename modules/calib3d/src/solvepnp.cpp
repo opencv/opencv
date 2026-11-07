@@ -55,7 +55,6 @@
 
 namespace cv
 {
-#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
 {
     CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
@@ -82,6 +81,7 @@ static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
     return (w.at<double>(2) < w.at<double>(1) * threshold);
 }
 
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool approxEqual(double a, double b, double eps)
 {
     return std::fabs(a-b) < eps;
@@ -147,6 +147,16 @@ bool solvePnP( InputArray opoints, InputArray ipoints,
     }
 
     return solutions > 0;
+}
+
+static double squaredReprojectionError(const std::vector<Point3d>& opoints,
+                                       const std::vector<Point2d>& ipoints,
+                                       const Mat& cameraMatrix, const Mat& distCoeffs,
+                                       const Mat& rvec, const Mat& tvec)
+{
+    std::vector<Point2d> projected;
+    projectPoints(opoints, rvec, tvec, cameraMatrix, distCoeffs, projected);
+    return norm(projected, ipoints, NORM_L2SQR);
 }
 
 class PnPRansacCallback CV_FINAL : public PointSetRegistrator::Callback
@@ -332,10 +342,18 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
+    Mat rvecInit, tvecInit;
+    bool initFound = false;
     try
     {
        if (flags == SOLVEPNP_ITERATIVE && !useExtrinsicGuess)
        {
+          // For a planar object the minimal sample model can be the mirrored pose, and the
+          // refinement below stays in that local minimum. Also refine from the homography
+          // based initialization of SOLVEPNP_ITERATIVE and keep the pose with the lower error.
+          if (isPlanarObjectPoints(opoints_inliers, 1e-3))
+             initFound = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix, distCoeffs,
+                                  rvecInit, tvecInit, false, SOLVEPNP_ITERATIVE);
           rvec = _local_model.col(0).clone();
           tvec = _local_model.col(1).clone();
           useExtrinsicGuess = true;
@@ -363,6 +381,16 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
             // raise other exceptions
             throw;
         }
+    }
+
+    if (result > 0 && initFound &&
+        squaredReprojectionError(opoints_inliers, ipoints_inliers, cameraMatrix, distCoeffs,
+                                 rvecInit, tvecInit) <
+        squaredReprojectionError(opoints_inliers, ipoints_inliers, cameraMatrix, distCoeffs,
+                                 rvec, tvec))
+    {
+        rvec = rvecInit;
+        tvec = tvecInit;
     }
 
     if (result <= 0)
