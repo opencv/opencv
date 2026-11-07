@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <type_traits>
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
@@ -161,7 +162,37 @@ void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
     {
         // extracted rectangle is totally inside the image
         src += ip.y * src_step + ip.x*cn;
+
         win_size.width *= cn;
+
+#if CV_RVV && CV_SIMD_SCALABLE
+        if constexpr (std::is_same<_Tp, float>::value &&
+                      std::is_same<_DTp, float>::value &&
+                      std::is_same<_WTp, float>::value &&
+                      std::is_same<ScaleOp, nop<float>>::value &&
+                      std::is_same<CastOp, nop<float>>::value)
+        {
+            const int lanes = VTraits<v_float32>::vlanes();
+            const v_float32 w00 = vx_setall_f32(a11), w10 = vx_setall_f32(a12);
+            const v_float32 w01 = vx_setall_f32(a21), w11 = vx_setall_f32(a22);
+            // Process interleaved elements; the right neighbor stays cn elements away.
+            for (i = 0; i < win_size.height; ++i, src += src_step, dst += dst_step)
+            {
+                for (j = 0; j <= win_size.width - lanes; j += lanes)
+                {
+                    v_float32 sum = v_add(v_mul(vx_load(src + j), w00),
+                                          v_mul(vx_load(src + j + cn), w10));
+                    sum = v_add(sum, v_mul(vx_load(src + j + src_step), w01));
+                    sum = v_add(sum, v_mul(vx_load(src + j + src_step + cn), w11));
+                    v_store(dst + j, sum);
+                }
+                for (; j < win_size.width; ++j)
+                    dst[j] = cast_op(src[j]*a11 + src[j+cn]*a12 +
+                                     src[j+src_step]*a21 + src[j+src_step+cn]*a22);
+            }
+            return;
+        }
+#endif
 
         for( i = 0; i < win_size.height; i++, src += src_step, dst += dst_step )
         {
