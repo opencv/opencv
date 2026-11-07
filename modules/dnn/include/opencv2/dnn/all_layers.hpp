@@ -701,6 +701,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MVNLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS MeanVarianceNormalizationLayer : public Layer
+    {
+    public:
+        static Ptr<MeanVarianceNormalizationLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ShapeLayer : public Layer
     {
     public:
