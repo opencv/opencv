@@ -746,10 +746,10 @@ static void checkParams(const MatPyramid& referencePyramid,
                  std::vector<int>& itersPerLevel,
                  const ECCParameters& eccParams) {
     if (itersPerLevel.empty()) {
-        itersPerLevel.resize(eccParams.nlevels, eccParams.criteria.maxCount);
+        itersPerLevel.resize(static_cast<int>(referencePyramid.size()), eccParams.criteria.maxCount);
     }
     CV_Assert(eccParams.interpolation == INTER_NEAREST || eccParams.interpolation == INTER_LINEAR);
-    CV_Assert(static_cast<int>(itersPerLevel.size()) == eccParams.nlevels);
+    CV_Assert(static_cast<int>(itersPerLevel.size()) >= static_cast<int>(referencePyramid.size()));
     for (const auto& lvl : referencePyramid) {
         CV_Assert(!lvl.empty() && lvl.type() == referencePyramid[0].type());
     }
@@ -757,7 +757,7 @@ static void checkParams(const MatPyramid& referencePyramid,
     for (const auto& lvl : samplePyramid) {
         CV_Assert(!lvl.empty() && lvl.type() == samplePyramid[0].type());
     }
-    CV_Assert(samplePyramid.size() == referencePyramid.size() && samplePyramid.size() == itersPerLevel.size());
+    CV_Assert(samplePyramid.size() == referencePyramid.size());
     CV_Assert(referencePyramid.back().rows > 1 && referencePyramid.back().cols > 1 &&
               samplePyramid.back().rows > 1 && samplePyramid.back().cols > 1);
     // If the user passed an un-initialized warpMatrix, initialize to identity
@@ -785,21 +785,45 @@ static void checkParams(const MatPyramid& referencePyramid,
     }
 }
 
+static int countShrinkableLevels(Size size, int blurRing, int nlevels) {
+    const int minSide = 2 * blurRing + 2;
+    int levels = 0;
+    while (levels < nlevels && size.width >= minSide && size.height >= minSide) {
+        levels++;
+        size = Size((size.width + 1) / 2, (size.height + 1) / 2);
+    }
+    return levels;
+}
+
 static MatPyramid prepareECCPyramid(InputArray image,
                              InputArray imageMask,  // Can be empty
                              int gaussFiltSize,
                              int nlevels) {
     MatPyramid imagePyramid, maskPyramid;
     buildPyramidECC(image, imagePyramid, imageMask, maskPyramid, nlevels);
+    // GaussianBlur (BORDER_REFLECT_101) fabricates a border ring of mirrored
+    // pixels; shrink the mask to exclude them.
+    const int blurRing = gaussFiltSize / 2;
     for (int lvl = 0; lvl < nlevels; lvl++) {
         Mat imgFloat;
         imagePyramid[lvl].convertTo(imgFloat, CV_32F, 1. / 255.);
         if (gaussFiltSize != 0) {
             GaussianBlur(imgFloat, imgFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
         }
-        imagePyramid[lvl] = spliceWithMask(
-            imgFloat,
-            (static_cast<int>(maskPyramid.size()) > lvl && !maskPyramid[lvl].empty()) ? maskPyramid[lvl] : Mat());
+        Mat mask;
+        bool hasUserMask = static_cast<int>(maskPyramid.size()) > lvl && !maskPyramid[lvl].empty();
+        if (blurRing > 0) {
+            const Rect valid(blurRing, blurRing,
+                             imgFloat.cols - 2 * blurRing, imgFloat.rows - 2 * blurRing);
+            mask = Mat::zeros(imgFloat.size(), CV_8U);
+            if (hasUserMask)
+                maskPyramid[lvl](valid).copyTo(mask(valid));
+            else
+                mask(valid).setTo(255);
+        } else if (hasUserMask) {
+            mask = maskPyramid[lvl];
+        }
+        imagePyramid[lvl] = spliceWithMask(imgFloat, mask);
     }
     return imagePyramid;
 }
@@ -810,8 +834,19 @@ double findTransformECCMultiScale(InputArray reference,
                         const ECCParameters& eccParams,
                         InputArray referenceMask,
                         InputArray sampleMask) {
-    MatPyramid referencePyramid = prepareECCPyramid(reference, referenceMask, eccParams.gaussFiltSize, eccParams.nlevels);
-    MatPyramid samplePyramid = prepareECCPyramid(sample, sampleMask, eccParams.gaussFiltSize, eccParams.nlevels);
+    const Size referenceSize = reference.size();
+    const Size sampleSize = sample.size();
+    const Size commonSize(std::min(referenceSize.width, sampleSize.width),
+                          std::min(referenceSize.height, sampleSize.height));
+    const int levels = countShrinkableLevels(commonSize, eccParams.gaussFiltSize / 2, eccParams.nlevels);
+    if (levels == 0) {
+        CV_Error(Error::StsBadSize,
+                 format("Image (%dx%d) cannot retain a 2x2 valid interior at the finest pyramid level "
+                        "with gaussFiltSize=%d. Use a larger image or a smaller gaussFiltSize.",
+                        commonSize.width, commonSize.height, eccParams.gaussFiltSize));
+    }
+    MatPyramid referencePyramid = prepareECCPyramid(reference, referenceMask, eccParams.gaussFiltSize, levels);
+    MatPyramid samplePyramid = prepareECCPyramid(sample, sampleMask, eccParams.gaussFiltSize, levels);
     Mat& warpMatrix = warpMatrixA.getMatRef();
     std::vector<int> itersPerLevelCopy = eccParams.itersPerLevel;
     // If the user passed an un-initialized warpMatrix, initialize to identity
@@ -852,15 +887,15 @@ double findTransformECCMultiScale(InputArray reference,
 
     const std::vector<int> numberOfIterations = ((eccParams.criteria.type & TermCriteria::COUNT) != 0)
                                                     ? itersPerLevelCopy
-                                                    : std::vector<int>(eccParams.nlevels, 200);
+                                                    : std::vector<int>(levels, 200);
     const double terminationEPS = (bool)(eccParams.criteria.type & TermCriteria::EPS) ? eccParams.criteria.epsilon : -1;
 
     // Scale warp matrix multiple times to lower pyramid level
-    for (int pyrLevel = 0; pyrLevel < eccParams.nlevels - 1; pyrLevel++) {
+    for (int pyrLevel = 0; pyrLevel < levels - 1; pyrLevel++) {
         scaleWarpMatrix(warpMatrix, 0.5);
     }
     double rho = -1;
-    for (int pyrLevel = eccParams.nlevels - 1; pyrLevel >= 0; --pyrLevel) {
+    for (int pyrLevel = levels - 1; pyrLevel >= 0; --pyrLevel) {
         const int hr = referencePyramid[pyrLevel].rows;
 
         Mat sampleWithGrad = prepareGradients(samplePyramid[pyrLevel]);
