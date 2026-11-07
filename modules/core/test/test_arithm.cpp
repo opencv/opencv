@@ -5188,6 +5188,37 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
         EXPECT_EQ(a.at<double>(0),  big64);
         EXPECT_EQ(a.at<double>(64), big64);
     }
+
+// sum_ takes its work type as a defaulted template parameter, and the unrolled step adds four
+// elements together in that type before the accumulator sees them. With the default the work type
+// is float for a CV_32F source, so four values past FLT_MAX/4 overflow to infinity even though the
+// double result holds the true sum with room to spare. norm and meanStdDev stay finite on the same
+// data, so sum and mean contradicted their own siblings. Lengths 1..3 took the plain tail loop and
+// were already correct; a length the vectorized path consumes whole was correct too, since that
+// path accumulates in double.
+TEST(Core_SumF32, large_values_do_not_overflow_the_work_type)
+{
+    const float v = 3.0e38f;            // just under FLT_MAX; 4*v is not representable in float
+    for (int len : {1, 2, 3, 4, 5, 7, 8, 16, 17, 24, 27, 64, 1000})
+        for (int cn = 1; cn <= 4; cn++)
+        {
+            SCOPED_TRACE(cv::format("len=%d cn=%d", len, cn));
+            const cv::Mat m(1, len, CV_MAKETYPE(CV_32F, cn), cv::Scalar::all(v));
+            const cv::Scalar s = cv::sum(m);
+            const double expected = (double)v * len;
+            for (int k = 0; k < cn; k++)
+            {
+                ASSERT_TRUE(!cvIsInf((float)(s[k] / expected))) << "channel " << k << " overflowed";
+                EXPECT_NEAR(expected, s[k], expected * 1e-12) << "channel " << k;
+            }
+
+            // mean must agree with meanStdDev, which accumulates in the wide type already
+            cv::Scalar mu, sd;
+            cv::meanStdDev(m, mu, sd);
+            const cv::Scalar mn = cv::mean(m);
+            for (int k = 0; k < cn; k++)
+                EXPECT_DOUBLE_EQ(mu[k], mn[k]) << "mean disagrees with meanStdDev, channel " << k;
+        }
 }
 
 }} // namespace
