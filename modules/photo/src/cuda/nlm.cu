@@ -171,6 +171,7 @@ namespace cv { namespace cuda { namespace device
         template void nlm_bruteforce_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
         template void nlm_bruteforce_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
         template void nlm_bruteforce_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
+        template void nlm_bruteforce_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
     }
 }}}
 
@@ -263,6 +264,7 @@ namespace cv { namespace cuda { namespace device
         __device__ __forceinline__ int calcDist(const uchar&  a, const uchar&  b) { return (a-b)*(a-b); }
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
+        __device__ __forceinline__ int calcDist(const ushort& a, const ushort& b) { int diff = int(a) - int(b); return diff * diff; }
 
         template <class T> struct FastNonLocalMeans
         {
@@ -474,7 +476,223 @@ namespace cv { namespace cuda { namespace device
             }
 
         };
+        struct FastNonLocalMeans_16
+        {
+            enum
+            {
+                CTA_SIZE = 128,
+                TILE_COLS = 128,
+                TILE_ROWS = 32,
+                STRIDE = CTA_SIZE
+            };
 
+            struct plus
+            {
+                __device__ __forceinline__ float operator()(float v1, float v2) const
+                {
+                    return v1 + v2;
+                }
+            };
+
+            int   search_radius;
+            int   block_radius;
+            int   search_window;
+            int   block_window;
+            float minus_h2_inv;
+
+            FastNonLocalMeans_16(int search_window_, int block_window_, float h)
+                : search_radius(search_window_ / 2),
+                block_radius(block_window_ / 2),
+                search_window(search_window_),
+                block_window(block_window_),
+                minus_h2_inv(-1.f / (h * h)) {
+            }   // One Channel: VecTraits cn=1
+
+            PtrStep<ushort> src;
+            mutable PtrStepf buffer;                  // float buffer (int yerine)
+
+            // calcDist — returns float
+            // 65535² = 4.29×10⁹ > INT_MAX, must return float
+            __device__ __forceinline__ float calcDist_16(ushort a, ushort b) const
+            {
+                float diff = float(a) - float(b);
+                return diff * diff;
+            }
+
+            __device__ __forceinline__ void initSums_BruteForce(
+                int i, int j,
+                float* dist_sums,
+                PtrStepf& col_sums,
+                PtrStepf& up_col_sums) const
+            {
+                for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+                {
+                    dist_sums[index] = 0.f;
+
+                    for (int tx = 0; tx < block_window; ++tx)
+                        col_sums(tx, index) = 0.f;
+
+                    int y = index / search_window;
+                    int x = index - y * search_window;
+
+                    int ay = i, ax = j;
+                    int by = i + y - search_radius;
+                    int bx = j + x - search_radius;
+
+                    for (int tx = -block_radius; tx <= block_radius; ++tx)
+                    {
+                        float col_sum = 0.f;
+                        for (int ty = -block_radius; ty <= block_radius; ++ty)
+                        {
+                            float dist = calcDist_16(src(ay + ty, ax + tx),
+                                src(by + ty, bx + tx));
+                            dist_sums[index] += dist;
+                            col_sum += dist;
+                        }
+                        col_sums(tx + block_radius, index) = col_sum;
+                    }
+                    up_col_sums(j, index) = col_sums(block_window - 1, index);
+                }
+            }
+
+            __device__ __forceinline__ void shiftRight_FirstRow(
+                int i, int j, int first,
+                float* dist_sums,
+                PtrStepf& col_sums,
+                PtrStepf& up_col_sums) const
+            {
+                for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+                {
+                    int y = index / search_window;
+                    int x = index - y * search_window;
+
+                    int ay = i, ax = j + block_radius;
+                    int by = i + y - search_radius;
+                    int bx = j + x - search_radius + block_radius;
+
+                    float col_sum = 0.f;
+                    for (int ty = -block_radius; ty <= block_radius; ++ty)
+                        col_sum += calcDist_16(src(ay + ty, ax), src(by + ty, bx));
+
+                    dist_sums[index] += col_sum - col_sums(first, index);
+                    col_sums(first, index) = col_sum;
+                    up_col_sums(j, index) = col_sum;
+                }
+            }
+
+            __device__ __forceinline__ void shiftRight_UpSums(
+                int i, int j, int first,
+                float* dist_sums,
+                PtrStepf& col_sums,
+                PtrStepf& up_col_sums) const
+            {
+                int ay = i, ax = j + block_radius;
+
+                ushort a_up = src(ay - block_radius - 1, ax);
+                ushort a_down = src(ay + block_radius, ax);
+
+                for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+                {
+                    int y = index / search_window;
+                    int x = index - y * search_window;
+
+                    int by = i + y - search_radius;
+                    int bx = j + x - search_radius + block_radius;
+
+                    ushort b_up = src(by - block_radius - 1, bx);
+                    ushort b_down = src(by + block_radius, bx);
+
+                    float col_sum = up_col_sums(j, index)
+                        + calcDist_16(a_down, b_down)
+                        - calcDist_16(a_up, b_up);
+
+                    dist_sums[index] += col_sum - col_sums(first, index);
+                    col_sums(first, index) = col_sum;
+                    up_col_sums(j, index) = col_sum;
+                }
+            }
+
+            __device__ __forceinline__ void convolve_window(
+                int i, int j,
+                const float* dist_sums,
+                ushort& dst) const
+            {
+                float weights_sum = 0.f;
+                float sum = 0.f;
+                float bw2_inv = 1.f / (block_window * block_window);
+
+                int sx = j - search_radius;
+                int sy = i - search_radius;
+
+                for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+                {
+                    int   y = index / search_window;
+                    int   x = index - y * search_window;
+                    float avg_dist = dist_sums[index] * bw2_inv;
+                    float weight = __expf(avg_dist * minus_h2_inv);
+
+                    weights_sum += weight;
+                    sum += weight * float(src(sy + y, sx + x));
+                }
+
+                __shared__ float cta_buffer[CTA_SIZE * 2];  // cn=1 → 2 slot
+
+                reduce<CTA_SIZE>(
+                    cv::cuda::device::smem_tuple(cta_buffer, cta_buffer + CTA_SIZE),
+                    thrust::tie(weights_sum, sum),
+                    threadIdx.x,
+                    thrust::make_tuple(plus(), plus()));
+
+                if (threadIdx.x == 0)
+                    dst = saturate_cast<ushort>(sum / weights_sum);
+            }
+
+            __device__ __forceinline__ void operator()(PtrStepSz<ushort>& dst) const
+            {
+                int tbx = blockIdx.x * TILE_COLS;
+                int tby = blockIdx.y * TILE_ROWS;
+                int tex = ::min(tbx + TILE_COLS, dst.cols);
+                int tey = ::min(tby + TILE_ROWS, dst.rows);
+
+                PtrStepf col_sums;
+                col_sums.data = (float*)buffer.ptr(dst.cols + blockIdx.x * block_window)
+                    + blockIdx.y * search_window * search_window;
+                col_sums.step = buffer.step;
+
+                PtrStepf up_col_sums;
+                up_col_sums.data = (float*)buffer.data
+                    + blockIdx.y * search_window * search_window;
+                up_col_sums.step = buffer.step;
+
+                extern __shared__ float dist_sums_16[];
+
+                int first = 0;
+
+                for (int i = tby; i < tey; ++i)
+                    for (int j = tbx; j < tex; ++j)
+                    {
+                        __syncthreads();
+
+                        if (j == tbx)
+                        {
+                            initSums_BruteForce(i, j, dist_sums_16, col_sums, up_col_sums);
+                            first = 0;
+                        }
+                        else
+                        {
+                            if (i == tby)
+                                shiftRight_FirstRow(i, j, first, dist_sums_16, col_sums, up_col_sums);
+                            else
+                                shiftRight_UpSums(i, j, first, dist_sums_16, col_sums, up_col_sums);
+
+                            first = (first + 1) % block_window;
+                        }
+
+                        __syncthreads();
+                        convolve_window(i, j, dist_sums_16, dst(i, j));
+                    }
+            }
+        };
         template<typename T>
         __global__ void fast_nlm_kernel(const FastNonLocalMeans<T> fnlm, PtrStepSz<T> dst) { fnlm(dst); }
 
@@ -511,7 +729,29 @@ namespace cv { namespace cuda { namespace device
         template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
         template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
         template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        //template void nlm_fast_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+        __global__ void fast_nlm_kernel_16(const FastNonLocalMeans_16 fnlm, PtrStepSz<ushort> dst)
+        {
+            fnlm(dst);
+        }
+        void nlm_fast_gpu_16u(const PtrStepSzb& src, PtrStepSzb dst, PtrStepSzf buffer,
+            int search_window, int block_window, float h, cudaStream_t stream)
+        {
+            FastNonLocalMeans_16 fnlm(search_window, block_window, h);
+            fnlm.src = (PtrStepSz<ushort>)src;
+            fnlm.buffer = buffer;
 
+            dim3 block(FastNonLocalMeans_16::CTA_SIZE, 1);
+            dim3 grid(divUp(src.cols, FastNonLocalMeans_16::TILE_COLS),
+                divUp(src.rows, FastNonLocalMeans_16::TILE_ROWS));
+
+            int smem = search_window * search_window * sizeof(float); // float — int değil
+
+            fast_nlm_kernel_16 << <grid, block, smem >> > (fnlm, (PtrStepSz<ushort>)dst);
+            cudaSafeCall(cudaGetLastError());
+            if (stream == 0)
+                cudaSafeCall(cudaDeviceSynchronize());
+        }
 
 
         __global__ void fnlm_split_kernel(const PtrStepSz<uchar3> lab, PtrStepb l, PtrStep<uchar2> ab)
