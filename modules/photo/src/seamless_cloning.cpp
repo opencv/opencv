@@ -58,7 +58,7 @@ static Mat checkMask(InputArray mask, Size size)
         if (mask.empty())
             gray = Mat(size.height, size.width, CV_8UC1, Scalar(255));
         else
-            return mask.getMat();
+            mask.copyTo(gray);
     }
 
     return gray;
