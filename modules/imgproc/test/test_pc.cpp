@@ -122,6 +122,62 @@ TEST(Imgproc_PhaseCorrelatorTest, accuracy_1d_odd_fft) {
     ASSERT_NEAR(phaseShift.x, (double)xShift, 1.);
 }
 
+typedef testing::TestWithParam<int> Imgproc_PhaseCorrelatorTest_Types;
+
+TEST_P(Imgproc_PhaseCorrelatorTest_Types, roi_padding_isolated)
+{
+    const int type = GetParam();
+    ASSERT_EQ(18, getOptimalDFTSize(17));
+    Mat parent1(40, 40, type, Scalar::all(0));
+    Mat parent2(40, 40, type, Scalar::all(1000));
+    const Rect rect(2, 2, 17, 17);
+    Mat src1 = parent1(rect), src2 = parent2(rect);
+    src2.setTo(0);
+    src1(Rect(8, 8, 1, 1)).setTo(1);
+    src2(Rect(8, 8, 1, 1)).setTo(1);
+
+    double referenceResponse = 0, response = 0;
+    Point2d reference = phaseCorrelate(src1.clone(), src2.clone(), noArray(),
+                                       &referenceResponse);
+    Point2d shift = phaseCorrelate(src1, src2, noArray(), &response);
+    EXPECT_NEAR(0.0, reference.x, 1e-5);
+    EXPECT_NEAR(0.0, reference.y, 1e-5);
+    EXPECT_NEAR(1.0, referenceResponse, 1e-5);
+    EXPECT_NEAR(reference.x, shift.x, 1e-5);
+    EXPECT_NEAR(reference.y, shift.y, 1e-5);
+    EXPECT_NEAR(referenceResponse, response, 1e-5);
+
+    src2.setTo(0);
+    src2(Rect(11, 6, 1, 1)).setTo(1);
+    shift = phaseCorrelate(src2, src1, noArray(), &response);
+    EXPECT_NEAR(-3.0, shift.x, 1e-5);
+    EXPECT_NEAR(2.0, shift.y, 1e-5);
+    EXPECT_NEAR(1.0, response, 1e-5);
+
+    Mat windowParent(40, 40, type, Scalar::all(0));
+    Mat window = windowParent(rect);
+    window.setTo(1);
+    reference = phaseCorrelate(src1.clone(), src2.clone(), window.clone(),
+                               &referenceResponse);
+    EXPECT_NEAR(3.0, reference.x, 1e-5);
+    EXPECT_NEAR(-2.0, reference.y, 1e-5);
+    EXPECT_NEAR(1.0, referenceResponse, 1e-5);
+    shift = phaseCorrelate(src1, src2, window, &response);
+    EXPECT_NEAR(reference.x, shift.x, 1e-5);
+    EXPECT_NEAR(reference.y, shift.y, 1e-5);
+    EXPECT_NEAR(referenceResponse, response, 1e-5);
+
+    windowParent.setTo(1000);
+    window.setTo(1);
+    shift = phaseCorrelate(src1, src2, window, &response);
+    EXPECT_NEAR(reference.x, shift.x, 1e-5);
+    EXPECT_NEAR(reference.y, shift.y, 1e-5);
+    EXPECT_NEAR(referenceResponse, response, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(ROI, Imgproc_PhaseCorrelatorTest_Types,
+    testing::Values(CV_32F, CV_64F));
+
 typedef testing::TestWithParam<tuple<int, int, int> > Imgproc_PhaseCorrelatorTest_Inputs;
 
 TEST_P(Imgproc_PhaseCorrelatorTest_Inputs, preserves_inputs)
