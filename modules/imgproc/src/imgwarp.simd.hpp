@@ -128,7 +128,7 @@ static int remapBilinearC1_run(const T* S0, size_t sstep, T* D,
     const int vlanes = VTraits<v_float32>::vlanes();
     const int dx0 = dx;
     const v_float32 vone   = vx_setall_f32(1.f);
-    const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
+    const v_float32 vscale = vx_setall_f32(1.f / static_cast<float>(INTER_TAB_SIZE));
     const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
     int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
     for( ; dx <= X1 - vlanes; dx += vlanes )
@@ -168,7 +168,7 @@ static int remapBilinearF32_run(const float* S0, size_t sstep, float* D,
     const int dx0 = dx;
     const float* S1 = S0 + sstep;
     const v_float32 vone   = vx_setall_f32(1.f);
-    const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
+    const v_float32 vscale = vx_setall_f32(1.f / static_cast<float>(INTER_TAB_SIZE));
     const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
     int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
     for( ; dx <= X1 - vlanes; dx += vlanes )
@@ -239,7 +239,7 @@ static int remapBicubicC1_run(const T* S0, size_t sstep, T* D, const short* XY,
 {
     const int vlanes = VTraits<v_float32>::vlanes();
     const int dx0 = dx;
-    const v_float32 vscale = vx_setall_f32(1.f / INTER_TAB_SIZE);
+    const v_float32 vscale = vx_setall_f32(1.f / static_cast<float>(INTER_TAB_SIZE));
     const v_int32   vmask  = vx_setall_s32(INTER_TAB_SIZE - 1);
     int CV_DECL_ALIGNED(CV_SIMD_WIDTH) ofs[VTraits<v_float32>::max_nlanes];
     float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[VTraits<v_float32>::max_nlanes];

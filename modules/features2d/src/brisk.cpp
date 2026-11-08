@@ -501,15 +501,15 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
   noLongPairs_ = 0;
 
   // fill indexChange with 0..n if empty
-  unsigned int indSize = (unsigned int)indexChange.size();
-  if (indSize == 0)
+  if (indexChange.empty())
   {
     indexChange.resize(points_ * (points_ - 1) / 2);
-    indSize = (unsigned int)indexChange.size();
 
-    for (unsigned int i = 0; i < indSize; i++)
+    for (unsigned int i = 0; i < (unsigned int)indexChange.size(); i++)
       indexChange[i] = i;
   }
+  unsigned int indSize = (unsigned int)indexChange.size();
+
   const float dMin_sq = dMin_ * dMin_;
   const float dMax_sq = dMax_ * dMax_;
   for (unsigned int i = 1; i < points_; i++)
