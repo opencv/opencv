@@ -46,33 +46,27 @@ template<> struct ColorChannel<float>
     static double half() { return 0.5; }
 };*/
 
+template<int... Is>
+struct Set;
 
-template<int i0, int i1 = -1, int i2 = -1>
-struct Set
+template<>
+struct Set<>
 {
-    static inline bool contains(int i)
+    static inline bool contains(int)
     {
-        return (i == i0 || i == i1 || i == i2);
+        return false;
     }
 };
 
-template<int i0, int i1>
-struct Set<i0, i1, -1>
+template<int i0, int... Is>
+struct Set<i0, Is...>
 {
     static inline bool contains(int i)
     {
-        return (i == i0 || i == i1);
+        return (i == i0) || Set<Is...>::contains(i);
     }
 };
 
-template<int i0>
-struct Set<i0, -1, -1>
-{
-    static inline bool contains(int i)
-    {
-        return (i == i0);
-    }
-};
 
 enum SizePolicy
 {

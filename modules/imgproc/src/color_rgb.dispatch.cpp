@@ -274,7 +274,7 @@ bool oclCvtColormRGBA2RGBA( InputArray _src, OutputArray _dst)
 
 void cvtColorBGR2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb)
 {
-    CvtHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+    CvtHelper< Set<3, 4>, Set<3, 4>, Set<CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F> > h(_src, _dst, dcn);
 
     hal::cvtBGRtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
                      h.depth, h.scn, dcn, swapb);

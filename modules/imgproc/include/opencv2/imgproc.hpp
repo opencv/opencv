@@ -538,26 +538,27 @@ enum HistCompMethods {
 - `[8U]` means to support `CV_8U` src type.
 - `[16U]` means to support `CV_16U` src type.
 - `[32F]` means to support `CV_32F` src type.
+- `[ALL]` means to support all src type.
 @ingroup imgproc_color_conversions
  */
 enum ColorConversionCodes {
-    COLOR_BGR2BGRA     = 0, //!< [8U/16U/32F] add alpha channel to RGB or BGR image
-    COLOR_RGB2RGBA     = COLOR_BGR2BGRA, //!< [8U/16U/32F]
+    COLOR_BGR2BGRA     = 0, //!< [ALL] add alpha channel to RGB or BGR image
+    COLOR_RGB2RGBA     = COLOR_BGR2BGRA, //!< [ALL]
 
-    COLOR_BGRA2BGR     = 1, //!< [8U/16U/32F] remove alpha channel from RGB or BGR image
-    COLOR_RGBA2RGB     = COLOR_BGRA2BGR, //!< [8U/16U/32F]
+    COLOR_BGRA2BGR     = 1, //!< [ALL] remove alpha channel from RGB or BGR image
+    COLOR_RGBA2RGB     = COLOR_BGRA2BGR, //!< [ALL]
 
-    COLOR_BGR2RGBA     = 2, //!< [8U/16U/32F] convert between RGB and BGR color spaces (with or without alpha channel)
-    COLOR_RGB2BGRA     = COLOR_BGR2RGBA, //!< [8U/16U/32F]
+    COLOR_BGR2RGBA     = 2, //!< [ALL] convert between RGB and BGR color spaces (with or without alpha channel)
+    COLOR_RGB2BGRA     = COLOR_BGR2RGBA, //!< [ALL]
 
-    COLOR_RGBA2BGR     = 3, //!< [8U/16U/32F]
-    COLOR_BGRA2RGB     = COLOR_RGBA2BGR, //!< [8U/16U/32F]
+    COLOR_RGBA2BGR     = 3, //!< [ALL]
+    COLOR_BGRA2RGB     = COLOR_RGBA2BGR, //!< [ALL]
 
-    COLOR_BGR2RGB      = 4, //!< [8U/16U/32F]
-    COLOR_RGB2BGR      = COLOR_BGR2RGB, //!< [8U/16U/32F]
+    COLOR_BGR2RGB      = 4, //!< [ALL]
+    COLOR_RGB2BGR      = COLOR_BGR2RGB, //!< [ALL]
 
-    COLOR_BGRA2RGBA    = 5, //!< [8U/16U/32F]
-    COLOR_RGBA2BGRA    = COLOR_BGRA2RGBA, //!< [8U/16U/32F]
+    COLOR_BGRA2RGBA    = 5, //!< [ALL]
+    COLOR_RGBA2BGRA    = COLOR_BGRA2RGBA, //!< [ALL]
 
     COLOR_BGR2GRAY     = 6, //!< [8U/16U/32F] convert between RGB/BGR and grayscale, @ref color_convert_rgb_gray "color conversions"
     COLOR_RGB2GRAY     = 7, //!< [8U/16U/32F]

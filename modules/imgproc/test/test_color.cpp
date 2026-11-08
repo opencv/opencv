@@ -3296,4 +3296,122 @@ TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
     }
 }
 
+
+typedef std::tuple<perf::MatDepth, int, int, bool> CvtColorParams;
+class Imgproc_CvtColor_DepthChannels : public testing::TestWithParam<CvtColorParams> {};
+
+TEST_P(Imgproc_CvtColor_DepthChannels, bgr2bgr_alltypes)
+{
+    const int depth    = std::get<0>(GetParam());
+    const int scn      = std::get<1>(GetParam());
+    const int dcn      = std::get<2>(GetParam());
+    const bool swapBlue = std::get<3>(GetParam());
+
+    int code = -1;
+
+    if(scn == 3)
+    {
+        code = (dcn == 3) ? ( (swapBlue) ? COLOR_BGR2RGB  : -1 )
+                          : ( (swapBlue) ? COLOR_BGR2RGBA : COLOR_BGR2BGRA) ;
+    }
+    else if(scn == 4)
+    {
+        code = (dcn == 3) ? ( (swapBlue) ? COLOR_BGRA2RGB  : COLOR_BGRA2BGR )
+                          : ( (swapBlue) ? COLOR_BGRA2RGBA : -1);
+    }
+
+    if( code == -1 )
+    {
+        // do nothing (e.g. COLOR_BGR2BGR, COLOR_BGRA2BGRA ...)
+        return;
+    }
+
+    cv::Mat src(cv::Size(240, 180), CV_MAKETYPE(depth, scn) );
+
+    double minValue;
+    double maxValue;
+
+    switch(depth)
+    {
+        case CV_8U:
+            minValue = static_cast<double>(std::numeric_limits<uint8_t>::min());
+            maxValue = static_cast<double>(std::numeric_limits<uint8_t>::max());
+            break;
+        case CV_8S:
+            minValue = static_cast<double>(std::numeric_limits<int8_t>::min());
+            maxValue = static_cast<double>(std::numeric_limits<int8_t>::max());
+            break;
+        case CV_16U:
+            minValue = static_cast<double>(std::numeric_limits<uint16_t>::min());
+            maxValue = static_cast<double>(std::numeric_limits<uint16_t>::max());
+            break;
+        case CV_16S:
+            minValue = static_cast<double>(std::numeric_limits<int16_t>::min());
+            maxValue = static_cast<double>(std::numeric_limits<int16_t>::max());
+            break;
+        case CV_32S:
+            minValue = static_cast<double>(std::numeric_limits<int32_t>::min());
+            maxValue = static_cast<double>(std::numeric_limits<int32_t>::max());
+            break;
+        case CV_16F: case CV_32F: case CV_64F:
+            minValue = 0.0;
+            maxValue = 1.0;
+            break;
+        default:
+            FAIL() << "Unexpected depth is used";
+            break;
+    }
+    cv::randu(src, cv::Scalar::all(minValue), cv::Scalar::all(maxValue));
+
+    cv::Mat dst;
+
+    EXPECT_NO_THROW( cvtColor(src, dst, code) );
+
+    EXPECT_FALSE(dst.empty());
+    ASSERT_EQ(dst.rows, src.rows);
+    ASSERT_EQ(dst.cols, src.cols);
+    ASSERT_EQ(dst.channels(), dcn);
+    ASSERT_EQ(dst.depth(), depth);
+
+    std::vector<cv::Mat> src_planes, dst_planes;
+    cv::split(src, src_planes);
+    cv::split(dst, dst_planes);
+
+    // G plane
+    {
+        double diffG = cvtest::norm(src_planes[1], dst_planes[1], NORM_INF);
+        EXPECT_EQ(diffG, 0.0) << "G-plane should not change!";
+    }
+
+    // R and B plane
+    {
+        int expected_b_idx = swapBlue ? 2 : 0;
+        int expected_r_idx = swapBlue ? 0 : 2;
+
+        double diffB = cvtest::norm(src_planes[0], dst_planes[expected_b_idx], NORM_INF);
+        double diffR = cvtest::norm(src_planes[2], dst_planes[expected_r_idx], NORM_INF);
+
+        EXPECT_EQ(diffB, 0.0) << "Blue plane mapping is incorrect (swapBlue = " << swapBlue << ")";
+        EXPECT_EQ(diffR, 0.0) << "Red plane mapping is incorrect (swapBlue = " << swapBlue << ")";
+    }
+
+    // A plane
+    if (scn == 4 && dcn == 4) {
+        double diffA = cvtest::norm(src_planes[3], dst_planes[3], NORM_INF);
+        EXPECT_EQ(diffA, 0.0) << "Alpha-plane should remain unchanged!";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Imgproc_CvtColor,
+    Imgproc_CvtColor_DepthChannels,
+    testing::Combine(
+        testing::Values( CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F), // MatType
+        testing::Values(3, 4), // scn
+        testing::Values(3, 4), // dcn
+        testing::Values(true, false) // Swap Blue
+    )
+);
+
+
 }} // namespace

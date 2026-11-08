@@ -70,6 +70,16 @@ struct v_type<ushort>{
 };
 
 template<>
+struct v_type<uint32_t>{
+    typedef v_uint32 t;
+};
+
+template<>
+struct v_type<uint64_t>{
+    typedef v_uint64 t;
+};
+
+template<>
 struct v_type<float>{
     typedef v_float32 t;
 };
@@ -91,6 +101,24 @@ struct v_set<ushort>
     static inline v_type<ushort>::t set(ushort x)
     {
         return vx_setall_u16(x);
+    }
+};
+
+template<>
+struct v_set<uint32_t>
+{
+    static inline v_type<uint32_t>::t set(uint32_t x)
+    {
+        return vx_setall_u32(x);
+    }
+};
+
+template<>
+struct v_set<uint64_t>
+{
+    static inline v_type<uint64_t>::t set(uint64_t x)
+    {
+        return vx_setall_u64(x);
     }
 };
 
@@ -1248,7 +1276,7 @@ struct mRGBA2RGBA<uchar>
 };
 } // namespace anon
 
-// 8u, 16u, 32f
+// ALL
 void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
@@ -1257,12 +1285,24 @@ void cvtBGRtoBGR(const uchar * src_data, size_t src_step,
     CV_INSTRUMENT_REGION();
 
     int blueIdx = swapBlue ? 2 : 0;
-    if( depth == CV_8U )
+    switch(depth)
+    {
+    case CV_8U: case CV_8S:
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uchar>(scn, dcn, blueIdx));
-    else if( depth == CV_16U )
+        break;
+    case CV_16U: case CV_16S: case CV_16F:
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<ushort>(scn, dcn, blueIdx));
-    else
-        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<float>(scn, dcn, blueIdx));
+        break;
+    case CV_32S: case CV_32F:
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uint32_t>(scn, dcn, blueIdx));
+        break;
+    case CV_64F:
+        CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2RGB<uint64_t>(scn, dcn, blueIdx));
+        break;
+    default:
+        CV_Error( cv::Error::StsBadFlag, cv::format("Unknown/unsupported depth: %d", depth));
+        break;
+    }
 }
 
 // only 8u
