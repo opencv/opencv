@@ -3711,32 +3711,36 @@ double dotProd_64f(const double* src1, const double* src2, int len)
     return dotProd_(src1, src2, len);
 }
 
-// 16F / 16BF: vx_load_expand widens each 16-bit value to float32, then sum in blocks like dotProd_32f
+// 16F / 16BF: widen each value to float32, then to double, because the product of
+// two bfloat values can be too big or too small for float32
 template<typename T> static inline
 double dotProdExpand_(const T* src1, const T* src2, int len)
 {
     double r = 0.0;
     int i = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const int cWidth = VTraits<v_float32>::vlanes();
-    int len0 = len & -cWidth, blockSize0 = (1 << 13), blockSize;
-
-    for (; i < len0; i += blockSize)
+    v_float64 v_sum0 = vx_setzero_f64(), v_sum1 = vx_setzero_f64();
+    v_float64 v_sum2 = vx_setzero_f64(), v_sum3 = vx_setzero_f64();
+    // four independent sums, so each multiply-add doesn't wait for the previous one
+    for (; i <= len - cWidth * 2; i += cWidth * 2)
     {
-        blockSize = std::min(len0 - i, blockSize0);
-        v_float32 v_sum0 = vx_setzero_f32(), v_sum1 = vx_setzero_f32();
-        int j = i;
-        // two independent sums, so each multiply-add doesn't wait for the previous one
-        for (; j <= i + blockSize - cWidth * 2; j += cWidth * 2)
-        {
-            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
-            v_sum1 = v_muladd(vx_load_expand(src1 + j + cWidth), vx_load_expand(src2 + j + cWidth), v_sum1);
-        }
-        for (; j < i + blockSize; j += cWidth)
-            v_sum0 = v_muladd(vx_load_expand(src1 + j), vx_load_expand(src2 + j), v_sum0);
-        r += v_reduce_sum(v_add(v_sum0, v_sum1));
+        v_float32 v_src10 = vx_load_expand(src1 + i), v_src20 = vx_load_expand(src2 + i);
+        v_float32 v_src11 = vx_load_expand(src1 + i + cWidth), v_src21 = vx_load_expand(src2 + i + cWidth);
+        // a double vector holds half as many lanes, so do the low half and the high half
+        v_sum0 = v_muladd(v_cvt_f64(v_src10), v_cvt_f64(v_src20), v_sum0);
+        v_sum1 = v_muladd(v_cvt_f64_high(v_src10), v_cvt_f64_high(v_src20), v_sum1);
+        v_sum2 = v_muladd(v_cvt_f64(v_src11), v_cvt_f64(v_src21), v_sum2);
+        v_sum3 = v_muladd(v_cvt_f64_high(v_src11), v_cvt_f64_high(v_src21), v_sum3);
     }
+    for (; i <= len - cWidth; i += cWidth)
+    {
+        v_float32 v_src1 = vx_load_expand(src1 + i), v_src2 = vx_load_expand(src2 + i);
+        v_sum0 = v_muladd(v_cvt_f64(v_src1), v_cvt_f64(v_src2), v_sum0);
+        v_sum1 = v_muladd(v_cvt_f64_high(v_src1), v_cvt_f64_high(v_src2), v_sum1);
+    }
+    r = v_reduce_sum(v_add(v_add(v_sum0, v_sum1), v_add(v_sum2, v_sum3)));
     vx_cleanup();
 #endif
     return r + dotProd_(src1 + i, src2 + i, len - i);
@@ -3752,22 +3756,19 @@ double dotProdFp8_(const T* src1_, const T* src2_, int len)
     double r = 0.0;
     int i = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const int cWidth = VTraits<v_float32>::vlanes();
-    int len0 = len & -cWidth, blockSize0 = (1 << 13), blockSize;
-
-    for (; i < len0; i += blockSize)
+    v_float64 v_sum0 = vx_setzero_f64(), v_sum1 = vx_setzero_f64();
+    for (; i <= len - cWidth; i += cWidth)
     {
-        blockSize = std::min(len0 - i, blockSize0);
-        v_float32 v_sum = vx_setzero_f32();
-        for (int j = i; j < i + blockSize; j += cWidth)
-        {
-            v_float32 v_src1 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src1 + j)));
-            v_float32 v_src2 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src2 + j)));
-            v_sum = v_muladd(v_src1, v_src2, v_sum);
-        }
-        r += v_reduce_sum(v_sum);
+        v_float32 v_src1 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src1 + i)));
+        v_float32 v_src2 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src2 + i)));
+        // the product of two fp8 values is always exact in float32, so only the sum needs double
+        v_float32 v_prod = v_mul(v_src1, v_src2);
+        v_sum0 = v_add(v_sum0, v_cvt_f64(v_prod));
+        v_sum1 = v_add(v_sum1, v_cvt_f64_high(v_prod));
     }
+    r = v_reduce_sum(v_add(v_sum0, v_sum1));
     vx_cleanup();
 #endif
     for (; i < len; i++)
