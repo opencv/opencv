@@ -233,7 +233,7 @@ public:
 
         float key = (log_max - log_mean) / (log_max - log_min);
         float map_key = 0.3f + 0.7f * std::pow(key, 1.4f);
-        intensity = exp(-intensity);
+        const float intensity_scale = exp(-intensity);
         Scalar chan_mean = mean(img);
         float gray_mean = static_cast<float>(mean(gray_img)[0]);
 
@@ -244,7 +244,7 @@ public:
             float global = color_adapt * static_cast<float>(chan_mean[i]) + (1.0f - color_adapt) * gray_mean;
             Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
             adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
-            pow(intensity * adapt, map_key, adapt);
+            pow(intensity_scale * adapt, map_key, adapt);
             channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));
         }
         gray_img.release();
