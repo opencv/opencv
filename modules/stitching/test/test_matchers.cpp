@@ -112,7 +112,9 @@ static void expectSameMatches(const detail::MatchesInfo& expected, const detail:
     EXPECT_EQ(expected.num_inliers, actual.num_inliers);
     ASSERT_EQ(expected.H.size(), actual.H.size());
     if (!expected.H.empty())
+    {
         EXPECT_EQ(0., cv::norm(expected.H, actual.H, NORM_INF));
+    }
 
     for (size_t i = 0; i < expected.matches.size(); ++i)
     {
