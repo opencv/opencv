@@ -2482,6 +2482,34 @@ TEST(Core_DotProduct, bool_nonzero_bytes)
     EXPECT_EQ(3., ma.dot(mb));
 }
 
+TEST(Core_DotProduct, bfloat_range)
+{
+    // 2^100 * 2^100 is too big for float32 and 2^-100 * 2^-100 is too small,
+    // but bfloat stores both inputs exactly and the results fit in double
+    Mat big, small;
+    Mat(1, 16, CV_32F, Scalar(std::ldexp(1., 100))).convertTo(big, CV_16BF);
+    Mat(1, 16, CV_32F, Scalar(std::ldexp(1., -100))).convertTo(small, CV_16BF);
+    EXPECT_EQ(std::ldexp(1., 204), big.dot(big));
+    EXPECT_EQ(std::ldexp(1., -196), small.dot(small));
+}
+
+TEST(Core_DotProduct, fp8_small_residual)
+{
+    // 1024*(224*224) + 4*(0.5*0.5) - 1024*(224*224) = 1, but a float32 sum loses the 1
+    Mat a32f(1, 2052, CV_32F), b32f(1, 2052, CV_32F, Scalar(224));
+    a32f.colRange(0, 1024).setTo(224);
+    a32f.colRange(1024, 1028).setTo(0.5);
+    b32f.colRange(1024, 1028).setTo(0.5);
+    a32f.colRange(1028, 2052).setTo(-224);
+    for (int depth : { CV_8F_E4M3FN, CV_8F_E4M3FNUZ })
+    {
+        Mat a, b;
+        a32f.convertTo(a, depth);
+        b32f.convertTo(b, depth);
+        EXPECT_EQ(1., a.dot(b)) << "depth=" << depth;
+    }
+}
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
