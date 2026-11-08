@@ -1757,6 +1757,8 @@ void ONNXImporter::parseGRU(LayerParams& layerParams, const opencv_onnx::NodePro
 
     MatShape gruShape = outShapes[node_proto.output(0)];
 
+    CV_CheckFalse(gruShape.empty(), "ERROR outShapes[node_proto.output(0)] is empty");
+
     // Add fake 1 as it is done in ONNX
     gruShape.insert(gruShape.begin() + 1, 1);
 

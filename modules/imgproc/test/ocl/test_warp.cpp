@@ -588,8 +588,8 @@ private:
             {
                 const float fx = mapx.at<float>(y, x);
                 const float fy = mapy.at<float>(y, x);
-                const int scaledX = static_cast<int>(std::floor(fx * INTER_TAB_SIZE + 0.5f));
-                const int scaledY = static_cast<int>(std::floor(fy * INTER_TAB_SIZE + 0.5f));
+                const int scaledX = static_cast<int>(std::floor(fx * static_cast<float>(INTER_TAB_SIZE) + 0.5f));
+                const int scaledY = static_cast<int>(std::floor(fy * static_cast<float>(INTER_TAB_SIZE) + 0.5f));
                 const int sx = scaledX >> INTER_BITS;
                 const int sy = scaledY >> INTER_BITS;
                 const T wx = static_cast<T>(scaledX & (INTER_TAB_SIZE - 1)) /
