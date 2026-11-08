@@ -415,7 +415,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         if (argsOk && splitForParallelStat(src, mask, chunks))
         {
             const int n = (int)chunks.size();
+            const int depth = src.depth();
+            const bool wideInteger = cn == 1 && (depth == CV_64S || depth == CV_64U);
             std::vector<double> mn(n), mx(n);
+            std::vector<uint64> mn64(wideInteger ? n : 0), mx64(wideInteger ? n : 0);
             std::vector<size_t> imn(n, 0), imx(n, 0);   // 1-based row-major indices, 0 = no element
             parallel_for_(Range(0, n), [&](const Range& r)
             {
@@ -430,6 +433,21 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                     {
                         imn[i] = chunkIndexToElem(chunks[i], a) + 1;
                         imx[i] = chunkIndexToElem(chunks[i], b) + 1;
+                        if (wideInteger)
+                        {
+                            if (depth == CV_64S)
+                            {
+                                // Flip the sign bit so unsigned comparisons preserve signed ordering.
+                                const uint64 signBit = (uint64)1 << 63;
+                                mn64[i] = (uint64)chunks[i].src.at<int64>(a) ^ signBit;
+                                mx64[i] = (uint64)chunks[i].src.at<int64>(b) ^ signBit;
+                            }
+                            else
+                            {
+                                mn64[i] = chunks[i].src.at<uint64>(a);
+                                mx64[i] = chunks[i].src.at<uint64>(b);
+                            }
+                        }
                     }
                 }
             });
@@ -440,8 +458,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             {
                 if (imn[i] == 0)
                     continue;
-                if (bmin < 0 || mn[i] < mn[bmin]) bmin = i;
-                if (bmax < 0 || mx[i] > mx[bmax]) bmax = i;
+                if (bmin < 0 || (wideInteger ? mn64[i] < mn64[bmin] : mn[i] < mn[bmin])) bmin = i;
+                if (bmax < 0 || (wideInteger ? mx64[i] > mx64[bmax] : mx[i] > mx[bmax])) bmax = i;
             }
             if (minVal) *minVal = bmin >= 0 ? mn[bmin] : 0;
             if (maxVal) *maxVal = bmax >= 0 ? mx[bmax] : 0;
