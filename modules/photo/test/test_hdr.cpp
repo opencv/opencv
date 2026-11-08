@@ -118,6 +118,27 @@ TEST(Photo_Tonemap, regression)
     checkEqual(result, expected, 3, "Mantiuk");
 }
 
+TEST(Photo_Tonemap, reinhard_preserves_intensity)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
+
+    Mat img, first, second;
+    loadImage(test_path + "image.hdr", img);
+    Mat original = img.clone();
+
+    Ptr<TonemapReinhard> tonemap = createTonemapReinhard(1.0f, 0.0f, 1.0f, 0.0f);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    tonemap->process(img, first);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    tonemap->process(img, second);
+    EXPECT_FLOAT_EQ(0.0f, tonemap->getIntensity());
+
+    checkEqual(first, second, 0, "Reinhard repeated process");
+    checkEqual(img, original, 0, "Reinhard input preservation");
+}
+
 TEST(Photo_AlignMTB, regression)
 {
     const int TESTS_COUNT = 100;
