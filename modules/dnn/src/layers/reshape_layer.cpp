@@ -293,9 +293,16 @@ public:
     {
         if (hasDynamicShapes)
         {
-            for (int i = 0; i < dynamicShapes.size(); ++i)
+            CV_CheckFalse(inputs.empty(), "ReshapeLayer: inputs must not be empty");
+            for (size_t i = 0; i < dynamicShapes.size(); ++i)
             {
-                newShapeDesc[dynamicShapes[i]] = inputs[0][inputIndices[i]];
+                const int dynAxis = dynamicShapes[i];
+                const int inpIdx = inputIndices[i];
+                CV_CheckGE(dynAxis, 0, "ReshapeLayer: dynamic axis must be non-negative");
+                CV_CheckLT(dynAxis, static_cast<int>(newShapeDesc.size()), "ReshapeLayer: dynamic axis out of range");
+                CV_CheckGE(inpIdx, 0, "ReshapeLayer: input index must be non-negative");
+                CV_CheckLT(inpIdx, static_cast<int>(inputs[0].size()), "ReshapeLayer: input index out of range");
+                newShapeDesc[dynAxis] = inputs[0][inpIdx];
             }
         }
         shapesInitialized = true;

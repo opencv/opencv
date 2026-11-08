@@ -4687,4 +4687,147 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+TEST(Layer_Test_CoreBounds, PermuteGatherReshapeValid_Control)
+{
+    {
+        LayerParams lp;
+        int order[] = {0, 2, 1};
+        lp.set("order", DictValue::arrayInt(order, 3));
+        Ptr<PermuteLayer> layer = PermuteLayer::create(lp);
+        std::vector<MatShape> inputs = {MatShape({1, 2, 3})}, outputs, internals;
+        layer->getMemoryShapes(inputs, 1, outputs, internals);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        EXPECT_EQ(outputs[0], MatShape({1, 3, 2}));
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 0);
+        lp.set("real_ndims", 1);
+        Ptr<GatherLayer> layer = GatherLayer::create(lp);
+        float inp_val[] = {1.0f, 2.0f, 3.0f, 4.0f};
+        Mat inp({2, 2}, CV_32F, inp_val);
+        int64_t idx_val[] = {1, 0};
+        Mat indices({2}, CV_64S, idx_val);
+        Mat out({2, 2}, CV_32F);
+        out.setTo(0.0f);
+        std::vector<Mat> inputs = {inp, indices}, outputs = {out}, internals;
+        layer->forward(inputs, outputs, internals);
+        EXPECT_EQ(outputs[0].at<float>(0, 0), 3.0f);
+        EXPECT_EQ(outputs[0].at<float>(0, 1), 4.0f);
+        EXPECT_EQ(outputs[0].at<float>(1, 0), 1.0f);
+        EXPECT_EQ(outputs[0].at<float>(1, 1), 2.0f);
+    }
+    {
+        LayerParams lp;
+        int dim[] = {0, 3};
+        int dyn_axes[] = {0};
+        int inp_indices[] = {0};
+        lp.set("dim", DictValue::arrayInt(dim, 2));
+        lp.set("has_dynamic_shapes", true);
+        lp.set("dynamic_axes", DictValue::arrayInt(dyn_axes, 1));
+        lp.set("input_indices", DictValue::arrayInt(inp_indices, 1));
+        Ptr<ReshapeLayer> layer = ReshapeLayer::create(lp);
+        std::vector<MatShape> inputs = {MatShape({2, 3})}, outputs, internals;
+        EXPECT_TRUE(layer->updateMemoryShapes(inputs));
+        layer->getMemoryShapes(inputs, 1, outputs, internals);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        EXPECT_EQ(outputs[0], MatShape({2, 3}));
+    }
+}
+
+typedef testing::TestWithParam<int> Layer_Test_GatherNegativeIndices;
+
+TEST_P(Layer_Test_GatherNegativeIndices, Valid)
+{
+    LayerParams lp;
+    lp.set("axis", 0);
+    lp.set("real_ndims", 1);
+    Ptr<GatherLayer> layer = GatherLayer::create(lp);
+    float inp_val[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    Mat inp({2, 2}, CV_32F, inp_val);
+    int32_t idx32[] = {-1, -2};
+    int64_t idx64[] = {-1, -2};
+    Mat indices = GetParam() == CV_32S ? Mat({2}, CV_32S, idx32)
+                                     : Mat({2}, CV_64S, idx64);
+    Mat out({2, 2}, CV_32F, Scalar(0));
+    std::vector<Mat> inputs = {inp, indices}, outputs = {out}, internals;
+    layer->forward(inputs, outputs, internals);
+    EXPECT_EQ(outputs[0].at<float>(0, 0), 3.0f);
+    EXPECT_EQ(outputs[0].at<float>(0, 1), 4.0f);
+    EXPECT_EQ(outputs[0].at<float>(1, 0), 1.0f);
+    EXPECT_EQ(outputs[0].at<float>(1, 1), 2.0f);
+}
+
+TEST_P(Layer_Test_GatherNegativeIndices, OutOfRange)
+{
+    LayerParams lp;
+    lp.set("axis", 0);
+    Ptr<GatherLayer> layer = GatherLayer::create(lp);
+    float inp_val[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    Mat inp({2, 2}, CV_32F, inp_val);
+    int32_t idx32[] = {-3};
+    int64_t idx64[] = {-3};
+    Mat indices = GetParam() == CV_32S ? Mat({1}, CV_32S, idx32)
+                                     : Mat({1}, CV_64S, idx64);
+    Mat out({1, 2}, CV_32F, Scalar(0));
+    std::vector<Mat> inputs = {inp, indices}, outputs = {out}, internals;
+    try
+    {
+        layer->forward(inputs, outputs, internals);
+        FAIL() << "Expected an out-of-range Gather index to be rejected";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(e.code, Error::StsOutOfRange);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_GatherNegativeIndices,
+                       testing::Values(CV_32S, CV_64S));
+
+TEST(Layer_Test_CoreBounds, RejectsOutOfRangePermuteGatherReshapeParams)
+{
+    {
+        LayerParams lp;
+        int bad_order[] = {0, 3, 1};
+        lp.set("order", DictValue::arrayInt(bad_order, 3));
+        EXPECT_THROW(PermuteLayer::create(lp), cv::Exception);
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 0);
+        Ptr<GatherLayer> layer = GatherLayer::create(lp);
+        Mat inp({2, 2}, CV_32F);
+        inp.setTo(1.0f);
+        int64_t bad_idx[] = {(1LL << 32)};
+        Mat indices({1}, CV_64S, bad_idx);
+        Mat out({1, 2}, CV_32F);
+        out.setTo(0.0f);
+        std::vector<Mat> inputs = {inp, indices}, outputs = {out}, internals;
+        EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 0);
+        lp.set("real_ndims", 5);
+        Ptr<GatherLayer> layer = GatherLayer::create(lp);
+        MatShape idxShape({2});
+        std::vector<MatShape> inputs = {MatShape({2, 3}), idxShape}, outputs, internals;
+        EXPECT_THROW(layer->getMemoryShapes(inputs, 1, outputs, internals), cv::Exception);
+    }
+    {
+        LayerParams lp;
+        int dim[] = {1, 2};
+        int dyn_axes[] = {0};
+        int inp_indices[] = {2};
+        lp.set("dim", DictValue::arrayInt(dim, 2));
+        lp.set("has_dynamic_shapes", true);
+        lp.set("dynamic_axes", DictValue::arrayInt(dyn_axes, 1));
+        lp.set("input_indices", DictValue::arrayInt(inp_indices, 1));
+        Ptr<ReshapeLayer> layer = ReshapeLayer::create(lp);
+        MatShape inpShape({1, 2});
+        EXPECT_THROW(layer->updateMemoryShapes({inpShape}), cv::Exception);
+    }
+}
+
 }} // namespace
