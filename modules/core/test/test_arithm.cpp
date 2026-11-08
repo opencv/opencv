@@ -2577,6 +2577,31 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 
+TEST(MinMaxLoc, nans_in_vector_loop)
+{
+    // IPP handles CV_32F on x86 and returns NaN for NaN input; test the SIMD loop instead
+    const bool useIPP = cv::ipp::useIPP();
+    cv::ipp::setUseIPP(false);
+    for (int depth : {CV_32F, CV_16F, CV_16BF})
+    {
+        Mat src32f(1, 100, CV_32F, Scalar(5));
+        src32f.at<float>(10) = 9;
+        src32f.at<float>(20) = 1;
+        src32f.colRange(80, 100).setTo(Scalar(std::numeric_limits<float>::quiet_NaN()));
+        Mat src;
+        src32f.convertTo(src, depth);
+
+        double minVal = 0, maxVal = 0;
+        Point minLoc, maxLoc;
+        minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        EXPECT_EQ(1, minVal) << depthToString(depth);
+        EXPECT_EQ(9, maxVal) << depthToString(depth);
+        EXPECT_EQ(Point(20, 0), minLoc) << depthToString(depth);
+        EXPECT_EQ(Point(10, 0), maxLoc) << depthToString(depth);
+    }
+    cv::ipp::setUseIPP(useIPP);
+}
+
 TEST(Subtract, scalarc1_matc3)
 {
     int scalar = 255;

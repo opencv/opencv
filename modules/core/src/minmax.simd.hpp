@@ -283,8 +283,10 @@ static void funcname(const T* src, const uchar* mask, WT* _minVal, WT* _maxVal, 
     /* particular lane has not been updated. */ \
     /* after each block we update minVal, maxVal, minIdx and maxIdx */ \
     if (!mask) { \
+        VT v_seen = v_minval; \
         for (; i <= len - vlanes; i += vlanes) { \
             VT data = load_op(src + i); \
+            data = v_select(v_eq(data, data), data, v_seen); \
             UVT lt_min = v_reinterpret_as_##usuffix(v_lt(data, v_minval)); \
             UVT gt_max = v_reinterpret_as_##usuffix(v_gt(data, v_maxval)); \
             v_minidx = v_select(lt_min, v_locidx, v_minidx); \
