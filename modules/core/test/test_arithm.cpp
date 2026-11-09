@@ -3183,6 +3183,30 @@ TEST(Core_CvAbs, lowest_signed_values)
     EXPECT_EQ(1ull,                     cv_abs((int64)-1));
 }
 
+// cv_absdiff() on int64 must return the exact distance, even when it does not fit in int64.
+TEST(Core_CvAbsDiff, int64_full_range)
+{
+    EXPECT_EQ((uint64)ULLONG_MAX, cv_absdiff((int64)LLONG_MAX, (int64)LLONG_MIN));
+    EXPECT_EQ((uint64)ULLONG_MAX, cv_absdiff((int64)LLONG_MIN, (int64)LLONG_MAX));
+    EXPECT_EQ(3ull,               cv_absdiff((int64)-1, (int64)2));
+}
+
+// norm(a, b) on CV_64S must not overflow when |a - b| is larger than INT64_MAX.
+TEST(Core_Norm, diff_64S_beyond_int64_range)
+{
+    for (int len : {1, 7, 64})
+    {
+        Mat a(1, len, CV_64S, Scalar(5e18));
+        Mat b(1, len, CV_64S, Scalar(-5e18));
+        Mat mask(1, len, CV_8U, Scalar(255));
+
+        EXPECT_EQ(1e19,       cv::norm(a, b, NORM_INF))       << "length " << len;
+        EXPECT_EQ(1e19,       cv::norm(a, b, NORM_INF, mask)) << "length " << len << ", masked";
+        EXPECT_EQ(len * 1e19, cv::norm(a, b, NORM_L1))        << "length " << len;
+        EXPECT_EQ(len * 1e19, cv::norm(a, b, NORM_L1, mask))  << "length " << len << ", masked";
+    }
+}
+
 // An L1 norm is a sum of magnitudes: never negative, and never dependent on the array length.
 // Checked over both signed integer depths, masked and unmasked, at lengths straddling the vector
 // width so the body, the tail and the two together are covered.
