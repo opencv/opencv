@@ -9,10 +9,10 @@ namespace opencv_test { namespace {
 
 // Uniform random samples over the whole range of the type, so that lossless coding is
 // exercised on every bit plane.
-static Mat randomImage(Size size, int type, uint64 seed = 0x5EED)
+static Mat randomImage(Size size, int type)
 {
     Mat img(size, type);
-    RNG rng(seed);
+    RNG& rng = theRNG();
     switch (CV_MAT_DEPTH(type))
     {
     case CV_8U:  rng.fill(img, RNG::UNIFORM, 0, 256); break;
@@ -35,8 +35,7 @@ static Mat smoothImage(Size size)
                                         saturate_cast<uchar>(128 + 100 * std::sin(x * 0.05) * std::cos(y * 0.07)));
     circle(img, Point(size.width / 3, size.height / 2), size.height / 4, Scalar(30, 200, 90), FILLED);
     Mat noise(size, CV_8UC3);
-    RNG rng(42);
-    rng.fill(noise, RNG::UNIFORM, 0, 16);
+    theRNG().fill(noise, RNG::UNIFORM, 0, 16);
     img += noise;
     GaussianBlur(img, img, Size(3, 3), 0);
     return img;
@@ -315,15 +314,21 @@ TEST(Imgcodecs_HTJ2K, readers_and_writers)
     }
 }
 
+// A truncated stream is refused, wherever it is cut: in the file boxes, the main header, a
+// tile-part or the EOC marker. Cuts before the CAP marker of a codestream go to another decoder.
 TEST(Imgcodecs_HTJ2K, truncated_input)
 {
-    const Mat src = randomImage(Size(64, 64), CV_8UC3);
-    std::vector<uchar> buf;
-    ASSERT_TRUE(imencode(".jhc", src, buf));
-    for (size_t len : { (size_t)4, (size_t)40, buf.size() / 2 })
+    const Mat src = randomImage(Size(32, 32), CV_8UC3);
+    for (const char* ext : { ".jph", ".jhc" })
     {
-        std::vector<uchar> cut(buf.begin(), buf.begin() + len);
-        EXPECT_NO_THROW(imdecode(cut, IMREAD_UNCHANGED)) << len;
+        std::vector<uchar> buf;
+        ASSERT_TRUE(imencode(ext, src, buf));
+        ASSERT_FALSE(imdecode(buf, IMREAD_UNCHANGED).empty()) << ext;
+        for (size_t len = 1; len < buf.size(); len++)
+        {
+            const std::vector<uchar> cut(buf.begin(), buf.begin() + len);
+            EXPECT_TRUE(imdecode(cut, IMREAD_UNCHANGED).empty()) << ext << " cut to " << len << " bytes";
+        }
     }
 }
 

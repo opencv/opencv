@@ -35,6 +35,7 @@ const uchar kJP2SignatureBox[12] = { 0x00, 0x00, 0x00, 0x0C, 'j', 'P', ' ', ' ',
 const int kMarkerSIZ = 0x51;
 const int kMarkerCAP = 0x50;
 const int kMarkerSOT = 0x90;
+const int kMarkerEOC = 0xD9;
 
 // Rsiz bit 14: a CAP marker segment is present.  Pcap bit for Part 15 (HTJ2K).
 const unsigned kRsizCapPresent = 0x4000;
@@ -87,6 +88,68 @@ bool isHTCodestream(const uchar* p, size_t n)
         off += 2 + len;
     }
     return false;
+}
+
+// The contiguous codestream box (ISO/IEC 15444-1 I.5.4) of a JP2-family file, as [begin, end).
+// The boxes before it must lie within the data.
+bool findCodestreamBox(const uchar* p, size_t n, size_t& begin, size_t& end)
+{
+    size_t off = 0;
+    while (off + 8 <= n)
+    {
+        uint64_t len = readBE32(p + off);
+        size_t hdr = 8;
+        if (len == 1)  // the length is in the XLBox field
+        {
+            if (off + 16 > n)
+                return false;
+            len = ((uint64_t)readBE32(p + off + 8) << 32) | readBE32(p + off + 12);
+            hdr = 16;
+        }
+        else if (len == 0)  // the box runs to the end of the file
+        {
+            len = n - off;
+        }
+        if (len < hdr || len > n - off)
+            return false;
+        if (memcmp(p + off + 4, "jp2c", 4) == 0)
+        {
+            begin = off + hdr;
+            end = off + (size_t)len;
+            return true;
+        }
+        off += (size_t)len;
+    }
+    return false;
+}
+
+// True when the codestream holds every tile-part it announces and ends with the EOC marker.
+// The decoder decodes a truncated codestream in part; this adapter refuses it, as the other
+// decoders do, rather than return an image with missing data.
+bool isCompleteCodestream(const uchar* p, size_t n)
+{
+    if (n < 4 || p[0] != 0xFF || p[1] != 0x4F)
+        return false;
+    size_t off = 2;
+    while (off + 4 <= n && p[off] == 0xFF && p[off + 1] != kMarkerSOT)  // main header
+    {
+        const size_t len = readBE16(p + off + 2);
+        if (len < 2)
+            return false;
+        off += 2 + len;
+    }
+    // Tile-parts. Psot is the length from the SOT marker to the end of the tile-part, or 0 for
+    // a last tile-part that runs to the EOC marker (ISO/IEC 15444-1 A.4.2).
+    while (off + 12 <= n && p[off] == 0xFF && p[off + 1] == kMarkerSOT)
+    {
+        const size_t psot = readBE32(p + off + 6);
+        if (psot == 0)
+            return n >= off + 14 + 2 && p[n - 2] == 0xFF && p[n - 1] == kMarkerEOC;
+        if (psot < 14 || psot > n - off)  // SOT and SOD markers take 14 bytes
+            return false;
+        off += psot;
+    }
+    return off + 2 <= n && p[off] == 0xFF && p[off + 1] == kMarkerEOC;
 }
 
 uint32_t htj2kThreads()
@@ -168,6 +231,16 @@ void storeRow(T* dst, int width, const int32_t* const* comps, const RowLayout& L
     }
 }
 
+// Channel k of an image row, as samples of one component.
+template <typename T>
+void loadRow(int32_t* dst, const Mat& img, int y, int k)
+{
+    const int cn = img.channels();
+    const T* s = img.ptr<T>(y) + k;
+    for (int x = 0; x < img.cols; x++, s += cn)
+        dst[x] = *s;
+}
+
 // sYCC (ISO/IEC 15444-1 Annex I, EnumCS 18) to RGB, in the source precision.
 void yccToRgb(const int32_t* const* ycc, int width, int precision, int32_t* r, int32_t* g, int32_t* b)
 {
@@ -231,6 +304,18 @@ bool HTJ2KDecoder::readHeader()
             return false;
         data = file_data.data();
         size = file_data.size();
+    }
+
+    size_t cs_begin = 0, cs_end = size;
+    if (isJPHFile(data, size) && !findCodestreamBox(data, size, cs_begin, cs_end))
+    {
+        CV_LOG_WARNING(NULL, "HTJ2K: the file is truncated or has no codestream box");
+        return false;
+    }
+    if (!isCompleteCodestream(data + cs_begin, cs_end - cs_begin))
+    {
+        CV_LOG_WARNING(NULL, "HTJ2K: the codestream is truncated");
+        return false;
     }
 
     try
@@ -488,18 +573,12 @@ bool HTJ2KEncoder::write(const Mat& img, const std::vector<int>& params)
         {
             for (int c = 0; c < nc; c++)
             {
-                const int k = src_ch[c];
-                int32_t* dst = rows[c];
                 switch (depth)
                 {
-                case CV_8U:
-                { const uchar* s = img.ptr<uchar>((int)y) + k; for (int x = 0; x < img.cols; x++, s += cn) dst[x] = *s; break; }
-                case CV_8S:
-                { const schar* s = img.ptr<schar>((int)y) + k; for (int x = 0; x < img.cols; x++, s += cn) dst[x] = *s; break; }
-                case CV_16U:
-                { const ushort* s = img.ptr<ushort>((int)y) + k; for (int x = 0; x < img.cols; x++, s += cn) dst[x] = *s; break; }
-                case CV_16S:
-                { const short* s = img.ptr<short>((int)y) + k; for (int x = 0; x < img.cols; x++, s += cn) dst[x] = *s; break; }
+                case CV_8U: loadRow<uchar>(rows[c], img, (int)y, src_ch[c]); break;
+                case CV_8S: loadRow<schar>(rows[c], img, (int)y, src_ch[c]); break;
+                case CV_16U: loadRow<ushort>(rows[c], img, (int)y, src_ch[c]); break;
+                case CV_16S: loadRow<short>(rows[c], img, (int)y, src_ch[c]); break;
                 }
             }
         });
