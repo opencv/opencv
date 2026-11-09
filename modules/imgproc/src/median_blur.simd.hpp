@@ -105,7 +105,7 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
     } Histogram;
 
     static_assert(sizeof(HT) == 2, "HT must be 16-bit for SIMD packing");
-    CV_DbgAssert( ksize <= 255 );
+    CV_Assert( ksize <= 255 );
 
 /**
  * HOP is short for Histogram OPeration. This macro makes an operation \a op on
@@ -901,7 +901,8 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
 
-        // Overflow safety check for 16-bit buckets: ksize > 255 causes k*255 > 65535
+        // The O(1) path counts the window in 16-bit histogram buckets. A bucket can hold up to
+        // ksize*ksize pixels, which exceeds 65535 once ksize > 255.
         const bool o1_unsafe = (ksize > 255);
 
         if( o1_unsafe || ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
