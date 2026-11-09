@@ -181,9 +181,9 @@ static Mat runQuantizeLinear(LayerParams& lp, std::vector<Mat>& inputs)
     return outputs[0];
 }
 
-// Regression test for per-tensor INT4/UINT4 output (#30596 review): the result has to
-// saturate to the 4-bit range on every path, including the x86 AVX2 per-tensor one,
-// so the input is long enough for its 8-lane loop and its scalar tail.
+// Per-tensor INT4/UINT4 output has to saturate to the 4-bit range on every path,
+// including the x86 AVX2 per-tensor one, so the input is long enough for its
+// 8-lane loop and its scalar tail.
 TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
 {
     const int n = 35;
