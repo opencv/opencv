@@ -1833,8 +1833,8 @@ column-offset/partial-width ROI) fall back to the two equivalent #Sobel passes.
 @param dx output image with the first-order derivative in x (depth @p ddepth, same size as src).
 @param dy output image with the first-order derivative in y (depth @p ddepth, same size as src).
 @param ksize size of the Sobel kernel; fused fast paths require 3 or 5 (other sizes use the Sobel
-            fallback). Also accepts 1, -1 (Scharr), and 7 for Sobel-compatible callers such as
-            #HoughCircles and #cv::segmentation::IntelligentScissorsMB.
+            fallback). Also accepts -1 (#FILTER_SCHARR) and odd sizes up to 31 for Sobel-compatible
+            callers such as #HoughCircles and #cv::segmentation::IntelligentScissorsMB.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
 @param ddepth output image depth; CV_16S or CV_32F.
 @param scale optional scale factor applied to the computed derivatives.

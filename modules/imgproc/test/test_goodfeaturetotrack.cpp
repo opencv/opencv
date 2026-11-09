@@ -551,7 +551,7 @@ TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
     EXPECT_LE(cv::norm(eigenCh[1], 4 * eigenChScharr[1], NORM_INF), 1e-4);
 }
 
-// spatialGradient() takes ksize 1, 3, 5 and 7 only, but Sobel() takes any odd size up to 31.
+// Corner functions must accept any odd Sobel aperture size up to 31.
 TEST(Imgproc_Corner, ksize_above_7_uses_Sobel)
 {
     Mat src(64, 64, CV_8UC1);
