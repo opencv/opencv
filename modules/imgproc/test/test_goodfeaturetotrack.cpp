@@ -551,44 +551,44 @@ TEST(Imgproc_Corner, ksize_zero_selects_Scharr)
     EXPECT_LE(cv::norm(eigenCh[1], 4 * eigenChScharr[1], NORM_INF), 1e-4);
 }
 
-// Corner functions must accept any odd Sobel aperture size up to 31.
-TEST(Imgproc_Corner, ksize_above_7_uses_Sobel)
+// Corner functions must accept odd Sobel aperture sizes above 7.
+typedef testing::TestWithParam<int> Imgproc_Corner_LargeKSize;
+
+TEST_P(Imgproc_Corner_LargeKSize, uses_Sobel)
 {
+    const int ksize = GetParam();
     Mat src(64, 64, CV_8UC1);
     randu(src, 0, 256);
     const int blockSize = 3;
     const double k = 0.04;
 
-    for (int ksize = 9; ksize <= 31; ksize += 2)
-    {
-        SCOPED_TRACE(cv::format("ksize=%d", ksize));
+    const double scale = 1.0 / ((double)(1 << (ksize - 1)) * blockSize * 255.0);
+    Mat dx, dy, a, b, c;
+    Sobel(src, dx, CV_32F, 1, 0, ksize, scale);
+    Sobel(src, dy, CV_32F, 0, 1, ksize, scale);
+    boxFilter(dx.mul(dx), a, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+    boxFilter(dx.mul(dy), b, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+    boxFilter(dy.mul(dy), c, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
 
-        const double scale = 1.0 / ((double)(1 << (ksize - 1)) * blockSize * 255.0);
-        Mat dx, dy, a, b, c;
-        Sobel(src, dx, CV_32F, 1, 0, ksize, scale);
-        Sobel(src, dy, CV_32F, 0, 1, ksize, scale);
-        boxFilter(dx.mul(dx), a, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
-        boxFilter(dx.mul(dy), b, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
-        boxFilter(dy.mul(dy), c, CV_32F, Size(blockSize, blockSize), Point(-1, -1), false);
+    Mat trace = a + c, diff = a - c, root;
+    sqrt(0.25 * diff.mul(diff) + b.mul(b), root);
+    Mat maxEigenExpected = 0.5 * trace + root;
+    Mat minEigenExpected = 0.5 * trace - root;
+    Mat harrisExpected = a.mul(c) - b.mul(b) - k * trace.mul(trace);
 
-        Mat trace = a + c, diff = a - c, root;
-        sqrt(0.25 * diff.mul(diff) + b.mul(b), root);
-        Mat maxEigenExpected = 0.5 * trace + root;
-        Mat minEigenExpected = 0.5 * trace - root;
-        Mat harrisExpected = a.mul(c) - b.mul(b) - k * trace.mul(trace);
-
-        Mat minEigen, harris, eigenVecs;
-        ASSERT_NO_THROW(cornerMinEigenVal(src, minEigen, blockSize, ksize));
-        ASSERT_NO_THROW(cornerHarris(src, harris, blockSize, ksize, k));
-        ASSERT_NO_THROW(cornerEigenValsAndVecs(src, eigenVecs, blockSize, ksize));
-        EXPECT_LE(cv::norm(minEigen, minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
-        EXPECT_LE(cv::norm(harris, harrisExpected, NORM_INF), 1e-4 * cv::norm(harrisExpected, NORM_INF));
-        std::vector<Mat> eigenCh;
-        split(eigenVecs, eigenCh);
-        EXPECT_LE(cv::norm(eigenCh[0], maxEigenExpected, NORM_INF), 1e-4 * cv::norm(maxEigenExpected, NORM_INF));
-        EXPECT_LE(cv::norm(eigenCh[1], minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
-    }
+    Mat minEigen, harris, eigenVecs;
+    ASSERT_NO_THROW(cornerMinEigenVal(src, minEigen, blockSize, ksize));
+    ASSERT_NO_THROW(cornerHarris(src, harris, blockSize, ksize, k));
+    ASSERT_NO_THROW(cornerEigenValsAndVecs(src, eigenVecs, blockSize, ksize));
+    EXPECT_LE(cv::norm(minEigen, minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
+    EXPECT_LE(cv::norm(harris, harrisExpected, NORM_INF), 1e-4 * cv::norm(harrisExpected, NORM_INF));
+    std::vector<Mat> eigenCh;
+    split(eigenVecs, eigenCh);
+    EXPECT_LE(cv::norm(eigenCh[0], maxEigenExpected, NORM_INF), 1e-4 * cv::norm(maxEigenExpected, NORM_INF));
+    EXPECT_LE(cv::norm(eigenCh[1], minEigenExpected, NORM_INF), 1e-4 * cv::norm(minEigenExpected, NORM_INF));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Corner_LargeKSize, testing::Values(9, 31));
 
 
 }} // namespace
