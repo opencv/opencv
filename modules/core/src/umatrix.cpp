@@ -532,7 +532,13 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
             int dleft = ofs.x;
             int dright = wholeSize.width - src.cols - ofs.x;
             src.adjustROI(dtop, dbottom, dleft, dright);
-            return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+            UMat whole = src.getUMat(accessFlags, usageFlags);
+            if (dims == 1)
+            {
+                Range r(ofs.x, ofs.x + sz.width);
+                return whole(&r);
+            }
+            return whole(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
         }
     }
     CV_Assert(data == datastart);
