@@ -1957,7 +1957,24 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
 
     // invalid aperture sizes must be rejected
     Mat src(16, 16, CV_8UC1), dx, dy;
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 0));
     EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 2));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 33));
+
+    // Scharr and odd Sobel apertures up to 31 must work via the Sobel fallback.
+    {
+        Mat srcLarge(64, 64, CV_8UC1);
+        rng.fill(srcLarge, RNG::UNIFORM, 0, 256);
+        for (int ks = FILTER_SCHARR; ks <= 31; ks += 2)
+        {
+            Mat dxRef, dyRef;
+            spatialGradient(srcLarge, dx, dy, ks, BORDER_DEFAULT, CV_32F);
+            Sobel(srcLarge, dxRef, CV_32F, 1, 0, ks, 1, 0, BORDER_DEFAULT);
+            Sobel(srcLarge, dyRef, CV_32F, 0, 1, ks, 1, 0, BORDER_DEFAULT);
+            EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 0.0) << "dx ksize=" << ks;
+            EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), 0.0) << "dy ksize=" << ks;
+        }
+    }
 }
 
 // Reproduces parallelCanny's per-slice row splitting and checks each slice's
