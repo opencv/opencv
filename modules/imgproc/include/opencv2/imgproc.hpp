@@ -1215,7 +1215,7 @@ kernels are generated (see #Sobel). The filters are normally passed to #sepFilte
 @param ky Output matrix of column filter coefficients. It has the type ktype .
 @param dx Derivative order in respect of x.
 @param dy Derivative order in respect of y.
-@param ksize Aperture size. It can be FILTER_SCHARR, 1, 3, 5, or 7.
+@param ksize Aperture size. It can be FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param normalize Flag indicating whether to normalize (scale down) the filter coefficients or not.
 Theoretically, the coefficients should have the denominator \f$=2^{ksize*2-dx-dy-2}\f$. If you are
 going to filter floating-point images, you are likely to use the normalized kernels. But if you
@@ -1544,7 +1544,7 @@ The second case corresponds to a kernel of:
     8-bit input images it will result in truncated derivatives.
 @param dx order of the derivative x.
 @param dy order of the derivative y.
-@param ksize size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
+@param ksize size of the extended Sobel kernel; it must be odd and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param scale optional scale factor for the computed derivative values; by default, no scaling is
 applied (see #getDerivKernels for details).
 @param delta optional delta value that is added to the results prior to storing them in dst.
