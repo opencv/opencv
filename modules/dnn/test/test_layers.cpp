@@ -1790,7 +1790,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets())
 // A constant weight whose leading dims broadcast against the activations: B has more than
 // one batch slice, but fewer than the output batch. The packed-B stride has to be derived
 // from the number of slices actually stored in B, not from the (broadcast) output batch.
-TEST(Test_MatMul, PackedBroadcastMultipleSlices)
+TEST(Layer_Test_MatMul, PackedBroadcastMultipleSlices)
 {
     const int A0 = 2, A1 = 1, M = 3, K = 4;
     const int B0 = 1, B1 = 5, N = 6;
