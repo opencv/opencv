@@ -4772,4 +4772,420 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     normAssert(refState, outputs[1], "present_state");
 }
 
+
+typedef testing::TestWithParam<int> Test_Col2Im_ShapeType;
+
+TEST_P(Test_Col2Im_ShapeType, EmptyInput)
+{
+    int shapeType = GetParam();
+    Mat image_shape(std::vector<int>{2}, shapeType);
+    Mat block_shape(std::vector<int>{2}, shapeType);
+    if (shapeType == CV_32S)
+    {
+        image_shape.at<int32_t>(0) = 4;
+        image_shape.at<int32_t>(1) = 4;
+        block_shape.at<int32_t>(0) = 2;
+        block_shape.at<int32_t>(1) = 2;
+    }
+    else
+    {
+        image_shape.at<int64_t>(0) = 4;
+        image_shape.at<int64_t>(1) = 4;
+        block_shape.at<int64_t>(0) = 2;
+        block_shape.at<int64_t>(1) = 2;
+    }
+
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_empty";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    for (const int N : {0, 1})
+    {
+        const int C = (N == 0) ? 1 : 0;
+        Mat data(std::vector<int>{N, C * 4, 9}, CV_32F);
+        std::vector<Mat> inputs{data, image_shape, block_shape};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({N, C, 4, 4}));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Col2Im_ShapeType, testing::Values(CV_32S, CV_64S));
+
+TEST(Test_Col2Im, TypeValidation)
+{
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_types";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<cv::dnn::MatType> outTypes, intTypes;
+    EXPECT_NO_THROW(layer->getTypes({CV_32F, CV_32S, CV_32S}, 1, 0, outTypes, intTypes));
+    EXPECT_EQ(outTypes, std::vector<cv::dnn::MatType>{CV_32F});
+    EXPECT_TRUE(intTypes.empty());
+
+    EXPECT_NO_THROW(layer->getTypes({CV_32F, CV_64S, CV_64S}, 1, 0, outTypes, intTypes));
+    EXPECT_EQ(outTypes, std::vector<cv::dnn::MatType>{CV_32F});
+    EXPECT_TRUE(intTypes.empty());
+
+    Mat image_shape(std::vector<int>{2}, CV_64S);
+    image_shape.at<int64_t>(0) = 4;
+    image_shape.at<int64_t>(1) = 4;
+    Mat block_shape(std::vector<int>{2}, CV_64S);
+    block_shape.at<int64_t>(0) = 2;
+    block_shape.at<int64_t>(1) = 2;
+
+    for (int badType : {CV_16F, CV_64F, CV_32S, CV_8U, CV_32FC2})
+    {
+        SCOPED_TRACE(typeToString(badType));
+        EXPECT_THROW(layer->getTypes({badType, CV_64S, CV_64S}, 1, 0, outTypes, intTypes), cv::Exception);
+
+        Mat badData(std::vector<int>{1, 4, 9}, badType, Scalar::all(1));
+        std::vector<Mat> inputs{badData, image_shape, block_shape}, outputs(1), internals;
+        EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
+    }
+
+    for (int badShapeType : {CV_32F, CV_16S, CV_32SC2})
+    {
+        SCOPED_TRACE(typeToString(badShapeType));
+        EXPECT_THROW(layer->getTypes({CV_32F, badShapeType, CV_64S}, 1, 0, outTypes, intTypes), cv::Exception);
+        EXPECT_THROW(layer->getTypes({CV_32F, CV_64S, badShapeType}, 1, 0, outTypes, intTypes), cv::Exception);
+
+        Mat data(std::vector<int>{1, 4, 9}, CV_32F, Scalar(1.0f));
+        Mat badShape(std::vector<int>{2}, badShapeType, Scalar::all(2));
+        std::vector<Mat> inputsImg{data, badShape, block_shape}, inputsBlk{data, image_shape, badShape}, outputs(1), internals;
+        EXPECT_THROW(layer->forward(inputsImg, outputs, internals), cv::Exception);
+        EXPECT_THROW(layer->forward(inputsBlk, outputs, internals), cv::Exception);
+    }
+}
+
+TEST(Test_Col2Im, OversizedShape)
+{
+    Mat data(std::vector<int>{1, 4, 9}, CV_32F, Scalar(1.0f));
+    Mat block_shape(std::vector<int>{2}, CV_64S);
+    block_shape.at<int64_t>(0) = 2;
+    block_shape.at<int64_t>(1) = 2;
+
+    Mat image_shape_oversized(std::vector<int>{2}, CV_64S);
+    image_shape_oversized.at<int64_t>(0) = (int64_t)std::numeric_limits<int>::max() + 100LL;
+    image_shape_oversized.at<int64_t>(1) = 4;
+
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_oversized_img";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, image_shape_oversized, block_shape};
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    Mat image_shape_valid(std::vector<int>{2}, CV_64S);
+    image_shape_valid.at<int64_t>(0) = 4;
+    image_shape_valid.at<int64_t>(1) = 4;
+
+    Mat block_shape_oversized(std::vector<int>{2}, CV_64S);
+    block_shape_oversized.at<int64_t>(0) = (int64_t)std::numeric_limits<int>::max() + 100LL;
+    block_shape_oversized.at<int64_t>(1) = 2;
+
+    inputs = {data, image_shape_valid, block_shape_oversized};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+}
+
+struct Col2ImMalformedCase
+{
+    const char* name;
+    std::vector<int> dataShape;
+    std::vector<int> imageShape;
+    std::vector<int> blockShape;
+    std::vector<int> strides;
+    std::vector<int> dilations;
+    std::vector<int> pads;
+};
+
+static std::ostream& operator<<(std::ostream& os, const Col2ImMalformedCase& tc)
+{
+    return os << tc.name;
+}
+
+typedef testing::TestWithParam<Col2ImMalformedCase> Test_Col2Im_Malformed;
+
+TEST_P(Test_Col2Im_Malformed, InvalidConfig)
+{
+    const Col2ImMalformedCase& tc = GetParam();
+    SCOPED_TRACE(tc.name);
+
+    Mat data(tc.dataShape, CV_32F, Scalar(1.0f));
+    Mat image_shape(std::vector<int>{(int)tc.imageShape.size()}, CV_32S);
+    for (size_t i = 0; i < tc.imageShape.size(); ++i)
+        image_shape.at<int32_t>((int)i) = tc.imageShape[i];
+    Mat block_shape(std::vector<int>{(int)tc.blockShape.size()}, CV_32S);
+    for (size_t i = 0; i < tc.blockShape.size(); ++i)
+        block_shape.at<int32_t>((int)i) = tc.blockShape[i];
+
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_malformed";
+    if (!tc.strides.empty())
+        lp.set("strides", DictValue::arrayInt(tc.strides.data(), (int)tc.strides.size()));
+    if (!tc.dilations.empty())
+        lp.set("dilations", DictValue::arrayInt(tc.dilations.data(), (int)tc.dilations.size()));
+    if (!tc.pads.empty())
+        lp.set("pads", DictValue::arrayInt(tc.pads.data(), (int)tc.pads.size()));
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, image_shape, block_shape};
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Col2Im_Malformed, testing::Values(
+    Col2ImMalformedCase{"zero_stride", {1, 4, 9}, {4, 4}, {2, 2}, {0, 1}, {}, {}},
+    Col2ImMalformedCase{"mismatched_strides_len", {1, 4, 9}, {4, 4}, {2, 2}, {1}, {}, {}},
+    Col2ImMalformedCase{"zero_dilation", {1, 4, 9}, {4, 4}, {2, 2}, {}, {0, 1}, {}},
+    Col2ImMalformedCase{"negative_dilation", {1, 4, 9}, {4, 4}, {2, 2}, {}, {-1, 1}, {}},
+    Col2ImMalformedCase{"mismatched_dilations_len", {1, 4, 9}, {4, 4}, {2, 2}, {}, {1}, {}},
+    Col2ImMalformedCase{"negative_pad", {1, 4, 9}, {4, 4}, {2, 2}, {}, {}, {-1, 0, 0, 0}},
+    Col2ImMalformedCase{"mismatched_pads_len", {1, 4, 9}, {4, 4}, {2, 2}, {}, {}, {0, 0}},
+    Col2ImMalformedCase{"spatial_dim_1d", {1, 2, 3}, {4}, {2}, {}, {}, {}},
+    Col2ImMalformedCase{"block_shape_len_mismatch", {1, 4, 9}, {4, 4}, {2, 2, 1}, {}, {}, {}},
+    Col2ImMalformedCase{"channel_not_divisible", {1, 5, 9}, {4, 4}, {2, 2}, {}, {}, {}}
+));
+
+TEST(Test_Col2Im, StaticAndDynamicShapeInference)
+{
+    // Constant image_shape and block_shape allow static output shape inference before forward().
+    Net netStatic = readNetFromONNX(findDataFile("dnn/onnx/models/col2im_spatial_4d.onnx"), ENGINE_OPENCV);
+    ASSERT_FALSE(netStatic.empty());
+    bool foundStaticLayer = false;
+    for (const String& lname : netStatic.getLayerNames())
+    {
+        Ptr<Layer> layer = netStatic.getLayer(lname);
+        if (layer && layer->type == "Col2Im")
+        {
+            foundStaticLayer = true;
+            EXPECT_FALSE(layer->dynamicOutputShapes());
+        }
+    }
+    EXPECT_TRUE(foundStaticLayer);
+
+    std::vector<MatShape> inShapes, outShapes;
+    netStatic.getLayerShapes(std::vector<MatShape>{MatShape{1, 16, 1}}, std::vector<int>{CV_32F}, 0, inShapes, outShapes);
+    ASSERT_EQ(inShapes.size(), (size_t)1);
+    EXPECT_EQ(inShapes[0], MatShape({1, 16, 1}));
+    ASSERT_EQ(outShapes.size(), (size_t)1);
+    EXPECT_EQ(outShapes[0], MatShape({1, 1, 2, 2, 2, 2}));
+
+    netStatic.getLayerShapes(std::vector<MatShape>{MatShape{2, 16, 1}}, std::vector<int>{CV_32F}, 0, inShapes, outShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)1);
+    EXPECT_EQ(outShapes[0], MatShape({2, 1, 2, 2, 2, 2}));
+
+    // Non-constant image_shape and block_shape remain dynamic.
+    Net netDynamic = readNetFromONNX(findDataFile("dnn/onnx/conformance/node/test_col2im/model.onnx"), ENGINE_OPENCV);
+    ASSERT_FALSE(netDynamic.empty());
+    bool foundDynamicLayer = false;
+    for (const String& lname : netDynamic.getLayerNames())
+    {
+        Ptr<Layer> layer = netDynamic.getLayer(lname);
+        if (layer && layer->type == "Col2Im")
+        {
+            foundDynamicLayer = true;
+            EXPECT_TRUE(layer->dynamicOutputShapes());
+        }
+    }
+    EXPECT_TRUE(foundDynamicLayer);
+
+    inShapes.clear();
+    outShapes.clear();
+    netDynamic.getLayerShapes(std::vector<MatShape>{}, std::vector<int>{}, 0, inShapes, outShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)1);
+    EXPECT_TRUE(outShapes[0].empty());
+}
+
+TEST(Test_Col2Im, Spatial4DWithAttributes)
+{
+    Net net = readNet(findDataFile("dnn/onnx/models/col2im_spatial_4d.onnx"));
+    ASSERT_FALSE(net.empty());
+
+    Mat data(std::vector<int>{1, 16, 1}, CV_32F);
+    for (int i = 0; i < 16; ++i)
+        data.at<float>(0, i, 0) = (float)(i + 1);
+
+    net.setInput(data, "data");
+    Mat out = net.forward();
+    ASSERT_EQ(out.dims, 6);
+    EXPECT_EQ(out.size[0], 1);
+    EXPECT_EQ(out.size[1], 1);
+    EXPECT_EQ(out.size[2], 2);
+    EXPECT_EQ(out.size[3], 2);
+    EXPECT_EQ(out.size[4], 2);
+    EXPECT_EQ(out.size[5], 2);
+}
+
+TEST(Test_Col2Im, FocusedCoordinateOverflow)
+{
+    // image_shape = [2, 1], block_shape = [2, 1]
+    // dilations = [INT_MAX, 1], pads = [INT_MAX, 0, 1, 0], strides = [1, 1]
+    // data shape = [1, 2, 3]
+    Mat data(std::vector<int>{1, 2, 3}, CV_32F, Scalar(1.0f));
+    Mat image_shape(std::vector<int>{2}, CV_32S);
+    image_shape.at<int32_t>(0) = 2;
+    image_shape.at<int32_t>(1) = 1;
+
+    Mat block_shape(std::vector<int>{2}, CV_32S);
+    block_shape.at<int32_t>(0) = 2;
+    block_shape.at<int32_t>(1) = 1;
+
+    LayerParams lp;
+    lp.type = "Col2Im";
+    lp.name = "test_col2im_coord_overflow";
+
+    const int s[2] = {1, 1};
+    lp.set("strides", DictValue::arrayInt(s, 2));
+
+    const int d[2] = {std::numeric_limits<int>::max(), 1};
+    lp.set("dilations", DictValue::arrayInt(d, 2));
+
+    const int p[4] = {std::numeric_limits<int>::max(), 0, 1, 0};
+    lp.set("pads", DictValue::arrayInt(p, 4));
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs{data, image_shape, block_shape};
+    std::vector<Mat> outputs;
+    EXPECT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({1, 1, 2, 1}));
+    const float* out_ptr = outputs[0].ptr<float>();
+    EXPECT_FLOAT_EQ(out_ptr[0], 1.0f);
+    EXPECT_FLOAT_EQ(out_ptr[1], 1.0f);
+}
+
+TEST(Test_Col2Im, TapRangeBoundaryAndStridedRows)
+{
+    struct CaseCfg
+    {
+        int N;
+        int C;
+        std::vector<int> imageShape;
+        std::vector<int> blockShape;
+        std::vector<int> strides;
+        std::vector<int> dilations;
+        std::vector<int> pads;
+    };
+
+    const CaseCfg cases[] = {
+        {2, 2, {2, 4}, {3, 3}, {1, 1}, {2, 1}, {4, 2, 1, 2}},
+        {2, 2, {3, 4, 5}, {2, 2, 2}, {1, 2, 2}, {1, 1, 2}, {1, 1, 1, 1, 1, 1}}
+    };
+
+    for (size_t caseIdx = 0; caseIdx < sizeof(cases) / sizeof(cases[0]); ++caseIdx)
+    {
+        const CaseCfg& tc = cases[caseIdx];
+        SCOPED_TRACE(cv::format("case_%zu", caseIdx));
+
+        const int D = (int)tc.imageShape.size();
+        int blockProd = 1;
+        for (int b : tc.blockShape)
+            blockProd *= b;
+
+        std::vector<int> outSpatial(D);
+        int L = 1;
+        size_t spatialSize = 1;
+        for (int d = 0; d < D; ++d)
+        {
+            int dimPadded = tc.imageShape[d] + tc.pads[d] + tc.pads[d + D];
+            int effKernel = (tc.blockShape[d] - 1) * tc.dilations[d] + 1;
+            outSpatial[d] = (dimPadded - effKernel) / tc.strides[d] + 1;
+            L *= outSpatial[d];
+            spatialSize *= (size_t)tc.imageShape[d];
+        }
+
+        Mat data(std::vector<int>{tc.N, tc.C * blockProd, L}, CV_32F);
+        float* dataPtr = data.ptr<float>();
+        for (size_t i = 0; i < data.total(); ++i)
+            dataPtr[i] = 0.25f * (float)((i % 29) + 1);
+
+        Mat image_shape(std::vector<int>{D}, CV_32S);
+        Mat block_shape(std::vector<int>{D}, CV_32S);
+        for (int d = 0; d < D; ++d)
+        {
+            image_shape.at<int32_t>(d) = tc.imageShape[d];
+            block_shape.at<int32_t>(d) = tc.blockShape[d];
+        }
+
+        LayerParams lp;
+        lp.type = "Col2Im";
+        lp.name = cv::format("test_col2im_tap_range_%zu", caseIdx);
+        lp.set("strides", DictValue::arrayInt(tc.strides.data(), D));
+        lp.set("dilations", DictValue::arrayInt(tc.dilations.data(), D));
+        lp.set("pads", DictValue::arrayInt(tc.pads.data(), 2 * D));
+
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        ASSERT_TRUE(layer);
+
+        std::vector<Mat> inputs{data, image_shape, block_shape};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+
+        std::vector<int> refShape = {tc.N, tc.C};
+        refShape.insert(refShape.end(), tc.imageShape.begin(), tc.imageShape.end());
+        ASSERT_EQ(shape(outputs[0]), MatShape(refShape));
+
+        Mat ref(refShape, CV_32F, Scalar(0.0f));
+        std::vector<size_t> blockSteps(D, 1), outSteps(D, 1), imgSteps(D, 1);
+        for (int d = D - 2; d >= 0; --d)
+        {
+            blockSteps[d] = blockSteps[d + 1] * (size_t)tc.blockShape[d + 1];
+            outSteps[d] = outSteps[d + 1] * (size_t)outSpatial[d + 1];
+            imgSteps[d] = imgSteps[d + 1] * (size_t)tc.imageShape[d + 1];
+        }
+
+        float* refPtr = ref.ptr<float>();
+        for (int n = 0; n < tc.N; ++n)
+        {
+            for (int c = 0; c < tc.C; ++c)
+            {
+                size_t nc = (size_t)n * (size_t)tc.C + (size_t)c;
+                const float* srcNc = dataPtr + nc * (size_t)blockProd * (size_t)L;
+                float* dstNc = refPtr + nc * spatialSize;
+
+                for (int k = 0; k < blockProd; ++k)
+                {
+                    for (int l = 0; l < L; ++l)
+                    {
+                        size_t dstOff = 0;
+                        bool inBounds = true;
+                        for (int d = 0; d < D; ++d)
+                        {
+                            int k_d = static_cast<int>(((size_t)k / blockSteps[d]) % (size_t)tc.blockShape[d]);
+                            int l_d = static_cast<int>(((size_t)l / outSteps[d]) % (size_t)outSpatial[d]);
+                            int pos = l_d * tc.strides[d] + k_d * tc.dilations[d] - tc.pads[d];
+                            if (pos < 0 || pos >= tc.imageShape[d])
+                            {
+                                inBounds = false;
+                                break;
+                            }
+                            dstOff += (size_t)pos * imgSteps[d];
+                        }
+                        if (inBounds)
+                            dstNc[dstOff] += srcNc[(size_t)k * (size_t)L + (size_t)l];
+                    }
+                }
+            }
+        }
+
+        normAssert(ref, outputs[0], cv::format("tap_range_case_%zu", caseIdx).c_str());
+    }
+}
+
 }} // namespace

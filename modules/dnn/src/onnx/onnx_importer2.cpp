@@ -215,6 +215,7 @@ protected:
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCompress             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCol2Im               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScan                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -510,7 +511,14 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "strides")
             {
-                CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_CheckGE(attribute_proto.ints_size(), 2, "Col2Im: strides must have at least 2 entries");
+                }
+                else
+                {
+                    CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                }
                 lp.set("stride", parse(attribute_proto.ints()));
             }
             else if(attribute_name == "pads")
@@ -530,6 +538,12 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
                         paddings.push_back(attribute_proto.ints(dims + i));
                     }
                     lp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+                }
+                else if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_Assert(attribute_proto.ints_size() % 2 == 0);
+                    CV_CheckGE(attribute_proto.ints_size(), 4, "Col2Im: pads must have at least 4 entries (2 per spatial axis)");
+                    lp.set("pad", parse(attribute_proto.ints()));
                 }
                 else
                 {
@@ -551,7 +565,14 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "dilations")
             {
-                CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_CheckGE(attribute_proto.ints_size(), 2, "Col2Im: dilations must have at least 2 entries");
+                }
+                else
+                {
+                    CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                }
                 lp.set("dilation", parse(attribute_proto.ints()));
             }
             else if(attribute_name == "activations" &&
@@ -2466,6 +2487,14 @@ void ONNXImporter2::parseCompress(LayerParams& layerParams, const opencv_onnx::N
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseCol2Im(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Col2Im";
+    CV_CheckEQ(node_proto.input_size(), 3, "Col2Im: three inputs are required");
+    CV_CheckEQ(node_proto.output_size(), 1, "Col2Im: one output is required");
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseImageDecoder(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ImageDecoder";
@@ -3643,6 +3672,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
     dispatch["Compress"] = &ONNXImporter2::parseCompress;
+    dispatch["Col2Im"] = &ONNXImporter2::parseCol2Im;
     dispatch["Unique"] = &ONNXImporter2::parseUnique;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
