@@ -8627,15 +8627,59 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 
 }
 
-#if CV_SIMD128
+// Expanding loads may read a full register, so image tails are copied into padded storage.
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename T>
-static inline v_float32x4 bicubicLoadChannels(const T* src)
+static inline v_float32 bicubicLoadChannels(const T* src)
+{
+    if constexpr (std::is_same_v<T, float>)
+        return vx_load(src);
+    else
+    {
+        alignas(CV_SIMD_WIDTH) T values[CV_SIMD_WIDTH/sizeof(T)] = {};
+        std::memcpy(values, src, VTraits<v_float32>::nlanes*sizeof(T));
+        if constexpr (std::is_same_v<T, uchar>)
+            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(values)));
+        else if constexpr (std::is_same_v<T, ushort>)
+            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(values)));
+        else
+            return v_cvt_f32(vx_load_expand(values));
+    }
+}
+
+template<typename T>
+static inline void bicubicStoreChannels(T* dst, const v_float32& value)
+{
+    if constexpr (std::is_same_v<T, float>)
+        vx_store(dst, value);
+    else
+    {
+        const v_int32 rounded = v_round(value);
+        if constexpr (std::is_same_v<T, uchar>)
+        {
+            const v_uint16 words = v_pack_u(rounded, rounded);
+            alignas(CV_SIMD_WIDTH) uchar packed[CV_SIMD_WIDTH];
+            // Store packed lanes to scratch to avoid writing past the channel tail.
+            v_store_low(packed, v_pack(words, words));
+            std::memcpy(dst, packed, VTraits<v_float32>::nlanes*sizeof(T));
+        }
+        else if constexpr (std::is_same_v<T, ushort>)
+            v_store_low(dst, v_pack_u(rounded, rounded));
+        else
+            v_store_low(dst, v_pack(rounded, rounded));
+    }
+}
+#endif
+
+#if CV_SIMD128
+// Keep the four-lane cleanup path for wide vectors when fewer than a full vector remains.
+template<typename T>
+static inline v_float32x4 bicubicLoadChannels4(const T* src)
 {
     if constexpr (std::is_same_v<T, float>)
         return v_load(src);
     else
     {
-        // Expanding loads on some backends read a full 16-byte register.
         alignas(16) T values[16/sizeof(T)] = {};
         std::memcpy(values, src, 4*sizeof(T));
         if constexpr (std::is_same_v<T, uchar>)
@@ -8648,7 +8692,7 @@ static inline v_float32x4 bicubicLoadChannels(const T* src)
 }
 
 template<typename T>
-static inline void bicubicStoreChannels(T* dst, const v_float32x4& value)
+static inline void bicubicStoreChannels4(T* dst, const v_float32x4& value)
 {
     if constexpr (std::is_same_v<T, float>)
         v_store(dst, value);
@@ -8714,11 +8758,13 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const T* fill = static_cast<const T*>(borderValue);
     T* dst = static_cast<T*>(destination);
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
-    const double minX = -double(std::max(size.width, 16)), minY = -double(std::max(size.height, 16));
+    const int bigwidth = std::max(size.width, 16), bigheight = std::max(size.height, 16);
+    const float minX = float(-bigwidth), minY = float(-bigheight);
+    const float maxX = float(bigwidth*2), maxY = float(bigheight*2);
     for (int i = 0; i < len; ++i, dst += channels)
     {
-        const double sx = std::isfinite(x[i]) ? double(x[i]) : x[i] > 0 ? -2.*minX : minX;
-        const double sy = std::isfinite(y[i]) ? double(y[i]) : y[i] > 0 ? -2.*minY : minY;
+        const float sx = std::isfinite(x[i]) ? std::clamp(x[i], minX, maxX) : x[i] > 0 ? maxX : minX;
+        const float sy = std::isfinite(y[i]) ? std::clamp(y[i], minY, maxY) : y[i] > 0 ? maxY : minY;
         const double baseX = std::floor(sx), baseY = std::floor(sy);
         if ((baseX - 1 >= size.width || baseX + 3 <= 0 || baseY - 1 >= size.height || baseY + 3 <= 0) &&
             (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
@@ -8760,6 +8806,28 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                 }
             }
 #endif
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            if constexpr (!std::is_same_v<T, double>)
+            {
+                const int lanes = VTraits<v_float32>::nlanes;
+                const v_float32 w0 = vx_setall_f32(wx[0]), w1 = vx_setall_f32(wx[1]);
+                const v_float32 w2 = vx_setall_f32(wx[2]), w3 = vx_setall_f32(wx[3]);
+                for (; channel <= channels - lanes; channel += lanes)
+                {
+                    v_float32 sum = vx_setzero_f32();
+                    for (int row = 0; row < 4; ++row)
+                    {
+                        const T* ptr = rows[row] + channel;
+                        v_float32 horizontal = v_add(v_mul(bicubicLoadChannels(ptr), w0),
+                                                    v_mul(bicubicLoadChannels(ptr + channels), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3), w3));
+                        sum = v_add(sum, v_mul(horizontal, vx_setall_f32(wy[row])));
+                    }
+                    bicubicStoreChannels(dst + channel, sum);
+                }
+            }
+#endif
 #if CV_SIMD128
             if constexpr (!std::is_same_v<T, double>)
             {
@@ -8771,13 +8839,13 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const T* ptr = rows[row] + channel;
-                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels(ptr), w0),
-                                                      v_mul(bicubicLoadChannels(ptr + channels), w1));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2), w2));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3), w3));
+                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels4(ptr), w0),
+                                                       v_mul(bicubicLoadChannels4(ptr + channels), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*2), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*3), w3));
                         sum = v_add(sum, v_mul(horizontal, v_setall_f32(wy[row])));
                     }
-                    bicubicStoreChannels(dst + channel, sum);
+                    bicubicStoreChannels4(dst + channel, sum);
                 }
             }
 #endif

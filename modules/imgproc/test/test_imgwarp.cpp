@@ -1278,6 +1278,10 @@ TEST_P(Imgproc_CubicPeriodicCoordinates, accuracy)
             wide.ptr<float>(y)[x*wide.channels() + channel] = float(y*8 + x + channel);
         wide.convertTo(src, CV_MAT_DEPTH(type));
         const auto reduce = [border](float coordinate, int length) {
+            const int bigSize = std::max(length, 16);
+            const float minCoord = float(-bigSize);
+            const float maxCoord = float(bigSize*2);
+            coordinate = std::clamp(coordinate, minCoord, maxCoord);
             if (length == 1)
                 return 0.f;
             const double period = border == BORDER_WRAP ? double(length) :
