@@ -1883,6 +1883,9 @@ public:
     The method reserves space for sz rows. If the matrix already has enough space to store sz rows,
     nothing happens. If the matrix is reallocated, the first Mat::rows rows are preserved. The method
     emulates the corresponding method of the STL vector class.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
     @param sz Number of rows.
      */
     void reserve(size_t sz);
@@ -1900,6 +1903,9 @@ public:
     The methods change the number of matrix rows. If the matrix is reallocated, the first
     min(Mat::rows, sz) rows are preserved. The methods emulate the corresponding methods of the STL
     vector class.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
     @param sz New number of rows.
      */
     void resize(size_t sz);
@@ -1918,6 +1924,9 @@ public:
     The methods add one or more elements to the bottom of the matrix. They emulate the corresponding
     method of the STL vector class. When elem is Mat , its type and the number of columns must be the
     same as in the container matrix.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
     @param elem Added element(s).
      */
     template<typename _Tp> void push_back(const _Tp& elem);
@@ -1940,6 +1949,9 @@ public:
     /** @brief Removes elements from the bottom of the matrix.
 
     The method removes one or more rows from the bottom of the matrix.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
     @param nelems Number of removed rows. If it is greater than the total number of rows, an exception
     is thrown.
      */
