@@ -597,7 +597,7 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
         *response /= M*N;
 
     // adjust shift relative to image center...
-    Point2d center((double)padded1.cols / 2.0, (double)padded1.rows / 2.0);
+    Point2d center(padded1.cols / 2, padded1.rows / 2);
 
     return (center - t);
 }
