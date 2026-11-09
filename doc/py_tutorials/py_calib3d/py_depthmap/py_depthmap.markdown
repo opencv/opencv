@@ -127,7 +127,9 @@ From disparity to depth
 
 Both matchers return disparity as 16-bit fixed-point numbers with 4 fractional bits, so divide by 16 to
 get disparity in pixels. Pixels without a valid match get `(minDisparity - 1) * 16`, which is -1 after
-the division here. Mask them, together with zero disparity, which corresponds to a point at infinity.
+the division here, so keep only `disparity > minDisparity - 1`. Zero disparity is not a point at infinity
+for this pair: with the offset \f$d_{offs}\f$ below it still has a finite depth. The singularity is at
+\f$d + d_{offs} = 0\f$, which is guarded separately.
 
 Depth then follows from the equation above, \f$Z = \frac{fB}{d + d_{offs}}\f$. \f$f\f$ is the focal
 length in pixels, \f$B\f$ the baseline, and \f$d_{offs}\f$ the difference between the principal points of
@@ -139,8 +141,9 @@ f = 3740 / 2     # focal length in pixels, halved with the image
 B = 0.160        # baseline in metres, so depth is in metres
 doffs = 270 / 2  # principal point offset in pixels, halved with the image
 
+min_disparity = 0  # the minDisparity the matcher was created with
 disparity = disparity_sgbm.astype(np.float32) / 16.0
-valid = disparity > 0
+valid = (disparity > min_disparity - 1) & (disparity + doffs > 0)
 depth = np.zeros_like(disparity)
 depth[valid] = f * B / (disparity[valid] + doffs)
 
