@@ -4687,4 +4687,89 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
+{
+    const int B = 2, C = 64, T = 8, K = 4;
+    Mat x(std::vector<int>{B, C, T}, CV_32F);
+    randu(x, -1, 1);
+    Mat w(std::vector<int>{C, 1, K}, CV_32F);
+    randu(w, -1, 1);
+    Mat bias(std::vector<int>{C}, CV_32F);
+    randu(bias, -1, 1);
+    Mat past(std::vector<int>{B, C, K - 1}, CV_32F);
+    randu(past, -1, 1);
+
+    LayerParams lp;
+    lp.type = "CausalConvWithState";
+    lp.name = "causal_conv_with_state";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weight must be [C, 1, K]
+    std::vector<Mat> inputs{x, Mat(std::vector<int>{1, 1, K}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, Mat(std::vector<int>{C, 2, K}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // bias must be [C]
+    inputs = {x, w, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, Mat(std::vector<int>{1, C}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // past_state must be [B, C, K - 1]
+    inputs = {x, w, bias, Mat(std::vector<int>{B, 1, K - 1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, bias, Mat(std::vector<int>{1, C, K - 1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, bias, Mat(std::vector<int>{B, C, K}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // weight, bias and past_state must have the input type, on both the fp32 and the fp16 path
+    Mat x16, w16, bias16, past16;
+    x.convertTo(x16, CV_16F);
+    w.convertTo(w16, CV_16F);
+    bias.convertTo(bias16, CV_16F);
+    past.convertTo(past16, CV_16F);
+    inputs = {x, w16};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias16, past};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias16, past16};
+    EXPECT_NO_THROW(runLayer(layer, inputs, outputs));
+
+    // valid inputs give the depthwise causal convolution, with past_state read per batch
+    Mat ref(std::vector<int>{B, C, T}, CV_32F), refState(std::vector<int>{B, C, K - 1}, CV_32F);
+    for (int b = 0; b < B; b++)
+    {
+        for (int c = 0; c < C; c++)
+        {
+            std::vector<float> pad(K - 1 + T);
+            for (int j = 0; j < K - 1; j++)
+                pad[j] = past.ptr<float>(b, c)[j];
+            for (int t = 0; t < T; t++)
+                pad[K - 1 + t] = x.ptr<float>(b, c)[t];
+            for (int t = 0; t < T; t++)
+            {
+                float acc = bias.at<float>(c);
+                for (int k = 0; k < K; k++)
+                    acc += w.ptr<float>(c)[k] * pad[t + k];
+                ref.ptr<float>(b, c)[t] = acc;
+            }
+            for (int j = 0; j < K - 1; j++)
+                refState.ptr<float>(b, c)[j] = pad[T + j];
+        }
+    }
+    inputs = {x, w, bias, past};
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(outputs.size(), (size_t)2);
+    normAssert(ref, outputs[0], "output");
+    normAssert(refState, outputs[1], "present_state");
+}
+
 }} // namespace
