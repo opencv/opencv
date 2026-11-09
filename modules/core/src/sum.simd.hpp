@@ -392,6 +392,12 @@ static int sum16f( const hfloat* src, const uchar* mask, float* dst, int len, in
 static int sum16bf( const bfloat* src, const uchar* mask, float* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_<bfloat, float, float>(src, mask, dst, len, cn); }
 
+static int sum8f( const fp8_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<fp8_t, float, float>(src, mask, dst, len, cn); }
+
+static int sum8fnuz( const fp8a_t* src, const uchar* mask, float* dst, int len, int cn )
+{ CV_INSTRUMENT_REGION(); return sum_<fp8a_t, float, float>(src, mask, dst, len, cn); }
+
 SumFunc getSumFunc(int depth)
 {
     static SumFunc sumTab[CV_DEPTH_MAX] =
@@ -409,6 +415,8 @@ SumFunc getSumFunc(int depth)
         sumWrap<uint64, double, sum64u>,
         sumWrap<int64, double, sum64s>,
         sumWrap<unsigned, double, sum32u>,
+        sumWrap<fp8_t, float, sum8f>,
+        sumWrap<fp8a_t, float, sum8fnuz>,
         0
     };
 

@@ -3261,6 +3261,52 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+// sum and mean on the fp8 depths, compared with the same values in CV_32F
+class Core_Sum_FP8 : public testing::TestWithParam< tuple<int, int, int> >
+{
+public:
+    int len;
+    Mat a32f, a;
+
+    void SetUp()
+    {
+        const int depth = get<0>(GetParam());
+        const int cn = get<1>(GetParam());
+        len = get<2>(GetParam());
+        const float vals[] = { 1.f, -2.f, 3.5f, 0.5f, 7.f, -0.25f };   // exact in both fp8 formats
+
+        a32f.create(1, len, CV_MAKETYPE(CV_32F, cn));
+        for (int i = 0; i < len * cn; i++)
+            a32f.ptr<float>()[i] = vals[i % 6];
+        a32f.convertTo(a, depth);
+    }
+};
+
+TEST_P(Core_Sum_FP8, sum)
+{
+    EXPECT_EQ(cv::sum(a32f), cv::sum(a));
+}
+
+TEST_P(Core_Sum_FP8, mean)
+{
+    EXPECT_EQ(cv::mean(a32f), cv::mean(a));
+}
+
+TEST_P(Core_Sum_FP8, mean_mask)
+{
+    // every third element is left out, so the mean divides by the selected count
+    Mat mask(1, len, CV_8U);
+    for (int i = 0; i < len; i++)
+        mask.at<uchar>(i) = i % 3 != 0;
+    EXPECT_EQ(cv::mean(a32f, mask), cv::mean(a, mask));
+}
+
+// (1 << 15) + 1 needs a second block, so the float total gets moved to the result and reset
+INSTANTIATE_TEST_CASE_P(/**/, Core_Sum_FP8, testing::Combine(
+    testing::Values(CV_8F_E4M3FN, CV_8F_E4M3FNUZ),
+    testing::Range(1, 5),
+    testing::Values(37, (1 << 15) + 1)));
+
 // cv::sum() returns doubles, so a CV_32U or CV_32S array whose total exceeds the 32-bit range must
 // still come back exact. The scalar step of the accumulation adds four elements to each other in
 // the source type before reaching the double accumulator, so large values used to wrap - silently
@@ -5019,7 +5065,7 @@ TEST(Core_Arithm, inRange_unsupported_depth_30153)
 
 TEST(Core_Arithm, sum_unsupported_depth)
 {
-    for (int depth : {CV_Bool, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    for (int depth : {CV_Bool})
     {
         for (int cn : {1, 3})
         {
