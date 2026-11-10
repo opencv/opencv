@@ -56,7 +56,7 @@ T read_number(cv::RLByteStream& strm)
     const int intc = strm.getByte();
     CV_Assert(intc >= -128 && intc < 128);
     char c = static_cast<char>(intc);
-    if (std::isspace(c)) {
+    if (std::isspace(static_cast<unsigned char>(c))) {
       if (i > 0)
         break;
       continue;
