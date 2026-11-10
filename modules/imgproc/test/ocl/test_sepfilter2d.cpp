@@ -162,6 +162,29 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                                 )
                            );
 
+// The tests above use at most 9 taps; the single-pass OpenCL kernel takes up to 21.
+// 15 taps gave wrong rows on an NVIDIA GPU, see https://github.com/opencv/opencv/issues/30733
+typedef testing::TestWithParam<int> SepFilter2D_LargeKernel;
+
+OCL_TEST_P(SepFilter2D_LargeKernel, Mat)
+{
+    const int ksize = GetParam();
+    Mat src(96, 96, CV_32FC1), kernelX(1, ksize, CV_32FC1), kernelY(1, ksize, CV_32FC1);
+    randu(src, -100, 100);
+    randu(kernelX, -1, 1);
+    randu(kernelY, -1, 1);
+    UMat usrc;
+    src.copyTo(usrc);
+
+    Mat dst;
+    UMat udst;
+    OCL_OFF(cv::sepFilter2D(src, dst, -1, kernelX, kernelY));
+    OCL_ON(cv::sepFilter2D(usrc, udst, -1, kernelX, kernelY));
+
+    EXPECT_MAT_NEAR_RELATIVE(dst, udst, 1e-5);
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D_LargeKernel, Values(11, 15, 21));
 
 } } // namespace opencv_test::ocl
 
