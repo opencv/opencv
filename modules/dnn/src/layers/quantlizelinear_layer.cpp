@@ -245,11 +245,18 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
               outtype == CV_16F || outtype == CV_32F);
     if (outtype == CV_8F_E4M3FN || outtype == CV_8F_E4M3FNUZ || wideFp8Out)
         CV_Assert(block_size == 0);  // block-wise FP8 quantization not yet supported
-    // INT4/UINT4 travel unpacked in CV_8S/CV_8U. QuantizeLinear saturates to the
-    // 4-bit range, which saturate_cast to the 8-bit storage type does not do.
-    const bool int4Out = onnx_dtype::isInt4(outputOnnxDtype) || onnx_dtype::isUint4(outputOnnxDtype);
-    if (int4Out)
-        CV_Assert(outtype == (onnx_dtype::isInt4(outputOnnxDtype) ? CV_8S : CV_8U));
+    // INT4/UINT4/INT2/UINT2 travel unpacked in CV_8S/CV_8U. QuantizeLinear saturates
+    // to the narrow range, which saturate_cast to the 8-bit storage type does not do.
+    const bool subByteOut = onnx_dtype::isInt4(outputOnnxDtype) || onnx_dtype::isUint4(outputOnnxDtype) ||
+                            onnx_dtype::isInt2(outputOnnxDtype) || onnx_dtype::isUint2(outputOnnxDtype);
+    const bool subByteSigned = onnx_dtype::isInt4(outputOnnxDtype) || onnx_dtype::isInt2(outputOnnxDtype);
+    int outLo = subByteSigned ? -128 : 0, outHi = subByteSigned ? 127 : 255;
+    if (onnx_dtype::isInt4(outputOnnxDtype))       { outLo = -8; outHi = 7; }
+    else if (onnx_dtype::isUint4(outputOnnxDtype)) { outHi = 15; }
+    else if (onnx_dtype::isInt2(outputOnnxDtype))  { outLo = -2; outHi = 1; }
+    else if (onnx_dtype::isUint2(outputOnnxDtype)) { outHi = 3; }
+    if (subByteOut)
+        CV_Assert(outtype == (subByteSigned ? CV_8S : CV_8U));
 
     if (!zp.empty()) {
         CV_Assert(zp.isContinuous());
@@ -483,16 +490,16 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
                    outputOnnxDtype));
     }
 
-    if (int4Out) {
+    if (subByteOut) {
         const int64_t total = (int64_t)out.total();
         if (outtype == CV_8S) {
             int8_t* d = out.ptr<int8_t>();
             for (int64_t j = 0; j < total; j++)
-                d[j] = (int8_t)std::min(std::max((int)d[j], -8), 7);
+                d[j] = (int8_t)std::min(std::max((int)d[j], outLo), outHi);
         } else {
             uint8_t* d = out.ptr<uint8_t>();
             for (int64_t j = 0; j < total; j++)
-                d[j] = (uint8_t)std::min((int)d[j], 15);
+                d[j] = (uint8_t)std::min((int)d[j], outHi);
         }
     }
 }

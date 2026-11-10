@@ -43,7 +43,9 @@ inline int  fp8NativeDepth(int t) { return t == 17 ? CV_8F_E4M3FN : CV_8F_E4M3FN
 inline bool isExoticFloat(int t) { return isFp8(t) || t == 23 /*FP4*/ || t == ONNX_FLOAT8E8M0; }
 inline bool isInt4(int t)        { return t == 22; }
 inline bool isUint4(int t)       { return t == 21; }
-inline bool isExotic(int t)      { return isExoticFloat(t) || isInt4(t) || isUint4(t); }
+inline bool isInt2(int t)        { return t == 26; }
+inline bool isUint2(int t)       { return t == 25; }
+inline bool isExotic(int t)      { return isExoticFloat(t) || isInt4(t) || isUint4(t) || isInt2(t) || isUint2(t); }
 
 inline uint32_t f2u(float f) { Cv32suf s; s.f = f; return s.u; }
 
@@ -182,6 +184,12 @@ inline int8_t  int4SignExtend(uint8_t nib) { return (int8_t)((nib & 0xF) >= 8 ? 
 
 // Extract the i-th 4-bit element from a tensor packed two-per-byte (low nibble first).
 inline uint8_t unpackNibble(const uchar* raw, size_t i) { return (i & 1) ? (raw[i >> 1] >> 4) & 0xF : raw[i >> 1] & 0xF; }
+
+// INT2/UINT2: same conventions as INT4/UINT4, two bits wide, packed four-per-byte (lowest bits first).
+inline int8_t  f32ToInt2(float x)  { int n = (int)std::trunc(x) & 0x3; return (int8_t)(n >= 2 ? n - 4 : n); }
+inline uint8_t f32ToUint2(float x) { return (uint8_t)((int)std::trunc(x) & 0x3); }
+inline int8_t  int2SignExtend(uint8_t c) { return (int8_t)((c & 0x3) >= 2 ? (int)(c & 0x3) - 4 : (c & 0x3)); }
+inline uint8_t unpackCrumb(const uchar* raw, size_t i) { return (raw[i >> 2] >> (2 * (i & 3))) & 0x3; }
 
 }}} // namespace cv::dnn::onnx_dtype
 
