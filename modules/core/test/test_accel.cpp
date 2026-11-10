@@ -20,9 +20,23 @@
 #ifdef __linux__
 #include <sys/mman.h>
 #include <unistd.h>
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
+#include <sys/syscall.h>
+#endif
 #endif
 
 namespace opencv_test { namespace {
+
+#ifdef __linux__
+int memfdCreate(const char* name)
+{
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
+    return (int)syscall(__NR_memfd_create, name, MFD_CLOEXEC);    // bionic declares memfd_create() from API 30 only
+#else
+    return memfd_create(name, MFD_CLOEXEC);
+#endif
+}
+#endif
 
 /* "emu", a test backend with four devices:
    emu:0  a discrete GPU: its memory sits at addresses the CPU cannot use, so OpenCV must copy;
@@ -274,7 +288,7 @@ public:
         // MEMORY_SHARED_COHERENT: one address for the CPU and the device
         {
 #ifdef __linux__
-            const int fd = memfd_create("emu", MFD_CLOEXEC);
+            const int fd = memfdCreate("emu");
             if (fd >= 0 && ftruncate(fd, (off_t)size) == 0)
             {
                 void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -1223,7 +1237,7 @@ TEST_F(Core_Accel, missing_plugin_is_reported)
 //! a memfd holding @p bytes, as a dma-buf exporter would hand out
 int makeDmaBuf(const std::vector<uchar>& bytes)
 {
-    const int fd = memfd_create("frame", MFD_CLOEXEC);
+    const int fd = memfdCreate("frame");
     CV_Assert(fd >= 0 && ftruncate(fd, (off_t)bytes.size()) == 0);
     void* p = mmap(0, bytes.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     CV_Assert(p != MAP_FAILED);
