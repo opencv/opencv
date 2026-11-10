@@ -804,7 +804,7 @@ namespace colormap
 
     void applyColorMap(InputArray src, OutputArray dst, int colormap)
     {
-        colormap::ColorMap* cm =
+        Ptr<colormap::ColorMap> cm =
             colormap == COLORMAP_AUTUMN ? (colormap::ColorMap*)(new colormap::Autumn) :
             colormap == COLORMAP_BONE ? (colormap::ColorMap*)(new colormap::Bone) :
             colormap == COLORMAP_CIVIDIS ? (colormap::ColorMap*)(new colormap::Cividis) :
@@ -832,8 +832,6 @@ namespace colormap
             CV_Error( Error::StsBadArg, "Unknown colormap id; use one of COLORMAP_*");
 
         (*cm)(src, dst);
-
-        delete cm;
     }
 
     void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
