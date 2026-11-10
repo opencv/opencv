@@ -760,6 +760,29 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values(1, 2, 3),
                             Bool()));
 
+// The tests above use at most 5 taps. With large kernels and 3 or 4 channels the OpenCL kernel can
+// move more rows of its local buffer than one block holds; 23 taps gave wrong values on an NVIDIA GPU,
+// see https://github.com/opencv/opencv/issues/30733
+typedef testing::TestWithParam<int> Laplacian_LargeKernel;
+
+OCL_TEST_P(Laplacian_LargeKernel, Mat)
+{
+    const int ksize = GetParam();
+    Mat src(96, 96, CV_32FC4);
+    randu(src, -100, 100);
+    UMat usrc;
+    src.copyTo(usrc);
+
+    Mat dst;
+    UMat udst;
+    OCL_OFF(cv::Laplacian(src, dst, -1, ksize));
+    OCL_ON(cv::Laplacian(usrc, udst, -1, ksize));
+
+    EXPECT_MAT_NEAR_RELATIVE(dst, udst, 1e-5);
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Laplacian_LargeKernel, Values(23, 31));
+
 
 } } // namespace opencv_test::ocl
 
