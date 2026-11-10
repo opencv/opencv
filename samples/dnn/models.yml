@@ -348,8 +348,9 @@ East:
   ocr_model: "VGG_CTC.onnx"
   mean: [123.68, 116.78, 103.94]
   scale: 1.0
-  width: 736
-  height: 736
+  # The ONNX model has a fixed input shape of 1x3x320x320.
+  width: 320
+  height: 320
   rgb: false
   sample: "text_detection"
 
