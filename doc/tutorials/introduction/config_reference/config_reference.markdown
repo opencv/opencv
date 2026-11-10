@@ -340,7 +340,7 @@ Corresponding BUILD_* options will force building and using the bundled librarie
 
 @note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
 @note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
-@note (HTJ2K) OpenCV doesn't contain OpenHTJ2K source code, so `BUILD_OPENHTJ2K` is not supported. Users must provide a system-wide installation of OpenHTJ2K 0.25.0 or later. It reads and writes \*.jph files and \*.jhc codestreams, and decodes only High-Throughput (Part 15) content: other JPEG 2000 files are still decoded by OpenJPEG or JasPer.
+@note (HTJ2K) OpenCV doesn't contain OpenHTJ2K source code, so `BUILD_OPENHTJ2K` is not supported. Users must provide a system-wide installation of OpenHTJ2K 0.26.0 or later. It reads and writes \*.jph files and \*.jhc codestreams, and decodes only High-Throughput (Part 15) content: other JPEG 2000 files are still decoded by OpenJPEG or JasPer.
 @note (JPEG) OpenCV 5 doesn't contain libjpeg source code, so `BUILD_JPEG_TURBO_DISABLE` is not supported. Users can use a system-wide installed libjpeg instead of libjpeg-turbo.
 @note (EXR) OpenCV 5 doesn't contain OpenEXR source code, so `BUILD_OPENEXR` is not supported. Users must provide a system-wide installation of libopenexr.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported. Users must provide a system-wide installation of libjxl.

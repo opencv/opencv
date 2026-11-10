@@ -483,7 +483,7 @@ HTJ2KEncoder::HTJ2KEncoder(bool jph) : m_jph(jph)
 {
     m_description = jph ? "HTJ2K files (*.jph)" : "HTJ2K codestreams (*.jhc)";
     m_buf_supported = true;
-    m_supported_encode_key = { IMWRITE_HTJ2K_QUALITY };
+    m_supported_encode_key = { IMWRITE_HTJ2K_QUALITY_SCALE };
 }
 
 HTJ2KEncoder::~HTJ2KEncoder()
@@ -512,12 +512,12 @@ bool HTJ2KEncoder::write(const Mat& img, const std::vector<int>& params)
     int quality = 100;
     for (size_t i = 0; i + 1 < params.size(); i += 2)
     {
-        if (params[i] == IMWRITE_HTJ2K_QUALITY)
+        if (params[i] == IMWRITE_HTJ2K_QUALITY_SCALE)
         {
             quality = std::min(std::max(params[i + 1], 0), 100);
             if (quality != params[i + 1])
-                CV_LOG_WARNING(NULL, cv::format("HTJ2K: IMWRITE_HTJ2K_QUALITY must be between 0 and 100, %d is used",
-                                                quality));
+                CV_LOG_WARNING(NULL, cv::format("HTJ2K: IMWRITE_HTJ2K_QUALITY_SCALE must be between 0 and 100, "
+                                                "%d is used", quality));
         }
     }
     const bool lossless = quality == 100;
@@ -568,6 +568,8 @@ bool HTJ2KEncoder::write(const Mat& img, const std::vector<int>& params)
         open_htj2k::openhtj2k_encoder encoder("", no_input, siz, cod, qcd,
                                               lossless ? kNoQfactor : (uint8_t)quality,
                                               m_jph, 0 /* sRGB */, htj2kThreads());
+        if (!lossless)
+            encoder.set_qfactor_weights(1);  // no visual weighting: every subband weight is 1
         encoder.set_output_buffer(out);
         encoder.invoke_line_based_stream([&](uint32_t y, int32_t** rows, uint16_t nc)
         {

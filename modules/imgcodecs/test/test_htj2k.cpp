@@ -99,8 +99,8 @@ TEST(Imgcodecs_HTJ2K, lossy_quality)
     const Mat src = smoothImage(Size(320, 240));
     std::vector<uchar> lossless, q90, q50;
     ASSERT_TRUE(imencode(".jph", src, lossless));
-    ASSERT_TRUE(imencode(".jph", src, q90, { IMWRITE_HTJ2K_QUALITY, 90 }));
-    ASSERT_TRUE(imencode(".jph", src, q50, { IMWRITE_HTJ2K_QUALITY, 50 }));
+    ASSERT_TRUE(imencode(".jph", src, q90, { IMWRITE_HTJ2K_QUALITY_SCALE, 90 }));
+    ASSERT_TRUE(imencode(".jph", src, q50, { IMWRITE_HTJ2K_QUALITY_SCALE, 50 }));
     EXPECT_LT(q90.size(), lossless.size());
     EXPECT_LT(q50.size(), q90.size());
 
@@ -128,8 +128,8 @@ TEST(Imgcodecs_HTJ2K, lossy_bgra)
     ASSERT_EQ(CV_8UC4, src.type());
 
     std::vector<uchar> q90, q50;
-    ASSERT_TRUE(imencode(".jph", src, q90, { IMWRITE_HTJ2K_QUALITY, 90 }));
-    ASSERT_TRUE(imencode(".jph", src, q50, { IMWRITE_HTJ2K_QUALITY, 50 }));
+    ASSERT_TRUE(imencode(".jph", src, q90, { IMWRITE_HTJ2K_QUALITY_SCALE, 90 }));
+    ASSERT_TRUE(imencode(".jph", src, q50, { IMWRITE_HTJ2K_QUALITY_SCALE, 50 }));
     EXPECT_LT(q50.size(), q90.size());
     const Mat d90 = imdecode(q90, IMREAD_UNCHANGED);
     const Mat d50 = imdecode(q50, IMREAD_UNCHANGED);
@@ -152,7 +152,7 @@ TEST(Imgcodecs_HTJ2K, lossy_16bit)
     Mat src;
     smoothImage(Size(160, 120)).convertTo(src, CV_16U, 256);
     std::vector<uchar> buf;
-    ASSERT_TRUE(imencode(".jph", src, buf, { IMWRITE_HTJ2K_QUALITY, 90 }));
+    ASSERT_TRUE(imencode(".jph", src, buf, { IMWRITE_HTJ2K_QUALITY_SCALE, 90 }));
     const Mat dst = imdecode(buf, IMREAD_UNCHANGED);
     ASSERT_FALSE(dst.empty());
     EXPECT_EQ(CV_16UC3, dst.type());

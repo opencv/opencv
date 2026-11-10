@@ -47,7 +47,8 @@ private:
  * @brief HTJ2K encoder using OpenHTJ2K.
  *
  * Writes a JPH file (*.jph) or a raw HTJ2K codestream (*.jhc). Lossless (reversible 5/3 wavelet)
- * by default; IMWRITE_HTJ2K_QUALITY below 100 selects lossy coding (irreversible 9/7 wavelet).
+ * by default; IMWRITE_HTJ2K_QUALITY_SCALE below 100 selects lossy coding (irreversible 9/7 wavelet)
+ * without visual weighting.
  */
 class HTJ2KEncoder CV_FINAL : public BaseImageEncoder
 {
