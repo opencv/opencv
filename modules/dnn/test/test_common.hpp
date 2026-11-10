@@ -220,10 +220,8 @@ public:
 
     void expectNoFallbacks(Net& net, bool raiseError = true)
     {
-        // The new DNN engine does not support back-ends for now
-        // bug: https://github.com/opencv/opencv/issues/26198
         if (net.getMainGraph()) {
-            // except CUDA, where an op left on the CPU sends the whole graph there
+            // the new engine places ops only for CUDA, where an op left on the CPU sends the whole graph there
             if (backend != DNN_BACKEND_CUDA)
                 return;
             const std::vector<std::string> cpuOps = cudaFallbackOps(net);

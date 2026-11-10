@@ -60,23 +60,13 @@ public:
         auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
         Net::Impl* netimpl_ = getNetImpl(this);
         CV_Assert(netimpl_ && netimpl_->isConstArg(this->inputs[2]));
-        double offVal = 0., onVal = 1.;
         Mat values = netimpl_->argTensor(this->inputs[2]);
-        if (!values.empty()) {
-            CV_Assert(values.total() == 2);
-            Mat values64;
-            values.convertTo(values64, CV_64F);
-            offVal = values64.ptr<double>()[0];
-            onVal = values64.ptr<double>()[1];
-        }
         if (inputs_arr.depth(0) == CV_32S)
             return make_cuda_node_with_indices<cuda4dnn::OneHotOp, int32_t>(preferableTarget, outputs_arr.type(0),
-                                                                             std::move(context->stream), axis,
-                                                                             offVal, onVal, false);
+                                                                             std::move(context->stream), axis, values);
         CV_CheckDepthEQ(inputs_arr.depth(0), CV_64S, "OneHot: CUDA reads int32 or int64 indices only");
         return make_cuda_node_with_indices<cuda4dnn::OneHotOp, int64_t>(preferableTarget, outputs_arr.type(0),
-                                                                         std::move(context->stream), axis,
-                                                                         offVal, onVal, false);
+                                                                         std::move(context->stream), axis, values);
     }
 #endif
 

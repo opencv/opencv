@@ -15,6 +15,7 @@
 #include <opencv2/core.hpp>
 
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 #include <utility>
 
@@ -23,11 +24,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T, class TIdx>
     class OneHotOp final : public CUDABackendNode {
     public:
-        OneHotOp(csl::Stream stream_, int axis_, double off_, double on_, bool runtimeValues_)
+        OneHotOp(csl::Stream stream_, int axis_, const Mat& values)
             : stream(std::move(stream_)), axis(axis_),
-              offValue(static_cast<T>(off_)), onValue(static_cast<T>(on_)),
-              runtimeValues(runtimeValues_)
+              offValue(static_cast<T>(0.f)), onValue(static_cast<T>(1.f))
         {
+            if (values.empty())
+                return;
+            CV_Assert(values.total() == 2);
+            // convert straight to T's depth so int64 values stay exact; half has no host type, so read it as float
+            using HostT = typename std::conditional<std::is_same<T, half>::value, float, T>::type;
+            Mat typed;
+            values.convertTo(typed, DataType<HostT>::depth);
+            offValue = static_cast<T>(typed.ptr<HostT>()[0]);
+            onValue = static_cast<T>(typed.ptr<HostT>()[1]);
         }
 
         void forward(
@@ -45,15 +54,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             if (outputs[0].total() == 0)
                 return;
 
-            if (runtimeValues && !inputs[2].empty()) {
-                Mat values, values64;
-                inputs[2].copyTo(values);
-                CV_Assert(values.total() == 2);
-                values.convertTo(values64, CV_64F);
-                offValue = static_cast<T>(values64.ptr<double>()[0]);
-                onValue = static_cast<T>(values64.ptr<double>()[1]);
-            }
-
             std::size_t inner = 1;
             for (int i = a + 1; i < rank; i++)
                 inner *= static_cast<std::size_t>(outShape[i]);
@@ -68,7 +68,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         int axis;
         T offValue, onValue;
-        bool runtimeValues;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

@@ -195,7 +195,9 @@ public:
             rawWeights.convertTo(wfloat, CV_32F);
         else
             wfloat = rawWeights;
-        origWeights = wfloat.clone();  // the unpacked [Cin, Cout/g, kh, kw] filter the CUDA path reads
+#ifdef HAVE_CUDA
+        origWeights = wfloat;  // shares the unpacked [Cin, Cout/g, kh, kw] filter; the packers only read it
+#endif
         packGemmWeights(wfloat, C0);
         weights.release();
         if (gemmWeights.empty())
