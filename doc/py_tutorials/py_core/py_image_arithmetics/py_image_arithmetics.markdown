@@ -19,8 +19,8 @@ saturated operation while Numpy addition is a modulo operation.
 
 For example, consider the below sample:
 @code{.py}
->>> x = np.uint8([250])
->>> y = np.uint8([10])
+>>> x = np.uint8([[250]])
+>>> y = np.uint8([[10]])
 
 >>> print( cv.add(x,y) ) # 250+10 = 260 => 255
 [[255]]
