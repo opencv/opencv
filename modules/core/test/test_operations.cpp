@@ -1399,6 +1399,9 @@ TEST(MatTestRoi, locateROI_1D)
     UMat u = roi.getUMat(ACCESS_READ);
     EXPECT_EQ(1, u.dims);
     EXPECT_EQ(2, u.cols);
+    u.locateROI(wholeSize, ofs);
+    EXPECT_EQ(Size(6, 1), wholeSize);
+    EXPECT_EQ(Point(2, 0), ofs);
     Mat back = u.getMat(ACCESS_READ);
     EXPECT_EQ(20, back.at<int>(0));
     EXPECT_EQ(30, back.at<int>(1));

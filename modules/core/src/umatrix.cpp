@@ -937,6 +937,16 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
     size_t esz = elemSize(), minstep;
     ptrdiff_t delta1 = (ptrdiff_t)offset, delta2 = (ptrdiff_t)u->size;
 
+    if( dims == 1 )
+    {
+        ofs.x = (int)(delta1/esz);
+        ofs.y = 0;
+
+        wholeSize.width = std::max((int)(delta2/esz), ofs.x + cols);
+        wholeSize.height = 1;
+        return;
+    }
+
     if( delta1 == 0 )
         ofs.x = ofs.y = 0;
     else
