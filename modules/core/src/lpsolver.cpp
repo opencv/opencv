@@ -79,7 +79,8 @@ static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::ve
  *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
  by this procedure - it should not be cleaned before the call to procedure and may contain mess after
  it also initializes N and B and does not make any assumptions about their init values
- * @return SOLVELP_UNFEASIBLE if problem is unfeasible, 0 if feasible.
+ * @return SOLVELP_UNFEASIBLE if problem is unfeasible, SOLVELP_LOST if the auxiliary variable of Phase I
+ cannot be pivoted out of the basis, 0 if feasible.
 */
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow);
 static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,int leaving_index,
@@ -163,14 +164,17 @@ int solveLP(InputArray Func, InputArray Constr, OutputArray z)
     return solveLP(Func, Constr, z, 1e-12);
 }
 
-// Returns a-b, or exactly 0 when the result is only rounding noise of the operands.
-// The simplex logic compares tableau entries with exactly 0, so the noise that a cancellation
-// leaves behind would be taken as a real value. The threshold is relative to the operands,
-// so it does not depend on the scale of the problem.
+// Returns x, or exactly 0 when x is only rounding noise: |x| <= 1e-12*scale, where scale is the
+// magnitude of the terms x was computed from. The simplex logic compares tableau entries with
+// exactly 0, so the noise that a cancellation leaves behind would be taken as a real value.
+// The threshold is relative, so it does not depend on the scale of the problem.
+static inline double snap_zero(double x,double scale){
+    return std::abs(x)<=1e-12*scale?0.0:x;
+}
+
+// Returns a-b, snapped to 0 relative to the operands.
 static inline double sub_snap_zero(double a,double b){
-    const double rel_eps=1e-12;
-    double d=a-b;
-    return std::abs(d)<=rel_eps*std::max(std::abs(a),std::abs(b))?0.0:d;
+    return snap_zero(a-b,std::max(std::abs(a),std::abs(b)));
 }
 
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
@@ -262,24 +266,31 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     print_simplex_state(c,b,v,N,B);
 
     //start from 1, because we ignore x_0
+    //each coefficient is a sum of terms: snap it once, relative to the sum of their absolute values
     c=0;
     v=0;
+    Mat_<double> abs_sum(1,c.cols,0.0);
     for(int I=1;I<old_c.cols;I++){
         if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
-            c(0,iterator_offset)=sub_snap_zero(c(0,iterator_offset),-old_c(0,I));
+            c(0,iterator_offset)+=old_c(0,I);
+            abs_sum(0,iterator_offset)+=std::abs(old_c(0,I));
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
             int iterator_offset=indexToRow[I]-nsize;
-            double coef=old_c(0,I);
             for(int j=0;j<c.cols;j++){
-                c(0,j)=sub_snap_zero(c(0,j),coef*b(iterator_offset,j));
+                double term=old_c(0,I)*b(iterator_offset,j);
+                c(0,j)-=term;
+                abs_sum(0,j)+=std::abs(term);
             }
-            v=sub_snap_zero(v,-coef*b(iterator_offset,b.cols-1));
+            v+=old_c(0,I)*b(iterator_offset,b.cols-1);
             print_matrix(c);
         }
+    }
+    for(int j=0;j<c.cols;j++){
+        c(0,j)=snap_zero(c(0,j),abs_sum(0,j));
     }
 
     dprintf(("after restore\n"));
@@ -389,7 +400,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         }
     }
     dprintf(("v was %g\n",v));
-    v=sub_snap_zero(v,-Coef*b(leaving_index,b.cols-1));
+    v+=Coef*b(leaving_index,b.cols-1);
 
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
