@@ -113,49 +113,71 @@ static void cubicWeights(float t, float weights[4])
     weights[3] = ((A * t3 - 5.f * A) * t3 + 8.f * A) * t3 - 4.f * A;
 }
 
-static float sampleBicubic(const Mat& map, float x, float y, int normW, int normH)
+// The 4x4 pixels around one bicubic sample and their separable weights: xofs is the column and
+// yofs the row start offset (row * width) within a channel plane. A pixel outside the map gets
+// offset 0 and weight 0, so sampling needs no bounds checks as long as the map is not empty.
+struct BicubicNeighborhood
 {
-    CV_Assert(map.type() == CV_32F);
-    if (map.empty() || normW <= 1 || normH <= 1)
-        return 0.0f;
-
-    const float fx = mapCoordinate(x, map.cols, normW);
-    const float fy = mapCoordinate(y, map.rows, normH);
-    const int x0 = cvFloor(fx);
-    const int y0 = cvFloor(fy);
+    int xofs[4];
+    int yofs[4];
     float wx[4];
     float wy[4];
-    cubicWeights(fx - x0, wx);
-    cubicWeights(fy - y0, wy);
+};
 
+static BicubicNeighborhood buildBicubicNeighborhood(float x, float y, int mapW, int mapH,
+                                                    int normW, int normH)
+{
+    const float fx = mapCoordinate(x, mapW, normW);
+    const float fy = mapCoordinate(y, mapH, normH);
+    const int x0 = cvFloor(fx);
+    const int y0 = cvFloor(fy);
+    BicubicNeighborhood neighborhood;
+    cubicWeights(fx - x0, neighborhood.wx);
+    cubicWeights(fy - y0, neighborhood.wy);
+    for (int k = 0; k < 4; ++k)
+    {
+        const int col = x0 - 1 + k;
+        const int row = y0 - 1 + k;
+        const bool colInside = col >= 0 && col < mapW;
+        const bool rowInside = row >= 0 && row < mapH;
+        neighborhood.xofs[k] = colInside ? col : 0;
+        neighborhood.yofs[k] = rowInside ? row * mapW : 0;
+        if (!colInside)
+            neighborhood.wx[k] = 0.f;
+        if (!rowInside)
+            neighborhood.wy[k] = 0.f;
+    }
+    return neighborhood;
+}
+
+static float sampleBicubic(const float* plane, const BicubicNeighborhood& neighborhood)
+{
     float value = 0.f;
     for (int j = 0; j < 4; ++j)
     {
-        float row = 0.f;
+        const float* row = plane + neighborhood.yofs[j];
+        float rowSum = 0.f;
         for (int i = 0; i < 4; ++i)
-            row += wx[i] * valueOrZero(map, x0 - 1 + i, y0 - 1 + j);
-        value += wy[j] * row;
+            rowSum += neighborhood.wx[i] * row[neighborhood.xofs[i]];
+        value += neighborhood.wy[j] * rowSum;
     }
     return value;
 }
 
-static Mat l2NormalizeChannels(const Mat& blob)
+static Mat l2NormalizeAcrossChannels(const Mat& blob)
 {
-    CV_Assert(blob.dims == 4 && blob.size[0] == 1 && blob.isContinuous());
+    CV_Assert(blob.dims == 4 && blob.size[0] == 1 && blob.type() == CV_32F && blob.isContinuous());
     const int channels = blob.size[1];
     const int area = blob.size[2] * blob.size[3];
-    Mat out = blob.clone();
-    float* ptr = out.ptr<float>();
-    for (int offset = 0; offset < area; ++offset)
-    {
-        float sumSq = 0.f;
-        for (int ch = 0; ch < channels; ++ch)
-            sumSq += ptr[ch * area + offset] * ptr[ch * area + offset];
-        const float inv = 1.f / std::max(std::sqrt(sumSq), 1e-12f);
-        for (int ch = 0; ch < channels; ++ch)
-            ptr[ch * area + offset] *= inv;
-    }
-    return out;
+    const Mat planes(channels, area, CV_32F, const_cast<float*>(blob.ptr<float>()));
+    Mat norms;
+    reduce(planes, norms, 0, REDUCE_SUM2, CV_32F);
+    sqrt(norms, norms);
+    max(norms, 1e-12, norms);
+    Mat normalized(channels, area, CV_32F);
+    for (int ch = 0; ch < channels; ++ch)
+        divide(planes.row(ch), norms, normalized.row(ch));
+    return normalized;
 }
 
 } // namespace
@@ -385,7 +407,7 @@ public:
 
             _descriptors.create(static_cast<int>(candidates.size()), kXFeatDescriptorSize, CV_32F);
             Mat descriptors = _descriptors.getMat();
-            const Mat denseDescriptors = l2NormalizeChannels(featBlob);
+            const Mat denseDescriptors = l2NormalizeAcrossChannels(featBlob);
             const float* featPtr = denseDescriptors.ptr<float>();
             const int featHW = featH * featW;
 
@@ -396,13 +418,11 @@ public:
                 {
                     float* dst = descriptors.ptr<float>(i);
                     const XFeatCandidate& c = candidates[i];
+                    const BicubicNeighborhood neighborhood =
+                        buildBicubicNeighborhood(c.ptPadded.x, c.ptPadded.y, featW, featH,
+                                                 inputSize_.width, inputSize_.height);
                     for (int ch = 0; ch < kXFeatDescriptorSize; ++ch)
-                    {
-                        Mat channel(featH, featW, CV_32F,
-                                    const_cast<float*>(featPtr + ch * featHW));
-                        dst[ch] = sampleBicubic(channel, c.ptPadded.x, c.ptPadded.y,
-                                                inputSize_.width, inputSize_.height);
-                    }
+                        dst[ch] = sampleBicubic(featPtr + ch * featHW, neighborhood);
                     normalize(descriptors.row(i), descriptors.row(i), 1.0, 0.0, NORM_L2);
                 }
             });
