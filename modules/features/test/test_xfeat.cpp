@@ -102,11 +102,11 @@ static void testXFeatRegression(const std::string& imageName, const std::string&
         << "only " << matched << " of " << keypoints.size()
         << " keypoints matched reference within 1 px (" << tag << ")";
 
-    const int descMatched = countDescriptorMatches(keypoints, descriptors, refKpts, refDesc, 1.0f, 0.25f);
+    const int descMatched = countDescriptorMatches(keypoints, descriptors, refKpts, refDesc, 1.0f, 0.01f);
     const double descMatchedRatio = static_cast<double>(descMatched) / descriptors.rows;
     EXPECT_GE(descMatchedRatio, 0.95)
         << "only " << descMatched << " of " << descriptors.rows
-        << " descriptors matched reference (L2 <= 0.25 after 1 px keypoint association, " << tag << ")";
+        << " descriptors matched reference (L2 <= 0.01 after 1 px keypoint association, " << tag << ")";
 }
 
 TEST(Features2d_XFeat, regression_box)
