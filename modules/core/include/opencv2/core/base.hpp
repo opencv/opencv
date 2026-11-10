@@ -321,6 +321,7 @@ inline int cv_absdiff(short x, short y) { return (int)std::abs((int)x - (int)y);
 inline unsigned cv_absdiff(int x, int y) { return (unsigned)std::max(x, y) - (unsigned)std::min(x, y); }
 inline unsigned cv_absdiff(unsigned x, unsigned y) { return std::max(x, y) - std::min(x, y); }
 inline uint64 cv_absdiff(uint64 x, uint64 y) { return std::max(x, y) - std::min(x, y); }
+inline uint64 cv_absdiff(int64 x, int64 y) { return (uint64)std::max(x, y) - (uint64)std::min(x, y); }
 inline float cv_absdiff(hfloat x, hfloat y) { return std::abs((float)x - (float)y); }
 inline float cv_absdiff(bfloat x, bfloat y) { return std::abs((float)x - (float)y); }
 inline float cv_absdiff(fp8_t x, fp8_t y) { return std::abs((float)x - (float)y); }
