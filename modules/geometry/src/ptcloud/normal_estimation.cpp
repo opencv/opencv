@@ -82,6 +82,8 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
     parallel_for_(Range(0, pts_size), [&](const Range &range) {
         // Index of current nearest neighbor point
         int cur_nei_idx;
+        // Reuse an independent neighborhood buffer across points in this range.
+        Mat pt_set(0, ori_pts.cols, ori_pts.type());
         for (int i = range.start; i < range.end; ++i)
         {
             // Neighbor indices for this point come from either the built kd-tree or the caller.
@@ -89,17 +91,20 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
             int row_cols = buildNN ? builtIdx.cols : (int)nn_idx[i].total();
             // The maximum size that may be used for this row
             int bound = max_neighbor_num > row_cols ? row_cols : max_neighbor_num;
-            // The first point should be itself
-            Mat pt_set = ori_pts.row(i).clone();
-            // Push the nearest neighbor points to pt_set
+            pt_set.resize(std::max(bound, 1));
+            // The first point should be itself.
+            ori_pts.row(i).copyTo(pt_set.row(0));
+            int count = 1;
+            // Copy neighbors into the preallocated buffer without growing a view.
             for (int j = 1; j < bound; ++j)
             {
                 cur_nei_idx = buildNN ? nn_idx_ptr_base[j] : nn_idx[i].at<int>(j);
                 // If the index is less than 0 or out of range,
                 // the nn_idx of this row will no longer have any information.
                 if (cur_nei_idx < 0 || cur_nei_idx >= pts_size) break;
-                pt_set.push_back(ori_pts.row(cur_nei_idx));
+                ori_pts.row(cur_nei_idx).copyTo(pt_set.row(count++));
             }
+            pt_set.resize(count);
 
             float *normals_ptr_base = normals_ptr + 3 * i;
             if (pt_set.rows < 3)

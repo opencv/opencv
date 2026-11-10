@@ -201,4 +201,28 @@ TEST(EstimateAffine2D, issue_14259_dont_change_inputs)
     EXPECT_EQ(0, (int)inliers.at<uchar>(2));
 }
 
+TEST(EstimateAffine2D, usac_result_can_grow)
+{
+    std::vector<Point2f> from = {{0, 0}, {2, 0}, {0, 2}, {2, 2}, {1, 3}, {3, 1}};
+    std::vector<Point2f> to;
+    for (const Point2f& p : from)
+        to.push_back(Point2f(2 * p.x + p.y + 3, -p.x + 2 * p.y + 4));
+    for (bool useParams : {false, true})
+    {
+        SCOPED_TRACE(useParams);
+        Mat mask;
+        Mat h = useParams ? estimateAffine2D(from, to, mask, UsacParams())
+                          : estimateAffine2D(from, to, mask, USAC_DEFAULT);
+        ASSERT_EQ(Size(3, 2), h.size());
+        EXPECT_FALSE(h.isSubmatrix());
+        Mat expected = Mat_<double>({2, 3}, {2., 1., 3., -1., 2., 4.});
+        EXPECT_LT(cvtest::norm(h, expected, NORM_INF), 1e-5);
+        Mat bottom = Mat_<double>({1, 3}, {0., 0., 1.});
+        h.push_back(bottom);
+        ASSERT_EQ(Size(3, 3), h.size());
+        EXPECT_EQ(0., cvtest::norm(h.row(2), bottom, NORM_INF));
+        EXPECT_LT(cvtest::norm(h.rowRange(0, 2), expected, NORM_INF), 1e-5);
+    }
+}
+
 }} // namespace
