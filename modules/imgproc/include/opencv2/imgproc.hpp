@@ -2190,7 +2190,8 @@ and then put in the formula above instead of M. The function cannot operate in-p
 @param flags combination of interpolation methods (#INTER_LINEAR or #INTER_NEAREST) and the
 optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
-@param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
+@param borderMode pixel extrapolation method (#BORDER_CONSTANT, #BORDER_REPLICATE, or #BORDER_TRANSPARENT).
+When #BORDER_TRANSPARENT is specified, the pixels outside the source image are left untouched, effectively making the destination image show through.
 @param borderValue value used in case of a constant border; by default, it equals 0.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
