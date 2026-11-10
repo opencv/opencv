@@ -1268,8 +1268,9 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
     }
 
     Mat dst = _dst.getMat();
-    // the small-kernel row pass reads pixels it has already overwritten
-    if (src.data == dst.data)
+    // In place, the row pass for kernels up to 9 wide reads pixels it has already written.
+    // The other row branch and the column pass are safe in place.
+    if (src.data == dst.data && ksize.width > 1 && ksize.width <= 9 && src.cols > ksize.width)
         src = src.clone();
     int numOfThreads = getNumThreads();
     int widthElem = src.cols * src.channels();
