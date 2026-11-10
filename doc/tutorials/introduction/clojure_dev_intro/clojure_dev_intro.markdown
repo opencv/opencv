@@ -532,10 +532,10 @@ main argument to both the GaussianBlur and the imwrite methods.
 First we want to add an image file to a newly create directory for storing static resources of the
 project.
 
-![](lena.jpg)
+![](images/lena.png)
 @code{.bash}
 mkdir -p resources/images
-cp ~/opt/opencv/doc/tutorials/introduction/desktop_java/images/lena.png resource/images/
+cp ~/opt/opencv/samples/java/clojure/simple-sample/resources/images/lena.png resources/images/
 @endcode
 ### Read the image
 
