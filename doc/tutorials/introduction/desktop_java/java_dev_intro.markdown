@@ -256,7 +256,7 @@ sbt eclipse
 @endcode
 Next, create the directory `src/main/resources` and download this Lena image into it:
 
-![](images/lena.png)
+![](lena.jpg)
 
 Make sure it's called `"lena.png"`. Items in the resources directory are available to the Java
 application at runtime.
