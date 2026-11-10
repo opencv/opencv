@@ -51,14 +51,17 @@ T read_number(cv::RLByteStream& strm)
   const size_t buffer_size = 2048;
 
   std::vector<char> buffer(buffer_size, 0);
-  for (size_t i = 0; i < buffer_size; ++i) {
+  size_t i = 0;
+  while (i < buffer_size) {
     const int intc = strm.getByte();
     CV_Assert(intc >= -128 && intc < 128);
     char c = static_cast<char>(intc);
     if (std::isspace(c)) {
-      break;
+      if (i > 0)
+        break;
+      continue;
     }
-    buffer[i] = c;
+    buffer[i++] = c;
   }
   const std::string str(buffer.begin(), buffer.end());
   return atoT<T>(str);
@@ -108,7 +111,10 @@ bool PFMDecoder::readHeader()
     CV_Error(Error::StsError, "Unexpected file type (expected `f` or `F`)");
   }
 
-  if ('\n' != m_strm.getByte()) {
+  int c = m_strm.getByte();
+  if (c == '\r')
+    c = m_strm.getByte();
+  if ('\n' != c) {
     CV_Error(Error::StsError, "Unexpected header format (expected line break)");
   }
 

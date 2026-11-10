@@ -637,6 +637,21 @@ TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
     EXPECT_EQ(0, cvtest::norm(expected, decoded, NORM_INF));
 }
 
+TEST(Imgcodecs_Pfm, crlf_line_endings)
+{
+    const string header = "Pf\r\n2 2\r\n-1.0\r\n";
+    vector<float> data = { 1.0f, 2.0f, 3.0f, 4.0f };
+    vector<uchar> buf(header.begin(), header.end());
+    const uchar* byte_ptr = reinterpret_cast<const uchar*>(data.data());
+    buf.insert(buf.end(), byte_ptr, byte_ptr + data.size() * sizeof(float));
+
+    Mat img = imdecode(buf, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    EXPECT_EQ(img.rows, 2);
+    EXPECT_EQ(img.cols, 2);
+    EXPECT_EQ(img.type(), CV_32FC1);
+}
+
 INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_ReadMode, testing::Combine(
     testing::Values(1, 3),
     testing::Values(IMREAD_UNCHANGED, IMREAD_GRAYSCALE, IMREAD_COLOR, IMREAD_COLOR_RGB,
