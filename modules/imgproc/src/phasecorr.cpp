@@ -541,12 +541,15 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
 
     if(M != src1.rows || N != src1.cols)
     {
-        copyMakeBorder(src1, padded1, 0, M - src1.rows, 0, N - src1.cols, BORDER_CONSTANT, Scalar::all(0));
-        copyMakeBorder(src2, padded2, 0, M - src2.rows, 0, N - src2.cols, BORDER_CONSTANT, Scalar::all(0));
+        copyMakeBorder(src1, padded1, 0, M - src1.rows, 0, N - src1.cols,
+                       BORDER_CONSTANT | BORDER_ISOLATED, Scalar::all(0));
+        copyMakeBorder(src2, padded2, 0, M - src2.rows, 0, N - src2.cols,
+                       BORDER_CONSTANT | BORDER_ISOLATED, Scalar::all(0));
 
         if(!window.empty())
         {
-            copyMakeBorder(window, paddedWin, 0, M - window.rows, 0, N - window.cols, BORDER_CONSTANT, Scalar::all(0));
+            copyMakeBorder(window, paddedWin, 0, M - window.rows, 0, N - window.cols,
+                           BORDER_CONSTANT | BORDER_ISOLATED, Scalar::all(0));
         }
     }
     else if(window.empty())
