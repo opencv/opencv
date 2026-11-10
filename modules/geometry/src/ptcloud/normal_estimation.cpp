@@ -90,7 +90,7 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
             // The maximum size that may be used for this row
             int bound = max_neighbor_num > row_cols ? row_cols : max_neighbor_num;
             // The first point should be itself
-            Mat pt_set(ori_pts.row(i));
+            Mat pt_set = ori_pts.row(i).clone();
             // Push the nearest neighbor points to pt_set
             for (int j = 1; j < bound; ++j)
             {
