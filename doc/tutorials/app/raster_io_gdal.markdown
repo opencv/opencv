@@ -98,7 +98,7 @@ Results
 
 Below is the output of the program. Use the first image as the input. For the DEM model, download
 the SRTM file located at the USGS here.
-[<http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip>](http://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip)
+[<https://web.archive.org/web/20170103002637/https://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip>](https://web.archive.org/web/20170103002637/https://dds.cr.usgs.gov/srtm/version2_1/SRTM1/Region_04/N37W123.hgt.zip)
 
 ![Input Image](images/gdal_output.jpg)
 
