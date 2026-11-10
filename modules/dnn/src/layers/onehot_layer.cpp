@@ -176,7 +176,8 @@ private:
             onVal  = tensorToScalar<Tout>(flat.row(1));
         }
 
-        Y.setTo(Scalar::all(offVal));
+        // typed fill: Scalar holds doubles and would round int64 values above 2^53
+        std::fill(Y.ptr<Tout>(), Y.ptr<Tout>() + Y.total(), offVal);
 
         Mat idx64;
         if (indices.depth() == CV_64S) idx64 = indices;

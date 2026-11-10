@@ -54,7 +54,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto loops = input.size_range(0, 2);
             auto norm_size = input.size_range(2, input.rank());
             if (norm_size == 1) {
-                kernels::fill<T>(stream, output, 0.f);
+                // a single element normalizes to 0, so the output is the per-channel bias
+                auto ws_allocator = csl::WorkspaceAllocator(workspace);
+                auto zeros = ws_allocator.get_span<float>(loops);
+                kernels::fill<float>(stream, zeros, 0.f);
+                kernels::normalize_mean_variance_channelwise<T>(stream, output, input, scale, bias, zeros, zeros, norm_size, C);
                 return;
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);

@@ -55,8 +55,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto norm_size = input.size_range(2, input.rank());
             auto num_groups = this->num_groups;
             auto group_size = C / num_groups;
-            if (norm_size == 1) {
-                kernels::fill<T>(stream, output, 0.f);
+            if (norm_size * group_size == 1) {
+                // a single-element group normalizes to 0, so the output is the per-channel bias
+                auto ws_allocator = csl::WorkspaceAllocator(workspace);
+                auto zeros = ws_allocator.get_span<float>(loops);
+                kernels::fill<float>(stream, zeros, 0.f);
+                kernels::normalize_mean_variance_groupwise<T>(stream, output, input, scale, bias, zeros, zeros, norm_size, C, num_groups, group_size);
                 return;
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);

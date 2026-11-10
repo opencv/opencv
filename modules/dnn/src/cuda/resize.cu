@@ -259,6 +259,12 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                     continue;
                 }
                 const index_type in_plane = plane * in_h * in_w;
+                // a single unit-weight tap is a copy; skipping float keeps int32 above 2^24 exact
+                if (taps_y == 1 && taps_x == 1 && w_y[oy] == 1.f && w_x[ox] == 1.f) {
+                    const int iy = idx_y[oy], ix = idx_x[ox];
+                    output[i] = (iy < 0 || ix < 0) ? static_cast<T>(0.f) : input[in_plane + iy * in_w + ix];
+                    continue;
+                }
                 float acc = 0.f;
                 for (int ky = 0; ky < taps_y; ky++) {
                     const int iy = idx_y[oy * taps_y + ky];

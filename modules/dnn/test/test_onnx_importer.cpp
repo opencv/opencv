@@ -138,7 +138,7 @@ public:
     void testONNXModels(const String& basename, const Extension ext = npy,
                         double l1 = 0, double lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1,
-                        bool testShapes = true, bool useWinograd = true)
+                        bool testShapes = true, bool useWinograd = true, bool useTF32 = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
         std::vector<Mat> inps(numInps);
@@ -166,6 +166,7 @@ public:
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
         net.enableWinograd(useWinograd);
+        net.enableTF32(useTF32);
 
         std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
@@ -4024,9 +4025,17 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
 }
 
 TEST_P(Test_ONNX_layers, MatMulNBits) {
-    testONNXModels("matmulnbits", npy, 1e-4, 1e-3);
-    testONNXModels("matmulnbits_8bits", npy, 1e-4, 1e-3);
-    testONNXModels("matmulnbits_partial_block", npy, 1e-4, 1e-3);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
+    double l1 = 1e-4, lInf = 1e-3;
+    // CUDA FP16 stores outputs near 20 in half (step 0.0156): measured L1 4.7e-3, Inf 1.07e-2
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 6e-3;
+        lInf = 1.5e-2;
+    }
+    // TF32 off: its 10-bit mantissa misses the FP32 reference bounds on CUDA
+    testONNXModels("matmulnbits", npy, l1, lInf, false, true, 1, true, true, false);
+    testONNXModels("matmulnbits_8bits", npy, l1, lInf, false, true, 1, true, true, false);
+    testONNXModels("matmulnbits_partial_block", npy, l1, lInf, false, true, 1, true, true, false);   // K=34 not a multiple of block_size=16: partial last block + scalar SIMD tail
 }
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
