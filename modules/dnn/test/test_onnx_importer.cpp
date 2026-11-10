@@ -2563,11 +2563,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
 
     const Mat expected = input * B;
     normAssert(expected, out - bias_only);
-    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
-    if (backend == DNN_BACKEND_CUDA)
-        EXPECT_FALSE(net.getParam(gemm, 0).empty());
-    else
-        EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
+    // initCUDA(), but not one getParam() can reach.
+    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_SetBiasOnly)
@@ -2666,11 +2664,9 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
         const Mat out_slice(2, 4, CV_32F, out.ptr<float>(b));
         normAssert(a_slice * b_slice, out_slice);
     }
-    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
-    if (backend == DNN_BACKEND_CUDA)
-        EXPECT_FALSE(net.getParam(matmul, 0).empty());
-    else
-        EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
+    // initCUDA(), but not one getParam() can reach.
+    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
@@ -2731,11 +2727,9 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
             attn = id;
     }
     ASSERT_GE(attn, 0);
-    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
-    if (backend == DNN_BACKEND_CUDA)
-        EXPECT_FALSE(net.getParam(attn, 0).empty());
-    else
-        EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
+    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
+    // initCUDA(), but not one getParam() can reach.
+    EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
     normAssert(ref, out);
 }
 
@@ -2792,7 +2786,9 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableTarget(target);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "MatMul"), 0).empty());
+        // The plain weight is kept for initCUDA() but held out of reach, so the
+        // public contract is the same one the CPU run above reports.
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
@@ -2835,7 +2831,9 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableTarget(target);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "Attention"), 0).empty());
+        // The plain weight is kept for initCUDA() but held out of reach, so the
+        // public contract is the same one the CPU run above reports.
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
@@ -2883,7 +2881,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableTarget(target);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "Gemm"), 0).empty());
+        // The plain weight is kept for initCUDA() but held out of reach, so the
+        // public contract is the same one the CPU run above reports.
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
