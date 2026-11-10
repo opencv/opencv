@@ -2739,6 +2739,20 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
     normAssert(ref, out);
 }
 
+// The constant operands live on the layer, so the switching tests below need its id for getParam().
+static int constWeightLayerId(Net& net, const String& type)
+{
+    int id = -1;
+    const std::vector<String> names = net.getLayerNames();
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        const int cur = net.getLayerId(names[i]);
+        if (net.getLayer(cur)->type == type)
+            id = cur;
+    }
+    return id;
+}
+
 TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
 {
     if (backend != DNN_BACKEND_CUDA)
@@ -2754,33 +2768,38 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
     cpu_only.setInput(input);
     const Mat expected = cpu_only.forward().clone();
 
-    // CPU -> CUDA -> CPU
-    Net net = readNetFromONNX(model);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setInput(input);
-    net.forward();
+    // CPU first: the forward packs B and drops it, so a later move to CUDA is refused rather
+    // than left to fail inside initCUDA() half way through the next forward.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
 
-    net.setPreferableBackend(DNN_BACKEND_CUDA);
-    net.setPreferableTarget(target);
-    net.setInput(input);
-    normAssert(expected, net.forward());
+        EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
+        EXPECT_THROW(net.setPreferableTarget(target), cv::Exception);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
-    net.setInput(input);
-    normAssert(expected, net.forward());
+        // A refused switch assigns nothing, so the net is still on CPU and still correct.
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+    }
 
-    // CUDA -> CPU
-    Net cuda_first = readNetFromONNX(model);
-    cuda_first.setPreferableBackend(DNN_BACKEND_CUDA);
-    cuda_first.setPreferableTarget(target);
-    cuda_first.setInput(input);
-    cuda_first.forward();
+    // CUDA first: initCUDA() reads B after finalize(), so it is kept and the way back is served.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_CUDA);
+        net.setPreferableTarget(target);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "MatMul"), 0).empty());
 
-    cuda_first.setPreferableBackend(DNN_BACKEND_OPENCV);
-    cuda_first.setPreferableTarget(DNN_TARGET_CPU);
-    cuda_first.setInput(input);
-    normAssert(expected, cuda_first.forward());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
@@ -2792,39 +2811,42 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
     const Mat input = blobFromNPY(_tf("data/input_attention.npy"));
     const Mat expected = blobFromNPY(_tf("data/output_attention.npy"));
 
-    // CPU -> CUDA -> CPU
-    Net net = readNetFromONNX(model);
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setInput(input);
-    net.forward();
+    // CPU first: the forward packs B and drops it, so a later move to CUDA is refused rather
+    // than left to fail inside initCUDA() half way through the next forward.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
 
-    net.setPreferableBackend(DNN_BACKEND_CUDA);
-    net.setPreferableTarget(target);
-    net.setInput(input);
-    normAssert(expected, net.forward());
+        EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
+        EXPECT_THROW(net.setPreferableTarget(target), cv::Exception);
 
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
-    net.setInput(input);
-    normAssert(expected, net.forward());
+        // A refused switch assigns nothing, so the net is still on CPU and still correct.
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+    }
 
-    // CUDA -> CPU
-    Net cuda_first = readNetFromONNX(model);
-    cuda_first.setPreferableBackend(DNN_BACKEND_CUDA);
-    cuda_first.setPreferableTarget(target);
-    cuda_first.setInput(input);
-    cuda_first.forward();
+    // CUDA first: initCUDA() reads B after finalize(), so it is kept and the way back is served.
+    {
+        Net net = readNetFromONNX(model);
+        net.setPreferableBackend(DNN_BACKEND_CUDA);
+        net.setPreferableTarget(target);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "Attention"), 0).empty());
 
-    cuda_first.setPreferableBackend(DNN_BACKEND_OPENCV);
-    cuda_first.setPreferableTarget(DNN_TARGET_CPU);
-    cuda_first.setInput(input);
-    normAssert(expected, cuda_first.forward());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
 {
-    // Without CUDA there is nothing to switch to: setPreferableBackend() warns and keeps the
-    // net on the CPU, so the refusal below cannot be observed.
     if (backend != DNN_BACKEND_CUDA)
         throw SkipTestException("Requires a CUDA-enabled build");
 
@@ -2832,45 +2854,42 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
     Mat input(3, 6, CV_32F);
     randu(input, -1.0, 1.0);
 
-    // CPU -> CUDA: refused, because the CPU forward released the weight.
+    Net cpu_only = readNetFromONNX(model);
+    cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cpu_only.setInput(input);
+    const Mat expected = cpu_only.forward().clone();
+
+    // CPU first: the forward packs B and drops it, so a later move to CUDA is refused rather
+    // than left to fail inside initCUDA() half way through the next forward.
     {
         Net net = readNetFromONNX(model);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setInput(input);
-        net.forward();
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
+
         EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
+        EXPECT_THROW(net.setPreferableTarget(target), cv::Exception);
+
+        // A refused switch assigns nothing, so the net is still on CPU and still correct.
+        net.setInput(input);
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
     }
 
-    // CUDA -> CPU: served, since a net on CUDA keeps the weight for initCUDA().
+    // CUDA first: initCUDA() reads B after finalize(), so it is kept and the way back is served.
     {
         Net net = readNetFromONNX(model);
         net.setPreferableBackend(DNN_BACKEND_CUDA);
         net.setPreferableTarget(target);
         net.setInput(input);
-        net.forward();
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_FALSE(net.getParam(constWeightLayerId(net, "Gemm"), 0).empty());
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
         net.setInput(input);
-        const Mat out = net.forward().clone();
-
-        Net cpu_only = readNetFromONNX(model);
-        cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
-        cpu_only.setInput(input);
-        normAssert(cpu_only.forward(), out);
-    }
-
-    // CPU -> CUDA -> CPU: the refused hop leaves the net on CPU and still correct.
-    {
-        Net net = readNetFromONNX(model);
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
-        net.setInput(input);
-        const Mat first = net.forward().clone();
-
-        EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
-        net.setInput(input);
-        normAssert(first, net.forward());
+        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
     }
 }
 

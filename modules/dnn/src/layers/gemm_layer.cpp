@@ -488,7 +488,7 @@ public:
             weights.release();
             // A recycled address would compare equal and skip the repack.
             last_packed_blob_data = nullptr;
-            // Only Gemm has a registered CUDA exec, so only its weight can be asked for again.
+            // initCUDA() would have nothing to read, so a later switch to CUDA is refused.
             netimpl->weightsReleased = true;
         }
 
