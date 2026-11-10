@@ -1232,6 +1232,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
      *  @param engine select DNN engine to be used. ENGINE_AUTO (the default) resolves to ENGINE_OPENCV; ENGINE_ORT selects the ONNX Runtime wrapper (ONNX models only, requires WITH_ONNXRUNTIME=ON).
      *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
+     *  @note Weights held in external data files are memory-mapped rather than read, so those
+     *  files must stay in place and unmodified for as long as the Net is alive. The overload
+     *  below reads them when passed false.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
@@ -1244,8 +1247,8 @@ CV__DNN_INLINE_NS_BEGIN
      *  the platform's memory-mapping call rather than reading the bytes into memory:
      *  CreateFileMapping() with MapViewOfFile() on Windows, mmap() on Linux, Android, macOS, iOS
      *  and other Unix-like platforms. The pages are faulted in on demand, so the data files must
-     *  stay in place and unmodified for as long as the Net is alive; the overload above reads
-     *  them, so only a caller that passes true here takes on that requirement. A platform that
+     *  stay in place and unmodified for as long as the Net is alive, which the overload above
+     *  requires as well; passing false here reads the bytes instead. A platform that
      *  supplies no mapping of its own reads the data instead and reports that in the log, as does
      *  a file the platform refuses to map. Where OpenCV is built without filesystem support, such
      *  as Emscripten or WinRT, external data is not supported at all, with or without this flag.

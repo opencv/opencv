@@ -89,7 +89,7 @@ Net readNetFromONNX(const String& onnxFile, int engine, bool mapExternalData)
 
 Net readNetFromONNX(const String& onnxFile, int engine)
 {
-    return readNetFromONNX(onnxFile, engine, false);
+    return readNetFromONNX(onnxFile, engine, true);
 }
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
