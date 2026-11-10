@@ -460,7 +460,7 @@ TEST(GeneralizedHoughGuil, parallel_matches_serial)
 
     const Size sz(320, 240);
     Mat image = Mat::zeros(sz, CV_8UC1);
-    RNG rng(0x1234);
+    RNG& rng = theRNG();
     for (int i = 0; i < 120; i++)
     {
         Point p1(rng.uniform(0, sz.width), rng.uniform(0, sz.height));
@@ -487,12 +487,14 @@ TEST(GeneralizedHoughGuil, parallel_matches_serial)
     guil->setPosThresh(20);
     guil->setTemplate(templ);
 
-    const int nthreads = getNumThreads();
+    const int nthreads = std::max(2, getNumThreads());
     std::vector<Vec4f> pos1, posN;
     std::vector<Vec3i> votes1, votesN;
     setNumThreads(1);
     guil->detect(image, pos1, votes1);
     setNumThreads(nthreads);
+    if (getNumThreads() < 2)
+        throw SkipTestException("Parallel backend does not provide more than one thread");
     guil->detect(image, posN, votesN);
 
     ASSERT_FALSE(pos1.empty());
