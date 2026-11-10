@@ -4723,14 +4723,6 @@ TEST_P(Core_LUT, accuracy)
     cv::Mat gt = reference(input, table);
     ASSERT_FALSE(gt.empty());
 
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
-
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
@@ -4755,14 +4747,6 @@ TEST_P(Core_LUT, accuracy_multi)
     cv::Mat gt = reference<3>(input, table);
     ASSERT_FALSE(gt.empty());
 
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
-
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
@@ -4786,14 +4770,6 @@ TEST_P(Core_LUT, accuracy_multi2)
 
     cv::Mat gt = reference<3, true>(input, table);
     ASSERT_FALSE(gt.empty());
-
-    // Force convert to 8U as CV_Bool is not supported in cv::norm for now
-    // TODO: Remove conversion after cv::norm fix
-    if (value_type == CV_Bool)
-    {
-        output.convertTo(output, CV_8U);
-        gt.convertTo(gt, CV_8U);
-    }
 
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
