@@ -450,6 +450,61 @@ TEST(WeightedHoughLines, diagonal)
     EXPECT_NEAR(CV_PI*3/4, lines[1][1], CV_PI/180 + 1e-6);
 }
 
+TEST(GeneralizedHoughGuil, parallel_matches_serial)
+{
+    Mat templ = Mat::zeros(96, 96, CV_8UC1);
+    const Point poly[] = { Point(10, 20), Point(40, 6), Point(84, 18), Point(88, 60),
+                           Point(60, 88), Point(30, 80), Point(8, 56) };
+    fillConvexPoly(templ, poly, 7, Scalar(200));
+    circle(templ, Point(48, 46), 18, Scalar(90), FILLED);
+
+    const Size sz(320, 240);
+    Mat image = Mat::zeros(sz, CV_8UC1);
+    RNG rng(0x1234);
+    for (int i = 0; i < 120; i++)
+    {
+        Point p1(rng.uniform(0, sz.width), rng.uniform(0, sz.height));
+        const double a = rng.uniform(0., CV_2PI);
+        line(image, p1, Point(p1.x + cvRound(12 * cos(a)), p1.y + cvRound(12 * sin(a))),
+             Scalar(rng.uniform(120, 256)), 1);
+    }
+    Mat rot = getRotationMatrix2D(Point2f(48, 48), 10, 1.0);
+    rot.at<double>(0, 2) += sz.width / 2 - 48;
+    rot.at<double>(1, 2) += sz.height / 2 - 48;
+    Mat placed;
+    warpAffine(templ, placed, rot, sz);
+    image = max(image, placed);
+
+    Ptr<GeneralizedHoughGuil> guil = createGeneralizedHoughGuil();
+    guil->setMinDist(10);
+    guil->setDp(2);
+    guil->setMinAngle(0);
+    guil->setMaxAngle(20);
+    guil->setAngleThresh(1);
+    guil->setMinScale(0.9);
+    guil->setMaxScale(1.1);
+    guil->setScaleThresh(1);
+    guil->setPosThresh(20);
+    guil->setTemplate(templ);
+
+    const int nthreads = getNumThreads();
+    std::vector<Vec4f> pos1, posN;
+    std::vector<Vec3i> votes1, votesN;
+    setNumThreads(1);
+    guil->detect(image, pos1, votes1);
+    setNumThreads(nthreads);
+    guil->detect(image, posN, votesN);
+
+    ASSERT_FALSE(pos1.empty());
+    ASSERT_EQ(pos1.size(), posN.size());
+    ASSERT_EQ(votes1.size(), votesN.size());
+    for (size_t i = 0; i < pos1.size(); i++)
+    {
+        EXPECT_EQ(pos1[i], posN[i]) << "i=" << i;
+        EXPECT_EQ(votes1[i], votesN[i]) << "i=" << i;
+    }
+}
+
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
                                                                            testing::Values( 0.05, 0.1 ),

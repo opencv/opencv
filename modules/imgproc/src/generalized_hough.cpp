@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include <functional>
 #include <limits>
 
@@ -608,8 +609,16 @@ namespace
         void calcScale(double angle);
         void calcPosition(double angle, int angleVotes, double scale, int scaleVotes);
 
+        void prepareVoting();
+
         std::vector< std::vector<Feature> > templFeatures_;
         std::vector< std::vector<Feature> > imageFeatures_;
+
+        std::vector<size_t> imageLevelOfs_;
+        std::vector<double> imageTheta_;
+        std::vector<double> imageD12_;
+        std::vector<double> imageP1x_, imageP1y_, imageP2x_, imageP2y_;
+        bool useParallel_;
 
         std::vector< std::pair<double, int> > angles_;
         std::vector< std::pair<double, int> > scales_;
@@ -630,6 +639,208 @@ namespace
     bool angleEq(double a, double b, double eps = 1.0)
     {
         return (fabs(clampAngle(a - b)) <= eps);
+    }
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    inline v_float64 clampAngle(v_float64 r)
+    {
+        const v_float64 v360 = vx_setall_f64(360.0);
+        const v_float64 vZero = vx_setzero_f64();
+        v_float64 m = v_gt(r, v360);
+        while (v_check_any(m))
+        {
+            r = v_select(m, v_sub(r, v360), r);
+            m = v_gt(r, v360);
+        }
+        m = v_lt(r, vZero);
+        while (v_check_any(m))
+        {
+            r = v_select(m, v_add(r, v360), r);
+            m = v_lt(r, vZero);
+        }
+        return r;
+    }
+
+    inline v_float64 angleEq(const v_float64& a, const v_float64& b, const v_float64& eps)
+    {
+        return v_le(v_abs(clampAngle(v_sub(a, b))), eps);
+    }
+#endif
+
+    void voteOrientation(const double* theta, size_t n, double tTheta,
+                         double minAngle, double maxAngle, double iAngleStep, int* hist)
+    {
+        size_t k = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        const int vlanes = VTraits<v_float64>::vlanes();
+        uint64 maskBuf[VTraits<v_float64>::max_nlanes];
+        int idxBuf[VTraits<v_int32>::max_nlanes];
+        const v_float64 vTheta = vx_setall_f64(tTheta);
+        const v_float64 vMin = vx_setall_f64(minAngle);
+        const v_float64 vMax = vx_setall_f64(maxAngle);
+        const v_float64 vInvStep = vx_setall_f64(iAngleStep);
+        for (; k + vlanes <= n; k += vlanes)
+        {
+            const v_float64 a = clampAngle(v_sub(vx_load(theta + k), vTheta));
+            const v_float64 m = v_and(v_ge(a, vMin), v_le(a, vMax));
+            if (!v_check_any(m))
+                continue;
+            v_store(idxBuf, v_round(v_mul(v_sub(a, vMin), vInvStep)));
+            v_store(maskBuf, v_reinterpret_as_u64(m));
+            for (int l = 0; l < vlanes; ++l)
+                if (maskBuf[l])
+                    ++hist[idxBuf[l]];
+        }
+        vx_cleanup();
+#endif
+        for (; k < n; ++k)
+        {
+            const double angle = clampAngle(theta[k] - tTheta);
+            if (angle >= minAngle && angle <= maxAngle)
+            {
+                const int b = cvRound((angle - minAngle) * iAngleStep);
+                ++hist[b];
+            }
+        }
+    }
+
+    void voteScale(const double* theta, const double* d12, size_t n, double tTheta, double tD12,
+                   double eps, double minScale, double maxScale, double iScaleStep, int* hist)
+    {
+        size_t k = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        const int vlanes = VTraits<v_float64>::vlanes();
+        uint64 maskBuf[VTraits<v_float64>::max_nlanes];
+        int idxBuf[VTraits<v_int32>::max_nlanes];
+        const v_float64 vTheta = vx_setall_f64(tTheta);
+        const v_float64 vEps = vx_setall_f64(eps);
+        const v_float64 vD12 = vx_setall_f64(tD12);
+        const v_float64 vMin = vx_setall_f64(minScale);
+        const v_float64 vMax = vx_setall_f64(maxScale);
+        const v_float64 vInvStep = vx_setall_f64(iScaleStep);
+        for (; k + 2 * vlanes <= n; k += 2 * vlanes)
+        {
+            const v_float64 e0 = angleEq(vx_load(theta + k), vTheta, vEps);
+            const v_float64 e1 = angleEq(vx_load(theta + k + vlanes), vTheta, vEps);
+            if (!v_check_any(v_or(e0, e1)))
+                continue;
+            for (int h = 0; h < 2; ++h)
+            {
+                const size_t kk = k + h * vlanes;
+                const v_float64 s = v_div(vx_load(d12 + kk), vD12);
+                const v_float64 m = v_and(h == 0 ? e0 : e1, v_and(v_ge(s, vMin), v_le(s, vMax)));
+                if (!v_check_any(m))
+                    continue;
+                v_store(idxBuf, v_round(v_mul(v_sub(s, vMin), vInvStep)));
+                v_store(maskBuf, v_reinterpret_as_u64(m));
+                for (int l = 0; l < vlanes; ++l)
+                    if (maskBuf[l])
+                        ++hist[idxBuf[l]];
+            }
+        }
+        vx_cleanup();
+#endif
+        for (; k < n; ++k)
+        {
+            if (angleEq(theta[k], tTheta, eps))
+            {
+                const double scale = d12[k] / tD12;
+                if (scale >= minScale && scale <= maxScale)
+                {
+                    const int s = cvRound((scale - minScale) * iScaleStep);
+                    ++hist[s];
+                }
+            }
+        }
+    }
+
+    struct PositionVoteParams
+    {
+        double tTheta, eps, idp;
+        Point2d r1, r2;
+        int histRows, histCols;
+        int* hist;
+        size_t histStep;
+    };
+
+    template <bool Atomic>
+    inline void addPositionVote(const PositionVoteParams& params, double c1x, double c1y)
+    {
+        int* cell = params.hist + (size_t)(cvRound(c1y) + 1) * params.histStep + (cvRound(c1x) + 1);
+        if (Atomic)
+            CV_XADD(cell, 1);
+        else
+            ++*cell;
+    }
+
+    template <bool Atomic>
+    void votePosition(const double* theta, const double* p1x, const double* p1y,
+                      const double* p2x, const double* p2y, size_t n, const PositionVoteParams& params)
+    {
+        size_t k = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        const int vlanes = VTraits<v_float64>::vlanes();
+        uint64 maskBuf[VTraits<v_float64>::max_nlanes];
+        double xBuf[VTraits<v_float64>::max_nlanes], yBuf[VTraits<v_float64>::max_nlanes];
+        const v_float64 vTheta = vx_setall_f64(params.tTheta);
+        const v_float64 vEps = vx_setall_f64(params.eps);
+        const v_float64 vIdp = vx_setall_f64(params.idp);
+        const v_float64 vR1X = vx_setall_f64(params.r1.x), vR1Y = vx_setall_f64(params.r1.y);
+        const v_float64 vR2X = vx_setall_f64(params.r2.x), vR2Y = vx_setall_f64(params.r2.y);
+        const v_float64 vOne = vx_setall_f64(1.0), vZero = vx_setzero_f64();
+        const v_float64 vRows = vx_setall_f64((double)params.histRows), vCols = vx_setall_f64((double)params.histCols);
+        for (; k + 2 * vlanes <= n; k += 2 * vlanes)
+        {
+            const v_float64 e0 = angleEq(vx_load(theta + k), vTheta, vEps);
+            const v_float64 e1 = angleEq(vx_load(theta + k + vlanes), vTheta, vEps);
+            if (!v_check_any(v_or(e0, e1)))
+                continue;
+            for (int h = 0; h < 2; ++h)
+            {
+                const v_float64 e = h == 0 ? e0 : e1;
+                if (!v_check_any(e))
+                    continue;
+                const size_t kk = k + h * vlanes;
+                const v_float64 c1x = v_mul(v_sub(vx_load(p1x + kk), vR1X), vIdp);
+                const v_float64 c1y = v_mul(v_sub(vx_load(p1y + kk), vR1Y), vIdp);
+                const v_float64 c2x = v_mul(v_sub(vx_load(p2x + kk), vR2X), vIdp);
+                const v_float64 c2y = v_mul(v_sub(vx_load(p2y + kk), vR2Y), vIdp);
+                const v_float64 tooFar = v_or(v_gt(v_abs(v_sub(c1x, c2x)), vOne),
+                                              v_gt(v_abs(v_sub(c1y, c2y)), vOne));
+                const v_float64 inBounds = v_and(v_and(v_ge(c1y, vZero), v_lt(c1y, vRows)),
+                                            v_and(v_ge(c1x, vZero), v_lt(c1x, vCols)));
+                const v_float64 m = v_and(v_and(e, v_not(tooFar)), inBounds);
+                if (!v_check_any(m))
+                    continue;
+                v_store(maskBuf, v_reinterpret_as_u64(m));
+                v_store(xBuf, c1x);
+                v_store(yBuf, c1y);
+                for (int l = 0; l < vlanes; ++l)
+                    if (maskBuf[l])
+                        addPositionVote<Atomic>(params, xBuf[l], yBuf[l]);
+            }
+        }
+        vx_cleanup();
+#endif
+        for (; k < n; ++k)
+        {
+            if (angleEq(theta[k], params.tTheta, params.eps))
+            {
+                Point2d c1(p1x[k], p1y[k]), c2(p2x[k], p2y[k]);
+
+                c1 = c1 - params.r1;
+                c1 *= params.idp;
+
+                c2 = c2 - params.r2;
+                c2 *= params.idp;
+
+                if (fabs(c1.x - c2.x) > 1 || fabs(c1.y - c2.y) > 1)
+                    continue;
+
+                if (c1.y >= 0 && c1.y < params.histRows && c1.x >= 0 && c1.x < params.histCols)
+                    addPositionVote<Atomic>(params, c1.x, c1.y);
+            }
+        }
     }
 
     GeneralizedHoughGuilImpl::GeneralizedHoughGuilImpl()
@@ -660,6 +871,8 @@ namespace
     void GeneralizedHoughGuilImpl::processImage()
     {
         buildFeatureList(imageEdges_, imageDx_, imageDy_, imageFeatures_);
+
+        prepareVoting();
 
         calcOrientation();
 
@@ -698,37 +911,67 @@ namespace
             e.reserve(maxBufferSize);
         });
 
-        for (size_t i = 0; i < points.size(); ++i)
+        auto addPair = [&](const ContourPoint& p1, const ContourPoint& p2)
         {
-            ContourPoint p1 = points[i];
+            const Point2d d = p1.pos - p2.pos;
 
-            for (size_t j = 0; j < points.size(); ++j)
+            Feature f;
+
+            f.p1 = p1;
+            f.p2 = p2;
+
+            f.alpha12 = clampAngle(fastAtan2((float)d.y, (float)d.x) - p1.theta);
+            f.d12 = norm(d);
+
+            if (f.d12 > maxDist)
+                return;
+
+            f.r1 = p1.pos - center;
+            f.r2 = p2.pos - center;
+
+            const int n = cvRound(f.alpha12 * alphaScale);
+
+            if (features[n].size() < static_cast<size_t>(maxBufferSize_))
+                features[n].push_back(f);
+        };
+
+        const size_t npoints = points.size();
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        std::vector<double> thetas(npoints);
+        for (size_t i = 0; i < npoints; ++i)
+            thetas[i] = points[i].theta;
+        const int vlanes = VTraits<v_float64>::vlanes();
+        uint64 maskBuf[2 * VTraits<v_float64>::max_nlanes];
+        const v_float64 vXi = vx_setall_f64(xi_);
+        const v_float64 vEps = vx_setall_f64(angleEpsilon_);
+#endif
+
+        for (size_t i = 0; i < npoints; ++i)
+        {
+            const ContourPoint p1 = points[i];
+            size_t j = 0;
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+            const v_float64 vTheta1 = vx_setall_f64(p1.theta);
+            for (; j + 2 * vlanes <= npoints; j += 2 * vlanes)
             {
-                ContourPoint p2 = points[j];
+                const v_float64 e0 = angleEq(v_sub(vTheta1, vx_load(&thetas[j])), vXi, vEps);
+                const v_float64 e1 = angleEq(v_sub(vTheta1, vx_load(&thetas[j + vlanes])), vXi, vEps);
+                if (!v_check_any(v_or(e0, e1)))
+                    continue;
+                v_store(maskBuf, v_reinterpret_as_u64(e0));
+                v_store(maskBuf + vlanes, v_reinterpret_as_u64(e1));
+                for (int l = 0; l < 2 * vlanes; ++l)
+                    if (maskBuf[l])
+                        addPair(p1, points[j + l]);
+            }
+#endif
+            for (; j < npoints; ++j)
+            {
+                const ContourPoint& p2 = points[j];
 
                 if (angleEq(p1.theta - p2.theta, xi_, angleEpsilon_))
-                {
-                    const Point2d d = p1.pos - p2.pos;
-
-                    Feature f;
-
-                    f.p1 = p1;
-                    f.p2 = p2;
-
-                    f.alpha12 = clampAngle(fastAtan2((float)d.y, (float)d.x) - p1.theta);
-                    f.d12 = norm(d);
-
-                    if (f.d12 > maxDist)
-                        continue;
-
-                    f.r1 = p1.pos - center;
-                    f.r2 = p2.pos - center;
-
-                    const int n = cvRound(f.alpha12 * alphaScale);
-
-                    if (features[n].size() < static_cast<size_t>(maxBufferSize_))
-                        features[n].push_back(f);
-                }
+                    addPair(p1, p2);
             }
         }
     }
@@ -763,6 +1006,44 @@ namespace
         }
     }
 
+    void GeneralizedHoughGuilImpl::prepareVoting()
+    {
+        CV_Assert( templFeatures_.size() == static_cast<size_t>(levels_ + 1) );
+        CV_Assert( imageFeatures_.size() == templFeatures_.size() );
+
+        const int nlevels = levels_ + 1;
+        uint64 totalWork = 0;
+        imageLevelOfs_.assign(nlevels + 1, 0);
+        for (int i = 0; i < nlevels; ++i)
+        {
+            imageLevelOfs_[i + 1] = imageLevelOfs_[i] + imageFeatures_[i].size();
+            totalWork += (uint64)templFeatures_[i].size() * imageFeatures_[i].size();
+        }
+
+        const size_t total = imageLevelOfs_[nlevels];
+        imageTheta_.resize(total);
+        imageD12_.resize(total);
+        imageP1x_.resize(total);
+        imageP1y_.resize(total);
+        imageP2x_.resize(total);
+        imageP2y_.resize(total);
+        for (int i = 0; i < nlevels; ++i)
+        {
+            for (size_t k = 0, idx = imageLevelOfs_[i]; k < imageFeatures_[i].size(); ++k, ++idx)
+            {
+                const Feature& f = imageFeatures_[i][k];
+                imageTheta_[idx] = f.p1.theta;
+                imageD12_[idx] = f.d12;
+                imageP1x_[idx] = f.p1.pos.x;
+                imageP1y_[idx] = f.p1.pos.y;
+                imageP2x_[idx] = f.p2.pos.x;
+                imageP2y_[idx] = f.p2.pos.y;
+            }
+        }
+
+        useParallel_ = getNumThreads() > 1 && totalWork >= 8192;
+    }
+
     void GeneralizedHoughGuilImpl::calcOrientation()
     {
         CV_Assert( levels_ > 0 );
@@ -776,28 +1057,31 @@ namespace
         const int angleRange = cvCeil((maxAngle_ - minAngle_) * iAngleStep);
 
         std::vector<int> OHist(angleRange + 1, 0);
-        for (int i = 0; i <= levels_; ++i)
+
+        auto voteLevels = [&](const Range& r, int* hist)
         {
-            const std::vector<Feature>& templRow = templFeatures_[i];
-            const std::vector<Feature>& imageRow = imageFeatures_[i];
-
-            for (size_t j = 0; j < templRow.size(); ++j)
+            for (int i = r.start; i < r.end; ++i)
             {
-                Feature templF = templRow[j];
-
-                for (size_t k = 0; k < imageRow.size(); ++k)
-                {
-                    Feature imF = imageRow[k];
-
-                    const double angle = clampAngle(imF.p1.theta - templF.p1.theta);
-                    if (angle >= minAngle_ && angle <= maxAngle_)
-                    {
-                        const int n = cvRound((angle - minAngle_) * iAngleStep);
-                        ++OHist[n];
-                    }
-                }
+                const size_t ofs = imageLevelOfs_[i], n = imageLevelOfs_[i + 1] - ofs;
+                for (size_t j = 0; j < templFeatures_[i].size(); ++j)
+                    voteOrientation(imageTheta_.data() + ofs, n, templFeatures_[i][j].p1.theta,
+                                    minAngle_, maxAngle_, iAngleStep, hist);
             }
+        };
+
+        if (useParallel_)
+        {
+            parallel_for_(Range(0, levels_ + 1), [&](const Range& r)
+            {
+                std::vector<int> localHist(OHist.size(), 0);
+                voteLevels(r, localHist.data());
+                for (size_t b = 0; b < localHist.size(); ++b)
+                    if (localHist[b])
+                        CV_XADD(&OHist[b], localHist[b]);
+            });
         }
+        else
+            voteLevels(Range(0, levels_ + 1), OHist.data());
 
         angles_.clear();
 
@@ -825,33 +1109,33 @@ namespace
 
         std::vector<int> SHist(scaleRange + 1, 0);
 
-        for (int i = 0; i <= levels_; ++i)
+        auto voteLevels = [&](const Range& r, int* hist)
         {
-            const std::vector<Feature>& templRow = templFeatures_[i];
-            const std::vector<Feature>& imageRow = imageFeatures_[i];
-
-            for (size_t j = 0; j < templRow.size(); ++j)
+            for (int i = r.start; i < r.end; ++i)
             {
-                Feature templF = templRow[j];
-
-                templF.p1.theta += angle;
-
-                for (size_t k = 0; k < imageRow.size(); ++k)
+                const size_t ofs = imageLevelOfs_[i], n = imageLevelOfs_[i + 1] - ofs;
+                for (size_t j = 0; j < templFeatures_[i].size(); ++j)
                 {
-                    Feature imF = imageRow[k];
-
-                    if (angleEq(imF.p1.theta, templF.p1.theta, angleEpsilon_))
-                    {
-                        const double scale = imF.d12 / templF.d12;
-                        if (scale >= minScale_ && scale <= maxScale_)
-                        {
-                            const int s = cvRound((scale - minScale_) * iScaleStep);
-                            ++SHist[s];
-                        }
-                    }
+                    const Feature& templF = templFeatures_[i][j];
+                    voteScale(imageTheta_.data() + ofs, imageD12_.data() + ofs, n, templF.p1.theta + angle, templF.d12,
+                              angleEpsilon_, minScale_, maxScale_, iScaleStep, hist);
                 }
             }
+        };
+
+        if (useParallel_)
+        {
+            parallel_for_(Range(0, levels_ + 1), [&](const Range& r)
+            {
+                std::vector<int> localHist(SHist.size(), 0);
+                voteLevels(r, localHist.data());
+                for (size_t b = 0; b < localHist.size(); ++b)
+                    if (localHist[b])
+                        CV_XADD(&SHist[b], localHist[b]);
+            });
         }
+        else
+            voteLevels(Range(0, levels_ + 1), SHist.data());
 
         scales_.clear();
 
@@ -882,46 +1166,46 @@ namespace
 
         Mat DHist(histRows + 2, histCols + 2, CV_32SC1, Scalar::all(0));
 
-        for (int i = 0; i <= levels_; ++i)
+        auto voteLevels = [&](const Range& r, bool atomic)
         {
-            const std::vector<Feature>& templRow = templFeatures_[i];
-            const std::vector<Feature>& imageRow = imageFeatures_[i];
+            PositionVoteParams params;
+            params.eps = angleEpsilon_;
+            params.idp = idp;
+            params.histRows = histRows;
+            params.histCols = histCols;
+            params.hist = DHist.ptr<int>(0);
+            params.histStep = DHist.step1();
 
-            for (size_t j = 0; j < templRow.size(); ++j)
+            for (int i = r.start; i < r.end; ++i)
             {
-                Feature templF = templRow[j];
-
-                templF.p1.theta += angle;
-
-                templF.r1 *= scale;
-                templF.r2 *= scale;
-
-                templF.r1 = Point2d(cosVal * templF.r1.x - sinVal * templF.r1.y, sinVal * templF.r1.x + cosVal * templF.r1.y);
-                templF.r2 = Point2d(cosVal * templF.r2.x - sinVal * templF.r2.y, sinVal * templF.r2.x + cosVal * templF.r2.y);
-
-                for (size_t k = 0; k < imageRow.size(); ++k)
+                const size_t ofs = imageLevelOfs_[i], n = imageLevelOfs_[i + 1] - ofs;
+                for (size_t j = 0; j < templFeatures_[i].size(); ++j)
                 {
-                    Feature imF = imageRow[k];
+                    Feature templF = templFeatures_[i][j];
 
-                    if (angleEq(imF.p1.theta, templF.p1.theta, angleEpsilon_))
-                    {
-                        Point2d c1, c2;
+                    templF.p1.theta += angle;
 
-                        c1 = imF.p1.pos - templF.r1;
-                        c1 *= idp;
+                    templF.r1 *= scale;
+                    templF.r2 *= scale;
 
-                        c2 = imF.p2.pos - templF.r2;
-                        c2 *= idp;
+                    templF.r1 = Point2d(cosVal * templF.r1.x - sinVal * templF.r1.y, sinVal * templF.r1.x + cosVal * templF.r1.y);
+                    templF.r2 = Point2d(cosVal * templF.r2.x - sinVal * templF.r2.y, sinVal * templF.r2.x + cosVal * templF.r2.y);
 
-                        if (fabs(c1.x - c2.x) > 1 || fabs(c1.y - c2.y) > 1)
-                            continue;
+                    params.tTheta = templF.p1.theta;
+                    params.r1 = templF.r1;
+                    params.r2 = templF.r2;
 
-                        if (c1.y >= 0 && c1.y < histRows && c1.x >= 0 && c1.x < histCols)
-                            ++DHist.at<int>(cvRound(c1.y) + 1, cvRound(c1.x) + 1);
-                    }
+                    (atomic ? votePosition<true> : votePosition<false>)(
+                        imageTheta_.data() + ofs, imageP1x_.data() + ofs, imageP1y_.data() + ofs,
+                        imageP2x_.data() + ofs, imageP2y_.data() + ofs, n, params);
                 }
             }
-        }
+        };
+
+        if (useParallel_)
+            parallel_for_(Range(0, levels_ + 1), [&](const Range& r) { voteLevels(r, true); });
+        else
+            voteLevels(Range(0, levels_ + 1), false);
 
         for(int y = 0; y < histRows; ++y)
         {
