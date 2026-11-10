@@ -223,7 +223,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
 
         return make_cuda_node<cuda4dnn::AttentionOp>(preferableTarget, std::move(context->stream),
                                                      std::move(context->cublas_handle),
-                                                     weights, bias, cfg);
+                                                     origWeights.empty() ? weights : origWeights,
+                                                     bias, cfg);
     }
 #endif
 
@@ -369,6 +370,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
             weights = w;
             wshape0 = shape(w);
             ownsWeights = true;
+            // The copy initCUDA() was going to read is now the wrong one.
+            origWeights.release();
         }
 
         Mat b = bias_arr.getMat();
@@ -385,6 +388,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
     void releaseConstWeights() CV_OVERRIDE
     {
         weights.release();
+        origWeights.release();
         bias.release();
     }
 
@@ -455,21 +459,29 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
 
     // A dynamic weight is not available yet; forward() packs that one.
     void prepackWeights() CV_OVERRIDE {
-        if (weights.empty())
-            return;
-        packQKV(weights);
-
         Net::Impl* netimpl_ = getNetImpl(this);
+        bool keepForCuda = false;
 #ifdef HAVE_CUDA
-        // initCUDA() reads the raw weight after finalize(), so a net targeting CUDA keeps it.
-        if (netimpl_ && netimpl_->preferableBackend == DNN_BACKEND_CUDA &&
-            supportBackend(DNN_BACKEND_CUDA))
-            return;
+        // initCUDA() reads the plain weight after finalize(), so a net targeting CUDA keeps it.
+        keepForCuda = netimpl_ && netimpl_->preferableBackend == DNN_BACKEND_CUDA &&
+                      supportBackend(DNN_BACKEND_CUDA);
 #endif
-        // The packed copy is what the kernels read from here on; the original is dead weight.
-        weights.release();
-        if (netimpl_)
-            netimpl_->weightsReleased = true;
+        if (!weights.empty()) {
+            packQKV(weights);
+            // The packed copy is what the kernels read from here on. Hold the plain
+            // weight out of reach of getParam() so the contract does not vary by backend.
+            if (keepForCuda)
+                origWeights = weights;
+            else if (netimpl_)
+                netimpl_->weightsReleased = true;
+            weights.release();
+        }
+        // A net moved off CUDA has no reader left for the plain weight.
+        if (!keepForCuda && !origWeights.empty()) {
+            origWeights.release();
+            if (netimpl_)
+                netimpl_->weightsReleased = true;
+        }
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
@@ -812,6 +824,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
     std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
 
     Mat weights;                 //!< constant QKV weight; released once packed
+    Mat origWeights;             //!< plain weight held for initCUDA(); getParam() must not see it
     Mat bias;                    //!< constant QKV bias
     bool ownsWeights = false;
     bool ownsBias = false;
