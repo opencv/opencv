@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 #include "../op_cuda.hpp"
+#include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
@@ -133,7 +134,7 @@ static void precompRotationTable(float *data,
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/v1.16.1/docs/ContribOperators.md#com.microsoft.Attention
 // Extension: a fused Attention may take [..., C] and group its tokens into batch and sequence the
 // way the replaced QKV reshape did (spec: 3D only).
-class AttentionLayerImpl CV_FINAL : public AttentionLayer {
+class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwner {
  public:
     AttentionLayerImpl(const LayerParams &params) {
         setParamsFrom(params);
@@ -361,11 +362,14 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     // constArgs() hands the constant operands over once; the layer owns them from here.
     void setWeights(InputArray weights_arr, InputArray bias_arr) CV_OVERRIDE
     {
+        // An empty weights keeps the current one; on the first handover there is none to keep.
         Mat w = weights_arr.getMat();
-        CV_Assert(!w.empty());
-        weights = w;
-        wshape0 = shape(w);
-        ownsWeights = true;
+        if (!w.empty() || !ownsWeights) {
+            CV_Assert(!w.empty());
+            weights = w;
+            wshape0 = shape(w);
+            ownsWeights = true;
+        }
 
         Mat b = bias_arr.getMat();
         if (!b.empty()) {
@@ -389,6 +393,15 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
     // prepackWeights() drops the weight once packed, so its shape has to outlive it
     MatShape weightShape() const { return wshape0; }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        if (!wshape0.empty()) {
+            prindent(strm, indent);
+            dumpWeightShape(strm, wshape0);
+        }
+        return strm;
+    }
 
     // Geometry derives from the weight shape alone, so this is safe before finalize().
     void packQKV(const Mat& weight) {

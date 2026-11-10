@@ -79,20 +79,14 @@ struct ModelFusionAttention
 
     static Mat projWeight(const Ptr<LayerInfo>& l)
     {
-        if (const GemmLayer* g = dynamic_cast<const GemmLayer*>(l.get()))
-            return g->constWeights();
-        if (const MatMulLayer* m = dynamic_cast<const MatMulLayer*>(l.get()))
-            return m->constWeights();
-        return Mat();
+        const ConstWeightOwner* o = dynamic_cast<const ConstWeightOwner*>(l.get());
+        return o ? o->constWeights() : Mat();
     }
 
     static Mat projBias(const Ptr<LayerInfo>& l)
     {
-        if (const GemmLayer* g = dynamic_cast<const GemmLayer*>(l.get()))
-            return g->constBias();
-        if (const MatMulLayer* m = dynamic_cast<const MatMulLayer*>(l.get()))
-            return m->constBias();
-        return Mat();
+        const ConstWeightOwner* o = dynamic_cast<const ConstWeightOwner*>(l.get());
+        return o ? o->constBias() : Mat();
     }
 
     static bool isProjCandidate(const Ptr<LayerInfo>& l)
@@ -663,7 +657,7 @@ struct ModelFusionAttention
 
         Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(attn_params.type, attn_params);
         CV_Assert(attn_layer);
-        AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+        ConstWeightOwner* attn = dynamic_cast<ConstWeightOwner*>(attn_layer.get());
         CV_Assert(attn);
         attn->setWeights(W_qkv, bias_qkv);
         attn_layer->inputs  = { shared_input };
@@ -953,7 +947,7 @@ struct ModelFusionAttention
         Ptr<LayerInfo> attn_layer =
             LayerFactory::createLayerInstance(attn_params.type, attn_params);
         if (!attn_layer) return false;
-        AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+        ConstWeightOwner* attn = dynamic_cast<ConstWeightOwner*>(attn_layer.get());
         if (!attn) return false;
         attn->setWeights(W_qkv, bias_qkv);
         attn_layer->inputs  = { shared_input };
@@ -1008,10 +1002,8 @@ struct ModelFusionAttention
             // rather than at setProg() bounds the live copy to one block.
             if (op < 0 || op >= (int)prog.size() || !prog[op])
                 continue;
-            if (GemmLayer* g = dynamic_cast<GemmLayer*>(prog[op].get()))
-                g->releaseConstWeights();
-            else if (MatMulLayer* m = dynamic_cast<MatMulLayer*>(prog[op].get()))
-                m->releaseConstWeights();
+            if (ConstWeightOwner* o = dynamic_cast<ConstWeightOwner*>(prog[op].get()))
+                o->releaseConstWeights();
         }
     }
 
@@ -1301,7 +1293,7 @@ struct ModelFusionAttention
                     Ptr<LayerInfo> attn_layer = LayerFactory::createLayerInstance(
                         attn_params.type, attn_params);
                     CV_Assert(attn_layer);
-                    AttentionLayer* attn = dynamic_cast<AttentionLayer*>(attn_layer.get());
+                    ConstWeightOwner* attn = dynamic_cast<ConstWeightOwner*>(attn_layer.get());
                     CV_Assert(attn);
                     attn->setWeights(W_qkv, bias_qkv);
 

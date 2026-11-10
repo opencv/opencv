@@ -1654,6 +1654,8 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 }
 
 
+ConstWeightOwner::~ConstWeightOwner() {}
+
 Mat Net::Impl::getParam(int layer, int numParam) const
 {
     Ptr<Layer> l = getLayer(layer);
@@ -1662,16 +1664,11 @@ Mat Net::Impl::getParam(int layer, int numParam) const
         return layerBlobs[numParam];
 
     // A constant handed over by setWeights() is not in blobs; read it from the layer.
-    if (numParam == 0 || numParam == 1) {
-        const Mat* owned = nullptr;
-        if (GemmLayer* gemm = dynamic_cast<GemmLayer*>(l.get()))
-            owned = numParam == 0 ? &gemm->constWeights() : &gemm->constBias();
-        else if (MatMulLayer* matmul = dynamic_cast<MatMulLayer*>(l.get()))
-            owned = numParam == 0 ? &matmul->constWeights() : &matmul->constBias();
-        else if (AttentionLayer* attn = dynamic_cast<AttentionLayer*>(l.get()))
-            owned = numParam == 0 ? &attn->constWeights() : &attn->constBias();
-        if (owned && !owned->empty())
-            return *owned;
+    if (const ConstWeightOwner* owner = dynamic_cast<const ConstWeightOwner*>(l.get())) {
+        if (numParam == 0 && !owner->constWeights().empty())
+            return owner->constWeights();
+        if (numParam == 1 && !owner->constBias().empty())
+            return owner->constBias();
     }
 
     // Until constArgs() hands them over they are still operands, and operand 0 is the data.
@@ -1694,39 +1691,57 @@ static void markLayerWeightsChanged(const Ptr<LayerInfo>& layer)
 static bool setConstWeights(const Ptr<LayerInfo>& layer, int numParam, const Mat& blob,
                             int c0, int accuracy)
 {
-    // Only the weight is reachable: setWeights() has no form that leaves it alone.
+    LayerInfo* l = layer.get();
+    if (ConstWeightOwner* owner = dynamic_cast<ConstWeightOwner*>(l)) {
+        // Parameter 0 is the weight and 1 the bias; the empty operand leaves the other alone.
+        if (numParam == 0)
+            owner->setWeights(blob, Mat());
+        else if (numParam == 1)
+            owner->setWeights(Mat(), blob);
+        else
+            return false;
+        return true;
+    }
+    // Conv and ConvTranspose pack the two together, so only the weight is reachable.
     if (numParam != 0)
         return false;
-    LayerInfo* l = layer.get();
     if (Conv2Layer* conv = dynamic_cast<Conv2Layer*>(l))
         conv->setWeights(blob, Mat(), c0, accuracy);
     else if (ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(l))
         deconv->setWeights(blob, Mat(), c0, accuracy);
-    else if (GemmLayer* gemm = dynamic_cast<GemmLayer*>(l))
-        gemm->setWeights(blob, Mat());
-    else if (MatMulLayer* matmul = dynamic_cast<MatMulLayer*>(l))
-        matmul->setWeights(blob, Mat());
-    else if (AttentionLayer* attn = dynamic_cast<AttentionLayer*>(l))
-        attn->setWeights(blob, Mat());
     else
         return false;
     return true;
+}
+
+// A constant lives in blobs, in the graph, or on the layer; the write follows it.
+bool Net::Impl::writeParam(const Ptr<LayerInfo>& l, int numParam, const Mat& blob)
+{
+    std::vector<Mat>& layerBlobs = l->blobs;
+    if (numParam < (int)layerBlobs.size()) {
+        // we don't make strong checks, use this function carefully
+        layerBlobs[numParam] = blob;
+        return true;
+    }
+
+    // constArgs() hands this operand to the layer at the first forward, so writing it here is
+    // what survives. Operand 0 is the data, so parameter i is operand i + 1.
+    if (mainGraph && numParam + 1 < (int)l->inputs.size()) {
+        Arg operand = l->inputs[numParam + 1];
+        if (isConstArg(operand)) {
+            argTensor(operand) = blob;
+            return true;
+        }
+    }
+
+    return setConstWeights(l, numParam, blob, defaultC0, accuracy);
 }
 
 void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
     // FIXIT we should not modify "execution" instance
     Ptr<Layer> l = getLayer(layer);
-    std::vector<Mat>& layerBlobs = l->blobs;
-    if (numParam < (int)layerBlobs.size()) {
-        // we don't make strong checks, use this function carefully
-        layerBlobs[numParam] = blob;
-        if (mainGraph)
-            markLayerWeightsChanged(l);
-        return;
-    }
-
-    if (!setConstWeights(l, numParam, blob, defaultC0, accuracy))
+    if (!writeParam(l, numParam, blob))
         CV_Error_(Error::StsOutOfRange,
                   ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
     markLayerWeightsChanged(l);
@@ -1761,13 +1776,7 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (!produces)
                 continue;
 
-            if (numParam < (int)layer->blobs.size()) {
-                layer->blobs[numParam] = blob;
-                markLayerWeightsChanged(layer);
-                return;
-            }
-
-            if (setConstWeights(layer, numParam, blob, defaultC0, accuracy)) {
+            if (writeParam(layer, numParam, blob)) {
                 markLayerWeightsChanged(layer);
                 return;
             }

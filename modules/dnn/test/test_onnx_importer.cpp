@@ -2563,8 +2563,68 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
 
     const Mat expected = input * B;
     normAssert(expected, out - bias_only);
-    // Packing released the weight, and nothing can give it back.
-    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
+    if (backend == DNN_BACKEND_CUDA)
+        EXPECT_FALSE(net.getParam(gemm, 0).empty());
+    else
+        EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_SetBiasOnly)
+{
+    const String model = _tf("models/gemm_vector_bias.onnx");
+    Mat input(3, 6, CV_32F), newC(1, 4, CV_32F);
+    randu(input, -1.0, 1.0);
+    randu(newC, -1.0, 1.0);
+
+    auto gemmId = [](Net& n) {
+        const std::vector<String> names = n.getLayerNames();
+        for (size_t i = 0; i < names.size(); i++)
+        {
+            const int id = n.getLayerId(names[i]);
+            if (n.getLayer(id)->type == "Gemm")
+                return id;
+        }
+        return -1;
+    };
+
+    Net probe = readNetFromONNX(model);
+    ASSERT_FALSE(probe.empty());
+    const int probe_id = gemmId(probe);
+    ASSERT_GE(probe_id, 0);
+    const Mat B = probe.getParam(probe_id, 0).clone();
+    ASSERT_EQ(shape(B), shape(6, 4));
+
+    Mat expected = input * B;
+    for (int r = 0; r < expected.rows; r++)
+        expected.row(r) += newC;
+
+    for (int by_name = 0; by_name < 2; by_name++)
+    {
+        for (int after_forward = 0; after_forward < 2; after_forward++)
+        {
+            Net net = readNetFromONNX(model);
+            ASSERT_FALSE(net.empty());
+            net.setPreferableBackend(backend);
+            net.setPreferableTarget(target);
+
+            if (after_forward)
+            {
+                net.setInput(input);
+                net.forward();
+            }
+
+            if (by_name)
+                net.setParam("Y", 1, newC);
+            else
+                net.setParam(gemmId(net), 1, newC);
+
+            net.setInput(input);
+            const String what = format("%s, %s forward", by_name ? "name" : "id",
+                                       after_forward ? "after" : "before");
+            normAssert(expected, net.forward(), what.c_str());
+        }
+    }
 }
 
 TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
@@ -2606,7 +2666,11 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
         const Mat out_slice(2, 4, CV_32F, out.ptr<float>(b));
         normAssert(a_slice * b_slice, out_slice);
     }
-    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
+    if (backend == DNN_BACKEND_CUDA)
+        EXPECT_FALSE(net.getParam(matmul, 0).empty());
+    else
+        EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
@@ -2667,7 +2731,11 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
             attn = id;
     }
     ASSERT_GE(attn, 0);
-    EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
+    // A net targeting CUDA keeps the weight for initCUDA(); any other frees it once packed.
+    if (backend == DNN_BACKEND_CUDA)
+        EXPECT_FALSE(net.getParam(attn, 0).empty());
+    else
+        EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
     normAssert(ref, out);
 }
 

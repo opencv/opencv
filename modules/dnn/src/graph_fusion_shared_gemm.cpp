@@ -39,7 +39,7 @@ namespace {
 // group twice; past this size that transient costs more than one wide Gemm saves.
 static constexpr size_t MAX_FUSED_WEIGHT_BYTES = (size_t)1 << 30;
 
-static bool readGemmBias(const GemmLayer* g, Mat& b_out)
+static bool readGemmBias(const ConstWeightOwner* g, Mat& b_out)
 {
     const Mat& b = g->constBias();
     if (b.empty()) { b_out.release(); return true; }
@@ -72,13 +72,14 @@ struct ModelFusionSharedGemm
         if (idx < 0 || idx >= (int)prog.size() || !prog[idx]) return false;
         const Ptr<LayerInfo>& l = prog[idx];
         GemmLayer* g = dynamic_cast<GemmLayer*>(l.get());
-        if (!g) return false;
+        const ConstWeightOwner* gc = dynamic_cast<const ConstWeightOwner*>(l.get());
+        if (!g || !gc) return false;
 
         if (l->inputs.size() != 1) return false;
 
-        const Mat& W = g->constWeights();
+        const Mat& W = gc->constWeights();
         if (W.empty() || W.dims != 2 || W.type() != CV_32F) return false;
-        const bool has_bias = !g->constBias().empty();
+        const bool has_bias = !gc->constBias().empty();
 
         bool trans_a = g->trans_a;
         bool trans_b = g->trans_b;
@@ -94,7 +95,7 @@ struct ModelFusionSharedGemm
         if (K <= 0 || N <= 0) return false;
 
         if (has_bias) {
-            const Mat& b = g->constBias();
+            const Mat& b = gc->constBias();
             if (b.type() != CV_32F) return false;
             if ((int)b.total() != N) return false;
         }
@@ -112,10 +113,7 @@ struct ModelFusionSharedGemm
         return true;
     }
 
-    void fuse()
-    {
-        fuseGraph(netimpl->mainGraph);
-    }
+    void fuse() { fuseGraph(netimpl->mainGraph); }
 
     bool fuseGraph(Ptr<Graph>& graph)
     {
@@ -170,7 +168,8 @@ struct ModelFusionSharedGemm
             Mat W_concat(2, wshape, CV_32F);
             int col_offset = 0;
             for (auto& info : infos) {
-                const GemmLayer* src = dynamic_cast<const GemmLayer*>(prog[info.layer_idx].get());
+                const ConstWeightOwner* src =
+                    dynamic_cast<const ConstWeightOwner*>(prog[info.layer_idx].get());
                 CV_Assert(src);
                 const Mat& W = src->constWeights();
                 // On a mismatch copyTo/transpose would resize dst, detaching it from W_concat.
@@ -191,8 +190,8 @@ struct ModelFusionSharedGemm
                 int b_offset = 0;
                 for (auto& info : infos) {
                     Mat b;
-                    const GemmLayer* src =
-                        dynamic_cast<const GemmLayer*>(prog[info.layer_idx].get());
+                    const ConstWeightOwner* src =
+                        dynamic_cast<const ConstWeightOwner*>(prog[info.layer_idx].get());
                     if (!src || !readGemmBias(src, b)) {
                         uniform = false; break;
                     }
@@ -225,7 +224,7 @@ struct ModelFusionSharedGemm
             if (all_have_bias) fp.set("real_ndims_C", 1);
             Ptr<LayerInfo> fused = LayerFactory::createLayerInstance("Gemm", fp);
             if (!fused) continue;
-            GemmLayer* fused_gemm = dynamic_cast<GemmLayer*>(fused.get());
+            ConstWeightOwner* fused_gemm = dynamic_cast<ConstWeightOwner*>(fused.get());
             if (!fused_gemm) continue;
             fused_gemm->setWeights(W_concat, all_have_bias ? b_concat : Mat());
 
@@ -276,7 +275,8 @@ struct ModelFusionSharedGemm
             // W_concat holds these weights now, so dropping the sources here rather than at
             // setProg() keeps one group's duplicate live instead of every group's.
             for (auto& info : infos)
-                if (GemmLayer* src = dynamic_cast<GemmLayer*>(prog[info.layer_idx].get()))
+                if (ConstWeightOwner* src =
+                        dynamic_cast<ConstWeightOwner*>(prog[info.layer_idx].get()))
                     src->releaseConstWeights();
         }
 
