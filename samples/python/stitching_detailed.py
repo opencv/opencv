@@ -29,25 +29,47 @@ BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
 FEATURES_FIND_CHOICES = OrderedDict()
 try:
-    cv.xfeatures2d_SURF.create() # check if the function can be called
-    FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
-except (AttributeError, cv.error) as e:
+    surf = getattr(getattr(cv, 'xfeatures2d', None), 'SURF_create', None) or getattr(cv, 'xfeatures2d_SURF', None)
+    if surf:
+        surf_create = surf.create if hasattr(surf, 'create') else surf
+        surf_create()
+        FEATURES_FIND_CHOICES['surf'] = surf_create
+    else:
+        print("SURF not available")
+except (AttributeError, cv.error):
     print("SURF not available")
+
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
+
 try:
-    FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
-except AttributeError:
+    sift = getattr(cv, 'SIFT_create', None) or getattr(getattr(cv, 'SIFT', None), 'create', None)
+    if sift:
+        sift()
+        FEATURES_FIND_CHOICES['sift'] = sift
+    else:
+        print("SIFT not available")
+except (AttributeError, cv.error):
     print("SIFT not available")
+
 try:
-    cv.xfeatures2d_BRISK.create() # check if the function can be called
-    FEATURES_FIND_CHOICES['brisk'] = cv.xfeatures2d_BRISK.create
-except AttributeError:
+    brisk = getattr(cv, 'BRISK_create', None) or getattr(getattr(cv, 'BRISK', None), 'create', None) or getattr(getattr(getattr(cv, 'xfeatures2d', None), 'BRISK', None), 'create', None)
+    if brisk:
+        brisk()
+        FEATURES_FIND_CHOICES['brisk'] = brisk
+    else:
+        print("BRISK not available")
+except (AttributeError, cv.error):
     print("BRISK not available")
+
 try:
-    cv.xfeatures2d_AKAZE.create() # check if the function can be called
-    FEATURES_FIND_CHOICES['akaze'] = cv.xfeatures2d_AKAZE.create
-except AttributeError:
+    akaze = getattr(cv, 'AKAZE_create', None) or getattr(getattr(cv, 'AKAZE', None), 'create', None) or getattr(getattr(getattr(cv, 'xfeatures2d', None), 'AKAZE', None), 'create', None)
+    if akaze:
+        akaze()
+        FEATURES_FIND_CHOICES['akaze'] = akaze
+    else:
+        print("AKAZE not available")
+except (AttributeError, cv.error):
     print("AKAZE not available")
 
 SEAM_FIND_CHOICES = OrderedDict()
