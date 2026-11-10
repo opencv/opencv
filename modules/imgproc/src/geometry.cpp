@@ -847,7 +847,7 @@ cv::Rect cv::boundingRect(InputArray array)
     CV_INSTRUMENT_REGION();
 
     Mat m = array.getMat();
-    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+    return m.depth() <= CV_8S ? maskBoundingRect(m) : pointSetBoundingRect(m);
 }
 
 

@@ -134,4 +134,14 @@ TEST(Imgproc_BoundingRect, out_of_int_range_29837)
     EXPECT_EQ(boundingRect(ints), Rect(imin, imin, imax, imax));
 }
 
+TEST(Imgproc_BoundingRect, mask_CV_8S)
+{
+    Mat mask = Mat::zeros(20, 20, CV_8SC1);
+    mask.at<schar>(5, 6) = -1;
+    mask.at<schar>(12, 15) = 1;
+
+    Rect r = boundingRect(mask);
+    EXPECT_EQ(r, Rect(6, 5, 10, 8));
+}
+
 }} // namespace
