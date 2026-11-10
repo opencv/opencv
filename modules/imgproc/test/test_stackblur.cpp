@@ -479,5 +479,46 @@ TEST(Imgproc_StackBlur, full_range_thread_invariance)
 
     EXPECT_EQ(cvtest::norm(single, multi, NORM_INF), 0.);
 }
+
+// The result must not depend on where the destination lives: a sub-matrix of a larger image
+// (the pixels around it must stay untouched), the source itself (in-place blur), or a
+// sub-matrix of the source. Every case must equal the blur of a separate continuous image.
+TEST(Imgproc_StackBlur, roi_and_inplace)
+{
+    const Rect roi(3, 2, 17, 11);
+    for (int type : {CV_8UC1, CV_8UC3, CV_16SC1, CV_16UC3, CV_32FC1, CV_32FC3})
+    {
+        for (const Size ksize : {Size(5, 7), Size(1, 5), Size(5, 1)})
+        {
+            SCOPED_TRACE(cv::format("type=%s ksize=%dx%d", typeToString(type).c_str(),
+                                    ksize.width, ksize.height));
+            Mat parent(roi.height + 6, roi.width + 9, type);
+            randu(parent, Scalar::all(0), Scalar::all(200));
+
+            Mat expected;
+            stackBlur(parent(roi).clone(), expected, ksize);
+
+            // the destination is a region of a larger image; the rest of the image must not change
+            Mat dstParent(parent.size(), type, Scalar::all(77)), dstExpected = dstParent.clone();
+            expected.copyTo(dstExpected(roi));
+            Mat dst = dstParent(roi);
+            stackBlur(parent(roi), dst, ksize);
+            EXPECT_EQ(0., cvtest::norm(dstExpected, dstParent, NORM_INF)) << "out of place";
+
+            // in place on a region of interest
+            Mat inplace = parent.clone();
+            Mat region = inplace(roi);
+            stackBlur(region, region, ksize);
+            Mat inplaceExpected = parent.clone();
+            expected.copyTo(inplaceExpected(roi));
+            EXPECT_EQ(0., cvtest::norm(inplaceExpected, inplace, NORM_INF)) << "in place";
+
+            // in place on a continuous image
+            Mat continuous = parent(roi).clone();
+            stackBlur(continuous, continuous, ksize);
+            EXPECT_EQ(0., cvtest::norm(expected, continuous, NORM_INF)) << "in place, continuous";
+        }
+    }
+}
 }
 }
