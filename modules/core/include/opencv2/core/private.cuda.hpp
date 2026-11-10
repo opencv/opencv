@@ -56,7 +56,33 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/private/cuda_stubs.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && (defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__))
+// AMD ROCm/HIP build of the CUDA modules. The GpuMat infrastructure and stream
+// helpers map onto the HIP runtime via the compat shim; NPP is not part of the
+// AMD path, the contrib modules that need it reimplement those entry points as
+// HIP kernels, so the NPP version macro is only a placeholder here.
+#  include <hip/hip_runtime.h>
+#  include "opencv2/core/cuda/cuda_to_hip.h"
+#  include "opencv2/core/cuda_stream_accessor.hpp"
+#  include "opencv2/core/cuda/common.hpp"
+
+#  ifndef NPP_VERSION
+#    define NPP_VERSION 0
+#  endif
+
+// The HIP runtime provides the modern stream/callback API unconditionally, but
+// the CUDA sources gate those paths on CUDART_VERSION (>= 5000 for stream
+// callbacks, >= 12000 elsewhere). Surface a modern version so the HIP build
+// takes the same branches as a current CUDA toolkit. CUDART_CB is a calling
+// convention attribute on NVIDIA; it is a no-op on HIP.
+#  ifndef CUDART_VERSION
+#    define CUDART_VERSION 12000
+#  endif
+#  ifndef CUDART_CB
+#    define CUDART_CB
+#  endif
+
+#elif defined(HAVE_CUDA)
 #  include <cuda.h>
 #  include <cuda_runtime.h>
 #  if defined(__CUDACC_VER_MAJOR__) && (8 <= __CUDACC_VER_MAJOR__)
@@ -102,7 +128,10 @@ namespace cv { namespace cuda {
     CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}
 
-#ifdef HAVE_CUDA
+// The NPP helpers and the CUDA driver API error check are not available on the
+// AMD ROCm/HIP path (NPP has no ROCm analog; the contrib modules that use it
+// reimplement those entry points as HIP kernels). Compile them only for CUDA.
+#if defined(HAVE_CUDA) && !(defined(__HIP_PLATFORM_AMD__) || defined(__HIPCC__))
 
 #define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
 

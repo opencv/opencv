@@ -482,6 +482,18 @@ namespace
         };
     };
 
+    template <typename T>
+    struct Is64BitInt { enum { value = 0 }; };
+    template <> struct Is64BitInt<long> { enum { value = 1 }; };
+    template <> struct Is64BitInt<unsigned long> { enum { value = 1 }; };
+    template <> struct Is64BitInt<long long> { enum { value = 1 }; };
+    template <> struct Is64BitInt<unsigned long long> { enum { value = 1 }; };
+
+    template <typename ScalarType, int Use64BitPolicy>
+    struct ConvertToPolicySel { typedef ConvertToPolicy<ScalarType> type; };
+    template <typename ScalarType>
+    struct ConvertToPolicySel<ScalarType, 1> { typedef ConvertToPolicy<double> type; };
+
     template <typename T, typename D>
     void convertToNoScale(const GpuMat& src, const GpuMat& dst, Stream& stream)
     {
@@ -490,7 +502,9 @@ namespace
         typedef typename LargerType<src_elem_type, float>::type larger_elem_type;
         typedef typename LargerType<float, dst_elem_type>::type scalar_type;
 
-        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
+        typedef typename ConvertToPolicySel<scalar_type,
+            Is64BitInt<T>::value || Is64BitInt<D>::value>::type policy_type;
+        gridTransformUnary_<policy_type>(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
     }
 
     template <typename T, typename D, typename S> struct Convertor : unary_function<T, D>
@@ -516,7 +530,9 @@ namespace
         op.alpha = cv::saturate_cast<scalar_type>(alpha);
         op.beta = cv::saturate_cast<scalar_type>(beta);
 
-        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
+        typedef typename ConvertToPolicySel<scalar_type,
+            Is64BitInt<T>::value || Is64BitInt<D>::value>::type policy_type_s;
+        gridTransformUnary_<policy_type_s>(globPtr<T>(src), globPtr<D>(dst), op, stream);
     }
 
     template <typename T, typename D>

@@ -180,13 +180,13 @@ namespace cv { namespace cuda { namespace device
     __device__ T warpScanInclusive(T idata, volatile T* s_Data, unsigned int tid)
     {
     #if __CUDA_ARCH__ >= 300
-        const unsigned int laneId = cv::cuda::device::Warp::laneId();
+        const unsigned int laneId = ::cv::cuda::device::Warp::laneId();
 
         // scan on shuffl functions
         #pragma unroll
         for (int i = 1; i <= (OPENCV_CUDA_WARP_SIZE / 2); i *= 2)
         {
-            const T n = cv::cuda::device::shfl_up(idata, i);
+            const T n = ::cv::cuda::device::shfl_up(idata, i);
             if (laneId >= i)
                   idata += n;
         }
