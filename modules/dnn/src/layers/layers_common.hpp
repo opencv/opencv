@@ -95,6 +95,15 @@ inline void widenToFP32(Mat& m)
     }
 }
 
+//! A layer that owns its constant keeps no blob for dump() to print, so it prints the shape.
+inline std::ostream& dumpWeightShape(std::ostream& strm, const MatShape& wshape)
+{
+    strm << "weight_shape: [";
+    for (int k = 0; k < wshape.dims; k++)
+        strm << (k > 0 ? ", " : "") << wshape[k];
+    return strm << "],\n";
+}
+
 // Several ONNX operations take list of integer's or float's,
 // e.g. to specify list of axes (Squeeze, Unsqueeze, Transpose, Reduce*, ...),
 // coordinates, repetitions etc. (Slice, Tile, ...), scale factors (Resize, ...).

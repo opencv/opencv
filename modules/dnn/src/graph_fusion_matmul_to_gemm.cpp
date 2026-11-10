@@ -173,7 +173,9 @@ struct ModelFusionMatMulToGemm
             if (mm->trans_a) continue;            // ND-A flatten assumes K = last axis
 
             // A MatMul with a runtime B owns no constant and isn't a candidate.
-            const Mat B = mm->constWeights();
+            const ConstWeightOwner* mm_consts = dynamic_cast<const ConstWeightOwner*>(layer.get());
+            if (!mm_consts) continue;
+            const Mat B = mm_consts->constWeights();
             if (B.empty() || B.dims != 2 || B.type() != CV_32F) continue;
 
             // Single runtime input expected (constArgs() took the const B).
@@ -184,7 +186,7 @@ struct ModelFusionMatMulToGemm
             (void)K;
             if (N <= 0) continue;
 
-            Mat bias = mm->constBias();
+            Mat bias = mm_consts->constBias();
             bool have_bias = !bias.empty();
             if (have_bias) {
                 if (bias.type() != CV_32F) continue;
@@ -224,7 +226,7 @@ struct ModelFusionMatMulToGemm
 
             Ptr<LayerInfo> gemm = LayerFactory::createLayerInstance("Gemm", gp);
             CV_Assert(gemm);  // the Mul/Add layers folded into it are already marked as dropped
-            GemmLayer* gemm_layer = dynamic_cast<GemmLayer*>(gemm.get());
+            ConstWeightOwner* gemm_layer = dynamic_cast<ConstWeightOwner*>(gemm.get());
             CV_Assert(gemm_layer);
             // This pass runs after constArgs(), so the new layer takes the weight directly.
             // Bw, not B: foldChannelAffine may have scaled a cloned copy.

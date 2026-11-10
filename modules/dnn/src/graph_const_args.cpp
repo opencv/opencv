@@ -65,10 +65,9 @@ struct ConstArgs
                 saved_tail_inputs.push_back(inp);
             }
 
-            GemmLayer* gemm = dynamic_cast<GemmLayer*>(layer_ptr);
-            // An int8 MatMul carries quantized weights in MatMulInt8Params, not as a const operand.
-            MatMulLayer* matmul = dynamic_cast<MatMulInt8Layer*>(layer_ptr)
-                                      ? nullptr : dynamic_cast<MatMulLayer*>(layer_ptr);
+            // An int8 MatMul keeps its quantized weights in MatMulInt8Params, owns no
+            // constant operand, and so implements none of this.
+            ConstWeightOwner* owner = dynamic_cast<ConstWeightOwner*>(layer_ptr);
             AttentionLayer* attn = dynamic_cast<AttentionLayer*>(layer_ptr);
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer_ptr);
             ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer_ptr);
@@ -98,22 +97,12 @@ struct ConstArgs
                     prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
                     prelu->inputs.resize(1);
                     unuse_tail = true;
-                } else if (gemm) {
-                    // matrix multiply with constant weights and bias
-                    gemm->setWeights(netimpl->__tensors__[inputs[1]],
-                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
-                    gemm->inputs.resize(1);
-                    unuse_tail = true;
-                } else if (matmul) {
-                    matmul->setWeights(netimpl->__tensors__[inputs[1]],
-                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
-                    matmul->inputs.resize(1);
-                    unuse_tail = true;
-                } else if (attn && ninputs <= 3) {
-                    // A 4th input is the mask, which stays a runtime input.
-                    attn->setWeights(netimpl->__tensors__[inputs[1]],
-                                     ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
-                    attn->inputs.resize(1);
+                } else if (owner && (!attn || ninputs <= 3)) {
+                    // constant weights and bias; Attention's 4th input is the mask, which
+                    // stays a runtime input
+                    owner->setWeights(netimpl->__tensors__[inputs[1]],
+                                      ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    layer_ptr->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {
                     // [TODO] ...

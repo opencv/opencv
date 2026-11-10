@@ -54,7 +54,7 @@ bool constC(LayerGemmOpMode mode){
 
 
 // Y = alpha * A’ * B’ + beta * C
-class GemmLayerImpl CV_FINAL : public GemmLayer {
+class GemmLayerImpl CV_FINAL : public GemmLayer, public ConstWeightOwner {
     PreparedFusion fusion;
 
 public:
@@ -99,14 +99,17 @@ public:
     // constArgs() hands the constant operands over once; the layer owns them from here.
     void setWeights(InputArray weights_arr, InputArray bias_arr) CV_OVERRIDE
     {
-        // A zero-sized dimension is a legal degenerate B, so an empty Mat is still a constant.
+        // An empty weights keeps the current one; on the first handover there is none to
+        // keep, and a zero-sized dimension is a legal degenerate B.
         Mat w = weights_arr.getMat();
-        widenToFP32(w);
-        weights = w;
-        wshape0 = shape(w);
-        ownsWeights = true;
-        // A recycled address would compare equal and skip the repack.
-        last_packed_blob_data = nullptr;
+        if (!w.empty() || !ownsWeights) {
+            widenToFP32(w);
+            weights = w;
+            wshape0 = shape(w);
+            ownsWeights = true;
+            // A recycled address would compare equal and skip the repack.
+            last_packed_blob_data = nullptr;
+        }
 
         Mat b = bias_arr.getMat();
         if (!b.empty()) {
@@ -225,6 +228,15 @@ public:
 
     // finalize() drops B once it is packed, so its shape has to outlive it
     MatShape constBShape() const { return wshape0; }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        if (!wshape0.empty()) {
+            prindent(strm, indent);
+            dumpWeightShape(strm, wshape0);
+        }
+        return strm;
+    }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,

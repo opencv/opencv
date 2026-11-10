@@ -31,7 +31,7 @@ using namespace cv::dnn::cuda4dnn;
 
 namespace cv { namespace dnn {
 
-class MatMulLayerImpl CV_FINAL : public MatMulLayer {
+class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
 #ifdef HAVE_OPENCL
     UMat weight_umat, bias_umat;
 #endif
@@ -65,14 +65,17 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
     // constArgs() hands the constant operands over once; the layer owns them from here.
     void setWeights(InputArray weights_arr, InputArray bias_arr) CV_OVERRIDE
     {
-        // A zero-sized dimension is a legal degenerate B, so an empty Mat is still a constant.
+        // An empty weights keeps the current one; on the first handover there is none to
+        // keep, and a zero-sized dimension is a legal degenerate B.
         Mat w = weights_arr.getMat();
-        widenToFP32(w);
-        weights = w;
-        wshape0 = shape(w);
-        ownsWeights = true;
-        // A recycled address would compare equal and skip the repack.
-        last_packed_input_B_data = nullptr;
+        if (!w.empty() || !ownsWeights) {
+            widenToFP32(w);
+            weights = w;
+            wshape0 = shape(w);
+            ownsWeights = true;
+            // A recycled address would compare equal and skip the repack.
+            last_packed_input_B_data = nullptr;
+        }
 
         Mat b = bias_arr.getMat();
         if (!b.empty()) {
@@ -150,6 +153,15 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
     // finalize() drops B once it is packed, so its shape has to outlive it
     MatShape constBShape() const { return wshape0; }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        if (!wshape0.empty()) {
+            prindent(strm, indent);
+            dumpWeightShape(strm, wshape0);
+        }
+        return strm;
+    }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
@@ -288,14 +300,21 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         Net::Impl* netimpl = getNetImpl(this);
         const bool ownedByGraph = netimpl && netimpl->mainGraph;
 
-        // op_cuda.cpp registers no CUDA exec for MatMul, so initCUDA() is unreachable from the
-        // graph and the original is dead weight once packed. The legacy path has no mainGraph.
-        if (ownsWeights && !weights.empty() && ownedByGraph &&
+        bool keepForCuda = false;
+#ifdef HAVE_CUDA
+        // initCUDA() reads B after finalize(), so a net targeting CUDA keeps it.
+        keepForCuda = ownedByGraph && netimpl->preferableBackend == DNN_BACKEND_CUDA &&
+                      supportBackend(DNN_BACKEND_CUDA);
+#endif
+
+        // The packed copy is what the kernels read from here on; the original is dead weight.
+        if (ownsWeights && !weights.empty() && !keepForCuda && ownedByGraph &&
             weights.type() == CV_32F &&
             (!packed_input_B.empty() || !thin_packed_B.empty())) {
             weights.release();
             // A recycled address would compare equal and skip the repack.
             last_packed_input_B_data = nullptr;
+            netimpl->weightsReleased = true;
         }
 
         // broadcast bias if needed
