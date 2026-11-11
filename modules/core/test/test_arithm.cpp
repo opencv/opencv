@@ -2453,6 +2453,21 @@ TEST(Core_FindNonZero, regression)
     ASSERT_TRUE(pts.size() == nz);
 }
 
+TEST(Core_FindNonZero, floating_point_signed_zero)
+{
+    double vals[] = { 0., -0., 1., -2., std::numeric_limits<double>::quiet_NaN() };
+    const Mat src64f(1, 5, CV_64F, vals);
+    const std::vector<Point> expected = { Point(2, 0), Point(3, 0), Point(4, 0) };
+    for (int depth : {CV_32F, CV_64F})
+    {
+        Mat src;
+        src64f.convertTo(src, depth);
+        std::vector<Point> pts;
+        findNonZero(src, pts);
+        EXPECT_EQ(expected, pts) << depthToString(depth);
+    }
+}
+
 TEST(Core_FindNonZero, fp8)
 {
     // columns: +0, -0, 1, -2, NaN

@@ -203,9 +203,13 @@ void findNonZero(InputArray _src, OutputArray _idx)
         }
         else if( depth == CV_32F )
         {
-            const int* ptr32s = (const int*)ptr8;
             for( j = 0; j < cols; j++ )
-                if( (ptr32s[j]<<1) != 0 ) buf[k++] = j;
+            {
+                uint32_t bits;
+                std::memcpy(&bits, ptr8 + j * sizeof(bits), sizeof(bits));
+                // Ignore the sign bit so both representations of zero are skipped.
+                if( (bits & 0x7fffffffU) != 0 ) buf[k++] = j;
+            }
         }
         else if( depth == CV_16F || depth == CV_16BF )
         {
@@ -223,9 +227,12 @@ void findNonZero(InputArray _src, OutputArray _idx)
         }
         else
         {
-            const int64* ptr64s = (const int64*)ptr8;
             for( j = 0; j < cols; j++ )
-                if( (ptr64s[j]<<1) != 0 ) buf[k++] = j;
+            {
+                uint64_t bits;
+                std::memcpy(&bits, ptr8 + j * sizeof(bits), sizeof(bits));
+                if( (bits & 0x7fffffffffffffffULL) != 0 ) buf[k++] = j;
+            }
         }
 
         if( k > 0 )
