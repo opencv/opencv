@@ -141,28 +141,34 @@ TEST(Core_StatParallelMinMax, wide_integer_extrema)
         Mat a(1000, 1000, CV_64S, Scalar((double)base));
         a.at<int64>(999, 998) = base - 1;
         a.at<int64>(999, 999) = base + 1;
+        double mn, mx;
         int imn[2], imx[2];
-        cv::minMaxIdx(a, nullptr, nullptr, imn, imx);
+        cv::minMaxIdx(a, &mn, &mx, imn, imx);
         EXPECT_EQ(999, imn[0]);
         EXPECT_EQ(998, imn[1]);
         EXPECT_EQ(999, imx[0]);
         EXPECT_EQ(999, imx[1]);
         EXPECT_EQ(base - 1, a.at<int64>(imn));
         EXPECT_EQ(base + 1, a.at<int64>(imx));
+        EXPECT_EQ((double)(base - 1), mn);
+        EXPECT_EQ((double)(base + 1), mx);
     }
     {
         const uint64 base = (uint64)1 << 63;
         Mat a(1000, 1000, CV_64U, Scalar((double)base));
         a.at<uint64>(999, 998) = base - 1;
         a.at<uint64>(999, 999) = base + 1;
+        double mn, mx;
         int imn[2], imx[2];
-        cv::minMaxIdx(a, nullptr, nullptr, imn, imx);
+        cv::minMaxIdx(a, &mn, &mx, imn, imx);
         EXPECT_EQ(999, imn[0]);
         EXPECT_EQ(998, imn[1]);
         EXPECT_EQ(999, imx[0]);
         EXPECT_EQ(999, imx[1]);
         EXPECT_EQ(base - 1, a.at<uint64>(imn));
         EXPECT_EQ(base + 1, a.at<uint64>(imx));
+        EXPECT_EQ((double)(base - 1), mn);
+        EXPECT_EQ((double)(base + 1), mx);
     }
 }
 
