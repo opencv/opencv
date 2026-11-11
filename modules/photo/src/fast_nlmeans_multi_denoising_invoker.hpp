@@ -226,18 +226,19 @@ void FastNlMeansMultiDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Rang
                             const T* b_down_ptr = cur_extended_src.ptr<T>(start_by + template_window_half_size_ + y);
 
                             int x = 0;
-#if CV_SIMD128
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                             if (nlmLanes_<T>::supported)
                             {
-                                const v_int32x4 v_a_up = nlmLanes_<T>::setall(a_up);
-                                const v_int32x4 v_a_down = nlmLanes_<T>::setall(a_down);
-                                for (; x <= search_window_size - VTraits<v_int32x4>::nlanes; x += VTraits<v_int32x4>::nlanes)
+                                const int nlanes = VTraits<v_int32>::vlanes();
+                                const v_int32 v_a_up = nlmLanes_<T>::setall(a_up);
+                                const v_int32 v_a_down = nlmLanes_<T>::setall(a_down);
+                                for (; x <= search_window_size - nlanes; x += nlanes)
                                 {
-                                    v_int32x4 v_col = v_add(v_load(up_col_dist_sums_row + x),
+                                    v_int32 v_col = v_add(vx_load(up_col_dist_sums_row + x),
                                         D::calcUpDownDistLanes(v_a_up, v_a_down,
                                                                nlmLanes_<T>::load(b_up_ptr + start_bx + x),
                                                                nlmLanes_<T>::load(b_down_ptr + start_bx + x)));
-                                    v_int32x4 v_dist = v_sub(v_load(dist_sums_row + x), v_load(col_dist_sums_row + x));
+                                    v_int32 v_dist = v_sub(vx_load(dist_sums_row + x), vx_load(col_dist_sums_row + x));
                                     v_store(dist_sums_row + x, v_add(v_dist, v_col));
                                     v_store(col_dist_sums_row + x, v_col);
                                     v_store(up_col_dist_sums_row + x, v_col);
