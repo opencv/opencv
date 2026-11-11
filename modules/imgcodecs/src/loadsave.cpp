@@ -623,7 +623,7 @@ imread_( const String& filename, int flags, OutputArray mat,
 
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize( mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
+        resize(mat, mat, Size(std::max(1, size.width / scale_denom), std::max(1, size.height / scale_denom)), 0, 0, INTER_LINEAR_EXACT);
     }
 
     /// optionally rotate the data if EXIF orientation flag says so
@@ -1432,7 +1432,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
 
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize(mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
+        resize(mat, mat, Size(std::max(1, size.width / scale_denom), std::max(1, size.height / scale_denom)), 0, 0, INTER_LINEAR_EXACT);
     }
 
     /// optionally rotate the data if EXIF' orientation flag says so
