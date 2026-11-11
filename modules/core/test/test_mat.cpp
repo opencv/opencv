@@ -1521,6 +1521,25 @@ TEST(Core_Matx, norm_l2_float_range)
     }
 }
 
+TEST(Core_Matx, norm_l1_integer_accumulation)
+{
+    EXPECT_DOUBLE_EQ(2.0 * INT_MAX, cv::norm(Vec2i(INT_MAX, -INT_MAX), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * INT_MAX,
+                    cv::norm(Matx<int, 2, 2>(INT_MAX, -INT_MAX, INT_MAX, -INT_MAX), NORM_L1));
+    EXPECT_DOUBLE_EQ(2.0 * INT_MAX + 2,
+                    cv::norm(Matx<int, 1, 5>(INT_MAX, -INT_MAX, 1, -1, 0), NORM_L1));
+}
+
+TEST(Core_Matx, norm_l1_float_accumulation)
+{
+    const float value = FLT_MAX / 2;
+    EXPECT_DOUBLE_EQ(3.0 * value, cv::norm(Vec3f(value, -value, value), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * value,
+                    cv::norm(Matx<float, 2, 2>(value, -value, value, -value), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * value,
+                    cv::norm(Matx<float, 1, 5>(value, -value, 0, value, -value), NORM_L1));
+}
+
 TEST(Core_Mat, regression_9507)
 {
     cv::Mat m = Mat::zeros(5, 5, CV_8UC3);
