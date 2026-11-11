@@ -2596,7 +2596,7 @@ public:
             if( sy0 >= ssize.height )
             {
                 for( dx = 0; dx < dsize.width; dx++ )
-                    D[dx] = 0;
+                    D[dx] = (T)0;
                 continue;
             }
 
@@ -2621,7 +2621,7 @@ public:
                 WT sum = 0;
                 int count = 0, sx0 = xofs[dx];
                 if( sx0 >= ssize.width )
-                    D[dx] = 0;
+                    D[dx] = (T)0;
 
                 for( int sy = 0; sy < scale_y; sy++ )
                 {
@@ -2686,6 +2686,16 @@ inline void saturate_store(const float* src, short* dst) {
     const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
     const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
     v_store(dst, v_pack(tmp0, tmp1));
+}
+
+inline void saturate_store(const float* src, hfloat* dst) {
+    v_pack_store(dst, vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    v_pack_store(dst + VTraits<v_float32>::vlanes(), vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+}
+
+inline void saturate_store(const float* src, bfloat* dst) {
+    v_pack_store(dst, vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    v_pack_store(dst + VTraits<v_float32>::vlanes(), vx_load(src + 1 * VTraits<v_float32>::vlanes()));
 }
 
 static inline v_float32 vx_setall(float coeff) { return vx_setall_f32(coeff); }
@@ -3000,6 +3010,9 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
         /*interpolation = INTER_AREA*/CV_UNUSED(0); // INTER_AREA is slower
 
+    if( isHalfFloat(depth) )
+        return false; // no half-float OpenCL kernels yet
+
     if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
             (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1) )) )
@@ -3256,6 +3269,16 @@ void resize(int src_type,
                 HResizeNoVec>,
             VResizeLinear<double, double, float, Cast<double, double>,
                 VResizeNoVec> >,
+        resizeGeneric_<
+            HResizeLinear<hfloat, float, float, 1,
+                HResizeNoVec>,
+            VResizeLinear<hfloat, float, float, Cast<float, hfloat>,
+                VResizeNoVec> >,
+        resizeGeneric_<
+            HResizeLinear<bfloat, float, float, 1,
+                HResizeNoVec>,
+            VResizeLinear<bfloat, float, float, Cast<float, bfloat>,
+                VResizeNoVec> >,
         0
     };
 
@@ -3284,7 +3307,15 @@ void resize(int src_type,
             HResizeCubic<double, double, float>,
             VResizeCubic<double, double, float, Cast<double, double>,
             VResizeNoVec> >,
-        0
+        resizeGeneric_<
+            HResizeCubic<hfloat, float, float>,
+            VResizeCubic<hfloat, float, float, Cast<float, hfloat>,
+            VResizeNoVec> >,
+        resizeGeneric_<
+            HResizeCubic<bfloat, float, float>,
+            VResizeCubic<bfloat, float, float, Cast<float, bfloat>,
+            VResizeNoVec> >,
+            0
     };
 
     static ResizeFunc lanczos4_tab[CV_DEPTH_MAX] =
@@ -3307,6 +3338,12 @@ void resize(int src_type,
         resizeGeneric_<HResizeLanczos4<double, double, float>,
             VResizeLanczos4<double, double, float, Cast<double, double>,
             VResizeNoVec> >,
+        resizeGeneric_<HResizeLanczos4<hfloat, float, float>,
+            VResizeLanczos4<hfloat, float, float, Cast<float, hfloat>,
+            VResizeNoVec> >,
+        resizeGeneric_<HResizeLanczos4<bfloat, float, float>,
+            VResizeLanczos4<bfloat, float, float, Cast<float, bfloat>,
+            VResizeNoVec> >,
         0
     };
 
@@ -3319,6 +3356,8 @@ void resize(int src_type,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
+        resizeAreaFast_<hfloat, float, ResizeAreaFastNoVec<hfloat, float> >,
+        resizeAreaFast_<bfloat, float, ResizeAreaFastNoVec<bfloat, float> >,
         0
     };
 
@@ -3326,7 +3365,8 @@ void resize(int src_type,
     {
         resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
         resizeArea_<short, float>, 0, resizeArea_<float, float>,
-        resizeArea_<double, double>, 0
+        resizeArea_<double, double>, resizeArea_<hfloat, float>,
+        resizeArea_<bfloat, float>, 0
     };
 
     static be_resize_func linear_exact_tab[CV_DEPTH_MAX] =
@@ -3599,7 +3639,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         CV_Assert(inv_scale_x > 0); CV_Assert(inv_scale_y > 0);
     }
 
-    if (interpolation == INTER_LINEAR_EXACT && (_src.depth() == CV_32F || _src.depth() == CV_64F))
+    const int sdepth = _src.depth();
+    if (interpolation == INTER_LINEAR_EXACT &&
+        (sdepth == CV_32F || sdepth == CV_64F || isHalfFloat(sdepth)))
         interpolation = INTER_LINEAR; // If depth isn't supported fallback to generic resize
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,

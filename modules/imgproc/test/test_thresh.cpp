@@ -114,7 +114,7 @@ TEST_P(Imgproc_Threshold_Masked_Fixed, threshold_mask_fixed)
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Fixed,
     testing::Combine(
         testing::Values(false, true),//use roi
-        testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),//depth
+        testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F, CV_16BF),//depth
         testing::Values(1, 3),//channels
         testing::Values(THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV),// threshTypes
         testing::Values(0)
@@ -281,9 +281,77 @@ TEST_P(Imgproc_Threshold_Unsupported_Depth, umat)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Unsupported_Depth,
     testing::Combine(
-        testing::Values(CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U),//depth
+        testing::Values(CV_Bool, CV_64U, CV_64S, CV_32U),//depth
         testing::Values(THRESH_BINARY, THRESH_TRUNC)// threshTypes
     )
 );
+
+typedef testing::TestWithParam<int> Threshold_HalfFloat;
+
+TEST_P(Threshold_HalfFloat, vs_fp32)
+{
+    const int depth = GetParam();
+    const int types[] = { THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC,
+                          THRESH_TOZERO, THRESH_TOZERO_INV };
+    cv::RNG rng(71);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat s32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, wid;
+        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        s32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(wid, CV_MAKETYPE(CV_32F, cn));
+
+        // 0.5 is exact; 0.3 rounds up on both depths; 0.1 rounds down on fp16
+        // and up on bf16, so both directions get exercised
+        const double threshes[] = { 0.5, 0.3, 0.1 };
+
+        for (int i = 0; i < 5; i++)
+            for (int t = 0; t < 3; t++)
+            {
+                SCOPED_TRACE(cv::format("depth=%d cn=%d type=%d thresh=%g",
+                                        depth, cn, types[i], threshes[t]));
+
+                Mat a, b, a32;
+                ASSERT_NO_THROW(cv::threshold(src, a, threshes[t], 1.0, types[i]));
+                ASSERT_EQ(depth, a.depth());
+                cv::threshold(wid, b, threshes[t], 1.0, types[i]);
+                a.convertTo(a32, CV_MAKETYPE(CV_32F, cn));
+
+                // TRUNC writes min(src, thresh), which rounds when thresh is not
+                // representable; the other four only select src, maxval or 0
+                const double tol = types[i] != THRESH_TRUNC ? 0.0 :
+                    (depth == CV_16F ? 1e-3 : 8e-3) * std::max(1.0, cvtest::norm(b, NORM_INF));
+                EXPECT_LE(cvtest::norm(a32, b, NORM_INF), tol);
+            }
+    }
+}
+
+
+// a pixel equal to the rounded threshold must follow the true threshold
+TEST_P(Threshold_HalfFloat, threshold_is_not_quantized)
+{
+    const int depth = GetParam();
+
+    // 0.3 is not representable; the nearest half-float value is above it
+    const double thresh = 0.3;
+    Mat probe32(1, 1, CV_32FC1, Scalar::all((float)thresh)), probe, roundTrip;
+    probe32.convertTo(probe, depth);
+    probe.convertTo(roundTrip, CV_32F);
+    const float rounded = roundTrip.at<float>(0, 0);
+    ASSERT_GT(rounded, (float)thresh) << "pick a threshold that rounds up for this depth";
+
+    Mat src(1, 1, CV_MAKETYPE(depth, 1));
+    probe.copyTo(src);
+
+    Mat dst, dst32;
+    cv::threshold(src, dst, thresh, 1.0, THRESH_BINARY);
+    dst.convertTo(dst32, CV_32F);
+
+    // rounded > thresh, so the pixel is above the threshold and takes maxval
+    EXPECT_EQ(1.f, dst32.at<float>(0, 0));
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_HalfFloat, testing::Values(CV_16F, CV_16BF));
 
 }} // namespace

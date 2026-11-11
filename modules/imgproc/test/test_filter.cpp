@@ -1127,6 +1127,243 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Morphology_Bool,
     )
 );
 
+typedef testing::TestWithParam<int> Morphology_HalfFloat;
+
+// min/max are exact on both half formats, so the result must match the fp32
+// reference bit for bit -- no tolerance
+TEST_P(Morphology_HalfFloat, exact_vs_fp32)
+{
+    const int depth = GetParam();
+
+    const int ops[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE };
+    const int borders[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101 };
+    // RECT takes the separable row+column getters, CROSS the 2D getter
+    const int shapes[] = { MORPH_RECT, MORPH_CROSS };
+
+    cv::RNG rng(37);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src32(40, 37, CV_MAKETYPE(CV_32F, cn)), srcHalf, ref32;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(-4), Scalar::all(4));
+        src32.convertTo(srcHalf, CV_MAKETYPE(depth, cn));
+        srcHalf.convertTo(ref32, CV_MAKETYPE(CV_32F, cn));
+
+        for (int si = 0; si < 2; si++)
+            for (int oi = 0; oi < 4; oi++)
+                for (int bi = 0; bi < 3; bi++)
+                {
+                    const int op = ops[oi], border = borders[bi];
+                    Mat kernel = getStructuringElement(shapes[si], Size(3, 3));
+
+                    SCOPED_TRACE(cv::format("depth=%d cn=%d shape=%d op=%d border=%d",
+                                            depth, cn, shapes[si], op, border));
+
+                    Mat actual, expected, actual32;
+                    ASSERT_NO_THROW(cv::morphologyEx(srcHalf, actual, op, kernel,
+                                                     Point(-1, -1), 1, border));
+                    ASSERT_EQ(depth, actual.depth());
+
+                    cv::morphologyEx(ref32, expected, op, kernel, Point(-1, -1), 1, border);
+                    actual.convertTo(actual32, CV_MAKETYPE(CV_32F, cn));
+
+                    EXPECT_EQ(0, cvtest::norm(actual32, expected, NORM_INF));
+                }
+    }
+}
+
+// erode/dilate reach the same getters directly, without morphologyEx on top
+TEST_P(Morphology_HalfFloat, erode_dilate_direct)
+{
+    const int depth = GetParam();
+    cv::RNG rng(41);
+
+    Mat src32(24, 24, CV_32FC1), srcHalf, ref32;
+    rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(srcHalf, depth);
+    srcHalf.convertTo(ref32, CV_32F);
+
+    Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+
+    Mat eroded, erodedRef, dilated, dilatedRef, eroded32, dilated32;
+    ASSERT_NO_THROW(cv::erode(srcHalf, eroded, kernel));
+    ASSERT_NO_THROW(cv::dilate(srcHalf, dilated, kernel));
+    cv::erode(ref32, erodedRef, kernel);
+    cv::dilate(ref32, dilatedRef, kernel);
+    eroded.convertTo(eroded32, CV_32F);
+    dilated.convertTo(dilated32, CV_32F);
+
+    EXPECT_EQ(0, cvtest::norm(eroded32, erodedRef, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(dilated32, dilatedRef, NORM_INF));
+}
+
+// the BORDER_CONSTANT sentinel must not win the min/max: a wrong sentinel
+// (0, or an overflow to inf) shows up as a bogus border here
+TEST_P(Morphology_HalfFloat, border_constant_sentinel)
+{
+    const int depth = GetParam();
+
+    Mat src(9, 9, CV_MAKETYPE(depth, 1));
+    Mat src32(9, 9, CV_32FC1, Scalar::all(0.25));
+    src32.convertTo(src, depth);
+
+    Mat eroded, dilated, e32, d32;
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
+    cv::erode(src, eroded, kernel, Point(-1, -1), 1, BORDER_CONSTANT);
+    cv::dilate(src, dilated, kernel, Point(-1, -1), 1, BORDER_CONSTANT);
+    eroded.convertTo(e32, CV_32F);
+    dilated.convertTo(d32, CV_32F);
+
+    Mat expected(9, 9, CV_32FC1, Scalar::all(0.25));
+    EXPECT_EQ(0, cvtest::norm(e32, expected, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(d32, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Morphology_HalfFloat, testing::Values(CV_16F, CV_16BF));
+
+typedef testing::TestWithParam<int> Filter_HalfFloat;
+
+// relative bound: derivative kernels have gain >> 1, so absolute half-ULP
+// scales with the output magnitude
+static void expectHalfClose(const Mat& got, const Mat& want, int depth, const char* what)
+{
+    ASSERT_EQ(depth, got.depth());
+    ASSERT_EQ(want.size(), got.size());
+    Mat got32;
+    got.convertTo(got32, CV_MAKETYPE(CV_32F, got.channels()));
+    const double eps = depth == CV_16F ? 1e-3 : 8e-3;
+    const double scale = std::max(1.0, cvtest::norm(want, NORM_INF));
+    EXPECT_LE(cvtest::norm(got32, want, NORM_INF), eps * scale) << what;
+}
+
+TEST_P(Filter_HalfFloat, vs_fp32)
+{
+    const int depth = GetParam();
+    cv::RNG rng(11);
+
+    const Mat kernel2d = Mat::ones(3, 3, CV_32F) / 9.f;
+    const Mat kernel1d = Mat::ones(1, 3, CV_32F) / 3.f;
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat s32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, wid;
+        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        s32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(wid, CV_MAKETYPE(CV_32F, cn));
+
+        SCOPED_TRACE(cv::format("depth=%d cn=%d", depth, cn));
+
+        Mat a, b;
+
+        ASSERT_NO_THROW(cv::GaussianBlur(src, a, Size(5, 5), 1.1, 1.1));
+        cv::GaussianBlur(wid, b, Size(5, 5), 1.1, 1.1);
+        expectHalfClose(a, b, depth, "GaussianBlur");
+
+        ASSERT_NO_THROW(cv::Sobel(src, a, -1, 1, 0, 3));
+        cv::Sobel(wid, b, -1, 1, 0, 3);
+        expectHalfClose(a, b, depth, "Sobel");
+
+        ASSERT_NO_THROW(cv::Scharr(src, a, -1, 1, 0));
+        cv::Scharr(wid, b, -1, 1, 0);
+        expectHalfClose(a, b, depth, "Scharr");
+
+        ASSERT_NO_THROW(cv::Laplacian(src, a, -1, 3));
+        cv::Laplacian(wid, b, -1, 3);
+        expectHalfClose(a, b, depth, "Laplacian ksize=3");
+
+        ASSERT_NO_THROW(cv::Laplacian(src, a, -1, 5));
+        cv::Laplacian(wid, b, -1, 5);
+        expectHalfClose(a, b, depth, "Laplacian ksize=5");
+
+        ASSERT_NO_THROW(cv::filter2D(src, a, -1, kernel2d));
+        cv::filter2D(wid, b, -1, kernel2d);
+        expectHalfClose(a, b, depth, "filter2D");
+
+        ASSERT_NO_THROW(cv::sepFilter2D(src, a, -1, kernel1d, kernel1d));
+        cv::sepFilter2D(wid, b, -1, kernel1d, kernel1d);
+        expectHalfClose(a, b, depth, "sepFilter2D");
+
+        ASSERT_NO_THROW(cv::blur(src, a, Size(5, 5)));
+        cv::blur(wid, b, Size(5, 5));
+        expectHalfClose(a, b, depth, "blur");
+
+        ASSERT_NO_THROW(cv::boxFilter(src, a, -1, Size(5, 5)));
+        cv::boxFilter(wid, b, -1, Size(5, 5));
+        expectHalfClose(a, b, depth, "boxFilter");
+    }
+}
+
+// sqrBoxFilter narrows to CV_32F, so both runs share the output type
+TEST_P(Filter_HalfFloat, sqrBoxFilter_vs_fp32)
+{
+    const int depth = GetParam();
+    const double eps = depth == CV_16F ? 1e-3 : 8e-3;
+    cv::RNG rng(13);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat s32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, wid, a, b;
+        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        s32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(wid, CV_MAKETYPE(CV_32F, cn));
+
+        SCOPED_TRACE(cv::format("depth=%d cn=%d", depth, cn));
+        ASSERT_NO_THROW(cv::sqrBoxFilter(src, a, CV_32F, Size(3, 3)));
+        cv::sqrBoxFilter(wid, b, CV_32F, Size(3, 3));
+        ASSERT_EQ(CV_32F, a.depth());
+        EXPECT_LE(cvtest::norm(a, b, NORM_INF), eps * std::max(1.0, cvtest::norm(b, NORM_INF)));
+
+        // default ddepth must pick CV_32F for a narrow input, not CV_64F
+        Mat d;
+        ASSERT_NO_THROW(cv::sqrBoxFilter(src, d, -1, Size(3, 3)));
+        EXPECT_EQ(CV_32F, d.depth());
+    }
+}
+
+// a constant image must survive every normalised smoother exactly
+TEST_P(Filter_HalfFloat, constant_is_exact)
+{
+    const int depth = GetParam();
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        SCOPED_TRACE(cv::format("depth=%d cn=%d", depth, cn));
+        Mat src(Size(40, 32), CV_MAKETYPE(depth, cn));
+        Mat c32(Size(40, 32), CV_MAKETYPE(CV_32F, cn), Scalar::all(0.5));
+        c32.convertTo(src, CV_MAKETYPE(depth, cn));
+        Mat want(src.size(), CV_MAKETYPE(CV_32F, cn), Scalar::all(0.5));
+
+        Mat a, a32;
+        cv::GaussianBlur(src, a, Size(5, 5), 1.1, 1.1);
+        a.convertTo(a32, CV_MAKETYPE(CV_32F, cn));
+        EXPECT_EQ(0, cvtest::norm(a32, want, NORM_INF)) << "GaussianBlur";
+
+        cv::blur(src, a, Size(5, 5));
+        a.convertTo(a32, CV_MAKETYPE(CV_32F, cn));
+        EXPECT_EQ(0, cvtest::norm(a32, want, NORM_INF)) << "blur";
+    }
+}
+
+// kernels with 50+ taps go through crossCorr's DFT path, which must keep a
+// float kernel: 1.1 is not representable in either half format, so on a
+// constant image the 80 rounded taps no longer cancel the -88 centre
+TEST_P(Filter_HalfFloat, filter2D_dft_keeps_float_kernel)
+{
+    const int depth = GetParam();
+
+    Mat kernel(9, 9, CV_32F, Scalar::all(1.1));
+    kernel.at<float>(4, 4) = -80 * 1.1f;
+
+    Mat wid(64, 64, CV_32FC1, Scalar::all(1)), src, a, b;
+    wid.convertTo(src, depth);
+
+    ASSERT_NO_THROW(cv::filter2D(src, a, -1, kernel));
+    cv::filter2D(wid, b, -1, kernel);
+    expectHalfClose(a, b, depth, "filter2D 9x9");
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Filter_HalfFloat, testing::Values(CV_16F, CV_16BF));
+
 TEST(Imgproc_sepFilter2D, identity)
 {
     std::vector<uint8_t> kernelX{0, 0, 0, 1, 0, 0, 0};

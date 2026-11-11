@@ -541,9 +541,10 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
 
-    if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
+    const int wdepth = workDepth(depth, depth);  // never a half float
+    if( depth != tdepth && tdepth != wdepth )
     {
-        _templ.convertTo(templ, std::max(CV_32F, depth));
+        _templ.convertTo(templ, wdepth);
         tdepth = templ.depth();
     }
 

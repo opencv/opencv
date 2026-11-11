@@ -324,5 +324,76 @@ TEST(Imgproc_StackBlur, regression_28233)
     EXPECT_NO_THROW(stackBlur(src2, dst2, Size(11, 11)));
     EXPECT_EQ(dst2.at<uchar>(1, 1), 50);
 }
+
+typedef testing::TestWithParam<int> StackBlur_HalfFloat;
+
+// weights are the triangular stack, normalised by (radius+1)^2
+static float stackBlurRef(const Mat& widened, int x, int y, int c, int cn, Size ksize)
+{
+    const int rw = ksize.width / 2, rh = ksize.height / 2;
+    float num = 0.f, den = 0.f;
+    for (int i = -rh; i <= rh; i++)
+        for (int j = -rw; j <= rw; j++)
+        {
+            const float w = (float)((rh + 1 - std::abs(i)) * (rw + 1 - std::abs(j)));
+            num += w * widened.ptr<float>(y + i)[(x + j) * cn + c];
+            den += w;
+        }
+    return num / den;
+}
+
+TEST_P(StackBlur_HalfFloat, vs_reference)
+{
+    const int depth = GetParam();
+    const double tol = depth == CV_16F ? 2e-3 : 1.2e-2;
+    const Size ksize(5, 5);
+
+    cv::RNG rng(61);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, widened, dst, dst32;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        src32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(widened, CV_MAKETYPE(CV_32F, cn));
+
+        SCOPED_TRACE(cv::format("depth=%d cn=%d", depth, cn));
+        ASSERT_NO_THROW(cv::stackBlur(src, dst, ksize));
+        ASSERT_EQ(depth, dst.depth());
+        ASSERT_EQ(src.size(), dst.size());
+        dst.convertTo(dst32, CV_MAKETYPE(CV_32F, cn));
+
+        for (int y = ksize.height; y < dst.rows - ksize.height; y++)
+            for (int x = ksize.width; x < dst.cols - ksize.width; x++)
+                for (int c = 0; c < cn; c++)
+                {
+                    float want = stackBlurRef(widened, x, y, c, cn, ksize);
+                    float got = dst32.ptr<float>(y)[x * cn + c];
+                    ASSERT_NEAR(want, got, tol) << "at (" << x << "," << y << ") ch " << c;
+                }
+    }
+}
+
+TEST_P(StackBlur_HalfFloat, constant_is_exact)
+{
+    const int depth = GetParam();
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        SCOPED_TRACE(cv::format("depth=%d cn=%d", depth, cn));
+        Mat src(Size(48, 40), CV_MAKETYPE(depth, cn)), dst, dst32;
+        Mat c32(Size(48, 40), CV_MAKETYPE(CV_32F, cn), Scalar::all(0.5));
+        c32.convertTo(src, CV_MAKETYPE(depth, cn));
+
+        ASSERT_NO_THROW(cv::stackBlur(src, dst, Size(7, 7)));
+        ASSERT_EQ(depth, dst.depth());
+        dst.convertTo(dst32, CV_MAKETYPE(CV_32F, cn));
+
+        Mat want(dst.size(), CV_MAKETYPE(CV_32F, cn), Scalar::all(0.5));
+        EXPECT_EQ(0, cvtest::norm(dst32, want, NORM_INF));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_HalfFloat, testing::Values(CV_16F, CV_16BF));
 }
 }

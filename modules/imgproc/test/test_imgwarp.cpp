@@ -746,10 +746,166 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_WRAP, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
     testing::Values(false, true)));
 
+typedef testing::TestWithParam<int> Remap_HalfFloat;
+
+TEST_P(Remap_HalfFloat, accuracy_vs_fp32)
+{
+    const int depth = GetParam();
+    const double tol = depth == CV_16F ? 1e-3 : 8e-3;
+
+    // INTER_CUBIC omitted: remap has it only in the gen-3 kernels, not the tables
+    const int interps[] = { INTER_NEAREST, INTER_LINEAR, INTER_LANCZOS4 };
+    const int borders[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101 };
+
+    const Size size(64, 48);
+    cv::RNG rng(19);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src32(size, CV_MAKETYPE(CV_32F, cn)), srcHalf, ref32;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        src32.convertTo(srcHalf, CV_MAKETYPE(depth, cn));
+        srcHalf.convertTo(ref32, CV_MAKETYPE(CV_32F, cn));
+
+        Mat mapRelX(size, CV_32FC1), mapRelY(size, CV_32FC1);
+        for (int y = 0; y < size.height; y++)
+            for (int x = 0; x < size.width; x++)
+            {
+                mapRelX.at<float>(y, x) = 1.7f * std::sin(y * 0.13f) - 0.25f;
+                mapRelY.at<float>(y, x) = 1.3f * std::cos(x * 0.11f) - 0.25f;
+            }
+        Mat mapAbsX = mapRelX.clone(), mapAbsY = mapRelY.clone();
+        mapAbsX.forEach<float>([](float& p, const int* pos) { p += (float)pos[1]; });
+        mapAbsY.forEach<float>([](float& p, const int* pos) { p += (float)pos[0]; });
+
+        for (int ii = 0, ni = (int)(sizeof(interps) / sizeof(interps[0])); ii < ni; ii++)
+            for (int bi = 0, nb = (int)(sizeof(borders) / sizeof(borders[0])); bi < nb; bi++)
+                for (int relative = 0; relative <= 1; relative++)  // relative reaches row 1 of each table
+                {
+                    const int interp = interps[ii];
+                    const int border = borders[bi];
+                    const int flags = interp | (relative ? WARP_RELATIVE_MAP : 0);
+                    const Mat& mxf = relative ? mapRelX : mapAbsX;
+                    const Mat& myf = relative ? mapRelY : mapAbsY;
+
+                    // CV_16SC2 map: a float map sends 32F down a fast path the
+                    // half depths do not share, snapping position to 1/32 px
+                    Mat mx, my;
+                    const bool nn = (interp == INTER_NEAREST);
+                    cv::convertMaps(mxf, myf, mx, my, CV_16SC2, nn);
+
+                    SCOPED_TRACE(cv::format("depth=%d cn=%d interp=%d border=%d relative=%d",
+                                            depth, cn, interp, border, relative));
+
+                    Mat actual, expected, actual32;
+                    ASSERT_NO_THROW(cv::remap(srcHalf, actual, mx, my, flags, border));
+                    ASSERT_EQ(depth, actual.depth());
+                    ASSERT_EQ(size, actual.size());
+
+                    cv::remap(ref32, expected, mx, my, flags, border);
+                    actual.convertTo(actual32, CV_MAKETYPE(CV_32F, cn));
+
+                    EXPECT_LE(cvtest::norm(actual32, expected, NORM_INF), tol);
+                }
+    }
+}
+
+// no cross-depth compare: hal::warpAffine has a per-type fast path for 32F
+TEST_P(Remap_HalfFloat, warps_exact_transforms)
+{
+    const int depth = GetParam();
+
+    const Size size(64, 48);
+    cv::RNG rng(29);
+    Mat src32(size, CV_32FC1), src;
+    rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, depth);
+
+    const int interps[] = { INTER_NEAREST, INTER_LINEAR };
+
+    for (int ii = 0; ii < 2; ii++)
+    {
+        const int interp = interps[ii];
+        SCOPED_TRACE(cv::format("depth=%d interp=%d", depth, interp));
+
+        Mat identity, shifted, persp;
+        ASSERT_NO_THROW(cv::warpAffine(src, identity,
+                                       Mat(Matx23d(1, 0, 0, 0, 1, 0)), size, interp));
+        ASSERT_EQ(depth, identity.depth());
+        ASSERT_EQ(size, identity.size());
+        EXPECT_EQ(0, cvtest::norm(identity, src, NORM_INF));
+
+        ASSERT_NO_THROW(cv::warpAffine(src, shifted,
+                                       Mat(Matx23d(1, 0, 3, 0, 1, 2)), size, interp));
+        Rect roi(3, 2, size.width - 3, size.height - 2);
+        EXPECT_EQ(0, cvtest::norm(shifted(roi),
+                                  src(Rect(0, 0, roi.width, roi.height)), NORM_INF));
+
+        ASSERT_NO_THROW(cv::warpPerspective(src, persp,
+                                            Mat(Matx33d(1, 0, 0, 0, 1, 0, 0, 0, 1)),
+                                            size, interp));
+        ASSERT_EQ(depth, persp.depth());
+        EXPECT_EQ(0, cvtest::norm(persp, src, NORM_INF));
+    }
+}
+
+// delete when the gen-3 bicubic kernels gain half specialisations
+TEST_P(Remap_HalfFloat, inter_cubic_is_not_supported_yet)
+{
+    const int depth = GetParam();
+    Mat src(32, 32, CV_MAKETYPE(depth, 1), Scalar::all(0)), dst;
+    Mat mx(32, 32, CV_32FC1, Scalar::all(4)), my(32, 32, CV_32FC1, Scalar::all(4));
+
+    EXPECT_THROW(cv::remap(src, dst, mx, my, INTER_CUBIC), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Remap_HalfFloat, testing::Values(CV_16F, CV_16BF));
+
 //////////////////////////////////////////////////////////////////////////
 
 TEST(Imgproc_Remap, accuracy) { CV_RemapTest test; test.safe_run(); }
 TEST(Imgproc_GetRectSubPix, accuracy) { CV_GetRectSubPixTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<int> GetRectSubPix_HalfFloat;
+
+// same getRectSubPix_Cn_ template and float accumulator on both sides here,
+// so the fp32 run is a fair reference
+TEST_P(GetRectSubPix_HalfFloat, vs_fp32)
+{
+    const int depth = GetParam();
+    const double tol = depth == CV_16F ? 1e-3 : 8e-3;
+
+    cv::RNG rng(67);
+
+    for (int cn = 1; cn <= 3; cn += 2)
+    {
+        Mat src32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, widened;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        src32.convertTo(src, CV_MAKETYPE(depth, cn));
+        src.convertTo(widened, CV_MAKETYPE(CV_32F, cn));
+
+        const Point2f centers[] = { Point2f(20.f, 16.f), Point2f(20.3f, 16.7f),
+                                    Point2f(1.5f, 1.5f), Point2f(46.5f, 38.5f) };
+
+        for (int i = 0; i < 4; i++)
+        {
+            SCOPED_TRACE(cv::format("depth=%d cn=%d center=(%.1f,%.1f)",
+                                    depth, cn, centers[i].x, centers[i].y));
+
+            Mat patch, ref, patch32;
+            ASSERT_NO_THROW(cv::getRectSubPix(src, Size(9, 7), centers[i], patch));
+            ASSERT_EQ(depth, patch.depth());
+            ASSERT_EQ(Size(9, 7), patch.size());
+
+            cv::getRectSubPix(widened, Size(9, 7), centers[i], ref);
+            patch.convertTo(patch32, CV_MAKETYPE(CV_32F, cn));
+
+            EXPECT_LE(cvtest::norm(patch32, ref, NORM_INF), tol);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, GetRectSubPix_HalfFloat, testing::Values(CV_16F, CV_16BF));
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -921,6 +1077,95 @@ TEST(Resize, horizontal_upscale_left_edge_regression)
         EXPECT_LE(maxdiff, 3.0);
     }
 }
+
+typedef testing::TestWithParam<int> Resize_HalfFloat;
+
+// CV_16F / CV_16BF storage runs with a float work type, so the only difference
+// from an all-float run is the rounding of each output store. The reference is
+// therefore the same resize over the same values widened back to CV_32F.
+TEST_P(Resize_HalfFloat, accuracy_vs_fp32)
+{
+    const int depth = GetParam();
+    const double tol = depth == CV_16F ? 2e-3 : 1.6e-2;
+
+    const int interps[] = { INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA,
+                            INTER_LANCZOS4, INTER_LINEAR_EXACT, INTER_NEAREST_EXACT };
+    const Size dsizes[] = { Size(128, 128),   // upscale              -> linear/cubic/lanczos4 tabs
+                            Size(32, 32),     // exact 2x downscale   -> areafast_tab
+                            Size(19, 23) };   // fractional downscale -> area_tab
+
+    cv::RNG rng(17);
+
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src32(64, 64, CV_MAKETYPE(CV_32F, cn)), srcHalf, ref32;
+        rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+        src32.convertTo(srcHalf, CV_MAKETYPE(depth, cn));
+        srcHalf.convertTo(ref32, CV_MAKETYPE(CV_32F, cn));
+
+        for (int si = 0, nsizes = (int)(sizeof(dsizes) / sizeof(dsizes[0])); si < nsizes; si++)
+            for (int ii = 0, ninterps = (int)(sizeof(interps) / sizeof(interps[0])); ii < ninterps; ii++)
+            {
+                const Size dsize = dsizes[si];
+                const int interp = interps[ii];
+                SCOPED_TRACE(cv::format("depth=%d cn=%d dsize=%dx%d interp=%d",
+                                        depth, cn, dsize.width, dsize.height, interp));
+
+                Mat actual, expected, actual32;
+                ASSERT_NO_THROW(cv::resize(srcHalf, actual, dsize, 0, 0, interp));
+                ASSERT_EQ(depth, actual.depth());
+                ASSERT_EQ(dsize, actual.size());
+
+                cv::resize(ref32, expected, dsize, 0, 0, interp);
+                actual.convertTo(actual32, CV_MAKETYPE(CV_32F, cn));
+
+                EXPECT_LE(cvtest::norm(actual32, expected, NORM_INF), tol);
+            }
+    }
+}
+
+// INTER_LINEAR_EXACT has no bit-exact kernel for float depths, so cv::resize
+// redirects them to INTER_LINEAR. The half depths were missing from that
+// redirect and reached linear_exact_tab[CV_16F] == 0.
+TEST_P(Resize_HalfFloat, linear_exact_falls_back_to_linear)
+{
+    const int depth = GetParam();
+
+    Mat src32(20, 20, CV_32FC1), src;
+    cv::RNG rng(23);
+    rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, depth);
+
+    Mat viaExact, viaLinear;
+    ASSERT_NO_THROW(cv::resize(src, viaExact, Size(10, 10), 0, 0, INTER_LINEAR_EXACT));
+    cv::resize(src, viaLinear, Size(10, 10), 0, 0, INTER_LINEAR);
+
+    ASSERT_EQ(depth, viaExact.depth());
+    EXPECT_EQ(0, cvtest::norm(viaExact, viaLinear, NORM_INF));
+}
+
+// The redirect must not swallow the other interpolation methods: only
+// INTER_LINEAR_EXACT is rewritten, everything else reaches its own table.
+TEST_P(Resize_HalfFloat, non_exact_interpolation_is_not_rewritten)
+{
+    const int depth = GetParam();
+
+    Mat src32(32, 32, CV_32FC1), src;
+    cv::RNG rng(31);
+    rng.fill(src32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, depth);
+
+    Mat linear, cubic, lanczos4;
+    cv::resize(src, linear,   Size(64, 64), 0, 0, INTER_LINEAR);
+    cv::resize(src, cubic,    Size(64, 64), 0, 0, INTER_CUBIC);
+    cv::resize(src, lanczos4, Size(64, 64), 0, 0, INTER_LANCZOS4);
+
+    EXPECT_GT(cvtest::norm(cubic, linear, NORM_INF), 0);
+    EXPECT_GT(cvtest::norm(lanczos4, linear, NORM_INF), 0);
+    EXPECT_GT(cvtest::norm(lanczos4, cubic, NORM_INF), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Resize_HalfFloat, testing::Values(CV_16F, CV_16BF));
 
 TEST(Imgproc_Warp, multichannel)
 {
@@ -1165,7 +1410,7 @@ TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});
     Mat_<float> mapy({2, 2}, {0, 0, 1, 1});
-    for (int depth : {CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
+    for (int depth : {CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ})
     {
         Mat src(2, 2, CV_MAKETYPE(depth, 1), Scalar::all(0)), dst;
         EXPECT_THROW(remap(src, dst, mapx, mapy, INTER_LANCZOS4), cv::Exception) << "depth=" << depth;
