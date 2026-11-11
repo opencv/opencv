@@ -380,14 +380,16 @@ namespace
 #ifdef HAVE_OPENCL
             if(useOpenCL)
             {
-                cv::copyMakeBorder(_src, usrcExt_, 0, bottom, 0, right, cv::BORDER_REFLECT_101);
+                cv::copyMakeBorder(_src, usrcExt_, 0, bottom, 0, right,
+                                   cv::BORDER_REFLECT_101 | cv::BORDER_ISOLATED);
                 tileSize = cv::Size(usrcExt_.size().width / tilesX_, usrcExt_.size().height / tilesY_);
                 _srcForLut = usrcExt_;
             }
             else
 #endif
             {
-                cv::copyMakeBorder(_src, srcExt_, 0, bottom, 0, right, cv::BORDER_REFLECT_101);
+                cv::copyMakeBorder(_src, srcExt_, 0, bottom, 0, right,
+                                   cv::BORDER_REFLECT_101 | cv::BORDER_ISOLATED);
                 tileSize = cv::Size(srcExt_.size().width / tilesX_, srcExt_.size().height / tilesY_);
                 _srcForLut = srcExt_;
             }

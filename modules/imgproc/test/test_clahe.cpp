@@ -40,6 +40,26 @@ TEST_P(CLAHE_Padding, reflected_border)
     EXPECT_MAT_NEAR(actual, inPlace, 0);
 }
 
+TEST(Imgproc_CLAHE, roi_ignores_pixels_outside)
+{
+    const Size size(23, 17);
+    for (int type : { CV_8UC1, CV_16UC1 })
+    {
+        // Sizes are not multiples of the 4x4 tile grid, so the right and bottom edges are padded.
+        // The pixels around the region must not leak into that padding.
+        Mat parent(size.height + 6, size.width + 6, type);
+        theRNG().fill(parent, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
+        Mat roi = parent(Rect(3, 3, size.width, size.height));
+        Mat standalone = roi.clone();
+
+        Ptr<CLAHE> clahe = cv::createCLAHE(4.0, Size(4, 4));
+        Mat expected, actual;
+        clahe->apply(standalone, expected);
+        clahe->apply(roi, actual);
+        EXPECT_MAT_NEAR(expected, actual, 0);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE_Padding, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_16UC1)),
     testing::Values(Size(8, 8), Size(3, 5), Size(1, 8), Size(8, 1)),
