@@ -438,18 +438,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
                         imx[i] = chunkIndexToElem(chunks[i], b) + 1;
                         if (wideInteger)
                         {
-                            if (depth == CV_64S)
-                            {
-                                // Flip the sign bit so unsigned comparisons preserve signed ordering.
-                                const uint64 signBit = (uint64)1 << 63;
-                                mn64[i] = (uint64)chunks[i].src.at<int64>(a) ^ signBit;
-                                mx64[i] = (uint64)chunks[i].src.at<int64>(b) ^ signBit;
-                            }
-                            else
-                            {
-                                mn64[i] = chunks[i].src.at<uint64>(a);
-                                mx64[i] = chunks[i].src.at<uint64>(b);
-                            }
+                            const uint64 signFlip = depth == CV_64S ? (uint64)1 << 63 : 0;
+                            mn64[i] = chunks[i].src.at<uint64>(a) ^ signFlip;
+                            mx64[i] = chunks[i].src.at<uint64>(b) ^ signFlip;
                         }
                     }
                 }
