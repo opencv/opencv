@@ -56,7 +56,8 @@ public:
         return static_cast<Conv2LayerImpl*>(self)->foldInputScale(scale, shift);
     }
 
-    //! conv(scale*x + shift) becomes conv'(x). Every weight copy the layer holds moves.
+    //! conv(scale*x + shift) becomes conv'(x). This runs before the first forward, so the
+    //! weights are still the plain [K, Cg, k...] blob that packWeights() lays out later.
     bool foldInputScale(const Mat& scale, const Mat& shift)
     {
         if (fusedBatchNorm || addResidual || fastActivation != FAST_ACTIV_NONE ||
@@ -69,7 +70,7 @@ public:
         for (int p : pads)
             if (p > 0)
                 return false;
-        if (weights.empty() || weights.type() != CV_32F || wshape0.dims != 4 || packC0 <= 0)
+        if (rawWeights.empty() || !rawWeights.isContinuous() || wshape0.dims != 4)
             return false;
         if (scale.type() != CV_32F || shift.type() != CV_32F ||
             !scale.isContinuous() || !shift.isContinuous() ||
@@ -79,77 +80,50 @@ public:
         const int K = wshape0[0], Cg = wshape0[1];
         if (ngroups <= 0 || K % ngroups != 0 || (int)scale.total() != Cg * ngroups)
             return false;
-        // The loops below rewrite the weights in place, so nothing may fail after them.
         if (!bias.empty() && (bias.type() != CV_32F || (int)bias.total() != K))
             return false;
 
+        // rawWeights still aliases the net's constant tensor, so fold into a copy. FP32 keeps
+        // the fold exact for an FP16 run too; packWeights() narrows it when it packs.
+        Mat W;
+        rawWeights.convertTo(W, CV_32F);
+
         const float* sc = scale.ptr<float>();
         const float* sh = shift.ptr<float>();
+        const int Kg = K / ngroups;
+        const size_t ksize = W.total() / ((size_t)K * Cg);
         std::vector<float> adj(K, 0.f);
-        const MatShape ws = weights.shape();
-        float* W = weights.ptr<float>();
+        float* Wdata = W.ptr<float>();
 
-        // MLAS holds its own copy, packed from the plain matrix setWeights() then dropped.
-        // It arms only for 1x1 dense, so the fold below walks exactly those weights.
-        Mat plain;
-        if (!mlas_packed_B_.empty())
-            plain.create(K, Cg, CV_32F);
-
-        if (ngroups == K && Cg == 1) {
-            // depthwise: C1 x ksize x C0, and the input channel is the output channel
-            const int ksize = ws[1], C0 = ws[2];
-            parallel_for_(Range(0, K), [&](const Range& r) {
-                for (int ch = r.start; ch < r.end; ch++) {
-                    float* w = W + (size_t)(ch / C0) * ksize * C0 + (ch % C0);
+        // Depthwise needs no branch of its own: with Kg == 1 and Cg == 1, k reads channel k.
+        parallel_for_(Range(0, K), [&](const Range& r) {
+            for (int k = r.start; k < r.end; k++) {
+                const int cbase = (k / Kg) * Cg;  // first input channel of k's group
+                float* wk = Wdata + (size_t)k * Cg * ksize;
+                float a = 0.f;
+                for (int c = 0; c < Cg; c++) {
+                    float* w = wk + (size_t)c * ksize;
                     float sw = 0.f;
-                    for (int i = 0; i < ksize; i++) {
-                        sw += w[(size_t)i * C0];
-                        w[(size_t)i * C0] *= sc[ch];
+                    for (size_t i = 0; i < ksize; i++) {
+                        sw += w[i];
+                        w[i] *= sc[cbase + c];
                     }
-                    adj[ch] += sh[ch] * sw;
+                    a += sh[cbase + c] * sw;
                 }
-            });
-        } else {
-            const ConvWeightPack pack = ConvWeightPack::forConv(wshape0, ws, ngroups, packC0);
-            const int ksize = pack.ksize;
-            const size_t sstride = pack.tapStride();
-            parallel_for_(Range(0, K), [&](const Range& r) {
-                for (int k = r.start; k < r.end; k++) {
-                    const int cbase = (k / pack.Kg) * Cg;  // first input channel of k's group
-                    for (int c = 0; c < Cg; c++) {
-                        float* w = W + pack.offset(k, c);
-                        float sw = 0.f;
-                        for (int i = 0; i < ksize; i++) {
-                            sw += w[i * sstride];
-                            w[i * sstride] *= sc[cbase + c];
-                        }
-                        if (!plain.empty())
-                            plain.ptr<float>(k)[c] = w[0];  // ksize == 1 whenever MLAS armed
-                        adj[k] += sh[cbase + c] * sw;
-                    }
-                }
-            });
-        }
+                adj[k] = a;
+            }
+        });
 
-        if (!plain.empty() &&
-            !mlasSgemmPackB(false, true, K, Cg, plain.ptr<float>(), Cg, mlas_packed_B_.data))
+        // setWeights() packed MLAS from the unfolded blob. It arms only for 1x1 dense.
+        if (!mlas_packed_B_.empty() &&
+            !mlasSgemmPackB(false, true, K, Cg, Wdata, Cg, mlas_packed_B_.data))
             mlas_packed_B_.release();
 
         // The CUDA path reads this plain copy instead of the packed one.
-        if (!origWeights.empty() && origWeights.type() == CV_32F) {
-            Mat w2d = origWeights.reshape(1, K);
-            const int Kg = K / ngroups, inner = (int)(origWeights.total() / ((size_t)K * Cg));
-            parallel_for_(Range(0, K), [&](const Range& r) {
-                for (int k = r.start; k < r.end; k++) {
-                    float* row = w2d.ptr<float>(k);
-                    for (int c = 0; c < Cg; c++) {
-                        float* wc = row + (size_t)c * inner;
-                        for (int i = 0; i < inner; i++)
-                            wc[i] *= sc[(k / Kg) * Cg + c];
-                    }
-                }
-            });
-        }
+        if (!origWeights.empty())
+            W.copyTo(origWeights);
+
+        rawWeights = W;
 
         // forwardMlasIm2col() reads this copy; it exists only for ngroups == 1.
         if (!im2colWeights_.empty()) {
@@ -245,16 +219,14 @@ public:
         int wtype0 = weights_.type();
         CV_Assert(wtype0 == CV_32F || wtype0 == CV_16F || wtype0 == CV_16BF ||
                   wtype0 == CV_8F_E4M3FN || wtype0 == CV_8F_E4M3FNUZ);
-        // repackConvWeights is FP32-only; FP8 reaches here only from vendor-quantised
-        // graphs that feed Conv without a DequantizeLinear. Half stays as it was --
-        // repackDepthwiseConvWeights takes CV_16F/CV_16BF natively.
+        // The packers take FP32/FP16/BF16; FP8 reaches here only from vendor-quantised
+        // graphs that feed Conv without a DequantizeLinear, so decode it once.
         if (wtype0 == CV_8F_E4M3FN || wtype0 == CV_8F_E4M3FNUZ) {
             Mat widened;
             weights_.convertTo(widened, CV_32F);
             weights_ = widened;
         }
         CV_Assert(accuracy == -1 || accuracy == CV_32F);
-        int wtype = accuracy < 0 ? CV_32F : accuracy;
 
         wshape0 = weights_.shape();
         packC0 = C0;
@@ -264,11 +236,8 @@ public:
 #endif
         bool depthwise = ngroups == wshape0[0] && wshape0[1] == 1;
 
-        if (depthwise) {
-            repackDepthwiseConvWeights(weights_, weights, wtype, C0);
-        } else {
-            repackConvWeights(weights_, weights, wtype, ngroups, C0);
-        }
+        rawWeights = weights_;
+        weights.release();
 
         if (!bias_.empty()) {
             CV_Assert(bias_.isContinuous() && bias_.total() == wshape0[0]);
@@ -279,8 +248,7 @@ public:
         // >= 256*256 so the reorder cost is amortized).
         mlas_packed_B_.release();
         mlas_packed_M_ = mlas_packed_K_ = 0;
-        if (!depthwise && ngroups == 1 && weights_.type() == CV_32F &&
-            wtype == CV_32F && mlasAvailable())
+        if (!depthwise && ngroups == 1 && weights_.type() == CV_32F && mlasAvailable())
         {
             bool ksize_all_one = wshape0.dims >= 3;
             for (int k = 2; k < wshape0.dims; k++)
@@ -313,7 +281,7 @@ public:
         // Weights as a (Cout, Cin*kh*kw) matrix for forwardMlasIm2col().
         im2colWeights_.release();
         if (!depthwise && ngroups == 1 && wshape0[1] <= SMALL_CIN_MAX && isPatchEmbedding() &&
-            weights_.type() == CV_32F && wtype == CV_32F && weights_.isContinuous() &&
+            weights_.type() == CV_32F && weights_.isContinuous() &&
             mlasAvailable())
         {
             im2colWeights_ = weights_.reshape(1, wshape0[0]).clone();
@@ -346,6 +314,17 @@ public:
     {
         return inputs.size() == 1 && !im2colWeights_.empty() &&
                getNetImpl(this)->originalLayout == DATA_LAYOUT_NCHW;
+    }
+
+    void packWeights(int wtype)
+    {
+        CV_Assert(!rawWeights.empty());
+        CV_Assert(wtype == CV_32F || wtype == CV_16F || wtype == CV_16BF);
+        if (ngroups == wshape0[0] && wshape0[1] == 1)
+            repackDepthwiseConvWeights(rawWeights, weights, wtype, packC0);
+        else
+            repackConvWeights(rawWeights, weights, wtype, ngroups, packC0);
+        rawWeights.release();
     }
 
     virtual bool fuseAddBias(InputArray arr) CV_OVERRIDE
@@ -788,10 +767,12 @@ public:
             if (!netimpl_->isConstArg(inputs[i]))
                 dynamicWeights = true;
         }
-        if (dynamicWeights || weights.empty()) {
+        if (dynamicWeights || (weights.empty() && rawWeights.empty())) {
             setWeights(input_arrs.getMat(1), ninputs > 2 ? input_arrs.getMat(2) : Mat(),
                        inpshape.back(), netimpl_->accuracy);
         }
+        if (!rawWeights.empty())
+            packWeights(inptype);
 
         MatShape outshape = convInferShape(inpshape, wshape0, emptyKernelShape,
                                            ngroups, strides, dilations,
@@ -873,6 +854,8 @@ public:
             }
         }
 
+        CV_CheckTypeEQ(weights.type(), inptype,
+                       "DNN/Conv: packed weights and activations must have the same type");
         ConvFunc func = cs.depthwise ? getDepthwiseConvFunc(inptype) : getConvFunc(inptype, C0);
         CV_Assert(func != nullptr);
         func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
@@ -886,6 +869,7 @@ public:
             // very rare situation of dynamic convolution weights,
             // we release temporarily allocated and reordered copy of the weights
             weights.release();
+            rawWeights.release();
         }
     }
 
@@ -1299,6 +1283,7 @@ public:
     Ptr<Layer> activ, batchNorm;
     Mat weights, bias, fusedScale, fusedBias;
     Mat origWeights;  // original NCHW filter (FP32), kept for the CUDA path
+    Mat rawWeights;
     MatShape wshape0, prevInpshape;
     int packC0 = 0;   // block factor the weights were packed with
     ConvState cs;

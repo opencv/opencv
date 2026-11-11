@@ -44,6 +44,8 @@ static double typeMin(int depth)
         case CV_16S: return std::numeric_limits<short>::lowest();
         case CV_32S: return std::numeric_limits<int>::lowest();
         case CV_64S: return (double)std::numeric_limits<int64_t>::lowest();
+        case CV_16F: return -65504.0;
+        case CV_16BF: return -3.3895313892515355e+38;
         case CV_32F: return -FLT_MAX;
         case CV_64F: return -DBL_MAX;
         default:     CV_Error(Error::StsUnsupportedFormat, "Clip: unsupported depth");
@@ -60,6 +62,8 @@ static double typeMax(int depth)
         case CV_16S: return std::numeric_limits<short>::max();
         case CV_32S: return std::numeric_limits<int>::max();
         case CV_64S: return std::nextafter((double)std::numeric_limits<int64_t>::max(), 0.0);
+        case CV_16F: return  65504.0;
+        case CV_16BF: return  3.3895313892515355e+38;
         case CV_32F: return  FLT_MAX;
         case CV_64F: return  DBL_MAX;
         default:     CV_Error(Error::StsUnsupportedFormat, "Clip: unsupported depth");
@@ -140,6 +144,24 @@ public:
         internals.assign(requiredInternals, inputs[0]);
     }
 
+    template<typename T>
+    static void clampHalfT(const Mat& src, Mat& dst, float lo, float hi)
+    {
+        const size_t total = src.total();
+        const T* sp = src.ptr<T>();
+        T* dp = dst.ptr<T>();
+        const size_t CHUNK = 16384;
+        const int nChunks = (int)((total + CHUNK - 1) / CHUNK);
+        parallel_for_(Range(0, nChunks), [&](const Range& r) {
+            for (int c = r.start; c < r.end; c++) {
+                const size_t start = (size_t)c * CHUNK;
+                const size_t end = std::min(start + CHUNK, total);
+                for (size_t i = start; i < end; i++)
+                    dp[i] = T(std::min(std::max((float)sp[i], lo), hi));
+            }
+        });
+    }
+
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -147,7 +169,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -173,6 +195,16 @@ public:
         double actualMin = dynMin ? getScalar(inputs[1]) : (hasMin ? minValue : typeMin(data.depth()));
         double actualMax = dynMax ? getScalar(inputs[2]) : (hasMax ? maxValue : typeMax(data.depth()));
         CV_Assert(actualMin <= actualMax);
+
+        if ((data.depth() == CV_16F || data.depth() == CV_16BF) &&
+            data.isContinuous() && dst.isContinuous() &&
+            data.total() == dst.total()) {
+            if (data.depth() == CV_16F)
+                clampHalfT<hfloat>(data, dst, (float)actualMin, (float)actualMax);
+            else
+                clampHalfT<bfloat>(data, dst, (float)actualMin, (float)actualMax);
+            return;
+        }
 
         // Fused single-pass clamp for contiguous CV_32F. Halves memory traffic
         // vs the cv::max + cv::min pair, and lets the allocator run it in-place.

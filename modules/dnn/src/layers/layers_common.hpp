@@ -90,6 +90,12 @@ double getWeightScale(const Mat& weightsMat);
 void tensorToIntVec(const Mat& tensor, std::vector<int>& vec);
 void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec);
 void tensorToScalar(const Mat& tensor, int type, void* value);
+
+// The default LayerInfo::getTypes() gate plus CV_16F/CV_16BF, for layers whose CPU forward()
+// has a half path. The default stays without half, so a layer lacking one rejects it.
+void getTypesWithHalf(const std::vector<MatType>& inputs, int requiredOutputs, int requiredInternals,
+                      std::vector<MatType>& outputs, std::vector<MatType>& internals);
+
 template<typename _Tp> _Tp tensorToScalar(const Mat& tensor)
 {
     _Tp value = _Tp(0);

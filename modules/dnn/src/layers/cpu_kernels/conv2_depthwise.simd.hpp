@@ -424,10 +424,188 @@ static void depthwiseConv32f(const void* inp__, const void* residual__,
     }, convStripes(ntasks, NC1*nrows*row_macs));
 }
 
+// FP16/BF16 depthwise convolution, C0 == 8. The C0 channels of a block map one-to-one
+// onto the v_float32 lanes, so operands expand on load and pack on store while the MAC
+// chain accumulates in FP32.
+template <typename _Tp>
+static void depthwiseConv16xf(const void* inp__, const void* residual__, void* out__,
+                              const ConvState& cs, const void* weights__,
+                              const float* scale__, const float* bias__)
+{
+    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+    constexpr int C0 = 8;
+
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
+    CV_Assert(cs.nspatialdims <= MAX_CONV_DIMS && MAX_CONV_DIMS == 3);
+    CV_Assert(C0 == cs.inpshape.back());
+
+    const int sdims = cs.nspatialdims;
+    const int C = cs.inpshape.C;
+    const int C1 = cs.inpshape[1];
+    const int NC1 = cs.inpshape[0]*C1;
+    const int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+    const int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+    const int Wi = cs.inpshape[sdims + 1];
+    const int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+    const int H = sdims > 1 ? cs.outshape[sdims] : 1;
+    const int W = cs.outshape[sdims + 1];
+    const size_t iplanesize = (size_t)Di*Hi*Wi*C0;
+    const size_t planesize = (size_t)D*H*W*C0;
+    const int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+    const int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+    const int ksize = (int)cs.ofstab.size();
+    const int* zyxtab = cs.coordtab.data();
+
+    const FastActivation fastActivation = cs.fastActivation;
+    const float* activParams = cs.activParams.data();
+    const ActivationFunc activation = cs.activation;
+    float maxval = FLT_MAX, defaultAlpha = 0.f;
+    if (fastActivation == FAST_ACTIV_CLIP) {
+        CV_Assert(cs.activParams.size() == 2u);
+        maxval = activParams[1];
+    } else if (fastActivation == FAST_ACTIV_LEAKY_RELU) {
+        CV_Assert(cs.activParams.size() == 1u);
+        defaultAlpha = activParams[0];
+    } else if (fastActivation == FAST_ACTIV_PRELU) {
+        CV_Assert(cs.activParams.size() == size_t(C));
+    } else if (fastActivation == FAST_ACTIV_NONE) {
+        defaultAlpha = 1.f;
+    }
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int nlanes = VTraits<v_float32>::vlanes();
+    const bool vec_ok = (nlanes <= C0) && (C0 % nlanes == 0);
+#else
+    const bool vec_ok = false;
+#endif
+
+    parallel_for_(Range(0, NC1), [&](const Range& range) {
+        float scalebuf[C0], biasbuf[C0], alphabuf[C0];
+        std::vector<float> actbuf(activation ? planesize : 0);
+
+        for (int nc1 = range.start; nc1 < range.end; nc1++) {
+            const int n = nc1 / C1;
+            const int c_base = (nc1 - n*C1)*C0;
+            const int c_count = std::min(C0, C - c_base);
+            const _Tp* weights = (const _Tp*)weights__ + (c_base/C0)*ksize*C0;
+            const _Tp* inp = (const _Tp*)inp__ + (size_t)nc1*iplanesize;
+            _Tp* out = (_Tp*)out__ + (size_t)nc1*planesize;
+            const _Tp* residual = residual__ ? (const _Tp*)residual__ + (size_t)nc1*planesize : nullptr;
+
+            int c = 0;
+            for (; c < c_count; c++) {
+                scalebuf[c] = scale__ ? scale__[c_base + c] : 1.f;
+                biasbuf[c] = bias__ ? bias__[c_base + c] : 0.f;
+                alphabuf[c] = fastActivation == FAST_ACTIV_PRELU ? activParams[c_base + c] : defaultAlpha;
+            }
+            for (; c < C0; c++) {
+                scalebuf[c] = 0.f;
+                biasbuf[c] = 0.f;
+                alphabuf[c] = 0.f;
+            }
+
+            for (int z0 = 0; z0 < D; z0++) {
+                const int zi_ = z0*SZ - padZ0;
+                for (int y0 = 0; y0 < H; y0++) {
+                    const int yi_ = y0*SY - padY0;
+                    for (int x0 = 0; x0 < W; x0++) {
+                        const int xi_ = x0*SX - padX0;
+                        const size_t outofs = (size_t)((z0*H + y0)*W + x0)*C0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                        if (vec_ok) {
+                            for (int co = 0; co < C0; co += nlanes) {
+                                v_float32 acc = vx_setzero_f32();
+                                for (int k = 0; k < ksize; k++) {
+                                    const int zi = zi_ + zyxtab[k*MAX_CONV_DIMS];
+                                    const int yi = yi_ + zyxtab[k*MAX_CONV_DIMS + 1];
+                                    const int xi = xi_ + zyxtab[k*MAX_CONV_DIMS + 2];
+                                    if ((unsigned)zi >= (unsigned)Di ||
+                                        (unsigned)yi >= (unsigned)Hi ||
+                                        (unsigned)xi >= (unsigned)Wi)
+                                        continue;
+                                    const _Tp* inptr = inp + (size_t)((zi*Hi + yi)*Wi + xi)*C0 + co;
+                                    const _Tp* wptr = weights + k*C0 + co;
+                                    acc = v_fma(vx_load_expand(inptr), vx_load_expand(wptr), acc);
+                                }
+                                acc = v_fma(acc, vx_load(scalebuf + co), vx_load(biasbuf + co));
+                                if (residual)
+                                    acc = v_add(acc, vx_load_expand(residual + outofs + co));
+                                v_float32 z = vx_setzero_f32();
+                                acc = v_min(v_select(v_ge(acc, z), acc,
+                                                     v_mul(acc, vx_load(alphabuf + co))),
+                                            vx_setall_f32(maxval));
+                                v_pack_store(out + outofs + co, acc);
+                            }
+                            continue;
+                        }
+#endif
+                        {
+                            float acc[C0];
+                            for (int i = 0; i < C0; i++)
+                                acc[i] = 0.f;
+
+                            for (int k = 0; k < ksize; k++) {
+                                const int zi = zi_ + zyxtab[k*MAX_CONV_DIMS];
+                                const int yi = yi_ + zyxtab[k*MAX_CONV_DIMS + 1];
+                                const int xi = xi_ + zyxtab[k*MAX_CONV_DIMS + 2];
+                                if ((unsigned)zi >= (unsigned)Di ||
+                                    (unsigned)yi >= (unsigned)Hi ||
+                                    (unsigned)xi >= (unsigned)Wi)
+                                    continue;
+                                const _Tp* inptr = inp + (size_t)((zi*Hi + yi)*Wi + xi)*C0;
+                                const _Tp* wptr = weights + k*C0;
+                                for (int i = 0; i < C0; i++)
+                                    acc[i] += (float)inptr[i]*(float)wptr[i];
+                            }
+
+                            for (int i = 0; i < C0; i++) {
+                                float v = acc[i]*scalebuf[i] + biasbuf[i];
+                                if (residual)
+                                    v += (float)residual[outofs + i];
+                                v = v >= 0.f ? v : v*alphabuf[i];
+                                out[outofs + i] = _Tp(std::min(v, maxval));
+                            }
+                        }
+                    }
+                }
+
+                if (activation) {
+                    _Tp* plane = out + (size_t)z0*H*W*C0;
+                    const int n_el = H*W*C0;
+                    for (int i = 0; i < n_el; i++)
+                        actbuf[i] = (float)plane[i];
+                    activation(actbuf.data(), actbuf.data(), n_el, activParams);
+                    for (int i = 0; i < n_el; i++)
+                        plane[i] = _Tp(actbuf[i]);
+                }
+            }
+        }
+    });
+}
+
+static void depthwiseConv16f(const void* inp, const void* residual, void* out,
+                             const ConvState& cs, const void* weights,
+                             const float* scale, const float* bias)
+{
+    depthwiseConv16xf<hfloat>(inp, residual, out, cs, weights, scale, bias);
+}
+
+static void depthwiseConv16bf(const void* inp, const void* residual, void* out,
+                              const ConvState& cs, const void* weights,
+                              const float* scale, const float* bias)
+{
+    depthwiseConv16xf<bfloat>(inp, residual, out, cs, weights, scale, bias);
+}
+
 ConvFunc getDepthwiseConvFunc_(int depth)
 {
-    ConvFunc func = depth == CV_32F ? depthwiseConv32f : nullptr;
-    return func;
+    if (depth == CV_32F)  return depthwiseConv32f;
+    if (depth == CV_16F)  return depthwiseConv16f;
+    if (depth == CV_16BF) return depthwiseConv16bf;
+    return nullptr;
 }
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END

@@ -174,6 +174,14 @@ inline void PreparedFusion::run(Mat& Y) const
 {
     if (!expr)
         return;
+    // Half outputs round-trip through float; the kernels below are FP32-only.
+    if (Y.depth() == CV_16F || Y.depth() == CV_16BF) {
+        Mat y32;
+        Y.convertTo(y32, CV_32F);
+        run(y32);
+        y32.convertTo(Y, Y.type());
+        return;
+    }
     CV_CheckTypeEQ(Y.type(), CV_32F, "DNN/fusion: output must be CV_32F");
     CV_Assert(Y.isContinuous());
 

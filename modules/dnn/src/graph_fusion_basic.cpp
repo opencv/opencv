@@ -210,7 +210,8 @@ void Net::Impl::fuseInstanceNormAffine()
     fusion.fuse();
 }
 
-// fold BN scale/bias into the weights of the immediately following Conv2 (pre-constArgs only)
+// fold BN scale/bias into the weights of the immediately following Conv2 (after constArgs,
+// which freezes a const-parameter BN down to one input)
 struct FuseBNPass
 {
     FuseBNPass(Net::Impl* netimpl_) : netimpl(netimpl_) {}
@@ -280,7 +281,7 @@ struct FuseBNPass
     }
 
     // Ask the conv to take the BatchNorm's scale and shift into its own weights. It owns
-    // the layout, so this works after constArgs() has packed them.
+    // the layout, so the pass needn't know whether the weights are packed yet.
     bool fuseForward(Conv2Layer* conv, BatchNorm2Layer* bn)
     {
         if (bn->inputs.size() != 1)

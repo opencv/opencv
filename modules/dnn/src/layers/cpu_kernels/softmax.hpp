@@ -25,6 +25,8 @@ void softmax(Mat &dst, const Mat &src, int axis, float scale);
 
 void logSoftmax(Mat &dst, const Mat &src, int axis);
 
+void softmaxHalf(Mat &dst, const Mat &src, int axis, float scale = 1.f, bool logSoftMax = false);
+
 }} // cv::dnn
 
 #endif // OPENCV_DNN_SOFTMAX_HPP

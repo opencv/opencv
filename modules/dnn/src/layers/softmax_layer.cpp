@@ -87,6 +87,12 @@ public:
     Ptr<OCL4DNNSoftmax<float> > softmaxOp;
 #endif
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -225,7 +231,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -239,6 +245,9 @@ public:
         Mat &dst = outputs[0];
         int axis = normalize_axis(axisRaw, src.dims);
 
+        const int inpdepth = src.depth();
+        const bool half = inpdepth == CV_16F || inpdepth == CV_16BF;
+
         // Softmax/LogSoftmax before opset 13 coerce the input to the 2D tensor
         // [a_0 * ... * a_{axis-1}, a_axis * ... * a_{n-1}] and normalise over its second
         // dimension, so the reduced range is the whole flattened tail and not just the
@@ -251,7 +260,10 @@ public:
             Mat src2d = src.reshape(1, twoDims);
             Mat dst2d = dst.reshape(1, twoDims);
 
-            if (logSoftMax) {
+            if (half) {
+                softmaxHalf(dst2d, src2d, 1, logSoftMax ? 1.f : scale, logSoftMax);
+                outputs_arr.assign(outputs);
+            } else if (logSoftMax) {
                 CV_Assert(scale == 1.f);
                 logSoftmax(dst2d, src2d, 1);
             } else if (scale != 1.f) {
@@ -259,6 +271,12 @@ public:
             } else {
                 softmax(dst2d, src2d, 1);
             }
+            return;
+        }
+
+        if (half) {
+            softmaxHalf(dst, src, axis, logSoftMax ? 1.f : scale, logSoftMax);
+            outputs_arr.assign(outputs);
             return;
         }
 
