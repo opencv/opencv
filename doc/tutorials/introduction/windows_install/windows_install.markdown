@@ -222,7 +222,7 @@ libraries). If you do not need the support for some of these, you can just freel
         according to your OS.
     -#  In case of the Qt framework you need to build yourself the binary files (unless you use the
         Microsoft Visual Studio 2008 with 32 bit compiler). To do this go to the [Qt
-        Downloads](https://www.qt.io/development/offline-installers) page. Download the source files (not the
+        Downloads](https://download.qt.io/archive/qt/) page. Download the source files (not the
         installers!!!):
 
         ![](images/qtDownloadThisPackage.png)
