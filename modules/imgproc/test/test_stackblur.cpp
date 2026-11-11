@@ -479,5 +479,68 @@ TEST(Imgproc_StackBlur, full_range_thread_invariance)
 
     EXPECT_EQ(cvtest::norm(single, multi, NORM_INF), 0.);
 }
+
+typedef testing::TestWithParam<tuple<int, int, Size> > StackBlur_SubmatrixDst;
+
+// The destination is a region of a larger image: it gets the blur of a continuous copy of
+// the source, and the pixels around it don't change.
+TEST_P(StackBlur_SubmatrixDst, regression)
+{
+    const int type = CV_MAKETYPE(get<0>(GetParam()), get<1>(GetParam()));
+    const Size ksize = get<2>(GetParam());
+    const Rect roi(3, 2, 17, 11);
+
+    Mat srcParent(roi.height + 6, roi.width + 9, type);
+    randu(srcParent, Scalar::all(0), Scalar::all(200));
+    Mat src = srcParent(roi), blurred;
+    stackBlur(src.clone(), blurred, ksize);
+
+    Mat dstParent(srcParent.size(), type, Scalar::all(77));
+    Mat expected = dstParent.clone();
+    blurred.copyTo(expected(roi));
+    Mat dst = dstParent(roi);
+    stackBlur(src, dst, ksize);
+    EXPECT_EQ(cvtest::norm(expected, dstParent, NORM_INF), 0.);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_SubmatrixDst,
+                        testing::Combine(
+                                testing::Values(CV_8U, CV_16S, CV_16U, CV_32F),
+                                testing::Values(1, 3),
+                                testing::Values(Size(3, 3), Size(5, 7), Size(1, 5), Size(5, 1), Size(11, 5))
+                        )
+);
+
+typedef testing::TestWithParam<tuple<int, int, Size, bool> > StackBlur_InPlace;
+
+// In place, the result equals the blur of a separate copy, also when the image is a region of
+// a larger one, whose other pixels don't change.
+TEST_P(StackBlur_InPlace, regression)
+{
+    const int type = CV_MAKETYPE(get<0>(GetParam()), get<1>(GetParam()));
+    const Size ksize = get<2>(GetParam());
+    const bool useRoi = get<3>(GetParam());
+
+    Mat parent(17, 26, type);
+    randu(parent, Scalar::all(0), Scalar::all(200));
+    const Rect roi = useRoi ? Rect(3, 2, 17, 11) : Rect(Point(), parent.size());
+    Mat blurred;
+    stackBlur(parent(roi).clone(), blurred, ksize);
+    Mat expected = parent.clone();
+    blurred.copyTo(expected(roi));
+
+    Mat img = parent(roi);
+    stackBlur(img, img, ksize);
+    EXPECT_EQ(cvtest::norm(expected, parent, NORM_INF), 0.);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, StackBlur_InPlace,
+                        testing::Combine(
+                                testing::Values(CV_8U, CV_16S, CV_16U, CV_32F),
+                                testing::Values(1, 3),
+                                testing::Values(Size(3, 3), Size(5, 7), Size(1, 5), Size(5, 1), Size(11, 5)),
+                                testing::Bool()
+                        )
+);
 }
 }

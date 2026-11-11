@@ -1081,7 +1081,7 @@ public:
     ParallelStackBlurColumn (const Mat & _src, Mat &_dst, int _radius):src(_src), dst(_dst) ,radius(_radius)
     {
         CN = src.channels();
-        widthElem = CN * src.cols;
+        rowStep = (int)dst.step1();
         height = src.rows;
         hm = src.rows - 1;
         mulVal = 1.0f / ((float)(radius + 1) * (radius + 1));
@@ -1134,7 +1134,7 @@ public:
 
         for (int i = 1; i <= radius; i++)
         {
-            if (i <= hm) srcPtr += widthElem;
+            if (i <= hm) srcPtr += rowStep;
             for (int k = 0; k < widthLen; k++)
             {
                 T tmp = *(srcPtr + k);
@@ -1165,7 +1165,7 @@ public:
             if (yp < hm)
             {
                 yp++;
-                srcPtr += widthElem;
+                srcPtr += rowStep;
             }
 
             int k = 0;
@@ -1188,7 +1188,7 @@ public:
                 sumIn[k] -= stack[sp1 * widthLen + k];
             }
 
-            dstPtr += widthElem;
+            dstPtr += rowStep;
             ++sp;
             if (sp >= kernelSize)
                 sp = 0;
@@ -1201,7 +1201,7 @@ private:
     int radius;
     int CN;
     int height;
-    int widthElem;
+    int rowStep;
     int hm;
     float mulVal;
     int mulValTab;
@@ -1268,6 +1268,10 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
     }
 
     Mat dst = _dst.getMat();
+    // In place, the row pass for kernels up to 9 wide reads pixels it has already written.
+    // The other row branch and the column pass are safe in place.
+    if (src.data == dst.data && ksize.width > 1 && ksize.width <= 9 && src.cols > ksize.width)
+        src = src.clone();
     int numOfThreads = getNumThreads();
     int widthElem = src.cols * src.channels();
 
