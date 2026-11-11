@@ -158,7 +158,7 @@ of them, you need to download and install them on your system.
 -   The latest [CUDA Toolkit](http://developer.nvidia.com/cuda-downloads) will allow you to use the power lying inside your GPU. This will
     drastically improve performance for some algorithms (e.g the HOG descriptor). Getting more and
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
--   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
+-   [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr/releases) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body
     motion tracking. Prebuilt binaries can be found [here](http://structure.io/openni). The source code of [OpenNI](https://github.com/OpenNI/OpenNI) and [OpenNI2](https://github.com/OpenNI/OpenNI2) are also available on Github.
@@ -212,7 +212,7 @@ libraries). If you do not need the support for some of these, you can just freel
 
     -#  In case of the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) library it is again a case of download and extract to the
         `D:/OpenCV/dep` directory.
-    -#  Same as above with [OpenEXR](http://www.openexr.com/downloads.html).
+    -#  Same as above with [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr/releases).
     -#  For the [OpenNI Framework](http://www.openni.org/) you need to install both the [development
         build](http://www.openni.org/downloadfiles/opennimodules/openni-binaries/21-stable) and the
         [PrimeSensor
