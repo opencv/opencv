@@ -75,8 +75,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
             ownsWeights = true;
             // A recycled address would compare equal and skip the repack.
             last_packed_input_B_data = nullptr;
-            // The copy initCUDA() was going to read is now the wrong one.
-            origWeights.release();
         }
 
         Mat b = bias_arr.getMat();
@@ -87,14 +85,21 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
         }
     }
 
-    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    //! A packed B is the one the kernels read; the plain copy a CUDA net keeps for initCUDA()
+    //! is not a public parameter.
+    bool packedReady() const { return !packed_input_B.empty() || !thin_packed_B.empty(); }
+
+    const Mat& constWeights() const CV_OVERRIDE
+    {
+        static const Mat none;
+        return packedReady() ? none : weights;
+    }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
     void releaseConstWeights() CV_OVERRIDE
     {
         weights.release();
-        origWeights.release();
         bias.release();
     }
 
@@ -311,22 +316,12 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
 #endif
 
         // The packed copy is what the kernels read from here on; the original is dead weight.
-        if (ownsWeights && !weights.empty() && ownedByGraph &&
-            weights.type() == CV_32F &&
-            (!packed_input_B.empty() || !thin_packed_B.empty())) {
-            // initCUDA() reads the plain matrix after finalize(). Hold it out of reach of
-            // getParam() so the contract does not vary by backend.
-            if (keepForCuda)
-                origWeights = weights;
-            else
-                netimpl->weightsReleased = true;
+        // A net moved off CUDA frees B on its next finalize.
+        if (ownsWeights && !weights.empty() && !keepForCuda && ownedByGraph &&
+            weights.type() == CV_32F && packedReady()) {
             weights.release();
             // A recycled address would compare equal and skip the repack.
             last_packed_input_B_data = nullptr;
-        }
-        // A net moved off CUDA has no reader left for the plain matrix.
-        if (ownedByGraph && !keepForCuda && !origWeights.empty()) {
-            origWeights.release();
             netimpl->weightsReleased = true;
         }
 
@@ -779,7 +774,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto input_B = Mat(), bias = Mat();
         if (ownsWeights) {
-            input_B = origWeights.empty() ? weights : origWeights;
+            input_B = weights;
             CV_CheckFalse(input_B.empty(), "DNN/MatMul/CUDA: constant B was released");
             if (ownsBias) {
                 bias = scaledBroadcastBias();
@@ -881,7 +876,6 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
     int real_ndims_C;
 
     Mat weights;                 //!< constant B; released once packed, ownsWeights survives
-    Mat origWeights;             //!< plain B held for initCUDA(); getParam() must not see it
     Mat bias;                    //!< constant C
     bool ownsWeights = false;
     bool ownsBias = false;
