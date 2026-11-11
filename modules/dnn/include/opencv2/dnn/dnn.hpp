@@ -290,6 +290,8 @@ CV__DNN_INLINE_NS_BEGIN
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
         void* netimpl = nullptr;
+        //! Opset version of the model domain this node was imported from (ONNX); -1 if unknown.
+        int opset = -1;
 
         CV_PROP String name;
         CV_PROP String type;

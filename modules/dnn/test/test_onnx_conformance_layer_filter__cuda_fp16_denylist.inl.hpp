@@ -13,6 +13,7 @@
 "test_cumsum_2d_axis_1",
 "test_cumsum_2d_negative_axis",
 "test_dropout_default_ratio",
+"test_dynamicquantizelinear_expanded", // accuracy: the scale is computed in FP16, so the uint8 output is off by one
 "test_einsum_batch_diagonal",
 "test_einsum_batch_matmul",
 "test_einsum_sum",
@@ -25,6 +26,7 @@
 "test_lppool_2d_strides",
 "test_lppool_3d_default",
 "test_maxpool_with_argmax_2d_precomputed_pads", // assertion failed mat.type() == CV_32F
+"test_nllloss_NCd1d2_with_weight_reduction_sum_expanded", // accuracy: the sum is reduced in FP16
 "test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded", // crash: https://github.com/opencv/opencv/issues/25471
 "test_reduce_prod_default_axes_keepdims_example", // fallback to cpu, accuracy
 "test_reduce_prod_default_axes_keepdims_random", // fallback to cpu, accuracy

@@ -1240,6 +1240,7 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     }
 
     LayerParams layerParams;
+    const size_t progBefore = curr_prog.size();
     try
     {
         layerParams = getLayerParams(node_proto);
@@ -1293,6 +1294,14 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         {
             CV_LOG_INFO(NULL, "    Output[" << i << "] = '" << node_proto.output(i) << "'");
         }
+    }
+
+    // Backends check executor support against the opset of the domain each node came from.
+    auto opset_it = onnx_opset_map.find(layer_type_domain);
+    const int node_opset = opset_it != onnx_opset_map.end() ? opset_it->second : -1;
+    for (size_t k = progBefore; k < curr_prog.size(); k++) {
+        if (curr_prog[k] && curr_prog[k]->opset < 0)
+            curr_prog[k]->opset = node_opset;
     }
 }
 

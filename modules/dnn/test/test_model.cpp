@@ -431,7 +431,8 @@ TEST_P(Test_Model, Keypoints_pose)
     bool swapRB = false;
 
     // Ref. Range: [58.6875, 508.625]
-    if (target == DNN_TARGET_CUDA_FP16)
+    // FP16 and TF32 move one near-tied heatmap peak by a cell (19.56 px)
+    if (target == DNN_TARGET_CUDA_FP16 || (target == DNN_TARGET_CUDA && cudaTF32Enabled()))
         norm = 20; // l1 = 1.5, lInf = 20
 
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
