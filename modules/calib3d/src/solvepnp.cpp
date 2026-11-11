@@ -270,8 +270,11 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         model_points = 4;
         ransac_kernel_method = flags;
     }
-    else if( npoints == 4 )
+    else if( npoints == 4 || isPlanarObjectPoints(opoints.reshape(3), 1e-3) )
     {
+        // EPnP is not reliable on coplanar points: one of its control points collapses
+        // onto the centroid, so many minimal samples give a wrong pose and RANSAC can
+        // fail to find any consensus (#25104). Planar objects use P3P samples instead.
         model_points = 4;
         ransac_kernel_method = SOLVEPNP_P3P;
     }
