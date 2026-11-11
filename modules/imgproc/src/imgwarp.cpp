@@ -411,8 +411,7 @@ static void remapNearest( const Mat& _src, Mat& _dst, const Mat& _xy,
     T cval[CV_CN_MAX];
     size_t sstep = _src.step/sizeof(S0[0]);
 
-    for(int k = 0; k < cn; k++ )
-        cval[k] = saturate_cast<T>(_borderValue[k & 3]);
+    scalarToRawData(_borderValue, cval, CV_MAKETYPE(_src.depth(), 4), cn);
 
     unsigned width1 = ssize.width, height1 = ssize.height;
 
@@ -1587,18 +1586,18 @@ void cv::remap( InputArray _src, OutputArray _dst,
     static RemapNNFunc nn_tab[2][CV_DEPTH_MAX] =
     {
         {
-            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
-            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>,
-            remapNearest<hfloat, false>, remapNearest<bfloat, false>, remapNearest<bool, false>,
-            remapNearest<uint64, false>, remapNearest<int64, false>, remapNearest<unsigned, false>,
-            remapNearest<fp8_t, false>, remapNearest<fp8a_t, false>, 0
+            remapNearest<uchar, false>, remapNearest<uchar, false>, remapNearest<ushort, false>, remapNearest<ushort, false>,
+            remapNearest<int, false>, remapNearest<int, false>, remapNearest<int64, false>,
+            remapNearest<ushort, false>, remapNearest<ushort, false>, remapNearest<uchar, false>,
+            remapNearest<int64, false>, remapNearest<int64, false>, remapNearest<int, false>,
+            remapNearest<uchar, false>, remapNearest<uchar, false>, 0
         },
         {
-            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
-            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>,
-            remapNearest<hfloat, true>, remapNearest<bfloat, true>, remapNearest<bool, true>,
-            remapNearest<uint64, true>, remapNearest<int64, true>, remapNearest<unsigned, true>,
-            remapNearest<fp8_t, true>, remapNearest<fp8a_t, true>, 0
+            remapNearest<uchar, true>, remapNearest<uchar, true>, remapNearest<ushort, true>, remapNearest<ushort, true>,
+            remapNearest<int, true>, remapNearest<int, true>, remapNearest<int64, true>,
+            remapNearest<ushort, true>, remapNearest<ushort, true>, remapNearest<uchar, true>,
+            remapNearest<int64, true>, remapNearest<int64, true>, remapNearest<int, true>,
+            remapNearest<uchar, true>, remapNearest<uchar, true>, 0
         }
     };
 
