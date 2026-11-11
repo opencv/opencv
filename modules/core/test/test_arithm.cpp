@@ -3004,6 +3004,30 @@ TEST(Core_AbsDiff, regression_29639_integer_overflow)
     }
 }
 
+// cv::sum() returns doubles, so a CV_32S array whose total exceeds the 32-bit range must still
+// come back exact. The scalar step of the accumulation added four elements to each other as int
+// before reaching the double accumulator, so large values wrapped (signed overflow).
+typedef testing::TestWithParam< tuple<int, int> > Core_SumWide;
+
+TEST_P(Core_SumWide, no_32bit_wraparound)
+{
+    const int cn  = get<0>(GetParam());
+    const int len = get<1>(GetParam());
+    const double value = 2147483647.0;
+
+    Mat flat(1, len * cn, CV_32S, Scalar(value));
+    Mat src = flat.reshape(cn);
+
+    const Scalar got = cv::sum(src);
+    const double expected = (double)len * value;
+    for (int c = 0; c < cn; c++)
+        EXPECT_DOUBLE_EQ(expected, got[c])
+            << "channels " << cn << ", length " << len << ", channel " << c;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_SumWide,
+    testing::Combine(testing::Values(1, 2, 3, 4), testing::Values(4, 7, 127)));
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
