@@ -1215,7 +1215,7 @@ kernels are generated (see #Sobel). The filters are normally passed to #sepFilte
 @param ky Output matrix of column filter coefficients. It has the type ktype .
 @param dx Derivative order in respect of x.
 @param dy Derivative order in respect of y.
-@param ksize Aperture size. It can be FILTER_SCHARR, 1, 3, 5, or 7.
+@param ksize Aperture size. It can be FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param normalize Flag indicating whether to normalize (scale down) the filter coefficients or not.
 Theoretically, the coefficients should have the denominator \f$=2^{ksize*2-dx-dy-2}\f$. If you are
 going to filter floating-point images, you are likely to use the normalized kernels. But if you
@@ -1278,7 +1278,7 @@ In-place operation is supported.
 @param src input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image depth should be
 CV_8U, CV_16U, or CV_32F, for larger aperture sizes, it can only be CV_8U.
 @param dst destination array of the same size and type as src.
-@param ksize aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
+@param ksize aperture linear size; it must be odd and positive, for example: 1, 3, 5, 7 ... (ksize = 1 returns the image unchanged)
 @sa  bilateralFilter, blur, boxFilter, GaussianBlur
  */
 CV_EXPORTS_W void medianBlur( InputArray src, OutputArray dst, int ksize );
@@ -1544,7 +1544,7 @@ The second case corresponds to a kernel of:
     8-bit input images it will result in truncated derivatives.
 @param dx order of the derivative x.
 @param dy order of the derivative y.
-@param ksize size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
+@param ksize size of the extended Sobel kernel; it must be odd and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param scale optional scale factor for the computed derivative values; by default, no scaling is
 applied (see #getDerivKernels for details).
 @param delta optional delta value that is added to the results prior to storing them in dst.
@@ -1628,7 +1628,7 @@ with the following \f$3 \times 3\f$ aperture:
 @param dst Destination image of the same size and the same number of channels as src .
 @param ddepth Desired depth of the destination image, see @ref filter_depths "combinations".
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
-details. The size must be positive and odd.
+details. The size must be positive, odd, and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
 applied. See #getDerivKernels for details.
 @param delta Optional delta value that is added to the results prior to storing them in dst .
@@ -1708,7 +1708,7 @@ of the formulae in the cornerEigenValsAndVecs description.
 @param dst Image to store the minimal eigenvalues. It has the type CV_32FC1 and the same size as
 src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
 CV_EXPORTS_W void cornerMinEigenVal( InputArray src, OutputArray dst,
@@ -1730,7 +1730,7 @@ Corners in the image can be found as the local maxima of this response map.
 @param dst Image to store the Harris detector responses. It has the type CV_32FC1 and the same
 size as src .
 @param blockSize Neighborhood size (see the details on #cornerEigenValsAndVecs ).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param k Harris detector free parameter. See the formula above.
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
@@ -1763,7 +1763,7 @@ The output of the function can be used for robust edge or corner detection.
 @param src Input single-channel 8-bit or floating-point image.
 @param dst Image to store the results. It has the same size as src and the type CV_32FC(6) .
 @param blockSize Neighborhood size (see details below).
-@param ksize Aperture parameter for the Sobel operator.
+@param ksize Aperture parameter for the Sobel operator. It can be #FILTER_SCHARR, or an odd number not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
 
 @sa  cornerMinEigenVal, cornerHarris, preCornerDetect
@@ -1790,9 +1790,9 @@ The corners can be found as local maximums of the functions, as shown below:
     Mat corner_mask = corners == dilated_corners;
 @endcode
 
-@param src Source single-channel 8-bit of floating-point image.
+@param src Source single-channel 8-bit or floating-point image.
 @param dst Output image that has the type CV_32F and the same size as src .
-@param ksize %Aperture size of the Sobel .
+@param ksize Aperture size of the Sobel operator; it must be odd and not larger than 31 (1, 3, 5, and 7 are the typical choices).
 @param borderType Pixel extrapolation method. See #BorderTypes. #BORDER_WRAP is not supported.
  */
 CV_EXPORTS_W void preCornerDetect( InputArray src, OutputArray dst, int ksize,

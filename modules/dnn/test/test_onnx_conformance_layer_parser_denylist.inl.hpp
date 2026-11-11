@@ -18,12 +18,6 @@
 "test_ai_onnx_ml_tree_ensemble_single_tree",
 "test_attention_4d_diff_heads_mask4d_padded_kv", // needs the nonpad_kv_seqlen input (padded-KV variant) which is not supported yet
 "test_averagepool_2d_ceil_last_window_starts_on_pad",
-"test_averagepool_2d_dilations",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_0_ceil_mode_is_True",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_False",
-"test_averagepool_3d_dilations_large_count_include_pad_is_1_ceil_mode_is_True",
-"test_averagepool_3d_dilations_small",
 "test_basic_deform_conv_with_padding",
 "test_basic_deform_conv_without_padding",
 "test_batchnorm_epsilon_training_mode",  // ---- same as above ---
@@ -34,57 +28,17 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed",  // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_castlike_FLOAT4E2M1_to_FLOAT",  // opencv_extra stores empty input data for these from-exotic CastLike cases
-"test_castlike_FLOAT4E2M1_to_FLOAT16",
-"test_castlike_FLOAT4E2M1_to_FLOAT16_expanded",
-"test_castlike_FLOAT4E2M1_to_FLOAT_expanded",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E4M3FNUZ_to_FLOAT_expanded",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT16",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E4M3FN_to_FLOAT_expanded",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E5M2FNUZ_to_FLOAT_expanded",
-"test_castlike_FLOAT8E5M2_to_FLOAT",
-"test_castlike_FLOAT8E5M2_to_FLOAT16",
-"test_castlike_FLOAT8E5M2_to_FLOAT16_expanded",
-"test_castlike_FLOAT8E5M2_to_FLOAT_expanded",
 "test_castlike_FLOAT_to_STRING",
-"test_castlike_INT4_to_FLOAT",
-"test_castlike_INT4_to_FLOAT16",
-"test_castlike_INT4_to_FLOAT16_expanded",
-"test_castlike_INT4_to_FLOAT_expanded",
-"test_castlike_INT4_to_INT8",
-"test_castlike_INT4_to_INT8_expanded",
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_UINT4_to_FLOAT",
-"test_castlike_UINT4_to_FLOAT16",
-"test_castlike_UINT4_to_FLOAT16_expanded",
-"test_castlike_UINT4_to_FLOAT_expanded",
-"test_castlike_UINT4_to_UINT8",
-"test_castlike_UINT4_to_UINT8_expanded",
 "test_clip_min_greater_than_max",
 "test_col2im",
 "test_col2im_5d",
 "test_col2im_dilations",
 "test_col2im_pads",
 "test_col2im_strides",
-"test_compress_0",  // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
-"test_compress_1",  // ---- same as above ---
-"test_compress_default_axis",  // ---- same as above ---
-"test_compress_negative_axis",  // ---- same as above ---
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_float4e2m1",
-"test_dequantizelinear_int16",
-"test_dequantizelinear_int4",
-"test_dequantizelinear_uint16",
-"test_dequantizelinear_uint4",
 "test_dft_axis",
 "test_equal_string",
 "test_equal_string_broadcast",
@@ -113,12 +67,7 @@
 "test_optional_has_element_empty_optional_input",
 "test_optional_has_element_optional_input",
 "test_optional_has_element_tensor_input",
-"test_quantizelinear_blocked_symmetric",
 "test_quantizelinear_float4e2m1",
-"test_quantizelinear_int16",
-"test_quantizelinear_int4",
-"test_quantizelinear_uint16",
-"test_quantizelinear_uint4",
 "test_regex_full_match_basic",
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",
@@ -216,8 +165,6 @@
 "test_quantizelinear_int2",
 "test_quantizelinear_uint2",
 // misc unsupported (expanded subgraphs / new ops)
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ_expanded",
-"test_castlike_no_saturate_FLOAT_to_FLOAT8E4M3FN_expanded",
 "test_range_bfloat16_type_positive_delta_expanded",
 // ===== ONNX 1.22 additions: forward/accuracy not yet supported =====
 // Attention softcap accuracy

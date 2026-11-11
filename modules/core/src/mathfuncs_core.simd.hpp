@@ -115,7 +115,7 @@ static void cartToPolar32f_(const float *X, const float *Y, float *mag, float *a
             // if it's inplace operation, we cannot repeatedly process
             // the tail for the second time, so we have to use the
             // scalar code
-            if( i == 0 || angle == X || angle == Y )
+            if( i == 0 || mag == X || mag == Y || angle == X || angle == Y )
                 break;
             i = len - VECSZ*2;
         }

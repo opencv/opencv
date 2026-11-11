@@ -68,6 +68,8 @@ static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
             case CV_64U:  ret = LUT_<uint8_t, uint64_t>;  break;
             case CV_64S:  ret = LUT_<uint8_t, int64_t>;   break;
             case CV_32U:  ret = LUT_<uint8_t, uint32_t>;  break;
+            case CV_8F_E4M3FN:   ret = LUT_<uint8_t, uint8_t>; break; // fp8_t
+            case CV_8F_E4M3FNUZ: ret = LUT_<uint8_t, uint8_t>; break; // fp8a_t
             default:      ret = nullptr;                  break;
         }
     }
@@ -88,6 +90,8 @@ static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
             case CV_64U:  ret = LUT_<uint16_t, uint64_t>; break;
             case CV_64S:  ret = LUT_<uint16_t, int64_t>;  break;
             case CV_32U:  ret = LUT_<uint16_t, uint32_t>; break;
+            case CV_8F_E4M3FN:   ret = LUT_<uint16_t, uint8_t>; break; // fp8_t
+            case CV_8F_E4M3FNUZ: ret = LUT_<uint16_t, uint8_t>; break; // fp8a_t
             default:      ret = nullptr;                  break;
         }
     }

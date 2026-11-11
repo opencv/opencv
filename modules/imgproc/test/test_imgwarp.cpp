@@ -1127,6 +1127,40 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+typedef testing::TestWithParam<tuple<int, int> > Imgproc_RemapManyChannels;
+
+TEST_P(Imgproc_RemapManyChannels, linear)
+{
+    RNG& rng = theRNG();
+    const int channels = get<0>(GetParam());
+    const int border = get<1>(GetParam());
+    Mat storage(29, 41, CV_MAKETYPE(CV_32F, channels));
+    rng.fill(storage, RNG::UNIFORM, -1.f, 1.f);
+    Mat src = storage(Rect(2, 3, 35, 23));
+    Mat mapx(19, 37, CV_32F), mapy(mapx.size(), CV_32F), fixed, fractions;
+    rng.fill(mapx, RNG::UNIFORM, -2.f, 37.f);
+    rng.fill(mapy, RNG::UNIFORM, -2.f, 25.f);
+    convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
+    Mat outputStorage(23, 43, src.type());
+    outputStorage.reshape(1).setTo(0.17);
+    Mat actual = outputStorage(Rect(3, 2, mapx.cols, mapx.rows));
+    const Scalar fill(0.13, 0.29, -0.41, 0.53);
+    remap(src, actual, fixed, fractions, INTER_LINEAR, border, fill);
+    for (int channel = 0; channel < channels; ++channel)
+    {
+        Mat plane, expected(mapx.size(), CV_32F, Scalar(0.17)), result;
+        extractChannel(src, plane, channel);
+        remap(plane, expected, fixed, fractions, INTER_LINEAR, border, Scalar(fill[channel & 3]));
+        extractChannel(actual, result, channel);
+        EXPECT_LE(cvtest::norm(expected, result, NORM_INF), 2e-6) << "channel=" << channel;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapManyChannels, testing::Combine(
+    testing::Values(5, 7, 9, 20, 31, 33, CV_CN_MAX),
+    testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT,
+                    (int)BORDER_REFLECT_101, (int)BORDER_WRAP, (int)BORDER_TRANSPARENT)));
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});

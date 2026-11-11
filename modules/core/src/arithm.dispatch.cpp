@@ -27,7 +27,7 @@ TKernel getHypotFunc(int T, int R)          { CV_CPU_DISPATCH(getHypotFunc_,   (
 TKernel getAtan2Func(int T, int R)          { CV_CPU_DISPATCH(getAtan2Func_,   (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getCmpFunc(TOp op, int T)           { CV_CPU_DISPATCH(getCmpFunc_,     (op, T),         CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getBitwiseFunc(TOp op, int esz)     { CV_CPU_DISPATCH(getBitwiseFunc_, (op, esz),       CV_CPU_DISPATCH_MODES_ALL); }
-TKernel getNotFunc(int esz)                 { CV_CPU_DISPATCH(getNotFunc_,     (esz),           CV_CPU_DISPATCH_MODES_ALL); }
+TKernel getNotFunc(int depth)               { CV_CPU_DISPATCH(getNotFunc_,     (depth),         CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getAddWeightedFunc(int T, int R)    { CV_CPU_DISPATCH(getAddWeightedFunc_, (T, R),      CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getSelectFunc(int mdepth, int T)    { CV_CPU_DISPATCH(getSelectFunc_,  (mdepth, T),     CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getClampFunc(int T)                 { CV_CPU_DISPATCH(getClampFunc_,   (T),             CV_CPU_DISPATCH_MODES_ALL); }
@@ -99,7 +99,7 @@ TKernel getElemwiseFunc(TOp op, int depth0, int depth1, int depth2, int rdepth)
     if (op == OP_NOT)
     {
         if (rdepth != depth0) return {};
-        return getNotFunc(CV_ELEM_SIZE1(depth0));
+        return getNotFunc(depth0);
     }
 
     // OP_HYPOT / OP_ATAN2: T x T -> T over the float depths (integer inputs are the compiler's job).
@@ -180,7 +180,7 @@ void not8u(const uchar* src1, size_t step1, const uchar* /*src2*/, size_t /*step
            uchar* dst, size_t step, int width, int height, void*)
 {
     const double noparams[4] = {};
-    ew::TKernel k = ew::getNotFunc(1);
+    ew::TKernel k = ew::getNotFunc(CV_8U);
     CV_Assert(k.fptr != nullptr);
     k.fptr(src1, step1, 1, nullptr, 0, 0, nullptr, 0, 0, dst, step, width, height,
            noparams, k.flags, k.userdata);

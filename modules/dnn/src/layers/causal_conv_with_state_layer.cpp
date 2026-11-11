@@ -32,7 +32,9 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE { return backendId == DNN_BACKEND_OPENCV; }
 
-    static bool present(const std::vector<Mat>& in, size_t i) { return in.size() > i && !in[i].empty(); }
+    // optional inputs arrive as empty Mats / MatShapes
+    template<typename T>
+    static bool present(const std::vector<T>& in, size_t i) { return in.size() > i && !in[i].empty(); }
 
     void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int,
                   std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
@@ -49,6 +51,21 @@ public:
         CV_CheckEQ(inputs[0].dims, 3, "input must be [batch, channels, seq]");
         CV_CheckEQ(inputs[1].dims, 3, "weight must be [channels, 1, kernel]");
         const int B = inputs[0][0], C = inputs[0][1], T = inputs[0][2], K = inputs[1][2];
+        CV_CheckEQ(inputs[1][0], C, "weight must have one filter per input channel");
+        CV_CheckEQ(inputs[1][1], 1, "weight must be [channels, 1, kernel]");
+        CV_CheckGE(K, 1, "kernel size must be positive");
+        if (present(inputs, 2))
+        {
+            CV_CheckEQ(inputs[2].dims, 1, "bias must be [channels]");
+            CV_CheckEQ(inputs[2][0], C, "bias must be [channels]");
+        }
+        if (present(inputs, 3))
+        {
+            CV_CheckEQ(inputs[3].dims, 3, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][0], B, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][1], C, "past_state must be [batch, channels, kernel - 1]");
+            CV_CheckEQ(inputs[3][2], K - 1, "past_state must be [batch, channels, kernel - 1]");
+        }
         outputs.assign(1, MatShape{B, C, T});
         outputs.push_back(MatShape{B, C, K - 1});
         return false;
@@ -59,6 +76,11 @@ public:
         std::vector<Mat> rawIn, rawOut;
         inputs_arr.getMatVector(rawIn);
         outputs_arr.getMatVector(rawOut);
+
+        // weight, bias and past_state share the input type, checked before the fp16 conversion below
+        for (size_t i = 1; i < rawIn.size(); ++i)
+            if (!rawIn[i].empty())
+                CV_CheckTypeEQ(rawIn[i].type(), rawIn[0].type(), "weight, bias and past_state must have the input type");
 
         const bool fp16 = rawIn[0].depth() == CV_16F;
         std::vector<Mat> in32, out32;

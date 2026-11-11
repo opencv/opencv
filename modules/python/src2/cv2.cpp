@@ -118,9 +118,30 @@ static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
     Py_RETURN_NONE;
 }
 
+static PyObject* pycvSetUseExactNumpyDtypes(PyObject*, PyObject* value)
+{
+    int flag = PyObject_IsTrue(value);
+    if (flag < 0)
+        return NULL;
+    setUseExactNumpyDtypes(flag != 0);
+    Py_RETURN_NONE;
+}
+
+static PyObject* pycvUseExactNumpyDtypes(PyObject*, PyObject*)
+{
+    return PyBool_FromLong(useExactNumpyDtypes());
+}
+
 static PyMethodDef special_methods[] = {
   {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
+  {"setUseExactNumpyDtypes", (PyCFunction)(pycvSetUseExactNumpyDtypes), METH_O,
+   "setUseExactNumpyDtypes(flag) -> None\n. Keep output bfloat16 / float8 arrays at their exact dtype "
+   "(registered by the ml_dtypes package, which must be imported) instead of widening them "
+   "to float32. Off by default. Input arrays are accepted regardless of this flag. "
+   "The flag is process-wide: set it in the application, libraries should not change it."},
+  {"useExactNumpyDtypes", (PyCFunction)(pycvUseExactNumpyDtypes), METH_NOARGS,
+   "useExactNumpyDtypes() -> retval"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
   {"createButton", CV_PY_FN_WITH_KW(pycvCreateButton), "createButton(buttonName, onChange [, userData, buttonType, initialButtonState]) -> None"},
@@ -594,6 +615,21 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_BoolC2);
     PUBLISH(CV_BoolC3);
     PUBLISH(CV_BoolC4);
+    PUBLISH(CV_16BF);
+    PUBLISH(CV_16BFC1);
+    PUBLISH(CV_16BFC2);
+    PUBLISH(CV_16BFC3);
+    PUBLISH(CV_16BFC4);
+    PUBLISH(CV_8F_E4M3FN);
+    PUBLISH(CV_8F_E4M3FNC1);
+    PUBLISH(CV_8F_E4M3FNC2);
+    PUBLISH(CV_8F_E4M3FNC3);
+    PUBLISH(CV_8F_E4M3FNC4);
+    PUBLISH(CV_8F_E4M3FNUZ);
+    PUBLISH(CV_8F_E4M3FNUZC1);
+    PUBLISH(CV_8F_E4M3FNUZC2);
+    PUBLISH(CV_8F_E4M3FNUZC3);
+    PUBLISH(CV_8F_E4M3FNUZC4);
 #undef PUBLISH_
 #undef PUBLISH
 

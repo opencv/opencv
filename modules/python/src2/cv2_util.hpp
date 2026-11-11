@@ -17,6 +17,15 @@ PyObject* failmsgp(const char *fmt, ...);
 int cvDepthToNumpyType(int depth);
 int numpyTypeToCvDepth(int typenum);
 
+// Output bfloat16 / float8 Mats keep their exact dtype only when enabled (off by default).
+void setUseExactNumpyDtypes(bool flag);
+bool useExactNumpyDtypes();
+bool isNonConventionalDepth(int depth);
+// Output descriptor: nullptr when disabled, unregistered, or without an OpenCV counterpart.
+PyArray_Descr* nonConventionalDescrForCvDepth(int depth);
+// Input depth: -1 when unregistered or without an OpenCV counterpart; ignores the output flag.
+int nonConventionalTypeToCvDepth(int typenum);
+
 //======================================================================================================================
 
 class PyAllowThreads

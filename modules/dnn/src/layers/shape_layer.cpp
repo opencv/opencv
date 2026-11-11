@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/shape.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -36,8 +39,24 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Net::Impl* netimpl_ = getNetImpl(this);
+        DataLayout origLayout = netimpl_ ? netimpl_->originalLayout : DATA_LAYOUT_NCHW;
+        return Ptr<BackendNode>(new cuda4dnn::ShapeOp(std::move(context->stream), start, end, origLayout));
+    }
+#endif
 
     Range getShapeRange(const MatShape& inpShape) const
     {

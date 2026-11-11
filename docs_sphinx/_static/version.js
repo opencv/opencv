@@ -12,6 +12,7 @@
  * the dropdown on every version's pages at once. Do not maintain a second
  * list anywhere. */
 window.OPENCV_DOC_VERSIONS = [
+    ['5.1', '/5.1'],
     ['4.13.0', '/4.13.0'],
     ['4.12.0', '/4.12.0'],
     ['4.11.0', '/4.11.0'],

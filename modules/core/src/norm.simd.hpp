@@ -774,11 +774,12 @@ struct NormL1_SIMD<int, double> {
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            // Widen to double before taking the magnitude: exact over the whole int32 range,
-            // INT_MIN included, which a float intermediate would not be above 2^24.
-            v_int32 i0 = vx_load(src + j), i1 = vx_load(src + j + VTraits<v_int32>::vlanes());
-            r00 = v_add(r00, v_abs(v_cvt_f64(i0))); r01 = v_add(r01, v_abs(v_cvt_f64_high(i0)));
-            r10 = v_add(r10, v_abs(v_cvt_f64(i1))); r11 = v_add(r11, v_abs(v_cvt_f64_high(i1)));
+            // v_abs(int32)->uint32 is exact at INT_MIN too (wraparound reinterpreted unsigned).
+            v_uint32 m0 = v_abs(vx_load(src + j)), m1 = v_abs(vx_load(src + j + VTraits<v_int32>::vlanes()));
+            v_uint64 m0lo, m0hi, m1lo, m1hi;
+            v_expand(m0, m0lo, m0hi); v_expand(m1, m1lo, m1hi);
+            r00 = v_add(r00, v_cvt_f64(v_reinterpret_as_s64(m0lo))); r01 = v_add(r01, v_cvt_f64(v_reinterpret_as_s64(m0hi)));
+            r10 = v_add(r10, v_cvt_f64(v_reinterpret_as_s64(m1lo))); r11 = v_add(r11, v_cvt_f64(v_reinterpret_as_s64(m1hi)));
         }
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         for (; j < n; j++) {
@@ -2829,6 +2830,8 @@ CV_DEF_NORM_ALL(64u, uint64, uint64, double, double)
 CV_DEF_NORM_ALL(64s, int64, uint64, double, double)
 CV_DEF_NORM_ALL(16f, hfloat, float, float, float)
 CV_DEF_NORM_ALL(16bf, bfloat, float, float, float)
+CV_DEF_NORM_ALL(8f, fp8_t, float, float, float)
+CV_DEF_NORM_ALL(8fnuz, fp8a_t, float, float, float)
 
 NormFunc getNormFunc(int normType, int depth)
 {
@@ -2850,6 +2853,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, uint64, normInf_64u>,
             normWrap<int64, uint64, normInf_64s>,
             normWrap<unsigned, unsigned, normInf_32u>,
+            normWrap<fp8_t, float, normInf_8f>,
+            normWrap<fp8a_t, float, normInf_8fnuz>,
             0
         },
         {
@@ -2866,6 +2871,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, double, normL1_64u>,
             normWrap<int64, double, normL1_64s>,
             normWrap<unsigned, double, normL1_32u>,
+            normWrap<fp8_t, float, normL1_8f>,
+            normWrap<fp8a_t, float, normL1_8fnuz>,
             0
         },
         {
@@ -2882,6 +2889,8 @@ NormFunc getNormFunc(int normType, int depth)
             normWrap<uint64, double, normL2_64u>,
             normWrap<int64, double, normL2_64s>,
             normWrap<unsigned, double, normL2_32u>,
+            normWrap<fp8_t, float, normL2_8f>,
+            normWrap<fp8a_t, float, normL2_8fnuz>,
             0
         }
     };
@@ -2909,6 +2918,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, uint64, normDiffInf_64u>,
             normDiffWrap<int64, uint64, normDiffInf_64s>,
             normDiffWrap<unsigned, unsigned, normDiffInf_32u>,
+            normDiffWrap<fp8_t, float, normDiffInf_8f>,
+            normDiffWrap<fp8a_t, float, normDiffInf_8fnuz>,
             0
         },
         {
@@ -2925,6 +2936,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, double, normDiffL1_64u>,
             normDiffWrap<int64, double, normDiffL1_64s>,
             normDiffWrap<unsigned, double, normDiffL1_32u>,
+            normDiffWrap<fp8_t, float, normDiffL1_8f>,
+            normDiffWrap<fp8a_t, float, normDiffL1_8fnuz>,
             0
         },
         {
@@ -2941,6 +2954,8 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             normDiffWrap<uint64, double, normDiffL2_64u>,
             normDiffWrap<int64, double, normDiffL2_64s>,
             normDiffWrap<unsigned, double, normDiffL2_32u>,
+            normDiffWrap<fp8_t, float, normDiffL2_8f>,
+            normDiffWrap<fp8a_t, float, normDiffL2_8fnuz>,
             0
         },
     };

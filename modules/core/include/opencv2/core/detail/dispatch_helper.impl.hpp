@@ -51,6 +51,15 @@ inline void depthDispatch(const int depth, Args&&... args)
         case CV_16BF:
             Functor<cv::bfloat>{}(std::forward<Args>(args)...);
             break;
+        case CV_Bool:
+            Functor<bool>{}(std::forward<Args>(args)...);
+            break;
+        case CV_8F_E4M3FN:
+            Functor<cv::fp8_t>{}(std::forward<Args>(args)...);
+            break;
+        case CV_8F_E4M3FNUZ:
+            Functor<cv::fp8a_t>{}(std::forward<Args>(args)...);
+            break;
         default:
             CV_Error(cv::Error::BadDepth, "Unsupported matrix type.");
     };

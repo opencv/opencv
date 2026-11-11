@@ -6,7 +6,7 @@
 namespace opencv_test {
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)
-CV_ENUM(TargetDepth, CV_8U, CV_16S)
+CV_ENUM(TargetDepth, CV_8U, CV_16S, CV_32F)
 
 typedef tuple<Size, int, TargetDepth, BorderMode> LaplacianParams;
 typedef perf::TestBaseWithParam<LaplacianParams> Perf_Laplacian;
@@ -15,7 +15,7 @@ PERF_TEST_P(Perf_Laplacian, Laplacian,
             testing::Combine(
                 testing::Values(szVGA, sz720p, sz1080p),
                 testing::Values(1, 3, 5),                // ksize: 1, 3, 5
-                TargetDepth::all(),                      // CV_8U and CV_16S
+                TargetDepth::all(),                      // CV_8U, CV_16S and CV_32F
                 BorderMode::all()
             ))
 {
@@ -25,7 +25,7 @@ PERF_TEST_P(Perf_Laplacian, Laplacian,
     int borderMode = get<3>(GetParam());
 
     Mat src(sz, CV_8UC1);
-    Mat dst(sz, ddepth == CV_16S ? CV_16SC1 : CV_8UC1);
+    Mat dst(sz, ddepth == CV_16S ? CV_16SC1 : ddepth == CV_32F ? CV_32FC1 : CV_8UC1);
 
     declare.in(src, WARMUP_RNG).out(dst);
 

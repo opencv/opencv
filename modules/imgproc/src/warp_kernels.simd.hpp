@@ -4,6 +4,9 @@
 
 #include <numeric>
 #include "precomp.hpp"
+#if CV_AVX512_SKX
+#define CV__SIMD_FORCE_WIDTH 256
+#endif
 #include "warp_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
@@ -7062,6 +7065,7 @@ bicubicCoeffs(float xs0, float ys0,
 }
 
 template<typename _Tp, typename _Fp>
+CV_DISABLE_UBSAN
 static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn,
                                const int32_t* tl_x, const int32_t* tl_y,
                                int32_t* goodx, int row, _Fp* pixbuf, int len,

@@ -2159,6 +2159,41 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPooling, testing::Combine(
     testing::Bool()),
     GlobalPoolingParamName());
 
+typedef testing::TestWithParam<tuple<MatShape, bool> > Layer_Test_GlobalPoolingBlock;
+TEST_P(Layer_Test_GlobalPoolingBlock, EmptyBatch)
+{
+    const MatShape sizes = std::get<0>(GetParam());
+    const bool useMax = std::get<1>(GetParam());
+    const int C0 = 8;
+    std::vector<int> blockSizes(sizes.begin(), sizes.end());
+    blockSizes[1] = (sizes[1] + C0 - 1) / C0;
+    blockSizes.push_back(C0);
+    Mat inp(MatShape(blockSizes, DATA_LAYOUT_BLOCK, sizes[1]), CV_32F);
+
+    LayerParams lp;
+    lp.name = "testGlobalPoolingBlock";
+    lp.type = "Pooling";
+    lp.set("pool", useMax ? "MAX" : "AVE");
+    lp.set("global_pooling", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+    std::vector<MatShape> inputs(1, inp.shape()), outputs, internals;
+    layer->getMemoryShapes(inputs, 1, outputs, internals);
+    std::vector<Mat> input(1, inp), output(1, Mat(outputs[0], CV_32F));
+    layer->finalize(input, output);
+    layer->forward(input, output, std::vector<Mat>());
+
+    MatShape expected = inp.shape();
+    for (int d = 2; d < expected.dims - 1; d++)
+        expected[d] = 1;
+    EXPECT_EQ(expected, output[0].shape());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPoolingBlock, testing::Combine(
+    testing::Values(MatShape{0, 16, 4, 5}),
+    testing::Bool()),
+    GlobalPoolingParamName());
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
@@ -2632,6 +2667,229 @@ TEST_P(Layer_Test_Resize, change_input)
         Mat out = net.forward();
         normAssert(out, ref);
     }
+}
+
+// ONNX folds a constant "scales" input of Resize into zoom_factor_x/y.  The sampling
+// step along an axis is then 1/scale, which is not the same as in/out whenever in*scale
+// is not integral: a 4x5 input with scales=0.5 gives a 2x2 output, so the step is 2 and
+// not 5/2.  Resize2Layer used to derive the step from the shapes and produced different
+// pixels from onnxruntime for that case.
+TEST_P(Layer_Test_Resize, downscale_uses_given_scales)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 4, inW = 5;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "opencv_linear");
+    lp.set("coordinate_transformation_mode", "half_pixel");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    // ONNX half_pixel: src = (dst + 0.5) / scale - 0.5, bilinear with edge clamping.
+    const float step = 1.f / scale;
+    Mat ref(outH, outW, CV_32F);
+    for (int i = 0; i < outH; ++i)
+    {
+        float sy = std::min(std::max((i + 0.5f) * step - 0.5f, 0.f), (float)(inH - 1));
+        int y0 = cvFloor(sy), y1 = std::min(y0 + 1, inH - 1);
+        float fy = sy - y0;
+        for (int j = 0; j < outW; ++j)
+        {
+            float sx = std::min(std::max((j + 0.5f) * step - 0.5f, 0.f), (float)(inW - 1));
+            int x0 = cvFloor(sx), x1 = std::min(x0 + 1, inW - 1);
+            float fx = sx - x0;
+            ref.at<float>(i, j) = (1 - fy) * ((1 - fx) * inp.at<float>(y0, x0) + fx * inp.at<float>(y0, x1))
+                                + fy * ((1 - fx) * inp.at<float>(y1, x0) + fx * inp.at<float>(y1, x1));
+        }
+    }
+
+    normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
+}
+
+// ONNX antialias filter taps for one axis: a triangle of support 1/scale, stretched
+// when downscaling, sampled at (dst + 0.5)/scale - 0.5 and edge-clamped.
+static void resizeAAReferenceWeights(int inS, int outS, float scale,
+                                     std::vector<std::vector<int> >& idx,
+                                     std::vector<std::vector<float> >& wgt)
+{
+    const float step = 1.f / scale;
+    const float support = step >= 1.f ? step : 1.f;
+    const float inv = step >= 1.f ? 1.f / step : 1.f;
+    idx.assign(outS, std::vector<int>());
+    wgt.assign(outS, std::vector<float>());
+    for (int o = 0; o < outS; ++o)
+    {
+        const float center = (o + 0.5f) * step - 0.5f;
+        const int lo = cvFloor(center - support + 0.5f);
+        const int hi = cvFloor(center + support + 0.5f);
+        std::vector<float> acc(inS, 0.f);
+        float total = 0.f;
+        for (int x = lo; x <= hi; ++x)
+        {
+            const float t = std::abs((x - center) * inv);
+            const float w = t < 1.f ? 1.f - t : 0.f;
+            acc[std::min(std::max(x, 0), inS - 1)] += w;
+            total += w;
+        }
+        for (int x = 0; x < inS; ++x)
+        {
+            if (acc[x] != 0.f)
+            {
+                idx[o].push_back(x);
+                wgt[o].push_back(total != 0.f ? acc[x] / total : 0.f);
+            }
+        }
+    }
+}
+
+// The antialias filter support is 1/scale as well, so the same folded-scale case
+// must not stretch the filter by the in/out ratio instead.
+TEST_P(Layer_Test_Resize, antialias_downscale_uses_given_scales)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 4, inW = 5;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = (float)(y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "opencv_linear");
+    lp.set("coordinate_transformation_mode", "half_pixel");
+    lp.set("antialias", 1);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    std::vector<std::vector<int> > xi, yi;
+    std::vector<std::vector<float> > xw, yw;
+    resizeAAReferenceWeights(inW, outW, scale, xi, xw);
+    resizeAAReferenceWeights(inH, outH, scale, yi, yw);
+
+    Mat tmp(inH, outW, CV_32F, Scalar(0));
+    for (int y = 0; y < inH; ++y)
+        for (int ox = 0; ox < outW; ++ox)
+        {
+            float acc = 0.f;
+            for (size_t k = 0; k < xi[ox].size(); ++k)
+                acc += xw[ox][k] * inp.at<float>(y, xi[ox][k]);
+            tmp.at<float>(y, ox) = acc;
+        }
+
+    Mat ref(outH, outW, CV_32F);
+    for (int oy = 0; oy < outH; ++oy)
+        for (int ox = 0; ox < outW; ++ox)
+        {
+            float acc = 0.f;
+            for (size_t k = 0; k < yi[oy].size(); ++k)
+                acc += yw[oy][k] * tmp.at<float>(yi[oy][k], ox);
+            ref.at<float>(oy, ox) = acc;
+        }
+
+    normAssert(out.reshape(1, std::vector<int>{outH, outW}), ref);
+}
+
+// align_corners lines up the corners of the input and the output, so its step is
+// (in - 1) / (out - 1) with the integer output length, not (in - 1) / (in * scale - 1).
+TEST_P(Layer_Test_Resize, align_corners_downscale)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int inH = 5, inW = 7;
+    const float scale = 0.5f;
+    Mat inp(inH, inW, CV_32F);
+    for (int y = 0; y < inH; ++y)
+        for (int x = 0; x < inW; ++x)
+            inp.at<float>(y, x) = 3.f * (y * inW + x);
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", (double)scale);
+    lp.set("zoom_factor_x", (double)scale);
+    lp.set("interpolation", "bilinear");
+    lp.set("align_corners", true);
+    lp.set("coordinate_transformation_mode", "align_corners");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(blobFromImage(inp));
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    const int outH = cvFloor(inH * scale), outW = cvFloor(inW * scale);
+    ASSERT_EQ(outH, out.size[2]);
+    ASSERT_EQ(outW, out.size[3]);
+
+    // src = dst * (in - 1) / (out - 1), bilinear with edge clamping.
+    const float stepY = outH > 1 ? float(inH - 1) / (outH - 1) : 0.f;
+    const float stepX = outW > 1 ? float(inW - 1) / (outW - 1) : 0.f;
+    Mat ref(outH, outW, CV_32F);
+    for (int i = 0; i < outH; ++i)
+    {
+        const float sy = std::min(std::max(i * stepY, 0.f), (float)(inH - 1));
+        const int y0 = cvFloor(sy), y1 = std::min(y0 + 1, inH - 1);
+        const float fy = sy - y0;
+        for (int j = 0; j < outW; ++j)
+        {
+            const float sx = std::min(std::max(j * stepX, 0.f), (float)(inW - 1));
+            const int x0 = cvFloor(sx), x1 = std::min(x0 + 1, inW - 1);
+            const float fx = sx - x0;
+            ref.at<float>(i, j) = (1 - fy) * ((1 - fx) * inp.at<float>(y0, x0) + fx * inp.at<float>(y0, x1))
+                                + fy * ((1 - fx) * inp.at<float>(y1, x0) + fx * inp.at<float>(y1, x1));
+        }
+    }
+
+    // the corners match exactly, and the interior step is (in - 1) / (out - 1)
+    const Mat out2d = out.reshape(1, std::vector<int>{outH, outW});
+    EXPECT_FLOAT_EQ(inp.at<float>(0, 0), out2d.at<float>(0, 0));
+    EXPECT_FLOAT_EQ(inp.at<float>(0, inW - 1), out2d.at<float>(0, outW - 1));
+    EXPECT_FLOAT_EQ(3.f * stepX, out2d.at<float>(0, 1));
+    // the kernel samples the last row and column 1e-6 short of the edge
+    normAssert(out2d, ref, "", 5e-5, 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
@@ -4287,6 +4545,65 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
     }
 }
 
+TEST(Test_SoftmaxCrossEntropyLoss, RejectMismatchedWeightsAndLabels)
+{
+    const int N = 2, C = 64;
+    Mat scores(std::vector<int>{N, C}, CV_32F);
+    randu(scores, -1, 1);
+    Mat labels(std::vector<int>{N}, CV_32S);
+    labels.at<int>(0) = C - 1;
+    labels.at<int>(1) = 3;
+
+    LayerParams lp;
+    lp.type = "SoftmaxCrossEntropyLoss";
+    lp.name = "sce_weights";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weights must hold one value per class
+    std::vector<Mat> inputs{scores, labels, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // probability labels must cover every sample of the scores
+    Mat probs(std::vector<int>{1, C}, CV_32F, Scalar(1.f / C));
+    inputs = {scores, probs};
+    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
+
+    // valid weights give the weighted mean loss, for both float32 and float16 weights
+    Mat weights(std::vector<int>{C}, CV_32F);
+    for (int c = 0; c < C; c++)
+        weights.at<float>(c) = 0.25f * (c % 8 + 1);
+
+    double num = 0, den = 0;
+    for (int n = 0; n < N; n++)
+    {
+        const float* x = scores.ptr<float>(n);
+        double maxv = x[0];
+        for (int c = 1; c < C; c++)
+            maxv = std::max(maxv, (double)x[c]);
+        double sumExp = 0;
+        for (int c = 0; c < C; c++)
+            sumExp += std::exp(x[c] - maxv);
+        const int y = labels.at<int>(n);
+        const double wy = weights.at<float>(y);
+        num += wy * (std::log(sumExp) + maxv - x[y]);
+        den += wy;
+    }
+    const double ref = num / den;
+
+    for (int wtype : {CV_32F, CV_16F})
+    {
+        Mat w;
+        weights.convertTo(w, wtype);
+        inputs = {scores, labels, w};
+        ASSERT_NO_THROW(runLayer(layer, inputs, outputs)) << typeToString(wtype);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(outputs[0].total(), (size_t)1);
+        EXPECT_NEAR(outputs[0].ptr<float>()[0], ref, 1e-5) << typeToString(wtype);
+    }
+}
+
 TEST(Test_GatherND, EmptyIndicesDoNotCrash)
 {
     for (int indicesType : {CV_32S, CV_64S})
@@ -4435,5 +4752,130 @@ TEST_P(Layer_Test_CropAndResize_Backends, BoxOutsideImage)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Test_CropAndResize_Backends, dnnBackendsAndTargets());
+
+
+TEST(Test_Compress, AllFalse_WithAxis)
+{
+    Mat data(3, 4, CV_32F);
+    randu(data, -1.0f, 1.0f);
+    Mat condition(1, 4, CV_Bool, Scalar::all(0));
+
+    LayerParams lp;
+    lp.type = "Compress";
+    lp.name = "test_compress_all_false_axis";
+    lp.set("axis", 1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, condition};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({3, 0}));
+}
+
+TEST(Test_Compress, AllFalse_WithoutAxis)
+{
+    Mat data(3, 4, CV_32F);
+    randu(data, -1.0f, 1.0f);
+    Mat condition(1, 12, CV_Bool, Scalar::all(0));
+
+    LayerParams lp;
+    lp.type = "Compress";
+    lp.name = "test_compress_all_false_no_axis";
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs{data, condition};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), MatShape({0}));
+}
+
+TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
+{
+    const int B = 2, C = 64, T = 8, K = 4;
+    Mat x(std::vector<int>{B, C, T}, CV_32F);
+    randu(x, -1, 1);
+    Mat w(std::vector<int>{C, 1, K}, CV_32F);
+    randu(w, -1, 1);
+    Mat bias(std::vector<int>{C}, CV_32F);
+    randu(bias, -1, 1);
+    Mat past(std::vector<int>{B, C, K - 1}, CV_32F);
+    randu(past, -1, 1);
+
+    LayerParams lp;
+    lp.type = "CausalConvWithState";
+    lp.name = "causal_conv_with_state";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // weight must be [C, 1, K]
+    std::vector<Mat> inputs{x, Mat(std::vector<int>{1, 1, K}, CV_32F, Scalar(1))};
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, Mat(std::vector<int>{C, 2, K}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // bias must be [C]
+    inputs = {x, w, Mat(std::vector<int>{1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, Mat(std::vector<int>{1, C}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // past_state must be [B, C, K - 1]
+    inputs = {x, w, bias, Mat(std::vector<int>{B, 1, K - 1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, bias, Mat(std::vector<int>{1, C, K - 1}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x, w, bias, Mat(std::vector<int>{B, C, K}, CV_32F, Scalar(1))};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+
+    // weight, bias and past_state must have the input type, on both the fp32 and the fp16 path
+    Mat x16, w16, bias16, past16;
+    x.convertTo(x16, CV_16F);
+    w.convertTo(w16, CV_16F);
+    bias.convertTo(bias16, CV_16F);
+    past.convertTo(past16, CV_16F);
+    inputs = {x, w16};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias16, past};
+    EXPECT_THROW(runLayer(layer, inputs, outputs), cv::Exception);
+    inputs = {x16, w16, bias16, past16};
+    EXPECT_NO_THROW(runLayer(layer, inputs, outputs));
+
+    // valid inputs give the depthwise causal convolution, with past_state read per batch
+    Mat ref(std::vector<int>{B, C, T}, CV_32F), refState(std::vector<int>{B, C, K - 1}, CV_32F);
+    for (int b = 0; b < B; b++)
+    {
+        for (int c = 0; c < C; c++)
+        {
+            std::vector<float> pad(K - 1 + T);
+            for (int j = 0; j < K - 1; j++)
+                pad[j] = past.ptr<float>(b, c)[j];
+            for (int t = 0; t < T; t++)
+                pad[K - 1 + t] = x.ptr<float>(b, c)[t];
+            for (int t = 0; t < T; t++)
+            {
+                float acc = bias.at<float>(c);
+                for (int k = 0; k < K; k++)
+                    acc += w.ptr<float>(c)[k] * pad[t + k];
+                ref.ptr<float>(b, c)[t] = acc;
+            }
+            for (int j = 0; j < K - 1; j++)
+                refState.ptr<float>(b, c)[j] = pad[T + j];
+        }
+    }
+    inputs = {x, w, bias, past};
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(outputs.size(), (size_t)2);
+    normAssert(ref, outputs[0], "output");
+    normAssert(refState, outputs[1], "present_state");
+}
 
 }} // namespace

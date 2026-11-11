@@ -310,7 +310,7 @@ public:
 
     //! Live tensor operands, indexed by each TENSOR node's constBufferId; extract() remaps them.
     std::vector<Arg> tensorArgs;
-    //! Parallel to constBufs: the layer declared it per-channel, so do not infer the axis.
+    //! Parallel to constBufs: declared or proven per-channel, so do not infer the axis.
     std::vector<uchar> constBufPerChannel;
 
     //! Set when this whole expression is one layer that already has a kernel.

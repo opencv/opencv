@@ -181,7 +181,7 @@ CV_EXPORTS TKernel getHypotFunc(int T, int R);               // OP_HYPOT, T x T 
 CV_EXPORTS TKernel getAtan2Func(int T, int R);               // OP_ATAN2, T x T -> T (float depths)
 CV_EXPORTS TKernel getCmpFunc(TOp op, int T);                // T x T -> u8 mask (op = OP_CMP_*)
 CV_EXPORTS TKernel getBitwiseFunc(TOp op, int esz);          // OP_AND / OP_OR / OP_XOR, by element size
-CV_EXPORTS TKernel getNotFunc(int esz);                      // OP_NOT, by element size
+CV_EXPORTS TKernel getNotFunc(int depth);                    // OP_NOT, by element size (CV_Bool: logical NOT)
 CV_EXPORTS TKernel getAddWeightedFunc(int T, int R);         // OP_ADDW, a*alpha+b*beta+gamma (T x T -> R)
 CV_EXPORTS TKernel getSelectFunc(int mdepth, int T);         // OP_SELECT: 1-byte mask, a/b/dst of T
 CV_EXPORTS TKernel getClampFunc(int T);                      // OP_CLAMP: min(max(x, lo), hi), all of T

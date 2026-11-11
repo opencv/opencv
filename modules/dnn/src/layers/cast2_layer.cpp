@@ -7,6 +7,11 @@
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/cast.hpp"
+#include "../cuda4dnn/primitives/reshape.hpp"
+#endif
 
 #include "../onnx/onnx_dtype_convert.hpp"
 
@@ -99,9 +104,68 @@ public:
         // Exotic dtypes (FP8/FP4/INT4/UINT4) are handled on the CPU path only.
         if (onnx_dtype::isExotic(toOnnxType_))
             return backendId == DNN_BACKEND_OPENCV;
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.size() != 1 || outputs.size() != 1)
+                return false;
+            // storage types, not toCvDepth_: resolveStorageDepth() may keep a half target as FP32
+            const int inType = netimpl_->argData(inputs[0]).type;
+            const int outType = netimpl_->argData(outputs[0]).type;
+            if (inType >= 0 && inType == outType)
+                return isCudaNodeType(inType);
+            // an intermediate arg has no type until the first forward; check only the known side(s)
+            auto castable = [](int t) { return t < 0 || t == CV_Bool || t == CV_32S || t == CV_64S || t == CV_32F; };
+            if (!castable(inType) || !castable(outType))
+                return false;
+            // the FP16 target stores float as half, which has no CastOp instantiation; an unknown type may be float
+            return netimpl_->preferableTarget != DNN_TARGET_CUDA_FP16 ||
+                   (inType >= 0 && outType >= 0 && inType != CV_32F && outType != CV_32F);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int inDepth = inputs_arr.depth(0);
+        const int outDepth = outputs_arr.depth(0);
+        if (inDepth == outDepth) {
+            if (inDepth == CV_Bool)
+                return make_cuda_node_bool<cuda4dnn::ReshapeOp>(std::move(context->stream));
+            return make_cuda_node_with_type<cuda4dnn::ReshapeOp>(preferableTarget, inputs_arr.type(0),
+                                                                 std::move(context->stream));
+        }
+        switch (inDepth)
+        {
+        case CV_Bool: return makeCastFrom<bool>(outDepth, std::move(context->stream));
+        case CV_32S: return makeCastFrom<int32_t>(outDepth, std::move(context->stream));
+        case CV_64S: return makeCastFrom<int64_t>(outDepth, std::move(context->stream));
+        case CV_32F: return makeCastFrom<float>(outDepth, std::move(context->stream));
+        }
+        CV_Error(Error::BadDepth, "Cast: unsupported input type on CUDA");
+        return Ptr<BackendNode>();
+    }
+
+    template <class TIn>
+    static Ptr<BackendNode> makeCastFrom(int outDepth, cuda4dnn::csl::Stream stream)
+    {
+        switch (outDepth)
+        {
+        case CV_Bool: return Ptr<BackendNode>(new cuda4dnn::CastOp<bool, TIn>(std::move(stream)));
+        case CV_32S: return Ptr<BackendNode>(new cuda4dnn::CastOp<int32_t, TIn>(std::move(stream)));
+        case CV_64S: return Ptr<BackendNode>(new cuda4dnn::CastOp<int64_t, TIn>(std::move(stream)));
+        case CV_32F: return Ptr<BackendNode>(new cuda4dnn::CastOp<float, TIn>(std::move(stream)));
+        }
+        CV_Error(Error::BadDepth, "Cast: unsupported output type on CUDA");
+        return Ptr<BackendNode>();
+    }
+#endif
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                 const int requiredOutputs,

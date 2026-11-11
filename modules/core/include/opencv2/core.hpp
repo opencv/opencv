@@ -799,7 +799,6 @@ In Python, multi-channel input is not supported at all due to a limitation in th
 binding generation process (there is no way to set minLoc and maxLoc to NULL). A
 workaround is to operate on each channel individually or to use NumPy to achieve the same
 functionality.
-@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -857,7 +856,6 @@ a single-row or single-column matrix. In OpenCV (following MATLAB) each array ha
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
-@note CV_16F/CV_16BF/CV_Bool/CV_64U/CV_64S/CV_32U are not supported for src.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -1834,9 +1832,9 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
 /** @brief Replaces NaNs (Not-a-Number values) in a matrix with the specified value.
 
 This function modifies the input matrix in-place.
-The input matrix must be of type `CV_32F` or `CV_64F`; other types are not supported.
+The input matrix must be of type `CV_16F`, `CV_16BF`, `CV_32F` or `CV_64F`; other types are not supported.
 
-@param a Input/output matrix (CV_32F or CV_64F type).
+@param a Input/output matrix (CV_16F, CV_16BF, CV_32F or CV_64F type).
 @param val Value used to replace NaNs (defaults to 0).
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);

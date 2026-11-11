@@ -116,6 +116,7 @@ struct Net::Impl : public detail::NetImplBase
     bool fusion;
     bool isAsync;  // FIXIT: drop
     bool useWinograd;
+    bool useTF32;
     bool useKVCache = false;
 
     std::vector<int64> layersTimings;
@@ -296,9 +297,18 @@ struct Net::Impl : public detail::NetImplBase
     {
         CudaInfo_t(cuda4dnn::csl::CSLContext ctxt)
             : context(std::move(ctxt))
-        {}
+        {
+            // zero-copy: kernels write it directly, the host reads it after the forward's sync
+            CUDA4DNN_CHECK_CUDA(cudaHostAlloc(reinterpret_cast<void**>(&errorFlag), sizeof(int), cudaHostAllocMapped));
+            *errorFlag = 0;
+            CUDA4DNN_CHECK_CUDA(cudaHostGetDevicePointer(reinterpret_cast<void**>(&context.error_flag), errorFlag, 0));
+        }
+        ~CudaInfo_t() { cudaFreeHost(errorFlag); }
+        CudaInfo_t(const CudaInfo_t&) = delete;
+        CudaInfo_t& operator=(const CudaInfo_t&) = delete;
         cuda4dnn::csl::CSLContext context;
         cuda4dnn::csl::Workspace workspace;
+        int* errorFlag = nullptr;
     };
 
     std::unique_ptr<CudaInfo_t> cudaInfo;
@@ -314,6 +324,10 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<uchar> cudaArgDeviceDirty;  // 1: device copy is authoritative -> needs D2H before host read
     std::vector<UMat> cudaTempBuffers;
     bool cudaPoolTemps = false;
+    // the main graph's forward recorded as one CUDA Graph, and the input shapes it was recorded for
+    cudaGraphExec_t cudaGraphExec = nullptr;
+    std::vector<MatShape> cudaGraphInputShapes;
+    void cudaGraphReset();
 
     // Device element type for a host tensor (half for float tensors under the FP16 target).
     int cudaDeviceType(const Mat& hostMat) const;
@@ -349,6 +363,7 @@ struct Net::Impl : public detail::NetImplBase
 
     virtual void fuseLayers(const std::vector<LayerPin>& blobsToKeep_);
     void enableWinograd(bool useWinograd_);
+    void enableTF32(bool useTF32_);
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_);
 
@@ -453,6 +468,7 @@ struct Net::Impl : public detail::NetImplBase
 
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
+    void aliasArg(const std::string& name, Arg arg); // adds a name for an existing Arg, e.g. a shared constant
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
@@ -587,7 +603,7 @@ inline Net::Impl* getNetImpl(const LayerInfo* op)
     return reinterpret_cast<Net::Impl*>(op->netimpl);
 }
 
-Net readNetFromONNX2(const String&);
+Net readNetFromONNX2(const String&, bool mapExternalData);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
 #ifdef HAVE_ONNXRUNTIME

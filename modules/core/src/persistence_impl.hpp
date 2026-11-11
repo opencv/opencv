@@ -151,6 +151,8 @@ public:
 
         ushort getUInt16();
 
+        unsigned getUInt32();
+
         int getInt32();
 
         int64_t getInt64();

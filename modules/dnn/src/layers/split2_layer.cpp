@@ -5,7 +5,10 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
-//#include "../op_cuda.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/slice.hpp"
+#endif
 //#include "../op_inf_engine.hpp"
 //#include "../ie_ngraph.hpp"
 //#include "../op_webnn.hpp"
@@ -38,8 +41,67 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.empty() || outputs.empty())
+                return false;
+            // offsets are fixed in initCUDA(), so the split sizes must be constant
+            if (inputs.size() == 2 && !netimpl_->isConstArg(inputs[1]))
+                return false;
+            // forwardOpCUDA() skips the whole op when any output is empty
+            for (const Arg& out : outputs) {
+                const MatShape& s = netimpl_->argData(out).shape;
+                for (int j = 0; j < s.dims; j++)
+                    if (s[j] == 0)
+                        return false;
+            }
+            const ArgData& adata = netimpl_->argData(inputs[0]);
+            if (adata.shape.dims > CSL_MAX_TENSOR_RANK)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = adata.type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+    // In block layout, split sizes along channels count real channels, not blocks of 8.
+    static bool isBlockChannelSplit(const MatShape& inpShape, int axis_)
+    {
+        return inpShape.layout == DATA_LAYOUT_BLOCK && axis_ == 1;
+    }
+
+    static int axisSize(const MatShape& inpShape, int axis_)
+    {
+        return isBlockChannelSplit(inpShape, axis_) ? inpShape.C : inpShape[axis_];
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        const int ndims = inputs_arr.shape(0).dims;
+        const int axis_ = normalize_axis(axis, ndims);
+
+        // output i starts where the previous outputs end along the split axis
+        const size_t noutputs = outputs_arr.total();
+        std::vector<std::vector<std::size_t>> offsets(noutputs, std::vector<std::size_t>(ndims, 0));
+        std::size_t start = 0;
+        for (size_t i = 0; i < noutputs; i++) {
+            offsets[i][axis_] = start;
+            start += (std::size_t)outputs_arr.shape((int)i)[axis_];
+        }
+
+        if (inputs_arr.depth(0) == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::SliceOp>(std::move(context->stream), std::move(offsets));
+        return make_cuda_node_with_type<cuda4dnn::SliceOp>(preferableTarget, inputs_arr.type(0),
+                                                           std::move(context->stream), std::move(offsets));
+    }
+#endif
 
     void getOutShapes(const MatShape& inpShape, int axis_,
                       const std::vector<int>& split,
@@ -50,6 +112,8 @@ public:
 
         int inpDims = inpShape.dims;
         CV_Assert(0 <= axis_ && axis_ < inpDims);
+        const bool blockC = isBlockChannelSplit(inpShape, axis_);
+        const int C0 = blockC ? inpShape.back() : 1;
         int totalSize_a = 0;
 
         outShapes.resize(noutputs);
@@ -57,11 +121,53 @@ public:
             MatShape outShape = inpShape;
             int s = split[i];
             CV_Assert(s >= 0);
-            CV_Assert(s <= inpShape[axis_] - totalSize_a);
-            outShape[axis_] = s;
+            CV_Assert(s <= axisSize(inpShape, axis_) - totalSize_a);
+            if (blockC) {
+                outShape[axis_] = (s + C0 - 1) / C0;
+                outShape.C = s;
+            } else {
+                outShape[axis_] = s;
+            }
             outShapes[i] = outShape;
             totalSize_a += s;
         }
+    }
+
+    // True when sizes known before shape inference (attribute or constant input) put a part
+    // boundary inside a channel block. forward() would then convert the input to NCHW and every
+    // part back to block, and plain consumers convert them back again; the plain tensor is cheaper.
+    bool hasUnalignedChannelSplit(int C0) const
+    {
+        std::vector<int> sizes = split;
+        if (inputs.size() == 2) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_->isConstArg(inputs[1]))
+                return true;
+            tensorToIntVec(netimpl_->argTensor(inputs[1]), sizes);
+        }
+        for (size_t k = 0; k + 1 < sizes.size(); k++)
+            if (sizes[k] % C0 != 0)
+                return true;
+        return false;  // also the default split, whose sizes depend on the channel count
+    }
+
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        desiredInputs.assign(actualInputs.size(), DATA_LAYOUT_UNKNOWN);
+        // Stay in block layout for a non-negative axis (negative axes count from the end, which
+        // differs between layouts), unless the sizes already show an unaligned channel split.
+        if (!actualInputs.empty() && actualInputs[0] == DATA_LAYOUT_BLOCK && axis >= 0 &&
+            !(axis == 1 && hasUnalignedChannelSplit(netimpl_->defaultC0))) {
+            desiredInputs[0] = DATA_LAYOUT_BLOCK;
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+            return netimpl_->defaultC0;
+        }
+        outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        return 0;
     }
 
     void makeDefaultSplit(int totalSize, size_t noutputs, std::vector<int>& split_) const
@@ -99,7 +205,7 @@ public:
             split_ = &tempSplit;
         }
         else if (split.empty()) {
-            makeDefaultSplit(inpShape[axis_], noutputs, tempSplit);
+            makeDefaultSplit(axisSize(inpShape, axis_), noutputs, tempSplit);
             split_ = &tempSplit;
         }
 
@@ -152,7 +258,7 @@ public:
             split_ = &tempSplit;
         }
         else if (split.empty()) {
-            makeDefaultSplit(inpShape[axis_], noutputs, tempSplit);
+            makeDefaultSplit(axisSize(inpShape, axis_), noutputs, tempSplit);
             split_ = &tempSplit;
         }
         getOutShapes(inpShape, axis_, *split_, outShapes);
@@ -195,10 +301,54 @@ public:
 
     void runOp(const Mat& inp, std::vector<Mat>& outs, int axis_)
     {
+        // An empty input (e.g. a zero batch) has nothing to copy; the outputs already have their shapes.
+        if (inp.total() == 0)
+            return;
+        if (isBlockChannelSplit(inp.size, axis_)) {
+            runOpBlockAxis1(inp, outs);
+            return;
+        }
         std::vector<int> sizes(outs.size());
         for (size_t i = 0; i < outs.size(); i++)
             sizes[i] = outs[i].size[axis_];
         cv::split(inp, axis_, sizes, outs);
+    }
+
+    // Channel split in block layout, like Concat's: if every part starts on a multiple of 8
+    // channels, split the channel blocks directly; otherwise (only a default split, whose sizes
+    // getLayouts() could not see) go through NCHW.
+    void runOpBlockAxis1(const Mat& inp, std::vector<Mat>& outs)
+    {
+        const int C0 = inp.size[inp.dims - 1];
+        const size_t nout = outs.size();
+        bool aligned = true;
+        for (size_t k = 0; k + 1 < nout; k++)
+            aligned = aligned && (outs[k].size.C % C0) == 0;
+        if (aligned) {
+            // Only the last part may end inside a block, so this is a split of the C1 axis. Empty
+            // parts are left out: Mat::create() would reallocate them and drop the block layout.
+            std::vector<int> blocks;
+            std::vector<Mat> parts;
+            for (const Mat& out : outs) {
+                if (out.size[1] > 0) {
+                    blocks.push_back(out.size[1]);
+                    parts.push_back(out);
+                }
+            }
+            cv::split(inp, 1, blocks, parts);
+            return;
+        }
+
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        Mat plainInp;
+        transformLayout(inp, plainInp, origLayout, origLayout, C0);
+        std::vector<int> sizes(nout);
+        for (size_t k = 0; k < nout; k++)
+            sizes[k] = outs[k].size.C;
+        std::vector<Mat> plainOuts;
+        cv::split(plainInp, 1, sizes, plainOuts);
+        for (size_t k = 0; k < nout; k++)
+            transformLayout(plainOuts[k], outs[k], DATA_LAYOUT_BLOCK, origLayout, C0);
     }
 };
 

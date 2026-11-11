@@ -17,14 +17,11 @@ namespace cv {
 
 namespace {
 
-enum
-{
-    RND_MAX_DIMS = CV_MAX_DIM + 1,   // + the channel axis
-    RND_BLOCK = 1024,                // elements converted per call when the source needs conversion
-    RND_VCHUNK = 1024,               // innermost-axis chunk in the vertical kernel
-    RND_SERIAL_WORK = 64*1024,       // below this (source elements) everything runs in one thread
-    RND_STRIPE_WORK = 64*1024
-};
+constexpr int RND_MAX_DIMS = CV_MAX_DIM + 1;   // + the channel axis
+constexpr int RND_BLOCK = 1024;                // elements converted per call when the source needs conversion
+constexpr int RND_VCHUNK = 1024;               // innermost-axis chunk in the vertical kernel
+constexpr double RND_SERIAL_WORK = 64*1024;    // below this (source elements) everything runs in one thread
+constexpr double RND_STRIPE_WORK = 64*1024;
 
 //////////////////////////////// vector traits ////////////////////////////////
 

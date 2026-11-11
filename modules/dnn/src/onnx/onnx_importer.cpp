@@ -69,7 +69,7 @@ static int resolveOnnxEngine(int engine)
     return engine;
 }
 
-Net readNetFromONNX(const String& onnxFile, int engine)
+Net readNetFromONNX(const String& onnxFile, int engine, bool mapExternalData)
 {
     if (resolveOnnxEngine(engine) == ENGINE_ORT)
     {
@@ -84,7 +84,12 @@ Net readNetFromONNX(const String& onnxFile, int engine)
         CV_LOG_WARNING(NULL, "DNN/ONNX/ORT: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_OPENCV.");
 #endif
     }
-    return readNetFromONNX2(onnxFile);
+    return readNetFromONNX2(onnxFile, mapExternalData);
+}
+
+Net readNetFromONNX(const String& onnxFile, int engine)
+{
+    return readNetFromONNX(onnxFile, engine, false);
 }
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
@@ -164,6 +169,10 @@ Mat readTensorFromONNX(const String& path)
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
+
+Net readNetFromONNX(const String&, int, bool) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
 
 Net readNetFromONNX(const String&, int) {
     DNN_PROTOBUF_UNSUPPORTED();

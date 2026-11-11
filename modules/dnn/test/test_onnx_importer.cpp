@@ -8,6 +8,7 @@
 
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
+#include "../src/mapped_file.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <numeric>
 namespace opencv_test { namespace {
@@ -215,6 +216,48 @@ public:
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
+    }
+
+    // forward() #1 runs eagerly, #2 records a CUDA Graph and #3 replays it; each must match the reference
+    void testONNXModelsRepeatedForward(const String& basename, bool changeBatch = false)
+    {
+        Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+        Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        checkBackend(&inp, &ref);
+        Net net = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        // the replay gets a new same-shaped input: replaying stale device data would fail here
+        Mat inp2;
+        inp.convertTo(inp2, -1, 0.5, 1.0);
+        Net refNet = readNetFromONNX(_tf("models/" + basename + ".onnx", required));
+        refNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        refNet.setInput(inp2);
+        Mat ref2 = refNet.forward();
+        const int forwards = 3;
+        for (int i = 1; i <= forwards; i++) {
+            net.setInput(i < forwards ? inp : inp2);
+            Mat out = net.forward();
+            normAssert(i < forwards ? ref : ref2, out, format("%s, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
+        }
+        if (!changeBatch)
+            return;
+        // a doubled batch resets the recorded graph and re-sizes every dynamic op
+        const int n = inp.size[0];
+        const int rowLen = (int)(inp.total() / n);
+        Mat rows;
+        vconcat(inp.reshape(1, std::vector<int>{n, rowLen}), inp2.reshape(1, std::vector<int>{n, rowLen}), rows);
+        std::vector<int> bigShape(inp.size.p, inp.size.p + inp.dims);
+        bigShape[0] = 2 * n;
+        Mat inp3 = rows.reshape(1, bigShape);
+        refNet.setInput(inp3);
+        Mat ref3 = refNet.forward();
+        for (int i = 1; i <= 2; i++) {
+            net.setInput(inp3);
+            Mat out = net.forward();
+            normAssert(ref3, out, format("%s, doubled batch, forward #%d", basename.c_str(), i).c_str(), default_l1, default_lInf);
+        }
     }
 
     // Runs an SDPA ONNX model through the importer + SDPALayer and checks the
@@ -1212,14 +1255,26 @@ TEST_P(Test_ONNX_layers, MatMul_init_2)
 }
 TEST_P(Test_ONNX_layers, MatMul_init_bcast)
 {
-    // New-engine CUDA MatMul/GEMM does not yet cover this broadcast variant; skip for now.
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testONNXModels("matmul_init_bcast");
 }
 
 TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
     testONNXModels("matmul_bcast");
+}
+
+TEST_P(Test_ONNX_layers, MatMul_batch_bcast_repeated_forward)
+{
+    testONNXModelsRepeatedForward("matmul_batch_bcast");
+}
+
+TEST_P(Test_ONNX_layers, Shape_repeated_forward)
+{
+    testONNXModelsRepeatedForward("shape_scale_static");
+}
+
+TEST_P(Test_ONNX_layers, Shape_reshape_dynamic_repeated_forward)
+{
+    testONNXModelsRepeatedForward("shape_reshape_dynamic", true);
 }
 
 // forwardInt<T> integer-accumulation path.
@@ -2478,6 +2533,86 @@ TEST_P(Test_ONNX_layers, Gemm_External_Data)
     testONNXModels("gemm_external_data", npy);
 }
 
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data)
+{
+    testONNXModels("layer_norm_external_data", npy);
+}
+
+// ENGINE_ORT registers the file for ONNX Runtime without parsing it, so neither the mapping
+// nor the bounds check below is reached.
+static bool ortEngineForced()
+{
+    return static_cast<cv::dnn::EngineType>(cv::utils::getConfigurationParameterSizeT(
+               "OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO)) == cv::dnn::ENGINE_ORT;
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Unaligned)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ true);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // A refused mapping copies instead and yields the same values; only the count separates them.
+    if (cv::utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_MMAP_EXTERNAL_DATA", true))
+    {
+        EXPECT_GT(cv::dnn::mappedViewCount(), views);
+    }
+    double l1 = 1e-5, lInf = 1e-4;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // FP16 output rounding at |ref| ~ 9.2; measured 3.0e-4 / 4.8e-3 over 100 runs
+        l1 = 5e-4;
+        lInf = 8e-3;
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out, "", l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_Truncated)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    // A range past the end of the file must be refused here; mapping it faults at inference.
+    EXPECT_THROW(readNetFromONNX(_tf("models/layer_norm_external_data_truncated.onnx")),
+                 cv::Exception);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm_External_Data_MappingDisabled)
+{
+    if (ortEngineForced())
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+
+    const uint64_t views = cv::dnn::mappedViewCount();
+    Net net = readNetFromONNX(_tf("models/layer_norm_external_data_unaligned.onnx"),
+                              ENGINE_AUTO, /*mapExternalData*/ false);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    net.setInput(blobFromNPY(_tf("data/input_layer_norm_external_data_unaligned.npy")));
+    const Mat out = net.forward();
+
+    // Nothing was mapped, and the copy path produces the same values.
+    EXPECT_EQ(cv::dnn::mappedViewCount(), views);
+    double l1 = 1e-5, lInf = 1e-4;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // FP16 output rounding at |ref| ~ 9.2; measured 3.0e-4 / 4.8e-3 over 100 runs
+        l1 = 5e-4;
+        lInf = 8e-3;
+    }
+    normAssert(blobFromNPY(_tf("data/output_layer_norm_external_data_unaligned.npy")), out, "", l1, lInf);
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
@@ -2664,8 +2799,8 @@ TEST_P(Test_ONNX_nets, RAFT)
     Size target_size{480, 360};
     auto img0 = imread(img0_path);
     auto img1 = imread(img1_path);
-    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
-    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true, false, CV_32F, /*interpolation*/ cv::INTER_LINEAR_EXACT);
 
     auto net = readNet(weight_path);
     net.setInput(blob0, "0");
@@ -3536,7 +3671,8 @@ TEST_P(Test_ONNX_nets, YOLOv5n)
         CV_32F,
         DNN_LAYOUT_NCHW,
         DNN_PMODE_NULL,
-        Scalar::all(0)
+        Scalar::all(0),
+        cv::INTER_LINEAR_EXACT
         );
 
     testYOLO(weightPath, refClassIds, refScores, refBoxes, imgParams);
@@ -3634,7 +3770,11 @@ TEST_P(Test_ONNX_layers, Expand_shape_model4) {
 }
 
 TEST_P(Test_ONNX_layers, Attention) {
-    testONNXModels("attention");
+    // CUDA_FP16 keeps Q/K/V, the scores and the softmax output in half; ~4.5 half ULPs at |ref| ~18
+    if (target == DNN_TARGET_CUDA_FP16)
+        testONNXModels("attention", npy, 0.01, 0.07);
+    else
+        testONNXModels("attention");
 }
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
@@ -3650,7 +3790,14 @@ TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
     testONNXModels("pytorch_attention_single_head");
 }
 TEST_P(Test_ONNX_layers, AttentionSharedShapeReshape) {
-    testONNXModels("attention_shared_shape_reshape", npy, 1e-4, 5e-4);
+    double l1 = 1e-4, lInf = 5e-4;
+    // CUDA FP16 computes the attention in half precision
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = default_l1;
+        lInf = default_lInf;
+    }
+    testONNXModels("attention_shared_shape_reshape", npy, l1, lInf);
 }
 
 // MultiHeadAttention `bias`/`key_padding_mask`, alone and together; BiasProjected feeds

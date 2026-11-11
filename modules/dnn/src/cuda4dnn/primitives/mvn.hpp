@@ -97,12 +97,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
                     auto means = ws_allocator.get_span<float>(outer_size);
-                    kernels::fill<float>(stream, means, 0);
 
                     if (normalize_variance)
                     {
+                        // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                         auto scales = ws_allocator.get_span<float>(outer_size);
-                        kernels::fill<float>(stream, scales, 0);
 
                         kernels::reduce_mean_sqr_sum<T>(stream, means, scales, input, inner_size);
                         kernels::compute_normalization_scale(stream, scales, means, scales, inner_size, epsilon);
@@ -110,6 +109,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     }
                     else
                     {
+                        // reduce_mean accumulates with atomics into zeroed means
+                        kernels::fill<float>(stream, means, 0);
                         kernels::reduce_mean<T>(stream, means, input, inner_size);
                         kernels::normalize_mean<T>(stream, output, input, means, inner_size);
                     }

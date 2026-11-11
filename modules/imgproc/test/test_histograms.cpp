@@ -142,6 +142,114 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
 
+// Multi-threaded calcHist must match a row-by-row single-threaded baseline.
+// The non-contiguous ROI covers row splitting, the contiguous clone covers
+// column splitting; the 1D mask keeps IPP/HAL fast paths out of the way.
+typedef testing::TestWithParam< testing::tuple<int, int, Size> > Imgproc_Hist_Calc_Parallel;
+
+TEST_P(Imgproc_Hist_Calc_Parallel, consistency)
+{
+    int type = testing::get<0>(GetParam());
+    int dims = testing::get<1>(GetParam());
+    Size sz  = testing::get<2>(GetParam());
+
+    int cn = dims;
+
+    Mat buf(Size(sz.width + 1, sz.height), CV_MAKETYPE(type, cn));
+    randu(buf, Scalar::all(0), Scalar::all(256));
+    Mat src = buf(Rect(0, 0, sz.width, sz.height));
+
+    Mat mask;
+    if( dims == 1 )
+    {
+        mask.create(sz, CV_8UC1);
+        randu(mask, Scalar::all(0), Scalar::all(2));
+    }
+
+    std::vector<int> ch(dims), hs(dims);
+    std::vector<std::vector<float> > rv(dims);
+    std::vector<const float*> rp(dims);
+    for( int i = 0; i < dims; i++ )
+    {
+        ch[i] = i;
+        hs[i] = (dims == 1) ? 64 : (dims == 2) ? 8 : 4;
+        rv[i].assign(2, 0.f);
+        rv[i][1] = 256.f;
+        rp[i] = &rv[i][0];
+    }
+
+    // Row-by-row: every call stays below the parallel threshold.
+    Mat baseline;
+    for( int y = 0; y < src.rows; y++ )
+    {
+        Mat row = src.row(y);
+        Mat mask_row = (dims == 1) ? mask.row(y) : Mat();
+        bool acc = (y > 0);
+        calcHist(&row, 1, ch.data(), mask_row, baseline, dims, hs.data(), rp.data(), true, acc);
+    }
+
+    setNumThreads(8);
+    Mat parallel_result;
+    calcHist(&src, 1, ch.data(), mask, parallel_result, dims, hs.data(), rp.data(), true, false);
+
+    // Flattened to one row: column-split path.
+    Mat contiguous = src.clone();
+    Mat contiguous_result;
+    calcHist(&contiguous, 1, ch.data(), mask, contiguous_result, dims, hs.data(), rp.data(), true, false);
+    setNumThreads(-1);
+
+    EXPECT_EQ(0.0, cv::norm(baseline, parallel_result, NORM_INF))
+        << "row-split, type=" << type << " dims=" << dims << " size=" << sz;
+    EXPECT_EQ(0.0, cv::norm(baseline, contiguous_result, NORM_INF))
+        << "column-split, type=" << type << " dims=" << dims << " size=" << sz;
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Hist_Calc_Parallel,
+    testing::Combine(
+        testing::Values(CV_8U, CV_16U, CV_32F),
+        testing::Values(1, 2, 3),
+        testing::Values(Size(640, 480), Size(1920, 1080), Size(7, 13))
+    )
+);
+
+TEST(Imgproc_Hist_Calc, boundary_exclusion_1d_32f)
+{
+    float vals[] = { 0.f, 63.999f, 64.f, 255.999f, 256.f, -0.001f, 1000.f, -1000.f };
+    Mat src(1, 8, CV_32FC1, vals);
+
+    int channels[] = {0};
+    int histSize[] = {4};
+    float range[] = {0.f, 256.f};
+    const float* ranges[] = {range};
+
+    Mat hist;
+    calcHist(&src, 1, channels, Mat(), hist, 1, histSize, ranges);
+
+    EXPECT_EQ(2.f, hist.at<float>(0)) << hist.t();
+    EXPECT_EQ(1.f, hist.at<float>(1)) << hist.t();
+    EXPECT_EQ(0.f, hist.at<float>(2)) << hist.t();
+    EXPECT_EQ(1.f, hist.at<float>(3)) << hist.t();
+}
+
+TEST(Imgproc_Hist_Calc, boundary_exclusion_2d)
+{
+    // second and third pixels have one in-range and one out-of-range channel:
+    // the whole pixel must be excluded, not partially counted.
+    float vals[] = { 50.f, 50.f,  256.f, 50.f,  50.f, 256.f };
+    Mat src(1, 3, CV_32FC2, vals);
+
+    int channels[] = {0, 1};
+    int histSize[] = {4, 4};
+    float range[] = {0.f, 256.f};
+    const float* ranges[] = {range, range};
+
+    Mat hist;
+    calcHist(&src, 1, channels, Mat(), hist, 2, histSize, ranges);
+
+    EXPECT_EQ(1.0, cv::sum(hist)[0]);
+    EXPECT_EQ(1.f, hist.at<float>(0, 0));
+}
+
 ////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
 
 void equalizeHistReference(const Mat& src, Mat& dst)

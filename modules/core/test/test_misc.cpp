@@ -441,6 +441,34 @@ TEST(Core_Parallel, propagate_fp_denormals_ignore_hint)
     }
 }
 
+class CountingParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    explicit CountingParallelLoopBody(std::vector<int>& hits) : hits_(hits) {}
+    void operator()(const cv::Range& r) const CV_OVERRIDE
+    {
+        for (int i = r.start; i < r.end; i++)
+            CV_XADD(&hits_[i], 1);
+    }
+    std::vector<int>& hits_;
+};
+
+typedef testing::TestWithParam<int> Core_Parallel_IndexCoverage;
+
+TEST_P(Core_Parallel_IndexCoverage, every_index_exactly_once)
+{
+    const int total = GetParam();
+    std::vector<int> hits(total, 0);
+    parallel_for_(cv::Range(0, total), CountingParallelLoopBody(hits));
+    for (int i = 0; i < total; i++)
+        ASSERT_EQ(1, hits[i]) << "index " << i << " of " << total;
+}
+
+// Brackets pplParallelFor's total<=workers fast path, and goes well past it to also
+// exercise the shrinking-chunk claim loop.
+INSTANTIATE_TEST_CASE_P(/**/, Core_Parallel_IndexCoverage,
+    testing::Values(1, 2, 4, 8, 16, 17, 32, 64, 100, 300, 100000));
+
 TEST(Core_Version, consistency)
 {
     // this test verifies that OpenCV version loaded in runtime

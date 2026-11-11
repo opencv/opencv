@@ -118,6 +118,11 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <class T, size_type N>
     using get_vector_type_t = typename get_vector_type<T, N>::type;
 
+    template <class T, int vec_size>
+    struct alignas(sizeof(T) * vec_size) aligned_vector {
+        T val[vec_size];
+    };
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::device */
 
 #endif /* OPENCV_DNN_SRC_CUDA_VECTOR_TRAITS_HPP */

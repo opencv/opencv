@@ -11,6 +11,7 @@
 #ifdef HAVE_CUDA
 // #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
+#include "fusion_cuda.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 #include "../op_cann.hpp"
@@ -90,16 +91,42 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    // the fused math has a CUDA form to run after the GEMM; N is the GEMM's output width
+    bool cudaFusedActivation() const
+    {
+        return !blobs.empty() && cudaSupportsFusion(fusion, trans_b ? blobs[0].size[0] : blobs[0].size[1]);
+    }
+#endif
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (fusion.expr && !(backendId == DNN_BACKEND_CUDA && cudaFusedActivation()))
+            return backendId == DNN_BACKEND_OPENCV;
+        if (backendId == DNN_BACKEND_CUDA) {
+            // inpType is set by getTypes() on the first forward; until then use the graph's arg type
+            int t = inpType;
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (t < 0 && netimpl_ && !inputs.empty())
+                t = netimpl_->argData(inputs[0]).type;
+            if (!const_B || trans_a || (t >= 0 && t != CV_32F))
+                return false;
+            // InnerProductOp computes A*B + C: no alpha/beta scaling, and C only as a constant length-N row
+            if (alpha != 1.f || inputs.size() > 1)
+                return false;
+            if (blobs.size() >= 2) {
+                const Mat& C = blobs[1];
+                const int N = trans_b ? blobs[0].size[0] : blobs[0].size[1];
+                if (beta != 1.f || C.dims < 1 || C.total() != (size_t)N || C.size[C.dims - 1] != N)
+                    return false;
+            }
+            return true;
+        }
+#else
         if (fusion.expr)
             return backendId == DNN_BACKEND_OPENCV;
-        // inpType is set by getTypes() on the first forward; until then use the graph's arg type
-        int t = inpType;
-        Net::Impl* netimpl_ = getNetImpl(this);
-        if (t < 0 && netimpl_ && !inputs.empty())
-            t = netimpl_->argData(inputs[0]).type;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && const_B && !trans_a && (t < 0 || t == CV_32F)) ||
                backendId == DNN_BACKEND_CANN ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
@@ -634,12 +661,17 @@ public:
         std::vector<UMat> inputs;
         inputs_.getUMatVector(inputs);
         auto B = blobs[0];
-        auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
+        // with B constant, a second blob is the constant C; the graph rewrites do not set const_C
+        auto C = blobs.size() >= 2 ? blobs[1] : Mat();
 
         if (!trans_b)
             cv::transpose(B, B);
-        auto flatten_start_axis = normalize_axis(1, inputs[0].dims);
-        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
+        // flatten_a=false keeps A's leading dims as rows, as forward() does: only the last axis is K
+        auto flatten_start_axis = flatten_a ? normalize_axis(1, inputs[0].dims) : inputs[0].dims - 1;
+        // the fused activation runs on the same stream, right after the GEMM
+        csl::Stream stream = context->stream;
+        Ptr<BackendNode> gemmNode = make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
+        return makeFusedCudaNode(fusion, gemmNode, preferableTarget, stream, outputs.shape(0));
     }
 #endif // HAVE_CUDA
 

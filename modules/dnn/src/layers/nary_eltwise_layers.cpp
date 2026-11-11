@@ -21,6 +21,7 @@
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/eltwise.hpp"
+#include "../cuda4dnn/primitives/logical.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -187,6 +188,7 @@ public:
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
     NaryEltwiseHelper helper;
+    bool computeInNCHW = false;
 public:
     std::string operation;
 
@@ -329,11 +331,44 @@ public:
                    op == OPERATION::DIV;
 #endif
 
+#ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
+            if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL ||
+                op == OPERATION::LESS || op == OPERATION::LESS_EQUAL || op == OPERATION::AND ||
+                op == OPERATION::OR || op == OPERATION::XOR || op == OPERATION::WHERE) {
+                Net::Impl* netimpl_ = getNetImpl(this);
+                if (!netimpl_)
+                    return false;
+                std::vector<int> types;
+                for (const Arg& a : inputs)
+                    types.push_back(netimpl_->argData(a).type);
+                // an intermediate arg has no type until the first forward; refuse only known mismatches
+                auto isCudaType = [](int t) { return t < 0 || isCudaNodeType(t); };
+                auto isBool = [](int t) { return t < 0 || t == CV_Bool; };
+                auto sameType = [](int a, int b) { return a < 0 || b < 0 || a == b; };
+                if (op == OPERATION::WHERE)
+                    return types.size() == 3 && isBool(types[0]) && sameType(types[1], types[2]) &&
+                           isCudaType(types[1]) && isCudaType(types[2]);
+                if (types.size() != 2 || !sameType(types[0], types[1]))
+                    return false;
+                if (op == OPERATION::AND || op == OPERATION::OR || op == OPERATION::XOR)
+                    return isBool(types[0]) && isBool(types[1]);
+                return isCudaType(types[0]) && isCudaType(types[1]);
+            }
+            if (op == OPERATION::POW) {
+                // EltwiseOp reads base and exponent as one float type
+                Net::Impl* netimpl_ = getNetImpl(this);
+                if (!netimpl_ || inputs.size() != 2)
+                    return false;
+                const int tb = netimpl_->argData(inputs[0]).type, te = netimpl_->argData(inputs[1]).type;
+                auto isFloat = [](int t) { return t < 0 || t == CV_32F || t == CV_16F; };
+                return isFloat(tb) && isFloat(te) && (tb < 0 || te < 0 || tb == te);
+            }
             return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
                    op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
                    op == OPERATION::SUB  || op == OPERATION::MOD || op == OPERATION::FMOD;
         }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -390,8 +425,44 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        computeInNCHW = outputs[0].size.layout == DATA_LAYOUT_BLOCK &&
+                        needsNCHW(inputs, outputs[0]);
         helper.init(inputs, outputs);
         CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+    }
+
+    // a block input broadcast to another C or rank is computed in NCHW
+    static bool needsNCHW(const std::vector<Mat>& inputs, const Mat& out)
+    {
+        bool hasConst = false, fits = true;
+        for (const Mat& t : inputs) {
+            if (t.size.layout != DATA_LAYOUT_BLOCK) {
+                hasConst = true;
+                fits = fits && t.total() == 1;
+            } else {
+                fits = fits && t.dims == out.dims && t.size.C == out.size.C;
+            }
+        }
+        return hasConst && !fits;
+    }
+
+    void forwardInNCHW(const std::vector<Mat>& inputs, Mat& out)
+    {
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        const int C0 = out.size[out.dims - 1];
+        std::vector<Mat> plainInputs(inputs.size()), plainOutputs(1);
+        for (size_t i = 0; i < inputs.size(); i++) {
+            if (inputs[i].size.layout == DATA_LAYOUT_BLOCK)
+                transformLayout(inputs[i], plainInputs[i], origLayout, origLayout, C0);
+            else
+                plainInputs[i] = inputs[i];
+        }
+        MatShape outShape = out.size;
+        plainOutputs[0].fit(outShape.toLayout(origLayout), out.type());
+        helper.init(plainInputs, plainOutputs);
+        CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+        forward(plainInputs, plainOutputs, noArray());
+        transformLayout(plainOutputs[0], out, DATA_LAYOUT_BLOCK, origLayout, C0);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -399,8 +470,27 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        bool anyBlock = false, allBlock = true;
+        for (const MatShape& s : inputs) {
+            anyBlock = anyBlock || s.layout == DATA_LAYOUT_BLOCK;
+            allBlock = allBlock && s.layout == DATA_LAYOUT_BLOCK;
+        }
         if (inputs.size() == 1) {
             outputs.assign(1, inputs.front());
+        } else if (anyBlock && !allBlock) {
+            // constants broadcast in NCHW, the result is in block layout
+            DataLayout origLayout = getNetImpl(this)->originalLayout;
+            std::vector<MatShape> shapes = inputs;
+            int C0 = 0;
+            for (MatShape& s : shapes) {
+                if (s.layout == DATA_LAYOUT_BLOCK) {
+                    C0 = s.back();
+                    s = s.toLayout(origLayout);
+                }
+            }
+            MatShape outShape = findCommonShape(shapes);
+            outShape.layout = origLayout;
+            outputs.assign(1, outShape.toLayout(DATA_LAYOUT_BLOCK, C0));
         } else {
             MatShape outShape = findCommonShape(inputs);
             outputs.assign(1, outShape);
@@ -494,6 +584,17 @@ public:
             outputs.assign(requiredOutputs, inputs[0]);
     }
 
+    // a scalar keeps its meaning in block layout; a Div numerator would divide by zero padding
+    bool isBlockConstant(size_t i) const
+    {
+        Net::Impl* netimpl_ = getNetImpl(this);
+        bool opOk = op == OPERATION::ADD || op == OPERATION::SUM || op == OPERATION::SUB ||
+                    op == OPERATION::PROD || op == OPERATION::MAX || op == OPERATION::MIN ||
+                    (op == OPERATION::DIV && i > 0);
+        return opOk && netimpl_->originalLayout == DATA_LAYOUT_NCHW &&
+               netimpl_->isConstArg(inputs[i]) && netimpl_->argTensor(inputs[i]).total() == 1;
+    }
+
     int getLayouts(const std::vector<DataLayout>& actualInputs,
                    std::vector<DataLayout>& desiredInputs,
                    const int requiredOutputs,
@@ -501,15 +602,16 @@ public:
     {
         auto* netimpl_ = getNetImpl(this);
         DataLayout defaultLayout = netimpl_->originalLayout;
-        size_t ninputs = actualInputs.size(), nblockInputs = 0;
+        size_t ninputs = actualInputs.size(), nblockInputs = 0, nconstInputs = 0;
         CV_Assert(ninputs >= 1u);
         for (size_t i = 0; i < ninputs; i++) {
             DataLayout layout = actualInputs[i];
             nblockInputs += layout == DATA_LAYOUT_BLOCK;
+            nconstInputs += layout != DATA_LAYOUT_BLOCK && isBlockConstant(i);
         }
 
         desiredInputs = actualInputs;
-        if (nblockInputs == ninputs) {
+        if (nblockInputs > 0 && nblockInputs + nconstInputs == ninputs) {
             outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
         } else {
             if (nblockInputs < ninputs) {
@@ -1092,6 +1194,11 @@ public:
             return;
         }
 
+        if (computeInNCHW && outputs[0].size.layout == DATA_LAYOUT_BLOCK) {
+            forwardInNCHW(inputs, outputs[0]);
+            return;
+        }
+
         std::vector<Mat> used_inputs = inputs;
 
         const Mat& out0 = outputs[0];
@@ -1532,6 +1639,30 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<UMat> inputs;
         inputs_.getUMatVector(inputs);
+
+        if (op == OPERATION::WHERE) {
+            if (inputs[1].depth() == CV_Bool)
+                return make_cuda_node_bool<cuda4dnn::WhereOp>(std::move(context->stream));
+            return make_cuda_node_with_type<cuda4dnn::WhereOp>(preferableTarget, inputs[1].type(), std::move(context->stream));
+        }
+        if (op == OPERATION::AND || op == OPERATION::OR || op == OPERATION::XOR) {
+            const cuda4dnn::LogicalOpType logicalOp = op == OPERATION::AND ? cuda4dnn::LogicalOpType::AND :
+                                                      op == OPERATION::OR  ? cuda4dnn::LogicalOpType::OR :
+                                                                             cuda4dnn::LogicalOpType::XOR;
+            return make_cuda_node_bool<cuda4dnn::LogicalOp>(std::move(context->stream), logicalOp);
+        }
+        if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL ||
+            op == OPERATION::LESS || op == OPERATION::LESS_EQUAL) {
+            const cuda4dnn::CompareOpType compareOp =
+                op == OPERATION::EQUAL         ? cuda4dnn::CompareOpType::EQUAL :
+                op == OPERATION::GREATER       ? cuda4dnn::CompareOpType::GREATER :
+                op == OPERATION::GREATER_EQUAL ? cuda4dnn::CompareOpType::GREATER_EQUAL :
+                op == OPERATION::LESS          ? cuda4dnn::CompareOpType::LESS :
+                                                 cuda4dnn::CompareOpType::LESS_EQUAL;
+            if (inputs[0].depth() == CV_Bool)
+                return make_cuda_node_bool<cuda4dnn::CompareOp>(std::move(context->stream), compareOp);
+            return make_cuda_node_with_type<cuda4dnn::CompareOp>(preferableTarget, inputs[0].type(), std::move(context->stream), compareOp);
+        }
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
