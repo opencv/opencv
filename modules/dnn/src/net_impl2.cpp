@@ -556,7 +556,7 @@ Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>&
     return graph;
 }
 
-// No half kernels yet, so half constants are widened just as setGraphInput() widens inputs.
+// When FP16 is off, half constants are widened just as setGraphInput() widens inputs.
 void Net::Impl::widenHalfConstants()
 {
     if (enableFP16)

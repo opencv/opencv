@@ -260,10 +260,37 @@ void ConvState::initConv(const MatShape& inpshape_,
     }
 }
 
+// Conversion goes through float so every (InpT, OutT) pair works uniformly.
+template <typename InpT, typename OutT>
+static void repackConvWeightsT(const Mat& weights, Mat& Wpack, int ngroups, int C0_,
+                               const MatShape& wshape, const MatShape& wpackShape, int K)
+{
+    parallel_for_(Range(0, K), [&](const Range& range) {
+        const ConvWeightPack pack = ConvWeightPack::forConv(wshape, wpackShape, ngroups, C0_);
+        const int Cg = pack.Cg, ksize = pack.ksize;
+        const size_t tapStride = pack.tapStride();
+        const InpT* wdata = weights.ptr<InpT>();
+        OutT* Wpackdata = Wpack.ptr<OutT>();
+
+        for (int k = range.start; k < range.end; ++k) {
+            for (int c = 0; c < Cg; ++c) {
+                const InpT* wptr = wdata + ((size_t)(k * Cg + c) * ksize);
+                OutT* wpackptr = Wpackdata + pack.offset(k, c);
+                for (int i = 0; i < ksize; ++i) {
+                    wpackptr[i*tapStride] = OutT(float(wptr[i]));
+                }
+            }
+        }
+    });
+}
+
+// Packed blob keeps 'outtype', so FP16/BF16 weights stay 2 bytes/element into the kernel.
 void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups, int C0_)
 {
     CV_Assert(weights.isContinuous());
-    CV_Assert_N(weights.type() == CV_32F, outtype == CV_32F);
+    int inptype = weights.type();
+    CV_Assert(inptype == CV_32F || inptype == CV_16F || inptype == CV_16BF);
+    CV_Assert(outtype == CV_32F || outtype == CV_16F || outtype == CV_16BF);
     CV_Assert(ngroups > 0);
     CV_Assert((C0_ & (C0_ - 1)) == 0 && C0_ >= 4);
 
@@ -277,26 +304,26 @@ void repackConvWeights(const Mat& weights, Mat& Wpack, int outtype, int ngroups,
         Wpack.release();
     }
     MatShape wpackShape = getWpackShape(weights.shape(), ngroups, C0_);
-    Wpack.create(wpackShape, CV_32F);
+    Wpack.create(wpackShape, outtype);
     Wpack.setZero();
 
-    parallel_for_(Range(0, K), [&](const Range& range) {
-        const ConvWeightPack pack = ConvWeightPack::forConv(wshape, wpackShape, ngroups, C0_);
-        const int Cg = pack.Cg, ksize = pack.ksize;
-        const size_t tapStride = pack.tapStride();
-        const float* wdata = weights.ptr<float>();
-        float* Wpackdata = Wpack.ptr<float>();
+    #define CV_DNN_REPACK_CONV_W(InpT) \
+        if (outtype == CV_32F) \
+            repackConvWeightsT<InpT, float>(weights, Wpack, ngroups, C0_, wshape, wpackShape, K); \
+        else if (outtype == CV_16F) \
+            repackConvWeightsT<InpT, hfloat>(weights, Wpack, ngroups, C0_, wshape, wpackShape, K); \
+        else \
+            repackConvWeightsT<InpT, bfloat>(weights, Wpack, ngroups, C0_, wshape, wpackShape, K)
 
-        for (int k = range.start; k < range.end; ++k) {
-            for (int c = 0; c < Cg; ++c) {
-                const float* wptr = wdata + ((size_t)(k * Cg + c) * ksize);
-                float* wpackptr = Wpackdata + pack.offset(k, c);
-                for (int i = 0; i < ksize; ++i) {
-                    wpackptr[i*tapStride] = wptr[i];
-                }
-            }
-        }
-    });
+    if (inptype == CV_32F) {
+        CV_DNN_REPACK_CONV_W(float);
+    } else if (inptype == CV_16F) {
+        CV_DNN_REPACK_CONV_W(hfloat);
+    } else {
+        CV_DNN_REPACK_CONV_W(bfloat);
+    }
+
+    #undef CV_DNN_REPACK_CONV_W
 }
 
 

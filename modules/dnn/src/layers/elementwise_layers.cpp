@@ -353,10 +353,11 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            // Types the functor has no integer kernel for follow the default gate.
+            // Types the functor has no integer kernel for follow the default gate, plus the
+            // half types that forward() runs through forwardHalfT().
             if (!ElementWiseIntDispatch<Func>::supports(func, input))
             {
-                LayerInfo::getTypes(inputs, requiredOutputs, requiredInternals, outputs, internals);
+                getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
                 return;
             }
         }
@@ -373,7 +374,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget) && !isIntegerDepth(inputs_arr.depth()),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16F)
+        if (this->preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -382,6 +383,22 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        const int inpdepth = inputs_arr.depth();
+        if (inpdepth == CV_16F || inpdepth == CV_16BF)
+        {
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                if (inputs[i].total() == 0)
+                    continue;
+                if (inpdepth == CV_16F)
+                    forwardHalfT<hfloat>(inputs[i], outputs[i]);
+                else
+                    forwardHalfT<bfloat>(inputs[i], outputs[i]);
+            }
+            outputs_arr.assign(outputs);
+            return;
+        }
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -436,6 +453,71 @@ public:
 
             CV_Error(Error::StsUnsupportedFormat, "ElementWiseLayer: unsupported input/output type; expected CV_32F or CV_64F.");
         }
+    }
+
+    template<typename _Tp>
+    void forwardHalfT(const Mat& src, Mat& dst) const
+    {
+        CV_Assert(src.isContinuous() && dst.isContinuous());
+        CV_CheckTypeEQ(src.type(), dst.type(), "ElementWiseLayer: dst must match src type");
+
+        std::vector<float> activParams_;
+        ActivationFunc activFunc = func.getActivationFunc(CV_32F, activParams_);
+        const float* params = activParams_.empty() ? nullptr : activParams_.data();
+
+        const size_t nelems = src.total();
+        const _Tp* sp = src.ptr<_Tp>();
+        _Tp* dp = dst.ptr<_Tp>();
+        const int TILE = 1024;
+
+        if (activFunc)
+        {
+            const int ntiles = (int)((nelems + TILE - 1) / TILE);
+            parallel_for_(Range(0, ntiles), [&](const Range& r) {
+                std::vector<float> buf(TILE);
+                for (int t = r.start; t < r.end; t++) {
+                    const size_t start = (size_t)t * TILE;
+                    const size_t len = std::min((size_t)TILE, nelems - start);
+                    for (size_t i = 0; i < len; i++)
+                        buf[i] = (float)sp[start + i];
+                    activFunc(buf.data(), buf.data(), (int)len, params);
+                    for (size_t i = 0; i < len; i++)
+                        dp[start + i] = _Tp(buf[i]);
+                }
+            }, (double)nelems * (1 / 1024.0));
+            return;
+        }
+
+        int nsamples = 1, outCn = 1;
+        size_t planeSize = 1;
+        if (src.dims > 1) {
+            nsamples = src.size[0];
+            outCn = src.size[1];
+        } else {
+            outCn = src.size[0];
+        }
+        for (int i = 2; i < src.dims; ++i)
+            planeSize *= src.size[i];
+
+        const size_t sampleSize = (size_t)outCn * planeSize;
+        const int nstripes = (int)((planeSize + TILE - 1) / TILE);
+
+        parallel_for_(Range(0, nsamples * nstripes), [&](const Range& r) {
+            std::vector<float> buf(TILE);
+            for (int idx = r.start; idx < r.end; idx++) {
+                const int n = idx / nstripes, st = idx % nstripes;
+                const size_t start = (size_t)st * TILE;
+                const int len = (int)std::min((size_t)TILE, planeSize - start);
+                for (int cn = 0; cn < outCn; cn++) {
+                    const size_t off = (size_t)n * sampleSize + (size_t)cn * planeSize + start;
+                    for (int i = 0; i < len; i++)
+                        buf[i] = (float)sp[off + i];
+                    func.apply(buf.data(), buf.data(), (int)start, len, (size_t)len, cn, cn + 1);
+                    for (int i = 0; i < len; i++)
+                        dp[off + i] = _Tp(buf[i]);
+                }
+            }
+        }, (double)nelems * (1 / 1024.0));
     }
 
     void forwardSlice(const float* src, float* dst, int len, size_t planeSize, int cn0, int cn1) const CV_OVERRIDE
