@@ -87,7 +87,7 @@ static const Board g_boards[] = {
 PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             testing::Combine(
                 testing::Values(Size(16, 16), Size(32, 32), Size(64, 64), Size(128, 128)),
-                testing::Values(CV_8UC1, CV_32FC1),
+                testing::Values(CV_8UC1, CV_32FC1, CV_32FC3),
                 PatchDepth::all()
                 )
             )
@@ -106,6 +106,8 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
     {
         Mat image = imread(getDataPath(g_boards[b].path), IMREAD_GRAYSCALE);
         ASSERT_FALSE(image.empty());
+        if (CV_MAT_CN(srcType) == 3)
+            cvtColor(image, image, COLOR_GRAY2BGR);
         if (CV_MAT_DEPTH(srcType) == CV_32F)
         {
             Mat f;
@@ -116,7 +118,7 @@ PERF_TEST_P(GetRectSubPix_Test, getRectSubPix,
             srcs.push_back(image);
     }
 
-    int patchType = CV_MAKETYPE(patchDepth, 1);
+    int patchType = CV_MAKETYPE(patchDepth, CV_MAT_CN(srcType));
     Mat patch(patchSize, patchType);
 
     declare.in(srcs[0]);
