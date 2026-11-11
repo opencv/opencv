@@ -208,7 +208,6 @@
 "test_momentum",
 "test_momentum_multiple",
 "test_mvn",
-"test_mvn_expanded",
 "test_nesterov_momentum",
 "test_nllloss_NC",
 "test_nllloss_NC_expanded",
