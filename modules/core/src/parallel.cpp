@@ -454,7 +454,41 @@ namespace {
     static inline void pplParallelFor(int first, int last, const Body& body)
     {
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
-        Concurrency::parallel_for(first, last, body, Concurrency::static_partitioner());
+        // static_partitioner just spawns one task per worker; the atomic loop rebalances.
+        if (first >= last)
+            return;
+
+        const int total = last - first;
+        // cv::getNumThreads() returns 0 for WINRT, which also reaches this function.
+        const unsigned vps = Concurrency::CurrentScheduler::Get()->GetNumberOfVirtualProcessors();
+        const unsigned workers = std::min(std::max(1u, vps), (unsigned)total);
+
+        // total<=workers means one unit each, so skip the contended claim loop below.
+        if (total <= (int)workers)
+        {
+            Concurrency::parallel_for(first, last, body, Concurrency::static_partitioner());
+            return;
+        }
+
+        const int remaining_multiplier = std::min(total,
+                (int)std::max(std::min(100u, workers * 4), workers * 2));  // experimental value
+
+        std::atomic<int> current_task(0);
+        const auto worker = [&](int)
+        {
+            for (;;)
+            {
+                int chunk_size = std::max(1, (total - current_task) / remaining_multiplier);
+                int id = current_task.fetch_add(chunk_size, std::memory_order_relaxed);
+                if (id >= total)
+                    break;
+                int end_id = std::min(total, id + chunk_size);
+                for (int i = first + id; i < first + end_id; ++i)
+                    body(i);
+            }
+        };
+        Concurrency::parallel_for(0, (int)workers, worker, Concurrency::static_partitioner());
+        CV_Assert(current_task >= total);
 #else
         Concurrency::parallel_for(first, last, body);
 #endif
