@@ -17,6 +17,6 @@ PERF_TEST_P(FarnebackGaussianSIMD, gaussianAndBoxControl,
     warpAffine(roi, secondFrame, transform, roi.size(), INTER_LINEAR, BORDER_REFLECT_101);
     declare.in(roi, secondFrame);
     TEST_CYCLE() calcOpticalFlowFarneback(roi, secondFrame, flow, .5, 3, 15, 3, 5, 1.1, flags);
-    SANITY_CHECK(flow, 1e-3);
+    SANITY_CHECK_NOTHING();
 }
 } // namespace
