@@ -7,11 +7,16 @@
 
 #include <opencv2/core/base.hpp>
 
-
-#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && defined(__MAC_11_0) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_11_0) || \
-     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0) || \
-     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && defined(__WATCHOS_7_0) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_7_0) || \
-     (defined(__TV_OS_VERSION_MAX_ALLOWED) && defined(__TVOS_14_0) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_14_0))
+// sepFilter2D on top of Apple's vImage (vImageSepConvolve_*).
+//
+// Handled: 8U->8U, 8U->16U, 32F->32F and 16F->16F (16F needs macOS 13 / iOS 16 at run time),
+// with a CV_32F kernel, default anchor and BORDER_CONSTANT or BORDER_REPLICATE.
+// Everything else returns CV_HAL_ERROR_NOT_IMPLEMENTED, and OpenCV's own code is used.
+//
+// Threading: the function keeps no state, so any number of threads can call it at once.
+// The image is split into stripes of rows with cv::parallel_for_, and each stripe is filtered
+// on one thread (kvImageDoNotTile), so vImage starts no threads of its own. cv::setNumThreads()
+// and nested parallel regions work as in the rest of OpenCV.
 
 int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, int src_type,
                                        uchar* dst_data, size_t dst_step, int dst_type,
@@ -22,7 +27,5 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
 
 #undef cv_hal_sepFilter_stateless
 #define cv_hal_sepFilter_stateless accelerate_hal_sepFilter_stateless
-
-#endif
 
 #endif

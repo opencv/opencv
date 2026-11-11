@@ -967,7 +967,7 @@ if(WITH_HAL_RVV)
   endif()
 endif()
 
-if(HAVE_ACCELERATE)
+if(HAVE_ACCELERATE_HAL)
   ocv_debug_message(STATUS "Enable Accelerate framework acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";accelerate;")
     set(OpenCV_HAL "accelerate;${OpenCV_HAL}")

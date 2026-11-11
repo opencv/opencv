@@ -4,12 +4,10 @@ set(ACCELERATE_HAL_VERSION 0.0.1 CACHE INTERNAL "")
 set(ACCELERATE_HAL_LIBRARIES "accelerate_hal" CACHE INTERNAL "")
 set(ACCELERATE_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "")
 set(ACCELERATE_HAL_HEADERS
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/accelerate_hal_core.hpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/accelerate_hal_imgproc.hpp"
   CACHE INTERNAL "")
 
 add_library(accelerate_hal STATIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/accelerate_hal_core.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/accelerate_hal_imgproc.cpp"
 )
 
