@@ -1325,6 +1325,29 @@ TEST_P(Imgproc_CubicPeriodicCoordinates, accuracy)
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicPeriodicCoordinates, testing::Values(
     CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9)));
 
+typedef testing::TestWithParam<int> Imgproc_CubicOutsideSource;
+
+TEST_P(Imgproc_CubicOutsideSource, constant_and_transparent)
+{
+    const int type = GetParam();
+    Mat src(4, 4, type), result(1, 2, type);
+    src.reshape(1).setTo(std::numeric_limits<double>::quiet_NaN());
+    // At floor(-2.75) == -3, even the rightmost (or bottommost) tap is outside.
+    Mat mapx = Mat_<float>({1, 2}, {-2.75f, 1.25f});
+    Mat mapy = Mat_<float>({1, 2}, {1.25f, -2.75f});
+
+    result.reshape(1).setTo(0.75);
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    for (int i = 0; i < result.cols*result.channels(); ++i)
+        EXPECT_EQ(0.75, result.ptr<double>()[i]);
+
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_CONSTANT, Scalar::all(0.25));
+    for (int i = 0; i < result.cols*result.channels(); ++i)
+        EXPECT_EQ(0.25, result.ptr<double>()[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicOutsideSource, testing::Values(CV_64FC1, CV_64FC(5)));
+
 TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
 {
     Mat src(4, 4, CV_32FC(5)), result(1, 3, CV_32FC(5));

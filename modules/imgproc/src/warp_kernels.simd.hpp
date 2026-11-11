@@ -7020,9 +7020,8 @@ bicubicWeights(float alpha, float A, float& w0, float& w1, float& w2, float& w3)
 }
 
 static CV_ALWAYS_INLINE int
-bicubicCoeffs(float xs0, float ys0,
-              size_t srcstep, Size size, int bpp, float A,
-              int bordertype, int& tl_x, int& tl_y, int& tl_ofs,
+bicubicCoeffs(float xs0, float ys0, Size size, float A,
+              int bordertype, int& tl_x, int& tl_y,
               float& wx0, float& wx1, float& wx2, float& wx3,
               float& wy0, float& wy1, float& wy2, float& wy3)
 {
@@ -7033,10 +7032,9 @@ bicubicCoeffs(float xs0, float ys0,
     float minx = float(-bigwidth), maxx = float(bigwidth*2);
     float miny = float(-bigheight), maxy = float(bigheight*2);
 
-    // clamp coordinates in floating-point to try to avoid unpredictable
-    // behavior if the floating-point coordinates are huge
-    float vx0 = std::clamp(xs0, minx, maxx);
-    float vy0 = std::clamp(ys0, miny, maxy);
+    // Clamp before converting to integers, with NaN mapped to the lower bound.
+    float vx0 = std::clamp(std::isnan(xs0) ? minx : xs0, minx, maxx);
+    float vy0 = std::clamp(std::isnan(ys0) ? miny : ys0, miny, maxy);
 
     int ix0 = cvFloor(vx0);
     int iy0 = cvFloor(vy0);
@@ -7046,8 +7044,8 @@ bicubicCoeffs(float xs0, float ys0,
     ix0--;
     iy0--;
 
-    int all_outliers = int((unsigned)(ix0 + 4) >= (unsigned)(width + 4)) |
-                       int((unsigned)(iy0 + 4) >= (unsigned)(height + 4));
+    int all_outliers = int((unsigned)(ix0 + 3) >= (unsigned)(width + 3)) |
+                       int((unsigned)(iy0 + 3) >= (unsigned)(height + 3));
     if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
         return -1;
 
@@ -7056,7 +7054,6 @@ bicubicCoeffs(float xs0, float ys0,
 
     tl_x = ix0;
     tl_y = iy0;
-    tl_ofs = iy0*(int)srcstep + ix0*bpp;
 
     bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
     bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
@@ -7261,15 +7258,15 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
 
     for (int i = 0; i < len; i++, dst += NCHANNELS) {
         buftype pixbuf[NCHANNELS][4];
-        int tl_x, tl_y, tl_ofs, goodx[4];
+        int tl_x, tl_y, goodx[4];
         acctype V0, V1, V2, V3;
         float wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3;
         float xs = srcx[i], ys = srcy[i];
 
-        int code = bicubicCoeffs(xs, ys, srcstep, size, BPP, A,
-                                 borderType, tl_x, tl_y, tl_ofs,
+        int code = bicubicCoeffs(xs, ys, size, A, borderType, tl_x, tl_y,
                                  wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
         if (code > 0) {
+            const size_t tl_ofs = size_t(tl_y)*srcstep + size_t(tl_x)*BPP;
             const chtype* srcrow;
             if constexpr (NCHANNELS == 1) {
                 acctype acc_r = 0;
@@ -8630,14 +8627,14 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 // Expanding loads may read a full register, so image tails are copied into padded storage.
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 template<typename T>
-static inline v_float32 bicubicLoadChannels(const T* src)
+static inline v_float32 bicubicLoadChannels(const T* src, int lanes)
 {
     if constexpr (std::is_same_v<T, float>)
         return vx_load(src);
     else
     {
-        alignas(CV_SIMD_WIDTH) T values[CV_SIMD_WIDTH/sizeof(T)] = {};
-        std::memcpy(values, src, VTraits<v_float32>::nlanes*sizeof(T));
+        alignas(CV_SIMD_WIDTH) T values[VTraits<v_uint8>::max_nlanes/sizeof(T)] = {};
+        std::memcpy(values, src, lanes*sizeof(T));
         if constexpr (std::is_same_v<T, uchar>)
             return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(values)));
         else if constexpr (std::is_same_v<T, ushort>)
@@ -8648,7 +8645,7 @@ static inline v_float32 bicubicLoadChannels(const T* src)
 }
 
 template<typename T>
-static inline void bicubicStoreChannels(T* dst, const v_float32& value)
+static inline void bicubicStoreChannels(T* dst, const v_float32& value, int lanes)
 {
     if constexpr (std::is_same_v<T, float>)
         vx_store(dst, value);
@@ -8658,10 +8655,10 @@ static inline void bicubicStoreChannels(T* dst, const v_float32& value)
         if constexpr (std::is_same_v<T, uchar>)
         {
             const v_uint16 words = v_pack_u(rounded, rounded);
-            alignas(CV_SIMD_WIDTH) uchar packed[CV_SIMD_WIDTH];
+            alignas(CV_SIMD_WIDTH) uchar packed[VTraits<v_uint8>::max_nlanes];
             // Store packed lanes to scratch to avoid writing past the channel tail.
             v_store_low(packed, v_pack(words, words));
-            std::memcpy(dst, packed, VTraits<v_float32>::nlanes*sizeof(T));
+            std::memcpy(dst, packed, lanes);
         }
         else if constexpr (std::is_same_v<T, ushort>)
             v_store_low(dst, v_pack_u(rounded, rounded));
@@ -8722,32 +8719,6 @@ static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
 }
 #endif
 
-static inline void bicubicWarpIndices(double base, int length, int borderType, int indices[4])
-{
-    if (length > 1 && (borderType == BORDER_WRAP || borderType == BORDER_REFLECT ||
-                       borderType == BORDER_REFLECT_101))
-    {
-        const int delta = borderType == BORDER_REFLECT_101;
-        const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
-        const double phase = std::fmod(base, period);
-        for (int tap = 0; tap < 4; ++tap)
-        {
-            double index = phase + tap - 1;
-            if (index < 0)
-                index += period;
-            else if (index >= period)
-                index -= period;
-            indices[tap] = int(index < length ? index : period - index - 1 + delta);
-        }
-    }
-    else
-    {
-        for (int tap = 0; tap < 4; ++tap)
-            indices[tap] = borderInterpolate(int(std::clamp(base + tap - 1, -1., double(length))),
-                                             length, borderType);
-    }
-}
-
 template<typename T>
 static void bicubicWarpChannels(const float* x, const float* y, int len,
                                 const void* source, size_t step, Size size, void* destination,
@@ -8758,27 +8729,23 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const T* fill = static_cast<const T*>(borderValue);
     T* dst = static_cast<T*>(destination);
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
-    const int bigwidth = std::max(size.width, 16), bigheight = std::max(size.height, 16);
-    const float minX = float(-bigwidth), minY = float(-bigheight);
-    const float maxX = float(bigwidth*2), maxY = float(bigheight*2);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int lanes = VTraits<v_float32>::vlanes();
+#endif
     for (int i = 0; i < len; ++i, dst += channels)
     {
-        const float sx = std::isfinite(x[i]) ? std::clamp(x[i], minX, maxX) : x[i] > 0 ? maxX : minX;
-        const float sy = std::isfinite(y[i]) ? std::clamp(y[i], minY, maxY) : y[i] > 0 ? maxY : minY;
-        const double baseX = std::floor(sx), baseY = std::floor(sy);
-        if ((baseX - 1 >= size.width || baseX + 3 <= 0 || baseY - 1 >= size.height || baseY + 3 <= 0) &&
-            (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
+        int left, top;
+        float wx[4], wy[4];
+        const int code = bicubicCoeffs(x[i], y[i], size, coefficient, borderType, left, top,
+                                      wx[0], wx[1], wx[2], wx[3], wy[0], wy[1], wy[2], wy[3]);
+        if (code < 0)
         {
             if (borderType == BORDER_CONSTANT)
                 std::copy(fill, fill + channels, dst);
             continue;
         }
-        float wx[4], wy[4];
-        bicubicWeights(float(sx - baseX), coefficient, wx[0], wx[1], wx[2], wx[3]);
-        bicubicWeights(float(sy - baseY), coefficient, wy[0], wy[1], wy[2], wy[3]);
-        if (baseX >= 1 && baseX + 2 < size.width && baseY >= 1 && baseY + 2 < size.height)
+        if (code > 0)
         {
-            const int left = int(baseX) - 1, top = int(baseY) - 1;
             const T* rows[4];
             for (int row = 0; row < 4; ++row)
                 rows[row] = reinterpret_cast<const T*>(static_cast<const uchar*>(source) + size_t(top + row)*step)
@@ -8809,7 +8776,6 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             if constexpr (!std::is_same_v<T, double>)
             {
-                const int lanes = VTraits<v_float32>::nlanes;
                 const v_float32 w0 = vx_setall_f32(wx[0]), w1 = vx_setall_f32(wx[1]);
                 const v_float32 w2 = vx_setall_f32(wx[2]), w3 = vx_setall_f32(wx[3]);
                 for (; channel <= channels - lanes; channel += lanes)
@@ -8818,13 +8784,13 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const T* ptr = rows[row] + channel;
-                        v_float32 horizontal = v_add(v_mul(bicubicLoadChannels(ptr), w0),
-                                                    v_mul(bicubicLoadChannels(ptr + channels), w1));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2), w2));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3), w3));
+                        v_float32 horizontal = v_add(v_mul(bicubicLoadChannels(ptr, lanes), w0),
+                                                    v_mul(bicubicLoadChannels(ptr + channels, lanes), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2, lanes), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3, lanes), w3));
                         sum = v_add(sum, v_mul(horizontal, vx_setall_f32(wy[row])));
                     }
-                    bicubicStoreChannels(dst + channel, sum);
+                    bicubicStoreChannels(dst + channel, sum, lanes);
                 }
             }
 #endif
@@ -8863,8 +8829,11 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
             continue;
         }
         int columns[4], rows[4];
-        bicubicWarpIndices(baseX, size.width, sampleBorder, columns);
-        bicubicWarpIndices(baseY, size.height, sampleBorder, rows);
+        for (int tap = 0; tap < 4; ++tap)
+        {
+            columns[tap] = borderInterpolate(left + tap, size.width, sampleBorder);
+            rows[tap] = borderInterpolate(top + tap, size.height, sampleBorder);
+        }
         const T* pixels[4][4];
         for (int row = 0; row < 4; ++row)
         {
