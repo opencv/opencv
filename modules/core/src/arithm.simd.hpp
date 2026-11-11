@@ -385,6 +385,28 @@ struct EwMul {
     template<typename V, typename S> static V vec(const V& a, const V& b, const S&) { return vec(a, b); }
     template<typename V> static V preproc(const V& a, const V& s) { return v_mul(a, s); }
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s * b; }
+    // 64-bit integers: a double holds only 53 bits, so a product through it is inexact above 2^53
+    // (UINT64_MAX / 2 * 1 became 2^63). At scale 1 the product is exact, clamped to the depth's
+    // range; any other scale stays in double.
+    static uint64_t scl(uint64_t a, uint64_t b, double s)
+    {
+        if (s != 1.0)
+            return saturate_cast<uint64_t>((double)a * s * (double)b);
+        return (a == 0 || b <= UINT64_MAX / a) ? a * b : UINT64_MAX;
+    }
+    static int64_t scl(int64_t a, int64_t b, double s)
+    {
+        if (s != 1.0)
+            return saturate_cast<int64_t>((double)a * s * (double)b);
+        const bool neg = (a < 0) != (b < 0);
+        const uint64_t ua = a < 0 ? 0 - (uint64_t)a : (uint64_t)a;   // exact for INT64_MIN too
+        const uint64_t ub = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
+        const uint64_t limit = (uint64_t)INT64_MAX + (neg ? 1 : 0);
+        if (ua != 0 && ub > limit / ua)
+            return neg ? INT64_MIN : INT64_MAX;
+        const uint64_t p = ua * ub;
+        return neg ? (int64_t)(0 - p) : (int64_t)p;
+    }
 };
 // div has two variants by the COMMON INPUT type (matching cv::'s per-type kernel choice): integer
 // inputs guard divide-by-zero -> 0 (cv:: iscalar_div); float inputs do NOT guard (cv:: fscalar_div,
@@ -402,6 +424,38 @@ struct EwDivInt {
     }
     template<typename V> static V preproc(const V& a, const V&) { return a; }   // identity: scale is in vec
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return b != W(0) ? a * s / b : W(0); }
+    // 64-bit integers: the quotient through a double is inexact above 2^53 (x / 1 != x). At scale 1
+    // it is exact, rounded to nearest with ties to even like the narrower depths, and clamped to the
+    // depth's range; any other scale stays in double.
+    static uint64_t scl(uint64_t a, uint64_t b, double s)
+    {
+        if (b == 0)
+            return 0;
+        if (s != 1.0)
+            return saturate_cast<uint64_t>((double)a * s / (double)b);
+        uint64_t q = a / b;
+        const uint64_t r = a % b;
+        if (r > b - r || (r == b - r && (q & 1)))
+            q++;
+        return q;
+    }
+    static int64_t scl(int64_t a, int64_t b, double s)
+    {
+        if (b == 0)
+            return 0;
+        if (s != 1.0)
+            return saturate_cast<int64_t>((double)a * s / (double)b);
+        const bool neg = (a < 0) != (b < 0);
+        const uint64_t ua = a < 0 ? 0 - (uint64_t)a : (uint64_t)a;   // exact for INT64_MIN too
+        const uint64_t ub = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
+        uint64_t q = ua / ub;
+        const uint64_t r = ua % ub;
+        if (r > ub - r || (r == ub - r && (q & 1)))
+            q++;
+        if (q > (uint64_t)INT64_MAX + (neg ? 1 : 0))
+            return neg ? INT64_MIN : INT64_MAX;
+        return neg ? (int64_t)(0 - q) : (int64_t)q;
+    }
 };
 struct EwDivFlt {
     static constexpr bool useScalar = true;
@@ -1217,10 +1271,12 @@ TKernel getMulFunc_(int T, int R)
         #endif
         break;
     case CV_64U:
-        fptr = R == CV_64F ? scalarBinaryKernel<uint64_t, double, double, EwMul> : nullptr;
+        fptr = R == CV_64U ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwMul, double> :
+               R == CV_64F ? scalarBinaryKernel<uint64_t, double, double, EwMul> : nullptr;
         break;
     case CV_64S:
-        fptr = R == CV_64F ? scalarBinaryKernel<int64_t,  double, double, EwMul> : nullptr;
+        fptr = R == CV_64S ? scalarBinaryKernel<int64_t, int64_t, int64_t, EwMul, double> :
+               R == CV_64F ? scalarBinaryKernel<int64_t,  double, double, EwMul> : nullptr;
         break;
     case CV_64F:
         #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
@@ -1266,8 +1322,10 @@ TKernel getDivFunc_(int T, int R, bool checked)
     case CV_32F:  fptr = R==CV_32F ? DIV(float,  float,  v_float32, float) : nullptr; break;
     case CV_32U:  fptr = R==CV_32U ? DIVW(unsigned, unsigned) : R==CV_64F ? DIVW(unsigned, double) : nullptr; break;
     case CV_32S:  fptr = R==CV_32S ? DIVW(int,      int)      : R==CV_64F ? DIVW(int,      double) : nullptr; break;
-    case CV_64U:  fptr = R==CV_64F ? DIVW(uint64_t, double) : nullptr; break;
-    case CV_64S:  fptr = R==CV_64F ? DIVW(int64_t,  double) : nullptr; break;
+    case CV_64U:  fptr = R==CV_64U ? (checked ? scalarBinaryKernel<uint64_t, uint64_t, uint64_t, EwDivInt, double> : nullptr) :
+                         R==CV_64F ? DIVW(uint64_t, double) : nullptr; break;
+    case CV_64S:  fptr = R==CV_64S ? (checked ? scalarBinaryKernel<int64_t, int64_t, int64_t, EwDivInt, double> : nullptr) :
+                         R==CV_64F ? DIVW(int64_t,  double) : nullptr; break;
     case CV_64F:  fptr = R==CV_64F ? DIVW(double,   double) : nullptr; break;
     default:      ;
     }

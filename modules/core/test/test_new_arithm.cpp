@@ -432,4 +432,74 @@ TEST(Core_EW_AddSub, saturation_s32_u32)
     }
 }
 
+// cv::multiply on 64-bit integers: the product is exact (a double holds only 53 bits) and saturates
+// at the depth's range. Uniform random data never gets near the boundaries, so the cases are directed:
+// products above 2^53, exactly at the limit, one past it, and the INT64_MIN edge.
+TEST(Core_EW_Mul, exact_and_saturating_s64_u64)
+{
+    {
+        const uint64_t a[] = { UINT64_MAX / 2, UINT64_MAX, 1ull << 32, (1ull << 32) + 1, 0, UINT64_MAX, 3, 3037000499ull, 9007199254740993ull };
+        const uint64_t b[] = { 1, 1, 1ull << 32, (1ull << 32) - 1, UINT64_MAX, 2, UINT64_MAX / 3, 3037000499ull, 3 };
+        const uint64_t e[] = { 9223372036854775807ull, UINT64_MAX, UINT64_MAX, UINT64_MAX, 0, UINT64_MAX, UINT64_MAX, 9223372030926249001ull, 27021597764222979ull };
+        const int n = (int)(sizeof(a)/sizeof(a[0]));
+        Mat A(1, n, CV_64U, (void*)a), B(1, n, CV_64U, (void*)b), P;
+        cv::multiply(A, B, P);
+        ASSERT_EQ(P.type(), CV_64U);
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(P.at<uint64_t>(i), e[i]) << "mul u64 case " << i;
+    }
+    {
+        const int64_t a[] = { INT64_MAX, INT64_MIN, INT64_MIN, -1, 3037000500ll, -3037000500ll, -(1ll << 31), 1ll << 32, 0, 9007199254740993ll };
+        const int64_t b[] = { 1, 1, -1, 3074457345618258602ll, 3037000500ll, 3037000500ll, 1ll << 32, 1ll << 31, INT64_MIN, -3 };
+        const int64_t e[] = { INT64_MAX, INT64_MIN, INT64_MAX, -3074457345618258602ll, INT64_MAX, INT64_MIN, INT64_MIN, INT64_MAX, 0, -27021597764222979ll };
+        const int n = (int)(sizeof(a)/sizeof(a[0]));
+        Mat A(1, n, CV_64S, (void*)a), B(1, n, CV_64S, (void*)b), P;
+        cv::multiply(A, B, P);
+        ASSERT_EQ(P.type(), CV_64S);
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(P.at<int64_t>(i), e[i]) << "mul s64 case " << i;
+    }
+}
+
+// A scale other than 1 keeps the double computation.
+TEST(Core_EW_Mul, scaled_s64)
+{
+    Mat A(1, 3, CV_64S), B(1, 3, CV_64S), P;
+    A.at<int64_t>(0) = 3;         B.at<int64_t>(0) = 4;
+    A.at<int64_t>(1) = INT64_MAX; B.at<int64_t>(1) = 2;
+    A.at<int64_t>(2) = -5;        B.at<int64_t>(2) = 4;
+    cv::multiply(A, B, P, 2.0);
+    EXPECT_EQ(P.at<int64_t>(0), 24);
+    EXPECT_EQ(P.at<int64_t>(1), INT64_MAX);
+    EXPECT_EQ(P.at<int64_t>(2), -40);
+}
+
+// cv::divide on 64-bit integers: the quotient is exact (x / 1 == x above 2^53), rounded to nearest with
+// ties to even like the narrower depths, divide-by-zero gives 0, and the result saturates at the range.
+TEST(Core_EW_Div, exact_and_saturating_s64_u64)
+{
+    {
+        const uint64_t a[] = { UINT64_MAX - 1, 9007199254740993ull, 9007199254740993ull, 7, 5, 1ull << 63, UINT64_MAX, UINT64_MAX, 1, 12345 };
+        const uint64_t b[] = { 1, 1, 3, 2, 2, UINT64_MAX - 1, 3, UINT64_MAX, 3, 0 };
+        const uint64_t e[] = { UINT64_MAX - 1, 9007199254740993ull, 3002399751580331ull, 4, 2, 1, 6148914691236517205ull, 1, 0, 0 };
+        const int n = (int)(sizeof(a)/sizeof(a[0]));
+        Mat A(1, n, CV_64U, (void*)a), B(1, n, CV_64U, (void*)b), Q;
+        cv::divide(A, B, Q);
+        ASSERT_EQ(Q.type(), CV_64U);
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(Q.at<uint64_t>(i), e[i]) << "div u64 case " << i;
+    }
+    {
+        const int64_t a[] = { INT64_MIN, -INT64_MAX, 3074457345618258602ll, -9007199254740993ll, -5, -7, 7, INT64_MIN, INT64_MAX, INT64_MIN, -12345 };
+        const int64_t b[] = { -1, 1, -2, 3, 2, 2, -2, 1, -1, 2, 0 };
+        const int64_t e[] = { INT64_MAX, -INT64_MAX, -1537228672809129301ll, -3002399751580331ll, -2, -4, -4, INT64_MIN, -INT64_MAX, -4611686018427387904ll, 0 };
+        const int n = (int)(sizeof(a)/sizeof(a[0]));
+        Mat A(1, n, CV_64S, (void*)a), B(1, n, CV_64S, (void*)b), Q;
+        cv::divide(A, B, Q);
+        ASSERT_EQ(Q.type(), CV_64S);
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(Q.at<int64_t>(i), e[i]) << "div s64 case " << i;
+    }
+}
+
 }} // namespace
