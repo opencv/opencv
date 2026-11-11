@@ -11,7 +11,7 @@ import os as _os, pathlib, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 
 from conf_helpers.state import (
-    DOC_ROOT, CONTRIB_ROOT, SPHINX_INPUT_ROOT,
+    DOC_ROOT, CONTRIB_ROOT, SPHINX_INPUT_ROOT, OPENCV_RELEASE,
     DOC_MODULES, JS_DOC_MODULES, PY_DOC_MODULES, CONTRIB_MODULES, API_MODULES,
     DOXYGEN_BASE_URL, _PATCHED_XML_DIR, HAVE_BREATHE,
     USE_INDEX_LANDING,
@@ -24,7 +24,7 @@ from conf_helpers.postprocess import _inline_coll_graphs_on_finish
 # -- Project ----------------------------------------------------------------
 project = "OpenCV"
 author = "OpenCV Team"
-release = "5.1"
+release = OPENCV_RELEASE
 
 # -- Sphinx core ------------------------------------------------------------
 extensions = ["myst_parser"]

@@ -12,6 +12,16 @@ HERE = pathlib.Path(__file__).resolve().parent.parent
 DOC_ROOT = (HERE.parent / "doc").resolve()
 OPENCV_ROOT = HERE.parent.resolve()
 
+def _opencv_release() -> str:
+    """Version label from core/version.hpp: "X.Y" for an X.Y.0 release, else full (e.g. "5.2.0-dev")."""
+    hdr = (OPENCV_ROOT / "modules" / "core" / "include" / "opencv2" / "core" / "version.hpp").read_text()
+    v = dict(re.findall(r'#define\s+CV_VERSION_(MAJOR|MINOR|REVISION|STATUS)\s+"?([^"\s]*)', hdr))
+    if v["REVISION"] == "0" and not v["STATUS"]:
+        return f'{v["MAJOR"]}.{v["MINOR"]}'
+    return f'{v["MAJOR"]}.{v["MINOR"]}.{v["REVISION"]}{v["STATUS"]}'
+
+OPENCV_RELEASE = _opencv_release()
+
 # SCOPE — tutorial module folders; env override or auto-discover per tree
 import os as _os
 
