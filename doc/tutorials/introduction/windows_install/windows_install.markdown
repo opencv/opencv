@@ -151,7 +151,7 @@ of them, you need to download and install them on your system.
     of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since
     this is not a free service.
 -   OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one
-    by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
+    by using the [Qt framework](https://www.qt.io/development/offline-installers). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
     the framework is required.
 -   [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) is a C++ template library for linear algebra.
