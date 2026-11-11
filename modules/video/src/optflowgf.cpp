@@ -416,7 +416,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     double sigma = m*0.3, s = 1;
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
-    AutoBuffer<float> _kernel((m+1)*5 + 16);
+    AutoBuffer<float> _kernel(m+1);
     AutoBuffer<const float*> _srow(m*2+1);
     float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
     float* kernel = _kernel.data();
@@ -434,12 +434,8 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     for( i = 0; i <= m; i++ )
         kernel[i] = (float)(kernel[i]*s);
 
-#if CV_SIMD128
-    float* simd_kernel = alignPtr(kernel + m+1, 16);
-    {
-        for( i = 0; i <= m; i++ )
-            v_store(simd_kernel + i*4, v_setall_f32(kernel[i]));
-    }
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const int lanes = VTraits<v_float32>::vlanes();
 #endif
 
     // compute blur(G)*flow=blur(h)
@@ -457,59 +453,50 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         x = 0;
 
-#if CV_RVV && CV_SIMD_SCALABLE
-        const int lanes = VTraits<v_float32>::vlanes();
-        for (; x <= width*5 - lanes; x += lanes)
+#if CV_SIMD || CV_SIMD_SCALABLE
         {
-            v_float32 acc = v_mul(vx_load(srow[m] + x), vx_setall_f32(kernel[0]));
-            for (i = 1; i <= m; ++i)
-                acc = v_add(acc, v_mul(v_add(vx_load(srow[m-i] + x), vx_load(srow[m+i] + x)), vx_setall_f32(kernel[i])));
-            v_store(vsum + x, acc);
-        }
-#elif CV_SIMD128
-        {
-            for( ; x <= width*5 - 16; x += 16 )
+            for( ; x <= width*5 - 4*lanes; x += 4*lanes )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0, s1, s2, s3;
-                s0 = v_mul(v_load(sptr0 + x), g4);
-                s1 = v_mul(v_load(sptr0 + x + 4), g4);
-                s2 = v_mul(v_load(sptr0 + x + 8), g4);
-                s3 = v_mul(v_load(sptr0 + x + 12), g4);
+                v_float32 g4 = vx_setall_f32(kernel[0]);
+                v_float32 s0, s1, s2, s3;
+                s0 = v_mul(vx_load(sptr0 + x), g4);
+                s1 = v_mul(vx_load(sptr0 + x + lanes), g4);
+                s2 = v_mul(vx_load(sptr0 + x + 2*lanes), g4);
+                s3 = v_mul(vx_load(sptr0 + x + 3*lanes), g4);
 
                 for( i = 1; i <= m; i++ )
                 {
-                    v_float32x4 x0, x1;
+                    v_float32 x0, x1;
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = v_load(simd_kernel + i*4);
-                    x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
-                    x1 = v_add(v_load(sptr0 + x + 4), v_load(sptr1 + x + 4));
+                    g4 = vx_setall_f32(kernel[i]);
+                    x0 = v_add(vx_load(sptr0 + x), vx_load(sptr1 + x));
+                    x1 = v_add(vx_load(sptr0 + x + lanes), vx_load(sptr1 + x + lanes));
                     s0 = v_muladd(x0, g4, s0);
                     s1 = v_muladd(x1, g4, s1);
-                    x0 = v_add(v_load(sptr0 + x + 8), v_load(sptr1 + x + 8));
-                    x1 = v_add(v_load(sptr0 + x + 12), v_load(sptr1 + x + 12));
+                    x0 = v_add(vx_load(sptr0 + x + 2*lanes), vx_load(sptr1 + x + 2*lanes));
+                    x1 = v_add(vx_load(sptr0 + x + 3*lanes), vx_load(sptr1 + x + 3*lanes));
                     s2 = v_muladd(x0, g4, s2);
                     s3 = v_muladd(x1, g4, s3);
                 }
 
                 v_store(vsum + x, s0);
-                v_store(vsum + x + 4, s1);
-                v_store(vsum + x + 8, s2);
-                v_store(vsum + x + 12, s3);
+                v_store(vsum + x + lanes, s1);
+                v_store(vsum + x + 2*lanes, s2);
+                v_store(vsum + x + 3*lanes, s3);
             }
 
-            for( ; x <= width*5 - 4; x += 4 )
+            for( ; x <= width*5 - lanes; x += lanes )
             {
                 const float *sptr0 = srow[m], *sptr1;
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0 = v_mul(v_load(sptr0 + x), g4);
+                v_float32 g4 = vx_setall_f32(kernel[0]);
+                v_float32 s0 = v_mul(vx_load(sptr0 + x), g4);
 
                 for( i = 1; i <= m; i++ )
                 {
                     sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = v_load(simd_kernel + i*4);
-                    v_float32x4 x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
+                    g4 = vx_setall_f32(kernel[i]);
+                    v_float32 x0 = v_add(vx_load(sptr0 + x), vx_load(sptr1 + x));
                     s0 = v_muladd(x0, g4, s0);
                 }
                 v_store(vsum + x, s0);
@@ -534,35 +521,36 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_RVV && CV_SIMD_SCALABLE
-        const int hlanes = VTraits<v_float32>::vlanes();
-        for (; x <= width*5 - hlanes; x += hlanes)
+#if CV_SIMD || CV_SIMD_SCALABLE
         {
-            v_float32 acc = v_mul(vx_load(vsum + x), vx_setall_f32(kernel[0]));
-            for (i = 1; i <= m; ++i)
-                acc = v_add(acc, v_mul(v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5)), vx_setall_f32(kernel[i])));
-            v_store(hsum + x, acc);
-        }
-#elif CV_SIMD128
-        {
-            for( ; x <= width*5 - 8; x += 8 )
+            for( ; x <= width*5 - 2*lanes; x += 2*lanes )
             {
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0 = v_mul(v_load(vsum + x), g4);
-                v_float32x4 s1 = v_mul(v_load(vsum + x + 4), g4);
+                v_float32 g4 = vx_setall_f32(kernel[0]);
+                v_float32 s0 = v_mul(vx_load(vsum + x), g4);
+                v_float32 s1 = v_mul(vx_load(vsum + x + lanes), g4);
 
                 for( i = 1; i <= m; i++ )
                 {
-                    g4 = v_load(simd_kernel + i*4);
-                    v_float32x4 x0 = v_add(v_load(vsum + x - i * 5), v_load(vsum + x + i * 5));
-                    v_float32x4 x1 = v_add(v_load(vsum + x - i * 5 + 4), v_load(vsum + x + i * 5 + 4));
+                    g4 = vx_setall_f32(kernel[i]);
+                    v_float32 x0 = v_add(vx_load(vsum + x - i * 5), vx_load(vsum + x + i * 5));
+                    v_float32 x1 = v_add(vx_load(vsum + x - i * 5 + lanes), vx_load(vsum + x + i * 5 + lanes));
                     s0 = v_muladd(x0, g4, s0);
                     s1 = v_muladd(x1, g4, s1);
                 }
 
                 v_store(hsum + x, s0);
-                v_store(hsum + x + 4, s1);
+                v_store(hsum + x + lanes, s1);
             }
+        }
+        for (; x <= width*5 - lanes; x += lanes)
+        {
+            v_float32 sum = v_mul(vx_load(vsum + x), vx_setall_f32(kernel[0]));
+            for (i = 1; i <= m; ++i)
+            {
+                v_float32 pair = v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5));
+                sum = v_muladd(pair, vx_setall_f32(kernel[i]), sum);
+            }
+            v_store(hsum + x, sum);
         }
 #endif
 
