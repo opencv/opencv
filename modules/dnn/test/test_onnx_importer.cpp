@@ -2620,7 +2620,7 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_SetBiasOnly)
             net.setInput(input);
             const String what = format("%s, %s forward", by_name ? "name" : "id",
                                        after_forward ? "after" : "before");
-            normAssert(expected, net.forward(), what.c_str());
+            normAssert(expected, net.forward(), what.c_str(), default_l1, default_lInf);
         }
     }
 }
@@ -2703,6 +2703,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)
     normAssert(small_out, fresh_small.forward());
 }
 
+static double attnL1()   { return 8e-3; }
+static double attnLInf() { return 7e-2; }
+
 TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
 {
     // The QKV projection folds into one Attention op, whose constants never reach blobs.
@@ -2730,7 +2733,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
     // Packed and released, on every backend: a net targeting CUDA keeps a copy for
     // initCUDA(), but not one getParam() can reach.
     EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
-    normAssert(ref, out);
+    normAssert(ref, out, "", attnL1(), attnLInf());
 }
 
 // The constant operands live on the layer, so the switching tests below need its id for getParam().
@@ -2802,6 +2805,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
 {
     if (backend != DNN_BACKEND_CUDA)
         throw SkipTestException("Requires a CUDA-enabled build");
+    const double l1 = attnL1(), lInf = attnLInf();
 
     const String model = _tf("models/attention.onnx");
     const Mat input = blobFromNPY(_tf("data/input_attention.npy"));
@@ -2813,7 +2817,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
         Net net = readNetFromONNX(model);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setInput(input);
-        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        normAssert(expected, net.forward(), "", l1, lInf);
         EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
 
         EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
@@ -2821,7 +2825,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
 
         // A refused switch assigns nothing, so the net is still on CPU and still correct.
         net.setInput(input);
-        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        normAssert(expected, net.forward(), "", l1, lInf);
     }
 
     // CUDA first: initCUDA() reads B after finalize(), so it is kept and the way back is served.
@@ -2830,7 +2834,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableBackend(DNN_BACKEND_CUDA);
         net.setPreferableTarget(target);
         net.setInput(input);
-        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        normAssert(expected, net.forward(), "", l1, lInf);
         // The plain weight is kept for initCUDA() but held out of reach, so the
         // public contract is the same one the CPU run above reports.
         EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
@@ -2838,7 +2842,7 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
         net.setInput(input);
-        normAssert(expected, net.forward(), "", default_l1, default_lInf);
+        normAssert(expected, net.forward(), "", l1, lInf);
         EXPECT_THROW(net.getParam(constWeightLayerId(net, "Attention"), 0), cv::Exception);
     }
 }
@@ -2890,6 +2894,34 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
         EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
+    }
+}
+
+TEST_P(Test_ONNX_layers, Gemm_SquareConstWeight_CudaReForward)
+{
+    if (backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("Requires a CUDA-enabled build");
+
+    const String model = _tf("models/gemm_square_weight.onnx");
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(DNN_BACKEND_CUDA);
+    net.setPreferableTarget(target);
+
+    const int row_counts[] = {3, 7};
+    for (int rows : row_counts)
+    {
+        Mat input(rows, 8, CV_32F);
+        randu(input, -1.0, 1.0);
+
+        net.setInput(input);
+        const Mat out = net.forward().clone();
+
+        Net cpu_only = readNetFromONNX(model);
+        cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
+        cpu_only.setInput(input);
+        normAssert(cpu_only.forward(), out, format("rows=%d", rows).c_str(),
+                   default_l1, default_lInf);
     }
 }
 

@@ -1683,9 +1683,13 @@ Mat Net::Impl::getParam(int layer, int numParam) const
 }
 
 // Bump only the epoch: the executor holding the packed weights may be another object.
-static void markLayerWeightsChanged(const Ptr<LayerInfo>& layer)
+static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer)
 {
     layer->weightEpoch++;
+#ifdef HAVE_CUDA
+    // A replayed graph keeps the old weights; re-finalizing inside a capture cannot allocate.
+    netimpl->cudaGraphReset();
+#endif
 }
 
 static bool setConstWeights(const Ptr<LayerInfo>& layer, int numParam, const Mat& blob,
@@ -1744,7 +1748,7 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     if (!writeParam(l, numParam, blob))
         CV_Error_(Error::StsOutOfRange,
                   ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
-    markLayerWeightsChanged(l);
+    markLayerWeightsChanged(this, l);
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1777,7 +1781,7 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
                 continue;
 
             if (writeParam(layer, numParam, blob)) {
-                markLayerWeightsChanged(layer);
+                markLayerWeightsChanged(this, layer);
                 return;
             }
 

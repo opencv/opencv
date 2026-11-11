@@ -109,8 +109,6 @@ public:
             ownsWeights = true;
             // A recycled address would compare equal and skip the repack.
             last_packed_blob_data = nullptr;
-            // The copy initCUDA() was going to read is now the wrong one.
-            origWeights.release();
         }
 
         Mat b = bias_arr.getMat();
@@ -185,14 +183,28 @@ public:
 
 
 
-    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    //! A packed B is the one the kernels read; the plain copy a CUDA net keeps for initCUDA()
+    //! is not a public parameter.
+    bool packedReady() const
+    {
+#ifdef HAVE_MLAS
+        if (packed_B_mlas_N > 0)
+            return true;
+#endif
+        return !packed_B.empty() || !thin_packed_B.empty();
+    }
+
+    const Mat& constWeights() const CV_OVERRIDE
+    {
+        static const Mat none;
+        return packedReady() ? none : weights;
+    }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
     void releaseConstWeights() CV_OVERRIDE
     {
         weights.release();
-        origWeights.release();
         bias.release();
     }
 
@@ -479,28 +491,14 @@ public:
                       supportBackend(DNN_BACKEND_CUDA);
 #endif
 
-        bool packed_ready = !packed_B.empty() || !thin_packed_B.empty();
-#ifdef HAVE_MLAS
-        packed_ready = packed_ready || packed_B_mlas_N > 0;
-#endif
-
         // The packed copy is what the kernels read from here on; the original is dead weight.
-        if (constB(mode) && !weights.empty() && ownedByGraph &&
-            weights.type() == CV_32F && packed_ready) {
-            // initCUDA() reads the plain matrix after finalize(). Hold it out of reach of
-            // getParam() so the contract does not vary by backend.
-            if (keepForCuda)
-                origWeights = weights;
-            else
-                // initCUDA() would have nothing to read, so a later switch to CUDA is refused.
-                netimpl->weightsReleased = true;
+        // A net moved off CUDA frees B on its next finalize.
+        if (constB(mode) && !weights.empty() && !keepForCuda && ownedByGraph &&
+            weights.type() == CV_32F && packedReady()) {
             weights.release();
             // A recycled address would compare equal and skip the repack.
             last_packed_blob_data = nullptr;
-        }
-        // A net moved off CUDA has no reader left for the plain matrix.
-        if (ownedByGraph && !keepForCuda && !origWeights.empty()) {
-            origWeights.release();
+            // initCUDA() would have nothing to read, so a later switch to CUDA is refused.
             netimpl->weightsReleased = true;
         }
 
@@ -760,13 +758,18 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         std::vector<UMat> inputs;
         inputs_.getUMatVector(inputs);
-        auto B = origWeights.empty() ? weights : origWeights;
-        CV_CheckFalse(B.empty(), "DNN/Gemm/Cuda: input B (weight) was released and not retained");
+        CV_CheckFalse(weights.empty(),
+                      "DNN/Gemm/Cuda: input B (weight) was released and not retained");
         // with B constant, an owned bias is the constant C; the graph rewrites do not set const_C
         auto C = ownsBias ? bias : Mat();
 
-        if (!trans_b)
-            cv::transpose(B, B);
+        // cv::transpose() works in place when source and destination alias and B is square, which
+        // would rewrite the layer's own weight and be undone by the next initCUDA().
+        Mat B;
+        if (trans_b)
+            B = weights;
+        else
+            cv::transpose(weights, B);
         // flatten_a=false keeps A's leading dims as rows, as forward() does: only the last axis is K
         auto flatten_start_axis = flatten_a ? normalize_axis(1, inputs[0].dims) : inputs[0].dims - 1;
         // the fused activation runs on the same stream, right after the GEMM
@@ -922,7 +925,6 @@ private:
     int packed_B_mlas_K = 0;
 #endif
     Mat weights;                 //!< constant B; released once packed, ownsWeights survives
-    Mat origWeights;             //!< plain B held for initCUDA(); getParam() must not see it
     Mat bias;                    //!< constant C
     bool ownsWeights = false;
     bool ownsBias = false;
