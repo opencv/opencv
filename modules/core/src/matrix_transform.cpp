@@ -1043,7 +1043,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     Mat src = _src.getMat();
     int type = src.type();
-    _dst.create( size, type );
+    _dst.create( src.dims, src.size.p, type );
     Mat dst = _dst.getMat();
 
     CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
