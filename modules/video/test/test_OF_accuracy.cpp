@@ -216,6 +216,35 @@ TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
     ASSERT_NO_THROW(dis->calc(prev, next, flow));
     EXPECT_EQ(flow.size(), prev.size());
 }
+typedef testing::TestWithParam<tuple<int, int> > Video_OpticalFlowFarneback;
+
+TEST_P(Video_OpticalFlowFarneback, GaussianTranslation)
+{
+    RNG& rng = theRNG();
+    const int width = get<0>(GetParam());
+    const int window = get<1>(GetParam());
+    Mat storage(100, width + 12, CV_8U);
+    rng.fill(storage, RNG::UNIFORM, 0, 256);
+    GaussianBlur(storage, storage, Size(5, 5), 1.0);
+    Mat first = storage(Rect(3, 2, width, 96));
+    Mat second;
+    Mat transform = Mat_<double>({2, 3}, {1., 0., 1., 0., 1., -1.});
+    warpAffine(first, second, transform, first.size(), INTER_LINEAR, BORDER_REFLECT_101);
+    Mat before = first.clone(), flow;
+    calcOpticalFlowFarneback(first, second, flow, .5, 3, window, 3, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
+    ASSERT_TRUE(checkRange(flow));
+    Scalar average = mean(flow(Rect(20, 20, width - 40, 56)));
+    EXPECT_NEAR(1., average[0], .12);
+    EXPECT_NEAR(-1., average[1], .12);
+    EXPECT_EQ(0., cv::norm(before, first, NORM_INF));
+    calcOpticalFlowFarneback(first, first, flow, .5, 3, window, 1, 5, 1.1, OPTFLOW_FARNEBACK_GAUSSIAN);
+    // Border polynomial fits can be ill-conditioned even for identical frames.
+    EXPECT_LE(cv::norm(flow(Rect(20, 20, width - 40, 56)), NORM_INF), .01);
+}
+
+INSTANTIATE_TEST_CASE_P(Accuracy, Video_OpticalFlowFarneback,
+    testing::Combine(testing::Values(63, 64, 65, 127, 128, 129), testing::Values(5, 15, 25)));
+
 TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
 {
     cv::Mat frame1 = cv::Mat::zeros(100, 100, CV_8UC1);
