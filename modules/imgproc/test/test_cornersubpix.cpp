@@ -94,6 +94,16 @@ TEST(Imgproc_CornerSubPix, corners_on_the_edge)
     EXPECT_ANY_THROW( cv::cornerSubPix(image, cornersNG2, win, zeroZone, criteria) ) << cornersNG2;
 }
 
+class ScopedThreadsGuard
+{
+public:
+    ScopedThreadsGuard() : old_threads(cv::getNumThreads()) {}
+    ~ScopedThreadsGuard() { cv::setNumThreads(old_threads); }
+    void set(int n) { cv::setNumThreads(n); }
+private:
+    int old_threads;
+};
+
 typedef testing::TestWithParam<int> Imgproc_CornerSubPix_Parallel;
 
 TEST_P(Imgproc_CornerSubPix_Parallel, many_corners_roi_single_vs_multi_thread)
@@ -120,13 +130,16 @@ TEST_P(Imgproc_CornerSubPix_Parallel, many_corners_roi_single_vs_multi_thread)
     const cv::Size win(5, 5), zeroZone(-1, -1);
     const cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 40, 0.001);
 
-    const int nthreads = cv::getNumThreads();
     std::vector<cv::Point2f> ref = initial, dst = initial;
+    {
+        ScopedThreadsGuard threadsGuard;
+        const int nthreads = cv::getNumThreads();
 
-    cv::setNumThreads(1);
-    cv::cornerSubPix(image, ref, win, zeroZone, criteria);
-    cv::setNumThreads(std::max(2, nthreads));
-    cv::cornerSubPix(image, dst, win, zeroZone, criteria);
+        threadsGuard.set(1);
+        cv::cornerSubPix(image, ref, win, zeroZone, criteria);
+        threadsGuard.set(std::max(2, nthreads));
+        cv::cornerSubPix(image, dst, win, zeroZone, criteria);
+    }
 
     ASSERT_EQ(ref.size(), dst.size());
     int moved = 0;

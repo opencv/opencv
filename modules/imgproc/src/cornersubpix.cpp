@@ -91,6 +91,13 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
         }
     }
 
+    const Rect imageRect(0, 0, src.cols, src.rows);
+    for( int pt_i = 0; pt_i < count; pt_i++ )
+    {
+        if( !imageRect.contains(corners[pt_i]) )
+            CV_Error(Error::StsOutOfRange, "cornerSubPix: initial corner is outside the image.");
+    }
+
     const int MIN_CORNERS_FOR_PARALLEL = 50;
     const double nstripes = (count >= MIN_CORNERS_FOR_PARALLEL) ? -1. : 1.;
 
@@ -100,10 +107,6 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
         for( int pt_i = range.start; pt_i < range.end; pt_i++ )
         {
             Point2f cT = corners[pt_i], cI = cT;
-            if (!Rect(0, 0, src.cols, src.rows).contains(cT))
-            {
-                CV_Error(Error::StsOutOfRange, "cornerSubPix: initial corner is outside the image.");
-            }
             int iter = 0;
             double err = 0;
 
@@ -148,7 +151,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
                 cI2.y = (float)(cI.y - b*scale*bb1 + a*scale*bb2);
                 err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
                 // if new point is out of image, leave previous point as the result
-                if( !Rect(0, 0, src.cols, src.rows).contains(cI2) )
+                if( !imageRect.contains(cI2) )
                     break;
                 cI = cI2;
             }
