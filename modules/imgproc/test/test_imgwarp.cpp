@@ -47,6 +47,11 @@
 #include <future>
 #include <thread>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
@@ -1231,19 +1236,33 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpManyChannels, testing::Combine(
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
                     BORDER_WRAP, BORDER_TRANSPARENT)));
 
-typedef testing::TestWithParam<int> Imgproc_CubicTightChannelStorage;
+typedef testing::TestWithParam<tuple<int, int>> Imgproc_CubicTightChannelStorage;
 
 TEST_P(Imgproc_CubicTightChannelStorage, cubic_tight_channel_storage)
 {
     RNG& rng = theRNG();
-    const int depth = GetParam();
-    SCOPED_TRACE(depth);
-    std::vector<uchar> storage(4*4*5*CV_ELEM_SIZE1(depth));
-    Mat src(4, 4, CV_MAKETYPE(depth, 5), storage.data()), result;
+    const int depth = get<0>(GetParam());
+    const int channels = get<1>(GetParam());
+    const size_t bytes = 4*4*channels*CV_ELEM_SIZE1(depth);
+#if defined(__linux__) || defined(__APPLE__)
+    // Place the final pixel against an inaccessible page to catch SIMD overreads.
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    ASSERT_GE(pageSize, static_cast<long>(bytes));
+    void* mapping = mmap(nullptr, 2*pageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    ASSERT_NE(MAP_FAILED, mapping);
+    const Ptr<void> storage(mapping, [pageSize](void* address) { munmap(address, 2*pageSize); });
+    uchar* boundary = static_cast<uchar*>(mapping) + pageSize;
+    ASSERT_EQ(0, mprotect(boundary, pageSize, PROT_NONE));
+    uchar* data = boundary - bytes;
+#else
+    std::vector<uchar> storage(bytes);
+    uchar* data = storage.data();
+#endif
+    Mat src(4, 4, CV_MAKETYPE(depth, channels), data), result;
     rng.fill(src, RNG::UNIFORM, 0., 64.);
     Mat mapx(1, 1, CV_32F, Scalar(1.25)), mapy = mapx.clone();
     remap(src, result, mapx, mapy, INTER_CUBIC);
-    for (int channel = 0; channel < 5; ++channel)
+    for (int channel = 0; channel < channels; ++channel)
     {
         Mat plane, referenceInput, expected, actual;
         extractChannel(src, plane, channel);
@@ -1252,11 +1271,12 @@ TEST_P(Imgproc_CubicTightChannelStorage, cubic_tight_channel_storage)
         remap(referenceInput, expected, mapx, mapy, INTER_CUBIC);
         extractChannel(expected, plane, 0);
         extractChannel(result, actual, channel);
-        EXPECT_LE(cvtest::norm(plane, actual, NORM_INF), 1.);
+        EXPECT_LE(cvtest::norm(plane, actual, NORM_INF), 1.) << "channel=" << channel;
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTightChannelStorage, testing::Values(CV_8U, CV_16U, CV_16S));
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTightChannelStorage, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_16S), testing::Values(5, 9, 20)));
 
 typedef testing::TestWithParam<int> Imgproc_CubicPeriodicCoordinates;
 
@@ -1330,23 +1350,53 @@ typedef testing::TestWithParam<int> Imgproc_CubicOutsideSource;
 TEST_P(Imgproc_CubicOutsideSource, constant_and_transparent)
 {
     const int type = GetParam();
-    Mat src(4, 4, type), result(1, 2, type);
-    src.reshape(1).setTo(std::numeric_limits<double>::quiet_NaN());
-    // At floor(-2.75) == -3, even the rightmost (or bottommost) tap is outside.
-    Mat mapx = Mat_<float>({1, 2}, {-2.75f, 1.25f});
-    Mat mapy = Mat_<float>({1, 2}, {1.25f, -2.75f});
+    const int width = 33;
+    Mat src(8, 8, type), result(1, width, type);
+    src.reshape(1).setTo(64);
+    if (CV_MAT_DEPTH(type) != CV_8U)
+    {
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        src.row(0).reshape(1).setTo(nan);
+        src.col(0).reshape(1).setTo(nan);
+    }
 
-    result.reshape(1).setTo(0.75);
-    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
-    for (int i = 0; i < result.cols*result.channels(); ++i)
-        EXPECT_EQ(0.75, result.ptr<double>()[i]);
+    for (float outside : {-2.75f, std::numeric_limits<float>::quiet_NaN()})
+    for (bool mixed : {false, true})
+    {
+        SCOPED_TRACE(outside);
+        SCOPED_TRACE(mixed);
+        // Exercise whole SIMD batches and the final partial batch. At -2.75 the last
+        // tap is at -1 along one axis. NaN must also produce a border sample.
+        Mat mapx(1, width, CV_32F, Scalar(outside)), mapy(1, width, CV_32F, Scalar(4.25));
+        for (int x = 1; x < width; x += 2)
+        {
+            mapx.at<float>(x) = 4.25f;
+            mapy.at<float>(x) = outside;
+        }
+        if (mixed)
+            mapx.at<float>(0) = 4.25f;
 
-    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_CONSTANT, Scalar::all(0.25));
-    for (int i = 0; i < result.cols*result.channels(); ++i)
-        EXPECT_EQ(0.25, result.ptr<double>()[i]);
+        for (int border : {BORDER_CONSTANT, BORDER_TRANSPARENT})
+        {
+            SCOPED_TRACE(border);
+            for (int x = 0; x < width; ++x)
+                result.col(x).reshape(1).setTo(17 + x);
+            remap(src, result, mapx, mapy, INTER_CUBIC, border, Scalar::all(91));
+
+            Mat values;
+            result.reshape(1).convertTo(values, CV_64F);
+            for (int x = 0; x < width; ++x)
+            {
+                const double expected = mixed && x == 0 ? 64. : (border == BORDER_CONSTANT ? 91. : 17. + x);
+                for (int c = 0; c < result.channels(); ++c)
+                    EXPECT_EQ(expected, values.at<double>(x*result.channels() + c)) << "x=" << x;
+            }
+        }
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicOutsideSource, testing::Values(CV_64FC1, CV_64FC(5)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicOutsideSource,
+                        testing::Values(CV_64FC1, CV_64FC(5), CV_32FC1, CV_8UC1));
 
 TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
 {

@@ -7019,16 +7019,18 @@ bicubicWeights(float alpha, float A, float& w0, float& w1, float& w2, float& w3)
     w2 = 1.f - w0 - w1 - w3;
 }
 
+constexpr int BICUBIC_LAST_TAP = 3;
+constexpr int BICUBIC_MIN_COORD_LIMIT = 16;
+
 static CV_ALWAYS_INLINE int
 bicubicCoeffs(float xs0, float ys0, Size size, float A,
               int bordertype, int& tl_x, int& tl_y,
               float& wx0, float& wx1, float& wx2, float& wx3,
               float& wy0, float& wy1, float& wy2, float& wy3)
 {
-    constexpr int MIN_SIZE = 16;
     int width = size.width, height = size.height;
-    int bigwidth = std::max(width, MIN_SIZE);
-    int bigheight = std::max(height, MIN_SIZE);
+    int bigwidth = std::max(width, BICUBIC_MIN_COORD_LIMIT);
+    int bigheight = std::max(height, BICUBIC_MIN_COORD_LIMIT);
     float minx = float(-bigwidth), maxx = float(bigwidth*2);
     float miny = float(-bigheight), maxy = float(bigheight*2);
 
@@ -7044,13 +7046,13 @@ bicubicCoeffs(float xs0, float ys0, Size size, float A,
     ix0--;
     iy0--;
 
-    int all_outliers = int((unsigned)(ix0 + 3) >= (unsigned)(width + 3)) |
-                       int((unsigned)(iy0 + 3) >= (unsigned)(height + 3));
+    int all_outliers = int((unsigned)(ix0 + BICUBIC_LAST_TAP) >= (unsigned)(width + BICUBIC_LAST_TAP)) |
+                       int((unsigned)(iy0 + BICUBIC_LAST_TAP) >= (unsigned)(height + BICUBIC_LAST_TAP));
     if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
         return -1;
 
-    int all_inliers = int((unsigned)ix0 < (unsigned)std::max(width - 3, 0)) &
-                      int((unsigned)iy0 < (unsigned)std::max(height - 3, 0));
+    int all_inliers = int((unsigned)ix0 < (unsigned)std::max(width - BICUBIC_LAST_TAP, 0)) &
+                      int((unsigned)iy0 < (unsigned)std::max(height - BICUBIC_LAST_TAP, 0));
 
     tl_x = ix0;
     tl_y = iy0;
@@ -7353,6 +7355,28 @@ bicubicWeights(const v_float32& alpha, float A,
     w2 = v_sub(v_sub(v_sub(v1, w0), w1), w3);
 }
 
+static CV_ALWAYS_INLINE v_float32
+bicubicClampCoords(const float* coords, int length)
+{
+    const int limit = std::max(length, BICUBIC_MIN_COORD_LIMIT);
+    const v_float32 lower = vx_setall_f32(float(-limit));
+    const v_float32 upper = vx_setall_f32(float(limit*2));
+    const v_float32 values = vx_load(coords);
+    return v_min(v_max(v_select(v_not_nan(values), values, lower), lower), upper);
+}
+
+constexpr int BICUBIC_MIXED_OUTLIERS = -2;
+
+static CV_ALWAYS_INLINE v_uint32
+bicubicOutliers(const v_int32& x, const v_int32& y, Size size)
+{
+    const v_int32 last = vx_setall_s32(BICUBIC_LAST_TAP);
+    const v_uint32 width = vx_setall_u32(size.width + BICUBIC_LAST_TAP);
+    const v_uint32 height = vx_setall_u32(size.height + BICUBIC_LAST_TAP);
+    return v_or(v_ge(v_reinterpret_as_u32(v_add(x, last)), width),
+                v_ge(v_reinterpret_as_u32(v_add(y, last)), height));
+}
+
 static CV_ALWAYS_INLINE int
 bicubicCoeffs(const float* srcx, const float* srcy,
               size_t srcstep, Size size, int bpp, float A,
@@ -7360,39 +7384,26 @@ bicubicCoeffs(const float* srcx, const float* srcy,
               v_float32& wx0, v_float32& wx1, v_float32& wx2, v_float32& wx3,
               v_float32& wy0, v_float32& wy1, v_float32& wy2, v_float32& wy3)
 {
-    constexpr int MIN_SIZE = 16;
-    int width = size.width, height = size.height;
-    int bigwidth = std::max(width, MIN_SIZE);
-    int bigheight = std::max(height, MIN_SIZE);
-    v_float32 minx = vx_setall_f32(float(-bigwidth)), maxx = vx_setall_f32(float(bigwidth*2));
-    v_float32 miny = vx_setall_f32(float(-bigheight)), maxy = vx_setall_f32(float(bigheight*2));
-
-    // clamp coordinates in floating-point to try to avoid unpredictable
-    // behavior if the floating-point coordinates are huge
-    v_float32 xs0 = vx_load(srcx), ys0 = vx_load(srcy);
-    v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
-    v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
+    const int width = size.width, height = size.height;
+    const v_float32 vx0 = bicubicClampCoords(srcx, width);
+    const v_float32 vy0 = bicubicClampCoords(srcy, height);
 
     v_int32 ix0 = v_floor(vx0);
     v_int32 iy0 = v_floor(vy0);
     v_float32 alpha = v_sub(vx0, v_cvt_f32(ix0));
     v_float32 beta = v_sub(vy0, v_cvt_f32(iy0));
 
-    v_int32 one_i = vx_setall_s32(1), four_i = vx_setall_s32(4);
+    const v_int32 one_i = vx_setall_s32(1);
     ix0 = v_sub(ix0, one_i);
     iy0 = v_sub(iy0, one_i);
 
-    v_uint32 width_outer = vx_setall_u32((uint32_t)(width + 4));
-    v_uint32 height_outer = vx_setall_u32((uint32_t)(height + 4));
+    if (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT) {
+        const v_uint32 outliers = bicubicOutliers(ix0, iy0, size);
+        if (v_check_any(outliers))
+            return v_check_all(outliers) ? -1 : BICUBIC_MIXED_OUTLIERS;
+    }
 
-    v_uint32 outliers_mask = v_or(v_ge(v_reinterpret_as_u32(v_add(ix0, four_i)), width_outer),
-                                  v_ge(v_reinterpret_as_u32(v_add(iy0, four_i)), height_outer));
-
-    bool all_outliers = v_check_all(outliers_mask);
-    if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
-        return -1;
-
-    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - 3, 0));
+    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - BICUBIC_LAST_TAP, 0));
     v_uint32 height_inner = vx_setall_u32((uint32_t)std::max(height - 5, 0));
 
     v_uint32 inliers_mask = v_and(v_lt(v_reinterpret_as_u32(ix0), width_inner),
@@ -7440,21 +7451,11 @@ bicubicCoeffs(const float* srcx, const float* srcy,
               v_float16& wy0, v_float16& wy1, v_float16& wy2, v_float16& wy3)
 {
     constexpr int nlanes32 = VTraits<v_float32>::nlanes;
-    constexpr int MIN_SIZE = 16;
-    int width = size.width, height = size.height;
-    int bigwidth = std::max(width, MIN_SIZE);
-    int bigheight = std::max(height, MIN_SIZE);
-    v_float32 minx = vx_setall_f32(float(-bigwidth)), maxx = vx_setall_f32(float(bigwidth*2));
-    v_float32 miny = vx_setall_f32(float(-bigheight)), maxy = vx_setall_f32(float(bigheight*2));
-
-    // clamp coordinates in floating-point to try to avoid unpredictable
-    // behavior if the floating-point coordinates are huge
-    v_float32 xs0 = vx_load(srcx), ys0 = vx_load(srcy);
-    v_float32 xs1 = vx_load(srcx + nlanes32), ys1 = vx_load(srcy + nlanes32);
-    v_float32 vx0 = v_min(v_max(xs0, minx), maxx);
-    v_float32 vy0 = v_min(v_max(ys0, miny), maxy);
-    v_float32 vx1 = v_min(v_max(xs1, minx), maxx);
-    v_float32 vy1 = v_min(v_max(ys1, miny), maxy);
+    const int width = size.width, height = size.height;
+    const v_float32 vx0 = bicubicClampCoords(srcx, width);
+    const v_float32 vy0 = bicubicClampCoords(srcy, height);
+    const v_float32 vx1 = bicubicClampCoords(srcx + nlanes32, width);
+    const v_float32 vy1 = bicubicClampCoords(srcy + nlanes32, height);
 
     v_int32 ix0 = v_floor(vx0);
     v_int32 iy0 = v_floor(vy0);
@@ -7465,35 +7466,20 @@ bicubicCoeffs(const float* srcx, const float* srcy,
     v_float32 alpha1 = v_sub(vx1, v_cvt_f32(ix1));
     v_float32 beta1 = v_sub(vy1, v_cvt_f32(iy1));
 
-    hfloat abuf[nlanes32*2], bbuf[nlanes32*2];
-
-    v_pack_store(abuf, alpha0);
-    v_pack_store(abuf + nlanes32, alpha1);
-    v_pack_store(bbuf, beta0);
-    v_pack_store(bbuf + nlanes32, beta1);
-
-    v_float16 alpha = vx_load(abuf);
-    v_float16 beta = vx_load(bbuf);
-
-    v_int32 one_i = vx_setall_s32(1), four_i = vx_setall_s32(4);
+    const v_int32 one_i = vx_setall_s32(1);
     ix0 = v_sub(ix0, one_i);
     iy0 = v_sub(iy0, one_i);
     ix1 = v_sub(ix1, one_i);
     iy1 = v_sub(iy1, one_i);
 
-    v_uint32 width_outer = vx_setall_u32((uint32_t)(width + 4));
-    v_uint32 height_outer = vx_setall_u32((uint32_t)(height + 4));
+    if (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT) {
+        const v_uint32 outliers0 = bicubicOutliers(ix0, iy0, size);
+        const v_uint32 outliers1 = bicubicOutliers(ix1, iy1, size);
+        if (v_check_any(v_or(outliers0, outliers1)))
+            return v_check_all(v_and(outliers0, outliers1)) ? -1 : BICUBIC_MIXED_OUTLIERS;
+    }
 
-    v_uint32 outliers_mask0 = v_or(v_ge(v_reinterpret_as_u32(v_add(ix0, four_i)), width_outer),
-                                  v_ge(v_reinterpret_as_u32(v_add(iy0, four_i)), height_outer));
-    v_uint32 outliers_mask1 = v_or(v_ge(v_reinterpret_as_u32(v_add(ix1, four_i)), width_outer),
-                                  v_ge(v_reinterpret_as_u32(v_add(iy1, four_i)), height_outer));
-
-    bool all_outliers = v_check_all(v_and(outliers_mask0, outliers_mask1));
-    if (all_outliers && (bordertype == BORDER_CONSTANT || bordertype == BORDER_TRANSPARENT))
-        return -1;
-
-    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - 3, 0));
+    v_uint32 width_inner = vx_setall_u32((uint32_t)std::max(width - BICUBIC_LAST_TAP, 0));
     v_uint32 height_inner = vx_setall_u32((uint32_t)std::max(height - 5, 0));
 
     v_uint32 inliers_mask0 = v_and(v_lt(v_reinterpret_as_u32(ix0), width_inner),
@@ -7511,6 +7497,16 @@ bicubicCoeffs(const float* srcx, const float* srcy,
     v_store(tl_x + nlanes32, ix1);
     v_store(tl_y + nlanes32, iy1);
     v_store(tl_ofs + nlanes32, tl_ofs1);
+
+    hfloat abuf[nlanes32*2], bbuf[nlanes32*2];
+
+    v_pack_store(abuf, alpha0);
+    v_pack_store(abuf + nlanes32, alpha1);
+    v_pack_store(bbuf, beta0);
+    v_pack_store(bbuf + nlanes32, beta1);
+
+    v_float16 alpha = vx_load(abuf);
+    v_float16 beta = vx_load(bbuf);
 
     bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
     bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
@@ -8142,6 +8138,12 @@ bicubicVec(const float* srcx, const float* srcy, int len,
         int code = bicubicCoeffs(xptr, yptr, srcstep, size, BPP, A,
                                  borderType, tl_x, tl_y, tl_ofs,
                                  wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
+        if (code == BICUBIC_MIXED_OUTLIERS) {
+            // Fully outside lanes need per-pixel handling for exact border values.
+            bicubicRef<chtype, NCHANNELS>(xptr, yptr, dlen, src, srcstep, size,
+                                          dst, params, borderType, borderVal);
+            continue;
+        }
 
         if (code > 0) {
             if constexpr (NCHANNELS == 1) {
@@ -8624,23 +8626,42 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 
 }
 
-// Expanding loads may read a full register, so image tails are copied into padded storage.
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+// LSX and LASX use a 16-byte load even when expanding fewer bytes.
+constexpr size_t BICUBIC_EXPAND_LOAD_BYTES = (CV_LSX || CV_LASX) ? 16 : VTraits<v_uint8>::max_nlanes;
+constexpr bool BICUBIC_EXPAND_LOAD_IS_EXACT = CV_SSE2 || CV_NEON || CV_RVV;
+
+template<typename T, size_t N>
+static inline const T* bicubicExpandInput(const T* src, const uchar* end, int lanes, T (&scratch)[N])
+{
+    if constexpr (!BICUBIC_EXPAND_LOAD_IS_EXACT)
+    {
+        const size_t bytes = lanes*sizeof(T);
+        if (bytes < sizeof(scratch) && size_t(end - reinterpret_cast<const uchar*>(src)) < sizeof(scratch))
+        {
+            std::memcpy(scratch, src, bytes);
+            std::fill(scratch + lanes, scratch + N, T{});
+            return scratch;
+        }
+    }
+    return src;
+}
+
 template<typename T>
-static inline v_float32 bicubicLoadChannels(const T* src, int lanes)
+static inline v_float32 bicubicLoadChannels(const T* src, const uchar* end, int lanes)
 {
     if constexpr (std::is_same_v<T, float>)
         return vx_load(src);
     else
     {
-        alignas(CV_SIMD_WIDTH) T values[VTraits<v_uint8>::max_nlanes/sizeof(T)] = {};
-        std::memcpy(values, src, lanes*sizeof(T));
+        alignas(CV_SIMD_WIDTH) T scratch[BICUBIC_EXPAND_LOAD_BYTES/sizeof(T)];
+        src = bicubicExpandInput(src, end, lanes, scratch);
         if constexpr (std::is_same_v<T, uchar>)
-            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(values)));
+            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src)));
         else if constexpr (std::is_same_v<T, ushort>)
-            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(values)));
+            return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(src)));
         else
-            return v_cvt_f32(vx_load_expand(values));
+            return v_cvt_f32(vx_load_expand(src));
     }
 }
 
@@ -8671,20 +8692,20 @@ static inline void bicubicStoreChannels(T* dst, const v_float32& value, int lane
 #if CV_SIMD128
 // Keep the four-lane cleanup path for wide vectors when fewer than a full vector remains.
 template<typename T>
-static inline v_float32x4 bicubicLoadChannels4(const T* src)
+static inline v_float32x4 bicubicLoadChannels4(const T* src, const uchar* end)
 {
     if constexpr (std::is_same_v<T, float>)
         return v_load(src);
     else
     {
-        alignas(16) T values[16/sizeof(T)] = {};
-        std::memcpy(values, src, 4*sizeof(T));
+        alignas(16) T scratch[16/sizeof(T)];
+        src = bicubicExpandInput(src, end, 4, scratch);
         if constexpr (std::is_same_v<T, uchar>)
-            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(values)));
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(src)));
         else if constexpr (std::is_same_v<T, ushort>)
-            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(values)));
+            return v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src)));
         else
-            return v_cvt_f32(v_load_expand(values));
+            return v_cvt_f32(v_load_expand(src));
     }
 }
 
@@ -8711,11 +8732,11 @@ static inline void bicubicStoreChannels4(T* dst, const v_float32x4& value)
 #endif
 
 #if CV_SIMD_FP16
-static inline v_float16x8 bicubicLoad8uHalf(const uchar* src)
+static inline v_float16x8 bicubicLoad8uHalf(const uchar* src, const uchar* end)
 {
-    alignas(16) uchar values[16] = {};
-    std::memcpy(values, src, 8);
-    return v_cvt_f16(v_reinterpret_as_s16(v_load_expand(values)));
+    alignas(16) uchar scratch[16];
+    src = bicubicExpandInput(src, end, 8, scratch);
+    return v_cvt_f16(v_reinterpret_as_s16(v_load_expand(src)));
 }
 #endif
 
@@ -8731,6 +8752,8 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int lanes = VTraits<v_float32>::vlanes();
+    const uchar* srcEnd = static_cast<const uchar*>(source) + size_t(size.height - 1)*step
+                          + size_t(size.width)*channels*sizeof(T);
 #endif
     for (int i = 0; i < len; ++i, dst += channels)
     {
@@ -8762,10 +8785,10 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const uchar* ptr = rows[row] + channel;
-                        v_float16x8 horizontal = v_mul(bicubicLoad8uHalf(ptr), w0);
-                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels), w1, horizontal);
-                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*2), w2, horizontal);
-                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*3), w3, horizontal);
+                        v_float16x8 horizontal = v_mul(bicubicLoad8uHalf(ptr, srcEnd), w0);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels, srcEnd), w1, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*2, srcEnd), w2, horizontal);
+                        horizontal = v_fma(bicubicLoad8uHalf(ptr + channels*3, srcEnd), w3, horizontal);
                         sum = v_fma(horizontal, v_setall_f16(hfloat(wy[row])), sum);
                     }
                     const v_int16x8 rounded = v_round(sum);
@@ -8784,10 +8807,10 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const T* ptr = rows[row] + channel;
-                        v_float32 horizontal = v_add(v_mul(bicubicLoadChannels(ptr, lanes), w0),
-                                                    v_mul(bicubicLoadChannels(ptr + channels, lanes), w1));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2, lanes), w2));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3, lanes), w3));
+                        v_float32 horizontal = v_add(v_mul(bicubicLoadChannels(ptr, srcEnd, lanes), w0),
+                                                    v_mul(bicubicLoadChannels(ptr + channels, srcEnd, lanes), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*2, srcEnd, lanes), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels(ptr + channels*3, srcEnd, lanes), w3));
                         sum = v_add(sum, v_mul(horizontal, vx_setall_f32(wy[row])));
                     }
                     bicubicStoreChannels(dst + channel, sum, lanes);
@@ -8805,10 +8828,10 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                     for (int row = 0; row < 4; ++row)
                     {
                         const T* ptr = rows[row] + channel;
-                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels4(ptr), w0),
-                                                       v_mul(bicubicLoadChannels4(ptr + channels), w1));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*2), w2));
-                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*3), w3));
+                        v_float32x4 horizontal = v_add(v_mul(bicubicLoadChannels4(ptr, srcEnd), w0),
+                                                       v_mul(bicubicLoadChannels4(ptr + channels, srcEnd), w1));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*2, srcEnd), w2));
+                        horizontal = v_add(horizontal, v_mul(bicubicLoadChannels4(ptr + channels*3, srcEnd), w3));
                         sum = v_add(sum, v_mul(horizontal, v_setall_f32(wy[row])));
                     }
                     bicubicStoreChannels4(dst + channel, sum);
