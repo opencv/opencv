@@ -688,10 +688,10 @@ public:
 
                 for( i = 0; i < alpha_count; i++ )
                 {
-                    if( fabs(G[i]) > 1e+300 )
+                    if( !(fabs(G[i]) <= 1e+300) )
                         return false;
 
-                    if( fabs(alpha[i]) > 1e16 )
+                    if( !(fabs(alpha[i]) <= 1e16) )
                         return false;
                 }
 
@@ -699,7 +699,7 @@ public:
                     break;
 
                 if( i < 0 || j < 0 )
-                    break;
+                    return false;
 
                 Q_i = get_row( i, &buf[0][0] );
                 Q_j = get_row( j, &buf[1][0] );
