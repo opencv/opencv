@@ -40,17 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
-
-// which sort convexHull uses
-#define CV_CONVHULL_SORT_DISPATCHER 0   // chosen by the data
-#define CV_CONVHULL_SORT_COUNTING   1
-#define CV_CONVHULL_SORT_RADIX      2
-#define CV_CONVHULL_SORT_STD        3
-
-#ifndef CV_CONVHULL_SORT
-#define CV_CONVHULL_SORT CV_CONVHULL_SORT_DISPATCHER
-#endif
 
 namespace cv
 {
@@ -455,13 +444,6 @@ static bool sortPoints(Point* data0,
 
     int64 counting_range = std::min(range.rangeY(), range.rangeX());
     bool use_counting = counting_range <= (int64)COUNTING_MAX_SPARSITY * total;
-    const int passes_count = radixPassesCount(range.rangeY()) + radixPassesCount(range.rangeX());
-    bool use_radix = total >= RADIX_MIN_TOTAL * passes_count;
-#if CV_CONVHULL_SORT != CV_CONVHULL_SORT_DISPATCHER
-    use_counting = CV_CONVHULL_SORT == CV_CONVHULL_SORT_COUNTING;
-    use_radix = CV_CONVHULL_SORT == CV_CONVHULL_SORT_RADIX;
-#endif
-
     if( use_counting && counting_range <= COUNTING_MAX_RANGE )
     {
         bool by_y = range.rangeY() < range.rangeX();
@@ -480,6 +462,8 @@ static bool sortPoints(Point* data0,
         }
     }
 
+    int passes_count = radixPassesCount(range.rangeY()) + radixPassesCount(range.rangeX());
+    bool use_radix = total >= RADIX_MIN_TOTAL * passes_count;
     if( use_radix )
     {
         radixSort(sortable_points, total, range, pointer, miny_ind, maxy_ind);
