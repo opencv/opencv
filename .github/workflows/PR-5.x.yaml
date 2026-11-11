@@ -4,35 +4,143 @@ on:
   pull_request:
     branches:
       - 5.x
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: PR-5.x-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+    outputs:
+      fast: ${{ steps.changes.outputs.fast }}
+      full: ${{ steps.changes.outputs.full }}
+      android: ${{ steps.changes.outputs.android }}
+      apple: ${{ steps.changes.outputs.apple }}
+      dnn: ${{ steps.changes.outputs.dnn }}
+      docs: ${{ steps.changes.outputs.docs }}
+      riscv: ${{ steps.changes.outputs.riscv }}
+    steps:
+      - name: Classify changed files
+        id: changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changedFiles = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                per_page: 100,
+              }
+            );
+            const files = changedFiles.flatMap(file =>
+              [file.filename, file.previous_filename].filter(Boolean)
+            );
+            const labels = new Set(
+              context.payload.pull_request.labels.map(label => label.name)
+            );
+            const matches = pattern => files.some(file => pattern.test(file));
+            const requestedFast = labels.has('ci:fast') && !labels.has('ci:full');
+
+            // Only implementation, test, performance, sample, and documentation
+            // changes local to one module are eligible for the fast lane. Public
+            // headers, core/build infrastructure, and unknown paths fail closed
+            // to the full matrix.
+            const safePath = file =>
+              /^modules\/[^/]+\/(src|test|perf|samples)\//.test(file) ||
+              /^(doc|samples)\//.test(file) ||
+              /\.md$/i.test(file);
+            const highRisk = files.some(file =>
+              /^modules\/core\//.test(file) ||
+              /^modules\/ts\//.test(file) ||
+              /^modules\/python\//.test(file) ||
+              /^modules\/[^/]+\/include\//.test(file) ||
+              /^(3rdparty|cmake|include|platforms)\//.test(file) ||
+              /(^|\/)CMakeLists\.txt$/.test(file) ||
+              /^\.github\//.test(file) ||
+              !safePath(file)
+            );
+            const fast = requestedFast && !highRisk;
+            const full = !fast;
+
+            const dnn = labels.has('category: dnn') ||
+              labels.has('category: dnn (onnx)') ||
+              matches(/^modules\/dnn\//);
+            const docs = matches(/^(doc\/|.*\.md$|modules\/[^/]+\/doc\/)/i);
+            const android = matches(/^(platforms\/android\/|modules\/java\/|samples\/android\/)/);
+            const apple = matches(/^(platforms\/(ios|osx)\/|modules\/objc\/|samples\/(swift|ios)\/)/);
+            const riscv = matches(/(riscv|rvv)/i);
+
+            for (const [name, value] of Object.entries({
+              fast,
+              full,
+              android: full || android,
+              apple: full || apple,
+              dnn,
+              docs: full || docs,
+              riscv: full || riscv,
+            })) {
+              core.setOutput(name, value.toString());
+            }
+
+            await core.summary
+              .addHeading('CI selection')
+              .addTable([
+                [{data: 'Mode', header: true}, {data: fast ? 'fast' : 'full', header: true}],
+                ['Changed files', changedFiles.length.toString()],
+                ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
+                ['Reason', requestedFast && highRisk
+                  ? 'ci:fast was overridden by a high-risk or unknown path'
+                  : requestedFast ? 'ci:fast label' : 'full coverage is the default'],
+              ])
+              .write();
+
   Linux:
+    needs: classify
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
     with:
       workflow_branch: 'main'
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
 
   Linux-no-HAL:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
 
   Linux-Apline:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-Alpine.yaml@main
 
   Windows:
+    needs: classify
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
     with:
       workflow_branch: main
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
 
   Ubuntu2404-ARM64:
+    needs: classify
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@main
 
   Ubuntu2404-ARM64-Debug:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@main
 
   Ubuntu2004-x64-OpenVINO:
+    needs: classify
+    if: needs.classify.outputs.dnn == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@main
 
   Ubuntu2004-x64-CUDA:
-    if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
+    needs: classify
+    if: needs.classify.outputs.dnn == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@main
 
 # Vulkan configuration disabled as Vulkan backend for DNN does not support int/int64 for now
@@ -41,24 +149,37 @@ jobs:
 #    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@main
 
   macOS-ARM64:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@main
 
 #  macOS-ARM64-Vulkan:
 #    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@main
 
   macOS-x64:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
 
   iOS:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
 
   Android:
+    needs: classify
+    if: needs.classify.outputs.android == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@main
 
   docs:
+    needs: classify
+    if: needs.classify.outputs.docs == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@main
 
   Linux-RISC-V-Clang:
+    needs: classify
+    if: needs.classify.outputs.riscv == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-RISCV.yaml@main
     with:
       workflow_branch: main
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
