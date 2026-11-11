@@ -444,7 +444,7 @@ TEST(Imgproc_ConvexHull, float_dense_grid)
     {
         SCOPED_TRACE(cv::format("iteration %d", iter));
 
-        const int total = rng.uniform(5, 200);
+        const int total = rng.uniform(128, 200); // fewer float points go to std::sort
         const int range = std::max(total / 2, 3);
         const int sign = iter % 2 == 0 ? 1 : -1;
 

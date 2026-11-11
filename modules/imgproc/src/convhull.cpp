@@ -419,6 +419,45 @@ struct CHullCmpPoints
     }
 };
 
+// Sorts the pointers with std::sort, by x then by y, and finds the points with min and max y.
+static CV_ALWAYS_INLINE void stdSortPoints(Point* data0,
+                                           bool is_float,
+                                           Point** pointer,
+                                           int total,
+                                           int& miny_ind,
+                                           int& maxy_ind)
+{
+    Point2f** pointerf = (Point2f**)pointer;
+
+    for( int i = 0; i < total; i++ )
+        pointer[i] = &data0[i];
+
+    if( !is_float )
+    {
+        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
+        for( int i = 1; i < total; i++ )
+        {
+            int y = pointer[i]->y;
+            if( pointer[miny_ind]->y > y )
+                miny_ind = i;
+            if( pointer[maxy_ind]->y < y )
+                maxy_ind = i;
+        }
+    }
+    else
+    {
+        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
+        for( int i = 1; i < total; i++ )
+        {
+            float y = pointerf[i]->y;
+            if( pointerf[miny_ind]->y > y )
+                miny_ind = i;
+            if( pointerf[maxy_ind]->y < y )
+                maxy_ind = i;
+        }
+    }
+}
+
 // Sorts the pointers and finds the points with min and max y. Picks the sort by the data.
 // Returns true if the sort is by y, then by x. miny_ind and maxy_ind are then the points with min and max x.
 static bool sortPoints(Point* data0,
@@ -429,17 +468,22 @@ static bool sortPoints(Point* data0,
                        int& miny_ind,
                        int& maxy_ind)
 {
-    Point2f** pointerf = (Point2f**)pointer;
-
-    AutoBuffer<int> _sortable_points_buffer;
-    const Point* sortable_points = is_float ?
-        floatPointsToSortablePoints((Point2f*)data0, total, _sortable_points_buffer) : data0;
-
     // counting sort if range <= COUNTING_MAX_RANGE and range / total <= COUNTING_MAX_SPARSITY,
     // else radix sort if total >= (RADIX_MIN_TOTAL * radix pass count),
     // else std::sort
     const int COUNTING_MAX_SPARSITY = 1;
     const int RADIX_MIN_TOTAL = 16; // per radix pass
+
+    // float points mostly need 4 + 4 radix passes; fewer points go to std::sort without the conversion
+    if( is_float && total < RADIX_MIN_TOTAL * 8 )
+    {
+        stdSortPoints(data0, is_float, pointer, total, miny_ind, maxy_ind);
+        return false;
+    }
+
+    AutoBuffer<int> _sortable_points_buffer;
+    const Point* sortable_points = is_float ?
+        floatPointsToSortablePoints((Point2f*)data0, total, _sortable_points_buffer) : data0;
     const CHullRange range = computeRange(sortable_points, total);
 
     int64 counting_range = std::min(range.rangeY(), range.rangeX());
@@ -476,33 +520,7 @@ static bool sortPoints(Point* data0,
         return false;
     }
 
-    for( int i = 0; i < total; i++ )
-        pointer[i] = &data0[i];
-
-    if( !is_float )
-    {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( int i = 1; i < total; i++ )
-        {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
-    }
-    else
-    {
-        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
-        for( int i = 1; i < total; i++ )
-        {
-            float y = pointerf[i]->y;
-            if( pointerf[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointerf[maxy_ind]->y < y )
-                maxy_ind = i;
-        }
-    }
+    stdSortPoints(data0, is_float, pointer, total, miny_ind, maxy_ind);
     return false;
 }
 
