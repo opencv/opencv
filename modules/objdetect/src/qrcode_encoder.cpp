@@ -1327,11 +1327,17 @@ private:
 
     struct Bitstream {
         int next(int bits) {
-            CV_Assert(idx < data.size());
+            if (idx >= data.size()) {
+                overrun = true;
+                return 0;
+            }
 
             int val = 0;
             while (bits >= actualBits) {
-                CV_CheckLT(idx, data.size(), "Not enough bits in the bitstream");
+                if (idx >= data.size()) {
+                    overrun = true;
+                    return val;
+                }
                 val |= data[idx++] << (bits - actualBits);
                 bits -= actualBits;
                 actualBits = 8;
@@ -1351,6 +1357,8 @@ private:
         std::vector<uint8_t> data;
         int actualBits = 8;
         size_t idx = 0;
+        // Set when more bits were requested than the stream holds.
+        bool overrun = false;
     } bitstream;
 
     bool run(const Mat& straight, String& decoded_info);
@@ -1472,7 +1480,7 @@ bool QRCodeDecoderImpl::run(const Mat& straight, String& decoded_info) {
     if (!errorCorrection(bitstream.data)) {
         return false;
     }
-    if (!decodeSymbols(decoded_info)) {
+    if (!decodeSymbols(decoded_info) || bitstream.overrun) {
         decoded_info = "";
         return false;
     }
