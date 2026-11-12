@@ -434,17 +434,28 @@ TEST(Imgproc_ConvexHull, overflow)
     ASSERT_EQ(hull, hullf);
 }
 
-// Float points on a grid of adjacent values are sorted the same way as dense int points.
+// Float points on a grid of evenly spaced values are sorted the same way as int points.
 // They are an exact scaled copy of the int grid, so both hulls must be the same.
 TEST(Imgproc_ConvexHull, float_dense_grid)
 {
     RNG& rng = TS::ptr()->get_rng();
 
+    // space between the float values, in FLT_EPSILON units; selects the sort
+    const std::vector<int> steps = {
+        1,          // counting sort
+        3,          // radix sort, 1 pass per coordinate
+        100,        // radix sort, 2 passes
+        20000,      // radix sort, 3 passes
+        1 << 20     // radix sort, 4 passes
+    };
+
     for (int iter = 0; iter < 100; ++iter)
     {
-        SCOPED_TRACE(cv::format("iteration %d", iter));
+        const int step = steps[iter % steps.size()];
+        const float scale = step * FLT_EPSILON; // sparsity (sortable range / total) is about step / 2
+        SCOPED_TRACE(cv::format("iteration %d, step %d", iter, step));
 
-        const int total = rng.uniform(128, 200); // fewer float points go to std::sort
+        const int total = rng.uniform(128, 170); // below 128 float points go to std::sort; above 170 step 3 needs 2 radix passes
         const int range = std::max(total / 2, 3);
         const int sign = iter % 2 == 0 ? 1 : -1;
 
@@ -457,8 +468,11 @@ TEST(Imgproc_ConvexHull, float_dense_grid)
             if (used(y, x))
                 continue; // keep the points distinct
             used(y, x) = 1;
-            points.push_back(Point(sign * x, sign * y));
-            pointsf.push_back(Point2f(sign * (1.f + x * FLT_EPSILON), sign * (1.f + y * FLT_EPSILON)));
+
+            Point p(sign * x, sign * y);
+            Point2f scaled_p(sign * (1.f + x * scale), sign * (1.f + y * scale));
+            points.push_back(p);
+            pointsf.push_back(scaled_p);
         }
 
         for (int clockwise = 0; clockwise < 2; ++clockwise)
