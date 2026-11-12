@@ -479,6 +479,8 @@ struct Net::Impl : public detail::NetImplBase
     int findDim(const std::string& name, bool insert=false);
 
     void prepareForInference();
+    // atImport: leave nets with fp16/bf16 tensors to finalize().
+    void prepareForInference(bool atImport);
     void finalize();
     // Selects executors for a single graph (recursing into subgraphs).
     void finalizeGraph(const Ptr<Graph>& graph, bool useCUDA);

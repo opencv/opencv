@@ -433,7 +433,7 @@ void TFLiteImporter::populateNet()
         netImpl->mainGraph = curr_graph;
         netImpl->modelFormat = DNN_MODEL_TFLITE;
         netImpl->originalLayout = DATA_LAYOUT_NCHW; // TODO Should we set NHWC?
-        netImpl->prepareForInference();
+        netImpl->prepareForInference(true);
     }
 }
 

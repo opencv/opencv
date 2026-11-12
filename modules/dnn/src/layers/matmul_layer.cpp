@@ -515,22 +515,39 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
         const T* biasPtr0 = haveBias ? biasBroadcast.ptr<T>() : nullptr;
 
         parallel_for_(Range(0, (int)(helper.batch * (size_t)M)), [&](const Range& r) {
+            AutoBuffer<float> sumbuf(N);
+            float* sum = sumbuf.data();
             for (int idx = r.start; idx < r.end; idx++) {
                 int bi = idx / M;
                 int m  = idx % M;
-                const T* aBase = aptr0 + helper.A_offsets[bi];
+                const T* aRow = aptr0 + helper.A_offsets[bi] + (size_t)m * lda0;
                 const T* bBase = bptr0 + helper.B_offsets[bi];
                 T* yRow = yptr0 + helper.C_offsets[bi] + (size_t)m * ldc;
                 const T* biasRow = haveBias ? biasPtr0 + helper.C_offsets[bi] + (size_t)m * ldc : nullptr;
 
-                for (int n = 0; n < N; n++) {
-                    float sum = 0.f;
+                if (ldb1 == 1) {
+                    // Rows of B are contiguous: accumulate a whole output row, k outer, n inner.
+                    for (int n = 0; n < N; n++)
+                        sum[n] = 0.f;
                     for (int k = 0; k < K; k++) {
-                        float av = (float)aBase[(size_t)m * lda0 + (size_t)k * lda1];
-                        float bv = (float)bBase[(size_t)k * ldb0 + (size_t)n * ldb1];
-                        sum += av * bv;
+                        float av = (float)aRow[(size_t)k * lda1];
+                        const T* bRow = bBase + (size_t)k * ldb0;
+                        for (int n = 0; n < N; n++)
+                            sum[n] += av * (float)bRow[n];
                     }
-                    float result = sum * alpha;
+                } else {
+                    // Transposed B is contiguous along k, so the dot-product order reads it linearly.
+                    for (int n = 0; n < N; n++) {
+                        const T* bCol = bBase + (size_t)n * ldb1;
+                        float s = 0.f;
+                        for (int k = 0; k < K; k++)
+                            s += (float)aRow[(size_t)k * lda1] * (float)bCol[(size_t)k * ldb0];
+                        sum[n] = s;
+                    }
+                }
+
+                for (int n = 0; n < N; n++) {
+                    float result = sum[n] * alpha;
                     if (haveBias)
                         result += beta * (float)biasRow[n];
                     yRow[n] = T(result);

@@ -646,10 +646,10 @@ public:
         const _Tp* bptr = B.ptr<_Tp>();
         _Tp* yptr = Y.ptr<_Tp>();
 
-        // Same broadcast cases as fillBroadcastCDouble(), resolved once instead of materialized.
-        enum CMode { C_NONE, C_SCALAR, C_ROW, C_COL, C_FULL };
-        CMode cmode = C_NONE;
+        // Same broadcast cases as fillBroadcastCDouble(), resolved once into (row, column) strides
+        // instead of materialized: scalar (0, 0), row (0, 1), column (1, 0), full (N, 1).
         const _Tp* cptr = nullptr;
+        size_t c_ms = 0, c_ns = 0;
         if ((constC(mode) || inputs.size() >= 3) && beta != 0.f) {
             const Mat& C = (inputs.size() >= 3) ? inputs.back() : blobs.back();
             if (!C.empty()) {
@@ -659,42 +659,60 @@ public:
                 const auto shape_C = shape(C);
                 const int nd = (int)shape_C.size();
                 if (nd == 0 || (nd == 1 && shape_C[0] == 1) ||
-                    (nd == 2 && shape_C[0] == 1 && shape_C[1] == 1))
-                    cmode = C_SCALAR;
+                    (nd == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+                    // scalar: both strides stay 0
+                }
                 else if ((nd == 1 && shape_C[0] == N) ||
                          (nd == 2 && shape_C[0] == 1 && shape_C[1] == N))
-                    cmode = C_ROW;
+                    c_ns = 1;
                 else if (nd == 2 && shape_C[0] == rows && shape_C[1] == 1)
-                    cmode = C_COL;
+                    c_ms = 1;
                 else {
                     CV_CheckEQ(shape_C[0], rows, "DNN/Gemm: C is not broadcast properly");
                     CV_CheckEQ(shape_C[1], N, "DNN/Gemm: C is not broadcast properly");
-                    cmode = C_FULL;
+                    c_ms = (size_t)N;
+                    c_ns = 1;
                 }
             }
         }
 
-        // Strides resolved once: one branchless K loop covers every transA/transB combination.
+        // Strides resolved once for every transA/transB combination.
         const size_t a_ms = trans_a ? 1 : (size_t)na, a_ks = trans_a ? (size_t)na : 1;
         const size_t b_ns = trans_b ? (size_t)nb : 1, b_ks = trans_b ? 1 : (size_t)nb;
 
         parallel_for_(Range(0, rows), [&](const Range& r) {
+            AutoBuffer<float> accbuf(N);
+            float* acc = accbuf.data();
             for (int m = r.start; m < r.end; m++) {
                 const _Tp* ap = aptr + (size_t)m*a_ms;
-                for (int n = 0; n < N; n++) {
-                    const _Tp* bp = bptr + (size_t)n*b_ns;
-                    float acc = 0.f;
-                    for (int k = 0; k < K; k++)
-                        acc += (float)ap[(size_t)k*a_ks]*(float)bp[(size_t)k*b_ks];
-                    acc *= alpha;
-                    switch (cmode) {
-                        case C_SCALAR: acc += beta*(float)cptr[0]; break;
-                        case C_ROW:    acc += beta*(float)cptr[n]; break;
-                        case C_COL:    acc += beta*(float)cptr[m]; break;
-                        case C_FULL:   acc += beta*(float)cptr[(size_t)m*N + n]; break;
-                        default: break;
+                if (!trans_b) {
+                    // Rows of B are contiguous: accumulate a whole output row, k outer, n inner.
+                    for (int n = 0; n < N; n++)
+                        acc[n] = 0.f;
+                    for (int k = 0; k < K; k++) {
+                        float av = (float)ap[(size_t)k*a_ks];
+                        const _Tp* bp = bptr + (size_t)k*b_ks;
+                        for (int n = 0; n < N; n++)
+                            acc[n] += av*(float)bp[n];
                     }
-                    yptr[(size_t)m*N + n] = _Tp(acc);
+                } else {
+                    // Transposed B is contiguous along k, so the dot-product order reads it linearly.
+                    for (int n = 0; n < N; n++) {
+                        const _Tp* bp = bptr + (size_t)n*b_ns;
+                        float s = 0.f;
+                        for (int k = 0; k < K; k++)
+                            s += (float)ap[(size_t)k*a_ks]*(float)bp[k];
+                        acc[n] = s;
+                    }
+                }
+
+                _Tp* yp = yptr + (size_t)m*N;
+                const _Tp* cp = cptr ? cptr + (size_t)m*c_ms : nullptr;
+                for (int n = 0; n < N; n++) {
+                    float v = acc[n]*alpha;
+                    if (cp)
+                        v += beta*(float)cp[(size_t)n*c_ns];
+                    yp[n] = _Tp(v);
                 }
             }
         });
