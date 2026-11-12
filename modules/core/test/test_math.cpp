@@ -2511,6 +2511,103 @@ TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; 
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
+
+TEST(Core_Trace, one_dimensional)
+{
+    {
+        std::vector<uchar> v = {10, 20, 30};
+        Mat m(v);
+        Scalar tr = cv::trace(m);
+        EXPECT_EQ(tr[0], 10.0);
+    }
+    {
+        std::vector<int> v = {42, 100, 200};
+        Mat m(v);
+        Scalar tr = cv::trace(m);
+        EXPECT_EQ(tr[0], 42.0);
+    }
+    {
+        std::vector<float> v = {3.5f, 1.0f};
+        Mat m(v);
+        Scalar tr = cv::trace(m);
+        EXPECT_FLOAT_EQ((float)tr[0], 3.5f);
+    }
+    {
+        std::vector<double> v = {7.25, 2.5};
+        Mat m(v);
+        Scalar tr = cv::trace(m);
+        EXPECT_DOUBLE_EQ(tr[0], 7.25);
+    }
+    {
+        std::vector<Vec3b> v = {Vec3b(1, 2, 3), Vec3b(4, 5, 6)};
+        Mat m(v);
+        Scalar tr = cv::trace(m);
+        EXPECT_EQ(tr, Scalar(1, 2, 3, 0));
+    }
+    {
+        std::vector<int> empty_v;
+        Mat m(empty_v);
+        EXPECT_EQ(cv::trace(m), Scalar());
+    }
+    {
+        Mat m;
+        EXPECT_EQ(cv::trace(m), Scalar());
+    }
+}
+
+TEST(Core_SetIdentity, one_dimensional)
+{
+    {
+        int sz[] = {4};
+        Mat m(1, sz, CV_8UC1, Scalar(255));
+        cv::setIdentity(m, Scalar(5));
+        EXPECT_EQ(m.at<uchar>(0), 5);
+        EXPECT_EQ(m.at<uchar>(1), 0);
+        EXPECT_EQ(m.at<uchar>(2), 0);
+        EXPECT_EQ(m.at<uchar>(3), 0);
+    }
+    {
+        int sz[] = {3};
+        Mat m(1, sz, CV_32SC1, Scalar(99));
+        cv::setIdentity(m, Scalar(17));
+        EXPECT_EQ(m.at<int>(0), 17);
+        EXPECT_EQ(m.at<int>(1), 0);
+        EXPECT_EQ(m.at<int>(2), 0);
+    }
+    {
+        int sz[] = {3};
+        Mat m(1, sz, CV_32FC1, Scalar(99));
+        cv::setIdentity(m, Scalar(1.5f));
+        EXPECT_FLOAT_EQ(m.at<float>(0), 1.5f);
+        EXPECT_FLOAT_EQ(m.at<float>(1), 0.0f);
+        EXPECT_FLOAT_EQ(m.at<float>(2), 0.0f);
+    }
+    {
+        int sz[] = {3};
+        Mat m(1, sz, CV_64FC1, Scalar(99));
+        cv::setIdentity(m, Scalar(2.5));
+        EXPECT_DOUBLE_EQ(m.at<double>(0), 2.5);
+        EXPECT_DOUBLE_EQ(m.at<double>(1), 0.0);
+        EXPECT_DOUBLE_EQ(m.at<double>(2), 0.0);
+    }
+    {
+        int sz[] = {2};
+        Mat m(1, sz, CV_8UC3, Scalar::all(99));
+        cv::setIdentity(m, Scalar(1, 2, 3));
+        EXPECT_EQ(m.at<Vec3b>(0), Vec3b(1, 2, 3));
+        EXPECT_EQ(m.at<Vec3b>(1), Vec3b(0, 0, 0));
+    }
+    {
+        std::vector<int> empty_v;
+        Mat m(empty_v);
+        EXPECT_NO_THROW(cv::setIdentity(m, Scalar(1)));
+    }
+    {
+        Mat m;
+        EXPECT_NO_THROW(cv::setIdentity(m, Scalar(1)));
+    }
+}
+
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
 TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }
