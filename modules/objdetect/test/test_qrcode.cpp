@@ -919,4 +919,35 @@ TEST(Objdetect_QRCode_decode, decode_truncated_bitstreams)
     EXPECT_TRUE(decodeSymbol(bad_eci_truncated).empty());
 }
 
+static const char* const valid_eci_after_text[21] = {
+    "111111100101101111111",
+    "100000100111001000001",
+    "101110101101101011101",
+    "101110100101001011101",
+    "101110100010101011101",
+    "100000100000101000001",
+    "111111101010101111111",
+    "000000001101100000000",
+    "111011111111011000100",
+    "111111001110001101011",
+    "000101111010100010011",
+    "110100010000001100000",
+    "110010100100101111001",
+    "000000001101010111011",
+    "111111101001011111111",
+    "100000101101110011111",
+    "101110101001011010001",
+    "101110100010001110010",
+    "101110101000100110101",
+    "100000101100001111010",
+    "111111101110101010111"
+};
+
+TEST(Objdetect_QRCode_decode, decode_eci_keeps_earlier_segments)
+{
+    // Byte "ab", then ECI 26, then byte "cd". The text decoded before the ECI
+    // designator must not be lost.
+    EXPECT_EQ("abcd", decodeSymbol(valid_eci_after_text));
+}
+
 }} // namespace

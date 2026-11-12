@@ -1770,8 +1770,9 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
         return false;
     }
 
-    // Decode depends on the mode
-    result = "";
+    // Decode depends on the mode. result is not cleared here: run() has already
+    // initialized it, and decodeECI() calls this function again with the text
+    // that was decoded before the ECI designator.
     while (!bitstream.empty()) {
         // A read already ran past the end of the data, so stop here.
         if (bitstream.overrun)
