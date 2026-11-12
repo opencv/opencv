@@ -99,6 +99,8 @@ GCGraph<TWeight>::~GCGraph()
 template <class TWeight>
 void GCGraph<TWeight>::create( unsigned int vtxCount, unsigned int edgeCount )
 {
+    vtcs.clear();
+    edges.clear();
     vtcs.reserve( vtxCount );
     edges.reserve( edgeCount + 2 );
     flow = 0;
