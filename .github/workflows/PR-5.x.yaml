@@ -14,15 +14,18 @@ jobs:
   classify:
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       pull-requests: read
     outputs:
       fast: ${{ steps.changes.outputs.fast }}
       full: ${{ steps.changes.outputs.full }}
+      delta: ${{ steps.changes.outputs.delta }}
       android: ${{ steps.changes.outputs.android }}
       apple: ${{ steps.changes.outputs.apple }}
       dnn: ${{ steps.changes.outputs.dnn }}
       docs: ${{ steps.changes.outputs.docs }}
       riscv: ${{ steps.changes.outputs.riscv }}
+      riscv_delta: ${{ steps.changes.outputs.riscv_delta }}
     steps:
       - name: Classify changed files
         id: changes
@@ -48,22 +51,53 @@ jobs:
             const full = labels.has('ci:full');
             const fast = !full;
 
-            const dnn = labels.has('category: dnn') ||
+            let previousSuccess = false;
+            if (full) {
+              try {
+                const priorRuns = await github.paginate(
+                  github.rest.actions.listWorkflowRuns,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: 'PR-5.x.yaml',
+                    head_sha: context.payload.pull_request.head.sha,
+                    event: 'pull_request',
+                    status: 'completed',
+                    per_page: 100,
+                  }
+                );
+                previousSuccess = priorRuns.some(run =>
+                  run.id !== context.runId && run.conclusion === 'success'
+                );
+              } catch (error) {
+                core.warning(`Unable to inspect earlier workflow runs: ${error.message}`);
+              }
+            }
+            const delta = full && previousSuccess;
+
+            const dnnRelevant = labels.has('category: dnn') ||
               labels.has('category: dnn (onnx)') ||
               matches(/^modules\/dnn\//);
-            const docs = matches(/^(doc\/|.*\.md$|modules\/[^/]+\/doc\/)/i);
-            const android = matches(/^(platforms\/android\/|modules\/java\/|samples\/android\/)/);
-            const apple = matches(/^(platforms\/(ios|osx)\/|modules\/objc\/|samples\/(swift|ios)\/)/);
-            const riscv = matches(/(riscv|rvv)/i);
+            const androidRelevant = matches(/^(platforms\/android\/|modules\/java\/|samples\/android\/)/);
+            const appleRelevant = matches(/^(platforms\/(ios|osx)\/|modules\/objc\/|samples\/(swift|ios)\/)/);
+            const riscvRelevant = matches(/(riscv|rvv)/i);
+            const optionalJob = relevant => full ? (!delta || !relevant) : relevant;
+
+            const dnn = optionalJob(dnnRelevant);
+            const android = optionalJob(androidRelevant);
+            const apple = optionalJob(appleRelevant);
+            const riscv = optionalJob(riscvRelevant);
 
             for (const [name, value] of Object.entries({
               fast,
               full,
-              android: full || android,
-              apple: full || apple,
+              delta,
+              android,
+              apple,
               dnn,
-              docs: full || docs,
-              riscv: full || riscv,
+              docs: !delta,
+              riscv,
+              riscv_delta: delta && riscvRelevant,
             })) {
               core.setOutput(name, value.toString());
             }
@@ -71,10 +105,11 @@ jobs:
             await core.summary
               .addHeading('CI selection')
               .addTable([
-                [{data: 'Mode', header: true}, {data: fast ? 'fast' : 'full', header: true}],
+                [{data: 'Mode', header: true}, {data: delta ? 'full (delta)' : fast ? 'fast' : 'full', header: true}],
                 ['Changed files', changedFiles.length.toString()],
                 ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
-                ['Reason', full ? 'ci:full label' : 'fast coverage is the default'],
+                ['Previous successful run', previousSuccess ? 'same commit' : 'none'],
+                ['Reason', delta ? 'ci:full after successful fast coverage' : full ? 'ci:full label' : 'fast coverage is the default'],
               ])
               .write();
 
@@ -84,6 +119,7 @@ jobs:
     with:
       workflow_branch: 'main'
       fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
 
   Linux-no-HAL:
     needs: classify
@@ -101,9 +137,11 @@ jobs:
     with:
       workflow_branch: main
       fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
 
   Ubuntu2404-ARM64:
     needs: classify
+    if: needs.classify.outputs.delta != 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@main
 
   Ubuntu2404-ARM64-Debug:
@@ -161,3 +199,4 @@ jobs:
     with:
       workflow_branch: main
       fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.riscv_delta) }}
