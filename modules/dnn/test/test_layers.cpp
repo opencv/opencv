@@ -2996,4 +2996,79 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+TEST(Layer_MatMul, beta_scaling)
+{
+    RNG& rng = theRNG();
+    Mat A({2, 3, 4}, CV_32F);
+    Mat B({2, 4, 5}, CV_32F);
+    Mat H({1, 1, 5}, CV_32F);
+    rng.fill(A, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(B, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(H, RNG::UNIFORM, -1.f, 1.f);
+
+    const float alpha = 0.75f;
+    const float beta = 0.5f;
+
+    // Case 1: variable A, B, and broadcast bias H with beta != 1
+    {
+        Net net;
+        LayerParams lp;
+        lp.name = "mm_var";
+        lp.type = "MatMul";
+        lp.set("alpha", alpha);
+        lp.set("beta", beta);
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        net.setInputsNames({"A", "B", "H"});
+        net.setInput(A, "A");
+        net.setInput(B, "B");
+        net.setInput(H, "H");
+        Mat out = net.forward();
+
+        Mat ref({2, 3, 5}, CV_32F);
+        for (int b = 0; b < 2; ++b)
+        {
+            Mat Ab(3, 4, CV_32F, A.ptr<float>(b));
+            Mat Bb(4, 5, CV_32F, B.ptr<float>(b));
+            Mat Rb(3, 5, CV_32F, ref.ptr<float>(b));
+            gemm(Ab, Bb, alpha, noArray(), 0.0, Rb);
+            for (int r = 0; r < 3; ++r)
+                for (int c = 0; c < 5; ++c)
+                    Rb.at<float>(r, c) += beta * H.ptr<float>()[c];
+        }
+        normAssert(out, ref, "MatMul variable bias beta=0.5", 1e-5, 1e-5);
+    }
+
+    // Case 2: constant B and pre-sized constant bias matching output shape with beta != 1
+    {
+        Mat Hfull({2, 3, 5}, CV_32F);
+        rng.fill(Hfull, RNG::UNIFORM, -1.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.name = "mm_const";
+        lp.type = "MatMul";
+        lp.set("alpha", alpha);
+        lp.set("beta", beta);
+        lp.blobs.push_back(B);
+        lp.blobs.push_back(Hfull);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(A);
+        Mat out = net.forward();
+
+        Mat ref({2, 3, 5}, CV_32F);
+        for (int b = 0; b < 2; ++b)
+        {
+            Mat Ab(3, 4, CV_32F, A.ptr<float>(b));
+            Mat Bb(4, 5, CV_32F, B.ptr<float>(b));
+            Mat Hb(3, 5, CV_32F, Hfull.ptr<float>(b));
+            Mat Rb(3, 5, CV_32F, ref.ptr<float>(b));
+            gemm(Ab, Bb, alpha, Hb, beta, Rb);
+        }
+        normAssert(out, ref, "MatMul const exact-shape bias beta=0.5", 1e-5, 1e-5);
+    }
+}
+
 }} // namespace
