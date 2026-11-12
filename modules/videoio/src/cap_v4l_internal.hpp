@@ -83,22 +83,22 @@ inline std::size_t minimumPayloadSize(unsigned int pixelFormat, std::size_t widt
 
 inline bool getPlanePayloadSize(std::size_t bytesUsed, std::size_t dataOffset,
                                 std::size_t planeLength, std::size_t mappedLength,
-                                std::size_t& payloadSize)
+                                std::size_t& payloadSize, std::size_t fallbackPayloadSize = 0)
 {
-    if (planeLength != mappedLength || bytesUsed < dataOffset || bytesUsed > planeLength)
+    if (planeLength != mappedLength || dataOffset > planeLength)
+        return false;
+    // Some capture drivers do not report bytesused for fixed-size formats.
+    // Infer only a known image size, never the unused capacity of the mapping.
+    if (bytesUsed == 0 && fallbackPayloadSize > 0)
+    {
+        if (fallbackPayloadSize > planeLength - dataOffset)
+            return false;
+        payloadSize = fallbackPayloadSize;
+        return true;
+    }
+    if (bytesUsed < dataOffset || bytesUsed > planeLength)
         return false;
     payloadSize = bytesUsed - dataOffset;
-    return true;
-}
-
-inline bool addPlanePayload(std::size_t& payloadSize, std::size_t bytesUsed, std::size_t dataOffset,
-                            std::size_t planeLength, std::size_t mappedLength)
-{
-    std::size_t planePayloadSize = 0;
-    if (!getPlanePayloadSize(bytesUsed, dataOffset, planeLength, mappedLength, planePayloadSize) ||
-        payloadSize > std::numeric_limits<std::size_t>::max() - planePayloadSize)
-        return false;
-    payloadSize += planePayloadSize;
     return true;
 }
 
@@ -118,32 +118,6 @@ inline bool copyPlanePayload(void* destination, std::size_t destinationLength,
                 static_cast<const unsigned char*>(source) + dataOffset, planePayloadSize);
     destinationOffset += planePayloadSize;
     return true;
-}
-
-inline bool canRetryInvalidFrame(std::size_t invalidFrameCount, std::size_t maxInvalidFrameCount)
-{
-    return invalidFrameCount < maxInvalidFrameCount;
-}
-
-template<typename Dequeue, typename Validate, typename Requeue>
-inline bool dequeueValidFrame(std::size_t maxInvalidFrameCount, std::size_t& invalidFrameCount,
-                              Dequeue dequeue, Validate validate, Requeue requeue)
-{
-    invalidFrameCount = 0;
-    if (maxInvalidFrameCount == 0)
-        return false;
-
-    while (dequeue())
-    {
-        if (validate())
-            return true;
-        if (!requeue())
-            return false;
-        ++invalidFrameCount;
-        if (!canRetryInvalidFrame(invalidFrameCount, maxInvalidFrameCount))
-            return false;
-    }
-    return false;
 }
 
 inline bool isFrameValid(bool errorFlagSet, std::size_t payloadSize, std::size_t minimumPayloadSize)

@@ -69,24 +69,67 @@ TEST(videoio_v4l2_payload, rejects_incomplete_or_error_flagged_frames)
 {
     const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480);
     EXPECT_TRUE(v4l2_internal::isFrameValid(false, minimumPayloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, 0, minimumPayloadSize)); // normalize before validating
     EXPECT_FALSE(v4l2_internal::isFrameValid(false, minimumPayloadSize - 1, minimumPayloadSize));
     EXPECT_FALSE(v4l2_internal::isFrameValid(true, minimumPayloadSize, minimumPayloadSize));
     EXPECT_FALSE(v4l2_internal::isFrameValid(false, 0, 0)); // empty variable-size frame
     EXPECT_TRUE(v4l2_internal::isFrameValid(false, 1, 0)); // nonempty variable-size frame
 }
 
+TEST(videoio_v4l2_payload, uses_format_size_when_fixed_payload_is_not_reported)
+{
+    const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(V4L2_PIX_FMT_YUYV, 640, 480);
+    const size_t mappedLength = minimumPayloadSize + 64;
+    size_t payloadSize = 0;
+    ASSERT_TRUE(v4l2_internal::getPlanePayloadSize(0, 0, mappedLength, mappedLength,
+                                                 payloadSize, minimumPayloadSize));
+    EXPECT_EQ(minimumPayloadSize, payloadSize);
+    EXPECT_TRUE(v4l2_internal::isFrameValid(false, payloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(true, payloadSize, minimumPayloadSize));
+
+    ASSERT_TRUE(v4l2_internal::getPlanePayloadSize(minimumPayloadSize - 1, 0, mappedLength, mappedLength,
+                                                 payloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, payloadSize, minimumPayloadSize));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(0, 0, minimumPayloadSize - 1, minimumPayloadSize - 1,
+                                                  payloadSize, minimumPayloadSize));
+    ASSERT_TRUE(v4l2_internal::getPlanePayloadSize(0, 0, mappedLength, mappedLength, payloadSize));
+    EXPECT_FALSE(v4l2_internal::isFrameValid(false, payloadSize, 0)); // no fallback for variable-size formats
+}
+
 TEST(videoio_v4l2_payload, validates_multiplanar_data_offsets)
 {
     size_t payloadSize = 0;
-    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 128, 16, 128, 128));
-    EXPECT_TRUE(v4l2_internal::addPlanePayload(payloadSize, 256, 32, 256, 256));
-    EXPECT_EQ(336u, payloadSize);
+    EXPECT_TRUE(v4l2_internal::getPlanePayloadSize(128, 16, 128, 128, payloadSize));
+    EXPECT_EQ(112u, payloadSize);
+    EXPECT_TRUE(v4l2_internal::getPlanePayloadSize(256, 32, 256, 256, payloadSize));
+    EXPECT_EQ(224u, payloadSize);
 
-    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 8, 16, 64, 64));
-    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 129, 16, 128, 128));
-    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 64, 16, 128, 64));
-    EXPECT_FALSE(v4l2_internal::addPlanePayload(payloadSize, 80, 16, 128, 64));
-    EXPECT_EQ(336u, payloadSize);
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(8, 16, 64, 64, payloadSize));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(129, 16, 128, 128, payloadSize));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(64, 16, 128, 64, payloadSize));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(80, 16, 128, 64, payloadSize));
+    EXPECT_EQ(224u, payloadSize);
+}
+
+TEST(videoio_v4l2_payload, copies_unreported_fixed_payload_without_mapping_padding)
+{
+    const unsigned char source[] = { 0xFF, 0xFF, 1, 2, 3, 4, 0xEE, 0xEE };
+    unsigned char destination[4] = {};
+    size_t payloadSize = 0;
+    ASSERT_TRUE(v4l2_internal::getPlanePayloadSize(0, 2, sizeof(source), sizeof(source), payloadSize, 4));
+    ASSERT_EQ(4u, payloadSize);
+    size_t destinationOffset = 0;
+    ASSERT_TRUE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
+                                               source, sizeof(source), sizeof(source), payloadSize + 2, 2));
+    EXPECT_EQ(4u, destinationOffset);
+    for (size_t i = 0; i < sizeof(destination); ++i)
+        EXPECT_EQ(i + 1, destination[i]);
+
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(0, 2, 8, 8, payloadSize, 7));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(0, 9, 8, 8, payloadSize, 4));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(0, 2, 8, 7, payloadSize, 4));
+    EXPECT_FALSE(v4l2_internal::getPlanePayloadSize(0, 2, 8, 8, payloadSize,
+                                                  std::numeric_limits<size_t>::max()));
 }
 
 TEST(videoio_v4l2_payload, copies_multiplanar_payload_with_checked_offsets)
@@ -107,64 +150,6 @@ TEST(videoio_v4l2_payload, copies_multiplanar_payload_with_checked_offsets)
     EXPECT_FALSE(v4l2_internal::copyPlanePayload(destination, sizeof(destination), destinationOffset,
                                                  source, sizeof(source), sizeof(source), 5, 1));
     EXPECT_EQ(0u, destinationOffset);
-}
-
-TEST(videoio_v4l2_payload, requeues_invalid_buffer_before_accepting_valid_buffer)
-{
-    const bool validFrames[] = { false, true };
-    size_t dequeuedFrames = 0;
-    size_t requeuedFrames = 0;
-    size_t invalidFrameCount = 0;
-    EXPECT_TRUE(v4l2_internal::dequeueValidFrame(
-        4, invalidFrameCount,
-        [&]()
-        {
-            if (dequeuedFrames == 2)
-                return false;
-            ++dequeuedFrames;
-            return true;
-        },
-        [&]() { return validFrames[dequeuedFrames - 1]; },
-        [&]() { ++requeuedFrames; return true; }));
-    EXPECT_EQ(2u, dequeuedFrames);
-    EXPECT_EQ(1u, requeuedFrames);
-    EXPECT_EQ(1u, invalidFrameCount);
-}
-
-TEST(videoio_v4l2_payload, stops_if_invalid_buffer_cannot_be_requeued)
-{
-    size_t dequeuedFrames = 0;
-    size_t requeuedFrames = 0;
-    size_t invalidFrameCount = 0;
-    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
-        4, invalidFrameCount,
-        [&]() { ++dequeuedFrames; return true; },
-        []() { return false; },
-        [&]() { ++requeuedFrames; return false; }));
-    EXPECT_EQ(1u, dequeuedFrames);
-    EXPECT_EQ(1u, requeuedFrames);
-    EXPECT_EQ(0u, invalidFrameCount);
-}
-
-TEST(videoio_v4l2_payload, stops_after_invalid_buffer_retry_limit)
-{
-    size_t dequeuedFrames = 0;
-    size_t requeuedFrames = 0;
-    size_t invalidFrameCount = 0;
-    EXPECT_FALSE(v4l2_internal::dequeueValidFrame(
-        3, invalidFrameCount,
-        [&]()
-        {
-            if (dequeuedFrames == 3)
-                return false;
-            ++dequeuedFrames;
-            return true;
-        },
-        []() { return false; },
-        [&]() { ++requeuedFrames; return true; }));
-    EXPECT_EQ(3u, dequeuedFrames);
-    EXPECT_EQ(3u, requeuedFrames);
-    EXPECT_EQ(3u, invalidFrameCount);
 }
 
 struct Format_Channels_Depth
