@@ -1465,6 +1465,12 @@ bool QRCodeDecoderImpl::run(const Mat& straight, String& decoded_info) {
     mode = static_cast<QRCodeEncoder::EncodeMode>(0);
     eci = static_cast<QRCodeEncoder::ECIEncodings>(0);
 
+    // decode() calls run() a second time on the transposed matrix, so the
+    // bitstream state must not leak from the previous attempt.
+    bitstream.idx = 0;
+    bitstream.actualBits = 8;
+    bitstream.overrun = false;
+
     // Decode format info
     int maskPattern;
     bool decoded = decodeFormatInfo(straight, maskPattern);
@@ -1749,7 +1755,10 @@ void QRCodeDecoderImpl::extractCodewords(Mat& source, std::vector<uint8_t>& code
 }
 
 bool QRCodeDecoderImpl::decodeSymbols(String& result) {
-    CV_Assert(!bitstream.empty());
+    if (bitstream.empty()) {
+        bitstream.overrun = true;
+        return false;
+    }
 
     // Decode depends on the mode
     result = "";
