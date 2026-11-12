@@ -487,15 +487,20 @@ TEST(GeneralizedHoughGuil, parallel_matches_serial)
     guil->setPosThresh(20);
     guil->setTemplate(templ);
 
-    const int nthreads = std::max(2, getNumThreads());
+    const int prev_nthreads = getNumThreads();
+    const int nthreads = std::max(2, prev_nthreads);
     std::vector<Vec4f> pos1, posN;
     std::vector<Vec3i> votes1, votesN;
     setNumThreads(1);
     guil->detect(image, pos1, votes1);
     setNumThreads(nthreads);
     if (getNumThreads() < 2)
+    {
+        setNumThreads(prev_nthreads);
         throw SkipTestException("Parallel backend does not provide more than one thread");
+    }
     guil->detect(image, posN, votesN);
+    setNumThreads(prev_nthreads);
 
     ASSERT_FALSE(pos1.empty());
     ASSERT_EQ(pos1.size(), posN.size());
