@@ -509,8 +509,10 @@ int quad_segment_agg(int sz, struct line_fit_pt *lfps, int indices[4]){
         float err;
 
         int res = zmaxheap_remove_max(heap, &rv, &err);
-        if (!res)
+        if (!res) {
+            zmaxheap_destroy(heap);
             return 0;
+        }
         CV_Assert(res);
 
         // is this remove_vertex valid? (Or has one of the left/right
@@ -1081,10 +1083,12 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
     // just use the min/max value from the last full tile.
     int tw = w / tilesz;
     int th = h / tilesz;
-
-    uint8_t *im_max = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-    uint8_t *im_min = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-
+    const size_t ntiles = size_t(tw) * size_t(th);
+    cv::AutoBuffer<uint8_t> tile_stats(ntiles * 4);
+    uint8_t *im_max = tile_stats.data();
+    uint8_t *im_min = im_max + ntiles;
+    uint8_t *im_max_tmp = im_min + ntiles;
+    uint8_t *im_min_tmp = im_max_tmp + ntiles;
 
     // first, collect min/max statistics for each tile
     for (int ty = 0; ty < th; ty++) {
@@ -1110,9 +1114,6 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
     // second, apply 3x3 max/min convolution to "blur" these values
     // over larger areas. This reduces artifacts due to abrupt changes
     // in the threshold value.
-    uint8_t *im_max_tmp = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-    uint8_t *im_min_tmp = (uint8_t*)calloc(tw*th, sizeof(uint8_t));
-
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
             uint8_t max = 0, min = 255;
@@ -1137,8 +1138,6 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
             im_min_tmp[ty*tw + tx] = min;
         }
     }
-    free(im_max);
-    free(im_min);
     im_max = im_max_tmp;
     im_min = im_min_tmp;
 
@@ -1218,8 +1217,6 @@ void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh
             }
         }
     }
-    free(im_min);
-    free(im_max);
 
     // this is a dilate/erode deglitching scheme that does not improve
     // anything as far as I can tell.
@@ -1292,10 +1289,13 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
         uf.do_line(thold, w, ts, y);
     }
 
-    // XXX sizing??
-    int nclustermap = 2*w*h - 1;
+    // Cap hash bucket directory at 1,048,573 (largest prime < 2^20, ~8 MiB on 64-bit)
+    // instead of 2*w*h - 1 (132.7 MiB on 4K), using size_t to prevent int overflow.
+    const size_t raw_buckets = std::max<size_t>(1, size_t(2) * size_t(w) * size_t(h) - 1);
+    const size_t nclustermap = std::min<size_t>(raw_buckets, 1048573u);
 
     struct uint64_zarray_entry **clustermap = (struct uint64_zarray_entry**)calloc(nclustermap, sizeof(struct uint64_zarray_entry*));
+    CV_Assert(clustermap != NULL);
 
     for (int y = 1; y < h-1; y++) {
         for (int x = 1; x < w-1; x++) {
@@ -1340,7 +1340,7 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
                 clusterid = (rep0 << 32) + rep1;                \
                 \
                 /* XXX lousy hash function */                       \
-        uint32_t clustermap_bucket = u64hash_2(clusterid) % nclustermap; \
+        size_t clustermap_bucket = size_t(u64hash_2(clusterid) % nclustermap); \
         struct uint64_zarray_entry *entry = clustermap[clustermap_bucket]; \
         while (entry && entry->id != clusterid)     {       \
             entry = entry->next;                            \
@@ -1413,7 +1413,7 @@ out = Mat::zeros(h, w, CV_8UC3);
     zarray_t *clusters = _zarray_create(sizeof(zarray_t*)); //, uint64_zarray_hash_size(clustermap));
     CV_Assert(clusters != NULL);
 
-    for (int i = 0; i < nclustermap; i++) {
+    for (size_t i = 0; i < nclustermap; i++) {
         for (struct uint64_zarray_entry *entry = clustermap[i]; entry; entry = entry->next) {
             // XXX reject clusters here?
             _zarray_add(clusters, &entry->cluster);
@@ -1463,7 +1463,7 @@ out = Mat::zeros(h, w, CV_8UC3);
         contours.push_back(cnt);
     }
 
-    for (int i = 0; i < nclustermap; i++) {
+    for (size_t i = 0; i < nclustermap; i++) {
         struct uint64_zarray_entry *entry = clustermap[i];
         while (entry) {
             struct uint64_zarray_entry *tmp = entry->next;
@@ -1528,6 +1528,9 @@ void _apriltag(Mat im_orig, const DetectorParameters & _params, std::vector<std:
 
     if (_params.aprilTagQuadDecimate > 1){
         resize(im_orig, quad_im, Size(), 1/_params.aprilTagQuadDecimate, 1/_params.aprilTagQuadDecimate, INTER_AREA);
+    }
+    else if (im_orig.isContinuous() && _params.aprilTagQuadSigma == 0) {
+        quad_im = im_orig;
     }
     else {
         im_orig.copyTo(quad_im);
