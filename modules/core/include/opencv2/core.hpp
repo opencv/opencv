@@ -331,7 +331,7 @@ result of an incorrect sign in the case of overflow.
 @param src1 first input array or a scalar.
 @param src2 second input array or a scalar.
 @param dst output array of the same size and the same number of channels as the input array.
-@param mask optional operation mask; this is CV_8U, CV8S or CV_Bool single channel array that specifies elements
+@param mask optional operation mask; this is CV_8U, CV_8S or CV_Bool single channel array that specifies elements
 of the output array to be changed.
 @param dtype optional depth of the output array
 @sa  add, addWeighted, scaleAdd, Mat::convertTo
@@ -434,6 +434,8 @@ The function can be replaced with a matrix expression:
 @endcode
 @note Saturation is not applied when the output array has the depth CV_32S. You may even get
 result of an incorrect sign in the case of overflow.
+@note CV_Bool inputs are not supported. Convert them to another depth first,
+for example with Mat::convertTo.
 @param src1 first input array.
 @param alpha weight of the first array elements.
 @param src2 second input array of the same size and channel number as src1.
@@ -590,7 +592,7 @@ independently for each channel, and return it:
 When all the mask elements are 0's, the function returns Scalar::all(0)
 @param src input array that should have from 1 to 4 channels so that the result can be stored in
 Scalar_ .
-@param mask optional operation mask ot type CV_8U, CV_8S or CV_Bool.
+@param mask optional operation mask of type CV_8U, CV_8S or CV_Bool.
 @sa  countNonZero, meanStdDev, norm, minMaxLoc
 */
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask = noArray());
@@ -665,7 +667,7 @@ The type of norm to calculate is specified using #NormTypes.
 @param src1 first input array.
 @param src2 second input array of the same size and the same type as src1.
 @param normType type of the norm (see #NormTypes).
-@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8S1 or CV_BoolC1.
+@param mask optional operation mask; it must have the same size as src1 and type CV_8UC1, CV_8SC1 or CV_BoolC1.
 */
 CV_EXPORTS_W double norm(InputArray src1, InputArray src2,
                          int normType = NORM_L2, InputArray mask = noArray());
@@ -1591,6 +1593,8 @@ specified 1D, 2D, 3D, ... box and 0 otherwise.
 
 When the lower and/or upper boundary parameters are scalars, the indexes
 (I) at lowerb and upperb in the above formulas should be omitted.
+@note CV_Bool and CV_8F inputs are not supported. Convert them to another depth first,
+for example with Mat::convertTo.
 @param src first input array.
 @param lowerb inclusive lower boundary array or a scalar.
 @param upperb inclusive upper boundary array or a scalar.
@@ -2207,7 +2211,7 @@ the set of input vectors.
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param ctype type of the matrix; it equals 'CV_64F' by default.
 @sa PCA, mulTransposed, Mahalanobis
 @todo InputArrayOfArrays
 */
@@ -2220,7 +2224,7 @@ CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, M
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrixl; it equals 'CV_64F' by default.
+@param ctype type of the matrix; it equals 'CV_64F' by default.
 */
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    InputOutputArray mean, int flags, int ctype = CV_64F);
