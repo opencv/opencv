@@ -3141,6 +3141,54 @@ TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
     }
 }
 
+// The edge-aware demosaicing walked the source and destination rows with a fixed pointer step,
+// which is only correct for continuous matrices. A source or destination that is a region of a
+// larger image gave wrong pixels in most rows.
+typedef testing::TestWithParam< tuple<int, int, Size> > ImgProc_BayerEdgeAware_SubMatrix;
+
+TEST_P(ImgProc_BayerEdgeAware_SubMatrix, source_and_destination_regions)
+{
+    const int code = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const Size sz = get<2>(GetParam());
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+
+    Mat bayer(sz, CV_MAKETYPE(depth, 1));
+    rng.fill(bayer, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 65536);
+
+    Mat expected;
+    cv::cvtColor(bayer, expected, code);
+    ASSERT_TRUE(expected.isContinuous());
+
+    // source: a region of a larger image whose other pixels are unrelated
+    Mat parentSrc(sz.height + 6, sz.width + 8, bayer.type());
+    rng.fill(parentSrc, RNG::UNIFORM, 0, depth == CV_8U ? 256 : 65536);
+    Mat srcRegion = parentSrc(Rect(3, 2, sz.width, sz.height));
+    bayer.copyTo(srcRegion);
+    ASSERT_FALSE(srcRegion.isContinuous());
+
+    Mat actual;
+    cv::cvtColor(srcRegion, actual, code);
+    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF)) << "source region";
+
+    // destination: a region of a larger image, the pixels around it must stay as they are
+    Mat parentDst(sz.height + 4, sz.width + 6, expected.type(), Scalar::all(77));
+    Mat dstRegion = parentDst(Rect(2, 1, sz.width, sz.height));
+    cv::cvtColor(bayer, dstRegion, code);
+    ASSERT_EQ(parentDst.data + parentDst.step + 2 * expected.elemSize(), dstRegion.data);
+
+    Mat parentExpected(parentDst.size(), parentDst.type(), Scalar::all(77));
+    expected.copyTo(parentExpected(Rect(2, 1, sz.width, sz.height)));
+    EXPECT_EQ(0, cvtest::norm(parentExpected, parentDst, NORM_INF)) << "destination region";
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, ImgProc_BayerEdgeAware_SubMatrix,
+    testing::Combine(
+        testing::Values((int)COLOR_BayerBG2BGR_EA, (int)COLOR_BayerGB2BGR_EA,
+                        (int)COLOR_BayerRG2BGR_EA, (int)COLOR_BayerGR2BGR_EA),
+        testing::Values((int)CV_8U, (int)CV_16U),
+        testing::Values(Size(23, 19), Size(16, 14))));
+
 TEST(ImgProc_Bayer2RGBA, accuracy)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
