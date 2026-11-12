@@ -520,14 +520,39 @@ TEST(Imgproc_ConvexHull, scaled_points)
 }
 
 // Points on the vertical line x = 0, where some of the zeros are negative, some positive.
-TEST(Imgproc_ConvexHull, float_signed_zero)
+TEST(Imgproc_ConvexHull, float_signed_zero_x)
 {
-    const std::vector<Point2f> points = { {-0.f, 1.f}, {-0.f, 7.f}, {0.f, 3.f}, {0.f, 5.f} };
+    const int total = 128; // fewer float points go to std::sort
+
+    std::vector<Point2f> points;
+    for (int i = 0; i < total; ++i)
+    {
+        const float zero = i % 2 == 0 ? 0.f : -0.f;
+        points.push_back(Point2f(zero, (float)(i + 1)));
+    }
 
     std::vector<int> hull;
     convexHull(points, hull, false, false);
     std::sort(hull.begin(), hull.end());
-    EXPECT_EQ(std::vector<int>({0, 1}), hull);
+    EXPECT_EQ(std::vector<int>({0, total - 1}), hull);
+}
+
+// Points on the horizontal line y = 0, where some of the zeros are negative, some positive.
+TEST(Imgproc_ConvexHull, float_signed_zero_y)
+{
+    const int total = 128; // fewer float points go to std::sort
+
+    std::vector<Point2f> points;
+    for (int i = 0; i < total; ++i)
+    {
+        const float zero = i % 2 == 0 ? 0.f : -0.f;
+        points.push_back(Point2f((float)(i + 1), zero));
+    }
+
+    std::vector<int> hull;
+    convexHull(points, hull, false, false);
+    std::sort(hull.begin(), hull.end());
+    EXPECT_EQ(std::vector<int>({0, total - 1}), hull);
 }
 
 static
