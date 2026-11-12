@@ -169,16 +169,16 @@ float calcOrientationHist(
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
 
-    cv::utils::BufferArea area;
-    float *X = 0, *Y = 0, *Mag, *Ori = 0, *W = 0, *temphist = 0;
-    area.allocate(X, len, CV_SIMD_WIDTH);
-    area.allocate(Y, len, CV_SIMD_WIDTH);
-    area.allocate(Ori, len, CV_SIMD_WIDTH);
-    area.allocate(W, len, CV_SIMD_WIDTH);
-    area.allocate(temphist, n+4, CV_SIMD_WIDTH);
-    area.commit();
-    temphist += 2;
-    Mag = X;
+    const int stride = (int)alignSize(len, CV_SIMD_WIDTH / sizeof(float));
+    const int hist_stride = (int)alignSize(n + 4, CV_SIMD_WIDTH / sizeof(float));
+    AutoBuffer<float, 4 * 512 + 64> raw_buf(4 * stride + hist_stride + CV_SIMD_WIDTH / sizeof(float));
+    float* aligned_base = alignPtr(raw_buf.data(), CV_SIMD_WIDTH);
+    float *X = aligned_base;
+    float *Y = X + stride;
+    float *Ori = Y + stride;
+    float *W = Ori + stride;
+    float *temphist = W + stride + 2;
+    float *Mag = X;
 
     for( i = 0; i < n; i++ )
         temphist[i] = 0.f;
@@ -731,18 +731,20 @@ void calcSIFTDescriptor(
     const int len_ddn = d * d * n;
     int rows = img.rows, cols = img.cols;
 
-    cv::utils::BufferArea area;
-    float *X = 0, *Y = 0, *Mag, *Ori = 0, *W = 0, *RBin = 0, *CBin = 0, *hist = 0, *rawDst = 0;
-    area.allocate(X, len, CV_SIMD_WIDTH);
-    area.allocate(Y, len, CV_SIMD_WIDTH);
-    area.allocate(Ori, len, CV_SIMD_WIDTH);
-    area.allocate(W, len, CV_SIMD_WIDTH);
-    area.allocate(RBin, len, CV_SIMD_WIDTH);
-    area.allocate(CBin, len, CV_SIMD_WIDTH);
-    area.allocate(hist, len_hist, CV_SIMD_WIDTH);
-    area.allocate(rawDst, len_ddn, CV_SIMD_WIDTH);
-    area.commit();
-    Mag = Y;
+    const int stride = (int)alignSize(len, CV_SIMD_WIDTH / sizeof(float));
+    const int hist_stride = (int)alignSize(len_hist, CV_SIMD_WIDTH / sizeof(float));
+    const int ddn_stride = (int)alignSize(len_ddn, CV_SIMD_WIDTH / sizeof(float));
+    AutoBuffer<float, 6 * 1024 + 512> raw_buf(6 * stride + hist_stride + ddn_stride + CV_SIMD_WIDTH / sizeof(float));
+    float* aligned_base = alignPtr(raw_buf.data(), CV_SIMD_WIDTH);
+    float *X = aligned_base;
+    float *Y = X + stride;
+    float *Ori = Y + stride;
+    float *W = Ori + stride;
+    float *RBin = W + stride;
+    float *CBin = RBin + stride;
+    float *hist = CBin + stride;
+    float *rawDst = hist + hist_stride;
+    float *Mag = Y;
 
     for( i = 0; i < d+2; i++ )
     {

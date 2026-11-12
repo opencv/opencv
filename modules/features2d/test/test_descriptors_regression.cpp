@@ -79,6 +79,30 @@ TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
     EXPECT_EQ(0, cvtest::norm(descriptors, descriptors2, NORM_INF));
 }
 
+TEST( Features2d_DescriptorExtractor_SIFT, compute_after_detect )
+{
+    Mat img(240, 320, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(240), -1);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(30), -1);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+
+    Ptr<SIFT> sift = SIFT::create();
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+    sift->detectAndCompute(img, noArray(), keypoints, descriptors);
+    ASSERT_FALSE(keypoints.empty());
+
+    vector<KeyPoint> keypoints2;
+    Mat descriptors2;
+    sift->detect(img, keypoints2);
+    sift->compute(img, keypoints2, descriptors2);
+
+    ASSERT_EQ(keypoints.size(), keypoints2.size());
+    EXPECT_EQ(0, cvtest::norm(descriptors, descriptors2, NORM_INF));
+}
+
 TEST( Features2d_DescriptorExtractor_AKAZE, compute_after_detect )
 {
     Mat img(240, 320, CV_8UC3);
