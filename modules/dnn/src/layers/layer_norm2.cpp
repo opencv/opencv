@@ -80,6 +80,29 @@ public:
     }
 #endif
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        // The importer copies half scale/bias into blobs before widenHalfConstants() runs, so
+        // with FP16 off they still arrive as CV_16F/CV_16BF; match them to the activations.
+        int d = inputs[0].depth();
+        for (Mat& blob : blobs) {
+            if ((blob.depth() == CV_16F || blob.depth() == CV_16BF) && blob.depth() != d) {
+                Mat widened;
+                blob.convertTo(widened, d);
+                blob = widened;
+            }
+        }
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,

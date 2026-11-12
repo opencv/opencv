@@ -579,6 +579,22 @@ void Net::Impl::widenHalfConstants()
     }
 }
 
+// Nets with fp16/bf16 tensors are prepared on the first forward(), once the FP16 target is known.
+void Net::Impl::prepareForInference(bool atImport)
+{
+    if (atImport) {
+        size_t nargs = args.size();
+        for (size_t i = 1; i < nargs; i++) {
+            if (args[i].type == CV_16F || args[i].type == CV_16BF) {
+                // still index the layers, so getLayerNames()/getLayer() work before forward()
+                totalLayers = updateGraphOfs(mainGraph, 0, true);
+                return;
+            }
+        }
+    }
+    prepareForInference();
+}
+
 void Net::Impl::prepareForInference()
 {
 #ifdef HAVE_ONNXRUNTIME
