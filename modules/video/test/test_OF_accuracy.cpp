@@ -211,6 +211,26 @@ TEST(DenseOpticalFlow_DIS, no_stale_initial_flow)
     EXPECT_EQ(0, cvtest::norm(flow, reference, NORM_INF));
 }
 
+TEST(DenseOpticalFlow_VariationalRefinement, calc_reuse_matches_fresh)
+{
+    Mat frame1(120, 160, CV_8UC1), frame2(120, 160, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.2);
+    Mat M = (Mat_<double>(2, 3) << 1, 0, 1.5, 0, 1, -0.75);
+    warpAffine(frame1, frame2, M, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Ptr<VariationalRefinement> vr = VariationalRefinement::create();
+    Mat flow1(frame1.size(), CV_32FC2, Scalar::all(0));
+    Mat flow2(frame1.size(), CV_32FC2, Scalar::all(0));
+    vr->calc(frame1, frame2, flow1);
+    vr->calc(frame1, frame2, flow2);
+    EXPECT_EQ(0, cvtest::norm(flow1, flow2, NORM_INF));
+    vr->collectGarbage();
+    Mat flow3(frame1.size(), CV_32FC2, Scalar::all(0));
+    vr->calc(frame1, frame2, flow3);
+    EXPECT_EQ(0, cvtest::norm(flow1, flow3, NORM_INF));
+}
+
 TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
 {
     Mat prev = Mat::zeros(Size(320, 240), CV_8UC1);

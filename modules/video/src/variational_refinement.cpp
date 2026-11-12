@@ -100,7 +100,7 @@ class VariationalRefinementImpl CV_FINAL : public VariationalRefinement
         void release();
     };
 
-    Mat_<float> Ix, Iy, Iz, Ixx, Ixy, Iyy, Ixz, Iyz;                            //!< image derivative buffers
+    Mat_<float> Ix, Iy, Iz, Ixx;                                                 //!< reusable full-frame work planes
     RedBlackBuffer Ix_rb, Iy_rb, Iz_rb, Ixx_rb, Ixy_rb, Iyy_rb, Ixz_rb, Iyz_rb; //!< corresponding red-black buffers
 
     RedBlackBuffer A11, A12, A22, b1, b2; //!< main linear system coefficients
@@ -476,10 +476,6 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
     Iy.create(s);
     Iz.create(s);
     Ixx.create(s);
-    Ixy.create(s);
-    Iyy.create(s);
-    Ixz.create(s);
-    Iyz.create(s);
 
     Ix_rb.create(s);
     Iy_rb.create(s);
@@ -493,15 +489,21 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
     mapX.create(s);
     mapY.create(s);
 
-    /* Floating point warps work significantly better than fixed-point */
-    Mat I1flt, warpedI;
+    /* Floating point warps work significantly better than fixed-point.
+     * None of the full-frame planes is read after prepareBuffers() (the solver reads only *_rb),
+     * and W_u/W_v are not read after warpImage + splitCheckerboard, so 6 full-frame planes
+     * (Ix, Iy, Iz, Ixx, mapX, mapY) serve every stage including calc()'s split/merge.
+     */
+    Mat I1flt = Ix, warpedI = Iy;
     I1.convertTo(I1flt, CV_32F);
     warpImage(warpedI, I1flt, W_u, W_v);
+    splitCheckerboard(W_u_rb, W_u);
+    splitCheckerboard(W_v_rb, W_v);
 
     /* Computing an average of the current and warped next frames (to compute the derivatives on) and
      * temporal derivative Iz
      */
-    Mat averagedI;
+    Mat averagedI = Ix;
     {
         vector<void *> op1s;
         op1s.push_back((void *)&I0);
@@ -519,7 +521,7 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
     }
     splitCheckerboard(Iz_rb, Iz);
 
-    /* Computing first-order derivatives */
+    /* Computing first-order derivatives (warpedI/Iy, Ixx, mapX, mapY are free scratch here) */
     {
         vector<void *> op1s;
         op1s.push_back((void *)&averagedI);
@@ -527,10 +529,10 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
         op1s.push_back((void *)&Iz);
         op1s.push_back((void *)&Iz);
         vector<void *> op2s;
-        op2s.push_back((void *)&Ix);
         op2s.push_back((void *)&Iy);
-        op2s.push_back((void *)&Ixz);
-        op2s.push_back((void *)&Iyz);
+        op2s.push_back((void *)&Ixx);
+        op2s.push_back((void *)&mapX);
+        op2s.push_back((void *)&mapY);
         vector<void *> op3s;
         op3s.push_back((void *)&Ix_rb);
         op3s.push_back((void *)&Iy_rb);
@@ -543,8 +545,10 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
         ops.push_back(&VariationalRefinementImpl::gradVertAndSplitOp);
         parallel_for_(Range(0, 4), ParallelOp_ParBody(*this, ops, op1s, op2s, op3s));
     }
+    std::swap(Ix, Iy);
+    std::swap(Iy, Ixx);
 
-    /* Computing second-order derivatives */
+    /* Computing second-order derivatives (Ixx, mapX, mapY are free scratch here) */
     {
         vector<void *> op1s;
         op1s.push_back((void *)&Ix);
@@ -552,8 +556,8 @@ void VariationalRefinementImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &W_u, Mat &
         op1s.push_back((void *)&Iy);
         vector<void *> op2s;
         op2s.push_back((void *)&Ixx);
-        op2s.push_back((void *)&Ixy);
-        op2s.push_back((void *)&Iyy);
+        op2s.push_back((void *)&mapX);
+        op2s.push_back((void *)&mapY);
         vector<void *> op3s;
         op3s.push_back((void *)&Ixx_rb);
         op3s.push_back((void *)&Ixy_rb);
@@ -1120,7 +1124,10 @@ void VariationalRefinementImpl::calc(InputArray I0, InputArray I1, InputOutputAr
     CV_Assert(!flow.empty() && flow.depth() == CV_32F && flow.channels() == 2);
     CV_Assert(I0.sameSize(flow));
 
-    Mat uv[2];
+    Size s = I0.size();
+    Iz.create(s);
+    Ixx.create(s);
+    Mat uv[2] = { Iz, Ixx };
     Mat &flowMat = flow.getMatRef();
     split(flowMat, uv);
     calcUV(I0, I1, uv[0], uv[1]);
@@ -1147,8 +1154,6 @@ void VariationalRefinementImpl::calcUV(InputArray I0, InputArray I1, InputOutput
     Mat &W_v = flow_v.getMatRef();
     prepareBuffers(I0Mat, I1Mat, W_u, W_v);
 
-    splitCheckerboard(W_u_rb, W_u);
-    splitCheckerboard(W_v_rb, W_v);
     W_u_rb.red.copyTo(tempW_u.red);
     W_u_rb.black.copyTo(tempW_u.black);
     W_v_rb.red.copyTo(tempW_v.red);
@@ -1200,10 +1205,6 @@ void VariationalRefinementImpl::collectGarbage()
     Iy.release();
     Iz.release();
     Ixx.release();
-    Ixy.release();
-    Iyy.release();
-    Ixz.release();
-    Iyz.release();
 
     Ix_rb.release();
     Iy_rb.release();
