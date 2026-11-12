@@ -89,11 +89,11 @@ static const int huff_code_mask = (1 << huff_val_shift) - 1;
 #endif
 static const int MJPEG_CAT_TAB_SIZE = 4096;
 
-// JPEG DC amplitude uses at most 11 bits, AC at most 10. Gray's *4 sample
-// scale plus a less-rounded SIMD FDCT can produce |coeff| > 2047 (category 12+).
-// The Huffman tables only define symbols 0..11, and cat_table only covers
-// [-4096, 4096] — larger values were an OOB read that showed up as
-// put_bits(len>=32) on some platforms (Mac M5).
+// Baseline Huffman tables define DC categories 0..11 and AC categories 0..10.
+// cat_table only covers [-4096, 4096]. A coefficient past that was an OOB read
+// that showed up as put_bits(len>=32) on some platforms.
+// mjpeg_clamp_category keeps the emitted symbol in range. The DC predictor must
+// follow that clamped difference: the decoder accumulates what was written.
 static inline int mjpeg_coeff_category(int val, const uchar* cat_table)
 {
     int idx = val;
@@ -1207,10 +1207,11 @@ public:
 
                         j = is_chroma + (i > luma_count);
                         val = buffer[0] - dc_pred[j];
-                        dc_pred[j] = buffer[0];
 
                         {
                             int cat = mjpeg_clamp_category(val, mjpeg_coeff_category(val, cat_table), 11);
+                            // Decoder predictor is the previous DC plus the difference actually written.
+                            dc_pred[j] += val;
                             output_buffer.put_val_bits(cat, huff_dc_tab[is_chroma],
                                                        (unsigned)(val - (val < 0 ? 1 : 0)), cat);
                         }

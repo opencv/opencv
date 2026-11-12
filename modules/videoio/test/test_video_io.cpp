@@ -1356,7 +1356,7 @@ static void mjpegConvertToYUV_ref(int colorspace, int channels, int input_channe
     for (int i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step)
     {
         for (int j = 0; j < x_limit; j++)
-            Y_data[j] = (short)(pix_data[j] * 4 - 128 * 4);
+            Y_data[j] = (short)(pix_data[j] - 128);
     }
 }
 
@@ -1519,12 +1519,8 @@ TEST_P(Videoio_MJPEG_Encoder, accuracy)
     else if (type == CV_8UC4)
         cvtColor(src, expected, COLOR_RGBA2BGR);
 
-    // Gray MJPEG uses a *4 AAN sample scale, so only geometry is checked there.
-    if (type != CV_8UC1)
-    {
-        EXPECT_GT(cvtest::PSNR(one, expected), 30.0) << sz << " Q=" << quality;
-        EXPECT_GT(cvtest::PSNR(many, expected), 30.0) << sz << " Q=" << quality;
-    }
+    EXPECT_GT(cvtest::PSNR(one, expected), 30.0) << sz << " Q=" << quality;
+    EXPECT_GT(cvtest::PSNR(many, expected), 30.0) << sz << " Q=" << quality;
     // Parallel MjpegEncoder stripes share DC prediction; decoded frames must match.
     EXPECT_LE(cv::norm(one, many, NORM_INF), 2.0) << sz << " Q=" << quality;
 }

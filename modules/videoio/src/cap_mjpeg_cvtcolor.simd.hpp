@@ -242,13 +242,13 @@ void mjpeg_convertToYUV(int colorspace, int channels, int input_channels,
         const int n32 = VTraits<v_int32>::vlanes();
         for (; j + n32 <= x_limit; j += n32)
         {
-            v_int32 y = v_sub(v_shl<2>(v_reinterpret_as_s32(vx_load_expand_q(pix_data + j))),
-                              vx_setall_s32(512));
+            v_int32 y = v_sub(v_reinterpret_as_s32(vx_load_expand_q(pix_data + j)),
+                              vx_setall_s32(128));
             v_pack_store(Y_data + j, y);
         }
 #endif
         for (; j < x_limit; j++)
-            Y_data[j] = (short)(pix_data[j] * 4 - 128 * 4);
+            Y_data[j] = (short)(pix_data[j] - 128);
     }
 #if CV_SIMD
     vx_cleanup();
