@@ -97,49 +97,51 @@ void Cloning::computeLaplacianY( const Mat &img, Mat &laplacianY)
 
 void Cloning::dst(const Mat& src, Mat& dest, bool invert)
 {
-    Mat temp = Mat::zeros(src.rows, 2 * src.cols + 2, CV_32F);
+    const int h = src.rows;
+    const int w = src.cols;
+    const int flag = invert ? DFT_ROWS + DFT_SCALE + DFT_INVERSE : DFT_ROWS;
 
-    int flag = invert ? DFT_ROWS + DFT_SCALE + DFT_INVERSE: DFT_ROWS;
-
-    src.copyTo(temp(Rect(1,0, src.cols, src.rows)));
-
-    for(int j = 0 ; j < src.rows ; ++j)
+    complex1_.create(h, 2 * w + 2, CV_32FC2);
+    for (int j = 0; j < h; ++j)
     {
-        float * tempLinePtr = temp.ptr<float>(j);
-        const float * srcLinePtr = src.ptr<float>(j);
-        for(int i = 0 ; i < src.cols ; ++i)
+        Vec2f* c1 = complex1_.ptr<Vec2f>(j);
+        const float* srcLinePtr = src.ptr<float>(j);
+        c1[0] = Vec2f(0.f, 0.f);
+        c1[w + 1] = Vec2f(0.f, 0.f);
+        for (int i = 0; i < w; ++i)
         {
-            tempLinePtr[src.cols + 2 + i] = - srcLinePtr[src.cols - 1 - i];
+            c1[1 + i] = Vec2f(srcLinePtr[i], 0.f);
+            c1[w + 2 + i] = Vec2f(-srcLinePtr[w - 1 - i], 0.f);
         }
     }
 
-    Mat planes[] = {temp, Mat::zeros(temp.size(), CV_32F)};
-    Mat complex;
+    dft(complex1_, complex1_, flag);
 
-    merge(planes, 2, complex);
-    dft(complex, complex, flag);
-    split(complex, planes);
-    temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32F);
-
-    for(int j = 0 ; j < src.cols ; ++j)
+    complex2_.create(w, 2 * h + 2, CV_32FC2);
+    for (int j = 0; j < w; ++j)
     {
-        float * tempLinePtr = temp.ptr<float>(j);
-        for(int i = 0 ; i < src.rows ; ++i)
+        Vec2f* c2 = complex2_.ptr<Vec2f>(j);
+        c2[0] = Vec2f(0.f, 0.f);
+        c2[h + 1] = Vec2f(0.f, 0.f);
+        for (int i = 0; i < h; ++i)
         {
-            float val = planes[1].ptr<float>(i)[j + 1];
-            tempLinePtr[i + 1] = val;
-            tempLinePtr[temp.cols - 1 - i] = - val;
+            const float val = complex1_.ptr<Vec2f>(i)[j + 1][1];
+            c2[1 + i] = Vec2f(val, 0.f);
+            c2[2 * h + 1 - i] = Vec2f(-val, 0.f);
         }
     }
 
-    Mat planes2[] = {temp, Mat::zeros(temp.size(), CV_32F)};
+    dft(complex2_, complex2_, flag);
 
-    merge(planes2, 2, complex);
-    dft(complex, complex, flag);
-    split(complex, planes2);
-
-    temp = planes2[1].t();
-    temp(Rect( 0, 1, src.cols, src.rows)).copyTo(dest);
+    dest.create(h, w, CV_32F);
+    for (int i = 0; i < h; ++i)
+    {
+        float* drow = dest.ptr<float>(i);
+        for (int j = 0; j < w; ++j)
+        {
+            drow[j] = complex2_.ptr<Vec2f>(j)[i + 1][1];
+        }
+    }
 }
 
 void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
@@ -202,20 +204,19 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
         resLinePtr[i] = imgLinePtr[i];
 }
 
-void Cloning::poissonSolver(const Mat &img, Mat &laplacianX , Mat &laplacianY, Mat &result)
+void Cloning::poissonSolver(const Mat &img, const Mat &lap, Mat &result)
 {
     const int w = img.cols;
     const int h = img.rows;
-
-    Mat lap = laplacianX + laplacianY;
 
     Mat bound = img.clone();
 
     rectangle(bound, Point(1, 1), Point(img.cols-2, img.rows-2), Scalar::all(0), -1);
     Mat boundary_points;
     Laplacian(bound, boundary_points, CV_32F);
+    bound.release();
 
-    boundary_points = lap - boundary_points;
+    subtract(lap, boundary_points, boundary_points);
 
     Mat mod_diff = boundary_points(Rect(1, 1, w-2, h-2));
 
@@ -230,7 +231,6 @@ void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
     patchGradientY = Mat(destination.size(),CV_32FC3);
 
     binaryMaskFloat = Mat(binaryMask.size(),CV_32FC1);
-    binaryMaskFloatInverted = Mat(binaryMask.size(),CV_32FC1);
 
     //init of the filters used in the dst
     const int w = destination.cols;
@@ -265,59 +265,78 @@ void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, Mat &
 
 void Cloning::scalarProduct(Mat mat, float r, float g, float b)
 {
-    vector <Mat> channels;
-    split(mat,channels);
-    multiply(channels[2],r,channels[2]);
-    multiply(channels[1],g,channels[1]);
-    multiply(channels[0],b,channels[0]);
-    merge(channels,mat);
+    CV_Assert(mat.type() == CV_32FC3);
+    for (int y = 0; y < mat.rows; ++y)
+    {
+        Vec3f* row = mat.ptr<Vec3f>(y);
+        for (int x = 0; x < mat.cols; ++x)
+        {
+            row[x][0] *= b;
+            row[x][1] *= g;
+            row[x][2] *= r;
+        }
+    }
 }
 
 void Cloning::arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const
 {
-    vector <Mat> lhs_channels;
-    vector <Mat> result_channels;
-
-    split(lhs,lhs_channels);
-    split(result,result_channels);
-
-    for(int chan = 0 ; chan < 3 ; ++chan)
-        multiply(lhs_channels[chan],rhs,result_channels[chan]);
-
-    merge(result_channels,result);
+    CV_Assert(lhs.type() == CV_32FC3 && rhs.type() == CV_32FC1 && lhs.size() == rhs.size());
+    result.create(lhs.size(), CV_32FC3);
+    for (int y = 0; y < lhs.rows; ++y)
+    {
+        const Vec3f* lrow = lhs.ptr<Vec3f>(y);
+        const float* rrow = rhs.ptr<float>(y);
+        Vec3f* drow = result.ptr<Vec3f>(y);
+        for (int x = 0; x < lhs.cols; ++x)
+        {
+            const float m = rrow[x];
+            drow[x] = Vec3f(lrow[x][0] * m, lrow[x][1] * m, lrow[x][2] * m);
+        }
+    }
 }
 
 void Cloning::poisson(const Mat &destination)
 {
-    Mat laplacianX = destinationGradientX + patchGradientX;
-    Mat laplacianY = destinationGradientY + patchGradientY;
+    add(destinationGradientX, patchGradientX, destinationGradientX);
+    patchGradientX.release();
+    add(destinationGradientY, patchGradientY, destinationGradientY);
+    patchGradientY.release();
 
-    computeLaplacianX(laplacianX,laplacianX);
-    computeLaplacianY(laplacianY,laplacianY);
+    computeLaplacianX(destinationGradientX, destinationGradientX);
+    computeLaplacianY(destinationGradientY, destinationGradientY);
 
-    split(laplacianX,rgbx_channel);
-    split(laplacianY,rgby_channel);
+    add(destinationGradientX, destinationGradientY, destinationGradientX);
+    destinationGradientY.release();
 
-    split(destination,output);
+    split(destinationGradientX, rgbx_channel);
+    destinationGradientX.release();
+
+    split(destination, output);
 
     for(int chan = 0 ; chan < 3 ; ++chan)
     {
-        poissonSolver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
+        poissonSolver(output[chan], rgbx_channel[chan], output[chan]);
+        rgbx_channel[chan].release();
     }
+    rgbx_channel.clear();
+    complex1_.release();
+    complex2_.release();
 }
 
 void Cloning::evaluate(const Mat &I, Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
-    wmask.convertTo(binaryMaskFloatInverted,CV_32FC1,1.0/255.0);
+    wmask.convertTo(binaryMaskFloat,CV_32FC1,1.0/255.0);
 
-    arrayProduct(destinationGradientX, binaryMaskFloatInverted, destinationGradientX);
-    arrayProduct(destinationGradientY, binaryMaskFloatInverted, destinationGradientY);
+    arrayProduct(destinationGradientX, binaryMaskFloat, destinationGradientX);
+    arrayProduct(destinationGradientY, binaryMaskFloat, destinationGradientY);
+    binaryMaskFloat.release();
 
     poisson(I);
 
     merge(output,cloned);
+    output.clear();
 }
 
 void Cloning::normalClone(const Mat &destination, const Mat &patch, Mat &binaryMask, Mat &cloned, int flag)
@@ -439,10 +458,11 @@ void Cloning::textureFlatten(Mat &I, Mat &mask, Mat &wmask, float low_threshold,
     Mat out;
     Canny(mask,out,low_threshold,high_threshold,kernel_size);
 
-    Mat zeros = Mat::zeros(patchGradientX.size(), CV_32FC3);
     Mat zerosMask = (out != 255);
-    zeros.copyTo(patchGradientX, zerosMask);
-    zeros.copyTo(patchGradientY, zerosMask);
+    out.release();
+    patchGradientX.setTo(Scalar::all(0), zerosMask);
+    patchGradientY.setTo(Scalar::all(0), zerosMask);
+    zerosMask.release();
 
     arrayProduct(patchGradientX,binaryMaskFloat, patchGradientX);
     arrayProduct(patchGradientY,binaryMaskFloat, patchGradientY);

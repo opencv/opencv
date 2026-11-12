@@ -68,7 +68,7 @@ namespace cv
             void dst(const Mat& src, Mat& dest, bool invert = false);
             void solve(const Mat &img, Mat& mod_diff, Mat &result);
 
-            void poissonSolver(const cv::Mat &img, cv::Mat &gxx , cv::Mat &gyy, cv::Mat &result);
+            void poissonSolver(const cv::Mat &img, const cv::Mat &lap, cv::Mat &result);
 
             void arrayProduct(const cv::Mat& lhs, const cv::Mat& rhs, cv::Mat& result) const;
 
@@ -78,10 +78,11 @@ namespace cv
             void computeLaplacianY(const cv::Mat &img, cv::Mat &gyy);
 
         private:
-            std::vector <cv::Mat> rgbx_channel, rgby_channel, output;
+            std::vector <cv::Mat> rgbx_channel, output;
             cv::Mat destinationGradientX, destinationGradientY;
             cv::Mat patchGradientX, patchGradientY;
-            cv::Mat binaryMaskFloat, binaryMaskFloatInverted;
+            cv::Mat binaryMaskFloat;
+            cv::Mat complex1_, complex2_;
 
             std::vector<float> filter_X, filter_Y;
     };

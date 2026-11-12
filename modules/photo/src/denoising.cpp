@@ -396,7 +396,6 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
     Mat dst = _dst.getMat();
 
     int type = srcImgs[0].type(), depth = CV_MAT_DEPTH(type);
-    int src_imgs_size = static_cast<int>(srcImgs.size());
 
     if (type != CV_8UC3)
     {
@@ -406,31 +405,36 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
 
     int from_to[] = { 0,0, 1,1, 2,2 };
 
-    // TODO convert only required images
-    std::vector<Mat> src_lab(src_imgs_size);
-    std::vector<Mat> l(src_imgs_size);
-    std::vector<Mat> ab(src_imgs_size);
-    for (int i = 0; i < src_imgs_size; i++)
-    {
-        src_lab[i] = Mat::zeros(srcImgs[0].size(), type);
-        l[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 1));
-        ab[i] = Mat::zeros(srcImgs[0].size(), CV_MAKE_TYPE(depth, 2));
-        cvtColor(srcImgs[i], src_lab[i], COLOR_LBGR2Lab);
+    const int temporalWindowHalfSize = temporalWindowSize / 2;
+    const int winStart = imgToDenoiseIndex - temporalWindowHalfSize;
 
-        Mat l_ab[] = { l[i], ab[i] };
-        mixChannels(&src_lab[i], 1, l_ab, 2, from_to, 3);
+    Mat src_lab;
+    std::vector<Mat> l(temporalWindowSize);
+    std::vector<Mat> ab(temporalWindowSize);
+    for (int k = 0; k < temporalWindowSize; k++)
+    {
+        const int srcIdx = winStart + k;
+        l[k].create(srcImgs[0].size(), CV_MAKE_TYPE(depth, 1));
+        ab[k].create(srcImgs[0].size(), CV_MAKE_TYPE(depth, 2));
+        cvtColor(srcImgs[srcIdx], src_lab, COLOR_LBGR2Lab);
+
+        Mat l_ab[] = { l[k], ab[k] };
+        mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
     }
+    src_lab.release();
 
     Mat dst_l;
     Mat dst_ab;
 
     fastNlMeansDenoisingMulti(
-        l, dst_l, imgToDenoiseIndex, temporalWindowSize,
+        l, dst_l, temporalWindowHalfSize, temporalWindowSize,
         h, templateWindowSize, searchWindowSize);
+    l.clear();
 
     fastNlMeansDenoisingMulti(
-        ab, dst_ab, imgToDenoiseIndex, temporalWindowSize,
+        ab, dst_ab, temporalWindowHalfSize, temporalWindowSize,
         hForColorComponents, templateWindowSize, searchWindowSize);
+    ab.clear();
 
     Mat l_ab_denoised[] = { dst_l, dst_ab };
     Mat dst_lab(srcImgs[0].size(), srcImgs[0].type());
