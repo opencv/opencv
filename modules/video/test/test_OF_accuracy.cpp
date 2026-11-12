@@ -172,6 +172,45 @@ TEST(DenseOpticalFlow_VariationalRefinement, ReferenceAccuracy)
     EXPECT_LE(calcRMSE(GT, flow), target_RMSE);
 }
 
+TEST(DenseOpticalFlow_DIS, calc_after_collectGarbage)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.0);
+    Mat M = (Mat_<double>(2, 3) << 1, 0, 2.0, 0, 1, -1.0);
+    warpAffine(frame1, frame2, M, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->collectGarbage();
+    Mat flow1, flow2, reference;
+    dis->calc(frame1, frame2, flow1);
+    dis->collectGarbage();
+    dis->calc(frame1, frame2, flow2);
+
+    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(frame1, frame2, reference);
+    EXPECT_EQ(0, cvtest::norm(flow1, reference, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(flow2, reference, NORM_INF));
+}
+
+TEST(DenseOpticalFlow_DIS, no_stale_initial_flow)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.0);
+    Mat M = (Mat_<double>(2, 3) << 1, 0, 2.0, 0, 1, -1.0);
+    warpAffine(frame1, frame2, M, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    // a call with an initial flow, then one without: the second must not reuse the first one's initial flow
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    Mat initial(frame1.size(), CV_32FC2, Scalar(5, -3));
+    dis->calc(frame1, frame2, initial);
+    Mat flow, reference;
+    dis->calc(frame1, frame2, flow);
+
+    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(frame1, frame2, reference);
+    EXPECT_EQ(0, cvtest::norm(flow, reference, NORM_INF));
+}
+
 TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
 {
     Mat prev = Mat::zeros(Size(320, 240), CV_8UC1);
