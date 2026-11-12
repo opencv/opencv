@@ -77,6 +77,10 @@ void PairwiseSeamFinder::find(const std::vector<UMat> &src, const std::vector<Po
     corners_ = corners;
     masks_ = masks;
     run();
+    images_.clear();
+    sizes_.clear();
+    corners_.clear();
+    masks_.clear();
 
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
@@ -116,6 +120,9 @@ void VoronoiSeamFinder::find(const std::vector<Size> &sizes, const std::vector<P
     corners_ = corners;
     masks_ = masks;
     run();
+    sizes_.clear();
+    corners_.clear();
+    masks_.clear();
 
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
@@ -227,6 +234,21 @@ void DpSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &
         Mat mask0 = masks[i0].getMat(ACCESS_RW), mask1 = masks[i1].getMat(ACCESS_RW);
         process(src[i0].getMat(ACCESS_READ), src[i1].getMat(ACCESS_READ), corners[i0], corners[i1], mask0, mask1);
     }
+
+    mask1_.release();
+    mask2_.release();
+    contour1mask_.release();
+    contour2mask_.release();
+    gradx1_.release();
+    grady1_.release();
+    gradx2_.release();
+    grady2_.release();
+    labels_.release();
+    states_.clear();
+    tls_.clear();
+    brs_.clear();
+    contours_.clear();
+    edges_.clear();
 
     LOGLN("Finding seams, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
@@ -1133,31 +1155,43 @@ private:
 void GraphCutSeamFinder::Impl::find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                                     std::vector<UMat> &masks)
 {
-    // Compute gradients
-    dx_.resize(src.size());
-    dy_.resize(src.size());
-    Mat dx, dy;
-    for (size_t i = 0; i < src.size(); ++i)
+    // Compute gradients only when COST_COLOR_GRAD is requested
+    if (cost_type_ == GraphCutSeamFinder::COST_COLOR_GRAD)
     {
-        CV_Assert(src[i].channels() == 3);
-        Sobel(src[i], dx, CV_32F, 1, 0);
-        Sobel(src[i], dy, CV_32F, 0, 1);
-        dx_[i].create(src[i].size(), CV_32F);
-        dy_[i].create(src[i].size(), CV_32F);
-        for (int y = 0; y < src[i].rows; ++y)
+        dx_.resize(src.size());
+        dy_.resize(src.size());
+        Mat dx, dy;
+        for (size_t i = 0; i < src.size(); ++i)
         {
-            const Point3f* dx_row = dx.ptr<Point3f>(y);
-            const Point3f* dy_row = dy.ptr<Point3f>(y);
-            float* dx_row_ = dx_[i].ptr<float>(y);
-            float* dy_row_ = dy_[i].ptr<float>(y);
-            for (int x = 0; x < src[i].cols; ++x)
+            CV_Assert(src[i].channels() == 3);
+            Sobel(src[i], dx, CV_32F, 1, 0);
+            Sobel(src[i], dy, CV_32F, 0, 1);
+            dx_[i].create(src[i].size(), CV_32F);
+            dy_[i].create(src[i].size(), CV_32F);
+            for (int y = 0; y < src[i].rows; ++y)
             {
-                dx_row_[x] = normL2(dx_row[x]);
-                dy_row_[x] = normL2(dy_row[x]);
+                const Point3f* dx_row = dx.ptr<Point3f>(y);
+                const Point3f* dy_row = dy.ptr<Point3f>(y);
+                float* dx_row_ = dx_[i].ptr<float>(y);
+                float* dy_row_ = dy_[i].ptr<float>(y);
+                for (int x = 0; x < src[i].cols; ++x)
+                {
+                    dx_row_[x] = normL2(dx_row[x]);
+                    dy_row_[x] = normL2(dy_row[x]);
+                }
             }
         }
     }
+    else
+    {
+        for (size_t i = 0; i < src.size(); ++i)
+            CV_Assert(src[i].channels() == 3);
+        dx_.clear();
+        dy_.clear();
+    }
     PairwiseSeamFinder::find(src, corners, masks);
+    dx_.clear();
+    dy_.clear();
 }
 
 
@@ -1266,8 +1300,9 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
 void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
 {
     Mat img1 = images_[first].getMat(ACCESS_READ), img2 = images_[second].getMat(ACCESS_READ);
-    Mat dx1 = dx_[first], dx2 = dx_[second];
-    Mat dy1 = dy_[first], dy2 = dy_[second];
+    const bool useGrad = (cost_type_ == GraphCutSeamFinder::COST_COLOR_GRAD);
+    Mat dx1 = useGrad ? dx_[first] : Mat(), dx2 = useGrad ? dx_[second] : Mat();
+    Mat dy1 = useGrad ? dy_[first] : Mat(), dy2 = useGrad ? dy_[second] : Mat();
     Mat mask1 = masks_[first].getMat(ACCESS_RW), mask2 = masks_[second].getMat(ACCESS_RW);
     Point tl1 = corners_[first], tl2 = corners_[second];
 
@@ -1276,10 +1311,14 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
     Mat subimg2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32FC3);
     Mat submask1(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
     Mat submask2(roi.height + 2 * gap, roi.width + 2 * gap, CV_8U);
-    Mat subdx1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy1(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdx2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
-    Mat subdy2(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    Mat subdx1, subdy1, subdx2, subdy2;
+    if (useGrad)
+    {
+        subdx1.create(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+        subdy1.create(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+        subdx2.create(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+        subdy2.create(roi.height + 2 * gap, roi.width + 2 * gap, CV_32F);
+    }
 
     // Cut subimages and submasks with some gap
     for (int y = -gap; y < roi.height + gap; ++y)
@@ -1292,15 +1331,21 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
             {
                 subimg1.at<Point3f>(y + gap, x + gap) = img1.at<Point3f>(y1, x1);
                 submask1.at<uchar>(y + gap, x + gap) = mask1.at<uchar>(y1, x1);
-                subdx1.at<float>(y + gap, x + gap) = dx1.at<float>(y1, x1);
-                subdy1.at<float>(y + gap, x + gap) = dy1.at<float>(y1, x1);
+                if (useGrad)
+                {
+                    subdx1.at<float>(y + gap, x + gap) = dx1.at<float>(y1, x1);
+                    subdy1.at<float>(y + gap, x + gap) = dy1.at<float>(y1, x1);
+                }
             }
             else
             {
                 subimg1.at<Point3f>(y + gap, x + gap) = Point3f(0, 0, 0);
                 submask1.at<uchar>(y + gap, x + gap) = 0;
-                subdx1.at<float>(y + gap, x + gap) = 0.f;
-                subdy1.at<float>(y + gap, x + gap) = 0.f;
+                if (useGrad)
+                {
+                    subdx1.at<float>(y + gap, x + gap) = 0.f;
+                    subdy1.at<float>(y + gap, x + gap) = 0.f;
+                }
             }
 
             int y2 = roi.y - tl2.y + y;
@@ -1309,15 +1354,21 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
             {
                 subimg2.at<Point3f>(y + gap, x + gap) = img2.at<Point3f>(y2, x2);
                 submask2.at<uchar>(y + gap, x + gap) = mask2.at<uchar>(y2, x2);
-                subdx2.at<float>(y + gap, x + gap) = dx2.at<float>(y2, x2);
-                subdy2.at<float>(y + gap, x + gap) = dy2.at<float>(y2, x2);
+                if (useGrad)
+                {
+                    subdx2.at<float>(y + gap, x + gap) = dx2.at<float>(y2, x2);
+                    subdy2.at<float>(y + gap, x + gap) = dy2.at<float>(y2, x2);
+                }
             }
             else
             {
                 subimg2.at<Point3f>(y + gap, x + gap) = Point3f(0, 0, 0);
                 submask2.at<uchar>(y + gap, x + gap) = 0;
-                subdx2.at<float>(y + gap, x + gap) = 0.f;
-                subdy2.at<float>(y + gap, x + gap) = 0.f;
+                if (useGrad)
+                {
+                    subdx2.at<float>(y + gap, x + gap) = 0.f;
+                    subdy2.at<float>(y + gap, x + gap) = 0.f;
+                }
             }
         }
     }

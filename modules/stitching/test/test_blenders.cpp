@@ -76,4 +76,58 @@ TEST(MultiBandBlender, CanBlendTwoImages)
     EXPECT_GE(psnr, 50);
 }
 
+TEST(StitchingMemoryHygiene, SeamFindersFeatherBlenderAndBlocksGain)
+{
+    RNG& rng = theRNG();
+    UMat u1(96, 128, CV_32FC3), u2(96, 128, CV_32FC3);
+    Mat m1(96, 128, CV_32FC3), m2(96, 128, CV_32FC3);
+    rng.fill(m1, RNG::UNIFORM, 10.f, 220.f);
+    rng.fill(m2, RNG::UNIFORM, 10.f, 220.f);
+    m1.copyTo(u1);
+    m2.copyTo(u2);
+
+    std::vector<Point> corners = {Point(0, 0), Point(64, 0)};
+    for (int costType : {(int)detail::GraphCutSeamFinder::COST_COLOR, (int)detail::GraphCutSeamFinder::COST_COLOR_GRAD})
+    {
+        std::vector<UMat> masks = {UMat(96, 128, CV_8U, Scalar(255)), UMat(96, 128, CV_8U, Scalar(255))};
+        detail::GraphCutSeamFinder finder(costType);
+        finder.find({u1, u2}, corners, masks);
+        EXPECT_GT(countNonZero(masks[0]), 0);
+        EXPECT_GT(countNonZero(masks[1]), 0);
+    }
+
+    {
+        std::vector<UMat> masks = {UMat(96, 128, CV_8U, Scalar(255)), UMat(96, 128, CV_8U, Scalar(255))};
+        detail::DpSeamFinder dp(detail::DpSeamFinder::COLOR);
+        dp.find({u1, u2}, corners, masks);
+        EXPECT_GT(countNonZero(masks[0]), 0);
+        EXPECT_GT(countNonZero(masks[1]), 0);
+    }
+
+    // FeatherBlender repeated reuse + BlocksGainCompensator Mat vs UMat apply exactness
+    detail::FeatherBlender fb;
+    fb.prepare(Rect(0, 0, 192, 96));
+    Mat s1, s2;
+    m1.convertTo(s1, CV_16SC3);
+    m2.convertTo(s2, CV_16SC3);
+    fb.feed(s1, Mat(96, 128, CV_8U, Scalar(255)), Point(0, 0));
+    fb.feed(s2, Mat(96, 128, CV_8U, Scalar(255)), Point(64, 0));
+    Mat blended, blendedMask;
+    fb.blend(blended, blendedMask);
+    EXPECT_EQ(blended.size(), Size(192, 96));
+
+    UMat img8_1, img8_2;
+    m1.convertTo(img8_1, CV_8UC3);
+    m2.convertTo(img8_2, CV_8UC3, 0.8);
+    detail::BlocksGainCompensator comp(16, 16);
+    comp.feed(corners, {img8_1, img8_2},
+              {{UMat(96, 128, CV_8U, Scalar(255)), 255}, {UMat(96, 128, CV_8U, Scalar(255)), 255}});
+
+    Mat outMat = img8_2.getMat(ACCESS_READ).clone();
+    UMat outUMat = img8_2.clone();
+    comp.apply(1, corners[1], outMat, Mat());
+    comp.apply(1, corners[1], outUMat, UMat());
+    EXPECT_EQ(0.0, cvtest::norm(outMat, outUMat.getMat(ACCESS_READ), NORM_INF));
+}
+
 }} // namespace
