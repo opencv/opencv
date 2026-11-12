@@ -7,6 +7,7 @@
 #include "precomp.hpp"
 #include "qrcode_encoder_table.inl.hpp"
 #include "graphical_code_detector_impl.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv
 {
@@ -1329,6 +1330,11 @@ private:
         int next(int bits) {
             // Asking for more bits than are left means the code is truncated.
             if (static_cast<size_t>(bits) > remaining()) {
+                if (!overrun) {
+                    CV_LOG_WARNING(NULL, "QR: the data of the code ends too early, "
+                                         << bits << " bits were requested but only "
+                                         << remaining() << " are left");
+                }
                 overrun = true;
                 return 0;
             }
@@ -1759,6 +1765,7 @@ void QRCodeDecoderImpl::extractCodewords(Mat& source, std::vector<uint8_t>& code
 
 bool QRCodeDecoderImpl::decodeSymbols(String& result) {
     if (bitstream.empty()) {
+        CV_LOG_WARNING(NULL, "QR: no data is left to decode, the code is truncated");
         bitstream.overrun = true;
         return false;
     }
