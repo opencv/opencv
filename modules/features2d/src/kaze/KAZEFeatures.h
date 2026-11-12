@@ -33,6 +33,16 @@ private:
     /// Vector of keypoint vectors for finding extrema in multiple threads
     std::vector<std::vector<cv::KeyPoint> > kpts_par_;
 
+    struct SubpixelStencil
+    {
+        float Dx, Dy, Ds;
+        float Dxx, Dyy, Dss, Dxy, Dxs, Dys;
+    };
+    std::vector<cv::Mat> lsmooth_pyr_;
+    cv::Mat work0_, work1_, work2_;
+    std::vector<std::vector<SubpixelStencil> > subpix_par_;
+    bool streamed_detection_;
+
     /// FED parameters
     int ncycles_;                  ///< Number of cycles
     bool reordering_;              ///< Flag for reordering time steps
@@ -46,7 +56,7 @@ public:
 
     /// Public methods for KAZE interface
     void Allocate_Memory_Evolution(void);
-    int Create_Nonlinear_Scale_Space(const cv::Mat& img);
+    int Create_Nonlinear_Scale_Space(const cv::Mat& img, bool detection = true, bool description = true);
     void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
     void Feature_Description(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
     static void Compute_Main_Orientation(cv::KeyPoint& kpt, const TPyramid& evolution_, const KAZEOptions& options);
@@ -59,8 +69,6 @@ public:
 
     /// Feature Detection Methods
     void Compute_KContrast(const cv::Mat& img, const float& kper);
-    void Compute_Multiscale_Derivatives(void);
-    void Compute_Detector_Response(void);
     void Determinant_Hessian(std::vector<cv::KeyPoint>& kpts);
     void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
 };

@@ -87,6 +87,7 @@ private:
   cv::Mat descriptorSamples_;  // List of positions in the grids to sample LDB bits from.
   cv::Mat descriptorBits_;
   cv::Mat bitMask_;
+  mutable cv::Mat work_[4];
 
   /// Scale Space methods
   void Allocate_Memory_Evolution();
@@ -106,7 +107,7 @@ public:
 public:
   /// Constructor with input arguments
   AKAZEFeatures(const AKAZEOptions& options);
-  void Create_Nonlinear_Scale_Space(InputArray img);
+  void Create_Nonlinear_Scale_Space(InputArray img, bool detection = true);
   void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
   void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
 };

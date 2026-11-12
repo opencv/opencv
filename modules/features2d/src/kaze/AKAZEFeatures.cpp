@@ -121,8 +121,15 @@ static inline int getGaussianKernelSize(float sigma) {
  * @param nbins Number of histogram bins
  * @return k contrast factor
  */
+static inline Mat reuse_plane(Mat& storage, Size sz)
+{
+  if (storage.empty() || storage.total() < static_cast<size_t>(sz.width) * static_cast<size_t>(sz.height))
+    storage.create(sz, CV_32F);
+  return Mat(sz.height, sz.width, CV_32F, storage.data);
+}
+
 static inline float
-compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
+compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins, Mat* work_modgs = 0)
 {
   CV_INSTRUMENT_REGION();
 
@@ -141,7 +148,7 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
 
   Mat Lx_inner = Lx(Rect(1, 1, cols, rows));
   Mat Ly_inner = Ly(Rect(1, 1, cols, rows));
-  Mat modgs;
+  Mat modgs = work_modgs ? reuse_plane(*work_modgs, Size(cols, rows)) : Mat();
   magnitude(Lx_inner, Ly_inner, modgs);
 
   float hmax = 0.0f;
@@ -153,11 +160,10 @@ compute_kcontrast(InputArray Lx_, InputArray Ly_, float perc, int nbins)
   if (hmax == 0.0f)
     return 0.03f;
 
-  Mat modgs_mutable = modgs.clone();
-  float* modg_ptr_w = modgs_mutable.ptr<float>();
+  float* modg_ptr_w = modgs.ptr<float>();
   float scale = (nbins - 1) / hmax;
   for (int i = 0; i < total; i++) {
-    modg_ptr_w[i] = modg_ptr[i] * scale;
+    modg_ptr_w[i] = modg_ptr_w[i] * scale;
   }
 
   std::vector<int> hist(nbins, 0);
@@ -266,17 +272,169 @@ static inline void prepareInputImage(InputArray image, OutputArray dst)
     else if (img.depth() == CV_16U)
       img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
   } else {
-    Mat img = image.getMat();
-    if (img.channels() > 1)
-      cvtColor(image, img, COLOR_BGR2GRAY);
+    Mat src = image.getMat();
+    Mat gray;
+    if (src.channels() > 1)
+      cvtColor(src, gray, COLOR_BGR2GRAY);
+    else
+      gray = src;
 
-    if (img.depth() == CV_32F)
-      dst.assign(img);
-    else if (img.depth() == CV_8U)
-      img.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
-    else if (img.depth() == CV_16U)
-      img.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
+    if (gray.depth() == CV_32F)
+      dst.assign(gray);
+    else if (gray.depth() == CV_8U)
+      gray.convertTo(dst, CV_32F, 1.0 / 255.0, 0);
+    else if (gray.depth() == CV_16U)
+      gray.convertTo(dst, CV_32F, 1.0 / 65535.0, 0);
   }
+}
+
+static inline void compute_akaze_level_lx_ly(const MEvolution& e, const Mat& Lsmooth,
+                                             Mat& work_lx, Mat& work_ly, Mat& Lx, Mat& Ly)
+{
+  const Size sz = Lsmooth.size();
+  Mat DxKx, DxKy, DyKx, DyKy;
+  compute_derivative_kernels(DxKx, DxKy, 1, 0, e.sigma_size);
+  compute_derivative_kernels(DyKx, DyKy, 0, 1, e.sigma_size);
+
+  Lx = reuse_plane(work_lx, sz);
+  Ly = reuse_plane(work_ly, sz);
+  const double nstripes = std::max(1, getNumThreads());
+  parallel_for_(Range(0, sz.height), [&](const Range& r) {
+    Mat lx = Lx.rowRange(r), ly = Ly.rowRange(r);
+    sepFilter2D(Lsmooth.rowRange(r), lx, CV_32F, DxKx, DxKy);
+    sepFilter2D(Lsmooth.rowRange(r), ly, CV_32F, DyKx, DyKy);
+  }, nstripes);
+}
+
+static inline void compute_akaze_level_ldet(MEvolution& e, const Mat& Lsmooth,
+                                            Mat& work_lx, Mat& work_ly, Mat& work_lxy, Mat& work_lyy)
+{
+  const Size sz = Lsmooth.size();
+  Mat DxKx, DxKy, DyKx, DyKy;
+  compute_derivative_kernels(DxKx, DxKy, 1, 0, e.sigma_size);
+  compute_derivative_kernels(DyKx, DyKy, 0, 1, e.sigma_size);
+
+  Mat Lx = reuse_plane(work_lx, sz);
+  Mat Ly = reuse_plane(work_ly, sz);
+  const double nstripes = std::max(1, getNumThreads());
+  parallel_for_(Range(0, sz.height), [&](const Range& r) {
+    Mat lx = Lx.rowRange(r), ly = Ly.rowRange(r);
+    sepFilter2D(Lsmooth.rowRange(r), lx, CV_32F, DxKx, DxKy);
+    sepFilter2D(Lsmooth.rowRange(r), ly, CV_32F, DyKx, DyKy);
+  }, nstripes);
+
+  e.Ldet.create(sz, CV_32F);
+  Mat Lxy = reuse_plane(work_lxy, sz);
+  Mat Lyy = reuse_plane(work_lyy, sz);
+  const float sigma_size_quat = (float)(e.sigma_size * e.sigma_size * e.sigma_size * e.sigma_size);
+  parallel_for_(Range(0, sz.height), [&](const Range& r) {
+    Mat lxx = e.Ldet.rowRange(r);
+    Mat lxy = Lxy.rowRange(r);
+    Mat lyy = Lyy.rowRange(r);
+    sepFilter2D(Lx.rowRange(r), lxx, CV_32F, DxKx, DxKy);
+    sepFilter2D(Lx.rowRange(r), lxy, CV_32F, DyKx, DyKy);
+    sepFilter2D(Ly.rowRange(r), lyy, CV_32F, DyKx, DyKy);
+    for (int y = 0; y < lxx.rows; ++y) {
+      const float* pxx = lxx.ptr<float>(y);
+      const float* pxy = lxy.ptr<float>(y);
+      const float* pyy = lyy.ptr<float>(y);
+      float* ldet = e.Ldet.ptr<float>(r.start + y);
+      for (int x = 0; x < sz.width; ++x)
+        ldet[x] = (pxx[x] * pyy[x] - pxy[x] * pxy[x]) * sigma_size_quat;
+    }
+  }, nstripes);
+}
+
+static inline Mat reconstruct_akaze_lsmooth(const Pyramid& evolution, size_t i, Mat& work_smooth, Mat& work_half)
+{
+  if (i == 0) {
+    return evolution[0].Lt;
+  }
+  const MEvolution& e = evolution[i];
+  Mat Lsmooth = reuse_plane(work_smooth, e.size);
+  if (e.octave > evolution[i - 1].octave) {
+    Mat half = reuse_plane(work_half, e.size);
+    resize(evolution[i - 1].Lt, half, e.size, 0, 0, INTER_AREA);
+    GaussianBlur(half, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+  } else {
+    GaussianBlur(evolution[i - 1].Lt, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+  }
+  return Lsmooth;
+}
+
+static inline void
+create_nonlinear_scale_space_cpu(InputArray image, const AKAZEOptions &options,
+  const std::vector<std::vector<float > > &tsteps_evolution, Pyramid &evolution, bool detection, Mat (&work)[4])
+{
+  CV_INSTRUMENT_REGION();
+  CV_Assert(evolution.size() > 0);
+
+  Mat img;
+  prepareInputImage(image, img);
+
+  int ksize = getGaussianKernelSize(options.soffset);
+  GaussianBlur(img, evolution[0].Lt, Size(ksize, ksize), options.soffset, options.soffset, BORDER_REPLICATE);
+
+  if (evolution.size() == 1) {
+    img.release();
+    if (detection)
+      compute_akaze_level_ldet(evolution[0], evolution[0].Lt, work[1], work[2], work[0], work[3]);
+    for (int w = 0; w < 4; ++w)
+      work[w].release();
+    return;
+  }
+
+  Mat Lsmooth = reuse_plane(work[0], img.size());
+  Mat Lx = reuse_plane(work[1], img.size());
+  Mat Ly = reuse_plane(work[2], img.size());
+  GaussianBlur(img, Lsmooth, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+  img.release();
+  Scharr(Lsmooth, Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
+  Scharr(Lsmooth, Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+
+  float kcontrast = compute_kcontrast(Lx, Ly, options.kcontrast_percentile, options.kcontrast_nbins, &work[3]);
+
+  if (detection)
+    compute_akaze_level_ldet(evolution[0], evolution[0].Lt, work[1], work[2], work[0], work[3]);
+
+  for (size_t i = 1; i < evolution.size(); i++) {
+    MEvolution &e = evolution[i];
+
+    if (e.octave > evolution[i - 1].octave) {
+      if (e.octave == 1) {
+        for (int w = 0; w < 4; ++w)
+          work[w].release();
+      }
+      resize(evolution[i - 1].Lt, e.Lt, e.size, 0, 0, INTER_AREA);
+      kcontrast *= 0.75f;
+    } else {
+      evolution[i - 1].Lt.copyTo(e.Lt);
+    }
+
+    Mat Lsmooth_i = reuse_plane(work[0], e.size);
+    Mat Lx_i = reuse_plane(work[1], e.size);
+    Mat Ly_i = reuse_plane(work[2], e.size);
+    Mat Lflow_i = reuse_plane(work[3], e.size);
+
+    GaussianBlur(e.Lt, Lsmooth_i, Size(5, 5), 1.0f, 1.0f, BORDER_REPLICATE);
+
+    Scharr(Lsmooth_i, Lx_i, CV_32F, 1, 0, 1.0, 0, BORDER_DEFAULT);
+    Scharr(Lsmooth_i, Ly_i, CV_32F, 0, 1, 1.0, 0, BORDER_DEFAULT);
+    compute_diffusivity(Lx_i, Ly_i, Lflow_i, kcontrast, options.diffusivity);
+
+    Mat Lstep_i = reuse_plane(work[1], e.size);
+    const std::vector<float> &tsteps = tsteps_evolution[i - 1];
+    for (size_t j = 0; j < tsteps.size(); j++) {
+      const float step_size = tsteps[j] * 0.5f;
+      non_linear_diffusion_step(e.Lt, Lflow_i, Lstep_i, step_size);
+      add(e.Lt, Lstep_i, e.Lt);
+    }
+
+    if (detection)
+      compute_akaze_level_ldet(e, Lsmooth_i, work[1], work[2], work[0], work[3]);
+  }
+  for (int w = 0; w < 4; ++w)
+    work[w].release();
 }
 
 /**
@@ -383,7 +541,7 @@ convertScalePyramid(const std::vector<Evolution<MatTypeSrc> >& src, std::vector<
  * @brief This method creates the nonlinear scale space for a given image
  * @param image Input image for which the nonlinear scale space needs to be created
  */
-void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
+void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image, bool detection)
 {
   if (ocl::isOpenCLActivated() && image.isUMat() && !ocl::Device::getDefault().hostUnifiedMemory()) {
     // will run OCL version of scale space pyramid
@@ -395,7 +553,7 @@ void AKAZEFeatures::Create_Nonlinear_Scale_Space(InputArray image)
     convertScalePyramid(uPyr, evolution_);
   } else {
     // CPU version
-    create_nonlinear_scale_space(image, options_, tsteps_, evolution_);
+    create_nonlinear_scale_space_cpu(image, options_, tsteps_, evolution_, detection, work_);
   }
 }
 
@@ -539,18 +697,6 @@ Compute_Determinant_Hessian_Response(UMatPyramid &evolution) {
   body(Range(0, (int)evolution.size()));
 }
 
-/**
- * @brief This method computes the feature detector response for the nonlinear scale space
- * @details CPU version
- * @note We use the Hessian determinant as the feature detector response
- */
-static inline void
-Compute_Determinant_Hessian_Response(Pyramid &evolution) {
-  CV_INSTRUMENT_REGION();
-
-  parallel_for_(Range(0, (int)evolution.size()), DeterminantHessianResponse<Mat>(evolution));
-}
-
 /* ************************************************************************* */
 
 /**
@@ -565,6 +711,10 @@ void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
   std::vector<Mat> keypoints_by_layers;
   Find_Scale_Space_Extrema(keypoints_by_layers);
   Do_Subpixel_Refinement(keypoints_by_layers, kpts);
+  keypoints_by_layers.clear();
+  for (size_t i = 0; i < evolution_.size(); ++i) {
+    evolution_[i].Ldet.release();
+  }
   Compute_Keypoints_Orientation(kpts);
 }
 
@@ -1545,37 +1695,123 @@ void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray
   }
   descriptors.create((int)kpts.size(), descriptor_size, descriptor_type);
 
-  Mat desc = descriptors.getMat();
-
-  switch (options_.descriptor)
+  if (kpts.empty())
   {
-    case AKAZE::DESCRIPTOR_KAZE_UPRIGHT: // Upright descriptors, not invariant to rotation
+    for (size_t i = 0; i < evolution_.size(); ++i)
     {
-      parallel_for_(Range(0, (int)kpts.size()), MSURF_Upright_Descriptor_64_Invoker(kpts, desc, evolution_));
+      evolution_[i].Lt.release();
+      evolution_[i].Lx.release();
+      evolution_[i].Ly.release();
     }
-    break;
-    case AKAZE::DESCRIPTOR_KAZE:
-    {
-      parallel_for_(Range(0, (int)kpts.size()), MSURF_Descriptor_64_Invoker(kpts, desc, evolution_));
-    }
-    break;
-    case AKAZE::DESCRIPTOR_MLDB_UPRIGHT: // Upright descriptors, not invariant to rotation
-    {
-      if (options_.descriptor_size == 0)
-        parallel_for_(Range(0, (int)kpts.size()), Upright_MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
-      else
-        parallel_for_(Range(0, (int)kpts.size()), Upright_MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
-    }
-    break;
-    case AKAZE::DESCRIPTOR_MLDB:
-    {
-      if (options_.descriptor_size == 0)
-        parallel_for_(Range(0, (int)kpts.size()), MLDB_Full_Descriptor_Invoker(kpts, desc, evolution_, options_));
-      else
-        parallel_for_(Range(0, (int)kpts.size()), MLDB_Descriptor_Subset_Invoker(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_));
-    }
-    break;
+    for (int w = 0; w < 4; ++w)
+      work_[w].release();
+    return;
   }
+
+  Mat desc = descriptors.getMat();
+  std::vector<std::vector<int> > by_level(evolution_.size());
+  for (size_t i = 0; i < kpts.size(); ++i)
+    by_level[kpts[i].class_id].push_back(static_cast<int>(i));
+
+  for (int lv = static_cast<int>(evolution_.size()) - 1; lv >= 0; --lv)
+  {
+    const std::vector<int>& idxs = by_level[lv];
+    if (!idxs.empty())
+    {
+      const bool built_lx = evolution_[lv].Lx.empty();
+      if (built_lx)
+      {
+        Mat Lsmooth = reconstruct_akaze_lsmooth(evolution_, static_cast<size_t>(lv), work_[0], work_[3]);
+        compute_akaze_level_lx_ly(evolution_[lv], Lsmooth, work_[1], work_[2], evolution_[lv].Lx, evolution_[lv].Ly);
+      }
+
+      switch (options_.descriptor)
+      {
+        case AKAZE::DESCRIPTOR_KAZE_UPRIGHT:
+        {
+          MSURF_Upright_Descriptor_64_Invoker inv(kpts, desc, evolution_);
+          parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+            for (int p = r.start; p < r.end; ++p)
+            {
+              int ki = idxs[p];
+              inv.Get_MSURF_Upright_Descriptor_64(kpts[ki], desc.ptr<float>(ki), desc.cols);
+            }
+          });
+        }
+        break;
+        case AKAZE::DESCRIPTOR_KAZE:
+        {
+          MSURF_Descriptor_64_Invoker inv(kpts, desc, evolution_);
+          parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+            for (int p = r.start; p < r.end; ++p)
+            {
+              int ki = idxs[p];
+              inv.Get_MSURF_Descriptor_64(kpts[ki], desc.ptr<float>(ki), desc.cols);
+            }
+          });
+        }
+        break;
+        case AKAZE::DESCRIPTOR_MLDB_UPRIGHT:
+        {
+          if (options_.descriptor_size == 0)
+          {
+            Upright_MLDB_Full_Descriptor_Invoker inv(kpts, desc, evolution_, options_);
+            parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+              for (int p = r.start; p < r.end; ++p)
+              {
+                int ki = idxs[p];
+                inv.Get_Upright_MLDB_Full_Descriptor(kpts[ki], desc.ptr<unsigned char>(ki), desc.cols);
+              }
+            });
+          }
+          else
+          {
+            Upright_MLDB_Descriptor_Subset_Invoker inv(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_);
+            parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+              for (int p = r.start; p < r.end; ++p)
+              {
+                int ki = idxs[p];
+                inv.Get_Upright_MLDB_Descriptor_Subset(kpts[ki], desc.ptr<unsigned char>(ki), desc.cols);
+              }
+            });
+          }
+        }
+        break;
+        case AKAZE::DESCRIPTOR_MLDB:
+        {
+          if (options_.descriptor_size == 0)
+          {
+            MLDB_Full_Descriptor_Invoker inv(kpts, desc, evolution_, options_);
+            parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+              for (int p = r.start; p < r.end; ++p)
+              {
+                int ki = idxs[p];
+                inv.Get_MLDB_Full_Descriptor(kpts[ki], desc.ptr<unsigned char>(ki), desc.cols);
+              }
+            });
+          }
+          else
+          {
+            MLDB_Descriptor_Subset_Invoker inv(kpts, desc, evolution_, options_, descriptorSamples_, descriptorBits_);
+            parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+              for (int p = r.start; p < r.end; ++p)
+              {
+                int ki = idxs[p];
+                inv.Get_MLDB_Descriptor_Subset(kpts[ki], desc.ptr<unsigned char>(ki), desc.cols);
+              }
+            });
+          }
+        }
+        break;
+      }
+
+      evolution_[lv].Lx.release();
+      evolution_[lv].Ly.release();
+    }
+    evolution_[lv].Lt.release();
+  }
+  for (int w = 0; w < 4; ++w)
+    work_[w].release();
 }
 
 /* ************************************************************************* */
@@ -1699,10 +1935,8 @@ void quantized_counting_sort(const float a[], const int n,
  * original SURF method. See Bay et al., Speeded Up Robust Features, ECCV 2006
  */
 static inline
-void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
+void Compute_Main_Orientation_From_Derivs(KeyPoint& kpt, const MEvolution& e, const Mat& Lx, const Mat& Ly)
 {
-  // get the right evolution level for this keypoint
-  const MEvolution& e = evolution[kpt.class_id];
   // Get the information from the keypoint
   int scale = cvRound(0.5f * kpt.size / e.octave_ratio);
   int x0 = cvRound(kpt.pt.x / e.octave_ratio);
@@ -1711,7 +1945,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
   // Sample derivatives responses for the points within radius of 6*scale
   const int ang_size = 109;
   float resX[ang_size], resY[ang_size];
-  Sample_Derivative_Response_Radius6(e.Lx, e.Ly, x0, y0, scale, resX, resY);
+  Sample_Derivative_Response_Radius6(Lx, Ly, x0, y0, scale, resX, resY);
 
   // Compute the angle of each gradient vector
   float Ang[ang_size];
@@ -1779,6 +2013,13 @@ void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
   kpt.angle = fastAtan2(maxY, maxX);
 }
 
+static inline
+void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
+{
+  const MEvolution& e = evolution[kpt.class_id];
+  Compute_Main_Orientation_From_Derivs(kpt, e, e.Lx, e.Ly);
+}
+
 class ComputeKeypointOrientation : public ParallelLoopBody
 {
 public:
@@ -1808,8 +2049,34 @@ private:
 void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) const
 {
   CV_INSTRUMENT_REGION();
+  if (kpts.empty())
+    return;
 
-  parallel_for_(Range(0, (int)kpts.size()), ComputeKeypointOrientation(kpts, evolution_));
+  if (!evolution_[kpts[0].class_id].Lx.empty())
+  {
+    parallel_for_(Range(0, (int)kpts.size()), ComputeKeypointOrientation(kpts, evolution_));
+    return;
+  }
+
+  std::vector<std::vector<int> > by_level(evolution_.size());
+  for (size_t i = 0; i < kpts.size(); ++i)
+    by_level[kpts[i].class_id].push_back(static_cast<int>(i));
+
+  Mat Lx, Ly;
+  for (size_t lv = 0; lv < evolution_.size(); ++lv)
+  {
+    const std::vector<int>& idxs = by_level[lv];
+    if (idxs.empty())
+      continue;
+    Mat Lsmooth = reconstruct_akaze_lsmooth(evolution_, lv, work_[0], work_[3]);
+    compute_akaze_level_lx_ly(evolution_[lv], Lsmooth, work_[1], work_[2], Lx, Ly);
+
+    const MEvolution& e = evolution_[lv];
+    parallel_for_(Range(0, (int)idxs.size()), [&](const Range& r) {
+      for (int p = r.start; p < r.end; ++p)
+        Compute_Main_Orientation_From_Derivs(kpts[idxs[p]], e, Lx, Ly);
+    });
+  }
 }
 
 /* ************************************************************************* */

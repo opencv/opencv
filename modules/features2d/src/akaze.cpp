@@ -211,7 +211,7 @@ namespace cv
             else
 #endif
             {
-                impl.Create_Nonlinear_Scale_Space(image);
+                impl.Create_Nonlinear_Scale_Space(image, !useProvidedKeypoints);
 
                 if (!useProvidedKeypoints)
                 {
