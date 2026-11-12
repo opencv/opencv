@@ -166,7 +166,7 @@ TEST(NanoTrack, small_target_size)
 
     // Textured static background with a 6x6 object (white with a dark core) moving 2 px right and 1 px down per frame.
     Mat noise(240, 320, CV_8UC1);
-    cv::RNG rng(0);
+    RNG& rng = theRNG();
     rng.fill(noise, RNG::UNIFORM, 0, 256);
     GaussianBlur(noise, noise, Size(0, 0), 3);
     normalize(noise, noise, 60, 160, NORM_MINMAX);
