@@ -13,7 +13,8 @@
  * list anywhere. */
 window.OPENCV_DOC_VERSIONS = [
     ['5.2.0-dev', '/5.x'],
-    ['5.1', '/5.1'],
+    ['5.1.0', '/5.1.0'],
+    ['4.15.0-dev', '/4.x'],
     ['4.14.0', '/4.14.0'],
     ['4.13.0', '/4.13.0'],
     ['4.12.0', '/4.12.0'],
@@ -89,11 +90,20 @@ function renderDoxygenVersionDropdown() {
   // Doxygen-only rendering. The Sphinx pages have no `#projectnumber` and
   // no jQuery, so bail early there — they read OPENCV_DOC_VERSIONS above
   // and build their own dropdown in the navbar template.
-  if (!document.getElementById("projectnumber") || typeof window.jQuery === "undefined")
+  var projectNumber = document.getElementById("projectnumber");
+
+  if (!projectNumber || typeof window.jQuery === "undefined")
       return;
+
+  // The legacy server may load both /5.x/version.js and /version.js.
+  // Do not replace a dropdown that has already been rendered.
+  var existingSelect = projectNumber.querySelector("select");
+  if (existingSelect)
+      return existingSelect.value;
+
   var versions = window.OPENCV_DOC_VERSIONS;
   var h = '<select>';
-  var current_ver = $("#projectnumber")[0].innerText || versions[0][0];
+  var current_ver = projectNumber.innerText || versions[0][0];
   current_ver = current_ver.trim();
   for (i = 0; i < versions.length; i++) {
       selected = ''
@@ -102,7 +112,7 @@ function renderDoxygenVersionDropdown() {
       h += '<option value="' + versions[i][0] + '"' + selected + '>' + versions[i][0] + '</option>';
   }
   h += '</select>';
-  $("#projectnumber")[0].innerHTML = h;
+  projectNumber.innerHTML = h;
   $("#projectnumber select")[0].addEventListener('change', function() {
       var v = $(this).children('option:selected').attr('value');
       var path = undefined;
