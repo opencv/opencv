@@ -154,7 +154,7 @@ of them, you need to download and install them on your system.
     by using the [Qt framework](http://qt.nokia.com/downloads). For a quick overview of what this has to offer, look into the
     documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of
     the framework is required.
--   [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) is a C++ template library for linear algebra.
+-   [Eigen](https://gitlab.com/libeigen/eigen/-/releases) is a C++ template library for linear algebra.
 -   The latest [CUDA Toolkit](http://developer.nvidia.com/cuda-downloads) will allow you to use the power lying inside your GPU. This will
     drastically improve performance for some algorithms (e.g the HOG descriptor). Getting more and
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
