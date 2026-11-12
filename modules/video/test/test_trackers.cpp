@@ -175,6 +175,46 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
     checkTrackingAccuracy(tracker, 0.69);
 }
 
+// A frame passed as a ROI must be tracked like a standalone copy of it: pixels of the parent image
+// around the ROI must not leak into a search window that crosses the frame border.
+template <typename CreateTracker>
+static void checkRoiImageMatchesClone(CreateTracker createTracker)
+{
+    Mat parent(240, 240, CV_8UC3, Scalar(255, 0, 0));
+    Mat image = parent(Rect(32, 32, 160, 160));
+    theRNG().fill(image, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
+    Mat clone = image.clone();
+    Rect initial(4, 4, 24, 24);
+
+    Ptr<Tracker> roiTracker = createTracker(), cloneTracker = createTracker();
+    roiTracker->init(image, initial);
+    cloneTracker->init(clone, initial);
+    for (int i = 0; i < 3; i++)
+    {
+        Rect roiResult, cloneResult;
+        roiTracker->update(image, roiResult);
+        cloneTracker->update(clone, cloneResult);
+        EXPECT_EQ(roiResult, cloneResult) << "update " << i;
+    }
+}
+
+TEST(DaSiamRPN, roi_image_matches_clone)
+{
+    cv::TrackerDaSiamRPN::Params params;
+    params.model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
+    params.kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
+    params.kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
+    checkRoiImageMatchesClone([&]() { return TrackerDaSiamRPN::create(params); });
+}
+
+TEST(NanoTrack, roi_image_matches_clone)
+{
+    cv::TrackerNano::Params params;
+    params.backbone = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
+    params.neckhead = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
+    checkRoiImageMatchesClone([&]() { return TrackerNano::create(params); });
+}
+
 TEST(vittrack, accuracy_vittrack)
 {
     std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");

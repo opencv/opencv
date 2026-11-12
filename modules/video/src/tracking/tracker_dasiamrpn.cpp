@@ -93,7 +93,6 @@ public:
 protected:
     dnn::Net siamRPN, siamKernelR1, siamKernelCL1;
     Rect boundingBox_;
-    Mat image_;
     struct trackerConfig
     {
         float windowInfluence = 0.43f;
@@ -133,7 +132,7 @@ protected:
 
 void TrackerDaSiamRPNImpl::init(InputArray image, const Rect& boundingBox)
 {
-    image_ = image.getMat().clone();
+    Mat img = image.getMat();
 
     trackState.update_scoreSize();
     trackState.targetBox = Rect2f(
@@ -142,7 +141,7 @@ void TrackerDaSiamRPNImpl::init(InputArray image, const Rect& boundingBox)
         float(boundingBox.width),
         float(boundingBox.height)
     );
-    trackerInit(image_);
+    trackerInit(img);
 }
 
 void TrackerDaSiamRPNImpl::trackerInit(Mat img)
@@ -182,8 +181,7 @@ void TrackerDaSiamRPNImpl::trackerInit(Mat img)
 
 bool TrackerDaSiamRPNImpl::update(InputArray image, Rect& boundingBox)
 {
-    image_ = image.getMat().clone();
-    trackerEval(image_);
+    trackerEval(image.getMat());
     boundingBox = {
         int(trackState.targetBox.x - int(trackState.targetBox.width / 2)),
         int(trackState.targetBox.y - int(trackState.targetBox.height / 2)),
@@ -402,7 +400,7 @@ Mat TrackerDaSiamRPNImpl::generateAnchors()
 
 Mat TrackerDaSiamRPNImpl::getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans)
 {
-    Mat zCrop, dst;
+    Mat zCrop;
     Size imgSize = img.size();
     float c = (originalSize + 1) / 2;
     float xMin = (float)cvRound(targetBox.x - c);
@@ -422,12 +420,17 @@ Mat TrackerDaSiamRPNImpl::getSubwindow(Mat& img, const Rect2f& targetBox, float 
 
     if (topPad == 0 && bottomPad == 0 && leftPad == 0 && rightPad == 0)
     {
-        img(Rect(int(xMin), int(yMin), int(xMax - xMin + 1), int(yMax - yMin + 1))).copyTo(zCrop);
+        zCrop = img(Rect(int(xMin), int(yMin), int(xMax - xMin + 1), int(yMax - yMin + 1)));
     }
     else
     {
-        copyMakeBorder(img, dst, topPad, bottomPad, leftPad, rightPad, BORDER_CONSTANT, avgChans);
-        dst(Rect(int(xMin), int(yMin), int(xMax - xMin + 1), int(yMax - yMin + 1))).copyTo(zCrop);
+        // Pad only the crop, not the whole frame: same pixels as copyMakeBorder() on the frame.
+        Rect crop(int(xMin) - leftPad, int(yMin) - topPad, int(xMax - xMin + 1), int(yMax - yMin + 1));
+        Rect inside = crop & Rect(Point(), imgSize);
+        zCrop.create(crop.size(), img.type());
+        zCrop.setTo(avgChans);
+        if (!inside.empty())
+            img(inside).copyTo(zCrop(inside - crop.tl()));
     }
 
     return zCrop;
