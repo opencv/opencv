@@ -484,4 +484,31 @@ TEST(Photo_CalibrateDebevec, bug_24966)
         #endif
     }
 }
+
+TEST(Photo_TonemapMantiuk, synthetic_hdr_determinism)
+{
+    RNG& rng = theRNG();
+    Mat hdr(96, 128, CV_32FC3);
+    for (int y = 0; y < hdr.rows; ++y)
+    {
+        Vec3f* row = hdr.ptr<Vec3f>(y);
+        for (int x = 0; x < hdr.cols; ++x)
+        {
+            const float base = std::exp((x * 0.03f) + (y * 0.02f) - 2.0f);
+            row[x] = Vec3f(base * rng.uniform(0.8f, 1.2f),
+                           base * rng.uniform(0.7f, 1.3f),
+                           base * rng.uniform(0.9f, 1.1f));
+        }
+    }
+
+    Ptr<TonemapMantiuk> tm = createTonemapMantiuk(2.2f, 0.7f, 1.0f);
+    Mat ldr1, ldr2;
+    tm->process(hdr, ldr1);
+    tm->process(hdr, ldr2);
+
+    ASSERT_EQ(ldr1.size(), hdr.size());
+    ASSERT_EQ(ldr1.type(), CV_32FC3);
+    ASSERT_TRUE(checkRange(ldr1, true, nullptr, 0.0, 1.0 + 1e-5));
+    EXPECT_EQ(0.0, cvtest::norm(ldr1, ldr2, NORM_INF));
+}
 }} // namespace

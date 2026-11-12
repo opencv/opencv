@@ -323,46 +323,54 @@ public:
         Mat log_img;
         log_(gray_img, log_img);
 
-        std::vector<Mat> x_contrast, y_contrast;
-        getContrast(log_img, x_contrast, y_contrast);
+        PyramidWorkspace ws;
+        initWorkspace(src.size(), ws);
 
-        for(size_t i = 0; i < x_contrast.size(); i++) {
-            mapContrast(x_contrast[i]);
-            mapContrast(y_contrast[i]);
+        getContrast(log_img, ws);
+
+        Mat abs_scratch;
+        for(size_t i = 0; i < ws.xc.size(); i++) {
+            mapContrast(ws.xc[i], abs_scratch);
+            mapContrast(ws.yc[i], abs_scratch);
         }
+        abs_scratch.release();
 
         Mat right(src.size(), CV_32F);
-        calculateSum(x_contrast, y_contrast, right);
+        calculateSum(ws, right);
 
-        Mat p, r, product, x = log_img;
-        calculateProduct(x, r);
-        r = right - r;
+        Mat p(src.size(), CV_32F), r(src.size(), CV_32F), product(src.size(), CV_32F), x = log_img;
+        calculateProduct(x, r, ws);
+        subtract(right, r, r);
         r.copyTo(p);
 
         const float target_error = 1e-3f;
         float target_norm = static_cast<float>(right.dot(right)) * powf(target_error, 2.0f);
+        right.release();
         int max_iterations = 100;
         float rr = static_cast<float>(r.dot(r));
 
         for(int i = 0; i < max_iterations; i++)
         {
-            calculateProduct(p, product);
+            calculateProduct(p, product, ws);
             double dprod = p.dot(product);
             CV_Assert(fabs(dprod) > 0);
             float alpha = rr / static_cast<float>(dprod);
 
-            r -= alpha * product;
-            x += alpha * p;
+            updateResidualAndSolution(r, x, product, p, alpha);
 
             float new_rr = static_cast<float>(r.dot(r));
             CV_Assert(fabs(rr) > 0);
-            p = r + (new_rr / rr) * p;
+            updateSearchDirection(p, r, new_rr / rr);
             rr = new_rr;
 
             if(rr < target_norm) {
                 break;
             }
         }
+        ws.clear();
+        p.release();
+        r.release();
+        product.release();
         exp(x, x);
         mapLuminance(img, img, gray_img, x, saturation);
 
@@ -401,70 +409,205 @@ protected:
     String name;
     float gamma, scale, saturation;
 
-    void signedPow(Mat src, float power, Mat& dst)
+    struct PyramidWorkspace
     {
-        Mat sign = (src > 0);
-        sign.convertTo(sign, CV_32F, 1.0f/255.0f);
-        sign = sign * 2.0f - 1.0f;
-        pow(abs(src), power, dst);
-        dst = dst.mul(sign);
+        std::vector<Mat> layer;
+        std::vector<Mat> xc;
+        std::vector<Mat> yc;
+        std::vector<Mat> sum;
+
+        void clear()
+        {
+            layer.clear();
+            xc.clear();
+            yc.clear();
+            sum.clear();
+        }
+    };
+
+    static void initWorkspace(Size sz, PyramidWorkspace& ws)
+    {
+        int levels = static_cast<int>(logf(static_cast<float>(min(sz.height, sz.width))) / logf(2.0f));
+        if (levels <= 0)
+        {
+            ws.clear();
+            return;
+        }
+        ws.layer.resize(levels);
+        ws.xc.resize(levels);
+        ws.yc.resize(levels);
+        ws.sum.resize(levels);
+
+        Size cur = sz;
+        for (int i = 0; i < levels; ++i)
+        {
+            ws.xc[i].create(cur, CV_32F);
+            ws.yc[i].create(cur, CV_32F);
+            if (i > 0)
+            {
+                ws.layer[i].create(cur, CV_32F);
+                ws.sum[i].create(cur, CV_32F);
+            }
+            cur = Size(cur.width / 2, cur.height / 2);
+        }
     }
 
-    void mapContrast(Mat& contrast)
+    static void updateResidualAndSolution(Mat& r, Mat& x, const Mat& product, const Mat& p, float alpha)
+    {
+        for (int y = 0; y < r.rows; ++y)
+        {
+            float* rrow = r.ptr<float>(y);
+            float* xrow = x.ptr<float>(y);
+            const float* prodrow = product.ptr<float>(y);
+            const float* prow = p.ptr<float>(y);
+            for (int c = 0; c < r.cols; ++c)
+            {
+                rrow[c] -= alpha * prodrow[c];
+                xrow[c] += alpha * prow[c];
+            }
+        }
+    }
+
+    static void updateSearchDirection(Mat& p, const Mat& r, float beta)
+    {
+        for (int y = 0; y < p.rows; ++y)
+        {
+            float* prow = p.ptr<float>(y);
+            const float* rrow = r.ptr<float>(y);
+            for (int c = 0; c < p.cols; ++c)
+            {
+                prow[c] = rrow[c] + beta * prow[c];
+            }
+        }
+    }
+
+    void signedPow(Mat& contrast, float power, Mat& abs_scratch)
+    {
+        absdiff(contrast, Scalar::all(0), abs_scratch);
+        pow(abs_scratch, power, abs_scratch);
+        for (int y = 0; y < contrast.rows; ++y)
+        {
+            float* crow = contrast.ptr<float>(y);
+            const float* arow = abs_scratch.ptr<float>(y);
+            for (int x = 0; x < contrast.cols; ++x)
+            {
+                crow[x] = (crow[x] > 0.0f) ? arow[x] : -arow[x];
+            }
+        }
+    }
+
+    void mapContrast(Mat& contrast, Mat& abs_scratch)
     {
         const float response_power = 0.4185f;
-        signedPow(contrast, response_power, contrast);
+        signedPow(contrast, response_power, abs_scratch);
         contrast *= scale;
-        signedPow(contrast, 1.0f / response_power, contrast);
+        signedPow(contrast, 1.0f / response_power, abs_scratch);
     }
 
-    void getGradient(Mat src, Mat& dst, int pos)
+    static void computeForwardGradients(const Mat& layer, Mat& xc, Mat& yc)
     {
-        dst = Mat::zeros(src.size(), CV_32F);
-        Mat a, b;
-        Mat grad = src.colRange(1, src.cols) - src.colRange(0, src.cols - 1);
-        grad.copyTo(dst.colRange(pos, src.cols + pos - 1));
-        if(pos == 1) {
-            src.col(0).copyTo(dst.col(0));
-        }
-    }
-
-    void getContrast(Mat src, std::vector<Mat>& x_contrast, std::vector<Mat>& y_contrast)
-    {
-        int levels = static_cast<int>(logf(static_cast<float>(min(src.rows, src.cols))) / logf(2.0f));
-        x_contrast.resize(levels);
-        y_contrast.resize(levels);
-
-        Mat layer;
-        src.copyTo(layer);
-        for(int i = 0; i < levels; i++) {
-            getGradient(layer, x_contrast[i], 0);
-            getGradient(layer.t(), y_contrast[i], 0);
-            resize(layer, layer, Size(layer.cols / 2, layer.rows / 2), 0, 0, INTER_LINEAR);
-        }
-    }
-
-    void calculateSum(std::vector<Mat>& x_contrast, std::vector<Mat>& y_contrast, Mat& sum)
-    {
-        if (x_contrast.empty())
-            return;
-        const int last = (int)x_contrast.size() - 1;
-        sum = Mat::zeros(x_contrast[last].size(), CV_32F);
-        for(int i = last; i >= 0; i--)
+        const int rows = layer.rows;
+        const int cols = layer.cols;
+        xc.create(rows, cols, CV_32F);
+        yc.create(rows, cols, CV_32F);
+        for (int r = 0; r < rows; ++r)
         {
-            Mat grad_x, grad_y;
-            getGradient(x_contrast[i], grad_x, 1);
-            getGradient(y_contrast[i], grad_y, 1);
-            resize(sum, sum, x_contrast[i].size(), 0, 0, INTER_LINEAR);
-            sum += grad_x + grad_y.t();
+            const float* lrow = layer.ptr<float>(r);
+            float* xrow = xc.ptr<float>(r);
+            for (int c = 0; c < cols - 1; ++c)
+                xrow[c] = lrow[c + 1] - lrow[c];
+            if (cols > 0)
+                xrow[cols - 1] = 0.0f;
+
+            float* yrow = yc.ptr<float>(r);
+            if (r < rows - 1)
+            {
+                const float* lnext = layer.ptr<float>(r + 1);
+                for (int c = 0; c < cols; ++c)
+                    yrow[c] = lnext[c] - lrow[c];
+            }
+            else
+            {
+                for (int c = 0; c < cols; ++c)
+                    yrow[c] = 0.0f;
+            }
         }
     }
 
-    void calculateProduct(Mat src, Mat& dst)
+    static void accumulateDivergence(const Mat& xc, const Mat& yc, Mat& sum, bool overwrite)
     {
-        std::vector<Mat> x_contrast, y_contrast;
-        getContrast(src, x_contrast, y_contrast);
-        calculateSum(x_contrast, y_contrast, dst);
+        const int rows = xc.rows;
+        const int cols = xc.cols;
+        if (cols <= 0)
+            return;
+        for (int r = 0; r < rows; ++r)
+        {
+            const float* xrow = xc.ptr<float>(r);
+            const float* yrow = yc.ptr<float>(r);
+            const float* yprev = (r > 0) ? yc.ptr<float>(r - 1) : nullptr;
+            float* srow = sum.ptr<float>(r);
+
+            const float gx0 = xrow[0];
+            const float gy0 = (r == 0) ? yrow[0] : (yrow[0] - yprev[0]);
+            if (overwrite)
+                srow[0] = gx0 + gy0;
+            else
+                srow[0] += gx0 + gy0;
+
+            for (int c = 1; c < cols; ++c)
+            {
+                const float gx = xrow[c] - xrow[c - 1];
+                const float gy = (r == 0) ? yrow[c] : (yrow[c] - yprev[c]);
+                if (overwrite)
+                    srow[c] = gx + gy;
+                else
+                    srow[c] += gx + gy;
+            }
+        }
+    }
+
+    void getContrast(const Mat& src, PyramidWorkspace& ws)
+    {
+        const int levels = static_cast<int>(ws.xc.size());
+        for (int i = 0; i < levels; ++i)
+        {
+            const Mat& cur = (i == 0) ? src : ws.layer[i];
+            computeForwardGradients(cur, ws.xc[i], ws.yc[i]);
+            if (i + 1 < levels)
+            {
+                resize(cur, ws.layer[i + 1], ws.layer[i + 1].size(), 0, 0, INTER_LINEAR);
+            }
+        }
+    }
+
+    void calculateSum(PyramidWorkspace& ws, Mat& dst)
+    {
+        if (ws.xc.empty())
+        {
+            dst.setTo(Scalar::all(0));
+            return;
+        }
+        const int last = static_cast<int>(ws.xc.size()) - 1;
+        dst.create(ws.xc[0].size(), CV_32F);
+        if (last == 0)
+        {
+            accumulateDivergence(ws.xc[0], ws.yc[0], dst, true);
+            return;
+        }
+
+        accumulateDivergence(ws.xc[last], ws.yc[last], ws.sum[last], true);
+        for (int i = last - 1; i >= 0; --i)
+        {
+            Mat& cur_sum = (i == 0) ? dst : ws.sum[i];
+            resize(ws.sum[i + 1], cur_sum, ws.xc[i].size(), 0, 0, INTER_LINEAR);
+            accumulateDivergence(ws.xc[i], ws.yc[i], cur_sum, false);
+        }
+    }
+
+    void calculateProduct(const Mat& src, Mat& dst, PyramidWorkspace& ws)
+    {
+        getContrast(src, ws);
+        calculateSum(ws, dst);
     }
 };
 
