@@ -45,28 +45,8 @@ jobs:
               context.payload.pull_request.labels.map(label => label.name)
             );
             const matches = pattern => files.some(file => pattern.test(file));
-            const requestedFast = labels.has('ci:fast') && !labels.has('ci:full');
-
-            // Only implementation, test, performance, sample, and documentation
-            // changes local to one module are eligible for the fast lane. Public
-            // headers, core/build infrastructure, and unknown paths fail closed
-            // to the full matrix.
-            const safePath = file =>
-              /^modules\/[^/]+\/(src|test|perf|samples)\//.test(file) ||
-              /^(doc|samples)\//.test(file) ||
-              /\.md$/i.test(file);
-            const highRisk = files.some(file =>
-              /^modules\/core\//.test(file) ||
-              /^modules\/ts\//.test(file) ||
-              /^modules\/python\//.test(file) ||
-              /^modules\/[^/]+\/include\//.test(file) ||
-              /^(3rdparty|cmake|include|platforms)\//.test(file) ||
-              /(^|\/)CMakeLists\.txt$/.test(file) ||
-              /^\.github\//.test(file) ||
-              !safePath(file)
-            );
-            const fast = requestedFast && !highRisk;
-            const full = !fast;
+            const full = labels.has('ci:full');
+            const fast = !full;
 
             const dnn = labels.has('category: dnn') ||
               labels.has('category: dnn (onnx)') ||
@@ -94,9 +74,7 @@ jobs:
                 [{data: 'Mode', header: true}, {data: fast ? 'fast' : 'full', header: true}],
                 ['Changed files', changedFiles.length.toString()],
                 ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
-                ['Reason', requestedFast && highRisk
-                  ? 'ci:fast was overridden by a high-risk or unknown path'
-                  : requestedFast ? 'ci:fast label' : 'full coverage is the default'],
+                ['Reason', full ? 'ci:full label' : 'fast coverage is the default'],
               ])
               .write();
 
