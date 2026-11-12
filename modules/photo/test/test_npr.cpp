@@ -166,4 +166,33 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+TEST(Photo_NPR, same_result_with_threads)
+{
+    // the filters split their lines between threads; each line is computed by the same code
+    Mat source(96, 128, CV_8UC3);
+    theRNG().fill(source, RNG::UNIFORM, 0, 256);
+
+    struct ThreadsGuard
+    {
+        int prev;
+        ThreadsGuard() : prev(getNumThreads()) {}
+        ~ThreadsGuard() { setNumThreads(prev); }
+    } guard;
+
+    Mat result[2][6];
+    for (int pass = 0; pass < 2; pass++)
+    {
+        setNumThreads(pass == 0 ? 1 : std::max(guard.prev, 4));
+        Mat* r = result[pass];
+        edgePreservingFilter(source, r[0], RECURS_FILTER);
+        edgePreservingFilter(source, r[1], NORMCONV_FILTER);
+        detailEnhance(source, r[2]);
+        pencilSketch(source, r[3], r[4]);
+        stylization(source, r[5]);
+    }
+
+    for (int i = 0; i < 6; i++)
+        EXPECT_EQ(0, cvtest::norm(result[0][i], result[1][i], NORM_INF)) << "output " << i;
+}
+
 }} // namespace

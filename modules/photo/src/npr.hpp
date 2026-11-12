@@ -55,6 +55,16 @@ double myinf = std::numeric_limits<double>::infinity();
 // Columns processed together by the passes that run down the image: they are copied to contiguous
 // lines, so the image is never transposed.
 static const int NPR_COLUMN_BLOCK = 64;
+// The normalized convolution copies its block of columns: narrower blocks keep that copy small for
+// each thread, at the same speed.
+static const int NPR_NC_COLUMN_BLOCK = 16;
+
+// Lines are independent, so the passes run lines or blocks of columns in parallel; each line is
+// computed by the same code whatever the split.
+static double npr_stripes()
+{
+    return getNumThreads() * 4.0;
+}
 
 class Domain_Filter
 {
@@ -221,6 +231,56 @@ void Domain_Filter::find_magnitude(const Mat &img, Mat &mag)
     mag = 1.0f - mag;
 }
 
+// Recursive filter of one row of w pixels of cn floats in place, left to right, then right to left.
+// v is scratch for w floats.
+static void rf_filter_row(float* t, const float* hz, int w, int cn, float a, float* v)
+{
+    for(int j = 0; j < w; j++)
+        v[j] = std::pow(a, hz[j]);
+
+    for(int j = 1; j < w; j++)
+        for(int c = 0; c < cn; c++)
+            t[j*cn+c] = t[j*cn+c] + (t[(j-1)*cn+c] - t[j*cn+c]) * v[j];
+    for(int j = w-2; j >= 0; j--)
+        for(int c = 0; c < cn; c++)
+            t[j*cn+c] = t[j*cn+c] + (t[(j+1)*cn+c] - t[j*cn+c]) * v[j+1];
+}
+
+// The same arithmetic per pixel down columns x0 .. x0+bw-1, top to bottom, then bottom to top.
+// V is scratch for output.rows * NPR_COLUMN_BLOCK floats.
+static void rf_filter_columns(Mat &output, const Mat &vert_hz, int x0, int bw, float a, float* V)
+{
+    const int h = output.rows;
+    const int cn = output.channels();
+    const int B = NPR_COLUMN_BLOCK;
+
+    for(int i = 0; i < h; i++)
+    {
+        const float* hzr = vert_hz.ptr<float>(i) + x0;
+        for(int j = 0; j < bw; j++)
+            V[i*B+j] = std::pow(a, hzr[j]);
+    }
+
+    for(int i = 1; i < h; i++)
+    {
+        float* t = output.ptr<float>(i) + x0*cn;
+        const float* tp = output.ptr<float>(i-1) + x0*cn;
+        const float* v = V + i*B;
+        for(int j = 0; j < bw; j++)
+            for(int c = 0; c < cn; c++)
+                t[j*cn+c] = t[j*cn+c] + (tp[j*cn+c] - t[j*cn+c]) * v[j];
+    }
+    for(int i = h-2; i >= 0; i--)
+    {
+        float* t = output.ptr<float>(i) + x0*cn;
+        const float* tn = output.ptr<float>(i+1) + x0*cn;
+        const float* v = V + (i+1)*B;
+        for(int j = 0; j < bw; j++)
+            for(int c = 0; c < cn; c++)
+                t[j*cn+c] = t[j*cn+c] + (tn[j*cn+c] - t[j*cn+c]) * v[j];
+    }
+}
+
 void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
 {
     int h = output.rows;
@@ -229,23 +289,11 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
 
     float a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
 
-    // Each row is independent: filter it left to right, then right to left.
-    AutoBuffer<float> V(w);
-    float* v = V.data();
-    for(int i = 0; i < h; i++)
-    {
-        const float* hzr = hz.ptr<float>(i);
-        for(int j = 0; j < w; j++)
-            v[j] = std::pow(a, hzr[j]);
-
-        float* t = output.ptr<float>(i);
-        for(int j = 1; j < w; j++)
-            for(int c = 0; c < channel; c++)
-                t[j*channel+c] = t[j*channel+c] + (t[(j-1)*channel+c] - t[j*channel+c]) * v[j];
-        for(int j = w-2; j >= 0; j--)
-            for(int c = 0; c < channel; c++)
-                t[j*channel+c] = t[j*channel+c] + (t[(j+1)*channel+c] - t[j*channel+c]) * v[j+1];
-    }
+    parallel_for_(Range(0, h), [&](const Range& range) {
+        AutoBuffer<float> V(w);
+        for(int i = range.start; i < range.end; i++)
+            rf_filter_row(output.ptr<float>(i), hz.ptr<float>(i), w, channel, a, V.data());
+    }, npr_stripes());
 }
 
 // Vertical pass of the recursive filter: the same arithmetic per pixel as compute_Rfilter() on the
@@ -254,42 +302,16 @@ void Domain_Filter::compute_Rfilter_vertical(Mat &output, Mat &vert_hz, float si
 {
     int h = output.rows;
     int w = output.cols;
-    int channel = output.channels();
     const int B = NPR_COLUMN_BLOCK;
 
     float a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
 
-    AutoBuffer<float> Vbuf((size_t)h * B);
-    float* V = Vbuf.data();
-    for(int x0 = 0; x0 < w; x0 += B)
-    {
-        int bw = std::min(B, w - x0);
-        for(int i = 0; i < h; i++)
-        {
-            const float* hzr = vert_hz.ptr<float>(i) + x0;
-            for(int j = 0; j < bw; j++)
-                V[i*B+j] = std::pow(a, hzr[j]);
-        }
-
-        for(int i = 1; i < h; i++)
-        {
-            float* t = output.ptr<float>(i) + x0*channel;
-            const float* tp = output.ptr<float>(i-1) + x0*channel;
-            const float* v = V + i*B;
-            for(int j = 0; j < bw; j++)
-                for(int c = 0; c < channel; c++)
-                    t[j*channel+c] = t[j*channel+c] + (tp[j*channel+c] - t[j*channel+c]) * v[j];
-        }
-        for(int i = h-2; i >= 0; i--)
-        {
-            float* t = output.ptr<float>(i) + x0*channel;
-            const float* tn = output.ptr<float>(i+1) + x0*channel;
-            const float* v = V + (i+1)*B;
-            for(int j = 0; j < bw; j++)
-                for(int c = 0; c < channel; c++)
-                    t[j*channel+c] = t[j*channel+c] + (tn[j*channel+c] - t[j*channel+c]) * v[j];
-        }
-    }
+    int nblocks = (w + B - 1) / B;
+    parallel_for_(Range(0, nblocks), [&](const Range& range) {
+        AutoBuffer<float> V((size_t)h * B);
+        for(int x0 = range.start * B; x0 < std::min(w, range.end * B); x0 += B)
+            rf_filter_columns(output, vert_hz, x0, std::min(B, w - x0), a, V.data());
+    }, std::min((double)nblocks, npr_stripes()));
 }
 
 // One iteration of the normalized convolution filter: a pass along the rows with ct_H, then a pass
@@ -299,48 +321,58 @@ void Domain_Filter::compute_NCfilter(Mat &output, float radius)
     int h = output.rows;
     int w = output.cols;
     int cn = output.channels();
-    int n = std::max(h, w);
-    const int B = NPR_COLUMN_BLOCK;
+    const int B = NPR_NC_COLUMN_BLOCK;
 
-    AutoBuffer<float> sumbuf((size_t)(n + 1) * cn);
-    AutoBuffer<int> idxbuf((size_t)n * 2);
-    AutoBuffer<float> domainbuf(std::max((size_t)w + 1, (size_t)B * (h + 1)));
-    AutoBuffer<float> colbuf((size_t)B * h * cn);
-    float* sum = sumbuf.data();
-    int* lo = idxbuf.data();
-    int* up = lo + n;
-    float* domain = domainbuf.data();
-    float* col = colbuf.data();
-
-    for(int i = 0; i < h; i++)
-    {
-        const float* ct = ct_H.ptr<float>(i);
-        std::copy(ct, ct + w, domain);
-        domain[w] = (float) myinf;
-        nc_filter_line(output.ptr<float>(i), w, cn, domain, radius, sum, lo, up);
-    }
-
-    for(int x0 = 0; x0 < w; x0 += B)
-    {
-        int bw = std::min(B, w - x0);
-        gather_domain_columns(ct_V, x0, bw, domain);
-        for(int i = 0; i < h; i++)
+    parallel_for_(Range(0, h), [&](const Range& range) {
+        AutoBuffer<float> sumbuf((size_t)(w + 1) * cn);
+        AutoBuffer<int> idxbuf((size_t)w * 2);
+        AutoBuffer<float> domainbuf((size_t)w + 1);
+        float* sum = sumbuf.data();
+        int* lo = idxbuf.data();
+        int* up = lo + w;
+        float* domain = domainbuf.data();
+        for(int i = range.start; i < range.end; i++)
         {
-            const float* src = output.ptr<float>(i) + x0*cn;
-            for(int b = 0; b < bw; b++)
-                for(int c = 0; c < cn; c++)
-                    col[(b*h+i)*cn+c] = src[b*cn+c];
+            const float* ct = ct_H.ptr<float>(i);
+            std::copy(ct, ct + w, domain);
+            domain[w] = (float) myinf;
+            nc_filter_line(output.ptr<float>(i), w, cn, domain, radius, sum, lo, up);
         }
-        for(int b = 0; b < bw; b++)
-            nc_filter_line(col + b*h*cn, h, cn, domain + b*(h+1), radius, sum, lo, up);
-        for(int i = 0; i < h; i++)
+    }, npr_stripes());
+
+    int nblocks = (w + B - 1) / B;
+    parallel_for_(Range(0, nblocks), [&](const Range& range) {
+        AutoBuffer<float> sumbuf((size_t)(h + 1) * cn);
+        AutoBuffer<int> idxbuf((size_t)h * 2);
+        AutoBuffer<float> domainbuf((size_t)B * (h + 1));
+        AutoBuffer<float> colbuf((size_t)B * h * cn);
+        float* sum = sumbuf.data();
+        int* lo = idxbuf.data();
+        int* up = lo + h;
+        float* domain = domainbuf.data();
+        float* col = colbuf.data();
+        for(int x0 = range.start * B; x0 < std::min(w, range.end * B); x0 += B)
         {
-            float* dst = output.ptr<float>(i) + x0*cn;
+            int bw = std::min(B, w - x0);
+            gather_domain_columns(ct_V, x0, bw, domain);
+            for(int i = 0; i < h; i++)
+            {
+                const float* src = output.ptr<float>(i) + x0*cn;
+                for(int b = 0; b < bw; b++)
+                    for(int c = 0; c < cn; c++)
+                        col[(b*h+i)*cn+c] = src[b*cn+c];
+            }
             for(int b = 0; b < bw; b++)
-                for(int c = 0; c < cn; c++)
-                    dst[b*cn+c] = col[(b*h+i)*cn+c];
+                nc_filter_line(col + b*h*cn, h, cn, domain + b*(h+1), radius, sum, lo, up);
+            for(int i = 0; i < h; i++)
+            {
+                float* dst = output.ptr<float>(i) + x0*cn;
+                for(int b = 0; b < bw; b++)
+                    for(int c = 0; c < cn; c++)
+                        dst[b*cn+c] = col[(b*h+i)*cn+c];
+            }
         }
-    }
+    }, std::min((double)nblocks, npr_stripes()));
 }
 
 void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r)
@@ -354,60 +386,68 @@ void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r
     horiz = Mat(h,w,CV_32FC1);
     vert = Mat(h,w,CV_32FC1);
 
-    for(int i = 0; i < h; i++)
-    {
-        const float* src = img.ptr<float>(i);
-        float* d = horiz.ptr<float>(i);
-        d[0] = 0.f;
-        for(int j = 1; j < w; j++)
+    // the l1 distances, then the derivatives of the horizontal and vertical domain transforms
+    parallel_for_(Range(0, h), [&](const Range& range) {
+        for(int i = range.start; i < range.end; i++)
         {
-            float s = 0.f;
-            for(int c = 0; c < channel; c++)
-                s = s + abs(src[j*channel+c] - src[(j-1)*channel+c]);
-            d[j] = s;
+            const float* src = img.ptr<float>(i);
+            float* d = horiz.ptr<float>(i);
+            d[0] = 0.f;
+            for(int j = 1; j < w; j++)
+            {
+                float s = 0.f;
+                for(int c = 0; c < channel; c++)
+                    s = s + abs(src[j*channel+c] - src[(j-1)*channel+c]);
+                d[j] = s;
+            }
+
+            d = vert.ptr<float>(i);
+            if(i == 0)
+            {
+                std::fill(d, d + w, 0.f);
+                continue;
+            }
+            const float* prev = img.ptr<float>(i-1);
+            for(int j = 0; j < w; j++)
+            {
+                float s = 0.f;
+                for(int c = 0; c < channel; c++)
+                    s = s + abs(src[j*channel+c] - prev[j*channel+c]);
+                d[j] = s;
+            }
         }
-    }
 
-    vert.row(0).setTo(Scalar::all(0));
-    for(int i = 1; i < h; i++)
-    {
-        const float* src = img.ptr<float>(i);
-        const float* prev = img.ptr<float>(i-1);
-        float* d = vert.ptr<float>(i);
-        for(int j = 0; j < w; j++)
-        {
-            float s = 0.f;
-            for(int c = 0; c < channel; c++)
-                s = s + abs(src[j*channel+c] - prev[j*channel+c]);
-            d[j] = s;
-        }
-    }
-
-    ////////////////////// Compute the derivatives of the horizontal and vertical domain transforms. /////////////////////////////
-
-    multiply(horiz,sigma_s/sigma_r,horiz);
-    multiply(vert,sigma_s/sigma_r,vert);
-
-    horiz = 1.0f + horiz;
-    vert = 1.0f + vert;
+        Mat hr = horiz.rowRange(range), vr = vert.rowRange(range);
+        multiply(hr,sigma_s/sigma_r,hr);
+        multiply(vr,sigma_s/sigma_r,vr);
+        hr = 1.0f + hr;
+        vr = 1.0f + vr;
+    }, npr_stripes());
 
     if(flags == 2)
     {
-        // the cumulative transforms, summed in place
-        for(int i = 0; i < h; i++)
-        {
-            float* hr = horiz.ptr<float>(i);
-            for(int j = 1; j < w; j++)
-                hr[j] = hr[j] + hr[j-1];
-        }
+        // the cumulative transforms, summed in place: along each row, and down blocks of columns
+        parallel_for_(Range(0, h), [&](const Range& range) {
+            for(int i = range.start; i < range.end; i++)
+            {
+                float* hr = horiz.ptr<float>(i);
+                for(int j = 1; j < w; j++)
+                    hr[j] = hr[j] + hr[j-1];
+            }
+        }, npr_stripes());
 
-        for(int i = 1; i < h; i++)
-        {
-            const float* vp = vert.ptr<float>(i-1);
-            float* vr = vert.ptr<float>(i);
-            for(int j = 0; j < w; j++)
-                vr[j] = vr[j] + vp[j];
-        }
+        const int B = NPR_COLUMN_BLOCK;
+        int nblocks = (w + B - 1) / B;
+        parallel_for_(Range(0, nblocks), [&](const Range& range) {
+            int x0 = range.start * B, x1 = std::min(w, range.end * B);
+            for(int i = 1; i < h; i++)
+            {
+                const float* vp = vert.ptr<float>(i-1);
+                float* vr = vert.ptr<float>(i);
+                for(int j = x0; j < x1; j++)
+                    vr[j] = vr[j] + vp[j];
+            }
+        }, std::min((double)nblocks, npr_stripes()));
 
         ct_H = horiz;
         ct_V = vert;
@@ -467,38 +507,47 @@ void Domain_Filter::pencil_sketch(Mat &img, Mat &sketch, Mat &color_res, float s
 
     // pen_res = shade_factor * (box width along the row + box width down the column)
     Mat pen_res = Mat(h,w,CV_32FC1);
-    int n = std::max(h, w);
-    AutoBuffer<int> idxbuf((size_t)n * 2);
-    AutoBuffer<float> domainbuf(std::max((size_t)w + 1, (size_t)B * (h + 1)));
-    int* lo = idxbuf.data();
-    int* up = lo + n;
-    float* domain = domainbuf.data();
 
-    for(int i = 0; i < h; i++)
-    {
-        const float* ct = ct_H.ptr<float>(i);
-        std::copy(ct, ct + w, domain);
-        domain[w] = (float) myinf;
-        boxfilter_limits(domain, w, radius, lo, up);
-        float* pr = pen_res.ptr<float>(i);
-        for(int j = 0; j < w; j++)
-            pr[j] = (float)(up[j] - lo[j]);
-    }
-
-    for(int x0 = 0; x0 < w; x0 += B)
-    {
-        int bw = std::min(B, w - x0);
-        gather_domain_columns(ct_V, x0, bw, domain);
-        for(int b = 0; b < bw; b++)
+    parallel_for_(Range(0, h), [&](const Range& range) {
+        AutoBuffer<int> idxbuf((size_t)w * 2);
+        AutoBuffer<float> domainbuf((size_t)w + 1);
+        int* lo = idxbuf.data();
+        int* up = lo + w;
+        float* domain = domainbuf.data();
+        for(int i = range.start; i < range.end; i++)
         {
-            boxfilter_limits(domain + b*(h+1), h, radius, lo, up);
-            for(int i = 0; i < h; i++)
+            const float* ct = ct_H.ptr<float>(i);
+            std::copy(ct, ct + w, domain);
+            domain[w] = (float) myinf;
+            boxfilter_limits(domain, w, radius, lo, up);
+            float* pr = pen_res.ptr<float>(i);
+            for(int j = 0; j < w; j++)
+                pr[j] = (float)(up[j] - lo[j]);
+        }
+    }, npr_stripes());
+
+    int nblocks = (w + B - 1) / B;
+    parallel_for_(Range(0, nblocks), [&](const Range& range) {
+        AutoBuffer<int> idxbuf((size_t)h * 2);
+        AutoBuffer<float> domainbuf((size_t)B * (h + 1));
+        int* lo = idxbuf.data();
+        int* up = lo + h;
+        float* domain = domainbuf.data();
+        for(int x0 = range.start * B; x0 < std::min(w, range.end * B); x0 += B)
+        {
+            int bw = std::min(B, w - x0);
+            gather_domain_columns(ct_V, x0, bw, domain);
+            for(int b = 0; b < bw; b++)
             {
-                float* pr = pen_res.ptr<float>(i) + x0 + b;
-                *pr = shade_factor * (*pr + (float)(up[i] - lo[i]));
+                boxfilter_limits(domain + b*(h+1), h, radius, lo, up);
+                for(int i = 0; i < h; i++)
+                {
+                    float* pr = pen_res.ptr<float>(i) + x0 + b;
+                    *pr = shade_factor * (*pr + (float)(up[i] - lo[i]));
+                }
             }
         }
-    }
+    }, std::min((double)nblocks, npr_stripes()));
     ct_H.release();
     ct_V.release();
 
