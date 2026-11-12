@@ -1327,17 +1327,14 @@ private:
 
     struct Bitstream {
         int next(int bits) {
-            if (idx >= data.size()) {
+            // Asking for more bits than are left means the code is truncated.
+            if (static_cast<size_t>(bits) > remaining()) {
                 overrun = true;
                 return 0;
             }
 
             int val = 0;
             while (bits >= actualBits) {
-                if (idx >= data.size()) {
-                    overrun = true;
-                    return val;
-                }
                 val |= data[idx++] << (bits - actualBits);
                 bits -= actualBits;
                 actualBits = 8;
@@ -1348,6 +1345,12 @@ private:
                 data[idx] &= 255 >> (8 - actualBits);
             }
             return val;
+        }
+
+        // Number of bits that have not been read yet.
+        size_t remaining() const {
+            return idx >= data.size() ? 0
+                : (data.size() - idx) * 8 - static_cast<size_t>(8 - actualBits);
         }
 
         bool empty() {
@@ -1763,6 +1766,14 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
     // Decode depends on the mode
     result = "";
     while (!bitstream.empty()) {
+        // A read already ran past the end of the data, so stop here.
+        if (bitstream.overrun)
+            return false;
+
+        // Fewer than 4 bits left can only be a truncated terminator.
+        if (bitstream.remaining() < 4)
+            return true;
+
         // Determine mode
         auto currMode = static_cast<QRCodeEncoder::EncodeMode>(bitstream.next(4));
         if (this->mode == 0) {
@@ -1780,8 +1791,9 @@ bool QRCodeDecoderImpl::decodeSymbols(String& result) {
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_BYTE)
             decodeByte(result);
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_ECI) {
-            if (!decodeECI(result))
-                return false;
+            // decodeECI() already decodes everything up to the terminator,
+            // only padding is left, so there is nothing more to parse here.
+            return decodeECI(result);
         }
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
             decodeKanji(result);
