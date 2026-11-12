@@ -846,8 +846,10 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     int totalsz = (int)it.size*mcn;
     int blockSize0 = std::min(totalsz, (int)((BLOCK_SIZE + esz-1)/esz));
     blockSize0 -= blockSize0 % mcn;    // must be divisible without remainder for unrolling and advancing
-    AutoBuffer<uchar> _scbuf(blockSize0*esz + 32);
-    uchar* scbuf = alignPtr((uchar*)_scbuf.data(), (int)sizeof(double));
+    // blockSize0*esz <= BLOCK_SIZE + esz - 1: the block and its alignment fit in the buffer, so setTo()
+    // doesn't allocate on every call. The block starts on a cache line, so vector loads don't split lines.
+    AutoBuffer<uchar, BLOCK_SIZE + 128> _scbuf(blockSize0*esz + CV_MALLOC_ALIGN);
+    uchar* scbuf = alignPtr((uchar*)_scbuf.data(), CV_MALLOC_ALIGN);
     convertAndUnrollScalar( value, type(), scbuf, blockSize0/mcn );
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )

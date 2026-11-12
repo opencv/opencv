@@ -232,7 +232,9 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         reallocate = !_dst.sameSize(*psrc1) || _dst.type() != type1;
     }
 
-    AutoBuffer<uchar> _buf;
+    // The scalar and mask blocks (blocksize*esz <= BLOCK_SIZE + esz - 1 bytes each) and their alignment fit
+    // in the buffer, so masked and scalar operations don't allocate on every call.
+    AutoBuffer<uchar, BLOCK_SIZE*2 + 256> _buf;
     uchar *scbuf = 0, *maskbuf = 0;
 
     _dst.createSameSize(*psrc1, type1);
@@ -271,8 +273,8 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         if( haveMask )
         {
             blocksize = std::min(blocksize, blocksize0);
-            _buf.allocate(blocksize*esz);
-            maskbuf = _buf.data();
+            _buf.allocate(blocksize*esz + CV_MALLOC_ALIGN);
+            maskbuf = alignPtr(_buf.data(), CV_MALLOC_ALIGN);
         }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
@@ -301,8 +303,8 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
 
-        _buf.allocate(blocksize*(haveMask ? 2 : 1)*esz + 32);
-        scbuf = _buf.data();
+        _buf.allocate(blocksize*(haveMask ? 2 : 1)*esz + 32 + CV_MALLOC_ALIGN);
+        scbuf = alignPtr(_buf.data(), CV_MALLOC_ALIGN);
         maskbuf = alignPtr(scbuf + blocksize*esz, 16);
 
         convertAndUnrollScalar( src2, src1.type(), scbuf, blocksize);
@@ -740,7 +742,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     BinaryFunc copymask = getCopyMaskFunc(dsz);
     Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
-    AutoBuffer<uchar> _buf;
+    // Up to four blocks of blocksize*wsz <= BLOCK_SIZE + wsz - 1 bytes and their alignment fit in the buffer,
+    // so operations with a scalar, a mask or a type conversion don't allocate on every call.
+    AutoBuffer<uchar, BLOCK_SIZE*4 + 256> _buf;
     uchar *buf, *maskbuf = 0, *buf1 = 0, *buf2 = 0, *wbuf = 0;
     size_t bufesz = (cvtsrc1 ? wsz : 0) +
                     (cvtsrc2 || haveScalar ? wsz : 0) +
@@ -760,8 +764,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         if( haveMask || cvtsrc1 || cvtsrc2 || cvtdst )
             blocksize = std::min(blocksize, blocksize0);
 
-        _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf.data();
+        _buf.allocate(bufesz*blocksize + 64 + CV_MALLOC_ALIGN);
+        buf = alignPtr(_buf.data(), CV_MALLOC_ALIGN);
         if( cvtsrc1 )
         {
             buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
@@ -838,8 +842,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         NAryMatIterator it(arrays, ptrs);
         size_t total = it.size, blocksize = std::min(total, blocksize0);
 
-        _buf.allocate(bufesz*blocksize + 64);
-        buf = _buf.data();
+        _buf.allocate(bufesz*blocksize + 64 + CV_MALLOC_ALIGN);
+        buf = alignPtr(_buf.data(), CV_MALLOC_ALIGN);
         if( cvtsrc1 )
         {
             buf1 = buf, buf = alignPtr(buf + blocksize * wsz, 16);
@@ -1986,7 +1990,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         size_t esz = src.elemSize();
         size_t blocksize = 36;
 
-        AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
+        AutoBuffer<uchar, BLOCK_SIZE*3 + 256> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
         uchar *buf = alignPtr(_buf.data() + blocksize*cn, 16);
 
         if( ldepth != sdepth && sdepth < CV_32S )
@@ -2095,7 +2099,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     NAryMatIterator it(lbScalar && ubScalar ? arrays_sc : arrays_nosc, ptrs);
     size_t total = it.size, blocksize = std::min(total, blocksize0);
 
-    AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
+    AutoBuffer<uchar, BLOCK_SIZE*3 + 256> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
     uchar *buf = _buf.data(), *mbuf = buf, *lbuf = 0, *ubuf = 0;
     buf = alignPtr(buf + blocksize*cn, 16);
 
