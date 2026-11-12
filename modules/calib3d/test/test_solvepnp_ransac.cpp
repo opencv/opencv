@@ -2507,19 +2507,27 @@ TEST(Calib3d_SolvePnPRansac, nearly_planar_object)
 {
     // Planar target in millimeters with 0.5 mm out-of-plane noise: detected as planar,
     // but not coplanar within an absolute tolerance of 1e-3 like the one used by IPPE.
-    RNG rng(25104);
+    RNG& rng = theRNG();
     Matx33d intrinsics(800, 0, 640,
                        0, 800, 360,
                        0, 0, 1);
     Vec3d rvecGT(CV_PI / 3, 0.1, 0.2), tvecGT(100, -200, 4000);
     std::vector<Point3f> objectPoints;
     for (int i = 0; i < 30; i++)
-        objectPoints.push_back(Point3f(rng.uniform(-1000.f, 1000.f), rng.uniform(-1000.f, 1000.f),
-                                       (float)rng.gaussian(0.5)));
+    {
+        float x = rng.uniform(-1000.f, 1000.f);
+        float y = rng.uniform(-1000.f, 1000.f);
+        float z = (float)rng.gaussian(0.5);
+        objectPoints.push_back(Point3f(x, y, z));
+    }
     std::vector<Point2f> imagePoints;
     projectPoints(objectPoints, rvecGT, tvecGT, intrinsics, noArray(), imagePoints);
     for (int i = 0; i < 9; i++)
-        imagePoints[i] = Point2f(rng.uniform(0.f, 1280.f), rng.uniform(0.f, 720.f));
+    {
+        float u = rng.uniform(0.f, 1280.f);
+        float v = rng.uniform(0.f, 720.f);
+        imagePoints[i] = Point2f(u, v);
+    }
 
     Mat rvec, tvec;
     ASSERT_TRUE(solvePnPRansac(objectPoints, imagePoints, intrinsics, noArray(), rvec, tvec));
