@@ -2608,6 +2608,69 @@ TEST(Core_SetIdentity, one_dimensional)
     }
 }
 
+TEST(Core_Trace, zero_dimensional)
+{
+    {
+        uchar val = 25;
+        Mat m(0, (const int*)nullptr, CV_8U, &val);
+        EXPECT_EQ(cv::trace(m)[0], 25.0);
+    }
+    {
+        int val = 42;
+        Mat m(0, (const int*)nullptr, CV_32S, &val);
+        EXPECT_EQ(cv::trace(m)[0], 42.0);
+    }
+    {
+        float val = 3.5f;
+        Mat m(0, (const int*)nullptr, CV_32F, &val);
+        EXPECT_FLOAT_EQ((float)cv::trace(m)[0], 3.5f);
+    }
+    {
+        double val = 7.25;
+        Mat m(0, (const int*)nullptr, CV_64F, &val);
+        EXPECT_DOUBLE_EQ(cv::trace(m)[0], 7.25);
+    }
+    {
+        Vec3b val(1, 2, 3);
+        Mat m(0, (const int*)nullptr, CV_8UC3, &val);
+        EXPECT_EQ(cv::trace(m), Scalar(1, 2, 3, 0));
+    }
+}
+
+TEST(Core_SetIdentity, zero_dimensional)
+{
+    {
+        uchar val = 0;
+        Mat m(0, (const int*)nullptr, CV_8U, &val);
+        cv::setIdentity(m, Scalar(5));
+        EXPECT_EQ(val, 5);
+    }
+    {
+        int val = 0;
+        Mat m(0, (const int*)nullptr, CV_32S, &val);
+        cv::setIdentity(m, Scalar(17));
+        EXPECT_EQ(val, 17);
+    }
+    {
+        float val = 0.0f;
+        Mat m(0, (const int*)nullptr, CV_32F, &val);
+        cv::setIdentity(m, Scalar(1.5f));
+        EXPECT_FLOAT_EQ(val, 1.5f);
+    }
+    {
+        double val = 0.0;
+        Mat m(0, (const int*)nullptr, CV_64F, &val);
+        cv::setIdentity(m, Scalar(2.5));
+        EXPECT_DOUBLE_EQ(val, 2.5);
+    }
+    {
+        Vec3b val(0, 0, 0);
+        Mat m(0, (const int*)nullptr, CV_8UC3, &val);
+        cv::setIdentity(m, Scalar(1, 2, 3));
+        EXPECT_EQ(val, Vec3b(1, 2, 3));
+    }
+}
+
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
 TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }

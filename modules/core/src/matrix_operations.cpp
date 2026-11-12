@@ -205,7 +205,12 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
     else
     {
         m = Scalar(0);
-        if( m.dims <= 1 )
+        if( m.dims == 0 )
+        {
+            if( !m.empty() )
+                m = s;
+        }
+        else if( m.dims == 1 )
         {
             if( !m.empty() )
                 m.col(0) = s;
@@ -263,7 +268,10 @@ cv::Scalar cv::trace( InputArray _m )
         return _s;
     }
 
-    if( m.dims <= 1 )
+    if( m.dims == 0 )
+        return m.empty() ? Scalar() : cv::sum(m);
+
+    if( m.dims == 1 )
         return m.empty() ? Scalar() : cv::sum(m.col(0));
 
     return cv::sum(m.diag());
