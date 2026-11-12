@@ -2948,4 +2948,46 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+
+TEST(Mat, copyTo_GpuMat_destination)
+{
+    if (cv::cuda::getCudaEnabledDeviceCount() < 1)
+        throw SkipTestException("No CUDA devices");
+
+    const Mat src(4, 5, CV_8UC3, Scalar(1, 2, 3));
+    Mat res;
+
+    cuda::GpuMat dst;  // empty destination
+    src.copyTo(dst);
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    dst.create(2, 2, CV_32FC1);  // destination of another size and type
+    src.copyTo(dst);
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    UMat usrc;
+    src.copyTo(usrc);
+    cuda::GpuMat udst;  // UMat source, empty destination
+    usrc.copyTo(udst);
+    ASSERT_EQ(src.size(), udst.size());
+    ASSERT_EQ(src.type(), udst.type());
+    udst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    cuda::GpuMat big(6, 7, CV_8UC3, Scalar::all(0));
+    src.copyTo(big(Rect(1, 1, 5, 4)));  // ROI of the same size is written in place
+    big.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res(Rect(1, 1, 5, 4)), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(res.row(0), NORM_INF));
+
+    Mat().copyTo(dst);  // empty source releases the destination, as for a Mat destination
+    EXPECT_TRUE(dst.empty());
+}
+
 }} // namespace
