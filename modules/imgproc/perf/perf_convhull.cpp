@@ -20,7 +20,7 @@ PERF_TEST_P_(ConvexHullRandomPerfTest, convexHull)
     const bool returnPoints = get<3>(GetParam());
     const int runs  = multirun_count(total);
 
-    RNG rng(0x12345678);      // fixed seed => identical input for comparison of different cases
+    RNG& rng = theRNG();      // the same seed in every test case
     std::vector<Mat> inputs(runs);
     for (int k = 0; k < runs; ++k)
     {
@@ -98,7 +98,7 @@ PERF_TEST_P_(ConvexHullContourPerfTest, convexHull)
     const double R = step * total / (2.0 * CV_PI);
     const double scaleY = 1.25;   // ellipse, taller than wide with any noise
 
-    RNG rng(0x12345678);      // fixed seed => identical input for comparison of different cases
+    RNG& rng = theRNG();      // the same seed in every test case
     std::vector<Mat> inputs(runs);
     for (int k = 0; k < runs; ++k)
     {
