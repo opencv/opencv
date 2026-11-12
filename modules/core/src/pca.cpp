@@ -125,8 +125,8 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
             tmp_data = tmp_mean;
         }
 
-        Mat evects1(count, len, ctype);
-        gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
+        Mat evects1(out_count, len, ctype);
+        gemm( eigenvectors.rowRange(0, out_count), tmp_data, 1, Mat(), 0, evects1,
             (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
         eigenvectors = evects1;
 
@@ -139,12 +139,10 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         }
     }
 
-    if( count > out_count )
-    {
-        // use clone() to physically copy the data and thus deallocate the original matrices
+    if( eigenvalues.rows > out_count )
         eigenvalues = eigenvalues.rowRange(0,out_count).clone();
+    if( eigenvectors.rows > out_count )
         eigenvectors = eigenvectors.rowRange(0,out_count).clone();
-    }
     return *this;
 }
 
@@ -193,7 +191,7 @@ int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
             break;
     }
 
-    L = std::max(2, L);
+    L = std::min(eigenvalues.rows, std::max(2, L));
 
     return L;
 }
@@ -245,6 +243,13 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
     eigen( covar, eigenvalues, eigenvectors );
 
+    // compute the cumulative energy content for each eigenvector
+    int L;
+    if (ctype == CV_32F)
+        L = computeCumulativeEnergy<float>(eigenvalues, retainedVariance);
+    else
+        L = computeCumulativeEnergy<double>(eigenvalues, retainedVariance);
+
     if( !(covar_flags & CV_COVAR_NORMAL) )
     {
         // CV_PCA_DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
@@ -261,12 +266,12 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
             tmp_data = tmp_mean;
         }
 
-        Mat evects1(count, len, ctype);
-        gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
+        Mat evects1(L, len, ctype);
+        gemm( eigenvectors.rowRange(0, L), tmp_data, 1, Mat(), 0, evects1,
             (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
         eigenvectors = evects1;
 
-        // normalize all eigenvectors
+        // normalize eigenvectors
         int i;
         for( i = 0; i < eigenvectors.rows; i++ )
         {
@@ -275,16 +280,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
         }
     }
 
-    // compute the cumulative energy content for each eigenvector
-    int L;
-    if (ctype == CV_32F)
-        L = computeCumulativeEnergy<float>(eigenvalues, retainedVariance);
-    else
-        L = computeCumulativeEnergy<double>(eigenvalues, retainedVariance);
-
     // use clone() to physically copy the data and thus deallocate the original matrices
-    eigenvalues = eigenvalues.rowRange(0,L).clone();
-    eigenvectors = eigenvectors.rowRange(0,L).clone();
+    if( eigenvalues.rows > L )
+        eigenvalues = eigenvalues.rowRange(0,L).clone();
+    if( eigenvectors.rows > L )
+        eigenvectors = eigenvectors.rowRange(0,L).clone();
 
     return *this;
 }

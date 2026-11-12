@@ -92,7 +92,7 @@ static void sortMatrixColumnsByIndices(InputArray _src, InputArray _indices, Out
     }
     Mat src = _src.getMat();
     std::vector<int> indices = _indices.getMat();
-    _dst.create(src.rows, src.cols, src.type());
+    _dst.create(src.rows, (int)indices.size(), src.type());
     Mat dst = _dst.getMat();
     for(size_t idx = 0; idx < indices.size(); idx++) {
         Mat originalCol = src.col(indices[idx]);
@@ -923,19 +923,19 @@ public:
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);
         } else {
-            Mat tmp;
-            // Convert the given input matrix to double. Is there any way to
-            // prevent allocating the temporary memory? Only used for copying
-            // into working memory and deallocated after.
-            src.getMat().convertTo(tmp, CV_64FC1);
+            Mat tmp = src.getMat();
+            if (tmp.type() != CV_64FC1) {
+                tmp.convertTo(tmp, CV_64FC1);
+            }
             // Get dimension of the matrix.
             this->n = tmp.cols;
             // Allocate the matrix data to work on.
             this->H = alloc_2d<double> (n, n);
             // Now safely copy the data.
             for (int i = 0; i < tmp.rows; i++) {
+                const double* row = tmp.ptr<double>(i);
                 for (int j = 0; j < tmp.cols; j++) {
-                    this->H[i][j] = tmp.at<double>(i, j);
+                    this->H[i][j] = row[j];
                 }
             }
             // Deallocates the temporary matrix before computing.
@@ -1098,8 +1098,11 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
                   << std::endl;
     }
     // clip number of components to be a valid number
-    if ((_num_components <= 0) || (_num_components >= C)) {
+    if ((_num_components <= 0) || (_num_components > (C - 1))) {
         _num_components = (C - 1);
+    }
+    if (_num_components > D) {
+        _num_components = D;
     }
     // holds the mean over all classes
     Mat meanTotal = Mat::zeros(1, D, data.type());
@@ -1134,33 +1137,40 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // calculate within-classes scatter
     Mat Sw = Mat::zeros(D, D, data.type());
     mulTransposed(data, Sw, true);
+    data.release();
     // calculate between-classes scatter
-    Mat Sb = Mat::zeros(D, D, data.type());
+    Mat Sb = Mat::zeros(D, D, Sw.type());
+    Mat tmp, tmpScatter;
     for (int i = 0; i < C; i++) {
-        Mat tmp;
         subtract(meanClass[i], meanTotal, tmp);
-        mulTransposed(tmp, tmp, true);
-        add(Sb, tmp, Sb);
+        mulTransposed(tmp, tmpScatter, true);
+        add(Sb, tmpScatter, Sb);
     }
+    tmp.release();
+    tmpScatter.release();
+    meanClass.clear();
+    meanTotal.release();
     // invert Sw
     Mat Swi = Sw.inv();
+    Sw.release();
     // M = inv(Sw)*Sb
     Mat M;
     gemm(Swi, Sb, 1.0, Mat(), 0.0, M);
+    Swi.release();
+    Sb.release();
     EigenvalueDecomposition es;
     es.compute(M);
+    M.release();
     _eigenvalues = es.eigenvalues();
     _eigenvectors = es.eigenvectors();
     // reshape eigenvalues, so they are stored by column
     _eigenvalues = _eigenvalues.reshape(1, 1);
     // get sorted indices descending by their eigenvalue
     std::vector<int> sorted_indices = argsort(_eigenvalues, false);
-    // now sort eigenvalues and eigenvectors accordingly
+    sorted_indices.resize(_num_components);
+    // now sort and slice only the kept components
     _eigenvalues = sortMatrixColumnsByIndices(_eigenvalues, sorted_indices);
     _eigenvectors = sortMatrixColumnsByIndices(_eigenvectors, sorted_indices);
-    // and now take only the num_components and we're out!
-    _eigenvalues = Mat(_eigenvalues, Range::all(), Range(0, _num_components));
-    _eigenvectors = Mat(_eigenvectors, Range::all(), Range(0, _num_components));
 }
 
 void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
