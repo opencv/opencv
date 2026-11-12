@@ -126,7 +126,7 @@ struct Net::Impl : public detail::NetImplBase
     std::string importFailure;
     ModelFormat modelFormat;
     DataLayout originalLayout;
-    // int onnx_opset;
+    int onnx_opset = -1;  // ai.onnx opset of the loaded model; -1 for other formats
 
     NamesHash argnames;
     NamesHash dimnames;

@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
 #include "../src/graph_partition.hpp"
@@ -131,19 +133,6 @@ TEST(DNN_LayerFactory, exec_table_is_per_backend_and_checks_opset)
         EXPECT_TRUE(LayerFactory::isExecSupported(type, GPU, 100));
     }
     EXPECT_FALSE(LayerFactory::isExecSupported(type, GPU));
-}
-
-TEST(DNN_ONNX_Opset, nodes_carry_the_model_opset)
-{
-    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/xfeat.onnx"));
-    Ptr<Graph> graph = net.getMainGraph();
-    ASSERT_TRUE(graph);
-    ASSERT_FALSE(graph->prog().empty());
-    for (const Ptr<LayerInfo>& op : graph->prog()) {
-        if (op) {
-            EXPECT_EQ(op->opset, 11) << op->name << " (" << op->type << ")";
-        }
-    }
 }
 
 // A CUDA exec that always fails, standing in for an unsupported case or a kernel that does not compile.

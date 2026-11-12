@@ -125,6 +125,7 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+        model.enableTF32(false);  // TF32 moves near-tied heatmap peaks; the references are FP32
 
         points = model.estimate(frame, 0.5);
 
@@ -431,8 +432,7 @@ TEST_P(Test_Model, Keypoints_pose)
     bool swapRB = false;
 
     // Ref. Range: [58.6875, 508.625]
-    // FP16 and TF32 move one near-tied heatmap peak by a cell (19.56 px)
-    if (target == DNN_TARGET_CUDA_FP16 || (target == DNN_TARGET_CUDA && cudaTF32Enabled()))
+    if (target == DNN_TARGET_CUDA_FP16)
         norm = 20; // l1 = 1.5, lInf = 20
 
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);

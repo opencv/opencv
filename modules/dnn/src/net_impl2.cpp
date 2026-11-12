@@ -414,8 +414,6 @@ public:
         hostShapeOp_.clear();
         inH2D_.clear();
         outD2H_.clear();
-        segments_.clear();
-        transitions_.clear();
     }
 
     Net::Impl* netimpl_;
@@ -428,9 +426,6 @@ public:
     std::vector<uchar> hostShapeOp_;  // op computes shape values on the host inside a CUDA graph
     std::vector<std::vector<uchar> > inH2D_;
     std::vector<std::vector<uchar> > outD2H_;
-    // the partition finalizeGraph() settled on and the values moved between its segments
-    std::vector<GraphSegment> segments_;
-    std::vector<ArgTransition> transitions_;
 };
 
 Ptr<Graph> Graph::create(void* netimpl, const std::string& name,
@@ -706,8 +701,8 @@ static std::string cudaPlacementBlocker(const Net::Impl& net, const Ptr<LayerInf
         return "it has dynamic output shapes";
     if (!LayerFactory::isExecSupported(op->type, DNN_BACKEND_CUDA))
         return "there is no CUDA exec for it";
-    if (!LayerFactory::isExecSupported(op->type, DNN_BACKEND_CUDA, op->opset))
-        return cv::format("its CUDA exec does not support opset %d", op->opset);
+    if (!LayerFactory::isExecSupported(op->type, DNN_BACKEND_CUDA, net.onnx_opset))
+        return cv::format("its CUDA exec does not support opset %d", net.onnx_opset);
     return std::string();
 }
 #endif
@@ -825,8 +820,8 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
     g->hostShapeOp_.assign(nops, 0);
 
-    // Each op runs on the accelerator if its table accepts it, else on CPU; forwardGraph() moves
-    // tensors at the segment boundaries listed by buildSegments() below.
+    // Each op runs on the accelerator if its table accepts it, else on CPU; forwardGraph() moves a
+    // tensor between host and device when its dirty flags say the other side holds the fresh copy.
     std::vector<int> placement;
     std::vector<Ptr<Layer> > accelExecs;
     planOpPlacement(graph, useCUDA, placement, accelExecs);
@@ -888,8 +883,10 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         std::vector<uchar> constArg(args.size(), 0);
         for (size_t a = 0; a < args.size(); a++)
             constArg[a] = args[a].kind == DNN_ARG_CONST;
-        buildSegments(prog, g->hostShapeOp_, g->execBackend_, g->outputs_, constArg, g->segments_, g->transitions_);
-        logPartition(graph->name(), prog, g->segments_, g->transitions_, *this);
+        std::vector<GraphSegment> segments;
+        std::vector<ArgTransition> transitions;
+        buildSegments(prog, g->hostShapeOp_, g->execBackend_, g->outputs_, constArg, segments, transitions);
+        logPartition(graph->name(), prog, segments, transitions, *this);
     }
 }
 
@@ -2017,10 +2014,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         int opBackend = (opidx < gimpl->execBackend_.size()) ? gimpl->execBackend_[opidx]
                                                              : DNN_BACKEND_OPENCV;
         CV_UNUSED(opBackend);  // only consumed by the HAVE_CUDA dispatch below
-#ifdef HAVE_CUDA
-        // if anything below throws, retryAfterAccelFailure() moves this op to CPU
-        accelRunningOp = opBackend == DNN_BACKEND_CUDA ? op.get() : nullptr;
-#endif
         const std::vector<Arg>& inputs = op->inputs;
         const std::vector<Arg>& outputs = op->outputs;
         size_t ninputs = inputs.size(), noutputs = outputs.size();
@@ -2079,6 +2072,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         std::vector<Ptr<Graph> >* subgraphs = op->subgraphs();
         if (!subgraphs) {
+#ifdef HAVE_CUDA
+            // shape inference above is the same on every backend; only the exec's own work below
+            // is a reason to move the op to CPU
+            accelRunningOp = opBackend == DNN_BACKEND_CUDA ? op.get() : nullptr;
+#endif
             // Blobs live on 'op', packed buffers on the executor 'layer'.
             if (layer->packedWeightEpoch != op->weightEpoch) {
                 layer->prepackWeights();
