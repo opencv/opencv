@@ -2954,7 +2954,8 @@ TEST(Mat, copyTo_GpuMat_destination)
     if (cv::cuda::getCudaEnabledDeviceCount() < 1)
         throw SkipTestException("No CUDA devices");
 
-    const Mat src(4, 5, CV_8UC3, Scalar(1, 2, 3));
+    Mat src(4, 5, CV_8UC3);
+    randu(src, Scalar::all(0), Scalar::all(256));
     Mat res;
 
     cuda::GpuMat dst;  // empty destination
@@ -2980,14 +2981,24 @@ TEST(Mat, copyTo_GpuMat_destination)
     udst.download(res);
     EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
 
+    const Rect roi(1, 1, 5, 4);
     cuda::GpuMat big(6, 7, CV_8UC3, Scalar::all(0));
-    src.copyTo(big(Rect(1, 1, 5, 4)));  // ROI of the same size is written in place
+    src.copyTo(big(roi));  // ROI of the same size is written in place, the rest is untouched
+    Mat expected(big.size(), big.type(), Scalar::all(0));
+    src.copyTo(expected(roi));
     big.download(res);
-    EXPECT_EQ(0, cvtest::norm(src, res(Rect(1, 1, 5, 4)), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(res.row(0), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expected, res, NORM_INF));
 
     Mat().copyTo(dst);  // empty source releases the destination, as for a Mat destination
     EXPECT_TRUE(dst.empty());
+
+    const int sz3[] = {2, 3, 4};  // cuda::GpuMat holds 2D data only: rejected, destination untouched
+    dst.upload(src);
+    EXPECT_THROW(Mat(3, sz3, CV_8UC1, Scalar::all(1)).copyTo(dst), cv::Exception);
+    EXPECT_THROW(UMat(3, sz3, CV_8UC1, Scalar::all(1)).copyTo(dst), cv::Exception);
+    ASSERT_EQ(src.size(), dst.size());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
 }
 
 }} // namespace
