@@ -1181,6 +1181,13 @@ void UMat::copyTo(OutputArray _dst) const
 #ifdef HAVE_CUDA
     if (_dst.isGpuMat())
     {
+        if (empty())
+        {
+            _dst.release();
+            return;
+        }
+        // getGpuMat() returns a copy of the header, so allocate the destination itself first
+        _dst.create(rows, cols, type());
         _dst.getGpuMat().upload(*this);
         return;
     }
