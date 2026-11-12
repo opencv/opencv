@@ -17,16 +17,18 @@ TEST_P(CLAHE_Padding, reflected_border)
     const bool useRoi = testing::get<4>(GetParam());
     const Size size(grid.width * 5 + extra.width, grid.height * 5 + extra.height);
 
-    // The ROI ends at the parent's bottom-right corner so border extrapolation
-    // uses the same pixels as a standalone image, while preserving a row stride.
-    Mat storage(size.height + 2, size.width + 3, type);
+    // The ROI sits inside the parent with more than a tile of parent pixels to its right and
+    // bottom, so the internal padding must not read them (it would if it did not isolate the ROI).
+    Mat storage(size.height + 2 + 8, size.width + 3 + 8, type);
+    theRNG().fill(storage, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
     Mat src = useRoi ? storage(Rect(3, 2, size.width, size.height)) : Mat(size, type);
-    theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
+    if (!useRoi)
+        theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
 
     const int bottom = (grid.height - size.height % grid.height) % grid.height;
     const int right = (grid.width - size.width % grid.width) % grid.width;
     Mat padded, expected, actual;
-    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101);
+    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101 | BORDER_ISOLATED);
 
     Ptr<CLAHE> clahe = cv::createCLAHE(clipLimit, grid);
     clahe->apply(padded, expected);
@@ -38,26 +40,6 @@ TEST_P(CLAHE_Padding, reflected_border)
     Mat inPlace = src.clone();
     clahe->apply(inPlace, inPlace);
     EXPECT_MAT_NEAR(actual, inPlace, 0);
-}
-
-TEST(Imgproc_CLAHE, roi_ignores_pixels_outside)
-{
-    const Size size(23, 17);
-    for (int type : { CV_8UC1, CV_16UC1 })
-    {
-        // Sizes are not multiples of the 4x4 tile grid, so the right and bottom edges are padded.
-        // The pixels around the region must not leak into that padding.
-        Mat parent(size.height + 6, size.width + 6, type);
-        theRNG().fill(parent, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
-        Mat roi = parent(Rect(3, 3, size.width, size.height));
-        Mat standalone = roi.clone();
-
-        Ptr<CLAHE> clahe = cv::createCLAHE(4.0, Size(4, 4));
-        Mat expected, actual;
-        clahe->apply(standalone, expected);
-        clahe->apply(roi, actual);
-        EXPECT_MAT_NEAR(expected, actual, 0);
-    }
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE_Padding, testing::Combine(
