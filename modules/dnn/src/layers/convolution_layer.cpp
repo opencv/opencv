@@ -253,6 +253,8 @@ public:
     Ptr<ActivationLayer> activ;
 
     Ptr<FastConv> fastConvImpl;
+    std::vector<size_t> fastConvPadsBegin, fastConvPadsEnd;  // the pads fastConvImpl was packed with
+    bool fastConvCanUseWinograd = false;
     bool canUseWinograd = false;
 
 #ifdef HAVE_OPENCL
@@ -452,7 +454,9 @@ public:
 
         // Winograd only works when input h and w >= 12.
         canUseWinograd = useWinograd && inputs[0].dims == 4 && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
-        if (fastConvImpl && (fastConvImpl->conv_type == CONV_TYPE_WINOGRAD3X3) ^ canUseWinograd)
+        // SAME padding depends on the input size, and the packed convolution keeps the pads it was built with
+        if (fastConvImpl && (fastConvCanUseWinograd != canUseWinograd ||
+                             fastConvPadsBegin != pads_begin || fastConvPadsEnd != pads_end))
         {
             fastConvImpl.reset();
         }
@@ -1304,6 +1308,9 @@ public:
                 fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
                                             dilations, pads_begin, pads_end, conv_dim,
                                             preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
+                fastConvPadsBegin = pads_begin;
+                fastConvPadsEnd = pads_end;
+                fastConvCanUseWinograd = canUseWinograd;
                 // This is legal to release weightsMat here as this is not used anymore for
                 // OpenCV inference. If network needs to be reinitialized (new shape, new backend)
                 // a new version of weightsMat is created at .finalize() from original weights

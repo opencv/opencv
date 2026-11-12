@@ -1997,6 +1997,50 @@ TEST(Layer_Test_Convolution, relu_fusion)
     normAssert(input, output);
 }
 
+// SAME padding depends on the input size: after a reshape to a size of the other parity, a stride-2
+// convolution must give what a fresh net gives
+TEST(Layer_Test_Convolution, same_padding_after_reshape)
+{
+    LayerParams lp;
+    lp.set("kernel_size", 3);
+    lp.set("stride", 2);
+    lp.set("num_output", 4);
+    lp.set("pad_mode", "SAME");
+    lp.set("bias_term", false);
+    lp.type = "Convolution";
+    lp.name = "testConv";
+
+    int weightsShape[] = {4, 3, 3, 3};
+    Mat weights(4, &weightsShape[0], CV_32F);
+    randu(weights, -1.0f, 1.0f);
+    lp.blobs.push_back(weights);
+
+    const int sizes[][2] = {{10, 9}, {9, 10}};
+    for (const auto& size : sizes)
+    {
+        int shape0[] = {1, 3, size[0], size[0]}, shape1[] = {1, 3, size[1], size[1]};
+        Mat input0(4, &shape0[0], CV_32F), input1(4, &shape1[0], CV_32F);
+        randu(input0, -1.0f, 1.0f);
+        randu(input1, -1.0f, 1.0f);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input0);
+        net.forward();
+        net.setInput(input1);
+        Mat output = net.forward();
+
+        Net fresh;
+        fresh.addLayerToPrev(lp.name, lp.type, lp);
+        fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
+        fresh.setInput(input1);
+        Mat reference = fresh.forward();
+
+        EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF)) << size[0] << " -> " << size[1];
+    }
+}
+
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
 TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
 {
