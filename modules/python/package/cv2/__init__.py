@@ -158,7 +158,15 @@ def bootstrap():
 
     py_module = sys.modules.pop("cv2")
 
-    native_module = importlib.import_module("cv2")
+    try:
+        native_module = importlib.import_module("cv2")
+    except BaseException:
+        # Don't leave the package directory on sys.path if the native module fails to load: callers may treat cv2
+        # as optional and keep running, and cv2/typing then shadows the standard typing module, e.g. in
+        # multiprocessing "spawn" children (https://github.com/opencv/opencv/issues/28766)
+        sys.path = save_sys_path
+        del sys.OpenCV_LOADER
+        raise
 
     sys.modules["cv2"] = py_module
     setattr(py_module, "_native", native_module)
