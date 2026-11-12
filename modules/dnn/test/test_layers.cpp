@@ -3103,4 +3103,145 @@ TEST(Layer_Gemm, bias_beta_zero_and_half)
     }
 }
 
+TEST(Layer_Tile_DepthSpace_Recurrent, memory_paths_parity)
+{
+    RNG& rng = theRNG();
+
+    // Tile: single repeated axis, multiple repeated axes, and all-1 repeats
+    {
+        Mat inp({2, 3, 4}, CV_32F);
+        rng.fill(inp, RNG::UNIFORM, -1.f, 1.f);
+
+        const int reps_cases[3][3] = {{1, 3, 1}, {2, 1, 3}, {1, 1, 1}};
+        for (int tc = 0; tc < 3; ++tc)
+        {
+            Net net;
+            LayerParams lp;
+            lp.name = "tile";
+            lp.type = "Tile";
+            lp.set("repeats", DictValue::arrayInt(reps_cases[tc], 3));
+            net.addLayerToPrev(lp.name, lp.type, lp);
+            net.setInput(inp);
+            Mat out = net.forward();
+
+            const int r0 = reps_cases[tc][0], r1 = reps_cases[tc][1], r2 = reps_cases[tc][2];
+            ASSERT_EQ(out.size[0], 2 * r0);
+            ASSERT_EQ(out.size[1], 3 * r1);
+            ASSERT_EQ(out.size[2], 4 * r2);
+            for (int i = 0; i < 2 * r0; ++i)
+                for (int j = 0; j < 3 * r1; ++j)
+                    for (int k = 0; k < 4 * r2; ++k)
+                        ASSERT_FLOAT_EQ(out.ptr<float>(i, j)[k], inp.ptr<float>(i % 2, j % 3)[k % 4]);
+        }
+    }
+
+    // DepthToSpace (DCR + CRD) and SpaceToDepth roundtrip
+    {
+        Mat inp({1, 8, 4, 6}, CV_32F);
+        rng.fill(inp, RNG::UNIFORM, -1.f, 1.f);
+
+        Net net;
+        LayerParams d2s, s2d;
+        d2s.name = "d2s";
+        d2s.type = "DepthToSpace";
+        d2s.set("blocksize", 2);
+        d2s.set("mode", "DCR");
+        s2d.name = "s2d";
+        s2d.type = "SpaceToDepth";
+        s2d.set("blocksize", 2);
+        net.addLayerToPrev(d2s.name, d2s.type, d2s);
+        net.addLayerToPrev(s2d.name, s2d.type, s2d);
+        net.setInput(inp);
+        Mat out = net.forward();
+        normAssert(out, inp, "DepthToSpace/SpaceToDepth DCR roundtrip", 0.0, 0.0);
+
+        Net netCrd;
+        LayerParams d2sCrd;
+        d2sCrd.name = "d2s_crd";
+        d2sCrd.type = "DepthToSpace";
+        d2sCrd.set("blocksize", 2);
+        d2sCrd.set("mode", "CRD");
+        netCrd.addLayerToPrev(d2sCrd.name, d2sCrd.type, d2sCrd);
+        netCrd.setInput(inp);
+        Mat outCrd = netCrd.forward();
+        ASSERT_EQ(shape(outCrd), MatShape({1, 2, 8, 12}));
+        for (int c = 0; c < 2; ++c)
+            for (int by = 0; by < 2; ++by)
+                for (int bx = 0; bx < 2; ++bx)
+                    for (int y = 0; y < 4; ++y)
+                        for (int x = 0; x < 6; ++x)
+                        {
+                            const int inC = c * 4 + by * 2 + bx;
+                            const float expected = inp.ptr<float>(0, inC)[y * 6 + x];
+                            const float actual = outCrd.ptr<float>(0, c)[(y * 2 + by) * 12 + (x * 2 + bx)];
+                            ASSERT_FLOAT_EQ(actual, expected);
+                        }
+    }
+
+    // LSTM with produce_cell_output=true (both standard and is_onnx bidirectional) + GRU bidirectional
+    {
+        const int S = 5, B = 3, I = 4, H = 6, D = 2;
+        Mat X({S, B, I}, CV_32F);
+        rng.fill(X, RNG::UNIFORM, -0.5f, 0.5f);
+
+        Mat Wh(D * 4 * H, H, CV_32F), Wx(D * 4 * H, I, CV_32F), bias(1, D * 4 * H, CV_32F);
+        Mat h0(D * B, H, CV_32F), c0(D * B, H, CV_32F), origBias(D, 8 * H, CV_32F);
+        rng.fill(Wh, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(Wx, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(bias, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(h0, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(c0, RNG::UNIFORM, -0.2f, 0.2f);
+        origBias.setTo(0.f);
+
+        Net netStd, netOnnx;
+        LayerParams lpStd;
+        lpStd.name = "lstm_std";
+        lpStd.type = "LSTM";
+        lpStd.set("bidirectional", true);
+        lpStd.set("hidden_size", H);
+        lpStd.set("produce_cell_output", true);
+        lpStd.blobs = {Wh.clone(), Wx.clone(), bias.clone(), h0.clone(), c0.clone()};
+        netStd.addLayerToPrev(lpStd.name, lpStd.type, lpStd);
+
+        LayerParams lpOnnx = lpStd;
+        lpOnnx.name = "lstm_onnx";
+        lpOnnx.set("is_onnx", true);
+        lpOnnx.blobs = {origBias.clone(), Wh.clone(), Wx.clone(), bias.clone(), h0.clone(), c0.clone()};
+        netOnnx.addLayerToPrev(lpOnnx.name, lpOnnx.type, lpOnnx);
+
+        netStd.setInput(X);
+        netOnnx.setInput(X);
+        std::vector<Mat> outStd, outOnnx;
+        netStd.forward(outStd, "lstm_std");
+        netOnnx.forward(outOnnx, "lstm_onnx");
+        ASSERT_EQ(outStd.size(), 2u);
+        ASSERT_EQ(outOnnx.size(), 2u);
+        normAssert(outOnnx[0], outStd[0], "LSTM h parity", 1e-6, 1e-6);
+
+        // Verify ONNX Y_c matches [cStd[S-1, :, 0:H], cStd[0, :, H:2H]]
+        ASSERT_EQ(shape(outOnnx[1]), MatShape({D, B, H}));
+        Mat cStdLastFwd = outStd[1].reshape(1, S * B).rowRange((S - 1) * B, S * B).colRange(0, H).clone();
+        Mat cStdLastBwd = outStd[1].reshape(1, S * B).rowRange(0, B).colRange(H, 2 * H).clone();
+        normAssert(outOnnx[1].reshape(1, D * B).rowRange(0, B), cStdLastFwd, "LSTM Yc dir 0", 1e-6, 1e-6);
+        normAssert(outOnnx[1].reshape(1, D * B).rowRange(B, 2 * B), cStdLastBwd, "LSTM Yc dir 1", 1e-6, 1e-6);
+
+        // GRU bidirectional smoke + determinism check across repeated forward calls
+        Mat gruWh(D * 3 * H, H, CV_32F), gruWx(D * 3 * H, I, CV_32F), gruB(1, D * 6 * H, CV_32F);
+        rng.fill(gruWh, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(gruWx, RNG::UNIFORM, -0.2f, 0.2f);
+        rng.fill(gruB, RNG::UNIFORM, -0.2f, 0.2f);
+        Net netGru;
+        LayerParams lpGru;
+        lpGru.name = "gru";
+        lpGru.type = "GRU";
+        lpGru.set("bidirectional", true);
+        lpGru.blobs = {gruWh, gruWx, gruB, h0.clone()};
+        netGru.addLayerToPrev(lpGru.name, lpGru.type, lpGru);
+        netGru.setInput(X);
+        Mat gruOut1 = netGru.forward().clone();
+        Mat gruOut2 = netGru.forward().clone();
+        normAssert(gruOut1, gruOut2, "GRU repeated forward parity", 0.0, 0.0);
+    }
+}
+
 }} // namespace

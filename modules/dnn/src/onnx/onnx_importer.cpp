@@ -1424,10 +1424,10 @@ void transformBlobs(std::vector<Mat>& blobs)
     Mat Wx = blobs[0];
     Mat Wh = blobs[1];
     Mat b = blobs[2];
-    std::vector<Mat> cudaWorkaround;
-    cudaWorkaround.push_back(Wx.clone());
-    cudaWorkaround.push_back(Wh.clone());
-    cudaWorkaround.push_back(b.clone());
+    // Only the bias sum (bx + bh) is non-invertible; Wx and Wh only undergo an
+    // invertible gate swap (IOFC -> IFOC) + header reshape, so initCUDA can
+    // reconstruct IFCO locally without pinning duplicate Wx/Wh matrices in RAM.
+    Mat originalBias = b.clone();
 
     const int numHidden = Wh.size[2];
 
@@ -1477,8 +1477,7 @@ void transformBlobs(std::vector<Mat>& blobs)
     }
 
     if (blobs.size() == 5) {
-        // so that future patch removing copies can leave all indexing as is
-        blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
+        blobs.insert(blobs.begin(), originalBias);
         return;
     }
 
@@ -1495,8 +1494,7 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[7] = blobs[7].clone().reshape(1, blobs[7].total());  // Single column.
     blobs[7] = Mat::diag(blobs[7]);
 
-    // so that future patch removing copies can leave all indexing as is
-    blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
+    blobs.insert(blobs.begin(), originalBias);
 }
 
 void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size)

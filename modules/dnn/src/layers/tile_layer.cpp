@@ -68,17 +68,39 @@ public:
         const Mat& data = inputs[0];
         Mat& out = outputs[0];
 
-        Mat tmp = data.clone();
-        MatShape tmp_shape = shape(tmp);
         MatShape out_shape = shape(out);
-        int rep_i, ndims = data.dims;
+        int ndims = data.dims;
+        int last_rep_axis = -1;
+        for (int i = 0; i < ndims; i++)
+        {
+            if (repeats[i] != 1)
+                last_rep_axis = i;
+        }
+
+        if (last_rep_axis < 0)
+        {
+            if (data.data != out.data)
+                data.reshape(0, out_shape).copyTo(out);
+            return;
+        }
+
+        const bool write_direct = (data.data != out.data) && out.isContinuous();
+        Mat tmp = data;
         int dims = 1;
         for (int i = 0; i < ndims; i++)
         {
-            rep_i = repeats[i];
+            const int rep_i = repeats[i];
             if (rep_i != 1)
             {
                 tmp = tmp.reshape(0, dims);
+                if (write_direct && i == last_rep_axis)
+                {
+                    Mat out_2d = out.reshape(0, dims);
+                    CV_Assert(out_2d.data == out.data);
+                    cv::repeat(tmp, 1, rep_i, out_2d);
+                    CV_Assert(out_2d.data == out.data);
+                    return;
+                }
                 tmp = cv::repeat(tmp, 1, rep_i);
             }
             // accumulate for every axis so a repeated non-leading axis tiles
@@ -86,7 +108,6 @@ public:
             dims *= out_shape[i];
         }
         tmp = tmp.reshape(0, out_shape);
-
         tmp.copyTo(out);
     }
 
