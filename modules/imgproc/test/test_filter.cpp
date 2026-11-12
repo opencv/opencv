@@ -1129,13 +1129,15 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Morphology_Bool,
 
 typedef testing::TestWithParam<int> Morphology_HalfFloat;
 
-// min/max are exact on both half formats, so the result must match the fp32
-// reference bit for bit -- no tolerance
+// min/max are exact on both half formats, and gradient/tophat/blackhat round
+// their one subtraction to half once, so the result must match the fp32
+// reference rounded to half bit for bit -- no tolerance
 TEST_P(Morphology_HalfFloat, exact_vs_fp32)
 {
     const int depth = GetParam();
 
-    const int ops[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE };
+    const int ops[] = { MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE,
+                        MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT };
     const int borders[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101 };
     // RECT takes the separable row+column getters, CROSS the 2D getter
     const int shapes[] = { MORPH_RECT, MORPH_CROSS };
@@ -1150,7 +1152,7 @@ TEST_P(Morphology_HalfFloat, exact_vs_fp32)
         srcHalf.convertTo(ref32, CV_MAKETYPE(CV_32F, cn));
 
         for (int si = 0; si < 2; si++)
-            for (int oi = 0; oi < 4; oi++)
+            for (int oi = 0; oi < 7; oi++)
                 for (int bi = 0; bi < 3; bi++)
                 {
                     const int op = ops[oi], border = borders[bi];
@@ -1159,12 +1161,14 @@ TEST_P(Morphology_HalfFloat, exact_vs_fp32)
                     SCOPED_TRACE(cv::format("depth=%d cn=%d shape=%d op=%d border=%d",
                                             depth, cn, shapes[si], op, border));
 
-                    Mat actual, expected, actual32;
+                    Mat actual, expected, expectedHalf, actual32;
                     ASSERT_NO_THROW(cv::morphologyEx(srcHalf, actual, op, kernel,
                                                      Point(-1, -1), 1, border));
                     ASSERT_EQ(depth, actual.depth());
 
                     cv::morphologyEx(ref32, expected, op, kernel, Point(-1, -1), 1, border);
+                    expected.convertTo(expectedHalf, CV_MAKETYPE(depth, cn));
+                    expectedHalf.convertTo(expected, CV_MAKETYPE(CV_32F, cn));
                     actual.convertTo(actual32, CV_MAKETYPE(CV_32F, cn));
 
                     EXPECT_EQ(0, cvtest::norm(actual32, expected, NORM_INF));

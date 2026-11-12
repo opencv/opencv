@@ -14,7 +14,7 @@ typedef tuple<Size, MatType> Size_MatType_HalfFloat_t;
 typedef perf::TestBaseWithParam<Size_MatType_HalfFloat_t> Size_MatType_HalfFloat;
 
 #define HALF_FLOAT_TYPES testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_32FC1)
-#define HALF_FLOAT_SIZES testing::Values(szVGA, sz720p)
+#define HALF_FLOAT_SIZES testing::Values(TYPICAL_MAT_SIZES)
 
 static Mat halfFloatSrc(Size size, int type)
 {

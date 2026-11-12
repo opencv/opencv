@@ -1487,6 +1487,11 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
+    // warpAffine and warpPerspective reach this point too, so one check covers all three
+    if (interpolation == INTER_CUBIC && (depth == CV_16F || depth == CV_16BF))
+        CV_Error(cv::Error::StsNotImplemented,
+                 "INTER_CUBIC is not supported for CV_16F and CV_16BF images, convert them to CV_32F first");
+
     if (interpolation == INTER_NEAREST && map1.depth() == CV_32F) {
         const auto *src_data = src.ptr<const uchar>();
         auto *dst_data = dst.ptr<uchar>();

@@ -2161,6 +2161,8 @@ the "outliers" in the source image are not modified by the function.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
+
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
 CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
@@ -2195,6 +2197,8 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 @param borderValue value used in case of a constant border; by default, it equals 0.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
+
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2246,6 +2250,7 @@ corresponds to the "outliers" in the source image are not modified by the functi
 for linear calculation for faster speed. See #AlgorithmHint.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
