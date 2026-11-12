@@ -488,6 +488,7 @@ void Mat::copyTo( OutputArray _dst ) const
             _dst.release();
             return;
         }
+        CV_CheckLE(dims, 2, "cuda::GpuMat holds 2D data only");
         // getGpuMat() returns a copy of the header, so allocate the destination itself first
         _dst.create(rows, cols, type());
         _dst.getGpuMat().upload(*this);
