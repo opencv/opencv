@@ -130,13 +130,17 @@ namespace
         templCenter_ = templCenter;
 
         processTempl();
+
+        templEdges_.release();
+        templDx_.release();
+        templDy_.release();
     }
 
     void GeneralizedHoughBase::setTemplateImpl(InputArray edges, InputArray dx, InputArray dy, Point templCenter)
     {
-        edges.getMat().copyTo(templEdges_);
-        dx.getMat().copyTo(templDx_);
-        dy.getMat().copyTo(templDy_);
+        templEdges_ = edges.getMat();
+        templDx_ = dx.getMat();
+        templDy_ = dy.getMat();
 
         CV_Assert( templEdges_.type() == CV_8UC1 );
         CV_Assert( templDx_.type() == CV_32FC1 && templDx_.size() == templEdges_.size() );
@@ -149,6 +153,10 @@ namespace
         templCenter_ = templCenter;
 
         processTempl();
+
+        templEdges_.release();
+        templDx_.release();
+        templDy_.release();
     }
 
     void GeneralizedHoughBase::detectImpl(InputArray image, OutputArray positions, OutputArray votes)
@@ -161,6 +169,10 @@ namespace
         voteOutBuf_.clear();
 
         processImage();
+
+        imageEdges_.release();
+        imageDx_.release();
+        imageDy_.release();
 
         if (!posOutBuf_.empty())
         {
@@ -178,9 +190,9 @@ namespace
 
     void GeneralizedHoughBase::detectImpl(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes)
     {
-        edges.getMat().copyTo(imageEdges_);
-        dx.getMat().copyTo(imageDx_);
-        dy.getMat().copyTo(imageDy_);
+        imageEdges_ = edges.getMat();
+        imageDx_ = dx.getMat();
+        imageDy_ = dy.getMat();
 
         CV_Assert( imageEdges_.type() == CV_8UC1 );
         CV_Assert( imageDx_.type() == CV_32FC1 && imageDx_.size() == imageEdges_.size() );
@@ -192,6 +204,10 @@ namespace
         voteOutBuf_.clear();
 
         processImage();
+
+        imageEdges_.release();
+        imageDx_.release();
+        imageDy_.release();
 
         if (!posOutBuf_.empty())
         {
@@ -660,6 +676,9 @@ namespace
     void GeneralizedHoughGuilImpl::processImage()
     {
         buildFeatureList(imageEdges_, imageDx_, imageDy_, imageFeatures_);
+        imageEdges_.release();
+        imageDx_.release();
+        imageDy_.release();
 
         calcOrientation();
 
@@ -692,10 +711,8 @@ namespace
         getContourPoints(edges, dx, dy, points);
 
         features.resize(levels_ + 1);
-        const size_t maxBufferSize = maxBufferSize_;
-        std::for_each(features.begin(), features.end(), [maxBufferSize](std::vector<Feature>& e) {
+        std::for_each(features.begin(), features.end(), [](std::vector<Feature>& e) {
             e.clear();
-            e.reserve(maxBufferSize);
         });
 
         for (size_t i = 0; i < points.size(); ++i)
@@ -740,7 +757,8 @@ namespace
         CV_Assert( dy.type() == dx.type() && dy.size == edges.size );
 
         points.clear();
-        points.reserve(edges.size().area());
+        // one point per edge pixel, not per image pixel
+        points.reserve(countNonZero(edges));
 
         for (int y = 0; y < edges.rows; ++y)
         {
