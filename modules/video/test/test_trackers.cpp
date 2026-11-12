@@ -289,4 +289,85 @@ TEST(vittrack, roi_image_matches_clone)
     EXPECT_NEAR(roiTracker->getTrackingScore(), cloneTracker->getTrackingScore(), 1e-6f);
 }
 
+TEST(TrackerMIL, gray_and_bgr_channel0_equivalence)
+{
+    RNG& rng = theRNG();
+    Mat gray1(120, 160, CV_8UC1, Scalar(60));
+    rectangle(gray1, Rect(40, 35, 30, 30), Scalar(210), FILLED);
+    Mat gray2(120, 160, CV_8UC1, Scalar(60));
+    rectangle(gray2, Rect(43, 37, 30, 30), Scalar(210), FILLED);
+
+    Mat ch1(120, 160, CV_8UC1), ch2(120, 160, CV_8UC1);
+    rng.fill(ch1, RNG::UNIFORM, 0, 255);
+    rng.fill(ch2, RNG::UNIFORM, 0, 255);
+    Mat bgr1, bgr2;
+    merge(std::vector<Mat>{gray1, ch1, ch2}, bgr1);
+    merge(std::vector<Mat>{gray2, ch2, ch1}, bgr2);
+
+    Rect initBox(40, 35, 30, 30);
+    uint64 seed = rng.state;
+    std::srand(42);
+    Ptr<TrackerMIL> trGray = TrackerMIL::create();
+    trGray->init(gray1, initBox);
+    Rect outGray;
+    ASSERT_TRUE(trGray->update(gray2, outGray));
+
+    rng.state = seed;
+    std::srand(42);
+    Ptr<TrackerMIL> trBgr = TrackerMIL::create();
+    trBgr->init(bgr1, initBox);
+    Rect outBgr;
+    ASSERT_TRUE(trBgr->update(bgr2, outBgr));
+
+    EXPECT_EQ(outGray, outBgr);
+}
+
+#ifdef HAVE_OPENCV_DNN
+TEST(GOTURN, synthetic_net_boundary_patch_parity)
+{
+    RNG& rng = theRNG();
+    dnn::Net net;
+    dnn::LayerParams lpConcat, lpPool, lpFc;
+    lpConcat.name = "concat";
+    lpConcat.type = "Concat";
+    lpConcat.set("axis", 1);
+    int idConcat = net.addLayer(lpConcat.name, lpConcat.type, lpConcat);
+    net.setInputsNames({"data1", "data2"});
+    net.connect(0, 0, idConcat, 0);
+    net.connect(0, 1, idConcat, 1);
+
+    lpPool.name = "pool";
+    lpPool.type = "Pooling";
+    lpPool.set("pool", "AVE");
+    lpPool.set("global_pooling", true);
+    int idPool = net.addLayerToPrev(lpPool.name, lpPool.type, lpPool);
+    CV_UNUSED(idPool);
+
+    Mat W(4, 6, CV_32F, Scalar(0.01f));
+    Mat b = (Mat_<float>(1, 4) << 56.f, 56.f, 170.f, 170.f);
+    lpFc.name = "scale";
+    lpFc.type = "InnerProduct";
+    lpFc.set("num_output", 4);
+    lpFc.set("bias_term", true);
+    lpFc.blobs = {W, b};
+    net.addLayerToPrev(lpFc.name, lpFc.type, lpFc);
+
+    Mat f0(180, 240, CV_8UC3), f1(180, 240, CV_8UC3), f2(180, 240, CV_8UC3);
+    rng.fill(f0, RNG::UNIFORM, 0, 255);
+    rng.fill(f1, RNG::UNIFORM, 0, 255);
+    rng.fill(f2, RNG::UNIFORM, 0, 255);
+
+    // Near-corner box forces negative unpadded coordinates and BORDER_REPLICATE padding
+    Rect box(4, 6, 40, 36);
+    Ptr<TrackerGOTURN> tracker = TrackerGOTURN::create(net);
+    tracker->init(f0, box);
+    ASSERT_TRUE(tracker->update(f1, box));
+    EXPECT_GT(box.width, 0);
+    EXPECT_GT(box.height, 0);
+    ASSERT_TRUE(tracker->update(f2, box));
+    EXPECT_GT(box.width, 0);
+    EXPECT_GT(box.height, 0);
+}
+#endif
+
 }}  // namespace opencv_test::

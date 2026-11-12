@@ -459,6 +459,37 @@ TEST(Video_ECC_Test_Compute, bug_14657) {
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
+TEST(Video_ECC_Test_Compute, masked_unsigned_no_uninit_read) {
+    RNG& rng = theRNG();
+    // Poison heap blocks beforehand so any unzeroed masked-out pixels in CV_8U/CV_16U fail deterministically
+    {
+        std::vector<Mat> poison(8);
+        for (size_t i = 0; i < poison.size(); ++i)
+            poison[i] = Mat(64, 64, CV_16SC3, Scalar(30000, -25000, 19000));
+    }
+
+    Mat tmpl8(64, 64, CV_8UC3), inp8(64, 64, CV_8UC3);
+    rng.fill(tmpl8, RNG::UNIFORM, 10, 240);
+    // Outside mask: uncorrelated high-amplitude values that MUST be ignored when masked out
+    rng.fill(inp8, RNG::UNIFORM, 0, 255);
+    Mat mask = Mat::zeros(64, 64, CV_8UC1);
+    Rect roi(16, 16, 32, 32);
+    mask(roi).setTo(255);
+    tmpl8(roi).copyTo(inp8(roi));
+
+    EXPECT_NEAR(computeECC(tmpl8, inp8, mask), 1.0, 1e-4);
+
+    Mat tmpl32, inp32;
+    tmpl8.convertTo(tmpl32, CV_32FC3);
+    inp8.convertTo(inp32, CV_32FC3);
+    EXPECT_NEAR(computeECC(tmpl32, inp32, mask), 1.0, 1e-6);
+    Mat diff8(64, 64, CV_8UC3);
+    rng.fill(diff8, RNG::UNIFORM, 10, 240);
+    Mat diff32;
+    diff8.convertTo(diff32, CV_32FC3);
+    EXPECT_NEAR(computeECC(tmpl8, diff8, mask), computeECC(tmpl32, diff32, mask), 1e-4);
+}
+
 TEST(Video_ECC_Mask, accuracy) {
     CV_ECC_Test_Mask test;
     test.safe_run();

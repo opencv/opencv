@@ -302,7 +302,6 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
     int active_pixels = inputMask.empty() ? templateImage.size().area() : countNonZero(inputMask);
     int type = templateImage.type();
     meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
-    Mat templateImage_zeromean = Mat::zeros(templateImage.size(), templateImage.type());
     Mat templateMat = templateImage.getMat();
     Mat inputMat = inputImage.getMat();
 
@@ -312,20 +311,28 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
      * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
      * we convert them to a signed ints with larger resolution for the subtraction step.
      */
-    if (type == CV_8U || type == CV_16U) {
-        int newType = type == CV_8U ? CV_16S : CV_32S;
+    const int depth = templateImage.depth();
+    const int zmType = (depth == CV_8U) ? CV_MAKETYPE(CV_16S, templateMat.channels())
+                     : (depth == CV_16U) ? CV_MAKETYPE(CV_32S, templateMat.channels())
+                     : type;
+    if (depth == CV_8U || depth == CV_16U) {
         Mat templateMatConverted, inputMatConverted;
-        templateMat.convertTo(templateMatConverted, newType);
+        templateMat.convertTo(templateMatConverted, zmType);
         cv::swap(templateMat, templateMatConverted);
-        inputMat.convertTo(inputMatConverted, newType);
+        inputMat.convertTo(inputMatConverted, zmType);
         cv::swap(inputMat, inputMatConverted);
     }
+    Mat templateImage_zeromean;
+    if (!inputMask.empty())
+        templateImage_zeromean = Mat::zeros(templateMat.size(), zmType);
     subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
     double templateImagenorm = std::sqrt(active_pixels * cv::norm(sdTemplate, NORM_L2SQR));
 
     Scalar meanInput, sdInput;
 
-    Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
+    Mat inputImage_zeromean;
+    if (!inputMask.empty())
+        inputImage_zeromean = Mat::zeros(inputMat.size(), zmType);
     meanStdDev(inputImage, meanInput, sdInput, inputMask);
     subtract(inputMat, meanInput, inputImage_zeromean, inputMask);
     double inputImagenorm = std::sqrt(active_pixels * norm(sdInput, NORM_L2SQR));
@@ -545,7 +552,7 @@ double cv::findTransformECCWithMask( InputArray templateImage,
         meanStdDev(templateFloat, tmpMean, tmpStd, imageMask);
 
         subtract(imageWarped, imgMean, imageWarped, imageMask);  // zero-mean input
-        templateZM = Mat::zeros(templateZM.rows, templateZM.cols, templateZM.type());
+        templateZM.setTo(Scalar::all(0));
         subtract(templateFloat, tmpMean, templateZM, imageMask);  // zero-mean template
 
         int validPixels = countNonZero(imageMask);
