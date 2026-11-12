@@ -163,7 +163,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     }
 
     // int64 is numpy's default int dtype: narrow for CV_32S APIs, but only losslessly.
-    if( type == CV_64S && int64ArrayFitsInt32(oarr) )
+    if( type == CV_64S && !info.preserve_dtype && int64ArrayFitsInt32(oarr) )
     {
         needcopy = needcast = true;
         new_typenum = NPY_INT;
