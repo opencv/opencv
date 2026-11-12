@@ -254,6 +254,8 @@ public:
 
     Ptr<FastConv> fastConvImpl;
     std::vector<size_t> fastConvPadsBegin, fastConvPadsEnd;  // the pads fastConvImpl was packed with
+    std::vector<double> fastConvWeightsMultipliers;
+    std::vector<float> fastConvBiasvec;
     bool fastConvCanUseWinograd = false;
     bool canUseWinograd = false;
 
@@ -409,13 +411,23 @@ public:
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
+        // Winograd only works when input h and w >= 12.
+        canUseWinograd = useWinograd && inputs[0].dims == 4 && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
+        // SAME padding depends on the input size, and the packed convolution keeps the pads it was built with
+        if (fastConvImpl && (fastConvCanUseWinograd != canUseWinograd ||
+                             fastConvPadsBegin != pads_begin || fastConvPadsEnd != pads_end))
+        {
+            fastConvImpl.reset();
+        }
+
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
         if (!blobs.empty())
         {
             Mat wm = blobs[0].reshape(1, numOutput);
-            if ((wm.step1() % VEC_ALIGN != 0) ||
-                !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
+            if (!fastConvImpl &&
+                ((wm.step1() % VEC_ALIGN != 0) ||
+                 !isAligned<VEC_ALIGN * sizeof(float)>(wm.data))
             )
             {
                 int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
@@ -448,18 +460,11 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
+        if (numOutput > 0)
+            biasvec[numOutput] = biasvec[numOutput+1] = biasvec[numOutput-1];
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
-
-        // Winograd only works when input h and w >= 12.
-        canUseWinograd = useWinograd && inputs[0].dims == 4 && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
-        // SAME padding depends on the input size, and the packed convolution keeps the pads it was built with
-        if (fastConvImpl && (fastConvCanUseWinograd != canUseWinograd ||
-                             fastConvPadsBegin != pads_begin || fastConvPadsEnd != pads_end))
-        {
-            fastConvImpl.reset();
-        }
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -624,8 +629,9 @@ public:
 
         if (!w.empty())
         {
-            // Keep origin weights unchanged.
-            if (weightsMat.data == blobs[0].data)
+            // Keep origin weights unchanged. When fastConvImpl is already packed, defer materializing
+            // weightsMat until forward() checks whether the fused multipliers or biases actually changed.
+            if (!fastConvImpl && weightsMat.data == blobs[0].data)
                 weightsMat = weightsMat.clone();
 
             Mat originWeights = blobs[0].reshape(1, outCn);
@@ -633,7 +639,8 @@ public:
             {
                 double wi = w.at<float>(i);
                 weightsMultipliers[i] *= wi;
-                cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
+                if (!fastConvImpl)
+                    cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
                 biasvec[i] *= wi;
             }
         }
@@ -1299,6 +1306,19 @@ public:
                 conv_dim = CONV_3D;
 
             // Initialization of FastCovn2d, pack weight.
+            if (fastConvImpl && !variableWeight &&
+                (fastConvWeightsMultipliers != weightsMultipliers || fastConvBiasvec != biasvec))
+            {
+                fastConvImpl.reset();
+                Mat wm = blobs[0].reshape(1, numOutput);
+                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+                Mat wm_buffer = Mat(numOutput, newcols, wm.type());
+                if (newcols > wm.cols)
+                    wm_buffer.colRange(wm.cols, newcols).setTo(Scalar::all(0.));
+                weightsMat = wm_buffer.colRange(0, wm.cols);
+                for (int i = 0; i < numOutput; ++i)
+                    cv::multiply(wm.row(i), weightsMultipliers[i], weightsMat.row(i));
+            }
             if (!fastConvImpl || variableWeight)
             {
                 int K = outputs[0].size[1];
@@ -1311,11 +1331,13 @@ public:
                 fastConvPadsBegin = pads_begin;
                 fastConvPadsEnd = pads_end;
                 fastConvCanUseWinograd = canUseWinograd;
-                // This is legal to release weightsMat here as this is not used anymore for
-                // OpenCV inference. If network needs to be reinitialized (new shape, new backend)
-                // a new version of weightsMat is created at .finalize() from original weights
-                weightsMat.release();
+                fastConvWeightsMultipliers = weightsMultipliers;
+                fastConvBiasvec = biasvec;
             }
+            // This is legal to release weightsMat here as this is not used anymore for
+            // OpenCV inference. If network needs to be reinitialized (new shape, new backend)
+            // a new version of weightsMat is created at .finalize() from original weights.
+            weightsMat.release();
 
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
         }
