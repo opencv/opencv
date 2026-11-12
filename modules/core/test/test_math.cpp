@@ -2645,6 +2645,39 @@ TEST(Core_SolveCubic, regression_27748)
     }
 }
 
+TEST(Core_SolveCubic, regression_30790)
+{
+    {
+        const std::vector<double> coeffs{1., -2., -15., 36.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -4., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{1., 13., 56., 80.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -5., 1e-8);
+        EXPECT_NEAR(roots[1], -4., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -4., -30., 72.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_NEAR(roots[0], -4., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
