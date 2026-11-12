@@ -3071,4 +3071,36 @@ TEST(Layer_MatMul, beta_scaling)
     }
 }
 
+TEST(Layer_Gemm, bias_beta_zero_and_half)
+{
+    RNG& rng = theRNG();
+    Mat A(4, 6, CV_32F), B(6, 5, CV_32F), C(1, 5, CV_32F);
+    rng.fill(A, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(B, RNG::UNIFORM, -1.f, 1.f);
+    rng.fill(C, RNG::UNIFORM, -1.f, 1.f);
+
+    for (float beta : {0.0f, 0.5f, 1.0f})
+    {
+        Net net;
+        LayerParams lp;
+        lp.name = "gemm";
+        lp.type = "Gemm";
+        lp.set("alpha", 1.25f);
+        lp.set("beta", beta);
+        lp.set("constB", true);
+        lp.set("constC", true);
+        lp.set("have_bias", true);
+        lp.set("real_ndims_C", 1);
+        lp.blobs.push_back(B);
+        lp.blobs.push_back(C);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setInput(A);
+        Mat out = net.forward();
+
+        Mat ref;
+        gemm(A, B, 1.25f, repeat(C, 4, 1), beta, ref);
+        normAssert(out, ref, "Gemm beta test", 1e-5, 1e-5);
+    }
+}
+
 }} // namespace
