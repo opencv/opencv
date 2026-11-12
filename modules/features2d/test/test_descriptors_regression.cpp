@@ -136,6 +136,49 @@ TEST( Features2d_DescriptorExtractor_AKAZE, compute_after_detect )
     }
 }
 
+TEST( Features2d_DescriptorExtractor_BRISK, setPatternScale_and_empty_keypoints )
+{
+    Mat img(200, 240, CV_8UC3);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    rectangle(img, Point(50, 50), Point(150, 150), Scalar(250, 250, 250), -1);
+
+    Ptr<BRISK> brisk = BRISK::create(30, 3, 1.0f);
+    for (int iter = 0; iter < 3; ++iter)
+        brisk->setPatternScale(1.0f + 0.1f * iter);
+    brisk->setPatternScale(1.0f);
+
+    FileStorage fs(".yml", FileStorage::WRITE | FileStorage::MEMORY);
+    brisk->write(fs);
+    String serialized = fs.releaseAndGetString();
+    FileStorage fsRead(serialized, FileStorage::READ | FileStorage::MEMORY);
+    brisk->read(fsRead.root());
+
+    Ptr<BRISK> ref = BRISK::create(30, 3, 1.0f);
+    vector<KeyPoint> kp1, kp2;
+    Mat desc1, desc2;
+    brisk->detectAndCompute(img, noArray(), kp1, desc1);
+    ref->detectAndCompute(img, noArray(), kp2, desc2);
+    ASSERT_EQ(kp1.size(), kp2.size());
+    EXPECT_EQ(0, cvtest::norm(desc1, desc2, NORM_HAMMING));
+
+    // Also verify non-continuous ROI parity and empty-keypoint compute()
+    Mat padded(240, 280, CV_8UC1, Scalar(128));
+    Mat roi = padded(Rect(20, 20, 240, 200));
+    cvtColor(img, roi, COLOR_BGR2GRAY);
+    Mat roiClone = roi.clone();
+    vector<KeyPoint> kpRoi, kpClone;
+    Mat descRoi, descClone;
+    brisk->detectAndCompute(roi, noArray(), kpRoi, descRoi);
+    brisk->detectAndCompute(roiClone, noArray(), kpClone, descClone);
+    ASSERT_EQ(kpRoi.size(), kpClone.size());
+    EXPECT_EQ(0, cvtest::norm(descRoi, descClone, NORM_HAMMING));
+
+    vector<KeyPoint> emptyKps;
+    Mat emptyDesc;
+    brisk->compute(img, emptyKps, emptyDesc);
+    EXPECT_TRUE(emptyDesc.empty());
+}
+
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",
