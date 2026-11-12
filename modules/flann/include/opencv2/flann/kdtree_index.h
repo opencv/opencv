@@ -460,7 +460,7 @@ private:
         int i;
         BranchSt branch;
         int checkCount = 0;
-        DynamicBitset checked(size_);
+        CheckedSet checked(size_);
 
         // Priority queue storing intermediate branches in the best-bin-first search
         // Kept in thread_local storage so each thread owns an independent heap
@@ -493,7 +493,7 @@ private:
      *  at least "mindistsq".
      */
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
-                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, DynamicBitset& checked, bool explore_all_trees = false)
+                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, CheckedSet& checked, bool explore_all_trees = false)
     {
         if (result_set.worstDist()<mindist) {
             //			printf("Ignoring branch, too far\n");

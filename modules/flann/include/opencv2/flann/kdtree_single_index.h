@@ -264,9 +264,10 @@ public:
     {
         float epsError = 1+get_param(searchParams,"eps",0.0f);
 
-        std::vector<DistanceType> dists(dim_,0);
-        DistanceType distsq = computeInitialDistances(vec, dists);
-        searchLevel(result, vec, root_node_, distsq, dists, epsError);
+        cv::AutoBuffer<DistanceType, 128> dists(dim_);
+        std::fill_n(dists.data(), dim_, (DistanceType)0);
+        DistanceType distsq = computeInitialDistances(vec, dists.data());
+        searchLevel(result, vec, root_node_, distsq, dists.data(), epsError);
     }
 
 private:
@@ -554,7 +555,7 @@ private:
         lim2 = left;
     }
 
-    DistanceType computeInitialDistances(const ElementType* vec, std::vector<DistanceType>& dists)
+    DistanceType computeInitialDistances(const ElementType* vec, DistanceType* dists)
     {
         DistanceType distsq = 0.0;
 
@@ -576,7 +577,7 @@ private:
      * Performs an exact search in the tree starting from a node.
      */
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, const NodePtr node, DistanceType mindistsq,
-                     std::vector<DistanceType>& dists, const float epsError)
+                     DistanceType* dists, const float epsError)
     {
         /* If this is a leaf node, then do check and return. */
         if ((node->child1 == NULL)&&(node->child2 == NULL)) {

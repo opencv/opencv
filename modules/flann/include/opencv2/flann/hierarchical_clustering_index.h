@@ -538,7 +538,7 @@ public:
         heap->clear();
         heap->reserve((int)size_);
 
-        std::vector<bool> checked(size_,false);
+        CheckedSet checked(size_);
         int checks = 0;
         for (int i=0; i<trees_; ++i) {
             findNN(root[i], result, vec, checks, maxChecks, heap, checked, explore_all_trees);
@@ -744,7 +744,7 @@ private:
 
 
     void findNN(NodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                const cv::Ptr<Heap<BranchSt>>& heap, std::vector<bool>& checked, bool explore_all_trees = false)
+                const cv::Ptr<Heap<BranchSt>>& heap, CheckedSet& checked, bool explore_all_trees = false)
     {
         if (node->childs==NULL) {
             if (!explore_all_trees && (checks>=maxChecks) && result.full()) {
@@ -752,16 +752,16 @@ private:
             }
             for (int i=0; i<node->size; ++i) {
                 int index = node->indices[i];
-                if (!checked[index]) {
+                if (!checked.test(index)) {
                     DistanceType dist = distance(dataset[index], vec, veclen_);
                     result.addPoint(dist, index);
-                    checked[index] = true;
+                    checked.set(index);
                     ++checks;
                 }
             }
         }
         else {
-            DistanceType* domain_distances = new DistanceType[branching_];
+            cv::AutoBuffer<DistanceType, 64> domain_distances(branching_);
             int best_index = 0;
             domain_distances[best_index] = distance(vec, dataset[node->childs[best_index]->pivot], veclen_);
             for (int i=1; i<branching_; ++i) {
@@ -775,7 +775,6 @@ private:
                     heap->insert(BranchSt(node->childs[i],domain_distances[i]));
                 }
             }
-            delete[] domain_distances;
             findNN(node->childs[best_index],result,vec, checks, maxChecks, heap, checked, explore_all_trees);
         }
     }
