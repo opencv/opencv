@@ -254,7 +254,9 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
                 break;
             }
         }
-        for(int j=0;j<w;j++)
+        // up to the +inf sentinel at w, as the searches below: otherwise a line that lies within the radius
+        // leaves the box of its first pixel empty
+        for(int j=0;j<=w;j++)
         {
             if(domain_row.at<float>(0,j) > upper_pos_row.at<float>(0,0))
             {
@@ -326,69 +328,19 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
         }
     }
 
-    Mat indices = Mat::zeros(h,w,CV_32FC1);
-    Mat final =   Mat::zeros(h,w,CV_32FC3);
+    Mat final = Mat::zeros(h,w,CV_32FC3);
 
+    // Box sums from the summed area table. The column indices are used directly: a linear index
+    // over all channels and rows does not fit the 24-bit float mantissa on images above ~5.6 MP.
     for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            indices.at<float>(i,j) = (float) i+1;
-
-    Mat a = Mat::zeros(h,w,CV_32FC1);
-    Mat b = Mat::zeros(h,w,CV_32FC1);
-
-    // Compute the box filter using a summed area table.
-    for(int c=0;c<channel;c++)
     {
-        Mat flag = Mat::ones(h,w,CV_32FC1);
-        multiply(flag,c+1,flag);
-
-        Mat temp1, temp2;
-        multiply(flag - 1,h*(w+1),temp1);
-        multiply(lower_idx - 1,h,temp2);
-        a = temp1 + temp2 + indices;
-
-        multiply(flag - 1,h*(w+1),temp1);
-        multiply(upper_idx - 1,h,temp2);
-        b = temp1 + temp2 + indices;
-
-        int p,q,r,rem;
-        int p1,q1,r1,rem1;
-
-        // Calculating indices
-        for(int i=0;i<h;i++)
+        for(int j=0;j<w;j++)
         {
-            for(int j=0;j<w;j++)
-            {
-
-                r = (int) b.at<float>(i,j)/(h*(w+1));
-                rem = (int) b.at<float>(i,j) - r*h*(w+1);
-                q = rem/h;
-                p = rem - q*h;
-                if(q==0)
-                {
-                    p=h;
-                    q=w;
-                    r=r-1;
-                }
-                if(p==0)
-                {
-                    p=h;
-                    q=q-1;
-                }
-
-                r1 = (int) a.at<float>(i,j)/(h*(w+1));
-                rem1 = (int) a.at<float>(i,j) - r1*h*(w+1);
-                q1 = rem1/h;
-                p1 = rem1 - q1*h;
-                if(p1==0)
-                {
-                    p1=h;
-                    q1=q1-1;
-                }
-
-                final.at<float>(i,j*channel+2-c) = (box_filter.at<float>(p-1,q*channel+(2-r)) - box_filter.at<float>(p1-1,q1*channel+(2-r1)))
+            const int q = (int) upper_idx.at<float>(i,j) - 1;
+            const int q1 = (int) lower_idx.at<float>(i,j) - 1;
+            for(int c=0;c<channel;c++)
+                final.at<float>(i,j*channel+c) = (box_filter.at<float>(i,q*channel+c) - box_filter.at<float>(i,q1*channel+c))
                     /(upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j));
-            }
         }
     }
 
