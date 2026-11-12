@@ -180,7 +180,7 @@ void blobFromImagesNCHWImpl(const std::vector<Mat>& images, Mat& blob_, const Im
         Tout* p_blob_b = p_blob + 2 * wh;
         Tout* p_blob_a = p_blob + 3 * wh;
 
-        if (param.swapRB)
+        if (param.swapRB && nch > 2)
             std::swap(p_blob_r, p_blob_b);
 
         if (useFusedKernel)
