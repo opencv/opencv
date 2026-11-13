@@ -1,4 +1,5 @@
 name: PR:5.x
+run-name: "PR #${{ github.event.pull_request.number }} [ci-fast=${{ contains(github.event.pull_request.labels.*.name, 'ci:fast') }},ci-full=${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}]"
 
 on:
   pull_request:

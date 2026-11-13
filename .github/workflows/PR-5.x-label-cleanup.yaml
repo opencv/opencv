@@ -1,0 +1,59 @@
+name: PR:5.x CI label cleanup
+
+on:
+  workflow_run:
+    workflows: ["PR:5.x"]
+    types: [completed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.pull_requests[0] != null
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Remove consumed CI mode labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const pullNumber = run.pull_requests[0].number;
+            const flags = run.display_title.match(
+              /\[ci-fast=(true|false),ci-full=(true|false)\]$/
+            );
+            if (!flags) {
+              core.notice('No CI mode labels recorded for this run');
+              return;
+            }
+            const labels = [];
+            if (flags[1] === 'true') labels.push('ci:fast');
+            if (flags[2] === 'true') labels.push('ci:full');
+            if (labels.length === 0) {
+              return;
+            }
+
+            const {data: pull} = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: pullNumber,
+            });
+            if (pull.head.sha !== run.head_sha) {
+              core.notice('A newer PR commit exists; keeping its CI mode labels');
+              return;
+            }
+
+            const currentLabels = new Set(pull.labels.map(label => label.name));
+            for (const label of labels) {
+              if (!currentLabels.has(label)) {
+                continue;
+              }
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: pullNumber,
+                name: label,
+              });
+              core.info(`Removed ${label} from PR #${pullNumber}`);
+            }
