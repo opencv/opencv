@@ -309,7 +309,7 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 /**
 Lookup table replacement
 Table consists of 256 elements of a size from 1 to 8 bytes having 1 channel or src_channels
-For 8s input type 128 is added to LUT index
+8s input is read as 8u with the same bits (no offset is added), so negative values index the upper half of the table (-1 maps to entry 255)
 Destination should have the same element type and number of channels as lookup table elements
 @param src_data Source image data
 @param src_step Source image step
@@ -335,7 +335,7 @@ inline int hal_ni_lut(const uchar *src_data, size_t src_step, size_t src_type, c
 /**
 Lookup table replacement
 Table consists of 65536 elements of a size from 1 to 8 bytes having 1 channel or src_channels
-For 16s input typea 32768 is added to LUT index
+16s input is read as 16u with the same bits (no offset is added), so negative values index the upper half of the table (-1 maps to entry 65535)
 Destination should have the same element type and number of channels as lookup table elements
 @param src_data Source image data
 @param src_step Source image step
