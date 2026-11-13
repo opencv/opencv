@@ -11,6 +11,9 @@
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/core/utils/logger.hpp>
+#include <atomic>
+#include <cstring>
 
 namespace opencv_test { namespace {
 
@@ -679,6 +682,48 @@ static std::vector<EngineType> forwardOutputsEngines()
     return engines;
 }
 INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::ValuesIn(forwardOutputsEngines()));
+
+static std::atomic<int> unsupportedTargetWarnings(0);
+static void countUnsupportedTargetWarnings(cv::utils::logging::LogLevel level, const char*, const char*, int,
+                                           const char*, const char* message)
+{
+    if (level == cv::utils::logging::LOG_LEVEL_WARNING && message &&
+        std::strstr(message, "Targets are not supported by the new graph engine"))
+        unsupportedTargetWarnings++;
+}
+
+struct UnsupportedTargetWarningCounter
+{
+    cv::utils::logging::LogLevel prevLevel;
+    UnsupportedTargetWarningCounter()
+    {
+        prevLevel = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_WARNING);
+        unsupportedTargetWarnings = 0;
+        cv::utils::logging::internal::replaceWriteLogMessageEx(countUnsupportedTargetWarnings);
+    }
+    ~UnsupportedTargetWarningCounter()
+    {
+        cv::utils::logging::internal::replaceWriteLogMessageEx(nullptr);
+        cv::utils::logging::setLogLevel(prevLevel);
+    }
+};
+
+// https://github.com/opencv/opencv/issues/30806
+TEST(Net, setPreferableTarget_CPU_no_warning_new_engine)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/top_k.onnx"), ENGINE_OPENCV);
+    ASSERT_FALSE(net.getMainGraph().empty());
+
+    UnsupportedTargetWarningCounter counter;
+
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    EXPECT_EQ(0, unsupportedTargetWarnings.load());
+
+    // non-CPU, non-CUDA targets are still reported as unsupported
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+    EXPECT_EQ(1, unsupportedTargetWarnings.load());
+}
 
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);
