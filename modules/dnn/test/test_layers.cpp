@@ -1971,6 +1971,66 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 /*group*/        Values(1, 2, 3, 6), dnnBackendsAndTargets(/*with IE*/ false)
 ));
 
+typedef tuple<std::vector<int>, std::vector<int> > ReduceSizesAxes;
+typedef testing::TestWithParam<ReduceSizesAxes> Layer_Test_Reduce_MultiAxes;
+TEST_P(Layer_Test_Reduce_MultiAxes, Accuracy)
+{
+    // Reducing three or more axes walks the reduced block with an odometer. A carry into an outer
+    // reduced axis used to use the step of the wrong axis, so outputs were wrong as soon as an
+    // outer reduced axis had three or more elements.
+    const std::vector<int>& sizes = get<0>(GetParam());
+    const std::vector<int>& axes = get<1>(GetParam());
+    const int ndims = (int)sizes.size();
+    Mat input(sizes, CV_32F);
+    randu(input, -1, 1);
+
+    std::vector<int> outShape(ndims, 1);
+    for (int d = 0; d < ndims; d++)
+    {
+        if (std::find(axes.begin(), axes.end(), d) == axes.end())
+            outShape[d] = sizes[d];
+    }
+
+    Mat expected(outShape, CV_32F, Scalar(0));
+    for (size_t i = 0; i < input.total(); i++)
+    {
+        int rem = (int)i, dst = 0;
+        std::vector<int> idx(ndims);
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d] = rem % sizes[d];
+            rem /= sizes[d];
+        }
+        for (int d = 0; d < ndims; d++)
+            dst = dst * outShape[d] + (outShape[d] == 1 ? 0 : idx[d]);
+        expected.ptr<float>()[dst] += input.ptr<float>()[i];
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "testReduceMultiAxes";
+    lp.set("reduce", "SUM");
+    lp.set("keepdims", true);
+    lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat output = net.forward();
+    ASSERT_EQ(shape(expected), shape(output));
+    normAssert(expected, output, "", 1e-5, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_MultiAxes, Values(
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 2, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 1, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{1, 2, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 1, 2}),
+    ReduceSizesAxes(std::vector<int>{2, 3, 2, 3, 2}, std::vector<int>{0, 1, 2, 4}),
+    ReduceSizesAxes(std::vector<int>{3, 3, 3, 2, 3}, std::vector<int>{0, 2, 3, 4})
+));
+
 TEST(Layer_Test_ReduceMean, accuracy_input_0)
 {
     vector<int> szData = { 2, 1, 2, 1 ,2 };
