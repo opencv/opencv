@@ -1041,4 +1041,59 @@ TEST(Calib3d_StereoSGBM_HH4, regression)
     CV_Assert( countNonZero(diff)==0);
 }
 
+TEST(Calib3d_StereoSGBM, hh_bit_exact_synthetic)
+{
+    auto fnv1a = [](const Mat& m) {
+        uint64_t h = 14695981039346656037ULL;
+        for (int r = 0; r < m.rows; ++r)
+        {
+            const uchar* p = m.ptr<uchar>(r);
+            const size_t nb = (size_t)m.cols * m.elemSize();
+            for (size_t i = 0; i < nb; ++i)
+            {
+                h ^= p[i];
+                h *= 1099511628211ULL;
+            }
+        }
+        return h;
+    };
+
+    struct Case {
+        int w, h, cn, minD, numD, bs, p1, p2, d12, cap, uniq, sws, sr, mode;
+        uint64_t expectedHash;
+    };
+    const std::vector<Case> cases = {
+        {160, 120, 1,  0, 32,  5,  80, 320, 1, 31, 10, 50, 16, StereoSGBM::MODE_HH,   0x93abe58e3659a804ULL},
+        {160, 120, 3, -8, 48,  3, 200, 800, 1, 63,  5,  0,  0, StereoSGBM::MODE_HH,   0x84b0b017b8147b64ULL},
+        {160, 120, 1,  0, 19,  7, 100, 400, 2, 15, 15, 30,  8, StereoSGBM::MODE_HH,   0xd89f6993b9788faeULL},
+        {120,   1, 1,  0, 16,  5,  50, 200, 1, 31, 10,  0,  0, StereoSGBM::MODE_HH,   0x431ccc3d72c04023ULL},
+        {120,   2, 1,  0, 16,  5,  50, 200, 1, 31, 10,  0,  0, StereoSGBM::MODE_HH,   0x8376f2dfc5abcfccULL},
+        {120,   5, 3,  0, 24, 11, 100, 400, 1, 31, 10,  0,  0, StereoSGBM::MODE_HH,   0xa0f998a03d8b02f8ULL},
+        {160, 120, 1,  0, 32,  5,  80, 320, 1, 31, 10, 50, 16, StereoSGBM::MODE_SGBM, 0x2e2b079cbf63dd30ULL},
+        {160, 120, 1,  0, 32,  5,  80, 320, 1, 31, 10, 50, 16, StereoSGBM::MODE_HH4,  0xd6ae268aee2ce11bULL},
+    };
+
+    RNG rng(42);
+    for (size_t i = 0; i < cases.size(); ++i)
+    {
+        const Case& c = cases[i];
+        Mat l(c.h, c.w, CV_MAKETYPE(CV_8U, c.cn));
+        Mat r(c.h, c.w, CV_MAKETYPE(CV_8U, c.cn));
+        rng.fill(l, RNG::UNIFORM, 0, 256);
+        rng.fill(r, RNG::UNIFORM, 0, 256);
+        for (int y = 0; y < c.h; ++y)
+        {
+            for (int x = 16; x < c.w; ++x)
+            {
+                for (int ch = 0; ch < c.cn; ++ch)
+                    r.ptr(y)[(x - 8) * c.cn + ch] = l.ptr(y)[x * c.cn + ch];
+            }
+        }
+        Ptr<StereoSGBM> sgbm = StereoSGBM::create(c.minD, c.numD, c.bs, c.p1, c.p2, c.d12, c.cap, c.uniq, c.sws, c.sr, c.mode);
+        Mat disp;
+        sgbm->compute(l, r, disp);
+        EXPECT_EQ(c.expectedHash, fnv1a(disp)) << "Mismatch at case " << i;
+    }
+}
+
 }} // namespace
