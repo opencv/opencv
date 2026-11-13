@@ -330,6 +330,7 @@ public:
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
     _InputArray(const UMat& um);
     _InputArray(const std::vector<UMat>& umv);
+    _InputArray(const Tensor& t);
 
     template<typename _Tp, std::size_t _Nm> _InputArray(const std::array<_Tp, _Nm>& arr);
     template<std::size_t _Nm> _InputArray(const std::array<Mat, _Nm>& arr);
@@ -474,6 +475,7 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     _OutputArray(UMat& m);
     _OutputArray(std::vector<UMat>& vec);
+    _OutputArray(Tensor& t);
 
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
@@ -492,6 +494,7 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     _OutputArray(const UMat& m);
     _OutputArray(const std::vector<UMat>& vec);
+    _OutputArray(const Tensor& t);
 
     template<typename _Tp, std::size_t _Nm> _OutputArray(std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> _OutputArray(const std::array<_Tp, _Nm>& arr);
@@ -572,6 +575,7 @@ public:
     template<typename _Tp, int m, int n> _InputOutputArray(Matx<_Tp, m, n>& matx);
     _InputOutputArray(UMat& m);
     _InputOutputArray(std::vector<UMat>& vec);
+    _InputOutputArray(Tensor& t);
 
     _InputOutputArray(const Mat& m);
     _InputOutputArray(const std::vector<Mat>& vec);
@@ -590,6 +594,7 @@ public:
     template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
     _InputOutputArray(const UMat& m);
     _InputOutputArray(const std::vector<UMat>& vec);
+    _InputOutputArray(const Tensor& t);
 
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(const std::array<_Tp, _Nm>& arr);
