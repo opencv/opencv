@@ -4263,6 +4263,79 @@ TEST_P(FiniteMaskFixture, flags)
 INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
 
+// finiteMask on every float depth, including CV_16F and CV_16BF: a pixel is finite if no channel is NaN or infinity
+typedef testing::TestWithParam<std::tuple<int, int> > Core_FiniteMask_depths;
+
+TEST_P(Core_FiniteMask_depths, accuracy)
+{
+    const int depth = get<0>(GetParam()), cn = get<1>(GetParam());
+    Mat src64(3, 37, CV_64FC(cn));
+    double* p = src64.ptr<double>();
+    for (int i = 0; i < (int)src64.total() * cn; i++)
+        p[i] = i % 11 == 0 ? NAN : i % 13 == 0 ? (i % 2 ? INFINITY : -INFINITY) : i - 50.0;
+
+    Mat src, mask;
+    src64.convertTo(src, depth);
+    cv::finiteMask(src, mask);
+    ASSERT_EQ(CV_8UC1, mask.type());
+
+    for (int i = 0; i < (int)src64.total(); i++)
+    {
+        bool finite = true;
+        for (int c = 0; c < cn; c++)
+            finite = finite && std::isfinite(p[i * cn + c]);
+        EXPECT_EQ(finite ? 255 : 0, mask.at<uchar>(i)) << i;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_depths,
+    testing::Combine(testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F), testing::Range(1, 5)));
+
+// finiteMask on exact bit patterns at the edges of the exponent, on the SIMD loop and the scalar tail
+typedef testing::TestWithParam<std::tuple<int, int> > Core_FiniteMask_bits;
+
+TEST_P(Core_FiniteMask_bits, boundary_values)
+{
+    const int depth = std::get<0>(GetParam());
+    const int cn = std::get<1>(GetParam());
+
+    const struct { ushort f16, bf16; bool finite; } values[] =
+    {
+        { 0x0000, 0x0000, true  },  // +0
+        { 0x8000, 0x8000, true  },  // -0
+        { 0x0001, 0x0001, true  },  // smallest subnormal
+        { 0x8001, 0x8001, true  },  // smallest negative subnormal
+        { 0x03ff, 0x007f, true  },  // largest subnormal
+        { 0x7bff, 0x7f7f, true  },  // largest finite
+        { 0xfbff, 0xff7f, true  },  // largest negative finite
+        { 0x7c00, 0x7f80, false },  // +inf
+        { 0xfc00, 0xff80, false },  // -inf
+        { 0x7c01, 0x7f81, false },  // signalling NaN
+        { 0x7e00, 0x7fc0, false },  // quiet NaN
+        { 0xfe00, 0xffc0, false },  // negative NaN
+        { 0x7fff, 0x7fff, false },  // largest NaN
+    };
+    const int nvalues = (int)(sizeof(values) / sizeof(values[0]));
+
+    // 111 pixels: wide enough for the SIMD loop, odd for the scalar tail
+    Mat src(3, 37, CV_MAKETYPE(depth, cn), Scalar::all(0));
+    ushort* p = src.ptr<ushort>();
+    for (int i = 0; i < (int)src.total(); i++)
+    {
+        const ushort bits = depth == CV_16F ? values[i % nvalues].f16 : values[i % nvalues].bf16;
+        p[i * cn + i % cn] = bits;  // one channel holds the value, the others stay 0
+    }
+
+    Mat mask;
+    finiteMask(src, mask);
+
+    for (int i = 0; i < (int)src.total(); i++)
+        EXPECT_EQ(values[i % nvalues].finite ? 255 : 0, mask.at<uchar>(i)) << "pixel " << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_FiniteMask_bits,
+    testing::Combine(testing::Values(CV_16F, CV_16BF), testing::Range(1, 5)));
+
 ///////////////////////////////////////////////////////////////////////////////////
 typedef testing::TestWithParam<perf::MatDepth> NonZeroSupportedMatDepth;
 

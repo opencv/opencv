@@ -1846,7 +1846,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 /** @brief Generates a mask of finite float values, i.e. not NaNs nor Infs.
 
 An element is set to 255 (all 1-bits) if all channels are finite.
-@param src Input matrix, should contain float or double elements of 1 to 4 channels
+@param src Input matrix, should contain CV_16F, CV_16BF, CV_32F or CV_64F elements of 1 to 4 channels
 @param mask Output matrix of the same size as input of type CV_8UC1
 */
 CV_EXPORTS_W void finiteMask(InputArray src, OutputArray mask);
