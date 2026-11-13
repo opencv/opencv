@@ -41,6 +41,10 @@
 
 #include "test_precomp.hpp"
 
+#if !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#include <thread>
+#endif
+
 namespace opencv_test { namespace {
 
 typedef tuple<Size> OFParams;
@@ -156,5 +160,47 @@ TEST_P(DenseOpticalFlow_VariationalRefinement, MultithreadReproducibility)
 }
 
 INSTANTIATE_TEST_CASE_P(FullSet, DenseOpticalFlow_VariationalRefinement, Values(szODD, szQVGA));
+
+#if !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+// One instance with expansion reuse enabled, driven by several threads on independent sequences.
+TEST(DenseOpticalFlow_Farneback, ReuseConcurrentCalls)
+{
+    const int threads = 4, pairs = 6;
+    std::vector<std::vector<Mat> > frames(threads), actual(threads);
+    for( int t = 0; t < threads; t++ )
+    {
+        actual[t].resize(pairs);
+        for( int i = 0; i <= pairs; i++ )
+        {
+            Mat frame(48, 64, CV_8U);
+            theRNG().fill(frame, RNG::UNIFORM, 0, 256);
+            GaussianBlur(frame, frame, Size(9, 9), 3, 3);
+            frames[t].push_back(frame);
+        }
+    }
+
+    Ptr<FarnebackOpticalFlow> algo =
+        FarnebackOpticalFlow::create(3, 0.5, false, 9, 3, 5, 1.1, OPTFLOW_FARNEBACK_REUSE_EXPANSION);
+    std::vector<std::thread> workers;
+    for( int t = 0; t < threads; t++ )
+        workers.push_back(std::thread([&, t]() {
+            for( int i = 0; i < pairs; i++ )
+                algo->calc(frames[t][i], frames[t][i + 1], actual[t][i]);
+        }));
+    for( size_t t = 0; t < workers.size(); t++ )
+        workers[t].join();
+
+    Ptr<FarnebackOpticalFlow> fresh = FarnebackOpticalFlow::create(3, 0.5, false, 9, 3, 5, 1.1, 0);
+    for( int t = 0; t < threads; t++ )
+        for( int i = 0; i < pairs; i++ )
+        {
+            Mat expected;
+            fresh->calc(frames[t][i], frames[t][i + 1], expected);
+            ASSERT_EQ(expected.size(), actual[t][i].size()) << "thread " << t << ", pair " << i;
+            EXPECT_EQ(0, cvtest::norm(expected, actual[t][i], NORM_INF))
+                << "thread " << t << ", pair " << i;
+        }
+}
+#endif
 
 }} // namespace
