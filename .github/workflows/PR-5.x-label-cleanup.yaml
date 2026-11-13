@@ -11,9 +11,7 @@ permissions:
 
 jobs:
   cleanup:
-    if: >-
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.pull_requests[0] != null
+    if: github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - name: Remove consumed CI mode labels
@@ -21,17 +19,22 @@ jobs:
         with:
           script: |
             const run = context.payload.workflow_run;
-            const pullNumber = run.pull_requests[0].number;
-            const flags = run.display_title.match(
-              /\[ci-fast=(true|false),ci-full=(true|false)\]$/
+            const flags = (run.display_title || '').match(
+              /^PR #(\d+) \[ci-fast=(true|false),ci-full=(true|false)\]$/
             );
             if (!flags) {
               core.notice('No CI mode labels recorded for this run');
               return;
             }
+            const pullNumber = Number(flags[1]);
+            const eventPullNumber = run.pull_requests?.[0]?.number;
+            if (eventPullNumber && eventPullNumber !== pullNumber) {
+              core.setFailed('Recorded PR number does not match the workflow event');
+              return;
+            }
             const labels = [];
-            if (flags[1] === 'true') labels.push('ci:fast');
-            if (flags[2] === 'true') labels.push('ci:full');
+            if (flags[2] === 'true') labels.push('ci:fast');
+            if (flags[3] === 'true') labels.push('ci:full');
             if (labels.length === 0) {
               return;
             }
