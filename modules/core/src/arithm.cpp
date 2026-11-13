@@ -719,6 +719,19 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
     const int rdepth = dtype >= 0 ? CV_MAT_DEPTH(dtype)
                      : (dst.fixedType() ? dst.depth() : autoDepth);
 
+    if (op == ew::OP_ADD && rdepth == CV_8U && !haveMask && pm1 && pm2 &&
+        pm1->dims == 2 && pm2->dims == 2 && pm1->size == pm2->size &&
+        ((pm1->type() == CV_8UC3 && pm2->type() == CV_32FC1) ||
+         (pm2->type() == CV_8UC3 && pm1->type() == CV_32FC1)))
+    {
+        const Mat& rgb = pm1->type() == CV_8UC3 ? *pm1 : *pm2;
+        const Mat& field = pm1->type() == CV_8UC3 ? *pm2 : *pm1;
+        dst.create(rgb.rows, rgb.cols, CV_8UC3);
+        Mat output = dst.getMat();
+        ew::addSharedFloat32ToRgb8(rgb, field, output);
+        return;
+    }
+
     // FAST PATH for the classic hot call: two same-type same-shape continuous arrays, no mask, no
     // scalar, no broadcast, result depth == input depth, and the array is SMALL. Building and
     // compiling the 1-instruction program plus the BroadcastOp setup costs ~40-250ns per call -
