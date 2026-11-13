@@ -126,64 +126,21 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
     points3d = points3d.reshape(4, 1);
 }
 
-/**
- * @param K
- * @param depth the depth image
- * @param points3d the resulting 3d points
- */
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-// RVV: use the native vsseg4 segmented store; the portable v_store_interleave
-// lowers to slow strided stores (vsse) there.
-template<typename T, typename VT>
-static inline void storePoints4(Vec<T, 4>* p, const VT& X, const VT& Y,
-                                const VT& Z, const VT& W, int vl)
-{
-#if CV_RVV
-    // Tuple fields are assembled with vset rather than vcreate for
-    // compatibility with compilers that lack the tuple vcreate intrinsics
-    // (Clang < 18, incl. the RISC-V Clang CI).
-    if constexpr (sizeof(T) == 4)
-    {
-        vfloat32m1x4_t seg = vfloat32m1x4_t();
-        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 0, X);
-        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 1, Y);
-        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 2, Z);
-        seg = __riscv_vset_v_f32m1_f32m1x4(seg, 3, W);
-        __riscv_vsseg4e32_v_f32m1x4(reinterpret_cast<float*>(p), seg, vl);
-    }
-    else
-    {
-        vfloat64m1x4_t seg = vfloat64m1x4_t();
-        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 0, X);
-        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 1, Y);
-        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 2, Z);
-        seg = __riscv_vset_v_f64m1_f64m1x4(seg, 3, W);
-        __riscv_vsseg4e64_v_f64m1x4(reinterpret_cast<double*>(p), seg, vl);
-    }
-#else
-    v_store_interleave(reinterpret_cast<T*>(p), X, Y, Z, W);
-#endif
-    (void)vl;
-}
-
-// One row of the dense no-mask path. Single IEEE multiply per output element,
-// no reassociation - results are bit-identical to the scalar reference.
+// One row of the dense no-mask path, with a scalar tail.
 template<typename T>
 static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* point, int n)
 {
+    typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
+    const int vl = VTraits<VT>::vlanes();
+    const VT yv = v_setall_<VT>(y_val);
+    const VT zero = v_setzero_<VT>();
     int i = 0;
-    if constexpr (sizeof(T) == 4)
+    for (; i + vl <= n; i += vl)
     {
-        typedef decltype(vx_load(static_cast<const T*>(nullptr))) VT;
-        const int vl = VTraits<VT>::vlanes();
-        const VT yv = v_setall_<VT>(y_val);
-        const VT zero = v_setzero_<VT>();
-        for (; i + vl <= n; i += vl)
-        {
-            VT zv = vx_load(z + i);
-            VT xv = vx_load(x_cache + i);
-            storePoints4<T>(point + i, v_mul(xv, zv), v_mul(yv, zv), zv, zero, vl);
-        }
+        VT zv = vx_load(z + i);
+        VT xv = vx_load(x_cache + i);
+        v_store_interleave(reinterpret_cast<T*>(point + i), v_mul(xv, zv), v_mul(yv, zv), zv, zero);
     }
     for (; i < n; ++i)
     {
@@ -196,6 +153,11 @@ static void depthTo3dRowVec(const T* x_cache, const T* z, T y_val, Vec<T, 4>* po
 }
 #endif
 
+/**
+ * @param K
+ * @param in_depth the depth image
+ * @param points3d the resulting 3d points
+ */
 template<typename T>
 void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d)
 {
