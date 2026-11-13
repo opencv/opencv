@@ -60,6 +60,8 @@
 namespace cv
 {
 
+namespace accel { class Device; }   // opencv2/core/accel.hpp
+
 //! @addtogroup core_basic
 //! @{
 
@@ -1286,6 +1288,11 @@ public:
 
     //! retrieve UMat from Mat
     UMat getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
+
+    /** @brief Copies the matrix into a new UMat on @p device (see cv::accel), or into a regular
+    UMat for the CPU (an empty Device). Returns once the matrix has been read, so it may be changed
+    or released right after. */
+    UMat upload(const accel::Device& device) const;
 
     /** @brief Creates a matrix header for the specified matrix row.
 
@@ -2853,7 +2860,8 @@ public:
       The data is mapped into host memory on the first such view and unmapped when the
       returned Mat is destroyed. @p flags is widened to ACCESS_RW internally, so the
       mapping is always read-write and the allocator may write back even after
-      read-only use.
+      read-only use. Accelerator memory (cv::accel) is the exception: a read-only view
+      is not written back.
     @param flags combination of AccessFlag values
     */
     Mat getMat(AccessFlag flags) const;
@@ -2927,6 +2935,16 @@ public:
     void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(const std::vector<int>& sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
+    /** @brief Allocates new data on @p device (see cv::accel) unless the matrix already has the
+    specified shape and type there. Data on another device is released, as data of another size
+    would be. For the CPU (an empty Device) the data is created as create() does. */
+    void createOn(const accel::Device& device, const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void createOn(const accel::Device& device, Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
+    /** @brief The data on @p device: this matrix when it is there already, otherwise a copy, which
+    is a transfer between devices when the data is on another one. */
+    UMat upload(const accel::Device& device) const;
 
     //! fits the new shape into existing data buffer if possible, otherwise reallocates data.
     void fit(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
