@@ -1101,7 +1101,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray inliers,
     if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
-        return ransac_output->getModel().rowRange(0,2);
+        return ransac_output->getModel().rowRange(0,2).clone();
     } else return Mat();
 }
 

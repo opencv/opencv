@@ -2188,7 +2188,11 @@ void _OutputArray::clear() const
     if( k == MAT )
     {
         CV_Assert(!fixedSize());
-        ((Mat*)obj)->resize(0);
+        Mat& m = *(Mat*)obj;
+        if (m.isSubmatrix())
+            m.release();
+        else
+            m.resize(0);
         return;
     }
 

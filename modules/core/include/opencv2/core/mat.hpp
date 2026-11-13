@@ -1878,12 +1878,17 @@ public:
     //! internal use function; properly re-allocates _size, _step arrays
     void copySize(const Mat& m);
 
-    /** @brief Reserves space for the certain number of rows.
+    /** @brief Reserves capacity along the first dimension.
 
-    The method reserves space for sz rows. If the matrix already has enough space to store sz rows,
-    nothing happens. If the matrix is reallocated, the first Mat::rows rows are preserved. The method
-    emulates the corresponding method of the STL vector class.
-    @param sz Number of rows.
+    The method reserves space for sz entries along the first dimension without changing size[0].
+    For a 1D matrix, these entries are individual elements stored along columns (rows is 1 and
+    cols equals size[0]); for a 2D matrix, they are rows; for an N-D matrix, they are slices with
+    the remaining dimensions unchanged. If sufficient capacity is available, nothing happens.
+    Reallocation preserves all existing entries. The method emulates STL vector::reserve.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
+    @param sz Requested capacity along the first dimension.
      */
     void reserve(size_t sz);
 
@@ -1895,17 +1900,23 @@ public:
     */
     void reserveBuffer(size_t sz);
 
-    /** @brief Changes the number of matrix rows.
+    /** @brief Changes the size of the first dimension.
 
-    The methods change the number of matrix rows. If the matrix is reallocated, the first
-    min(Mat::rows, sz) rows are preserved. The methods emulate the corresponding methods of the STL
-    vector class.
-    @param sz New number of rows.
+    The methods set size[0] to sz and preserve the first min(old size[0], sz) entries.
+    For a 1D matrix, entries are elements stored along columns, so cols changes and rows remains 1.
+    For a 2D matrix, entries are rows; for an N-D matrix, they are slices with the remaining
+    dimensions unchanged. Growing beyond the available capacity reallocates the matrix.
+    The overload without a value does not initialize newly added entries; the Scalar overload
+    initializes them with s. The methods emulate STL vector::resize.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
+    @param sz New size of the first dimension.
      */
     void resize(size_t sz);
 
     /** @overload
-    @param sz New number of rows.
+    @param sz New size of the first dimension.
     @param s Value assigned to the newly added elements.
      */
     void resize(size_t sz, const Scalar& s);
@@ -1913,11 +1924,16 @@ public:
     //! internal function
     void push_back_(const void* elem);
 
-    /** @brief Adds elements to the bottom of the matrix.
+    /** @brief Appends entries along the first dimension.
 
-    The methods add one or more elements to the bottom of the matrix. They emulate the corresponding
-    method of the STL vector class. When elem is Mat , its type and the number of columns must be the
-    same as in the container matrix.
+    The methods append entries along the first dimension and emulate STL vector::push_back.
+    When elem is Mat and the destination is nonempty, its type, dimensionality, and sizes other
+    than size[0] must match the destination. For a 1D matrix, appending a Mat adds elements along
+    columns, increasing cols while rows remains 1. For a 2D matrix, it adds rows; for an N-D
+    matrix, it adds slices with the remaining dimensions unchanged.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
     @param elem Added element(s).
      */
     template<typename _Tp> void push_back(const _Tp& elem);
@@ -1933,15 +1949,20 @@ public:
     template<typename _Tp> void push_back(const std::vector<_Tp>& elem);
 
     /** @overload
-    @param m Added line(s).
+    @param m Matrix containing entries to append along the first dimension.
     */
     void push_back(const Mat& m);
 
-    /** @brief Removes elements from the bottom of the matrix.
+    /** @brief Removes entries from the end of the first dimension.
 
-    The method removes one or more rows from the bottom of the matrix.
-    @param nelems Number of removed rows. If it is greater than the total number of rows, an exception
-    is thrown.
+    The method decreases size[0] by nelems. For a 1D matrix, it removes elements from the end
+    of the columns, decreasing cols while rows remains 1. For a 2D matrix, it removes rows;
+    for an N-D matrix, it removes slices with the remaining dimensions unchanged.
+    @note This method is not supported for submatrices and throws an exception for them,
+    even when the requested operation would not change the size or capacity.
+    Use clone() first to obtain an independently resizable matrix.
+    @param nelems Number of entries to remove from the first dimension. If it exceeds size[0],
+    an exception is thrown.
      */
     void pop_back(size_t nelems=1);
 

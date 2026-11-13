@@ -2777,6 +2777,212 @@ TEST(Mat0D, basic)
     ASSERT_EQ(1, m2.size().height);
 }
 
+TEST(Mat1D, reserve_preserves_elements)
+{
+    int n = 3;
+    Mat m(1, &n, CV_32S, Scalar(1));
+    m.at<int>(1) = 2;
+    m.reserve(100);
+    ASSERT_EQ(1, m.dims);
+    EXPECT_EQ(Size(3, 1), m.size());
+    EXPECT_EQ(1, m.at<int>(0));
+    EXPECT_EQ(2, m.at<int>(1));
+    EXPECT_EQ(1, m.at<int>(2));
+    EXPECT_FALSE(m.isSubmatrix());
+    const uchar* data = m.data;
+    m.reserve(50);
+    EXPECT_EQ(data, m.data);
+}
+
+TEST(Mat1D, resize_growth_and_shrink)
+{
+    for (bool preallocate : {false, true})
+    {
+        SCOPED_TRACE(preallocate);
+        int n = 3;
+        Mat m(1, &n, CV_32SC2, Scalar(1, 2));
+        if (preallocate)
+            m.reserve(100);
+        m.resize(20, Scalar(9, 8));
+        ASSERT_EQ(1, m.dims);
+        ASSERT_EQ(Size(20, 1), m.size());
+        for (int i = 0; i < 20; ++i)
+            EXPECT_EQ(i < 3 ? Vec2i(1, 2) : Vec2i(9, 8), m.at<Vec2i>(i));
+        m.resize(2);
+        EXPECT_EQ(Size(2, 1), m.size());
+        m.resize(40);
+        ASSERT_EQ(1, m.dims);
+        EXPECT_EQ(Size(40, 1), m.size());
+        EXPECT_EQ(Vec2i(1, 2), m.at<Vec2i>(1));
+        m.resize(0);
+        EXPECT_EQ(1, m.dims);
+        EXPECT_TRUE(m.empty());
+    }
+}
+
+TEST(Mat1D, push_back_and_pop_back)
+{
+    int n = 3;
+    Mat m(1, &n, CV_32S, Scalar(1));
+    n = 20;
+    Mat tail(1, &n, CV_32S, Scalar(7));
+    m.push_back(tail);
+    ASSERT_EQ(1, m.dims);
+    ASSERT_EQ(Size(23, 1), m.size());
+    for (int i = 0; i < 23; ++i)
+        EXPECT_EQ(i < 3 ? 1 : 7, m.at<int>(i));
+    m.pop_back(20);
+    EXPECT_EQ(Size(3, 1), m.size());
+    EXPECT_EQ(1, m.at<int>(2));
+    m.pop_back(3);
+    EXPECT_EQ(1, m.dims);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(Mat, size_operations_reject_submatrices)
+{
+    for (int dims = 1; dims <= 3; ++dims)
+    {
+        SCOPED_TRACE(dims);
+        int sizes[] = {6, 4, 3};
+        Mat parent(dims, sizes, CV_32S, Scalar(5));
+        Range ranges[] = {Range(1, 4), Range::all(), Range::all()};
+        Mat roi = parent(ranges);
+        ASSERT_TRUE(roi.isSubmatrix());
+        Mat original = roi.clone();
+        const uchar* data = roi.data;
+        const uchar* dataend = roi.dataend;
+        const uchar* datalimit = roi.datalimit;
+        const int flags = roi.flags;
+        const std::vector<std::function<void(Mat&)> > operations = {
+            [](Mat& m) { m.reserve(0); },
+            [](Mat& m) { m.reserve(100); },
+            [](Mat& m) { m.resize(3); },
+            [](Mat& m) { m.resize(2); },
+            [](Mat& m) { m.resize(100); },
+            [](Mat& m) { m.resize(3, Scalar(9)); },
+            [](Mat& m) { m.resize(2, Scalar(9)); },
+            [](Mat& m) { m.resize(100, Scalar(9)); },
+            [](Mat& m) { m.pop_back(0); },
+            [](Mat& m) { m.pop_back(); },
+            [](Mat& m) { m.push_back(Mat()); },
+            [](Mat& m) { m.push_back(m.clone()); },
+            [](Mat& m) { m.push_back(m); }
+        };
+        for (size_t i = 0; i < operations.size(); ++i)
+        {
+            SCOPED_TRACE(i);
+            EXPECT_THROW(operations[i](roi), cv::Exception);
+            EXPECT_EQ(data, roi.data);
+            EXPECT_EQ(dataend, roi.dataend);
+            EXPECT_EQ(datalimit, roi.datalimit);
+            EXPECT_EQ(flags, roi.flags);
+            EXPECT_EQ(original.size, roi.size);
+            EXPECT_EQ(0., cvtest::norm(original, roi, NORM_INF));
+            EXPECT_EQ(0., cvtest::norm(parent, Mat(dims, sizes, CV_32S, Scalar(5)), NORM_INF));
+        }
+    }
+}
+
+TEST(Mat, scalar_push_back_rejects_submatrix)
+{
+    Mat parent(6, 1, CV_32S, Scalar(5));
+    Mat roi = parent.rowRange(1, 4);
+    EXPECT_THROW(roi.push_back(7), cv::Exception);
+    int value = 7;
+    EXPECT_THROW(roi.push_back_(&value), cv::Exception);
+    EXPECT_EQ(3, roi.rows);
+    EXPECT_EQ(0., cvtest::norm(parent, Mat(6, 1, CV_32S, Scalar(5)), NORM_INF));
+    int n = 6;
+    Mat parent1D(1, &n, CV_32S, Scalar(5));
+    Mat roi1D = parent1D.colRange(1, 4);
+    EXPECT_THROW(roi1D.push_back(7), cv::Exception);
+    EXPECT_EQ(Size(3, 1), roi1D.size());
+    EXPECT_EQ(0., cvtest::norm(parent1D, Mat(1, &n, CV_32S, Scalar(5)), NORM_INF));
+}
+
+TEST(Mat, regular_size_operations_and_roi_source)
+{
+    for (int dims = 1; dims <= 3; ++dims)
+    {
+        SCOPED_TRACE(dims);
+        int sizes[] = {3, 4, 2};
+        Mat m(dims, sizes, CV_32S, Scalar(1));
+        m.reserve(50);
+        m.resize(5, Scalar(9));
+        sizes[0] = 6;
+        Mat parent(dims, sizes, CV_32S, Scalar(7));
+        Range ranges[] = {Range(1, 3), Range::all(), Range::all()};
+        Mat source = parent(ranges);
+        ASSERT_TRUE(source.isSubmatrix());
+        m.push_back(source);
+        ASSERT_EQ(dims, m.dims);
+        ASSERT_EQ(7, m.size[0]);
+        size_t slice = m.total() / 7;
+        for (size_t i = 0; i < m.total(); ++i)
+            EXPECT_EQ(i < 3 * slice ? 1 : i < 5 * slice ? 9 : 7, m.ptr<int>()[i]);
+        m.pop_back(2);
+        m.resize(2);
+        EXPECT_EQ(2, m.size[0]);
+        EXPECT_EQ(dims, m.dims);
+        EXPECT_FALSE(m.isSubmatrix());
+    }
+}
+
+TEST(Mat1D, scalar_push_back)
+{
+    for (bool preallocate : {false, true})
+    {
+        SCOPED_TRACE(preallocate);
+        int n = 3;
+        Mat m(1, &n, CV_32SC2, Scalar(1, 2));
+        if (preallocate)
+            m.reserve(100);
+        const uchar* data = m.data;
+        m.push_back(Vec2i(7, 8));
+        m.push_back(Vec2i(9, 10));
+        ASSERT_EQ(1, m.dims);
+        ASSERT_EQ(Size(5, 1), m.size());
+        for (int i = 0; i < 3; ++i)
+            EXPECT_EQ(Vec2i(1, 2), m.at<Vec2i>(i));
+        EXPECT_EQ(Vec2i(7, 8), m.at<Vec2i>(3));
+        EXPECT_EQ(Vec2i(9, 10), m.at<Vec2i>(4));
+        if (preallocate)
+            EXPECT_EQ(data, m.data);
+        EXPECT_THROW(m.push_back(1), cv::Exception);
+    }
+    Mat column(3, 1, CV_32S, Scalar(1));
+    column.push_back(7);
+    EXPECT_EQ(4, column.rows);
+    EXPECT_EQ(7, column.at<int>(3));
+    Mat matrix(2, 3, CV_32S, Scalar(1));
+    EXPECT_THROW(matrix.push_back(7), cv::Exception);
+}
+
+TEST(Core_InputOutputArray, clear_submatrix)
+{
+    for (int dims = 1; dims <= 3; ++dims)
+    {
+        SCOPED_TRACE(dims);
+        int sizes[] = {6, 4, 3};
+        Mat parent(dims, sizes, CV_32S, Scalar(5));
+        Mat original = parent.clone();
+        Range ranges[] = {Range(1, 4), Range::all(), Range::all()};
+        Mat roi = parent(ranges);
+        ASSERT_TRUE(roi.isSubmatrix());
+        _OutputArray(roi).clear();
+        EXPECT_TRUE(roi.empty());
+        EXPECT_EQ(0., cvtest::norm(parent, original, NORM_INF));
+    }
+    Mat m(3, 1, CV_32S, Scalar(5));
+    const uchar* data = m.data;
+    _OutputArray(m).clear();
+    EXPECT_TRUE(m.empty());
+    EXPECT_EQ(data, m.data);
+    m.push_back(7);
+    EXPECT_EQ(7, m.at<int>(0));
+}
+
 TEST(Mat1D, basic)
 {
     std::vector<int> sizes { 100 };
