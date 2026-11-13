@@ -92,7 +92,7 @@ static double accumulateECCSystem(const Mat& gradX, const Mat& gradY,
             for (int x = 0; x < ws; ++x)
             {
                 const float fx = (float)x;
-                float hatX = 0.f, hatY = 0.f, den = 1.f;
+                float hatX = 0.f, hatY = 0.f, invDen = 1.f;
                 if (motionType == MOTION_EUCLIDEAN)
                 {
                     hatX = -(fx * h1_) - (fy * h0_);
@@ -100,9 +100,10 @@ static double accumulateECCSystem(const Mat& gradX, const Mat& gradY,
                 }
                 else if (motionType == MOTION_HOMOGRAPHY)
                 {
-                    den = fx * h2_ + fy * h5_ + 1.0f;
-                    hatX = -(fx * h0_ + fy * h3_ + h6_) / den;
-                    hatY = -(fx * h1_ + fy * h4_ + h7_) / den;
+                    const float den = fx * h2_ + fy * h5_ + 1.0f;
+                    invDen = (den != 0.f) ? (1.0f / den) : 0.f;
+                    hatX = -(fx * h0_ + fy * h3_ + h6_) * invDen;
+                    hatY = -(fx * h1_ + fy * h4_ + h7_) * invDen;
                 }
 
                 const int base = x * ch;
@@ -138,8 +139,8 @@ static double accumulateECCSystem(const Mat& gradX, const Mat& gradY,
                         case MOTION_HOMOGRAPHY:
                         default:
                         {
-                            const float gxd = gx / den;
-                            const float gyd = gy / den;
+                            const float gxd = gx * invDen;
+                            const float gyd = gy * invDen;
                             const float t = hatX * gxd + hatY * gyd;
                             j[0] = gxd * fx;
                             j[1] = gyd * fx;
