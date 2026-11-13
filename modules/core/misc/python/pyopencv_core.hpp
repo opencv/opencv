@@ -230,6 +230,36 @@ static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
     return -1;
 }
 
+// cv::RNG is wrapped as a smart pointer, so an 'RNG*' argument (cv::randShuffle) is converted
+// to the pointer to the very same generator the passed Python object refers to. This way the
+// state of the caller's generator is properly updated by the called function.
+template<>
+struct PyOpenCV_Converter<RNG*>
+{
+    static bool to(PyObject* obj, RNG*& value, const ArgInfo& info)
+    {
+        if (!obj || obj == Py_None)
+            return true;
+        Ptr<RNG>* holder = NULL;
+        if (pyopencv_RNG_getp(obj, holder))
+        {
+            value = holder->get();
+            return true;
+        }
+        failmsg("Expected cv::RNG for argument '%s'", info.name);
+        return false;
+    }
+};
+
+// implementation of the cv.theRNG() binding declared in
+// modules/core/misc/python/shadow_rng.hpp; the returned smart pointer shares the ownership
+// of the thread-local generator, so that the Python object refers to the very same generator
+// (and keeps it alive) instead of getting a copy of it
+static Ptr<RNG> cv_theRNG()
+{
+    return theRNGPtr();
+}
+
 #define PYOPENCV_EXTRA_METHODS_CV \
   {"CV_MAKETYPE", CV_PY_FN_WITH_KW(pycvMakeType), "CV_MAKETYPE(depth, channels) -> retval"}, \
   {"CV_8UC", (PyCFunction)(pycvMakeTypeCh<CV_8U>), METH_O, "CV_8UC(channels) -> retval"}, \
