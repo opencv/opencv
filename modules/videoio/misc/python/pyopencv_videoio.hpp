@@ -42,6 +42,7 @@ public:
 
     ~PythonStreamReader()
     {
+        PyEnsureGIL gil;
         if (obj)
             Py_DECREF(obj);
     }
@@ -51,34 +52,24 @@ public:
         if (!obj)
             return 0;
 
-        PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
-
-        PyGILState_STATE gstate;
-        gstate = PyGILState_Ensure();
-
-        PyObject* py_size = pyopencv_from(static_cast<int>(size));
-
-        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), py_size, NULL);
-        bool hasPyReadError = PyErr_Occurred() != nullptr;
-        char* src = PyBytes_AsString(res);
-        size_t len = static_cast<size_t>(PyBytes_Size(res));
-        bool hasPyBytesError = PyErr_Occurred() != nullptr;
-        if (src && len <= static_cast<size_t>(size))
+        PyEnsureGIL gil;
+        PySafeObject res(PyObject_CallMethod(obj, "read", "L", size));
+        if (!res)
         {
-            std::memcpy(buffer, src, len);
-        }
-        Py_DECREF(res);
-        Py_DECREF(py_size);
-
-        PyGILState_Release(gstate);
-
-        if (hasPyReadError)
+            PyErr_Clear();
             CV_Error(cv::Error::StsError, "Python .read() call error");
-        if (hasPyBytesError)
+        }
+
+        char* src = NULL;
+        Py_ssize_t len = 0;
+        if (PyBytes_AsStringAndSize(res, &src, &len) < 0)
+        {
+            PyErr_Clear();
             CV_Error(cv::Error::StsError, "Python buffer access error");
+        }
 
-        CV_CheckLE(len, static_cast<size_t>(size), "Stream chunk size should be less or equal than requested size");
-
+        CV_CheckLE(static_cast<size_t>(len), static_cast<size_t>(size), "Stream chunk size should be less or equal than requested size");
+        std::memcpy(buffer, src, static_cast<size_t>(len));
         return len;
     }
 
@@ -87,28 +78,20 @@ public:
         if (!obj)
             return 0;
 
-        PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
-
-        PyGILState_STATE gstate;
-        gstate = PyGILState_Ensure();
-
-        PyObject* py_offset = pyopencv_from(static_cast<int>(offset));
-        PyObject* py_whence = pyopencv_from(way);
-
-        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), py_offset, py_whence, NULL);
-        bool hasPySeekError = PyErr_Occurred() != nullptr;
-        long long pos = PyLong_AsLongLong(res);
-        bool hasPyConvertError = PyErr_Occurred() != nullptr;
-        Py_DECREF(res);
-        Py_DECREF(py_offset);
-        Py_DECREF(py_whence);
-
-        PyGILState_Release(gstate);
-
-        if (hasPySeekError)
+        PyEnsureGIL gil;
+        PySafeObject res(PyObject_CallMethod(obj, "seek", "Li", offset, way));
+        if (!res)
+        {
+            PyErr_Clear();
             CV_Error(cv::Error::StsError, "Python .seek() call error");
-        if (hasPyConvertError)
+        }
+
+        long long pos = PyLong_AsLongLong(res);
+        if (PyErr_Occurred())
+        {
+            PyErr_Clear();
             CV_Error(cv::Error::StsError, "Python .seek() result => long long conversion error");
+        }
         return pos;
     }
 
