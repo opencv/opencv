@@ -217,4 +217,40 @@ TEST(Photo_DenoisingColoredMulti, window_subset_equivalence)
     EXPECT_EQ(0.0, cvtest::norm(outFull, outSub, NORM_INF));
 }
 
+TEST(Photo_DenoisingColoredMulti, column_tiling_multithread_parity)
+{
+    RNG& rng = theRNG();
+    // Width 600 crosses the 512-column tile boundary
+    Mat single(40, 600, CV_8UC3);
+    rng.fill(single, RNG::UNIFORM, 0, 256);
+
+    std::vector<Mat> frames(3);
+    for (int k = 0; k < 3; ++k)
+    {
+        frames[k].create(40, 600, CV_8UC3);
+        rng.fill(frames[k], RNG::UNIFORM, 0, 256);
+    }
+
+    int prevThreads = cv::getNumThreads();
+    cv::setNumThreads(1);
+    Mat outSingle1T, outMulti1T;
+    fastNlMeansDenoisingColored(single, outSingle1T, 4.f, 4.f, 5, 11);
+    fastNlMeansDenoisingColoredMulti(frames, outMulti1T, 1, 3, 4.f, 4.f, 5, 11);
+
+    cv::setNumThreads(8);
+    Mat outSingleMT, outMultiMT;
+    fastNlMeansDenoisingColored(single, outSingleMT, 4.f, 4.f, 5, 11);
+    fastNlMeansDenoisingColoredMulti(frames, outMultiMT, 1, 3, 4.f, 4.f, 5, 11);
+    cv::setNumThreads(prevThreads);
+
+    EXPECT_EQ(0.0, cvtest::norm(outSingle1T, outSingleMT, NORM_INF));
+    EXPECT_EQ(0.0, cvtest::norm(outMulti1T, outMultiMT, NORM_INF));
+
+    // Verify non-tiled single-column-tile sub-ROI crop across tile boundary x=512 is bit-identical
+    Mat seamRef = outSingle1T(Rect(496, 12, 32, 16));
+    Mat seamSub;
+    fastNlMeansDenoisingColored(single(Rect(481, 0, 62, 40)).clone(), seamSub, 4.f, 4.f, 5, 11);
+    EXPECT_EQ(0.0, cvtest::norm(seamRef, seamSub(Rect(15, 12, 32, 16)), NORM_INF));
+}
+
 }} // namespace

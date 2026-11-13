@@ -196,6 +196,7 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     Mat l_ab[] = { l, ab };
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
+    src_lab.release();
 
     fastNlMeansDenoising(l, l, h, templateWindowSize, searchWindowSize);
     fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);

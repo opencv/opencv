@@ -44,6 +44,7 @@
 
 #include "precomp.hpp"
 #include <limits>
+#include "opencv2/core/utils/tls.hpp"
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
 #include "arrays.hpp"
@@ -79,13 +80,21 @@ private:
     int almost_template_window_size_sq_bin_shift_;
     std::vector<WT> almost_dist2weight_;
 
+    struct WorkBuffers
+    {
+        std::vector<int> distSums;
+        std::vector<int> colDistSums;
+        std::vector<int> upColDistSums;
+    };
+    mutable cv::TLSData<WorkBuffers> tlsWork_;
+
     void calcDistSumsForFirstElementInRow(
-        int i, Array2d<int>& dist_sums,
+        int i, int colStart, Array2d<int>& dist_sums,
         Array3d<int>& col_dist_sums,
         Array3d<int>& up_col_dist_sums) const;
 
     void calcDistSumsForElementInFirstRow(
-        int i, int j, int first_col_num,
+        int i, int j, int colStart, int first_col_num,
         Array2d<int>& dist_sums,
         Array3d<int>& col_dist_sums,
         Array3d<int>& up_col_dist_sums) const;
@@ -150,117 +159,133 @@ void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::operator() (const Range& ra
 {
     int row_from = range.start;
     int row_to = range.end - 1;
+    const int kColTile = 512;
+    const int tileCols = std::min(src_.cols, kColTile);
 
-    // sums of cols anf rows for current pixel p
-    Array2d<int> dist_sums(search_window_size_, search_window_size_);
+    WorkBuffers& wb = tlsWork_.getRef();
+    const size_t distSz = (size_t)search_window_size_ * search_window_size_;
+    const size_t colDistSz = (size_t)template_window_size_ * distSz;
+    const size_t upColDistSz = (size_t)tileCols * distSz;
+    if (wb.distSums.size() < distSz) wb.distSums.resize(distSz);
+    if (wb.colDistSums.size() < colDistSz) wb.colDistSums.resize(colDistSz);
+    if (wb.upColDistSums.size() < upColDistSz) wb.upColDistSums.resize(upColDistSz);
+
+    // sums of cols and rows for current pixel p
+    Array2d<int> dist_sums(wb.distSums.data(), search_window_size_, search_window_size_);
 
     // for lazy calc optimization (sum of cols for current pixel)
-    Array3d<int> col_dist_sums(template_window_size_, search_window_size_, search_window_size_);
+    Array3d<int> col_dist_sums(wb.colDistSums.data(), template_window_size_, search_window_size_, search_window_size_);
 
-    int first_col_num = -1;
-    // last elements of column sum (for each element in row)
-    Array3d<int> up_col_dist_sums(src_.cols, search_window_size_, search_window_size_);
+    // last elements of column sum (for each element in current column tile)
+    Array3d<int> up_col_dist_sums(wb.upColDistSums.data(), tileCols, search_window_size_, search_window_size_);
 
-    for (int i = row_from; i <= row_to; i++)
+    for (int colStart = 0; colStart < src_.cols; colStart += kColTile)
     {
-        for (int j = 0; j < src_.cols; j++)
-        {
-            int search_window_y = i - search_window_half_size_;
-            int search_window_x = j - search_window_half_size_;
+        const int colEnd = std::min(src_.cols, colStart + kColTile);
+        int first_col_num = -1;
 
-            // calc dist_sums
-            if (j == 0)
+        for (int i = row_from; i <= row_to; i++)
+        {
+            for (int j = colStart; j < colEnd; j++)
             {
-                calcDistSumsForFirstElementInRow(i, dist_sums, col_dist_sums, up_col_dist_sums);
-                first_col_num = 0;
-            }
-            else
-            {
-                // calc cur dist_sums using previous dist_sums
-                if (i == row_from)
+                int search_window_y = i - search_window_half_size_;
+                int search_window_x = j - search_window_half_size_;
+
+                // calc dist_sums
+                if (j == colStart)
                 {
-                    calcDistSumsForElementInFirstRow(i, j, first_col_num,
-                        dist_sums, col_dist_sums, up_col_dist_sums);
+                    calcDistSumsForFirstElementInRow(i, colStart, dist_sums, col_dist_sums, up_col_dist_sums);
+                    first_col_num = 0;
                 }
                 else
                 {
-                    int ay = border_size_ + i;
-                    int ax = border_size_ + j + template_window_half_size_;
-
-                    int start_by = border_size_ + i - search_window_half_size_;
-                    int start_bx = border_size_ + j - search_window_half_size_ + template_window_half_size_;
-
-                    T a_up = extended_src_.at<T>(ay - template_window_half_size_ - 1, ax);
-                    T a_down = extended_src_.at<T>(ay + template_window_half_size_, ax);
-
-                    // copy class member to local variable for optimization
-                    int search_window_size = search_window_size_;
-
-                    for (int y = 0; y < search_window_size; y++)
+                    // calc cur dist_sums using previous dist_sums
+                    if (i == row_from)
                     {
-                        int * dist_sums_row = dist_sums.row_ptr(y);
-                        int * col_dist_sums_row = col_dist_sums.row_ptr(first_col_num, y);
-                        int * up_col_dist_sums_row = up_col_dist_sums.row_ptr(j, y);
+                        calcDistSumsForElementInFirstRow(i, j, colStart, first_col_num,
+                            dist_sums, col_dist_sums, up_col_dist_sums);
+                    }
+                    else
+                    {
+                        int ay = border_size_ + i;
+                        int ax = border_size_ + j + template_window_half_size_;
 
-                        const T * b_up_ptr = extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
-                        const T * b_down_ptr = extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
+                        int start_by = border_size_ + i - search_window_half_size_;
+                        int start_bx = border_size_ + j - search_window_half_size_ + template_window_half_size_;
+
+                        T a_up = extended_src_.at<T>(ay - template_window_half_size_ - 1, ax);
+                        T a_down = extended_src_.at<T>(ay + template_window_half_size_, ax);
+
+                        // copy class member to local variable for optimization
+                        int search_window_size = search_window_size_;
+                        const int jLocal = j - colStart;
+
+                        for (int y = 0; y < search_window_size; y++)
+                        {
+                            int * dist_sums_row = dist_sums.row_ptr(y);
+                            int * col_dist_sums_row = col_dist_sums.row_ptr(first_col_num, y);
+                            int * up_col_dist_sums_row = up_col_dist_sums.row_ptr(jLocal, y);
+
+                            const T * b_up_ptr = extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
+                            const T * b_down_ptr = extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
 
 // MSVC 2015 generates unaligned destination for "movaps" instruction for 32-bit builds
 #if defined _MSC_VER && _MSC_VER == 1900 && !defined _WIN64
 #pragma loop(no_vector)
 #endif
-                        for (int x = 0; x < search_window_size; x++)
-                        {
-                            // remove from current pixel sum column sum with index "first_col_num"
-                            dist_sums_row[x] -= col_dist_sums_row[x];
+                            for (int x = 0; x < search_window_size; x++)
+                            {
+                                // remove from current pixel sum column sum with index "first_col_num"
+                                dist_sums_row[x] -= col_dist_sums_row[x];
 
-                            int bx = start_bx + x;
-                            col_dist_sums_row[x] = up_col_dist_sums_row[x] + D::template calcUpDownDist<T>(a_up, a_down, b_up_ptr[bx], b_down_ptr[bx]);
+                                int bx = start_bx + x;
+                                col_dist_sums_row[x] = up_col_dist_sums_row[x] + D::template calcUpDownDist<T>(a_up, a_down, b_up_ptr[bx], b_down_ptr[bx]);
 
-                            dist_sums_row[x] += col_dist_sums_row[x];
-                            up_col_dist_sums_row[x] = col_dist_sums_row[x];
+                                dist_sums_row[x] += col_dist_sums_row[x];
+                                up_col_dist_sums_row[x] = col_dist_sums_row[x];
+                            }
                         }
+                    }
+
+                    first_col_num = (first_col_num + 1) % template_window_size_;
+                }
+
+                // calc weights
+                IT estimation[pixelInfo<T>::channels], weights_sum[pixelInfo<WT>::channels];
+                for (int channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
+                    estimation[channel_num] = 0;
+                for (int channel_num = 0; channel_num < pixelInfo<WT>::channels; channel_num++)
+                    weights_sum[channel_num] = 0;
+
+                for (int y = 0; y < search_window_size_; y++)
+                {
+                    const T* cur_row_ptr = extended_src_.ptr<T>(border_size_ + search_window_y + y);
+                    int* dist_sums_row = dist_sums.row_ptr(y);
+                    for (int x = 0; x < search_window_size_; x++)
+                    {
+                        int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
+                        WT weight = almost_dist2weight_[almostAvgDist];
+                        T p = cur_row_ptr[border_size_ + search_window_x + x];
+                        incWithWeight<T, IT, WT>(estimation, weights_sum, weight, p);
                     }
                 }
 
-                first_col_num = (first_col_num + 1) % template_window_size_;
+                divByWeightsSum<IT, UIT, pixelInfo<T>::channels, pixelInfo<WT>::channels>(estimation,
+                                                                                          weights_sum);
+                dst_.at<T>(i,j) = saturateCastFromArray<T, IT>(estimation);
             }
-
-            // calc weights
-            IT estimation[pixelInfo<T>::channels], weights_sum[pixelInfo<WT>::channels];
-            for (int channel_num = 0; channel_num < pixelInfo<T>::channels; channel_num++)
-                estimation[channel_num] = 0;
-            for (int channel_num = 0; channel_num < pixelInfo<WT>::channels; channel_num++)
-                weights_sum[channel_num] = 0;
-
-            for (int y = 0; y < search_window_size_; y++)
-            {
-                const T* cur_row_ptr = extended_src_.ptr<T>(border_size_ + search_window_y + y);
-                int* dist_sums_row = dist_sums.row_ptr(y);
-                for (int x = 0; x < search_window_size_; x++)
-                {
-                    int almostAvgDist = dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
-                    WT weight = almost_dist2weight_[almostAvgDist];
-                    T p = cur_row_ptr[border_size_ + search_window_x + x];
-                    incWithWeight<T, IT, WT>(estimation, weights_sum, weight, p);
-                }
-            }
-
-            divByWeightsSum<IT, UIT, pixelInfo<T>::channels, pixelInfo<WT>::channels>(estimation,
-                                                                                      weights_sum);
-            dst_.at<T>(i,j) = saturateCastFromArray<T, IT>(estimation);
         }
     }
 }
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForFirstElementInRow(
-    int i,
+    int i, int colStart,
     Array2d<int>& dist_sums,
     Array3d<int>& col_dist_sums,
     Array3d<int>& up_col_dist_sums) const
 {
-    int j = 0;
+    int j = colStart;
 
     for (int y = 0; y < search_window_size_; y++)
         for (int x = 0; x < search_window_size_; x++)
@@ -283,13 +308,13 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForFirst
                     col_dist_sums[tx + template_window_half_size_][y][x] += dist;
                 }
 
-            up_col_dist_sums[j][y][x] = col_dist_sums[template_window_size_ - 1][y][x];
+            up_col_dist_sums[0][y][x] = col_dist_sums[template_window_size_ - 1][y][x];
         }
 }
 
 template <typename T, typename IT, typename UIT, typename D, typename WT>
 inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForElementInFirstRow(
-    int i, int j, int first_col_num,
+    int i, int j, int colStart, int first_col_num,
     Array2d<int>& dist_sums,
     Array3d<int>& col_dist_sums,
     Array3d<int>& up_col_dist_sums) const
@@ -301,6 +326,7 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForEleme
     int start_bx = border_size_ + j - search_window_half_size_ + template_window_half_size_;
 
     int new_last_col_num = first_col_num;
+    const int jLocal = j - colStart;
 
     for (int y = 0; y < search_window_size_; y++)
         for (int x = 0; x < search_window_size_; x++)
@@ -314,7 +340,7 @@ inline void FastNlMeansDenoisingInvoker<T, IT, UIT, D, WT>::calcDistSumsForEleme
                 col_dist_sums[new_last_col_num][y][x] += D::template calcDist<T>(extended_src_, ay + ty, ax, by + ty, bx);
 
             dist_sums[y][x] += col_dist_sums[new_last_col_num][y][x];
-            up_col_dist_sums[j][y][x] = col_dist_sums[new_last_col_num][y][x];
+            up_col_dist_sums[jLocal][y][x] = col_dist_sums[new_last_col_num][y][x];
         }
 }
 
