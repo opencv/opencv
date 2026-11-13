@@ -415,21 +415,33 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         if (argsOk && splitForParallelStat(src, mask, chunks))
         {
             const int n = (int)chunks.size();
-            std::vector<double> mn(n), mx(n);
+            const int depth = src.depth();
+            // Only single-channel input supports extrema indices. For multi-channel input,
+            // merging rounded values is sufficient because the public outputs are doubles.
+            const bool wideInteger = cn == 1 && (depth == CV_64S || depth == CV_64U);
+            std::vector<double> mn(wideInteger ? 0 : n), mx(wideInteger ? 0 : n);
+            std::vector<uint64> mn64(wideInteger ? n : 0), mx64(wideInteger ? n : 0);
             std::vector<size_t> imn(n, 0), imx(n, 0);   // 1-based row-major indices, 0 = no element
             parallel_for_(Range(0, n), [&](const Range& r)
             {
                 for (int i = r.start; i < r.end; i++)
                 {
                     int a[2] = {-1, -1}, b[2] = {-1, -1};
-                    minMaxIdx_(chunks[i].src, &mn[i], &mx[i], cn == 1 ? a : nullptr, cn == 1 ? b : nullptr,
-                               chunks[i].mask);
+                    minMaxIdx_(chunks[i].src, wideInteger ? nullptr : &mn[i],
+                               wideInteger ? nullptr : &mx[i], cn == 1 ? a : nullptr,
+                               cn == 1 ? b : nullptr, chunks[i].mask);
                     if (cn > 1)
                         imn[i] = imx[i] = 1;
                     else if (a[0] >= 0)
                     {
                         imn[i] = chunkIndexToElem(chunks[i], a) + 1;
                         imx[i] = chunkIndexToElem(chunks[i], b) + 1;
+                        if (wideInteger)
+                        {
+                            const uint64 signFlip = depth == CV_64S ? (uint64)1 << 63 : 0;
+                            mn64[i] = chunks[i].src.at<uint64>(a) ^ signFlip;
+                            mx64[i] = chunks[i].src.at<uint64>(b) ^ signFlip;
+                        }
                     }
                 }
             });
@@ -440,11 +452,21 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             {
                 if (imn[i] == 0)
                     continue;
-                if (bmin < 0 || mn[i] < mn[bmin]) bmin = i;
-                if (bmax < 0 || mx[i] > mx[bmax]) bmax = i;
+                if (bmin < 0 || (wideInteger ? mn64[i] < mn64[bmin] : mn[i] < mn[bmin])) bmin = i;
+                if (bmax < 0 || (wideInteger ? mx64[i] > mx64[bmax] : mx[i] > mx[bmax])) bmax = i;
             }
-            if (minVal) *minVal = bmin >= 0 ? mn[bmin] : 0;
-            if (maxVal) *maxVal = bmax >= 0 ? mx[bmax] : 0;
+            auto wideValue = [&](int best, size_t idx)
+            {
+                const StatChunk& c = chunks[best];
+                const size_t offset = idx - 1 - c.firstElem;
+                const int row = (int)(offset / c.src.cols), col = (int)(offset % c.src.cols);
+                return depth == CV_64S ? (double)c.src.at<int64>(row, col) :
+                                        (double)c.src.at<uint64>(row, col);
+            };
+            if (minVal)
+                *minVal = bmin >= 0 ? (wideInteger ? wideValue(bmin, imn[bmin]) : mn[bmin]) : 0;
+            if (maxVal)
+                *maxVal = bmax >= 0 ? (wideInteger ? wideValue(bmax, imx[bmax]) : mx[bmax]) : 0;
             if (minIdx) ofs2idx(src, bmin >= 0 ? imn[bmin] : 0, minIdx);
             if (maxIdx) ofs2idx(src, bmax >= 0 ? imx[bmax] : 0, maxIdx);
             return;
