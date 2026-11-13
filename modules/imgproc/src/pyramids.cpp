@@ -1521,16 +1521,17 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     {
         CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
     }
-    bool use_avx512vbmi = checkHardwareSupport(CPU_AVX_512VBMI);
+    // The 16-bit kernel is compiled only as AVX512_ICL. This macro is 0 unless that
+    // object is in the build, so a default build keeps the int SIMD horizontal pass.
+    // AVX2: 16-bit intermediates have negligible uplift.
+    // ARM: 16-bit intermediates are 5 to 10% slower.
+    bool use_avx512_icl = CV_CPU_HAS_SUPPORT_AVX512_ICL;
 
     PyrFunc func = 0;
     if( depth == CV_8U )
     {
-        if(use_avx512vbmi)
+        if(use_avx512_icl)
         {
-            // intermediate storage in 16bit only improves when used along with AVX512_VBMI ISA.
-            // AVX2: Usage with AVX2 has negligible measurable uplift in performance.
-            // ARM: Using 16bit intermediate storage has shown 5 to 10% degradation on ARM platform.
             func = pyrDown_< FixPtUcharCast<uchar, 8> >;
         }
         else
