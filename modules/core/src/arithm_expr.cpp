@@ -368,7 +368,7 @@ static bool constFits(const TExpr& e, int s, int d)
 // wide fallback per op family, then cast both operands and emit (direct, else wide+narrow). Operands
 // may be typed (INPUT/TEMP) or a flexible CONST (materialized at the compute depth here).
 // ---------------------------------------------------------------------------
-int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
+int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params, bool computeInResult)
 {
     // addWeighted a*alpha + b*beta + gamma (params = {alpha, beta, gamma}): ONE fused kernel (two v_fma).
     // Inputs are the same type T (cast to a common type if not). The kernel outputs T/f32 (small ints,
@@ -596,7 +596,7 @@ int TExpr::emitBinary(TOp op, int a, int b, int rdepth, const Scalar& params)
         depth = base; wide = CV_64F; break;
     case OP_MUL: case OP_DIV:
     {
-        depth = base;
+        depth = computeInResult ? result : base;
         const bool w = (depth==CV_32U || depth==CV_32S || depth==CV_64U ||
                         depth==CV_64S || depth==CV_64F);
         wide = w ? CV_64F : CV_32F;
