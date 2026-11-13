@@ -432,4 +432,38 @@ TEST(Core_EW_AddSub, saturation_s32_u32)
     }
 }
 
+TEST(Core_EW_AddSub, saturation_s64_u64)
+{
+    {
+        const int64_t mx = INT64_MAX, mn = INT64_MIN;
+        const int64_t a[]    = { mx, mn, mx, mn, 0,  -1,     mx,     mx, mn, 12345 };
+        const int64_t b[]    = { 1,  -1, mx, mn, mn, mx,     -1,     mn, mx, -54321 };
+        const int64_t rsum[] = { mx, mn, mx, mn, mn, mx - 1, mx - 1, -1, -1, -41976 };
+        const int64_t rdif[] = { mx - 1, mn + 1, 0, 0, mx, mn, mx, mx, mn, 66666 };
+        Mat A(1, 10, CV_64S, (void*)a), B(1, 10, CV_64S, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 10; i++)
+        {
+            EXPECT_EQ(rsum[i], sum.at<int64_t>(i)) << "add s64 case " << i;
+            EXPECT_EQ(rdif[i], dif.at<int64_t>(i)) << "sub s64 case " << i;
+        }
+    }
+    {
+        const uint64_t mx = UINT64_MAX, half = 1ULL << 63;
+        const uint64_t a[]    = { mx, 0, mx, 5,  0, 100, half };
+        const uint64_t b[]    = { 1,  1, mx, 5,  0, 7,   half };
+        const uint64_t rsum[] = { mx, 1, mx, 10, 0, 107, mx };
+        const uint64_t rdif[] = { mx - 1, 0, 0, 0, 0, 93, 0 };
+        Mat A(1, 7, CV_64U, (void*)a), B(1, 7, CV_64U, (void*)b), sum, dif;
+        cv::add(A, B, sum);
+        cv::subtract(A, B, dif);
+        for (int i = 0; i < 7; i++)
+        {
+            EXPECT_EQ(rsum[i], sum.at<uint64_t>(i)) << "add u64 case " << i;
+            EXPECT_EQ(rdif[i], dif.at<uint64_t>(i)) << "sub u64 case " << i;
+        }
+    }
+}
+
 }} // namespace
