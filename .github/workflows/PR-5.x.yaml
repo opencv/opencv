@@ -1,38 +1,164 @@
 name: PR:5.x
+run-name: "PR #${{ github.event.pull_request.number }} [ci-fast=${{ contains(github.event.pull_request.labels.*.name, 'ci:fast') }},ci-full=${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}]"
 
 on:
   pull_request:
     branches:
       - 5.x
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: PR-5.x-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      pull-requests: read
+    outputs:
+      fast: ${{ steps.changes.outputs.fast }}
+      full: ${{ steps.changes.outputs.full }}
+      delta: ${{ steps.changes.outputs.delta }}
+      android: ${{ steps.changes.outputs.android }}
+      apple: ${{ steps.changes.outputs.apple }}
+      dnn: ${{ steps.changes.outputs.dnn }}
+      docs: ${{ steps.changes.outputs.docs }}
+      riscv: ${{ steps.changes.outputs.riscv }}
+      riscv_delta: ${{ steps.changes.outputs.riscv_delta }}
+    steps:
+      - name: Classify changed files
+        id: changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changedFiles = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                per_page: 100,
+              }
+            );
+            const files = changedFiles.flatMap(file =>
+              [file.filename, file.previous_filename].filter(Boolean)
+            );
+            const labels = new Set(
+              context.payload.pull_request.labels.map(label => label.name)
+            );
+            const matches = pattern => files.some(file => pattern.test(file));
+            const resetMode = context.payload.action === 'synchronize';
+            const full = !resetMode && labels.has('ci:full');
+            const fast = !full;
+
+            let previousSuccess = false;
+            if (full) {
+              try {
+                const priorRuns = await github.paginate(
+                  github.rest.actions.listWorkflowRuns,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: 'PR-5.x.yaml',
+                    head_sha: context.payload.pull_request.head.sha,
+                    event: 'pull_request',
+                    status: 'completed',
+                    per_page: 100,
+                  }
+                );
+                previousSuccess = priorRuns.some(run =>
+                  run.id !== context.runId && run.conclusion === 'success'
+                );
+              } catch (error) {
+                core.warning(`Unable to inspect earlier workflow runs: ${error.message}`);
+              }
+            }
+            const delta = full && previousSuccess;
+
+            const dnnRelevant = labels.has('category: dnn') ||
+              labels.has('category: dnn (onnx)') ||
+              matches(/^modules\/dnn\//);
+            const androidRelevant = matches(/^(platforms\/android\/|modules\/java\/|samples\/android\/)/);
+            const appleRelevant = matches(/^(platforms\/(ios|osx)\/|modules\/objc\/|samples\/(swift|ios)\/)/);
+            const riscvRelevant = matches(/(riscv|rvv)/i);
+            const optionalJob = relevant => full ? (!delta || !relevant) : relevant;
+
+            const dnn = optionalJob(dnnRelevant);
+            const android = optionalJob(androidRelevant);
+            const apple = optionalJob(appleRelevant);
+            const riscv = optionalJob(riscvRelevant);
+
+            for (const [name, value] of Object.entries({
+              fast,
+              full,
+              delta,
+              android,
+              apple,
+              dnn,
+              docs: !delta,
+              riscv,
+              riscv_delta: delta && riscvRelevant,
+            })) {
+              core.setOutput(name, value.toString());
+            }
+
+            await core.summary
+              .addHeading('CI selection')
+              .addTable([
+                [{data: 'Mode', header: true}, {data: delta ? 'full (delta)' : fast ? 'fast' : 'full', header: true}],
+                ['Changed files', changedFiles.length.toString()],
+                ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
+                ['Previous successful run', previousSuccess ? 'same commit' : 'none'],
+                ['Reason', delta ? 'ci:full after successful fast coverage' : full ? 'ci:full label' : resetMode ? 'new commit resets CI mode to fast' : 'fast coverage is the default'],
+              ])
+              .write();
+
   Linux:
+    needs: classify
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
     with:
       workflow_branch: 'main'
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
 
   Linux-no-HAL:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
 
   Linux-Apline:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-Alpine.yaml@main
 
   Windows:
+    needs: classify
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
     with:
       workflow_branch: main
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
 
   Ubuntu2404-ARM64:
+    needs: classify
+    if: needs.classify.outputs.delta != 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@main
 
   Ubuntu2404-ARM64-Debug:
+    needs: classify
+    if: needs.classify.outputs.full == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@main
 
   Ubuntu2004-x64-OpenVINO:
+    needs: classify
+    if: needs.classify.outputs.dnn == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@main
 
   Ubuntu2004-x64-CUDA:
-    if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
+    needs: classify
+    if: needs.classify.outputs.dnn == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@main
 
 # Vulkan configuration disabled as Vulkan backend for DNN does not support int/int64 for now
@@ -41,24 +167,38 @@ jobs:
 #    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@main
 
   macOS-ARM64:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@main
 
 #  macOS-ARM64-Vulkan:
 #    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@main
 
   macOS-x64:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
 
   iOS:
+    needs: classify
+    if: needs.classify.outputs.apple == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
 
   Android:
+    needs: classify
+    if: needs.classify.outputs.android == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@main
 
   docs:
+    needs: classify
+    if: needs.classify.outputs.docs == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@main
 
   Linux-RISC-V-Clang:
+    needs: classify
+    if: needs.classify.outputs.riscv == 'true' || needs.classify.outputs.riscv_delta == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-RISCV.yaml@main
     with:
       workflow_branch: main
+      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
+      delta: ${{ fromJSON(needs.classify.outputs.riscv_delta) }}
