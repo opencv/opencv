@@ -1037,6 +1037,88 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     normAssert(h_t_reference, outputs[0]);
 }
 
+static void runRotaryEmbedding(int64_t pos0, int64_t pos1, int dim_head, int cache_width,
+                               std::vector<Mat>& outputs, int input_type = CV_32F)
+{
+    const int B = 1, S = 2, num_heads = 1, seq_len_max = 8;
+
+    Mat input(std::vector<int>{B, S, num_heads * dim_head}, input_type, Scalar(1.f));
+    Mat cos_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
+    Mat pos(std::vector<int>{B, S}, CV_64S);
+    pos.at<int64_t>(0, 0) = pos0;
+    pos.at<int64_t>(0, 1) = pos1;
+
+    LayerParams lp;
+    lp.set("num_heads", num_heads);
+    std::vector<Mat> inputs{input, cos_cache, sin_cache, pos};
+    runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs);
+}
+
+TEST(Layer_RotaryEmbedding, gather_position_ids)
+{
+    std::vector<Mat> outputs;
+    runRotaryEmbedding(0, 1, 4, 2, outputs);
+    ASSERT_EQ(1u, outputs.size());
+    // real = 1*0.5 - 1*0.5, imag = 1*0.5 + 1*0.5
+    Mat ref(std::vector<int>{1, 2, 4}, CV_32F);
+    float* r = ref.ptr<float>();
+    for (int t = 0; t < 2; ++t)
+    {
+        r[t * 4 + 0] = r[t * 4 + 1] = 0.f;
+        r[t * 4 + 2] = r[t * 4 + 3] = 1.f;
+    }
+    normAssert(ref, outputs[0]);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_negative_position_id)
+{
+    std::vector<Mat> outputs;
+    try
+    {
+        runRotaryEmbedding(-1, 0, 4, 2, outputs);
+        FAIL() << "negative position id was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(cv::Error::StsOutOfRange, e.code);
+    }
+}
+
+TEST(Layer_RotaryEmbedding, rejects_cache_width_mismatch)
+{
+    std::vector<Mat> outputs;
+    // the cache rows are strided by rotary_dim / 2, so their width must be exactly that:
+    // dim_head 8 needs width 4, and a wider cache would be read with the wrong stride
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 8, 2, outputs), cv::Exception);
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 4, 4, outputs), cv::Exception);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_fp16_input)
+{
+    // the kernels compute in float32; a 2-byte input must not be reinterpreted as float32
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 4, 2, outputs, CV_16F), cv::Exception);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_num_heads_mismatch_4d)
+{
+    const int B = 1, H = 2, S = 2, D = 4;
+    Mat input(std::vector<int>{B, H, S, D}, CV_32F, Scalar(1.f));
+    Mat cos_cache(std::vector<int>{B, S, D / 2}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{B, S, D / 2}, CV_32F, Scalar(0.5f));
+    std::vector<Mat> inputs{input, cos_cache, sin_cache};
+    std::vector<Mat> outputs;
+
+    LayerParams lp;
+    runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs);
+    ASSERT_EQ(1u, outputs.size());
+
+    // 4d input defines the head count; a larger num_heads attribute would index past the tensor
+    lp.set("num_heads", H + 1);
+    EXPECT_THROW(runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs), cv::Exception);
+}
+
 TEST(Layer_Attention, rank4_input_matches_rank3)
 {
     const int B0 = 2, B1 = 3, S = 17, C = 64, NH = 4;
