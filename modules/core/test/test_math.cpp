@@ -2549,6 +2549,56 @@ TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; 
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
+
+TEST(Core_Trace, non_2d_assert)
+{
+    // 1D matrices must throw an assertion error
+    {
+        std::vector<uchar> v = {10, 20, 30};
+        Mat m(v);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
+    }
+    {
+        std::vector<float> v = {3.5f, 1.0f};
+        Mat m(v);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
+    }
+    {
+        int sz[] = {4};
+        Mat m(1, sz, CV_32SC1);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
+    }
+
+    // 0D matrices must throw an assertion error
+    {
+        int val = 42;
+        Mat m(0, (const int*)nullptr, CV_32S, &val);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
+    }
+}
+
+TEST(Core_SetIdentity, non_2d_assert)
+{
+    // 1D matrices must throw an assertion error
+    {
+        int sz[] = {4};
+        Mat m(1, sz, CV_8UC1);
+        EXPECT_THROW(cv::setIdentity(m, Scalar(5)), cv::Exception);
+    }
+    {
+        int sz[] = {3};
+        Mat m(1, sz, CV_32FC1);
+        EXPECT_THROW(cv::setIdentity(m, Scalar(1.5f)), cv::Exception);
+    }
+
+    // 0D matrices must throw an assertion error
+    {
+        int val = 0;
+        Mat m(0, (const int*)nullptr, CV_32S, &val);
+        EXPECT_THROW(cv::setIdentity(m, Scalar(17)), cv::Exception);
+    }
+}
+
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }
 TEST(Core_Phase, accuracy32f) { Core_PhaseTest test(CV_32FC1); test.safe_run(); }
 TEST(Core_Phase, accuracy64f) { Core_PhaseTest test(CV_64FC1); test.safe_run(); }

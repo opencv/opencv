@@ -167,7 +167,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _m.dims() <= 2 );
+    CV_Assert( _m.dims() == 2 );
 
     CV_OCL_RUN(_m.isUMat(),
                ocl_setIdentity(_m, s))
@@ -233,7 +233,7 @@ cv::Scalar cv::trace( InputArray _m )
     CV_INSTRUMENT_REGION();
 
     Mat m = _m.getMat();
-    CV_Assert( m.dims <= 2 );
+    CV_Assert( m.dims == 2 );
     int type = m.type();
     int nm = std::min(m.rows, m.cols);
 
