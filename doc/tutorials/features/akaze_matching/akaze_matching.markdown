@@ -27,7 +27,7 @@ You can find expanded version of this example here:
 Data
 ----
 
-We are going to use images 1 and 3 from *Graffiti* sequence of [Oxford dataset](http://www.robots.ox.ac.uk/~vgg/data/data-aff.html).
+We are going to use images 1 and 3 from *Graffiti* sequence of the [Oxford affine dataset](https://www.robots.ox.ac.uk/~vgg/research/affine/).
 
 ![](images/graf.png)
 
