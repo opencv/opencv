@@ -57,6 +57,29 @@ typedef std::string OrtPathString;
 OrtPathString toOrtPath(const std::string& utf8Path);
 #endif
 
+/** @brief A layer that owns its constant operands instead of keeping them in Layer::blobs.
+ *
+ * constArgs() hands them over, the graph passes read and replace them through here, and the
+ * layer drops the originals once they are packed.
+ */
+class CV_EXPORTS ConstWeightOwner
+{
+public:
+    virtual ~ConstWeightOwner();
+
+    //! Takes ownership of the constant operands. An empty one leaves the current in place.
+    virtual void setWeights(InputArray weights, InputArray bias) = 0;
+
+    //! What setWeights() took. The weight goes empty once it has been packed, so a pass that
+    //! needs it must run before inference.
+    virtual const Mat& constWeights() const = 0;
+    virtual const Mat& constBias() const = 0;
+
+    //! Drops constants a graph pass has already copied elsewhere. Shapes survive, as they do
+    //! after packing; only call it on a layer the graph is removing.
+    virtual void releaseConstWeights() = 0;
+};
+
 /** @brief Single entry in a @ref PerfProfile.
  *
  * In DNN_PROFILE_DETAILED mode, @p label is "layer_name (type)" and @p count is 1.
@@ -157,6 +180,8 @@ struct Net::Impl : public detail::NetImplBase
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalized = false; // executors have been selected for the current backend/target
+    // A const weight dropped after packing cannot be given back, and initCUDA() needs the raw one.
+    bool weightsReleased = false;
     std::vector<MatShape> pinnedInputShapes;
 
     // Post-fusion (pre block-layout) snapshot so finalize() can re-run from a clean
@@ -261,6 +286,7 @@ struct Net::Impl : public detail::NetImplBase
     void setInputShape(const String& inputName, const MatShape& shape);
     virtual void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
     Mat getParam(int layer, int numParam) const;
+    bool writeParam(const Ptr<LayerInfo>& layer, int numParam, const Mat& blob);
     void setParam(int layer, int numParam, const Mat& blob);
     void setParam(const std::string& outputTensorName, int numParam, const Mat& blob);
     std::vector<Ptr<Layer>> getLayerInputs(int layerId) const;

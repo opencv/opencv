@@ -1043,24 +1043,19 @@ TEST(Fusion, LayerScaleFoldsIntoGemmWeights)
     normAssert(refProj.reshape(1, shape), outs[1], "shared MatMul result");
     normAssert(refShared.reshape(1, shape), outs[2], "not folded");
 
-    // One Gemm holds W with column n scaled by gamma[n], the other plain W.
-    Mat scaledW = W.clone();
-    for (int n = 0; n < 24; n++)
-    {
-        Mat col = scaledW.col(n);
-        col *= gp[n];
-    }
-    int scaled = 0, plain = 0;
+    // The fold absorbs the Mul/Add it replaces, so it is visible as ops that are gone: the
+    // Y path's Mul and Add leave the graph, while the shared path keeps its Mul because
+    // `proj` is a graph output. Unfolded, three NaryEltwise ops would survive instead of one.
+    int gemms = 0, elementwise = 0;
     for (const auto& l : net.getMainGraph()->prog())
     {
-        if (!l || l->type != "Gemm" || l->blobs.empty() || l->blobs[0].total() != W.total())
+        if (!l)
             continue;
-        Mat B = l->blobs[0].rows == W.rows ? l->blobs[0] : Mat(l->blobs[0].t());
-        scaled += cvtest::norm(B, scaledW, NORM_INF) < 1e-6;
-        plain += cvtest::norm(B, W, NORM_INF) < 1e-6;
+        gemms += l->type == "Gemm";
+        elementwise += l->type == "NaryEltwise";
     }
-    EXPECT_EQ(1, scaled) << "LayerScale was not folded into the Gemm weights";
-    EXPECT_EQ(1, plain) << "the Gemm whose result is shared must keep its weights";
+    EXPECT_EQ(2, gemms);
+    EXPECT_EQ(1, elementwise) << "LayerScale was not folded into the Gemm weights";
 }
 
 // Direct NCHW convolution without groups, accumulated in double; pads are {top, left, bottom, right}.

@@ -65,6 +65,10 @@ struct ConstArgs
                 saved_tail_inputs.push_back(inp);
             }
 
+            // An int8 MatMul keeps its quantized weights in MatMulInt8Params, owns no
+            // constant operand, and so implements none of this.
+            ConstWeightOwner* owner = dynamic_cast<ConstWeightOwner*>(layer_ptr);
+            AttentionLayer* attn = dynamic_cast<AttentionLayer*>(layer_ptr);
             Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer_ptr);
             ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer_ptr);
             BatchNorm2Layer* bn = dynamic_cast<BatchNorm2Layer*>(layer_ptr);
@@ -92,6 +96,13 @@ struct ConstArgs
                 } else if (prelu && ninputs == 2) {
                     prelu->setSlope(netimpl->__tensors__[inputs[1].idx]);
                     prelu->inputs.resize(1);
+                    unuse_tail = true;
+                } else if (owner && (!attn || ninputs <= 3)) {
+                    // constant weights and bias; Attention's 4th input is the mask, which
+                    // stays a runtime input
+                    owner->setWeights(netimpl->__tensors__[inputs[1]],
+                                      ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    layer_ptr->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {
                     // [TODO] ...
