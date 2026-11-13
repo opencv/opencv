@@ -262,3 +262,20 @@ if(WITH_FASTCV)
     endif()
   endif()
 endif(WITH_FASTCV)
+
+# --- Accelerate ---
+if(WITH_ACCELERATE)
+  find_library(ACCELERATE_FRAMEWORK Accelerate)
+  if(ACCELERATE_FRAMEWORK)
+    set(HAVE_ACCELERATE ON CACHE BOOL "Accelerate status")
+    # The Accelerate HAL needs vImageSepConvolve_* (macOS 11, iOS 14, watchOS 7, tvOS 14).
+    # The check fails if the deployment target is older, then the HAL is not built.
+    set(_accelerate_required_libraries "${CMAKE_REQUIRED_LIBRARIES}")
+    set(CMAKE_REQUIRED_LIBRARIES "-framework Accelerate")
+    ocv_check_compiler_flag(CXX "-Werror=unguarded-availability-new" HAVE_ACCELERATE_HAL
+                            "${OpenCV_SOURCE_DIR}/cmake/checks/accelerate_hal_check.cpp")
+    set(CMAKE_REQUIRED_LIBRARIES "${_accelerate_required_libraries}")
+  else()
+    set(HAVE_ACCELERATE OFF CACHE BOOL "Accelerate status")
+  endif()
+endif()
