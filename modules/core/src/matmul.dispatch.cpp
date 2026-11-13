@@ -350,6 +350,11 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 #endif
 
     Mat A = matA.getMat(), B = matB.getMat(), C = beta != 0.0 ? matC.getMat() : Mat();
+    // A 1D Mat is one row, but its step[0] is the size of one element, not of the whole row.
+    // Give it an ordinary 2D one-row header so the row step passed to the kernels is right.
+    if (A.dims == 1) A = A.reshape(0, 1);
+    if (B.dims == 1) B = B.reshape(0, 1);
+    if (C.dims == 1) C = C.reshape(0, 1);
     Size a_size = A.size(), d_size;
     int len = 0, type = A.type();
 
@@ -388,6 +393,8 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 
     _matD.create( d_size.height, d_size.width, type );
     Mat D = _matD.getMat();
+    // A preallocated 1D output keeps its 1D header after create(), so normalize it like A, B and C.
+    if (D.dims == 1) D = D.reshape(0, 1);
     if( (flags & GEMM_3_T) != 0 && C.data == D.data )
     {
         transpose( C, C );
