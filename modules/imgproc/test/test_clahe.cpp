@@ -17,16 +17,18 @@ TEST_P(CLAHE_Padding, reflected_border)
     const bool useRoi = testing::get<4>(GetParam());
     const Size size(grid.width * 5 + extra.width, grid.height * 5 + extra.height);
 
-    // The ROI ends at the parent's bottom-right corner so border extrapolation
-    // uses the same pixels as a standalone image, while preserving a row stride.
-    Mat storage(size.height + 2, size.width + 3, type);
+    // The ROI sits inside the parent with more than a tile of parent pixels to its right and
+    // bottom, so the internal padding must not read them (it would if it did not isolate the ROI).
+    Mat storage(size.height + 2 + 8, size.width + 3 + 8, type);
+    theRNG().fill(storage, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
     Mat src = useRoi ? storage(Rect(3, 2, size.width, size.height)) : Mat(size, type);
-    theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
+    if (!useRoi)
+        theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
 
     const int bottom = (grid.height - size.height % grid.height) % grid.height;
     const int right = (grid.width - size.width % grid.width) % grid.width;
     Mat padded, expected, actual;
-    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101);
+    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101 | BORDER_ISOLATED);
 
     Ptr<CLAHE> clahe = cv::createCLAHE(clipLimit, grid);
     clahe->apply(padded, expected);
