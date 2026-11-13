@@ -11,16 +11,21 @@
 #include <stddef.h>
 
 // Kernels of the CUDA and HIP backends (gpu_kernels.impl.hpp), launched on @p s. Elements are
-// @p esz bytes (supportedElementSize), rows are @p sstep / @p dstep bytes apart.
+// @p esz bytes (supportedElementSize), rows are @p sstep / @p dstep / @p step bytes apart.
 namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 
 bool supportedElementSize(int esz);
 //! OpenCV's flip codes: 0 around the x axis, > 0 around the y axis, < 0 both
 CV_GPU(Error_t) flip(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                      int rows, int cols, int esz, int mode, CV_GPU(Stream_t) s);
+//! flip of @p data in place: every element trades places with its mirror image
+CV_GPU(Error_t) flipInplace(unsigned char* data, size_t step, int rows, int cols, int esz, int mode,
+                            CV_GPU(Stream_t) s);
 //! @p rows x @p cols in, cols x rows out
 CV_GPU(Error_t) transpose(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                           int rows, int cols, int esz, CV_GPU(Stream_t) s);
+//! transpose of the square @p n x @p n matrix @p data in place
+CV_GPU(Error_t) transposeInplace(unsigned char* data, size_t step, int n, int esz, CV_GPU(Stream_t) s);
 
 }}}} // namespace cv::accel::CV_GPU_NS::kernels
 

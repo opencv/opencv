@@ -6,7 +6,7 @@
 #include "opencl_kernels_core.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
-#include "opencv2/core/utils/accel_dispatch.private.hpp"
+#include "opencv2/core/accel_backend.hpp"
 
 #include "transpose.simd.hpp"
 #include "transpose.simd_declarations.hpp"
@@ -480,16 +480,40 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
+// a region or fixed-size output elsewhere stays there; the CPU writes it
+static bool accelOutputMovable(OutputArray _dst, const accel::Device& device)
+{
+    const UMat& dst = _dst.getUMatRef();
+    return accel::getDevice(dst) == device || !(_dst.fixedSize() || dst.isSubmatrix());
+}
+
 static bool accel_transpose(InputArray _src, OutputArray _dst)
 {
-    if (_src.empty())
+    if (!_src.isUMat() || !_dst.isUMat() || _src.empty())
         return false;
-    const Size sz = _src.size();
-    accel::detail::OpCall call("transpose");
-    call.input(_src).output(_dst, MatShape({sz.width, sz.height}), _src.type());
-    return call.run<accel::CoreOps>([](accel::CoreOps& ops, std::vector<UMat>& a, accel::Stream& s) {
-        return ops.transpose(a[0], a[1], s);
-    });
+
+    const UMat src = _src.getUMat();
+    accel::Device device = accel::getDevice(src);
+    if (device.empty() || !accelOutputMovable(_dst, device))
+        return false;
+
+    UMat& dst = _dst.getUMatRef();
+    if (dst.u == src.u && src.rows != src.cols)
+    {
+        // in place with a new shape: a new buffer, filled from the kept src
+        UMat result;
+        result.createOn(device, Size(src.rows, src.cols), src.type());
+        transpose(src, result);
+        dst = result;
+        return true;
+    }
+    dst.createOn(device, Size(src.rows, src.cols), src.type());
+
+    accel::CoreOps* ops = device.ops<accel::CoreOps>("core");
+    if (!ops)
+        return false;   // CPU fallback; the output is already on the device
+
+    return ops->transpose(src, dst, device.threadStream());
 }
 
 void transpose( InputArray _src, OutputArray _dst )
@@ -499,7 +523,8 @@ void transpose( InputArray _src, OutputArray _dst )
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
 
-    CV_ACCEL_RUN(_src.isUMat() || _dst.isUMat(), accel_transpose(_src, _dst))
+    if (accel_transpose(_src, _dst))
+        return;
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_transpose(_src, _dst))
@@ -1033,16 +1058,24 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 #endif
 
-static bool accel_flip(InputArray _src, OutputArray _dst, int flipMode)
+static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 {
-    if (_src.empty())
+    if (!_src.isUMat() || !_dst.isUMat() || _src.empty())
         return false;
-    const Size sz = _src.size();
-    accel::detail::OpCall call("flip");
-    call.input(_src).output(_dst, MatShape({sz.height, sz.width}), _src.type());
-    return call.run<accel::CoreOps>([flipMode](accel::CoreOps& ops, std::vector<UMat>& a, accel::Stream& s) {
-        return ops.flip(a[0], a[1], flipMode, s);
-    });
+
+    const UMat src = _src.getUMat();
+    accel::Device device = accel::getDevice(src);
+    if (device.empty() || !accelOutputMovable(_dst, device))
+        return false;
+
+    UMat& dst = _dst.getUMatRef();
+    dst.createOn(device, src.shape(), src.type());
+
+    accel::CoreOps* ops = device.ops<accel::CoreOps>("core");
+    if (!ops)
+        return false;   // CPU fallback; the output is already on the device
+
+    return ops->flip(src, dst, flipCode, device.threadStream());
 }
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
@@ -1066,7 +1099,8 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         return _src.copyTo(_dst);
     }
 
-    CV_ACCEL_RUN(_src.isUMat() || _dst.isUMat(), accel_flip(_src, _dst, flip_mode))
+    if (accel_flip(_src, _dst, flip_mode))
+        return;
 
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 

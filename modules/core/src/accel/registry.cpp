@@ -4,87 +4,93 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: backends, plugins and devices, streams, ExecutionScope, preferred devices,
-// counters and the transfer policy.
+// Non-CPU HAL: backends and devices, the per-thread streams, and the buffers a stream keeps alive.
 
 #include "../precomp.hpp"
 #include "accel_impl.hpp"
-#include "opencv2/core/utils/configuration.private.hpp"
-#include "opencv2/core/utils/filesystem.hpp"
-#include "opencv2/core/utils/filesystem.private.hpp"
 #include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/utils/tls.hpp"
 
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
-#include "opencv2/core/utils/plugin_loader.private.hpp"
-#endif
+#include <deque>
+#include <mutex>
 
 namespace cv { namespace accel {
 
-// defaults of the backend interface
-
 Event::~Event() {}
-Stream::~Stream() {}
 Ops::~Ops() {}
 Backend::~Backend() {}
 
 bool CoreOps::flip(const UMat&, UMat&, int, Stream&) { return false; }
 bool CoreOps::transpose(const UMat&, UMat&, Stream&) { return false; }
 
-void* Backend::hostAddress(int, void* ptr, MemoryKind) { return ptr; }
-void Backend::beginCpuAccess(int, void*, size_t, MemoryKind, bool) {}
-void Backend::endCpuAccess(int, void*, size_t, MemoryKind, bool) {}
-void* Backend::importDmaBuf(int, int, size_t, MemoryKind&) { return 0; }
-int Backend::exportDmaBuf(int, void*, size_t, MemoryKind) { return -1; }
-Ops* Backend::ops(const String&) { return 0; }
+void* Backend::hostAddress(int, void*) { return 0; }
+Ops* Backend::ops(const char*) { return 0; }
 
-MemoryKind Backend::defaultMemoryKind(int device) const
+struct Stream::Impl
 {
-    // shared memory is used where there is some
-    return detail::mostSharedKind(memoryKinds(device));
-}
+    std::mutex mutex;
+    std::deque<std::pair<Ptr<Event>, std::vector<UMat> > > pending;    // in the order of the work
+};
 
-void* Backend::allocateHost(int, size_t size)
+namespace {
+
+//! failed work counts as finished: the buffers it used can be released
+bool finished(const Ptr<Event>& e)
 {
     try
     {
-        return fastMalloc(size);
+        return e->query();
     }
-    catch (const cv::Exception&)
+    catch (const cv::Exception& ex)
     {
-        return 0;
+        CV_LOG_WARNING(NULL, "accel: device work failed: " << ex.what());
+        return true;
     }
 }
 
-void Backend::deallocateHost(int, void* ptr)
+} // namespace
+
+Stream::Stream() : p_(new Impl()) {}
+
+Stream::~Stream()
 {
-    fastFree(ptr);
+    for (size_t i = 0; i < p_->pending.size(); i++)
+    {
+        try
+        {
+            p_->pending[i].first->wait();
+        }
+        catch (const cv::Exception& ex)
+        {
+            CV_LOG_WARNING(NULL, "accel: device work failed: " << ex.what());
+        }
+    }
+    delete p_;
 }
 
-Device::Impl::Impl(const Ptr<Backend>& b, int i)
-    : backend(b), index(i), name(cv::format("%s:%d", b->name().c_str(), i)),
-      kinds(b->memoryKinds(i)), defaultKind(b->defaultMemoryKind(i)), pinnedBytes(0), allocator(0),
-      cachedBytes(0)
+void Stream::retain(const std::vector<UMat>& arrays)
 {
-    CV_Assert(kinds != 0 && "accel: a device must provide at least one memory kind");
-    CV_Assert((kinds & (int)defaultKind) != 0 && "accel: the default memory kind is not provided");
-    allocator = new detail::DeviceAllocator(this);
+    Ptr<Event> e = record();
+    releaseFinished();
+    std::lock_guard<std::mutex> lock(p_->mutex);
+    p_->pending.push_back(std::make_pair(e, arrays));
 }
 
-const Ptr<Stream>& Device::Impl::defaultStream()
+void Stream::releaseFinished()
 {
-    std::lock_guard<std::mutex> lock(streamMutex_);
-    if (!stream_)
-        stream_ = newStream();
-    return stream_;
+    std::vector<std::vector<UMat> > done;   // released after the lock: that may free device memory
+    std::lock_guard<std::mutex> lock(p_->mutex);
+    while (!p_->pending.empty() && finished(p_->pending.front().first))
+    {
+        done.push_back(std::vector<UMat>());
+        done.back().swap(p_->pending.front().second);
+        p_->pending.pop_front();
+    }
 }
 
-Ptr<Stream> Device::Impl::newStream()
-{
-    Ptr<Stream> s = backend->createStream(index);
-    CV_Assert(s && "accel: the backend returned no stream");
-    s->owner_ = this;
-    return s;
-}
+Device::Impl::Impl(const Ptr<Backend>& b, int i, int id_, detail::BackendAllocator* a)
+    : backend(b), index(i), id(id_), name(cv::format("%s:%d", b->name().c_str(), i)), allocator(a)
+{}
 
 namespace {
 
@@ -98,31 +104,22 @@ public:
         return *r;
     }
 
-    //! built-in backends and plugins found on disk, once, before anything else is registered
+    //! the built-in backends, once, before anything else is registered
     void loadBuiltins()
     {
         std::call_once(builtinsOnce_, [this]() {
 #ifdef HAVE_CUDA
-            if (utils::getConfigurationParameterBool("OPENCV_ACCEL_CUDA", true))
+            try
             {
-                try
-                {
-                    Ptr<Backend> cuda = cuda_impl::createCudaBackend();
-                    if (cuda && cuda->deviceCount() > 0)
-                        add(cuda);
-                }
-                catch (const cv::Exception& e)
-                {
-                    CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
-                }
+                Ptr<Backend> cuda = cuda_impl::createCudaBackend();
+                if (cuda && cuda->deviceCount() > 0)
+                    add(cuda);
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
             }
 #endif
-            if (utils::getConfigurationParameterBool("OPENCV_ACCEL_PLUGINS_ENABLE", true))
-            {
-                std::vector<std::string> plugins = pluginCandidates();
-                for (size_t i = 0; i < plugins.size(); i++)
-                    loadPluginFile(plugins[i]);
-            }
         });
     }
 
@@ -133,24 +130,14 @@ public:
         CV_Assert(!name.empty());
         const int n = b->deviceCount();
         CV_Assert(n >= 0);
-        std::vector<Device::Impl*> created;    // outside the lock: this calls into the backend
-        for (int i = 0; i < n; i++)
-            created.push_back(new Device::Impl(b, i));
         std::lock_guard<std::mutex> lock(mutex_);
         for (size_t i = 0; i < backends_.size(); i++)
-        {
             if (backends_[i]->name() == name)
-            {
-                for (size_t j = 0; j < created.size(); j++)
-                {
-                    delete created[j]->allocator;
-                    delete created[j];
-                }
                 CV_Error_(Error::StsBadArg, ("accel: a backend named '%s' is already registered", name.c_str()));
-            }
-        }
         backends_.push_back(b);
-        devices_.insert(devices_.end(), created.begin(), created.end());
+        detail::BackendAllocator* allocator = new detail::BackendAllocator();
+        for (int i = 0; i < n; i++)
+            devices_.push_back(new Device::Impl(b, i, (int)devices_.size(), allocator));
     }
 
     std::vector<Device::Impl*> devices()
@@ -160,120 +147,8 @@ public:
         return devices_;
     }
 
-    bool loadPluginFile(const std::string& path)
-    {
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
-        using namespace cv::plugin::impl;
-        std::unique_ptr<DynamicLib> lib(new DynamicLib(toFileSystemPath(path)));
-        if (!lib->isLoaded())
-        {
-            CV_LOG_WARNING(NULL, "accel: cannot load the plugin " << path);
-            return false;
-        }
-        FN_opencv_core_accel_plugin_init_t init =
-            reinterpret_cast<FN_opencv_core_accel_plugin_init_t>(lib->getSymbol(CV_ACCEL_PLUGIN_INIT_NAME));
-        if (!init)
-        {
-            CV_LOG_WARNING(NULL, "accel: " << path << " is not a backend plugin (no " CV_ACCEL_PLUGIN_INIT_NAME ")");
-            return false;
-        }
-        const OpenCV_Core_Accel_Plugin_API* api = 0;
-        for (int v = CV_ACCEL_PLUGIN_API_VERSION; v >= 0 && !api; v--)
-            api = init(CV_ACCEL_PLUGIN_ABI_VERSION, v, NULL);
-        if (!api)
-        {
-            CV_LOG_WARNING(NULL, "accel: the plugin " << path << " implements another version of the backend interface");
-            return false;
-        }
-        if (!compatible(api->api_header, path))
-            return false;
-        Backend* raw = 0;
-        if (api->createBackend(&raw) != CV_ERROR_OK || !raw)
-        {
-            CV_LOG_WARNING(NULL, "accel: the plugin " << path << " failed to start");
-            return false;
-        }
-        Ptr<Backend> backend(raw);
-        // the backend's code lives in the library for as long as the backend: for the whole process
-        lib->disableAutomaticLibraryUnloading();
-        lib.release();
-        try
-        {
-            add(backend);
-        }
-        catch (const cv::Exception& e)
-        {
-            CV_LOG_WARNING(NULL, "accel: the plugin " << path << " was not registered: " << e.what());
-            return false;
-        }
-        CV_LOG_INFO(NULL, "accel: loaded the plugin " << path << " (" << backend->name() << ", "
-                          << backend->deviceCount() << " device(s))");
-        return true;
-#else
-        CV_UNUSED(path);
-        return false;
-#endif
-    }
-
 private:
     Registry() {}
-
-    // the interface passes C++ objects (UMat, String, Ptr): plugins need this exact OpenCV version
-    static bool compatible(const OpenCV_API_Header& h, const std::string& path)
-    {
-        if (h.valid_size < sizeof(OpenCV_Core_Accel_Plugin_API) || h.min_api_version != CV_ACCEL_PLUGIN_ABI_VERSION)
-        {
-            CV_LOG_WARNING(NULL, "accel: the plugin " << path << " implements another version of the backend interface");
-            return false;
-        }
-        if (h.opencv_version_major != CV_VERSION_MAJOR || h.opencv_version_minor != CV_VERSION_MINOR
-            || h.opencv_version_patch != CV_VERSION_REVISION)
-        {
-            CV_LOG_WARNING(NULL, "accel: the plugin " << path << " was built for OpenCV "
-                           << h.opencv_version_major << "." << h.opencv_version_minor << "."
-                           << h.opencv_version_patch << ", this is " CV_VERSION);
-            return false;
-        }
-        return true;
-    }
-
-    //! OPENCV_ACCEL_PLUGINS, otherwise libopencv_core_accel_*.so in the plugin directories
-    static std::vector<std::string> pluginCandidates()
-    {
-        std::vector<std::string> result;
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
-        const std::vector<std::string> explicitFiles =
-            utils::getConfigurationParameterPaths("OPENCV_ACCEL_PLUGINS", std::vector<std::string>());
-        if (!explicitFiles.empty())
-            return explicitFiles;
-        std::vector<std::string> dirs =
-            utils::getConfigurationParameterPaths("OPENCV_CORE_PLUGIN_PATH", std::vector<std::string>());
-        if (dirs.empty())
-        {
-            std::string binary;
-            if (utils::getBinLocation(binary))
-                dirs.push_back(utils::fs::getParent(binary));
-        }
-        const std::string pattern = plugin::impl::libraryPrefix() + "opencv_core_accel_*" + plugin::impl::librarySuffix();
-        for (size_t i = 0; i < dirs.size(); i++)
-        {
-            if (dirs[i].empty())
-                continue;
-            std::vector<std::string> found;
-            try
-            {
-                cv::glob(utils::fs::join(dirs[i], pattern), found, false);
-            }
-            catch (const cv::Exception&)
-            {
-                continue;
-            }
-            std::sort(found.begin(), found.end());
-            result.insert(result.end(), found.begin(), found.end());
-        }
-#endif
-        return result;
-    }
 
     std::once_flag builtinsOnce_;
     std::mutex mutex_;
@@ -281,46 +156,15 @@ private:
     std::vector<Device::Impl*> devices_;
 };
 
-struct ScopeTLS
+// streams of one thread, by Device::Impl::id; destroyed with the thread, after their work
+struct ThreadStreams
 {
-    bool active;
-    Device::Impl* dev;
-    const Ptr<Stream>* stream;  // the ExecutionScope's own member, alive as long as the scope
-};
-thread_local ScopeTLS tlsScope = { false, 0, 0 };
-
-std::mutex& preferredMutex()
-{
-    static std::mutex* m = new std::mutex();
-    return *m;
-}
-
-std::vector<Device::Impl*>& preferredList()
-{
-    static std::vector<Device::Impl*>* l = new std::vector<Device::Impl*>();
-    return *l;
-}
-
-std::atomic<bool> g_havePreferred(false);
-
-struct Counters
-{
-    std::atomic<uint64> h2d, d2h, d2d, transfers, ops, fallbacks, waits;
-    Counters() : h2d(0), d2h(0), d2d(0), transfers(0), ops(0), fallbacks(0), waits(0) {}
+    std::vector<Ptr<Stream> > streams;
 };
 
-Counters& counters()
+TLSData<ThreadStreams>& threadStreams()
 {
-    static Counters* c = new Counters();
-    return *c;
-}
-
-std::atomic<int>& policyValue()
-{
-    static std::atomic<int>* p = new std::atomic<int>(
-        utils::getConfigurationParameterString("OPENCV_ACCEL_TRANSFER_POLICY", "allow") == "forbid"
-            ? TRANSFER_FORBID : TRANSFER_ALLOW);
-    return *p;
+    CV_SINGLETON_LAZY_INIT_REF(TLSData<ThreadStreams>, new TLSData<ThreadStreams>())
 }
 
 } // namespace
@@ -330,13 +174,6 @@ void registerBackend(const Ptr<Backend>& backend)
     Registry& r = Registry::get();
     r.loadBuiltins();   // built-in backends come first in Device::enumerate()
     r.add(backend);
-}
-
-bool loadPlugin(const String& path)
-{
-    Registry& r = Registry::get();
-    r.loadBuiltins();
-    return r.loadPluginFile(path);
 }
 
 std::vector<Device> Device::enumerate()
@@ -372,177 +209,49 @@ String Device::backend() const { return impl_ ? impl_->backend->name() : String(
 int Device::index() const { return impl_ ? impl_->index : -1; }
 String Device::name() const { return impl_ ? impl_->name : String("cpu"); }
 String Device::description() const { return impl_ ? impl_->backend->deviceDescription(impl_->index) : String("CPU"); }
-int Device::memoryKinds() const { return impl_ ? impl_->kinds : (int)MEMORY_SHARED_COHERENT; }
-MemoryKind Device::defaultMemoryKind() const { return impl_ ? impl_->defaultKind : MEMORY_SHARED_COHERENT; }
 
-MatAllocator* Device::allocator() const
+Stream& Device::threadStream() const
 {
-    return impl_ ? (MatAllocator*)impl_->allocator : Mat::getDefaultAllocator();
+    CV_Assert(impl_ && "accel: the CPU has no stream");
+    return detail::threadStream(impl_);
+}
+
+Ops* Device::opsImpl(const char* module) const
+{
+    return impl_ ? impl_->backend->ops(module) : 0;
 }
 
 Device getDevice(const UMat& m)
 {
-    detail::BufferState* st = detail::stateOf(m.u);
-    return st ? Device(st->dev) : Device();
-}
-
-MemoryKind getMemoryKind(const UMat& m)
-{
-    detail::BufferState* st = detail::stateOf(m.u);
-    return st ? st->kind : MEMORY_SHARED_COHERENT;
-}
-
-Ptr<Stream> createStream(const Device& device)
-{
-    CV_Assert(!device.empty() && "accel: streams belong to a device");
-    return device.impl()->newStream();
-}
-
-ExecutionScope::ExecutionScope(const Device& device)
-    : prevActive_(tlsScope.active), prev_(tlsScope.dev), prevStream_(tlsScope.stream)
-{
-    tlsScope.active = true;
-    tlsScope.dev = device.impl();
-    tlsScope.stream = 0;
-}
-
-ExecutionScope::ExecutionScope(const Device& device, const Ptr<Stream>& stream)
-    : prevActive_(tlsScope.active), prev_(tlsScope.dev), prevStream_(tlsScope.stream), stream_(stream)
-{
-    CV_Assert(!device.empty() && stream && "accel: a stream needs its device");
-    CV_Assert(stream->device() == device && "accel: the stream belongs to another device");
-    tlsScope.active = true;
-    tlsScope.dev = device.impl();
-    tlsScope.stream = &stream_;
-}
-
-ExecutionScope::~ExecutionScope()
-{
-    tlsScope.active = prevActive_;
-    tlsScope.dev = prev_.impl();
-    tlsScope.stream = prevStream_;
+    if (!m.u || !detail::isBackendAllocator(m.u->currAllocator))
+        return Device();
+    return Device(static_cast<Device::Impl*>(m.u->allocatorContext.get()));
 }
 
 void synchronize(const Device& device)
 {
     if (device.empty())
         return;
-    device.impl()->defaultStream()->synchronize();
-    detail::collectRetired(false);
-}
-
-void setPreferredDevices(const std::vector<Device>& devices)
-{
-    std::vector<Device::Impl*> list;
-    for (size_t i = 0; i < devices.size(); i++)
-    {
-        CV_Assert(!devices[i].empty() && "accel: the CPU cannot be a preferred device");
-        list.push_back(devices[i].impl());
-    }
-    std::lock_guard<std::mutex> lock(preferredMutex());
-    preferredList().swap(list);
-    g_havePreferred = !preferredList().empty();
-}
-
-std::vector<Device> getPreferredDevices()
-{
-    std::lock_guard<std::mutex> lock(preferredMutex());
-    std::vector<Device> result;
-    for (size_t i = 0; i < preferredList().size(); i++)
-        result.push_back(Device(preferredList()[i]));
-    return result;
-}
-
-void setTransferPolicy(TransferPolicy policy)
-{
-    CV_Assert(policy == TRANSFER_ALLOW || policy == TRANSFER_FORBID);
-    policyValue().store(policy);
-}
-
-TransferPolicy getTransferPolicy()
-{
-    return (TransferPolicy)policyValue().load();
-}
-
-TransferStats getTransferStats()
-{
-    Counters& c = counters();
-    TransferStats s;
-    s.bytesHostToDevice = c.h2d.load();
-    s.bytesDeviceToHost = c.d2h.load();
-    s.bytesDeviceToDevice = c.d2d.load();
-    s.transfers = c.transfers.load();
-    s.deviceOps = c.ops.load();
-    s.cpuFallbacks = c.fallbacks.load();
-    s.hostWaits = c.waits.load();
-    return s;
-}
-
-void resetTransferStats()
-{
-    Counters& c = counters();
-    c.h2d = 0; c.d2h = 0; c.d2d = 0; c.transfers = 0;
-    c.ops = 0; c.fallbacks = 0; c.waits = 0;
+    Stream& s = device.threadStream();
+    s.synchronize();
+    s.releaseFinished();
 }
 
 namespace detail {
 
-MemoryKind mostSharedKind(int kinds)
+Stream& threadStream(Device::Impl* dev)
 {
-    if (kinds & MEMORY_SHARED_COHERENT)
-        return MEMORY_SHARED_COHERENT;
-    if (kinds & MEMORY_SHARED_NONCOHERENT)
-        return MEMORY_SHARED_NONCOHERENT;
-    if (kinds & MEMORY_MANAGED)
-        return MEMORY_MANAGED;
-    return MEMORY_DEVICE;
-}
-
-bool isActive()
-{
-    return g_liveBuffers.load(std::memory_order_relaxed) > 0 || tlsScope.active;
-}
-
-const Ptr<Stream>& currentStream(Device::Impl* dev)
-{
-    if (tlsScope.active && tlsScope.dev == dev && tlsScope.stream)
-        return *tlsScope.stream;
-    return dev->defaultStream();
-}
-
-MatAllocator* scopeAllocator()
-{
-    return (tlsScope.active && tlsScope.dev) ? (MatAllocator*)tlsScope.dev->allocator : 0;
-}
-
-Device::Impl* scopeDevice(bool& active)
-{
-    active = tlsScope.active;
-    return tlsScope.dev;
-}
-
-std::vector<Device::Impl*> preferredDevices()
-{
-    if (!g_havePreferred.load(std::memory_order_relaxed))
-        return std::vector<Device::Impl*>();
-    std::lock_guard<std::mutex> lock(preferredMutex());
-    return preferredList();
-}
-
-void countCopy(CopyKind kind, size_t bytes)
-{
-    Counters& c = counters();
-    switch (kind)
+    std::vector<Ptr<Stream> >& streams = threadStreams().getRef().streams;
+    if ((int)streams.size() <= dev->id)
+        streams.resize(dev->id + 1);
+    Ptr<Stream>& s = streams[dev->id];
+    if (!s)
     {
-    case COPY_HOST_TO_DEVICE: c.h2d += bytes; c.transfers++; break;
-    case COPY_DEVICE_TO_HOST: c.d2h += bytes; c.transfers++; break;
-    case COPY_DEVICE_TO_DEVICE: c.d2d += bytes; break;
+        s = dev->backend->createStream(dev->index);
+        CV_Assert(s && "accel: the backend returned no stream");
     }
+    return *s;
 }
-
-void countDeviceOp() { counters().ops++; }
-void countFallback() { counters().fallbacks++; }
-void countHostWait() { counters().waits++; }
 
 } // namespace detail
 

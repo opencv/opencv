@@ -646,8 +646,6 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if (!a)
-            a = accel::detail::scopeAllocator();    // a device ExecutionScope places new data on its device
-        if (!a)
         {
             a = a0;
             a0 = Mat::getDefaultAllocator();
@@ -669,6 +667,63 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
     finalizeHdr(*this);
     addref();
     size.dims = dims = d0;
+}
+
+void UMat::createOn(const accel::Device& device, const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
+{
+    if (accel::getDevice(*this) != device)
+        release();      // create() alone would keep a buffer of the same size where it is
+    if (device.empty())
+    {
+        create(_shape, _type, _usageFlags);
+        return;
+    }
+    const MatShape shape0 = _shape;     // _shape may be this->size, which release() clears
+    _type = CV_MAT_TYPE(_type);
+    if (_usageFlags == cv::USAGE_DEFAULT)
+        _usageFlags = usageFlags;
+    if (u && _type == type() && _usageFlags == usageFlags && shape() == shape0)
+        return;
+    release();
+    if (shape0.dims < 0)
+        return;
+    usageFlags = _usageFlags;
+    flags = _type | MAGIC_VAL;
+    int one = 1;
+    setSize(*this, std::max(shape0.dims, 1), shape0.dims > 0 ? shape0.p : &one, 0, true);
+    offset = 0;
+    if (total() > 0)
+        u = device.impl()->allocator->allocate(device.impl(), dims, size.p, _type, step.p);
+    finalizeHdr(*this);
+    addref();
+    size.dims = dims = shape0.dims;
+    size.layout = shape0.layout;
+    size.C = shape0.C;
+}
+
+void UMat::createOn(const accel::Device& device, Size _size, int _type, UMatUsageFlags _usageFlags)
+{
+    createOn(device, MatShape({_size.height, _size.width}), _type, _usageFlags);
+}
+
+UMat UMat::upload(const accel::Device& device) const
+{
+    if (empty() || accel::getDevice(*this) == device)
+        return *this;
+    UMat dst;
+    dst.createOn(device, shape(), type());
+    copyTo(dst);
+    return dst;
+}
+
+UMat Mat::upload(const accel::Device& device) const
+{
+    UMat dst;
+    if (empty())
+        return dst;
+    dst.createOn(device, shape(), type());
+    copyTo(dst);
+    return dst;
 }
 
 void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
@@ -1174,7 +1229,7 @@ Mat UMat::getMat(AccessFlag accessFlags) const
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     // Accelerator memory does: a CPU read leaves the device copy current, and map() is called for
     // every view, so a write view taken after read views upgrades the mapping.
-    const bool accelMemory = accel::detail::isDeviceAllocator(u->currAllocator);
+    const bool accelMemory = accel::detail::isBackendAllocator(u->currAllocator);
     if (!accelMemory || !(accessFlags & ACCESS_RW))
         accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
@@ -1214,9 +1269,6 @@ void* UMat::handle(AccessFlag accessFlags) const
     {
         u->currAllocator->unmap(u);
     }
-
-    // accelerator memory: the caller's own device work must see OpenCV's finished results
-    accel::detail::prepareHandle(u, accessFlags);
 
     if (!!(accessFlags & ACCESS_WRITE))
         u->markHostCopyObsolete(true);

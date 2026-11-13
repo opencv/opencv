@@ -6,7 +6,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/accel_backend.hpp"
-#include "opencv2/core/utils/accel_dispatch.private.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -17,42 +16,15 @@
 #include <mutex>
 #include <thread>
 
-#ifdef __linux__
-#include <sys/mman.h>
-#include <unistd.h>
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
-#include <sys/syscall.h>
-#endif
-#endif
-
 namespace opencv_test { namespace {
 
-#ifdef __linux__
-int memfdCreate(const char* name)
-{
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 30
-    return (int)syscall(__NR_memfd_create, name, MFD_CLOEXEC);    // bionic declares memfd_create() from API 30 only
-#else
-    return memfd_create(name, MFD_CLOEXEC);
-#endif
-}
-#endif
-
-/* "emu", a test backend with four devices:
+/* "emu", a test backend with three devices:
    emu:0  a discrete GPU: its memory sits at addresses the CPU cannot use, so OpenCV must copy;
-   emu:1  shared, coherent memory: device addresses are host addresses; on Linux the memory is a
-          memfd, so it can be exported and imported as a dma-buf;
-   emu:2  shared, non-coherent memory: the CPU sees a separate "cache" that beginCpuAccess()
-          refreshes from device memory and endCpuAccess() writes back, so a missing call shows up
-          as stale data;
-   emu:3  a "2D engine" on shared memory: imports dma-bufs, and only flips.
+   emu:1  memory the CPU addresses: device addresses are host addresses;
+   emu:2  a second discrete GPU, for transfers between devices.
    Each stream runs its work on its own thread, after an optional delay, so a missing wait shows
-   up as wrong data. Work on freed or unknown memory is counted as a violation. */
-
-/* emu:4 and emu:5 are "APUs" with device and shared memory, for the kind, budget and promotion
-   tests; emu:4 defaults to shared memory, emu:5 to device memory, so its buffers get promoted. */
-enum { EMU_DISCRETE = 0, EMU_SHARED = 1, EMU_NONCOHERENT = 2, EMU_ENGINE = 3, EMU_APU = 4,
-       EMU_APU_DEVICE = 5, EMU_DEVICES = 6 };
+   up as wrong data. Work on freed memory or on another device's memory is counted as a violation. */
+enum { EMU_DISCRETE = 0, EMU_SHARED = 1, EMU_DISCRETE2 = 2, EMU_DEVICES = 3 };
 
 std::atomic<int> g_delayUs(0);
 
@@ -105,7 +77,7 @@ public:
             stop_ = true;
         }
         wake_.notify_all();
-        worker_.join();
+        worker_.join();     // after the queued work
     }
 
     void enqueue(std::function<void()> task)
@@ -122,15 +94,6 @@ public:
         Ptr<EmuEvent> e = makePtr<EmuEvent>();
         enqueue([this, e] { e->complete(error()); });
         return e;
-    }
-
-    bool waitEvent(const Ptr<accel::Event>& event) CV_OVERRIDE
-    {
-        Ptr<EmuEvent> e = event.dynamicCast<EmuEvent>();
-        if (!e)
-            return false;
-        enqueue([e] { e->waitQuiet(); });
-        return true;
     }
 
     void synchronize() CV_OVERRIDE { record()->wait(); }
@@ -200,6 +163,12 @@ public:
     bool flip(const UMat& src, UMat& dst, int flipCode, accel::Stream& stream) CV_OVERRIDE;
     bool transpose(const UMat& src, UMat& dst, accel::Stream& stream) CV_OVERRIDE;
 private:
+    //! false for what the emulated devices decline: doubles, Mat views alive, overlapping views
+    bool runnable(const UMat& src, const UMat& dst);
+    //! queues fn(srcBytes, dstBytes) on @p stream, then keeps the arguments alive as backends do
+    void launch(const UMat& src, UMat& dst, accel::Stream& stream,
+                const std::function<void(const uchar*, uchar*)>& fn);
+
     EmuBackend* b_;
 };
 
@@ -213,241 +182,75 @@ public:
             opsRun_[i] = 0;
             live_[i] = 0;
         }
-        for (int i = 0; i < 4; i++)
-            kindsAllocated[i] = 0;
     }
-
-    //! 0 device, 1 coherent, 2 non-coherent, 3 managed
-    static int kindIndex(accel::MemoryKind k)
-    {
-        switch (k)
-        {
-        case accel::MEMORY_SHARED_COHERENT:    return 1;
-        case accel::MEMORY_SHARED_NONCOHERENT: return 2;
-        case accel::MEMORY_MANAGED:            return 3;
-        default:                               return 0;
-        }
-    }
-
-    //! how many allocations of each kind, so a test can say which one a buffer got
-    std::atomic<int> kindsAllocated[4];
 
     String name() const CV_OVERRIDE { return "emu"; }
     int deviceCount() const CV_OVERRIDE { return EMU_DEVICES; }
     String deviceDescription(int d) const CV_OVERRIDE
     {
-        static const char* names[] = { "emulated discrete GPU", "emulated coherent memory",
-                                       "emulated non-coherent memory", "emulated 2D engine",
-                                       "emulated APU", "emulated APU defaulting to device memory" };
+        static const char* names[] = { "emulated discrete GPU", "emulated memory the CPU addresses",
+                                       "emulated second discrete GPU" };
         return names[d];
     }
-    int memoryKinds(int d) const CV_OVERRIDE
-    {
-        if (d == EMU_APU || d == EMU_APU_DEVICE)
-            return accel::MEMORY_DEVICE | accel::MEMORY_SHARED_COHERENT
-                 | accel::MEMORY_SHARED_NONCOHERENT;
-        if (d == EMU_DISCRETE)
-            return accel::MEMORY_DEVICE;
-        return d == EMU_NONCOHERENT ? accel::MEMORY_SHARED_NONCOHERENT : accel::MEMORY_SHARED_COHERENT;
-    }
-    accel::MemoryKind defaultMemoryKind(int d) const CV_OVERRIDE
-    {
-        return d == EMU_APU_DEVICE ? accel::MEMORY_DEVICE : accel::Backend::defaultMemoryKind(d);
-    }
 
-    void* allocate(int d, size_t size, accel::MemoryKind kind) CV_OVERRIDE
+    void* allocate(int d, size_t size) CV_OVERRIDE
     {
         std::lock_guard<std::mutex> lock(mem_);
         Block* b = new Block();
         b->device = d;
         b->size = size;
-        b->kind = kind;
-        kindsAllocated[kindIndex(kind)]++;
-        // device memory is a fake address the CPU cannot use, whatever device it is on
-        if (kind == accel::MEMORY_DEVICE)
-        {
-            b->storage.resize(size);
-            b->base = b->storage.data();
-            b->addr = nextFake_;
-            nextFake_ += ((size >> 12) + 2) << 12;
-            blocks_[b->addr] = b;
-            live_[d]++;
-            return (void*)b->addr;
-        }
-        if (kind == accel::MEMORY_SHARED_NONCOHERENT)
-        {
-            b->storage.resize(size);
-            b->base = b->storage.data();
-            b->cache.resize(size);
-            b->addr = nextFake_;
-            nextFake_ += ((size >> 12) + 2) << 12;
-            blocks_[b->addr] = b;
-            live_[d]++;
-            return (void*)b->addr;
-        }
-        // MEMORY_SHARED_COHERENT: one address for the CPU and the device
-        {
-#ifdef __linux__
-            const int fd = memfdCreate("emu");
-            if (fd >= 0 && ftruncate(fd, (off_t)size) == 0)
-            {
-                void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-                if (p != MAP_FAILED)
-                {
-                    b->fd = fd;
-                    b->base = (uchar*)p;
-                }
-            }
-            if (!b->base && fd >= 0)
-                close(fd);
-#endif
-            if (!b->base)
-            {
-                b->storage.resize(size);
-                b->base = b->storage.data();
-            }
+        b->storage.resize(size);
+        b->base = b->storage.data();
+        if (d == EMU_SHARED)
             b->addr = (uintptr_t)b->base;   // the CPU and the device use the same address
+        else
+        {
+            b->addr = nextFake_;            // an address the CPU cannot use
+            nextFake_ += ((size >> 12) + 2) << 12;
         }
         blocks_[b->addr] = b;
         live_[d]++;
         return (void*)b->addr;
     }
 
-    void deallocate(int d, void* ptr, accel::MemoryKind) CV_OVERRIDE
+    void deallocate(int d, void* handle) CV_OVERRIDE
     {
         std::lock_guard<std::mutex> lock(mem_);
-        std::map<uintptr_t, Block*>::iterator it = blocks_.find((uintptr_t)ptr);
+        std::map<uintptr_t, Block*>::iterator it = blocks_.find((uintptr_t)handle);
         if (it == blocks_.end() || it->second->device != d)
         {
             violations_++;
             return;
         }
         live_[d]--;
-        release(it->second);
+        delete it->second;
         blocks_.erase(it);
     }
 
-    void* importDmaBuf(int d, int fd, size_t size, accel::MemoryKind& kind) CV_OVERRIDE
+    void* hostAddress(int d, void* handle) CV_OVERRIDE
     {
-#ifdef __linux__
-        if (d != EMU_SHARED && d != EMU_ENGINE)
-            return 0;
-        void* p = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        if (p == MAP_FAILED)
-            return 0;
-        kind = accel::MEMORY_SHARED_COHERENT;   // a mapped memfd, whatever this device's default is
-        std::lock_guard<std::mutex> lock(mem_);
-        Block* b = new Block();
-        b->device = d;
-        b->size = size;
-        b->base = (uchar*)p;
-        b->fd = dup(fd);
-        b->addr = (uintptr_t)p;
-        blocks_[b->addr] = b;
-        live_[d]++;
-        imports_++;
-        return p;
-#else
-        CV_UNUSED(d); CV_UNUSED(fd); CV_UNUSED(size); CV_UNUSED(kind);
-        return 0;
-#endif
-    }
-
-    int exportDmaBuf(int d, void* ptr, size_t, accel::MemoryKind) CV_OVERRIDE
-    {
-#ifdef __linux__
-        std::lock_guard<std::mutex> lock(mem_);
-        Block* b = find((uintptr_t)ptr, 1);
-        if (!b || b->device != d || b->fd < 0)
-            return -1;
-        return dup(b->fd);
-#else
-        CV_UNUSED(d); CV_UNUSED(ptr);
-        return -1;
-#endif
-    }
-
-    void* hostAddress(int d, void* ptr, accel::MemoryKind kind) CV_OVERRIDE
-    {
-        CV_UNUSED(d);
-        if (kind != accel::MEMORY_SHARED_NONCOHERENT)
-            return ptr;
-        std::lock_guard<std::mutex> lock(mem_);
-        Block* b = find((uintptr_t)ptr, 1);
-        if (!b)
-        {
-            violations_++;
-            return 0;
-        }
-        return b->cache.data() + ((uintptr_t)ptr - b->addr);
-    }
-
-    void beginCpuAccess(int d, void* ptr, size_t size, accel::MemoryKind kind, bool) CV_OVERRIDE
-    {
-        CV_UNUSED(d);
-        begins_++;
-        if (kind != accel::MEMORY_SHARED_NONCOHERENT)
-            return;
-        std::lock_guard<std::mutex> lock(mem_);
-        Block* b = find((uintptr_t)ptr, size);
-        if (!b)
-        {
-            violations_++;
-            return;
-        }
-        const size_t off = (uintptr_t)ptr - b->addr;
-        memcpy(b->cache.data() + off, b->base + off, size);     // the CPU now sees the device's bytes
-    }
-
-    void endCpuAccess(int d, void* ptr, size_t size, accel::MemoryKind kind, bool written) CV_OVERRIDE
-    {
-        CV_UNUSED(d);
-        ends_++;
-        if (kind != accel::MEMORY_SHARED_NONCOHERENT || !written)
-            return;
-        std::lock_guard<std::mutex> lock(mem_);
-        Block* b = find((uintptr_t)ptr, size);
-        if (!b)
-        {
-            violations_++;
-            return;
-        }
-        const size_t off = (uintptr_t)ptr - b->addr;
-        memcpy(b->base + off, b->cache.data() + off, size);     // the device now sees the CPU's bytes
+        return d == EMU_SHARED ? handle : 0;
     }
 
     void copy(int d, accel::CopyKind kind, accel::DeviceRef dst, size_t dstStep,
-              accel::DeviceRef src, size_t srcStep,
-              size_t w, size_t rows, accel::Stream& stream, bool hostStable) CV_OVERRIDE
+              accel::DeviceRef src, size_t srcStep, size_t w, size_t rows, accel::Stream& stream) CV_OVERRIDE
     {
         EmuStream& s = emuStreamOf(stream);
         CV_Assert(s.device_ == d);
+        (kind == accel::COPY_HOST_TO_DEVICE ? h2d_ : kind == accel::COPY_DEVICE_TO_HOST ? d2h_ : d2d_) += w * rows;
         // this backend's handles are addresses of its own making, so the offset folds into them
         const uintptr_t da = (uintptr_t)dst.handle + dst.offset;
         const uintptr_t sa = (uintptr_t)src.handle + src.offset;
-        if (kind == accel::COPY_HOST_TO_DEVICE && !hostStable)
-        {
-            // the caller's memory may change once we return: read it now, as a staging copy would
-            std::shared_ptr<std::vector<uchar> > staged = std::make_shared<std::vector<uchar> >(w * rows);
-            for (size_t r = 0; r < rows; r++)
-                memcpy(staged->data() + r * w, (const uchar*)sa + r * srcStep, w);
-            s.enqueue([this, staged, da, dstStep, w, rows] {
-                std::lock_guard<std::mutex> lock(mem_);
-                uchar* p = deviceBytes(da, dstStep, w, rows);
-                if (p)
-                    for (size_t r = 0; r < rows; r++)
-                        memcpy(p + r * dstStep, staged->data() + r * w, w);
-            });
-            return;
-        }
-        s.enqueue([this, kind, da, dstStep, sa, srcStep, w, rows] {
+        s.enqueue([this, d, kind, da, dstStep, sa, srcStep, w, rows] {
             std::lock_guard<std::mutex> lock(mem_);
-            const uchar* sp = kind == accel::COPY_HOST_TO_DEVICE ? (const uchar*)sa : deviceBytes(sa, srcStep, w, rows);
-            uchar* dp = kind == accel::COPY_DEVICE_TO_HOST ? (uchar*)da : deviceBytes(da, dstStep, w, rows);
+            const uchar* sp = kind == accel::COPY_HOST_TO_DEVICE ? (const uchar*)sa : deviceBytes(d, sa, srcStep, w, rows);
+            uchar* dp = kind == accel::COPY_DEVICE_TO_HOST ? (uchar*)da : deviceBytes(d, da, dstStep, w, rows);
             if (sp && dp)
                 for (size_t r = 0; r < rows; r++)
                     memcpy(dp + r * dstStep, sp + r * srcStep, w);
         });
+        if (kind != accel::COPY_DEVICE_TO_DEVICE)
+            s.synchronize();    // copies to and from the host finish before returning
     }
 
     Ptr<accel::Stream> createStream(int d) CV_OVERRIDE
@@ -455,19 +258,20 @@ public:
         Ptr<EmuStream> s = makePtr<EmuStream>(d);
         std::lock_guard<std::mutex> lock(mem_);
         streams_.push_back(std::weak_ptr<EmuStream>(s));
+        streamsCreated_++;
         return s;
     }
 
-    accel::Ops* ops(const String& module) CV_OVERRIDE
+    accel::Ops* ops(const char* module) CV_OVERRIDE
     {
-        return module == accel::CoreOps::module() ? &core_ : 0;
+        return strcmp(module, "core") == 0 ? &core_ : 0;
     }
 
-    //! the bytes of [addr, addr + (rows-1)*step + width) in device memory; NULL (a violation) if unknown
-    uchar* deviceBytes(uintptr_t addr, size_t step, size_t width, size_t rows)
+    //! the bytes of [addr, addr + (rows-1)*step + width) in @p d's memory; NULL (a violation) if not there
+    uchar* deviceBytes(int d, uintptr_t addr, size_t step, size_t width, size_t rows)
     {
         Block* b = find(addr, rows > 0 ? (rows - 1) * step + width : 0);
-        if (!b)
+        if (!b || b->device != d)
         {
             violations_++;
             return 0;
@@ -480,15 +284,22 @@ public:
         g_delayUs = 0;
         throwNext = false;
         failNextAsync = false;
-        duringOp = nullptr;
         violations_ = 0;
-        begins_ = 0;
-        ends_ = 0;
-        imports_ = 0;
-        for (int i = 0; i < EMU_DEVICES; i++)
-            opsRun_[i] = 0;
+        resetCounters();
         clearErrors();
     }
+
+    void resetCounters()
+    {
+        h2d_ = 0;
+        d2h_ = 0;
+        d2d_ = 0;
+        for (int i = 0; i < EMU_DEVICES; i++)
+            opsRun_[i] = 0;
+    }
+
+    //! bytes moved between host and device memory
+    uint64 transferred() const { return h2d_.load() + d2h_.load(); }
 
     void clearErrors()
     {
@@ -509,38 +320,22 @@ public:
 
     std::atomic<bool> throwNext{false};        // the next operation throws
     std::atomic<bool> failNextAsync{false};    // the next operation fails on the device, later
-    std::function<void()> duringOp;            // runs inside flip, after it took the addresses
     std::atomic<int> violations_{0};
-    std::atomic<int> begins_{0}, ends_{0};
-    std::atomic<int> imports_{0};
+    std::atomic<int> streamsCreated_{0};
+    std::atomic<uint64> h2d_{0}, d2h_{0}, d2d_{0};
     std::atomic<int> opsRun_[EMU_DEVICES];
     std::mutex mem_;    // held by every task while it touches device memory
 
 private:
     struct Block
     {
-        Block() : device(0), kind(accel::MEMORY_DEVICE), addr(0), size(0), base(0), fd(-1) {}
+        Block() : device(0), addr(0), size(0), base(0) {}
         int device;
-        accel::MemoryKind kind;     // what it was allocated as, so deallocate can check
         uintptr_t addr;
         size_t size;
         uchar* base;
         std::vector<uchar> storage;
-        std::vector<uchar> cache;
-        int fd;     // memfd behind mmap'ed memory
     };
-
-    static void release(Block* b)
-    {
-#ifdef __linux__
-        if (b->fd >= 0)
-        {
-            munmap(b->base, b->size);
-            close(b->fd);
-        }
-#endif
-        delete b;
-    }
 
     Block* find(uintptr_t addr, size_t len)
     {
@@ -559,68 +354,76 @@ private:
     std::vector<std::weak_ptr<EmuStream> > streams_;
 };
 
-bool EmuCoreOps::flip(const UMat& src, UMat& dst, int flipCode, accel::Stream& stream)
+bool EmuCoreOps::runnable(const UMat& src, const UMat& dst)
 {
     if (src.depth() == CV_64F)
-        return false;   // the emulated device has no doubles: the CPU runs these calls
+        return false;   // the emulated devices have no doubles: the CPU runs these calls
     if (b_->throwNext.exchange(false))
-        CV_Error(Error::StsError, "emu: flip failed");
-    if (src.dims != 2)
-        return false;
+        CV_Error(Error::StsError, "emu: the operation failed");
+    return src.dims == 2 && src.u->refcount == 0 && dst.u->refcount == 0 &&
+           (src.u != dst.u || src.offset == dst.offset);
+}
+
+void EmuCoreOps::launch(const UMat& src, UMat& dst, accel::Stream& stream,
+                        const std::function<void(const uchar*, uchar*)>& fn)
+{
     EmuStream* s = &emuStreamOf(stream);
     b_->opsRun_[s->device_]++;
-    const uintptr_t sa = (uintptr_t)accel::devicePtr(src), da = (uintptr_t)accel::devicePtr(dst);
+    const uintptr_t sa = (uintptr_t)src.handle(ACCESS_READ) + src.offset;
+    const uintptr_t da = (uintptr_t)dst.handle(ACCESS_WRITE) + dst.offset;
     const size_t ss = src.step[0], ds = dst.step[0];
-    const int rows = src.rows, cols = src.cols;
-    const int esz = (int)src.elemSize();
+    const size_t sw = src.cols * src.elemSize(), dw = dst.cols * dst.elemSize();
+    const int srows = src.rows, drows = dst.rows;
     const bool fail = b_->failNextAsync.exchange(false);
-    if (b_->duringOp)
-        b_->duringOp();
     EmuBackend* b = b_;
     s->enqueue([=] {
         if (fail)
         {
-            s->fail("emu: flip failed on the device");
+            s->fail("emu: the operation failed on the device");
             return;
         }
         std::lock_guard<std::mutex> lock(b->mem_);
-        const uchar* sp = b->deviceBytes(sa, ss, (size_t)cols * esz, rows);
-        uchar* dp = b->deviceBytes(da, ds, (size_t)cols * esz, rows);
-        if (!sp || !dp)
-            return;
+        const uchar* sp = b->deviceBytes(s->device_, sa, ss, sw, srows);
+        uchar* dp = b->deviceBytes(s->device_, da, ds, dw, drows);
+        if (sp && dp)
+            fn(sp, dp);
+    });
+    stream.retain({ src, dst });
+}
+
+bool EmuCoreOps::flip(const UMat& src, UMat& dst, int flipCode, accel::Stream& stream)
+{
+    if (!runnable(src, dst))
+        return false;
+    const size_t ss = src.step[0], ds = dst.step[0], esz = src.elemSize();
+    const int rows = src.rows, cols = src.cols;
+    launch(src, dst, stream, [=](const uchar* sp, uchar* dp) {
+        // through a copy of the source, which makes an in-place call work too
+        std::vector<uchar> tmp((size_t)rows * cols * esz);
+        for (int y = 0; y < rows; y++)
+            memcpy(&tmp[(size_t)y * cols * esz], sp + y * ss, cols * esz);
         const bool flipRows = flipCode <= 0, flipCols = flipCode != 0;
         for (int y = 0; y < rows; y++)
             for (int x = 0; x < cols; x++)
-                memcpy(dp + y * ds + (size_t)x * esz,
-                       sp + (flipRows ? rows - 1 - y : y) * ss
-                          + (size_t)(flipCols ? cols - 1 - x : x) * esz, esz);
+                memcpy(dp + y * ds + x * esz,
+                       &tmp[((size_t)(flipRows ? rows - 1 - y : y) * cols + (flipCols ? cols - 1 - x : x)) * esz], esz);
     });
     return true;
 }
 
 bool EmuCoreOps::transpose(const UMat& src, UMat& dst, accel::Stream& stream)
 {
-    EmuStream* s = &emuStreamOf(stream);
-    if (src.depth() == CV_64F || s->device_ == EMU_ENGINE)
-        return false;   // the 2D engine only flips
-    if (src.dims != 2)
+    if (!runnable(src, dst))
         return false;
-    b_->opsRun_[s->device_]++;
-    const uintptr_t sa = (uintptr_t)accel::devicePtr(src), da = (uintptr_t)accel::devicePtr(dst);
-    const size_t ss = src.step[0], ds = dst.step[0];
+    const size_t ss = src.step[0], ds = dst.step[0], esz = src.elemSize();
     const int rows = src.rows, cols = src.cols;
-    const int esz = (int)src.elemSize();
-    EmuBackend* b = b_;
-    s->enqueue([=] {
-        std::lock_guard<std::mutex> lock(b->mem_);
-        const uchar* sp = b->deviceBytes(sa, ss, (size_t)cols * esz, rows);
-        uchar* dp = b->deviceBytes(da, ds, (size_t)rows * esz, cols);
-        if (!sp || !dp)
-            return;
+    launch(src, dst, stream, [=](const uchar* sp, uchar* dp) {
+        std::vector<uchar> tmp((size_t)rows * cols * esz);
+        for (int y = 0; y < rows; y++)
+            memcpy(&tmp[(size_t)y * cols * esz], sp + y * ss, cols * esz);
         for (int y = 0; y < rows; y++)
             for (int x = 0; x < cols; x++)
-                memcpy(dp + x * ds + (size_t)y * esz,
-                       sp + y * ss + (size_t)x * esz, esz);
+                memcpy(dp + x * ds + y * esz, &tmp[((size_t)y * cols + x) * esz], esz);
     });
     return true;
 }
@@ -641,53 +444,6 @@ accel::Device emuDevice(int i)
 {
     emu();
     return accel::Device::find(cv::format("emu:%d", i));
-}
-
-//! a setting of an OPENCV_ACCEL_* variable, put back when it goes out of scope
-class EnvVar
-{
-public:
-    EnvVar(const char* name, const std::string& value) : name_(name)
-    {
-        const char* prev = getenv(name);
-        had_ = prev != 0;
-        if (had_)
-            prev_ = prev;
-        set(name, value);
-        accel::detail::reloadSettings();    // the accel code reads them once otherwise
-    }
-    ~EnvVar()
-    {
-        set(name_, had_ ? prev_ : std::string());
-        accel::detail::reloadSettings();
-    }
-private:
-    static void set(const char* name, const std::string& value)
-    {
-#ifdef _WIN32
-        _putenv_s(name, value.c_str());     // an empty value removes the variable
-#else
-        if (value.empty())
-            unsetenv(name);
-        else
-            setenv(name, value.c_str(), 1);
-#endif
-    }
-
-    const char* name_;
-    bool had_;
-    std::string prev_;
-};
-
-//! a UMat in @p d's memory holding @p m; its allocator field stays empty
-UMat onDevice(const accel::Device& d, const Mat& m)
-{
-    UMat u;
-    u.allocator = d.allocator();
-    u.create(m.size(), m.type());
-    u.allocator = 0;
-    m.copyTo(u);
-    return u;
 }
 
 Mat toHost(const UMat& u)
@@ -712,44 +468,36 @@ protected:
         if (sizeof(void*) < 8)
             throw SkipTestException("the emulator needs 64-bit addresses");
         emu().reset();
-        accel::setTransferPolicy(accel::TRANSFER_ALLOW);
-        accel::resetTransferStats();
     }
     void TearDown() CV_OVERRIDE
     {
         if (sizeof(void*) < 8)
             return;
-        accel::setPreferredDevices(std::vector<accel::Device>());
+        g_delayUs = 0;
         for (int i = 0; i < EMU_DEVICES; i++)
             accel::synchronize(emuDevice(i));
-        accel::setTransferPolicy(accel::TRANSFER_ALLOW);
-        g_delayUs = 0;
         EXPECT_EQ(0, emu().violations_.load());
-        EXPECT_EQ(emu().begins_.load(), emu().ends_.load());
     }
 };
 
 TEST_F(Core_Accel, devices)
 {
-    accel::Device d0 = emuDevice(EMU_DISCRETE), d1 = emuDevice(EMU_SHARED), d2 = emuDevice(EMU_NONCOHERENT);
+    const accel::Device d0 = emuDevice(EMU_DISCRETE), d1 = emuDevice(EMU_SHARED);
     ASSERT_FALSE(d0.empty());
     ASSERT_FALSE(d1.empty());
-    ASSERT_FALSE(d2.empty());
     EXPECT_EQ("emu:1", d1.name());
     EXPECT_EQ("emu", d1.backend());
     EXPECT_EQ(1, d1.index());
+    EXPECT_EQ("emulated memory the CPU addresses", d1.description());
     EXPECT_EQ(d0, accel::Device::find("emu"));
     EXPECT_TRUE(accel::Device::find("emu:7").empty());
+    EXPECT_TRUE(accel::Device::find("emu:x").empty());
     EXPECT_TRUE(accel::Device::find("nonexistent").empty());
-    EXPECT_EQ(accel::MEMORY_DEVICE, d0.memoryKinds());
-    EXPECT_EQ(accel::MEMORY_SHARED_COHERENT, d1.memoryKinds());
-    EXPECT_EQ(accel::MEMORY_SHARED_NONCOHERENT, d2.memoryKinds());
-    EXPECT_EQ(accel::MEMORY_DEVICE, d0.defaultMemoryKind());
-    EXPECT_EQ(accel::MEMORY_SHARED_COHERENT, d1.defaultMemoryKind());
-    EXPECT_EQ(accel::MEMORY_SHARED_NONCOHERENT, d2.defaultMemoryKind());
     EXPECT_EQ("cpu", accel::Device().name());
-    EXPECT_EQ(accel::MEMORY_SHARED_COHERENT, accel::Device().memoryKinds());
-    EXPECT_EQ(Mat::getDefaultAllocator(), accel::Device().allocator());
+
+    EXPECT_TRUE(d0.ops<accel::CoreOps>("core") != NULL);
+    EXPECT_TRUE(d0.ops<accel::CoreOps>("imgproc") == NULL);
+    EXPECT_TRUE(accel::Device().ops<accel::CoreOps>("core") == NULL);
 
     int found = 0;
     std::vector<accel::Device> all = accel::Device::enumerate();
@@ -758,24 +506,77 @@ TEST_F(Core_Accel, devices)
     EXPECT_EQ(EMU_DEVICES, found);
 }
 
-TEST_F(Core_Accel, round_trip_on_every_device)
+TEST_F(Core_Accel, create_on_places_the_data)
+{
+    const accel::Device d0 = emuDevice(EMU_DISCRETE), d2 = emuDevice(EMU_DISCRETE2);
+    UMat u;
+    u.createOn(d0, Size(16, 8), CV_8UC3);
+    EXPECT_EQ(d0, accel::getDevice(u));
+    EXPECT_EQ(Size(16, 8), u.size());
+    EXPECT_EQ(CV_8UC3, u.type());
+    const UMatData* first = u.u;
+    u.createOn(d0, MatShape({8, 16}), CV_8UC3);
+    EXPECT_EQ(first, u.u) << "the same shape and type on the same device keep the buffer";
+    u.createOn(d2, Size(16, 8), CV_8UC3);
+    EXPECT_EQ(d2, accel::getDevice(u)) << "data on another device is released";
+    u.createOn(accel::Device(), Size(16, 8), CV_8UC3);
+    EXPECT_TRUE(accel::getDevice(u).empty());
+    EXPECT_EQ(Size(16, 8), u.size());
+
+    UMat nd;
+    nd.createOn(d0, MatShape({3, 4, 5}), CV_32FC1);
+    EXPECT_EQ(3, nd.dims);
+    EXPECT_EQ(MatShape({3, 4, 5}), nd.shape());
+    EXPECT_EQ(d0, accel::getDevice(nd));
+}
+
+TEST_F(Core_Accel, upload_and_read_back_on_every_device)
 {
     const Mat src = randomMat(Size(53, 37), CV_8UC3);
+    const uint64 bytes = src.total() * src.elemSize();
     for (int d = 0; d < EMU_DEVICES; d++)
     {
-        accel::resetTransferStats();
-        UMat u = onDevice(emuDevice(d), src);
+        emu().resetCounters();
+        UMat u = src.upload(emuDevice(d));
         EXPECT_EQ(emuDevice(d), accel::getDevice(u));
         EXPECT_EQ(0, cvtest::norm(src, toHost(u), NORM_INF)) << "device " << d;
-        const accel::TransferStats st = accel::getTransferStats();
-        if (d == EMU_DISCRETE || d == EMU_APU_DEVICE)
-        {
-            EXPECT_EQ(src.total() * src.elemSize(), st.bytesHostToDevice);
-            EXPECT_EQ(src.total() * src.elemSize(), st.bytesDeviceToHost);
-        }
+        if (d == EMU_SHARED)
+            EXPECT_EQ(0u, emu().transferred()) << "the CPU uses the device's memory in place";
         else
-            EXPECT_EQ(0u, st.transfers) << "shared memory is never copied";
+        {
+            EXPECT_EQ(bytes, emu().h2d_.load());
+            EXPECT_EQ(bytes, emu().d2h_.load());
+        }
     }
+}
+
+TEST_F(Core_Accel, mat_upload_has_read_the_matrix_when_it_returns)
+{
+    Mat src = randomMat(Size(32, 16), CV_8UC1);
+    const Mat expected = src.clone();
+    g_delayUs = 10000;
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    src.setTo(Scalar::all(0));
+    src.release();
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF));
+}
+
+TEST_F(Core_Accel, umat_upload_is_shallow_on_the_same_device)
+{
+    const Mat src = randomMat(Size(20, 10), CV_16UC2);
+    const accel::Device d0 = emuDevice(EMU_DISCRETE), d2 = emuDevice(EMU_DISCRETE2);
+    UMat u = src.upload(d0);
+    EXPECT_EQ(u.u, u.upload(d0).u);
+
+    UMat other = u.upload(d2);
+    EXPECT_EQ(d2, accel::getDevice(other));
+    EXPECT_NE(u.u, other.u);
+    EXPECT_EQ(0, cvtest::norm(src, toHost(other), NORM_INF));
+
+    UMat back = other.upload(accel::Device());
+    EXPECT_TRUE(accel::getDevice(back).empty());
+    EXPECT_EQ(0, cvtest::norm(src, toHost(back), NORM_INF));
+    EXPECT_EQ(back.u, back.upload(accel::Device()).u);
 }
 
 TEST_F(Core_Accel, flip_runs_on_the_device_of_its_input)
@@ -785,15 +586,11 @@ TEST_F(Core_Accel, flip_runs_on_the_device_of_its_input)
     {
         for (int code = -1; code <= 1; code++)
         {
-            UMat u = onDevice(emuDevice(d), src), dst;
-            emu().opsRun_[d] = 0;
-            accel::resetTransferStats();
+            UMat u = src.upload(emuDevice(d)), dst;
+            emu().resetCounters();
             cv::flip(u, dst, code);
-            const accel::TransferStats st = accel::getTransferStats();
-            EXPECT_EQ(1u, st.deviceOps);
-            EXPECT_EQ(0u, st.cpuFallbacks);
-            EXPECT_EQ(0u, st.transfers);
             EXPECT_EQ(1, emu().opsRun_[d].load());
+            EXPECT_EQ(0u, emu().transferred());
             EXPECT_EQ(emuDevice(d), accel::getDevice(dst)) << "the output is created where the call ran";
             Mat expected;
             cv::flip(src, expected, code);
@@ -805,12 +602,12 @@ TEST_F(Core_Accel, flip_runs_on_the_device_of_its_input)
 TEST_F(Core_Accel, transpose_runs_on_the_device)
 {
     const Mat src = randomMat(Size(29, 13), CV_32FC2);
-    for (int d = 0; d < EMU_ENGINE; d++)
+    for (int d = 0; d < EMU_DEVICES; d++)
     {
-        UMat u = onDevice(emuDevice(d), src), dst;
-        accel::resetTransferStats();
+        UMat u = src.upload(emuDevice(d)), dst;
+        emu().resetCounters();
         cv::transpose(u, dst);
-        EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
+        EXPECT_EQ(1, emu().opsRun_[d].load());
         EXPECT_EQ(emuDevice(d), accel::getDevice(dst));
         EXPECT_EQ(Size(13, 29), dst.size());
         EXPECT_EQ(0, cvtest::norm(src.t(), toHost(dst), NORM_INF)) << "device " << d;
@@ -820,102 +617,178 @@ TEST_F(Core_Accel, transpose_runs_on_the_device)
 TEST_F(Core_Accel, declined_call_runs_on_the_cpu_and_its_output_stays_on_the_device)
 {
     const Mat src = randomMat(Size(20, 10), CV_64FC1);  // the emulator declines doubles
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
-    accel::resetTransferStats();
+    UMat u = src.upload(emuDevice(EMU_DISCRETE)), dst;
+    emu().resetCounters();
     cv::flip(u, dst, 1);
-    const accel::TransferStats st = accel::getTransferStats();
-    EXPECT_EQ(0u, st.deviceOps);
-    EXPECT_EQ(1u, st.cpuFallbacks);
+    EXPECT_EQ(0, emu().opsRun_[EMU_DISCRETE].load());
     EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(dst));
     Mat expected;
     cv::flip(src, expected, 1);
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
 }
 
-TEST_F(Core_Accel, cpu_fallback_reads_its_input_without_uploading_it_again)
+TEST_F(Core_Accel, cpu_fallback_does_not_upload_its_input_again)
 {
     const Mat src = randomMat(Size(20, 10), CV_64FC1);
     const uint64 bytes = src.total() * src.elemSize();
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
-    accel::resetTransferStats();
+    UMat u = src.upload(emuDevice(EMU_DISCRETE)), dst;
+    emu().resetCounters();
     cv::flip(u, dst, 0);
-    const accel::TransferStats st = accel::getTransferStats();
-    EXPECT_EQ(bytes, st.bytesDeviceToHost) << "the input is downloaded once";
-    EXPECT_EQ(bytes, st.bytesHostToDevice) << "only the output is uploaded; a fresh output is not downloaded";
+    EXPECT_EQ(bytes, emu().d2h_.load()) << "the input is downloaded once";
+    EXPECT_EQ(bytes, emu().h2d_.load()) << "only the output is uploaded; a new output is not downloaded";
 }
 
-TEST_F(Core_Accel, shared_memory_is_used_in_place)
+TEST_F(Core_Accel, cpu_uses_memory_it_addresses_in_place)
 {
     const Mat src = randomMat(Size(16, 8), CV_64FC1);
-    UMat u = onDevice(emuDevice(EMU_SHARED), src);
-    accel::resetTransferStats();
+    UMat u = src.upload(emuDevice(EMU_SHARED));
+    emu().resetCounters();
     {
         Mat view = u.getMat(ACCESS_READ);
         EXPECT_EQ((uchar*)u.u->handle + u.offset, view.data) << "the CPU reads the device's own bytes";
     }
     UMat dst;
     cv::flip(u, dst, 1);    // declined: the CPU runs it, on the same memory
-    EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
-    EXPECT_EQ(0u, accel::getTransferStats().transfers);
+    EXPECT_EQ(0u, emu().transferred());
     Mat expected;
     cv::flip(src, expected, 1);
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
 }
 
-TEST_F(Core_Accel, noncoherent_memory_keeps_the_caches_right)
+TEST_F(Core_Accel, in_place_calls_run_on_the_device)
 {
-    accel::Device d = emuDevice(EMU_NONCOHERENT);
-    UMat u;
-    u.allocator = d.allocator();
-    u.create(12, 9, CV_8UC1);
-    u.allocator = 0;
+    const int devices[] = { EMU_DISCRETE, EMU_SHARED };
+    for (int i = 0; i < 2; i++)
     {
-        Mat view = u.getMat(ACCESS_WRITE);
-        for (int y = 0; y < view.rows; y++)
-            for (int x = 0; x < view.cols; x++)
-                view.at<uchar>(y, x) = (uchar)(y * 16 + x);
-    }   // releasing the view writes the CPU cache back
-    UMat dst;
-    cv::flip(u, dst, -1);   // runs on the device, on device memory
-    Mat expected(12, 9, CV_8UC1);
-    for (int y = 0; y < 12; y++)
-        for (int x = 0; x < 9; x++)
-            expected.at<uchar>(y, x) = (uchar)((11 - y) * 16 + (8 - x));
-    Mat got = dst.getMat(ACCESS_READ).clone();     // the view refreshes the CPU cache first
-    EXPECT_EQ(0, cvtest::norm(expected, got, NORM_INF));
-    EXPECT_EQ(1, emu().opsRun_[EMU_NONCOHERENT].load());
+        const int d = devices[i];
+        const Mat rect = randomMat(Size(9, 6), CV_8UC3), square = randomMat(Size(7, 7), CV_16UC1);
+        UMat u = rect.upload(emuDevice(d));
+        emu().resetCounters();
+        cv::flip(u, u, 1);
+        cv::flip(u, u, -1);
+        Mat expected;
+        cv::flip(rect, expected, 0);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF)) << "device " << d;
+
+        UMat v = square.upload(emuDevice(d));
+        cv::transpose(v, v);
+        EXPECT_EQ(0, cvtest::norm(square.t(), toHost(v), NORM_INF)) << "device " << d;
+
+        cv::transpose(u, u);    // a new buffer: the shape changes
+        EXPECT_EQ(Size(6, 9), u.size());
+        EXPECT_EQ(emuDevice(d), accel::getDevice(u));
+        EXPECT_EQ(0, cvtest::norm(expected.t(), toHost(u), NORM_INF)) << "device " << d;
+        EXPECT_EQ(4, emu().opsRun_[d].load());
+    }
 }
 
-TEST_F(Core_Accel, cpu_waits_for_device_work)
+TEST_F(Core_Accel, declined_in_place_calls_run_on_the_cpu)
 {
-    const Mat src = randomMat(Size(40, 30), CV_8UC4);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
-    accel::synchronize(emuDevice(EMU_DISCRETE));
-    g_delayUs = 20000;
-    accel::resetTransferStats();
+    const Mat src = randomMat(Size(9, 4), CV_64FC1);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    cv::flip(u, u, -1);
+    cv::transpose(u, u);
+    EXPECT_EQ(0, emu().opsRun_[EMU_DISCRETE].load());
+    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(u));
+    Mat expected;
+    cv::flip(src, expected, -1);
+    EXPECT_EQ(0, cvtest::norm(expected.t(), toHost(u), NORM_INF));
+}
+
+TEST_F(Core_Accel, output_on_another_device_moves_to_the_input)
+{
+    const Mat src = randomMat(Size(10, 6), CV_16UC1);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    UMat dst = Mat(Mat::zeros(6, 10, CV_16UC1)).upload(emuDevice(EMU_SHARED));
     cv::flip(u, dst, 1);
-    Mat got = toHost(dst);
-    EXPECT_GE(accel::getTransferStats().hostWaits, 1u);
+    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(dst));
+    EXPECT_EQ(1, emu().opsRun_[EMU_DISCRETE].load());
     Mat expected;
     cv::flip(src, expected, 1);
-    EXPECT_EQ(0, cvtest::norm(expected, got, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
+}
+
+TEST_F(Core_Accel, region_output_on_the_device_is_written_in_place)
+{
+    const Mat src = randomMat(Size(8, 6), CV_8UC2);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    UMat big = Mat(Mat::zeros(20, 20, CV_8UC2)).upload(emuDevice(EMU_DISCRETE));
+    cv::flip(u, big(Rect(4, 5, 8, 6)), 1);
+    EXPECT_EQ(1, emu().opsRun_[EMU_DISCRETE].load());
+    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(big));
+    Mat expected = Mat::zeros(20, 20, CV_8UC2);
+    cv::flip(src, expected(Rect(4, 5, 8, 6)), 1);
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
+}
+
+TEST_F(Core_Accel, region_output_elsewhere_stays_where_it_is)
+{
+    const Mat src = randomMat(Size(8, 6), CV_8UC1);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    UMat onShared = Mat(Mat::zeros(10, 12, CV_8UC1)).upload(emuDevice(EMU_SHARED));
+    UMat onHost;
+    Mat(Mat::zeros(10, 12, CV_8UC1)).copyTo(onHost);
+    UMat bigs[] = { onShared, onHost };
+    for (int i = 0; i < 2; i++)
+    {
+        const accel::Device where = accel::getDevice(bigs[i]);
+        cv::flip(u, bigs[i](Rect(2, 3, 8, 6)), 0);
+        UMat roi = bigs[i](Rect(1, 1, 8, 6));
+        cv::flip(u, roi, 1);
+        EXPECT_EQ(where, accel::getDevice(bigs[i])) << "a region cannot move";
+        EXPECT_EQ(where, accel::getDevice(roi));
+        Mat expected = Mat::zeros(10, 12, CV_8UC1);
+        cv::flip(src, expected(Rect(2, 3, 8, 6)), 0);
+        cv::flip(src, expected(Rect(1, 1, 8, 6)), 1);
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(bigs[i]), NORM_INF)) << i;
+    }
+    EXPECT_EQ(0, emu().opsRun_[EMU_DISCRETE].load());
+}
+
+TEST_F(Core_Accel, mat_output_is_written_by_the_cpu)
+{
+    const Mat src = randomMat(Size(11, 7), CV_32FC1);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    Mat dst;
+    cv::flip(u, dst, -1);
+    Mat expected;
+    cv::flip(src, expected, -1);
+    EXPECT_EQ(0, cvtest::norm(expected, dst, NORM_INF));
+}
+
+TEST_F(Core_Accel, cpu_waits_for_the_work_of_its_thread)
+{
+    const Mat src = randomMat(Size(40, 30), CV_8UC4);
+    Mat expected;
+    cv::flip(src, expected, 1);
+    for (int d = 0; d < 2; d++)
+    {
+        UMat u = src.upload(emuDevice(d)), dst;
+        g_delayUs = 20000;
+        cv::flip(u, dst, 1);
+        EXPECT_EQ(0, cvtest::norm(expected, dst.getMat(ACCESS_READ), NORM_INF)) << "device " << d;
+        g_delayUs = 0;
+    }
 }
 
 TEST_F(Core_Accel, cpu_write_waits_for_device_reads)
 {
     const Mat src = randomMat(Size(40, 30), CV_8UC1);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
-    accel::synchronize(emuDevice(EMU_DISCRETE));
-    g_delayUs = 20000;
-    cv::flip(u, dst, 0);    // reads u later, on the device
-    u.setTo(Scalar(7));     // the CPU write has to wait for that read
     Mat expected;
     cv::flip(src, expected, 0);
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(Mat(src.size(), CV_8UC1, Scalar(7)), toHost(u), NORM_INF));
+    for (int d = 0; d < 2; d++)
+    {
+        UMat u = src.upload(emuDevice(d)), dst;
+        g_delayUs = 20000;
+        cv::flip(u, dst, 0);    // reads u later, on the device
+        u.setTo(Scalar(7));     // on the CPU, after that read
+        g_delayUs = 0;
+        EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF)) << "device " << d;
+        EXPECT_EQ(0, cvtest::norm(Mat(src.size(), CV_8UC1, Scalar(7)), toHost(u), NORM_INF)) << "device " << d;
+    }
 }
 
-TEST_F(Core_Accel, released_memory_outlives_the_device_work_using_it)
+TEST_F(Core_Accel, released_buffers_outlive_the_device_work)
 {
     const Mat src = randomMat(Size(64, 48), CV_8UC1);
     const accel::Device d = emuDevice(EMU_DISCRETE);
@@ -924,187 +797,77 @@ TEST_F(Core_Accel, released_memory_outlives_the_device_work_using_it)
     UMat dst;
     g_delayUs = 20000;
     {
-        UMat u = onDevice(d, src);
+        UMat u = src.upload(d);
         cv::flip(u, dst, 1);
     }   // u is released while the flip still reads it
+    EXPECT_EQ(before + 2, emu().live(EMU_DISCRETE)) << "the stream keeps u until the flip is done";
     accel::synchronize(d);
     g_delayUs = 0;
-    Mat expected;
-    cv::flip(src, expected, 1);
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
-    accel::synchronize(d);
     EXPECT_EQ(before + 1, emu().live(EMU_DISCRETE)) << "only dst is left";
-}
-
-TEST_F(Core_Accel, output_on_another_device_moves_to_the_input)
-{
-    const Mat src = randomMat(Size(10, 6), CV_16UC1);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src);
-    UMat dst = onDevice(emuDevice(EMU_SHARED), Mat::zeros(6, 10, CV_16UC1));
-    cv::flip(u, dst, 1);
-    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(dst));
-    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
     Mat expected;
     cv::flip(src, expected, 1);
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
-}
-
-TEST_F(Core_Accel, region_output_is_written_in_place)
-{
-    const Mat src = randomMat(Size(8, 6), CV_8UC2);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src);
-    UMat big = onDevice(emuDevice(EMU_DISCRETE), Mat::zeros(20, 20, CV_8UC2));
-    cv::flip(u, big(Rect(4, 5, 8, 6)), 1);
-    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(big));
-    Mat expected = Mat::zeros(20, 20, CV_8UC2);
-    cv::flip(src, expected(Rect(4, 5, 8, 6)), 1);
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
-}
-
-TEST_F(Core_Accel, region_output_on_another_device_gets_the_result_copied_in)
-{
-    const Mat src = randomMat(Size(8, 6), CV_8UC1);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src);
-    UMat big = onDevice(emuDevice(EMU_SHARED), Mat::zeros(10, 12, CV_8UC1));
-    cv::flip(u, big(Rect(2, 3, 8, 6)), 0);
-    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-    EXPECT_EQ(emuDevice(EMU_SHARED), accel::getDevice(big)) << "a region cannot move";
-    Mat expected = Mat::zeros(10, 12, CV_8UC1);
-    cv::flip(src, expected(Rect(2, 3, 8, 6)), 0);
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
-}
-
-TEST_F(Core_Accel, mat_output_is_downloaded)
-{
-    const Mat src = randomMat(Size(11, 7), CV_32FC1);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src);
-    Mat dst;
-    accel::resetTransferStats();
-    cv::flip(u, dst, -1);
-    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-    EXPECT_EQ(src.total() * src.elemSize(), accel::getTransferStats().bytesDeviceToHost);
-    Mat expected;
-    cv::flip(src, expected, -1);
-    EXPECT_EQ(0, cvtest::norm(expected, dst, NORM_INF));
-}
-
-TEST_F(Core_Accel, in_place_call)
-{
-    const Mat src = randomMat(Size(9, 9), CV_8UC3);
-    for (int d = 0; d < EMU_ENGINE; d++)
-    {
-        UMat u = onDevice(emuDevice(d), src);
-        cv::flip(u, u, 1);
-        cv::transpose(u, u);
-        Mat expected;
-        cv::flip(src, expected, 1);
-        expected = expected.t();
-        EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF)) << "device " << d;
-        EXPECT_EQ(emuDevice(d), accel::getDevice(u));
-    }
-}
-
-TEST_F(Core_Accel, execution_scope_places_new_data_and_runs_calls)
-{
-    const accel::Device d = emuDevice(EMU_DISCRETE);
-    const Mat src = randomMat(Size(12, 5), CV_8UC1);
-    UMat host;
-    src.copyTo(host);   // OpenCL or host memory
-    ASSERT_TRUE(accel::getDevice(host).empty());
-    {
-        accel::ExecutionScope scope(d);
-        UMat fresh(5, 5, CV_8UC1);
-        EXPECT_EQ(d, accel::getDevice(fresh));
-        UMat dst;
-        accel::resetTransferStats();
-        cv::flip(host, dst, 1);     // the input is copied to the scope's device
-        EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-        EXPECT_EQ(d, accel::getDevice(dst));
-        Mat expected;
-        cv::flip(src, expected, 1);
-        EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
-        {
-            accel::ExecutionScope cpu((accel::Device()));
-            UMat onCpu(4, 4, CV_8UC1);
-            EXPECT_TRUE(accel::getDevice(onCpu).empty());
-            UMat dst2;
-            cv::flip(dst, dst2, 1);     // runs on the CPU
-            EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-            EXPECT_EQ(0, cvtest::norm(src, toHost(dst2), NORM_INF));
-        }
-    }
-    UMat after(3, 3, CV_8UC1);
-    EXPECT_TRUE(accel::getDevice(after).empty());
-}
-
-TEST_F(Core_Accel, transfer_forbid_reports_hidden_copies)
-{
-    const Mat src8 = randomMat(Size(8, 8), CV_8UC1), src64 = randomMat(Size(8, 8), CV_64FC1);
-    UMat u8 = onDevice(emuDevice(EMU_DISCRETE), src8);
-    UMat u64 = onDevice(emuDevice(EMU_DISCRETE), src64);
-    UMat shared64 = onDevice(emuDevice(EMU_SHARED), src64);
-    accel::setTransferPolicy(accel::TRANSFER_FORBID);
-    UMat dst;
-    EXPECT_NO_THROW(cv::flip(u8, dst, 1)) << "everything stays on the device";
-    Mat matDst;
-    EXPECT_THROW(cv::flip(u8, matDst, 1), cv::Exception) << "the result would be downloaded";
-    UMat dst64;
-    EXPECT_THROW(cv::flip(u64, dst64, 1), cv::Exception) << "the CPU would copy device data";
-    UMat sharedDst;
-    EXPECT_NO_THROW(cv::flip(shared64, sharedDst, 1)) << "the CPU runs on shared memory without copies";
-    accel::setTransferPolicy(accel::TRANSFER_ALLOW);
 }
 
 TEST_F(Core_Accel, device_error_surfaces_when_the_cpu_waits)
 {
-    const Mat src = randomMat(Size(8, 8), CV_8UC1);
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
-    accel::synchronize(emuDevice(EMU_DISCRETE));
+    const accel::Device d = emuDevice(EMU_DISCRETE);
+    UMat u = randomMat(Size(8, 8), CV_8UC1).upload(d), dst;
     emu().failNextAsync = true;
     cv::flip(u, dst, 1);    // queued: the failure happens later, on the device
     EXPECT_THROW(toHost(dst), cv::Exception);
-    EXPECT_THROW(accel::synchronize(emuDevice(EMU_DISCRETE)), cv::Exception) << "the error is sticky";
+    EXPECT_THROW(accel::synchronize(d), cv::Exception) << "the error is sticky";
     emu().clearErrors();
 }
 
 TEST_F(Core_Accel, operation_errors_propagate)
 {
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), randomMat(Size(8, 8), CV_8UC1)), dst;
+    UMat u = randomMat(Size(8, 8), CV_8UC1).upload(emuDevice(EMU_DISCRETE)), dst;
     emu().throwNext = true;
     EXPECT_THROW(cv::flip(u, dst, 1), cv::Exception);
-}
-
-TEST_F(Core_Accel, handle_waits_for_device_work)
-{
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), randomMat(Size(32, 32), CV_8UC1)), dst;
-    accel::synchronize(emuDevice(EMU_DISCRETE));
-    g_delayUs = 20000;
-    cv::flip(u, dst, 1);
-    accel::resetTransferStats();
-    void* h = dst.handle(ACCESS_READ);
-    EXPECT_EQ(dst.u->handle, h);
-    EXPECT_GE(accel::getTransferStats().hostWaits, 1u);
 }
 
 TEST_F(Core_Accel, copies_between_umats)
 {
     const Mat src = randomMat(Size(15, 11), CV_8UC3);
-    UMat a = onDevice(emuDevice(EMU_DISCRETE), src);
+    const uint64 bytes = src.total() * src.elemSize();
+    UMat a = src.upload(emuDevice(EMU_DISCRETE));
 
     UMat same;
-    same.allocator = emuDevice(EMU_DISCRETE).allocator();
-    accel::resetTransferStats();
+    same.createOn(emuDevice(EMU_DISCRETE), src.size(), src.type());
+    emu().resetCounters();
     a.copyTo(same);
-    EXPECT_EQ(0u, accel::getTransferStats().transfers) << "within one device";
-    EXPECT_EQ(src.total() * src.elemSize(), accel::getTransferStats().bytesDeviceToDevice);
+    EXPECT_EQ(0u, emu().transferred()) << "within one device";
+    EXPECT_EQ(bytes, emu().d2d_.load());
 
     UMat other;
-    other.allocator = emuDevice(EMU_NONCOHERENT).allocator();
+    other.createOn(emuDevice(EMU_DISCRETE2), src.size(), src.type());
+    emu().resetCounters();
     a.copyTo(other);    // through the host
-    EXPECT_EQ(emuDevice(EMU_NONCOHERENT), accel::getDevice(other));
+    EXPECT_EQ(bytes, emu().d2h_.load());
+    EXPECT_EQ(bytes, emu().h2d_.load());
+    EXPECT_EQ(emuDevice(EMU_DISCRETE2), accel::getDevice(other));
     EXPECT_EQ(0, cvtest::norm(src, toHost(same), NORM_INF));
     EXPECT_EQ(0, cvtest::norm(src, toHost(other), NORM_INF));
+}
+
+TEST_F(Core_Accel, cpu_read_is_not_uploaded_back)
+{
+    const Mat src = randomMat(Size(16, 16), CV_8UC1);
+    UMat u = src.upload(emuDevice(EMU_DISCRETE));
+    emu().resetCounters();
+    {
+        Mat a = u.getMat(ACCESS_READ), b = u.getMat(ACCESS_READ);
+        EXPECT_EQ(0, cvtest::norm(src, a, NORM_INF));
+    }
+    EXPECT_EQ(src.total(), emu().d2h_.load());
+    EXPECT_EQ(0u, emu().h2d_.load());
+    {
+        Mat r = u.getMat(ACCESS_READ), w = u.getMat(ACCESS_WRITE);
+        w.setTo(Scalar(3));
+    }
+    EXPECT_EQ(src.total(), emu().h2d_.load()) << "a write view is uploaded when the views are released";
+    EXPECT_EQ(0, cvtest::norm(Mat(src.size(), CV_8UC1, Scalar(3)), toHost(u), NORM_INF));
 }
 
 TEST_F(Core_Accel, opencl_declines_device_memory)
@@ -1114,7 +877,7 @@ TEST_F(Core_Accel, opencl_declines_device_memory)
     const bool prev = cv::ocl::useOpenCL();
     cv::ocl::setUseOpenCL(true);
     const Mat src = randomMat(Size(20, 10), CV_64FC1);  // declined by the emulator: the call reaches the OpenCL branch
-    UMat u = onDevice(emuDevice(EMU_DISCRETE), src), dst;
+    UMat u = src.upload(emuDevice(EMU_DISCRETE)), dst;
 #ifdef HAVE_OPENCL
     EXPECT_FALSE(cv::ocl::internal::isCLBuffer(u));    // defined only in OpenCL builds
 #endif
@@ -1123,6 +886,18 @@ TEST_F(Core_Accel, opencl_declines_device_memory)
     Mat expected;
     cv::flip(src, expected, 1);
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
+}
+
+TEST_F(Core_Accel, each_thread_has_its_own_stream)
+{
+    const accel::Device d = emuDevice(EMU_DISCRETE);
+    accel::Stream* mine = &d.threadStream();
+    EXPECT_EQ(mine, &d.threadStream());
+    EXPECT_NE(mine, &emuDevice(EMU_DISCRETE2).threadStream());
+    accel::Stream* other = 0;
+    std::thread([&] { other = &d.threadStream(); }).join();
+    EXPECT_NE(mine, other);
+    EXPECT_THROW(accel::Device().threadStream(), cv::Exception);
 }
 
 TEST_F(Core_Accel, threads_share_a_device)
@@ -1136,7 +911,7 @@ TEST_F(Core_Accel, threads_share_a_device)
             try
             {
                 const Mat src = randomMat(Size(17 + t, 9), CV_8UC1);
-                UMat u = onDevice(d, src), a, b;
+                UMat u = src.upload(d), a, b;
                 for (int i = 0; i < 10; i++)
                 {
                     cv::flip(u, a, i % 3 - 1);
@@ -1156,222 +931,76 @@ TEST_F(Core_Accel, threads_share_a_device)
     EXPECT_EQ(0, failures.load());
 }
 
-static void readOnCpu(const UMat* u, Mat* out)
+TEST_F(Core_Accel, synchronize_hands_the_data_to_another_thread)
 {
-    u->getMat(ACCESS_READ).copyTo(*out);
-}
-
-TEST_F(Core_Accel, cpu_read_during_a_device_call_does_not_move_its_input)
-{
-    EnvVar zc("OPENCV_ACCEL_ZERO_COPY_MAX_BYTES", "1048576");
-    const Mat src = randomMat(Size(32, 16), CV_8UC1);
-    UMat u = onDevice(emuDevice(EMU_APU_DEVICE), src), dst;
-    ASSERT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u));
-
-    // the backend has taken u's address and not queued its work yet when another thread reads u
-    Mat seen;
-    emu().duringOp = [&u, &seen]() { std::thread(readOnCpu, &u, &seen).join(); };
-    cv::flip(u, dst, 1);
-    emu().duringOp = nullptr;
-
-    EXPECT_EQ(0, cvtest::norm(src, seen, NORM_INF));
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u)) << "promoted while a call used it";
+    const accel::Device d = emuDevice(EMU_DISCRETE);
+    const Mat src = randomMat(Size(32, 24), CV_8UC1);
+    UMat u = src.upload(d), dst;
+    std::mutex m;
+    std::condition_variable cv_;
+    bool queued = false, read = false;
+    std::thread producer([&] {
+        g_delayUs = 20000;
+        cv::flip(u, dst, 1);
+        accel::synchronize(d);      // without it, the reader's stream would not wait for this one
+        g_delayUs = 0;
+        {
+            std::lock_guard<std::mutex> lock(m);
+            queued = true;
+        }
+        cv_.notify_all();
+        std::unique_lock<std::mutex> lock(m);
+        cv_.wait(lock, [&] { return read; });   // alive until the reader is done
+    });
+    Mat got;
+    {
+        std::unique_lock<std::mutex> lock(m);
+        cv_.wait(lock, [&] { return queued; });
+    }
+    got = toHost(dst);
+    {
+        std::lock_guard<std::mutex> lock(m);
+        read = true;
+    }
+    cv_.notify_all();
+    producer.join();
     Mat expected;
     cv::flip(src, expected, 1);
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(src, u.getMat(ACCESS_READ), NORM_INF));
-    EXPECT_TRUE(accel::isSharedKind(accel::getMemoryKind(u))) << "promoted once the call is done";
+    EXPECT_EQ(0, cvtest::norm(expected, got, NORM_INF));
+}
+
+TEST_F(Core_Accel, thread_exit_finishes_its_work_and_releases_its_buffers)
+{
+    const accel::Device d = emuDevice(EMU_DISCRETE);
+    const Mat src = randomMat(Size(32, 24), CV_8UC1);
+    accel::synchronize(d);
+    const int before = emu().live(EMU_DISCRETE);
+    UMat result;
+    std::thread([&] {
+        g_delayUs = 20000;
+        UMat u = src.upload(d), dst;
+        cv::flip(u, dst, 0);
+        result = dst;
+    }).join();
+    g_delayUs = 0;
+    EXPECT_EQ(before + 1, emu().live(EMU_DISCRETE)) << "u is released once the flip is done";
+    Mat expected;
+    cv::flip(src, expected, 0);
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(result), NORM_INF));
 }
 
 TEST_F(Core_Accel, mat_calls_are_not_affected)
 {
-    UMat keepActive = onDevice(emuDevice(EMU_DISCRETE), Mat::ones(2, 2, CV_8UC1));
+    UMat onDevice = Mat(Mat::ones(2, 2, CV_8UC1)).upload(emuDevice(EMU_DISCRETE));
     const Mat src = randomMat(Size(10, 10), CV_8UC1);
     Mat dst;
-    accel::resetTransferStats();
+    emu().resetCounters();
     cv::flip(src, dst, 1);
-    const accel::TransferStats st = accel::getTransferStats();
-    EXPECT_EQ(0u, st.deviceOps);
-    EXPECT_EQ(0u, st.cpuFallbacks);
-    EXPECT_EQ(0u, st.transfers);
+    cv::transpose(src, dst);
+    for (int d = 0; d < EMU_DEVICES; d++)
+        EXPECT_EQ(0, emu().opsRun_[d].load());
+    EXPECT_EQ(0u, emu().transferred());
 }
-
-TEST_F(Core_Accel, user_streams_are_ordered_by_the_buffers)
-{
-    const accel::Device d = emuDevice(EMU_DISCRETE);
-    const Mat src = randomMat(Size(40, 30), CV_8UC1);
-    UMat u = onDevice(d, src), a, b;
-    accel::synchronize(d);
-    g_delayUs = 10000;
-    {
-        Ptr<accel::Stream> s1 = accel::createStream(d), s2 = accel::createStream(d);
-        {
-            accel::ExecutionScope scope(d, s1);
-            cv::flip(u, a, 1);      // queued on s1
-        }
-        {
-            accel::ExecutionScope scope(d, s2);
-            cv::flip(a, b, 1);      // on s2, after s1 has written a
-        }
-    }   // the streams go away; the buffers keep what they still need
-    EXPECT_EQ(0, cvtest::norm(src, toHost(b), NORM_INF));
-}
-
-TEST_F(Core_Accel, stream_of_another_device_is_refused)
-{
-    const accel::Device d = emuDevice(EMU_DISCRETE), other = emuDevice(EMU_SHARED);
-    Ptr<accel::Stream> s = accel::createStream(other);
-    EXPECT_EQ(other, s->device());
-    EXPECT_THROW(accel::ExecutionScope scope(d, s), cv::Exception);
-    UMat u(8, 8, CV_8UC1);
-    EXPECT_TRUE(accel::getDevice(u).empty()) << "the refused scope must not stay in effect";
-}
-
-TEST_F(Core_Accel, missing_plugin_is_reported)
-{
-    EXPECT_FALSE(accel::loadPlugin("/nonexistent/libopencv_core_accel_none.so"));
-}
-
-#ifdef __linux__
-
-//! a memfd holding @p bytes, as a dma-buf exporter would hand out
-int makeDmaBuf(const std::vector<uchar>& bytes)
-{
-    const int fd = memfdCreate("frame");
-    CV_Assert(fd >= 0 && ftruncate(fd, (off_t)bytes.size()) == 0);
-    void* p = mmap(0, bytes.size(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    CV_Assert(p != MAP_FAILED);
-    memcpy(p, bytes.data(), bytes.size());
-    munmap(p, bytes.size());
-    return fd;
-}
-
-std::vector<uchar> readDmaBuf(int fd, size_t size)
-{
-    std::vector<uchar> out(size);
-    void* p = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
-    CV_Assert(p != MAP_FAILED);
-    memcpy(out.data(), p, size);
-    munmap(p, size);
-    return out;
-}
-
-TEST_F(Core_Accel, dma_buf_is_wrapped_and_exported_without_copies)
-{
-    // a 6x8 8-bit image, rows 16 bytes apart, starting 32 bytes into the buffer
-    const size_t step = 16, offset = 32, total = offset + step * 6;
-    std::vector<uchar> bytes(total, 0);
-    Mat image(6, 8, CV_8UC1);
-    for (int y = 0; y < 6; y++)
-        for (int x = 0; x < 8; x++)
-            bytes[offset + y * step + x] = image.at<uchar>(y, x) = (uchar)(y * 10 + x);
-    const int fd = makeDmaBuf(bytes);
-    const accel::Device shared = emuDevice(EMU_SHARED);
-    accel::resetTransferStats();
-    UMat frame = accel::wrapDmaBuf(shared, fd, Size(8, 6), CV_8UC1, step, offset);
-    close(fd);  // the UMat holds its own reference
-    EXPECT_EQ(shared, accel::getDevice(frame));
-    EXPECT_EQ(0, cvtest::norm(image, toHost(frame), NORM_INF));
-
-    UMat flipped;
-    cv::flip(frame, flipped, 0);    // on the device, straight from the wrapped memory
-    EXPECT_EQ(1u, accel::getTransferStats().deviceOps);
-    const int out = accel::exportDmaBuf(flipped);
-    ASSERT_GE(out, 0);
-    std::vector<uchar> got = readDmaBuf(out, flipped.total());
-    close(out);
-    Mat expected;
-    cv::flip(image, expected, 0);
-    EXPECT_EQ(0, cvtest::norm(expected, Mat(6, 8, CV_8UC1, got.data()), NORM_INF));
-
-    cv::flip(flipped, frame, 1);    // wrapped memory as an output: written in place
-    EXPECT_EQ(shared, accel::getDevice(frame));
-    const int again = accel::exportDmaBuf(frame);
-    ASSERT_GE(again, 0);
-    std::vector<uchar> after = readDmaBuf(again, total);
-    close(again);
-    cv::flip(image, expected, -1);
-    EXPECT_EQ(0, cvtest::norm(expected, Mat(6, 8, CV_8UC1, after.data() + offset, step), NORM_INF));
-    EXPECT_EQ(0u, accel::getTransferStats().transfers);
-}
-
-TEST_F(Core_Accel, dma_buf_needs_a_device_that_imports_it)
-{
-    const int fd = makeDmaBuf(std::vector<uchar>(64, 1));
-    EXPECT_THROW(accel::wrapDmaBuf(emuDevice(EMU_DISCRETE), fd, Size(8, 8), CV_8UC1), cv::Exception);
-    EXPECT_THROW(accel::wrapDmaBuf(emuDevice(EMU_SHARED), fd, Size(9, 8), CV_8UC1), cv::Exception)
-        << "the image is larger than the buffer";
-    close(fd);
-    UMat discrete = onDevice(emuDevice(EMU_DISCRETE), Mat::ones(4, 4, CV_8UC1));
-    EXPECT_THROW(accel::exportDmaBuf(discrete), cv::Exception);
-}
-
-TEST_F(Core_Accel, dma_buf_extent_that_wraps_is_refused)
-{
-    const int fd = makeDmaBuf(std::vector<uchar>(4096, 1));
-    // offset + step would wrap around to a few bytes, which the buffer has
-    const size_t half = (size_t)1 << (sizeof(size_t) * 8 - 1);
-    EXPECT_THROW(accel::wrapDmaBuf(emuDevice(EMU_SHARED), fd, Size(1, 2), CV_8UC1, half, half), cv::Exception);
-    close(fd);
-}
-
-TEST_F(Core_Accel, preferred_device_computes_on_shared_memory_in_place)
-{
-    const accel::Device owner = emuDevice(EMU_SHARED), engine = emuDevice(EMU_ENGINE);
-    const Mat src = randomMat(Size(24, 16), CV_8UC3);
-    UMat u = onDevice(owner, src), flipped, transposed;
-    accel::setPreferredDevices(std::vector<accel::Device>(1, engine));
-    accel::synchronize(owner);
-    g_delayUs = 5000;
-    accel::resetTransferStats();
-    cv::flip(u, flipped, 1);
-    EXPECT_EQ(1, emu().opsRun_[EMU_ENGINE].load()) << "the preferred device ran it";
-    EXPECT_EQ(0, emu().opsRun_[EMU_SHARED].load());
-    EXPECT_EQ(owner, accel::getDevice(flipped)) << "the data stays where it was";
-    cv::transpose(flipped, transposed);     // the engine declines: the owner runs it, after the engine's flip
-    EXPECT_EQ(1, emu().opsRun_[EMU_SHARED].load());
-    EXPECT_EQ(2u, accel::getTransferStats().deviceOps);
-    EXPECT_EQ(0u, accel::getTransferStats().transfers);
-    Mat expected;
-    cv::flip(src, expected, 1);
-    EXPECT_EQ(0, cvtest::norm(expected.t(), toHost(transposed), NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(expected, toHost(flipped), NORM_INF));
-}
-
-TEST_F(Core_Accel, preferred_device_is_skipped_when_it_cannot_reach_the_memory)
-{
-    accel::setPreferredDevices(std::vector<accel::Device>(1, emuDevice(EMU_ENGINE)));
-    const Mat src = randomMat(Size(8, 8), CV_8UC1);
-    const int devices[] = { EMU_DISCRETE, EMU_NONCOHERENT };    // copy-only memory; memory that cannot be exported
-    for (int i = 0; i < 2; i++)
-    {
-        const int d = devices[i];
-        UMat u = onDevice(emuDevice(d), src), dst;
-        emu().opsRun_[d] = 0;
-        emu().opsRun_[EMU_ENGINE] = 0;
-        cv::flip(u, dst, 1);
-        EXPECT_EQ(1, emu().opsRun_[d].load()) << "device " << d;
-        EXPECT_EQ(0, emu().opsRun_[EMU_ENGINE].load()) << "device " << d;
-    }
-}
-
-TEST_F(Core_Accel, imports_are_released_with_their_buffer)
-{
-    const accel::Device engine = emuDevice(EMU_ENGINE);
-    accel::setPreferredDevices(std::vector<accel::Device>(1, engine));
-    accel::synchronize(engine);
-    const int before = emu().live(EMU_ENGINE);
-    {
-        UMat u = onDevice(emuDevice(EMU_SHARED), randomMat(Size(8, 8), CV_8UC1)), dst;
-        cv::flip(u, dst, 1);
-        EXPECT_EQ(before + 2, emu().live(EMU_ENGINE)) << "the engine imported u and dst";
-    }
-    accel::synchronize(engine);
-    accel::synchronize(emuDevice(EMU_SHARED));
-    EXPECT_EQ(before, emu().live(EMU_ENGINE));
-}
-
-#endif // __linux__
 
 #ifdef HAVE_CUDA
 
@@ -1383,6 +1012,12 @@ accel::Device cudaDevice()
     return d;
 }
 
+//! a kernel wrote @p m (UMat::handle(ACCESS_WRITE)); the CPU path leaves the host copy current
+bool writtenByDevice(const UMat& m)
+{
+    return m.u->hostCopyObsolete();
+}
+
 TEST(Core_Accel_CUDA, flip_and_transpose)
 {
     const accel::Device d = cudaDevice();
@@ -1390,17 +1025,45 @@ TEST(Core_Accel_CUDA, flip_and_transpose)
     for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
     {
         const Mat src = randomMat(Size(1923, 1081), types[t]);
-        UMat u = onDevice(d, src), f, tr;
-        accel::resetTransferStats();
+        UMat u = src.upload(d), f, tr;
         cv::flip(u, f, -1);
         cv::transpose(u, tr);
-        EXPECT_EQ(2u, accel::getTransferStats().deviceOps) << typeToString(types[t]);
+        EXPECT_EQ(d, accel::getDevice(f));
+        EXPECT_EQ(d, accel::getDevice(tr));
+        EXPECT_TRUE(writtenByDevice(f));
+        EXPECT_TRUE(writtenByDevice(tr));
         Mat ef, et;
         cv::flip(src, ef, -1);
         cv::transpose(src, et);
         EXPECT_EQ(0, cvtest::norm(ef, toHost(f), NORM_INF)) << typeToString(types[t]);
         EXPECT_EQ(0, cvtest::norm(et, toHost(tr), NORM_INF)) << typeToString(types[t]);
-        EXPECT_EQ(d, accel::getDevice(f));
+    }
+}
+
+TEST(Core_Accel_CUDA, in_place)
+{
+    const accel::Device d = cudaDevice();
+    const int types[] = { CV_8UC1, CV_8UC3, CV_32FC1, CV_64FC3 };
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+    {
+        const Mat rect = randomMat(Size(333, 117), types[t]), square = randomMat(Size(101, 101), types[t]);
+        for (int code = -1; code <= 1; code++)
+        {
+            UMat u = rect.upload(d);
+            cv::flip(u, u, code);
+            EXPECT_TRUE(writtenByDevice(u));
+            Mat expected;
+            cv::flip(rect, expected, code);
+            EXPECT_EQ(0, cvtest::norm(expected, toHost(u), NORM_INF)) << typeToString(types[t]) << ", code " << code;
+        }
+        UMat v = square.upload(d), w = rect.upload(d);
+        cv::transpose(v, v);
+        cv::transpose(w, w);
+        EXPECT_EQ(d, accel::getDevice(w));
+        EXPECT_TRUE(writtenByDevice(v));
+        EXPECT_TRUE(writtenByDevice(w));
+        EXPECT_EQ(0, cvtest::norm(square.t(), toHost(v), NORM_INF)) << typeToString(types[t]);
+        EXPECT_EQ(0, cvtest::norm(rect.t(), toHost(w), NORM_INF)) << typeToString(types[t]);
     }
 }
 
@@ -1408,11 +1071,10 @@ TEST(Core_Accel_CUDA, unsupported_element_size_falls_back)
 {
     const accel::Device d = cudaDevice();
     const Mat src = randomMat(Size(33, 21), CV_8UC(5));    // 5-byte elements: no kernel
-    UMat u = onDevice(d, src), dst;
-    accel::resetTransferStats();
+    UMat u = src.upload(d), dst;
     cv::flip(u, dst, 1);
-    EXPECT_EQ(1u, accel::getTransferStats().cpuFallbacks);
     EXPECT_EQ(d, accel::getDevice(dst));
+    EXPECT_FALSE(writtenByDevice(dst));
     Mat expected;
     cv::flip(src, expected, 1);
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
@@ -1422,8 +1084,8 @@ TEST(Core_Accel_CUDA, region_and_chain)
 {
     const accel::Device d = cudaDevice();
     const Mat src = randomMat(Size(640, 480), CV_8UC3);
-    UMat u = onDevice(d, src), a, b;
-    UMat big = onDevice(d, Mat::zeros(500, 700, CV_8UC3));
+    UMat u = src.upload(d), a, b;
+    UMat big = Mat(Mat::zeros(500, 700, CV_8UC3)).upload(d);
     for (int i = 0; i < 20; i++)
     {
         cv::flip(u, a, 1);
@@ -1436,151 +1098,5 @@ TEST(Core_Accel_CUDA, region_and_chain)
 }
 
 #endif // HAVE_CUDA
-
-// ---- memory kinds and the policy that picks one -----------------------------------------
-
-namespace {
-
-const int APU_KINDS = accel::MEMORY_DEVICE | accel::MEMORY_SHARED_COHERENT
-                    | accel::MEMORY_SHARED_NONCOHERENT;
-
-//! a UMat of @p shape on @p d, created the way UMat::create does, with @p usage
-UMat createOn(const accel::Device& d, const MatShape& shape, int type,
-              UMatUsageFlags usage = USAGE_DEFAULT)
-{
-    UMat u(usage);
-    u.allocator = d.allocator();
-    u.create(shape, type);
-    u.allocator = 0;
-    return u;
-}
-
-} // namespace
-
-TEST(Core_Accel_Kind, device_reports_what_it_provides)
-{
-    EXPECT_EQ(accel::MEMORY_DEVICE, emuDevice(EMU_DISCRETE).memoryKinds());
-    EXPECT_EQ(accel::MEMORY_DEVICE, emuDevice(EMU_DISCRETE).defaultMemoryKind());
-    // the CPU addresses its own memory
-    EXPECT_EQ(accel::MEMORY_SHARED_COHERENT, accel::Device().memoryKinds());
-}
-
-TEST(Core_Accel_Kind, usage_flags_choose_the_kind)
-{
-    accel::Device d = emuDevice(EMU_APU);
-    ASSERT_EQ(APU_KINDS, d.memoryKinds());
-
-    UMat def = createOn(d, MatShape({64, 64}), CV_8UC1);
-    UMat dev = createOn(d, MatShape({64, 64}), CV_8UC1, USAGE_ALLOCATE_DEVICE_MEMORY);
-    UMat shr = createOn(d, MatShape({64, 64}), CV_8UC1, USAGE_ALLOCATE_SHARED_MEMORY);
-
-    EXPECT_EQ(d.defaultMemoryKind(), accel::getMemoryKind(def));
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(dev));
-    EXPECT_TRUE(accel::isSharedKind(accel::getMemoryKind(shr)));
-}
-
-TEST(Core_Accel_Kind, override_is_honoured_and_refused)
-{
-    {
-        EnvVar force("OPENCV_ACCEL_FORCE_MEMORY_KIND", "device");
-        UMat u = createOn(emuDevice(EMU_APU), MatShape({32, 32}), CV_8UC1);
-        EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u));
-    }
-    {
-        // a kind the device cannot provide is ignored, and the buffer still works
-        EnvVar force("OPENCV_ACCEL_FORCE_MEMORY_KIND", "managed");
-        accel::Device d = emuDevice(EMU_DISCRETE);
-        UMat u = createOn(d, MatShape({32, 32}), CV_8UC1);
-        EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u));
-    }
-}
-
-TEST(Core_Accel_Kind, pinned_budget_turns_shared_into_device)
-{
-    accel::Device d = emuDevice(EMU_APU);
-    ASSERT_EQ(APU_KINDS, d.memoryKinds());
-
-    EnvVar limit("OPENCV_ACCEL_PINNED_LIMIT_MB", "1");
-    UMat big = createOn(d, MatShape({2048, 1024}), CV_8UC1);    // 2 MB, over the budget
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(big));
-}
-
-TEST(Core_Accel_Kind, promotion_on_first_cpu_access)
-{
-    accel::Device d = emuDevice(EMU_APU);
-    ASSERT_EQ(APU_KINDS, d.memoryKinds());
-
-    EnvVar force("OPENCV_ACCEL_ZERO_COPY_MAX_BYTES", "1048576");
-    Mat src(64, 64, CV_8UC1, Scalar(7));
-
-    UMat u = createOn(d, MatShape({64, 64}), CV_8UC1, USAGE_ALLOCATE_DEVICE_MEMORY);
-    src.copyTo(u);
-    // the kind was asked for, so it is never moved
-    EXPECT_EQ(0, cv::norm(u.getMat(ACCESS_READ), src, NORM_INF));
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u));
-
-    // one that got the device's default moves to shared memory when the CPU first reads it
-    UMat v = createOn(emuDevice(EMU_APU_DEVICE), MatShape({64, 64}), CV_8UC1);
-    src.copyTo(v);
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(v));
-    EXPECT_EQ(0, cv::norm(v.getMat(ACCESS_READ), src, NORM_INF));
-    EXPECT_TRUE(accel::isSharedKind(accel::getMemoryKind(v)));
-}
-
-TEST(Core_Accel_Kind, promotion_respects_the_threshold)
-{
-    accel::Device d = emuDevice(EMU_APU);
-    EnvVar zc("OPENCV_ACCEL_ZERO_COPY_MAX_BYTES", "1024");   // smaller than the buffer
-    Mat src(64, 64, CV_8UC1, Scalar(3));
-
-    UMat u = createOn(d, MatShape({64, 64}), CV_8UC1, USAGE_ALLOCATE_DEVICE_MEMORY);
-    src.copyTo(u);
-    EXPECT_EQ(accel::MEMORY_DEVICE, accel::getMemoryKind(u));
-    EXPECT_EQ(0, cv::norm(u.getMat(ACCESS_READ), src, NORM_INF)) << "the copy path must still work";
-}
-
-TEST(Core_Accel_Cache, reuses_memory_and_still_gives_right_results)
-{
-    EnvVar cache("OPENCV_ACCEL_CACHE_MAX_MB", "16");
-    accel::Device d = emuDevice(EMU_DISCRETE);
-    Mat src(64, 64, CV_8UC1);
-    randu(src, 0, 255);
-    Mat expected;
-    cv::flip(src, expected, 0);
-
-    for (int i = 0; i < 8; i++)
-    {
-        UMat u = onDevice(d, src), out;
-        {
-            accel::ExecutionScope scope(d);
-            cv::flip(u, out, 0);
-        }
-        EXPECT_EQ(0, cv::norm(out.getMat(ACCESS_READ), expected, NORM_INF))
-            << "iteration " << i << " got recycled memory with stale contents";
-    }
-}
-
-TEST(Core_Accel_Cache, exported_memory_is_never_reused)
-{
-#ifdef __linux__
-    EnvVar cache("OPENCV_ACCEL_CACHE_MAX_MB", "16");
-    accel::Device d = emuDevice(EMU_SHARED);
-    Mat src(64, 64, CV_8UC1, Scalar(5));
-
-    int fd = -1;
-    {
-        UMat u = onDevice(d, src);
-        fd = accel::exportDmaBuf(u);
-        ASSERT_GE(fd, 0);
-    }   // u is released here; the fd still refers to those bytes
-
-    // whatever the allocator hands out next must not be the exported block
-    UMat other = onDevice(d, Mat(64, 64, CV_8UC1, Scalar(9)));
-    UMat imported = accel::wrapDmaBuf(d, fd, Size(64, 64), CV_8UC1);
-    EXPECT_EQ(0, cv::norm(imported.getMat(ACCESS_READ), src, NORM_INF))
-        << "the exported buffer was reused while its dma-buf was still open";
-    close(fd);
-#endif
-}
 
 }} // namespace

@@ -6,8 +6,8 @@
 
 // Non-CPU HAL: the CUDA backend; all but the choice of memory lives in gpu/.
 //
-// Discrete GPUs use device memory from a stream-ordered pool with pinned host copies; integrated
-// GPUs from Xavier on use pinned memory mapped into the GPU, so nothing is copied.
+// Discrete GPUs use device memory from a stream-ordered pool; integrated GPUs from Xavier on use
+// pinned memory mapped into the GPU, which the CPU uses without copies.
 
 #include "../precomp.hpp"
 #include "accel_impl.hpp"
@@ -31,8 +31,6 @@ public:
             const int cc = d.prop.major * 10 + d.prop.minor;
             // before Xavier, pinned memory is uncached for the CPU: copies are faster there
             d.shared = d.prop.integrated && d.prop.canMapHostMemory && cc >= 72;
-            // one kind per device: device memory, or shared memory on an integrated part (Jetson)
-            d.kinds = d.shared ? MEMORY_SHARED_COHERENT : MEMORY_DEVICE;
         }
     }
 

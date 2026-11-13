@@ -50,6 +50,27 @@ __global__ void flipKernel(const unsigned char* src, size_t sstep, unsigned char
     }
 }
 
+// each mirrored pair is swapped once, by the thread of its first element
+template<typename T>
+__global__ void flipInplaceKernel(unsigned char* data, size_t step, int rows, int cols, bool flipRows, bool flipCols)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= cols)
+        return;
+    const int mx = flipCols ? cols - 1 - x : x;
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    {
+        const unsigned my = flipRows ? (unsigned)rows - 1 - y : y;
+        if (y > my || (y == my && x >= mx))
+            continue;
+        T* a = (T*)(data + (size_t)y * step) + x;
+        T* b = (T*)(data + (size_t)my * step) + mx;
+        const T t = *a;
+        *a = *b;
+        *b = t;
+    }
+}
+
 // a TILE x TILE block goes through shared memory, so both the reads and the writes walk along rows
 template<typename T>
 __global__ void transposeKernel(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
@@ -69,6 +90,23 @@ __global__ void transposeKernel(const unsigned char* src, size_t sstep, unsigned
             if (ox < rows && x0 + j < cols)
                 ((T*)(dst + (size_t)(x0 + j) * dstep))[ox] = tile[threadIdx.x][j];
         __syncthreads();
+    }
+}
+
+// each element above the diagonal is swapped with its counterpart below it
+template<typename T>
+__global__ void transposeInplaceKernel(unsigned char* data, size_t step, int n)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= n)
+        return;
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)x; y += gridDim.y * blockDim.y)
+    {
+        T* a = (T*)(data + (size_t)y * step) + x;
+        T* b = (T*)(data + (size_t)x * step) + y;
+        const T t = *a;
+        *a = *b;
+        *b = t;
     }
 }
 
@@ -95,6 +133,17 @@ CV_GPU(Error_t) flipN(const unsigned char* src, size_t sstep, unsigned char* dst
 }
 
 template<int N>
+CV_GPU(Error_t) flipInplaceN(unsigned char* data, size_t step, int rows, int cols, int mode, CV_GPU(Stream_t) s)
+{
+    bool flipRows = mode <= 0, flipCols = mode != 0;
+    void* args[] = { &data, &step, &rows, &cols, &flipRows, &flipCols };
+    const bool wide = aligned(data, step, data, step, alignof(Elem<N>));
+    const void* k = wide ? (const void*)flipInplaceKernel<Elem<N> > : (const void*)flipInplaceKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(rows, cols, BLOCK_X, BLOCK_Y), dim3(BLOCK_X, BLOCK_Y),
+                                args, 0, s);
+}
+
+template<int N>
 CV_GPU(Error_t) transposeN(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                            int rows, int cols, CV_GPU(Stream_t) s)
 {
@@ -103,6 +152,16 @@ CV_GPU(Error_t) transposeN(const unsigned char* src, size_t sstep, unsigned char
     const void* k = wide ? (const void*)transposeKernel<Elem<N> >
                          : (const void*)transposeKernel<Bytes<N> >;
     return CV_GPU(LaunchKernel)(k, grid(rows, cols, TILE, TILE), dim3(TILE, BLOCK_Y), args, 0, s);
+}
+
+template<int N>
+CV_GPU(Error_t) transposeInplaceN(unsigned char* data, size_t step, int n, CV_GPU(Stream_t) s)
+{
+    void* args[] = { &data, &step, &n };
+    const bool wide = aligned(data, step, data, step, alignof(Elem<N>));
+    const void* k = wide ? (const void*)transposeInplaceKernel<Elem<N> >
+                         : (const void*)transposeInplaceKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(n, n, BLOCK_X, BLOCK_Y), dim3(BLOCK_X, BLOCK_Y), args, 0, s);
 }
 
 } // namespace
@@ -142,12 +201,27 @@ CV_GPU(Error_t) flip(const unsigned char* src, size_t sstep, unsigned char* dst,
     CV_ACCEL_GPU_BY_SIZE(flipN, src, sstep, dst, dstep, rows, cols, mode, s)
 }
 
+CV_GPU(Error_t) flipInplace(unsigned char* data, size_t step, int rows, int cols, int esz, int mode,
+                            CV_GPU(Stream_t) s)
+{
+    if (rows <= 0 || cols <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(flipInplaceN, data, step, rows, cols, mode, s)
+}
+
 CV_GPU(Error_t) transpose(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
                           int rows, int cols, int esz, CV_GPU(Stream_t) s)
 {
     if (rows <= 0 || cols <= 0)
         return CV_GPU(Success);
     CV_ACCEL_GPU_BY_SIZE(transposeN, src, sstep, dst, dstep, rows, cols, s)
+}
+
+CV_GPU(Error_t) transposeInplace(unsigned char* data, size_t step, int n, int esz, CV_GPU(Stream_t) s)
+{
+    if (n <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(transposeInplaceN, data, step, n, s)
 }
 
 #undef CV_ACCEL_GPU_BY_SIZE

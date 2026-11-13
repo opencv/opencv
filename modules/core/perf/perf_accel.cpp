@@ -27,11 +27,7 @@ static UMat onDevice(const accel::Device& d, Size sz, int type)
 {
     Mat h(sz, type);
     randu(h, 0, 255);
-    UMat u;
-    u.allocator = d.allocator();
-    h.copyTo(u);
-    u.allocator = 0;
-    return u;
+    return h.upload(d);
 }
 
 PERF_TEST_P(Accel_Size_MatType, flip, testing::Combine(testing::Values(ACCEL_SIZES), testing::Values(ACCEL_TYPES)))

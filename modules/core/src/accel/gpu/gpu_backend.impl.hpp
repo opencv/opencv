@@ -148,16 +148,6 @@ public:
         return makePtr<GpuEvent>(e);
     }
 
-    bool waitEvent(const Ptr<Event>& event) CV_OVERRIDE
-    {
-        GpuEvent* ge = dynamic_cast<GpuEvent*>(event.get());
-        if (!ge)
-            return false;
-        DeviceGuard g(device_);
-        check(CV_GPU(StreamWaitEvent)(s_, ge->e_, 0), "StreamWaitEvent");  // also across devices
-        return true;
-    }
-
     void synchronize() CV_OVERRIDE
     {
         check(CV_GPU(StreamSynchronize)(s_), "StreamSynchronize");
@@ -175,52 +165,69 @@ GpuStream& gpuStreamOf(Stream& s)
     return *gs;
 }
 
+/* Whether the kernels can run on @p src and @p dst: 2-D, an element size they move, no Mat view
+   alive (UMat::handle() needs that), and either separate buffers or the same view (in place).
+   Other views of one buffer may overlap, which the kernels do not handle. */
+bool runnable(const UMat& src, const UMat& dst)
+{
+    return src.dims == 2 && kernels::supportedElementSize((int)src.elemSize()) &&
+           src.u->refcount == 0 && dst.u->refcount == 0 &&
+           (src.u != dst.u || (src.offset == dst.offset && src.step[0] == dst.step[0]));
+}
+
 class GpuCoreOps CV_FINAL : public CoreOps
 {
 public:
     bool flip(const UMat& src, UMat& dst, int flipCode, Stream& stream) CV_OVERRIDE
     {
-        const int esz = (int)src.elemSize();
-        if (src.dims != 2 || !kernels::supportedElementSize(esz))
+        if (!runnable(src, dst))
             return false;
         GpuStream& s = gpuStreamOf(stream);
         DeviceGuard g(s.device_);
-        check(kernels::flip((const unsigned char*)devicePtr(src), src.step[0],
-                            (unsigned char*)devicePtr(dst), dst.step[0],
-                            src.rows, src.cols, esz, flipCode, s.s_), "flip");
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        const int esz = (int)src.elemSize();
+        check(src.u == dst.u
+              ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
+              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_),
+              "flip");
+        stream.retain({ src, dst });
         return true;
     }
 
     bool transpose(const UMat& src, UMat& dst, Stream& stream) CV_OVERRIDE
     {
-        const int esz = (int)src.elemSize();
-        if (src.dims != 2 || !kernels::supportedElementSize(esz))
+        if (!runnable(src, dst) || (src.u == dst.u && src.rows != src.cols))
             return false;
         GpuStream& s = gpuStreamOf(stream);
         DeviceGuard g(s.device_);
-        check(kernels::transpose((const unsigned char*)devicePtr(src), src.step[0],
-                                 (unsigned char*)devicePtr(dst), dst.step[0],
-                                 src.rows, src.cols, esz, s.s_), "transpose");
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        const int esz = (int)src.elemSize();
+        check(src.u == dst.u
+              ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
+              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_),
+              "transpose");
+        stream.retain({ src, dst });
         return true;
     }
 };
 
-//! one device; a backend's constructor says what it offers (shared, kinds)
+//! one device; a backend's constructor says whether the CPU addresses its memory (shared)
 struct GpuDevice
 {
-    GpuDevice() : shared(false), kinds(MEMORY_DEVICE), poolsSupported(false), pool(0), allocStream(0) {}
+    GpuDevice() : shared(false), poolsSupported(false), pool(0), allocStream(0) {}
 
     cvGpuDeviceProp prop;
-    bool shared;                    // host memory mapped into the GPU is the default kind
-    int kinds;                      // bitmask of MemoryKind
+    bool shared;                    // memory is host memory mapped into the GPU
     bool poolsSupported;
     std::once_flag poolOnce;
     CV_GPU(MemPool_t) pool;         // the backend's own pool for device memory, 0 without one
     CV_GPU(Stream_t) allocStream;   // where pool memory is allocated and freed
 };
 
-/* Devices, streams, copies, device memory and coherent shared memory, and the core operations.
-   A backend that offers more memory kinds allocates those itself and passes the rest here. */
+/* Devices, streams, copies, memory and the core operations. Device memory comes from a
+   stream-ordered pool where the device has pools; shared devices get mapped host memory. */
 class GpuBackend : public Backend
 {
 public:
@@ -243,37 +250,38 @@ public:
 
     int deviceCount() const CV_OVERRIDE { return (int)devs_.size(); }
     String deviceDescription(int device) const CV_OVERRIDE { return devs_[device]->prop.name; }
-    int memoryKinds(int device) const CV_OVERRIDE { return devs_[device]->kinds; }
 
-    void* allocate(int device, size_t size, MemoryKind kind) CV_OVERRIDE
+    void* allocate(int device, size_t size) CV_OVERRIDE
     {
         GpuDevice& d = *devs_[device];
-        CV_Assert((d.kinds & (int)kind) != 0 && "accel(" CV_GPU_RUNTIME "): a kind this device does not provide");
-        CV_Assert((kind == MEMORY_DEVICE || kind == MEMORY_SHARED_COHERENT) && "accel: a kind the backend did not allocate");
         DeviceGuard g(device);
         void* p = 0;
         CV_GPU(Error_t) r;
-        if (kind == MEMORY_SHARED_COHERENT)
+        if (d.shared)
             r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_MAPPED | CV_GPU_HOST_ALLOC_PORTABLE);  // one address for CPU and GPU
         else if (usesPool(device))
             r = allocateFromPool(d, size, &p);
         else
             r = CV_GPU(Malloc)(&p, size);
-        return allocated(r, p);
+        if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
+        {
+            (void)CV_GPU(GetLastError)();
+            return 0;
+        }
+        check(r, "allocate");
+        return p;
     }
 
-    void deallocate(int device, void* ptr, MemoryKind kind) CV_OVERRIDE
+    void deallocate(int device, void* handle) CV_OVERRIDE
     {
         // called while UMats are released: report failures, never throw
         try
         {
             GpuDevice& d = *devs_[device];
             DeviceGuard g(device);
-            // freed the way it was allocated; Free takes managed memory too
-            const CV_GPU(Error_t) r =
-                kind == MEMORY_SHARED_COHERENT || kind == MEMORY_SHARED_NONCOHERENT ? CV_GPU_HOST_FREE(ptr)
-                : kind == MEMORY_DEVICE && usesPool(device) ? CV_GPU(FreeAsync)(ptr, d.allocStream)
-                : CV_GPU(Free)(ptr);
+            const CV_GPU(Error_t) r = d.shared ? CV_GPU_HOST_FREE(handle)
+                                    : usesPool(device) ? CV_GPU(FreeAsync)(handle, d.allocStream)
+                                    : CV_GPU(Free)(handle);
             if (r != CV_GPU(Success))
             {
                 (void)CV_GPU(GetLastError)();
@@ -286,26 +294,13 @@ public:
         }
     }
 
-    void* allocateHost(int device, size_t size) CV_OVERRIDE
+    void* hostAddress(int device, void* handle) CV_OVERRIDE
     {
-        DeviceGuard g(device);
-        void* p = 0;
-        if (CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_PORTABLE) != CV_GPU(Success))
-        {
-            (void)CV_GPU(GetLastError)();
-            return 0;
-        }
-        return p;
-    }
-
-    void deallocateHost(int, void* ptr) CV_OVERRIDE
-    {
-        if (CV_GPU_HOST_FREE(ptr) != CV_GPU(Success))
-            (void)CV_GPU(GetLastError)();
+        return devs_[device]->shared ? handle : 0;
     }
 
     void copy(int device, CopyKind kind, DeviceRef dst, size_t dstStep, DeviceRef src, size_t srcStep,
-              size_t widthBytes, size_t rows, Stream& stream, bool hostStable) CV_OVERRIDE
+              size_t widthBytes, size_t rows, Stream& stream) CV_OVERRIDE
     {
         void* d = (uchar*)dst.handle + dst.offset;
         const void* sp = (const uchar*)src.handle + src.offset;
@@ -313,12 +308,8 @@ public:
         DeviceGuard g(device);
         check(CV_GPU(Memcpy2DAsync)(d, dstStep, sp, srcStep, widthBytes, rows, CV_GPU(MemcpyDefault), s.s_),
               "Memcpy2DAsync");
-        if (kind == COPY_HOST_TO_DEVICE && !hostStable)
-        {
-            // the caller's memory may change once this returns, and pinned memory is read asynchronously
-            Ptr<Event> e = s.record();
-            e->wait();
-        }
+        if (kind != COPY_DEVICE_TO_DEVICE)
+            s.synchronize();
     }
 
     Ptr<Stream> createStream(int device) CV_OVERRIDE
@@ -326,9 +317,9 @@ public:
         return makePtr<GpuStream>(device, eventFlags(device));
     }
 
-    Ops* ops(const String& module) CV_OVERRIDE
+    Ops* ops(const char* module) CV_OVERRIDE
     {
-        return module == CoreOps::module() ? &core_ : 0;
+        return strcmp(module, "core") == 0 ? &core_ : 0;
     }
 
 protected:
@@ -345,18 +336,6 @@ protected:
             return 0;
         }
         return v;
-    }
-
-    //! @p p, or NULL when the device is out of memory; throws on any other failure
-    static void* allocated(CV_GPU(Error_t) r, void* p)
-    {
-        if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
-        {
-            (void)CV_GPU(GetLastError)();
-            return 0;
-        }
-        check(r, "allocate");
-        return p;
     }
 
     std::vector<std::unique_ptr<GpuDevice> > devs_;
