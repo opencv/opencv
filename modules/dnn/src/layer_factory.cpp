@@ -105,7 +105,15 @@ Ptr<Layer> LayerFactory::createLayerInstance(const String& type, LayerParams& pa
 }
 
 typedef std::map<std::string, LayerFactory::OpConstructor> OpFactory_Impl;
-typedef std::map<std::string, std::map<int, LayerFactory::ExecConstructor> > ExecFactory_Impl;
+
+struct ExecEntry
+{
+    LayerFactory::ExecConstructor ctor;
+    int minOpset;
+    int maxOpset;
+};
+// one table per backend: op type -> executor and the model opsets it accepts
+typedef std::unordered_map<int, std::unordered_map<std::string, ExecEntry> > ExecFactory_Impl;
 
 static OpFactory_Impl& getOpFactoryImpl()
 {
@@ -142,11 +150,42 @@ Ptr<LayerInfo> LayerFactory::createOp(const String& type, const LayerParams& par
 
 void LayerFactory::registerExec(const String& type, int backendId, ExecConstructor constructor)
 {
+    registerExec(type, backendId, constructor, 0, INT_MAX);
+}
+
+void LayerFactory::registerExec(const String& type, int backendId, ExecConstructor constructor,
+                                int minOpset, int maxOpset)
+{
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(type, "type", type.c_str());
     CV_Assert(constructor);
+    CV_CheckLE(minOpset, maxOpset, "");
     cv::AutoLock lock(getLayerFactoryMutex());
-    getExecFactoryImpl()[type][backendId] = constructor;
+    getExecFactoryImpl()[backendId][type] = ExecEntry{constructor, minOpset, maxOpset};
+}
+
+void LayerFactory::unregisterExec(const String& type, int backendId)
+{
+    CV_TRACE_FUNCTION();
+    CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+    cv::AutoLock lock(getLayerFactoryMutex());
+    ExecFactory_Impl& impl = getExecFactoryImpl();
+    auto it = impl.find(backendId);
+    if (it != impl.end())
+        it->second.erase(type);
+}
+
+bool LayerFactory::isExecSupported(const String& type, int backendId, int opset)
+{
+    cv::AutoLock lock(getLayerFactoryMutex());
+    const ExecFactory_Impl& impl = getExecFactoryImpl();
+    auto it = impl.find(backendId);
+    if (it == impl.end())
+        return false;
+    auto eit = it->second.find(type);
+    if (eit == it->second.end())
+        return false;
+    return opset < 0 || (eit->second.minOpset <= opset && opset <= eit->second.maxOpset);
 }
 
 Ptr<Layer> LayerFactory::createExec(const String& type, int backendId,
@@ -158,11 +197,11 @@ Ptr<Layer> LayerFactory::createExec(const String& type, int backendId,
     {
         cv::AutoLock lock(getLayerFactoryMutex());
         ExecFactory_Impl& impl = getExecFactoryImpl();
-        ExecFactory_Impl::const_iterator it = impl.find(type);
+        auto it = impl.find(backendId);
         if (it != impl.end()) {
-            auto bit = it->second.find(backendId);
-            if (bit != it->second.end())
-                ctor = bit->second;
+            auto eit = it->second.find(type);
+            if (eit != it->second.end())
+                ctor = eit->second.ctor;
         }
     }
     if (ctor)

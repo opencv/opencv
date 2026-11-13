@@ -226,6 +226,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR | bool | false | also raise exception when NaN check has failed |
 | OPENCV_DNN_ONNX_USE_LEGACY_NAMES | bool | false | use ONNX node names as-is instead of "onnx_node!${node_name}" |
 | OPENCV_DNN_CUSTOM_ONNX_TYPE_INCLUDE_DOMAIN_NAME | bool | true | prepend layer domain to layer types ("domain.type") |
+| OPENCV_DNN_MIN_SUBGRAPH_SIZE | num | 3 | CUDA: a run of consecutive CUDA ops shorter than this runs on CPU, to avoid host/device copies |
 | OPENCV_VULKAN_RUNTIME | file path | | set location of Vulkan runtime library for DNN Vulkan backend |
 | OPENCV_DNN_IE_SERIALIZE | bool | false | dump intermediate OpenVINO graph (default file names `${dump_base_name}_ngraph.xml`, `${dump_base_name}_ngraph.bin`) |
 | OPENCV_DNN_IE_EXTRA_PLUGIN_PATH | path | | path to extra OpenVINO plugins |

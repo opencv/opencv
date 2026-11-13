@@ -774,7 +774,8 @@ Net ONNXImporter2::parseModel()
     }
     netimpl->modelFormat = DNN_MODEL_ONNX;
     netimpl->originalLayout = DATA_LAYOUT_NCHW;
-    // netimpl->onnx_opset = onnx_opset;
+    auto opset_it = onnx_opset_map.find(str_domain_ai_onnx);
+    netimpl->onnx_opset = opset_it != onnx_opset_map.end() ? opset_it->second : -1;
 
     if (have_errors) {
         std::stringstream sstrm;

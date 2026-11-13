@@ -86,6 +86,13 @@ public:
     static Ptr<LayerInfo> createOp(const String& type, const LayerParams& params);
 
     static void registerExec(const String& type, int backendId, ExecConstructor constructor);
+    //! Registers an executor that is valid only for model opsets in [minOpset, maxOpset].
+    static void registerExec(const String& type, int backendId, ExecConstructor constructor,
+                             int minOpset, int maxOpset);
+    //! Removes the executor registered for @p type on @p backendId, if there is one.
+    static void unregisterExec(const String& type, int backendId);
+    //! Checks the backend's table for @p type; a negative @p opset skips the opset range check.
+    static bool isExecSupported(const String& type, int backendId, int opset = -1);
     static Ptr<Layer> createExec(const String& type, int backendId,
                                  const Ptr<LayerInfo>& data, void* backendCtx);
 

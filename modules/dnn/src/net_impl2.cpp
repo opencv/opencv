@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
+#include "graph_partition.hpp"
 
 #include <limits>
 
@@ -600,6 +601,216 @@ void Net::Impl::prepareForInference()
     }
 }
 
+static const char* backendName(int backendId)
+{
+    return backendId == DNN_BACKEND_CUDA ? "CUDA" : backendId == DNN_BACKEND_OPENCV ? "CPU" : "accelerator";
+}
+
+#ifdef HAVE_CUDA
+// A dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
+// argTensor(), i.e. the host copies forwardGraph() downloads before the op runs.
+static bool isHostSizedDynamicOp(const std::string& type)
+{
+    static const std::set<std::string> ops = {
+        "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
+    };
+    return ops.count(type) != 0;
+}
+
+static void unmarkHostOp(const std::vector<Ptr<LayerInfo> >& prog, std::vector<uchar>& hostShapeOp,
+                         std::vector<uchar>& hostArg, size_t k)
+{
+    hostShapeOp[k] = 0;
+    for (const Arg& out : prog[k]->outputs)
+        if (!out.empty())
+            hostArg[out.idx] = 0;
+}
+
+// Shape and the small ops on its values run on the host, so the dynamic ops they size never wait for the device.
+static void markHostShapeOps(const Net::Impl& net, const std::vector<Ptr<LayerInfo> >& prog,
+                             std::vector<uchar>& hostShapeOp)
+{
+    static const std::set<std::string> hostShapeOpTypes = {
+        "Shape", "Gather2", "Concat2", "Unsqueeze", "Squeeze", "Slice2", "Cast2", "NaryEltwise", "Not", "Reshape2"
+    };
+    const size_t nops = prog.size();
+    std::vector<uchar> hostArg(net.args.size(), 0);
+    std::vector<int> producer(net.args.size(), -1);
+    for (size_t i = 0; i < nops; i++) {
+        const Ptr<LayerInfo>& op = prog[i];
+        if (!op)
+            continue;
+        for (const Arg& out : op->outputs)
+            if (!out.empty())
+                producer[out.idx] = (int)i;
+        if (!hostShapeOpTypes.count(op->type))
+            continue;
+        bool anyHost = false, allHost = true;
+        for (const Arg& inp : op->inputs) {
+            if (inp.empty() || net.isConstArg(inp))
+                continue;
+            anyHost |= hostArg[inp.idx] != 0;
+            allHost &= hostArg[inp.idx] != 0;
+        }
+        if (op->type != "Shape" && !(anyHost && allHost))
+            continue;
+        hostShapeOp[i] = 1;
+        for (const Arg& out : op->outputs)
+            if (!out.empty())
+                hostArg[out.idx] = 1;
+    }
+    // a host value read as device data would need an upload every forward, so that chain stays on CUDA
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (size_t i = nops; i-- > 0;) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op)
+                continue;
+            const size_t ninp = op->inputs.size();
+            if (hostShapeOp[i]) {
+                // a host op fed by an unmarked producer would have to download from the device
+                for (const Arg& inp : op->inputs) {
+                    if (op->type != "Shape" && !inp.empty() && !net.isConstArg(inp) && !hostArg[inp.idx]) {
+                        unmarkHostOp(prog, hostShapeOp, hostArg, i);
+                        changed = true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            const bool sizedOnHost = op->dynamicOutputShapes() && isHostSizedDynamicOp(op->type);
+            for (size_t j = 0; j < ninp; j++) {
+                Arg inp = op->inputs[j];
+                if (inp.empty() || !hostArg[inp.idx] || (sizedOnHost && (j > 0 || ninp == 1)))
+                    continue;
+                unmarkHostOp(prog, hostShapeOp, hostArg, (size_t)producer[inp.idx]);
+                changed = true;
+            }
+        }
+    }
+}
+
+// Why @p op cannot run on CUDA, or an empty string if the CUDA table accepts it.
+static std::string cudaPlacementBlocker(const Net::Impl& net, const Ptr<LayerInfo>& op)
+{
+    if (net.accelFailedOps.count(op.get()))
+        return "it failed on CUDA in an earlier forward";
+    if (op->subgraphs())
+        return "control-flow bodies stay on CPU";
+    if (op->dynamicOutputShapes() && !isHostSizedDynamicOp(op->type))
+        return "it has dynamic output shapes";
+    if (!LayerFactory::isExecSupported(op->type, DNN_BACKEND_CUDA))
+        return "there is no CUDA exec for it";
+    if (!LayerFactory::isExecSupported(op->type, DNN_BACKEND_CUDA, net.onnx_opset))
+        return cv::format("its CUDA exec does not support opset %d", net.onnx_opset);
+    return std::string();
+}
+#endif
+
+void Net::Impl::planOpPlacement(const Ptr<Graph>& graph, bool useCUDA,
+                                std::vector<int>& placement, std::vector<Ptr<Layer> >& accelExecs)
+{
+    GraphImpl* g = static_cast<GraphImpl*>(graph.get());
+    const std::vector<Ptr<LayerInfo> >& prog = g->prog_;
+    const size_t nops = prog.size();
+    placement.assign(nops, DNN_BACKEND_OPENCV);
+    accelExecs.assign(nops, Ptr<Layer>());
+
+    if (partitionPlanned) {
+        // Ops added after planning (TransformLayout) are host-side layout conversions.
+        for (size_t i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            auto it = op ? plannedBackend.find(op.get()) : plannedBackend.end();
+            if (it == plannedBackend.end() || it->second == DNN_BACKEND_OPENCV)
+                continue;
+            if (it->second == PLACED_ON_HOST) {
+                g->hostShapeOp_[i] = 1;
+                continue;
+            }
+#ifdef HAVE_CUDA
+            if (it->second == DNN_BACKEND_CUDA && cudaInfo)
+                accelExecs[i] = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
+#endif
+            if (accelExecs[i])
+                placement[i] = it->second;
+            else
+                CV_LOG_WARNING(NULL, cv::format("DNN/NewEngine: op '%s' (%s) was planned for %s but its exec "
+                                                "could not be created again; running it on CPU",
+                                                op->name.c_str(), op->type.c_str(), backendName(it->second)));
+        }
+        return;
+    }
+
+#ifdef HAVE_CUDA
+    if (useCUDA && cudaInfo) {
+        markHostShapeOps(*this, prog, g->hostShapeOp_);
+        for (size_t i = 0; i < nops; i++) {
+            const Ptr<LayerInfo>& op = prog[i];
+            if (!op || g->hostShapeOp_[i])
+                continue;
+            std::string reason = cudaPlacementBlocker(*this, op);
+            if (reason.empty()) {
+                accelExecs[i] = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
+                if (!accelExecs[i])
+                    reason = "its CUDA exec declined this configuration";
+            }
+            if (!reason.empty()) {
+                CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: op '%s' (%s) stays on CPU: %s",
+                                             op->name.c_str(), op->type.c_str(), reason.c_str()));
+                continue;
+            }
+            placement[i] = DNN_BACKEND_CUDA;
+        }
+
+        const std::vector<int> supported = placement;
+        demoteShortRuns(prog, g->hostShapeOp_, placement, minAccelSubgraphSize);
+        bool anyAccel = false;
+        for (size_t i = 0; i < nops; i++) {
+            if (placement[i] != supported[i]) {
+                accelExecs[i].release();
+                CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: op '%s' (%s) moved to CPU: its CUDA run is shorter "
+                                             "than OPENCV_DNN_MIN_SUBGRAPH_SIZE=%zu ops",
+                                             prog[i]->name.c_str(), prog[i]->type.c_str(), minAccelSubgraphSize));
+            }
+            anyAccel |= placement[i] != DNN_BACKEND_OPENCV;
+        }
+        if (!anyAccel)
+            g->hostShapeOp_.assign(nops, 0);  // nothing is on the device, so no op needs a host fast path
+    }
+#else
+    CV_UNUSED(useCUDA);
+#endif
+
+    for (size_t i = 0; i < nops; i++) {
+        if (prog[i])
+            plannedBackend[prog[i].get()] = g->hostShapeOp_[i] ? (int)PLACED_ON_HOST : placement[i];
+    }
+}
+
+static void logPartition(const std::string& graphName, const std::vector<Ptr<LayerInfo> >& prog,
+                         const std::vector<GraphSegment>& segments,
+                         const std::vector<ArgTransition>& transitions, const Net::Impl& net)
+{
+    std::ostringstream strm;
+    strm << "DNN/NewEngine: graph '" << graphName << "' runs as " << segments.size() << " segment(s):";
+    for (const GraphSegment& s : segments)
+        strm << " " << backendName(s.backend) << " #" << s.first << "-#" << s.last << " (" << s.nops << " ops)";
+    strm << "; " << transitions.size() << " transition(s)";
+    const size_t maxShown = 32;
+    for (size_t k = 0; k < transitions.size() && k < maxShown; k++) {
+        const ArgTransition& t = transitions[k];
+        strm << (k == 0 ? ": '" : ", '") << net.argName(t.arg) << "' " << backendName(t.from)
+             << "->" << backendName(t.to);
+        if (t.consumer >= 0)
+            strm << " before '" << prog[t.consumer]->name << "'";
+        else
+            strm << " as graph output";
+    }
+    if (transitions.size() > maxShown)
+        strm << ", ...";
+    CV_LOG_INFO(NULL, strm.str());
+}
+
 void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
 {
     GraphImpl* g = static_cast<GraphImpl*>(graph.get());
@@ -609,109 +820,24 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
     g->execBackend_.assign(nops, DNN_BACKEND_OPENCV);
     g->hostShapeOp_.assign(nops, 0);
 
-#ifdef HAVE_CUDA
-    // Whole-graph CUDA gate: run on CUDA only if *every* op has a CUDA executor; if any op is
-    // unsupported (or the graph has control-flow subgraphs) run the entire graph on CPU. This
-    // avoids partial CPU<->CUDA execution and its host/device coherence hazards for now.
-    std::vector<Ptr<Layer> > cudaExecs;
-    bool graphOnCuda = false;
-    if (useCUDA && cudaInfo) {
-        // a dynamic op stays on CUDA only if getMemoryShapes() reads its value inputs through
-        // argTensor(), i.e. the host copies forwardGraph() downloads before the op runs
-        static const std::set<std::string> hostSizedDynamicOps = {
-            "Reshape2", "Expand2", "Squeeze", "Unsqueeze", "Slice2", "ConstantOfShape", "Tile2"
-        };
-        // Shape and the small ops on its values run on the host, so the dynamic ops they size never wait for the device
-        static const std::set<std::string> hostShapeOpTypes = {
-            "Shape", "Gather2", "Concat2", "Unsqueeze", "Squeeze", "Slice2", "Cast2", "NaryEltwise", "Not", "Reshape2"
-        };
-        std::vector<uchar> hostArg(args.size(), 0);
-        std::vector<int> producer(args.size(), -1);
-        for (i = 0; i < nops; i++) {
-            const Ptr<LayerInfo>& op = prog[i];
-            if (!op)
-                continue;
-            for (const Arg& out : op->outputs)
-                if (!out.empty())
-                    producer[out.idx] = (int)i;
-            if (!hostShapeOpTypes.count(op->type))
-                continue;
-            bool anyHost = false, allHost = true;
-            for (const Arg& inp : op->inputs) {
-                if (inp.empty() || isConstArg(inp))
-                    continue;
-                anyHost |= hostArg[inp.idx] != 0;
-                allHost &= hostArg[inp.idx] != 0;
-            }
-            if (op->type != "Shape" && !(anyHost && allHost))
-                continue;
-            g->hostShapeOp_[i] = 1;
-            for (const Arg& out : op->outputs)
-                if (!out.empty())
-                    hostArg[out.idx] = 1;
-        }
-        auto unmarkHostOp = [&](size_t k) {
-            g->hostShapeOp_[k] = 0;
-            for (const Arg& out : prog[k]->outputs)
-                if (!out.empty())
-                    hostArg[out.idx] = 0;
-        };
-        // a host value read as device data would need an upload every forward, so that chain stays on CUDA
-        for (bool changed = true; changed;) {
-            changed = false;
-            for (i = nops; i-- > 0;) {
-                const Ptr<LayerInfo>& op = prog[i];
-                if (!op)
-                    continue;
-                const size_t ninp = op->inputs.size();
-                if (g->hostShapeOp_[i]) {
-                    // a host op fed by an unmarked producer would have to download from the device
-                    for (const Arg& inp : op->inputs) {
-                        if (op->type != "Shape" && !inp.empty() && !isConstArg(inp) && !hostArg[inp.idx]) {
-                            unmarkHostOp(i);
-                            changed = true;
-                            break;
-                        }
-                    }
-                    continue;
-                }
-                const bool sizedOnHost = op->dynamicOutputShapes() && hostSizedDynamicOps.count(op->type);
-                for (size_t j = 0; j < ninp; j++) {
-                    Arg inp = op->inputs[j];
-                    if (inp.empty() || !hostArg[inp.idx] || (sizedOnHost && (j > 0 || ninp == 1)))
-                        continue;
-                    unmarkHostOp((size_t)producer[inp.idx]);
-                    changed = true;
-                }
-            }
-        }
+    // Each op runs on the accelerator if its table accepts it, else on CPU; forwardGraph() moves a
+    // tensor between host and device when its dirty flags say the other side holds the fresh copy.
+    std::vector<int> placement;
+    std::vector<Ptr<Layer> > accelExecs;
+    planOpPlacement(graph, useCUDA, placement, accelExecs);
 
-        graphOnCuda = true;
-        cudaExecs.assign(nops, Ptr<Layer>());
+#ifdef HAVE_CUDA
+    if (graph == mainGraph) {
+        bool anyCPU = false, anyCUDA = false;
         for (i = 0; i < nops; i++) {
-            const Ptr<LayerInfo>& op = prog[i];
-            if (!op || g->hostShapeOp_[i])
-                continue;  // a host shape op takes its CPU exec below
-            if (op->subgraphs()) { graphOnCuda = false; break; }  // control-flow bodies stay on CPU
-            if (op->dynamicOutputShapes() && !hostSizedDynamicOps.count(op->type)) { graphOnCuda = false; break; }
-            Ptr<Layer> e = LayerFactory::createExec(op->type, DNN_BACKEND_CUDA, op, &cudaInfo->context);
-            if (!e) { graphOnCuda = false; break; }
-            cudaExecs[i] = e;
+            if (!prog[i] || g->hostShapeOp_[i])
+                continue;
+            anyCUDA |= placement[i] == DNN_BACKEND_CUDA;
+            anyCPU |= placement[i] == DNN_BACKEND_OPENCV;
         }
-        if (!graphOnCuda) {
-            cudaExecs.clear();
-            g->hostShapeOp_.assign(nops, 0);
-            const Ptr<LayerInfo>& blocker = prog[i];
-            const char* reason = blocker->subgraphs() ? "has subgraphs"
-                               : blocker->dynamicOutputShapes() ? "has dynamic output shapes"
-                               : "has no CUDA exec";
-            CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: graph '%s': op '%s' (%s) %s; "
-                                         "running the whole graph on CPU", graph->name().c_str(),
-                                         blocker->name.c_str(), blocker->type.c_str(), reason));
-        }
+        // device temps may share buffers only when no CPU op reads or writes them
+        cudaPoolTemps = anyCUDA && !anyCPU;
     }
-    if (graph == mainGraph)
-        cudaPoolTemps = graphOnCuda;
 #endif
 
     for (i = 0; i < nops; i++) {
@@ -726,15 +852,12 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
                 finalizeGraph(sub, useCUDA);
         }
 
-        Ptr<Layer> exec;
+        Ptr<Layer> exec = accelExecs[i];
         int backend = DNN_BACKEND_OPENCV;
-#ifdef HAVE_CUDA
-        if (graphOnCuda && cudaExecs[i]) {
-            exec = cudaExecs[i];
+        if (exec) {
             exec->preferableTarget = preferableTarget;
-            backend = DNN_BACKEND_CUDA;
+            backend = placement[i];
         }
-#endif
         if (!exec) {
             exec = LayerFactory::createExec(op->type, DNN_BACKEND_OPENCV, op, nullptr);
             if (!exec)
@@ -752,8 +875,18 @@ void Net::Impl::finalizeGraph(const Ptr<Graph>& graph, bool useCUDA)
         g->exec_[i] = exec;
         g->execBackend_[i] = backend;
         CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize op #%zu '%s' (%s) -> %s",
-                    i, op->name.c_str(), op->type.c_str(),
-                    backend == DNN_BACKEND_CUDA ? "CUDA" : "CPU"));
+                    i, op->name.c_str(), op->type.c_str(), backendName(backend)));
+    }
+
+    // the second pass sees the final program, TransformLayout ops included
+    if (useCUDA && partitionPlanned) {
+        std::vector<uchar> constArg(args.size(), 0);
+        for (size_t a = 0; a < args.size(); a++)
+            constArg[a] = args[a].kind == DNN_ARG_CONST;
+        std::vector<GraphSegment> segments;
+        std::vector<ArgTransition> transitions;
+        buildSegments(prog, g->hostShapeOp_, g->execBackend_, g->outputs_, constArg, segments, transitions);
+        logPartition(graph->name(), prog, segments, transitions, *this);
     }
 }
 
@@ -837,8 +970,13 @@ void Net::Impl::finalize()
     CV_LOG_INFO(NULL, cv::format("DNN/NewEngine: finalize() backend=%d target=%d useCUDA=%d over %zu graph(s)",
                 preferableBackend, preferableTarget, (int)useCUDA, allgraphs.size()));
 
+    // an accelerated run shorter than this goes back to CPU, since its transfers would cost more than it saves
+    minAccelSubgraphSize = utils::getConfigurationParameterSizeT("OPENCV_DNN_MIN_SUBGRAPH_SIZE", 3);
+    plannedBackend.clear();
+    partitionPlanned = false;
     for (const Ptr<Graph>& g : allgraphs)
         finalizeGraph(g, useCUDA);
+    partitionPlanned = true;
     useBlockLayout();
     // TransformLayout nodes only exist from here on; fuse residual Adds into
     // them, and leave every layer already fused before the snapshot alone.
@@ -850,6 +988,30 @@ void Net::Impl::finalize()
         finalizeGraph(g, useCUDA);
 
     finalized = true;
+}
+
+bool Net::Impl::retryAfterAccelFailure(const cv::Exception& e)
+{
+    const LayerInfo* op = accelRunningOp;
+    accelRunningOp = nullptr;
+    if (!op || accelFailedOps.count(op))
+        return false;
+#ifdef HAVE_CUDA
+    // A kernel fault leaves the CUDA context unusable for good; only a failure that the context
+    // survives (an unsupported case, a JIT compile error, an allocation) can move to CPU.
+    cudaGetLastError();
+    if (!cudaInfo || cudaStreamSynchronize(cudaInfo->context.stream.get()) != cudaSuccess) {
+        CV_LOG_ERROR(NULL, cv::format("DNN/NewEngine: op '%s' (%s) failed and the CUDA context is no "
+                                      "longer usable", op->name.c_str(), op->type.c_str()));
+        return false;
+    }
+#endif
+    accelFailedOps.insert(op);
+    CV_LOG_WARNING(NULL, cv::format("DNN/NewEngine: op '%s' (%s) failed on the accelerator (%s); "
+                                    "it runs on CPU from now on", op->name.c_str(), op->type.c_str(),
+                                    e.err.c_str()));
+    finalized = false;
+    return true;
 }
 
 void Net::Impl::allocateLayerOutputs(
@@ -963,10 +1125,19 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     //tracingMode = DNN_TRACE_ALL;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
-    dimvalues.assign(nsymdims, -1);
-    layersTimings.assign(totalLayers + 1, 0.);
-
-    forwardGraph(mainGraph, inputs, outputs, true);
+    // An accelerated op that fails is moved to CPU and the forward runs again on the new partition.
+    for (;;) {
+        dimvalues.assign(nsymdims, -1);
+        layersTimings.assign(totalLayers + 1, 0.);
+        try {
+            forwardGraph(mainGraph, inputs, outputs, true);
+            break;
+        } catch (const cv::Exception& e) {
+            if (!retryAfterAccelFailure(e))
+                throw;
+        }
+        finalize();
+    }
 
     // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).
     if (useKVCache && kvCacheManager.hasRoutes)
@@ -1901,6 +2072,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         std::vector<Ptr<Graph> >* subgraphs = op->subgraphs();
         if (!subgraphs) {
+#ifdef HAVE_CUDA
+            // shape inference above is the same on every backend; only the exec's own work below
+            // is a reason to move the op to CPU
+            accelRunningOp = opBackend == DNN_BACKEND_CUDA ? op.get() : nullptr;
+#endif
             // Blobs live on 'op', packed buffers on the executor 'layer'.
             if (layer->packedWeightEpoch != op->weightEpoch) {
                 layer->prepackWeights();
@@ -2100,6 +2276,14 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                           ("unknown layer type '%s' with subgraphs", op->type.c_str()));
             }
         }
+#ifdef HAVE_CUDA
+        if (subgraphs) {
+            // control-flow ops run on the host, so a CUDA consumer must upload their outputs again
+            for (size_t k = 0; k < noutputs; k++)
+                cudaSetHostDirty(outputs[k]);
+        }
+        accelRunningOp = nullptr;
+#endif
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {

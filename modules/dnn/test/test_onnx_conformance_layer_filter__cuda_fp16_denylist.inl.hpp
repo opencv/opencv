@@ -13,6 +13,7 @@
 "test_cumsum_2d_axis_1",
 "test_cumsum_2d_negative_axis",
 "test_dropout_default_ratio",
+"test_dynamicquantizelinear_expanded", // accuracy: the scale is computed in FP16, so the uint8 output is off by one
 "test_einsum_batch_diagonal",
 "test_einsum_batch_matmul",
 "test_einsum_sum",
@@ -25,6 +26,7 @@
 "test_lppool_2d_strides",
 "test_lppool_3d_default",
 "test_maxpool_with_argmax_2d_precomputed_pads", // assertion failed mat.type() == CV_32F
+"test_nllloss_NCd1d2_with_weight_reduction_sum_expanded", // accuracy: the sum is reduced in FP16
 "test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded", // crash: https://github.com/opencv/opencv/issues/25471
 "test_reduce_prod_default_axes_keepdims_example", // fallback to cpu, accuracy
 "test_reduce_prod_default_axes_keepdims_random", // fallback to cpu, accuracy
@@ -44,9 +46,6 @@
 "test_quantizelinear", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear_axis", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear_blocked", // Issue https://github.com/opencv/opencv/issues/25999
-"test_max_float64",
-"test_min_float64",
-"test_mod_mixed_sign_float64",
 "test_attention_3d_attn_mask",
 "test_attention_3d_causal",
 "test_attention_3d_diff_heads_sizes",
@@ -85,33 +84,3 @@
 "test_attention_4d_softcap",
 "test_attention_4d_attn_mask_bool",
 "test_attention_4d_attn_mask_bool_4d",
-// New-engine CUDA: arithmetic ops lack integer (int16/uint16/uint32/uint64) support and
-// standalone BatchNorm with non-const params; denylisted for now (pass on CPU, wrong on CUDA).
-"test_add_int16",
-"test_add_uint16",
-"test_add_uint32",
-"test_add_uint64",
-"test_sub_int16",
-"test_sub_uint16",
-"test_sub_uint32",
-"test_sub_uint64",
-"test_mul_int16",
-"test_mul_uint16",
-"test_mul_uint32",
-"test_mul_uint64",
-"test_div_int16",
-"test_div_uint16",
-"test_div_uint32",
-"test_div_uint64",
-"test_max_int16",
-"test_max_uint16",
-"test_max_uint32",
-"test_max_uint64",
-"test_min_int16",
-"test_min_uint16",
-"test_min_uint32",
-"test_min_uint64",
-"test_mod_mixed_sign_int16",
-"test_mod_uint16",
-"test_mod_uint32",
-"test_mod_uint64",
