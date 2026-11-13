@@ -431,7 +431,7 @@ There are multiple less popular frameworks which can be used to read and write v
 | `WITH_XIMEA` | _OFF_ | [XIMEA](https://www.ximea.com/) cameras support. |
 | `WITH_XINE` | _OFF_ | [XINE](https://en.wikipedia.org/wiki/Xine) library support. |
 | `WITH_LIBREALSENSE` | _OFF_ | [RealSense](https://en.wikipedia.org/wiki/Intel_RealSense) cameras support. |
-| `WITH_MFX` | _OFF_ | [MediaSDK](http://mediasdk.intel.com/) library can be used for HW-accelerated decoding and encoding of raw video streams. |
+| `WITH_MFX` | _OFF_ | [oneVPL](https://github.com/intel/libvpl) library (checked first) or legacy [Media SDK](https://github.com/Intel-Media-SDK/MediaSDK) library (used as a fallback) can be used for HW-accelerated decoding and encoding of raw video streams. |
 | `WITH_GPHOTO2` | _OFF_ | [GPhoto](https://en.wikipedia.org/wiki/GPhoto) library can be used to capure frames from cameras. |
 | `WITH_ANDROID_MEDIANDK` | _ON_ | [MediaNDK](https://developer.android.com/ndk/guides/stable_apis#libmediandk) library is available on Android since API level 21. |
 
