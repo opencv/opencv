@@ -2070,6 +2070,8 @@ int dataType2cv(int dt)
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool :
         dt == opencv_onnx::TensorProto_DataType_UINT4 ? CV_8U :
         dt == opencv_onnx::TensorProto_DataType_INT4 ? CV_8S :
+        dt == opencv_onnx::TensorProto_DataType_UINT2 ? CV_8U :
+        dt == opencv_onnx::TensorProto_DataType_INT2 ? CV_8S :
         dt == onnx_dtype::ONNX_FLOAT8E8M0 ? CV_32F :
         onnx_dtype::isFp8Native(dt) ? onnx_dtype::fp8NativeDepth(dt) :
         onnx_dtype::isExoticFloat(dt) ? CV_16F : -1;
@@ -2415,6 +2417,24 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         uchar* dst = blob.ptr<uchar>();
         for (size_t i = 0, total = blob.total(); i < total; i++)
             dst[i] = onnx_dtype::unpackNibble(src, i);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT2)
+    {
+        checkPayloadSize(payload_bytes * 4);  // four 2-bit elements per byte
+        blob.create((int)sizes.size(), sizes.data(), CV_8SC1);
+        const uchar* src = payload;
+        schar* dst = blob.ptr<schar>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = onnx_dtype::int2SignExtend(onnx_dtype::unpackCrumb(src, i));
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_UINT2)
+    {
+        checkPayloadSize(payload_bytes * 4);  // four 2-bit elements per byte
+        blob.create((int)sizes.size(), sizes.data(), CV_8UC1);
+        const uchar* src = payload;
+        uchar* dst = blob.ptr<uchar>();
+        for (size_t i = 0, total = blob.total(); i < total; i++)
+            dst[i] = onnx_dtype::unpackCrumb(src, i);
     }
     else
     {

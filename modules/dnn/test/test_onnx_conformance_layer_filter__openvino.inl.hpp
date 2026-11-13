@@ -486,7 +486,11 @@ CASE(test_cast_FLOAT16_to_FLOAT8E5M2)
     SKIP;
 CASE(test_cast_FLOAT16_to_FLOAT8E5M2FNUZ)
     SKIP;
+CASE(test_cast_FLOAT16_to_INT2)
+    SKIP;
 CASE(test_cast_FLOAT16_to_INT4)
+    SKIP;
+CASE(test_cast_FLOAT16_to_UINT2)
     SKIP;
 CASE(test_cast_FLOAT16_to_UINT4)
     SKIP;
@@ -520,15 +524,31 @@ CASE(test_cast_FLOAT_to_FLOAT8E5M2)
     SKIP;
 CASE(test_cast_FLOAT_to_FLOAT8E5M2FNUZ)
     SKIP;
+CASE(test_cast_FLOAT_to_INT2)
+    SKIP;
 CASE(test_cast_FLOAT_to_INT4)
     SKIP;
+CASE(test_cast_FLOAT_to_UINT2)
+    SKIP;
 CASE(test_cast_FLOAT_to_UINT4)
+    SKIP;
+CASE(test_cast_INT2_to_FLOAT)
+    SKIP;
+CASE(test_cast_INT2_to_FLOAT16)
+    SKIP;
+CASE(test_cast_INT2_to_INT8)
     SKIP;
 CASE(test_cast_INT4_to_FLOAT)
     SKIP;
 CASE(test_cast_INT4_to_FLOAT16)
     SKIP;
 CASE(test_cast_INT4_to_INT8)
+    SKIP;
+CASE(test_cast_UINT2_to_FLOAT)
+    SKIP;
+CASE(test_cast_UINT2_to_FLOAT16)
+    SKIP;
+CASE(test_cast_UINT2_to_UINT8)
     SKIP;
 CASE(test_cast_UINT4_to_FLOAT)
     SKIP;
@@ -580,9 +600,17 @@ CASE(test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ_expanded)
     SKIP;
 CASE(test_castlike_FLOAT16_to_FLOAT8E5M2_expanded)
     SKIP;
+CASE(test_castlike_FLOAT16_to_INT2)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_INT2_expanded)
+    SKIP;
 CASE(test_castlike_FLOAT16_to_INT4)
     SKIP;
 CASE(test_castlike_FLOAT16_to_INT4_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_UINT2)
+    SKIP;
+CASE(test_castlike_FLOAT16_to_UINT2_expanded)
     SKIP;
 CASE(test_castlike_FLOAT16_to_UINT4)
     SKIP;
@@ -628,6 +656,26 @@ CASE(test_castlike_FLOAT8E5M2_to_FLOAT16_expanded)
     SKIP;
 CASE(test_castlike_FLOAT8E5M2_to_FLOAT_expanded)
     SKIP;
+CASE(test_castlike_FLOAT_to_INT2)
+    SKIP;
+CASE(test_castlike_FLOAT_to_INT2_expanded)
+    SKIP;
+CASE(test_castlike_FLOAT_to_UINT2)
+    SKIP;
+CASE(test_castlike_FLOAT_to_UINT2_expanded)
+    SKIP;
+CASE(test_castlike_INT2_to_FLOAT)
+    SKIP;
+CASE(test_castlike_INT2_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_INT2_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_INT2_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_INT2_to_INT8)
+    SKIP;
+CASE(test_castlike_INT2_to_INT8_expanded)
+    SKIP;
 CASE(test_castlike_INT4_to_FLOAT)
     SKIP;
 CASE(test_castlike_INT4_to_FLOAT16)
@@ -639,6 +687,18 @@ CASE(test_castlike_INT4_to_FLOAT_expanded)
 CASE(test_castlike_INT4_to_INT8)
     SKIP;
 CASE(test_castlike_INT4_to_INT8_expanded)
+    SKIP;
+CASE(test_castlike_UINT2_to_FLOAT)
+    SKIP;
+CASE(test_castlike_UINT2_to_FLOAT16)
+    SKIP;
+CASE(test_castlike_UINT2_to_FLOAT16_expanded)
+    SKIP;
+CASE(test_castlike_UINT2_to_FLOAT_expanded)
+    SKIP;
+CASE(test_castlike_UINT2_to_UINT8)
+    SKIP;
+CASE(test_castlike_UINT2_to_UINT8_expanded)
     SKIP;
 CASE(test_castlike_UINT4_to_FLOAT)
     SKIP;
@@ -882,9 +942,13 @@ CASE(test_dequantizelinear_e5m2)
     SKIP;
 CASE(test_dequantizelinear_int16)
     SKIP;
+CASE(test_dequantizelinear_int2)
+    SKIP;
 CASE(test_dequantizelinear_int4)
     SKIP;
 CASE(test_dequantizelinear_uint16)
+    SKIP;
+CASE(test_dequantizelinear_uint2)
     SKIP;
 CASE(test_dequantizelinear_uint4)
     SKIP;
@@ -2223,9 +2287,13 @@ CASE(test_quantizelinear_e5m2)
     SKIP;
 CASE(test_quantizelinear_int16)
     SKIP;
+CASE(test_quantizelinear_int2)
+    SKIP;
 CASE(test_quantizelinear_int4)
     SKIP;
 CASE(test_quantizelinear_uint16)
+    SKIP;
+CASE(test_quantizelinear_uint2)
     SKIP;
 CASE(test_quantizelinear_uint4)
     SKIP;
