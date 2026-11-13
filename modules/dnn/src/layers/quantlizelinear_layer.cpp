@@ -24,10 +24,9 @@ template <typename _OutTp>
 __attribute__((target("avx2")))
 #endif
 static void quantizeLinearChunk_f32_avx2(const float* src, _OutTp* dst,
-                                         float scale, int zp_i, int64_t len)
+                                         float scale, int zp_i, int lo_i, int hi_i,
+                                         int64_t len)
 {
-    const int lo_i = (int)std::numeric_limits<_OutTp>::lowest();
-    const int hi_i = (int)std::numeric_limits<_OutTp>::max();
     __m256 vscale = _mm256_set1_ps(scale);
     // Clamp in float: a value outside int32 range converts to INT_MIN, which then
     // saturates to the wrong end. Bounds carry the zero point so it can be added after.
@@ -62,7 +61,8 @@ static void quantizeLinearChunk_f32_avx2(const float* src, _OutTp* dst,
 
 template <typename _OutTp>
 static void quantizeLinearFast_f32_avx2(const float* inp, _OutTp* out,
-                                        float scale, int zp_i, int64_t total)
+                                        float scale, int zp_i, int lo_i, int hi_i,
+                                        int64_t total)
 {
     const int64_t block = 1024;
     int64_t nblocks = (total + block - 1) / block;
@@ -71,7 +71,7 @@ static void quantizeLinearFast_f32_avx2(const float* inp, _OutTp* out,
         for (int i = r.start; i < r.end; i++) {
             int64_t ofs = i * block;
             int64_t len = std::min(block, total - ofs);
-            quantizeLinearChunk_f32_avx2(inp + ofs, out + ofs, scale, zp_i, len);
+            quantizeLinearChunk_f32_avx2(inp + ofs, out + ofs, scale, zp_i, lo_i, hi_i, len);
         }
     });
 }
@@ -311,16 +311,17 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
         && (outtype == CV_8U || outtype == CV_8S) && checkHardwareSupport(CV_CPU_AVX2)) {
         float scale_f32 = reinterpret_cast<const float*>(scale.data)[0];
         int64_t total = nslices * slice_size;
+        // The kernel clamps in float before converting, so the 4-bit range goes in as bounds.
         if (outtype == CV_8U) {
             int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
             quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
                                         reinterpret_cast<uint8_t*>(out.data),
-                                        scale_f32, zp_i, total);
+                                        scale_f32, zp_i, 0, int4Out ? 15 : 255, total);
         } else {
             int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const int8_t*>(zp.data)[0];
             quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
                                         reinterpret_cast<int8_t*>(out.data),
-                                        scale_f32, zp_i, total);
+                                        scale_f32, zp_i, int4Out ? -8 : -128, int4Out ? 7 : 127, total);
         }
         return;
     }

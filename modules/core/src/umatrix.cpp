@@ -532,7 +532,13 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
             int dleft = ofs.x;
             int dright = wholeSize.width - src.cols - ofs.x;
             src.adjustROI(dtop, dbottom, dleft, dright);
-            return src.getUMat(accessFlags, usageFlags)(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
+            UMat whole = src.getUMat(accessFlags, usageFlags);
+            if (dims == 1)
+            {
+                Range r(ofs.x, ofs.x + sz.width);
+                return whole(&r);
+            }
+            return whole(cv::Rect(ofs.x, ofs.y, sz.width, sz.height));
         }
     }
     CV_Assert(data == datastart);
@@ -930,6 +936,16 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
     CV_Assert( dims <= 2 && step[0] > 0 );
     size_t esz = elemSize(), minstep;
     ptrdiff_t delta1 = (ptrdiff_t)offset, delta2 = (ptrdiff_t)u->size;
+
+    if( dims == 1 )
+    {
+        ofs.x = (int)(delta1/esz);
+        ofs.y = 0;
+
+        wholeSize.width = std::max((int)(delta2/esz), ofs.x + cols);
+        wholeSize.height = 1;
+        return;
+    }
 
     if( delta1 == 0 )
         ofs.x = ofs.y = 0;

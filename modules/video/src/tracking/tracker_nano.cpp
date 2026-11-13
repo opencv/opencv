@@ -332,8 +332,11 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
 
     resX = std::max(0.f, std::min((float)imgSize.width, resX));
     resY = std::max(0.f, std::min((float)imgSize.height, resY));
-    resW = std::max(10.f, std::min((float)imgSize.width, resW));
-    resH = std::max(10.f, std::min((float)imgSize.height, resH));
+    // Keep the size positive, but do not inflate small targets: a 10 px floor (inherited from pysot)
+    // makes the reported box larger than the object and, through the scale penalty, penalizes
+    // correctly sized candidates on the next frame.
+    resW = std::max(1.f, std::min((float)imgSize.width, resW));
+    resH = std::max(1.f, std::min((float)imgSize.height, resH));
 
     targetPos[0] = resX;
     targetPos[1] = resY;

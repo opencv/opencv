@@ -88,7 +88,7 @@ static bool ocl_finiteMask(const UMat img, UMat mask)
 
     const ocl::Device d = ocl::Device::getDefault();
     bool doubleSupport = d.doubleFPConfig() > 0;
-    if (!doubleSupport && depth == CV_64F)
+    if ((depth != CV_32F && depth != CV_64F) || (!doubleSupport && depth == CV_64F))
     {
         return false;
     }
@@ -109,10 +109,10 @@ static bool ocl_finiteMask(const UMat img, UMat mask)
 
 #endif
 
-static FiniteMaskFunc getFiniteMaskFunc(bool isDouble, int cn)
+static FiniteMaskFunc getFiniteMaskFunc(int depth, int cn)
 {
     CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(getFiniteMaskFunc, (isDouble, cn), CV_CPU_DISPATCH_MODES_ALL);
+    CV_CPU_DISPATCH(getFiniteMaskFunc, (depth, cn), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 void finiteMask(InputArray _src, OutputArray _mask)
@@ -122,7 +122,7 @@ void finiteMask(InputArray _src, OutputArray _mask)
     int channels = _src.channels();
     int depth = _src.depth();
     CV_Assert( channels > 0 && channels <= 4);
-    CV_Assert( depth == CV_32F || depth == CV_64F );
+    CV_Assert( depth == CV_16F || depth == CV_16BF || depth == CV_32F || depth == CV_64F );
     std::vector<int> vsz(_src.dims());
     _src.sizend(vsz.data());
     _mask.create(_src.dims(), vsz.data(), CV_8UC1);
@@ -139,7 +139,7 @@ void finiteMask(InputArray _src, OutputArray _mask)
     size_t total = planes[0].total();
     size_t i, nplanes = it.nplanes;
 
-    FiniteMaskFunc func = getFiniteMaskFunc((depth == CV_64F), channels);
+    FiniteMaskFunc func = getFiniteMaskFunc(depth, channels);
 
     for( i = 0; i < nplanes; i++, ++it )
     {

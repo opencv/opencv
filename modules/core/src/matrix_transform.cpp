@@ -1043,8 +1043,14 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     Mat src = _src.getMat();
     int type = src.type();
-    _dst.create( size, type );
+    _dst.create( src.dims, src.size.p, type );
     Mat dst = _dst.getMat();
+    if (src.dims == 1)
+    {
+        // step[0] of a 1D Mat is the element size, but HAL and the code below expect a row step
+        src = Mat(1, src.cols, type, src.data);
+        dst = Mat(1, dst.cols, type, dst.data);
+    }
 
     CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
              dst.ptr(), dst.step, flip_mode);
