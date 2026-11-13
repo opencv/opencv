@@ -3403,4 +3403,29 @@ TEST(ImgProc_applyColorMap, empty_src)
     EXPECT_TRUE(dst.empty());
 }
 
+TEST(ImgProc_applyColorMap, userColor_1x256)
+{
+    cv::Mat1b src({0, 128, 255});
+    cv::Mat3b lut_256x1(256, 1);
+    for (int i = 0; i < 256; ++i)
+        lut_256x1(i, 0) = cv::Vec3b((uchar)i, (uchar)(255 - i), (uchar)(i / 2));
+    cv::Mat lut_1x256 = lut_256x1.reshape(0, 1);
+    ASSERT_EQ(lut_1x256.total(), (size_t)256);
+
+    cv::Mat3b dst_256x1, dst_1x256;
+    cv::applyColorMap(src, dst_256x1, lut_256x1);
+    cv::applyColorMap(src, dst_1x256, lut_1x256);
+    ASSERT_EQ(cv::norm(dst_256x1, dst_1x256, NORM_L1), 0);
+
+    // a table with the wrong number of entries is still rejected
+    try {
+        cv::Mat lut_wrong(255, 1, CV_8UC3, cv::Scalar::all(0));
+        cv::Mat3b dst;
+        cv::applyColorMap(src, dst, lut_wrong);
+        FAIL() << "applyColorMap should throw for a 255-entry table";
+    } catch (const cv::Exception& e) {
+        EXPECT_EQ(e.code, cv::Error::StsAssert);
+    }
+}
+
 }} // namespace
