@@ -11,7 +11,8 @@
 //   weight = pow(|lap|, wcon) * pow(saturation, wsat) * pow(well-exposedness, wexp) + 1e-12.
 // grayUp/grayMid/grayDn are the three gray rows; the caller reflects the vertical border.
 // Horizontal borders are applied here. Saturation is applied only for 3-channel images.
-// (wcon, wsat, wexp) == (1, 1, 0) skips pow and the exposure exp.
+// The default (wcon, wsat, wexp) == (1, 1, 0) needs no special case: mertensPow
+// returns x for exponent 1 and 1 for exponent 0, and the exposure exp is skipped.
 
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -92,46 +93,6 @@ void mertensWeightRow_(const float* grayUp, const float* grayMid, const float* g
     const float eps = 1e-12f;
     const float inv3 = static_cast<float>(1.0 / 3.0);
     int x = 0;
-
-    // createMergeMertens() defaults. pow(x, 1) is a copy and pow(x, 0) is 1.
-    if (channels == 3 && wcon == 1.0f && wsat == 1.0f && wexp == 0.0f)
-    {
-        if (cols > 0)
-        {
-            const float c0 = src[0], c1 = src[1], c2 = src[2];
-            const float mean = (c0 + c1 + c2) * inv3;
-            const float d0 = c0 - mean, d1 = c1 - mean, d2 = c2 - mean;
-            const float sat = std::sqrt(d0 * d0 + d1 * d1 + d2 * d2);
-            mertensStore1(dst, sum, 0, mertensContrastAt(grayUp, grayMid, grayDn, 0, cols) * sat + eps);
-            x = 1;
-        }
-#if CV_SIMD || CV_SIMD_SCALABLE
-        const int n = VTraits<v_float32>::vlanes();
-        const v_float32 vinv3 = vx_setall_f32(inv3);
-        const v_float32 veps = vx_setall_f32(eps);
-        for (; x <= cols - n - 1; x += n)
-        {
-            v_float32 c0, c1, c2;
-            v_load_deinterleave(src + x * 3, c0, c1, c2);
-            const v_float32 mean = v_mul(v_add(v_add(c0, c1), c2), vinv3);
-            const v_float32 d0 = v_sub(c0, mean);
-            const v_float32 d1 = v_sub(c1, mean);
-            const v_float32 d2 = v_sub(c2, mean);
-            const v_float32 sat = v_sqrt(v_add(v_add(v_mul(d0, d0), v_mul(d1, d1)), v_mul(d2, d2)));
-            const v_float32 contrast = mertensContrast(grayUp, grayMid, grayDn, x);
-            mertensStoreN(dst, sum, x, v_add(v_mul(contrast, sat), veps));
-        }
-#endif
-        for (; x < cols; x++)
-        {
-            const float c0 = src[x * 3], c1 = src[x * 3 + 1], c2 = src[x * 3 + 2];
-            const float mean = (c0 + c1 + c2) * inv3;
-            const float d0 = c0 - mean, d1 = c1 - mean, d2 = c2 - mean;
-            const float sat = std::sqrt(d0 * d0 + d1 * d1 + d2 * d2);
-            mertensStore1(dst, sum, x, mertensContrastAt(grayUp, grayMid, grayDn, x, cols) * sat + eps);
-        }
-        return;
-    }
 
     const bool applySat = channels == 3 && wsat != 0.0f;
     const bool applyExp = wexp != 0.0f;
