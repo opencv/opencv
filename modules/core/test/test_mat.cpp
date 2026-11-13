@@ -2989,6 +2989,12 @@ TEST(Mat, copyTo_GpuMat_destination)
     big.download(res);
     EXPECT_EQ(0, cvtest::norm(expected, res, NORM_INF));
 
+    // ROI of another size or type must throw instead of silently allocating a temporary header
+    EXPECT_THROW(src.copyTo(big(Rect(0, 0, 2, 2))), cv::Exception);
+    EXPECT_THROW(Mat(src.size(), CV_32FC1, Scalar::all(1)).copyTo(big(roi)), cv::Exception);
+    big.download(res);
+    EXPECT_EQ(0, cvtest::norm(expected, res, NORM_INF));
+
     Mat().copyTo(dst);  // empty source releases the destination, as for a Mat destination
     EXPECT_TRUE(dst.empty());
 
