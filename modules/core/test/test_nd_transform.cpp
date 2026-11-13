@@ -335,6 +335,25 @@ TEST(Core_FlipND, inplace_roi)
     }
 }
 
+TEST(Core_Flip, 1d)
+{
+    int sz = 5;
+    Mat src(1, &sz, CV_32S);
+    for (int i = 0; i < sz; i++)
+        src.at<int>(i) = i + 1;
+
+    for (int flipCode = -1; flipCode <= 1; flipCode++)
+    {
+        SCOPED_TRACE(cv::format("flipCode %d", flipCode));
+        Mat dst;
+        cv::flip(src, dst, flipCode);
+        ASSERT_EQ(1, dst.dims);
+        ASSERT_EQ(sz, dst.size[0]);
+        for (int i = 0; i < sz; i++)
+            EXPECT_EQ(flipCode == 0 ? i + 1 : sz - i, dst.at<int>(i));
+    }
+}
+
 TEST(Core_ConcatND, random)
 {
     RNG& rng = theRNG();
