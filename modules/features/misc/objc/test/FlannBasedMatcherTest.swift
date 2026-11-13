@@ -143,6 +143,32 @@ class FlannBasedMatcherTest: OpenCVTestCase {
         XCTAssertEqual(expected, writeParams(matcher))
     }
 
+    func testIntegerEpsIsStoredAsFloat() {
+        // An Int eps must still be stored with setFloat, since FLANN reads it as float.
+        let matcher = FlannBasedMatcher(indexParams: ["algorithm": 1, "trees": 4],
+                                        searchParams: ["checks": 32, "eps": 0])
+
+        let yml = writeParams(matcher)
+        XCTAssertTrue(yml.contains("      name: eps\n      type: 5\n      value: 0.\n"), yml)  // FLANN_INDEX_TYPE_32F
+    }
+
+    func testIntegerEpsKDTreeMatch() {
+        // With eps stored as Int, KD-tree search fails with "FLANN 'eps' param type mismatch".
+        let train = Mat(rows: 50, cols: 32, type: CvType.CV_32F)
+        Core.randu(dst: train, low: 0, high: 100)
+
+        let matcher = FlannBasedMatcher(indexParams: ["algorithm": 1, "trees": 4],
+                                        searchParams: ["checks": 32, "eps": 0])
+        var matches = [DMatch]()
+        matcher.match(queryDescriptors: train, trainDescriptors: train, matches: &matches)
+
+        XCTAssertEqual(50, matches.count)
+        for (i, m) in matches.enumerated() {
+            XCTAssertEqual(Int32(i), m.trainIdx)
+            XCTAssertEqual(0, m.distance, accuracy: OpenCVTestCase.FEPS)
+        }
+    }
+
     func testDefaultConstructorKDTreeMatch() {
         let train = Mat(rows: 50, cols: 32, type: CvType.CV_32F)
         Core.randu(dst: train, low: 0, high: 100)
