@@ -115,6 +115,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pad2,           Pad2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(NonZero,        NonZeroLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Compress,       CompressLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Col2Im,          Col2ImLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ImageDecoder,   ImageDecoderLayer);
     CV_DNN_REGISTER_LAYER_CLASS(QuantizeLinear, QuantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DynamicQuantizeLinear, DynamicQuantizeLinearLayer);
