@@ -1,6 +1,10 @@
 name: PR:5.x CI label cleanup
 
 on:
+  pull_request_target:
+    branches:
+      - 5.x
+    types: [synchronize]
   workflow_run:
     workflows: ["PR:5.x"]
     types: [completed]
@@ -10,8 +14,37 @@ permissions:
   pull-requests: read
 
 jobs:
+  reset-on-new-commit:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reset CI mode labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const currentLabels = new Set(
+              context.payload.pull_request.labels.map(label => label.name)
+            );
+            for (const label of ['ci:fast', 'ci:full']) {
+              if (!currentLabels.has(label)) {
+                continue;
+              }
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  name: label,
+                });
+                core.info(`Removed ${label} from PR #${context.issue.number}`);
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+
   cleanup:
-    if: github.event.workflow_run.event == 'pull_request'
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - name: Remove consumed CI mode labels
@@ -53,10 +86,14 @@ jobs:
               if (!currentLabels.has(label)) {
                 continue;
               }
-              await github.rest.issues.removeLabel({
-                ...context.repo,
-                issue_number: pullNumber,
-                name: label,
-              });
-              core.info(`Removed ${label} from PR #${pullNumber}`);
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: pullNumber,
+                  name: label,
+                });
+                core.info(`Removed ${label} from PR #${pullNumber}`);
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
             }

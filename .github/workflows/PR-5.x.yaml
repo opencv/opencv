@@ -49,7 +49,8 @@ jobs:
               context.payload.pull_request.labels.map(label => label.name)
             );
             const matches = pattern => files.some(file => pattern.test(file));
-            const full = labels.has('ci:full');
+            const resetMode = context.payload.action === 'synchronize';
+            const full = !resetMode && labels.has('ci:full');
             const fast = !full;
 
             let previousSuccess = false;
@@ -110,7 +111,7 @@ jobs:
                 ['Changed files', changedFiles.length.toString()],
                 ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
                 ['Previous successful run', previousSuccess ? 'same commit' : 'none'],
-                ['Reason', delta ? 'ci:full after successful fast coverage' : full ? 'ci:full label' : 'fast coverage is the default'],
+                ['Reason', delta ? 'ci:full after successful fast coverage' : full ? 'ci:full label' : resetMode ? 'new commit resets CI mode to fast' : 'fast coverage is the default'],
               ])
               .write();
 
