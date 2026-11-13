@@ -406,6 +406,8 @@ struct EwMul {
     {
         if (s != 1.0)
             return saturate_cast<uint64_t>((double)a * s * (double)b);
+        if (((a | b) >> 32) == 0)   // both below 2^32: the product fits, skip the 64-bit divide
+            return a * b;
         return (a == 0 || b <= UINT64_MAX / a) ? a * b : UINT64_MAX;
     }
     static int64_t scl(int64_t a, int64_t b, double s)
@@ -415,6 +417,11 @@ struct EwMul {
         const bool neg = (a < 0) != (b < 0);
         const uint64_t ua = a < 0 ? 0 - (uint64_t)a : (uint64_t)a;   // exact for INT64_MIN too
         const uint64_t ub = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
+        if (((ua | ub) >> 31) == 0)   // both magnitudes below 2^31: the product is below 2^62
+        {
+            const uint64_t q = ua * ub;
+            return neg ? (int64_t)(0 - q) : (int64_t)q;
+        }
         const uint64_t limit = (uint64_t)INT64_MAX + (neg ? 1 : 0);
         if (ua != 0 && ub > limit / ua)
             return neg ? INT64_MIN : INT64_MAX;
