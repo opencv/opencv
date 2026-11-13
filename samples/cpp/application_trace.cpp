@@ -59,9 +59,9 @@ int main(int argc, char** argv)
     }
 
     int N = parser.get<int>("n");
-    if (N <= 0)
+    if (N < 0)
     {
-        cerr << "Error: Number of frames to process must be greater than 0." << endl;
+        cerr << "Error: Number of frames to process must be a positive integer." << endl;
         return -1;
     }
     if (nframes > 0 && N > nframes)
