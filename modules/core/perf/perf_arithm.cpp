@@ -9,6 +9,28 @@ using namespace perf;
 using BroadcastTest = perf::TestBaseWithParam<std::tuple<std::vector<int>, perf::MatType, std::vector<int>>>;
 typedef Size_MatType BinaryOpTest;
 
+using SharedFieldAddTest = perf::TestBaseWithParam<std::tuple<Size, bool>>;
+
+PERF_TEST_P_(SharedFieldAddTest, rgb8_float32)
+{
+    const Size size = get<0>(GetParam());
+    const bool cropped = get<1>(GetParam());
+    Mat storage(size.height, size.width + (cropped ? 4 : 0), CV_8UC3);
+    Mat image = storage.colRange(0, size.width);
+    Mat field(size, CV_32FC1), output(size, CV_8UC3);
+    randu(storage, Scalar::all(0), Scalar::all(256));
+    randu(field, -400.f, 400.f);
+    declare.in(image, field).out(output);
+
+    TEST_CYCLE() cv::add(image, field, output, noArray(), CV_8U);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(, SharedFieldAddTest,
+    testing::Combine(testing::Values(Size(64, 64), Size(224, 224), Size(512, 512), Size(1024, 1024)),
+                     testing::Bool()));
+
 PERF_TEST_P_(BroadcastTest, basic)
 {
     std::vector<int> shape_src = get<0>(GetParam());
