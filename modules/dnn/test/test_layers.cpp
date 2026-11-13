@@ -166,6 +166,60 @@ TEST_P(Layer_SDPA_Kernels, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Layer_SDPA_Kernels, testing::Combine(
     testing::Values(1, 5), testing::Values(1, 7, 259), testing::Values(1, 17, 65)));
 
+// QuantizeLinear requires exactly one output, which the shared runLayer() does not request.
+static Mat runQuantizeLinear(LayerParams& lp, std::vector<Mat>& inputs)
+{
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("QuantizeLinear", lp);
+    std::vector<MatShape> inShapes, outShapes, internals;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (const Mat& m : inputs) { inShapes.push_back(shape(m)); inTypes.push_back(cv::dnn::MatType(m.type())); }
+    layer->getMemoryShapes(inShapes, 1, outShapes, internals);
+    layer->getTypes(inTypes, 1, 0, outTypes, internalTypes);
+    std::vector<Mat> outputs{Mat(outShapes[0], outTypes[0])}, intp;
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, intp);
+    return outputs[0];
+}
+
+// Per-tensor INT4/UINT4 output has to saturate to the 4-bit range on every path,
+// including the x86 AVX2 per-tensor one, so the input is long enough for its
+// 8-lane loop and its scalar tail.
+TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
+{
+    const int n = 35;
+    const float vals[6] = {-100.f, -7.f, 0.f, 6.f, 40.f, 1000.f};
+    Mat x(1, n, CV_32F);
+    for (int i = 0; i < n; i++)
+        x.at<float>(0, i) = vals[i % 6];
+    const int one = 1;
+    Mat scale(1, &one, CV_32F, Scalar(1.f));  // rank-1 per-tensor scale, as ONNX exports it
+
+    {
+        LayerParams lp;
+        lp.set("axis", 1);
+        lp.set("output_onnx_dtype", 22);  // ONNX INT4, stored as CV_8S
+        Mat zp(1, &one, CV_8S, Scalar(1));
+        std::vector<Mat> inputs{x, scale, zp};
+        Mat out = runQuantizeLinear(lp, inputs);
+        ASSERT_EQ(CV_8S, out.type());
+        const int expected[6] = {-8, -6, 1, 7, 7, 7};
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(expected[i % 6], (int)out.at<schar>(0, i)) << "i=" << i;
+    }
+    {
+        LayerParams lp;
+        lp.set("axis", 1);
+        lp.set("output_onnx_dtype", 21);  // ONNX UINT4, stored as CV_8U
+        Mat zp(1, &one, CV_8U, Scalar(2));
+        std::vector<Mat> inputs{x, scale, zp};
+        Mat out = runQuantizeLinear(lp, inputs);
+        ASSERT_EQ(CV_8U, out.type());
+        const int expected[6] = {0, 0, 2, 8, 15, 15};
+        for (int i = 0; i < n; i++)
+            EXPECT_EQ(expected[i % 6], (int)out.at<uchar>(0, i)) << "i=" << i;
+    }
+}
+
 TEST(Layer_Test_Reshape, Accuracy)
 {
     {
