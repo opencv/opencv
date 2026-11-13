@@ -54,6 +54,10 @@ class texpr_test(NewOpenCVTests):
                 image = rng.integers(0, 256, (3, width + 4, 3), dtype=np.uint8)[:, 2:-2]
                 field = rng.uniform(-400, 400, (3, width + 4)).astype(np.float32)[:, 2:-2]
                 field[:, -min(width, len(offsets)):] = offsets[-min(width, len(offsets)):]
+                if width == 224:
+                    # Put ties in the first SIMD block, before exceptional offsets trigger scalar fallback.
+                    image[:, :2] = [100, 101, 102]
+                    field[:, :2] = [-0.5, 0.5]
                 expected, = cv.texpr("uint8({0} + {1})", [image, field])
                 storage = np.full((3, width + 4, 3), 137, dtype=np.uint8)
                 output = storage[:, 2:-2]
