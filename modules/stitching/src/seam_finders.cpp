@@ -1467,6 +1467,8 @@ void GraphCutSeamFinderGpu::find(const std::vector<UMat> &src, const std::vector
         }
     }
     PairwiseSeamFinder::find(src, corners, masks);
+    dx_.clear();
+    dy_.clear();
 }
 
 
