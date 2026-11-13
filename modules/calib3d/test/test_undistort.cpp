@@ -1906,6 +1906,51 @@ TEST(Calib3d_initUndistortRectifyMap, regression_14467)
     EXPECT_LE(cvtest::norm(dst, mesh_uv, NORM_INF), 1e-3);
 }
 
+TEST(Calib3d_initWideAngleProjMap, issue_30744)
+{
+    // initWideAngleProjMap must read distCoeffs in the standard
+    // (k1, k2, p1, p2, k3, ...) order, use the rational radial model and
+    // the real principal point from the camera matrix.
+    // https://github.com/opencv/opencv/issues/30744
+    Mat K = (Mat_<double>(3, 3) << 500, 0, 320, 0, 500, 240, 0, 0, 1);
+
+    // 8 coefficients in standard order: k1, k2, p1, p2, k3, k4, k5, k6
+    Mat dist = (Mat_<double>(8, 1) << 0.10, -0.05, 0.02, -0.01, 0.03, 0.01, -0.02, 0.005);
+
+    Mat mapxy;
+    float scale = initWideAngleProjMap(K, dist, Size(640, 480), 640, CV_32FC2,
+                                       mapxy, noArray(), PROJ_SPHERICAL_EQRECT, 0.0);
+
+    // Round-trip: undistort the map points back and compare against the
+    // spherical projection of the dest pixels, computed independently
+    // (analytic inverse of mapPointSpherical for alpha = 0, EQRECT).
+    Mat dst;
+    undistortPoints(mapxy.reshape(2, (int)mapxy.total()), dst, K, dist, noArray(), K);
+    dst = dst.reshape(2, mapxy.rows);
+
+    Point2f dcenter((mapxy.cols - 1) * 0.5f, (mapxy.rows - 1) * 0.5f);
+    for (int y = 0; y < mapxy.rows; y += 25)
+    {
+        for (int x = 0; x < mapxy.cols; x += 25)
+        {
+            double px = (x - dcenter.x) / scale, py = (y - dcenter.y) / scale;
+            double sx = std::sin(px), sy = std::sin(py);
+            double s = 1.0 / std::sqrt(1.0 - sx * sx - sy * sy);
+            EXPECT_NEAR(dst.at<Vec2f>(y, x)[0], 500 * sx * s + 320, 2e-1);
+            EXPECT_NEAR(dst.at<Vec2f>(y, x)[1], 500 * sy * s + 240, 2e-1);
+        }
+    }
+
+    // Exact map values (from the fixed implementation): these pin the
+    // coefficient order, the rational radial model and the principal point.
+    EXPECT_NEAR(mapxy.at<Vec2f>(100, 100)[0], 101.454f, 1e-2);
+    EXPECT_NEAR(mapxy.at<Vec2f>(100, 100)[1], 86.961f, 1e-2);
+    EXPECT_NEAR(mapxy.at<Vec2f>(200, 300)[0], 302.707f, 1e-2);
+    EXPECT_NEAR(mapxy.at<Vec2f>(200, 300)[1], 191.112f, 1e-2);
+    EXPECT_NEAR(mapxy.at<Vec2f>(350, 450)[0], 439.566f, 1e-2);
+    EXPECT_NEAR(mapxy.at<Vec2f>(350, 450)[1], 328.125f, 1e-2);
+}
+
 TEST(Calib3d_initInverseRectificationMap, regression_20165)
 {
     Size size_w_h(1280, 800);
