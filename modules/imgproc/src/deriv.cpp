@@ -254,7 +254,7 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     int dtype = CV_MAKE_TYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = workDepth(ddepth, sdepth);
 
     Mat kx, ky;
     getDerivKernels( kx, ky, dx, dy, ksize, false, ktype );
@@ -303,7 +303,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
     int dtype = CV_MAKETYPE(ddepth, cn);
     _dst.create( _src.size(), dtype );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = workDepth(ddepth, sdepth);
 
     Mat kx, ky;
     getScharrKernels( kx, ky, dx, dy, false, ktype );
@@ -359,6 +359,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+    if (isHalfFloat(sdepth) || isHalfFloat(ddepth))
         return false;
 
     Mat kernelX = kd.reshape(1, 1);
@@ -619,7 +621,7 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = sdepth;
     _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
-    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
+    int ktype = workDepth(ddepth, sdepth);
     Mat kernel;
 
     if( ksize == 1 || ksize == 3 )
@@ -674,7 +676,8 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     }
     else
     {
-        int wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S : sdepth <= CV_32F ? CV_32F : CV_64F;
+        int wdepth = sdepth == CV_8U && ksize <= 5 ? CV_16S :
+                     isHalfFloat(sdepth) || sdepth <= CV_32F ? CV_32F : CV_64F;
         int wtype = CV_MAKETYPE(wdepth, cn);
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );

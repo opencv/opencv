@@ -114,17 +114,23 @@ Ptr<FilterEngine> createMorphologyFilter(
     {
         int depth = CV_MAT_DEPTH(type);
         CV_Assert( depth == CV_8U || depth == CV_Bool || depth == CV_16U || depth == CV_16S ||
-                   depth == CV_32F || depth == CV_64F );
+                   depth == CV_32F || depth == CV_64F ||
+                   isHalfFloat(depth) );
+        // max finite per depth, same values as core's getMaxVal
         if( op == MORPH_ERODE )
             borderValue = Scalar::all( depth == CV_8U ? (double)UCHAR_MAX :
                                        depth == CV_Bool ? 1. :
                                        depth == CV_16U ? (double)USHRT_MAX :
                                        depth == CV_16S ? (double)SHRT_MAX :
+                                       depth == CV_16F ? 65504. :
+                                       depth == CV_16BF ? (double)FLT_MAX :
                                        depth == CV_32F ? (double)FLT_MAX : DBL_MAX);
         else
             borderValue = Scalar::all( depth == CV_8U || depth == CV_Bool || depth == CV_16U ?
                                            0. :
                                        depth == CV_16S ? (double)SHRT_MIN :
+                                       depth == CV_16F ? -65504. :
+                                       depth == CV_16BF ? (double)-FLT_MAX :
                                        depth == CV_32F ? (double)-FLT_MAX : -DBL_MAX);
     }
 
@@ -641,6 +647,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
     bool doubleSupport = dev.doubleFPConfig() > 0;
 
     if (cn > 4 || (!doubleSupport && depth == CV_64F) ||
+        isHalfFloat(depth) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;
 
@@ -798,8 +805,10 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
     Size ksize = !kernel.empty() ? kernel.size() : Size(3, 3), ssize = _src.size();
 
     bool doubleSupport = dev.doubleFPConfig() > 0;
-    // ocl::typeToStr() has no mapping for CV_Bool, so fall back to the CPU path
-    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT || depth == CV_Bool)
+    // ocl::typeToStr() has no mapping for CV_Bool, and there are no half-float
+    // OpenCL kernels yet, so both fall back to the CPU path
+    if ((depth == CV_64F && !doubleSupport) || borderType != BORDER_CONSTANT ||
+        depth == CV_Bool || isHalfFloat(depth))
         return false;
 
     bool haveExtraMat = !_extraMat.empty();

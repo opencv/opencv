@@ -126,6 +126,12 @@ struct nop
     _Tp operator()(_Tp a) const { return a; }
 };
 
+template<typename _Tp>
+struct cast_flt
+{
+    _Tp operator()(float a) const { return saturate_cast<_Tp>(a); }
+};
+
 
 template<typename _Tp, typename _DTp, typename _WTp, class ScaleOp, class CastOp>
 void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
@@ -321,6 +327,12 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
     else if( depth == CV_8U && ddepth == CV_32F )
         getRectSubPix_8u32f
         (image.ptr(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);
+    else if( depth == CV_16F && ddepth == CV_16F )
+        getRectSubPix_Cn_<hfloat, hfloat, float, nop<float>, cast_flt<hfloat> >
+        (image.ptr<hfloat>(), image.step, image.size(), patch.ptr<hfloat>(), patch.step, patch.size(), center, cn);
+    else if( depth == CV_16BF && ddepth == CV_16BF )
+        getRectSubPix_Cn_<bfloat, bfloat, float, nop<float>, cast_flt<bfloat> >
+        (image.ptr<bfloat>(), image.step, image.size(), patch.ptr<bfloat>(), patch.step, patch.size(), center, cn);
     else if( depth == CV_32F && ddepth == CV_32F )
         getRectSubPix_Cn_<float, float, float, nop<float>, nop<float> >
         (image.ptr<float>(), image.step, image.size(), patch.ptr<float>(), patch.step, patch.size(), center, cn);

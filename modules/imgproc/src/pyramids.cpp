@@ -62,6 +62,14 @@ template<typename T, int shift> struct FltCast
     rtype operator ()(type1 arg) const { return arg*(T)(1./(1 << shift)); }
 };
 
+// half storage, float accumulator
+template<typename T, int shift> struct HalfCast
+{
+    typedef float type1;
+    typedef T rtype;
+    rtype operator ()(type1 arg) const { return saturate_cast<T>(arg*(1.f/(1 << shift))); }
+};
+
 template<typename T1, typename T2, int cn> int PyrDownVecH(const T1*, T2*, int)
 {
     //   row[x       ] = src[x * 2 + 2*cn  ] * 6 + (src[x * 2 +   cn  ] + src[x * 2 + 3*cn  ]) * 4 + src[x * 2       ] + src[x * 2 + 4*cn  ];
@@ -1314,7 +1322,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (cn > 4 || (depth == CV_64F && !doubleSupport))
+    if (cn > 4 || (depth == CV_64F && !doubleSupport) ||
+        isHalfFloat(depth))
         return false;
 
     Size ssize = _src.size();
@@ -1366,7 +1375,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
         return false;
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if (depth == CV_64F && !doubleSupport)
+    if ((depth == CV_64F && !doubleSupport) ||
+        isHalfFloat(depth))
         return false;
 
     Size ssize = _src.size();
@@ -1456,6 +1466,10 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
         func = pyrDown_< FltCast<float, 8> >;
     else if( depth == CV_64F )
         func = pyrDown_< FltCast<double, 8> >;
+    else if( depth == CV_16F )
+        func = pyrDown_< HalfCast<hfloat, 8> >;
+    else if( depth == CV_16BF )
+        func = pyrDown_< HalfCast<bfloat, 8> >;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
@@ -1561,6 +1575,10 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
         func = pyrUp_< FltCast<float, 6> >;
     else if( depth == CV_64F )
         func = pyrUp_< FltCast<double, 6> >;
+    else if( depth == CV_16F )
+        func = pyrUp_< HalfCast<hfloat, 6> >;
+    else if( depth == CV_16BF )
+        func = pyrUp_< HalfCast<bfloat, 6> >;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 

@@ -47,39 +47,40 @@
 namespace cv
 {
 
-template <typename T>
-static inline T threshBinary(const T& src, const T& thresh, const T& maxval)
+// WT is the compare type; half depths pass float so thresh is not quantized first
+template <typename T, typename WT = T>
+static inline T threshBinary(const T& src, const WT& thresh, const T& maxval)
 {
-    return src > thresh ? maxval : 0;
+    return (WT)src > thresh ? maxval : (T)0;
 }
 
-template <typename T>
-static inline T threshBinaryInv(const T& src, const T& thresh, const T& maxval)
+template <typename T, typename WT = T>
+static inline T threshBinaryInv(const T& src, const WT& thresh, const T& maxval)
 {
-    return src <= thresh ? maxval : 0;
+    return (WT)src <= thresh ? maxval : (T)0;
 }
 
-template <typename T>
-static inline T threshTrunc(const T& src, const T& thresh)
+template <typename T, typename WT = T>
+static inline T threshTrunc(const T& src, const WT& thresh)
 {
-    return std::min(src, thresh);
+    return saturate_cast<T>(std::min((WT)src, thresh));
 }
 
-template <typename T>
-static inline T threshToZero(const T& src, const T& thresh)
+template <typename T, typename WT = T>
+static inline T threshToZero(const T& src, const WT& thresh)
 {
-    return src > thresh ? src : 0;
+    return (WT)src > thresh ? src : (T)0;
 }
 
-template <typename T>
-static inline T threshToZeroInv(const T& src, const T& thresh)
+template <typename T, typename WT = T>
+static inline T threshToZeroInv(const T& src, const WT& thresh)
 {
-    return src <= thresh ? src : 0;
+    return (WT)src <= thresh ? src : (T)0;
 }
 
-template <typename T>
+template <typename T, typename WT = T>
 static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
-                          size_t dst_step, T thresh, T maxval, int type)
+                          size_t dst_step, WT thresh, T maxval, int type)
 {
     int i = 0, j;
     switch (type)
@@ -87,31 +88,31 @@ static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
     case THRESH_BINARY:
         for (; i < roi.height; i++, src += src_step, dst += dst_step)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshBinary<T>(src[j], thresh, maxval);
+                dst[j] = threshBinary<T, WT>(src[j], thresh, maxval);
         return;
 
     case THRESH_BINARY_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
+                dst[j] = threshBinaryInv<T, WT>(src[j], thresh, maxval);
         return;
 
     case THRESH_TRUNC:
         for (; i < roi.height; i++, src += src_step, dst += dst_step)
             for (j = 0; j < roi.width; j++)
-                  dst[j] = threshTrunc<T>(src[j], thresh);
+                  dst[j] = threshTrunc<T, WT>(src[j], thresh);
         return;
 
     case THRESH_TOZERO:
         for (; i < roi.height; i++, src += src_step, dst += dst_step)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshToZero<T>(src[j], thresh);
+                dst[j] = threshToZero<T, WT>(src[j], thresh);
         return;
 
     case THRESH_TOZERO_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshToZeroInv<T>(src[j], thresh);
+                dst[j] = threshToZeroInv<T, WT>(src[j], thresh);
         return;
 
     default:
@@ -119,9 +120,9 @@ static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
     }
 }
 
-template <typename T>
+template <typename T, typename WT = T>
 static void threshGenericWithMask(const Mat& _src, Mat& _dst, const Mat& _mask,
-                                  T thresh, T maxval, int type)
+                                  WT thresh, T maxval, int type)
 {
     Size roi = _src.size();
     const int cn = _src.channels();
@@ -141,35 +142,35 @@ static void threshGenericWithMask(const Mat& _src, Mat& _dst, const Mat& _mask,
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += mask_step)
             for (j = 0; j < roi.width; j++)
                 if (mask[j/cn] != 0)
-                    dst[j] = threshBinary<T>(src[j], thresh, maxval);
+                    dst[j] = threshBinary<T, WT>(src[j], thresh, maxval);
         return;
 
     case THRESH_BINARY_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += mask_step)
             for (j = 0; j < roi.width; j++)
                 if (mask[j/cn] != 0)
-                    dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
+                    dst[j] = threshBinaryInv<T, WT>(src[j], thresh, maxval);
         return;
 
     case THRESH_TRUNC:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += mask_step)
             for (j = 0; j < roi.width; j++)
                 if (mask[j/cn] != 0)
-                    dst[j] = threshTrunc<T>(src[j], thresh);
+                    dst[j] = threshTrunc<T, WT>(src[j], thresh);
         return;
 
     case THRESH_TOZERO:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += mask_step)
             for (j = 0; j < roi.width; j++)
                 if (mask[j/cn] != 0)
-                    dst[j] = threshToZero<T>(src[j], thresh);
+                    dst[j] = threshToZero<T, WT>(src[j], thresh);
         return;
 
     case THRESH_TOZERO_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += mask_step)
             for (j = 0; j < roi.width; j++)
                 if (mask[j/cn] != 0)
-                    dst[j] = threshToZeroInv<T>(src[j], thresh);
+                    dst[j] = threshToZeroInv<T, WT>(src[j], thresh);
         return;
 
     default:
@@ -1324,6 +1325,30 @@ getThreshVal_Triangle_8u( const Mat& _src, const Mat& _mask = cv::Mat() )
     return thresh;
 }
 
+template <typename T>
+static void threshHalf(const Mat& src, Mat& dst, const Mat& mask, int row0, int row1,
+                       double thresh, double maxval, int type)
+{
+    if (!mask.empty())
+    {
+        threshGenericWithMask<T, float>(src, dst, mask.rowRange(row0, row1),
+                                        (float)thresh, (T)(float)maxval, type);
+        return;
+    }
+
+    Size roi = src.size();
+    roi.width *= src.channels();
+    if( src.isContinuous() && dst.isContinuous() )
+    {
+        roi.width *= roi.height;
+        roi.height = 1;
+    }
+
+    threshGeneric<T, float>(roi, src.ptr<T>(), src.step/sizeof(T),
+                            dst.ptr<T>(), dst.step/sizeof(T),
+                            (float)thresh, (T)(float)maxval, type);
+}
+
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
@@ -1390,6 +1415,10 @@ public:
             else
                 thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
         }
+        else if( srcStripe.depth() == CV_16F )
+            threshHalf<hfloat>( srcStripe, dstStripe, mask, row0, row1, thresh, maxval, thresholdType );
+        else if( srcStripe.depth() == CV_16BF )
+            threshHalf<bfloat>( srcStripe, dstStripe, mask, row0, row1, thresh, maxval, thresholdType );
     }
 
 private:
@@ -1604,6 +1633,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         ;
     else if( src.depth() == CV_64F )
         ;
+    else if( isHalfFloat(src.depth()) )
+        ;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
@@ -1749,6 +1780,8 @@ double cv::thresholdWithMask( InputArray _src, InputOutputArray _dst, InputArray
     else if( src.depth() == CV_32F )
         ;
     else if( src.depth() == CV_64F )
+        ;
+    else if( isHalfFloat(src.depth()) )
         ;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );

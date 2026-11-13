@@ -80,6 +80,7 @@ This module offers a comprehensive suite of image processing functions, enabling
     CV_16U/CV_16S             | -1/CV_32F/CV_64F
     CV_32F                    | -1/CV_32F
     CV_64F                    | -1/CV_64F
+    CV_16F/CV_16BF            | -1
 
     @note when ddepth=-1, the output image will have the same depth as the source.
 
@@ -1289,7 +1290,7 @@ The function convolves the source image with the specified Gaussian kernel. In-p
 supported.
 
 @param src input image; the image can have any number of channels, which are processed
-independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+independently, but the depth should be CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param ksize Gaussian kernel size. ksize.width and ksize.height can differ but they both must be
 positive and odd. Or, they can be zero's and then they are computed from sigma.
@@ -1403,7 +1404,7 @@ The call `blur(src, dst, ksize, anchor, borderType)` is equivalent to `boxFilter
 anchor, true, borderType)`.
 
 @param src input image; it can have any number of channels, which are processed independently, but
-the depth should be CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+the depth should be CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param ksize blurring kernel size.
 @param anchor anchor point; default value Point(-1,-1) means that the anchor is at the kernel
@@ -1425,7 +1426,7 @@ depending on if they are on the right or on the left side of the stack. The only
 Original paper was proposed by Mario Klingemann, which can be found https://underdestruction.com/2004/02/25/stackblur-2004.
 
 @param src input image. The number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S or CV_32F.
+CV_8U, CV_16U, CV_16S, CV_32F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param ksize stack-blurring kernel size. The ksize.width and ksize.height can differ but they both must be
 positive and odd.
@@ -2015,7 +2016,7 @@ The function supports the in-place mode. Erosion can be applied several ( iterat
 case of multi-channel images, each channel is processed independently.
 
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param kernel structuring element used for erosion; if `kernel=Mat()`, a `3 x 3` rectangular
 structuring element is used. Kernel can be created using #getStructuringElement.
@@ -2047,7 +2048,7 @@ The function supports the in-place mode. Dilation can be applied several ( itera
 case of multi-channel images, each channel is processed independently.
 
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst output image of the same size and type as src.
 @param kernel structuring element used for dilation; if `kernel=Mat()`, a `3 x 3` rectangular
 structuring element is used. Kernel can be created using #getStructuringElement
@@ -2072,7 +2073,7 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 processed independently.
 
 @param src Source image. The number of channels can be arbitrary. The depth should be one of
-CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
+CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F or CV_16BF.
 @param dst Destination image of the same size and type as source image.
 @param op Type of a morphological operation, see #MorphTypes
 @param kernel Structuring element. It can be created using #getStructuringElement.
@@ -2160,6 +2161,8 @@ the "outliers" in the source image are not modified by the function.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
+
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
 CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
@@ -2194,6 +2197,8 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 @param borderValue value used in case of a constant border; by default, it equals 0.
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
+
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2245,6 +2250,7 @@ corresponds to the "outliers" in the source image are not modified by the functi
 for linear calculation for faster speed. See #AlgorithmHint.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
+@note #INTER_CUBIC is not supported for CV_16F and CV_16BF images.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
@@ -2872,7 +2878,8 @@ or Triangle algorithm and uses it instead of the specified thresh.
 @note Currently, the Otsu's method is implemented only for CV_8UC1 and CV_16UC1 images,
 and the Triangle's method is implemented only for CV_8UC1 images.
 
-@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
+@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F, CV_64F, CV_16F
+or CV_16BF).
 @param dst output array of the same size  and type and the same number of channels as src.
 @param thresh threshold value.
 @param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding

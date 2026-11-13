@@ -1345,6 +1345,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     if(!dev.hasFP64() && depth == CV_64F)
         return false;
 
+    if( isHalfFloat(depth) )
+        return false; // no half-float OpenCL kernels yet
+
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
         return false;
@@ -1484,6 +1487,11 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
 
+    // warpAffine and warpPerspective reach this point too, so one check covers all three
+    if (interpolation == INTER_CUBIC && (depth == CV_16F || depth == CV_16BF))
+        CV_Error(cv::Error::StsNotImplemented,
+                 "INTER_CUBIC is not supported for CV_16F and CV_16BF images, convert them to CV_32F first");
+
     if (interpolation == INTER_NEAREST && map1.depth() == CV_32F) {
         const auto *src_data = src.ptr<const uchar>();
         auto *dst_data = dst.ptr<uchar>();
@@ -1608,11 +1616,13 @@ void cv::remap( InputArray _src, OutputArray _dst,
     {
         {
             remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
-            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
+            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>,
+            remapNearest<hfloat, false>, remapNearest<bfloat, false>, 0
         },
         {
             remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
-            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
+            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>,
+            remapNearest<hfloat, true>, remapNearest<bfloat, true>, 0
         }
     };
 
@@ -1623,14 +1633,18 @@ void cv::remap( InputArray _src, OutputArray _dst,
             remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
             remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
             remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, hfloat>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, bfloat>, RemapNoVec<false>, float, false>, 0
         },
         {
             remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
             remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
             remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
             remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, hfloat>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, bfloat>, RemapNoVec<true>, float, true>, 0
         }
     };
 
@@ -1641,14 +1655,18 @@ void cv::remap( InputArray _src, OutputArray _dst,
             remapLanczos4<Cast<float, ushort>, float, 1, false>,
             remapLanczos4<Cast<float, short>, float, 1, false>, 0,
             remapLanczos4<Cast<float, float>, float, 1, false>,
-            remapLanczos4<Cast<double, double>, float, 1, false>, 0
+            remapLanczos4<Cast<double, double>, float, 1, false>,
+            remapLanczos4<Cast<float, hfloat>, float, 1, false>,
+            remapLanczos4<Cast<float, bfloat>, float, 1, false>, 0
         },
         {
             remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
             remapLanczos4<Cast<float, ushort>, float, 1, true>,
             remapLanczos4<Cast<float, short>, float, 1, true>, 0,
             remapLanczos4<Cast<float, float>, float, 1, true>,
-            remapLanczos4<Cast<double, double>, float, 1, true>, 0
+            remapLanczos4<Cast<double, double>, float, 1, true>,
+            remapLanczos4<Cast<float, hfloat>, float, 1, true>,
+            remapLanczos4<Cast<float, bfloat>, float, 1, true>, 0
         }
     };
 
@@ -2178,7 +2196,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     if ( !(borderType == cv::BORDER_CONSTANT &&
            (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
-         (!doubleSupport && depth == CV_64F) || cn > 4)
+         (!doubleSupport && depth == CV_64F) || cn > 4 ||
+         isHalfFloat(depth))  // no half-float OpenCL kernels yet
         return false;
 
     bool useDouble = depth == CV_64F;
