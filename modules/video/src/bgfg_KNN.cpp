@@ -171,9 +171,11 @@ public:
             u_flag.create(frameSize.height * nN * 3, frameSize.width, CV_8UC1);
             u_flag.setTo(Scalar::all(0));
 
-            if (nchannels==3)
-                nchannels=4;
-            u_sample.create(frameSize.height * nN * 3, frameSize.width, CV_32FC(nchannels));
+            if (nchannels == 2 || nchannels == 3)
+                nchannels = 4;
+            // Frame pixels arrive as 8-bit uchar channels and samples are copied verbatim or zero-padded;
+            // storing CV_8U instead of CV_32F cuts OpenCL sample buffer size 4x with identical arithmetic.
+            u_sample.create(frameSize.height * nN * 3, frameSize.width, CV_8UC(nchannels));
             u_sample.setTo(Scalar::all(0));
 
             u_aModelIndexShort.create(frameSize.height, frameSize.width, CV_8UC1);
@@ -647,6 +649,9 @@ public:
 #ifdef HAVE_OPENCL
 bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
+    if (_image.depth() != CV_8U)
+        return false;
+
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
 
     if( needToInitialize )

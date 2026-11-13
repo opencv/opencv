@@ -45,26 +45,26 @@
 #if CN==1
 
 #define T_MEAN float
+#define T_SAMPLE uchar
 #define F_ZERO (0.0f)
 
-#define frameToMean(a, b) (b) = *(a);
+#define sampleToMean(a) ((float)(a))
+#define frameToSample(a) (*(a))
 #define meanToFrame(a, b) *b = convert_uchar_sat(a);
 
 #else
 
 #define T_MEAN float4
+#define T_SAMPLE uchar4
 #define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
+
+#define sampleToMean(a) convert_float4(a)
+#define frameToSample(a) ((uchar4)((a)[0], (CN >= 2 ? (a)[1] : 0), (CN >= 3 ? (a)[2] : 0), 0))
 
 #define meanToFrame(a, b)\
     b[0] = convert_uchar_sat(a.x); \
     b[1] = convert_uchar_sat(a.y); \
     b[2] = convert_uchar_sat(a.z);
-
-#define frameToMean(a, b)\
-    b.x = a[0]; \
-    b.y = a[1]; \
-    b.z = a[2]; \
-    b.w = 0.0f;
 
 #endif
 
@@ -91,8 +91,8 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
     if( x < frame_col && y < frame_row)
     {
         __global const uchar* _frame = (frame + mad24(y, frame_step, mad24(x, CN, frame_offset)));
-        T_MEAN pix;
-        frameToMean(_frame, pix);
+        T_SAMPLE pix_sample = frameToSample(_frame);
+        T_MEAN pix = sampleToMean(pix_sample);
 
         uchar foreground = 255; // 0 - the pixel classified as background
 
@@ -103,13 +103,13 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
         int pt_idx =  mad24(y, frame_col, x);
         int idx_step = frame_row * frame_col;
 
-        __global T_MEAN* _sample = (__global T_MEAN*)(sample);
+        __global T_SAMPLE* _sample = (__global T_SAMPLE*)(sample);
 
         for (uchar n = 0; n < (NSAMPLES) * 3 ; ++n)
         {
             int n_idx = mad24(n, idx_step, pt_idx);
 
-            T_MEAN c_mean = _sample[n_idx];
+            T_MEAN c_mean = sampleToMean(_sample[n_idx]);
 
             uchar c_flag = flag[n_idx];
 
@@ -147,7 +147,7 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
 
                 if (c_flag)
                 {
-                    T_MEAN c_mean = _sample[n_idx];
+                    T_MEAN c_mean = sampleToMean(_sample[n_idx]);
 
                     float numerator = dot(pix, c_mean);
                     float denominator = dot(c_mean, c_mean);
@@ -210,7 +210,7 @@ __kernel void knn_kernel(__global const uchar* frame, int frame_step, int frame_
 
         if (nextShortUpdate == nShortCounter)
         {
-            _sample[offsetShort] = pix;
+            _sample[offsetShort] = pix_sample;
             flag[offsetShort] = include;
             _aModelIndexShort[0] = (modelIndexShort >= ((NSAMPLES)-1)) ? 0 : (modelIndexShort + 1);
         }
@@ -230,7 +230,7 @@ __kernel void getBackgroundImage2_kernel(__global const uchar* flag,
 
         T_MEAN meanVal = (T_MEAN)F_ZERO;
 
-        __global T_MEAN* _sample = (__global T_MEAN*)(sample);
+        __global const T_SAMPLE* _sample = (__global const T_SAMPLE*)(sample);
         int idx_step = dst_row * dst_col;
         for (uchar n = 0; n < (NSAMPLES) * 3 ; ++n)
         {
@@ -238,7 +238,7 @@ __kernel void getBackgroundImage2_kernel(__global const uchar* flag,
             uchar c_flag = flag[n_idx];
             if(c_flag)
             {
-                meanVal = _sample[n_idx];
+                meanVal = sampleToMean(_sample[n_idx]);
                 break;
             }
         }
