@@ -161,4 +161,31 @@ TEST(ML_SVM, getSupportVectors)
     EXPECT_EQ(0, sv.rows);    // inapplicable for non-linear SVMs
 }
 
+TEST(ML_SVM, trainAuto_parallel_budget_parity)
+{
+    const int N = 600;
+    Mat samples(N, 4, CV_32F), responses(N, 1, CV_32S);
+    RNG rng(123);
+    for (int i = 0; i < N; ++i)
+    {
+        const int cls = i & 1;
+        for (int j = 0; j < 4; ++j)
+            samples.at<float>(i, j) = (float)(rng.gaussian(0.4) + (cls ? 1.5 : -1.5));
+        responses.at<int>(i, 0) = cls;
+    }
+
+    Ptr<SVM> svm = SVM::create();
+    svm->setType(SVM::C_SVC);
+    svm->setKernel(SVM::RBF);
+    svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 200, 1e-3));
+    Ptr<TrainData> data = TrainData::create(samples, ROW_SAMPLE, responses);
+    ParamGrid cGrid(0.1, 100.0, 10.0), gGrid(0.01, 10.0, 10.0), unused(1.0, 1.0, 0.0);
+    ASSERT_TRUE(svm->trainAuto(data, 3, cGrid, gGrid, unused, unused, unused, unused));
+
+    Mat p0 = (Mat_<float>(1, 4) << -1.5f, -1.5f, -1.5f, -1.5f);
+    Mat p1 = (Mat_<float>(1, 4) <<  1.5f,  1.5f,  1.5f,  1.5f);
+    EXPECT_EQ(0.f, svm->predict(p0));
+    EXPECT_EQ(1.f, svm->predict(p1));
+}
+
 }} // namespace

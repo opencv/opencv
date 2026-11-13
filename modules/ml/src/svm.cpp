@@ -526,7 +526,8 @@ public:
                 double _Cp, double _Cn,
                 const Ptr<SVM::Kernel>& _kernel, GetRow _get_row,
                 SelectWorkingSet _select_working_set, CalcRho _calc_rho,
-                TermCriteria _termCrit )
+                TermCriteria _termCrit,
+                size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             clear();
 
@@ -559,10 +560,13 @@ public:
             get_row_func = _get_row;
             CV_Assert(get_row_func != 0);
 
-            // assume that for large training sets ~25% of Q matrix is used
+            // assume that for large training sets ~25% of Q matrix is used;
+            // respect the caller's per-solver budget when TrainAuto runs workers in parallel
+            const size_t budgetBytes = std::max<size_t>(sizeof(Qfloat), maxCacheBytes);
+            const size_t minBudgetBytes = std::min<size_t>((size_t)MIN_CACHE_SIZE, budgetBytes / 12);
             int64 csize = (int64)sample_count*sample_count/4;
-            csize = std::max(csize, (int64)(MIN_CACHE_SIZE/sizeof(Qfloat)) );
-            csize = std::min(csize, (int64)(MAX_CACHE_SIZE/sizeof(Qfloat)) );
+            csize = std::max(csize, (int64)(minBudgetBytes/sizeof(Qfloat)) );
+            csize = std::min(csize, (int64)(budgetBytes/sizeof(Qfloat)) );
             max_cache_size = (int)((csize + sample_count-1)/sample_count);
             max_cache_size = std::min(std::max(max_cache_size, 1), sample_count);
             cache_size = 0;
@@ -1049,7 +1053,8 @@ public:
         */
         static bool solve_c_svc( const Mat& _samples, const vector<schar>& _y,
                                  double _Cp, double _Cn, const Ptr<SVM::Kernel>& _kernel,
-                                 vector<double>& _alpha, SolutionInfo& _si, TermCriteria termCrit )
+                                 vector<double>& _alpha, SolutionInfo& _si, TermCriteria termCrit,
+                                 size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             int sample_count = _samples.rows;
 
@@ -1060,7 +1065,7 @@ public:
                            &Solver::get_row_svc,
                            &Solver::select_working_set,
                            &Solver::calc_rho,
-                           termCrit );
+                           termCrit, maxCacheBytes );
 
             if( !solver.solve_generic( _si ))
                 return false;
@@ -1075,7 +1080,8 @@ public:
         static bool solve_nu_svc( const Mat& _samples, const vector<schar>& _y,
                                   double nu, const Ptr<SVM::Kernel>& _kernel,
                                   vector<double>& _alpha, SolutionInfo& _si,
-                                  TermCriteria termCrit )
+                                  TermCriteria termCrit,
+                                  size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             int sample_count = _samples.rows;
 
@@ -1105,7 +1111,7 @@ public:
                            &Solver::get_row_svc,
                            &Solver::select_working_set_nu_svm,
                            &Solver::calc_rho_nu_svm,
-                           termCrit );
+                           termCrit, maxCacheBytes );
 
             if( !solver.solve_generic( _si ))
                 return false;
@@ -1126,7 +1132,8 @@ public:
         static bool solve_one_class( const Mat& _samples, double nu,
                                      const Ptr<SVM::Kernel>& _kernel,
                                      vector<double>& _alpha, SolutionInfo& _si,
-                                     TermCriteria termCrit )
+                                     TermCriteria termCrit,
+                                     size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             int sample_count = _samples.rows;
             vector<schar> _y(sample_count, 1);
@@ -1147,7 +1154,7 @@ public:
                            &Solver::get_row_one_class,
                            &Solver::select_working_set,
                            &Solver::calc_rho,
-                           termCrit );
+                           termCrit, maxCacheBytes );
 
             return solver.solve_generic(_si);
         }
@@ -1155,7 +1162,8 @@ public:
         static bool solve_eps_svr( const Mat& _samples, const vector<float>& _yf,
                                    double p, double C, const Ptr<SVM::Kernel>& _kernel,
                                    vector<double>& _alpha, SolutionInfo& _si,
-                                   TermCriteria termCrit )
+                                   TermCriteria termCrit,
+                                   size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             int sample_count = _samples.rows;
             int alpha_count = sample_count*2;
@@ -1179,7 +1187,7 @@ public:
                            &Solver::get_row_svr,
                            &Solver::select_working_set,
                            &Solver::calc_rho,
-                           termCrit );
+                           termCrit, maxCacheBytes );
 
             if( !solver.solve_generic( _si ))
                 return false;
@@ -1194,7 +1202,8 @@ public:
         static bool solve_nu_svr( const Mat& _samples, const vector<float>& _yf,
                                   double nu, double C, const Ptr<SVM::Kernel>& _kernel,
                                   vector<double>& _alpha, SolutionInfo& _si,
-                                  TermCriteria termCrit )
+                                  TermCriteria termCrit,
+                                  size_t maxCacheBytes = MAX_CACHE_SIZE )
         {
             int sample_count = _samples.rows;
             int alpha_count = sample_count*2;
@@ -1222,7 +1231,7 @@ public:
                            &Solver::get_row_svr,
                            &Solver::select_working_set_nu_svm,
                            &Solver::calc_rho_nu_svm,
-                           termCrit );
+                           termCrit, maxCacheBytes );
 
             if( !solver.solve_generic( _si ))
                 return false;
@@ -1265,7 +1274,7 @@ public:
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    SVMImpl()
+    SVMImpl() : solverCacheBudget(Solver::MAX_CACHE_SIZE)
     {
         clear();
         checkParams();
@@ -1424,9 +1433,9 @@ public:
                 _responses.convertTo(_yf, CV_32F);
 
             bool ok =
-            svmType == ONE_CLASS ? Solver::solve_one_class( _samples, params.nu, kernel, _alpha, sinfo, params.termCrit ) :
-            svmType == EPS_SVR ? Solver::solve_eps_svr( _samples, _yf, params.p, params.C, kernel, _alpha, sinfo, params.termCrit ) :
-            svmType == NU_SVR ? Solver::solve_nu_svr( _samples, _yf, params.nu, params.C, kernel, _alpha, sinfo, params.termCrit ) : false;
+            svmType == ONE_CLASS ? Solver::solve_one_class( _samples, params.nu, kernel, _alpha, sinfo, params.termCrit, solverCacheBudget ) :
+            svmType == EPS_SVR ? Solver::solve_eps_svr( _samples, _yf, params.p, params.C, kernel, _alpha, sinfo, params.termCrit, solverCacheBudget ) :
+            svmType == NU_SVR ? Solver::solve_nu_svr( _samples, _yf, params.nu, params.C, kernel, _alpha, sinfo, params.termCrit, solverCacheBudget ) : false;
 
             if( !ok )
                 return false;
@@ -1538,10 +1547,10 @@ public:
                     DecisionFunc df;
                     bool ok = params.svmType == C_SVC ?
                                 Solver::solve_c_svc( temp_samples, temp_y, Cp, Cn,
-                                                     kernel, _alpha, sinfo, params.termCrit ) :
+                                                     kernel, _alpha, sinfo, params.termCrit, solverCacheBudget ) :
                               params.svmType == NU_SVC ?
                                 Solver::solve_nu_svc( temp_samples, temp_y, params.nu,
-                                                      kernel, _alpha, sinfo, params.termCrit ) :
+                                                      kernel, _alpha, sinfo, params.termCrit, solverCacheBudget ) :
                               false;
                     if( !ok )
                         return false;
@@ -1700,8 +1709,10 @@ public:
             int test_sample_count = (sample_count + k_fold/2)/k_fold;
             int train_sample_count = sample_count - test_sample_count;
 
-            // Use a local instance
+            // Use a local instance with kernel cache budget divided across parallel grid workers
             cv::Ptr<SVMImpl> svm = makePtr<SVMImpl>();
+            const int nWorkers = std::max(1, std::min((int)parameters.size(), getNumThreads()));
+            svm->solverCacheBudget = std::max<size_t>((size_t)4 << 20, (size_t)Solver::MAX_CACHE_SIZE / (size_t)nWorkers);
             svm->class_labels = labels;
 
             int rtype = responses.type();
@@ -2365,6 +2376,7 @@ public:
     SvmParams params;
     Mat class_labels;
     int var_count;
+    size_t solverCacheBudget;
     Mat sv, uncompressed_sv;
     vector<DecisionFunc> decision_func;
     vector<double> df_alpha;
