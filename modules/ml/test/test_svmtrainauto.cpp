@@ -4,6 +4,8 @@
 
 #include "test_precomp.hpp"
 
+#include <limits>
+
 namespace opencv_test { namespace {
 
 using cv::ml::SVM;
@@ -159,6 +161,142 @@ TEST(ML_SVM, getSupportVectors)
     EXPECT_EQ(3, sv.rows);
     sv = svm->getUncompressedSupportVectors();
     EXPECT_EQ(0, sv.rows);    // inapplicable for non-linear SVMs
+}
+
+TEST(ML_SVM, nu_svc_extreme_float_no_crash)
+{
+    float fdata[] = {
+        -3.40282347e+38f, 0.0f,
+         3.08375703e+38f, 0.0f,
+         3.38958311e+38f, 0.0f,
+        -3.40053886e+38f, 0.0f,
+        -5.19229686e+33f, 0.0f,
+        -5.17201445e+33f, 0.0f,
+    };
+    int labels[] = {1, 0, 0, 0, 0, 0};
+
+    Mat features(6, 2, CV_32FC1, fdata);
+    Mat responses(6, 1, CV_32SC1, labels);
+
+    Ptr<SVM> svm = SVM::create();
+    ASSERT_TRUE(svm);
+    svm->setType(SVM::NU_SVC);
+    svm->setKernel(SVM::LINEAR);
+    svm->setNu(0.010317);
+    svm->setTermCriteria(TermCriteria(
+        TermCriteria::MAX_ITER | TermCriteria::EPS, 11, 0.099998f));
+
+    EXPECT_FALSE(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+    EXPECT_FALSE(svm->isTrained());
+    EXPECT_TRUE(svm->getSupportVectors().empty());
+}
+
+class NonFiniteSVMKernel : public SVM::Kernel
+{
+public:
+    explicit NonFiniteSVMKernel(float value) : value_(value), calls(0) {}
+
+    int getType() const CV_OVERRIDE { return SVM::CUSTOM; }
+
+    void calc(int vcount, int, const float*, const float*, float* results) CV_OVERRIDE
+    {
+        ++calls;
+        for (int i = 0; i < vcount; ++i)
+            results[i] = value_;
+    }
+
+    float value_;
+    int calls;
+};
+
+TEST(ML_SVM, nu_svc_non_finite_gradient)
+{
+    // The built-in kernels clamp NaNs; use a custom kernel to reach the solver checks.
+    const float values[] = {
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity()
+    };
+    Mat features = (Mat_<float>(4, 2) << -2, -1, -1, -2, 1, 2, 2, 1);
+    Mat responses = (Mat_<int>(4, 1) << 0, 0, 1, 1);
+
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
+    {
+        SCOPED_TRACE(i);
+        Ptr<NonFiniteSVMKernel> kernel = makePtr<NonFiniteSVMKernel>(values[i]);
+        Ptr<SVM> svm = SVM::create();
+        svm->setType(SVM::NU_SVC);
+        svm->setNu(0.5);
+        svm->setCustomKernel(kernel);
+
+        EXPECT_FALSE(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+        EXPECT_GT(kernel->calls, 0);
+        EXPECT_FALSE(svm->isTrained());
+        EXPECT_TRUE(svm->getSupportVectors().empty());
+    }
+}
+
+TEST(ML_SVM, finite_linear_training)
+{
+    Mat features = (Mat_<float>(4, 2) << -2, -1, -1, -2, 1, 2, 2, 1);
+    Mat responses = (Mat_<int>(4, 1) << 0, 0, 1, 1);
+    Mat queries = (Mat_<float>(2, 2) << -3, -3, 3, 3);
+    const int types[] = { SVM::C_SVC, SVM::NU_SVC };
+
+    for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
+    {
+        SCOPED_TRACE(types[i]);
+        Ptr<SVM> svm = SVM::create();
+        svm->setType(types[i]);
+        svm->setKernel(SVM::LINEAR);
+        svm->setNu(0.5);
+
+        ASSERT_TRUE(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+        EXPECT_TRUE(svm->isTrained());
+        EXPECT_FALSE(svm->getSupportVectors().empty());
+        EXPECT_FLOAT_EQ(0, svm->predict(queries.row(0)));
+        EXPECT_FLOAT_EQ(1, svm->predict(queries.row(1)));
+    }
+}
+
+TEST(ML_SVM, finite_linear_regression_training)
+{
+    Mat features = (Mat_<float>(4, 1) << -2, -1, 1, 2);
+    Mat responses = (Mat_<float>(4, 1) << -3, -1, 3, 5);
+    Mat query = (Mat_<float>(1, 1) << 0.5f);
+    const int types[] = { SVM::EPS_SVR, SVM::NU_SVR };
+
+    for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); ++i)
+    {
+        SCOPED_TRACE(types[i]);
+        Ptr<SVM> svm = SVM::create();
+        svm->setType(types[i]);
+        svm->setKernel(SVM::LINEAR);
+        svm->setC(10);
+        svm->setP(0.01);
+        svm->setNu(0.5);
+
+        ASSERT_TRUE(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+        EXPECT_TRUE(svm->isTrained());
+        EXPECT_NEAR(2, svm->predict(query), 0.05);
+    }
+}
+
+TEST(ML_SVM, finite_linear_one_class_training)
+{
+    Mat features = (Mat_<float>(4, 1) << 1, 2, 3, 4);
+    Mat responses = Mat::ones(4, 1, CV_32S);
+    Mat inlier = (Mat_<float>(1, 1) << 5);
+    Mat outlier = (Mat_<float>(1, 1) << -1);
+    Ptr<SVM> svm = SVM::create();
+    svm->setType(SVM::ONE_CLASS);
+    svm->setKernel(SVM::LINEAR);
+    svm->setNu(0.5);
+
+    ASSERT_TRUE(svm->train(features, cv::ml::ROW_SAMPLE, responses));
+    EXPECT_TRUE(svm->isTrained());
+    EXPECT_FLOAT_EQ(1, svm->predict(inlier));
+    EXPECT_FLOAT_EQ(0, svm->predict(outlier));
 }
 
 }} // namespace
