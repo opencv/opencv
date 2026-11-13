@@ -251,7 +251,7 @@ libraries). If you do not need the support for some of these, you can just freel
         @code{.bash}
         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
         @endcode
-        Also, add the built binary files path to the system path by using the [PathEditor](http://www.redfernplace.com/software-projects/patheditor/). In our
+        Also, add the built binary files path to the system path by using the [PathEditor](https://web.archive.org/web/20130327133615/http://www.redfernplace.com/software-projects/patheditor/). In our
         case this is `D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`.
 
         @note
@@ -395,7 +395,7 @@ However, to do this the operating system needs to know where they are. The syste
 a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know
 where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs
 right beside the applications executable file (*exe*) for the OS to find it, which is highly
-unpleasant if you work on many projects. To do this start up again the [PathEditor](http://www.redfernplace.com/software-projects/patheditor/) and add the
+unpleasant if you work on many projects. To do this start up again the [PathEditor](https://web.archive.org/web/20130327133615/http://www.redfernplace.com/software-projects/patheditor/) and add the
 following new entry (right click in the application to bring up the menu):
 @code
     %OPENCV_DIR%\bin

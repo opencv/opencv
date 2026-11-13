@@ -92,7 +92,7 @@ The most popular CV application scenario for an Android operated device is start
 and displaying the preview frames modified by that CV algo.
 
 Let's consider how we can use OpenCL in this scenario. In particular let's try two ways: direct calls to OpenCL API and recently introduced OpenCV T-API
-(aka [Transparent API](https://docs.google.com/presentation/d/1qoa29N_B-s297-fp0-b3rBirvpzJQp8dCtllLQ4DVCY/present)) - implicit OpenCL accelerations of some OpenCV algo-s.
+(aka Transparent API, see @ref core_opencl) - implicit OpenCL accelerations of some OpenCV algo-s.
 
 Application structure
 ---------------------
