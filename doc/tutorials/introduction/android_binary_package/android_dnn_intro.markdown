@@ -26,9 +26,17 @@ Tutorial was written for Android Studio 2022.2.1.
 - Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases
 and unpack it (for example, `opencv-4.X.Y-android-sdk.zip`, minimum version 4.9 is required).
 
-- Download the MobileNet-SSD object detection model in ONNX format and save it as
-`mobilenet.onnx`. This single file contains both the network topology and its
-trained weights.
+
+- Download the [SSD-MobileNetV1-12 ONNX model](https://huggingface.co/onnxmodelzoo/ssd_mobilenet_v1_12/resolve/main/ssd_mobilenet_v1_12.onnx) from the ONNX Model Zoo and save it as `mobilenet.onnx` in `app/src/main/res/raw`. Create the `raw` directory if it does not exist.
+
+**Model compatibility:** The sample expects the SSD-MobileNetV1-12 ONNX model with the following interface:
+
+- Input: UINT8 RGB tensor in NHWC layout, with shape `[1, height, width, 3]`. The model supports variable image dimensions.
+- Input preprocessing: Raw RGB pixel values without normalization or mean subtraction.
+- Outputs: Four tensors: `num_detections`, `detection_boxes`, `detection_scores`, and `detection_classes`.
+- Dataset: COCO.
+
+Other MobileNet-SSD models may have different input types, layouts, preprocessing requirements or output formats and may require corresponding changes to the sample.
 
 ## Create an empty Android Studio project and add OpenCV dependency
 
@@ -78,10 +86,18 @@ See also [Android documentation on resources](https://developer.android.com/guid
 
 @snippet android/mobilenet-objdetect/src/org/opencv/samples/opencv_mobilenet/MainActivity.java mobilenet_handle_frame
 
-`Dnn.blobFromImage` converts camera frame to neural network input tensor. Resize and statistical
-normalization are applied. Each line of network output tensor contains information on one detected
-object in the following order: confidence in range [0, 1], class id, left, top, right, bottom box
-coordinates. All coordinates are in range [0, 1] and should be scaled to image size before rendering.
+
+The camera frame is converted from RGBA to RGB and passed to the network as a UINT8 tensor in NHWC layout. No normalization or mean subtraction is applied.
+
+The network returns four output tensors:
+
+- `num_detections`: Number of detected objects.
+- `detection_boxes`: Normalized bounding box coordinates in the order top, left, bottom, right.
+- `detection_scores`: Confidence scores for each detection, ranging from 0 to 1.
+- `detection_classes`: COCO class identifiers.
+
+The sample filters detections using a confidence threshold and scales the normalized bounding box coordinates to the camera frame dimensions before drawing the detected objects.
+ All coordinates are in range [0, 1] and should be scaled to image size before rendering.
 
 - Launch an application and make a fun!
 ![](images/11_demo.jpg)
