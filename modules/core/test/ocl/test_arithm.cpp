@@ -1581,6 +1581,37 @@ OCL_TEST_P(InRange, Scalar)
     }
 }
 
+OCL_TEST(InRange, FractionalScalarEmptyInterval)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw cvtest::SkipTestException("OpenCL is not available");
+
+    Mat src = Mat_<uchar>({1, 3}, {0, 1, 2});
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    OCL_ON(cv::inRange(usrc, Scalar(0.1), Scalar(0.9), udst));
+    ASSERT_TRUE(cv::ocl::useOpenCL());
+    EXPECT_EQ(0, cv::countNonZero(udst));
+}
+
+OCL_TEST(InRange, MultichannelScalarBroadcast)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw cvtest::SkipTestException("OpenCL is not available");
+
+    Mat src(1, 2, CV_8UC3);
+    src.at<Vec3b>(0, 0) = Vec3b(1, 7, 255);
+    src.at<Vec3b>(0, 1) = Vec3b(0, 7, 255);
+    UMat usrc, udst;
+    src.copyTo(usrc);
+    uchar lowerValue = 1, upperValue = 255;
+    Mat lower(1, 1, CV_8U, &lowerValue), upper(1, 1, CV_8U, &upperValue);
+    OCL_ON(cv::inRange(usrc, lower, upper, udst));
+    ASSERT_TRUE(cv::ocl::useOpenCL());
+    const Mat expected = Mat_<uchar>({1, 2}, {255, 0});
+    EXPECT_EQ(0, cv::norm(udst.getMat(ACCESS_READ), expected, NORM_INF));
+}
+
 //////////////////////////////// ConvertScaleAbs ////////////////////////////////////////////////
 
 PARAM_TEST_CASE(ConvertScaleAbs, MatDepth, Channels, bool)
