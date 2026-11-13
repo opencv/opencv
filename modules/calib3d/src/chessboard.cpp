@@ -698,6 +698,14 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
         std::vector<cv::Mat> &feature_maps,
         const cv::Mat &_mask)const
 {
+    detectImpl(_gray_image, &rotated_images, feature_maps, _mask);
+}
+
+void FastX::detectImpl(const cv::Mat& _gray_image,
+        std::vector<cv::Mat> *rotated_images,
+        std::vector<cv::Mat> &feature_maps,
+        const cv::Mat &_mask)const
+{
     if(!_mask.empty())
         CV_Error(Error::StsBadSize, "Mask is not supported");
     CV_CheckTypeEQ(_gray_image.type(), CV_8UC1, "Unsupported image type");
@@ -716,55 +724,59 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
     const cv::Size size(diag,diag);
     const int num = int(0.5001*CV_PI/parameters.resolution);
 
-    rotated_images.resize(num_scales);
+    if(rotated_images)
+        rotated_images->resize(num_scales);
     feature_maps.resize(num_scales);
 
-    parallel_for_(Range(parameters.min_scale,parameters.max_scale+1),[&](const Range& range){
-        for(int scale=range.start;scale < range.end;++scale)
+    // Process scales sequentially while reusing scratch buffers: warpAffine, boxFilter,
+    // and merge already parallelize internally across threads, so a parallel scale loop
+    // multiplies temporary buffer memory by num_scales without increasing parallelism.
+    {
+        cv::UMat rotated, filtered;
+        std::vector<cv::UMat> images(2*num);
+        cv::Mat rotated_scratch;
+        for(int scale=parameters.min_scale;scale <= parameters.max_scale;++scale)
         {
-            // calc images
-            // for each angle step
             int scale_id = scale-parameters.min_scale;
             int scale_size = int(std::pow(2,scale+1+super_res));
             int scale_size2 = int((scale_size/7)*2+1);
-            std::vector<cv::UMat> images;
-            images.resize(2*num);
-            cv::UMat rotated,filtered_h,filtered_v;
             cv::boxFilter(gray_image,images[0],-1,cv::Size(scale_size,scale_size2));
             cv::boxFilter(gray_image,images[num],-1,cv::Size(scale_size2,scale_size));
             for(int i=1;i<num;++i)
             {
                 float angle = parameters.resolution*i;
                 rotate(-angle,gray_image,size,rotated);
-                cv::boxFilter(rotated,filtered_h,-1,cv::Size(scale_size,scale_size2));
-                cv::boxFilter(rotated,filtered_v,-1,cv::Size(scale_size2,scale_size));
-
-                // rotate filtered images back
-                rotate(angle,filtered_h,gray_image.size(),images[i]);
-                rotate(angle,filtered_v,gray_image.size(),images[i+num]);
+                cv::boxFilter(rotated,filtered,-1,cv::Size(scale_size,scale_size2));
+                rotate(angle,filtered,gray_image.size(),images[i]);
+                cv::boxFilter(rotated,filtered,-1,cv::Size(scale_size2,scale_size));
+                rotate(angle,filtered,gray_image.size(),images[i+num]);
             }
-            cv::merge(images,rotated_images[scale_id]);
-
-            // calc feature map
-            calcFeatureMap(rotated_images[scale_id],feature_maps[scale_id]);
-
-            // filter feature map to improve impulse responses
-            if(parameters.filter)
-            {
-                cv::Mat high,low;
-                cv::boxFilter(feature_maps[scale_id],low,-1,cv::Size(scale_size,scale_size));
-                int scale2 = int((scale_size/6))*2+1;
-                cv::boxFilter(feature_maps[scale_id],high,-1,cv::Size(scale2,scale2));
-                feature_maps[scale_id] = high-0.8*low;
-            }
+            cv::Mat &rotated_out = rotated_images ? (*rotated_images)[scale_id] : rotated_scratch;
+            cv::merge(images,rotated_out);
+            calcFeatureMap(rotated_out,feature_maps[scale_id]);
         }
-    });
+    }
+    gray_image.release();
+
+    // filter feature maps to improve impulse responses, reusing a single high/low pair
+    if(parameters.filter)
+    {
+        cv::Mat high, low;
+        for(int scale=parameters.min_scale;scale <= parameters.max_scale;++scale)
+        {
+            int scale_id = scale-parameters.min_scale;
+            int scale_size = int(std::pow(2,scale+1+super_res));
+            cv::boxFilter(feature_maps[scale_id],low,-1,cv::Size(scale_size,scale_size));
+            int scale2 = int((scale_size/6))*2+1;
+            cv::boxFilter(feature_maps[scale_id],high,-1,cv::Size(scale2,scale2));
+            cv::addWeighted(high, 1.0, low, -0.8, 0.0, feature_maps[scale_id]);
+        }
+    }
 }
 
 void FastX::detectImpl(const cv::Mat& image,std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat &mask)const
 {
-    std::vector<cv::Mat> rotated_images;
-    detectImpl(image,rotated_images,feature_maps,mask);
+    detectImpl(image,nullptr,feature_maps,mask);
     findKeyPoints(feature_maps,keypoints,mask);
 }
 
@@ -3407,6 +3419,12 @@ Chessboard::~Chessboard()
 void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,
         std::vector<std::vector<float> > &angles ,const cv::Mat& mask)const
 {
+    findKeyPointsImpl(image, keypoints, feature_maps, angles, mask, true);
+}
+
+void Chessboard::findKeyPointsImpl(const cv::Mat& image, std::vector<KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,
+        std::vector<std::vector<float> > &angles ,const cv::Mat& mask, bool keep_feature_maps)const
+{
     keypoints.clear();
     angles.clear();
     vector<KeyPoint> keypoints_temp;
@@ -3426,6 +3444,8 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
 
     //calculate seed chessboard corners
     detector.findKeyPoints(feature_maps,keypoints_temp,mask);
+    if(!keep_feature_maps)
+        std::vector<cv::Mat>().swap(feature_maps);
 
     //sort points and limit number
     int max_seeds = std::min((int)keypoints_temp.size(),parameters.max_points);
@@ -3436,6 +3456,7 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
             keypoints_temp.end(),sortKeyPoint);
     keypoints_temp.resize(max_seeds);
     std::vector<std::vector<float> > angles_temp  = detector.calcAngles(rotated_images,keypoints_temp);
+    std::vector<cv::Mat>().swap(rotated_images);
 
     // filter out keypoints which are not symmetric
     std::vector<KeyPoint>::iterator iter1 = keypoints_temp.begin();
@@ -3627,6 +3648,11 @@ void Chessboard::detectImpl(const Mat& image, vector<KeyPoint>& keypoints,std::v
 
 Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &feature_maps,const Mat& mask)const
 {
+    return detectImpl(gray, &feature_maps, mask);
+}
+
+Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> *feature_maps_out,const Mat& mask)const
+{
 #ifdef CV_DETECTORS_CHESSBOARD_DEBUG
     debug_image = gray;
 #endif
@@ -3635,7 +3661,9 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
     cv::Size chessboard_size2(parameters.chessboard_size.height,parameters.chessboard_size.width);
     std::vector<KeyPoint> keypoints_seed;
     std::vector<std::vector<float> > angles;
-    findKeyPoints(gray,keypoints_seed,feature_maps,angles,mask);
+    std::vector<cv::Mat> local_feature_maps;
+    std::vector<cv::Mat> &feature_maps = feature_maps_out ? *feature_maps_out : local_feature_maps;
+    findKeyPointsImpl(gray,keypoints_seed,feature_maps,angles,mask,feature_maps_out != nullptr);
     if(int(keypoints_seed.size()) < parameters.chessboard_size.width * parameters.chessboard_size.height)
         return Chessboard::Board();
 
@@ -3900,8 +3928,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     std::vector<cv::KeyPoint> corners;
     details::Chessboard detector(para);
 
-    std::vector<cv::Mat> maps;
-    details::Chessboard::Board board = detector.detectImpl(img,maps,cv::Mat());
+    details::Chessboard::Board board = detector.detectImpl(img,nullptr,cv::Mat());
     corners = board.getKeyPoints();
     if(corners.empty())
     {

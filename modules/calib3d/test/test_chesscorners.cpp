@@ -953,5 +953,35 @@ TEST(Calib3d_CornerOrdering, issue_26830) {
     ASSERT_EQ(cornersMinimumSizeMatchesPatternSize, cornersMinimumSizeSmallerThanPatternSize);
 }
 
+TEST(Calib3d_ChessboardDetector2, synthetic_sb_accuracy_parity)
+{
+    const int sq = 60;
+    const int ox = 60, oy = 60;
+    Mat board(540, 720, CV_8UC1, Scalar(220));
+    for (int r = 0; r < 7; ++r)
+        for (int c = 0; c < 10; ++c)
+            if ((r + c) % 2 == 0)
+                rectangle(board, Rect(ox + c * sq, oy + r * sq, sq, sq), Scalar(30), FILLED);
+    GaussianBlur(board, board, Size(3, 3), 0.7);
+
+    std::vector<Point2f> baseCorners;
+    const int flagsList[] = {0, CALIB_CB_EXHAUSTIVE, CALIB_CB_EXHAUSTIVE | CALIB_CB_ACCURACY,
+                             CALIB_CB_NORMALIZE_IMAGE | CALIB_CB_EXHAUSTIVE | CALIB_CB_ACCURACY};
+    for (int flags : flagsList)
+    {
+        std::vector<Point2f> corners;
+        ASSERT_TRUE(findChessboardCornersSB(board, Size(9, 6), corners, flags));
+        ASSERT_EQ(54u, corners.size());
+        if (baseCorners.empty())
+            baseCorners = corners;
+        else
+            EXPECT_LT(cv::norm(baseCorners, corners, NORM_INF), 0.5);
+
+        std::vector<Point2f> cornersRepeat;
+        ASSERT_TRUE(findChessboardCornersSB(board, Size(9, 6), cornersRepeat, flags));
+        EXPECT_EQ(0.0, cv::norm(corners, cornersRepeat, NORM_INF));
+    }
+}
+
 }} // namespace
 /* End of file. */

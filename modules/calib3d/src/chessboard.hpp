@@ -95,6 +95,10 @@ class FastX : public cv::Feature2D
     private:
         void detectImpl(const cv::Mat& _src, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask)const;
         virtual void detectImpl(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::noArray())const;
+        void detectImpl(const cv::Mat& _gray_image,
+                        std::vector<cv::Mat>* rotated_images,
+                        std::vector<cv::Mat>& feature_maps,
+                        const cv::Mat& _mask)const;
 
         void rotate(float angle,cv::InputArray img,cv::Size size,cv::OutputArray out)const;
         void calcFeatureMap(const cv::Mat &images,cv::Mat& out)const;
@@ -822,6 +826,7 @@ class Chessboard: public cv::Feature2D
          */
         void detectImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
         Chessboard::Board detectImpl(const cv::Mat& image,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
+        Chessboard::Board detectImpl(const cv::Mat& gray, std::vector<cv::Mat>* feature_maps, const cv::Mat& mask)const;
 
         // define pure virtual methods
         virtual int descriptorSize()const override{return 0;}
@@ -863,6 +868,8 @@ class Chessboard: public cv::Feature2D
     private:
         void detectImpl(const cv::Mat&,std::vector<cv::KeyPoint>&, const cv::Mat& mast =cv::Mat())const;
         virtual void detectImpl(cv::InputArray image, std::vector<cv::KeyPoint>& keypoints, cv::InputArray mask=cv::noArray())const;
+        void findKeyPointsImpl(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, std::vector<cv::Mat>& feature_maps,
+                               std::vector<std::vector<float> >& angles, const cv::Mat& mask, bool keep_feature_maps)const;
 
     private:
         Parameters parameters; // storing the configuration of the detector
