@@ -81,9 +81,9 @@ public:
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
 
+        // FP16/BF16 go to forwardHalfT(); FP8 has no kernel, so decode it once here.
         for (Mat& blob : blobs) {
-            if (blob.type() == CV_16F || blob.type() == CV_16BF ||
-                blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
+            if (blob.type() == CV_8F_E4M3FN || blob.type() == CV_8F_E4M3FNUZ) {
                 Mat widened;
                 blob.convertTo(widened, CV_32F);
                 blob = widened;
@@ -140,7 +140,7 @@ public:
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            CV_CheckType(input, input == CV_32F || input == CV_64F, "");
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_16F || input == CV_16BF, "");
 
         inpType = inputs[0];
         outputs.assign(requiredOutputs, inputs[0]);
@@ -331,8 +331,19 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
 
-        // CV_64F skips the float-only packed-B/MLAS caching below; see forwardDouble().
-        if (inputs[0].depth() == CV_64F)
+        // The importer copies half weights into blobs before widenHalfConstants() runs, so
+        // with FP16 off they still arrive as CV_16F/CV_16BF; match them to the activations.
+        int d = inputs[0].depth();
+        for (Mat& blob : blobs) {
+            if ((blob.depth() == CV_16F || blob.depth() == CV_16BF) && blob.depth() != d) {
+                Mat widened;
+                blob.convertTo(widened, d);
+                blob = widened;
+            }
+        }
+
+        // Packing below is float-only: CV_64F uses forwardDouble(), FP16/BF16 forwardHalfT().
+        if (d == CV_64F || d == CV_16F || d == CV_16BF)
             return;
 
         LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
@@ -424,22 +435,6 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            if (fusion.expr) {
-                std::vector<Mat> outs;
-                outputs_arr.getMatVector(outs);
-                if (!outs.empty()) {
-                    Mat y32;
-                    outs[0].convertTo(y32, CV_32F);
-                    fusion.run(y32);
-                    y32.convertTo(outs[0], outs[0].type());
-                }
-            }
-            return;
-        }
-
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -448,6 +443,16 @@ public:
 
         if (inputs[0].depth() == CV_64F) {
             forwardDouble(inputs, outputs, mode);
+            return;
+        }
+        if (inputs[0].depth() == CV_16F) {
+            forwardHalfT<hfloat>(inputs, outputs, mode);
+            fusion.run(outputs[0]);
+            return;
+        }
+        if (inputs[0].depth() == CV_16BF) {
+            forwardHalfT<bfloat>(inputs, outputs, mode);
+            fusion.run(outputs[0]);
             return;
         }
 
@@ -615,6 +620,102 @@ public:
             for (size_t i = 0; i < total; i++)
                 out[i] = beta * c[i];
         }
+    }
+
+    // Scalar reference GEMM for FP16/BF16: A, B, C and Y stay at 2 bytes/element,
+    // only the accumulator is float. fastGemm/cv::gemm are float-only.
+    template <typename _Tp>
+    void forwardHalfT(const std::vector<Mat>& inputs, std::vector<Mat>& outputs, LayerGemmOpMode mode)
+    {
+        const Mat &A = inputs[0];
+        Mat &Y = outputs[0];
+        const Mat &B = constB(mode) ? blobs[0] : inputs[1];
+
+        CV_CheckTypeEQ(B.depth(), A.depth(), "DNN/Gemm: B must match A's type");
+        CV_Assert(A.isContinuous() && B.isContinuous() && Y.isContinuous());
+
+        const auto shape_A = shape(A), shape_B = shape(B), shape_Y = shape(Y);
+        const int na = shape_A[shape_A.size() - 1];
+        const int nb = shape_B[shape_B.size() - 1];
+        const int N = shape_Y[shape_Y.size() - 1];
+        const int rows = (int)(Y.total() / (size_t)N);
+        const int ma = (int)(A.total() / (size_t)na);
+        const int K = trans_a ? ma : na;
+
+        const _Tp* aptr = A.ptr<_Tp>();
+        const _Tp* bptr = B.ptr<_Tp>();
+        _Tp* yptr = Y.ptr<_Tp>();
+
+        // Same broadcast cases as fillBroadcastCDouble(), resolved once into (row, column) strides
+        // instead of materialized: scalar (0, 0), row (0, 1), column (1, 0), full (N, 1).
+        const _Tp* cptr = nullptr;
+        size_t c_ms = 0, c_ns = 0;
+        if ((constC(mode) || inputs.size() >= 3) && beta != 0.f) {
+            const Mat& C = (inputs.size() >= 3) ? inputs.back() : blobs.back();
+            if (!C.empty()) {
+                CV_CheckTypeEQ(C.depth(), A.depth(), "DNN/Gemm: C must match A's type");
+                CV_Assert(C.isContinuous());
+                cptr = C.ptr<_Tp>();
+                const auto shape_C = shape(C);
+                const int nd = (int)shape_C.size();
+                if (nd == 0 || (nd == 1 && shape_C[0] == 1) ||
+                    (nd == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+                    // scalar: both strides stay 0
+                }
+                else if ((nd == 1 && shape_C[0] == N) ||
+                         (nd == 2 && shape_C[0] == 1 && shape_C[1] == N))
+                    c_ns = 1;
+                else if (nd == 2 && shape_C[0] == rows && shape_C[1] == 1)
+                    c_ms = 1;
+                else {
+                    CV_CheckEQ(shape_C[0], rows, "DNN/Gemm: C is not broadcast properly");
+                    CV_CheckEQ(shape_C[1], N, "DNN/Gemm: C is not broadcast properly");
+                    c_ms = (size_t)N;
+                    c_ns = 1;
+                }
+            }
+        }
+
+        // Strides resolved once for every transA/transB combination.
+        const size_t a_ms = trans_a ? 1 : (size_t)na, a_ks = trans_a ? (size_t)na : 1;
+        const size_t b_ns = trans_b ? (size_t)nb : 1, b_ks = trans_b ? 1 : (size_t)nb;
+
+        parallel_for_(Range(0, rows), [&](const Range& r) {
+            AutoBuffer<float> accbuf(N);
+            float* acc = accbuf.data();
+            for (int m = r.start; m < r.end; m++) {
+                const _Tp* ap = aptr + (size_t)m*a_ms;
+                if (!trans_b) {
+                    // Rows of B are contiguous: accumulate a whole output row, k outer, n inner.
+                    for (int n = 0; n < N; n++)
+                        acc[n] = 0.f;
+                    for (int k = 0; k < K; k++) {
+                        float av = (float)ap[(size_t)k*a_ks];
+                        const _Tp* bp = bptr + (size_t)k*b_ks;
+                        for (int n = 0; n < N; n++)
+                            acc[n] += av*(float)bp[n];
+                    }
+                } else {
+                    // Transposed B is contiguous along k, so the dot-product order reads it linearly.
+                    for (int n = 0; n < N; n++) {
+                        const _Tp* bp = bptr + (size_t)n*b_ns;
+                        float s = 0.f;
+                        for (int k = 0; k < K; k++)
+                            s += (float)ap[(size_t)k*a_ks]*(float)bp[k];
+                        acc[n] = s;
+                    }
+                }
+
+                _Tp* yp = yptr + (size_t)m*N;
+                const _Tp* cp = cptr ? cptr + (size_t)m*c_ms : nullptr;
+                for (int n = 0; n < N; n++) {
+                    float v = acc[n]*alpha;
+                    if (cp)
+                        v += beta*(float)cp[(size_t)n*c_ns];
+                    yp[n] = _Tp(v);
+                }
+            }
+        });
     }
 
     // CV_64F via cv::gemm, not the float-only fastGemm/MLAS kernels above.

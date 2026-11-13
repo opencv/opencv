@@ -81,12 +81,12 @@ Net::Impl::Impl()
     // on the SIMD width of the host: C0 == 8 is the mainstream, well-tested setting.
     // (Deriving it from vlanes() made the layout hardware-dependent; see the #29493 discussion.)
     defaultC0 = DEFAULT_C0;
-    enableFP16 = haveFP16 = false;
-    // FP16 is not ready yet in the new DNN engine
+    // The half kernels work but are still slower than the float ones, so FP16 stays off
+    // until the new engine is asked for it with DNN_TARGET_CPU_FP16 (see setPreferableTarget()).
     // Ticket: https://github.com/opencv/opencv/issues/26196
-    /*if (checkHardwareSupport(CV_CPU_FP16)) {
-        enableFP16 = haveFP16 = true;
-    }*/
+    // The same switch also turns on the bf16 paths, which CV_CPU_FP16 says nothing about.
+    enableFP16 = false;
+    haveFP16 = checkHardwareSupport(CV_CPU_FP16);
 
     tracingMode = DNN_TRACE_NONE;
     profilingMode = DNN_PROFILE_NONE;

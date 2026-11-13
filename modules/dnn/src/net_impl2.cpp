@@ -556,7 +556,7 @@ Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>&
     return graph;
 }
 
-// No half kernels yet, so half constants are widened just as setGraphInput() widens inputs.
+// When FP16 is off, half constants are widened just as setGraphInput() widens inputs.
 void Net::Impl::widenHalfConstants()
 {
     if (enableFP16)
@@ -577,6 +577,22 @@ void Net::Impl::widenHalfConstants()
         }
         adata.type = accuracy;
     }
+}
+
+// Nets with fp16/bf16 tensors are prepared on the first forward(), once the FP16 target is known.
+void Net::Impl::prepareForInference(bool atImport)
+{
+    if (atImport) {
+        size_t nargs = args.size();
+        for (size_t i = 1; i < nargs; i++) {
+            if (args[i].type == CV_16F || args[i].type == CV_16BF) {
+                // still index the layers, so getLayerNames()/getLayer() work before forward()
+                totalLayers = updateGraphOfs(mainGraph, 0, true);
+                return;
+            }
+        }
+    }
+    prepareForInference();
 }
 
 void Net::Impl::prepareForInference()

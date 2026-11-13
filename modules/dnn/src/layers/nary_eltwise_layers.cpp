@@ -575,7 +575,7 @@ public:
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
+                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_16F || input == CV_16BF || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
 
         if (op == OPERATION::EQUAL || op == OPERATION::NOT_EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
@@ -754,7 +754,8 @@ public:
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
 
-        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value && b.total() == 1) {
+        if (op == OPERATION::POW && std::is_same<T, RESULT_T>::value && b.total() == 1 &&
+            (std::is_same<T, float>::value || std::is_same<T, double>::value)) {
             cv::pow(a, (double)(*(const T*)b.data), out);
             return;
         }
@@ -1176,7 +1177,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1427,10 +1428,11 @@ public:
     template<typename T, typename... Args>
     inline typename std::enable_if<!std::is_integral<T>::value || std::is_same<T, bool>::value, void>::type opDispatch(size_t ninputs, Args&&... args)
     {
+        typedef typename DataType<T>::work_type WT;
         if (ninputs == 2) { // Operators that take two operands
             switch (op) {
                 case OPERATION::EQUAL: {
-                    auto equal = [](const T &a, const T &b) { return a == b; };
+                    auto equal = [](const T &a, const T &b) { return WT(a) == WT(b); };
                     binary_forward<T, bool>(equal, std::forward<Args>(args)...);
                     break;
                 }
@@ -1440,42 +1442,42 @@ public:
                     break;
                 }
                 case OPERATION::GREATER: {
-                    auto greater = [](const T &a, const T &b) { return a > b; };
+                    auto greater = [](const T &a, const T &b) { return WT(a) > WT(b); };
                     binary_forward<T, bool>(greater, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::GREATER_EQUAL: {
-                    auto greater_equal = [](const T &a, const T &b) { return a >= b; };
+                    auto greater_equal = [](const T &a, const T &b) { return WT(a) >= WT(b); };
                     binary_forward<T, bool>(greater_equal, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::LESS: {
-                    auto less = [](const T &a, const T &b) { return a < b; };
+                    auto less = [](const T &a, const T &b) { return WT(a) < WT(b); };
                     binary_forward<T, bool>(less, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::LESS_EQUAL: {
-                    auto less_equal = [](const T &a, const T &b) { return a <= b; };
+                    auto less_equal = [](const T &a, const T &b) { return WT(a) <= WT(b); };
                     binary_forward<T, bool>(less_equal, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::POW: {
-                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)WT(a), (double)WT(b))); };
                     binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
                     break;
                 }
                 case OPERATION::MAX: {
-                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    auto max = [](const T &a, const T &b) { return T(std::max(WT(a), WT(b))); };
                     binary_forward<T, T>(max, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MEAN: {
-                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    auto mean = [](const T &a, const T &b) { return T((WT(a) + WT(b)) / WT(2)); };
                     binary_forward<T, T>(mean, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MIN: {
-                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    auto min = [](const T &a, const T &b) { return T(std::min(WT(a), WT(b))); };
                     binary_forward<T, T>(min, std::forward<Args>(args)...);
                     break;
                 }
@@ -1485,28 +1487,28 @@ public:
                     break;
                 }
                 case OPERATION::FMOD: {
-                    auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                    auto fmod = [](const T &a, const T &b) { return T(std::fmod(WT(a), WT(b))); };
                     binary_forward<T, T>(fmod, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::PROD: {
-                    auto prod = [](const T &a, const T &b) { return a * b; };
+                    auto prod = [](const T &a, const T &b) { return T(WT(a) * WT(b)); };
                     binary_forward<T, T>(prod, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::SUB: {
-                    auto sub = [](const T &a, const T &b) { return a - b; };
+                    auto sub = [](const T &a, const T &b) { return T(WT(a) - WT(b)); };
                     binary_forward<T, T>(sub, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::ADD:
                 case OPERATION::SUM: {
-                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    auto sum = [](const T &a, const T &b) { return T(WT(a) + WT(b)); };
                     binary_forward<T, T>(sum, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::DIV: {
-                    auto div = [](const T &a, const T &b) { return a / b; };
+                    auto div = [](const T &a, const T &b) { return T(WT(a) / WT(b)); };
                     binary_forward<T, T>(div, std::forward<Args>(args)...);
                     break;
                 }
@@ -1518,30 +1520,30 @@ public:
                 default: CV_Error(Error::StsBadArg, "Unsupported operation");
             }
         } else if (ninputs == 3 && op == OPERATION::WHERE) { // Operators that take three operands
-            auto where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
+            auto where = [](const bool &a, const T &b, const T &c) { return a ? b : c; };
             ternary_forward<bool, T, T, T>(where, std::forward<Args>(args)...);
         } else { // Operators that can take multiple (>= 3) operands
             switch (op)
             {
                 case OPERATION::MAX: {
-                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
-                    nary_forward<T>(max, T{1}, std::forward<Args>(args)...);
+                    auto max = [](const T &a, const T &b) { return T(std::max(WT(a), WT(b))); };
+                    nary_forward<T>(max, T(WT(1)), std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MEAN: {
                     // Sum up inputs and then calculate mean by scale = 1 / ninputs
-                    auto sum = [](const T &a, const T &b) { return a + b; };
-                    nary_forward<T>(sum, T{1} / ninputs, std::forward<Args>(args)...);
+                    auto sum = [](const T &a, const T &b) { return T(WT(a) + WT(b)); };
+                    nary_forward<T>(sum, T(WT(1) / ninputs), std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MIN: {
-                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
-                    nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
+                    auto min = [](const T &a, const T &b) { return T(std::min(WT(a), WT(b))); };
+                    nary_forward<T>(min, T(WT(1)), std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::SUM: {
-                    auto sum = [](const T &a, const T &b) { return a + b; };
-                    nary_forward<T>(sum, T{1}, std::forward<Args>(args)...);
+                    auto sum = [](const T &a, const T &b) { return T(WT(a) + WT(b)); };
+                    nary_forward<T>(sum, T(WT(1)), std::forward<Args>(args)...);
                     break;
                 }
                 default:
@@ -1585,6 +1587,12 @@ public:
         {
             case CV_Bool:
                 boolOpDispatch(std::forward<Args>(args)...);
+                break;
+            case CV_16F:
+                opDispatch<hfloat>(std::forward<Args>(args)...);
+                break;
+            case CV_16BF:
+                opDispatch<bfloat>(std::forward<Args>(args)...);
                 break;
             case CV_8U:
                 opDispatch<uint8_t>(std::forward<Args>(args)...);

@@ -32,6 +32,12 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
@@ -64,7 +70,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

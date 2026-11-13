@@ -84,6 +84,8 @@ Mat blobFromNPY(const std::string& path)
     std::string npyType = getType(header);
     if (npyType == "<f4")
         matType = CV_32F;
+    else if (npyType == "<f2")
+        matType = CV_16F;
     else if (npyType == "<f8")
         matType = CV_64F;
     else if (npyType == "<i4")

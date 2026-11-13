@@ -45,6 +45,12 @@ public:
         mode = params.get<String>("mode", "scale");
     }
 
+    void getTypes(const std::vector<MatType>& inputs, const int requiredOutputs, const int requiredInternals,
+                  std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        getTypesWithHalf(inputs, requiredOutputs, requiredInternals, outputs, internals);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -100,12 +106,85 @@ public:
         out.convertTo(dst, CV_32F, 1. / 255.);
     }
 
+    template<typename T>
+    void forwardHalfT(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        CV_Check(mode, mode == "scale", "DNN/Scale: FP16/BF16 supports mode=\"scale\" only");
+
+        const Mat& inpBlob = inputs[0];
+        Mat& outBlob = outputs[0];
+        CV_Assert(inpBlob.isContinuous() && outBlob.isContinuous());
+        CV_CheckTypeEQ(inpBlob.type(), outBlob.type(), "DNN/Scale: output must match input type");
+
+        Mat weights = hasWeights ? (blobs.empty() ? inputs[1] : blobs[0]).reshape(1, 1) : Mat();
+        Mat bias = hasBias ? (blobs.empty() ? inputs[1] : blobs.back()).reshape(1, 1) : Mat();
+
+        Mat weightsF, biasF;
+        if (!weights.empty())
+            weights.convertTo(weightsF, CV_32F);
+        if (!bias.empty())
+            bias.convertTo(biasF, CV_32F);
+
+        const MatShape inpShape = shape(inpBlob);
+        const int numWeights = !weightsF.empty() ? (int)weightsF.total() : (int)biasF.total();
+        CV_Assert(numWeights != 0);
+        if (hasWeights && hasBias)
+            CV_CheckEQ(weights.total(), bias.total(), "Incompatible weights/bias blobs");
+
+        const T* inpData = inpBlob.ptr<T>();
+        T* outData = outBlob.ptr<T>();
+        const float* wptr = weightsF.empty() ? nullptr : weightsF.ptr<float>();
+        const float* bptr = biasF.empty() ? nullptr : biasF.ptr<float>();
+
+        const size_t nelems = inpBlob.total();
+        const int TILE = 1024;
+
+        if (weightsF.total() == 1)
+        {
+            const float w = wptr[0];
+            const float b = hasBias && bptr ? bptr[0] : 0.f;
+            const int ntiles = (int)((nelems + TILE - 1) / TILE);
+            parallel_for_(Range(0, ntiles), [&](const Range& r) {
+                for (int t = r.start; t < r.end; t++) {
+                    const size_t start = (size_t)t * TILE;
+                    const size_t len = std::min((size_t)TILE, nelems - start);
+                    for (size_t i = 0; i < len; i++)
+                        outData[start + i] = T((float)inpData[start + i] * w + b);
+                }
+            }, (double)nelems * (1 / 1024.0));
+            return;
+        }
+
+        int endAxis;
+        for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
+        {
+            if (total(inpShape, axis, endAxis) == numWeights)
+                break;
+        }
+        CV_Assert(total(inpShape, axis, endAxis) == numWeights);
+        CV_Assert(!hasBias || numWeights == (int)biasF.total());
+
+        const int numSlices = total(inpShape, 0, axis);
+        const size_t spatialSize = endAxis != inpBlob.dims ? (size_t)total(inpShape, endAxis) : 1;
+
+        parallel_for_(Range(0, numSlices * numWeights), [&](const Range& r) {
+            for (int idx = r.start; idx < r.end; idx++) {
+                const int j = idx % numWeights;
+                const float w = wptr ? wptr[j] : 1.f;
+                const float b = bptr ? bptr[j] : 0.f;
+                const size_t off = (size_t)idx * spatialSize;
+                for (size_t i = 0; i < spatialSize; i++)
+                    outData[off + i] = T((float)inpData[off + i] * w + b);
+            }
+        }, (double)nelems * (1 / 1024.0));
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -116,6 +195,17 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert_N(outputs.size() == 1, !blobs.empty() || inputs.size() == 2);
+
+        const int inpdepth = inputs[0].depth();
+        if (inpdepth == CV_16F || inpdepth == CV_16BF)
+        {
+            if (inpdepth == CV_16F)
+                forwardHalfT<hfloat>(inputs, outputs);
+            else
+                forwardHalfT<bfloat>(inputs, outputs);
+            outputs_arr.assign(outputs);
+            return;
+        }
 
         Mat &inpBlob = inputs[0];
         Mat &outBlob = outputs[0];
