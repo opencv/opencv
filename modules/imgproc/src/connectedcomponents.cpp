@@ -47,6 +47,7 @@
 //M*/
 //
 #include "precomp.hpp"
+#include "opencv2/core/utils/tls.hpp"
 #include <vector>
 
 namespace cv{
@@ -54,6 +55,10 @@ namespace cv{
 
     struct NoOp{
         NoOp(){
+        }
+
+        static inline bool hasStats(){
+            return false;
         }
 
         inline
@@ -74,12 +79,8 @@ namespace cv{
         void finish(){
         }
 
-        inline
-        void setNextLoc(const int /*nextLoc*/){
-        }
-
         inline static
-        void mergeStats(const cv::Mat& /*imgLabels*/, NoOp * /*sopArray*/, NoOp& /*sop*/, const int& /*nLabels*/){
+        void mergeStats(TLSDataAccumulator<NoOp>& /*sopTLS*/, NoOp& /*sop*/, const int& /*nLabels*/){
         }
 
     };
@@ -94,10 +95,13 @@ namespace cv{
         const _OutputArray *_mcentroidsv;
         cv::Mat centroidsv;
         std::vector<Point2ui64> integrals;
-        int _nextLoc;
 
-        CCStatsOp() : _mstatsv(0), _mcentroidsv(0), _nextLoc(0) {}
-        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv) : _mstatsv(&_statsv), _mcentroidsv(&_centroidsv), _nextLoc(0){}
+        CCStatsOp() : _mstatsv(0), _mcentroidsv(0) {}
+        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv) : _mstatsv(&_statsv), _mcentroidsv(&_centroidsv) {}
+
+        static inline bool hasStats(){
+            return true;
+        }
 
         inline
         void init(int nlabels){
@@ -119,6 +123,8 @@ namespace cv{
 
         inline
         void initElement(const int nlabels){
+            if (statsv.rows == nlabels)
+                return;
             statsv = cv::Mat(nlabels, CC_STAT_MAX, cv::DataType<int>::type);
             for (int l = 0; l < (int)nlabels; ++l){
                 int *row = (int *)statsv.ptr(l);
@@ -164,34 +170,29 @@ namespace cv{
             }
         }
 
-        inline
-        void setNextLoc(const int nextLoc){
-            _nextLoc = nextLoc;
-        }
-
         inline static
-        void mergeStats(const cv::Mat& imgLabels, CCStatsOp *sopArray, CCStatsOp& sop, const int& nLabels){
-            const int  h = imgLabels.rows;
+        void mergeStats(TLSDataAccumulator<CCStatsOp>& sopTLS, CCStatsOp& sop, const int& nLabels){
+            std::vector<CCStatsOp*>& threadSops = sopTLS.detachData();
+            for (size_t idx = 0; idx < threadSops.size(); ++idx){
+                const CCStatsOp* nextSop = threadSops[idx];
+                if (!nextSop || nextSop->statsv.rows != nLabels)
+                    continue;
+                for (int l = 0; l < nLabels; ++l){
+                    const int *rowNext = (const int*)nextSop->statsv.ptr(l);
+                    if (rowNext[CC_STAT_AREA] > 0){ //if changed merge all the stats
+                        int *rowMerged = (int*)sop.statsv.ptr(l);
+                        rowMerged[CC_STAT_LEFT] = MIN(rowMerged[CC_STAT_LEFT], rowNext[CC_STAT_LEFT]);
+                        rowMerged[CC_STAT_WIDTH] = MAX(rowMerged[CC_STAT_WIDTH], rowNext[CC_STAT_WIDTH]);
+                        rowMerged[CC_STAT_TOP] = MIN(rowMerged[CC_STAT_TOP], rowNext[CC_STAT_TOP]);
+                        rowMerged[CC_STAT_HEIGHT] = MAX(rowMerged[CC_STAT_HEIGHT], rowNext[CC_STAT_HEIGHT]);
+                        rowMerged[CC_STAT_AREA] += rowNext[CC_STAT_AREA];
 
-            if (sop._nextLoc != h){
-                for (int nextLoc = sop._nextLoc; nextLoc < h; nextLoc = sopArray[nextLoc]._nextLoc){
-                    //merge between sopNext and sop
-                    for (int l = 0; l < nLabels; ++l){
-                        int *rowNext = (int*)sopArray[nextLoc].statsv.ptr(l);
-                        if (rowNext[CC_STAT_AREA] > 0){ //if changed merge all the stats
-                            int *rowMerged = (int*)sop.statsv.ptr(l);
-                            rowMerged[CC_STAT_LEFT] = MIN(rowMerged[CC_STAT_LEFT], rowNext[CC_STAT_LEFT]);
-                            rowMerged[CC_STAT_WIDTH] = MAX(rowMerged[CC_STAT_WIDTH], rowNext[CC_STAT_WIDTH]);
-                            rowMerged[CC_STAT_TOP] = MIN(rowMerged[CC_STAT_TOP], rowNext[CC_STAT_TOP]);
-                            rowMerged[CC_STAT_HEIGHT] = MAX(rowMerged[CC_STAT_HEIGHT], rowNext[CC_STAT_HEIGHT]);
-                            rowMerged[CC_STAT_AREA] += rowNext[CC_STAT_AREA];
-
-                            sop.integrals[l].x += sopArray[nextLoc].integrals[l].x;
-                            sop.integrals[l].y += sopArray[nextLoc].integrals[l].y;
-                        }
+                        sop.integrals[l].x += nextSop->integrals[l].x;
+                        sop.integrals[l].y += nextSop->integrals[l].y;
                     }
                 }
             }
+            sopTLS.cleanupDetachedData();
         }
     };
 
@@ -498,12 +499,12 @@ namespace cv{
             cv::Mat& imgLabels_;
             LabelT* P_;
             StatsOp& sop_;
-            StatsOp* sopArray_;
+            TLSDataAccumulator<StatsOp>& sopTLS_;
             LabelT& nLabels_;
 
         public:
-            SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, StatsOp& sop, StatsOp* sopArray, LabelT& nLabels)
-                : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels) {}
+            SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, StatsOp& sop, TLSDataAccumulator<StatsOp>& sopTLS, LabelT& nLabels)
+                : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopTLS_(sopTLS), nLabels_(nLabels) {}
 
             void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
@@ -514,8 +515,8 @@ namespace cv{
                 const int rowEnd = range.end;
 
                 if (rowBegin > 0) {
-                    sopArray_[rowBegin].initElement(nLabels_);
-                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+                    StatsOp& sopLocal = StatsOp::hasStats() ? sopTLS_.getRef() : sop_;
+                    sopLocal.initElement(nLabels_);
 
                     if (imgLabels_.rows & 1) {
                         if (imgLabels_.cols & 1) {
@@ -534,67 +535,67 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0) {
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (c + 1 < imgLabels_.cols) {
                                             if (img_row[c + 1] > 0) {
                                                 imgLabels_row[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                                sopLocal(r, c + 1, iLabel);
                                             }
                                             else {
                                                 imgLabels_row[c + 1] = 0;
-                                                sopArray_[rowBegin](r, c + 1, 0);
+                                                sopLocal(r, c + 1, 0);
                                             }
                                             if (r + 1 < imgLabels_.rows) {
                                                 if (img_row_fol[c] > 0) {
                                                     imgLabels_row_fol[c] = iLabel;
-                                                    sopArray_[rowBegin](r + 1, c, iLabel);
+                                                    sopLocal(r + 1, c, iLabel);
                                                 }
                                                 else {
                                                     imgLabels_row_fol[c] = 0;
-                                                    sopArray_[rowBegin](r + 1, c, 0);
+                                                    sopLocal(r + 1, c, 0);
                                                 }
                                                 if (img_row_fol[c + 1] > 0) {
                                                     imgLabels_row_fol[c + 1] = iLabel;
-                                                    sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                    sopLocal(r + 1, c + 1, iLabel);
                                                 }
                                                 else {
                                                     imgLabels_row_fol[c + 1] = 0;
-                                                    sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                    sopLocal(r + 1, c + 1, 0);
                                                 }
                                             }
                                         }
                                         else if (r + 1 < imgLabels_.rows) {
                                             if (img_row_fol[c] > 0) {
                                                 imgLabels_row_fol[c] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                                sopLocal(r + 1, c, iLabel);
                                             }
                                             else {
                                                 imgLabels_row_fol[c] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
+                                                sopLocal(r + 1, c, 0);
                                             }
                                         }
                                     }
                                     else {
                                         imgLabels_row[c] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
+                                        sopLocal(r, c, 0);
                                         if (c + 1 < imgLabels_.cols) {
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                             if (r + 1 < imgLabels_.rows) {
                                                 imgLabels_row_fol[c] = 0;
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                         else if (r + 1 < imgLabels_.rows) {
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                     }
                                 }
@@ -615,49 +616,49 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0) {
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row[c + 1] > 0) {
                                             imgLabels_row[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                            sopLocal(r, c + 1, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                         }
                                         if (r + 1 < imgLabels_.rows) {
                                             if (img_row_fol[c] > 0) {
                                                 imgLabels_row_fol[c] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                                sopLocal(r + 1, c, iLabel);
                                             }
                                             else {
                                                 imgLabels_row_fol[c] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
+                                                sopLocal(r + 1, c, 0);
                                             }
                                             if (img_row_fol[c + 1] > 0) {
                                                 imgLabels_row_fol[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                sopLocal(r + 1, c + 1, iLabel);
                                             }
                                             else {
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                     }
                                     else {
                                         imgLabels_row[c] = 0;
                                         imgLabels_row[c + 1] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r, c + 1, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r, c + 1, 0);
                                         if (r + 1 < imgLabels_.rows) {
                                             imgLabels_row_fol[c] = 0;
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r + 1, c, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                 }
@@ -680,49 +681,49 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0) {
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row_fol[c] > 0) {
                                             imgLabels_row_fol[c] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                            sopLocal(r + 1, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                         if (c + 1 < imgLabels_.cols) {
                                             if (img_row[c + 1] > 0) {
                                                 imgLabels_row[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                                sopLocal(r, c + 1, iLabel);
                                             }
                                             else {
                                                 imgLabels_row[c + 1] = 0;
-                                                sopArray_[rowBegin](r, c + 1, 0);
+                                                sopLocal(r, c + 1, 0);
                                             }
                                             if (img_row_fol[c + 1] > 0) {
                                                 imgLabels_row_fol[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                sopLocal(r + 1, c + 1, iLabel);
                                             }
                                             else {
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                     }
                                     else {
                                         imgLabels_row[c] = 0;
                                         imgLabels_row_fol[c] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r + 1, c, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r + 1, c, 0);
                                         if (c + 1 < imgLabels_.cols) {
                                             imgLabels_row[c + 1] = 0;
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                 }
@@ -743,35 +744,35 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0) {
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row[c + 1] > 0) {
                                             imgLabels_row[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                            sopLocal(r, c + 1, iLabel);
                                         }
                                         else {
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                         }
                                         if (img_row_fol[c] > 0) {
                                             imgLabels_row_fol[c] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                            sopLocal(r + 1, c, iLabel);
                                         }
                                         else {
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                         if (img_row_fol[c + 1] > 0) {
                                             imgLabels_row_fol[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                            sopLocal(r + 1, c + 1, iLabel);
                                         }
                                         else {
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                     else {
@@ -779,10 +780,10 @@ namespace cv{
                                         imgLabels_row[c + 1] = 0;
                                         imgLabels_row_fol[c] = 0;
                                         imgLabels_row_fol[c + 1] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r, c + 1, 0);
-                                        sopArray_[rowBegin](r + 1, c, 0);
-                                        sopArray_[rowBegin](r + 1, c + 1, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r, c + 1, 0);
+                                        sopLocal(r + 1, c, 0);
+                                        sopLocal(r + 1, c + 1, 0);
                                     }
                                 }
                             }//END case 4
@@ -791,7 +792,6 @@ namespace cv{
                 }
                 else {
                     //the first thread uses sop in order to make less merges
-                    sop_.setNextLoc(rowEnd);
                     if (imgLabels_.rows & 1) {
                         if (imgLabels_.cols & 1) {
                             //Case 1: both rows and cols odd
@@ -1175,14 +1175,14 @@ namespace cv{
                 flattenLParallel(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
-            //Array for statistics data
-            AutoBuffer<StatsOp> sopArray(h);
+            //Thread-local statistics accumulators
+            TLSDataAccumulator<StatsOp> sopTLS;
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopTLS, nLabels), nParallelStripes);
 
-            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            StatsOp::mergeStats(sopTLS, sop, nLabels);
             sop.finish();
 
             return nLabels;
@@ -1686,11 +1686,11 @@ namespace cv{
             cv::Mat& imgLabels_;
             const LabelT* P_;
             StatsOp& sop_;
-            StatsOp* sopArray_;
+            TLSDataAccumulator<StatsOp>& sopTLS_;
             LabelT& nLabels_;
         public:
-            SecondScan(cv::Mat& imgLabels, const LabelT* P, StatsOp& sop, StatsOp* sopArray, LabelT& nLabels)
-                : imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels) {}
+            SecondScan(cv::Mat& imgLabels, const LabelT* P, StatsOp& sop, TLSDataAccumulator<StatsOp>& sopTLS, LabelT& nLabels)
+                : imgLabels_(imgLabels), P_(P), sop_(sop), sopTLS_(sopTLS), nLabels_(nLabels) {}
 
             SecondScan& operator=(const SecondScan&) { return *this; }
 
@@ -1702,21 +1702,20 @@ namespace cv{
                 const int rowEnd = range.end;
 
                 if (rowBegin > 0) {
-                    sopArray_[rowBegin].initElement(nLabels_);
-                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+                    StatsOp& sopLocal = StatsOp::hasStats() ? sopTLS_.getRef() : sop_;
+                    sopLocal.initElement(nLabels_);
 
                     for (; r < rowEnd; ++r) {
                         LabelT* img_row_start = imgLabels_.ptr<LabelT>(r);
                         LabelT* const img_row_end = img_row_start + imgLabels_.cols;
                         for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c) {
                             *img_row_start = P_[*img_row_start];
-                            sopArray_[rowBegin](r, c, *img_row_start);
+                            sopLocal(r, c, *img_row_start);
                         }
                     }
                 }
                 else {
                     //the first thread uses sop in order to make less merges
-                    sop_.setNextLoc(rowEnd);
                     for (; r < rowEnd; ++r) {
                         LabelT* img_row_start = imgLabels_.ptr<LabelT>(r);
                         LabelT* const img_row_end = img_row_start + imgLabels_.cols;
@@ -1805,13 +1804,13 @@ namespace cv{
                 flattenLParallel(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
-            //Array for statistics dataof threads
-            AutoBuffer<StatsOp> sopArray(h);
+            //Thread-local statistics accumulators
+            TLSDataAccumulator<StatsOp> sopTLS;
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
-            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopTLS, nLabels), nParallelStripes);
+            StatsOp::mergeStats(sopTLS, sop, nLabels);
             sop.finish();
 
             return nLabels;
@@ -2173,11 +2172,11 @@ namespace cv{
             cv::Mat& imgLabels_;
             const LabelT *P_;
             StatsOp& sop_;
-            StatsOp *sopArray_;
+            TLSDataAccumulator<StatsOp>& sopTLS_;
             LabelT& nLabels_;
         public:
-            SecondScan(cv::Mat& imgLabels, const LabelT *P, StatsOp& sop, StatsOp *sopArray, LabelT& nLabels)
-                : imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels){}
+            SecondScan(cv::Mat& imgLabels, const LabelT *P, StatsOp& sop, TLSDataAccumulator<StatsOp>& sopTLS, LabelT& nLabels)
+                : imgLabels_(imgLabels), P_(P), sop_(sop), sopTLS_(sopTLS), nLabels_(nLabels){}
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
@@ -2189,21 +2188,20 @@ namespace cv{
                 const int rowEnd = range.end;
 
                 if (rowBegin > 0){
-                    sopArray_[rowBegin].initElement(nLabels_);
-                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+                    StatsOp& sopLocal = StatsOp::hasStats() ? sopTLS_.getRef() : sop_;
+                    sopLocal.initElement(nLabels_);
 
                     for (; r < rowEnd; ++r) {
                         LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
                         LabelT * const img_row_end = img_row_start + imgLabels_.cols;
                         for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c){
                             *img_row_start = P_[*img_row_start];
-                            sopArray_[rowBegin](r, c, *img_row_start);
+                            sopLocal(r, c, *img_row_start);
                         }
                     }
                 }
                 else{
                     //the first thread uses sop in order to make less merges
-                    sop_.setNextLoc(rowEnd);
                     for (; r < rowEnd; ++r) {
                         LabelT * img_row_start = imgLabels_.ptr<LabelT>(r);
                         LabelT * const img_row_end = img_row_start + imgLabels_.cols;
@@ -2351,13 +2349,13 @@ namespace cv{
                 }
             }
 
-            //Array for statistics dataof threads
-            AutoBuffer<StatsOp> sopArray(h);
+            //Thread-local statistics accumulators
+            TLSDataAccumulator<StatsOp> sopTLS;
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
-            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopTLS, nLabels), nParallelStripes);
+            StatsOp::mergeStats(sopTLS, sop, nLabels);
             sop.finish();
 
             return nLabels;
@@ -3618,12 +3616,12 @@ namespace cv{
             cv::Mat& imgLabels_;
             LabelT *P_;
             StatsOp& sop_;
-            StatsOp *sopArray_;
+            TLSDataAccumulator<StatsOp>& sopTLS_;
             LabelT& nLabels_;
 
         public:
-            SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT *P, StatsOp& sop, StatsOp *sopArray, LabelT& nLabels)
-                : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels){}
+            SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT *P, StatsOp& sop, TLSDataAccumulator<StatsOp>& sopTLS, LabelT& nLabels)
+                : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopTLS_(sopTLS), nLabels_(nLabels){}
 
             void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
@@ -3634,8 +3632,8 @@ namespace cv{
                 const int rowEnd = range.end;
 
                 if (rowBegin > 0){
-                    sopArray_[rowBegin].initElement(nLabels_);
-                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+                    StatsOp& sopLocal = StatsOp::hasStats() ? sopTLS_.getRef() : sop_;
+                    sopLocal.initElement(nLabels_);
 
                     if (imgLabels_.rows&  1){
                         if (imgLabels_.cols&  1){
@@ -3654,67 +3652,67 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0){
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (c + 1 < imgLabels_.cols) {
                                             if (img_row[c + 1] > 0){
                                                 imgLabels_row[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                                sopLocal(r, c + 1, iLabel);
                                             }
                                             else{
                                                 imgLabels_row[c + 1] = 0;
-                                                sopArray_[rowBegin](r, c + 1, 0);
+                                                sopLocal(r, c + 1, 0);
                                             }
                                             if (r + 1 < imgLabels_.rows) {
                                                 if (img_row_fol[c] > 0){
                                                     imgLabels_row_fol[c] = iLabel;
-                                                    sopArray_[rowBegin](r + 1, c, iLabel);
+                                                    sopLocal(r + 1, c, iLabel);
                                                 }
                                                 else{
                                                     imgLabels_row_fol[c] = 0;
-                                                    sopArray_[rowBegin](r + 1, c, 0);
+                                                    sopLocal(r + 1, c, 0);
                                                 }
                                                 if (img_row_fol[c + 1] > 0){
                                                     imgLabels_row_fol[c + 1] = iLabel;
-                                                    sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                    sopLocal(r + 1, c + 1, iLabel);
                                                 }
                                                 else{
                                                     imgLabels_row_fol[c + 1] = 0;
-                                                    sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                    sopLocal(r + 1, c + 1, 0);
                                                 }
                                             }
                                         }
                                         else if (r + 1 < imgLabels_.rows) {
                                             if (img_row_fol[c] > 0){
                                                 imgLabels_row_fol[c] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                                sopLocal(r + 1, c, iLabel);
                                             }
                                             else{
                                                 imgLabels_row_fol[c] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
+                                                sopLocal(r + 1, c, 0);
                                             }
                                         }
                                     }
                                     else {
                                         imgLabels_row[c] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
+                                        sopLocal(r, c, 0);
                                         if (c + 1 < imgLabels_.cols) {
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                             if (r + 1 < imgLabels_.rows) {
                                                 imgLabels_row_fol[c] = 0;
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                         else if (r + 1 < imgLabels_.rows) {
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                     }
                                 }
@@ -3735,49 +3733,49 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0){
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row[c + 1] > 0){
                                             imgLabels_row[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                            sopLocal(r, c + 1, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                         }
                                         if (r + 1 < imgLabels_.rows) {
                                             if (img_row_fol[c] > 0){
                                                 imgLabels_row_fol[c] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                                sopLocal(r + 1, c, iLabel);
                                             }
                                             else{
                                                 imgLabels_row_fol[c] = 0;
-                                                sopArray_[rowBegin](r + 1, c, 0);
+                                                sopLocal(r + 1, c, 0);
                                             }
                                             if (img_row_fol[c + 1] > 0){
                                                 imgLabels_row_fol[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                sopLocal(r + 1, c + 1, iLabel);
                                             }
                                             else{
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                     }
                                     else {
                                         imgLabels_row[c] = 0;
                                         imgLabels_row[c + 1] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r, c + 1, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r, c + 1, 0);
                                         if (r + 1 < imgLabels_.rows) {
                                             imgLabels_row_fol[c] = 0;
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r + 1, c, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                 }
@@ -3800,49 +3798,49 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0){
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row_fol[c] > 0){
                                             imgLabels_row_fol[c] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                            sopLocal(r + 1, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                         if (c + 1 < imgLabels_.cols) {
                                             if (img_row[c + 1] > 0){
                                                 imgLabels_row[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                                sopLocal(r, c + 1, iLabel);
                                             }
                                             else{
                                                 imgLabels_row[c + 1] = 0;
-                                                sopArray_[rowBegin](r, c + 1, 0);
+                                                sopLocal(r, c + 1, 0);
                                             }
                                             if (img_row_fol[c + 1] > 0){
                                                 imgLabels_row_fol[c + 1] = iLabel;
-                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                sopLocal(r + 1, c + 1, iLabel);
                                             }
                                             else{
                                                 imgLabels_row_fol[c + 1] = 0;
-                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                sopLocal(r + 1, c + 1, 0);
                                             }
                                         }
                                     }
                                     else{
                                         imgLabels_row[c] = 0;
                                         imgLabels_row_fol[c] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r + 1, c, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r + 1, c, 0);
                                         if (c + 1 < imgLabels_.cols) {
                                             imgLabels_row[c + 1] = 0;
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                 }
@@ -3863,35 +3861,35 @@ namespace cv{
                                         iLabel = P_[iLabel];
                                         if (img_row[c] > 0){
                                             imgLabels_row[c] = iLabel;
-                                            sopArray_[rowBegin](r, c, iLabel);
+                                            sopLocal(r, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c] = 0;
-                                            sopArray_[rowBegin](r, c, 0);
+                                            sopLocal(r, c, 0);
                                         }
                                         if (img_row[c + 1] > 0){
                                             imgLabels_row[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                            sopLocal(r, c + 1, iLabel);
                                         }
                                         else{
                                             imgLabels_row[c + 1] = 0;
-                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopLocal(r, c + 1, 0);
                                         }
                                         if (img_row_fol[c] > 0){
                                             imgLabels_row_fol[c] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                            sopLocal(r + 1, c, iLabel);
                                         }
                                         else{
                                             imgLabels_row_fol[c] = 0;
-                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopLocal(r + 1, c, 0);
                                         }
                                         if (img_row_fol[c + 1] > 0){
                                             imgLabels_row_fol[c + 1] = iLabel;
-                                            sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                            sopLocal(r + 1, c + 1, iLabel);
                                         }
                                         else{
                                             imgLabels_row_fol[c + 1] = 0;
-                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            sopLocal(r + 1, c + 1, 0);
                                         }
                                     }
                                     else {
@@ -3899,10 +3897,10 @@ namespace cv{
                                         imgLabels_row[c + 1] = 0;
                                         imgLabels_row_fol[c] = 0;
                                         imgLabels_row_fol[c + 1] = 0;
-                                        sopArray_[rowBegin](r, c, 0);
-                                        sopArray_[rowBegin](r, c + 1, 0);
-                                        sopArray_[rowBegin](r + 1, c, 0);
-                                        sopArray_[rowBegin](r + 1, c + 1, 0);
+                                        sopLocal(r, c, 0);
+                                        sopLocal(r, c + 1, 0);
+                                        sopLocal(r + 1, c, 0);
+                                        sopLocal(r + 1, c + 1, 0);
                                     }
                                 }
                             }//END case 4
@@ -3911,7 +3909,6 @@ namespace cv{
                 }
                 else{
                     //the first thread uses sop in order to make less merges
-                    sop_.setNextLoc(rowEnd);
                     if (imgLabels_.rows&  1){
                         if (imgLabels_.cols&  1){
                             //Case 1: both rows and cols odd
@@ -4287,14 +4284,14 @@ namespace cv{
                 flattenLParallel(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
-            //Array for statistics data
-            AutoBuffer<StatsOp> sopArray(h);
+            //Thread-local statistics accumulators
+            TLSDataAccumulator<StatsOp> sopTLS;
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopTLS, nLabels), nParallelStripes);
 
-            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            StatsOp::mergeStats(sopTLS, sop, nLabels);
             sop.finish();
 
             return nLabels;

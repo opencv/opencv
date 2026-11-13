@@ -815,5 +815,43 @@ TEST(Imgproc_ConnectedComponents, regression_29854)
     }
 }
 
+TEST(Imgproc_ConnectedComponents, tls_stats_parity_multithread)
+{
+    struct ThreadGuard {
+        int prev;
+        ThreadGuard() : prev(getNumThreads()) {}
+        ~ThreadGuard() { setNumThreads(prev); }
+    } guard;
+
+    for (const Size& sz : {Size(320, 256), Size(321, 257)})
+    {
+        Mat img(sz, CV_8UC1, Scalar(0));
+        for (int y = 0; y < sz.height; y += 6)
+            for (int x = 0; x < sz.width; x += 6)
+                rectangle(img, Rect(x, y, 4, 4), Scalar(255), FILLED);
+        // Cross-stripe spanning component so stripes share label indices
+        line(img, Point(sz.width / 2, 0), Point(sz.width / 2, sz.height - 1), Scalar(255), 3);
+
+        for (const int connectivity : {4, 8})
+        {
+            for (const int ccltype : {CCL_WU, CCL_GRANA, CCL_BOLELLI})
+            {
+                Mat labels1, stats1, cent1;
+                setNumThreads(1);
+                int n1 = connectedComponentsWithStats(img, labels1, stats1, cent1, connectivity, CV_32S, ccltype);
+
+                Mat labelsN, statsN, centN;
+                setNumThreads(std::max(4, guard.prev));
+                int nN = connectedComponentsWithStats(img, labelsN, statsN, centN, connectivity, CV_32S, ccltype);
+
+                EXPECT_EQ(n1, nN) << "size=" << sz << " conn=" << connectivity << " ccl=" << ccltype;
+                EXPECT_EQ(0, cvtest::norm(labels1, labelsN, NORM_INF));
+                EXPECT_EQ(0, cvtest::norm(stats1, statsN, NORM_INF));
+                EXPECT_LE(cvtest::norm(cent1, centN, NORM_INF), 1e-12);
+            }
+        }
+    }
+}
+
 }
 } // namespace
