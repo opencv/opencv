@@ -763,7 +763,7 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
-TEST(Objdetect_QRCode_decode, decode_regression_contrib_3478)
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_regression_contrib_3478)
 {
     // Crafted QR code from opencv_contrib issue 3478. Decoding it used to throw an
     // exception from the bitstream reader. The decoder must reject such a code and
@@ -775,19 +775,18 @@ TEST(Objdetect_QRCode_decode, decode_regression_contrib_3478)
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    for (int i = 0; i < 2; i++)
-    {
-        GraphicalCodeDetector qrcode = QRCodeDetector();
-        if (i == 1)
-            qrcode = QRCodeDetectorAruco();
-
-        std::vector<Point> corners;
-        ASSERT_TRUE(qrcode.detect(src, corners));
-        Mat straight_barcode;
-        std::string decoded_info;
-        EXPECT_NO_THROW(decoded_info = qrcode.decode(src, corners, straight_barcode));
-        EXPECT_TRUE(decoded_info.empty());
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
     }
+
+    std::vector<Point> corners;
+    ASSERT_TRUE(qrcode.detect(src, corners));
+    Mat straight_barcode;
+    std::string decoded_info;
+    EXPECT_NO_THROW(decoded_info = qrcode.decode(src, corners, straight_barcode));
+    EXPECT_TRUE(decoded_info.empty());
 }
 
 static const char* const valid_one_bit_terminator[21] = {
