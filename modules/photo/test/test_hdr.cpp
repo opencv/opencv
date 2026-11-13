@@ -512,6 +512,147 @@ TEST(Photo_TonemapMantiuk, synthetic_hdr_determinism)
     EXPECT_EQ(0.0, cvtest::norm(ldr1, ldr2, NORM_INF));
 }
 
+TEST(Photo_Tonemap, drago_reinhard_synthetic_reference_parity)
+{
+    RNG rng(20261113ULL);
+    Mat hdr(64, 80, CV_32FC3);
+    for (int y = 0; y < hdr.rows; ++y)
+    {
+        Vec3f* row = hdr.ptr<Vec3f>(y);
+        for (int x = 0; x < hdr.cols; ++x)
+        {
+            const float base = std::exp((x * 0.04f) + (y * 0.03f) - 2.0f);
+            row[x] = Vec3f(base * rng.uniform(0.6f, 1.4f),
+                           base * rng.uniform(0.5f, 1.5f),
+                           base * rng.uniform(0.7f, 1.3f));
+        }
+    }
+
+    // Verify linear tonemap matches explicit scalar min/max/gamma formula
+    {
+        Ptr<Tonemap> tm = createTonemap(2.2f);
+        Mat out;
+        tm->process(hdr, out);
+        double mn = 0, mx = 0;
+        minMaxLoc(hdr, &mn, &mx);
+        Mat ref = (hdr - static_cast<float>(mn)) / static_cast<float>(mx - mn);
+        pow(ref, 1.0f / 2.2f, ref);
+        EXPECT_LT(cvtest::norm(out, ref, NORM_INF), 3e-5);
+    }
+
+    // Verify Drago matches reference channel-split math (saturation == 1.0f and != 1.0f)
+    for (float sat : {1.0f, 0.7f})
+    {
+        const float gamma = 2.2f, bias = 0.85f;
+        Ptr<TonemapDrago> tm = createTonemapDrago(gamma, sat, bias);
+        Mat out1, out2;
+        tm->process(hdr, out1);
+        tm->process(hdr, out2);
+        EXPECT_EQ(0.0, cvtest::norm(out1, out2, NORM_INF));
+        ASSERT_TRUE(checkRange(out1, true, nullptr, 0.0, 1.0 + 1e-5));
+
+        double mn = 0, mx = 0;
+        minMaxLoc(hdr, &mn, &mx);
+        Mat imgRef = (hdr - static_cast<float>(mn)) / static_cast<float>(mx - mn);
+        Mat gray;
+        cvtColor(imgRef, gray, COLOR_RGB2GRAY);
+        Mat logG;
+        max(gray, Scalar::all(1e-4), logG);
+        log(logG, logG);
+        float meanL = expf(static_cast<float>(sum(logG)[0]) / logG.total());
+        gray /= meanL;
+        double dmax = 0;
+        minMaxLoc(gray, nullptr, &dmax);
+        Mat numMap, denMap;
+        log(gray + 1.0f, numMap);
+        pow(gray / static_cast<float>(dmax), logf(bias) / logf(0.5f), denMap);
+        log(2.0f + 8.0f * denMap, denMap);
+        Mat newLum = numMap / denMap;
+        std::vector<Mat> ch(3);
+        split(imgRef, ch);
+        for (int c = 0; c < 3; ++c)
+        {
+            ch[c] = ch[c].mul(1.0f / gray);
+            pow(ch[c], sat, ch[c]);
+            ch[c] = ch[c].mul(newLum);
+        }
+        merge(ch, imgRef);
+        minMaxLoc(imgRef, &mn, &mx);
+        imgRef = (imgRef - static_cast<float>(mn)) / static_cast<float>(mx - mn);
+        pow(imgRef, 1.0f / gamma, imgRef);
+        EXPECT_LT(cvtest::norm(out1, imgRef, NORM_INF), 1e-5);
+    }
+
+    // Verify Reinhard matches reference channel-split math
+    {
+        const float gamma = 2.2f, intensity = 0.25f, light_adapt = 0.8f, color_adapt = 0.4f;
+        Ptr<TonemapReinhard> tm = createTonemapReinhard(gamma, intensity, light_adapt, color_adapt);
+        Mat out1, out2;
+        tm->process(hdr, out1);
+        tm->process(hdr, out2);
+        EXPECT_EQ(0.0, cvtest::norm(out1, out2, NORM_INF));
+        ASSERT_TRUE(checkRange(out1, true, nullptr, 0.0, 1.0 + 1e-5));
+
+        double mn = 0, mx = 0;
+        minMaxLoc(hdr, &mn, &mx);
+        Mat imgRef = (hdr - static_cast<float>(mn)) / static_cast<float>(mx - mn);
+        Mat gray;
+        cvtColor(imgRef, gray, COLOR_RGB2GRAY);
+        Mat logG;
+        max(gray, Scalar::all(1e-4), logG);
+        log(logG, logG);
+        float logMean = static_cast<float>(sum(logG)[0] / logG.total());
+        double dmin = 0, dmax = 0;
+        minMaxLoc(logG, &dmin, &dmax);
+        float key = (static_cast<float>(dmax) - logMean) / static_cast<float>(dmax - dmin);
+        float mapKey = 0.3f + 0.7f * std::pow(key, 1.4f);
+        float intScale = exp(-intensity);
+        Scalar cMean = mean(imgRef);
+        float gMean = static_cast<float>(mean(gray)[0]);
+        std::vector<Mat> ch(3);
+        split(imgRef, ch);
+        for (int c = 0; c < 3; ++c)
+        {
+            float global = color_adapt * static_cast<float>(cMean[c]) + (1.0f - color_adapt) * gMean;
+            Mat adapt = color_adapt * ch[c] + (1.0f - color_adapt) * gray;
+            adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
+            pow(intScale * adapt, mapKey, adapt);
+            ch[c] = ch[c].mul(1.0f / (adapt + ch[c]));
+        }
+        merge(ch, imgRef);
+        minMaxLoc(imgRef, &mn, &mx);
+        imgRef = (imgRef - static_cast<float>(mn)) / static_cast<float>(mx - mn);
+        pow(imgRef, 1.0f / gamma, imgRef);
+        EXPECT_LT(cvtest::norm(out1, imgRef, NORM_INF), 1e-5);
+    }
+}
+
+TEST(Photo_Tonemap, zero_luminance_and_flat_finite)
+{
+    Mat hdr(32, 48, CV_32FC3);
+    RNG rng(20261113ULL);
+    rng.fill(hdr, RNG::UNIFORM, Scalar(0.1f, 0.1f, 0.1f), Scalar(4.0f, 4.0f, 4.0f));
+    hdr.at<Vec3f>(0, 0) = Vec3f(0.0f, 0.0f, 0.0f);
+    hdr.at<Vec3f>(3, 5) = Vec3f(0.0f, 0.0f, 0.0f);
+
+    for (float sat : {1.0f, 0.7f})
+    {
+        Ptr<TonemapDrago> drago = createTonemapDrago(2.2f, sat, 0.85f);
+        Mat out;
+        drago->process(hdr, out);
+        EXPECT_TRUE(checkRange(out, true, nullptr, 0.0, 1.0 + 1e-5));
+        EXPECT_EQ(Vec3f(0.0f, 0.0f, 0.0f), out.at<Vec3f>(0, 0));
+    }
+
+    Mat flatHdr(16, 16, CV_32FC3, Scalar(0.5f, 0.5f, 0.5f));
+    Ptr<TonemapReinhard> reinhard = createTonemapReinhard(2.2f, 0.25f, 0.8f, 0.4f);
+    Mat outBlack, outFlat;
+    reinhard->process(hdr, outBlack);
+    reinhard->process(flatHdr, outFlat);
+    EXPECT_TRUE(checkRange(outBlack, true, nullptr, 0.0, 1.0 + 1e-5));
+    EXPECT_TRUE(checkRange(outFlat, true, nullptr, 0.0, 1.0 + 1e-5));
+}
+
 TEST(Photo_MergeMertens, synthetic_parity)
 {
     vector<Mat> imgs3(3);

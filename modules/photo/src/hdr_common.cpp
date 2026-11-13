@@ -96,14 +96,40 @@ Mat RobertsonWeights(int length)
 
 void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
 {
-    std::vector<Mat> channels(3);
-    split(src, channels);
-    for(int i = 0; i < 3; i++) {
-        channels[i] = channels[i].mul(1.0f / lum);
-        pow(channels[i], saturation, channels[i]);
-        channels[i] = channels[i].mul(new_lum);
-    }
-    merge(channels, dst);
+    CV_Assert(src.size() == lum.size() && src.size() == new_lum.size());
+    CV_Assert(src.type() == CV_32FC3 && lum.type() == CV_32FC1 && new_lum.type() == CV_32FC1);
+    dst.create(src.size(), CV_32FC3);
+    parallel_for_(Range(0, src.rows), [&](const Range& range) {
+        for (int r = range.start; r < range.end; ++r)
+        {
+            const Vec3f* srow = src.ptr<Vec3f>(r);
+            Vec3f* drow = dst.ptr<Vec3f>(r);
+            const float* lrow = lum.ptr<float>(r);
+            const float* nlrow = new_lum.ptr<float>(r);
+            if (saturation == 1.0f)
+            {
+                for (int c = 0; c < src.cols; ++c)
+                {
+                    const float l = lrow[c];
+                    const float scale = (l > 0.0f) ? (nlrow[c] / l) : 0.0f;
+                    drow[c] = srow[c] * scale;
+                }
+            }
+            else
+            {
+                for (int c = 0; c < src.cols; ++c)
+                {
+                    const float l = lrow[c];
+                    const float invL = (l > 0.0f) ? (1.0f / l) : 0.0f;
+                    const float nl = nlrow[c];
+                    const Vec3f v = srow[c];
+                    drow[c] = Vec3f(std::pow(v[0] * invL, saturation) * nl,
+                                    std::pow(v[1] * invL, saturation) * nl,
+                                    std::pow(v[2] * invL, saturation) * nl);
+                }
+            }
+        }
+    });
 }
 
 Mat linearResponse(int channels, int length)

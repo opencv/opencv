@@ -53,6 +53,47 @@ inline void log_(const Mat& src, Mat& dst)
     log(dst, dst);
 }
 
+static void applyLinearNormAndGamma(const Mat& src, Mat& dst, float gamma)
+{
+    double min, max;
+    minMaxLoc(src, &min, &max);
+    const float fmin = static_cast<float>(min);
+    const float fmax = static_cast<float>(max);
+    if (max - min > DBL_EPSILON)
+    {
+        const float invRange = 1.0f / (fmax - fmin);
+        const float invGamma = 1.0f / gamma;
+        const int cols3 = src.cols * src.channels();
+        parallel_for_(Range(0, src.rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                const float* srow = src.ptr<float>(r);
+                float* drow = dst.ptr<float>(r);
+                if (gamma == 1.0f)
+                {
+                    for (int k = 0; k < cols3; ++k)
+                        drow[k] = (srow[k] - fmin) * invRange;
+                }
+                else
+                {
+                    for (int k = 0; k < cols3; ++k)
+                    {
+                        const float v = (srow[k] - fmin) * invRange;
+                        drow[k] = std::pow(v, invGamma);
+                    }
+                }
+            }
+        });
+    }
+    else
+    {
+        if (src.data != dst.data)
+            src.copyTo(dst);
+        if (gamma != 1.0f)
+            pow(dst, 1.0f / gamma, dst);
+    }
+}
+
 class TonemapImpl CV_FINAL : public Tonemap
 {
 public:
@@ -70,17 +111,7 @@ public:
         _dst.create(src.size(), CV_32FC3);
         Mat dst = _dst.getMat();
 
-        double min, max;
-        minMaxLoc(src, &min, &max);
-        float fmin = static_cast<float>(min);
-        float fmax = static_cast<float>(max);
-        if(max - min > DBL_EPSILON) {
-            dst = (src - fmin) / (fmax - fmin);
-        } else {
-            src.copyTo(dst);
-        }
-
-        pow(dst, 1.0f / gamma, dst);
+        applyLinearNormAndGamma(src, dst, gamma);
     }
 
     float getGamma() const CV_OVERRIDE { return gamma; }
@@ -130,33 +161,77 @@ public:
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
 
-        Ptr<Tonemap> linear = createTonemap(1.0f);
-        linear->process(src, img);
+        applyLinearNormAndGamma(src, img, 1.0f);
 
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
-        Mat log_img;
-        log_(gray_img, log_img);
-        float mean = expf(static_cast<float>(sum(log_img)[0]) / log_img.total());
-        gray_img /= mean;
-        log_img.release();
 
-        double dmax;
-        minMaxLoc(gray_img, NULL, &dmax);
-        float max = static_cast<float>(dmax);
-        CV_Assert(max > 0);
+        const int rows = gray_img.rows;
+        const int cols = gray_img.cols;
+        std::vector<double> rowLogSums(rows, 0.0);
+        std::vector<float> rowMaxG(rows, -std::numeric_limits<float>::infinity());
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                const float* grow = gray_img.ptr<float>(r);
+                double lsum = 0.0;
+                float rmax = -std::numeric_limits<float>::infinity();
+                for (int c = 0; c < cols; ++c)
+                {
+                    const float g = grow[c];
+                    lsum += std::log(std::max(g, 1e-4f));
+                    if (g > rmax)
+                        rmax = g;
+                }
+                rowLogSums[r] = lsum;
+                rowMaxG[r] = rmax;
+            }
+        });
+        double totalLogSum = 0.0;
+        float globalMaxG = -std::numeric_limits<float>::infinity();
+        for (int r = 0; r < rows; ++r)
+        {
+            totalLogSum += rowLogSums[r];
+            if (rowMaxG[r] > globalMaxG)
+                globalMaxG = rowMaxG[r];
+        }
+        const float mean = expf(static_cast<float>(totalLogSum / gray_img.total()));
+        const float invMean = 1.0f / mean;
+        const float maxLum = globalMaxG * invMean;
+        CV_Assert(maxLum > 0);
+        const float invMaxLum = 1.0f / maxLum;
+        const float biasExp = logf(bias) / logf(0.5f);
+        const float sat = saturation;
 
-        Mat map;
-        log(gray_img + 1.0f, map);
-        Mat div;
-        pow(gray_img / static_cast<float>(max), logf(bias) / logf(0.5f), div);
-        log(2.0f + 8.0f * div, div);
-        map = map.mul(1.0f / div);
-        div.release();
-        mapLuminance(img, img, gray_img, map, saturation);
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                Vec3f* irow = img.ptr<Vec3f>(r);
+                const float* grow = gray_img.ptr<float>(r);
+                for (int c = 0; c < cols; ++c)
+                {
+                    const float lum = grow[c] * invMean;
+                    const float newLum = std::log(lum + 1.0f) /
+                        std::log(2.0f + 8.0f * std::pow(lum * invMaxLum, biasExp));
+                    const float invLum = (lum > 0.0f) ? (1.0f / lum) : 0.0f;
+                    Vec3f& pix = irow[c];
+                    if (sat == 1.0f)
+                    {
+                        const float s = invLum * newLum;
+                        pix *= s;
+                    }
+                    else
+                    {
+                        pix[0] = std::pow(pix[0] * invLum, sat) * newLum;
+                        pix[1] = std::pow(pix[1] * invLum, sat) * newLum;
+                        pix[2] = std::pow(pix[2] * invLum, sat) * newLum;
+                    }
+                }
+            }
+        });
+        gray_img.release();
 
-        linear->setGamma(gamma);
-        linear->process(img, img);
+        applyLinearNormAndGamma(img, img, gamma);
     }
 
     float getGamma() const CV_OVERRIDE { return gamma; }
@@ -216,42 +291,103 @@ public:
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
-        Ptr<Tonemap> linear = createTonemap(1.0f);
-        linear->process(src, img);
+        applyLinearNormAndGamma(src, img, 1.0f);
 
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
-        Mat log_img;
-        log_(gray_img, log_img);
 
-        float log_mean = static_cast<float>(sum(log_img)[0] / log_img.total());
-        double dlog_min, dlog_max;
-        minMaxLoc(log_img, &dlog_min, &dlog_max);
-        float log_max = static_cast<float>(dlog_max);
-        float log_min = static_cast<float>(dlog_min);
-        log_img.release();
-
-        float key = (log_max - log_mean) / (log_max - log_min);
-        float map_key = 0.3f + 0.7f * std::pow(key, 1.4f);
-        const float intensity_scale = exp(-intensity);
-        Scalar chan_mean = mean(img);
-        float gray_mean = static_cast<float>(mean(gray_img)[0]);
-
-        std::vector<Mat> channels(3);
-        split(img, channels);
-
-        for(int i = 0; i < 3; i++) {
-            float global = color_adapt * static_cast<float>(chan_mean[i]) + (1.0f - color_adapt) * gray_mean;
-            Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
-            adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
-            pow(intensity_scale * adapt, map_key, adapt);
-            channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));
+        const int rows = gray_img.rows;
+        const int cols = gray_img.cols;
+        std::vector<double> rowLogSum(rows, 0.0), rowGraySum(rows, 0.0);
+        std::vector<double> rowC0Sum(rows, 0.0), rowC1Sum(rows, 0.0), rowC2Sum(rows, 0.0);
+        std::vector<float> rowLogMin(rows, std::numeric_limits<float>::infinity());
+        std::vector<float> rowLogMax(rows, -std::numeric_limits<float>::infinity());
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                const Vec3f* irow = img.ptr<Vec3f>(r);
+                const float* grow = gray_img.ptr<float>(r);
+                double lsum = 0.0, gsum = 0.0, c0 = 0.0, c1 = 0.0, c2 = 0.0;
+                float lmin = std::numeric_limits<float>::infinity();
+                float lmax = -std::numeric_limits<float>::infinity();
+                for (int c = 0; c < cols; ++c)
+                {
+                    const float g = grow[c];
+                    const float lg = std::log(std::max(g, 1e-4f));
+                    lsum += lg;
+                    gsum += g;
+                    if (lg < lmin) lmin = lg;
+                    if (lg > lmax) lmax = lg;
+                    const Vec3f pix = irow[c];
+                    c0 += pix[0];
+                    c1 += pix[1];
+                    c2 += pix[2];
+                }
+                rowLogSum[r] = lsum;
+                rowGraySum[r] = gsum;
+                rowC0Sum[r] = c0;
+                rowC1Sum[r] = c1;
+                rowC2Sum[r] = c2;
+                rowLogMin[r] = lmin;
+                rowLogMax[r] = lmax;
+            }
+        });
+        double totalLogSum = 0.0, totalGraySum = 0.0, totalC0 = 0.0, totalC1 = 0.0, totalC2 = 0.0;
+        float log_min = std::numeric_limits<float>::infinity();
+        float log_max = -std::numeric_limits<float>::infinity();
+        for (int r = 0; r < rows; ++r)
+        {
+            totalLogSum += rowLogSum[r];
+            totalGraySum += rowGraySum[r];
+            totalC0 += rowC0Sum[r];
+            totalC1 += rowC1Sum[r];
+            totalC2 += rowC2Sum[r];
+            if (rowLogMin[r] < log_min) log_min = rowLogMin[r];
+            if (rowLogMax[r] > log_max) log_max = rowLogMax[r];
         }
-        gray_img.release();
-        merge(channels, img);
 
-        linear->setGamma(gamma);
-        linear->process(img, img);
+        const double totalPx = static_cast<double>(gray_img.total());
+        const float log_mean = static_cast<float>(totalLogSum / totalPx);
+        const float key = (log_max > log_min) ? (log_max - log_mean) / (log_max - log_min) : 1.0f;
+        const float map_key = 0.3f + 0.7f * std::pow(key, 1.4f);
+        const float intensity_scale = exp(-intensity);
+        const float gray_mean = static_cast<float>(totalGraySum / totalPx);
+        const float chan_mean[3] = {
+            static_cast<float>(totalC0 / totalPx),
+            static_cast<float>(totalC1 / totalPx),
+            static_cast<float>(totalC2 / totalPx)
+        };
+        const float ca = color_adapt;
+        const float invCa = 1.0f - color_adapt;
+        const float la = light_adapt;
+        const float globalTerm[3] = {
+            (1.0f - la) * (ca * chan_mean[0] + invCa * gray_mean),
+            (1.0f - la) * (ca * chan_mean[1] + invCa * gray_mean),
+            (1.0f - la) * (ca * chan_mean[2] + invCa * gray_mean)
+        };
+
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                Vec3f* irow = img.ptr<Vec3f>(r);
+                const float* grow = gray_img.ptr<float>(r);
+                for (int c = 0; c < cols; ++c)
+                {
+                    const float invCaG = invCa * grow[c];
+                    Vec3f& pix = irow[c];
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        const float x = pix[k];
+                        const float adapt = la * (ca * x + invCaG) + globalTerm[k];
+                        const float aPow = std::pow(intensity_scale * adapt, map_key);
+                        pix[k] = x * (1.0f / (aPow + x));
+                    }
+                }
+            }
+        });
+        gray_img.release();
+
+        applyLinearNormAndGamma(img, img, gamma);
     }
 
     float getGamma() const CV_OVERRIDE { return gamma; }
