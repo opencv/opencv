@@ -104,6 +104,9 @@ const string exts[] = {
 #ifdef HAVE_JPEGXL
     ".jxl",
 #endif
+#ifdef HAVE_OPENHTJ2K
+    ".jph",
+#endif
 #ifdef HAVE_PNG
     ".png",
 #endif
