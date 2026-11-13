@@ -553,7 +553,8 @@ static bool arithm_op_ocl(InputArray _src1, InputArray _src2, OutputArray _dst,
     {
         wtype = coerceTypes(depth1, depth2, false);
         wtype = coerceTypes(wtype, dtype, false);
-        if (dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F))
+        // a scalar's narrowed depth is not an input type, so only an array operand may take the integer shortcut
+        if (dtype < CV_32F && (depth1 < CV_32F || (!haveScalar && depth2 < CV_32F)))
             wtype = CV_32S;
     }
     else
