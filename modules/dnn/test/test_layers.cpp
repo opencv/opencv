@@ -4406,6 +4406,72 @@ TEST_P(Test_MatMul_BiasBeta, Accuracy)
 }
 INSTANTIATE_TEST_CASE_P(/**/, Test_MatMul_BiasBeta, dnnBackendsAndTargets());
 
+// Verify layer reuse across dynamic shapes switching between thin and standard kernels.
+TEST(Test_MatMul, DynamicShapes_ReuseLayerInstance)
+{
+    const int K = 53, N = 67;
+    Mat B(K, N, CV_32F);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_dynamic_shapes";
+    lp.blobs.push_back(B);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    for (int M : {2, 37, 2})
+    {
+        Mat A(M, K, CV_32F);
+        randu(A, -1.f, 1.f);
+
+        std::vector<Mat> inputs{A};
+        std::vector<Mat> outputs(1, Mat(M, N, CV_32F));
+        std::vector<Mat> internals;
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, internals);
+
+        Mat expected;
+        gemm(A, B, 1., noArray(), 0., expected);
+        normAssert(outputs[0], expected, "MatMul dynamic shape mismatch", 1e-4, 1e-4);
+    }
+}
+
+TEST(Test_Gemm, DynamicShapes_ReuseLayerInstance)
+{
+    const int K = 53, N = 67;
+    Mat B(K, N, CV_32F);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "Gemm";
+    lp.name = "gemm_dynamic_shapes";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("alpha", 1.0f);
+    lp.set("beta", 0.0f);
+    lp.set("constB", true);
+    lp.blobs.push_back(B);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    for (int M : {2, 37, 2})
+    {
+        Mat A(M, K, CV_32F);
+        randu(A, -1.f, 1.f);
+
+        std::vector<Mat> inputs{A};
+        std::vector<Mat> outputs(1, Mat(M, N, CV_32F));
+        std::vector<Mat> internals;
+        layer->finalize(inputs, outputs);
+        layer->forward(inputs, outputs, internals);
+
+        Mat expected;
+        gemm(A, B, 1., noArray(), 0., expected);
+        normAssert(outputs[0], expected, "Gemm dynamic shape mismatch", 1e-4, 1e-4);
+    }
+}
+
 // Without a bias the gemm runs with beta = 0 and must never read Y: poison it with NaN.
 // M = 2 with constant B takes fastGemmThin, M = 37 the packed fastGemmBatch path; dynamic
 // B (constB = false) takes the MLAS/fastGemmBatch "truly dynamic B" path in both cases.

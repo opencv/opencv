@@ -379,26 +379,6 @@ public:
 #endif
             if (!mlas_packed) {
                 fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-
-                if (!trans_a && blobs[0].type() == CV_32F) {
-                    std::vector<Mat> outputs;
-                    outputs_arr.getMatVector(outputs);
-                    if (!outputs.empty()) {
-                        const auto &Y = outputs[0];
-                        const auto shape_Y = shape(Y);
-                        const int N = shape_Y.back();
-                        const int K = trans_b ? blobs[0].size[1] : blobs[0].size[0];
-                        const int rows_thin = flatten_a ? shape_Y[shape_Y.size() - 2]
-                                                        : (int)(Y.total() / (size_t)N);
-                        if (fastGemmThinEligible(rows_thin, N, K)) {
-                            thin_packed_B.resize(fastGemmThinPackBSize(N, K));
-                            const size_t ldb_K = trans_b ? 1 : N;
-                            const size_t ldb_N = trans_b ? K : 1;
-                            fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
-                                              ldb_K, ldb_N, thin_packed_B.data());
-                        }
-                    }
-                }
             }
 
             last_packed_blob_data = blobs[0].data;
@@ -566,7 +546,14 @@ public:
             }
 #endif
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            if (!thin_packed_B.empty()) {
+            if (!trans_a && blobs[0].type() == CV_32F && fastGemmThinEligible(rows, N, K)) {
+                if (thin_packed_B.empty()) {
+                    const size_t ldb_K = trans_b ? 1 : N;
+                    const size_t ldb_N = trans_b ? K : 1;
+                    thin_packed_B.resize(fastGemmThinPackBSize(N, K));
+                    fastGemmThinPackB(N, K, blobs[0].ptr<const float>(),
+                                      ldb_K, ldb_N, thin_packed_B.data());
+                }
                 fastGemmThin(rows, N, K, alpha, A.ptr<const float>(), na, 1,
                              thin_packed_B.data(), 1.f, Y.ptr<float>(), N, opt.multi_thread);
             } else {

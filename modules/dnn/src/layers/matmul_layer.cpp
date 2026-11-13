@@ -230,23 +230,36 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             B_mat = &promoted_B;
         }
 
-        if (B_mat && helper.N > 0 && helper.K > 0 && B_mat->data != last_packed_input_B_data) {
-            packed_input_B.clear();
-            packed_input_B.shrink_to_fit();
-            thin_packed_B.clear();
+        if (B_mat && helper.N > 0 && helper.K > 0) {
+            if (B_mat->data != last_packed_input_B_data) {
+                packed_input_B.clear();
+                packed_input_B.shrink_to_fit();
+                thin_packed_B.clear();
+                thin_packed_B.shrink_to_fit();
+                last_packed_input_B_data = B_mat->data;
+            }
 
             if (helper.batch == 1 && B_mat->type() == CV_32F &&
                 fastGemmThinEligible(helper.M, helper.N, helper.K)) {
-                thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
-                fastGemmThinPackB(helper.N, helper.K,
-                                  B_mat->ptr<const float>(),
-                                  (size_t)helper.ldb0, (size_t)helper.ldb1,
-                                  thin_packed_B.data());
+                if (thin_packed_B.empty()) {
+                    thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
+                    fastGemmThinPackB(helper.N, helper.K,
+                                      B_mat->ptr<const float>(),
+                                      (size_t)helper.ldb0, (size_t)helper.ldb1,
+                                      thin_packed_B.data());
+                }
             } else {
-                fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
-                helper.updatePackedBOffsets(packed_input_B.size());
+                bool need_update_offsets = false;
+                if (packed_input_B.empty()) {
+                    fastGemmPackB(*B_mat, packed_input_B, trans_b, opt);
+                    need_update_offsets = true;
+                } else if (helper.packed_B_offsets.size() != helper.B_offsets.size()) {
+                    need_update_offsets = true;
+                }
+                if (need_update_offsets) {
+                    helper.updatePackedBOffsets(packed_input_B.size());
+                }
             }
-            last_packed_input_B_data = B_mat->data;
         }
 
         // broadcast bias if needed
@@ -405,7 +418,8 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                               helper.M, helper.N, helper.K, alpha, a, helper.lda0, helper.lda1,
                               b, helper.ldb0, helper.ldb1, gemm_beta, y, helper.ldc, opt);
             }
-        } else if (!thin_packed_B.empty()) {
+        } else if (!thin_packed_B.empty() && helper.batch == 1 &&
+                   fastGemmThinEligible(helper.M, helper.N, helper.K)) {
             fastGemmThin(helper.M, helper.N, helper.K, alpha,
                          a, helper.lda0, helper.lda1,
                          thin_packed_B.data(), gemm_beta,
