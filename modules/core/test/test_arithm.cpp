@@ -3627,4 +3627,59 @@ TEST(Core_InRange, unsupported_depth_throws)
     EXPECT_THROW(cv::inRange(src, lower, upper, dst), cv::Exception);
 }
 
+// Products of two int values with a scale that is not a power of two. Operands are even in
+// [-80000, 80000], so most products exceed 2^31 and are divisible by 4: x * y * 0.3, 0.2 and -0.3
+// are never exact ties, and every scaled result fits in an int (at most 1.92e9).
+typedef testing::TestWithParam<double> Core_MulScale32S;
+
+TEST_P(Core_MulScale32S, large_products)
+{
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    const double scale = GetParam();
+    Mat a(2, 37, CV_32S), b(2, 37, CV_32S), dst;
+    rng.fill(a, RNG::UNIFORM, -40000, 40001);
+    rng.fill(b, RNG::UNIFORM, -40000, 40001);
+    a *= 2;
+    b *= 2;
+    cv::multiply(a, b, dst, scale);
+    ASSERT_EQ(CV_32S, dst.type());
+    for (int y = 0; y < a.rows; y++)
+        for (int x = 0; x < a.cols; x++)
+        {
+            int expected = saturate_cast<int>((double)a.at<int>(y, x) * b.at<int>(y, x) * scale);
+            ASSERT_EQ(expected, dst.at<int>(y, x))
+                << "a=" << a.at<int>(y, x) << " b=" << b.at<int>(y, x);
+        }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulScale32S, testing::Values(0.3, -0.3, 0.2));
+
+// Power-of-two scales of 2^-14 .. 2^-20: 2^-16 and smaller used to index past the shift table.
+typedef testing::TestWithParam< tuple<int, int> > Core_MulTinyPowerOfTwoScale;
+
+TEST_P(Core_MulTinyPowerOfTwoScale, result_within_one)
+{
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    const int depth = get<0>(GetParam());
+    const double scale = std::ldexp(1.0, -get<1>(GetParam()));
+    const int maxValue = depth == CV_16U ? 32000 : depth == CV_16S ? 22000 : 100000;
+
+    Mat a(2, 37, depth), b(2, 37, depth), dst;
+    rng.fill(a, RNG::UNIFORM, 1, maxValue);
+    rng.fill(b, RNG::UNIFORM, 1, maxValue);
+    cv::multiply(a, b, dst, scale);
+    ASSERT_EQ(depth, dst.depth());
+
+    // exact value is at most one away from the result, whatever the rounding
+    Mat a64, b64, dst64;
+    a.convertTo(a64, CV_64F);
+    b.convertTo(b64, CV_64F);
+    dst.convertTo(dst64, CV_64F);
+    Mat exact = a64.mul(b64) * scale;
+    EXPECT_LE(cvtest::norm(exact, dst64, NORM_INF), 1.0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulTinyPowerOfTwoScale,
+    testing::Combine(testing::Values((int)CV_16U, (int)CV_16S, (int)CV_32S), testing::Range(14, 21)));
+
 }} // namespace

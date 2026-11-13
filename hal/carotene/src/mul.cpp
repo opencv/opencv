@@ -1119,8 +1119,10 @@ void mul(const Size2D &size,
 
     s32 iscale = static_cast<s32>(scale), exp = 0;
     f32 significand = frexp(scale, &exp);
+    // funcs[] below has 16 entries, indexed by -exp + 1 (exp is the frexp exponent, 0 for 2^-1):
+    // the shift kernels exist for scales down to 2^-15 (exp == -14), smaller ones use the float path
     bool is_integer_scale = isIntegerScale(scale),
-         is_power_of_2 = (significand == 0.5f) && (exp <= 0);
+         is_power_of_2 = (significand == 0.5f) && (exp <= 0) && (exp > -15);
     exp = -exp + 1;
 
     if (is_power_of_2)
@@ -1345,8 +1347,10 @@ void mul(const Size2D &size,
 
     s32 iscale = static_cast<s32>(scale), exp = 0;
     f64 significand = frexp(scale, &exp);
+    // funcs[] below has 16 entries, indexed by -exp + 1: the shift kernels exist for scales down to
+    // 2^-15 (exp == -14), smaller ones use the float path
     bool is_integer_scale = isIntegerScale(scale),
-         is_power_of_2 = (significand == 0.5) && (exp <= 0);
+         is_power_of_2 = (significand == 0.5) && (exp <= 0) && (exp > -15);
     exp = -exp + 1;
 
     if (is_power_of_2)
@@ -1425,7 +1429,7 @@ void mul(const Size2D &size,
             {
                 for (; j < size.width; j++)
                 {
-                    f64 fval = src0[j] * src1[j] * scale;
+                    f64 fval = (f64)src0[j] * src1[j] * scale;
                     dst[j] = internal::saturate_cast<s32>(fval);
                 }
             }
@@ -1463,7 +1467,7 @@ void mul(const Size2D &size,
             {
                 for (; j < size.width; j++)
                 {
-                    f64 fval = src0[j] * src1[j] * scale;
+                    f64 fval = (f64)src0[j] * src1[j] * scale;
                     dst[j] = (s32)trunc(fval);
                 }
             }
