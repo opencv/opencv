@@ -1487,8 +1487,9 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
-        // Normalize coefficients in-place to prevent overflow/instability
-        double scale = 1.0 / max_coeff;
+        // Normalize coefficients in-place to prevent overflow/instability.
+        // Power of two scale keeps it exact, so d == 0 is still hit for repeated roots.
+        double scale = std::ldexp(1.0, -std::ilogb(max_coeff));
         a0 *= scale;
         a1 *= scale;
         a2 *= scale;
