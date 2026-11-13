@@ -194,7 +194,7 @@ jobs:
 
   Linux-RISC-V-Clang:
     needs: classify
-    if: needs.classify.outputs.riscv == 'true'
+    if: needs.classify.outputs.riscv == 'true' || needs.classify.outputs.riscv_delta == 'true'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-RISCV.yaml@main
     with:
       workflow_branch: main
