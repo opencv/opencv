@@ -171,6 +171,9 @@ def main():
     kp1, desc1 = detector.detectAndCompute(img1, None)
     kp2, desc2 = detector.detectAndCompute(img2, None)
     print('img1 - %d features, img2 - %d features' % (len(kp1), len(kp2)))
+    if desc1 is None or desc2 is None:
+        print('Not enough features for matching')
+        sys.exit(0)
 
     def match_and_draw(win):
         print('matching...')
