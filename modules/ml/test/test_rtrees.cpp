@@ -115,5 +115,17 @@ TEST(ML_RTrees, bug_12974_throw_exception_when_predict_different_feature_count)
     ASSERT_THROW(model->predict(test), Exception);
 }
 
+TEST(ML_DTrees, default_params_train)
+{
+    Ptr<DTrees> model = DTrees::create();
+    Mat samples(24, 4, CV_32F);
+    randu(samples, 0.f, 10.f);
+    Mat labels(24, 1, CV_32S);
+    for (int i = 0; i < 24; ++i)
+        labels.at<int>(i, 0) = i % 2;
+    ASSERT_NO_THROW(EXPECT_TRUE(model->train(samples, ROW_SAMPLE, labels)));
+    Mat query = samples.row(0);
+    EXPECT_NO_THROW(model->predict(query));
+}
 
 }} // namespace
