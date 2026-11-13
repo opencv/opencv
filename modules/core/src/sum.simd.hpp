@@ -380,8 +380,12 @@ static int sum64u( const uint64* src, const uchar* mask, double* dst, int len, i
 static int sum64s( const int64* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
+// The work type is double, not the default float: the unrolled step adds four elements together
+// before the accumulator sees them, and in float that overflows to infinity once they pass
+// FLT_MAX/4, even though the sum fits the double result easily. sum16f below widens its work
+// type past hfloat for the same reason. The vectorized path already accumulates in double.
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<float, double, double>(src, mask, dst, len, cn); }
 
 static int sum64f( const double* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
