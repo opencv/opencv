@@ -796,8 +796,8 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         int nonInterleavedRows = kernel_w_ % 2;
         int blockWidth = swizzled_factor;  // should equal to simd size.
         int rowAlignment = 32;
-        size_t interleaved_filter_size = M_ * kernel_w_ * kernel_h_ * channels_ * sizeof(Dtype);
-        cv::AutoBuffer<Dtype, 0> tmpSwizzledWeight(interleaved_filter_size);
+        size_t interleaved_filter_elems = M_ * kernel_w_ * kernel_h_ * channels_;
+        cv::AutoBuffer<Dtype, 0> tmpSwizzledWeight(interleaved_filter_elems);
         for (int od = 0; od < M_; od++)
             for (int id = 0; id < channels_; id++)
                 for (int r = 0; r < kernel_h_; r++)
