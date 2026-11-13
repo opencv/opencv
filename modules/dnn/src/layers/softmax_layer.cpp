@@ -168,13 +168,14 @@ public:
         if (!kmax.create("kernel_channel_max", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
+        // With LOG_SOFTMAX, subtract keeps x - max and sum adds up exp(x - max).
+        if (logSoftMax) buildOpts += " -DLOG_SOFTMAX ";
         if (!ksub.create("kernel_channel_subtract", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
         if (!ksum.create("kernel_channel_sum", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
-        if (logSoftMax) buildOpts += " -DLOG_SOFTMAX ";
         if (!kdiv.create("kernel_channel_div", ocl::dnn::softmax_oclsrc, buildOpts))
             return false;
 
