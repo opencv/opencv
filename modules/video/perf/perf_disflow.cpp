@@ -41,6 +41,38 @@ PERF_TEST_P(DenseOpticalFlow_DIS, perf,
     SANITY_CHECK_NOTHING();
 }
 
+typedef tuple<int, int> DISDensificationParams; // patch size, patch stride
+typedef TestBaseWithParam<DISDensificationParams> DenseOpticalFlow_DIS_Densification;
+
+// A configuration in which densification takes a large share of the run time
+PERF_TEST_P(DenseOpticalFlow_DIS_Densification, perf,
+            Values(DISDensificationParams(8, 4), DISDensificationParams(8, 3)))
+{
+    DISDensificationParams params = GetParam();
+    Size sz = sz720p;
+
+    Mat frame1(sz, CV_8U);
+    Mat frame2(sz, CV_8U);
+
+    MakeArtificialExample(frame1, frame2);
+
+    Ptr<DISOpticalFlow> algo = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+    algo->setPatchSize(get<0>(params));
+    algo->setPatchStride(get<1>(params));
+    algo->setFinestScale(0);
+    algo->setGradientDescentIterations(1);
+    algo->setVariationalRefinementIterations(0);
+    algo->setUseSpatialPropagation(false);
+
+    TEST_CYCLE()
+    {
+        Mat flow;
+        algo->calc(frame1, frame2, flow);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 void MakeArtificialExample(Mat &dst_frame1, Mat &dst_frame2)
 {
     int src_scale = 2;
