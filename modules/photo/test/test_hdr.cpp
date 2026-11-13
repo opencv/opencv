@@ -484,4 +484,128 @@ TEST(Photo_CalibrateDebevec, bug_24966)
         #endif
     }
 }
+
+TEST(Photo_TonemapMantiuk, synthetic_hdr_determinism)
+{
+    RNG& rng = theRNG();
+    Mat hdr(96, 128, CV_32FC3);
+    for (int y = 0; y < hdr.rows; ++y)
+    {
+        Vec3f* row = hdr.ptr<Vec3f>(y);
+        for (int x = 0; x < hdr.cols; ++x)
+        {
+            const float base = std::exp((x * 0.03f) + (y * 0.02f) - 2.0f);
+            row[x] = Vec3f(base * rng.uniform(0.8f, 1.2f),
+                           base * rng.uniform(0.7f, 1.3f),
+                           base * rng.uniform(0.9f, 1.1f));
+        }
+    }
+
+    Ptr<TonemapMantiuk> tm = createTonemapMantiuk(2.2f, 0.7f, 1.0f);
+    Mat ldr1, ldr2;
+    tm->process(hdr, ldr1);
+    tm->process(hdr, ldr2);
+
+    ASSERT_EQ(ldr1.size(), hdr.size());
+    ASSERT_EQ(ldr1.type(), CV_32FC3);
+    ASSERT_TRUE(checkRange(ldr1, true, nullptr, 0.0, 1.0 + 1e-5));
+    EXPECT_EQ(0.0, cvtest::norm(ldr1, ldr2, NORM_INF));
+}
+
+TEST(Photo_MergeMertens, synthetic_parity)
+{
+    vector<Mat> imgs3(3);
+    for (int i = 0; i < 3; ++i)
+    {
+        imgs3[i] = Mat(97, 131, CV_8UC3);
+        RNG rng(100 + i);
+        rng.fill(imgs3[i], RNG::UNIFORM, Scalar::all(20 * i), Scalar::all(120 + 60 * i));
+        circle(imgs3[i], Point(40 + 15 * i, 50), 20, Scalar(30 + 80 * i, 200 - 40 * i, 120), FILLED);
+    }
+
+    Ptr<MergeMertens> mm1 = createMergeMertens(1.0f, 1.0f, 1.0f);
+    Ptr<MergeMertens> mm2 = createMergeMertens(0.5f, 1.2f, 0.8f);
+    Mat out3a, out3b, out3w;
+    mm1->process(imgs3, out3a);
+    mm1->process(imgs3, out3b);
+    ASSERT_EQ(CV_32FC3, out3a.type());
+    ASSERT_EQ(imgs3[0].size(), out3a.size());
+    ASSERT_TRUE(checkRange(out3a, true));
+    EXPECT_EQ(0.0, cvtest::norm(out3a, out3b, NORM_INF));
+
+    // Constant single exposure must reproduce normalized input closely regardless of weights
+    vector<Mat> single3(1, imgs3[1]);
+    Mat singleExpected, singleOut;
+    imgs3[1].convertTo(singleExpected, CV_32F, 1.0f / 255.0f);
+    mm2->process(single3, singleOut);
+    EXPECT_LE(cvtest::norm(singleOut, singleExpected, NORM_INF), 1e-5);
+
+    // Grayscale (1-channel) path
+    vector<Mat> imgs1(3);
+    for (int i = 0; i < 3; ++i)
+        cvtColor(imgs3[i], imgs1[i], COLOR_BGR2GRAY);
+    Mat out1a, out1b;
+    mm1->process(imgs1, out1a);
+    mm2->process(imgs1, out1b);
+    ASSERT_EQ(CV_32FC1, out1a.type());
+    ASSERT_EQ(imgs1[0].size(), out1a.size());
+    ASSERT_TRUE(checkRange(out1a, true));
+    ASSERT_TRUE(checkRange(out1b, true));
+    mm2->process(imgs3, out3w);
+    ASSERT_TRUE(checkRange(out3w, true));
+
+    // Exact mathematical reference for MergeMertens weights + Laplacian pyramid fusion
+    auto refMertens = [](const vector<Mat>& seq, float wcon, float wsat, float wexp) -> Mat {
+        Size sz = seq[0].size();
+        int n = (int)seq.size();
+        vector<Mat> w(n), fimgs(n);
+        Mat wsum = Mat::zeros(sz, CV_32F);
+        for (int i = 0; i < n; ++i) {
+            seq[i].convertTo(fimgs[i], CV_32F, 1.0f / 255.0f);
+            Mat gray, contrast, sat = Mat::zeros(sz, CV_32F), we = Mat::ones(sz, CV_32F);
+            cvtColor(fimgs[i], gray, COLOR_RGB2GRAY);
+            Laplacian(gray, contrast, CV_32F);
+            contrast = abs(contrast);
+            vector<Mat> ch;
+            split(fimgs[i], ch);
+            Mat mean = (ch[0] + ch[1] + ch[2]) / 3.0f;
+            for (int c = 0; c < 3; ++c) {
+                Mat dev = ch[c] - mean;
+                sat += dev.mul(dev);
+                Mat expo;
+                exp(-((ch[c] - 0.5f).mul(ch[c] - 0.5f)) / 0.08f, expo);
+                we = we.mul(expo);
+            }
+            sqrt(sat, sat);
+            pow(contrast, wcon, contrast);
+            pow(sat, wsat, sat);
+            pow(we, wexp, we);
+            w[i] = contrast.mul(sat).mul(we) + 1e-12f;
+            wsum += w[i];
+        }
+        int maxlvl = (int)(logf((float)min(sz.width, sz.height)) / logf(2.0f));
+        vector<Mat> res(maxlvl + 1);
+        for (int i = 0; i < n; ++i) {
+            w[i] /= wsum;
+            vector<Mat> ip, wp;
+            buildPyramid(fimgs[i], ip, maxlvl);
+            buildPyramid(w[i], wp, maxlvl);
+            for (int l = 0; l < maxlvl; ++l) {
+                Mat up; pyrUp(ip[l + 1], up, ip[l].size()); ip[l] -= up;
+            }
+            for (int l = 0; l <= maxlvl; ++l) {
+                vector<Mat> ch; split(ip[l], ch);
+                for (int c = 0; c < 3; ++c) ch[c] = ch[c].mul(wp[l]);
+                merge(ch, ip[l]);
+                if (res[l].empty()) res[l] = ip[l]; else res[l] += ip[l];
+            }
+        }
+        for (int l = maxlvl; l > 0; --l) {
+            Mat up; pyrUp(res[l], up, res[l - 1].size()); res[l - 1] += up;
+        }
+        return res[0];
+    };
+    checkEqual(out3a, refMertens(imgs3, 1.0f, 1.0f, 1.0f), 1e-5, "MergeMertens default ref");
+    checkEqual(out3w, refMertens(imgs3, 0.5f, 1.2f, 0.8f), 1e-5, "MergeMertens weighted ref");
+}
 }} // namespace

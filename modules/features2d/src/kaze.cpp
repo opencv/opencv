@@ -180,15 +180,21 @@ namespace cv
             if ( img.depth() == CV_32F )
                 img1_32 = img;
             else if ( img.depth() == CV_8U )
+            {
                 img.convertTo(img1_32, CV_32F, 1.0 / 255.0, 0);
+                img.release();
+            }
             else if ( img.depth() == CV_16U )
+            {
                 img.convertTo(img1_32, CV_32F, 1.0 / 65535.0, 0);
+                img.release();
+            }
 
             CV_Assert( ! img1_32.empty() );
 
             KAZEOptions options;
-            options.img_width = img.cols;
-            options.img_height = img.rows;
+            options.img_width = img1_32.cols;
+            options.img_height = img1_32.rows;
             options.extended = extended;
             options.upright = upright;
             options.dthreshold = threshold;
@@ -197,7 +203,8 @@ namespace cv
             options.diffusivity = diffusivity;
 
             KAZEFeatures impl(options);
-            impl.Create_Nonlinear_Scale_Space(img1_32);
+            impl.Create_Nonlinear_Scale_Space(img1_32, !useProvidedKeypoints, descriptors.needed());
+            img1_32.release();
 
             if (!useProvidedKeypoints)
             {

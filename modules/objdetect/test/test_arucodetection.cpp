@@ -1538,4 +1538,37 @@ INSTANTIATE_TEST_CASE_P(
             aruco::CORNER_REFINE_APRILTAG
         ));
 
+TEST(CV_ArucoDetectMarkers, AprilTagHighResCappedClusterMap)
+{
+    aruco::Dictionary dict = aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_36h11);
+    aruco::DetectorParameters params;
+    params.cornerRefinementMethod = aruco::CORNER_REFINE_APRILTAG;
+    aruco::ArucoDetector detector(dict, params);
+
+    // 1024x1024 has 2*w*h - 1 = 2,097,151 > 1,048,573, exercising the capped prime bucket table
+    // as well as both continuous full-frame and non-continuous ROI inputs.
+    Mat canvas(1024, 1024, CV_8UC1, Scalar(240));
+    const int ids_gt[2] = {3, 42};
+    const Point origins[2] = {Point(120, 140), Point(680, 620)};
+    for (int k = 0; k < 2; ++k)
+    {
+        Mat tag;
+        aruco::generateImageMarker(dict, ids_gt[k], 160, tag);
+        tag.copyTo(canvas(Rect(origins[k].x, origins[k].y, 160, 160)));
+    }
+
+    std::vector<std::vector<Point2f>> corners;
+    std::vector<int> ids;
+    detector.detectMarkers(canvas, corners, ids);
+    ASSERT_EQ(ids.size(), 2u);
+
+    // Also verify non-continuous ROI input
+    Mat roi = canvas(Rect(64, 64, 896, 896));
+    ASSERT_FALSE(roi.isContinuous());
+    std::vector<std::vector<Point2f>> roiCorners;
+    std::vector<int> roiIds;
+    detector.detectMarkers(roi, roiCorners, roiIds);
+    ASSERT_EQ(roiIds.size(), 2u);
+}
+
 }} // namespace

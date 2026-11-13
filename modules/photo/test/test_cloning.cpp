@@ -315,4 +315,35 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     EXPECT_LE(errorL1, reference.total() * numerical_precision) << "size=" << reference.size();
 }
 
+TEST(Photo_SeamlessClone_Synthetic, all_modes_smoke_and_identity)
+{
+    RNG& rng = theRNG();
+    Mat dst(96, 112, CV_8UC3), src(48, 56, CV_8UC3);
+    rng.fill(dst, RNG::UNIFORM, 20, 235);
+    rng.fill(src, RNG::UNIFORM, 20, 235);
+    Mat mask = Mat::zeros(src.size(), CV_8UC1);
+    rectangle(mask, Rect(8, 8, 40, 32), Scalar(255), FILLED);
+
+    Point center(dst.cols / 2, dst.rows / 2);
+    for (int flag : {NORMAL_CLONE, MIXED_CLONE, MONOCHROME_TRANSFER})
+    {
+        Mat out;
+        seamlessClone(src, dst, mask, center, out, flag);
+        ASSERT_EQ(out.size(), dst.size());
+        ASSERT_EQ(out.type(), CV_8UC3);
+        // Outside mask ROI, pixels must match destination
+        ASSERT_EQ(cvtest::norm(out.row(0), dst.row(0), NORM_INF), 0.0);
+    }
+
+    Mat fullMask = Mat::zeros(dst.size(), CV_8UC1);
+    rectangle(fullMask, Rect(16, 16, 64, 64), Scalar(255), FILLED);
+    Mat cc, ic, tf;
+    colorChange(dst, fullMask, cc, 1.2f, 0.8f, 1.1f);
+    illuminationChange(dst, fullMask, ic, 0.2f, 0.4f);
+    textureFlattening(dst, fullMask, tf, 30.f, 45.f, 3);
+    ASSERT_EQ(cc.size(), dst.size());
+    ASSERT_EQ(ic.size(), dst.size());
+    ASSERT_EQ(tf.size(), dst.size());
+}
+
 }} // namespace

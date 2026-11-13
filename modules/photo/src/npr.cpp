@@ -55,15 +55,15 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
 
     Mat I = _src.getMat();
 
-    Domain_Filter obj;
-
     Mat img;
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
-    Mat res;
-    obj.filter(img, res, sigma_s, sigma_r, flags);
+    {
+        Domain_Filter obj;
+        obj.filter(img, sigma_s, sigma_r, flags);
+    }
 
-    convertScaleAbs(res, dst, 255,0);
+    convertScaleAbs(img, dst, 255,0);
 }
 
 void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float sigma_r)
@@ -80,23 +80,29 @@ void cv::detailEnhance(InputArray _src, OutputArray dst, float sigma_s, float si
     Mat lab;
     vector <Mat> lab_channel;
     cvtColor(img,lab,COLOR_BGR2Lab);
+    img.release();
     split(lab,lab_channel);
+    lab.release();
 
     Mat L;
     lab_channel[0].convertTo(L,CV_32FC1,1.0/255.0);
 
-    Domain_Filter obj;
-
-    Mat res;
-    obj.filter(L, res, sigma_s, sigma_r, 1);
+    Mat res = L.clone();
+    {
+        Domain_Filter obj;
+        obj.filter(res, sigma_s, sigma_r, 1);
+    }
 
     Mat detail = L - res;
     multiply(detail,factor,detail);
     L = res + detail;
+    detail.release();
 
     L.convertTo(lab_channel[0],CV_32FC1,255);
+    L.release();
 
     merge(lab_channel,lab);
+    lab_channel.clear();
 
     cvtColor(lab,res,COLOR_Lab2BGR);
     res.convertTo(dst,CV_8UC3,255);
@@ -118,8 +124,7 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
 
     Domain_Filter obj;
 
-    Mat sketch = Mat(I.size(),CV_32FC1);
-    Mat color_sketch = Mat(I.size(),CV_32FC3);
+    Mat sketch, color_sketch;
 
     obj.pencil_sketch(img, sketch, color_sketch, sigma_s, sigma_r, shade_factor);
 
@@ -142,22 +147,24 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     int h = img.size().height;
     int w = img.size().width;
 
-    Mat res;
-    Mat magnitude = Mat(h,w,CV_32FC1);
+    {
+        Domain_Filter obj;
+        obj.filter(img, sigma_s, sigma_r, NORMCONV_FILTER);
+    }
 
-    Domain_Filter obj;
-    obj.filter(img, res, sigma_s, sigma_r, NORMCONV_FILTER);
+    Mat magnitude;
+    Domain_Filter::find_magnitude(img,magnitude);
 
-    obj.find_magnitude(res,magnitude);
+    // each channel of the filtered image times the magnitude
+    int cn = img.channels();
+    for(int i = 0; i < h; i++)
+    {
+        float* p = img.ptr<float>(i);
+        const float* m = magnitude.ptr<float>(i);
+        for(int j = 0; j < w; j++)
+            for(int c = 0; c < cn; c++)
+                p[j*cn+c] = p[j*cn+c] * m[j];
+    }
 
-    Mat stylized;
-
-    vector <Mat> temp;
-    split(res,temp);
-    multiply(temp[0],magnitude,temp[0]);
-    multiply(temp[1],magnitude,temp[1]);
-    multiply(temp[2],magnitude,temp[2]);
-    merge(temp,stylized);
-
-    stylized.convertTo(dst,CV_8UC3,255);
+    img.convertTo(dst,CV_8UC3,255);
 }

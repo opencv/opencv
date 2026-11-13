@@ -563,11 +563,36 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
 
     CV_Assert(_image.type() == CV_8UC3);
 
+    const UMat& src_gain = gain_maps_.at(index);
+    if (_image.isMat() && src_gain.channels() != 3)
+    {
+        Mat img = _image.getMat();
+        Mat gain1c;
+        if (src_gain.size() == img.size())
+            gain1c = src_gain.getMat(ACCESS_READ);
+        else
+            resize(src_gain.getMat(ACCESS_READ), gain1c, img.size(), 0, 0, INTER_LINEAR);
+
+        const int stripRows = std::min(64, std::max(1, img.rows));
+        Mat strip3c(stripRows, img.cols, CV_32FC3);
+        for (int y0 = 0; y0 < img.rows; y0 += stripRows)
+        {
+            const int rows = std::min(stripRows, img.rows - y0);
+            Mat g1 = gain1c.rowRange(y0, y0 + rows);
+            Mat g3 = strip3c.rowRange(0, rows);
+            const Mat planes[3] = {g1, g1, g1};
+            merge(planes, 3, g3);
+            Mat imgStrip = img.rowRange(y0, y0 + rows);
+            multiply(imgStrip, g3, imgStrip, 1, img.type());
+        }
+        return;
+    }
+
     UMat u_gain_map;
-    if (gain_maps_.at(index).size() == _image.size())
-        u_gain_map = gain_maps_.at(index);
+    if (src_gain.size() == _image.size())
+        u_gain_map = src_gain;
     else
-        resize(gain_maps_.at(index), u_gain_map, _image.size(), 0, 0, INTER_LINEAR);
+        resize(src_gain, u_gain_map, _image.size(), 0, 0, INTER_LINEAR);
 
     if (u_gain_map.channels() != 3)
     {

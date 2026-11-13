@@ -194,4 +194,27 @@ TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
     EXPECT_MAT_NEAR(result_16u, expected, 1);
 }
 
+TEST(Photo_DenoisingColoredMulti, window_subset_equivalence)
+{
+    RNG& rng = theRNG();
+    const int totalFrames = 11;
+    const int winSize = 3;
+    const int targetIdx = 7;
+    std::vector<Mat> frames(totalFrames);
+    for (int i = 0; i < totalFrames; ++i)
+    {
+        frames[i].create(48, 64, CV_8UC3);
+        rng.fill(frames[i], RNG::UNIFORM, 0, 256);
+    }
+
+    std::vector<Mat> subFrames(frames.begin() + (targetIdx - winSize / 2),
+                               frames.begin() + (targetIdx + winSize / 2 + 1));
+
+    Mat outFull, outSub;
+    fastNlMeansDenoisingColoredMulti(frames, outFull, targetIdx, winSize, 5.f, 5.f, 5, 11);
+    fastNlMeansDenoisingColoredMulti(subFrames, outSub, winSize / 2, winSize, 5.f, 5.f, 5, 11);
+
+    EXPECT_EQ(0.0, cvtest::norm(outFull, outSub, NORM_INF));
+}
+
 }} // namespace

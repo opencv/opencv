@@ -81,6 +81,35 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
     EXPECT_GT(psnr, 60.0);
 }
 
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, large_image)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+
+    // above 2^24 / 3 pixels, where a float linear index over the three channels lost precision;
+    // every input row is constant, so every row of the result must be constant too
+    Mat src(2400, 2400, CV_8UC3), result;
+    for (int i = 0; i < src.rows; i++)
+        src.row(i).setTo(Scalar((37 * i) % 256, (53 * i + 11) % 256, (71 * i + 29) % 256));
+    edgePreservingFilter(src, result, NORMCONV_FILTER);
+
+    EXPECT_LE(cvtest::norm(result, repeat(result.col(0), 1, result.cols), NORM_INF), 1);
+}
+
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, small_flat_image)
+{
+    // the box of the first pixel of a line used to stay empty when the whole line lies within the filter
+    // radius (about 91 pixels of a flat image for the default sigma_s); a flat image must stay flat
+    const Size sizes[] = { Size(1, 1), Size(1, 5), Size(5, 1), Size(3, 3), Size(40, 200), Size(200, 40), Size(91, 91) };
+    for (const Size& sz : sizes)
+    {
+        Mat src(sz, CV_8UC3, Scalar(100, 150, 200)), result;
+        edgePreservingFilter(src, result, NORMCONV_FILTER);
+        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "edgePreservingFilter " << sz;
+        stylization(src, result);
+        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "stylization " << sz;
+    }
+}
+
 TEST(Photo_NPR_DetailEnhance, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
@@ -135,6 +164,35 @@ TEST(Photo_NPR_Stylization, regression)
     double stylized_error = cvtest::norm(stylized_reference, result, NORM_L1);
     EXPECT_LE(stylized_error, numerical_precision);
 
+}
+
+TEST(Photo_NPR, same_result_with_threads)
+{
+    // the filters split their lines between threads; each line is computed by the same code
+    Mat source(96, 128, CV_8UC3);
+    theRNG().fill(source, RNG::UNIFORM, 0, 256);
+
+    struct ThreadsGuard
+    {
+        int prev;
+        ThreadsGuard() : prev(getNumThreads()) {}
+        ~ThreadsGuard() { setNumThreads(prev); }
+    } guard;
+
+    Mat result[2][6];
+    for (int pass = 0; pass < 2; pass++)
+    {
+        setNumThreads(pass == 0 ? 1 : std::max(guard.prev, 4));
+        Mat* r = result[pass];
+        edgePreservingFilter(source, r[0], RECURS_FILTER);
+        edgePreservingFilter(source, r[1], NORMCONV_FILTER);
+        detailEnhance(source, r[2]);
+        pencilSketch(source, r[3], r[4]);
+        stylization(source, r[5]);
+    }
+
+    for (int i = 0; i < 6; i++)
+        EXPECT_EQ(0, cvtest::norm(result[0][i], result[1][i], NORM_INF)) << "output " << i;
 }
 
 }} // namespace

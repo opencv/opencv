@@ -89,7 +89,6 @@ BufferArea::BufferArea(bool safe_) :
     totalSize(0),
     safe(safe_ || CV_BUFFER_AREA_OVERRIDE_SAFE_MODE)
 {
-    // nothing
 }
 #else
 BufferArea::BufferArea(bool safe_)
@@ -105,6 +104,10 @@ BufferArea::~BufferArea()
 
 void BufferArea::allocate_(void **ptr, ushort type_size, size_t count, ushort alignment)
 {
+    // most users allocate a handful of buffers (SIFT allocates 5 and 8 for every keypoint): one allocation for the
+    // block list on first use instead of one per doubling, and none when the area is left unused
+    if (blocks.empty())
+        blocks.reserve(8);
     blocks.push_back(Block(ptr, type_size, count, alignment));
 #ifndef OPENCV_ENABLE_MEMORY_SANITIZER
     if (!safe)

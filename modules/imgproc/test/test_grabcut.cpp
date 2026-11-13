@@ -175,4 +175,33 @@ TEST(Imgproc_GrabCut, repeatability)
     EXPECT_EQ(0, countNonZero(mask_2 != mask_3));
 }
 
+TEST(Imgproc_GrabCut, multi_iter_lut_and_direct_equivalence)
+{
+    RNG& rng = theRNG();
+    // Test both small (inline exp) and medium (table LUT: 4 * 200 * 200 * 3 = 480000 >= 390152) sizes
+    for (int side : {64, 200})
+    {
+        Mat img(side, side, CV_8UC3);
+        rng.fill(img, RNG::UNIFORM, 0, 40);
+        Rect fgRect(side / 4, side / 4, side / 2, side / 2);
+        Mat fgRoi = img(fgRect);
+        rng.fill(fgRoi, RNG::UNIFORM, 200, 255);
+
+        Mat maskMulti, bgd1, fgd1;
+        uint64 savedState = rng.state;
+        grabCut(img, maskMulti, fgRect, bgd1, fgd1, 3, GC_INIT_WITH_RECT);
+
+        // Step-by-step 1-iter init + 2 x 1-iter GC_EVAL must match 3-iter GC_INIT_WITH_RECT exactly
+        rng.state = savedState;
+        Mat maskStep, bgd2, fgd2;
+        grabCut(img, maskStep, fgRect, bgd2, fgd2, 1, GC_INIT_WITH_RECT);
+        grabCut(img, maskStep, Rect(), bgd2, fgd2, 1, GC_EVAL);
+        grabCut(img, maskStep, Rect(), bgd2, fgd2, 1, GC_EVAL);
+
+        EXPECT_EQ(0, countNonZero(maskMulti != maskStep)) << "side=" << side;
+        Mat fgExtracted = (maskMulti == GC_PR_FGD) | (maskMulti == GC_FGD);
+        EXPECT_GT(countNonZero(fgExtracted(fgRect)), fgRect.area() * 8 / 10);
+    }
+}
+
 }} // namespace

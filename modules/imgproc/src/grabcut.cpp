@@ -279,49 +279,56 @@ static double calcBeta( const Mat& img )
   Calculate weights of noterminal vertices of graph.
   beta and gamma - parameters of GrabCut algorithm.
  */
-static void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Mat& uprightW, double beta, double gamma )
+static inline int colorSqDist(const Vec3b& a, const Vec3b& b)
 {
-    const double gammaDivSqrt2 = gamma / std::sqrt(2.0f);
-    leftW.create( img.rows, img.cols, CV_64FC1 );
-    upleftW.create( img.rows, img.cols, CV_64FC1 );
-    upW.create( img.rows, img.cols, CV_64FC1 );
-    uprightW.create( img.rows, img.cols, CV_64FC1 );
-    for( int y = 0; y < img.rows; y++ )
+    const int db = int(a[0]) - int(b[0]);
+    const int dg = int(a[1]) - int(b[1]);
+    const int dr = int(a[2]) - int(b[2]);
+    return db * db + dg * dg + dr * dr;
+}
+
+struct NWeightLUT
+{
+    static const int MAX_SQ_DIST = 3 * 255 * 255; // 195075
+    std::vector<double> ortho;
+    std::vector<double> diag;
+    double beta = 0.0;
+    double gamma = 0.0;
+    double gammaDivSqrt2 = 0.0;
+    bool useTable = false;
+
+    void init(Size imgSize, int iterCount, double beta_, double gamma_)
     {
-        for( int x = 0; x < img.cols; x++ )
+        beta = beta_;
+        gamma = gamma_;
+        gammaDivSqrt2 = gamma_ / std::sqrt(2.0f);
+        const size_t totalEdges = size_t(4) * size_t(imgSize.width) * size_t(imgSize.height) * size_t(std::max(1, iterCount));
+        useTable = (totalEdges >= size_t(2 * (MAX_SQ_DIST + 1)));
+        if (useTable)
         {
-            Vec3d color = img.at<Vec3b>(y,x);
-            if( x-1>=0 ) // left
+            ortho.resize(MAX_SQ_DIST + 1);
+            diag.resize(MAX_SQ_DIST + 1);
+            for (int d2 = 0; d2 <= MAX_SQ_DIST; ++d2)
             {
-                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y,x-1);
-                leftW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
+                const double e = std::exp(-beta * double(d2));
+                ortho[d2] = gamma * e;
+                diag[d2] = gammaDivSqrt2 * e;
             }
-            else
-                leftW.at<double>(y,x) = 0;
-            if( x-1>=0 && y-1>=0 ) // upleft
-            {
-                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x-1);
-                upleftW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
-            }
-            else
-                upleftW.at<double>(y,x) = 0;
-            if( y-1>=0 ) // up
-            {
-                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x);
-                upW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
-            }
-            else
-                upW.at<double>(y,x) = 0;
-            if( x+1<img.cols && y-1>=0 ) // upright
-            {
-                Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x+1);
-                uprightW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
-            }
-            else
-                uprightW.at<double>(y,x) = 0;
         }
     }
-}
+
+    inline double weightOrtho(const Vec3b& a, const Vec3b& b) const
+    {
+        const int d2 = colorSqDist(a, b);
+        return useTable ? ortho[d2] : (gamma * std::exp(-beta * double(d2)));
+    }
+
+    inline double weightDiag(const Vec3b& a, const Vec3b& b) const
+    {
+        const int d2 = colorSqDist(a, b);
+        return useTable ? diag[d2] : (gammaDivSqrt2 * std::exp(-beta * double(d2)));
+    }
+};
 
 /*
   Check size, type and element values of mask matrix.
@@ -461,29 +468,31 @@ static void learnGMMs( const Mat& img, const Mat& mask, const Mat& compIdxs, GMM
   Construct GCGraph
 */
 static void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM, double lambda,
-                       const Mat& leftW, const Mat& upleftW, const Mat& upW, const Mat& uprightW,
-                       GCGraph<double>& graph )
+                       const NWeightLUT& nweights, GCGraph<double>& graph )
 {
     int vtxCount = img.cols*img.rows,
         edgeCount = 2*(4*img.cols*img.rows - 3*(img.cols + img.rows) + 2);
     graph.create(vtxCount, edgeCount);
-    Point p;
-    for( p.y = 0; p.y < img.rows; p.y++ )
+    for( int y = 0; y < img.rows; y++ )
     {
-        for( p.x = 0; p.x < img.cols; p.x++)
+        const Vec3b* imgRow = img.ptr<Vec3b>(y);
+        const Vec3b* prevRow = (y > 0) ? img.ptr<Vec3b>(y - 1) : nullptr;
+        const uchar* maskRow = mask.ptr<uchar>(y);
+        for( int x = 0; x < img.cols; x++)
         {
             // add node
             int vtxIdx = graph.addVtx();
-            Vec3b color = img.at<Vec3b>(p);
+            Vec3b color = imgRow[x];
 
             // set t-weights
             double fromSource, toSink;
-            if( mask.at<uchar>(p) == GC_PR_BGD || mask.at<uchar>(p) == GC_PR_FGD )
+            const uchar mval = maskRow[x];
+            if( mval == GC_PR_BGD || mval == GC_PR_FGD )
             {
                 fromSource = -log( bgdGMM(color) );
                 toSink = -log( fgdGMM(color) );
             }
-            else if( mask.at<uchar>(p) == GC_BGD )
+            else if( mval == GC_BGD )
             {
                 fromSource = 0;
                 toSink = lambda;
@@ -496,24 +505,24 @@ static void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM
             graph.addTermWeights( vtxIdx, fromSource, toSink );
 
             // set n-weights
-            if( p.x>0 )
+            if( x > 0 )
             {
-                double w = leftW.at<double>(p);
+                double w = nweights.weightOrtho(color, imgRow[x - 1]);
                 graph.addEdges( vtxIdx, vtxIdx-1, w, w );
             }
-            if( p.x>0 && p.y>0 )
+            if( x > 0 && y > 0 )
             {
-                double w = upleftW.at<double>(p);
+                double w = nweights.weightDiag(color, prevRow[x - 1]);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols-1, w, w );
             }
-            if( p.y>0 )
+            if( y > 0 )
             {
-                double w = upW.at<double>(p);
+                double w = nweights.weightOrtho(color, prevRow[x]);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols, w, w );
             }
-            if( p.x<img.cols-1 && p.y>0 )
+            if( x < img.cols - 1 && y > 0 )
             {
-                double w = uprightW.at<double>(p);
+                double w = nweights.weightDiag(color, prevRow[x + 1]);
                 graph.addEdges( vtxIdx, vtxIdx-img.cols+1, w, w );
             }
         }
@@ -583,16 +592,16 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     const double lambda = 9*gamma;
     const double beta = calcBeta( img );
 
-    Mat leftW, upleftW, upW, uprightW;
-    calcNWeights( img, leftW, upleftW, upW, uprightW, beta, gamma );
+    NWeightLUT nweights;
+    nweights.init(img.size(), iterCount, beta, gamma);
 
+    GCGraph<double> graph;
     for( int i = 0; i < iterCount; i++ )
     {
-        GCGraph<double> graph;
         assignGMMsComponents( img, mask, bgdGMM, fgdGMM, compIdxs );
         if( mode != GC_EVAL_FREEZE_MODEL )
             learnGMMs( img, mask, compIdxs, bgdGMM, fgdGMM );
-        constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, leftW, upleftW, upW, uprightW, graph );
+        constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, nweights, graph );
         estimateSegmentation( graph, mask );
     }
 }

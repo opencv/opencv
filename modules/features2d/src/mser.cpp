@@ -431,7 +431,8 @@ public:
                         std::vector<Rect>& bboxes ) CV_OVERRIDE;
     void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE;
 
-    void preprocess1( const Mat& img, int* level_size )
+    void preprocess1( const Mat& img, int* level_size,
+                      vector<Pixel>& pixbuf, vector<Pixel*>& heapbuf, vector<CompHistory>& histbuf )
     {
         memset(level_size, 0, 256*sizeof(level_size[0]));
 
@@ -462,7 +463,7 @@ public:
         }
     }
 
-    void preprocess2( const Mat& img, int* level_size )
+    void preprocess2( const Mat& img, int* level_size, vector<Pixel>& pixbuf )
     {
         int i;
 
@@ -485,7 +486,8 @@ public:
     }
 
     void pass( const Mat& img, vector<vector<Point> >& msers, vector<Rect>& bboxvec,
-              Size size, const int* level_size, int mask )
+              Size size, const int* level_size, int mask,
+              vector<Pixel>& pixbuf, vector<Pixel*>& heapbuf, vector<CompHistory>& histbuf )
     {
         CompHistory* histptr = &histbuf[0];
         int step = size.width;
@@ -601,11 +603,6 @@ public:
             comptr->growHistory(histptr, wp, 256, true);
         }
     }
-
-    Mat tempsrc;
-    vector<Pixel> pixbuf;
-    vector<Pixel*> heapbuf;
-    vector<CompHistory> histbuf;
 
     Params params;
 };
@@ -1008,6 +1005,10 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
     if( src.type() == CV_8U )
     {
         int level_size[256];
+        Mat tempsrc;
+        vector<Pixel> pixbuf;
+        vector<Pixel*> heapbuf;
+        vector<CompHistory> histbuf;
         if( !src.isContinuous() )
         {
             src.copyTo(tempsrc);
@@ -1015,12 +1016,12 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
         }
 
         // darker to brighter (MSER+)
-        preprocess1( src, level_size );
+        preprocess1( src, level_size, pixbuf, heapbuf, histbuf );
         if( !params.pass2Only )
-            pass( src, msers, bboxes, size, level_size, 0 );
+            pass( src, msers, bboxes, size, level_size, 0, pixbuf, heapbuf, histbuf );
         // brighter to darker (MSER-)
-        preprocess2( src, level_size );
-        pass( src, msers, bboxes, size, level_size, 255 );
+        preprocess2( src, level_size, pixbuf );
+        pass( src, msers, bboxes, size, level_size, 255, pixbuf, heapbuf, histbuf );
     }
     else
     {

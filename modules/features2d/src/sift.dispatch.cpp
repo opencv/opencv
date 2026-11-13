@@ -182,6 +182,7 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     {
         cvtColor(img, gray, COLOR_BGR2GRAY);
         gray.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
+        gray.release();
     }
     else
         img.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT_FIXPT_SCALE, 0);
@@ -207,16 +208,15 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
             resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
 #endif
         }
-        Mat result;
-        GaussianBlur(dbl, result, Size(), sig_diff, sig_diff);
-        return result;
+        gray_fpt.release();
+        GaussianBlur(dbl, dbl, Size(), sig_diff, sig_diff);
+        return dbl;
     }
     else
     {
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA, 0.01f) );
-        Mat result;
-        GaussianBlur(gray_fpt, result, Size(), sig_diff, sig_diff);
-        return result;
+        GaussianBlur(gray_fpt, gray_fpt, Size(), sig_diff, sig_diff);
+        return gray_fpt;
     }
 }
 
@@ -536,26 +536,110 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     Mat base = createInitialImage(image, firstOctave < 0, (float)sigma, enable_precise_upscale);
     std::vector<Mat> gpyr;
     int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
-
-    //double t, tf = getTickFrequency();
-    //t = (double)getTickCount();
-    buildGaussianPyramid(base, gpyr, nOctaves);
-
-    //t = (double)getTickCount() - t;
-    //printf("pyramid construction time: %g\n", t*1000./tf);
+    const bool needDescriptors = _descriptors.needed();
 
     if( !useProvidedKeypoints )
     {
-        std::vector<Mat> dogpyr;
-        buildDoGPyramid(gpyr, dogpyr);
-        //t = (double)getTickCount();
-        findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
+        AutoBuffer<double> sig(nOctaveLayers + 3);
+        sig[0] = sigma;
+        double k = std::pow( 2, 1. / nOctaveLayers );
+        for( int i = 1; i < nOctaveLayers + 3; i++ )
+        {
+            double sig_prev = std::pow(k, i - 1) * sigma;
+            double sig_total = sig_prev * k;
+            sig[i] = std::sqrt(sig_total * sig_total - sig_prev * sig_prev);
+        }
+
+        gpyr.resize(nOctaves * (nOctaveLayers + 3));
+        const int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
+        keypoints.clear();
+        TLSDataAccumulator<std::vector<KeyPoint> > tls_kpts_struct;
+        std::vector<Mat> dogpyr(nOctaves * (nOctaveLayers + 2));
+
+        Mat next_octave_base = base;
+        base.release();
+
+        for( int o = 0; o < nOctaves; o++ )
+        {
+            const int g_base = o * (nOctaveLayers + 3);
+            const int dog_base = o * (nOctaveLayers + 2);
+
+            Mat g_prev = next_octave_base;
+            next_octave_base.release();
+
+            for( int i = 1; i <= nOctaveLayers; i++ )
+            {
+                Mat& g_curr = gpyr[g_base + i];
+                GaussianBlur(g_prev, g_curr, Size(), sig[i], sig[i]);
+                subtract(g_curr, g_prev, dogpyr[dog_base + i - 1], noArray(), DataType<sift_wt>::type);
+                if( i == 1 )
+                    g_prev.release();
+                g_prev = g_curr;
+            }
+
+            // Layers nOctaveLayers + 1 and nOctaveLayers + 2 are only needed to form the top two DoG
+            // planes; calcOrientationHist and calcDescriptors only ever access 1 <= layer <= nOctaveLayers.
+            Mat g_extra;
+            GaussianBlur(g_prev, g_extra, Size(), sig[nOctaveLayers + 1], sig[nOctaveLayers + 1]);
+            subtract(g_extra, g_prev, dogpyr[dog_base + nOctaveLayers], noArray(), DataType<sift_wt>::type);
+            g_prev.release();
+
+            Mat& dog_top = dogpyr[dog_base + nOctaveLayers + 1];
+            if( DataType<sift_wt>::type == g_extra.type() )
+            {
+                GaussianBlur(g_extra, dog_top, Size(), sig[nOctaveLayers + 2], sig[nOctaveLayers + 2]);
+                subtract(dog_top, g_extra, dog_top, noArray(), DataType<sift_wt>::type);
+            }
+            else
+            {
+                Mat g_extra2;
+                GaussianBlur(g_extra, g_extra2, Size(), sig[nOctaveLayers + 2], sig[nOctaveLayers + 2]);
+                subtract(g_extra2, g_extra, dog_top, noArray(), DataType<sift_wt>::type);
+            }
+            g_extra.release();
+
+            for( int i = 1; i <= nOctaveLayers; i++ )
+            {
+                const int idx = dog_base + i;
+                const Mat& img = dogpyr[idx];
+                const int step = (int)img.step1();
+                const int rows = img.rows, cols = img.cols;
+
+                parallel_for_(Range(SIFT_IMG_BORDER, rows - SIFT_IMG_BORDER),
+                    findScaleSpaceExtremaComputer(
+                        o, i, threshold, idx, step, cols,
+                        nOctaveLayers,
+                        contrastThreshold,
+                        edgeThreshold,
+                        sigma,
+                        gpyr, dogpyr, tls_kpts_struct));
+            }
+
+            for( int i = 0; i < nOctaveLayers + 2; i++ )
+                dogpyr[dog_base + i].release();
+
+            if( o + 1 < nOctaves )
+            {
+                const Mat& src = gpyr[g_base + nOctaveLayers];
+                resize(src, next_octave_base, Size(src.cols / 2, src.rows / 2), 0, 0, INTER_NEAREST);
+            }
+
+            if( !needDescriptors )
+            {
+                for( int i = 1; i <= nOctaveLayers; i++ )
+                    gpyr[g_base + i].release();
+            }
+        }
+
+        std::vector<std::vector<KeyPoint>*> kpt_vecs;
+        tls_kpts_struct.gather(kpt_vecs);
+        for (size_t i = 0; i < kpt_vecs.size(); ++i)
+            keypoints.insert(keypoints.end(), kpt_vecs[i]->begin(), kpt_vecs[i]->end());
+
         KeyPointsFilter::removeDuplicatedSorted( keypoints );
 
         if( nfeatures > 0 )
             KeyPointsFilter::retainBest(keypoints, nfeatures);
-        //t = (double)getTickCount() - t;
-        //printf("keypoint detection time: %g\n", t*1000./tf);
 
         if( firstOctave < 0 )
             for( size_t i = 0; i < keypoints.size(); i++ )
@@ -572,11 +656,12 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     }
     else
     {
-        // filter keypoints by mask
-        //KeyPointsFilter::runByPixelsMask( keypoints, mask );
+        if( needDescriptors )
+            buildGaussianPyramid(base, gpyr, nOctaves);
+        base.release();
     }
 
-    if( _descriptors.needed() )
+    if( needDescriptors )
     {
         //t = (double)getTickCount();
         int dsize = descriptorSize();

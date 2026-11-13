@@ -54,6 +54,131 @@ TEST( Features2d_DescriptorExtractor_KAZE, regression )
     test.safe_run();
 }
 
+// compute() on the keypoints of detect() gives the descriptors of detectAndCompute()
+TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
+{
+    Mat img(240, 320, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(240), -1);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(30), -1);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+
+    Ptr<KAZE> kaze = KAZE::create();
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+    kaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+    ASSERT_FALSE(keypoints.empty());
+
+    vector<KeyPoint> keypoints2;
+    Mat descriptors2;
+    kaze->detect(img, keypoints2);
+    kaze->compute(img, keypoints2, descriptors2);
+
+    ASSERT_EQ(keypoints.size(), keypoints2.size());
+    EXPECT_EQ(0, cvtest::norm(descriptors, descriptors2, NORM_INF));
+}
+
+TEST( Features2d_DescriptorExtractor_SIFT, compute_after_detect )
+{
+    Mat img(240, 320, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(240), -1);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(30), -1);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+
+    Ptr<SIFT> sift = SIFT::create();
+    vector<KeyPoint> keypoints;
+    Mat descriptors;
+    sift->detectAndCompute(img, noArray(), keypoints, descriptors);
+    ASSERT_FALSE(keypoints.empty());
+
+    vector<KeyPoint> keypoints2;
+    Mat descriptors2;
+    sift->detect(img, keypoints2);
+    sift->compute(img, keypoints2, descriptors2);
+
+    ASSERT_EQ(keypoints.size(), keypoints2.size());
+    EXPECT_EQ(0, cvtest::norm(descriptors, descriptors2, NORM_INF));
+}
+
+TEST( Features2d_DescriptorExtractor_AKAZE, compute_after_detect )
+{
+    Mat img(240, 320, CV_8UC3);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(240, 200, 180), -1);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(30, 60, 90), -1);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+
+    const AKAZE::DescriptorType types[] = {
+        AKAZE::DESCRIPTOR_MLDB,
+        AKAZE::DESCRIPTOR_MLDB_UPRIGHT,
+        AKAZE::DESCRIPTOR_KAZE,
+        AKAZE::DESCRIPTOR_KAZE_UPRIGHT
+    };
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); ++t)
+    {
+        Ptr<AKAZE> akaze = AKAZE::create(types[t]);
+        vector<KeyPoint> keypoints, keypoints2;
+        Mat descriptors, descriptors2;
+        akaze->detectAndCompute(img, noArray(), keypoints, descriptors);
+        ASSERT_FALSE(keypoints.empty());
+
+        akaze->detect(img, keypoints2);
+        ASSERT_EQ(keypoints.size(), keypoints2.size());
+        for (size_t k = 0; k < keypoints.size(); ++k)
+            EXPECT_NEAR(keypoints[k].angle, keypoints2[k].angle, 1e-5f);
+
+        akaze->compute(img, keypoints2, descriptors2);
+        EXPECT_EQ(0, cvtest::norm(descriptors, descriptors2, NORM_INF));
+    }
+}
+
+TEST( Features2d_DescriptorExtractor_BRISK, setPatternScale_and_empty_keypoints )
+{
+    Mat img(200, 240, CV_8UC3);
+    theRNG().fill(img, RNG::UNIFORM, 0, 255);
+    rectangle(img, Point(50, 50), Point(150, 150), Scalar(250, 250, 250), -1);
+
+    Ptr<BRISK> brisk = BRISK::create(30, 3, 1.0f);
+    for (int iter = 0; iter < 3; ++iter)
+        brisk->setPatternScale(1.0f + 0.1f * iter);
+    brisk->setPatternScale(1.0f);
+
+    FileStorage fs(".yml", FileStorage::WRITE | FileStorage::MEMORY);
+    brisk->write(fs);
+    String serialized = fs.releaseAndGetString();
+    FileStorage fsRead(serialized, FileStorage::READ | FileStorage::MEMORY);
+    brisk->read(fsRead.root());
+
+    Ptr<BRISK> ref = BRISK::create(30, 3, 1.0f);
+    vector<KeyPoint> kp1, kp2;
+    Mat desc1, desc2;
+    brisk->detectAndCompute(img, noArray(), kp1, desc1);
+    ref->detectAndCompute(img, noArray(), kp2, desc2);
+    ASSERT_EQ(kp1.size(), kp2.size());
+    EXPECT_EQ(0, cvtest::norm(desc1, desc2, NORM_HAMMING));
+
+    // Also verify non-continuous ROI parity and empty-keypoint compute()
+    Mat padded(240, 280, CV_8UC1, Scalar(128));
+    Mat roi = padded(Rect(20, 20, 240, 200));
+    cvtColor(img, roi, COLOR_BGR2GRAY);
+    Mat roiClone = roi.clone();
+    vector<KeyPoint> kpRoi, kpClone;
+    Mat descRoi, descClone;
+    brisk->detectAndCompute(roi, noArray(), kpRoi, descRoi);
+    brisk->detectAndCompute(roiClone, noArray(), kpClone, descClone);
+    ASSERT_EQ(kpRoi.size(), kpClone.size());
+    EXPECT_EQ(0, cvtest::norm(descRoi, descClone, NORM_HAMMING));
+
+    vector<KeyPoint> emptyKps;
+    Mat emptyDesc;
+    brisk->compute(img, emptyKps, emptyDesc);
+    EXPECT_TRUE(emptyDesc.empty());
+}
+
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",

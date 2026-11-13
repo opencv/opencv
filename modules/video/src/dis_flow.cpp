@@ -259,6 +259,12 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
         initial_Ux.resize(coarsest_scale + 1);
         initial_Uy.resize(coarsest_scale + 1);
     }
+    else
+    {
+        // the initial flow of an earlier call must not be used for this one
+        initial_Ux.clear();
+        initial_Uy.clear();
+    }
 
     int fraction = 1;
     int cur_rows = 0, cur_cols = 0;
@@ -1540,12 +1546,18 @@ void DISOpticalFlowImpl::collectGarbage()
     I0ys.clear();
     Ux.clear();
     Uy.clear();
+    initial_Ux.clear();
+    initial_Uy.clear();
     U.release();
     Sx.release();
     Sy.release();
+    I0x_buf.release();
+    I0y_buf.release();
     I0xx_buf.release();
     I0yy_buf.release();
     I0xy_buf.release();
+    I0x_buf_aux.release();
+    I0y_buf_aux.release();
     I0xx_buf_aux.release();
     I0yy_buf_aux.release();
     I0xy_buf_aux.release();
@@ -1557,18 +1569,23 @@ void DISOpticalFlowImpl::collectGarbage()
     u_I0xs.clear();
     u_I0ys.clear();
     u_U.clear();
+    u_initial_U.clear();
     u_S.release();
+    u_I0x_buf.release();
+    u_I0y_buf.release();
     u_I0xx_buf.release();
     u_I0yy_buf.release();
     u_I0xy_buf.release();
+    u_I0x_buf_aux.release();
+    u_I0y_buf_aux.release();
     u_I0xx_buf_aux.release();
     u_I0yy_buf_aux.release();
     u_I0xy_buf_aux.release();
 #endif
 
-    for (int i = finest_scale; i <= coarsest_scale; i++)
+    // the processors are created once, in the constructor: free their buffers but keep them
+    for (size_t i = 0; i < variational_refinement_processors.size(); i++)
         variational_refinement_processors[i]->collectGarbage();
-    variational_refinement_processors.clear();
 }
 
 Ptr<DISOpticalFlow> DISOpticalFlow::create(int preset)

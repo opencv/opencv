@@ -1564,9 +1564,8 @@ private:
             }
         }
         else {
-            DistanceType* domain_distances = new DistanceType[branching_];
-            int closest_center = exploreNodeBranches(node, vec, domain_distances, heap);
-            delete[] domain_distances;
+            cv::AutoBuffer<DistanceType, 64> domain_distances(branching_);
+            int closest_center = exploreNodeBranches(node, vec, domain_distances.data(), heap);
             findNN(node->childs[closest_center],result,vec, checks, maxChecks, heap);
         }
     }
@@ -1642,15 +1641,14 @@ private:
             }
         }
         else {
-            int* sort_indices = new int[branching_];
+            cv::AutoBuffer<int, 64> sort_indices(branching_);
 
-            getCenterOrdering(node, vec, sort_indices);
+            getCenterOrdering(node, vec, sort_indices.data());
 
             for (int i=0; i<branching_; ++i) {
                 findExactNN(node->childs[sort_indices[i]],result,vec);
             }
 
-            delete[] sort_indices;
         }
     }
 
@@ -1662,7 +1660,7 @@ private:
      */
     void getCenterOrdering(KMeansNodePtr node, const ElementType* q, int* sort_indices)
     {
-        DistanceType* domain_distances = new DistanceType[branching_];
+        cv::AutoBuffer<DistanceType, 64> domain_distances(branching_);
         for (int i=0; i<branching_; ++i) {
             DistanceType dist = distance_(q, node->childs[i]->pivot, veclen_);
 
@@ -1676,7 +1674,6 @@ private:
             domain_distances[j] = dist;
             sort_indices[j] = i;
         }
-        delete[] domain_distances;
     }
 
     /**

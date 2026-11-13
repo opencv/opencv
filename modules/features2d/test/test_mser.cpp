@@ -179,4 +179,30 @@ TEST(Features2d_MSER, history_update_regression)
     }
 }
 
+TEST(Features2d_MSER, synthetic_parity_and_reuse)
+{
+    Mat img1(240, 320, CV_8U, Scalar::all(200));
+    rectangle(img1, Rect(20, 20, 60, 40), Scalar::all(30), FILLED);
+    circle(img1, Point(160, 120), 35, Scalar::all(60), FILLED);
+    circle(img1, Point(250, 170), 20, Scalar::all(245), FILLED);
+    Mat img2 = img1(Rect(10, 10, 180, 150)); // non-continuous ROI
+
+    Ptr<MSER> mserReused = MSER::create();
+    Ptr<MSER> mserFresh = MSER::create();
+
+    vector<vector<Point> > r1a, r1b, r2a, r2b;
+    vector<Rect> b1a, b1b, b2a, b2b;
+    mserReused->detectRegions(img1, r1a, b1a);
+    mserFresh->detectRegions(img1, r1b, b1b);
+    ASSERT_FALSE(r1a.empty());
+    ASSERT_EQ(r1a, r1b);
+    ASSERT_EQ(b1a, b1b);
+
+    mserReused->detectRegions(img2, r2a, b2a);
+    MSER::create()->detectRegions(img2, r2b, b2b);
+    ASSERT_FALSE(r2a.empty());
+    ASSERT_EQ(r2a, r2b);
+    ASSERT_EQ(b2a, b2b);
+}
+
 }} // namespace

@@ -155,6 +155,76 @@ private:
 
 #endif
 
+#include <vector>
+
+namespace cvflann {
+
+/** The dataset points one search has already checked.
+ * Every search on a thread reuses the same bits: a search marks the points it checks, and the destructor clears
+ * only those marks. That costs far less than allocating and zeroing one bit per dataset point for every query.
+ * A search that starts while another one runs on the same thread gets bits of its own.
+ */
+class CheckedSet
+{
+public:
+    explicit CheckedSet(size_t size) : bits_(&own_bits_), touched_(&own_touched_), overflowed_(false)
+    {
+        if (depth() == 0)
+        {
+            bits_ = &threadBits();
+            touched_ = &threadTouched();
+        }
+        if (bits_->size() < size)
+            bits_->resize(size);
+        max_touched_ = size / 64 + 64;
+        ++depth();
+    }
+    ~CheckedSet()
+    {
+        if (overflowed_)
+        {
+            bits_->reset();
+        }
+        else
+        {
+            for (size_t i = 0; i < touched_->size(); ++i)
+                bits_->reset((*touched_)[i]);
+        }
+        touched_->clear();
+        --depth();
+    }
+    bool test(size_t index) const { return bits_->test(index); }
+    void set(size_t index)
+    {
+        if (bits_->test(index))
+            return;
+        bits_->set(index);
+        if (!overflowed_)
+        {
+            if (touched_->size() < max_touched_)
+                touched_->push_back(index);
+            else
+                overflowed_ = true;
+        }
+    }
+
+private:
+    CheckedSet(const CheckedSet&);
+    CheckedSet& operator=(const CheckedSet&);
+    static DynamicBitset& threadBits() { thread_local DynamicBitset bits; return bits; }
+    static std::vector<size_t>& threadTouched() { thread_local std::vector<size_t> touched; return touched; }
+    static int& depth() { thread_local int searches = 0; return searches; }
+
+    DynamicBitset own_bits_;
+    std::vector<size_t> own_touched_;
+    DynamicBitset* bits_;
+    std::vector<size_t>* touched_;
+    size_t max_touched_;
+    bool overflowed_;
+};
+
+} // namespace cvflann
+
 //! @endcond
 
 #endif // OPENCV_FLANN_DYNAMIC_BITSET_H_

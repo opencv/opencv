@@ -242,7 +242,8 @@ const vector<int>& DTreesImpl::getActiveVars()
 
 int DTreesImpl::addTree(const vector<int>& sidx )
 {
-    size_t n = (params.getMaxDepth() > 0 ? (1 << params.getMaxDepth()) : 1024) + w->wnodes.size();
+    int maxDepth = params.getMaxDepth();
+    size_t n = (maxDepth > 0 && maxDepth < 10 ? (size_t(1) << maxDepth) : 1024) + w->wnodes.size();
 
     w->wnodes.reserve(n);
     w->wsplits.reserve(n);
@@ -251,7 +252,7 @@ int DTreesImpl::addTree(const vector<int>& sidx )
     w->wsplits.clear();
     w->wsubsets.clear();
 
-    int cv_n = params.getCVFolds();
+    int cv_n = w->cv_labels.empty() ? 0 : params.getCVFolds();
 
     if( cv_n > 0 )
     {
@@ -361,7 +362,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
 
     node.parent = parent;
     node.depth = parent >= 0 ? w->wnodes[parent].depth + 1 : 0;
-    int nfolds = params.getCVFolds();
+    int nfolds = w->cv_labels.empty() ? 0 : params.getCVFolds();
 
     if( nfolds > 0 )
     {
@@ -469,7 +470,7 @@ int DTreesImpl::findBestSplit( const vector<int>& _sidx )
 void DTreesImpl::calcValue( int nidx, const vector<int>& _sidx )
 {
     WNode* node = &w->wnodes[nidx];
-    int i, j, k, n = (int)_sidx.size(), cv_n = params.getCVFolds();
+    int i, j, k, n = (int)_sidx.size(), cv_n = w->cv_labels.empty() ? 0 : params.getCVFolds();
     int m = (int)classLabels.size();
 
     cv::AutoBuffer<double> buf(std::max(m, 3)*(cv_n+1));

@@ -175,6 +175,46 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
     checkTrackingAccuracy(tracker, 0.69);
 }
 
+// A frame passed as a ROI must be tracked like a standalone copy of it: pixels of the parent image
+// around the ROI must not leak into a search window that crosses the frame border.
+template <typename CreateTracker>
+static void checkRoiImageMatchesClone(CreateTracker createTracker)
+{
+    Mat parent(240, 240, CV_8UC3, Scalar(255, 0, 0));
+    Mat image = parent(Rect(32, 32, 160, 160));
+    theRNG().fill(image, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
+    Mat clone = image.clone();
+    Rect initial(4, 4, 24, 24);
+
+    Ptr<Tracker> roiTracker = createTracker(), cloneTracker = createTracker();
+    roiTracker->init(image, initial);
+    cloneTracker->init(clone, initial);
+    for (int i = 0; i < 3; i++)
+    {
+        Rect roiResult, cloneResult;
+        roiTracker->update(image, roiResult);
+        cloneTracker->update(clone, cloneResult);
+        EXPECT_EQ(roiResult, cloneResult) << "update " << i;
+    }
+}
+
+TEST(DaSiamRPN, roi_image_matches_clone)
+{
+    cv::TrackerDaSiamRPN::Params params;
+    params.model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
+    params.kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
+    params.kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
+    checkRoiImageMatchesClone([&]() { return TrackerDaSiamRPN::create(params); });
+}
+
+TEST(NanoTrack, roi_image_matches_clone)
+{
+    cv::TrackerNano::Params params;
+    params.backbone = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
+    params.neckhead = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
+    checkRoiImageMatchesClone([&]() { return TrackerNano::create(params); });
+}
+
 TEST(vittrack, accuracy_vittrack)
 {
     std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
@@ -248,5 +288,86 @@ TEST(vittrack, roi_image_matches_clone)
     EXPECT_EQ(roiResult, cloneResult);
     EXPECT_NEAR(roiTracker->getTrackingScore(), cloneTracker->getTrackingScore(), 1e-6f);
 }
+
+TEST(TrackerMIL, gray_and_bgr_channel0_equivalence)
+{
+    RNG& rng = theRNG();
+    Mat gray1(120, 160, CV_8UC1, Scalar(60));
+    rectangle(gray1, Rect(40, 35, 30, 30), Scalar(210), FILLED);
+    Mat gray2(120, 160, CV_8UC1, Scalar(60));
+    rectangle(gray2, Rect(43, 37, 30, 30), Scalar(210), FILLED);
+
+    Mat ch1(120, 160, CV_8UC1), ch2(120, 160, CV_8UC1);
+    rng.fill(ch1, RNG::UNIFORM, 0, 255);
+    rng.fill(ch2, RNG::UNIFORM, 0, 255);
+    Mat bgr1, bgr2;
+    merge(std::vector<Mat>{gray1, ch1, ch2}, bgr1);
+    merge(std::vector<Mat>{gray2, ch2, ch1}, bgr2);
+
+    Rect initBox(40, 35, 30, 30);
+    uint64 seed = rng.state;
+    std::srand(42);
+    Ptr<TrackerMIL> trGray = TrackerMIL::create();
+    trGray->init(gray1, initBox);
+    Rect outGray;
+    ASSERT_TRUE(trGray->update(gray2, outGray));
+
+    rng.state = seed;
+    std::srand(42);
+    Ptr<TrackerMIL> trBgr = TrackerMIL::create();
+    trBgr->init(bgr1, initBox);
+    Rect outBgr;
+    ASSERT_TRUE(trBgr->update(bgr2, outBgr));
+
+    EXPECT_EQ(outGray, outBgr);
+}
+
+#ifdef HAVE_OPENCV_DNN
+TEST(GOTURN, synthetic_net_boundary_patch_parity)
+{
+    RNG& rng = theRNG();
+    dnn::Net net;
+    dnn::LayerParams lpConcat, lpPool, lpFc;
+    lpConcat.name = "concat";
+    lpConcat.type = "Concat";
+    lpConcat.set("axis", 1);
+    int idConcat = net.addLayer(lpConcat.name, lpConcat.type, lpConcat);
+    net.setInputsNames({"data1", "data2"});
+    net.connect(0, 0, idConcat, 0);
+    net.connect(0, 1, idConcat, 1);
+
+    lpPool.name = "pool";
+    lpPool.type = "Pooling";
+    lpPool.set("pool", "AVE");
+    lpPool.set("global_pooling", true);
+    int idPool = net.addLayerToPrev(lpPool.name, lpPool.type, lpPool);
+    CV_UNUSED(idPool);
+
+    Mat W(4, 6, CV_32F, Scalar(0.01f));
+    Mat b = (Mat_<float>(1, 4) << 56.f, 56.f, 170.f, 170.f);
+    lpFc.name = "scale";
+    lpFc.type = "InnerProduct";
+    lpFc.set("num_output", 4);
+    lpFc.set("bias_term", true);
+    lpFc.blobs = {W, b};
+    net.addLayerToPrev(lpFc.name, lpFc.type, lpFc);
+
+    Mat f0(180, 240, CV_8UC3), f1(180, 240, CV_8UC3), f2(180, 240, CV_8UC3);
+    rng.fill(f0, RNG::UNIFORM, 0, 255);
+    rng.fill(f1, RNG::UNIFORM, 0, 255);
+    rng.fill(f2, RNG::UNIFORM, 0, 255);
+
+    // Near-corner box forces negative unpadded coordinates and BORDER_REPLICATE padding
+    Rect box(4, 6, 40, 36);
+    Ptr<TrackerGOTURN> tracker = TrackerGOTURN::create(net);
+    tracker->init(f0, box);
+    ASSERT_TRUE(tracker->update(f1, box));
+    EXPECT_GT(box.width, 0);
+    EXPECT_GT(box.height, 0);
+    ASSERT_TRUE(tracker->update(f2, box));
+    EXPECT_GT(box.width, 0);
+    EXPECT_GT(box.height, 0);
+}
+#endif
 
 }}  // namespace opencv_test::

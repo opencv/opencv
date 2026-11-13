@@ -176,8 +176,10 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
 
 void FeatherBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
+    weight_map_.release();
     normalizeUsingWeightMap(dst_weight_map_, dst_);
     compare(dst_weight_map_, WEIGHT_EPS, dst_mask_, CMP_GT);
+    dst_weight_map_.release();
     Blender::blend(dst, dst_mask);
 }
 

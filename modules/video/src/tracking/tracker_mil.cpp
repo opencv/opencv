@@ -39,11 +39,16 @@ TrackerMILImpl::TrackerMILImpl(const TrackerMIL::Params& parameters)
 
 void TrackerMILImpl::compute_integral(const Mat& img, Mat& ii_img)
 {
-    Mat ii;
-    std::vector<Mat> ii_imgs;
-    integral(img, ii, CV_32F);  // FIXIT split first
-    split(ii, ii_imgs);
-    ii_img = ii_imgs[0];
+    if (img.channels() > 1)
+    {
+        Mat ch0;
+        extractChannel(img, ch0, 0);
+        integral(ch0, ii_img, CV_32F);
+    }
+    else
+    {
+        integral(img, ii_img, CV_32F);
+    }
 }
 
 void TrackerMILImpl::init(InputArray image, const Rect& boundingBox)

@@ -39,7 +39,7 @@ using namespace std;
  * @note The constructor allocates memory for the nonlinear scale space
  */
 KAZEFeatures::KAZEFeatures(KAZEOptions& options)
-        : options_(options)
+        : options_(options), streamed_detection_(false)
 {
     ncycles_ = 0;
     reordering_ = true;
@@ -59,15 +59,7 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
     {
         for (int j = 0; j <= options_.nsublevels - 1; j++)
         {
-            TEvolution aux;
-            aux.Lx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Ly = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lxx = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lxy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lyy = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lt = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Lsmooth = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
-            aux.Ldet = Mat::zeros(options_.img_height, options_.img_width, CV_32F);
+            TEvolution aux;  // images are created level by level in Create_Nonlinear_Scale_Space()
             aux.esigma = (float)(options_.soffset*std::pow(2, (float)(j) / (float)(options_.nsublevels)+i));
             aux.etime = 0.5f*(aux.esigma*aux.esigma);
             aux.sigma_size = cvRound(aux.esigma);
@@ -93,51 +85,368 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
 
 /* ************************************************************************* */
 /**
- * @brief This method creates the nonlinear scale space for a given image
- * @param img Input image for which the nonlinear scale space needs to be created
- * @return 0 if the nonlinear scale space was created successfully. -1 otherwise
+ * @brief Computes the scale-normalized first derivatives and the Hessian determinant of one level
+ * @param e Evolution level; Lx, Ly and Ldet are written
+ * @param Lsmooth Smoothed image of the level
+ * @param Lxx, Lxy, Lyy Scratch images for the second derivatives
  */
-int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
+static void compute_level_lx_ly(TEvolution& e, const Mat& Lsmooth, Mat& work0, Mat& work1, bool scale_first)
+{
+    const Size size = Lsmooth.size();
+    const int s = e.sigma_size;
+    const float sf = static_cast<float>(s);
+    const double nstripes = std::max(1, getNumThreads());
+
+    Mat kx_dx, ky_dx, kx_dy, ky_dy;
+    compute_derivative_kernels(kx_dx, ky_dx, 1, 0, s);
+    compute_derivative_kernels(kx_dy, ky_dy, 0, 1, s);
+
+    work0.create(size, CV_32F);
+    work1.create(size, CV_32F);
+    e.Lx = work0;
+    e.Ly = work1;
+    parallel_for_(Range(0, size.height), [&](const Range& r) {
+        Mat lx = e.Lx.rowRange(r), ly = e.Ly.rowRange(r);
+        sepFilter2D(Lsmooth.rowRange(r), lx, CV_32F, kx_dx, ky_dx);
+        sepFilter2D(Lsmooth.rowRange(r), ly, CV_32F, kx_dy, ky_dy);
+        if (scale_first)
+        {
+            for (int y = 0; y < lx.rows; ++y)
+            {
+                float* plx = lx.ptr<float>(y);
+                float* ply = ly.ptr<float>(y);
+                for (int x = 0; x < size.width; ++x)
+                {
+                    plx[x] *= sf;
+                    ply[x] *= sf;
+                }
+            }
+        }
+    }, nstripes);
+}
+
+static void compute_level_ldet_from_lsmooth(const TEvolution& e, const Mat& Lsmooth, Mat& Ldet,
+                                            Mat& Lx, Mat& Ly, Mat& work_lxy, Mat& work_lyy)
+{
+    const Size size = Lsmooth.size();
+    const int s = e.sigma_size;
+    const float s2 = static_cast<float>(s * s);
+    const double nstripes = std::max(1, getNumThreads());
+
+    Mat kx_dx, ky_dx, kx_dy, ky_dy;
+    compute_derivative_kernels(kx_dx, ky_dx, 1, 0, s);
+    compute_derivative_kernels(kx_dy, ky_dy, 0, 1, s);
+
+    Lx.create(size, CV_32F);
+    Ly.create(size, CV_32F);
+    parallel_for_(Range(0, size.height), [&](const Range& r) {
+        Mat lx = Lx.rowRange(r), ly = Ly.rowRange(r);
+        sepFilter2D(Lsmooth.rowRange(r), lx, CV_32F, kx_dx, ky_dx);
+        sepFilter2D(Lsmooth.rowRange(r), ly, CV_32F, kx_dy, ky_dy);
+    }, nstripes);
+
+    // Second derivatives read Lx and Ly across band borders; reuse Ldet, work_lxy and work_lyy per band.
+    Ldet.create(size, CV_32F);
+    work_lxy.create(size, CV_32F);
+    work_lyy.create(size, CV_32F);
+    parallel_for_(Range(0, size.height), [&](const Range& r) {
+        Mat lxx = Ldet.rowRange(r);
+        Mat lxy = work_lxy.rowRange(r);
+        Mat lyy = work_lyy.rowRange(r);
+        sepFilter2D(Lx.rowRange(r), lxx, CV_32F, kx_dx, ky_dx);
+        sepFilter2D(Ly.rowRange(r), lyy, CV_32F, kx_dy, ky_dy);
+        sepFilter2D(Lx.rowRange(r), lxy, CV_32F, kx_dy, ky_dy);
+        for (int ix = 0; ix < lxx.rows; ix++)
+        {
+            const float* pxx = lxx.ptr<float>(ix);
+            const float* pxy = lxy.ptr<float>(ix);
+            const float* pyy = lyy.ptr<float>(ix);
+            float* ldet = Ldet.ptr<float>(r.start + ix);
+            for (int jx = 0; jx < size.width; jx++)
+            {
+                const float vxx = pxx[jx] * s2;
+                const float vxy = pxy[jx] * s2;
+                const float vyy = pyy[jx] * s2;
+                ldet[jx] = (vxx * vyy - vxy * vxy);
+            }
+        }
+    }, nstripes);
+}
+
+static float compute_k_percentile_from_scharr(const Mat& Lx, const Mat& Ly, float perc, int nbins)
+{
+    int nbin = 0, nelements = 0, nthreshold = 0, k = 0;
+    float kperc = 0.0f, modg = 0.0f;
+    float npoints = 0.0f;
+    float hmax = 0.0f;
+    std::vector<int> hist(nbins, 0);
+
+    for (int i = 1; i < Lx.rows - 1; i++)
+    {
+        const float* lx = Lx.ptr<float>(i);
+        const float* ly = Ly.ptr<float>(i);
+        for (int j = 1; j < Lx.cols - 1; j++)
+        {
+            modg = lx[j] * lx[j] + ly[j] * ly[j];
+            if (modg > hmax)
+                hmax = modg;
+        }
+    }
+    hmax = sqrt(hmax);
+    for (int i = 1; i < Lx.rows - 1; i++)
+    {
+        const float* lx = Lx.ptr<float>(i);
+        const float* ly = Ly.ptr<float>(i);
+        for (int j = 1; j < Lx.cols - 1; j++)
+        {
+            modg = lx[j] * lx[j] + ly[j] * ly[j];
+            if (modg != 0.0f)
+            {
+                nbin = (int)floor(nbins * (sqrt(modg) / hmax));
+                if (nbin == nbins)
+                    nbin--;
+                hist[nbin]++;
+                npoints++;
+            }
+        }
+    }
+
+    nthreshold = (int)(npoints * perc);
+    for (k = 0; nelements < nthreshold && k < nbins; k++)
+        nelements = nelements + hist[k];
+
+    if (nelements < nthreshold)
+        kperc = 0.03f;
+    else
+        kperc = hmax * ((float)(k) / (float)nbins);
+
+    return kperc;
+}
+
+static void compute_kaze_diffusivity(const Mat& gx, const Mat& gy, Mat& Lflow, const KAZEOptions& options)
+{
+    if (options.diffusivity == KAZE::DIFF_PM_G1)
+        pm_g1(gx, gy, Lflow, options.kcontrast);
+    else if (options.diffusivity == KAZE::DIFF_PM_G2)
+        pm_g2(gx, gy, Lflow, options.kcontrast);
+    else if (options.diffusivity == KAZE::DIFF_WEICKERT)
+        weickert_diffusivity(gx, gy, Lflow, options.kcontrast);
+    else if (options.diffusivity == KAZE::DIFF_CHARBONNIER)
+        charbonnier_diffusivity(gx, gy, Lflow, options.kcontrast);
+    else
+        CV_Error_(Error::StsError, ("Diffusivity is not supported: %d", static_cast<int>(options.diffusivity)));
+}
+
+static void zero_corners(Mat& m)
+{
+    m.at<float>(0, 0) = 0.0f;
+    m.at<float>(0, m.cols - 1) = 0.0f;
+    m.at<float>(m.rows - 1, 0) = 0.0f;
+    m.at<float>(m.rows - 1, m.cols - 1) = 0.0f;
+}
+
+int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img, bool detection, bool description)
 {
     CV_Assert(evolution_.size() > 0);
+    const size_t nlevels = evolution_.size();
 
-    // Copy the original image to the first level of the evolution
-    img.copyTo(evolution_[0].Lt);
-    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lt, 0, 0, options_.soffset);
-    gaussian_2D_convolution(evolution_[0].Lt, evolution_[0].Lsmooth, 0, 0, options_.sderivatives);
+    lsmooth_pyr_.clear();
+    kpts_par_.clear();
+    subpix_par_.clear();
+    streamed_detection_ = false;
 
-    // Firstly compute the kcontrast factor
-        Compute_KContrast(evolution_[0].Lt, options_.kcontrast_percentille);
+    Mat lt_curr, Lsmooth, Lflow;
+    gaussian_2D_convolution(img, lt_curr, 0, 0, options_.soffset);
+    gaussian_2D_convolution(lt_curr, Lsmooth, 0, 0, options_.sderivatives);
+    Scharr(Lsmooth, work0_, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
+    Scharr(Lsmooth, work1_, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+    options_.kcontrast = compute_k_percentile_from_scharr(
+        work0_, work1_, options_.kcontrast_percentille, options_.kcontrast_bins);
 
-    // Allocate memory for the flow and step images
-    Mat Lflow = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
-    Mat Lstep = Mat::zeros(evolution_[0].Lt.rows, evolution_[0].Lt.cols, CV_32F);
-
-    // Now generate the rest of evolution levels
-    for (size_t i = 1; i < evolution_.size(); i++)
+    if (nlevels < 3)
     {
-        evolution_[i - 1].Lt.copyTo(evolution_[i].Lt);
-        gaussian_2D_convolution(evolution_[i - 1].Lt, evolution_[i].Lsmooth, 0, 0, options_.sderivatives);
+        if (detection)
+            compute_level_ldet_from_lsmooth(evolution_[0], Lsmooth, evolution_[0].Ldet, work0_, work1_, work2_, Lflow);
+        if (description)
+        {
+            Mat lx, ly;
+            compute_level_lx_ly(evolution_[0], Lsmooth, lx, ly, true);
+        }
 
-        // Compute the Gaussian derivatives Lx and Ly
-        Scharr(evolution_[i].Lsmooth, evolution_[i].Lx, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
-        Scharr(evolution_[i].Lsmooth, evolution_[i].Ly, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+        for (size_t i = 1; i < nlevels; i++)
+        {
+            gaussian_2D_convolution(lt_curr, Lsmooth, 0, 0, options_.sderivatives);
+            if (detection)
+                compute_level_ldet_from_lsmooth(evolution_[i], Lsmooth, evolution_[i].Ldet, work0_, work1_, work2_, Lflow);
+            if (description)
+            {
+                Mat lx, ly;
+                compute_level_lx_ly(evolution_[i], Lsmooth, lx, ly, true);
+            }
+        }
+        work0_.release();
+        work1_.release();
+        work2_.release();
+        return 0;
+    }
 
-        // Compute the conductivity equation
-        if (options_.diffusivity == KAZE::DIFF_PM_G1)
-            pm_g1(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        else if (options_.diffusivity == KAZE::DIFF_PM_G2)
-            pm_g2(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        else if (options_.diffusivity == KAZE::DIFF_WEICKERT)
-            weickert_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
-        else if (options_.diffusivity == KAZE::DIFF_CHARBONNIER)
-            charbonnier_diffusivity(evolution_[i].Lx, evolution_[i].Ly, Lflow, options_.kcontrast);
+    if (description)
+    {
+        lsmooth_pyr_.resize(nlevels);
+        if (!detection)
+            lsmooth_pyr_[0] = Lsmooth;
+    }
+
+    Mat ldet_ring[3];
+    auto extract_streamed_extrema = [&](int level, const Mat& ldet_prev, const Mat& ldet_curr, const Mat& ldet_next) {
+        const TEvolution& ev = evolution_[level];
+        const int rows = options_.img_height - 2;
+        if (rows <= 0 || options_.img_width <= 2)
+            return;
+        const int nstripes = std::max(1, std::min(rows, getNumThreads()));
+        std::vector<std::vector<KeyPoint> > stripe_kpts(nstripes);
+        std::vector<std::vector<SubpixelStencil> > stripe_subpix(nstripes);
+
+        parallel_for_(Range(0, nstripes), [&](const Range& sr) {
+            for (int s_idx = sr.start; s_idx < sr.end; ++s_idx)
+            {
+                const int y0 = 1 + (rows * s_idx) / nstripes;
+                const int y1 = 1 + (rows * (s_idx + 1)) / nstripes;
+                std::vector<KeyPoint>& out_kp = stripe_kpts[s_idx];
+                std::vector<SubpixelStencil>& out_sp = stripe_subpix[s_idx];
+
+                for (int ix = y0; ix < y1; ix++)
+                {
+                    const float* curr_row = ldet_curr.ptr<float>(ix);
+                    for (int jx = 1; jx < options_.img_width - 1; jx++)
+                    {
+                        const float value = curr_row[jx];
+                        if (value > options_.dthreshold &&
+                            value >= curr_row[jx - 1] &&
+                            check_maximum_neighbourhood(ldet_curr, 1, value, ix, jx, 1) &&
+                            check_maximum_neighbourhood(ldet_prev, 1, value, ix, jx, 0) &&
+                            check_maximum_neighbourhood(ldet_next, 1, value, ix, jx, 0))
+                        {
+                            KeyPoint point;
+                            point.pt.x = (float)jx;
+                            point.pt.y = (float)ix;
+                            point.response = fabs(value);
+                            point.size = ev.esigma;
+                            point.octave = (int)ev.octave;
+                            point.class_id = level;
+                            point.angle = static_cast<float>(ev.sublevel);
+                            out_kp.push_back(point);
+
+                            const float* c_m1 = ldet_curr.ptr<float>(ix - 1);
+                            const float* c_p1 = ldet_curr.ptr<float>(ix + 1);
+                            const float* p_m1 = ldet_prev.ptr<float>(ix - 1);
+                            const float* p_0  = ldet_prev.ptr<float>(ix);
+                            const float* p_p1 = ldet_prev.ptr<float>(ix + 1);
+                            const float* n_m1 = ldet_next.ptr<float>(ix - 1);
+                            const float* n_0  = ldet_next.ptr<float>(ix);
+                            const float* n_p1 = ldet_next.ptr<float>(ix + 1);
+
+                            SubpixelStencil sp;
+                            sp.Dx = 0.5f * (curr_row[jx + 1] - curr_row[jx - 1]);
+                            sp.Dy = 0.5f * (c_p1[jx] - c_m1[jx]);
+                            sp.Ds = 0.5f * (n_0[jx] - p_0[jx]);
+                            sp.Dxx = curr_row[jx + 1] + curr_row[jx - 1] - 2.0f * value;
+                            sp.Dyy = c_p1[jx] + c_m1[jx] - 2.0f * value;
+                            sp.Dss = n_0[jx] + p_0[jx] - 2.0f * value;
+                            sp.Dxy = 0.25f * (c_p1[jx + 1] + c_m1[jx - 1]) - 0.25f * (c_m1[jx + 1] + c_p1[jx - 1]);
+                            sp.Dxs = 0.25f * (n_0[jx + 1] + p_0[jx - 1]) - 0.25f * (n_0[jx - 1] + p_0[jx + 1]);
+                            sp.Dys = 0.25f * (n_p1[jx] + p_m1[jx]) - 0.25f * (n_m1[jx] + p_p1[jx]);
+                            out_sp.push_back(sp);
+                        }
+                    }
+                }
+            }
+        }, nstripes);
+
+        std::vector<KeyPoint>& dst_kp = kpts_par_[level - 1];
+        std::vector<SubpixelStencil>& dst_sp = subpix_par_[level - 1];
+        size_t total_n = 0;
+        for (int s_idx = 0; s_idx < nstripes; ++s_idx)
+            total_n += stripe_kpts[s_idx].size();
+        dst_kp.reserve(total_n);
+        dst_sp.reserve(total_n);
+        for (int s_idx = 0; s_idx < nstripes; ++s_idx)
+        {
+            dst_kp.insert(dst_kp.end(), stripe_kpts[s_idx].begin(), stripe_kpts[s_idx].end());
+            dst_sp.insert(dst_sp.end(), stripe_subpix[s_idx].begin(), stripe_subpix[s_idx].end());
+        }
+    };
+
+    // Level 1 uses the exact same Lsmooth and Scharr(Lsmooth) as Level 0.
+    // Step lt_curr in place from Lt[0] to Lt[1] first while work0_/work1_ still hold Scharr(Lsmooth).
+    compute_kaze_diffusivity(work0_, work1_, Lflow, options_);
+    zero_corners(work0_);
+    for (int j = 0; j < nsteps_[0]; j++)
+        nld_step_scalar(lt_curr, Lflow, work0_, tsteps_[0][j]);
+
+    if (detection)
+    {
+        streamed_detection_ = true;
+        kpts_par_.assign(nlevels - 2, std::vector<KeyPoint>());
+        subpix_par_.assign(nlevels - 2, std::vector<SubpixelStencil>());
+
+        compute_level_ldet_from_lsmooth(evolution_[0], Lsmooth, ldet_ring[0], work0_, work1_, work2_, Lflow);
+        if (evolution_[1].sigma_size == evolution_[0].sigma_size)
+            ldet_ring[0].copyTo(ldet_ring[1]);
         else
-            CV_Error_(Error::StsError, ("Diffusivity is not supported: %d", static_cast<int>(options_.diffusivity)));
+            compute_level_ldet_from_lsmooth(evolution_[1], Lsmooth, ldet_ring[1], work0_, work1_, work2_, Lflow);
+    }
 
-        // Perform FED n inner steps
-        for (int j = 0; j < nsteps_[i - 1]; j++)
-            nld_step_scalar(evolution_[i].Lt, Lflow, Lstep, tsteps_[i - 1][j]);
+    if (description)
+    {
+        lsmooth_pyr_[1] = Lsmooth;
+        Lsmooth.release();
+    }
+
+    for (size_t i = 2; i < nlevels; i++)
+    {
+        const bool need_next_lt = (i + 1 < nlevels);
+        const bool save_lsmooth = description && (!detection || need_next_lt);
+        if (!detection && !save_lsmooth && !need_next_lt)
+            break;
+
+        gaussian_2D_convolution(lt_curr, Lsmooth, 0, 0, options_.sderivatives);
+
+        if (need_next_lt)
+        {
+            Scharr(Lsmooth, work0_, CV_32F, 1, 0, 1, 0, BORDER_DEFAULT);
+            Scharr(Lsmooth, work1_, CV_32F, 0, 1, 1, 0, BORDER_DEFAULT);
+            compute_kaze_diffusivity(work0_, work1_, Lflow, options_);
+            zero_corners(work0_);
+            for (int j = 0; j < nsteps_[i - 1]; j++)
+                nld_step_scalar(lt_curr, Lflow, work0_, tsteps_[i - 1][j]);
+        }
+        else
+        {
+            lt_curr.release();
+        }
+
+        if (detection)
+        {
+            compute_level_ldet_from_lsmooth(evolution_[i], Lsmooth, ldet_ring[i % 3], work0_, work1_, work2_, Lflow);
+            extract_streamed_extrema(static_cast<int>(i - 1),
+                                     ldet_ring[(i - 2) % 3],
+                                     ldet_ring[(i - 1) % 3],
+                                     ldet_ring[i % 3]);
+        }
+
+        if (save_lsmooth)
+        {
+            lsmooth_pyr_[i] = Lsmooth;
+            Lsmooth.release();
+        }
+    }
+
+    work2_.release();
+    if (!description)
+    {
+        work0_.release();
+        work1_.release();
     }
 
     return 0;
@@ -156,85 +465,121 @@ void KAZEFeatures::Compute_KContrast(const Mat &img, const float &kpercentile)
 
 /* ************************************************************************* */
 /**
- * @brief This method computes the feature detector response for the nonlinear scale space
- * @note We use the Hessian determinant as feature detector
- */
-void KAZEFeatures::Compute_Detector_Response(void)
-{
-    float lxx = 0.0, lxy = 0.0, lyy = 0.0;
-
-    // Firstly compute the multiscale derivatives
-    Compute_Multiscale_Derivatives();
-
-    for (size_t i = 0; i < evolution_.size(); i++)
-    {
-                for (int ix = 0; ix < options_.img_height; ix++)
-        {
-                        for (int jx = 0; jx < options_.img_width; jx++)
-            {
-                lxx = *(evolution_[i].Lxx.ptr<float>(ix)+jx);
-                lxy = *(evolution_[i].Lxy.ptr<float>(ix)+jx);
-                lyy = *(evolution_[i].Lyy.ptr<float>(ix)+jx);
-                *(evolution_[i].Ldet.ptr<float>(ix)+jx) = (lxx*lyy - lxy*lxy);
-            }
-        }
-    }
-}
-
-/* ************************************************************************* */
-/**
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
  */
 void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 {
     kpts.clear();
-        Compute_Detector_Response();
-        Determinant_Hessian(kpts);
-    Do_Subpixel_Refinement(kpts);
-}
-
-/* ************************************************************************* */
-class MultiscaleDerivativesKAZEInvoker : public ParallelLoopBody
-{
-public:
-    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev) : evolution_(&ev)
+    if (!streamed_detection_)
     {
+        Determinant_Hessian(kpts);
+        Do_Subpixel_Refinement(kpts);
+        return;
     }
 
-    void operator()(const Range& range) const CV_OVERRIDE
-    {
-        TPyramid& evolution = *evolution_;
-        for (int i = range.start; i < range.end; i++)
-        {
-            compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Ly, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+    const float smax = 3.0f;
+    std::vector<SubpixelStencil> chosen_subpix;
 
-            evolution[i].Lx = evolution[i].Lx*((evolution[i].sigma_size));
-            evolution[i].Ly = evolution[i].Ly*((evolution[i].sigma_size));
-            evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+    for (int i = 0; i < (int)kpts_par_.size(); i++)
+    {
+        const int level = i + 1;
+        const TEvolution& evolution_level = evolution_[level];
+        for (int j = 0; j < (int)kpts_par_[i].size(); j++)
+        {
+            bool is_extremum = true;
+            bool is_repeated = false;
+            int id_repeated = 0;
+            const KeyPoint& kpts_par_ij = kpts_par_[i][j];
+
+            for (int ik = 0; ik < (int)kpts.size(); ik++)
+            {
+                const KeyPoint& kpts_ik = kpts[ik];
+                if (kpts_ik.class_id == level || kpts_ik.class_id == level + 1 || kpts_ik.class_id == level - 1)
+                {
+                    Point2f diff = kpts_par_ij.pt - kpts_ik.pt;
+                    if (diff.dot(diff) < evolution_level.sigma_size * evolution_level.sigma_size)
+                    {
+                        if (kpts_par_ij.response > kpts_ik.response)
+                        {
+                            id_repeated = ik;
+                            is_repeated = true;
+                        }
+                        else
+                        {
+                            is_extremum = false;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (is_extremum)
+            {
+                const int left_x = cvRound(kpts_par_ij.pt.x - smax * kpts_par_ij.size);
+                const int right_x = cvRound(kpts_par_ij.pt.x + smax * kpts_par_ij.size);
+                const int up_y = cvRound(kpts_par_ij.pt.y - smax * kpts_par_ij.size);
+                const int down_y = cvRound(kpts_par_ij.pt.y + smax * kpts_par_ij.size);
+
+                if (left_x >= 0 && right_x < options_.img_width &&
+                    up_y >= 0 && down_y < options_.img_height)
+                {
+                    if (!is_repeated)
+                    {
+                        kpts.push_back(kpts_par_ij);
+                        chosen_subpix.push_back(subpix_par_[i][j]);
+                    }
+                    else
+                    {
+                        kpts[id_repeated] = kpts_par_ij;
+                        chosen_subpix[id_repeated] = subpix_par_[i][j];
+                    }
+                }
+            }
         }
     }
 
-private:
-    std::vector<TEvolution>*  evolution_;
-};
+    kpts_par_.clear();
+    subpix_par_.clear();
 
-/* ************************************************************************* */
-/**
- * @brief This method computes the multiscale derivatives for the nonlinear scale space
- */
-void KAZEFeatures::Compute_Multiscale_Derivatives(void)
-{
-    parallel_for_(Range(0, (int)evolution_.size()),
-                                        MultiscaleDerivativesKAZEInvoker(evolution_));
+    Mat A = Mat::zeros(3, 3, CV_32F);
+    Mat b = Mat::zeros(3, 1, CV_32F);
+    Mat dst = Mat::zeros(3, 1, CV_32F);
+    std::vector<KeyPoint> refined;
+    refined.reserve(kpts.size());
+
+    for (size_t i = 0; i < kpts.size(); i++)
+    {
+        const SubpixelStencil& sp = chosen_subpix[i];
+        *(A.ptr<float>(0)) = sp.Dxx;
+        *(A.ptr<float>(1) + 1) = sp.Dyy;
+        *(A.ptr<float>(2) + 2) = sp.Dss;
+        *(A.ptr<float>(0) + 1) = *(A.ptr<float>(1)) = sp.Dxy;
+        *(A.ptr<float>(0) + 2) = *(A.ptr<float>(2)) = sp.Dxs;
+        *(A.ptr<float>(1) + 2) = *(A.ptr<float>(2) + 1) = sp.Dys;
+
+        *(b.ptr<float>(0)) = -sp.Dx;
+        *(b.ptr<float>(1)) = -sp.Dy;
+        *(b.ptr<float>(2)) = -sp.Ds;
+
+        solve(A, b, dst, DECOMP_LU);
+
+        if (fabs(*(dst.ptr<float>(0))) <= 1.0f &&
+            fabs(*(dst.ptr<float>(1))) <= 1.0f &&
+            fabs(*(dst.ptr<float>(2))) <= 1.0f)
+        {
+            KeyPoint kp = kpts[i];
+            kp.pt.x += *(dst.ptr<float>(0));
+            kp.pt.y += *(dst.ptr<float>(1));
+            float dsc = kp.octave + (kp.angle + *(dst.ptr<float>(2))) / (float)(options_.nsublevels);
+            kp.size = (float)(2 * options_.soffset * std::pow(2, dsc));
+            kp.angle = 0.0f;
+            refined.push_back(kp);
+        }
+    }
+
+    kpts.swap(refined);
 }
-
 
 /* ************************************************************************* */
 class FindExtremumKAZEInvoker : public ParallelLoopBody
@@ -501,11 +846,13 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
 class KAZE_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, TPyramid& evolution, const KAZEOptions& options)
+        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, TPyramid& evolution, const KAZEOptions& options,
+                                const std::vector<int>* indices = 0)
                 : kpts_(&kpts)
                 , desc_(&desc)
                 , evolution_(&evolution)
                 , options_(options)
+                , indices_(indices)
     {
     }
 
@@ -519,8 +866,9 @@ public:
         Mat                   &desc      = *desc_;
         TPyramid   &evolution = *evolution_;
 
-        for (int i = range.start; i < range.end; i++)
+        for (int r_i = range.start; r_i < range.end; r_i++)
         {
+            const int i = indices_ ? (*indices_)[r_i] : r_i;
             kpts[i].angle = 0.0;
             if (options_.upright)
             {
@@ -551,6 +899,7 @@ private:
         Mat                   * desc_;
         TPyramid   * evolution_;
         KAZEOptions                 options_;
+        const std::vector<int>*     indices_;
 };
 
 /* ************************************************************************* */
@@ -567,14 +916,53 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
     }
 
     // Allocate memory for the matrix of descriptors
-        if (options_.extended == true) {
+    if (options_.extended == true) {
         desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
     }
     else {
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
+    if (kpts.empty())
+    {
+        lsmooth_pyr_.clear();
+        work0_.release();
+        work1_.release();
+        return;
+    }
+
+    if (lsmooth_pyr_.empty())
+    {
         parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
+        return;
+    }
+
+    std::vector<std::vector<int> > by_level(evolution_.size());
+    for (size_t i = 0; i < kpts.size(); ++i)
+        by_level[kpts[i].class_id].push_back(static_cast<int>(i));
+
+    for (int lv = static_cast<int>(evolution_.size()) - 1; lv >= 0; --lv)
+    {
+        const std::vector<int>& idxs = by_level[lv];
+        if (!idxs.empty())
+        {
+            compute_level_lx_ly(evolution_[lv], lsmooth_pyr_[lv], work0_, work1_, true);
+            lsmooth_pyr_[lv].release();
+
+            parallel_for_(Range(0, (int)idxs.size()),
+                          KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_, &idxs));
+
+            evolution_[lv].Lx.release();
+            evolution_[lv].Ly.release();
+        }
+        else
+        {
+            lsmooth_pyr_[lv].release();
+        }
+    }
+    lsmooth_pyr_.clear();
+    work0_.release();
+    work1_.release();
 }
 
 /* ************************************************************************* */
@@ -588,7 +976,8 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const TPyramid& evolu
 {
     int ix = 0, iy = 0, idx = 0, s = 0, level = 0;
     float xf = 0.0, yf = 0.0, gweight = 0.0;
-    vector<float> resX(109), resY(109), Ang(109);
+    const size_t ang_size = 109;
+    float resX[ang_size], resY[ang_size], Ang[ang_size];
 
     // Variables for computing the dominant direction
     float sumX = 0.0, sumY = 0.0, max = 0.0, ang1 = 0.0, ang2 = 0.0;
@@ -627,7 +1016,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const TPyramid& evolu
         ang2 = (ang1 + (float)(CV_PI / 3.0) > (float)(2.0*CV_PI) ? ang1 - (float)(5.0*CV_PI / 3.0) : ang1 + (float)(CV_PI / 3.0));
         sumX = sumY = 0.f;
 
-        for (size_t k = 0; k < Ang.size(); ++k) {
+        for (size_t k = 0; k < ang_size; ++k) {
             // Get angle from the x-axis of the sample point
             const float & ang = Ang[k];
 
@@ -1327,7 +1716,7 @@ void KAZEFeatures::Create_Nonlinear_Scale_Space_UMat(InputArray image, UTPyramid
     }
 
     // Compute sigma_size-scaled multiscale derivatives and Ldet for all levels.
-    // Matches CPU Compute_Multiscale_Derivatives + Compute_Detector_Response exactly:
+    // Matches the CPU compute_level_derivatives() exactly:
     //   Lx  = s * scharr_s(Lsmooth)
     //   Ly  = s * scharr_s(Lsmooth)
     //   Lxx = s^2 * scharr_s(Lx_unscaled)   [applied before scaling Lx]

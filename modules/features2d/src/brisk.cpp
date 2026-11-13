@@ -179,10 +179,10 @@ protected:
                 const float key_y, const unsigned int scale,
                 const unsigned int rot, const unsigned int point) const;
     // pattern properties
-    BriskPatternPoint* patternPoints_;     //[i][rotation][scale]
+    std::vector<BriskPatternPoint> patternPoints_; //[i][rotation][scale]
     unsigned int points_;                 // total number of collocation points
-    float* scaleList_;                     // lists the scaling per scale index [scale]
-    unsigned int* sizeList_;             // lists the total pattern size per scale index [scale]
+    std::vector<float> scaleList_;        // lists the scaling per scale index [scale]
+    std::vector<unsigned int> sizeList_;  // lists the total pattern size per scale index [scale]
     static const unsigned int scales_;    // scales discretization
     static const float scalerange_;     // span of sizes 40->4 Octaves - else, this needs to be adjusted...
     static const unsigned int n_rot_;    // discretization of the rotation look-up
@@ -191,8 +191,8 @@ protected:
     int strings_;                        // number of uchars the descriptor consists of
     float dMax_;                         // short pair maximum distance
     float dMin_;                         // long pair maximum distance
-    BriskShortPair* shortPairs_;         // d<_dMax
-    BriskLongPair* longPairs_;             // d>_dMin
+    std::vector<BriskShortPair> shortPairs_; // d<_dMax
+    std::vector<BriskLongPair> longPairs_;   // d>_dMin
     unsigned int noShortPairs_;         // number of shortParis
     unsigned int noLongPairs_;             // number of longParis
 
@@ -436,21 +436,21 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
     sinval = t;
   }
   // set up the patterns
-  patternPoints_ = new BriskPatternPoint[points_ * scales_ * n_rot_];
+  patternPoints_.resize(static_cast<size_t>(points_) * scales_ * n_rot_);
 
   // define the scale discretization:
   static const float lb_scale = (float)(std::log(scalerange_) / std::log(2.0));
   static const float lb_scale_step = lb_scale / (scales_);
 
-  scaleList_ = new float[scales_];
-  sizeList_ = new unsigned int[scales_];
+  scaleList_.resize(scales_);
+  sizeList_.resize(scales_);
 
   const float sigma_scale = 1.3f;
 
   for (unsigned int scale = 0; scale < scales_; ++scale) {
       scaleList_[scale] = (float) std::pow(2, scale * lb_scale_step);
       sizeList_[scale] = 0;
-      BriskPatternPoint *patternIteratorOuter = patternPoints_ + (scale * n_rot_ * points_);
+      BriskPatternPoint *patternIteratorOuter = patternPoints_.data() + (scale * n_rot_ * points_);
       // generate the pattern points look-up
       for (int ring = 0; ring < rings; ++ring) {
           double scaleRadiusProduct = scaleList_[scale] * radiusList[ring];
@@ -495,8 +495,9 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
   }
 
   // now also generate pairings
-  shortPairs_ = new BriskShortPair[points_ * (points_ - 1) / 2];
-  longPairs_ = new BriskLongPair[points_ * (points_ - 1) / 2];
+  const size_t maxPairs = static_cast<size_t>(points_) * (points_ - 1) / 2;
+  shortPairs_.resize(maxPairs);
+  longPairs_.resize(maxPairs);
   noShortPairs_ = 0;
   noLongPairs_ = 0;
 
@@ -734,14 +735,19 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
                                      OutputArray _descriptors, bool doDescriptors, bool doOrientation,
                                      bool useProvidedKeypoints) const
 {
-  Mat image = _image.getMat(), mask = _mask.getMat();
-  if( image.type() != CV_8UC1 )
-      cvtColor(image, image, COLOR_BGR2GRAY);
+  Mat src = _image.getMat(), mask = _mask.getMat();
+  Mat image;
+  if( src.type() != CV_8UC1 )
+      cvtColor(src, image, COLOR_BGR2GRAY);
+  else if( !src.isContinuous() )
+      image = src.clone();
+  else
+      image = src;
 
   if (!useProvidedKeypoints)
   {
     doOrientation = true;
-    computeKeypointsNoOrientation(_image, _mask, keypoints);
+    computeKeypointsNoOrientation(image, mask, keypoints);
   }
 
   //Remove keypoints very close to the border
@@ -778,13 +784,6 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     }
   }
 
-  // first, calculate the integral image over the whole image:
-  // current integral image
-  cv::Mat _integral; // the integral image
-  cv::integral(image, _integral);
-
-  int* _values = new int[points_]; // for temporary use
-
   // resize the descriptors:
   cv::Mat descriptors;
   if (doDescriptors)
@@ -793,6 +792,17 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
     descriptors = _descriptors.getMat();
     descriptors.setTo(0);
   }
+
+  if (ksize == 0 || (!doOrientation && !doDescriptors))
+    return;
+
+  // first, calculate the integral image over the whole image:
+  // current integral image
+  cv::Mat _integral; // the integral image
+  cv::integral(image, _integral);
+
+  AutoBuffer<int, 64> _values_buf(points_);
+  int* _values = _values_buf.data(); // for temporary use
 
   // now do the extraction for all keypoints:
 
@@ -820,8 +830,8 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
         int direction0 = 0;
         int direction1 = 0;
         // now iterate through the long pairings
-        const BriskLongPair* max = longPairs_ + noLongPairs_;
-        for (BriskLongPair* iter = longPairs_; iter < max; ++iter)
+        const BriskLongPair* max = longPairs_.data() + noLongPairs_;
+        for (const BriskLongPair* iter = longPairs_.data(); iter < max; ++iter)
         {
           CV_Assert(iter->i < points_ && iter->j < points_);
           t1 = *(_values + iter->i);
@@ -876,8 +886,8 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
 
     // now iterate through all the pairings
     unsigned int* ptr2 = (unsigned int*) ptr;
-    const BriskShortPair* max = shortPairs_ + noShortPairs_;
-    for (BriskShortPair* iter = shortPairs_; iter < max; ++iter)
+    const BriskShortPair* max = shortPairs_.data() + noShortPairs_;
+    for (const BriskShortPair* iter = shortPairs_.data(); iter < max; ++iter)
     {
       CV_Assert(iter->i < points_ && iter->j < points_);
       t1 = *(_values + iter->i);
@@ -898,27 +908,24 @@ BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _ma
 
     ptr += strings_;
   }
-
-  // clean-up
-  delete[] _values;
 }
 
 
 BRISK_Impl::~BRISK_Impl()
 {
-  delete[] patternPoints_;
-  delete[] shortPairs_;
-  delete[] longPairs_;
-  delete[] scaleList_;
-  delete[] sizeList_;
 }
 
 void
 BRISK_Impl::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
 {
-  Mat image = _image.getMat(), mask = _mask.getMat();
-  if( image.type() != CV_8UC1 )
-      cvtColor(_image, image, COLOR_BGR2GRAY);
+  Mat src = _image.getMat(), mask = _mask.getMat();
+  Mat image;
+  if( src.type() != CV_8UC1 )
+      cvtColor(src, image, COLOR_BGR2GRAY);
+  else if( !src.isContinuous() )
+      image = src.clone();
+  else
+      image = src;
 
   BriskScaleSpace briskScaleSpace(octaves);
   briskScaleSpace.constructPyramid(image);
@@ -949,7 +956,7 @@ BriskScaleSpace::constructPyramid(const cv::Mat& image)
   pyramid_.clear();
 
   // fill the pyramid:
-  pyramid_.push_back(BriskLayer(image.clone()));
+  pyramid_.push_back(BriskLayer(image.isContinuous() ? image : image.clone()));
   if (layers_ > 1)
   {
     pyramid_.push_back(BriskLayer(pyramid_.back(), BriskLayer::CommonParams::TWOTHIRDSAMPLE));

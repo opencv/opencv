@@ -77,7 +77,8 @@ public:
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
             if (real_ndims_C == 1) { // (1,) or (N,)
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
+                const int c_elems = total(shape_C);
+                CV_Check(c_elems, c_elems == 1 || c_elems == N, "DNN/Gemm: invalid dimension of C");
             } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
                 // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
@@ -101,69 +102,62 @@ public:
         return false;
     }
 
-    // TODO: replace with cv::broadcast() once 1d mat is supported
-    // FIXME: fix if conditions if 1d mat is supported properly
-    void broadcastCWtihBeta(int M, int N, const Mat &C) {
-        if (beta != 0 && !C.empty()) {
-            broadcast_C.clear();
-            broadcast_C.resize(M * N, 0.f);
+    void writeCWithBetaToY(int M, int N, const Mat &C, float *ptr_y) const {
+        const size_t total = static_cast<size_t>(M) * static_cast<size_t>(N);
+        if (beta == 0.f || C.empty()) {
+            std::memset(ptr_y, 0, total * sizeof(float));
+            return;
+        }
 
-            const float *ptr_c = C.ptr<const float>();
-            const auto shape_C = shape(C);
-            if ((real_ndims_C == 0) || (real_ndims_C == 1 && shape_C[0] == 1) ||
-                (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
-                // (), (1,), (1, 1)
-                float c = *ptr_c;
-                int total = M * N;
-                for (int i = 0; i < total; ++i) {
-                    broadcast_C[i] = beta * c;
-                }
-            } else if ((real_ndims_C == 1 && shape_C[0] == N) ||
-                       (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
-                // (N,), (1, N)
+        const float *ptr_c = C.ptr<const float>();
+        const size_t c_total = C.total();
+        const auto shape_C = shape(C);
+        if ((real_ndims_C == 0) || (real_ndims_C == 1 && c_total == 1) ||
+            (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+            // (), (1,), (1, 1)
+            const float val = beta * (*ptr_c);
+            std::fill(ptr_y, ptr_y + total, val);
+        } else if ((real_ndims_C == 1 && c_total == static_cast<size_t>(N)) ||
+                   (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
+            // (N,), (1, N)
+            if (beta == 1.f) {
                 for (int i = 0; i < M; ++i) {
-                    int step = i * N;
-                    for (int j = 0; j < N; ++j) {
-                        broadcast_C[step + j] = beta * ptr_c[j];
-                    }
-                }
-            } else if (real_ndims_C == 2 && shape_C[0] == M && shape_C[1] == 1) {
-                // (M, 1)
-                for (int i = 0; i < M; ++i) {
-                    int step = i * N;
-                    for (int j = 0; j < N; ++j) {
-                        broadcast_C[step + j] = beta * ptr_c[i];
-                    }
+                    std::memcpy(ptr_y + static_cast<size_t>(i) * N, ptr_c, N * sizeof(float));
                 }
             } else {
-                // (M, N)
-                std::transform(ptr_c, ptr_c + M * N, broadcast_C.begin(), [this] (const float &c) {
-                    return this->beta * c; });
+                for (int j = 0; j < N; ++j) {
+                    ptr_y[j] = beta * ptr_c[j];
+                }
+                for (int i = 1; i < M; ++i) {
+                    std::memcpy(ptr_y + static_cast<size_t>(i) * N, ptr_y, N * sizeof(float));
+                }
+            }
+        } else if (real_ndims_C == 2 && shape_C[0] == M && shape_C[1] == 1) {
+            // (M, 1)
+            for (int i = 0; i < M; ++i) {
+                std::fill_n(ptr_y + static_cast<size_t>(i) * N, N, beta * ptr_c[i]);
+            }
+        } else {
+            // (M, N)
+            const size_t c_total = C.total();
+            CV_CheckGT(c_total, static_cast<size_t>(0), "DNN/Gemm: C is empty");
+            for (size_t off = 0; off < total; off += c_total) {
+                const size_t chunk = std::min(c_total, total - off);
+                for (size_t k = 0; k < chunk; ++k) {
+                    ptr_y[off + k] = beta * ptr_c[k];
+                }
             }
         }
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        CV_UNUSED(inputs_arr);
+        CV_UNUSED(outputs_arr);
         opt.init();
 
         // pack B if it is const
         if (const_B) {
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
-        }
-
-        // also pre-broadcast bias
-        if (const_C) {
-            const auto &C = blobs.back();
-
-            std::vector<Mat> outputs;
-            outputs_arr.getMatVector(outputs);
-            const auto &Y = outputs[0];
-            const auto shape_Y = shape(Y);
-            size_t dims_Y = shape_Y.size();
-            int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
-
-            // broadcast
-            broadcastCWtihBeta(M, N, C);
         }
     }
 
@@ -192,15 +186,10 @@ public:
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
 
-        // broadcast C and copy C to output
+        // broadcast C directly into output buffer without persistent scratch
         if (have_bias) {
-            if (!const_C) {
-                broadcastCWtihBeta(M, N, inputs.back());
-            }
-            int step = M * N;
-            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
-            float *ptr_y = Y.ptr<float>();
-            std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
+            const Mat &C = const_C ? blobs.back() : inputs.back();
+            writeCWithBetaToY(M, N, C, Y.ptr<float>());
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
@@ -369,7 +358,6 @@ private:
     bool const_C;
     bool have_bias;
     std::vector<float> packed_B;
-    std::vector<float> broadcast_C;
     int real_ndims_C;
     FastGemmOpt opt;
 };

@@ -59,10 +59,17 @@ struct DepthSpaceOps {
     }
 
     void cpuCompute(const Mat &input, Mat &output) {
-        const auto output_shape = shape(output);
-        Mat tmp;
-        cv::transposeND(input.reshape(1, internal_shape), permutation, tmp);
-        tmp.reshape(1, output_shape).copyTo(output);
+        if (input.data != output.data && output.isContinuous()) {
+            Mat out_reshaped = output.reshape(1, transposed_internal_shape);
+            CV_Assert(out_reshaped.data == output.data);
+            cv::transposeND(input.reshape(1, internal_shape), permutation, out_reshaped);
+            CV_Assert(out_reshaped.data == output.data);
+        } else {
+            const auto output_shape = shape(output);
+            Mat tmp;
+            cv::transposeND(input.reshape(1, internal_shape), permutation, tmp);
+            tmp.reshape(1, output_shape).copyTo(output);
+        }
     }
 
 #ifdef HAVE_OPENCL

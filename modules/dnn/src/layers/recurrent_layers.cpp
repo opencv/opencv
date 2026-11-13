@@ -60,6 +60,19 @@ namespace dnn
 template<typename Dtype>
 static void tanh(const Mat &src, Mat &dst)
 {
+    if (src.dims <= 2)
+    {
+        const int rows = src.rows;
+        const int cols = src.cols * src.channels();
+        for (int r = 0; r < rows; ++r)
+        {
+            const Dtype* sptr = src.ptr<Dtype>(r);
+            Dtype* dptr = dst.ptr<Dtype>(r);
+            for (int c = 0; c < cols; ++c)
+                dptr[c] = std::tanh(sptr[c]);
+        }
+        return;
+    }
     MatConstIterator_<Dtype> itSrc = src.begin<Dtype>();
     MatIterator_<Dtype> itDst = dst.begin<Dtype>();
 
@@ -80,10 +93,45 @@ static void tanh(const Mat &src, Mat &dst)
         CV_Error(Error::StsUnsupportedFormat, "Function supports only floating point types");
 }
 
+template<typename Dtype>
+static void sigmoidImpl(const Mat &src, Mat &dst)
+{
+    if (src.dims <= 2)
+    {
+        const int rows = src.rows;
+        const int cols = src.cols * src.channels();
+        for (int r = 0; r < rows; ++r)
+        {
+            const Dtype* sptr = src.ptr<Dtype>(r);
+            Dtype* dptr = dst.ptr<Dtype>(r);
+            for (int c = 0; c < cols; ++c)
+                dptr[c] = -sptr[c];
+        }
+        cv::exp(dst, dst);
+        for (int r = 0; r < rows; ++r)
+        {
+            Dtype* dptr = dst.ptr<Dtype>(r);
+            for (int c = 0; c < cols; ++c)
+                dptr[c] = Dtype(1) / (Dtype(1) + dptr[c]);
+        }
+        return;
+    }
+    MatConstIterator_<Dtype> itSrc = src.begin<Dtype>();
+    MatIterator_<Dtype> itDst = dst.begin<Dtype>();
+    for (; itSrc != src.end<Dtype>(); ++itSrc, ++itDst)
+        *itDst = Dtype(1) / (Dtype(1) + std::exp(-(*itSrc)));
+}
+
 static void sigmoid(const Mat &src, Mat &dst)
 {
-    cv::exp(-src, dst);
-    cv::pow(1 + dst, -1, dst);
+    dst.create(src.dims, (const int*)src.size, src.type());
+
+    if (src.type() == CV_32F)
+        sigmoidImpl<float>(src, dst);
+    else if (src.type() == CV_64F)
+        sigmoidImpl<double>(src, dst);
+    else
+        CV_Error(Error::StsUnsupportedFormat, "Function supports only floating point types");
 }
 
 typedef void (*ActivationFunction)(const Mat &src, Mat &dst);
@@ -145,9 +193,10 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useNEON;
 #endif
 
-    // CUDA needs input blobs to be rearranged in a specific way, but some transformations
-    // in ONNXImporter are destructive, so we keep a copy.
-    std::vector<Mat> originalBlobs;
+    // CUDA needs separate bx and bh before ONNXImporter sums them into b;
+    // Wx and Wh can be reconstructed directly from blobs[1] and blobs[0].
+    Mat originalBias;
+    bool isOnnx{false};
 
 public:
 
@@ -168,11 +217,12 @@ public:
     {
         setParamsFrom(params);
 
-        if (params.get<bool>("is_onnx", false))
+        isOnnx = params.get<bool>("is_onnx", false);
+        if (isOnnx)
         {
-            // collect copies of onnx blobs
-            originalBlobs.insert(originalBlobs.begin(), blobs.begin(), blobs.begin() + 3);
-            blobs.erase(blobs.begin(), blobs.begin() + 3);
+            CV_Assert(!blobs.empty());
+            originalBias = blobs[0];
+            blobs.erase(blobs.begin());
         }
 
         bidirectional = params.get<bool>("bidirectional", false);
@@ -333,7 +383,7 @@ public:
         if (produceCellOutput)
         {
             // the producer is ONNX, so CellState is different
-            if (!originalBlobs.empty())
+            if (isOnnx)
             {
                 int shp[] = {(1 + static_cast<int>(bidirectional)), _numSamples, numHidden};
                 MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
@@ -428,8 +478,10 @@ public:
             input[0] = tmp;
         }
 
-        Mat cOut = produceCellOutput ? output[0].clone() : Mat();
-        const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
+        const bool needYcTransform = isOnnx; // if the producer is onnx
+        const bool directCellOut = produceCellOutput && !needYcTransform;
+        const bool streamOnnxCellOut = produceCellOutput && needYcTransform && (layout == SEQ_BATCH_HID);
+        Mat cOut = (produceCellOutput && !directCellOut && !streamOnnxCellOut) ? output[0].clone() : Mat();
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
         {
@@ -487,7 +539,12 @@ public:
             Mat hOutTs = output[0].reshape(1, numSamplesTotal);
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
             Mat cOutTs;
-            if (produceCellOutput)
+            if (directCellOut)
+            {
+                cOutTs = output[1].reshape(1, numSamplesTotal);
+                cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
+            }
+            else if (produceCellOutput && !streamOnnxCellOut)
             {
                 cOutTs = cOut.reshape(1, numSamplesTotal);
                 cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
@@ -724,7 +781,22 @@ public:
                 //save results in output blobs
                 hInternal.copyTo(hOutTs.rowRange(curRowRange));
                 if (produceCellOutput)
-                    cInternal.copyTo(cOutTs.rowRange(curRowRange));
+                {
+                    if (streamOnnxCellOut)
+                    {
+                        const int targetTs = (i == 0) ? (numTimeStamps - 1) : 0;
+                        if (ts == targetTs)
+                        {
+                            Mat ycDst = output[1].reshape(1, numDirs * numSamples)
+                                                 .rowRange(i * numSamples, (i + 1) * numSamples);
+                            cInternal.copyTo(ycDst);
+                        }
+                    }
+                    else
+                    {
+                        cInternal.copyTo(cOutTs.rowRange(curRowRange));
+                    }
+                }
             }
         }
         // transpose to match batch first output
@@ -733,12 +805,10 @@ public:
             cv::transposeND(output[0], {1, 0, 2}, tmp);
             output[0] = tmp;
         }
-        if (needYcTransform && produceCellOutput)
+        if (produceCellOutput && !directCellOut && !streamOnnxCellOut)
         {
-            fixCellState(cOut, numDirs);
-        }
-        if (produceCellOutput)
-        {
+            if (needYcTransform)
+                fixCellState(cOut, numDirs);
             cOut.copyTo(output[1]);
         }
     }
@@ -795,11 +865,20 @@ public:
     Ptr<BackendNode> initCUDA(void *context_, const std::vector<Ptr<BackendWrapper>> &inputs,
                               const std::vector<Ptr<BackendWrapper>> &outputs) override
     {
+        CV_Assert(isOnnx && !originalBias.empty());
         const int numDirs = 1 + static_cast<int>(bidirectional);
-        auto toIFCO = [numDirs] (Mat& in) {
+        auto ifocToIFCO = [numDirs] (Mat& in) {
+            int rest = static_cast<int>(in.total() / numDirs / 4);
+            Mat m = in.reshape(1, {numDirs, 4, rest});
+            Mat outputGate = m.col(2);
+            Mat cellGate = m.col(3);
+            // IFOC -> IFCO
+            std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), cellGate.begin<float>());
+            in = in.reshape(1, numDirs);
+        };
+        auto iofcToIFCO = [numDirs] (Mat& in) {
             int first = in.size[0];
-            int rest = in.total() / first / 4;
-            // every weight blob contains weights for Input, Output, Forget and Cell gates
+            int rest = static_cast<int>(in.total() / first / 4);
             Mat m = in.reshape(1, {first, 4, rest});
             Mat outputGate = m.col(1);
             Mat forgetGate = m.col(2);
@@ -812,28 +891,25 @@ public:
             in = in.reshape(1, numDirs);
         };
 
-        Mat& b = originalBlobs[2];
-        // B is a concatenation of biases for Wh and Wx
-        b = b.reshape(1, originalBlobs[2].size[0]*2);
+        Mat Wx_cuda = blobs[1].clone();
+        Mat Wh_cuda = blobs[0].clone();
+        Mat b_cuda = originalBias.clone().reshape(1, originalBias.size[0] * 2);
 
-        for (auto& m : originalBlobs)
-        {
-            toIFCO(m);
-        }
-
-        b = b.reshape(1, static_cast<int>(b.total()));
+        ifocToIFCO(Wx_cuda);
+        ifocToIFCO(Wh_cuda);
+        iofcToIFCO(b_cuda);
+        b_cuda = b_cuda.reshape(1, static_cast<int>(b_cuda.total()));
 
         Mat ordered_weights;
         // Wx_f, Wh_f, [Wx_b, Wh_b,] b
         for (int i = 0; i < numDirs; ++i)
         {
-            for (size_t j = 0; j < 2; ++j) // Wx, Wh
-            {
-                Mat oneDirection = originalBlobs[j].row(i);
-                ordered_weights.push_back(oneDirection.reshape(1, static_cast<int>(oneDirection.total())));
-            }
+            Mat oneWx = Wx_cuda.row(i);
+            ordered_weights.push_back(oneWx.reshape(1, static_cast<int>(oneWx.total())));
+            Mat oneWh = Wh_cuda.row(i);
+            ordered_weights.push_back(oneWh.reshape(1, static_cast<int>(oneWh.total())));
         }
-        ordered_weights.push_back(b);
+        ordered_weights.push_back(b_cuda);
 
         // Pass hidden states as is
         Mat h0 = blobs[3];
@@ -1048,6 +1124,24 @@ CV_EXPORTS_W Ptr<RNNLayer> RNNLayer::create(const LayerParams& params)
     return Ptr<RNNLayer>(new RNNLayerImpl(params));
 }
 
+template<typename Dtype>
+static void gruBlendHidden(const Mat& z, const Mat& n_t, Mat& hInternal)
+{
+    const int rows = hInternal.rows;
+    const int cols = hInternal.cols;
+    for (int r = 0; r < rows; ++r)
+    {
+        const Dtype* zptr = z.ptr<Dtype>(r);
+        const Dtype* nptr = n_t.ptr<Dtype>(r);
+        Dtype* hptr = hInternal.ptr<Dtype>(r);
+        for (int c = 0; c < cols; ++c)
+        {
+            const Dtype zval = zptr[c];
+            hptr[c] = zval * hptr[c] + (Dtype(1) - zval) * nptr[c];
+        }
+    }
+}
+
 class GRULayerImpl CV_FINAL : public GRULayer
 {
     int numTimeStamps, numSamples;
@@ -1056,6 +1150,7 @@ class GRULayerImpl CV_FINAL : public GRULayer
     MatShape outTailShape;  //shape of single output sample
     MatShape outTsShape;    //shape of N output samples
     bool bidirectional;     // If true, produces both forward and reversed directions along time axis
+    Mat b_rz_precomp;
 
 public:
 
@@ -1120,9 +1215,7 @@ public:
         internals.assign(1, shape(_numSamples, _numOut));     // hInternal
         internals.push_back(shape(_numSamples, 1));           // dummyOnes
         internals.push_back(shape(_numSamples, 2 * _numOut)); // gates
-        internals.push_back(shape(_numSamples, 2 * _numOut)); // gates_b
         internals.push_back(shape(_numSamples, 1 * _numOut)); // h_linear
-        internals.push_back(shape(_numSamples, _numOut));     // ones
 
         return false;
     }
@@ -1152,6 +1245,16 @@ public:
         outTsShape.push_back(numSamples);
         outTsShape.insert(outTsShape.end(), outTailShape.begin(), outTailShape.end());
         outTsShape.back() *= (1 + static_cast<int>(bidirectional));
+
+        const int numDirs = 1 + static_cast<int>(bidirectional);
+        b_rz_precomp.create(numDirs, 2 * numOut, blobs[2].type());
+        for (int i = 0; i < numDirs; ++i)
+        {
+            const Mat bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
+            const Mat bx = bias.colRange(0, bias.cols / 2);
+            const Mat bh = bias.colRange(bias.cols / 2, bias.cols);
+            cv::add(bx.colRange(0, 2 * numOut), bh.colRange(0, 2 * numOut), b_rz_precomp.row(i));
+        }
 
         allocated = true;
     }
@@ -1184,15 +1287,14 @@ public:
             const Mat &bh = bias.colRange(bias.cols / 2, bias.cols);
 
             Mat hInternal = internals[0], dummyOnes = internals[1], gates = internals[2],
-                b_rz = internals[3], n_t = internals[4], ones = internals[5];
+                n_t = internals[3];
             h_0.copyTo(hInternal);
             dummyOnes.setTo(1.);
-            ones.setTo(1.);
 
             int numOut = Wh.size[1];
             const Mat& wx_rz = Wx.rowRange(0, 2 * numOut);
             const Mat& wh_rz = Wh.rowRange(0, 2 * numOut);
-            b_rz = bx.colRange(0, 2 * numOut) + bh.colRange(0, 2 * numOut);
+            const Mat b_rz = b_rz_precomp.row(i);
             const Mat& wx_n = Wx.rowRange(2 * numOut, 3 * numOut);
             const Mat& wh_n = Wh.rowRange(2 * numOut, 3 * numOut);
             const Mat& b_in = bx.colRange(2 * numOut, 3 * numOut);
@@ -1203,7 +1305,6 @@ public:
 
             Mat hOutTs = output[0].reshape(1, numSamplesTotal);
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
-            Mat cOutTs = Mat();
 
             int tsStart, tsEnd, tsInc;
             if (i == 1) {
@@ -1240,11 +1341,13 @@ public:
                 gemm(dummyOnes, b_in, 1, n_t, 1, n_t);                // + b_in
                 tanh(n_t, n_t);                                       // tanh()
 
-                //compute next h_t = z (*) h_(t-1) + (1 - z) (*) n_t
-                multiply(z, hInternal, hInternal);                    // z (*) h_{t-1}
-                subtract(ones, z, z);                                 // 1 - z
-                multiply(z, n_t, z);                                  // (1 - z) * n
-                add(z, hInternal, hInternal);                         // z (*) h_(t-1) + (1 - z) (*) n_t
+                // compute next h_t = z (*) h_(t-1) + (1 - z) (*) n_t in-place
+                if (hInternal.type() == CV_32F)
+                    gruBlendHidden<float>(z, n_t, hInternal);
+                else if (hInternal.type() == CV_64F)
+                    gruBlendHidden<double>(z, n_t, hInternal);
+                else
+                    CV_Error(Error::StsUnsupportedFormat, "GRU supports only floating point types");
 
                 //save results in output blobs
                 hInternal.copyTo(hOutTs.rowRange(curRowRange));

@@ -97,7 +97,7 @@ public:
             CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
             CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
 
-            blobs[0].copyTo(oriMat);
+            oriMat = blobs[0];
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;
             if (vecsize % VEC_ALIGN != 0)

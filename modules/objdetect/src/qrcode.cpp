@@ -126,7 +126,8 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!src.empty());
-    barcode = src.clone();
+    // only read below (or replaced by a resized copy): no need to copy the input
+    barcode = src;
     const double min_side = std::min(src.size().width, src.size().height);
     if (min_side < 512.0)
     {
@@ -533,7 +534,7 @@ bool QRDetect::localization()
         Size new_size(width, height);
         Mat intermediate;
         resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
-        bin_barcode = intermediate.clone();
+        bin_barcode = intermediate;
         for (size_t i = 0; i < localization_points.size(); i++)
         {
             localization_points[i] *= coeff_expansion;
@@ -546,7 +547,7 @@ bool QRDetect::localization()
         Size new_size(width, height);
         Mat intermediate;
         resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
-        bin_barcode = intermediate.clone();
+        bin_barcode = intermediate;
         for (size_t i = 0; i < localization_points.size(); i++)
         {
             localization_points[i] /= coeff_expansion;
@@ -574,9 +575,10 @@ bool QRDetect::computeTransformationPoints()
 
     vector<Point> locations, non_zero_elem[3], newHull;
     vector<Point2f> new_non_zero_elem[3];
+    Mat mask(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
     for (size_t i = 0; i < 3; i++)
     {
-        Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
+        mask.setTo(0);
         uint8_t next_pixel, future_pixel = 255;
         int count_test_lines = 0, index_c = max(0, min(cvRound(localization_points[i].x), bin_barcode.cols - 1));
         const int index_r = max(0, min(cvRound(localization_points[i].y), bin_barcode.rows - 1));
@@ -731,7 +733,6 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     size_t angle_size = angle_list.size();
     uint8_t value, mask_value;
     Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
-    Mat fill_bin_barcode = bin_barcode.clone();
     for (size_t i = 0; i < angle_size; i++)
     {
         LineIterator line_iter(bin_barcode, angle_list[ i      % angle_size],
@@ -743,7 +744,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
             mask_value = mask.at<uint8_t>(p + Point(1, 1));
             if (value == 0 && mask_value == 0)
             {
-                floodFill(fill_bin_barcode, mask, p, 255,
+                floodFill(bin_barcode, mask, p, 255,
                           0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
             }
         }
@@ -1102,7 +1103,7 @@ protected:
     bool preparingCurvedQRCodes();
 
     const static int NUM_SIDES = 2;
-    Mat original, bin_barcode, no_border_intermediate, intermediate, straight, curved_to_straight, test_image;
+    Mat bin_barcode, no_border_intermediate, intermediate, straight, curved_to_straight;
     vector<Point2f> original_points;
     Mat homography;
     vector<Point2f> original_curved_points;
@@ -1163,10 +1164,8 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
     CV_TRACE_FUNCTION();
     vector<Point2f> bbox = points;
-    original = src.clone();
-    test_image = src.clone();
-    adaptiveThreshold(original, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
-    intermediate = Mat::zeros(original.size(), CV_8UC1);
+    adaptiveThreshold(src, bin_barcode, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
+    intermediate.release();
     original_points = bbox;
     version = 0;
     version_size = 0;
@@ -1213,8 +1212,8 @@ void QRDecode::getPointsInsideQRCode(const vector<Point2f> &angle_list)
 
     vector<Point> locations;
     findNonZero(contour_mask, locations);
+    contour_mask.release();
 
-    Mat fill_bin_barcode = bin_barcode.clone();
     Mat qrcode_mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
     uint8_t value, mask_value;
     for(size_t i = 0; i < locations.size(); i++)
@@ -1223,7 +1222,7 @@ void QRDecode::getPointsInsideQRCode(const vector<Point2f> &angle_list)
         mask_value = qrcode_mask.at<uint8_t>(locations[i] + Point(1, 1));
         if (value == 0 && mask_value == 0)
         {
-            floodFill(fill_bin_barcode, qrcode_mask, locations[i], 255,
+            floodFill(bin_barcode, qrcode_mask, locations[i], 255,
                       0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
         }
     }
@@ -1615,17 +1614,14 @@ Point QRDecode::findClosestZeroPoint(Point2f original_point)
 Mat QRDecode::getPatternsMask()
 {
     Mat mask(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1, Scalar(0));
-    Mat patterns_mask(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1, Scalar(0));
-    Mat fill_bin_barcode = bin_barcode.clone();
     for (size_t i = 0; i < original_points.size(); i++)
     {
         if (i == 2) continue;
         Point p = findClosestZeroPoint(original_points[i]);
-        floodFill(fill_bin_barcode, mask, p, 255,
-                        0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
-        patterns_mask += mask;
+        floodFill(bin_barcode, mask, p, 255,
+                        0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY | (255 << 8));
     }
-    Mat mask_roi = patterns_mask(Range(1, bin_barcode.rows - 1), Range(1, bin_barcode.cols - 1));
+    Mat mask_roi = mask(Range(1, bin_barcode.rows - 1), Range(1, bin_barcode.cols - 1));
 
     return mask_roi;
 }
@@ -3604,7 +3600,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         Size new_size(width, height);
         Mat intermediate;
         resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
-        bin_barcode = intermediate.clone();
+        bin_barcode = intermediate;
     }
     else if (purpose == ZOOMING)
     {
@@ -3613,7 +3609,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         Size new_size(width, height);
         Mat intermediate;
         resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
-        bin_barcode = intermediate.clone();
+        bin_barcode = intermediate;
     }
     else
     {

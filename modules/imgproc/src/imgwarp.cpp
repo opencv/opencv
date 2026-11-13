@@ -3428,8 +3428,8 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         int phi, rho;
 
         // precalculate scaled rho
-        Mat rhos = Mat(1, dsize.width, CV_32F);
-        float* bufRhos = (float*)(rhos.data);
+        AutoBuffer<float, 4096> rhos(dsize.width);
+        float* bufRhos = rhos.data();
         if (semiLog)
         {
             double Kmag = std::log(maxRadius) / dsize.width;
@@ -3478,22 +3478,21 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         else
             Kmag = maxRadius / ssize.width;
 
-        Mat bufx, bufy, bufp, bufa;
-
-        bufx = Mat(1, dsize.width, CV_32F);
-        bufy = Mat(1, dsize.width, CV_32F);
-        bufp = Mat(1, dsize.width, CV_32F);
-        bufa = Mat(1, dsize.width, CV_32F);
+        AutoBuffer<float, 4096> bufx_mem(dsize.width);
+        Mat bufx(1, dsize.width, CV_32F, bufx_mem.data());
 
         for (int x = 0; x < dsize.width; x++)
             bufx.at<float>(0, x) = (float)x - center.x;
 
+        const double nstripes = std::max(1, cv::getNumThreads() * 4);
         cv::parallel_for_(cv::Range(0, dsize.height), [&](const cv::Range& range) {
+            // one row buffer per stripe; cartToPolar writes directly into the destination map rows
+            const Mat& local_bufx = bufx;
+            AutoBuffer<float, 4096> bufy_mem(dsize.width);
+            Mat local_bufy(1, dsize.width, CV_32F, bufy_mem.data());
             for (int y = range.start; y < range.end; ++y) {
-               Mat local_bufx = bufx.clone();
-               Mat local_bufy = Mat(1, dsize.width, CV_32F);
-               Mat local_bufp = Mat(1, dsize.width, CV_32F);
-               Mat local_bufa = Mat(1, dsize.width, CV_32F);
+                Mat local_bufp = mapx.row(y);
+                Mat local_bufa = mapy.row(y);
 
                 for (int x = 0; x < dsize.width; x++) {
                     local_bufy.at<float>(0, x) = static_cast<float>(y) - center.y;
@@ -3510,13 +3509,13 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 float* my = (float*)(mapy.data + y * mapy.step);
 
                 for (int x = 0; x < dsize.width; x++) {
-                    double rho = local_bufp.at<float>(0, x) / Kmag;
-                    double phi = local_bufa.at<float>(0, x) / Kangle;
+                    double rho = mx[x] / Kmag;
+                    double phi = my[x] / Kangle;
                     mx[x] = static_cast<float>(rho);
                     my[x] = static_cast<float>(phi) + ANGLE_BORDER;
                 }
             }
-        });
+        }, nstripes);
 
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
               (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);

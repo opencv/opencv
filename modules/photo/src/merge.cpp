@@ -478,103 +478,166 @@ public:
         Size size = images[0].size();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
+        auto fastPow = [](float v, float p) -> float {
+            if (p == 0.0f) return 1.0f;
+            if (p == 1.0f) return v;
+            return std::pow(v, p);
+        };
+
         std::vector<Mat> weights(images.size());
         Mat weight_sum = Mat::zeros(size, CV_32F);
-        Mutex weight_sum_mutex;
+        Mat img, gray, contrast;
+        const float third = 1.0f / 3.0f;
+        const float invTwoVar = 1.0f / 0.08f;
 
-        parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
-            for(int i = range.start; i < range.end; i++) {
-                Mat img, gray, contrast, saturation, wellexp;
-                std::vector<Mat> splitted(channels);
-
-                images[i].convertTo(img, CV_32F, 1.0f/255.0f);
-                if(channels == 3) {
-                    cvtColor(img, gray, COLOR_RGB2GRAY);
-                } else {
-                    img.copyTo(gray);
-                }
-                images[i] = img;
-                split(img, splitted);
-
-                Laplacian(gray, contrast, CV_32F);
-                contrast = abs(contrast);
-
-                Mat mean = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    mean += splitted[c];
-                }
-                mean /= channels;
-
-                saturation = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels;  c++) {
-                    Mat deviation = splitted[c] - mean;
-                    pow(deviation, 2.0f, deviation);
-                    saturation += deviation;
-                }
-                sqrt(saturation, saturation);
-
-                wellexp = Mat::ones(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    Mat expo = splitted[c] - 0.5f;
-                    pow(expo, 2.0f, expo);
-                    expo = -expo / 0.08f;
-                    exp(expo, expo);
-                    wellexp = wellexp.mul(expo);
-                }
-
-                pow(contrast, wcon, contrast);
-                pow(saturation, wsat, saturation);
-                pow(wellexp, wexp, wellexp);
-
-                weights[i] = contrast;
-                if(channels == 3) {
-                    weights[i] = weights[i].mul(saturation);
-                }
-                weights[i] = weights[i].mul(wellexp) + 1e-12f;
-
-                AutoLock lock(weight_sum_mutex);
-                weight_sum += weights[i];
+        for(size_t i = 0; i < images.size(); i++) {
+            images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+            if(channels == 3) {
+                cvtColor(img, gray, COLOR_RGB2GRAY);
+            } else {
+                gray = img;
             }
-        });
+
+            Laplacian(gray, contrast, CV_32F);
+
+            weights[i].create(size, CV_32F);
+            parallel_for_(Range(0, size.height), [&](const Range& range) {
+                for(int y = range.start; y < range.end; y++) {
+                    const float* cPtr = contrast.ptr<float>(y);
+                    const float* imgPtr = img.ptr<float>(y);
+                    float* wPtr = weights[i].ptr<float>(y);
+                    float* wsPtr = weight_sum.ptr<float>(y);
+                    if(channels == 3) {
+                        for(int x = 0; x < size.width; x++) {
+                            const float b = imgPtr[3 * x];
+                            const float g = imgPtr[3 * x + 1];
+                            const float r = imgPtr[3 * x + 2];
+                            const float mean = (b + g + r) * third;
+                            const float db = b - mean;
+                            const float dg = g - mean;
+                            const float dr = r - mean;
+                            const float sat = std::sqrt(db * db + dg * dg + dr * dr);
+
+                            const float eb = b - 0.5f;
+                            const float eg = g - 0.5f;
+                            const float er = r - 0.5f;
+                            const float wexpVal = std::exp(-(eb * eb + eg * eg + er * er) * invTwoVar);
+
+                            const float w = fastPow(std::fabs(cPtr[x]), wcon)
+                                          * fastPow(sat, wsat)
+                                          * fastPow(wexpVal, wexp)
+                                          + 1e-12f;
+                            wPtr[x] = w;
+                            wsPtr[x] += w;
+                        }
+                    } else {
+                        for(int x = 0; x < size.width; x++) {
+                            const float v = imgPtr[x] - 0.5f;
+                            const float wexpVal = std::exp(-(v * v) * invTwoVar);
+                            const float w = fastPow(std::fabs(cPtr[x]), wcon)
+                                          * fastPow(wexpVal, wexp)
+                                          + 1e-12f;
+                            wPtr[x] = w;
+                            wsPtr[x] += w;
+                        }
+                    }
+                }
+            });
+        }
+        gray.release();
+        contrast.release();
 
         int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
         std::vector<Mat> res_pyr(maxlevel + 1);
-        std::vector<Mutex> res_pyr_mutexes(maxlevel + 1);
+        std::vector<Mat> img_pyr, weight_pyr;
+        Mat up;
 
-        parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
-            for(int i = range.start; i < range.end; i++) {
-                weights[i] /= weight_sum;
-
-                std::vector<Mat> img_pyr, weight_pyr;
-                buildPyramid(images[i], img_pyr, maxlevel);
-                buildPyramid(weights[i], weight_pyr, maxlevel);
-
-                for(int lvl = 0; lvl < maxlevel; lvl++) {
-                    Mat up;
-                    pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
-                    img_pyr[lvl] -= up;
-                }
-                for(int lvl = 0; lvl <= maxlevel; lvl++) {
-                    std::vector<Mat> splitted(channels);
-                    split(img_pyr[lvl], splitted);
-                    for(int c = 0; c < channels; c++) {
-                        splitted[c] = splitted[c].mul(weight_pyr[lvl]);
-                    }
-                    merge(splitted, img_pyr[lvl]);
-
-                    AutoLock lock(res_pyr_mutexes[lvl]);
-                    if(res_pyr[lvl].empty()) {
-                        res_pyr[lvl] = img_pyr[lvl];
-                    } else {
-                        res_pyr[lvl] += img_pyr[lvl];
-                    }
-                }
+        for(size_t i = 0; i < images.size(); i++) {
+            images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+            weights[i] /= weight_sum;
+            if(i + 1 == images.size()) {
+                weight_sum.release();
             }
-        });
+
+            buildPyramid(img, img_pyr, maxlevel);
+            buildPyramid(weights[i], weight_pyr, maxlevel);
+            weights[i].release();
+
+            const bool initRes = (i == 0);
+            for(int lvl = 0; lvl <= maxlevel; lvl++) {
+                const Size lsz = img_pyr[lvl].size();
+                if(initRes) {
+                    res_pyr[lvl].create(lsz, CV_32FCC);
+                }
+                const bool hasUp = (lvl < maxlevel);
+                if(hasUp) {
+                    pyrUp(img_pyr[lvl + 1], up, lsz);
+                }
+                parallel_for_(Range(0, lsz.height), [&](const Range& range) {
+                    for(int y = range.start; y < range.end; y++) {
+                        const float* imgPtr = img_pyr[lvl].ptr<float>(y);
+                        const float* upPtr = hasUp ? up.ptr<float>(y) : 0;
+                        const float* wPtr = weight_pyr[lvl].ptr<float>(y);
+                        float* rPtr = res_pyr[lvl].ptr<float>(y);
+                        if(channels == 3) {
+                            if(hasUp) {
+                                for(int x = 0; x < lsz.width; x++) {
+                                    const float w = wPtr[x];
+                                    const int idx = 3 * x;
+                                    const float v0 = (imgPtr[idx] - upPtr[idx]) * w;
+                                    const float v1 = (imgPtr[idx + 1] - upPtr[idx + 1]) * w;
+                                    const float v2 = (imgPtr[idx + 2] - upPtr[idx + 2]) * w;
+                                    if(initRes) {
+                                        rPtr[idx] = v0;
+                                        rPtr[idx + 1] = v1;
+                                        rPtr[idx + 2] = v2;
+                                    } else {
+                                        rPtr[idx] += v0;
+                                        rPtr[idx + 1] += v1;
+                                        rPtr[idx + 2] += v2;
+                                    }
+                                }
+                            } else {
+                                for(int x = 0; x < lsz.width; x++) {
+                                    const float w = wPtr[x];
+                                    const int idx = 3 * x;
+                                    if(initRes) {
+                                        rPtr[idx] = imgPtr[idx] * w;
+                                        rPtr[idx + 1] = imgPtr[idx + 1] * w;
+                                        rPtr[idx + 2] = imgPtr[idx + 2] * w;
+                                    } else {
+                                        rPtr[idx] += imgPtr[idx] * w;
+                                        rPtr[idx + 1] += imgPtr[idx + 1] * w;
+                                        rPtr[idx + 2] += imgPtr[idx + 2] * w;
+                                    }
+                                }
+                            }
+                        } else {
+                            if(hasUp) {
+                                for(int x = 0; x < lsz.width; x++) {
+                                    const float v = (imgPtr[x] - upPtr[x]) * wPtr[x];
+                                    rPtr[x] = initRes ? v : (rPtr[x] + v);
+                                }
+                            } else {
+                                for(int x = 0; x < lsz.width; x++) {
+                                    const float v = imgPtr[x] * wPtr[x];
+                                    rPtr[x] = initRes ? v : (rPtr[x] + v);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        img.release();
+        up.release();
+        img_pyr.clear();
+        weight_pyr.clear();
+
         for(int lvl = maxlevel; lvl > 0; lvl--) {
-            Mat up;
-            pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
-            res_pyr[lvl - 1] += up;
+            Mat levelUp;
+            pyrUp(res_pyr[lvl], levelUp, res_pyr[lvl - 1].size());
+            res_pyr[lvl - 1] += levelUp;
         }
         dst.create(size, CV_32FCC);
         res_pyr[0].copyTo(dst);
