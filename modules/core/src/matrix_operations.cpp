@@ -167,7 +167,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _m.dims() <= 2 );
+    CV_Assert( _m.dims() == 2 );
 
     CV_OCL_RUN(_m.isUMat(),
                ocl_setIdentity(_m, s))
@@ -205,18 +205,7 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
     else
     {
         m = Scalar(0);
-        if( m.dims == 0 )
-        {
-            if( !m.empty() )
-                m = s;
-        }
-        else if( m.dims == 1 )
-        {
-            if( !m.empty() )
-                m.col(0) = s;
-        }
-        else
-            m.diag() = s;
+        m.diag() = s;
     }
 }
 
@@ -244,7 +233,7 @@ cv::Scalar cv::trace( InputArray _m )
     CV_INSTRUMENT_REGION();
 
     Mat m = _m.getMat();
-    CV_Assert( m.dims <= 2 );
+    CV_Assert( m.dims == 2 );
     int type = m.type();
     int nm = std::min(m.rows, m.cols);
 
@@ -267,12 +256,6 @@ cv::Scalar cv::trace( InputArray _m )
             _s += ptr[i*step];
         return _s;
     }
-
-    if( m.dims == 0 )
-        return m.empty() ? Scalar() : cv::sum(m);
-
-    if( m.dims == 1 )
-        return m.empty() ? Scalar() : cv::sum(m.col(0));
 
     return cv::sum(m.diag());
 }

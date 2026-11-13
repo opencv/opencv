@@ -2512,162 +2512,52 @@ TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 
-TEST(Core_Trace, one_dimensional)
+TEST(Core_Trace, non_2d_assert)
 {
+    // 1D matrices must throw an assertion error
     {
         std::vector<uchar> v = {10, 20, 30};
         Mat m(v);
-        Scalar tr = cv::trace(m);
-        EXPECT_EQ(tr[0], 10.0);
-    }
-    {
-        std::vector<int> v = {42, 100, 200};
-        Mat m(v);
-        Scalar tr = cv::trace(m);
-        EXPECT_EQ(tr[0], 42.0);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
     }
     {
         std::vector<float> v = {3.5f, 1.0f};
         Mat m(v);
-        Scalar tr = cv::trace(m);
-        EXPECT_FLOAT_EQ((float)tr[0], 3.5f);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
     }
-    {
-        std::vector<double> v = {7.25, 2.5};
-        Mat m(v);
-        Scalar tr = cv::trace(m);
-        EXPECT_DOUBLE_EQ(tr[0], 7.25);
-    }
-    {
-        std::vector<Vec3b> v = {Vec3b(1, 2, 3), Vec3b(4, 5, 6)};
-        Mat m(v);
-        Scalar tr = cv::trace(m);
-        EXPECT_EQ(tr, Scalar(1, 2, 3, 0));
-    }
-    {
-        std::vector<int> empty_v;
-        Mat m(empty_v);
-        EXPECT_EQ(cv::trace(m), Scalar());
-    }
-    {
-        Mat m;
-        EXPECT_EQ(cv::trace(m), Scalar());
-    }
-}
-
-TEST(Core_SetIdentity, one_dimensional)
-{
     {
         int sz[] = {4};
-        Mat m(1, sz, CV_8UC1, Scalar(255));
-        cv::setIdentity(m, Scalar(5));
-        EXPECT_EQ(m.at<uchar>(0), 5);
-        EXPECT_EQ(m.at<uchar>(1), 0);
-        EXPECT_EQ(m.at<uchar>(2), 0);
-        EXPECT_EQ(m.at<uchar>(3), 0);
+        Mat m(1, sz, CV_32SC1);
+        EXPECT_THROW(cv::trace(m), cv::Exception);
     }
-    {
-        int sz[] = {3};
-        Mat m(1, sz, CV_32SC1, Scalar(99));
-        cv::setIdentity(m, Scalar(17));
-        EXPECT_EQ(m.at<int>(0), 17);
-        EXPECT_EQ(m.at<int>(1), 0);
-        EXPECT_EQ(m.at<int>(2), 0);
-    }
-    {
-        int sz[] = {3};
-        Mat m(1, sz, CV_32FC1, Scalar(99));
-        cv::setIdentity(m, Scalar(1.5f));
-        EXPECT_FLOAT_EQ(m.at<float>(0), 1.5f);
-        EXPECT_FLOAT_EQ(m.at<float>(1), 0.0f);
-        EXPECT_FLOAT_EQ(m.at<float>(2), 0.0f);
-    }
-    {
-        int sz[] = {3};
-        Mat m(1, sz, CV_64FC1, Scalar(99));
-        cv::setIdentity(m, Scalar(2.5));
-        EXPECT_DOUBLE_EQ(m.at<double>(0), 2.5);
-        EXPECT_DOUBLE_EQ(m.at<double>(1), 0.0);
-        EXPECT_DOUBLE_EQ(m.at<double>(2), 0.0);
-    }
-    {
-        int sz[] = {2};
-        Mat m(1, sz, CV_8UC3, Scalar::all(99));
-        cv::setIdentity(m, Scalar(1, 2, 3));
-        EXPECT_EQ(m.at<Vec3b>(0), Vec3b(1, 2, 3));
-        EXPECT_EQ(m.at<Vec3b>(1), Vec3b(0, 0, 0));
-    }
-    {
-        std::vector<int> empty_v;
-        Mat m(empty_v);
-        EXPECT_NO_THROW(cv::setIdentity(m, Scalar(1)));
-    }
-    {
-        Mat m;
-        EXPECT_NO_THROW(cv::setIdentity(m, Scalar(1)));
-    }
-}
 
-TEST(Core_Trace, zero_dimensional)
-{
-    {
-        uchar val = 25;
-        Mat m(0, (const int*)nullptr, CV_8U, &val);
-        EXPECT_EQ(cv::trace(m)[0], 25.0);
-    }
+    // 0D matrices must throw an assertion error
     {
         int val = 42;
         Mat m(0, (const int*)nullptr, CV_32S, &val);
-        EXPECT_EQ(cv::trace(m)[0], 42.0);
-    }
-    {
-        float val = 3.5f;
-        Mat m(0, (const int*)nullptr, CV_32F, &val);
-        EXPECT_FLOAT_EQ((float)cv::trace(m)[0], 3.5f);
-    }
-    {
-        double val = 7.25;
-        Mat m(0, (const int*)nullptr, CV_64F, &val);
-        EXPECT_DOUBLE_EQ(cv::trace(m)[0], 7.25);
-    }
-    {
-        Vec3b val(1, 2, 3);
-        Mat m(0, (const int*)nullptr, CV_8UC3, &val);
-        EXPECT_EQ(cv::trace(m), Scalar(1, 2, 3, 0));
+        EXPECT_THROW(cv::trace(m), cv::Exception);
     }
 }
 
-TEST(Core_SetIdentity, zero_dimensional)
+TEST(Core_SetIdentity, non_2d_assert)
 {
+    // 1D matrices must throw an assertion error
     {
-        uchar val = 0;
-        Mat m(0, (const int*)nullptr, CV_8U, &val);
-        cv::setIdentity(m, Scalar(5));
-        EXPECT_EQ(val, 5);
+        int sz[] = {4};
+        Mat m(1, sz, CV_8UC1);
+        EXPECT_THROW(cv::setIdentity(m, Scalar(5)), cv::Exception);
     }
+    {
+        int sz[] = {3};
+        Mat m(1, sz, CV_32FC1);
+        EXPECT_THROW(cv::setIdentity(m, Scalar(1.5f)), cv::Exception);
+    }
+
+    // 0D matrices must throw an assertion error
     {
         int val = 0;
         Mat m(0, (const int*)nullptr, CV_32S, &val);
-        cv::setIdentity(m, Scalar(17));
-        EXPECT_EQ(val, 17);
-    }
-    {
-        float val = 0.0f;
-        Mat m(0, (const int*)nullptr, CV_32F, &val);
-        cv::setIdentity(m, Scalar(1.5f));
-        EXPECT_FLOAT_EQ(val, 1.5f);
-    }
-    {
-        double val = 0.0;
-        Mat m(0, (const int*)nullptr, CV_64F, &val);
-        cv::setIdentity(m, Scalar(2.5));
-        EXPECT_DOUBLE_EQ(val, 2.5);
-    }
-    {
-        Vec3b val(0, 0, 0);
-        Mat m(0, (const int*)nullptr, CV_8UC3, &val);
-        cv::setIdentity(m, Scalar(1, 2, 3));
-        EXPECT_EQ(val, Vec3b(1, 2, 3));
+        EXPECT_THROW(cv::setIdentity(m, Scalar(17)), cv::Exception);
     }
 }
 
