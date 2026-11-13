@@ -23,9 +23,12 @@
 //   - At least 2 Gemm layers share the same input arg.
 //   - Each Gemm has a const weight blob and (optionally) const bias.
 //   - All Gemms have identical (alpha, beta, trans_a, trans_b) and matching K.
+//   - No member's sole consumer is a layer the Gemm could absorb: the Slice2 this
+//     pass inserts is not a chain participant, so that follower would survive.
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
+#include "adjacency_graph.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -46,6 +49,21 @@ static bool readGemmWeight(const Ptr<LayerInfo>& l, bool trans_b, Mat& W_out)
         W.copyTo(W_out);
     }
     return true;
+}
+
+// Slice2 registers no FusionOps, so a Slice2 between a Gemm and a follower the Gemm
+// could have absorbed leaves that follower as a standalone layer for good.
+static bool absorbableFollower(const vector<Ptr<LayerInfo>>& prog,
+                               const std::map<int, vector<int>>& consumers, Arg out)
+{
+    auto it = consumers.find(out.idx);
+    if (it == consumers.end() || it->second.size() != 1) return false;
+    int idx = it->second[0];
+    if (idx < 0 || idx >= (int)prog.size() || !prog[idx]) return false;
+    Layer* l = dynamic_cast<Layer*>(prog[idx].get());
+    if (!l) return false;
+    const FusionOps* ops = fusionOpsFor(l);
+    return ops && ops->unfold;
 }
 
 static bool readGemmBias(const Ptr<LayerInfo>& l, Mat& b_out)
@@ -136,6 +154,13 @@ struct ModelFusionSharedGemm
         };
         std::map<Key, vector<GemmInfo>, decltype(keyLess)> groups(keyLess);
 
+        std::map<int, vector<int>> consumers;
+        for (size_t i = 0; i < nops; i++) {
+            if (!prog[i]) continue;
+            for (Arg in : prog[i]->inputs)
+                consumers[in.idx].push_back((int)i);
+        }
+
         for (size_t i = 0; i < nops; i++) {
             GemmInfo info;
             if (!inspectGemm(prog, (int)i, info)) continue;
@@ -150,6 +175,17 @@ struct ModelFusionSharedGemm
         for (auto& group : groups) {
             auto infos = group.second;
             if (infos.size() < 2) continue;
+
+            bool absorbs = false;
+            for (auto& info : infos) {
+                const Ptr<LayerInfo>& l = prog[info.layer_idx];
+                if (!l->outputs.empty() &&
+                    absorbableFollower(prog, consumers, l->outputs[0])) {
+                    absorbs = true;
+                    break;
+                }
+            }
+            if (absorbs) continue;
 
             bool all_have_bias = infos[0].has_bias;
             bool uniform = true;
