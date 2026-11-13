@@ -502,5 +502,54 @@ TEST(Video_ECC_BigMS_Mask, accuracy) {
     CV_ECC_BigPictureTest test(true);
     test.safe_run();
 }
+
+TEST(Video_ECC, synthetic_all_motion_models) {
+    const Size sz(192, 144);
+    Mat tex1(sz, CV_8UC1), tex3(sz, CV_8UC3);
+    RNG rng(7777);
+    rng.fill(tex1, RNG::NORMAL, 128, 30);
+    GaussianBlur(tex1, tex1, Size(7, 7), 1.8);
+    circle(tex1, Point(60, 50), 22, Scalar(220), FILLED);
+    rectangle(tex1, Rect(95, 65, 50, 38), Scalar(40), FILLED);
+    cvtColor(tex1, tex3, COLOR_GRAY2BGR);
+
+    Mat mask(sz, CV_8UC1, Scalar(255));
+    rectangle(mask, Rect(0, 0, sz.width, 8), Scalar(0), FILLED);
+
+    const int models[] = { MOTION_TRANSLATION, MOTION_EUCLIDEAN, MOTION_AFFINE, MOTION_HOMOGRAPHY };
+    for (int m = 0; m < 4; ++m)
+    {
+        const int motion = models[m];
+        Mat gt;
+        if (motion == MOTION_TRANSLATION)
+            gt = (Mat_<float>(2, 3) << 1.f, 0.f, 2.5f, 0.f, 1.f, -1.75f);
+        else if (motion == MOTION_EUCLIDEAN)
+        {
+            float a = 0.04f;
+            gt = (Mat_<float>(2, 3) << std::cos(a), -std::sin(a), 2.2f, std::sin(a), std::cos(a), -1.5f);
+        }
+        else if (motion == MOTION_AFFINE)
+            gt = (Mat_<float>(2, 3) << 0.99f, 0.025f, 2.0f, -0.02f, 1.01f, -1.5f);
+        else
+            gt = (Mat_<float>(3, 3) << 1.0f, 0.015f, 2.0f, -0.015f, 0.995f, -1.5f, 1e-4f, -1e-4f, 1.0f);
+
+        for (int chCase = 0; chCase < 2; ++chCase)
+        {
+            const Mat& src = (chCase == 0) ? tex1 : tex3;
+            Mat warped;
+            if (motion == MOTION_HOMOGRAPHY)
+                warpPerspective(src, warped, gt, sz, INTER_LINEAR, BORDER_REFLECT);
+            else
+                warpAffine(src, warped, gt, sz, INTER_LINEAR, BORDER_REFLECT);
+
+            Mat est = (motion == MOTION_HOMOGRAPHY) ? Mat::eye(3, 3, CV_32F) : Mat::eye(2, 3, CV_32F);
+            double cc = findTransformECC(src, warped, est, motion,
+                                         TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 60, 1e-6),
+                                         mask, 5);
+            EXPECT_GT(cc, 0.99) << "motion=" << motion << " ch=" << src.channels();
+            EXPECT_LE(cvtest::norm(est, gt, NORM_INF), 0.15) << "motion=" << motion << " ch=" << src.channels();
+        }
+    }
+}
 }  // namespace
 }  // namespace opencv_test
