@@ -440,7 +440,12 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     if(n_needed) Mat(n).copyTo(_nfa);
 
     // Clear used structures
-    ordered_points.clear();
+    image.release();
+    scaled_image.release();
+    angles.release();
+    modgrad.release();
+    used.release();
+    std::vector<normPoint>().swap(ordered_points);
 }
 
 void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
@@ -462,12 +467,17 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
         resize(gaussian_img, scaled_image, Size(), SCALE, SCALE, INTER_LINEAR_EXACT);
+        gaussian_img.release();
+        image.release();
         ll_angle(rho, N_BINS);
+        scaled_image.release();
     }
     else
     {
         scaled_image = image;
+        image.release();
         ll_angle(rho, N_BINS);
+        scaled_image.release();
     }
 
     LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11.0);
@@ -475,7 +485,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
 
     // // Initialize region only when needed
     // Mat region = Mat::zeros(scaled_image.size(), CV_8UC1);
-    used = Mat_<uchar>::zeros(scaled_image.size()); // zeros = NOTUSED
+    used = Mat_<uchar>::zeros(img_height, img_width); // zeros = NOTUSED
     std::vector<RegionPoint> reg;
 
     // Search for line segments
@@ -546,6 +556,7 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
 
     // Computing gradient for remaining pixels
     double max_grad = -1;
+    size_t n_defined = 0;
     for(int y = 0; y < img_height - 1; ++y)
     {
         const uchar* scaled_image_row = scaled_image.ptr<uchar>(y);
@@ -570,6 +581,7 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
             {
                 angles_row[x] = fastAtan2(float(gx), float(-gy)) * DEG_TO_RADS;  // gradient angle computation
                 if (norm > max_grad) { max_grad = norm; }
+                ++n_defined;
             }
 
         }
@@ -577,11 +589,16 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
 
     // Compute histogram of gradient values
     double bin_coef = (max_grad > 0) ? double(n_bins - 1) / max_grad : 0; // If all image is smooth, max_grad <= 0
+    ordered_points.clear();
+    ordered_points.reserve(n_defined);
     for(int y = 0; y < img_height - 1; ++y)
     {
+        const double* angles_row = angles.ptr<double>(y);
         const double* modgrad_row = modgrad.ptr<double>(y);
         for(int x = 0; x < img_width - 1; ++x)
         {
+            if (angles_row[x] == NOTDEF)
+                continue;
             normPoint _point;
             int i = int(modgrad_row[x] * bin_coef);
             _point.p = Point(x, y);
