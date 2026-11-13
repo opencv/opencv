@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <opencv2/core/utils/tls.hpp>
-#include "layers/cpu_kernels/fast_gemm.hpp"
+#include "opencv2/core/private/fast_gemm.hpp"
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -182,8 +182,8 @@ void KVCache::grow(const Mat& newData) {
         int totalPages    = std::max(neededPages, reservedPages);
         for (int i = 0; i < totalPages; i++) {
             int page_size = isKCache ?
-                (int)fastGemmPackBSize(pageSize, headDim, opt):
-                (int)fastGemmPackBSize(headDim, pageSize, opt);
+                (int)hal::fastGemmPackBSize(pageSize, headDim, opt):
+                (int)hal::fastGemmPackBSize(headDim, pageSize, opt);
 
             pages.push_back(
                 Mat({batchSize, nHeads, page_size}, CV_32F, Scalar(0))
@@ -213,8 +213,8 @@ void KVCache::appendTokens(const Mat& newData, int T) {
 
 void KVCache::growPrefill(const Mat& newData, int T){
     int totalPages = (T + pageSize - 1) / pageSize;
-    int ps = isKCache ? (int)fastGemmPackBSize(pageSize, headDim, opt)
-                      : (int)fastGemmPackBSize(headDim, pageSize, opt);
+    int ps = isKCache ? (int)hal::fastGemmPackBSize(pageSize, headDim, opt)
+                      : (int)hal::fastGemmPackBSize(headDim, pageSize, opt);
 
     bool is3Dlayout = newData.dims == 3;
 
@@ -259,7 +259,7 @@ void KVCache::growPrefill(const Mat& newData, int T){
             const int N = headDim;
             const int K = pageSize;
 
-            fastGemmPackB(
+            hal::fastGemmPackB(
                 isKCache,
                 N, K,
                 actual_source, chunk_T < pageSize ? headDim : lds,
@@ -274,7 +274,7 @@ void KVCache::growPrefill(const Mat& newData, int T){
 
 void KCache::growGenerate(const Mat& newData){
     int cur_page = nTokens / pageSize;
-    const int Ps = fastGemmPackBSize(pageSize, headDim, opt);
+    const int Ps = hal::fastGemmPackBSize(pageSize, headDim, opt);
     int t0 = nTokens % pageSize;
     const int batch_size = newData.size[0];
 
@@ -301,8 +301,8 @@ void KCache::growGenerate(const Mat& newData){
 
 void VCache::growGenerate(const Mat& newData){
     const int batch_size = newData.size[0];
-    const int Nr = fastGemmNR(opt);
-    const int Ps = fastGemmPackBSize(headDim, pageSize, opt);
+    const int Nr = hal::fastGemmNR(opt);
+    const int Ps = hal::fastGemmPackBSize(headDim, pageSize, opt);
     const int t0 = nTokens  % pageSize;
     const int step_packed = pageSize * Nr;
     int cur_page = nTokens  / pageSize;

@@ -7,6 +7,14 @@
 #include "../../precomp.hpp"
 #include "mlas_gemm.hpp"
 
+namespace cv { namespace dnn {
+
+static bool use_mlas = true;
+
+void setUseMlas(bool flag) { use_mlas = flag; }
+
+}}  // cv::dnn
+
 #ifdef HAVE_MLAS
 
 #include "mlas.h"
@@ -19,7 +27,7 @@ bool mlasAvailable() {
         const size_t a = MlasGetPreferredBufferAlignment();
         return a > 0 && a <= 256;
     }();
-    return ok;
+    return ok && use_mlas;
 }
 
 bool mlasSgemm(bool trans_a, bool trans_b,

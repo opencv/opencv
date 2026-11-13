@@ -6,7 +6,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 #include "cpu_kernels/softmax.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -150,7 +150,7 @@ private:
                 ko[bn] = ((size_t)b * Hkv + n / group) * Skv * D;
                 so[bn] = ((size_t)b * Hq + n) * L * Skv;
             }
-        fastGemmBatch(batch, qo.data(), ko.data(), so.data(),
+        dispatchGemmBatch(batch, qo.data(), ko.data(), so.data(),
                       L, Skv, D, scl, Q.ptr<float>(), D, 1, K.ptr<float>(), 1, D,
                       0.f, S.ptr<float>(), Skv, opt);
     }
@@ -172,7 +172,7 @@ private:
                 vo[bn] = ((size_t)b * Hkv + n / group) * Skv * Dv;
                 yo[bn] = ((size_t)b * Hq + n) * L * Dv;
             }
-        fastGemmBatch(batch, po.data(), vo.data(), yo.data(),
+        dispatchGemmBatch(batch, po.data(), vo.data(), yo.data(),
                       L, Dv, Skv, 1.f, P.ptr<float>(), Skv, 1, V.ptr<float>(), Dv, 1,
                       0.f, Y.ptr<float>(), Dv, opt);
     }

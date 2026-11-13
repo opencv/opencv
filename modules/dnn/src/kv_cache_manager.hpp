@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include "layers/cpu_kernels/fast_gemm.hpp"
+#include "opencv2/core/private/fast_gemm.hpp"
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -70,11 +70,11 @@ class VCache : public KVCache
     public:
         VCache(FastGemmOpt opt) : KVCache(opt) {
             isKCache = false;
-            pageSize = fastGemmKC(opt);
+            pageSize = hal::fastGemmKC(opt);
         }
         VCache(FastGemmOpt opt, int nHeads) : KVCache(opt, nHeads) {
             isKCache = false;
-            pageSize = fastGemmKC(opt);
+            pageSize = hal::fastGemmKC(opt);
         }
     protected:
         void growGenerate(const Mat& newData) CV_OVERRIDE;
@@ -85,11 +85,11 @@ class KCache : public KVCache
     public:
         KCache(FastGemmOpt opt) : KVCache(opt) {
             isKCache = true;
-            pageSize = fastGemmNR(opt);
+            pageSize = hal::fastGemmNR(opt);
         }
         KCache(FastGemmOpt opt, int nHeads) : KVCache(opt, nHeads) {
             isKCache = true;
-            pageSize = fastGemmNR(opt);
+            pageSize = hal::fastGemmNR(opt);
         }
     protected:
         void growGenerate(const Mat& newData) CV_OVERRIDE;
