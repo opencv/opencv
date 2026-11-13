@@ -372,51 +372,88 @@ static void initMaskWithRect( Mat& mask, Size imgSize, Rect rect )
 /*
   Initialize GMM background and foreground models using kmeans algorithm.
 */
+static void learnSamplesFromMat( const Mat& samples, const Mat& labels, GMM& gmm )
+{
+    gmm.initLearning();
+    const int nSamples = samples.rows;
+    const int* lblPtr = labels.ptr<int>(0);
+    for( int i = 0; i < nSamples; i++ )
+    {
+        const float* s = samples.ptr<float>(i);
+        gmm.addSample( lblPtr[i], Vec3d(s[0], s[1], s[2]) );
+    }
+    gmm.endLearning();
+}
+
 static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM )
 {
     const int kMeansItCount = 10;
     const int kMeansType = KMEANS_PP_CENTERS;
 
-    Mat bgdLabels, fgdLabels;
-    std::vector<Vec3b> bgdSamples, fgdSamples;
-    Point p;
-    for( p.y = 0; p.y < img.rows; p.y++ )
+    int bgdCount = 0, fgdCount = 0;
+    for( int y = 0; y < img.rows; y++ )
     {
-        for( p.x = 0; p.x < img.cols; p.x++ )
+        const uchar* maskRow = mask.ptr<uchar>(y);
+        for( int x = 0; x < img.cols; x++ )
         {
-            if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
-                bgdSamples.push_back( img.at<Vec3b>(p) );
+            if( maskRow[x] == GC_BGD || maskRow[x] == GC_PR_BGD )
+                ++bgdCount;
             else // GC_FGD | GC_PR_FGD
-                fgdSamples.push_back( img.at<Vec3b>(p) );
+                ++fgdCount;
         }
     }
-    CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
+    CV_Assert( bgdCount > 0 && fgdCount > 0 );
+
     {
-        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_8UC1, &bgdSamples[0][0] );
-        _bgdSamples.convertTo(_bgdSamples, CV_32FC1);
-        int num_clusters = GMM::componentsCount;
-        num_clusters = std::min(num_clusters, (int)bgdSamples.size());
-        kmeans( _bgdSamples, num_clusters, bgdLabels,
+        Mat bgdSamples( bgdCount, 3, CV_32FC1 );
+        Mat bgdLabels;
+        int idx = 0;
+        for( int y = 0; y < img.rows; y++ )
+        {
+            const Vec3b* imgRow = img.ptr<Vec3b>(y);
+            const uchar* maskRow = mask.ptr<uchar>(y);
+            for( int x = 0; x < img.cols; x++ )
+            {
+                if( maskRow[x] == GC_BGD || maskRow[x] == GC_PR_BGD )
+                {
+                    float* dst = bgdSamples.ptr<float>(idx++);
+                    const Vec3b c = imgRow[x];
+                    dst[0] = (float)c[0];
+                    dst[1] = (float)c[1];
+                    dst[2] = (float)c[2];
+                }
+            }
+        }
+        int num_clusters = std::min(GMM::componentsCount, bgdCount);
+        kmeans( bgdSamples, num_clusters, bgdLabels,
                 TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
+        learnSamplesFromMat( bgdSamples, bgdLabels, bgdGMM );
     }
     {
-        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_8UC1, &fgdSamples[0][0] );
-        _fgdSamples.convertTo(_fgdSamples, CV_32FC1);
-        int num_clusters = GMM::componentsCount;
-        num_clusters = std::min(num_clusters, (int)fgdSamples.size());
-        kmeans( _fgdSamples, num_clusters, fgdLabels,
+        Mat fgdSamples( fgdCount, 3, CV_32FC1 );
+        Mat fgdLabels;
+        int idx = 0;
+        for( int y = 0; y < img.rows; y++ )
+        {
+            const Vec3b* imgRow = img.ptr<Vec3b>(y);
+            const uchar* maskRow = mask.ptr<uchar>(y);
+            for( int x = 0; x < img.cols; x++ )
+            {
+                if( maskRow[x] != GC_BGD && maskRow[x] != GC_PR_BGD )
+                {
+                    float* dst = fgdSamples.ptr<float>(idx++);
+                    const Vec3b c = imgRow[x];
+                    dst[0] = (float)c[0];
+                    dst[1] = (float)c[1];
+                    dst[2] = (float)c[2];
+                }
+            }
+        }
+        int num_clusters = std::min(GMM::componentsCount, fgdCount);
+        kmeans( fgdSamples, num_clusters, fgdLabels,
                 TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
+        learnSamplesFromMat( fgdSamples, fgdLabels, fgdGMM );
     }
-
-    bgdGMM.initLearning();
-    for( int i = 0; i < (int)bgdSamples.size(); i++ )
-        bgdGMM.addSample( bgdLabels.at<int>(i,0), Vec3d(bgdSamples[i]) );
-    bgdGMM.endLearning();
-
-    fgdGMM.initLearning();
-    for( int i = 0; i < (int)fgdSamples.size(); i++ )
-        fgdGMM.addSample( fgdLabels.at<int>(i,0), Vec3d(fgdSamples[i]) );
-    fgdGMM.endLearning();
 }
 
 /*
@@ -424,14 +461,16 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
 */
 static void assignGMMsComponents( const Mat& img, const Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM, Mat& compIdxs )
 {
-    Point p;
-    for( p.y = 0; p.y < img.rows; p.y++ )
+    for( int y = 0; y < img.rows; y++ )
     {
-        for( p.x = 0; p.x < img.cols; p.x++ )
+        const Vec3b* imgRow = img.ptr<Vec3b>(y);
+        const uchar* maskRow = mask.ptr<uchar>(y);
+        uchar* compRow = compIdxs.ptr<uchar>(y);
+        for( int x = 0; x < img.cols; x++ )
         {
-            Vec3d color = img.at<Vec3b>(p);
-            compIdxs.at<int>(p) = mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD ?
-                bgdGMM.whichComponent(color) : fgdGMM.whichComponent(color);
+            const Vec3d color = imgRow[x];
+            compRow[x] = (uchar)(maskRow[x] == GC_BGD || maskRow[x] == GC_PR_BGD ?
+                bgdGMM.whichComponent(color) : fgdGMM.whichComponent(color));
         }
     }
 }
@@ -443,90 +482,176 @@ static void learnGMMs( const Mat& img, const Mat& mask, const Mat& compIdxs, GMM
 {
     bgdGMM.initLearning();
     fgdGMM.initLearning();
-    Point p;
-    for( int ci = 0; ci < GMM::componentsCount; ci++ )
+    for( int y = 0; y < img.rows; y++ )
     {
-        for( p.y = 0; p.y < img.rows; p.y++ )
+        const Vec3b* imgRow = img.ptr<Vec3b>(y);
+        const uchar* maskRow = mask.ptr<uchar>(y);
+        const uchar* compRow = compIdxs.ptr<uchar>(y);
+        for( int x = 0; x < img.cols; x++ )
         {
-            for( p.x = 0; p.x < img.cols; p.x++ )
-            {
-                if( compIdxs.at<int>(p) == ci )
-                {
-                    if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
-                        bgdGMM.addSample( ci, img.at<Vec3b>(p) );
-                    else
-                        fgdGMM.addSample( ci, img.at<Vec3b>(p) );
-                }
-            }
+            const int ci = compRow[x];
+            if( maskRow[x] == GC_BGD || maskRow[x] == GC_PR_BGD )
+                bgdGMM.addSample( ci, imgRow[x] );
+            else
+                fgdGMM.addSample( ci, imgRow[x] );
         }
     }
     bgdGMM.endLearning();
     fgdGMM.endLearning();
 }
 
-/*
-  Construct GCGraph
-*/
-static void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM, double lambda,
-                       const NWeightLUT& nweights, GCGraph<double>& graph )
+static inline bool isUncertainMask( uchar m )
 {
-    int vtxCount = img.cols*img.rows,
-        edgeCount = 2*(4*img.cols*img.rows - 3*(img.cols + img.rows) + 2);
-    graph.create(vtxCount, edgeCount);
-    for( int y = 0; y < img.rows; y++ )
+    return m == GC_PR_BGD || m == GC_PR_FGD;
+}
+
+/*
+  Construct GCGraph over uncertain (GC_PR_BGD / GC_PR_FGD) pixels only.
+  Definite pixels (GC_BGD / GC_FGD) have t-weight lambda = 450 strictly greater
+  than the maximum possible n-weight degree (4*gamma + 4*gamma/sqrt(2) = 341.42),
+  so they never cross the min-cut; incident boundary n-weights fold directly into
+  adjacent uncertain vertices' t-weights. Returns true if maxFlow() must be run.
+*/
+static bool constructGCGraph( const Mat& img, Mat& mask, const GMM& bgdGMM, const GMM& fgdGMM,
+                              const NWeightLUT& nweights, GCGraph<double>& graph )
+{
+    const int rows = img.rows;
+    const int cols = img.cols;
+    int vtxCount = 0;
+    int edgePairCount = 0;
+    for( int y = 0; y < rows; y++ )
+    {
+        const uchar* maskRow = mask.ptr<uchar>(y);
+        const uchar* prevMaskRow = (y > 0) ? mask.ptr<uchar>(y - 1) : nullptr;
+        for( int x = 0; x < cols; x++ )
+        {
+            if( !isUncertainMask(maskRow[x]) )
+                continue;
+            ++vtxCount;
+            if( x > 0 && isUncertainMask(maskRow[x - 1]) )
+                ++edgePairCount;
+            if( y > 0 )
+            {
+                if( x > 0 && isUncertainMask(prevMaskRow[x - 1]) )
+                    ++edgePairCount;
+                if( isUncertainMask(prevMaskRow[x]) )
+                    ++edgePairCount;
+                if( x < cols - 1 && isUncertainMask(prevMaskRow[x + 1]) )
+                    ++edgePairCount;
+            }
+        }
+    }
+
+    if( vtxCount == 0 )
+        return false;
+
+    if( edgePairCount == 0 )
+    {
+        for( int y = 0; y < rows; y++ )
+        {
+            const Vec3b* imgRow = img.ptr<Vec3b>(y);
+            uchar* maskRow = mask.ptr<uchar>(y);
+            for( int x = 0; x < cols; x++ )
+            {
+                if( !isUncertainMask(maskRow[x]) )
+                    continue;
+                const Vec3b color = imgRow[x];
+                double fromSource = -log( bgdGMM(color) );
+                double toSink = -log( fgdGMM(color) );
+                for( int dy = -1; dy <= 1; dy++ )
+                {
+                    if( y + dy < 0 || y + dy >= rows )
+                        continue;
+                    const Vec3b* nbImgRow = img.ptr<Vec3b>(y + dy);
+                    const uchar* nbMaskRow = mask.ptr<uchar>(y + dy);
+                    for( int dx = -1; dx <= 1; dx++ )
+                    {
+                        if( (dy == 0 && dx == 0) || x + dx < 0 || x + dx >= cols )
+                            continue;
+                        const double w = (dy == 0 || dx == 0) ?
+                            nweights.weightOrtho(color, nbImgRow[x + dx]) :
+                            nweights.weightDiag(color, nbImgRow[x + dx]);
+                        if( nbMaskRow[x + dx] == GC_FGD )
+                            fromSource += w;
+                        else
+                            toSink += w;
+                    }
+                }
+                maskRow[x] = (fromSource >= toSink) ? GC_PR_FGD : GC_PR_BGD;
+            }
+        }
+        return false;
+    }
+
+    graph.create( vtxCount, 2 * edgePairCount );
+    std::vector<int> prevRowVtx(cols, -1);
+    std::vector<int> curRowVtx(cols, -1);
+    for( int y = 0; y < rows; y++ )
     {
         const Vec3b* imgRow = img.ptr<Vec3b>(y);
         const Vec3b* prevRow = (y > 0) ? img.ptr<Vec3b>(y - 1) : nullptr;
         const uchar* maskRow = mask.ptr<uchar>(y);
-        for( int x = 0; x < img.cols; x++)
+        const uchar* prevMaskRow = (y > 0) ? mask.ptr<uchar>(y - 1) : nullptr;
+        for( int x = 0; x < cols; x++ )
         {
-            // add node
-            int vtxIdx = graph.addVtx();
-            Vec3b color = imgRow[x];
-
-            // set t-weights
-            double fromSource, toSink;
+            const Vec3b color = imgRow[x];
             const uchar mval = maskRow[x];
-            if( mval == GC_PR_BGD || mval == GC_PR_FGD )
+            if( isUncertainMask(mval) )
             {
-                fromSource = -log( bgdGMM(color) );
-                toSink = -log( fgdGMM(color) );
-            }
-            else if( mval == GC_BGD )
-            {
-                fromSource = 0;
-                toSink = lambda;
-            }
-            else // GC_FGD
-            {
-                fromSource = lambda;
-                toSink = 0;
-            }
-            graph.addTermWeights( vtxIdx, fromSource, toSink );
+                const int vtxIdx = graph.addVtx();
+                curRowVtx[x] = vtxIdx;
+                double fromSource = -log( bgdGMM(color) );
+                double toSink = -log( fgdGMM(color) );
 
-            // set n-weights
-            if( x > 0 )
-            {
-                double w = nweights.weightOrtho(color, imgRow[x - 1]);
-                graph.addEdges( vtxIdx, vtxIdx-1, w, w );
+                auto handleNb = [&](int nbVtx, uchar mNb, double w) {
+                    if( nbVtx >= 0 )
+                        graph.addEdges( vtxIdx, nbVtx, w, w );
+                    else if( mNb == GC_FGD )
+                        fromSource += w;
+                    else
+                        toSink += w;
+                };
+                if( x > 0 )
+                    handleNb( curRowVtx[x - 1], maskRow[x - 1], nweights.weightOrtho(color, imgRow[x - 1]) );
+                if( x > 0 && y > 0 )
+                    handleNb( prevRowVtx[x - 1], prevMaskRow[x - 1], nweights.weightDiag(color, prevRow[x - 1]) );
+                if( y > 0 )
+                    handleNb( prevRowVtx[x], prevMaskRow[x], nweights.weightOrtho(color, prevRow[x]) );
+                if( x < cols - 1 && y > 0 )
+                    handleNb( prevRowVtx[x + 1], prevMaskRow[x + 1], nweights.weightDiag(color, prevRow[x + 1]) );
+
+                graph.addTermWeights( vtxIdx, fromSource, toSink );
             }
-            if( x > 0 && y > 0 )
+            else
             {
-                double w = nweights.weightDiag(color, prevRow[x - 1]);
-                graph.addEdges( vtxIdx, vtxIdx-img.cols-1, w, w );
-            }
-            if( y > 0 )
-            {
-                double w = nweights.weightOrtho(color, prevRow[x]);
-                graph.addEdges( vtxIdx, vtxIdx-img.cols, w, w );
-            }
-            if( x < img.cols - 1 && y > 0 )
-            {
-                double w = nweights.weightDiag(color, prevRow[x + 1]);
-                graph.addEdges( vtxIdx, vtxIdx-img.cols+1, w, w );
+                curRowVtx[x] = -1;
+                const double srcW_mask = (mval == GC_FGD) ? 1.0 : 0.0;
+                const double snkW_mask = (mval == GC_BGD) ? 1.0 : 0.0;
+                if( x > 0 && curRowVtx[x - 1] >= 0 )
+                {
+                    const double w = nweights.weightOrtho(color, imgRow[x - 1]);
+                    graph.addTermWeights( curRowVtx[x - 1], srcW_mask * w, snkW_mask * w );
+                }
+                if( x > 0 && y > 0 && prevRowVtx[x - 1] >= 0 )
+                {
+                    const double w = nweights.weightDiag(color, prevRow[x - 1]);
+                    graph.addTermWeights( prevRowVtx[x - 1], srcW_mask * w, snkW_mask * w );
+                }
+                if( y > 0 && prevRowVtx[x] >= 0 )
+                {
+                    const double w = nweights.weightOrtho(color, prevRow[x]);
+                    graph.addTermWeights( prevRowVtx[x], srcW_mask * w, snkW_mask * w );
+                }
+                if( x < cols - 1 && y > 0 && prevRowVtx[x + 1] >= 0 )
+                {
+                    const double w = nweights.weightDiag(color, prevRow[x + 1]);
+                    graph.addTermWeights( prevRowVtx[x + 1], srcW_mask * w, snkW_mask * w );
+                }
             }
         }
+        std::swap(prevRowVtx, curRowVtx);
     }
+    return true;
 }
 
 /*
@@ -535,18 +660,14 @@ static void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM
 static void estimateSegmentation( GCGraph<double>& graph, Mat& mask )
 {
     graph.maxFlow();
-    Point p;
-    for( p.y = 0; p.y < mask.rows; p.y++ )
+    int vtxIdx = 0;
+    for( int y = 0; y < mask.rows; y++ )
     {
-        for( p.x = 0; p.x < mask.cols; p.x++ )
+        uchar* maskRow = mask.ptr<uchar>(y);
+        for( int x = 0; x < mask.cols; x++ )
         {
-            if( mask.at<uchar>(p) == GC_PR_BGD || mask.at<uchar>(p) == GC_PR_FGD )
-            {
-                if( graph.inSourceSegment( p.y*mask.cols+p.x /*vertex index*/ ) )
-                    mask.at<uchar>(p) = GC_PR_FGD;
-                else
-                    mask.at<uchar>(p) = GC_PR_BGD;
-            }
+            if( isUncertainMask(maskRow[x]) )
+                maskRow[x] = graph.inSourceSegment( vtxIdx++ ) ? GC_PR_FGD : GC_PR_BGD;
         }
     }
 }
@@ -568,7 +689,6 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
         CV_Error( cv::Error::StsBadArg, "image must have CV_8UC3 type" );
 
     GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
-    Mat compIdxs( img.size(), CV_32SC1 );
 
     if( mode == GC_INIT_WITH_RECT || mode == GC_INIT_WITH_MASK )
     {
@@ -589,19 +709,19 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
         checkMask( img, mask );
 
     const double gamma = 50;
-    const double lambda = 9*gamma;
     const double beta = calcBeta( img );
 
     NWeightLUT nweights;
     nweights.init(img.size(), iterCount, beta, gamma);
 
+    Mat compIdxs( img.size(), CV_8UC1 );
     GCGraph<double> graph;
     for( int i = 0; i < iterCount; i++ )
     {
         assignGMMsComponents( img, mask, bgdGMM, fgdGMM, compIdxs );
         if( mode != GC_EVAL_FREEZE_MODEL )
             learnGMMs( img, mask, compIdxs, bgdGMM, fgdGMM );
-        constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, nweights, graph );
-        estimateSegmentation( graph, mask );
+        if( constructGCGraph(img, mask, bgdGMM, fgdGMM, nweights, graph) )
+            estimateSegmentation( graph, mask );
     }
 }

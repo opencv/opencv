@@ -204,4 +204,68 @@ TEST(Imgproc_GrabCut, multi_iter_lut_and_direct_equivalence)
     }
 }
 
+TEST(Imgproc_GrabCut, pruned_graph_edge_cases)
+{
+    RNG rng(20261113ULL);
+    Mat img(120, 160, CV_8UC3);
+    rng.fill(img, RNG::UNIFORM, 10, 45);
+    Rect fgRect(35, 25, 90, 70);
+    rng.fill(img(fgRect), RNG::UNIFORM, 200, 250);
+
+    // Case 1: GC_INIT_WITH_RECT recovers planted foreground accurately
+    {
+        theRNG().state = 1234567ULL;
+        Mat mask, bgdModel, fgdModel;
+        grabCut(img, mask, fgRect, bgdModel, fgdModel, 3, GC_INIT_WITH_RECT);
+        for (int y = 0; y < img.rows; ++y)
+        {
+            const uchar* m = mask.ptr<uchar>(y);
+            for (int x = 0; x < img.cols; ++x)
+            {
+                if (!fgRect.contains(Point(x, y)))
+                    EXPECT_EQ((int)GC_BGD, (int)m[x]);
+            }
+        }
+        Mat fg = (mask == GC_PR_FGD) | (mask == GC_FGD);
+        EXPECT_GT(countNonZero(fg(fgRect)), fgRect.area() * 9 / 10);
+    }
+
+    // Case 2: 1x1 rect (single uncertain pixel, edgePairCount == 0) + isolated uncertain pixels in INIT_WITH_MASK
+    {
+        theRNG().state = 1234567ULL;
+        Mat mask1x1Same, bgdModel, fgdModel;
+        // Same-color neighbors all marked GC_BGD pull the isolated pixel to GC_PR_BGD
+        grabCut(img, mask1x1Same, Rect(80, 60, 1, 1), bgdModel, fgdModel, 2, GC_INIT_WITH_RECT);
+        EXPECT_EQ((int)GC_PR_BGD, (int)mask1x1Same.at<uchar>(60, 80));
+
+        // Distinct bright isolated pixel inside dark GC_BGD neighborhood stays GC_PR_FGD
+        Mat imgSpot(40, 40, CV_8UC3, Scalar(20, 20, 20));
+        imgSpot.at<Vec3b>(20, 20) = Vec3b(245, 245, 245);
+        Mat maskSpot, bgdSpot, fgdSpot;
+        theRNG().state = 1234567ULL;
+        grabCut(imgSpot, maskSpot, Rect(20, 20, 1, 1), bgdSpot, fgdSpot, 2, GC_INIT_WITH_RECT);
+        EXPECT_EQ((int)GC_PR_FGD, (int)maskSpot.at<uchar>(20, 20));
+
+        // Mask with uncertain interior + isolated uncertain border pixel (5, 5)
+        Mat maskIso(img.size(), CV_8UC1, Scalar(GC_BGD));
+        maskIso(Rect(50, 40, 60, 40)).setTo(GC_PR_BGD);
+        maskIso(Rect(60, 45, 40, 30)).setTo(GC_FGD);
+        maskIso.at<uchar>(5, 5) = GC_PR_FGD;
+        grabCut(img, maskIso, Rect(), bgdModel, fgdModel, 2, GC_INIT_WITH_MASK);
+        EXPECT_EQ((int)GC_FGD, (int)maskIso.at<uchar>(55, 75));
+        EXPECT_EQ((int)GC_BGD, (int)maskIso.at<uchar>(0, 0));
+    }
+
+    // Case 3: All definite mask (vtxCount == 0) must leave mask unchanged without error
+    {
+        theRNG().state = 1234567ULL;
+        Mat maskFixed(img.size(), CV_8UC1, Scalar(GC_BGD));
+        maskFixed(fgRect).setTo(GC_FGD);
+        Mat orig = maskFixed.clone();
+        Mat bgdModel, fgdModel;
+        grabCut(img, maskFixed, Rect(), bgdModel, fgdModel, 2, GC_INIT_WITH_MASK);
+        EXPECT_EQ(0, countNonZero(maskFixed != orig));
+    }
+}
+
 }} // namespace
