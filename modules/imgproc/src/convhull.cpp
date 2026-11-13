@@ -199,7 +199,6 @@ static bool countingSortAndPrune(const Point* data,
 {
     struct XColumn { const Point* lo; const Point* hi; };
 
-    // with by_y x and y are swapped
     const auto x = [](const Point* p) { return by_y ? p->y : p->x; };
     const auto y = [](const Point* p) { return by_y ? p->x : p->y; };
     const int minX = by_y ? range.minY : range.minX;
@@ -462,7 +461,7 @@ static CV_ALWAYS_INLINE void stdSortPoints(Point* data0,
 // Returns true if the sort is by y, then by x. miny_ind and maxy_ind are then the points with min and max x.
 static bool sortPoints(Point* data0,
                        bool is_float,
-                       bool monotonic, // require_monotonic_indices
+                       bool require_monotonic_indices,
                        Point** pointer,
                        int& total,
                        int& miny_ind,
@@ -492,8 +491,8 @@ static bool sortPoints(Point* data0,
     {
         bool by_y = range.rangeY() < range.rangeX();
         bool sorted = by_y ?
-            countingSortAndPrune<true>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind) :
-            countingSortAndPrune<false>(sortable_points, range, monotonic, pointer, total, miny_ind, maxy_ind);
+            countingSortAndPrune<true>(sortable_points, range, require_monotonic_indices, pointer, total, miny_ind, maxy_ind) :
+            countingSortAndPrune<false>(sortable_points, range, require_monotonic_indices, pointer, total, miny_ind, maxy_ind);
         if( sorted )
         {
             if( is_float )

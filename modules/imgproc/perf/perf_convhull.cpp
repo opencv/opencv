@@ -20,7 +20,7 @@ PERF_TEST_P_(ConvexHullRandomPerfTest, convexHull)
     const bool returnPoints = get<3>(GetParam());
     const int runs  = multirun_count(total);
 
-    RNG& rng = theRNG();      // the same seed in every test case
+    RNG& rng = theRNG();
     std::vector<Mat> inputs(runs);
     for (int k = 0; k < runs; ++k)
     {
@@ -32,7 +32,6 @@ PERF_TEST_P_(ConvexHullRandomPerfTest, convexHull)
                 inputs[k].at<Point2f>(i) = Point2f(rng.uniform(0.f, (float)side), rng.uniform(0.f, (float)side));
     }
 
-    // output: indices, or points of the input type
     std::vector<int> hull_idx;
     std::vector<Point> hull_pts;
     std::vector<Point2f> hull_ptsf;
@@ -98,7 +97,7 @@ PERF_TEST_P_(ConvexHullContourPerfTest, convexHull)
     const double R = step * total / (2.0 * CV_PI);
     const double scaleY = 1.25;   // ellipse, taller than wide with any noise
 
-    RNG& rng = theRNG();      // the same seed in every test case
+    RNG& rng = theRNG();
     std::vector<Mat> inputs(runs);
     for (int k = 0; k < runs; ++k)
     {
@@ -111,11 +110,10 @@ PERF_TEST_P_(ConvexHullContourPerfTest, convexHull)
             if (depth == CV_32S)
                 inputs[k].at<Point>(i) = Point(cvRound(x), cvRound(y));
             else
-                inputs[k].at<Point2f>(i) = Point2f((float)x, (float)y);   // not rounded
+                inputs[k].at<Point2f>(i) = Point2f((float)x, (float)y);
         }
     }
 
-    // output: indices, or points of the input type
     std::vector<int> hull_idx;
     std::vector<Point> hull_pts;
     std::vector<Point2f> hull_ptsf;
