@@ -459,7 +459,8 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         const double sprec = 3;
         const unsigned int h =  (unsigned int)(ceil(sigma * sqrt(2 * sprec * log(10.0))));
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
-        GaussianBlur(image, gaussian_img, ksize, sigma);
+        // the smoothing must not read pixels around a sub-matrix of a larger image
+        GaussianBlur(image, gaussian_img, ksize, sigma, 0, BORDER_DEFAULT | BORDER_ISOLATED);
         // Scale image to needed size
         resize(gaussian_img, scaled_image, Size(), SCALE, SCALE, INTER_LINEAR_EXACT);
         ll_angle(rho, N_BINS);
