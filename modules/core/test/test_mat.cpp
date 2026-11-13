@@ -491,6 +491,55 @@ TEST(Core_PCA, accuracy)
     EXPECT_EQ(0, remove(filename.c_str()));
 }
 
+TEST(Core_PCA, multi_strip_parity)
+{
+    RNG rng(9911);
+    const int types[] = { CV_32F, CV_64F };
+    const int flagsList[] = { CV_PCA_DATA_AS_ROW, CV_PCA_DATA_AS_COL };
+    for (int t = 0; t < 2; ++t)
+    {
+        for (int f = 0; f < 2; ++f)
+        {
+            const int flags = flagsList[f];
+            const bool asCol = (flags == CV_PCA_DATA_AS_COL);
+            const int N = 40, D = 35000, K = 8; // >4 MiB working set forces multi-strip tiling
+            Mat train = asCol ? Mat(D, N, types[t]) : Mat(N, D, types[t]);
+            Mat probe = asCol ? Mat(D, N + 7, types[t]) : Mat(N + 7, D, types[t]);
+            rng.fill(train, RNG::NORMAL, 100.0, 2.5);
+            rng.fill(probe, RNG::NORMAL, 100.0, 2.5);
+
+            PCA pca(train, noArray(), flags, K);
+            ASSERT_EQ(K, pca.eigenvectors.rows);
+            ASSERT_EQ(D, pca.eigenvectors.cols);
+
+            Mat refProj, refBack;
+            Mat meanRep = repeat(pca.mean, asCol ? 1 : probe.rows, asCol ? probe.cols : 1);
+            Mat centered = probe - meanRep;
+            if (!asCol)
+            {
+                gemm(centered, pca.eigenvectors, 1.0, Mat(), 0.0, refProj, GEMM_2_T);
+                gemm(refProj, pca.eigenvectors, 1.0, meanRep, 1.0, refBack, 0);
+            }
+            else
+            {
+                gemm(pca.eigenvectors, centered, 1.0, Mat(), 0.0, refProj, 0);
+                gemm(pca.eigenvectors, refProj, 1.0, meanRep, 1.0, refBack, GEMM_1_T);
+            }
+
+            Mat gotProj = pca.project(probe);
+            Mat gotBack = pca.backProject(gotProj);
+            double tol = (types[t] == CV_32F) ? 1e-3 : 1e-9;
+            EXPECT_LE(cvtest::norm(gotProj, refProj, NORM_INF), tol);
+            EXPECT_LE(cvtest::norm(gotBack, refBack, NORM_INF), tol);
+
+            // In-place aliasing check: project(mat, mat)
+            Mat alias = probe.clone();
+            pca.project(alias, alias);
+            EXPECT_LE(cvtest::norm(alias, refProj, NORM_INF), tol);
+        }
+    }
+}
+
 class Core_ArrayOpTest : public cvtest::BaseTest
 {
 public:

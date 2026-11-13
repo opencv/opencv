@@ -50,6 +50,104 @@
 namespace cv
 {
 
+namespace
+{
+
+template<typename T>
+static void copyAndShiftByMeanTyped(const Mat& src, Mat& dst, const Mat& mean, bool meanIsRow, double sign)
+{
+    const int rows = src.rows;
+    const int cols = src.cols;
+    if (meanIsRow)
+    {
+        const T* mptr = mean.ptr<T>(0);
+        const T s = static_cast<T>(sign);
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                const T* srow = src.ptr<T>(r);
+                T* drow = dst.ptr<T>(r);
+                for (int c = 0; c < cols; ++c)
+                    drow[c] = srow[c] + s * mptr[c];
+            }
+        }, src.total() >= 65536 ? rows : 1);
+    }
+    else
+    {
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int r = range.start; r < range.end; ++r)
+            {
+                const T mval = static_cast<T>(sign) * mean.at<T>(r, 0);
+                const T* srow = src.ptr<T>(r);
+                T* drow = dst.ptr<T>(r);
+                for (int c = 0; c < cols; ++c)
+                    drow[c] = srow[c] + mval;
+            }
+        }, src.total() >= 65536 ? rows : 1);
+    }
+}
+
+static void shiftByMean(const Mat& src, Mat& dst, const Mat& mean, bool meanIsRow, double sign)
+{
+    const int depth = dst.depth();
+    if (depth == CV_32F)
+        copyAndShiftByMeanTyped<float>(src, dst, mean, meanIsRow, sign);
+    else if (depth == CV_64F)
+        copyAndShiftByMeanTyped<double>(src, dst, mean, meanIsRow, sign);
+    else
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported PCA depth");
+}
+
+static void convertAndCenter(const Mat& src, Mat& tmp, const Mat& mean, bool meanIsRow, int ctype)
+{
+    if (src.type() == ctype)
+    {
+        tmp.create(src.size(), ctype);
+        shiftByMean(src, tmp, mean, meanIsRow, -1.0);
+    }
+    else
+    {
+        src.convertTo(tmp, ctype);
+        shiftByMean(tmp, tmp, mean, meanIsRow, -1.0);
+    }
+}
+
+static void computeScrambledEigenvectors(const Mat& data, const Mat& mean, int flags,
+                                         int out_count, int ctype, Mat& eigenvectors)
+{
+    const bool asCol = (flags & CV_PCA_DATA_AS_COL) != 0;
+    const int len = asCol ? data.rows : data.cols;
+    const int in_count = asCol ? data.cols : data.rows;
+    const size_t elemSize = CV_ELEM_SIZE(ctype);
+    const size_t kTargetStripBytes = 4u << 20;
+    const int blockLen = std::max(1, std::min(len,
+        (int)(kTargetStripBytes / (std::max(1, in_count) * elemSize))));
+
+    Mat evects1(out_count, len, ctype);
+    Mat eigenSlice = eigenvectors.rowRange(0, out_count);
+    Mat tmp_data;
+
+    for (int pos = 0; pos < len; pos += blockLen)
+    {
+        const int curLen = std::min(blockLen, len - pos);
+        Mat sub = asCol ? data.rowRange(pos, pos + curLen) : data.colRange(pos, pos + curLen);
+        Mat mSlice = asCol ? mean.rowRange(pos, pos + curLen) : mean.colRange(pos, pos + curLen);
+        convertAndCenter(sub, tmp_data, mSlice, !asCol, ctype);
+
+        Mat outStrip = evects1.colRange(pos, pos + curLen);
+        gemm(eigenSlice, tmp_data, 1, Mat(), 0, outStrip, asCol ? CV_GEMM_B_T : 0);
+    }
+
+    eigenvectors = evects1;
+    for (int i = 0; i < out_count; i++)
+    {
+        Mat vec = eigenvectors.row(i);
+        normalize(vec, vec);
+    }
+}
+
+} // namespace
+
 PCA::PCA() {}
 
 PCA::PCA(InputArray data, InputArray _mean, int flags, int maxComponents)
@@ -113,30 +211,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     {
         // CV_PCA_DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
         // CV_PCA_DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
-        Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
-        if( data.type() != ctype || tmp_mean.data == mean.data )
-        {
-            data.convertTo( tmp_data, ctype );
-            subtract( tmp_data, tmp_mean, tmp_data );
-        }
-        else
-        {
-            subtract( data, tmp_mean, tmp_mean );
-            tmp_data = tmp_mean;
-        }
-
-        Mat evects1(out_count, len, ctype);
-        gemm( eigenvectors.rowRange(0, out_count), tmp_data, 1, Mat(), 0, evects1,
-            (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
-        eigenvectors = evects1;
-
-        // normalize eigenvectors
-        int i;
-        for( i = 0; i < out_count; i++ )
-        {
-            Mat vec = eigenvectors.row(i);
-            normalize(vec, vec);
-        }
+        computeScrambledEigenvectors(data, mean, flags, out_count, ctype, eigenvectors);
     }
 
     if( eigenvalues.rows > out_count )
@@ -254,30 +329,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     {
         // CV_PCA_DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
         // CV_PCA_DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
-        Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
-        if( data.type() != ctype || tmp_mean.data == mean.data )
-        {
-            data.convertTo( tmp_data, ctype );
-            subtract( tmp_data, tmp_mean, tmp_data );
-        }
-        else
-        {
-            subtract( data, tmp_mean, tmp_mean );
-            tmp_data = tmp_mean;
-        }
-
-        Mat evects1(L, len, ctype);
-        gemm( eigenvectors.rowRange(0, L), tmp_data, 1, Mat(), 0, evects1,
-            (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
-        eigenvectors = evects1;
-
-        // normalize eigenvectors
-        int i;
-        for( i = 0; i < eigenvectors.rows; i++ )
-        {
-            Mat vec = eigenvectors.row(i);
-            normalize(vec, vec);
-        }
+        computeScrambledEigenvectors(data, mean, flags, L, ctype, eigenvectors);
     }
 
     // use clone() to physically copy the data and thus deallocate the original matrices
@@ -294,22 +346,53 @@ void PCA::project(InputArray _data, OutputArray result) const
     Mat data = _data.getMat();
     CV_Assert( !mean.empty() && !eigenvectors.empty() &&
         ((mean.rows == 1 && mean.cols == data.cols) || (mean.cols == 1 && mean.rows == data.rows)));
-    Mat tmp_data, tmp_mean = repeat(mean, data.rows/mean.rows, data.cols/mean.cols);
-    int ctype = mean.type();
-    if( data.type() != ctype || tmp_mean.data == mean.data )
-    {
-        data.convertTo( tmp_data, ctype );
-        subtract( tmp_data, tmp_mean, tmp_data );
-    }
+    const bool meanIsRow = (mean.rows == 1);
+    const int ctype = mean.type();
+    const int D = meanIsRow ? data.cols : data.rows;
+    const int N = meanIsRow ? data.rows : data.cols;
+    const int k = eigenvectors.rows;
+    const int resRows = meanIsRow ? N : k;
+    const int resCols = meanIsRow ? k : N;
+
+    Mat dst;
+    const bool aliased = result.isMat() && result.getMat().datastart == data.datastart;
+    if (aliased)
+        dst.create(resRows, resCols, ctype);
     else
     {
-        subtract( data, tmp_mean, tmp_mean );
-        tmp_data = tmp_mean;
+        result.create(resRows, resCols, ctype);
+        dst = result.getMat();
     }
-    if( mean.rows == 1 )
-        gemm( tmp_data, eigenvectors, 1, Mat(), 0, result, GEMM_2_T );
-    else
-        gemm( eigenvectors, tmp_data, 1, Mat(), 0, result, 0 );
+
+    const size_t elemSize = CV_ELEM_SIZE(ctype);
+    const size_t kTargetStripBytes = 4u << 20;
+    const int blockFeat = std::max(1, std::min(D, (int)(kTargetStripBytes / elemSize)));
+    const int blockSamples = std::max(1, std::min(N,
+        (int)(kTargetStripBytes / ((size_t)blockFeat * elemSize))));
+
+    Mat tmp_data;
+    for (int s0 = 0; s0 < N; s0 += blockSamples)
+    {
+        const int s1 = std::min(N, s0 + blockSamples);
+        Mat outSlice = meanIsRow ? dst.rowRange(s0, s1) : dst.colRange(s0, s1);
+        for (int f0 = 0; f0 < D; f0 += blockFeat)
+        {
+            const int f1 = std::min(D, f0 + blockFeat);
+            Mat sub = meanIsRow ? data(Range(s0, s1), Range(f0, f1))
+                                : data(Range(f0, f1), Range(s0, s1));
+            Mat mSlice = meanIsRow ? mean.colRange(f0, f1) : mean.rowRange(f0, f1);
+            convertAndCenter(sub, tmp_data, mSlice, meanIsRow, ctype);
+
+            Mat eSlice = eigenvectors.colRange(f0, f1);
+            gemm(meanIsRow ? tmp_data : eSlice,
+                 meanIsRow ? eSlice : tmp_data,
+                 1, (f0 == 0) ? Mat() : outSlice, (f0 == 0) ? 0.0 : 1.0,
+                 outSlice, meanIsRow ? GEMM_2_T : 0);
+        }
+    }
+
+    if (aliased)
+        dst.copyTo(result);
 }
 
 Mat PCA::project(InputArray data) const
@@ -326,18 +409,15 @@ void PCA::backProject(InputArray _data, OutputArray result) const
         ((mean.rows == 1 && eigenvectors.rows == data.cols) ||
          (mean.cols == 1 && eigenvectors.rows == data.rows)));
 
-    Mat tmp_data, tmp_mean;
+    Mat tmp_data;
     data.convertTo(tmp_data, mean.type());
     if( mean.rows == 1 )
-    {
-        tmp_mean = repeat(mean, data.rows, 1);
-        gemm( tmp_data, eigenvectors, 1, tmp_mean, 1, result, 0 );
-    }
+        gemm( tmp_data, eigenvectors, 1, Mat(), 0, result, 0 );
     else
-    {
-        tmp_mean = repeat(mean, 1, data.cols);
-        gemm( eigenvectors, tmp_data, 1, tmp_mean, 1, result, GEMM_1_T );
-    }
+        gemm( eigenvectors, tmp_data, 1, Mat(), 0, result, GEMM_1_T );
+
+    Mat dst = result.getMat();
+    shiftByMean(dst, dst, mean, mean.rows == 1, 1.0);
 }
 
 Mat PCA::backProject(InputArray data) const
