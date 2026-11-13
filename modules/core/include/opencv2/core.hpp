@@ -801,6 +801,7 @@ In Python, multi-channel input is not supported at all due to a limitation in th
 binding generation process (there is no way to set minLoc and maxLoc to NULL). A
 workaround is to operate on each channel individually or to use NumPy to achieve the same
 functionality.
+@note NaN handling is left unspecified, see patchNaNs() and finiteMask().
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -858,6 +859,7 @@ a single-row or single-column matrix. In OpenCV (following MATLAB) each array ha
 dimensions, i.e. single-column matrix is Mx1 matrix (and therefore minIdx/maxIdx will be
 (i1,0)/(i2,0)) and single-row matrix is 1xN matrix (and therefore minIdx/maxIdx will be
 (0,j1)/(0,j2)).
+@note NaN handling is left unspecified, see patchNaNs() and finiteMask().
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
