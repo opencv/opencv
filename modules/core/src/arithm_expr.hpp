@@ -170,6 +170,7 @@ struct TKernel
 // kernel for this combination" - the compiler then inserts OP_CAST and retries with a working type.
 // These are the useful, op-specific intermediaries (candidates for CV_EXPORTS later).
 CV_EXPORTS TKernel getAddFunc(int T, int R);
+void addSharedFloat32ToRgb8(const Mat& rgb, const Mat& field, Mat& dst);
 CV_EXPORTS TKernel getSubFunc(int T, int R);
 CV_EXPORTS TKernel getMulFunc(int T, int R);
 CV_EXPORTS TKernel getDivFunc(int T, int R, bool checked);   // `checked` => guard b==0 -> 0 (integer divide)

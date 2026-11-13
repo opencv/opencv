@@ -299,6 +299,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // ---- per-op kernel entry points for THIS baseline (the regular dispatchers in
 //      arithm.dispatch.cpp reach them through CV_CPU_DISPATCH). ----
 TKernel getAddFunc_(int T, int R);
+void addSharedFloat32ToRgb8_(const Mat& rgb, const Mat& field, Mat& dst, const Range& rows);
 TKernel getSubFunc_(int T, int R);
 TKernel getMulFunc_(int T, int R);
 TKernel getDivFunc_(int T, int R, bool checked);
@@ -316,6 +317,61 @@ TKernel getClampFunc_(int T);                // OP_CLAMP: min(max(x, lo), hi), a
 TKernel getCastFunc_(int sdepth, int ddepth, bool scaled);   // OP_CAST / OP_CONVERT_SCALE
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#if CV_SIMD || CV_SIMD_SCALABLE
+static inline v_int32 addRgbLanes(const v_uint32& pixels, const v_float32& offset)
+{
+    return v_round(v_add(v_cvt_f32(v_reinterpret_as_s32(pixels)), offset));
+}
+
+static inline v_uint8 addRgbPlane(const v_uint8& pixels, const v_float32& d0, const v_float32& d1,
+                                const v_float32& d2, const v_float32& d3)
+{
+    v_uint16 low, high;
+    v_uint32 p0, p1, p2, p3;
+    v_expand(pixels, low, high);
+    v_expand(low, p0, p1);
+    v_expand(high, p2, p3);
+    return v_pack_u(v_pack(addRgbLanes(p0, d0), addRgbLanes(p1, d1)),
+                    v_pack(addRgbLanes(p2, d2), addRgbLanes(p3, d3)));
+}
+#endif
+
+void addSharedFloat32ToRgb8_(const Mat& rgb, const Mat& field, Mat& dst, const Range& rows)
+{
+    for (int y = rows.start; y < rows.end; ++y)
+    {
+        const uchar* source = rgb.ptr<uchar>(y);
+        const float* offsets = field.ptr<float>(y);
+        uchar* output = dst.ptr<uchar>(y);
+        int x = 0;
+#if CV_SIMD || CV_SIMD_SCALABLE
+        const int lanes = VTraits<v_float32>::vlanes();
+        const int pixels = VTraits<v_uint8>::vlanes();
+        const v_float32 limit = vx_setall_f32(0x1p30f);
+        for (; x <= rgb.cols - pixels; x += pixels)
+        {
+            const v_float32 d0 = vx_load(offsets + x), d1 = vx_load(offsets + x + lanes);
+            const v_float32 d2 = vx_load(offsets + x + 2 * lanes), d3 = vx_load(offsets + x + 3 * lanes);
+            // Out-of-range and NaN conversions may differ between SIMD and cvRound.
+            if (!v_check_all(v_and(v_and(v_lt(v_abs(d0), limit), v_lt(v_abs(d1), limit)),
+                                   v_and(v_lt(v_abs(d2), limit), v_lt(v_abs(d3), limit)))))
+                break;
+            v_uint8 a, b, c;
+            const size_t index = static_cast<size_t>(x) * 3;
+            v_load_deinterleave(source + index, a, b, c);
+            v_store_interleave(output + index, addRgbPlane(a, d0, d1, d2, d3),
+                              addRgbPlane(b, d0, d1, d2, d3), addRgbPlane(c, d0, d1, d2, d3));
+        }
+#endif
+        for (; x < rgb.cols; ++x)
+        {
+            const size_t index = static_cast<size_t>(x) * 3;
+            for (int ch = 0; ch < 3; ++ch)
+                output[index + ch] = saturate_cast<uchar>(source[index + ch] + offsets[x]);
+        }
+    }
+}
 
 // ===========================================================================
 // Op functors (vector + scalar). New binary ops slot in here.

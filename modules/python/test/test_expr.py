@@ -45,6 +45,30 @@ class texpr_test(NewOpenCVTests):
         got = cv.texpr("{0} * {1}", [img, row])[0]
         self.assertLessEqual(np.max(np.abs(got - img * row)), 1e-3)
 
+    def test_add_shared_float32_field_to_rgb8(self):
+        offsets = [-400, -255.5, -2.5, -0.5, 0.5, 2.5, 254.5, 400,
+                   np.nan, np.inf, -np.inf, 2.0**31, -2.0**31]
+        rng = np.random.default_rng(137)
+        for width in (7, 64, 67, 224):
+            with self.subTest(width=width):
+                image = rng.integers(0, 256, (3, width + 4, 3), dtype=np.uint8)[:, 2:-2]
+                field = rng.uniform(-400, 400, (3, width + 4)).astype(np.float32)[:, 2:-2]
+                field[:, -min(width, len(offsets)):] = offsets[-min(width, len(offsets)):]
+                if width == 224:
+                    # Put ties in the first SIMD block, before exceptional offsets trigger scalar fallback.
+                    image[:, :2] = [100, 101, 102]
+                    field[:, :2] = [-0.5, 0.5]
+                expected, = cv.texpr("uint8({0} + {1})", [image, field])
+                storage = np.full((3, width + 4, 3), 137, dtype=np.uint8)
+                output = storage[:, 2:-2]
+
+                np.testing.assert_array_equal(cv.add(image, field, dtype=cv.CV_8U), expected)
+                cv.add(field, image, dst=output, dtype=cv.CV_8U)
+                np.testing.assert_array_equal(output, expected)
+                self.assertTrue(np.all(storage[:, :2] == 137) and np.all(storage[:, -2:] == 137))
+                cv.add(image, field, dst=image, dtype=cv.CV_8U)
+                np.testing.assert_array_equal(image, expected)
+
     def test_ternary_and_compare(self):
         a = np.random.uniform(0, 100, (9, 14)).astype(np.float32)
         b = np.random.uniform(0, 100, (9, 14)).astype(np.float32)

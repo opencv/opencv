@@ -17,6 +17,21 @@ namespace cv { namespace ew {
 
 // ---- tier 2: pick the kernel optimized for the current CPU ---------------------------------------
 TKernel getAddFunc(int T, int R)            { CV_CPU_DISPATCH(getAddFunc_,     (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
+static void addSharedFloat32ToRgb8Rows(const Mat& rgb, const Mat& field, Mat& dst, const Range& rows)
+{
+    CV_CPU_DISPATCH(addSharedFloat32ToRgb8_, (rgb, field, dst, rows), CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void addSharedFloat32ToRgb8(const Mat& rgb, const Mat& field, Mat& dst)
+{
+    const Range rows(0, rgb.rows);
+    const size_t pixelsPerStripe = 1 << 16;
+    if (getNumThreads() > 1 && rgb.rows > 1 && rgb.total() >= 4 * pixelsPerStripe)
+        parallel_for_(rows, [&](const Range& stripe) { addSharedFloat32ToRgb8Rows(rgb, field, dst, stripe); },
+                      static_cast<double>(rgb.total()) / pixelsPerStripe);
+    else
+        addSharedFloat32ToRgb8Rows(rgb, field, dst, rows);
+}
 TKernel getSubFunc(int T, int R)            { CV_CPU_DISPATCH(getSubFunc_,     (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getMulFunc(int T, int R)            { CV_CPU_DISPATCH(getMulFunc_,     (T, R),          CV_CPU_DISPATCH_MODES_ALL); }
 TKernel getDivFunc(int T, int R, bool chk)  { CV_CPU_DISPATCH(getDivFunc_,     (T, R, chk),     CV_CPU_DISPATCH_MODES_ALL); }
