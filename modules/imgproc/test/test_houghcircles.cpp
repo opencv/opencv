@@ -318,4 +318,34 @@ TEST_P(HoughCirclesTest, ManySmallCircles)
 INSTANTIATE_TEST_CASE_P(HoughGradient, HoughCirclesTest, testing::Values(HOUGH_GRADIENT));
 INSTANTIATE_TEST_CASE_P(HoughGradientAlt, HoughCirclesTest, testing::Values(HOUGH_GRADIENT_ALT));
 
+TEST(HoughCircles_Gradient, synthetic_multithread_parity)
+{
+    struct ThreadGuard {
+        int prev;
+        ThreadGuard() : prev(getNumThreads()) {}
+        ~ThreadGuard() { setNumThreads(prev); }
+    } guard;
+
+    Mat img(640, 800, CV_8UC1, Scalar(20));
+    circle(img, Point(160, 160), 45, Scalar(220), 3, LINE_AA);
+    circle(img, Point(420, 260), 70, Scalar(200), FILLED, LINE_AA);
+    circle(img, Point(620, 480), 35, Scalar(240), 4, LINE_AA);
+
+    std::vector<Vec4f> circles1, circlesN;
+    setNumThreads(1);
+    HoughCircles(img, circles1, HOUGH_GRADIENT, 1.0, 50, 100, 30, 20, 90);
+    setNumThreads(std::max(4, guard.prev));
+    HoughCircles(img, circlesN, HOUGH_GRADIENT, 1.0, 50, 100, 30, 20, 90);
+
+    ASSERT_EQ(3u, circles1.size());
+    ASSERT_EQ(circles1.size(), circlesN.size());
+    for (size_t i = 0; i < circles1.size(); ++i)
+    {
+        EXPECT_NEAR(circles1[i][0], circlesN[i][0], 1e-4f);
+        EXPECT_NEAR(circles1[i][1], circlesN[i][1], 1e-4f);
+        EXPECT_NEAR(circles1[i][2], circlesN[i][2], 1e-4f);
+        EXPECT_NEAR(circles1[i][3], circlesN[i][3], 1e-4f);
+    }
+}
+
 }} // namespace

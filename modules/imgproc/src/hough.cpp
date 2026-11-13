@@ -1188,21 +1188,20 @@ class HoughCirclesAccumInvoker : public ParallelLoopBody
 {
 public:
     HoughCirclesAccumInvoker(const Mat &_edges, const Mat &_dx, const Mat &_dy, int _minRadius, int _maxRadius, float _idp,
-                             std::vector<Mat>& _accumVec, NZPointSet& _nz, Mutex& _mtx) :
+                             Mat& _accum, NZPointSet& _nz) :
         edges(_edges), dx(_dx), dy(_dy), minRadius(_minRadius), maxRadius(_maxRadius), idp(_idp),
-        accumVec(_accumVec), nz(_nz), mutex(_mtx)
+        accum(_accum), nz(_nz)
     {
         acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
         astep = acols + 2;
+        adata = accum.ptr<int>();
     }
 
     ~HoughCirclesAccumInvoker() { }
 
     void operator()(const Range &boundaries) const CV_OVERRIDE
     {
-        Mat accumLocal = Mat(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
-        int *adataLocal = accumLocal.ptr<int>();
-        NZPointSet nzLocal(nz.positions.rows, nz.positions.cols);
+        const bool singleThread = (boundaries == Range(0, edges.rows));
         int startRow = boundaries.start;
         int endRow = boundaries.end;
         int numCols = edges.cols;
@@ -1268,7 +1267,8 @@ _next_step:
                     continue;
 
                 Point pt = Point(x % edges.cols, y + x / edges.cols);
-                nzLocal.insert(pt);
+                // Stripes own disjoint row ranges of edges, so writing nz.positions(pt) is race-free.
+                nz.insert(pt);
 
                 sx = cvRound((vx * idp) * 1024 / mag);
                 sy = cvRound((vy * idp) * 1024 / mag);
@@ -1289,18 +1289,24 @@ _next_step:
                             (unsigned)y2 >= (unsigned)arows )
                             break;
 
-                        adataLocal[y2*astep + x2]++;
+                        int* cell = adata + y2 * astep + x2;
+                        if (singleThread)
+                        {
+                            (*cell)++;
+                        }
+                        else
+                        {
+#if defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 5))
+                            __atomic_fetch_add(cell, 1, __ATOMIC_RELAXED);
+#else
+                            CV_XADD(cell, 1);
+#endif
+                        }
                     }
 
                     sx = -sx; sy = -sy;
                 }
             }
-        }
-
-        { // TODO Try using TLSContainers
-            AutoLock lock(mutex);
-            accumVec.push_back(accumLocal);
-            nz.insert(nzLocal);
         }
     }
 
@@ -1308,12 +1314,11 @@ private:
     const Mat &edges, &dx, &dy;
     int minRadius, maxRadius;
     float idp;
-    std::vector<Mat>& accumVec;
+    Mat& accum;
     NZPointSet& nz;
 
     int acols, arows, astep;
-
-    Mutex& mutex;
+    int* adata;
 };
 
 class HoughCirclesFindCentersInvoker : public ParallelLoopBody
@@ -1716,21 +1721,18 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 
     Mutex mtx;
     int numThreads = std::max(1, getNumThreads());
-    std::vector<Mat> accumVec;
+    const int acols = cvCeil(edges.cols * idp), arows = cvCeil(edges.rows * idp);
+    Mat accum(arows + 2, acols + 2, CV_32SC1, Scalar::all(0));
     NZPointSet nz(_image.rows(), _image.cols());
     parallel_for_(Range(0, edges.rows),
-                  HoughCirclesAccumInvoker(edges, dx, dy, minRadius, maxRadius, idp, accumVec, nz, mtx),
+                  HoughCirclesAccumInvoker(edges, dx, dy, minRadius, maxRadius, idp, accum, nz),
                   numThreads);
+    edges.release();
+    dx.release();
+    dy.release();
     int nzSz = cv::countNonZero(nz.positions);
     if(nzSz <= 0)
         return;
-
-    Mat accum = accumVec[0];
-    for(size_t i = 1; i < accumVec.size(); i++)
-    {
-        accum += accumVec[i];
-    }
-    accumVec.clear();
 
     std::vector<int> centers;
 
