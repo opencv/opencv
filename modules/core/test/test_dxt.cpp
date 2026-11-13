@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/fp_control_utils.hpp"
 
 #define CV_TEST_DXT_MUL_CONJ 8 /**< conjugate the second argument of cvMulSpectrums */
 
@@ -1342,6 +1343,219 @@ static Mat dxtRandom(RNG& rng, int rows, int cols, int type)
     cvtest::randUni(rng, m, Scalar::all(-1.), Scalar::all(1.));
     return m;
 }
+
+class Core_DFT_PrimeFactors : public testing::TestWithParam<int>
+{
+    bool useIPP;
+    int threads;
+protected:
+    void SetUp() CV_OVERRIDE
+    {
+        useIPP = cv::ipp::useIPP();
+        threads = cv::getNumThreads();
+        cv::ipp::setUseIPP(false);
+    }
+    void TearDown() CV_OVERRIDE
+    {
+        cv::ipp::setUseIPP(useIPP);
+        cv::setNumThreads(threads);
+    }
+};
+
+TEST_P(Core_DFT_PrimeFactors, complex_reference)
+{
+    const int depth = GetParam();
+    RNG rng(0x157ab);
+    const int sizes[] = { 127, 131, 254, 257, 381, 508, 1009, 4093, 127*64 };
+    const int flag_sets[] = { 0, DFT_SCALE, DFT_INVERSE, DFT_INVERSE | DFT_SCALE };
+    for (int n : sizes)
+    {
+        Mat src = dxtRandom(rng, 1, n, CV_MAKETYPE(depth, 2)), input;
+        src.convertTo(input, CV_64F);
+        double eps = depth == CV_32F ? FLT_EPSILON : DBL_EPSILON;
+        double tolerance = 32*eps*(1 + std::log((double)n)/std::log(2.))*cvtest::norm(src, NORM_L2);
+        for (int flags : flag_sets)
+        {
+            SCOPED_TRACE(cv::format("n=%d depth=%d flags=%d", n, depth, flags));
+            Mat out, actual;
+            cv::dft(src, out, flags);
+            out.convertTo(actual, CV_64F);
+            // Independent direct sums, with exact integer angle reduction rather
+            // than a recurrence. Sample large transforms to keep the test bounded.
+            for (int k = 0; k < n; k += n <= 257 ? 1 : std::max(1, n/17))
+            {
+                long double re = 0, im = 0;
+                for (int j = 0; j < n; j++)
+                {
+                    long double angle = 2*std::acos(-1.L)*(((int64)j*k) % n)/n;
+                    if (!(flags & DFT_INVERSE))
+                        angle = -angle;
+                    long double wr = std::cos(angle), wi = std::sin(angle);
+                    Vec2d v = input.at<Vec2d>(0, j);
+                    re += v[0]*wr - v[1]*wi;
+                    im += v[0]*wi + v[1]*wr;
+                }
+                double scale = flags & DFT_SCALE ? 1./n : 1.;
+                EXPECT_NEAR(actual.at<Vec2d>(0, k)[0], (double)(re*scale), tolerance*scale);
+                EXPECT_NEAR(actual.at<Vec2d>(0, k)[1], (double)(im*scale), tolerance*scale);
+            }
+            Mat inplace = src.clone();
+            cv::dft(inplace, inplace, flags);
+            EXPECT_EQ(0, cvtest::norm(inplace, out, NORM_INF));
+        }
+    }
+}
+
+TEST_P(Core_DFT_PrimeFactors, real_packing)
+{
+    const int depth = GetParam();
+    RNG rng(0x718cd);
+    const int sizes[] = { 127, 131, 254, 257, 508, 1009, 2018, 4093 };
+    double tolerance = depth == CV_32F ? 3e-5 : 5e-13;
+    for (int n : sizes)
+    {
+        SCOPED_TRACE(cv::format("n=%d depth=%d", n, depth));
+        Mat src = dxtRandom(rng, 1, n, depth), complex, packed, full, back;
+        cv::dft(src, complex, DFT_COMPLEX_OUTPUT);
+        cv::dft(src, packed);
+        full.create(1, n, CV_MAKETYPE(depth, 2));
+        convertFromCCS(packed, packed, full, 0);
+        EXPECT_LE(dxtRelDiff(full, complex), tolerance);
+        EXPECT_EQ(0, depth == CV_32F ? (double)complex.at<Vec2f>(0, 0)[1] : complex.at<Vec2d>(0, 0)[1]);
+        cv::dft(complex, back, DFT_INVERSE | DFT_SCALE | DFT_REAL_OUTPUT);
+        EXPECT_LE(dxtRelDiff(back, src), tolerance);
+        cv::dft(packed, packed, DFT_INVERSE | DFT_SCALE);
+        EXPECT_LE(dxtRelDiff(packed, src), tolerance);
+        Mat column = src.t(), colout;
+        cv::dft(column, colout, DFT_COMPLEX_OUTPUT);
+        EXPECT_LE(dxtRelDiff(colout.t(), complex), tolerance);
+    }
+}
+
+TEST_P(Core_DFT_PrimeFactors, dynamic_range)
+{
+    const int depth = GetParam();
+    RNG rng(0x3f125);
+    Mat unit = dxtRandom(rng, 1, 4093, CV_MAKETYPE(depth, 2)), expected;
+    const double amplitudes[] = { depth == CV_32F ? 1e34 : 1e300,
+                                  depth == CV_32F ? 1e-30 : 1e-280 };
+    const int flag_sets[] = { 0, DFT_INVERSE | DFT_SCALE };
+    for (int flags : flag_sets)
+    {
+        cv::dft(unit, expected, flags);
+        expected.convertTo(expected, CV_64F);
+        for (double amplitude : amplitudes)
+        {
+            SCOPED_TRACE(cv::format("depth=%d amplitude=%g flags=%d", depth, amplitude, flags));
+            Mat src, out, normalized;
+            unit.convertTo(src, -1, amplitude);
+            cv::dft(src, out, flags);
+            ASSERT_TRUE(cv::checkRange(out));
+            out.convertTo(normalized, CV_64F, 1./amplitude);
+            EXPECT_LE(dxtRelDiff(normalized, expected), depth == CV_32F ? 1e-5 : 1e-12);
+        }
+    }
+}
+
+TEST_P(Core_DFT_PrimeFactors, subnormal_input)
+{
+    const int depth = GetParam(), n = 4093;
+    cv::FPDenormalsIgnoreHintScope preserveSubnormals(false);
+    const double minNormal = depth == CV_32F ? std::numeric_limits<float>::min() :
+                                             std::numeric_limits<double>::min();
+    Mat probe(1, 64, depth, Scalar::all(minNormal/2)), restored;
+    cv::add(probe, probe, restored);
+    if (countNonZero(restored != minNormal) != 0)
+        throw SkipTestException("Subnormal arithmetic is flushed to zero on this platform");
+    const int exponent = depth == CV_32F ?
+        std::numeric_limits<float>::min_exponent - std::numeric_limits<float>::digits :
+        std::numeric_limits<double>::min_exponent - std::numeric_limits<double>::digits;
+    Mat unit(1, n, CV_64FC2), src(1, n, CV_MAKETYPE(depth, 2)), expected, out;
+    for (int j = 0; j < 2*n; j++)
+    {
+        const double value = (j*13 % 11) - 5;
+        unit.ptr<double>()[j] = value;
+        if (depth == CV_32F)
+            src.ptr<float>()[j] = std::ldexp((float)value, exponent);
+        else
+            src.ptr<double>()[j] = std::ldexp(value, exponent);
+    }
+    cv::dft(unit, expected);
+    cv::dft(src, out);
+    ASSERT_TRUE(cv::checkRange(out));
+    for (int j = 0; j < 2*n; j++)
+    {
+        const double value = depth == CV_32F ? out.ptr<float>()[j] : out.ptr<double>()[j];
+        // Compare in units of the smallest subnormal to include final quantization.
+        EXPECT_NEAR(expected.ptr<double>()[j], std::ldexp(value, -exponent), 1.);
+    }
+}
+
+TEST_P(Core_DFT_PrimeFactors, strided_parallel)
+{
+    const int depth = GetParam();
+    RNG rng(0x1532d);
+    const int flag_sets[] = { 0, DFT_ROWS };
+    for (Size size : { Size(257, 131), Size(254, 127), Size(4093, 33) })
+    {
+        for (int cn : { 1, 2 })
+        {
+            Mat parent = dxtRandom(rng, size.height + 2, size.width + 3, CV_MAKETYPE(depth, cn));
+            Mat src = parent(Rect(1, 1, size.width, size.height));
+            for (int flags : flag_sets)
+            {
+                SCOPED_TRACE(cv::format("size=%dx%d depth=%d cn=%d flags=%d",
+                                       size.width, size.height, depth, cn, flags));
+                Mat reference, outParent(parent.size(), parent.type());
+                Mat out = outParent(Rect(1, 1, size.width, size.height)), back;
+                cv::setNumThreads(1);
+                cv::dft(src, reference, flags);
+                cv::setNumThreads(4);
+                cv::dft(src, out, flags);
+                EXPECT_EQ(0, cvtest::norm(out, reference, NORM_INF));
+                cv::dft(out, back, flags | DFT_INVERSE | DFT_SCALE);
+                EXPECT_LE(dxtRelDiff(back, src), depth == CV_32F ? 5e-5 : 1e-12);
+            }
+            Mat padded = src.clone(), reference, out;
+            int nonzero = size.height/2;
+            padded.rowRange(nonzero, size.height).setTo(0);
+            cv::dft(padded, reference);
+            cv::dft(src, out, 0, nonzero);
+            EXPECT_EQ(0, cvtest::norm(out, reference, NORM_INF));
+        }
+    }
+}
+
+TEST_P(Core_DFT_PrimeFactors, dct_plan_reuse)
+{
+    const int depth = GetParam();
+    RNG rng(0x9281);
+    double tolerance = depth == CV_32F ? 3e-5 : 5e-13;
+    const int flag_sets[] = { 0, DCT_INVERSE };
+    for (int n : { 254, 262, 514 })
+    {
+        Mat src = dxtRandom(rng, 1, n, depth), reference, out;
+        for (int flags : flag_sets)
+        {
+            DCT_1D(src, reference, flags);
+            cv::dct(src, out, flags);
+            EXPECT_LE(dxtRelDiff(out, reference), tolerance);
+        }
+    }
+    // The same DCT plan is rebuilt for the row and column passes.
+    for (Size size : { Size(254, 256), Size(256, 254), Size(262, 254) })
+    {
+        Mat src = dxtRandom(rng, size.height, size.width, depth), out, back;
+        cv::dct(src, out);
+        cv::dct(out, back, DCT_INVERSE);
+        EXPECT_LE(dxtRelDiff(back, src), tolerance);
+        cv::dct(src, out, DCT_ROWS);
+        cv::dct(out, out, DCT_ROWS | DCT_INVERSE);
+        EXPECT_LE(dxtRelDiff(out, src), tolerance);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core, Core_DFT_PrimeFactors, testing::Values(CV_32F, CV_64F));
 
 TEST(Core_DFT, sweep_1d)
 {

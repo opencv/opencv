@@ -75,7 +75,7 @@ typedef perf::TestBaseWithParam<Len_MatType_Flags_Col_t> Len_MatType_Flags_Col;
 
 // single row (1 x N) or single column (N x 1) vectors, N covers the 2^k, 5-smooth and odd plans
 PERF_TEST_P(Len_MatType_Flags_Col, dft1d, testing::Combine(
-                                    testing::Values(256, 1000, 1024, 4096, 4725, 65536),
+                                    testing::Values(256, 257, 1000, 1009, 1024, 4093, 4096, 4725, 8128, 65536),
                                     testing::Values(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2),
                                     DFT1D_FlagsType::all(), testing::Bool()))
 {
