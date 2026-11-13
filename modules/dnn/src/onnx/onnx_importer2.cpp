@@ -296,6 +296,7 @@ protected:
     void parseNonMaxSuppression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTensorScatter        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2260,6 +2261,14 @@ void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeP
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseTensorScatter(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Check(node_proto.input_size(), node_proto.input_size() == 2 || node_proto.input_size() == 3,
+             "TensorScatter: 2 or 3 inputs are required.");
+    layerParams.type = "TensorScatter";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     // ONNX spec: direction is required string attr: "LEFT" or "RIGHT"
@@ -3661,6 +3670,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["RoiAlign"] = &ONNXImporter2::parseRoiAlign;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["TensorScatter"] = &ONNXImporter2::parseTensorScatter;
     dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
     dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;

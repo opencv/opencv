@@ -46,6 +46,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include "../src/layers/tensor_scatter.hpp"
 
 #ifdef HAVE_INF_ENGINE
 #include <thread>
@@ -4770,6 +4771,263 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     ASSERT_EQ(outputs.size(), (size_t)2);
     normAssert(ref, outputs[0], "output");
     normAssert(refState, outputs[1], "present_state");
+}
+
+TEST(Test_TensorScatter, DefaultWriteIndices)
+{
+    const int shape_past[] = {2, 3, 4};
+    const int shape_update[] = {2, 1, 4};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, -1.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_default_indices";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    for (int b = 0; b < 2; ++b)
+    {
+        for (int k = 0; k < 4; ++k)
+        {
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 0, k), update.at<float>(b, 0, k));
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 1, k), past.at<float>(b, 1, k));
+            EXPECT_FLOAT_EQ(outputs[0].at<float>(b, 2, k), past.at<float>(b, 2, k));
+        }
+    }
+}
+
+TEST(Test_TensorScatter, CircularWrapAround)
+{
+    const int shape_past[] = {1, 3, 2};
+    const int shape_update[] = {1, 2, 2};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, 0.f, 5.f);
+    randu(update, 100.f, 200.f);
+
+    int32_t indices_data[] = {2};
+    Mat indices(1, 1, CV_32S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_circular";
+    lp.set("axis", 1);
+    lp.set("mode", "circular");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    for (int k = 0; k < 2; ++k)
+    {
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 2, k), update.at<float>(0, 0, k));
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 0, k), update.at<float>(0, 1, k));
+        EXPECT_FLOAT_EQ(outputs[0].at<float>(0, 1, k), past.at<float>(0, 1, k));
+    }
+
+    {
+        const int shape_past_multi[] = {1, 5, 2};
+        const int shape_update_multi[] = {1, 4, 2};
+        Mat past_multi(3, shape_past_multi, CV_32F);
+        Mat update_multi(3, shape_update_multi, CV_32F);
+        randu(past_multi, 0.f, 5.f);
+        randu(update_multi, 100.f, 200.f);
+
+        int32_t idx_multi_data[] = {3};
+        Mat idx_multi(1, 1, CV_32S, idx_multi_data);
+        std::vector<Mat> multi_inputs = {past_multi, update_multi, idx_multi};
+        std::vector<Mat> multi_outputs;
+        runLayer(layer, multi_inputs, multi_outputs);
+
+        for (int k = 0; k < 2; ++k)
+        {
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 3, k), update_multi.at<float>(0, 0, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 4, k), update_multi.at<float>(0, 1, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 0, k), update_multi.at<float>(0, 2, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 1, k), update_multi.at<float>(0, 3, k));
+            EXPECT_FLOAT_EQ(multi_outputs[0].at<float>(0, 2, k), past_multi.at<float>(0, 2, k));
+        }
+    }
+}
+
+
+TEST(Test_TensorScatter, Int64MaxWriteIndexLinear)
+{
+    const int shape_past[] = {1, 4, 2};
+    const int shape_update[] = {1, 1, 2};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, 0.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    int64_t indices_data[] = {std::numeric_limits<int64_t>::max()};
+    Mat indices(1, 1, CV_64S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_int64_max";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs(1, Mat(3, shape_past, CV_32F));
+    std::vector<Mat> internals;
+    layer->finalize(inputs, outputs);
+    EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
+}
+
+TEST(Test_TensorScatter, ZeroWorkDomain)
+{
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_zero_work";
+    lp.set("axis", 2);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // Case 1: Empty intermediate dimension (past=[1, 0, 4], update=[1, 0, 1], axis=2)
+    {
+        const int shape_past[] = {1, 0, 4};
+        const int shape_update[] = {1, 0, 1};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_update, CV_32F);
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({1, 0, 4}));
+    }
+
+    // Case 2: Zero-batch tensor (past=[0, 2, 4], update=[0, 2, 1], axis=2)
+    {
+        const int shape_past[] = {0, 2, 4};
+        const int shape_update[] = {0, 2, 1};
+        Mat past(3, shape_past, CV_32F);
+        Mat update(3, shape_update, CV_32F);
+        std::vector<Mat> inputs = {past, update};
+        std::vector<Mat> outputs;
+        runLayer(layer, inputs, outputs);
+        ASSERT_EQ(outputs.size(), (size_t)1);
+        ASSERT_EQ(shape(outputs[0]), MatShape({0, 2, 4}));
+    }
+}
+
+
+TEST(Test_TensorScatter, ChunkedWorkDomain)
+{
+    const int shape_past[] = {4, 8, 16};
+    const int shape_update[] = {4, 2, 16};
+    Mat past(3, shape_past, CV_32F);
+    Mat update(3, shape_update, CV_32F);
+    randu(past, -1.f, 1.f);
+    randu(update, 10.f, 20.f);
+
+    int32_t indices_data[] = {1, 3, 0, 5};
+    Mat indices(1, 4, CV_32S, indices_data);
+
+    LayerParams lp;
+    lp.type = "TensorScatter";
+    lp.name = "test_ts_chunked";
+    lp.set("axis", 1);
+    lp.set("mode", "linear");
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {past, update, indices};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), shape(past));
+
+    for (int b = 0; b < 4; ++b)
+    {
+        int write_offset = indices_data[b];
+        for (int s = 0; s < 2; ++s)
+        {
+            for (int k = 0; k < 16; ++k)
+            {
+                EXPECT_FLOAT_EQ(outputs[0].at<float>(b, write_offset + s, k),
+                                update.at<float>(b, s, k));
+            }
+        }
+    }
+}
+
+TEST(Test_TensorScatter, PlanChunksScheduler)
+{
+    // Test empty domain
+    EXPECT_TRUE(cv::dnn::planTensorScatterChunks(0, 3).empty());
+
+    // Test multiple chunks with remainder: 8 slices, max_chunk_size = 3
+    // Chunks: [0, 3), [3, 3), [6, 2)
+    auto chunks = cv::dnn::planTensorScatterChunks(8, 3);
+    ASSERT_EQ(chunks.size(), (size_t)3);
+    EXPECT_EQ(chunks[0].start, (size_t)0);
+    EXPECT_EQ(chunks[0].len, (size_t)3);
+    EXPECT_EQ(chunks[1].start, (size_t)3);
+    EXPECT_EQ(chunks[1].len, (size_t)3);
+    EXPECT_EQ(chunks[2].start, (size_t)6);
+    EXPECT_EQ(chunks[2].len, (size_t)2);
+
+    // Verify boundary coverage: all elements [0, 8) visited exactly once
+    std::vector<bool> visited(8, false);
+    for (const auto& c : chunks)
+    {
+        for (size_t i = 0; i < c.len; ++i)
+        {
+            size_t idx = c.start + i;
+            ASSERT_LT(idx, (size_t)8);
+            EXPECT_FALSE(visited[idx]);
+            visited[idx] = true;
+        }
+    }
+    for (bool v : visited)
+        EXPECT_TRUE(v);
+
+    // Test large domain >= 2^32 with max_chunk_size = INT_MAX / 2
+    size_t chunk_limit = static_cast<size_t>(std::numeric_limits<int>::max() / 2);
+    size_t large_domain = chunk_limit * 2 + 5;
+    auto chunks_large = cv::dnn::planTensorScatterChunks(large_domain, chunk_limit);
+    ASSERT_EQ(chunks_large.size(), (size_t)3);
+    EXPECT_EQ(chunks_large[0].start, (size_t)0);
+    EXPECT_EQ(chunks_large[0].len, chunk_limit);
+    EXPECT_EQ(chunks_large[1].start, chunk_limit);
+    EXPECT_EQ(chunks_large[1].len, chunk_limit);
+    EXPECT_EQ(chunks_large[2].start, chunk_limit * 2);
+    EXPECT_EQ(chunks_large[2].len, (size_t)5);
+    for (const auto& c : chunks_large)
+    {
+        EXPECT_LE(c.len, chunk_limit);
+        EXPECT_LE(c.len, static_cast<size_t>(std::numeric_limits<int>::max()));
+    }
+
+    // Malformed argument validations
+    EXPECT_THROW(cv::dnn::planTensorScatterChunks(10, 0), cv::Exception);
+    EXPECT_THROW(cv::dnn::planTensorScatterChunks(10, static_cast<size_t>(std::numeric_limits<int>::max()) + 1), cv::Exception);
 }
 
 }} // namespace
