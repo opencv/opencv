@@ -2088,6 +2088,41 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_GlobalPoolingBlock, testing::Combine(
     testing::Bool()),
     GlobalPoolingParamName());
 
+// rows 3 and 4 of a 5x3 matrix lie past min(h, w); ONNX Trilu still masks them
+TEST(Layer_Test_Trilu, tall_matrix)
+{
+    const int sz[] = {2, 5, 3};
+    Mat inp(3, sz, CV_32F);
+    randu(inp, 1, 10);
+
+    for (int upper = 0; upper <= 1; upper++)
+    {
+        for (int k = -2; k <= 1; k++)
+        {
+            LayerParams lp;
+            lp.name = "testTrilu";
+            lp.type = "Trilu";
+            lp.set("upper", upper == 1);
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+
+            Mat kMat(1, 1, CV_64S);
+            kMat.at<int64>(0, 0) = k;
+            std::vector<Mat> inputs = {inp, kMat}, outputs(1, Mat(3, sz, CV_32F));
+            layer->forward(inputs, outputs, std::vector<Mat>());
+
+            for (int n = 0; n < sz[0]; n++)
+                for (int l = 0; l < sz[1]; l++)
+                    for (int c = 0; c < sz[2]; c++)
+                    {
+                        const bool keep = upper ? (c - l >= k) : (c - l <= k);
+                        const float expected = keep ? inp.ptr<float>(n, l)[c] : 0.f;
+                        EXPECT_EQ(expected, outputs[0].ptr<float>(n, l)[c])
+                            << "upper=" << upper << " k=" << k << " n=" << n << " l=" << l << " c=" << c;
+                    }
+        }
+    }
+}
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {

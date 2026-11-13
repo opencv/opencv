@@ -18,6 +18,14 @@ void reduce_mean(const csl::Stream& stream, csl::Span<float> means, csl::View<T>
 template <class T>
 void reduce_mean_sqr_sum(const csl::Stream& stream, csl::Span<float> means, csl::Span<float> sum_sqrs, csl::View<T> input, std::size_t inner_size);
 
+// floats of scratch the overload below needs to split rows this long across blocks; 0 when it does not split
+std::size_t reduce_mean_sqr_sum_scratch(std::size_t rows, std::size_t inner_size);
+
+// same result, with long rows split across blocks and the partials added in a fixed order
+template <class T>
+void reduce_mean_sqr_sum(const csl::Stream& stream, csl::Span<float> means, csl::Span<float> sum_sqrs, csl::View<T> input,
+                         std::size_t inner_size, csl::Span<float> scratch);
+
 void compute_normalization_scale(const csl::Stream& stream, csl::Span<float> scale, csl::View<float> means, csl::View<float> sum_sqrs, std::size_t inner_size, float eps);
 
 template <class T>

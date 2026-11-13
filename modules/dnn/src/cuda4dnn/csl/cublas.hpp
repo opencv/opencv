@@ -11,7 +11,6 @@
 #include "memory.hpp"
 
 #include <opencv2/core.hpp>
-#include <opencv2/core/utils/configuration.private.hpp>
 
 #include <cublas_v2.h>
 

@@ -8,11 +8,139 @@
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <map>
+#include <set>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/einsum.hpp"
+#endif
 
 namespace cv
 {
 namespace dnn
 {
+
+#ifdef HAVE_CUDA
+// One label per axis of an einsum term. The axes under "..." get digits, numbered from the
+// right so that equal trailing ellipsis axes of both operands share a label.
+static bool expandEinsumTerm(const std::string& term, int rank, std::string& labels)
+{
+    const size_t pos = term.find("...");
+    const std::string left = pos == std::string::npos ? term : term.substr(0, pos);
+    const std::string right = pos == std::string::npos ? std::string() : term.substr(pos + 3);
+    const int ellipsis = rank - (int)(left.size() + right.size());
+    // each ellipsis axis gets one digit label, so at most ten
+    if (ellipsis < 0 || (pos == std::string::npos && ellipsis != 0) || ellipsis > 10)
+        return false;
+    labels = left;
+    for (int j = 0; j < ellipsis; j++)
+        labels += char('0' + (ellipsis - 1 - j));
+    labels += right;
+    for (char c : left + right)
+        if (!std::isalpha((unsigned char)c))
+            return false;
+    return true;
+}
+
+// Plans a two-operand einsum as permute -> strided batched GEMM -> permute. False for what that
+// cannot express: a label repeated within a term, a label summed out of one operand only, or
+// a shared label whose sizes differ (broadcasting).
+static bool planEinsumCUDA(const std::vector<String>& terms, const String& rhs,
+                           const MatShape& shapeA, const MatShape& shapeB, cuda4dnn::EinsumPlan& plan)
+{
+    if (terms.size() != 2 || shapeA.dims < 0 || shapeB.dims < 0)
+        return false;
+    auto ellipsisRank = [](const std::string& term, int rank) {
+        return term.find("...") == std::string::npos ? 0 : rank - (int)(term.size() - 3);
+    };
+    const int ellipsisOut = std::max(ellipsisRank(terms[0], shapeA.dims), ellipsisRank(terms[1], shapeB.dims));
+    const int rankOut = (int)rhs.size() - (rhs.find("...") == std::string::npos ? 0 : 3 - ellipsisOut);
+    std::string la, lb, lo;
+    if (!expandEinsumTerm(terms[0], shapeA.dims, la) || !expandEinsumTerm(terms[1], shapeB.dims, lb) ||
+        !expandEinsumTerm(rhs, rankOut, lo))
+        return false;
+
+    std::map<char, int> size;
+    for (const std::string& labels : {la, lb, lo})
+        if (std::set<char>(labels.begin(), labels.end()).size() != labels.size())
+            return false;
+    for (size_t i = 0; i < la.size(); i++)
+        size[la[i]] = shapeA[(int)i];
+    for (size_t i = 0; i < lb.size(); i++) {
+        auto it = size.find(lb[i]);
+        if (it != size.end() && it->second > 0 && shapeB[(int)i] > 0 && it->second != shapeB[(int)i])
+            return false;
+        if (it == size.end() || it->second <= 0)
+            size[lb[i]] = shapeB[(int)i];
+    }
+
+    auto in = [](const std::string& labels, char c) { return labels.find(c) != std::string::npos; };
+    std::string batch, m, n, k;
+    for (char c : lo) {
+        if (!in(la, c) && !in(lb, c))
+            return false;
+        (in(la, c) && in(lb, c) ? batch : in(la, c) ? m : n) += c;
+    }
+    for (char c : la)
+        if (!in(lo, c)) {
+            if (!in(lb, c))
+                return false;
+            k += c;
+        }
+    for (char c : lb)
+        if (!in(lo, c) && !in(la, c))
+            return false;
+
+    auto product = [&](const std::string& labels) {
+        std::size_t p = 1;
+        for (char c : labels) p *= (std::size_t)std::max(size[c], 0);
+        return p;
+    };
+    auto shapeOf = [&](const std::string& labels) {
+        std::vector<std::size_t> s;
+        for (char c : labels) s.push_back((std::size_t)std::max(size[c], 0));
+        return s;
+    };
+    auto positions = [](const std::string& from, const std::string& wanted) {
+        std::vector<std::size_t> p;
+        for (char c : wanted) p.push_back(from.find(c));
+        return p;
+    };
+
+    plan = cuda4dnn::EinsumPlan();
+    plan.batch = product(batch);
+    plan.M = product(m);
+    plan.N = product(n);
+    plan.K = product(k);
+    const std::string mk = batch + m + k, kn = batch + k + n, mn = batch + m + n;
+    if (la != mk) {
+        if (la == batch + k + m) {
+            plan.transA = true;
+        } else {
+            plan.permA = positions(la, mk);
+            plan.shapeA = shapeOf(mk);
+        }
+    }
+    if (lb != kn) {
+        if (lb == batch + n + k) {
+            plan.transB = true;
+        } else {
+            plan.permB = positions(lb, kn);
+            plan.shapeB = shapeOf(kn);
+        }
+    }
+    if (lo != mn) {
+        plan.permC = positions(mn, lo);
+        plan.shapeC = shapeOf(mn);
+    }
+    return true;
+}
+#endif
 
 static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
                                         const MatShape& input_dims,
@@ -462,9 +590,37 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || inputs.size() != 2 || !explicitEquation)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            for (const Arg& a : inputs) {
+                const int t = netimpl_->argData(a).type;
+                if (t >= 0 && t != CV_32F)
+                    return false;
+            }
+            cuda4dnn::EinsumPlan plan;
+            return planEinsumCUDA(lhs_eq_tokens, rhs_eq, netimpl_->argData(inputs[0]).shape,
+                                  netimpl_->argData(inputs[1]).shape, plan);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        CV_UNUSED(outputs_arr);
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        cuda4dnn::EinsumPlan plan;
+        CV_Assert(planEinsumCUDA(lhs_eq_tokens, rhs_eq, inputs_arr.shape(0), inputs_arr.shape(1), plan));
+        return make_cuda_node<cuda4dnn::EinsumOp>(preferableTarget, std::move(context->stream),
+                                                 std::move(context->cublas_handle), plan);
+    }
+#endif
 
     virtual void getTypes(const std::vector<MatType>& inputs,
                           const int requiredOutputs,

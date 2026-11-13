@@ -42,6 +42,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void eltwise_pow_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
+    template <class T>
+    void eltwise_prelu_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> slope);
+
+    // integer types only
+    template <class T>
+    void eltwise_bitand_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
+
+    template <class T>
+    void eltwise_bitor_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
+
+    template <class T>
+    void eltwise_bitxor_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_KERNELS_ELTWISE_OPS_HPP */

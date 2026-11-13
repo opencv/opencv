@@ -16,6 +16,9 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
+#include "../cuda4dnn/kernels/fill_copy.hpp"
+#include "../cuda4dnn/kernels/padding.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>
@@ -64,7 +67,113 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
                 output[i] = input[iidx];
             }
         }
+
+        template <class T, std::size_t Rank>
+        __global__ void pad_nd(
+            Span<T> output, array<size_type, Rank> out_strides,
+            View<T> input, array<size_type, Rank> in_strides, array<index_type, Rank> in_shape,
+            array<index_type, Rank> pads_begin, int mode, T value)
+        {
+            for (auto i : grid_stride_range(output.size())) {
+                index_type iidx = 0;
+                bool outside = false;
+                for (int j = 0; j < Rank; j++) {
+                    const index_type n = in_shape[j];
+                    const index_type out_j = j == 0 ? i / out_strides[0] : (i % out_strides[j - 1]) / out_strides[j];
+                    index_type p = out_j - pads_begin[j];
+                    if (p < 0 || p >= n) {
+                        if (mode == static_cast<int>(kernels::PadMode::CONSTANT)) {
+                            outside = true;
+                            break;
+                        } else if (mode == static_cast<int>(kernels::PadMode::REPLICATE)) {
+                            p = p < 0 ? 0 : n - 1;
+                        } else if (mode == static_cast<int>(kernels::PadMode::WRAP)) {
+                            p = ((p % n) + n) % n;
+                        } else if (n == 1) {
+                            p = 0;
+                        } else {
+                            // reflect101 may bounce more than once when a pad exceeds the axis
+                            while (p < 0 || p >= n)
+                                p = p < 0 ? -p : 2 * n - 2 - p;
+                        }
+                    }
+                    iidx += p * in_strides[j];
+                }
+                output[i] = outside ? value : input[iidx];
+            }
+        }
     }
+
+    template <class T, std::size_t Rank> static
+    void launch_pad_nd(
+        const Stream& stream,
+        Span<T> output, const std::vector<std::size_t>& outStride,
+        View<T> input, const std::vector<std::size_t>& inStride, const std::vector<std::size_t>& inShape,
+        const std::vector<int>& padsBegin, int mode, T value)
+    {
+        CV_Assert(outStride.size() == Rank && inStride.size() == Rank);
+        CV_Assert(inShape.size() == Rank && padsBegin.size() == Rank);
+
+        array<size_type, Rank> outStride_k, inStride_k;
+        outStride_k.assign(std::begin(outStride), std::end(outStride));
+        inStride_k.assign(std::begin(inStride), std::end(inStride));
+
+        array<index_type, Rank> inShape_k, padsBegin_k;
+        for (int i = 0; i < Rank; i++) {
+            inShape_k[i] = inShape[i];
+            padsBegin_k[i] = padsBegin[i];
+        }
+
+        auto kernel = raw::pad_nd<T, Rank>;
+        auto policy = make_policy(kernel, output.size(), 0, stream);
+        launch_kernel(kernel, policy, output, outStride_k, input, inStride_k, inShape_k, padsBegin_k, mode, value);
+    }
+
+    GENERATE_KERNEL_DISPATCHER(pad_nd_dispatcher, launch_pad_nd);
+
+    template <class T>
+    void pad_nd(
+        const Stream& stream,
+        TensorSpan<T> output, TensorView<T> input,
+        const std::vector<int>& pads_begin, PadMode mode, T value)
+    {
+        CV_Assert(output.rank() == input.rank());
+        CV_Assert(output.rank() == pads_begin.size());
+        if (output.size() == 0)
+            return;
+        // an empty input leaves only constant padding
+        if (input.size() == 0) {
+            CV_Assert(mode == PadMode::CONSTANT);
+            fill<T>(stream, output, value);
+            return;
+        }
+
+        const auto rank = input.rank();
+        auto inShape = input.shape_as_vector();
+        auto outShape = output.shape_as_vector();
+
+        std::vector<std::size_t> inStride(rank), outStride(rank);
+        inStride.back() = 1;
+        outStride.back() = 1;
+        for (int i = (int)rank - 2; i >= 0; i--) {
+            inStride[i] = inStride[i + 1] * inShape[i + 1];
+            outStride[i] = outStride[i + 1] * outShape[i + 1];
+        }
+
+        CV_Assert(1 <= rank && rank <= CSL_MAX_TENSOR_RANK);
+        pad_nd_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, input, inStride, inShape,
+                                                     pads_begin, static_cast<int>(mode), value);
+    }
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template void pad_nd(const Stream&, TensorSpan<__half>, TensorView<__half>, const std::vector<int>&, PadMode, __half);
+#endif
+    template void pad_nd(const Stream&, TensorSpan<float>, TensorView<float>, const std::vector<int>&, PadMode, float);
+    template void pad_nd(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, const std::vector<int>&, PadMode, int8_t);
+    template void pad_nd(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, const std::vector<int>&, PadMode, uint8_t);
+    template void pad_nd(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, const std::vector<int>&, PadMode, int32_t);
+    template void pad_nd(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, const std::vector<int>&, PadMode, int64_t);
+    template void pad_nd(const Stream&, TensorSpan<bool>, TensorView<bool>, const std::vector<int>&, PadMode, bool);
 
     template <class T, std::size_t Rank> static
     void launch_copy_with_reflection101(

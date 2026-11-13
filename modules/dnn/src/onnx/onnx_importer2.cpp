@@ -2446,6 +2446,23 @@ void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::N
             layerParams.set("zoom_factor_y", scales.at<float>(2));
             layerParams.set("zoom_factor_x", scales.at<float>(3));
             n_inputs = 1;
+        } else if (layerParams.get<String>("mode", "nearest") != "nearest" ||
+                   (!layerParams.get<bool>("align_corners", false) &&
+                    !layerParams.get<bool>("half_pixel_centers", false))) {
+            // runtime scales go to Resize2, which can stay on CUDA; nearest only in its plain
+            // asymmetric form, since that is the one Resize2 can match exactly
+            layerParams.type = "Resize2";
+            // keep the legacy layer's sampling, which only the two flags selected
+            if (!layerParams.has("coordinate_transformation_mode")) {
+                const bool halfPixel = layerParams.get<String>("mode") == "opencv_linear" ||
+                                       layerParams.get<bool>("half_pixel_centers", false);
+                layerParams.set("coordinate_transformation_mode",
+                                halfPixel ? "half_pixel" :
+                                layerParams.get<bool>("align_corners", false) ? "align_corners" : "asymmetric");
+            }
+            // the legacy nearest path (cv::resize INTER_NEAREST) rounds down
+            if (layerParams.get<String>("mode", "nearest") == "nearest" && !layerParams.has("nearest_mode"))
+                layerParams.set("nearest_mode", "floor");
         }
     }
     replaceLayerParam(layerParams, "mode", "interpolation");
@@ -3676,7 +3693,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
-    dispatch["RMSNormalization"] = dispatch["SimplifiedLayerNormalization"] = &ONNXImporter2::parseRMSNormalization;
+    dispatch["RMSNormalization"] = &ONNXImporter2::parseRMSNormalization;
     dispatch["RotaryEmbedding"] = &ONNXImporter2::parseRotaryEmbedding;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;

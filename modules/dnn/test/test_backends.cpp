@@ -119,7 +119,18 @@ public:
 };
 
 TEST_P(DNNTestNetwork, YOLOv8n) {
-    processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0");
+    // output0 holds box coordinates in pixels (|ref| ~ 638), so the error scales with that range
+    double l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_CUDA && cudaTF32Enabled())
+    {
+        lInf = 0.9;  // TF32: measured 0.848
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 7e-3;   // measured 6.31e-3 (full cuDNN), 10 runs
+        lInf = 3.5;  // measured 3.11 (full cuDNN), 2.02 (cuDNN JIT), 10 runs
+    }
+    processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0", l1, lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
 }

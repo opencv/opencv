@@ -28,35 +28,39 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        GroupNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t num_groups)
+        GroupNormOp(csl::Stream stream_, float epsilon_, size_t loops, size_t num_groups, size_t group_elems)
             : stream(std::move(stream_)), epsilon(epsilon_), num_groups(num_groups) {
+            reduce_scratch = kernels::reduce_mean_sqr_sum_scratch(loops, group_elems);
             csl::WorkspaceBuilder builder;
             builder.require<float>(loops * num_groups); // mean and stdev for each group
             builder.require<float>(loops * num_groups);
+            if (reduce_scratch)
+                builder.require<float>(reduce_scratch);
             scratch_mem_in_bytes = builder.required_workspace_size();
         }
 
-        void forward(const std::vector<cv::Ptr<BackendWrapper>>& inputs,
-                     const std::vector<cv::Ptr<BackendWrapper>>& outputs,
+        void forward(const std::vector<UMat>& inputs,
+                     const std::vector<UMat>& outputs,
                      csl::Workspace& workspace) override {
-            auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
-            auto scale_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
+            CV_Assert(inputs.size() == 3 && outputs.size() == 1);
 
-            auto input = input_wrapper->getView();
-            auto scale = scale_wrapper->getView();
-            auto bias = bias_wrapper->getView();
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto scale = csl::viewOf<T>(inputs[1]);
+            auto bias = csl::viewOf<T>(inputs[2]);
 
-            auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
-            auto output = output_wrapper->getSpan();
+            auto output = csl::spanOf<T>(outputs[0]);
 
             auto C = input.get_axis_size(1);
             auto loops = input.size_range(0, 2);
             auto norm_size = input.size_range(2, input.rank());
             auto num_groups = this->num_groups;
             auto group_size = C / num_groups;
-            if (norm_size == 1) {
-                kernels::fill<T>(stream, output, 0.f);
+            if (norm_size * group_size == 1) {
+                // a single-element group normalizes to 0, so the output is the per-channel bias
+                auto ws_allocator = csl::WorkspaceAllocator(workspace);
+                auto zeros = ws_allocator.get_span<float>(loops);
+                kernels::fill<float>(stream, zeros, 0.f);
+                kernels::normalize_mean_variance_groupwise<T>(stream, output, input, scale, bias, zeros, zeros, norm_size, C, num_groups, group_size);
                 return;
             } else {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
@@ -64,8 +68,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 // reduce_mean_sqr_sum writes every row, so no zero-fill is needed
                 auto mean = ws_allocator.get_span<float>(loops / group_size);
                 auto stdev = ws_allocator.get_span<float>(loops / group_size);
+                auto partials = reduce_scratch ? ws_allocator.get_span<float>(reduce_scratch) : csl::Span<float>();
 
-                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size * group_size);
+                kernels::reduce_mean_sqr_sum<T>(stream, mean, stdev, input, norm_size * group_size, partials);
                 kernels::compute_normalization_scale(stream, stdev, mean, stdev, norm_size * group_size, epsilon);
                 kernels::normalize_mean_variance_groupwise<T>(stream, output, input, scale, bias, mean, stdev, norm_size, C, num_groups, group_size);
             }
@@ -77,6 +82,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         float epsilon;
         std::size_t num_groups;
+        std::size_t reduce_scratch;
         std::size_t scratch_mem_in_bytes;
     };
 

@@ -279,7 +279,6 @@ TEST_P(Test_YOLO_nets, YOLOv4)
         // TF32 reorders two near-tied NMS candidates on one box: IoU diff 0.0429 in 100 of 100 runs
         iouDiff = 0.05;
     }
-
     std::string model_file = "yolov4.onnx";
 
     {
