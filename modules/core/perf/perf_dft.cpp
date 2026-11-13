@@ -7,7 +7,7 @@ using namespace perf;
 ///////////////////////////////////////////////////////dft//////////////////////////////////////////////////////////////
 
 #define MAT_TYPES_DFT  CV_32FC1, CV_32FC2, CV_64FC1
-#define MAT_SIZES_DFT  cv::Size(320, 480), cv::Size(800, 600), cv::Size(1280, 1024), sz1080p, sz2K
+#define MAT_SIZES_DFT  cv::Size(256, 256), cv::Size(512, 512), cv::Size(320, 480), cv::Size(800, 600), cv::Size(1280, 1024), sz1080p, sz2K
 CV_ENUM(FlagsType, 0, DFT_INVERSE, DFT_SCALE, DFT_COMPLEX_OUTPUT, DFT_ROWS, DFT_INVERSE|DFT_COMPLEX_OUTPUT)
 #define TEST_MATS_DFT  testing::Combine(testing::Values(MAT_SIZES_DFT), testing::Values(MAT_TYPES_DFT), FlagsType::all(), testing::Values(true, false))
 
