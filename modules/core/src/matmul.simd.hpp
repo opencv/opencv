@@ -114,6 +114,14 @@ double dotProd_16s(const short* src1, const short* src2, int len);
 double dotProd_32s(const int* src1, const int* src2, int len);
 double dotProd_32f(const float* src1, const float* src2, int len);
 double dotProd_64f(const double* src1, const double* src2, int len);
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len);
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len);
+double dotProd_bool(const uchar* src1, const uchar* src2, int len);
+double dotProd_64u(const uint64* src1, const uint64* src2, int len);
+double dotProd_64s(const int64* src1, const int64* src2, int len);
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len);
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len);
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len);
 
 
 
@@ -3701,6 +3709,115 @@ double dotProd_32f(const float* src1, const float* src2, int len)
 double dotProd_64f(const double* src1, const double* src2, int len)
 {
     return dotProd_(src1, src2, len);
+}
+
+// 16F / 16BF: widen each value to float32, then to double, because the product of
+// two bfloat values can be too big or too small for float32
+template<typename T> static inline
+double dotProdExpand_(const T* src1, const T* src2, int len)
+{
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    v_float64 v_sum0 = vx_setzero_f64(), v_sum1 = vx_setzero_f64();
+    v_float64 v_sum2 = vx_setzero_f64(), v_sum3 = vx_setzero_f64();
+    // four independent sums, so each multiply-add doesn't wait for the previous one
+    for (; i <= len - cWidth * 2; i += cWidth * 2)
+    {
+        v_float32 v_src10 = vx_load_expand(src1 + i), v_src20 = vx_load_expand(src2 + i);
+        v_float32 v_src11 = vx_load_expand(src1 + i + cWidth), v_src21 = vx_load_expand(src2 + i + cWidth);
+        // a double vector holds half as many lanes, so do the low half and the high half
+        v_sum0 = v_muladd(v_cvt_f64(v_src10), v_cvt_f64(v_src20), v_sum0);
+        v_sum1 = v_muladd(v_cvt_f64_high(v_src10), v_cvt_f64_high(v_src20), v_sum1);
+        v_sum2 = v_muladd(v_cvt_f64(v_src11), v_cvt_f64(v_src21), v_sum2);
+        v_sum3 = v_muladd(v_cvt_f64_high(v_src11), v_cvt_f64_high(v_src21), v_sum3);
+    }
+    for (; i <= len - cWidth; i += cWidth)
+    {
+        v_float32 v_src1 = vx_load_expand(src1 + i), v_src2 = vx_load_expand(src2 + i);
+        v_sum0 = v_muladd(v_cvt_f64(v_src1), v_cvt_f64(v_src2), v_sum0);
+        v_sum1 = v_muladd(v_cvt_f64_high(v_src1), v_cvt_f64_high(v_src2), v_sum1);
+    }
+    r = v_reduce_sum(v_add(v_add(v_sum0, v_sum1), v_add(v_sum2, v_sum3)));
+    vx_cleanup();
+#endif
+    return r + dotProd_(src1 + i, src2 + i, len - i);
+}
+
+// fp8: decode through the 256-entry table (gathered with v_lut, as in cvtFp8ToF32)
+template<typename T> static inline
+double dotProdFp8_(const T* src1_, const T* src2_, int len)
+{
+    const uchar* src1 = (const uchar*)src1_;
+    const uchar* src2 = (const uchar*)src2_;
+    const float* tab = T::decodeLUT();
+    double r = 0.0;
+    int i = 0;
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cWidth = VTraits<v_float32>::vlanes();
+    v_float64 v_sum0 = vx_setzero_f64(), v_sum1 = vx_setzero_f64();
+    for (; i <= len - cWidth; i += cWidth)
+    {
+        v_float32 v_src1 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src1 + i)));
+        v_float32 v_src2 = v_lut(tab, v_reinterpret_as_s32(vx_load_expand_q(src2 + i)));
+        // the product of two fp8 values is always exact in float32, so only the sum needs double
+        v_float32 v_prod = v_mul(v_src1, v_src2);
+        v_sum0 = v_add(v_sum0, v_cvt_f64(v_prod));
+        v_sum1 = v_add(v_sum1, v_cvt_f64_high(v_prod));
+    }
+    r = v_reduce_sum(v_add(v_sum0, v_sum1));
+    vx_cleanup();
+#endif
+    for (; i < len; i++)
+        r += (double)tab[src1[i]] * tab[src2[i]];
+    return r;
+}
+
+double dotProd_16f(const hfloat* src1, const hfloat* src2, int len)
+{
+    return dotProdExpand_(src1, src2, len);
+}
+
+double dotProd_16bf(const bfloat* src1, const bfloat* src2, int len)
+{
+    return dotProdExpand_(src1, src2, len);
+}
+
+// CV_Bool: any non-zero byte is true, so count the positions where both are true
+double dotProd_bool(const uchar* src1, const uchar* src2, int len)
+{
+    int r = 0;
+    for (int i = 0; i < len; i++)
+        r += src1[i] != 0 && src2[i] != 0;
+    return r;
+}
+
+double dotProd_64u(const uint64* src1, const uint64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_64s(const int64* src1, const int64* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_32u(const unsigned* src1, const unsigned* src2, int len)
+{
+    return dotProd_(src1, src2, len);
+}
+
+double dotProd_8f(const fp8_t* src1, const fp8_t* src2, int len)
+{
+    return dotProdFp8_(src1, src2, len);
+}
+
+double dotProd_8fnuz(const fp8a_t* src1, const fp8a_t* src2, int len)
+{
+    return dotProdFp8_(src1, src2, len);
 }
 
 #endif

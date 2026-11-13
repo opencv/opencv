@@ -2470,6 +2470,73 @@ TEST(Core_Invert, small)
 TEST(Core_CrossProduct, accuracy) { Core_CrossProductTest test; test.safe_run(); }
 TEST(Core_Determinant, accuracy) { Core_DetTest test; test.safe_run(); }
 TEST(Core_DotProduct, accuracy) { Core_DotProductTest test; test.safe_run(); }
+
+typedef testing::TestWithParam<int> Core_DotProduct_NewTypes;
+
+TEST_P(Core_DotProduct_NewTypes, accuracy)
+{
+    const int depth = GetParam();
+    // small integers: every depth stores them exactly, so the dot product is exact
+    Mat a32s(17, 41, CV_32SC2), b32s(17, 41, CV_32SC2);
+    randu(a32s, -8, 9);
+    randu(b32s, -8, 9);
+    Mat a, b;
+    a32s.convertTo(a, depth);
+    b32s.convertTo(b, depth);
+
+    // reference: the same values in CV_64F (negative values become 0 for the unsigned depths,
+    // non-zero values become 1 for CV_Bool)
+    Mat a64f, b64f;
+    a.convertTo(a64f, CV_64F);
+    b.convertTo(b64f, CV_64F);
+
+    EXPECT_EQ(a64f.dot(b64f), a.dot(b));
+    // a non-continuous ROI is processed plane by plane
+    const Rect roi(3, 2, 30, 11);
+    EXPECT_EQ(a64f(roi).dot(b64f(roi)), a(roi).dot(b(roi)));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_DotProduct_NewTypes,
+    testing::Values(CV_16F, CV_16BF, CV_Bool, CV_32U, CV_64U, CV_64S, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
+TEST(Core_DotProduct, bool_nonzero_bytes)
+{
+    // any non-zero byte is true, so 2 and 255 count as 1 (dotProd_8u would give 1027)
+    uchar a[] = { 2, 255, 0, 1, 7 };
+    uchar b[] = { 255, 2, 3, 0, 1 };
+    Mat ma = Mat(1, 5, CV_8U, a).reinterpret(CV_Bool);
+    Mat mb = Mat(1, 5, CV_8U, b).reinterpret(CV_Bool);
+    EXPECT_EQ(3., ma.dot(mb));
+}
+
+TEST(Core_DotProduct, bfloat_range)
+{
+    // 2^100 * 2^100 is too big for float32 and 2^-100 * 2^-100 is too small,
+    // but bfloat stores both inputs exactly and the results fit in double
+    Mat big, small;
+    Mat(1, 16, CV_32F, Scalar(std::ldexp(1., 100))).convertTo(big, CV_16BF);
+    Mat(1, 16, CV_32F, Scalar(std::ldexp(1., -100))).convertTo(small, CV_16BF);
+    EXPECT_EQ(std::ldexp(1., 204), big.dot(big));
+    EXPECT_EQ(std::ldexp(1., -196), small.dot(small));
+}
+
+TEST(Core_DotProduct, fp8_small_residual)
+{
+    // 1024*(224*224) + 4*(0.5*0.5) - 1024*(224*224) = 1, but a float32 sum loses the 1
+    Mat a32f(1, 2052, CV_32F), b32f(1, 2052, CV_32F, Scalar(224));
+    a32f.colRange(0, 1024).setTo(224);
+    a32f.colRange(1024, 1028).setTo(0.5);
+    b32f.colRange(1024, 1028).setTo(0.5);
+    a32f.colRange(1028, 2052).setTo(-224);
+    for (int depth : { CV_8F_E4M3FN, CV_8F_E4M3FNUZ })
+    {
+        Mat a, b;
+        a32f.convertTo(a, depth);
+        b32f.convertTo(b, depth);
+        EXPECT_EQ(1., a.dot(b)) << "depth=" << depth;
+    }
+}
+
 TEST(Core_GEMM, accuracy) { Core_GEMMTest test; test.safe_run(); }
 
 TEST(Core_GEMM, inplace_complex)
