@@ -5,7 +5,10 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
-#include "opencv2/core/accel_backend.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
+
+// the emulated devices run their work on threads
+#if !defined(OPENCV_DISABLE_THREAD_SUPPORT)
 
 #include <atomic>
 #include <chrono>
@@ -1100,3 +1103,5 @@ TEST(Core_Accel_CUDA, region_and_chain)
 #endif // HAVE_CUDA
 
 }} // namespace
+
+#endif // OPENCV_DISABLE_THREAD_SUPPORT

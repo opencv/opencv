@@ -678,7 +678,7 @@ void UMat::createOn(const accel::Device& device, const MatShape& _shape, int _ty
         create(_shape, _type, _usageFlags);
         return;
     }
-    const MatShape shape0 = _shape;     // _shape may be this->size, which release() clears
+    const MatShape shape0 = _shape;
     _type = CV_MAT_TYPE(_type);
     if (_usageFlags == cv::USAGE_DEFAULT)
         _usageFlags = usageFlags;

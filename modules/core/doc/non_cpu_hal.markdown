@@ -2,9 +2,10 @@ Non-CPU HAL: accelerators behind cv:: functions {#non_cpu_hal}
 ===============================================
 
 UMat data can be placed on an accelerator, such as a discrete GPU, an integrated GPU or an NPU.
-When a cv:: function gets an input UMat on a device, it runs on that device if the device's
-backend implements the function, and on the CPU otherwise. Either way its output is created on
-the device, so a pipeline stays where its data is.
+A cv:: function with an accelerator hook (cv::flip and cv::transpose in this version) runs on the
+device of its input UMat if the device's backend implements it, and on the CPU otherwise. Either
+way its output is created on the device, so a pipeline of such functions stays where its data
+is. Functions without a hook run on the CPU and create regular UMats for their outputs.
 
 This first version is deliberately small: explicit placement, computation that follows its input,
 one stream per device and CPU thread, and backends built into OpenCV.
@@ -42,11 +43,13 @@ devices, `Device::find("cuda")` finds one by name.
 Where a call runs
 -----------------
 
-A call runs on the device that holds its input UMat. There is no device preference and no
-automatic placement: data moves between devices only through `upload()`.
+A function with an accelerator hook runs on the device that holds its input UMat. There is no
+device preference and no automatic placement: data moves between devices only through `upload()`.
 
 The output is created on that device with `createOn()`, unless it is a region of a larger UMat or
 a fixed-size array that lives elsewhere: such an output stays where it is and the CPU writes it.
+A region or fixed-size array of another size or type is left to the CPU code, which reports the
+mismatch as it does for any UMat.
 If the device's backend does not implement the operation, or declines this particular call, the
 function goes on to its OpenCL and CPU code. The OpenCL code declines memory it does not own, so
 the CPU runs the call through `UMat::getMat()`, and the output is still on the device.
@@ -64,9 +67,12 @@ ordered against each other. A thread that hands device data to another thread ca
 `cv::accel::synchronize(device)` first, as with the per-thread queues of OpenCL.
 
 The buffers an operation uses stay alive until its work has finished, even when the caller
-releases its UMats at once. A stream keeps a reference to them (`Stream::retain()`) and drops it
-when the work is done, the way the OpenCL backend keeps the UMats of a running kernel. When a
-thread exits, its streams finish their work and release what they kept.
+releases its UMats at once. A stream keeps a reference to them (`Stream::retain()`), as the
+OpenCL backend does for the UMats of a running kernel, and drops it the next time the thread
+waits for the stream or queues more work after that work is done. When a thread exits, its
+streams finish their work and release what they kept. An allocation that runs out of device
+memory waits for the calling thread's stream and tries again; buffers kept by other threads'
+streams are not reclaimed there.
 
 A device error surfaces where the CPU next waits for that work, for example in `getMat()` or
 `synchronize()`.
@@ -89,8 +95,8 @@ returns the device's own bytes.
 Writing a backend
 -----------------
 
-A backend implements `cv::accel::Backend` (`opencv2/core/accel_backend.hpp`) and is built into
-OpenCV behind its own build flag. It provides device memory, copies, streams and events, and one
+A backend implements `cv::accel::Backend` (`opencv2/core/private/accel_backend.hpp`, a header
+that is not installed) and is built into OpenCV behind its own build flag. It provides device memory, copies, streams and events, and one
 operations interface per module:
 
 ```cpp
@@ -164,7 +170,7 @@ static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputMovable(_dst, device))
+    if (device.empty() || !accelOutputUsable(_dst, device, src.size(), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();

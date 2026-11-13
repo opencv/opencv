@@ -7,7 +7,7 @@
 #ifndef OPENCV_CORE_SRC_ACCEL_IMPL_HPP
 #define OPENCV_CORE_SRC_ACCEL_IMPL_HPP
 
-#include "opencv2/core/accel_backend.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 
 namespace cv { namespace accel {
 

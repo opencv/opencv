@@ -12,7 +12,6 @@
 #include "opencv2/core/utils/tls.hpp"
 
 #include <deque>
-#include <mutex>
 
 namespace cv { namespace accel {
 
@@ -28,7 +27,7 @@ Ops* Backend::ops(const char*) { return 0; }
 
 struct Stream::Impl
 {
-    std::mutex mutex;
+    cv::Mutex mutex;
     std::deque<std::pair<Ptr<Event>, std::vector<UMat> > > pending;    // in the order of the work
 };
 
@@ -72,14 +71,14 @@ void Stream::retain(const std::vector<UMat>& arrays)
 {
     Ptr<Event> e = record();
     releaseFinished();
-    std::lock_guard<std::mutex> lock(p_->mutex);
+    cv::AutoLock lock(p_->mutex);
     p_->pending.push_back(std::make_pair(e, arrays));
 }
 
 void Stream::releaseFinished()
 {
     std::vector<std::vector<UMat> > done;   // released after the lock: that may free device memory
-    std::lock_guard<std::mutex> lock(p_->mutex);
+    cv::AutoLock lock(p_->mutex);
     while (!p_->pending.empty() && finished(p_->pending.front().first))
     {
         done.push_back(std::vector<UMat>());
@@ -107,20 +106,8 @@ public:
     //! the built-in backends, once, before anything else is registered
     void loadBuiltins()
     {
-        std::call_once(builtinsOnce_, [this]() {
-#ifdef HAVE_CUDA
-            try
-            {
-                Ptr<Backend> cuda = cuda_impl::createCudaBackend();
-                if (cuda && cuda->deviceCount() > 0)
-                    add(cuda);
-            }
-            catch (const cv::Exception& e)
-            {
-                CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
-            }
-#endif
-        });
+        static const bool loaded = addBuiltins();
+        CV_UNUSED(loaded);
     }
 
     void add(const Ptr<Backend>& b)
@@ -130,7 +117,7 @@ public:
         CV_Assert(!name.empty());
         const int n = b->deviceCount();
         CV_Assert(n >= 0);
-        std::lock_guard<std::mutex> lock(mutex_);
+        cv::AutoLock lock(mutex_);
         for (size_t i = 0; i < backends_.size(); i++)
             if (backends_[i]->name() == name)
                 CV_Error_(Error::StsBadArg, ("accel: a backend named '%s' is already registered", name.c_str()));
@@ -143,15 +130,31 @@ public:
     std::vector<Device::Impl*> devices()
     {
         loadBuiltins();
-        std::lock_guard<std::mutex> lock(mutex_);
+        cv::AutoLock lock(mutex_);
         return devices_;
     }
 
 private:
     Registry() {}
 
-    std::once_flag builtinsOnce_;
-    std::mutex mutex_;
+    bool addBuiltins()
+    {
+#ifdef HAVE_CUDA
+        try
+        {
+            Ptr<Backend> cuda = cuda_impl::createCudaBackend();
+            if (cuda && cuda->deviceCount() > 0)
+                add(cuda);
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
+        }
+#endif
+        return true;
+    }
+
+    cv::Mutex mutex_;
     std::vector<Ptr<Backend> > backends_;
     std::vector<Device::Impl*> devices_;
 };

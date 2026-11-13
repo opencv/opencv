@@ -10,7 +10,7 @@
 // Non-CPU HAL: what the CUDA and HIP backends share. Their handles are addresses, so a handle plus
 // an offset is an address too.
 
-#include "opencv2/core/accel_backend.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "gpu_kernels.hpp"
 

@@ -149,6 +149,7 @@ void BackendAllocator::map(UMatData* u, AccessFlag accessFlags) const
     if (!u->copyOnMap())
     {
         s.synchronize();    // the CPU uses the device's own bytes
+        s.releaseFinished();
         return;
     }
     if (!u->data)
@@ -158,6 +159,7 @@ void BackendAllocator::map(UMatData* u, AccessFlag accessFlags) const
         dev->backend->copy(dev->index, COPY_DEVICE_TO_HOST, DeviceRef(u->data), u->size,
                            DeviceRef(u->handle), u->size, u->size, 1, s);
         u->markHostCopyObsolete(false);
+        s.releaseFinished();    // the copy waited for the work before it
     }
     // getMat() maps every view, so a later write view marks it here
     if (!!(accessFlags & ACCESS_WRITE))
@@ -204,6 +206,7 @@ void BackendAllocator::download(UMatData* u, void* dst, int dims, const size_t s
         dev->backend->copy(dev->index, COPY_DEVICE_TO_HOST, DeviceRef(dst, dof), dp,
                            DeviceRef(u->handle, so), sp, w, rows, s);
     });
+    s.releaseFinished();    // the copies waited for the work before them
 }
 
 void BackendAllocator::upload(UMatData* u, const void* src, int dims, const size_t sz[],

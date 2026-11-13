@@ -4,13 +4,18 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_CORE_ACCEL_BACKEND_HPP
-#define OPENCV_CORE_ACCEL_BACKEND_HPP
+#ifndef OPENCV_CORE_PRIVATE_ACCEL_BACKEND_HPP
+#define OPENCV_CORE_PRIVATE_ACCEL_BACKEND_HPP
+
+#ifndef __OPENCV_BUILD
+#  error this is a private header which should not be used from outside of the OpenCV library
+#endif
 
 #include "opencv2/core/accel.hpp"
 
 /*
-Interface of the accelerator backends built into OpenCV (CUDA, ...).
+Interface of the accelerator backends built into OpenCV (CUDA, ...). It is not installed: backends
+are built with OpenCV.
 
 A backend provides device memory, copies, streams and events, and one operations interface per
 module (CoreOps, ...). OpenCV keeps the UMat bookkeeping. Backends report errors by throwing
@@ -18,9 +23,6 @@ cv::Exception.
 */
 
 namespace cv { namespace accel {
-
-//! @addtogroup core_accel
-//! @{
 
 /** @brief A point in a stream. It completes when the work queued before it has finished. */
 class CV_EXPORTS Event
@@ -145,8 +147,6 @@ public:
 The built-in CUDA backend registers itself. Backends stay registered for the life of the process. */
 CV_EXPORTS void registerBackend(const Ptr<Backend>& backend);
 
-//! @}
-
 }} // namespace cv::accel
 
-#endif // OPENCV_CORE_ACCEL_BACKEND_HPP
+#endif // OPENCV_CORE_PRIVATE_ACCEL_BACKEND_HPP

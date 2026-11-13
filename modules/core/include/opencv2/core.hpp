@@ -85,6 +85,7 @@ performing mathematical computations, and managing memory efficiently within the
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_accel Accelerators (non-CPU HAL)
     @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
     @defgroup core_hal Hardware Acceleration Layer
     @{

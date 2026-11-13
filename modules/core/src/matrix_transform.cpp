@@ -6,7 +6,7 @@
 #include "opencl_kernels_core.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
-#include "opencv2/core/accel_backend.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 
 #include "transpose.simd.hpp"
 #include "transpose.simd_declarations.hpp"
@@ -481,9 +481,11 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 #endif
 
 // a region or fixed-size output elsewhere stays there; the CPU writes it
-static bool accelOutputMovable(OutputArray _dst, const accel::Device& device)
+static bool accelOutputUsable(OutputArray _dst, const accel::Device& device, Size size, int type)
 {
     const UMat& dst = _dst.getUMatRef();
+    if ((_dst.fixedSize() && dst.size() != size) || (_dst.fixedType() && dst.type() != type))
+        return false;   // the CPU path reports the mismatch
     return accel::getDevice(dst) == device || !(_dst.fixedSize() || dst.isSubmatrix());
 }
 
@@ -494,7 +496,7 @@ static bool accel_transpose(InputArray _src, OutputArray _dst)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputMovable(_dst, device))
+    if (device.empty() || !accelOutputUsable(_dst, device, Size(src.rows, src.cols), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();
@@ -1065,7 +1067,7 @@ static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputMovable(_dst, device))
+    if (device.empty() || !accelOutputUsable(_dst, device, src.size(), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();
@@ -1093,14 +1095,14 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
             flip_mode = 1;
     }
 
+    if (accel_flip(_src, _dst, flip_mode))
+        return;
+
     if ((size.width == 1 && flip_mode > 0) ||
         (size.height == 1 && flip_mode == 0))
     {
         return _src.copyTo(_dst);
     }
-
-    if (accel_flip(_src, _dst, flip_mode))
-        return;
 
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
