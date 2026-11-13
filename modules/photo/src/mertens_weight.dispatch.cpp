@@ -4,6 +4,7 @@
 // Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #include "precomp.hpp"
+#include "hdr_common.hpp"
 
 #include "mertens_weight.simd.hpp"
 #include "mertens_weight.simd_declarations.hpp" // CV_CPU_DISPATCH_MODES_ALL=AVX512_ICL,BASELINE
@@ -16,10 +17,6 @@ static MertensWeightRowFunc resolveMertensWeightRow()
 {
     CV_CPU_DISPATCH_FN(mertensWeightRow_, CV_CPU_DISPATCH_MODES_ALL);
 }
-
-void mertensWeightRow(const float* grayUp, const float* grayMid, const float* grayDn,
-                      const float* src, float* dst, int cols, int channels,
-                      float wcon, float wsat, float wexp, float* sum);
 
 void mertensWeightRow(const float* grayUp, const float* grayMid, const float* grayDn,
                       const float* src, float* dst, int cols, int channels,

@@ -4,6 +4,7 @@
 // Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 
 #include "precomp.hpp"
+#include "hdr_common.hpp"
 
 #include "mertens_fuse.simd.hpp"
 #include "mertens_fuse.simd_declarations.hpp" // CV_CPU_DISPATCH_MODES_ALL=AVX512_ICL,BASELINE
@@ -26,13 +27,6 @@ static MertensBlendAccFunc resolveBlendAcc()
 {
     CV_CPU_DISPATCH_FN(mertensBlendAcc_, CV_CPU_DISPATCH_MODES_ALL);
 }
-
-void mertensConvertGray(const uchar* src, size_t srcStep, float* img, size_t imgStep,
-                        float* gray, size_t grayStep, int rows, int cols);
-void mertensPyrUpSub(const float* src, size_t srcStep, float* dst, size_t dstStep,
-                     int srcRows, int srcCols, int dstRows, int dstCols, int channels);
-void mertensBlendAcc(const float* img, size_t imgStep, const float* weight, size_t weightStep,
-                     float* acc, size_t accStep, int rows, int cols, int channels, bool accumulate);
 
 void mertensConvertGray(const uchar* src, size_t srcStep, float* img, size_t imgStep,
                         float* gray, size_t grayStep, int rows, int cols)

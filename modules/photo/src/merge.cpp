@@ -49,16 +49,6 @@
 namespace cv
 {
 
-void mertensWeightRow(const float* grayUp, const float* grayMid, const float* grayDn,
-                      const float* src, float* dst, int cols, int channels,
-                      float wcon, float wsat, float wexp, float* sum);
-void mertensConvertGray(const uchar* src, size_t srcStep, float* img, size_t imgStep,
-                        float* gray, size_t grayStep, int rows, int cols);
-void mertensPyrUpSub(const float* src, size_t srcStep, float* dst, size_t dstStep,
-                     int srcRows, int srcCols, int dstRows, int dstCols, int channels);
-void mertensBlendAcc(const float* img, size_t imgStep, const float* weight, size_t weightStep,
-                     float* acc, size_t accStep, int rows, int cols, int channels, bool accumulate);
-
 namespace
 {
 
@@ -324,41 +314,6 @@ static void debevecFinalizeC3(const Mat& s0, const Mat& s1, const Mat& s2, const
     });
 }
 
-// BORDER_REFLECT_101, matching cv::Laplacian's default border.
-static int mertensReflect101(int p, int len)
-{
-    if ((unsigned)p < (unsigned)len)
-        return p;
-    if (len == 1)
-        return 0;
-    do
-    {
-        if (p < 0)
-            p = -p;
-        else
-            p = 2 * len - 2 - p;
-    }
-    while ((unsigned)p >= (unsigned)len);
-    return p;
-}
-
-// Dispatched row (baseline and AVX512_ICL). Fuses Laplacian ksize=1, abs, and the weight.
-// (1, 1, 0) on 3 channels is the fast case inside the row.
-static void mertensWeight(const Mat& img, const Mat& gray, Mat& weight, int channels,
-                          float wcon, float wsat, float wexp, Mat& weightSum)
-{
-    weight.create(img.size(), CV_32F);
-    const int rows = img.rows;
-    for (int y = 0; y < rows; y++)
-    {
-        const float* up = gray.ptr<float>(mertensReflect101(y - 1, rows));
-        const float* mid = gray.ptr<float>(y);
-        const float* dn = gray.ptr<float>(mertensReflect101(y + 1, rows));
-        mertensWeightRow(up, mid, dn, img.ptr<float>(y), weight.ptr<float>(y),
-                         img.cols, channels, wcon, wsat, wexp, weightSum.ptr<float>(y));
-    }
-}
-
 } // namespace
 
 class MergeDebevecImpl CV_FINAL : public MergeDebevec
@@ -525,10 +480,14 @@ public:
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         std::vector<Mat> weights(images.size());
+        std::vector<Mat> grays(images.size());
         Mat weight_sum = Mat::zeros(size, CV_32F);
-        Mutex weight_sum_mutex;
+        const int nimages = static_cast<int>(images.size());
+        const int rows = size.height;
+        const int cols = size.width;
 
-        parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
+        // Convert each exposure on its own. No shared write.
+        parallel_for_(Range(0, nimages), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
                 Mat img, gray;
                 weights[i].create(size, CV_32F);
@@ -549,9 +508,24 @@ public:
                         gray = img;
                 }
                 images[i] = img;
-                // weight_sum is shared. The add happens in the weight store, under this lock.
-                AutoLock lock(weight_sum_mutex);
-                mertensWeight(img, gray, weights[i], channels, wcon, wsat, wexp, weight_sum);
+                grays[i] = gray;
+            }
+        });
+
+        // Each stripe owns its weight_sum rows and adds every exposure into them.
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int i = 0; i < nimages; i++)
+            {
+                const Mat& img = images[i];
+                const Mat& gray = grays[i];
+                for (int y = range.start; y < range.end; y++)
+                {
+                    const int up = borderInterpolate(y - 1, rows, BORDER_REFLECT_101);
+                    const int dn = borderInterpolate(y + 1, rows, BORDER_REFLECT_101);
+                    mertensWeightRow(gray.ptr<float>(up), gray.ptr<float>(y), gray.ptr<float>(dn),
+                                     img.ptr<float>(y), weights[i].ptr<float>(y),
+                                     cols, channels, wcon, wsat, wexp, weight_sum.ptr<float>(y));
+                }
             }
         });
 
