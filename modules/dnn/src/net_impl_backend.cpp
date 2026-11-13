@@ -375,8 +375,11 @@ void Net::Impl::setPreferableTarget(int targetId)
 
     if (mainGraph)
     {
+        if (targetId == DNN_TARGET_CPU
 #ifdef HAVE_CUDA
-        if (targetId == DNN_TARGET_CPU || IS_DNN_CUDA_TARGET(targetId))
+            || IS_DNN_CUDA_TARGET(targetId)
+#endif
+            )
         {
             if (preferableTarget != targetId) {
                 preferableTarget = targetId;
@@ -384,7 +387,6 @@ void Net::Impl::setPreferableTarget(int targetId)
             }
             return;
         }
-#endif
         CV_LOG_WARNING(NULL, "Targets are not supported by the new graph engine for now");
         return;
     }
