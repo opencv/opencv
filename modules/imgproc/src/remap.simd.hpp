@@ -292,7 +292,11 @@ int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
 
 RemapWideC1Fn getRemapLanczos4C1Fn_()
 {
+#if CV_SIMD128
     return remapLanczos4C1_simd;
+#else
+    return nullptr;
+#endif
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

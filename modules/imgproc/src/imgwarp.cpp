@@ -1070,24 +1070,34 @@ struct RemapLanczos4VecC1
                    int, int, unsigned, unsigned, int) const { return 0; }
 };
 
-#define CV_REMAP_LANCZOS4_SHIM(T, DEPTH)                                             \
-template<> struct RemapLanczos4VecC1<T, float>                                       \
-{                                                                                   \
-    int operator()(const T* S0, size_t sstep, T* D, const short* XY,                \
-                   const ushort* FXY, const float* wtab, int dx, int dwidth,        \
-                   unsigned width1, unsigned height1, int off_y) const              \
-    {                                                                               \
-        static const RemapWideC1Fn fn = remapLanczos4C1_fn();                       \
-        return fn(DEPTH, (const uchar*)S0, sstep, (uchar*)D,                        \
-                  XY, FXY, wtab, dx, dwidth, width1, height1, off_y);               \
-    }                                                                               \
+// 32F stays on the scalar loop: the vectorized 8x8 sum misses the float tolerance.
+// A null function means the dispatched TU was built without CV_SIMD128, so the
+// scalar loop runs. The check is not #if CV_SIMD128 here: this file is the
+// baseline TU, and that guard would also hide an AVX512 kernel.
+template<typename T>
+struct RemapLanczos4VecC1<T, float>
+{
+    int operator()(const T* S0, size_t sstep, T* D, const short* XY,
+                   const ushort* FXY, const float* wtab, int dx, int dwidth,
+                   unsigned width1, unsigned height1, int off_y) const
+    {
+        if constexpr (std::is_same<T, ushort>::value || std::is_same<T, short>::value)
+        {
+            static const RemapWideC1Fn fn = remapLanczos4C1_fn();
+            if (!fn)
+                return 0;
+            return fn(DataType<T>::depth, (const uchar*)S0, sstep, (uchar*)D,
+                      XY, FXY, wtab, dx, dwidth, width1, height1, off_y);
+        }
+        else
+        {
+            CV_UNUSED(S0); CV_UNUSED(sstep); CV_UNUSED(D); CV_UNUSED(XY); CV_UNUSED(FXY);
+            CV_UNUSED(wtab); CV_UNUSED(dx); CV_UNUSED(dwidth); CV_UNUSED(width1);
+            CV_UNUSED(height1); CV_UNUSED(off_y);
+            return 0;
+        }
+    }
 };
-// 32F is intentionally not shimmed: its vectorized accumulation deviates beyond
-// the float accuracy tolerance, so it stays on the scalar loop. Emitting a shim
-// would add a per-pixel dispatch call that returns 0 and slows the scalar path.
-CV_REMAP_LANCZOS4_SHIM(ushort, CV_16U)
-CV_REMAP_LANCZOS4_SHIM(short, CV_16S)
-#undef CV_REMAP_LANCZOS4_SHIM
 
 template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
