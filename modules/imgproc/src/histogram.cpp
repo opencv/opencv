@@ -3235,10 +3235,8 @@ public:
 
     void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
-        int localHistogram[HIST_SZ] = {0, };
-
+        int subHist[4][HIST_SZ] = {{0, }};
         const size_t sstep = src_.step;
-
         int width = src_.cols;
         int height = rowRange.end - rowRange.start;
 
@@ -3251,22 +3249,31 @@ public:
         for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
         {
             int x = 0;
-            for (; x <= width - 4; x += 4)
+            for (; x <= width - 16; x += 16)
             {
-                int t0 = ptr[x], t1 = ptr[x+1];
-                localHistogram[t0]++; localHistogram[t1]++;
-                t0 = ptr[x+2]; t1 = ptr[x+3];
-                localHistogram[t0]++; localHistogram[t1]++;
+                uint64 lo, hi;
+                memcpy(&lo, ptr + x, sizeof(lo));
+                memcpy(&hi, ptr + x + 8, sizeof(hi));
+                for (int k = 0; k < 2; k++, lo >>= 32, hi >>= 32)
+                {
+                    subHist[0][lo & 0xFF]++;
+                    subHist[1][(lo >> 8) & 0xFF]++;
+                    subHist[2][(lo >> 16) & 0xFF]++;
+                    subHist[3][(lo >> 24) & 0xFF]++;
+                    subHist[0][hi & 0xFF]++;
+                    subHist[1][(hi >> 8) & 0xFF]++;
+                    subHist[2][(hi >> 16) & 0xFF]++;
+                    subHist[3][(hi >> 24) & 0xFF]++;
+                }
             }
-
             for (; x < width; ++x)
-                localHistogram[ptr[x]]++;
+                subHist[0][ptr[x]]++;
         }
 
         cv::AutoLock lock(*histogramLock_);
 
         for( int i = 0; i < HIST_SZ; i++ )
-            globalHistogram_[i] += localHistogram[i];
+            globalHistogram_[i] += subHist[0][i] + subHist[1][i] + subHist[2][i] + subHist[3][i];
     }
 
     static bool isWorthParallel( const cv::Mat& src )
@@ -3410,13 +3417,14 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
-    int lut[hist_sz] = {0,};
+    uchar lut_u8[hist_sz] = {0,};
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     cv::Range heightRange(0, src.rows);
+    const double nstripes = std::max(1.0, std::min((double)src.rows, (double)src.total() / (1 << 16)));
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, calcBody);
+        parallel_for_(heightRange, calcBody, nstripes);
     else
         calcBody(heightRange);
 
@@ -3433,20 +3441,16 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     float scale = (hist_sz - 1.f)/(total - hist[i]);
     int sum = 0;
 
-    for (lut[i++] = 0; i < hist_sz; ++i)
+    for (lut_u8[i++] = 0; i < hist_sz; ++i)
     {
         sum += hist[i];
-        lut[i] = saturate_cast<uchar>(sum * scale);
+        lut_u8[i] = saturate_cast<uchar>(sum * scale);
     }
-
-    uchar lut_u8[hist_sz];
-    for (int j = 0; j < hist_sz; ++j)
-        lut_u8[j] = (uchar)lut[j];
 
     EqualizeHistLut_Invoker lutBody(src, dst, lut_u8);
 
     if(EqualizeHistLut_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, lutBody);
+        parallel_for_(heightRange, lutBody, nstripes);
     else
         lutBody(heightRange);
 }
