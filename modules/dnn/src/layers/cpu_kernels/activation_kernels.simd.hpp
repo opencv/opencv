@@ -19,7 +19,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 cv::dnn::ActivationFunc getActivationFunc_(int type);
 
 // Per-row softmax over a contiguous Mat axis.
-void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale);
+void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale, bool logSoftmax);
 
 // Fused clamp on a single contiguous chunk, 4x unrolled. Used by clip_layer.
 void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi);
@@ -353,7 +353,7 @@ void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi
         dst[i] = std::min(std::max(src[i], lo), hi);
 }
 
-void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale) {
+void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale, bool logSoftmax) {
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
     CV_Assert(src.size == dst.size);
@@ -437,6 +437,17 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
             for (; cnDim < axisStep; cnDim++) {
                 axisBuf[cnDim] = expf((axisBuf[cnDim] - maxVal) * scale);
                 s += axisBuf[cnDim];
+            }
+
+            if (logSoftmax) {
+                // log(softmax(x)) underflows to -inf once x is far below the maximum,
+                // so compute (x - max) * scale - log(sum(exp((x - max) * scale))) instead.
+                const float logSum = std::log(s);
+                for (_cnDim = 0; _cnDim < axisStep; _cnDim++) {
+                    const size_t idx = srcOffset + (_cnDim + axisBias) * cnStep;
+                    dstPtr[idx] = (srcPtr[idx] - maxVal) * scale - logSum;
+                }
+                continue;
             }
 
             _cnDim = 0;
