@@ -1042,6 +1042,52 @@ TEST(Imgproc_Remap, DISABLED_memleak)
     }
 }
 
+TEST(Imgproc_WarpAffine, IntegerTranslation)
+{
+    const Scalar border(13, 57, 131, 231);
+    const Scalar untouched(17, 41, 103, 223);
+    const Rect dstRoi(2, 3, 39, 25);
+    RNG rng(137);
+
+    for (int channels : {1, 3, 4})
+    for (const Size& srcSize : {Size(37, 29), Size(1, 1)})
+    {
+        const int type = CV_8UC(channels);
+        Mat srcParent(srcSize.height + 7, srcSize.width + 9, type);
+        rng.fill(srcParent, RNG::UNIFORM, 0, 256);
+        Mat src = srcParent(Rect(Point(3, 2), srcSize));
+
+        for (const Point& shift : {Point(), Point(5, -4), Point(-7, 9), Point(38, 24), Point(-53, 49)})
+        {
+            Mat expected(dstRoi.height + 6, dstRoi.width + 7, type, untouched);
+            for (int y = 0; y < dstRoi.height; ++y)
+            {
+                uchar* out = expected.ptr(y + dstRoi.y) + dstRoi.x * channels;
+                for (int x = 0; x < dstRoi.width; ++x)
+                {
+                    const int sx = x - shift.x, sy = y - shift.y;
+                    const bool inside = 0 <= sx && sx < src.cols && 0 <= sy && sy < src.rows;
+                    for (int c = 0; c < channels; ++c)
+                        out[x * channels + c] = inside ? src.ptr(sy)[sx * channels + c] : uchar(border[c]);
+                }
+            }
+
+            for (bool inverse : {false, true})
+            {
+                SCOPED_TRACE(cv::format("channels=%d src=%dx%d shift=(%d,%d) inverse=%d",
+                                        channels, src.cols, src.rows, shift.x, shift.y, inverse));
+                const Point offset = inverse ? -shift : shift;
+                const Matx23d matrix(1, 0, offset.x, 0, 1, offset.y);
+                Mat dstParent(expected.size(), type, untouched);
+                Mat dst = dstParent(dstRoi);
+                warpAffine(src, dst, matrix, dstRoi.size(), INTER_LINEAR | (inverse ? WARP_INVERSE_MAP : 0),
+                           BORDER_CONSTANT, border, ALGO_HINT_ACCURATE);
+                ASSERT_EQ(0., cvtest::norm(expected, dstParent, NORM_INF));
+            }
+        }
+    }
+}
+
 TEST(Imgproc_warpPolar, identity)
 {
     const int N = 33;

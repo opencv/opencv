@@ -2279,6 +2279,28 @@ static void warpAffine(int src_type,
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
+    // Keep every mapped integer coordinate exactly representable in the float32 warp kernels.
+    constexpr int coordinateLimit = 1 << 23;
+    if (interpolation == INTER_LINEAR && hint == ALGO_HINT_ACCURATE && borderType == BORDER_CONSTANT &&
+        (src_type == CV_8UC1 || src_type == CV_8UC3 || src_type == CV_8UC4) &&
+        M[0] == 1. && M[1] == 0. && M[3] == 0. && M[4] == 1. &&
+        std::abs(M[2]) < coordinateLimit && std::abs(M[5]) < coordinateLimit &&
+        M[2] == std::trunc(M[2]) && M[5] == std::trunc(M[5]) &&
+        dst_width < coordinateLimit && dst_height < coordinateLimit &&
+        src_width < coordinateLimit && src_height < coordinateLimit)
+    {
+        const Point shift(-static_cast<int>(M[2]), -static_cast<int>(M[5]));
+        const Rect overlap = Rect(shift, src.size()) & Rect(Point(), dst.size());
+        const Scalar fill(saturate_cast<uchar>(borderValue[0]), saturate_cast<uchar>(borderValue[1]),
+                          saturate_cast<uchar>(borderValue[2]), saturate_cast<uchar>(borderValue[3]));
+        if (overlap.empty())
+            dst.setTo(fill);
+        else
+            copyMakeBorder(src(overlap - shift), dst, overlap.y, dst.rows - overlap.br().y,
+                           overlap.x, dst.cols - overlap.br().x, BORDER_CONSTANT | BORDER_ISOLATED, fill);
+        return;
+    }
+
     if (interpolation == INTER_NEAREST) {
         switch (src_type) {
             case CV_8UC1: {
