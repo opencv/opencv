@@ -557,6 +557,96 @@ TEST(Layer_LSTM2_Test_Accuracy_, BatchOneReverseParallel)
     testLSTM2BatchOneParallel(false, true, 128);
 }
 
+TEST(Layer_LSTM2_Test_Accuracy_, WithoutTimestampDim)
+{
+    const int N = 2, I = 8, H = 16, D = 1;
+    const float k = 1.f / std::sqrt((float)H);
+
+    Mat X({N, I}, CV_32F);
+    Mat W({D, 4 * H, I}, CV_32F);
+    Mat R({D, 4 * H, H}, CV_32F);
+    Mat B({D, 8 * H}, CV_32F);
+    Mat h0({D, N, H}, CV_32F), c0({D, N, H}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -k, k);
+    randu(R, -k, k);
+    randu(B, -k, k);
+    randu(h0, -1.f, 1.f);
+    randu(c0, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_no_timestamp";
+    lp.set("hidden_size", H);
+    lp.set("bidirectional", false);
+    lp.set("reverse", false);
+    lp.set("use_timestamp_dim", false);
+    lp.set("produce_output_yh", true);
+    lp.set("produce_cell_output", true);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs = {X, W, R, B, Mat(), h0, c0};
+    std::vector<MatShape> inShapes, outShapes, internalShapes;
+    std::vector<cv::dnn::MatType> inTypes, outTypes, internalTypes;
+    for (size_t i = 0; i < inputs.size(); i++)
+    {
+        inShapes.push_back(shape(inputs[i]));
+        inTypes.push_back(inputs[i].type());
+    }
+
+    layer->getMemoryShapes(inShapes, 3, outShapes, internalShapes);
+    ASSERT_EQ(outShapes.size(), (size_t)3);
+    EXPECT_EQ(outShapes[0], shape(D, N, H));
+    layer->getTypes(inTypes, 3, (int)internalShapes.size(), outTypes, internalTypes);
+
+    std::vector<Mat> outputs, internals;
+    for (size_t i = 0; i < outShapes.size(); i++)
+        outputs.push_back(Mat(outShapes[i], outTypes[i]));
+    for (size_t i = 0; i < internalShapes.size(); i++)
+        internals.push_back(Mat(internalShapes[i], internalTypes[i]));
+
+    layer->finalize(inputs, outputs);
+    layer->forward(inputs, outputs, internals);
+
+    Mat X3d = X.reshape(1, {1, N, I});
+    Mat expectedY, expectedYh, expectedYc;
+    lstmReference(X3d, W, R, B, h0, c0, false, expectedY, expectedYh, expectedYc);
+
+    Mat expectedY3d = expectedY.reshape(1, {D, N, H});
+    normAssert(expectedY3d, outputs[0], "LSTM2 Y", 1e-4, 1e-4);
+    normAssert(expectedYh, outputs[1], "LSTM2 Y_h", 1e-4, 1e-4);
+    normAssert(expectedYc, outputs[2], "LSTM2 Y_c", 1e-4, 1e-4);
+}
+
+TEST(Layer_LSTM2_Test_Guards, InputValidation)
+{
+    LayerParams lp;
+    lp.type = "LSTM2";
+    lp.name = "lstm2_guard";
+    lp.set("hidden_size", 16);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<MatShape> outShapes, internalShapes;
+
+    // Fewer than 3 inputs must be rejected
+    std::vector<MatShape> tooFew = {shape(1, 1, 8), shape(1, 64, 8)};
+    EXPECT_THROW(layer->getMemoryShapes(tooFew, 1, outShapes, internalShapes), cv::Exception);
+
+    // Rank < 3 for W must be rejected
+    std::vector<MatShape> invalidW = {shape(1, 1, 8), shape(64, 8), shape(1, 64, 16)};
+    EXPECT_THROW(layer->getMemoryShapes(invalidW, 1, outShapes, internalShapes), cv::Exception);
+
+    // Rank < 3 for R must be rejected
+    std::vector<MatShape> invalidR = {shape(1, 1, 8), shape(1, 64, 8), shape(64, 16)};
+    EXPECT_THROW(layer->getMemoryShapes(invalidR, 1, outShapes, internalShapes), cv::Exception);
+
+    // Rank < 3 for X when useTimestampDim is true must be rejected
+    std::vector<MatShape> invalidX = {shape(1, 8), shape(1, 64, 8), shape(1, 64, 16)};
+    EXPECT_THROW(layer->getMemoryShapes(invalidX, 1, outShapes, internalShapes), cv::Exception);
+}
+
 TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
 {
     Mat Wx = blobFromNPY(_tf("gru.W.npy"));
