@@ -203,11 +203,15 @@ int absdiffResultDepth(int depth)
 }
 
 // numpy-ish promotion of two KNOWN depths for the COMPUTE type (float dominates; the wider integer
-// otherwise, and - unlike promoteArith - two WIDE integers float-promote: promote2(16U,64S)=64F).
+// otherwise). Two integers of which one is 64-bit meet at promoteArith's integer type, as in numpy
+// (int64 + int32 -> int64, uint64 + uint32 -> uint64), so the op is not rounded through a double;
+// only uint64 with a signed integer, which no integer type holds, still promotes to 64F.
 // This is cv::add's "wtype": the type both operands are brought to before the op runs.
 static int promote2(int a, int b)
 {
     if (a == b) return a;
+    if (CV_IS_INT_TYPE(a) && CV_IS_INT_TYPE(b) && (CV_ELEM_SIZE1(a) == 8 || CV_ELEM_SIZE1(b) == 8))
+        return promoteArith(a, b);
 
     constexpr unsigned lbits = 3, lmask = (1u << lbits) - 1u;
     const uint64_t typelut = (uint64_t)((0ULL << CV_8U*lbits) | (0ULL << CV_8S*lbits) |

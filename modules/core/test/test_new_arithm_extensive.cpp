@@ -40,6 +40,8 @@ static bool isFloat(int d) { return d==CV_16F || d==CV_16BF || d==CV_32F || d==C
 static int promote2(int a, int b)
 {
     if (a == b) return a;
+    if (CV_IS_INT_TYPE(a) && CV_IS_INT_TYPE(b) && (CV_ELEM_SIZE1(a) == 8 || CV_ELEM_SIZE1(b) == 8))
+        return promoteArith(a, b);
 
     constexpr unsigned lbits = 3, lmask = (1u << lbits) - 1u;
     const uint64_t typelut = (uint64_t)((0ULL << CV_8U*lbits) | (0ULL << CV_8S*lbits) |
