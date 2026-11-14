@@ -3296,4 +3296,114 @@ TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/30743
+// applyColorMap must support both 256x1 and 1x256 custom lookup tables.
+TEST(ImgProc_applyColorMap, custom_colormap_regression_30743)
+{
+    // Generate test image (CV_8UC1 with values 0..255)
+    Mat src_gray(16, 16, CV_8UC1);
+    for (int i = 0; i < 256; ++i)
+    {
+        src_gray.at<uchar>(i / 16, i % 16) = static_cast<uchar>(i);
+    }
+
+    // Generate custom 3-channel colormaps: 256x1 and 1x256
+    Mat lut3c_256x1(256, 1, CV_8UC3);
+    Mat lut3c_1x256(1, 256, CV_8UC3);
+    for (int i = 0; i < 256; ++i)
+    {
+        Vec3b color(static_cast<uchar>(i), static_cast<uchar>(255 - i), static_cast<uchar>((i * 2) % 256));
+        lut3c_256x1.at<Vec3b>(i, 0) = color;
+        lut3c_1x256.at<Vec3b>(0, i) = color;
+    }
+
+    Mat dst_256x1, dst_1x256;
+    EXPECT_NO_THROW(applyColorMap(src_gray, dst_256x1, lut3c_256x1));
+    EXPECT_NO_THROW(applyColorMap(src_gray, dst_1x256, lut3c_1x256));
+
+    // Verify output correctness
+    EXPECT_EQ(dst_256x1.size(), src_gray.size());
+    EXPECT_EQ(dst_256x1.type(), CV_8UC3);
+    EXPECT_EQ(dst_1x256.size(), src_gray.size());
+    EXPECT_EQ(dst_1x256.type(), CV_8UC3);
+    EXPECT_DOUBLE_EQ(cvtest::norm(dst_256x1, dst_1x256, NORM_INF), 0.0);
+
+    for (int i = 0; i < 256; ++i)
+    {
+        Vec3b expected = lut3c_1x256.at<Vec3b>(0, i);
+        Vec3b actual = dst_1x256.at<Vec3b>(i / 16, i % 16);
+        EXPECT_EQ(expected, actual);
+    }
+
+    // Generate custom 1-channel colormaps: 256x1 and 1x256
+    Mat lut1c_256x1(256, 1, CV_8UC1);
+    Mat lut1c_1x256(1, 256, CV_8UC1);
+    for (int i = 0; i < 256; ++i)
+    {
+        uchar val = static_cast<uchar>(255 - i);
+        lut1c_256x1.at<uchar>(i, 0) = val;
+        lut1c_1x256.at<uchar>(0, i) = val;
+    }
+
+    Mat dst1c_256x1, dst1c_1x256;
+    EXPECT_NO_THROW(applyColorMap(src_gray, dst1c_256x1, lut1c_256x1));
+    EXPECT_NO_THROW(applyColorMap(src_gray, dst1c_1x256, lut1c_1x256));
+
+    EXPECT_EQ(dst1c_256x1.size(), src_gray.size());
+    EXPECT_EQ(dst1c_256x1.type(), CV_8UC1);
+    EXPECT_EQ(dst1c_1x256.size(), src_gray.size());
+    EXPECT_EQ(dst1c_1x256.type(), CV_8UC1);
+    EXPECT_DOUBLE_EQ(cvtest::norm(dst1c_256x1, dst1c_1x256, NORM_INF), 0.0);
+
+    for (int i = 0; i < 256; ++i)
+    {
+        uchar expected = lut1c_1x256.at<uchar>(0, i);
+        uchar actual = dst1c_1x256.at<uchar>(i / 16, i % 16);
+        EXPECT_EQ(expected, actual);
+    }
+
+    // Also test with CV_8UC3 source image
+    Mat src_color(16, 16, CV_8UC3);
+    for (int i = 0; i < 256; ++i)
+    {
+        src_color.at<Vec3b>(i / 16, i % 16) = Vec3b::all(static_cast<uchar>(i));
+    }
+    Mat dst_color_256x1, dst_color_1x256;
+    EXPECT_NO_THROW(applyColorMap(src_color, dst_color_256x1, lut3c_256x1));
+    EXPECT_NO_THROW(applyColorMap(src_color, dst_color_1x256, lut3c_1x256));
+    EXPECT_DOUBLE_EQ(cvtest::norm(dst_color_256x1, dst_color_1x256, NORM_INF), 0.0);
+    EXPECT_DOUBLE_EQ(cvtest::norm(dst_256x1, dst_color_256x1, NORM_INF), 0.0);
+}
+
+TEST(ImgProc_applyColorMap, custom_colormap_invalid_rejected)
+{
+    Mat src = Mat::zeros(10, 10, CV_8UC1);
+    Mat dst;
+
+    // Empty colormap
+    EXPECT_THROW(applyColorMap(src, dst, Mat()), cv::Exception);
+
+    // Wrong element counts
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 255, CV_8UC3)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(257, 1, CV_8UC3)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 100, CV_8UC1)), cv::Exception);
+
+    // Non 1D lookup table (total == 256, but not 1x256 or 256x1)
+    EXPECT_THROW(applyColorMap(src, dst, Mat(16, 16, CV_8UC3)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(2, 128, CV_8UC3)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(128, 2, CV_8UC1)), cv::Exception);
+
+    // Unsupported channel counts
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 256, CV_8UC2)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 256, CV_8UC4)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(256, 1, CV_8UC2)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(256, 1, CV_8UC4)), cv::Exception);
+
+    // Unsupported data types
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 256, CV_32FC1)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(1, 256, CV_32FC3)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(256, 1, CV_16UC1)), cv::Exception);
+    EXPECT_THROW(applyColorMap(src, dst, Mat(256, 1, CV_32SC1)), cv::Exception);
+}
+
 }} // namespace
