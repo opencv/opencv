@@ -304,6 +304,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 template<int esz>
 static void fillTileBorder(
     const uchar* src, size_t srcstep, int src_w, int src_h,
+    const Point& srcOffset, const Size& wholeSize,
     uchar*       dst, size_t dststep,
     int pad_top, int pad_bottom, int pad_left, int pad_right,
     int borderType, const uchar* constVal)
@@ -311,12 +312,17 @@ static void fillTileBorder(
     const int dst_w = src_w + pad_left + pad_right;
 
     // ── Left/right column offset table (byte offsets into a source row) ────────
-    AutoBuffer<int> _tab(pad_left + pad_right);
-    int* tab = _tab.data();
-    for (int i = 0; i < pad_left; i++)
-        tab[i] = borderInterpolate(i - pad_left, src_w, borderType) * esz;
-    for (int i = 0; i < pad_right; i++)
-        tab[pad_left + i] = borderInterpolate(src_w + i, src_w, borderType) * esz;
+    AutoBuffer<ptrdiff_t> _tab(pad_left + pad_right);
+    ptrdiff_t* tab = _tab.data();
+    if (borderType != BORDER_CONSTANT)
+    {
+        for (int i = 0; i < pad_left; i++)
+            tab[i] = (ptrdiff_t)(borderInterpolate(srcOffset.x + i - pad_left,
+                                                  wholeSize.width, borderType) - srcOffset.x) * esz;
+        for (int i = 0; i < pad_right; i++)
+            tab[pad_left + i] = (ptrdiff_t)(borderInterpolate(srcOffset.x + src_w + i,
+                                                            wholeSize.width, borderType) - srcOffset.x) * esz;
+    }
 
     // For BORDER_CONSTANT top/bottom rows, pre-build a full-width fill row.
     AutoBuffer<uchar> _constRow;
@@ -329,12 +335,12 @@ static void fillTileBorder(
             memcpy(constRow + x * esz, constVal, esz);
     }
 
-    // ── Interior rows ─────────────────────────────────────────────────────────
-    uchar* dstRow = dst + pad_top * dststep;
-    for (int r = 0; r < src_h; r++, dstRow += dststep, src += srcstep)
+    // A reflected pixel can lie outside a short edge tile's cropped region.
+    // Always resolve border coordinates against its backing image.
+    const auto copyRow = [&](const uchar* srcRow, uchar* dstRow)
     {
         // Copy source pixels into the interior portion of the row.
-        memcpy(dstRow + pad_left * esz, src, src_w * esz);
+        memcpy(dstRow + pad_left * esz, srcRow, src_w * esz);
 
         if (borderType == BORDER_CONSTANT)
         {
@@ -346,11 +352,15 @@ static void fillTileBorder(
         else
         {
             for (int i = 0; i < pad_left; i++)
-                memcpy(dstRow + i * esz, src + tab[i], esz);
+                memcpy(dstRow + i * esz, srcRow + tab[i], esz);
             for (int i = 0; i < pad_right; i++)
-                memcpy(dstRow + (pad_left + src_w + i) * esz, src + tab[pad_left + i], esz);
+                memcpy(dstRow + (pad_left + src_w + i) * esz, srcRow + tab[pad_left + i], esz);
         }
-    }
+    };
+
+    // ── Interior rows ─────────────────────────────────────────────────────────
+    for (int r = 0; r < src_h; r++)
+        copyRow(src + r * srcstep, dst + (pad_top + r) * dststep);
 
     // ── Top rows ──────────────────────────────────────────────────────────────
     for (int r = 0; r < pad_top; r++)
@@ -359,8 +369,8 @@ static void fillTileBorder(
             memcpy(dst + r * dststep, constRow, dst_w * esz);
         else
         {
-            int j = borderInterpolate(r - pad_top, src_h, borderType);
-            memcpy(dst + r * dststep, dst + (pad_top + j) * dststep, dst_w * esz);
+            int j = borderInterpolate(srcOffset.y + r - pad_top, wholeSize.height, borderType);
+            copyRow(src + (ptrdiff_t)(j - srcOffset.y) * (ptrdiff_t)srcstep, dst + r * dststep);
         }
     }
 
@@ -372,11 +382,44 @@ static void fillTileBorder(
             memcpy(dstBot + r * dststep, constRow, dst_w * esz);
         else
         {
-            int j = borderInterpolate(src_h + r, src_h, borderType);
-            memcpy(dstBot + r * dststep, dst + (pad_top + j) * dststep, dst_w * esz);
+            int j = borderInterpolate(srcOffset.y + src_h + r, wholeSize.height, borderType);
+            copyRow(src + (ptrdiff_t)(j - srcOffset.y) * (ptrdiff_t)srcstep, dstBot + r * dststep);
         }
     }
 }
+
+class RowRangeFilterInvoker : public ParallelLoopBody
+{
+public:
+    RowRangeFilterInvoker(const FilterEngine& _fe, const Mat& _src, Mat& _dst)
+        : fe(_fe), src(_src), dst(_dst)
+    {
+        src.locateROI(wholeSize, ofs);
+    }
+
+    virtual void operator()(const Range& range) const CV_OVERRIDE
+    {
+        // Only stateless filters are shared; each range has its own ring buffer.
+        FilterEngine engine(fe.filter2D, fe.rowFilter, fe.columnFilter,
+                            fe.srcType, fe.dstType, fe.bufType,
+                            fe.rowBorderType, fe.columnBorderType);
+        // Preserve the already converted (including morphology's default) value.
+        engine.constBorderValue = fe.constBorderValue;
+        FilterEngine__start(engine, wholeSize, Size(src.cols, range.size()),
+                            Point(ofs.x, ofs.y + range.start));
+        int y = engine.startY - ofs.y;
+        FilterEngine__proceed(engine, src.ptr() + y * (ptrdiff_t)src.step,
+                              (int)src.step, engine.endY - engine.startY,
+                              dst.ptr(range.start), (int)dst.step);
+    }
+
+private:
+    const FilterEngine& fe;
+    const Mat& src;
+    Mat& dst;
+    Size wholeSize;
+    Point ofs;
+};
 
 class TiledFilterInvoker : public ParallelLoopBody
 {
@@ -447,9 +490,12 @@ public:
 
                 const int esz = (int)CV_ELEM_SIZE(fe.srcType);
                 const uchar* cval = fe.constBorderValue.empty() ? nullptr : &fe.constBorderValue[0];
+                Size borderSize;
+                Point borderOffset;
+                src_region.locateROI(borderSize, borderOffset);
 
 #define FILL_BORDER(E) fillTileBorder<E>(src_region.ptr(), (size_t)src_region.step, \
-    src_region.cols, src_region.rows, tile_mat.ptr(), (size_t)tile_mat.step, \
+    src_region.cols, src_region.rows, borderOffset, borderSize, tile_mat.ptr(), (size_t)tile_mat.step, \
     pad_top, pad_bottom, pad_left, pad_right, borderType, cval)
                 switch (esz)
                 {
@@ -579,6 +625,21 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
 
         // Heuristic: Balance L2 cache locality (128) vs parallel load balancing (64).
         int tileSize = (src.total() < (size_t)nthreads * 128 * 128 * 4) ? 64 : 128;
+        int bufferRows = std::max(this_.ksize.height + 3,
+                                 std::max(this_.anchor.y, this_.ksize.height - this_.anchor.y - 1) * 2 + 1);
+        size_t stripeBufferSize = CV_ELEM_SIZE(this_.bufType) *
+                                  alignSize(src.cols, VEC_ALIGN) * bufferRows;
+        if (this_.isSeparable() && src.rows >= nthreads &&
+            stripeBufferSize <= (size_t)tileSize * tileSize)
+        {
+            // Full-width stripes avoid repeating row-filter calls and horizontal
+            // border preparation. Keep their ring buffers within the working-set
+            // budget of a byte-valued tile; larger buffers retain the tiled path.
+            RowRangeFilterInvoker invoker(this_, src_copy, dst);
+            parallel_for_(Range(0, dst.rows), invoker, nthreads);
+            return;
+        }
+
         int totalTiles = ((dst.cols + tileSize - 1) / tileSize) * ((dst.rows + tileSize - 1) / tileSize);
 
         TiledFilterInvoker invoker(this_, src_copy, dst, tileSize);
