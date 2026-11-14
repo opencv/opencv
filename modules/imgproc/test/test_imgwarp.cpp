@@ -798,6 +798,21 @@ void resizeArea(const cv::Mat & src, cv::Mat & dst)
     }
 }
 
+TEST(Resize, Area_fractional_shared_rows)
+{
+    Mat storage(5, 7, CV_8UC3);
+    Mat src = storage(Rect(1, 1, 3, 3));
+    for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
+            src.at<Vec3b>(y, x) = Vec3b(uchar(9 * y + 3 * x), uchar(3 * y + 9 * x), uchar(9 * (y + x)));
+
+    Vec3b expectedPixels[] = {Vec3b(4, 4, 6), Vec3b(8, 16, 18), Vec3b(16, 8, 18), Vec3b(20, 20, 30)};
+    const Mat expected(2, 2, CV_8UC3, expectedPixels);
+    Mat dst;
+    resize(src, dst, expected.size(), 0, 0, INTER_AREA);
+    EXPECT_EQ(0.0, cv::norm(dst, expected, NORM_INF));
+}
+
 TEST(Resize, Area_half)
 {
     const int size = 1000;

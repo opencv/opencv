@@ -180,6 +180,20 @@ PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
 }
 
 
+PERF_TEST_P(MatInfo_Size_Size, resizeDownAreaFractional,
+            testing::Values(MatInfo_Size_Size_t(CV_8UC3, szVGA, Size(224, 224)),
+                            MatInfo_Size_Size_t(CV_8UC3, sz1080p, Size(910, 512))))
+{
+    const MatInfo_Size_Size_t& params = GetParam();
+    Mat src(get<1>(params), get<0>(params)), dst(get<2>(params), get<0>(params));
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_AREA);
+
+    EXPECT_GT(countNonZero(dst.reshape(1)), 0);
+    SANITY_CHECK_NOTHING();
+}
+
 typedef TestBaseWithParam<tuple<MatType, Size, double> > MatInfo_Size_Scale_Area;
 
 PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
