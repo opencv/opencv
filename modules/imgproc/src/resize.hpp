@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2026, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -53,31 +54,11 @@
 
 namespace cv
 {
-namespace opt_AVX2
-{
-#if CV_TRY_AVX2
-void resizeNN2_AVX2(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_AVX2(const Range&, const Mat&, Mat&, int*, double);
-#endif
-}
 
-namespace opt_SSE4_1
-{
-#if CV_TRY_SSE4_1
-void resizeNN2_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
-
-int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width);
-#endif
-}
-
-namespace opt_LASX
-{
-#if CV_TRY_LASX
-void resizeNN2_LASX(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, double);
-#endif
-}
+bool resizeLinearExact(int src_type,
+                       const uchar* src_data, size_t src_step, int src_width, int src_height,
+                       uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
+                       double inv_scale_x, double inv_scale_y, int* interpolation);
 
 }
 #endif
