@@ -206,4 +206,44 @@ TEST(Features2D_ORB, invalidCreateParameters)
                              ORB::HARRIS_SCORE, 1), cv::Exception);
 }
 
+TEST(Features2D_ORB, roi_submatrix_padding)
+{
+    // The keypoints and descriptors detected on a sub-matrix ROI must match
+    // those detected on an isolated clone of the exact same region, rather
+    // than reading pixels from the parent image outside the ROI boundaries.
+    Mat parent(300, 300, CV_8UC1);
+    RNG& rng = cvtest::TS::ptr()->get_rng();
+    rng.fill(parent, RNG::UNIFORM, 0, 256);
+
+    Rect roi(50, 50, 200, 200);
+    Mat srcRoi = parent(roi);
+    Mat srcClone = srcRoi.clone();
+
+    Ptr<ORB> orb = cv::ORB::create();
+
+    vector<KeyPoint> kpsRoi, kpsClone;
+    Mat descRoi, descClone;
+
+    orb->detectAndCompute(srcRoi, noArray(), kpsRoi, descRoi, false);
+    orb->detectAndCompute(srcClone, noArray(), kpsClone, descClone, false);
+
+    ASSERT_EQ(kpsRoi.size(), kpsClone.size())
+        << "Keypoint count differs between submatrix ROI and isolated clone";
+    ASSERT_GT(kpsRoi.size(), 0u)
+        << "No keypoints were detected in test image";
+
+    for (size_t i = 0; i < kpsRoi.size(); ++i)
+    {
+        EXPECT_EQ(kpsRoi[i].pt, kpsClone[i].pt) << "Keypoint position mismatch at index " << i;
+        EXPECT_EQ(kpsRoi[i].response, kpsClone[i].response) << "Keypoint response mismatch at index " << i;
+        EXPECT_EQ(kpsRoi[i].angle, kpsClone[i].angle) << "Keypoint angle mismatch at index " << i;
+    }
+
+    if (!descRoi.empty() && !descClone.empty())
+    {
+        EXPECT_EQ(0, cvtest::norm(descRoi, descClone, NORM_INF))
+            << "Descriptors differ between submatrix ROI and isolated clone";
+    }
+}
+
 }} // namespace
