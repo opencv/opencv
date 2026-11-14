@@ -401,27 +401,37 @@ struct EwMul {
     template<typename W, typename ST> static W scl(W a, W b, ST s) { return a * s * b; }
     // 64-bit integers: a double holds only 53 bits, so a product through it is inexact above 2^53
     // (UINT64_MAX / 2 * 1 became 2^63). At scale 1 the product is exact, clamped to the depth's
-    // range; any other scale stays in double.
+    // range; any other scale stays in double. A double estimate of the product decides cheaply
+    // whether it fits: the estimate is off by well under 2^13 at 2^64 (three roundings), so one
+    // below 2^64 - 2^24 (2^63 - 2^23 for signed) cannot overflow and one above 2^64 + 2^24
+    // (2^63 + 2^23) certainly does. Only the thin band between takes the exact check.
+    static constexpr double kU64Fits = 18446744073709551616.0 - 16777216.0;
+    static constexpr double kU64Over = 18446744073709551616.0 + 16777216.0;
+    static constexpr double kI64Fits = 9223372036854775808.0 - 8388608.0;
+    static constexpr double kI64Over = 9223372036854775808.0 + 8388608.0;
     static uint64_t scl(uint64_t a, uint64_t b, double s)
     {
         if (s != 1.0)
             return saturate_cast<uint64_t>((double)a * s * (double)b);
-        if (((a | b) >> 32) == 0)   // both below 2^32: the product fits, skip the 64-bit divide
+        const double est = (double)a * (double)b;
+        if (est <= kU64Fits)
             return a * b;
+        if (est >= kU64Over)
+            return UINT64_MAX;
         return (a == 0 || b <= UINT64_MAX / a) ? a * b : UINT64_MAX;
     }
     static int64_t scl(int64_t a, int64_t b, double s)
     {
         if (s != 1.0)
             return saturate_cast<int64_t>((double)a * s * (double)b);
+        const double est = std::fabs((double)a * (double)b);
+        if (est <= kI64Fits)
+            return a * b;
         const bool neg = (a < 0) != (b < 0);
+        if (est >= kI64Over)
+            return neg ? INT64_MIN : INT64_MAX;
         const uint64_t ua = a < 0 ? 0 - (uint64_t)a : (uint64_t)a;   // exact for INT64_MIN too
         const uint64_t ub = b < 0 ? 0 - (uint64_t)b : (uint64_t)b;
-        if (((ua | ub) >> 31) == 0)   // both magnitudes below 2^31: the product is below 2^62
-        {
-            const uint64_t q = ua * ub;
-            return neg ? (int64_t)(0 - q) : (int64_t)q;
-        }
         const uint64_t limit = (uint64_t)INT64_MAX + (neg ? 1 : 0);
         if (ua != 0 && ub > limit / ua)
             return neg ? INT64_MIN : INT64_MAX;

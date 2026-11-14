@@ -438,9 +438,10 @@ TEST(Core_EW_AddSub, saturation_s32_u32)
 TEST(Core_EW_Mul, exact_and_saturating_s64_u64)
 {
     {
-        const uint64_t a[] = { UINT64_MAX / 2, UINT64_MAX, 1ull << 32, (1ull << 32) + 1, 0, UINT64_MAX, 3, 3037000499ull, 9007199254740993ull };
-        const uint64_t b[] = { 1, 1, 1ull << 32, (1ull << 32) - 1, UINT64_MAX, 2, UINT64_MAX / 3, 3037000499ull, 3 };
-        const uint64_t e[] = { 9223372036854775807ull, UINT64_MAX, UINT64_MAX, UINT64_MAX, 0, UINT64_MAX, UINT64_MAX, 9223372030926249001ull, 27021597764222979ull };
+        // The last four cases sit in the band just below 2^64 where the double estimate cannot decide.
+        const uint64_t a[] = { UINT64_MAX / 2, UINT64_MAX, 1ull << 32, (1ull << 32) + 1, 0, UINT64_MAX, 3, 3037000499ull, 9007199254740993ull, (1ull << 32) - 256, (1ull << 32) + 1, UINT64_MAX - 1000 };
+        const uint64_t b[] = { 1, 1, 1ull << 32, (1ull << 32) - 1, UINT64_MAX, 2, UINT64_MAX / 3, 3037000499ull, 3, (1ull << 32) + 256, (1ull << 32) + 1, 1 };
+        const uint64_t e[] = { 9223372036854775807ull, UINT64_MAX, UINT64_MAX, UINT64_MAX, 0, UINT64_MAX, UINT64_MAX, 9223372030926249001ull, 27021597764222979ull, 18446744073709486080ull, UINT64_MAX, UINT64_MAX - 1000 };
         const int n = (int)(sizeof(a)/sizeof(a[0]));
         Mat A(1, n, CV_64U, (void*)a), B(1, n, CV_64U, (void*)b), P;
         cv::multiply(A, B, P);
@@ -449,9 +450,10 @@ TEST(Core_EW_Mul, exact_and_saturating_s64_u64)
             EXPECT_EQ(P.at<uint64_t>(i), e[i]) << "mul u64 case " << i;
     }
     {
-        const int64_t a[] = { INT64_MAX, INT64_MIN, INT64_MIN, -1, 3037000500ll, -3037000500ll, -(1ll << 31), 1ll << 32, 0, 9007199254740993ll };
-        const int64_t b[] = { 1, 1, -1, 3074457345618258602ll, 3037000500ll, 3037000500ll, 1ll << 32, 1ll << 31, INT64_MIN, -3 };
-        const int64_t e[] = { INT64_MAX, INT64_MIN, INT64_MAX, -3074457345618258602ll, INT64_MAX, INT64_MIN, INT64_MIN, INT64_MAX, 0, -27021597764222979ll };
+        // The last three cases sit in the band just below 2^63 where the double estimate cannot decide.
+        const int64_t a[] = { INT64_MAX, INT64_MIN, INT64_MIN, -1, 3037000500ll, -3037000500ll, -(1ll << 31), 1ll << 32, 0, 9007199254740993ll, (1ll << 31) - 256, -(1ll << 31) + 256, INT64_MAX - 1000 };
+        const int64_t b[] = { 1, 1, -1, 3074457345618258602ll, 3037000500ll, 3037000500ll, 1ll << 32, 1ll << 31, INT64_MIN, -3, (1ll << 32) + 512, (1ll << 32) + 512, 1 };
+        const int64_t e[] = { INT64_MAX, INT64_MIN, INT64_MAX, -3074457345618258602ll, INT64_MAX, INT64_MIN, INT64_MIN, INT64_MAX, 0, -27021597764222979ll, 9223372036854644736ll, -9223372036854644736ll, INT64_MAX - 1000 };
         const int n = (int)(sizeof(a)/sizeof(a[0]));
         Mat A(1, n, CV_64S, (void*)a), B(1, n, CV_64S, (void*)b), P;
         cv::multiply(A, B, P);
