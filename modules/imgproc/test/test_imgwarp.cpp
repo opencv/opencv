@@ -1045,11 +1045,10 @@ TEST(Imgproc_Remap, DISABLED_memleak)
 TEST(Imgproc_WarpAffine, IntegerTranslation)
 {
     const Scalar border(13, 57, 131, 231);
-    const Scalar untouched(17, 41, 103, 223);
     const Rect dstRoi(2, 3, 39, 25);
     RNG rng(137);
 
-    for (int channels : {1, 3, 4})
+    for (int channels = 1; channels <= CV_CN_MAX; ++channels)
     for (const Size& srcSize : {Size(37, 29), Size(1, 1)})
     {
         const int type = CV_8UC(channels);
@@ -1059,7 +1058,8 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
 
         for (const Point& shift : {Point(), Point(5, -4), Point(-7, 9), Point(38, 24), Point(-53, 49)})
         {
-            Mat expected(dstRoi.height + 6, dstRoi.width + 7, type, untouched);
+            Mat expected(dstRoi.height + 6, dstRoi.width + 7, type);
+            expected.reshape(1).setTo(17);
             for (int y = 0; y < dstRoi.height; ++y)
             {
                 uchar* out = expected.ptr(y + dstRoi.y) + dstRoi.x * channels;
@@ -1068,24 +1068,41 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
                     const int sx = x - shift.x, sy = y - shift.y;
                     const bool inside = 0 <= sx && sx < src.cols && 0 <= sy && sy < src.rows;
                     for (int c = 0; c < channels; ++c)
-                        out[x * channels + c] = inside ? src.ptr(sy)[sx * channels + c] : uchar(border[c]);
+                        out[x * channels + c] = inside ? src.ptr(sy)[sx * channels + c]
+                                                       : saturate_cast<uchar>(border[c % 4]);
                 }
             }
 
+            for (int interpolation : {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4})
             for (bool inverse : {false, true})
             {
-                SCOPED_TRACE(cv::format("channels=%d src=%dx%d shift=(%d,%d) inverse=%d",
-                                        channels, src.cols, src.rows, shift.x, shift.y, inverse));
+                if (channels > 4 && (interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4))
+                    continue;
+                SCOPED_TRACE(cv::format("channels=%d src=%dx%d shift=(%d,%d) interpolation=%d inverse=%d",
+                                        channels, src.cols, src.rows, shift.x, shift.y, interpolation, inverse));
                 const Point offset = inverse ? -shift : shift;
                 const Matx23d matrix(1, 0, offset.x, 0, 1, offset.y);
-                Mat dstParent(expected.size(), type, untouched);
+                Mat dstParent(expected.size(), type);
+                dstParent.reshape(1).setTo(17);
                 Mat dst = dstParent(dstRoi);
-                warpAffine(src, dst, matrix, dstRoi.size(), INTER_LINEAR | (inverse ? WARP_INVERSE_MAP : 0),
+                warpAffine(src, dst, matrix, dstRoi.size(), interpolation | (inverse ? WARP_INVERSE_MAP : 0),
                            BORDER_CONSTANT, border, ALGO_HINT_ACCURATE);
                 ASSERT_EQ(0., cvtest::norm(expected, dstParent, NORM_INF));
             }
         }
     }
+}
+
+TEST(Imgproc_WarpAffine, IntegerTranslationPreservesUnsupportedCases)
+{
+    const Mat src(2, 7, CV_8UC(5));
+    const Matx23d identity(1, 0, 0, 0, 1, 0);
+    Mat dst;
+    for (int interpolation : {INTER_CUBIC, INTER_LANCZOS4, INTER_LINEAR_EXACT, INTER_NEAREST_EXACT})
+        EXPECT_THROW(warpAffine(src, dst, identity, src.size(), interpolation), cv::Exception);
+
+    const Mat wide(1, SHRT_MAX, CV_8UC2, Scalar::all(17));
+    EXPECT_THROW(warpAffine(wide, dst, identity, Size(1, 1), INTER_LINEAR), cv::Exception);
 }
 
 TEST(Imgproc_warpPolar, identity)
