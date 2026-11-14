@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
@@ -45,6 +46,34 @@ PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall,
         : 255 * 255 * tmpl.total() * 1e-6;
 
     SANITY_CHECK(result, eps);
+}
+
+PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateSmall_32f,
+            testing::Combine(
+                testing::Values(cv::Size(320, 240), cv::Size(640, 480),
+                                cv::Size(1024, 768)),
+                testing::Values(cv::Size(12, 12), cv::Size(16, 16)),
+                MethodType::all()
+                )
+            )
+{
+    Size imgSz = get<0>(GetParam());
+    Size tmplSz = get<1>(GetParam());
+    int method = get<2>(GetParam());
+
+    Mat img(imgSz, CV_32FC1);
+    Mat tmpl(tmplSz, CV_32FC1);
+    Mat result(imgSz - tmplSz + Size(1,1), CV_32F);
+
+    declare
+        .in(img, WARMUP_RNG)
+        .in(tmpl, WARMUP_RNG)
+        .out(result)
+        .time(30);
+
+    TEST_CYCLE() cv::matchTemplate(img, tmpl, result, method);
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplateBig,

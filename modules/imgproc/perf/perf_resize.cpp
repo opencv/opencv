@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, Intel Corporation, all rights reserved.
 #include "perf_precomp.hpp"
 
 namespace opencv_test {
@@ -14,6 +15,9 @@ typedef TestBaseWithParam<MatInfo_SizePair_t> MatInfo_SizePair;
 #define MATTYPE_NE_VALUES CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,     \
                           CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4, \
                           CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4
+
+#define RESIZE_INTER_TYPES CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, \
+                           CV_16SC1, CV_16SC3, CV_16SC4, CV_32FC1, CV_32FC3, CV_32FC4
 
 // For gradient-ish testing of the other matrix formats
 template<typename T>
@@ -277,6 +281,59 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_NEAREST_EXACT);
 
     EXPECT_GT(countNonZero(dst.reshape(1)), 0);
+    SANITY_CHECK_NOTHING();
+}
+
+CV_ENUM(ResizeInterCubicLanczos, INTER_CUBIC, INTER_LANCZOS4)
+typedef tuple<MatType, Size, double, ResizeInterCubicLanczos> MatInfo_Size_Scale_Inter_t;
+typedef TestBaseWithParam<MatInfo_Size_Scale_Inter_t> MatInfo_Size_Scale_Inter;
+
+PERF_TEST_P(MatInfo_Size_Scale_Inter, resizeCubicLanczos,
+            testing::Combine(
+                testing::Values(RESIZE_INTER_TYPES),
+                testing::Values(sz1080p),
+                testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
+                ResizeInterCubicLanczos::all()
+                ))
+{
+    int    type  = get<0>(GetParam());
+    Size   from  = get<1>(GetParam());
+    double scale = get<2>(GetParam());
+    int    inter = get<3>(GetParam());
+
+    Size to(saturate_cast<int>(from.width * scale), saturate_cast<int>(from.height * scale));
+
+    Mat src(from, type), dst(to, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::resize(src, dst, to, 0, 0, inter);
+
+    SANITY_CHECK_NOTHING();
+}
+
+CV_ENUM(ResizeInterAffine, INTER_LINEAR, INTER_CUBIC)
+typedef tuple<MatType, Size, double, ResizeInterAffine> MatInfo_Size_Scale_InterAffine_t;
+typedef TestBaseWithParam<MatInfo_Size_Scale_InterAffine_t> MatInfo_Size_Scale_InterAffine;
+
+PERF_TEST_P(MatInfo_Size_Scale_InterAffine, resizeAffine,
+            testing::Combine(
+                testing::Values(RESIZE_INTER_TYPES),
+                testing::Values(sz1080p),
+                testing::Values(0.777, 1.333, 2.0, 0.5, 0.25),
+                ResizeInterAffine::all()
+                ))
+{
+    int    type  = get<0>(GetParam());
+    Size   from  = get<1>(GetParam());
+    double scale = get<2>(GetParam());
+    int    inter = get<3>(GetParam());
+
+    Mat src(from, type);
+    Mat dst(saturate_cast<int>(from.width * scale), saturate_cast<int>(from.height * scale), type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, inter);
+
     SANITY_CHECK_NOTHING();
 }
 
