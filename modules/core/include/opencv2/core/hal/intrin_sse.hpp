@@ -3434,7 +3434,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
-    return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
+    return v_float32x4(_mm_cvtph_ps(_mm_loadl_epi64((const __m128i*)ptr)));
 #else
     const __m128i z = _mm_setzero_si128(), delta = _mm_set1_epi32(0x38000000);
     const __m128i signmask = _mm_set1_epi32(0x80000000), maxexp = _mm_set1_epi32(0x7c000000);
