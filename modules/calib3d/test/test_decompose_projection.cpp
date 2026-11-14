@@ -180,4 +180,23 @@ TEST(Calib3d_DecomposeProjectionMatrix, bug_23733)
     EXPECT_LT(cv::norm(P_recompose - P, cv::NORM_INF), 1e-16);
 }
 
+TEST(Calib3d_RQDecomp3x3, large_scale)
+{
+    // P (and its left 3x3 block) is defined up to scale; the zero checks after the Givens
+    // rotations used an absolute tolerance and threw for inputs larger than ~1e7*K*R
+    const Matx33d K(812.3, 0.7, 330.1,
+                    0, 798.9, 251.2,
+                    0, 0, 1);
+    Matx33d Rtrue;
+    Rodrigues(Vec3d(0.3, -1.1, 0.4), Rtrue);
+    for (double scale : {1e7, 1e9, 1e12})
+    {
+        Matx33d M = scale*(K*Rtrue), R, Q;
+        ASSERT_NO_THROW(RQDecomp3x3(M, R, Q)) << "scale = " << scale;
+        EXPECT_LE(cv::norm(R*(1./scale), K, NORM_INF), 1e-9) << "scale = " << scale;
+        EXPECT_LE(cv::norm(Q, Rtrue, NORM_INF), 1e-12) << "scale = " << scale;
+        EXPECT_LE(cv::norm(R*Q, M, NORM_INF), 1e-14*cv::norm(M, NORM_INF)) << "scale = " << scale;
+    }
+}
+
 }} // namespace
