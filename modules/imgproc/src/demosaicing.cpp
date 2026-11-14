@@ -1612,11 +1612,8 @@ public:
         int dcn = dst.channels();
         int dcn2 = dcn<<1;
         int start_with_green = Start_with_green, blue = Blue;
-        int sstep = int(src.step / src.elemSize1()), dstep = int(dst.step / dst.elemSize1());
+        int sstep = int(src.step / src.elemSize1());
         SIMDInterpolator vecOp;
-
-        const T* S = src.ptr<T>(range.start + 1) + 1;
-        T* D = reinterpret_cast<T*>(dst.data + (range.start + 1) * dst.step) + dcn;
 
         if (range.start % 2)
         {
@@ -1627,6 +1624,10 @@ public:
         // to BGR
         for (int y = range.start; y < range.end; ++y)
         {
+            // rows are not necessarily contiguous (src or dst can be a sub-matrix)
+            const T* S = src.ptr<T>(y + 1) + 1;
+            T* D = reinterpret_cast<T*>(dst.data + (y + 1) * dst.step) + dcn;
+
             int x = 1;
             if (start_with_green)
             {
@@ -1675,16 +1676,15 @@ public:
                 ++S;
             }
 
+            T* Dfirst = reinterpret_cast<T*>(dst.data + (y + 1) * dst.step);
             for (int i = 0; i < dcn; ++i)
             {
                 D[i] = D[-dcn + i];
-                D[-dstep+dcn+i] = D[-dstep+(dcn<<1)+i];
+                Dfirst[i] = Dfirst[dcn + i];
             }
 
             start_with_green ^= 1;
             blue ^= 1;
-            S += 2;
-            D += dcn2;
         }
     }
 
