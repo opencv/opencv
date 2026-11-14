@@ -244,6 +244,9 @@ OCV_OPTION(WITH_VTK "Include VTK library support (and build opencv_viz module ei
 OCV_OPTION(WITH_CUDA "Include NVidia Cuda Runtime support" OFF
   VISIBLE_IF NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_CUDA)
+OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP runtime support (compiles the CUDA modules for AMD GPUs)" OFF
+  VISIBLE_IF NOT IOS AND NOT XROS AND NOT WINRT
+  VERIFY HAVE_CUDA)
 OCV_OPTION(WITH_CUFFT "Include NVidia Cuda Fast Fourier Transform (FFT) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUFFT)
@@ -259,6 +262,9 @@ OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" ON
 OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVENC)
+OCV_OPTION(WITH_ROCDECODE "Include AMD rocDecode video decoding library support" ON
+  VISIBLE_IF WITH_HIP
+  VERIFY HAVE_ROCDECODE)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_EIGEN)
@@ -698,6 +704,28 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
       endif()
     elseif(UNIX)
       message(WARNING "CUDA: Not detected!  If you are not using the default host compiler (g++) then you need to specify both CMAKE_CUDA_HOST_COMPILER and CMAKE_CUDA_COMPILER. e.g. -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/clang++ -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc.")
+    endif()
+  endif()
+endif()
+
+# --- HIP Support (AMD ROCm) ---
+# HIP is always used as a first class CMake language, mirroring the CUDA first
+# class language path; the device sources keep their .cu extension and are
+# given LANGUAGE HIP per target.
+if(WITH_HIP)
+  if(CMAKE_VERSION VERSION_LESS 3.21)
+    message(WARNING "HIP: First class HIP language support requires CMake >= 3.21, disabling WITH_HIP.")
+    set(WITH_HIP OFF CACHE BOOL "Include AMD ROCm/HIP runtime support" FORCE)
+  else()
+    include(CheckLanguage)
+    check_language(HIP)
+    if(CMAKE_HIP_COMPILER)
+      if(CMAKE_HIP_ARCHITECTURES)
+        set(USER_DEFINED_CMAKE_HIP_ARCHITECTURES TRUE)
+      endif()
+      enable_language(HIP)
+    elseif(UNIX)
+      message(WARNING "HIP: Not detected! Ensure ROCm is installed and hipcc is on PATH, or pass -DCMAKE_HIP_COMPILER=/opt/rocm/bin/hipcc.")
     endif()
   endif()
 endif()
