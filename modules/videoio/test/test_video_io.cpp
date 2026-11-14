@@ -4,6 +4,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/videoio/container_avi.private.hpp"
 
 namespace opencv_test
 {
@@ -1279,6 +1280,268 @@ TEST_P(PreciseSeekingTest, seek_nonInteger_fps_frame_accurate)
 VideoCaptureAPIs seekable_backeinds[] = {CAP_FFMPEG, CAP_MSMF, CAP_AVFOUNDATION};
 
 INSTANTIATE_TEST_CASE_P(videoio, PreciseSeekingTest, testing::ValuesIn(seekable_backeinds), safe_capture_name_printer);
+
+// Independent scalar replica of Motion JPEG convertToYUV (fixed-point BT.601, 12-bit).
+static void mjpegConvertToYUV_ref(int colorspace, int channels, int input_channels,
+                                  short* UV_data, short* Y_data, const uchar* pix_data,
+                                  int y_limit, int x_limit, int step, int u_plane_ofs, int v_plane_ofs)
+{
+    const int UV_step = 16;
+    const int x_scale = channels > 1 ? 2 : 1;
+    const int y_scale = x_scale;
+    const int Y_step = x_scale * 8;
+    auto descale12 = [](int x) { return (x + (1 << 11)) >> 12; };
+    auto yuv_from_rgb = [&](int r, int g, int b, int& Y, int& U, int& V) {
+        Y = descale12(r * 1225 + g * 2404 + b * 467) - 128;
+        U = descale12(r * -691 + g * -1357 + b * 2048);
+        V = descale12(r * 2048 + g * -1715 + b * -333);
+    };
+
+    if (channels > 1)
+    {
+        int i = 0;
+        if (colorspace == COLORSPACE_YUV444P)
+        {
+            for (; i + 2 <= y_limit; i += 2, pix_data += step * 2, Y_data += Y_step * 2, UV_data += UV_step)
+            {
+                const uchar* pix = pix_data;
+                int j = 0;
+                for (; j + 2 <= x_limit; j += 2, pix += 2)
+                {
+                    Y_data[j] = (short)(pix[0] - 128);
+                    Y_data[j + 1] = (short)(pix[1] - 128);
+                    Y_data[j + Y_step] = (short)(pix[step] - 128);
+                    Y_data[j + Y_step + 1] = (short)(pix[step + 1] - 128);
+                    UV_data[j >> 1] = (short)(pix[v_plane_ofs] + pix[v_plane_ofs + 1] +
+                                              pix[v_plane_ofs + step] + pix[v_plane_ofs + step + 1] - 128 * 4);
+                    UV_data[(j >> 1) + 8] = (short)(pix[u_plane_ofs] + pix[u_plane_ofs + 1] +
+                                                    pix[u_plane_ofs + step] + pix[u_plane_ofs + step + 1] - 128 * 4);
+                }
+                for (; j < x_limit; j++, pix += input_channels)
+                {
+                    Y_data[j] = (short)(pix[0] - 128);
+                    Y_data[j + Y_step] = (short)(pix[step] - 128);
+                    UV_data[j >> 1] = (short)(UV_data[j >> 1] + pix[v_plane_ofs] + pix[v_plane_ofs + step] - 128 * 2);
+                    UV_data[(j >> 1) + 8] = (short)(UV_data[(j >> 1) + 8] + pix[u_plane_ofs] + pix[u_plane_ofs + step] - 128 * 2);
+                }
+            }
+        }
+        for (; i < y_limit; i++, pix_data += step, Y_data += Y_step)
+        {
+            const uchar* pix = pix_data;
+            for (int j = 0; j < x_limit; j++, pix += input_channels)
+            {
+                int y, u, v;
+                if (colorspace == COLORSPACE_BGR)
+                    yuv_from_rgb(pix[2], pix[1], pix[0], y, u, v);
+                else if (colorspace == COLORSPACE_RGBA)
+                    yuv_from_rgb(pix[0], pix[1], pix[2], y, u, v);
+                else
+                {
+                    y = pix[0] - 128;
+                    u = pix[v_plane_ofs] - 128;
+                    v = pix[u_plane_ofs] - 128;
+                }
+                const int j2 = j >> (x_scale - 1);
+                Y_data[j] = (short)y;
+                UV_data[j2] = (short)(UV_data[j2] + u);
+                UV_data[j2 + 8] = (short)(UV_data[j2 + 8] + v);
+            }
+            if (((i + 1) & (y_scale - 1)) == 0)
+                UV_data += UV_step;
+        }
+        return;
+    }
+
+    for (int i = 0; i < y_limit; i++, pix_data += step, Y_data += Y_step)
+    {
+        for (int j = 0; j < x_limit; j++)
+            Y_data[j] = (short)(pix_data[j] - 128);
+    }
+}
+
+static void checkConvertToYUV(int colorspace, const Mat& src, int channels, int y_limit, int x_limit)
+{
+    const int input_channels = src.channels();
+    const int x_scale = channels > 1 ? 2 : 1;
+    const int Y_step = x_scale * 8;
+    const int y_uv = channels > 1 ? (y_limit + 1) / 2 : 0;
+    Mat Y(y_limit, Y_step, CV_16SC1, Scalar::all(0));
+    Mat UV(std::max(y_uv, 1), 16, CV_16SC1, Scalar::all(0));
+    Mat Yref = Y.clone();
+    Mat UVref = UV.clone();
+
+    const int u_plane_ofs = (colorspace == COLORSPACE_YUV444P) ? (int)src.step * (src.rows / 3) : 0;
+    const int v_plane_ofs = (colorspace == COLORSPACE_YUV444P) ? 2 * u_plane_ofs : 0;
+
+    mjpegConvertToYUV(colorspace, channels, input_channels, UV.ptr<short>(), Y.ptr<short>(),
+                      src.ptr<uchar>(), y_limit, x_limit, (int)src.step, u_plane_ofs, v_plane_ofs);
+    mjpegConvertToYUV_ref(colorspace, channels, input_channels, UVref.ptr<short>(), Yref.ptr<short>(),
+                          src.ptr<uchar>(), y_limit, x_limit, (int)src.step, u_plane_ofs, v_plane_ofs);
+
+    EXPECT_EQ(0, cv::norm(Y, Yref, NORM_INF))
+        << "Y mismatch colorspace=" << colorspace << " " << x_limit << "x" << y_limit;
+    if (channels > 1)
+    {
+        EXPECT_EQ(0, cv::norm(UV, UVref, NORM_INF))
+            << "UV mismatch colorspace=" << colorspace << " " << x_limit << "x" << y_limit;
+    }
+}
+
+static const char* mjpegColorspaceName(int colorspace)
+{
+    switch (colorspace)
+    {
+    case COLORSPACE_GRAY:    return "GRAY";
+    case COLORSPACE_RGBA:    return "RGBA";
+    case COLORSPACE_BGR:     return "BGR";
+    case COLORSPACE_YUV444P: return "YUV444P";
+    default:                 return "UNKNOWN";
+    }
+}
+
+typedef tuple<Size, int> MJPEG_ConvertToYUV_t;
+class Videoio_MJPEG_convertToYUV : public testing::TestWithParam<MJPEG_ConvertToYUV_t> {};
+
+TEST_P(Videoio_MJPEG_convertToYUV, accuracy)
+{
+    if (!videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
+        throw SkipTestException("CAP_OPENCV_MJPEG is not available");
+
+    const Size sz = get<0>(GetParam());
+    const int colorspace = get<1>(GetParam());
+
+    if (colorspace == COLORSPACE_BGR)
+    {
+        Mat bgr(sz, CV_8UC3);
+        randu(bgr, 0, 256);
+        checkConvertToYUV(COLORSPACE_BGR, bgr, 3, sz.height, sz.width);
+    }
+    else if (colorspace == COLORSPACE_RGBA)
+    {
+        Mat rgba(sz, CV_8UC4);
+        randu(rgba, 0, 256);
+        checkConvertToYUV(COLORSPACE_RGBA, rgba, 3, sz.height, sz.width);
+    }
+    else if (colorspace == COLORSPACE_GRAY)
+    {
+        Mat gray(Size(std::min(sz.width, 8), sz.height), CV_8UC1);
+        randu(gray, 0, 256);
+        checkConvertToYUV(COLORSPACE_GRAY, gray, 1, gray.rows, gray.cols);
+    }
+    else
+    {
+        Mat yuv(sz.height * 3, sz.width, CV_8UC1);
+        randu(yuv, 0, 256);
+        checkConvertToYUV(COLORSPACE_YUV444P, yuv, 3, sz.height, sz.width);
+    }
+}
+
+inline static std::string mjpeg_cvt_name_printer(const testing::TestParamInfo<Videoio_MJPEG_convertToYUV::ParamType>& info)
+{
+    std::ostringstream os;
+    const Size sz = get<0>(info.param);
+    os << sz.width << "x" << sz.height << "_" << mjpegColorspaceName(get<1>(info.param));
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_MJPEG_convertToYUV,
+    testing::Combine(
+        testing::Values(
+            Size(16, 16), // SIMD 16-wide BGR / YUV444 MCU
+            Size(16, 15), // odd leftover row after SIMD pairs
+            Size(15, 16), // scalar leftover width
+            Size(8, 8),   // gray MCU width; color partial MCU
+            Size(7, 3)
+        ),
+        testing::Values(COLORSPACE_BGR, COLORSPACE_RGBA, COLORSPACE_GRAY, COLORSPACE_YUV444P)
+    ),
+    mjpeg_cvt_name_printer);
+
+typedef tuple<Size, int /*quality*/, int /*type*/> MJPEG_Encoder_t;
+class Videoio_MJPEG_Encoder : public testing::TestWithParam<MJPEG_Encoder_t> {};
+
+TEST_P(Videoio_MJPEG_Encoder, accuracy)
+{
+    if (!videoio_registry::hasBackend(CAP_OPENCV_MJPEG))
+        throw SkipTestException("CAP_OPENCV_MJPEG is not available");
+
+    const Size sz = get<0>(GetParam());
+    const int quality = get<1>(GetParam());
+    const int type = get<2>(GetParam());
+    const bool isColor = CV_MAT_CN(type) != 1;
+    const int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
+
+    Mat src(sz, type);
+    for (int y = 0; y < sz.height; y++)
+    {
+        for (int x = 0; x < sz.width; x++)
+        {
+            const uchar gx = (uchar)((x * 255) / std::max(sz.width - 1, 1));
+            const uchar gy = (uchar)((y * 255) / std::max(sz.height - 1, 1));
+            const uchar gz = (uchar)(((x + y) * 255) / std::max(sz.width + sz.height - 2, 1));
+            if (type == CV_8UC1)
+                src.at<uchar>(y, x) = (uchar)((gx + gy) / 2);
+            else if (type == CV_8UC4)
+                src.at<Vec4b>(y, x) = Vec4b(gx, gy, gz, 255); // RGBA byte order for the encoder
+            else
+                src.at<Vec3b>(y, x) = Vec3b(gx, gy, gz);
+        }
+    }
+
+    auto encodeDecode = [&](int nstripes) {
+        const std::string filename = cv::tempfile(".avi");
+        VideoWriter writer;
+        EXPECT_TRUE(writer.open(filename, CAP_OPENCV_MJPEG, fourcc, 25.0, sz, isColor));
+        EXPECT_TRUE(writer.set(VIDEOWRITER_PROP_QUALITY, quality));
+        EXPECT_TRUE(writer.set(VIDEOWRITER_PROP_NSTRIPES, nstripes));
+        writer.write(src);
+        writer.release();
+        VideoCapture cap(filename, CAP_OPENCV_MJPEG);
+        EXPECT_TRUE(cap.isOpened());
+        Mat decoded;
+        cap >> decoded;
+        cap.release();
+        remove(filename.c_str());
+        return decoded;
+    };
+
+    const Mat one = encodeDecode(1);
+    const Mat many = encodeDecode(4);
+    ASSERT_FALSE(one.empty());
+    ASSERT_FALSE(many.empty());
+    ASSERT_EQ(sz, one.size());
+    ASSERT_EQ(sz, many.size());
+
+    Mat expected = src;
+    if (type == CV_8UC1)
+        cvtColor(src, expected, COLOR_GRAY2BGR);
+    else if (type == CV_8UC4)
+        cvtColor(src, expected, COLOR_RGBA2BGR);
+
+    EXPECT_GT(cvtest::PSNR(one, expected), 30.0) << sz << " Q=" << quality;
+    EXPECT_GT(cvtest::PSNR(many, expected), 30.0) << sz << " Q=" << quality;
+    // Parallel MjpegEncoder stripes share DC prediction; decoded frames must match.
+    EXPECT_LE(cv::norm(one, many, NORM_INF), 2.0) << sz << " Q=" << quality;
+}
+
+inline static std::string mjpeg_encoder_name_printer(const testing::TestParamInfo<Videoio_MJPEG_Encoder::ParamType>& info)
+{
+    std::ostringstream os;
+    const Size sz = get<0>(info.param);
+    const int type = get<2>(info.param);
+    os << sz.width << "x" << sz.height << "_Q" << get<1>(info.param) << "_"
+       << (type == CV_8UC1 ? "GRAY" : type == CV_8UC4 ? "RGBA" : "BGR");
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_MJPEG_Encoder,
+    testing::Combine(
+        testing::Values(Size(64, 48), Size(320, 240), Size(321, 241)),
+        testing::Values(75, 95),
+        testing::Values(CV_8UC1, CV_8UC3, CV_8UC4)
+    ),
+    mjpeg_encoder_name_printer);
 
 // Regression test for heap-buffer-overflow in mjpeg_buffer::put_bits (GitHub issue #29112).
 // When len == bits_free the old guard used strict '>' and skipped the resize, causing
