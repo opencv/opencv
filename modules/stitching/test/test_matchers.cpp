@@ -43,6 +43,88 @@
 
 namespace opencv_test { namespace {
 
+static detail::ImageFeatures makeMatcherTestFeatures(bool translated, bool perturbDescriptors)
+{
+    const int count = 80;
+    detail::ImageFeatures features;
+    features.img_idx = translated ? 1 : 0;
+    features.img_size = Size(640, 480);
+    Mat descriptors(count, 32, CV_8U);
+    unsigned int state = 0x12345678;
+
+    for (int i = 0; i < count; ++i)
+    {
+        const Point2f point(30.f + (i % 10) * 55.f + (translated ? 8.f : 0.f),
+                            30.f + (i / 10) * 50.f + (translated ? 6.f : 0.f));
+        features.keypoints.push_back(KeyPoint(point, 31.f));
+        for (int j = 0; j < descriptors.cols; ++j)
+        {
+            state = state * 1664525 + 1013904223;
+            descriptors.at<uchar>(i, j) = static_cast<uchar>(state >> 24);
+        }
+    }
+
+    if (perturbDescriptors)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            descriptors.at<uchar>(i, (i * 7) % descriptors.cols) ^= 1 << ((i * 3) % 8);
+            descriptors.at<uchar>(i, (i * 13 + 1) % descriptors.cols) ^= 1 << ((i * 5 + 1) % 8);
+        }
+    }
+
+    descriptors.copyTo(features.descriptors);
+    return features;
+}
+
+static detail::ImageFeatures makeFloatMatcherTestFeatures(bool translated)
+{
+    const int count = 80;
+    const int descriptorSize = 16;
+    detail::ImageFeatures features;
+    features.img_idx = translated ? 1 : 0;
+    features.img_size = Size(640, 480);
+    Mat descriptors(count, descriptorSize, CV_32F);
+
+    for (int i = 0; i < count; ++i)
+    {
+        const Point2f point(30.f + (i % 10) * 55.f + (translated ? 8.f : 0.f),
+                            30.f + (i / 10) * 50.f + (translated ? 6.f : 0.f));
+        features.keypoints.push_back(KeyPoint(point, 31.f));
+
+        for (int j = 0; j < descriptorSize; ++j)
+        {
+            const int bit = (i >> (j % 7)) & 1;
+            const float variation = static_cast<float>((i * (j + 3) + j * 11) % 101) * 0.0001f;
+            descriptors.at<float>(i, j) = (bit ? 10.f : -10.f) + variation +
+                                          (translated ? 0.00001f : 0.f);
+        }
+    }
+
+    descriptors.copyTo(features.descriptors);
+    return features;
+}
+
+static void expectSameMatches(const detail::MatchesInfo& expected, const detail::MatchesInfo& actual)
+{
+    ASSERT_EQ(expected.matches.size(), actual.matches.size());
+    ASSERT_EQ(expected.inliers_mask, actual.inliers_mask);
+    EXPECT_EQ(expected.num_inliers, actual.num_inliers);
+    ASSERT_EQ(expected.H.size(), actual.H.size());
+    if (!expected.H.empty())
+    {
+        EXPECT_EQ(0., cv::norm(expected.H, actual.H, NORM_INF));
+    }
+
+    for (size_t i = 0; i < expected.matches.size(); ++i)
+    {
+        EXPECT_EQ(expected.matches[i].queryIdx, actual.matches[i].queryIdx);
+        EXPECT_EQ(expected.matches[i].trainIdx, actual.matches[i].trainIdx);
+        EXPECT_EQ(expected.matches[i].imgIdx, actual.matches[i].imgIdx);
+        EXPECT_EQ(expected.matches[i].distance, actual.matches[i].distance);
+    }
+}
+
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
@@ -113,6 +195,103 @@ TEST(ParallelFeaturesFinder, IsSameWithSerial)
 #endif
         EXPECT_EQ(serial_features.img_size, para_features[i].img_size);
         EXPECT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
+    }
+}
+
+TEST(BestOf2NearestMatcher, RepeatedMatchingIsDeterministic)
+{
+    const detail::ImageFeatures features1 = makeMatcherTestFeatures(false, false);
+    const detail::ImageFeatures features2 = makeMatcherTestFeatures(true, true);
+
+    detail::BestOf2NearestMatcher matcher(false, 0.3f, 6, 6);
+    cv::setRNGSeed(12345);
+    const auto initialRngState = cv::theRNG().state;
+
+    detail::MatchesInfo expected;
+    matcher(features1, features2, expected);
+    ASSERT_GE(expected.matches.size(), 6u);
+    ASSERT_GE(expected.num_inliers, 6);
+    EXPECT_EQ(initialRngState, cv::theRNG().state);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        detail::MatchesInfo actual;
+        matcher(features1, features2, actual);
+        expectSameMatches(expected, actual);
+        EXPECT_EQ(initialRngState, cv::theRNG().state);
+    }
+
+    std::vector<detail::ImageFeatures> features;
+    features.push_back(features1);
+    features.push_back(features2);
+    features.push_back(features1);
+    features.push_back(features2);
+
+    std::vector<detail::MatchesInfo> pairwiseMatches;
+    matcher(features, pairwiseMatches);
+    const detail::MatchesInfo expectedPair = pairwiseMatches[1];
+    ASSERT_GE(expectedPair.matches.size(), 6u);
+    ASSERT_GE(expectedPair.num_inliers, 6);
+    expectSameMatches(expected, expectedPair);
+    expectSameMatches(expectedPair, pairwiseMatches[3]);
+    expectSameMatches(expectedPair, pairwiseMatches[2 * features.size() + 3]);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        matcher(features, pairwiseMatches);
+        expectSameMatches(expectedPair, pairwiseMatches[1]);
+        expectSameMatches(expectedPair, pairwiseMatches[3]);
+        expectSameMatches(expectedPair, pairwiseMatches[2 * features.size() + 3]);
+    }
+}
+
+TEST(BestOf2NearestMatcher, RepeatedFloatMatchingIsDeterministic)
+{
+    const detail::ImageFeatures features1 = makeFloatMatcherTestFeatures(false);
+    const detail::ImageFeatures features2 = makeFloatMatcherTestFeatures(true);
+
+    ASSERT_EQ(CV_32FC1, features1.descriptors.type());
+    ASSERT_EQ(CV_32FC1, features2.descriptors.type());
+
+    detail::BestOf2NearestMatcher matcher(false, 0.3f, 6, 6);
+    cv::setRNGSeed(12345);
+    const auto initialRngState = cv::theRNG().state;
+
+    detail::MatchesInfo expected;
+    matcher(features1, features2, expected);
+    ASSERT_GE(expected.matches.size(), 6u);
+    ASSERT_GE(expected.num_inliers, 6);
+    EXPECT_EQ(initialRngState, cv::theRNG().state);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        detail::MatchesInfo actual;
+        matcher(features1, features2, actual);
+        expectSameMatches(expected, actual);
+        EXPECT_EQ(initialRngState, cv::theRNG().state);
+    }
+
+    std::vector<detail::ImageFeatures> features;
+    features.push_back(features1);
+    features.push_back(features2);
+    features.push_back(features1);
+    features.push_back(features2);
+
+    std::vector<detail::MatchesInfo> pairwiseMatches;
+    matcher(features, pairwiseMatches);
+    const detail::MatchesInfo expectedPair = pairwiseMatches[1];
+    ASSERT_GE(expectedPair.matches.size(), 6u);
+    ASSERT_GE(expectedPair.num_inliers, 6);
+    expectSameMatches(expected, expectedPair);
+    expectSameMatches(expectedPair, pairwiseMatches[3]);
+    expectSameMatches(expectedPair, pairwiseMatches[2 * features.size() + 3]);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        matcher(features, pairwiseMatches);
+        expectSameMatches(expectedPair, pairwiseMatches[1]);
+        expectSameMatches(expectedPair, pairwiseMatches[3]);
+        expectSameMatches(expectedPair, pairwiseMatches[2 * features.size() + 3]);
     }
 }
 
