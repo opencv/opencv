@@ -48,6 +48,7 @@
 
 namespace cv
 {
+
 namespace
 {
 
@@ -479,61 +480,52 @@ public:
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         std::vector<Mat> weights(images.size());
+        std::vector<Mat> grays(images.size());
         Mat weight_sum = Mat::zeros(size, CV_32F);
-        Mutex weight_sum_mutex;
+        const int nimages = static_cast<int>(images.size());
+        const int rows = size.height;
+        const int cols = size.width;
 
-        parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
+        // Convert each exposure on its own. No shared write.
+        parallel_for_(Range(0, nimages), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
-                Mat img, gray, contrast, saturation, wellexp;
-                std::vector<Mat> splitted(channels);
-
-                images[i].convertTo(img, CV_32F, 1.0f/255.0f);
-                if(channels == 3) {
-                    cvtColor(img, gray, COLOR_RGB2GRAY);
-                } else {
-                    img.copyTo(gray);
+                Mat img, gray;
+                weights[i].create(size, CV_32F);
+                if (channels == 3 && images[i].depth() == CV_8U)
+                {
+                    img.create(images[i].size(), CV_32FC3);
+                    gray.create(images[i].size(), CV_32F);
+                    mertensConvertGray(images[i].ptr<uchar>(), images[i].step,
+                                       img.ptr<float>(), img.step, gray.ptr<float>(), gray.step,
+                                       img.rows, img.cols);
+                }
+                else
+                {
+                    images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+                    if(channels == 3)
+                        cvtColor(img, gray, COLOR_RGB2GRAY);
+                    else
+                        gray = img;
                 }
                 images[i] = img;
-                split(img, splitted);
+                grays[i] = gray;
+            }
+        });
 
-                Laplacian(gray, contrast, CV_32F);
-                contrast = abs(contrast);
-
-                Mat mean = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    mean += splitted[c];
+        // Each stripe owns its weight_sum rows and adds every exposure into them.
+        parallel_for_(Range(0, rows), [&](const Range& range) {
+            for (int i = 0; i < nimages; i++)
+            {
+                const Mat& img = images[i];
+                const Mat& gray = grays[i];
+                for (int y = range.start; y < range.end; y++)
+                {
+                    const int up = borderInterpolate(y - 1, rows, BORDER_REFLECT_101);
+                    const int dn = borderInterpolate(y + 1, rows, BORDER_REFLECT_101);
+                    mertensWeightRow(gray.ptr<float>(up), gray.ptr<float>(y), gray.ptr<float>(dn),
+                                     img.ptr<float>(y), weights[i].ptr<float>(y),
+                                     cols, channels, wcon, wsat, wexp, weight_sum.ptr<float>(y));
                 }
-                mean /= channels;
-
-                saturation = Mat::zeros(size, CV_32F);
-                for(int c = 0; c < channels;  c++) {
-                    Mat deviation = splitted[c] - mean;
-                    pow(deviation, 2.0f, deviation);
-                    saturation += deviation;
-                }
-                sqrt(saturation, saturation);
-
-                wellexp = Mat::ones(size, CV_32F);
-                for(int c = 0; c < channels; c++) {
-                    Mat expo = splitted[c] - 0.5f;
-                    pow(expo, 2.0f, expo);
-                    expo = -expo / 0.08f;
-                    exp(expo, expo);
-                    wellexp = wellexp.mul(expo);
-                }
-
-                pow(contrast, wcon, contrast);
-                pow(saturation, wsat, saturation);
-                pow(wellexp, wexp, wellexp);
-
-                weights[i] = contrast;
-                if(channels == 3) {
-                    weights[i] = weights[i].mul(saturation);
-                }
-                weights[i] = weights[i].mul(wellexp) + 1e-12f;
-
-                AutoLock lock(weight_sum_mutex);
-                weight_sum += weights[i];
             }
         });
 
@@ -544,30 +536,27 @@ public:
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
                 weights[i] /= weight_sum;
-
-                std::vector<Mat> img_pyr, weight_pyr;
-                buildPyramid(images[i], img_pyr, maxlevel);
-                buildPyramid(weights[i], weight_pyr, maxlevel);
-
+                std::vector<Mat> img_pyr(maxlevel + 1), weight_pyr(maxlevel + 1);
+                img_pyr[0] = images[i];
+                weight_pyr[0] = weights[i];
                 for(int lvl = 0; lvl < maxlevel; lvl++) {
-                    Mat up;
-                    pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
-                    img_pyr[lvl] -= up;
+                    // Laplacian of this color level once its coarser Gaussian exists, before the next coarser color level.
+                    pyrDown(img_pyr[lvl], img_pyr[lvl + 1]);
+                    mertensPyrUpSub(img_pyr[lvl + 1].ptr<float>(), img_pyr[lvl + 1].step,
+                                    img_pyr[lvl].ptr<float>(), img_pyr[lvl].step,
+                                    img_pyr[lvl + 1].rows, img_pyr[lvl + 1].cols,
+                                    img_pyr[lvl].rows, img_pyr[lvl].cols, channels);
+                    pyrDown(weight_pyr[lvl], weight_pyr[lvl + 1]);
                 }
                 for(int lvl = 0; lvl <= maxlevel; lvl++) {
-                    std::vector<Mat> splitted(channels);
-                    split(img_pyr[lvl], splitted);
-                    for(int c = 0; c < channels; c++) {
-                        splitted[c] = splitted[c].mul(weight_pyr[lvl]);
-                    }
-                    merge(splitted, img_pyr[lvl]);
-
                     AutoLock lock(res_pyr_mutexes[lvl]);
-                    if(res_pyr[lvl].empty()) {
-                        res_pyr[lvl] = img_pyr[lvl];
-                    } else {
-                        res_pyr[lvl] += img_pyr[lvl];
-                    }
+                    const bool accumulate = !res_pyr[lvl].empty();
+                    if (!accumulate)
+                        res_pyr[lvl].create(img_pyr[lvl].size(), img_pyr[lvl].type());
+                    mertensBlendAcc(img_pyr[lvl].ptr<float>(), img_pyr[lvl].step,
+                                    weight_pyr[lvl].ptr<float>(), weight_pyr[lvl].step,
+                                    res_pyr[lvl].ptr<float>(), res_pyr[lvl].step,
+                                    img_pyr[lvl].rows, img_pyr[lvl].cols, channels, accumulate);
                 }
             }
         });
