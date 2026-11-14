@@ -1181,7 +1181,8 @@ void UMat::copyTo(OutputArray _dst) const
 #ifdef HAVE_CUDA
     if (_dst.isGpuMat())
     {
-        _dst.getGpuMat().upload(*this);
+        // Mat::copyTo() handles the empty source, the 2D check and the allocation
+        getMat(ACCESS_READ).copyTo(_dst);
         return;
     }
 #endif

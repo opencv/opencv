@@ -2948,4 +2948,66 @@ TEST(Core_InputOutputArray, std_vector_vector)
     EXPECT_EQ(0., err2);
 }
 
+
+TEST(Mat, copyTo_GpuMat_destination)
+{
+    if (cv::cuda::getCudaEnabledDeviceCount() < 1)
+        throw SkipTestException("No CUDA devices");
+
+    Mat src(4, 5, CV_8UC3);
+    randu(src, Scalar::all(0), Scalar::all(256));
+    Mat res;
+
+    cuda::GpuMat dst;  // empty destination
+    src.copyTo(dst);
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    dst.create(2, 2, CV_32FC1);  // destination of another size and type
+    src.copyTo(dst);
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    UMat usrc;
+    src.copyTo(usrc);
+    cuda::GpuMat udst;  // UMat source, empty destination
+    usrc.copyTo(udst);
+    ASSERT_EQ(src.size(), udst.size());
+    ASSERT_EQ(src.type(), udst.type());
+    udst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+
+    const Rect roi(1, 1, 5, 4);
+    cuda::GpuMat big(6, 7, CV_8UC3, Scalar::all(0));
+    src.copyTo(big(roi));  // ROI of the same size is written in place, the rest is untouched
+    Mat expected(big.size(), big.type(), Scalar::all(0));
+    src.copyTo(expected(roi));
+    big.download(res);
+    EXPECT_EQ(0, cvtest::norm(expected, res, NORM_INF));
+
+    // ROI of another size or type must throw instead of silently allocating a temporary header
+    EXPECT_THROW(src.copyTo(big(Rect(0, 0, 2, 2))), cv::Exception);
+    EXPECT_THROW(Mat(src.size(), CV_32FC1, Scalar::all(1)).copyTo(big(roi)), cv::Exception);
+    big.download(res);
+    EXPECT_EQ(0, cvtest::norm(expected, res, NORM_INF));
+
+    Mat().copyTo(dst);  // empty source releases the destination, as for a Mat destination
+    EXPECT_TRUE(dst.empty());
+    dst.upload(src);
+    UMat().copyTo(dst);
+    EXPECT_TRUE(dst.empty());
+
+    const int sz3[] = {2, 3, 4};  // cuda::GpuMat holds 2D data only: rejected, destination untouched
+    dst.upload(src);
+    EXPECT_THROW(Mat(3, sz3, CV_8UC1, Scalar::all(1)).copyTo(dst), cv::Exception);
+    EXPECT_THROW(UMat(3, sz3, CV_8UC1, Scalar::all(1)).copyTo(dst), cv::Exception);
+    ASSERT_EQ(src.size(), dst.size());
+    dst.download(res);
+    EXPECT_EQ(0, cvtest::norm(src, res, NORM_INF));
+}
+
 }} // namespace
