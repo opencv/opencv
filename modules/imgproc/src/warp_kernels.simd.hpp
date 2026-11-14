@@ -8632,7 +8632,8 @@ constexpr size_t BICUBIC_EXPAND_LOAD_BYTES = (CV_LSX || CV_LASX) ? 16 : VTraits<
 constexpr bool BICUBIC_EXPAND_LOAD_IS_EXACT = CV_SSE2 || CV_NEON || CV_RVV;
 
 template<typename T, size_t N>
-static inline const T* bicubicExpandInput(const T* src, const uchar* end, int lanes, T (&scratch)[N])
+static inline const T* bicubicExpandInput(const T* src, [[maybe_unused]] const uchar* end,
+                                          [[maybe_unused]] int lanes, T (&scratch)[N])
 {
     if constexpr (!BICUBIC_EXPAND_LOAD_IS_EXACT)
     {
@@ -8648,7 +8649,8 @@ static inline const T* bicubicExpandInput(const T* src, const uchar* end, int la
 }
 
 template<typename T>
-static inline v_float32 bicubicLoadChannels(const T* src, const uchar* end, int lanes)
+static inline v_float32 bicubicLoadChannels(const T* src, [[maybe_unused]] const uchar* end,
+                                          [[maybe_unused]] int lanes)
 {
     if constexpr (std::is_same_v<T, float>)
         return vx_load(src);
@@ -8666,7 +8668,7 @@ static inline v_float32 bicubicLoadChannels(const T* src, const uchar* end, int 
 }
 
 template<typename T>
-static inline void bicubicStoreChannels(T* dst, const v_float32& value, int lanes)
+static inline void bicubicStoreChannels(T* dst, const v_float32& value, [[maybe_unused]] int lanes)
 {
     if constexpr (std::is_same_v<T, float>)
         vx_store(dst, value);
@@ -8692,7 +8694,7 @@ static inline void bicubicStoreChannels(T* dst, const v_float32& value, int lane
 #if CV_SIMD128
 // Keep the four-lane cleanup path for wide vectors when fewer than a full vector remains.
 template<typename T>
-static inline v_float32x4 bicubicLoadChannels4(const T* src, const uchar* end)
+static inline v_float32x4 bicubicLoadChannels4(const T* src, [[maybe_unused]] const uchar* end)
 {
     if constexpr (std::is_same_v<T, float>)
         return v_load(src);
@@ -8752,8 +8754,8 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     const int sampleBorder = borderType == BORDER_TRANSPARENT ? BORDER_CONSTANT : borderType;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int lanes = VTraits<v_float32>::vlanes();
-    const uchar* srcEnd = static_cast<const uchar*>(source) + size_t(size.height - 1)*step
-                          + size_t(size.width)*channels*sizeof(T);
+    [[maybe_unused]] const uchar* srcEnd = static_cast<const uchar*>(source) +
+        size_t(size.height - 1)*step + size_t(size.width)*channels*sizeof(T);
 #endif
     for (int i = 0; i < len; ++i, dst += channels)
     {
