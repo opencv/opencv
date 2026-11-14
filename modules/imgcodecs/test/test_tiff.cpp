@@ -1469,7 +1469,7 @@ static uint64_t sampleBitsAt(const Mat& img, int y, int x, int ch)
 // start at 0 with an empty file.
 static void appendTiffPage(std::vector<uchar>& file, size_t& ifdLinkPos, const Mat& img,
                            uint16_t planarConfig, int rowsPerStrip, Size tileSize = Size(),
-                           int bitsOverride = 0)
+                           int bitsOverride = 0, int orientation = 0)
 {
     const int w = img.cols, h = img.rows, spp = img.channels();
     const bool tiled = tileSize.width > 0;
@@ -1644,6 +1644,8 @@ static void appendTiffPage(std::vector<uchar>& file, size_t& ifdLinkPos, const M
     }
     add(277, 3, 1, (uint32_t)spp);
     add(284, 3, 1, planarConfig);
+    if (orientation > 0)
+        add(274, 3, 1, (uint32_t)orientation);
     if (spp == 2 || spp == 4)
         add(338, 3, 1, 2);   // one extra sample, unassociated alpha
     if (spp == 1)
@@ -1696,6 +1698,60 @@ static Mat makePlanarTestMat(int type, Size size)
     }
     return img;
 }
+
+typedef tuple<perf::MatType, int> TiffOrientationParams;
+typedef testing::TestWithParam<TiffOrientationParams> Imgcodecs_Tiff_Orientation;
+
+// Orientations 5-8 swap rows and columns, so a non-square image changes shape (issue #30635).
+TEST_P(Imgcodecs_Tiff_Orientation, decode_transposed_orientation)
+{
+    const int type = get<0>(GetParam());
+    const int orientation = get<1>(GetParam());
+    const Mat truth = makePlanarTestMat(type, Size(5, 3));
+
+    std::vector<uchar> file;
+    size_t link = 0;
+    appendTiffPage(file, link, truth, TIFF_PLANARCONFIG_CONTIG, truth.rows, Size(), 0, orientation);
+
+    Mat expected(truth.cols, truth.rows, truth.type());
+    for (int y = 0; y < truth.rows; y++)
+    {
+        for (int x = 0; x < truth.cols; x++)
+        {
+            int dstY, dstX;
+            switch (orientation)
+            {
+            case 5: dstY = x;                 dstX = y;                 break;
+            case 6: dstY = x;                 dstX = truth.rows - 1 - y; break;
+            case 7: dstY = truth.cols - 1 - x; dstX = truth.rows - 1 - y; break;
+            default: dstY = truth.cols - 1 - x; dstX = y;                 break;
+            }
+            memcpy(expected.ptr(dstY) + dstX * expected.elemSize(),
+                   truth.ptr(y) + x * truth.elemSize(), truth.elemSize());
+        }
+    }
+
+    Mat decoded;
+    imdecode(file, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE, &decoded);
+    ASSERT_EQ(Size(truth.rows, truth.cols), decoded.size());
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decoded);
+
+    const string filename = tempfile(".tiff");
+    FILE* fp = fopen(filename.c_str(), "wb");
+    ASSERT_TRUE(fp != NULL);
+    ASSERT_EQ((size_t)1, fwrite(&file[0], file.size(), 1, fp));
+    fclose(fp);
+    const Mat decodedFile = imread(filename, IMREAD_ANYDEPTH | IMREAD_GRAYSCALE);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), expected, decodedFile);
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
+
+INSTANTIATE_TEST_CASE_P(Orientations, Imgcodecs_Tiff_Orientation,
+        testing::Combine(
+            testing::Values(perf::MatType(CV_8UC1), perf::MatType(CV_16UC1)),
+            testing::Values(5, 6, 7, 8)
+        )
+);
 
 typedef tuple<perf::MatType, int> PlanarSeparateParams;   // rowsPerStrip > 0, or 0 for 16x16 tiles
 typedef testing::TestWithParam<PlanarSeparateParams> Imgcodecs_Tiff_PlanarSeparate;
