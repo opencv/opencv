@@ -537,6 +537,7 @@ class ArgInfo(object):
         arg += 0x02 if self.arithm_op_src_arg else 0x0
         arg += 0x04 if self.pathlike else 0x0
         arg += 0x08 if self.nd_mat else 0x0
+        arg += 0x10 if "/PRESERVE_DTYPE" in self._modifiers else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 

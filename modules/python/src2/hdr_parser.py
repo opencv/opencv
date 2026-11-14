@@ -254,6 +254,10 @@ class CppHeaderParser(object):
             modlist.append("/PATH")
             arg_str = arg_str.replace("CV_WRAP_FILE_PATH", "")
 
+        if "CV_WRAP_PRESERVE_DTYPE" in arg_str:
+            modlist.append("/PRESERVE_DTYPE")
+            arg_str = arg_str.replace("CV_WRAP_PRESERVE_DTYPE", "")
+
         isarray = False
         npos = arg_str.find("CV_CARRAY")
         if npos >= 0:
