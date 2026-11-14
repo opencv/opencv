@@ -1276,7 +1276,7 @@ and the rows and cols are switched for ROTATE_90_CLOCKWISE and ROTATE_90_COUNTER
 @sa transpose, repeat, completeSymm, flip, RotateFlags
 */
 CV_EXPORTS_W void rotate(CV_WRAP_PRESERVE_DTYPE InputArray src,
-                         CV_WRAP_PRESERVE_DTYPE OutputArray dst, int rotateCode);
+                         OutputArray dst, int rotateCode);
 
 /** @brief Fills the output array with repeated copies of the input array.
 
@@ -1922,7 +1922,7 @@ should be done separately if needed.
 @param dst output array of the same type as src.
 */
 CV_EXPORTS_W void transpose(CV_WRAP_PRESERVE_DTYPE InputArray src,
-                            CV_WRAP_PRESERVE_DTYPE OutputArray dst);
+                            OutputArray dst);
 
 /** @brief Transpose for n-dimensional matrices.
  *
@@ -1935,13 +1935,13 @@ CV_EXPORTS_W void transpose(CV_WRAP_PRESERVE_DTYPE InputArray src,
  */
 CV_EXPORTS_W void transpose(CV_WRAP_PRESERVE_DTYPE InputArray src,
                             const std::vector<int>& order,
-                            CV_WRAP_PRESERVE_DTYPE OutputArray dst);
+                            OutputArray dst);
 
 /** @deprecated Use transpose(InputArray, const std::vector<int>&, OutputArray) instead.
  */
 CV_DEPRECATED_EXTERNAL CV_EXPORTS_W void transposeND(CV_WRAP_PRESERVE_DTYPE InputArray src,
                                                      const std::vector<int>& order,
-                                                     CV_WRAP_PRESERVE_DTYPE OutputArray dst);
+                                                     OutputArray dst);
 
 /** @brief Performs the matrix transformation of every array element.
 
