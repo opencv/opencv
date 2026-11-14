@@ -763,6 +763,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
 // The tests above use at most 5 taps. With large kernels and 3 or 4 channels the OpenCL kernel can
 // move more rows of its local buffer than one block holds; 23 taps gave wrong values on an NVIDIA GPU,
 // see https://github.com/opencv/opencv/issues/30733
+// BORDER_REPLICATE has no size gate: with the default border the OpenCL path needs more rows than
+// ksize + maxWorkGroupSize/16 and otherwise falls back to the CPU, which would compare CPU with CPU.
 typedef testing::TestWithParam<int> Laplacian_LargeKernel;
 
 OCL_TEST_P(Laplacian_LargeKernel, Mat)
@@ -775,8 +777,8 @@ OCL_TEST_P(Laplacian_LargeKernel, Mat)
 
     Mat dst;
     UMat udst;
-    OCL_OFF(cv::Laplacian(src, dst, -1, ksize));
-    OCL_ON(cv::Laplacian(usrc, udst, -1, ksize));
+    OCL_OFF(cv::Laplacian(src, dst, -1, ksize, 1, 0, BORDER_REPLICATE));
+    OCL_ON(cv::Laplacian(usrc, udst, -1, ksize, 1, 0, BORDER_REPLICATE));
 
     EXPECT_MAT_NEAR_RELATIVE(dst, udst, 1e-5);
 }
