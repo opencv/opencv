@@ -293,7 +293,7 @@ struct Sum_SIMD<float, double>
 #endif
 #endif
 
-template<typename T, typename ST>
+template<typename T, typename ST, typename WT=T>
 static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
     const T* src = src0;
@@ -309,7 +309,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
             #if CV_ENABLE_UNROLLED
             for(; i <= len - 4; i += 4, src += cn*4 )
-                s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
+                s0 += (WT)src[0] + (WT)src[cn] + (WT)src[cn*2] + (WT)src[cn*3];
             #endif
             for( ; i < len; i++, src += cn )
                 s0 += src[0];
@@ -424,7 +424,7 @@ static int sum16s( const short* src, const uchar* mask, int* dst, int len, int c
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
