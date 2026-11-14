@@ -195,7 +195,7 @@ int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
 
     L = std::max(2, L);
 
-    return L;
+    return std::min(L, eigenvalues.rows);
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double retainedVariance)
