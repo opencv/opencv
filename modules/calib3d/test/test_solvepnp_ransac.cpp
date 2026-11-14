@@ -2463,4 +2463,80 @@ TEST(Calib3d_SolvePnPRansac, regression_27098)
     EXPECT_LE(cvtest::norm(projected, imagePoints, NORM_INF), 1.0);
 }
 
+TEST(Calib3d_SolvePnPRansac, regression_25104)
+{
+    // Exactly planar points (ground plane y = 0.368) seen at a grazing angle. EPnP is not
+    // reliable on coplanar points, so with EPnP minimal samples RANSAC found no consensus.
+    const float x[] = { 1.917f, -0.394f, -0.004f, 0.215f, -0.356f, -0.886f, -0.16f, 0.26f, 0.037f,
+                        0.15f, -0.39f, 0.263f, 0.361f, -0.068f, -0.13f, -0.311f, -0.008f, 0.662f,
+                        -0.829f, -0.193f, 1.65f, 0.121f, -0.142f, -0.231f, 1.069f, 0.705f, -0.51f,
+                        0.096f, 0.496f, -0.099f, 0.336f, 0.653f, 0.71f };
+    const float z[] = { 2.637f, 1.988f, 2.005f, 1.915f, 1.684f, 2.329f, 3.325f, 1.459f, 1.625f,
+                        1.772f, 2.577f, 3.243f, 2.342f, 1.658f, 1.537f, 1.723f, 1.823f, 3.167f,
+                        3.359f, 1.708f, 2.65f, 1.925f, 2.127f, 1.856f, 2.495f, 2.152f, 2.22f,
+                        1.627f, 1.544f, 1.609f, 2.883f, 1.669f, 1.923f };
+    const float u[] = { 784, 182, 343, 432, 125, 66, 335, 504, 349, 409, 254, 412, 458, 290, 230, 163,
+                        334, 485, 213, 226, 729, 392, 298, 232, 625, 579, 177, 384, 629, 265, 432,
+                        667, 619 };
+    const float v[] = { 285, 359, 349, 356, 415, 331, 278, 462, 416, 380, 307, 277, 313, 412, 452, 404,
+                        375, 277, 281, 403, 287, 357, 338, 375, 298, 323, 335, 414, 422, 426, 288,
+                        385, 345 };
+    std::vector<Point3f> objectPoints;
+    std::vector<Point2f> imagePoints;
+    for (int i = 0; i < 33; i++)
+    {
+        objectPoints.push_back(Point3f(x[i], 0.368f, z[i]));
+        imagePoints.push_back(Point2f(u[i], v[i]));
+    }
+    Matx33d intrinsics(424.861, 0, 424.861,
+                       0, 421.488, 239.519,
+                       0, 0, 1);
+
+    Mat rvec, tvec;
+    std::vector<int> inliers;
+    ASSERT_TRUE(solvePnPRansac(objectPoints, imagePoints, intrinsics, noArray(), rvec, tvec,
+                               false, 1000, 8.0f, 0.99, inliers, SOLVEPNP_ITERATIVE));
+    EXPECT_EQ(inliers.size(), objectPoints.size());
+
+    std::vector<Point2f> projected;
+    projectPoints(objectPoints, rvec, tvec, intrinsics, noArray(), projected);
+    EXPECT_LE(cvtest::norm(projected, imagePoints, NORM_INF), 8.0);
+}
+
+TEST(Calib3d_SolvePnPRansac, nearly_planar_object)
+{
+    // Planar target in millimeters with 0.5 mm out-of-plane noise: detected as planar,
+    // but not coplanar within an absolute tolerance of 1e-3 like the one used by IPPE.
+    RNG& rng = theRNG();
+    Matx33d intrinsics(800, 0, 640,
+                       0, 800, 360,
+                       0, 0, 1);
+    Vec3d rvecGT(CV_PI / 3, 0.1, 0.2), tvecGT(100, -200, 4000);
+    std::vector<Point3f> objectPoints;
+    for (int i = 0; i < 30; i++)
+    {
+        float x = rng.uniform(-1000.f, 1000.f);
+        float y = rng.uniform(-1000.f, 1000.f);
+        float z = (float)rng.gaussian(0.5);
+        objectPoints.push_back(Point3f(x, y, z));
+    }
+    std::vector<Point2f> imagePoints;
+    projectPoints(objectPoints, rvecGT, tvecGT, intrinsics, noArray(), imagePoints);
+    for (int i = 0; i < 9; i++)
+    {
+        float u = rng.uniform(0.f, 1280.f);
+        float v = rng.uniform(0.f, 720.f);
+        imagePoints[i] = Point2f(u, v);
+    }
+
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnPRansac(objectPoints, imagePoints, intrinsics, noArray(), rvec, tvec));
+
+    Matx33d R, RGT;
+    cv::Rodrigues(rvec, R);
+    cv::Rodrigues(rvecGT, RGT);
+    EXPECT_LE(cvtest::norm(R, RGT, NORM_INF), 1e-3);
+    EXPECT_LE(cvtest::norm(tvec, Mat(tvecGT), NORM_INF), 1.0);
+}
+
 }} // namespace
