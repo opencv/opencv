@@ -763,4 +763,190 @@ TEST(Objdetect_QRCode_detect, detect_regression_27783)
     }
 }
 
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_regression_contrib_3478)
+{
+    // Crafted QR code from opencv_contrib issue 3478. Decoding it used to throw an
+    // exception from the bitstream reader. The decoder must reject such a code and
+    // return an empty string instead.
+    const std::string name_current_image = "issue_3478.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
+
+    std::vector<Point> corners;
+    ASSERT_TRUE(qrcode.detect(src, corners));
+    Mat straight_barcode;
+    std::string decoded_info;
+    EXPECT_NO_THROW(decoded_info = qrcode.decode(src, corners, straight_barcode));
+    EXPECT_TRUE(decoded_info.empty());
+}
+
+static const char* const valid_one_bit_terminator[21] = {
+    "111111100011001111111",
+    "100000100001001000001",
+    "101110101110001011101",
+    "101110100001001011101",
+    "101110100011001011101",
+    "100000100100001000001",
+    "111111101010101111111",
+    "000000001100100000000",
+    "111011111000011000100",
+    "111000000110111000001",
+    "001001111011110001000",
+    "001110011011011111001",
+    "001100101000001000011",
+    "000000001101100001010",
+    "111111101011011001011",
+    "100000101100010001011",
+    "101110101101010111100",
+    "101110100000111000010",
+    "101110101001100011101",
+    "100000101010111011000",
+    "111111101000100010101"
+};
+
+static const char* const valid_eci_padding[21] = {
+    "111111100010101111111",
+    "100000100000101000001",
+    "101110101010001011101",
+    "101110100000101011101",
+    "101110100101101011101",
+    "100000100111001000001",
+    "111111101010101111111",
+    "000000001010000000000",
+    "111011111010111000100",
+    "010011000111010100011",
+    "100011101111011100101",
+    "000011010101110111110",
+    "111101101011011100101",
+    "000000001110001000010",
+    "111111101010100010011",
+    "100000101100001001111",
+    "101110101010101011100",
+    "101110100011010101000",
+    "101110101011011100101",
+    "100000101101110111001",
+    "111111101011011100111"
+};
+
+static const char* const bad_partial_underflow[21] = {
+    "111111100011001111111",
+    "100000100001001000001",
+    "101110101110001011101",
+    "101110100001001011101",
+    "101110100101001011101",
+    "100000100010001000001",
+    "111111101010101111111",
+    "000000001010100000000",
+    "111011111100011000100",
+    "011011001010111000001",
+    "010010111001110001000",
+    "111000010001011111001",
+    "100010101100001000011",
+    "000000001101100001010",
+    "111111101011011001000",
+    "100000101000010001011",
+    "101110101011010111100",
+    "101110100110111000010",
+    "101110101001100011101",
+    "100000101010111011000",
+    "111111101100100010101"
+};
+
+static const char* const bad_eci_truncated[21] = {
+    "111111100011101111111",
+    "100000100100001000001",
+    "101110101111001011101",
+    "101110100010101011101",
+    "101110100010101011101",
+    "100000100000001000001",
+    "111111101010101111111",
+    "000000001111100000000",
+    "111011111001011000100",
+    "100110010101011101010",
+    "100100110001101110011",
+    "010010010100000010000",
+    "000011111111001110101",
+    "000000001111011101010",
+    "111111101101111111011",
+    "100000101111000110010",
+    "101110101111001110101",
+    "101110100011011100000",
+    "101110101101100110101",
+    "100000101110100000010",
+    "111111101000001110111"
+};
+
+// Decodes a version 1 QR symbol given as 21 rows of 21 modules ('1' = dark).
+static std::string decodeSymbol(const char* const* rows)
+{
+    Mat modules(21, 21, CV_8UC1);
+    for (int r = 0; r < 21; r++)
+        for (int c = 0; c < 21; c++)
+            modules.at<uchar>(r, c) = rows[r][c] == '1' ? 0 : 255;
+
+    Mat scaled, img;
+    resize(modules, scaled, Size(), 10, 10, INTER_NEAREST);
+    cv::copyMakeBorder(scaled, img, 40, 40, 40, 40, BORDER_CONSTANT, Scalar(255));
+
+    QRCodeDetector qrcode;
+    std::vector<Point2f> corners;
+    EXPECT_TRUE(qrcode.detect(img, corners));
+    std::string decoded;
+    EXPECT_NO_THROW(decoded = qrcode.decode(img, corners));
+    return decoded;
+}
+
+TEST(Objdetect_QRCode_decode, decode_truncated_bitstreams)
+{
+    // Valid code whose data leaves only 1 bit for the terminator (41 digits).
+    EXPECT_EQ("12345678901234567890123456789012345678901",
+              decodeSymbol(valid_one_bit_terminator));
+    // Valid ECI code followed by padding bytes.
+    EXPECT_EQ("Hi", decodeSymbol(valid_eci_padding));
+    // The last numeric group needs 10 bits but only 8 are left.
+    EXPECT_TRUE(decodeSymbol(bad_partial_underflow).empty());
+    // The ECI segment is cut off at the very end of the data.
+    EXPECT_TRUE(decodeSymbol(bad_eci_truncated).empty());
+}
+
+static const char* const valid_eci_after_text[21] = {
+    "111111100101101111111",
+    "100000100111001000001",
+    "101110101101101011101",
+    "101110100101001011101",
+    "101110100010101011101",
+    "100000100000101000001",
+    "111111101010101111111",
+    "000000001101100000000",
+    "111011111111011000100",
+    "111111001110001101011",
+    "000101111010100010011",
+    "110100010000001100000",
+    "110010100100101111001",
+    "000000001101010111011",
+    "111111101001011111111",
+    "100000101101110011111",
+    "101110101001011010001",
+    "101110100010001110010",
+    "101110101000100110101",
+    "100000101100001111010",
+    "111111101110101010111"
+};
+
+TEST(Objdetect_QRCode_decode, decode_eci_keeps_earlier_segments)
+{
+    // Byte "ab", then ECI 26, then byte "cd". The text decoded before the ECI
+    // designator must not be lost.
+    EXPECT_EQ("abcd", decodeSymbol(valid_eci_after_text));
+}
+
 }} // namespace
