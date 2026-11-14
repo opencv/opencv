@@ -1206,9 +1206,7 @@ void CV_WarpPerspective_Test::generate_test_data()
     int depth = depths[rng.uniform(0, 2)];
     M.clone().convertTo(M, depth);
 
-    // BUG: https://github.com/opencv/opencv/issues/29816
-    // BORDER_REPLICATE disabled due to KleidiCV accuracy issue on ARM
-    static const int borderTypes[] = { /*BORDER_REPLICATE,*/ BORDER_REFLECT, BORDER_TRANSPARENT };
+    static const int borderTypes[] = { BORDER_REPLICATE, BORDER_REFLECT, BORDER_TRANSPARENT };
     borderType = borderTypes[rng.uniform(0, sizeof(borderTypes) / sizeof(borderTypes[0]))];
 }
 
@@ -1219,6 +1217,17 @@ void CV_WarpPerspective_Test::run_func()
 
 float CV_WarpPerspective_Test::get_success_error_level(int _interpolation, int _depth) const
 {
+    // The reference above rounds the interpolation coordinates to INTER_BITS fractional
+    // bits, as cv::warpPerspective itself does, so the interpolation weights are taken
+    // from a grid of 1/INTER_TAB_SIZE. An implementation that interpolates at full
+    // precision - a HAL, for instance - is more accurate but does not reproduce that
+    // rounding: each of the two coordinates is off by up to 1/(2*INTER_TAB_SIZE), and on
+    // the 0/255 images generated here a coordinate carries a weight of 255, so bilinear
+    // interpolation can differ by almost 2 * 255 / (2 * INTER_TAB_SIZE) = 7.97.
+    // See https://github.com/opencv/opencv/issues/29816
+    if (_interpolation == INTER_LINEAR)
+        return 8.0f;
+
     return CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
 }
 
