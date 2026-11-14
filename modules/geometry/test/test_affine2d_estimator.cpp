@@ -83,6 +83,32 @@ TEST_P(EstimateAffine2D, test3Points)
     }
 }
 
+// 3 exactly collinear points cannot determine a unique affine transform.
+// estimateAffine2D must reject them cleanly instead of returning a
+// transform full of inf/nan while reporting every point as an inlier.
+TEST_P(EstimateAffine2D, test3CollinearPoints)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+    for (size_t i = 0; i < 100; ++i)
+    {
+        float t0 = rngIn(0.f, 1.f), t1 = rngIn(0.f, 1.f), t2 = rngIn(0.f, 1.f);
+        Mat fpts(1, 3, CV_32FC2);
+        fpts.at<Point2f>(0) = Point2f(t0 * 100.f, t0 * 50.f);
+        fpts.at<Point2f>(1) = Point2f(t1 * 100.f, t1 * 50.f);
+        fpts.at<Point2f>(2) = Point2f(t2 * 100.f, t2 * 50.f);
+
+        Mat tpts;
+        transform(fpts, tpts, aff);
+
+        vector<uchar> inliers;
+        Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method);
+
+        EXPECT_TRUE(aff_est.empty());
+        EXPECT_EQ(countNonZero(inliers), 0);
+    }
+}
+
 TEST_P(EstimateAffine2D, testNPoints)
 {
     // try more transformations

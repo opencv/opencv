@@ -93,6 +93,31 @@ TEST_P(EstimateAffinePartial2D, test2Points)
     }
 }
 
+// 2 identical points cannot determine a unique similarity transform.
+// estimateAffinePartial2D must reject them cleanly instead of returning a
+// transform full of inf/nan while reporting both points as inliers.
+TEST_P(EstimateAffinePartial2D, test2DuplicatePoints)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+    for (size_t i = 0; i < 100; ++i)
+    {
+        float x = rngIn(-100.f, 100.f), y = rngIn(-100.f, 100.f);
+        Mat fpts(1, 2, CV_32FC2);
+        fpts.at<Point2f>(0) = Point2f(x, y);
+        fpts.at<Point2f>(1) = Point2f(x, y);
+
+        Mat tpts;
+        transform(fpts, tpts, aff);
+
+        vector<uchar> inliers;
+        Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method);
+
+        EXPECT_TRUE(aff_est.empty());
+        EXPECT_EQ(countNonZero(inliers), 0);
+    }
+}
+
 TEST_P(EstimateAffinePartial2D, testNPoints)
 {
     // try more transformations
