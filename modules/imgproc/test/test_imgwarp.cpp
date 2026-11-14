@@ -43,6 +43,7 @@
 #include "opencv2/ts/ts_gtest.h"
 #include "test_precomp.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <future>
 #include <thread>
@@ -1091,6 +1092,20 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
             }
         }
     }
+}
+
+BIGDATA_TEST(Imgproc_WarpAffine, IntegerTranslationEmptyOverlap)
+{
+    // One pixel below INT_MAX leaves the matrix continuous but overflows setTo's block counter.
+    const Size size(32769, 65534);
+    const Mat src(1, 1, CV_8U, Scalar(17));
+    const Matx23d matrix(1, 0, size.width, 0, 1, 0);
+    Mat dst;
+    warpAffine(src, dst, matrix, size, INTER_NEAREST, BORDER_CONSTANT, Scalar(73), ALGO_HINT_ACCURATE);
+
+    ASSERT_EQ(size, dst.size());
+    ASSERT_TRUE(dst.isContinuous());
+    EXPECT_TRUE(std::all_of(dst.data, dst.data + dst.total(), [](uchar value) { return value == 73; }));
 }
 
 TEST(Imgproc_WarpAffine, IntegerTranslationPreservesUnsupportedCases)

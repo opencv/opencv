@@ -2305,7 +2305,7 @@ static bool warpAffineIntegerTranslation(const Mat& src, Mat& dst, const double 
     {
         const Scalar fill(values[0], values[1], values[2], values[3]);
         if (overlap.empty())
-            dst.setTo(fill);
+            dst = fill;  // Scalar assignment uses size_t for the fill size.
         else
             copyMakeBorder(src(overlap - shift), dst, overlap.y, dst.rows - overlap.br().y,
                            overlap.x, dst.cols - overlap.br().x, BORDER_CONSTANT | BORDER_ISOLATED, fill);
