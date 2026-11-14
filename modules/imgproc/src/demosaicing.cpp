@@ -1087,7 +1087,7 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
     // VNG uses a 5x5 filter to calculate the gradient around the target pixel.
     // To make it simple for edge pixels, 2 pixel paddings are added using reflection.
     cv::Mat srcmat;
-    copyMakeBorder(_srcmat, srcmat, 2, 2, 2, 2, BORDER_REFLECT_101);
+    copyMakeBorder(_srcmat, srcmat, 2, 2, 2, 2, BORDER_REFLECT_101 | BORDER_ISOLATED);
 
     const uchar* bayer = srcmat.ptr();
     int bstep = (int)srcmat.step;
