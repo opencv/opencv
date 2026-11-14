@@ -81,6 +81,13 @@
     #undef pixel
   #endif
 
+  #if CV_RVV
+    #define CV__FASTMATH_ENABLE_RVV
+    #if !defined(OPENCV_SKIP_INCLUDE_RISCV_VECTOR_H)
+      #include <riscv_vector.h>
+    #endif
+  #endif
+
   #if defined(CV_INLINE_ROUND_FLT)
     // user-specified version
     // CV_INLINE_ROUND_DBL should be defined too
@@ -201,6 +208,11 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
+#elif defined CV__FASTMATH_ENABLE_RVV
+    const size_t vl = __riscv_vsetvl_e64m2(1);
+    vfloat64m2_t v = __riscv_vfmv_v_f_f64m2(value, vl);
+    vint32m1_t r = __riscv_vfncvt_x_f_w_i32m1(v, vl);
+    return (int)__riscv_vmv_x_s_i32m1_i32(r);
 #elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float64x1_t v = vdup_n_f64(value);
     int64x1_t r = vcvtn_s64_f64(v);
@@ -331,6 +343,11 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
+#elif defined CV__FASTMATH_ENABLE_RVV
+    const size_t vl = __riscv_vsetvl_e32m1(1);
+    vfloat32m1_t v = __riscv_vfmv_v_f_f32m1(value, vl);
+    vint32m1_t r = __riscv_vfcvt_x_f_v_i32m1(v, vl);
+    return (int)__riscv_vmv_x_s_i32m1_i32(r);
 #elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float32x2_t v = vdup_n_f32(value);
     int32x2_t r = vcvtn_s32_f32(v);
