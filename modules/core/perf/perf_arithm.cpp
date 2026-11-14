@@ -525,6 +525,65 @@ PERF_TEST_P_(BinaryOpTest, transpose_generic_move_tail_order)
     SANITY_CHECK_NOTHING();
 }
 
+// 64-bit integer multiply / divide. The data is either below 2^30 (typical: the product fits and
+// the overflow check can be skipped) or spans every bit width up to 64 (overflow check and
+// saturation both run). An odd size guards the tail of the loop.
+typedef std::tuple<Size, perf::MatType, bool> Size_MatType_Wide;
+typedef perf::TestBaseWithParam<Size_MatType_Wide> BinaryOp64Test;
+
+static void fill64(cv::Mat& m, bool wide)
+{
+    cv::RNG rng(0x64);
+    for (int y = 0; y < m.rows; y++)
+        for (int x = 0; x < m.cols; x++)
+        {
+            const uint64_t v = ((uint64_t)rng.next() << 32) | rng.next();
+            const uint64_t u = wide ? (v >> rng.uniform(0, 64)) : (v >> 34);
+            if (m.depth() == CV_64U)
+                m.at<uint64_t>(y, x) = u;
+            else
+                m.at<int64_t>(y, x) = (int64_t)u;
+        }
+}
+
+PERF_TEST_P_(BinaryOp64Test, multiply64)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    bool wide = get<2>(GetParam());
+    cv::Mat a(sz, type), b(sz, type), c(sz, type);
+    fill64(a, wide);
+    fill64(b, wide);
+    declare.in(a, b).out(c);
+
+    TEST_CYCLE() cv::multiply(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BinaryOp64Test, divide64)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    bool wide = get<2>(GetParam());
+    cv::Mat a(sz, type), b(sz, type), c(sz, type);
+    fill64(a, wide);
+    fill64(b, wide);
+    declare.in(a, b).out(c);
+
+    TEST_CYCLE() cv::divide(a, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOp64Test,
+    testing::Combine(
+        testing::Values(sz1080p, Size(1919, 1079)),
+        testing::Values(CV_64SC1, CV_64UC1),
+        testing::Bool()
+    )
+);
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BinaryOpTest,
     testing::Combine(
         testing::Values(szVGA, sz720p, sz1080p, Size(127, 61)),   // 127x61 guards per-call overhead
