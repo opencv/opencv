@@ -1533,6 +1533,15 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 // BUG: https://github.com/opencv/opencv/issues/26308
 void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    CV_CheckGE(node_proto_.input_size(), 3, "DNN/ONNX/LSTM: requires at least 3 inputs (X, W, R)");
+    CV_CheckGE(node_inputs.size(), (size_t)3, "DNN/ONNX/LSTM: requires at least 3 node inputs");
+
+    const ArgData& xdata = netimpl->args.at(node_inputs[0].idx);
+    if (!xdata.shape.empty())
+    {
+        CV_CheckEQ(xdata.shape.size(), (size_t)3, "DNN/ONNX/LSTM: input X must have rank 3");
+    }
+
     opencv_onnx::NodeProto lstm_proto = node_proto_;
     layerParams.type = "LSTM2";
 
@@ -2876,20 +2885,69 @@ void ONNXImporter2::parseQGemm(LayerParams& layerParams, const opencv_onnx::Node
     dq_a = addDequantize(bn + "/dequant_a", {inp[0], inp[1], inp[2]}, node_proto);
     dq_b = addDequantize(bn + "/dequant_b", {inp[3], inp[4], inp[5]}, node_proto, 0);
 
+    Arg bias_arg;
+    bool has_bias = (ninputs > 6 && !node_proto.input(6).empty());
+    if (has_bias)
+    {
+        if (net.isConstArg(inp[6]))
+        {
+            Mat bias_mat = net.argTensor(inp[6]);
+            if (bias_mat.depth() == CV_32S)
+            {
+                if (net.isConstArg(inp[1]) && net.isConstArg(inp[4]))
+                {
+                    Mat a_scale_mat = net.argTensor(inp[1]);
+                    Mat b_scale_mat = net.argTensor(inp[4]);
+                    CV_CheckGE(a_scale_mat.total(), (size_t)1, "DNN/ONNX/QGemm: a_scale is empty");
+                    CV_CheckGE(b_scale_mat.total(), (size_t)1, "DNN/ONNX/QGemm: b_scale is empty");
+
+                    Mat bias_float;
+                    bias_mat.convertTo(bias_float, CV_32F);
+                    float a_sc = a_scale_mat.at<float>(0);
+                    if (b_scale_mat.total() == 1)
+                        bias_float *= a_sc * b_scale_mat.at<float>(0);
+                    else
+                    {
+                        CV_CheckEQ(b_scale_mat.total(), bias_float.total(),
+                                   "DNN/ONNX/QGemm: per-channel b_scale length must match the bias length");
+                        for (int i = 0; i < (int)b_scale_mat.total(); i++)
+                            bias_float.at<float>(i) *= a_sc * b_scale_mat.at<float>(i);
+                    }
+                    bias_arg = netimpl->newConstArg(bn + "/bias_float", bias_float);
+                }
+                else
+                {
+                    bias_arg = addDequantize(bn + "/dequant_bias", {inp[6], inp[1]}, node_proto);
+                }
+            }
+            else
+            {
+                CV_CheckType(bias_mat.type(), bias_mat.depth() == CV_32F || bias_mat.depth() == CV_64F,
+                             "DNN/ONNX/QGemm: bias C must be int32 or float");
+                bias_arg = inp[6];
+            }
+        }
+        else
+        {
+            bias_arg = inp[6];
+        }
+    }
+
     LayerParams gemmLp;
     gemmLp.name = bn + "/gemm";
     gemmLp.type = "Gemm";
     copyAttrs(layerParams, gemmLp);
     Arg gemm_out = net.getArg(gemmLp.name);
-    node_inputs = (!node_proto.input(6).empty()) ? std::vector<Arg>{dq_a, dq_b, inp[6]}
-                                                 : std::vector<Arg>{dq_a, dq_b};
+    node_inputs = has_bias ? std::vector<Arg>{dq_a, dq_b, bias_arg}
+                           : std::vector<Arg>{dq_a, dq_b};
     node_outputs = {gemm_out};
     addLayer(gemmLp, node_proto);
 
     std::vector<Arg> q_sc_zp = {inp[7]};
     if (ninputs == 9)
         q_sc_zp.push_back(inp[8]);
-    addQuantize(bn + "/quant_y", gemm_out, q_sc_zp, out, node_proto);
+    addQuantize(bn + "/quant_y", gemm_out, q_sc_zp, out, node_proto,
+                (ninputs == 9) ? findGraphTensorOnnxType(node_proto.input(8)) : -1);
 }
 
 void ONNXImporter2::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

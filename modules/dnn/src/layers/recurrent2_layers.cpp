@@ -46,8 +46,10 @@ static void sigmoid(const Mat &src, Mat &dst)
 template<typename T>
 static void reorderGatesIOFCtoIFOC_(Mat& in)
 {
+    CV_Assert(!in.empty() && in.dims >= 2);
     int first = in.size[0];
-    int rest = in.total() / first / 4;
+    CV_Assert(first > 0 && in.total() % (first * 4) == 0);
+    int rest = (int)(in.total() / (first * 4));
     Mat m = in.reshape(1, {first, 4, rest});
     Mat outputGate = m.col(1), forgetGate = m.col(2);
     std::swap_ranges(outputGate.begin<T>(), outputGate.end<T>(), forgetGate.begin<T>());
@@ -186,9 +188,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
         {
+            CV_CheckGE(inputs.size(), (size_t)3, "LSTM requires at least 3 inputs (X, W, R)");
             const MatShape& inp0 = inputs[0];
             const MatShape& Wx = inputs[1];
             const MatShape& Wh = inputs[2];
+
+            CV_CheckGE(Wx.size(), (size_t)3, "LSTM input W must have rank 3");
+            CV_CheckGE(Wh.size(), (size_t)3, "LSTM input R must have rank 3");
 
             int _hidSize = Wh[2];
             int _inpSize = Wx[2];
@@ -205,7 +211,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             int _seqLen;
             if (useTimestampDim)
             {
-                CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _inpSize);
+                CV_CheckGE(inp0.size(), (size_t)3, "LSTM input X with timestamp must have rank 3");
+                CV_Assert((int)total(inp0, 2) == _inpSize);
                 if (layout == SEQ_BATCH_HID) {
                     _batchSize = inp0[1];
                     _seqLen = inp0[0];
@@ -224,8 +231,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
             else
             {
-                CV_Assert(inp0.size() >= 2 && total(inp0, 1) == _inpSize);
+                CV_CheckGE(inp0.size(), (size_t)2, "LSTM input X must have at least rank 2");
+                CV_Assert((int)total(inp0, 1) == _inpSize);
                 _batchSize = inp0[0];
+                _seqLen = 1;
                 outResShape.push_back(1 + static_cast<int>(bidirectional));
                 outResShape.push_back(_batchSize);
             }
@@ -239,13 +248,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::swap(shp[0], shp[1]);
             MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
 
-            // compute output shape of yc
-            if (produceCellOutput)
+            // compute output shape of yh
+            if (produceOutputYh)
             {
                 outputs.push_back(newShape);
             }
-            // compute output shape of yh
-            if (produceOutputYh)
+            // compute output shape of yc
+            if (produceCellOutput)
             {
                 outputs.push_back(newShape);
             }
@@ -541,13 +550,15 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             inputs_arr.getMatVector(input);
             outputs_arr.getMatVector(output);
 
-            int numInputs = input.size();
-            int inpSize = input[0].size[2];
+            int numInputs = (int)input.size();
+            CV_Assert(numInputs >= 3);  // X, W, R are mandatory
 
+            int inpSize;
             // determine seqLen and batchSize
             if (useTimestampDim)
             {
-                CV_Assert(input[0].dims >= 2 && (int)input[0].total(2) == inpSize);
+                CV_Assert(input[0].dims >= 3);
+                inpSize = (int)input[0].total(2);
                 if (layout == SEQ_BATCH_HID){
                     seqLenth = input[0].size[0];
                     batchSize = input[0].size[1];
@@ -556,18 +567,18 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     batchSize = input[0].size[0];
                 }
             } else {
-                CV_Assert(input[0].dims >= 2 && (int)input[0].total(1) == inpSize);
+                CV_Assert(input[0].dims >= 2);
+                inpSize = (int)input[0].total(1);
                 seqLenth = 1;
                 batchSize = input[0].size[0];
             }
+            CV_Assert(input[1].dims >= 3 && inpSize == input[1].size[2]);
 
             // ONNX LSTM inputs 0..7: X,W,R,B,sequence_lens,initial_h,initial_c,P; slots 3..7 optional.
             // Test non-emptiness, not count: some exports keep empty slots for unused inputs.
             auto hasInput = [&](int idx) {
                 return idx < numInputs && !input[idx].empty();
             };
-
-            CV_Assert(numInputs >= 3);  // X, W, R are mandatory
 
             const int numDirs = 1 + static_cast<int>(bidirectional);
             const int batchSizeTotal = seqLenth * batchSize;
@@ -651,20 +662,34 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
             Mat y4d = hOutAll.reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
             Mat ySeqFirst;   // (seq, dirs, batch, hid): the layout=0 Y; Yh sliced from it
-            if (layout == SEQ_BATCH_HID) {
-                cv::transpose(y4d, {0, 2, 1, 3}, output[0]);
-                ySeqFirst = output[0];
-            } else {
+            if (useTimestampDim)
+            {
+                if (layout == SEQ_BATCH_HID) {
+                    cv::transpose(y4d, {0, 2, 1, 3}, output[0]);
+                    ySeqFirst = output[0];
+                } else {
+                    cv::transpose(y4d, {0, 2, 1, 3}, ySeqFirst);
+                    cv::transpose(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
+                }
+            }
+            else
+            {
+                // When useTimestampDim == false, output[0] is preallocated with 3D shape (dirs, batch, hid).
+                // Do not transpose directly into output[0], which would reallocate it as 4D
+                // and detach from the engine graph.
                 cv::transpose(y4d, {0, 2, 1, 3}, ySeqFirst);
-                cv::transpose(y4d, {1, 0, 2, 3}, output[0]);   // (batch, seq, dirs, hid)
+                int outShp[] = {numDirs, batchSize, numHidden};
+                Mat y3d = ySeqFirst.reshape(1, sizeof(outShp)/sizeof(outShp[0]), outShp);
+                y3d.copyTo(output[0]);
             }
 
-            if (produceOutputYh){
-                getCellStateYh(ySeqFirst, output[1], numDirs);
+            int outIdx = 1;
+            if (produceOutputYh && (int)output.size() > outIdx){
+                getCellStateYh(ySeqFirst, output[outIdx++], numDirs);
             }
 
-            if (produceCellOutput){
-                getCellStateYc(cOut, output[2], numDirs);
+            if (produceCellOutput && (int)output.size() > outIdx){
+                getCellStateYc(cOut, output[outIdx++], numDirs);
             }
         }
 
