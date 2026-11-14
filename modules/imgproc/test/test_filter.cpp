@@ -1954,11 +1954,33 @@ TEST(Imgproc_SpatialGradient, fused_accuracy)
                     EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), 0.0) << "ROI dy ksize=" << ks << " border=" << b << " ddepth=" << ddepth;
                 }
     }
-
-    // invalid aperture sizes must be rejected
-    Mat src(16, 16, CV_8UC1), dx, dy;
-    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 2));
 }
+
+TEST(Imgproc_SpatialGradient, invalid_ksize)
+{
+    Mat src(16, 16, CV_8UC1, Scalar::all(0)), dx, dy;
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 0));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 2));
+    EXPECT_ANY_THROW(spatialGradient(src, dx, dy, 33));
+}
+
+typedef testing::TestWithParam<int> Imgproc_SpatialGradient_KSize;
+
+TEST_P(Imgproc_SpatialGradient_KSize, matches_Sobel)
+{
+    const int ksize = GetParam();
+    Mat src(64, 64, CV_8UC1);
+    randu(src, 0, 256);
+    Mat dx, dy, dxRef, dyRef;
+    spatialGradient(src, dx, dy, ksize, BORDER_DEFAULT, CV_32F);
+    Sobel(src, dxRef, CV_32F, 1, 0, ksize, 1, 0, BORDER_DEFAULT);
+    Sobel(src, dyRef, CV_32F, 0, 1, ksize, 1, 0, BORDER_DEFAULT);
+    EXPECT_LE(cvtest::norm(dx, dxRef, NORM_INF), 0.0);
+    EXPECT_LE(cvtest::norm(dy, dyRef, NORM_INF), 0.0);
+}
+
+// ksize 5 takes the fused path, 9 the Sobel fallback.
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_SpatialGradient_KSize, testing::Values(5, 9));
 
 // Reproduces parallelCanny's per-slice row splitting and checks each slice's
 // spatialGradient output matches the whole-image gradient (i.e. multi-threaded == single).

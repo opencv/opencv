@@ -189,9 +189,27 @@ OCL_TEST_P(EqualizeHist, Mat)
 
 //////////////////////////////// Corners test //////////////////////////////////////////
 
-struct CornerTestBase :
-        public ImgprocTestBase
+PARAM_TEST_CASE(CornerTestBase, MatType,
+                int, // blockSize
+                int, // apertureSize
+                BorderType, // border type
+                bool) // roi or not
 {
+    int type, borderType, blockSize, apertureSize;
+    bool useRoi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        blockSize = GET_PARAM(1);
+        apertureSize = GET_PARAM(2);
+        borderType = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
+    }
+
     void random_roi()
     {
         Mat image = readImageType("../gpu/stereobm/aloe-L.png", type);
@@ -219,6 +237,14 @@ struct CornerTestBase :
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
+
+    void Near(double threshold = 0.0, bool relative = false)
+    {
+        if (relative)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
+        else
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
+    }
 };
 
 typedef CornerTestBase CornerMinEigenVal;
@@ -228,8 +254,6 @@ OCL_TEST_P(CornerMinEigenVal, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
-
-        int apertureSize = 3;
 
         OCL_OFF(cv::cornerMinEigenVal(src_roi, dst_roi, blockSize, apertureSize, borderType));
         OCL_ON(cv::cornerMinEigenVal(usrc_roi, udst_roi, blockSize, apertureSize, borderType));
@@ -253,7 +277,6 @@ OCL_TEST_P(CornerHarris, Mat)
     {
         random_roi();
 
-        int apertureSize = 3;
         double k = randomDouble(0.01, 0.9);
 
         OCL_OFF(cv::cornerHarris(src_roi, dst_roi, blockSize, apertureSize, k, borderType));
@@ -554,6 +577,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, EqualizeHist, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
                             Values((MatType)CV_8UC1, (MatType)CV_32FC1),
                             Values(3, 5),
+                            Values(0, 3, 9),
                             Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT101),
                             Bool()));
@@ -561,6 +585,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
                             Values((MatType)CV_8UC1, CV_32FC1),
                             Values(3, 5),
+                            Values(0, 3, 9),
                             Values( (BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
                                     (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT_101),
                             Bool()));
