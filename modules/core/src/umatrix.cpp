@@ -1181,15 +1181,8 @@ void UMat::copyTo(OutputArray _dst) const
 #ifdef HAVE_CUDA
     if (_dst.isGpuMat())
     {
-        if (empty())
-        {
-            _dst.release();
-            return;
-        }
-        CV_CheckLE(dims, 2, "cuda::GpuMat holds 2D data only");
-        // getGpuMat() returns a copy of the header, so allocate the destination itself first
-        _dst.create(rows, cols, type());
-        _dst.getGpuMat().upload(*this);
+        // Mat::copyTo() handles the empty source, the 2D check and the allocation
+        getMat(ACCESS_READ).copyTo(_dst);
         return;
     }
 #endif

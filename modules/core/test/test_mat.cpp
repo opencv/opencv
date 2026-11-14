@@ -2997,6 +2997,9 @@ TEST(Mat, copyTo_GpuMat_destination)
 
     Mat().copyTo(dst);  // empty source releases the destination, as for a Mat destination
     EXPECT_TRUE(dst.empty());
+    dst.upload(src);
+    UMat().copyTo(dst);
+    EXPECT_TRUE(dst.empty());
 
     const int sz3[] = {2, 3, 4};  // cuda::GpuMat holds 2D data only: rejected, destination untouched
     dst.upload(src);
