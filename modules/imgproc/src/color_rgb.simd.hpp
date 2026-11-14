@@ -747,12 +747,12 @@ struct RGB2Gray<uchar>
         int i = 0;
 
 #if CV_AVX512_SKX
-        // Bit-exact x86 fast paths. BGRA: no channel deinterleave at all - the 4-byte
-        // pixel feeds vpmaddwd directly. BGR (VBMI): vpermb deinterleaves into b/g pairs
-        // + r, then one vpmaddwd (b*cb+g*cg) and one vpmulld (r*cr). Full 15-bit -> maxErr 0.
+        // Bit-exact fast paths. BGRA uses each packed pixel directly. BGR
+        // separates b/g pairs and r, then applies the same weighted sum.
+        // Full 15-bit coefficients, so the result matches the scalar path.
         const __m512i vdelta = _mm512_set1_epi32(1 << (shift - 1));
-        // The final block is clamped to [n-16, n) so any remainder is covered by one
-        // overlapping (idempotent) store instead of a scalar tail - no odd-width penalty.
+        // The final block covers [n-16, n). Any remainder is one overlapping
+        // store, which does not write past n.
         if (n >= 16 && scn == 4)
         {
             const __m512i coef = _mm512_set1_epi64(((int64_t)cr << 32) | ((int64_t)((uint16_t)cg) << 16) | (uint16_t)cb);
@@ -780,19 +780,41 @@ struct RGB2Gray<uchar>
             const __m512i vidx    = _mm512_loadu_si512(idxb);
             const __m512i coef_bg = _mm512_set1_epi32(((uint32_t)((uint16_t)cg) << 16) | (uint16_t)cb);
             const __m512i vcr     = _mm512_set1_epi32(cr);
-            auto do16 = [&](int j)
+            // One 16-pixel (48-byte) BGR group. Kept outside the loop.
+            const __mmask64 m48 = 0x0000FFFFFFFFFFFFULL;
+            // 16-pixel conversion. The source vector is passed in so several
+            // groups can be converted in one iteration.
+            auto gray16 = [&](__m512i s, uchar* d)
             {
-                __m512i s    = _mm512_maskz_loadu_epi8(0x0000FFFFFFFFFFFFULL, src + (size_t)j*3);
                 __m512i perm = _mm512_permutexvar_epi8(vidx, s);
                 __m256i bg   = _mm512_castsi512_si256(perm);
                 __m128i r8   = _mm512_extracti32x4_epi32(perm, 2);
                 __m512i bgs  = _mm512_madd_epi16(_mm512_cvtepu8_epi16(bg), coef_bg);
                 __m512i y    = _mm512_add_epi32(bgs, _mm512_mullo_epi32(_mm512_cvtepu8_epi32(r8), vcr));
                 y = _mm512_srli_epi32(_mm512_add_epi32(y, vdelta), shift);
-                _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
+                _mm_storeu_si128((__m128i*)d, _mm512_cvtusepi32_epi8(y));
             };
-            for (; i + 16 <= n; i += 16) do16(i);
-            if (i < n) do16(n - 16);
+            // Four independent 16-pixel groups (192 source bytes) per iteration.
+            for (; i + 64 <= n; i += 64)
+            {
+                const uchar* s = src + (size_t)i * 3;
+                _mm_prefetch(reinterpret_cast<const char*>(s + 192), _MM_HINT_T0);
+                _mm_prefetch(reinterpret_cast<const char*>(s + 256), _MM_HINT_T0);
+                _mm_prefetch(reinterpret_cast<const char*>(s + 320), _MM_HINT_T0);
+                __m512i s0 = _mm512_maskz_loadu_epi8(m48, s);
+                __m512i s1 = _mm512_maskz_loadu_epi8(m48, s + 48);
+                __m512i s2 = _mm512_maskz_loadu_epi8(m48, s + 96);
+                __m512i s3 = _mm512_maskz_loadu_epi8(m48, s + 144);
+                gray16(s0, dst + i);
+                gray16(s1, dst + i + 16);
+                gray16(s2, dst + i + 32);
+                gray16(s3, dst + i + 48);
+            }
+            for (; i + 16 <= n; i += 16)
+                gray16(_mm512_maskz_loadu_epi8(m48, src + (size_t)i * 3), dst + i);
+            // Overlapping tail: pixels [n-16, n) are recomputed and never written past n.
+            if (i < n)
+                gray16(_mm512_maskz_loadu_epi8(m48, src + (size_t)(n - 16) * 3), dst + (n - 16));
             return;
         }
 #endif // CV_AVX_512VBMI
