@@ -2905,6 +2905,30 @@ TEST(Core_Norm, NORM_L2SQR_16SC4_large)
     EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR));
 }
 
+TEST(Core_Norm, NORM_L2SQR_16S_min_value)
+{
+    // (-32768)^2 + (-32768)^2 does not fit into int32
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src(4, 64, CV_16SC(cn), Scalar::all(SHRT_MIN));
+        const double expected = static_cast<double>(src.total()) * cn * 32768.0 * 32768.0;
+        EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR)) << "cn=" << cn;
+        EXPECT_EQ(std::sqrt(expected), cv::norm(src, NORM_L2)) << "cn=" << cn;
+    }
+}
+
+TEST(Core_Norm, NORM_L2SQR_32S_min_value)
+{
+    // INT_MIN^2 + INT_MIN^2 does not fit into int64
+    for (int cn = 1; cn <= 4; cn++)
+    {
+        Mat src(4, 64, CV_32SC(cn), Scalar::all(INT_MIN));
+        const double expected = static_cast<double>(src.total()) * cn * 2147483648.0 * 2147483648.0;
+        EXPECT_EQ(expected, cv::norm(src, NORM_L2SQR)) << "cn=" << cn;
+        EXPECT_EQ(std::sqrt(expected), cv::norm(src, NORM_L2)) << "cn=" << cn;
+    }
+}
+
 TEST(Core_ConvertTo, regression_12121)
 {
     {
