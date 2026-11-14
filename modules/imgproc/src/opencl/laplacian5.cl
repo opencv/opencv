@@ -176,13 +176,19 @@ __kernel void laplacian(__global uchar* Src, int src_step, int srcOffsetX, int s
             storepix(CONVERT_TO_DT(sum), Dst + mad24(y + liy, dst_step, mad24(x, DSTSIZE, dst_offset)));
         }
 
-        for (int i = liy * BLK_X + lix; i < (RADIUS*2) * (BLK_X+(RADIUS*2)); i += BLK_X * BLK_Y)
+        // Move the last 2*RADIUS rows to the top, BLK_Y rows at a time. When 2*RADIUS > BLK_Y
+        // a row can be both copied and overwritten; the barrier after each step keeps the read first.
+        for (int top = 0; top < 2*RADIUS; top += BLK_Y)
         {
-            int clocX = i % (BLK_X+(RADIUS*2));
-            int clocY = i / (BLK_X+(RADIUS*2));
-            lsmem[clocY][clocX] = lsmem[clocY + BLK_Y][clocX];
+            int rows = min(2*RADIUS - top, BLK_Y);
+            for (int i = liy * BLK_X + lix; i < rows * (BLK_X+(RADIUS*2)); i += BLK_X * BLK_Y)
+            {
+                int clocX = i % (BLK_X+(RADIUS*2));
+                int clocY = top + i / (BLK_X+(RADIUS*2));
+                lsmem[clocY][clocX] = lsmem[clocY + BLK_Y][clocX];
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
-        barrier(CLK_LOCAL_MEM_FENCE);
 
         int yb = y + liy + BLK_Y + srcOffsetY + RADIUS;
         EXTRAPOLATE(yb, (height));
