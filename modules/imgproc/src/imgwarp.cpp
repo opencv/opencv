@@ -3465,8 +3465,11 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     }
     else
     {
-        const int ANGLE_BORDER = 1;
-        cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        // The angle is periodic, so the source is extended with wrapped rows.
+        // Their number has to cover the interpolation kernel: 2 taps for linear, 4 for cubic, 8 for Lanczos.
+        const int interpolation = flags & cv::INTER_MAX;
+        const int ANGLE_BORDER = interpolation == INTER_LANCZOS4 ? 4 : interpolation == INTER_CUBIC ? 2 : 1;
+        cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP | BORDER_ISOLATED);
         Mat src = _dst.getMat();
         Size ssize = _dst.size();
         ssize.height -= 2 * ANGLE_BORDER;
