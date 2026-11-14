@@ -47,6 +47,11 @@
 #include <future>
 #include <thread>
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 namespace opencv_test { namespace {
 
 class CV_ImgWarpBaseTest : public cvtest::ArrayTest
@@ -941,8 +946,6 @@ TEST(Imgproc_Warp, multichannel)
         int width = rng.uniform(3, 333);
         int height = rng.uniform(3, 333);
         int cn = rng.uniform(1, 15);
-        if(inter == INTER_CUBIC || inter == INTER_LANCZOS4)
-            cn = rng.uniform(1, 5);
         Mat src(height, width, CV_8UC(cn)), dst;
         //randu(src, 0, 256);
         src.setTo(0.);
@@ -1160,6 +1163,258 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapManyChannels, testing::Combine(
     testing::Values(5, 7, 9, 20, 31, 33, CV_CN_MAX),
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT,
                     (int)BORDER_REFLECT_101, (int)BORDER_WRAP, (int)BORDER_TRANSPARENT)));
+
+typedef testing::TestWithParam<tuple<int, int, Size, int, int> > Imgproc_WarpManyChannels;
+
+TEST_P(Imgproc_WarpManyChannels, cubic_lanczos_many_channels)
+{
+    RNG& rng = theRNG();
+    const int depth = get<0>(GetParam());
+    const int channels = get<1>(GetParam());
+    const Size size = get<2>(GetParam());
+    const int interpolation = get<3>(GetParam());
+    const int border = get<4>(GetParam());
+    SCOPED_TRACE(depth);
+    SCOPED_TRACE(channels);
+    SCOPED_TRACE(interpolation);
+    SCOPED_TRACE(border);
+    Mat storage(size.height + 4, size.width + 6, CV_MAKETYPE(depth, channels));
+    const double low = depth == CV_16S ? -32768. : 0.;
+    const double high = depth == CV_8U ? 256. : depth == CV_16U ? 65536. : depth == CV_16S ? 32768. : 64.;
+    rng.fill(storage, RNG::UNIFORM, low, high);
+    Mat src = storage(Rect(2, 1, size.width, size.height));
+    const Size outputSize(11, 9);
+    Mat affine = getRotationMatrix2D(Point2f(3.5f, 4.5f), 17., 1.1);
+    Mat perspective = Mat::eye(3, 3, CV_64F);
+    affine.copyTo(perspective.rowRange(0, 2));
+    perspective.at<double>(2, 0) = 0.001;
+    Mat mapx(outputSize, CV_32F), mapy(outputSize, CV_32F), fixed, fractions;
+    rng.fill(mapx, RNG::UNIFORM, -5.f, float(size.width + 5));
+    rng.fill(mapy, RNG::UNIFORM, -5.f, float(size.height + 5));
+    convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
+    const Scalar fill(3., 11., 29., 47.);
+    for (int operation = 0; operation < 5; ++operation)
+    {
+        SCOPED_TRACE(operation);
+        const auto warp = [&](const Mat& input, Mat& output, const Scalar& value) {
+            if (operation == 0)
+                warpAffine(input, output, affine, outputSize, interpolation | WARP_INVERSE_MAP, border, value);
+            else if (operation == 1)
+                warpPerspective(input, output, perspective, outputSize, interpolation, border, value);
+            else if (operation == 2)
+                remap(input, output, mapx, mapy, interpolation, border, value);
+            else if (operation == 3)
+                remap(input, output, fixed, fractions, interpolation, border, value);
+            else
+                remap(input, output, mapx, mapy, interpolation | WARP_RELATIVE_MAP, border, value);
+        };
+        Mat resultStorage(outputSize.height + 3, outputSize.width + 4, src.type());
+        resultStorage.reshape(1).setTo(17.);
+        Mat result = resultStorage(Rect(1, 2, outputSize.width, outputSize.height));
+        warp(src, result, fill);
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            Mat plane, referenceInput, expected(outputSize, CV_MAKETYPE(depth, 2), Scalar::all(17.));
+            extractChannel(src, plane, channel);
+            const Mat planes[] = {plane, plane};
+            merge(planes, 2, referenceInput);
+            warp(referenceInput, expected, Scalar::all(fill[channel & 3]));
+            Mat expectedPlane, actualPlane;
+            extractChannel(expected, expectedPlane, 0);
+            extractChannel(result, actualPlane, channel);
+            const double tolerance = depth == CV_32F || depth == CV_64F ? 3e-5 : 1.;
+            ASSERT_LE(cvtest::norm(expectedPlane, actualPlane, NORM_INF), tolerance) << "channel=" << channel;
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpManyChannels, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+    testing::Values(5, 9, 20, CV_CN_MAX),
+    testing::Values(Size(1, 1), Size(17, 13)),
+    testing::Values(INTER_CUBIC, INTER_LANCZOS4),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
+                    BORDER_WRAP, BORDER_TRANSPARENT)));
+
+typedef testing::TestWithParam<tuple<int, int>> Imgproc_CubicTightChannelStorage;
+
+TEST_P(Imgproc_CubicTightChannelStorage, cubic_tight_channel_storage)
+{
+    RNG& rng = theRNG();
+    const int depth = get<0>(GetParam());
+    const int channels = get<1>(GetParam());
+    const size_t bytes = 4*4*channels*CV_ELEM_SIZE1(depth);
+#if defined(__linux__) || defined(__APPLE__)
+    // Place the final pixel against an inaccessible page to catch SIMD overreads.
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    ASSERT_GE(pageSize, static_cast<long>(bytes));
+    void* mapping = mmap(nullptr, 2*pageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    ASSERT_NE(MAP_FAILED, mapping);
+    const Ptr<void> storage(mapping, [pageSize](void* address) { munmap(address, 2*pageSize); });
+    uchar* boundary = static_cast<uchar*>(mapping) + pageSize;
+    ASSERT_EQ(0, mprotect(boundary, pageSize, PROT_NONE));
+    uchar* data = boundary - bytes;
+#else
+    std::vector<uchar> storage(bytes);
+    uchar* data = storage.data();
+#endif
+    Mat src(4, 4, CV_MAKETYPE(depth, channels), data), result;
+    rng.fill(src, RNG::UNIFORM, 0., 64.);
+    Mat mapx(1, 1, CV_32F, Scalar(1.25)), mapy = mapx.clone();
+    remap(src, result, mapx, mapy, INTER_CUBIC);
+    for (int channel = 0; channel < channels; ++channel)
+    {
+        Mat plane, referenceInput, expected, actual;
+        extractChannel(src, plane, channel);
+        const Mat planes[] = {plane, plane};
+        merge(planes, 2, referenceInput);
+        remap(referenceInput, expected, mapx, mapy, INTER_CUBIC);
+        extractChannel(expected, plane, 0);
+        extractChannel(result, actual, channel);
+        EXPECT_LE(cvtest::norm(plane, actual, NORM_INF), 1.) << "channel=" << channel;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTightChannelStorage, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_16S), testing::Values(5, 9, 20)));
+
+typedef testing::TestWithParam<int> Imgproc_CubicPeriodicCoordinates;
+
+TEST_P(Imgproc_CubicPeriodicCoordinates, accuracy)
+{
+    const int type = GetParam();
+    const float coordinates[] = {33.f, 33.25f, -33.f, -33.25f, 1048576.25f, -1048576.25f,
+                                 2147483648.f, -2147483648.f, 1e10f, -1e10f,
+                                 std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+    for (Size size : {Size(4, 3), Size(1, 1)})
+    for (int border : {BORDER_WRAP, BORDER_REFLECT, BORDER_REFLECT_101})
+    {
+        SCOPED_TRACE(size);
+        SCOPED_TRACE(border);
+        Mat wide(size, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+        for (int y = 0; y < size.height; ++y)
+        for (int x = 0; x < size.width; ++x)
+        for (int channel = 0; channel < wide.channels(); ++channel)
+            wide.ptr<float>(y)[x*wide.channels() + channel] = float(y*8 + x + channel);
+        wide.convertTo(src, CV_MAT_DEPTH(type));
+        const auto reduce = [border](float coordinate, int length) {
+            const int bigSize = std::max(length, 16);
+            const float minCoord = float(-bigSize);
+            const float maxCoord = float(bigSize*2);
+            coordinate = std::clamp(coordinate, minCoord, maxCoord);
+            if (length == 1)
+                return 0.f;
+            const double period = border == BORDER_WRAP ? double(length) :
+                                  2.*(length - (border == BORDER_REFLECT_101));
+            return float(std::fmod(double(coordinate), period));
+        };
+        for (float coordinate : coordinates)
+        for (int axis = 0; axis < 2; ++axis)
+        {
+            SCOPED_TRACE(coordinate);
+            SCOPED_TRACE(axis);
+            const float x = axis == 0 ? coordinate : 1.25f;
+            const float y = axis == 1 ? coordinate : 1.25f;
+            Mat mapx(1, 1, CV_32F, Scalar(x)), mapy(1, 1, CV_32F, Scalar(y));
+            Mat expectedX(1, 1, CV_32F, Scalar(reduce(x, size.width)));
+            Mat expectedY(1, 1, CV_32F, Scalar(reduce(y, size.height)));
+            Mat expected;
+            remap(src, expected, expectedX, expectedY, INTER_CUBIC, border);
+            for (int operation = 0; operation < 3; ++operation)
+            {
+                SCOPED_TRACE(operation);
+                Mat actual;
+                if (operation == 0)
+                    remap(src, actual, mapx, mapy, INTER_CUBIC, border);
+                else if (operation == 1)
+                {
+                    Mat transform = Mat_<double>({2, 3}, {1., 0., x, 0., 1., y});
+                    warpAffine(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
+                }
+                else
+                {
+                    Mat transform = Mat_<double>({3, 3}, {1., 0., x, 0., 1., y, 0., 0., 1.});
+                    warpPerspective(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
+                }
+                EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-5);
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicPeriodicCoordinates, testing::Values(
+    CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9)));
+
+typedef testing::TestWithParam<int> Imgproc_CubicOutsideSource;
+
+TEST_P(Imgproc_CubicOutsideSource, constant_and_transparent)
+{
+    const int type = GetParam();
+    const int width = 33;
+    Mat src(8, 8, type), result(1, width, type);
+    src.reshape(1).setTo(64);
+    if (CV_MAT_DEPTH(type) != CV_8U)
+    {
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        src.row(0).reshape(1).setTo(nan);
+        src.col(0).reshape(1).setTo(nan);
+    }
+
+    for (float outside : {-2.75f, std::numeric_limits<float>::quiet_NaN()})
+    for (bool mixed : {false, true})
+    {
+        SCOPED_TRACE(outside);
+        SCOPED_TRACE(mixed);
+        // Exercise whole SIMD batches and the final partial batch. At -2.75 the last
+        // tap is at -1 along one axis. NaN must also produce a border sample.
+        Mat mapx(1, width, CV_32F, Scalar(outside)), mapy(1, width, CV_32F, Scalar(4.25));
+        for (int x = 1; x < width; x += 2)
+        {
+            mapx.at<float>(x) = 4.25f;
+            mapy.at<float>(x) = outside;
+        }
+        if (mixed)
+            mapx.at<float>(0) = 4.25f;
+
+        for (int border : {BORDER_CONSTANT, BORDER_TRANSPARENT})
+        {
+            SCOPED_TRACE(border);
+            for (int x = 0; x < width; ++x)
+                result.col(x).reshape(1).setTo(17 + x);
+            remap(src, result, mapx, mapy, INTER_CUBIC, border, Scalar::all(91));
+
+            Mat values;
+            result.reshape(1).convertTo(values, CV_64F);
+            for (int x = 0; x < width; ++x)
+            {
+                const double expected = mixed && x == 0 ? 64. : (border == BORDER_CONSTANT ? 91. : 17. + x);
+                for (int c = 0; c < result.channels(); ++c)
+                    EXPECT_EQ(expected, values.at<double>(x*result.channels() + c)) << "x=" << x;
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicOutsideSource,
+                        testing::Values(CV_64FC1, CV_64FC(5), CV_32FC1, CV_8UC1));
+
+TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
+{
+    Mat src(4, 4, CV_32FC(5)), result(1, 3, CV_32FC(5));
+    src.reshape(1).setTo(1.f);
+    Mat mapx = Mat_<float>({1, 3}, {std::numeric_limits<float>::quiet_NaN(),
+                                   std::numeric_limits<float>::infinity(),
+                                   -std::numeric_limits<float>::infinity()});
+    Mat mapy(1, 3, CV_32F, Scalar(1.25));
+    result.reshape(1).setTo(0.75);
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    Mat expected(result.size(), result.type());
+    expected.reshape(1).setTo(0.75);
+    EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
+    remap(src, result, mapx, mapy, INTER_CUBIC, BORDER_CONSTANT, Scalar::all(0.25));
+    expected.reshape(1).setTo(0.25);
+    EXPECT_EQ(cvtest::norm(expected, result, NORM_INF), 0.);
+}
 
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
