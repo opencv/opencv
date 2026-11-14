@@ -508,8 +508,6 @@ bool PAMDecoder::readHeader()
                     selected_fmt = IMWRITE_PAM_FORMAT_GRAYSCALE;
                 else if (m_channels == 3 && m_maxval < 256)
                     selected_fmt = IMWRITE_PAM_FORMAT_RGB;
-                else
-                    CV_Error(Error::StsError, "Can't determine selected_fmt (IMWRITE_PAM_FORMAT_NULL)");
             }
             CV_CheckDepth(m_sampledepth, m_sampledepth == CV_8U || m_sampledepth == CV_16U, "");
             CV_Check(m_channels, m_channels >= 1 && m_channels <= 4, "Unsupported number of channels");
