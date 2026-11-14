@@ -41,6 +41,7 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
+#include <cmath>
 
 #define dprintf(x)
 #define print_matrix(x)
@@ -78,7 +79,8 @@ static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::ve
  *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
  by this procedure - it should not be cleaned before the call to procedure and may contain mess after
  it also initializes N and B and does not make any assumptions about their init values
- * @return SOLVELP_UNFEASIBLE if problem is unfeasible, 0 if feasible.
+ * @return SOLVELP_UNFEASIBLE if problem is unfeasible, SOLVELP_LOST if the auxiliary variable of Phase I
+ cannot be pivoted out of the basis, 0 if feasible.
 */
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow);
 static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,int leaving_index,
@@ -119,13 +121,13 @@ int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_, double constr_
     vector<int> N,B;
     vector<unsigned int> indexToRow;
 
-    if(initialize_simplex(bigC,bigB,v,N,B,indexToRow)==SOLVELP_UNFEASIBLE){
-        return SOLVELP_UNFEASIBLE;
+    int res=initialize_simplex(bigC,bigB,v,N,B,indexToRow);
+    if(res!=0){
+        return res;
     }
     Mat_<double> c=bigC.colRange(1,bigC.cols),
         b=bigB.colRange(1,bigB.cols);
 
-    int res=0;
     if((res=inner_simplex(c,b,v,N,B,indexToRow))==SOLVELP_UNBOUNDED){
         return SOLVELP_UNBOUNDED;
     }
@@ -160,6 +162,19 @@ int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_, double constr_
 int solveLP(InputArray Func, InputArray Constr, OutputArray z)
 {
     return solveLP(Func, Constr, z, 1e-12);
+}
+
+// Returns x, or exactly 0 when x is only rounding noise: |x| <= 1e-12*scale, where scale is the
+// magnitude of the terms x was computed from. The simplex logic compares tableau entries with
+// exactly 0, so the noise that a cancellation leaves behind would be taken as a real value.
+// The threshold is relative, so it does not depend on the scale of the problem.
+static inline double snap_zero(double x,double scale){
+    return std::abs(x)<=1e-12*scale?0.0:x;
+}
+
+// Returns a-b, snapped to 0 relative to the operands.
+static inline double sub_snap_zero(double a,double b){
+    return snap_zero(a-b,std::max(std::abs(a),std::abs(b)));
 }
 
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
@@ -224,7 +239,17 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
-        pivot(c,b,v,N,B,iterator_offset,0,indexToRow);
+        // x0 is basic at 0: pivot it out on the largest entry of its row, since a given entry may be 0.
+        int entering_index=0;
+        for(int j=1;j<b.cols-1;j++){
+            if(std::abs(b(iterator_offset,j))>std::abs(b(iterator_offset,entering_index))){
+                entering_index=j;
+            }
+        }
+        if(b(iterator_offset,entering_index)==0){
+            return SOLVELP_LOST;
+        }
+        pivot(c,b,v,N,B,iterator_offset,entering_index,indexToRow);
     }
 
     vector<int>::iterator iterator;
@@ -241,21 +266,31 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     print_simplex_state(c,b,v,N,B);
 
     //start from 1, because we ignore x_0
+    //each coefficient is a sum of terms: snap it once, relative to the sum of their absolute values
     c=0;
     v=0;
+    Mat_<double> abs_sum(1,c.cols,0.0);
     for(int I=1;I<old_c.cols;I++){
         if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
             c(0,iterator_offset)+=old_c(0,I);
+            abs_sum(0,iterator_offset)+=std::abs(old_c(0,I));
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
             int iterator_offset=indexToRow[I]-nsize;
-            c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
+            for(int j=0;j<c.cols;j++){
+                double term=old_c(0,I)*b(iterator_offset,j);
+                c(0,j)-=term;
+                abs_sum(0,j)+=std::abs(term);
+            }
             v+=old_c(0,I)*b(iterator_offset,b.cols-1);
             print_matrix(c);
         }
+    }
+    for(int j=0;j<c.cols;j++){
+        c(0,j)=snap_zero(c(0,j),abs_sum(0,j));
     }
 
     dprintf(("after restore\n"));
@@ -349,7 +384,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
                 if(j==entering_index){
                     b(i,j)=-coef*b(leaving_index,j);
                 }else{
-                    b(i,j)-=(coef*b(leaving_index,j));
+                    b(i,j)=sub_snap_zero(b(i,j),coef*b(leaving_index,j));
                 }
             }
         }
@@ -361,7 +396,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
         if(i==entering_index){
             c(0,i)=-Coef*b(leaving_index,i);
         }else{
-            c(0,i)-=Coef*b(leaving_index,i);
+            c(0,i)=sub_snap_zero(c(0,i),Coef*b(leaving_index,i));
         }
     }
     dprintf(("v was %g\n",v));
