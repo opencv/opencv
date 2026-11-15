@@ -8082,6 +8082,123 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 
 #endif
 
+// x86-optimized macros for 8-bit pixels retrieval and reordering.
+// Instead of scattering the 4 taps of every lane into a temporary buffer one by one
+// and then loading that buffer back into vector registers (which defeats store-to-load
+// forwarding and is very slow on x86), each lane's 4 taps are fetched with a single
+// 32-bit (C1) or 128-bit (C3, C4) load and the values are transposed in registers.
+// The 128-bit loads for C3 read 4 bytes past the last tap; this is safe for the same
+// reason the NEON path above is: inliers are limited to iy0 < height - 5, so there is
+// always at least one more row after the last row being read.
+#if !CV_SIMD_FP16 && CV_SSE2 && ((CV_SIMD_WIDTH == 32 && CV_AVX2) || CV_SIMD_WIDTH == 16)
+
+static CV_ALWAYS_INLINE int bicubicLoad32(const uint8_t* ptr)
+{
+    int val;
+    memcpy(&val, ptr, sizeof(val));
+    return val;
+}
+
+// splits 4 packed 8-bit taps per 32-bit lane into 4 vectors of 32-bit integers
+static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_int32& t1,
+                                            v_int32& t2, v_int32& t3)
+{
+    const v_uint32 mask = vx_setall_u32(0xFF);
+    t0 = v_reinterpret_as_s32(v_and(v, mask));
+    t1 = v_reinterpret_as_s32(v_and(v_shr<8>(v), mask));
+    t2 = v_reinterpret_as_s32(v_and(v_shr<16>(v), mask));
+    t3 = v_reinterpret_as_s32(v_shr<24>(v));
+}
+
+// for each lane j loads the 4 consecutive bytes starting at srcrow + ofs[j]
+static CV_ALWAYS_INLINE v_uint32 bicubicGather8uC1(const uint8_t* srcrow, const int32_t* ofs)
+{
+#if CV_SIMD_WIDTH == 32
+    return v_uint32(_mm256_setr_epi32(
+        bicubicLoad32(srcrow + ofs[0]), bicubicLoad32(srcrow + ofs[1]),
+        bicubicLoad32(srcrow + ofs[2]), bicubicLoad32(srcrow + ofs[3]),
+        bicubicLoad32(srcrow + ofs[4]), bicubicLoad32(srcrow + ofs[5]),
+        bicubicLoad32(srcrow + ofs[6]), bicubicLoad32(srcrow + ofs[7])));
+#else
+    return v_uint32(_mm_setr_epi32(
+        bicubicLoad32(srcrow + ofs[0]), bicubicLoad32(srcrow + ofs[1]),
+        bicubicLoad32(srcrow + ofs[2]), bicubicLoad32(srcrow + ofs[3])));
+#endif
+}
+
+#undef FETCH_INLIERS_8UC1
+#define FETCH_INLIERS_8UC1(row) \
+    bicubicSplit8u(bicubicGather8uC1((const uint8_t*)src + row*srcstep, tl_ofs), R0, R1, R2, R3)
+
+#if CV_SSSE3
+// for each lane j loads the 4 taps of a 3- or 4-channel pixel row starting at srcrow + ofs[j]
+// and returns them per channel, 4 packed 8-bit taps per 32-bit lane
+template<int CN>
+static CV_ALWAYS_INLINE void bicubicGather8uCn(const uint8_t* srcrow, const int32_t* ofs,
+                                               v_uint32& r, v_uint32& g, v_uint32& b, v_uint32& a)
+{
+    static_assert(CN == 3 || CN == 4, "");
+#if CV_SIMD_WIDTH == 32
+    const __m256i mask = CN == 3 ?
+        _mm256_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1,
+                         0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
+        _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+                         0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+    // lanes j and j+4 go to the low and high 128-bit halves, so after
+    // the in-lane transpose below lane order matches 0..7
+    #define CV_BICUBIC_LOAD2(j) _mm256_shuffle_epi8(_mm256_inserti128_si256( \
+        _mm256_castsi128_si256(_mm_loadu_si128((const __m128i*)(srcrow + ofs[j]))), \
+        _mm_loadu_si128((const __m128i*)(srcrow + ofs[j + 4])), 1), mask)
+    __m256i p0 = CV_BICUBIC_LOAD2(0), p1 = CV_BICUBIC_LOAD2(1);
+    __m256i p2 = CV_BICUBIC_LOAD2(2), p3 = CV_BICUBIC_LOAD2(3);
+    #undef CV_BICUBIC_LOAD2
+    __m256i t0 = _mm256_unpacklo_epi32(p0, p1); // r0 r1 g0 g1
+    __m256i t1 = _mm256_unpacklo_epi32(p2, p3); // r2 r3 g2 g3
+    __m256i t2 = _mm256_unpackhi_epi32(p0, p1); // b0 b1 a0 a1
+    __m256i t3 = _mm256_unpackhi_epi32(p2, p3); // b2 b3 a2 a3
+    r = v_uint32(_mm256_unpacklo_epi64(t0, t1));
+    g = v_uint32(_mm256_unpackhi_epi64(t0, t1));
+    b = v_uint32(_mm256_unpacklo_epi64(t2, t3));
+    a = v_uint32(_mm256_unpackhi_epi64(t2, t3));
+#else
+    const __m128i mask = CN == 3 ?
+        _mm_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
+        _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+    __m128i p0 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[0])), mask);
+    __m128i p1 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[1])), mask);
+    __m128i p2 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[2])), mask);
+    __m128i p3 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[3])), mask);
+    __m128i t0 = _mm_unpacklo_epi32(p0, p1); // r0 r1 g0 g1
+    __m128i t1 = _mm_unpacklo_epi32(p2, p3); // r2 r3 g2 g3
+    __m128i t2 = _mm_unpackhi_epi32(p0, p1); // b0 b1 a0 a1
+    __m128i t3 = _mm_unpackhi_epi32(p2, p3); // b2 b3 a2 a3
+    r = v_uint32(_mm_unpacklo_epi64(t0, t1));
+    g = v_uint32(_mm_unpackhi_epi64(t0, t1));
+    b = v_uint32(_mm_unpacklo_epi64(t2, t3));
+    a = v_uint32(_mm_unpackhi_epi64(t2, t3));
+#endif
+}
+
+#undef FETCH_INLIERS_8UC3
+#define FETCH_INLIERS_8UC3(row) { \
+    v_uint32 _r, _g, _b, _a; \
+    bicubicGather8uCn<3>((const uint8_t*)src + row*srcstep, tl_ofs, _r, _g, _b, _a); \
+    bicubicSplit8u(_r, R0, R1, R2, R3); \
+    bicubicSplit8u(_g, G0, G1, G2, G3); \
+    bicubicSplit8u(_b, B0, B1, B2, B3); }
+
+#undef FETCH_INLIERS_8UC4
+#define FETCH_INLIERS_8UC4(row) { \
+    v_uint32 _r, _g, _b, _a; \
+    bicubicGather8uCn<4>((const uint8_t*)src + row*srcstep, tl_ofs, _r, _g, _b, _a); \
+    bicubicSplit8u(_r, R0, R1, R2, R3); \
+    bicubicSplit8u(_g, G0, G1, G2, G3); \
+    bicubicSplit8u(_b, B0, B1, B2, B3); \
+    bicubicSplit8u(_a, A0, A1, A2, A3); }
+#endif // CV_SSSE3
+
+#endif // x86
+
 #undef BICUBIC_C1_PROCESS_ROW
 #define BICUBIC_C1_PROCESS_ROW(row, fetch_inliers) \
     fetch_inliers(row); \
@@ -8366,7 +8483,12 @@ bicubicVec(const float* srcx, const float* srcy, int len,
             }
         }
 
-        memcpy(dst, outbuf, dlen*NCHANNELS*sizeof(dst[0]));
+        // BORDER_TRANSPARENT takes this path for every full batch, so use a constant
+        // size there to let the compiler replace the library call with a few moves
+        if (dlen == BATCH)
+            memcpy(dst, outbuf, BATCH*NCHANNELS*sizeof(dst[0]));
+        else
+            memcpy(dst, outbuf, dlen*NCHANNELS*sizeof(dst[0]));
     }
 }
 #endif

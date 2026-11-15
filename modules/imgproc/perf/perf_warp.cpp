@@ -191,6 +191,64 @@ PERF_TEST_P( TestRemap, map1_32fc2,
     SANITY_CHECK_NOTHING();
 }
 
+CV_ENUM(BorderModeCubic, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_TRANSPARENT)
+typedef TestBaseWithParam< tuple<Size, BorderModeCubic, MatType> > TestWarpCubic;
+
+PERF_TEST_P( TestWarpCubic, remap_random_map,
+             Combine(
+                 Values( szVGA, sz1080p ),
+                 BorderModeCubic::all(),
+                 Values(CV_8UC1, CV_8UC3, CV_8UC4)
+                 )
+             )
+{
+    Size size = get<0>(GetParam());
+    int borderMode = get<1>(GetParam());
+    int type = get<2>(GetParam());
+    Size srcSize(640, 640);
+    Mat source(srcSize, type), destination(size, type);
+    Mat map_x(size, CV_32F), map_y(size, CV_32F);
+
+    declare.in(source, destination, WARMUP_RNG);
+    theRNG().fill(map_x, RNG::UNIFORM, 0.f, (float)srcSize.width);
+    theRNG().fill(map_y, RNG::UNIFORM, 0.f, (float)srcSize.height);
+
+    TEST_CYCLE()
+    {
+        remap(source, destination, map_x, map_y, INTER_CUBIC, borderMode);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P( TestWarpCubic, warpAffine,
+             Combine(
+                 Values( szVGA, sz1080p ),
+                 BorderModeCubic::all(),
+                 Values(CV_8UC1, CV_8UC3, CV_8UC4)
+                 )
+             )
+{
+    Size size = get<0>(GetParam());
+    int borderMode = get<1>(GetParam());
+    int type = get<2>(GetParam());
+    Size srcSize(512, 512);
+    Mat source(srcSize, type), destination(size, type);
+    Point2f srcCenter(srcSize.width*0.5f, srcSize.height*0.5f);
+    Mat M = getRotationMatrix2D(srcCenter, 2., 1.5);
+    M.at<double>(0, 2) += size.width*0.5 - srcCenter.x;
+    M.at<double>(1, 2) += size.height*0.5 - srcCenter.y;
+
+    declare.in(source, destination, WARMUP_RNG);
+
+    TEST_CYCLE()
+    {
+        warpAffine(source, destination, M, size, INTER_CUBIC, borderMode);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, bool relative )
 {
     if (map_y.empty()) {
