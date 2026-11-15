@@ -230,17 +230,12 @@ static void triangleRasterizeInternal(InputArray _vertices, InputArray _indices,
     nTriangles = (int)triangles.total();
 
     // indices are used to read vertices and colors, check them all before anything is drawn
-    for (int t = 0; t < nTriangles; t++)
+    Mat flatIndices = triangles.reshape(1);
+    Point badPos;
+    if (!checkRange(flatIndices, true, &badPos, 0, nVerts))
     {
-        const Vec3i& tri = triangles.at<Vec3i>(t);
-        for (int i = 0; i < 3; i++)
-        {
-            if (tri[i] < 0 || tri[i] >= nVerts)
-            {
-                CV_Error(Error::StsOutOfRange, cv::format("Triangle %d has vertex index %d, expected [0, %d)",
-                                                          t, tri[i], nVerts));
-            }
-        }
+        CV_Error(Error::StsOutOfRange, cv::format("Triangle %d has vertex index %d, expected [0, %d)",
+                                                  badPos.y, flatIndices.at<int>(badPos), nVerts));
     }
 
     if (!_colors.empty())
