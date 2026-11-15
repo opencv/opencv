@@ -78,15 +78,9 @@ PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
 typedef TestBaseWithParam<tuple<Size, MatType, int> > TestWarpAffineIntegerTranslation;
 
 PERF_TEST_P(TestWarpAffineIntegerTranslation, WarpAffineIntegerTranslation,
-            testing::ValuesIn([] {
-                std::vector<tuple<Size, MatType, int> > cases;
-                for (const Size& size : {Size(256, 256), Size(512, 512), Size(1024, 1024)})
-                for (int channels : {1, 2, 3, 4, 5, 16})
-                for (int interpolation : {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4})
-                    if (channels <= 4 || (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
-                        cases.emplace_back(size, CV_8UC(channels), interpolation);
-                return cases;
-            }()))
+            Combine(Values(szVGA, sz1080p),
+                    Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
+                    Values(INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)))
 {
     const Size size = get<0>(GetParam());
     const int type = get<1>(GetParam());

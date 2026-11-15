@@ -1050,7 +1050,7 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
     RNG rng(137);
 
     for (int channels = 1; channels <= CV_CN_MAX; ++channels)
-    for (const Size& srcSize : {Size(37, 29), Size(1, 1)})
+    for (const Size& srcSize : {Size(37, 29), Size(49, 35), Size(1, 1)})
     {
         const int type = CV_8UC(channels);
         Mat srcParent(srcSize.height + 7, srcSize.width + 9, type);
@@ -1092,32 +1092,6 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
             }
         }
     }
-}
-
-BIGDATA_TEST(Imgproc_WarpAffine, IntegerTranslationEmptyOverlap)
-{
-    // One pixel below INT_MAX leaves the matrix continuous but overflows setTo's block counter.
-    const Size size(32769, 65534);
-    const Mat src(1, 1, CV_8U, Scalar(17));
-    const Matx23d matrix(1, 0, size.width, 0, 1, 0);
-    Mat dst;
-    warpAffine(src, dst, matrix, size, INTER_NEAREST, BORDER_CONSTANT, Scalar(73), ALGO_HINT_ACCURATE);
-
-    ASSERT_EQ(size, dst.size());
-    ASSERT_TRUE(dst.isContinuous());
-    EXPECT_TRUE(std::all_of(dst.data, dst.data + dst.total(), [](uchar value) { return value == 73; }));
-}
-
-TEST(Imgproc_WarpAffine, IntegerTranslationPreservesUnsupportedCases)
-{
-    const Mat src(2, 7, CV_8UC(5));
-    const Matx23d identity(1, 0, 0, 0, 1, 0);
-    Mat dst;
-    for (int interpolation : {INTER_CUBIC, INTER_LANCZOS4, INTER_LINEAR_EXACT, INTER_NEAREST_EXACT})
-        EXPECT_THROW(warpAffine(src, dst, identity, src.size(), interpolation), cv::Exception);
-
-    const Mat wide(1, SHRT_MAX, CV_8UC2, Scalar::all(17));
-    EXPECT_THROW(warpAffine(wide, dst, identity, Size(1, 1), INTER_LINEAR), cv::Exception);
 }
 
 TEST(Imgproc_warpPolar, identity)

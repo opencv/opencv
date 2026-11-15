@@ -2294,41 +2294,40 @@ static bool warpAffineIntegerTranslation(const Mat& src, Mat& dst, const double 
                           dst.cols - 1 - shift.x > SHRT_MAX || dst.rows - 1 - shift.y > SHRT_MAX))
         return false;
 
-    // Mat::setTo counts the pixels of a contiguous destination in an int.
-    if (channels > 4 && dst.total() > INT_MAX)
-        return false;
-
     const Rect overlap = Rect(shift, src.size()) & Rect(Point(), dst.size());
-    uchar values[4];
-    scalarToRawData(borderValue, values, CV_8UC4);
-    if (channels <= 4)
+    const size_t pixelBytes = src.elemSize();
+    const size_t rowBytes = dst.cols * pixelBytes;
+    const size_t leftBytes = overlap.x * pixelBytes;
+    const size_t copyBytes = overlap.width * pixelBytes;
+    const size_t rightBytes = rowBytes - leftBytes - copyBytes;
+    const size_t borderBytes = overlap.height < dst.rows ? rowBytes : std::max(leftBytes, rightBytes);
+    AutoBuffer<uchar> borderRow(borderBytes);
+    if (borderBytes != 0)
     {
-        const Scalar fill(values[0], values[1], values[2], values[3]);
-        if (overlap.empty())
-            dst = fill;  // Scalar assignment uses size_t for the fill size.
-        else
-            copyMakeBorder(src(overlap - shift), dst, overlap.y, dst.rows - overlap.br().y,
-                           overlap.x, dst.cols - overlap.br().x, BORDER_CONSTANT | BORDER_ISOLATED, fill);
-        return true;
+        // remap repeats the four border components across the channels.
+        scalarToRawData(borderValue, borderRow.data(), CV_8UC(std::min(channels, 4)), channels);
+        for (size_t filled = pixelBytes; filled < borderBytes; filled *= 2)
+            memcpy(borderRow.data() + filled, borderRow.data(), std::min(filled, borderBytes - filled));
     }
 
-    // remap repeats the four border components across the channels.
-    uchar pixel[CV_CN_MAX];
-    for (int channel = 0; channel < channels; ++channel)
-        pixel[channel] = values[channel % 4];
-    const Mat fill(1, channels, CV_8U, pixel);
-
-    if (overlap.empty())
-        dst.setTo(fill);
-    else
-    {
-        src(overlap - shift).copyTo(dst(overlap));
-        dst.rowRange(0, overlap.y).setTo(fill);
-        dst.rowRange(overlap.br().y, dst.rows).setTo(fill);
-        Mat middle = dst.rowRange(overlap.y, overlap.br().y);
-        middle.colRange(0, overlap.x).setTo(fill);
-        middle.colRange(overlap.br().x, dst.cols).setTo(fill);
-    }
+    const size_t srcOffset = overlap.empty() ? 0 : (overlap.x - shift.x) * pixelBytes;
+    const int bottom = overlap.y + overlap.height;
+    parallel_for_(Range(0, dst.rows), [&](const Range& range) {
+        for (int y = range.start; y < range.end; ++y)
+        {
+            uchar* out = dst.ptr(y);
+            if (y < overlap.y || y >= bottom)
+            {
+                memcpy(out, borderRow.data(), rowBytes);
+                continue;
+            }
+            if (leftBytes != 0)
+                memcpy(out, borderRow.data(), leftBytes);
+            memcpy(out + leftBytes, src.ptr(y - shift.y) + srcOffset, copyBytes);
+            if (rightBytes != 0)
+                memcpy(out + leftBytes + copyBytes, borderRow.data(), rightBytes);
+        }
+    }, dst.total() / (double)(1 << 16));
     return true;
 }
 
@@ -2343,10 +2342,6 @@ static void warpAffine(int src_type,
 
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
-
-    if (warpAffineIntegerTranslation(src, dst, M, interpolation, borderType,
-                                     Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3])))
-        return;
 
     if (interpolation == INTER_NEAREST) {
         switch (src_type) {
@@ -2603,7 +2598,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         M[2] = b1; M[5] = b2;
     }
 
-    if (interpolation == INTER_CUBIC && warpAffineIntegerTranslation(src, dst, M, interpolation, borderType, borderValue))
+    if (warpAffineIntegerTranslation(src, dst, M, interpolation, borderType, borderValue))
         return;
 
     if (genericWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
