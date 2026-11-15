@@ -3211,56 +3211,6 @@ private:
     cv::Mutex* histogramLock_;
 };
 
-namespace cv {
-    void equalizeHistLut_dispatch( const uchar* src, uchar* dst, int len, const uchar* lut );
-}
-
-class EqualizeHistLut_Invoker : public cv::ParallelLoopBody
-{
-public:
-    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, uchar* lut )
-        : src_(src),
-          dst_(dst),
-          lut_(lut)
-    { }
-
-    void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
-    {
-        const size_t sstep = src_.step;
-        const size_t dstep = dst_.step;
-
-        int width = src_.cols;
-        int height = rowRange.end - rowRange.start;
-        const uchar* lut = lut_;
-
-        if (src_.isContinuous() && dst_.isContinuous())
-        {
-            width *= height;
-            height = 1;
-        }
-
-        const uchar* sptr = src_.ptr<uchar>(rowRange.start);
-        uchar* dptr = dst_.ptr<uchar>(rowRange.start);
-
-        for (; height--; sptr += sstep, dptr += dstep)
-        {
-            cv::equalizeHistLut_dispatch(sptr, dptr, width, lut);
-        }
-    }
-
-    static bool isWorthParallel( const cv::Mat& src )
-    {
-        return ( src.total() >= 640*480 );
-    }
-
-private:
-    EqualizeHistLut_Invoker& operator=(const EqualizeHistLut_Invoker&);
-
-    cv::Mat& src_;
-    cv::Mat& dst_;
-    uchar* lut_;
-};
-
 CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
 {
     cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
@@ -3343,10 +3293,9 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
 
     EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     cv::Range heightRange(0, src.rows);
-    const double nstripes = std::max(1.0, std::min((double)src.rows, (double)src.total() / (1 << 16)));
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, calcBody, nstripes);
+        parallel_for_(heightRange, calcBody, src.total()/(double)(1<<16));
     else
         calcBody(heightRange);
 
@@ -3369,12 +3318,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
         lut_u8[i] = saturate_cast<uchar>(sum * scale);
     }
 
-    EqualizeHistLut_Invoker lutBody(src, dst, lut_u8);
-
-    if(EqualizeHistLut_Invoker::isWorthParallel(src))
-        parallel_for_(heightRange, lutBody, nstripes);
-    else
-        lutBody(heightRange);
+    LUT(src, Mat(1, hist_sz, CV_8U, lut_u8), dst);
 }
 
 #if 0
