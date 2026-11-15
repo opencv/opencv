@@ -561,7 +561,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   const int x = int(xf);
   const int y = int(yf);
   const int& imagecols = image.cols;
-  const int imagestep = (int)image.step;
+  const ptrdiff_t imagestep = (ptrdiff_t)image.step;
 
   // get the sigma:
   const float sigma_half = briskPoint.sigma;
