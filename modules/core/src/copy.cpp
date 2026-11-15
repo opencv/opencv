@@ -916,6 +916,28 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
         return;
     }
     CV_Assert( (int64_t)ssize.height * ny <= INT_MAX && (int64_t)ssize.width * nx <= INT_MAX );
+
+    // A 1D Mat repeats into a longer 1D Mat (ny*nx copies concatenated),
+    // mirroring the flip handler's contract of keeping 1D inputs 1D.
+    if( _src.dims() == 1 )
+    {
+        CV_Assert( ssize.height == 1 );
+        int total = ssize.width * ny * nx;
+        _dst.create(1, &total, _src.type());
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        int esz = (int)src.elemSize();
+        int srcWidthBytes = ssize.width * esz;
+        int copyBytes = srcWidthBytes * nx;
+        uchar* d = dst.ptr();
+        const uchar* sptr = src.ptr();
+        for( int y = 0; y < ny; y++ )
+        {
+            for( int x = 0; x < nx; x++ )
+                memcpy( d + (y * nx + x) * srcWidthBytes, sptr, srcWidthBytes );
+        }
+        return;
+    }
+
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
 #if !defined __APPLE__
