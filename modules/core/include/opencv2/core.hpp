@@ -487,7 +487,9 @@ The function LUT fills the output array with values from the look-up table. Indi
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \forkthree{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\) or \(\texttt{CV_16U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}{32768}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\)}\f]
+\f[d =  \forkthree{0}{if \(\texttt{src(I)} \ge 0\)}{256}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\) and \(\texttt{src(I)} < 0\)}{65536}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\) and \(\texttt{src(I)} < 0\)}\f]
+In other words, CV_8S and CV_16S values are read as the unsigned numbers with the same bits, so
+negative values index the upper half of the table (for example, -1 maps to entry 255 for CV_8S).
 @param src input array of 8-bit or 16-bit integer elements.
 @param lut look-up table of 256 elements (if src has depth CV_8U or CV_8S) or 65536 elements(if src has depth CV_16U or CV_16S); in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
@@ -1624,7 +1626,7 @@ equivalent matrix expressions:
 @endcode
 @param src1 first input array or a scalar; when it is an array, it must have a single channel.
 @param src2 second input array or a scalar; when it is an array, it must have a single channel.
-@param dst output array of type ref CV_8U that has the same size and the same number of channels as
+@param dst output array of type CV_8U that has the same size and the same number of channels as
     the input arrays.
 @param cmpop a flag, that specifies correspondence between the arrays (cv::CmpTypes)
 @sa checkRange, min, max, threshold
