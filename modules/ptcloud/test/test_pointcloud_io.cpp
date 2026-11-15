@@ -375,4 +375,37 @@ TEST(PointCloud, LoadObjFaceExtraSlashFields)
     std::remove(path.c_str());
 }
 
+TEST(PointCloud, SavePlyAttributeCountMismatch)
+{
+    // OBJ keeps "vn" and per-vertex colors independent of "v",
+    // PLY needs one normal and one color per vertex
+    std::string obj_path = tempfile("attr_mismatch.obj");
+    std::ofstream file(obj_path, std::ios::binary);
+    file << "v 0 0 0 1 0 0\nv 1 0 0\nv 0 1 0\nv 1 1 0\nvn 0 0 1\n";
+    file.close();
+
+    std::vector<cv::Point3f> points, normals, rgb;
+    cv::loadPointCloud(obj_path, points, normals, rgb);
+    ASSERT_EQ(points.size(), size_t(4));
+    ASSERT_EQ(normals.size(), size_t(1));
+    ASSERT_EQ(rgb.size(), size_t(1));
+
+    std::vector<cv::Point3f> no_normals;
+    std::string ply_path = tempfile("attr_mismatch.ply");
+    for (int i = 0; i < 2; i++)
+    {
+        if (i == 0)
+            cv::savePointCloud(ply_path, points, normals);
+        else
+            cv::savePointCloud(ply_path, points, no_normals, rgb);
+
+        std::ifstream f(ply_path.c_str());
+        EXPECT_FALSE(f.good())
+            << "savePointCloud() wrote a PLY file with mismatched attribute counts: " << ply_path;
+        f.close();
+        std::remove(ply_path.c_str());
+    }
+    std::remove(obj_path.c_str());
+}
+
 }} /* namespace opencv_test */
