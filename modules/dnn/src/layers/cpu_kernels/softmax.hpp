@@ -17,7 +17,8 @@
 
 namespace cv { namespace dnn {
 
-void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale = 1.f);
+void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale = 1.f,
+             bool logSoftmax = false);
 
 void softmax(Mat &dst, const Mat &src, int axis);
 
