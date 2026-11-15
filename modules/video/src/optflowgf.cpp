@@ -216,7 +216,7 @@ FarnebackPolyExpPyr( const Mat& src0, Vector<Mat>& pyr, int maxlevel, int n, dou
 
 
 static void
-FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& matM, int _y0, int _y1 )
+FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& matM )
 {
     const int BORDER = 5;
     static const float border[BORDER] = {0.14f, 0.14f, 0.4472f, 0.4472f, 0.4472f};
@@ -227,7 +227,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
 
     matM.create(height, width, CV_32FC(5));
 
-    parallel_for_(Range(_y0, _y1), [&](const Range& range)
+    parallel_for_(Range(0, height), [&](const Range& range)
     {
         for( int y = range.start; y < range.end; y++ )
         {
@@ -311,7 +311,7 @@ FarnebackUpdateMatrices( const Mat& _R0, const Mat& _R1, const Mat& _flow, Mat& 
                 M[x*5+4] = r6*r2 + r5*r3; // h(2)
             }
         }
-    }, (_y1 - _y0)*width/(double)(1 << 16));
+    }, width*height/(double)(1 << 16));
 }
 
 
@@ -322,8 +322,6 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
 {
     int x, y, width = _flow.cols, height = _flow.rows;
     int m = block_size/2;
-    int y0 = 0, y1;
-    int min_update_stripe = std::max((1 << 10)/width, block_size);
     double scale = 1./(block_size*block_size);
 
     AutoBuffer<double> _vsum((width+m*2+2)*5);
@@ -397,14 +395,10 @@ FarnebackUpdateFlow_Blur( const Mat& _R0, const Mat& _R1,
             flow[x*2] = (float)((g11_*h2_-g12_*h1_)*idet);
             flow[x*2+1] = (float)((g22_*h1_-g12_*h2_)*idet);
         }
-
-        y1 = y == height - 1 ? height : y - block_size;
-        if( update_matrices && (y1 == height || y1 >= y0 + min_update_stripe) )
-        {
-            FarnebackUpdateMatrices( _R0, _R1, _flow, matM, y0, y1 );
-            y0 = y1;
-        }
     }
+
+    if( update_matrices )
+        FarnebackUpdateMatrices( _R0, _R1, _flow, matM );
 }
 
 
@@ -413,21 +407,15 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
                                   Mat& _flow, Mat& matM, int block_size,
                                   bool update_matrices )
 {
-    int x, y, i, width = _flow.cols, height = _flow.rows;
+    int width = _flow.cols, height = _flow.rows;
     int m = block_size/2;
-    int y0 = 0, y1;
-    int min_update_stripe = std::max((1 << 10)/width, block_size);
     double sigma = m*0.3, s = 1;
 
-    AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
     AutoBuffer<float> _kernel((m+1)*5 + 16);
-    AutoBuffer<const float*> _srow(m*2+1);
-    float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
     float* kernel = _kernel.data();
-    const float** srow = _srow.data();
     kernel[0] = (float)s;
 
-    for( i = 1; i <= m; i++ )
+    for( int i = 1; i <= m; i++ )
     {
         float t = (float)std::exp(-i*i/(2*sigma*sigma) );
         kernel[i] = t;
@@ -435,149 +423,153 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     }
 
     s = 1./s;
-    for( i = 0; i <= m; i++ )
+    for( int i = 0; i <= m; i++ )
         kernel[i] = (float)(kernel[i]*s);
 
 #if CV_SIMD128
     float* simd_kernel = alignPtr(kernel + m+1, 16);
     {
-        for( i = 0; i <= m; i++ )
+        for( int i = 0; i <= m; i++ )
             v_store(simd_kernel + i*4, v_setall_f32(kernel[i]));
     }
 #endif
 
-    // compute blur(G)*flow=blur(h)
-    for( y = 0; y < height; y++ )
+    parallel_for_(Range(0, height), [&](const Range& range)
     {
-        double g11, g12, g22, h1, h2;
-        float* flow = _flow.ptr<float>(y);
+        AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
+        AutoBuffer<const float*> _srow(m*2+1);
+        float *vsum = alignPtr(_vsum.data() + (m+1)*5, 16), *hsum = alignPtr(_hsum.data(), 16);
+        const float** srow = _srow.data();
+        int x, i;
 
-        // vertical blur
-        for( i = 0; i <= m; i++ )
+        for( int y = range.start; y < range.end; y++ )
         {
-            srow[m-i] = matM.ptr<float>(std::max(y-i,0));
-            srow[m+i] = matM.ptr<float>(std::min(y+i,height-1));
-        }
+            double g11, g12, g22, h1, h2;
+            float* flow = _flow.ptr<float>(y);
 
-        x = 0;
+            // vertical blur
+            for( i = 0; i <= m; i++ )
+            {
+                srow[m-i] = matM.ptr<float>(std::max(y-i,0));
+                srow[m+i] = matM.ptr<float>(std::min(y+i,height-1));
+            }
+
+            x = 0;
 #if CV_SIMD128
-        {
-            for( ; x <= width*5 - 16; x += 16 )
             {
-                const float *sptr0 = srow[m], *sptr1;
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0, s1, s2, s3;
-                s0 = v_mul(v_load(sptr0 + x), g4);
-                s1 = v_mul(v_load(sptr0 + x + 4), g4);
-                s2 = v_mul(v_load(sptr0 + x + 8), g4);
-                s3 = v_mul(v_load(sptr0 + x + 12), g4);
-
-                for( i = 1; i <= m; i++ )
+                for( ; x <= width*5 - 16; x += 16 )
                 {
-                    v_float32x4 x0, x1;
-                    sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = v_load(simd_kernel + i*4);
-                    x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
-                    x1 = v_add(v_load(sptr0 + x + 4), v_load(sptr1 + x + 4));
-                    s0 = v_muladd(x0, g4, s0);
-                    s1 = v_muladd(x1, g4, s1);
-                    x0 = v_add(v_load(sptr0 + x + 8), v_load(sptr1 + x + 8));
-                    x1 = v_add(v_load(sptr0 + x + 12), v_load(sptr1 + x + 12));
-                    s2 = v_muladd(x0, g4, s2);
-                    s3 = v_muladd(x1, g4, s3);
+                    const float *sptr0 = srow[m], *sptr1;
+                    v_float32x4 g4 = v_load(simd_kernel);
+                    v_float32x4 s0, s1, s2, s3;
+                    s0 = v_mul(v_load(sptr0 + x), g4);
+                    s1 = v_mul(v_load(sptr0 + x + 4), g4);
+                    s2 = v_mul(v_load(sptr0 + x + 8), g4);
+                    s3 = v_mul(v_load(sptr0 + x + 12), g4);
+
+                    for( i = 1; i <= m; i++ )
+                    {
+                        v_float32x4 x0, x1;
+                        sptr0 = srow[m+i], sptr1 = srow[m-i];
+                        g4 = v_load(simd_kernel + i*4);
+                        x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
+                        x1 = v_add(v_load(sptr0 + x + 4), v_load(sptr1 + x + 4));
+                        s0 = v_muladd(x0, g4, s0);
+                        s1 = v_muladd(x1, g4, s1);
+                        x0 = v_add(v_load(sptr0 + x + 8), v_load(sptr1 + x + 8));
+                        x1 = v_add(v_load(sptr0 + x + 12), v_load(sptr1 + x + 12));
+                        s2 = v_muladd(x0, g4, s2);
+                        s3 = v_muladd(x1, g4, s3);
+                    }
+
+                    v_store(vsum + x, s0);
+                    v_store(vsum + x + 4, s1);
+                    v_store(vsum + x + 8, s2);
+                    v_store(vsum + x + 12, s3);
                 }
 
-                v_store(vsum + x, s0);
-                v_store(vsum + x + 4, s1);
-                v_store(vsum + x + 8, s2);
-                v_store(vsum + x + 12, s3);
-            }
-
-            for( ; x <= width*5 - 4; x += 4 )
-            {
-                const float *sptr0 = srow[m], *sptr1;
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0 = v_mul(v_load(sptr0 + x), g4);
-
-                for( i = 1; i <= m; i++ )
+                for( ; x <= width*5 - 4; x += 4 )
                 {
-                    sptr0 = srow[m+i], sptr1 = srow[m-i];
-                    g4 = v_load(simd_kernel + i*4);
-                    v_float32x4 x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
-                    s0 = v_muladd(x0, g4, s0);
+                    const float *sptr0 = srow[m], *sptr1;
+                    v_float32x4 g4 = v_load(simd_kernel);
+                    v_float32x4 s0 = v_mul(v_load(sptr0 + x), g4);
+
+                    for( i = 1; i <= m; i++ )
+                    {
+                        sptr0 = srow[m+i], sptr1 = srow[m-i];
+                        g4 = v_load(simd_kernel + i*4);
+                        v_float32x4 x0 = v_add(v_load(sptr0 + x), v_load(sptr1 + x));
+                        s0 = v_muladd(x0, g4, s0);
+                    }
+                    v_store(vsum + x, s0);
                 }
-                v_store(vsum + x, s0);
             }
-        }
 #endif
-        for( ; x < width*5; x++ )
-        {
-            float s0 = srow[m][x]*kernel[0];
-            for( i = 1; i <= m; i++ )
-                s0 += (srow[m+i][x] + srow[m-i][x])*kernel[i];
-            vsum[x] = s0;
-        }
+            for( ; x < width*5; x++ )
+            {
+                float s0 = srow[m][x]*kernel[0];
+                for( i = 1; i <= m; i++ )
+                    s0 += (srow[m+i][x] + srow[m-i][x])*kernel[i];
+                vsum[x] = s0;
+            }
 
-        // update borders
-        for( x = 0; x < m*5; x++ )
-        {
-            vsum[-1-x] = vsum[4-x];
-            vsum[width*5+x] = vsum[width*5+x-5];
-        }
+            // update borders
+            for( x = 0; x < m*5; x++ )
+            {
+                vsum[-1-x] = vsum[4-x];
+                vsum[width*5+x] = vsum[width*5+x-5];
+            }
 
-        // horizontal blur
-        x = 0;
+            // horizontal blur
+            x = 0;
 #if CV_SIMD128
-        {
-            for( ; x <= width*5 - 8; x += 8 )
             {
-                v_float32x4 g4 = v_load(simd_kernel);
-                v_float32x4 s0 = v_mul(v_load(vsum + x), g4);
-                v_float32x4 s1 = v_mul(v_load(vsum + x + 4), g4);
-
-                for( i = 1; i <= m; i++ )
+                for( ; x <= width*5 - 8; x += 8 )
                 {
-                    g4 = v_load(simd_kernel + i*4);
-                    v_float32x4 x0 = v_add(v_load(vsum + x - i * 5), v_load(vsum + x + i * 5));
-                    v_float32x4 x1 = v_add(v_load(vsum + x - i * 5 + 4), v_load(vsum + x + i * 5 + 4));
-                    s0 = v_muladd(x0, g4, s0);
-                    s1 = v_muladd(x1, g4, s1);
-                }
+                    v_float32x4 g4 = v_load(simd_kernel);
+                    v_float32x4 s0 = v_mul(v_load(vsum + x), g4);
+                    v_float32x4 s1 = v_mul(v_load(vsum + x + 4), g4);
 
-                v_store(hsum + x, s0);
-                v_store(hsum + x + 4, s1);
+                    for( i = 1; i <= m; i++ )
+                    {
+                        g4 = v_load(simd_kernel + i*4);
+                        v_float32x4 x0 = v_add(v_load(vsum + x - i * 5), v_load(vsum + x + i * 5));
+                        v_float32x4 x1 = v_add(v_load(vsum + x - i * 5 + 4), v_load(vsum + x + i * 5 + 4));
+                        s0 = v_muladd(x0, g4, s0);
+                        s1 = v_muladd(x1, g4, s1);
+                    }
+
+                    v_store(hsum + x, s0);
+                    v_store(hsum + x + 4, s1);
+                }
+            }
+#endif
+            for( ; x < width*5; x++ )
+            {
+                float sum = vsum[x]*kernel[0];
+                for( i = 1; i <= m; i++ )
+                    sum += kernel[i]*(vsum[x - i*5] + vsum[x + i*5]);
+                hsum[x] = sum;
+            }
+
+            for( x = 0; x < width; x++ )
+            {
+                g11 = hsum[x*5];
+                g12 = hsum[x*5+1];
+                g22 = hsum[x*5+2];
+                h1 = hsum[x*5+3];
+                h2 = hsum[x*5+4];
+
+                double idet = 1./(g11*g22 - g12*g12 + 1e-3);
+
+                flow[x*2] = (float)((g11*h2-g12*h1)*idet);
+                flow[x*2+1] = (float)((g22*h1-g12*h2)*idet);
             }
         }
-#endif
-        for( ; x < width*5; x++ )
-        {
-            float sum = vsum[x]*kernel[0];
-            for( i = 1; i <= m; i++ )
-                sum += kernel[i]*(vsum[x - i*5] + vsum[x + i*5]);
-            hsum[x] = sum;
-        }
+    }, (double)width*height/(1 << 14));
 
-        for( x = 0; x < width; x++ )
-        {
-            g11 = hsum[x*5];
-            g12 = hsum[x*5+1];
-            g22 = hsum[x*5+2];
-            h1 = hsum[x*5+3];
-            h2 = hsum[x*5+4];
-
-            double idet = 1./(g11*g22 - g12*g12 + 1e-3);
-
-            flow[x*2] = (float)((g11*h2-g12*h1)*idet);
-            flow[x*2+1] = (float)((g22*h1-g12*h2)*idet);
-        }
-
-        y1 = y == height - 1 ? height : y - block_size;
-        if( update_matrices && (y1 == height || y1 >= y0 + min_update_stripe) )
-        {
-            FarnebackUpdateMatrices( _R0, _R1, _flow, matM, y0, y1 );
-            y0 = y1;
-        }
-    }
+    if( update_matrices )
+        FarnebackUpdateMatrices( _R0, _R1, _flow, matM );
 }
 
 }
@@ -1179,7 +1171,7 @@ void FarnebackOpticalFlowImpl::calc(InputArray _prev0, InputArray _next0,
             FarnebackPolyExp( I, R[i], polyN_, polySigma_ );
         }
 
-        FarnebackUpdateMatrices( R[0], R[1], flow, M, 0, flow.rows );
+        FarnebackUpdateMatrices( R[0], R[1], flow, M );
 
         for( i = 0; i < numIters_; i++ )
         {
