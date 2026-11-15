@@ -109,6 +109,29 @@ TEST_P(EstimateAffine2D, test3CollinearPoints)
     }
 }
 
+// A small, well-conditioned triangle far from the origin is not degenerate:
+// the degeneracy check must depend on the triangle itself, not on where it is.
+TEST_P(EstimateAffine2D, test3PointsLargeOffset)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+
+    Mat fpts(1, 3, CV_32FC2);
+    fpts.at<Point2f>(0) = Point2f(1e6f, 1e6f);
+    fpts.at<Point2f>(1) = Point2f(1e6f + 10.f, 1e6f);
+    fpts.at<Point2f>(2) = Point2f(1e6f, 1e6f + 10.f);
+
+    Mat tpts;
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method);
+
+    ASSERT_FALSE(aff_est.empty());
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+    EXPECT_EQ(countNonZero(inliers), 3);
+}
+
 TEST_P(EstimateAffine2D, testNPoints)
 {
     // try more transformations

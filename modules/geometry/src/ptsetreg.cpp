@@ -653,8 +653,11 @@ public:
         // denom is twice the signed area of the (x1,y1),(x2,y2),(x3,y3) triangle.
         // If the 3 points are (nearly) collinear, the affine transform is not
         // uniquely determined; reject instead of dividing by a near-zero value.
-        const double scale3 = fabs(x1) + fabs(y1) + fabs(x2) + fabs(y2) + fabs(x3) + fabs(y3);
-        if (fabs(denom) <= 10 * FLT_EPSILON * scale3 * scale3)
+        // The tolerance is measured against the triangle's own edges, so it
+        // does not depend on where the points are in the plane.
+        const double len12 = fabs(x2-x1) + fabs(y2-y1);
+        const double len13 = fabs(x3-x1) + fabs(y3-y1);
+        if (fabs(denom) <= 10 * FLT_EPSILON * len12 * len13)
             return 0;
         double d = 1. / denom;
         M[0] = d * ( X1*(y2-y3) + X2*(y3-y1) + X3*(y1-y2) );
@@ -752,10 +755,11 @@ public:
         const double sq_dist = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
         // sq_dist is the squared distance between the two points. If they are
         // (nearly) the same point, the similarity transform is not uniquely
-        // determined; reject instead of dividing by a near-zero value.
-        const double scale2 = fabs(x1) + fabs(y1) + fabs(x2) + fabs(y2);
-        if (sq_dist <= 10 * FLT_EPSILON * scale2 * scale2)
-            return 0;
+        // Only coincident points leave the transform undetermined; any other
+        // separation, however small, still determines it.
+        if (sq_dist == 0)
+            return 0;        // determined; reject instead of dividing by a near-zero value.
+
         double d = 1./sq_dist;
         // solution vector
         double S0 = d * ( (X1-X2)*(x1-x2) + (Y1-Y2)*(y1-y2) );

@@ -118,6 +118,28 @@ TEST_P(EstimateAffinePartial2D, test2DuplicatePoints)
     }
 }
 
+// Two distinct points far from the origin are not degenerate: only coincident
+// points leave the similarity transform undetermined.
+TEST_P(EstimateAffinePartial2D, test2PointsLargeOffset)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+
+    Mat fpts(1, 2, CV_32FC2);
+    fpts.at<Point2f>(0) = Point2f(1e6f, 1e6f);
+    fpts.at<Point2f>(1) = Point2f(1e6f + 10.f, 1e6f);
+
+    Mat tpts;
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method);
+
+    ASSERT_FALSE(aff_est.empty());
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+    EXPECT_EQ(countNonZero(inliers), 2);
+}
+
 TEST_P(EstimateAffinePartial2D, testNPoints)
 {
     // try more transformations
