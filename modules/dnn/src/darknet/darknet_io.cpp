@@ -71,6 +71,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <istream>
 #include <sstream>
 
 #include "darknet_io.hpp"
@@ -670,8 +671,8 @@ namespace cv {
                 for (std::string str; std::getline(ss, str, ',');) {
                     std::stringstream line(str);
                     T val = T();
-                    line >> val;
-                    if (!line)
+                    // Require the whole token: "1x" must not be read as 1.
+                    if (!(line >> val) || !(line >> std::ws).eof())
                         CV_Error(cv::Error::StsParseError, "Invalid numeric value in list: " + src);
                     dst.push_back(val);
                 }

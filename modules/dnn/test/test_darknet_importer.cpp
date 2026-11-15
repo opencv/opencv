@@ -1280,6 +1280,135 @@ TEST(Test_Darknet, readNetFromDarknet_rejects_malformed_cfg_and_truncated_weight
         cv::Exception);
 }
 
+static std::string darknetRouteCfg(const std::string& layers)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[maxpool]\nsize=1\nstride=1\n"
+           "[route]\nlayers=" + layers + "\n";
+}
+
+// The importer parses the anchors of the last cfg section once up front and then again
+// while building the region or yolo layer. A trailing layer makes the second parse the only one.
+static std::string darknetTrailingLayer(bool trailing)
+{
+    return trailing ? "[maxpool]\nsize=1\nstride=1\n" : "";
+}
+
+static std::string darknetRegionCfg(const std::string& anchors, bool trailing)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
+           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\n" +
+           darknetTrailingLayer(trailing);
+}
+
+static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask, bool trailing)
+{
+    return "[net]\nwidth=1\nheight=1\nchannels=1\n"
+           "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
+           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + "\nnum=1\nclasses=1\n" +
+           darknetTrailingLayer(trailing);
+}
+
+static std::vector<char> darknetZeroWeights(size_t floats)
+{
+    std::vector<char> weights(20 + floats * sizeof(float), 0);
+    const int32_t minor = 2;
+    std::memcpy(weights.data() + 4, &minor, sizeof(int32_t));
+    return weights;
+}
+
+static void expectDarknetNumericListRejected(const std::string& cfg)
+{
+    try
+    {
+        const std::vector<char> weights = darknetZeroWeights(12);
+        readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+        FAIL() << "Numeric list with trailing characters was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(Error::StsParseError, e.code);
+    }
+}
+
+static void expectDarknetNumericListAccepted(const std::string& cfg)
+{
+    const std::vector<char> weights = darknetZeroWeights(12);
+    Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
+    EXPECT_FALSE(net.empty());
+}
+
+TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
+{
+    // A token must be consumed entirely: "1x" has the numeric prefix 1.
+    const std::string prefixCfg = darknetRouteCfg("-1x");
+    EXPECT_THROW(readNetFromDarknet(prefixCfg.data(), prefixCfg.size()), cv::Exception);
+
+    const char* route[] = {"-1x", "-1,-2x", "0x1", "1.5", "-1,0.5"};
+    for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + route[i]);
+        expectDarknetNumericListRejected(darknetRouteCfg(route[i]));
+    }
+
+    const char* anchors[] = {"1x", "1,1x", "1.5.2,1", "1,1.5abc"};
+    for (int trailing = 0; trailing < 2; ++trailing)
+    {
+        for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
+        {
+            SCOPED_TRACE(std::string("anchors=") + anchors[i] + (trailing ? " with trailing layer" : ""));
+            expectDarknetNumericListRejected(darknetRegionCfg(anchors[i], trailing != 0));
+            expectDarknetNumericListRejected(darknetYoloCfg(anchors[i], "0", trailing != 0));
+        }
+    }
+
+    const char* mask[] = {"0x", "0.5", "0x1", "0,0x"};
+    for (int trailing = 0; trailing < 2; ++trailing)
+    {
+        for (size_t i = 0; i < sizeof(mask) / sizeof(mask[0]); ++i)
+        {
+            SCOPED_TRACE(std::string("mask=") + mask[i] + (trailing ? " with trailing layer" : ""));
+            expectDarknetNumericListRejected(darknetYoloCfg("1,1", mask[i], trailing != 0));
+        }
+    }
+}
+
+TEST(Test_Darknet, numeric_list_valid_values_control)
+{
+    // Whitespace inside values is removed by the cfg line reader before numeric
+    // parsing, so these controls differ from the rejected cases only in spelling.
+    const char* route[] = {"-1,-2", "-1, -2", " -1 , -2 \t", "-1,-2,"};
+    for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + route[i]);
+        const std::string cfg = darknetRouteCfg(route[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(3.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(4, out.dims);
+        EXPECT_EQ(2, out.size[1]);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[0], 1e-5f);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[1], 1e-5f);
+    }
+
+    const char* anchors[] = {"1,1", "1, 1", " 1.5 , 2e0 \t", "1e1,.5\r"};
+    for (int trailing = 0; trailing < 2; ++trailing)
+    {
+        for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
+        {
+            SCOPED_TRACE(std::string("anchors=") + anchors[i] + (trailing ? " with trailing layer" : ""));
+            expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i], trailing != 0));
+            expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t", trailing != 0));
+        }
+    }
+}
+
 typedef testing::TestWithParam<std::string> Test_Darknet_from;
 
 static std::string darknetFromCfg(const std::string& layer, const std::string& from)
