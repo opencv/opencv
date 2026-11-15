@@ -833,14 +833,25 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     if( op == REDUCE_AVG )
     {
         op = REDUCE_SUM;
-        // An average is summed first, so an integer destination needs an accumulator the row
-        // sum cannot overflow. CV_32S covers the 8-bit depths and is the long-standing choice
-        // for them. It does not cover the wider ones: a CV_16U row passes INT_MAX after 32768
-        // maximal elements, and no 16-bit or 32-bit source has a reduce kernel writing CV_32S,
-        // so promoting them to CV_32S threw "Unsupported combination" instead of averaging.
-        if( ddepth <= CV_32S )
+        // An average is summed before it is divided, so an integer destination is accumulated in
+        // a wider depth first. The destination depths are listed rather than compared: the depth
+        // enum is an identifier and not a width ordering, since CV_Bool, CV_64U, CV_64S and
+        // CV_32U were appended above CV_32S.
+        //
+        // The 8-bit sources keep CV_32S, as before. The wider ones have no CV_32S kernel at all
+        // - the table offers 16u32f, 16u64f, 16s32f, 16s64f and 32s64f only - so promoting them
+        // to CV_32S asked for a kernel that does not exist and threw "Unsupported combination"
+        // instead of averaging.
+        //
+        // This promotion does not make every integer average overflow-proof, and does not claim
+        // to: reduceR_/reduceC_ take the accumulator from Op::rtype, so the 8-bit kernels sum in
+        // int whatever the destination depth is, and a row of more than INT_MAX/255 maximal
+        // CV_8U elements still wraps. That is independent of the choice made here - REDUCE_SUM
+        // with dtype = CV_64F wraps identically - and needs the kernels themselves to change.
+        if( ddepth == CV_8U || ddepth == CV_8S || ddepth == CV_16U ||
+            ddepth == CV_16S || ddepth == CV_32S )
         {
-            int adepth = sdepth <= CV_8S ? CV_32S : CV_64F;
+            int adepth = (sdepth == CV_8U || sdepth == CV_8S) ? CV_32S : CV_64F;
             temp.create(dst.rows, dst.cols, CV_MAKETYPE(adepth, cn));
             ddepth = adepth;
         }
