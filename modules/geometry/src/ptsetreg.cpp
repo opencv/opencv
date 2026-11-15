@@ -753,13 +753,10 @@ public:
         we solve that analytically
         */
         const double sq_dist = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
-        // sq_dist is the squared distance between the two points. If they are
-        // (nearly) the same point, the similarity transform is not uniquely
         // Only coincident points leave the transform undetermined; any other
         // separation, however small, still determines it.
         if (sq_dist == 0)
-            return 0;        // determined; reject instead of dividing by a near-zero value.
-
+            return 0;
         double d = 1./sq_dist;
         // solution vector
         double S0 = d * ( (X1-X2)*(x1-x2) + (Y1-Y2)*(y1-y2) );
