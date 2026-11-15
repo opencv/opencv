@@ -655,7 +655,6 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     double k[14] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0}, M[9]={0,0,0,0,0,0,0,0,0};
     Mat distCoeffs(distCoeffs0.rows, distCoeffs0.cols, CV_MAKETYPE(CV_64F,distCoeffs0.channels()), k);
     Mat cameraMatrix(3,3,CV_64F,M);
-    Point2f scenter((float)cameraMatrix.at<double>(0,2), (float)cameraMatrix.at<double>(1,2));
     Point2f dcenter((destImageWidth-1)*0.5f, 0.f);
     float xmin = FLT_MAX, xmax = -FLT_MAX, ymin = FLT_MAX, ymax = -FLT_MAX;
     int N = 9;
@@ -690,8 +689,8 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
     dcenter.y = (dsize.height - 1)*0.5f;
 
     Mat mapxy(dsize, CV_32FC2);
-    double k1 = k[0], k2 = k[1], k3 = k[2], p1 = k[3], p2 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
-    double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = scenter.x, cy = scenter.y;
+    double k1 = k[0], k2 = k[1], p1 = k[2], p2 = k[3], k3 = k[4], k4 = k[5], k5 = k[6], k6 = k[7], s1 = k[8], s2 = k[9], s3 = k[10], s4 = k[11];
+    double fx = cameraMatrix.at<double>(0,0), fy = cameraMatrix.at<double>(1,1), cx = cameraMatrix.at<double>(0,2), cy = cameraMatrix.at<double>(1,2);
     Matx33d matTilt;
     detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt);
 
@@ -709,7 +708,7 @@ float initWideAngleProjMap(InputArray _cameraMatrix0, InputArray _distCoeffs0,
             }
             double x2 = q.x*q.x, y2 = q.y*q.y;
             double r2 = x2 + y2, _2xy = 2*q.x*q.y;
-            double kr = 1 + ((k3*r2 + k2)*r2 + k1)*r2/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
+            double kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2);
             double xd = (q.x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+ s2*r2*r2);
             double yd = (q.y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+ s4*r2*r2);
             cv::Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
