@@ -449,6 +449,15 @@ TEST(WeightedHoughLines, diagonal)
     EXPECT_NEAR(CV_PI/4, lines[0][1], CV_PI/180 + 1e-6);
     EXPECT_NEAR(CV_PI*3/4, lines[1][1], CV_PI/180 + 1e-6);
 }
+class ScopedThreadsGuard
+{
+public:
+    ScopedThreadsGuard() : old_threads(getNumThreads()) {}
+    ~ScopedThreadsGuard() { setNumThreads(old_threads); }
+    void set(int n) { setNumThreads(n); }
+private:
+    int old_threads;
+};
 
 TEST(GeneralizedHoughGuil, parallel_matches_serial)
 {
@@ -468,7 +477,7 @@ TEST(GeneralizedHoughGuil, parallel_matches_serial)
         line(image, p1, Point(p1.x + cvRound(12 * cos(a)), p1.y + cvRound(12 * sin(a))),
              Scalar(rng.uniform(120, 256)), 1);
     }
-    Mat rot = getRotationMatrix2D(Point2f(48, 48), 10, 1.0);
+    Mat rot = getRotationMatrix2D(Point2f(48, 48), -10, 1.0);
     rot.at<double>(0, 2) += sz.width / 2 - 48;
     rot.at<double>(1, 2) += sz.height / 2 - 48;
     Mat placed;
@@ -487,22 +496,31 @@ TEST(GeneralizedHoughGuil, parallel_matches_serial)
     guil->setPosThresh(20);
     guil->setTemplate(templ);
 
-    const int prev_nthreads = getNumThreads();
-    const int nthreads = std::max(2, prev_nthreads);
     std::vector<Vec4f> pos1, posN;
     std::vector<Vec3i> votes1, votesN;
-    setNumThreads(1);
-    guil->detect(image, pos1, votes1);
-    setNumThreads(nthreads);
-    if (getNumThreads() < 2)
     {
-        setNumThreads(prev_nthreads);
-        throw SkipTestException("Parallel backend does not provide more than one thread");
+        ScopedThreadsGuard threadsGuard;
+        const int nthreads = std::max(2, getNumThreads());
+        threadsGuard.set(1);
+        guil->detect(image, pos1, votes1);
+        threadsGuard.set(nthreads);
+        if (getNumThreads() < 2)
+            throw SkipTestException("Parallel backend does not provide more than one thread");
+        guil->detect(image, posN, votesN);
     }
-    guil->detect(image, posN, votesN);
-    setNumThreads(prev_nthreads);
 
     ASSERT_FALSE(pos1.empty());
+
+    bool found = false;
+    for (size_t i = 0; i < pos1.size(); i++)
+    {
+        found = found || (std::abs(pos1[i][0] - sz.width / 2.f) <= 3.f &&
+                          std::abs(pos1[i][1] - sz.height / 2.f) <= 3.f &&
+                          std::abs(pos1[i][2] - 1.f) <= 0.06f &&
+                          std::abs(pos1[i][3] - 10.f) <= 5.f);
+    }
+    EXPECT_TRUE(found) << "the rotated template was not detected at the image centre";
+
     ASSERT_EQ(pos1.size(), posN.size());
     ASSERT_EQ(votes1.size(), votesN.size());
     for (size_t i = 0; i < pos1.size(); i++)

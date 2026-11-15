@@ -133,7 +133,7 @@ PERF_TEST_P(Size_Density, GeneralizedHoughGuil,
     rectangle(templ, Point(40, 60), Point(70, 72), Scalar(30), FILLED);
 
     Mat image = Mat::zeros(sz, CV_8UC1);
-    RNG rng(0x1234);
+    RNG& rng = theRNG();
     int nseg = (int)((double)sz.area() * density / 10000);
     for (int i = 0; i < nseg; i++)
     {
@@ -142,7 +142,7 @@ PERF_TEST_P(Size_Density, GeneralizedHoughGuil,
         Point p2(p1.x + cvRound(12 * cos(a)), p1.y + cvRound(12 * sin(a)));
         line(image, p1, p2, Scalar(rng.uniform(120, 256)), 1);
     }
-    Mat rot = getRotationMatrix2D(Point2f(48, 48), 10, 1.0);
+    Mat rot = getRotationMatrix2D(Point2f(48, 48), -10, 1.0);
     rot.at<double>(0, 2) += sz.width / 2 - 48;
     rot.at<double>(1, 2) += sz.height / 2 - 48;
     Mat placed;
