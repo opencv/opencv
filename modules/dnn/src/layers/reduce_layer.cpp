@@ -80,17 +80,6 @@ public:
             auto norm_axis = normalize_axis(axes[i], shape_input);
             axes[i] = norm_axis;
         }
-
-        bool do_nothing = true;
-        for (auto axis : axes) {
-            if (shape_input[axis] != 1) {
-                do_nothing = false;
-            }
-        }
-        if (do_nothing) {
-            axes.clear();
-            noop_with_empty_axes = true;
-        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
