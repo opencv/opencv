@@ -807,9 +807,11 @@ void Mat::forEach_impl(const Functor& operation) {
 
             _Tp* pixel = &(mat->template at<_Tp>(idx));
             const _Tp* const pixel_end = pixel + COLS;
+            // a 1D Mat has a single index, so count along idx[0]
+            const int col_idx = mat->dims == 1 ? 0 : 1;
             while(pixel < pixel_end) {
                 op(*pixel++, static_cast<const int*>(idx));
-                idx[1]++;
+                idx[col_idx]++;
             }
         }
         PixelOperationWrapper& operator=(const PixelOperationWrapper &) {
