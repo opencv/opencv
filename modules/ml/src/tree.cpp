@@ -1411,6 +1411,8 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
 
         for(;;)
         {
+            // a root or child index loaded from a model must name an existing node
+            CV_Assert( 0 <= nidx && (size_t)nidx < nodes.size() );
             prev = nidx;
             const Node& node = nodes[nidx];
             if( node.split < 0 )
@@ -1418,6 +1420,7 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
             const Split& split = splits[node.split];
             int vi = split.varIdx;
             int ci = cvidx ? cvidx[vi] : vi;
+            CV_Assert( 0 <= ci && (size_t)ci < sample.total() );
             float val = psample[ci*sstep];
             if( val == MISSED_VAL )
             {
@@ -1768,9 +1771,11 @@ void DTreesImpl::readParams( const FileNode& fn )
         if (!varIdx.empty())
         {
             n = (int)varIdx.size();
+            CV_CheckLE(n, (int)varType.size(), "ML/DTrees: 'var_idx' has more entries than 'var_type'");
             for (; i < n; ++i)
             {
                 int var = varIdx[i];
+                CV_Assert(0 <= var && var < varAll);
                 extendedTypes[var] = varType[i];
             }
         }
@@ -1801,6 +1806,7 @@ void DTreesImpl::readParams( const FileNode& fn )
             Vec2i newOffsets(0, 0);
             if (varType[i] == VAR_CATEGORICAL) // only categorical vars are represented in catMap
             {
+                CV_Assert(j < counts.size());
                 newOffsets[0] = curShift;
                 curShift += counts[j];
                 newOffsets[1] = curShift;
@@ -1820,6 +1826,15 @@ void DTreesImpl::readParams( const FileNode& fn )
         fn["cat_ofs"] >> catOfs;
         fn["missing_subst"] >> missingSubst;
         fn["class_labels"] >> classLabels;
+    }
+
+    // predict() looks categorical values up in catMap through these offsets
+    for (size_t vi = 0; vi < catOfs.size(); ++vi)
+    {
+        const Vec2i& ofs = catOfs[vi];
+        CV_Assert(0 <= ofs[0] && ofs[0] <= ofs[1] && ofs[1] <= (int)catMap.size());
+        // a categorical variable has at least one category value; an empty range is only valid for an ordered one
+        CV_Assert(vi >= varType.size() || varType[vi] != VAR_CATEGORICAL || ofs[0] < ofs[1]);
     }
 
     // init var mapping for node reading (var indexes or varIdx indexes)
@@ -1909,7 +1924,10 @@ int DTreesImpl::readNode( const FileNode& fn )
     node.value = (double)fn["value"];
 
     if( _isClassifier )
+    {
         node.classIdx = (int)fn["norm_class_idx"];
+        CV_Assert( 0 <= node.classIdx && node.classIdx < (int)classLabels.size() );
+    }
 
     FileNode sfn = fn["splits"];
     if( !sfn.empty() )
@@ -1936,10 +1954,14 @@ int DTreesImpl::readNode( const FileNode& fn )
 int DTreesImpl::readTree( const FileNode& fn )
 {
     int i, n = (int)fn.size(), root = -1, pidx = -1;
+    const size_t firstNode = nodes.size();
     FileNodeIterator it = fn.begin();
 
     for( i = 0; i < n; i++, ++it )
     {
+        // the nodes are stored depth first: once every split has both children the tree is
+        // complete, and a further node would silently replace the root
+        CV_Assert( i == 0 || pidx >= 0 );
         int nidx = readNode(*it);
         if( nidx < 0 )
             break;
@@ -1963,6 +1985,19 @@ int DTreesImpl::readTree( const FileNode& fn )
                 pidx = nodes[pidx].parent;
         }
     }
+
+    // predictTrees() follows left/right of every split node, so each of them needs both children
+    // (a list that ends early leaves the open splits with -1)
+    CV_Assert( root >= 0 );
+    for( size_t k = firstNode; k < nodes.size(); k++ )
+    {
+        const Node& nd = nodes[k];
+        if( nd.split < 0 )
+            continue;
+        CV_Assert( 0 <= nd.left && (size_t)nd.left < nodes.size() );
+        CV_Assert( 0 <= nd.right && (size_t)nd.right < nodes.size() );
+    }
+
     roots.push_back(root);
     return root;
 }
