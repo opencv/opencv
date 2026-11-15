@@ -133,7 +133,4 @@ For this the cv::imwrite function is called that has the file path and the cv::M
 
 @add_toggle_python
 @snippet samples/python/tutorial_code/introduction/display_image/display_image.py imsave
-**Note:** The `cv::waitKey(0)` function will block the Python interpreter until a key is pressed. If you close the window using the 'X' button instead, the Python kernel may freeze. For a more robust GUI loop, refer to the following code snippet:
-
-@snippet samples/python/tutorial_code/introduction/display_image/display_image.py gui_loop
-@end_toggle
+**Note:** The `cv::waitKey(0)` function will block the Python interpreter indefinitely. The code above uses a timed loop (`cv::waitKey(100)`) to prevent the kernel from freezing, allowing the user to close the window via the 'X' button.
