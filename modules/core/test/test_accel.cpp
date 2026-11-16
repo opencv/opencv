@@ -178,7 +178,7 @@ private:
 class EmuBackend CV_FINAL : public accel::Backend
 {
 public:
-    EmuBackend() : core_(this), nextFake_((uintptr_t)0xDE0000000000ull)
+    EmuBackend() : core_(this), nextFake_((uintptr_t)0xDE << (sizeof(uintptr_t) * 8 - 8))
     {
         for (int i = 0; i < EMU_DEVICES; i++)
         {
@@ -719,8 +719,9 @@ TEST_F(Core_Accel, region_output_on_the_device_is_written_in_place)
     cv::flip(u, big(Rect(4, 5, 8, 6)), 1);
     EXPECT_EQ(1, emu().opsRun_[EMU_DISCRETE].load());
     EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(big));
-    Mat expected = Mat::zeros(20, 20, CV_8UC2);
-    cv::flip(src, expected(Rect(4, 5, 8, 6)), 1);
+    Mat expected = Mat::zeros(20, 20, CV_8UC2), flipped;
+    cv::flip(src, flipped, 1);
+    flipped.copyTo(expected(Rect(4, 5, 8, 6)));
     EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
 }
 
