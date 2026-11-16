@@ -106,7 +106,12 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     IndexParams params;
     params["algorithm"] = header.index_type;
     NNIndex<Distance>* nnIndex = create_index_by_type<Distance>(dataset, params, distance);
-    nnIndex->loadIndex(fin);
+    try {
+        nnIndex->loadIndex(fin);
+    } catch (...) {
+        delete nnIndex;
+        throw;
+    }
 
     return nnIndex;
 }

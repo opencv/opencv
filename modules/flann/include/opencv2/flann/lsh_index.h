@@ -38,7 +38,9 @@
 //! @cond IGNORED
 
 #include <algorithm>
+#include <climits>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <vector>
 
@@ -102,7 +104,11 @@ public:
         multi_probe_level_ = get_param(index_params_,"multi_probe_level",2);
 
         feature_size_ = (unsigned)dataset_.cols;
-        fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
+        const size_t key_size_upper_bound = (std::min)(sizeof(lsh::BucketKey) * CHAR_BIT + 1, sizeof(size_t) * CHAR_BIT);
+        if (key_size_ > 0 && (size_t)key_size_ < key_size_upper_bound && multi_probe_level_ >= 0)
+        {
+            fill_xor_mask(0, key_size_, static_cast<unsigned int>((std::min)(multi_probe_level_, key_size_)), xor_masks_);
+        }
     }
 
 
@@ -143,7 +149,48 @@ public:
         load_value(stream, table_number_);
         load_value(stream, key_size_);
         load_value(stream, multi_probe_level_);
-        load_value(stream, dataset_);
+
+        const size_t key_size_upper_bound = (std::min)(sizeof(lsh::BucketKey) * CHAR_BIT + 1, sizeof(size_t) * CHAR_BIT);
+        const size_t elem_bits = sizeof(ElementType) * CHAR_BIT;
+        if (table_number_ <= 0 || key_size_ <= 0 ||
+            (size_t)key_size_ >= key_size_upper_bound ||
+            ((size_t)key_size_ + elem_bits - 1) / elem_bits > (size_t)feature_size_ ||
+            multi_probe_level_ < 0)
+        {
+            FLANN_THROW(cv::Error::StsParseError, "Invalid LSH index parameters in file");
+        }
+
+        // The index searches the features passed to load(), as the other index types do, so the copy of
+        // the dataset saved with the index is skipped. The file format does not change.
+        Matrix<ElementType> saved;
+        if (fread(&saved, sizeof(saved), 1, stream) != 1)
+            FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
+        if (saved.rows != dataset_.rows || saved.cols != dataset_.cols)
+            FLANN_THROW(cv::Error::StsBadArg, "The features do not match the saved LSH index");
+        if (saved.cols > 0 && saved.rows > (std::numeric_limits<size_t>::max)() / saved.cols)
+            FLANN_THROW(cv::Error::StsParseError, "Invalid dataset size in LSH index file");
+        const size_t count = saved.rows * saved.cols;
+        if (count > (std::numeric_limits<size_t>::max)() / sizeof(ElementType))
+            FLANN_THROW(cv::Error::StsParseError, "Invalid dataset size in LSH index file");
+        size_t left = count * sizeof(ElementType);
+        if (left > 0)
+        {
+            left -= 1;
+            while (left > 0)
+            {
+                const size_t step = (std::min)(left, (size_t)1 << 30);
+                if (fseek(stream, (long)step, SEEK_CUR) != 0)
+                    FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
+                left -= step;
+            }
+            if (fgetc(stream) == EOF)
+                FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
+        }
+
+        // the constructor built the probe masks for the default parameters
+        xor_masks_.clear();
+        fill_xor_mask(0, key_size_, static_cast<unsigned int>((std::min)(multi_probe_level_, key_size_)), xor_masks_);
+
         // Building the index is so fast we can afford not storing it
         buildIndex();
 
@@ -252,7 +299,7 @@ private:
         if (level == 0) return;
         for (int index = lowest_index - 1; index >= 0; --index) {
             // Create a new key
-            lsh::BucketKey new_key = key | (1 << index);
+            lsh::BucketKey new_key = key | (lsh::BucketKey(1) << index);
             fill_xor_mask(new_key, index, level - 1, xor_masks);
         }
     }
