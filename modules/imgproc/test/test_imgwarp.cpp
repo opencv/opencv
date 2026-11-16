@@ -1344,34 +1344,36 @@ TEST_P(Imgproc_Warp_NearestNewDepths, accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_Warp_NearestNewDepths,
     testing::Values(CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
-typedef testing::TestWithParam<int> Imgproc_CubicTransparent;
+typedef testing::TestWithParam<tuple<int, int> > Imgproc_CubicTransparent;
 
 TEST_P(Imgproc_CubicTransparent, uses_each_destination_pixel)
 {
-    const int cn = GetParam();
+    const int depth = get<0>(GetParam());
+    const int cn = get<1>(GetParam());
     const int width = 35;
     const uchar background[] = {53, 70, 101, 84};
-    const uchar expected[] = {67, 80, 104, 91};
-    const Mat src(8, 8, CV_8UC(cn), Scalar::all(113));
+    const Mat src(8, 8, CV_MAKETYPE(depth, cn), Scalar::all(113));
     const Mat mapx(1, width, CV_32F, Scalar(-0.75));
     const Mat mapy(1, width, CV_32F, Scalar(5.25));
-    std::vector<uchar> pixels(width*cn);
-    Mat dst(1, width, src.type(), pixels.data());
-
+    Mat bg(1, width, CV_8UC(cn));
     for (int x = 0; x < width; ++x)
         for (int c = 0; c < cn; ++c)
-            pixels[x*cn + c] = background[(x + c) % 4];
+            bg.ptr<uchar>()[x*cn + c] = background[(x + c) % 4];
 
-    remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    std::vector<uchar> pixels(width*src.elemSize());
+    Mat dst(1, width, src.type(), pixels.data());
+    bg.convertTo(dst, depth);
 
     // At x = -0.75 the in-bounds taps have a combined weight of 29/128.
-    for (int x = 0; x < width; ++x)
-        for (int c = 0; c < cn; ++c)
-            EXPECT_EQ(expected[(x + c) % 4], dst.ptr<uchar>()[x*cn + c])
-                    << "x=" << x << ", channel=" << c;
+    Mat expected;
+    bg.convertTo(expected, depth, 99./128, 113*29./128);
+
+    remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    EXPECT_EQ(0, cvtest::norm(expected, dst, NORM_INF));
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTransparent, testing::Values(1, 3, 4));
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTransparent, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_32F), testing::Values(1, 3, 4)));
 
 // https://github.com/opencv/opencv/issues/29589
 TEST(Imgproc_Warp, reject_nd_input)
