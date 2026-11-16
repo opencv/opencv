@@ -137,4 +137,51 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, small_flat_image)
+{
+    RNG& rng = theRNG();
+    const Size sizes[] = {
+        Size(1, 1), Size(1, 5), Size(5, 1), Size(3, 3),
+        Size(64, 64), Size(40, 200), Size(200, 40), Size(91, 91)
+    };
+    for (const Size& sz : sizes)
+    {
+        Scalar color(rng.uniform(16, 240), rng.uniform(16, 240), rng.uniform(16, 240));
+        Mat src(sz, CV_8UC3, color), result;
+
+        edgePreservingFilter(src, result, NORMCONV_FILTER);
+        ASSERT_EQ(result.size(), src.size());
+        ASSERT_EQ(result.type(), src.type());
+        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "edgePreservingFilter " << sz;
+
+        stylization(src, result);
+        ASSERT_EQ(result.size(), src.size());
+        ASSERT_EQ(result.type(), src.type());
+        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "stylization " << sz;
+
+        if (sz.width <= 91 && sz.height <= 91)
+        {
+            Mat sketch, colorSketch;
+            pencilSketch(src, sketch, colorSketch);
+            ASSERT_EQ(sketch.size(), src.size());
+            ASSERT_EQ(colorSketch.size(), src.size());
+            const int expectedShade = saturate_cast<uchar>((sz.width + sz.height) * 0.02f * 255.0f);
+            EXPECT_LE(cvtest::norm(sketch, Mat(sz, CV_8UC1, Scalar(expectedShade)), NORM_INF), 1) << "pencilSketch " << sz;
+        }
+    }
+
+    Mat colSrc(16, 1, CV_8UC3), colRes, wideRes;
+    rng.fill(colSrc, RNG::UNIFORM, 32, 224);
+    edgePreservingFilter(colSrc, colRes, NORMCONV_FILTER);
+    edgePreservingFilter(repeat(colSrc, 1, 96), wideRes, NORMCONV_FILTER);
+    ASSERT_EQ(colRes.size(), colSrc.size());
+    EXPECT_LE(cvtest::norm(colRes, wideRes.col(0), NORM_INF), 1);
+
+    Mat rowSrc = colSrc.t(), rowRes, tallRes;
+    edgePreservingFilter(rowSrc, rowRes, NORMCONV_FILTER);
+    edgePreservingFilter(repeat(rowSrc, 96, 1), tallRes, NORMCONV_FILTER);
+    ASSERT_EQ(rowRes.size(), rowSrc.size());
+    EXPECT_LE(cvtest::norm(rowRes, tallRes.row(0), NORM_INF), 1);
+}
+
 }} // namespace
