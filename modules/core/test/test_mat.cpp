@@ -1237,52 +1237,54 @@ TEST(Core_Reduce, int8_signed_extremes)
         EXPECT_EQ(-128, res.at<schar>(0, 0));
     }
 }
-// REDUCE_AVG sums before it divides, so it promotes the accumulator for an integer
-// destination. Promoting to CV_32S only works for the 8-bit depths: no 16- or 32-bit source
-// has a reduce kernel writing CV_32S, so the documented default dtype = -1 threw
-// "Unsupported combination" for CV_16U, CV_16S and CV_32S while CV_8U went through.
-TEST(Core_Reduce, avg_default_dtype_covers_the_integer_depths)
+// REDUCE_AVG sums before dividing, so an integer destination needs a wider accumulator.
+// CV_32S only serves the 8-bit depths: no 16- or 32-bit source has a kernel writing CV_32S,
+// so dtype = -1 threw "Unsupported combination" for CV_16U, CV_16S and CV_32S.
+typedef testing::TestWithParam<std::tuple<int, int> > Core_ReduceAvgDepth;
+
+TEST_P(Core_ReduceAvgDepth, default_dtype_keeps_the_source_depth)
 {
+    const int dim = std::get<0>(GetParam());
+    const int depth = std::get<1>(GetParam());
     const int n = 64;
-    const int depths[] = { CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F };
-    for (int dim = 0; dim <= 1; dim++)
-        for (int depth : depths)
-        {
-            SCOPED_TRACE(cv::format("dim=%d depth=%d", dim, depth));
-            // Every element equal, so the average is that element whatever n is.
-            const double v = 100;
-            const cv::Mat src = dim == 0 ? cv::Mat(n, 1, CV_MAKETYPE(depth, 1), cv::Scalar(v))
-                                         : cv::Mat(1, n, CV_MAKETYPE(depth, 1), cv::Scalar(v));
-            cv::Mat res;
-            ASSERT_NO_THROW(cv::reduce(src, res, dim, cv::REDUCE_AVG, -1));
-            ASSERT_EQ(depth, res.depth()) << "dtype = -1 must keep the source depth";
+    const double v = 100;   // every element equal, so the average is v for any length
+    const Mat src = dim == 0 ? Mat(n, 1, CV_MAKETYPE(depth, 1), Scalar(v))
+                             : Mat(1, n, CV_MAKETYPE(depth, 1), Scalar(v));
+    Mat res;
+    ASSERT_NO_THROW(cv::reduce(src, res, dim, cv::REDUCE_AVG, -1));
+    ASSERT_EQ(depth, res.depth());
 
-            cv::Mat as64;
-            res.convertTo(as64, CV_64F);
-            EXPECT_NEAR(v, as64.at<double>(0, 0), depth == CV_32F ? 1e-3 : 1e-9);
-        }
+    Mat as64;
+    res.convertTo(as64, CV_64F);
+    EXPECT_NEAR(v, as64.at<double>(0, 0), depth == CV_32F ? 1e-3 : 1e-9);
 }
 
-// The same promotion has to be wide enough as well as present: a CV_16U row passes INT_MAX
-// after 32768 maximal elements, so a CV_32S accumulator would wrap before the division.
-TEST(Core_Reduce, avg_accumulator_survives_a_wide_16bit_row)
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceAvgDepth,
+    testing::Combine(testing::Values(0, 1),
+                     testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+// The accumulator has to be wide enough as well as present: a CV_32S one would wrap here
+// before the division.
+typedef testing::TestWithParam<std::tuple<int, int> > Core_ReduceAvgWide;
+
+TEST_P(Core_ReduceAvgWide, accumulator_does_not_wrap)
 {
-    const int n = 100000;   // 65535 * n is far past INT_MAX
-    for (int dim = 0; dim <= 1; dim++)
-    {
-        SCOPED_TRACE(cv::format("dim=%d", dim));
-        const cv::Mat u = dim == 0 ? cv::Mat(n, 1, CV_16UC1, cv::Scalar(65535))
-                                   : cv::Mat(1, n, CV_16UC1, cv::Scalar(65535));
-        cv::Mat res;
-        cv::reduce(u, res, dim, cv::REDUCE_AVG, -1);
-        EXPECT_EQ(65535, res.at<ushort>(0, 0));
+    const int dim = std::get<0>(GetParam());
+    const int depth = std::get<1>(GetParam());
+    const int n = 65536;   // smallest length that passes INT_MAX for both depths below
+    const double v = depth == CV_16U ? 65535 : -32768;
+    const Mat src = dim == 0 ? Mat(n, 1, CV_MAKETYPE(depth, 1), Scalar(v))
+                             : Mat(1, n, CV_MAKETYPE(depth, 1), Scalar(v));
+    Mat res;
+    cv::reduce(src, res, dim, cv::REDUCE_AVG, -1);
 
-        const cv::Mat s = dim == 0 ? cv::Mat(n, 1, CV_16SC1, cv::Scalar(-32768))
-                                   : cv::Mat(1, n, CV_16SC1, cv::Scalar(-32768));
-        cv::reduce(s, res, dim, cv::REDUCE_AVG, -1);
-        EXPECT_EQ(-32768, res.at<short>(0, 0));
-    }
+    Mat as64;
+    res.convertTo(as64, CV_64F);
+    EXPECT_EQ(v, as64.at<double>(0, 0));
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceAvgWide,
+    testing::Combine(testing::Values(0, 1), testing::Values(CV_16U, CV_16S)));
 
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 
