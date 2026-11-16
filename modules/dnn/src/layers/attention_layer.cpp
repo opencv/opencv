@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
+#include "../mapped_file.hpp"
 #include "../op_cuda.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
@@ -369,7 +370,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
             weights = w;
             wshape0 = shape(w);
             ownsWeights = true;
-            constsPacked = false;
         }
 
         Mat b = bias_arr.getMat();
@@ -379,12 +379,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
         }
     }
 
-    //! Empty once packed: a weight a CUDA net keeps for initCUDA() is not a public parameter.
-    const Mat& constWeights() const CV_OVERRIDE
-    {
-        static const Mat none;
-        return constsPacked ? none : weights;
-    }
+    const Mat& constWeights() const CV_OVERRIDE { return weights; }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -473,6 +468,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
             return;
 #endif
         // The packed copy is what the kernels read from here on; the original is dead weight.
+        if (isMappedTensor(weights)) {
+            // Handing the pages back frees as much as releasing would, and leaves the weight
+            // readable for getParam() at the cost of faulting it in again.
+            releaseMappedPages(weights, 0, weights.total() * weights.elemSize());
+            return;
+        }
         weights.release();
         if (netimpl_)
             netimpl_->weightsReleased = true;
@@ -495,11 +496,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
         hidden_size = weight_shape[1];
         qkv_hidden_sizes[2] = hidden_size - qkv_hidden_sizes[0] - qkv_hidden_sizes[1];
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
-
-        // Packed by prepackWeights() on CPU and read by initCUDA() on CUDA; either way the
-        // constant is consumed by the first forward. Only finalize() runs on both paths.
-        if (ownsWeights)
-            constsPacked = true;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
@@ -823,7 +819,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
     std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
 
     Mat weights;                 //!< constant QKV weight; released once packed
-    bool constsPacked = false;   //!< the weight is packed, so it is no longer a public parameter
     Mat bias;                    //!< constant QKV bias
     bool ownsWeights = false;
     bool ownsBias = false;

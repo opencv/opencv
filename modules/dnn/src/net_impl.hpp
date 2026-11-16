@@ -70,8 +70,8 @@ public:
     //! Takes ownership of the constant operands. An empty one leaves the current in place.
     virtual void setWeights(InputArray weights, InputArray bias) = 0;
 
-    //! What setWeights() took. The weight goes empty once it has been packed, so a pass that
-    //! needs it must run before inference.
+    //! What setWeights() took. Once packed, a mapped weight stays readable with its pages
+    //! dropped and a copied one goes empty, so a pass that needs it must run before inference.
     virtual const Mat& constWeights() const = 0;
     virtual const Mat& constBias() const = 0;
 
@@ -145,6 +145,9 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<int64> layersTimings;
 
     std::string modelFileName;
+    // Layer name -> the const arg setWeights() took. constArgs() cuts the layer's link to it,
+    // so this is what lets getParam() read a packed-away weight back out of modelFileName.
+    std::map<std::string, Arg> constWeightArgs;
     // Why an importer gave up on the model; empty for every net that loaded.
     std::string importFailure;
     ModelFormat modelFormat;
@@ -632,6 +635,10 @@ inline Net::Impl* getNetImpl(const LayerInfo* op)
 Net readNetFromONNX2(const String&, bool mapExternalData);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
+
+// One initializer read back out of an ONNX file, for a constant a layer has consumed.
+// Empty when the file, the tensor, or protobuf support is not there.
+Mat readOnnxInitializer(const String& onnxFile, const String& tensorName);
 #ifdef HAVE_ONNXRUNTIME
 Net readNetFromONNX2_ORT(const String& onnxFile);
 #endif

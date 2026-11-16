@@ -51,6 +51,10 @@ public:
 
     uchar* data() const { return payload; }
 
+    // Drops the resident pages of [offset, offset + length) of the payload, keeping the view
+    // mapped. Only whole pages inside that range go, so a partial page at either edge stays.
+    bool discardPayload(size_t offset, size_t length) const;
+
 private:
     MappedFile(const MappedFile&);
     MappedFile& operator=(const MappedFile&);
@@ -60,11 +64,21 @@ private:
                              size_t& viewOffset, size_t& viewLength, size_t& delta);
     static Ptr<MappedFile> finishView(void* base, size_t viewLength, size_t delta);
 
+    // Per-platform, like open(): hands a page-aligned range back to the kernel.
+    static bool discardRange(uchar* base, size_t length);
+
     // What the platform unmaps, never the payload: the base is rounded down to the granularity.
     uchar* viewBase = nullptr;
     size_t viewLength = 0;
     uchar* payload = nullptr;
 };
+
+// True when m's bytes are a view over a mapped file rather than a heap allocation.
+bool isMappedTensor(const Mat& m);
+
+// discardPayload() for the view m was built from. Writes made through m are discarded with the
+// pages, so release only a range that has just been read.
+bool releaseMappedPages(const Mat& m, size_t offset, size_t length);
 
 // Views created so far; a refused mapping copies instead and yields identical values.
 CV_EXPORTS uint64_t mappedViewCount();

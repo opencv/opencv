@@ -101,6 +101,14 @@ MappedFile::~MappedFile()
         UnmapViewOfFile(viewBase);
 }
 
+bool MappedFile::discardRange(uchar* base, size_t length)
+{
+    // VirtualUnlock drops a never-locked range from the working set and reports ERROR_NOT_LOCKED.
+    if (VirtualUnlock(base, length))
+        return true;
+    return GetLastError() == ERROR_NOT_LOCKED;
+}
+
 CV__DNN_INLINE_NS_END
 }}
 

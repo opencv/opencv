@@ -3,9 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include "../mapped_file.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 // backends
 #include "../op_cuda.hpp"
@@ -183,8 +183,7 @@ public:
 
 
 
-    //! A packed B is the one the kernels read; the plain copy a CUDA net keeps for initCUDA()
-    //! is not a public parameter.
+    //! Whether finalize() has built the form the kernels read, so B itself is spare.
     bool packedReady() const
     {
 #ifdef HAVE_MLAS
@@ -194,11 +193,7 @@ public:
         return !packed_B.empty() || !thin_packed_B.empty();
     }
 
-    const Mat& constWeights() const CV_OVERRIDE
-    {
-        static const Mat none;
-        return packedReady() ? none : weights;
-    }
+    const Mat& constWeights() const CV_OVERRIDE { return weights; }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -495,11 +490,17 @@ public:
         // A net moved off CUDA frees B on its next finalize.
         if (constB(mode) && !weights.empty() && !keepForCuda && ownedByGraph &&
             weights.type() == CV_32F && packedReady()) {
-            weights.release();
-            // A recycled address would compare equal and skip the repack.
-            last_packed_blob_data = nullptr;
-            // initCUDA() would have nothing to read, so a later switch to CUDA is refused.
-            netimpl->weightsReleased = true;
+            if (isMappedTensor(weights)) {
+                // Handing the pages back frees as much as releasing would, and leaves B readable
+                // for getParam() and initCUDA() at the cost of faulting it in again.
+                releaseMappedPages(weights, 0, weights.total() * weights.elemSize());
+            } else {
+                weights.release();
+                // A recycled address would compare equal and skip the repack.
+                last_packed_blob_data = nullptr;
+                // initCUDA() would have nothing to read, so a later switch to CUDA is refused.
+                netimpl->weightsReleased = true;
+            }
         }
 
         if (constC(mode) && flatten_a) {

@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
+#include "../mapped_file.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fusion_apply.hpp"
 
@@ -85,15 +86,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
         }
     }
 
-    //! A packed B is the one the kernels read; the plain copy a CUDA net keeps for initCUDA()
-    //! is not a public parameter.
+    //! Whether finalize() has built the form the kernels read, so B itself is spare.
     bool packedReady() const { return !packed_input_B.empty() || !thin_packed_B.empty(); }
 
-    const Mat& constWeights() const CV_OVERRIDE
-    {
-        static const Mat none;
-        return packedReady() ? none : weights;
-    }
+    const Mat& constWeights() const CV_OVERRIDE { return weights; }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -319,10 +315,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
         // A net moved off CUDA frees B on its next finalize.
         if (ownsWeights && !weights.empty() && !keepForCuda && ownedByGraph &&
             weights.type() == CV_32F && packedReady()) {
-            weights.release();
-            // A recycled address would compare equal and skip the repack.
-            last_packed_input_B_data = nullptr;
-            netimpl->weightsReleased = true;
+            if (isMappedTensor(weights)) {
+                // Handing the pages back frees as much as releasing would, and leaves B readable
+                // for getParam() at the cost of faulting it in again.
+                releaseMappedPages(weights, 0, weights.total() * weights.elemSize());
+            } else {
+                weights.release();
+                // A recycled address would compare equal and skip the repack.
+                last_packed_input_B_data = nullptr;
+                netimpl->weightsReleased = true;
+            }
         }
 
         // broadcast bias if needed

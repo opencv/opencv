@@ -2562,9 +2562,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
     const Mat out = net.forward().clone();
 
     const Mat expected = input * B;
-    normAssert(expected, out - bias_only);
-    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
-    // initCUDA(), but not one getParam() can reach.
+    normAssert(expected, out - bias_only, "", default_l1, default_lInf);
+    // setParam() above replaced B, so the model file no longer holds this layer's weight and
+    // the read-back that serves getParam() elsewhere is switched off for it.
     EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
 }
 
@@ -2662,10 +2662,11 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
         const Mat a_slice(2, 3, CV_32F, input.ptr<float>(b));
         const Mat b_slice(3, 4, CV_32F, B.ptr<float>(b));
         const Mat out_slice(2, 4, CV_32F, out.ptr<float>(b));
-        normAssert(a_slice * b_slice, out_slice);
+        normAssert(a_slice * b_slice, out_slice, format("slice %d", b).c_str(),
+                   default_l1, default_lInf);
     }
-    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
-    // initCUDA(), but not one getParam() can reach.
+    // setParam() above replaced B, so the model file no longer holds this layer's weight and
+    // the read-back that serves getParam() elsewhere is switched off for it.
     EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
 }
 
@@ -2730,8 +2731,8 @@ TEST_P(Test_ONNX_layers, Attention_ConstWeight_NotABlob)
             attn = id;
     }
     ASSERT_GE(attn, 0);
-    // Packed and released, on every backend: a net targeting CUDA keeps a copy for
-    // initCUDA(), but not one getParam() can reach.
+    // A fused layer's weight is a concatenation that never existed as one tensor in the
+    // model, so there is nothing to read back.
     EXPECT_THROW(net.getParam(attn, 0), cv::Exception);
     normAssert(ref, out, "", attnL1(), attnLInf());
 }
@@ -2750,6 +2751,88 @@ static int constWeightLayerId(Net& net, const String& type)
     return id;
 }
 
+// Packing consumes the weight, so getParam() serves it from the mapping it kept or by reading the
+// initializer back out of the model file. Either way the caller must see the original bytes.
+static void expectWeightReadBack(Net& net, const String& type, const Mat& expected)
+{
+    const Mat w = net.getParam(constWeightLayerId(net, type), 0);
+    ASSERT_FALSE(w.empty());
+    EXPECT_EQ(shape(w), shape(expected));
+    normAssert(expected, w, "", 0, 0);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReadBackAfterForward)
+{
+    Net net = readNetFromONNX(_tf("models/gemm_vector_bias.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    const int gemm = constWeightLayerId(net, "Gemm");
+    ASSERT_GE(gemm, 0);
+    const Mat B0 = net.getParam(gemm, 0).clone();
+    ASSERT_FALSE(B0.empty());
+
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // The forward packs B and hands the original back, so this is served by the mapping the
+    // layer kept or by reading the initializer out of the model file again.
+    expectWeightReadBack(net, "Gemm", B0);
+    // The bias is never packed, so it was reachable throughout.
+    EXPECT_FALSE(net.getParam(gemm, 1).empty());
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ExternalData_ConstWeight_ReadBackAfterForward)
+{
+    Net net = readNetFromONNX(_tf("models/gemm_external_data.onnx"));
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    const int gemm = constWeightLayerId(net, "Gemm");
+    ASSERT_GE(gemm, 0);
+    const Mat B0 = net.getParam(gemm, 0).clone();
+    ASSERT_FALSE(B0.empty());
+
+    Mat input(4, 8, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // B is external data, so the layer holds a mapping and keeps it rather than reading the
+    // initializer back out of the model file.
+    expectWeightReadBack(net, "Gemm", B0);
+}
+
+TEST_P(Test_ONNX_layers, Gemm_ConstWeight_BufferLoadedHasNoReadBack)
+{
+    const String path = _tf("models/gemm_vector_bias.onnx");
+    std::ifstream f(path.c_str(), std::ios::binary | std::ios::ate);
+    ASSERT_TRUE(f.is_open());
+    std::vector<uchar> bytes((size_t)f.tellg());
+    f.seekg(0);
+    ASSERT_TRUE(f.read((char*)bytes.data(), (std::streamsize)bytes.size()).good());
+
+    Net net = readNetFromONNX(bytes);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    const int gemm = constWeightLayerId(net, "Gemm");
+    ASSERT_GE(gemm, 0);
+
+    Mat input(3, 6, CV_32F);
+    randu(input, -1.0, 1.0);
+    net.setInput(input);
+    net.forward();
+
+    // Nothing was loaded from a file, so the packed-away weight has nowhere to come back from.
+    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+}
+
 TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
 {
     if (backend != DNN_BACKEND_CUDA)
@@ -2761,6 +2844,7 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
     randu(input, -1.0, 1.0);
 
     Net cpu_only = readNetFromONNX(model);
+    const Mat B0 = cpu_only.getParam(constWeightLayerId(cpu_only, "MatMul"), 0).clone();
     cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
     cpu_only.setInput(input);
     const Mat expected = cpu_only.forward().clone();
@@ -2772,7 +2856,7 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
+        expectWeightReadBack(net, "MatMul", B0);
 
         EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
         EXPECT_THROW(net.setPreferableTarget(target), cv::Exception);
@@ -2789,15 +2873,15 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableTarget(target);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        // The plain weight is kept for initCUDA() but held out of reach, so the
-        // public contract is the same one the CPU run above reports.
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
+        // Whether the weight was kept for initCUDA() or handed back, getParam() reports the
+        // same bytes the model holds, so the contract does not vary with the backend.
+        expectWeightReadBack(net, "MatMul", B0);
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "MatMul"), 0), cv::Exception);
+        expectWeightReadBack(net, "MatMul", B0);
     }
 }
 
@@ -2857,6 +2941,7 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
     randu(input, -1.0, 1.0);
 
     Net cpu_only = readNetFromONNX(model);
+    const Mat B0 = cpu_only.getParam(constWeightLayerId(cpu_only, "Gemm"), 0).clone();
     cpu_only.setPreferableBackend(DNN_BACKEND_OPENCV);
     cpu_only.setInput(input);
     const Mat expected = cpu_only.forward().clone();
@@ -2868,7 +2953,7 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
+        expectWeightReadBack(net, "Gemm", B0);
 
         EXPECT_THROW(net.setPreferableBackend(DNN_BACKEND_CUDA), cv::Exception);
         EXPECT_THROW(net.setPreferableTarget(target), cv::Exception);
@@ -2885,15 +2970,15 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_CudaSwitchAfterForward)
         net.setPreferableTarget(target);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        // The plain weight is kept for initCUDA() but held out of reach, so the
-        // public contract is the same one the CPU run above reports.
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
+        // Whether the weight was kept for initCUDA() or handed back, getParam() reports the
+        // same bytes the model holds, so the contract does not vary with the backend.
+        expectWeightReadBack(net, "Gemm", B0);
 
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
         net.setPreferableTarget(DNN_TARGET_CPU);
         net.setInput(input);
         normAssert(expected, net.forward(), "", default_l1, default_lInf);
-        EXPECT_THROW(net.getParam(constWeightLayerId(net, "Gemm"), 0), cv::Exception);
+        expectWeightReadBack(net, "Gemm", B0);
     }
 }
 
