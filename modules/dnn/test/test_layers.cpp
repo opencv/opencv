@@ -4794,26 +4794,22 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
 static Mat reverseSequenceReference(const Mat& X, const std::vector<int64_t>& lensData,
                                     int timeAxis, int batchAxis)
 {
-    Mat ref = X.clone();
-    CV_CheckTrue(X.isContinuous(), "reverseSequenceReference requires a continuous input");
-
-    const int nB = X.size[batchAxis], nT = X.size[timeAxis];
-    const size_t batchStep = X.step[batchAxis];
-    const size_t timeStep = X.step[timeAxis];
-    const size_t blockSize = X.step[std::max(timeAxis, batchAxis)];
-
-    const uchar* s = X.ptr();
-    uchar* d = ref.ptr();
-    for (int b = 0; b < nB; ++b)
+    const int rank = X.dims;
+    Mat ref = X.clone();   // every element is overwritten below; clone keeps shape and type
+    std::vector<int> idx(rank), srcIdx(rank);
+    for (size_t flat = 0; flat < (size_t)X.total(); ++flat)
     {
-        const int64_t L = lensData[b];
-        for (int t = 0; t < nT; ++t)
+        size_t rem = flat;
+        for (int d = rank - 1; d >= 0; --d)
         {
-            const int srcT = (t < L) ? (int)(L - 1 - t) : t;
-            std::memcpy(d + b * batchStep + t * timeStep,
-                        s + b * batchStep + srcT * timeStep,
-                        blockSize);
+            idx[d] = (int)(rem % X.size[d]);
+            rem /= X.size[d];
         }
+        srcIdx = idx;
+        const int t = idx[timeAxis];
+        const int64_t L = lensData[idx[batchAxis]];
+        srcIdx[timeAxis] = (int)(t < L ? L - 1 - t : t);
+        std::memcpy(ref.ptr(idx.data()), X.ptr(srcIdx.data()), X.elemSize());
     }
     return ref;
 }

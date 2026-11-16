@@ -9,6 +9,7 @@
 // NOTE: time_axis/batch_axis must be 0 or 1 and must differ; input rank must be >= 2.
 
 #include "../precomp.hpp"
+#include "layers_common.hpp"
 
 namespace cv {
 namespace dnn {
@@ -77,12 +78,13 @@ public:
         const int batchAxis = batch_axis, timeAxis = time_axis;
         const int nBatch = X.size[batchAxis], nTimeStep = X.size[timeAxis];
 
-        std::vector<int64_t> seqLen(nBatch);
-        const int lensDepth = lens.depth();
+        std::vector<int> seqLen;
+        tensorToIntVec(lens, seqLen);
+        CV_CheckEQ((int)seqLen.size(), nBatch,
+                   "ReverseSequence: sequence_lens must hold one element per batch");
         for (int b = 0; b < nBatch; ++b)
         {
-            seqLen[b] = lensDepth == CV_32S ? (int64_t) lens.ptr<int32_t>()[b] : lens.ptr<int64_t>()[b];
-            CV_CheckTrue(seqLen[b] >= 0 && seqLen[b] <= (int64_t) nTimeStep,
+            CV_CheckTrue(seqLen[b] >= 0 && seqLen[b] <= nTimeStep,
                          "ReverseSequence: sequence_lens values must be in [0, nTimeStep]");
         }
 
