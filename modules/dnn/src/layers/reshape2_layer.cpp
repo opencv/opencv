@@ -42,7 +42,7 @@ class Reshape2LayerImpl CV_FINAL : public Reshape2Layer
 {
 public:
     bool dynamicShapeSpec;
-    // ONNX 'allowzero' (opset 14+): when set, a 0 in the shape means a zero-size axis
+    // ONNX 'allowzero' (opsets 14 to 23): when set, a 0 in the shape means a zero-size axis
     // instead of "copy this axis from the input"
     bool allowZero;
 
