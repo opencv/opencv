@@ -439,6 +439,33 @@ TEST(Imgproc_StackBlur, large_kernel_8u)
     }
 }
 
+// From radius 181 the CV_8U column SIMD product sum * stackblurMul no longer fits a signed 32-bit int.
+TEST(Imgproc_StackBlur, large_kernel_8u_column)
+{
+    for (int kernel : {359, 361, 363, 509})
+    {
+        const int radius = kernel / 2;
+        for (double value : {255., 128.})
+        {
+            Mat col(kernel + 32, 64, CV_8UC3, Scalar::all(value)), dst;
+            stackBlur(col, dst, Size(1, kernel));
+            EXPECT_LE(cvtest::norm(col, dst, NORM_INF), 1.) << "value=" << value << " kernel=" << kernel;
+        }
+
+        Mat tri(kernel, 1, CV_64F), one(1, 1, CV_64F, Scalar::all(1.));
+        for (int i = 0; i < kernel; i++)
+            tri.at<double>(i) = (radius + 1 - std::abs(i - radius)) / double((radius + 1) * (radius + 1));
+
+        Mat noise(2 * kernel, 64, CV_8UC3), dst, ref, dst64;
+        randu(noise, Scalar::all(0), Scalar::all(256));
+        sepFilter2D(noise, ref, CV_64F, one, tri, Point(-1, -1), 0, BORDER_REPLICATE);
+        stackBlur(noise, dst, Size(1, kernel));
+        dst.convertTo(dst64, CV_64F);
+        const Rect inner(0, radius, noise.cols, noise.rows - 2 * radius);
+        EXPECT_LE(cvtest::norm(ref(inner), dst64(inner), NORM_INF), 1.) << "kernel=" << kernel;
+    }
+}
+
 // (radius + 1)^2 itself doesn't fit 32 bits here.
 TEST(Imgproc_StackBlur, full_range_huge_kernel)
 {

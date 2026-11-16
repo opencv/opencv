@@ -839,7 +839,8 @@ inline int opColumn<uchar, int>(const uchar* srcPtr, uchar* dstPtr, uchar* stack
     {
         const int VEC_LINE_8 = VTraits<v_uint8>::vlanes();
         const int VEC_LINE_32 = VTraits<v_int32>::vlanes();
-        v_int32 v_mulVal = vx_setall_s32(mulValTab);
+        // From radius 181, 255 * (radius + 1)^2 * mulValTab doesn't fit a signed 32-bit int, but fits an unsigned one.
+        v_uint32 v_mulVal = vx_setall_u32(mulValTab);
 
         auto stackStartPtr = stack + ss * widthLen;
         auto stackSp1Ptr = stack + sp1 * widthLen;
@@ -867,8 +868,8 @@ inline int opColumn<uchar, int>(const uchar* srcPtr, uchar* dstPtr, uchar* stack
 
             v_store(dstPtr + k,
                     v_pack(
-                            v_reinterpret_as_u16(v_pack(v_shr(v_mul(v_sum0, v_mulVal), shrValTab), v_shr(v_mul(v_sum1, v_mulVal), shrValTab))),
-                            v_reinterpret_as_u16(v_pack(v_shr(v_mul(v_sum2, v_mulVal), shrValTab), v_shr(v_mul(v_sum3, v_mulVal), shrValTab)))));
+                            v_pack(v_shr(v_mul(v_reinterpret_as_u32(v_sum0), v_mulVal), shrValTab), v_shr(v_mul(v_reinterpret_as_u32(v_sum1), v_mulVal), shrValTab)),
+                            v_pack(v_shr(v_mul(v_reinterpret_as_u32(v_sum2), v_mulVal), shrValTab), v_shr(v_mul(v_reinterpret_as_u32(v_sum3), v_mulVal), shrValTab))));
 
             v_sum0 = v_sub(v_sum0, v_sumOut0);
             v_sum1 = v_sub(v_sum1, v_sumOut1);
