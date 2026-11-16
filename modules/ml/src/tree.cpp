@@ -132,6 +132,7 @@ void DTreesImpl::clear()
     splits.clear();
     subsets.clear();
     classLabels.clear();
+    missingSubst.clear();
 
     w.release();
     _isClassifier = false;
@@ -1858,6 +1859,9 @@ int DTreesImpl::readSplit( const FileNode& fn )
     vi = varMapping[vi]; // convert to varIdx if needed
     CV_Assert( 0 <= vi && vi < (int)varType.size() );
     split.varIdx = vi;
+    // predictTrees() replaces a missing value of this variable with missing_subst[vi]
+    if( !missingSubst.empty() && vi >= (int)missingSubst.size() )
+        CV_Error( Error::StsParseError, "ML/DTrees: 'missing_subst' is shorter than the split variable index" );
 
     if( varType[vi] == VAR_CATEGORICAL ) // split on categorical var
     {

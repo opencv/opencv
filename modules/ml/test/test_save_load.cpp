@@ -381,6 +381,98 @@ TEST(ML_DTrees, load_truncated_trained_tree)
     EXPECT_THROW(Algorithm::loadFromString<ml::DTrees>(head + entry[0] + entry[1] + entry[2] + entry[2]), Exception);
 }
 
+// Three ordered inputs; only input 2 decides the class, so the single split is on variable 2.
+static std::string missingSubstDTreesModel()
+{
+    const int n = 40;
+    Mat samples(n, 3, CV_32F), responses(n, 1, CV_32S);
+    for (int i = 0; i < n; i++)
+    {
+        samples.at<float>(i, 0) = 3.f;
+        samples.at<float>(i, 1) = 3.f;
+        samples.at<float>(i, 2) = (float)(i % 10);
+        responses.at<int>(i) = (i % 10) >= 5;
+    }
+    Mat varType = (Mat_<uchar>(4, 1) << ml::VAR_ORDERED, ml::VAR_ORDERED, ml::VAR_ORDERED, ml::VAR_CATEGORICAL);
+    Ptr<ml::TrainData> td = ml::TrainData::create(samples, ml::ROW_SAMPLE, responses,
+                                                  noArray(), noArray(), noArray(), varType);
+    Ptr<ml::DTrees> dt = ml::DTrees::create();
+    dt->setMaxDepth(4);
+    dt->setCVFolds(0);
+    dt->setMinSampleCount(1);
+    dt->train(td);
+    return dtreesToString(dt);
+}
+
+static std::string withMissingSubst(const std::string& model, const std::string& values)
+{
+    const size_t pos = model.find("missing_subst:");
+    EXPECT_NE(pos, std::string::npos);
+    if (pos == std::string::npos)
+        return model;
+    const size_t end = model.find(']', pos);
+    EXPECT_NE(end, std::string::npos);
+    if (end == std::string::npos)
+        return model;
+    return model.substr(0, pos) + "missing_subst: [ " + values + " ]" + model.substr(end + 1);
+}
+
+TEST(ML_DTrees, load_short_missing_subst)
+{
+    const std::string model = missingSubstDTreesModel();
+    ASSERT_NE(model.find("var:2,"), std::string::npos);
+    const Mat sample = (Mat_<float>(1, 3) << 3.f, 3.f, 9.f);
+    const Mat missing = (Mat_<float>(1, 3) << 3.f, 3.f, ml::TrainData::missingValue());
+
+    // predict() substitutes a missing input with its missing_subst entry
+    Ptr<ml::DTrees> good = Algorithm::loadFromString<ml::DTrees>(withMissingSubst(model, "0., 0., 9."));
+    ASSERT_FALSE(good.empty());
+    EXPECT_EQ(1.f, good->predict(sample));
+    EXPECT_EQ(1.f, good->predict(missing));
+    good = Algorithm::loadFromString<ml::DTrees>(withMissingSubst(model, "0., 0., 0."));
+    ASSERT_FALSE(good.empty());
+    EXPECT_EQ(0.f, good->predict(missing));
+
+    // an empty list means no substitution; the split's default direction is used instead
+    Ptr<ml::DTrees> noSubst = Algorithm::loadFromString<ml::DTrees>(withMissingSubst(model, ""));
+    ASSERT_FALSE(noSubst.empty());
+    EXPECT_EQ(1.f, noSubst->predict(sample));
+    EXPECT_NO_THROW(noSubst->predict(missing));
+
+    // the split is on variable 2, so a list with fewer than 3 entries is read past its end
+    EXPECT_THROW(Algorithm::loadFromString<ml::DTrees>(withMissingSubst(model, "0., 0.")), Exception);
+    EXPECT_THROW(Algorithm::loadFromString<ml::DTrees>(withMissingSubst(model, "9.")), Exception);
+}
+
+TEST(ML_DTrees, read_legacy_model_into_trained_instance)
+{
+    // trained on one input, so this instance holds a short missing_subst list (the input and the response)
+    Mat samples = (Mat_<float>(4, 1) << 0.f, 1.f, 2.f, 3.f);
+    Mat responses = (Mat_<int>(4, 1) << 0, 0, 1, 1);
+    Ptr<ml::DTrees> dt = ml::DTrees::create();
+    dt->setMaxDepth(2);
+    dt->setCVFolds(0);
+    dt->setMinSampleCount(1);
+    dt->train(ml::TrainData::create(samples, ml::ROW_SAMPLE, responses));
+
+    // the legacy format stores no missing_subst, so the trained values must not survive read()
+    const string filename = findDataFile("legacy/dtree_abalone.xml");
+    FileStorage fs(filename, FileStorage::READ);
+    dt->read(fs.getFirstTopLevelNode());
+    Ptr<ml::DTrees> fresh = Algorithm::load<ml::DTrees>(filename);
+    ASSERT_FALSE(fresh.empty());
+    ASSERT_EQ(fresh->getVarCount(), dt->getVarCount());
+
+    Mat input(10, fresh->getVarCount(), CV_32F);
+    cv::theRNG().fill(input, RNG::UNIFORM, 0, 40);
+    randomFillCategories(filename, input);
+    input.row(0).setTo(ml::TrainData::missingValue());
+    Mat expected, actual;
+    fresh->predict(input, expected);
+    dt->predict(input, actual);
+    EXPECT_EQ(0, cvtest::norm(expected, actual, NORM_INF));
+}
+
 /*TEST(ML_SVM, throw_exception_when_save_untrained_model)
 {
     Ptr<cv::ml::SVM> svm;
