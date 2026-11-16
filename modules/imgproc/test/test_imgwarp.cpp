@@ -1277,6 +1277,62 @@ TEST(Imgproc_Remap, bilinear_c1_16bit_fixed_map_sample_order)
     }
 }
 
+TEST(Imgproc_Remap, linear_two_channel_float_map_precision)
+{
+    const Mat_<Vec2f> src({2, 2}, {
+        Vec2f(0.f, 4.f), Vec2f(1.f, 2.f),
+        Vec2f(0.f, 3.f), Vec2f(1.f, 1.f)});
+    const Mat_<float> mapx({1, 2}, {0.01f, 0.4f});
+    const Mat_<float> mapy(mapx.size(), 0.25f);
+    const Mat_<Vec2f> expected({1, 2}, {Vec2f(0.01f, 3.73f), Vec2f(0.4f, 2.95f)});
+    const Mat_<Vec2f> relative({1, 2}, {Vec2f(0.01f, 0.25f), Vec2f(-0.6f, 0.25f)});
+    Mat actual;
+    remap(src, actual, mapx, mapy, INTER_LINEAR);
+    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6);
+    remap(src, actual, relative, noArray(), INTER_LINEAR | WARP_RELATIVE_MAP);
+    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6);
+
+    Mat fixed, weights;
+    convertMaps(mapx, mapy, fixed, weights, CV_16SC2);
+    remap(src, actual, fixed, weights, INTER_LINEAR);
+    const Mat_<Vec2f> fixedExpected({1, 2}, {Vec2f(0.f, 3.75f), Vec2f(0.40625f, 2.9375f)});
+    EXPECT_LE(cvtest::norm(fixedExpected, actual, NORM_INF), 1e-6);
+}
+
+TEST(Imgproc_Remap, linear_two_channel_float_map_borders)
+{
+    Mat_<Vec2f> storage(4, 5, Vec2f(0.f, 0.f));
+    Mat src = storage(Rect(1, 1, 2, 2));
+    src.at<Vec2f>(0, 0) = Vec2f(0.f, 4.f);
+    src.at<Vec2f>(0, 1) = Vec2f(1.f, 2.f);
+    src.at<Vec2f>(1, 0) = Vec2f(0.f, 3.f);
+    src.at<Vec2f>(1, 1) = Vec2f(1.f, 1.f);
+    const Mat_<Vec2f> map({1, 4}, {
+        Vec2f(-0.19f, 0.4f), Vec2f(1.25f, 0.4f), Vec2f(2.21f, 0.1f), Vec2f(0.3f, 0.81f)});
+    Mat dstStorage(3, 6, CV_32FC2);
+    Mat dst = dstStorage(Rect(1, 1, 4, 1));
+    const Scalar fill(0.13, -0.27);
+    std::vector<Mat> planes;
+    split(src, planes);
+    for (int border : {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101, BORDER_WRAP})
+    {
+        remap(src, dst, map, noArray(), INTER_LINEAR, border, fill);
+        for (int channel = 0; channel < 2; ++channel)
+        {
+            Mat expected, actual;
+            remap(planes[channel], expected, map, noArray(), INTER_LINEAR, border, Scalar(fill[channel]));
+            extractChannel(dst, actual, channel);
+            EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6) << "border=" << border;
+        }
+    }
+
+    dst.setTo(Scalar(137, 219));
+    remap(src, dst, map, noArray(), INTER_LINEAR, BORDER_TRANSPARENT);
+    const Mat_<Vec2f> transparentExpected({1, 4}, {
+        Vec2f(137.f, 219.f), Vec2f(1.f, 1.6f), Vec2f(137.f, 219.f), Vec2f(0.3f, 2.59f)});
+    EXPECT_LE(cvtest::norm(transparentExpected, dst, NORM_INF), 1e-6);
+}
+
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {
     Mat_<float> mapx({2, 2}, {0, 1, 0, 1});

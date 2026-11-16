@@ -851,7 +851,9 @@ void CV_Remap_Test::run_func()
 
 void CV_Remap_Test::convert_maps()
 {
-    if (interpolation == INTER_CUBIC) {
+    const bool floatLinearC2 = interpolation == INTER_LINEAR && dst.type() == CV_32FC2 &&
+                              mapx.depth() == CV_32F;
+    if (interpolation == INTER_CUBIC || floatLinearC2) {
         if (mapx.type() != CV_32FC1)
             convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_32FC1, interpolation == INTER_NEAREST);
     }
