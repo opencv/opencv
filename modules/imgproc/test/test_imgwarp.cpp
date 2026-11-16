@@ -1308,7 +1308,7 @@ TEST(Imgproc_Remap, linear_two_channel_float_map_borders)
     src.at<Vec2f>(1, 0) = Vec2f(0.f, 3.f);
     src.at<Vec2f>(1, 1) = Vec2f(1.f, 1.f);
     const Mat_<Vec2f> map({1, 4}, {
-        Vec2f(-0.19f, 0.4f), Vec2f(1.25f, 0.4f), Vec2f(2.21f, 0.1f), Vec2f(0.3f, 0.81f)});
+        Vec2f(-0.25f, 0.5f), Vec2f(1.25f, 0.5f), Vec2f(2.25f, 0.f), Vec2f(0.3f, 0.81f)});
     Mat dstStorage(3, 6, CV_32FC2);
     Mat dst = dstStorage(Rect(1, 1, 4, 1));
     const Scalar fill(0.13, -0.27);
@@ -1329,8 +1329,82 @@ TEST(Imgproc_Remap, linear_two_channel_float_map_borders)
     dst.setTo(Scalar(137, 219));
     remap(src, dst, map, noArray(), INTER_LINEAR, BORDER_TRANSPARENT);
     const Mat_<Vec2f> transparentExpected({1, 4}, {
-        Vec2f(137.f, 219.f), Vec2f(1.f, 1.6f), Vec2f(137.f, 219.f), Vec2f(0.3f, 2.59f)});
+        Vec2f(34.25f, 57.375f), Vec2f(35.f, 55.875f), Vec2f(137.f, 219.f), Vec2f(0.3f, 2.59f)});
     EXPECT_LE(cvtest::norm(transparentExpected, dst, NORM_INF), 1e-6);
+}
+
+TEST(Imgproc_Remap, linear_two_channel_float_map_transparent_borders)
+{
+    const Mat_<Vec2f> src({2, 2}, {
+        Vec2f(0.f, 10.f), Vec2f(1.f, 12.f), Vec2f(2.f, 14.f), Vec2f(3.f, 16.f)});
+    const Vec2f initial(80.f, 100.f);
+    Mat_<Vec2f> map(1, 33), expected(map.size());
+    map(0, 0) = Vec2f(0.5f, -0.25f);
+    map(0, 1) = Vec2f(0.5f, 1.25f);
+    map(0, 2) = Vec2f(-0.25f, -0.25f);
+    map(0, 3) = Vec2f(0.5f, -1.25f);
+
+    for (int x = 4; x < map.cols; ++x)
+    {
+        const float sx = (x % 4) * 0.25f;
+        map(0, x) = Vec2f(sx, 0.5f);
+        expected(0, x) = Vec2f(1.f + sx, 12.f + 2.f * sx);
+    }
+    expected(0, 0) = Vec2f(20.375f, 33.25f);
+    expected(0, 1) = Vec2f(21.875f, 36.25f);
+    expected(0, 2) = Vec2f(35.f, 49.375f);
+    expected(0, 3) = initial;
+
+    Mat_<Vec2f> actual(map.size(), initial);
+    remap(src, actual, map, noArray(), INTER_LINEAR, BORDER_TRANSPARENT);
+    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6);
+
+    std::vector<Mat> relative;
+    split(map, relative);
+    for (int x = 0; x < map.cols; ++x)
+        relative[0].at<float>(0, x) -= x;
+    actual.setTo(Scalar(initial[0], initial[1]));
+    remap(src, actual, relative[0], relative[1], INTER_LINEAR | WARP_RELATIVE_MAP, BORDER_TRANSPARENT);
+    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6);
+}
+
+TEST(Imgproc_Remap, linear_two_channel_float_map_large_periodic_borders)
+{
+    const Mat_<Vec2f> src({1, 3}, {Vec2f(0.f, 10.f), Vec2f(1.f, 14.f), Vec2f(2.f, 18.f)});
+    const int borders[] = {BORDER_WRAP, BORDER_REFLECT, BORDER_REFLECT_101};
+    const float expected[][4] = {
+        {0.75f, 1.25f, 1.f, 0.f},
+        {1.25f, 1.25f, 1.f, 0.f},
+        {0.25f, 0.75f, 0.f, 2.f},
+    };
+
+    for (bool relative : {false, true})
+    {
+        const Mat_<Vec2f> map({1, 3}, {
+            Vec2f(-32768.25f, 0.f),
+            Vec2f(relative ? 32766.25f : 32767.25f, 0.f),
+            Vec2f(4294967296.f, 0.f)});
+        std::vector<Mat> maps;
+        split(map, maps);
+        const int flags = INTER_LINEAR | (relative ? WARP_RELATIVE_MAP : 0);
+        for (size_t i = 0; i < std::size(borders); ++i)
+        {
+            const float* values = expected[i];
+            const auto ramp = [](float value) { return Vec2f(value, 10.f + 4.f * value); };
+            const Mat_<Vec2f> reference({1, 3}, {
+                ramp(values[0]), ramp(values[1]), ramp(values[relative ? 3 : 2])});
+            for (bool planar : {false, true})
+            {
+                SCOPED_TRACE(cv::format("border=%d relative=%d planar=%d", borders[i], relative, planar));
+                Mat actual;
+                if (planar)
+                    remap(src, actual, maps[0], maps[1], flags, borders[i]);
+                else
+                    remap(src, actual, map, noArray(), flags, borders[i]);
+                EXPECT_LE(cvtest::norm(reference, actual, NORM_INF), 1e-6);
+            }
+        }
+    }
 }
 
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)

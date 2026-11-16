@@ -1531,101 +1531,6 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 
 #endif
 
-template<bool relative>
-static void remapLinear32FC2(const Mat& src, Mat& dst, const Mat& map1, const Mat& map2,
-                            int borderType, const Scalar& borderValue)
-{
-    const Vec2f fill(saturate_cast<float>(borderValue[0]), saturate_cast<float>(borderValue[1]));
-    const bool interleaved = map2.empty();
-    const int mapStride = interleaved ? 2 : 1;
-    const float lastCol = static_cast<float>(src.cols - 1);
-    const float lastRow = static_cast<float>(src.rows - 1);
-    parallel_for_(Range(0, dst.rows), [&](const Range& range)
-    {
-        for (int y = range.start; y < range.end; ++y)
-        {
-            const float* mapX = map1.ptr<float>(y);
-            const float* mapY = interleaved ? mapX + 1 : map2.ptr<float>(y);
-            Vec2f* out = dst.ptr<Vec2f>(y);
-            for (int x = 0, mapIndex = 0; x < dst.cols; ++x, mapIndex += mapStride)
-            {
-                float sx = mapX[mapIndex];
-                float sy = mapY[mapIndex];
-                if constexpr (relative)
-                {
-                    sx += x;
-                    sy += y;
-                }
-                Vec2f p00, p01, p10, p11;
-                float fx, fy;
-                if (sx >= 0 && sx < lastCol && sy >= 0 && sy < lastRow)
-                {
-                    const int x0 = static_cast<int>(sx), y0 = static_cast<int>(sy);
-                    fx = sx - x0;
-                    fy = sy - y0;
-#if CV_SIMD128
-                    const float* top = src.ptr<float>(y0) + 2 * x0;
-                    const float* bottom = src.ptr<float>(y0 + 1) + 2 * x0;
-                    const v_float32x4 columns = v_fma(v_load(bottom), v_setall_f32(fy),
-                                                      v_mul(v_load(top), v_setall_f32(1.f - fy)));
-                    const v_float32x4 weighted = v_mul(columns, v_float32x4(1.f - fx, 1.f - fx, fx, fx));
-                    v_store_low(out[x].val, v_add(weighted, v_rotate_right<2>(weighted)));
-                    continue;
-#else
-                    const Vec2f* top = src.ptr<Vec2f>(y0) + x0;
-                    const Vec2f* bottom = src.ptr<Vec2f>(y0 + 1) + x0;
-                    p00 = top[0];
-                    p01 = top[1];
-                    p10 = bottom[0];
-                    p11 = bottom[1];
-#endif
-                }
-                else
-                {
-                    // Bound non-finite and extreme coordinates before converting to integers.
-                    sx = std::min(float(SHRT_MAX), std::max(float(SHRT_MIN), sx));
-                    sy = std::min(float(SHRT_MAX), std::max(float(SHRT_MIN), sy));
-                    int x0 = cvFloor(sx), y0 = cvFloor(sy);
-                    int x1 = x0 + 1, y1 = y0 + 1;
-                    fx = sx - x0;
-                    fy = sy - y0;
-                    if (borderType == BORDER_TRANSPARENT)
-                    {
-                        if (x0 < 0 || x0 >= src.cols || y0 < 0 || y0 >= src.rows)
-                            continue;
-                        x1 = std::min(x1, src.cols - 1);
-                        y1 = std::min(y1, src.rows - 1);
-                    }
-                    else if (borderType == BORDER_CONSTANT &&
-                             (x0 < -1 || x0 >= src.cols || y0 < -1 || y0 >= src.rows))
-                    {
-                        out[x] = fill;
-                        continue;
-                    }
-                    else
-                    {
-                        x0 = borderInterpolate(x0, src.cols, borderType);
-                        x1 = borderInterpolate(x1, src.cols, borderType);
-                        y0 = borderInterpolate(y0, src.rows, borderType);
-                        y1 = borderInterpolate(y1, src.rows, borderType);
-                    }
-                    const auto sample = [&](int col, int row)
-                    {
-                        return col >= 0 && row >= 0 ? src.ptr<Vec2f>(row)[col] : fill;
-                    };
-                    p00 = sample(x0, y0);
-                    p01 = sample(x1, y0);
-                    p10 = sample(x0, y1);
-                    p11 = sample(x1, y1);
-                }
-                const Vec2f top = p00 * (1.f - fx) + p01 * fx;
-                const Vec2f bottom = p10 * (1.f - fx) + p11 * fx;
-                out[x] = top * (1.f - fy) + bottom * fy;
-            }
-        }
-    });
-}
-
 }
 
 void cv::remap( InputArray _src, OutputArray _dst,
@@ -1794,11 +1699,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
                     break;
                 }
                 case CV_32FC2: {
-                    if (hasRelativeFlag)
-                        remapLinear32FC2<true>(src, dst, map1, map2, borderType, borderValue);
-                    else
-                        remapLinear32FC2<false>(src, dst, map1, map2, borderType, borderValue);
-                    return;
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC2, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
                 }
                 case CV_32FC3: {
                     CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);

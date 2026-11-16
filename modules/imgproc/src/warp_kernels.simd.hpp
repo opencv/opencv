@@ -306,6 +306,10 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
+void remapLinearInvoker_32FC2(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
@@ -6407,6 +6411,176 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
         }
     };
     parallel_for_(Range(0, dst_rows), worker);
+}
+
+namespace {
+
+struct LinearRemapBorder
+{
+    int first, second;
+    float fraction;
+};
+
+static inline LinearRemapBorder linearRemapBorder(float map, int offset, int size, int borderType)
+{
+    const bool periodic = borderType == BORDER_WRAP || borderType == BORDER_REFLECT ||
+                          borderType == BORDER_REFLECT_101;
+    double coordinate = static_cast<double>(map) + offset;
+    if (!(coordinate >= SHRT_MIN && coordinate <= SHRT_MAX))
+    {
+        if (periodic && std::isfinite(map))
+        {
+            const int period = borderType == BORDER_WRAP ? size : 2 * (size - (borderType == BORDER_REFLECT_101));
+            // Apply the relative offset after reduction so it survives even when the map's ULP exceeds it.
+            coordinate = period ? std::fmod(static_cast<double>(map), period) + offset : 0.;
+        }
+        else
+        {
+            coordinate = coordinate > 0 ? SHRT_MAX : SHRT_MIN;
+        }
+    }
+    const int first = cvFloor(coordinate);
+    const float fraction = static_cast<float>(coordinate - first);
+    if (periodic)
+        return {borderInterpolate_fast(first, size, borderType),
+                borderInterpolate_fast(first + 1, size, borderType), fraction};
+    return {borderInterpolate(first, size, borderType), borderInterpolate(first + 1, size, borderType), fraction};
+}
+
+#if CV_SIMD || CV_SIMD_SCALABLE
+static inline v_float32 interpolateRemapPairs(const float* top, const float* bottom, const int* indexes,
+                                             const v_float32& fx, const v_float32& fy)
+{
+    const v_float32 leftTop = vx_lut_pairs(top, indexes);
+    const v_float32 rightTop = vx_lut_pairs(top + 2, indexes);
+    const v_float32 leftBottom = vx_lut_pairs(bottom, indexes);
+    const v_float32 rightBottom = vx_lut_pairs(bottom + 2, indexes);
+    const v_float32 one = vx_setall_f32(1.f);
+    const v_float32 topValue = v_fma(rightTop, fx, v_mul(leftTop, v_sub(one, fx)));
+    const v_float32 bottomValue = v_fma(rightBottom, fx, v_mul(leftBottom, v_sub(one, fx)));
+    return v_fma(bottomValue, fy, v_mul(topValue, v_sub(one, fy)));
+}
+#endif
+
+} // anonymous
+
+void remapLinearInvoker_32FC2(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative)
+{
+    const size_t srcStride = src_step / sizeof(float), dstStride = dst_step / sizeof(float);
+    const size_t map1Stride = map1_step / sizeof(float), map2Stride = map2_step / sizeof(float);
+    const bool interleaved = map2_data == nullptr;
+    const Vec2f fill(saturate_cast<float>(border_value[0]), saturate_cast<float>(border_value[1]));
+    const bool transparent = border_type == BORDER_TRANSPARENT;
+    const int sampleBorder = transparent ? BORDER_CONSTANT : border_type;
+    const float lastCol = static_cast<float>(src_cols - 1), lastRow = static_cast<float>(src_rows - 1);
+
+    parallel_for_(Range(0, dst_rows), [&](const Range& range)
+    {
+        CV_INSTRUMENT_REGION();
+#if CV_SIMD || CV_SIMD_SCALABLE
+        constexpr int maxLanes = VTraits<v_float32>::max_nlanes;
+        const int lanes = VTraits<v_float32>::vlanes();
+        const v_float32 zero = vx_setzero_f32();
+        const v_float32 width = vx_setall_f32(lastCol), height = vx_setall_f32(lastRow);
+        // Scalable gathers use 32-bit byte offsets.
+        const bool useVector = src_cols > 1 && src_rows > 1 &&
+                               src_step <= static_cast<size_t>(UINT_MAX) / src_rows;
+        const v_int32 rowStride = vx_setall_s32(useVector ? static_cast<int>(srcStride) : 0);
+        std::array<float, maxLanes> startIndices;
+        std::iota(startIndices.begin(), startIndices.end(), 0.f);
+        const v_float32 columnOffsets = vx_load(startIndices.data());
+        int indexes[maxLanes];
+#endif
+        for (int y = range.start; y < range.end; ++y)
+        {
+            const float* mapX = map1_data + y * map1Stride;
+            const float* mapY = interleaved ? mapX + 1 : map2_data + y * map2Stride;
+            float* dst = dst_data + y * dstStride;
+            const int dy = is_relative ? y : 0;
+            for (int x = 0; x < dst_cols;)
+            {
+#if CV_SIMD || CV_SIMD_SCALABLE
+                if (useVector && x <= dst_cols - lanes)
+                {
+                    v_float32 sx, sy;
+                    if (interleaved)
+                        v_load_deinterleave(mapX + 2 * x, sx, sy);
+                    else
+                    {
+                        sx = vx_load(mapX + x);
+                        sy = vx_load(mapY + x);
+                    }
+                    if (is_relative)
+                    {
+                        sx = v_add(sx, v_add(columnOffsets, vx_setall_f32(static_cast<float>(x))));
+                        sy = v_add(sy, vx_setall_f32(static_cast<float>(dy)));
+                    }
+                    if (v_check_all(v_and(v_and(v_ge(sx, zero), v_lt(sx, width)),
+                                          v_and(v_ge(sy, zero), v_lt(sy, height)))))
+                    {
+                        const v_int32 ix = v_floor(sx), iy = v_floor(sy);
+                        vx_store(indexes, v_muladd(iy, rowStride, v_add(ix, ix)));
+                        const v_float32 fx = v_sub(sx, v_cvt_f32(ix)), fy = v_sub(sy, v_cvt_f32(iy));
+                        v_float32 fxLo, fxHi, fyLo, fyHi;
+                        v_zip(fx, fx, fxLo, fxHi);
+                        v_zip(fy, fy, fyLo, fyHi);
+                        vx_store(dst + 2 * x, interpolateRemapPairs(src_data, src_data + srcStride, indexes, fxLo, fyLo));
+                        vx_store(dst + 2 * x + lanes, interpolateRemapPairs(src_data, src_data + srcStride,
+                                                                           indexes + lanes / 2, fxHi, fyHi));
+                        x += lanes;
+                        continue;
+                    }
+                }
+#endif
+                const int dx = is_relative ? x : 0;
+                const int mapIndex = interleaved ? 2 * x : x;
+                const float mx = mapX[mapIndex], my = mapY[mapIndex];
+                const float sx = mx + dx, sy = my + dy;
+                float* pixel = dst + 2 * x;
+                ++x;
+                LinearRemapBorder bx, by;
+                Vec2f missing;
+                if (sx >= 0 && sx < lastCol && sy >= 0 && sy < lastRow)
+                {
+                    const int ix = static_cast<int>(sx), iy = static_cast<int>(sy);
+                    bx = {ix, ix + 1, sx - ix};
+                    by = {iy, iy + 1, sy - iy};
+                }
+                else
+                {
+                    bx = linearRemapBorder(mx, dx, src_cols, sampleBorder);
+                    by = linearRemapBorder(my, dy, src_rows, sampleBorder);
+                    if ((bx.first < 0 && bx.second < 0) || (by.first < 0 && by.second < 0))
+                    {
+                        if (!transparent)
+                        {
+                            pixel[0] = fill[0];
+                            pixel[1] = fill[1];
+                        }
+                        continue;
+                    }
+                    missing = transparent ? Vec2f(pixel[0], pixel[1]) : fill;
+                }
+                const auto sample = [&](int col, int row)
+                {
+                    if (col < 0 || row < 0)
+                        return missing;
+                    const float* value = src_data + row * srcStride + 2 * col;
+                    return Vec2f(value[0], value[1]);
+                };
+                const Vec2f top = sample(bx.first, by.first) * (1.f - bx.fraction) +
+                                  sample(bx.second, by.first) * bx.fraction;
+                const Vec2f bottom = sample(bx.first, by.second) * (1.f - bx.fraction) +
+                                     sample(bx.second, by.second) * bx.fraction;
+                const Vec2f value = top * (1.f - by.fraction) + bottom * by.fraction;
+                pixel[0] = value[0];
+                pixel[1] = value[1];
+            }
+        }
+    });
 }
 
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
