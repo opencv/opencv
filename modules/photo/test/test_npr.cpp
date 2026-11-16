@@ -119,24 +119,6 @@ TEST(Photo_NPR_PencilSketch, regression)
     EXPECT_LE(color_pencil_error, numerical_precision);
 }
 
-TEST(Photo_NPR_Stylization, regression)
-{
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
-    string original_path = folder + "test1.png";
-
-    Mat source = imread(original_path, IMREAD_COLOR);
-
-    ASSERT_FALSE(source.empty()) << "Could not load input image " << original_path;
-
-    Mat result;
-    stylization(source,result);
-
-    Mat stylized_reference = imread(folder + "stylized_reference.png");
-    double stylized_error = cvtest::norm(stylized_reference, result, NORM_L1);
-    EXPECT_LE(stylized_error, numerical_precision);
-
-}
-
 TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, small_flat_image)
 {
     RNG& rng = theRNG();
@@ -182,6 +164,24 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, small_flat_image)
     edgePreservingFilter(repeat(rowSrc, 96, 1), tallRes, NORMCONV_FILTER);
     ASSERT_EQ(rowRes.size(), rowSrc.size());
     EXPECT_LE(cvtest::norm(rowRes, tallRes.row(0), NORM_INF), 1);
+}
+
+TEST(Photo_NPR_Stylization, regression)
+{
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
+    string original_path = folder + "test1.png";
+
+    Mat source = imread(original_path, IMREAD_COLOR);
+
+    ASSERT_FALSE(source.empty()) << "Could not load input image " << original_path;
+
+    Mat result;
+    stylization(source,result);
+
+    Mat stylized_reference = imread(folder + "stylized_reference.png");
+    double stylized_error = cvtest::norm(stylized_reference, result, NORM_L1);
+    EXPECT_LE(stylized_error, numerical_precision);
+
 }
 
 }} // namespace
