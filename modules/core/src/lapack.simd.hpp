@@ -307,7 +307,7 @@ template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, 
 }
 #endif
 
-#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#if !CV_SIMD || !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n, double* result) const
 {
     for( int k = 0; k < n; k++ )
