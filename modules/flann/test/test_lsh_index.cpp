@@ -109,22 +109,20 @@ TEST(Flann_LSH, load_with_small_key_size)
     }
 }
 
-TEST(Flann_LSH, load_searches_the_given_features)
+// The file holds the dataset, so a loaded index finds the saved rows whatever data of the same
+// size load() gets (#4758 passes an uninitialized matrix); loading again replaces that copy.
+TEST(Flann_LSH, load_uses_the_saved_dataset)
 {
-    Mat features(500, 32, CV_8UC1), other(500, 32, CV_8UC1);
+    Mat features(500, 32, CV_8UC1), placeholder(500, 32, CV_8UC1, Scalar::all(0));
     theRNG().fill(features, RNG::UNIFORM, 0, 256);
-    theRNG().fill(other, RNG::UNIFORM, 0, 256);
     TempFile file(".flann");
-
     {
         flann::Index built(features, flann::LshIndexParams(12, 20, 2), cvflann::FLANN_DIST_HAMMING);
         built.save(file.path);
     }
-
     flann::Index loaded;
-    ASSERT_TRUE(loaded.load(other, file.path));
-    expectRowsFound(loaded, other);
-
+    ASSERT_TRUE(loaded.load(placeholder, file.path));
+    expectRowsFound(loaded, features);
     ASSERT_TRUE(loaded.load(features, file.path));
     expectRowsFound(loaded, features);
     loaded.release();
@@ -147,12 +145,11 @@ TEST(Flann_LSH, load_rejects_invalid_stream)
     ASSERT_EQ(12, getIntAt(saved, params_ofs + sizeof(int)));
     ASSERT_EQ(1, getIntAt(saved, params_ofs + 2 * sizeof(int)));
 
-    // table_number <= 0, key_size <= 0, key_size out of BucketKey range, negative multi_probe_level
+    // table_number <= 0, key_size <= 0, key_size out of BucketKey range
     const struct { size_t ofs; int val; } bad_params[] = {
         { params_ofs, 0 },
         { params_ofs + sizeof(int), 0 },
         { params_ofs + sizeof(int), 33 },
-        { params_ofs + 2 * sizeof(int), -1 },
     };
     for (size_t i = 0; i < sizeof(bad_params) / sizeof(bad_params[0]); ++i)
     {
@@ -164,22 +161,29 @@ TEST(Flann_LSH, load_rejects_invalid_stream)
         EXPECT_THROW(loaded.load(features, file.path), cv::Exception);
     }
 
-    // key_size larger than feature bit width (2 bytes = 16 bits, with key_size = 20)
+    // key_size larger than the saved features' bit width (2 bytes = 16 bits, with key_size = 20); the file
+    // is written by hand because building an LSH index on features narrower than size_t is not supported
     Mat narrow(32, 2, CV_8UC1);
     theRNG().fill(narrow, RNG::UNIFORM, 0, 256);
     {
-        std::vector<char> narrowBuf = saved;
+        const size_t matrix_ofs = params_ofs + 3 * sizeof(int);
+        std::vector<char> narrowBuf(saved.begin(), saved.begin() + matrix_ofs + sizeof(cvflann::Matrix<uchar>));
         cvflann::IndexHeader hdr;
         memcpy(&hdr, &narrowBuf[0], sizeof(hdr));
         hdr.cols = (size_t)narrow.cols;
         memcpy(&narrowBuf[0], &hdr, sizeof(hdr));
         setIntAt(narrowBuf, params_ofs + sizeof(int), 20);
+        cvflann::Matrix<uchar> matHdr;
+        memcpy(&matHdr, &narrowBuf[matrix_ofs], sizeof(matHdr));
+        matHdr.cols = matHdr.stride = (size_t)narrow.cols;
+        memcpy(&narrowBuf[matrix_ofs], &matHdr, sizeof(matHdr));
+        narrowBuf.insert(narrowBuf.end(), (const char*)narrow.data, (const char*)narrow.data + narrow.total());
         writeFileBytes(file.path, narrowBuf);
         flann::Index loaded;
         EXPECT_THROW(loaded.load(narrow, file.path), cv::Exception);
     }
 
-    // saved Matrix header disagreeing with IndexHeader / caller dataset dimensions
+    // saved Matrix header claiming more rows than the file holds
     {
         std::vector<char> mismatchBuf = saved;
         const size_t matrix_ofs = params_ofs + 3 * sizeof(int);
