@@ -7064,7 +7064,7 @@ bicubicCoeffs(float xs0, float ys0,
     return all_inliers;
 }
 
-template<typename _Tp, typename _Fp>
+template<bool perLaneBackground, typename _Tp, typename _Fp>
 CV_DISABLE_UBSAN
 static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn,
                                const int32_t* tl_x, const int32_t* tl_y,
@@ -7074,10 +7074,16 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
     int width = size.width, height = size.height;
     srcstep /= sizeof(_Tp);
     if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) {
-        const int defStep = borderType == BORDER_TRANSPARENT ? cn : 0;
-        for (int i = 0; i < len; i++, defVal += defStep) {
-            const _Tp defR = defVal[0], defG = cn > 1 ? defVal[1] : _Tp();
-            const _Tp defB = cn > 2 ? defVal[2] : _Tp(), defA = cn > 3 ? defVal[3] : _Tp();
+        _Tp defR = defVal[0], defG = cn > 1 ? defVal[1] : _Tp();
+        _Tp defB = cn > 2 ? defVal[2] : _Tp(), defA = cn > 3 ? defVal[3] : _Tp();
+        for (int i = 0; i < len; i++) {
+            if constexpr (perLaneBackground) {
+                defR = defVal[0];
+                defG = cn > 1 ? defVal[1] : _Tp();
+                defB = cn > 2 ? defVal[2] : _Tp();
+                defA = cn > 3 ? defVal[3] : _Tp();
+                defVal += cn;
+            }
             int x0 = tl_x[i], y0 = tl_y[i] + row;
             int x1 = x0 + 1, x2 = x0 + 2, x3 = x0 + 3;
             int my = int((unsigned)y0 < (unsigned)height);
@@ -7317,8 +7323,8 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
             float wys[] = {wy0, wy1, wy2, wy3};
             const chtype* defVal = borderType == BORDER_TRANSPARENT ? dst : borderVal;
             for (int row = 0; row < 4; row++) {
-                bicubicFetchPixels((const chtype*)src, srcstep, size, NCHANNELS, &tl_x, &tl_y,
-                                   goodx, row, &pixbuf[0][0], 1, borderType, defVal);
+                bicubicFetchPixels<false>((const chtype*)src, srcstep, size, NCHANNELS, &tl_x, &tl_y,
+                                          goodx, row, &pixbuf[0][0], 1, borderType, defVal);
                 float wy = wys[row];
                 for (int c = 0; c < NCHANNELS; c++) {
                     V0 = acctype(pixbuf[c][0]);
@@ -8214,9 +8220,10 @@ bicubicVec(const float* srcx, const float* srcy, int len,
             }
             continue;
         } else {
-            const chtype* defVal = borderType == BORDER_TRANSPARENT ? dst : borderVal;
+            const bool transparent = borderType == BORDER_TRANSPARENT;
+            const chtype* defVal = transparent ? dst : borderVal;
             chtype tail[BATCH*NCHANNELS];
-            if (borderType == BORDER_TRANSPARENT && dlen < BATCH) {
+            if (transparent && dlen < BATCH) {
                 memcpy(tail, dst, dlen*BPP);
                 std::fill(tail + dlen*NCHANNELS, tail + BATCH*NCHANNELS, chtype());
                 defVal = tail;
@@ -8226,8 +8233,12 @@ bicubicVec(const float* srcx, const float* srcy, int len,
             acc_r = acc_g = acc_b = acc_a = v_setzero_<vecfptype>();
 
             for (int row = 0; row < 4; row++) {
-                bicubicFetchPixels((const chtype*)src, srcstep, size, NCHANNELS, tl_x, tl_y,
-                                    goodx, row, &pixbuf[0][0], BATCH, borderType, defVal);
+                if (transparent)
+                    bicubicFetchPixels<true>((const chtype*)src, srcstep, size, NCHANNELS, tl_x, tl_y,
+                                             goodx, row, &pixbuf[0][0], BATCH, BORDER_TRANSPARENT, defVal);
+                else
+                    bicubicFetchPixels<false>((const chtype*)src, srcstep, size, NCHANNELS, tl_x, tl_y,
+                                              goodx, row, &pixbuf[0][0], BATCH, borderType, defVal);
                 vecfptype wy = wys[row];
                 V0 = vx_load(&pixbuf[0][0]);
                 V1 = vx_load(&pixbuf[0][BATCH]);
