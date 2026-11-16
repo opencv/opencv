@@ -2683,6 +2683,40 @@ TEST(Core_Arithm, scalar_vs_4x1_64F_array)
     EXPECT_EQ(0, cvtest::norm(d, Mat(2, 2, CV_8UC3, Scalar(99, 108, 117)), NORM_INF));
 }
 
+TEST(Core_Arithm, add_rgb8_shared_float_field)
+{
+    // The odd-width ROI exceeds the 262144-pixel parallel threshold.
+    const Rect roi(3, 2, 641, 513);
+    Mat rgbParent(roi.height + 4, roi.width + 8, CV_8UC3);
+    Mat fieldParent(roi.height + 4, roi.width + 12, CV_32FC1);
+    Mat rgb = rgbParent(roi), field = fieldParent(roi);
+    RNG rng((uint64)ARITHM_RNG_SEED);
+    rng.fill(rgb, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
+    rng.fill(field, RNG::UNIFORM, -400.f, 400.f);
+
+    const Scalar border(17, 33, 49);
+    Mat expectedParent(roi.height + 4, roi.width + 16, CV_8UC3, border);
+    Mat expected = expectedParent(roi);
+    for (int y = 0; y < roi.height; ++y)
+    {
+        const Vec3b* pixels = rgb.ptr<Vec3b>(y);
+        const float* offsets = field.ptr<float>(y);
+        Vec3b* result = expected.ptr<Vec3b>(y);
+        for (int x = 0; x < roi.width; ++x)
+            for (int ch = 0; ch < 3; ++ch)
+                result[x][ch] = saturate_cast<uchar>(pixels[x][ch] + offsets[x]);
+    }
+
+    Mat dstParent(expectedParent.size(), CV_8UC3, border);
+    Mat dst = dstParent(roi);
+    cv::add(rgb, field, dst, noArray(), CV_8U);
+    EXPECT_EQ(0, cvtest::norm(dstParent, expectedParent, NORM_INF)) << "RGB + field";
+
+    dstParent.setTo(border);
+    cv::add(field, rgb, dst, noArray(), CV_8U);
+    EXPECT_EQ(0, cvtest::norm(dstParent, expectedParent, NORM_INF)) << "field + RGB";
+}
+
 TEST(Compare, regression_16F_do_not_crash)
 {
     cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
