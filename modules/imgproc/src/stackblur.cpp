@@ -1217,10 +1217,21 @@ static inline bool stackBlurSumFitsInt(int radius)
     return (int64_t)(radius + 1) * (radius + 1) <= INT_MAX / maxAbs;
 }
 
+// Same bound for int64_t. (radius + 1)^2 itself always fits, since radius is at most INT_MAX / 2.
+template<typename T>
+static inline bool stackBlurSumFitsInt64(int radius)
+{
+    const int64_t maxAbs = std::max(-(int64_t)std::numeric_limits<T>::min(), (int64_t)std::numeric_limits<T>::max());
+    return (int64_t)(radius + 1) * (radius + 1) <= std::numeric_limits<int64_t>::max() / maxAbs;
+}
+
 // The SIMD paths need 32-bit sums, so larger kernels take the scalar loops with 64-bit sums.
+// A kernel whose sums don't fit int64_t either is rejected.
 template<typename T>
 static void stackBlurInteger(const Mat& src, Mat& dst, int radiusW, int radiusH, int widthElem, int numOfThreads)
 {
+    CV_Check(radiusW, stackBlurSumFitsInt64<T>(radiusW), "stackBlur: kernel width too large for the image depth");
+    CV_Check(radiusH, stackBlurSumFitsInt64<T>(radiusH), "stackBlur: kernel height too large for the image depth");
     if (radiusW != 0)
     {
         if (stackBlurSumFitsInt<T>(radiusW))

@@ -479,6 +479,17 @@ TEST(Imgproc_StackBlur, full_range_huge_kernel)
     }
 }
 
+// From radius 11863373, 65535 * (radius + 1)^2 doesn't fit int64_t: such a kernel is rejected instead of overflowing.
+TEST(Imgproc_StackBlur, int64_sum_limit_16u)
+{
+    const int lastRadius = 11863372;
+    Mat constant(1, 2 * lastRadius + 3, CV_16UC1, Scalar::all(65535)), dst;
+    stackBlur(constant, dst, Size(2 * lastRadius + 1, 1));
+    EXPECT_LE(cvtest::norm(constant, dst, NORM_INF), 1.);
+    EXPECT_THROW(stackBlur(constant, dst, Size(2 * lastRadius + 3, 1)), cv::Exception);
+    EXPECT_THROW(stackBlur(constant.t(), dst, Size(1, 2 * lastRadius + 3)), cv::Exception);
+}
+
 class ScopedThreadsGuard
 {
 public:
