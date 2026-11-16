@@ -56,6 +56,16 @@ class WarningTests(unittest.TestCase):
         text = xml_render._doxygen_desc_to_md(node, 2)
         self.assertIn(":::{note}\n\n: Note text.", text)
 
+    def test_subpages_keep_their_api_tree(self):
+        self.write("main_modules/cudaarithm", "# CUDA arithmetic\n")
+        self.write("extra_modules/cudaarithm", "# CUDA arithmetic\n")
+        with patch.object(translate, "SPHINX_INPUT_ROOT", self.root), \
+                patch.dict(translate._ANCHOR_TO_DOC,
+                           {"api_cudaarithm": "extra_modules/cudaarithm"}):
+            text = translate._translate("- @subpage api_cudaarithm\n", "main_modules/cuda")
+        self.assertIn("/main_modules/cudaarithm", text)
+        self.assertNotIn("/extra_modules/cudaarithm", text)
+
     def test_sphinx_keeps_global_and_page_local_links(self):
         from sphinx.application import Sphinx
         self.write("index", "# API\n\n```{toctree}\n\nmain_modules/group\n"

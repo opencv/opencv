@@ -983,7 +983,17 @@ def _translate(text: str, docname: str | None = None) -> str:
                 # @ref follows redirects; @subpage uses literal target.
                 lookup = _resolve_redirect(anchor) if kind == "ref" else anchor
                 if lookup in _ANCHOR_TO_DOC:
-                    resolved.append((kind, "internal", _ANCHOR_TO_DOC[lookup],
+                    target = _ANCHOR_TO_DOC[lookup]
+                    if (kind == "subpage" and docname
+                            and docname.startswith(("main_modules/", "extra_modules/"))
+                            and target.startswith(("main_modules/", "extra_modules/"))):
+                        # CUDA groups can have a view in both API trees. The
+                        # later anchor scan must not steal the other tree's
+                        # navigation children and leave its local pages orphaned.
+                        local = docname.split("/", 1)[0] + "/" + target.split("/", 1)[1]
+                        if (SPHINX_INPUT_ROOT / (local + ".md")).is_file():
+                            target = local
+                    resolved.append((kind, "internal", target,
                                      disp or _ANCHOR_TO_TITLE.get(lookup, lookup),
                                      description, prefix, inline))
                 elif lookup in _ANCHOR_TO_EXTERNAL:
