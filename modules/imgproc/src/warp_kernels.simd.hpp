@@ -7074,9 +7074,10 @@ static void bicubicFetchPixels(const _Tp* src, size_t srcstep, Size size, int cn
     int width = size.width, height = size.height;
     srcstep /= sizeof(_Tp);
     if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) {
-        _Tp defR = defVal[0], defG = cn > 1 ? defVal[1] : _Tp();
-        _Tp defB = cn > 2 ? defVal[2] : _Tp(), defA = cn > 3 ? defVal[3] : _Tp();
-        for (int i = 0; i < len; i++) {
+        const int defStep = borderType == BORDER_TRANSPARENT ? cn : 0;
+        for (int i = 0; i < len; i++, defVal += defStep) {
+            const _Tp defR = defVal[0], defG = cn > 1 ? defVal[1] : _Tp();
+            const _Tp defB = cn > 2 ? defVal[2] : _Tp(), defA = cn > 3 ? defVal[3] : _Tp();
             int x0 = tl_x[i], y0 = tl_y[i] + row;
             int x1 = x0 + 1, x2 = x0 + 2, x3 = x0 + 3;
             int my = int((unsigned)y0 < (unsigned)height);
@@ -8214,6 +8215,12 @@ bicubicVec(const float* srcx, const float* srcy, int len,
             continue;
         } else {
             const chtype* defVal = borderType == BORDER_TRANSPARENT ? dst : borderVal;
+            chtype tail[BATCH*NCHANNELS];
+            if (borderType == BORDER_TRANSPARENT && dlen < BATCH) {
+                memcpy(tail, dst, dlen*BPP);
+                std::fill(tail + dlen*NCHANNELS, tail + BATCH*NCHANNELS, chtype());
+                defVal = tail;
+            }
             vecfptype wys[4] = {wy0, wy1, wy2, wy3};
             vecbuftype V0, V1, V2, V3;
             acc_r = acc_g = acc_b = acc_a = v_setzero_<vecfptype>();
