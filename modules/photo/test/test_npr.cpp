@@ -81,6 +81,32 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
     EXPECT_GT(psnr, 60.0);
 }
 
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, large_image)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_DEBUG_LONG);
+
+    const int rows = 2400, cols = 2400, ref_cols = 256, band_h = 3;
+    Mat bands(rows / band_h, 1, CV_8UC3);
+    theRNG().fill(bands, RNG::UNIFORM, 0, 256);
+
+    Mat row_colors(rows, 1, CV_8UC3);
+    for (int i = 0; i < rows; i++)
+        bands.row(i / band_h).copyTo(row_colors.row(i));
+
+    Mat src = repeat(row_colors, 1, cols);
+    Mat ref_src = repeat(row_colors, 1, ref_cols);
+
+    Mat result, ref_result;
+    edgePreservingFilter(src, result, NORMCONV_FILTER);
+    edgePreservingFilter(ref_src, ref_result, NORMCONV_FILTER);
+    EXPECT_LE(cvtest::norm(result, repeat(ref_result.col(ref_cols / 2), 1, cols), NORM_INF), 1);
+
+    Mat stylized, ref_stylized;
+    stylization(src, stylized);
+    stylization(ref_src, ref_stylized);
+    EXPECT_LE(cvtest::norm(stylized, repeat(ref_stylized.col(ref_cols / 2), 1, cols), NORM_INF), 1);
+}
+
 TEST(Photo_NPR_DetailEnhance, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
