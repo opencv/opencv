@@ -3634,7 +3634,7 @@ typedef testing::TestWithParam<double> Core_MulScale32S;
 
 TEST_P(Core_MulScale32S, large_products)
 {
-    RNG& rng = cvtest::TS::ptr()->get_rng();
+    RNG& rng = theRNG();
     const double scale = GetParam();
     Mat a(2, 37, CV_32S), b(2, 37, CV_32S), dst;
     rng.fill(a, RNG::UNIFORM, -40000, 40001);
@@ -3659,7 +3659,7 @@ typedef testing::TestWithParam< tuple<int, int> > Core_MulTinyPowerOfTwoScale;
 
 TEST_P(Core_MulTinyPowerOfTwoScale, result_within_one)
 {
-    RNG& rng = cvtest::TS::ptr()->get_rng();
+    RNG& rng = theRNG();
     const int depth = get<0>(GetParam());
     const double scale = std::ldexp(1.0, -get<1>(GetParam()));
     const int maxValue = depth == CV_16U ? 32000 : depth == CV_16S ? 22000 : 100000;
@@ -3681,5 +3681,26 @@ TEST_P(Core_MulTinyPowerOfTwoScale, result_within_one)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MulTinyPowerOfTwoScale,
     testing::Combine(testing::Values((int)CV_16U, (int)CV_16S, (int)CV_32S), testing::Range(14, 21)));
+
+// For signed types the largest absolute product is min() * min(), not max() * max()
+template <typename T>
+static void checkMulLargestProduct(T a, T b, double scale, T expected)
+{
+    Mat src1(2, 37, DataType<T>::type, Scalar::all((double)a));
+    Mat src2(2, 37, DataType<T>::type, Scalar::all((double)b));
+    Mat dst;
+    cv::multiply(src1, src2, dst, scale);
+    ASSERT_EQ(src1.type(), dst.type());
+    Mat ref(src1.size(), src1.type(), Scalar::all((double)expected));
+    EXPECT_EQ(0, cvtest::norm(ref, dst, NORM_INF))
+        << "a=" << (double)a << " b=" << (double)b << " scale=" << scale;
+}
+
+TEST(Core_MulScale, signed_min_times_min_is_not_rounded_to_zero)
+{
+    checkMulLargestProduct<schar>(-128, -128, std::ldexp(1.0, -14), 1);
+    checkMulLargestProduct<short>(-32768, -32768, std::ldexp(1.0, -30), 1);
+    checkMulLargestProduct<int>(INT_MIN, INT_MIN, std::ldexp(1.0, -62), 1);
+}
 
 }} // namespace
