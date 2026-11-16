@@ -8092,13 +8092,6 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 // always at least one more row after the last row being read.
 #if !CV_SIMD_FP16 && CV_SSE2 && ((CV_SIMD_WIDTH == 32 && CV_AVX2) || CV_SIMD_WIDTH == 16)
 
-static CV_ALWAYS_INLINE int bicubicLoad32(const uint8_t* ptr)
-{
-    int val;
-    memcpy(&val, ptr, sizeof(val));
-    return val;
-}
-
 // splits 4 packed 8-bit taps per 32-bit lane into 4 vectors of 32-bit integers
 static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_int32& t1,
                                             v_int32& t2, v_int32& t3)
@@ -8110,25 +8103,28 @@ static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_in
     t3 = v_reinterpret_as_s32(v_shr<24>(v));
 }
 
-// for each lane j loads the 4 consecutive bytes starting at srcrow + ofs[j]
+#undef FETCH_INLIERS_8UC1
+#if CV_SIMD_WIDTH == 32
+#define FETCH_INLIERS_8UC1(row) \
+    bicubicSplit8u(v_reinterpret_as_u32(vx_lut_quads((const uchar*)src + row*srcstep, tl_ofs)), R0, R1, R2, R3)
+#else
+// 128-bit v_lut_quads(const uchar*, const int*) builds the vector from 16 single-byte loads,
+// which is ~1.25x slower here than these four 32-bit loads
+static CV_ALWAYS_INLINE int bicubicLoad32(const uint8_t* ptr)
+{
+    int val;
+    memcpy(&val, ptr, sizeof(val));
+    return val;
+}
 static CV_ALWAYS_INLINE v_uint32 bicubicGather8uC1(const uint8_t* srcrow, const int32_t* ofs)
 {
-#if CV_SIMD_WIDTH == 32
-    return v_uint32(_mm256_setr_epi32(
-        bicubicLoad32(srcrow + ofs[0]), bicubicLoad32(srcrow + ofs[1]),
-        bicubicLoad32(srcrow + ofs[2]), bicubicLoad32(srcrow + ofs[3]),
-        bicubicLoad32(srcrow + ofs[4]), bicubicLoad32(srcrow + ofs[5]),
-        bicubicLoad32(srcrow + ofs[6]), bicubicLoad32(srcrow + ofs[7])));
-#else
     return v_uint32(_mm_setr_epi32(
         bicubicLoad32(srcrow + ofs[0]), bicubicLoad32(srcrow + ofs[1]),
         bicubicLoad32(srcrow + ofs[2]), bicubicLoad32(srcrow + ofs[3])));
-#endif
 }
-
-#undef FETCH_INLIERS_8UC1
 #define FETCH_INLIERS_8UC1(row) \
     bicubicSplit8u(bicubicGather8uC1((const uint8_t*)src + row*srcstep, tl_ofs), R0, R1, R2, R3)
+#endif
 
 #if CV_SSSE3
 // for each lane j loads the 4 taps of a 3- or 4-channel pixel row starting at srcrow + ofs[j]
@@ -8138,45 +8134,32 @@ static CV_ALWAYS_INLINE void bicubicGather8uCn(const uint8_t* srcrow, const int3
                                                v_uint32& r, v_uint32& g, v_uint32& b, v_uint32& a)
 {
     static_assert(CN == 3 || CN == 4, "");
+    // after the shuffle, lane j holds the r, g, b, a taps of pixel j as 4 packed 32-bit values
+    v_uint32 p0, p1, p2, p3;
 #if CV_SIMD_WIDTH == 32
     const __m256i mask = CN == 3 ?
         _mm256_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1,
                          0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
         _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                          0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    // lanes j and j+4 go to the low and high 128-bit halves, so after
-    // the in-lane transpose below lane order matches 0..7
-    #define CV_BICUBIC_LOAD2(j) _mm256_shuffle_epi8(_mm256_inserti128_si256( \
+    // pixels j and j+4 go to the low and high 128-bit halves; v_transpose4x4 works within
+    // 128-bit halves, so the result lane order is 0..7
+    #define CV_BICUBIC_LOAD2(j) v_uint32(_mm256_shuffle_epi8(_mm256_inserti128_si256( \
         _mm256_castsi128_si256(_mm_loadu_si128((const __m128i*)(srcrow + ofs[j]))), \
-        _mm_loadu_si128((const __m128i*)(srcrow + ofs[j + 4])), 1), mask)
-    __m256i p0 = CV_BICUBIC_LOAD2(0), p1 = CV_BICUBIC_LOAD2(1);
-    __m256i p2 = CV_BICUBIC_LOAD2(2), p3 = CV_BICUBIC_LOAD2(3);
+        _mm_loadu_si128((const __m128i*)(srcrow + ofs[j + 4])), 1), mask))
+    p0 = CV_BICUBIC_LOAD2(0); p1 = CV_BICUBIC_LOAD2(1);
+    p2 = CV_BICUBIC_LOAD2(2); p3 = CV_BICUBIC_LOAD2(3);
     #undef CV_BICUBIC_LOAD2
-    __m256i t0 = _mm256_unpacklo_epi32(p0, p1); // r0 r1 g0 g1
-    __m256i t1 = _mm256_unpacklo_epi32(p2, p3); // r2 r3 g2 g3
-    __m256i t2 = _mm256_unpackhi_epi32(p0, p1); // b0 b1 a0 a1
-    __m256i t3 = _mm256_unpackhi_epi32(p2, p3); // b2 b3 a2 a3
-    r = v_uint32(_mm256_unpacklo_epi64(t0, t1));
-    g = v_uint32(_mm256_unpackhi_epi64(t0, t1));
-    b = v_uint32(_mm256_unpacklo_epi64(t2, t3));
-    a = v_uint32(_mm256_unpackhi_epi64(t2, t3));
 #else
     const __m128i mask = CN == 3 ?
         _mm_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
         _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    __m128i p0 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[0])), mask);
-    __m128i p1 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[1])), mask);
-    __m128i p2 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[2])), mask);
-    __m128i p3 = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[3])), mask);
-    __m128i t0 = _mm_unpacklo_epi32(p0, p1); // r0 r1 g0 g1
-    __m128i t1 = _mm_unpacklo_epi32(p2, p3); // r2 r3 g2 g3
-    __m128i t2 = _mm_unpackhi_epi32(p0, p1); // b0 b1 a0 a1
-    __m128i t3 = _mm_unpackhi_epi32(p2, p3); // b2 b3 a2 a3
-    r = v_uint32(_mm_unpacklo_epi64(t0, t1));
-    g = v_uint32(_mm_unpackhi_epi64(t0, t1));
-    b = v_uint32(_mm_unpacklo_epi64(t2, t3));
-    a = v_uint32(_mm_unpackhi_epi64(t2, t3));
+    p0 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[0])), mask));
+    p1 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[1])), mask));
+    p2 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[2])), mask));
+    p3 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[3])), mask));
 #endif
+    v_transpose4x4(p0, p1, p2, p3, r, g, b, a);
 }
 
 #undef FETCH_INLIERS_8UC3
