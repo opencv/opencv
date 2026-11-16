@@ -406,8 +406,9 @@ struct ModelFusionSliceToSplit
             split->outputs = { prog[idx[first]]->outputs[0], prog[idx[second]]->outputs[0] };
             split->netimpl = netimpl;
 
-            newprog[idx[first]] = split;
-            dropped[idx[second]] = true;
+            // At the earlier Slice: a layer between the two may read either output.
+            newprog[idx[0]] = split;
+            dropped[idx[1]] = true;
             modified = true;
         }
 
