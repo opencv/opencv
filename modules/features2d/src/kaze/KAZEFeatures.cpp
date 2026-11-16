@@ -43,6 +43,7 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options)
 {
     ncycles_ = 0;
     reordering_ = true;
+    derivatives_computed_ = false;
 
     // Now allocate memory for the evolution
     Allocate_Memory_Evolution();
@@ -100,6 +101,7 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
 int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
 {
     CV_Assert(evolution_.size() > 0);
+    derivatives_computed_ = false;
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
@@ -198,7 +200,8 @@ void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 class MultiscaleDerivativesKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev) : evolution_(&ev)
+    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev, bool second_order = true)
+        : evolution_(&ev), second_order_(second_order)
     {
     }
 
@@ -209,30 +212,36 @@ public:
         {
             compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, evolution[i].sigma_size);
             compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Ly, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+            if (second_order_)
+            {
+                compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
+                compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
+                compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+
+                evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+                evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+                evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+            }
 
             evolution[i].Lx = evolution[i].Lx*((evolution[i].sigma_size));
             evolution[i].Ly = evolution[i].Ly*((evolution[i].sigma_size));
-            evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
         }
     }
 
 private:
     std::vector<TEvolution>*  evolution_;
+    bool second_order_;
 };
 
 /* ************************************************************************* */
 /**
  * @brief This method computes the multiscale derivatives for the nonlinear scale space
  */
-void KAZEFeatures::Compute_Multiscale_Derivatives(void)
+void KAZEFeatures::Compute_Multiscale_Derivatives(bool second_order)
 {
     parallel_for_(Range(0, (int)evolution_.size()),
-                                        MultiscaleDerivativesKAZEInvoker(evolution_));
+                                        MultiscaleDerivativesKAZEInvoker(evolution_, second_order));
+    derivatives_computed_ = true;
 }
 
 
@@ -564,17 +573,29 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
     for(size_t i = 0; i < kpts.size(); i++)
     {
         CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
+        CV_Assert(std::fabs(kpts[i].pt.x) < 1e7f && std::fabs(kpts[i].pt.y) < 1e7f &&
+                  kpts[i].size >= 0.0f && kpts[i].size < 1e6f);
     }
 
     // Allocate memory for the matrix of descriptors
-        if (options_.extended == true) {
+    if (options_.extended == true) {
         desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
     }
     else {
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
     }
 
-        parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
+    if (kpts.empty())
+    {
+        return;
+    }
+
+    if (!derivatives_computed_)
+    {
+        Compute_Multiscale_Derivatives(false);
+    }
+
+    parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
 }
 
 /* ************************************************************************* */
@@ -597,7 +618,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const TPyramid& evolu
     xf = kpt.pt.x;
     yf = kpt.pt.y;
     level = kpt.class_id;
-    s = cvRound(kpt.size / 2.0f);
+    s = std::max(1, cvRound(kpt.size / 2.0f));
 
     // Calculate derivatives responses for points within radius of 6*scale
     for (int i = -6; i <= 6; ++i) {
@@ -686,7 +707,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = cvRound(kpt.size / 2.0f);
+    scale = std::max(1, cvRound(kpt.size / 2.0f));
     level = kpt.class_id;
 
     i = -8;
@@ -775,9 +796,10 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
 
     // convert to unit vector
     len = sqrt(len);
-
-    for (i = 0; i < dsize; i++) {
-        desc[i] /= len;
+    if (len > 0.0f) {
+        for (i = 0; i < dsize; i++) {
+            desc[i] /= len;
+        }
     }
 }
 
@@ -814,7 +836,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = cvRound(kpt.size / 2.0f);
+    scale = std::max(1, cvRound(kpt.size / 2.0f));
     angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
@@ -904,9 +926,10 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
 
     // convert to unit vector
     len = sqrt(len);
-
-    for (i = 0; i < dsize; i++) {
-        desc[i] /= len;
+    if (len > 0.0f) {
+        for (i = 0; i < dsize; i++) {
+            desc[i] /= len;
+        }
     }
 }
 
@@ -945,7 +968,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = cvRound(kpt.size / 2.0f);
+    scale = std::max(1, cvRound(kpt.size / 2.0f));
     level = kpt.class_id;
 
     i = -8;
@@ -1056,9 +1079,10 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
 
     // convert to unit vector
     len = sqrt(len);
-
-    for (i = 0; i < dsize; i++) {
-        desc[i] /= len;
+    if (len > 0.0f) {
+        for (i = 0; i < dsize; i++) {
+            desc[i] /= len;
+        }
     }
 }
 
@@ -1097,7 +1121,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = cvRound(kpt.size / 2.0f);
+    scale = std::max(1, cvRound(kpt.size / 2.0f));
     angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
@@ -1213,9 +1237,10 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
 
     // convert to unit vector
     len = sqrt(len);
-
-    for (i = 0; i < dsize; i++) {
-        desc[i] /= len;
+    if (len > 0.0f) {
+        for (i = 0; i < dsize; i++) {
+            desc[i] /= len;
+        }
     }
 }
 
@@ -1398,25 +1423,15 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
     for (size_t i = 0; i < kpts.size(); i++)
     {
         int lv = kpts[i].class_id;
-        if (lv >= 0 && lv < (int)uPyr.size())
-            kpts_by_level[lv].push_back((int)i);
+        CV_Assert(0 <= lv && lv < (int)uPyr.size());
+        CV_Assert(std::fabs(kpts[i].pt.x) < 1e7f && std::fabs(kpts[i].pt.y) < 1e7f &&
+                  kpts[i].size >= 0.0f && kpts[i].size < 1e6f);
+        kpts_by_level[lv].push_back((int)i);
     }
 
-    // Pre-allocate output matrix; we'll write into row-ranges per level
+    // Pre-allocate output matrix; we'll write into rows by original keypoint index
     desc.create((int)kpts.size(), descriptor_size, CV_32F);
     Mat out_mat = desc.getMat();
-
-    // Track the keypoint ordering as we iterate levels
-    // (kpts_by_level iterates in ascending level order, matching kpts order after sorting)
-    // We use a small vector to map global keypoint index -> descriptor row
-    std::vector<int> kpt_to_row(kpts.size(), -1);
-    {
-        // Determine final output row for each keypoint based on iteration order
-        int row = 0;
-        for (size_t lv = 0; lv < uPyr.size(); lv++)
-            for (int ki : kpts_by_level[lv])
-                kpt_to_row[ki] = row++;
-    }
 
     for (size_t lv = 0; lv < uPyr.size(); lv++)
     {
@@ -1452,6 +1467,13 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
         if (!ok)
         {
             // GPU failed — fall back to full CPU path
+            out_mat.release();
+            for (size_t j = 0; j < uPyr.size(); j++)
+            {
+                uPyr[j].Lx.copyTo(evolution_[j].Lx);
+                uPyr[j].Ly.copyTo(evolution_[j].Ly);
+            }
+            derivatives_computed_ = true;
             Mat cpu_desc;
             Feature_Description(kpts, cpu_desc);
             cpu_desc.copyTo(desc);
@@ -1462,8 +1484,7 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
         Mat level_mat = desc_level.getMat(ACCESS_READ);
         for (int i = 0; i < n; i++)
         {
-            int row = kpt_to_row[indices[i]];
-            level_mat.row(i).copyTo(out_mat.row(row));
+            level_mat.row(i).copyTo(out_mat.row(indices[i]));
         }
     }
 }

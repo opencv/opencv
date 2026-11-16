@@ -164,8 +164,8 @@ namespace cv
                 {
                     impl.Compute_Descriptors_UMat(keypoints, descriptors, uPyr);
 
-                    CV_Assert((!descriptors.empty() || descriptors.cols() == descriptorSize()));
-                    CV_Assert((!descriptors.empty() || (descriptors.type() == descriptorType())));
+                    CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
+                    CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));
                 }
                 return;
             }

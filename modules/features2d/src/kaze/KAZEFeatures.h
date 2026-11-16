@@ -38,6 +38,7 @@ private:
     bool reordering_;              ///< Flag for reordering time steps
     std::vector<std::vector<float > > tsteps_;  ///< Vector of FED dynamic time steps
     std::vector<int> nsteps_;      ///< Vector of number of steps per cycle
+    bool derivatives_computed_;
 
 public:
 
@@ -59,7 +60,7 @@ public:
 
     /// Feature Detection Methods
     void Compute_KContrast(const cv::Mat& img, const float& kper);
-    void Compute_Multiscale_Derivatives(void);
+    void Compute_Multiscale_Derivatives(bool second_order = true);
     void Compute_Detector_Response(void);
     void Determinant_Hessian(std::vector<cv::KeyPoint>& kpts);
     void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
