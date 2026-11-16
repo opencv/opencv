@@ -688,37 +688,72 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
         make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
 
-typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+// The size of a deflate stream is implementation-defined: zlib, zlib-ng, and their
+// architecture-specific optimizations (e.g. LoongArch64, see #30850) produce different,
+// equally valid streams for the same input and level. Check the invariants that hold
+// for any conforming zlib instead of exact byte counts.
+typedef testing::TestWithParam<testing::tuple<string, int>> Imgcodecs_Png_ImwriteFlags;
+
+static size_t encodePngSize(const Mat& src, int compression_level)
+{
+    vector<uchar> buf;
+    EXPECT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level }));
+
+    // PNG is lossless: the decoded image must be identical, whatever the compressed size is.
+    Mat dst = imdecode(buf, IMREAD_UNCHANGED);
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(src.size(), dst.size());
+    EXPECT_EQ(src.type(), dst.type());
+    if (!dst.empty() && src.size() == dst.size() && src.type() == dst.type())
+        EXPECT_EQ(0, cvtest::norm(src, dst, NORM_INF)) << "compression_level=" << compression_level;
+    return buf.size();
+}
 
 TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + get<0>(GetParam());
-
     const int compression_level = get<1>(GetParam());
-    const size_t compression_level_output_size = get<2>(GetParam());
 
     Mat src = imread(filename, IMREAD_UNCHANGED);
-    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+    ASSERT_FALSE(src.empty()) << "Cannot read test image " << filename;
 
-    vector<uchar> buf;
-    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
-    EXPECT_EQ(buf.size(), compression_level_output_size);
+    const size_t raw_size = src.total() * src.elemSize();
+    const size_t size = encodePngSize(src, compression_level);
+
+    if (compression_level == 0)
+    {
+        // Level 0 stores the data uncompressed: raw size plus small PNG/zlib framing overhead.
+        EXPECT_GE(size, raw_size);
+        EXPECT_LE(size, raw_size + raw_size / 100);
+    }
+    else
+    {
+        // The test image is highly compressible (~20% of raw size with zlib, ~28% with zlib-ng level 1).
+        EXPECT_LT(size, raw_size / 2);
+    }
+}
+
+TEST(Imgcodecs_Png_CompressionLevel, effect)
+{
+    const string filename = cvtest::TS::ptr()->get_data_path() + "../perf/512x512.png";
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    // The level must be honored: no compression > fastest > best. Strict monotonicity between
+    // the intermediate levels is not guaranteed by zlib, so only the extremes are compared.
+    const size_t size0 = encodePngSize(src, 0);
+    const size_t size1 = encodePngSize(src, 1);
+    const size_t size9 = encodePngSize(src, 9);
+    EXPECT_GT(size0, size1);
+    EXPECT_GT(size1, size9);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
     Imgcodecs_Png_ImwriteFlags,
-    testing::Values(
-        make_tuple("../perf/512x512.png", 0, 788279),
-        make_tuple("../perf/512x512.png", 1, 179503),
-        make_tuple("../perf/512x512.png", 2, 176007),
-        make_tuple("../perf/512x512.png", 3, 170497),
-        make_tuple("../perf/512x512.png", 4, 163357),
-        make_tuple("../perf/512x512.png", 5, 159190),
-        make_tuple("../perf/512x512.png", 6, 156621),
-        make_tuple("../perf/512x512.png", 7, 155696),
-        make_tuple("../perf/512x512.png", 8, 153708),
-        make_tuple("../perf/512x512.png", 9, 152181)));
+    testing::Combine(
+        testing::Values("../perf/512x512.png"),
+        testing::Range(0, 10)));
 
 // See https://github.com/opencv/opencv/issues/27614
 typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
