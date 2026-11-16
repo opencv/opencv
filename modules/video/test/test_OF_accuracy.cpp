@@ -198,25 +198,6 @@ TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
 }
 
 // See https://github.com/opencv/opencv/issues/20185
-TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
-{
-    Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
-    theRNG().fill(prev, RNG::UNIFORM, 0, 256);
-    theRNG().fill(next, RNG::UNIFORM, 0, 256);
-
-    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
-    dis->setPatchStride(10);
-
-    Mat flow(prev.size(), CV_32FC2, Scalar(60.f, 60.f));
-    ASSERT_NO_THROW(dis->calc(prev, next, flow));
-    EXPECT_EQ(flow.size(), prev.size());
-
-    dis->setPatchSize(25);
-    flow.setTo(Scalar(60.f, 60.f));
-    ASSERT_NO_THROW(dis->calc(prev, next, flow));
-    EXPECT_EQ(flow.size(), prev.size());
-}
-
 TEST(DenseOpticalFlow_DIS, calc_after_collectGarbage)
 {
     Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
@@ -284,6 +265,25 @@ TEST(DenseOpticalFlow_DIS, calc_after_collectGarbage)
         EXPECT_EQ(0, cvtest::norm(uFlow1, uRef, NORM_INF));
         EXPECT_EQ(0, cvtest::norm(uFlow2, uRef, NORM_INF));
     }
+}
+
+TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
+{
+    Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
+    theRNG().fill(prev, RNG::UNIFORM, 0, 256);
+    theRNG().fill(next, RNG::UNIFORM, 0, 256);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->setPatchStride(10);
+
+    Mat flow(prev.size(), CV_32FC2, Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
+
+    dis->setPatchSize(25);
+    flow.setTo(Scalar(60.f, 60.f));
+    ASSERT_NO_THROW(dis->calc(prev, next, flow));
+    EXPECT_EQ(flow.size(), prev.size());
 }
 TEST(Video_OpticalFlowFarneback, InitialFlow_Validation)
 {
