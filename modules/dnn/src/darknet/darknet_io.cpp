@@ -750,8 +750,9 @@ namespace cv {
                     }
                 }
 
-                std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
-                std::vector<float> vec = getNumbers<float>(anchors);
+                if (net->layers_cfg.empty())
+                    CV_Error(cv::Error::StsParseError, "Darknet cfg has no layers");
+
                 std::map<std::string, std::string> &net_params = net->net_cfg;
                 net->width = getParam(net_params, "width", 416);
                 net->height = getParam(net_params, "height", 416);
@@ -800,7 +801,7 @@ namespace cv {
                             groups, batch_normalize);
 
                         tensor_shape[0] = filters;
-                        updateSpatialShape(tensor_shape, kernel_size, stride, 2LL * padding);
+                        updateSpatialShape(tensor_shape, kernel_size, stride, int64_t(2) * padding);
                     }
                     else if (layer_type == "connected")
                     {
@@ -867,7 +868,9 @@ namespace cv {
                         tensor_shape[0] = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
                             layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
-                            CV_Assert(layers_vec[k] >= 0 && static_cast<size_t>(layers_vec[k]) < net->out_channels_vec.size());
+                            // only the layers before this route exist when it is built
+                            if (layers_vec[k] < 0 || layers_vec[k] >= layers_counter)
+                                CV_Error(Error::StsParseError, "Route layer index is out of range: " + bottom_layers);
                             const int outChannels = net->out_channels_vec[layers_vec[k]];
                             CV_Assert(outChannels >= 0 && tensor_shape[0] <= INT_MAX - outChannels);
                             tensor_shape[0] += outChannels;

@@ -1288,27 +1288,18 @@ static std::string darknetRouteCfg(const std::string& layers)
            "[route]\nlayers=" + layers + "\n";
 }
 
-// The importer parses the anchors of the last cfg section once up front and then again
-// while building the region or yolo layer. A trailing layer makes the second parse the only one.
-static std::string darknetTrailingLayer(bool trailing)
-{
-    return trailing ? "[maxpool]\nsize=1\nstride=1\n" : "";
-}
-
-static std::string darknetRegionCfg(const std::string& anchors, bool trailing)
+static std::string darknetRegionCfg(const std::string& anchors)
 {
     return "[net]\nwidth=1\nheight=1\nchannels=1\n"
            "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
-           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\n" +
-           darknetTrailingLayer(trailing);
+           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\n";
 }
 
-static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask, bool trailing)
+static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask)
 {
     return "[net]\nwidth=1\nheight=1\nchannels=1\n"
            "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
-           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + "\nnum=1\nclasses=1\n" +
-           darknetTrailingLayer(trailing);
+           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + "\nnum=1\nclasses=1\n";
 }
 
 static std::vector<char> darknetZeroWeights(size_t floats)
@@ -1354,24 +1345,18 @@ TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
     }
 
     const char* anchors[] = {"1x", "1,1x", "1.5.2,1", "1,1.5abc"};
-    for (int trailing = 0; trailing < 2; ++trailing)
+    for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
     {
-        for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
-        {
-            SCOPED_TRACE(std::string("anchors=") + anchors[i] + (trailing ? " with trailing layer" : ""));
-            expectDarknetNumericListRejected(darknetRegionCfg(anchors[i], trailing != 0));
-            expectDarknetNumericListRejected(darknetYoloCfg(anchors[i], "0", trailing != 0));
-        }
+        SCOPED_TRACE(std::string("anchors=") + anchors[i]);
+        expectDarknetNumericListRejected(darknetRegionCfg(anchors[i]));
+        expectDarknetNumericListRejected(darknetYoloCfg(anchors[i], "0"));
     }
 
     const char* mask[] = {"0x", "0.5", "0x1", "0,0x"};
-    for (int trailing = 0; trailing < 2; ++trailing)
+    for (size_t i = 0; i < sizeof(mask) / sizeof(mask[0]); ++i)
     {
-        for (size_t i = 0; i < sizeof(mask) / sizeof(mask[0]); ++i)
-        {
-            SCOPED_TRACE(std::string("mask=") + mask[i] + (trailing ? " with trailing layer" : ""));
-            expectDarknetNumericListRejected(darknetYoloCfg("1,1", mask[i], trailing != 0));
-        }
+        SCOPED_TRACE(std::string("mask=") + mask[i]);
+        expectDarknetNumericListRejected(darknetYoloCfg("1,1", mask[i]));
     }
 }
 
@@ -1398,13 +1383,77 @@ TEST(Test_Darknet, numeric_list_valid_values_control)
     }
 
     const char* anchors[] = {"1,1", "1, 1", " 1.5 , 2e0 \t", "1e1,.5\r"};
-    for (int trailing = 0; trailing < 2; ++trailing)
+    for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
     {
-        for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
+        SCOPED_TRACE(std::string("anchors=") + anchors[i]);
+        expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i]));
+        expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t"));
+    }
+}
+
+// The route is the third layer (index 2) and one more layer follows it. Only the
+// layers parsed before the route, 0 and 1, can be its inputs.
+static std::string darknetRouteWithNextLayerCfg(const std::string& layers)
+{
+    return darknetRouteCfg(layers) + "[maxpool]\nsize=1\nstride=1\n";
+}
+
+TEST(Test_Darknet, route_rejects_self_and_forward_references)
+{
+    const char* layers[] = {"2", "3", "-1,2", "0,3", "4", "2147483647"};
+    for (size_t i = 0; i < sizeof(layers) / sizeof(layers[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + layers[i]);
+        const std::string cfg = darknetRouteWithNextLayerCfg(layers[i]);
+        try
         {
-            SCOPED_TRACE(std::string("anchors=") + anchors[i] + (trailing ? " with trailing layer" : ""));
-            expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i], trailing != 0));
-            expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t", trailing != 0));
+            readNetFromDarknet(cfg.data(), cfg.size());
+            FAIL() << "Route to a layer that is not parsed yet was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+        }
+    }
+}
+
+TEST(Test_Darknet, route_accepts_preceding_layers)
+{
+    const char* layers[] = {"0", "1", "-2", "0,1"};
+    const int channels[] = {1, 1, 1, 2};
+    for (size_t i = 0; i < sizeof(layers) / sizeof(layers[0]); ++i)
+    {
+        SCOPED_TRACE(std::string("route layers=") + layers[i]);
+        const std::string cfg = darknetRouteWithNextLayerCfg(layers[i]);
+        Net net = readNetFromDarknet(cfg.data(), cfg.size());
+        ASSERT_FALSE(net.empty());
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        const int shape[] = {1, 1, 1, 1};
+        net.setInput(Mat(4, shape, CV_32F, Scalar(3.0f)));
+        const Mat out = net.forward();
+        ASSERT_EQ(4, out.dims);
+        EXPECT_EQ(channels[i], out.size[1]);
+        EXPECT_NEAR(3.0f, out.ptr<float>()[0], 1e-5f);
+    }
+}
+
+TEST(Test_Darknet, cfg_without_layers_is_rejected)
+{
+    const std::string cfgs[] = {"", "[net]\nwidth=4\nheight=4\nchannels=1\n", "# comment\n"};
+    for (size_t i = 0; i < sizeof(cfgs) / sizeof(cfgs[0]); ++i)
+    {
+        SCOPED_TRACE(cfgs[i]);
+        const std::vector<uchar> cfg(cfgs[i].begin(), cfgs[i].end());
+        try
+        {
+            readNetFromDarknet(cfg, std::vector<uchar>());
+            FAIL() << "cfg without layers was accepted";
+        }
+        catch (const cv::Exception& e)
+        {
+            EXPECT_EQ(Error::StsParseError, e.code);
+            EXPECT_NE(std::string::npos, e.err.find("no layers")) << e.err;
         }
     }
 }
