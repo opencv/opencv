@@ -102,6 +102,9 @@ struct ConstArgs
                     // stays a runtime input
                     owner->setWeights(netimpl->__tensors__[inputs[1]],
                                       ninputs > 2 ? netimpl->__tensors__[inputs[2]] : Mat());
+                    // resize() below is the last link to the initializer; getParam() needs it
+                    // to read the weight again once packing has consumed it.
+                    netimpl->constWeightArgs[layer_ptr->name] = inputs[1];
                     layer_ptr->inputs.resize(1);
                     unuse_tail = true;
                 }/* else if (activ && dynamic_cast<ReLU6Layer>(activ)) {

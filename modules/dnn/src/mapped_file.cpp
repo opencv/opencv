@@ -58,11 +58,49 @@ std::atomic<uint64_t>& viewCounter()
     return counter;
 }
 
+// The allocator identity is the marker: wrap() is the only thing that installs it.
+const Ptr<MappedFile>* mappedViewOf(const Mat& m)
+{
+    if (!m.u || m.u->currAllocator != &mappedFileAllocator())
+        return nullptr;
+    return static_cast<const Ptr<MappedFile>*>(m.u->userdata);
+}
+
 }
 
 uint64_t mappedViewCount()
 {
     return viewCounter().load();
+}
+
+bool isMappedTensor(const Mat& m)
+{
+    const Ptr<MappedFile>* view = mappedViewOf(m);
+    return view != nullptr && !view->empty();
+}
+
+bool releaseMappedPages(const Mat& m, size_t offset, size_t length)
+{
+    const Ptr<MappedFile>* view = mappedViewOf(m);
+    if (!view || view->empty())
+        return false;
+    return (*view)->discardPayload(offset, length);
+}
+
+bool MappedFile::discardPayload(size_t offset, size_t length) const
+{
+    const size_t granularity = mappingGranularity();
+    if (!viewBase || length == 0 || granularity == 0)
+        return false;
+
+    const size_t payloadLength = viewLength - (size_t)(payload - viewBase);
+    if (offset > payloadLength || length > payloadLength - offset)
+        return false;
+
+    // Whole pages only: a partial page at either edge also holds bytes outside the range.
+    uchar* first = alignPtr(payload + offset, (int)granularity);
+    uchar* last = (uchar*)((size_t)(payload + offset + length) & ~(granularity - 1));
+    return first < last && discardRange(first, (size_t)(last - first));
 }
 
 Mat MappedFile::wrap(const Ptr<MappedFile>& file, int dims, const int* sizes, int type)

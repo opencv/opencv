@@ -36,6 +36,12 @@ MappedFile::~MappedFile()
 {
 }
 
+bool MappedFile::discardRange(uchar* base, size_t length)
+{
+    CV_UNUSED(base); CV_UNUSED(length);
+    return false;
+}
+
 CV__DNN_INLINE_NS_END
 }}
 

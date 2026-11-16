@@ -3854,6 +3854,32 @@ Net readNetFromONNX2(const std::vector<uchar>& buffer)
     return importer.parseBuffer(buffer.data(), buffer.size());
 }
 
+Mat readOnnxInitializer(const String& onnxFile, const String& tensorName)
+{
+    if (onnxFile.empty() || tensorName.empty())
+        return Mat();
+
+    std::fstream input(onnxFile.c_str(), std::ios::in | std::ios::binary);
+    if (!input)
+        return Mat();
+
+    // Nothing of the model survives loading, so this re-parses it in full: with inline
+    // initializers that costs the model's size. Introspection only, never from forward().
+    opencv_onnx::ModelProto model;
+    if (!model.ParseFromIstream(&input))
+        return Mat();
+
+    ExternalDataCache cache;
+    const opencv_onnx::GraphProto& graph = model.graph();
+    for (int i = 0; i < graph.initializer_size(); i++)
+    {
+        const opencv_onnx::TensorProto& tensor_proto = graph.initializer(i);
+        if (tensor_proto.name() == tensorName)
+            return getMatFromTensor2(tensor_proto, utils::fs::getParent(onnxFile), &cache);
+    }
+    return Mat();  // not a top-level initializer: a subgraph's, or produced by a node
+}
+
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
@@ -3868,6 +3894,10 @@ Net readNetFromONNX2(const char*, size_t) {
 
 Net readNetFromONNX2(const std::vector<uchar>&) {
     DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Mat readOnnxInitializer(const String&, const String&) {
+    return Mat();
 }
 
 #endif  // HAVE_PROTOBUF

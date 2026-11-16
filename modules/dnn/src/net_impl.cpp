@@ -1678,14 +1678,39 @@ Mat Net::Impl::getParam(int layer, int numParam) const
             return argTensor(operand);
     }
 
+    // A released weight was never mapped, so the model file holds the only copy. A fused layer
+    // has no entry here: its weight never existed as one tensor.
+    if (numParam == 0 && mainGraph && modelFormat == DNN_MODEL_ONNX &&
+        dynamic_cast<const ConstWeightOwner*>(l.get()))
+    {
+        std::map<std::string, Arg>::const_iterator it = constWeightArgs.find(l->name);
+        if (it != constWeightArgs.end())
+        {
+            const std::string& tensorName = args[it->second.idx].name;
+            if (modelFileName.empty())
+                CV_Error_(Error::StsError,
+                          ("DNN: layer '%s' has packed its weight and the net was loaded from a "
+                           "buffer, so it cannot be read back", l->name.c_str()));
+            Mat w = readOnnxInitializer(modelFileName, tensorName);
+            if (w.empty())
+                CV_Error_(Error::StsError,
+                          ("DNN: cannot read '%s' back from '%s' for layer '%s'",
+                           tensorName.c_str(), modelFileName.c_str(), l->name.c_str()));
+            return w;
+        }
+    }
+
     CV_Error_(Error::StsOutOfRange,
               ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
 }
 
 // Bump only the epoch: the executor holding the packed weights may be another object.
-static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer)
+static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer, int numParam)
 {
     layer->weightEpoch++;
+    // The model file no longer holds this weight, so getParam() must stop reading it back there.
+    if (numParam == 0)
+        netimpl->constWeightArgs.erase(layer->name);
 #ifdef HAVE_CUDA
     // A replayed graph keeps the old weights; re-finalizing inside a capture cannot allocate.
     netimpl->cudaGraphReset();
@@ -1748,7 +1773,7 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     if (!writeParam(l, numParam, blob))
         CV_Error_(Error::StsOutOfRange,
                   ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
-    markLayerWeightsChanged(this, l);
+    markLayerWeightsChanged(this, l, numParam);
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1781,7 +1806,7 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
                 continue;
 
             if (writeParam(layer, numParam, blob)) {
-                markLayerWeightsChanged(this, layer);
+                markLayerWeightsChanged(this, layer, numParam);
                 return;
             }
 
