@@ -102,6 +102,8 @@ class QRDetect
 {
 public:
     void init(const Mat& src, double eps_vertical_ = 0.2, double eps_horizontal_ = 0.1);
+    void setCheckDiagonals(bool value) { check_diagonals = value; }
+    bool hasRejectedFinderCandidates() const { return rejected_finder_candidates; }
     bool localization();
     bool computeTransformationPoints();
     Mat getBinBarcode() { return bin_barcode; }
@@ -111,6 +113,7 @@ protected:
     vector<Vec3d> searchHorizontalLines();
     vector<Point2f> separateVerticalLines(const vector<Vec3d> &list_lines);
     vector<Point2f> extractVerticalLines(const vector<Vec3d> &list_lines, double eps);
+    bool testDiagonalLines(const Point &center, double eps) const;
     void fixationPoints(vector<Point2f> &local_point);
     vector<Point2f> getQuadrilateral(vector<Point2f> angle_list);
     bool testByPassRoute(vector<Point2f> hull, int start, int finish);
@@ -118,6 +121,7 @@ protected:
     Mat barcode, bin_barcode, resized_barcode, resized_bin_barcode, straight_barcode;
     vector<Point2f> localization_points, transformation_points;
     double eps_vertical, eps_horizontal, coeff_expansion;
+    bool check_diagonals = false, rejected_finder_candidates = false;
     enum resize_direction { ZOOMING, SHRINKING, UNCHANGED } purpose;
 };
 
@@ -236,12 +240,14 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     CV_TRACE_FUNCTION();
     const double min_dist_between_points = 10.0;
     const double max_ratio = 1.0;
+    bool found_candidates = false;
     for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
     {
         const float coeff_epsilon = coeff_epsilon_i * 0.1f;
         vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon);
         if (!point2f_result.empty())
         {
+            found_candidates = true;
             vector<Point2f> centers;
             Mat labels;
             double compactness = kmeans(
@@ -269,6 +275,10 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
                 return point2f_result;
             }
         }
+    }
+    if (found_candidates)
+    {
+        rejected_finder_candidates = true;
     }
     return vector<Point2f>();  // nothing
 }
@@ -344,6 +354,16 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
                 }
             }
 
+            if (weight < eps && check_diagonals)
+            {
+                // Data modules can form the 1:1:3:1:1 pattern horizontally and vertically
+                // by chance, so also require it along both diagonals. Any line through
+                // the center of a finder pattern crosses its rings in that ratio, so this
+                // does not depend on the rotation of the code.
+                const Point center(x, y + cvRound((test_lines[0] - test_lines[3]) * 0.5));
+                if (!testDiagonalLines(center, eps))
+                    continue;
+            }
             if (weight < eps)
             {
                 result.push_back(list_lines[pnt]);
@@ -362,6 +382,54 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
         }
     }
     return point2f_result;
+}
+
+bool QRDetect::testDiagonalLines(const Point &center, double eps) const
+{
+    CV_TRACE_FUNCTION();
+    const Point directions[2] = { Point(1, 1), Point(1, -1) };
+    double test_lines[6];
+    for (const Point &direction : directions)
+    {
+        // Lengths of the center, inner and outer runs on each side of the center
+        size_t count = 0;
+        for (int sign = 1; sign >= -1; sign -= 2)
+        {
+            const Point step = direction * sign;
+            uint8_t future_pixel = 255;
+            int length = 0;
+            Point p = center;
+            const size_t end = count + 3;
+            while (count < end)
+            {
+                p += step;
+                if (p.x < 0 || p.y < 0 || p.x >= bin_barcode.cols || p.y >= bin_barcode.rows)
+                {
+                    // Like searchHorizontalLines, let the outer run end at the image border
+                    if (count + 1 != end || length == 0)
+                        return false;
+                    test_lines[count++] = length;
+                    break;
+                }
+                length++;
+                if (bin_barcode.at<uint8_t>(p) == future_pixel)
+                {
+                    future_pixel = static_cast<uint8_t>(~future_pixel);
+                    test_lines[count++] = length;
+                    length = 0;
+                }
+            }
+        }
+
+        double length = 0.0, weight = 0.0;
+        for (size_t i = 0; i < 6; i++)
+            length += test_lines[i];
+        for (size_t i = 0; i < 6; i++)
+            weight += fabs((test_lines[i] / length) - ((i % 3 == 0) ? 3.0 / 14.0 : 1.0 / 7.0));
+        if (weight >= eps)
+            return false;
+    }
+    return true;
 }
 
 void QRDetect::fixationPoints(vector<Point2f> &local_point)
@@ -1028,8 +1096,20 @@ bool ImplContour::detect(InputArray in, OutputArray points) const
 
     QRDetect qrdet;
     qrdet.init(inarr, epsX, epsY);
-    if (!qrdet.localization()) { return false; }
-    if (!qrdet.computeTransformationPoints()) { return false; }
+    // localization() and computeTransformationPoints() do not change the binarized
+    // images in place, so this copy can be used for a second attempt.
+    QRDetect qrdet_diagonals = qrdet;
+    if (!qrdet.localization() || !qrdet.computeTransformationPoints())
+    {
+        // Data modules can look like a fourth finder pattern, so that no split of
+        // the candidates into three finder patterns is accepted (#23810). Only then,
+        // try again with the finder pattern ratio also checked along the diagonals.
+        if (!qrdet.hasRejectedFinderCandidates()) { return false; }
+        qrdet = qrdet_diagonals;
+        qrdet.setCheckDiagonals(true);
+        if (!qrdet.localization()) { return false; }
+        if (!qrdet.computeTransformationPoints()) { return false; }
+    }
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
     updatePointsResult(points, pnts2f);
     return true;
