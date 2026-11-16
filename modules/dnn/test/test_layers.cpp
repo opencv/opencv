@@ -2107,6 +2107,103 @@ TEST(Layer_Test_Convolution, relu_fusion)
     normAssert(input, output);
 }
 
+// SAME padding depends on the input size: after a reshape to another size, a convolution
+// must match a fresh Net across 1D, 2D (both sides of the 12 px Winograd cutoff and with
+// Winograd off), depthwise, and 3D inputs.
+TEST(Layer_Test_Convolution, same_padding_after_reshape)
+{
+    auto makeParams = [](int spatialDims, int strideVal, int inChannels = 3, int outChannels = 4, int group = 1) {
+        LayerParams lp;
+        lp.type = "Convolution";
+        lp.name = "testConv";
+        lp.set("num_output", outChannels);
+        lp.set("group", group);
+        lp.set("pad_mode", "SAME");
+        lp.set("bias_term", true);
+        if (spatialDims == 3)
+        {
+            int ks[] = {3, 3, 3};
+            int st[] = {strideVal, strideVal, strideVal};
+            lp.set("kernel_size", DictValue::arrayInt(ks, 3));
+            lp.set("stride", DictValue::arrayInt(st, 3));
+        }
+        else
+        {
+            lp.set("kernel_size", 3);
+            lp.set("stride", strideVal);
+        }
+
+        std::vector<int> weightShape = {outChannels, inChannels / group};
+        weightShape.insert(weightShape.end(), spatialDims, 3);
+        Mat weights(weightShape, CV_32F);
+        randu(weights, -1.0f, 1.0f);
+        lp.blobs.push_back(weights);
+
+        Mat bias(1, outChannels, CV_32F);
+        randu(bias, -1.0f, 1.0f);
+        lp.blobs.push_back(bias);
+        return lp;
+    };
+
+    auto checkPair = [](LayerParams& lp, const std::vector<int>& shapeA,
+                        const std::vector<int>& shapeB, bool winograd = true,
+                        Target target = DNN_TARGET_CPU) {
+        const std::vector<int> dirs[][2] = {{shapeA, shapeB}, {shapeB, shapeA}};
+        for (const auto& dir : dirs)
+        {
+            Mat input0(dir[0], CV_32F), input1(dir[1], CV_32F);
+            randu(input0, -1.0f, 1.0f);
+            randu(input1, -1.0f, 1.0f);
+
+            Net net;
+            net.addLayerToPrev(lp.name, lp.type, lp);
+            net.setPreferableBackend(DNN_BACKEND_OPENCV);
+            net.setPreferableTarget(target);
+            net.enableWinograd(winograd);
+            net.setInput(input0);
+            net.forward();
+            net.setInput(input1);
+            Mat output = net.forward();
+
+            Net fresh;
+            fresh.addLayerToPrev(lp.name, lp.type, lp);
+            fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
+            fresh.setPreferableTarget(target);
+            fresh.enableWinograd(winograd);
+            fresh.setInput(input1);
+            Mat reference = fresh.forward();
+
+            ASSERT_EQ(shape(reference), shape(output));
+            EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF))
+                << toString(dir[0]) << " -> " << toString(dir[1])
+                << " (winograd=" << winograd << ", target=" << target << ")";
+        }
+    };
+
+    LayerParams lp1d = makeParams(1, 2);
+    checkPair(lp1d, {1, 3, 10}, {1, 3, 9});
+
+    LayerParams lp2d = makeParams(2, 2);
+    checkPair(lp2d, {1, 3, 10, 10}, {1, 3, 9, 9});
+    checkPair(lp2d, {1, 3, 10, 9}, {1, 3, 9, 10});
+    checkPair(lp2d, {1, 3, 14, 14}, {1, 3, 11, 11});
+    checkPair(lp2d, {1, 3, 16, 16}, {1, 3, 15, 15}, false);
+
+    LayerParams lp2dWino = makeParams(2, 1);
+    checkPair(lp2dWino, {1, 3, 14, 14}, {1, 3, 11, 11});
+
+    LayerParams lp2dDw = makeParams(2, 2, 4, 4, 4);
+    checkPair(lp2dDw, {1, 4, 10, 10}, {1, 4, 9, 9});
+
+    LayerParams lp3d = makeParams(3, 2);
+    checkPair(lp3d, {1, 3, 6, 6, 6}, {1, 3, 5, 5, 5});
+
+#ifdef HAVE_OPENCL
+    if (cv::ocl::useOpenCL())
+        checkPair(lp2d, {1, 3, 10, 10}, {1, 3, 9, 9}, true, DNN_TARGET_OPENCL);
+#endif
+}
+
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
 TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
 {
