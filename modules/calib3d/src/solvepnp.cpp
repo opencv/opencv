@@ -904,16 +904,32 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_UPNP. Fallback to EPnP.");
         }
 
-        Mat undistortedPoints;
-        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-        epnp PnP(cameraMatrix, opoints, undistortedPoints);
+        // EPnP is not reliable with exactly 4 points, and solvePnPRansac already uses P3P
+        // for them. EPnP is only kept as a fallback if P3P does not find a solution.
+        if (npoints == 4)
+        {
+            std::vector<Mat> rvecs, tvecs;
+            solveP3P(opoints, ipoints, _cameraMatrix, _distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
+            if (!rvecs.empty())
+            {
+                vec_rvecs.push_back(rvecs[0]);
+                vec_tvecs.push_back(tvecs[0]);
+            }
+        }
 
-        Mat rvec, tvec, R;
-        PnP.compute_pose(R, tvec);
-        Rodrigues(R, rvec);
+        if (vec_rvecs.empty())
+        {
+            Mat undistortedPoints;
+            undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+            epnp PnP(cameraMatrix, opoints, undistortedPoints);
 
-        vec_rvecs.push_back(rvec);
-        vec_tvecs.push_back(tvec);
+            Mat rvec, tvec, R;
+            PnP.compute_pose(R, tvec);
+            Rodrigues(R, rvec);
+
+            vec_rvecs.push_back(rvec);
+            vec_tvecs.push_back(tvec);
+        }
     }
     else if (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
     {

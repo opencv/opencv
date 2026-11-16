@@ -1917,6 +1917,44 @@ TEST(Calib3d_SolvePnP, refine)
     }
 }
 
+// EPnP is not reliable with exactly 4 points, so solvePnP uses P3P for them, as solvePnPRansac does.
+TEST(Calib3d_SolvePnP, epnp_four_points_regression)
+{
+    const Matx33d K(600, 0, 320, 0, 600, 240, 0, 0, 1);
+    const Vec3d rvec_gt(0.078, 0.013, -0.074), tvec_gt(0.012, -0.258, 4.721);
+    const std::vector<Point3d> object = {Point3d(0.277, 0.219, -0.808), Point3d(0.322, 0.264, 0.648),
+                                         Point3d(0.607, -0.346, 0.444), Point3d(0.735, 0.786, -0.677)};
+    std::vector<Point2d> image;
+    projectPoints(object, rvec_gt, tvec_gt, K, noArray(), image);
+
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnP(object, image, K, noArray(), rvec, tvec, false, SOLVEPNP_EPNP));
+    EXPECT_LE(cvtest::norm(Mat(rvec_gt), rvec, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(Mat(tvec_gt), tvec, NORM_INF), 1e-6);
+}
+
+TEST(Calib3d_SolvePnP, epnp_four_points_random)
+{
+    const Matx33d K(600, 0, 320, 0, 600, 240, 0, 0, 1);
+    RNG rng(0x4e50);
+    for (int i = 0; i < 100; i++)
+    {
+        const Vec3d rvec_gt(rng.gaussian(0.3), rng.gaussian(0.3), rng.gaussian(0.3));
+        const Vec3d tvec_gt(rng.gaussian(0.3), rng.gaussian(0.3), rng.uniform(3., 6.));
+        std::vector<Point3d> object;
+        for (int j = 0; j < 4; j++)
+            object.push_back(Point3d(rng.uniform(-1., 1.), rng.uniform(-1., 1.), rng.uniform(-1., 1.)));
+        std::vector<Point2d> image;
+        projectPoints(object, rvec_gt, tvec_gt, K, noArray(), image);
+
+        Mat rvec, tvec;
+        ASSERT_TRUE(solvePnP(object, image, K, noArray(), rvec, tvec, false, SOLVEPNP_EPNP)) << "iteration " << i;
+        std::vector<Point2d> reprojected;
+        projectPoints(object, rvec, tvec, K, noArray(), reprojected);
+        EXPECT_LE(cv::norm(image, reprojected, NORM_INF), 1e-3) << "iteration " << i;
+    }
+}
+
 TEST(Calib3d_SolvePnPRansac, minPoints)
 {
     //https://github.com/opencv/opencv/issues/14423
