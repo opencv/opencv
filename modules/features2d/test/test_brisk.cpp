@@ -114,7 +114,7 @@ TEST(Features2d_BRISK, invalidCreateParameters)
 TEST(Features2d_BRISK, descriptors_of_sub_matrix)
 {
     // Row steps of a region of a larger image differ from its width.
-    RNG rng(1234);
+    RNG& rng = theRNG();
     Mat img(150, 170, CV_8UC1);
     rng.fill(img, RNG::UNIFORM, 0, 256);
     GaussianBlur(img, img, Size(5, 5), 2);
