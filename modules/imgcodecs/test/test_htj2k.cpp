@@ -159,6 +159,27 @@ TEST(Imgcodecs_HTJ2K, lossy_16bit)
     EXPECT_GT(cv::PSNR(src, dst, 65535), 35);
 }
 
+// 16-bit images get steps scaled by the sample precision: at the same quality a value keeps
+// about twice as many bits as for 8 bits, so the error relative to the sample range is much
+// smaller than for the same picture at 8 bits.
+TEST(Imgcodecs_HTJ2K, lossy_16bit_precision)
+{
+    const Mat src8 = smoothImage(Size(160, 120));
+    Mat src16;
+    src8.convertTo(src16, CV_16U, 257);  // the same picture over the 16-bit range
+    for (int q : { 50, 90 })
+    {
+        std::vector<uchar> b8, b16;
+        ASSERT_TRUE(imencode(".jph", src8, b8, { IMWRITE_HTJ2K_QUALITY_SCALE, q }));
+        ASSERT_TRUE(imencode(".jph", src16, b16, { IMWRITE_HTJ2K_QUALITY_SCALE, q }));
+        const Mat d8 = imdecode(b8, IMREAD_UNCHANGED), d16 = imdecode(b16, IMREAD_UNCHANGED);
+        ASSERT_EQ(CV_8UC3, d8.type());
+        ASSERT_EQ(CV_16UC3, d16.type());
+        const double psnr8 = cv::PSNR(src8, d8, 255), psnr16 = cv::PSNR(src16, d16, 65535);
+        EXPECT_GT(psnr16, psnr8 + 10) << "quality " << q << ": 8-bit " << psnr8 << " dB, 16-bit " << psnr16 << " dB";
+    }
+}
+
 //==================================================================================================
 // Output conversions requested through the imread flags.
 

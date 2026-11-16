@@ -569,7 +569,10 @@ bool HTJ2KEncoder::write(const Mat& img, const std::vector<int>& params)
                                               lossless ? kNoQfactor : (uint8_t)quality,
                                               m_jph, 0 /* sRGB */, htj2kThreads());
         if (!lossless)
+        {
             encoder.set_qfactor_weights(1);  // no visual weighting: every subband weight is 1
+            encoder.set_qfactor_scale(1);    // steps scaled by the sample precision (same at 8 bits)
+        }
         encoder.set_output_buffer(out);
         encoder.invoke_line_based_stream([&](uint32_t y, int32_t** rows, uint16_t nc)
         {
