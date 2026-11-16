@@ -2111,15 +2111,10 @@ TEST_P(Imgproc_warpPolar_Inverse, angular_seam)
                   interpolation | WARP_POLAR_LINEAR | WARP_INVERSE_MAP | (fill ? (int)WARP_FILL_OUTLIERS : 0));
 
         // skip the centre and the outer rim, where the kernel leaves the source along the radius
-        int nwrong = 0;
-        for (int y = 0; y < dst.rows; y++)
-            for (int x = 0; x < dst.cols; x++)
-            {
-                const double r = std::sqrt((double)(x - 100) * (x - 100) + (double)(y - 100) * (y - 100));
-                if (r >= 4 && r <= 90 && dst.at<uchar>(y, x) != 200)
-                    nwrong++;
-            }
-        EXPECT_EQ(0, nwrong) << "fill outliers: " << fill;
+        Mat mask = Mat::zeros(dst.size(), CV_8UC1);
+        circle(mask, Point(100, 100), 90, Scalar(255), FILLED);
+        circle(mask, Point(100, 100), 4, Scalar(0), FILLED);
+        EXPECT_EQ(0, countNonZero((dst != 200) & mask)) << "fill outliers: " << fill;
     }
 }
 
