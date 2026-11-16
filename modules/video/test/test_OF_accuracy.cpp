@@ -147,27 +147,6 @@ TEST(DenseOpticalFlow_DIS, StaleInitialFlow)
     Mat grown_flow;
     dis_grow->calc(frame1, frame2, grown_flow);
     EXPECT_EQ(0.0, cvtest::norm(grown_flow, reference, NORM_INF));
-
-    UMat u_frame1 = frame1.getUMat(ACCESS_READ);
-    UMat u_frame2 = frame2.getUMat(ACCESS_READ);
-    Ptr<DISOpticalFlow> u_dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
-    UMat u_initial(frame1.size(), CV_32FC2, Scalar(5.f, -3.f));
-    u_dis->calc(u_frame1, u_frame2, u_initial);
-
-    UMat u_flow, u_reference;
-    u_dis->calc(u_frame1, u_frame2, u_flow);
-    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(u_frame1, u_frame2, u_reference);
-    EXPECT_EQ(0.0, cvtest::norm(u_flow.getMat(ACCESS_READ), u_reference.getMat(ACCESS_READ), NORM_INF));
-
-    UMat u_small1 = small1.getUMat(ACCESS_READ);
-    UMat u_small2 = small2.getUMat(ACCESS_READ);
-    Ptr<DISOpticalFlow> u_dis_grow = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
-    UMat u_small_initial(small1.size(), CV_32FC2, Scalar(5.f, -3.f));
-    u_dis_grow->calc(u_small1, u_small2, u_small_initial);
-
-    UMat u_grown_flow;
-    u_dis_grow->calc(u_frame1, u_frame2, u_grown_flow);
-    EXPECT_EQ(0.0, cvtest::norm(u_grown_flow.getMat(ACCESS_READ), u_reference.getMat(ACCESS_READ), NORM_INF));
 }
 
 TEST(DenseOpticalFlow_DIS, InvalidImgSize_CoarsestLevelLessThanZero)

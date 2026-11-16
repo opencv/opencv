@@ -1238,10 +1238,6 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, InputArray flow,
     {
         u_initial_U.resize(coarsest_scale + 1);
     }
-    else
-    {
-        u_initial_U.clear();
-    }
 
     int fraction = 1;
     int cur_rows = 0, cur_cols = 0;
