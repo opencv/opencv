@@ -309,5 +309,75 @@ TEST(Photo_ColorCorrection, serialization)
     EXPECT_EQ(yaml1, yaml2);
 }
 
+static void writePolyfit(FileStorage& fs, const char* name, bool isLog, int deg, const Mat& p)
+{
+    fs << name << "{" << "deg" << deg;
+    if (isLog)
+        writePolyfit(fs, "p", false, deg, p);
+    else
+        fs << "p" << p;
+    fs << "}";
+}
+
+static std::string makeModelWithPolyfit(int linearType, int deg, const Mat& p)
+{
+    const bool isLog = linearType == cv::ccm::LINEARIZATION_GRAYLOGPOLYFIT ||
+                       linearType == cv::ccm::LINEARIZATION_COLORLOGPOLYFIT;
+    const bool isColor = linearType == cv::ccm::LINEARIZATION_COLORPOLYFIT ||
+                         linearType == cv::ccm::LINEARIZATION_COLORLOGPOLYFIT;
+    FileStorage fs("", FileStorage::WRITE | FileStorage::MEMORY);
+    fs << "ColorCorrectionModel" << "{"
+       << "ccm" << Mat::eye(3, 3, CV_64F)
+       << "loss" << 0.
+       << "csEnum" << (int)cv::ccm::COLOR_SPACE_SRGB
+       << "ccm_type" << (int)cv::ccm::CCM_LINEAR
+       << "shape" << 9
+       << "linear" << "{" << "deg" << deg;
+    for (const char* name : isColor ? std::vector<const char*>{"pr", "pg", "pb"} : std::vector<const char*>{"p"})
+        writePolyfit(fs, name, isLog, deg, p);
+    fs << "}"
+       << "distance" << (int)cv::ccm::DISTANCE_CIE2000
+       << "linear_type" << linearType
+       << "gamma" << 2.2
+       << "deg" << deg
+       << "saturated_threshold" << std::vector<double>{0, 0.98}
+       << "}";
+    return fs.releaseAndGetString();
+}
+
+TEST(Photo_ColorCorrection, read_rejects_inconsistent_polyfit)
+{
+    const Mat img(4, 4, CV_8UC3, Scalar(10, 100, 200));
+    const Mat good = Mat_<double>({4, 1}, {0., 1., 0., 0.});
+
+    const Mat bad[] = {
+        Mat(1, 1, CV_64F, Scalar(0.5)),   // fewer coefficients than deg + 1
+        Mat(4, 1, CV_32F, Scalar(0.5)),   // coefficients are not double
+        Mat()
+    };
+    const int types[] = { cv::ccm::LINEARIZATION_GRAYPOLYFIT, cv::ccm::LINEARIZATION_COLORPOLYFIT,
+                          cv::ccm::LINEARIZATION_GRAYLOGPOLYFIT, cv::ccm::LINEARIZATION_COLORLOGPOLYFIT };
+    for (int type : types)
+    {
+        {
+            cv::ccm::ColorCorrectionModel model;
+            FileStorage fs(makeModelWithPolyfit(type, 3, good), FileStorage::READ | FileStorage::MEMORY);
+            ASSERT_NO_THROW(model.read(fs["ColorCorrectionModel"])) << "type=" << type;
+            Mat out;
+            ASSERT_NO_THROW(model.correctImage(img, out)) << "type=" << type;
+            EXPECT_EQ(img.size(), out.size());
+        }
+        for (const Mat& p : bad)
+        {
+            cv::ccm::ColorCorrectionModel model;
+            FileStorage fs(makeModelWithPolyfit(type, 3, p), FileStorage::READ | FileStorage::MEMORY);
+            EXPECT_THROW(model.read(fs["ColorCorrectionModel"]), cv::Exception) << "type=" << type;
+        }
+        cv::ccm::ColorCorrectionModel model;
+        FileStorage fs(makeModelWithPolyfit(type, -1, good), FileStorage::READ | FileStorage::MEMORY);
+        EXPECT_THROW(model.read(fs["ColorCorrectionModel"]), cv::Exception) << "type=" << type;
+    }
+}
+
 } // namespace
 } // namespace opencv_test

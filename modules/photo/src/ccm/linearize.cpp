@@ -20,6 +20,9 @@ void Polyfit::write(cv::FileStorage& fs) const {
 void Polyfit::read(const cv::FileNode& node) {
     node["deg"] >> deg;
     node["p"] >> p;
+    CV_CheckGE(deg, 0, "Polyfit: degree must be non-negative");
+    CV_CheckTypeEQ(p.type(), CV_64FC1, "Polyfit: coefficients must be CV_64FC1");
+    CV_CheckEQ(p.total(), (size_t)deg + 1, "Polyfit: coefficient count must be deg + 1");
 }
 
 // Global functions to support FileStorage for Polyfit
