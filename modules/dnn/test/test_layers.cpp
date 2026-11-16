@@ -2176,7 +2176,7 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
             ASSERT_EQ(shape(reference), shape(output));
             EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF))
                 << toString(dir[0]) << " -> " << toString(dir[1])
-                << " (winograd=" << winograd << ", target=" << target << ")";
+                << " (winograd=" << winograd << ", target=" << (int)target << ")";
         }
     };
 
@@ -2202,6 +2202,62 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
     if (cv::ocl::useOpenCL())
         checkPair(lp2d, {1, 3, 10, 10}, {1, 3, 9, 9}, true, DNN_TARGET_OPENCL);
 #endif
+}
+
+// BatchNorm is folded into the packed convolution; after enableFusion(false) the same Net
+// must match a fresh unfused Net, for Winograd (stride 1) and generic (stride 2) packing.
+TEST(Layer_Test_Convolution, repack_after_fusion_change)
+{
+    for (int strideVal = 1; strideVal <= 2; strideVal++)
+    {
+        LayerParams conv;
+        conv.type = "Convolution";
+        conv.name = "testConv";
+        conv.set("num_output", 4);
+        conv.set("kernel_size", 3);
+        conv.set("stride", strideVal);
+        conv.set("pad", 1);
+        conv.set("bias_term", true);
+        Mat weights({4, 3, 3, 3}, CV_32F), bias(1, 4, CV_32F);
+        randu(weights, -1.0f, 1.0f);
+        randu(bias, -1.0f, 1.0f);
+        conv.blobs.push_back(weights);
+        conv.blobs.push_back(bias);
+
+        LayerParams bn;
+        bn.type = "BatchNorm";
+        bn.name = "testBN";
+        Mat mean(1, 4, CV_32F), var(1, 4, CV_32F);
+        randu(mean, -1.0f, 1.0f);
+        randu(var, 0.5f, 2.0f);
+        bn.blobs.push_back(mean);
+        bn.blobs.push_back(var);
+
+        Mat input({1, 3, 16, 16}, CV_32F);
+        randu(input, -1.0f, 1.0f);
+
+        Net net;
+        net.addLayerToPrev(conv.name, conv.type, conv);
+        net.addLayerToPrev(bn.name, bn.type, bn);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        net.forward();
+        net.enableFusion(false);
+        net.setInput(input);
+        Mat output = net.forward();
+
+        Net fresh;
+        fresh.addLayerToPrev(conv.name, conv.type, conv);
+        fresh.addLayerToPrev(bn.name, bn.type, bn);
+        fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
+        fresh.setPreferableTarget(DNN_TARGET_CPU);
+        fresh.enableFusion(false);
+        fresh.setInput(input);
+        Mat reference = fresh.forward();
+
+        EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF)) << "stride " << strideVal;
+    }
 }
 
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
