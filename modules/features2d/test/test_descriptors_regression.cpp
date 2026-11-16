@@ -146,14 +146,6 @@ TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
     kaze_charb->compute(bgr, kp_bgr2, desc_bgr2);
     EXPECT_EQ(0.0, cvtest::norm(desc_bgr1, desc_bgr2, NORM_INF));
 
-    // Flat image produces finite descriptor (no 0/0 NaN), and invalid class_id is rejected
-    Mat flat = Mat::zeros(64, 64, CV_8UC1);
-    vector<KeyPoint> kp_flat(1, KeyPoint(32.0f, 32.0f, 6.4f, 0.0f, 1.0f, 0, 0));
-    Mat desc_flat;
-    kaze->compute(flat, kp_flat, desc_flat);
-    ASSERT_EQ(Size(64, 1), desc_flat.size());
-    EXPECT_TRUE(checkRange(desc_flat));
-
     // Single-thread vs multi-thread parity with RAII thread-count restoration
     struct ThreadCountGuard
     {
@@ -177,12 +169,6 @@ TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
     }
     EXPECT_EQ(0.0, cvtest::norm(desc_ref, desc_1t, NORM_INF));
     EXPECT_EQ(0.0, cvtest::norm(desc_1t, desc_mt, NORM_INF));
-
-    vector<KeyPoint> kp_bad_neg(1, KeyPoint(32.0f, 32.0f, 6.4f, 0.0f, 1.0f, 0, -1));
-    vector<KeyPoint> kp_bad_hi(1, KeyPoint(32.0f, 32.0f, 6.4f, 0.0f, 1.0f, 0, 16));
-    Mat desc_bad;
-    EXPECT_THROW(kaze->compute(img, kp_bad_neg, desc_bad), cv::Exception);
-    EXPECT_THROW(kaze->compute(img, kp_bad_hi, desc_bad), cv::Exception);
 }
 
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )

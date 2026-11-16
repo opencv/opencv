@@ -573,12 +573,10 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
     for(size_t i = 0; i < kpts.size(); i++)
     {
         CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
-        CV_Assert(std::fabs(kpts[i].pt.x) < 1e7f && std::fabs(kpts[i].pt.y) < 1e7f &&
-                  kpts[i].size >= 0.0f && kpts[i].size < 1e6f);
     }
 
     // Allocate memory for the matrix of descriptors
-    if (options_.extended == true) {
+        if (options_.extended == true) {
         desc = Mat::zeros((int)kpts.size(), 128, CV_32FC1);
     }
     else {
@@ -595,7 +593,7 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
         Compute_Multiscale_Derivatives(false);
     }
 
-    parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
+        parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
 }
 
 /* ************************************************************************* */
@@ -618,7 +616,7 @@ void KAZEFeatures::Compute_Main_Orientation(KeyPoint &kpt, const TPyramid& evolu
     xf = kpt.pt.x;
     yf = kpt.pt.y;
     level = kpt.class_id;
-    s = std::max(1, cvRound(kpt.size / 2.0f));
+    s = cvRound(kpt.size / 2.0f);
 
     // Calculate derivatives responses for points within radius of 6*scale
     for (int i = -6; i <= 6; ++i) {
@@ -707,7 +705,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = std::max(1, cvRound(kpt.size / 2.0f));
+    scale = cvRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -796,10 +794,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
 
     // convert to unit vector
     len = sqrt(len);
-    if (len > 0.0f) {
-        for (i = 0; i < dsize; i++) {
-            desc[i] /= len;
-        }
+
+    for (i = 0; i < dsize; i++) {
+        desc[i] /= len;
     }
 }
 
@@ -836,7 +833,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = std::max(1, cvRound(kpt.size / 2.0f));
+    scale = cvRound(kpt.size / 2.0f);
     angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
@@ -926,10 +923,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_64(const KeyPoint &kpt, float 
 
     // convert to unit vector
     len = sqrt(len);
-    if (len > 0.0f) {
-        for (i = 0; i < dsize; i++) {
-            desc[i] /= len;
-        }
+
+    for (i = 0; i < dsize; i++) {
+        desc[i] /= len;
     }
 }
 
@@ -968,7 +964,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = std::max(1, cvRound(kpt.size / 2.0f));
+    scale = cvRound(kpt.size / 2.0f);
     level = kpt.class_id;
 
     i = -8;
@@ -1079,10 +1075,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_128(const KeyPoint &kp
 
     // convert to unit vector
     len = sqrt(len);
-    if (len > 0.0f) {
-        for (i = 0; i < dsize; i++) {
-            desc[i] /= len;
-        }
+
+    for (i = 0; i < dsize; i++) {
+        desc[i] /= len;
     }
 }
 
@@ -1121,7 +1116,7 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
     // Get the information from the keypoint
     yf = kpt.pt.y;
     xf = kpt.pt.x;
-    scale = std::max(1, cvRound(kpt.size / 2.0f));
+    scale = cvRound(kpt.size / 2.0f);
     angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
     level = kpt.class_id;
     co = cos(angle);
@@ -1237,10 +1232,9 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Descriptor_128(const KeyPoint &kpt, float
 
     // convert to unit vector
     len = sqrt(len);
-    if (len > 0.0f) {
-        for (i = 0; i < dsize; i++) {
-            desc[i] /= len;
-        }
+
+    for (i = 0; i < dsize; i++) {
+        desc[i] /= len;
     }
 }
 
@@ -1424,8 +1418,6 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
     {
         int lv = kpts[i].class_id;
         CV_Assert(0 <= lv && lv < (int)uPyr.size());
-        CV_Assert(std::fabs(kpts[i].pt.x) < 1e7f && std::fabs(kpts[i].pt.y) < 1e7f &&
-                  kpts[i].size >= 0.0f && kpts[i].size < 1e6f);
         kpts_by_level[lv].push_back((int)i);
     }
 

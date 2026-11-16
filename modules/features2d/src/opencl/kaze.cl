@@ -48,7 +48,7 @@ KAZE_compute_upright_descriptor_64(
     float kpt_y = keypoints_y[idx];
     float kpt_sz = keypoints_size[idx];
 
-    int scale = max(1, (int)(kpt_sz / 2.0f + 0.5f));  // cvRound equivalent
+    int scale = (int)(kpt_sz / 2.0f + 0.5f);  // cvRound equivalent
     float xf = kpt_x;
     float yf = kpt_y;
 
@@ -183,7 +183,7 @@ KAZE_compute_upright_descriptor_128(
     float kpt_y = keypoints_y[idx];
     float kpt_sz = keypoints_size[idx];
 
-    int scale = max(1, (int)(kpt_sz / 2.0f + 0.5f));
+    int scale = (int)(kpt_sz / 2.0f + 0.5f);
     float xf = kpt_x;
     float yf = kpt_y;
 
