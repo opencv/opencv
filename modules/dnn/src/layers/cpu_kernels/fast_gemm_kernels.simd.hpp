@@ -130,7 +130,8 @@ int fastGemmNC();
 int fastGemmKC();
 int fastGemmNR();
 
-void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz);
+void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1,
+                         size_t esz, size_t k0, size_t k1);
 
 void fastGemmKernel(size_t M, size_t N, size_t K,
                     float alpha, const char *A, size_t lda0, size_t lda1,
@@ -647,7 +648,8 @@ int fastGemmNC() {return FAST_GEMM_F32_NC;}
 int fastGemmKC() {return FAST_GEMM_F32_PACKED_STRIDE_K;}
 int fastGemmNR() {return FAST_GEMM_F32_NR;}
 
-void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1, size_t esz) {
+void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1,
+                         size_t esz, size_t k0, size_t k1) {
     size_t GEMM_NC = FAST_GEMM_F32_NC, GEMM_NR = FAST_GEMM_F32_NR;
     size_t NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
     size_t KC = std::min(static_cast<size_t>(FAST_GEMM_F32_PACKED_STRIDE_K), K);
@@ -657,22 +659,24 @@ void fastGemmPackBKernel(const char *B, char *packed_B, size_t N, size_t K, size
         size_t j0 = r * NC;
         size_t nc = N - j0 < NC ? N - j0 : NC;
         size_t _nc = (nc + GEMM_NR - 1) / GEMM_NR * GEMM_NR * esz;
-        for (size_t k = 0; k < K; k += KC) {
-            size_t kc = K - k < KC ? K - k : KC;
+        char *packed_b = packed_B + _nc * k0;
+        for (size_t k = k0; k < k1; k += KC) {
+            size_t kc = k1 - k < KC ? k1 - k : KC;
             size_t step = (k * ldb0 + j0 * ldb1) * esz;
 #if CV_RVV
-            fast_gemm_pack16_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+            fast_gemm_pack16_f32(nc, kc, B + step, ldb1, ldb0, packed_b);
 #elif CV_NEON && CV_NEON_AARCH64
-            fast_gemm_pack12_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+            fast_gemm_pack12_f32(nc, kc, B + step, ldb1, ldb0, packed_b);
 #elif CV_AVX
-            fast_gemm_pack8_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+            fast_gemm_pack8_f32(nc, kc, B + step, ldb1, ldb0, packed_b);
 #elif CV_LASX
-            fast_gemm_pack16_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+            fast_gemm_pack16_f32(nc, kc, B + step, ldb1, ldb0, packed_b);
 #elif CV_SIMD128
-            fast_gemm_pack12_f32(nc, kc, B + step, ldb1, ldb0, packed_B);
+            fast_gemm_pack12_f32(nc, kc, B + step, ldb1, ldb0, packed_b);
 #endif
-            packed_B += _nc * kc;
+            packed_b += _nc * kc;
         }
+        packed_B += _nc * K;
     }
 }
 
