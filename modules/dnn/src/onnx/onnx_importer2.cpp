@@ -540,10 +540,9 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "auto_pad")
             {
-                // pad_mode cannot express SAME_UPPER vs SAME_LOWER; getAutoPadding() prefers auto_pad.
                 lp.set("auto_pad", attribute_proto.s());
                 if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
-                    lp.set("pad_mode",  "SAME");
+                    lp.set("pad_mode", attribute_proto.s());
                 }
                 else if (attribute_proto.s() == "VALID") {
                     lp.set("pad_mode", "VALID");
