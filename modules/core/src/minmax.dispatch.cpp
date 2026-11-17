@@ -318,7 +318,10 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    if (src.dims <= 2)
+    // HAL implementations are not expected to handle empty inputs (src.data is NULL)
+    const bool useHal = !src.empty();
+
+    if (useHal && src.dims <= 2)
     {
         if ((size_t)src.step == (size_t)mask.step || mask.empty())
         {
@@ -329,7 +332,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         CALL_HAL(minMaxIdxMaskStep, cv_hal_minMaxIdxMaskStep, src.data, src.step, src.cols*cn, src.rows,
                  src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
     }
-    else if (src.isContinuous() && (mask.isContinuous() || mask.empty()))
+    else if (useHal && src.isContinuous() && (mask.isContinuous() || mask.empty()))
     {
         int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
                                    minVal, maxVal, minIdx, maxIdx, mask.data);

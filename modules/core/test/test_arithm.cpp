@@ -2393,6 +2393,41 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 
+typedef testing::TestWithParam<int> Core_MinMaxIdx_empty;
+
+TEST_P(Core_MinMaxIdx_empty, no_data)
+{
+    const int depth = GetParam();
+    const Size sizes[] = { Size(0, 0), Size(0, 5), Size(5, 0) };
+    for (const Size& sz : sizes)
+    {
+        SCOPED_TRACE(cv::format("depth=%d size=%dx%d", depth, sz.width, sz.height));
+        Mat src(sz, CV_MAKETYPE(depth, 1));
+
+        double minVal = -1, maxVal = -1;
+        int minIdx[2] = { 7, 7 }, maxIdx[2] = { 7, 7 };
+        ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx));
+        EXPECT_EQ(0., minVal);
+        EXPECT_EQ(0., maxVal);
+        EXPECT_EQ(-1, minIdx[0]);
+        EXPECT_EQ(-1, minIdx[1]);
+        EXPECT_EQ(-1, maxIdx[0]);
+        EXPECT_EQ(-1, maxIdx[1]);
+
+        minVal = maxVal = -1;
+        Point minLoc(7, 7), maxLoc(7, 7);
+        ASSERT_NO_THROW(cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc));
+        EXPECT_EQ(0., minVal);
+        EXPECT_EQ(0., maxVal);
+        EXPECT_EQ(Point(-1, -1), minLoc);
+        EXPECT_EQ(Point(-1, -1), maxLoc);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MinMaxIdx_empty,
+    testing::Values((int)CV_8U, (int)CV_8S, (int)CV_16U, (int)CV_16S, (int)CV_32S, (int)CV_32F,
+                    (int)CV_64F));
+
 TEST(Subtract, scalarc1_matc3)
 {
     int scalar = 255;
