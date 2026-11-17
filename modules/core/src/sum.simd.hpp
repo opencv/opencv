@@ -426,7 +426,7 @@ static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn
             if (!v_check_any(m))
                 continue;
             count = v_dotprod_expand(v_and(m, one), one, count);
-            v_uint8 a, b, c, d;
+            v_uint8 a, b, c, d = zero;
             if (cn == 1)
                 a = vx_load(src + i);
             else if (cn == 2)
