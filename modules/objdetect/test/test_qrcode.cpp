@@ -778,7 +778,7 @@ TEST(Objdetect_QRCode_detect, detect_regression_23810)
     {
         Mat qrImg;
         qrcode_enc->encode(expect_msg, qrImg);
-        for (const int scale : {4, 8})
+        for (const int scale : {4, 8, 24})
         {
             Mat src;
             resize(qrImg, src, Size(), scale, scale, INTER_NEAREST);
@@ -788,6 +788,24 @@ TEST(Objdetect_QRCode_detect, detect_regression_23810)
             EXPECT_EQ(expect_msg, decoded_msg) << "scale " << scale;
         }
     }
+}
+
+// The second finder pattern search added for #23810 must not find more codes in noise.
+// The first search alone detects 6 of these 50 images.
+TEST(Objdetect_QRCode_detect, detect_regression_23810_noise)
+{
+    RNG rng(777);
+    QRCodeDetector qrcode;
+    int detected = 0;
+    for (int i = 0; i < 50; i++)
+    {
+        Mat src(240, 320, CV_8UC1);
+        rng.fill(src, RNG::UNIFORM, Scalar(0), Scalar(256));
+        std::vector<Point> corners;
+        if (qrcode.detect(src, corners))
+            detected++;
+    }
+    EXPECT_LE(detected, 6);
 }
 
 }} // namespace

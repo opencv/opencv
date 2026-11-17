@@ -112,8 +112,11 @@ public:
 protected:
     vector<Vec3d> searchHorizontalLines();
     vector<Point2f> separateVerticalLines(const vector<Vec3d> &list_lines);
-    vector<Point2f> extractVerticalLines(const vector<Vec3d> &list_lines, double eps);
+    vector<Point2f> extractVerticalLines(const vector<Vec3d> &list_lines, double eps,
+                                         vector<double> *widths = nullptr);
     bool testDiagonalLines(const Point &center, double eps) const;
+    static bool checkFinderGeometry(const vector<Point2f> &centers, const Mat &labels,
+                                    const vector<double> &widths);
     void fixationPoints(vector<Point2f> &local_point);
     vector<Point2f> getQuadrilateral(vector<Point2f> angle_list);
     bool testByPassRoute(vector<Point2f> hull, int start, int finish);
@@ -241,10 +244,11 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     const double min_dist_between_points = 10.0;
     const double max_ratio = 1.0;
     bool found_candidates = false;
+    vector<double> widths;
     for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
     {
         const float coeff_epsilon = coeff_epsilon_i * 0.1f;
-        vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon);
+        vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon, &widths);
         if (!point2f_result.empty())
         {
             found_candidates = true;
@@ -272,6 +276,13 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 
             if (ratio < max_ratio)
             {
+                // In the second search, also check the geometry of the accepted split.
+                // A failed check ends the search, so that a larger epsilon cannot pick
+                // another set of candidates from noise.
+                if (check_diagonals && !checkFinderGeometry(centers, labels, widths))
+                {
+                    return vector<Point2f>();
+                }
                 return point2f_result;
             }
         }
@@ -283,7 +294,8 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
     return vector<Point2f>();  // nothing
 }
 
-vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps)
+vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, double eps,
+                                               vector<double> *widths)
 {
     CV_TRACE_FUNCTION();
     vector<Vec3d> result;
@@ -372,16 +384,61 @@ vector<Point2f> QRDetect::extractVerticalLines(const vector<Vec3d> &list_lines, 
     }
 
     vector<Point2f> point2f_result;
+    if (widths)
+        widths->clear();
     if (result.size() > 2)
     {
         for (size_t i = 0; i < result.size(); i++)
         {
+            if (widths)
+                widths->push_back(result[i][2]);
             point2f_result.push_back(
                   Point2f(static_cast<float>(result[i][0] + result[i][2] * 0.5),
                           static_cast<float>(result[i][1])));
         }
     }
     return point2f_result;
+}
+
+bool QRDetect::checkFinderGeometry(const vector<Point2f> &centers, const Mat &labels,
+                                   const vector<double> &widths)
+{
+    CV_TRACE_FUNCTION();
+    // Stricter than the first search: the three finder patterns of a code have about
+    // the same size, and their centers form a right isosceles triangle. Patterns that
+    // appear by chance in noise usually do not.
+    const double max_width_ratio = 1.3, max_leg_ratio = 1.3;
+    const double min_hypotenuse_ratio = 1.2, max_hypotenuse_ratio = 1.65;
+    CV_Assert(centers.size() == 3 && (size_t)labels.rows == widths.size());
+
+    double width_sum[3] = { 0.0, 0.0, 0.0 };
+    int width_count[3] = { 0, 0, 0 };
+    for (int i = 0; i < labels.rows; i++)
+    {
+        const int label = labels.at<int>(i);
+        width_sum[label] += widths[i];
+        width_count[label]++;
+    }
+    double min_width = std::numeric_limits<double>::max(), max_width = 0.0;
+    for (int i = 0; i < 3; i++)
+    {
+        if (width_count[i] == 0)
+            return false;
+        const double width = width_sum[i] / width_count[i];
+        min_width = std::min(min_width, width);
+        max_width = std::max(max_width, width);
+    }
+    if (max_width > min_width * max_width_ratio)
+        return false;
+
+    double sides[3];
+    for (int i = 0; i < 3; i++)
+        sides[i] = norm(centers[i] - centers[(i + 1) % 3]);
+    std::sort(sides, sides + 3);
+    if (sides[0] <= 0.0 || sides[1] > sides[0] * max_leg_ratio)
+        return false;
+    const double hypotenuse_ratio = sides[2] / sides[1];
+    return hypotenuse_ratio >= min_hypotenuse_ratio && hypotenuse_ratio <= max_hypotenuse_ratio;
 }
 
 bool QRDetect::testDiagonalLines(const Point &center, double eps) const
