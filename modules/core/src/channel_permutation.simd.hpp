@@ -12,7 +12,13 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 bool permuteByteChannels(NAryMatIterator& it, const int* order, int channels);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
-#if CV_SSSE3 || (defined(CV_NEON_AARCH64) && CV_NEON_AARCH64)
+#if CV_NEON && (defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC))
+#define CV_CHANNEL_PERMUTATION_NEON_AARCH64 1
+#else
+#define CV_CHANNEL_PERMUTATION_NEON_AARCH64 0
+#endif
+
+#if CV_SSSE3 || CV_CHANNEL_PERMUTATION_NEON_AARCH64
 namespace {
 
 constexpr int vectorBytes = 16;
@@ -36,7 +42,7 @@ inline v_uint8x16 shuffleBytes(const uchar* src, const ByteShuffle& shuffle)
         result = _mm_or_si128(result, _mm_shuffle_epi8(v_load(src + index * vectorBytes).val,
                                                        shuffle.masks[index].val));
     return v_uint8x16(result);
-#else
+#elif CV_CHANNEL_PERMUTATION_NEON_AARCH64
     if constexpr (vectors == 1)
         return v_uint8x16(vqtbl1q_u8(vld1q_u8(src), shuffle.mask.val));
     else if constexpr (vectors == 2)
@@ -81,8 +87,8 @@ void shufflePlanes(NAryMatIterator& it, const int* order, int channels,
 
 bool permuteByteChannels(NAryMatIterator& it, const int* order, int channels)
 {
-#if CV_SSSE3 || (defined(CV_NEON_AARCH64) && CV_NEON_AARCH64)
-#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
+#if CV_SSSE3 || CV_CHANNEL_PERMUTATION_NEON_AARCH64
+#if CV_CHANNEL_PERMUTATION_NEON_AARCH64
     if (channels >= 9 && channels <= 12)
         return false;
 #endif
@@ -146,6 +152,7 @@ bool permuteByteChannels(NAryMatIterator& it, const int* order, int channels)
     return false;
 #endif
 }
+#undef CV_CHANNEL_PERMUTATION_NEON_AARCH64
 #endif
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END

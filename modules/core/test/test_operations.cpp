@@ -47,51 +47,51 @@
 namespace opencv_test {
 namespace {
 
-TEST(Core_MixChannels, interleaved_permutations)
-{
-    RNG rng(137);
-    for (int channels : {2, 3, 4})
-    {
-        for (int depth : {CV_8U, CV_16F, CV_32F})
-        {
-            for (bool roi : {false, true})
-            {
-                SCOPED_TRACE(cv::format("channels=%d depth=%d roi=%d", channels, depth, roi));
-                const int type = CV_MAKETYPE(depth, channels);
-                const Rect region(roi ? 1 : 0, roi ? 2 : 0, 39, 19);
-                Mat input(region.y + region.height, region.x + region.width + (roi ? 3 : 0), type);
-                Mat output(input.size(), type);
-                Mat expected = Mat::zeros(input.size(), type);
-                Mat bytes(input.rows, static_cast<int>(input.cols * input.elemSize()), CV_8U, input.data, input.step);
-                rng.fill(bytes, RNG::UNIFORM, 0, 256);
+typedef testing::TestWithParam<tuple<int, int, bool> > Core_MixChannelsInterleaved;
 
-                const Mat src = input(region);
-                Mat dst = output(region);
-                std::vector<Mat> planes;
-                split(src, planes);
-                std::vector<int> order = {0, 1, 2, 3};
-                order.resize(channels);
-                do
-                {
-                    output.setTo(Scalar::all(0));
-                    std::vector<int> fromTo;
-                    std::vector<Mat> expectedPlanes(channels);
-                    for (int to = channels - 1; to >= 0; --to)
-                    {
-                        fromTo.push_back(order[to]);
-                        fromTo.push_back(to);
-                        expectedPlanes[to] = planes[order[to]];
-                    }
-                    Mat expectedRoi = expected(region);
-                    merge(expectedPlanes, expectedRoi);
-                    cv::mixChannels(&src, 1, &dst, 1, fromTo.data(), order.size());
-                    ASSERT_EQ(0, std::memcmp(expected.data, output.data, output.total() * output.elemSize()));
-                }
-                while (std::next_permutation(order.begin(), order.end()));
-            }
+TEST_P(Core_MixChannelsInterleaved, interleaved_permutations)
+{
+    const int channels = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const bool roi = get<2>(GetParam());
+    const int type = CV_MAKETYPE(depth, channels);
+    const Rect region(roi ? 1 : 0, roi ? 2 : 0, 39, 19);
+    Mat input(region.y + region.height, region.x + region.width + (roi ? 3 : 0), type);
+    Mat output(input.size(), type);
+    Mat expected = Mat::zeros(input.size(), type);
+    Mat bytes(input.rows, static_cast<int>(input.cols * input.elemSize()), CV_8U, input.data, input.step);
+    theRNG().fill(bytes, RNG::UNIFORM, 0, 256);
+
+    const Mat src = input(region);
+    Mat dst = output(region);
+    std::vector<Mat> planes;
+    split(src, planes);
+    std::vector<int> order = {0, 1, 2, 3};
+    order.resize(channels);
+    do
+    {
+        output.setTo(Scalar::all(0));
+        std::vector<int> fromTo;
+        std::vector<Mat> expectedPlanes(channels);
+        for (int to = channels - 1; to >= 0; --to)
+        {
+            fromTo.push_back(order[to]);
+            fromTo.push_back(to);
+            expectedPlanes[to] = planes[order[to]];
         }
+        Mat expectedRoi = expected(region);
+        merge(expectedPlanes, expectedRoi);
+        cv::mixChannels(&src, 1, &dst, 1, fromTo.data(), order.size());
+        ASSERT_EQ(0, std::memcmp(expected.data, output.data, output.total() * output.elemSize()))
+            << testing::PrintToString(order);
     }
+    while (std::next_permutation(order.begin(), order.end()));
 }
+
+INSTANTIATE_TEST_CASE_P(Core, Core_MixChannelsInterleaved, testing::Combine(
+    testing::Values(2, 3, 4),
+    testing::Values(CV_8U, CV_16F, CV_32F),
+    testing::Bool()));
 
 TEST(Core_MixChannels, overlapping_interleaved_arrays)
 {
@@ -132,40 +132,40 @@ TEST(Core_MixChannels, partial_mapping_with_full_pair_count)
     EXPECT_EQ(0, cvtest::norm(dst, expected, NORM_INF));
 }
 
-TEST(Core_MixChannels, wide_interleaved_permutations)
-{
-    RNG rng(137);
-    for (int channels : {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32, 64, CV_CN_MAX})
-    {
-        for (bool roi : {false, true})
-        {
-            SCOPED_TRACE(cv::format("channels=%d roi=%d", channels, roi));
-            const int type = CV_MAKETYPE(channels <= 16 ? CV_8U : CV_32F, channels);
-            const Rect region(roi ? 1 : 0, 0, channels <= 16 ? 39 : 257, channels <= 16 ? 37 : 256);
-            Mat source(region.height, region.x + region.width + (roi ? 1 : 0), type);
-            Mat destination = Mat::zeros(source.size(), type);
-            Mat expected = Mat::zeros(source.size(), type);
-            Mat bytes(source.rows, static_cast<int>(source.cols * source.elemSize()), CV_8U, source.data, source.step);
-            rng.fill(bytes, RNG::UNIFORM, 0, 256);
+typedef testing::TestWithParam<tuple<int, bool> > Core_MixChannelsWideInterleaved;
 
-            const Mat src = source(region);
-            Mat dst = destination(region);
-            Mat expectedROI = expected(region);
-            std::vector<Mat> planes;
-            split(src, planes);
-            std::vector<int> fromTo;
-            for (int channel = 0; channel < channels; ++channel)
-            {
-                fromTo.push_back(channels - 1 - channel);
-                fromTo.push_back(channel);
-            }
-            std::reverse(planes.begin(), planes.end());
-            merge(planes, expectedROI);
-            cv::mixChannels(&src, 1, &dst, 1, fromTo.data(), channels);
-            ASSERT_EQ(0, std::memcmp(expected.data, destination.data, destination.total() * destination.elemSize()));
-        }
+TEST_P(Core_MixChannelsWideInterleaved, wide_interleaved_permutations)
+{
+    const int channels = get<0>(GetParam());
+    const bool roi = get<1>(GetParam());
+    const int type = CV_MAKETYPE(channels <= 16 ? CV_8U : CV_32F, channels);
+    const Rect region(roi ? 1 : 0, 0, channels <= 16 ? 39 : 257, channels <= 16 ? 37 : 256);
+    Mat source(region.height, region.x + region.width + (roi ? 1 : 0), type);
+    Mat destination = Mat::zeros(source.size(), type);
+    Mat expected = Mat::zeros(source.size(), type);
+    Mat bytes(source.rows, static_cast<int>(source.cols * source.elemSize()), CV_8U, source.data, source.step);
+    theRNG().fill(bytes, RNG::UNIFORM, 0, 256);
+
+    const Mat src = source(region);
+    Mat dst = destination(region);
+    Mat expectedROI = expected(region);
+    std::vector<Mat> planes;
+    split(src, planes);
+    std::vector<int> fromTo;
+    for (int channel = 0; channel < channels; ++channel)
+    {
+        fromTo.push_back(channels - 1 - channel);
+        fromTo.push_back(channel);
     }
+    std::reverse(planes.begin(), planes.end());
+    merge(planes, expectedROI);
+    cv::mixChannels(&src, 1, &dst, 1, fromTo.data(), channels);
+    ASSERT_EQ(0, std::memcmp(expected.data, destination.data, destination.total() * destination.elemSize()));
 }
+
+INSTANTIATE_TEST_CASE_P(Core, Core_MixChannelsWideInterleaved, testing::Combine(
+    testing::Values(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32, 64, CV_CN_MAX),
+    testing::Bool()));
 
 class CV_OperationsTest : public cvtest::BaseTest
 {
