@@ -239,11 +239,22 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
         pads_begin.assign(kernel.size(), 0);
         pads_end.assign(kernel.size(), 0);
     }
-    if (padMode == "SAME" || padMode == "SAME_UPPER" || padMode == "SAME_LOWER")
+    if (padMode == "SAME")
     {
         CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size());
         for (int i = 0; i < pads_begin.size(); i++) {
             // There are test cases with stride > kernel.
+            if (strides[i] <= kernel[i])
+            {
+                int pad = (kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i]) / 2;
+                pads_begin[i] = pads_end[i] = pad;
+            }
+        }
+    }
+    else if (padMode == "SAME_LOWER" || padMode == "SAME_UPPER")
+    {
+        CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size());
+        for (int i = 0; i < pads_begin.size(); i++) {
             if (strides[i] <= kernel[i])
             {
                 int total_pad = kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i];
