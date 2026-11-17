@@ -43,6 +43,9 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 # define IPP_DISABLE_NORM_INF_32F_C3CMR  0
 #endif
 
+// ippiNorm_Inf_32f_C1MR over-reads past the mask buffer, see issue #30804
+#define IPP_DISABLE_NORM_INF_32F_C1MR  1
+
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
 

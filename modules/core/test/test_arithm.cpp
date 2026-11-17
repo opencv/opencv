@@ -6,6 +6,10 @@
 #include <limits>
 #include "ref_reduce_arg.impl.hpp"
 #include <algorithm>
+#if !defined(_WIN32)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 namespace opencv_test { namespace {
 
@@ -4990,6 +4994,50 @@ TEST_P(Core_MaskTypeTest, Norm)
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
+
+#if !defined(_WIN32)
+// Regression test for https://github.com/opencv/opencv/issues/30804 .
+//
+// The masked IPP primitives ippiMinMaxIndx_32f_C1MR / ippiNorm_Inf_32f_C1MR read a few
+// bytes past the end of the uint8 mask buffer. That only crashes when the page right
+// after the mask is unmapped, so a plain Mat::zeros mask (which has slack after it on
+// the heap) never triggers it; this places the mask so its last byte is the last byte
+// of a mapped page, with an inaccessible page immediately after, matching the issue's
+// own repro. Windows reproduces the same way via VirtualAlloc/VirtualProtect, but is
+// not covered here to keep this test to one platform-independent code path (POSIX
+// mmap/mprotect).
+static Mat flushAgainstGuardPage(const Mat& src)
+{
+    const size_t n = src.total() * src.elemSize();
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    const size_t pages = (n + (size_t)pageSize - 1) / (size_t)pageSize;
+    const size_t total = (pages + 1) * (size_t)pageSize;
+    void* base = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    CV_Assert(base != MAP_FAILED);
+    CV_Assert(mprotect((char*)base + pages * (size_t)pageSize, (size_t)pageSize, PROT_NONE) == 0);
+    void* addr = (char*)base + pages * (size_t)pageSize - n;
+    memcpy(addr, src.data, n);
+    return Mat(src.rows, src.cols, src.type(), addr);
+}
+
+TEST(Core_MinMaxIdx, mask_against_guard_page_no_crash)
+{
+    const int h = 480, w = 640;
+    Mat eig(h, w, CV_32F, Scalar(1.0f));
+    Mat mask0 = Mat::zeros(h, w, CV_8U);
+    mask0.at<uchar>(h - 1, w - 1) = 255;  // one nonzero pixel, the very last one
+    Mat mask = flushAgainstGuardPage(mask0);
+
+    double minVal = 0, maxVal = 0;
+    EXPECT_NO_THROW(cv::minMaxIdx(eig, &minVal, &maxVal, NULL, NULL, mask));
+    EXPECT_EQ(1.0, minVal);
+    EXPECT_EQ(1.0, maxVal);
+
+    double normInf = 0;
+    EXPECT_NO_THROW(normInf = cv::norm(eig, NORM_INF, mask));
+    EXPECT_EQ(1.0, normInf);
+}
+#endif  // !defined(_WIN32)
 
 TEST_P(Core_MaskTypeTest, Mean)
 {

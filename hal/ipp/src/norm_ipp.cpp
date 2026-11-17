@@ -24,7 +24,9 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         #if (!IPP_DISABLE_NORM_INF_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
         #endif
+        #if (!IPP_DISABLE_NORM_INF_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
+        #endif
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
