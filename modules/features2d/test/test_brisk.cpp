@@ -111,4 +111,34 @@ TEST(Features2d_BRISK, invalidCreateParameters)
     EXPECT_THROW(BRISK::create(30, 3, -1.0f), cv::Exception);
 }
 
+TEST(Features2d_BRISK, descriptors_of_sub_matrix)
+{
+    // Row steps of a region of a larger image differ from its width.
+    RNG& rng = theRNG();
+    Mat img(150, 170, CV_8UC1);
+    rng.fill(img, RNG::UNIFORM, 0, 256);
+    GaussianBlur(img, img, Size(5, 5), 2);
+
+    Mat parent(img.rows + 7, img.cols + 9, CV_8UC1);
+    rng.fill(parent, RNG::UNIFORM, 0, 256);
+    Mat roi = parent(Rect(4, 3, img.cols, img.rows));
+    img.copyTo(roi);
+
+    Ptr<BRISK> brisk = BRISK::create(30);
+    std::vector<KeyPoint> keypoints;
+    brisk->detect(img, keypoints);
+    ASSERT_GT(keypoints.size(), 5u);
+
+    std::vector<KeyPoint> keypointsRoi = keypoints;
+    Mat descriptors, descriptorsRoi;
+    brisk->compute(img, keypoints, descriptors);
+    brisk->compute(roi, keypointsRoi, descriptorsRoi);
+
+    ASSERT_EQ(keypoints.size(), keypointsRoi.size());
+    ASSERT_EQ(descriptors.size(), descriptorsRoi.size());
+    EXPECT_EQ(0, cvtest::norm(descriptors, descriptorsRoi, NORM_INF));
+    for (size_t i = 0; i < keypoints.size(); i++)
+        EXPECT_EQ(keypoints[i].angle, keypointsRoi[i].angle) << "keypoint " << i;
+}
+
 }} // namespace
