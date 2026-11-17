@@ -4,8 +4,7 @@
 
 // ONNX ReverseSequence operator
 // Spec: https://onnx.ai/onnx/operators/onnx__ReverseSequence.html
-// Supported opsets: ai.onnx opset 10 and newer. Opset 28 only relaxed the type
-// constraint from all_tensor_types() to all_tensor_types_ir4(), semantics are unchanged.
+// Supported opsets: 10-28
 // NOTE: time_axis/batch_axis must be 0 or 1 and must differ; input rank must be >= 2.
 
 #include "../precomp.hpp"
