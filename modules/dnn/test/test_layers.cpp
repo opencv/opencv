@@ -4876,4 +4876,78 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     normAssert(refState, outputs[1], "present_state");
 }
 
+TEST(Layer_Test_LinearAttention, RejectMismatchedInputShapes)
+{
+    const int B = 2, T = 4, H = 4, D = 8;
+    LayerParams lp;
+    lp.type = "LinearAttention";
+    lp.name = "linear_attention";
+    lp.set("q_num_heads", H);
+    lp.set("kv_num_heads", H);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // inputs: query, key, value, past_state, decay, beta; outputs: output, present_state
+    auto run = [&](const std::vector<Mat>& inputs) {
+        std::vector<MatShape> inShapes, outShapes, intShapes;
+        std::vector<cv::dnn::MatType> inTypes, outTypes, intTypes;
+        for (const Mat& m : inputs)
+        {
+            inShapes.push_back(shape(m));
+            inTypes.push_back(m.type());
+        }
+        layer->getMemoryShapes(inShapes, 2, outShapes, intShapes);
+        layer->getTypes(inTypes, (int)outShapes.size(), (int)intShapes.size(), outTypes, intTypes);
+        std::vector<Mat> inp(inputs), outs, ints;
+        for (size_t i = 0; i < outShapes.size(); i++)
+            outs.push_back(Mat(outShapes[i], outTypes[i]));
+        for (size_t i = 0; i < intShapes.size(); i++)
+            ints.push_back(Mat(intShapes[i], intTypes[i]));
+        layer->finalize(inp, outs);
+        layer->forward(inp, outs, ints);
+    };
+    auto rnd = [](const std::vector<int>& sz, int type = CV_32F) {
+        Mat m(sz, CV_32F);
+        randu(m, -1, 1);
+        if (type != CV_32F)
+            m.convertTo(m, type);
+        return m;
+    };
+
+    const Mat q = rnd({B, T, H * D}), k = rnd({B, T, H * D}), v = rnd({B, T, H * D});
+    const Mat past = rnd({B, H, D, D}), decay = rnd({B, T, H * D}), beta = rnd({B, T, H});
+
+    // key and value must be 3D and match the query batch and sequence length
+    EXPECT_THROW(run({q, rnd({B * T, H * D}), v}), cv::Exception);
+    EXPECT_THROW(run({q, rnd({B, 1, H * D}), v}), cv::Exception);
+    EXPECT_THROW(run({q, k, rnd({1, T, H * D})}), cv::Exception);
+    EXPECT_THROW(run({q, k, rnd({B, 1, H * D})}), cv::Exception);
+
+    // past_state must be [batch, kv_num_heads, head_size, v_head_size]
+    EXPECT_THROW(run({q, k, v, rnd({1})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, rnd({1, H, D, D})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, rnd({B, 1, D, D})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, rnd({B, H, 1, D})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, rnd({B, H, D, 1})}), cv::Exception);
+
+    // decay must be [batch, seq, kv_num_heads * head_size] or [batch, seq, kv_num_heads]
+    EXPECT_THROW(run({q, k, v, past, rnd({B, T, 1}), beta}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, rnd({1, T, H * D}), beta}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, rnd({B, 1, H * D}), beta}), cv::Exception);
+
+    // beta must be [batch, seq, kv_num_heads] or [batch, seq, 1]
+    EXPECT_THROW(run({q, k, v, past, decay, rnd({B, 1, H})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, decay, rnd({1, T, 1})}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, decay, rnd({B, T, 2})}), cv::Exception);
+
+    // every input is read as float after the fp16 conversion
+    EXPECT_THROW(run({q, rnd({B, T, H * D}, CV_8U), v}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, rnd({B, H, D, D}, CV_8U)}), cv::Exception);
+
+    // valid layouts, including per-head decay, broadcast beta and an fp16 past_state
+    EXPECT_NO_THROW(run({q, k, v, past, decay, beta}));
+    EXPECT_NO_THROW(run({q, k, v, Mat(), rnd({B, T, H}), rnd({B, T, 1})}));
+    EXPECT_NO_THROW(run({q, k, v, rnd({B, H, D, D}, CV_16F), decay, beta}));
+}
+
 }} // namespace
