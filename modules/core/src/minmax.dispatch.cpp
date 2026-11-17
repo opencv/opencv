@@ -318,7 +318,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    // HAL implementations are not expected to handle empty inputs (src.data is NULL)
+    // empty input: nothing for a HAL to do (KleidiCV 26.03 minMaxIdx dereferences src_data)
     const bool useHal = !src.empty();
 
     if (useHal && src.dims <= 2)
