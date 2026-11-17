@@ -706,11 +706,11 @@ TEST_P(Imgcodecs_Png_Encode, params)
     Mat dst = imdecode(buf, IMREAD_UNCHANGED);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
 
-    
+
     EXPECT_GE(buf.size(), file_buf.size() * 3 / 4);
     EXPECT_LE(buf.size(), file_buf.size() * 3 / 2);
 
-    
+
     int expected_filter_type = -1;
     switch (filter)
     {
