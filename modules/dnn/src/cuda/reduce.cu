@@ -191,7 +191,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         template <typename T, int BlockSize>
         __global__ void reduce_sum_nd_kernel(const T* input, T* output, ReduceSumNdMetadata metadata, bool mean) {
-            using TAccum = std::conditional_t<std::is_integral<T>::value, double, typename accumulation_type<T>::type>;
+            using TAccum = typename std::conditional<std::is_integral<T>::value, double, typename accumulation_type<T>::type>::type;
             __shared__ BlockReduceStorage<SumState<TAccum>, BlockSize> reduce_storage;
             __shared__ std::int64_t input_base;
 
@@ -415,7 +415,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             // and rounded once, so the tree order adds no rounding error
             constexpr bool kDoubleAccum = std::is_integral<T>::value ||
                 (Op == GenericReduceOp::PROD && std::is_same<T, float>::value);
-            using TAccum = std::conditional_t<kDoubleAccum, double, typename accumulation_type<T>::type>;
+            using TAccum = typename std::conditional<kDoubleAccum, double, typename accumulation_type<T>::type>::type;
             using Step = GenericReduceStep<Op>;
             __shared__ BlockReduceStorage<TAccum, BlockSize> reduce_storage;
             __shared__ std::int64_t input_base;
