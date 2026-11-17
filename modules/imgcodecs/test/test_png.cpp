@@ -652,9 +652,7 @@ CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG
 
 typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
 
-// Returns the filter type (0..4) stored in front of every scanline of an 8-bit, non-interlaced PNG
-// encoded with IMWRITE_PNG_COMPRESSION = 0. At level 0 the zlib stream consists of stored
-// (uncompressed) deflate blocks, so the scanlines can be read without any zlib implementation.
+
 static vector<uchar> getPngScanlineFilterTypes(const vector<uchar>& png, size_t row_bytes)
 {
     vector<uchar> z;  // concatenated IDAT data
@@ -704,18 +702,15 @@ TEST_P(Imgcodecs_Png_Encode, params)
     vector<uchar> buf;
     ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter }));
 
-    // PNG is lossless: whatever the compressed size is, the decoded image must be identical.
+
     Mat dst = imdecode(buf, IMREAD_UNCHANGED);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
 
-    // The reference files were produced with zlib. Other valid implementations (zlib-ng, including its
-    // per-architecture optimizations) generate different streams, so the size can not match exactly.
-    // Observed with zlib 1.3.1 and zlib-ng 2.2.1 on x86_64 and LoongArch64: 0.96x ... 1.26x (#30850).
+    
     EXPECT_GE(buf.size(), file_buf.size() * 3 / 4);
     EXPECT_LE(buf.size(), file_buf.size() * 3 / 2);
 
-    // The filter type is chosen by libpng before compression and does not depend on zlib:
-    // every scanline must use exactly the requested filter. (Multi-filter modes allow several types.)
+    
     int expected_filter_type = -1;
     switch (filter)
     {
@@ -754,11 +749,7 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
         make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
 
-// The compressed size depends on the zlib implementation (zlib, zlib-ng, their versions and
-// per-architecture optimizations), so exact sizes can not be tested, see #30850.
-// Allowed [min, max] range of the PNG file size per compression level of 512x512.png. The ranges are the
-// minimum and maximum observed with zlib 1.2.11 - 1.3.1 and zlib-ng 2.0.7 - 2.3.3 on x86_64 and LoongArch64,
-// widened by 2%. Level 0 stores the data uncompressed: the raw 512*512*3 bytes plus PNG/zlib framing.
+
 typedef testing::TestWithParam<testing::tuple<string, int, size_t, size_t>> Imgcodecs_Png_ImwriteFlags;
 
 TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
@@ -776,7 +767,7 @@ TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
     vector<uchar> buf;
     ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level }));
 
-    // PNG is lossless: whatever the compressed size is, the decoded image must be identical.
+
     Mat dst = imdecode(buf, IMREAD_UNCHANGED);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
 
@@ -798,8 +789,7 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("../perf/512x512.png", 8, 148000, 157000),
         make_tuple("../perf/512x512.png", 9, 146500, 156000)));
 
-// The ranges above overlap for the high levels, so also check that the parameters make a difference.
-// Only relations that held for all tested zlib implementations are required.
+
 TEST(Imgcodecs_Png_CompressionParams, level_effect)
 {
     const string filename = cvtest::TS::ptr()->get_data_path() + "../perf/512x512.png";
@@ -814,12 +804,11 @@ TEST(Imgcodecs_Png_CompressionParams, level_effect)
         sizes[level] = buf.size();
     }
 
-    // A higher level must not produce a larger file. Strictly decreasing sizes are not guaranteed:
-    // level 9 of zlib-ng 2.1+ is up to 1.2% larger than its level 8, so allow 2%.
+
     for (int level = 1; level < 9; level++)
         EXPECT_LE(sizes[level + 1], sizes[level] + sizes[level] / 50) << "level=" << level;
 
-    // The level must have a real effect: level 9 is 15% (zlib) to 31% (zlib-ng) smaller than level 1.
+
     EXPECT_LT(sizes[9], sizes[1] - sizes[1] / 20);
 }
 
@@ -833,7 +822,7 @@ TEST(Imgcodecs_Png_CompressionParams, strategy_effect)
     ASSERT_TRUE(imencode(".png", src, buf_default, { IMWRITE_PNG_COMPRESSION, 6, IMWRITE_PNG_STRATEGY, IMWRITE_PNG_STRATEGY_DEFAULT }));
     ASSERT_TRUE(imencode(".png", src, buf_huffman, { IMWRITE_PNG_COMPRESSION, 6, IMWRITE_PNG_STRATEGY, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY }));
 
-    // Huffman-only disables string matching: about 40% larger with all tested zlib implementations.
+
     EXPECT_GT(buf_huffman.size(), buf_default.size() + buf_default.size() / 10);
 }
 
