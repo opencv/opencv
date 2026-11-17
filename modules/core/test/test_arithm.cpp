@@ -4998,15 +4998,15 @@ TEST_P(Core_MaskTypeTest, Norm)
 #if !defined(_WIN32)
 // Regression test for https://github.com/opencv/opencv/issues/30804 .
 //
-// The masked IPP primitives ippiMinMaxIndx_32f_C1MR / ippiNorm_Inf_32f_C1MR read a few
-// bytes past the end of the uint8 mask buffer. That only crashes when the page right
-// after the mask is unmapped, so a plain Mat::zeros mask (which has slack after it on
-// the heap) never triggers it; this places the mask so its last byte is the last byte
-// of a mapped page, with an inaccessible page immediately after, matching the issue's
-// own repro. Windows reproduces the same way via VirtualAlloc/VirtualProtect, but is
-// not covered here to keep this test to one platform-independent code path (POSIX
-// mmap/mprotect).
-static Mat flushAgainstGuardPage(const Mat& src)
+// Regression test for https://github.com/opencv/opencv/issues/30804 .
+struct GuardPagePlacement
+{
+    Mat mat;
+    void* base;
+    size_t size;
+};
+
+static GuardPagePlacement flushAgainstGuardPage(const Mat& src)
 {
     const size_t n = src.total() * src.elemSize();
     const long pageSize = sysconf(_SC_PAGESIZE);
@@ -5017,25 +5017,32 @@ static Mat flushAgainstGuardPage(const Mat& src)
     CV_Assert(mprotect((char*)base + pages * (size_t)pageSize, (size_t)pageSize, PROT_NONE) == 0);
     void* addr = (char*)base + pages * (size_t)pageSize - n;
     memcpy(addr, src.data, n);
-    return Mat(src.rows, src.cols, src.type(), addr);
+    return { Mat(src.rows, src.cols, src.type(), addr), base, total };
 }
 
 TEST(Core_MinMaxIdx, mask_against_guard_page_no_crash)
 {
     const int h = 480, w = 640;
-    Mat eig(h, w, CV_32F, Scalar(1.0f));
+    Mat eig = Mat::zeros(h, w, CV_32F);
+    eig.at<float>(h - 1, w - 1) = 5.0f;  // the only value the mask lets through
     Mat mask0 = Mat::zeros(h, w, CV_8U);
-    mask0.at<uchar>(h - 1, w - 1) = 255;  // one nonzero pixel, the very last one
-    Mat mask = flushAgainstGuardPage(mask0);
+    mask0.at<uchar>(h - 1, w - 1) = 255;
+    GuardPagePlacement guarded = flushAgainstGuardPage(mask0);
+    Mat& mask = guarded.mat;
 
     double minVal = 0, maxVal = 0;
-    EXPECT_NO_THROW(cv::minMaxIdx(eig, &minVal, &maxVal, NULL, NULL, mask));
-    EXPECT_EQ(1.0, minVal);
-    EXPECT_EQ(1.0, maxVal);
+    int minIdx[2] = {-1, -1}, maxIdx[2] = {-1, -1};
+    cv::minMaxIdx(eig, &minVal, &maxVal, minIdx, maxIdx, mask);
+    EXPECT_EQ(5.0, minVal);
+    EXPECT_EQ(5.0, maxVal);
+    EXPECT_EQ(h - 1, minIdx[0]);
+    EXPECT_EQ(w - 1, minIdx[1]);
+    EXPECT_EQ(h - 1, maxIdx[0]);
+    EXPECT_EQ(w - 1, maxIdx[1]);
 
-    double normInf = 0;
-    EXPECT_NO_THROW(normInf = cv::norm(eig, NORM_INF, mask));
-    EXPECT_EQ(1.0, normInf);
+    EXPECT_EQ(5.0, cv::norm(eig, NORM_INF, mask));
+
+    munmap(guarded.base, guarded.size);
 }
 #endif  // !defined(_WIN32)
 
