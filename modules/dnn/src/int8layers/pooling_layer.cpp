@@ -296,7 +296,8 @@ public:
 
         ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID :
+                       (padMode == "SAME_LOWER" ? ov::op::PadType::SAME_LOWER : ov::op::PadType::SAME_UPPER);
 
         auto rounding_type = ceilMode ? ov::op::RoundingType::CEIL : ov::op::RoundingType::FLOOR;
         ov::Output<ov::Node> pool;
