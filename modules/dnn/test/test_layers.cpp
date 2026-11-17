@@ -294,10 +294,13 @@ TEST(Layer_Test_Reshape, Accuracy)
 }
 
 // Legacy models spell a flatten-to-(1, total) as a 2D shape whose second element is wrong.
-static MatShape reshape2OutShape(const MatShape& inpShape, const std::vector<int>& spec)
+static MatShape reshape2OutShape(const MatShape& inpShape, const std::vector<int>& spec,
+                                 bool allowZero = false)
 {
     LayerParams params;
     params.set("shape", DictValue::arrayInt<const int*>(spec.data(), spec.size()));
+    if (allowZero)
+        params.set("allowzero", 1);
     Ptr<Layer> layer = LayerFactory::createLayerInstance("Reshape2", params);
 
     std::vector<MatShape> outputs, internals;
@@ -315,6 +318,37 @@ TEST(Layer_Test_Reshape2, legacy_shape_spec)
     EXPECT_EQ(MatShape({1, 7}), reshape2OutShape(MatShape({7}), {1, 7}));
     EXPECT_EQ(MatShape({1, 24}), reshape2OutShape(MatShape({1, 2, 3, 4}), {0, -1}));
     EXPECT_EQ(MatShape({2, 12}), reshape2OutShape(MatShape({2, 3, 4}), {0, -1}));
+}
+
+// ONNX allowzero: a 0 in the shape is a zero-size axis instead of "copy this axis from the input"
+TEST(Layer_Test_Reshape2, allowzero)
+{
+    // 2D legacy path: without allowzero, (0, 5) on a (1, 0) input would be taken for the
+    // legacy (1, total) spelling; with allowzero the 0 must stay a real zero-size axis
+    EXPECT_EQ(MatShape({0, 5}), reshape2OutShape(MatShape({1, 0}), {0, 5}, true));
+    EXPECT_EQ(MatShape({3, 0}), reshape2OutShape(MatShape({0, 3}), {3, 0}, true));
+    // without allowzero, 0 still copies the input axis
+    EXPECT_EQ(MatShape({2, 3}), reshape2OutShape(MatShape({2, 3}), {0, 3}));
+    // N-D path (test_reshape_allowzero_reordered)
+    EXPECT_EQ(MatShape({3, 4, 0}), reshape2OutShape(MatShape({0, 3, 4}), {3, 4, 0}, true));
+}
+
+TEST(Layer_Test_Reshape2, allowzero_block_layout)
+{
+    // a 0 in the channel position keeps the block layout only when it means "copy C";
+    // with allowzero it is a zero-size channel axis, so the layer must fall back to NCHW
+    const int spec[] = {1, 0, 4, 4};
+    LayerParams params;
+    params.set("shape", DictValue::arrayInt<const int*>(spec, 4));
+    params.set("allowzero", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Reshape2", params);
+
+    std::vector<DataLayout> desiredInputs, outputs;
+    layer->getLayouts(std::vector<DataLayout>(1, DATA_LAYOUT_BLOCK), desiredInputs, 1, outputs);
+    ASSERT_EQ(1u, desiredInputs.size());
+    ASSERT_EQ(1u, outputs.size());
+    EXPECT_EQ(DATA_LAYOUT_NCHW, desiredInputs[0]);
+    EXPECT_EQ(DATA_LAYOUT_UNKNOWN, outputs[0]);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
