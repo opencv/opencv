@@ -39,7 +39,8 @@ typedef TestBaseWithParam<tuple<MatType, bool>> MixChannelsWidePermutation;
 
 PERF_TEST_P(MixChannelsWidePermutation, interleaved,
             testing::Combine(testing::Values(CV_8UC(5), CV_8UC(8), CV_8UC(12), CV_8UC(16),
-                                             CV_32FC(32), CV_32FC(64), CV_32FC(CV_CN_MAX)),
+                                             CV_32FC(32), CV_32FC(64), CV_32FC(CV_CN_MAX),
+                                             CV_32SC(64), CV_32UC(64)),
                              testing::Bool()))
 {
     const int type = get<0>(GetParam());

@@ -132,13 +132,13 @@ TEST(Core_MixChannels, partial_mapping_with_full_pair_count)
     EXPECT_EQ(0, cvtest::norm(dst, expected, NORM_INF));
 }
 
-typedef testing::TestWithParam<tuple<int, bool> > Core_MixChannelsWideInterleaved;
+typedef testing::TestWithParam<tuple<perf::MatType, bool> > Core_MixChannelsWideInterleaved;
 
 TEST_P(Core_MixChannelsWideInterleaved, wide_interleaved_permutations)
 {
-    const int channels = get<0>(GetParam());
+    const int type = get<0>(GetParam());
+    const int channels = CV_MAT_CN(type);
     const bool roi = get<1>(GetParam());
-    const int type = CV_MAKETYPE(channels <= 16 ? CV_8U : CV_32F, channels);
     const Rect region(roi ? 1 : 0, 0, channels <= 16 ? 39 : 257, channels <= 16 ? 37 : 256);
     Mat source(region.height, region.x + region.width + (roi ? 1 : 0), type);
     Mat destination = Mat::zeros(source.size(), type);
@@ -164,7 +164,9 @@ TEST_P(Core_MixChannelsWideInterleaved, wide_interleaved_permutations)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, Core_MixChannelsWideInterleaved, testing::Combine(
-    testing::Values(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 32, 64, CV_CN_MAX),
+    testing::Values(CV_8UC(5), CV_8UC(6), CV_8UC(7), CV_8UC(8), CV_8UC(9), CV_8UC(10),
+                    CV_8UC(11), CV_8UC(12), CV_8UC(13), CV_8UC(14), CV_8UC(15), CV_8UC(16),
+                    CV_32FC(32), CV_32FC(64), CV_32FC(CV_CN_MAX), CV_32SC(32), CV_32UC(32)),
     testing::Bool()));
 
 class CV_OperationsTest : public cvtest::BaseTest

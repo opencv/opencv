@@ -175,13 +175,13 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
     const size_t elemSize = src.elemSize1();
     const size_t pixels = it.size * it.nplanes;
     const bool bytes = channels >= 5 && channels <= 16 && elemSize == 1 && it.size >= 16 && pixels >= 1024;
-    const bool wideFloat = channels >= 32 && src.depth() == CV_32F && pixels >= 65536;
+    const bool wide32 = channels >= 32 && elemSize == 4 && pixels >= 65536;
 #if CV_SIMD || CV_SIMD_SCALABLE
     const bool small = channels >= 2 && channels <= 4 && elemSize <= 4;
 #else
     const bool small = false;
 #endif
-    if (!(small || bytes || wideFloat))
+    if (!(small || bytes || wide32))
         return false;
 
     // Preserve the existing write order for overlapping matrices.
@@ -220,7 +220,7 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
     {
         CV_CPU_DISPATCH(permuteByteChannels, (it, order, channels), CV_CPU_DISPATCH_MODES_ALL);
     }
-    if (wideFloat)
+    if (wide32)
     {
         for (size_t plane = 0; plane < it.nplanes; ++plane, ++it)
             copyPermutedPixels(reinterpret_cast<const unsigned*>(it.ptrs[0]), reinterpret_cast<unsigned*>(it.ptrs[1]),
