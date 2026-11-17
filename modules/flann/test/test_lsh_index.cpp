@@ -145,11 +145,12 @@ TEST(Flann_LSH, load_rejects_invalid_stream)
     ASSERT_EQ(12, getIntAt(saved, params_ofs + sizeof(int)));
     ASSERT_EQ(1, getIntAt(saved, params_ofs + 2 * sizeof(int)));
 
-    // table_number <= 0, key_size <= 0, key_size out of BucketKey range
+    // table_number <= 0, key_size <= 0, key_size out of BucketKey range, multi_probe_level < 0
     const struct { size_t ofs; int val; } bad_params[] = {
         { params_ofs, 0 },
         { params_ofs + sizeof(int), 0 },
         { params_ofs + sizeof(int), 33 },
+        { params_ofs + 2 * sizeof(int), -1 },
     };
     for (size_t i = 0; i < sizeof(bad_params) / sizeof(bad_params[0]); ++i)
     {

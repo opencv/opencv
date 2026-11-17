@@ -796,15 +796,7 @@ bool loadIndex_(Index* index0, void*& index, const Mat& data, FILE* fin, const D
     ::cvflann::IndexParams params;
     params["algorithm"] = index0->getAlgorithm();
     IndexType* _index = new IndexType(dataset, params, dist);
-    try
-    {
-        _index->loadIndex(fin);
-    }
-    catch (...)
-    {
-        delete _index;
-        throw;
-    }
+    _index->loadIndex(fin);
     index = _index;
     return true;
 }
