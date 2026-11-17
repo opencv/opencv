@@ -180,6 +180,18 @@ void makeFarnebackFramePair(Size size, Mat& frame1, Mat& frame2)
     remap(frame1, frame2, disp, Mat(), INTER_LINEAR, BORDER_REPLICATE);
 }
 
+struct NumThreadsScope
+{
+    explicit NumThreadsScope(int n) : nprev(cv::getNumThreads()) {
+        cv::setNumThreads(n);
+    }
+    ~NumThreadsScope() {
+        cv::setNumThreads(nprev);
+    }
+private:
+    int nprev;
+};
+
 } // namespace
 
 TEST_P(DenseOpticalFlow_Farneback, MultithreadReproducibility)
@@ -193,15 +205,21 @@ TEST_P(DenseOpticalFlow_Farneback, MultithreadReproducibility)
     Mat frame1, frame2;
     makeFarnebackFramePair(size, frame1, frame2);
 
-    Mat res1, res2;
-    calcOpticalFlowFarneback(frame1, frame2, res1, 0.5, 3, 15, 3, polyN, polySigma, flags);
-    calcOpticalFlowFarneback(frame1, frame2, res2, 0.5, 3, 15, 3, polyN, polySigma, flags);
+    Mat resSingleThread, resMultiThread;
+    {
+        NumThreadsScope threads(1);
+        calcOpticalFlowFarneback(frame1, frame2, resSingleThread, 0.5, 3, 15, 3, polyN, polySigma, flags);
+    }
+    {
+        NumThreadsScope threads(std::max(2, cv::getNumThreads()));
+        calcOpticalFlowFarneback(frame1, frame2, resMultiThread, 0.5, 3, 15, 3, polyN, polySigma, flags);
+    }
 
-    ASSERT_EQ(CV_32FC2, res1.type());
-    ASSERT_EQ(size, res1.size());
-    EXPECT_EQ(0, cv::norm(res1, res2, NORM_INF));
+    ASSERT_EQ(CV_32FC2, resSingleThread.type());
+    ASSERT_EQ(size, resSingleThread.size());
+    EXPECT_EQ(0, cv::norm(resSingleThread, resMultiThread, NORM_INF));
 
-    EXPECT_GT(cv::norm(res1, NORM_INF), 0.0);
+    EXPECT_GT(cv::norm(resSingleThread, NORM_INF), 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(FullSet, DenseOpticalFlow_Farneback,

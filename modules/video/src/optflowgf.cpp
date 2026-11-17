@@ -200,7 +200,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
                 drow[x*5+4] = (float)(b6*ig55);
             }
         }
-    });
+    }, (double)width*height/(1 << 14));
 }
 
 
