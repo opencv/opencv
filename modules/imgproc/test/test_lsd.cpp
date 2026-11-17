@@ -416,4 +416,36 @@ TEST_F(Imgproc_LSD_Common, drawSegmentsEmpty)
     );
 }
 
+typedef testing::TestWithParam<int> Imgproc_LSD_SubMatrix;
+
+TEST_P(Imgproc_LSD_SubMatrix, detect_on_region)
+{
+    // The default scale (0.8) smooths the image first; that must not read the pixels around a region.
+    const int mode = GetParam();
+    Mat1b img(Size(160, 120), 30);
+    rectangle(img, Rect(40, 30, 80, 60), Scalar(220), FILLED);
+    line(img, Point(0, 0), Point(159, 60), Scalar(120), 2);
+    Mat1b noise(img.size());
+    cv::randu(noise, 0, 8);
+    img += noise;
+
+    Mat1b parent(img.rows + 12, img.cols + 12);
+    cv::randu(parent, 0, 256);
+    Mat1b region = parent(Rect(6, 6, img.cols, img.rows));
+    img.copyTo(region);
+    ASSERT_FALSE(region.isContinuous());
+
+    std::vector<Vec4f> linesContinuous, linesRegion;
+    createLineSegmentDetector(mode)->detect(img, linesContinuous);
+    createLineSegmentDetector(mode)->detect(region, linesRegion);
+
+    EXPECT_FALSE(linesContinuous.empty());
+    ASSERT_EQ(linesContinuous.size(), linesRegion.size());
+    for (size_t i = 0; i < linesContinuous.size(); i++)
+        EXPECT_EQ(linesContinuous[i], linesRegion[i]) << "segment " << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_LSD_SubMatrix,
+    testing::Values((int)LSD_REFINE_NONE, (int)LSD_REFINE_STD, (int)LSD_REFINE_ADV));
+
 }} // namespace
