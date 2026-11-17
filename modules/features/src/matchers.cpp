@@ -657,6 +657,7 @@ void DescriptorMatcher::knnMatch( InputArray queryDescriptors, std::vector<std::
 {
     CV_INSTRUMENT_REGION();
 
+    matches.clear();
     if( empty() || queryDescriptors.empty() )
         return;
 
