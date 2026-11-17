@@ -652,7 +652,7 @@ CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG
 
 typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
 
-
+// Compressed sizes vary across zlib implementations and architectures.
 static vector<uchar> getPngScanlineFilterTypes(const vector<uchar>& png, size_t row_bytes)
 {
     vector<uchar> z;  // concatenated IDAT data
