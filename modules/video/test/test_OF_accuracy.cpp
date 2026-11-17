@@ -198,6 +198,75 @@ TEST(DenseOpticalFlow_DIS, ManualCoarsestScale)
 }
 
 // See https://github.com/opencv/opencv/issues/20185
+TEST(DenseOpticalFlow_DIS, calc_after_collectGarbage)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.0);
+    Mat warp = Mat_<double>({2, 3}, {1, 0, 2.0, 0, 1, -1.0});
+    warpAffine(frame1, frame2, warp, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Mat reference;
+    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(frame1, frame2, reference);
+
+    // collectGarbage() between two calc() calls and after an initial-flow call
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+        Mat flow1, flow2;
+        dis->calc(frame1, frame2, flow1);
+        dis->collectGarbage();
+        dis->calc(frame1, frame2, flow2);
+        EXPECT_EQ(0, cvtest::norm(flow1, reference, NORM_INF));
+        EXPECT_EQ(0, cvtest::norm(flow2, reference, NORM_INF));
+
+        Mat initial(frame1.size(), CV_32FC2, Scalar(5.f, -3.f));
+        dis->calc(frame1, frame2, initial);
+        dis->collectGarbage();
+        Mat flowAfterInitial;
+        dis->calc(frame1, frame2, flowAfterInitial);
+        EXPECT_EQ(0, cvtest::norm(flowAfterInitial, reference, NORM_INF));
+    }
+
+    // collectGarbage() before the first calc() and after parameter changes
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+        dis->collectGarbage();
+        Mat flow1;
+        dis->calc(frame1, frame2, flow1);
+        EXPECT_EQ(0, cvtest::norm(flow1, reference, NORM_INF));
+
+        dis->setFinestScale(2);
+        dis->setVariationalRefinementIterations(0);
+        dis->collectGarbage();
+        Mat flowNoVarRef, refNoVarRef;
+        dis->calc(frame1, frame2, flowNoVarRef);
+        Ptr<DISOpticalFlow> refDis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+        refDis->setFinestScale(2);
+        refDis->setVariationalRefinementIterations(0);
+        refDis->calc(frame1, frame2, refNoVarRef);
+        EXPECT_EQ(0, cvtest::norm(flowNoVarRef, refNoVarRef, NORM_INF));
+    }
+
+    // UMat / OpenCL path
+    {
+        UMat uFrame1, uFrame2, uFlow1, uFlow2, uRef;
+        frame1.copyTo(uFrame1);
+        frame2.copyTo(uFrame2);
+
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        dis->collectGarbage();
+        dis->calc(uFrame1, uFrame2, uFlow1);
+        dis->collectGarbage();
+        dis->calc(uFrame1, uFrame2, uFlow2);
+
+        DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST)->calc(uFrame1, uFrame2, uRef);
+        ASSERT_EQ(uFrame1.size(), uFlow1.size());
+        ASSERT_EQ(uFrame1.size(), uFlow2.size());
+        EXPECT_EQ(0, cvtest::norm(uFlow1, uRef, NORM_INF));
+        EXPECT_EQ(0, cvtest::norm(uFlow2, uRef, NORM_INF));
+    }
+}
+
 TEST(DenseOpticalFlow_DIS, regression_20185_patch_larger_than_border)
 {
     Mat prev(240, 320, CV_8UC1), next(240, 320, CV_8UC1);
