@@ -119,6 +119,12 @@ TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
                 vector<KeyPoint> empty_kps;
                 ASSERT_NO_THROW(kaze->compute(uimg, empty_kps, udesc_empty));
                 EXPECT_TRUE(udesc_empty.empty());
+
+                // a level outside the pyramid is rejected on the OpenCL path, as on the CPU path
+                vector<KeyPoint> ukp_bad(1, ukp_dc[0]);
+                ukp_bad[0].class_id = -1;
+                UMat udesc_bad;
+                EXPECT_THROW(kaze->compute(uimg, ukp_bad, udesc_bad), cv::Exception) << "UMat extended=" << extended;
             }
         }
     }
