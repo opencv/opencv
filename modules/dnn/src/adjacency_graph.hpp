@@ -437,7 +437,7 @@ inline float evalElement(const AdjacencyGraph& g, float x,
         case FusionEltwiseOp::SQRT:  v[i] = std::sqrt(a); break;
         case FusionEltwiseOp::RECIP: v[i] = 1.f / a; break;
         case FusionEltwiseOp::CLAMP:
-            v[i] = a < n.scalar ? n.scalar : (a > n.scalar2 ? n.scalar2 : a);
+            v[i] = std::min(std::max(a, n.scalar), n.scalar2);
             break;
         case FusionEltwiseOp::TENSOR:
             // Only a sink that opted in is offered one, and it reads the nodes itself.

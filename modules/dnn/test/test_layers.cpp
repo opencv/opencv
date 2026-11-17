@@ -4876,4 +4876,66 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     normAssert(refState, outputs[1], "present_state");
 }
 
+TEST(Layer_Test_Clip, MinGreaterThanMax)
+{
+    // Under ONNX specification, min(max(x, min), max) clamps to max when min > max.
+    LayerParams lp;
+    lp.type = "Clip";
+    lp.name = "ClipLayer";
+    lp.set("min", 10.0f);
+    lp.set("max", 0.0f);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Clip", lp);
+
+    Mat input(1, 5, CV_32F);
+    float* inPtr = input.ptr<float>();
+    inPtr[0] = -5.0f;
+    inPtr[1] = 0.0f;
+    inPtr[2] = 5.0f;
+    inPtr[3] = 10.0f;
+    inPtr[4] = 15.0f;
+
+    std::vector<Mat> inputs = {input};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    Mat& out = outputs[0];
+    const float* outPtr = out.ptr<float>();
+    for (int i = 0; i < 5; i++)
+    {
+        EXPECT_FLOAT_EQ(outPtr[i], 0.0f);
+    }
+}
+
+TEST(Layer_Test_Clip, DynamicMinGreaterThanMax)
+{
+    LayerParams lp;
+    lp.type = "Clip";
+    lp.name = "ClipLayer";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Clip", lp);
+
+    Mat input(1, 5, CV_32F);
+    float* inPtr = input.ptr<float>();
+    inPtr[0] = -5.0f;
+    inPtr[1] = 0.0f;
+    inPtr[2] = 5.0f;
+    inPtr[3] = 10.0f;
+    inPtr[4] = 15.0f;
+
+    Mat minMat(1, 1, CV_32F, Scalar(10.0f));
+    Mat maxMat(1, 1, CV_32F, Scalar(0.0f));
+
+    std::vector<Mat> inputs = {input, minMat, maxMat};
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    Mat& out = outputs[0];
+    const float* outPtr = out.ptr<float>();
+    for (int i = 0; i < 5; i++)
+    {
+        EXPECT_FLOAT_EQ(outPtr[i], 0.0f);
+    }
+}
+
 }} // namespace

@@ -30,7 +30,6 @@
 "test_bernoulli_seed_expanded",  // ---- same as above ---
 "test_castlike_FLOAT_to_STRING",
 "test_castlike_STRING_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_clip_min_greater_than_max",
 "test_col2im",
 "test_col2im_5d",
 "test_col2im_dilations",
