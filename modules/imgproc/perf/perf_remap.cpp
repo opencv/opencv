@@ -74,4 +74,30 @@ PERF_TEST_P( TestRemap, Remap,
     }
 }
 
+typedef TestBaseWithParam<MatType> TestRemapCubic;
+
+PERF_TEST_P( TestRemapCubic, TransparentBorder, Values( CV_8UC1, CV_8UC4 ) )
+{
+    const int type = GetParam();
+    const Size size(1025, 128);
+    Mat src(64, 64, type, Scalar::all(113)), dst(size, type);
+    // The cubic footprint crosses the left edge for every output pixel.
+    Mat mapx(size, CV_32F, Scalar(-0.75)), mapy(size, CV_32F, Scalar(5.25));
+    const Scalar background(53, 70, 101, 84);
+    const int runs = 24;
+
+    declare.in(src, mapx, mapy).out(dst).runs(runs).tbb_threads(1);
+
+    while (next())
+    {
+        dst.setTo(background);
+        startTimer();
+        for (int i = 0; i < runs; ++i)
+            remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+        stopTimer();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
