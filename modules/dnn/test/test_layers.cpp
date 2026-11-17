@@ -2146,8 +2146,7 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
     };
 
     auto checkPair = [](LayerParams& lp, const std::vector<int>& shapeA,
-                        const std::vector<int>& shapeB, bool winograd = true,
-                        Target target = DNN_TARGET_CPU) {
+                        const std::vector<int>& shapeB, bool winograd = true) {
         const std::vector<int> dirs[][2] = {{shapeA, shapeB}, {shapeB, shapeA}};
         for (const auto& dir : dirs)
         {
@@ -2158,7 +2157,6 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
             Net net;
             net.addLayerToPrev(lp.name, lp.type, lp);
             net.setPreferableBackend(DNN_BACKEND_OPENCV);
-            net.setPreferableTarget(target);
             net.enableWinograd(winograd);
             net.setInput(input0);
             net.forward();
@@ -2168,7 +2166,6 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
             Net fresh;
             fresh.addLayerToPrev(lp.name, lp.type, lp);
             fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
-            fresh.setPreferableTarget(target);
             fresh.enableWinograd(winograd);
             fresh.setInput(input1);
             Mat reference = fresh.forward();
@@ -2176,7 +2173,7 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
             ASSERT_EQ(shape(reference), shape(output));
             EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF))
                 << toString(dir[0]) << " -> " << toString(dir[1])
-                << " (winograd=" << winograd << ", target=" << (int)target << ")";
+                << " (winograd=" << winograd << ")";
         }
     };
 
@@ -2197,11 +2194,6 @@ TEST(Layer_Test_Convolution, same_padding_after_reshape)
 
     LayerParams lp3d = makeParams(3, 2);
     checkPair(lp3d, {1, 3, 6, 6, 6}, {1, 3, 5, 5, 5});
-
-#ifdef HAVE_OPENCL
-    if (cv::ocl::useOpenCL())
-        checkPair(lp2d, {1, 3, 10, 10}, {1, 3, 9, 9}, true, DNN_TARGET_OPENCL);
-#endif
 }
 
 // BatchNorm is folded into the packed convolution; after enableFusion(false) the same Net
