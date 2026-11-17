@@ -1128,7 +1128,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_OutputParams_YOLO26n,
 typedef testing::TestWithParam<Target> Test_OutputParams_RTDETR;
 TEST_P(Test_OutputParams_RTDETR, declared_matches_inferred)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
     testOutputParams("onnx/models/rtdetr-l.onnx", "dog416.png", 640,
                      DetectionOutputParams(DNN_BOX_CENTER, DNN_CLS_SCORES, DNN_COORD_NORMALIZED,
                                            DNN_ACT_NONE), GetParam());
@@ -1139,7 +1139,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_OutputParams_RTDETR,
 typedef testing::TestWithParam<Target> Test_OutputParams_RFDETR;
 TEST_P(Test_OutputParams_RFDETR, declared_matches_inferred)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_VERYLONG);
     testOutputParams("onnx/models/rfdetr.onnx", "dog416.png", 560,
                      DetectionOutputParams(DNN_BOX_CENTER, DNN_CLS_SCORES, DNN_COORD_NORMALIZED,
                                            DNN_ACT_SIGMOID), GetParam());
