@@ -1105,13 +1105,14 @@ void mul(const Size2D &size,
                              CONVERT_POLICY cpolicy);
 
     // the largest absolute product is min() * min() for signed types and max() * max() for unsigned
-    // ones; results below 0.5 round to 0
+    // ones; results up to 0.5 round to 0 (to even, like saturate_cast). An exact 0.5 must not reach
+    // the shift kernels: CV_8S * 2^-15 would round up in the vector body (1 << 15 overflows s16).
     const f64 maxOperand = std::numeric_limits<T>::is_signed ?
         -static_cast<f64>(std::numeric_limits<T>::min()) :
         static_cast<f64>(std::numeric_limits<T>::max());
     if (scale == 0.0f ||
         (std::numeric_limits<T>::is_integer &&
-         std::fabs(static_cast<f64>(scale)) * maxOperand * maxOperand < 0.5))
+         std::fabs(static_cast<f64>(scale)) * maxOperand * maxOperand <= 0.5))
     {
         for (size_t y = 0; y < size.height; ++y)
         {

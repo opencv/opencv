@@ -3682,25 +3682,40 @@ TEST_P(Core_MulTinyPowerOfTwoScale, result_within_one)
 INSTANTIATE_TEST_CASE_P(/**/, Core_MulTinyPowerOfTwoScale,
     testing::Combine(testing::Values((int)CV_16U, (int)CV_16S, (int)CV_32S), testing::Range(14, 21)));
 
-// For signed types the largest absolute product is min() * min(), not max() * max()
+// For signed types the largest absolute product is min() * min(), not max() * max(). Widths cover
+// the 128-bit and 64-bit vector bodies and the scalar tail of the Carotene kernels.
+typedef testing::TestWithParam<int> Core_MulScale;
+
 template <typename T>
-static void checkMulLargestProduct(T a, T b, double scale, T expected)
+static void checkMulLargestProduct(int width, T a, T b, double scale, T expected)
 {
-    Mat src1(2, 37, DataType<T>::type, Scalar::all((double)a));
-    Mat src2(2, 37, DataType<T>::type, Scalar::all((double)b));
+    Mat src1(2, width, DataType<T>::type, Scalar::all((double)a));
+    Mat src2(2, width, DataType<T>::type, Scalar::all((double)b));
     Mat dst;
     cv::multiply(src1, src2, dst, scale);
     ASSERT_EQ(src1.type(), dst.type());
     Mat ref(src1.size(), src1.type(), Scalar::all((double)expected));
     EXPECT_EQ(0, cvtest::norm(ref, dst, NORM_INF))
-        << "a=" << (double)a << " b=" << (double)b << " scale=" << scale;
+        << "width=" << width << " a=" << (double)a << " b=" << (double)b << " scale=" << scale;
 }
 
-TEST(Core_MulScale, signed_min_times_min_is_not_rounded_to_zero)
+TEST_P(Core_MulScale, signed_min_times_min_is_not_rounded_to_zero)
 {
-    checkMulLargestProduct<schar>(-128, -128, std::ldexp(1.0, -14), 1);
-    checkMulLargestProduct<short>(-32768, -32768, std::ldexp(1.0, -30), 1);
-    checkMulLargestProduct<int>(INT_MIN, INT_MIN, std::ldexp(1.0, -62), 1);
+    const int width = GetParam();
+    checkMulLargestProduct<schar>(width, -128, -128, std::ldexp(1.0, -14), 1);
+    checkMulLargestProduct<short>(width, -32768, -32768, std::ldexp(1.0, -30), 1);
+    checkMulLargestProduct<int>(width, INT_MIN, INT_MIN, std::ldexp(1.0, -62), 1);
 }
+
+// An exact 0.5 result rounds to even, i.e. to 0, like saturate_cast does
+TEST_P(Core_MulScale, signed_min_times_min_exact_half_rounds_to_even)
+{
+    const int width = GetParam();
+    checkMulLargestProduct<schar>(width, -128, -128, std::ldexp(1.0, -15), 0);
+    checkMulLargestProduct<short>(width, -32768, -32768, std::ldexp(1.0, -31), 0);
+    checkMulLargestProduct<int>(width, INT_MIN, INT_MIN, std::ldexp(1.0, -63), 0);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MulScale, testing::Values(1, 7, 8, 15, 16, 37, 64));
 
 }} // namespace
