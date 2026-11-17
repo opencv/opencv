@@ -106,6 +106,22 @@ TEST(Core_MixChannels, overlapping_interleaved_arrays)
     EXPECT_EQ(Vec3b(11, 11, 11), pixels.back());
 }
 
+TEST(Core_MixChannels, identity_mapping_wide_row)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+
+    const int cols = INT_MAX / 8 + 1;
+    Mat src(1, cols, CV_8UC(8)), dst(src.size(), src.type());
+    const size_t bytes = src.total() * src.elemSize();
+    std::memset(src.data, 0, bytes);
+    src.data[0] = 11;
+    src.data[bytes - 1] = 22;
+    const int fromTo[] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7};
+
+    cv::mixChannels(&src, 1, &dst, 1, fromTo, 8);
+    EXPECT_EQ(0, std::memcmp(src.data, dst.data, bytes));
+}
+
 TEST(Core_MixChannels, partial_mapping_with_full_pair_count)
 {
     const Mat src(7, 39, CV_8UC4, Scalar(11, 22, 33, 44));

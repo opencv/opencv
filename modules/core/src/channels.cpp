@@ -185,8 +185,14 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
         return false;
 
     // Preserve the existing write order for overlapping matrices.
+    const size_t planeBytes = it.size * src.elemSize();
+    const size_t totalBytes = it.nplanes * planeBytes;
+    const uchar* srcStart = src.isContinuous() ? src.data : src.datastart;
+    const uchar* srcEnd = src.isContinuous() ? src.data + totalBytes : src.dataend;
+    const uchar* dstStart = dst.isContinuous() ? dst.data : dst.datastart;
+    const uchar* dstEnd = dst.isContinuous() ? dst.data + totalBytes : dst.dataend;
     std::less<const uchar*> less;
-    if (less(src.datastart, dst.dataend) && less(dst.datastart, src.dataend))
+    if (less(srcStart, dstEnd) && less(dstStart, srcEnd))
         return false;
 
     int order[CV_CN_MAX];
@@ -206,7 +212,8 @@ static bool tryPermuteChannels(const Mat& src, const Mat& dst, const int* fromTo
 
     if (identity)
     {
-        src.copyTo(dst);
+        for (size_t plane = 0; plane < it.nplanes; ++plane, ++it)
+            std::memcpy(it.ptrs[1], it.ptrs[0], planeBytes);
         return true;
     }
     if (bytes)
