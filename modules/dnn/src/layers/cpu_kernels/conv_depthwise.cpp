@@ -183,7 +183,7 @@ void depthWiseBlockConv2D(const float* wptr,
         if (pad_l > 0)
         {
             // the kernel taps are at k*dilation_w - pad_l; the one at k = 0 is in the padding
-            // and the ones at k = 1, 2 are beyond the right border for very narrow inputs
+            // and the ones at k = 1, 2 can be beyond the right border for very narrow inputs
             int in_j1 = dilation_w - pad_l, in_j2 = dilation_w*2 - pad_l;
             float s1 = 1.f, s2 = 1.f;
             if (in_j1 >= width)
@@ -355,8 +355,7 @@ void depthWiseBlockConv1D(const float* wptr,
 
     if (pad_l > 0)
     {
-        // the kernel taps are at k*dilation_w - pad_l; the one at k = 0 is in the padding
-        // and the ones at k = 1, 2 are beyond the right border for very narrow inputs
+        // the kernel taps are at k*dilation_w - pad_l (see depthWiseBlockConv2D)
         int in_j1 = dilation_w - pad_l, in_j2 = dilation_w*2 - pad_l;
         float s1 = 1.f, s2 = 1.f;
         if (in_j1 >= width)
