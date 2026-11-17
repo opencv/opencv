@@ -463,8 +463,8 @@ public:
                             thin_packed_B.resize(fastGemmThinPackBSize(N, K));
                             const size_t ldb_K = trans_b ? 1 : N;
                             const size_t ldb_N = trans_b ? K : 1;
-                            fastGemmThinPackB(N, K, weights.ptr<const float>(),
-                                              ldb_K, ldb_N, thin_packed_B.data());
+                            fastGemmThinPackB(weights, N, K, ldb_K, ldb_N,
+                                              thin_packed_B.data());
                         }
                     }
                 }

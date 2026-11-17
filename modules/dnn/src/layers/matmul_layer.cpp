@@ -288,8 +288,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
             if (helper.batch == 1 && B_mat->type() == CV_32F &&
                 fastGemmThinEligible(helper.M, helper.N, helper.K)) {
                 thin_packed_B.resize(fastGemmThinPackBSize(helper.N, helper.K));
-                fastGemmThinPackB(helper.N, helper.K,
-                                  B_mat->ptr<const float>(),
+                fastGemmThinPackB(*B_mat, helper.N, helper.K,
                                   (size_t)helper.ldb0, (size_t)helper.ldb1,
                                   thin_packed_B.data());
             } else {
