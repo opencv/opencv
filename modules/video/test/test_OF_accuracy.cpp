@@ -121,6 +121,34 @@ TEST(DenseOpticalFlow_DIS, ReferenceAccuracy)
     }
 }
 
+TEST(DenseOpticalFlow_DIS, StaleInitialFlow)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.0);
+    Mat M = Mat_<double>({2, 3}, {1, 0, 2.0, 0, 1, -1.0});
+    warpAffine(frame1, frame2, M, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    Mat initial(frame1.size(), CV_32FC2, Scalar(5.f, -3.f));
+    dis->calc(frame1, frame2, initial);
+
+    Mat flow, reference;
+    dis->calc(frame1, frame2, flow);
+    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(frame1, frame2, reference);
+    EXPECT_EQ(0.0, cvtest::norm(flow, reference, NORM_INF));
+
+    Mat small1 = frame1(Rect(0, 0, 160, 120)).clone();
+    Mat small2 = frame2(Rect(0, 0, 160, 120)).clone();
+    Ptr<DISOpticalFlow> dis_grow = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    Mat small_initial(small1.size(), CV_32FC2, Scalar(5.f, -3.f));
+    dis_grow->calc(small1, small2, small_initial);
+
+    Mat grown_flow;
+    dis_grow->calc(frame1, frame2, grown_flow);
+    EXPECT_EQ(0.0, cvtest::norm(grown_flow, reference, NORM_INF));
+}
+
 TEST(DenseOpticalFlow_DIS, InvalidImgSize_CoarsestLevelLessThanZero)
 {
     cv::Ptr<cv::DISOpticalFlow> of = cv::DISOpticalFlow::create();
