@@ -1292,7 +1292,7 @@ static std::string darknetRegionCfg(const std::string& anchors)
 {
     return "[net]\nwidth=1\nheight=1\nchannels=1\n"
            "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
-           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\n";
+           "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\nsoftmax=1\n";
 }
 
 static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask)
@@ -1324,19 +1324,24 @@ static void expectDarknetNumericListRejected(const std::string& cfg)
     }
 }
 
-static void expectDarknetNumericListAccepted(const std::string& cfg)
+static void expectDarknetNumericListAccepted(const std::string& cfg, const std::string& layerName,
+                                              float expectedFirst, float expectedSecond)
 {
     const std::vector<char> weights = darknetZeroWeights(12);
     Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
     EXPECT_FALSE(net.empty());
+    const int layerId = net.getLayerId(layerName);
+    ASSERT_GE(layerId, 0);
+    const Ptr<Layer> layer = net.getLayer(layerId);
+    ASSERT_FALSE(layer.empty());
+    ASSERT_EQ((size_t)1, layer->blobs.size());
+    ASSERT_EQ((size_t)2, layer->blobs[0].total());
+    EXPECT_FLOAT_EQ(expectedFirst, layer->blobs[0].ptr<float>()[0]);
+    EXPECT_FLOAT_EQ(expectedSecond, layer->blobs[0].ptr<float>()[1]);
 }
 
 TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
 {
-    // A token must be consumed entirely: "1x" has the numeric prefix 1.
-    const std::string prefixCfg = darknetRouteCfg("-1x");
-    EXPECT_THROW(readNetFromDarknet(prefixCfg.data(), prefixCfg.size()), cv::Exception);
-
     const char* route[] = {"-1x", "-1,-2x", "0x1", "1.5", "-1,0.5"};
     for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
     {
@@ -1383,11 +1388,14 @@ TEST(Test_Darknet, numeric_list_valid_values_control)
     }
 
     const char* anchors[] = {"1,1", "1, 1", " 1.5 , 2e0 \t", "1e1,.5\r"};
+    const float expected[][2] = {{1.0f, 1.0f}, {1.0f, 1.0f}, {1.5f, 2.0f}, {10.0f, 0.5f}};
     for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
     {
         SCOPED_TRACE(std::string("anchors=") + anchors[i]);
-        expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i]));
-        expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t"));
+        expectDarknetNumericListAccepted(darknetRegionCfg(anchors[i]), "detection_out",
+                                         expected[i][0], expected[i][1]);
+        expectDarknetNumericListAccepted(darknetYoloCfg(anchors[i], " 0 \t"), "yolo_1",
+                                         expected[i][0], expected[i][1]);
     }
 }
 
