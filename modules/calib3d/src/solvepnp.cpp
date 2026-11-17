@@ -904,32 +904,55 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             CV_LOG_DEBUG(NULL, "Broken implementation for SOLVEPNP_UPNP. Fallback to EPnP.");
         }
 
-        // EPnP is not reliable with exactly 4 points, and solvePnPRansac already uses P3P
-        // for them. EPnP is only kept as a fallback if P3P does not find a solution.
+        Mat undistortedPoints;
+        undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
+        epnp PnP(cameraMatrix, opoints, undistortedPoints);
+
+        Mat rvec, tvec, R;
+        PnP.compute_pose(R, tvec);
+        Rodrigues(R, rvec);
+
+        // EPnP is not reliable with exactly 4 points. Also try P3P, which solves from 3 points and
+        // uses the 4th one only to rank its solutions, with each of the 4 points in turn as the 4th
+        // one, and keep the pose with the smallest reprojection error. The result does not depend
+        // on the order of the points, and it is never worse than EPnP alone.
         if (npoints == 4)
         {
-            std::vector<Mat> rvecs, tvecs;
-            solveP3P(opoints, ipoints, _cameraMatrix, _distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
-            if (!rvecs.empty())
+            Mat object64, image64;
+            opoints.convertTo(object64, CV_64F);
+            ipoints.convertTo(image64, CV_64F);
+            const std::vector<Point3d> object(object64.ptr<Point3d>(), object64.ptr<Point3d>() + 4);
+            const std::vector<Point2d> image(image64.ptr<Point2d>(), image64.ptr<Point2d>() + 4);
+
+            double bestError = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvec, tvec);
+            for (int first = 0; first < 4; first++)
             {
-                vec_rvecs.push_back(rvecs[0]);
-                vec_tvecs.push_back(tvecs[0]);
+                Mat opointsP3P(4, 1, opoints.type()), ipointsP3P(4, 1, ipoints.type());
+                for (int i = 0; i < 4; i++)
+                {
+                    opoints.row((first + i) % 4).copyTo(opointsP3P.row(i));
+                    ipoints.row((first + i) % 4).copyTo(ipointsP3P.row(i));
+                }
+
+                std::vector<Mat> rvecs, tvecs;
+                solveP3P(opointsP3P, ipointsP3P, _cameraMatrix, _distCoeffs, rvecs, tvecs, SOLVEPNP_P3P);
+                if (rvecs.empty())
+                    continue;
+
+                const double error = squaredReprojectionError(object, image, cameraMatrix, distCoeffs, rvecs[0], tvecs[0]);
+                if (cvIsNaN(error))
+                    continue;
+                if (error < bestError || cvIsNaN(bestError))
+                {
+                    bestError = error;
+                    rvec = rvecs[0];
+                    tvec = tvecs[0];
+                }
             }
         }
 
-        if (vec_rvecs.empty())
-        {
-            Mat undistortedPoints;
-            undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
-            epnp PnP(cameraMatrix, opoints, undistortedPoints);
-
-            Mat rvec, tvec, R;
-            PnP.compute_pose(R, tvec);
-            Rodrigues(R, rvec);
-
-            vec_rvecs.push_back(rvec);
-            vec_tvecs.push_back(tvec);
-        }
+        vec_rvecs.push_back(rvec);
+        vec_tvecs.push_back(tvec);
     }
     else if (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P)
     {
