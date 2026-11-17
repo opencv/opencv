@@ -67,7 +67,8 @@ void fastDepthwiseConv( const float* wptr,
             w00 = w01 = w02 = 0.f;
             imgptr0 = imgptr1;
         }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
+        // not "else if": with a small height both the top and the bottom taps can be outside
+        if (in_i + dilation_h*(kernel_h-1) >= height)
         {
             w20 = w21 = w22 = 0.f;
             imgptr2 = imgptr1;
@@ -75,9 +76,9 @@ void fastDepthwiseConv( const float* wptr,
         float* outptr = outptr_ + out_i*outW;
         if (pad_l > 0)
         {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            out = imgptr0[dilation_w - pad_l]*w01 + imgptr0[dilation_w*2 - pad_l]*w02 +
+                  imgptr1[dilation_w - pad_l]*w11 + imgptr1[dilation_w*2 - pad_l]*w12 +
+                  imgptr2[dilation_w - pad_l]*w21 + imgptr2[dilation_w*2 - pad_l]*w22 + bias;
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[0] = out;
@@ -241,7 +242,8 @@ void fastDepthwiseConv( const float* wptr,
             w00 = w01 = w02 = 0.f;
             imgptr0 = imgptr1;
         }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
+        // not "else if": with a small height both the top and the bottom taps can be outside
+        if (in_i + dilation_h*(kernel_h-1) >= height)
         {
             w20 = w21 = w22 = 0.f;
             imgptr2 = imgptr1;
@@ -249,9 +251,9 @@ void fastDepthwiseConv( const float* wptr,
         float* outptr = outptr_ + out_i*outW;
         if (pad_l > 0)
         {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            out = imgptr0[dilation_w - pad_l]*w01 + imgptr0[dilation_w*2 - pad_l]*w02 +
+                  imgptr1[dilation_w - pad_l]*w11 + imgptr1[dilation_w*2 - pad_l]*w12 +
+                  imgptr2[dilation_w - pad_l]*w21 + imgptr2[dilation_w*2 - pad_l]*w22 + bias;
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[0] = out;
@@ -395,7 +397,8 @@ void fastDepthwiseConv( const float* wptr,
             w00 = w01 = w02 = 0.f;
             imgptr0 = imgptr1;
         }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
+        // not "else if": with a small height both the top and the bottom taps can be outside
+        if (in_i + dilation_h*(kernel_h-1) >= height)
         {
             w20 = w21 = w22 = 0.f;
             imgptr2 = imgptr1;
@@ -403,9 +406,9 @@ void fastDepthwiseConv( const float* wptr,
         float* outptr = outptr_ + out_i*outW;
         if (pad_l > 0)
         {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            out = imgptr0[dilation_w - pad_l]*w01 + imgptr0[dilation_w*2 - pad_l]*w02 +
+                  imgptr1[dilation_w - pad_l]*w11 + imgptr1[dilation_w*2 - pad_l]*w12 +
+                  imgptr2[dilation_w - pad_l]*w21 + imgptr2[dilation_w*2 - pad_l]*w22 + bias;
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[0] = out;

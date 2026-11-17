@@ -2107,6 +2107,89 @@ TEST(Layer_Test_Convolution, relu_fusion)
     normAssert(input, output);
 }
 
+// Depthwise 3x3 convolution with padding and dilation, including very small inputs. The expected
+// values are computed directly from the definition of the convolution.
+typedef testing::TestWithParam<tuple<Size, Size, Size> > Layer_Test_DepthwiseConv_dilation;
+TEST_P(Layer_Test_DepthwiseConv_dilation, accuracy)
+{
+    const Size dilation = get<0>(GetParam());
+    const Size stride = get<1>(GetParam());
+    const Size pad = get<2>(GetParam());
+    const int channels = 3, kernel = 3;
+
+    const Size inputSizes[] = { Size(10, 14), Size(40, 14), Size(1, 5), Size(2, 6), Size(5, 1),
+                                Size(40, 3) };
+    for (const Size& inputSize : inputSizes)
+    {
+        const int width = inputSize.width, height = inputSize.height;
+        const int spanH = height + 2*pad.height - dilation.height*(kernel - 1) - 1;
+        const int spanW = width + 2*pad.width - dilation.width*(kernel - 1) - 1;
+        if (spanH < 0 || spanW < 0)
+            continue;  // the kernel does not fit into the padded input
+        const int outH = spanH/stride.height + 1;
+        const int outW = spanW/stride.width + 1;
+
+        int inSz[] = {2, channels, height, width};
+        int wSz[] = {channels, 1, kernel, kernel};
+        Mat input(4, inSz, CV_32F), weights(4, wSz, CV_32F), bias(1, channels, CV_32F);
+        RNG& rng = theRNG();
+        rng.fill(input, RNG::UNIFORM, -1, 1);
+        rng.fill(weights, RNG::UNIFORM, -1, 1);
+        rng.fill(bias, RNG::UNIFORM, -1, 1);
+
+        LayerParams lp;
+        lp.name = "dwconv";
+        lp.type = "Convolution";
+        lp.set("kernel_size", kernel);
+        lp.set("num_output", channels);
+        lp.set("group", channels);
+        lp.set("pad_w", pad.width);
+        lp.set("pad_h", pad.height);
+        lp.set("stride_w", stride.width);
+        lp.set("stride_h", stride.height);
+        lp.set("dilation_w", dilation.width);
+        lp.set("dilation_h", dilation.height);
+        lp.set("bias_term", true);
+        lp.blobs.push_back(weights);
+        lp.blobs.push_back(bias);
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setInput(input);
+        Mat out = net.forward();
+
+        int refSz[] = {2, channels, outH, outW};
+        Mat ref(4, refSz, CV_32F);
+        for (int n = 0; n < 2; n++)
+            for (int c = 0; c < channels; c++)
+                for (int y = 0; y < outH; y++)
+                    for (int x = 0; x < outW; x++)
+                    {
+                        double sum = bias.at<float>(0, c);
+                        for (int i = 0; i < kernel; i++)
+                            for (int j = 0; j < kernel; j++)
+                            {
+                                int iy = y*stride.height - pad.height + i*dilation.height;
+                                int ix = x*stride.width - pad.width + j*dilation.width;
+                                if (iy < 0 || iy >= height || ix < 0 || ix >= width)
+                                    continue;
+                                sum += (double)input.ptr<float>(n, c)[iy*width + ix] *
+                                       weights.ptr<float>(c)[i*kernel + j];
+                            }
+                        ref.ptr<float>(n, c)[y*outW + x] = (float)sum;
+                    }
+        SCOPED_TRACE(cv::format("input %dx%d", width, height));
+        normAssert(ref, out, "", 1e-5, 1e-5);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_DepthwiseConv_dilation, testing::Combine(
+    testing::Values(Size(1, 1), Size(2, 2), Size(1, 3), Size(3, 1)),
+    testing::Values(Size(1, 1), Size(1, 2)),
+    testing::Values(Size(1, 1), Size(1, 0), Size(0, 1))
+));
+
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;
 TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
 {
