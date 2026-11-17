@@ -3738,6 +3738,27 @@ TEST(Core_ConvertTo, regression_12121)
     }
 }
 
+// convertTo(CV_Bool) must treat -0.0 as zero for every floating-point depth
+typedef testing::TestWithParam<perf::MatDepth> Core_ConvertTo_NegativeZeroToBool;
+
+TEST_P(Core_ConvertTo_NegativeZeroToBool, accuracy)
+{
+    const int depth = GetParam();
+    const float vals[] = { -0.f, 0.f, 1.f, -1.f, 0.5f, -0.5f };
+    const uchar expected[] = { 0, 0, 1, 1, 1, 1 };
+    Mat src32f(1, 6, CV_32F, (void*)vals);
+
+    Mat src, dst;
+    src32f.convertTo(src, depth);
+    src.convertTo(dst, CV_Bool);
+    ASSERT_EQ(CV_Bool, dst.type());
+    for (int i = 0; i < 6; i++)
+        EXPECT_EQ(expected[i], dst.at<uchar>(i)) << "i=" << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertTo_NegativeZeroToBool,
+    testing::Values(perf::MatDepth(CV_32F), CV_64F, CV_16F, CV_16BF, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
