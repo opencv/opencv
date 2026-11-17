@@ -139,6 +139,10 @@ TEST(Fusion, MathMatchesClosedForm)
         r.clamp(LayerMath::INPUT_VALUE, 0.f, 6.f);
         EXPECT_FLOAT_EQ(std::min(std::max(x, 0.f), 6.f), eval1(r, x)) << "clip " << x;
 
+        r = LayerMath();
+        r.clamp(LayerMath::INPUT_VALUE, 6.f, 0.f);
+        EXPECT_FLOAT_EQ(std::min(std::max(x, 6.f), 0.f), eval1(r, x)) << "clip min > max " << x;
+
         r = LayerMath(); fusion::detail::sigmoid(r);
         EXPECT_NEAR(1.f / (1.f + std::exp(-x)), eval1(r, x), 1e-5) << "sigmoid " << x;
 
