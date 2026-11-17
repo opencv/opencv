@@ -828,7 +828,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         }
 
         size.width *= cn;
-        const bool useParallel = (size.height * (size.width / cn) >= 320 * 240);
+        const bool useParallel = (_dst.total() >= (size_t)320*240);
         if( useParallel )
         {
             parallel_for_(Range(0, size.height), [&](const Range& range)
@@ -879,7 +879,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
         }
 
         size.width *= cn;
-        const bool useParallel = (size.height * (size.width / cn) >= 64 * 64);
+        const bool useParallel = (_dst.total() >= (size_t)64*64);
         if( useParallel )
         {
             parallel_for_(Range(0, size.height), [&](const Range& range)
