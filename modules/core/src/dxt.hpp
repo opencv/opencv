@@ -78,6 +78,8 @@ struct DftPlan
     // first_radix > 1: nc/first_radix output positions (g*first_radix) of the input columns j
     AutoBuffer<int> itab;
     AutoBuffer<double> tw;      // storage for all the tables below (type T, 8-byte aligned)
+    Ptr<DftPlan> convolution;   // smooth C2C plan for Bluestein, absent for the mixed-radix path
+    AutoBuffer<double, 0> chirp; // interleaved chirp[nc], followed by its convolution spectrum
     const void* rtw_re;         // W_n^k = exp(-2*pi*i*k/n), k in [0, n/2]; R2C/C2R/DCT/IDCT with even n
     const void* rtw_im;
     const void* dct_re;         // s*W_4n^k, k in [0, n/2]; DCT/IDCT (s = DCT normalization)
@@ -101,6 +103,7 @@ struct DftPlan
 private:
     // fills the twiddle tables (stage tables, W_n^k, DCT) into `tw`; ntw = total number of T entries
     template<typename T> void fillTables(size_t ntw, bool need_rtw, bool need_dct);
+    template<typename T> void initBluestein(int convolution_size);
 
     DftPlan(const DftPlan&);            // tables hold raw pointers into the AutoBuffers: no copies
     DftPlan& operator=(const DftPlan&);
