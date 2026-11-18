@@ -1287,7 +1287,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
                     return result;
                 } catch (...) {
                     CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::read(" << buf_size << ") failed");
-                    return 0;
+                    return AVERROR(EIO);
                 }
             },
             NULL,
