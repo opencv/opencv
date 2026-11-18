@@ -1493,6 +1493,322 @@ TEST_P(Test_ONNX_layers, ReduceL2)
     testONNXModels("reduceL2_subgraph2_2");
 }
 
+namespace {
+struct AttnOnnxBuf
+{
+    std::vector<uchar> b;
+    void uvar(uint64_t v)
+    {
+        while (v >= 0x80) { b.push_back((uchar)((v & 0x7f) | 0x80)); v >>= 7; }
+        b.push_back((uchar)v);
+    }
+    void tag(uint32_t f, uint32_t w) { uvar((uint64_t(f) << 3) | w); }
+    void i64(uint32_t f, int64_t v) { tag(f, 0); uvar((uint64_t)v); }
+    void i32(uint32_t f, int32_t v) { tag(f, 0); uvar((uint64_t)(int64_t)v); }
+    void bytes(uint32_t f, const void* p, size_t n)
+    {
+        tag(f, 2);
+        uvar(n);
+        const uchar* q = static_cast<const uchar*>(p);
+        b.insert(b.end(), q, q + n);
+    }
+    void str(uint32_t f, const std::string& s) { bytes(f, s.data(), s.size()); }
+    void sub(uint32_t f, const AttnOnnxBuf& c) { bytes(f, c.b.data(), c.b.size()); }
+};
+
+static AttnOnnxBuf attnValueInfo(const std::string& name, int32_t elemType, const std::vector<int>& dims)
+{
+    AttnOnnxBuf shape;
+    for (int d : dims) { AttnOnnxBuf dm; dm.i64(1, d); shape.sub(1, dm); }
+    AttnOnnxBuf tt; tt.i32(1, elemType); tt.sub(2, shape);
+    AttnOnnxBuf tp; tp.sub(1, tt);
+    AttnOnnxBuf vi; vi.str(1, name); vi.sub(2, tp);
+    return vi;
+}
+
+static AttnOnnxBuf attnTensorF32(const std::string& name, const Mat& m)
+{
+    CV_Assert(m.type() == CV_32F && m.isContinuous());
+    AttnOnnxBuf t;
+    for (int i = 0; i < m.dims; ++i) t.i64(1, m.size[i]);
+    t.i32(2, 1);
+    t.str(8, name);
+    t.bytes(9, m.data, m.total() * sizeof(float));
+    return t;
+}
+
+static AttnOnnxBuf attnTensorI64(const std::string& name, const std::vector<int64_t>& vals)
+{
+    AttnOnnxBuf t;
+    t.i64(1, (int64_t)vals.size());
+    t.i32(2, 7);
+    t.str(8, name);
+    t.bytes(9, vals.data(), vals.size() * sizeof(int64_t));
+    return t;
+}
+
+static AttnOnnxBuf attnAttrInt(const std::string& name, int64_t v)
+{
+    AttnOnnxBuf a; a.str(1, name); a.i64(3, v); a.i32(20, 2);
+    return a;
+}
+
+static AttnOnnxBuf attnAttrInts(const std::string& name, const std::vector<int64_t>& vs)
+{
+    AttnOnnxBuf a; a.str(1, name);
+    for (int64_t v : vs) a.i64(8, v);
+    a.i32(20, 7);
+    return a;
+}
+
+static AttnOnnxBuf attnNode(const std::string& op, const std::vector<std::string>& inps,
+                            const std::vector<std::string>& outs,
+                            const std::vector<AttnOnnxBuf>& attrs = {},
+                            const std::string& domain = "")
+{
+    AttnOnnxBuf n;
+    for (const auto& s : inps) n.str(1, s);
+    for (const auto& s : outs) n.str(2, s);
+    n.str(4, op);
+    for (const auto& a : attrs) n.sub(5, a);
+    if (!domain.empty()) n.str(7, domain);
+    return n;
+}
+
+static std::vector<uchar> attnModel(const std::vector<AttnOnnxBuf>& nodes,
+                                    const std::vector<AttnOnnxBuf>& inps,
+                                    const std::vector<AttnOnnxBuf>& outs,
+                                    const std::vector<AttnOnnxBuf>& inits,
+                                    bool msDomain)
+{
+    AttnOnnxBuf g;
+    for (const auto& n : nodes) g.sub(1, n);
+    g.str(2, "g");
+    for (const auto& t : inits) g.sub(5, t);
+    for (const auto& i : inps) g.sub(11, i);
+    for (const auto& o : outs) g.sub(12, o);
+    AttnOnnxBuf m;
+    m.i64(1, 8);
+    m.str(2, "test");
+    m.sub(7, g);
+    { AttnOnnxBuf op; op.str(1, ""); op.i64(2, 18); m.sub(8, op); }
+    if (msDomain) { AttnOnnxBuf op; op.str(1, "com.microsoft"); op.i64(2, 1); m.sub(8, op); }
+    return m.b;
+}
+
+static Mat exactMaskedAttentionRef(const Mat& X, const Mat& W, const Mat& B, const Mat& mask,
+                                   int batch, int seq, int numHeads, int headDim)
+{
+    const int hidden = numHeads * headDim;
+    const float invSqrtD = 1.f / std::sqrt((float)headDim);
+    Mat out({batch, seq, hidden}, CV_32F, Scalar(0));
+    const float* xp = X.ptr<const float>();
+    const float* wp = W.ptr<const float>();
+    const float* bp = B.empty() ? nullptr : B.ptr<const float>();
+    const float* mp = mask.empty() ? nullptr : mask.ptr<const float>();
+
+    std::vector<float> proj(batch * seq * 3 * hidden, 0.f);
+    for (int b = 0; b < batch; ++b)
+    {
+        for (int s = 0; s < seq; ++s)
+        {
+            const float* xrow = xp + ((size_t)b * seq + s) * hidden;
+            float* prow = proj.data() + ((size_t)b * seq + s) * (3 * hidden);
+            for (int c = 0; c < 3 * hidden; ++c)
+            {
+                double acc = bp ? (double)bp[c] : 0.0;
+                for (int k = 0; k < hidden; ++k)
+                    acc += (double)xrow[k] * wp[(size_t)k * (3 * hidden) + c];
+                prow[c] = (float)acc;
+            }
+        }
+        for (int h = 0; h < numHeads; ++h)
+        {
+            for (int qi = 0; qi < seq; ++qi)
+            {
+                std::vector<double> scores(seq);
+                double maxScore = -1e300;
+                for (int ki = 0; ki < seq; ++ki)
+                {
+                    const float* qv = proj.data() + ((size_t)b * seq + qi) * (3 * hidden) + h * headDim;
+                    const float* kv = proj.data() + ((size_t)b * seq + ki) * (3 * hidden) + hidden + h * headDim;
+                    double dot = 0.0;
+                    for (int d = 0; d < headDim; ++d)
+                        dot += (double)qv[d] * kv[d];
+                    double sc = dot * invSqrtD;
+                    if (mp)
+                        sc += (double)mp[((size_t)b * seq + qi) * seq + ki];
+                    scores[ki] = sc;
+                    if (sc > maxScore) maxScore = sc;
+                }
+                double sumExp = 0.0;
+                for (int ki = 0; ki < seq; ++ki)
+                {
+                    scores[ki] = std::exp(scores[ki] - maxScore);
+                    sumExp += scores[ki];
+                }
+                float* dst = out.ptr<float>() + ((size_t)b * seq + qi) * hidden + h * headDim;
+                for (int d = 0; d < headDim; ++d)
+                {
+                    double acc = 0.0;
+                    for (int ki = 0; ki < seq; ++ki)
+                    {
+                        const float* vv = proj.data() + ((size_t)b * seq + ki) * (3 * hidden) + 2 * hidden + h * headDim;
+                        acc += (scores[ki] / sumExp) * vv[d];
+                    }
+                    dst[d] = (float)acc;
+                }
+            }
+        }
+    }
+    return out;
+}
+} // namespace
+
+TEST_P(Test_ONNX_layers, Attention_MaskAndCommutativeFusion)
+{
+    if (backend != DNN_BACKEND_OPENCV && backend != DNN_BACKEND_CUDA)
+        throw SkipTestException("com.microsoft::Attention and fused Attention run on OpenCV and CUDA backends");
+
+    const int B = 2, S = 5, H = 2, Dh = 8, C = H * Dh;
+    Mat X({B, S, C}, CV_32F), W(C, 3 * C, CV_32F), bias(std::vector<int>{3 * C}, CV_32F);
+    Mat mask({B, 1, S, S}, CV_32F);
+    randu(X, -1.f, 1.f);
+    randu(W, -0.5f, 0.5f);
+    randu(bias, -0.2f, 0.2f);
+    randu(mask, -3.f, 0.f);
+
+    const bool fp16 = target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16 ||
+                      target == DNN_TARGET_OPENCL_FP16;
+    const double l1 = fp16 ? 1e-2 : default_l1;
+    const double lInf = fp16 ? 5e-2 : default_lInf;
+
+    const Mat refMasked = exactMaskedAttentionRef(X, W, bias, mask, B, S, H, Dh);
+    const Mat refNoBias = exactMaskedAttentionRef(X, W, Mat(), mask, B, S, H, Dh);
+    const Mat refUnmasked = exactMaskedAttentionRef(X, W, bias, Mat(), B, S, H, Dh);
+
+    const std::vector<AttnOnnxBuf> msAttrs = {
+        attnAttrInt("num_heads", H),
+        attnAttrInts("qkv_hidden_sizes", {C, C, C})
+    };
+
+    // 1. Dynamic 4th mask input
+    {
+        std::vector<uchar> buf = attnModel(
+            { attnNode("Attention", {"X", "W", "B", "M"}, {"Y"}, msAttrs, "com.microsoft") },
+            { attnValueInfo("X", 1, {B, S, C}), attnValueInfo("M", 1, {B, 1, S, S}) },
+            { attnValueInfo("Y", 1, {B, S, C}) },
+            { attnTensorF32("W", W), attnTensorF32("B", bias) }, true);
+        Net net = readNetFromONNX(buf);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(X, "X");
+        net.setInput(mask, "M");
+        normAssert(refMasked, net.forward(), "dynamic_mask", l1, lInf);
+    }
+
+    // 2. Constant initializer 4th mask input
+    {
+        std::vector<uchar> buf = attnModel(
+            { attnNode("Attention", {"X", "W", "B", "M"}, {"Y"}, msAttrs, "com.microsoft") },
+            { attnValueInfo("X", 1, {B, S, C}) },
+            { attnValueInfo("Y", 1, {B, S, C}) },
+            { attnTensorF32("W", W), attnTensorF32("B", bias), attnTensorF32("M", mask) }, true);
+        Net net = readNetFromONNX(buf);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(X, "X");
+        normAssert(refMasked, net.forward(), "const_mask", l1, lInf);
+    }
+
+    // 3. Omitted optional bias ("") + trailing empty mask ("")
+    {
+        std::vector<uchar> bufNoBias = attnModel(
+            { attnNode("Attention", {"X", "W", "", "M"}, {"Y"}, msAttrs, "com.microsoft") },
+            { attnValueInfo("X", 1, {B, S, C}), attnValueInfo("M", 1, {B, 1, S, S}) },
+            { attnValueInfo("Y", 1, {B, S, C}) },
+            { attnTensorF32("W", W) }, true);
+        Net net1 = readNetFromONNX(bufNoBias);
+        net1.setPreferableBackend(backend);
+        net1.setPreferableTarget(target);
+        net1.setInput(X, "X");
+        net1.setInput(mask, "M");
+        normAssert(refNoBias, net1.forward(), "omitted_bias", l1, lInf);
+
+        std::vector<uchar> bufEmptyMask = attnModel(
+            { attnNode("Attention", {"X", "W", "B", ""}, {"Y"}, msAttrs, "com.microsoft") },
+            { attnValueInfo("X", 1, {B, S, C}) },
+            { attnValueInfo("Y", 1, {B, S, C}) },
+            { attnTensorF32("W", W), attnTensorF32("B", bias) }, true);
+        Net net2 = readNetFromONNX(bufEmptyMask);
+        net2.setPreferableBackend(backend);
+        net2.setPreferableTarget(target);
+        net2.setInput(X, "X");
+        normAssert(refUnmasked, net2.forward(), "trailing_empty_mask", l1, lInf);
+    }
+
+    // 4. Decomposed BERT self-attention with commutative Add(M, qk_div) (mask in input 0)
+    {
+        Mat Wq = W.colRange(0, C).clone();
+        Mat Wk = W.colRange(C, 2 * C).clone();
+        Mat Wv = W.colRange(2 * C, 3 * C).clone();
+        Mat Bq(std::vector<int>{C}, CV_32F, bias.ptr<float>());
+        Mat Bk(std::vector<int>{C}, CV_32F, bias.ptr<float>() + C);
+        Mat Bv(std::vector<int>{C}, CV_32F, bias.ptr<float>() + 2 * C);
+        Mat scaleTensor(std::vector<int>{1}, CV_32F, Scalar(std::sqrt((float)Dh)));
+
+        std::vector<uchar> bertBuf = attnModel(
+            {
+                attnNode("MatMul", {"X", "Wq"}, {"Qm"}),
+                attnNode("Add", {"Qm", "Bq"}, {"Qa"}),
+                attnNode("Reshape", {"Qa", "qkv_shape"}, {"Qr"}),
+                attnNode("Transpose", {"Qr"}, {"Qt"}, { attnAttrInts("perm", {0, 2, 1, 3}) }),
+
+                attnNode("MatMul", {"X", "Wk"}, {"Km"}),
+                attnNode("Add", {"Km", "Bk"}, {"Ka"}),
+                attnNode("Reshape", {"Ka", "qkv_shape"}, {"Kr"}),
+                attnNode("Transpose", {"Kr"}, {"Kt"}, { attnAttrInts("perm", {0, 2, 3, 1}) }),
+
+                attnNode("MatMul", {"X", "Wv"}, {"Vm"}),
+                attnNode("Add", {"Vm", "Bv"}, {"Va"}),
+                attnNode("Reshape", {"Va", "qkv_shape"}, {"Vr"}),
+                attnNode("Transpose", {"Vr"}, {"Vt"}, { attnAttrInts("perm", {0, 2, 1, 3}) }),
+
+                attnNode("MatMul", {"Qt", "Kt"}, {"Scores"}),
+                attnNode("Div", {"Scores", "Scale"}, {"Scaled"}),
+                attnNode("Add", {"M", "Scaled"}, {"Masked"}),
+                attnNode("Softmax", {"Masked"}, {"Probs"}, { attnAttrInt("axis", -1) }),
+                attnNode("MatMul", {"Probs", "Vt"}, {"Ctx"}),
+                attnNode("Transpose", {"Ctx"}, {"CtxT"}, { attnAttrInts("perm", {0, 2, 1, 3}) }),
+                attnNode("Reshape", {"CtxT", "out_shape"}, {"Y"})
+            },
+            { attnValueInfo("X", 1, {B, S, C}), attnValueInfo("M", 1, {B, 1, S, S}) },
+            { attnValueInfo("Y", 1, {B, S, C}) },
+            {
+                attnTensorF32("Wq", Wq), attnTensorF32("Bq", Bq.clone()),
+                attnTensorF32("Wk", Wk), attnTensorF32("Bk", Bk.clone()),
+                attnTensorF32("Wv", Wv), attnTensorF32("Bv", Bv.clone()),
+                attnTensorF32("Scale", scaleTensor),
+                attnTensorI64("qkv_shape", {B, S, H, Dh}),
+                attnTensorI64("out_shape", {B, S, C})
+            }, false);
+
+        Net net = readNetFromONNX(bertBuf);
+        ASSERT_TRUE(net.getMainGraph());
+        int attnCount = 0;
+        for (const auto& l : net.getMainGraph()->prog())
+            if (l && l->type == "Attention")
+                ++attnCount;
+        EXPECT_EQ(1, attnCount) << "BERT pattern with Add(mask, scores) should fuse into Attention";
+
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+        net.setInput(X, "X");
+        net.setInput(mask, "M");
+        normAssert(refMasked, net.forward(), "bert_commutative_mask_add", l1, lInf);
+    }
+}
+
 TEST_P(Test_ONNX_layers, Split)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
