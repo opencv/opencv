@@ -1380,7 +1380,9 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
     AutoBuffer<int> buf(nclasses + catbufsize + 1);
     int* votes = buf.data();
     int* catbuf = votes + nclasses;
-    const int* cvidx = (flags & (COMPRESSED_INPUT|PREPROCESSED_INPUT)) == 0 && !varIdx.empty() ? &compVarIdx[0] : 0;
+    const bool rawMode = (flags & (COMPRESSED_INPUT|PREPROCESSED_INPUT)) == 0;
+    CV_Assert( varIdx.empty() || compVarIdx.size() == varType.size() );
+    const int* cvidx = !varIdx.empty() ? compVarIdx.data() : 0;
     const uchar* vtype = &varType[0];
     const Vec2i* cofs = !catOfs.empty() ? &catOfs[0] : 0;
     const int* cmap = !catMap.empty() ? &catMap[0] : 0;
@@ -1418,11 +1420,18 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
             const Node& node = nodes[nidx];
             if( node.split < 0 )
                 break;
+            CV_Assert( (size_t)node.split < splits.size() );
             const Split& split = splits[node.split];
             int vi = split.varIdx;
+            // Splits use global variable indices; Boost training supplies only
+            // the active variables. Check each index in its own coordinate space.
+            CV_Assert( 0 <= vi && vi < getVarCount() );
+            CV_Assert( !cvidx || (size_t)vi < compVarIdx.size() );
             int ci = cvidx ? cvidx[vi] : vi;
-            CV_Assert( 0 <= ci && (size_t)ci < sample.total() );
-            float val = psample[ci*sstep];
+            CV_Assert( 0 <= ci && ci < nvars );
+            int sampleIdx = rawMode ? vi : ci;
+            CV_Assert( (size_t)sampleIdx < sample.total() );
+            float val = psample[sampleIdx*sstep];
             if( val == MISSED_VAL )
             {
                 if( !missingSubstPtr )
@@ -1430,6 +1439,7 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
                     nidx = node.defaultDir < 0 ? node.left : node.right;
                     continue;
                 }
+                CV_Assert( (size_t)vi < missingSubst.size() );
                 val = missingSubstPtr[vi];
             }
 

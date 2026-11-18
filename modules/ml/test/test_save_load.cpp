@@ -11,17 +11,21 @@ void randomFillCategories(const string & filename, Mat & input)
 {
     Mat catMap;
     Mat catCount;
+    Mat varIdx;
     std::vector<uchar> varTypes;
 
     FileStorage fs(filename, FileStorage::READ);
     FileNode root = fs.getFirstTopLevelNode();
     root["cat_map"] >> catMap;
     root["cat_count"] >> catCount;
+    root["var_idx"] >> varIdx;
     root["var_type"] >> varTypes;
 
     int offset = 0;
     int countOffset = 0;
     uint var = 0, varCount = (uint)varTypes.size();
+    if (!varIdx.empty())
+        varCount = std::min(varCount, (uint)varIdx.total());
     for (; var < varCount; ++var)
     {
         if (varTypes[var] == ml::VAR_CATEGORICAL)
@@ -31,7 +35,10 @@ void randomFillCategories(const string & filename, Mat & input)
             {
                 int randomChosenIndex = offset + ((uint)cv::theRNG()) % size;
                 int value = catMap.at<int>(0, randomChosenIndex);
-                input.at<float>(row, var) = (float)value;
+                // Legacy var_type and cat_count use active-variable order;
+                // prediction without COMPRESSED_INPUT takes original columns.
+                const int inputVar = varIdx.empty() ? (int)var : varIdx.at<int>((int)var);
+                input.at<float>(row, inputVar) = (float)value;
             }
             offset += size;
             ++countOffset;
@@ -227,6 +234,88 @@ TEST(ML_DTrees, predict_split_on_unused_variable)
     Ptr<ml::DTrees> bad = Algorithm::loadFromString<ml::DTrees>(replacedOnce(model, "var:0,", "var:1,"));
     ASSERT_FALSE(bad.empty());
     EXPECT_THROW(bad->predict(sample), Exception);
+}
+
+TEST(ML_DTrees, predict_valid_variable_subset)
+{
+    Mat samples = (Mat_<float>(4, 3) << 7.f, 10.f, 0.f, 7.f, 10.f, 0.f,
+                                       7.f, 10.f, 1.f, 7.f, 10.f, 1.f);
+    Mat responses = (Mat_<int>(4, 1) << 0, 0, 1, 1);
+    Mat varIdx = (Mat_<int>(1, 2) << 0, 2);
+    Ptr<ml::TrainData> data = ml::TrainData::create(samples, ml::ROW_SAMPLE,
+        responses, varIdx);
+    Ptr<ml::DTrees> model = ml::DTrees::create();
+    model->setMaxDepth(1);
+    model->setCVFolds(0);
+    model->setMinSampleCount(1);
+    ASSERT_TRUE(model->train(data));
+    ASSERT_FALSE(model->getSplits().empty());
+    ASSERT_EQ(2, model->getSplits()[0].varIdx);
+    Mat compressed(1, 2, CV_32F);
+    for (int i = 0; i < samples.rows; ++i)
+    {
+        data->getSample(varIdx, i, compressed.ptr<float>());
+        EXPECT_EQ((float)responses.at<int>(i), model->predict(samples.row(i)));
+        EXPECT_EQ((float)responses.at<int>(i),
+            model->predict(compressed, noArray(), ml::StatModel::COMPRESSED_INPUT));
+    }
+    // A short row is rejected before looking up the split's sample value,
+    // in both the global and compressed coordinate systems.
+    EXPECT_THROW(model->predict(samples.row(0).colRange(0, 2)), Exception);
+    EXPECT_THROW(model->predict(compressed.colRange(0, 1), noArray(),
+        ml::StatModel::COMPRESSED_INPUT), Exception);
+}
+
+TEST(ML_Boost, train_predict_valid_variable_subset)
+{
+    const int boostTypes[] = { ml::Boost::DISCRETE, ml::Boost::REAL,
+                              ml::Boost::LOGIT, ml::Boost::GENTLE };
+    for (int categorical = 0; categorical < 2; ++categorical)
+    {
+        Mat samples(40, 5, CV_32F, Scalar(-10)), responses(40, 1, CV_32S);
+        for (int i = 0; i < samples.rows; ++i)
+        {
+            samples.at<float>(i, 1) = 0.f;
+            samples.at<float>(i, 4) = (float)(i % 2);
+            responses.at<int>(i) = i % 2;
+        }
+        Mat varIdx = (Mat_<int>(1, 2) << 1, 4);
+        Mat varType(6, 1, CV_8U, Scalar(ml::VAR_ORDERED));
+        varType.at<uchar>(4) = categorical ? ml::VAR_CATEGORICAL : ml::VAR_ORDERED;
+        varType.at<uchar>(5) = ml::VAR_CATEGORICAL;
+        Ptr<ml::TrainData> data = ml::TrainData::create(samples, ml::ROW_SAMPLE,
+            responses, varIdx, noArray(), noArray(), varType);
+        ASSERT_EQ(2, data->getNVars());
+        ASSERT_EQ(5, data->getNAllVars());
+
+        for (size_t b = 0; b < sizeof(boostTypes)/sizeof(boostTypes[0]); ++b)
+        {
+            SCOPED_TRACE(testing::Message() << "boost=" << boostTypes[b]
+                         << " categorical=" << categorical);
+            Ptr<ml::Boost> model = ml::Boost::create();
+            model->setBoostType(boostTypes[b]);
+            model->setWeakCount(3);
+            model->setMaxDepth(1);
+            model->setMinSampleCount(1);
+            model->setWeightTrimRate(0.);
+            // updateWeightsAndTrim predicts on a two-element compressed sample,
+            // while the informative split has global variable index four.
+            ASSERT_TRUE(model->train(data));
+            ASSERT_FALSE(model->getSplits().empty());
+            EXPECT_EQ(4, model->getSplits()[0].varIdx);
+
+            Ptr<ml::Boost> loaded = Algorithm::loadFromString<ml::Boost>(dtreesToString(model));
+            ASSERT_FALSE(loaded.empty());
+            for (int i = 0; i < samples.rows; ++i)
+            {
+                EXPECT_EQ((float)responses.at<int>(i), model->predict(samples.row(i)));
+                EXPECT_EQ((float)responses.at<int>(i), loaded->predict(samples.row(i)));
+            }
+            // Public Boost prediction still requires all original input columns.
+            EXPECT_THROW(model->predict(samples.row(0).colRange(0, 2)), Exception);
+            EXPECT_THROW(loaded->predict(samples.row(0).colRange(0, 2)), Exception);
+        }
+    }
 }
 
 // One categorical input taking the values 0..3, so cat_map holds 4 values and the
