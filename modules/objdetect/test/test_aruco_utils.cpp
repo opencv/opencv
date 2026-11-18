@@ -88,12 +88,7 @@ void projectMarker(Mat& img, const aruco::Board& board, int markerIndex, Mat cam
         Scalar::all(borderValue));
 
     // copy only not-border pixels
-    for (int y = 0; y < aux.rows; y++) {
-        for (int x = 0; x < aux.cols; x++) {
-            if (aux.at< unsigned char >(y, x) == borderValue) continue;
-            img.at< unsigned char >(y, x) = aux.at< unsigned char >(y, x);
-        }
-    }
+    aux.copyTo(img, aux != borderValue);
 }
 
 Mat projectBoard(const aruco::GridBoard& board, Mat cameraMatrix, double yaw, double pitch, double distance,

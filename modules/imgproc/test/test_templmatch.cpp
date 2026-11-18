@@ -184,121 +184,126 @@ static void matchTemplate_reference(Mat & img, Mat & templ, Mat & result, const 
             b_denom = 1.;
     }
 
-    for (int i = 0; i < result.rows; i++)
+    // every output element is computed independently, so rows can be processed in parallel
+    auto rowBody = [&](const cv::Range& range)
     {
-        for (int j = 0; j < result.cols; j++)
+        for (int i = range.start; i < range.end; i++)
         {
-            Scalar a_sum(0), a_sum2(0);
-            Scalar ccorr(0);
-            double value = 0.;
-
-            if (depth == CV_8U)
+            for (int j = 0; j < result.cols; j++)
             {
-                const uchar* a = img.ptr<uchar>(i, j); // ??? ->data.ptr + i*img->step + j*cn;
-                const uchar* b = templ.ptr<uchar>();
+                Scalar a_sum(0), a_sum2(0);
+                Scalar ccorr(0);
+                double value = 0.;
 
-                if( cn == 1 || method < cv::TM_CCOEFF )
+                if (depth == CV_8U)
                 {
-                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
-                        for (int l = 0; l < width_n; l++)
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            a_sum.val[0] += a[l];
-                            a_sum2.val[0] += a[l]*a[l];
-                        }
+                    const uchar* a = img.ptr<uchar>(i, j); // ??? ->data.ptr + i*img->step + j*cn;
+                    const uchar* b = templ.ptr<uchar>();
+
+                    if( cn == 1 || method < cv::TM_CCOEFF )
+                    {
+                        for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                            for (int l = 0; l < width_n; l++)
+                            {
+                                ccorr.val[0] += a[l]*b[l];
+                                a_sum.val[0] += a[l];
+                                a_sum2.val[0] += a[l]*a[l];
+                            }
+                    }
+                    else
+                    {
+                        for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                            for (int l = 0; l < width_n; l += 3)
+                            {
+                                ccorr.val[0] += a[l]*b[l];
+                                ccorr.val[1] += a[l+1]*b[l+1];
+                                ccorr.val[2] += a[l+2]*b[l+2];
+                                a_sum.val[0] += a[l];
+                                a_sum.val[1] += a[l+1];
+                                a_sum.val[2] += a[l+2];
+                                a_sum2.val[0] += a[l]*a[l];
+                                a_sum2.val[1] += a[l+1]*a[l+1];
+                                a_sum2.val[2] += a[l+2]*a[l+2];
+                            }
+                    }
                 }
-                else
+                else // CV_32F
                 {
-                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
-                        for (int l = 0; l < width_n; l += 3)
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            ccorr.val[1] += a[l+1]*b[l+1];
-                            ccorr.val[2] += a[l+2]*b[l+2];
-                            a_sum.val[0] += a[l];
-                            a_sum.val[1] += a[l+1];
-                            a_sum.val[2] += a[l+2];
-                            a_sum2.val[0] += a[l]*a[l];
-                            a_sum2.val[1] += a[l+1]*a[l+1];
-                            a_sum2.val[2] += a[l+2]*a[l+2];
-                        }
+                    const float* a = img.ptr<float>(i, j); // ???? (const float*)(img->data.ptr + i*img->step) + j*cn;
+                    const float* b = templ.ptr<float>();
+
+                    if( cn == 1 || method < cv::TM_CCOEFF )
+                    {
+                        for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                            for (int l = 0; l < width_n; l++)
+                            {
+                                ccorr.val[0] += a[l]*b[l];
+                                a_sum.val[0] += a[l];
+                                a_sum2.val[0] += a[l]*a[l];
+                            }
+                    }
+                    else
+                    {
+                        for (int k = 0; k < height; k++, a += a_step, b += b_step)
+                            for (int l = 0; l < width_n; l += 3)
+                            {
+                                ccorr.val[0] += a[l]*b[l];
+                                ccorr.val[1] += a[l+1]*b[l+1];
+                                ccorr.val[2] += a[l+2]*b[l+2];
+                                a_sum.val[0] += a[l];
+                                a_sum.val[1] += a[l+1];
+                                a_sum.val[2] += a[l+2];
+                                a_sum2.val[0] += a[l]*a[l];
+                                a_sum2.val[1] += a[l+1]*a[l+1];
+                                a_sum2.val[2] += a[l+2]*a[l+2];
+                            }
+                    }
                 }
+
+                switch( method )
+                {
+                case cv::TM_CCORR:
+                case cv::TM_CCORR_NORMED:
+                    value = ccorr.val[0];
+                    break;
+                case cv::TM_SQDIFF:
+                case cv::TM_SQDIFF_NORMED:
+                    value = (a_sum2.val[0] + b_sum2 - 2*ccorr.val[0]);
+                    break;
+                default:
+                    value = (ccorr.val[0] - a_sum.val[0]*b_mean.val[0]+
+                             ccorr.val[1] - a_sum.val[1]*b_mean.val[1]+
+                             ccorr.val[2] - a_sum.val[2]*b_mean.val[2]);
+                }
+
+                if( method & 1 )
+                {
+                    double denom;
+
+                    // calc denominator
+                    if( method != cv::TM_CCOEFF_NORMED )
+                    {
+                        denom = a_sum2.val[0] + a_sum2.val[1] + a_sum2.val[2];
+                    }
+                    else
+                    {
+                        denom = a_sum2.val[0] - (a_sum.val[0]*a_sum.val[0])/area;
+                        denom += a_sum2.val[1] - (a_sum.val[1]*a_sum.val[1])/area;
+                        denom += a_sum2.val[2] - (a_sum.val[2]*a_sum.val[2])/area;
+                    }
+                    denom = sqrt(MAX(denom,0))*b_denom;
+                    if( fabs(value) < denom )
+                        value /= denom;
+                    else if( fabs(value) < denom*1.125 )
+                        value = value > 0 ? 1 : -1;
+                    else
+                        value = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
+                }
+                result.at<float>(i, j) = (float)value;
             }
-            else // CV_32F
-            {
-                const float* a = img.ptr<float>(i, j); // ???? (const float*)(img->data.ptr + i*img->step) + j*cn;
-                const float* b = templ.ptr<float>();
-
-                if( cn == 1 || method < cv::TM_CCOEFF )
-                {
-                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
-                        for (int l = 0; l < width_n; l++)
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            a_sum.val[0] += a[l];
-                            a_sum2.val[0] += a[l]*a[l];
-                        }
-                }
-                else
-                {
-                    for (int k = 0; k < height; k++, a += a_step, b += b_step)
-                        for (int l = 0; l < width_n; l += 3)
-                        {
-                            ccorr.val[0] += a[l]*b[l];
-                            ccorr.val[1] += a[l+1]*b[l+1];
-                            ccorr.val[2] += a[l+2]*b[l+2];
-                            a_sum.val[0] += a[l];
-                            a_sum.val[1] += a[l+1];
-                            a_sum.val[2] += a[l+2];
-                            a_sum2.val[0] += a[l]*a[l];
-                            a_sum2.val[1] += a[l+1]*a[l+1];
-                            a_sum2.val[2] += a[l+2]*a[l+2];
-                        }
-                }
-            }
-
-            switch( method )
-            {
-            case cv::TM_CCORR:
-            case cv::TM_CCORR_NORMED:
-                value = ccorr.val[0];
-                break;
-            case cv::TM_SQDIFF:
-            case cv::TM_SQDIFF_NORMED:
-                value = (a_sum2.val[0] + b_sum2 - 2*ccorr.val[0]);
-                break;
-            default:
-                value = (ccorr.val[0] - a_sum.val[0]*b_mean.val[0]+
-                         ccorr.val[1] - a_sum.val[1]*b_mean.val[1]+
-                         ccorr.val[2] - a_sum.val[2]*b_mean.val[2]);
-            }
-
-            if( method & 1 )
-            {
-                double denom;
-
-                // calc denominator
-                if( method != cv::TM_CCOEFF_NORMED )
-                {
-                    denom = a_sum2.val[0] + a_sum2.val[1] + a_sum2.val[2];
-                }
-                else
-                {
-                    denom = a_sum2.val[0] - (a_sum.val[0]*a_sum.val[0])/area;
-                    denom += a_sum2.val[1] - (a_sum.val[1]*a_sum.val[1])/area;
-                    denom += a_sum2.val[2] - (a_sum.val[2]*a_sum.val[2])/area;
-                }
-                denom = sqrt(MAX(denom,0))*b_denom;
-                if( fabs(value) < denom )
-                    value /= denom;
-                else if( fabs(value) < denom*1.125 )
-                    value = value > 0 ? 1 : -1;
-                else
-                    value = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
-            }
-            result.at<float>(i, j) = (float)value;
         }
-    }
+    };
+    cv::parallel_for_(cv::Range(0, result.rows), rowBody);
 }
 
 //==============================================================================

@@ -137,7 +137,7 @@ static void DFT_2D( const Mat& src, Mat& dst, int flags )
 
 static Mat initDCTWave( int n, bool inv )
 {
-    int i, k;
+    int i, k, m;
     double angle = CV_PI*0.5/n;
     Mat wave(n, n, CV_64F);
 
@@ -145,13 +145,21 @@ static Mat initDCTWave( int n, bool inv )
     for( k = 0; k < n; k++ )
         wave.at<double>(0, k) = scale;
     scale *= sqrt(2.);
+    // the angle is reduced exactly (period 4n) before the cosine, so only 4n distinct cosines are needed
+    std::vector<double> cosTab(4*n);
+    for( m = 0; m < 4*n; m++ )
+        cosTab[m] = cos( angle*m );
     for( i = 1; i < n; i++ )
-        for( k = 0; k < n; k++ )
+    {
+        double* w = wave.ptr<double>(i);
+        for( k = 0, m = i; k < n; k++ )   // m = i*(2k+1) mod 4n
         {
-            // reduce the angle exactly (period 4n) before the cosine to keep the reference accurate
-            int m = (int)(((int64)i*(2*k + 1)) % (4*n));
-            wave.at<double>(i, k) = scale*cos( angle*m );
+            w[k] = scale*cosTab[m];
+            m += 2*i;
+            if( m >= 4*n )
+                m -= 4*n;
         }
+    }
 
     if( inv )
         cv::transpose( wave, wave );
@@ -1360,10 +1368,10 @@ TEST(Core_DFT, sweep_1d)
                 SCOPED_TRACE(cv::format("n=%d depth=%d scale=%d", n, depth, sc));
 
                 // complex -> complex, forward and inverse, and the round trip
-                Mat x = dxtRandom(rng, 1, n, CV_MAKETYPE(depth, 2)), ref, out, back;
-                DFT_1D(x, ref, scale_flag);
+                Mat x = dxtRandom(rng, 1, n, CV_MAKETYPE(depth, 2)), ref, refF, out, back;
+                DFT_1D(x, refF, scale_flag);
                 cv::dft(x, out, scale_flag);
-                EXPECT_LE(dxtRelDiff(out, ref), thresh) << "C2C forward";
+                EXPECT_LE(dxtRelDiff(out, refF), thresh) << "C2C forward";
                 DFT_1D(x, ref, DFT_INVERSE | scale_flag);
                 cv::dft(x, out, DFT_INVERSE | scale_flag);
                 EXPECT_LE(dxtRelDiff(out, ref), thresh) << "C2C inverse";
@@ -1397,8 +1405,7 @@ TEST(Core_DFT, sweep_1d)
                 // in-place
                 Mat y = x.clone();
                 cv::dft(y, y, scale_flag);
-                DFT_1D(x, ref, scale_flag);
-                EXPECT_LE(dxtRelDiff(y, ref), thresh) << "C2C in-place";
+                EXPECT_LE(dxtRelDiff(y, refF), thresh) << "C2C in-place";
                 y = xr.clone();
                 cv::dft(y, y, scale_flag);
                 cv::dft(xr, out, scale_flag);
@@ -1409,11 +1416,10 @@ TEST(Core_DFT, sweep_1d)
                     EXPECT_LE(dxtRelDiff(y, xr), thresh) << "C2R in-place";
                 }
 
-                // column vectors
-                Mat xcol = x.t(), refcol;
-                DFT_1D(xcol, refcol, scale_flag);
+                // column vectors; the reference values do not depend on the layout
+                Mat xcol = x.t();
                 cv::dft(xcol, out, scale_flag);
-                EXPECT_LE(dxtRelDiff(out, refcol), thresh) << "C2C column";
+                EXPECT_LE(dxtRelDiff(out, refF.reshape(0, n)), thresh) << "C2C column";
             }
         }
     }
@@ -1458,17 +1464,18 @@ TEST(Core_DCT, sweep_1d)
         int n = sizes[si];
         if (n % 2 != 0)
             continue;   // cv::dct() supports even lengths only
+        Mat waveF = initDCTWave(n, false), waveI = waveF.t();   // shared by both depths
         for (int depth = CV_32F; depth <= CV_64F; depth += CV_64F - CV_32F)
         {
             double thresh = dxtSweepThresh(depth, n);
             SCOPED_TRACE(cv::format("n=%d depth=%d", n, depth));
-            Mat x = dxtRandom(rng, 1, n, depth), ref, out, back;
-            DCT_1D(x, ref, 0);
+            Mat x = dxtRandom(rng, 1, n, depth), refF, refI, out, back;
+            DCT_1D(x, refF, 0, waveF);
             cv::dct(x, out, 0);
-            EXPECT_LE(dxtRelDiff(out, ref), thresh) << "DCT";
-            DCT_1D(x, ref, DCT_INVERSE);
+            EXPECT_LE(dxtRelDiff(out, refF), thresh) << "DCT";
+            DCT_1D(x, refI, DCT_INVERSE, waveI);
             cv::dct(x, out, DCT_INVERSE);
-            EXPECT_LE(dxtRelDiff(out, ref), thresh) << "IDCT";
+            EXPECT_LE(dxtRelDiff(out, refI), thresh) << "IDCT";
             cv::dct(x, out, 0);
             cv::dct(out, back, DCT_INVERSE);
             EXPECT_LE(dxtRelDiff(back, x), thresh) << "DCT round trip";
@@ -1478,14 +1485,12 @@ TEST(Core_DCT, sweep_1d)
             cv::dct(y, y, 0);
             EXPECT_LE(dxtRelDiff(y, out), thresh) << "DCT in-place";
 
-            // column vector (strided source/destination inside the engine)
-            Mat xcol = x.t(), refcol;
-            DCT_1D(xcol, refcol, 0);
+            // column vector (strided source/destination inside the engine); the reference values are the same
+            Mat xcol = x.t();
             cv::dct(xcol, out, 0);
-            EXPECT_LE(dxtRelDiff(out, refcol), thresh) << "DCT column";
-            DCT_1D(xcol, refcol, DCT_INVERSE);
+            EXPECT_LE(dxtRelDiff(out, refF.reshape(0, n)), thresh) << "DCT column";
             cv::dct(xcol, out, DCT_INVERSE);
-            EXPECT_LE(dxtRelDiff(out, refcol), thresh) << "IDCT column";
+            EXPECT_LE(dxtRelDiff(out, refI.reshape(0, n)), thresh) << "IDCT column";
 
             // rows batch
             Mat xm = dxtRandom(rng, 3, n, depth), outm, rowout;

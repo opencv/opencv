@@ -71,6 +71,7 @@ TEST(Resize_Bitexact, Linear8U)
         { CV_8UC1, Size(7168,5376) }  //    7        7
     };
 
+    Mat srcByCn[CV_CN_MAX + 1]; // the source depends only on the channel count
     for (int modeind = 0, _modecnt = sizeof(modes) / sizeof(modes[0]); modeind < _modecnt; ++modeind)
         {
             int type = modes[modeind].type, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -82,29 +83,44 @@ TEST(Resize_Bitexact, Linear8U)
             softdouble scale_x = softdouble::one() / softdouble(inv_scale_x);
             softdouble scale_y = softdouble::one() / softdouble(inv_scale_y);
 
-            Mat src(rows, cols, type), refdst(drows, dcols, type), dst;
-            RNG rnd(0x123456789abcdefULL);
-            for (int j = 0; j < rows; j++)
+            Mat refdst(drows, dcols, type), dst;
+            Mat& src = srcByCn[cn];
+            if (src.empty())
             {
-                uint8_t* line = src.ptr(j);
-                for (int i = 0; i < cols; i++)
-                    for (int c = 0; c < cn; c++)
-                    {
-                        double val = j < rows / 2 ? ( i < cols / 2 ? ((sin((i + 1)*CV_PI / 256.)*sin((j + 1)*CV_PI / 256.)*sin((cn + 4)*CV_PI / 8.) + 1.)*128.)                         :
-                                                                     (((i / 128 + j / 128) % 2) * 250 + (j / 128) % 2)                                                                ) :
-                                                    ( i < cols / 2 ? ((i / 128) * (85 - j / 256 * 40) * ((j / 128) % 2) + (7 - i / 128) * (85 - j / 256 * 40) * ((j / 128 + 1) % 2))    :
-                                                                     ((uchar)rnd)                                                                                                     ) ;
-                        if (depth == CV_8U)
-                            line[i*cn + c] = (uint8_t)val;
-                        else if (depth == CV_16U)
-                            ((uint16_t*)line)[i*cn + c] = (uint16_t)val;
-                        else if (depth == CV_16S)
-                            ((int16_t*)line)[i*cn + c] = (int16_t)val;
-                        else if (depth == CV_32S)
-                            ((int32_t*)line)[i*cn + c] = (int32_t)val;
-                        else
-                            CV_Assert(0);
-                    }
+                src.create(rows, cols, type);
+                RNG rnd(0x123456789abcdefULL);
+                for (int j = 0; j < rows; j++)
+                {
+                    uint8_t* line = src.ptr(j);
+                    for (int i = 0; i < cols; i++)
+                        for (int c = 0; c < cn; c++)
+                        {
+                            double val = j < rows / 2 ? ( i < cols / 2 ? ((sin((i + 1)*CV_PI / 256.)*sin((j + 1)*CV_PI / 256.)*sin((cn + 4)*CV_PI / 8.) + 1.)*128.)                         :
+                                                                         (((i / 128 + j / 128) % 2) * 250 + (j / 128) % 2)                                                                ) :
+                                                        ( i < cols / 2 ? ((i / 128) * (85 - j / 256 * 40) * ((j / 128) % 2) + (7 - i / 128) * (85 - j / 256 * 40) * ((j / 128 + 1) % 2))    :
+                                                                         ((uchar)rnd)                                                                                                     ) ;
+                            if (depth == CV_8U)
+                                line[i*cn + c] = (uint8_t)val;
+                            else if (depth == CV_16U)
+                                ((uint16_t*)line)[i*cn + c] = (uint16_t)val;
+                            else if (depth == CV_16S)
+                                ((int16_t*)line)[i*cn + c] = (int16_t)val;
+                            else if (depth == CV_32S)
+                                ((int32_t*)line)[i*cn + c] = (int32_t)val;
+                            else
+                                CV_Assert(0);
+                        }
+                }
+            }
+
+            std::vector<int> xofs(dcols);
+            std::vector<int64_t> xc0(dcols), xc1(dcols);
+            for (int i = 0; i < dcols; i++)
+            {
+                softdouble src_col_flt = scale_x*(softdouble(i) + softdouble(0.5)) - softdouble(0.5);
+                xofs[i] = cvFloor(src_col_flt);
+                xc1[i] = cvRound64((src_col_flt - softdouble(xofs[i]))*softdouble(fixedOne));
+                xc0[i] = fixedOne - xc1[i];
             }
 
             for (int j = 0; j < drows; j++)
@@ -116,10 +132,8 @@ TEST(Resize_Bitexact, Linear8U)
 
                 for (int i = 0; i < dcols; i++)
                 {
-                    softdouble src_col_flt = scale_x*(softdouble(i) + softdouble(0.5)) - softdouble(0.5);
-                    int src_col = cvFloor(src_col_flt);
-                    int64_t xcoeff1 = cvRound64((src_col_flt - softdouble(src_col))*softdouble(fixedOne));
-                    int64_t xcoeff0 = fixedOne - xcoeff1;
+                    int src_col = xofs[i];
+                    int64_t xcoeff1 = xc1[i], xcoeff0 = xc0[i];
 
                     uint8_t* dst_pt = refdst.ptr(j, i);
                     uint8_t* src_pt00 = src.ptr( src_row      < 0 ? 0 :  src_row      >= rows ? rows - 1 :  src_row     ,

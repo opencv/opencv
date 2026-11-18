@@ -96,7 +96,7 @@ namespace opencv_test { namespace {
         double sigma_color, double sigma_space, int borderType)
     {
         int cn = src.channels();
-        int i, j, k, maxk, radius;
+        int maxk, radius;
         double minValSrc = -1, maxValSrc = 1;
         const int kExpNumBinsPerChannel = 1 << 12;
         int kExpNumBins = 0;
@@ -156,7 +156,7 @@ namespace opencv_test { namespace {
         scale_index = kExpNumBins/len;
 
         // initialize the exp LUT
-        for( i = 0; i < kExpNumBins+2; i++ )
+        for( int i = 0; i < kExpNumBins+2; i++ )
         {
             if( lastExpVal > 0.f )
             {
@@ -169,8 +169,9 @@ namespace opencv_test { namespace {
         }
 
         // initialize space-related bilateral filter coefficients
-        for( i = -radius, maxk = 0; i <= radius; i++ )
-            for( j = -radius; j <= radius; j++ )
+        maxk = 0;
+        for( int i = -radius; i <= radius; i++ )
+            for( int j = -radius; j <= radius; j++ )
             {
                 double r = std::sqrt((double)i*i + (double)j*j);
                 if( r > radius )
@@ -179,57 +180,63 @@ namespace opencv_test { namespace {
                 space_ofs[maxk++] = (int)(i*(temp.step/sizeof(float)) + j*cn);
             }
 
-        for( i = 0; i < size.height; i++ )
+        // output rows are independent, so the reference runs them in parallel
+        auto rowBody = [&](const Range& rows)
         {
-            const float* sptr = temp.ptr<float>(i+radius) + radius*cn;
-            float* dptr = dst.ptr<float>(i);
+            for( int i = rows.start; i < rows.end; i++ )
+            {
+                int j, k;
+                const float* sptr = temp.ptr<float>(i+radius) + radius*cn;
+                float* dptr = dst.ptr<float>(i);
 
-            if( cn == 1 )
-            {
-                for( j = 0; j < size.width; j++ )
+                if( cn == 1 )
                 {
-                    float sum = 0, wsum = 0;
-                    float val0 = sptr[j];
-                    for( k = 0; k < maxk; k++ )
+                    for( j = 0; j < size.width; j++ )
                     {
-                        float val = sptr[j + space_ofs[k]];
-                        float alpha = (float)(std::abs(val - val0)*scale_index);
-                        int idx = cvFloor(alpha);
-                        alpha -= idx;
-                        float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-                        sum += val*w;
-                        wsum += w;
+                        float sum = 0, wsum = 0;
+                        float val0 = sptr[j];
+                        for( k = 0; k < maxk; k++ )
+                        {
+                            float val = sptr[j + space_ofs[k]];
+                            float alpha = (float)(std::abs(val - val0)*scale_index);
+                            int idx = cvFloor(alpha);
+                            alpha -= idx;
+                            float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
+                            sum += val*w;
+                            wsum += w;
+                        }
+                        dptr[j] = (float)(sum/wsum);
                     }
-                    dptr[j] = (float)(sum/wsum);
+                }
+                else
+                {
+                    CV_Assert( cn == 3 );
+                    for( j = 0; j < size.width*3; j += 3 )
+                    {
+                        float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
+                        float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
+                        for( k = 0; k < maxk; k++ )
+                        {
+                            const float* sptr_k = sptr + j + space_ofs[k];
+                            float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
+                            float alpha = (float)((std::abs(b - b0) +
+                                std::abs(g - g0) + std::abs(r - r0))*scale_index);
+                            int idx = cvFloor(alpha);
+                            alpha -= idx;
+                            float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
+                            sum_b += b*w; sum_g += g*w; sum_r += r*w;
+                            wsum += w;
+                        }
+                        wsum = 1.f/wsum;
+                        b0 = sum_b*wsum;
+                        g0 = sum_g*wsum;
+                        r0 = sum_r*wsum;
+                        dptr[j] = b0; dptr[j+1] = g0; dptr[j+2] = r0;
+                    }
                 }
             }
-            else
-            {
-                CV_Assert( cn == 3 );
-                for( j = 0; j < size.width*3; j += 3 )
-                {
-                    float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
-                    float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
-                    for( k = 0; k < maxk; k++ )
-                    {
-                        const float* sptr_k = sptr + j + space_ofs[k];
-                        float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
-                        float alpha = (float)((std::abs(b - b0) +
-                            std::abs(g - g0) + std::abs(r - r0))*scale_index);
-                        int idx = cvFloor(alpha);
-                        alpha -= idx;
-                        float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-                        sum_b += b*w; sum_g += g*w; sum_r += r*w;
-                        wsum += w;
-                    }
-                    wsum = 1.f/wsum;
-                    b0 = sum_b*wsum;
-                    g0 = sum_g*wsum;
-                    r0 = sum_r*wsum;
-                    dptr[j] = b0; dptr[j+1] = g0; dptr[j+2] = r0;
-                }
-            }
-        }
+        };
+        parallel_for_(Range(0, size.height), rowBody);
     }
 
     int CV_BilateralFilterTest::prepare_test_case(int /* test_case_index */)
