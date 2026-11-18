@@ -8082,15 +8082,12 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
 
 #endif
 
-// x86-optimized macros for 8-bit pixels retrieval and reordering.
-// Instead of scattering the 4 taps of every lane into a temporary buffer one by one
-// and then loading that buffer back into vector registers (which defeats store-to-load
-// forwarding and is very slow on x86), each lane's 4 taps are fetched with a single
-// 32-bit (C1) or 128-bit (C3, C4) load and the values are transposed in registers.
-// The 128-bit loads for C3 read 4 bytes past the last tap; this is safe for the same
-// reason the NEON path above is: inliers are limited to iy0 < height - 5, so there is
-// always at least one more row after the last row being read.
-#if !CV_SIMD_FP16 && CV_SSE2 && ((CV_SIMD_WIDTH == 32 && CV_AVX2) || CV_SIMD_WIDTH == 16)
+// x86: fetch each lane's 4 taps with one 32-bit (C1) or 128-bit (C3, C4) load and transpose them
+// in registers instead of going through a scalar buffer (store-to-load forwarding stalls).
+// The C3 load reads 4 bytes past the last tap; like the NEON path above, this is safe because
+// inliers have iy0 < height - 5, so another row always follows.
+// AVX-512 builds also take the AVX2 branch: this file sets CV__SIMD_FORCE_WIDTH 256.
+#if !CV_SIMD_FP16 && CV_SSE2 && (CV_SIMD_WIDTH == 16 || (CV_SIMD_WIDTH == 32 && CV_AVX2))
 
 // splits 4 packed 8-bit taps per 32-bit lane into 4 vectors of 32-bit integers
 static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_int32& t1,
@@ -8108,8 +8105,7 @@ static CV_ALWAYS_INLINE void bicubicSplit8u(const v_uint32& v, v_int32& t0, v_in
 #define FETCH_INLIERS_8UC1(row) \
     bicubicSplit8u(v_reinterpret_as_u32(vx_lut_quads((const uchar*)src + row*srcstep, tl_ofs)), R0, R1, R2, R3)
 #else
-// 128-bit v_lut_quads(const uchar*, const int*) builds the vector from 16 single-byte loads,
-// which is ~1.25x slower here than these four 32-bit loads
+// 128-bit v_lut_quads(const uchar*, const int*) is built from single bytes and is ~1.25x slower
 static CV_ALWAYS_INLINE int bicubicLoad32(const uint8_t* ptr)
 {
     int val;
@@ -8127,39 +8123,29 @@ static CV_ALWAYS_INLINE v_uint32 bicubicGather8uC1(const uint8_t* srcrow, const 
 #endif
 
 #if CV_SSSE3
-// for each lane j loads the 4 taps of a 3- or 4-channel pixel row starting at srcrow + ofs[j]
-// and returns them per channel, 4 packed 8-bit taps per 32-bit lane
+// returns the taps of 3- or 4-channel pixels per channel, 4 packed 8-bit taps per 32-bit lane
 template<int CN>
 static CV_ALWAYS_INLINE void bicubicGather8uCn(const uint8_t* srcrow, const int32_t* ofs,
                                                v_uint32& r, v_uint32& g, v_uint32& b, v_uint32& a)
 {
     static_assert(CN == 3 || CN == 4, "");
-    // after the shuffle, lane j holds the r, g, b, a taps of pixel j as 4 packed 32-bit values
-    v_uint32 p0, p1, p2, p3;
-#if CV_SIMD_WIDTH == 32
-    const __m256i mask = CN == 3 ?
-        _mm256_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1,
-                         0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
-        _mm256_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
-                         0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    // pixels j and j+4 go to the low and high 128-bit halves; v_transpose4x4 works within
-    // 128-bit halves, so the result lane order is 0..7
-    #define CV_BICUBIC_LOAD2(j) v_uint32(_mm256_shuffle_epi8(_mm256_inserti128_si256( \
-        _mm256_castsi128_si256(_mm_loadu_si128((const __m128i*)(srcrow + ofs[j]))), \
-        _mm_loadu_si128((const __m128i*)(srcrow + ofs[j + 4])), 1), mask))
-    p0 = CV_BICUBIC_LOAD2(0); p1 = CV_BICUBIC_LOAD2(1);
-    p2 = CV_BICUBIC_LOAD2(2); p3 = CV_BICUBIC_LOAD2(3);
-    #undef CV_BICUBIC_LOAD2
-#else
     const __m128i mask = CN == 3 ?
         _mm_setr_epi8(0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, -1, -1, -1, -1) :
         _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    p0 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[0])), mask));
-    p1 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[1])), mask));
-    p2 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[2])), mask));
-    p3 = v_uint32(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(srcrow + ofs[3])), mask));
+    // with AVX2 the high half of p[j] holds pixel j + 4; v_transpose4x4 works within 128-bit halves
+    #define CV_BICUBIC_LOAD(j) _mm_loadu_si128((const __m128i*)(srcrow + ofs[j]))
+    v_uint32 p[4];
+    for (int j = 0; j < 4; j++)
+    {
+#if CV_SIMD_WIDTH == 32
+        __m256i v = _mm256_inserti128_si256(_mm256_castsi128_si256(CV_BICUBIC_LOAD(j)), CV_BICUBIC_LOAD(j + 4), 1);
+        p[j] = v_uint32(_mm256_shuffle_epi8(v, _mm256_broadcastsi128_si256(mask)));
+#else
+        p[j] = v_uint32(_mm_shuffle_epi8(CV_BICUBIC_LOAD(j), mask));
 #endif
-    v_transpose4x4(p0, p1, p2, p3, r, g, b, a);
+    }
+    #undef CV_BICUBIC_LOAD
+    v_transpose4x4(p[0], p[1], p[2], p[3], r, g, b, a);
 }
 
 #undef FETCH_INLIERS_8UC3

@@ -1485,14 +1485,17 @@ TEST_P(Imgproc_Remap_Cubic8U, accuracy)
     rng.fill(srcBuf, RNG::UNIFORM, 0, 256);
     Mat src = srcBuf(Rect(3, 2, srcSize.width, srcSize.height));
 
-    // Most rows keep the whole 4x4 neighbourhood of every pixel inside the source, so that whole
-    // SIMD batches take the optimized inlier path. Other rows cross the border or are mapped
-    // entirely outside of the source. With BORDER_TRANSPARENT, the result for such pixels
-    // depends on the SIMD batch they fall into, so that mode uses the inner rows only.
+    // Most rows meet the SIMD inlier condition (ix0 < width - 3, iy0 < height - 5) for every pixel,
+    // so whole batches take the optimized path. Some rows stay inside the source but go below that
+    // limit, which sends their batches to the generic path. In the other modes, some rows also cross
+    // the border or lie entirely outside; with BORDER_TRANSPARENT the result there depends on the
+    // SIMD batch a pixel falls into, so that mode skips them.
     const bool transparent = borderType == BORDER_TRANSPARENT;
     Mat mapx(dstSize, CV_32F), mapy(dstSize, CV_32F);
     rng.fill(mapx, RNG::UNIFORM, 1.f, srcSize.width - 2.01f);
-    rng.fill(mapy, RNG::UNIFORM, 1.f, srcSize.height - 2.01f);
+    rng.fill(mapy, RNG::UNIFORM, 1.f, srcSize.height - 4.01f);
+    for (int y = 2; y < dstSize.height; y += 6)
+        rng.fill(mapy.row(y), RNG::UNIFORM, srcSize.height - 4.f, srcSize.height - 2.01f);
     if (!transparent)
     {
         for (int y = 1; y < dstSize.height; y += 5)
