@@ -42,7 +42,9 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "umatrix.hpp"
+#include "accel/accel_impl.hpp"
 
+#include "opencv2/core/utils/accel_dispatch.private.hpp"
 #include <opencv2/core/utils/tls.hpp>
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
@@ -651,6 +653,8 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
     {
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if (!a)
+            a = accel::detail::scopeAllocator();    // a device ExecutionScope places new data on its device
+        if (!a)
         {
             a = a0;
             a0 = Mat::getDefaultAllocator();
@@ -1185,11 +1189,15 @@ Mat UMat::getMat(AccessFlag accessFlags) const
     if(!u)
         return Mat();
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
-    accessFlags |= ACCESS_RW;
+    // Accelerator memory does: a CPU read leaves the device copy current, and map() is called for
+    // every view, so a write view taken after read views upgrades the mapping.
+    const bool accelMemory = accel::detail::isDeviceAllocator(u->currAllocator);
+    if (!accelMemory || !(accessFlags & ACCESS_RW))
+        accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
     try
     {
-        if(CV_XADD(&u->refcount, 1) == 0)
+        if(CV_XADD(&u->refcount, 1) == 0 || accelMemory)
             u->currAllocator->map(u, accessFlags);
         if (u->data != 0)
         {
@@ -1223,6 +1231,9 @@ void* UMat::handle(AccessFlag accessFlags) const
     {
         u->currAllocator->unmap(u);
     }
+
+    // accelerator memory: the caller's own device work must see OpenCV's finished results
+    accel::detail::prepareHandle(u, accessFlags);
 
     if (!!(accessFlags & ACCESS_WRITE))
         u->markHostCopyObsolete(true);
@@ -1379,11 +1390,37 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 // void UMat::convertTo moved to convert.dispatch.cpp
 //
 
+static bool accel_setTo(UMat& dst, InputArray _value)
+{
+    Mat value = _value.getMat();
+    if (!checkScalar(value, dst.type(), _value.kind(), _InputArray::UMAT))
+        return false;
+    Scalar s;
+    {
+        Mat tmp;
+        value.convertTo(tmp, CV_64F);
+        tmp = tmp.reshape(1, 1);
+        const int n = (int)std::min(tmp.total(), (size_t)4);
+        for (int i = 0; i < n; i++)
+            s.val[i] = tmp.at<double>(i);
+    }
+    // OpCall keeps pointers to its arguments, so the array must outlive run().
+    const _OutputArray dstArr(dst);
+    accel::detail::OpCall call("setTo");
+    call.output(dstArr, dst.shape(), dst.type());
+    return call.run<accel::CoreOps>([&s](accel::CoreOps& ops, std::vector<UMat>& a, accel::Stream& st) {
+        return ops.setTo(a[0], s, st);
+    });
+}
+
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     CV_INSTRUMENT_REGION();
 
     bool haveMask = !_mask.empty();
+
+    CV_ACCEL_RUN_(!haveMask, accel_setTo(*this, _value), *this)
+
 #ifdef HAVE_OPENCL
     int tp = type(), cn = CV_MAT_CN(tp), d = CV_MAT_DEPTH(tp);
 
