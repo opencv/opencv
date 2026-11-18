@@ -2004,7 +2004,9 @@ TEST(Layer_Test_Reduce, all_axes_listed_explicitly)
                                               << " noop=" << noop;
                 EXPECT_NEAR(expected[op], output.ptr<float>()[0], 1e-5) << ops[op] << " noop=" << noop;
                 if (keepdims)
+                {
                     EXPECT_EQ(MatShape(std::vector<int>(rank, 1)), shape(output));
+                }
             }
         }
     }

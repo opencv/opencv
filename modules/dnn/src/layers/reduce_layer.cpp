@@ -405,8 +405,7 @@ public:
 
             if (axes.empty()) {
                 if (noop_with_empty_axes) {
-                    // copyTo is not used here for the reason that we want a
-                    // copy for the case when dims at all axes are 1
+                    // empty axes with noop_with_empty_axes: the output is a copy of the input
                     const auto p_src = src.ptr<const dtype>();
                     auto p_dst = dst.ptr<dtype>();
                     std::memcpy(p_dst, p_src, sizeof(dtype) * dst.total());
