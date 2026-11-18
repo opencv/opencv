@@ -16,6 +16,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <algorithm>
 #include <cstddef>
 
 using namespace cv::dnn::cuda4dnn::csl;
@@ -32,20 +33,58 @@ namespace raw {
         }
     }
 
+    constexpr int MEAN_SQR_SUM_BLOCK_SIZE = 256;
+
     template <class T>
     __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
-        for (auto idx : grid_stride_range(input.size())) {
-            const index_type outer_idx = idx / inner_size;
-            auto x = static_cast<float>(input[idx]);
-            atomicAdd(&means[outer_idx], x / inner_size);
-            atomicAdd(&sum_sqrs[outer_idx], x * x);
+        __shared__ float sdata[MEAN_SQR_SUM_BLOCK_SIZE];
+        __shared__ float row_mean;
+
+        const size_type outer_size = means.size();
+        for (index_type outer_idx = blockIdx.x; outer_idx < outer_size; outer_idx += gridDim.x) {
+            const index_type row_start = outer_idx * inner_size;
+
+            float sum = 0.f;
+            for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x)
+                sum += static_cast<float>(input[row_start + i]);
+
+            sdata[threadIdx.x] = sum;
+            __syncthreads();
+            for (int stride = MEAN_SQR_SUM_BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
+                if (threadIdx.x < stride)
+                    sdata[threadIdx.x] += sdata[threadIdx.x + stride];
+                __syncthreads();
+            }
+            if (threadIdx.x == 0) {
+                row_mean = sdata[0] / inner_size;
+                means[outer_idx] = row_mean;
+            }
+            __syncthreads();
+
+            const float mean = row_mean;
+            float sqr = 0.f;
+            for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
+                const float diff = static_cast<float>(input[row_start + i]) - mean;
+                sqr += diff * diff;
+            }
+
+            sdata[threadIdx.x] = sqr;
+            __syncthreads();
+            for (int stride = MEAN_SQR_SUM_BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
+                if (threadIdx.x < stride)
+                    sdata[threadIdx.x] += sdata[threadIdx.x + stride];
+                __syncthreads();
+            }
+            if (threadIdx.x == 0)
+                sum_sqrs[outer_idx] = sdata[0];
+            __syncthreads();
         }
     }
 
     __global__ void compute_normalization_scale(Span<float> scale, View<float> means, View<float> sums_sqr, size_type inner_size, float eps) {
+        (void)means;
         for (auto idx : grid_stride_range(scale.size())) {
-            auto mean = means[idx];
-            auto var = sums_sqr[idx] / inner_size - mean * mean;
+            auto var = sums_sqr[idx] / inner_size;
             using device::rsqrt;
             scale[idx] = rsqrt(eps + var);
         }
@@ -133,8 +172,12 @@ void reduce_mean_sqr_sum(const Stream& stream, Span<float> means, Span<float> su
     CV_Assert(input.size() / inner_size == means.size());
     CV_Assert(input.size() / inner_size == sum_sqrs.size());
 
+    if (means.size() == 0)
+        return;
+
     auto kernel = raw::reduce_mean_sqr_sum<T>;
-    auto policy = make_policy(kernel, input.size(), 0, stream);
+    const unsigned int grid_size = static_cast<unsigned int>(std::min<std::size_t>(means.size(), 2147483647ULL));
+    auto policy = execution_policy(dim3(grid_size), dim3(raw::MEAN_SQR_SUM_BLOCK_SIZE), 0, stream);
     launch_kernel(kernel, policy, means, sum_sqrs, input, inner_size);
 }
 
