@@ -137,14 +137,22 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     if (params.has("auto_pad"))
     {
         String autoPad = params.get<String>("auto_pad");
-        if (autoPad != "NOTSET")
-            padMode = autoPad;
+        if (autoPad == "SAME_LOWER")
+            padMode = "SAME_LOWER";
+        else if (autoPad == "SAME_UPPER")
+            padMode = "SAME";
+        else if (autoPad == "VALID")
+            padMode = "VALID";
     }
     if (padMode.empty() && params.has("pad_mode"))
     {
         String pm = params.get<String>("pad_mode");
-        if (pm != "NOTSET")
-            padMode = pm;
+        if (pm == "SAME_LOWER")
+            padMode = "SAME_LOWER";
+        else if (pm == "SAME_UPPER" || pm == "SAME")
+            padMode = "SAME";
+        else if (pm == "VALID")
+            padMode = "VALID";
     }
 
     for (int i = 0; i < strides.size(); i++)

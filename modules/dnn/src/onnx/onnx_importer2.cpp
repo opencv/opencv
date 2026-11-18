@@ -540,12 +540,15 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "auto_pad")
             {
-                lp.set("auto_pad", attribute_proto.s());
-                if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
-                    lp.set("pad_mode", attribute_proto.s());
-                }
-                else if (attribute_proto.s() == "VALID") {
-                    lp.set("pad_mode", "VALID");
+                if (attribute_proto.s() != "NOTSET")
+                {
+                    lp.set("auto_pad", attribute_proto.s());
+                    if (attribute_proto.s() == "SAME_UPPER" || attribute_proto.s() == "SAME_LOWER") {
+                        lp.set("pad_mode", "SAME");
+                    }
+                    else if (attribute_proto.s() == "VALID") {
+                        lp.set("pad_mode", "VALID");
+                    }
                 }
             }
             else if(attribute_name == "dilations")
@@ -1829,6 +1832,11 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
         if (layerParams.has("pad_mode"))
         {
             String padMode = toUpperCase(layerParams.get<String>("pad_mode"));
+            if (padMode == "SAME_UPPER" || padMode == "SAME_LOWER")
+            {
+                padMode = "SAME";
+                layerParams.set("pad_mode", "SAME");
+            }
             if (padMode != "SAME" && padMode != "VALID")
                 CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
         }
