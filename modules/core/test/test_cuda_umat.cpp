@@ -115,6 +115,117 @@ TEST(Core_CudaUMat, device_to_device_copy)
     EXPECT_EQ(0.0, cvtest::norm(src, dst, NORM_INF));
 }
 
+TEST(Core_CudaUMat, user_host_data_coherence)
+{
+    skipIfNoCudaDevice();
+    MatAllocator* cudaAlloc = cv::cuda::getCudaAllocator();
+    ASSERT_TRUE(cudaAlloc != NULL);
+
+    // Build a UMat backed by caller-owned host data0 via CudaUMatAllocator::allocate
+    Mat host(32, 48, CV_32FC1);
+    randu(host, -10.f, 10.f);
+    const int sizes[2] = { host.rows, host.cols };
+    size_t steps[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
+
+    UMat u;
+    u.allocator = cudaAlloc;
+    u.flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | CV_32FC1;
+    u.dims = 2;
+    u.size = MatShape(2, sizes);
+    u.rows = host.rows;
+    u.cols = host.cols;
+    u.u = cudaAlloc->allocate(2, sizes, CV_32FC1, host.data, steps, ACCESS_RW, USAGE_DEFAULT);
+    u.step[0] = steps[0];
+    u.step[1] = steps[1];
+    u.addref();
+
+    // 1. download() while deviceCopyObsolete() is true must read data0, not uninitialized VRAM
+    Mat downloaded;
+    u.copyTo(downloaded);
+    EXPECT_EQ(0.0, cvtest::norm(host, downloaded, NORM_INF));
+
+    // 2. Same-allocator copy() while src->deviceCopyObsolete() is true must sync data0 first
+    UMat uCopy = makeCudaUMat();
+    u.copyTo(uCopy);
+    Mat fromCopy;
+    uCopy.copyTo(fromCopy);
+    EXPECT_EQ(0.0, cvtest::norm(host, fromCopy, NORM_INF));
+
+    // 3. Partial-ROI upload() onto a data0-backed UMat must preserve unwritten pixels outside ROI
+    Mat host2 = host.clone();
+    size_t steps2[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
+    UMat uPartial;
+    uPartial.allocator = cudaAlloc;
+    uPartial.flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | CV_32FC1;
+    uPartial.dims = 2;
+    uPartial.size = MatShape(2, sizes);
+    uPartial.rows = host2.rows;
+    uPartial.cols = host2.cols;
+    uPartial.u = cudaAlloc->allocate(2, sizes, CV_32FC1, host2.data, steps2, ACCESS_RW, USAGE_DEFAULT);
+    uPartial.step[0] = steps2[0];
+    uPartial.step[1] = steps2[1];
+    uPartial.addref();
+
+    Rect patchRect(4, 5, 12, 10);
+    Mat patch(patchRect.size(), CV_32FC1);
+    randu(patch, 50.f, 60.f);
+    Mat expected = host2.clone();
+    patch.copyTo(expected(patchRect));
+    patch.copyTo(uPartial(patchRect));
+
+    Mat afterPartial;
+    uPartial.copyTo(afterPartial);
+    EXPECT_EQ(0.0, cvtest::norm(expected, afterPartial, NORM_INF));
+}
+
+TEST(Core_CudaUMat, zero_dim_and_adopt_umatdata)
+{
+    skipIfNoCudaDevice();
+    MatAllocator* cudaAlloc = cv::cuda::getCudaAllocator();
+    ASSERT_TRUE(cudaAlloc != NULL);
+
+    // 0-D allocation must not underflow step[-1]
+    size_t sentinel[3] = { 0xDEADBEEFu, 0xCAFEBABEu, 0x12345678u };
+    UMatData* u0 = cudaAlloc->allocate(0, NULL, CV_32FC1, NULL, &sentinel[1], ACCESS_RW, USAGE_DEFAULT);
+    ASSERT_TRUE(u0 != NULL);
+    EXPECT_EQ(size_t(0xDEADBEEFu), sentinel[0]);
+    EXPECT_EQ(sizeof(float), u0->size);
+    cudaAlloc->deallocate(u0);
+
+    // allocate(UMatData*) on a host-originated UMatData must take currAllocator ownership
+    const int sz[2] = { 8, 12 };
+    size_t st[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
+    UMatData* uh = Mat::getStdAllocator()->allocate(2, sz, CV_32FC1, NULL, st, ACCESS_RW, USAGE_DEFAULT);
+    ASSERT_TRUE(uh != NULL);
+    ASSERT_TRUE(cudaAlloc->allocate(uh, ACCESS_RW, USAGE_DEFAULT));
+    EXPECT_EQ(cudaAlloc, uh->currAllocator);
+    EXPECT_TRUE(uh->handle != NULL);
+    cudaAlloc->deallocate(uh);
+}
+
+TEST(Core_CudaUMat, roi_to_roi_2d_copy)
+{
+    skipIfNoCudaDevice();
+
+    Mat srcFull(96, 112, CV_32FC3), dstFull(96, 112, CV_32FC3);
+    randu(srcFull, -5.f, 5.f);
+    randu(dstFull, 10.f, 20.f);
+
+    UMat uSrc = makeCudaUMat(), uDst = makeCudaUMat();
+    srcFull.copyTo(uSrc);
+    dstFull.copyTo(uDst);
+
+    Rect srcRoi(7, 9, 45, 37), dstRoi(13, 19, 45, 37);
+    uSrc(srcRoi).copyTo(uDst(dstRoi));
+
+    Mat expected = dstFull.clone();
+    srcFull(srcRoi).copyTo(expected(dstRoi));
+
+    Mat got;
+    uDst.copyTo(got);
+    EXPECT_EQ(0.0, cvtest::norm(expected, got, NORM_INF));
+}
+
 // Proves the allocator's handle is a real, kernel-usable CUDA buffer via GpuMat interop.
 TEST(Core_CudaUMat, kernel_interop_via_gpumat)
 {

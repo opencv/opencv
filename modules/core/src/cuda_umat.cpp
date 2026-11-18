@@ -25,23 +25,31 @@ public:
     UMatData* allocate(int dims, const int* sizes, int type, void* data0,
                        size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
-        const size_t elemSize = CV_ELEM_SIZE(type);
-        size_t total = elemSize;
-        for (int i = 0; i < dims; i++)
-            total *= (size_t)sizes[i];
-
-        if (step)
+        size_t total = CV_ELEM_SIZE(type);
+        for (int i = dims - 1; i >= 0; i--)
         {
-            step[dims - 1] = elemSize;
-            for (int i = dims - 2; i >= 0; i--)
-                step[i] = step[i + 1] * (size_t)sizes[i + 1];
+            if (step)
+            {
+                if (data0 && step[i] != CV_AUTOSTEP)
+                {
+                    CV_Assert(total <= step[i]);
+                    total = step[i];
+                }
+                else
+                {
+                    step[i] = total;
+                }
+            }
+            total *= (size_t)sizes[i];
         }
 
-        UMatData* u = new UMatData(this);
-        u->size = total;
-
+        void* handle = NULL;
         if (total > 0)
-            cudaSafeCall(cudaMalloc(&u->handle, total));
+            cudaSafeCall(cudaMalloc(&handle, total));
+
+        UMatData* u = new UMatData(this);
+        u->handle = handle;
+        u->size = total;
 
         if (data0)
         {
@@ -60,9 +68,14 @@ public:
     {
         if (!u)
             return false;
-        if (!u->handle && u->size > 0)
+        CV_Assert(!u->handle || u->currAllocator == this);
+        if (!u->handle)
         {
-            cudaSafeCall(cudaMalloc(&u->handle, u->size));
+            void* handle = NULL;
+            if (u->size > 0)
+                cudaSafeCall(cudaMalloc(&handle, u->size));
+            u->handle = handle;
+            u->currAllocator = this;
             if (u->data)
                 u->markDeviceCopyObsolete(true);
             else
@@ -75,10 +88,15 @@ public:
     {
         if (!u)
             return;
+        CV_Assert(u->urefcount == 0);
+        CV_Assert(u->refcount == 0);
         if (u->handle)
             cudaSafeCall(cudaFree(u->handle));
-        if (u->data && !(u->flags & UMatData::USER_ALLOCATED))
-            fastFree(u->data);
+        if (u->origdata && !(u->flags & UMatData::USER_ALLOCATED))
+        {
+            fastFree(u->origdata);
+            u->origdata = 0;
+        }
         delete u;
     }
 
@@ -112,10 +130,18 @@ public:
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dststep[]) const CV_OVERRIDE
     {
-        if (!u || !u->handle || !dstptr)
+        if (!u || !dstptr)
             return;
-        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, 0, dststep,
-                   dims, sz, cudaMemcpyDeviceToHost);
+        if (u->deviceCopyObsolete() && u->data)
+        {
+            copyPlanes(u->data, srcofs, srcstep, (uchar*)dstptr, NULL, dststep,
+                       dims, sz, cudaMemcpyHostToHost, true);
+            return;
+        }
+        if (!u->handle)
+            return;
+        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, NULL, dststep,
+                   dims, sz, cudaMemcpyDeviceToHost, false);
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
@@ -124,10 +150,18 @@ public:
     {
         if (!u || !srcptr)
             return;
+        CV_Assert(!u->handle || u->currAllocator == this);
         if (!u->handle && u->size > 0)
-            cudaSafeCall(cudaMalloc(&u->handle, u->size));
+        {
+            void* handle = NULL;
+            cudaSafeCall(cudaMalloc(&handle, u->size));
+            u->handle = handle;
+            u->currAllocator = this;
+        }
+        if (u->deviceCopyObsolete() && u->data && !isFullOverwrite(u, dims, sz, dstofs, dststep))
+            unmap(u);
         copyPlanes((uchar*)srcptr, NULL, srcstep, (uchar*)u->handle, dstofs, dststep,
-                   dims, sz, cudaMemcpyHostToDevice);
+                   dims, sz, cudaMemcpyHostToDevice, false);
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
     }
@@ -139,17 +173,38 @@ public:
     {
         if (!src || !dst || !src->handle || !dst->handle)
             return;
+        if (src->deviceCopyObsolete() && src->data)
+            unmap(src);
+        if (dst->deviceCopyObsolete() && dst->data && !isFullOverwrite(dst, dims, sz, dstofs, dststep))
+            unmap(dst);
         copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
-                   dims, sz, cudaMemcpyDeviceToDevice);
+                   dims, sz, cudaMemcpyDeviceToDevice, false);
         dst->markHostCopyObsolete(true);
         dst->markDeviceCopyObsolete(false);
     }
 
 private:
+    static bool isFullOverwrite(const UMatData* u, int dims, const size_t sz[],
+                                const size_t dstofs[], const size_t dststep[])
+    {
+        size_t expectedStep = 1;
+        for (int i = dims - 1; i >= 0; i--)
+        {
+            if (sz[i] == 0)
+                return false;
+            if (dstofs && dstofs[i] != 0)
+                return false;
+            if (i <= dims - 2 && dststep && dststep[i] != expectedStep)
+                return false;
+            expectedStep *= sz[i];
+        }
+        return expectedStep == u->size;
+    }
+
     // sz/steps follow the MatAllocator convention: the last dim carries element bytes.
     static void copyPlanes(uchar* srcbase, const size_t srcofs[], const size_t srcstep[],
                            uchar* dstbase, const size_t dstofs[], const size_t dststep[],
-                           int dims, const size_t sz[], cudaMemcpyKind kind)
+                           int dims, const size_t sz[], cudaMemcpyKind kind, bool hostToHost)
     {
         int isz[CV_MAX_DIM];
         uchar* srcptr = srcbase;
@@ -159,11 +214,41 @@ private:
             CV_Assert(sz[i] <= (size_t)INT_MAX);
             if (sz[i] == 0)
                 return;
-            if (srcofs)
+            if (srcofs && srcofs[i] != 0)
+            {
+                CV_Assert(i > dims - 2 || srcstep != NULL);
                 srcptr += srcofs[i] * (i <= dims - 2 ? srcstep[i] : 1);
-            if (dstofs)
+            }
+            if (dstofs && dstofs[i] != 0)
+            {
+                CV_Assert(i > dims - 2 || dststep != NULL);
                 dstptr += dstofs[i] * (i <= dims - 2 ? dststep[i] : 1);
+            }
             isz[i] = (int)sz[i];
+        }
+
+        if (dims == 2)
+        {
+            const size_t height = sz[0];
+            const size_t widthBytes = sz[1];
+            const size_t spitch = srcstep ? srcstep[0] : widthBytes;
+            const size_t dpitch = dststep ? dststep[0] : widthBytes;
+            if (spitch >= widthBytes && dpitch >= widthBytes)
+            {
+                if (hostToHost)
+                {
+                    if (spitch == widthBytes && dpitch == widthBytes)
+                        std::memcpy(dstptr, srcptr, height * widthBytes);
+                    else
+                        for (size_t r = 0; r < height; r++)
+                            std::memcpy(dstptr + r * dpitch, srcptr + r * spitch, widthBytes);
+                }
+                else
+                {
+                    cudaSafeCall(cudaMemcpy2D(dstptr, dpitch, srcptr, spitch, widthBytes, height, kind));
+                }
+                return;
+            }
         }
 
         Mat src(dims, isz, CV_8U, srcptr, srcstep);
@@ -174,7 +259,12 @@ private:
         NAryMatIterator it(arrays, ptrs, 2);
         const size_t planesz = it.size;
         for (size_t j = 0; j < it.nplanes; j++, ++it)
-            cudaSafeCall(cudaMemcpy(ptrs[1], ptrs[0], planesz, kind));
+        {
+            if (hostToHost)
+                std::memcpy(ptrs[1], ptrs[0], planesz);
+            else
+                cudaSafeCall(cudaMemcpy(ptrs[1], ptrs[0], planesz, kind));
+        }
     }
 };
 
