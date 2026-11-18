@@ -1415,6 +1415,86 @@ CV_DEPRECATED Ptr<hal::SepFilter2D> SepFilter2D::create(int , int , int ,
                                     int , int ,
                                     double , int )  { return Ptr<hal::SepFilter2D>(); }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-detection: route rank-1 separable kernels to sepFilter2D
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Decompose a 2D kernel K into rank-1 outer product K = kx ⊗ ky.
+// Returns true if K is rank-1 within relTol tolerance (relative to max|K|).
+// On success, kx is a continuous 1×cols row vector and ky is a continuous rows×1 column vector (both CV_64F).
+static bool decomposeSeparableKernel(const cv::Mat& K, cv::Mat& kx, cv::Mat& ky, double relTol = 1e-6)
+{
+    if (K.rows < 2 || K.cols < 2)
+        return false;
+
+    cv::Mat Kf;
+    K.convertTo(Kf, CV_64F);
+
+    cv::SVD svd(Kf);
+
+    double sigma1 = svd.w.at<double>(0);
+    if (sigma1 < 1e-300)
+        return false;
+
+    int nr = std::min(K.rows, K.cols);
+    double sigma2 = (nr >= 2) ? svd.w.at<double>(1) : 0.0;
+
+    if (sigma2 / sigma1 > relTol)
+        return false;
+
+    // K ≈ sigma1 * U[:,0] * Vt[0,:]
+    cv::Mat Vt0 = svd.vt.row(0);            // 1×cols
+    cv::Mat U0  = svd.u.col(0);             // rows×1
+    cv::Mat ky_full = U0 * sigma1;          // rows×1
+
+    // Pivot normalization: find argmax|ky| to avoid near-zero division amplification.
+    cv::Mat absKy = cv::abs(ky_full);
+    int pivotIdx = 0;
+    double pivotAbs = absKy.at<double>(0);
+    for (int i = 1; i < absKy.rows; i++)
+    {
+        double v = absKy.at<double>(i);
+        if (v > pivotAbs) { pivotAbs = v; pivotIdx = i; }
+    }
+
+    if (pivotAbs < 1e-300)
+        return false;
+
+    double pivotVal = ky_full.at<double>(pivotIdx);
+    double invPivot = 1.0 / pivotVal;
+    cv::Mat kx_full = Vt0 * pivotVal;       // 1×cols, scaled so K = kx ⊗ ky exactly
+    ky_full = ky_full * invPivot;           // rows×1, normalized
+
+    // Flatten to continuous 1D vectors
+    kx = kx_full.reshape(1, 1);             // enforce 1×cols
+    ky = ky_full.reshape(1, ky_full.rows);  // enforce rows×1
+
+    // Verify K ≈ ky * kx
+    cv::Mat recon = ky * kx;
+    cv::Mat diff;
+    cv::absdiff(Kf, recon, diff);
+    double kMaxAbs = 0;
+    cv::Mat absK = cv::abs(Kf);
+    for (int i = 0; i < absK.total(); i++)
+    {
+        double v = absK.at<double>(i);
+        if (v > kMaxAbs) kMaxAbs = v;
+    }
+    if (kMaxAbs > 0)
+    {
+        double maxDiff = 0;
+        for (int i = 0; i < diff.total(); i++)
+        {
+            double v = diff.at<double>(i);
+            if (v > maxDiff) maxDiff = v;
+        }
+        if (maxDiff > relTol * kMaxAbs)
+            return false;
+    }
+
+    return true;
+}
+
 
 void filter2D(int stype, int dtype, int kernel_type,
               uchar * src_data, size_t src_step,
@@ -1441,6 +1521,47 @@ void filter2D(int stype, int dtype, int kernel_type,
                               delta, borderType, isSubmatrix);
     if (res)
         return;
+
+    // ══════════════════════════════════════════════════════════════
+    // Auto-route rank-1 separable kernels → sepFilter2D
+    // Guards:
+    //   - k² >= 81  (x86 sweet spot benchmarked; below this SVD overhead dominates)
+    //   - whole-image only  (sepFilter2D needs full buffer for border extension)
+    //   - skip integer kernels  (CV_8U/S, CV_32S have fixed-point fast paths, no gain)
+    //   - 64F kernel requires 64F work depth  (separable engine would otherwise downcast)
+    // ══════════════════════════════════════════════════════════════
+    {
+        const int sdepth  = CV_MAT_DEPTH(stype);
+        const int ddepth  = CV_MAT_DEPTH(dtype);
+        const int kdepth  = CV_MAT_DEPTH(kernel_type);
+        const int ksize2  = kernel_width * kernel_height;
+
+        if (ksize2 >= 81 &&
+            offset_x == 0 && offset_y == 0 &&
+            width == full_width && height == full_height &&
+            kdepth != CV_8U && kdepth != CV_8S && kdepth != CV_32S &&
+            !(kdepth == CV_64F && sdepth != CV_64F && ddepth != CV_64F))
+        {
+            cv::Mat kernel = cv::Mat(cv::Size(kernel_width, kernel_height), kernel_type,
+                                     kernel_data, kernel_step);
+            cv::Mat kx_sep, ky_sep;
+            if (decomposeSeparableKernel(kernel, kx_sep, ky_sep, 1e-6))
+            {
+                cv::Mat kx_cast, ky_cast;
+                kx_sep.convertTo(kx_cast, kernel_type);
+                ky_sep.convertTo(ky_cast, kernel_type);
+
+                sepFilter2D(stype, dtype, kernel_type,
+                            src_data, src_step, dst_data, dst_step,
+                            width, height, full_width, full_height,
+                            offset_x, offset_y,
+                            kx_cast.data, (int)kx_cast.total(),
+                            ky_cast.data, (int)ky_cast.total(),
+                            anchor_x, anchor_y, delta, borderType);
+                return;
+            }
+        }
+    }
 
     res = dftFilter2D(stype, dtype, kernel_type,
                       src_data, src_step,
