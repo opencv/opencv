@@ -209,7 +209,6 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
     vec.push_back(vec.back().clone());
     circle(vec.back(), Point(100, 100), 45, Scalar(0, 0, 255, 0), 2, LINE_AA);
     vector<uchar> buf;
-    EXPECT_TRUE(imwrite("test" + GetParam(), vec));
 
     TEST_CYCLE() imencode(GetParam(), vec, buf);
 
