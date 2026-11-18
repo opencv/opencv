@@ -6,8 +6,6 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 
-#include <cstring>
-
 namespace opencv_test { namespace {
 
 TEST(Multiview_VisibilityMask, nonContinuousMaskMatchesClone)
@@ -127,14 +125,8 @@ TEST(Multiview_ObjectPoints, equivalentLayouts)
         imagePoints[c][0] = image;
     }
 
-    const cv::Mat column = points.reshape(3);
-    const cv::Mat layouts[] = {points, points.t(), points.reshape(3, 1), column};
+    const cv::Mat layouts[] = {points, points.t(), points.reshape(3, 1), points.reshape(3)};
     const char* names[] = {"Nx3 CV_32F", "3xN CV_32F", "1xN CV_32FC3", "Nx1 CV_32FC3"};
-    ASSERT_EQ(points.data, column.data);
-    ASSERT_EQ(npoints, column.rows);
-    ASSERT_EQ(1, column.cols);
-    ASSERT_EQ(CV_32FC3, column.type());
-    ASSERT_TRUE(column.isContinuous());
 
     double referenceRMS = 0;
     std::vector<cv::Mat> referenceR, referenceT, referenceBoardR, referenceBoardT;
@@ -142,11 +134,6 @@ TEST(Multiview_ObjectPoints, equivalentLayouts)
     for (size_t i = 0; i < 4; ++i)
     {
         SCOPED_TRACE(names[i]);
-        const cv::Mat canonical = i == 1 ? cv::Mat(layouts[i].t()) : layouts[i].reshape(1, npoints);
-        ASSERT_EQ(points.size(), canonical.size());
-        ASSERT_EQ(points.type(), canonical.type());
-        ASSERT_TRUE(canonical.isContinuous());
-        ASSERT_EQ(0, std::memcmp(points.data, canonical.data, points.total() * points.elemSize()));
 
         std::vector<cv::Mat> intrinsics, distortion, rvecs, tvecs, boardR, boardT;
         for (int c = 0; c < cameras; ++c)

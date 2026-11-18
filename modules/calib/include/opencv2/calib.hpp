@@ -1043,7 +1043,8 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints1,
 
 /** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibration.
 
-@param[in] objPoints Calibration pattern object points. Expected shape: NUM_FRAMES x NUM_POINTS x 3. Supported data type: CV_32F.
+@param[in] objPoints Calibration pattern object points for each frame. For N points, the supported layouts
+are Nx3 or 3xN for CV_32F, and 1xN or Nx1 for CV_32FC3.
 @param[in] imagePoints Detected pattern points on camera images. Expected shape: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2.
 This function supports partial observation of the calibration pattern.
 To enable this, set the unobserved image points to be invalid points (eg. (-1., -1.)).
