@@ -189,9 +189,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                                   strideB = count > 1 ? B_offsets[start + 1] - B_offsets[start] : 0,
                                   strideC = count > 1 ? C_offsets[start + 1] - C_offsets[start] : M * N;
                 csl::cublas::gemmStridedBatched<T>(handle, trans_b, trans_a, N, M, K,
-                    1.f, B.get() + static_cast<std::ptrdiff_t>(B_offsets[start]), ldb, strideB,
+                    alpha, B.get() + static_cast<std::ptrdiff_t>(B_offsets[start]), ldb, strideB,
                     A.get() + static_cast<std::ptrdiff_t>(A_offsets[start]), lda, strideA,
-                    0.f, C.get() + static_cast<std::ptrdiff_t>(C_offsets[start]), ldc, strideC, count);
+                    beta, C.get() + static_cast<std::ptrdiff_t>(C_offsets[start]), ldc, strideC, count);
                 start = end;
             }
         }

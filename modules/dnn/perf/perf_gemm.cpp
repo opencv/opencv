@@ -359,6 +359,50 @@ PERF_TEST_P_(MatMul, matmul)
     SANITY_CHECK_NOTHING();
 }
 
+typedef TestBaseWithParam<tuple<Backend, Target> > MatMul_BroadcastBias;
+
+PERF_TEST_P_(MatMul_BroadcastBias, init_and_forward)
+{
+    Backend backend_id = get<0>(GetParam());
+    Target target_id = get<1>(GetParam());
+    if (backend_id != DNN_BACKEND_OPENCV && backend_id != DNN_BACKEND_CUDA)
+        throw SkipTestException("MatMul broadcast bias perf targets OpenCV and CUDA");
+
+    const int B = 16, M = 1024, K = 128, N = 1024;
+    Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias(std::vector<int>{N}, CV_32F);
+    randu(A, -1.0f, 1.0f);
+    randu(W, -1.0f, 1.0f);
+    randu(bias, -0.5f, 0.5f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "testBiasedMatMul";
+    lp.set("real_ndims_C", 1);
+    lp.blobs = {W, bias};
+
+    // Warmup CUDA handles once outside timed loop
+    {
+        Net warm;
+        warm.addLayerToPrev(lp.name, lp.type, lp);
+        warm.setPreferableBackend(backend_id);
+        warm.setPreferableTarget(target_id);
+        warm.setInput(A);
+        warm.forward();
+    }
+
+    TEST_CYCLE()
+    {
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backend_id);
+        net.setPreferableTarget(target_id);
+        net.setInput(A);
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 // Same configs as matmul, but with B as a second network input instead of a constant
 // blob - exercises the blobs.empty() dispatch (MLAS / fastGemmBatch "truly dynamic B"),
 // which matmul above never reaches since it always packs B as a blob.
@@ -461,6 +505,8 @@ PERF_TEST_P_(MatMul, innerproduct)
 
     SANITY_CHECK_NOTHING();
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, MatMul_BroadcastBias, dnnBackendsAndTargets(false, false));
 
 INSTANTIATE_TEST_CASE_P(/**/, Gemm, Combine(
     GemmParamId::all(),

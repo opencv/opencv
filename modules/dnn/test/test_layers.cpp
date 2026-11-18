@@ -50,6 +50,9 @@
 #ifdef HAVE_INF_ENGINE
 #include <thread>
 #endif
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#endif
 
 namespace opencv_test { namespace {
 
@@ -4542,6 +4545,241 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
         normAssert(outputs[0], expected, "MatMul no-bias output mismatch", 1e-4, 1e-4);
     }
 }
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_MatMul_CudaBroadcastBias;
+TEST_P(Layer_Test_MatMul_CudaBroadcastBias, RuntimeAndUnexpandedBias)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Tests MatMul broadcast and runtime bias on OpenCV and CUDA backends");
+
+    const bool fp16 = targetId == DNN_TARGET_CUDA_FP16 || targetId == DNN_TARGET_CPU_FP16 ||
+                      targetId == DNN_TARGET_OPENCL_FP16;
+    double l1, lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+    if (fp16)
+    {
+        l1 = 1.5e-2;
+        lInf = 6e-2;
+    }
+
+    // 1. Runtime 3-D B [1, K, N] + runtime 1-D bias [N] with alpha != 1 and beta != 1
+    {
+        const int B = 2, M = 5, K = 12, N = 16;
+        Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias(std::vector<int>{N}, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(W, -0.5f, 0.5f);
+        randu(bias, 1.f, 2.f);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_runtimeB_runtimeBias";
+        lp.set("transA", false);
+        lp.set("transB", false);
+        lp.set("alpha", 1.5f);
+        lp.set("beta", 0.5f);
+        lp.set("real_ndims_C", 1);
+
+        Net cpuNet;
+        int cid = cpuNet.addLayer(lp.name, lp.type, lp);
+        cpuNet.connect(0, 0, cid, 0);
+        cpuNet.connect(0, 1, cid, 1);
+        cpuNet.connect(0, 2, cid, 2);
+        cpuNet.setInputsNames({"A", "B", "bias"});
+        cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        cpuNet.setPreferableTarget(DNN_TARGET_CPU);
+        cpuNet.setInput(A, "A");
+        cpuNet.setInput(W, "B");
+        cpuNet.setInput(bias, "bias");
+        Mat ref = cpuNet.forward().clone();
+
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        net.setInputsNames({"A", "B", "bias"});
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(A, "A");
+        net.setInput(W, "B");
+        net.setInput(bias, "bias");
+        Mat out = net.forward();
+        normAssert(ref, out, "runtimeB_runtimeBias_alpha_beta", l1, lInf);
+    }
+
+    // 2. Constant 3-D B [1, K, N] + constant broadcast bias [1, 1, N] with alpha != 1 & beta != 1
+    {
+        const int B = 3, M = 7, K = 16, N = 24;
+        Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias({1, 1, N}, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(W, -0.5f, 0.5f);
+        randu(bias, -1.f, 1.f);
+
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_constB_constBias3d";
+        lp.set("transA", false);
+        lp.set("transB", false);
+        lp.set("alpha", 0.75f);
+        lp.set("beta", 1.25f);
+        lp.set("real_ndims_C", 3);
+        lp.blobs.push_back(W);
+        lp.blobs.push_back(bias);
+
+        Net cpuNet;
+        cpuNet.addLayerToPrev(lp.name, lp.type, lp);
+        cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        cpuNet.setPreferableTarget(DNN_TARGET_CPU);
+        cpuNet.setInput(A);
+        Mat ref = cpuNet.forward().clone();
+
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(A);
+        Mat out = net.forward();
+        normAssert(ref, out, "constB_constBias3d", l1, lInf);
+    }
+
+    // 3. New-engine ONNX 3-input MatMul(A, B, bias) exercising MatMulBroadcastOp::forward(UMat)
+    {
+        struct WireBuf
+        {
+            std::vector<uchar> b;
+            void uvar(uint64_t v)
+            {
+                while (v >= 0x80) { b.push_back((uchar)((v & 0x7f) | 0x80)); v >>= 7; }
+                b.push_back((uchar)v);
+            }
+            void tag(uint32_t f, uint32_t w) { uvar((uint64_t(f) << 3) | w); }
+            void i64(uint32_t f, int64_t v) { tag(f, 0); uvar((uint64_t)v); }
+            void i32(uint32_t f, int32_t v) { tag(f, 0); uvar((uint64_t)(int64_t)v); }
+            void f32(uint32_t f, float v)
+            {
+                tag(f, 5);
+                uchar tmp[4];
+                std::memcpy(tmp, &v, 4);
+                b.insert(b.end(), tmp, tmp + 4);
+            }
+            void bytes(uint32_t f, const void* p, size_t n)
+            {
+                tag(f, 2);
+                uvar(n);
+                const uchar* q = static_cast<const uchar*>(p);
+                b.insert(b.end(), q, q + n);
+            }
+            void str(uint32_t f, const std::string& s) { bytes(f, s.data(), s.size()); }
+            void sub(uint32_t f, const WireBuf& c) { bytes(f, c.b.data(), c.b.size()); }
+        };
+        auto valInfo = [](const std::string& name, const std::vector<int>& dims) {
+            WireBuf shape;
+            for (int d : dims) { WireBuf dm; dm.i64(1, d); shape.sub(1, dm); }
+            WireBuf tt; tt.i32(1, 1); tt.sub(2, shape);
+            WireBuf tp; tp.sub(1, tt);
+            WireBuf vi; vi.str(1, name); vi.sub(2, tp);
+            return vi;
+        };
+        auto attrF = [](const std::string& name, float v) {
+            WireBuf a; a.str(1, name); a.f32(2, v); a.i32(20, 1); return a;
+        };
+        auto attrI = [](const std::string& name, int64_t v) {
+            WireBuf a; a.str(1, name); a.i64(3, v); a.i32(20, 2); return a;
+        };
+
+        const int B = 2, M = 6, K = 12, N = 16;
+        Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias(std::vector<int>{N}, CV_32F);
+        randu(A, -1.f, 1.f);
+        randu(W, -0.5f, 0.5f);
+        randu(bias, 1.f, 2.f);
+
+        WireBuf node;
+        node.str(1, "A"); node.str(1, "B"); node.str(1, "bias");
+        node.str(2, "Y");
+        node.str(3, "mm_rt");
+        node.str(4, "MatMul");
+        node.sub(5, attrF("alpha", 1.5f));
+        node.sub(5, attrF("beta", 0.5f));
+        node.sub(5, attrI("real_ndims_C", 1));
+
+        WireBuf g;
+        g.sub(1, node);
+        g.str(2, "g");
+        g.sub(11, valInfo("A", {B, M, K}));
+        g.sub(11, valInfo("B", {1, K, N}));
+        g.sub(11, valInfo("bias", {N}));
+        g.sub(12, valInfo("Y", {B, M, N}));
+
+        WireBuf op; op.i64(2, 18);
+        WireBuf m; m.i64(1, 8); m.sub(7, g); m.sub(8, op);
+
+        Net cpuNet = readNetFromONNX(m.b);
+        cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+        cpuNet.setPreferableTarget(DNN_TARGET_CPU);
+        cpuNet.setInput(A, "A");
+        cpuNet.setInput(W, "B");
+        cpuNet.setInput(bias, "bias");
+        Mat ref = cpuNet.forward().clone();
+
+        Net net = readNetFromONNX(m.b);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(A, "A");
+        net.setInput(W, "B");
+        net.setInput(bias, "bias");
+        Mat out = net.forward();
+        normAssert(ref, out, "onnx_new_engine_runtimeB_runtimeBias", l1, lInf);
+    }
+
+#ifdef HAVE_CUDA
+    // 4. Unexpanded device bias memory bound on [16, 1024, 128] @ [1, 128, 1024] + [1024] (output = 64 MiB;
+    // stock scaledBroadcastBias() uploaded an extra 64 MiB expanded bias tensor to VRAM)
+    if (backendId == DNN_BACKEND_CUDA && targetId == DNN_TARGET_CUDA)
+    {
+        Mat warmA({1, 4, 4}, CV_32F, Scalar(0)), warmB({1, 4, 4}, CV_32F, Scalar(0)), warmC(std::vector<int>{4}, CV_32F, Scalar(0));
+        {
+            LayerParams wlp;
+            wlp.type = "MatMul";
+            wlp.name = "warm";
+            wlp.set("real_ndims_C", 1);
+            wlp.blobs = {warmB, warmC};
+            Net warmNet;
+            warmNet.addLayerToPrev(wlp.name, wlp.type, wlp);
+            warmNet.setPreferableBackend(backendId);
+            warmNet.setPreferableTarget(targetId);
+            warmNet.setInput(warmA);
+            warmNet.forward();
+        }
+
+        const int B = 16, M = 1024, K = 128, N = 1024;
+        Mat A({B, M, K}, CV_32F, Scalar(0.1f));
+        Mat W({1, K, N}, CV_32F, Scalar(0.01f));
+        Mat bias(std::vector<int>{N}, CV_32F, Scalar(0.5f));
+
+        cv::cuda::DeviceInfo devInfo;
+        const size_t freeBefore = devInfo.freeMemory();
+        LayerParams lp;
+        lp.type = "MatMul";
+        lp.name = "matmul_unexpanded_vram";
+        lp.set("real_ndims_C", 1);
+        lp.blobs = {W, bias};
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(A);
+        Mat out = net.forward();
+        const size_t freeAfter = devInfo.freeMemory();
+        const size_t usedBytes = (freeBefore > freeAfter) ? (freeBefore - freeAfter) : 0;
+        // Input (8 MiB) + output (64 MiB) + W (0.5 MiB) + unexpanded bias (4 KiB) ~ 74 MiB; stock uses ~140 MiB
+        EXPECT_LT(usedBytes, size_t(104ULL * 1024 * 1024))
+            << "MatMul uploaded expanded broadcast bias to VRAM: used " << (usedBytes >> 20) << " MiB";
+    }
+#endif
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_MatMul_CudaBroadcastBias, dnnBackendsAndTargets());
 
 TEST(Test_SoftmaxCrossEntropyLoss, RejectMismatchedWeightsAndLabels)
 {
