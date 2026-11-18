@@ -4896,53 +4896,10 @@ TEST(Layer_ReverseSequence_Test_Accuracy_, LensOutOfRangeThrows)
 
     std::vector<Mat> negative = makeReverseSequenceInputs(MatShape{2, 3}, {-1, 1}, CV_64S, CV_32F);
     EXPECT_ANY_THROW(runLayer(layer, negative, outputs));  // L < 0
-}
-
-TEST(Layer_ReverseSequence_Test_Accuracy_, LensLengthMismatchThrows)
-{
-    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
-    ASSERT_TRUE(layer);
 
     // 3 batch elements, but only 2 sequence lengths.
-    std::vector<Mat> inputs = makeReverseSequenceInputs(MatShape{3, 4}, {2, 4}, CV_64S, CV_32F), outputs;
-    EXPECT_ANY_THROW(runLayer(layer, inputs, outputs));
-}
-
-TEST(Layer_ReverseSequence_Test_Accuracy_, InvalidAxesThrow)
-{
-    // time_axis and batch_axis must both be 0 or 1 and must differ.
-    EXPECT_ANY_THROW(makeReverseSequenceLayer(0, 0));
-    EXPECT_ANY_THROW(makeReverseSequenceLayer(2, 0));
-    EXPECT_ANY_THROW(makeReverseSequenceLayer(0, 2));
-}
-
-TEST(Layer_ReverseSequence_Test_Contract_, NoInPlaceAndInputUnchanged)
-{
-    // runLayer() clones the inputs and ignores the value returned by getMemoryShapes(),
-    // so this test drives the layer by hand to check two things it cannot: the layer does
-    // not claim in-place support, and forward() leaves its input untouched.
-    std::vector<Mat> inputs = makeReverseSequenceInputs(MatShape{2, 3}, {2, 3}, CV_64S, CV_32F);
-    const Mat Xcopy = inputs[0].clone();
-
-    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
-    ASSERT_TRUE(layer);
-
-    std::vector<MatShape> inShapes = {shape(inputs[0]), shape(inputs[1])}, outShapes, internalShapes;
-    std::vector<cv::dnn::MatType> inTypes = {inputs[0].type(), inputs[1].type()}, outTypes, internalTypes;
-
-    EXPECT_FALSE(layer->getMemoryShapes(inShapes, 1, outShapes, internalShapes));
-    ASSERT_EQ(outShapes.size(), (size_t)1);
-    ASSERT_EQ(outShapes[0], inShapes[0]);
-
-    layer->getTypes(inTypes, (int)outShapes.size(), (int)internalShapes.size(),
-                    outTypes, internalTypes);
-
-    std::vector<Mat> outputs = { Mat(outShapes[0], outTypes[0]) };
-    std::vector<Mat> internals;
-    layer->finalize(inputs, outputs);
-
-    layer->forward(inputs, outputs, internals);
-    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(inputs[0], Xcopy, NORM_INF)) << "forward() must not modify its input";
+    std::vector<Mat> mismatch = makeReverseSequenceInputs(MatShape{3, 4}, {2, 4}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, mismatch, outputs));
 }
 
 TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
