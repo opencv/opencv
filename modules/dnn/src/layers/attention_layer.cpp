@@ -379,7 +379,11 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
         }
     }
 
-    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    const Mat& constWeights() const CV_OVERRIDE
+    {
+        static const Mat none;
+        return keptForCuda ? none : weights;
+    }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -481,6 +485,15 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
+
+#ifdef HAVE_CUDA
+        // The CUDA executor forwards finalize() but not prepackWeights(), so this is the only
+        // hook that runs on both paths.
+        Net::Impl* netimpl_ = getNetImpl(this);
+        keptForCuda = ownsWeights && netimpl_ &&
+                      netimpl_->preferableBackend == DNN_BACKEND_CUDA &&
+                      supportBackend(DNN_BACKEND_CUDA);
+#endif
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
@@ -818,6 +831,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer, public ConstWeightOwn
     bool do_rotary;
     std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
 
+    //! Held only so initCUDA() can read it, so getParam() treats it as consumed and goes
+    //! through the same read-back every other backend does.
+    bool keptForCuda = false;
     Mat weights;                 //!< constant QKV weight; released once packed
     Mat bias;                    //!< constant QKV bias
     bool ownsWeights = false;

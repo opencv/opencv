@@ -2563,9 +2563,9 @@ TEST_P(Test_ONNX_layers, Gemm_ConstWeight_NotABlob)
 
     const Mat expected = input * B;
     normAssert(expected, out - bias_only, "", default_l1, default_lInf);
-    // setParam() above replaced B, so the model file no longer holds this layer's weight and
-    // the read-back that serves getParam() elsewhere is switched off for it.
-    EXPECT_THROW(net.getParam(gemm, 0), cv::Exception);
+    // The model file still describes the original B, so the weight setParam() installed is the
+    // one getParam() has to return.
+    normAssert(B, net.getParam(gemm, 0), "", 0, 0);
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_SetBiasOnly)
@@ -2665,9 +2665,9 @@ TEST_P(Test_ONNX_layers, MatMul_ConstWeight_NotABlob)
         normAssert(a_slice * b_slice, out_slice, format("slice %d", b).c_str(),
                    default_l1, default_lInf);
     }
-    // setParam() above replaced B, so the model file no longer holds this layer's weight and
-    // the read-back that serves getParam() elsewhere is switched off for it.
-    EXPECT_THROW(net.getParam(matmul, 0), cv::Exception);
+    // The model file still describes the original B, so the weight setParam() installed is the
+    // one getParam() has to return.
+    normAssert(B, net.getParam(matmul, 0), "", 0, 0);
 }
 
 TEST_P(Test_ONNX_layers, Gemm_ConstWeight_ReForward)

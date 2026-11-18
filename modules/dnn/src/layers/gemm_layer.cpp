@@ -193,7 +193,11 @@ public:
         return !packed_B.empty() || !thin_packed_B.empty();
     }
 
-    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    const Mat& constWeights() const CV_OVERRIDE
+    {
+        static const Mat none;
+        return keptForCuda ? none : weights;
+    }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -488,8 +492,10 @@ public:
 
         // The packed copy is what the kernels read from here on; the original is dead weight.
         // A net moved off CUDA frees B on its next finalize.
-        if (constB(mode) && !weights.empty() && !keepForCuda && ownedByGraph &&
-            weights.type() == CV_32F && packedReady()) {
+        const bool consumed = constB(mode) && !weights.empty() && ownedByGraph &&
+                              weights.type() == CV_32F && packedReady();
+        keptForCuda = consumed && keepForCuda;
+        if (consumed && !keepForCuda) {
             if (isMappedTensor(weights)) {
                 // Handing the pages back frees as much as releasing would, and leaves B readable
                 // for getParam() and initCUDA() at the cost of faulting it in again.
@@ -925,6 +931,9 @@ private:
     int packed_B_mlas_N = 0;
     int packed_B_mlas_K = 0;
 #endif
+    //! Held only so initCUDA() can read it, so getParam() treats it as consumed and goes
+    //! through the same read-back every other backend does.
+    bool keptForCuda = false;
     Mat weights;                 //!< constant B; released once packed, ownsWeights survives
     Mat bias;                    //!< constant C
     bool ownsWeights = false;

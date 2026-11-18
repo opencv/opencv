@@ -148,6 +148,9 @@ struct Net::Impl : public detail::NetImplBase
     // Layer name -> the const arg setWeights() took. constArgs() cuts the layer's link to it,
     // so this is what lets getParam() read a packed-away weight back out of modelFileName.
     std::map<std::string, Arg> constWeightArgs;
+    // Layer name -> the weight setParam() installed. The model file does not describe it, so this
+    // is the only thing getParam() can return once packing has consumed the layer's own copy.
+    std::map<std::string, Mat> setParamWeights;
     // Why an importer gave up on the model; empty for every net that loaded.
     std::string importFailure;
     ModelFormat modelFormat;
