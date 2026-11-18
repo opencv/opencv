@@ -1837,6 +1837,61 @@ TEST_P(Test_Caffe_layers, Interp)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Gemm_SquareTranspose;
+TEST_P(Layer_Test_Gemm_SquareTranspose, ReshapeBatch)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    const int K = 16;
+    Mat B(K, K, CV_32F), C(std::vector<int>{K}, CV_32F);
+    randu(B, -1.f, 1.f);
+    B.at<float>(0, 1) += 1.f;
+    B.at<float>(1, 0) -= 1.f;
+    randu(C, -0.5f, 0.5f);
+    const Mat B_orig = B.clone();
+
+    LayerParams lp;
+    lp.type = "Gemm";
+    lp.name = "gemm_square_notrans";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("constB", true);
+    lp.set("constC", true);
+    lp.set("have_bias", true);
+    lp.set("real_ndims_C", 1);
+    lp.blobs.push_back(B);
+    lp.blobs.push_back(C);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    const bool fp16 = targetId == DNN_TARGET_CUDA_FP16 || targetId == DNN_TARGET_OPENCL_FP16 ||
+                      targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CPU_FP16;
+    const double l1 = fp16 ? 1e-2 : 1e-5;
+    const double lInf = fp16 ? 5e-2 : 1e-4;
+
+    const int batches[] = {1, 3, 1};
+    for (size_t step = 0; step < sizeof(batches) / sizeof(batches[0]); ++step)
+    {
+        const int M = batches[step];
+        Mat A(M, K, CV_32F);
+        randu(A, -1.f, 1.f);
+
+        Mat ref = A * B_orig;
+        for (int r = 0; r < M; ++r)
+            ref.row(r) += C.reshape(1, 1);
+
+        net.setInput(A);
+        Mat out = net.forward();
+        normAssert(ref, out, format("step=%zu M=%d", step, M).c_str(), l1, lInf);
+        EXPECT_EQ(0.0, cvtest::norm(net.getParam(id, 0), B_orig, NORM_INF));
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Gemm_SquareTranspose, dnnBackendsAndTargets());
+
 // A constant weight whose leading dims broadcast against the activations: B has more than
 // one batch slice, but fewer than the output batch. The packed-B stride has to be derived
 // from the number of slices actually stored in B, not from the (broadcast) output batch.
