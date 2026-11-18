@@ -4997,8 +4997,6 @@ TEST_P(Core_MaskTypeTest, Norm)
 
 #if !defined(_WIN32)
 // Regression test for https://github.com/opencv/opencv/issues/30804 .
-//
-// Regression test for https://github.com/opencv/opencv/issues/30804 .
 struct GuardPagePlacement
 {
     Mat mat;
@@ -5041,6 +5039,36 @@ TEST(Core_MinMaxIdx, mask_against_guard_page_no_crash)
     EXPECT_EQ(w - 1, maxIdx[1]);
 
     EXPECT_EQ(5.0, cv::norm(eig, NORM_INF, mask));
+
+    munmap(guarded.base, guarded.size);
+}
+
+// Same mask buffer over-read as the Core_MinMaxIdx test above, in the L1/L2
+// siblings of the masked norm primitives and in their two-image (NormDiff,
+// NORM_RELATIVE) counterparts.
+TEST(Core_Norm, mask_against_guard_page_no_crash)
+{
+    const int h = 480, w = 640;
+    Mat a = Mat::ones(h, w, CV_32F);
+    Mat b = Mat::zeros(h, w, CV_32F);
+    Mat mask0 = Mat::zeros(h, w, CV_8U);
+    mask0.at<uchar>(h - 1, w - 1) = 255;
+    GuardPagePlacement guarded = flushAgainstGuardPage(mask0);
+    Mat& mask = guarded.mat;
+
+    EXPECT_EQ(1.0, cv::norm(a, NORM_L1, mask));
+    EXPECT_EQ(1.0, cv::norm(a, NORM_L2, mask));
+    EXPECT_EQ(1.0, cv::norm(a, b, NORM_INF, mask));
+    EXPECT_EQ(1.0, cv::norm(a, b, NORM_L1, mask));
+    EXPECT_EQ(1.0, cv::norm(a, b, NORM_L2, mask));
+    EXPECT_NE(0.0, cv::norm(a, b, NORM_INF | NORM_RELATIVE, mask));
+    EXPECT_NE(0.0, cv::norm(a, b, NORM_L1 | NORM_RELATIVE, mask));
+    EXPECT_NE(0.0, cv::norm(a, b, NORM_L2 | NORM_RELATIVE, mask));
+
+    Mat a3 = Mat::ones(h, w, CV_32FC3);
+    Mat b3 = Mat::zeros(h, w, CV_32FC3);
+    EXPECT_EQ(1.0, cv::norm(a3, NORM_L1, mask));
+    EXPECT_EQ(1.0, cv::norm(a3, b3, NORM_INF, mask));
 
     munmap(guarded.base, guarded.size);
 }
