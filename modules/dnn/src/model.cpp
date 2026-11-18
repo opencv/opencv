@@ -546,26 +546,29 @@ bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int
     return true;
 }
 
-// Channel 4 alone is class 0 in a score-block row, so activity needs every class.
-bool rowIsActive(const Mat& out, const AnchorFreeLayout& layout, int b, int i, int lastScore)
+// Channel 4 alone is class 0 in a score-block row, so activity needs every class. Rows below
+// the decode threshold are padding, whose degenerate boxes must not decide the layout.
+bool rowIsActive(const Mat& out, const AnchorFreeLayout& layout, int b, int i, int lastScore,
+                 float confThreshold)
 {
     for (int c = 4; c <= lastScore; c++)
     {
-        if (layout.at(out, b, i, c) > 0.f)
+        if (layout.at(out, b, i, c) >= confThreshold)
             return true;
     }
     return false;
 }
 
 // Only active rows carry coordinates; padding would otherwise read as normalized.
-bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int lastScore)
+bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int lastScore,
+                        float confThreshold)
 {
     bool any = false;
     for (int b = 0; b < layout.B; b++)
     {
         for (int i = 0; i < layout.N; i++)
         {
-            if (!rowIsActive(out, layout, b, i, lastScore))
+            if (!rowIsActive(out, layout, b, i, lastScore, confThreshold))
                 continue;
             for (int c = 0; c < 4; c++)
             {
@@ -647,14 +650,15 @@ bool mergeSplitOutputs(const std::vector<Mat>& outs, Mat& merged, ScoreActivatio
 }
 
 // Centre rows fail this: w would have to exceed cx on every detection.
-bool boxesAreCorners(const Mat& out, const AnchorFreeLayout& layout, int lastScore)
+bool boxesAreCorners(const Mat& out, const AnchorFreeLayout& layout, int lastScore,
+                     float confThreshold)
 {
     bool any = false;
     for (int b = 0; b < layout.B; b++)
     {
         for (int i = 0; i < layout.N; i++)
         {
-            if (!rowIsActive(out, layout, b, i, lastScore))
+            if (!rowIsActive(out, layout, b, i, lastScore, confThreshold))
                 continue;
             if (layout.at(out, b, i, 2) <= layout.at(out, b, i, 0)
                 || layout.at(out, b, i, 3) <= layout.at(out, b, i, 1))
@@ -673,7 +677,7 @@ struct HeadLayout
     bool cornerBox = false;      // x1, y1, x2, y2 rather than cx, cy, w, h
 
     static HeadLayout from(const Mat& out, const AnchorFreeLayout& layout, int nm,
-                           const DetectionOutputParams& params)
+                           const DetectionOutputParams& params, float confThreshold)
     {
         HeadLayout head;
         head.explicitClass = params.classForm == DNN_CLS_AUTO
@@ -685,10 +689,10 @@ struct HeadLayout
 
         const int lastScore = head.explicitClass ? 4 : layout.C - nm - 1;
         head.normalized = params.coordSpace == DNN_COORD_AUTO
-                        ? boxesAreNormalized(out, layout, lastScore)
+                        ? boxesAreNormalized(out, layout, lastScore, confThreshold)
                         : params.coordSpace == DNN_COORD_NORMALIZED;
         head.cornerBox = params.boxForm == DNN_BOX_AUTO
-                       ? boxesAreCorners(out, layout, lastScore)
+                       ? boxesAreCorners(out, layout, lastScore, confThreshold)
                        : params.boxForm == DNN_BOX_CORNER;
         return head;
     }
@@ -1001,7 +1005,8 @@ void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const 
                "estimatePoses: the net returned a different number of samples");
     const int detWidth = poseDetWidth(out, layout, params);
     const int numKeypoints = poseKeypointCount(layout, detWidth);
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints, params);
+    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints, params,
+                                             confThreshold);
 
     keypoints.clear();
     boxes.clear();
@@ -1034,7 +1039,8 @@ void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Si
                "segmentInstances: the net returned a different number of samples");
     CV_CheckEQ(proto.size[0], (int)frameSizes.size(),
                "segmentInstances: the prototypes hold a different number of samples");
-    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1], params);
+    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1], params,
+                                             confThreshold);
 
     masks.clear();
     classIds.clear();
@@ -1512,7 +1518,8 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         const Mat& out = detections[0];
         AnchorFreeLayout layout = AnchorFreeLayout::from(out);
         CV_CheckEQ(layout.B, 1, "detect: the net returned more than one sample for one image");
-        const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams);
+        const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams,
+                                                 confThreshold);
         SampleDecode d = decodeSample(out, layout, head, /*b=*/0, /*nm=*/0, impl->size,
                                        impl->paddingMode, Size(frameWidth, frameHeight),
                                        confThreshold, nmsThreshold, getNmsAcrossClasses());
@@ -1552,7 +1559,8 @@ void DetectionModel::detect(InputArrayOfArrays frames,
     AnchorFreeLayout layout = AnchorFreeLayout::from(out);
     CV_CheckEQ(layout.B, (int)sizes.size(),
                "batched detect: the net returned a different number of samples");
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams);
+    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams,
+                                             confThreshold);
 
     classIds.clear();
     confidences.clear();
