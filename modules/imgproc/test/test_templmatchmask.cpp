@@ -328,4 +328,122 @@ std::vector<ConstantTemplateParams> ctparams = {
 
 INSTANTIATE_TEST_CASE_P(/**/, ConstantTemplateWithMask, testing::ValuesIn(ctparams));
 
+
+typedef std::tuple<int, int, int> MaskUniformParams;
+
+class Imgproc_MatchTemplate_MaskUniform : public testing::TestWithParam<MaskUniformParams>
+{
+};
+
+TEST_P(Imgproc_MatchTemplate_MaskUniform, ccoeff_normed_no_nan)
+{
+    const int ch = std::get<0>(GetParam());
+    const int val = std::get<1>(GetParam());
+    const int mask_depth = std::get<2>(GetParam());
+
+    Mat templ(16, 16, CV_MAKETYPE(CV_8U, ch), Scalar::all(20));
+    templ(Rect(4, 4, 8, 8)).setTo(Scalar::all(220));
+
+    Mat mask_u8(16, 16, CV_8UC1, Scalar::all(0));
+    mask_u8(Rect(2, 2, 12, 12)).setTo(Scalar::all(255));
+
+    Mat mask;
+    if (mask_depth == CV_8U)
+    {
+        mask = mask_u8;
+    }
+    else
+    {
+        mask_u8.convertTo(mask, CV_32F, 1.0 / 255.0);
+    }
+
+    Mat img(48, 48, CV_MAKETYPE(CV_8U, ch), Scalar::all(val));
+    templ.copyTo(img(Rect(32, 32, 16, 16)));
+
+    Mat result;
+    matchTemplate(img, templ, result, TM_CCOEFF_NORMED, mask);
+
+    ASSERT_EQ(CV_32FC1, result.type());
+    EXPECT_TRUE(cv::checkRange(result, true, NULL, -1.0, 1.0 + 1e-5))
+        << "NaN/Inf or out-of-range value for ch=" << ch << ", intensity=" << val
+        << ", mask_depth=" << mask_depth;
+
+    // Uniform background window (zero variance)
+    EXPECT_NEAR(0.0f, result.at<float>(0, 0), 1e-5f);
+    // Exact template match window (1.0f)
+    EXPECT_NEAR(1.0f, result.at<float>(32, 32), 1e-4f);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /**/,
+    Imgproc_MatchTemplate_MaskUniform,
+    testing::Combine(
+        testing::Values(1, 3),
+        testing::Values(0, 128, 200, 255),
+        testing::Values(CV_8U, CV_32F)
+    )
+);
+
+TEST(Imgproc_MatchTemplate, mask_coeff_normed_bright_low_contrast) {
+    Mat templ(16, 16, CV_8UC1);
+    Mat img(24, 24, CV_8UC1);
+    for (int r = 0; r < img.rows; ++r)
+    {
+        for (int c = 0; c < img.cols; ++c)
+        {
+            uchar val = static_cast<uchar>(((r + c) % 2 == 0) ? 200 : 201);
+            img.at<uchar>(r, c) = val;
+            if (r < templ.rows && c < templ.cols)
+                templ.at<uchar>(r, c) = val;
+        }
+    }
+
+    Mat mask_u8(16, 16, CV_8UC1, Scalar::all(255));
+    Mat mask_f32(16, 16, CV_32F, Scalar::all(1.0f));
+
+    for (int m = 0; m < 2; m++)
+    {
+        const Mat& mask = (m == 0) ? mask_u8 : mask_f32;
+        Mat result;
+        matchTemplate(img, templ, result, TM_CCOEFF_NORMED, mask);
+
+        EXPECT_TRUE(cv::checkRange(result, true, NULL, -1.0 - 1e-5, 1.0 + 1e-5));
+        // Mask aligned (1.0f)
+        EXPECT_NEAR(1.0f, result.at<float>(0, 0), 1e-4f);
+        // Mask misaligned (-1.0f)
+        EXPECT_NEAR(-1.0f, result.at<float>(0, 1), 1e-4f);
+    }
+}
+
+TEST(Imgproc_MatchTemplate, mask_ccoeff_normed_nonbinary_float_mask_and_low_amplitude) {
+    // Non-binary mask
+    Mat templ_u8(16, 16, CV_8UC1, Scalar::all(20));
+    templ_u8(Rect(4, 4, 8, 8)).setTo(Scalar::all(220));
+
+    Mat float_mask(16, 16, CV_32F, Scalar::all(0.0f));
+    float_mask(Rect(2, 2, 12, 12)).setTo(Scalar::all(0.35f));
+    float_mask(Rect(5, 5, 6, 6)).setTo(Scalar::all(0.85f));
+
+    Mat img_bright(48, 48, CV_8UC1, Scalar::all(255));
+    templ_u8.copyTo(img_bright(Rect(32, 32, 16, 16)));
+
+    Mat res_nonbinary;
+    matchTemplate(img_bright, templ_u8, res_nonbinary, TM_CCOEFF_NORMED, float_mask);
+    EXPECT_TRUE(cv::checkRange(res_nonbinary, true, NULL, -1.0, 1.0 + 1e-5));
+    EXPECT_NEAR(0.0f, res_nonbinary.at<float>(0, 0), 1e-4f);
+    EXPECT_NEAR(1.0f, res_nonbinary.at<float>(32, 32), 1e-4f);
+
+    // Low amplitude input to test low variance handling
+    Mat templ_f32(16, 16, CV_32F, Scalar::all(1e-4f));
+    templ_f32(Rect(4, 4, 8, 8)).setTo(Scalar::all(2e-4f));
+
+    Mat img_f32(48, 48, CV_32F, Scalar::all(1e-4f));
+    templ_f32.copyTo(img_f32(Rect(32, 32, 16, 16)));
+
+    Mat res_low_amp;
+    matchTemplate(img_f32, templ_f32, res_low_amp, TM_CCOEFF_NORMED, float_mask);
+    EXPECT_TRUE(cv::checkRange(res_low_amp, true, NULL, -1.0, 1.0 + 1e-5));
+    EXPECT_NEAR(0.0f, res_low_amp.at<float>(0, 0), 1e-4f);
+    EXPECT_NEAR(1.0f, res_low_amp.at<float>(32, 32), 1e-4f);
+}
 }} // namespace
