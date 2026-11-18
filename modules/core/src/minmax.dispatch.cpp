@@ -313,15 +313,29 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
+    if (_src.empty())
+    {
+        // no elements: the extrema are 0 and the indices are -1
+        if (minVal)
+            *minVal = 0;
+        if (maxVal)
+            *maxVal = 0;
+        for (int i = 0; i < _src.dims(); i++)
+        {
+            if (minIdx)
+                minIdx[i] = -1;
+            if (maxIdx)
+                maxIdx[i] = -1;
+        }
+        return;
+    }
+
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
-    // empty input: nothing for a HAL to do (KleidiCV 26.03 minMaxIdx dereferences src_data)
-    const bool useHal = !src.empty();
-
-    if (useHal && src.dims <= 2)
+    if (src.dims <= 2)
     {
         if ((size_t)src.step == (size_t)mask.step || mask.empty())
         {
@@ -332,7 +346,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         CALL_HAL(minMaxIdxMaskStep, cv_hal_minMaxIdxMaskStep, src.data, src.step, src.cols*cn, src.rows,
                  src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
     }
-    else if (useHal && src.isContinuous() && (mask.isContinuous() || mask.empty()))
+    else if (src.isContinuous() && (mask.isContinuous() || mask.empty()))
     {
         int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
                                    minVal, maxVal, minIdx, maxIdx, mask.data);

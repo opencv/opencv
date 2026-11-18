@@ -2428,6 +2428,30 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_MinMaxIdx_empty,
     testing::Values((int)CV_8U, (int)CV_8S, (int)CV_16U, (int)CV_16S, (int)CV_32S, (int)CV_32F,
                     (int)CV_64F));
 
+// a default constructed Mat has dims == 0, unlike the 0x0, 0x5 and 5x0 matrices above
+TEST(Core_MinMaxIdx_default_mat, empty)
+{
+    Mat src;
+    ASSERT_EQ(0, src.dims);
+
+    double minVal = -1, maxVal = -1;
+    ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+
+    int minIdx[2] = { 7, 7 }, maxIdx[2] = { 7, 7 };
+    minVal = maxVal = -1;
+    ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+
+    minVal = maxVal = -1;
+    Point minLoc(7, 7), maxLoc(7, 7);
+    ASSERT_NO_THROW(cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+}
+
 TEST(Subtract, scalarc1_matc3)
 {
     int scalar = 255;
