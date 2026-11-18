@@ -184,7 +184,10 @@ static void matchTemplate_reference(Mat & img, Mat & templ, Mat & result, const 
             b_denom = 1.;
     }
 
-    for (int i = 0; i < result.rows; i++)
+    // every output element is computed independently, so rows can be processed in parallel
+    auto rowBody = [&](const cv::Range& range)
+    {
+    for (int i = range.start; i < range.end; i++)
     {
         for (int j = 0; j < result.cols; j++)
         {
@@ -299,6 +302,8 @@ static void matchTemplate_reference(Mat & img, Mat & templ, Mat & result, const 
             result.at<float>(i, j) = (float)value;
         }
     }
+    };
+    cv::parallel_for_(cv::Range(0, result.rows), rowBody);
 }
 
 //==============================================================================

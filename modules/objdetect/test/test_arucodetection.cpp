@@ -213,12 +213,7 @@ static Mat projectMarker(const aruco::Dictionary &dictionary, int id, Mat camera
                     Scalar::all(borderValue));
 
     // copy only not-border pixels
-    for(int y = 0; y < aux.rows; y++) {
-        for(int x = 0; x < aux.cols; x++) {
-            if(aux.at<unsigned char>(y, x) == borderValue) continue;
-            img.at<unsigned char>(y, x) = aux.at<unsigned char>(y, x);
-        }
-    }
+    aux.copyTo(img, aux != borderValue);
 
     return img;
 }

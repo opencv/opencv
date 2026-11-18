@@ -184,10 +184,6 @@ protected:
         alg = static_cast<RgbdNormals::RgbdNormalsMethod>(int(std::get<1>(std::get<0>(p))));
         scale = std::get<2>(std::get<0>(p));
         idx = std::get<1>(p);
-
-        float diffThreshold = scale ? 100000.f : 50.f;
-        normalsComputer = RgbdNormals::create(H, W, depth, K(), 5, diffThreshold, alg);
-        normalsComputer->cache();
     }
 
     struct NormalsCompareResult
@@ -221,6 +217,11 @@ protected:
     void runCase(bool scaleUp, int nPlanes, bool makeDepth,
                  double meanThreshold, double maxThreshold, double threshold3d)
     {
+        // created here rather than in SetUp() so that skipped instances do not pay for cache()
+        float diffThreshold = scale ? 100000.f : 50.f;
+        normalsComputer = RgbdNormals::create(H, W, depth, K(), 5, diffThreshold, alg);
+        normalsComputer->cache();
+
         RNG& rng = cv::theRNG();
         rng.state += idx + nTestCasesNormals*int(scale) + alg*16 + depth*64;
 
