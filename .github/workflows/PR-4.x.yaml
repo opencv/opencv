@@ -7,29 +7,39 @@ on:
       - 4.x
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
+# Changes to labels outside ci:* get their own group and skip every job, so they never cancel or restart CI.
 concurrency:
-  group: PR-4.x-${{ github.event.pull_request.number }}
+  group: PR-4.x-${{ github.event.pull_request.number }}${{ github.event.label && !startsWith(github.event.label.name, 'ci:') && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
   classify:
+    if: ${{ !github.event.label || startsWith(github.event.label.name, 'ci:') }}
     runs-on: ubuntu-24.04
     permissions:
       actions: read
       pull-requests: read
+    # One plan per job: fast, delta or full for jobs that have a fast mode, run or skip for the others.
     outputs:
-      fast: ${{ steps.changes.outputs.fast }}
-      full: ${{ steps.changes.outputs.full }}
-      delta: ${{ steps.changes.outputs.delta }}
-      android: ${{ steps.changes.outputs.android }}
-      apple: ${{ steps.changes.outputs.apple }}
-      dnn: ${{ steps.changes.outputs.dnn }}
-      docs: ${{ steps.changes.outputs.docs }}
-      riscv: ${{ steps.changes.outputs.riscv }}
-      riscv_delta: ${{ steps.changes.outputs.riscv_delta }}
+      Linux: ${{ steps.plan.outputs.Linux }}
+      Linux-no-HAL: ${{ steps.plan.outputs.Linux-no-HAL }}
+      Linux-Apline: ${{ steps.plan.outputs.Linux-Apline }}
+      Windows: ${{ steps.plan.outputs.Windows }}
+      Ubuntu2404-ARM64: ${{ steps.plan.outputs.Ubuntu2404-ARM64 }}
+      Ubuntu2404-ARM64-Debug: ${{ steps.plan.outputs.Ubuntu2404-ARM64-Debug }}
+      Ubuntu2004-x64-OpenVINO: ${{ steps.plan.outputs.Ubuntu2004-x64-OpenVINO }}
+      Ubuntu2004-x64-CUDA: ${{ steps.plan.outputs.Ubuntu2004-x64-CUDA }}
+      macOS-ARM64: ${{ steps.plan.outputs.macOS-ARM64 }}
+      macOS-x64: ${{ steps.plan.outputs.macOS-x64 }}
+      macOS-ARM64-Vulkan: ${{ steps.plan.outputs.macOS-ARM64-Vulkan }}
+      iOS: ${{ steps.plan.outputs.iOS }}
+      Android-SDK: ${{ steps.plan.outputs.Android-SDK }}
+      TIM-VX: ${{ steps.plan.outputs.TIM-VX }}
+      docs: ${{ steps.plan.outputs.docs }}
+      Linux-RISC-V-Clang: ${{ steps.plan.outputs.Linux-RISC-V-Clang }}
     steps:
-      - name: Classify changed files
-        id: changes
+      - name: Plan CI jobs
+        id: plan
         uses: actions/github-script@v7
         with:
           script: |
@@ -49,33 +59,9 @@ jobs:
               context.payload.pull_request.labels.map(label => label.name)
             );
             const matches = pattern => files.some(file => pattern.test(file));
+            const base = context.payload.pull_request.base.ref;
             const resetMode = context.payload.action === 'synchronize';
             const full = !resetMode && labels.has('ci:full');
-            const fast = !full;
-
-            let previousSuccess = false;
-            if (full) {
-              try {
-                const priorRuns = await github.paginate(
-                  github.rest.actions.listWorkflowRuns,
-                  {
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    workflow_id: 'PR-4.x.yaml',
-                    head_sha: context.payload.pull_request.head.sha,
-                    event: 'pull_request',
-                    status: 'completed',
-                    per_page: 100,
-                  }
-                );
-                previousSuccess = priorRuns.some(run =>
-                  run.id !== context.runId && run.conclusion === 'success'
-                );
-              } catch (error) {
-                core.warning(`Unable to inspect earlier workflow runs: ${error.message}`);
-              }
-            }
-            const delta = full && previousSuccess;
 
             const dnnRelevant = labels.has('category: dnn') ||
               labels.has('category: dnn (onnx)') ||
@@ -83,124 +69,195 @@ jobs:
             const androidRelevant = matches(/^(platforms\/android\/|modules\/java\/|samples\/android\/)/);
             const appleRelevant = matches(/^(platforms\/(ios|osx)\/|modules\/objc\/|samples\/(swift|ios)\/)/);
             const riscvRelevant = matches(/(riscv|rvv)/i);
-            const optionalJob = relevant => full ? (!delta || !relevant) : relevant;
 
-            const dnn = optionalJob(dnnRelevant);
-            const android = optionalJob(androidRelevant);
-            const apple = optionalJob(appleRelevant);
-            const riscv = optionalJob(riscvRelevant);
+            // Whether each job runs in fast mode. Full mode runs every job that has not passed yet.
+            const inFast = {
+              'Linux': true,
+              'Linux-no-HAL': false,
+              'Linux-Apline': false,
+              'Windows': true,
+              'Ubuntu2404-ARM64': true,
+              'Ubuntu2404-ARM64-Debug': false,
+              'Ubuntu2004-x64-OpenVINO': dnnRelevant,
+              'Ubuntu2004-x64-CUDA': dnnRelevant,
+              'macOS-ARM64': appleRelevant,
+              'macOS-x64': appleRelevant,
+              'macOS-ARM64-Vulkan': appleRelevant,
+              'iOS': appleRelevant,
+              'Android-SDK': androidRelevant,
+              'TIM-VX': dnnRelevant,
+              'docs': true,
+              'Linux-RISC-V-Clang': riscvRelevant,
+            };
+            // The one configuration fast mode runs, for jobs whose delta mode runs everything else.
+            const fastConfig = {
+              'Linux': `Linux / Ubuntu (24.04, ${base})`,
+              'Windows': `Windows / Windows (x64, base, ${base})`,
+              'Linux-RISC-V-Clang': `Linux-RISC-V-Clang / RISC-V (clang, ${base}, true)`,
+            };
 
-            for (const [name, value] of Object.entries({
-              fast,
-              full,
-              delta,
-              android,
-              apple,
-              dnn,
-              docs: !delta,
-              riscv,
-              riscv_delta: delta && riscvRelevant,
-            })) {
-              core.setOutput(name, value.toString());
+            // Latest attempt of every job from earlier runs on this commit, including a run this one cancels.
+            const earlier = [];
+            if (full) {
+              try {
+                const runs = await github.paginate(
+                  github.rest.actions.listWorkflowRuns,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: 'PR-4.x.yaml',
+                    head_sha: context.payload.pull_request.head.sha,
+                    event: 'pull_request',
+                    per_page: 100,
+                  }
+                );
+                for (const run of runs) {
+                  if (run.id === context.runId || run.conclusion === 'skipped') {
+                    continue;
+                  }
+                  earlier.push(await github.paginate(
+                    github.rest.actions.listJobsForWorkflowRun,
+                    {
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      run_id: run.id,
+                      filter: 'latest',
+                      per_page: 100,
+                    }
+                  ));
+                }
+              } catch (error) {
+                core.warning(`Unable to inspect earlier workflow runs: ${error.message}`);
+                earlier.length = 0;
+              }
+            }
+
+            const partsOf = (jobs, name) => jobs.filter(job => job.name.startsWith(`${name} / `));
+            const isWork = job => !job.name.endsWith(' / branch_eval');
+            // A job passed in a run when it did real work and no part of it failed, was cancelled or is unfinished.
+            const passedIn = (jobs, name) => {
+              const parts = partsOf(jobs, name);
+              return parts.some(job => isWork(job) && job.conclusion === 'success') &&
+                parts.every(job => job.conclusion === 'success' || job.conclusion === 'skipped');
+            };
+            const fullPlan = name => {
+              const fast = fastConfig[name];
+              if (!fast) {
+                return earlier.some(jobs => passedIn(jobs, name)) ? 'skip' : 'run';
+              }
+              const fastPassed = earlier.some(jobs =>
+                jobs.some(job => job.name === fast && job.conclusion === 'success'));
+              const restPassed = earlier.some(jobs => passedIn(jobs, name) &&
+                partsOf(jobs, name).some(job => isWork(job) && job.name !== fast));
+              return fastPassed && restPassed ? 'skip' : fastPassed ? 'delta' : 'full';
+            };
+
+            const plan = {};
+            for (const [name, runsInFast] of Object.entries(inFast)) {
+              plan[name] = full ? fullPlan(name) :
+                !runsInFast ? 'skip' : fastConfig[name] ? 'fast' : 'run';
+              core.setOutput(name, plan[name]);
             }
 
             await core.summary
               .addHeading('CI selection')
               .addTable([
-                [{data: 'Mode', header: true}, {data: delta ? 'full (delta)' : fast ? 'fast' : 'full', header: true}],
+                [{data: 'Mode', header: true}, {data: full ? 'full' : 'fast', header: true}],
+                ['Reason', full ? 'ci:full label' : resetMode ? 'new commit resets CI mode to fast' : 'fast coverage is the default'],
                 ['Changed files', changedFiles.length.toString()],
-                ['DNN acceleration', dnn ? 'enabled' : 'disabled'],
-                ['Previous successful run', previousSuccess ? 'same commit' : 'none'],
-                ['Reason', delta ? 'ci:full after successful fast coverage' : full ? 'ci:full label' : resetMode ? 'new commit resets CI mode to fast' : 'fast coverage is the default'],
+                ['Earlier runs checked', earlier.length.toString()],
+                ...Object.entries(plan),
               ])
               .write();
 
   Linux:
     needs: classify
+    if: needs.classify.outputs.Linux != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
     with:
       workflow_branch: main
-      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
-      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
+      fast: ${{ needs.classify.outputs.Linux == 'fast' }}
+      delta: ${{ needs.classify.outputs.Linux == 'delta' }}
 
   Linux-no-HAL:
     needs: classify
-    if: needs.classify.outputs.full == 'true'
+    if: needs.classify.outputs.Linux-no-HAL != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-NoHAL.yaml@main
 
   Linux-Apline:
     needs: classify
-    if: needs.classify.outputs.full == 'true'
+    if: needs.classify.outputs.Linux-Apline != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux-Alpine.yaml@main
 
   Windows:
     needs: classify
+    if: needs.classify.outputs.Windows != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
     with:
       workflow_branch: main
-      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
-      delta: ${{ fromJSON(needs.classify.outputs.delta) }}
+      fast: ${{ needs.classify.outputs.Windows == 'fast' }}
+      delta: ${{ needs.classify.outputs.Windows == 'delta' }}
 
   Ubuntu2404-ARM64:
     needs: classify
-    if: needs.classify.outputs.delta != 'true'
+    if: needs.classify.outputs.Ubuntu2404-ARM64 != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
 
   Ubuntu2404-ARM64-Debug:
     needs: classify
-    if: needs.classify.outputs.full == 'true'
+    if: needs.classify.outputs.Ubuntu2404-ARM64-Debug != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
 
   Ubuntu2004-x64-OpenVINO:
     needs: classify
-    if: needs.classify.outputs.dnn == 'true'
+    if: needs.classify.outputs.Ubuntu2004-x64-OpenVINO != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@main
 
   Ubuntu2004-x64-CUDA:
     needs: classify
-    if: needs.classify.outputs.dnn == 'true'
+    if: needs.classify.outputs.Ubuntu2004-x64-CUDA != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
 
   macOS-ARM64:
     needs: classify
-    if: needs.classify.outputs.apple == 'true'
+    if: needs.classify.outputs.macOS-ARM64 != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
 
   macOS-x64:
     needs: classify
-    if: needs.classify.outputs.apple == 'true'
+    if: needs.classify.outputs.macOS-x64 != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
 
   macOS-ARM64-Vulkan:
     needs: classify
-    if: needs.classify.outputs.apple == 'true'
+    if: needs.classify.outputs.macOS-ARM64-Vulkan != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
 
   iOS:
     needs: classify
-    if: needs.classify.outputs.apple == 'true'
+    if: needs.classify.outputs.iOS != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
 
   Android-SDK:
     needs: classify
-    if: needs.classify.outputs.android == 'true'
+    if: needs.classify.outputs.Android-SDK != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@main
 
   TIM-VX:
     needs: classify
-    if: needs.classify.outputs.dnn == 'true'
+    if: needs.classify.outputs.TIM-VX != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
 
   docs:
     needs: classify
-    if: needs.classify.outputs.docs == 'true'
+    if: needs.classify.outputs.docs != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
 
   Linux-RISC-V-Clang:
     needs: classify
-    if: needs.classify.outputs.riscv == 'true' || needs.classify.outputs.riscv_delta == 'true'
+    if: needs.classify.outputs.Linux-RISC-V-Clang != 'skip'
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-RISCV.yaml@main
     with:
       workflow_branch: main
-      fast: ${{ fromJSON(needs.classify.outputs.fast) }}
-      delta: ${{ fromJSON(needs.classify.outputs.riscv_delta) }}
+      fast: ${{ needs.classify.outputs.Linux-RISC-V-Clang == 'fast' }}
+      delta: ${{ needs.classify.outputs.Linux-RISC-V-Clang == 'delta' }}
