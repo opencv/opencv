@@ -5023,4 +5023,39 @@ TEST(Layer_Test_PadMode, ConvAutoPadSAME_LOWER)
     EXPECT_FLOAT_EQ(out.ptr<float>(0, 0, 0)[0], 14.0f);
 }
 
+TEST(Layer_Test_PadMode, ConvAutoPadNOTSET_ExplicitPadding)
+{
+    int sz[] = {1, 1, 4, 4};
+    Mat input(4, sz, CV_32F);
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            input.ptr<float>(0, 0, r)[c] = (float)(r * 4 + c + 1);
+
+    Mat weights(4, std::vector<int>{1, 1, 3, 3}.data(), CV_32F, Scalar(1.0f));
+
+    LayerParams lp;
+    lp.name = "conv";
+    lp.type = "Convolution";
+    lp.set("kernel_w", 3);
+    lp.set("kernel_h", 3);
+    lp.set("stride_w", 2);
+    lp.set("stride_h", 2);
+    lp.set("pad_w", 1);
+    lp.set("pad_h", 1);
+    lp.set("num_output", 1);
+    lp.set("bias_term", false);
+    lp.set("auto_pad", "NOTSET");
+    lp.blobs.push_back(weights);
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    Mat out = net.forward();
+
+    ASSERT_EQ(out.size[2], 2);
+    ASSERT_EQ(out.size[3], 2);
+    // Explicit padding pads 1 on each side: window at (0,0) covers r:[0,1], c:[0,1] => 1+2+5+6 = 14
+    EXPECT_FLOAT_EQ(out.ptr<float>(0, 0, 0)[0], 14.0f);
+}
+
 }} // namespace
