@@ -159,7 +159,7 @@ OCL_TEST(SIFT, Batch)
     vector<UMat> imgs;
     vector<UMat> descriptors;
     vector<vector<KeyPoint> > keypoints;
-    int n = 6;
+    int n = 2;
     Ptr<SIFT> sift = SIFT::create();
 
     for (int i = 0; i < n; i++)

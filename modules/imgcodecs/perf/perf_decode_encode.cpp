@@ -235,7 +235,10 @@ PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_anim))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Encode, multi_page, testing::ValuesIn(exts_multi))
+#ifdef HAVE_TIFF
+// Only TIFF has its own writemulti(); for the other formats multi-page I/O goes through
+// writeanimation() and the same reader, which Encode.animation / Decode.animation measure.
+PERF_TEST_P(Encode, multi_page, testing::Values(".tiff"))
 {
     Animation animation = makeCirclesAnimation();
 
@@ -263,7 +266,7 @@ PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_anim))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
+PERF_TEST_P(Decode, multi_page, testing::Values(".tiff"))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
@@ -277,5 +280,6 @@ PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
 
     SANITY_CHECK_NOTHING();
 }
+#endif // HAVE_TIFF
 
 } // namespace

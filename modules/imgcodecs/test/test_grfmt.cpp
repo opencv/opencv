@@ -267,7 +267,8 @@ const string all_exts[] =
 vector<Size> all_sizes()
 {
     vector<Size> res;
-    for (int k = 1; k <= 5; ++k)
+    // Up to 1920x1440: every codec's size-dependent branch (e.g. TIFF 1-row strips) is reached by k <= 3.
+    for (int k = 1; k <= 3; ++k)
         res.push_back(Size(640 * k, 480 * k));
     return res;
 }

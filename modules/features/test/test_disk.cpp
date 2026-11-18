@@ -132,7 +132,8 @@ TEST(Features2d_DISK, MaxKeypointsAndThreshold)
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
-    Ptr<DISK> detector = DISK::create(modelPath);
+    // The cap and threshold logic is resolution independent; 384x384 still gives >1000 keypoints.
+    Ptr<DISK> detector = DISK::create(modelPath, -1, 0.0f, Size(384, 384));
     ASSERT_TRUE(detector);
 
     Mat img = imread(cvtest::findDataFile("shared/lena.png"));
@@ -171,7 +172,8 @@ TEST(Features2d_DISK, MaskSupport)
 
     const std::string modelPath = cvtest::findDataFile("dnn/disk.onnx", false);
 
-    Ptr<DISK> detector = DISK::create(modelPath);
+    // 384x384 keeps a non-unit image-to-net scale (512/384) for the coordinate and mask mapping.
+    Ptr<DISK> detector = DISK::create(modelPath, -1, 0.0f, Size(384, 384));
     Mat img = imread(cvtest::findDataFile("shared/lena.png"));
     ASSERT_FALSE(img.empty());
 

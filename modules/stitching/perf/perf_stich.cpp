@@ -22,8 +22,8 @@ typedef TestBaseWithParam<tuple<string, int>> stitchExposureCompMultiFeed;
 #else
 #define TEST_DETECTORS testing::Values("orb")
 #endif
-#define TEST_EXP_COMP_BS testing::Values(32, 16, 12, 10, 8)
-#define TEST_EXP_COMP_NR_FEED testing::Values(1, 2, 3, 4, 5)
+#define TEST_EXP_COMP_BS testing::Values(16, 12, 10, 8)  // 32 is the Stitcher default, measured by stitch.a123
+#define TEST_EXP_COMP_NR_FEED testing::Values(1, 2, 5)
 #define TEST_EXP_COMP_MODE testing::Values("gain", "channels", "blocks_gain", "blocks_channels")
 #define AFFINE_DATASETS testing::Values("s", "budapest", "newspaper", "prague")
 

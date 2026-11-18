@@ -46,6 +46,8 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, int, bool, bool)
             image = readImage("denoising/lena_noised_gaussian_sigma=10.png",
                                   cn == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
             ASSERT_FALSE(image.empty());
+            // 8x5 OpenCL blocks of 32x32 (incl. partial ones) and several CPU row stripes
+            image = image(Rect(130, 180, 250, 150)).clone();
         }
 
         Size roiSize = use_image ? image.size() : randomSize(1, MAX_VALUE);

@@ -460,7 +460,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
 
 Size all_sizes[] = {
     Size(640, 480),
-    Size(976, 768)
+    Size(656, 496)  // row step 1968 is not a multiple of 32: exercises the aligned-copy path in the FFmpeg writer
 };
 
 TEST_P(videoio_synthetic, write_read_position) { doTest(); }

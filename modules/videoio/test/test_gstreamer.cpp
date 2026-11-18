@@ -21,7 +21,8 @@ TEST_P(videoio_gstreamer, read_check)
     int count_frames = 10;
     std::ostringstream pipeline;
     pipeline << "videotestsrc pattern=ball num-buffers=" << count_frames << " ! " << format;
-    pipeline << ", width=" << frame_size.width << ", height=" << frame_size.height << " ! appsink";
+    // sync=false: deliver the 10 buffers without waiting for the 30 fps pipeline clock
+    pipeline << ", width=" << frame_size.width << ", height=" << frame_size.height << " ! appsink sync=false";
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open(pipeline.str(), CAP_GSTREAMER));
     ASSERT_TRUE(cap.isOpened());
