@@ -81,6 +81,8 @@ public:
     {
         CV_CheckGE(inputs.size(), (size_t)3, "LinearAttention needs query, key, value");
         CV_CheckEQ(inputs[0].dims, 3, "LinearAttention: query must be 3D [batch, seq, q_num_heads*head_size]");
+        CV_CheckEQ(inputs[1].dims, 3, "LinearAttention: key must be 3D [batch, seq, kv_num_heads*head_size]");
+        CV_CheckEQ(inputs[2].dims, 3, "LinearAttention: value must be 3D [batch, seq, kv_num_heads*v_head_size]");
         CV_Check(requiredOutputs, requiredOutputs == 1 || requiredOutputs == 2,
                  "LinearAttention: expects 1 (output) or 2 (output, present_state) outputs");
 
@@ -89,6 +91,33 @@ public:
         const int dk    = inputs[0][2] / q_num_heads;
         const int dv    = inputs[2][2] / kv_num_heads;
         CV_CheckEQ(inputs[1][2] / kv_num_heads, dk, "LinearAttention: key head_size must equal query head_size");
+        for (int i = 1; i <= 2; i++)
+        {
+            CV_CheckEQ(inputs[i][0], batch, "LinearAttention: key and value must have the query batch size");
+            CV_CheckEQ(inputs[i][1], seq, "LinearAttention: key and value must have the query sequence length");
+        }
+        if (present(inputs, 3))
+        {
+            CV_CheckEQ(inputs[3].dims, 4, "LinearAttention: past_state must be [batch, kv_num_heads, head_size, v_head_size]");
+            CV_CheckTrue(inputs[3][0] == batch && inputs[3][1] == kv_num_heads &&
+                         inputs[3][2] == dk && inputs[3][3] == dv,
+                         "LinearAttention: past_state must be [batch, kv_num_heads, head_size, v_head_size]");
+        }
+        // decay and beta are only read by the update rules that use them
+        if (use_decay && present(inputs, 4))
+        {
+            CV_CheckEQ(inputs[4].dims, 3, "LinearAttention: decay must be 3D");
+            CV_CheckTrue(inputs[4][0] == batch && inputs[4][1] == seq &&
+                         (inputs[4][2] == kv_num_heads * dk || inputs[4][2] == kv_num_heads),
+                         "LinearAttention: decay must be [batch, seq, kv_num_heads*head_size] or [batch, seq, kv_num_heads]");
+        }
+        if (use_delta && present(inputs, 5))
+        {
+            CV_CheckEQ(inputs[5].dims, 3, "LinearAttention: beta must be 3D");
+            CV_CheckTrue(inputs[5][0] == batch && inputs[5][1] == seq &&
+                         (inputs[5][2] == kv_num_heads || inputs[5][2] == 1),
+                         "LinearAttention: beta must be [batch, seq, kv_num_heads] or [batch, seq, 1]");
+        }
 
         const MatShape stateShape{batch, kv_num_heads, dk, dv};
         outputs.assign(1, MatShape{batch, seq, q_num_heads * dv});   // output
@@ -113,6 +142,8 @@ public:
         for (size_t i = 0; i < rawInputs.size(); ++i)
         {
             if (rawInputs[i].empty()) continue;
+            CV_CheckType(rawInputs[i].type(), rawInputs[i].type() == CV_32F || rawInputs[i].type() == CV_16F,
+                         "LinearAttention: all inputs must be FP32 or FP16");
             if (rawInputs[i].depth() == CV_16F) rawInputs[i].convertTo(in32[i], CV_32F);
             else in32[i] = rawInputs[i];
         }
