@@ -905,8 +905,36 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
                 // transform back, but now with only one channel
                 norm_imgx += temp_res.reshape(1, result.rows);
             }
-            sqrt(norm_imgx, norm_imgx);
-            result /= norm_imgx * norm_templx;
+            const float templ_norm = static_cast<float>(norm_templx);
+            for (int i = 0; i < result.rows; i++)
+            {
+                float* res_row = result.ptr<float>(i);
+                const float* norm_row = norm_imgx.ptr<float>(i);
+                for (int j = 0; j < result.cols; j++)
+                {
+                    const float var = norm_row[j];
+                    if (cvIsNaN(var) || var <= FLT_EPSILON)
+                    {
+                        res_row[j] = 0.0f;
+                        continue;
+                    }
+
+                    const float num = res_row[j];
+                    const float den = std::sqrt(var) * templ_norm;
+                    if (std::abs(num) < den)
+                    {
+                        res_row[j] = num / den;
+                    }
+                    else if (std::abs(num) < 1.125f * den)
+                    {
+                        res_row[j] = num > 0 ? 1.0f : -1.0f;
+                    }
+                    else
+                    {
+                        res_row[j] = 0.0f;
+                    }
+                }
+            }
         }
     }
 }
