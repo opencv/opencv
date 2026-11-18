@@ -4622,6 +4622,9 @@ TEST_P(Layer_Test_MatMul_CudaBroadcastBias, RuntimeBAndBiasAlphaBeta)
 TEST_P(Layer_Test_MatMul_CudaBroadcastBias, ConstBAndBroadcastBias3D)
 {
     initBackendAndThresholds();
+    // the OpenCL forward of MatMul does not apply alpha yet
+    if (backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     const int B = 3, M = 7, K = 16, N = 24;
     Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias({1, 1, N}, CV_32F);
