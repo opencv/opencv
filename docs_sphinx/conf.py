@@ -84,7 +84,6 @@ if API_MODULES:
 
 exclude_patterns = [
     "**/Thumbs.db", "**/.DS_Store", "**/_old/**",
-    "tutorials/core/how_to_use_OpenCV_parallel_for_/**",
     "tutorials/introduction/load_save_image/**",
     "tutorials/app/_old/**",
 ]
