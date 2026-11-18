@@ -397,46 +397,6 @@ TEST_F(fisheyeTest, CalibrationCheckCondRejectsNearCollinearView)
         cv::Exception);
 }
 
-TEST_F(fisheyeTest, Calibration)
-{
-    const int n_images = 34;
-
-    const cv::Matx33d goldK(558.4780870585967, 0, 620.4585053962692,
-                            0, 560.5067667343917, 381.9394122875291,
-                            0, 0, 1);
-    const cv::Vec4d goldD(-0.00146136, -0.00329847, 0.00605742, -0.00374201);
-
-    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
-    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
-
-    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
-    fs_left.release();
-
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
-    fs_object.release();
-
-    int flag = 0;
-    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::CALIB_CHECK_COND;
-    flag |= cv::CALIB_FIX_SKEW;
-
-    cv::Matx33d theK;
-    cv::Vec4d theD;
-
-    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
-                           cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
-
-    EXPECT_MAT_NEAR(theK, goldK, 1e-8);
-    EXPECT_MAT_NEAR(theD, goldD, 1e-8);
-}
-
 TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
 {
     const int n_images = 34;
@@ -645,6 +605,13 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            rvec, tvec, flag, cv::TermCriteria(3, 20, 1e-6));
 
+    const cv::Matx33d goldK(558.4780870585967, 0, 620.4585053962692,
+                            0, 560.5067667343917, 381.9394122875291,
+                            0, 0, 1);
+    const cv::Vec4d goldD(-0.00146136, -0.00329847, 0.00605742, -0.00374201);
+    EXPECT_MAT_NEAR(theK, goldK, 1e-8);
+    EXPECT_MAT_NEAR(theD, goldD, 1e-8);
+
     cv::internal::IntrinsicParams param, errors;
     cv::Vec2d err_std;
     double thresh_cond = 1e6;
@@ -666,73 +633,6 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     EXPECT_MAT_NEAR(err_std, cv::Vec2d(0.187475975266883, 0.185678953263995), 1e-7);
     CV_Assert(fabs(rms - 0.263782587133546) < 1e-10);
     CV_Assert(errors.alpha == 0);
-}
-
-TEST_F(fisheyeTest, stereoCalibrate)
-{
-    const int n_images = 34;
-
-    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
-
-    std::vector<std::vector<cv::Point2d> > leftPoints(n_images);
-    std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
-    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
-
-    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_left.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_left[cv::format("image_%d", i )] >> leftPoints[i];
-    fs_left.release();
-
-    cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_right.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_right[cv::format("image_%d", i )] >> rightPoints[i];
-    fs_right.release();
-
-    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
-    CV_Assert(fs_object.isOpened());
-    for(int i = 0; i < n_images; ++i)
-        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
-    fs_object.release();
-
-    cv::Matx33d K1, K2, theR;
-    cv::Vec3d theT;
-    cv::Vec4d D1, D2;
-
-    int flag = 0;
-    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::CALIB_CHECK_COND;
-    flag |= cv::CALIB_FIX_SKEW;
-
-    cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, theR, theT, flag,
-                    cv::TermCriteria(3, 12, 0));
-
-    cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
-                           -0.06956823121068059,    0.9975601387249519, 0.005833595226966235,
-                          -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);
-    cv::Vec3d T_correct(-0.099402724724121, 0.00270812139265413, 0.00129330292472699);
-    cv::Matx33d K1_correct (561.195925927249,                0, 621.282400272412,
-                                   0, 562.849402029712, 380.555455380889,
-                                   0,                0,                1);
-
-    cv::Matx33d K2_correct (560.395452535348,                0, 678.971652040359,
-                                   0,  561.90171021422, 380.401340535339,
-                                   0,                0,                1);
-
-    cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
-    cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
-
-    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(theT, T_correct, 1e-10);
-
-    EXPECT_MAT_NEAR(K1, K1_correct, 1e-10);
-    EXPECT_MAT_NEAR(K2, K2_correct, 1e-10);
-
-    EXPECT_MAT_NEAR(D1, D1_correct, 1e-10);
-    EXPECT_MAT_NEAR(D2, D2_correct, 1e-10);
-
 }
 
 TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)

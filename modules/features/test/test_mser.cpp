@@ -96,6 +96,7 @@ TEST(Features2d_MSER, cases)
     vector<Rect> boxes;
 
     RNG rng((uint64)123456);
+    std::set<int> tested;
 
     for( int i = 0; i < 100; i++ )
     {
@@ -104,6 +105,11 @@ TEST(Features2d_MSER, cases)
         bool binarize = use_big_image ? rng.uniform(0, 5) != 0 : false;
         bool blur = rng.uniform(0, 2) != 0;
         int thresh = thresharr[rng.uniform(0, 5)];
+
+        // The draws allow only 28 distinct inputs and MSER is deterministic; run each one once.
+        const int key = (((use_big_image * 2 + invert) * 2 + binarize) * 2 + blur) * 256 + (binarize ? thresh : 0);
+        if (!tested.insert(key).second)
+            continue;
 
         /*if( i == 0 )
         {
@@ -155,6 +161,7 @@ TEST(Features2d_MSER, cases)
         ASSERT_LE(minRegs, nmsers);
         ASSERT_GE(maxRegs, nmsers);
     }
+    EXPECT_EQ(28u, tested.size()) << "every image/invert/binarize/threshold/blur combination must run";
 }
 
 TEST(Features2d_MSER, history_update_regression)

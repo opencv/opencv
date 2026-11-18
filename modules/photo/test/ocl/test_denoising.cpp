@@ -122,8 +122,9 @@ OCL_TEST_P(FastNlMeansDenoisingColored, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising,
                             Combine(Values(1, 2, 3, 4), Values((int)NORM_L2, (int)NORM_L1),
                                     Bool(), Values(true)));
+// one channel with per-channel h is the same call as FastNlMeansDenoising
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising_hsep,
-                            Combine(Values(1, 2, 3, 4), Values((int)NORM_L2, (int)NORM_L1),
+                            Combine(Values(2, 3, 4), Values((int)NORM_L2, (int)NORM_L1),
                                     Bool(), Values(true)));
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoisingColored,
                             Combine(Values(3, 4), Values((int)NORM_L2), Bool(), Values(false)));

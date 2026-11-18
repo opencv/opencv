@@ -872,8 +872,7 @@ INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
                       (int)COLOR_YUV2GRAY_UYVY, (int)COLOR_YUV2GRAY_YUY2,
                       (int)COLOR_RGB2YUV_UYVY,  (int)COLOR_BGR2YUV_UYVY,  (int)COLOR_RGBA2YUV_UYVY, (int)COLOR_BGRA2YUV_UYVY,
                       (int)COLOR_RGB2YUV_YUY2,  (int)COLOR_BGR2YUV_YUY2,  (int)COLOR_RGB2YUV_YVYU,  (int)COLOR_BGR2YUV_YVYU,
-                      (int)COLOR_RGBA2YUV_YUY2, (int)COLOR_BGRA2YUV_YUY2, (int)COLOR_RGBA2YUV_YVYU, (int)COLOR_BGRA2YUV_YVYU,
-                      (int)COLOR_RGB2YUV_YUY2));
+                      (int)COLOR_RGBA2YUV_YUY2, (int)COLOR_BGRA2YUV_YUY2, (int)COLOR_RGBA2YUV_YVYU, (int)COLOR_BGRA2YUV_YVYU));
 
 }
 

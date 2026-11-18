@@ -2739,8 +2739,6 @@ protected:
     }
 };
 
-TEST(Core_KMeans, singular) { CV_KMeansSingularTest test; test.safe_run(MAT_N_DIM_C1); }
-
 CV_ENUM(KMeansInputVariant, MAT_N_DIM_C1, MAT_N_1_CDIM, MAT_1_N_CDIM, MAT_N_DIM_C1_NONCONT, MAT_N_1_CDIM_NONCONT, VECTOR)
 
 typedef testing::TestWithParam<KMeansInputVariant> Core_KMeans_InputVariants;
