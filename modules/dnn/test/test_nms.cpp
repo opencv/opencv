@@ -68,6 +68,19 @@ TEST(BatchedNMS, Accuracy)
         ASSERT_EQ(indices[i], ref_indices[i]);
 }
 
+TEST(BatchedNMS, NegativeCoordinates)
+{
+    // boxes of different classes that only touch at one corner
+    std::vector<Rect2d> bboxes = { Rect2d(0, 0, 10, 10), Rect2d(-10, -10, 10, 10) };
+    std::vector<float> scores = { 0.9f, 0.8f };
+    std::vector<int> class_ids = { 0, 1 };
+    std::vector<int> indices;
+
+    cv::dnn::NMSBoxesBatched(bboxes, scores, class_ids, 0.5f, 0.5f, indices);
+
+    ASSERT_EQ(2u, indices.size());
+}
+
 TEST(SoftNMS, Accuracy)
 {
     //reference results are obtained using TF v2.7 tf.image.non_max_suppression_with_scores
