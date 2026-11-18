@@ -98,63 +98,6 @@ static Ptr<detail::PoseGraph> readG2OFile(const std::string& g2oFileName)
 }
 
 
-TEST(PoseGraph, sphereG2O)
-{
-    // Test takes 15+ sec in Release mode and 400+ sec in Debug mode
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG);
-
-    // The dataset was taken from here: https://lucacarlone.mit.edu/datasets/
-    // Connected paper:
-    // L.Carlone, R.Tron, K.Daniilidis, and F.Dellaert.
-    // Initialization Techniques for 3D SLAM : a Survey on Rotation Estimation and its Use in Pose Graph Optimization.
-    // In IEEE Intl.Conf.on Robotics and Automation(ICRA), pages 4597 - 4604, 2015.
-
-    std::string filename = cvtest::TS::ptr()->get_data_path() + "/cv/rgbd/sphere_bignoise_vertex3.g2o";
-
-    Ptr<detail::PoseGraph> pg = readG2OFile(filename);
-
-    // You may change logging level to view detailed optimization report
-    // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
-
-    // geoScale=1 is experimental, not guaranteed to work on other problems
-    // the rest are default params
-    pg->createOptimizer(LevMarq::Settings().setGeoScale(1.0)
-                        .setMaxIterations(100)
-                        .setCheckRelEnergyChange(true)
-                        .setRelEnergyDeltaTolerance(1e-6)
-                        .setGeodesic(true));
-
-    auto r = pg->optimize();
-
-    EXPECT_TRUE(r.found);
-    EXPECT_LE(r.iters, 20); // should converge in 31 iterations
-
-    EXPECT_LE(r.energy, 1.47723e+06); // should converge to 1.47722e+06 or less
-
-    // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
-    if (cvtest::debugLevel > 0)
-    {
-        // Write edge-only model of how nodes are located in space
-        std::string fname = "pgout.obj";
-        std::fstream of(fname, std::fstream::out);
-        std::vector<size_t> ids = pg->getNodesIds();
-        for (const size_t& id : ids)
-        {
-            Point3d d = pg->getNodePose(id).translation();
-            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
-        }
-
-        size_t esz = pg->getNumEdges();
-        for (size_t i = 0; i < esz; i++)
-        {
-            size_t sid = pg->getEdgeStart(i), tid = pg->getEdgeEnd(i);
-            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
-        }
-
-        of.close();
-    }
-}
-
 TEST(PoseGraphMST, optimization)
 {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG);
@@ -195,6 +138,7 @@ TEST(PoseGraphMST, optimization)
 
     EXPECT_TRUE(r1.found);
     EXPECT_TRUE(r2.found);
+    EXPECT_LE(r2.iters, 20);
     EXPECT_LE(r2.energy, 1.47723e+06);
     // Allow small tolerance due to optimization differences; final energy/iterations are effectively the same
     EXPECT_LE(std::abs(r1.energy - r2.energy), 1e-2);
@@ -503,11 +447,6 @@ TEST(PoseGraph, simple)
     EXPECT_TRUE(r.found);
 }
 #else
-
-TEST(PoseGraph, sphereG2O)
-{
-    throw SkipTestException("Build with Eigen required for pose graph optimization");
-}
 
 TEST(PoseGraphMST, optimization)
 {

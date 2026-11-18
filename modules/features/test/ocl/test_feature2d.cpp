@@ -43,7 +43,7 @@ PARAM_TEST_CASE(Feature2DFixture, std::function<Ptr<Feature2D>()>, std::string, 
     }
 };
 
-OCL_TEST_P(Feature2DFixture, KeypointsSame)
+OCL_TEST_P(Feature2DFixture, KeypointsAndDescriptorsSame)
 {
     size_t count_diff = (keypoints.size() > ukeypoints.size()) ?
                         keypoints.size() - ukeypoints.size() : ukeypoints.size() - keypoints.size();
@@ -74,10 +74,8 @@ OCL_TEST_P(Feature2DFixture, KeypointsSame)
     }
     size_t n = std::min(cpu_sorted.size(), ocl_sorted.size());
     EXPECT_GE(matched, (int)(n * 0.70));
-}
 
-OCL_TEST_P(Feature2DFixture, DescriptorsSame)
-{
+    // Descriptors of the same SetUp() run; one test per image avoids running the pipeline twice.
     EXPECT_EQ(descriptors.size(), udescriptors.size());
     ASSERT_EQ(descriptors.type(), udescriptors.type());
     Mat udesc = udescriptors.getMat(ACCESS_READ);

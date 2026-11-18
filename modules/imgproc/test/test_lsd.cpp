@@ -166,19 +166,6 @@ TEST_F(Imgproc_LSD_ADV, rotatedRect)
     ASSERT_EQ(EPOCHS, passedtests);
 }
 
-TEST_F(Imgproc_LSD_STD, whiteNoise)
-{
-    for (int i = 0; i < EPOCHS; ++i)
-    {
-        GenerateWhiteNoise(test_image);
-        Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
-        detector->detect(test_image, lines);
-
-        if(50u >= lines.size()) ++passedtests;
-    }
-    ASSERT_EQ(EPOCHS, passedtests);
-}
-
 TEST_F(Imgproc_LSD_STD, constColor)
 {
     for (int i = 0; i < EPOCHS; ++i)
@@ -283,7 +270,7 @@ TEST_F(Imgproc_LSD_Common, supportsVec4iResult)
         std::vector<Vec4i> linesVec4i;
         detector->detect(test_image, linesVec4i);
 
-        if (lines.size() == linesVec4i.size())
+        if (50u >= lines.size() && lines.size() == linesVec4i.size())
         {
             bool pass = true;
             for (size_t lineIndex = 0; pass && lineIndex < lines.size(); lineIndex++)
