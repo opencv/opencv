@@ -1674,8 +1674,15 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
-    if (mainGraph)
+    if (mainGraph) {
         markLayerWeightsChanged(getLayer(layer));
+#ifdef HAVE_CUDA
+        cudaGraphReset();
+#endif
+    } else {
+        getLayerData(layer).backendNodes.clear();
+        netWasAllocated = false;
+    }
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1710,6 +1717,9 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (numParam < (int)layer->blobs.size()) {
                 layer->blobs[numParam] = blob;
                 markLayerWeightsChanged(layer);
+#ifdef HAVE_CUDA
+                cudaGraphReset();
+#endif
                 return;
             }
 
@@ -1717,6 +1727,9 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (conv && numParam == 0) {
                 conv->setWeights(blob, Mat(), defaultC0, accuracy);
                 markLayerWeightsChanged(layer);
+#ifdef HAVE_CUDA
+                cudaGraphReset();
+#endif
                 return;
             }
 
@@ -1724,6 +1737,9 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (deconv && numParam == 0) {
                 deconv->setWeights(blob, Mat(), defaultC0, accuracy);
                 markLayerWeightsChanged(layer);
+#ifdef HAVE_CUDA
+                cudaGraphReset();
+#endif
                 return;
             }
 
