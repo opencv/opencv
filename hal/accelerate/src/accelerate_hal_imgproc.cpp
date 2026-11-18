@@ -21,7 +21,6 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
     // vImageSepConvolve_Planar16U fails Imgproc_Sobel.accuracy tests
     // vImageSepConvolve_ARGB8888 fails SepFilter2D.Mat_BitExact test
     const bool supported_types = (src_type == CV_8U && (dst_type == CV_8U || dst_type == CV_16U)) ||
-                                 (src_type == CV_16F && dst_type == CV_16F) ||
                                  (src_type == CV_32F && dst_type == CV_32F);
     if (!supported_types || kernel_type != CV_32F || (borderType != cv::BORDER_CONSTANT && borderType != cv::BORDER_REPLICATE) ||
         anchor_x != -1 || anchor_y != -1) {
@@ -31,12 +30,13 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
     uchar* _dst_data = dst_data;
     size_t _dst_step = dst_step;
     const int elem_size = CV_ELEM_SIZE(src_type);
+    const size_t dst_elem_size = CV_ELEM_SIZE(dst_type);
     cv::AutoBuffer<uchar> dst;
 
     // In-place processing is not allowed
     if (src_data == dst_data) {
-        dst.allocate(width * height * elem_size);
-        _dst_step = width * elem_size;
+        _dst_step = (size_t)width * dst_elem_size;
+        dst.allocate(_dst_step * height);
         _dst_data = dst.data();
     }
 
@@ -56,19 +56,6 @@ int accelerate_hal_sepFilter_stateless(const uchar* src_data, size_t src_step, i
                 reinterpret_cast<const float*>(kernelx_data), kernelx_len,
                 reinterpret_cast<const float*>(kernely_data), kernely_len,
                 delta, Pixel_F{}, flags);
-        } else if (src_type == CV_16F && dst_type == CV_16F) {
-#if ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && defined(__MAC_13_0) && __MAC_OS_X_VERSION_MAX_ALLOWED >= __MAC_13_0) || \
-     (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_16_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_16_0) || \
-     (defined(__WATCH_OS_VERSION_MAX_ALLOWED) && defined(__WATCHOS_9_0) && __WATCH_OS_VERSION_MAX_ALLOWED >= __WATCHOS_9_0) || \
-     (defined(__TV_OS_VERSION_MAX_ALLOWED) && defined(__TVOS_16_0) && __TV_OS_VERSION_MAX_ALLOWED >= __TVOS_16_0))
-            if (__builtin_available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)) {
-                return vImageSepConvolve_Planar16F(&src_buffer, dst_buffer, nullptr,
-                    offset_x, y,
-                    reinterpret_cast<const float*>(kernelx_data), kernelx_len,
-                    reinterpret_cast<const float*>(kernely_data), kernely_len,
-                    delta, Pixel_F{}, flags);
-            }
-#endif
         } else if (src_type == CV_32F && dst_type == CV_32F) {
             return vImageSepConvolve_PlanarF(&src_buffer, dst_buffer, nullptr,
                 offset_x, y,

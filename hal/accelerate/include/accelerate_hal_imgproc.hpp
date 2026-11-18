@@ -9,7 +9,7 @@
 
 // sepFilter2D on top of Apple's vImage (vImageSepConvolve_*).
 //
-// Handled: 8U->8U, 8U->16U, 32F->32F and 16F->16F (16F needs macOS 13 / iOS 16 at run time),
+// Handled: 8U->8U, 8U->16U and 32F->32F,
 // with a CV_32F kernel, default anchor and BORDER_CONSTANT or BORDER_REPLICATE.
 // Everything else returns CV_HAL_ERROR_NOT_IMPLEMENTED, and OpenCV's own code is used.
 //
