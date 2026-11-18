@@ -1684,9 +1684,12 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
     if( e.flags == 'I' && e.a.dims <= 2 )
         setIdentity(m, Scalar(e.alpha));
     else if( e.flags == '0' )
-        m = Scalar();
+        m.setZero();
     else if( e.flags == '1' )
+    {
+        CV_CheckLE(m.channels(), 4, "cv::Mat::ones does not support more than 4 channels");
         m = Scalar(e.alpha);
+    }
     else
         CV_Error(cv::Error::StsError, "Invalid matrix initializer type");
 }
