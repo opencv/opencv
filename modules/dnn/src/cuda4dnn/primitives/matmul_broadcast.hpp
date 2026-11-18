@@ -67,13 +67,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, alpha, transA, input_A, A_offsets, transB, input_B, B_offsets);
 
-            // add bias if exists (runtime bias sits at inputs[1] when B is constant, else inputs[2])
-            const std::size_t bias_idx = input_B_tensor.empty() ? 2 : 1;
-            if (!bias_tensor.empty() || inputs.size() > bias_idx) {
+            // add bias if exists
+            if (!bias_tensor.empty() || inputs.size() >= 3) {
                 csl::TensorView<T> bias;
                 float bias_scale = 1.f;  // a constant bias comes pre-scaled by beta
                 if (bias_tensor.empty()) {
-                    auto bias_wrapper = inputs[bias_idx].dynamicCast<wrapper_type>();
+                    auto bias_wrapper = inputs[2].dynamicCast<wrapper_type>();
                     bias = bias_wrapper->getView();
                     bias_scale = beta;
                 } else {
@@ -101,23 +100,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             csl::tensor_ops::gemmBatched<T>(cublasHandle, batch, 0.f, output, C_offsets, alpha, transA, input_A, A_offsets, transB, input_B, B_offsets);
 
-            const std::size_t bias_idx = input_B_tensor.empty() ? 2 : 1;
-            if (!bias_tensor.empty() || inputs.size() > bias_idx) {
-                csl::TensorView<T> bias;
-                float bias_scale = 1.f;
-                if (bias_tensor.empty()) {
-                    bias = csl::viewOf<T>(inputs[bias_idx]);
-                    bias_scale = beta;
-                } else {
-                    bias = csl::TensorView<T>(bias_tensor);
-                }
-
-                if (bias_scale == 1.f)
-                    kernels::eltwise_sum_2<T>(stream, output, output, bias);
-                else
-                    kernels::eltwise_sum_coeff_2<T>(stream, output, T(1.f), output,
-                                                    T(bias_scale), bias);
-            }
+            if (!bias_tensor.empty())
+                kernels::eltwise_sum_2<T>(stream, output, output, csl::TensorView<T>(bias_tensor));
         }
 
     private:

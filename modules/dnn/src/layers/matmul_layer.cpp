@@ -83,7 +83,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             if (inputs.empty())
                 return true;
             const bool constB = inputs.size() == 1 && (blobs.size() == 1 || blobs.size() == 2);
-            const bool inputB = blobs.empty() && (inputs.size() == 2 || inputs.size() == 3);
+            const bool inputB = blobs.empty() && inputs.size() == 2;
             if (!constB && !inputB)
                 return false;
             Net::Impl* netimpl_ = getNetImpl(this);
@@ -98,21 +98,16 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             for (const Mat& b : blobs)
                 if (b.type() != CV_32F)
                     return false;
-            // gemmBatched reads the last two axes of A, B and Y; 1-D matrix operands stay on CPU
-            const size_t matInputs = blobs.empty() ? 2 : 1;
-            for (size_t i = 0; i < std::min(matInputs, inputs.size()); i++) {
-                const int dims = netimpl_->argData(inputs[i]).shape.dims;
+            // gemmBatched reads the last two axes of A, B and Y; 1-D operands stay on CPU
+            for (const Arg& a : inputs) {
+                const int dims = netimpl_->argData(a).shape.dims;
                 if (dims >= 0 && dims < 2)
                     return false;
             }
             if (!blobs.empty() && blobs[0].dims < 2)
                 return false;
-            if ((inputs.size() + blobs.size()) == 3) {
-                const int biasDims = blobs.size() >= 2 ? blobs[1].dims
-                                                       : netimpl_->argData(inputs.back()).shape.dims;
-                if (biasDims > (int)CSL_MAX_TENSOR_RANK)
-                    return false;
-            }
+            if (blobs.size() == 2 && blobs[1].dims > (int)CSL_MAX_TENSOR_RANK)
+                return false;
             return true;
         }
 #endif
@@ -253,24 +248,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             last_packed_input_B_data = B_mat->data;
         }
 
-        // broadcast bias if needed (CUDA broadcasts unexpanded blobs[1] directly on device)
+        // The broadcast bias is built on first use (forward(), forward_ocl(), initNgraph(), initCUDA()),
+        // so a CUDA net that adds the unexpanded bias on device never allocates it.
         last_c_shape = C_shape;
         broadcast_bias.release();
-        bool skipHostBiasBroadcast = false;
-#ifdef HAVE_CUDA
-        const Net::Impl* cudaNetImpl = getNetImpl(this);
-        const bool onCuda = IS_DNN_CUDA_TARGET(preferableTarget) ||
-                            (cudaNetImpl && cudaNetImpl->preferableBackend == DNN_BACKEND_CUDA);
-        const int bDims = blobs.empty() ? inputs[1].dims : blobs[0].dims;
-        if (onCuda && supportBackend(DNN_BACKEND_CUDA) &&
-            inputs[0].dims >= 2 && bDims >= 2 && blobs.size() >= 2 &&
-            C_shape.size() <= CSL_MAX_TENSOR_RANK &&
-            blobs.back().dims <= (int)CSL_MAX_TENSOR_RANK)
-            skipHostBiasBroadcast = true;
-#endif
-        if ((inputs.size() + blobs.size()) >= 3 && blobs.size() >= 2 && !skipHostBiasBroadcast) {
-            ensureBroadcastBias(C_shape);
-        }
 
 #ifdef HAVE_OPENCL
         weight_umat.release();
@@ -358,7 +339,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 }
             } else { // bias from constant
                 if (broadcast_bias.empty())
-                    ensureBroadcastBias(shape_Y);
+                    ensureBroadcastBias(last_c_shape);
                 const auto *bias = broadcast_bias.ptr<const float>();
                 std::memcpy(y, bias, total(shape_Y) * sizeof(float));
             }
