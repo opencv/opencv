@@ -670,6 +670,25 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
   endif()
 endif()
 
+# --- HIP/ROCm Support ---
+OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP support" OFF)
+OCV_OPTION(BUILD_PLUGIN_ACCEL_HIP "Build the HIP backend of the non-CPU HAL as a plugin" ON
+           VISIBLE_IF WITH_HIP)
+if(WITH_HIP)
+  include(CheckLanguage)
+  check_language(HIP)
+  if(CMAKE_HIP_COMPILER)
+    # Must precede enable_language(HIP): CMake caches its own CMAKE_HIP_ARCHITECTURES there,
+    # taken from the GPUs of the build machine.
+    include(cmake/OpenCVHipArchitectures.cmake)
+    ocv_hip_select_architectures()
+    if(OCV_HIP_ARCH_FOUND)
+      enable_language(HIP)
+    endif()
+  endif()
+  include(cmake/OpenCVDetectHIP.cmake)
+endif()
+
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
@@ -1060,6 +1079,9 @@ ocv_add_modules_compiler_options()
 
 # OpenCV modules
 ocv_register_modules()
+
+# HIP backend of the non-CPU HAL, built as a plugin against the modules above
+include(cmake/OpenCVBuildAccelHip.cmake)
 
 # Generate targets for documentation
 add_subdirectory(doc)
