@@ -2,7 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "perf_precomp.hpp"
-#include "opencv2/imgcodecs.hpp"
 
 namespace opencv_test { namespace {
 
@@ -53,44 +52,30 @@ PERF_TEST_P(DenseOpticalFlow_Farneback, perf,
 }
 
 CV_ENUM(FarnebackGaussian, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
-typedef tuple<int, FarnebackGaussian, bool> FarnebackCPUParams;
-typedef TestBaseWithParam<FarnebackCPUParams> FarnebackCPU;
+typedef tuple<Size, int, FarnebackGaussian> FarnebackSequenceParams;
+typedef TestBaseWithParam<FarnebackSequenceParams> FarnebackSequence;
 
-PERF_TEST_P(FarnebackCPU, calcOpticalFlowFarneback,
-            Combine(Values(5, 7), FarnebackGaussian::all(), testing::Bool()))
+PERF_TEST_P(FarnebackSequence, calcOpticalFlowFarneback,
+            Combine(Values(sz720p, sz1080p), Values(5, 7), FarnebackGaussian::all()))
 {
-    const Mat prev = imread(getDataPath("cv/optflow/RubberWhale1.png"), IMREAD_GRAYSCALE);
-    const Mat next = imread(getDataPath("cv/optflow/RubberWhale2.png"), IMREAD_GRAYSCALE);
-    ASSERT_FALSE(prev.empty());
-    ASSERT_FALSE(next.empty());
-
-    const int polyN = get<0>(GetParam());
+    const Size size = get<0>(GetParam());
+    const int polyN = get<1>(GetParam());
+    const int flags = get<2>(GetParam());
     const double polySigma = polyN == 5 ? 1.1 : 1.5;
-    int flags = get<1>(GetParam());
-    const bool useInitialFlow = get<2>(GetParam());
-    const double pyrScale = 0.5;
-    const int levels = 5, winSize = 13, iterations = 10;
-    Mat flow(prev.size(), CV_32FC2);
-    Mat initialFlow;
-    if (useInitialFlow)
+    const std::vector<Mat> frames = makeSequence(size);
+    Mat flow(size, CV_32FC2);
+    int pair = 0;
+
+    // Nine samples cover all frame pairs. Wrap for the framework's default tenth sample.
+    declare.iterations(SEQUENCE_LENGTH).time(900);
+    TEST_CYCLE()
     {
-        cv::calcOpticalFlowFarneback(prev, next, initialFlow, pyrScale, levels, winSize,
-                                     iterations, polyN, polySigma, flags);
-        flags |= OPTFLOW_USE_INITIAL_FLOW;
+        cv::calcOpticalFlowFarneback(frames[pair], frames[pair + 1], flow,
+                                    0.5, 5, 13, 3, polyN, polySigma, flags);
+        pair = (pair + 1) % (SEQUENCE_LENGTH - 1);
     }
 
-    declare.in(prev, next).out(flow);
-    while (this->next())
-    {
-        if (useInitialFlow)
-            initialFlow.copyTo(flow);
-        startTimer();
-        cv::calcOpticalFlowFarneback(prev, next, flow, pyrScale, levels, winSize,
-                                     iterations, polyN, polySigma, flags);
-        stopTimer();
-    }
-
-    EXPECT_EQ(prev.size(), flow.size());
+    EXPECT_EQ(size, flow.size());
     EXPECT_EQ(CV_32FC2, flow.type());
     EXPECT_TRUE(checkRange(flow));
     SANITY_CHECK_NOTHING();
