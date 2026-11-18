@@ -89,6 +89,11 @@ OCL_TEST_P(FarnebackOpticalFlow, Mat)
     cv::Mat frame1 = readImage("optflow/RubberWhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
+    // half-size centre crop: pyrScale 0.3 and 0.5 still stop at the 32 px minimum level size, 0.8 still uses 5 levels
+    const Rect crop(146, 97, 292, 194);
+    frame0 = frame0(crop).clone();
+    frame1 = frame1(crop).clone();
+
     double polySigma = polyN <= 5 ? 1.1 : 1.5;
 
     cv::Mat flow; cv::UMat uflow;

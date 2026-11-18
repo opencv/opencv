@@ -93,7 +93,7 @@ TEST(ParallelFeaturesFinder, IsSameWithSerial)
     detail::ImageFeatures serial_features;
     detail::computeImageFeatures(serial_finder, img, serial_features);
 
-    vector<Mat> imgs(50, img);
+    vector<Mat> imgs(8, img);  // the vector path is a serial loop; 8 copies still overlap if it is ever parallelized
     vector<detail::ImageFeatures> para_features(imgs.size());
     detail::computeImageFeatures(para_finder, imgs, para_features);  // FIXIT This call doesn't use parallel_for_()
 

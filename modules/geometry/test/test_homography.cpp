@@ -221,7 +221,8 @@ static void print_information_8(int _method, int j, int N, int k, int l, double 
 TEST(Calib3d_Homography, accuracy)
 {
     using namespace HomographyTestUtils;
-    for (int N = MIN_COUNT_OF_POINTS; N <= MAX_COUNT_OF_POINTS; ++N)
+    // every count up to 63 (minimal case and all small-count tails), then a sparse sample of larger sets
+    for (int N = MIN_COUNT_OF_POINTS; N <= MAX_COUNT_OF_POINTS; N += (N < 64 ? 1 : 13))
     {
         RNG& rng = cv::theRNG();
 

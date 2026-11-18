@@ -100,9 +100,9 @@ TEST(Flann_KMeansIndex, destroy_after_truncated_load)
     const std::vector<char> saved = saveKMeansIndex(data, filename);
     ASSERT_GT(saved.size(), kmeans_trees_ofs + sizeof(int));
 
-    // every cut after trees_ stops inside the indices, a node, a pivot or a leaf offset,
-    // and the destructor then frees whatever part of the tree was loaded
-    for (size_t len = kmeans_trees_ofs + sizeof(int); len < saved.size(); ++len)
+    // every field after trees_ is a whole number of 4-byte words, so cutting at each word
+    // boundary reaches every failing read; cuts inside a word fail the same fread()
+    for (size_t len = kmeans_trees_ofs + sizeof(int); len < saved.size(); len += sizeof(int))
     {
         SCOPED_TRACE(cv::format("File length: %d", (int)len));
         writeFile(filename, std::vector<char>(saved.begin(), saved.begin() + len));

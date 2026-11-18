@@ -2249,9 +2249,11 @@ TEST(Calib_CalibrateCamera, deterministic_across_threads)
             {
                 cv::Mat K, D, stdIntr, stdExtr, perViewErr, newObj, stdObj;
                 std::vector<cv::Mat> rvecs, tvecs;
+                // a few LM steps exercise the parallel per-part accumulation; convergence is not under test
                 cv::calibrateCameraRO(objectPoints, imagePoints, cv::Size(1280, 720), iFixedPoint,
                                       K, D, rvecs, tvecs, newObj,
-                                      stdIntr, stdExtr, stdObj, perViewErr);
+                                      stdIntr, stdExtr, stdObj, perViewErr,
+                                      0, cv::TermCriteria(cv::TermCriteria::COUNT, 5, 0));
 
                 std::vector<cv::Mat> parts = { K.reshape(1, 1), D.reshape(1, 1),
                                                stdIntr.reshape(1, 1), stdExtr.reshape(1, 1) };

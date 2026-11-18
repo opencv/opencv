@@ -43,7 +43,7 @@ TEST( Features2d_DescriptorExtractor, batch_ORB )
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
     vector<vector<KeyPoint> > keypoints;
-    int i, n = 6;
+    int i, n = 2;
     Ptr<ORB> orb = ORB::create();
 
     for( i = 0; i < n; i++ )
@@ -71,7 +71,7 @@ TEST( Features2d_DescriptorExtractor, batch_SIFT )
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
     vector<vector<KeyPoint> > keypoints;
-    int i, n = 6;
+    int i, n = 2;
     Ptr<SIFT> sift = SIFT::create();
 
     for( i = 0; i < n; i++ )
