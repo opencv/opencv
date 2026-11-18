@@ -529,14 +529,19 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         x = 0;
 
 #if CV_RVV && CV_SIMD_SCALABLE
-        // Broadcast each coefficient for the current vector length.
-        const int lanes = VTraits<v_float32>::vlanes();
+        const int lanes = static_cast<int>(__riscv_vsetvlmax_e32m1());
         for (; x <= width*5 - lanes; x += lanes)
         {
-            v_float32 acc = v_mul(vx_load(srow[m] + x), vx_setall_f32(kernel[0]));
+            const vfloat32m1_t center = __riscv_vle32_v_f32m1(srow[m] + x, lanes);
+            vfloat32m1_t acc = __riscv_vfmul_vf_f32m1(center, kernel[0], lanes);
             for (i = 1; i <= m; ++i)
-                acc = v_fma(v_add(vx_load(srow[m-i] + x), vx_load(srow[m+i] + x)), vx_setall_f32(kernel[i]), acc);
-            v_store(vsum + x, acc);
+            {
+                const vfloat32m1_t upper = __riscv_vle32_v_f32m1(srow[m-i] + x, lanes);
+                const vfloat32m1_t lower = __riscv_vle32_v_f32m1(srow[m+i] + x, lanes);
+                const vfloat32m1_t sum = __riscv_vfadd_vv_f32m1(upper, lower, lanes);
+                acc = __riscv_vfmacc_vf_f32m1(acc, kernel[i], sum, lanes);
+            }
+            __riscv_vse32_v_f32m1(vsum + x, acc, lanes);
         }
 #elif CV_SIMD128
         {
@@ -606,14 +611,19 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         // horizontal blur
         x = 0;
 #if CV_RVV && CV_SIMD_SCALABLE
-        // Broadcast each coefficient for the current vector length.
-        const int hlanes = VTraits<v_float32>::vlanes();
+        const int hlanes = static_cast<int>(__riscv_vsetvlmax_e32m1());
         for (; x <= width*5 - hlanes; x += hlanes)
         {
-            v_float32 acc = v_mul(vx_load(vsum + x), vx_setall_f32(kernel[0]));
+            const vfloat32m1_t center = __riscv_vle32_v_f32m1(vsum + x, hlanes);
+            vfloat32m1_t acc = __riscv_vfmul_vf_f32m1(center, kernel[0], hlanes);
             for (i = 1; i <= m; ++i)
-                acc = v_fma(v_add(vx_load(vsum + x - i*5), vx_load(vsum + x + i*5)), vx_setall_f32(kernel[i]), acc);
-            v_store(hsum + x, acc);
+            {
+                const vfloat32m1_t left = __riscv_vle32_v_f32m1(vsum + x - i*5, hlanes);
+                const vfloat32m1_t right = __riscv_vle32_v_f32m1(vsum + x + i*5, hlanes);
+                const vfloat32m1_t sum = __riscv_vfadd_vv_f32m1(left, right, hlanes);
+                acc = __riscv_vfmacc_vf_f32m1(acc, kernel[i], sum, hlanes);
+            }
+            __riscv_vse32_v_f32m1(hsum + x, acc, hlanes);
         }
 #elif CV_SIMD128
         {
