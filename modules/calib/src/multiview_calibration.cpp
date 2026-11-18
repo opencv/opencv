@@ -634,7 +634,9 @@ double calibrateMultiview(
     const Mat obj_pts_0 = objPoints.getMat(0);
     CV_Assert((obj_pts_0.type() == CV_32F && (obj_pts_0.rows == 3 || obj_pts_0.cols == 3)) ||
               (obj_pts_0.type() == CV_32FC3 && (obj_pts_0.rows == 1 || obj_pts_0.cols == 1)));
-    const bool obj_points_in_rows = obj_pts_0.cols == 3;
+    const bool obj_points_in_rows = obj_pts_0.channels() == 3
+        ? obj_pts_0.cols == 1
+        : obj_pts_0.cols == 3;
     const int NUM_CAMERAS = (int)detection_mask_.rows, NUM_FRAMES = (int)detection_mask_.cols;
     CV_Assert((NUM_CAMERAS > 1) && (NUM_FRAMES > 0));
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
