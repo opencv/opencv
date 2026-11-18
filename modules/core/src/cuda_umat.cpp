@@ -75,7 +75,11 @@ public:
             if (u->size > 0)
                 cudaSafeCall(cudaMalloc(&handle, u->size));
             u->handle = handle;
-            u->currAllocator = this;
+            if (u->currAllocator != this)
+            {
+                u->prevAllocator = u->currAllocator;
+                u->currAllocator = this;
+            }
             if (u->data)
                 u->markDeviceCopyObsolete(true);
             else
@@ -91,11 +95,27 @@ public:
         CV_Assert(u->urefcount == 0);
         CV_Assert(u->refcount == 0);
         if (u->handle)
+        {
             cudaSafeCall(cudaFree(u->handle));
+            u->handle = NULL;
+        }
+        if (u->prevAllocator && u->prevAllocator != this)
+        {
+            u->markDeviceCopyObsolete(true);
+            if (u->data && u->data != u->origdata && !(u->flags & UMatData::USER_ALLOCATED))
+                fastFree(u->data);
+            u->data = u->origdata;
+            const MatAllocator* prev = u->prevAllocator;
+            u->currAllocator = prev;
+            u->prevAllocator = NULL;
+            prev->deallocate(u);
+            return;
+        }
         if (u->origdata && !(u->flags & UMatData::USER_ALLOCATED))
         {
             fastFree(u->origdata);
-            u->origdata = 0;
+            u->origdata = NULL;
+            u->data = NULL;
         }
         delete u;
     }
@@ -105,7 +125,12 @@ public:
         if (!u)
             return;
         if (!u->data && u->size > 0)
-            u->data = u->origdata = static_cast<uchar*>(fastMalloc(u->size));
+        {
+            uchar* p = static_cast<uchar*>(fastMalloc(u->size));
+            u->data = p;
+            if (!u->prevAllocator || u->prevAllocator == this)
+                u->origdata = p;
+        }
         if (u->hostCopyObsolete() && u->handle && u->data)
         {
             cudaSafeCall(cudaMemcpy(u->data, u->handle, u->size, cudaMemcpyDeviceToHost));
@@ -156,7 +181,11 @@ public:
             void* handle = NULL;
             cudaSafeCall(cudaMalloc(&handle, u->size));
             u->handle = handle;
-            u->currAllocator = this;
+            if (u->currAllocator != this)
+            {
+                u->prevAllocator = u->currAllocator;
+                u->currAllocator = this;
+            }
         }
         if (u->deviceCopyObsolete() && u->data && !isFullOverwrite(u, dims, sz, dstofs, dststep))
             unmap(u);
