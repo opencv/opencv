@@ -11,6 +11,9 @@
 namespace cv {
 namespace dnn {
 
+// elements per parallel_for_ stripe
+static const double PARALLEL_GRANULARITY = 65536;
+
 /*
     IsNaN layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__IsNaN.html
@@ -27,7 +30,7 @@ static inline void computeIsNaNMask(const T* src, uchar* dst, const size_t count
             WT v = (WT)src[i];
             dst[i] = static_cast<uchar>(cvIsNaN(v));
         }
-    });
+    }, (double)count / PARALLEL_GRANULARITY);
 }
 
 class IsNaNLayerImpl CV_FINAL : public IsNaNLayer

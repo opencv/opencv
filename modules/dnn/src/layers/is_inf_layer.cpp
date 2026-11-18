@@ -11,6 +11,9 @@
 namespace cv {
 namespace dnn {
 
+// elements per parallel_for_ stripe
+static const double PARALLEL_GRANULARITY = 65536;
+
 /*
     IsInf layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__IsInf.html
@@ -29,7 +32,7 @@ static inline void computeIsInfMask(const T* src, uchar* dst, const size_t count
                 WT v = (WT)src[i];
                 dst[i] = static_cast<uchar>(cvIsInf(v));
             }
-        });
+        }, (double)count / PARALLEL_GRANULARITY);
     }
     else if (detectPositive)
     {
@@ -39,7 +42,7 @@ static inline void computeIsInfMask(const T* src, uchar* dst, const size_t count
                 WT v = (WT)src[i];
                 dst[i] = static_cast<uchar>(cvIsInf(v) && (v > 0));
             }
-        });
+        }, (double)count / PARALLEL_GRANULARITY);
     }
     else if (detectNegative)
     {
@@ -49,7 +52,7 @@ static inline void computeIsInfMask(const T* src, uchar* dst, const size_t count
                 WT v = (WT)src[i];
                 dst[i] = static_cast<uchar>(cvIsInf(v) && (v < 0));
             }
-        });
+        }, (double)count / PARALLEL_GRANULARITY);
     }
     else
     {

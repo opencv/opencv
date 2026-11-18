@@ -13,6 +13,9 @@
 
 namespace cv { namespace dnn {
 
+// elements per parallel_for_ stripe
+static const double PARALLEL_GRANULARITY = 65536;
+
 /*
     OneHot layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__OneHot.html
@@ -170,7 +173,7 @@ private:
                 size_t base = hi * ((size_t)localDepth * localOutStep) + lo;
                 localOutPtr[base + (size_t)wrapped * localOutStep] = localOnVal;
             }
-        });
+        }, (double)inTotal / PARALLEL_GRANULARITY);
     }
 
 public:
