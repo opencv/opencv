@@ -4876,4 +4876,38 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     normAssert(refState, outputs[1], "present_state");
 }
 
+typedef testing::TestWithParam<tuple<MatDepth, double> > Layer_Test_Hardmax;
+TEST_P(Layer_Test_Hardmax, RowsWithoutValueAboveLowest)
+{
+    const int depth = get<0>(GetParam());
+    const double lowest = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Hardmax";
+    lp.name = "test_hardmax";
+    lp.set("axis", -1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // Every element is the lowest value of its type, so none is greater than lowest()
+    Mat input(2, 3, depth, Scalar::all(lowest));
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Ties go to the first element, so each row must be [1, 0, 0]
+    Mat ref(2, 3, depth, Scalar::all(0));
+    ref.col(0).setTo(1);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
+    make_tuple(CV_8U, 0.0),
+    make_tuple(CV_8S, -128.0),
+    make_tuple(CV_32S, (double)INT_MIN),
+    make_tuple(CV_32F, -std::numeric_limits<double>::infinity()),
+    make_tuple(CV_64F, -std::numeric_limits<double>::infinity())
+));
+
 }} // namespace
