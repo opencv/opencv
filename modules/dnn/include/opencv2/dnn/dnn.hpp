@@ -868,11 +868,11 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param numParam index of the layer parameter in the Layer::blobs array.
          *  @note With ENGINE_OPENCV the constant weights of Conv, ConvTranspose, Gemm, MatMul
          *  and Attention live in the layer rather than in Layer::blobs, and the first forward()
-         *  packs a weight and gives the original back. getParam() still returns it for a net
-         *  read from a file: either from the mapping the layer kept, or by reading the
-         *  initializer out of the model file again, which parses that file afresh. It throws
-         *  for a net read from a buffer, for a weight a fusion concatenated, and for one
-         *  setParam() has replaced, since the file no longer holds any of those.
+         *  packs a weight and gives the original back. getParam() still returns it, and returns
+         *  the same thing on every backend: from the mapping the layer kept, from the weight
+         *  setParam() installed, or by reading the initializer out of the model file again,
+         *  which parses that file afresh. It throws only where no original is left to return,
+         *  for a net read from a buffer and for a weight a fusion concatenated.
          *  @see Layer::blobs
          */
         CV_WRAP Mat getParam(int layer, int numParam = 0) const;

@@ -1678,6 +1678,13 @@ Mat Net::Impl::getParam(int layer, int numParam) const
             return argTensor(operand);
     }
 
+    // setParam() installed this weight, so it is not in any file and the caller's Mat is it.
+    if (numParam == 0 && mainGraph) {
+        std::map<std::string, Mat>::const_iterator sp = setParamWeights.find(l->name);
+        if (sp != setParamWeights.end())
+            return sp->second;
+    }
+
     // A released weight was never mapped, so the model file holds the only copy. A fused layer
     // has no entry here: its weight never existed as one tensor.
     if (numParam == 0 && mainGraph && modelFormat == DNN_MODEL_ONNX &&
@@ -1705,12 +1712,15 @@ Mat Net::Impl::getParam(int layer, int numParam) const
 }
 
 // Bump only the epoch: the executor holding the packed weights may be another object.
-static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer, int numParam)
+static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer, int numParam,
+                                    const Mat& blob)
 {
     layer->weightEpoch++;
-    // The model file no longer holds this weight, so getParam() must stop reading it back there.
-    if (numParam == 0)
+    if (numParam == 0) {
+        // The model file no longer describes this weight, but the caller's own Mat still does.
         netimpl->constWeightArgs.erase(layer->name);
+        netimpl->setParamWeights[layer->name] = blob;
+    }
 #ifdef HAVE_CUDA
     // A replayed graph keeps the old weights; re-finalizing inside a capture cannot allocate.
     netimpl->cudaGraphReset();
@@ -1773,7 +1783,7 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
     if (!writeParam(l, numParam, blob))
         CV_Error_(Error::StsOutOfRange,
                   ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
-    markLayerWeightsChanged(this, l, numParam);
+    markLayerWeightsChanged(this, l, numParam, blob);
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1806,7 +1816,7 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
                 continue;
 
             if (writeParam(layer, numParam, blob)) {
-                markLayerWeightsChanged(this, layer, numParam);
+                markLayerWeightsChanged(this, layer, numParam, blob);
                 return;
             }
 

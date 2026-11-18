@@ -89,7 +89,11 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
     //! Whether finalize() has built the form the kernels read, so B itself is spare.
     bool packedReady() const { return !packed_input_B.empty() || !thin_packed_B.empty(); }
 
-    const Mat& constWeights() const CV_OVERRIDE { return weights; }
+    const Mat& constWeights() const CV_OVERRIDE
+    {
+        static const Mat none;
+        return keptForCuda ? none : weights;
+    }
     const Mat& constBias() const CV_OVERRIDE { return bias; }
 
     // wshape0 and the ownership flags survive, as they do after packing.
@@ -312,8 +316,10 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
 
         // The packed copy is what the kernels read from here on; the original is dead weight.
         // A net moved off CUDA frees B on its next finalize.
-        if (ownsWeights && !weights.empty() && !keepForCuda && ownedByGraph &&
-            weights.type() == CV_32F && packedReady()) {
+        const bool consumed = ownsWeights && !weights.empty() && ownedByGraph &&
+                              weights.type() == CV_32F && packedReady();
+        keptForCuda = consumed && keepForCuda;
+        if (consumed && !keepForCuda) {
             if (isMappedTensor(weights)) {
                 // Handing the pages back frees as much as releasing would, and leaves B readable
                 // for getParam() at the cost of faulting it in again.
@@ -876,6 +882,9 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer, public ConstWeightOwner {
 
     int real_ndims_C;
 
+    //! Held only so initCUDA() can read it, so getParam() treats it as consumed and goes
+    //! through the same read-back every other backend does.
+    bool keptForCuda = false;
     Mat weights;                 //!< constant B; released once packed, ownsWeights survives
     Mat bias;                    //!< constant C
     bool ownsWeights = false;
