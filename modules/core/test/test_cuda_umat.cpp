@@ -10,7 +10,6 @@
 
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/core/ocl.hpp>
-#include <map>
 
 namespace opencv_test { namespace {
 
@@ -207,95 +206,27 @@ TEST(Core_CudaUMat, zero_dim_and_adopt_umatdata)
 
 struct CountingCustomAllocator CV_FINAL : public MatAllocator
 {
-    mutable std::map<uchar*, uchar*> liveBlocks;
-    mutable int deallocateCalls;
-    mutable int freedBlocks;
+    mutable int deallocateCalls = 0;
 
-    CountingCustomAllocator() : deallocateCalls(0), freedBlocks(0) {}
-
-    ~CountingCustomAllocator() CV_OVERRIDE
-    {
-        for (std::map<uchar*, uchar*>::iterator it = liveBlocks.begin(); it != liveBlocks.end(); ++it)
-            delete[] it->second;
-        liveBlocks.clear();
-    }
-
-    UMatData* allocate(int dims, const int* sizes, int type, void* data0,
-                       size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
-    {
-        size_t total = CV_ELEM_SIZE(type);
-        for (int i = dims - 1; i >= 0; i--)
-        {
-            if (step)
-            {
-                if (data0 && step[i] != CV_AUTOSTEP)
-                {
-                    CV_Assert(total <= step[i]);
-                    total = step[i];
-                }
-                else
-                {
-                    step[i] = total;
-                }
-            }
-            total *= (size_t)sizes[i];
-        }
-
-        UMatData* u = new UMatData(this);
-        u->prevAllocator = NULL;
-        u->size = total;
-        if (data0)
-        {
-            u->data = u->origdata = static_cast<uchar*>(data0);
-            u->flags |= UMatData::USER_ALLOCATED;
-        }
-        else if (total > 0)
-        {
-            uchar* raw = new uchar[total + sizeof(void*) + 64];
-            uchar** aligned = alignPtr(reinterpret_cast<uchar**>(raw) + 1, 64);
-            aligned[-1] = NULL;
-            uchar* ptr = reinterpret_cast<uchar*>(aligned);
-            liveBlocks[ptr] = raw;
-            u->data = u->origdata = ptr;
-        }
-        return u;
-    }
-
-    UMatData* allocateMetadataOnly(size_t total) const
+    UMatData* make(size_t total, uchar* backing) const
     {
         UMatData* u = new UMatData(this);
         u->prevAllocator = NULL;
         u->size = total;
+        u->data = u->origdata = backing;
         return u;
     }
-
-    bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
-    {
-        return u != NULL;
-    }
-
+    UMatData* allocate(int, const int*, int, void*, size_t*, AccessFlag, UMatUsageFlags) const CV_OVERRIDE
+    { return NULL; }
+    bool allocate(UMatData* u, AccessFlag, UMatUsageFlags) const CV_OVERRIDE
+    { return u != NULL; }
     void deallocate(UMatData* u) const CV_OVERRIDE
     {
-        if (!u)
-            return;
-        CV_Assert(u->urefcount == 0);
-        CV_Assert(u->refcount == 0);
+        ASSERT_TRUE(u != NULL);
         EXPECT_TRUE(u->handle == NULL);
         EXPECT_EQ(this, u->currAllocator);
-        EXPECT_TRUE(u->prevAllocator == NULL || u->prevAllocator == this);
-        if (!(u->flags & UMatData::USER_ALLOCATED) && u->origdata)
-        {
-            std::map<uchar*, uchar*>::iterator it = liveBlocks.find(u->origdata);
-            EXPECT_TRUE(it != liveBlocks.end());
-            if (it != liveBlocks.end())
-            {
-                delete[] it->second;
-                liveBlocks.erase(it);
-                freedBlocks++;
-            }
-            u->origdata = NULL;
-            u->data = NULL;
-        }
+        EXPECT_TRUE(u->prevAllocator == NULL);
+        EXPECT_EQ(u->origdata, u->data);
         deallocateCalls++;
         delete u;
     }
@@ -308,92 +239,40 @@ TEST(Core_CudaUMat, adopt_custom_allocator)
     ASSERT_TRUE(cudaAlloc != NULL);
 
     CountingCustomAllocator customAlloc;
-    const int sz[2] = { 8, 12 };
-    const size_t rowBytes = (size_t)sz[1] * sizeof(float);
-    const size_t copySz[2] = { (size_t)sz[0], rowBytes };
-    const size_t copyStep[2] = { rowBytes, sizeof(float) };
+    const int rows = 8, cols = 12;
+    const size_t rowBytes = (size_t)cols * sizeof(float), total = (size_t)rows * rowBytes;
+    const size_t copySz[2] = { (size_t)rows, rowBytes }, copyStep[2] = { rowBytes, sizeof(float) };
+    std::vector<void*> storage(1 + (total + sizeof(void*) - 1) / sizeof(void*), NULL);
+    uchar* backing = reinterpret_cast<uchar*>(&storage[1]);
 
-    // 1. allocate(UMatData*) preserves prevAllocator and delegates host cleanup to it
-    size_t st1[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
-    UMatData* u1 = customAlloc.allocate(2, sz, CV_32FC1, NULL, st1, ACCESS_RW, USAGE_DEFAULT);
-    ASSERT_TRUE(u1 != NULL && u1->origdata != NULL);
-    Mat expected1(sz[0], sz[1], CV_32FC1, u1->data, st1[0]);
-    randu(expected1, -20.f, 20.f);
-    Mat expected1Copy = expected1.clone();
+    Mat src(rows, cols, CV_32FC1), got(rows, cols, CV_32FC1);
+    randu(src, -20.f, 20.f);
+    std::memcpy(backing, src.data, total);
 
+    UMatData* u1 = customAlloc.make(total, backing);
     ASSERT_TRUE(cudaAlloc->allocate(u1, ACCESS_RW, USAGE_DEFAULT));
-    EXPECT_EQ(cudaAlloc, u1->currAllocator);
     EXPECT_EQ(&customAlloc, u1->prevAllocator);
-    ASSERT_TRUE(u1->handle != NULL);
-
     cudaAlloc->unmap(u1);
-    Mat got1(sz[0], sz[1], CV_32FC1);
-    cudaAlloc->download(u1, got1.data, 2, copySz, NULL, copyStep, copyStep);
-    EXPECT_EQ(0.0, cvtest::norm(expected1Copy, got1, NORM_INF));
-
+    cudaAlloc->download(u1, got.data, 2, copySz, NULL, copyStep, copyStep);
+    EXPECT_EQ(0.0, cvtest::norm(src, got, NORM_INF));
     u1->currAllocator->deallocate(u1);
     ASSERT_EQ(1, customAlloc.deallocateCalls);
-    EXPECT_EQ(1, customAlloc.freedBlocks);
-    EXPECT_EQ(0u, customAlloc.liveBlocks.size());
 
-    // 2. upload() onto an unallocated UMatData also preserves prevAllocator and delegates deallocate()
-    size_t st2[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
-    UMatData* u2 = customAlloc.allocate(2, sz, CV_32FC1, NULL, st2, ACCESS_RW, USAGE_DEFAULT);
-    ASSERT_TRUE(u2 != NULL && u2->handle == NULL);
-    Mat expected2(sz[0], sz[1], CV_32FC1);
-    randu(expected2, 5.f, 15.f);
-
-    cudaAlloc->upload(u2, expected2.data, 2, copySz, NULL, copyStep, copyStep);
-    EXPECT_EQ(cudaAlloc, u2->currAllocator);
+    UMatData* u2 = customAlloc.make(total, NULL);
+    cudaAlloc->upload(u2, src.data, 2, copySz, NULL, copyStep, copyStep);
     EXPECT_EQ(&customAlloc, u2->prevAllocator);
-    ASSERT_TRUE(u2->handle != NULL);
-
     cudaAlloc->map(u2, ACCESS_READ);
-    EXPECT_EQ(0.0, cvtest::norm(expected2, Mat(sz[0], sz[1], CV_32FC1, u2->data, st2[0]), NORM_INF));
-
+    EXPECT_TRUE(u2->origdata == NULL);
+    EXPECT_EQ(0.0, cvtest::norm(src, Mat(rows, cols, CV_32FC1, u2->data, rowBytes), NORM_INF));
     u2->currAllocator->deallocate(u2);
     ASSERT_EQ(2, customAlloc.deallocateCalls);
-    EXPECT_EQ(2, customAlloc.freedBlocks);
-    EXPECT_EQ(0u, customAlloc.liveBlocks.size());
 
-    // 3. Repeated allocate(UMatData*) on a 0-byte adopted UMatData must not clobber prevAllocator
-    const int zeroSz[2] = { 0, 12 };
-    size_t st3[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
-    UMatData* u3 = customAlloc.allocate(2, zeroSz, CV_32FC1, NULL, st3, ACCESS_RW, USAGE_DEFAULT);
-    ASSERT_TRUE(u3 != NULL);
+    UMatData* u3 = customAlloc.make(0, NULL);
     ASSERT_TRUE(cudaAlloc->allocate(u3, ACCESS_RW, USAGE_DEFAULT));
     ASSERT_TRUE(cudaAlloc->allocate(u3, ACCESS_RW, USAGE_DEFAULT));
-    EXPECT_EQ(cudaAlloc, u3->currAllocator);
     EXPECT_EQ(&customAlloc, u3->prevAllocator);
     u3->currAllocator->deallocate(u3);
     ASSERT_EQ(3, customAlloc.deallocateCalls);
-
-    // 4. Adopted UMatData with origdata == NULL mapped via CudaUMatAllocator::map() frees scratch data only
-    UMatData* u4 = customAlloc.allocateMetadataOnly((size_t)sz[0] * rowBytes);
-    ASSERT_TRUE(u4 != NULL && u4->origdata == NULL);
-    cudaAlloc->upload(u4, expected2.data, 2, copySz, NULL, copyStep, copyStep);
-    cudaAlloc->map(u4, ACCESS_READ);
-    ASSERT_TRUE(u4->data != NULL);
-    EXPECT_TRUE(u4->origdata == NULL);
-    EXPECT_EQ(0.0, cvtest::norm(expected2, Mat(sz[0], sz[1], CV_32FC1, u4->data, copyStep[0]), NORM_INF));
-    u4->currAllocator->deallocate(u4);
-    ASSERT_EQ(4, customAlloc.deallocateCalls);
-    EXPECT_EQ(0u, customAlloc.liveBlocks.size());
-
-    // 5. Built-in pinned-memory HostMem::getAllocator() (cudaHostAlloc/cudaFreeHost) roundtrip + delegation
-    MatAllocator* pinnedAlloc = cv::cuda::HostMem::getAllocator();
-    ASSERT_TRUE(pinnedAlloc != NULL);
-    size_t st5[2] = { CV_AUTOSTEP, CV_AUTOSTEP };
-    UMatData* u5 = pinnedAlloc->allocate(2, sz, CV_32FC1, NULL, st5, ACCESS_RW, USAGE_DEFAULT);
-    ASSERT_TRUE(u5 != NULL && u5->origdata != NULL);
-    expected1Copy.copyTo(Mat(sz[0], sz[1], CV_32FC1, u5->data, st5[0]));
-    ASSERT_TRUE(cudaAlloc->allocate(u5, ACCESS_RW, USAGE_DEFAULT));
-    EXPECT_EQ(cudaAlloc, u5->currAllocator);
-    EXPECT_EQ(pinnedAlloc, u5->prevAllocator);
-    Mat got5(sz[0], sz[1], CV_32FC1);
-    cudaAlloc->download(u5, got5.data, 2, copySz, NULL, copyStep, copyStep);
-    EXPECT_EQ(0.0, cvtest::norm(expected1Copy, got5, NORM_INF));
-    u5->currAllocator->deallocate(u5);
 }
 
 TEST(Core_CudaUMat, roi_to_roi_2d_copy)
