@@ -31,13 +31,6 @@ public:
         return e;
     }
 
-    void prepackWeights() CV_OVERRIDE
-    {
-        impl->prepackWeights();
-        node.release();
-        cudaNode.release();
-    }
-
     void finalize(InputArrayOfArrays inputs, OutputArrayOfArrays outputs) CV_OVERRIDE
     {
         impl->finalize(inputs, outputs);

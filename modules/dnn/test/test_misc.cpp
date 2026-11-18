@@ -665,92 +665,6 @@ static void testForwardOutputsArePrivate(EngineType engine)
     normAssert(dup[0], dup[1]);
 }
 
-namespace {
-struct MiniOnnxBuf
-{
-    std::vector<uchar> b;
-    void uvar(uint64_t v)
-    {
-        while (v >= 0x80) { b.push_back((uchar)((v & 0x7f) | 0x80)); v >>= 7; }
-        b.push_back((uchar)v);
-    }
-    void tag(uint32_t f, uint32_t w) { uvar((uint64_t(f) << 3) | w); }
-    void i64(uint32_t f, int64_t v) { tag(f, 0); uvar((uint64_t)v); }
-    void i32(uint32_t f, int32_t v) { tag(f, 0); uvar((uint64_t)(int64_t)v); }
-    void f32(uint32_t f, float v)
-    {
-        tag(f, 5);
-        uchar tmp[4];
-        std::memcpy(tmp, &v, 4);
-        b.insert(b.end(), tmp, tmp + 4);
-    }
-    void bytes(uint32_t f, const void* p, size_t n)
-    {
-        tag(f, 2);
-        uvar(n);
-        const uchar* q = static_cast<const uchar*>(p);
-        b.insert(b.end(), q, q + n);
-    }
-    void str(uint32_t f, const std::string& s) { bytes(f, s.data(), s.size()); }
-    void sub(uint32_t f, const MiniOnnxBuf& c) { bytes(f, c.b.data(), c.b.size()); }
-};
-
-static MiniOnnxBuf onnxValueInfoF32(const std::string& name, const std::vector<int>& dims)
-{
-    MiniOnnxBuf shape;
-    for (int d : dims) { MiniOnnxBuf dm; dm.i64(1, d); shape.sub(1, dm); }
-    MiniOnnxBuf tt; tt.i32(1, 1); tt.sub(2, shape);
-    MiniOnnxBuf tp; tp.sub(1, tt);
-    MiniOnnxBuf vi; vi.str(1, name); vi.sub(2, tp);
-    return vi;
-}
-
-static MiniOnnxBuf onnxTensorF32(const std::string& name, const Mat& m)
-{
-    CV_Assert(m.type() == CV_32F && m.isContinuous());
-    MiniOnnxBuf t;
-    for (int i = 0; i < m.dims; ++i) t.i64(1, m.size[i]);
-    t.i32(2, 1);
-    t.str(8, name);
-    t.bytes(9, m.data, m.total() * sizeof(float));
-    return t;
-}
-
-static MiniOnnxBuf onnxNode(const std::string& op, const std::vector<std::string>& inps,
-                            const std::vector<std::string>& outs,
-                            const std::vector<MiniOnnxBuf>& attrs = {},
-                            const std::string& name = "")
-{
-    MiniOnnxBuf n;
-    for (const auto& s : inps) n.str(1, s);
-    for (const auto& s : outs) n.str(2, s);
-    if (!name.empty()) n.str(3, name);
-    n.str(4, op);
-    for (const auto& a : attrs) n.sub(5, a);
-    return n;
-}
-
-static std::vector<uchar> onnxModel(const std::vector<MiniOnnxBuf>& nodes,
-                                    const std::vector<MiniOnnxBuf>& inps,
-                                    const std::vector<MiniOnnxBuf>& outs,
-                                    const std::vector<MiniOnnxBuf>& inits)
-{
-    MiniOnnxBuf g;
-    for (const auto& n : nodes) g.sub(1, n);
-    g.str(2, "g");
-    for (const auto& t : inits) g.sub(5, t);
-    for (const auto& i : inps) g.sub(11, i);
-    for (const auto& o : outs) g.sub(12, o);
-    MiniOnnxBuf m;
-    m.i64(1, 8);
-    m.str(2, "test");
-    m.sub(7, g);
-    MiniOnnxBuf op; op.str(1, ""); op.i64(2, 18);
-    m.sub(8, op);
-    return m.b;
-}
-} // namespace
-
 typedef testing::TestWithParam<tuple<Backend, Target> > Net_CudaGraphCoherence;
 TEST_P(Net_CudaGraphCoherence, SetParamInvalidatesCapturedGraph)
 {
@@ -764,82 +678,70 @@ TEST_P(Net_CudaGraphCoherence, SetParamInvalidatesCapturedGraph)
     const double l1 = fp16 ? 1e-2 : 1e-5;
     const double lInf = fp16 ? 5e-2 : 1e-4;
 
-    const int M = 4, K = 8, N = 6;
-    Mat W1(K, N, CV_32F), W2(K, N, CV_32F), W3(K, N, CV_32F), B(std::vector<int>{N}, CV_32F);
-    randu(W1, -1.f, 1.f);
-    randu(W2, -1.f, 1.f);
-    randu(W3, -1.f, 1.f);
-    randu(B, -0.5f, 0.5f);
-
-    std::vector<uchar> modelBytes = onnxModel(
-        { onnxNode("Gemm", {"X", "W", "B"}, {"Y"}, {}, "gemm0") },
-        { onnxValueInfoF32("X", {M, K}) },
-        { onnxValueInfoF32("Y", {M, N}) },
-        { onnxTensorF32("W", W1), onnxTensorF32("B", B) });
-
-    Net net = readNetFromONNX(modelBytes);
-    net.setPreferableBackend(backendId);
-    net.setPreferableTarget(targetId);
-
-    auto evalRef = [&](const Mat& X, const Mat& W) {
-        Mat ref = X * W;
-        for (int r = 0; r < M; ++r)
-            ref.row(r) += B.reshape(1, 1);
-        return ref;
-    };
-
-    Mat X(M, K, CV_32F);
-    randu(X, -1.f, 1.f);
-    net.setInput(X);
-
-    // Call 1 (eager), then setParam BEFORE Call 2 (which would otherwise capture initCUDA's cudaMalloc)
-    normAssert(evalRef(X, W1), net.forward(), "call1_W1", l1, lInf);
-    net.setParam("Y", 0, W2);
-    normAssert(evalRef(X, W2), net.forward(), "call2_after_setParam_W2", l1, lInf);
-    normAssert(evalRef(X, W2), net.forward(), "call3_record_W2", l1, lInf);
-    normAssert(evalRef(X, W2), net.forward(), "call4_replay_W2", l1, lInf);
-
-    // Now setParam AFTER graph replay is active (Call 4 replayed W2)
-    net.setParam("Y", 0, W3);
-    normAssert(evalRef(X, W3), net.forward(), "call5_after_replay_setParam_W3", l1, lInf);
-    normAssert(evalRef(X, W3), net.forward(), "call6_record_W3", l1, lInf);
-    normAssert(evalRef(X, W3), net.forward(), "call7_replay_W3", l1, lInf);
-
-    // Also check Conv2 setParam before and after CUDA Graph capture
-    Mat cW1({4, 3, 3, 3}, CV_32F), cW2({4, 3, 3, 3}, CV_32F), cW3({4, 3, 3, 3}, CV_32F);
-    randu(cW1, -0.5f, 0.5f);
-    randu(cW2, -0.5f, 0.5f);
-    randu(cW3, -0.5f, 0.5f);
-    std::vector<uchar> convBytes = onnxModel(
-        { onnxNode("Conv", {"X", "W"}, {"Y"}, {}, "conv0") },
-        { onnxValueInfoF32("X", {1, 3, 6, 6}) },
-        { onnxValueInfoF32("Y", {1, 4, 4, 4}) },
-        { onnxTensorF32("W", cW1) });
-
-    Net convNet = readNetFromONNX(convBytes);
-    convNet.setPreferableBackend(backendId);
-    convNet.setPreferableTarget(targetId);
-
-    auto convCpuRef = [&](const Mat& inp, const Mat& w) {
-        Net refNet = readNetFromONNX(convBytes);
+    // Reference: a fresh CPU net from the same model, with the weight set before its first forward()
+    auto cpuRef = [](const std::string& model, const Mat& inp, const Mat& w) {
+        Net refNet = readNetFromONNX(model);
         refNet.setPreferableBackend(DNN_BACKEND_OPENCV);
         refNet.setPreferableTarget(DNN_TARGET_CPU);
-        refNet.setParam("Y", 0, w);
+        if (!w.empty())
+            refNet.setParam("Y", 0, w);
         refNet.setInput(inp);
         return refNet.forward().clone();
     };
 
+    // Y = X * W + B with X [M, K], W [K, N], B [N]
+    const std::string gemmModel = findDataFile("dnn/onnx/models/gemm_setparam.onnx");
+    const int M = 4, K = 8, N = 6;
+    Mat W2(K, N, CV_32F), W3(K, N, CV_32F);
+    randu(W2, -1.f, 1.f);
+    randu(W3, -1.f, 1.f);
+
+    Net net = readNetFromONNX(gemmModel);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    Mat X(M, K, CV_32F);
+    randu(X, -1.f, 1.f);
+    net.setInput(X);
+    ASSERT_GT(cvtest::norm(cpuRef(gemmModel, X, Mat()), cpuRef(gemmModel, X, W2), NORM_INF), 0.1)
+        << "the reference does not see the weight set by setParam()";
+
+    // Call 1 (eager), then setParam BEFORE Call 2 (which would otherwise capture initCUDA's cudaMalloc)
+    normAssert(cpuRef(gemmModel, X, Mat()), net.forward(), "call1_W1", l1, lInf);
+    net.setParam("Y", 0, W2);
+    normAssert(cpuRef(gemmModel, X, W2), net.forward(), "call2_after_setParam_W2", l1, lInf);
+    normAssert(cpuRef(gemmModel, X, W2), net.forward(), "call3_record_W2", l1, lInf);
+    normAssert(cpuRef(gemmModel, X, W2), net.forward(), "call4_replay_W2", l1, lInf);
+
+    // Now setParam AFTER graph replay is active (Call 4 replayed W2)
+    net.setParam("Y", 0, W3);
+    normAssert(cpuRef(gemmModel, X, W3), net.forward(), "call5_after_replay_setParam_W3", l1, lInf);
+    normAssert(cpuRef(gemmModel, X, W3), net.forward(), "call6_record_W3", l1, lInf);
+    normAssert(cpuRef(gemmModel, X, W3), net.forward(), "call7_replay_W3", l1, lInf);
+
+    // Also check Conv2 setParam before and after CUDA Graph capture
+    const std::string convModel = findDataFile("dnn/onnx/models/conv_setparam.onnx");
+    Mat cW2({4, 3, 3, 3}, CV_32F), cW3({4, 3, 3, 3}, CV_32F);
+    randu(cW2, -0.5f, 0.5f);
+    randu(cW3, -0.5f, 0.5f);
+
+    Net convNet = readNetFromONNX(convModel);
+    convNet.setPreferableBackend(backendId);
+    convNet.setPreferableTarget(targetId);
+
     Mat cX({1, 3, 6, 6}, CV_32F);
     randu(cX, -1.f, 1.f);
     convNet.setInput(cX);
-    normAssert(convCpuRef(cX, cW1), convNet.forward(), "conv_call1", l1, lInf);
+    ASSERT_GT(cvtest::norm(cpuRef(convModel, cX, Mat()), cpuRef(convModel, cX, cW2), NORM_INF), 0.1)
+        << "the reference does not see the weight set by setParam()";
+    normAssert(cpuRef(convModel, cX, Mat()), convNet.forward(), "conv_call1", l1, lInf);
     convNet.setParam("Y", 0, cW2);
-    normAssert(convCpuRef(cX, cW2), convNet.forward(), "conv_call2_W2", l1, lInf);
-    normAssert(convCpuRef(cX, cW2), convNet.forward(), "conv_call3_record_W2", l1, lInf);
+    normAssert(cpuRef(convModel, cX, cW2), convNet.forward(), "conv_call2_W2", l1, lInf);
+    normAssert(cpuRef(convModel, cX, cW2), convNet.forward(), "conv_call3_record_W2", l1, lInf);
     convNet.setParam("Y", 0, cW3);
-    normAssert(convCpuRef(cX, cW3), convNet.forward(), "conv_call4_W3", l1, lInf);
-    normAssert(convCpuRef(cX, cW3), convNet.forward(), "conv_call5_record_W3", l1, lInf);
-    normAssert(convCpuRef(cX, cW3), convNet.forward(), "conv_call6_replay_W3", l1, lInf);
+    normAssert(cpuRef(convModel, cX, cW3), convNet.forward(), "conv_call4_W3", l1, lInf);
+    normAssert(cpuRef(convModel, cX, cW3), convNet.forward(), "conv_call5_record_W3", l1, lInf);
+    normAssert(cpuRef(convModel, cX, cW3), convNet.forward(), "conv_call6_replay_W3", l1, lInf);
 }
 
 TEST_P(Net_CudaGraphCoherence, ClassicNetSetParamRebuildsBackendNode)
