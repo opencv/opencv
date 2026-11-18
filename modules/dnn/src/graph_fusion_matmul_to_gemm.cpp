@@ -193,10 +193,20 @@ struct ModelFusionMatMulToGemm
                 const Mat& bias = layer->blobs[1];
                 if (bias.type() != CV_32F) continue;
                 int total = (int)bias.total();
-                if (total != 1 && total != N) continue;
+                if (total != 1 && (bias.dims < 1 || total != N || bias.size[bias.dims - 1] != N))
+                    continue;
+                const int a_dims = netimpl->argData(layer->inputs[0]).shape.dims;
+                if (a_dims >= 0 && bias.dims > a_dims)
+                    continue;
             }
 
-            Mat Bw = B, bias = have_bias ? layer->blobs[1] : Mat();
+            Mat Bw = B;
+            Mat bias;
+            if (have_bias) {
+                const Mat& raw_bias = layer->blobs[1];
+                Mat cont = raw_bias.isContinuous() ? raw_bias : raw_bias.clone();
+                bias = cont.reshape(1, std::vector<int>{(int)cont.total()});
+            }
             vector<Arg> outputs = layer->outputs;
             if (mm->alpha == 1.f && mm->beta == 1.f)
                 outputs = foldChannelAffine(newprog, layer, consumer, usecounts,

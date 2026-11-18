@@ -1109,6 +1109,137 @@ static Mat relu(const Mat& x)
     return cv::max(x, 0.0);
 }
 
+namespace {
+struct FusionOnnxBuf
+{
+    std::vector<uchar> b;
+    void uvar(uint64_t v)
+    {
+        while (v >= 0x80) { b.push_back((uchar)((v & 0x7f) | 0x80)); v >>= 7; }
+        b.push_back((uchar)v);
+    }
+    void tag(uint32_t f, uint32_t w) { uvar((uint64_t(f) << 3) | w); }
+    void i64(uint32_t f, int64_t v) { tag(f, 0); uvar((uint64_t)v); }
+    void i32(uint32_t f, int32_t v) { tag(f, 0); uvar((uint64_t)(int64_t)v); }
+    void bytes(uint32_t f, const void* p, size_t n)
+    {
+        tag(f, 2);
+        uvar(n);
+        const uchar* q = static_cast<const uchar*>(p);
+        b.insert(b.end(), q, q + n);
+    }
+    void str(uint32_t f, const std::string& s) { bytes(f, s.data(), s.size()); }
+    void sub(uint32_t f, const FusionOnnxBuf& c) { bytes(f, c.b.data(), c.b.size()); }
+};
+
+static FusionOnnxBuf fusionValueInfoF32(const std::string& name, const std::vector<int>& dims)
+{
+    FusionOnnxBuf shape;
+    for (int d : dims) { FusionOnnxBuf dm; dm.i64(1, d); shape.sub(1, dm); }
+    FusionOnnxBuf tt; tt.i32(1, 1); tt.sub(2, shape);
+    FusionOnnxBuf tp; tp.sub(1, tt);
+    FusionOnnxBuf vi; vi.str(1, name); vi.sub(2, tp);
+    return vi;
+}
+
+static FusionOnnxBuf fusionTensorF32(const std::string& name, const Mat& m)
+{
+    CV_Assert(m.type() == CV_32F && m.isContinuous());
+    FusionOnnxBuf t;
+    for (int i = 0; i < m.dims; ++i) t.i64(1, m.size[i]);
+    t.i32(2, 1);
+    t.str(8, name);
+    t.bytes(9, m.data, m.total() * sizeof(float));
+    return t;
+}
+
+static FusionOnnxBuf fusionNode(const std::string& op, const std::vector<std::string>& inps,
+                                const std::vector<std::string>& outs)
+{
+    FusionOnnxBuf n;
+    for (const auto& s : inps) n.str(1, s);
+    for (const auto& s : outs) n.str(2, s);
+    n.str(4, op);
+    return n;
+}
+
+static std::vector<uchar> buildMatMulAddOnnx(const std::vector<int>& xDims, const Mat& W, const Mat& bias)
+{
+    std::vector<int> yDims = xDims;
+    yDims.back() = W.size[1];
+    FusionOnnxBuf g;
+    g.sub(1, fusionNode("MatMul", {"X", "W"}, {"MM"}));
+    g.sub(1, fusionNode("Add", {"MM", "B"}, {"Y"}));
+    g.str(2, "g");
+    g.sub(5, fusionTensorF32("W", W));
+    g.sub(5, fusionTensorF32("B", bias));
+    g.sub(11, fusionValueInfoF32("X", xDims));
+    g.sub(12, fusionValueInfoF32("Y", yDims));
+    FusionOnnxBuf m;
+    m.i64(1, 8);
+    m.str(2, "test");
+    m.sub(7, g);
+    FusionOnnxBuf op; op.str(1, ""); op.i64(2, 18);
+    m.sub(8, op);
+    return m.b;
+}
+} // namespace
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Fusion_MatMulToGemm;
+TEST_P(Fusion_MatMulToGemm, HigherRankAndColumnBias)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("MatMul-to-Gemm fusion targets OpenCV and CUDA backends");
+
+    double l1, lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    // 1. [1, 1, N] per-channel bias on a 3-D MatMul should reshape to 1-D [N] and fuse to Gemm
+    {
+        const int B = 2, S = 5, K = 16, N = 24;
+        Mat X = randomInput({B, S, K});
+        Mat W = randomInput({K, N});
+        Mat bias3d = randomInput({1, 1, N});
+
+        Net net = readNetFromONNX(buildMatMulAddOnnx({B, S, K}, W, bias3d));
+        EXPECT_EQ(1, fusedCount(net, "Gemm"));
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(X);
+        Mat out = net.forward();
+
+        Mat ref2d = X.reshape(1, B * S) * W;
+        for (int r = 0; r < B * S; ++r)
+            ref2d.row(r) += bias3d.reshape(1, 1);
+        normAssert(ref2d.reshape(1, {B, S, N}), out, "nd_channel_bias", l1, lInf);
+    }
+
+    // 2. [M, 1] per-row column bias when M == N must NOT be rewritten into a [N] per-column Gemm bias
+    {
+        const int M = 16, K = 12, N = 16;
+        Mat X = randomInput({M, K});
+        Mat W = randomInput({K, N});
+        Mat colBias = randomInput({M, 1});
+        colBias.at<float>(0, 0) += 2.f;
+        colBias.at<float>(1, 0) -= 2.f;
+
+        Net net = readNetFromONNX(buildMatMulAddOnnx({M, K}, W, colBias));
+        EXPECT_EQ(0, fusedCount(net, "Gemm"));
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(X);
+        Mat out = net.forward();
+
+        Mat ref = X * W;
+        for (int c = 0; c < N; ++c)
+            ref.col(c) += colBias;
+        normAssert(ref, out, "column_bias_M_eq_N", l1, lInf);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Fusion_MatMulToGemm, dnnBackendsAndTargets());
+
 // A patch embedding with 3 input channels reads the plain input, so it needs no layout conversion.
 // Other small convs, like this padded 5x5 one, keep block layout and the blocked kernel.
 TEST(Fusion, OnlyPatchEmbeddingConvSkipsBlockLayout)
