@@ -15,6 +15,8 @@ Test for TFLite models loading
 
 #ifdef OPENCV_TEST_DNN_TFLITE
 
+#include "schema_generated.h"
+
 namespace opencv_test { namespace {
 
 using namespace cv;
@@ -433,6 +435,390 @@ TEST(Test_TFLite_Importer, SparseTensor)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
+
+// The models below are assembled in memory with the generated TFLite schema API, so these tests
+// need no external model files.
+namespace tflite_fixture {
+
+using flatbuffers::FlatBufferBuilder;
+using flatbuffers::Offset;
+using namespace opencv_tflite;
+
+static std::vector<uint8_t> int32Bytes(const std::vector<int32_t>& values)
+{
+    std::vector<uint8_t> bytes(values.size() * sizeof(int32_t));
+    if (!bytes.empty())
+        std::memcpy(bytes.data(), values.data(), bytes.size());
+    return bytes;
+}
+
+static std::vector<uint8_t> firstBytes(const std::vector<uint8_t>& bytes, size_t count)
+{
+    return std::vector<uint8_t>(bytes.begin(), bytes.begin() + count);
+}
+
+// TfLitePoolParams fields up to and including `activation`, as MediaPipe serializes them.
+static std::vector<uint8_t> poolParams(int strideW = 2, int strideH = 2, int filterW = 2, int filterH = 2)
+{
+    return int32Bytes({1 /*padding SAME*/, strideW, strideH, filterW, filterH, 0 /*activation*/});
+}
+
+static std::vector<uint8_t> transposeConvParams(int strideW = 2, int strideH = 2)
+{
+    return int32Bytes({1 /*padding SAME*/, strideW, strideH});
+}
+
+struct Case
+{
+    // operator code
+    int8_t deprecatedCode = BuiltinOperator_MAX_POOL_2D;
+    const char* customCode = nullptr;
+    // operator
+    uint32_t opcodeIndex = 0;
+    std::vector<int32_t> inputs{0};
+    std::vector<int32_t> outputs{1};
+    int poolOptions = 1;  // 0: none, 1: Pool2DOptions(2,2,2,2), 2: Conv2DOptions in the Pool2DOptions slot,
+                          // 3: FullyConnectedOptions
+    int strideW = 2, strideH = 2, filterW = 2, filterH = 2;
+    bool hasCustomOptions = false;
+    std::vector<uint8_t> customOptions;
+    // tensors; every tensor but an optional unnamed one gets a name
+    std::vector<std::vector<int32_t> > shapes{{1, 4, 4, 1}, {1, 2, 2, 1}};
+    int unnamedTensor = -1;
+    std::vector<std::vector<uint8_t> > buffers{std::vector<uint8_t>()};
+    std::vector<uint32_t> tensorBuffers{0, 0};
+    std::vector<int32_t> graphInputs{0}, graphOutputs{1};
+    // optional second operator, a custom operator with operator code 1
+    const char* secondCustomCode = nullptr;
+    std::vector<uint8_t> secondCustomOptions;
+    std::vector<int32_t> secondInputs, secondOutputs;
+};
+
+static Case maxPool()
+{
+    return Case();
+}
+
+static Case customOp(const char* code, std::vector<uint8_t> options, bool present = true)
+{
+    Case c;
+    c.deprecatedCode = BuiltinOperator_CUSTOM;
+    c.customCode = code;
+    c.poolOptions = 0;
+    c.hasCustomOptions = present;
+    c.customOptions = options;
+    return c;
+}
+
+static Case argmaxPool(std::vector<uint8_t> options, bool present = true)
+{
+    Case c = customOp("MaxPoolingWithArgmax2D", options, present);
+    c.shapes = {{1, 4, 4, 1}, {1, 2, 2, 1}, {1, 2, 2, 1}};
+    c.tensorBuffers = {0, 0, 0};
+    c.outputs = {1, 2};
+    c.graphOutputs = {1, 2};
+    return c;
+}
+
+static Case unpooling(std::vector<uint8_t> options, bool present = true)
+{
+    Case c = customOp("MaxUnpooling2D", options, present);
+    c.shapes = {{1, 2, 2, 1}, {1, 2, 2, 1}, {1, 4, 4, 1}};
+    c.tensorBuffers = {0, 0, 0};
+    c.inputs = {0, 1};
+    c.outputs = {2};
+    c.graphInputs = {0, 1};
+    c.graphOutputs = {2};
+    return c;
+}
+
+static Case transposeConv(std::vector<uint8_t> options, bool present = true)
+{
+    Case c = customOp("Convolution2DTransposeBias", options, present);
+    c.shapes = {{1, 2, 2, 1}, {1, 2, 2, 1}, {1}, {1, 4, 4, 1}};
+    c.tensorBuffers = {0, 1, 2, 0};
+    c.buffers = {std::vector<uint8_t>(),
+                 std::vector<uint8_t>(4 * sizeof(float), 0),
+                 std::vector<uint8_t>(sizeof(float), 0)};
+    c.inputs = {0, 1, 2};
+    c.outputs = {3};
+    return c;
+}
+
+// MaxPoolingWithArgmax2D feeding both of its outputs to MaxUnpooling2D.
+static Case argmaxPoolThenUnpooling()
+{
+    Case c = argmaxPool(poolParams());
+    c.shapes = {{1, 4, 4, 1}, {1, 2, 2, 1}, {1, 2, 2, 1}, {1, 4, 4, 1}};
+    c.tensorBuffers = {0, 0, 0, 0};
+    c.graphOutputs = {3};
+    c.secondCustomCode = "MaxUnpooling2D";
+    c.secondCustomOptions = poolParams();
+    c.secondInputs = {1, 2};
+    c.secondOutputs = {3};
+    return c;
+}
+
+// A fully connected operator whose optional bias input is omitted (-1).
+static Case fullyConnectedWithoutBias()
+{
+    Case c;
+    c.deprecatedCode = BuiltinOperator_FULLY_CONNECTED;
+    c.poolOptions = 3;
+    c.shapes = {{1, 4}, {2, 4}, {1, 2}};
+    c.tensorBuffers = {0, 1, 0};
+    c.buffers = {std::vector<uint8_t>(), std::vector<uint8_t>(8 * sizeof(float), 0)};
+    c.inputs = {0, 1, -1};
+    c.outputs = {2};
+    c.graphOutputs = {2};
+    return c;
+}
+
+static Case dequantize()
+{
+    Case c;
+    c.deprecatedCode = BuiltinOperator_DEQUANTIZE;
+    c.poolOptions = 0;
+    return c;
+}
+
+static std::vector<char> build(const Case& c)
+{
+    FlatBufferBuilder fbb;
+
+    std::vector<Offset<OperatorCode> > codes;
+    codes.push_back(CreateOperatorCodeDirect(fbb, c.deprecatedCode, c.customCode, 1,
+                                             (BuiltinOperator)c.deprecatedCode));
+    if (c.secondCustomCode)
+        codes.push_back(CreateOperatorCodeDirect(fbb, BuiltinOperator_CUSTOM, c.secondCustomCode, 1,
+                                                 BuiltinOperator_CUSTOM));
+
+    std::vector<Offset<Tensor> > tensors;
+    for (size_t i = 0; i < c.shapes.size(); ++i)
+    {
+        const std::string name = i == 0 ? "input" : cv::format("tensor%d", (int)i);
+        tensors.push_back(CreateTensorDirect(fbb, &c.shapes[i], TensorType_FLOAT32, c.tensorBuffers[i],
+                                             (int)i == c.unnamedTensor ? nullptr : name.c_str(),
+                                             0, false, 0, nullptr, true));
+    }
+
+    Offset<void> builtin;
+    BuiltinOptions builtinType = BuiltinOptions_NONE;
+    if (c.poolOptions == 1)
+    {
+        builtinType = BuiltinOptions_Pool2DOptions;
+        builtin = CreatePool2DOptions(fbb, Padding_SAME, c.strideW, c.strideH, c.filterW, c.filterH,
+                                      ActivationFunctionType_NONE).Union();
+    }
+    else if (c.poolOptions == 2)
+    {
+        builtinType = BuiltinOptions_Conv2DOptions;
+        builtin = CreateConv2DOptions(fbb, Padding_SAME, 1, 1, ActivationFunctionType_NONE).Union();
+    }
+    else if (c.poolOptions == 3)
+    {
+        builtinType = BuiltinOptions_FullyConnectedOptions;
+        builtin = CreateFullyConnectedOptions(fbb, ActivationFunctionType_NONE).Union();
+    }
+
+    std::vector<Offset<Operator> > operators;
+    operators.push_back(CreateOperatorDirect(fbb, c.opcodeIndex, &c.inputs, &c.outputs, builtinType, builtin,
+                                             c.hasCustomOptions ? &c.customOptions : nullptr));
+    if (c.secondCustomCode)
+        operators.push_back(CreateOperatorDirect(fbb, 1, &c.secondInputs, &c.secondOutputs, BuiltinOptions_NONE, 0,
+                                                 &c.secondCustomOptions));
+
+    std::vector<Offset<SubGraph> > subgraphs;
+    subgraphs.push_back(CreateSubGraphDirect(fbb, &tensors, &c.graphInputs, &c.graphOutputs, &operators, "main"));
+
+    std::vector<Offset<Buffer> > buffers;
+    for (size_t i = 0; i < c.buffers.size(); ++i)
+        buffers.push_back(c.buffers[i].empty() ? CreateBuffer(fbb) : CreateBufferDirect(fbb, &c.buffers[i]));
+
+    FinishModelBuffer(fbb, CreateModelDirect(fbb, 3, &codes, &subgraphs, "fixture", &buffers));
+    return std::vector<char>(fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize());
+}
+
+}  // namespace tflite_fixture
+
+static void expectTFLiteAccepted(const tflite_fixture::Case& c)
+{
+    const std::vector<char> model = tflite_fixture::build(c);
+    EXPECT_NO_THROW(readNetFromTFLite(model.data(), model.size()));
+}
+
+static void expectTFLiteRejected(const tflite_fixture::Case& c, const char* reason)
+{
+    SCOPED_TRACE(reason);
+    const std::vector<char> model = tflite_fixture::build(c);
+    try
+    {
+        (void)readNetFromTFLite(model.data(), model.size());
+        FAIL() << "Invalid TFLite model was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos) << e.what();
+    }
+}
+
+TEST(Test_TFLite_Importer, OperatorOutputsAndOpcode)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(maxPool());
+
+    Case noOutputs = maxPool();
+    noOutputs.outputs = {};
+    expectTFLiteRejected(noOutputs, "operator has no outputs");
+
+    Case negativeOutput = maxPool();
+    negativeOutput.outputs = {-1};
+    expectTFLiteRejected(negativeOutput, "output tensor index must be non-negative");
+
+    Case outputOutOfRange = maxPool();
+    outputOutOfRange.outputs = {2};
+    expectTFLiteRejected(outputOutOfRange, "output tensor index out of range");
+
+    // A flatbuffer vector element is addressed by offset and never resolves to a null pointer,
+    // so the null-tensor and null-operator-code assertions have no malformed-model witness.
+    Case unnamedOutput = maxPool();
+    unnamedOutput.unnamedTensor = 1;
+    expectTFLiteRejected(unnamedOutput, "outputName");
+
+    Case opcodeOutOfRange = maxPool();
+    opcodeOutOfRange.opcodeIndex = 3;
+    expectTFLiteRejected(opcodeOutOfRange, "opcode_index out of range");
+
+    Case customWithoutCode = customOp(nullptr, poolParams());
+    expectTFLiteRejected(customWithoutCode, "customCode");
+}
+
+TEST(Test_TFLite_Importer, OperatorTensorIndexes)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(argmaxPoolThenUnpooling());
+    expectTFLiteAccepted(fullyConnectedWithoutBias());
+
+    // The second output of the first operator is out of range and the second operator consumes it.
+    Case laterOutputOutOfRange = argmaxPoolThenUnpooling();
+    laterOutputOutOfRange.outputs = {1, 7};
+    laterOutputOutOfRange.secondInputs = {1, 7};
+    expectTFLiteRejected(laterOutputOutOfRange, "output tensor index out of range");
+
+    Case laterOutputNegative = argmaxPool(poolParams());
+    laterOutputNegative.outputs = {1, -2};
+    expectTFLiteRejected(laterOutputNegative, "output tensor index must be non-negative");
+
+    Case inputOutOfRange = maxPool();
+    inputOutOfRange.inputs = {2};
+    expectTFLiteRejected(inputOutOfRange, "input tensor index out of range");
+
+    Case inputNegative = maxPool();
+    inputNegative.inputs = {-2};
+    expectTFLiteRejected(inputNegative, "input tensor index must be non-negative or -1");
+
+    Case optionalInputOutOfRange = fullyConnectedWithoutBias();
+    optionalInputOutOfRange.inputs = {0, 1, 3};
+    expectTFLiteRejected(optionalInputOutOfRange, "input tensor index out of range");
+}
+
+TEST(Test_TFLite_Importer, SubgraphInputs)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(maxPool());
+
+    Case inputOutOfRange = maxPool();
+    inputOutOfRange.graphInputs = {2};
+    expectTFLiteRejected(inputOutOfRange, "subgraph input tensor index out of range");
+
+    Case inputNegative = maxPool();
+    inputNegative.graphInputs = {-1};
+    expectTFLiteRejected(inputNegative, "subgraph input tensor index must be non-negative");
+
+    Case unnamedInput = maxPool();
+    unnamedInput.unnamedTensor = 0;
+    expectTFLiteRejected(unnamedInput, "inputName");
+}
+
+TEST(Test_TFLite_Importer, DequantizeInputs)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(dequantize());
+
+    Case noInputs = dequantize();
+    noInputs.inputs = {};
+    expectTFLiteRejected(noInputs, "DEQUANTIZE operator requires an input");
+
+    Case omittedInput = dequantize();
+    omittedInput.inputs = {-1};
+    expectTFLiteRejected(omittedInput, "DEQUANTIZE input must not be omitted");
+}
+
+TEST(Test_TFLite_Importer, PoolingOptions)
+{
+    using namespace tflite_fixture;
+
+    Case noOptions = maxPool();
+    noOptions.poolOptions = 0;
+    expectTFLiteRejected(noOptions, "options");
+
+    Case wrongOptions = maxPool();
+    wrongOptions.poolOptions = 2;
+    expectTFLiteRejected(wrongOptions, "options");
+
+    Case zeroStrideW = maxPool();
+    zeroStrideW.strideW = 0;
+    expectTFLiteRejected(zeroStrideW, "stride_w must be positive");
+
+    Case zeroStrideH = maxPool();
+    zeroStrideH.strideH = 0;
+    expectTFLiteRejected(zeroStrideH, "stride_h must be positive");
+
+    Case zeroFilterW = maxPool();
+    zeroFilterW.filterW = 0;
+    expectTFLiteRejected(zeroFilterW, "filter_w must be positive");
+
+    Case zeroFilterH = maxPool();
+    zeroFilterH.filterH = 0;
+    expectTFLiteRejected(zeroFilterH, "filter_h must be positive");
+}
+
+TEST(Test_TFLite_Importer, MaxPoolingWithArgmaxOptions)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(argmaxPool(poolParams()));
+    expectTFLiteRejected(argmaxPool(std::vector<uint8_t>(), false), "custom_options() != nullptr");
+    expectTFLiteRejected(argmaxPool(firstBytes(poolParams(), 4)),
+                         "custom_options too small");
+    expectTFLiteRejected(argmaxPool(poolParams(0, 2, 2, 2)), "stride_w must be positive");
+    expectTFLiteRejected(argmaxPool(poolParams(2, 0, 2, 2)), "stride_h must be positive");
+    expectTFLiteRejected(argmaxPool(poolParams(2, 2, 0, 2)), "filter_w must be positive");
+    expectTFLiteRejected(argmaxPool(poolParams(2, 2, 2, 0)), "filter_h must be positive");
+}
+
+TEST(Test_TFLite_Importer, MaxUnpoolingOptions)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(unpooling(poolParams()));
+    expectTFLiteRejected(unpooling(std::vector<uint8_t>(), false), "custom_options() != nullptr");
+    expectTFLiteRejected(unpooling(firstBytes(poolParams(), 4)),
+                         "custom_options too small");
+    expectTFLiteRejected(unpooling(poolParams(0, 2, 2, 2)), "stride_w must be positive");
+    expectTFLiteRejected(unpooling(poolParams(2, 0, 2, 2)), "stride_h must be positive");
+    expectTFLiteRejected(unpooling(poolParams(2, 2, 0, 2)), "filter_w must be positive");
+    expectTFLiteRejected(unpooling(poolParams(2, 2, 2, 0)), "filter_h must be positive");
+}
+
+TEST(Test_TFLite_Importer, TransposeConvolutionOptions)
+{
+    using namespace tflite_fixture;
+    expectTFLiteAccepted(transposeConv(transposeConvParams()));
+    expectTFLiteRejected(transposeConv(std::vector<uint8_t>(), false), "custom_options() != nullptr");
+    expectTFLiteRejected(transposeConv(firstBytes(transposeConvParams(), 4)),
+                         "custom_options too small");
+    expectTFLiteRejected(transposeConv(transposeConvParams(0, 2)), "stride_w must be positive");
+    expectTFLiteRejected(transposeConv(transposeConvParams(2, 0)), "stride_h must be positive");
+}
 
 }}  // namespace
 
