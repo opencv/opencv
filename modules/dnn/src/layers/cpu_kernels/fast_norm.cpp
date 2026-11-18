@@ -70,7 +70,41 @@ static inline void normAccumSumSqSum64f(const float* x, size_t n, double& sum, d
 }
 #endif
 
-// Unchanged: only mvn_layer.cpp uses this overload, out of scope here.
+// mean and var come from one pass, as E[x] and E[x^2] - E[x]^2 over float sums. The subtraction multiplies the
+// rounding error of the sums by 1 + mean^2 / var: once the mean is a few thousand standard deviations nothing of
+// var is left, and long rows also lose digits of the mean in the sums. Such rows are measured again from
+// d = x - mean, summed in double (over float blocks of 64 vectors): mean += E[d], var = E[d^2] - E[d]^2.
+// Rows with mean^2 <= 64 * var magnify the error at most 65 times (6 bits) and keep their one-pass values.
+static inline void normRefineMeanVar(const float* x, size_t n, float& mean, float& var) {
+    if (mean * mean <= 64.f * var)
+        return;
+    double sum = 0., sqsum = 0.;
+    size_t j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const size_t VEC_SZ = (size_t)VTraits<v_float32>::vlanes();
+    const v_float32 vmean = vx_setall_f32(mean);
+    while (j + VEC_SZ <= n) {
+        v_float32 vsum = vx_setzero_f32(), vsqsum = vx_setzero_f32();
+        for (size_t k = 0; k < 64 && j + VEC_SZ <= n; k++, j += VEC_SZ) {
+            v_float32 d = v_sub(vx_load(x + j), vmean);
+            vsum = v_add(vsum, d);
+            vsqsum = v_fma(d, d, vsqsum);
+        }
+        sum += v_reduce_sum(vsum);
+        sqsum += v_reduce_sum(vsqsum);
+    }
+#endif
+    for (; j < n; j++) {
+        double d = (double)x[j] - mean;
+        sum += d;
+        sqsum += d * d;
+    }
+    const double dmean = sum / (double)n;
+    mean = (float)(mean + dmean);
+    var = (float)std::max(0., sqsum / (double)n - dmean * dmean);
+}
+
+// Only mvn_layer.cpp uses this overload.
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
@@ -98,8 +132,9 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
 #endif
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = normalize_variance ? 1.f / std::sqrt(var + epsilon) : 1.f;
 
             size_t j = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -157,7 +192,9 @@ static void fastNormMeanInvStdDevImpl(const Mat& input, Mat& mean, Mat& invStdDe
                 }
             }
             m *= inv_norm_size;
-            const T var = std::max((T)0, mean_square * inv_norm_size - m * m);
+            T var = std::max((T)0, mean_square * inv_norm_size - m * m);
+            if constexpr (std::is_same<T, float>::value)
+                normRefineMeanVar(x, norm_size, m, var);
             const T stdev = std::sqrt(var + epsilon);
             mean_data[i] = m;
             invstd_data[i] = (T)1 / stdev;
@@ -219,8 +256,12 @@ static void fastNormImpl(const Mat &input, const Mat &scale, Mat &output, T epsi
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max((T)0, mean_square * inv_norm_size - mean * mean) + epsilon);
-            T inv_stdev = (T)1 / mean_square;
+            T var = std::max((T)0, mean_square * inv_norm_size - mean * mean);
+            if constexpr (std::is_same<T, float>::value) {
+                if (recenter)
+                    normRefineMeanVar(x, norm_size, mean, var);
+            }
+            T inv_stdev = (T)1 / std::sqrt(var + epsilon);
 
             size_t j = 0;
             if constexpr (std::is_same<T, float>::value) {
@@ -291,8 +332,10 @@ static void fastNormImpl(const Mat &input, const Mat &scale, const Mat &bias, Ma
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max((T)0, mean_square * inv_norm_size - mean * mean) + epsilon);
-            T inv_stdev = (T)1 / mean_square;
+            T var = std::max((T)0, mean_square * inv_norm_size - mean * mean);
+            if constexpr (std::is_same<T, float>::value)
+                normRefineMeanVar(x, norm_size, mean, var);
+            T inv_stdev = (T)1 / std::sqrt(var + epsilon);
 
             size_t j = 0;
             if constexpr (std::is_same<T, float>::value) {
@@ -687,8 +730,9 @@ static void fastNormChannelImpl(const Mat &input, const Mat &scale, const Mat &b
                 }
             }
 
-            T mean = (T)(dmean / norm_size);
-            T var = (T)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            const double dm = dmean / norm_size;
+            T mean = (T)dm;
+            T var = (T)std::max(0., dmean_sq / norm_size - dm * dm);
             T inv_stdev = (T)1 / std::sqrt(var + epsilon);
 
             size_t c = i % C;
@@ -737,7 +781,7 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
         fastNormChannelImpl<float>(input, scale, bias, output, epsilon);
 }
 
-// GroupNorm, BLOCK layout, CV_32F -- extracted verbatim, unchanged.
+// GroupNorm, BLOCK layout, CV_32F.
 static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t num_groups) {
     const auto input_shape = shape(input);
     size_t C = (size_t)input_shape.C;
@@ -842,8 +886,9 @@ static void fastNormGroupBlockF32(const Mat &input, const Mat &scale, const Mat 
                 }
             }
 
-            float mean = (float)(group_sum * inv_norm_size);
-            float var  = std::max(0.f, (float)(group_sqsum * inv_norm_size - (double)mean * (double)mean));
+            const double dmean = group_sum * inv_norm_size;
+            float mean = (float)dmean;
+            float var  = std::max(0.f, (float)(group_sqsum * inv_norm_size - dmean * dmean));
             float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             for (int c1_start = c_start / C0, c1_end_idx = (c_end - 1) / C0 + 1,
@@ -1049,8 +1094,9 @@ static void fastNormGroupImpl(const Mat &input, const Mat &scale, const Mat &bia
                 }
             }
 
-            T mean = (T)(dmean / norm_size);
-            T var = (T)std::max(0., dmean_sq / norm_size - (double)mean * (double)mean);
+            const double dm = dmean / norm_size;
+            T mean = (T)dm;
+            T var = (T)std::max(0., dmean_sq / norm_size - dm * dm);
             T inv_stdev = (T)1 / std::sqrt(var + epsilon);
 
             // Channel-outer loop avoids a per-element j/step division and lets T=float vectorize below.
