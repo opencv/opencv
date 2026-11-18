@@ -361,7 +361,7 @@ PERF_TEST_P_(MatMul, matmul)
 
 typedef TestBaseWithParam<tuple<Backend, Target> > MatMul_BroadcastBias;
 
-PERF_TEST_P_(MatMul_BroadcastBias, init_and_forward)
+PERF_TEST_P_(MatMul_BroadcastBias, matmul_broadcast_bias)
 {
     Backend backend_id = get<0>(GetParam());
     Target target_id = get<1>(GetParam());
@@ -380,23 +380,19 @@ PERF_TEST_P_(MatMul_BroadcastBias, init_and_forward)
     lp.set("real_ndims_C", 1);
     lp.blobs = {W, bias};
 
-    // Warmup CUDA handles once outside timed loop
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backend_id);
+    net.setPreferableTarget(target_id);
+
+    // warmup
     {
-        Net warm;
-        warm.addLayerToPrev(lp.name, lp.type, lp);
-        warm.setPreferableBackend(backend_id);
-        warm.setPreferableTarget(target_id);
-        warm.setInput(A);
-        warm.forward();
+        net.setInput(A);
+        Mat out = net.forward();
     }
 
     TEST_CYCLE()
     {
-        Net net;
-        net.addLayerToPrev(lp.name, lp.type, lp);
-        net.setPreferableBackend(backend_id);
-        net.setPreferableTarget(target_id);
-        net.setInput(A);
         Mat res = net.forward();
     }
 
