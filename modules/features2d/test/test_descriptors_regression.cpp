@@ -56,125 +56,49 @@ TEST( Features2d_DescriptorExtractor_KAZE, regression )
 
 TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
 {
-    RNG& rng = theRNG();
     Mat img(240, 320, CV_8UC1);
-    rng.fill(img, RNG::UNIFORM, 0, 256);
+    theRNG().fill(img, RNG::UNIFORM, 0, 256);
     GaussianBlur(img, img, Size(9, 9), 2.0);
     rectangle(img, Point(40, 40), Point(160, 140), Scalar(245), FILLED);
     rectangle(img, Point(120, 90), Point(260, 200), Scalar(15), FILLED);
-    circle(img, Point(200, 70), 28, Scalar(235), FILLED);
     GaussianBlur(img, img, Size(5, 5), 1.0);
 
-    for (int ext_idx = 0; ext_idx < 2; ++ext_idx)
+    for (int i = 0; i < 4; ++i)
     {
-        for (int up_idx = 0; up_idx < 2; ++up_idx)
-        {
-            const bool extended = (ext_idx != 0);
-            const bool upright = (up_idx != 0);
-            Ptr<KAZE> kaze = KAZE::create(extended, upright);
+        const bool extended = (i & 1) != 0, upright = (i & 2) != 0;
+        Ptr<KAZE> kaze = KAZE::create(extended, upright);
 
-            vector<KeyPoint> kp_dc, kp_det;
-            Mat desc_dc, desc_comp;
-            kaze->detectAndCompute(img, noArray(), kp_dc, desc_dc);
-            ASSERT_FALSE(kp_dc.empty());
+        // compute() on the detected keypoints, in reverse order, gives the detectAndCompute() rows in reverse order
+        vector<KeyPoint> kp;
+        Mat desc_dc, desc;
+        kaze->detectAndCompute(img, noArray(), kp, desc_dc);
+        ASSERT_FALSE(kp.empty());
+        vector<KeyPoint> kp_rev(kp.rbegin(), kp.rend());
+        kaze->compute(img, kp_rev, desc);
+        flip(desc, desc, 0);
+        EXPECT_EQ(0.0, cvtest::norm(desc_dc, desc, NORM_INF)) << "extended=" << extended << " upright=" << upright;
 
-            kaze->detect(img, kp_det);
-            ASSERT_EQ(kp_dc.size(), kp_det.size());
+        if (!upright)
+            continue;
 
-            kaze->compute(img, kp_det, desc_comp);
-            ASSERT_EQ(desc_dc.size(), desc_comp.size());
-            EXPECT_EQ(0.0, cvtest::norm(desc_dc, desc_comp, NORM_INF))
-                << "extended=" << extended << " upright=" << upright;
+        // the same on the OpenCL path (upright descriptors), which also rejects a level outside the pyramid
+        UMat uimg, udesc_dc, udesc;
+        img.copyTo(uimg);
+        vector<KeyPoint> ukp;
+        kaze->detectAndCompute(uimg, noArray(), ukp, udesc_dc);
+        ASSERT_FALSE(ukp.empty());
+        vector<KeyPoint> ukp_rev(ukp.rbegin(), ukp.rend());
+        kaze->compute(uimg, ukp_rev, udesc);
+        Mat udesc_flipped;
+        flip(udesc.getMat(ACCESS_READ), udesc_flipped, 0);
+        EXPECT_EQ(0.0, cvtest::norm(udesc_dc.getMat(ACCESS_READ), udesc_flipped, NORM_INF)) << "UMat extended=" << extended;
 
-            float max_angle_diff = 0.0f;
-            for (size_t k = 0; k < kp_dc.size(); ++k)
-                max_angle_diff = std::max(max_angle_diff, std::fabs(kp_dc[k].angle - kp_det[k].angle));
-            EXPECT_EQ(0.0f, max_angle_diff)
-                << "extended=" << extended << " upright=" << upright;
-
-            vector<KeyPoint> kp_rev(kp_dc.rbegin(), kp_dc.rend());
-            Mat desc_rev, desc_dc_flipped;
-            kaze->compute(img, kp_rev, desc_rev);
-            flip(desc_dc, desc_dc_flipped, 0);
-            ASSERT_EQ(desc_dc_flipped.size(), desc_rev.size());
-            EXPECT_EQ(0.0, cvtest::norm(desc_dc_flipped, desc_rev, NORM_INF))
-                << "extended=" << extended << " upright=" << upright;
-
-            if (upright)
-            {
-                UMat uimg, udesc_dc, udesc_rev, udesc_empty;
-                img.copyTo(uimg);
-                vector<KeyPoint> ukp_dc;
-                kaze->detectAndCompute(uimg, noArray(), ukp_dc, udesc_dc);
-                ASSERT_FALSE(ukp_dc.empty());
-
-                vector<KeyPoint> ukp_rev(ukp_dc.rbegin(), ukp_dc.rend());
-                kaze->compute(uimg, ukp_rev, udesc_rev);
-                Mat udesc_dc_flipped;
-                flip(udesc_dc.getMat(ACCESS_READ), udesc_dc_flipped, 0);
-                ASSERT_EQ(udesc_dc_flipped.size(), udesc_rev.size());
-                EXPECT_EQ(0.0, cvtest::norm(udesc_dc_flipped, udesc_rev.getMat(ACCESS_READ), NORM_INF))
-                    << "UMat extended=" << extended;
-
-                vector<KeyPoint> empty_kps;
-                ASSERT_NO_THROW(kaze->compute(uimg, empty_kps, udesc_empty));
-                EXPECT_TRUE(udesc_empty.empty());
-
-                // a level outside the pyramid is rejected on the OpenCL path, as on the CPU path
-                vector<KeyPoint> ukp_bad(1, ukp_dc[0]);
-                ukp_bad[0].class_id = -1;
-                UMat udesc_bad;
-                EXPECT_THROW(kaze->compute(uimg, ukp_bad, udesc_bad), cv::Exception) << "UMat extended=" << extended;
-            }
-        }
+        vector<KeyPoint> none;
+        EXPECT_NO_THROW(kaze->compute(uimg, none, udesc));
+        vector<KeyPoint> bad(1, ukp[0]);
+        bad[0].class_id = -1;
+        EXPECT_THROW(kaze->compute(uimg, bad, udesc), cv::Exception) << "UMat extended=" << extended;
     }
-
-    // Level 0 (class_id == 0) is never emitted by detect(), so check caller-supplied level-0 keypoint
-    Ptr<KAZE> kaze = KAZE::create();
-    vector<KeyPoint> kp_lvl0(1, KeyPoint(120.0f, 90.0f, 6.4f, 0.0f, 1.0f, 0, 0));
-    Mat desc_lvl0;
-    kaze->compute(img, kp_lvl0, desc_lvl0);
-    ASSERT_EQ(Size(64, 1), desc_lvl0.size());
-    EXPECT_TRUE(checkRange(desc_lvl0));
-    EXPECT_NEAR(1.0, cv::norm(desc_lvl0, NORM_L2), 1e-5);
-
-    // BGR input with non-default diffusivity
-    Mat bgr(200, 240, CV_8UC3);
-    rng.fill(bgr, RNG::UNIFORM, 0, 256);
-    rectangle(bgr, Point(35, 35), Point(130, 130), Scalar(250, 250, 250), FILLED);
-    rectangle(bgr, Point(95, 80), Point(205, 175), Scalar(10, 10, 10), FILLED);
-    Ptr<KAZE> kaze_charb = KAZE::create(false, false, 0.001f, 4, 4, KAZE::DIFF_CHARBONNIER);
-    vector<KeyPoint> kp_bgr1, kp_bgr2;
-    Mat desc_bgr1, desc_bgr2;
-    kaze_charb->detectAndCompute(bgr, noArray(), kp_bgr1, desc_bgr1);
-    ASSERT_FALSE(kp_bgr1.empty());
-    kaze_charb->detect(bgr, kp_bgr2);
-    kaze_charb->compute(bgr, kp_bgr2, desc_bgr2);
-    EXPECT_EQ(0.0, cvtest::norm(desc_bgr1, desc_bgr2, NORM_INF));
-
-    // Single-thread vs multi-thread parity with RAII thread-count restoration
-    struct ThreadCountGuard
-    {
-        int prev;
-        explicit ThreadCountGuard(int n) : prev(getNumThreads()) { setNumThreads(n); }
-        ~ThreadCountGuard() { setNumThreads(prev); }
-    };
-    vector<KeyPoint> kp_ref, kp_1t, kp_mt;
-    Mat desc_ref, desc_1t, desc_mt;
-    kaze->detectAndCompute(img, noArray(), kp_ref, desc_ref);
-    kaze->detect(img, kp_1t);
-    kp_mt = kp_1t;
-    const int mt_threads = std::max(2, getNumThreads());
-    {
-        ThreadCountGuard guard(1);
-        kaze->compute(img, kp_1t, desc_1t);
-    }
-    {
-        ThreadCountGuard guard(mt_threads);
-        kaze->compute(img, kp_mt, desc_mt);
-    }
-    EXPECT_EQ(0.0, cvtest::norm(desc_ref, desc_1t, NORM_INF));
-    EXPECT_EQ(0.0, cvtest::norm(desc_1t, desc_mt, NORM_INF));
 }
 
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )

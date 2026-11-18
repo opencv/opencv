@@ -43,7 +43,6 @@ KAZEFeatures::KAZEFeatures(KAZEOptions& options)
 {
     ncycles_ = 0;
     reordering_ = true;
-    derivatives_computed_ = false;
 
     // Now allocate memory for the evolution
     Allocate_Memory_Evolution();
@@ -101,7 +100,6 @@ void KAZEFeatures::Allocate_Memory_Evolution(void) {
 int KAZEFeatures::Create_Nonlinear_Scale_Space(const Mat &img)
 {
     CV_Assert(evolution_.size() > 0);
-    derivatives_computed_ = false;
 
     // Copy the original image to the first level of the evolution
     img.copyTo(evolution_[0].Lt);
@@ -241,7 +239,6 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(bool second_order)
 {
     parallel_for_(Range(0, (int)evolution_.size()),
                                         MultiscaleDerivativesKAZEInvoker(evolution_, second_order));
-    derivatives_computed_ = true;
 }
 
 
@@ -581,16 +578,6 @@ void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
     }
     else {
         desc = Mat::zeros((int)kpts.size(), 64, CV_32FC1);
-    }
-
-    if (kpts.empty())
-    {
-        return;
-    }
-
-    if (!derivatives_computed_)
-    {
-        Compute_Multiscale_Derivatives(false);
     }
 
         parallel_for_(Range(0, (int)kpts.size()), KAZE_Descriptor_Invoker(kpts, desc, evolution_, options_));
@@ -1465,7 +1452,6 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
                 uPyr[j].Lx.copyTo(evolution_[j].Lx);
                 uPyr[j].Ly.copyTo(evolution_[j].Ly);
             }
-            derivatives_computed_ = true;
             Mat cpu_desc;
             Feature_Description(kpts, cpu_desc);
             cpu_desc.copyTo(desc);

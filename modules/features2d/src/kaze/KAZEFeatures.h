@@ -38,7 +38,6 @@ private:
     bool reordering_;              ///< Flag for reordering time steps
     std::vector<std::vector<float > > tsteps_;  ///< Vector of FED dynamic time steps
     std::vector<int> nsteps_;      ///< Vector of number of steps per cycle
-    bool derivatives_computed_;
 
 public:
 
