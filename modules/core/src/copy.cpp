@@ -713,6 +713,8 @@ Mat& Mat::operator = (const Scalar& s)
     }
     else
     {
+        CV_CheckLE(channels(), 4, "cv::Scalar can only initialize matrices with at most 4 channels; use Vec<_Tp, cn> initializer or setTo(Vec<_Tp, cn>) instead");
+
         int fill_value = 0;
         if ( can_apply_memset(*this, s, fill_value) )
         {

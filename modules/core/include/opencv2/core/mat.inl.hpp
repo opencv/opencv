@@ -772,6 +772,72 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
         Mat(n, 1, traits::Type<_Tp>::value, (void*)vec.val).copyTo(*this);
 }
 
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(int _rows, int _cols, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_rows, _cols, _type);
+    setTo(_value);
+}
+
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(Size _sz, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_sz.height, _sz.width, _type);
+    setTo(_value);
+}
+
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(int _dims, const int* _sz, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_dims, _sz, _type);
+    setTo(_value);
+}
+
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(const std::vector<int>& _sz, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_sz, _type);
+    setTo(_value);
+}
+
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(const MatShape& _shape, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_shape, _type);
+    setTo(_value);
+}
+
+template<typename _Tp, int cn, typename> inline
+Mat::Mat(std::initializer_list<int> _shape, int _type, const Vec<_Tp, cn>& _value)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0)
+{
+    CV_CheckEQ(cn, CV_MAT_CN(_type),
+               "Initializer vector length must match the number of channels");
+    create(_shape, _type);
+    setTo(_value);
+}
+
 
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
