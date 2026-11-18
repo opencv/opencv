@@ -1295,11 +1295,11 @@ static std::string darknetRegionCfg(const std::string& anchors)
            "[region]\nanchors=" + anchors + "\nnum=1\nclasses=1\ncoords=4\nsoftmax=1\n";
 }
 
-static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask)
+static std::string darknetYoloCfg(const std::string& anchors, const std::string& mask, int num = 1)
 {
     return "[net]\nwidth=1\nheight=1\nchannels=1\n"
            "[convolutional]\nfilters=6\nsize=1\nstride=1\npad=0\nactivation=linear\n"
-           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + "\nnum=1\nclasses=1\n";
+           "[yolo]\nmask=" + mask + "\nanchors=" + anchors + format("\nnum=%d\nclasses=1\n", num);
 }
 
 static std::vector<char> darknetZeroWeights(size_t floats)
@@ -1316,11 +1316,12 @@ static void expectDarknetNumericListRejected(const std::string& cfg)
     {
         const std::vector<char> weights = darknetZeroWeights(12);
         readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
-        FAIL() << "Numeric list with trailing characters was accepted";
+        FAIL() << "Invalid numeric list was accepted";
     }
     catch (const cv::Exception& e)
     {
         EXPECT_EQ(Error::StsParseError, e.code);
+        EXPECT_NE(std::string::npos, e.err.find("Invalid numeric value in list")) << e.err;
     }
 }
 
@@ -1340,16 +1341,18 @@ static void expectDarknetNumericListAccepted(const std::string& cfg, const std::
     EXPECT_FLOAT_EQ(expectedSecond, layer->blobs[0].ptr<float>()[1]);
 }
 
-TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
+TEST(Test_Darknet, numeric_list_reject_invalid_prefix_or_range)
 {
-    const char* route[] = {"-1x", "-1,-2x", "0x1", "1.5", "-1,0.5"};
+    const char* route[] = {"x-1", "-1,,0", "-1,+", "2147483648x", "-2147483649x",
+                           "999999999999999999999999x"};
     for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
     {
         SCOPED_TRACE(std::string("route layers=") + route[i]);
         expectDarknetNumericListRejected(darknetRouteCfg(route[i]));
     }
 
-    const char* anchors[] = {"1x", "1,1x", "1.5.2,1", "1,1.5abc"};
+    const char* anchors[] = {"x1,1", "1,.", "1,nan", "inf,1", "-inf,1", "1e400x,1",
+                             "1,-1e39x", "1e-50x,1", "1e-400x,1"};
     for (size_t i = 0; i < sizeof(anchors) / sizeof(anchors[0]); ++i)
     {
         SCOPED_TRACE(std::string("anchors=") + anchors[i]);
@@ -1357,7 +1360,7 @@ TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
         expectDarknetNumericListRejected(darknetYoloCfg(anchors[i], "0"));
     }
 
-    const char* mask[] = {"0x", "0.5", "0x1", "0,0x"};
+    const char* mask[] = {"x0", "+", "0,,0", "2147483648x"};
     for (size_t i = 0; i < sizeof(mask) / sizeof(mask[0]); ++i)
     {
         SCOPED_TRACE(std::string("mask=") + mask[i]);
@@ -1367,8 +1370,7 @@ TEST(Test_Darknet, numeric_list_reject_invalid_trailing_characters)
 
 TEST(Test_Darknet, numeric_list_valid_values_control)
 {
-    // Whitespace inside values is removed by the cfg line reader before numeric
-    // parsing, so these controls differ from the rejected cases only in spelling.
+    // Whitespace inside values is removed by the cfg line reader before numeric parsing.
     const char* route[] = {"-1,-2", "-1, -2", " -1 , -2 \t", "-1,-2,"};
     for (size_t i = 0; i < sizeof(route) / sizeof(route[0]); ++i)
     {
@@ -1399,6 +1401,19 @@ TEST(Test_Darknet, numeric_list_valid_values_control)
     }
 }
 
+TEST(Test_Darknet, anchors_accept_numeric_prefix)
+{
+    const std::string anchors = "1e1px,.5units";
+    expectDarknetNumericListAccepted(darknetRegionCfg(anchors), "detection_out", 10.f, .5f);
+    expectDarknetNumericListAccepted(darknetYoloCfg(anchors, "0"), "yolo_1", 10.f, .5f);
+    expectDarknetNumericListAccepted(darknetRegionCfg("1e+,0tail"), "detection_out", 1.f, 0.f);
+}
+
+TEST(Test_Darknet, mask_accepts_numeric_prefix)
+{
+    expectDarknetNumericListAccepted(darknetYoloCfg("2,3,5,7", "1x", 2), "yolo_1", 5.f, 7.f);
+}
+
 // The route is the third layer (index 2) and one more layer follows it. Only the
 // layers parsed before the route, 0 and 1, can be its inputs.
 static std::string darknetRouteWithNextLayerCfg(const std::string& layers)
@@ -1427,8 +1442,8 @@ TEST(Test_Darknet, route_rejects_self_and_forward_references)
 
 TEST(Test_Darknet, route_accepts_preceding_layers)
 {
-    const char* layers[] = {"0", "1", "-2", "0,1"};
-    const int channels[] = {1, 1, 1, 2};
+    const char* layers[] = {"0", "1", "-2", "0,1", "-1x", "-1tail,-2x", "0x1", "1.5", "-1,0.5"};
+    const int channels[] = {1, 1, 1, 2, 1, 2, 1, 1, 2};
     for (size_t i = 0; i < sizeof(layers) / sizeof(layers[0]); ++i)
     {
         SCOPED_TRACE(std::string("route layers=") + layers[i]);
@@ -1479,7 +1494,7 @@ static std::string darknetFromCfg(const std::string& layer, const std::string& f
 TEST_P(Test_Darknet_from, rejects_invalid_from)
 {
     const char* invalid[] = {"-5", "-3", "2", "5", "-2147483648", "2147483647",
-                             "", "invalid", "1x", "2147483648"};
+                             "", "invalid", "0,1", "1,,0", "2147483648", "2suffix"};
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i)
     {
         SCOPED_TRACE(invalid[i]);
@@ -1498,7 +1513,7 @@ TEST_P(Test_Darknet_from, rejects_invalid_from)
 
 TEST_P(Test_Darknet_from, accepts_valid_from)
 {
-    const char* valid[] = {"-2", "-1", "0", "1"};
+    const char* valid[] = {"-2", "-1", "0", "1", "-2tail", "1x", "0.5", "-1,"};
     for (size_t i = 0; i < sizeof(valid) / sizeof(valid[0]); ++i)
     {
         SCOPED_TRACE(valid[i]);

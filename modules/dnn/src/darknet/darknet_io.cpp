@@ -69,6 +69,11 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include <cerrno>
+#include <cfloat>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <istream>
@@ -662,6 +667,29 @@ namespace cv {
                 return dst;
             }
 
+            // Darknet accepts a numeric prefix in each comma-separated field.
+            static bool parseNumber(const char* token, int& value)
+            {
+                char* end;
+                errno = 0;
+                const long number = std::strtol(token, &end, 10);
+                if (end == token || errno == ERANGE || number < INT_MIN || number > INT_MAX)
+                    return false;
+                value = static_cast<int>(number);
+                return true;
+            }
+
+            static bool parseNumber(const char* token, float& value)
+            {
+                char* end;
+                errno = 0;
+                const double number = std::strtod(token, &end);
+                if (end == token || errno == ERANGE || !std::isfinite(number) || std::fabs(number) > FLT_MAX)
+                    return false;
+                value = static_cast<float>(number);
+                return number == 0 || value != 0;
+            }
+
             template<typename T>
             std::vector<T> getNumbers(const std::string &src)
             {
@@ -669,10 +697,8 @@ namespace cv {
                 std::stringstream ss(src);
 
                 for (std::string str; std::getline(ss, str, ',');) {
-                    std::stringstream line(str);
-                    T val = T();
-                    // Require the whole token: "1x" must not be read as 1.
-                    if (!(line >> val) || !(line >> std::ws).eof())
+                    T val;
+                    if (!parseNumber(str.c_str(), val))
                         CV_Error(cv::Error::StsParseError, "Invalid numeric value in list: " + src);
                     dst.push_back(val);
                 }
@@ -683,11 +709,11 @@ namespace cv {
                                     int layers_counter)
             {
                 const std::string value = getParam<std::string>(params, "from", "");
-                std::istringstream stream(value);
-                int from = 0;
-                if (!(stream >> from) || !stream.eof())
+                const std::vector<int> indices = getNumbers<int>(value);
+                if (indices.size() != 1)
                     CV_Error(Error::StsParseError, "Invalid 'from' layer index: " + value);
 
+                int from = indices[0];
                 if (from < 0)
                     from += layers_counter;
                 if (from < 0 || from >= layers_counter)
