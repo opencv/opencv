@@ -79,6 +79,8 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
         max_coord = std::max(y2, max_coord);
         min_coord = std::min(x1, min_coord);
         min_coord = std::min(y1, min_coord);
+        min_coord = std::min(x2, min_coord);
+        min_coord = std::min(y2, min_coord);
     }
 
     // calculate offset and add offset to each bbox

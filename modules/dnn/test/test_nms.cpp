@@ -79,6 +79,14 @@ TEST(BatchedNMS, NegativeCoordinates)
     cv::dnn::NMSBoxesBatched(bboxes, scores, class_ids, 0.5f, 0.5f, indices);
 
     ASSERT_EQ(2u, indices.size());
+
+    // all coordinates negative, int Rect overload
+    std::vector<Rect> int_bboxes = { Rect(-12, -12, 10, 10), Rect(-12, -12, 10, 10) };
+    indices.clear();
+
+    cv::dnn::NMSBoxesBatched(int_bboxes, scores, class_ids, 0.5f, 0.5f, indices);
+
+    ASSERT_EQ(2u, indices.size());
 }
 
 TEST(SoftNMS, Accuracy)
