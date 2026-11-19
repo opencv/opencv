@@ -1723,6 +1723,28 @@ TEST_P(Imgproc_RemapHalfRGB, linear_2x2_footprint)
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapHalfRGB,
                         testing::Values(CV_32FC1, CV_32FC2, CV_16SC2));
 
+TEST(Imgproc_Remap, bilinear_half_rgb_fixed_relative_offsets)
+{
+    Mat wide(31, 275, CV_32FC3), half;
+    theRNG().fill(wide, RNG::UNIFORM, -1.f, 1.f);
+    wide.convertTo(half, CV_16F);
+    half.convertTo(wide, CV_32F);
+
+    const Size outputSize(273, 29);
+    const Mat mapX(outputSize, CV_32F, Scalar(0.25)), mapY(outputSize, CV_32F, Scalar(0.5));
+    Mat fixed, fractions, expected, actual;
+    convertMaps(mapX, mapY, fixed, fractions, CV_16SC2);
+    const int interpolation = INTER_LINEAR | WARP_RELATIVE_MAP;
+    remap(wide, expected, fixed, fractions, interpolation);
+    remap(half, actual, fixed, fractions, interpolation);
+    Mat expectedHalf;
+    expected.convertTo(expectedHalf, CV_16F);
+    expectedHalf.convertTo(expected, CV_32F);
+    Mat actualWide;
+    actual.convertTo(actualWide, CV_32F);
+    EXPECT_LE(cvtest::norm(expected, actualWide, NORM_INF), 1./1024.);
+}
+
 TEST(Imgproc_Warp, float16_linear_transparent)
 {
     for (int channels : {1, 3, 4})

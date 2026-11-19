@@ -21,16 +21,32 @@ typedef void (*ImgWarpFunc)(const float* x, const float* y, int len,
 
 ImgWarpFunc getImgWarpFunc(int type, int interpolation);
 
+using RemapBilinearHalfRGBFunc = void (*)(const hfloat* src, size_t step, hfloat* dst,
+                                          const short* xy, const ushort* fractions,
+                                          const float* weights, int length, const Point& offset);
+
+#if CV_SIMD128 && CV_FP16 && (CV_NEON || CV_AVX2)
+static inline v_float32x4 loadBilinearFourHalf(const hfloat* source)
+{
+#if CV_AVX2
+    // F16C expands four halves. The generic SSE expansion loads eight.
+    return v_float32x4(_mm_cvtph_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(source))));
+#else
+    return v_load_expand(source);
+#endif
+}
+#endif
+
 // Interpolate two adjacent RGB pixels from each row, then store exactly three channels.
 static inline void bilinearHalfRGB(const hfloat* top, const hfloat* bottom,
                                    float w0, float w1, float w2, float w3, hfloat* dst)
 {
-#if CV_NEON && CV_FP16 && CV_SIMD128
-    // On NEON these four-half loads collectively read only the six samples in each row.
-    const v_float32x4 tl = v_load_expand(top);
-    const v_float32x4 tr = v_rotate_right<1>(v_load_expand(top + 2));
-    const v_float32x4 bl = v_load_expand(bottom);
-    const v_float32x4 br = v_rotate_right<1>(v_load_expand(bottom + 2));
+#if CV_SIMD128 && CV_FP16 && (CV_NEON || CV_AVX2)
+    // These four-half loads collectively read only the six samples in each row.
+    const v_float32x4 tl = loadBilinearFourHalf(top);
+    const v_float32x4 tr = v_rotate_right<1>(loadBilinearFourHalf(top + 2));
+    const v_float32x4 bl = loadBilinearFourHalf(bottom);
+    const v_float32x4 br = v_rotate_right<1>(loadBilinearFourHalf(bottom + 2));
     v_float32x4 sum = v_add(v_mul(tl, v_setall_f32(w0)), v_mul(tr, v_setall_f32(w1)));
     sum = v_add(sum, v_mul(bl, v_setall_f32(w2)));
     sum = v_add(sum, v_mul(br, v_setall_f32(w3)));

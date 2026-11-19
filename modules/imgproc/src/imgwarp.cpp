@@ -784,6 +784,13 @@ struct RemapBilinearVecC1<T, float>
     }
 };
 
+#if CV_TRY_AVX2
+static RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB(bool relative)
+{
+    CV_CPU_DISPATCH(getRemapBilinearHalfRGB_, (relative), CV_CPU_DISPATCH_MODES_ALL);
+}
+#endif
+
 static inline int remapBilinearSameRun( const short* XY, int dx, int end,
                                          unsigned width1, unsigned height1, bool inl )
 {
@@ -902,6 +909,19 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         D[0] = castOp(t0); D[1] = castOp(t1);
                     }
                 else if( cn == 3 )
+                {
+#if CV_TRY_AVX2
+                    if constexpr (std::is_same_v<T, hfloat> && std::is_same_v<AT, float>)
+                    {
+                        static const auto kernel = getRemapBilinearHalfRGB(isRelative);
+                        if (kernel)
+                        {
+                            kernel(S0, sstep, D, XY + 2*dx, FXY + dx, wtab, X1 - dx, subOffset);
+                            D += (X1 - dx)*3;
+                            dx = X1;
+                        }
+                    }
+#endif
                     for( ; dx < X1; dx++, D += 3 )
                     {
                         int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
@@ -917,6 +937,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                             D[0] = castOp(t0); D[1] = castOp(t1); D[2] = castOp(t2);
                         }
                     }
+                }
                 else if( cn == 4 )
                     for( ; dx < X1; dx++, D += 4 )
                     {

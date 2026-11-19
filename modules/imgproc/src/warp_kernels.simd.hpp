@@ -111,6 +111,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 ImgWarpFunc getBicubicWarpFunc_(int type);
 ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb);
+RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB_(bool relative);
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -8915,6 +8916,33 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
 ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb)
 {
     return rgb ? bilinearWarpHalf<true> : bilinearWarpHalf<false>;
+}
+
+#if CV_AVX2 && CV_FP16
+template<bool relative>
+static void remapBilinearHalfRGBFixed(const hfloat* src, size_t step, hfloat* dst,
+                                      const short* xy, const ushort* fractions,
+                                      const float* weights, int length, const Point& offset)
+{
+    for (int i = 0; i < length; ++i, dst += 3)
+    {
+        const int x = xy[2*i] + (relative ? offset.x + i : 0);
+        const int y = xy[2*i + 1] + (relative ? offset.y : 0);
+        const hfloat* top = src + size_t(y)*step + 3*size_t(x);
+        const float* w = weights + 4*fractions[i];
+        bilinearHalfRGB(top, top + step, w[0], w[1], w[2], w[3], dst);
+    }
+}
+#endif
+
+RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB_(bool relative)
+{
+#if CV_AVX2 && CV_FP16
+    return relative ? remapBilinearHalfRGBFixed<true> : remapBilinearHalfRGBFixed<false>;
+#else
+    CV_UNUSED(relative);
+    return nullptr;
+#endif
 }
 
 template<typename T>
