@@ -110,6 +110,7 @@ namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 ImgWarpFunc getBicubicWarpFunc_(int type);
+ImgWarpFunc getBilinearHalfWarpFunc_();
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -8714,6 +8715,13 @@ static inline v_float32x4 bicubicLoadChannels4(const T* src, [[maybe_unused]] co
 {
     if constexpr (std::is_same_v<T, float>)
         return v_load(src);
+    else if constexpr (std::is_same_v<T, hfloat>)
+    {
+        // Half expansion can read eight samples for a four-lane result.
+        alignas(16) hfloat values[8] = {};
+        std::memcpy(values, src, 4*sizeof(hfloat));
+        return v_load_expand(values);
+    }
     else
     {
         alignas(16) T scratch[16/sizeof(T)];
@@ -8732,6 +8740,8 @@ static inline void bicubicStoreChannels4(T* dst, const v_float32x4& value)
 {
     if constexpr (std::is_same_v<T, float>)
         v_store(dst, value);
+    else if constexpr (std::is_same_v<T, hfloat>)
+        v_pack_store(dst, value);
     else
     {
         const v_int32x4 rounded = v_round(value);
@@ -8773,6 +8783,124 @@ static inline V bicubicChannelMulAdd(const V& value, const V& weight, const V& s
 }
 #endif
 
+struct BilinearHalfAxis
+{
+    int first;
+    int second;
+    float fraction;
+};
+
+static inline BilinearHalfAxis bilinearHalfAxis(float value, int length, int borderType)
+{
+    double position = value;
+    if (!std::isfinite(position))
+        position = borderType == BORDER_REPLICATE && !std::isnan(position) ?
+                   (position > 0 ? double(length) : -1.) : 0.;
+    const double base = std::floor(position);
+    const float fraction = float(position - base);
+    if (base >= 0 && base + 1 < length)
+        return {int(base), int(base + 1), fraction};
+    if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        return {base >= 0 && base < length ? int(base) : -1,
+                base + 1 >= 0 && base + 1 < length ? int(base + 1) : -1, fraction};
+    if (borderType == BORDER_REPLICATE)
+    {
+        const auto clampIndex = [length](double index) {
+            return index < 0 ? 0 : index >= length ? length - 1 : int(index);
+        };
+        return {clampIndex(base), clampIndex(base + 1), fraction};
+    }
+    if (length == 1)
+        return {0, 0, 0.f};
+    if (borderType != BORDER_WRAP && borderType != BORDER_REFLECT && borderType != BORDER_REFLECT_101)
+        CV_Error(Error::StsBadArg, "Unsupported border mode");
+    if (base >= std::numeric_limits<int>::min()/2 && base <= std::numeric_limits<int>::max()/2 &&
+        length <= std::numeric_limits<int>::max()/2)
+    {
+        const int index = int(base);
+        return {borderInterpolate_fast(index, length, borderType),
+                borderInterpolate_fast(index + 1, length, borderType), fraction};
+    }
+    const int delta = borderType == BORDER_REFLECT_101;
+    const double period = borderType == BORDER_WRAP ? double(length) : 2.*(length - delta);
+    double phase = std::fmod(base, period);
+    if (phase < 0)
+        phase += period;
+    const auto borderIndex = [=](double index) {
+        if (index >= period)
+            index -= period;
+        return int(index < length ? index : period - index - 1 + delta);
+    };
+    return {borderIndex(phase), borderIndex(phase + 1), fraction};
+}
+
+static void bilinearWarpHalf(const float* x, const float* y, int len,
+                              const void* source, size_t step, Size size, void* destination,
+                              const float*, int borderType, const void* borderValue, int channels)
+{
+    const hfloat* fill = static_cast<const hfloat*>(borderValue);
+    hfloat* dst = static_cast<hfloat*>(destination);
+    for (int i = 0; i < len; ++i, dst += channels)
+    {
+        const float sx = x[i], sy = y[i];
+        if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
+        {
+            const float lower = borderType == BORDER_TRANSPARENT ? 0.f : -1.f;
+            const bool outside = !std::isfinite(sx) || !std::isfinite(sy) ||
+                                 (borderType == BORDER_TRANSPARENT ? sx < lower || sy < lower : sx <= lower || sy <= lower) ||
+                                 double(sx) >= size.width || double(sy) >= size.height;
+            if (outside)
+            {
+                if (borderType == BORDER_CONSTANT)
+                    std::copy(fill, fill + channels, dst);
+                continue;
+            }
+        }
+        const BilinearHalfAxis horizontal = bilinearHalfAxis(sx, size.width, borderType);
+        const BilinearHalfAxis vertical = bilinearHalfAxis(sy, size.height, borderType);
+        const float alpha = horizontal.fraction, beta = vertical.fraction;
+        const float weights[] = {(1.f - alpha)*(1.f - beta), alpha*(1.f - beta),
+                                 (1.f - alpha)*beta, alpha*beta};
+        const int columns[] = {horizontal.first, horizontal.second};
+        const int rows[] = {vertical.first, vertical.second};
+        const hfloat* pixels[4];
+        for (int row = 0; row < 2; ++row)
+        {
+            const hfloat* rowData = rows[row] < 0 ? nullptr : reinterpret_cast<const hfloat*>(
+                static_cast<const uchar*>(source) + size_t(rows[row])*step);
+            for (int column = 0; column < 2; ++column)
+                pixels[row*2 + column] = rowData && columns[column] >= 0 ?
+                                         rowData + size_t(columns[column])*channels : nullptr;
+        }
+        float scale = 1.f;
+        if (borderType == BORDER_TRANSPARENT && !(pixels[0] && pixels[1] && pixels[2] && pixels[3]))
+        {
+            float weightSum = 0.f;
+            for (int tap = 0; tap < 4; ++tap)
+                if (pixels[tap])
+                    weightSum += weights[tap];
+            if (weightSum == 0.f)
+                continue;
+            scale = 1.f/weightSum;
+        }
+        for (int channel = 0; channel < channels; ++channel)
+        {
+            const float border = borderType == BORDER_CONSTANT ? float(fill[channel]) : 0.f;
+            const float v0 = pixels[0] ? float(pixels[0][channel]) : border;
+            const float v1 = pixels[1] ? float(pixels[1][channel]) : border;
+            const float v2 = pixels[2] ? float(pixels[2][channel]) : border;
+            const float v3 = pixels[3] ? float(pixels[3][channel]) : border;
+            dst[channel] = hfloat((v0*weights[0] + v1*weights[1] + v2*weights[2] + v3*weights[3])*scale);
+        }
+    }
+}
+
+
+ImgWarpFunc getBilinearHalfWarpFunc_()
+{
+    return bilinearWarpHalf;
+}
+
 template<typename T>
 static void bicubicWarpChannels(const float* x, const float* y, int len,
                                 const void* source, size_t step, Size size, void* destination,
@@ -8808,7 +8936,7 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
                             + left*channels;
             int channel = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            if constexpr (!std::is_same_v<T, double>)
+            if constexpr (!std::is_same_v<T, double> && !std::is_same_v<T, hfloat>)
             {
                 const v_float32 w0 = vx_setall_f32(wx[0]), w1 = vx_setall_f32(wx[1]);
                 const v_float32 w2 = vx_setall_f32(wx[2]), w3 = vx_setall_f32(wx[3]);
@@ -8902,6 +9030,8 @@ static void bicubicWarpWrap(const float* x, const float* y, int len, const void*
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
+    if (CV_MAT_DEPTH(type) == CV_16F)
+        return bicubicWarpChannels<hfloat>;
     if (CV_MAT_CN(type) > 4)
     {
         switch (CV_MAT_DEPTH(type))
