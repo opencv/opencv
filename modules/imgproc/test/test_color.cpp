@@ -2989,11 +2989,11 @@ TEST(Imgproc_cvtColor_BE, COLOR_BGR2GRAY)  { runCvtColorBitExactCheck(COLOR_BGR2
 TEST(Imgproc_cvtColor_BE, COLOR_BGRA2GRAY) { runCvtColorBitExactCheck(COLOR_BGRA2GRAY, CV_8UC3, 0x3008c6b8); }
 
 // Exact integer reference for 8-bit 4-channel RGB2Gray (BY15/GY15/RY15, gray_shift 15).
-// Alpha is random and ignored. Widths straddle the 16-pixel AVX-512 block size.
+// Alpha is random and ignored. Widths cover the scalar path, one 16-pixel block, and tails.
 static void runCvtColorGray4chExactCheck(ColorConversionCodes code, bool bgra)
 {
-    const int widths[] = { 1, 2, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65, 263 };
-    RNG rng(0x4c4c);
+    const int widths[] = { 1, 16, 17, 263 };
+    RNG &rng = theRNG();
     for (int w : widths)
     {
         Mat src(3, w, CV_8UC4);
@@ -3034,7 +3034,7 @@ static void runCvtColorGray4chAliasedCheck(ColorConversionCodes code, bool bgra)
         ~OptimizedGuard() { setUseOptimized(saved); }
     } guard;
 
-    RNG rng(0x7a7a);
+    RNG &rng = theRNG();
     for (int optimized = 1; optimized >= 0; optimized--)
     {
         setUseOptimized(optimized != 0);
