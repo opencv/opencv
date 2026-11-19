@@ -3101,6 +3101,19 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
     const bool const_weight = net.isConstArg(node_inputs[1]);
     const bool const_bias = !has_bias || net.isConstArg(node_inputs[2]);
 
+    // mask_index is an int32 0/1 key padding mask, not an additive bias: lower it the same way
+    // parseMultiHeadAttention does. addKeyPaddingMaskBias() calls addLayer(), which overwrites
+    // node_inputs/node_outputs, so save and restore them around it.
+    if (has_mask) {
+        const std::vector<Arg> orig_node_inputs = node_inputs, orig_node_outputs = node_outputs;
+        const float mask_filter_value = params.get<float>("mask_filter_value", -10000.f);
+        Arg mask = addKeyPaddingMaskBias(params.name, node_proto, orig_node_inputs[3],
+                                         orig_node_inputs[0], mask_filter_value);
+        node_inputs = orig_node_inputs;
+        node_outputs = orig_node_outputs;
+        node_inputs[3] = mask;
+    }
+
     if (const_weight && const_bias) {
         Mat W = net.argTensor(node_inputs[1]);
         CV_CheckEQ(W.dims, 2, "ONNXImporter2/parseAttention: weights must be 2D");
