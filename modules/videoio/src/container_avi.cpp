@@ -790,7 +790,7 @@ void BitStream::jflush(unsigned currval, int bitIdx)
 {
     uchar v;
     uchar* ptr = m_current;
-    currval |= (1 << bitIdx)-1;
+    currval |= (unsigned)((1ull << bitIdx) - 1);
     while( bitIdx < 32 )
     {
         v = (uchar)(currval >> 24);
