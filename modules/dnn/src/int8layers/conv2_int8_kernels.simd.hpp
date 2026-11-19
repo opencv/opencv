@@ -980,6 +980,57 @@ static inline void storeInt32x8(int32_t* dst, __m256i v, int n)
 }
 #endif
 
+#if CV_NEON && defined(__aarch64__)
+// One pixel's 8 channels as u8 widened to s16 (int8 input is flipped to u8 by vxor).
+static inline int16x8_t dwLoadNEON(const int8_t* ip, uint8x8_t vxor)
+{
+    return vreinterpretq_s16_u16(vmovl_u8(veor_u8(vld1_u8((const uint8_t*)ip), vxor)));
+}
+
+static inline void dwMacNEON(int32x4_t& a0, int32x4_t& a1, int16x8_t x, int16x8_t w)
+{
+    a0 = vmlal_s16(a0, vget_low_s16(x), vget_low_s16(w));
+    a1 = vmlal_high_s16(a1, x, w);
+}
+
+// Requantizes one pixel's accumulators and writes its first n_g channels, as the AVX2 path does.
+template<bool INT32_OUT>
+static inline void dwStoreNEON(ConvInt8Out<INT32_OUT>* optr, const int8_t* rptr,
+                               int32x4_t a0, int32x4_t a1, float32x4_t m0, float32x4_t m1,
+                               float32x4_t vzp, const int8_t* activLUT, bool inputIsU8, int n_g)
+{
+    if constexpr (INT32_OUT) {
+        alignas(16) int32_t buf[8];
+        vst1q_s32(buf, a0); vst1q_s32(buf + 4, a1);
+        memcpy(optr, buf, n_g * sizeof(int32_t));
+    } else {
+        float32x4_t f0 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(a0), m0), vzp);
+        float32x4_t f1 = vaddq_f32(vmulq_f32(vcvtq_f32_s32(a1), m1), vzp);
+        if (rptr) {
+            int16x8_t r16 = vmovl_s8(vld1_s8(rptr));
+            f0 = vaddq_f32(f0, vsubq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(r16))), vzp));
+            f1 = vaddq_f32(f1, vsubq_f32(vcvtq_f32_s32(vmovl_high_s16(r16)), vzp));
+        }
+        int16x8_t p16 = vcombine_s16(vqmovn_s32(vcvtnq_s32_f32(f0)), vqmovn_s32(vcvtnq_s32_f32(f1)));
+        uint8x8_t p8 = inputIsU8 ? vqmovun_s16(p16) : vreinterpret_u8_s8(vqmovn_s16(p16));
+        if (!activLUT && n_g == 8) {
+            vst1_u8((uint8_t*)optr, p8);
+            return;
+        }
+        alignas(8) uint8_t tmp[8];
+        vst1_u8(tmp, p8);
+        if (!activLUT)
+            memcpy(optr, tmp, n_g);
+        else if (inputIsU8)
+            for (int j = 0; j < n_g; j++)
+                ((uint8_t*)optr)[j] = (uint8_t)activLUT[tmp[j]];
+        else
+            for (int j = 0; j < n_g; j++)
+                optr[j] = activLUT[(int)(int8_t)tmp[j] + 128];
+    }
+}
+#endif
+
 // INT8 depthwise convolution kernel (ngroups==K==C, Kg==Cg==1).
 template<bool INT32_OUT>
 static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
@@ -1035,10 +1086,19 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
 
     // Spatial tiling: split planeblocks into ntiles tiles so the total task count
     // is N*K1*ntiles, giving all threads work even when K is small (e.g. K=16 → K1=2).
-    constexpr int SB_TILE = 8;
     int nthreads = std::max(1, cv::getNumThreads());
+#if CV_NEON && defined(__aarch64__)
+    // ~4 tasks per thread: whole rows when there are enough of them,
+    // otherwise (e.g. a 1D conv) pieces of rows, at least 8 pixels each.
+    int nrows = D_ * H_;
+    int wanted = std::max(1, (nthreads * 4 + N * K1 - 1) / (N * K1));
+    int TILE = nrows >= wanted ? (nrows + wanted - 1) / wanted * W_
+                               : std::max(8, ((planeblocks_ + wanted - 1) / wanted + 7) & ~7);
+#else
+    constexpr int SB_TILE = 8;
     int TILE = std::max(SB_TILE,
         ((planeblocks_ + nthreads * 4 - 1) / (nthreads * 4) + SB_TILE - 1) & ~(SB_TILE - 1));
+#endif
     int ntiles = (planeblocks_ + TILE - 1) / TILE;
     int total_tasks = N * K1 * ntiles;
 #if CV_AVX2 && (defined(__x86_64__) || defined(_M_X64))
@@ -1312,6 +1372,115 @@ static void convInt8BlockDepthwise(const void* inp_, const void* residual_,
                 continue;
             }
 #endif // CV_AVX2
+
+#if CV_NEON && defined(__aarch64__)
+            if (ksize <= 128) {
+                int n_g = g_end - g_start;
+                constexpr int SB = 8;
+                alignas(16) int16_t wbuf[128 * K0];
+                alignas(16) int32_t bbuf[K0] = {0};
+                alignas(16) float mbuf[K0] = {0};
+                for (int i = 0; i < ksize; i++) {
+                    for (int j = 0; j < K0; j++) {
+                        int g = g_start + j;
+                        wbuf[i * K0 + j] = j < n_g ? wdata[(size_t)g * ksize * C1Max * C0 * K0
+                                                         + (size_t)i * C1Max * C0 * K0
+                                                         + (size_t)(g % C0) * K0] : 0;
+                    }
+                }
+                for (int j = 0; j < n_g; j++) {
+                    bbuf[j] = bias[g_start + j];
+                    mbuf[j] = multiplier[g_start + j];
+                }
+                const int32x4_t vb0 = vld1q_s32(bbuf), vb1 = vld1q_s32(bbuf + 4);
+                const float32x4_t m0 = vld1q_f32(mbuf), m1 = vld1q_f32(mbuf + 4);
+                const float32x4_t vzp = vdupq_n_f32((float)out_zp);
+                const uint8x8_t vxor = vdup_n_u8(inputIsU8 ? 0 : 0x80);
+                const int16x8_t vpad = vdupq_n_s16((int16_t)(inputIsU8 ? inp_zp
+                                                   : (int)(uint8_t)((uint8_t)inp_zp ^ 0x80u)));
+                const int step = Sx * C0;
+
+                // the tile in row segments [x0, x1); each goes in blocks of 8 pixels, the last one shifted back
+                for (int p0 = p_task_start; p0 < p_task_end; ) {
+                    int zy = p0 / W, row0 = zy * W;
+                    int x0 = p0 - row0, x1 = std::min(W, x0 + (p_task_end - p0));
+                    p0 = row0 + x1;
+                    int zj = zy / H, yj = zy - zj * H;
+                    bool zy_inner = (zj >= innerZ0 && zj < innerZ1) && (yj >= innerY0 && yj < innerY1);
+                    int zi0 = zj * Sz - padZ, yi0 = yj * Sy - padY;
+
+                    if (x1 - x0 < SB) {
+                        // short segments: one pixel at a time, all 8 channels at once
+                        for (int xj = x0; xj < x1; xj++) {
+                            int xi0 = xj * Sx - padX;
+                            int32x4_t a0 = vb0, a1 = vb1;
+                            for (int i = 0; i < ksize; i++) {
+                                int zi = zi0 + ofsZYX[i*3], yi = yi0 + ofsZYX[i*3+1], xi = xi0 + ofsZYX[i*3+2];
+                                int16x8_t x = vpad;
+                                if ((unsigned)zi < (unsigned)Di && (unsigned)yi < (unsigned)Hi &&
+                                    (unsigned)xi < (unsigned)Wi)
+                                    x = dwLoadNEON(inpbaseptr + (((zi * Hi) + yi) * Wi + xi) * C0, vxor);
+                                dwMacNEON(a0, a1, x, vld1q_s16(wbuf + i * K0));
+                            }
+                            dwStoreNEON<INT32_OUT>(outbase + (row0 + xj) * K0,
+                                                   resbase ? resbase + (row0 + xj) * K0 : nullptr,
+                                                   a0, a1, m0, m1, vzp, activLUT, inputIsU8, n_g);
+                        }
+                        continue;
+                    }
+
+                    for (int xb = x0; xb < x1; xb += SB) {
+                        int xj = std::min(xb, x1 - SB);
+                        int p = row0 + xj, xi0 = xj * Sx - padX;
+                        int32x4_t a00 = vb0, a01 = vb1, a10 = vb0, a11 = vb1, a20 = vb0, a21 = vb1;
+                        int32x4_t a30 = vb0, a31 = vb1, a40 = vb0, a41 = vb1, a50 = vb0, a51 = vb1;
+                        int32x4_t a60 = vb0, a61 = vb1, a70 = vb0, a71 = vb1;
+                        if (zy_inner && xj >= innerX0 && xj + SB <= innerX1) {
+                            // no bounds checks
+                            for (int i = 0; i < ksize; i++) {
+                                const int16x8_t w = vld1q_s16(wbuf + i * K0);
+                                const int8_t* ip = inpbaseptr + ((((zi0 + ofsZYX[i*3]) * Hi) +
+                                    yi0 + ofsZYX[i*3+1]) * Wi + xi0 + ofsZYX[i*3+2]) * C0;
+                                dwMacNEON(a00, a01, dwLoadNEON(ip, vxor), w);
+                                dwMacNEON(a10, a11, dwLoadNEON(ip + step, vxor), w);
+                                dwMacNEON(a20, a21, dwLoadNEON(ip + 2 * step, vxor), w);
+                                dwMacNEON(a30, a31, dwLoadNEON(ip + 3 * step, vxor), w);
+                                dwMacNEON(a40, a41, dwLoadNEON(ip + 4 * step, vxor), w);
+                                dwMacNEON(a50, a51, dwLoadNEON(ip + 5 * step, vxor), w);
+                                dwMacNEON(a60, a61, dwLoadNEON(ip + 6 * step, vxor), w);
+                                dwMacNEON(a70, a71, dwLoadNEON(ip + 7 * step, vxor), w);
+                            }
+                        } else {
+                            // padding is read as the input zero point
+                            for (int i = 0; i < ksize; i++) {
+                                const int16x8_t w = vld1q_s16(wbuf + i * K0);
+                                int zi = zi0 + ofsZYX[i*3], yi = yi0 + ofsZYX[i*3+1], xi = xi0 + ofsZYX[i*3+2];
+                                bool rowok = (unsigned)zi < (unsigned)Di && (unsigned)yi < (unsigned)Hi;
+                                const int8_t* rp = rowok ? inpbaseptr + ((zi * Hi) + yi) * Wi * C0 : inpbaseptr;
+                                #define DW_LD(j) (rowok && (unsigned)(xi + (j) * Sx) < (unsigned)Wi ? \
+                                    dwLoadNEON(rp + (xi + (j) * Sx) * C0, vxor) : vpad)
+                                dwMacNEON(a00, a01, DW_LD(0), w);
+                                dwMacNEON(a10, a11, DW_LD(1), w);
+                                dwMacNEON(a20, a21, DW_LD(2), w);
+                                dwMacNEON(a30, a31, DW_LD(3), w);
+                                dwMacNEON(a40, a41, DW_LD(4), w);
+                                dwMacNEON(a50, a51, DW_LD(5), w);
+                                dwMacNEON(a60, a61, DW_LD(6), w);
+                                dwMacNEON(a70, a71, DW_LD(7), w);
+                                #undef DW_LD
+                            }
+                        }
+                        #define DW_STORE_NEON(j) dwStoreNEON<INT32_OUT>(outbase + (p + j) * K0, \
+                            resbase ? resbase + (p + j) * K0 : nullptr, a##j##0, a##j##1, \
+                            m0, m1, vzp, activLUT, inputIsU8, n_g)
+                        DW_STORE_NEON(0); DW_STORE_NEON(1); DW_STORE_NEON(2); DW_STORE_NEON(3);
+                        DW_STORE_NEON(4); DW_STORE_NEON(5); DW_STORE_NEON(6); DW_STORE_NEON(7);
+                        #undef DW_STORE_NEON
+                    }
+                }
+                continue;
+            }
+#endif // CV_NEON
 
             for (int p = p_task_start; p < p_task_end; p++) {
                 int zj  = p / (H * W);
