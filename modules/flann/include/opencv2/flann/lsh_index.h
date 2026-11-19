@@ -105,9 +105,6 @@ public:
         multi_probe_level_ = get_param(index_params_,"multi_probe_level",2);
 
         feature_size_ = (unsigned)dataset_.cols;
-        // buildIndex() rejects other key sizes; shifting the probe masks for them is undefined
-        if (key_size_ > 0 && key_size_ <= (int)(sizeof(lsh::BucketKey) * CHAR_BIT))
-            fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
     }
 
 
@@ -127,6 +124,9 @@ public:
             // Add the features to the table
             table.add(dataset_);
         }
+        xor_masks_.clear();
+        if (!tables_.empty())
+            fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
     }
 
     flann_algorithm_t getType() const CV_OVERRIDE
@@ -149,7 +149,8 @@ public:
         load_value(stream, table_number);
         load_value(stream, key_size);
         load_value(stream, multi_probe_level);
-        if (table_number <= 0 || key_size <= 0 || key_size > (int)(sizeof(lsh::BucketKey) * CHAR_BIT) || multi_probe_level < 0)
+        const size_t key_size_upper_bound = (std::min)(sizeof(lsh::BucketKey) * CHAR_BIT + 1, sizeof(size_t) * CHAR_BIT);
+        if (table_number <= 0 || key_size <= 0 || (size_t)key_size >= key_size_upper_bound || multi_probe_level < 0)
             FLANN_THROW(cv::Error::StsParseError, "Invalid LSH index parameters in file");
 
         // The index searches the dataset saved with it, as before, and now owns that copy
@@ -172,10 +173,6 @@ public:
         loaded_dataset_.swap(data);
         dataset_ = Matrix<ElementType>(loaded_dataset_.get(), saved.rows, saved.cols);
         feature_size_ = (unsigned)dataset_.cols;
-
-        // the constructor built the probe masks for the default parameters
-        xor_masks_.clear();
-        fill_xor_mask(0, key_size_, multi_probe_level_, xor_masks_);
 
         // Building the index is so fast we can afford not storing it
         buildIndex();
@@ -285,7 +282,7 @@ private:
         if (level == 0) return;
         for (int index = lowest_index - 1; index >= 0; --index) {
             // Create a new key
-            lsh::BucketKey new_key = key | (1 << index);
+            lsh::BucketKey new_key = key | (lsh::BucketKey(1) << index);
             fill_xor_mask(new_key, index, level - 1, xor_masks);
         }
     }

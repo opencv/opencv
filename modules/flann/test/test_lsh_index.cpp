@@ -4,6 +4,8 @@
 
 #include "test_precomp.hpp"
 
+#include <algorithm>
+#include <climits>
 #include <fstream>
 
 namespace opencv_test { namespace {
@@ -40,7 +42,7 @@ static void setIntAt(std::vector<char>& buf, size_t ofs, int v)
     memcpy(&buf[ofs], &v, sizeof(int));
 }
 
-// Every dataset row sits in its own bucket, so knnSearch finds it at distance 0 regardless of the random bit masks.
+// Each query row is in the dataset, so table->getKey(row) hits its own bucket (even when rows share buckets) and finds it at distance 0.
 static void expectRowsFound(flann::Index& index, const Mat& features)
 {
     Mat indices, dists;
@@ -145,11 +147,12 @@ TEST(Flann_LSH, load_rejects_invalid_stream)
     ASSERT_EQ(12, getIntAt(saved, params_ofs + sizeof(int)));
     ASSERT_EQ(1, getIntAt(saved, params_ofs + 2 * sizeof(int)));
 
-    // table_number <= 0, key_size <= 0, key_size out of BucketKey range, multi_probe_level < 0
+    // table_number <= 0, key_size <= 0, key_size at/above LshTable::initialize() limit, multi_probe_level < 0
+    const int key_size_upper_bound = static_cast<int>((std::min)(sizeof(cvflann::lsh::BucketKey) * CHAR_BIT + 1, sizeof(size_t) * CHAR_BIT));
     const struct { size_t ofs; int val; } bad_params[] = {
         { params_ofs, 0 },
         { params_ofs + sizeof(int), 0 },
-        { params_ofs + sizeof(int), 33 },
+        { params_ofs + sizeof(int), key_size_upper_bound },
         { params_ofs + 2 * sizeof(int), -1 },
     };
     for (size_t i = 0; i < sizeof(bad_params) / sizeof(bad_params[0]); ++i)
