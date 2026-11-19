@@ -1709,16 +1709,18 @@ TEST_P(Imgproc_RemapHalfRGB, tight_footprint)
         pixels[i] = hfloat(float(4*(i/3) + i%3)/256.f);
     const Mat src(side, side, CV_16FC3, pixels);
     const int center = side/2 - 1;
-    const Mat mapX(1, 1, CV_32F, Scalar(center + 0.25)), mapY(1, 1, CV_32F, Scalar(center + 0.5));
+    // Eight destinations also exercise the wide-load guard on this two-pixel RGB row.
+    const int width = interpolation == INTER_LINEAR ? 8 : 1;
+    const Mat mapX(1, width, CV_32F, Scalar(center + 0.25)), mapY(1, width, CV_32F, Scalar(center + 0.5));
     Mat map1 = mapX, map2 = mapY;
     if (mapType != CV_32FC1)
         convertMaps(mapX, mapY, map1, map2, mapType);
 
-    hfloat output[4] = {hfloat(0.f), hfloat(0.f), hfloat(0.f), hfloat(23.f)};
-    Mat dst(1, 1, CV_16FC3, output);
+    std::vector<hfloat> output(3*width + 1, hfloat(23.f));
+    Mat dst(1, width, CV_16FC3, output.data());
     remap(src, dst, map1, map2, interpolation);
-    ASSERT_EQ(dst.data, reinterpret_cast<uchar*>(output));
-    EXPECT_EQ(23.f, float(output[3]));
+    ASSERT_EQ(dst.data, reinterpret_cast<uchar*>(output.data()));
+    EXPECT_EQ(23.f, float(output.back()));
 
     Mat wide, expected, rounded, actual;
     src.convertTo(wide, CV_32F);
@@ -1733,12 +1735,13 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapHalfRGB,
                         testing::Combine(testing::Values(INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4),
                                          testing::Values(CV_32FC1, CV_32FC2, CV_16SC2)));
 
-typedef testing::TestWithParam<tuple<int, int>> Imgproc_RemapCubicHalfRGB;
+typedef testing::TestWithParam<tuple<int, int, int>> Imgproc_RemapHalfRGBBlocks;
 
-TEST_P(Imgproc_RemapCubicHalfRGB, mixed_footprints_and_tail)
+TEST_P(Imgproc_RemapHalfRGBBlocks, mixed_footprints_and_tail)
 {
-    const int mapType = get<0>(GetParam());
-    const int border = get<1>(GetParam());
+    const int interpolation = get<0>(GetParam());
+    const int mapType = get<1>(GetParam());
+    const int border = get<2>(GetParam());
     Mat wider(13, 18, CV_32FC3), halfStorage;
     theRNG().fill(wider, RNG::UNIFORM, -1.f, 1.f);
     wider.convertTo(halfStorage, CV_16F);
@@ -1746,14 +1749,15 @@ TEST_P(Imgproc_RemapCubicHalfRGB, mixed_footprints_and_tail)
     Mat wide;
     half.convertTo(wide, CV_32F);
 
-    const int width = 19;
+    const int width = 27;
     Mat mapX(1, width, CV_32F), mapY(1, width, CV_32F, Scalar(2.75));
     for (int x = 0; x < width; ++x)
         mapX.at<float>(x) = 1.25f + x%9;
-    // Complete block, mixed block, then a three-pixel tail.
+    // Complete block, mixed block, right-edge block, then a three-pixel tail.
     mapX.at<float>(8) = -0.75f;
     mapX.at<float>(13) = mapType == CV_16SC2 ? -4.f : std::numeric_limits<float>::quiet_NaN();
-    mapX.at<float>(18) = 15.25f;
+    mapX.at<float>(21) = 14.25f;
+    mapX.at<float>(26) = 15.25f;
     Mat map1 = mapX, map2 = mapY;
     if (mapType != CV_32FC1)
         convertMaps(mapX, mapY, map1, map2, mapType);
@@ -1761,14 +1765,16 @@ TEST_P(Imgproc_RemapCubicHalfRGB, mixed_footprints_and_tail)
     Mat expected(1, width, CV_32FC3), result;
     theRNG().fill(expected, RNG::UNIFORM, -1.f, 1.f);
     expected.convertTo(result, CV_16F);
-    result.convertTo(expected, CV_32F);
+    // The legacy FP32 transparent linear path has different partial-border behavior.
+    const Mat& referenceSource = interpolation == INTER_LINEAR && border == BORDER_TRANSPARENT ? half : wide;
+    result.convertTo(expected, referenceSource.depth());
     const Scalar fill(0.25, -0.5, 0.75);
-    remap(half, result, map1, map2, INTER_CUBIC, border, fill);
+    remap(half, result, map1, map2, interpolation, border, fill);
     for (int x = 0; x < width; ++x)
     {
         const Rect one(x, 0, 1, 1);
         Mat dst = expected(one);
-        remap(wide, dst, map1(one), map2.empty() ? Mat() : map2(one), INTER_CUBIC, border, fill);
+        remap(referenceSource, dst, map1(one), map2.empty() ? Mat() : map2(one), interpolation, border, fill);
     }
 
     Mat rounded, observed;
@@ -1778,8 +1784,9 @@ TEST_P(Imgproc_RemapCubicHalfRGB, mixed_footprints_and_tail)
     EXPECT_LE(cvtest::norm(expected, observed, NORM_INF), 1./1024.);
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapCubicHalfRGB,
-                        testing::Combine(testing::Values(CV_32FC1, CV_32FC2, CV_16SC2),
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapHalfRGBBlocks,
+                        testing::Combine(testing::Values(INTER_LINEAR, INTER_CUBIC),
+                                         testing::Values(CV_32FC1, CV_32FC2, CV_16SC2),
                                          testing::Values(BORDER_CONSTANT, BORDER_TRANSPARENT)));
 
 TEST(Imgproc_Remap, bilinear_half_rgb_fixed_relative_offsets)
