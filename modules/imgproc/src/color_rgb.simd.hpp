@@ -734,18 +734,24 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
+        // The vector kernels cover a remainder by rewinding the final block so it ends at
+        // n, which re-reads source pixels already visited. If the destination overlaps the
+        // source (identical or partially overlapping storage) an earlier store may have
+        // overwritten bytes that re-read needs. Rewind only when the two byte ranges are
+        // disjoint; otherwise finish the remainder with the scalar loop, which reads each
+        // pixel before it can be overwritten.
+        [[maybe_unused]] const bool disjoint = [&]() {
+            const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+            return (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
+        }();
+
 #if CV_AVX512_SKX
         // Bit-exact x86 fast paths. BGRA: no channel deinterleave at all - the 4-byte
         // pixel feeds vpmaddwd directly. BGR (VBMI): vpermb deinterleaves into b/g pairs
         // + r, then one vpmaddwd (b*cb+g*cg) and one vpmulld (r*cr). Full 15-bit -> maxErr 0.
         const __m512i vdelta = _mm512_set1_epi32(1 << (shift - 1));
         // The final block is clamped to [n-16, n) so any remainder is covered by one
-        // overlapping store instead of a scalar tail. That tail re-reads source pixels, so
-        // if the destination overlaps the source (identical or partially overlapping
-        // storage) an earlier store may have overwritten bytes it reads. Use the AVX-512
-        // kernels only when the two byte ranges are disjoint.
-        const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
-        const bool disjoint = (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
+        // overlapping store instead of a scalar tail; hence these kernels need `disjoint`.
         if (n >= 16 && scn == 4 && disjoint)
         {
             const __m512i coef = _mm512_set1_epi64(((int64_t)cr << 32) | ((int64_t)((uint16_t)cg) << 16) | (uint16_t)cb);
@@ -809,7 +815,8 @@ struct RGB2Gray<uchar>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                // Do not rewind over overlapping buffers; the scalar loop below finishes.
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);

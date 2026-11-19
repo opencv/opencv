@@ -2992,7 +2992,7 @@ TEST(Imgproc_cvtColor_BE, COLOR_BGRA2GRAY) { runCvtColorBitExactCheck(COLOR_BGRA
 // Alpha is random and ignored. Widths straddle the 16-pixel AVX-512 block size.
 static void runCvtColorGray4chExactCheck(ColorConversionCodes code, bool bgra)
 {
-    const int widths[] = { 1, 2, 15, 16, 17, 18, 31, 32, 33, 263 };
+    const int widths[] = { 1, 2, 15, 16, 17, 18, 31, 32, 33, 63, 64, 65, 263 };
     RNG rng(0x4c4c);
     for (int w : widths)
     {
@@ -3022,27 +3022,43 @@ static void runCvtColorGray4chExactCheck(ColorConversionCodes code, bool bgra)
 // dst starts at the same byte as src (offset 0) or 1-3 bytes into it.
 static void runCvtColorGray4chAliasedCheck(ColorConversionCodes code, bool bgra)
 {
-    const int widths[] = { 15, 16, 17, 18, 19, 20, 31, 32, 33 };
-    RNG rng(0x7a7a);
-    for (int w : widths)
+    // Widths past one 32-byte (33) and one 64-byte (65) vector would make a vector tail rewind
+    // into source bytes the first block already overwrote.
+    const int widths[] = { 15, 16, 17, 18, 19, 20, 31, 32, 33, 63, 64, 65, 66, 97, 129 };
+
+    // Run both the dispatched (e.g. AVX-512) path and the baseline one; restore on any exit.
+    struct OptimizedGuard
     {
-        for (int off = 0; off <= 3; off++)
+        bool saved;
+        OptimizedGuard() : saved(useOptimized()) {}
+        ~OptimizedGuard() { setUseOptimized(saved); }
+    } guard;
+
+    RNG rng(0x7a7a);
+    for (int optimized = 1; optimized >= 0; optimized--)
+    {
+        setUseOptimized(optimized != 0);
+        for (int w : widths)
         {
-            std::vector<uchar> buf((size_t)w * 4 + 4);
-            for (auto& v : buf) v = (uchar)rng.uniform(0, 256);
-            const std::vector<uchar> orig = buf;
-
-            Mat src(1, w, CV_8UC4, buf.data());
-            Mat dst(1, w, CV_8UC1, buf.data() + off);
-            cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
-
-            for (int x = 0; x < w; x++)
+            for (int off = 0; off <= 3; off++)
             {
-                const uchar* p = &orig[(size_t)x * 4];
-                const int r = bgra ? p[2] : p[0];
-                const int b = bgra ? p[0] : p[2];
-                const uchar expected = (uchar)((b * 3735 + p[1] * 19235 + r * 9798 + (1 << 14)) >> 15);
-                ASSERT_EQ(expected, dst.data[x]) << "width=" << w << " offset=" << off << " x=" << x;
+                std::vector<uchar> buf((size_t)w * 4 + 4);
+                for (auto& v : buf) v = (uchar)rng.uniform(0, 256);
+                const std::vector<uchar> orig = buf;
+
+                Mat src(1, w, CV_8UC4, buf.data());
+                Mat dst(1, w, CV_8UC1, buf.data() + off);
+                cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
+
+                for (int x = 0; x < w; x++)
+                {
+                    const uchar* p = &orig[(size_t)x * 4];
+                    const int r = bgra ? p[2] : p[0];
+                    const int b = bgra ? p[0] : p[2];
+                    const uchar expected = (uchar)((b * 3735 + p[1] * 19235 + r * 9798 + (1 << 14)) >> 15);
+                    ASSERT_EQ(expected, dst.data[x]) << "optimized=" << optimized << " width=" << w
+                                                     << " offset=" << off << " x=" << x;
+                }
             }
         }
     }
