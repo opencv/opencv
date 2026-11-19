@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <numeric>
 #include <type_traits>
 
 namespace cv {
@@ -998,6 +999,42 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
                 v_store_pair_as(dst, w0, w1);
                 v_store_pair_as(dst + VECSZ*2, w2, w3);
                 v_store_pair_as(dst + VECSZ*4, w4, w5);
+            }
+        }
+    }
+    else if (width > 4 && width <= 16 && s0x == 1 && s1x == 1 &&
+             ((s0y == 0 && s1y == (size_t)width && src0_ != dst_) ||
+              (s1y == 0 && s0y == (size_t)width && src1_ != dst_)) &&
+             dsty == (size_t)width) {
+        const int ewidth = std::lcm(width, VECSZ*2);
+        const int dy = ewidth / width;
+        if (height >= dy) {
+            Wlane scbuf[VTraits<Wvec>::max_nlanes*2*16];
+            expandScalar(s0y == 0 ? src0 : src1, 1, width, scbuf, ewidth);
+            for (int x = 0; x < ewidth; x += VECSZ)
+                v_store(scbuf + x, Op::preproc(vx_load(scbuf + x), vscalar));
+
+            if (s0y == 0) {
+                for (; y + dy <= height; y += dy, src1 += s1y*dy, dst += dsty*dy) {
+                    for (int x = 0; x < ewidth; x += VECSZ*2) {
+                        Wvec a0, a1, b0, b1;
+                        vx_load_pair_as(scbuf + x, a0, a1);
+                        vx_load_pair_as(src1 + x, b0, b1);
+                        auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
+                        v_store_pair_as(dst + x, c0, c1);
+                    }
+                }
+            }
+            else {
+                for (; y + dy <= height; y += dy, src0 += s0y*dy, dst += dsty*dy) {
+                    for (int x = 0; x < ewidth; x += VECSZ*2) {
+                        Wvec a0, a1, b0, b1;
+                        vx_load_pair_as(src0 + x, a0, a1);
+                        vx_load_pair_as(scbuf + x, b0, b1);
+                        auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
+                        v_store_pair_as(dst + x, c0, c1);
+                    }
+                }
             }
         }
     }
