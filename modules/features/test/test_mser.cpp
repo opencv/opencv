@@ -95,27 +95,14 @@ TEST(Features2d_MSER, cases)
     vector<vector<Point> > msers;
     vector<Rect> boxes;
 
-    RNG rng((uint64)123456);
-    std::set<int> tested;
-
-    for( int i = 0; i < 100; i++ )
+    // MSER is deterministic, so each image/invert/blur/threshold combination runs once; t < 0 means no binarization
+    for( int use_big_image = 0; use_big_image < 2; use_big_image++ )
+    for( int invert = 0; invert < 2; invert++ )
+    for( int blur = 0; blur < 2; blur++ )
+    for( int t = -1; t < (use_big_image ? 5 : 0); t++ )
     {
-        bool use_big_image = rng.uniform(0, 7) != 0;
-        bool invert = rng.uniform(0, 2) != 0;
-        bool binarize = use_big_image ? rng.uniform(0, 5) != 0 : false;
-        bool blur = rng.uniform(0, 2) != 0;
-        int thresh = thresharr[rng.uniform(0, 5)];
-
-        // The draws allow only 28 distinct inputs and MSER is deterministic; run each one once.
-        const int key = (((use_big_image * 2 + invert) * 2 + binarize) * 2 + blur) * 256 + (binarize ? thresh : 0);
-        if (!tested.insert(key).second)
-            continue;
-
-        /*if( i == 0 )
-        {
-            use_big_image = true;
-            invert = binarize = blur = false;
-        }*/
+        bool binarize = t >= 0;
+        int thresh = binarize ? thresharr[t] : 0;
 
         const Mat& src0 = use_big_image ? big_image : small_image;
         Mat src = src0.clone();
@@ -145,9 +132,9 @@ TEST(Features2d_MSER, cases)
 
         if( maxRegs < nmsers || minRegs > nmsers )
         {
-            printf("%d. minArea=%d, maxArea=%d, nmsers=%d, minRegs=%d, maxRegs=%d, "
+            printf("minArea=%d, maxArea=%d, nmsers=%d, minRegs=%d, maxRegs=%d, "
                    "image=%s, invert=%d, binarize=%d, thresh=%d, blur=%d\n",
-                   i, kMinArea, kMaxArea, nmsers, minRegs, maxRegs, use_big_image ? "big" : "small",
+                   kMinArea, kMaxArea, nmsers, minRegs, maxRegs, use_big_image ? "big" : "small",
                    (int)invert, (int)binarize, thresh, (int)blur);
     #if defined RENDER_MSERS && RENDER_MSERS
             Mat image;
@@ -161,7 +148,6 @@ TEST(Features2d_MSER, cases)
         ASSERT_LE(minRegs, nmsers);
         ASSERT_GE(maxRegs, nmsers);
     }
-    EXPECT_EQ(28u, tested.size()) << "every image/invert/binarize/threshold/blur combination must run";
 }
 
 TEST(Features2d_MSER, history_update_regression)
