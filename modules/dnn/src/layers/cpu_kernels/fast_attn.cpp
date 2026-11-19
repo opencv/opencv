@@ -7,6 +7,7 @@
 
 namespace cv { namespace dnn {
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 static inline v_float32 load_int_mask_as_f32(const int32_t* ptr) {
     v_int32 v = vx_load(ptr);
     return v_reinterpret_as_f32(v_ne(v, vx_setall_s32(0)));
@@ -31,6 +32,7 @@ template<typename T>
 inline v_float32 load_int_mask_as_f32(const T* ptr) {
     return vx_setall_f32(0.f);
 }
+#endif
 
 
 template <typename MaskT>

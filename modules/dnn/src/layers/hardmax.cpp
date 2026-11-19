@@ -107,8 +107,8 @@ public:
 
                 for (size_t inner = 0; inner < inner_size; ++inner)
                 {
-                    T max_val = std::numeric_limits<T>::lowest();
-                    size_t max_idx = 0;
+                    size_t max_idx = outer_offset + inner;
+                    T max_val = src_ptr[max_idx];
 
                     // Find max along the reduction axis
                     for (size_t mid = 0; mid < mid_size; ++mid)

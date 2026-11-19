@@ -8,6 +8,94 @@
 
 namespace opencv_test { namespace {
 
+TEST(Multiview_VisibilityMask, nonContinuousMaskMatchesClone)
+{
+    const int cameras = 2, frames = 6;
+    const cv::Matx33d K(900, 0, 640, 0, 910, 480, 0, 0, 1);
+    std::vector<std::vector<cv::Vec3f>> objectPoints(frames);
+    std::vector<std::vector<cv::Mat>> imagePoints(cameras, std::vector<cv::Mat>(frames));
+    for (int f = 0; f < frames; ++f)
+    {
+        const double a = 0.2 * sin(f + 0.2), b = 0.25 * cos(f);
+        const cv::Matx33d Rx(1, 0, 0, 0, cos(a), -sin(a), 0, sin(a), cos(a));
+        const cv::Matx33d Ry(cos(b), 0, sin(b), 0, 1, 0, -sin(b), 0, cos(b));
+        for (int y = 0; y < 4; ++y)
+            for (int x = 0; x < 5; ++x)
+                objectPoints[f].emplace_back(x / 16.f, y / 16.f, 0);
+        for (int c = 0; c < cameras; ++c)
+        {
+            imagePoints[c][f].create(20, 2, CV_32F);
+            for (int i = 0; i < 20; ++i)
+            {
+                const cv::Vec3d q = Ry * Rx * cv::Vec3d(objectPoints[f][i]) +
+                        cv::Vec3d(-0.12 + 0.035 * f + 0.16 * c, -0.09, 1.5 + 0.07 * (f % 3));
+                // Independent, distortion-free pinhole projection.
+                imagePoints[c][f].at<float>(i, 0) = (float)(900 * q[0] / q[2] + 640);
+                imagePoints[c][f].at<float>(i, 1) = (float)(910 * q[1] / q[2] + 480);
+            }
+        }
+    }
+
+    for (int type : {CV_8UC1, CV_BoolC1})
+    {
+        SCOPED_TRACE(type);
+        cv::Mat packed(cameras, frames, type);
+        for (int c = 0; c < cameras; ++c)
+            for (int f = 0; f < frames; ++f)
+            {
+                if (type == CV_BoolC1)
+                    packed.at<bool>(c, f) = true;
+                else
+                    packed.at<uchar>(c, f) = 7; // Every nonzero byte denotes visibility.
+            }
+        // Zero padding makes a flat reader mistake row 0's padding for camera 1.
+        cv::Mat backing = cv::Mat::zeros(cameras, frames * 2, type);
+        cv::Mat roi = backing(cv::Rect(0, 0, frames, cameras));
+        packed.copyTo(roi);
+        const cv::Mat cloned = roi.clone();
+        ASSERT_TRUE(packed.isContinuous());
+        ASSERT_FALSE(roi.isContinuous());
+        ASSERT_TRUE(cloned.isContinuous());
+        std::vector<cv::Mat> referenceR, referenceT;
+        double referenceRMS = 0;
+        for (const cv::Mat& mask : {packed, cloned, roi})
+        {
+            SCOPED_TRACE(mask.step[0]);
+            ASSERT_EQ(packed.size(), mask.size());
+            ASSERT_EQ(packed.type(), mask.type());
+            for (int c = 0; c < cameras; ++c)
+                for (int f = 0; f < frames; ++f)
+                    ASSERT_EQ(packed.ptr(c)[f], mask.ptr(c)[f]);
+            std::vector<cv::Mat> Ks, distortions, rotations, translations;
+            for (int c = 0; c < cameras; ++c)
+            {
+                Ks.push_back(cv::Mat(K).clone());
+                distortions.push_back(cv::Mat::zeros(5, 1, CV_64F));
+            }
+            double rms = 0;
+            ASSERT_NO_THROW(rms = cv::calibrateMultiview(objectPoints, imagePoints,
+                    std::vector<cv::Size>(cameras, cv::Size(1280, 960)), mask,
+                    std::vector<uchar>(cameras, cv::CALIB_MODEL_PINHOLE),
+                    Ks, distortions, rotations, translations, cv::noArray(),
+                    cv::CALIB_USE_INTRINSIC_GUESS | cv::CALIB_STEREO_REGISTRATION,
+                    cv::TermCriteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 100, 1e-10)));
+            ASSERT_LT(rms, 1e-3);
+            if (referenceR.empty())
+            {
+                referenceR = rotations;
+                referenceT = translations;
+                referenceRMS = rms;
+            }
+            EXPECT_DOUBLE_EQ(referenceRMS, rms);
+            for (int c = 0; c < cameras; ++c)
+            {
+                EXPECT_MAT_NEAR(referenceR[c], rotations[c], 1e-12);
+                EXPECT_MAT_NEAR(referenceT[c], translations[c], 1e-12);
+            }
+        }
+    }
+}
+
 TEST(multiview_calibration, accuracy) {
     // convert euler angles to rotation matrix
     const auto euler2rot = [] (double x, double y, double z) {
