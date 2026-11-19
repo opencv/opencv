@@ -4,25 +4,8 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Collapses the decomposed RMS normalization that HuggingFace/optimum exports emit
-// into a single RMSNormalization layer.
-//
-// Pattern (X feeds both Pow and the first Mul):
-//   X -> Pow(2) -> ReduceMean(axes=[-1], keepdims) -> Add(eps) -> Sqrt -> Div(1, .)
-//     \                                                                      |
-//      `------------------------> Mul <---------------------------------------'
-//                                  |
-//                            Mul(scale) -> Y
-//
-// Replacement:
-//   X -> RMSNormalization[axis=-1, epsilon=eps](scale) -> Y
-//
-// Restrictions (skip otherwise):
-//   - the reduce axes must be exactly {-1}: a positive axis cannot be confirmed to be
-//     the trailing one, since shapes are not inferred until after fusion
-//   - every intermediate must have a single consumer and must not be a graph output
-//   - Pow's exponent, Add's epsilon and Div's numerator must be fp32 scalars, and the
-//     numerator must be 1 so the Div is a reciprocal
+// Fuses the decomposed RMSNorm that HuggingFace/optimum exports emit:
+//   X * (1 / Sqrt(ReduceMean(Pow(X, 2), [-1]) + eps)) * scale  ->  RMSNormalization(X, scale)
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
@@ -97,14 +80,14 @@ struct ModelFusionRMSNorm
         vector<bool> dropped(nops, false);
         vector<Ptr<LayerInfo>> newprog = prog;
 
-        // Walks one link of the chain: the arg must be consumed by exactly one surviving
-        // op and must not escape the graph, which is what makes the removal self-contained.
+        // One link of the chain: `a` feeds exactly one surviving single-output op and is
+        // not a graph output, which is what makes the removal self-contained.
         auto step = [&](Arg a, int& op) -> bool {
             if (externalArgs.count(a.idx) || usecounts[a.idx] != 1) return false;
             auto nit = nconsumers.find(a.idx);
             if (nit == nconsumers.end() || nit->second != 1) return false;
             op = consumer[a.idx];
-            return prog[op] && !dropped[op];
+            return prog[op] && !dropped[op] && prog[op]->outputs.size() == 1;
         };
 
         for (size_t i = 0; i < nops; i++) {
@@ -121,8 +104,8 @@ struct ModelFusionRMSNorm
             if (!step(pow_layer->outputs[0], rm_idx)) continue;
             Reduce2Layer* rm = dynamic_cast<Reduce2Layer*>(prog[rm_idx].get());
             if (!rm || rm->reduce_type != Reduce2Layer::ReduceType::MEAN) continue;
+            // Shapes are not inferred before fusion, so only -1 is known to be the last axis.
             if (!rm->keepdims || rm->axes.size() != 1 || rm->axes[0] != -1) continue;
-            if (prog[rm_idx]->outputs.size() != 1) continue;
 
             int add_idx = -1;
             if (!step(prog[rm_idx]->outputs[0], add_idx)) continue;
@@ -130,28 +113,24 @@ struct ModelFusionRMSNorm
             Arg eps_arg = otherInput(prog[add_idx], prog[rm_idx]->outputs[0]);
             float epsilon = 0.f;
             if (eps_arg.empty() || !constScalar(eps_arg, epsilon)) continue;
-            if (prog[add_idx]->outputs.size() != 1) continue;
 
             int sqrt_idx = -1;
             if (!step(prog[add_idx]->outputs[0], sqrt_idx)) continue;
             if (!dynamic_cast<SqrtLayer*>(prog[sqrt_idx].get())) continue;
-            if (prog[sqrt_idx]->outputs.size() != 1) continue;
 
             int div_idx = -1;
             if (!step(prog[sqrt_idx]->outputs[0], div_idx)) continue;
             if (!nary(prog[div_idx], NaryEltwiseLayer::OPERATION::DIV)) continue;
             // Only Div(1, sqrt) is a reciprocal; Div(sqrt, 1) would invert the scaling.
-            if (prog[div_idx]->inputs.size() != 2) continue;
-            if (prog[div_idx]->inputs[1].idx != prog[sqrt_idx]->outputs[0].idx) continue;
+            const vector<Arg>& div_in = prog[div_idx]->inputs;
+            if (div_in.size() != 2 || div_in[1].idx != prog[sqrt_idx]->outputs[0].idx) continue;
             float numerator = 0.f;
-            if (!constScalar(prog[div_idx]->inputs[0], numerator) || numerator != 1.f) continue;
-            if (prog[div_idx]->outputs.size() != 1) continue;
+            if (!constScalar(div_in[0], numerator) || numerator != 1.f) continue;
 
             int mul_idx = -1;
             if (!step(prog[div_idx]->outputs[0], mul_idx)) continue;
             if (!nary(prog[mul_idx], NaryEltwiseLayer::OPERATION::PROD)) continue;
             if (otherInput(prog[mul_idx], prog[div_idx]->outputs[0]).idx != X.idx) continue;
-            if (prog[mul_idx]->outputs.size() != 1) continue;
 
             int scale_idx = -1;
             if (!step(prog[mul_idx]->outputs[0], scale_idx)) continue;
@@ -161,7 +140,6 @@ struct ModelFusionRMSNorm
             // RMSNormalization needs a rank-1 scale; Mul would have broadcast anything.
             const MatShape sshape = netimpl->argTensor(scale).shape();
             if (sshape.dims != 1 || sshape[0] < 2) continue;
-            if (prog[scale_idx]->outputs.size() != 1) continue;
 
             LayerParams lp;
             lp.name = prog[scale_idx]->name;   // keep the name for profiling continuity
@@ -198,6 +176,9 @@ struct ModelFusionRMSNorm
 
 void Net::Impl::fuseRMSNorm()
 {
+    // RMSNormalization has no CUDA exec, and one such op sends the whole graph to the CPU.
+    if (preferableBackend != DNN_BACKEND_OPENCV || preferableTarget != DNN_TARGET_CPU)
+        return;
     ModelFusionRMSNorm pass(this);
     pass.fuse();
 }
