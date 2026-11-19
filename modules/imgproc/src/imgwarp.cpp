@@ -75,7 +75,7 @@ ImgWarpFunc getImgWarpFunc(int type, int interpolation)
     }
     if (interpolation == INTER_LINEAR && CV_MAT_DEPTH(type) == CV_16F &&
         (CV_MAT_CN(type) == 1 || CV_MAT_CN(type) == 3 || CV_MAT_CN(type) == 4)) {
-        CV_CPU_DISPATCH(getBilinearHalfWarpFunc_, (), CV_CPU_DISPATCH_MODES_ALL);
+        CV_CPU_DISPATCH(getBilinearHalfWarpFunc_, (CV_MAT_CN(type) == 3), CV_CPU_DISPATCH_MODES_ALL);
     }
     return (ImgWarpFunc)nullptr;
 }
@@ -907,10 +907,15 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         int sx = XY[dx*2]+(isRelative ? (_offset.x+dx) : 0), sy = XY[dx*2+1]+off_y;
                         const AT* w = wtab + FXY[dx]*4;
                         const T* S = S0 + sy*sstep + sx*3;
-                        WT t0 = S[0]*w[0] + S[3]*w[1] + S[sstep]*w[2] + S[sstep+3]*w[3];
-                        WT t1 = S[1]*w[0] + S[4]*w[1] + S[sstep+1]*w[2] + S[sstep+4]*w[3];
-                        WT t2 = S[2]*w[0] + S[5]*w[1] + S[sstep+2]*w[2] + S[sstep+5]*w[3];
-                        D[0] = castOp(t0); D[1] = castOp(t1); D[2] = castOp(t2);
+                        if constexpr (std::is_same_v<T, hfloat>)
+                            bilinearHalfRGB(S, S + sstep, w[0], w[1], w[2], w[3], D);
+                        else
+                        {
+                            WT t0 = S[0]*w[0] + S[3]*w[1] + S[sstep]*w[2] + S[sstep+3]*w[3];
+                            WT t1 = S[1]*w[0] + S[4]*w[1] + S[sstep+1]*w[2] + S[sstep+4]*w[3];
+                            WT t2 = S[2]*w[0] + S[5]*w[1] + S[sstep+2]*w[2] + S[sstep+5]*w[3];
+                            D[0] = castOp(t0); D[1] = castOp(t1); D[2] = castOp(t2);
+                        }
                     }
                 else if( cn == 4 )
                     for( ; dx < X1; dx++, D += 4 )

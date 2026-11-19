@@ -110,7 +110,7 @@ namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 ImgWarpFunc getBicubicWarpFunc_(int type);
-ImgWarpFunc getBilinearHalfWarpFunc_();
+ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb);
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -8834,6 +8834,7 @@ static inline BilinearHalfAxis bilinearHalfAxis(float value, int length, int bor
     return {borderIndex(phase), borderIndex(phase + 1), fraction};
 }
 
+template<bool rgb>
 static void bilinearWarpHalf(const float* x, const float* y, int len,
                               const void* source, size_t step, Size size, void* destination,
                               const float*, int borderType, const void* borderValue, int channels)
@@ -8843,6 +8844,21 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
     for (int i = 0; i < len; ++i, dst += channels)
     {
         const float sx = x[i], sy = y[i];
+        if constexpr (rgb)
+        {
+            if (sx >= 0.f && sx < size.width - 1 && sy >= 0.f && sy < size.height - 1)
+            {
+                const int col = static_cast<int>(sx), row = static_cast<int>(sy);
+                const float alpha = sx - col, beta = sy - row;
+                const float w0 = (1.f - alpha)*(1.f - beta), w1 = alpha*(1.f - beta);
+                const float w2 = (1.f - alpha)*beta, w3 = alpha*beta;
+                const hfloat* top = reinterpret_cast<const hfloat*>(
+                    static_cast<const uchar*>(source) + size_t(row)*step) + 3*size_t(col);
+                const hfloat* bottom = reinterpret_cast<const hfloat*>(reinterpret_cast<const uchar*>(top) + step);
+                bilinearHalfRGB(top, bottom, w0, w1, w2, w3, dst);
+                continue;
+            }
+        }
         if (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT)
         {
             const float lower = borderType == BORDER_TRANSPARENT ? 0.f : -1.f;
@@ -8896,9 +8912,9 @@ static void bilinearWarpHalf(const float* x, const float* y, int len,
 }
 
 
-ImgWarpFunc getBilinearHalfWarpFunc_()
+ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb)
 {
-    return bilinearWarpHalf;
+    return rgb ? bilinearWarpHalf<true> : bilinearWarpHalf<false>;
 }
 
 template<typename T>
