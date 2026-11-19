@@ -52,7 +52,12 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
     size_t globalsize = dbsize * wgs;
     if (k.run(1, &globalsize, &wgs, true))
-        return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
+    {
+        double cnt = cv::sum(db.getMat(ACCESS_READ))[0];
+        if (cnt > (double)INT_MAX)
+            CV_Error(Error::StsOutOfRange, "countNonZero: the result exceeds INT_MAX and can't be represented as int");
+        return res = (int)cnt, true;
+    }
     return false;
 }
 #endif
@@ -86,7 +91,10 @@ static bool ipp_countNonZero( Mat &src, int &res )
         if(status < 0)
             return false;
 
-        res = size.width*size.height - count;
+        int64 nz = (int64)size.width*size.height - count;
+        if(nz > INT_MAX)
+            return false; // let the generic code path report the overflow
+        res = (int)nz;
     }
     else
     {
@@ -95,7 +103,7 @@ static bool ipp_countNonZero( Mat &src, int &res )
         Mat            planes[1];
         NAryMatIterator it(arrays, planes, 1);
         IppiSize        size  = {(int)it.size*src.channels(), 1};
-        res = 0;
+        int64 total_nz = 0;
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
             if(depth == CV_8U)
@@ -108,8 +116,11 @@ static bool ipp_countNonZero( Mat &src, int &res )
             if(status < 0 || (int)it.planes->total()*src.channels() < count)
                 return false;
 
-            res += (int)it.planes->total()*src.channels() - count;
+            total_nz += (int64)it.planes->total()*src.channels() - count;
         }
+        if(total_nz > INT_MAX)
+            return false; // let the generic code path report the overflow
+        res = (int)total_nz;
     }
 
     return true;
@@ -142,12 +153,15 @@ int countNonZero(InputArray _src)
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1] = {};
     NAryMatIterator it(arrays, ptrs);
-    int total = (int)it.size, nz = 0;
+    int total = (int)it.size;
+    int64 nz = 0;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         nz += func( ptrs[0], total );
 
-    return nz;
+    if( nz > INT_MAX )
+        CV_Error(Error::StsOutOfRange, "countNonZero: the result exceeds INT_MAX and can't be represented as int");
+    return (int)nz;
 }
 
 void findNonZero(InputArray _src, OutputArray _idx)
