@@ -75,32 +75,36 @@ template<typename _Tp> static inline _Tp hypot(_Tp a, _Tp b)
 
 template<typename T> struct VBLAS
 {
-    int dot(const T*, const T*, int, T*) const { return 0; }
-    void givens(T*, T*, int, T, T) const {}
-    void dotD(const T*, const T*, int, double*) const {}
-    void givensD(T*, T*, int, T, T, double*, double*) const {}
+    void givens(T* a, T* b, int n, T c, T s) const
+    {
+        for( int k = 0; k < n; k++ )
+        {
+            T t0 = c*a[k] + s*b[k];
+            T t1 = -s*a[k] + c*b[k];
+            a[k] = t0; b[k] = t1;
+        }
+    }
+
+    void dotD(const T* a, const T* b, int n, double* result) const
+    {
+        for( int k = 0; k < n; k++ )
+            *result += (double)a[k]*(double)b[k];
+    }
+
+    void givensD(T* a, T* b, int n, T c, T s, double* na, double* nb) const
+    {
+        for( int k = 0; k < n; k++ )
+        {
+            T t0 = c*a[k] + s*b[k];
+            T t1 = -s*a[k] + c*b[k];
+            a[k] = t0; b[k] = t1;
+            *na += (double)t0*t0;
+            *nb += (double)t1*t1;
+        }
+    }
 };
 
 #if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
-template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
-{
-    if( n < 2*VTraits<v_float32>::vlanes() )
-        return 0;
-    int k = 0;
-    v_float32 s0 = vx_setzero_f32();
-    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
-    {
-        v_float32 a0 = vx_load(a + k);
-        v_float32 b0 = vx_load(b + k);
-
-        s0 = v_add(s0, v_mul(a0, b0));
-    }
-    *result = v_reduce_sum(s0);
-    vx_cleanup();
-    return k;
-}
-
-
 template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
 {
     if( n <= 0 )
@@ -247,25 +251,6 @@ template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, doubl
 
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n, double* result) const
-{
-    if( n < 2*VTraits<v_float64>::vlanes() )
-        return 0;
-    int k = 0;
-    v_float64 s0 = vx_setzero_f64();
-    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
-    {
-        v_float64 a0 = vx_load(a + k);
-        v_float64 b0 = vx_load(b + k);
-
-        s0 = v_add(s0, v_mul(a0, b0));
-    }
-    *result = v_reduce_sum(s0);
-    vx_cleanup();
-    return k;
-}
-
-
 template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
 {
     if( n <= 0 )
@@ -294,68 +279,6 @@ template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double
 
 #endif // CV_SIMD_64F
 #endif // CV_SIMD
-
-#if !CV_SIMD
-template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
-{
-    for( int k = 0; k < n; k++ )
-    {
-        float t0 = c*a[k] + s*b[k];
-        float t1 = -s*a[k] + c*b[k];
-        a[k] = t0; b[k] = t1;
-    }
-}
-#endif
-
-#if !CV_SIMD || !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n, double* result) const
-{
-    for( int k = 0; k < n; k++ )
-        *result += (double)a[k]*(double)b[k];
-}
-
-template<> inline void VBLAS<float>::givensD(float* a, float* b, int n, float c, float s,
-                                            double* na, double* nb) const
-{
-    for( int k = 0; k < n; k++ )
-    {
-        float t0 = c*a[k] + s*b[k];
-        float t1 = -s*a[k] + c*b[k];
-        a[k] = t0; b[k] = t1;
-        *na += (double)t0*t0;
-        *nb += (double)t1*t1;
-    }
-}
-
-template<> inline void VBLAS<double>::dotD(const double* a, const double* b, int n, double* result) const
-{
-    for( int k = 0; k < n; k++ )
-        *result += a[k]*b[k];
-}
-
-template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double c, double s) const
-{
-    for( int k = 0; k < n; k++ )
-    {
-        double t0 = c*a[k] + s*b[k];
-        double t1 = -s*a[k] + c*b[k];
-        a[k] = t0; b[k] = t1;
-    }
-}
-
-template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, double c, double s,
-                                             double* na, double* nb) const
-{
-    for( int k = 0; k < n; k++ )
-    {
-        double t0 = c*a[k] + s*b[k];
-        double t1 = -s*a[k] + c*b[k];
-        a[k] = t0; b[k] = t1;
-        *na += t0*t0;
-        *nb += t1*t1;
-    }
-}
-#endif
 
 template<typename _Tp> void
 JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
