@@ -343,26 +343,33 @@ static inline int borderInterpolate_fast( int p, int len, int borderType )
         if( len == 1 )
             return 0;
 
+        const int64_t len64 = len;
+        const int64_t p64 = p;
         // Fast path: single reflection without division for small deviations.
-        if( -len + delta <= p && p < 2 * len - delta )
-            return p < 0 ? -p - 1 + delta : 2 * len - 1 - delta - p;
+        if( -len64 + delta <= p64 && p64 < 2 * len64 - delta )
+            return (int)(p64 < 0 ? -p64 - 1 + delta : 2 * len64 - 1 - delta - p64);
         // Bounded fallback: O(1) modulo for large |p|
-        const int64 period = 2LL * (len - delta);
-        int64 p64 = p;
-        p64 %= period;
-        if( p64 < 0 )
-            p64 += period;
-        if( p64 >= len )
-            p64 = period - p64 - 1 + delta;
-        p = (int)p64;
+        const int64_t period = 2 * (len64 - delta);
+        int64_t r64 = p64 % period;
+        if( r64 < 0 )
+            r64 += period;
+        if( r64 >= len64 )
+            r64 = period - r64 - 1 + delta;
+        p = (int)r64;
     }
     else if( borderType == BORDER_WRAP )
     {
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
+        if( p < 0 || p >= len )
+        {
+            int64_t p64 = p;
+            p64 %= (int64_t)len;
+            if( p64 < 0 )
+                p64 += len;
+            p = (int)p64;
+        }
     }
+    else
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 } // anonymous
@@ -7056,7 +7063,7 @@ bicubicCoeffs(float xs0, float ys0,
 
     tl_x = ix0;
     tl_y = iy0;
-    tl_ofs = iy0*(int)srcstep + ix0*bpp;
+    tl_ofs = all_inliers ? iy0*(int)srcstep + ix0*bpp : 0;
 
     bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
     bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
