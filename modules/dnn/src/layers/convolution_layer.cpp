@@ -452,10 +452,9 @@ public:
 
         // Winograd only works when input h and w >= 12.
         canUseWinograd = useWinograd && inputs[0].dims == 4 && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
-        if (fastConvImpl && (fastConvImpl->conv_type == CONV_TYPE_WINOGRAD3X3) ^ canUseWinograd)
-        {
-            fastConvImpl.reset();
-        }
+        // forward() packs fastConvImpl with the pads and canUseWinograd computed here and with
+        // weightsMat, which may still get fused BatchNorm weights, so it is rebuilt like convolutionOp.
+        fastConvImpl.reset();
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
