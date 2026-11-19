@@ -740,8 +740,13 @@ struct RGB2Gray<uchar>
         // + r, then one vpmaddwd (b*cb+g*cg) and one vpmulld (r*cr). Full 15-bit -> maxErr 0.
         const __m512i vdelta = _mm512_set1_epi32(1 << (shift - 1));
         // The final block is clamped to [n-16, n) so any remainder is covered by one
-        // overlapping (idempotent) store instead of a scalar tail - no odd-width penalty.
-        if (n >= 16 && scn == 4)
+        // overlapping store instead of a scalar tail. That tail re-reads source pixels, so
+        // if the destination overlaps the source (identical or partially overlapping
+        // storage) an earlier store may have overwritten bytes it reads. Use the AVX-512
+        // kernels only when the two byte ranges are disjoint.
+        const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+        const bool disjoint = (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
+        if (n >= 16 && scn == 4 && disjoint)
         {
             const __m512i coef = _mm512_set1_epi64(((int64_t)cr << 32) | ((int64_t)((uint16_t)cg) << 16) | (uint16_t)cb);
             const __m512i idxEven = _mm512_setr_epi32(0,2,4,6,8,10,12,14, 16,18,20,22,24,26,28,30);
@@ -755,12 +760,12 @@ struct RGB2Gray<uchar>
                 __m512i y  = _mm512_srli_epi32(_mm512_add_epi32(_mm512_add_epi32(bg, rr), vdelta), shift);
                 _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
             };
-            for (; i + 16 <= n; i += 16) do16(i);
+            for (; i <= n - 16; i += 16) do16(i);
             if (i < n) do16(n - 16);
             return;
         }
 #if CV_AVX_512VBMI
-        if (n >= 16 && scn == 3)
+        if (n >= 16 && scn == 3 && disjoint)
         {
             static const uint8_t idxb[64] = {
                 0,1, 3,4, 6,7, 9,10, 12,13, 15,16, 18,19, 21,22, 24,25, 27,28, 30,31, 33,34, 36,37, 39,40, 42,43, 45,46,
@@ -779,7 +784,7 @@ struct RGB2Gray<uchar>
                 y = _mm512_srli_epi32(_mm512_add_epi32(y, vdelta), shift);
                 _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
             };
-            for (; i + 16 <= n; i += 16) do16(i);
+            for (; i <= n - 16; i += 16) do16(i);
             if (i < n) do16(n - 16);
             return;
         }
