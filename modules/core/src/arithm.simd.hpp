@@ -650,7 +650,10 @@ static inline void cmpUnpackPatch(int flags, uchar trueVal, uchar mvals[4], ucha
 // from TKernel::flags - 255 (default, matching cv::compare) or 1 (a numpy-style 0/1 mask). Integers
 // compare directly (WT == T); f16/bf16 compare through a float WT. This is the fallback for the depths
 // the SIMD kernel doesn't cover (f16/bf16/64-bit). stepx in {0,1}; dst is u8, byte step == element step.
-template<typename T, typename WT, class Cmp>
+// isBool normalises each operand to 0/1 first: a CV_Bool byte is not guaranteed canonical, since a
+// matrix wrapping an external buffer is never converted, so comparing raw bytes would order 2 above
+// 1 when both mean true. This matches countNonZero, norm and the scalar cv::compare overload.
+template<typename T, typename WT, class Cmp, bool isBool = false>
 static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
                          const void* src1_, size_t s1y, size_t s1x,
                          const void*, size_t, size_t,
@@ -671,6 +674,7 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     cmpUnpackPatch(flags, trueVal, mvals, vvals);
     const bool perch = (flags & EW_CMP_PATCH) != 0;          // per-channel fix-up (width=cn<=4)
     CV_Assert(!perch || width <= 4);                         // a per-channel patch is a short-row tile
+    #define EW_CMP_LD(v) (isBool ? (WT)((v) != 0) : (WT)(v))
     #define EW_CMP_APPLY(cond, x) (perch ? (uchar)(((cond) ? mvals[x] : 0) | vvals[x]) \
                                          : (uchar)((cond) ? trueVal : 0))
 
@@ -678,18 +682,19 @@ static int scalarCompareKernel(const void* src0_, size_t s0y, size_t s0x,
     for (int y = 0; y < height; y++, src0 += s0y, src1 += s1y, dst += dsty)
     {
         if (s0x == s1x) {
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], (WT)src1[x]), x);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(EW_CMP_LD(src0[x]), EW_CMP_LD(src1[x])), x);
         }
         else if (s0x == 0) {
-            WT a = (WT)src0[0];
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, (WT)src1[x]), x);
+            WT a = EW_CMP_LD(src0[0]);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(a, EW_CMP_LD(src1[x])), x);
         }
         else {
-            WT b = (WT)src1[0];
-            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp((WT)src0[x], b), x);
+            WT b = EW_CMP_LD(src1[0]);
+            for (int x = 0; x < width; x++) dst[x] = EW_CMP_APPLY(Cmp::cmp(EW_CMP_LD(src0[x]), b), x);
         }
     }
     #undef EW_CMP_APPLY
+    #undef EW_CMP_LD
     return 0;
 }
 
@@ -1386,6 +1391,9 @@ static KernelFunc compareByType(int T)
     case CV_16F:  return vecCompareKernel<hfloat,   v_float32, v_uint32, Cmp>;   // widen f16->f32
     #endif
     case CV_16BF: return vecCompareKernel<bfloat,   v_float32, v_uint32, Cmp>;   // widen bf16->f32 (no native)
+    // CV_Bool is logical, not a one-byte integer: compare it as (x != 0), so a non-canonical
+    // byte compares equal to 1 rather than above it.
+    case CV_Bool: return scalarCompareKernel<uchar,    uchar,    Cmp, true>;
     case CV_64U:  return scalarCompareKernel<uint64_t, uint64_t, Cmp>;
     case CV_64S:  return scalarCompareKernel<int64_t,  int64_t,  Cmp>;
     #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
