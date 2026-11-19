@@ -3807,6 +3807,30 @@ TEST(Core_MeanStdDev, bool_input)
     EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
 }
 
+TEST(Core_MeanStdDev, half_subnormal_first_moment)
+{
+    const float subnormal = std::ldexp(1.0f, -24);
+    Mat source(1, 4, CV_16FC1);
+    hfloat* values = source.ptr<hfloat>();
+    values[0] = values[2] = hfloat(1.0f);
+    values[1] = values[3] = hfloat(subnormal);
+
+    Scalar mean, stddev;
+    meanStdDev(source, mean, stddev);
+    EXPECT_DOUBLE_EQ((1.0 + subnormal) / 2, mean[0]);
+    EXPECT_DOUBLE_EQ((1.0 - subnormal) / 2, stddev[0]);
+}
+
+TEST(Core_MeanStdDev, half_constant_image)
+{
+    const double value = float(hfloat(0.7f));
+    Mat source(512, 512, CV_16FC3, Scalar::all(value));
+    Scalar mean, stddev;
+    meanStdDev(source, mean, stddev);
+    EXPECT_EQ(Scalar(value, value, value), mean);
+    EXPECT_EQ(Scalar::all(0), stddev);
+}
+
 // Related issue : https://github.com/opencv/opencv/issues/26861
 TEST(Core_MeanStdDevTest, LargeImage)
 {
