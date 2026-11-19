@@ -190,7 +190,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                 if (t >= 0 && t != CV_32F)
                     return false;
             }
-            return blobs[0].type() == CV_32F && blobs[1].type() == CV_32F &&
+            return blobs.front().type() == CV_32F && blobs.back().type() == CV_32F &&
                    qkv_head_sizes[0] == qkv_head_sizes[1];
         }
 #endif
@@ -215,7 +215,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         return make_cuda_node<cuda4dnn::AttentionOp>(preferableTarget, std::move(context->stream),
                                                      std::move(context->cublas_handle),
-                                                     blobs[0], blobs[1], cfg);
+                                                     blobs.front(), blobs.back(), cfg);
     }
 #endif
 
@@ -227,8 +227,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         CV_CheckGE(num_inputs, 3, "DNN/Attention: at least three inputs are required (data, weight, bias)");
         CV_CheckLE(num_inputs, 4, "DNN/Attention: at most four inputs are supported (data, weight, bias, mask)");
         const auto &input_shape = inputs[0];
-        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs[0]);
-        const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs[1]);
+        const auto &weight_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
+        const auto &bias_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
 
         CV_CheckGE(input_shape.size(), static_cast<size_t>(3),
                    "DNN/Attention: invalid input dimension");
@@ -469,7 +469,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         float *QKV[3] = {Q, K, V}; // [B, N, S, H] per tensor
         {
             const auto &input = inputs[0];
-            const auto &bias = blobs.empty() ? inputs[2] : blobs[1];
+            const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             const auto *input_data = input.ptr<const float>();
             const auto *bias_data = bias.ptr<const float>();
 
