@@ -1598,4 +1598,94 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_BoxFilterInplaceROI, testing::Combine(
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
 
 
+TEST(Imgproc_Filter2D, rank1_separable_matches_sepFilter2D)
+{
+    Mat src(128, 128, CV_8UC1);
+    RNG(42).fill(src, RNG::UNIFORM, 0, 255);
+
+    Mat kx9 = cv::getGaussianKernel(9, 1.5, CV_32F);
+    Mat ky9 = cv::getGaussianKernel(9, 1.5, CV_32F).t();
+    Mat k9  = kx9 * ky9;
+    Mat dst_f, dst_s;
+    cv::filter2D(src, dst_f, -1, k9, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::sepFilter2D(src, dst_s, -1, kx9, ky9, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_f, dst_s, NORM_INF), 1);
+
+    Mat src32f;
+    src.convertTo(src32f, CV_32F);
+    Mat kx11 = cv::getGaussianKernel(11, 2.0, CV_32F);
+    Mat ky11 = cv::getGaussianKernel(11, 2.0, CV_32F).t();
+    Mat k11  = kx11 * ky11;
+    cv::filter2D(src32f, dst_f, -1, k11, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::sepFilter2D(src32f, dst_s, -1, kx11, ky11, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_f, dst_s, NORM_INF), 1e-4);
+
+    Mat src64f;
+    src.convertTo(src64f, CV_64F);
+    Mat kx15 = cv::getGaussianKernel(15, 2.5, CV_64F);
+    Mat ky15 = cv::getGaussianKernel(15, 2.5, CV_64F).t();
+    Mat k15  = kx15 * ky15;
+    cv::filter2D(src64f, dst_f, -1, k15, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::sepFilter2D(src64f, dst_s, -1, kx15, ky15, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_f, dst_s, NORM_INF), 1e-10);
+
+    Mat kxb = Mat::ones(15, 1, CV_32F) / 15.0f;
+    Mat kyb = Mat::ones(1, 15, CV_32F) / 15.0f;
+    Mat kb  = kxb * kyb;
+    cv::filter2D(src, dst_f, -1, kb, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::sepFilter2D(src, dst_s, -1, kxb, kyb, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_f, dst_s, NORM_INF), 1);
+}
+
+TEST(Imgproc_Filter2D, non_rank1_falls_through)
+{
+    Mat src(128, 128, CV_8UC1);
+    RNG(7).fill(src, RNG::UNIFORM, 0, 255);
+    Mat kr(13, 13, CV_32F);
+    RNG(99).fill(kr, RNG::UNIFORM, -1, 1);
+
+    Mat Kf;
+    kr.convertTo(Kf, CV_64F);
+    cv::SVD svd(Kf);
+    double s1 = svd.w.at<double>(0), s2 = svd.w.at<double>(1);
+    ASSERT_GT(s2 / s1, 1e-6);
+    Mat dst, dst_ref;
+    cv::filter2D(src, dst_ref, -1, kr, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::filter2D(src, dst, -1, kr, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst, dst_ref, NORM_INF), 0);
+}
+
+TEST(Imgproc_Filter2D, integer_kernel_not_routed)
+{
+    Mat src16(128, 128, CV_16SC1);
+    RNG(11).fill(src16, RNG::UNIFORM, 0, 1000);
+    Mat k16(9, 9, CV_16SC1, Scalar(1));
+    k16.at<short>(4, 4) = 37;
+    Mat dst, dst_ref;
+    cv::filter2D(src16, dst_ref, -1, k16, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::filter2D(src16, dst, -1, k16, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst, dst_ref, NORM_INF), 0);
+}
+
+TEST(Imgproc_Filter2D, separable_roi_not_routed_whole_image_routed)
+{
+    Mat full(256, 256, CV_8UC1);
+    RNG(55).fill(full, RNG::UNIFORM, 0, 255);
+    Mat roi = full(Rect(50, 50, 128, 128));
+    Mat kx11 = cv::getGaussianKernel(11, 2.0, CV_32F);
+    Mat ky11 = cv::getGaussianKernel(11, 2.0, CV_32F).t();
+    Mat k11  = kx11 * ky11;
+
+    Mat dst_roi, dst_roi_ref;
+    cv::filter2D(roi, dst_roi_ref, -1, k11, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::filter2D(roi, dst_roi, -1, k11, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_roi, dst_roi_ref, NORM_INF), 0);
+
+    Mat dst_full, dst_full_sep;
+    cv::filter2D(full, dst_full, -1, k11, Point(-1, -1), 0, BORDER_REPLICATE);
+    cv::sepFilter2D(full, dst_full_sep, -1, kx11, ky11, Point(-1, -1), 0, BORDER_REPLICATE);
+    EXPECT_LE(cvtest::norm(dst_full, dst_full_sep, NORM_INF), 1);
+}
+
+
 }} // namespace

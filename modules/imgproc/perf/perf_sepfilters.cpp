@@ -242,4 +242,58 @@ PERF_TEST_P(Size_MatType_dx_dy_Border3x3ROI, scharrViaSobelFilter,
     SANITY_CHECK(dst);
 }
 
+typedef tuple<Size, MatType, int> Filter2D_separable_t;
+typedef perf::TestBaseWithParam<Filter2D_separable_t> Filter2D_separable;
+
+PERF_TEST_P(Filter2D_separable, filter2D,
+            testing::Combine(
+                testing::Values(szVGA, sz1080p),
+                testing::Values(CV_8U, CV_32F),
+                testing::Values(9, 11, 15)
+            ))
+{
+    Size size = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    int k = get<2>(GetParam());
+
+    Mat src(size, depth);
+    Mat dst(size, depth);
+    warmup(src, WARMUP_RNG);
+
+    Mat kx = cv::getGaussianKernel(k, k * 0.25, CV_32F);
+    Mat ky = cv::getGaussianKernel(k, k * 0.25, CV_32F).t();
+    Mat K = kx * ky;
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() cv::filter2D(src, dst, -1, K, Point(-1, -1), 0, BORDER_REPLICATE);
+
+    SANITY_CHECK(dst);
+}
+
+PERF_TEST_P(Filter2D_separable, sepFilter2D,
+            testing::Combine(
+                testing::Values(szVGA, sz1080p),
+                testing::Values(CV_8U, CV_32F),
+                testing::Values(9, 11, 15)
+            ))
+{
+    Size size = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    int k = get<2>(GetParam());
+
+    Mat src(size, depth);
+    Mat dst(size, depth);
+    warmup(src, WARMUP_RNG);
+
+    Mat kx = cv::getGaussianKernel(k, k * 0.25, CV_32F);
+    Mat ky = cv::getGaussianKernel(k, k * 0.25, CV_32F).t();
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kx, ky, Point(-1, -1), 0, BORDER_REPLICATE);
+
+    SANITY_CHECK(dst);
+}
+
 } // namespace
