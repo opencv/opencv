@@ -104,5 +104,41 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsFalse)
     }
 }
 
+///////////////////////// clear() //////////////////////////////
+
+static void checkClearMatchesNewObject(const Ptr<BackgroundSubtractor>& used, const Ptr<BackgroundSubtractor>& fresh)
+{
+    Mat sceneA(48, 64, CV_8UC3, Scalar::all(40));
+    rectangle(sceneA, Rect(8, 8, 16, 16), Scalar::all(200), FILLED);
+    Mat sceneB(48, 64, CV_8UC3, Scalar::all(160));
+    rectangle(sceneB, Rect(32, 16, 16, 16), Scalar::all(20), FILLED);
+
+    Mat mask;
+    for (int i = 0; i < 5; i++)
+        used->apply(sceneA, mask);
+    used->clear();
+
+    Mat maskUsed, maskFresh, bgUsed, bgFresh;
+    theRNG() = RNG(0x12345678);  // KNN draws its update points from theRNG()
+    used->apply(sceneB, maskUsed);
+    theRNG() = RNG(0x12345678);
+    fresh->apply(sceneB, maskFresh);
+    used->getBackgroundImage(bgUsed);
+    fresh->getBackgroundImage(bgFresh);
+
+    EXPECT_EQ(0, cvtest::norm(maskUsed, maskFresh, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(bgUsed, bgFresh, NORM_INF));
+}
+
+TEST(BackgroundSubtractorMOG2, clear_resets_model)
+{
+    checkClearMatchesNewObject(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
+}
+
+TEST(BackgroundSubtractorKNN, clear_resets_model)
+{
+    checkClearMatchesNewObject(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
+}
+
 }} // namespace
 /* End of file. */

@@ -129,6 +129,8 @@ public:
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() CV_OVERRIDE {}
+    //! drop the background model; the next apply() starts a new one as on a new object
+    void clear() CV_OVERRIDE { initialize(Size(), 0); }
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
