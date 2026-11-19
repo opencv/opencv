@@ -459,7 +459,7 @@ def _translate(text: str, docname: str | None = None) -> str:
                 i += 1
             return l[i:]
         body = "\n".join(_dedent(l) for l in lines).strip()
-        block = f":::{{{kind}}}\n{body}\n:::"
+        block = f":::{{{kind}}}\n\n{body}\n:::"
         if indent:
             block = "\n".join((indent + ln) if ln.strip() else ln
                               for ln in block.split("\n"))
@@ -983,7 +983,17 @@ def _translate(text: str, docname: str | None = None) -> str:
                 # @ref follows redirects; @subpage uses literal target.
                 lookup = _resolve_redirect(anchor) if kind == "ref" else anchor
                 if lookup in _ANCHOR_TO_DOC:
-                    resolved.append((kind, "internal", _ANCHOR_TO_DOC[lookup],
+                    target = _ANCHOR_TO_DOC[lookup]
+                    if (kind == "subpage" and docname
+                            and docname.startswith(("main_modules/", "extra_modules/"))
+                            and target.startswith(("main_modules/", "extra_modules/"))):
+                        # CUDA groups can have a view in both API trees. The
+                        # later anchor scan must not steal the other tree's
+                        # navigation children and leave its local pages orphaned.
+                        local = docname.split("/", 1)[0] + "/" + target.split("/", 1)[1]
+                        if (SPHINX_INPUT_ROOT / (local + ".md")).is_file():
+                            target = local
+                    resolved.append((kind, "internal", target,
                                      disp or _ANCHOR_TO_TITLE.get(lookup, lookup),
                                      description, prefix, inline))
                 elif lookup in _ANCHOR_TO_EXTERNAL:
@@ -1558,6 +1568,9 @@ def _source_read(app, docname, source):
         if API_MODULES and "api_root" in _ANCHOR_TO_DOC:
             text = text.rstrip() + "\n\n- @subpage api_root\n"
     out = _translate(text, docname)
+    if docname.startswith(("main_modules/", "extra_modules/")):
+        from .targets import localize_api_labels
+        out = localize_api_labels(out, docname)
     # Mark unreferenced tutorial pages :orphan: (skip master/front-matter/referenced).
     if (docname.startswith(_TUTORIAL_PREFIXES)
             and docname != "tutorials/tutorials"

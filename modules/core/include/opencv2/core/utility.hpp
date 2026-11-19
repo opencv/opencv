@@ -183,8 +183,11 @@ protected:
     size_t sz;
     //! capacity - allocated element count (>= sz). Starts at fixed_size (the local buf), grows on demand.
     size_t cap;
-    //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements
-    _Tp buf[(fixed_size > 0) ? fixed_size : 1];
+    //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements.
+    //! Aligned to at least 8 bytes whatever _Tp is, so that a byte buffer (AutoBuffer<uchar>)
+    //! can hold doubles/int64 even when the local storage is used; the heap path (new _Tp[])
+    //! is at least that aligned on every supported platform.
+    alignas(alignof(_Tp) > 8 ? alignof(_Tp) : 8) _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
 /**  @brief Sets/resets the break-on-error mode.
