@@ -8,6 +8,7 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "atomics.hpp"
+#include "block_stride_range.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
 
@@ -35,49 +36,46 @@ namespace raw {
 
     constexpr int MEAN_SQR_SUM_BLOCK_SIZE = 256;
 
+    template <int BLOCK_SIZE>
+    __device__ __forceinline__ float block_reduce_sum(float (&sdata)[BLOCK_SIZE], float val) {
+        static_assert(BLOCK_SIZE > 0 && (BLOCK_SIZE & (BLOCK_SIZE - 1)) == 0, "BLOCK_SIZE must be a power of two");
+        sdata[threadIdx.x] = val;
+        __syncthreads();
+        for (int stride = BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
+            if (threadIdx.x < stride)
+                sdata[threadIdx.x] += sdata[threadIdx.x + stride];
+            __syncthreads();
+        }
+        const float total = sdata[0];
+        __syncthreads();
+        return total;
+    }
+
     template <class T>
     __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
         __shared__ float sdata[MEAN_SQR_SUM_BLOCK_SIZE];
-        __shared__ float row_mean;
 
         const size_type outer_size = means.size();
         for (index_type outer_idx = blockIdx.x; outer_idx < outer_size; outer_idx += gridDim.x) {
             const index_type row_start = outer_idx * inner_size;
 
             float sum = 0.f;
-            for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x)
+            for (auto i : block_stride_range<MEAN_SQR_SUM_BLOCK_SIZE>(inner_size))
                 sum += static_cast<float>(input[row_start + i]);
 
-            sdata[threadIdx.x] = sum;
-            __syncthreads();
-            for (int stride = MEAN_SQR_SUM_BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
-                if (threadIdx.x < stride)
-                    sdata[threadIdx.x] += sdata[threadIdx.x + stride];
-                __syncthreads();
-            }
-            if (threadIdx.x == 0) {
-                row_mean = sdata[0] / inner_size;
-                means[outer_idx] = row_mean;
-            }
-            __syncthreads();
+            const float mean = block_reduce_sum(sdata, sum) / inner_size;
+            if (threadIdx.x == 0)
+                means[outer_idx] = mean;
 
-            const float mean = row_mean;
             float sqr = 0.f;
-            for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
+            for (auto i : block_stride_range<MEAN_SQR_SUM_BLOCK_SIZE>(inner_size)) {
                 const float diff = static_cast<float>(input[row_start + i]) - mean;
                 sqr += diff * diff;
             }
 
-            sdata[threadIdx.x] = sqr;
-            __syncthreads();
-            for (int stride = MEAN_SQR_SUM_BLOCK_SIZE / 2; stride > 0; stride >>= 1) {
-                if (threadIdx.x < stride)
-                    sdata[threadIdx.x] += sdata[threadIdx.x + stride];
-                __syncthreads();
-            }
+            const float sqr_sum = block_reduce_sum(sdata, sqr);
             if (threadIdx.x == 0)
-                sum_sqrs[outer_idx] = sdata[0];
-            __syncthreads();
+                sum_sqrs[outer_idx] = sqr_sum;
         }
     }
 

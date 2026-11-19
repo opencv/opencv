@@ -84,10 +84,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 auto ws_allocator = csl::WorkspaceAllocator(workspace);
 
                 auto mean = ws_allocator.get_span<float>(loops);
-                kernels::fill<float>(stream, mean, 0.f);
-
                 auto inv_stddev = ws_allocator.get_span<float>(loops);
-                kernels::fill<float>(stream, inv_stddev, 0.f);
 
                 kernels::reduce_mean_sqr_sum<T>(stream, mean, inv_stddev, input, norm_size);
                 kernels::compute_normalization_scale(stream, inv_stddev, mean, inv_stddev, norm_size, epsilon);
