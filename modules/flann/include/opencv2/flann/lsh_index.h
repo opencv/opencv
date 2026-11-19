@@ -157,7 +157,7 @@ public:
         Matrix<ElementType> saved;
         if (fread(&saved, sizeof(saved), 1, stream) != 1)
             FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
-        if (saved.cols > 0 && saved.rows > (std::numeric_limits<size_t>::max)() / sizeof(ElementType) / saved.cols)
+        if (saved.rows != dataset_.rows || saved.cols != dataset_.cols)
             FLANN_THROW(cv::Error::StsParseError, "Invalid dataset size in LSH index file");
         if (((size_t)key_size + sizeof(ElementType) * CHAR_BIT - 1) / (sizeof(ElementType) * CHAR_BIT) > saved.cols)
             FLANN_THROW(cv::Error::StsParseError, "Invalid LSH index parameters in file");

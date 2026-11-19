@@ -187,15 +187,22 @@ TEST(Flann_LSH, load_rejects_invalid_stream)
         EXPECT_THROW(loaded.load(narrow, file.path), cv::Exception);
     }
 
-    // saved Matrix header claiming more rows than the file holds
+    // saved Matrix with one row less or one column more than the header that load() checks, data to match
+    for (int dim = 0; dim < 2; ++dim)
     {
-        std::vector<char> mismatchBuf = saved;
+        SCOPED_TRACE(dim == 0 ? "rows" : "cols");
         const size_t matrix_ofs = params_ofs + 3 * sizeof(int);
+        std::vector<char> mismatchBuf(saved.begin(), saved.begin() + matrix_ofs + sizeof(cvflann::Matrix<uchar>));
         cvflann::Matrix<uchar> matHdr;
         memcpy(&matHdr, &mismatchBuf[matrix_ofs], sizeof(matHdr));
         ASSERT_EQ((size_t)features.rows, matHdr.rows);
-        matHdr.rows += 1;
+        ASSERT_EQ((size_t)features.cols, matHdr.cols);
+        if (dim == 0)
+            matHdr.rows -= 1;
+        else
+            matHdr.cols = matHdr.stride = matHdr.cols + 1;
         memcpy(&mismatchBuf[matrix_ofs], &matHdr, sizeof(matHdr));
+        mismatchBuf.resize(mismatchBuf.size() + matHdr.rows * matHdr.cols, 0x5a);
         writeFileBytes(file.path, mismatchBuf);
         flann::Index loaded;
         EXPECT_THROW(loaded.load(features, file.path), cv::Exception);
