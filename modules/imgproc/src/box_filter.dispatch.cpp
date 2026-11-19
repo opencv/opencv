@@ -158,8 +158,11 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     ocl::Kernel kernel;
 
+    // Odd sizes select one pixel per work item inside filterSmall. That path was
+    // slower than the general kernel, so require an even width and height.
     if ((dev.isIntel() || dev.isAMD() || dev.isNVidia()) &&
         !(dev.type() & ocl::Device::TYPE_CPU) &&
+        (size.width % 2 == 0 && size.height % 2 == 0) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
