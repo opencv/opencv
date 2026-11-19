@@ -1528,8 +1528,9 @@ protected:
                             curCount += bins[j];
                         }
                         float rCur = (upbin + j)/2.f /nBinsPerDr * dr + minRadius;
-                        if((curCount * rBest >= maxCount * rCur) ||
-                            (rBest < FLT_EPSILON && curCount >= maxCount))
+                        if(curCount > accThreshold &&
+                            ((curCount * rBest >= maxCount * rCur) ||
+                            (rBest < FLT_EPSILON && curCount >= maxCount)))
                         {
                             rBest = rCur;
                             maxCount = curCount;

@@ -318,4 +318,30 @@ TEST_P(HoughCirclesTest, ManySmallCircles)
 INSTANTIATE_TEST_CASE_P(HoughGradient, HoughCirclesTest, testing::Values(HOUGH_GRADIENT));
 INSTANTIATE_TEST_CASE_P(HoughGradientAlt, HoughCirclesTest, testing::Values(HOUGH_GRADIENT_ALT));
 
+TEST(Imgproc_HoughCircles, regression_23423)
+{
+    Mat img = Mat::zeros(200, 200, CV_8UC1);
+    Point center(100, 100);
+
+    // Outer circle at R = 60 (~130 count > accThreshold = 40)
+    ellipse(img, center, Size(60,60), 0, 0, 270, Scalar(255), 1);
+    // Inner circle at r = 10 (~31 count < accThreshold = 40)
+    circle(img, center, 10, Scalar(255), -1);
+
+    std::vector<Vec3f> circles;
+    HoughCircles(img, circles, HOUGH_GRADIENT, 1.0, 20.0, 100.0, 40.0, 5, 80);
+
+    bool foundOuterCircle = false;
+    for (size_t i = 0; i < circles.size(); i++)
+    {
+        if (std::abs(circles[i][0] - 100.5f) <= 2.0f &&
+            std::abs(circles[i][1] - 100.5f) <= 2.0f &&
+            std::abs(circles[i][2] - 60.0f) <= 2.0f)
+        {
+            foundOuterCircle = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundOuterCircle) << "Detected circles: " << Mat(circles);
+}
 }} // namespace
