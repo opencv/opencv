@@ -1919,6 +1919,92 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     normAssert(indices, outputs[1].reshape(1, 5));
 }
 
+// Normalization of rows whose mean is large against their spread. E[x^2] - E[x]^2 in float loses
+// the variance there; each layer is compared with an FP64 computation from the same input.
+static Mat normRowsRef64F(const Mat& x, int rows, int len, double eps)
+{
+    CV_Assert(x.type() == CV_32F && x.isContinuous() && x.total() == (size_t)rows * len);
+    Mat ref(x.dims, x.size.p, CV_32F);
+    for (int r = 0; r < rows; r++)
+    {
+        const float* xr = x.ptr<float>() + (size_t)r * len;
+        float* yr = ref.ptr<float>() + (size_t)r * len;
+        double mean = 0, var = 0;
+        for (int i = 0; i < len; i++)
+            mean += xr[i];
+        mean /= len;
+        for (int i = 0; i < len; i++)
+            var += (xr[i] - mean) * (xr[i] - mean);
+        const double invStd = 1. / std::sqrt(var / len + eps);
+        for (int i = 0; i < len; i++)
+            yr[i] = (float)((xr[i] - mean) * invStd);
+    }
+    return ref;
+}
+
+static Mat runNormLayer(LayerParams& lp, std::vector<Mat> inputs)
+{
+    std::vector<Mat> outputs;
+    runLayer(LayerFactory::createLayerInstance(lp.type, lp), inputs, outputs);
+    return outputs[0];
+}
+
+TEST(Layer_Test_Norm_LargeOffset, Accuracy_CPU)
+{
+    const float eps = 1e-5f;
+    // float holds a mean of 10000 to half an ulp, 2^-11; over the standard deviation 1/sqrt(12),
+    // that moves the outputs by 1.7e-3
+    const double l1 = 2.5e-3, lInf = 2.5e-3;
+    // values around 10000 with a spread of +-0.5: the mean is about 35000 standard deviations
+    Mat x(std::vector<int>{2, 4, 8, 8}, CV_32F);
+    randu(x, -0.5f, 0.5f);
+    x += Scalar(10000);
+    const Mat x3d = x.reshape(1, std::vector<int>{2, 4, 64});
+    const Mat ones64(std::vector<int>{64}, CV_32F, Scalar(1)), zeros64(std::vector<int>{64}, CV_32F, Scalar(0));
+    const Mat ones4(std::vector<int>{4}, CV_32F, Scalar(1)), zeros4(std::vector<int>{4}, CV_32F, Scalar(0));
+    // MVN, LayerNormalization over the last axis and InstanceNormalization all normalize the 64 values of each (n, c)
+    const Mat ref = normRowsRef64F(x, 8, 64, eps);
+    const Mat ref3d = ref.reshape(1, std::vector<int>{2, 4, 64});
+    {
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "mvn";
+        lp.set("normalize_variance", true);
+        lp.set("eps", eps);
+        normAssert(ref, runNormLayer(lp, {x}), "MVN", l1, lInf);
+        // a 1024 x 1024 plane: on long rows the float sums also drop digits of the mean
+        Mat xl(std::vector<int>{1, 1, 1024, 1024}, CV_32F);
+        randu(xl, -0.5f, 0.5f);
+        xl += Scalar(10000);
+        normAssert(normRowsRef64F(xl, 1, 1024 * 1024, eps), runNormLayer(lp, {xl}), "MVN, 1024 x 1024", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "LayerNormalization";
+        lp.name = "ln";
+        lp.set("axis", 2);
+        lp.set("epsilon", eps);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64, zeros64}), "LayerNormalization", l1, lInf);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64}), "LayerNormalization without bias", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "in";
+        lp.set("epsilon", eps);
+        normAssert(ref, runNormLayer(lp, {x, ones4, zeros4}), "InstanceNormalization", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "GroupNormalization";
+        lp.name = "gn";
+        lp.set("epsilon", eps);
+        lp.set("num_groups", 2);
+        normAssert(normRowsRef64F(x, 4, 128, eps), runNormLayer(lp, {x, ones4, zeros4}), "GroupNormalization",
+                   l1, lInf);
+    }
+}
+
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
 TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 {
