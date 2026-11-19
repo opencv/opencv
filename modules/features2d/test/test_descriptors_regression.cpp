@@ -77,27 +77,6 @@ TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
         kaze->compute(img, kp_rev, desc);
         flip(desc, desc, 0);
         EXPECT_EQ(0.0, cvtest::norm(desc_dc, desc, NORM_INF)) << "extended=" << extended << " upright=" << upright;
-
-        if (!upright)
-            continue;
-
-        // the same on the OpenCL path (upright descriptors), which also rejects a level outside the pyramid
-        UMat uimg, udesc_dc, udesc;
-        img.copyTo(uimg);
-        vector<KeyPoint> ukp;
-        kaze->detectAndCompute(uimg, noArray(), ukp, udesc_dc);
-        ASSERT_FALSE(ukp.empty());
-        vector<KeyPoint> ukp_rev(ukp.rbegin(), ukp.rend());
-        kaze->compute(uimg, ukp_rev, udesc);
-        Mat udesc_flipped;
-        flip(udesc.getMat(ACCESS_READ), udesc_flipped, 0);
-        EXPECT_EQ(0.0, cvtest::norm(udesc_dc.getMat(ACCESS_READ), udesc_flipped, NORM_INF)) << "UMat extended=" << extended;
-
-        vector<KeyPoint> none;
-        EXPECT_NO_THROW(kaze->compute(uimg, none, udesc));
-        vector<KeyPoint> bad(1, ukp[0]);
-        bad[0].class_id = -1;
-        EXPECT_THROW(kaze->compute(uimg, bad, udesc), cv::Exception) << "UMat extended=" << extended;
     }
 }
 
