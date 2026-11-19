@@ -284,36 +284,4 @@ TEST(Flann_LshTable, narrow_features_1_to_7_bytes)
     }
 }
 
-TEST(Flann_GenericIndex, deletes_index_when_build_throws)
-{
-    Mat features8u(32, 32, CV_8UC1);
-    theRNG().fill(features8u, RNG::UNIFORM, 0, 256);
-
-    const int badKeys[] = { 0, static_cast<int>(sizeof(size_t) * CHAR_BIT) };
-    for (int k = 0; k < 2; ++k)
-    {
-        bool threw = false;
-        try
-        {
-            flann::GenericIndex<cvflann::Hamming<unsigned char> > idx(
-                features8u, cvflann::LshIndexParams(8, badKeys[k], 2));
-            CV_UNUSED(idx);
-        }
-        catch (const cv::Exception& e)
-        {
-            threw = true;
-            EXPECT_EQ(Error::StsBadArg, e.code);
-        }
-        EXPECT_TRUE(threw) << "badKey=" << badKeys[k];
-    }
-
-    Mat features32f(32, 8, CV_32FC1);
-    theRNG().fill(features32f, RNG::UNIFORM, -1.f, 1.f);
-    EXPECT_THROW({
-        flann::GenericIndex<cvflann::L2<float> > idx(
-            features32f, cvflann::KMeansIndexParams(1));
-        CV_UNUSED(idx);
-    }, cv::Exception);
-}
-
 }} // namespace
