@@ -8919,7 +8919,9 @@ static inline __m256 loadEightWarpHalf(const hfloat* src)
 {
     return _mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src)));
 }
+#endif
 
+#if CV_FP16 && (CV_AVX2 || (CV_NEON && CV_SIMD128))
 static inline void storeThreeWarpHalf(const v_float32x4& rgb, hfloat* dst)
 {
     hfloat packed[4];
@@ -9121,11 +9123,64 @@ static void remapLanczosHalfRGB(const hfloat* src, size_t step, const float* wei
     _mm256_storeu_ps(values + 16, sum2);
     sumPackedLanczosRGB(values, dst);
 }
+#elif CV_NEON && CV_FP16 && CV_SIMD128
+static inline void expandFourPackedRGBWeights(const float* w, v_float32x4* packed)
+{
+    packed[0] = v_float32x4(w[0], w[0], w[0], w[1]);
+    packed[1] = v_float32x4(w[1], w[1], w[2], w[2]);
+    packed[2] = v_float32x4(w[2], w[3], w[3], w[3]);
+}
+
+static inline v_float32x4 sumFourPackedWarpRGB(const v_float32x4* taps)
+{
+    // Align the start of each RGB tap to the first lane before summing.
+    const v_float32x4 tap1 = v_rotate_right<3>(taps[0], taps[1]);
+    const v_float32x4 tap2 = v_rotate_right<2>(taps[1], taps[2]);
+    const v_float32x4 tap3 = v_rotate_right<1>(taps[2]);
+    return v_add(v_add(v_add(taps[0], tap1), tap2), tap3);
+}
+
+static inline void bicubicWarpHalfRGB(const hfloat* src, size_t step,
+                                      const float* wx, const float* wy, hfloat* dst)
+{
+    const v_float32x4 zero = v_setall_f32(0.f);
+    v_float32x4 columns[3] = {zero, zero, zero};
+    for (int row = 0; row < 4; ++row)
+    {
+        const hfloat* samples = src + size_t(row)*step;
+        const v_float32x4 weight = v_setall_f32(wy[row]);
+        for (int group = 0; group < 3; ++group)
+            columns[group] = v_fma(loadBilinearFourHalf(samples + 4*group), weight, columns[group]);
+    }
+
+    v_float32x4 weights[3];
+    expandFourPackedRGBWeights(wx, weights);
+    for (int group = 0; group < 3; ++group)
+        columns[group] = v_mul(columns[group], weights[group]);
+    storeThreeWarpHalf(sumFourPackedWarpRGB(columns), dst);
+}
+
+static void remapLanczosHalfRGB(const hfloat* src, size_t step, const float* weights, hfloat* dst)
+{
+    const v_float32x4 zero = v_setall_f32(0.f);
+    v_float32x4 sums[6] = {zero, zero, zero, zero, zero, zero};
+    for (int row = 0; row < 8; ++row)
+    {
+        const hfloat* samples = src + size_t(row)*step;
+        const float* w = weights + 8*row;
+        v_float32x4 packed[6];
+        expandFourPackedRGBWeights(w, packed);
+        expandFourPackedRGBWeights(w + 4, packed + 3);
+        for (int group = 0; group < 6; ++group)
+            sums[group] = v_fma(loadBilinearFourHalf(samples + 4*group), packed[group], sums[group]);
+    }
+    storeThreeWarpHalf(v_add(sumFourPackedWarpRGB(sums), sumFourPackedWarpRGB(sums + 3)), dst);
+}
 #endif
 
 RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB_()
 {
-#if CV_AVX2 && CV_FP16
+#if CV_FP16 && (CV_AVX2 || (CV_NEON && CV_SIMD128))
     return remapLanczosHalfRGB;
 #else
     return nullptr;
@@ -9161,7 +9216,7 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
         }
         if (code > 0)
         {
-#if CV_AVX2 && CV_FP16
+#if CV_FP16 && (CV_AVX2 || (CV_NEON && CV_SIMD128))
             if constexpr (std::is_same_v<T, hfloat>)
             {
                 if (channels == 3)
@@ -9316,6 +9371,63 @@ static void bicubicWarpHalfRGBBlocks(const float* x, const float* y, int len,
         bicubicWarpChannels<hfloat>(x + i, y + i, len - i, source, step, size, dst, params,
                                    borderType, borderValue, channels);
 }
+#elif CV_NEON && CV_FP16 && CV_SIMD128 && CV_SIMD_WIDTH == 16
+static inline void cubicRGBBlockWeights(const v_float32x4& fraction, float coefficient, float (&weights)[4][4])
+{
+    v_float32x4 w0, w1, w2, w3;
+    v_float32x4 p0, p1, p2, p3;
+    bicubicWeights(fraction, coefficient, w0, w1, w2, w3);
+    v_transpose4x4(w0, w1, w2, w3, p0, p1, p2, p3);
+    v_store(weights[0], p0);
+    v_store(weights[1], p1);
+    v_store(weights[2], p2);
+    v_store(weights[3], p3);
+}
+
+static void bicubicWarpHalfRGBBlocks(const float* x, const float* y, int len,
+                                     const void* source, size_t step, Size size, void* destination,
+                                     const float* params, int borderType, const void* borderValue, int channels)
+{
+    const float coefficient = params ? *params : -0.75f;
+    const v_float32x4 minimum = v_setall_f32(1.f);
+    const v_float32x4 maxX = v_setall_f32(float(size.width - 2));
+    const v_float32x4 maxY = v_setall_f32(float(size.height - 2));
+    const size_t halfStep = step/sizeof(hfloat);
+    const hfloat* src = static_cast<const hfloat*>(source);
+    hfloat* dst = static_cast<hfloat*>(destination);
+    const int block = 4;
+    int i = 0;
+    for (; i + block <= len; i += block, dst += 3*block)
+    {
+        const v_float32x4 sx = v_load(x + i), sy = v_load(y + i);
+        const v_float32x4 inX = v_and(v_ge(sx, minimum), v_lt(sx, maxX));
+        const v_float32x4 inY = v_and(v_ge(sy, minimum), v_lt(sy, maxY));
+        if (!v_check_all(v_and(inX, inY)))
+        {
+            bicubicWarpChannels<hfloat>(x + i, y + i, block, source, step, size, dst, params,
+                                       borderType, borderValue, channels);
+            continue;
+        }
+
+        const v_int32x4 ix = v_trunc(sx), iy = v_trunc(sy);
+        int ixValues[block], iyValues[block];
+        v_store(ixValues, ix);
+        v_store(iyValues, iy);
+        float wx[block][4], wy[block][4];
+        cubicRGBBlockWeights(v_sub(sx, v_cvt_f32(ix)), coefficient, wx);
+        cubicRGBBlockWeights(v_sub(sy, v_cvt_f32(iy)), coefficient, wy);
+
+        for (int lane = 0; lane < block; ++lane)
+        {
+            const hfloat* top = src + size_t(iyValues[lane] - 1)*halfStep + 3*size_t(ixValues[lane] - 1);
+            bicubicWarpHalfRGB(top, halfStep, wx[lane], wy[lane], dst + 3*lane);
+        }
+    }
+
+    if (i < len)
+        bicubicWarpChannels<hfloat>(x + i, y + i, len - i, source, step, size, dst, params,
+                                   borderType, borderValue, channels);
+}
 #endif
 
 template<typename T, void (*fn)(const float*, const float*, int, const void*, size_t, Size, T*, const float*, int, T*)>
@@ -9326,7 +9438,7 @@ static void bicubicWarpWrap(const float* x, const float* y, int len, const void*
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
-#if CV_AVX2 && CV_FP16 && CV_SIMD_WIDTH == 32
+#if CV_FP16 && ((CV_AVX2 && CV_SIMD_WIDTH == 32) || (CV_NEON && CV_SIMD128 && CV_SIMD_WIDTH == 16))
     if (type == CV_16FC3)
         return bicubicWarpHalfRGBBlocks;
 #endif
