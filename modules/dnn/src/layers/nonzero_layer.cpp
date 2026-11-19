@@ -28,12 +28,15 @@ static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, int nst
     if (total == 0)
         return 0;
     cv::parallel_for_(cv::Range(0, nstripes), [&](const cv::Range& range) {
-        const size_t i0 = total * (size_t)range.start / (size_t)nstripes;
-        const size_t i1 = total * (size_t)range.end   / (size_t)nstripes;
-        size_t nz = 0;
-        for (size_t i = i0; i < i1; ++i)
-            nz += isNonZero(data[i]);
-        nzcounts[(size_t)range.start] = nz;
+        for (int stripe = range.start; stripe < range.end; ++stripe)
+        {
+            const size_t i0 = total * (size_t)stripe / (size_t)nstripes;
+            const size_t i1 = total * (size_t)(stripe + 1) / (size_t)nstripes;
+            size_t nz = 0;
+            for (size_t i = i0; i < i1; ++i)
+                nz += isNonZero(data[i]);
+            nzcounts[(size_t)stripe] = nz;
+        }
     });
 
     size_t total_nz = 0;
