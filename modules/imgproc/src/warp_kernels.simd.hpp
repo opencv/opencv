@@ -7029,7 +7029,7 @@ bicubicWeights(float alpha, float A, float& w0, float& w1, float& w2, float& w3)
 static CV_ALWAYS_INLINE int
 bicubicCoeffs(float xs0, float ys0,
               size_t srcstep, Size size, int bpp, float A,
-              int bordertype, int& tl_x, int& tl_y, int& tl_ofs,
+              int bordertype, int& tl_x, int& tl_y, ptrdiff_t& tl_ofs,
               float& wx0, float& wx1, float& wx2, float& wx3,
               float& wy0, float& wy1, float& wy2, float& wy3)
 {
@@ -7063,7 +7063,7 @@ bicubicCoeffs(float xs0, float ys0,
 
     tl_x = ix0;
     tl_y = iy0;
-    tl_ofs = all_inliers ? iy0*(int)srcstep + ix0*bpp : 0;
+    tl_ofs = all_inliers ? (ptrdiff_t)iy0*(ptrdiff_t)srcstep + (ptrdiff_t)ix0*bpp : 0;
 
     bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
     bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
@@ -7268,7 +7268,8 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
 
     for (int i = 0; i < len; i++, dst += NCHANNELS) {
         buftype pixbuf[NCHANNELS][4];
-        int tl_x, tl_y, tl_ofs, goodx[4];
+        int tl_x, tl_y, goodx[4];
+        ptrdiff_t tl_ofs;
         acctype V0, V1, V2, V3;
         float wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3;
         float xs = srcx[i], ys = srcy[i];
@@ -8116,6 +8117,15 @@ bicubicVec(const float* srcx, const float* srcy, int len,
            chtype* dst, const float* params,
            int borderType, chtype* borderVal)
 {
+    // SIMD bicubicCoeffs computes 32-bit signed byte offsets; fall back to
+    // bicubicRef (which uses ptrdiff_t) for images larger than INT_MAX bytes.
+    if (srcstep > (size_t)INT_MAX ||
+        (srcstep > 0 && (size_t)size.height > (size_t)INT_MAX / srcstep)) {
+        bicubicRef<chtype, NCHANNELS>(srcx, srcy, len, src, srcstep, size,
+                                      dst, params, borderType, borderVal);
+        return;
+    }
+
     constexpr float defaultA = -0.75f;
     float A = params ? *params : defaultA;
 
