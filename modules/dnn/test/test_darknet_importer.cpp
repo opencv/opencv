@@ -44,6 +44,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <clocale>
 
 namespace opencv_test { namespace {
 
@@ -1413,6 +1414,38 @@ TEST(Test_Darknet, mask_accepts_numeric_prefix)
 {
     expectDarknetNumericListAccepted(darknetYoloCfg("2,3,5,7", "1x", 2), "yolo_1", 5.f, 7.f);
 }
+
+class Test_Darknet_decimal_locale : public testing::TestWithParam<char>
+{
+    std::string savedLocale;
+protected:
+    void SetUp() CV_OVERRIDE { savedLocale = std::setlocale(LC_NUMERIC, NULL); }
+    void TearDown() CV_OVERRIDE { EXPECT_TRUE(std::setlocale(LC_NUMERIC, savedLocale.c_str()) != NULL); }
+};
+
+TEST_P(Test_Darknet_decimal_locale, anchors_accept_fractional_prefix)
+{
+    if (GetParam() == '.')
+    {
+        ASSERT_TRUE(std::setlocale(LC_NUMERIC, "C") != NULL);
+    }
+    else
+    {
+        const char* names[] = {"de_DE.UTF-8", "fr_FR.UTF-8", "German_Germany.1252"};
+        for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i)
+        {
+            if (std::setlocale(LC_NUMERIC, names[i]) && std::string(std::localeconv()->decimal_point) == ",")
+                break;
+        }
+        if (std::string(std::localeconv()->decimal_point) != ",")
+            throw SkipTestException("No comma-decimal numeric locale installed");
+    }
+    ASSERT_STREQ(GetParam() == '.' ? "." : ",", std::localeconv()->decimal_point);
+    expectDarknetNumericListAccepted(darknetRegionCfg("1.25.75,.5units"), "detection_out", 1.25f, .5f);
+    expectDarknetNumericListRejected(darknetRegionCfg("0.5e-999,1"));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_decimal_locale, testing::Values('.', ','));
 
 // The route is the third layer (index 2) and one more layer follows it. Only the
 // layers parsed before the route, 0 and 1, can be its inputs.

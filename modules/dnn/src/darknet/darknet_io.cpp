@@ -683,8 +683,27 @@ namespace cv {
             {
                 char* end;
                 errno = 0;
-                const double number = std::strtod(token, &end);
-                if (end == token || errno == ERANGE || !std::isfinite(number) || std::fabs(number) > FLT_MAX)
+                double number = std::strtod(token, &end);
+                bool parsed = end != token;
+                int parseErrno = errno;
+                if (*end == '.')
+                {
+                    // Same retry as FileStorage::Impl::strtod() in core persistence.cpp:
+                    // a comma-decimal LC_NUMERIC stops at '.', so parse again with ','.
+                    std::string retry(token);
+                    const size_t dot = end - token;
+                    retry[dot] = ',';
+                    char* retryEnd;
+                    errno = 0;
+                    const double retryNumber = std::strtod(retry.c_str(), &retryEnd);
+                    if (retryEnd > retry.c_str() + dot)
+                    {
+                        number = retryNumber;
+                        parsed = true;
+                        parseErrno = errno;
+                    }
+                }
+                if (!parsed || parseErrno == ERANGE || !std::isfinite(number) || std::fabs(number) > FLT_MAX)
                     return false;
                 value = static_cast<float>(number);
                 return number == 0 || value != 0;
