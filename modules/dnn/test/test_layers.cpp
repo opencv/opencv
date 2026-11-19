@@ -2303,36 +2303,48 @@ TEST(Layer_Test_Norm_LargeOffset, Accuracy_CPU)
                    "LayerNormalization2 InvStdDev", 1e-5, 1e-4);
     }
     {
-        // GroupNormalization on the block layout, channels in blocks of 8
-        const int C0 = 8;
-        Mat xc(std::vector<int>{1, 16, 4, 4}, CV_32F);
+        // GroupNormalization and InstanceNormalization on the block layout, channels in blocks of 8
+        const int C0 = 8, spatial = 8 * 8;
+        Mat xc(std::vector<int>{1, 16, 8, 8}, CV_32F);
         randu(xc, -0.5f, 0.5f);
         xc += Scalar(10000);
-        Mat blk(MatShape(std::vector<int>{1, 2, 4, 4, C0}, DATA_LAYOUT_BLOCK, 16), CV_32F);
+        Mat blk(MatShape(std::vector<int>{1, 2, 8, 8, C0}, DATA_LAYOUT_BLOCK, 16), CV_32F);
         for (int c = 0; c < 16; c++)
-            for (int p = 0; p < 16; p++)
-                blk.ptr<float>()[((c / C0) * 16 + p) * C0 + c % C0] = xc.ptr<float>()[c * 16 + p];
-        LayerParams lp;
-        lp.type = "GroupNormalization";
-        lp.name = "gn_block";
-        lp.set("epsilon", eps);
-        lp.set("num_groups", 4);
-        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            for (int p = 0; p < spatial; p++)
+                blk.ptr<float>()[((c / C0) * spatial + p) * C0 + c % C0] = xc.ptr<float>()[c * spatial + p];
         const Mat ones16(std::vector<int>{16}, CV_32F, Scalar(1)), zeros16(std::vector<int>{16}, CV_32F, Scalar(0));
-        std::vector<Mat> inputs = {blk, ones16, zeros16}, outputs;
-        std::vector<MatShape> inputShapes, outputShapes, internals;
-        for (const Mat& m : inputs)
-            inputShapes.push_back(m.shape());
-        layer->getMemoryShapes(inputShapes, 1, outputShapes, internals);
-        outputs.push_back(Mat(outputShapes[0], CV_32F));
-        layer->finalize(inputs, outputs);
-        layer->forward(inputs, outputs, std::vector<Mat>());
-        Mat got(xc.dims, xc.size.p, CV_32F);
-        for (int c = 0; c < 16; c++)
-            for (int p = 0; p < 16; p++)
-                got.ptr<float>()[c * 16 + p] = outputs[0].ptr<float>()[((c / C0) * 16 + p) * C0 + c % C0];
-        // this kernel folds the mean into the bias, x * s + (b - mean * s), which rounds at the scale of 10000 * s
-        normAssert(normRowsRef64F(xc, 4, 64, eps), got, "GroupNormalization, block layout", 1e-2, 1e-2);
+        auto runBlockNorm = [&](LayerParams& lp) {
+            Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+            std::vector<Mat> inputs = {blk, ones16, zeros16}, outputs;
+            std::vector<MatShape> inputShapes, outputShapes, internals;
+            for (const Mat& m : inputs)
+                inputShapes.push_back(m.shape());
+            layer->getMemoryShapes(inputShapes, 1, outputShapes, internals);
+            outputs.push_back(Mat(outputShapes[0], CV_32F));
+            layer->finalize(inputs, outputs);
+            layer->forward(inputs, outputs, std::vector<Mat>());
+            Mat got(xc.dims, xc.size.p, CV_32F);
+            for (int c = 0; c < 16; c++)
+                for (int p = 0; p < spatial; p++)
+                    got.ptr<float>()[c * spatial + p] = outputs[0].ptr<float>()[((c / C0) * spatial + p) * C0 + c % C0];
+            return got;
+        };
+        // Both block kernels fold the mean into the bias, x * s + (b - mean * s), which rounds at the scale of 10000 * s
+        {
+            LayerParams lp;
+            lp.type = "GroupNormalization";
+            lp.name = "gn_block";
+            lp.set("epsilon", eps);
+            lp.set("num_groups", 4);
+            normAssert(normRowsRef64F(xc, 4, 4 * spatial, eps), runBlockNorm(lp), "GroupNormalization, block layout", 1e-2, 1e-2);
+        }
+        {
+            LayerParams lp;
+            lp.type = "InstanceNormalization";
+            lp.name = "in_block";
+            lp.set("epsilon", eps);
+            normAssert(normRowsRef64F(xc, 16, spatial, eps), runBlockNorm(lp), "InstanceNormalization, block layout", 1e-2, 1e-2);
+        }
     }
 }
 
