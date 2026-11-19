@@ -1683,6 +1683,46 @@ TEST(Imgproc_Warp, float16_tight_channel_storage)
     }
 }
 
+typedef testing::TestWithParam<int> Imgproc_RemapHalfRGB;
+
+TEST_P(Imgproc_RemapHalfRGB, linear_2x2_footprint)
+{
+    const size_t samples = 12;
+    std::vector<hfloat> source(samples);
+    hfloat* pixels = source.data();
+#if defined(__linux__) || defined(__APPLE__)
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    ASSERT_GE(pageSize, static_cast<long>(samples*sizeof(hfloat)));
+    void* mapping = mmap(nullptr, 2*pageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    ASSERT_NE(MAP_FAILED, mapping);
+    const Ptr<void> storage(mapping, [pageSize](void* address) { munmap(address, 2*pageSize); });
+    uchar* boundary = static_cast<uchar*>(mapping) + pageSize;
+    ASSERT_EQ(0, mprotect(boundary, pageSize, PROT_NONE));
+    pixels = reinterpret_cast<hfloat*>(boundary) - samples;
+#endif
+
+    // Each RGB row has exactly six samples. The final row ends at the guard page.
+    for (size_t i = 0; i < samples; ++i)
+        pixels[i] = hfloat(float(4*(i/3) + i%3));
+    const Mat src(2, 2, CV_16FC3, pixels);
+    const Mat mapX(1, 1, CV_32F, Scalar(0.25)), mapY(1, 1, CV_32F, Scalar(0.5));
+    Mat map1 = mapX, map2 = mapY;
+    if (GetParam() != CV_32FC1)
+        convertMaps(mapX, mapY, map1, map2, GetParam());
+
+    hfloat output[4] = {hfloat(0.f), hfloat(0.f), hfloat(0.f), hfloat(23.f)};
+    Mat dst(1, 1, CV_16FC3, output);
+    remap(src, dst, map1, map2, INTER_LINEAR);
+
+    EXPECT_EQ(5.f, float(output[0]));
+    EXPECT_EQ(6.f, float(output[1]));
+    EXPECT_EQ(7.f, float(output[2]));
+    EXPECT_EQ(23.f, float(output[3]));
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapHalfRGB,
+                        testing::Values(CV_32FC1, CV_32FC2, CV_16SC2));
+
 TEST(Imgproc_Warp, float16_linear_transparent)
 {
     for (int channels : {1, 3, 4})
