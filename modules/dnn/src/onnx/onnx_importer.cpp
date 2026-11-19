@@ -1135,7 +1135,10 @@ void ONNXImporter::parseAveragePool(LayerParams& layerParams, const opencv_onnx:
     layerParams.type = "Pooling";
     layerParams.set("pool", "AVE");
     setCeilMode(layerParams);
-    layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
+    // count_include_pad says whether padded values count towards the kernel area.
+    // Keep the previous producer-based default when the attribute is missing.
+    const bool countIncludePad = layerParams.get<int>("count_include_pad", framework_name == "pytorch") != 0;
+    layerParams.set("ave_pool_padded_area", countIncludePad);
     addLayer(layerParams, node_proto);
 }
 

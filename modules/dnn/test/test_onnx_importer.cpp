@@ -829,6 +829,12 @@ TEST_P(Test_ONNX_layers, AveragePooling)
     testONNXModels("average_pooling");
 }
 
+// PyTorch model with count_include_pad=0: the attribute must override the producer-based default
+TEST_P(Test_ONNX_layers, AveragePooling_exclude_pad)
+{
+    testONNXModels("average_pooling_exclude_pad");
+}
+
 TEST_P(Test_ONNX_layers, MaxPooling3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
