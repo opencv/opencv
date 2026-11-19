@@ -101,7 +101,8 @@ static ChMode decideChannelMode(const Mat* const* arrays, int K)
         int b = a.dims > 0 ? a.size[a.dims - 1] : 1;   // 0-dim scalar has no spatial back (=1)
         if (back < 0) back = b; else if (b != back) sameBack = false;
     }
-    return (allMulti && sameBack) ? CH_FOLD : CH_DIM;    // fold only if no channel broadcast
+    // fold only if no channel broadcast and the folded extent still fits into int
+    return (allMulti && sameBack && (long long)back * N <= INT_MAX) ? CH_FOLD : CH_DIM;
 }
 
 // numpy-style broadcast of several right-aligned shapes.
@@ -158,7 +159,8 @@ static int collapseDims(MatStep* S, MatShape* H, int K, MatShape& D)
             scalar  = scalar  && curScalar;
             consist = consist && (curScalar == prevScalar);
         }
-        if (contig && (consist || scalar))
+        // dims are int: do not merge axes if the product does not fit
+        if (contig && (consist || scalar) && (long long)D[j] * D[i] <= INT_MAX)
         {
             for (int k = 0; k < K; k++) H[k][j] *= H[k][i];
             D[j] *= D[i];
@@ -216,7 +218,7 @@ static bool fastSameShape(const Mat* const* arrays, int K, bool expandChannels,
         for (int i = 0; i < rdims; i++) if (a.size[i] != R.size[i]) return false;
     }
     const long long total = (long long)R.total() * rcn;   // channels folded into the 1D run
-    CV_Assert(total <= (long long)INT_MAX);
+    if (total > (long long)INT_MAX) return false;    // 1D run does not fit int: use general path
     for (int k = 0; k < K; k++)
     {
         const Mat& a = *arrays[k];
