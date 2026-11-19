@@ -888,7 +888,8 @@ public:
     DIFF_CHARBONNIER
     @param max_points Maximum amount of returned points. In case if image contains
     more features, then the features with highest response are returned.
-    Negative value means no limitation.
+    Negative value means no limitation. The limit applies only to detected keypoints, not to
+    keypoints passed to compute() or to detectAndCompute() with useProvidedKeypoints=true.
      */
     CV_WRAP static Ptr<AKAZE> create(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
