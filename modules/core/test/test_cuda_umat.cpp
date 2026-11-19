@@ -273,6 +273,19 @@ TEST(Core_CudaUMat, adopt_custom_allocator)
     EXPECT_EQ(&customAlloc, u3->prevAllocator);
     u3->currAllocator->deallocate(u3);
     ASSERT_EQ(3, customAlloc.deallocateCalls);
+
+    // A partial upload() that takes over a UMatData with host data keeps the pixels outside the region
+    Mat host4(rows, cols, CV_32FC1, Scalar::all(7.f)), patch(2, 3, CV_32FC1, Scalar::all(100.f));
+    std::memcpy(backing, host4.data, total);
+    const size_t patchSz[2] = { 2, 3 * sizeof(float) }, patchOfs[2] = { 1, 2 * sizeof(float) };
+    const size_t patchStep[2] = { 3 * sizeof(float), sizeof(float) };
+    UMatData* u4 = customAlloc.make(total, backing);
+    cudaAlloc->upload(u4, patch.data, 2, patchSz, patchOfs, copyStep, patchStep);
+    cudaAlloc->download(u4, got.data, 2, copySz, NULL, copyStep, copyStep);
+    patch.copyTo(host4(Rect(2, 1, 3, 2)));
+    EXPECT_EQ(0.0, cvtest::norm(host4, got, NORM_INF));
+    u4->currAllocator->deallocate(u4);
+    ASSERT_EQ(4, customAlloc.deallocateCalls);
 }
 
 TEST(Core_CudaUMat, roi_to_roi_2d_copy)

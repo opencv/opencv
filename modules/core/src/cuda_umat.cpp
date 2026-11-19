@@ -159,14 +159,13 @@ public:
             return;
         if (u->deviceCopyObsolete() && u->data)
         {
-            copyPlanes(u->data, srcofs, srcstep, (uchar*)dstptr, NULL, dststep,
-                       dims, sz, cudaMemcpyHostToHost, true);
+            MatAllocator::download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
             return;
         }
         if (!u->handle)
             return;
         copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, NULL, dststep,
-                   dims, sz, cudaMemcpyDeviceToHost, false);
+                   dims, sz, cudaMemcpyDeviceToHost);
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
@@ -175,22 +174,11 @@ public:
     {
         if (!u || !srcptr)
             return;
-        CV_Assert(!u->handle || u->currAllocator == this);
-        if (!u->handle && u->size > 0)
-        {
-            void* handle = NULL;
-            cudaSafeCall(cudaMalloc(&handle, u->size));
-            u->handle = handle;
-            if (u->currAllocator != this)
-            {
-                u->prevAllocator = u->currAllocator;
-                u->currAllocator = this;
-            }
-        }
+        allocate(u, ACCESS_RW, USAGE_DEFAULT);
         if (u->deviceCopyObsolete() && u->data && !isFullOverwrite(u, dims, sz, dstofs, dststep))
             unmap(u);
         copyPlanes((uchar*)srcptr, NULL, srcstep, (uchar*)u->handle, dstofs, dststep,
-                   dims, sz, cudaMemcpyHostToDevice, false);
+                   dims, sz, cudaMemcpyHostToDevice);
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
     }
@@ -207,7 +195,7 @@ public:
         if (dst->deviceCopyObsolete() && dst->data && !isFullOverwrite(dst, dims, sz, dstofs, dststep))
             unmap(dst);
         copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
-                   dims, sz, cudaMemcpyDeviceToDevice, false);
+                   dims, sz, cudaMemcpyDeviceToDevice);
         dst->markHostCopyObsolete(true);
         dst->markDeviceCopyObsolete(false);
     }
@@ -233,7 +221,7 @@ private:
     // sz/steps follow the MatAllocator convention: the last dim carries element bytes.
     static void copyPlanes(uchar* srcbase, const size_t srcofs[], const size_t srcstep[],
                            uchar* dstbase, const size_t dstofs[], const size_t dststep[],
-                           int dims, const size_t sz[], cudaMemcpyKind kind, bool hostToHost)
+                           int dims, const size_t sz[], cudaMemcpyKind kind)
     {
         int isz[CV_MAX_DIM];
         uchar* srcptr = srcbase;
@@ -264,18 +252,7 @@ private:
             const size_t dpitch = dststep ? dststep[0] : widthBytes;
             if (spitch >= widthBytes && dpitch >= widthBytes)
             {
-                if (hostToHost)
-                {
-                    if (spitch == widthBytes && dpitch == widthBytes)
-                        std::memcpy(dstptr, srcptr, height * widthBytes);
-                    else
-                        for (size_t r = 0; r < height; r++)
-                            std::memcpy(dstptr + r * dpitch, srcptr + r * spitch, widthBytes);
-                }
-                else
-                {
-                    cudaSafeCall(cudaMemcpy2D(dstptr, dpitch, srcptr, spitch, widthBytes, height, kind));
-                }
+                cudaSafeCall(cudaMemcpy2D(dstptr, dpitch, srcptr, spitch, widthBytes, height, kind));
                 return;
             }
         }
@@ -288,12 +265,7 @@ private:
         NAryMatIterator it(arrays, ptrs, 2);
         const size_t planesz = it.size;
         for (size_t j = 0; j < it.nplanes; j++, ++it)
-        {
-            if (hostToHost)
-                std::memcpy(ptrs[1], ptrs[0], planesz);
-            else
-                cudaSafeCall(cudaMemcpy(ptrs[1], ptrs[0], planesz, kind));
-        }
+            cudaSafeCall(cudaMemcpy(ptrs[1], ptrs[0], planesz, kind));
     }
 };
 
