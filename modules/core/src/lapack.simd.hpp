@@ -104,7 +104,7 @@ template<typename T> struct VBLAS
     }
 };
 
-#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
 {
     if( n <= 0 )
@@ -132,7 +132,7 @@ template<> inline void VBLAS<float>::givens(float* a, float* b, int n, float c, 
 }
 
 
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#if CV_SIMD && (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<> inline void VBLAS<float>::dotD(const float* a, const float* b, int n, double* result) const
 {
     if( n <= 0 )
@@ -247,7 +247,7 @@ template<> inline void VBLAS<double>::givensD(double* a, double* b, int n, doubl
     }
     vx_cleanup();
 }
-#endif // CV_SIMD_64F
+#endif // CV_SIMD && (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
@@ -277,8 +277,8 @@ template<> inline void VBLAS<double>::givens(double* a, double* b, int n, double
     vx_cleanup();
 }
 
-#endif // CV_SIMD_64F
-#endif // CV_SIMD
+#endif // (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
 template<typename _Tp> void
 JacobiSVDImpl_(_Tp* At, size_t astep, _Tp* _W, _Tp* Vt, size_t vstep,
