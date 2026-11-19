@@ -93,6 +93,53 @@ TEST_P(EstimateAffinePartial2D, test2Points)
     }
 }
 
+// 2 identical points cannot determine a unique similarity transform.
+// estimateAffinePartial2D must reject them cleanly instead of returning a
+// transform full of inf/nan while reporting both points as inliers.
+TEST_P(EstimateAffinePartial2D, test2DuplicatePoints)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+    for (size_t i = 0; i < 100; ++i)
+    {
+        float x = rngIn(-100.f, 100.f), y = rngIn(-100.f, 100.f);
+        Mat fpts(1, 2, CV_32FC2);
+        fpts.at<Point2f>(0) = Point2f(x, y);
+        fpts.at<Point2f>(1) = Point2f(x, y);
+
+        Mat tpts;
+        transform(fpts, tpts, aff);
+
+        vector<uchar> inliers;
+        Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method);
+
+        EXPECT_TRUE(aff_est.empty());
+        EXPECT_EQ(countNonZero(inliers), 0);
+    }
+}
+
+// Two distinct points far from the origin are not degenerate: only coincident
+// points leave the similarity transform undetermined.
+TEST_P(EstimateAffinePartial2D, test2PointsLargeOffset)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+
+    Mat fpts(1, 2, CV_32FC2);
+    fpts.at<Point2f>(0) = Point2f(1e6f, 1e6f);
+    fpts.at<Point2f>(1) = Point2f(1e6f + 10.f, 1e6f);
+
+    Mat tpts;
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffinePartial2D(fpts, tpts, inliers, method);
+
+    ASSERT_FALSE(aff_est.empty());
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+    EXPECT_EQ(countNonZero(inliers), 2);
+}
+
 TEST_P(EstimateAffinePartial2D, testNPoints)
 {
     // try more transformations
