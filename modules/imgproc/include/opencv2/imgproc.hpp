@@ -2682,7 +2682,12 @@ CV_32F                    | -1/CV_64F | -1/CV_64F
 CV_64F                    | -1/CV_64F | -1/CV_64F
 
 When sdepth is -1, it means CV_32S for CV_8U input and CV_64F otherwise. When sqdepth is -1, it
-means CV_64F. Any other combination raises an error.
+means CV_64F. Other combinations raise an error, except in the OpenCL case below.
+
+@note When src is CV_8UC1, sum is a UMat, OpenCL is used and tilted is not requested, any sdepth and
+sqdepth from CV_32S, CV_32F and CV_64F are accepted (CV_64F needs a device with double precision
+support). Without OpenCL, the combinations missing from the table raise an error, so portable
+code should stick to the table.
 
 As a practical example, the next figure shows the calculation of the integral of a straight
 rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
