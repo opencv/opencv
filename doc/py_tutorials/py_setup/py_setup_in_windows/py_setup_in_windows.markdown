@@ -71,7 +71,7 @@ Building OpenCV from source
 
     @note Another method to have 64-bit Python packages is to use ready-made Python distributions
     from third-parties like [Anaconda](http://www.continuum.io/downloads),
-    [Enthought](https://www.enthought.com/downloads/) etc. It will be bigger in size, but will have
+    Enthought etc. It will be bigger in size, but will have
     everything you need. Everything in a single shell. You can also download 32-bit versions also.
 
 -#  Make sure Python and Numpy are working fine.
