@@ -373,6 +373,14 @@ class dnn_test(NewOpenCVTests):
 
         self.assertTrue(all(cv.dnn.NMSBoxes(rects, confs, 0, 0.6).ravel() == (0, 1)))
 
+    def test_layer_id_typing_alias(self):
+        try:
+            import cv2.typing
+        except ImportError:
+            raise unittest.SkipTest("cv2.typing module is not available")
+        # Net::getLayer() accepts only a layer index (int) or a layer name (str)
+        self.assertEqual(cv2.typing.LayerId.__args__, (int, str))
+
     def test_custom_layer(self):
         class CropLayer(object):
             def __init__(self, params, blobs):
