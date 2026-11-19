@@ -138,13 +138,15 @@ PERF_TEST_P(PointsNum, SolvePnPRansac, testing::Values(5, 3*9, 7*13))
 
     Mat rvec;
     Mat tvec;
+    bool found = false;
 
     TEST_CYCLE()
     {
-        cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        found = cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
     }
 
     // the projections are noise free, so RANSAC must find the generating pose again
+    EXPECT_TRUE(found);
     Mat rvec_gold64, tvec_gold64;
     rvec_gold.reshape(1, 3).convertTo(rvec_gold64, CV_64F);
     tvec_gold.reshape(1, 3).convertTo(tvec_gold64, CV_64F);

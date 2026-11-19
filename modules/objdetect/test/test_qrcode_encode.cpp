@@ -109,8 +109,7 @@ TEST_P(Objdetect_QRCode_Encode, regression) {
                 return; // done
             }
         }
-        FAIL()  << "Not found results in config file:" << dataset_config
-                << "\nRe-run tests with enabled UPDATE_ENCODE_TEST_DATA macro to update test data.";
+        FAIL()  << "Not found results in config file:" << dataset_config;
     }
 }
 
@@ -154,8 +153,7 @@ TEST_P(Objdetect_QRCode_Encode_ECI, regression) {
                 return; // done
             }
         }
-        FAIL()  << "Not found results in config file:" << dataset_config
-                << "\nRe-run tests with enabled UPDATE_ENCODE_TEST_DATA macro to update test data.";
+        FAIL()  << "Not found results in config file:" << dataset_config;
     }
 }
 
