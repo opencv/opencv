@@ -2668,7 +2668,9 @@ static AVCodecContext * icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
        identically 1. */
     frame_rate=(int)(fps+0.5);
     frame_rate_base=1;
-    while (fabs(((double)frame_rate/frame_rate_base) - fps) > 0.001){
+    // absolute tolerance of 0.001 is too coarse for low fps (e.g. 1/60 would become 17/1000)
+    const double fps_eps = std::min(0.001, fps * 1e-4);
+    while (frame_rate_base < 1000000 && fabs(((double)frame_rate/frame_rate_base) - fps) > fps_eps){
         frame_rate_base*=10;
         frame_rate=(int)(fps*frame_rate_base + 0.5);
     }
