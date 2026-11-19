@@ -112,6 +112,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 ImgWarpFunc getBicubicWarpFunc_(int type);
 ImgWarpFunc getBilinearHalfWarpFunc_(bool rgb);
 RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB_(bool relative);
+RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB_();
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -8945,6 +8946,83 @@ RemapBilinearHalfRGBFunc getRemapBilinearHalfRGB_(bool relative)
 #endif
 }
 
+#if CV_AVX2 && CV_FP16
+static inline __m256 loadEightWarpHalf(const hfloat* src)
+{
+    return _mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src)));
+}
+
+template<int taps>
+static inline void sumPackedWarpRGB(const float* values, hfloat* dst)
+{
+    float red = values[0], green = values[1], blue = values[2];
+    for (int tap = 1; tap < taps; ++tap)
+    {
+        red += values[3*tap];
+        green += values[3*tap + 1];
+        blue += values[3*tap + 2];
+    }
+    hfloat rgb[4];
+    v_pack_store(rgb, v_float32x4(red, green, blue, 0.f));
+    std::memcpy(dst, rgb, 3*sizeof(hfloat));
+}
+
+static inline void bicubicWarpHalfRGB(const hfloat* src, size_t step,
+                                      const float* wx, const float* wy, hfloat* dst)
+{
+    // Four RGB taps occupy 12 halves. The loads read exactly eight and four per row.
+    __m256 low = _mm256_setzero_ps();
+    __m128 high = _mm_setzero_ps();
+    for (int row = 0; row < 4; ++row)
+    {
+        const hfloat* samples = src + size_t(row)*step;
+        low = _mm256_add_ps(low, _mm256_mul_ps(loadEightWarpHalf(samples), _mm256_set1_ps(wy[row])));
+        high = _mm_add_ps(high, _mm_mul_ps(loadBilinearFourHalf(samples + 8).val, _mm_set1_ps(wy[row])));
+    }
+
+    const __m128 w = _mm_loadu_ps(wx);
+    const __m256 lowWeights = _mm256_permutevar8x32_ps(_mm256_castps128_ps256(w),
+                                                       _mm256_setr_epi32(0, 0, 0, 1, 1, 1, 2, 2));
+    const __m128 highWeights = _mm_shuffle_ps(w, w, _MM_SHUFFLE(3, 3, 3, 2));
+    float values[12];
+    _mm256_storeu_ps(values, _mm256_mul_ps(low, lowWeights));
+    _mm_storeu_ps(values + 8, _mm_mul_ps(high, highWeights));
+    sumPackedWarpRGB<4>(values, dst);
+}
+
+static void remapLanczosHalfRGB(const hfloat* src, size_t step, const float* weights, hfloat* dst)
+{
+    // Three eight-half loads cover one row of eight RGB taps.
+    const __m256i taps0 = _mm256_setr_epi32(0, 0, 0, 1, 1, 1, 2, 2);
+    const __m256i taps1 = _mm256_setr_epi32(2, 3, 3, 3, 4, 4, 4, 5);
+    const __m256i taps2 = _mm256_setr_epi32(5, 5, 6, 6, 6, 7, 7, 7);
+    __m256 sum0 = _mm256_setzero_ps(), sum1 = _mm256_setzero_ps(), sum2 = _mm256_setzero_ps();
+    for (int row = 0; row < 8; ++row)
+    {
+        const hfloat* samples = src + size_t(row)*step;
+        const __m256 w = _mm256_loadu_ps(weights + 8*row);
+        sum0 = _mm256_add_ps(sum0, _mm256_mul_ps(loadEightWarpHalf(samples), _mm256_permutevar8x32_ps(w, taps0)));
+        sum1 = _mm256_add_ps(sum1, _mm256_mul_ps(loadEightWarpHalf(samples + 8), _mm256_permutevar8x32_ps(w, taps1)));
+        sum2 = _mm256_add_ps(sum2, _mm256_mul_ps(loadEightWarpHalf(samples + 16), _mm256_permutevar8x32_ps(w, taps2)));
+    }
+
+    float values[24];
+    _mm256_storeu_ps(values, sum0);
+    _mm256_storeu_ps(values + 8, sum1);
+    _mm256_storeu_ps(values + 16, sum2);
+    sumPackedWarpRGB<8>(values, dst);
+}
+#endif
+
+RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB_()
+{
+#if CV_AVX2 && CV_FP16
+    return remapLanczosHalfRGB;
+#else
+    return nullptr;
+#endif
+}
+
 template<typename T>
 static void bicubicWarpChannels(const float* x, const float* y, int len,
                                 const void* source, size_t step, Size size, void* destination,
@@ -8974,6 +9052,18 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
         }
         if (code > 0)
         {
+#if CV_AVX2 && CV_FP16
+            if constexpr (std::is_same_v<T, hfloat>)
+            {
+                if (channels == 3)
+                {
+                    const hfloat* row = reinterpret_cast<const hfloat*>(
+                        static_cast<const uchar*>(source) + size_t(top)*step) + 3*size_t(left);
+                    bicubicWarpHalfRGB(row, step/sizeof(hfloat), wx, wy, dst);
+                    continue;
+                }
+            }
+#endif
             const T* rows[4];
             for (int row = 0; row < 4; ++row)
                 rows[row] = reinterpret_cast<const T*>(static_cast<const uchar*>(source) + size_t(top + row)*step)

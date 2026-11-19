@@ -25,6 +25,8 @@ using RemapBilinearHalfRGBFunc = void (*)(const hfloat* src, size_t step, hfloat
                                           const short* xy, const ushort* fractions,
                                           const float* weights, int length, const Point& offset);
 
+using RemapLanczosHalfRGBFunc = void (*)(const hfloat* src, size_t step, const float* weights, hfloat* dst);
+
 #if CV_SIMD128 && CV_FP16 && (CV_NEON || CV_AVX2)
 static inline v_float32x4 loadBilinearFourHalf(const hfloat* source)
 {
