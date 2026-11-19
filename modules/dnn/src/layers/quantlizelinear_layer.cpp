@@ -8,6 +8,7 @@
 #include "../net_impl.hpp"
 #include "../onnx/onnx_dtype_convert.hpp"
 
+#include "opencv2/core/hal/intrin.hpp"
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 #endif
@@ -16,6 +17,29 @@ namespace cv
 {
 namespace dnn
 {
+
+// Runs a type-specific chunk(src, dst, len) kernel over stripes of `block` elements.
+template <typename _InpTp, typename _OutTp, typename _ChunkFn>
+static void quantizeLinearStriped(const _InpTp* inp, _OutTp* out, int64_t total, int64_t block,
+                                  const _ChunkFn& chunk)
+{
+    const int64_t nblocks = (total + block - 1) / block;
+    parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
+        for (int i = r.start; i < r.end; i++) {
+            const int64_t ofs = i * block;
+            chunk(inp + ofs, out + ofs, std::min(block, total - ofs));
+        }
+    });
+}
+
+// round(v) + zp, with v clamped to [flo, fhi] in float first so it can't overflow int.
+// A NaN fails both compares and lands on the low bound.
+static inline int quantizeClamped(float v, float flo, float fhi, int zp)
+{
+    v = v > flo ? v : flo;
+    v = v < fhi ? v : fhi;
+    return cvRound(v) + zp;
+}
 
 // Fast path for per-tensor quantization: float -> uint8 or int8 with AVX2
 #if defined(__x86_64__) || defined(_M_X64)
@@ -59,24 +83,70 @@ static void quantizeLinearChunk_f32_avx2(const float* src, _OutTp* dst,
     }
 }
 
-template <typename _OutTp>
-static void quantizeLinearFast_f32_avx2(const float* inp, _OutTp* out,
-                                        float scale, int zp_i, int lo_i, int hi_i,
-                                        int64_t total)
-{
-    const int64_t block = 1024;
-    int64_t nblocks = (total + block - 1) / block;
+#endif
 
-    parallel_for_(Range(0, (int)nblocks), [&](const Range& r) {
-        for (int i = r.start; i < r.end; i++) {
-            int64_t ofs = i * block;
-            int64_t len = std::min(block, total - ofs);
-            quantizeLinearChunk_f32_avx2(inp + ofs, out + ofs, scale, zp_i, lo_i, hi_i, len);
-        }
-    });
+#if !(defined(__x86_64__) || defined(_M_X64)) && (CV_SIMD || CV_SIMD_SCALABLE)
+// Per-tensor float -> uint8/int8 with universal intrinsics; same math and clamping as the AVX2 path.
+static inline v_int32 quantizeLinearVec_f32(const float* src, const v_float32& vscale, const v_float32& vlo,
+                                            const v_float32& vhi, const v_int32& vzp)
+{
+    v_float32 v = v_div(vx_load(src), vscale);
+    // compares, not max/min, so a NaN lands on the low bound as in the scalar loop
+    v = v_select(v_gt(v, vlo), v, vlo);
+    v = v_select(v_lt(v, vhi), v, vhi);
+    return v_add(v_round(v), vzp);   // round before adding the zero point
+}
+
+template <typename _OutTp>
+static void quantizeLinearChunk_f32_simd(const float* src, _OutTp* dst, float scale, int zp_i,
+                                         int lo_i, int hi_i, int64_t len)
+{
+    const float flo = (float)(lo_i - zp_i), fhi = (float)(hi_i - zp_i);
+    const int VL = VTraits<v_float32>::vlanes();
+    const v_float32 vscale = vx_setall_f32(scale), vlo = vx_setall_f32(flo), vhi = vx_setall_f32(fhi);
+    const v_int32 vzp = vx_setall_s32(zp_i);
+    int64_t j = 0;
+    for (; j <= len - 4 * VL; j += 4 * VL) {
+        // named vectors, not an array: RVV vector types are sizeless
+        v_int32 r0 = quantizeLinearVec_f32(src + j, vscale, vlo, vhi, vzp);
+        v_int32 r1 = quantizeLinearVec_f32(src + j + VL, vscale, vlo, vhi, vzp);
+        v_int32 r2 = quantizeLinearVec_f32(src + j + 2 * VL, vscale, vlo, vhi, vzp);
+        v_int32 r3 = quantizeLinearVec_f32(src + j + 3 * VL, vscale, vlo, vhi, vzp);
+        v_int16 p0 = v_pack(r0, r1), p1 = v_pack(r2, r3);
+        if (std::is_signed<_OutTp>::value)
+            v_store((schar*)(dst + j), v_pack(p0, p1));
+        else
+            v_store((uchar*)(dst + j), v_pack_u(p0, p1));
+    }
+    for (; j < len; j++)
+        dst[j] = (_OutTp)quantizeClamped(src[j] / scale, flo, fhi, zp_i);
 }
 #endif
 
+// Per-tensor float -> uint8/int8 with the SIMD chunk kernel of this CPU; false if there is none.
+template <typename _OutTp>
+static bool quantizeLinearPerTensor_f32(const float* inp, _OutTp* out, float scale, int zp_i,
+                                        int lo_i, int hi_i, int64_t total)
+{
+#if defined(__x86_64__) || defined(_M_X64)
+    if (!checkHardwareSupport(CV_CPU_AVX2))
+        return false;
+    quantizeLinearStriped(inp, out, total, 1024, [&](const float* src, _OutTp* dst, int64_t len) {
+        quantizeLinearChunk_f32_avx2(src, dst, scale, zp_i, lo_i, hi_i, len);
+    });
+    return true;
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
+    // 64k elements per stripe: one stripe per 1k elements costs more in dispatch than the work
+    quantizeLinearStriped(inp, out, total, (int64_t)1 << 16, [&](const float* src, _OutTp* dst, int64_t len) {
+        quantizeLinearChunk_f32_simd(src, dst, scale, zp_i, lo_i, hi_i, len);
+    });
+    return true;
+#else
+    CV_UNUSED(inp); CV_UNUSED(out); CV_UNUSED(scale); CV_UNUSED(zp_i);
+    CV_UNUSED(lo_i); CV_UNUSED(hi_i); CV_UNUSED(total);
+    return false;
+#endif
+}
 
 /*
     QuantizeLinear layer, as defined in ONNX specification:
@@ -93,6 +163,8 @@ static void quantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
 {
     int bsz_ = std::max(block_size_, 1);
     int nblocks_per_axis = (sz_a_ + bsz_ - 1) / bsz_;
+    // output range, shifted by each zero point below before clamping in float
+    const int omin = (int)std::numeric_limits<_OutTp>::min(), omax = (int)std::numeric_limits<_OutTp>::max();
     int64_t nmacro_blocks = nslices * nblocks_per_axis;
     CV_Assert(nmacro_blocks <= (int64_t)INT_MAX);
 
@@ -127,36 +199,31 @@ static void quantizeLinear(const _InpTp* inp_, const _ScaleTp* scale_,
                 for (int k = 0; k < delta; k++, inp += slice_size, out += slice_size,
                                                 sc += scale_step, zp += zp_step) {
                     float scval = (float)(*sc);
-                    _OutTp zpval = zp ? *zp : (_InpTp)0;
+                    int zpi = zp ? (int)*zp : 0;
+                    float flo = (float)(omin - zpi), fhi = (float)(omax - zpi);
 
                     for (int64_t j = 0; j < slice_size; j++)
-                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
+                        out[j] = (_OutTp)quantizeClamped((float)inp[j] / scval, flo, fhi, zpi);
                 }
             } else if (block_size > 0 ) {
                 int bsz = block_size;
                 for (int k = 0; k < delta; k++, inp += bsz, out += bsz) {
                     bsz = std::min(bsz, sz_a - (block_idx + k)*block_size);
                     float scval = (float)sc[k];
-                    _OutTp zpval = zp ? zp[k] : (_InpTp)0;
+                    int zpi = zp ? (int)zp[k] : 0;
+                    float flo = (float)(omin - zpi), fhi = (float)(omax - zpi);
 
                     for (int j = 0; j < bsz; j++)
-                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
+                        out[j] = (_OutTp)quantizeClamped((float)inp[j] / scval, flo, fhi, zpi);
                 }
                 sc += delta;
                 zp += zp ? delta : 0;
             } else {
                 // scale values have been pre-converted to float32 in the parent function
-                if (zp) {
-                    for (int j = 0; j < delta; j++) {
-                        float scval = (float)sc[j];
-                        _OutTp zpval = zp[j];
-                        out[j] = saturate_cast<_OutTp>(cvRound((float)inp[j] / scval) + (int)zpval);
-                    }
-                } else {
-                    for (int j = 0; j < delta; j++) {
-                        float scval = (float)sc[j];
-                        out[j] = saturate_cast<_OutTp>((float)inp[j] / scval);
-                    }
+                for (int j = 0; j < delta; j++) {
+                    int zpi = zp ? (int)zp[j] : 0;
+                    out[j] = (_OutTp)quantizeClamped((float)inp[j] / (float)sc[j],
+                                                     (float)(omin - zpi), (float)(omax - zpi), zpi);
                 }
                 inp += delta;
                 out += delta;
@@ -305,27 +372,22 @@ static void quantizeLinear(const Mat& inp, const Mat& scale_, const Mat& zp,
         }
     }
 
-    // Fast path: per-tensor quantization float to uint8 or int8 with AVX2 + parallelism
-#if defined(__x86_64__) || defined(_M_X64)
+    // Fast path: per-tensor quantization float to uint8 or int8, vectorized and in parallel.
+    // The kernels clamp in float before converting, so the 4-bit range goes in as bounds.
     if (block_size == 0 && sz_a == 1 && inptype == CV_32F && sctype == CV_32F
-        && (outtype == CV_8U || outtype == CV_8S) && checkHardwareSupport(CV_CPU_AVX2)) {
+        && (outtype == CV_8U || outtype == CV_8S)) {
+        const float* src = reinterpret_cast<const float*>(inp.data);
         float scale_f32 = reinterpret_cast<const float*>(scale.data)[0];
         int64_t total = nslices * slice_size;
-        // The kernel clamps in float before converting, so the 4-bit range goes in as bounds.
-        if (outtype == CV_8U) {
-            int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const uint8_t*>(zp.data)[0];
-            quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
-                                        reinterpret_cast<uint8_t*>(out.data),
-                                        scale_f32, zp_i, 0, int4Out ? 15 : 255, total);
-        } else {
-            int zp_i = zp.empty() ? 0 : (int)reinterpret_cast<const int8_t*>(zp.data)[0];
-            quantizeLinearFast_f32_avx2(reinterpret_cast<const float*>(inp.data),
-                                        reinterpret_cast<int8_t*>(out.data),
-                                        scale_f32, zp_i, int4Out ? -8 : -128, int4Out ? 7 : 127, total);
-        }
-        return;
+        bool done = outtype == CV_8U
+            ? quantizeLinearPerTensor_f32(src, reinterpret_cast<uint8_t*>(out.data), scale_f32,
+                                          zp.empty() ? 0 : (int)zp.ptr<uint8_t>()[0], 0, int4Out ? 15 : 255, total)
+            : quantizeLinearPerTensor_f32(src, reinterpret_cast<int8_t*>(out.data), scale_f32,
+                                          zp.empty() ? 0 : (int)zp.ptr<int8_t>()[0],
+                                          int4Out ? -8 : -128, int4Out ? 7 : 127, total);
+        if (done)
+            return;
     }
-#endif
 
     if (outtype == CV_8U && sctype == CV_32F && inptype == CV_32F)
         quantizeLinear(reinterpret_cast<const float*>(inp.data),
