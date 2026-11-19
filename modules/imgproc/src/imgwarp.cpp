@@ -1150,7 +1150,7 @@ struct RemapLanczos4VecC1<T, float>
     }
 };
 
-#if CV_TRY_AVX2
+#if CV_TRY_AVX2 || CV_TRY_NEON || CV_TRY_NEON_FP16
 static RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB()
 {
     CV_CPU_DISPATCH(getRemapLanczosHalfRGB_, (), CV_CPU_DISPATCH_MODES_ALL);
@@ -1205,7 +1205,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-#if CV_TRY_AVX2
+#if CV_TRY_AVX2 || CV_TRY_NEON || CV_TRY_NEON_FP16
                 if constexpr (std::is_same_v<T, hfloat> && std::is_same_v<AT, float>)
                 {
                     if (cn == 3)
