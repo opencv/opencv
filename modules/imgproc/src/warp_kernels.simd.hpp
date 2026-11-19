@@ -8952,19 +8952,23 @@ static inline __m256 loadEightWarpHalf(const hfloat* src)
     return _mm256_cvtph_ps(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src)));
 }
 
-template<int taps>
-static inline void sumPackedWarpRGB(const float* values, hfloat* dst)
+static inline void storeThreeWarpHalf(const v_float32x4& rgb, hfloat* dst)
+{
+    hfloat packed[4];
+    v_pack_store(packed, rgb);
+    std::memcpy(dst, packed, 3*sizeof(hfloat));
+}
+
+static inline void sumPackedLanczosRGB(const float* values, hfloat* dst)
 {
     float red = values[0], green = values[1], blue = values[2];
-    for (int tap = 1; tap < taps; ++tap)
+    for (int tap = 1; tap < 8; ++tap)
     {
         red += values[3*tap];
         green += values[3*tap + 1];
         blue += values[3*tap + 2];
     }
-    hfloat rgb[4];
-    v_pack_store(rgb, v_float32x4(red, green, blue, 0.f));
-    std::memcpy(dst, rgb, 3*sizeof(hfloat));
+    storeThreeWarpHalf(v_float32x4(red, green, blue, 0.f), dst);
 }
 
 static inline void bicubicWarpHalfRGB(const hfloat* src, size_t step,
@@ -8984,10 +8988,18 @@ static inline void bicubicWarpHalfRGB(const hfloat* src, size_t step,
     const __m256 lowWeights = _mm256_permutevar8x32_ps(_mm256_castps128_ps256(w),
                                                        _mm256_setr_epi32(0, 0, 0, 1, 1, 1, 2, 2));
     const __m128 highWeights = _mm_shuffle_ps(w, w, _MM_SHUFFLE(3, 3, 3, 2));
-    float values[12];
-    _mm256_storeu_ps(values, _mm256_mul_ps(low, lowWeights));
-    _mm_storeu_ps(values + 8, _mm_mul_ps(high, highWeights));
-    sumPackedWarpRGB<4>(values, dst);
+    low = _mm256_mul_ps(low, lowWeights);
+    high = _mm_mul_ps(high, highWeights);
+
+    // Shift the packed groups into RGB lanes before adding the four column taps.
+    const __m128i first = _mm_castps_si128(_mm256_castps256_ps128(low));
+    const __m128i middle = _mm_castps_si128(_mm256_extractf128_ps(low, 1));
+    const __m128i last = _mm_castps_si128(high);
+    const __m128 tap1 = _mm_castsi128_ps(_mm_alignr_epi8(middle, first, 12));
+    const __m128 tap2 = _mm_castsi128_ps(_mm_alignr_epi8(last, middle, 8));
+    const __m128 tap3 = _mm_castsi128_ps(_mm_srli_si128(last, 4));
+    const __m128 rgb = _mm_add_ps(_mm_add_ps(_mm_add_ps(_mm_castsi128_ps(first), tap1), tap2), tap3);
+    storeThreeWarpHalf(v_float32x4(rgb), dst);
 }
 
 static void remapLanczosHalfRGB(const hfloat* src, size_t step, const float* weights, hfloat* dst)
@@ -9010,7 +9022,7 @@ static void remapLanczosHalfRGB(const hfloat* src, size_t step, const float* wei
     _mm256_storeu_ps(values, sum0);
     _mm256_storeu_ps(values + 8, sum1);
     _mm256_storeu_ps(values + 16, sum2);
-    sumPackedWarpRGB<8>(values, dst);
+    sumPackedLanczosRGB(values, dst);
 }
 #endif
 
@@ -9156,6 +9168,76 @@ static void bicubicWarpChannels(const float* x, const float* y, int len,
     }
 }
 
+#if CV_AVX2 && CV_FP16 && CV_SIMD_WIDTH == 32
+static inline void cubicRGBBlockWeights(__m256 fraction, float coefficient, float (&weights)[8][4])
+{
+    v_float32 w0, w1, w2, w3;
+    bicubicWeights(v_float32(fraction), coefficient, w0, w1, w2, w3);
+    __m128 lower0 = _mm256_castps256_ps128(w0.val), lower1 = _mm256_castps256_ps128(w1.val);
+    __m128 lower2 = _mm256_castps256_ps128(w2.val), lower3 = _mm256_castps256_ps128(w3.val);
+    __m128 upper0 = _mm256_extractf128_ps(w0.val, 1), upper1 = _mm256_extractf128_ps(w1.val, 1);
+    __m128 upper2 = _mm256_extractf128_ps(w2.val, 1), upper3 = _mm256_extractf128_ps(w3.val, 1);
+    _MM_TRANSPOSE4_PS(lower0, lower1, lower2, lower3);
+    _MM_TRANSPOSE4_PS(upper0, upper1, upper2, upper3);
+    _mm_storeu_ps(weights[0], lower0);
+    _mm_storeu_ps(weights[1], lower1);
+    _mm_storeu_ps(weights[2], lower2);
+    _mm_storeu_ps(weights[3], lower3);
+    _mm_storeu_ps(weights[4], upper0);
+    _mm_storeu_ps(weights[5], upper1);
+    _mm_storeu_ps(weights[6], upper2);
+    _mm_storeu_ps(weights[7], upper3);
+}
+
+static void bicubicWarpHalfRGBBlocks(const float* x, const float* y, int len,
+                                     const void* source, size_t step, Size size, void* destination,
+                                     const float* params, int borderType, const void* borderValue, int channels)
+{
+    const float coefficient = params ? *params : -0.75f;
+    const __m256 minimum = _mm256_set1_ps(1.f);
+    const __m256 maxX = _mm256_set1_ps(float(size.width - 2));
+    const __m256 maxY = _mm256_set1_ps(float(size.height - 2));
+    const size_t halfStep = step/sizeof(hfloat);
+    const hfloat* src = static_cast<const hfloat*>(source);
+    hfloat* dst = static_cast<hfloat*>(destination);
+    const int block = 8;
+    int i = 0;
+    for (; i + block <= len; i += block, dst += 3*block)
+    {
+        const __m256 sx = _mm256_loadu_ps(x + i), sy = _mm256_loadu_ps(y + i);
+        const __m256 validX = _mm256_and_ps(_mm256_cmp_ps(sx, minimum, _CMP_GE_OQ),
+                                            _mm256_cmp_ps(sx, maxX, _CMP_LT_OQ));
+        const __m256 validY = _mm256_and_ps(_mm256_cmp_ps(sy, minimum, _CMP_GE_OQ),
+                                            _mm256_cmp_ps(sy, maxY, _CMP_LT_OQ));
+        if (_mm256_movemask_ps(_mm256_and_ps(validX, validY)) != 255)
+        {
+            bicubicWarpChannels<hfloat>(x + i, y + i, block, source, step, size, dst, params,
+                                       borderType, borderValue, channels);
+            continue;
+        }
+
+        // Complete footprints have positive coordinates, so truncation gives the floor.
+        const __m256i ix = _mm256_cvttps_epi32(sx), iy = _mm256_cvttps_epi32(sy);
+        int ixValues[block], iyValues[block];
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(ixValues), ix);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(iyValues), iy);
+        float wx[block][4], wy[block][4];
+        cubicRGBBlockWeights(_mm256_sub_ps(sx, _mm256_cvtepi32_ps(ix)), coefficient, wx);
+        cubicRGBBlockWeights(_mm256_sub_ps(sy, _mm256_cvtepi32_ps(iy)), coefficient, wy);
+
+        for (int lane = 0; lane < block; ++lane)
+        {
+            const hfloat* top = src + size_t(iyValues[lane] - 1)*halfStep + 3*size_t(ixValues[lane] - 1);
+            bicubicWarpHalfRGB(top, halfStep, wx[lane], wy[lane], dst + 3*lane);
+        }
+    }
+
+    if (i < len)
+        bicubicWarpChannels<hfloat>(x + i, y + i, len - i, source, step, size, dst, params,
+                                   borderType, borderValue, channels);
+}
+#endif
+
 template<typename T, void (*fn)(const float*, const float*, int, const void*, size_t, Size, T*, const float*, int, T*)>
 static void bicubicWarpWrap(const float* x, const float* y, int len, const void* src, size_t srcstep, Size srcsize, void* dst, const float* coeffs, int flags, const void* fillval, int)
 {
@@ -9164,6 +9246,10 @@ static void bicubicWarpWrap(const float* x, const float* y, int len, const void*
 
 ImgWarpFunc getBicubicWarpFunc_(int type)
 {
+#if CV_AVX2 && CV_FP16 && CV_SIMD_WIDTH == 32
+    if (type == CV_16FC3)
+        return bicubicWarpHalfRGBBlocks;
+#endif
     if (CV_MAT_DEPTH(type) == CV_16F)
         return bicubicWarpChannels<hfloat>;
     if (CV_MAT_CN(type) > 4)
