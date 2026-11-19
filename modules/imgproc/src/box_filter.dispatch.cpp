@@ -158,7 +158,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     ocl::Kernel kernel;
 
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+    if ((dev.isIntel() || dev.isAMD() || dev.isNVidia()) &&
+        !(dev.type() & ocl::Device::TYPE_CPU) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
