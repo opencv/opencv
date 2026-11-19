@@ -74,15 +74,17 @@ PERF_TEST_P( TestRemap, Remap,
     }
 }
 
-typedef TestBaseWithParam< tuple<Size, MatType, MatType> > TestRemapLinearFisheyeRGB;
+typedef TestBaseWithParam< tuple<Size, MatType, MatType, int> > TestRemapFisheyeRGB;
 
-PERF_TEST_P(TestRemapLinearFisheyeRGB, Remap,
+PERF_TEST_P(TestRemapFisheyeRGB, Remap,
             Combine(Values(Size(224, 224), Size(512, 512)),
-                    Values(CV_16FC3, CV_32FC3), Values(CV_32FC1, CV_16SC2)))
+                    Values(CV_16FC3, CV_32FC3), Values(CV_32FC1, CV_16SC2),
+                    Values(INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)))
 {
     const Size size = get<0>(GetParam());
     const int type = get<1>(GetParam());
     const int mapType = get<2>(GetParam());
+    const int interpolation = get<3>(GetParam());
     Mat wide(size, CV_32FC3), src, dst(size, type), map1, map2;
     theRNG().fill(wide, RNG::UNIFORM, -1.f, 1.f);
     wide.convertTo(src, type);
@@ -92,7 +94,7 @@ PERF_TEST_P(TestRemapLinearFisheyeRGB, Remap,
     fisheye::initUndistortRectifyMap(camera, Vec4d::all(0.), Matx33d::eye(), camera, size, mapType, map1, map2);
 
     declare.in(src, map1, map2).out(dst);
-    TEST_CYCLE() remap(src, dst, map1, map2, INTER_LINEAR);
+    TEST_CYCLE() remap(src, dst, map1, map2, interpolation);
     SANITY_CHECK_NOTHING();
 }
 

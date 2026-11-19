@@ -1150,6 +1150,13 @@ struct RemapLanczos4VecC1<T, float>
     }
 };
 
+#if CV_TRY_AVX2
+static RemapLanczosHalfRGBFunc getRemapLanczosHalfRGB()
+{
+    CV_CPU_DISPATCH(getRemapLanczosHalfRGB_, (), CV_CPU_DISPATCH_MODES_ALL);
+}
+#endif
+
 template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                            const Mat& _fxy, const void* _wtab,
@@ -1198,6 +1205,20 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
+#if CV_TRY_AVX2
+                if constexpr (std::is_same_v<T, hfloat> && std::is_same_v<AT, float>)
+                {
+                    if (cn == 3)
+                    {
+                        static const auto kernel = getRemapLanczosHalfRGB();
+                        if (kernel)
+                        {
+                            kernel(S, sstep, w, D);
+                            continue;
+                        }
+                    }
+                }
+#endif
                 int k = 0;
 #if CV_SIMD || CV_SIMD_SCALABLE
                 if constexpr (std::is_same_v<T, hfloat>)

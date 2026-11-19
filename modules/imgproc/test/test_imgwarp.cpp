@@ -1683,11 +1683,14 @@ TEST(Imgproc_Warp, float16_tight_channel_storage)
     }
 }
 
-typedef testing::TestWithParam<int> Imgproc_RemapHalfRGB;
+typedef testing::TestWithParam<tuple<int, int>> Imgproc_RemapHalfRGB;
 
-TEST_P(Imgproc_RemapHalfRGB, linear_2x2_footprint)
+TEST_P(Imgproc_RemapHalfRGB, tight_footprint)
 {
-    const size_t samples = 12;
+    const int interpolation = get<0>(GetParam());
+    const int mapType = get<1>(GetParam());
+    const int side = interpolation == INTER_LINEAR ? 2 : interpolation == INTER_CUBIC ? 4 : 8;
+    const size_t samples = 3*side*side;
     std::vector<hfloat> source(samples);
     hfloat* pixels = source.data();
 #if defined(__linux__) || defined(__APPLE__)
@@ -1701,27 +1704,34 @@ TEST_P(Imgproc_RemapHalfRGB, linear_2x2_footprint)
     pixels = reinterpret_cast<hfloat*>(boundary) - samples;
 #endif
 
-    // Each RGB row has exactly six samples. The final row ends at the guard page.
+    // The source is exactly one footprint and its final row ends at the guard page.
     for (size_t i = 0; i < samples; ++i)
-        pixels[i] = hfloat(float(4*(i/3) + i%3));
-    const Mat src(2, 2, CV_16FC3, pixels);
-    const Mat mapX(1, 1, CV_32F, Scalar(0.25)), mapY(1, 1, CV_32F, Scalar(0.5));
+        pixels[i] = hfloat(float(4*(i/3) + i%3)/256.f);
+    const Mat src(side, side, CV_16FC3, pixels);
+    const int center = side/2 - 1;
+    const Mat mapX(1, 1, CV_32F, Scalar(center + 0.25)), mapY(1, 1, CV_32F, Scalar(center + 0.5));
     Mat map1 = mapX, map2 = mapY;
-    if (GetParam() != CV_32FC1)
-        convertMaps(mapX, mapY, map1, map2, GetParam());
+    if (mapType != CV_32FC1)
+        convertMaps(mapX, mapY, map1, map2, mapType);
 
     hfloat output[4] = {hfloat(0.f), hfloat(0.f), hfloat(0.f), hfloat(23.f)};
     Mat dst(1, 1, CV_16FC3, output);
-    remap(src, dst, map1, map2, INTER_LINEAR);
-
-    EXPECT_EQ(5.f, float(output[0]));
-    EXPECT_EQ(6.f, float(output[1]));
-    EXPECT_EQ(7.f, float(output[2]));
+    remap(src, dst, map1, map2, interpolation);
+    ASSERT_EQ(dst.data, reinterpret_cast<uchar*>(output));
     EXPECT_EQ(23.f, float(output[3]));
+
+    Mat wide, expected, rounded, actual;
+    src.convertTo(wide, CV_32F);
+    remap(wide, expected, map1, map2, interpolation);
+    expected.convertTo(rounded, CV_16F);
+    rounded.convertTo(expected, CV_32F);
+    dst.convertTo(actual, CV_32F);
+    EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1./1024.);
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapHalfRGB,
-                        testing::Values(CV_32FC1, CV_32FC2, CV_16SC2));
+                        testing::Combine(testing::Values(INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4),
+                                         testing::Values(CV_32FC1, CV_32FC2, CV_16SC2)));
 
 TEST(Imgproc_Remap, bilinear_half_rgb_fixed_relative_offsets)
 {
