@@ -74,4 +74,24 @@ PERF_TEST_P( TestRemap, Remap,
     }
 }
 
+typedef TestBaseWithParam< tuple<Size, MatType, int> > TestRemapFisheyeFloatRGB;
+
+PERF_TEST_P(TestRemapFisheyeFloatRGB, Remap,
+            Combine(Values(Size(224, 224), Size(512, 512)),
+                    Values(CV_32FC1, CV_16SC2),
+                    Values(INTER_CUBIC, INTER_LANCZOS4)))
+{
+    const Size size = get<0>(GetParam());
+    const int mapType = get<1>(GetParam());
+    const int interpolation = get<2>(GetParam());
+    const double focal = 120.0 * size.width / 224;
+    const Matx33d K(focal, 0, size.width / 2.0, 0, focal, size.height / 2.0, 0, 0, 1);
+    Mat src(size, CV_32FC3), dst(size, CV_32FC3), map1, map2;
+    fisheye::initUndistortRectifyMap(K, Vec4d::all(0), Matx33d::eye(), K, size, mapType, map1, map2);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+    TEST_CYCLE() remap(src, dst, map1, map2, interpolation);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

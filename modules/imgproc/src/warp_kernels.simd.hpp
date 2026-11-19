@@ -8102,6 +8102,39 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     BICUBIC_UPDATE_ACC_VEC(acc_b, B0, B1, B2, B3, wy##row); \
     BICUBIC_UPDATE_ACC_VEC(acc_a, A0, A1, A2, A3, wy##row)
 
+#if CV_NEON && CV_SIMD_WIDTH == 16
+static inline void storeBicubicWeights(const v_float32x4& w0, const v_float32x4& w1,
+                                       const v_float32x4& w2, const v_float32x4& w3, float (&weights)[4][4])
+{
+    v_float32x4 p0, p1, p2, p3;
+    v_transpose4x4(w0, w1, w2, w3, p0, p1, p2, p3);
+    v_store(weights[0], p0);
+    v_store(weights[1], p1);
+    v_store(weights[2], p2);
+    v_store(weights[3], p3);
+}
+
+static inline void bicubicWarpRGB(const float* src, size_t step,
+                                  const float* wx, const float* wy, float* dst)
+{
+    const v_float32x4 zero = v_setzero_f32();
+    v_float32x4 columns[3] = {zero, zero, zero};
+    for (int row = 0; row < 4; ++row)
+    {
+        const float* samples = src + size_t(row)*step;
+        const v_float32x4 weight = v_setall_f32(wy[row]);
+        for (int group = 0; group < 3; ++group)
+            columns[group] = v_fma(v_load(samples + 4*group), weight, columns[group]);
+    }
+
+    v_float32x4 weights[3];
+    packRGBWarpWeights(wx, weights);
+    for (int group = 0; group < 3; ++group)
+        columns[group] = v_mul(columns[group], weights[group]);
+    storeWarpRGB(dst, sumFourRGBWarpTaps(columns));
+}
+#endif
+
 template<typename chtype, int NCHANNELS, typename vecfptype, typename vecbuftype>
 static void
 bicubicVec(const float* srcx, const float* srcy, int len,
@@ -8147,6 +8180,19 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                                  wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
 
         if (code > 0) {
+#if CV_NEON && CV_SIMD_WIDTH == 16
+            if constexpr (NCHANNELS == 3 && std::is_same_v<chtype, float>) {
+                float wx[BATCH][4], wy[BATCH][4];
+                storeBicubicWeights(wx0, wx1, wx2, wx3, wx);
+                storeBicubicWeights(wy0, wy1, wy2, wy3, wy);
+                const size_t step = srcstep / sizeof(float);
+                for (int j = 0; j < dlen; ++j) {
+                    const float* top = static_cast<const float*>(src) + size_t(tl_y[j])*step + 3*size_t(tl_x[j]);
+                    bicubicWarpRGB(top, step, wx[j], wy[j], dst + 3*j);
+                }
+                continue;
+            }
+#endif
             if constexpr (NCHANNELS == 1) {
                 vecbuftype R0, R1, R2, R3;
                 acc_r = v_setzero_<vecfptype>();

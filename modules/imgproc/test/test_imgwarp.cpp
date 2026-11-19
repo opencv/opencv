@@ -1161,6 +1161,48 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapManyChannels, testing::Combine(
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT,
                     (int)BORDER_REFLECT_101, (int)BORDER_WRAP, (int)BORDER_TRANSPARENT)));
 
+typedef testing::TestWithParam<tuple<int, int, int>> Imgproc_RemapFloatRGB;
+
+TEST_P(Imgproc_RemapFloatRGB, matches_separate_channels)
+{
+    const int interpolation = get<0>(GetParam());
+    const int mapType = get<1>(GetParam());
+    const int border = get<2>(GetParam());
+    const Scalar fill(0.25, -0.5, 0.75);
+    Mat storage(19, 21, CV_32FC3);
+    theRNG().fill(storage, RNG::UNIFORM, -1.f, 1.f);
+    const Mat src = storage(Rect(1, 2, 18, 16));
+
+    Mat mapX(1, 13, CV_32F), mapY(1, 13, CV_32F, Scalar(7.75));
+    for (int x = 0; x < mapX.cols; ++x)
+        mapX.at<float>(x) = 3.25f + x%7;
+    mapX.at<float>(5) = 0.25f;
+    mapX.at<float>(8) = -50.f;
+    mapX.at<float>(12) = 16.25f;
+    Mat map1 = mapX, map2 = mapY;
+    if (mapType != CV_32FC1)
+        convertMaps(mapX, mapY, map1, map2, mapType);
+
+    Mat initial(mapX.size(), CV_32FC3);
+    theRNG().fill(initial, RNG::UNIFORM, -1.f, 1.f);
+    Mat dst = initial.clone();
+    remap(src, dst, map1, map2, interpolation, border, fill);
+    for (int c = 0; c < 3; ++c)
+    {
+        Mat srcChannel, expected, actual;
+        extractChannel(src, srcChannel, c);
+        extractChannel(initial, expected, c);
+        remap(srcChannel, expected, map1, map2, interpolation, border, Scalar(fill[c]));
+        extractChannel(dst, actual, c);
+        EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-6);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapFloatRGB,
+                        testing::Combine(testing::Values(INTER_CUBIC, INTER_LANCZOS4),
+                                         testing::Values(CV_32FC1, CV_32FC2, CV_16SC2),
+                                         testing::Values(BORDER_CONSTANT, BORDER_TRANSPARENT)));
+
 TEST(Imgproc_Remap, cubic_c1_border_transparent_preserves_edge_dst)
 {
     Mat src(5, 5, CV_32FC1);
