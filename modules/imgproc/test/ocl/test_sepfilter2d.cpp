@@ -73,9 +73,10 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
         useRoi = GET_PARAM(4);
     }
 
-    void random_roi(bool bitExact)
+    void random_roi(bool bitExact, int fixedKernelSize = 0)
     {
-        Size ksize = randomSize(kernelMinSize, kernelMaxSize);
+        Size ksize = fixedKernelSize > 0 ? Size(fixedKernelSize, fixedKernelSize)
+                                         : randomSize(kernelMinSize, kernelMaxSize);
         if (1 != ksize.width % 2)
             ksize.width++;
         if (1 != ksize.height % 2)
@@ -148,6 +149,24 @@ OCL_TEST_P(SepFilter2D, Mat_BitExact)
     }
 }
 
+// The tests above use at most 9 taps; the single-pass OpenCL kernel takes up to 21. With 11 or more
+// vertical taps it moved rows of its local buffer in place without a barrier: wrong rows on an NVIDIA GPU,
+// see https://github.com/opencv/opencv/issues/30733
+OCL_TEST_P(SepFilter2D, Mat_LargeKernel)
+{
+    const int ksizes[] = {11, 15, 21};
+    for (size_t k = 0; k < sizeof(ksizes) / sizeof(ksizes[0]); k++)
+        for (int j = 0; j < test_loop_times + 3; j++)
+        {
+            random_roi(false, ksizes[k]);
+
+            OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+            OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+
+            Near(1.0);
+        }
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                             Combine(
                                 Values(CV_8U, CV_32F),
@@ -161,7 +180,6 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                                 Bool()  // ROI
                                 )
                            );
-
 
 } } // namespace opencv_test::ocl
 
