@@ -211,8 +211,8 @@ OCL_TEST_P(AccumulateWeighted, Mask)
     {
         random_roi();
 
-        OCL_OFF(cv::accumulateWeighted(src_roi, dst_roi, alpha));
-        OCL_ON(cv::accumulateWeighted(usrc_roi, udst_roi, alpha));
+        OCL_OFF(cv::accumulateWeighted(src_roi, dst_roi, alpha, mask_roi));
+        OCL_ON(cv::accumulateWeighted(usrc_roi, udst_roi, alpha, umask_roi));
 
         OCL_EXPECT_MATS_NEAR(dst, 1e-2);
     }
