@@ -608,12 +608,12 @@ public:
             else
             {
                 *offset = maxsize - 1;
-                maxofst = min(maxofst, val);
+                maxofst = std::min(maxofst, val);
             }
         }
         else
         {
-            minofst = max(minofst, val + 1);
+            minofst = std::max(minofst, val + 1);
         }
     }
     void getMinMax(int &min, int &max)
@@ -648,8 +648,8 @@ public:
         AutoBuffer<fixedpoint> linebuf(interp_y_len * dst_width * cn);
         int last_eval = - interp_y_len;
         int evalbuf_start = 0;
-        int rmin_y = max(min_y, range.start);
-        int rmax_y = min(max_y, range.end);
+        int rmin_y = std::max(min_y, range.start);
+        int rmax_y = std::min(max_y, range.end);
         if (range.start < min_y)
         {
             last_eval = 1 - interp_y_len;
@@ -664,9 +664,9 @@ public:
             int &iy = yoffsets[dy];
 
             int i;
-            for (i = max(iy, last_eval + interp_y_len); i < min(iy + interp_y_len, src_height); i++, evalbuf_start = (evalbuf_start + 1) % interp_y_len)
+            for (i = std::max(iy, last_eval + interp_y_len); i < std::min(iy + interp_y_len, src_height); i++, evalbuf_start = (evalbuf_start + 1) % interp_y_len)
                 hResize((ET*)(src + i * src_step), cn, xoffsets, xcoeffs, linebuf.data() + evalbuf_start*(dst_width * cn), min_x, max_x, dst_width);
-            evalbuf_start = (evalbuf_start + max(iy, src_height - interp_y_len) - max(last_eval, src_height - interp_y_len)) % interp_y_len;
+            evalbuf_start = (evalbuf_start + std::max(iy, src_height - interp_y_len) - std::max(last_eval, src_height - interp_y_len)) % interp_y_len;
             last_eval = iy;
 
             fixedpoint curcoeffs[interp_y_len];
@@ -2971,7 +2971,7 @@ static int computeResizeAreaTabImpl( int ssize, int dsize, int cn, double scale,
             emit(sx, float(1.0 / cellWidth));
 
         if( fsx2 - sx2 > 1e-3 )
-            emit(sx2, (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth));
+            emit(sx2, (float)(std::min({fsx2 - sx2, 1., cellWidth}) / cellWidth));
     }
     if constexpr (OCL) ofs_tab[dsize] = k;
     return k;

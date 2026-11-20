@@ -1822,7 +1822,7 @@ void TFLiteImporter::parseActivation(const Operator& op, const std::string& opco
             else if (opcode == "LOGISTIC")
                 y = 1.0f / (1.0f + std::exp(-x));
             else if (opcode == "HARD_SWISH")
-                y = x * max(0.f, min(1.f, x / 6.f + 0.5f));
+                y = x * std::clamp(x / 6.f + 0.5f, 0.f, 1.f);
             else if (opcode == "LEAKY_RELU")
                 y = x >= 0.f ? x : slope*x;
             else

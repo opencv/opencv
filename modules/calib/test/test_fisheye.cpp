@@ -505,7 +505,7 @@ TEST_F(fisheyeTest, Homography)
     fs_object.release();
 
     cv::internal::IntrinsicParams param;
-    param.Init(cv::Vec2d(cv::max(imageSize.width, imageSize.height) / CV_PI, cv::max(imageSize.width, imageSize.height) / CV_PI),
+    param.Init(cv::Vec2d(std::max(imageSize.width, imageSize.height) / CV_PI, std::max(imageSize.width, imageSize.height) / CV_PI),
                cv::Vec2d(imageSize.width  / 2.0 - 0.5, imageSize.height / 2.0 - 0.5));
 
     cv::Mat _imagePoints (imagePoints[0]);

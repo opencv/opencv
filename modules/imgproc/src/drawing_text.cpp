@@ -712,16 +712,16 @@ compressCharacter(const uchar* bitmap_buf,
         {
             if(bitmap_buf[i*bitmap_step + j] != 0)
             {
-                left = min(left, j);
-                right = max(right, j);
+                left = std::min(left, j);
+                right = std::max(right, j);
                 have_nz = true;
             }
         }
         if( have_nz )
         {
             global_have_nz |= have_nz;
-            top = min(top, i);
-            bottom = max(bottom, i);
+            top = std::min(top, i);
+            bottom = std::max(bottom, i);
         }
     }
     // all 0's
@@ -800,7 +800,7 @@ compressCharacter(const uchar* bitmap_buf,
                     buf[k++] = 0;
                 while(count > 0)
                 {
-                    int dcount = min(count, RLE_MAX);
+                    int dcount = std::min(count, RLE_MAX);
                     count -= dcount;
                     buf[k++] = (uchar)dcount;
                     if(count > 0)
@@ -818,7 +818,7 @@ compressCharacter(const uchar* bitmap_buf,
     {
         while(count > 0)
         {
-            int dcount = min(count, RLE_MAX);
+            int dcount = std::min(count, RLE_MAX);
             count -= dcount;
             buf[k++] = (uchar)dcount;
             if(count > 0)
@@ -1486,7 +1486,7 @@ Point FontRenderEngine::putText_(
             int dx = roundFixPt(pos.x_advance, FRAC_BITS);
             int dy = roundFixPt(pos.y_advance, FRAC_BITS);
             int new_pen_x = pen.x + dx*alignSign;
-            nextline_dy = max(nextline_dy, cached->linegap);
+            nextline_dy = std::max(nextline_dy, cached->linegap);
             // TODO: this wrapping algorithm is quite dumb,
             // preferably should split text at word boundary
             if( wrap && imgsize.width > 0 && new_pen_x*alignSign > x1*alignSign )

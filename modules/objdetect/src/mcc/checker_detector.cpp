@@ -238,7 +238,7 @@ bool CCheckerDetectorImpl::
     }
     //remove too close detections
     removeTooCloseDetections();
-    m_checkers.resize(min(nc, (int)m_checkers.size()));
+    m_checkers.resize(std::min(nc, (int)m_checkers.size()));
     return !m_checkers.empty();
 }
 
@@ -296,10 +296,10 @@ bool CCheckerDetectorImpl::
             float confidence = detectionScores.at<float>(0, i);
             if (confidence > m_params.confidenceThreshold)
             {
-                float xTopLeft = max(0.0f, detectionBoxes.at<float>(i, 1) * cols - m_params.borderWidth);
-                float yTopLeft = max(0.0f, detectionBoxes.at<float>(i, 0) * rows - m_params.borderWidth);
-                float xBottomRight = min((float)cols - 1, detectionBoxes.at<float>(i, 3) * cols + m_params.borderWidth);
-                float yBottomRight = min((float)rows - 1, detectionBoxes.at<float>(i, 2) * rows + m_params.borderWidth);
+                float xTopLeft = std::max(0.0f, detectionBoxes.at<float>(i, 1) * cols - m_params.borderWidth);
+                float yTopLeft = std::max(0.0f, detectionBoxes.at<float>(i, 0) * rows - m_params.borderWidth);
+                float xBottomRight = std::min((float)cols - 1, detectionBoxes.at<float>(i, 3) * cols + m_params.borderWidth);
+                float yBottomRight = std::min((float)rows - 1, detectionBoxes.at<float>(i, 2) * rows + m_params.borderWidth);
 
                 Point2f topLeft = {xTopLeft, yTopLeft};
                 Point2f bottomRight = {xBottomRight, yBottomRight};
@@ -469,7 +469,7 @@ bool CCheckerDetectorImpl::
     //remove too close detections
     removeTooCloseDetections();
 
-    m_checkers.resize(min(nc, (int)m_checkers.size()));
+    m_checkers.resize(std::min(nc, (int)m_checkers.size()));
 
     return !m_checkers.empty();
 #else
@@ -1195,9 +1195,9 @@ Mat CCheckerDetectorImpl::getRefColors() {
         // Convert to 8-bit RGB values (0-255) but store as int
         Vec3f rgb = rgb_color.at<Vec3f>(0, 0) * 255;
         out.at<Vec3i>(i, 0) = Vec3i(
-            std::min(255, std::max(0, static_cast<int>(rgb[0]))),  // Blue
-            std::min(255, std::max(0, static_cast<int>(rgb[1]))),  // Green
-            std::min(255, std::max(0, static_cast<int>(rgb[2])))   // Red
+            std::clamp(static_cast<int>(rgb[0]), 0, 255),  // Blue
+            std::clamp(static_cast<int>(rgb[1]), 0, 255),  // Green
+            std::clamp(static_cast<int>(rgb[2]), 0, 255)   // Red
         );
     }
     return out;
@@ -1240,7 +1240,7 @@ void CCheckerDetectorImpl::
     std::vector<int> idx;
     sort(J, idx);
     float invAsp = 1 / asp;
-    size_t n = min(nc, (unsigned)N);
+    size_t n = std::min(nc, (unsigned)N);
     checkers.clear();
 
     for (size_t i = 0; i < n; i++)

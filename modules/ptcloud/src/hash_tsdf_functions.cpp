@@ -530,7 +530,7 @@ void ocl_integrateHashTsdfVolumeUnit(
         {
             bufferSizeDegree = (int)(log2(sizeAfter) + 1); // clz() would be better
             int oldBuffSize = buff_lvl;
-            buff_lvl = (int)pow(2, bufferSizeDegree);
+            buff_lvl = (int)std::pow(2, bufferSizeDegree);
 
             volUnitsDataCopy.resize(buff_lvl);
 
@@ -837,7 +837,7 @@ Point3f getNormalVoxel(
     normal[2] = interpolate(tx, ty, tz, czv);
 #endif
 
-    float nv = sqrt(normal[0] * normal[0] +
+    float nv = std::sqrt(normal[0] * normal[0] +
         normal[1] * normal[1] +
         normal[2] * normal[2]);
     return nv < 0.0001f ? nan3 : normal / nv;
@@ -980,7 +980,7 @@ Point3f ocl_getNormalVoxel(
     normal[2] = interpolate(tx, ty, tz, czv);
 #endif
 
-    float nv = sqrt(normal[0] * normal[0] +
+    float nv = std::sqrt(normal[0] * normal[0] +
         normal[1] * normal[1] +
         normal[2] * normal[2]);
     return nv < 0.0001f ? nan3 : normal / nv;

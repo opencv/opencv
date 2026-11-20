@@ -205,7 +205,7 @@ void HomographyDecompZhang::decompose(std::vector<CameraMotion>& camMotions)
     double lambda1t3 = lambda1*lambda3;
 
     double t1 = 1.0/(2.0*lambda1t3);
-    double t2 = sqrt(1.0+4.0*lambda1t3/lambda1m3_2);
+    double t2 = std::sqrt(1.0+4.0*lambda1t3/lambda1m3_2);
     double t12 = t1*t2;
 
     double e1 = -t1 + t12; //t1*(-1.0f + t2 );
@@ -213,8 +213,8 @@ void HomographyDecompZhang::decompose(std::vector<CameraMotion>& camMotions)
     double e1_2 = e1*e1;
     double e3_2 = e3*e3;
 
-    double nv1p = sqrt(e1_2*lambda1m3_2 + 2*e1*(lambda1t3-1) + 1.0);
-    double nv3p = sqrt(e3_2*lambda1m3_2 + 2*e3*(lambda1t3-1) + 1.0);
+    double nv1p = std::sqrt(e1_2*lambda1m3_2 + 2*e1*(lambda1t3-1) + 1.0);
+    double nv3p = std::sqrt(e3_2*lambda1m3_2 + 2*e3*(lambda1t3-1) + 1.0);
     double v1p[3], v3p[3];
 
     v1p[0]=Vt.at<double>(0)*nv1p, v1p[1]=Vt.at<double>(1)*nv1p, v1p[2]=Vt.at<double>(2)*nv1p;
@@ -349,9 +349,9 @@ void HomographyDecompInria::decompose(std::vector<CameraMotion>& camMotions)
     double M11 = oppositeOfMinor(S, 1, 1);
     double M22 = oppositeOfMinor(S, 2, 2);
 
-    double rtM00 = sqrt(M00);
-    double rtM11 = sqrt(M11);
-    double rtM22 = sqrt(M22);
+    double rtM00 = std::sqrt(M00);
+    double rtM11 = std::sqrt(M11);
+    double rtM22 = std::sqrt(M22);
 
     double M01 = oppositeOfMinor(S, 0, 1);
     double M12 = oppositeOfMinor(S, 1, 2);
@@ -398,14 +398,14 @@ void HomographyDecompInria::decompose(std::vector<CameraMotion>& camMotions)
     }
 
     double traceS = S(0, 0) + S(1, 1) + S(2, 2);
-    double v = 2.0 * sqrt(1 + traceS - M00 - M11 - M22);
+    double v = 2.0 * std::sqrt(1 + traceS - M00 - M11 - M22);
 
     double ESii = signd(S(indx, indx)) ;
     double r_2 = 2 + traceS + v;
     double nt_2 = 2 + traceS - v;
 
-    double r = sqrt(r_2);
-    double n_t = sqrt(nt_2);
+    double r = std::sqrt(r_2);
+    double n_t = std::sqrt(nt_2);
 
     Vec3d na = npa / norm(npa);
     Vec3d nb = npb / norm(npb);

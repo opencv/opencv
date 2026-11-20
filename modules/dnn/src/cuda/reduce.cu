@@ -382,7 +382,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             template <typename T, typename TAccum>
             static __device__ __forceinline__ void Accumulate(TAccum& acc, T, TAccum value, const TAccum&) { acc += value * value; }
             template <typename TAccum>
-            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum&) { return sqrt(acc); }
+            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum&) { return std::sqrt(acc); }
         };
 
         template <>
@@ -398,15 +398,15 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             template <typename T, typename TAccum>
             static __device__ __forceinline__ void Accumulate(TAccum& acc, T, TAccum value, const TAccum&) { acc += value; }
             template <typename TAccum>
-            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum&) { return log(acc); }
+            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum&) { return std::log(acc); }
         };
 
         template <>
         struct GenericReduceStep<GenericReduceOp::LOG_SUM_EXP> {
             template <typename T, typename TAccum>
-            static __device__ __forceinline__ void Accumulate(TAccum& acc, T, TAccum value, const TAccum& shared_max) { acc += exp(value - shared_max); }
+            static __device__ __forceinline__ void Accumulate(TAccum& acc, T, TAccum value, const TAccum& shared_max) { acc += std::exp(value - shared_max); }
             template <typename TAccum>
-            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum& shared_max) { return log(acc) + shared_max; }
+            static __device__ __forceinline__ TAccum Finalize(TAccum acc, const TAccum& shared_max) { return std::log(acc) + shared_max; }
         };
 
         template <typename T, GenericReduceOp Op, int BlockSize>

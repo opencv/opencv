@@ -250,37 +250,6 @@ void cv::min( InputArray src1, InputArray src2, OutputArray dst )
     arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
 }
 
-// The concrete Mat/UMat overloads of min/max exist because C++ overload resolution needs them (a
-// bare cv::min(mat, mat, mat) binds Mat& more tightly than InputArray); they must run the SAME engine
-// path as the InputArray forms - NOT the legacy binary_op - so mixed types and broadcasting work.
-void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
-{
-    CV_INSTRUMENT_REGION();
-
-    arithm_op(ew::OP_MAX, src1, src2, dst, noArray(), -1, OCL_OP_MAX, false);
-}
-
-void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
-{
-    CV_INSTRUMENT_REGION();
-
-    arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
-}
-
-void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
-{
-    CV_INSTRUMENT_REGION();
-
-    arithm_op(ew::OP_MAX, src1, src2, dst, noArray(), -1, OCL_OP_MAX, false);
-}
-
-void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
-{
-    CV_INSTRUMENT_REGION();
-
-    arithm_op(ew::OP_MIN, src1, src2, dst, noArray(), -1, OCL_OP_MIN, false);
-}
-
 
 /****************************************************************************************\
 *                                      add/subtract                                      *

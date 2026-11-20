@@ -65,8 +65,8 @@ void CB0cluster::
 
             //heuristic to combine two sub charts, This is pretty ugly at the moment,
             //Looking for somthing better
-            w = min(abs(W[i] - W[j]) / (W[i] + W[j]),
-                    abs(max(W[i], W[j]) - 24 / 11.0f * min(W[i], W[j])) / (max(W[i], W[j]) + 24 / 11.0f * min(W[i], W[j])));
+            w = std::min(abs(W[i] - W[j]) / (W[i] + W[j]),
+                    abs(std::max(W[i], W[j]) - 24 / 11.0f * std::min(W[i], W[j])) / (std::max(W[i], W[j]) + 24 / 11.0f * std::min(W[i], W[j])));
             w = (w < 0.1);
 
             y = w * dist;

@@ -35,6 +35,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
+#include <algorithm>
 #include <iostream>
 #include <stdlib.h>
 
@@ -117,10 +118,10 @@ void source(int event, int x, int y, int, void*)
 
         for(int i=0;i<var;i++)
         {
-            minx = min(minx,pts[i].x);
-            maxx = max(maxx,pts[i].x);
-            miny = min(miny,pts[i].y);
-            maxy = max(maxy,pts[i].y);
+            minx = std::min(minx,pts[i].x);
+            maxx = std::max(maxx,pts[i].x);
+            miny = std::min(miny,pts[i].y);
+            maxy = std::max(maxy,pts[i].y);
         }
         lenx = maxx - minx;
         leny = maxy - miny;
@@ -226,10 +227,10 @@ void destination(int event, int x, int y, int, void*)
     {
         for(int i=0;i<flag;i++)
         {
-            minxd = min(minxd,pts2[i].x);
-            maxxd = max(maxxd,pts2[i].x);
-            minyd = min(minyd,pts2[i].y);
-            maxyd = max(maxyd,pts2[i].y);
+            minxd = std::min(minxd,pts2[i].x);
+            maxxd = std::max(maxxd,pts2[i].x);
+            minyd = std::min(minyd,pts2[i].y);
+            maxyd = std::max(maxyd,pts2[i].y);
         }
 
         if(maxxd > im1.size().width || maxyd > im1.size().height || minxd < 0 || minyd < 0)
@@ -475,10 +476,10 @@ int main()
 
             for(int i=0;i<var;i++)
             {
-                minx = min(minx,pts[i].x);
-                maxx = max(maxx,pts[i].x);
-                miny = min(miny,pts[i].y);
-                maxy = max(maxy,pts[i].y);
+                minx = std::min(minx,pts[i].x);
+                maxx = std::max(maxx,pts[i].x);
+                miny = std::min(miny,pts[i].y);
+                maxy = std::max(maxy,pts[i].y);
             }
             lenx = maxx - minx;
             leny = maxy - miny;

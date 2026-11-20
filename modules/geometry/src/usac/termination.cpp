@@ -14,7 +14,7 @@ private:
 public:
     StandardTerminationCriteriaImpl (double confidence, int points_size_,
                                      int sample_size_, int max_iterations_) :
-            log_confidence(log(1 - confidence)), points_size (points_size_),
+            log_confidence(std::log(1 - confidence)), points_size (points_size_),
             sample_size (sample_size_), MAX_ITERATIONS(max_iterations_)  {}
 
     /*
@@ -30,7 +30,7 @@ public:
      */
     int update (const Mat &model, int inlier_number) const override {
         CV_UNUSED(model);
-        const double predicted_iters = log_confidence / log(1 - std::pow
+        const double predicted_iters = log_confidence / std::log(1 - std::pow
             (static_cast<double>(inlier_number) / points_size, sample_size));
 
         // if inlier_prob == 1 then log(0) = -inf, predicted_iters == -0
@@ -42,7 +42,7 @@ public:
     }
 
     static int getMaxIterations (int inlier_number, int sample_size, int points_size, double conf) {
-        const double pred_iters = log(1 - conf) / log(1 - std::pow(static_cast<double>(inlier_number)/points_size, sample_size));
+        const double pred_iters = std::log(1 - conf) / std::log(1 - std::pow(static_cast<double>(inlier_number)/points_size, sample_size));
         if (std::isinf(pred_iters))
             return INT_MAX;
         return (int) pred_iters + 1;
@@ -63,7 +63,7 @@ private:
 public:
     SPRTTerminationImpl (const Ptr<AdaptiveSPRT> &sprt_, double confidence,
            int points_size_, int sample_size_, int max_iterations_)
-           : sprt (sprt_), log_eta_0(log(1-confidence)),
+           : sprt (sprt_), log_eta_0(std::log(1-confidence)),
            points_size (points_size_), sample_size (sample_size_),MAX_ITERATIONS(max_iterations_){}
 
     /*
@@ -90,7 +90,7 @@ public:
             return getStandardUpperBound(inlier_size);
 
         const double epsilon = static_cast<double>(inlier_size) / points_size; // inlier probability
-        const double P_g = pow (epsilon, sample_size); // probability of good sample
+        const double P_g = std::pow (epsilon, sample_size); // probability of good sample
 
         double log_eta_lmin1 = 0;
 
@@ -98,7 +98,7 @@ public:
         // compute log n(l-1), l is number of tests
         for (const auto &test : sprt_histories) {
             if (test.tested_samples == 0) continue;
-            log_eta_lmin1 += log (1 - P_g * (1 - pow (test.A,
+            log_eta_lmin1 += std::log (1 - P_g * (1 - std::pow (test.A,
                -computeExponentH(test.epsilon, epsilon,test.delta)))) * test.tested_samples;
             total_number_of_tested_samples += test.tested_samples;
         }
@@ -109,7 +109,7 @@ public:
             return getStandardUpperBound(inlier_size);
         // use decision threshold A for last test (l-th)
         const double predicted_iters_sprt = total_number_of_tested_samples + (log_eta_0 - log_eta_lmin1) /
-                log (1 - P_g * (1 - 1 / sprt_histories.back().A)); // last A
+                std::log (1 - P_g * (1 - 1 / sprt_histories.back().A)); // last A
         if (std::isnan(predicted_iters_sprt) || std::isinf(predicted_iters_sprt))
             return getStandardUpperBound(inlier_size);
 
@@ -122,7 +122,7 @@ public:
     }
 private:
     inline int getStandardUpperBound(int inlier_size) const {
-        const double predicted_iters = log_eta_0 / log(1 - std::pow
+        const double predicted_iters = log_eta_0 / std::log(1 - std::pow
                 (static_cast<double>(inlier_size) / points_size, sample_size));
         return (! std::isinf(predicted_iters) && predicted_iters < MAX_ITERATIONS) ?
                 static_cast<int>(predicted_iters) : MAX_ITERATIONS;
@@ -138,13 +138,13 @@ private:
      * Has numerical solution.
      */
     static double computeExponentH (double epsilon, double epsilon_new, double delta) {
-        const double a = log (delta / epsilon); // log likelihood ratio
-        const double b = log ((1 - delta) / (1 - epsilon));
+        const double a = std::log (delta / epsilon); // log likelihood ratio
+        const double b = std::log ((1 - delta) / (1 - epsilon));
 
-        const double x0 = log (1 / (1 - epsilon_new)) / b;
-        const double v0 = epsilon_new * exp (x0 * a);
-        const double x1 = log ((1 - 2*v0) / (1 - epsilon_new)) / b;
-        const double v1 = epsilon_new * exp (x1 * a) + (1 - epsilon_new) * exp(x1 * b);
+        const double x0 = std::log (1 / (1 - epsilon_new)) / b;
+        const double v0 = epsilon_new * std::exp (x0 * a);
+        const double x1 = std::log ((1 - 2*v0) / (1 - epsilon_new)) / b;
+        const double v1 = epsilon_new * std::exp (x1 * a) + (1 - epsilon_new) * std::exp(x1 * b);
         const double h = x0 - (x0 - x1) / (1 + v0 - v1) * v0;
 
         if (std::isnan(h))
@@ -174,7 +174,7 @@ public:
             int max_iterations_, double relax_coef_)
             : sprt_termination (sprt, confidence, points_size_, sample_size_,
             max_iterations_),
-            relax_coef (relax_coef_), log_confidence(log(1-confidence)),
+            relax_coef (relax_coef_), log_confidence(std::log(1-confidence)),
           points_size (points_size_), sample_size (sample_size_),
           MAX_ITERS (max_iterations_) {}
 
@@ -185,7 +185,7 @@ public:
         if (inlier_prob >= 1)
             return 0;
 
-        const double predicted_iters = log_confidence / log(1 - std::pow(inlier_prob, sample_size));
+        const double predicted_iters = log_confidence / std::log(1 - std::pow(inlier_prob, sample_size));
 
         if (! std::isinf(predicted_iters) && predicted_iters < predicted_iterations)
             return static_cast<int>(predicted_iters);
@@ -211,7 +211,7 @@ public:
     ProsacTerminationCriteriaImpl (const Ptr<ProsacSampler> &sampler_,const Ptr<Error> &error_,
             int points_size_, int sample_size_, double confidence, int max_iterations,
             int min_termination_length_, double beta_, double non_randomness_phi_,
-            double inlier_threshold_, const std::vector<int> &non_rand_inliers) : log_conf(log(1-confidence)), beta(beta_),
+            double inlier_threshold_, const std::vector<int> &non_rand_inliers) : log_conf(std::log(1-confidence)), beta(beta_),
             non_randomness_phi(non_randomness_phi_), inlier_threshold(inlier_threshold_),
             MAX_ITERATIONS(max_iterations), points_size (points_size_),
             min_termination_length (min_termination_length_), sample_size(sample_size_),
@@ -322,7 +322,7 @@ public:
                     continue;
 
                 // add 1 to termination length since num_inliers_under_termination_len is updated
-                const double new_max_samples = log_conf/log(1-std::pow(static_cast<double>(num_inliers_under_termination_len)
+                const double new_max_samples = log_conf/std::log(1-std::pow(static_cast<double>(num_inliers_under_termination_len)
                         / (termination_len+1), sample_size));
 
                 if (! std::isinf(new_max_samples) && predicted_iterations > new_max_samples) {
@@ -337,7 +337,7 @@ public:
 
         // compare also when termination length = points_size,
         // so inliers under termination length is total number of inliers:
-        const double predicted_iters = log_conf / log(1 - std::pow
+        const double predicted_iters = log_conf / std::log(1 - std::pow
                 (static_cast<double>(inliers_size) / points_size, sample_size));
 
         if (! std::isinf(predicted_iters) && predicted_iters < predicted_iterations)

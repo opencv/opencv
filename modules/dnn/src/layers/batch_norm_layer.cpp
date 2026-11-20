@@ -104,7 +104,7 @@ public:
 
         for (size_t i = 0; i < n; ++i)
         {
-            float w = (hasWeights ? weightsData[i] : 1.0f) / sqrt(stdData[i] * varMeanScale + epsilon);
+            float w = (hasWeights ? weightsData[i] : 1.0f) / std::sqrt(stdData[i] * varMeanScale + epsilon);
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }

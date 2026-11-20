@@ -156,7 +156,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         qkv_head_sizes[0] = static_cast<size_t>(qkv_hidden_sizes[0] / num_heads);
         qkv_head_sizes[1] = static_cast<size_t>(qkv_hidden_sizes[1] / num_heads);
 
-        scale = 1.f / params.get<float>("scale", sqrt(qkv_head_sizes[0]));
+        scale = 1.f / params.get<float>("scale", std::sqrt(qkv_head_sizes[0]));
 
         output_ndims = params.get<int>("output_ndims", 3);
 

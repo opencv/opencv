@@ -713,7 +713,7 @@ void FastX::detectImpl(const cv::Mat& _gray_image,
 
     //for each scale
     const int num_scales = parameters.max_scale-parameters.min_scale+1;
-    const int diag = int(sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
+    const int diag = int(std::sqrt(gray_image.rows*gray_image.rows+gray_image.cols*gray_image.cols));
     const cv::Size size(diag,diag);
     const int num = int(0.5001*CV_PI/parameters.resolution);
 
@@ -3447,7 +3447,7 @@ void Chessboard::findKeyPoints(const cv::Mat& image, std::vector<KeyPoint>& keyp
         const std::vector<float> &angles_i3 = *iter2;
         if(angles_i3.size() != 2)// || pt.response < noise)
             continue;
-        int result = testPointSymmetry(image,pt.pt,pt.size*0.7F,std::max(10.0F,sqrt(pt.response)+0.5F*pt.size));
+        int result = testPointSymmetry(image,pt.pt,pt.size*0.7F,std::max(10.0F,std::sqrt(pt.response)+0.5F*pt.size));
         if(result > MAX_SYMMETRY_ERRORS)
             continue;
         else if(result > 3)
@@ -3684,7 +3684,7 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
         float white_angle =  fabs(angles_i.front());  // angle is negative if black --> clockwise
         float black_angle =  fabs(angles_i.back());   // angle is negative if black --> clockwise
         if(angles_i.front() < 0)                 // ensure white angle is first
-            swap(white_angle,black_angle);
+            std::swap(white_angle,black_angle);
 
         std::vector<Board> boards;
         generateBoards(flann_index, data,*points_iter,white_angle,black_angle,min_response,gray,boards);

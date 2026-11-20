@@ -41,7 +41,7 @@ T sizeCal(const T& w, const T& h)
 {
     T pad = (w + h) * T(0.5);
     T sz2 = (w + pad) * (h + pad);
-    return sqrt(sz2);
+    return std::sqrt(sz2);
 }
 
 template <>
@@ -159,7 +159,7 @@ void TrackerDaSiamRPNImpl::trackerInit(Mat img)
     trackState.avgChans = mean(img);
     float wc = targetBox.width + trackState.contextAmount * (targetBox.width + targetBox.height);
     float hc = targetBox.height + trackState.contextAmount * (targetBox.width + targetBox.height);
-    float sz = (float)cvRound(sqrt(wc * hc));
+    float sz = (float)cvRound(std::sqrt(wc * hc));
 
     Mat zCrop = getSubwindow(img, targetBox, sz, trackState.avgChans);
     Mat blob;
@@ -200,7 +200,7 @@ void TrackerDaSiamRPNImpl::trackerEval(Mat img)
     float wc = targetBox.height + trackState.contextAmount * (targetBox.width + targetBox.height);
     float hc = targetBox.width + trackState.contextAmount * (targetBox.width + targetBox.height);
 
-    float sz = sqrt(wc * hc);
+    float sz = std::sqrt(wc * hc);
     float scaleZ = trackState.exemplarSize / sz;
 
     float searchSize = float((trackState.instanceSize - trackState.exemplarSize) / 2);
@@ -363,7 +363,7 @@ Mat TrackerDaSiamRPNImpl::generateAnchors()
 
     for (auto i = 0; i < anchorNum; i++)
     {
-        int ws = int(sqrt(size / ratios[i]));
+        int ws = int(std::sqrt(size / ratios[i]));
         int hs = int(ws * ratios[i]);
 
         float wws = float(ws) * scales;

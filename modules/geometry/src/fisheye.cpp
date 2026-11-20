@@ -501,12 +501,12 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         // (r^2 = a^2 + b^2)
         // x'^2 + y'^2 = theta_d^2 =>
         // theta_d = sqrt(x'^2 + y'^2)
-        double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
+        double theta_d = std::sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
 
         // the current camera model is only valid up to 180 FOV
         // for larger FOV the loop below does not converge
         // clip values so we still get plausible results for super fisheye images > 180 grad
-        theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
+        theta_d = std::clamp(theta_d, -CV_PI/2., CV_PI/2.);
 
         bool converged = false;
         double theta = theta_d;
@@ -578,7 +578,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     CV_Assert(D.empty() || ((D.total() == 4) && (D.depth() == CV_32F || D.depth() == CV_64F)));
 
     int w = image_size.width, h = image_size.height;
-    balance = std::min(std::max(balance, 0.0), 1.0);
+    balance = std::clamp(balance, 0.0, 1.0);
 
     Mat points(1, 4, CV_64FC2);
     Vec2d* pptr = points.ptr<Vec2d>();
@@ -613,8 +613,8 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
     double f3 = h * 0.5 * aspect_ratio/(cn[1] - miny);
     double f4 = h * 0.5 * aspect_ratio/(maxy - cn[1]);
 
-    double fmin = std::min(f1, std::min(f2, std::min(f3, f4)));
-    double fmax = std::max(f1, std::max(f2, std::max(f3, f4)));
+    double fmin = std::min({f1, f2, f3, f4});
+    double fmax = std::max({f1, f2, f3, f4});
 
     double f = balance * fmin + (1.0 - balance) * fmax;
     f *= fov_scale > 0 ? 1.0/fov_scale : 1.0;

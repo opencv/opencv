@@ -210,12 +210,12 @@ static Vec6f getBoundingBox(const Mat& points)
     for (int i = 0; i < (int)points.total(); i++)
     {
         Point3f pt = points.at<Point3f>(i);
-        bb[0] = min(bb[0], pt.x);
-        bb[1] = min(bb[1], pt.y);
-        bb[2] = min(bb[2], pt.z);
-        bb[3] = max(bb[3], pt.x);
-        bb[4] = max(bb[4], pt.y);
-        bb[5] = max(bb[5], pt.z);
+        bb[0] = std::min(bb[0], pt.x);
+        bb[1] = std::min(bb[1], pt.y);
+        bb[2] = std::min(bb[2], pt.z);
+        bb[3] = std::max(bb[3], pt.x);
+        bb[4] = std::max(bb[4], pt.y);
+        bb[5] = std::max(bb[5], pt.z);
     }
 
     return bb;
@@ -261,7 +261,7 @@ void Octree::Impl::fill(bool useResolution, InputArray _points, InputArray _colo
     Point3f minBound(bbox[0], bbox[1], bbox[2]);
     Point3f maxBound(bbox[3], bbox[4], bbox[5]);
 
-    double maxSize = max(max(maxBound.x - minBound.x, maxBound.y - minBound.y), maxBound.z - minBound.z);
+    double maxSize = std::max({maxBound.x - minBound.x, maxBound.y - minBound.y, maxBound.z - minBound.z});
 
     // Extend maxSize to the closest power of 2 that exceeds it for bit operations
     maxSize = double(1 << int(ceil(log2(maxSize))));
@@ -488,7 +488,7 @@ bool OctreeNode::overlap(const Point3f& query, float squareRadius) const
     float dist = SquaredDistance(center, query);
     float temp = float(this->size) * float(this->size) * 3.0f;
 
-    return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + sqrt(temp * squareRadius)) ;
+    return ( dist + dist * std::numeric_limits<float>::epsilon() ) <= float(temp * 0.25f + squareRadius + std::sqrt(temp * squareRadius)) ;
 }
 
 

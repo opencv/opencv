@@ -147,12 +147,12 @@ Ptr<FastConv> initFastConv(
         if (conv_dim == CONV_1D)
         {
             ifRunDepthWise &= Hk == 1 && Wk == 3 && (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
-                              && max(stride_w, dilation_w) >= conv->pad_left && conv->pad_left <= 1;
+                              && std::max(stride_w, dilation_w) >= conv->pad_left && conv->pad_left <= 1;
         }
         else if (conv_dim == CONV_2D)
         {
             ifRunDepthWise &= Hk == 3 && Wk == 3 && ((stride_w == 1) || (stride_w == 2 && dilation_w == 1)) &&
-                              max(stride_w, dilation_w) >= conv->pad_left && max(stride_h, dilation_h) >= conv->pad_top
+                              std::max(stride_w, dilation_w) >= conv->pad_left && std::max(stride_h, dilation_h) >= conv->pad_top
                               && conv->pad_left <= 1 && conv->pad_top <= 1;
         }
 
@@ -361,7 +361,7 @@ Ptr<FastConv> initFastConv(
     {
         // The weights are packed as
         // ngroups x (ceil((K/ngroups)/CONV_MR)*CONV_MR) x (Cg*Hk*Wk*Dk) x CONV_MR tensor
-        int Kg = K/ngroups, Cg = max(C/ngroups, 1);
+        int Kg = K/ngroups, Cg = std::max(C/ngroups, 1);
         int DkHkWkCg = Dk*Hk*Wk*Cg;
 
         int numStripsMR = (Kg + CONV_MR_FP32 - 1) / CONV_MR_FP32;

@@ -12,8 +12,6 @@
 #include <algorithm>
 #include <numeric>
 
-using std::max;
-using std::min;
 
 namespace cv
 {
@@ -495,18 +493,18 @@ public:
                 const int8_t *srcData = 0;
                 int pad_d_begin = (pads_begin.size() == 3) ? pads_begin[0] : 0;
                 dstart = d0 * stride_d - pad_d_begin;
-                dend = min(dstart + kernel_d, (int)(inp_depth + pads_end[0]));
+                dend = std::min(dstart + kernel_d, (int)(inp_depth + pads_end[0]));
 
                 ystart = y0 * stride_h - pad_t;
-                yend = min(ystart + kernel_h, inp_height + pad_b);
+                yend = std::min(ystart + kernel_h, inp_height + pad_b);
                 srcData = src->ptr<int8_t>(n, c);
 
                 int ddelta = dend - dstart;
-                dstart = max(dstart, 0);
-                dend = min(dend, inp_depth);
+                dstart = std::max(dstart, 0);
+                dend = std::min(dend, inp_depth);
                 int ydelta = yend - ystart;
-                ystart = max(ystart, 0);
-                yend = min(yend, inp_height);
+                ystart = std::max(ystart, 0);
+                yend = std::min(yend, inp_height);
                 int8_t *dstData = &dst->ptr<int8_t>(n, c, d0)[y0 * width];
 
                 int delta = std::min((int)(stripeEnd - ofs0), width - x0);
@@ -517,8 +515,8 @@ public:
                     for( ; x0 < x1; x0++ )
                     {
                         int xstart = x0 * stride_w - pad_l;
-                        int xend = min(xstart + kernel_w, inp_width);
-                        xstart = max(xstart, 0);
+                        int xend = std::min(xstart + kernel_w, inp_width);
+                        xstart = std::max(xstart, 0);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = (int8_t)outZp;
@@ -615,10 +613,10 @@ public:
                     for( ; x0 < x1; ++x0)
                     {
                         int xstart = x0 * stride_w - pad_l;
-                        int xend = min(xstart + kernel_w, inp_width + pad_r);
+                        int xend = std::min(xstart + kernel_w, inp_width + pad_r);
                         int xdelta = xend - xstart;
-                        xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
+                        xstart = std::max(xstart, 0);
+                        xend = std::min(xend, inp_width);
 
                         int real_kernel_area = (dend - dstart) * (yend - ystart) * (xend - xstart);
                         int padded_kernel_area = xdelta * ydelta * ddelta;

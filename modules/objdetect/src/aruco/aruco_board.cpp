@@ -89,10 +89,10 @@ void Board::Impl::generateImage(Size outSize, OutputArray img, int marginSize, i
 
     for(unsigned int i = 0; i < objPoints.size(); i++) {
         for(int j = 0; j < 4; j++) {
-            minX = min(minX, objPoints[i][j].x);
-            maxX = max(maxX, objPoints[i][j].x);
-            minY = min(minY, objPoints[i][j].y);
-            maxY = max(maxY, objPoints[i][j].y);
+            minX = std::min(minX, objPoints[i][j].x);
+            maxX = std::max(maxX, objPoints[i][j].x);
+            minY = std::min(minY, objPoints[i][j].y);
+            maxY = std::max(maxY, objPoints[i][j].y);
         }
     }
 
@@ -395,7 +395,7 @@ void CharucoBoardImpl::calcNearestMarkerCorners() {
             double sqDistance;
             Point3f distVector = charucoCorner - center;
             sqDistance = distVector.x * distVector.x + distVector.y * distVector.y;
-            if(j == 0 || fabs(sqDistance - minDist) < cv::pow(0.01 * squareLength, 2)) {
+            if(j == 0 || fabs(sqDistance - minDist) < std::pow(0.01 * squareLength, 2)) {
                 // if same minimum distance (or first iteration), add to nearestMarkerIdx vector
                 nearestMarkerIdx[i].push_back(j);
                 minDist = sqDistance;
@@ -603,7 +603,7 @@ bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
     Vec<double, 3> testLine = point0.cross(point1);
     Vec<double, 3> testPoint(0, 0, 1);
 
-    double divisor = sqrt(testLine[0]*testLine[0] + testLine[1]*testLine[1]);
+    double divisor = std::sqrt(testLine[0]*testLine[0] + testLine[1]*testLine[1]);
     CV_Assert(divisor != 0.0);
 
     // normalize the line with normal

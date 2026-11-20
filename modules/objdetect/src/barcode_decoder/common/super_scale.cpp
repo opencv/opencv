@@ -28,7 +28,7 @@ int SuperScale::init(const std::string &model_path)
 
 void SuperScale::processImageScale(const Mat &src, Mat &dst, float scale, const bool &use_sr, int sr_max_size)
 {
-    scale = min(scale, MAX_SCALE);
+    scale = std::min(scale, MAX_SCALE);
     if (scale > .0 && scale < 1.0)
     {  // down sample
         resize(src, dst, Size(), scale, scale, INTER_AREA);
@@ -41,7 +41,7 @@ void SuperScale::processImageScale(const Mat &src, Mat &dst, float scale, const 
     {
         int width = src.cols;
         int height = src.rows;
-        if (use_sr && (int) sqrt(width * height * 1.0) < sr_max_size && net_loaded_)
+        if (use_sr && (int) std::sqrt(width * height * 1.0) < sr_max_size && net_loaded_)
         {
             superResolutionScale(src, dst);
             if (scale > 2.0)

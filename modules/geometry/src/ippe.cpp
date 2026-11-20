@@ -192,7 +192,7 @@ void PoseSolver::solveSquare(InputArray _objectPoints, InputArray _imagePoints, 
         objectPoints2D.ptr<Vec2d>(0)[2] = Vec2d(objectPoints.ptr<Vec3f>(0)[2](0), objectPoints.ptr<Vec3f>(0)[2](1));
         objectPoints2D.ptr<Vec2d>(0)[3] = Vec2d(objectPoints.ptr<Vec3f>(0)[3](0), objectPoints.ptr<Vec3f>(0)[3](1));
 
-        squareLength = sqrt( (objectPoints.ptr<Vec3f>(0)[1](0) - objectPoints.ptr<Vec3f>(0)[0](0))*
+        squareLength = std::sqrt( (objectPoints.ptr<Vec3f>(0)[1](0) - objectPoints.ptr<Vec3f>(0)[0](0))*
                              (objectPoints.ptr<Vec3f>(0)[1](0) - objectPoints.ptr<Vec3f>(0)[0](0)) +
                              (objectPoints.ptr<Vec3f>(0)[1](1) - objectPoints.ptr<Vec3f>(0)[0](1))*
                              (objectPoints.ptr<Vec3f>(0)[1](1) - objectPoints.ptr<Vec3f>(0)[0](1)) );
@@ -204,7 +204,7 @@ void PoseSolver::solveSquare(InputArray _objectPoints, InputArray _imagePoints, 
         objectPoints2D.ptr<Vec2d>(0)[2] = Vec2d(objectPoints.ptr<Vec3d>(0)[2](0), objectPoints.ptr<Vec3d>(0)[2](1));
         objectPoints2D.ptr<Vec2d>(0)[3] = Vec2d(objectPoints.ptr<Vec3d>(0)[3](0), objectPoints.ptr<Vec3d>(0)[3](1));
 
-        squareLength = sqrt( (objectPoints.ptr<Vec3d>(0)[1](0) - objectPoints.ptr<Vec3d>(0)[0](0))*
+        squareLength = std::sqrt( (objectPoints.ptr<Vec3d>(0)[1](0) - objectPoints.ptr<Vec3d>(0)[0](0))*
                              (objectPoints.ptr<Vec3d>(0)[1](0) - objectPoints.ptr<Vec3d>(0)[0](0)) +
                              (objectPoints.ptr<Vec3d>(0)[1](1) - objectPoints.ptr<Vec3d>(0)[0](1))*
                              (objectPoints.ptr<Vec3d>(0)[1](1) - objectPoints.ptr<Vec3d>(0)[0](1)) );
@@ -303,7 +303,7 @@ void PoseSolver::rot2vec(InputArray _R, OutputArray _r)
     Mat rvec = _r.getMat();
 
     double trace = R.at<double>(0, 0) + R.at<double>(1, 1) + R.at<double>(2, 2);
-    double w_norm = std::acos(std::min(std::max((trace - 1.0) / 2.0, -1.0), 1.0));
+    double w_norm = std::acos(std::clamp((trace - 1.0) / 2.0, -1.0, 1.0));
     double eps = std::numeric_limits<float>::epsilon();
     double d = 1 / (2 * std::sin(w_norm)) * w_norm;
     if (w_norm < eps) //rotation is the identity
@@ -458,11 +458,11 @@ void PoseSolver::computeRotations(double j00, double j01, double j10, double j11
     double ata01 = a00 * a10 + a01 * a11;
     double ata11 = a10 * a10 + a11 * a11;
 
-    double gamma2 = 0.5 * (ata00 + ata11 + sqrt((ata00 - ata11) * (ata00 - ata11) + 4.0 * ata01 * ata01));
+    double gamma2 = 0.5 * (ata00 + ata11 + std::sqrt((ata00 - ata11) * (ata00 - ata11) + 4.0 * ata01 * ata01));
     if (gamma2 < 0)
         CV_Error(Error::StsNoConv, "gamma2 is negative.");
 
-    double gamma = sqrt(gamma2);
+    double gamma = std::sqrt(gamma2);
 
     if (std::fabs(gamma) < std::numeric_limits<float>::epsilon())
         CV_Error(Error::StsNoConv, "gamma is zero.");
@@ -478,8 +478,8 @@ void PoseSolver::computeRotations(double j00, double j01, double j10, double j11
     double rtilde10_2 = rtilde10 * rtilde10;
     double rtilde11_2 = rtilde11 * rtilde11;
 
-    double b0 = sqrt(-rtilde00_2 - rtilde10_2 + 1);
-    double b1 = sqrt(-rtilde01_2 - rtilde11_2 + 1);
+    double b0 = std::sqrt(-rtilde00_2 - rtilde10_2 + 1);
+    double b1 = std::sqrt(-rtilde01_2 - rtilde11_2 + 1);
     double sp = (-rtilde00 * rtilde01 - rtilde10 * rtilde11);
 
     if (sp < 0)
@@ -715,7 +715,7 @@ void PoseSolver::evalReprojError(InputArray _objectPoints, InputArray _imagePoin
 
         err += dx * dx + dy * dy;
     }
-    err = sqrt(err / (2.0f * n));
+    err = std::sqrt(err / (2.0f * n));
 }
 
 void PoseSolver::sortPosesByReprojError(InputArray _objectPoints, InputArray _imagePoints, InputArray _Ma, InputArray _Mb,
@@ -748,7 +748,7 @@ void PoseSolver::rotateVec2ZAxis(const Matx31d& a, Matx33d& Ra)
     double ay = a(1);
     double az = a(2);
 
-    double nrm = sqrt(ax*ax + ay*ay + az*az);
+    double nrm = std::sqrt(ax*ax + ay*ay + az*az);
     ax = ax/nrm;
     ay = ay/nrm;
     az = az/nrm;
@@ -824,7 +824,7 @@ bool PoseSolver::computeObjextSpaceR3Pts(InputArray _objectPoints, Matx33d& R)
     double ny = (p1x - p3x)*(p1z - p2z) - (p1x - p2x)*(p1z - p3z);
     double nz = (p1x - p2x)*(p1y - p3y) - (p1x - p3x)*(p1y - p2y);
 
-    double nrm = sqrt(nx*nx+ ny*ny + nz*nz);
+    double nrm = std::sqrt(nx*nx+ ny*ny + nz*nz);
     if (nrm > IPPE_SMALL)
     {
         nx = nx/nrm;
@@ -964,7 +964,7 @@ void normalizeDataIsotropic(InputArray _Data, OutputArray _DataN, OutputArray _T
         DataN.at<double>(1, i) = yh;
         kappa = kappa + xh * xh + yh * yh;
     }
-    double beta = sqrt(2 * numPoints / kappa);
+    double beta = std::sqrt(2 * numPoints / kappa);
     DataN = DataN * beta;
 
     T.at<double>(0, 0) = 1.0 / beta;

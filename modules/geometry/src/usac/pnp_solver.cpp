@@ -361,16 +361,16 @@ public:
             const double n12 = root, n12_p2 = n12 * n12;
             const double n13 = (d12_p2*(d23_p2-d31_p2*n12_p2)+(d23_p2-d31_p2)*(d23_p2*(1+n12_p2-2*n12*c12)-d12_p2*n12_p2))
                                 / (2*d12_p2*(d23_p2*c31 - d31_p2*c23*n12) + 2*(d31_p2-d23_p2)*d12_p2*c23*n12);
-            const double n1 = d12 / sqrt(1 + n12_p2 - 2*n12*c12); // 1+n12^2-2n12c12 is always > 0
+            const double n1 = d12 / std::sqrt(1 + n12_p2 - 2*n12*c12); // 1+n12^2-2n12c12 is always > 0
             const double n2 = n1 * n12;
             const double n3 = n1 * n13;
 
             if (n1 <= 0 || n2 <= 0 || n3 <= 0)
                 continue;
             // compute and check errors
-            if (fabs((sqrt(n1*n1 + n2*n2 - 2*n1*n2*c12) - d12) / d12) > VAL_THR ||
-                fabs((sqrt(n2*n2 + n3*n3 - 2*n2*n3*c23) - d23) / d23) > VAL_THR ||
-                fabs((sqrt(n3*n3 + n1*n1 - 2*n3*n1*c31) - d31) / d31) > VAL_THR)
+            if (fabs((std::sqrt(n1*n1 + n2*n2 - 2*n1*n2*c12) - d12) / d12) > VAL_THR ||
+                fabs((std::sqrt(n2*n2 + n3*n3 - 2*n2*n3*c23) - d23) / d23) > VAL_THR ||
+                fabs((std::sqrt(n3*n3 + n1*n1 - 2*n3*n1*c31) - d31) / d31) > VAL_THR)
                 continue;
 
             const Vec3d nX1 = n1 * cx1;

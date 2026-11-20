@@ -721,7 +721,7 @@ void View::rotate(float dx, float dy)
     float phi = ::asin(this->position(1));
     theta -= dx * 0.05f;
     phi += dy * 0.05f;
-    phi = max(-1.5f, min(1.5f, phi));
+    phi = std::clamp(phi, -1.5f, 1.5f);
 
     this->position(0) = ::cos(theta) * ::cos(phi) * this->distance;
     this->position(1) = ::sin(phi) * this->distance;
@@ -746,7 +746,7 @@ void View::move(float dx, float dy)
 void View::scaleDistance(float amount)
 {
     this->distance *= amount;
-    this->distance = max(0.1f, this->distance);
+    this->distance = std::max(0.1f, this->distance);
     this->position = normalize(this->position - this->origin) * this->distance + this->origin;
 
     this->lookAt(this->origin, this->up);
@@ -1055,7 +1055,7 @@ void Window::onMouse(int event, int x, int y, int flags)
     }
     else if (event == EVENT_MOUSEWHEEL)
     {
-        this->view.scaleDistance(min(1.2f, max(0.8f, 1.0f - getMouseWheelDelta(flags) / 12.0f)));
+        this->view.scaleDistance(std::clamp(1.0f - getMouseWheelDelta(flags) / 12.0f, 0.8f, 1.2f));
         updateWindow(this->name);
     }
 }

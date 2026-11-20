@@ -82,13 +82,13 @@ Mat RobertsonWeights(int length)
     CV_Assert(length >= 1);
     Mat weight(length, 1, CV_32FC3);
     float q = (length - 1) / 4.0f;
-    float e4 = exp(4.f);
+    float e4 = std::exp(4.f);
     float scale = e4/(e4 - 1.f);
     float shift = 1 / (1.f - e4);
 
     for(int i = 0; i < length; i++) {
         float value = i / q - 2.0f;
-        value = scale*exp(-value * value) + shift;
+        value = scale*std::exp(-value * value) + shift;
         weight.at<Vec3f>(i) = Vec3f::all(value);
     }
     return weight;

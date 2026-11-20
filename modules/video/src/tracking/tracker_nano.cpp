@@ -59,7 +59,7 @@ static float sizeCal(float w, float h)
 {
     float pad = (w + h) * 0.5f;
     float sz2 = (w + pad) * (h + pad);
-    return sqrt(sz2);
+    return std::sqrt(sz2);
 }
 
 static Mat sizeCal(const Mat& w, const Mat& h)
@@ -187,7 +187,7 @@ void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
     float sumSz = targetSz[0] + targetSz[1];
     float wExtent = targetSz[0] + trackState.contextAmount * (sumSz);
     float hExtent = targetSz[1] + trackState.contextAmount * (sumSz);
-    int sz = int(cv::sqrt(wExtent * hExtent));
+    int sz = int(std::sqrt(wExtent * hExtent));
 
     Mat crop;
     getSubwindow(crop, image, sz, exemplarSize);
@@ -246,7 +246,7 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
 
     float wc = targetSz[0] + trackState.contextAmount * targetSzSum;
     float hc = targetSz[1] + trackState.contextAmount * targetSzSum;
-    float sz = cv::sqrt(wc * hc);
+    float sz = std::sqrt(wc * hc);
     float scale_z = exemplarSize / sz;
     float sx = sz * (float(instanceSize) / exemplarSize);
     targetSz[0] *= scale_z;

@@ -800,7 +800,7 @@ void QRCodeEncoderImpl::rearrangeBlocks(const vector<vector<uint8_t> > &data_blo
 {
     rearranged_data.clear();
     int blocks = cur_ecc_params->num_blocks_in_G2 + cur_ecc_params->num_blocks_in_G1;
-    int col_border = max(cur_ecc_params->data_codewords_in_G2, cur_ecc_params->data_codewords_in_G1);
+    int col_border = std::max(cur_ecc_params->data_codewords_in_G2, cur_ecc_params->data_codewords_in_G1);
     int total_codeword_num = version_info->total_codewords;
     int is_not_equal = cur_ecc_params->data_codewords_in_G2 - cur_ecc_params->data_codewords_in_G1;
     int add_steps = cur_ecc_params->data_codewords_in_G2 > cur_ecc_params->data_codewords_in_G1 ?
@@ -943,7 +943,7 @@ void QRCodeEncoderImpl::findAutoMaskType()
         int modules_percent = dark_modules * 100 / total_modules;
         int lower_bound = 45;
         int upper_bound = 55;
-        int diff = min(abs(modules_percent - lower_bound), abs(modules_percent - upper_bound));
+        int diff = std::min(abs(modules_percent - lower_bound), abs(modules_percent - upper_bound));
         penalty_four = (diff / 5) * 10;
         penalty_total = penalty_one + penalty_two + penalty_three + penalty_four;
         if (penalty_total < lowest_penalty)

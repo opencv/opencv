@@ -798,7 +798,7 @@ static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOu
     ocl::Device dev = ocl::Device::getDefault();
 
     const int pixPerWI = 16;
-    int workgroup_size = min((int) dev.maxWorkGroupSize(), (src.cols + pixPerWI - 1)/pixPerWI);
+    int workgroup_size = std::min((int) dev.maxWorkGroupSize(), (src.cols + pixPerWI - 1)/pixPerWI);
     ocl::Kernel pointListKernel("make_point_list", ocl::imgproc::hough_lines_oclsrc,
                                 format("-D MAKE_POINTS_LIST -D GROUP_SIZE=%d -D LOCAL_SIZE=%d", workgroup_size, src.cols));
     if (pointListKernel.empty())
@@ -821,7 +821,7 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
     ocl::Device dev = ocl::Device::getDefault();
 
     float irho = (float) (1 / rho);
-    int workgroup_size = min((int) dev.maxWorkGroupSize(), total_points);
+    int workgroup_size = std::min((int) dev.maxWorkGroupSize(), total_points);
 
     ocl::Kernel fillAccumKernel;
     size_t localThreads[2];
@@ -896,7 +896,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (getLinesKernel.empty())
         return false;
 
-    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
+    int linesMax = threshold > 0 ? std::min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
     UMat lines(linesMax, 1, CV_32FC2);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
@@ -906,7 +906,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
 
-    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
+    int total_lines = std::min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
     else
@@ -949,7 +949,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     if (getLinesKernel.empty())
         return false;
 
-    int linesMax = threshold > 0 ? min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
+    int linesMax = threshold > 0 ? std::min(total_points*numangle/threshold, OCL_MAX_LINES) : OCL_MAX_LINES;
     UMat lines(linesMax, 1, CV_32SC4);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::ReadOnly(src),
@@ -960,7 +960,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
         return false;
 
-    int total_lines = min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
+    int total_lines = std::min(counters.getMat(ACCESS_READ).at<int>(0, 1), linesMax);
     if (total_lines > 0)
         _lines.assign(lines.rowRange(Range(0, total_lines)));
     else
@@ -1358,8 +1358,8 @@ public:
         std::vector<int> centersLocal;
         bool singleThread = (boundaries == Range(1, accum.rows - 1));
 
-        startRow = max(1, startRow);
-        endRow = min(arows - 1, endRow);
+        startRow = std::max(1, startRow);
+        endRow = std::min(arows - 1, endRow);
 
         //Find possible circle centers
         for(int y = startRow; y < endRow; ++y )
@@ -1728,7 +1728,7 @@ static void HoughCirclesGradient(InputArray _image, OutputArray _circles,
 {
     CV_Assert(kernelSize == -1 || kernelSize == 3 || kernelSize == 5 || kernelSize == 7);
 
-    dp = max(dp, 1.f);
+    dp = std::max(dp, 1.f);
     float idp = 1.f/dp;
 
     Mat edges, dx, dy;

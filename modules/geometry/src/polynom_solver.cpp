@@ -24,7 +24,7 @@ int solve_deg2(double a, double b, double c, double & x1, double & x2)
     return 1;
   }
 
-  double sqrt_delta = sqrt(delta);
+  double sqrt_delta = std::sqrt(delta);
   x1 = (-b + sqrt_delta) * inv_2a;
   x2 = (-b - sqrt_delta) * inv_2a;
   return 2;
@@ -94,7 +94,7 @@ int solve_deg3(double a, double b, double c, double d,
   double R_abs = fabs(R);
   if (R_abs > DBL_EPSILON)
   {
-    AD = cv::cubeRoot(R_abs + sqrt(D));
+    AD = cv::cubeRoot(R_abs + std::sqrt(D));
     AD = (R >= 0) ? AD : -AD;
     BD = -Q / AD;
   }
@@ -131,7 +131,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
   if (R2 < 0)
     return 0;
 
-  R = sqrt(R2);
+  R = std::sqrt(R2);
   double inv_R = 1. / R;
 
   int nb_real_roots = 0;
@@ -143,7 +143,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
     if (temp < 0)
       D2 = E2 = -1;
     else {
-      double sqrt_temp = sqrt(temp);
+      double sqrt_temp = std::sqrt(temp);
       D2 = 0.75 * b2 - 2 * c + 2 * sqrt_temp;
       E2 = D2 - 4 * sqrt_temp;
     }
@@ -157,7 +157,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
 
   double b_4 = 0.25 * b, R_2 = 0.5 * R;
   if (D2 >= 0) {
-    double D = sqrt(D2);
+    double D = std::sqrt(D2);
     nb_real_roots = 2;
     double D_2 = 0.5 * D;
     x0 = R_2 + D_2 - b_4;
@@ -166,7 +166,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
 
   // Calculate E^2
   if (E2 >= 0) {
-    double E = sqrt(E2);
+    double E = std::sqrt(E2);
     double E_2 = 0.5 * E;
     if (nb_real_roots == 0) {
       x0 = - R_2 + E_2 - b_4;

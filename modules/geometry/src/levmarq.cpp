@@ -241,7 +241,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
 
                         if (geoSolved)
                         {
-                            double truncerr = sqrt(xgeo.dot(xgeo) / x.dot(x));
+                            double truncerr = std::sqrt(xgeo.dot(xgeo) / x.dot(x));
                             bool geoIsGood = (truncerr < 1.0);
                             if (geoIsGood)
                                 x += xgeo * settings.geoScale;
@@ -295,7 +295,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
                 enoughLm = true;
 
                 if (settings.useStepQuality)
-                    lambdaLevMarq *= std::max(1.0 / settings.initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
+                    lambdaLevMarq *= std::max(1.0 / settings.initialLmDownFactor, 1.0 - std::pow(2.0 * stepQuality - 1.0, 3));
                 else
                     lambdaLevMarq *= 1.0 / settings.initialLmDownFactor;
                 lmUpFactor = settings.initialLmUpFactor;

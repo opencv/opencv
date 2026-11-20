@@ -60,8 +60,6 @@
 #include <float.h>
 #include <algorithm>
 #include <numeric>
-using std::max;
-using std::min;
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -869,18 +867,18 @@ public:
                 {
                     int pad_d_begin = (pads_begin.size() == 3) ? pads_begin[0] : 0;
                     dstart = d0 * stride_d - pad_d_begin;
-                    dend = min(dstart + kernel_d, (int)(inp_depth + pads_end[0]));
+                    dend = std::min(dstart + kernel_d, (int)(inp_depth + pads_end[0]));
 
                     ystart = y0 * stride_h - pad_t;
-                    yend = min(ystart + kernel_h, inp_height + pad_b);
+                    yend = std::min(ystart + kernel_h, inp_height + pad_b);
                     srcData = src->ptr<float>(n, c);
                 }
                 int ddelta = dend - dstart;
-                dstart = max(dstart, 0);
-                dend = min(dend, inp_depth);
+                dstart = std::max(dstart, 0);
+                dend = std::min(dend, inp_depth);
                 int ydelta = yend - ystart;
-                ystart = max(ystart, 0);
-                yend = min(yend, inp_height);
+                ystart = std::max(ystart, 0);
+                yend = std::min(yend, inp_height);
                 float *dstData = &dst->ptr<float>(n, c, d0)[y0 * width];
                 float *dstMaskData = mask->data ? &mask->ptr<float>(n, c, d0)[y0 * width] : 0;
 
@@ -892,8 +890,8 @@ public:
                     for( ; x0 < x1; x0++ )
                     {
                         int xstart = x0 * stride_w - pad_l;
-                        int xend = min(xstart + kernel_w, inp_width);
-                        xstart = max(xstart, 0);
+                        int xend = std::min(xstart + kernel_w, inp_width);
+                        xstart = std::max(xstart, 0);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = 0;
@@ -1060,10 +1058,10 @@ public:
                     for( ; x0 < x1; ++x0)
                     {
                         int xstart = x0 * stride_w - pad_l;
-                        int xend = min(xstart + kernel_w, inp_width + pad_r);
+                        int xend = std::min(xstart + kernel_w, inp_width + pad_r);
                         int xdelta = xend - xstart;
-                        xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
+                        xstart = std::max(xstart, 0);
+                        xend = std::min(xend, inp_width);
                         float inv_kernel_area = avePoolPaddedArea ? xdelta * ydelta * ddelta :
                                                 ((dend - dstart) * (yend - ystart) * (xend - xstart));
                         inv_kernel_area = poolingType == AVE ? 1.0 / inv_kernel_area : 1.0;
@@ -1126,8 +1124,8 @@ public:
                     {
                         int xstart = xstartROI + x0 * roiRatio;
                         int xend = xstartROI + std::ceil((x0 + 1) * roiRatio);
-                        xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
+                        xstart = std::max(xstart, 0);
+                        xend = std::min(xend, inp_width);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = 0;
@@ -1158,8 +1156,8 @@ public:
                     {
                         int xstart = (int)std::floor(xstartROI + x0 * roiRatio);
                         int xend = (int)std::ceil(xstartROI + (x0 + 1) * roiRatio);
-                        xstart = max(xstart, 0);
-                        xend = min(xend, inp_width);
+                        xstart = std::max(xstart, 0);
+                        xend = std::min(xend, inp_width);
                         if (xstart >= xend || ystart >= yend)
                         {
                             dstData[x0] = 0;
