@@ -1554,7 +1554,9 @@ function(_ocv_append_target_includes target)
 endfunction()
 
 macro(ocv_add_cuda_compile_flags)
-  ocv_cuda_compile_flags()
+  if(COMMAND ocv_cuda_compile_flags)
+    ocv_cuda_compile_flags()
+  endif()
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: ${CUDA_NVCC_FLAGS}
   "-Xcompiler=${CMAKE_CXX_FLAGS_CUDA} $<$<CONFIG:Debug>:${CMAKE_CXX_FLAGS_DEBUG_CUDA}> \
   $<$<CONFIG:Release>:${CMAKE_CXX_FLAGS_RELEASE_CUDA}>" >)
