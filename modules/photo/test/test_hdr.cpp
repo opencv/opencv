@@ -76,9 +76,11 @@ void loadResponseCSV(String path, Mat& response)
 {
     response = Mat(256, 1, CV_32FC3);
     std::ifstream resp_file(path.c_str());
+    ASSERT_TRUE(resp_file.is_open()) << "Could not open response file " << path;
     for(int i = 0; i < 256; i++) {
         for(int c = 0; c < 3; c++) {
-            resp_file >> response.at<Vec3f>(i)[c];
+            ASSERT_TRUE(static_cast<bool>(resp_file >> response.at<Vec3f>(i)[c]))
+                << "Missing or malformed value in " << path << " at row " << i << ", channel " << c;
             resp_file.ignore(1);
         }
     }
@@ -201,7 +203,7 @@ TEST(Photo_MergeDebevec, regression)
     vector<float> times;
     Mat response;
     loadExposureSeq(test_path + "exposures/", images, times);
-    loadResponseCSV(test_path + "exposures/response.csv", response);
+    ASSERT_NO_FATAL_FAILURE(loadResponseCSV(test_path + "exposures/response.csv", response));
 
     Ptr<MergeDebevec> merge = createMergeDebevec();
 
@@ -301,7 +303,7 @@ TEST(Photo_MergeDebevec, regression_1channel)
     checkEqual(result_default, result_linear, 1e-5f, "Debevec 1ch default vs linear CRF");
 
     Mat response3;
-    loadResponseCSV(test_path + "exposures/response.csv", response3);
+    ASSERT_NO_FATAL_FAILURE(loadResponseCSV(test_path + "exposures/response.csv", response3));
     Mat response1(256, 1, CV_32FC1);
     for (int i = 0; i < 256; i++)
         response1.at<float>(i) = response3.at<Vec3f>(i)[0];
@@ -396,14 +398,20 @@ TEST(Photo_CalibrateDebevec, regression)
     vector<float> times;
     Mat response, expected;
     loadExposureSeq(test_path + "exposures/", images, times);
-    loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
+    ASSERT_NO_FATAL_FAILURE(loadResponseCSV(test_path + "calibrate/debevec.csv", expected));
     Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
     calibrate->process(images, response, times);
+    // The difference is divided by the response and reduced with minMaxLoc(),
+    // which may skip NaN, so require finite curves and a positive response first.
+    ASSERT_TRUE(cv::checkRange(expected)) << "non-finite values in the reference curve";
+    ASSERT_TRUE(cv::checkRange(response, true, NULL, FLT_MIN, FLT_MAX));
     Mat diff = abs(response - expected);
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-    ASSERT_LT(max, 0.15);
+    // The reference curve is the double-precision solution of the same system;
+    // measured float32 builds differ from it by at most 0.0044.
+    ASSERT_LT(max, 0.02);
 }
 
 TEST(Photo_CalibrateDebevec, middle_value_is_fixed)
@@ -431,7 +439,7 @@ TEST(Photo_CalibrateRobertson, regression)
     vector<float> times;
     Mat response, expected;
     loadExposureSeq(test_path + "exposures/", images, times);
-    loadResponseCSV(test_path + "calibrate/robertson.csv", expected);
+    ASSERT_NO_FATAL_FAILURE(loadResponseCSV(test_path + "calibrate/robertson.csv", expected));
 
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
     calibrate->process(images, response, times);
