@@ -168,13 +168,14 @@ if(PARALLEL_ENABLE_PLUGINS)
 endif()
 
 if(HAVE_CUDA)
+  # Real CUDA installation present — cudev module required.
   if(NOT HAVE_opencv_cudev)
     message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
   endif()
-  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-   list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
-  endif()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
+  endif()
 endif()
 
 if(CV_CLANG_CL AND AARCH64)
@@ -182,6 +183,7 @@ if(CV_CLANG_CL AND AARCH64)
 endif()
 
 ocv_create_module(${extra_libs})
+
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
