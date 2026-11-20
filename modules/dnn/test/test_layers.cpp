@@ -5167,4 +5167,35 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Clip_Unsigned, Values(
     make_tuple(CV_64U, (double)std::numeric_limits<uint64_t>::max())
 ));
 
+static void testEyeLikeUnsigned(int depth)
+{
+    LayerParams lp;
+    lp.type = "EyeLike";
+    lp.name = "testEyeLike";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("EyeLike", lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs(1, Mat(3, 3, depth, Scalar(0)));
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(depth, outputs[0].depth());
+
+    Mat ref = Mat::eye(3, 3, CV_64F);
+    Mat out64f;
+    outputs[0].convertTo(out64f, CV_64F);
+    EXPECT_EQ(0, cvtest::norm(ref, out64f, NORM_INF));
+}
+
+TEST(Layer_Test_EyeLike, Unsigned32)
+{
+    testEyeLikeUnsigned(CV_32U);
+}
+
+TEST(Layer_Test_EyeLike, Unsigned64)
+{
+    testEyeLikeUnsigned(CV_64U);
+}
+
 }} // namespace
