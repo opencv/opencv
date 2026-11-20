@@ -2712,4 +2712,19 @@ TEST(Core_InputOutput, filestorage_64u_large_values)
     }
 }
 
+TEST(Core_InputOutput, filestorage_int_above_uint64_max_saturates)
+{
+    const char* texts[] = {
+        "%YAML:1.0\n---\nv: 99999999999999999999\nn: -99999999999999999999\n",
+        "<?xml version=\"1.0\"?>\n<opencv_storage>\n<v>99999999999999999999</v>\n<n>-99999999999999999999</n>\n</opencv_storage>\n",
+        "{\n    \"v\": 99999999999999999999,\n    \"n\": -99999999999999999999\n}\n"
+    };
+    for (const char* text : texts)
+    {
+        FileStorage fs(text, FileStorage::READ | FileStorage::MEMORY);
+        EXPECT_EQ(INT64_MAX, (int64_t)fs["v"]) << text;
+        EXPECT_EQ(INT64_MIN, (int64_t)fs["n"]) << text;
+    }
+}
+
 }} // namespace

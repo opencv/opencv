@@ -6,6 +6,7 @@
 #include "persistence.hpp"
 #include "persistence_impl.hpp"
 #include "persistence_base64_encoding.hpp"
+#include <cerrno>
 #include <unordered_map>
 #include <iterator>
 
@@ -84,7 +85,11 @@ int64_t strToInt64( const char* str, char** endptr )
 {
     if( *str == '-' )
         return strtoll( str, endptr, 0 );
-    return (int64_t)strtoull( str, endptr, 0 );
+    errno = 0;
+    uint64_t val = strtoull( str, endptr, 0 );
+    if( errno == ERANGE )
+        return INT64_MAX;
+    return (int64_t)val;
 }
 
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
