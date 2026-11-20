@@ -176,7 +176,21 @@ public:
     //! the destructor
     ~BackgroundSubtractorMOG2Impl() CV_OVERRIDE {}
     //! drop the background model; the next apply() starts a new one as on a new object
-    void clear() CV_OVERRIDE { initialize(Size(), 0); }
+    void clear() CV_OVERRIDE
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
+        nframes = 0;
+
+        bgmodel.release();
+        bgmodelUsedModes.release();
+#ifdef HAVE_OPENCL
+        u_weight.release();
+        u_variance.release();
+        u_mean.release();
+        u_bgmodelUsedModes.release();
+#endif
+    }
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 

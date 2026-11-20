@@ -4,6 +4,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/video/background_segm.hpp"
+#include "opencv2/core/ocl.hpp"
 
 namespace opencv_test { namespace {
 
@@ -106,19 +107,24 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsFalse)
 
 ///////////////////////// clear() //////////////////////////////
 
+// T is Mat for the CPU path and UMat for the OpenCL path
+template <typename T>
 static void checkClearMatchesNewObject(const Ptr<BackgroundSubtractor>& used, const Ptr<BackgroundSubtractor>& fresh)
 {
-    Mat sceneA(48, 64, CV_8UC3, Scalar::all(40));
-    rectangle(sceneA, Rect(8, 8, 16, 16), Scalar::all(200), FILLED);
-    Mat sceneB(48, 64, CV_8UC3, Scalar::all(160));
-    rectangle(sceneB, Rect(32, 16, 16, 16), Scalar::all(20), FILLED);
+    Mat sceneA_(48, 64, CV_8UC3, Scalar::all(40));
+    rectangle(sceneA_, Rect(8, 8, 16, 16), Scalar::all(200), FILLED);
+    Mat sceneB_(48, 64, CV_8UC3, Scalar::all(160));
+    rectangle(sceneB_, Rect(32, 16, 16, 16), Scalar::all(20), FILLED);
+    T sceneA, sceneB;
+    sceneA_.copyTo(sceneA);
+    sceneB_.copyTo(sceneB);
 
-    Mat mask;
+    T mask;
     for (int i = 0; i < 5; i++)
         used->apply(sceneA, mask);
     used->clear();
 
-    Mat maskUsed, maskFresh, bgUsed, bgFresh;
+    T maskUsed, maskFresh, bgUsed, bgFresh;
     theRNG() = RNG(0x12345678);  // KNN draws its update points from theRNG()
     used->apply(sceneB, maskUsed);
     theRNG() = RNG(0x12345678);
@@ -132,13 +138,29 @@ static void checkClearMatchesNewObject(const Ptr<BackgroundSubtractor>& used, co
 
 TEST(BackgroundSubtractorMOG2, clear_resets_model)
 {
-    checkClearMatchesNewObject(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
+    checkClearMatchesNewObject<Mat>(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
 }
 
 TEST(BackgroundSubtractorKNN, clear_resets_model)
 {
-    checkClearMatchesNewObject(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
+    checkClearMatchesNewObject<Mat>(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
 }
+
+#ifdef HAVE_OPENCL
+TEST(BackgroundSubtractorMOG2, clear_resets_model_ocl)
+{
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    checkClearMatchesNewObject<UMat>(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
+}
+
+TEST(BackgroundSubtractorKNN, clear_resets_model_ocl)
+{
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    checkClearMatchesNewObject<UMat>(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
+}
+#endif
 
 }} // namespace
 /* End of file. */
