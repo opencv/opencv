@@ -175,7 +175,7 @@ Point3f getNormalColorHashVoxel(
     normal[2] = interpolate(tx, ty, tz, czv);
 #endif
 
-    float nv = sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+    float nv = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
     return nv < 0.0001f ? nan3 : normal / nv;
 }
 

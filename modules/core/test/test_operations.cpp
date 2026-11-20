@@ -126,7 +126,7 @@ bool CV_OperationsTest::TestMat()
         Mat shi_2x1(2, 1, CV_32F, Scalar(-1));
         Scalar shift = Scalar::all(15);
 
-        float data[] = { sqrt(2.f)/2, -sqrt(2.f)/2, 1.f, sqrt(2.f)/2, sqrt(2.f)/2, 10.f };
+        float data[] = { std::sqrt(2.f)/2, -std::sqrt(2.f)/2, 1.f, std::sqrt(2.f)/2, std::sqrt(2.f)/2, 10.f };
         Mat rot_2x3(2, 3, CV_32F, data);
 
         Mat res = one_3x1 + shi_3x1 + shi_3x1 + shi_3x1;
@@ -497,7 +497,7 @@ bool CV_OperationsTest::TestTemplateMat()
         Mat_<float> shi_2x1(2, 1, -2);
         Scalar shift = Scalar::all(15);
 
-        float data[] = { sqrt(2.f)/2, -sqrt(2.f)/2, 1.f, sqrt(2.f)/2, sqrt(2.f)/2, 10.f };
+        float data[] = { std::sqrt(2.f)/2, -std::sqrt(2.f)/2, 1.f, std::sqrt(2.f)/2, std::sqrt(2.f)/2, 10.f };
         Mat_<float> rot_2x3(2, 3, data);
 
         Mat_<float> res = Mat(Mat(2 * rot_2x3) * Mat(one_3x1 + shi_3x1 + shi_3x1 + shi_3x1) - shi_2x1) + shift;

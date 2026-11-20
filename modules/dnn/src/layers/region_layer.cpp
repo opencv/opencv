@@ -130,7 +130,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    float logistic_activate(float x) { return 1.F / (1.F + exp(-x)); }
+    float logistic_activate(float x) { return 1.F / (1.F + std::exp(-x)); }
 
     void softmax_activate(const float* input, const int n, const float temp, float* output)
     {
@@ -141,7 +141,7 @@ public:
             if (input[i] > largest) largest = input[i];
         }
         for (i = 0; i < n; ++i) {
-            float e = exp((input[i] - largest) / temp);
+            float e = std::exp((input[i] - largest) / temp);
             sum += e;
             output[i] = e;
         }
@@ -335,8 +335,8 @@ public:
                                 float y_tmp = (logistic_activate(srcData[box_index + 1]) - 0.5f) * scale_x_y + 0.5f;
                                 dstData[box_index + 0] = (x + x_tmp) / cols;
                                 dstData[box_index + 1] = (y + y_tmp) / rows;
-                                dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
-                                dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
+                                dstData[box_index + 2] = std::exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
+                                dstData[box_index + 3] = std::exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
 
                                 int class_index = index_sample_offset + index * cell_size + 5;
                                 for (int j = 0; j < classes; ++j) {

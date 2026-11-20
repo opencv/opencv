@@ -47,7 +47,7 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
                     for(int l=0; l < h; l+=1) {
                         int cmin = upperTri ? 0 : (l + k + 1);
                         cmin = std::max(cmin, 0);
-                        const int cmax = upperTri ? min(l + k -1, w-1) : w-1;
+                        const int cmax = upperTri ? std::min(l + k -1, w-1) : w-1;
                         const int num_zeros = cmax - cmin + 1;
                         if (cmin < w && num_zeros > 0)
                         {

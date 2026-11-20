@@ -627,7 +627,7 @@ static void exponentialMapToSE3Inv(const Mat& twist, Mat& R1, Mat& t1)
     Mat R;
     Rodrigues(rvec, R);
 
-    double theta = sqrt(wx*wx + wy*wy + wz*wz);
+    double theta = std::sqrt(wx*wx + wy*wy + wz*wz);
     double sinc = std::fabs(theta) < 1e-8 ? 1 : std::sin(theta) / theta;
     double mcosc = (std::fabs(theta) < 1e-8) ? 0.5 : (1- std::cos(theta)) / (theta*theta);
     double msinc = (std::abs(theta) < 1e-8) ? (1/6.0) : (1-sinc) / (theta*theta);
@@ -1049,7 +1049,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     {
         int type = (reprojectionError.fixedType() || !reprojectionError.empty())
                 ? reprojectionError.type()
-                : (max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F);
+                : (std::max(_ipoints.depth(), _opoints.depth()) == CV_64F ? CV_64F : CV_32F);
 
         reprojectionError.create(solutions, 1, type);
         CV_CheckType(reprojectionError.type(), type == CV_32FC1 || type == CV_64FC1,
@@ -1078,7 +1078,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             Mat projectedPoints;
             projectPoints(objectPoints, vec_rvecs[i], vec_tvecs[i], cameraMatrix, distCoeffs, projectedPoints);
             int nprojectedPoints = (int)projectedPoints.total();
-            double rmse = norm(projectedPoints, imagePoints, NORM_L2) / sqrt(2*nprojectedPoints);
+            double rmse = norm(projectedPoints, imagePoints, NORM_L2) / std::sqrt(2*nprojectedPoints);
 
             Mat err = reprojectionError.getMat();
             if (type == CV_32F)

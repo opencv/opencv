@@ -136,7 +136,7 @@ struct ChessBoardCorner
         {
             if (neighbors[i])
             {
-                sum += sqrt(normL2Sqr<float>(neighbors[i]->pt - pt));
+                sum += std::sqrt(normL2Sqr<float>(neighbors[i]->pt - pt));
                 n++;
             }
         }
@@ -1948,13 +1948,13 @@ void ChessBoardDetector::generateQuads(const Mat& image_, int flags, int dilatio
             double p = arcLength(approx_contour, true);
             double area = contourArea(approx_contour, false);
 
-            double d1 = sqrt(normL2Sqr<double>(pt[0] - pt[2]));
-            double d2 = sqrt(normL2Sqr<double>(pt[1] - pt[3]));
+            double d1 = std::sqrt(normL2Sqr<double>(pt[0] - pt[2]));
+            double d2 = std::sqrt(normL2Sqr<double>(pt[1] - pt[3]));
 
             // philipg.  Only accept those quadrangles which are more square
             // than rectangular and which are big enough
-            double d3 = sqrt(normL2Sqr<double>(pt[0] - pt[1]));
-            double d4 = sqrt(normL2Sqr<double>(pt[1] - pt[2]));
+            double d3 = std::sqrt(normL2Sqr<double>(pt[0] - pt[1]));
+            double d4 = std::sqrt(normL2Sqr<double>(pt[1] - pt[2]));
             if (!(d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_area &&
                 d1 >= 0.15 * p && d2 >= 0.15 * p))
                 continue;
@@ -2000,7 +2000,7 @@ void ChessBoardDetector::generateQuads(const Mat& image_, int flags, int dilatio
         }
 
         const int edge_len_compensation = 2 * dilations;
-        q.edge_sqr_len += 2 * sqrt(q.edge_sqr_len) * edge_len_compensation + edge_len_compensation * edge_len_compensation;
+        q.edge_sqr_len += 2 * std::sqrt(q.edge_sqr_len) * edge_len_compensation + edge_len_compensation * edge_len_compensation;
     }
 
     all_quads_count = quad_count;

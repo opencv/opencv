@@ -458,7 +458,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4f>& lines,
         Mat gaussian_img;
         const double sigma = (SCALE < 1)?(SIGMA_SCALE / SCALE):(SIGMA_SCALE);
         const double sprec = 3;
-        const unsigned int h =  (unsigned int)(ceil(sigma * sqrt(2 * sprec * log(10.0))));
+        const unsigned int h =  (unsigned int)(ceil(sigma * std::sqrt(2 * sprec * std::log(10.0))));
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
@@ -735,7 +735,7 @@ double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, c
     CV_Assert(!(double_equal(Ixx, 0) && double_equal(Iyy, 0) && double_equal(Ixy, 0)));
 
     // Compute smallest eigenvalue
-    double lambda = 0.5 * (Ixx + Iyy - sqrt((Ixx - Iyy) * (Ixx - Iyy) + 4.0 * Ixy * Ixy));
+    double lambda = 0.5 * (Ixx + Iyy - std::sqrt((Ixx - Iyy) * (Ixx - Iyy) + 4.0 * Ixy * Ixy));
 
     // Compute angle
     double theta = (fabs(Ixx)>fabs(Iyy))?
@@ -778,7 +778,7 @@ bool LineSegmentDetectorImpl::refine(std::vector<RegionPoint>& reg, double reg_a
     CV_Assert(n > 0);
     double mean_angle = sum / double(n);
     // 2 * standard deviation
-    double tau = 2.0 * sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle);
+    double tau = 2.0 * std::sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle);
 
     // Try new region
     region_grow(Point(reg[0].x, reg[0].y), reg, reg_angle, tau);
@@ -1017,8 +1017,8 @@ double LineSegmentDetectorImpl::nfa(const int& n, const int& k, const double& p)
 
     double log1term = log_gamma(double(n) + 1) - log_gamma(double(k) + 1)
                 - log_gamma(double(n-k) + 1)
-                + double(k) * log(p) + double(n-k) * log(1.0 - p);
-    double term = exp(log1term);
+                + double(k) * std::log(p) + double(n-k) * std::log(1.0 - p);
+    double term = std::exp(log1term);
 
     if(double_equal(term, 0))
     {

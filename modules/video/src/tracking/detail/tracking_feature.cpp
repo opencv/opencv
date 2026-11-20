@@ -103,7 +103,7 @@ void CvHaarEvaluator::generateFeatures(int nFeatures)
     }
 }
 
-#define INITSIGMA(numAreas) (static_cast<float>(sqrt(256.0f * 256.0f / 12.0f * (numAreas))));
+#define INITSIGMA(numAreas) (static_cast<float>(std::sqrt(256.0f * 256.0f / 12.0f * (numAreas))));
 
 CvHaarEvaluator::FeatureHaar::FeatureHaar(Size patchSize)
 {
@@ -137,8 +137,8 @@ void CvHaarEvaluator::FeatureHaar::generateRandomFeature(Size patchSize)
         position.y = rand() % (patchSize.height);
         position.x = rand() % (patchSize.width);
 
-        baseDim.width = (int)((1 - sqrt(1 - (float)rand() * (float)(1.0 / RAND_MAX))) * patchSize.width);
-        baseDim.height = (int)((1 - sqrt(1 - (float)rand() * (float)(1.0 / RAND_MAX))) * patchSize.height);
+        baseDim.width = (int)((1 - std::sqrt(1 - (float)rand() * (float)(1.0 / RAND_MAX))) * patchSize.width);
+        baseDim.height = (int)((1 - std::sqrt(1 - (float)rand() * (float)(1.0 / RAND_MAX))) * patchSize.height);
 
         //select types
         //float probType[11] = {0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0950f};

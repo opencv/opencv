@@ -146,11 +146,11 @@ void ClfMilBoost::update(const Mat& posx, const Mat& negx)
             float lll = 1.0f;
             for (int j = 0; j < numpos; j++)
                 lll *= (1 - sigmoid(Hpos[j] + pospred[w][j]));
-            poslikl[w] = (float)-log(1 - lll + 1e-5);
+            poslikl[w] = (float)-std::log(1 - lll + 1e-5);
 
             lll = 0.0f;
             for (int j = 0; j < numneg; j++)
-                lll += (float)-log(1e-5f + 1 - sigmoid(Hneg[j] + negpred[w][j]));
+                lll += (float)-std::log(1e-5f + 1 - sigmoid(Hneg[j] + negpred[w][j]));
             neglikl[w] = lll;
 
             likl[w] = poslikl[w] / numpos + neglikl[w] / numneg;
@@ -286,8 +286,8 @@ void ClfOnlineStump::update(const Mat& posx, const Mat& negx, const Mat_<float>&
 
         _q = (_mu1 - _mu0) / 2;
         _s = sign(_mu1 - _mu0);
-        _log_n0 = std::log(float(1.0f / std::pow(_sig0, 0.5f)));
-        _log_n1 = std::log(float(1.0f / std::pow(_sig1, 0.5f)));
+        _log_n0 = std::log(float(1.0f / std::sqrt(_sig0)));
+        _log_n1 = std::log(float(1.0f / std::sqrt(_sig1)));
         //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
         //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
         _e1 = -1.0f / (2.0f * _sig1 + std::numeric_limits<float>::min());
@@ -314,8 +314,8 @@ void ClfOnlineStump::update(const Mat& posx, const Mat& negx, const Mat_<float>&
 
         _q = (_mu1 - _mu0) / 2;
         _s = sign(_mu1 - _mu0);
-        _log_n0 = std::log(float(1.0f / std::pow(_sig0, 0.5f)));
-        _log_n1 = std::log(float(1.0f / std::pow(_sig1, 0.5f)));
+        _log_n0 = std::log(float(1.0f / std::sqrt(_sig0)));
+        _log_n1 = std::log(float(1.0f / std::sqrt(_sig1)));
         //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
         //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
         _e1 = -1.0f / (2.0f * _sig1 + std::numeric_limits<float>::min());

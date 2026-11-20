@@ -337,17 +337,17 @@ void Utils::decomposeProjection (const Mat &P, Matx33d &K, Matx33d &R, Vec3d &t,
     K = Matx33d::eye();
     K(1,2) = M.row(1).dot(M.row(2)) / scale;
     K(0,2) = M.row(0).dot(M.row(2)) / scale;
-    K(1,1) = sqrt(M.row(1).dot(M.row(1)) / scale - K(1,2)*K(1,2));
-    K(0,0) = sqrt(M.row(0).dot(M.row(0)) / scale - K(0,2)*K(0,2));
+    K(1,1) = std::sqrt(M.row(1).dot(M.row(1)) / scale - K(1,2)*K(1,2));
+    K(0,0) = std::sqrt(M.row(0).dot(M.row(0)) / scale - K(0,2)*K(0,2));
     if (same_focal)
         K(0,0) = K(1,1) = (K(0,0) + K(1,1)) / 2;
-    R = K.inv() * M / sqrt(scale);
+    R = K.inv() * M / std::sqrt(scale);
     if (determinant(M) < 0) R *= -1;
     t = R * M.inv() * Vec3d(P.col(3));
 }
 
 double Utils::getPoissonCDF (double lambda, int inliers) {
-    double exp_lambda = exp(-lambda), cdf = exp_lambda, lambda_i_div_fact_i = 1;
+    double exp_lambda = std::exp(-lambda), cdf = exp_lambda, lambda_i_div_fact_i = 1;
     for (int i = 1; i <= inliers; i++) {
         lambda_i_div_fact_i *= (lambda / i);
         cdf += exp_lambda * lambda_i_div_fact_i;

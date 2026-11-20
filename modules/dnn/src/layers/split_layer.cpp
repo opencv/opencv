@@ -87,7 +87,7 @@ public:
     {
         CV_Assert(inputs.size() == 1);
 
-        Layer::getMemoryShapes(inputs, max(1, outputsCount >= 0 ? outputsCount : requiredOutputs),
+        Layer::getMemoryShapes(inputs, std::max(1, outputsCount >= 0 ? outputsCount : requiredOutputs),
                                outputs, internals);
         return false;
     }

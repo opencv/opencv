@@ -39,7 +39,7 @@ public:
     // err > 0
     float getError(float err) const override
     {
-        return exp(minvScale * err);
+        return std::exp(minvScale * err);
     }
 };
 #endif
@@ -233,7 +233,7 @@ static void thresholdPatternCameraAngles (int NUM_PATTERN_PTS, double THR_PATTER
                             pattern1 = p1;
                             pattern2 = p2;
                             pattern3 = p3;
-                            norm_normal = sqrt(norm_normal);
+                            norm_normal = std::sqrt(norm_normal);
                             break;
                         }
                     }
@@ -255,7 +255,7 @@ static void thresholdPatternCameraAngles (int NUM_PATTERN_PTS, double THR_PATTER
             Rodrigues(rvecs_all[c][f], R);
             opt_axes[c][f] = Vec3d(Mat(R.row(2)));
             const double angle = acos(opt_axes[c][f].dot(pattern_normal));
-            is_valid_angle2pattern[c][f] = min(M_PI-angle, angle) < THR_PATTERN_CAMERA_ANGLES;
+            is_valid_angle2pattern[c][f] = std::min(M_PI-angle, angle) < THR_PATTERN_CAMERA_ANGLES;
         }
     }
 }
@@ -730,7 +730,7 @@ double calibrateMultiview(
                     for (int f = 0; f < (int) obj_points_.size(); f++) {
                         double err2 = multiview::computeReprojectionMSE(obj_points_[f],
                             img_points_[f], K, dist, rvecs.row(f), tvecs.row(f), noArray(), noArray(), cv::CALIB_MODEL_FISHEYE);
-                        errors_per_view[f] = sqrt(err2);
+                        errors_per_view[f] = std::sqrt(err2);
                     }
                 } else {
                     repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], K, dist,
@@ -962,7 +962,7 @@ double calibrateMultiview(
                 const double err2 = multiview::computeReprojectionMSE(objPoints_norm[f] * scale_3d_pts,
                         imagePoints[c][f], Ks_vec[c],
                         distortions_vec[c], rvec0, tvec0, rvec, tvec, models_mat.at<uchar>(c));
-                (*errs_ptr++) = sqrt(err2);
+                (*errs_ptr++) = std::sqrt(err2);
                 sum_errors += err2;
                 cnt_errors += 1;
             } else (*errs_ptr++) = -1.0;
@@ -973,7 +973,7 @@ double calibrateMultiview(
         errs.copyTo(perFrameErrors);
     }
 
-    return sqrt(sum_errors / cnt_errors);
+    return std::sqrt(sum_errors / cnt_errors);
 }
 
 double calibrateMultiview(

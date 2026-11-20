@@ -98,8 +98,6 @@ static double normalizePoints(const Mat& points,
                               Mat& normalizedPoints,
                               Mat& pointMean)
 {
-    using std::fpclassify;
-    using std::sqrt;
     constexpr double defaultPointScale = 1.0;
     const Mat pointCoordinates =
         points.reshape(1, static_cast<int>(points.total()));
@@ -110,14 +108,14 @@ static double normalizePoints(const Mat& points,
     // Apply Hartley normalization. The maximum coordinate is an intermediate
     // preconditioner that prevents the squared norm from underflowing.
     double maximumCoordinate = norm(centeredPoints, NORM_INF);
-    if (fpclassify(maximumCoordinate) == FP_ZERO)
+    if (std::fpclassify(maximumCoordinate) == FP_ZERO)
     {
         maximumCoordinate = defaultPointScale;
     }
     Mat scaledPoints = centeredPoints / maximumCoordinate;
     double standardDeviation =
-        norm(scaledPoints, NORM_L2) / sqrt(scaledPoints.total());
-    if (fpclassify(standardDeviation) == FP_ZERO)
+        norm(scaledPoints, NORM_L2) / std::sqrt(scaledPoints.total());
+    if (std::fpclassify(standardDeviation) == FP_ZERO)
     {
         standardDeviation = defaultPointScale;
     }
@@ -251,7 +249,7 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     }
     else
     {
-        finalParam.Init(Vec2d(max(image_size.width, image_size.height) / 2., max(image_size.width, image_size.height) / 2.),
+        finalParam.Init(Vec2d(std::max(image_size.width, image_size.height) / 2., std::max(image_size.width, image_size.height) / 2.),
                         Vec2d(image_size.width  / 2.0 - 0.5, image_size.height / 2.0 - 0.5));
     }
 
@@ -617,7 +615,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     }
 
     rms /= ((double)e.total() / 2.0);
-    rms = sqrt(rms);
+    rms = std::sqrt(rms);
 
     _K1 = Matx33d(intrinsicLeft.f[0], intrinsicLeft.f[0] * intrinsicLeft.alpha, intrinsicLeft.c[0],
                                    0,                       intrinsicLeft.f[1], intrinsicLeft.c[1],
@@ -1127,7 +1125,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     }
 
     meanStdDev(ex, noArray(), std_err);
-    std_err *= sqrt((double)ex.total()/((double)ex.total() - 1.0));
+    std_err *= std::sqrt((double)ex.total()/((double)ex.total() - 1.0));
 
     Vec<double, 1> sigma_x;
     meanStdDev(ex.reshape(1, 1), noArray(), sigma_x);
@@ -1141,10 +1139,10 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     // an explanation of that denominator correction can be found here:
     // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
     // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
-    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
+    sigma_x  *= std::sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
 
     errors = 3 * sigma_x(0) * JJ2.diag();
-    rms = sqrt(norm(ex, NORM_L2SQR)/ex.total());
+    rms = std::sqrt(norm(ex, NORM_L2SQR)/ex.total());
 }
 
 void cv::internal::dAB(InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB)

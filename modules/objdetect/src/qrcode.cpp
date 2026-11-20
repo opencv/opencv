@@ -495,7 +495,7 @@ bool QRDetect::localization()
 
         triangle_perim = (triangle_sides[0] + triangle_sides[1] + triangle_sides[2]) / 2;
 
-        square_area = sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
+        square_area = std::sqrt((triangle_perim * (triangle_perim - triangle_sides[0])
                                            * (triangle_perim - triangle_sides[1])
                                            * (triangle_perim - triangle_sides[2]))) * 2;
         img_square_area = bin_barcode.cols * bin_barcode.rows;
@@ -575,8 +575,8 @@ bool QRDetect::computeTransformationPoints()
     {
         Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
         uint8_t next_pixel, future_pixel = 255;
-        int count_test_lines = 0, index_c = max(0, min(cvRound(localization_points[i].x), bin_barcode.cols - 1));
-        const int index_r = max(0, min(cvRound(localization_points[i].y), bin_barcode.rows - 1));
+        int count_test_lines = 0, index_c = std::max(0, std::min(cvRound(localization_points[i].x), bin_barcode.cols - 1));
+        const int index_r = std::max(0, std::min(cvRound(localization_points[i].y), bin_barcode.rows - 1));
         for (; index_c < bin_barcode.cols - 1; index_c++)
         {
             next_pixel = bin_barcode.ptr<uint8_t>(index_r)[index_c + 1];
@@ -1150,7 +1150,7 @@ float static getMinSideLen(const vector<Point2f> &points) {
     CV_Assert(points.size() == 4ull);
     double res = norm(points[1]-points[0]);
     for (size_t i = 1ull; i < points.size(); i++) {
-        res = min(res, norm(points[i]-points[(i+1ull) % points.size()]));
+        res = std::min(res, norm(points[i]-points[(i+1ull) % points.size()]));
     }
     return static_cast<float>(res);
 }
@@ -1167,7 +1167,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     original_points = bbox;
     version = 0;
     version_size = 0;
-    test_perspective_size = max(getMinSideLen(points)+1.f, 251.f);
+    test_perspective_size = std::max(getMinSideLen(points)+1.f, 251.f);
     result_info = "";
 }
 
@@ -1182,7 +1182,7 @@ float QRDecode::distancePointToLine(Point2f a, Point2f b , Point2f c)
     A = c.y - b.y;
     B = c.x - b.x;
     C = c.x * b.y - b.x * c.y;
-    float dist = sqrt(A*A + B*B);
+    float dist = std::sqrt(A*A + B*B);
     if (dist == 0) return 0;
     result = abs((A * a.x - B * a.y + C)) / dist;
 
@@ -2183,7 +2183,7 @@ bool QRDecode::straightenQRCodeInParts()
     {
         return false;
     }
-    float perspective_curved_size = max(getMinSideLen(original_points)+1.f, 251.f);;
+    float perspective_curved_size = std::max(getMinSideLen(original_points)+1.f, 251.f);;
     const Size temporary_size(cvRound(perspective_curved_size), cvRound(perspective_curved_size));
 
     float dist = perspective_curved_size / (number_pnts_to_cut - 1);
@@ -2349,10 +2349,10 @@ static inline bool checkFinderPatternByAspect(const vector<Point> &finderPattern
         return false;
     float sidesLen[4];
     for (size_t i = 0; i < finderPattern.size(); i++) {
-        sidesLen[i] = (sqrt(normL2Sqr<float>(Point2f(finderPattern[i] - finderPattern[(i+1ull)%finderPattern.size()]))));
+        sidesLen[i] = (std::sqrt(normL2Sqr<float>(Point2f(finderPattern[i] - finderPattern[(i+1ull)%finderPattern.size()]))));
     }
-    const float maxSide = max(max(sidesLen[0], sidesLen[1]), max(sidesLen[2], sidesLen[3]));
-    const float minSide = min(min(sidesLen[0], sidesLen[1]), min(sidesLen[2], sidesLen[3]));
+    const float maxSide = std::max({sidesLen[0], sidesLen[1], sidesLen[2], sidesLen[3]});
+    const float minSide = std::min({sidesLen[0], sidesLen[1], sidesLen[2], sidesLen[3]});
 
     const float patternMaxRelativeLen = .3f;
     if (1.f - minSide / maxSide > patternMaxRelativeLen)
@@ -2388,11 +2388,11 @@ static inline std::pair<int, int> matchPatternPoints(const vector<Point> &finder
             }
         }
     }
-    distanceToOrig = sqrt(distanceToOrig);
+    distanceToOrig = std::sqrt(distanceToOrig);
 
     // check that the distance from the QR pattern to the corners of the QR code is small
-    const float originalQrSide = sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[1]))*0.5f +
-                                 sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[3]))*0.5f;
+    const float originalQrSide = std::sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[1]))*0.5f +
+                                 std::sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[3]))*0.5f;
     const float maxRelativeDistance = .1f;
 
     if (distanceToOrig/originalQrSide > maxRelativeDistance)
@@ -2707,8 +2707,8 @@ void QRDecode::detectAlignment() {
                     float l = resTemplate.at<float>(maxLoc.y, maxLoc.x - 1), r = resTemplate.at<float>(maxLoc.y, maxLoc.x + 1);
                     float u = resTemplate.at<float>(maxLoc.y - 1, maxLoc.x), d = resTemplate.at<float>(maxLoc.y + 1, maxLoc.x);
                     float denx = l - 2*c + r, deny = u - 2*c + d;
-                    if (denx < 0) refined.x += std::max(-0.5f, std::min(0.5f, (l - r)/(2*denx)));
-                    if (deny < 0) refined.y += std::max(-0.5f, std::min(0.5f, (u - d)/(2*deny)));
+                    if (denx < 0) refined.x += std::clamp((l - r)/(2*denx), -0.5f, 0.5f);
+                    if (deny < 0) refined.y += std::clamp((u - d)/(2*deny), -0.5f, 0.5f);
                 }
                 const float templateOffset = static_cast<float>(resizedAlignmentMarker.size().width) / 2.f;
                 Point2f alignmentCoord(Point2f(refined.x + left_top_x + templateOffset, refined.y + left_top_y + templateOffset));
@@ -2779,8 +2779,8 @@ bool QRDecode::samplingForVersion()
     for (int r = 0, i = 0; i < version_size; r += deltas_rows[i], i++) {
         for (int c = 0, j = 0; j < version_size; c += deltas_cols[j], j++) {
             Mat tile = postIntermediate(
-                           Range(r, min(r + delta_rows, postIntermediate.rows)),
-                           Range(c, min(c + delta_cols, postIntermediate.cols)));
+                           Range(r, std::min(r + delta_rows, postIntermediate.rows)),
+                           Range(c, std::min(c + delta_cols, postIntermediate.cols)));
             const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
             straight.ptr<uint8_t>(i)[j] = (frequencyElem < totalFrequencyElem) ? 0 : 255;
         }
@@ -4224,8 +4224,8 @@ struct FinderPatternInfo {
         for (int i = 0; i < 4; i++) {
             center += points[i];
             const Point2f side = points[i]-points[(i+1) % 4];
-            const float lenSide = sqrt(normL2Sqr<float>(side));
-            minSin = min(minSin, abs(side.y) / lenSide);
+            const float lenSide = std::sqrt(normL2Sqr<float>(side));
+            minSin = std::min(minSin, abs(side.y) / lenSide);
             moduleSize += lenSide;
         }
         moduleSize /= (4.f * 7.f); // 4 sides, 7 modules in one side
@@ -4295,7 +4295,7 @@ struct FinderPatternInfo {
         Point2f toThis = other.getDirectionTo(typePattern);
         const float cosAngle = getCosAngle(toOther, toThis);
         if (cosAngle < 0.f && (CV_PI - acos(cosAngle)) / 2.f < maxRotation) {
-            const float angleCenter = max(acos(getCosAngle(toOther, other.center - center)), acos(getCosAngle(toThis, center - other.center)));
+            const float angleCenter = std::max(acos(getCosAngle(toOther, other.center - center)), acos(getCosAngle(toThis, center - other.center)));
             if (angleCenter < maxRotation)
                 return true;
             }
@@ -4303,7 +4303,7 @@ struct FinderPatternInfo {
     }
 
     static float getCosAngle(const Point2f& vec1, const Point2f& vec2) {
-        float cosAngle = vec1.dot(vec2) / (sqrt(normL2Sqr<float>(vec1)) * sqrt(normL2Sqr<float>(vec2)));
+        float cosAngle = vec1.dot(vec2) / (std::sqrt(normL2Sqr<float>(vec1)) * std::sqrt(normL2Sqr<float>(vec2)));
         cosAngle = std::max(-1.f, cosAngle);
         cosAngle = std::min(1.f, cosAngle);
         return cosAngle;
@@ -4371,9 +4371,9 @@ struct FinderPatternInfo {
             for(int i = 1; i < lineIterator.count; i++, ++lineIterator) {
                 const uint8_t value = img.at<uint8_t>(lineIterator.pos());
                 if (prevValue != value) {
-                    const float dist = sqrt(normL2Sqr<float>((Point2f)(vec.back()-lineIterator.pos())));
+                    const float dist = std::sqrt(normL2Sqr<float>((Point2f)(vec.back()-lineIterator.pos())));
                     // check long and short lines in timing pattern
-                    const float relativeDiff = max(moduleSize, dist)/min(moduleSize, dist);
+                    const float relativeDiff = std::max(moduleSize, dist)/std::min(moduleSize, dist);
                     if (relativeDiff > maxTimingPatternMismatch) {
                         if (dist < moduleSize || relativeDiff < maxTimingPatternMismatch*8.f)
                             penaltyPoints++;
@@ -4441,8 +4441,8 @@ struct QRCode {
         if (abs(pattern1.minQrAngle - pattern2.minQrAngle) >  qrDetectorParameters.maxRotation ||
             abs(pattern1.minQrAngle - pattern3.minQrAngle) > qrDetectorParameters.maxRotation) // check maxRotation
             return QRCode(pattern1, pattern2, pattern3, centerQR, distance);
-        if (max(pattern1.moduleSize, pattern2.moduleSize) / min(pattern1.moduleSize, pattern2.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch ||
-            max(pattern1.moduleSize, pattern3.moduleSize) / min(pattern1.moduleSize, pattern3.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch)
+        if (std::max(pattern1.moduleSize, pattern2.moduleSize) / std::min(pattern1.moduleSize, pattern2.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch ||
+            std::max(pattern1.moduleSize, pattern3.moduleSize) / std::min(pattern1.moduleSize, pattern3.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch)
             return QRCode(pattern1, pattern2, pattern3, centerQR, distance);
         // QR code:
         // center       right
@@ -4457,9 +4457,9 @@ struct QRCode {
         //  bottom
 
         // sides length check
-        const float side1 = sqrt(normL2Sqr<float>(pattern1.center - pattern2.center));
-        const float side2 = sqrt(normL2Sqr<float>(pattern1.center - pattern3.center));
-        const float side3 = sqrt(normL2Sqr<float>(pattern2.center - pattern3.center));
+        const float side1 = std::sqrt(normL2Sqr<float>(pattern1.center - pattern2.center));
+        const float side2 = std::sqrt(normL2Sqr<float>(pattern1.center - pattern3.center));
+        const float side3 = std::sqrt(normL2Sqr<float>(pattern2.center - pattern3.center));
         std::array<float, 3> sides = {side1, side2, side3};
         std::sort(sides.begin(), sides.end());
         // check sides diff
@@ -4501,7 +4501,7 @@ struct QRCode {
                                                    pattern2.getQRCorner().second, pattern2.points[pattern2.innerCornerId]);
                     Point2f c2 = intersectionLines(pattern1.getQRCorner().second, pattern1.points[pattern1.innerCornerId],
                                                    pattern3.getQRCorner().second, pattern3.points[pattern3.innerCornerId]);
-                    const float centerDistance = sqrt(normL2Sqr<float>(c1 - c2));
+                    const float centerDistance = std::sqrt(normL2Sqr<float>(c1 - c2));
                     distance = (sides[0] + sides[1] + centerDistance)*(sides[1] / sides[0]);
                 }
             }
@@ -4529,8 +4529,8 @@ struct QRCode {
             return std::numeric_limits<int>::max();
 
         // TODO: add v1, v2 check, add "y" checks
-        float numModules = (sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - rightPattern.getQRCorner().second)))*0.5f +
-                            sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - bottomPattern.getQRCorner().second))*0.5f)) / moduleSize;
+        float numModules = (std::sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - rightPattern.getQRCorner().second)))*0.5f +
+                            std::sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - bottomPattern.getQRCorner().second))*0.5f)) / moduleSize;
 
         const int sizeDelta = abs(cvRound(numModules) - (14 + v1.z < v2.z ? v1.x : v2.x));
         const int colorDelta = abs(v1.x - v1.y - v1.y) + abs(v2.x - v2.y - v2.y);
@@ -4569,7 +4569,7 @@ vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, co
     for (size_t i = 0ull; i < corners.size(); i++) {
         FinderPatternInfo pattern = FinderPatternInfo(corners[i]);
         patterns[i] = pattern;
-        maxModuleSize = max(maxModuleSize, pattern.moduleSize);
+        maxModuleSize = std::max(maxModuleSize, pattern.moduleSize);
     }
     const int threshold = cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) +
                           (cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) % 2 ? 0 : 1);
@@ -4677,7 +4677,7 @@ struct PimplQRAruco : public ImplContour {
         float minDist = std::numeric_limits<float>::max();
         for (size_t i = 0ull; i < corners.size(); i += 4ull) {
             Point2f qrCenter((corners[i] + corners[i+1ull] + corners[i+2ull] + corners[i+3ull]) / 4.f);
-            float dist = sqrt(normL2Sqr<float>(qrCenter - imageCenter));
+            float dist = std::sqrt(normL2Sqr<float>(qrCenter - imageCenter));
             if (dist < minDist) {
                 minQrId = i;
                 minDist = dist;

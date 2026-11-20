@@ -214,8 +214,8 @@ private:
                     // Get bounding box
                     float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
                     float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
-                    float w = exp(bbox_v[idx * 4 + 2]) * strides[i];
-                    float h = exp(bbox_v[idx * 4 + 3]) * strides[i];
+                    float w = std::exp(bbox_v[idx * 4 + 2]) * strides[i];
+                    float h = std::exp(bbox_v[idx * 4 + 3]) * strides[i];
 
                     float x1 = cx - w / 2.f;
                     float y1 = cy - h / 2.f;

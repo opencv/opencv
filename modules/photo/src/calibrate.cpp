@@ -91,7 +91,7 @@ public:
                 points.push_back(Point(rand() % cols, rand() % rows));
             }
         } else {
-            int x_points = static_cast<int>(sqrt(static_cast<double>(samples) * cols / rows));
+            int x_points = static_cast<int>(std::sqrt(static_cast<double>(samples) * cols / rows));
             CV_Assert(0 < x_points && x_points <= cols);
             int y_points = samples / x_points;
             CV_Assert(0 < y_points && y_points <= rows);
@@ -129,7 +129,7 @@ public:
                     float wij = w.at<float>(val);
                     A.at<float>(k, val) = wij;
                     A.at<float>(k, LDR_SIZE + (int)i) = -wij;
-                    B.at<float>(k, 0) = wij * log(times.at<float>((int)j));
+                    B.at<float>(k, 0) = wij * std::log(times.at<float>((int)j));
                     k++;
                 }
             }

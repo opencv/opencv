@@ -1084,9 +1084,9 @@ static int * initLUTforABXZ()
 inline void fill_one(int16_t *LAB, const int16_t *LAB_prev, int16_t *LUV, const int16_t *LUV_prev, int p, int q, int r, int _p, int _q, int _r)
 {
     int idxold = 0;
-    idxold += min(p+(_p), (int)(LAB_LUT_DIM-1))*3;
-    idxold += min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
-    idxold += min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
+    idxold += std::min(p+(_p), (int)(LAB_LUT_DIM-1))*3;
+    idxold += std::min(q+(_q), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
+    idxold += std::min(r+(_r), (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
     int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*(_p)+2*(_q)+(_r);
     LAB[idxnew]    = LAB_prev[idxold];
     LAB[idxnew+8]  = LAB_prev[idxold+1];
@@ -1948,8 +1948,8 @@ struct RGB2Lab_f
 
                     if(bIdx)
                     {
-                        swap(rvec0, bvec0);
-                        swap(rvec1, bvec1);
+                        std::swap(rvec0, bvec0);
+                        std::swap(rvec1, bvec1);
                     }
 
                     v_float32 zerof = vx_setzero_f32(), onef = vx_setall_f32(1.0f);
@@ -2448,9 +2448,9 @@ struct Lab2RGBinteger
         go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
         bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
 
-        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
-        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
-        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+        ro = std::clamp(ro, 0, (int)INV_GAMMA_TAB_SIZE-1);
+        go = std::clamp(go, 0, (int)INV_GAMMA_TAB_SIZE-1);
+        bo = std::clamp(bo, 0, (int)INV_GAMMA_TAB_SIZE-1);
 
         if(issRGB)
         {
@@ -3292,7 +3292,7 @@ struct RGB2Luvinterpolate
 
                 if(bIdx)
                 {
-                    swap(r, b);
+                    std::swap(r, b);
                 }
 
                 /*
@@ -3587,7 +3587,7 @@ struct Luv2RGBinteger
         int z = zm/256 + zm/65536;
 
         //limit X, Y, Z to [0, 2] to fit white point
-        x = max(0, min(2*BASE, x)); z = max(0, min(2*BASE, z));
+        x = std::clamp(x, 0, 2*BASE); z = std::clamp(z, 0, 2*BASE);
 
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2];
         int C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5];
@@ -3597,9 +3597,9 @@ struct Luv2RGBinteger
         go = CV_DESCALE(C3 * x + C4 * y + C5 * z, shift);
         bo = CV_DESCALE(C6 * x + C7 * y + C8 * z, shift);
 
-        ro = max(0, min((int)INV_GAMMA_TAB_SIZE-1, ro));
-        go = max(0, min((int)INV_GAMMA_TAB_SIZE-1, go));
-        bo = max(0, min((int)INV_GAMMA_TAB_SIZE-1, bo));
+        ro = std::clamp(ro, 0, (int)INV_GAMMA_TAB_SIZE-1);
+        go = std::clamp(go, 0, (int)INV_GAMMA_TAB_SIZE-1);
+        bo = std::clamp(bo, 0, (int)INV_GAMMA_TAB_SIZE-1);
 
         if(issRGB)
         {

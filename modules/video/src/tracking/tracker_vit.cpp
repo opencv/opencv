@@ -98,7 +98,7 @@ protected:
 static int crop_image(const Mat& src, Mat& dst, Rect box, int factor)
 {
     int x = box.x, y = box.y, w = box.width, h = box.height;
-    int crop_sz = cvCeil(sqrt(w * h) * factor);
+    int crop_sz = cvCeil(std::sqrt(w * h) * factor);
 
     int x1 = x + (w - crop_sz) / 2;
     int x2 = x1 + crop_sz;

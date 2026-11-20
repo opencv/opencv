@@ -606,7 +606,7 @@ public:
         const double * const p = (double *) model.data;
         double coeff_a = p[0], coeff_b = p[1], coeff_c = p[2], coeff_d = p[3];
         // Format for easy distance calculation
-        double magnitude_abc = sqrt(coeff_a * coeff_a + coeff_b * coeff_b + coeff_c * coeff_c);
+        double magnitude_abc = std::sqrt(coeff_a * coeff_a + coeff_b * coeff_b + coeff_c * coeff_c);
         if (0 != magnitude_abc) {
             double inv_magnitude_abc = 1.0 / magnitude_abc;
             coeff_a = coeff_a * inv_magnitude_abc;
@@ -703,7 +703,7 @@ public:
         float diff_y = center_y - pts_ptr_y[point_idx];
         float diff_z = center_z - pts_ptr_z[point_idx];
         // A better way to avoid sqrt() ?
-        float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
+        float distance_from_center = std::sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
         float diff_dist = distance_from_center - radius;
         double distance_square_from_surface = diff_dist * diff_dist;
 
@@ -743,7 +743,7 @@ public:
             float diff_y = center_y - pts_ptr_y[i];
             float diff_z = center_z - pts_ptr_z[i];
             // A better way to avoid sqrt() ?
-            float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
+            float distance_from_center = std::sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
             float diff_dist = distance_from_center - radius;
             errors_cache[i] = diff_dist * diff_dist;
         }
@@ -851,8 +851,8 @@ public:
             x2_m = points[smpl + 2] - mean_pts2_x;
             y2_m = points[smpl + 3] - mean_pts2_y;
 
-            avg_dist1 += sqrt (x1_m * x1_m + y1_m * y1_m);
-            avg_dist2 += sqrt (x2_m * x2_m + y2_m * y2_m);
+            avg_dist1 += std::sqrt (x1_m * x1_m + y1_m * y1_m);
+            avg_dist2 += std::sqrt (x2_m * x2_m + y2_m * y2_m);
         }
 
         // scale

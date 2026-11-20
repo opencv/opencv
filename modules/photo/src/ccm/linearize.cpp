@@ -61,7 +61,7 @@ double Polyfit::fromEW(double x)
     double res = 0;
     for (int d = 0; d <= deg; ++d)
     {
-        res += pow(x, d) * p.at<double>(d, 0);
+        res += std::pow(x, d) * p.at<double>(d, 0);
     }
     return res;
 };

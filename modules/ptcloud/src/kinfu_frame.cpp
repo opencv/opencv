@@ -91,8 +91,8 @@ struct RenderInvoker : ParallelLoopBody
                     Point3f v = normalize(-Vec3f(p));
                     Point3f r = normalize(Vec3f(2.f*n*n.dot(l) - l));
 
-                    uchar ix = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*max(0.f, n.dot(l)) +
-                                        Lx*Ks*Sx*specPow<sp>(max(0.f, r.dot(v))))*255.f);
+                    uchar ix = (uchar)((Ax*Ka*Dx + Lx*Kd*Dx*std::max(0.f, n.dot(l)) +
+                                        Lx*Ks*Sx*specPow<sp>(std::max(0.f, r.dot(v))))*255.f);
                     color = Vec4b(ix, ix, ix, 0);
                 }
 
@@ -215,8 +215,8 @@ struct PyrDownBilateralInvoker : ParallelLoopBody
             {
                 depthType center = srcCenterRow[2*x];
 
-                int sx = max(0, 2*x - D/2), ex = min(2*x - D/2 + D, depth.cols-1);
-                int sy = max(0, 2*y - D/2), ey = min(2*y - D/2 + D, depth.rows-1);
+                int sx = std::max(0, 2*x - D/2), ex = std::min(2*x - D/2 + D, depth.cols-1);
+                int sy = std::max(0, 2*y - D/2), ey = std::min(2*y - D/2 + D, depth.rows-1);
 
                 depthType sum = 0;
                 int count = 0;

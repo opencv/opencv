@@ -138,9 +138,9 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
 
     // calculate maximum and minimum sizes in pixels
     unsigned int minPerimeterPixels =
-        (unsigned int)(minPerimeterRate * max(in.cols, in.rows));
+        (unsigned int)(minPerimeterRate * std::max(in.cols, in.rows));
     unsigned int maxPerimeterPixels =
-        (unsigned int)(maxPerimeterRate * max(in.cols, in.rows));
+        (unsigned int)(maxPerimeterRate * std::max(in.cols, in.rows));
 
     // for aruco3 functionality
     if (minSize != 0) {
@@ -161,13 +161,13 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         if(approxCurve.size() != 4 || !isContourConvex(approxCurve)) continue;
 
         // check min distance between corners
-        double minDistSq = max(in.cols, in.rows) * max(in.cols, in.rows);
+        double minDistSq = std::max(in.cols, in.rows) * std::max(in.cols, in.rows);
         for(int j = 0; j < 4; j++) {
             double d = (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) *
                            (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) +
                        (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y) *
                            (double)(approxCurve[j].y - approxCurve[(j + 1) % 4].y);
-            minDistSq = min(minDistSq, d);
+            minDistSq = std::min(minDistSq, d);
         }
         double minCornerDistancePixels = double(contours[i].size()) * minCornerDistanceRate;
         if(minDistSq < minCornerDistancePixels * minCornerDistancePixels) continue;
@@ -197,7 +197,7 @@ static void _reorderCandidatesCorners(vector<vector<Point2f> > &candidates) {
         double crossProduct = (dx1 * dy2) - (dy1 * dx2);
 
         if(crossProduct < 0.0) { // not clockwise direction
-            swap(candidates[i][1], candidates[i][3]);
+            std::swap(candidates[i][1], candidates[i][3]);
         }
     }
 }
@@ -205,7 +205,7 @@ static void _reorderCandidatesCorners(vector<vector<Point2f> > &candidates) {
 static float getAverageModuleSize(const vector<Point2f>& markerCorners, int markerSize, int markerBorderBits) {
     float averageArucoModuleSize = 0.f;
     for (size_t i = 0ull; i < 4ull; i++) {
-        averageArucoModuleSize += sqrt(normL2Sqr<float>(Point2f(markerCorners[i] - markerCorners[(i+1ull) % 4ull])));
+        averageArucoModuleSize += std::sqrt(normL2Sqr<float>(Point2f(markerCorners[i] - markerCorners[(i+1ull) % 4ull])));
     }
     int numModules = markerSize + markerBorderBits * 2;
     averageArucoModuleSize /= ((float)markerCorners.size()*numModules);
@@ -235,7 +235,7 @@ struct MarkerCandidateTree : MarkerCandidate{
         contour = std::move(contour_);
         perimeter = 0.f;
         for (size_t i = 0ull; i < 4ull; i++) {
-            perimeter += sqrt(normL2Sqr<float>(Point2f(corners[i] - corners[(i+1ull) % 4ull])));
+            perimeter += std::sqrt(normL2Sqr<float>(Point2f(corners[i] - corners[(i+1ull) % 4ull])));
         }
     }
 
@@ -258,9 +258,9 @@ float static inline getAverageDistance(const std::vector<Point2f>& marker1, cons
             distSq += normL2Sqr<float>(marker1[modC] - marker2[c]);
         }
         distSq /= 4.f;
-        minDistSq = min(minDistSq, distSq);
+        minDistSq = std::min(minDistSq, distSq);
     }
-    return sqrt(minDistSq);
+    return std::sqrt(minDistSq);
 }
 
 /**
@@ -463,7 +463,7 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
     const float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / area;
     const float normalizedMarkerConfidence = 1.f - normalizedMarkerUnc;
 
-    return std::max(0.f, std::min(1.f, normalizedMarkerConfidence));
+    return std::clamp(normalizedMarkerConfidence, 0.f, 1.f);
 }
 
 /**
@@ -1039,7 +1039,7 @@ struct ArucoDetector::ArucoDetectorImpl {
             for (int j = i - 1; j >= 0; j--) {
                 if (checkMarker1InMarker2(selectedCandidates[i].corners, selectedCandidates[j].corners)) {
                     selectedCandidates[i].parent = j;
-                    selectedCandidates[j].depth = max(selectedCandidates[j].depth, selectedCandidates[i].depth + 1);
+                    selectedCandidates[j].depth = std::max(selectedCandidates[j].depth, selectedCandidates[i].depth + 1);
                     break;
                 }
             }
@@ -1064,7 +1064,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         int maxDepth = 0;
         for (size_t i = 0ull; i < selectedContours.size(); i++)
-            maxDepth = max(selectedContours[i].depth, maxDepth);
+            maxDepth = std::max(selectedContours[i].depth, maxDepth);
         vector<vector<size_t>> depths(maxDepth+1);
         for (size_t i = 0ull; i < selectedContours.size(); i++) {
             depths[selectedContours[i].depth].push_back(i);
@@ -1158,7 +1158,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 } else {
                     int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
                                 getAverageModuleSize(candidates[i], dictionary.markerSize, detectorParams.markerBorderBits)));
-                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                    cornerRefinementWinSize = std::min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
                     cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
                             TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
                                 detectorParams.cornerRefinementMaxIterations,
@@ -1370,7 +1370,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                     Point2f rejCorner = _rejectedCorners.getMat(j).ptr<Point2f>()[(c + k) % 4];
                     Point2f distVector = undetectedMarkersCorners[i][k] - rejCorner;
                     double cornerDist = distVector.x * distVector.x + distVector.y * distVector.y;
-                    currentMaxDistance = max(currentMaxDistance, cornerDist);
+                    currentMaxDistance = std::max(currentMaxDistance, cornerDist);
                 }
                 // if distance is better than current best distance
                 if(currentMaxDistance < closestCandidateDistance) {
@@ -1433,7 +1433,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                 std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
                 int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
                                               getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
-                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                cornerRefinementWinSize = std::min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
                 cornerSubPix(grey, closestRotatedMarker,
                              Size(cornerRefinementWinSize, cornerRefinementWinSize),
                              Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
@@ -1559,8 +1559,8 @@ void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
     // calculate colors
     Scalar textColor, cornerColor;
     textColor = cornerColor = borderColor;
-    swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
-    swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
+    std::swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
+    std::swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
 
     int nMarkers = (int)_corners.total();
     for(int i = 0; i < nMarkers; i++) {

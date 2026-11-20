@@ -582,8 +582,8 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
 {
     CV_INSTRUMENT_REGION();
 
-    int start_i = min(range.start * stripe_sz, h);
-    int end_i = min(range.end * stripe_sz, h);
+    int start_i = std::min(range.start * stripe_sz, h);
+    int end_i = std::min(range.end * stripe_sz, h);
 
     float zeta_squared = var->zeta * var->zeta;
     float epsilon_squared = var->epsilon * var->epsilon;
@@ -698,7 +698,7 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
             /* Color constancy penalty (computed by Taylor expansion):*/
             Ik1z = pIz[j] + pIx[j] * pdU[j] + pIy[j] * pdV[j];
             /* Weight of the color constancy term in the current fixed-point iteration divided by derivNorm: */
-            weight = (delta2 / sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared)) / derivNorm;
+            weight = (delta2 / std::sqrt(Ik1z * Ik1z / derivNorm + epsilon_squared)) / derivNorm;
             /* Add respective color constancy terms to the linear system coefficients: */
             pa11[j] = weight * (pIx[j] * pIx[j]) + zeta_squared;
             pa12[j] = weight * (pIx[j] * pIy[j]);
@@ -715,7 +715,7 @@ void VariationalRefinementImpl::ComputeDataTerm_ParBody::operator()(const Range 
             Ik1zx = pIxz[j] + pIxx[j] * pdU[j] + pIxy[j] * pdV[j];
             Ik1zy = pIyz[j] + pIxy[j] * pdU[j] + pIyy[j] * pdV[j];
             /* Weight of the gradient constancy term in the current fixed-point iteration: */
-            weight = gamma2 / sqrt(Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2 + epsilon_squared);
+            weight = gamma2 / std::sqrt(Ik1zx * Ik1zx / derivNorm + Ik1zy * Ik1zy / derivNorm2 + epsilon_squared);
             /* Add respective gradient constancy components to the linear system coefficients: */
             pa11[j] += weight * (pIxx[j] * pIxx[j] / derivNorm + pIxy[j] * pIxy[j] / derivNorm2);
             pa12[j] += weight * (pIxx[j] * pIxy[j] / derivNorm + pIxy[j] * pIyy[j] / derivNorm2);
@@ -744,8 +744,8 @@ void VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::operator()
 {
     CV_INSTRUMENT_REGION();
 
-    int start_i = min(range.start * stripe_sz, h);
-    int end_i = min(range.end * stripe_sz, h);
+    int start_i = std::min(range.start * stripe_sz, h);
+    int end_i = std::min(range.end * stripe_sz, h);
 
     float epsilon_squared = var->epsilon * var->epsilon;
     float alpha2 = var->alpha / 2;
@@ -826,7 +826,7 @@ void VariationalRefinementImpl::ComputeSmoothnessTermHorPass_ParBody::operator()
     uy = cW_u_next_row[j] - cW_u[j];                                                                                   \
     vy = cW_v_next_row[j] - cW_v[j];                                                                                   \
     /* Weight of the smoothness term in the current fixed-point iteration: */                                          \
-    pWeight[j] = alpha2 / sqrt(ux * ux + vx * vx + uy * uy + vy * vy + epsilon_squared);                               \
+    pWeight[j] = alpha2 / std::sqrt(ux * ux + vx * vx + uy * uy + vy * vy + epsilon_squared);                               \
     /* Gradients for initial raw flow multiplied by weight:*/                                                          \
     ux = pWeight[j] * (pW_u_next[j] - pW_u[j]);                                                                        \
     vx = pWeight[j] * (pW_v_next[j] - pW_v[j]);
@@ -912,8 +912,8 @@ void VariationalRefinementImpl::ComputeSmoothnessTermVertPass_ParBody::operator(
 {
     CV_INSTRUMENT_REGION();
 
-    int start_i = min(range.start * stripe_sz, h);
-    int end_i = min(range.end * stripe_sz, h);
+    int start_i = std::min(range.start * stripe_sz, h);
+    int end_i = std::min(range.end * stripe_sz, h);
 
     float *pWeight;
     float *pA_u, *pA_u_next_row, *pA_v, *pA_v_next_row;
@@ -1008,8 +1008,8 @@ void VariationalRefinementImpl::RedBlackSOR_ParBody::operator()(const Range &ran
 {
     CV_INSTRUMENT_REGION();
 
-    int start = min(range.start * stripe_sz, h);
-    int end = min(range.end * stripe_sz, h);
+    int start = std::min(range.start * stripe_sz, h);
+    int end = std::min(range.end * stripe_sz, h);
 
     float *pa11, *pa12, *pa22, *pb1, *pb2, *pW, *pdu, *pdv;
     float *pW_next, *pdu_next, *pdv_next;

@@ -464,12 +464,12 @@ void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) cons
             {
                 // pt in local coords
                 Point3f pg = p;
-                bb[0] = min(bb[0], pg.x);
-                bb[1] = min(bb[1], pg.y);
-                bb[2] = min(bb[2], pg.z);
-                bb[3] = max(bb[3], pg.x);
-                bb[4] = max(bb[4], pg.y);
-                bb[5] = max(bb[5], pg.z);
+                bb[0] = std::min(bb[0], pg.x);
+                bb[1] = std::min(bb[1], pg.y);
+                bb[2] = std::min(bb[2], pg.z);
+                bb[3] = std::max(bb[3], pg.x);
+                bb[4] = std::max(bb[4], pg.y);
+                bb[5] = std::max(bb[5], pg.z);
             }
 
             bb.copyTo(boundingBox);
@@ -757,12 +757,12 @@ void ColorHashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision)
             for (auto p : pts)
             {
                 Point3f pg = p;
-                bb[0] = min(bb[0], pg.x);
-                bb[1] = min(bb[1], pg.y);
-                bb[2] = min(bb[2], pg.z);
-                bb[3] = max(bb[3], pg.x);
-                bb[4] = max(bb[4], pg.y);
-                bb[5] = max(bb[5], pg.z);
+                bb[0] = std::min(bb[0], pg.x);
+                bb[1] = std::min(bb[1], pg.y);
+                bb[2] = std::min(bb[2], pg.z);
+                bb[3] = std::max(bb[3], pg.x);
+                bb[4] = std::max(bb[4], pg.y);
+                bb[5] = std::max(bb[5], pg.z);
             }
 
             bb.copyTo(boundingBox);

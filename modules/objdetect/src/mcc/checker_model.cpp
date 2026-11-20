@@ -238,7 +238,7 @@ float CChartModel::
         // euclidean
         Vec3f v = v1 - v2;
         dist_i = v.dot(v);
-        dist += sqrt(dist_i);
+        dist += std::sqrt(dist_i);
 
         // cosine
         //float costh = v1.dot(v2) / (norm(v1)*norm(v2));

@@ -1754,7 +1754,7 @@ private:
 
                 radixes.push_back(radix);
                 blocks.push_back(block);
-                min_radix = min(min_radix, block*radix);
+                min_radix = std::min(min_radix, block*radix);
                 n *= radix;
             }
             factor_index++;
@@ -1780,7 +1780,7 @@ private:
             }
             radixes.push_back(radix);
             blocks.push_back(block);
-            min_radix = min(min_radix, block*radix);
+            min_radix = std::min(min_radix, block*radix);
         }
     }
 

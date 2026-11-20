@@ -1177,11 +1177,11 @@ inline v_float64x8 v_reverse(const v_float64x8 &a)
       sctype CV_DECL_ALIGNED(64) idx[2];                                                                            \
       _mm_store_si128((__m128i*)idx, _mm_##ifunc(_mm256_castsi256_si128(half), _mm256_extracti128_si256(half, 1))); \
       return scop(idx[0], idx[1]); }
-OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, min, v_uint64x8, min_epu64, min)
-OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, max, v_uint64x8, max_epu64, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, min, v_uint64x8, min_epu64, std::min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, max, v_uint64x8, max_epu64, std::max)
 OPENCV_HAL_IMPL_AVX512_REDUCE_8(uint64, sum, v_uint64x8, add_epi64, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
-OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  min, v_int64x8,  min_epi64, min)
-OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  max, v_int64x8,  max_epi64, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  min, v_int64x8,  min_epi64, std::min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  max, v_int64x8,  max_epi64, std::max)
 OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  sum, v_int64x8,  add_epi64, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
 
 #define OPENCV_HAL_IMPL_AVX512_REDUCE_8F(func, ifunc, scop)                                         \
@@ -1190,8 +1190,8 @@ OPENCV_HAL_IMPL_AVX512_REDUCE_8(int64,  sum, v_int64x8,  add_epi64, OPENCV_HAL_I
       double CV_DECL_ALIGNED(64) idx[2];                                                            \
       _mm_store_pd(idx, _mm_##ifunc(_mm256_castpd256_pd128(half), _mm256_extractf128_pd(half, 1))); \
       return scop(idx[0], idx[1]); }
-OPENCV_HAL_IMPL_AVX512_REDUCE_8F(min, min_pd, min)
-OPENCV_HAL_IMPL_AVX512_REDUCE_8F(max, max_pd, max)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8F(min, min_pd, std::min)
+OPENCV_HAL_IMPL_AVX512_REDUCE_8F(max, max_pd, std::max)
 OPENCV_HAL_IMPL_AVX512_REDUCE_8F(sum, add_pd, OPENCV_HAL_IMPL_AVX512_REDUCE_ADD64)
 
 #define OPENCV_HAL_IMPL_AVX512_REDUCE_16(sctype, func, _Tpvec, ifunc)                                 \

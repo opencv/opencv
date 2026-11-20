@@ -45,7 +45,7 @@ int main( int argc, char** argv )
             break;
 
         Point2f center( (float)src.cols / 2, (float)src.rows / 2 );
-        double maxRadius = 0.7*min(center.y, center.x);
+        double maxRadius = 0.7*std::min(center.y, center.x);
 
         //! [InverseMap]
         // direct transform using warpPolar (replacing deprecated functions)

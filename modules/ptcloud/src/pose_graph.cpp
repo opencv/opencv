@@ -401,7 +401,7 @@ static inline cv::Matx66d llt6(Matx66d m)
                 sum += L(i, k) * L(j, k);
 
             if (i == j)
-                L(i, i) = sqrt(m(i, i) - sum);
+                L(i, i) = std::sqrt(m(i, i) - sum);
             else
                 L(i, j) = (1.0 / L(j, j) * (m(i, j) - sum));
         }

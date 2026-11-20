@@ -924,7 +924,7 @@ static double calibrateCameraInternalBouguet( const Mat& objectPoints,
         bool optimizeObjPoints = releaseObject;
 
         Mat_<double> param_m = _param.getMat();
-        param_m = param_m.reshape(1, max(param_m.rows, param_m.cols));
+        param_m = param_m.reshape(1, std::max(param_m.rows, param_m.cols));
 
         if( flags & CALIB_FIX_ASPECT_RATIO )
         {

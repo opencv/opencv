@@ -260,7 +260,7 @@ public:
 
                 if (_maxSize.size() > 0)
                 {
-                    float size = sqrt(minSize * _maxSize[i]);
+                    float size = std::sqrt(minSize * _maxSize[i]);
                     _boxWidths.push_back(size);
                     _boxHeights.push_back(size);
                 }
@@ -268,7 +268,7 @@ public:
                 // rest of priors
                 for (size_t r = 0; r < _aspectRatios.size(); ++r)
                 {
-                    float arSqrt = sqrt(_aspectRatios[r]);
+                    float arSqrt = std::sqrt(_aspectRatios[r]);
                     _boxWidths.push_back(minSize * arSqrt);
                     _boxHeights.push_back(minSize / arSqrt);
                 }
@@ -496,7 +496,7 @@ public:
             outputPtr = outputs[0].ptr<float>();
             for (size_t d = 0; d < _outChannelSize; ++d)
             {
-                outputPtr[d] = std::min<float>(std::max<float>(outputPtr[d], 0.), 1.);
+                outputPtr[d] = std::clamp(outputPtr[d], 0.f, 1.f);
             }
         }
         // set the variance.

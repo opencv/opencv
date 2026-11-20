@@ -5502,4 +5502,15 @@ INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_nonCanonical,
 INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_scalarAgreement,
     testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
 
+TEST(SanityTest, MinMat) {
+  cv::Mat1b a(2, 2, uchar{10});
+  cv::Mat1b b(2, 2, uchar{20});
+  cv::Mat dst;
+  cv::min(a, b, dst);
+  EXPECT_EQ(dst.at<uchar>(0, 0), 10);
+
+  cv::Mat roi_dst(4, 4, CV_8UC1, cv::Scalar(0));
+  cv::min(cv::Mat(a), cv::Mat(b), roi_dst(cv::Rect(0, 0, 2, 2)));
+  EXPECT_EQ(roi_dst.at<uchar>(0, 0), 10);
+}
 }} // namespace

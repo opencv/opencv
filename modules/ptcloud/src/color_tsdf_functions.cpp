@@ -105,8 +105,8 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                         startZ = endZ = 0;
                     }
                 }
-                startZ = max(0, startZ);
-                endZ = min(int(volResolution.z), endZ);
+                startZ = std::max(0, startZ);
+                endZ = std::min(int(volResolution.z), endZ);
                 for (int z = startZ; z < endZ; z++)
                 {
                     // optimization of the following:
@@ -203,7 +203,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                         colorFix(r, g, b);
                         // update TSDF
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
-                        weight = WeightType(min(int(weight + 1), int(maxWeight)));
+                        weight = WeightType(std::min(int(weight + 1), int(maxWeight)));
                     }
                 }
             }
@@ -254,8 +254,8 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
                         startZ = endZ = 0;
                     }
                 }
-                startZ = max(0, startZ);
-                endZ = min(int(volResolution.z), endZ);
+                startZ = std::max(0, startZ);
+                endZ = std::min(int(volResolution.z), endZ);
 
                 for (int z = startZ; z < endZ; z++)
                 {
@@ -309,7 +309,7 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 
                         // update TSDF
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
-                        weight = (WeightType)min(weight + 1, maxWeight);
+                        weight = (WeightType)std::min(weight + 1, maxWeight);
                     }
                 }
             }
@@ -531,7 +531,7 @@ inline Point3f getNormalColorVoxel(const Mat& volume,
         nv = v0 + tx * (v1 - v0);
     }
 
-    float nv = sqrt(an[0] * an[0] +
+    float nv = std::sqrt(an[0] * an[0] +
         an[1] * an[1] +
         an[2] * an[2]);
     return nv < 0.0001f ? nan3 : an / nv;
@@ -809,8 +809,8 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                 float _minAx[4], _maxAx[4];
                 v_store(_minAx, minAx);
                 v_store(_maxAx, maxAx);
-                float tmin = max({ _minAx[0], _minAx[1], _minAx[2], clip });
-                float tmax = min({ _maxAx[0], _maxAx[1], _maxAx[2] });
+                float tmin = std::max({ _minAx[0], _minAx[1], _minAx[2], clip });
+                float tmax = std::min({ _maxAx[0], _maxAx[1], _maxAx[2] });
 
                 // precautions against getting coordinates out of bounds
                 tmin = tmin + tstep;
@@ -917,15 +917,15 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                 Point3f ttop = rayinv.mul(boxMax - orig);
 
                 // re-order intersections to find smallest and largest on each axis
-                Point3f minAx(min(ttop.x, tbottom.x), min(ttop.y, tbottom.y), min(ttop.z, tbottom.z));
-                Point3f maxAx(max(ttop.x, tbottom.x), max(ttop.y, tbottom.y), max(ttop.z, tbottom.z));
+                Point3f minAx(std::min(ttop.x, tbottom.x), std::min(ttop.y, tbottom.y), std::min(ttop.z, tbottom.z));
+                Point3f maxAx(std::max(ttop.x, tbottom.x), std::max(ttop.y, tbottom.y), std::max(ttop.z, tbottom.z));
 
                 // near clipping plane
                 const float clip = 0.f;
                 //float tmin = max(max(max(minAx.x, minAx.y), max(minAx.x, minAx.z)), clip);
                 //float tmax =     min(min(maxAx.x, maxAx.y), min(maxAx.x, maxAx.z));
-                float tmin = max({ minAx.x, minAx.y, minAx.z, clip });
-                float tmax = min({ maxAx.x, maxAx.y, maxAx.z });
+                float tmin = std::max({ minAx.x, minAx.y, minAx.z, clip });
+                float tmax = std::min({ maxAx.x, maxAx.y, maxAx.z });
 
                 // precautions against getting coordinates out of bounds
                 tmin = tmin + tstep;

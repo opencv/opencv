@@ -119,8 +119,8 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         for(size_t i=0; i<alf.size(); i++)
         {
             const double sqSigma = obj.sigma * obj.sigma;
-            const double pos = ((1 + alf[i])/2) * exp(-1.0 * 0.5 * (temp[i] * temp[i]) / sqSigma);
-            const double neg = ((1 - alf[i])/2) * exp(-1.0 * 0.5 * (temp1[i] * temp1[i]) / sqSigma);
+            const double pos = ((1 + alf[i])/2) * std::exp(-1.0 * 0.5 * (temp[i] * temp[i]) / sqSigma);
+            const double neg = ((1 - alf[i])/2) * std::exp(-1.0 * 0.5 * (temp1[i] * temp1[i]) / sqSigma);
             G_pos[i] = pos;
             G_neg[i] = neg;
         }

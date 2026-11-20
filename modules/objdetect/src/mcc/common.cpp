@@ -61,7 +61,7 @@ float perimeter(const std::vector<Point2f> &ps)
         dx = ps[i].x - ps[i2].x;
         dy = ps[i].y - ps[i2].y;
 
-        sum += sqrt(dx * dx + dy * dy);
+        sum += std::sqrt(dx * dx + dy * dy);
     }
 
     return sum;

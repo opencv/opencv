@@ -418,12 +418,12 @@ void Cloning::illuminationChange(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, flo
 
     Mat multX, multY, multx_temp, multy_temp;
 
-    multiply(patchGradientX,pow(alpha,beta),multX);
+    multiply(patchGradientX,std::pow(alpha,beta),multX);
     pow(mag,-1*beta, multx_temp);
     multiply(multX,multx_temp, patchGradientX);
     patchNaNs(patchGradientX);
 
-    multiply(patchGradientY,pow(alpha,beta),multY);
+    multiply(patchGradientY,std::pow(alpha,beta),multY);
     pow(mag,-1*beta, multy_temp);
     multiply(multY,multy_temp,patchGradientY);
     patchNaNs(patchGradientY);

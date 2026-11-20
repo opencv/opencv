@@ -268,7 +268,7 @@ private:
             warpedImage = rotImage;
         else
         {
-            float s = 0.8f * sqrt(tilt * tilt - 1);
+            float s = 0.8f * std::sqrt(tilt * tilt - 1);
             GaussianBlur(rotImage, rotImage, Size(0, 0), s, 0.01);
             resize(rotImage, warpedImage, Size(0, 0), 1.0/tilt, 1.0, INTER_NEAREST);
             pose(0, 0) /= tilt;
