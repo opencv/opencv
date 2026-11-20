@@ -11,6 +11,7 @@
 // package (graph_to_onnx.py).
 
 #include "precomp.hpp"
+#include "net_impl.hpp"
 #include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -484,15 +485,30 @@ Net readNetFromSafetensors(const String& graphJsonPath,
         }
     }
 
-    // 9. Serialize and forward to the standard ONNX importer
-    std::string serialized = model.SerializeAsString();
-    if (serialized.empty())
-        CV_Error(Error::StsError, "DNN/Safetensors: failed to serialize ModelProto");
+    // 9. Forward the in-memory ModelProto directly to the ONNX importer,
+    //    skipping the serialize/parse round-trip (two large copies).
+    //    Engine resolution mirrors readNetFromONNX(buffer, size, engine):
+    //    ENGINE_ORT does not accept in-memory models.
+    if (engine == ENGINE_AUTO)
+        engine = ENGINE_OPENCV;
+    if (engine != ENGINE_OPENCV && engine != ENGINE_ORT)
+    {
+        CV_LOG_WARNING(NULL, "DNN/Safetensors: only ENGINE_AUTO, ENGINE_OPENCV and ENGINE_ORT are supported; "
+                             "falling back to ENGINE_OPENCV.");
+        engine = ENGINE_OPENCV;
+    }
+    if (engine == ENGINE_ORT)
+    {
+#ifdef HAVE_ONNXRUNTIME
+        CV_Error(Error::StsNotImplemented, "DNN/Safetensors: loading from in-memory model is not supported by ENGINE_ORT");
+#else
+        CV_LOG_WARNING(NULL, "DNN/Safetensors: OpenCV was built without ONNX Runtime (WITH_ONNXRUNTIME=OFF). Falling back to ENGINE_OPENCV.");
+#endif
+    }
 
-    CV_LOG_INFO(NULL, "DNN/Safetensors: built ONNX model (" << serialized.size()
-                << " bytes), forwarding to ONNX importer");
+    CV_LOG_INFO(NULL, "DNN/Safetensors: built ONNX model, forwarding to ONNX importer");
 
-    return readNetFromONNX(serialized.data(), serialized.size(), engine);
+    return readNetFromONNX2(std::move(model));
 }
 
 CV__DNN_INLINE_NS_END
