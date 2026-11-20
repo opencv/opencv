@@ -1898,8 +1898,7 @@ otherwise. The function is used to calculate the covariance matrix. With
 zero delta, it can be used as a faster substitute for general matrix
 product A\*B when B=A'
 @param src input single-channel matrix of depth CV_8U, CV_16U, CV_16S, CV_32F
-or CV_64F. Note that unlike gemm, the function can multiply not only
-floating-point matrices.
+or CV_64F.
 @param dst output square matrix.
 @param aTa Flag specifying the multiplication ordering. See the
 description below.
