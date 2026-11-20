@@ -313,6 +313,23 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
+    if (_src.empty())
+    {
+        // no elements: the extrema are 0 and the indices are -1
+        if (minVal)
+            *minVal = 0;
+        if (maxVal)
+            *maxVal = 0;
+        for (int i = 0; i < _src.dims(); i++)
+        {
+            if (minIdx)
+                minIdx[i] = -1;
+            if (maxIdx)
+                maxIdx[i] = -1;
+        }
+        return;
+    }
+
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
