@@ -119,39 +119,43 @@ TEST(Photo_NPR_PencilSketch, regression)
     EXPECT_LE(color_pencil_error, numerical_precision);
 }
 
-TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, small_flat_image)
+typedef testing::TestWithParam<Size> Photo_NPR_SmallFlatImage;
+
+TEST_P(Photo_NPR_SmallFlatImage, regression)
+{
+    const Size sz = GetParam();
+    RNG& rng = theRNG();
+    Scalar color(rng.uniform(16, 240), rng.uniform(16, 240), rng.uniform(16, 240));
+    Mat src(sz, CV_8UC3, color), result;
+
+    edgePreservingFilter(src, result, NORMCONV_FILTER);
+    ASSERT_EQ(result.size(), src.size());
+    ASSERT_EQ(result.type(), src.type());
+    EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "edgePreservingFilter";
+
+    stylization(src, result);
+    ASSERT_EQ(result.size(), src.size());
+    ASSERT_EQ(result.type(), src.type());
+    EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "stylization";
+
+    if (sz.width <= 91 && sz.height <= 91)
+    {
+        Mat sketch, colorSketch;
+        pencilSketch(src, sketch, colorSketch);
+        ASSERT_EQ(sketch.size(), src.size());
+        ASSERT_EQ(colorSketch.size(), src.size());
+        const int expectedShade = saturate_cast<uchar>((sz.width + sz.height) * 0.02f * 255.0f);
+        EXPECT_LE(cvtest::norm(sketch, Mat(sz, CV_8UC1, Scalar(expectedShade)), NORM_INF), 1) << "pencilSketch";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Photo_NPR_SmallFlatImage, Values(
+    Size(1, 1), Size(1, 5), Size(5, 1), Size(3, 3),
+    Size(64, 64), Size(40, 200), Size(200, 40), Size(91, 91)));
+
+TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, single_row_and_column)
 {
     RNG& rng = theRNG();
-    const Size sizes[] = {
-        Size(1, 1), Size(1, 5), Size(5, 1), Size(3, 3),
-        Size(64, 64), Size(40, 200), Size(200, 40), Size(91, 91)
-    };
-    for (const Size& sz : sizes)
-    {
-        Scalar color(rng.uniform(16, 240), rng.uniform(16, 240), rng.uniform(16, 240));
-        Mat src(sz, CV_8UC3, color), result;
-
-        edgePreservingFilter(src, result, NORMCONV_FILTER);
-        ASSERT_EQ(result.size(), src.size());
-        ASSERT_EQ(result.type(), src.type());
-        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "edgePreservingFilter " << sz;
-
-        stylization(src, result);
-        ASSERT_EQ(result.size(), src.size());
-        ASSERT_EQ(result.type(), src.type());
-        EXPECT_LE(cvtest::norm(result, src, NORM_INF), 1) << "stylization " << sz;
-
-        if (sz.width <= 91 && sz.height <= 91)
-        {
-            Mat sketch, colorSketch;
-            pencilSketch(src, sketch, colorSketch);
-            ASSERT_EQ(sketch.size(), src.size());
-            ASSERT_EQ(colorSketch.size(), src.size());
-            const int expectedShade = saturate_cast<uchar>((sz.width + sz.height) * 0.02f * 255.0f);
-            EXPECT_LE(cvtest::norm(sketch, Mat(sz, CV_8UC1, Scalar(expectedShade)), NORM_INF), 1) << "pencilSketch " << sz;
-        }
-    }
-
     Mat colSrc(16, 1, CV_8UC3), colRes, wideRes;
     rng.fill(colSrc, RNG::UNIFORM, 32, 224);
     edgePreservingFilter(colSrc, colRes, NORMCONV_FILTER);
