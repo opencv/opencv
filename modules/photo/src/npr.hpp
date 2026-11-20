@@ -326,69 +326,18 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
         }
     }
 
-    Mat indices = Mat::zeros(h,w,CV_32FC1);
-    Mat final =   Mat::zeros(h,w,CV_32FC3);
-
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            indices.at<float>(i,j) = (float) i+1;
-
-    Mat a = Mat::zeros(h,w,CV_32FC1);
-    Mat b = Mat::zeros(h,w,CV_32FC1);
+    Mat final = Mat::zeros(h,w,CV_32FC3);
 
     // Compute the box filter using a summed area table.
-    for(int c=0;c<channel;c++)
+    for(int i=0;i<h;i++)
     {
-        Mat flag = Mat::ones(h,w,CV_32FC1);
-        multiply(flag,c+1,flag);
-
-        Mat temp1, temp2;
-        multiply(flag - 1,h*(w+1),temp1);
-        multiply(lower_idx - 1,h,temp2);
-        a = temp1 + temp2 + indices;
-
-        multiply(flag - 1,h*(w+1),temp1);
-        multiply(upper_idx - 1,h,temp2);
-        b = temp1 + temp2 + indices;
-
-        int p,q,r,rem;
-        int p1,q1,r1,rem1;
-
-        // Calculating indices
-        for(int i=0;i<h;i++)
+        for(int j=0;j<w;j++)
         {
-            for(int j=0;j<w;j++)
-            {
-
-                r = (int) b.at<float>(i,j)/(h*(w+1));
-                rem = (int) b.at<float>(i,j) - r*h*(w+1);
-                q = rem/h;
-                p = rem - q*h;
-                if(q==0)
-                {
-                    p=h;
-                    q=w;
-                    r=r-1;
-                }
-                if(p==0)
-                {
-                    p=h;
-                    q=q-1;
-                }
-
-                r1 = (int) a.at<float>(i,j)/(h*(w+1));
-                rem1 = (int) a.at<float>(i,j) - r1*h*(w+1);
-                q1 = rem1/h;
-                p1 = rem1 - q1*h;
-                if(p1==0)
-                {
-                    p1=h;
-                    q1=q1-1;
-                }
-
-                final.at<float>(i,j*channel+2-c) = (box_filter.at<float>(p-1,q*channel+(2-r)) - box_filter.at<float>(p1-1,q1*channel+(2-r1)))
-                    /(upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j));
-            }
+            const int q = (int) upper_idx.at<float>(i,j) - 1;
+            const int q1 = (int) lower_idx.at<float>(i,j) - 1;
+            const float denom = upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j);
+            for(int c=0;c<channel;c++)
+                final.at<float>(i,j*channel+c) = (box_filter.at<float>(i,q*channel+c) - box_filter.at<float>(i,q1*channel+c)) / denom;
         }
     }
 
