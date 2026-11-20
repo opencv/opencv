@@ -15,6 +15,10 @@ struct CV_EXPORTS UMatDataAutoLock
     UMatData* u2;
 };
 
+/** @brief The allocator of this thread's DeviceScope device.
+NULL outside a scope and in a CPU scope, so new UMats are placed as before. */
+MatAllocator* getDeviceScopeAllocator();
+
 }
 
 #endif // OPENCV_CORE_SRC_UMATRIX_HPP

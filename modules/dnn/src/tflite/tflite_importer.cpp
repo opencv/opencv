@@ -23,6 +23,7 @@ CV__DNN_INLINE_NS_BEGIN
 #ifdef HAVE_FLATBUFFERS
 
 using namespace opencv_tflite;
+using opencv_tflite::Tensor;  // cv::Tensor would hide it otherwise
 
 class TFLiteImporter {
 public:

@@ -515,7 +515,8 @@ struct CoreTLSData
         oclExecutionContextInitialized(false), useOpenCL(-1),
 //#endif
         useIPP(-1),
-        useIPP_NE(-1)
+        useIPP_NE(-1),
+        scopeDevice(0)
     {}
 
     RNG rng;
@@ -526,6 +527,7 @@ struct CoreTLSData
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
+    ComputeDevice::Impl* scopeDevice; // device of the innermost DeviceScope, NULL for the CPU
 };
 
 CoreTLSData& getCoreTlsData();
