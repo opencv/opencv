@@ -1089,6 +1089,49 @@ TEST(Imgproc_warpPolar, identity)
 #endif
 }
 
+typedef testing::TestWithParam<int> Imgproc_warpPolar_Inverse;
+
+// the inverse transform of a constant polar image has to be constant up to the angular seam
+TEST_P(Imgproc_warpPolar_Inverse, angular_seam)
+{
+    const int interpolation = GetParam();
+    const Mat polar(360, 100, CV_8UC1, Scalar::all(200));
+    const Point2f center(100.f, 100.f);
+    const double radius = 100;
+
+    for (int fill = 0; fill < 2; fill++)
+    {
+        Mat dst;
+        warpPolar(polar, dst, Size(201, 201), center, radius,
+                  interpolation | WARP_POLAR_LINEAR | WARP_INVERSE_MAP | (fill ? (int)WARP_FILL_OUTLIERS : 0));
+
+        // skip the centre and the outer rim, where the kernel leaves the source along the radius
+        Mat mask = Mat::zeros(dst.size(), CV_8UC1);
+        circle(mask, Point(100, 100), 90, Scalar(255), FILLED);
+        circle(mask, Point(100, 100), 4, Scalar(0), FILLED);
+        EXPECT_EQ(0, countNonZero((dst != 200) & mask)) << "fill outliers: " << fill;
+    }
+}
+
+// a sub-matrix has to give the same result as its copy
+TEST_P(Imgproc_warpPolar_Inverse, submatrix)
+{
+    const int interpolation = GetParam();
+    Mat big(140, 140, CV_8UC1);
+    theRNG().fill(big, RNG::UNIFORM, 0, 256);
+    const Rect roi(20, 25, 100, 90);
+    const int flags = interpolation | WARP_POLAR_LINEAR | WARP_INVERSE_MAP | WARP_FILL_OUTLIERS;
+
+    Mat dst_roi, dst_copy;
+    warpPolar(big(roi), dst_roi, Size(120, 120), Point2f(60.f, 60.f), 60, flags);
+    warpPolar(big(roi).clone(), dst_copy, Size(120, 120), Point2f(60.f, 60.f), 60, flags);
+
+    EXPECT_EQ(0, cvtest::norm(dst_roi, dst_copy, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_warpPolar_Inverse,
+                        testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC, (int)INTER_LANCZOS4));
+
 TEST(Imgproc_Remap, issue_23562)
 {
     cv::RNG rng(17);
