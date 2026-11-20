@@ -2219,7 +2219,7 @@ the set of input vectors.
 @param flags operation flags as a combination of #CovarFlags
 @param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
 default). When it is negative, the depth of the samples is used instead. A
-CV_64F mean with #COVAR_USE_AVG also makes the output CV_64F.
+non-empty CV_64F mean also makes the output CV_64F.
 @sa PCA, mulTransposed, Mahalanobis
 @todo InputArrayOfArrays
 */
@@ -2234,7 +2234,8 @@ CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, M
 @param flags operation flags as a combination of #CovarFlags
 @param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
 default). When it is negative, the depth of the samples is used instead. A
-CV_64F mean with #COVAR_USE_AVG also makes the output CV_64F.
+non-empty CV_64F mean also makes the output CV_64F (for a single samples
+matrix, only with #COVAR_USE_AVG).
 */
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    InputOutputArray mean, int flags, int ctype = CV_64F);
