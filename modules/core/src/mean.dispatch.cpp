@@ -112,6 +112,14 @@ Scalar mean(InputArray _src, InputArray _mask)
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
+    if (src.depth() == CV_Bool)
+    {
+        // there is no sum kernel for CV_Bool; convertTo maps any non-zero value to 1
+        Mat src8u;
+        src.convertTo(src8u, CV_8U);
+        return mean(src8u, mask);
+    }
+
     std::vector<StatChunk> chunks;
     if (src.channels() > 4 || !splitForParallelStat(src, mask, chunks))
         return mean_(src, mask);
@@ -442,6 +450,15 @@ static void writeStatResult(OutputArray _dst, int cn, const Scalar& v)
 void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask)
 {
     CV_INSTRUMENT_REGION();
+
+    if (_src.depth() == CV_Bool)
+    {
+        // there is no sum kernel for CV_Bool; convertTo maps any non-zero value to 1
+        Mat src8u;
+        _src.getMat().convertTo(src8u, CV_8U);
+        meanStdDev(src8u, _mean, _sdv, _mask);
+        return;
+    }
 
     std::vector<StatChunk> chunks;
     if (!_src.isUMat() && !_src.empty())
