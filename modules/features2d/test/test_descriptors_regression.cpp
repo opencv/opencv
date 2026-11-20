@@ -35,13 +35,8 @@ TEST( Features2d_DescriptorExtractor_BRISK, regression )
 
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
-    // TODO adjust the parameters below
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",
-#if CV_NEON
-                                              (CV_DescriptorExtractorTest<Hamming>::DistanceType)25.f,
-#else
                                               (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-#endif
                                              ORB::create() );
     test.safe_run();
 }

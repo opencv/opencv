@@ -116,12 +116,10 @@ protected:
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
             if (dist == 0)
                 exact_count++;
+            if (dist > maxDist)
+                failed_count++;
             if( dist > curMaxDist )
-            {
-                if (dist > maxDist)
-                    failed_count++;
                 curMaxDist = dist;
-            }
 #if 0
             if (dist > 0)
             {
