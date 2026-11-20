@@ -67,7 +67,8 @@ void fastDepthwiseConv( const float* wptr,
             w00 = w01 = w02 = 0.f;
             imgptr0 = imgptr1;
         }
-        // not "else if": with a small height both the top and the bottom taps can be outside
+        // the bottom taps are zeroed independently of the top ones: with a small height the first
+        // and the last row of the kernel can both be outside of the input
         if (in_i + dilation_h*(kernel_h-1) >= height)
         {
             w20 = w21 = w22 = 0.f;
