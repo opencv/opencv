@@ -1531,6 +1531,21 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
+TEST(Imgproc_WarpPerspective, nearest_float_half_ties)
+{
+    Mat source(8, 10, CV_32FC1);
+    for (int y = 0; y < source.rows; ++y)
+        for (int x = 0; x < source.cols; ++x)
+            source.at<float>(y, x) = float(y * source.cols + x);
+
+    const Matx33d transform(1, 0, 0.5, 0, 1, -0.5, 0, 0, 1);
+    Mat result;
+    warpPerspective(source, result, transform, Size(7, 5), INTER_NEAREST);
+    for (int y = 0; y < result.rows; ++y)
+        for (int x = 1; x < result.cols; ++x)
+            EXPECT_EQ(source.at<float>(cvRound(y + 0.5), cvRound(x - 0.5)), result.at<float>(y, x));
+}
+
 // warpPerspective
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
