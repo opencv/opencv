@@ -366,4 +366,36 @@ PERF_TEST_P( TestWarpPerspectiveSmallSrc, WarpPerspective_SmallSrc,
     SANITY_CHECK_NOTHING();
 }
 
+CV_ENUM(PolarMode, WARP_POLAR_LINEAR, WARP_POLAR_LOG)
+typedef TestBaseWithParam< tuple<MatType, Size, InterType, PolarMode, bool> > TestWarpPolar;
+
+PERF_TEST_P( TestWarpPolar, WarpPolar,
+             Combine(
+                Values(CV_8UC1, CV_8UC3),
+                Values( szVGA, sz720p, sz1080p ),
+                InterType::all(),
+                PolarMode::all(),
+                testing::Bool()
+             )
+)
+{
+    const int  dataType  = get<0>(GetParam());
+    const Size sz        = get<1>(GetParam());
+    const int  interType = get<2>(GetParam());
+    const int  polarMode = get<3>(GetParam());
+    const bool inverse   = get<4>(GetParam());
+
+    Mat src(sz, dataType), dst(sz, dataType);
+    cvtest::fillGradient(src);
+    declare.in(src).out(dst);
+
+    const Point2f center(sz.width * 0.5f, sz.height * 0.5f);
+    const double maxRadius = std::min(sz.width, sz.height) * 0.5;
+    const int flags = interType | polarMode | (inverse ? WARP_INVERSE_MAP : 0);
+
+    TEST_CYCLE() warpPolar( src, dst, sz, center, maxRadius, flags );
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
