@@ -116,7 +116,8 @@ protected:
             DistanceType dist = distance( validDescriptors.ptr<ValueType>(y), calcDescriptors.ptr<ValueType>(y), dimension );
             if (dist == 0)
                 exact_count++;
-            if (dist > maxDist)
+            // A NaN distance compares false, so test for the passing case.
+            if (!(dist <= maxDist))
                 failed_count++;
             if( dist > curMaxDist )
                 curMaxDist = dist;
