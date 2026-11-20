@@ -1271,7 +1271,12 @@ TEST_P(Core_ReduceAvgWide, accumulator_does_not_wrap)
 {
     const int dim = std::get<0>(GetParam());
     const int depth = std::get<1>(GetParam());
-    const int n = 65536;   // smallest length that passes INT_MAX for both depths below
+    // 65537, not 65536: for CV_16S, -32768 * 65536 is exactly INT_MIN, which a 32-bit signed
+    // accumulator still holds, so at that length the signed cases pass without proving the
+    // accumulator was widened at all. One more element puts both depths outside the int range,
+    // 65535 * 65537 above INT_MAX and -32768 * 65537 below INT_MIN, so these keep their teeth
+    // if a CV_32S kernel is ever added for the 16-bit sources.
+    const int n = 65537;
     const double v = depth == CV_16U ? 65535 : -32768;
     const Mat src = dim == 0 ? Mat(n, 1, CV_MAKETYPE(depth, 1), Scalar(v))
                              : Mat(1, n, CV_MAKETYPE(depth, 1), Scalar(v));
