@@ -6,6 +6,7 @@
 #include <limits>
 #include "ref_reduce_arg.impl.hpp"
 #include <algorithm>
+#include <atomic>
 
 namespace opencv_test { namespace {
 
@@ -5356,6 +5357,37 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
         cv::multiply(a, b, a, big64);
         EXPECT_EQ(a.at<double>(0),  big64);
         EXPECT_EQ(a.at<double>(64), big64);
+    }
+}
+
+// https://github.com/opencv/opencv/issues/30942
+// The element count of a large multi-channel array exceeds INT_MAX; the broadcast driver must not
+// overflow int when folding channels / collapsing dims. The body never touches the data, so Mat
+// headers over a small buffer are used (no multi-GB allocation).
+TEST(BroadcastOp, regression_30942_large_multichannel_no_int_overflow)
+{
+    const int rows = 25344, cols = 50432, cn = 3;
+    const int64 expected = (int64)rows*cols*cn;
+    ASSERT_GT(expected, (int64)INT_MAX);
+
+    std::vector<uchar> buf((size_t)cols*cn);
+    Mat big(rows, cols, CV_8UC3, buf.data(), (size_t)cols*cn);   // fake: rows alias the same data
+    Mat row(1, cols, CV_8UC3, buf.data());
+
+    for (int variant = 0; variant < 2; variant++)
+    {
+        // variant 0: two same-shape arrays; variant 1: one row broadcast over all rows
+        const Mat* arrays[2] = { &big, variant == 0 ? &big : &row };
+        std::atomic<int64> processed(0);
+        std::atomic<int> bad(0);
+        broadcastOp(arrays, 2, [&](const BroadcastOp::Tile& tile)
+        {
+            if (tile.width <= 0 || tile.height <= 0)
+                bad++;
+            processed += (int64)tile.width*tile.height;
+        }, true);
+        EXPECT_EQ(0, bad.load()) << "variant=" << variant;
+        EXPECT_EQ(expected, processed.load()) << "variant=" << variant;
     }
 }
 
