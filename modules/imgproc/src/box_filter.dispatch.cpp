@@ -122,7 +122,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if (ddepth < 0)
         ddepth = sdepth;
 
-    if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+    if (cn > 4 || isHalfFloat(sdepth) || isHalfFloat(ddepth) ||
+        (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;
 
@@ -356,7 +357,8 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     borderType = (borderType&~BORDER_ISOLATED);
 
-    if(sdepth >= CV_32F && src.type() == dst.type() && (ksize.height <= 5 && ksize.width <= 5))
+    if((sdepth == CV_32F || sdepth == CV_64F) && src.type() == dst.type() &&
+       (ksize.height <= 5 && ksize.width <= 5))
     {
         CV_CPU_DISPATCH(blockSum, (src, dst, ksize, anchor, wsz, ofs, normalize, borderType),
             CV_CPU_DISPATCH_MODES_ALL);
@@ -403,7 +405,7 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
     Size size = _src.size();
 
     if( ddepth < 0 )
-        ddepth = sdepth < CV_32F ? CV_32F : CV_64F;
+        ddepth = isHalfFloat(sdepth) || sdepth < CV_32F ? CV_32F : CV_64F;
 
     if( borderType != BORDER_CONSTANT && normalize )
     {

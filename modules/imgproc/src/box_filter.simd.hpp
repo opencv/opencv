@@ -1657,6 +1657,10 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
         return makePtr<RowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowSum<double, double> >(ksize, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<RowSum<hfloat, double> >(ksize, anchor);
+    if( sdepth == CV_16BF && ddepth == CV_64F )
+        return makePtr<RowSum<bfloat, double> >(ksize, anchor);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
@@ -1698,6 +1702,10 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         return makePtr<ColumnSum<int, double> >(ksize, anchor, scale);
     if( ddepth == CV_64F && sdepth == CV_64F )
         return makePtr<ColumnSum<double, double> >(ksize, anchor, scale);
+    if( ddepth == CV_16F && sdepth == CV_64F )
+        return makePtr<ColumnSum<double, hfloat> >(ksize, anchor, scale);
+    if( ddepth == CV_16BF && sdepth == CV_64F )
+        return makePtr<ColumnSum<double, bfloat> >(ksize, anchor, scale);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of sum format (=%d), and destination format (=%d)",
@@ -1826,6 +1834,10 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
         return makePtr<SqrRowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<SqrRowSum<double, double> >(ksize, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<SqrRowSum<hfloat, double> >(ksize, anchor);
+    if( sdepth == CV_16BF && ddepth == CV_64F )
+        return makePtr<SqrRowSum<bfloat, double> >(ksize, anchor);
 
     CV_Error_( cv::Error::StsNotImplemented,
               ("Unsupported combination of source format (=%d), and buffer format (=%d)",

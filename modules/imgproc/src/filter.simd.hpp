@@ -3339,9 +3339,9 @@ Ptr<BaseRowFilter> getLinearRowFilter(
 
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(bufType);
     int cn = CV_MAT_CN(srcType);
-    CV_Assert( cn == CV_MAT_CN(bufType) &&
-        ddepth >= std::max(sdepth, CV_32S) &&
-        kernel.type() == ddepth );
+    CV_Assert( cn == CV_MAT_CN(bufType) && kernel.type() == ddepth &&
+        (isHalfFloat(sdepth) ? ddepth == CV_32F
+                             : ddepth >= std::max(sdepth, CV_32S)) );
     int ksize = kernel.rows + kernel.cols - 1;
 
     if( (symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) != 0 && ksize <= 5 )
@@ -3378,6 +3378,10 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         return makePtr<RowFilter<float, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
+    if( sdepth == CV_16F && ddepth == CV_32F )
+        return makePtr<RowFilter<hfloat, float, RowNoVec> >(kernel, anchor);
+    if( sdepth == CV_16BF && ddepth == CV_32F )
+        return makePtr<RowFilter<bfloat, float, RowNoVec> >(kernel, anchor);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
@@ -3395,9 +3399,9 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
 
     int sdepth = CV_MAT_DEPTH(bufType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(dstType);
-    CV_Assert( cn == CV_MAT_CN(bufType) &&
-        sdepth >= std::max(ddepth, CV_32S) &&
-        kernel.type() == sdepth );
+    CV_Assert( cn == CV_MAT_CN(bufType) && kernel.type() == sdepth &&
+        (isHalfFloat(ddepth) ? sdepth == CV_32F
+                             : sdepth >= std::max(ddepth, CV_32S)) );
 
     if( !(symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) )
     {
@@ -3420,6 +3424,10 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
             return makePtr<ColumnFilter<Cast<float, float>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_64F && sdepth == CV_64F )
             return makePtr<ColumnFilter<Cast<double, double>, ColumnNoVec> >(kernel, anchor, delta);
+        if( ddepth == CV_16F && sdepth == CV_32F )
+            return makePtr<ColumnFilter<Cast<float, hfloat>, ColumnNoVec> >(kernel, anchor, delta);
+        if( ddepth == CV_16BF && sdepth == CV_32F )
+            return makePtr<ColumnFilter<Cast<float, bfloat>, ColumnNoVec> >(kernel, anchor, delta);
     }
     else
     {
@@ -3475,6 +3483,12 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 SymmColumnVec_32f(kernel, symmetryType, 0, delta));
         if( ddepth == CV_64F && sdepth == CV_64F )
             return makePtr<SymmColumnFilter<Cast<double, double>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
+        if( ddepth == CV_16F && sdepth == CV_32F )
+            return makePtr<SymmColumnFilter<Cast<float, hfloat>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
+        if( ddepth == CV_16BF && sdepth == CV_32F )
+            return makePtr<SymmColumnFilter<Cast<float, bfloat>, ColumnNoVec> >
                 (kernel, anchor, delta, symmetryType);
     }
 
@@ -3632,6 +3646,13 @@ Ptr<BaseFilter> getLinearFilter(
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<Filter2D<double,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
+
+    if( sdepth == CV_16F && ddepth == CV_16F )
+        return makePtr<Filter2D<hfloat,
+            Cast<float, hfloat>, FilterNoVec> >(kernel, anchor, delta);
+    if( sdepth == CV_16BF && ddepth == CV_16BF )
+        return makePtr<Filter2D<bfloat,
+            Cast<float, bfloat>, FilterNoVec> >(kernel, anchor, delta);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",

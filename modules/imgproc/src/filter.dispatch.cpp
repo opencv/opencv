@@ -341,7 +341,7 @@ Ptr<FilterEngine> createSeparableLinearFilter(
     Mat rowKernel, columnKernel;
 
     bool isBitExactMode = false;
-    int bdepth = std::max(CV_32F,std::max(sdepth, ddepth));
+    int bdepth = workDepth(sdepth, ddepth);
     int bits = 0;
 
     if( sdepth == CV_8U &&
@@ -566,7 +566,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     ddepth = ddepth < 0 ? sdepth : ddepth;
     int dtype = CV_MAKE_TYPE(ddepth, cn), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
             wtype = CV_MAKE_TYPE(wdepth, cn);
-    if (cn > 4)
+    if (cn > 4 || isHalfFloat(sdepth) || isHalfFloat(ddepth))
         return false;
 
     Size ksize = _kernel.size();
@@ -955,7 +955,7 @@ bool ocl_sepFilter2D(
     Size imgSize = _src.size();
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    if (cn > 4)
+    if (cn > 4 || isHalfFloat(sdepth) || isHalfFloat(ddepth))
         return false;
 
     Mat kernelX = _kernelX.getMat().reshape(1, 1);

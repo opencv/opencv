@@ -1258,8 +1258,22 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
         if (ksize.height != 1)
             parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<float, float>(dst, dst, radiusH), numOfThreads);
     }
+    else if (sdepth == CV_16F)
+    {
+        if (ksize.width != 1)
+            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<hfloat, float>(src, dst, radiusW), numOfThreads);
+        if (ksize.height != 1)
+            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<hfloat, float>(dst, dst, radiusH), numOfThreads);
+    }
+    else if (sdepth == CV_16BF)
+    {
+        if (ksize.width != 1)
+            parallel_for_(Range(0, src.rows), ParallelStackBlurRow<bfloat, float>(src, dst, radiusW), numOfThreads);
+        if (ksize.height != 1)
+            parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<bfloat, float>(dst, dst, radiusH), numOfThreads);
+    }
     else
         CV_Error(Error::StsNotImplemented,
-                   ("Unsupported input format in StackBlur, the supported formats are: CV_8U, CV_16U, CV_16S and CV_32F."));
+                   ("Unsupported input format in StackBlur, the supported formats are: CV_8U, CV_16U, CV_16S, CV_32F, CV_16F and CV_16BF."));
 }
 } //namespace
