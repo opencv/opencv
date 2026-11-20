@@ -42,6 +42,8 @@ static void flash_attn_add_mask(float* S, int rows, int n, const float* mask, co
 void flashAttention(const float* Q, const float* K, const float* V, float* out,
                     int B, int H, int Sq, int Skv, int D, int Dv, float scale,
                     const float* mask, const size_t* mask_steps, bool k_transposed) {
+    if (B == 0 || H == 0 || Sq == 0 || Dv == 0)
+        return;  // the output is empty, nothing to compute
     CV_Assert(B > 0 && H > 0 && Sq > 0 && Skv > 0 && D > 0 && Dv > 0);
     CV_Assert(!mask || mask_steps);
     const int nthreads = std::max(1, getNumThreads());

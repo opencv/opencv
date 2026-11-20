@@ -166,6 +166,20 @@ TEST_P(Layer_SDPA_Kernels, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Layer_SDPA_Kernels, testing::Combine(
     testing::Values(1, 5), testing::Values(1, 7, 259), testing::Values(1, 17, 65)));
 
+// An empty query gives an empty output instead of an exception.
+TEST(Layer_SDPA, empty_query)
+{
+    const int qShape[] = {1, 2, 0, 8}, ktShape[] = {1, 2, 8, 5}, vShape[] = {1, 2, 5, 4};
+    Mat q(4, qShape, CV_32F), kt(4, ktShape, CV_32F), v(4, vShape, CV_32F);
+    randu(kt, -1.f, 1.f);
+    randu(v, -1.f, 1.f);
+    Ptr<Layer> layer = SDPALayer::create(LayerParams());
+    std::vector<Mat> inputs{q, kt, v}, outputs;
+    ASSERT_NO_THROW(runLayer(layer, inputs, outputs));
+    ASSERT_EQ(1u, outputs.size());
+    EXPECT_EQ(MatShape({1, 0, 8}), shape(outputs[0]));
+}
+
 // QuantizeLinear requires exactly one output, which the shared runLayer() does not request.
 static Mat runQuantizeLinear(LayerParams& lp, std::vector<Mat>& inputs)
 {
