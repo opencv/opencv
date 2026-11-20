@@ -187,10 +187,15 @@ public:
         const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
         unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
         const int esz = (int)src.elemSize();
-        check(src.u == dst.u
+        const CV_GPU(Error_t) r = src.u == dst.u
               ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
-              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_),
-              "flip");
+              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_);
+        if (r == CV_GPU_ERROR_NO_KERNEL_IMAGE)
+        {
+            (void)CV_GPU(GetLastError)();
+            return false;   // no code for this GPU in the build: nothing was queued, the CPU runs it
+        }
+        check(r, "flip");
         stream.retain({ src, dst });
         return true;
     }
@@ -204,10 +209,15 @@ public:
         const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
         unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
         const int esz = (int)src.elemSize();
-        check(src.u == dst.u
+        const CV_GPU(Error_t) r = src.u == dst.u
               ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
-              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_),
-              "transpose");
+              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_);
+        if (r == CV_GPU_ERROR_NO_KERNEL_IMAGE)
+        {
+            (void)CV_GPU(GetLastError)();
+            return false;
+        }
+        check(r, "transpose");
         stream.retain({ src, dst });
         return true;
     }
@@ -288,7 +298,13 @@ public:
                 r = CV_GPU_HOST_FREE(handle);
 #ifdef CV_ACCEL_GPU_HAVE_POOLS
             else if (usesPool(device))
+            {
+                // allocStream only allocates and frees, so this returns at once and gives what the
+                // pool keeps above its release threshold back to the driver
                 r = CV_GPU(FreeAsync)(handle, d.allocStream);
+                if (r == CV_GPU(Success))
+                    r = CV_GPU(StreamSynchronize)(d.allocStream);
+            }
 #endif
             else
                 r = CV_GPU(Free)(handle);
@@ -386,7 +402,7 @@ private:
             d.pool = 0;
             return;
         }
-        uint64_t threshold = UINT64_MAX;
+        uint64_t threshold = (uint64_t)256 << 20;     // what the pool keeps for reuse; the rest goes back
         if (CV_GPU(MemPoolSetAttribute)(d.pool, CV_GPU(MemPoolAttrReleaseThreshold), &threshold) != CV_GPU(Success))
             (void)CV_GPU(GetLastError)();
     }
@@ -396,10 +412,14 @@ private:
         CV_GPU(Error_t) r = CV_GPU(MallocFromPoolAsync)(p, size, d.pool, d.allocStream);
         if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
         {
-            // what the pool keeps in blocks of other sizes goes back to the driver, then once more
+            // what the pool keeps in blocks of other sizes goes back to the driver, then once more;
+            // blocks freed on allocStream can be trimmed only once the stream has reached the frees
             (void)CV_GPU(GetLastError)();
+            (void)CV_GPU(StreamSynchronize)(d.allocStream);
             (void)CV_GPU(MemPoolTrimTo)(d.pool, 0);
             r = CV_GPU(MallocFromPoolAsync)(p, size, d.pool, d.allocStream);
+            if (r != CV_GPU(Success))
+                (void)CV_GPU(MemPoolTrimTo)(d.pool, 0);    // a failed attempt may leave memory reserved
         }
         if (r == CV_GPU(Success))
             r = CV_GPU(StreamSynchronize)(d.allocStream);   // from now on usable on every stream

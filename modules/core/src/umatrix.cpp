@@ -346,6 +346,9 @@ UMat& UMat::operator=(const UMat& m)
 UMat UMat::clone() const
 {
     UMat m;
+    const accel::Device device = accel::getDevice(*this);
+    if (!device.empty())
+        m.createOn(device, shape(), type());    // the copy stays on the device
     copyTo(m);
     return m;
 }

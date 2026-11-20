@@ -16,6 +16,7 @@
 #  define CV_GPU_NS hip_impl
 #  define CV_GPU_RUNTIME "hip"
 #  define CV_GPU_ERROR_OUT_OF_MEMORY hipErrorOutOfMemory
+#  define CV_GPU_ERROR_NO_KERNEL_IMAGE hipErrorNoBinaryForGpu
 #  define CV_GPU_ATTR_MEMORY_POOLS hipDeviceAttributeMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC hipHostMalloc
 #  define CV_GPU_HOST_FREE hipHostFree
@@ -29,6 +30,7 @@ typedef hipDeviceAttribute_t cvGpuDeviceAttr;
 #  define CV_GPU_NS cuda_impl
 #  define CV_GPU_RUNTIME "cuda"
 #  define CV_GPU_ERROR_OUT_OF_MEMORY cudaErrorMemoryAllocation
+#  define CV_GPU_ERROR_NO_KERNEL_IMAGE cudaErrorNoKernelImageForDevice
 #  define CV_GPU_ATTR_MEMORY_POOLS cudaDevAttrMemoryPoolsSupported
 #  define CV_GPU_HOST_ALLOC cudaHostAlloc
 #  define CV_GPU_HOST_FREE cudaFreeHost
