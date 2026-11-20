@@ -19,7 +19,7 @@ typedef void (*ImgWarpFunc)(const float* x, const float* y, int len,
 
 ImgWarpFunc getImgWarpFunc(int type, int interpolation);
 
-#if CV_NEON && CV_SIMD128
+#if CV_SIMD128
 static inline void packRGBWarpWeights(const float* weights, v_float32x4* packed)
 {
     packed[0] = v_float32x4(weights[0], weights[0], weights[0], weights[1]);

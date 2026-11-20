@@ -1099,7 +1099,7 @@ struct RemapLanczos4VecC1<T, float>
     }
 };
 
-#if CV_NEON && CV_SIMD128
+#if CV_SIMD128
 static inline void remapLanczosRGB(const float* src, size_t step, const float* weights, float* dst)
 {
     const v_float32x4 zero = v_setzero_f32();
@@ -1166,7 +1166,7 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-#if CV_NEON && CV_SIMD128
+#if CV_SIMD128
                 if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
                 {
                     if (cn == 3)

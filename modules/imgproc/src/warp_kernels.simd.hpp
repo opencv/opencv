@@ -8102,7 +8102,7 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     BICUBIC_UPDATE_ACC_VEC(acc_b, B0, B1, B2, B3, wy##row); \
     BICUBIC_UPDATE_ACC_VEC(acc_a, A0, A1, A2, A3, wy##row)
 
-#if CV_NEON && CV_SIMD_WIDTH == 16
+#if CV_SIMD128 && CV_SIMD_WIDTH == 16
 static inline void storeBicubicWeights(const v_float32x4& w0, const v_float32x4& w1,
                                        const v_float32x4& w2, const v_float32x4& w3, float (&weights)[4][4])
 {
@@ -8180,7 +8180,7 @@ bicubicVec(const float* srcx, const float* srcy, int len,
                                  wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3);
 
         if (code > 0) {
-#if CV_NEON && CV_SIMD_WIDTH == 16
+#if CV_SIMD128 && CV_SIMD_WIDTH == 16
             if constexpr (NCHANNELS == 3 && std::is_same_v<chtype, float>) {
                 float wx[BATCH][4], wy[BATCH][4];
                 storeBicubicWeights(wx0, wx1, wx2, wx3, wx);
