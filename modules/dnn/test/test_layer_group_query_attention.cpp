@@ -184,6 +184,16 @@ TEST(GroupQueryAttentionLayer, Guard_RejectsSeqlensSmallerThanQuery)
     EXPECT_ANY_THROW(net.forward());
 }
 
+// Control for the shared-buffer rejection below: the last row of a 4-row buffer
+// (seqlens_k = 3) is in range and must still run, so an over-strict guard fails here.
+TEST(GroupQueryAttentionLayer, Guard_AcceptsSeqlensLastRowSharedBuffer)
+{
+    Net net = makeGQANet(/*sharedBuffer*/ true);
+    feedGQANet(net, /*S*/1, /*keyS*/1, /*pastLen*/4, /*pastHeads*/GQA_KV_NUM_HEADS,
+               /*pastD*/GQA_HEAD_SIZE, /*seqlens*/3);
+    EXPECT_NO_THROW(net.forward());
+}
+
 // seqlens_k + 1 must not wrap around int and point past the end of the shared KV buffer.
 TEST(GroupQueryAttentionLayer, Guard_RejectsSeqlensOverflowSharedBuffer)
 {
