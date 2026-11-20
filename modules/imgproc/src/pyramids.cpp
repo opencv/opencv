@@ -1480,6 +1480,11 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     Size dsz = _dsz.empty() ? Size(src.cols*2, src.rows*2) : _dsz;
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
+    if( src.empty() )
+    {
+        CV_Assert( dst.empty() );
+        return;
+    }
     int depth = src.depth();
 
     CALL_HAL(pyrUp, cv_hal_pyrup, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
