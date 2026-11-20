@@ -414,7 +414,7 @@ static inline void writeReal(uchar* p, double fval)
 
 void FileStorage::Impl::init() {
     flags = 0;
-    buffer.clear();
+    std::vector<char>().swap(buffer);
     bufofs = 0;
     state = UNDEFINED;
     is_using_base64 = false;
@@ -435,20 +435,24 @@ void FileStorage::Impl::init() {
     gzfile = 0;
     empty_stream = true;
 
-    strbufv.clear();
+    std::vector<char>().swap(strbufv);
     strbuf = 0;
     strbufsize = strbufpos = 0;
-    roots.clear();
+    std::vector<FileNode>().swap(roots);
 
-    fs_data.clear();
-    fs_data_ptrs.clear();
-    fs_data_blksz.clear();
+    std::vector<Ptr<std::vector<uchar> > >().swap(fs_data);
+    std::vector<uchar*>().swap(fs_data_ptrs);
+    std::vector<size_t>().swap(fs_data_blksz);
     freeSpaceOfs = 0;
 
-    str_hash.clear();
-    str_hash_data.clear();
-    str_hash_data.resize(1);
-    str_hash_data[0] = '\0';
+    str_hash_t().swap(str_hash);
+    std::vector<char>(1, '\0').swap(str_hash_data);
+
+    std::deque<char>().swap(outbuf);
+    std::deque<FStructData>().swap(write_stack);
+    emitter_do_not_use_direct_dereference.release();
+    parser_do_not_use_direct_dereference.release();
+    base64decoder = Base64Decoder();
 
     filename.clear();
     lineno = 0;
