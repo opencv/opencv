@@ -50,7 +50,7 @@
 #if defined(__OPENCV_BUILD) && defined(__clang__)
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
-#if defined(__OPENCV_BUILD) && defined(__GNUC__)
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 

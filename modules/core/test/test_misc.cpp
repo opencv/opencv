@@ -1164,6 +1164,19 @@ TEST(Core_KeyPoint, ConvertOutOfBounds) {
     EXPECT_EQ(pts[0], cv::Point2f(1.0f, 2.0f));
 }
 
+TEST(Core_KeyPoint, OverlapInternallyTangent)
+{
+    // a small circle (radius 0.5) just inside a big one (radius 5.5), touching its edge;
+    // float rounding pushed the cosine below -1 here and acos() returned NaN
+    cv::KeyPoint kpBig(0.f, 0.f, 11.f);
+    cv::KeyPoint kpSmall(std::nextafter(5.f, 6.f), 0.f, 1.f);
+
+    float ovrl = cv::KeyPoint::overlap(kpBig, kpSmall);
+    EXPECT_FALSE(cvIsNaN(ovrl));
+    EXPECT_NEAR(ovrl, 1.f / 121.f, 1e-4);
+    EXPECT_NEAR(cv::KeyPoint::overlap(kpSmall, kpBig), ovrl, 1e-6);
+}
+
 TEST(Core_EmptyMat, FuzzRegressions) {
     cv::Mat empty_mat;
     cv::Mat mask_1x1 = cv::Mat::ones(1, 1, CV_8U);

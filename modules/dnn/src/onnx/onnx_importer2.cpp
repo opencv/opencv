@@ -267,6 +267,7 @@ protected:
     void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEyeLike              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseReverseSequence      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBlackmanWindow       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHannWindow           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHammingWindow        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2344,6 +2345,12 @@ void ONNXImporter2::parseEyeLike(LayerParams& layerParams, const opencv_onnx::No
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseReverseSequence(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "ReverseSequence";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseBlackmanWindow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "BlackmanWindow";
@@ -3653,6 +3660,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["BitCast"] = &ONNXImporter2::parseBitCast;
     dispatch["EyeLike"] = &ONNXImporter2::parseEyeLike;
+    dispatch["ReverseSequence"] = &ONNXImporter2::parseReverseSequence;
     dispatch["BlackmanWindow"] = &ONNXImporter2::parseBlackmanWindow;
     dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
     dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;

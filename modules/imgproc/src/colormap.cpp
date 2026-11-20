@@ -838,7 +838,7 @@ namespace colormap
 
     void applyColorMap(InputArray src, OutputArray dst, InputArray userColor)
     {
-        if (userColor.size() != Size(1,256))
+        if (userColor.total() != 256)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");

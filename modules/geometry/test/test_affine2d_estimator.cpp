@@ -83,6 +83,84 @@ TEST_P(EstimateAffine2D, test3Points)
     }
 }
 
+// 3 exactly collinear points cannot determine a unique affine transform.
+// estimateAffine2D must reject them cleanly instead of returning a
+// transform full of inf/nan while reporting every point as an inlier.
+TEST_P(EstimateAffine2D, test3CollinearPoints)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+    for (size_t i = 0; i < 100; ++i)
+    {
+        float t0 = rngIn(0.f, 1.f), t1 = rngIn(0.f, 1.f), t2 = rngIn(0.f, 1.f);
+        Mat fpts(1, 3, CV_32FC2);
+        fpts.at<Point2f>(0) = Point2f(t0 * 100.f, t0 * 50.f);
+        fpts.at<Point2f>(1) = Point2f(t1 * 100.f, t1 * 50.f);
+        fpts.at<Point2f>(2) = Point2f(t2 * 100.f, t2 * 50.f);
+
+        Mat tpts;
+        transform(fpts, tpts, aff);
+
+        vector<uchar> inliers;
+        Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method);
+
+        EXPECT_TRUE(aff_est.empty());
+        EXPECT_EQ(countNonZero(inliers), 0);
+    }
+}
+
+// The same idea with points that are collinear only up to float32 rounding: 10/3.f
+// and 100/3.f are rounded, so the area of the triangle is tiny but not exactly zero.
+// It is far below the degeneracy tolerance, so the sample must be rejected too.
+TEST_P(EstimateAffine2D, test3NearlyCollinearPoints)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+
+    Mat fpts(1, 3, CV_32FC2);
+    fpts.at<Point2f>(0) = Point2f(0.f, 0.f);
+    fpts.at<Point2f>(1) = Point2f(10.f, 10 / 3.f);
+    fpts.at<Point2f>(2) = Point2f(100.f, 100 / 3.f);
+
+    // make sure that the rounding really leaves a non-zero area
+    const Point2f p0 = fpts.at<Point2f>(0), p1 = fpts.at<Point2f>(1), p2 = fpts.at<Point2f>(2);
+    const double cross = ((double)p1.x - p0.x) * ((double)p2.y - p0.y) -
+                         ((double)p1.y - p0.y) * ((double)p2.x - p0.x);
+    ASSERT_NE(cross, 0.0);
+
+    Mat tpts;
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method);
+
+    EXPECT_TRUE(aff_est.empty());
+    EXPECT_EQ(countNonZero(inliers), 0);
+}
+
+// A small, well-conditioned triangle far from the origin is not degenerate:
+// the degeneracy check must depend on the triangle itself, not on where it is.
+TEST_P(EstimateAffine2D, test3PointsLargeOffset)
+{
+    const int method = GetParam();
+    Mat aff = Mat_<double>({2, 3}, {1, 0, 5, 0, 1, 3}); // pure translation
+
+    Mat fpts(1, 3, CV_32FC2);
+    fpts.at<Point2f>(0) = Point2f(1e6f, 1e6f);
+    fpts.at<Point2f>(1) = Point2f(1e6f + 10.f, 1e6f);
+    fpts.at<Point2f>(2) = Point2f(1e6f, 1e6f + 10.f);
+
+    Mat tpts;
+    transform(fpts, tpts, aff);
+
+    vector<uchar> inliers;
+    Mat aff_est = estimateAffine2D(fpts, tpts, inliers, method);
+
+    ASSERT_FALSE(aff_est.empty());
+    EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-3);
+    EXPECT_EQ(countNonZero(inliers), 3);
+}
+
 TEST_P(EstimateAffine2D, testNPoints)
 {
     // try more transformations

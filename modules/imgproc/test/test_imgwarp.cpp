@@ -1153,6 +1153,32 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpAffineIntegerOrthogonal, testing::C
     testing::Values(CV_32F, CV_64F),
     testing::Values(false, true)));
 
+TEST(Imgproc_WarpAffine, NearUnitScaleKeepsRequestedInterpolation)
+{
+    const Size size(20000, 1);
+    const Matx23f matrix(1.000001f, 0.f, 0.f, 0.f, 1.f, 0.f);
+    Mat src(size, CV_8UC1);
+    for (int x = 0; x < src.cols; ++x)
+        src.at<uchar>(0, x) = (x & 1) ? 255 : 0;
+
+    const int sampleX = 18000;
+    for (bool inverse : {false, true})
+    {
+        const double scale = inverse ? matrix(0, 0) : 1. / matrix(0, 0);
+        Mat map(size, CV_32FC2);
+        for (int x = 0; x < size.width; ++x)
+            map.at<Vec2f>(0, x) = Vec2f(static_cast<float>(scale * x), 0.f);
+
+        Mat expected, actual;
+        remap(src, expected, map, Mat(), INTER_LINEAR, BORDER_CONSTANT);
+        warpAffine(src, actual, matrix, size,
+                   INTER_LINEAR | (inverse ? WARP_INVERSE_MAP : 0), BORDER_CONSTANT);
+
+        EXPECT_EQ(expected.at<uchar>(0, sampleX), actual.at<uchar>(0, sampleX));
+        EXPECT_NE(src.at<uchar>(0, sampleX), actual.at<uchar>(0, sampleX));
+    }
+}
+
 TEST(Imgproc_WarpAffine, FractionalTranslationKeepsRequestedInterpolation)
 {
     Mat src(7, 9, CV_8UC1);
@@ -1274,6 +1300,49 @@ TEST(Imgproc_warpPolar, identity)
 #endif
 }
 
+typedef testing::TestWithParam<int> Imgproc_warpPolar_Inverse;
+
+// the inverse transform of a constant polar image has to be constant up to the angular seam
+TEST_P(Imgproc_warpPolar_Inverse, angular_seam)
+{
+    const int interpolation = GetParam();
+    const Mat polar(360, 100, CV_8UC1, Scalar::all(200));
+    const Point2f center(100.f, 100.f);
+    const double radius = 100;
+
+    for (int fill = 0; fill < 2; fill++)
+    {
+        Mat dst;
+        warpPolar(polar, dst, Size(201, 201), center, radius,
+                  interpolation | WARP_POLAR_LINEAR | WARP_INVERSE_MAP | (fill ? (int)WARP_FILL_OUTLIERS : 0));
+
+        // skip the centre and the outer rim, where the kernel leaves the source along the radius
+        Mat mask = Mat::zeros(dst.size(), CV_8UC1);
+        circle(mask, Point(100, 100), 90, Scalar(255), FILLED);
+        circle(mask, Point(100, 100), 4, Scalar(0), FILLED);
+        EXPECT_EQ(0, countNonZero((dst != 200) & mask)) << "fill outliers: " << fill;
+    }
+}
+
+// a sub-matrix has to give the same result as its copy
+TEST_P(Imgproc_warpPolar_Inverse, submatrix)
+{
+    const int interpolation = GetParam();
+    Mat big(140, 140, CV_8UC1);
+    theRNG().fill(big, RNG::UNIFORM, 0, 256);
+    const Rect roi(20, 25, 100, 90);
+    const int flags = interpolation | WARP_POLAR_LINEAR | WARP_INVERSE_MAP | WARP_FILL_OUTLIERS;
+
+    Mat dst_roi, dst_copy;
+    warpPolar(big(roi), dst_roi, Size(120, 120), Point2f(60.f, 60.f), 60, flags);
+    warpPolar(big(roi).clone(), dst_copy, Size(120, 120), Point2f(60.f, 60.f), 60, flags);
+
+    EXPECT_EQ(0, cvtest::norm(dst_roi, dst_copy, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_warpPolar_Inverse,
+                        testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC, (int)INTER_LANCZOS4));
+
 TEST(Imgproc_Remap, issue_23562)
 {
     cv::RNG rng(17);
@@ -1345,6 +1414,64 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapManyChannels, testing::Combine(
     testing::Values(5, 7, 9, 20, 31, 33, CV_CN_MAX),
     testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT,
                     (int)BORDER_REFLECT_101, (int)BORDER_WRAP, (int)BORDER_TRANSPARENT)));
+
+TEST(Imgproc_Remap, cubic_c1_border_transparent_preserves_edge_dst)
+{
+    Mat src(5, 5, CV_32FC1);
+    randu(src, Scalar::all(-1), Scalar::all(1));
+
+    Mat_<float> mapx(3, 3, -1.f);
+    Mat_<float> mapy(3, 3, -1.f);
+    Mat dst(3, 3, CV_32FC1, Scalar::all(123));
+    Mat ref = dst.clone();
+
+    remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF));
+}
+
+TEST(Imgproc_Remap, bilinear_c1_16bit_fixed_map_sample_order)
+{
+    const Size srcSize(64, 16), dstSize(32, 8);
+    const ushort fxy = (24 << INTER_BITS) | 8; // x = 1/4, y = 3/4
+
+    Mat map1(dstSize, CV_16SC2), map2(dstSize, CV_16UC1, Scalar::all(fxy));
+    for (int y = 0; y < dstSize.height; ++y)
+    {
+        for (int x = 0; x < dstSize.width; ++x)
+            map1.at<Vec2s>(y, x) = Vec2s((short)(2 + x), (short)(2 + y));
+    }
+
+    for (int type : {CV_16SC1, CV_16UC1})
+    {
+        Mat src(srcSize, type), dst;
+        for (int y = 0; y < src.rows; ++y)
+        {
+            for (int x = 0; x < src.cols; ++x)
+            {
+                const int value = y * 128 + x * 32 + (type == CV_16SC1 ? -2000 : 2000);
+                if (type == CV_16SC1)
+                    src.at<short>(y, x) = (short)value;
+                else
+                    src.at<ushort>(y, x) = (ushort)value;
+            }
+        }
+
+        remap(src, dst, map1, map2, INTER_LINEAR);
+        for (int y = 0; y < dst.rows; ++y)
+        {
+            for (int x = 0; x < dst.cols; ++x)
+            {
+                const Vec2s xy = map1.at<Vec2s>(y, x);
+                const int expected = xy[1] * 128 + xy[0] * 32 + 104 +
+                                     (type == CV_16SC1 ? -2000 : 2000);
+                if (type == CV_16SC1)
+                    EXPECT_EQ(expected, dst.at<short>(y, x));
+                else
+                    EXPECT_EQ(expected, dst.at<ushort>(y, x));
+            }
+        }
+    }
+}
 
 TEST(Imgproc_Remap, lanczos4_unsupported_depth)
 {

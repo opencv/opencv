@@ -2859,6 +2859,17 @@ TEST(Mat1D, basic)
     }
 }
 
+TEST(Mat1D, forEach_position)
+{
+    std::vector<int> sizes { 10 };
+    Mat m(sizes, CV_32SC1, Scalar::all(-1));
+    m.forEach<int>([](int& v, const int* position) { v = position[0]; });
+
+    ASSERT_EQ(1, m.dims);
+    for (int i = 0; i < 10; i++)
+        EXPECT_EQ(i, m.at<int>(i));
+}
+
 TEST(Mat, ptrVecni_20044)
 {
     Mat_<int> m({3, 4}, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});

@@ -265,7 +265,7 @@ static void cvt##suffix(const uchar* src_, size_t sstep, const uchar*, size_t, \
     \
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep ) { \
         for ( int j = 0; j < size.width; j++ ) \
-            dst[j] = (src[j]<<shift) != 0; \
+            dst[j] = (_Ts)(src[j] << shift) != 0; \
     } \
 }
 
@@ -451,7 +451,7 @@ DEF_CVT_FUNC(16f64f, cvt1_, hfloat, double, v_float32)
 DEF_CVT_FUNC(16f64u, cvt1_, hfloat, uint64_t, v_float32)
 DEF_CVT_FUNC(16f64s, cvt1_, hfloat, int64_t, v_float32)
 DEF_CVT_FUNC(16f16bf, cvt1_, hfloat, bfloat, v_float32)
-DEF_CVT2BOOL_FUNC(16f8b, short, 1)
+DEF_CVT2BOOL_FUNC(16f8b, ushort, 1)
 
 ////////////////////// 16bf -> ... ////////////////////////
 

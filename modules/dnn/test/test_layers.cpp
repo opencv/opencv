@@ -220,6 +220,56 @@ TEST(Layer_Test_QuantizeLinear, int4_per_tensor_saturates)
     }
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_LogSoftmax;
+TEST_P(Layer_Test_LogSoftmax, DoesNotUnderflow)
+{
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+
+    // log(softmax(x)) is -inf once x is about 104 below the maximum, where exp underflows.
+    // The 17-element row also goes through the SIMD loops.
+    std::vector<float> data = {1000.f, 1001.f, 1002.f, -1000.f, 0.f, 1000.f};
+    for (int i = 0; i < 17; i++)
+        data.push_back(100.f * i - 800.f);
+
+    for (int len : {3, 17})
+    {
+        SCOPED_TRACE(len);
+        const int rows = len == 3 ? 2 : 1;
+        Mat input(rows, len, CV_32F, data.data() + (len == 3 ? 0 : 6));
+
+        LayerParams lp;
+        lp.type = "Softmax";
+        lp.name = "logSoftmax";
+        lp.set("axis", 1);
+        lp.set("log_softmax", true);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(input);
+        Mat out = net.forward();
+
+        Mat ref(rows, len, CV_32F);
+        for (int r = 0; r < rows; r++)
+        {
+            const float* x = input.ptr<float>(r);
+            double maxVal = *std::max_element(x, x + len), sum = 0;
+            for (int c = 0; c < len; c++)
+                sum += std::exp(x[c] - maxVal);
+            for (int c = 0; c < len; c++)
+                ref.at<float>(r, c) = static_cast<float>(x[c] - maxVal - std::log(sum));
+        }
+        double l1 = 1e-4, lInf = 1e-4;
+        if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16)
+            DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+        normAssert(ref, out.reshape(1, rows), "", l1, lInf);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_LogSoftmax,
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false));
+
 TEST(Layer_Test_Reshape, Accuracy)
 {
     {
@@ -4741,6 +4791,117 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+static Mat reverseSequenceReference(const Mat& X, const std::vector<int64_t>& lensData,
+                                    int timeAxis, int batchAxis)
+{
+    const int rank = X.dims;
+    Mat ref = X.clone();   // every element is overwritten below; clone keeps shape and type
+    std::vector<int> idx(rank), srcIdx(rank);
+    for (size_t flat = 0; flat < (size_t)X.total(); ++flat)
+    {
+        size_t rem = flat;
+        for (int d = rank - 1; d >= 0; --d)
+        {
+            idx[d] = (int)(rem % X.size[d]);
+            rem /= X.size[d];
+        }
+        srcIdx = idx;
+        const int t = idx[timeAxis];
+        const int64_t L = lensData[idx[batchAxis]];
+        srcIdx[timeAxis] = (int)(t < L ? L - 1 - t : t);
+        std::memcpy(ref.ptr(idx.data()), X.ptr(srcIdx.data()), X.elemSize());
+    }
+    return ref;
+}
+
+static std::vector<Mat> makeReverseSequenceInputs(const MatShape& xShape,
+                                                  const std::vector<int64_t>& lensData,
+                                                  int lensType, int dataType)
+{
+    Mat X(xShape, dataType);
+    if (dataType == CV_32F || dataType == CV_64F)
+    {
+        randu(X, -1.0, 1.0);
+    }
+    else
+    {
+        for (size_t i = 0; i < X.total() * X.elemSize(); ++i)
+            X.ptr<uchar>()[i] = (uchar)((i * 37 + 11) & 0xff);
+    }
+
+    Mat lens({(int)lensData.size()}, lensType);
+    for (size_t i = 0; i < lensData.size(); ++i)
+    {
+        if (lensType == CV_32S)
+            lens.ptr<int32_t>()[i] = (int32_t)lensData[i];
+        else
+        {
+            CV_Assert(lensType == CV_64S);
+            lens.ptr<int64_t>()[i] = lensData[i];
+        }
+    }
+    return {X, lens};
+}
+
+static Ptr<Layer> makeReverseSequenceLayer(int timeAxis, int batchAxis)
+{
+    LayerParams lp;
+    lp.type = "ReverseSequence";
+    lp.name = "reverse_sequence";
+    lp.set("time_axis", timeAxis);
+    lp.set("batch_axis", batchAxis);
+    return LayerFactory::createLayerInstance(lp.type, lp);
+}
+
+static void checkReverseSequence(const MatShape& xShape, const std::vector<int64_t>& lensData,
+                                 int lensType, int timeAxis, int batchAxis, int dataType)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(timeAxis, batchAxis);
+    ASSERT_TRUE(layer) << "ReverseSequence layer is not registered";
+
+    std::vector<Mat> inputs = makeReverseSequenceInputs(xShape, lensData, lensType, dataType);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), xShape);
+
+    const Mat ref = reverseSequenceReference(inputs[0], lensData, timeAxis, batchAxis);
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, Reference)
+{
+    // int16, rank 2, batch-first layout.
+    checkReverseSequence(MatShape{4, 4}, {4, 3, 2, 1}, CV_64S, 1, 0, CV_16S);
+
+    // int16, rank 3: each step is a contiguous block of 2 elements.
+    checkReverseSequence(MatShape{2, 3, 2}, {3, 1}, CV_64S, 1, 0, CV_16S);
+
+    // time-first layout with int32 sequence_lens.
+    checkReverseSequence(MatShape{3, 2, 2}, {3, 3}, CV_32S, 0, 1, CV_16S);
+
+    // float32 with L == 0, L == 1 and L == nTimeStep.
+    checkReverseSequence(MatShape{4, 4}, {0, 1, 4, 2}, CV_64S, 1, 0, CV_32F);
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, LensOutOfRangeThrows)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> outputs;
+    std::vector<Mat> tooLong = makeReverseSequenceInputs(MatShape{2, 3}, {4, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, tooLong, outputs));   // L > nTimeStep
+
+    std::vector<Mat> negative = makeReverseSequenceInputs(MatShape{2, 3}, {-1, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, negative, outputs));  // L < 0
+
+    // 3 batch elements, but only 2 sequence lengths.
+    std::vector<Mat> mismatch = makeReverseSequenceInputs(MatShape{3, 4}, {2, 4}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, mismatch, outputs));
+}
+
 TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
 {
     const int B = 2, C = 64, T = 8, K = 4;
@@ -4824,6 +4985,116 @@ TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
     ASSERT_EQ(outputs.size(), (size_t)2);
     normAssert(ref, outputs[0], "output");
     normAssert(refState, outputs[1], "present_state");
+}
+
+typedef testing::TestWithParam<tuple<MatDepth, double> > Layer_Test_Hardmax;
+TEST_P(Layer_Test_Hardmax, RowsWithoutValueAboveLowest)
+{
+    const int depth = get<0>(GetParam());
+    const double lowest = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Hardmax";
+    lp.name = "test_hardmax";
+    lp.set("axis", -1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // Every element is the lowest value of its type, so none is greater than lowest()
+    Mat input(2, 3, depth, Scalar::all(lowest));
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Ties go to the first element, so each row must be [1, 0, 0]
+    Mat ref(2, 3, depth, Scalar::all(0));
+    ref.col(0).setTo(1);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
+    make_tuple(CV_8U, 0.0),
+    make_tuple(CV_8S, -128.0),
+    make_tuple(CV_32S, (double)INT_MIN),
+    make_tuple(CV_32F, -std::numeric_limits<double>::infinity()),
+    make_tuple(CV_64F, -std::numeric_limits<double>::infinity())
+));
+
+static void testClipMinGreaterThanMax(int depth, bool dynamic)
+{
+    const int total = 64;
+    Mat input(1, total, depth);
+    Mat ref(1, total, depth);
+
+    const double minVal = 5.0;
+    const double maxVal = 2.0;
+
+    if (depth == CV_32F)
+    {
+        float* inPtr = input.ptr<float>();
+        float* refPtr = ref.ptr<float>();
+        for (int i = 0; i < total; ++i)
+        {
+            inPtr[i] = (float)i * 0.5f - 15.0f;
+            refPtr[i] = (float)maxVal;
+        }
+    }
+    else // CV_64F
+    {
+        double* inPtr = input.ptr<double>();
+        double* refPtr = ref.ptr<double>();
+        for (int i = 0; i < total; ++i)
+        {
+            inPtr[i] = (double)i * 0.5 - 15.0;
+            refPtr[i] = maxVal;
+        }
+    }
+
+    LayerParams lp;
+    lp.type = "Clip";
+    lp.name = "ClipLayer";
+
+    std::vector<Mat> inputs = {input};
+    if (!dynamic)
+    {
+        lp.set("min", (float)minVal);
+        lp.set("max", (float)maxVal);
+    }
+    else
+    {
+        Mat minMat(1, 1, depth, Scalar(minVal));
+        Mat maxMat(1, 1, depth, Scalar(maxVal));
+        inputs.push_back(minMat);
+        inputs.push_back(maxMat);
+    }
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Clip", lp);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    normAssert(ref, outputs[0], "Clip min > max output mismatch");
+}
+
+TEST(Layer_Test_Clip, MinGreaterThanMax_Float32)
+{
+    testClipMinGreaterThanMax(CV_32F, false);
+}
+
+TEST(Layer_Test_Clip, MinGreaterThanMax_Float64)
+{
+    testClipMinGreaterThanMax(CV_64F, false);
+}
+
+TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float32)
+{
+    testClipMinGreaterThanMax(CV_32F, true);
+}
+
+TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float64)
+{
+    testClipMinGreaterThanMax(CV_64F, true);
 }
 
 }} // namespace

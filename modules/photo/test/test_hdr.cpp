@@ -307,13 +307,24 @@ TEST(Photo_CalibrateDebevec, regression)
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
-    ASSERT_LT(max, 0.25);
-#elif !defined(HAVE_IPP)
-    ASSERT_LT(max, 0.22);
-#else
     ASSERT_LT(max, 0.15);
-#endif
+}
+
+TEST(Photo_CalibrateDebevec, middle_value_is_fixed)
+{
+    // the response is normalized by g(LDR_SIZE / 2) = 0, i.e. response(128) == 1
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+    vector<Mat> images;
+    vector<float> times;
+    Mat response;
+    loadExposureSeq(test_path + "exposures/", images, times);
+    Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
+    calibrate->process(images, response, times);
+    Vec3f middle = response.at<Vec3f>(128);
+    for(int c = 0; c < 3; c++) {
+        EXPECT_NEAR(1.0f, middle[c], 1e-3f) << "channel=" << c;
+    }
 }
 
 TEST(Photo_CalibrateRobertson, regression)
@@ -354,40 +365,25 @@ TEST(Photo_CalibrateDebevec, bug_24966)
     vector<Mat> all_images;
     vector<float> all_times;
     loadExposureSeq(test_path + "exposures/", all_images, all_times);
-    // Use a balanced subset of exposures
-    vector<int> selected_indices = {1,2,3,4,5};
     vector<Mat> images;
     vector<float> times;
-    for (int idx : selected_indices) {
+    for (int idx : {1, 2, 3, 4, 5}) {
         images.push_back(all_images[idx]);
         times.push_back(all_times[idx]);
     }
-    // Run CRF estimation for different sample points
-    vector<int> sample_points = {200,300,400};
-    vector<Mat> responses;
-    for (int samples : sample_points) {
-        Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec(samples);
-        Mat response;
-        calibrate->process(images, response, times);
-        Mat roi = response.rowRange(15, 240); //Checking CRF only in the middle of the image
-        responses.push_back(roi);
-    }
+    Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
+    Mat response, response_ext;
+    calibrate->process(images, response, times);
 
-    // Compare consecutive pairs of CRFs
-    for (size_t i = 0; i < responses.size()-1; ++i) {
-        Mat diff = abs(responses[i] - responses[i+1]);
-        double max_diff;
-        minMaxLoc(diff, nullptr, &max_diff);
-        cout << "max_diff = " << max_diff << endl;
-        #if defined(__aarch64__) && defined(__APPLE__)
-            ASSERT_LT(max_diff, 10) << "CRF instability detected between samples="
-                << sample_points[i] << " and " << sample_points[i+1]
-                << " (max diff = " << max_diff << ")";
-        #else
-            ASSERT_LT(max_diff, 5) << "CRF instability detected between samples="
-                << sample_points[i] << " and " << sample_points[i+1]
-                << " (max diff = " << max_diff << ")";
-        #endif
-    }
+    // #24966: pixels at 0 and 255 get (almost) zero weight, so a fully saturated and a fully black
+    // exposure only add zero-weight equations and must not change the response.
+    images.push_back(Mat(images[0].size(), images[0].type(), Scalar::all(255)));
+    times.push_back(times.front() * 2);
+    images.push_back(Mat(images[0].size(), images[0].type(), Scalar::all(0)));
+    times.push_back(times[4] / 2);
+    calibrate->process(images, response_ext, times);
+
+    double max_diff = cvtest::norm(response.rowRange(15, 240), response_ext.rowRange(15, 240), NORM_INF);
+    EXPECT_LT(max_diff, 0.5);
 }
 }} // namespace

@@ -153,7 +153,7 @@ int countNonZero(InputArray _src)
 void findNonZero(InputArray _src, OutputArray _idx)
 {
     Mat src = _src.getMat();
-    CV_Assert( src.channels() == 1 && src.dims == 2 );
+    CV_Assert( src.channels() == 1 && src.dims <= 2 );
 
     int depth = src.depth();
     std::vector<Point> idxvec;
