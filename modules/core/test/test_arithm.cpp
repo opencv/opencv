@@ -3778,26 +3778,19 @@ TEST(Core_MeanStdDev, regression_multichannel)
 
 TEST(Core_MeanStdDev, bool_input)
 {
-    uchar src_buf[]  = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
-    uchar ref_buf[]  = { 0, 1, 0,   1, 1, 0 };
-    uchar mask_buf[] = { 0, 1, 1,   1, 1, 1 };
+    uchar src_buf[] = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
     Mat src(1, 6, CV_Bool, src_buf);
-    Mat ref(1, 6, CV_8U, ref_buf);
-    Mat mask(1, 6, CV_8U, mask_buf);
 
-    EXPECT_EQ(cv::mean(ref), cv::mean(src));
-    EXPECT_EQ(cv::mean(ref, mask), cv::mean(src, mask));
+    EXPECT_EQ(0.5, cv::mean(src)[0]);
 
-    Scalar m, sd, ref_m, ref_sd;
+    Scalar m, sd;
     meanStdDev(src, m, sd);
-    meanStdDev(ref, ref_m, ref_sd);
-    EXPECT_EQ(ref_m, m);
-    EXPECT_EQ(ref_sd, sd);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
 
-    meanStdDev(src, m, sd, mask);
-    meanStdDev(ref, ref_m, ref_sd, mask);
-    EXPECT_EQ(ref_m, m);
-    EXPECT_EQ(ref_sd, sd);
+    Mat mask(1, 6, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
+    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
 }
 
 // Related issue : https://github.com/opencv/opencv/issues/26861
