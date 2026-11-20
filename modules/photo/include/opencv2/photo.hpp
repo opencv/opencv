@@ -571,6 +571,10 @@ CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, floa
 /** @brief Inverse camera response function is extracted for each brightness value by minimizing an objective
 function as linear system. This algorithm uses all image pixels.
 
+Brightness values that occur in none of the images get a response of 0. The curve is scaled so
+that the middle value is 1; if the middle value has no usable estimate, the nearest value that has
+one keeps its previous estimate instead.
+
 For more information see @cite RB99 .
  */
 class CV_EXPORTS_W CalibrateRobertson : public CalibrateCRF

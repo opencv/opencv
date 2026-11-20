@@ -80,7 +80,8 @@ Mat triangleWeights(int length)
 Mat RobertsonWeights(int length)
 {
     CV_Assert(length >= 1);
-    Mat weight(length, 1, CV_32FC3);
+    // One channel: LUT() applies a one-channel table to every channel of the image.
+    Mat weight(length, 1, CV_32FC1);
     float q = (length - 1) / 4.0f;
     float e4 = exp(4.f);
     float scale = e4/(e4 - 1.f);
@@ -89,7 +90,7 @@ Mat RobertsonWeights(int length)
     for(int i = 0; i < length; i++) {
         float value = i / q - 2.0f;
         value = scale*exp(-value * value) + shift;
-        weight.at<Vec3f>(i) = Vec3f::all(value);
+        weight.at<float>(i) = value;
     }
     return weight;
 }
@@ -109,25 +110,15 @@ void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
 Mat linearResponse(int channels, int length)
 {
     CV_Assert(length >= 1);
+    CV_Assert(channels >= 1 && channels <= 4);
     Mat response = Mat(length, 1, CV_MAKETYPE(CV_32F, channels));
-
-    if (channels == 1)
+    for (int i = 0; i < length; i++)
     {
-        for (int i = 0; i < length; i++)
+        float* row = response.ptr<float>(i);
+        for (int c = 0; c < channels; c++)
         {
-            response.at<float>(i) = static_cast<float>(i);
+            row[c] = static_cast<float>(i);
         }
-    }
-    else if (channels == 3)
-    {
-        for (int i = 0; i < length; i++)
-        {
-            response.at<Vec3f>(i) = Vec3f::all(static_cast<float>(i));
-        }
-    }
-    else
-    {
-        CV_Error(Error::StsBadArg, "Unsupported number of channels in linearResponse");
     }
     return response;
 }
