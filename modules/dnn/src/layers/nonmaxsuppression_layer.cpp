@@ -10,6 +10,7 @@
 #include <limits>
 #include <numeric>
 #include <cstdint>
+#include "../nms.inl.hpp"
 
 namespace cv {
 namespace dnn {
@@ -180,6 +181,8 @@ private:
                 const float* sPtr = scoresBlob.ptr<float>(b, c);
                 for (int n = 0; n < N; ++n) {
                     float sc = sPtr[n];
+                    if (!(sc > scoreThr))
+                        continue;
                     const float* bx = boxesBlob.ptr<float>(b, n);
                     Rect2f r;
                     if (centerPointBox == 0) {
@@ -204,9 +207,9 @@ private:
                 for (const Rect2f& rf : rects) {
                     rects2d.emplace_back((double)rf.x, (double)rf.y, (double)rf.width, (double)rf.height);
                 }
-                NMSBoxes(rects2d, scores, /*score_threshold*/ scoreThr, /*nms_threshold*/ iouThr, keep, 1.f, 0);
-                if (maxOut > 0 && (int)keep.size() > maxOut)
-                    keep.resize(maxOut);
+                // stop as soon as maxOut boxes are kept: same result as trimming afterwards
+                NMSFast_(rects2d, scores, scoreThr, iouThr, 1.f, 0, keep, rectOverlap,
+                         maxOut > 0 ? maxOut : std::numeric_limits<int>::max());
 
                 auto& local = tripletsPerBC[taskIdx];
                 local.reserve(keep.size());
