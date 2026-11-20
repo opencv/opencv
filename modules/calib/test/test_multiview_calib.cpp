@@ -21,7 +21,7 @@ TEST(Multiview_VisibilityMask, nonContinuousMaskMatchesClone)
         const cv::Matx33d Ry(cos(b), 0, sin(b), 0, 1, 0, -sin(b), 0, cos(b));
         for (int y = 0; y < 4; ++y)
             for (int x = 0; x < 5; ++x)
-                objectPoints[f].emplace_back(x / 16.f, y / 16.f, 0);
+                objectPoints[f].emplace_back(x / 16.f, y / 16.f, 0.f);
         for (int c = 0; c < cameras; ++c)
         {
             imagePoints[c][f].create(20, 2, CV_32F);
