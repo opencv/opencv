@@ -5133,4 +5133,38 @@ TEST(Layer_Test_OneHot, UInt16Values)
     EXPECT_EQ((int)out.at<uint16_t>(0, 1), 0);
 }
 
+typedef testing::TestWithParam<tuple<MatDepth, double> > Layer_Test_Clip_Unsigned;
+TEST_P(Layer_Test_Clip_Unsigned, MinOnly)
+{
+    const int depth = get<0>(GetParam());
+    const double typeMax = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Clip";
+    lp.name = "test_clip";
+    lp.set("min", 2.f);  // no "max": the upper bound is the largest value of the type
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // The largest value checks that the missing max does not clip anything
+    const double inVals[]  = {0, 1, 3, typeMax};
+    const double refVals[] = {2, 2, 3, typeMax};
+    Mat input, ref;
+    Mat(1, 4, CV_64F, (void*)inVals).convertTo(input, depth);
+    Mat(1, 4, CV_64F, (void*)refVals).convertTo(ref, depth);
+
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(depth, outputs[0].depth());
+    EXPECT_EQ(0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Clip_Unsigned, Values(
+    make_tuple(CV_32U, (double)std::numeric_limits<uint32_t>::max()),
+    make_tuple(CV_64U, (double)std::numeric_limits<uint64_t>::max())
+));
+
 }} // namespace
