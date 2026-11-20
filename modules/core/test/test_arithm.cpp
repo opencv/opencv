@@ -2487,6 +2487,20 @@ TEST(Core_FindNonZero, wide_rows_8u)
     EXPECT_EQ(expected, pts);
 }
 
+TEST(Core_FindNonZero, mat_1d)
+{
+    int sz[] = {7};
+    Mat src(1, sz, CV_8U, Scalar(0));
+    src.at<uchar>(2) = 5;
+    src.at<uchar>(6) = 1;
+
+    std::vector<Point> pts;
+    findNonZero(src, pts);
+
+    std::vector<Point> expected = { Point(2, 0), Point(6, 0) };
+    EXPECT_EQ(expected, pts);
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;
