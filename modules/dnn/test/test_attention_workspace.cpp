@@ -34,9 +34,7 @@ TEST_P(Layer_AttentionWorkspace, memoryPlan)
     if (!dynamicWeights)
         params.blobs = {weights, bias};
     Ptr<Layer> layer = AttentionLayer::create(params);
-#ifdef HAVE_MLAS
     size_t previous = 0;
-#endif
     for (int seq : {1024, 2048})
     {
         std::vector<MatShape> inputs{MatShape{2, seq, 32}}, outputs, internals;
@@ -52,23 +50,13 @@ TEST_P(Layer_AttentionWorkspace, memoryPlan)
         size_t elements = 0;
         for (const MatShape& shape : internals)
             elements += total(shape);
-#ifdef HAVE_MLAS
-        if (!hasMask)
+        // Linear workspace growth, including QKV and optional RoPE; the mask is applied tile by tile.
+        EXPECT_LT(elements, size_t(2 * seq * 128));
+        if (previous)
         {
-            // Linear workspace growth, including QKV and optional RoPE.
-            EXPECT_LT(elements, size_t(2 * seq * 128));
-            if (previous)
-            {
-                EXPECT_LE(elements, 2 * previous);
-            }
-            previous = elements;
+            EXPECT_LE(elements, 2 * previous);
         }
-        else
-#endif
-        {
-            EXPECT_EQ(MatShape({4, seq, seq}), internals[1]);
-            EXPECT_EQ(MatShape({4, seq, 24}), internals[2]);
-        }
+        previous = elements;
     }
 }
 
