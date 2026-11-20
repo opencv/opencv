@@ -4910,4 +4910,80 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
     make_tuple(CV_64F, -std::numeric_limits<double>::infinity())
 ));
 
+static void testClipMinGreaterThanMax(int depth, bool dynamic)
+{
+    const int total = 64;
+    Mat input(1, total, depth);
+    Mat ref(1, total, depth);
+
+    const double minVal = 5.0;
+    const double maxVal = 2.0;
+
+    if (depth == CV_32F)
+    {
+        float* inPtr = input.ptr<float>();
+        float* refPtr = ref.ptr<float>();
+        for (int i = 0; i < total; ++i)
+        {
+            inPtr[i] = (float)i * 0.5f - 15.0f;
+            refPtr[i] = (float)maxVal;
+        }
+    }
+    else // CV_64F
+    {
+        double* inPtr = input.ptr<double>();
+        double* refPtr = ref.ptr<double>();
+        for (int i = 0; i < total; ++i)
+        {
+            inPtr[i] = (double)i * 0.5 - 15.0;
+            refPtr[i] = maxVal;
+        }
+    }
+
+    LayerParams lp;
+    lp.type = "Clip";
+    lp.name = "ClipLayer";
+
+    std::vector<Mat> inputs = {input};
+    if (!dynamic)
+    {
+        lp.set("min", (float)minVal);
+        lp.set("max", (float)maxVal);
+    }
+    else
+    {
+        Mat minMat(1, 1, depth, Scalar(minVal));
+        Mat maxMat(1, 1, depth, Scalar(maxVal));
+        inputs.push_back(minMat);
+        inputs.push_back(maxMat);
+    }
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Clip", lp);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    normAssert(ref, outputs[0], "Clip min > max output mismatch");
+}
+
+TEST(Layer_Test_Clip, MinGreaterThanMax_Float32)
+{
+    testClipMinGreaterThanMax(CV_32F, false);
+}
+
+TEST(Layer_Test_Clip, MinGreaterThanMax_Float64)
+{
+    testClipMinGreaterThanMax(CV_64F, false);
+}
+
+TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float32)
+{
+    testClipMinGreaterThanMax(CV_32F, true);
+}
+
+TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float64)
+{
+    testClipMinGreaterThanMax(CV_64F, true);
+}
+
 }} // namespace

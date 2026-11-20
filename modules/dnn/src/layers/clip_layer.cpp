@@ -85,8 +85,6 @@ public:
         hasMax = params.has("max");
         if (hasMin) minValue = params.get<float>("min");
         if (hasMax) maxValue = params.get<float>("max");
-        if (hasMin && hasMax)
-            CV_Assert(minValue <= maxValue);
     }
 
     bool unfoldMath(LayerMath& r, const ConstOperand& side) const
@@ -172,7 +170,6 @@ public:
 
         double actualMin = dynMin ? getScalar(inputs[1]) : (hasMin ? minValue : typeMin(data.depth()));
         double actualMax = dynMax ? getScalar(inputs[2]) : (hasMax ? maxValue : typeMax(data.depth()));
-        CV_Assert(actualMin <= actualMax);
 
         // Fused single-pass clamp for contiguous CV_32F. Halves memory traffic
         // vs the cv::max + cv::min pair, and lets the allocator run it in-place.

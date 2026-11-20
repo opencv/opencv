@@ -720,6 +720,8 @@ CASE(test_clip_inbounds)
     SKIP;
 CASE(test_clip_inbounds_expanded)
     SKIP;
+CASE(test_clip_min_greater_than_max)
+    SKIP;
 CASE(test_clip_min_greater_than_max_expanded)
     SKIP;
 CASE(test_clip_outbounds)
