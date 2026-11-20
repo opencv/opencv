@@ -38,7 +38,7 @@ cmake -DWITH_ONNXRUNTIME=ON ..
 cmake -DWITH_ONNXRUNTIME=ON -DDOWNLOAD_ONNXRUNTIME_GPU=ON ..
 ```
 
-ORT execution providers are supported, including CUDA for NVIDIA hardware.
+ORT execution providers are supported, including CUDA for NVIDIA hardware. This makes `ENGINE_ORT` the recommended choice for GPU-accelerated inference while GPU support for `ENGINE_OPENCV` is still in development.
 
 ### Selecting an Engine
 
