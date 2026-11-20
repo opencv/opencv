@@ -87,7 +87,6 @@
 "test_sequence_map_identity_1_sequence_expanded",
 "test_sequence_map_identity_2_sequences",
 "test_sequence_map_identity_2_sequences_expanded",
-"test_shape_start_greater_than_end",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",

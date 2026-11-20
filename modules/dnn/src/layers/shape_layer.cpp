@@ -66,6 +66,8 @@ public:
 
         start_ = std::max(0, std::min(start_, outDims));
         end_ = std::max(0, std::min(end_, outDims));
+        // ONNX: start > end gives an empty output
+        end_ = std::max(end_, start_);
 
         CV_Assert(0 <= start_);
         CV_Assert(start_ <= end_);
