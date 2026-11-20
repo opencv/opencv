@@ -103,7 +103,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_GQA_Model, testing::Values(
 
 static const int GQA_NUM_HEADS = 4, GQA_KV_NUM_HEADS = 2, GQA_HEAD_SIZE = 8;
 
-static Net makeGQANet()
+static Net makeGQANet(bool sharedBuffer = false)
 {
     LayerParams lp;
     lp.type = "AttentionOnnxAi";
@@ -115,6 +115,8 @@ static Net makeGQANet()
     lp.set("has_past", 1);
     lp.set("has_seqlens_k", 1);
     lp.set("has_rotary_cache", 0);
+    if (sharedBuffer)
+        lp.set("shared_kv_buffer", 1);
 
     Net net;
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
@@ -179,6 +181,15 @@ TEST(GroupQueryAttentionLayer, Guard_RejectsSeqlensSmallerThanQuery)
     Net net = makeGQANet();
     feedGQANet(net, /*S*/4, /*keyS*/4, /*pastLen*/2, /*pastHeads*/GQA_KV_NUM_HEADS,
                /*pastD*/GQA_HEAD_SIZE, /*seqlens*/1);
+    EXPECT_ANY_THROW(net.forward());
+}
+
+// seqlens_k + 1 must not wrap around int and point past the end of the shared KV buffer.
+TEST(GroupQueryAttentionLayer, Guard_RejectsSeqlensOverflowSharedBuffer)
+{
+    Net net = makeGQANet(/*sharedBuffer*/ true);
+    feedGQANet(net, /*S*/1, /*keyS*/1, /*pastLen*/4, /*pastHeads*/GQA_KV_NUM_HEADS,
+               /*pastD*/GQA_HEAD_SIZE, /*seqlens*/INT_MAX);
     EXPECT_ANY_THROW(net.forward());
 }
 
