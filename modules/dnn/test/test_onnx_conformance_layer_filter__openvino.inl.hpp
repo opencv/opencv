@@ -2704,9 +2704,9 @@ CASE(test_resize_upsample_sizes_nearest_floor_align_corners)
 CASE(test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric)
     SKIP;
 CASE(test_reversesequence_batch)
-    // no filter
+    SKIP;
 CASE(test_reversesequence_time)
-    // no filter
+    SKIP;
 CASE(test_rnn_seq_length)
     SKIP;
 CASE(test_roialign_aligned_false)

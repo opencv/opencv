@@ -4791,6 +4791,117 @@ TEST(Test_Compress, AllFalse_WithoutAxis)
     ASSERT_EQ(shape(outputs[0]), MatShape({0}));
 }
 
+static Mat reverseSequenceReference(const Mat& X, const std::vector<int64_t>& lensData,
+                                    int timeAxis, int batchAxis)
+{
+    const int rank = X.dims;
+    Mat ref = X.clone();   // every element is overwritten below; clone keeps shape and type
+    std::vector<int> idx(rank), srcIdx(rank);
+    for (size_t flat = 0; flat < (size_t)X.total(); ++flat)
+    {
+        size_t rem = flat;
+        for (int d = rank - 1; d >= 0; --d)
+        {
+            idx[d] = (int)(rem % X.size[d]);
+            rem /= X.size[d];
+        }
+        srcIdx = idx;
+        const int t = idx[timeAxis];
+        const int64_t L = lensData[idx[batchAxis]];
+        srcIdx[timeAxis] = (int)(t < L ? L - 1 - t : t);
+        std::memcpy(ref.ptr(idx.data()), X.ptr(srcIdx.data()), X.elemSize());
+    }
+    return ref;
+}
+
+static std::vector<Mat> makeReverseSequenceInputs(const MatShape& xShape,
+                                                  const std::vector<int64_t>& lensData,
+                                                  int lensType, int dataType)
+{
+    Mat X(xShape, dataType);
+    if (dataType == CV_32F || dataType == CV_64F)
+    {
+        randu(X, -1.0, 1.0);
+    }
+    else
+    {
+        for (size_t i = 0; i < X.total() * X.elemSize(); ++i)
+            X.ptr<uchar>()[i] = (uchar)((i * 37 + 11) & 0xff);
+    }
+
+    Mat lens({(int)lensData.size()}, lensType);
+    for (size_t i = 0; i < lensData.size(); ++i)
+    {
+        if (lensType == CV_32S)
+            lens.ptr<int32_t>()[i] = (int32_t)lensData[i];
+        else
+        {
+            CV_Assert(lensType == CV_64S);
+            lens.ptr<int64_t>()[i] = lensData[i];
+        }
+    }
+    return {X, lens};
+}
+
+static Ptr<Layer> makeReverseSequenceLayer(int timeAxis, int batchAxis)
+{
+    LayerParams lp;
+    lp.type = "ReverseSequence";
+    lp.name = "reverse_sequence";
+    lp.set("time_axis", timeAxis);
+    lp.set("batch_axis", batchAxis);
+    return LayerFactory::createLayerInstance(lp.type, lp);
+}
+
+static void checkReverseSequence(const MatShape& xShape, const std::vector<int64_t>& lensData,
+                                 int lensType, int timeAxis, int batchAxis, int dataType)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(timeAxis, batchAxis);
+    ASSERT_TRUE(layer) << "ReverseSequence layer is not registered";
+
+    std::vector<Mat> inputs = makeReverseSequenceInputs(xShape, lensData, lensType, dataType);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    ASSERT_EQ(shape(outputs[0]), xShape);
+
+    const Mat ref = reverseSequenceReference(inputs[0], lensData, timeAxis, batchAxis);
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, Reference)
+{
+    // int16, rank 2, batch-first layout.
+    checkReverseSequence(MatShape{4, 4}, {4, 3, 2, 1}, CV_64S, 1, 0, CV_16S);
+
+    // int16, rank 3: each step is a contiguous block of 2 elements.
+    checkReverseSequence(MatShape{2, 3, 2}, {3, 1}, CV_64S, 1, 0, CV_16S);
+
+    // time-first layout with int32 sequence_lens.
+    checkReverseSequence(MatShape{3, 2, 2}, {3, 3}, CV_32S, 0, 1, CV_16S);
+
+    // float32 with L == 0, L == 1 and L == nTimeStep.
+    checkReverseSequence(MatShape{4, 4}, {0, 1, 4, 2}, CV_64S, 1, 0, CV_32F);
+}
+
+TEST(Layer_ReverseSequence_Test_Accuracy_, LensOutOfRangeThrows)
+{
+    Ptr<Layer> layer = makeReverseSequenceLayer(1, 0);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> outputs;
+    std::vector<Mat> tooLong = makeReverseSequenceInputs(MatShape{2, 3}, {4, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, tooLong, outputs));   // L > nTimeStep
+
+    std::vector<Mat> negative = makeReverseSequenceInputs(MatShape{2, 3}, {-1, 1}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, negative, outputs));  // L < 0
+
+    // 3 batch elements, but only 2 sequence lengths.
+    std::vector<Mat> mismatch = makeReverseSequenceInputs(MatShape{3, 4}, {2, 4}, CV_64S, CV_32F);
+    EXPECT_ANY_THROW(runLayer(layer, mismatch, outputs));
+}
+
 TEST(Layer_Test_CausalConvWithState, RejectMismatchedWeightBiasAndState)
 {
     const int B = 2, C = 64, T = 8, K = 4;
