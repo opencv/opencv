@@ -3,7 +3,8 @@ import cv2 as cv
 import sys
 ## [imports]
 ## [imread]
-img = cv.imread(cv.samples.findFile("starry_night.jpg"))
+image_path = cv.samples.findFile("starry_night.jpg", required=False, silentMode=True) or "starry_night.jpg"
+img = cv.imread(image_path)
 ## [imread]
 ## [empty]
 if img is None:

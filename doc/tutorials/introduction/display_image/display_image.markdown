@@ -92,6 +92,14 @@ After reading in the image data will be stored in a @ref cv::Mat object.
 @end_toggle
 
 @note
+    `cv::samples::findFile` searches for sample data packaged with the OpenCV source repository.
+    When installing OpenCV through pre-built packages (such as `pip install opencv-python`), the
+    sample data directory is not included by default. In that case, `findFile` falls back to looking
+    for `"starry_night.jpg"` in your current working directory. You can download this sample image
+    from the OpenCV GitHub repository (`samples/data/starry_night.jpg`) or substitute the path to
+    any image of your choice.
+
+@note
    OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm,
     pgm, ppm) and Sun raster (sr, ras). With help of plugins (you need to specify to use them if you
     build yourself the library, nevertheless in the packages we ship present by default) you may
