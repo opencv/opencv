@@ -343,26 +343,33 @@ static inline int borderInterpolate_fast( int p, int len, int borderType )
         if( len == 1 )
             return 0;
 
+        const int64_t len64 = len;
+        const int64_t p64 = p;
         // Fast path: single reflection without division for small deviations.
-        if( -len + delta <= p && p < 2 * len - delta )
-            return p < 0 ? -p - 1 + delta : 2 * len - 1 - delta - p;
+        if( -len64 + delta <= p64 && p64 < 2 * len64 - delta )
+            return (int)(p64 < 0 ? -p64 - 1 + delta : 2 * len64 - 1 - delta - p64);
         // Bounded fallback: O(1) modulo for large |p|
-        const int64 period = 2LL * (len - delta);
-        int64 p64 = p;
-        p64 %= period;
-        if( p64 < 0 )
-            p64 += period;
-        if( p64 >= len )
-            p64 = period - p64 - 1 + delta;
-        p = (int)p64;
+        const int64_t period = 2 * (len64 - delta);
+        int64_t r64 = p64 % period;
+        if( r64 < 0 )
+            r64 += period;
+        if( r64 >= len64 )
+            r64 = period - r64 - 1 + delta;
+        p = (int)r64;
     }
     else if( borderType == BORDER_WRAP )
     {
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
+        if( p < 0 || p >= len )
+        {
+            int64_t p64 = p;
+            p64 %= (int64_t)len;
+            if( p64 < 0 )
+                p64 += len;
+            p = (int)p64;
+        }
     }
+    else
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 } // anonymous
@@ -7022,7 +7029,7 @@ bicubicWeights(float alpha, float A, float& w0, float& w1, float& w2, float& w3)
 static CV_ALWAYS_INLINE int
 bicubicCoeffs(float xs0, float ys0,
               size_t srcstep, Size size, int bpp, float A,
-              int bordertype, int& tl_x, int& tl_y, int& tl_ofs,
+              int bordertype, int& tl_x, int& tl_y, ptrdiff_t& tl_ofs,
               float& wx0, float& wx1, float& wx2, float& wx3,
               float& wy0, float& wy1, float& wy2, float& wy3)
 {
@@ -7056,7 +7063,7 @@ bicubicCoeffs(float xs0, float ys0,
 
     tl_x = ix0;
     tl_y = iy0;
-    tl_ofs = iy0*(int)srcstep + ix0*bpp;
+    tl_ofs = all_inliers ? (ptrdiff_t)iy0*(ptrdiff_t)srcstep + (ptrdiff_t)ix0*bpp : 0;
 
     bicubicWeights(alpha, A, wx0, wx1, wx2, wx3);
     bicubicWeights(beta, A, wy0, wy1, wy2, wy3);
@@ -7261,7 +7268,8 @@ static void bicubicRef(const float* srcx, const float* srcy, int len,
 
     for (int i = 0; i < len; i++, dst += NCHANNELS) {
         buftype pixbuf[NCHANNELS][4];
-        int tl_x, tl_y, tl_ofs, goodx[4];
+        int tl_x, tl_y, goodx[4];
+        ptrdiff_t tl_ofs;
         acctype V0, V1, V2, V3;
         float wx0, wx1, wx2, wx3, wy0, wy1, wy2, wy3;
         float xs = srcx[i], ys = srcy[i];
@@ -8109,6 +8117,15 @@ bicubicVec(const float* srcx, const float* srcy, int len,
            chtype* dst, const float* params,
            int borderType, chtype* borderVal)
 {
+    // SIMD bicubicCoeffs computes 32-bit signed byte offsets; fall back to
+    // bicubicRef (which uses ptrdiff_t) for images larger than INT_MAX bytes.
+    if (srcstep > (size_t)INT_MAX ||
+        (srcstep > 0 && (size_t)size.height > (size_t)INT_MAX / srcstep)) {
+        bicubicRef<chtype, NCHANNELS>(srcx, srcy, len, src, srcstep, size,
+                                      dst, params, borderType, borderVal);
+        return;
+    }
+
     constexpr float defaultA = -0.75f;
     float A = params ? *params : defaultA;
 
