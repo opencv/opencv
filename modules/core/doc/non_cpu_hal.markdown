@@ -34,6 +34,7 @@ Placement is always explicit:
   Mat can be changed or released right after.
 * `UMat::upload(device)` returns the UMat itself when its data is already on that device, and a
   copy otherwise. A copy between two devices happens only when it is asked for this way.
+* `UMat::clone()` makes its copy on the device that holds the original.
 * An empty `Device` stands for the CPU: `upload(cv::accel::Device())` brings data back into a
   regular UMat.
 
@@ -150,8 +151,8 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
 ### Backends in OpenCV
 
 * CUDA (`src/accel/backend_cuda.cpp`), built in when OpenCV is built with CUDA. Discrete GPUs use
-  device memory from a stream-ordered pool of the backend's own, which keeps up to 256 MiB of freed
-  memory per device for reuse and returns the rest to the driver; integrated GPUs from Xavier on
+  device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
+  while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
   and `transpose`, in place too. Its kernels and runtime calls (`src/accel/gpu/`) are written
   once for the CUDA and HIP runtimes.

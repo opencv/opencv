@@ -402,7 +402,8 @@ private:
             d.pool = 0;
             return;
         }
-        uint64_t threshold = (uint64_t)256 << 20;     // what the pool keeps for reuse; the rest goes back
+        // what the pool may hold, in use and kept for reuse together; freed memory above it goes back
+        uint64_t threshold = (uint64_t)d.prop.totalGlobalMem / 4;
         if (CV_GPU(MemPoolSetAttribute)(d.pool, CV_GPU(MemPoolAttrReleaseThreshold), &threshold) != CV_GPU(Success))
             (void)CV_GPU(GetLastError)();
     }
