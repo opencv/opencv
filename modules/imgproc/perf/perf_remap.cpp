@@ -77,7 +77,7 @@ PERF_TEST_P( TestRemap, Remap,
 typedef TestBaseWithParam< tuple<Size, MatType, int> > TestRemapFisheyeFloatRGB;
 
 PERF_TEST_P(TestRemapFisheyeFloatRGB, Remap,
-            Combine(Values(Size(224, 224), Size(512, 512)),
+            Combine(Values(Size(224, 224), Size(512, 512), szVGA, sz1080p),
                     Values(CV_32FC1, CV_16SC2),
                     Values(INTER_CUBIC, INTER_LANCZOS4)))
 {

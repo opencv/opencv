@@ -1169,16 +1169,19 @@ TEST_P(Imgproc_RemapFloatRGB, matches_separate_channels)
     const int mapType = get<1>(GetParam());
     const int border = get<2>(GetParam());
     const Scalar fill(0.25, -0.5, 0.75);
-    Mat storage(19, 21, CV_32FC3);
+    Mat storage(31, 41, CV_32FC3);
     theRNG().fill(storage, RNG::UNIFORM, -1.f, 1.f);
-    const Mat src = storage(Rect(1, 2, 18, 16));
+    const Mat src = storage(Rect(1, 2, 35, 27));
 
-    Mat mapX(1, 13, CV_32F), mapY(1, 13, CV_32F, Scalar(7.75));
-    for (int x = 0; x < mapX.cols; ++x)
-        mapX.at<float>(x) = 3.25f + x%7;
-    mapX.at<float>(5) = 0.25f;
-    mapX.at<float>(8) = -50.f;
-    mapX.at<float>(12) = 16.25f;
+    Mat mapX(3, 37, CV_32F), mapY(mapX.size(), CV_32F);
+    theRNG().fill(mapX, RNG::UNIFORM, 3.f, float(src.cols - 5));
+    theRNG().fill(mapY, RNG::UNIFORM, 3.f, float(src.rows - 5));
+    mapX.at<float>(2, 5) = 0.25f;
+    mapX.at<float>(2, 8) = -50.f;
+    mapX.at<float>(2, 12) = src.cols - 1.75f;
+    mapY.at<float>(2, 16) = src.rows - 0.25f;
+    mapY.at<float>(2, 20) = -50.f;
+    mapX.at<float>(2, 36) = src.cols - 2.25f;
     Mat map1 = mapX, map2 = mapY;
     if (mapType != CV_32FC1)
         convertMaps(mapX, mapY, map1, map2, mapType);

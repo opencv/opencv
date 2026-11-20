@@ -1099,24 +1099,8 @@ struct RemapLanczos4VecC1<T, float>
     }
 };
 
-#if CV_SIMD128
-static inline void remapLanczosRGB(const float* src, size_t step, const float* weights, float* dst)
-{
-    const v_float32x4 zero = v_setzero_f32();
-    v_float32x4 sums[6] = {zero, zero, zero, zero, zero, zero};
-    for (int row = 0; row < 8; ++row)
-    {
-        const float* samples = src + size_t(row)*step;
-        const float* w = weights + 8*row;
-        v_float32x4 packed[6];
-        packRGBWarpWeights(w, packed);
-        packRGBWarpWeights(w + 4, packed + 3);
-        for (int group = 0; group < 6; ++group)
-            sums[group] = v_fma(v_load(samples + 4*group), packed[group], sums[group]);
-    }
-    storeWarpRGB(dst, v_add(sumFourRGBWarpTaps(sums), sumFourRGBWarpTaps(sums + 3)));
-}
-#endif
+using RemapLanczos4RGBFn = void (*)(const float*, size_t, const float*, float*);
+RemapLanczos4RGBFn remapLanczos4RGB_fn();
 
 template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
@@ -1139,6 +1123,16 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
 
     unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
+
+    RemapLanczos4RGBFn rgbFn = nullptr;
+    if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
+    {
+        if (cn == 3)
+        {
+            static const RemapLanczos4RGBFn fn = remapLanczos4RGB_fn();
+            rgbFn = fn;
+        }
+    }
 
     if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
     {
@@ -1166,16 +1160,14 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
-#if CV_SIMD128
                 if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
                 {
-                    if (cn == 3)
+                    if (rgbFn)
                     {
-                        remapLanczosRGB(S, sstep, w, D);
+                        rgbFn(S, sstep, w, D);
                         continue;
                     }
                 }
-#endif
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;

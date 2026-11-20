@@ -20,4 +20,9 @@ RemapWideC1Fn remapLanczos4C1_fn()
     CV_CPU_DISPATCH(getRemapLanczos4C1Fn_, (), CV_CPU_DISPATCH_MODES_ALL);
 }
 
+RemapLanczos4RGBFn remapLanczos4RGB_fn()
+{
+    CV_CPU_DISPATCH(getRemapLanczos4RGBFn_, (), CV_CPU_DISPATCH_MODES_ALL);
+}
+
 } // namespace cv

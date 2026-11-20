@@ -8008,38 +8008,6 @@ CV_ALWAYS_INLINE v_float32 v_fma(const v_int32& a, const v_float32& b, const v_f
     R2.val = vzip1q_f32(_r02b, _r13b);   \
     R3.val = vzip2q_f32(_r02b, _r13b); }
 
-#undef FETCH_INLIERS_32FC3
-#define FETCH_INLIERS_32FC3(row) { \
-    const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \
-    float32x4x3_t _r0 = vld3q_f32((const chtype*)(srcrow + tl_ofs[0])); \
-    float32x4x3_t _r1 = vld3q_f32((const chtype*)(srcrow + tl_ofs[1])); \
-    float32x4x3_t _r2 = vld3q_f32((const chtype*)(srcrow + tl_ofs[2])); \
-    float32x4x3_t _r3 = vld3q_f32((const chtype*)(srcrow + tl_ofs[3])); \
-    float32x4_t _r02a = vzip1q_f32(_r0.val[0], _r2.val[0]);   \
-    float32x4_t _r02b = vzip2q_f32(_r0.val[0], _r2.val[0]);   \
-    float32x4_t _r13a = vzip1q_f32(_r1.val[0], _r3.val[0]);   \
-    float32x4_t _r13b = vzip2q_f32(_r1.val[0], _r3.val[0]);   \
-    float32x4_t _g02a = vzip1q_f32(_r0.val[1], _r2.val[1]);   \
-    float32x4_t _g02b = vzip2q_f32(_r0.val[1], _r2.val[1]);   \
-    float32x4_t _g13a = vzip1q_f32(_r1.val[1], _r3.val[1]);   \
-    float32x4_t _g13b = vzip2q_f32(_r1.val[1], _r3.val[1]);   \
-    float32x4_t _b02a = vzip1q_f32(_r0.val[2], _r2.val[2]);   \
-    float32x4_t _b02b = vzip2q_f32(_r0.val[2], _r2.val[2]);   \
-    float32x4_t _b13a = vzip1q_f32(_r1.val[2], _r3.val[2]);   \
-    float32x4_t _b13b = vzip2q_f32(_r1.val[2], _r3.val[2]);   \
-    R0.val = vzip1q_f32(_r02a, _r13a);             \
-    R1.val = vzip2q_f32(_r02a, _r13a);             \
-    R2.val = vzip1q_f32(_r02b, _r13b);             \
-    R3.val = vzip2q_f32(_r02b, _r13b);             \
-    G0.val = vzip1q_f32(_g02a, _g13a);             \
-    G1.val = vzip2q_f32(_g02a, _g13a);             \
-    G2.val = vzip1q_f32(_g02b, _g13b);             \
-    G3.val = vzip2q_f32(_g02b, _g13b);             \
-    B0.val = vzip1q_f32(_b02a, _b13a);             \
-    B1.val = vzip2q_f32(_b02a, _b13a);             \
-    B2.val = vzip1q_f32(_b02b, _b13b);             \
-    B3.val = vzip2q_f32(_b02b, _b13b); }
-
 #undef FETCH_INLIERS_32FC4
 #define FETCH_INLIERS_32FC4(row) { \
     const uint8_t* srcrow = (const uint8_t*)src + row*srcstep; \

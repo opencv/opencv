@@ -5,6 +5,7 @@
 // Copyright (C) 2026, Advanced Micro Devices, all rights reserved.
 
 #include "opencv2/core/hal/intrin.hpp"
+#include "warp_common.hpp"
 
 #include <climits>
 
@@ -12,14 +13,17 @@ namespace cv {
 
 using RemapBilinearC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, int);
 using RemapWideC1Fn = int (*)(int, const uchar*, size_t, uchar*, const short*, const ushort*, const float*, int, int, unsigned, unsigned, int);
+using RemapLanczos4RGBFn = void (*)(const float*, size_t, const float*, float*);
 
 RemapBilinearC1Fn remapBilinearC1_fn();
 RemapWideC1Fn remapLanczos4C1_fn();
+RemapLanczos4RGBFn remapLanczos4RGB_fn();
 
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 RemapBilinearC1Fn getRemapBilinearC1Fn_();
 RemapWideC1Fn getRemapLanczos4C1Fn_();
+RemapLanczos4RGBFn getRemapLanczos4RGBFn_();
 
 int remapBilinearC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
                          const short* XY, const ushort* FXY, const float* wtab,
@@ -28,6 +32,10 @@ int remapBilinearC1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
 int remapLanczos4C1_simd(int depth, const uchar* S0, size_t sstep, uchar* D,
                          const short* XY, const ushort* FXY, const float* wtab,
                          int dx, int dwidth, unsigned width1, unsigned height1, int off_y);
+
+#if CV_SIMD128
+void remapLanczos4RGB_simd(const float* src, size_t step, const float* weights, float* dst);
+#endif
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -294,6 +302,34 @@ RemapWideC1Fn getRemapLanczos4C1Fn_()
 {
 #if CV_SIMD128
     return remapLanczos4C1_simd;
+#else
+    return nullptr;
+#endif
+}
+
+#if CV_SIMD128
+void remapLanczos4RGB_simd(const float* src, size_t step, const float* weights, float* dst)
+{
+    const v_float32x4 zero = v_setzero_f32();
+    v_float32x4 sums[6] = {zero, zero, zero, zero, zero, zero};
+    for (int row = 0; row < 8; ++row)
+    {
+        const float* samples = src + size_t(row)*step;
+        const float* w = weights + 8*row;
+        v_float32x4 packed[6];
+        packRGBWarpWeights(w, packed);
+        packRGBWarpWeights(w + 4, packed + 3);
+        for (int group = 0; group < 6; ++group)
+            sums[group] = v_fma(v_load(samples + 4*group), packed[group], sums[group]);
+    }
+    storeWarpRGB(dst, v_add(sumFourRGBWarpTaps(sums), sumFourRGBWarpTaps(sums + 3)));
+}
+#endif
+
+RemapLanczos4RGBFn getRemapLanczos4RGBFn_()
+{
+#if CV_SIMD128
+    return remapLanczos4RGB_simd;
 #else
     return nullptr;
 #endif
