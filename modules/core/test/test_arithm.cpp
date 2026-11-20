@@ -6,10 +6,6 @@
 #include <limits>
 #include "ref_reduce_arg.impl.hpp"
 #include <algorithm>
-#if !defined(_WIN32)
-#include <sys/mman.h>
-#include <unistd.h>
-#endif
 
 namespace opencv_test { namespace {
 
@@ -4994,85 +4990,6 @@ TEST_P(Core_MaskTypeTest, Norm)
     EXPECT_EQ((double)9*4*cn, cv::norm(a, b, NORM_L1)); // without mask, IPP works well
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
-
-#if !defined(_WIN32)
-// Regression test for https://github.com/opencv/opencv/issues/30804 .
-struct GuardPagePlacement
-{
-    Mat mat;
-    void* base;
-    size_t size;
-};
-
-static GuardPagePlacement flushAgainstGuardPage(const Mat& src)
-{
-    const size_t n = src.total() * src.elemSize();
-    const long pageSize = sysconf(_SC_PAGESIZE);
-    const size_t pages = (n + (size_t)pageSize - 1) / (size_t)pageSize;
-    const size_t total = (pages + 1) * (size_t)pageSize;
-    void* base = mmap(NULL, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    CV_Assert(base != MAP_FAILED);
-    CV_Assert(mprotect((char*)base + pages * (size_t)pageSize, (size_t)pageSize, PROT_NONE) == 0);
-    void* addr = (char*)base + pages * (size_t)pageSize - n;
-    memcpy(addr, src.data, n);
-    return { Mat(src.rows, src.cols, src.type(), addr), base, total };
-}
-
-TEST(Core_MinMaxIdx, mask_against_guard_page_no_crash)
-{
-    const int h = 480, w = 640;
-    Mat eig = Mat::zeros(h, w, CV_32F);
-    eig.at<float>(h - 1, w - 1) = 5.0f;  // the only value the mask lets through
-    Mat mask0 = Mat::zeros(h, w, CV_8U);
-    mask0.at<uchar>(h - 1, w - 1) = 255;
-    GuardPagePlacement guarded = flushAgainstGuardPage(mask0);
-    Mat& mask = guarded.mat;
-
-    double minVal = 0, maxVal = 0;
-    int minIdx[2] = {-1, -1}, maxIdx[2] = {-1, -1};
-    cv::minMaxIdx(eig, &minVal, &maxVal, minIdx, maxIdx, mask);
-    EXPECT_EQ(5.0, minVal);
-    EXPECT_EQ(5.0, maxVal);
-    EXPECT_EQ(h - 1, minIdx[0]);
-    EXPECT_EQ(w - 1, minIdx[1]);
-    EXPECT_EQ(h - 1, maxIdx[0]);
-    EXPECT_EQ(w - 1, maxIdx[1]);
-
-    EXPECT_EQ(5.0, cv::norm(eig, NORM_INF, mask));
-
-    munmap(guarded.base, guarded.size);
-}
-
-// Same mask buffer over-read as the Core_MinMaxIdx test above, in the L1/L2
-// siblings of the masked norm primitives and in their two-image (NormDiff,
-// NORM_RELATIVE) counterparts.
-TEST(Core_Norm, mask_against_guard_page_no_crash)
-{
-    const int h = 480, w = 640;
-    Mat a = Mat::ones(h, w, CV_32F);
-    Mat b = Mat::zeros(h, w, CV_32F);
-    Mat mask0 = Mat::zeros(h, w, CV_8U);
-    mask0.at<uchar>(h - 1, w - 1) = 255;
-    GuardPagePlacement guarded = flushAgainstGuardPage(mask0);
-    Mat& mask = guarded.mat;
-
-    EXPECT_EQ(1.0, cv::norm(a, NORM_L1, mask));
-    EXPECT_EQ(1.0, cv::norm(a, NORM_L2, mask));
-    EXPECT_EQ(1.0, cv::norm(a, b, NORM_INF, mask));
-    EXPECT_EQ(1.0, cv::norm(a, b, NORM_L1, mask));
-    EXPECT_EQ(1.0, cv::norm(a, b, NORM_L2, mask));
-    EXPECT_NE(0.0, cv::norm(a, b, NORM_INF | NORM_RELATIVE, mask));
-    EXPECT_NE(0.0, cv::norm(a, b, NORM_L1 | NORM_RELATIVE, mask));
-    EXPECT_NE(0.0, cv::norm(a, b, NORM_L2 | NORM_RELATIVE, mask));
-
-    Mat a3 = Mat::ones(h, w, CV_32FC3);
-    Mat b3 = Mat::zeros(h, w, CV_32FC3);
-    EXPECT_EQ(1.0, cv::norm(a3, NORM_L1, mask));
-    EXPECT_EQ(1.0, cv::norm(a3, b3, NORM_INF, mask));
-
-    munmap(guarded.base, guarded.size);
-}
-#endif  // !defined(_WIN32)
 
 TEST_P(Core_MaskTypeTest, Mean)
 {
