@@ -5097,4 +5097,38 @@ TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float64)
     testClipMinGreaterThanMax(CV_64F, true);
 }
 
+static Mat runOneHot(const Mat& values)
+{
+    LayerParams lp;
+    lp.type = "OneHot";
+    lp.name = "test_onehot";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    CV_Assert(layer);
+
+    std::vector<int64_t> idx = {0, 2, 1};
+    std::vector<int64_t> depth = {3};
+    std::vector<Mat> inputs{Mat(idx).reshape(1, std::vector<int>{3}),
+                            Mat(depth).reshape(1, std::vector<int>{1}),
+                            values};
+    std::vector<Mat> outputs, internals;
+    layer->forward(inputs, outputs, internals);
+    return outputs[0];
+}
+
+TEST(Layer_Test_OneHot, Int8Values)
+{
+    std::vector<int8_t> v = {-1, 1};  // off, on
+    Mat out = runOneHot(Mat(v).reshape(1, std::vector<int>{2}));
+    EXPECT_EQ((int)out.at<int8_t>(0, 0), 1);
+    EXPECT_EQ((int)out.at<int8_t>(0, 1), -1);
+}
+
+TEST(Layer_Test_OneHot, UInt16Values)
+{
+    std::vector<uint16_t> v = {0, 300};  // off, on
+    Mat out = runOneHot(Mat(v).reshape(1, std::vector<int>{2}));
+    EXPECT_EQ((int)out.at<uint16_t>(0, 0), 300);
+    EXPECT_EQ((int)out.at<uint16_t>(0, 1), 0);
+}
+
 }} // namespace
