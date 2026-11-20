@@ -75,16 +75,15 @@ PERF_TEST_P(TestWarpAffine, WarpAffineManyChannels,
     SANITY_CHECK_NOTHING();
 }
 
-typedef TestBaseWithParam<tuple<Size, MatType, int> > TestWarpAffineIntegerTranslation;
+typedef TestBaseWithParam<tuple<Size, MatType> > TestWarpAffineIntegerTranslation;
 
 PERF_TEST_P(TestWarpAffineIntegerTranslation, WarpAffineIntegerTranslation,
             Combine(Values(szVGA, sz1080p),
-                    Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4),
-                    Values(INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)))
+                    Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4)))
 {
     const Size size = get<0>(GetParam());
     const int type = get<1>(GetParam());
-    const int interpolation = get<2>(GetParam());
+    const int interpolation = INTER_LINEAR;
     const int dx = 17, dy = 13;
     const Matx23d matrix(1, 0, dx, 0, 1, -dy);
     const Scalar border(13, 57, 131, 231);

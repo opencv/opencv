@@ -2267,68 +2267,62 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
-static bool warpAffineIntegerTranslation(const Mat& src, Mat& dst, const double M[6],
-                                         int interpolation, int borderType, const Scalar& borderValue)
+static bool isIntegerOrthogonalTransform(const Mat& M)
 {
-    if (borderType != BORDER_CONSTANT || src.depth() != CV_8U ||
-        (interpolation != INTER_NEAREST && interpolation != INTER_LINEAR &&
-         interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4) ||
-        M[0] != 1. || M[1] != 0. || M[3] != 0. || M[4] != 1.)
+    if (M.rows != 2 || M.cols != 3 || (M.type() != CV_32F && M.type() != CV_64F))
         return false;
 
-    // Each mapped coordinate must be an exact float32 integer.
-    constexpr int coordinateLimit = 1 << 23;
-    if (!(std::abs(M[2]) < coordinateLimit && std::abs(M[5]) < coordinateLimit) ||
-        M[2] != std::trunc(M[2]) || M[5] != std::trunc(M[5]) ||
-        src.cols >= coordinateLimit || src.rows >= coordinateLimit ||
-        dst.cols >= coordinateLimit || dst.rows >= coordinateLimit)
-        return false;
-
-    const int channels = src.channels();
-    const Point shift(-static_cast<int>(M[2]), -static_cast<int>(M[5]));
-    const bool usesShortMaps = interpolation == INTER_LANCZOS4 ||
-                               (interpolation != INTER_CUBIC && channels != 1 && channels != 3 && channels != 4);
-    // The fallback builds signed 16-bit maps and remap restricts the source size.
-    if (usesShortMaps && (src.cols >= SHRT_MAX || src.rows >= SHRT_MAX ||
-                          M[2] < SHRT_MIN || M[5] < SHRT_MIN ||
-                          dst.cols - 1 - shift.x > SHRT_MAX || dst.rows - 1 - shift.y > SHRT_MAX))
-        return false;
-
-    const Rect overlap = Rect(shift, src.size()) & Rect(Point(), dst.size());
-    const size_t pixelBytes = src.elemSize();
-    const size_t rowBytes = dst.cols * pixelBytes;
-    const size_t leftBytes = overlap.x * pixelBytes;
-    const size_t copyBytes = overlap.width * pixelBytes;
-    const size_t rightBytes = rowBytes - leftBytes - copyBytes;
-    const size_t borderBytes = overlap.height < dst.rows ? rowBytes : std::max(leftBytes, rightBytes);
-    AutoBuffer<uchar> borderRow(borderBytes);
-    if (borderBytes != 0)
+    double values[6];
+    if (M.type() == CV_32F)
     {
-        // remap repeats the four border components across the channels.
-        scalarToRawData(borderValue, borderRow.data(), CV_8UC(std::min(channels, 4)), channels);
-        for (size_t filled = pixelBytes; filled < borderBytes; filled *= 2)
-            memcpy(borderRow.data() + filled, borderRow.data(), std::min(filled, borderBytes - filled));
+        const float* row0 = M.ptr<float>(0);
+        const float* row1 = M.ptr<float>(1);
+        for (int i = 0; i < 3; ++i)
+        {
+            values[i] = row0[i];
+            values[i + 3] = row1[i];
+        }
+    }
+    else
+    {
+        const double* row0 = M.ptr<double>(0);
+        const double* row1 = M.ptr<double>(1);
+        for (int i = 0; i < 3; ++i)
+        {
+            values[i] = row0[i];
+            values[i + 3] = row1[i];
+        }
     }
 
-    const size_t srcOffset = overlap.empty() ? 0 : (overlap.x - shift.x) * pixelBytes;
-    const int bottom = overlap.y + overlap.height;
-    parallel_for_(Range(0, dst.rows), [&](const Range& range) {
-        for (int y = range.start; y < range.end; ++y)
+    static const double transforms[][4] = {
+        { 1.,  0.,  0.,  1.},
+        { 0., -1.,  1.,  0.},
+        {-1.,  0.,  0., -1.},
+        { 0.,  1., -1.,  0.},
+        { 0.,  1.,  1.,  0.}
+    };
+    static const int linearIndices[] = {0, 1, 3, 4};
+    // Right-angle matrices from getRotationMatrix2D can retain floating-point round-off.
+    const double matrixTolerance = M.depth() == CV_32F ? 1e-6 : 1e-12;
+    for (size_t transform = 0; transform < sizeof(transforms) / sizeof(transforms[0]); ++transform)
+    {
+        bool matches = true;
+        for (int i = 0; i < 4; ++i)
         {
-            uchar* out = dst.ptr(y);
-            if (y < overlap.y || y >= bottom)
+            if (std::abs(values[linearIndices[i]] - transforms[transform][i]) > matrixTolerance)
             {
-                memcpy(out, borderRow.data(), rowBytes);
-                continue;
+                matches = false;
+                break;
             }
-            if (leftBytes != 0)
-                memcpy(out, borderRow.data(), leftBytes);
-            memcpy(out + leftBytes, src.ptr(y - shift.y) + srcOffset, copyBytes);
-            if (rightBytes != 0)
-                memcpy(out + leftBytes + copyBytes, borderRow.data(), rightBytes);
         }
-    }, dst.total() / (double)(1 << 16));
-    return true;
+        if (!matches)
+            continue;
+
+        if (std::abs(values[2] - std::round(values[2])) <= matrixTolerance &&
+            std::abs(values[5] - std::round(values[5])) <= matrixTolerance)
+            return true;
+    }
+    return false;
 }
 
 namespace hal {
@@ -2562,6 +2556,18 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
                                         interpolation != INTER_CUBIC) );
 
+    Mat M0;
+    if (interpolation == INTER_LINEAR || interpolation == INTER_AREA ||
+        interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
+    {
+        M0 = _M0.getMat();
+        if (isIntegerOrthogonalTransform(M0))
+        {
+            interpolation = INTER_NEAREST;
+            flags = (flags & ~INTER_MAX) | INTER_NEAREST;
+        }
+    }
+
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
@@ -2571,7 +2577,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
                                  borderValue, OCL_OP_AFFINE))
 
-    Mat src = _src.getMat(), M0 = _M0.getMat();
+    Mat src = _src.getMat();
+    if (M0.empty())
+        M0 = _M0.getMat();
     _dst.create( dsize.empty() ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
     CV_Assert( src.cols > 0 && src.rows > 0 );
@@ -2597,9 +2605,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         double b2 = -M[3]*M[2] - M[4]*M[5];
         M[2] = b1; M[5] = b2;
     }
-
-    if (warpAffineIntegerTranslation(src, dst, M, interpolation, borderType, borderValue))
-        return;
 
     if (genericWarp(src, matM, Mat(), Mat(), dst, interpolation, borderType, borderValue, false)) {
         return;

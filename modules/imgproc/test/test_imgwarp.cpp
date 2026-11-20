@@ -1043,6 +1043,139 @@ TEST(Imgproc_Remap, DISABLED_memleak)
     }
 }
 
+enum IntegerOrthogonalTransform
+{
+    INTEGER_ROTATE_90,
+    INTEGER_ROTATE_180,
+    INTEGER_ROTATE_270,
+    INTEGER_TRANSPOSE
+};
+
+static Matx23d getIntegerOrthogonalTransform(int transform, const Size& srcSize, Size& dstSize)
+{
+    dstSize = transform == INTEGER_ROTATE_180 ? srcSize : Size(srcSize.height, srcSize.width);
+    const Point2f srcCenter((srcSize.width - 1) * 0.5f, (srcSize.height - 1) * 0.5f);
+    const Point2f dstCenter((dstSize.width - 1) * 0.5f, (dstSize.height - 1) * 0.5f);
+    Matx23d matrix;
+    if (transform == INTEGER_TRANSPOSE)
+    {
+        matrix = Matx23d(0, 1, dstCenter.x - srcCenter.y,
+                         1, 0, dstCenter.y - srcCenter.x);
+    }
+    else
+    {
+        const double angle = transform == INTEGER_ROTATE_90 ? 90. :
+                             transform == INTEGER_ROTATE_180 ? 180. : 270.;
+        Mat rotation = getRotationMatrix2D(srcCenter, angle, 1.);
+        for (int y = 0; y < 2; ++y)
+            for (int x = 0; x < 3; ++x)
+                matrix(y, x) = rotation.at<double>(y, x);
+        matrix(0, 2) += dstCenter.x - srcCenter.x;
+        matrix(1, 2) += dstCenter.y - srcCenter.y;
+    }
+    // Shift the transformed image to exercise border handling.
+    matrix(0, 2) += 1.;
+    matrix(1, 2) -= 1.;
+    return matrix;
+}
+
+typedef testing::tuple<int, int, int, int, bool> WarpAffineOrthogonalParam;
+typedef testing::TestWithParam<WarpAffineOrthogonalParam> Imgproc_WarpAffineIntegerOrthogonal;
+
+TEST_P(Imgproc_WarpAffineIntegerOrthogonal, nearestForExactOrthogonalTransforms)
+{
+    const int transform = get<0>(GetParam());
+    const int interpolation = get<1>(GetParam());
+    const int borderType = get<2>(GetParam());
+    const int matrixDepth = get<3>(GetParam());
+    const bool inverse = get<4>(GetParam());
+    const Size srcSize(7, 5);
+    Size dstSize;
+    const Matx23d forward = getIntegerOrthogonalTransform(transform, srcSize, dstSize);
+    Mat forwardMat(2, 3, CV_64F);
+    for (int y = 0; y < 2; ++y)
+        for (int x = 0; x < 3; ++x)
+            forwardMat.at<double>(y, x) = forward(y, x);
+    Mat warpMatrix64;
+    if (inverse)
+        invertAffineTransform(forwardMat, warpMatrix64);
+    else
+        warpMatrix64 = forwardMat.clone();
+    Mat warpMatrix;
+    warpMatrix64.convertTo(warpMatrix, matrixDepth);
+    Mat dstToSrc;
+    if (inverse)
+        dstToSrc = warpMatrix;
+    else
+        invertAffineTransform(warpMatrix, dstToSrc);
+    Mat dstToSrc64;
+    dstToSrc.convertTo(dstToSrc64, CV_64F);
+
+    const Scalar border(13, 57, 131, 231);
+    RNG& rng = theRNG();
+    for (int type : {CV_8UC3, CV_32FC4})
+    {
+        const Scalar sentinel = type == CV_8UC3 ? Scalar::all(17) : Scalar::all(-37);
+        Mat srcStorage(srcSize.height + 3, srcSize.width + 5, type);
+        rng.fill(srcStorage, RNG::UNIFORM, 0, 256);
+        Mat src = srcStorage(Rect(2, 1, srcSize.width, srcSize.height));
+
+        Mat actualStorage(dstSize.height + 4, dstSize.width + 6, type, sentinel);
+        Mat expectedStorage(actualStorage.size(), type, sentinel);
+        const Rect dstRoi(2, 1, dstSize.width, dstSize.height);
+        Mat actual = actualStorage(dstRoi);
+        Mat expected = expectedStorage(dstRoi);
+        Mat map(dstSize, CV_32FC2);
+        const double* row0 = dstToSrc64.ptr<double>(0);
+        const double* row1 = dstToSrc64.ptr<double>(1);
+        for (int y = 0; y < dstSize.height; ++y)
+        {
+            Vec2f* mapRow = map.ptr<Vec2f>(y);
+            for (int x = 0; x < dstSize.width; ++x)
+                mapRow[x] = Vec2f(static_cast<float>(row0[0] * x + row0[1] * y + row0[2]),
+                                  static_cast<float>(row1[0] * x + row1[1] * y + row1[2]));
+        }
+
+        SCOPED_TRACE(cv::format("transform=%d interpolation=%d border=%d matrixDepth=%d inverse=%d type=%d",
+                                transform, interpolation, borderType, matrixDepth, inverse, type));
+        remap(src, expected, map, Mat(), INTER_NEAREST, borderType, border);
+        warpAffine(src, actual, warpMatrix, dstSize,
+                   interpolation | (inverse ? WARP_INVERSE_MAP : 0), borderType, border, ALGO_HINT_ACCURATE);
+        EXPECT_EQ(0., cvtest::norm(expectedStorage, actualStorage, NORM_INF));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpAffineIntegerOrthogonal, testing::Combine(
+    testing::Values(INTEGER_ROTATE_90, INTEGER_ROTATE_180, INTEGER_ROTATE_270, INTEGER_TRANSPOSE),
+    testing::Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC, (int)INTER_AREA, (int)INTER_LANCZOS4),
+    testing::Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT_101,
+                    (int)BORDER_WRAP, (int)BORDER_TRANSPARENT),
+    testing::Values(CV_32F, CV_64F),
+    testing::Values(false, true)));
+
+TEST(Imgproc_WarpAffine, FractionalTranslationKeepsRequestedInterpolation)
+{
+    Mat src(7, 9, CV_8UC1);
+    for (int y = 0; y < src.rows; ++y)
+        for (int x = 0; x < src.cols; ++x)
+            src.at<uchar>(y, x) = static_cast<uchar>(x * 17 + y * 29);
+
+    const Size dstSize(11, 9);
+    const Matx23d matrix(1, 0, 0.5, 0, 1, 0.25);
+    Mat map(dstSize, CV_32FC2);
+    for (int y = 0; y < dstSize.height; ++y)
+    {
+        Vec2f* row = map.ptr<Vec2f>(y);
+        for (int x = 0; x < dstSize.width; ++x)
+            row[x] = Vec2f(x + 0.5f, y + 0.25f);
+    }
+
+    Mat actual, expected;
+    warpAffine(src, actual, matrix, dstSize, INTER_LINEAR | WARP_INVERSE_MAP, BORDER_CONSTANT, Scalar(13));
+    remap(src, expected, map, Mat(), INTER_LINEAR, BORDER_CONSTANT, Scalar(13));
+    EXPECT_EQ(0., cvtest::norm(expected, actual, NORM_INF));
+}
+
 TEST(Imgproc_WarpAffine, IntegerTranslation)
 {
     const Scalar border(13, 57, 131, 231);
