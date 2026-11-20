@@ -30,10 +30,15 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
     for( int i = 0; i < m; i += N ) { \
         if (i + N-1 < m) { \
             const styp* a_ptr = A + lda0*i; \
-            for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
-            { \
-                FAST_GEMM_LOAD_TO_BUF_##N(styp); \
-                FAST_GEMM_PACK##suffix##_##N(buf, packA); \
+            if (lda0 == 1) { \
+                for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
+                    FAST_GEMM_PACK##suffix##_##N(a_ptr + j, packA); \
+            } else { \
+                for( int j = 0; j < k*lda1; packA += N, j += lda1 ) \
+                { \
+                    FAST_GEMM_LOAD_TO_BUF_##N(styp); \
+                    FAST_GEMM_PACK##suffix##_##N(buf, packA); \
+                } \
             } \
         } else { \
             const styp* a_ptr[N]; \
