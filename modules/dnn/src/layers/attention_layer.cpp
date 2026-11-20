@@ -18,12 +18,9 @@
 namespace cv { namespace dnn {
 
 static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_size,
-                       const float *weight_data, size_t hidden_size, std::vector<float> &packed_weight, const FastGemmOpt &opt) {
+                       const float *weight_data, size_t hidden_size, float *packed_weight_data, const FastGemmOpt &opt) {
     // num_heads * pack(head_size, input_hidden_size)
     size_t pack_size = fastGemmPackBSize(head_size, input_hidden_size, opt);
-    size_t packed_weight_size = num_heads * pack_size;
-    packed_weight.resize(packed_weight_size, 0.f);
-    auto *packed_weight_data = packed_weight.data();
     for (size_t i = 0; i < num_heads; i++) {
         fastGemmPackB(false, head_size, input_hidden_size, weight_data, hidden_size, packed_weight_data, opt);
         packed_weight_data += pack_size;
@@ -351,10 +348,10 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         qkv_head_sizes[2] = static_cast<size_t>(qkv_hidden_sizes[2] / num_heads);
 
         const auto *weight_data = weight.ptr<const float>();
+        const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
 #ifdef HAVE_MLAS
         // One MLAS-packed [input_hidden_size, head_size] slice per (Q/K/V, head).
         if (mlasAvailable() && !opt.use_rvv) {
-            const size_t col_ofs[3] = {0, qkv_hidden_sizes[0], qkv_hidden_sizes[0] + qkv_hidden_sizes[1]};
             size_t total = 0;
             bool sizes_ok = true;
             for (int t = 0; t < 3; t++) {
@@ -373,22 +370,28 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                             weight_data + col_ofs[t] + h * qkv_head_sizes[t], (int)hidden_size,
                                             packed_qkv_mlas.ptr() + packed_qkv_ofs[t] + h * packed_qkv_step[t]);
                 if (ok) {
-                    packed_weight_q.clear();
-                    packed_weight_k.clear();
-                    packed_weight_v.clear();
+                    packed_weight.clear();
                     return;
                 }
             }
         }
         packed_qkv_mlas.release();
 #endif
-        packWeight(num_heads, qkv_head_sizes[0], input_hidden_size, weight_data,                                             hidden_size, packed_weight_q, opt);
-        packWeight(num_heads, qkv_head_sizes[1], input_hidden_size, weight_data + qkv_hidden_sizes[0],                       hidden_size, packed_weight_k, opt);
-        packWeight(num_heads, qkv_head_sizes[2], input_hidden_size, weight_data + qkv_hidden_sizes[0] + qkv_hidden_sizes[1], hidden_size, packed_weight_v, opt);
+        // The fastGemm-packed slices share one buffer too, so one fastGemmBatch can cover Q, K and V.
+        size_t total = 0;
+        for (int t = 0; t < 3; t++) {
+            packed_weight_ofs[t] = total;
+            packed_weight_step[t] = fastGemmPackBSize(qkv_head_sizes[t], input_hidden_size, opt);
+            total += packed_weight_step[t] * num_heads;
+        }
+        packed_weight.resize(total, 0.f);
+        for (int t = 0; t < 3; t++)
+            packWeight(num_heads, qkv_head_sizes[t], input_hidden_size, weight_data + col_ofs[t], hidden_size,
+                       packed_weight.data() + packed_weight_ofs[t], opt);
     }
 
     bool qkvPacked() const {
-        return !packed_weight_q.empty() || !packed_qkv_mlas.empty();
+        return !packed_weight.empty() || !packed_qkv_mlas.empty();
     }
 
     // Dynamic weights (blobs empty) aren't available yet; forward() packs those.
@@ -441,8 +444,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         else if (!qkvPacked())
             packQKV(blobs.front());
 
-        float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
-        size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
         CV_Assert(internals.size() == 3 + (do_rotary ? 1 : 0));
 
         if (do_rotary)
@@ -491,17 +492,16 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                     rotationKernel(taskOutput(i), rope_table.ptr<const float>(), seq_len, qkv_head_sizes[i % 3]);
             };
 
-            opt.multi_thread = false;
+            parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                for (int i = r.start; i < r.end; i++)
+                    fillBias(i);
+            });
+            // All per-head GEMMs go in one batch, which also splits each GEMM across threads.
+            // Q, K and V go in separate batches only if their head sizes differ.
+            const bool same_size = qkv_head_sizes[0] == qkv_head_sizes[1] && qkv_head_sizes[1] == qkv_head_sizes[2];
             bool projected = false;
 #ifdef HAVE_MLAS
             if (!packed_qkv_mlas.empty()) {
-                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
-                    for (int i = r.start; i < r.end; i++)
-                        fillBias(i);
-                });
-                // All per-head GEMMs in one MLAS batch, which also splits each GEMM across threads.
-                // Q, K and V go in separate batches only if their head sizes differ.
-                const bool same_size = qkv_head_sizes[0] == qkv_head_sizes[1] && qkv_head_sizes[1] == qkv_head_sizes[2];
                 std::vector<const float*> A;
                 std::vector<const void*> B;
                 std::vector<float*> C;
@@ -519,28 +519,30 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                                                      A.data(), (int)input_hidden_size, B.data(), 1.f, C.data(), N);
                     CV_Assert(projected);
                 }
-                if (do_rotary) {
-                    parallel_for_(Range(0, (int)loops), [&](const Range &r) {
-                        for (int i = r.start; i < r.end; i++)
-                            applyRotary(i);
-                    });
-                }
             }
 #endif
             if (!projected) {
-                double nstripes = loops * seq_len * qkv_head_sizes[0] * input_hidden_size * (1 / 1024.0);
-                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
-                    for (int i = r.start; i < r.end; i++) {
-                        fillBias(i);
-                        const size_t head_size = qkv_head_sizes[i % 3];
-                        auto *packed_weight = packed_weights[i % 3] + packed_weights_size[i % 3] * ((i / 3) % num_heads);
-                        // Single-threaded gemm; outer parallel_for_ already partitions over (batch, head, qkv).
-                        fastGemm(false, seq_len, head_size, input_hidden_size,
-                                1.f, taskInput(i), input_hidden_size,
-                                packed_weight, 1.f, taskOutput(i), head_size, opt);
-                        applyRotary(i);
+                // Same batches with fastGemm; A, B and C are offsets from input_data, packed_weight and Q.
+                std::vector<size_t> A, B, C;
+                for (size_t t = 0; t < (same_size ? 1u : 3u); t++) {
+                    A.clear(); B.clear(); C.clear();
+                    for (size_t i = 0; i < loops; i++) {
+                        if (!same_size && i % 3 != t)
+                            continue;
+                        A.push_back(taskInput(i) - input_data);
+                        B.push_back(packed_weight_ofs[i % 3] + ((i / 3) % num_heads) * packed_weight_step[i % 3]);
+                        C.push_back(taskOutput(i) - Q);
                     }
-                }, nstripes);
+                    const int N = (int)qkv_head_sizes[t];
+                    fastGemmBatch(A.size(), A.data(), B.data(), C.data(), (int)seq_len, N, (int)input_hidden_size, 1.f,
+                                  input_data, (int)input_hidden_size, 1, packed_weight.data(), 1.f, Q, N, opt);
+                }
+            }
+            if (do_rotary) {
+                parallel_for_(Range(0, (int)loops), [&](const Range &r) {
+                    for (int i = r.start; i < r.end; i++)
+                        applyRotary(i);
+                });
             }
         }
 
@@ -655,10 +657,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
     bool do_rotary;
     std::vector<int> qkv_batch, qkv_seq;  // token grouping from the attention fusion
-    std::vector<float> packed_weight_q;
-    std::vector<float> packed_weight_k;
-    std::vector<float> packed_weight_v;
-    Mat packed_qkv_mlas;  // used instead of packed_weight_q/k/v when MLAS is available
+    std::vector<float> packed_weight;  // fastGemm-packed Q, K and V heads
+    size_t packed_weight_ofs[3] = {0, 0, 0}, packed_weight_step[3] = {0, 0, 0};
+    Mat packed_qkv_mlas;  // used instead of packed_weight when MLAS is available
     size_t packed_qkv_ofs[3] = {0, 0, 0}, packed_qkv_step[3] = {0, 0, 0};
     std::vector<unsigned char> flash_scratch;
 
