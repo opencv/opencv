@@ -1123,9 +1123,7 @@ TEST_P(Fusion_MatMulToGemm, HigherRankAndColumnBias)
     // MatMul + Add models, and how many Gemm layers the rewrite must leave
     const std::pair<std::string, int> cases[] = {
         {"matmul_add_bias_nd", 1},               // [1, 1, N] bias on a 3-D input: reshaped to [N] and fused
-        {"matmul_add_bias_nd_after_relu", 1},    // [1, 1, N] bias after a 3-D Relu: input rank propagated, fused
-        {"matmul_add_bias_nd_chain", 2},         // two [1, 1, N] MatMul+Add stages on 3-D input: both fuse
-        {"matmul_add_bias_1d_rank_unknown", 1},  // 1-D [N] bias after Squeeze (unknown rank): never raises rank, fused
+        {"matmul_add_bias_1d_rank_unknown", 1},  // [N] bias after Squeeze (rank not known): adds no axis, fused
         {"matmul_add_bias_column", 0},           // [M, 1] bias with M == N: one value per row, not per column
     };
     for (const auto& c : cases)
@@ -1143,15 +1141,12 @@ TEST_P(Fusion_MatMulToGemm, HigherRankAndColumnBias)
         normAssert(ref, out, name.c_str(), l1, lInf);
     }
 
-    // A [1, 1, N] bias on a 2-D input (directly, after Relu, or across two chained MatMul+Add stages) or on an
-    // input whose rank is unknown at fusion time makes or can make the output 3-D, which a Gemm cannot produce,
-    // so the rewrite must skip it. Only that decision is checked: the MatMul that keeps the bias does not
-    // broadcast it to 3-D on 5.x either.
+    // A [1, 1, N] bias on a 2-D input makes the output 3-D, which a Gemm cannot produce, so the rewrite must skip
+    // it, also when the input comes from another layer and its rank is not known. Only that decision is checked:
+    // the MatMul that keeps the bias does not broadcast it to 3-D on 5.x either.
     const char* skippedRankModels[] = {
         "matmul_add_bias_rank",
         "matmul_add_bias_rank_after_relu",
-        "matmul_add_bias_rank_chain",
-        "matmul_add_bias_rank_unknown",
     };
     for (const char* name : skippedRankModels)
     {

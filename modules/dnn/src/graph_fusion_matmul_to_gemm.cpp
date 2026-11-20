@@ -134,96 +134,6 @@ struct ModelFusionMatMulToGemm
         return outputs;
     }
 
-    static bool keepsFirstInputRank(const LayerInfo* l)
-    {
-        return dynamic_cast<const ActivationLayer*>(l) ||
-               dynamic_cast<const ClipLayer*>(l) ||
-               dynamic_cast<const LayerNormLayer*>(l) ||
-               dynamic_cast<const LayerNorm2Layer*>(l) ||
-               dynamic_cast<const RMSNormLayer*>(l) ||
-               dynamic_cast<const InstanceNormLayer*>(l) ||
-               dynamic_cast<const GroupNormLayer*>(l) ||
-               dynamic_cast<const BatchNorm2Layer*>(l) ||
-               dynamic_cast<const MVNLayer*>(l) ||
-               dynamic_cast<const LRNLayer*>(l) ||
-               dynamic_cast<const SoftmaxLayer*>(l) ||
-               dynamic_cast<const HardmaxLayer*>(l) ||
-               dynamic_cast<const Cast2Layer*>(l) ||
-               dynamic_cast<const TransposeLayer*>(l) ||
-               dynamic_cast<const Concat2Layer*>(l) ||
-               dynamic_cast<const Pad2Layer*>(l) ||
-               dynamic_cast<const Slice2Layer*>(l) ||
-               dynamic_cast<const Tile2Layer*>(l) ||
-               dynamic_cast<const Conv2Layer*>(l) ||
-               dynamic_cast<const ConvTranspose2Layer*>(l) ||
-               dynamic_cast<const MaxPoolLayer*>(l) ||
-               dynamic_cast<const AveragePoolLayer*>(l) ||
-               dynamic_cast<const LpPoolLayer*>(l) ||
-               dynamic_cast<const TriluLayer*>(l) ||
-               dynamic_cast<const CumSumLayer*>(l) ||
-               dynamic_cast<const CumProdLayer*>(l);
-    }
-
-    static int rankOf(const vector<int>& min_rank, Arg a)
-    {
-        return (a.idx > 0 && (size_t)a.idx < min_rank.size()) ? min_rank[a.idx] : -1;
-    }
-
-    static void setMinRank(vector<int>& min_rank, Arg a, int r)
-    {
-        if (a.idx > 0 && (size_t)a.idx < min_rank.size())
-            min_rank[a.idx] = r;
-    }
-
-    // Sound lower bound on output 0's rank (-1 when unknown). Intermediates have no shape at
-    // fusion time, so declared input/constant ranks are propagated across rank-predictable ops.
-    int inferOutputMinRank(const LayerInfo* op, const vector<int>& min_rank) const
-    {
-        if (dynamic_cast<const NaryEltwiseLayer*>(op)) {
-            int r = -1;
-            for (Arg inp : op->inputs)
-                r = std::max(r, rankOf(min_rank, inp));
-            return r;
-        }
-        if (const GemmLayer* gemm = dynamic_cast<const GemmLayer*>(op))
-            return gemm->flatten_a ? 2 : (op->inputs.empty() ? -1 : rankOf(min_rank, op->inputs[0]));
-        if (const MatMulLayer* mm = dynamic_cast<const MatMulLayer*>(op)) {
-            if (op->inputs.empty() || dynamic_cast<const MatMulInt8Layer*>(op))
-                return -1;
-            const int b_rank = !mm->blobs.empty() ? mm->blobs[0].dims
-                                                  : (op->inputs.size() >= 2 ? rankOf(min_rank, op->inputs[1]) : -1);
-            const int r = rankOf(min_rank, op->inputs[0]);
-            if (b_rank < 2 || r < 1)
-                return -1;
-            return r == 1 ? b_rank - 1 : std::max(r, b_rank);
-        }
-        if (const Reshape2Layer* rs = dynamic_cast<const Reshape2Layer*>(op)) {
-            if (op->inputs.size() == 1 && rs->newShapeDesc.dims >= 0)
-                return rs->newShapeDesc.dims;
-            if (op->inputs.size() >= 2 && netimpl->isConstArg(op->inputs[1])) {
-                const Mat& shp = netimpl->argTensor(op->inputs[1]);
-                if (shp.dims <= 1)
-                    return (int)shp.total();
-            }
-            return -1;
-        }
-        if (!op->inputs.empty() && keepsFirstInputRank(op))
-            return rankOf(min_rank, op->inputs[0]);
-        return -1;
-    }
-
-    void propagateMinRank(const LayerInfo* op, vector<int>& min_rank) const
-    {
-        if (dynamic_cast<const Split2Layer*>(op)) {
-            const int r = op->inputs.empty() ? -1 : rankOf(min_rank, op->inputs[0]);
-            for (Arg out : op->outputs)
-                setMinRank(min_rank, out, r);
-            return;
-        }
-        if (!op->outputs.empty())
-            setMinRank(min_rank, op->outputs[0], inferOutputMinRank(op, min_rank));
-    }
-
     bool fuseGraph(Ptr<Graph>& graph)
     {
         const vector<Ptr<LayerInfo>>& prog = graph->prog();
@@ -252,21 +162,9 @@ struct ModelFusionMatMulToGemm
         }
         vector<bool> dropped(nops, false);
 
-        vector<int> min_rank(netimpl->args.size(), -1);
-        for (size_t idx = 1; idx < netimpl->args.size(); idx++) {
-            Arg a((int)idx);
-            if (netimpl->isConstArg(a))
-                min_rank[idx] = netimpl->argTensor(a).dims;
-            else if (netimpl->argData(a).kind == DNN_ARG_INPUT)
-                min_rank[idx] = netimpl->argData(a).shape.dims;
-        }
-        for (Arg inp : graph->inputs())
-            setMinRank(min_rank, inp, netimpl->argData(inp).shape.dims);
-
         for (size_t i = 0; i < nops; i++) {
             const Ptr<LayerInfo>& layer = newprog[i];
             if (!layer || dropped[i]) continue;
-            propagateMinRank(layer.get(), min_rank);
 
             MatMulLayer* mm = dynamic_cast<MatMulLayer*>(layer.get());
             if (!mm) continue;
@@ -291,7 +189,6 @@ struct ModelFusionMatMulToGemm
             (void)K;
             if (N <= 0) continue;
 
-            const int a_min_rank = rankOf(min_rank, layer->inputs[0]);
             bool have_bias = layer->blobs.size() == 2;
             if (have_bias) {
                 const Mat& bias = layer->blobs[1];
@@ -299,9 +196,10 @@ struct ModelFusionMatMulToGemm
                 int total = (int)bias.total();
                 if (total != 1 && (bias.dims < 1 || total != N || bias.size[bias.dims - 1] != N))
                     continue;
-                // A 0-D or 1-D bias never raises the rank above A's (rank >= 1); higher-rank biases
-                // require A to be known to have at least as many dimensions, or Gemm drops leading axes.
-                if (bias.dims > 1 && a_min_rank < bias.dims)
+                // A bias with more dimensions than A would add leading axes to the output, which a Gemm
+                // cannot do, and A's rank is known here only for graph inputs.
+                const int a_dims = netimpl->argData(layer->inputs[0]).shape.dims;
+                if (bias.dims > 1 && (a_dims < 0 || bias.dims > a_dims))
                     continue;
             }
 
@@ -350,8 +248,6 @@ struct ModelFusionMatMulToGemm
             gemm->outputs = outputs;
             gemm->netimpl = netimpl;
 
-            if (!outputs.empty())
-                setMinRank(min_rank, outputs[0], a_min_rank);
             newprog[i] = gemm;
             changed = true;
             modified = true;
