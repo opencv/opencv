@@ -124,10 +124,10 @@ static void checkClearMatchesNewObject(const Ptr<BackgroundSubtractor>& used, co
         used->apply(sceneA, mask);
     used->clear();
 
+    // One frame is given to each object: KNN takes its update points from theRNG() only after
+    // a frame has been processed, so the first apply() on an empty model does not depend on it.
     T maskUsed, maskFresh, bgUsed, bgFresh;
-    theRNG() = RNG(0x12345678);  // KNN draws its update points from theRNG()
     used->apply(sceneB, maskUsed);
-    theRNG() = RNG(0x12345678);
     fresh->apply(sceneB, maskFresh);
     used->getBackgroundImage(bgUsed);
     fresh->getBackgroundImage(bgFresh);
