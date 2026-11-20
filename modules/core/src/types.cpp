@@ -122,6 +122,9 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
         float c_2 = c * c;
         float cosAlpha = ( b_2 + c_2 - a_2 ) / ( kp2.size * c );
         float cosBeta  = ( a_2 + c_2 - b_2 ) / ( kp1.size * c );
+        // rounding can push the cosines slightly outside [-1, 1], where acos returns NaN
+        cosAlpha = std::min(std::max(cosAlpha, -1.f), 1.f);
+        cosBeta  = std::min(std::max(cosBeta,  -1.f), 1.f);
         float alpha = acos( cosAlpha );
         float beta = acos( cosBeta );
         float sinAlpha = sin(alpha);
