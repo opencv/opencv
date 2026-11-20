@@ -1231,6 +1231,9 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
 
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 && _src.dims() <= 2);
 
+    // there are no source pixels to replicate, reflect or wrap
+    CV_Assert( !_src.empty() || (borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT );
+
     CV_OCL_RUN(_dst.isUMat(),
                ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
