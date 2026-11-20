@@ -5018,7 +5018,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
     make_tuple(CV_8S, -128.0),
     make_tuple(CV_32S, (double)INT_MIN),
     make_tuple(CV_32F, -std::numeric_limits<double>::infinity()),
-    make_tuple(CV_64F, -std::numeric_limits<double>::infinity())
+    make_tuple(CV_64F, -std::numeric_limits<double>::infinity()),
+    make_tuple(CV_64S, (double)std::numeric_limits<int64_t>::min()),
+    make_tuple(CV_Bool, 0.0)
 ));
 
 static void testClipMinGreaterThanMax(int depth, bool dynamic)
