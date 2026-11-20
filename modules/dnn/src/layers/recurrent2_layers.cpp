@@ -6,7 +6,7 @@
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "layers_common.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 #include "cpu_kernels/mlas_gemm.hpp"
 #include "../net_impl.hpp"
 
@@ -309,7 +309,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 if (!packedWx[i].empty())
                 {
                     FastGemmOpt opt = gemmOpt;
-                    fastGemm(false, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
+                    hal::fastGemm(false, batchSizeTotal, gateN, projK, 1.f, xTs.ptr<float>(), projK,
                              packedWx[i].data(), 1.f, gatesAll.ptr<float>(), gateN, opt);
                     return gatesAll;
                 }
@@ -444,7 +444,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 {
                     FastGemmOpt opt = gemmOpt;
                     opt.multi_thread = parallelInside;
-                    fastGemm(false, batchSize, Wh.rows, Wh.cols, 1.f, hInternal.ptr<float>(), Wh.cols,
+                    hal::fastGemm(false, batchSize, Wh.rows, Wh.cols, 1.f, hInternal.ptr<float>(), Wh.cols,
                              packedWh[i].data(), 1.f, gates.ptr<float>(), Wh.rows, opt);
                 }
                 else if (dtype == CV_32F)

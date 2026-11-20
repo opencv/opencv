@@ -8,7 +8,7 @@
 #include "opencv2/core/utility.hpp" // parallel_for_
 #include <algorithm>
 
-namespace cv { namespace dnn {
+namespace cv { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 void fastGemmThinTBKernel(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
@@ -16,11 +16,11 @@ void fastGemmThinTBKernel(size_t batch, const size_t *A_offsets, const size_t *B
                           const float *B, int ldb, float beta, float *C, int ldc, bool multi_thread);
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
-}}  // namespace cv::dnn
+}}  // namespace cv::hal
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-namespace cv { namespace dnn {
+namespace cv { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 static constexpr int FAST_GEMM_THIN_TB_MIN_TASK_MACS = 1 << 15;
@@ -99,6 +99,6 @@ void fastGemmThinTBKernel(size_t batch, const size_t *A_offsets, const size_t *B
 }
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
-}}  // namespace cv::dnn
+}}  // namespace cv::hal
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
