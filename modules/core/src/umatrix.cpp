@@ -1229,7 +1229,7 @@ Mat UMat::getMat(AccessFlag accessFlags) const
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     // Accelerator memory does: a CPU read leaves the device copy current, and map() is called for
     // every view, so a write view taken after read views upgrades the mapping.
-    const bool accelMemory = accel::detail::isBackendAllocator(u->currAllocator);
+    const bool accelMemory = !!(u->flags & UMatData::ACCEL_MEMORY);
     if (!accelMemory || !(accessFlags & ACCESS_RW))
         accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);

@@ -7427,6 +7427,9 @@ struct Image2D::Impl
             CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
 
         CV_Assert(!src.empty());
+        // a UMat of another allocator has no cl_mem to copy from or alias
+        if (isForeignBuffer(src.u))
+            CV_Error(Error::OpenCLApiCallError, "OpenCL image: the UMat is not an OpenCL buffer");
         CV_Assert(ocl::Device::getDefault().imageSupport());
 
         int err, depth = src.depth(), cn = src.channels();
@@ -7525,7 +7528,7 @@ bool Image2D::canCreateAlias(const UMat &m)
 {
     bool ret = false;
     const Device & d = ocl::Device::getDefault();
-    if (d.imageFromBufferSupport() && !m.empty())
+    if (d.imageFromBufferSupport() && !m.empty() && !isForeignBuffer(m.u))
     {
         // This is the required pitch alignment in pixels
         uint pitchAlign = d.imagePitchAlignment();

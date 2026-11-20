@@ -76,11 +76,6 @@ void forEachPlane(int dims, const size_t sz[], const size_t srcofs[], const size
 
 } // namespace
 
-bool isBackendAllocator(const MatAllocator* a)
-{
-    return a != 0 && dynamic_cast<const BackendAllocator*>(a) != 0;
-}
-
 UMatData* BackendAllocator::allocate(Device::Impl* dev, int dims, const int* sizes, int type, size_t* step) const
 {
     size_t total = CV_ELEM_SIZE(type);
@@ -106,6 +101,7 @@ UMatData* BackendAllocator::allocate(Device::Impl* dev, int dims, const int* siz
                                     dev->name.c_str(), (unsigned long long)total));
 
     UMatData* u = new UMatData(this);
+    u->flags |= UMatData::ACCEL_MEMORY;     // what getDevice() and UMat::getMat() test
     u->size = total;
     u->handle = handle;
     u->allocatorContext = std::shared_ptr<void>(dev, [](void*) {});    // devices live as long as the process

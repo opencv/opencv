@@ -38,4 +38,9 @@ typedef cudaDeviceProp cvGpuDeviceProp;
 typedef cudaDeviceAttr cvGpuDeviceAttr;
 #endif
 
+// stream-ordered memory pools came with CUDA 11.2; older toolkits allocate with Malloc
+#if defined(CV_ACCEL_GPU_HIP) || CUDART_VERSION >= 11020
+#  define CV_ACCEL_GPU_HAVE_POOLS 1
+#endif
+
 #endif // OPENCV_CORE_SRC_ACCEL_GPU_RUNTIME_HPP

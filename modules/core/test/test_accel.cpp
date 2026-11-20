@@ -29,8 +29,6 @@ namespace opencv_test { namespace {
    up as wrong data. Work on freed memory or on another device's memory is counted as a violation. */
 enum { EMU_DISCRETE = 0, EMU_SHARED = 1, EMU_DISCRETE2 = 2, EMU_DEVICES = 3 };
 
-std::atomic<int> g_delayUs(0);
-
 class EmuEvent CV_FINAL : public accel::Event
 {
 public:
@@ -72,7 +70,8 @@ private:
 class EmuStream CV_FINAL : public accel::Stream
 {
 public:
-    explicit EmuStream(int device) : device_(device), stop_(false), worker_([this] { loop(); }) {}
+    EmuStream(int device, const std::atomic<int>& delayUs)
+        : device_(device), delayUs_(delayUs), stop_(false), worker_([this] { loop(); }) {}
     ~EmuStream()
     {
         {
@@ -135,13 +134,14 @@ private:
                 task = std::move(queue_.front());
                 queue_.pop_front();
             }
-            const int delay = g_delayUs.load();
+            const int delay = delayUs_.load();
             if (delay > 0)
                 std::this_thread::sleep_for(std::chrono::microseconds(delay));
             task();
         }
     }
 
+    const std::atomic<int>& delayUs_;   // EmuBackend::delayUs
     std::mutex m_;
     std::condition_variable wake_;
     std::deque<std::function<void()> > queue_;
@@ -191,8 +191,9 @@ public:
     int deviceCount() const CV_OVERRIDE { return EMU_DEVICES; }
     String deviceDescription(int d) const CV_OVERRIDE
     {
-        static const char* names[] = { "emulated discrete GPU", "emulated memory the CPU addresses",
-                                       "emulated second discrete GPU" };
+        static const char* const names[] = { "emulated discrete GPU",
+                                             "emulated memory the CPU addresses",
+                                             "emulated second discrete GPU" };
         return names[d];
     }
 
@@ -258,7 +259,7 @@ public:
 
     Ptr<accel::Stream> createStream(int d) CV_OVERRIDE
     {
-        Ptr<EmuStream> s = makePtr<EmuStream>(d);
+        Ptr<EmuStream> s = makePtr<EmuStream>(d, delayUs);
         std::lock_guard<std::mutex> lock(mem_);
         streams_.push_back(std::weak_ptr<EmuStream>(s));
         streamsCreated_++;
@@ -284,7 +285,7 @@ public:
 
     void reset()
     {
-        g_delayUs = 0;
+        delayUs = 0;
         throwNext = false;
         failNextAsync = false;
         violations_ = 0;
@@ -321,6 +322,7 @@ public:
         return live_[d];
     }
 
+    std::atomic<int> delayUs{0};               // each stream waits this long before every task
     std::atomic<bool> throwNext{false};        // the next operation throws
     std::atomic<bool> failNextAsync{false};    // the next operation fails on the device, later
     std::atomic<int> violations_{0};
@@ -431,15 +433,14 @@ bool EmuCoreOps::transpose(const UMat& src, UMat& dst, accel::Stream& stream)
     return true;
 }
 
+// registered once: backends stay registered for the life of the process
 EmuBackend& emu()
 {
-    static EmuBackend* backend = 0;
-    static std::once_flag once;
-    std::call_once(once, [] {
+    static EmuBackend* const backend = [] {
         Ptr<EmuBackend> b = makePtr<EmuBackend>();
-        backend = b.get();
         accel::registerBackend(b);
-    });
+        return b.get();
+    }();
     return *backend;
 }
 
@@ -476,7 +477,7 @@ protected:
     {
         if (sizeof(void*) < 8)
             return;
-        g_delayUs = 0;
+        emu().delayUs = 0;
         for (int i = 0; i < EMU_DEVICES; i++)
             accel::synchronize(emuDevice(i));
         EXPECT_EQ(0, emu().violations_.load());
@@ -557,7 +558,7 @@ TEST_F(Core_Accel, mat_upload_has_read_the_matrix_when_it_returns)
 {
     Mat src = randomMat(Size(32, 16), CV_8UC1);
     const Mat expected = src.clone();
-    g_delayUs = 10000;
+    emu().delayUs = 10000;
     UMat u = src.upload(emuDevice(EMU_DISCRETE));
     src.setTo(Scalar::all(0));
     src.release();
@@ -749,6 +750,20 @@ TEST_F(Core_Accel, region_output_elsewhere_stays_where_it_is)
     EXPECT_EQ(0, emu().opsRun_[EMU_DISCRETE].load());
 }
 
+TEST_F(Core_Accel, transpose_into_another_region_of_the_same_buffer)
+{
+    Mat expected = randomMat(Size(10, 10), CV_8UC1);
+    UMat big = expected.upload(emuDevice(EMU_DISCRETE));
+    UMat roi = big(Rect(5, 5, 2, 3));
+    cv::transpose(big(Rect(0, 0, 3, 2)), roi);
+    cv::transpose(big(Rect(0, 4, 3, 2)), big(Rect(7, 0, 2, 3)));
+    cv::transpose(expected(Rect(0, 0, 3, 2)), expected(Rect(5, 5, 2, 3)));
+    cv::transpose(expected(Rect(0, 4, 3, 2)), expected(Rect(7, 0, 2, 3)));
+    EXPECT_EQ(big.u, roi.u) << "the region is written in place";
+    EXPECT_EQ(emuDevice(EMU_DISCRETE), accel::getDevice(big));
+    EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
+}
+
 TEST_F(Core_Accel, mat_output_is_written_by_the_cpu)
 {
     const Mat src = randomMat(Size(11, 7), CV_32FC1);
@@ -768,10 +783,10 @@ TEST_F(Core_Accel, cpu_waits_for_the_work_of_its_thread)
     for (int d = 0; d < 2; d++)
     {
         UMat u = src.upload(emuDevice(d)), dst;
-        g_delayUs = 20000;
+        emu().delayUs = 20000;
         cv::flip(u, dst, 1);
         EXPECT_EQ(0, cvtest::norm(expected, dst.getMat(ACCESS_READ), NORM_INF)) << "device " << d;
-        g_delayUs = 0;
+        emu().delayUs = 0;
     }
 }
 
@@ -783,10 +798,10 @@ TEST_F(Core_Accel, cpu_write_waits_for_device_reads)
     for (int d = 0; d < 2; d++)
     {
         UMat u = src.upload(emuDevice(d)), dst;
-        g_delayUs = 20000;
+        emu().delayUs = 20000;
         cv::flip(u, dst, 0);    // reads u later, on the device
         u.setTo(Scalar(7));     // on the CPU, after that read
-        g_delayUs = 0;
+        emu().delayUs = 0;
         EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF)) << "device " << d;
         EXPECT_EQ(0, cvtest::norm(Mat(src.size(), CV_8UC1, Scalar(7)), toHost(u), NORM_INF)) << "device " << d;
     }
@@ -799,14 +814,14 @@ TEST_F(Core_Accel, released_buffers_outlive_the_device_work)
     accel::synchronize(d);
     const int before = emu().live(EMU_DISCRETE);
     UMat dst;
-    g_delayUs = 20000;
+    emu().delayUs = 20000;
     {
         UMat u = src.upload(d);
         cv::flip(u, dst, 1);
     }   // u is released while the flip still reads it
     EXPECT_EQ(before + 2, emu().live(EMU_DISCRETE)) << "the stream keeps u until the flip is done";
     accel::synchronize(d);
-    g_delayUs = 0;
+    emu().delayUs = 0;
     EXPECT_EQ(before + 1, emu().live(EMU_DISCRETE)) << "only dst is left";
     Mat expected;
     cv::flip(src, expected, 1);
@@ -892,6 +907,18 @@ TEST_F(Core_Accel, opencl_declines_device_memory)
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
 }
 
+TEST_F(Core_Accel, opencl_image_declines_device_memory)
+{
+    if (!cv::ocl::haveOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    const bool prev = cv::ocl::useOpenCL();
+    cv::ocl::setUseOpenCL(true);
+    UMat u = randomMat(Size(64, 64), CV_8UC1).upload(emuDevice(EMU_DISCRETE));
+    EXPECT_FALSE(cv::ocl::Image2D::canCreateAlias(u)) << "the sampler path of cv::resize";
+    EXPECT_THROW(cv::ocl::Image2D image(u), cv::Exception);
+    cv::ocl::setUseOpenCL(prev);
+}
+
 TEST_F(Core_Accel, each_thread_has_its_own_stream)
 {
     const accel::Device d = emuDevice(EMU_DISCRETE);
@@ -944,10 +971,10 @@ TEST_F(Core_Accel, synchronize_hands_the_data_to_another_thread)
     std::condition_variable cv_;
     bool queued = false, read = false;
     std::thread producer([&] {
-        g_delayUs = 20000;
+        emu().delayUs = 20000;
         cv::flip(u, dst, 1);
         accel::synchronize(d);      // without it, the reader's stream would not wait for this one
-        g_delayUs = 0;
+        emu().delayUs = 0;
         {
             std::lock_guard<std::mutex> lock(m);
             queued = true;
@@ -981,12 +1008,12 @@ TEST_F(Core_Accel, thread_exit_finishes_its_work_and_releases_its_buffers)
     const int before = emu().live(EMU_DISCRETE);
     UMat result;
     std::thread([&] {
-        g_delayUs = 20000;
+        emu().delayUs = 20000;
         UMat u = src.upload(d), dst;
         cv::flip(u, dst, 0);
         result = dst;
     }).join();
-    g_delayUs = 0;
+    emu().delayUs = 0;
     EXPECT_EQ(before + 1, emu().live(EMU_DISCRETE)) << "u is released once the flip is done";
     Mat expected;
     cv::flip(src, expected, 0);

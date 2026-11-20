@@ -52,6 +52,12 @@ public:
     String name() const;        //!< "cuda:0", or "cpu"
     String description() const; //!< what the backend reports, for example the GPU model
 
+    bool operator==(const Device& other) const { return impl_ == other.impl_; }
+    bool operator!=(const Device& other) const { return impl_ != other.impl_; }
+
+    //! @cond IGNORED
+    // for OpenCV's operations and backends (opencv2/core/private/accel_backend.hpp)
+
     /** @brief The calling thread's stream on this device, created on first use. Operations
     queue their work on it. */
     Stream& threadStream() const;
@@ -65,10 +71,6 @@ public:
     //! the operations of @p module as their base class; ops() casts them
     Ops* opsImpl(const char* module) const;
 
-    bool operator==(const Device& other) const { return impl_ == other.impl_; }
-    bool operator!=(const Device& other) const { return impl_ != other.impl_; }
-
-    //! @cond IGNORED
     struct Impl;
     explicit Device(Impl* impl) : impl_(impl) {}
     Impl* impl() const { return impl_; }

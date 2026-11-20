@@ -59,7 +59,6 @@ public:
               const size_t dstofs[], const size_t dststep[], bool sync) const CV_OVERRIDE;
 };
 
-bool isBackendAllocator(const MatAllocator* a);
 //! the calling thread's stream on @p dev, created on first use
 Stream& threadStream(Device::Impl* dev);
 

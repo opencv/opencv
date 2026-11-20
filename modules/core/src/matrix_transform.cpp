@@ -502,6 +502,9 @@ static bool accel_transpose(InputArray _src, OutputArray _dst)
     UMat& dst = _dst.getUMatRef();
     if (dst.u == src.u && src.rows != src.cols)
     {
+        // src itself never has the transposed size, so this is another region of the buffer
+        if (dst.size() == Size(src.rows, src.cols))
+            return false;   // the CPU writes it in place
         // in place with a new shape: a new buffer, filled from the kept src
         UMat result;
         result.createOn(device, Size(src.rows, src.cols), src.type());

@@ -99,8 +99,7 @@ class Registry
 public:
     static Registry& get()
     {
-        static Registry* r = new Registry();
-        return *r;
+        CV_SINGLETON_LAZY_INIT_REF(Registry, new Registry())
     }
 
     //! the built-in backends, once, before anything else is registered
@@ -226,7 +225,7 @@ Ops* Device::opsImpl(const char* module) const
 
 Device getDevice(const UMat& m)
 {
-    if (!m.u || !detail::isBackendAllocator(m.u->currAllocator))
+    if (!m.u || !(m.u->flags & UMatData::ACCEL_MEMORY))
         return Device();
     return Device(static_cast<Device::Impl*>(m.u->allocatorContext.get()));
 }

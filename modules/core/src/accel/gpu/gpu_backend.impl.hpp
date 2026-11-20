@@ -216,14 +216,14 @@ public:
 //! one device; a backend's constructor says whether the CPU addresses its memory (shared)
 struct GpuDevice
 {
-    GpuDevice() : shared(false), poolsSupported(false), pool(0), allocStream(0) {}
-
     cvGpuDeviceProp prop;
-    bool shared;                    // memory is host memory mapped into the GPU
-    bool poolsSupported;
+    bool shared = false;                // memory is host memory mapped into the GPU
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+    bool poolsSupported = false;
     std::once_flag poolOnce;
-    CV_GPU(MemPool_t) pool;         // the backend's own pool for device memory, 0 without one
-    CV_GPU(Stream_t) allocStream;   // where pool memory is allocated and freed
+    CV_GPU(MemPool_t) pool = 0;         // the backend's own pool for device memory, 0 without one
+    CV_GPU(Stream_t) allocStream = 0;   // where pool memory is allocated and freed
+#endif
 };
 
 /* Devices, streams, copies, memory and the core operations. Device memory comes from a
@@ -243,7 +243,9 @@ public:
         {
             std::unique_ptr<GpuDevice> d(new GpuDevice());
             check(CV_GPU(GetDeviceProperties)(&d->prop, i), "GetDeviceProperties");
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
             d->poolsSupported = attr(CV_GPU_ATTR_MEMORY_POOLS, i) != 0;
+#endif
             devs_.push_back(std::move(d));
         }
     }
@@ -259,8 +261,10 @@ public:
         CV_GPU(Error_t) r;
         if (d.shared)
             r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_MAPPED | CV_GPU_HOST_ALLOC_PORTABLE);  // one address for CPU and GPU
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
         else if (usesPool(device))
             r = allocateFromPool(d, size, &p);
+#endif
         else
             r = CV_GPU(Malloc)(&p, size);
         if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
@@ -279,9 +283,15 @@ public:
         {
             GpuDevice& d = *devs_[device];
             DeviceGuard g(device);
-            const CV_GPU(Error_t) r = d.shared ? CV_GPU_HOST_FREE(handle)
-                                    : usesPool(device) ? CV_GPU(FreeAsync)(handle, d.allocStream)
-                                    : CV_GPU(Free)(handle);
+            CV_GPU(Error_t) r;
+            if (d.shared)
+                r = CV_GPU_HOST_FREE(handle);
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+            else if (usesPool(device))
+                r = CV_GPU(FreeAsync)(handle, d.allocStream);
+#endif
+            else
+                r = CV_GPU(Free)(handle);
             if (r != CV_GPU(Success))
             {
                 (void)CV_GPU(GetLastError)();
@@ -306,8 +316,14 @@ public:
         const void* sp = (const uchar*)src.handle + src.offset;
         GpuStream& s = gpuStreamOf(stream);
         DeviceGuard g(device);
-        check(CV_GPU(Memcpy2DAsync)(d, dstStep, sp, srcStep, widthBytes, rows, CV_GPU(MemcpyDefault), s.s_),
-              "Memcpy2DAsync");
+        // a contiguous region goes as one span: Memcpy2D refuses a pitch above cudaDevAttrMaxPitch
+        // (2 GiB), and map() passes a whole buffer as one row of its full size
+        if (rows == 1 || (dstStep == widthBytes && srcStep == widthBytes))
+            check(CV_GPU(MemcpyAsync)(d, sp, widthBytes * rows, CV_GPU(MemcpyDefault), s.s_),
+                  "MemcpyAsync");
+        else
+            check(CV_GPU(Memcpy2DAsync)(d, dstStep, sp, srcStep, widthBytes, rows,
+                                        CV_GPU(MemcpyDefault), s.s_), "Memcpy2DAsync");
         if (kind != COPY_DEVICE_TO_DEVICE)
             s.synchronize();
     }
@@ -341,6 +357,7 @@ protected:
     std::vector<std::unique_ptr<GpuDevice> > devs_;
 
 private:
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
     //! device memory of @p device comes from the backend's pool; creates the pool on first use
     bool usesPool(int device)
     {
@@ -388,6 +405,7 @@ private:
             r = CV_GPU(StreamSynchronize)(d.allocStream);   // from now on usable on every stream
         return r;
     }
+#endif
 
     GpuCoreOps core_;
 };
