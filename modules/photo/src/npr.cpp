@@ -54,6 +54,7 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
+    CV_Assert(!I.empty() && I.channels() <= 3);
 
     Domain_Filter obj;
 
@@ -107,6 +108,7 @@ void cv::pencilSketch(InputArray _src, OutputArray _dst1, OutputArray _dst2, flo
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
+    CV_Assert(!I.empty() && I.channels() == 3);
     _dst1.create(I.size(), CV_8UC1);
     Mat dst1 = _dst1.getMat();
 
@@ -133,6 +135,7 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     CV_INSTRUMENT_REGION();
 
     Mat I = _src.getMat();
+    CV_Assert(!I.empty() && I.channels() == 3);
     _dst.create(I.size(), CV_8UC3);
     Mat dst = _dst.getMat();
 
