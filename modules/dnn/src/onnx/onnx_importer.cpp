@@ -1645,6 +1645,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     IterShape_t shapeIt = outShapes.find(lstm_proto.input(0));
     CV_Assert(shapeIt != outShapes.end());
     const MatShape x_shape = shapeIt->second;
+    CV_CheckEQ(x_shape.size(), (size_t)3, "LSTM input must have rank 3");
 
     //if layout is 1, change batch and sequence dims
     const int layout = layerParams.get<int>("layout", 0);
@@ -2082,11 +2083,61 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
         CV_Error(Error::StsNotImplemented,
                  "Required attribute 'kernel_size' is not present.");
 
+    // The deconvolution layer supports 2D and 3D kernels only. It reads one
+    // spatial input dimension and one stride, pad, dilation and output padding
+    // value per kernel dimension when computing shapes, including for dynamic
+    // inputs and with or without output_shape.
+    DictValue kernel = layerParams.get("kernel_size");
+    if (kernel.size() != 2 && kernel.size() != 3)
+        CV_Error(Error::StsNotImplemented, "ONNX/ConvTranspose: only 2D and 3D ConvTranspose are supported");
+    IterShape_t shapeIt = outShapes.find(node_proto.input(0));
+    CV_Assert(shapeIt != outShapes.end());
+    const MatShape& inputShape = shapeIt->second;
+    CV_CheckEQ(inputShape.size(), (size_t)(kernel.size() + 2), "Input rank must match convolution rank");
+
+    std::vector<int> defaultStrides(kernel.size(), 1);
+    CV_Assert(!defaultStrides.empty());
+    DictValue strides = layerParams.has("stride") ? layerParams.get("stride") :
+                        DictValue::arrayInt(defaultStrides.data(), defaultStrides.size());
+    CV_CheckEQ(kernel.size(), strides.size(), "Kernel and stride ranks must match");
+    for (int i = 0; i < strides.size(); i++)
+    {
+        CV_CheckGT(strides.get<int>(i), 0, "Stride must be positive");
+        CV_CheckGT(kernel.get<int>(i), 0, "Kernel size must be positive");
+    }
+    if (layerParams.has("dilation"))
+    {
+        const DictValue& dilation = layerParams.get("dilation");
+        CV_CheckEQ(dilation.size(), strides.size(), "Dilation and stride ranks must match");
+        for (int i = 0; i < dilation.size(); i++)
+            CV_CheckGT(dilation.get<int>(i), 0, "Dilation must be positive");
+    }
+    if (layerParams.has("pad"))
+    {
+        const DictValue& pad = layerParams.get("pad");
+        CV_CheckEQ(pad.size(), 2 * strides.size(), "Pads must have begin and end values for each spatial axis");
+        for (int i = 0; i < pad.size(); i++)
+            CV_CheckGE(pad.get<int>(i), 0, "Pads must be non-negative");
+    }
+    if (layerParams.has("output_padding"))
+    {
+        const DictValue& outputPadding = layerParams.get("output_padding");
+        CV_CheckEQ(outputPadding.size(), strides.size(), "Output padding and stride ranks must match");
+        for (int i = 0; i < outputPadding.size(); i++)
+        {
+            CV_CheckGE(outputPadding.get<int>(i), 0, "Output padding must be non-negative");
+            CV_CheckLT(outputPadding.get<int>(i), strides.get<int>(i), "Output padding must be smaller than stride");
+        }
+    }
+
     if (layerParams.has("output_shape"))
     {
         const DictValue& outShape = layerParams.get("output_shape");
-        DictValue strides = layerParams.get("stride");
-        DictValue kernel = layerParams.get("kernel_size");
+        // Accept spatial ONNX shapes and legacy shapes with batch/channel dimensions.
+        const int spatialOffset = outShape.size() == strides.size() ? 0 : 2;
+        CV_CheckEQ(outShape.size(), strides.size() + spatialOffset, "Output shape rank must match spatial or full tensor rank");
+        for (int i = 0; i < strides.size(); i++)
+            CV_CheckGT(outShape.get<int>(spatialOffset + i), 0, "Output shape must be positive");
 
         String padMode;
         std::vector<int> adjust_pads;
@@ -2098,12 +2149,54 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
 
             for (int i = 0; i < strides.size(); i++)
             {
-                int sz = outShape.get<int>(2 + i);
+                int sz = outShape.get<int>(spatialOffset + i);
                 int stride = strides.get<int>(i);
+                if (padMode == "VALID")
+                    CV_CheckGE(sz, kernel.get<int>(i), "Output shape must be at least kernel size for VALID padding");
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
                                                          (sz - kernel.get<int>(i)) % stride);
             }
-            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
+            CV_Assert(!adjust_pads.empty());
+            layerParams.set("adj", DictValue::arrayInt(adjust_pads.data(), adjust_pads.size()));
+        }
+        else
+        {
+            // ONNX derives the pads from output_shape and the spatial input size. The
+            // deconvolution layer computes its output size from the runtime input and
+            // has no fixed-output-size mode, so output_shape cannot be honored when the
+            // spatial input size is dynamic or unknown at import time.
+            bool knownSpatialInput = !hasDynamicShapes;
+            for (int i = 0; knownSpatialInput && i < strides.size(); i++)
+                knownSpatialInput = inputShape[2 + i] > 0;
+            if (!knownSpatialInput)
+                CV_Error(Error::StsNotImplemented,
+                         "ONNX/ConvTranspose: output_shape with dynamic spatial input is not supported");
+
+            std::vector<int> pads(strides.size());
+            for (int i = 0; i < strides.size(); i++)
+            {
+                const int stride = strides.get<int>(i);
+                const int dilation = layerParams.has("dilation") ? layerParams.get("dilation").get<int>(i) : 1;
+                const int outputPadding = layerParams.has("output_padding") ? layerParams.get("output_padding").get<int>(i) : 0;
+                // The deconvolution layer's shape calculation does not support dilation.
+                CV_CheckEQ(dilation, 1, "ConvTranspose output_shape requires unit dilation");
+
+                const int64 totalPadding = (int64)stride * (inputShape[2 + i] - 1) + outputPadding +
+                                           kernel.get<int>(i) -
+                                           outShape.get<int>(spatialOffset + i);
+                if (totalPadding < 0 || totalPadding > INT_MAX)
+                    CV_Error(Error::StsOutOfRange, "ConvTranspose output_shape requires unsupported padding");
+                // NOTSET puts an odd padding element at the beginning. The layer
+                // requires symmetric pads, so preserve the end with output adjustment.
+                pads[i] = (int)(totalPadding - totalPadding / 2);
+                const int adjustment = outputPadding + (int)(totalPadding % 2);
+                CV_CheckLT(adjustment, stride, "ConvTranspose output_shape requires unsupported asymmetric padding");
+                adjust_pads.push_back(adjustment);
+            }
+            CV_Assert(!pads.empty());
+            CV_Assert(!adjust_pads.empty());
+            layerParams.set("pad", DictValue::arrayInt(pads.data(), pads.size()));
+            layerParams.set("adj", DictValue::arrayInt(adjust_pads.data(), adjust_pads.size()));
         }
     }
     else if (layerParams.has("output_padding"))
@@ -3505,6 +3598,11 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
 
     Mat bias = (ninputs == 9) ? getBlob(node_proto, 8) : Mat::zeros(1, outCn, CV_32S);
+    CV_CheckTypeEQ(bias.depth(), CV_32S, "Quantized bias must be int32");
+    CV_CheckEQ(bias.total(), (size_t)outCn, "Quantized bias length must equal output channels");
+    if (ninputs == 9 && constBlobsExtraInfo.find(node_proto.input(8)) != constBlobsExtraInfo.end())
+        CV_CheckEQ(getBlobExtraInfo(node_proto, 8).real_ndims, 1, "Quantized bias must be 1D");
+    CV_CheckLE(bias.dims, 2, "Quantized bias must be 1D");
 
     Mat weights_2d = weights.reshape(1, outCn);
     Mat biasFused(1, outCn, CV_32S);
@@ -3624,16 +3722,33 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
     int8_t out_zp = ninputs == 9 ? getScalarFromMat<int8_t>(getBlob(node_proto, 8)) : 0;
 
     Mat bias;
-    if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
+    int biasRank = 1;
+    const bool hasBias = ninputs > 6 && !node_proto.input(6).empty();
+    if (hasBias)
+    {
+        if (constBlobs.find(node_proto.input(6)) == constBlobs.end())
+            CV_Error(Error::StsNotImplemented, "ONNX/QGemm: non-constant bias C is not supported");
         bias = getBlob(node_proto, 6);
-    if (bias.empty())
+        // Folded constants have no recorded ONNX rank. Use the Mat rank: a
+        // folded [N] then looks like [N, 1] and is rejected, which is conservative.
+        biasRank = constBlobsExtraInfo.find(node_proto.input(6)) != constBlobsExtraInfo.end() ?
+                   getBlobExtraInfo(node_proto, 6).real_ndims : bias.dims;
+    }
+    else
         bias = Mat::zeros(1, outCn, CV_32S);
+    CV_CheckTypeEQ(bias.depth(), CV_32S, "Quantized bias must be int32");
+    // C is unidirectionally broadcast to (M, N). The fused bias is a single row,
+    // so only shapes that do not vary along M are supported.
+    const bool biasScalar = bias.total() == 1;
+    const bool biasPerColumn = bias.total() == (size_t)outCn && (biasRank < 2 || bias.size[0] == 1);
+    if (biasRank > 2 || bias.dims > 2 || (!biasScalar && !biasPerColumn))
+        CV_Error(Error::StsNotImplemented, "ONNX/QGemm: supported bias C shapes are [], [1], [N], [1, 1] and [1, N]");
 
     Mat biasFused(1, outCn, CV_32S);
     Mat outputMultiplier(1, outCn, CV_32F);
     for (int i = 0; i < outCn; i++)
     {
-        biasFused.at<int>(i) = bias.at<int>(i) - inp_zp*(cv::sum(weights.row(i))[0]);
+        biasFused.at<int>(i) = bias.at<int>(biasScalar ? 0 : i) - inp_zp*(cv::sum(weights.row(i))[0]);
         outputMultiplier.at<float>(i) = (inp_sc * wt_sc.at<float>(i)) / out_sc;
     }
 
