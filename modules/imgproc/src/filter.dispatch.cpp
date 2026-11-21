@@ -951,7 +951,6 @@ bool ocl_sepFilter2D(
         double delta, int borderType
 )
 {
-    const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -1013,8 +1012,7 @@ bool ocl_sepFilter2D(
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
             (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
-            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
-            OCL_PERFORMANCE_CHECK(d.isIntel()),  // TODO FIXIT
+            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,
                    borderType & ~BORDER_ISOLATED, ddepth,
@@ -1057,7 +1055,6 @@ bool ocl_sepFilter2D_BitExact(
         int shift_bits
 )
 {
-    const ocl::Device & d = ocl::Device::getDefault();
     Size imgSize = _src.size();
 
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -1087,8 +1084,7 @@ bool ocl_sepFilter2D_BitExact(
             imgSize.width > optimizedSepFilterLocalWidth + anchor.x &&
             imgSize.height > optimizedSepFilterLocalHeight + anchor.y &&
             (!(borderType & BORDER_ISOLATED) || _src.offset() == 0) &&
-            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1) &&
-            OCL_PERFORMANCE_CHECK(d.isIntel()),  // TODO FIXIT
+            anchor == Point(kernelX.cols >> 1, kernelY.cols >> 1),
             ocl_sepFilter2D_SinglePass(
                     _src, _dst, kernelX, kernelY, delta,
                    borderType & ~BORDER_ISOLATED, ddepth, bdepth,
