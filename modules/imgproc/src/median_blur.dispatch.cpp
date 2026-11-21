@@ -208,6 +208,20 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
+    const int channels = src0.channels();
+    if (src0.depth() == CV_8U && ksize > 5 && channels != 1 && channels != 3 && channels != 4)
+    {
+        std::vector<Mat> srcChannels, dstChannels(channels);
+        cv::split(src0, srcChannels);
+        parallel_for_(Range(0, channels), [&](const Range& range)
+        {
+            for (int channel = range.start; channel < range.end; ++channel)
+                medianBlur(srcChannels[channel], dstChannels[channel], ksize);
+        });
+        cv::merge(dstChannels, dst);
+        return;
+    }
+
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);
 }
