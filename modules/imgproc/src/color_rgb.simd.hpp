@@ -734,6 +734,69 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
+        // The vector kernels cover a remainder by rewinding the final block so it ends at
+        // n, which re-reads source pixels already visited. If the destination overlaps the
+        // source (identical or partially overlapping storage) an earlier store may have
+        // overwritten bytes that re-read needs. Rewind only when the two byte ranges are
+        // disjoint; otherwise finish the remainder with the scalar loop, which reads each
+        // pixel before it can be overwritten.
+        [[maybe_unused]] const bool disjoint = [&]() {
+            const uintptr_t s0 = (uintptr_t)src, d0 = (uintptr_t)dst;
+            return (s0 + (uintptr_t)n * (uintptr_t)scn <= d0) || (d0 + (uintptr_t)n <= s0);
+        }();
+
+#if CV_AVX512_SKX
+        // Bit-exact x86 fast paths. BGRA: no channel deinterleave at all - the 4-byte
+        // pixel feeds vpmaddwd directly. BGR (VBMI): vpermb deinterleaves into b/g pairs
+        // + r, then one vpmaddwd (b*cb+g*cg) and one vpmulld (r*cr). Full 15-bit -> maxErr 0.
+        const __m512i vdelta = _mm512_set1_epi32(1 << (shift - 1));
+        // The final block is clamped to [n-16, n) so any remainder is covered by one
+        // overlapping store instead of a scalar tail; hence these kernels need `disjoint`.
+        if (n >= 16 && scn == 4 && disjoint)
+        {
+            const __m512i coef = _mm512_set1_epi64(((int64_t)cr << 32) | ((int64_t)((uint16_t)cg) << 16) | (uint16_t)cb);
+            const __m512i idxEven = _mm512_setr_epi32(0,2,4,6,8,10,12,14, 16,18,20,22,24,26,28,30);
+            const __m512i idxOdd  = _mm512_setr_epi32(1,3,5,7,9,11,13,15, 17,19,21,23,25,27,29,31);
+            auto do16 = [&](int j)
+            {
+                __m512i a = _mm512_madd_epi16(_mm512_cvtepu8_epi16(_mm256_loadu_si256((const __m256i*)(src + (size_t)j*4))),    coef);
+                __m512i b = _mm512_madd_epi16(_mm512_cvtepu8_epi16(_mm256_loadu_si256((const __m256i*)(src + (size_t)j*4 + 32))), coef);
+                __m512i bg = _mm512_permutex2var_epi32(a, idxEven, b);
+                __m512i rr = _mm512_permutex2var_epi32(a, idxOdd,  b);
+                __m512i y  = _mm512_srli_epi32(_mm512_add_epi32(_mm512_add_epi32(bg, rr), vdelta), shift);
+                _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
+            };
+            for (; i <= n - 16; i += 16) do16(i);
+            if (i < n) do16(n - 16);
+            return;
+        }
+#if CV_AVX_512VBMI
+        if (n >= 16 && scn == 3 && disjoint)
+        {
+            static const uint8_t idxb[64] = {
+                0,1, 3,4, 6,7, 9,10, 12,13, 15,16, 18,19, 21,22, 24,25, 27,28, 30,31, 33,34, 36,37, 39,40, 42,43, 45,46,
+                2,5,8,11,14,17,20,23,26,29,32,35,38,41,44,47, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+            const __m512i vidx    = _mm512_loadu_si512(idxb);
+            const __m512i coef_bg = _mm512_set1_epi32(((uint32_t)((uint16_t)cg) << 16) | (uint16_t)cb);
+            const __m512i vcr     = _mm512_set1_epi32(cr);
+            auto do16 = [&](int j)
+            {
+                __m512i s    = _mm512_maskz_loadu_epi8(0x0000FFFFFFFFFFFFULL, src + (size_t)j*3);
+                __m512i perm = _mm512_permutexvar_epi8(vidx, s);
+                __m256i bg   = _mm512_castsi512_si256(perm);
+                __m128i r8   = _mm512_extracti32x4_epi32(perm, 2);
+                __m512i bgs  = _mm512_madd_epi16(_mm512_cvtepu8_epi16(bg), coef_bg);
+                __m512i y    = _mm512_add_epi32(bgs, _mm512_mullo_epi32(_mm512_cvtepu8_epi32(r8), vcr));
+                y = _mm512_srli_epi32(_mm512_add_epi32(y, vdelta), shift);
+                _mm_storeu_si128((__m128i*)(dst + j), _mm512_cvtusepi32_epi8(y));
+            };
+            for (; i <= n - 16; i += 16) do16(i);
+            if (i < n) do16(n - 16);
+            return;
+        }
+#endif // CV_AVX_512VBMI
+#endif // CV_AVX512_SKX
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
 #if CV_NEON
@@ -752,7 +815,8 @@ struct RGB2Gray<uchar>
              i += vsize, src += scn*vsize, dst += vsize)
         {
             if ( i > n - vsize ) {
-                if (i == 0 || src == dst) {
+                // Do not rewind over overlapping buffers; the scalar loop below finishes.
+                if (i == 0 || !disjoint) {
                     break;
                 }
                 int backup = i - (n - vsize);
