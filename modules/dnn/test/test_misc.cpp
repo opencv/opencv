@@ -680,6 +680,25 @@ static std::vector<EngineType> forwardOutputsEngines()
 }
 INSTANTIATE_TEST_CASE_P(/**/, Net_ForwardOutputsArePrivate, testing::ValuesIn(forwardOutputsEngines()));
 
+// A Reshape of a model input views the input's memory; repeated runs on the same input, where
+// other ops read the input too, must give the same result each time.
+TEST(Net_ReshapeViews, repeated_forward)
+{
+    for (const char* name : {"attention_shared_shape_reshape", "matmul_with_two_inputs",
+                             "dynamic_reshape_opset_11", "flatten_by_prod"}) {
+        SCOPED_TRACE(name);
+        Net net = readNetFromONNX(findDataFile(std::string("dnn/onnx/models/") + name + ".onnx"),
+                                  ENGINE_OPENCV);
+        Mat inp = blobFromNPY(findDataFile(std::string("dnn/onnx/data/input_") + name + ".npy"));
+        Mat ref = blobFromNPY(findDataFile(std::string("dnn/onnx/data/output_") + name + ".npy"));
+        net.setInput(inp);
+        Mat first = net.forward().clone();
+        normAssert(ref, first, "", 1e-4, 5e-4);
+        for (int i = 0; i < 2; i++)
+            EXPECT_EQ(cvtest::norm(first, net.forward(), NORM_INF), 0);
+    }
+}
+
 #ifdef HAVE_INF_ENGINE
 static const std::chrono::milliseconds async_timeout(10000);
 

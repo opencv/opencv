@@ -1927,6 +1927,16 @@ CV__DNN_INLINE_NS_BEGIN
         bool per_channel;
         //! ONNX MatMulInteger (opset 10) mode: int32 output, B and both zero points are inputs
         bool int32_output = false;
+        //! MatMulInteger with the Cast to float, the scale Mul and an optional bias Add folded in:
+        //! float output, input 4 is the scale (scalar or per column), input 5 the optional bias
+        bool dequant_output = false;
+        //! with dequant_output, the DynamicQuantizeLinear of A folded in: input 0 is float A,
+        //! input 2 is unused and input 4 is the weight scale only (empty for 1)
+        bool quantize_input = false;
+        //! with dequant_output, a following Reshape to [B,S,H,D] and Transpose(0,2,1,3) folded in:
+        //! the output is [B,H,S,D]; the Reshape shape is head_split_shape, or input 6 when unset
+        bool head_split = false;
+        MatShape head_split_shape;
 
         /** @brief Creates the ONNX MatMulInteger form of the layer.
          * @param params layer parameters; "int32_output" must be true, because the requantizing

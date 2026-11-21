@@ -1508,6 +1508,17 @@ PERF_TEST_P_(Layer_DynamicInt8, MatMulInteger)
     test_model("matmulinteger_dynamic_block", {1, 256, 256});
 }
 
+// a projection into attention heads, [1, S, 768] -> [1, 12, S, 64], as in TrOCR's decoder
+PERF_TEST_P_(Layer_DynamicInt8, MatMulIntegerHeadSplit)
+{
+    test_model("matmulinteger_head_split_block", {1, 577, 768});
+}
+
+PERF_TEST_P_(Layer_DynamicInt8, MatMulIntegerHeadSplitOneToken)
+{
+    test_model("matmulinteger_head_split_block", {1, 1, 768});
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_DynamicInt8, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 } // namespace
