@@ -989,6 +989,8 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A cv::Scalar can only initialize matrices with at most 4 channels. For matrices with
+    more than 4 channels, use the template constructor with cv::Vec, or use Mat::setTo(const Vec<_Tp, cn>&).
     */
     Mat(int rows, int cols, int type, const Scalar& s);
 
@@ -1000,8 +1002,27 @@ public:
     @param s An optional value to initialize each matrix element with. To set all the matrix elements to
     the particular value after the construction, use the assignment operator
     Mat::operator=(const Scalar& value) .
+    @note A cv::Scalar can only initialize matrices with at most 4 channels. For matrices with
+    more than 4 channels, use the template constructor with cv::Vec, or use Mat::setTo(const Vec<_Tp, cn>&).
       */
     Mat(Size size, int type, const Scalar& s);
+
+    /** @overload
+    @param rows Number of rows in a 2D array.
+    @param cols Number of columns in a 2D array.
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(int rows, int cols, int type, const Vec<_Tp, cn>& initializer);
+
+    /** @overload
+    @param size 2D array size: Size(cols, rows) .
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(Size size, int type, const Vec<_Tp, cn>& initializer);
 
     /** @overload
     @param ndims Array dimensionality.
@@ -1072,6 +1093,39 @@ public:
     Mat::operator=(const Scalar& value) .
     */
     Mat(std::initializer_list<int> shape, int type, const Scalar& s);
+
+    /** @overload
+    @param ndims Array dimensionality.
+    @param sizes Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(int ndims, const int* sizes, int type, const Vec<_Tp, cn>& initializer);
+
+    /** @overload
+    @param sizes Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(const std::vector<int>& sizes, int type, const Vec<_Tp, cn>& initializer);
+
+    /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(const MatShape& shape, int type, const Vec<_Tp, cn>& initializer);
+
+    /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC(n), ..., CV_64FC(n) to create multi-channel matrices.
+    @param initializer A vector value to initialize each matrix element with.
+    */
+    template <typename _Tp, int cn, typename = typename std::enable_if<(cn > 4)>::type>
+    Mat(std::initializer_list<int> shape, int type, const Vec<_Tp, cn>& initializer);
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied

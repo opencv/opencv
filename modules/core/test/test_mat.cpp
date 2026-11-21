@@ -3410,4 +3410,104 @@ TEST(Mat, ScalarMul) {
     ASSERT_EQ(cv_mat_mul.at<cv::Vec3f>(0, 0), cv::Vec3f(2, 6, 12));
 }
 
+TEST(Core_Mat, MultiChannelVecInitializer)
+{
+    Vec<float, 8> v8(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f);
+    Mat m8(10, 12, CV_32FC(8), v8);
+    EXPECT_EQ(m8.rows, 10);
+    EXPECT_EQ(m8.cols, 12);
+    EXPECT_EQ(m8.channels(), 8);
+    for (int r = 0; r < m8.rows; ++r)
+    {
+        for (int c = 0; c < m8.cols; ++c)
+        {
+            const Vec<float, 8>& val = m8.at<Vec<float, 8>>(r, c);
+            for (int ch = 0; ch < 8; ++ch)
+            {
+                EXPECT_EQ(val[ch], v8[ch]);
+            }
+        }
+    }
+
+    Vec<double, 6> v6(10, 20, 30, 40, 50, 60);
+    Mat m6(Size(8, 6), CV_64FC(6), v6);
+    EXPECT_EQ(m6.rows, 6);
+    EXPECT_EQ(m6.cols, 8);
+    EXPECT_EQ(m6.channels(), 6);
+    for (int r = 0; r < m6.rows; ++r)
+    {
+        for (int c = 0; c < m6.cols; ++c)
+        {
+            const Vec<double, 6>& val = m6.at<Vec<double, 6>>(r, c);
+            for (int ch = 0; ch < 6; ++ch)
+            {
+                EXPECT_EQ(val[ch], v6[ch]);
+            }
+        }
+    }
+
+    int sz3[] = { 3, 4, 5 };
+    Vec<int, 5> v5(1, 2, 3, 4, 5);
+    Mat m5(3, sz3, CV_32SC(5), v5);
+    EXPECT_EQ(m5.dims, 3);
+    EXPECT_EQ(m5.channels(), 5);
+    const int* p5 = m5.ptr<int>();
+    size_t total5 = m5.total();
+    for (size_t i = 0; i < total5; ++i)
+    {
+        for (int ch = 0; ch < 5; ++ch)
+        {
+            EXPECT_EQ(p5[i * 5 + ch], v5[ch]);
+        }
+    }
+
+    Vec<float, 8> v8_b(0.9f, 0.9f, 0.9f, 0.9f, 0.9f, 0.9f, 0.9f, 0.9f);
+    Mat m8_b(5, 5, CV_32FC(8), v8_b);
+    for (int r = 0; r < m8_b.rows; ++r)
+    {
+        for (int c = 0; c < m8_b.cols; ++c)
+        {
+            const Vec<float, 8>& val = m8_b.at<Vec<float, 8>>(r, c);
+            for (int ch = 0; ch < 8; ++ch)
+            {
+                EXPECT_EQ(val[ch], 0.9f);
+            }
+        }
+    }
+
+    Vec<float, 6> v6_mismatch;
+    EXPECT_THROW(Mat(10, 10, CV_32FC(8), v6_mismatch), cv::Exception);
+
+    Mat m_scalar_flt(5, 5, CV_32FC1, Scalar_<float>(0.5f));
+    EXPECT_EQ(m_scalar_flt.at<float>(0, 0), 0.5f);
+}
+
+TEST(Core_Mat, ScalarChannelsCheck)
+{
+    Mat m3(10, 10, CV_8UC3, Scalar(10, 20, 30));
+    EXPECT_EQ(m3.channels(), 3);
+    EXPECT_EQ(m3.at<Vec3b>(0, 0), Vec3b(10, 20, 30));
+
+    EXPECT_THROW(Mat(100, 100, CV_32FC(8), Scalar(0.9)), cv::Exception);
+    EXPECT_THROW(Mat(Size(10, 10), CV_32FC(8), Scalar(0.9)), cv::Exception);
+
+    Mat m_assign(10, 10, CV_32FC(8));
+    EXPECT_THROW(m_assign = Scalar(0.9), cv::Exception);
+
+    Mat m8_zero(10, 10, CV_32FC(8), Scalar::all(0));
+    EXPECT_EQ(m8_zero.channels(), 8);
+    EXPECT_EQ((m8_zero.at<Vec<float, 8>>(0, 0)[0]), 0.f);
+
+    Mat m8_assign(10, 10, CV_32FC(8));
+    EXPECT_NO_THROW(m8_assign = Scalar(0));
+    EXPECT_EQ((m8_assign.at<Vec<float, 8>>(0, 0)[0]), 0.f);
+
+    Mat mz = Mat::zeros(10, 10, CV_32FC(8));
+    EXPECT_EQ(mz.channels(), 8);
+    for (int ch = 0; ch < 8; ++ch)
+    {
+        EXPECT_EQ((mz.at<Vec<float, 8>>(0, 0)[ch]), 0.f);
+    }
+}
+
 }} // namespace
