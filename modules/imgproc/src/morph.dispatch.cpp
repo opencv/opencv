@@ -114,7 +114,7 @@ Ptr<FilterEngine> createMorphologyFilter(
     {
         int depth = CV_MAT_DEPTH(type);
         CV_Assert( depth == CV_8U || depth == CV_Bool || depth == CV_16U || depth == CV_16S ||
-                   depth == CV_32F || depth == CV_64F );
+                   depth == CV_16F || depth == CV_32F || depth == CV_64F );
         if( op == MORPH_ERODE )
             borderValue = Scalar::all( depth == CV_8U ? (double)UCHAR_MAX :
                                        depth == CV_Bool ? 1. :
