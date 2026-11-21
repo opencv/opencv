@@ -53,6 +53,7 @@ static inline bool readWrite(DetectorParameters &params, const FileNode* readNod
     check |= readWriteParameter("minOtsuStdDev", params.minOtsuStdDev, readNode, writeStorage);
     check |= readWriteParameter("errorCorrectionRate", params.errorCorrectionRate, readNode, writeStorage);
     check |= readWriteParameter("minGroupDistance", params.minGroupDistance, readNode, writeStorage);
+    check |= readWriteParameter("detectNestedMarkers", params.detectNestedMarkers, readNode, writeStorage);
     // new aruco 3 functionality
     check |= readWriteParameter("useAruco3Detection", params.useAruco3Detection, readNode, writeStorage);
     check |= readWriteParameter("minSideLengthCanonicalImg", params.minSideLengthCanonicalImg, readNode, writeStorage);
@@ -1033,6 +1034,11 @@ struct ArucoDetector::ArucoDetectorImpl {
                 selectedCandidates.push_back(std::move(candidateTree[i]));
             }
         }
+
+        // the hierarchy is used to discard the candidates surrounding an identified marker,
+        // keep them when nested markers are expected
+        if (detectorParams.detectNestedMarkers)
+            return selectedCandidates;
 
         // find hierarchy in the candidate tree
         for (int i = (int)selectedCandidates.size()-1; i >= 0; i--) {
