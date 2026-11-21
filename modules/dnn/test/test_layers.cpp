@@ -4101,6 +4101,59 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
     }
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Gemm_SquareTranspose;
+TEST_P(Layer_Test_Gemm_SquareTranspose, ReshapeBatch)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    const int K = 16;
+    Mat B(K, K, CV_32F), C(std::vector<int>{K}, CV_32F);
+    randu(B, -1.f, 1.f);
+    B.at<float>(0, 1) += 1.f;
+    B.at<float>(1, 0) -= 1.f;
+    randu(C, -0.5f, 0.5f);
+    const Mat B_orig = B.clone();
+
+    LayerParams lp;
+    lp.type = "Gemm";
+    lp.name = "gemm_square_notrans";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("constB", true);
+    lp.set("constC", true);
+    lp.set("have_bias", true);
+    lp.set("real_ndims_C", 1);
+    lp.blobs.push_back(B);
+    lp.blobs.push_back(C);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    double l1, lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    const int batches[] = {1, 3, 1};
+    for (size_t step = 0; step < sizeof(batches) / sizeof(batches[0]); ++step)
+    {
+        const int M = batches[step];
+        Mat A(M, K, CV_32F);
+        randu(A, -1.f, 1.f);
+
+        Mat ref = A * B_orig;
+        for (int r = 0; r < M; ++r)
+            ref.row(r) += C.reshape(1, 1);
+
+        net.setInput(A);
+        Mat out = net.forward();
+        normAssert(ref, out, format("step=%zu M=%d", step, M).c_str(), l1, lInf);
+        EXPECT_EQ(0.0, cvtest::norm(net.getParam(id, 0), B_orig, NORM_INF));
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Gemm_SquareTranspose, dnnBackendsAndTargets());
+
 TEST(Test_Gemm, FastGemmBlockedTails)
 {
     struct TestCase

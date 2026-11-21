@@ -665,7 +665,11 @@ public:
         auto C = blobs.size() >= 2 ? blobs[1] : Mat();
 
         if (!trans_b)
-            cv::transpose(B, B);
+        {
+            Mat Bt;
+            cv::transpose(B, Bt);
+            B = Bt;
+        }
         // flatten_a=false keeps A's leading dims as rows, as forward() does: only the last axis is K
         auto flatten_start_axis = flatten_a ? normalize_axis(1, inputs[0].dims) : inputs[0].dims - 1;
         // the fused activation runs on the same stream, right after the GEMM
