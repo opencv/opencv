@@ -96,6 +96,83 @@ TEST(Multiview_VisibilityMask, nonContinuousMaskMatchesClone)
     }
 }
 
+TEST(Multiview_ObjectPoints, equivalentLayouts)
+{
+    const int cameras = 2, npoints = 12;
+    const cv::Matx33d K(900, 0, 640, 0, 910, 480, 0, 0, 1);
+    const double angle = 0.24;
+    const cv::Matx33d boardRotation(cos(angle), 0, sin(angle), 0, 1, 0, -sin(angle), 0, cos(angle));
+    cv::Mat_<float> points(npoints, 3);
+    std::vector<std::vector<cv::Mat>> imagePoints(cameras, std::vector<cv::Mat>(1));
+
+    for (int p = 0; p < npoints; ++p)
+    {
+        points(p, 0) = (p % 4) / 16.f;
+        points(p, 1) = (p / 4) / 16.f;
+        points(p, 2) = 0;
+    }
+    for (int c = 0; c < cameras; ++c)
+    {
+        cv::Mat_<cv::Vec2f> image(npoints, 1);
+        for (int p = 0; p < npoints; ++p)
+        {
+            const cv::Vec3d x(points(p, 0), points(p, 1), points(p, 2));
+            const cv::Vec3d q = boardRotation * x + cv::Vec3d(0.16 * c - 0.1, -0.075, 1.5);
+            ASSERT_GT(q[2], 0.);
+            image(p, 0) = cv::Vec2f((float)(900 * q[0] / q[2] + 640),
+                                    (float)(910 * q[1] / q[2] + 480));
+        }
+        imagePoints[c][0] = image;
+    }
+
+    const cv::Mat layouts[] = {points, points.t(), points.reshape(3, 1), points.reshape(3)};
+    const char* names[] = {"Nx3 CV_32F", "3xN CV_32F", "1xN CV_32FC3", "Nx1 CV_32FC3"};
+
+    double referenceRMS = 0;
+    std::vector<cv::Mat> referenceR, referenceT, referenceBoardR, referenceBoardT;
+    cv::Mat referencePairs, referenceErrors;
+    for (size_t i = 0; i < 4; ++i)
+    {
+        SCOPED_TRACE(names[i]);
+
+        std::vector<cv::Mat> intrinsics, distortion, rvecs, tvecs, boardR, boardT;
+        for (int c = 0; c < cameras; ++c)
+        {
+            intrinsics.emplace_back(K);
+            distortion.push_back(cv::Mat::zeros(5, 1, CV_64F));
+        }
+        cv::Mat pairs, errors;
+        double rms = 0;
+        ASSERT_NO_THROW(rms = cv::calibrateMultiview(std::vector<cv::Mat>{layouts[i]}, imagePoints,
+                std::vector<cv::Size>(cameras, cv::Size(1280, 960)), cv::Mat::ones(cameras, 1, CV_8U),
+                std::vector<uchar>(cameras, cv::CALIB_MODEL_PINHOLE), intrinsics, distortion,
+                rvecs, tvecs, pairs, boardR, boardT, errors, cv::noArray(), cv::CALIB_USE_INTRINSIC_GUESS));
+        ASSERT_LT(rms, 1e-3);
+
+        if (i == 0)
+        {
+            referenceRMS = rms;
+            referenceR = rvecs;
+            referenceT = tvecs;
+            referenceBoardR = boardR;
+            referenceBoardT = boardT;
+            referencePairs = pairs;
+            referenceErrors = errors;
+        }
+        EXPECT_NEAR(referenceRMS, rms, 1e-4);
+        EXPECT_MAT_NEAR(referencePairs, pairs, 0);
+        EXPECT_MAT_NEAR(referenceErrors, errors, 1e-4);
+        EXPECT_MAT_NEAR(referenceBoardR[0], boardR[0], 1e-6);
+        EXPECT_MAT_NEAR(referenceBoardT[0], boardT[0], 1e-6);
+        for (int c = 0; c < cameras; ++c)
+        {
+            EXPECT_MAT_NEAR(cv::Mat(K), intrinsics[c], 1e-12);
+            EXPECT_MAT_NEAR(referenceR[c], rvecs[c], 1e-6);
+            EXPECT_MAT_NEAR(referenceT[c], tvecs[c], 1e-6);
+        }
+    }
+}
+
 TEST(multiview_calibration, accuracy) {
     // convert euler angles to rotation matrix
     const auto euler2rot = [] (double x, double y, double z) {
