@@ -435,14 +435,19 @@ void Regression::write(cv::InputArray array)
 
 static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const cv::Mat& diff, double eps, double* max_violation = 0, double* max_allowed = 0)
 {
-    cv::Mat diff64f;
+    cv::Mat diff64f, expected64f, actual64f;
     diff.reshape(1).convertTo(diff64f, CV_64F);
+    expected.reshape(1).convertTo(expected64f, CV_64F);
+    actual.reshape(1).convertTo(actual64f, CV_64F);
 
-    cv::Mat expected_abs = cv::abs(expected.reshape(1));
-    cv::Mat actual_abs = cv::abs(actual.reshape(1));
+    // threshold = eps * max(|expected|, |actual|), computed in double so it
+    // matches diff64f (cv::compare requires identical type and depth).
+    cv::Mat expected_abs = cv::abs(expected64f);
+    cv::Mat actual_abs = cv::abs(actual64f);
+
     cv::Mat maximum, mask;
     cv::max(expected_abs, actual_abs, maximum);
-    cv::multiply(maximum, cv::Vec<double, 1>(eps), maximum, CV_64F);
+    cv::multiply(maximum, cv::Scalar(eps), maximum);
     cv::compare(diff64f, maximum, mask, cv::CMP_GT);
 
     int v = cv::countNonZero(mask);
