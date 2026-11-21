@@ -80,17 +80,6 @@ public:
             auto norm_axis = normalize_axis(axes[i], shape_input);
             axes[i] = norm_axis;
         }
-
-        bool do_nothing = true;
-        for (auto axis : axes) {
-            if (shape_input[axis] != 1) {
-                do_nothing = false;
-            }
-        }
-        if (do_nothing) {
-            axes.clear();
-            noop_with_empty_axes = true;
-        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -407,10 +396,17 @@ public:
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
 
+            // Listing every axis is the same as reducing the whole tensor. ReduceInvoker needs
+            // at least one axis left unreduced.
+            if (!axes.empty() &&
+                std::set<int>(axes.begin(), axes.end()).size() == shape(src).size()) {
+                axes.clear();
+                noop_with_empty_axes = false;
+            }
+
             if (axes.empty()) {
                 if (noop_with_empty_axes) {
-                    // copyTo is not used here for the reason that we want a
-                    // copy for the case when dims at all axes are 1
+                    // empty axes with noop_with_empty_axes: the output is a copy of the input
                     const auto p_src = src.ptr<const dtype>();
                     auto p_dst = dst.ptr<dtype>();
                     std::memcpy(p_dst, p_src, sizeof(dtype) * dst.total());
