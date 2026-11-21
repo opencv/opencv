@@ -6,6 +6,22 @@
 
 namespace opencv_test { namespace {
 
+typedef testing::TestWithParam<Size> Imgproc_PyrUp_empty;
+
+TEST_P(Imgproc_PyrUp_empty, no_crash)
+{
+    Mat src(GetParam(), CV_8UC1), dst;
+
+    ASSERT_NO_THROW(pyrUp(src, dst));
+    EXPECT_TRUE(dst.empty());
+    // a non-empty destination size cannot be filled from an empty source
+    EXPECT_THROW(pyrUp(src, dst, Size(1, 10)), cv::Exception);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_PyrUp_empty, testing::Values(
+    Size(0, 0), Size(0, 5), Size(5, 0)
+));
+
 TEST(Imgproc_PyrUp, pyrUp_regression_22184)
 {
     Mat src(100,100,CV_16UC3,Scalar(255,255,255));
