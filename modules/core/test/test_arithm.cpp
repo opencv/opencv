@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <cstring>
 #include <iomanip>
 #include <limits>
 #include "ref_reduce_arg.impl.hpp"
@@ -5311,6 +5312,93 @@ TEST_P(Core_PatchNaNs, replaces_only_nans)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_PatchNaNs, testing::Values(CV_16F, CV_16BF, CV_32F, CV_64F));
+
+using Core_BinaryRow = testing::TestWithParam<std::tuple<int, int, Size, bool, bool, bool,
+                                                       std::tuple<bool, double>>>;
+
+TEST_P(Core_BinaryRow, matchesExpanded)
+{
+    const int depth = std::get<0>(GetParam());
+    const int channels = std::get<1>(GetParam());
+    const Size size = std::get<2>(GetParam());
+    const bool roi = std::get<3>(GetParam());
+    const bool inplace = std::get<4>(GetParam());
+    const bool reverse = std::get<5>(GetParam());
+    const bool multiply = std::get<0>(std::get<6>(GetParam()));
+    const double scale = std::get<1>(std::get<6>(GetParam()));
+    const int type = CV_MAKETYPE(depth, channels);
+    Mat srcStorage(size.height, size.width + int(roi), type);
+    Mat src = srcStorage.colRange(0, size.width);
+    Mat dstStorage(size.height, size.width + int(roi), type);
+    Mat dst = inplace ? src : dstStorage.colRange(0, size.width);
+    Mat gain(1, 1, type), reference;
+    theRNG().fill(src, RNG::UNIFORM, -256.0, 256.0);
+    theRNG().fill(gain, RNG::UNIFORM, -16.0, 16.0);
+    const Mat expanded = cv::repeat(gain, size.height, size.width);
+    if (multiply)
+    {
+        cv::multiply(reverse ? expanded : src, reverse ? src : expanded, reference, scale);
+        cv::multiply(reverse ? gain : src, reverse ? src : gain, dst, scale);
+    }
+    else
+    {
+        cv::subtract(reverse ? expanded : src, reverse ? src : expanded, reference);
+        cv::subtract(reverse ? gain : src, reverse ? src : gain, dst);
+    }
+
+    for (int y = 0; y < size.height; ++y)
+        EXPECT_EQ(0, std::memcmp(reference.ptr(y), dst.ptr(y), size.width * dst.elemSize())) << y;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_BinaryRow,
+    testing::Combine(testing::Values(CV_8U, CV_16S, CV_16F), testing::Values(5, 9, 16),
+                     testing::Values(Size(1, 1), Size(7, 1), Size(65, 33), Size(257, 257)),
+                     testing::Bool(), testing::Bool(), testing::Bool(),
+                     testing::Values(std::make_tuple(true, 1.0), std::make_tuple(true, -0.75),
+                                     std::make_tuple(false, 1.0))));
+
+using Core_MultiplyHalfRow = testing::TestWithParam<std::tuple<int, bool, bool, double>>;
+
+TEST_P(Core_MultiplyHalfRow, bitExact)
+{
+    const int channels = std::get<0>(GetParam());
+    const bool roi = std::get<1>(GetParam());
+    const bool inplace = std::get<2>(GetParam());
+    const double scale = std::get<3>(GetParam());
+    const int type = CV_MAKETYPE(CV_16F, channels);
+    const Size size(65, 33);
+    Mat srcStorage(size.height, size.width + int(roi), type);
+    Mat src = srcStorage.colRange(0, size.width);
+    Mat dstStorage(size.height, size.width + int(roi), type);
+    Mat dst = inplace ? src : dstStorage.colRange(0, size.width);
+    Mat gain(1, 1, type), reference(size, type);
+
+    theRNG().fill(src, RNG::UNIFORM, -65504.0, 65504.0);
+    theRNG().fill(gain, RNG::UNIFORM, -2.0, 2.0);
+    gain.ptr<hfloat>()[0] = hfloat(-0.0f);
+    gain.ptr<hfloat>()[1] = hfloat(0.0f);
+
+    const hfloat* factors = gain.ptr<hfloat>();
+    for (int y = 0; y < size.height; ++y)
+    {
+        const hfloat* input = src.ptr<hfloat>(y);
+        hfloat* expected = reference.ptr<hfloat>(y);
+        for (int x = 0; x < size.width; ++x)
+            for (int c = 0; c < channels; ++c)
+            {
+                const int offset = x * channels + c;
+                expected[offset] = hfloat((float(factors[c]) * float(scale)) * float(input[offset]));
+            }
+    }
+
+    cv::multiply(src, gain, dst, scale);
+
+    for (int y = 0; y < size.height; ++y)
+        EXPECT_EQ(0, std::memcmp(reference.ptr(y), dst.ptr(y), size.width * dst.elemSize())) << y;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MultiplyHalfRow,
+    testing::Combine(testing::Values(5, 9, 16), testing::Bool(), testing::Bool(), testing::Values(1.0, -0.75)));
 
 TEST(Core_Multiply, scale_simd_scalar_consistency)
 {
