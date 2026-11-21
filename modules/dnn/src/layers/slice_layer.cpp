@@ -104,6 +104,16 @@ void transformForNegSteps(const MatShape& inpShape, std::vector<std::vector<Rang
         step = -step;
         start = sliceRanges[0][i].start;
         end = sliceRanges[0][i].end;
+        if (inpShape[i] > 0)
+        {
+            // negative values count from the end; clamp start to [0, n - 1] and end to [-1, n - 1]
+            if (start < 0)
+                start += inpShape[i];
+            if (end < 0)
+                end += inpShape[i];
+            start = std::min(std::max(start, 0), inpShape[i] - 1);
+            end = std::min(std::max(end, -1), inpShape[i] - 1);
+        }
         new_end = start >= inpShape[i] ? inpShape[i] : start + 1;
         new_start = end + 1;
         new_start = new_end - 1 - ((new_end - 1 - new_start) / step) * step;
@@ -329,7 +339,7 @@ public:
                     CV_Assert(step != 0);
                     if (step < 0)
                         neg_step_dims.push_back(i);
-                    if (std::abs(step) > 1)
+                    if (std::abs(step) > 1 || step < 0)
                         hasSteps = true;
                     sliceSteps[0][i] = step;
                 }
