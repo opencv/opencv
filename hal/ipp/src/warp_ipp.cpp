@@ -83,6 +83,10 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
 {
     CV_HAL_CHECK_USE_IPP();
 
+    const int channels = CV_MAT_CN(src_type);
+    if (channels > 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter  = ippiGetInterpolation(interpolation);
@@ -118,7 +122,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
 #endif
 
-    if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
+    if(impl[CV_TYPE(src_type)][channels - 1][interpolation] == 0)
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
