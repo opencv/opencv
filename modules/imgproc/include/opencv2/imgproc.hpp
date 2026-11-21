@@ -2118,6 +2118,11 @@ To shrink an image, it will generally look best with #INTER_AREA interpolation, 
 enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
+For CV_16F input, the CPU implementation of linear, cubic, area and Lanczos interpolation
+uses CV_32F coefficients and intermediate values and rounds to CV_16F when storing the result.
+Floating-point working storage is limited to row buffers.
+As with CV_32F input, #INTER_LINEAR_EXACT uses #INTER_LINEAR for CV_16F input.
+
 @param src input image.
 @param dst output image; it has the size dsize (when it is non-zero) or the size computed from
 src.size(), fx, and fy; the type of dst is the same as of src.
