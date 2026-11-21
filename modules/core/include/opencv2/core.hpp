@@ -255,6 +255,28 @@ CV_EXPORTS_W void copyMakeBorder(InputArray src, OutputArray dst,
                                  int top, int bottom, int left, int right,
                                  int borderType, const Scalar& value = Scalar() );
 
+/** @brief Copies an image and fills its constant border with one value per channel.
+
+The source ROI and destination follow the same rules as in #copyMakeBorder. This function
+uses the CPU path.
+
+@param src Source image.
+@param dst Destination image of the same type as src and of size
+`Size(src.cols + left + right, src.rows + top + bottom)`.
+@param top Number of border pixels above the source.
+@param bottom Number of border pixels below the source.
+@param left Number of border pixels to the left of the source.
+@param right Number of border pixels to the right of the source.
+@param borderType #BORDER_CONSTANT, optionally combined with #BORDER_ISOLATED.
+@param borderValues Single-channel 1-D, row, or column vector with one element per source channel.
+Values are converted to the source depth with saturation where applicable.
+
+@sa copyMakeBorder
+*/
+CV_EXPORTS_W void copyMakeBorderWithBorderValues(InputArray src, OutputArray dst,
+                                                int top, int bottom, int left, int right,
+                                                int borderType, InputArray borderValues);
+
 /** @brief Calculates the per-element sum of two arrays or an array and a scalar.
 
 The function add calculates:
