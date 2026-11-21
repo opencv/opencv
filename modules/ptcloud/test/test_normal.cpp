@@ -635,6 +635,66 @@ INSTANTIATE_TEST_CASE_P(RGBD_Normals, RenderedNormals, ::testing::Combine(::test
     NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_CROSS_PRODUCT, {  57.9832,  2531}}),
                                                                           ::testing::Values(true, false)));
 
+typedef ::testing::TestWithParam<std::tuple<MatDepth, NormalComputers>> NormalsInputSize;
+
+TEST_P(NormalsInputSize, rejects_mismatched_input_size)
+{
+    const int depth = std::get<0>(GetParam());
+    const RgbdNormals::RgbdNormalsMethod method = (RgbdNormals::RgbdNormalsMethod)int(std::get<1>(GetParam()));
+    const int cfgRows = 48, cfgCols = 64;
+    Mat intr(Matx33d(262.5, 0.0, 31.5, 0.0, 262.5, 23.5, 0.0, 0.0, 1.0));
+
+    auto makePoints4 = [&](int r, int c) -> Mat {
+        Mat depth32(r, c, CV_32FC1);
+        theRNG().fill(depth32, RNG::UNIFORM, 1.5f, 3.0f);
+        Mat pts;
+        depthTo3d(depth32, intr, pts);
+        if (depth == CV_64F)
+            pts.convertTo(pts, CV_64F);
+        return pts;
+    };
+
+    Ptr<RgbdNormals> comp = RgbdNormals::create(cfgRows, cfgCols, depth, intr, 5, 50.f, method);
+
+    Mat okOut;
+    ASSERT_NO_THROW(comp->apply(makePoints4(cfgRows, cfgCols), okOut));
+    EXPECT_EQ(Size(cfgCols, cfgRows), okOut.size());
+
+    const Size badSizes[4] = {
+        Size(32, 24),          // both smaller
+        Size(96, 72),          // both larger
+        Size(cfgCols, 24),     // height mismatch only
+        Size(32, cfgRows)      // width mismatch only
+    };
+    for (const Size& sz : badSizes)
+    {
+        Mat sentinel(1, 1, CV_MAKETYPE(depth, 4), Scalar::all(7.0));
+        EXPECT_THROW(comp->apply(makePoints4(sz.height, sz.width), sentinel), cv::Exception) << "badSize=" << sz;
+        EXPECT_EQ(Size(1, 1), sentinel.size()) << "badSize=" << sz;
+    }
+
+    if (method == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
+    {
+        for (int dDepth : { CV_16U, CV_32F, CV_64F })
+        {
+            Mat badDepth(24, 32, CV_MAKETYPE(dDepth, 1), Scalar::all(2000));
+            Mat out;
+            EXPECT_THROW(comp->apply(badDepth, out), cv::Exception) << "LINEMOD 1ch depth=" << dDepth;
+        }
+    }
+
+    // setRows() and setCols() change the accepted input size
+    comp->setRows(24);
+    comp->setCols(32);
+    Mat outResized;
+    EXPECT_THROW(comp->apply(makePoints4(cfgRows, cfgCols), outResized), cv::Exception);
+    ASSERT_NO_THROW(comp->apply(makePoints4(24, 32), outResized));
+    EXPECT_EQ(Size(32, 24), outResized.size());
+}
+
+INSTANTIATE_TEST_CASE_P(RGBD_Normals, NormalsInputSize, ::testing::Combine(::testing::Values(CV_32F, CV_64F),
+                                                                           NormalComputers::all()));
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class RgbdPlaneGenerate : public ::testing::TestWithParam<std::tuple<int, bool, int>>

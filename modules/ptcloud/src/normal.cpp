@@ -261,6 +261,9 @@ public:
             CV_Error(Error::StsInternal, "Unknown normal computer algorithm");
         }
 
+        CV_CheckEQ(points3d_ori.rows, rows, "Invalid input height for RgbdNormals");
+        CV_CheckEQ(points3d_ori.cols, cols, "Invalid input width for RgbdNormals");
+
         // Initialize the pimpl
         cache();
 
