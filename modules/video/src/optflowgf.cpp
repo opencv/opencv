@@ -171,7 +171,78 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
             row[width*3+x] = row[width*3+x-3];
         }
 
-        for( x = 0; x < width; x++ )
+        x = 0;
+#if CV_RVV && CV_SIMD_SCALABLE && CV_SIMD_SCALABLE_64F
+        const int rvvLanes = (int)__riscv_vsetvlmax_e32m1();
+        for (; x <= width - rvvLanes; x += rvvLanes)
+        {
+            const size_t vl = rvvLanes;
+            const vfloat32m1x3_t center = __riscv_vlseg3e32_v_f32m1x3(row + x * 3, vl);
+            vfloat64m2_t b1 = __riscv_vfwcvt_f_f_v_f64m2(
+                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 0), g[0], vl), vl);
+            vfloat64m2_t b3 = __riscv_vfwcvt_f_f_v_f64m2(
+                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 1), g[0], vl), vl);
+            vfloat64m2_t b5 = __riscv_vfwcvt_f_f_v_f64m2(
+                __riscv_vfmul_vf_f32m1(__riscv_vget_v_f32m1x3_f32m1(center, 2), g[0], vl), vl);
+            vfloat64m2_t b2 = __riscv_vfmv_v_f_f64m2(0., vl);
+            vfloat64m2_t b4 = __riscv_vfmv_v_f_f64m2(0., vl);
+            vfloat64m2_t b6 = __riscv_vfmv_v_f_f64m2(0., vl);
+            for (int kk = 1; kk <= n; ++kk)
+            {
+                const vfloat32m1x3_t plus = __riscv_vlseg3e32_v_f32m1x3(row + (x + kk) * 3, vl);
+                const vfloat32m1x3_t minus = __riscv_vlseg3e32_v_f32m1x3(row + (x - kk) * 3, vl);
+                const vfloat32m1_t p0 = __riscv_vget_v_f32m1x3_f32m1(plus, 0),
+                                   m0 = __riscv_vget_v_f32m1x3_f32m1(minus, 0);
+                const vfloat32m1_t p1 = __riscv_vget_v_f32m1x3_f32m1(plus, 1),
+                                   m1 = __riscv_vget_v_f32m1x3_f32m1(minus, 1);
+                const vfloat32m1_t p2 = __riscv_vget_v_f32m1x3_f32m1(plus, 2),
+                                   m2 = __riscv_vget_v_f32m1x3_f32m1(minus, 2);
+                // Preserve the scalar code's FP32 sums/products before conversion to FP64.
+                const vfloat64m2_t tg = __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfadd_vv_f32m1(p0, m0, vl), vl);
+                b1 = __riscv_vfadd_vv_f64m2(b1, __riscv_vfmul_vf_f64m2(tg, g[kk], vl), vl);
+                b4 = __riscv_vfadd_vv_f64m2(b4, __riscv_vfmul_vf_f64m2(tg, xxg[kk], vl), vl);
+                b2 = __riscv_vfadd_vv_f64m2(
+                    b2,
+                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfsub_vv_f32m1(p0, m0, vl), xg[kk], vl),
+                                               vl),
+                    vl);
+                b3 = __riscv_vfadd_vv_f64m2(
+                    b3,
+                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfadd_vv_f32m1(p1, m1, vl), g[kk], vl),
+                                               vl),
+                    vl);
+                b6 = __riscv_vfadd_vv_f64m2(
+                    b6,
+                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfsub_vv_f32m1(p1, m1, vl), xg[kk], vl),
+                                               vl),
+                    vl);
+                b5 = __riscv_vfadd_vv_f64m2(
+                    b5,
+                    __riscv_vfwcvt_f_f_v_f64m2(__riscv_vfmul_vf_f32m1(__riscv_vfadd_vv_f32m1(p2, m2, vl), g[kk], vl),
+                                               vl),
+                    vl);
+            }
+            const vfloat32m1_t r0 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b3, ig11, vl), vl);
+            const vfloat32m1_t r1 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b2, ig11, vl), vl);
+            const vfloat32m1_t r2 =
+                __riscv_vfncvt_f_f_w_f32m1(__riscv_vfadd_vv_f64m2(__riscv_vfmul_vf_f64m2(b1, ig03, vl),
+                                                                  __riscv_vfmul_vf_f64m2(b5, ig33, vl), vl),
+                                           vl);
+            const vfloat32m1_t r3 =
+                __riscv_vfncvt_f_f_w_f32m1(__riscv_vfadd_vv_f64m2(__riscv_vfmul_vf_f64m2(b1, ig03, vl),
+                                                                  __riscv_vfmul_vf_f64m2(b4, ig33, vl), vl),
+                                           vl);
+            const vfloat32m1_t r4 = __riscv_vfncvt_f_f_w_f32m1(__riscv_vfmul_vf_f64m2(b6, ig55, vl), vl);
+            vfloat32m1x5_t result = vfloat32m1x5_t();
+            result = __riscv_vset_v_f32m1_f32m1x5(result, 0, r0);
+            result = __riscv_vset_v_f32m1_f32m1x5(result, 1, r1);
+            result = __riscv_vset_v_f32m1_f32m1x5(result, 2, r2);
+            result = __riscv_vset_v_f32m1_f32m1x5(result, 3, r3);
+            result = __riscv_vset_v_f32m1_f32m1x5(result, 4, r4);
+            __riscv_vsseg5e32_v_f32m1x5(drow + x * 5, result, vl);
+        }
+#endif
+        for( ; x < width; x++ )
         {
             g0 = g[0];
             // r1 ~ 1, r2 ~ x, r3 ~ y, r4 ~ x^2, r5 ~ y^2, r6 ~ xy
@@ -456,7 +527,23 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
         }
 
         x = 0;
-#if CV_SIMD128
+
+#if CV_RVV && CV_SIMD_SCALABLE
+        const int lanes = static_cast<int>(__riscv_vsetvlmax_e32m1());
+        for (; x <= width*5 - lanes; x += lanes)
+        {
+            const vfloat32m1_t center = __riscv_vle32_v_f32m1(srow[m] + x, lanes);
+            vfloat32m1_t acc = __riscv_vfmul_vf_f32m1(center, kernel[0], lanes);
+            for (i = 1; i <= m; ++i)
+            {
+                const vfloat32m1_t upper = __riscv_vle32_v_f32m1(srow[m-i] + x, lanes);
+                const vfloat32m1_t lower = __riscv_vle32_v_f32m1(srow[m+i] + x, lanes);
+                const vfloat32m1_t sum = __riscv_vfadd_vv_f32m1(upper, lower, lanes);
+                acc = __riscv_vfmacc_vf_f32m1(acc, kernel[i], sum, lanes);
+            }
+            __riscv_vse32_v_f32m1(vsum + x, acc, lanes);
+        }
+#elif CV_SIMD128
         {
             for( ; x <= width*5 - 16; x += 16 )
             {
@@ -523,7 +610,22 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
         // horizontal blur
         x = 0;
-#if CV_SIMD128
+#if CV_RVV && CV_SIMD_SCALABLE
+        const int hlanes = static_cast<int>(__riscv_vsetvlmax_e32m1());
+        for (; x <= width*5 - hlanes; x += hlanes)
+        {
+            const vfloat32m1_t center = __riscv_vle32_v_f32m1(vsum + x, hlanes);
+            vfloat32m1_t acc = __riscv_vfmul_vf_f32m1(center, kernel[0], hlanes);
+            for (i = 1; i <= m; ++i)
+            {
+                const vfloat32m1_t left = __riscv_vle32_v_f32m1(vsum + x - i*5, hlanes);
+                const vfloat32m1_t right = __riscv_vle32_v_f32m1(vsum + x + i*5, hlanes);
+                const vfloat32m1_t sum = __riscv_vfadd_vv_f32m1(left, right, hlanes);
+                acc = __riscv_vfmacc_vf_f32m1(acc, kernel[i], sum, hlanes);
+            }
+            __riscv_vse32_v_f32m1(hsum + x, acc, hlanes);
+        }
+#elif CV_SIMD128
         {
             for( ; x <= width*5 - 8; x += 8 )
             {

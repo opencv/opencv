@@ -51,4 +51,34 @@ PERF_TEST_P(DenseOpticalFlow_Farneback, perf,
     SANITY_CHECK_NOTHING();
 }
 
+CV_ENUM(FarnebackGaussian, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+typedef tuple<Size, int, FarnebackGaussian> FarnebackSequenceParams;
+typedef TestBaseWithParam<FarnebackSequenceParams> FarnebackSequence;
+
+PERF_TEST_P(FarnebackSequence, calcOpticalFlowFarneback,
+            Combine(Values(sz720p, sz1080p), Values(5, 7), FarnebackGaussian::all()))
+{
+    const Size size = get<0>(GetParam());
+    const int polyN = get<1>(GetParam());
+    const int flags = get<2>(GetParam());
+    const double polySigma = polyN == 5 ? 1.1 : 1.5;
+    const std::vector<Mat> frames = makeSequence(size);
+    Mat flow(size, CV_32FC2);
+    int pair = 0;
+
+    // Nine samples cover all frame pairs. Wrap for the framework's default tenth sample.
+    declare.iterations(SEQUENCE_LENGTH).time(900);
+    TEST_CYCLE()
+    {
+        cv::calcOpticalFlowFarneback(frames[pair], frames[pair + 1], flow,
+                                    0.5, 5, 13, 3, polyN, polySigma, flags);
+        pair = (pair + 1) % (SEQUENCE_LENGTH - 1);
+    }
+
+    EXPECT_EQ(size, flow.size());
+    EXPECT_EQ(CV_32FC2, flow.type());
+    EXPECT_TRUE(checkRange(flow));
+    SANITY_CHECK_NOTHING();
+}
+
 }} // namespace
