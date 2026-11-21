@@ -115,7 +115,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
     Mat src = _src.getMat();
     CV_Assert( !src.empty() );
-    CV_Assert( ksize == -1 || ksize == 1 || ksize == 3 || ksize == 5 || ksize == 7 );
+    CV_Assert( ksize == FILTER_SCHARR || (ksize > 0 && ksize <= 31 && ksize % 2 == 1) );
     CV_Assert( ddepth == CV_16S || ddepth == CV_32F );
 
     Size wholeSize;
