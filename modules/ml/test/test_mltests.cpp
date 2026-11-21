@@ -311,6 +311,32 @@ INSTANTIATE_TEST_CASE_P(/**/, ML_SL_Params, testing::ValuesIn(ML_SL_Params_List)
 
 //==================================================================================================
 
+TEST(ML_DTrees, default_cvfolds_train_no_crash_regression_28942)
+{
+    const int N = 10;
+    const int F = 2;
+
+    Mat samples(N, F, CV_32FC1);
+    Mat labels(N, 1, CV_32SC1);
+    for (int i = 0; i < N; i++)
+    {
+        samples.at<float>(i, 0) = static_cast<float>(i % 2);
+        samples.at<float>(i, 1) = static_cast<float>(i / 2);
+        labels.at<int>(i, 0) = i % 2;
+    }
+
+    Ptr<TrainData> train_data = TrainData::create(samples, ROW_SAMPLE, labels);
+    ASSERT_FALSE(train_data.empty());
+
+    Ptr<DTrees> dtree = DTrees::create();
+    ASSERT_FALSE(dtree.empty());
+    EXPECT_EQ(1, dtree->getCVFolds());
+    dtree->setMaxDepth(10);
+    EXPECT_TRUE(dtree->train(train_data));
+}
+
+//==================================================================================================
+
 TEST(TrainDataGet, layout_ROW_SAMPLE)  // Details: #12236
 {
     cv::Mat test = cv::Mat::ones(150, 30, CV_32FC1) * 2;
