@@ -5236,7 +5236,6 @@ TEST(Layer_Test_EyeLike, Unsigned64)
     testEyeLikeUnsigned(CV_64U);
 }
 
-
 typedef testing::TestWithParam<int> Test_Col2Im_ShapeType;
 
 TEST_P(Test_Col2Im_ShapeType, EmptyInput)
@@ -5682,5 +5681,85 @@ TEST(Test_Col2Im, TapRangeBoundaryAndStridedRows)
         normAssert(ref, outputs[0], cv::format("tap_range_case_%zu", caseIdx).c_str());
     }
 }
+
+static void testReduceUnsigned(int depth, const std::string& op, const std::vector<int>& axes,
+                               const Mat& input, const Mat& expectedRef)
+{
+    LayerParams lp;
+    lp.type = "Reduce2";
+    lp.name = "testReduce";
+    lp.set("reduce", op);
+    lp.set("keepdims", true);
+    if (!axes.empty())
+        lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Reduce2", lp);
+    ASSERT_TRUE(layer);
+
+    std::vector<Mat> inputs(1, input);
+    std::vector<Mat> outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(depth, outputs[0].depth());
+    EXPECT_EQ(shape(expectedRef), shape(outputs[0]));
+
+    Mat ref64, out64;
+    expectedRef.convertTo(ref64, CV_64F);
+    outputs[0].convertTo(out64, CV_64F);
+    EXPECT_EQ(0, cvtest::norm(ref64, out64, NORM_INF));
+}
+
+typedef testing::TestWithParam<MatDepth> Layer_Test_Reduce_Unsigned;
+
+TEST_P(Layer_Test_Reduce_Unsigned, MaxMinSum)
+{
+    const int depth = GetParam();
+
+    // Values > 2^31 verify unsigned comparison logic (not treated as negative int32)
+    const double inVals[2][3] = {
+        {1000000000.0, 3000000000.0, 2000000000.0},
+        {4000000000.0,  500000000.0, 2500000000.0}
+    };
+    Mat input(2, 3, CV_64F, (void*)inVals);
+    input.convertTo(input, depth);
+
+    // Max along axis 0: [4000000000, 3000000000, 2500000000]
+    {
+        const double refVals[1][3] = {
+            {4000000000.0, 3000000000.0, 2500000000.0}
+        };
+        Mat ref(1, 3, CV_64F, (void*)refVals);
+        ref.convertTo(ref, depth);
+        testReduceUnsigned(depth, "MAX", {0}, input, ref);
+    }
+
+    // Min along axis 1: [[1000000000], [500000000]]
+    {
+        const double refVals[2][1] = {
+            {1000000000.0},
+            { 500000000.0}
+        };
+        Mat ref(2, 1, CV_64F, (void*)refVals);
+        ref.convertTo(ref, depth);
+        testReduceUnsigned(depth, "MIN", {1}, input, ref);
+    }
+
+    // Sum along axis 0: [5000000000, 3500000000, 4500000000]
+    if (depth == CV_64U)
+    {
+        const double refVals[1][3] = {
+            {5000000000.0, 3500000000.0, 4500000000.0}
+        };
+        Mat ref(1, 3, CV_64F, (void*)refVals);
+        ref.convertTo(ref, depth);
+        testReduceUnsigned(depth, "SUM", {0}, input, ref);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_Unsigned, Values(
+    CV_32U,
+    CV_64U
+));
 
 }} // namespace
