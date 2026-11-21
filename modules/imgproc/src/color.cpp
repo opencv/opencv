@@ -201,7 +201,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
     if(dcn <= 0)
             dcn = dstChannels(code);
 
-    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() &&
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() && CV_MAT_DEPTH(_src.type()) != CV_16F &&
                 !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),
                 ocl_cvtColor(_src, _dst, code, dcn) )
 
