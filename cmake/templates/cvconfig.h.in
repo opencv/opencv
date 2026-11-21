@@ -79,6 +79,9 @@
 /* JPEG XL codec */
 #cmakedefine HAVE_JPEGXL
 
+/* HTJ2K (JPEG 2000 Part 15) codec */
+#cmakedefine HAVE_OPENHTJ2K
+
 /* GDCM DICOM codec */
 #cmakedefine HAVE_GDCM
 
