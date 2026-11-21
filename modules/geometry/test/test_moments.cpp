@@ -88,4 +88,69 @@ TEST(Imgproc_Moments, degenerateContours)
     EXPECT_EQ(m2.m00, 0);
 }
 
+TEST(Geometry_MatchShapes, reflectedContour)
+{
+    const std::vector<Point> triangle = {{0, 0}, {5, 0}, {1, 2}};
+    const std::vector<Point> reflection = {{0, 0}, {-5, 0}, {-1, 2}};
+
+    // Reflection changes only the sign of h7, whose magnitude is 8 / 4100625.
+    const double logMagnitude = std::abs(std::log10(8.0 / 4100625));
+    const double distances[] = {2 / logMagnitude, 2 * logMagnitude, 2};
+    double hu[7];
+    HuMoments(moments(triangle), hu);
+
+    for (int method : {CONTOURS_MATCH_I1, CONTOURS_MATCH_I2, CONTOURS_MATCH_I3})
+    {
+        SCOPED_TRACE(method);
+        EXPECT_NEAR(0.0, matchShapes(triangle, reflection, method, 0), 1e-12);
+        EXPECT_NEAR(0.0, matchShapes(triangle, reflection, method, 0, 1e-5), 1e-12);
+        EXPECT_NEAR(0.0, matchShapes(triangle, reflection, method, 0, std::abs(hu[6])), 1e-12);
+        for (double eps : {1e-6, 0.0})
+            EXPECT_NEAR(distances[method - CONTOURS_MATCH_I1], matchShapes(triangle, reflection, method, 0, eps), 1e-12);
+    }
+}
+
+TEST(Geometry_MatchShapes, pairwiseThreshold)
+{
+    const std::vector<Point> square = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+    const std::vector<Point> triangle = {{0, 0}, {5, 0}, {1, 2}};
+    // Only h1 is nonzero in the square. The two h1 values are 1/6 and 5/18.
+    const double expected = std::log10(5.0 / 3.0);
+    const int method = CONTOURS_MATCH_I2;
+    const double legacy = matchShapes(square, triangle, method, 1);
+    EXPECT_NEAR(expected, legacy, 1e-12);
+    EXPECT_EQ(legacy, matchShapes(square, triangle, method, 0, 1e-5));
+    EXPECT_NEAR(expected, matchShapes(square, triangle, method, 1, 0.0), 1e-12);
+    for (int mode : {CONTOURS_MATCH_I1, CONTOURS_MATCH_I2, CONTOURS_MATCH_I3})
+    {
+        SCOPED_TRACE(mode);
+        EXPECT_EQ(0.0, matchShapes(square, triangle, mode, 0, 0.2));
+        EXPECT_EQ(0.0, matchShapes(triangle, square, mode, 0, 0.2));
+    }
+}
+
+TEST(Geometry_MatchShapes, degenerateContours)
+{
+    const std::vector<Point> line = {{0, 0}, {1, 1}, {2, 2}};
+    const std::vector<Point> triangle = {{0, 0}, {5, 0}, {1, 2}};
+    for (int method : {CONTOURS_MATCH_I1, CONTOURS_MATCH_I2, CONTOURS_MATCH_I3})
+    {
+        SCOPED_TRACE(method);
+        for (double eps : {0.0, 1e-5, 1.0})
+        {
+            SCOPED_TRACE(eps);
+            EXPECT_EQ(0.0, matchShapes(line, line, method, 0, eps));
+            EXPECT_EQ(DBL_MAX, matchShapes(line, triangle, method, 0, eps));
+            EXPECT_EQ(DBL_MAX, matchShapes(triangle, line, method, 0, eps));
+        }
+    }
+}
+
+TEST(Geometry_MatchShapes, invalidThreshold)
+{
+    const std::vector<Point> triangle = {{0, 0}, {5, 0}, {1, 2}};
+    for (double eps : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()})
+        EXPECT_THROW(matchShapes(triangle, triangle, CONTOURS_MATCH_I2, 0, eps), cv::Exception);
+}
+
 }} // namespace
