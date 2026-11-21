@@ -1308,7 +1308,7 @@ Mat estimateAffine2D(InputArray from, InputArray to, OutputArray mask, int metho
     if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
-        return ransac_output->getModel().rowRange(0,2);
+        return ransac_output->getModel().rowRange(0,2).clone();
     }
     if (mask.needed()){
         mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);

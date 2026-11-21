@@ -1428,14 +1428,15 @@ Mat::operator Matx<_Tp, m, n>() const
 template<typename _Tp> inline
 void Mat::push_back(const _Tp& elem)
 {
+    CV_Assert( !isSubmatrix() );
     if( !data )
     {
         *this = Mat(1, 1, traits::Type<_Tp>::value, (void*)&elem).clone();
         return;
     }
-    CV_Assert(traits::Type<_Tp>::value == type() && cols == 1);
+    CV_Assert(traits::Type<_Tp>::value == type() && (dims == 1 || cols == 1));
     const uchar* tmp = dataend + step[0];
-    if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
+    if( isContinuous() && tmp <= datalimit )
     {
         *(_Tp*)(data + (size.p[0]++) * step.p[0]) = elem;
         if (dims == 2)

@@ -1577,27 +1577,24 @@ Mat Mat::diag(int d) const
 
 void Mat::pop_back(size_t nelems)
 {
+    CV_Assert( !isSubmatrix() );
     CV_Assert( nelems <= (size_t)size.p[0] );
     CV_Assert( dims >= 1 );
 
-    if( isSubmatrix() )
-        *this = rowRange(0, size.p[0] - (int)nelems);
-    else
-    {
-        size.p[0] -= (int)nelems;
-        if (dims == 2)
-            rows = size.p[0];
-        else if (dims == 1)
-            cols = size.p[0];
-        dataend -= nelems*step.p[0];
-    }
+    size.p[0] -= (int)nelems;
+    if (dims == 2)
+        rows = size.p[0];
+    else if (dims == 1)
+        cols = size.p[0];
+    dataend -= nelems*step.p[0];
 }
 
 
 void Mat::push_back_(const void* elem)
 {
+    CV_Assert( !isSubmatrix() );
     size_t r = size.p[0];
-    if( isSubmatrix() || dataend + step.p[0] > datalimit )
+    if( dataend + step.p[0] > datalimit )
         reserve( std::max(r + 1, (r*3+1)/2) );
 
     size_t esz = elemSize();
@@ -1618,10 +1615,11 @@ void Mat::push_back_(const void* elem)
 
 void Mat::reserve(size_t nelems)
 {
+    CV_Assert( !isSubmatrix() );
     const size_t MIN_SIZE = 64;
 
     CV_Assert( (int)nelems >= 0 );
-    if( !isSubmatrix() && step.p[0] != 0 && data + step.p[0]*nelems <= datalimit )
+    if( step.p[0] != 0 && data + step.p[0]*nelems <= datalimit )
         return;
 
     int r = size.p[0];
@@ -1644,7 +1642,7 @@ void Mat::reserve(size_t nelems)
     Mat m(newsize, type());
     if( r > 0)
     {
-        Mat mpart = m.rowRange(0, r);
+        Mat mpart = m.dims == 1 ? m.colRange(0, r) : m.rowRange(0, r);
         copyTo(mpart);
     }
 
@@ -1688,12 +1686,13 @@ void Mat::reserveBuffer(size_t nbytes)
 
 void Mat::resize(size_t nelems)
 {
+    CV_Assert( !isSubmatrix() );
     int r = size.p[0];
     if( r == (int)nelems )
         return;
     CV_Assert( (int)nelems >= 0 );
 
-    if( isSubmatrix() || data + step.p[0]*nelems > datalimit )
+    if( data + step.p[0]*nelems > datalimit )
         reserve(nelems);
 
     size.p[0] = (int)nelems;
@@ -1714,13 +1713,14 @@ void Mat::resize(size_t nelems, const Scalar& s)
 
     if( size.p[0] > saveRows )
     {
-        Mat part = rowRange(saveRows, size.p[0]);
+        Mat part = dims == 1 ? colRange(saveRows, size.p[0]) : rowRange(saveRows, size.p[0]);
         part = s;
     }
 }
 
 void Mat::push_back(const Mat& elems)
 {
+    CV_Assert( !isSubmatrix() );
     size_t r = size.p[0];
     size_t delta = elems.size.p[0];
     if( delta == 0 )
@@ -1753,7 +1753,7 @@ void Mat::push_back(const Mat& elems)
             step.p[0] = step0 = minstep;
     }
 
-    if( isSubmatrix() || dataend + step0*delta > datalimit )
+    if( dataend + step0*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
     size.p[0] += int(delta);
