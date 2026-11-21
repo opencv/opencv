@@ -5023,6 +5023,44 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Hardmax, Values(
     make_tuple(CV_Bool, 0.0)
 ));
 
+typedef testing::TestWithParam<MatDepth> Layer_Test_OneHot_ValuesDepth;
+TEST_P(Layer_Test_OneHot_ValuesDepth, Accuracy)
+{
+    const int depth = GetParam();
+
+    LayerParams lp;
+    lp.type = "OneHot";
+    lp.name = "test_onehot";
+    lp.set("axis", -1);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // indices {0, 2, 1}, depth 3, values {off = 0, on = 1}
+    std::vector<int64_t> idx = {0, 2, 1};
+    std::vector<int64_t> numClasses = {3};
+    Mat values;
+    Mat(std::vector<float>{0.f, 1.f}).convertTo(values, depth);
+
+    std::vector<Mat> inputs{Mat(idx).reshape(1, std::vector<int>{3}),
+                            Mat(numClasses).reshape(1, std::vector<int>{1}),
+                            values.reshape(1, std::vector<int>{2})}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    // Each row has `on` at its index and `off` everywhere else
+    Mat ref;
+    Mat(std::vector<float>{1, 0, 0,
+                           0, 0, 1,
+                           0, 1, 0}).reshape(1, 3).convertTo(ref, depth);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(outputs[0].depth(), depth);
+    EXPECT_EQ(0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_OneHot_ValuesDepth, Values(
+    CV_8U, CV_32S, CV_32F, CV_32U, CV_64U, CV_Bool
+));
+
 static void testClipMinGreaterThanMax(int depth, bool dynamic)
 {
     const int total = 64;
