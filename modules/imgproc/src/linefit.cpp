@@ -97,7 +97,126 @@ static void fitLine2D_wods( const Point2f* points, int count, float *weights, fl
     line[3] = (float) y;
 }
 
-static void fitLine3D_wods( const Point3f * points, int count, float *weights, float *line )
+namespace
+{
+struct LineFit3DScatter
+{
+    double xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+
+    void add(const Point3d& p, double weight = 1)
+    {
+        xx += weight * (p.x * p.x);
+        xy += weight * (p.x * p.y);
+        xz += weight * (p.x * p.z);
+        yy += weight * (p.y * p.y);
+        yz += weight * (p.y * p.z);
+        zz += weight * (p.z * p.z);
+    }
+
+    LineFit3DScatter& operator+=(const LineFit3DScatter& rhs)
+    {
+        xx += rhs.xx;
+        xy += rhs.xy;
+        xz += rhs.xz;
+        yy += rhs.yy;
+        yz += rhs.yz;
+        zz += rhs.zz;
+        return *this;
+    }
+};
+
+struct LineFit3DSummary
+{
+    int count = 0;
+    Point3d origin, mean;
+    LineFit3DScatter scatter;
+
+    Point3d centroid() const { return origin + mean; }
+};
+
+static void mergeLineFit3D(LineFit3DSummary& left, const LineFit3DSummary& right)
+{
+    if (!left.count)
+    {
+        left = right;
+        return;
+    }
+    // Combine the centered block scatters and the scatter of their means.
+    const Point3d delta = (right.origin - left.origin) + (right.mean - left.mean);
+    const int combined = left.count + right.count;
+    const double fraction = static_cast<double>(right.count) / combined;
+    left.mean += fraction * delta;
+    left.scatter += right.scatter;
+    left.scatter.add(delta, fraction * left.count);
+    left.count = combined;
+}
+
+static LineFit3DSummary accumulateLineFit3D(const Point3f* points, int count)
+{
+    constexpr int blockSize = 256;
+    double x[blockSize], y[blockSize], z[blockSize];
+    LineFit3DSummary total;
+    for (int base = 0; base < count;)
+    {
+        LineFit3DSummary block;
+        block.count = std::min(count - base, blockSize);
+        block.origin = Point3d(points[base]);
+        for (int i = 0; i < block.count; ++i)
+        {
+            const Point3d p = Point3d(points[base + i]) - block.origin;
+            x[i] = p.x;
+            y[i] = p.y;
+            z[i] = p.z;
+            block.mean += p;
+        }
+        // Center the staged coordinates before forming any products.
+        block.mean *= 1.0 / block.count;
+        for (int i = 0; i < block.count; ++i)
+        {
+            const Point3d p(x[i] - block.mean.x, y[i] - block.mean.y, z[i] - block.mean.z);
+            block.scatter.add(p);
+        }
+        mergeLineFit3D(total, block);
+        base += block.count;
+    }
+    return total;
+}
+} // namespace
+
+// Keep the L2 staging frame out of the shared robust dispatcher.
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#elif defined(_MSC_VER)
+__declspec(noinline)
+#endif
+static void fitLine3D_L2(const Point3f* points, int count, float* line)
+{
+    CV_Assert(count > 0);
+
+    const LineFit3DSummary summary = accumulateLineFit3D(points, count);
+    const LineFit3DScatter& s = summary.scatter;
+    const double xx = s.xx, xy = s.xy, xz = s.xz, yy = s.yy, yz = s.yz, zz = s.zz;
+
+    // The smallest eigenvector of trace(scatter)*I - scatter minimizes squared line distance.
+    const Matx33d distanceMatrix(yy + zz, -xy, -xz,
+                                -xy, xx + zz, -yz,
+                                -xz, -yz, xx + yy);
+    // The Jacobi fallback uses an absolute tolerance for off-diagonal entries.
+    const double scale = std::max(xx, std::max(yy, zz));
+    Vec3d values;
+    Matx33d vectors = Matx33d::zeros();
+    eigen(distanceMatrix * (scale > 0 ? 1.0 / scale : 1.0), values, vectors);
+
+    const Point3d center = summary.centroid();
+    line[0] = static_cast<float>(vectors(2, 0));
+    line[1] = static_cast<float>(vectors(2, 1));
+    line[2] = static_cast<float>(vectors(2, 2));
+    line[3] = static_cast<float>(center.x);
+    line[4] = static_cast<float>(center.y);
+    line[5] = static_cast<float>(center.z);
+}
+
+static void fitLine3D_wods( const Point3f * points, int count, const float *weights, float *line )
 {
     CV_Assert(count > 0);
     int i;
@@ -112,47 +231,24 @@ static void fitLine3D_wods( const Point3f * points, int count, float *weights, f
     memset( evl, 0, 3*sizeof(evl[0]));
     memset( evc, 0, 9*sizeof(evl[0]));
 
-    if( weights )
+    for( i = 0; i < count; i++ )
     {
-        for( i = 0; i < count; i++ )
-        {
-            float x = points[i].x;
-            float y = points[i].y;
-            float z = points[i].z;
-            float w = weights[i];
+        float x = points[i].x;
+        float y = points[i].y;
+        float z = points[i].z;
+        float w = weights[i];
 
 
-            x2 += x * x * w;
-            xy += x * y * w;
-            xz += x * z * w;
-            y2 += y * y * w;
-            yz += y * z * w;
-            z2 += z * z * w;
-            x0 += x * w;
-            y0 += y * w;
-            z0 += z * w;
-            w0 += w;
-        }
-    }
-    else
-    {
-        for( i = 0; i < count; i++ )
-        {
-            float x = points[i].x;
-            float y = points[i].y;
-            float z = points[i].z;
-
-            x2 += x * x;
-            xy += x * y;
-            xz += x * z;
-            y2 += y * y;
-            yz += y * z;
-            z2 += z * z;
-            x0 += x;
-            y0 += y;
-            z0 += z;
-        }
-        w0 = (float) count;
+        x2 += x * x * w;
+        xy += x * y * w;
+        xz += x * z * w;
+        y2 += y * y * w;
+        yz += y * z * w;
+        z2 += z * z * w;
+        x0 += x * w;
+        y0 += y * w;
+        z0 += z * w;
+        w0 += w;
     }
 
     x2 /= w0;
@@ -476,7 +572,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
     switch (dist)
     {
     case cv::DIST_L2:
-        return fitLine3D_wods( points, count, 0, line );
+        return fitLine3D_L2(points, count, line);
 
     case cv::DIST_L1:
         calc_weights = weightL1;
