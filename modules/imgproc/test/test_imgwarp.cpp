@@ -1274,6 +1274,37 @@ TEST(Imgproc_Remap, lanczos4_unsupported_depth)
     }
 }
 
+typedef testing::TestWithParam<tuple<int, int> > Imgproc_CubicTransparent;
+
+TEST_P(Imgproc_CubicTransparent, uses_each_destination_pixel)
+{
+    const int depth = get<0>(GetParam());
+    const int cn = get<1>(GetParam());
+    const int width = 35;
+    const uchar background[] = {53, 70, 101, 84};
+    const Mat src(8, 8, CV_MAKETYPE(depth, cn), Scalar::all(113));
+    const Mat mapx(1, width, CV_32F, Scalar(-0.75));
+    const Mat mapy(1, width, CV_32F, Scalar(5.25));
+    Mat bg(1, width, CV_8UC(cn));
+    for (int x = 0; x < width; ++x)
+        for (int c = 0; c < cn; ++c)
+            bg.ptr<uchar>()[x*cn + c] = background[(x + c) % 4];
+
+    std::vector<uchar> pixels(width*src.elemSize());
+    Mat dst(1, width, src.type(), pixels.data());
+    bg.convertTo(dst, depth);
+
+    // At x = -0.75 the in-bounds taps have a combined weight of 29/128.
+    Mat expected;
+    bg.convertTo(expected, depth, 99./128, 113*29./128);
+
+    remap(src, dst, mapx, mapy, INTER_CUBIC, BORDER_TRANSPARENT);
+    EXPECT_EQ(0, cvtest::norm(expected, dst, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicTransparent, testing::Combine(
+    testing::Values(CV_8U, CV_16U, CV_32F), testing::Values(1, 3, 4)));
+
 // https://github.com/opencv/opencv/issues/29589
 TEST(Imgproc_Warp, reject_nd_input)
 {
