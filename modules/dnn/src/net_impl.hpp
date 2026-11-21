@@ -126,7 +126,7 @@ struct Net::Impl : public detail::NetImplBase
     std::string importFailure;
     ModelFormat modelFormat;
     DataLayout originalLayout;
-    // int onnx_opset;
+    int onnx_opset = -1;  // ai.onnx opset of the loaded model; -1 for other formats
 
     NamesHash argnames;
     NamesHash dimnames;
@@ -170,6 +170,20 @@ struct Net::Impl : public detail::NetImplBase
     };
     bool fusedSnapshotValid = false;
     std::vector<FusedGraphSnapshot> fusedSnapshot;
+
+    // Backend partition. The first finalizeGraph() pass of finalize() decides where each op runs;
+    // useBlockLayout() lays tensors out for that choice, so the second pass reuses it.
+    enum { PLACED_ON_HOST = -1 };  // a shape op computed on the host inside an accelerated graph
+    std::unordered_map<const LayerInfo*, int> plannedBackend;
+    bool partitionPlanned = false;
+    size_t minAccelSubgraphSize = 1;
+    // Ops whose accelerated executor failed at runtime; they run on CPU after the next finalize().
+    std::set<const LayerInfo*> accelFailedOps;
+    const LayerInfo* accelRunningOp = nullptr;  // the accelerated op being run; still set if it threw
+    void planOpPlacement(const Ptr<Graph>& graph, bool useCUDA,
+                         std::vector<int>& placement, std::vector<Ptr<Layer> >& accelExecs);
+    bool retryAfterAccelFailure(const cv::Exception& e);
+
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<int64_t> dimvalues;
