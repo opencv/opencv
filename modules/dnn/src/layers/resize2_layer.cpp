@@ -1295,8 +1295,10 @@ public:
         }
 
         Mat inp, out;
+        // Nearest only copies values, so CV_64S can stay int64 instead of going through float.
+        const bool nearestInt64 = depth == CV_64S && interpolation == "nearest";
         if (depth != CV_32F && depth != CV_8S && depth != CV_8U && depth != CV_16F && depth != CV_16BF &&
-            depth != CV_32S) {
+            depth != CV_32S && !nearestInt64) {
             inp_.convertTo(inp, CV_32F);
             out.fit(outShape, CV_32F);
             depth = CV_32F;
@@ -1340,6 +1342,9 @@ public:
                 break;
             case CV_32S:
                 resizeNearest<int32_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            case CV_64S:
+                resizeNearest<int64_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default: CV_Error(Error::StsUnsupportedFormat,"Unsupported depth");
             }
