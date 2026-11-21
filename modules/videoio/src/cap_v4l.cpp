@@ -287,6 +287,8 @@ typedef uint32_t __u32;
 #define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
 #endif
 
+#include "cap_v4l_internal.hpp"
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
@@ -349,6 +351,8 @@ struct Buffer
 {
     Memory memories[VIDEO_MAX_PLANES];
     v4l2_plane planes[VIDEO_MAX_PLANES] = {};
+    // Keep inferred copy sizes separate from the driver metadata used for QBUF.
+    size_t planeBytesUsed[VIDEO_MAX_PLANES] = {};
     // Total number of bytes occupied by data in the all planes (payload)
     __u32 bytesused;
     // This is dequeued buffer. It used for to put it back in the queue.
@@ -950,22 +954,91 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
         buf.m.planes = mplanes;
         buf.length = VIDEO_MAX_PLANES;
     }
-
-    while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
-        int err = errno;
-        if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
-            // Maybe buffer not in the queue? Try to put there
-            if (!tryIoctl(VIDIOC_QBUF, &buf))
-                return false;
-            continue;
+    const size_t maxInvalidFrameCount = req.count > 0 ? req.count : 1;
+    size_t invalidFrameCount = 0;
+    size_t payloadSize = 0;
+    const size_t frameWidth = V4L2_TYPE_IS_MULTIPLANAR(type) ? form.fmt.pix_mp.width : form.fmt.pix.width;
+    const size_t frameHeight = V4L2_TYPE_IS_MULTIPLANAR(type) ? form.fmt.pix_mp.height : form.fmt.pix.height;
+    const size_t minimumPayloadSize = v4l2_internal::minimumPayloadSize(palette, frameWidth, frameHeight);
+    const size_t maxPayloadSize = static_cast<size_t>(std::numeric_limits<int>::max());
+    size_t planeBytesUsed[VIDEO_MAX_PLANES] = {};
+    bool validFrame = false;
+    while (invalidFrameCount < maxInvalidFrameCount)
+    {
+        if (!tryIoctl(VIDIOC_DQBUF, &buf))
+        {
+            int err = errno;
+            if (err == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
+            {
+                // Maybe buffer not in the queue? Try to put there
+                if (!tryIoctl(VIDIOC_QBUF, &buf))
+                    return false;
+                continue;
+            }
+            /* display the error and stop processing */
+            returnFrame = false;
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
+            return false;
         }
-        /* display the error and stop processing */
-        returnFrame = false;
-        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't read frame (VIDIOC_DQBUF): errno=" << err << " (" << strerror(err) << ")");
+
+        CV_Assert(buf.index < req.count);
+        payloadSize = 0;
+        bool validPayload = true;
+        if (V4L2_TYPE_IS_MULTIPLANAR(type))
+        {
+            for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++)
+            {
+                const v4l2_plane& plane = buf.m.planes[n_planes];
+                const size_t mappedLength = buffers[buf.index].memories[n_planes].length;
+                const size_t fallbackPayloadSize = minimumPayloadSize == 0 ? 0 :
+                    (num_planes == 1 ? minimumPayloadSize : form.fmt.pix_mp.plane_fmt[n_planes].sizeimage);
+                size_t planePayloadSize = 0;
+                if (!v4l2_internal::getPlanePayloadSize(plane.bytesused, plane.data_offset,
+                                                       plane.length, mappedLength, planePayloadSize,
+                                                       fallbackPayloadSize) ||
+                    planePayloadSize > maxPayloadSize - payloadSize)
+                {
+                    validPayload = false;
+                    break;
+                }
+                planeBytesUsed[n_planes] = planePayloadSize + plane.data_offset;
+                payloadSize += planePayloadSize;
+            }
+        }
+        else
+        {
+            const size_t mappedLength = buffers[buf.index].memories[MEMORY_ORIG].length;
+            validPayload = v4l2_internal::getPlanePayloadSize(buf.bytesused, 0, buf.length,
+                                                              mappedLength, payloadSize, minimumPayloadSize);
+        }
+        if (payloadSize > maxPayloadSize)
+            validPayload = false;
+
+        const bool errorFlagSet = (buf.flags & V4L2_BUF_FLAG_ERROR) != 0;
+        if (validPayload && v4l2_internal::isFrameValid(errorFlagSet, payloadSize, minimumPayloadSize))
+        {
+            validFrame = true;
+            break;
+        }
+
+        CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): dropping incomplete or errored frame"
+                     << " (flags=" << buf.flags << ", payload=" << payloadSize
+                     << ", minimum=" << minimumPayloadSize << ")");
+        bufferIndex = -1;
+        if (!tryIoctl(VIDIOC_QBUF, &buf))
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): failed to requeue invalid frame: errno="
+                         << errno << " (" << strerror(errno) << ")");
+            return false;
+        }
+        ++invalidFrameCount;
+    }
+    if (!validFrame)
+    {
+        CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): stopping after "
+                       << invalidFrameCount << " consecutive invalid frames");
         return false;
     }
-
-    CV_Assert(buf.index < req.count);
 
     if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
         for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++)
@@ -978,20 +1051,12 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
     bufferIndex = buf.index;
 
     if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-        __u32 offset = 0;
-
         buffers[buf.index].buffer.m.planes = buffers[buf.index].planes;
         memcpy(buffers[buf.index].planes, buf.m.planes, sizeof(mplanes));
-
-        for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-            __u32 bytesused;
-            bytesused = buffers[buf.index].planes[n_planes].bytesused -
-                        buffers[buf.index].planes[n_planes].data_offset;
-            offset += bytesused;
-        }
-        buffers[buf.index].bytesused = offset;
-    } else
-        buffers[buf.index].bytesused = buffers[buf.index].buffer.bytesused;
+        for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++)
+            buffers[buf.index].planeBytesUsed[n_planes] = planeBytesUsed[n_planes];
+    }
+    buffers[buf.index].bytesused = static_cast<__u32>(payloadSize);
 
     //set timestamp in capture struct to be timestamp of most recent frame
     timestamp = buf.timestamp;
@@ -1411,15 +1476,15 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     unsigned char *start;
 
     if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-        __u32 offset = 0;
+        size_t offset = 0;
         start = (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start;
         for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-            __u32 data_offset, bytesused;
-            data_offset = currentBuffer.planes[n_planes].data_offset;
-            bytesused = currentBuffer.planes[n_planes].bytesused - data_offset;
-            memcpy(start + offset, (char *)currentBuffer.memories[n_planes].start + data_offset,
-                   std::min(currentBuffer.memories[n_planes].length, (size_t)bytesused));
-            offset += bytesused;
+            const v4l2_plane& plane = currentBuffer.planes[n_planes];
+            const Memory& memory = currentBuffer.memories[n_planes];
+            CV_Assert(v4l2_internal::copyPlanePayload(start,
+                                                      buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length,
+                                                      offset, memory.start, plane.length, memory.length,
+                                                      currentBuffer.planeBytesUsed[n_planes], plane.data_offset));
         }
 
         imageSize = cv::Size(form.fmt.pix_mp.width, form.fmt.pix_mp.height);
@@ -2078,19 +2143,8 @@ void CvCaptureCAM_V4L::initFrameNonBGR()
         image_type = CV_8UC1;
         if(bufferIndex < 0)
             size = Size(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, 1);
-        else {
-            __u32 bytesused = 0;
-            if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-                __u32 data_offset;
-                for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-                    data_offset = buffers[bufferIndex].planes[n_planes].data_offset;
-                    bytesused += buffers[bufferIndex].planes[n_planes].bytesused - data_offset;
-                }
-            } else {
-                bytesused = buffers[bufferIndex].buffer.bytesused;
-            }
-            size = Size(bytesused, 1);
-        }
+        else
+            size = Size(buffers[bufferIndex].bytesused, 1);
         break;
     }
     frame.create(size, image_type);
@@ -2116,22 +2170,16 @@ bool CvCaptureCAM_V4L::retrieveFrame(int, OutputArray ret)
         CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): buffer input size=" << currentBuffer.bytesused);
 
         if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-            // calculate total size
-            __u32 bytestotal = 0;
-            for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-                const v4l2_plane & cur_plane = currentBuffer.planes[n_planes];
-                bytestotal += cur_plane.bytesused - cur_plane.data_offset;
-            }
             // allocate frame data
-            frame.create(Size(bytestotal, 1), CV_8U);
+            frame.create(Size(static_cast<int>(currentBuffer.bytesused), 1), CV_8U);
             // copy each plane to the frame
-            __u32 offset = 0;
+            size_t offset = 0;
             for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
                 const v4l2_plane & cur_plane = currentBuffer.planes[n_planes];
                 const Memory & cur_mem = currentBuffer.memories[n_planes];
-                memcpy(frame.data + offset,
-                       (char*)cur_mem.start + cur_plane.data_offset,
-                       std::min(currentBuffer.memories[n_planes].length, (size_t)cur_plane.bytesused));
+                CV_Assert(v4l2_internal::copyPlanePayload(frame.data, frame.total(), offset,
+                                                          cur_mem.start, cur_plane.length, cur_mem.length,
+                                                          currentBuffer.planeBytesUsed[n_planes], cur_plane.data_offset));
             }
         } else {
             initFrameNonBGR();
