@@ -186,9 +186,9 @@ struct ModelFusionAttention
         return true;
     }
 
-    // Accept Add op with exactly two inputs; identify the non-constant runtime
+    // Accept Add op with exactly two inputs; given score_arg, identify the other
     // input (the mask tensor). Returns false if the Add doesn't match.
-    bool isMaskAdd(const vector<Ptr<LayerInfo>>& prog, int idx, Arg* out_mask) const
+    bool isMaskAdd(const vector<Ptr<LayerInfo>>& prog, int idx, Arg score_arg, Arg* out_mask) const
     {
         if (idx < 0 || idx >= (int)prog.size() || !prog[idx])
             return false;
@@ -197,7 +197,12 @@ struct ModelFusionAttention
             return false;
         const auto& inputs = prog[idx]->inputs;
         if (inputs.size() != 2) return false;
-        *out_mask = inputs[1];
+        if (inputs[0].idx == score_arg.idx)
+            *out_mask = inputs[1];
+        else if (inputs[1].idx == score_arg.idx)
+            *out_mask = inputs[0];
+        else
+            return false;
         return true;
     }
 
@@ -1173,7 +1178,7 @@ struct ModelFusionAttention
                         cur_out = prog[qk_div_idx]->outputs[0];
                         cur_consumer = singleConsumer(cur_out);
                         Arg maybe_mask;
-                        if (isMaskAdd(prog, cur_consumer, &maybe_mask)) {
+                        if (isMaskAdd(prog, cur_consumer, cur_out, &maybe_mask)) {
                             qk_add_idx = cur_consumer;
                             mask_arg = maybe_mask;
                             has_mask = true;
