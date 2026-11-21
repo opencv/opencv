@@ -29,6 +29,9 @@
 #define CV_WARP_VECTOR_GET_ADDR_C1() \
     v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, src_ix0), \
             addr_1 = v_muladd(v_srcstep, src_iy1, src_ix1);
+#define CV_WARP_VECTOR_GET_ADDR_C2() \
+    v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, v_add(src_ix0, src_ix0)), \
+            addr_1 = v_muladd(v_srcstep, src_iy1, v_add(src_ix1, src_ix1));
 #define CV_WARP_VECTOR_GET_ADDR_C3() \
     v_int32 addr_0 = v_muladd(v_srcstep, src_iy0, v_mul(src_ix0, three)), \
             addr_1 = v_muladd(v_srcstep, src_iy1, v_mul(src_ix1, three));
@@ -84,10 +87,10 @@
     dst_x1 = v_add(dst_x1, delta); \
     CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN)
 
-#define CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(INTER, CN) \
+#define CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2_LAYOUT(INTER, CN, INTERLEAVED) \
     v_float32 src_x0, src_y0, \
               src_x1, src_y1; \
-    if (map1 == map2) { \
+    if (INTERLEAVED) { \
         v_load_deinterleave(sx_data + 2*x, src_x0, src_y0); \
         v_load_deinterleave(sy_data + 2*(x+vlanes_32), src_x1, src_y1); \
     } else { \
@@ -105,6 +108,9 @@
         dst_x1 = v_add(dst_x1, delta); \
     } \
     CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN)
+
+#define CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(INTER, CN) \
+    CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2_LAYOUT(INTER, CN, map1 == map2)
 
 namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -303,6 +309,10 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
+void remapLinearInvoker_32FC2(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
                               const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
@@ -6403,6 +6413,103 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 32F);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
                 CV_WARP_SCALAR_STORE(LINEAR, C1, 32F);
+            }
+        }
+    };
+    parallel_for_(Range(0, dst_rows), worker);
+}
+
+void remapLinearInvoker_32FC2(const float *src_data, size_t src_step, int src_rows, int src_cols,
+                              float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
+                              int border_type, const double border_value[4],
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    auto worker = [&](const Range &r) {
+        CV_INSTRUMENT_REGION();
+
+        const auto *src = src_data;
+        auto *dst = dst_data;
+        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        const bool interleaved = map2_data == nullptr;
+        int srccols = src_cols, srcrows = src_rows;
+        int dstcols = dst_cols;
+        bool relative = is_relative;
+
+        const float bval[] = {saturate_cast<float>(border_value[0]),
+                              saturate_cast<float>(border_value[1])};
+        int border_type_x = border_type != BORDER_CONSTANT &&
+                            border_type != BORDER_TRANSPARENT &&
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
+        int border_type_y = border_type != BORDER_CONSTANT &&
+                            border_type != BORDER_TRANSPARENT &&
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
+        constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_32 = VTraits<v_float32>::vlanes();
+        int uf = vlanes_32 * 2;
+
+        std::array<float, max_vlanes_32> start_indices;
+        std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
+
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
+                 inner_scols = vx_setall_u32((unsigned)srccols - 1),
+                 outer_srows = vx_setall_u32((unsigned)srcrows + 1),
+                 outer_scols = vx_setall_u32((unsigned)srccols + 1);
+        v_float32 delta = vx_setall_f32(static_cast<float>(uf));
+        v_int32 one = vx_setall_s32(1);
+        // Scalable gathers use 32-bit byte offsets.
+        const bool useVector = src_step <= static_cast<size_t>(UINT_MAX) / srcrows;
+        v_int32 v_srcstep = vx_setall_s32(useVector ? static_cast<int>(srcstep) : 0);
+        int32_t addr[max_uf],
+                src_ix[max_uf],
+                src_iy[max_uf];
+        float pixbuf[max_uf*4*2];
+        v_float32 bval_v0 = vx_setall_f32(bval[0]);
+        v_float32 bval_v1 = vx_setall_f32(bval[1]);
+#endif
+
+        for (int y = r.start; y < r.end; y++) {
+            float* dstptr = dst + y*dststep;
+            const float *sx_data = map1_data + y*map1step;
+            const float *sy_data = interleaved ? sx_data : map2_data + y*map2step;
+            int x = 0;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
+            for (; useVector && x <= dstcols - uf; x += uf) {
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2_LAYOUT(LINEAR, C2, interleaved);
+                if (v_reduce_min(inner_mask) != 0) {
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_PAIRS_F32_C2(src_x0, src_y0, 0);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_PAIRS_F32_C2(src_x1, src_y1, vlanes_32);
+                } else {
+                    CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C2, 32F);
+                    CV_WARP_VECTOR_INTER_LOAD(LINEAR, C2, 32F, 32F);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C2);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C2);
+                }
+            }
+#endif // (CV_SIMD || CV_SIMD_SCALABLE)
+
+            for (; x < dstcols; x++) {
+                float sx, sy;
+                if (interleaved) {
+                    sx = sx_data[2*x];
+                    sy = sy_data[2*x+1];
+                } else {
+                    sx = sx_data[x];
+                    sy = sy_data[x];
+                }
+
+                if (relative) {
+                    sx += x;
+                    sy += y;
+                }
+
+                CV_WARP_SCALAR_SHUFFLE(LINEAR, C2, 32F);
+                CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C2);
+                CV_WARP_SCALAR_STORE(LINEAR, C2, 32F);
             }
         }
     };

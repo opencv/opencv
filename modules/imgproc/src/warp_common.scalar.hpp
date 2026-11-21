@@ -9,6 +9,9 @@
     dtype_reg p00##cn, p01##cn, p10##cn, p11##cn;
 #define CV_WARP_SCALAR_SHUFFLE_DEF_C1(inter, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg)
+#define CV_WARP_SCALAR_SHUFFLE_DEF_C2(inter, dtype_reg) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(r, dtype_reg) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg)
 #define CV_WARP_SCALAR_SHUFFLE_DEF_C3(inter, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(r, dtype_reg) \
     CV_WARP_##inter##_SCALAR_SHUFFLE_DEF(g, dtype_reg) \
@@ -33,6 +36,10 @@
 #define CV_WARP_SCALAR_SHUFFLE_LOAD_C1(inter) \
     const auto *srcptr = src + srcstep * iy + ix; \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(g, 1, 0)
+#define CV_WARP_SCALAR_SHUFFLE_LOAD_C2(inter) \
+    const auto *srcptr = src + srcstep * iy + ix*2; \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(r, 2, 0) \
+    CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(g, 2, 1)
 #define CV_WARP_SCALAR_SHUFFLE_LOAD_C3(inter) \
     const auto *srcptr = src + srcstep * iy + ix*3; \
     CV_WARP_##inter##_SCALAR_SHUFFLE_LOAD(r, 3, 0) \
@@ -47,6 +54,9 @@
 
 #define CV_WARP_SCALAR_SHUFFLE_STORE_CONSTANT_BORDER_C1() \
     dstptr[x] = bval[0];
+#define CV_WARP_SCALAR_SHUFFLE_STORE_CONSTANT_BORDER_C2() \
+    dstptr[x*2] = bval[0]; \
+    dstptr[x*2+1] = bval[1];
 #define CV_WARP_SCALAR_SHUFFLE_STORE_CONSTANT_BORDER_C3() \
     dstptr[x*3] = bval[0]; \
     dstptr[x*3+1] = bval[1]; \
@@ -70,6 +80,24 @@
         int iy_ = borderInterpolate_fast(iy + dy, srcrows, border_type_y); \
         size_t glob_ofs = iy_*srcstep + ix_; \
         pxy##g = src[glob_ofs]; \
+    }
+#define CV_WARP_SCALAR_FETCH_PIXEL_C2(dy, dx, pxy) \
+    if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
+        size_t glob_ofs = (iy + dy)*srcstep + (ix + dx)*2; \
+        pxy##r = src[glob_ofs]; \
+        pxy##g = src[glob_ofs+1]; \
+    } else if (border_type == BORDER_CONSTANT) { \
+        pxy##r = bval[0]; \
+        pxy##g = bval[1]; \
+    } else if (border_type == BORDER_TRANSPARENT) { \
+        pxy##r = dstptr[x*2]; \
+        pxy##g = dstptr[x*2+1]; \
+    } else { \
+        int ix_ = borderInterpolate_fast(ix + dx, srccols, border_type_x); \
+        int iy_ = borderInterpolate_fast(iy + dy, srcrows, border_type_y); \
+        size_t glob_ofs = iy_*srcstep + ix_*2; \
+        pxy##r = src[glob_ofs]; \
+        pxy##g = src[glob_ofs+1]; \
     }
 #define CV_WARP_SCALAR_FETCH_PIXEL_C3(dy, dx, pxy) \
     if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
@@ -158,6 +186,9 @@
     float v1##cn = p10##cn + sx*(p11##cn - p10##cn);
 #define CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32_C1() \
     CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32(g)
+#define CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32_C2() \
+    CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32(r) \
+    CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32(g)
 #define CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32_C3() \
     CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32(r) \
     CV_WARP_SCALAR_LINEAR_INTER_CALC_ALPHA_F32(g) \
@@ -171,6 +202,9 @@
 #define CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32(cn) \
     v0##cn += sy*(v1##cn - v0##cn);
 #define CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32_C1() \
+    CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32(g)
+#define CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32_C2() \
+    CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32(r) \
     CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32(g)
 #define CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32_C3() \
     CV_WARP_SCALAR_LINEAR_INTER_CALC_BETA_F32(r) \
@@ -190,6 +224,9 @@
 // Store
 #define CV_WARP_SCALAR_STORE_C1(dtype, var) \
     dstptr[x] = saturate_cast<dtype>(var##g);
+#define CV_WARP_SCALAR_STORE_C2(dtype, var) \
+    dstptr[x*2]   = saturate_cast<dtype>(var##r); \
+    dstptr[x*2+1] = saturate_cast<dtype>(var##g);
 #define CV_WARP_SCALAR_STORE_C3(dtype, var) \
     dstptr[x*3]   = saturate_cast<dtype>(var##r); \
     dstptr[x*3+1] = saturate_cast<dtype>(var##g); \
