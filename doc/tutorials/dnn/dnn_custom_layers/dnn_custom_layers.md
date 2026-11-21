@@ -220,11 +220,42 @@ a centric one.
 
 @snippet dnn/edge_detection.py CropLayer
 
-@note Both methods should return lists.
+A Python layer is not derived from cv::dnn::Layer. Its methods only look similar to
+the C++ ones, so they have their own arguments and return values:
+
+- Constructor `__init__(self, params, blobs)`
+
+Called once for every layer of this type when OpenCV creates it. `params` is a `dict`
+with the layer's hyper-parameters from cv::dnn::LayerParams. Keys are strings and values
+are `int`, `float` or `str` (a tuple of them if a parameter has several values). `blobs`
+is a sequence of numpy arrays with the layer's trained weights. It is empty if the layer
+has no weights.
+
+- Output blobs' shape computation `getMemoryShapes(self, inputs)`
+
+`inputs` is a list of input shapes, one per input blob. Every shape is a sequence of
+integers, for example `(1, 3, 224, 224)`. Return a list of output shapes, one per output
+blob. There are no `requiredOutputs` and `internals` arguments like in C++.
+
+- Run a layer `forward(self, inputs)`
+
+`inputs` is a sequence of numpy arrays, one per input blob. Return a list of numpy arrays,
+one per output blob. Every output must have the shape returned by `getMemoryShapes` and
+the same data type as the output blob allocated by OpenCV (usually `numpy.float32`).
+
+@note Both methods should return lists. Other methods of cv::dnn::Layer such as `finalize`
+are not called for Python layers, so do all the preparations in `getMemoryShapes` like
+the example above does. Python layers are supported only by the
+OpenCV backend (cv.dnn.DNN_BACKEND_OPENCV).
 
 - Register a new layer.
 
 @snippet dnn/edge_detection.py Register
+
+`cv.dnn_registerLayer(type, class)` takes the layer type as it is written in the model
+file and the class that creates the layer. Register the layer before reading the model.
+If OpenCV already has a layer of this type, your class is used instead of it. Call
+`cv.dnn_unregisterLayer(type)` to remove your layer when you do not need it anymore.
 
 That's it! We have replaced an implemented OpenCV's layer to a custom one.
 You may find a full script in the [source code](https://github.com/opencv/opencv/tree/4.x/samples/dnn/edge_detection.py).
