@@ -8,6 +8,7 @@
 #include <opencv2/core/base.hpp>
 
 #define IPP_DISABLE_MINMAXIDX_MANY_ROWS 1  // see Core_MinMaxIdx.rows_overflow test
+#define IPP_DISABLE_MINMAXIDX_32F_C1MR  1  // ippiMinMaxIndx_32f_C1MR over-reads past the mask buffer, see issue #30804
 
 static inline IppDataType ippiGetDataType(int depth)
 {
@@ -44,7 +45,9 @@ static IppStatus ipp_minMaxIndexMask_wrap(const void* pSrc, int srcStep, IppiSiz
     {
     case ipp8u:  return CV_INSTRUMENT_FUN_IPP(ippiMinMaxIndx_8u_C1MR, (const Ipp8u*)pSrc, srcStep, pMask, maskStep, size, pMinVal, pMaxVal, pMinIndex, pMaxIndex);
     case ipp16u: return CV_INSTRUMENT_FUN_IPP(ippiMinMaxIndx_16u_C1MR, (const Ipp16u*)pSrc, srcStep, pMask, maskStep, size, pMinVal, pMaxVal, pMinIndex, pMaxIndex);
+#if !IPP_DISABLE_MINMAXIDX_32F_C1MR
     case ipp32f: return CV_INSTRUMENT_FUN_IPP(ippiMinMaxIndx_32f_C1MR, (const Ipp32f*)pSrc, srcStep, pMask, maskStep, size, pMinVal, pMaxVal, pMinIndex, pMaxIndex);
+#endif
     default:     return ippStsDataTypeErr;
     }
 }

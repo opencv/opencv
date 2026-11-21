@@ -35,13 +35,22 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 # define IPP_DISABLE_NORM_INF_16U_C1MR   0
 #endif
 
-// segmentation fault in ippiNorm[Diff]_Inf_32f_C3CMR with the macOS ippicv (2021.9.1);
-// the newer Linux/Windows ippicv (2026.0.0) is not affected
-#if defined(__APPLE__)
-# define IPP_DISABLE_NORM_INF_32F_C3CMR  1
-# else
-# define IPP_DISABLE_NORM_INF_32F_C3CMR  0
-#endif
+// segmentation fault in ippiNorm[Diff]_Inf_32f_C3CMR: originally seen only with
+// the macOS ippicv (2021.9.1), but also reproduced on Linux with ippicv 2026.1.0
+// (same mask buffer over-read as IPP_DISABLE_NORM_INF_32F_C1MR below), so this is
+// no longer platform-gated
+#define IPP_DISABLE_NORM_INF_32F_C3CMR  1
+
+// ippiNorm_Inf_32f_C1MR over-reads past the mask buffer, see issue #30804
+#define IPP_DISABLE_NORM_INF_32F_C1MR  1
+
+// Same mask buffer over-read as IPP_DISABLE_NORM_INF_32F_C1MR/C3CMR above, in the
+// L1/L2 siblings of the masked 32f norm primitives (ippiNorm_L1/L2_32f_C1MR/C3CMR
+// and the matching ippiNormRel_*/ippiNormDiff_* functions in norm_ipp.cpp)
+#define IPP_DISABLE_NORM_L1_32F_C1MR   1
+#define IPP_DISABLE_NORM_L2_32F_C1MR   1
+#define IPP_DISABLE_NORM_L1_32F_C3CMR  1
+#define IPP_DISABLE_NORM_L2_32F_C3CMR  1
 
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
