@@ -652,6 +652,40 @@ CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG
 
 typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
 
+// Returns the filter type of every scanline. Requires IMWRITE_PNG_COMPRESSION = 0: the stored
+// deflate blocks can be parsed without zlib.
+static vector<uchar> getPngScanlineFilterTypes(const vector<uchar>& png, size_t row_bytes)
+{
+    vector<uchar> z;  // concatenated IDAT data
+    for (size_t pos = 8; pos + 12 <= png.size();)
+    {
+        const size_t len = ((size_t)png[pos] << 24) | ((size_t)png[pos + 1] << 16) | ((size_t)png[pos + 2] << 8) | png[pos + 3];
+        if (len > png.size() - pos - 12)
+            return vector<uchar>();
+        if (memcmp(&png[pos + 4], "IDAT", 4) == 0)
+            z.insert(z.end(), png.begin() + pos + 8, png.begin() + pos + 8 + len);
+        pos += 12 + len;
+    }
+
+    vector<uchar> types;
+    size_t row_pos = 0;  // position inside the current "filter type + row" record
+    for (size_t p = 2; p + 5 <= z.size();)  // skip the 2-byte zlib header
+    {
+        const size_t len = z[p + 1] | (z[p + 2] << 8);
+        if (((z[p] >> 1) & 3) != 0 || len > z.size() - p - 5)
+            return vector<uchar>();  // not a stored block
+        for (size_t i = 0; i < len; i++, row_pos++)
+        {
+            if (row_pos % (row_bytes + 1) == 0)
+                types.push_back(z[p + 5 + i]);
+        }
+        if (z[p] & 1)
+            break;
+        p += 5 + len;
+    }
+    return types;
+}
+
 TEST_P(Imgcodecs_Png_Encode, params)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -664,11 +698,38 @@ TEST_P(Imgcodecs_Png_Encode, params)
     std::vector<uchar> file_buf;
     readFileBytes(filename, file_buf);
     Mat src = imdecode(file_buf, IMREAD_UNCHANGED);
-    EXPECT_FALSE(src.empty()) << "Cannot decode test image " << filename;
+    ASSERT_FALSE(src.empty()) << "Cannot decode test image " << filename;
 
     vector<uchar> buf;
-    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter });
-    EXPECT_EQ(buf.size(), file_buf.size());
+    ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter }));
+
+    Mat dst = imdecode(buf, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+
+    // Reference files are made by zlib, other implementations differ: 0.96x-1.26x observed (#30850).
+    EXPECT_GE(buf.size(), file_buf.size() * 3 / 4);
+    EXPECT_LE(buf.size(), file_buf.size() * 3 / 2);
+
+    // Filters are applied by libpng before compression: every row must use the requested one.
+    int expected_filter_type = -1;
+    switch (filter)
+    {
+    case IMWRITE_PNG_FILTER_NONE:  expected_filter_type = 0; break;
+    case IMWRITE_PNG_FILTER_SUB:   expected_filter_type = 1; break;
+    case IMWRITE_PNG_FILTER_UP:    expected_filter_type = 2; break;
+    case IMWRITE_PNG_FILTER_AVG:   expected_filter_type = 3; break;
+    case IMWRITE_PNG_FILTER_PAETH: expected_filter_type = 4; break;
+    default: break;
+    }
+    if (expected_filter_type >= 0)
+    {
+        vector<uchar> stored;
+        ASSERT_TRUE(imencode(".png", src, stored, { IMWRITE_PNG_COMPRESSION, 0, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter }));
+        const vector<uchar> types = getPngScanlineFilterTypes(stored, src.cols * src.elemSize());
+        ASSERT_EQ((size_t)src.rows, types.size());
+        for (size_t row = 0; row < types.size(); row++)
+            EXPECT_EQ(expected_filter_type, (int)types[row]) << "row=" << row;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
@@ -688,7 +749,10 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
         make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
 
-typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+// Output size depends on the zlib implementation (#30850), so ranges are used instead of exact sizes:
+// min/max seen with zlib 1.2-1.3 and zlib-ng 2.0-2.3 on x86_64 and LoongArch64, widened by 2%.
+// Level 0 is stored: raw 512*512*3 bytes plus framing.
+typedef testing::TestWithParam<testing::tuple<string, int, size_t, size_t>> Imgcodecs_Png_ImwriteFlags;
 
 TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
 {
@@ -696,29 +760,82 @@ TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
     const string filename = root + get<0>(GetParam());
 
     const int compression_level = get<1>(GetParam());
-    const size_t compression_level_output_size = get<2>(GetParam());
+    const size_t min_output_size = get<2>(GetParam());
+    const size_t max_output_size = get<3>(GetParam());
 
     Mat src = imread(filename, IMREAD_UNCHANGED);
-    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+    ASSERT_FALSE(src.empty()) << "Cannot read test image " << filename;
 
     vector<uchar> buf;
-    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
-    EXPECT_EQ(buf.size(), compression_level_output_size);
+    ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level }));
+
+    Mat dst = imdecode(buf, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+
+    EXPECT_GE(buf.size(), min_output_size);
+    EXPECT_LE(buf.size(), max_output_size);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
     Imgcodecs_Png_ImwriteFlags,
     testing::Values(
-        make_tuple("../perf/512x512.png", 0, 788279),
-        make_tuple("../perf/512x512.png", 1, 179503),
-        make_tuple("../perf/512x512.png", 2, 176007),
-        make_tuple("../perf/512x512.png", 3, 170497),
-        make_tuple("../perf/512x512.png", 4, 163357),
-        make_tuple("../perf/512x512.png", 5, 159190),
-        make_tuple("../perf/512x512.png", 6, 156621),
-        make_tuple("../perf/512x512.png", 7, 155696),
-        make_tuple("../perf/512x512.png", 8, 153708),
-        make_tuple("../perf/512x512.png", 9, 152181)));
+        make_tuple("../perf/512x512.png", 0, 786432, 795000),
+        make_tuple("../perf/512x512.png", 1, 175500, 227500),
+        make_tuple("../perf/512x512.png", 2, 162500, 180000),
+        make_tuple("../perf/512x512.png", 3, 157000, 174000),
+        make_tuple("../perf/512x512.png", 4, 154000, 167000),
+        make_tuple("../perf/512x512.png", 5, 152500, 162500),
+        make_tuple("../perf/512x512.png", 6, 151000, 160000),
+        make_tuple("../perf/512x512.png", 7, 149000, 159000),
+        make_tuple("../perf/512x512.png", 8, 148000, 157000),
+        make_tuple("../perf/512x512.png", 9, 146500, 156000)));
+
+// Ranges overlap for high levels, so also check that the level has an effect.
+TEST(Imgcodecs_Png_CompressionParams, level_effect)
+{
+    const string filename = cvtest::TS::ptr()->get_data_path() + "../perf/512x512.png";
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    size_t sizes[10];
+    for (int level = 0; level <= 9; level++)
+    {
+        vector<uchar> buf;
+        ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, level }));
+        sizes[level] = buf.size();
+    }
+
+    // Not strictly decreasing: zlib-ng level 9 is up to 1.2% larger than level 8.
+    for (int level = 1; level < 9; level++)
+        EXPECT_LE(sizes[level + 1], sizes[level] + sizes[level] / 50) << "level=" << level;
+
+    // Level 9 is 15% (zlib) to 31% (zlib-ng) smaller than level 1 and also beats level 5.
+    EXPECT_LT(sizes[9], sizes[1] - sizes[1] / 20);
+    EXPECT_LT(sizes[9], sizes[5]);
+}
+
+TEST(Imgcodecs_Png_CompressionParams, strategy_effect)
+{
+    const string filename = cvtest::TS::ptr()->get_data_path() + "../perf/512x512.png";
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    const int strategies[] = { IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY,
+                               IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED };
+    size_t sizes[5];
+    for (int i = 0; i < 5; i++)
+    {
+        vector<uchar> buf;
+        ASSERT_TRUE(imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, 6, IMWRITE_PNG_STRATEGY, strategies[i] }));
+        sizes[i] = buf.size();
+
+        Mat dst = imdecode(buf, IMREAD_UNCHANGED);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst) << "strategy=" << strategies[i];
+    }
+
+    // Huffman-only disables string matching: about 40% larger with all tested zlib implementations.
+    EXPECT_GT(sizes[2], sizes[0] + sizes[0] / 10);
+}
 
 // See https://github.com/opencv/opencv/issues/27614
 typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
