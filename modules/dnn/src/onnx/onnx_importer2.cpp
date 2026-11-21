@@ -97,6 +97,10 @@ public:
 
     Net parseFile(const char *onnxFile, bool mapExternalData = true);
     Net parseBuffer(const void* buffer, size_t sizeBuffer);
+    // Takes an already-built ModelProto (e.g. produced by another importer)
+    // and runs the standard import pipeline, skipping the
+    // serialize/parse round-trip of parseBuffer.
+    Net parseModelProto(opencv_onnx::ModelProto&& model);
 
 protected:
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
@@ -420,6 +424,16 @@ Net ONNXImporter2::parseBuffer(const void* buffer, size_t sizeBuffer)
 
     if (!model_proto.ParseFromIstream(&input))
         CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
+
+    return parseModel();
+}
+
+Net ONNXImporter2::parseModelProto(opencv_onnx::ModelProto&& model)
+{
+    onnxFilename = std::string();
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: processing pre-parsed in-memory ONNX model");
+
+    model_proto = std::move(model);
 
     return parseModel();
 }
@@ -3812,6 +3826,12 @@ Net readNetFromONNX2(const std::vector<uchar>& buffer)
     return importer.parseBuffer(buffer.data(), buffer.size());
 }
 
+Net readNetFromONNX2(opencv_onnx::ModelProto&& model)
+{
+    ONNXImporter2 importer;
+    return importer.parseModelProto(std::move(model));
+}
+
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
@@ -3825,6 +3845,10 @@ Net readNetFromONNX2(const char*, size_t) {
 }
 
 Net readNetFromONNX2(const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromONNX2(opencv_onnx::ModelProto&&) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 

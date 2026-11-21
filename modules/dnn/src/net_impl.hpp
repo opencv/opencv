@@ -37,6 +37,12 @@ namespace Ort {
 }
 #endif
 
+// Forward declaration at global scope (matches opencv-onnx.pb.h); used by the
+// readNetFromONNX2(ModelProto&&) overload below.
+namespace opencv_onnx {
+    class ModelProto;
+}
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -606,6 +612,7 @@ inline Net::Impl* getNetImpl(const LayerInfo* op)
 Net readNetFromONNX2(const String&, bool mapExternalData);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
+Net readNetFromONNX2(opencv_onnx::ModelProto&& model);
 #ifdef HAVE_ONNXRUNTIME
 Net readNetFromONNX2_ORT(const String& onnxFile);
 #endif
