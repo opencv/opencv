@@ -544,7 +544,15 @@ Net readNetFromSafetensors(const String& graphJsonPath,
             // of silently truncating (out-of-range casts would be UB, and
             // non-integral values would be lossy).
             const size_t elem_size = (info.dtype == "F32") ? sizeof(float) : sizeof(double);
-            const size_t num_elements = data_size / elem_size;
+            // The expected element count is derived from the (already
+            // validated) tensor shape, never from the byte span: the parser
+            // guarantees numel * elem_size == data span, and the assertion
+            // below rejects any span that does not match the shape exactly.
+            uint64_t numel = 1;
+            for (int64_t d : info.shape)
+                numel *= (uint64_t)d;
+            CV_Assert(numel * (uint64_t)elem_size == (uint64_t)data_size);
+            const size_t num_elements = (size_t)numel;
             std::vector<int64_t> int64_buf(num_elements);
             for (size_t i = 0; i < num_elements; ++i)
             {
