@@ -158,6 +158,9 @@ of them, you need to download and install them on your system.
 -   The latest [CUDA Toolkit](http://developer.nvidia.com/cuda-downloads) will allow you to use the power lying inside your GPU. This will
     drastically improve performance for some algorithms (e.g the HOG descriptor). Getting more and
     more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
+-   The [ROCm toolkit](https://rocm.docs.amd.com) provides the same GPU acceleration on AMD GPUs: the
+    CUDA-accelerated modules can be built for AMD hardware through HIP by configuring with `WITH_HIP`
+    instead of `WITH_CUDA` (see @ref tutorial_config_reference_func_hetero).
 -   [OpenEXR](http://www.openexr.com/downloads.html) source files are required for the library to work with this high dynamic range (HDR)
     image file format.
 -   The OpenNI Framework contains a set of open source APIs that provide support for natural interaction with devices via methods such as voice command recognition, hand gestures, and body

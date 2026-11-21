@@ -63,9 +63,17 @@ namespace cv { namespace cuda { namespace device
         /** \brief Returns the warp lane ID of the calling thread. */
         static __device__ __forceinline__ unsigned int laneId()
         {
+#if defined(__HIP_DEVICE_COMPILE__)
+            // No %%laneid PTX on HIP. WARP_SIZE is the logical 32; derive the
+            // lane from the linearized thread index so width-32 cooperation is
+            // correct on both wave32 (RDNA) and wave64 (CDNA, gfx90a).
+            const unsigned int tid = (threadIdx.z * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x;
+            return tid & (WARP_SIZE - 1);
+#else
             unsigned int ret;
             asm("mov.u32 %0, %%laneid;" : "=r"(ret) );
             return ret;
+#endif
         }
 
         template<typename It, typename T>
