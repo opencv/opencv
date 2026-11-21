@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/ocl.hpp"
 
 namespace opencv_test { namespace {
 
@@ -175,6 +176,122 @@ TEST(DenseOpticalFlow_DIS, InvalidImgSize_CoarsestLevelLessThanFinestLevel)
 
     ASSERT_EQ(flow.rows, mat_size);
     ASSERT_EQ(flow.cols, mat_size);
+}
+
+TEST(DenseOpticalFlow_DIS, small_frame_preserves_finest_scale_and_patch_size)
+{
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(5, 5), 1.2);
+    Mat warp(Matx23d(1.0, 0.0, 3.5, 0.0, 1.0, -2.0));
+    warpAffine(frame1, frame2, warp, frame1.size(), INTER_LINEAR, BORDER_REFLECT);
+
+    Mat small1 = frame1(Rect(80, 60, 64, 64)).clone();
+    Mat small2 = frame2(Rect(80, 60, 64, 64)).clone();
+
+    // 1. CPU: PRESET_ULTRAFAST (finest_scale = 2, patch_size = 8)
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        Ptr<DISOpticalFlow> fresh = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        Mat flowSmall, flowReused, flowFresh;
+        dis->calc(small1, small2, flowSmall);
+        EXPECT_EQ(2, dis->getFinestScale());
+        EXPECT_EQ(8, dis->getPatchSize());
+
+        dis->calc(frame1, frame2, flowReused);
+        fresh->calc(frame1, frame2, flowFresh);
+        ASSERT_TRUE(checkRange(flowReused));
+        EXPECT_EQ(0.0, cvtest::norm(flowReused, flowFresh, NORM_INF));
+    }
+
+    // 2. CPU: PRESET_FAST with setPatchSize(12) (finest_scale = 2, patch_size = 12)
+    {
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        dis->setPatchSize(12);
+        Ptr<DISOpticalFlow> fresh = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        fresh->setPatchSize(12);
+        Mat flowSmall, flowReused, flowFresh;
+        dis->calc(small1, small2, flowSmall);
+        EXPECT_EQ(2, dis->getFinestScale());
+        EXPECT_EQ(12, dis->getPatchSize());
+
+        dis->calc(frame1, frame2, flowReused);
+        fresh->calc(frame1, frame2, flowFresh);
+        ASSERT_TRUE(checkRange(flowReused));
+        EXPECT_EQ(0.0, cvtest::norm(flowReused, flowFresh, NORM_INF));
+    }
+
+    // 3. UMat / OpenCL path: PRESET_ULTRAFAST and setFinestScale(3) with patch_size = 8
+    {
+        UMat uFrame1, uFrame2, uSmall1, uSmall2;
+        frame1.copyTo(uFrame1);
+        frame2.copyTo(uFrame2);
+        small1.copyTo(uSmall1);
+        small2.copyTo(uSmall2);
+
+        Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        Ptr<DISOpticalFlow> fresh = DISOpticalFlow::create(DISOpticalFlow::PRESET_ULTRAFAST);
+        UMat uFlowSmall, uFlowReused, uFlowFresh;
+        dis->calc(uSmall1, uSmall2, uFlowSmall);
+        EXPECT_EQ(2, dis->getFinestScale());
+        EXPECT_EQ(8, dis->getPatchSize());
+
+        dis->calc(uFrame1, uFrame2, uFlowReused);
+        fresh->calc(uFrame1, uFrame2, uFlowFresh);
+        EXPECT_EQ(0.0, cvtest::norm(uFlowReused, uFlowFresh, NORM_INF));
+
+        Ptr<DISOpticalFlow> disScale3 = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        disScale3->setFinestScale(3);
+        Ptr<DISOpticalFlow> cpuScale3 = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        cpuScale3->setFinestScale(3);
+        UMat uSmall3, uLargeReused, uLargeFresh;
+        Mat cpuSmall3;
+        disScale3->calc(uSmall1, uSmall2, uSmall3);
+        cpuScale3->calc(small1, small2, cpuSmall3);
+        EXPECT_EQ(3, disScale3->getFinestScale());
+        EXPECT_EQ(8, disScale3->getPatchSize());
+        EXPECT_LE(cvtest::norm(uSmall3.getMat(ACCESS_READ), cpuSmall3, NORM_INF), 1e-4);
+
+        Ptr<DISOpticalFlow> freshScale3 = DISOpticalFlow::create(DISOpticalFlow::PRESET_FAST);
+        freshScale3->setFinestScale(3);
+        disScale3->calc(uFrame1, uFrame2, uLargeReused);
+        freshScale3->calc(uFrame1, uFrame2, uLargeFresh);
+        EXPECT_EQ(0.0, cvtest::norm(uLargeReused, uLargeFresh, NORM_INF));
+    }
+}
+
+TEST(DenseOpticalFlow_DIS, ocl_uses_initial_flow)
+{
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not enabled");
+
+    Mat frame1(240, 320, CV_8UC1), frame2(240, 320, CV_8UC1);
+    theRNG().fill(frame1, RNG::UNIFORM, 0, 256);
+    GaussianBlur(frame1, frame1, Size(7, 7), 1.5);
+
+    const double dx = 96.0, dy = 48.0;
+    Mat warp(Matx23d(1.0, 0.0, dx, 0.0, 1.0, dy));
+    warpAffine(frame1, frame2, warp, frame1.size(), INTER_LINEAR, BORDER_REPLICATE);
+
+    Mat initFlow(frame1.size(), CV_32FC2, Scalar(0.8 * dx, 0.8 * dy));
+    UMat uFrame1, uFrame2, uFlowNone, uFlowInit, uFlowAfter;
+    frame1.copyTo(uFrame1);
+    frame2.copyTo(uFrame2);
+    initFlow.copyTo(uFlowInit);
+
+    Ptr<DISOpticalFlow> dis = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
+    dis->calc(uFrame1, uFrame2, uFlowNone);
+    dis->calc(uFrame1, uFrame2, uFlowInit);
+
+    Mat cpuFlowInit = initFlow.clone();
+    DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM)->calc(frame1, frame2, cpuFlowInit);
+
+    EXPECT_GT(cvtest::norm(uFlowInit, uFlowNone, NORM_INF), 20.0);
+    EXPECT_LE(cvtest::norm(uFlowInit.getMat(ACCESS_READ), cpuFlowInit, NORM_INF), 1e-4);
+
+    // Subsequent call without initial flow resumes the uninitialized OpenCL path
+    dis->calc(uFrame1, uFrame2, uFlowAfter);
+    EXPECT_EQ(0.0, cvtest::norm(uFlowAfter, uFlowNone, NORM_INF));
 }
 
 TEST(DenseOpticalFlow_VariationalRefinement, ReferenceAccuracy)

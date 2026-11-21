@@ -488,6 +488,25 @@ void DISOpticalFlowImpl::autoSelectPatchSizeAndScales(int img_width)
     }
 }
 
+namespace {
+struct AutoSelectGuard
+{
+    int* finest_scale;
+    int* patch_size;
+    int saved_finest_scale;
+    int saved_patch_size;
+
+    AutoSelectGuard(int& fs, int& ps)
+        : finest_scale(&fs), patch_size(&ps), saved_finest_scale(fs), saved_patch_size(ps) {}
+
+    ~AutoSelectGuard()
+    {
+        *finest_scale = saved_finest_scale;
+        *patch_size = saved_patch_size;
+    }
+};
+} // namespace
+
 DISOpticalFlowImpl::PatchInverseSearch_ParBody::PatchInverseSearch_ParBody(DISOpticalFlowImpl &_dis, int _nstripes,
                                                                            int _hs, Mat &dst_Sx, Mat &dst_Sy,
                                                                            Mat &src_Ux, Mat &src_Uy, Mat &_I0, Mat &_I1,
@@ -1390,12 +1409,15 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
 
+    AutoSelectGuard auto_select_guard(finest_scale, patch_size);
     if (coarsest_scale<finest_scale)
     {
         // choose the finest level based on coarsest level.
         // Refs: https://github.com/tikroeger/OF_DIS/blob/2c9f2a674f3128d3a41c10e41cc9f3a35bb1b523/run_dense.cpp#L239
         int original_img_width = I0.size().width;
         autoSelectPatchSizeAndScales(original_img_width);
+        if (patch_size != 8)
+            return false;
     }
 
     ocl_prepareBuffers(I0Mat, I1Mat, flow, use_input_flow);
@@ -1454,16 +1476,15 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     CV_Assert(I0.isContinuous());
     CV_Assert(I1.isContinuous());
 
+    const bool use_input_flow = flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2;
+
     CV_OCL_RUN(flow.isUMat() &&
-               (patch_size == 8) && (use_spatial_propagation == true),
+               (patch_size == 8) && (use_spatial_propagation == true) && !use_input_flow,
                ocl_calc(I0, I1, flow));
 
     Mat I0Mat = I0.getMat();
     Mat I1Mat = I1.getMat();
-    bool use_input_flow = false;
-    if (flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2)
-        use_input_flow = true;
-    else
+    if (!use_input_flow)
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
 
@@ -1477,6 +1498,7 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
 
+    AutoSelectGuard auto_select_guard(finest_scale, patch_size);
     if (coarsest_scale<finest_scale)
     {
         // choose the finest level based on coarsest level.
