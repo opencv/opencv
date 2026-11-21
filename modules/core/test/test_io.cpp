@@ -1879,6 +1879,13 @@ TEST(Core_InputOutput, FileStorage_YAML_empty_key)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+TEST(Core_InputOutput, FileStorage_YAML_dash_line_after_first_document)
+{
+    // a line that starts with '-' but is not '---' after the first document
+    const std::string content = "%YAML:1.0\n---\na: 1\n...\n- 2\n";
+    EXPECT_THROW(FileStorage(content, FileStorage::READ | FileStorage::MEMORY), cv::Exception);
+}
+
 TEST(Core_InputOutput, FileStorage_write_to_sequence)
 {
     const std::vector<std::string> formatExts = { ".yml", ".json", ".xml" };
