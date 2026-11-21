@@ -3425,7 +3425,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     {
         CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
-        int phi, rho;
+        int rho;
 
         // precalculate scaled rho
         Mat rhos = Mat(1, dsize.width, CV_32F);
@@ -3440,27 +3440,78 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         else
         {
             double Kmag = maxRadius / dsize.width;
-            for (rho = 0; rho < dsize.width; rho++)
+            rho = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+            {
+                const v_float64 vK = vx_setall_f64(Kmag);
+                const int vl32 = VTraits<v_float32>::vlanes();
+                const int vl64 = VTraits<v_float64>::vlanes();
+                double idx[VTraits<v_float32>::max_nlanes];
+                for (; rho <= dsize.width - vl32; rho += vl32)
+                {
+                    for (int i = 0; i < vl32; i++)
+                        idx[i] = (double)(rho + i);
+                    const v_float64 a = v_mul(vx_load(idx), vK);
+                    const v_float64 b = v_mul(vx_load(idx + vl64), vK);
+                    v_store(bufRhos + rho, v_cvt_f32(a, b));
+                }
+            }
+#endif
+            for (; rho < dsize.width; rho++)
                 bufRhos[rho] = (float)(rho * Kmag);
         }
 
-        for (phi = 0; phi < dsize.height; phi++)
+        const int mapCols = dsize.width;
+        const float* rhoTab = bufRhos;
+        Mat& mapxRef = mapx;
+        Mat& mapyRef = mapy;
+        const Point2f ctr = center;
+        auto buildPolarMapRows = [&](const Range& range)
         {
-            double KKy = Kangle * phi;
-            double cp = std::cos(KKy);
-            double sp = std::sin(KKy);
-            float* mx = (float*)(mapx.data + phi*mapx.step);
-            float* my = (float*)(mapy.data + phi*mapy.step);
-
-            for (rho = 0; rho < dsize.width; rho++)
+            for (int row = range.start; row < range.end; row++)
             {
-                double x = bufRhos[rho] * cp + center.x;
-                double y = bufRhos[rho] * sp + center.y;
+                double KKy = Kangle * row;
+                double cp = std::cos(KKy);
+                double sp = std::sin(KKy);
+                float* mx = (float*)(mapxRef.data + row*mapxRef.step);
+                float* my = (float*)(mapyRef.data + row*mapyRef.step);
+                int col = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+                {
+                    const v_float64 vcp = vx_setall_f64(cp), vsp = vx_setall_f64(sp);
+                    const v_float64 vcx = vx_setall_f64((double)ctr.x), vcy = vx_setall_f64((double)ctr.y);
+                    const int vl = VTraits<v_float32>::vlanes();
+                    for (; col <= mapCols - vl; col += vl)
+                    {
+                        const v_float32 r = vx_load(rhoTab + col);
+                        const v_float64 rlo = v_cvt_f64(r);
+                        const v_float64 rhi = v_cvt_f64_high(r);
+                        const v_float64 xlo = v_add(v_mul(rlo, vcp), vcx);
+                        const v_float64 xhi = v_add(v_mul(rhi, vcp), vcx);
+                        const v_float64 ylo = v_add(v_mul(rlo, vsp), vcy);
+                        const v_float64 yhi = v_add(v_mul(rhi, vsp), vcy);
+                        v_store(mx + col, v_cvt_f32(xlo, xhi));
+                        v_store(my + col, v_cvt_f32(ylo, yhi));
+                    }
+                }
+#endif
+                for (; col < mapCols; col++)
+                {
+                    double x = rhoTab[col] * cp + ctr.x;
+                    double y = rhoTab[col] * sp + ctr.y;
 
-                mx[rho] = (float)x;
-                my[rho] = (float)y;
+                    mx[col] = (float)x;
+                    my[col] = (float)y;
+                }
             }
-        }
+        };
+
+        const double polarStripes = std::min((double)dsize.height,
+                                             (double)dsize.width * (double)dsize.height / 32768.0);
+        if (polarStripes < 2.0)
+            buildPolarMapRows(Range(0, dsize.height));
+        else
+            parallel_for_(Range(0, dsize.height), buildPolarMapRows, polarStripes);
         remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
     else
