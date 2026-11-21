@@ -183,7 +183,8 @@ public:
 
 private:
     std::shared_ptr<BitStream> strm;
-    int outfps;
+    double outfps;
+    int fpsRate, fpsScale;
     int width, height, channels;
     size_t moviPointer;
     std::vector<size_t> frameOffset, frameSize, AVIChunkSizeIndex, frameNumIndexes;

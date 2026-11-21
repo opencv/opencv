@@ -435,10 +435,10 @@ public:
         if( strcmp(ext, ".avi") != 0 && strcmp(ext, ".AVI") != 0 && strcmp(ext, ".Avi") != 0 )
             return false;
 
+        CV_Assert(fps > 0);
         if( !container.initContainer(filename, fps, size, iscolor) )
             return false;
 
-        CV_Assert(fps >= 1);
         quality = 75;
         rawstream = false;
 
