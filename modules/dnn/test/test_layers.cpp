@@ -5058,7 +5058,7 @@ TEST_P(Layer_Test_OneHot_ValuesDepth, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_OneHot_ValuesDepth, Values(
-    CV_8U, CV_32S, CV_32F, CV_32U, CV_Bool
+    CV_8U, CV_32S, CV_32F, CV_32U, CV_64U, CV_Bool
 ));
 
 static void testClipMinGreaterThanMax(int depth, bool dynamic)

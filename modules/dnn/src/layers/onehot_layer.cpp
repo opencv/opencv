@@ -250,6 +250,7 @@ public:
             case CV_16S:  runKernel<int16_t>(indices, (int)depth64, values, Y); break;
             case CV_32U:  runKernel<uint32_t>(indices, (int)depth64, values, Y); break;
             case CV_32S:  runKernel<int>(indices, (int)depth64, values, Y); break;
+            case CV_64U:  runKernel<uint64_t>(indices, (int)depth64, values, Y); break;
             case CV_64S:  runKernel<int64_t>(indices, (int)depth64, values, Y); break;
             case CV_16F:  runKernel<hfloat>(indices, (int)depth64, values, Y); break;
             case CV_16BF: runKernel<bfloat>(indices, (int)depth64, values, Y); break;
