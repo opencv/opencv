@@ -129,6 +129,34 @@ public:
     }
     //! the destructor
     ~BackgroundSubtractorKNNImpl() CV_OVERRIDE {}
+    //! drop the background model; the next apply() starts a new one as on a new object
+    void clear() CV_OVERRIDE
+    {
+        frameSize = Size(0,0);
+        frameType = 0;
+        nframes = 0;
+        nLongCounter = 0;
+        nMidCounter = 0;
+        nShortCounter = 0;
+
+        bgmodel.release();
+        aModelIndexShort.release();
+        aModelIndexMid.release();
+        aModelIndexLong.release();
+        nNextShortUpdate.release();
+        nNextMidUpdate.release();
+        nNextLongUpdate.release();
+#ifdef HAVE_OPENCL
+        u_flag.release();
+        u_sample.release();
+        u_aModelIndexShort.release();
+        u_aModelIndexMid.release();
+        u_aModelIndexLong.release();
+        u_nNextShortUpdate.release();
+        u_nNextMidUpdate.release();
+        u_nNextLongUpdate.release();
+#endif
+    }
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 

@@ -4,6 +4,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/video/background_segm.hpp"
+#include "opencv2/core/ocl.hpp"
 
 namespace opencv_test { namespace {
 
@@ -103,6 +104,63 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsFalse)
         }
     }
 }
+
+///////////////////////// clear() //////////////////////////////
+
+// T is Mat for the CPU path and UMat for the OpenCL path
+template <typename T>
+static void checkClearMatchesNewObject(const Ptr<BackgroundSubtractor>& used, const Ptr<BackgroundSubtractor>& fresh)
+{
+    Mat sceneA_(48, 64, CV_8UC3, Scalar::all(40));
+    rectangle(sceneA_, Rect(8, 8, 16, 16), Scalar::all(200), FILLED);
+    Mat sceneB_(48, 64, CV_8UC3, Scalar::all(160));
+    rectangle(sceneB_, Rect(32, 16, 16, 16), Scalar::all(20), FILLED);
+    T sceneA, sceneB;
+    sceneA_.copyTo(sceneA);
+    sceneB_.copyTo(sceneB);
+
+    T mask;
+    for (int i = 0; i < 5; i++)
+        used->apply(sceneA, mask);
+    used->clear();
+
+    // One frame is given to each object: KNN takes its update points from theRNG() only after
+    // a frame has been processed, so the first apply() on an empty model does not depend on it.
+    T maskUsed, maskFresh, bgUsed, bgFresh;
+    used->apply(sceneB, maskUsed);
+    fresh->apply(sceneB, maskFresh);
+    used->getBackgroundImage(bgUsed);
+    fresh->getBackgroundImage(bgFresh);
+
+    EXPECT_EQ(0, cvtest::norm(maskUsed, maskFresh, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(bgUsed, bgFresh, NORM_INF));
+}
+
+TEST(BackgroundSubtractorMOG2, clear_resets_model)
+{
+    checkClearMatchesNewObject<Mat>(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
+}
+
+TEST(BackgroundSubtractorKNN, clear_resets_model)
+{
+    checkClearMatchesNewObject<Mat>(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
+}
+
+#ifdef HAVE_OPENCL
+TEST(BackgroundSubtractorMOG2, clear_resets_model_ocl)
+{
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    checkClearMatchesNewObject<UMat>(createBackgroundSubtractorMOG2(), createBackgroundSubtractorMOG2());
+}
+
+TEST(BackgroundSubtractorKNN, clear_resets_model_ocl)
+{
+    if (!cv::ocl::useOpenCL())
+        throw SkipTestException("OpenCL is not available");
+    checkClearMatchesNewObject<UMat>(createBackgroundSubtractorKNN(), createBackgroundSubtractorKNN());
+}
+#endif
 
 }} // namespace
 /* End of file. */
