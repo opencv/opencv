@@ -1189,6 +1189,8 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
     }
 }
 
+// The test requires FFmpeg wrapper rebuild on Windows
+#ifndef _WIN32
 // MPEG-TS has no seek index and FFmpeg searches it by DTS. With B-frames the first key frame's DTS
 // is lower than the stream start_time (a PTS), so seeking to the first GOP used to skip it.
 // related issue: https://github.com/opencv/opencv/issues/9053
@@ -1223,7 +1225,7 @@ TEST(videoio_ffmpeg, seek_mpegts_bframes)
     }
     ASSERT_EQ(nframes, (int)frames.size());
 
-    for (int target : {0, 1, gop - 1, gop, gop + 1})
+    for (int target : {0, 1, gop - 1, gop, gop + 1, 2 * gop, 2 * gop + 1})
     {
         SCOPED_TRACE(cv::format("target=%d", target));
         VideoCapture cap(filename, CAP_FFMPEG);
@@ -1235,8 +1237,33 @@ TEST(videoio_ffmpeg, seek_mpegts_bframes)
         ASSERT_TRUE(cap.read(img));
         EXPECT_EQ(0, cvtest::norm(img, frames[target], NORM_INF));
     }
+
+    // raw mode (CAP_PROP_FORMAT=-1) goes through the same seek: a rewind to frame 0 must return the first packet
+    std::vector<Mat> packets;
+    {
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        ASSERT_TRUE(cap.isOpened());
+        Mat pkt;
+        while (cap.read(pkt))
+            packets.push_back(pkt.clone());
+    }
+    ASSERT_EQ(nframes, (int)packets.size());
+    for (int readsBefore : {0, 1, gop + 1})
+    {
+        SCOPED_TRACE(cv::format("raw, packets read before rewind=%d", readsBefore));
+        VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
+        ASSERT_TRUE(cap.isOpened());
+        Mat pkt;
+        for (int i = 0; i < readsBefore; i++)
+            ASSERT_TRUE(cap.read(pkt));
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
+        ASSERT_TRUE(cap.read(pkt));
+        ASSERT_EQ(packets[0].total(), pkt.total());
+        EXPECT_EQ(0, cvtest::norm(pkt, packets[0], NORM_INF));
+    }
     remove(filename.c_str());
 }
+#endif
 
 // In raw mode (CAP_PROP_FORMAT=-1) a seek lands on the nearest preceding key frame packet.
 // Requesting a key frame of an H.264 stream with B-frames must return that key frame, not the previous GOP.
