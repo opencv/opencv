@@ -25,23 +25,31 @@ public:
     UMatData* allocate(int dims, const int* sizes, int type, void* data0,
                        size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
-        const size_t elemSize = CV_ELEM_SIZE(type);
-        size_t total = elemSize;
-        for (int i = 0; i < dims; i++)
-            total *= (size_t)sizes[i];
-
-        if (step)
+        size_t total = CV_ELEM_SIZE(type);
+        for (int i = dims - 1; i >= 0; i--)
         {
-            step[dims - 1] = elemSize;
-            for (int i = dims - 2; i >= 0; i--)
-                step[i] = step[i + 1] * (size_t)sizes[i + 1];
+            if (step)
+            {
+                if (data0 && step[i] != CV_AUTOSTEP)
+                {
+                    CV_Assert(total <= step[i]);
+                    total = step[i];
+                }
+                else
+                {
+                    step[i] = total;
+                }
+            }
+            total *= (size_t)sizes[i];
         }
 
-        UMatData* u = new UMatData(this);
-        u->size = total;
-
+        void* handle = NULL;
         if (total > 0)
-            cudaSafeCall(cudaMalloc(&u->handle, total));
+            cudaSafeCall(cudaMalloc(&handle, total));
+
+        UMatData* u = new UMatData(this);
+        u->handle = handle;
+        u->size = total;
 
         if (data0)
         {
@@ -60,9 +68,18 @@ public:
     {
         if (!u)
             return false;
-        if (!u->handle && u->size > 0)
+        CV_Assert(!u->handle || u->currAllocator == this);
+        if (!u->handle)
         {
-            cudaSafeCall(cudaMalloc(&u->handle, u->size));
+            void* handle = NULL;
+            if (u->size > 0)
+                cudaSafeCall(cudaMalloc(&handle, u->size));
+            u->handle = handle;
+            if (u->currAllocator != this)
+            {
+                u->prevAllocator = u->currAllocator;
+                u->currAllocator = this;
+            }
             if (u->data)
                 u->markDeviceCopyObsolete(true);
             else
@@ -75,10 +92,31 @@ public:
     {
         if (!u)
             return;
+        CV_Assert(u->urefcount == 0);
+        CV_Assert(u->refcount == 0);
         if (u->handle)
+        {
             cudaSafeCall(cudaFree(u->handle));
-        if (u->data && !(u->flags & UMatData::USER_ALLOCATED))
-            fastFree(u->data);
+            u->handle = NULL;
+        }
+        if (u->prevAllocator && u->prevAllocator != this)
+        {
+            u->markDeviceCopyObsolete(true);
+            if (u->data && u->data != u->origdata && !(u->flags & UMatData::USER_ALLOCATED))
+                fastFree(u->data);
+            u->data = u->origdata;
+            const MatAllocator* prev = u->prevAllocator;
+            u->currAllocator = prev;
+            u->prevAllocator = NULL;
+            prev->deallocate(u);
+            return;
+        }
+        if (u->origdata && !(u->flags & UMatData::USER_ALLOCATED))
+        {
+            fastFree(u->origdata);
+            u->origdata = NULL;
+            u->data = NULL;
+        }
         delete u;
     }
 
@@ -87,7 +125,12 @@ public:
         if (!u)
             return;
         if (!u->data && u->size > 0)
-            u->data = u->origdata = static_cast<uchar*>(fastMalloc(u->size));
+        {
+            uchar* p = static_cast<uchar*>(fastMalloc(u->size));
+            u->data = p;
+            if (!u->prevAllocator || u->prevAllocator == this)
+                u->origdata = p;
+        }
         if (u->hostCopyObsolete() && u->handle && u->data)
         {
             cudaSafeCall(cudaMemcpy(u->data, u->handle, u->size, cudaMemcpyDeviceToHost));
@@ -112,9 +155,16 @@ public:
                   const size_t srcofs[], const size_t srcstep[],
                   const size_t dststep[]) const CV_OVERRIDE
     {
-        if (!u || !u->handle || !dstptr)
+        if (!u || !dstptr)
             return;
-        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, 0, dststep,
+        if (u->deviceCopyObsolete() && u->data)
+        {
+            MatAllocator::download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+            return;
+        }
+        if (!u->handle)
+            return;
+        copyPlanes((uchar*)u->handle, srcofs, srcstep, (uchar*)dstptr, NULL, dststep,
                    dims, sz, cudaMemcpyDeviceToHost);
     }
 
@@ -124,8 +174,9 @@ public:
     {
         if (!u || !srcptr)
             return;
-        if (!u->handle && u->size > 0)
-            cudaSafeCall(cudaMalloc(&u->handle, u->size));
+        allocate(u, ACCESS_RW, USAGE_DEFAULT);
+        if (u->deviceCopyObsolete() && u->data && !isFullOverwrite(u, dims, sz, dstofs, dststep))
+            unmap(u);
         copyPlanes((uchar*)srcptr, NULL, srcstep, (uchar*)u->handle, dstofs, dststep,
                    dims, sz, cudaMemcpyHostToDevice);
         u->markHostCopyObsolete(true);
@@ -139,6 +190,10 @@ public:
     {
         if (!src || !dst || !src->handle || !dst->handle)
             return;
+        if (src->deviceCopyObsolete() && src->data)
+            unmap(src);
+        if (dst->deviceCopyObsolete() && dst->data && !isFullOverwrite(dst, dims, sz, dstofs, dststep))
+            unmap(dst);
         copyPlanes((uchar*)src->handle, srcofs, srcstep, (uchar*)dst->handle, dstofs, dststep,
                    dims, sz, cudaMemcpyDeviceToDevice);
         dst->markHostCopyObsolete(true);
@@ -146,6 +201,23 @@ public:
     }
 
 private:
+    static bool isFullOverwrite(const UMatData* u, int dims, const size_t sz[],
+                                const size_t dstofs[], const size_t dststep[])
+    {
+        size_t expectedStep = 1;
+        for (int i = dims - 1; i >= 0; i--)
+        {
+            if (sz[i] == 0)
+                return false;
+            if (dstofs && dstofs[i] != 0)
+                return false;
+            if (i <= dims - 2 && dststep && dststep[i] != expectedStep)
+                return false;
+            expectedStep *= sz[i];
+        }
+        return expectedStep == u->size;
+    }
+
     // sz/steps follow the MatAllocator convention: the last dim carries element bytes.
     static void copyPlanes(uchar* srcbase, const size_t srcofs[], const size_t srcstep[],
                            uchar* dstbase, const size_t dstofs[], const size_t dststep[],
@@ -159,11 +231,30 @@ private:
             CV_Assert(sz[i] <= (size_t)INT_MAX);
             if (sz[i] == 0)
                 return;
-            if (srcofs)
+            if (srcofs && srcofs[i] != 0)
+            {
+                CV_Assert(i > dims - 2 || srcstep != NULL);
                 srcptr += srcofs[i] * (i <= dims - 2 ? srcstep[i] : 1);
-            if (dstofs)
+            }
+            if (dstofs && dstofs[i] != 0)
+            {
+                CV_Assert(i > dims - 2 || dststep != NULL);
                 dstptr += dstofs[i] * (i <= dims - 2 ? dststep[i] : 1);
+            }
             isz[i] = (int)sz[i];
+        }
+
+        if (dims == 2)
+        {
+            const size_t height = sz[0];
+            const size_t widthBytes = sz[1];
+            const size_t spitch = srcstep ? srcstep[0] : widthBytes;
+            const size_t dpitch = dststep ? dststep[0] : widthBytes;
+            if (spitch >= widthBytes && dpitch >= widthBytes)
+            {
+                cudaSafeCall(cudaMemcpy2D(dstptr, dpitch, srcptr, spitch, widthBytes, height, kind));
+                return;
+            }
         }
 
         Mat src(dims, isz, CV_8U, srcptr, srcstep);
