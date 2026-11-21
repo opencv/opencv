@@ -979,6 +979,35 @@ TEST(Imgproc_MedianBlur, regression_28385)
     ASSERT_EQ(out.size(), Size(100, 50000));
 }
 
+typedef testing::TestWithParam<testing::tuple<int, int, bool> > Imgproc_MedianBlurChannels;
+
+TEST_P(Imgproc_MedianBlurChannels, matches_independent_planes)
+{
+    const int channels = get<0>(GetParam());
+    const int ksize = get<1>(GetParam());
+    const bool inplace = get<2>(GetParam());
+    Mat storage(19, 21, CV_8UC(channels));
+    Mat src = storage(Rect(1, 1, 19, 17));
+    cv::theRNG().fill(src, RNG::UNIFORM, 0, 256);
+
+    std::vector<Mat> planes;
+    cv::split(src, planes);
+    for (Mat& plane : planes)
+        medianBlur(plane, plane, ksize);
+    Mat expected;
+    cv::merge(planes, expected);
+
+    Mat dst = inplace ? src : Mat();
+    medianBlur(src, dst, ksize);
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    EXPECT_EQ(0., cvtest::norm(dst, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_MedianBlurChannels,
+                        testing::Combine(testing::Values(1, 2, 3, 4, 5, 6, 9),
+                                         testing::Values(3, 5, 7, 9), testing::Bool()));
+
 TEST(Imgproc_Sobel, s16_regression_13506)
 {
     Mat src = Mat_<short>({8, 16}, {
