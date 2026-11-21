@@ -645,6 +645,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Imgproc_FilterSupportedFormats,
         make_pair( CV_16S, CV_16S),
         make_pair( CV_16S, CV_32F),
         make_pair( CV_16S, CV_64F),
+        make_pair( CV_16F, CV_16F),
+        make_pair( CV_16F, CV_32F),
+        make_pair( CV_16F, CV_64F),
         make_pair( CV_32F, CV_32F),
         make_pair( CV_64F, CV_64F)
     )
@@ -1597,5 +1600,421 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_BoxFilterInplaceROI, testing::Combine(
     testing::Values(CV_32F, CV_64F), testing::Values(1, 3, 5),
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
 
+
+static void expectMorphologyEqual(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.type(), actual.type());
+    ASSERT_EQ(expected.size(), actual.size());
+    for (int row = 0; row < expected.rows; ++row)
+        EXPECT_EQ(0, memcmp(expected.ptr(row), actual.ptr(row), expected.cols * expected.elemSize())) << row;
+}
+
+
+TEST(Imgproc_Morphology16f, constant_extrema)
+{
+    const ushort patterns[] = {0, 0x8000, 1, 0x8001, 0x7bff, 0xfbff, 0x7c00, 0xfc00};
+    for (ushort bits : patterns)
+        for (int op : {MORPH_ERODE, MORPH_DILATE})
+            for (int shape : {MORPH_RECT, MORPH_ELLIPSE})
+            {
+                SCOPED_TRACE(cv::format("bits=%04x op=%d shape=%d", (unsigned)bits, op, shape));
+                Mat source(7, 9, CV_16F);
+                for (int row = 0; row < source.rows; ++row)
+                    for (int col = 0; col < source.cols; ++col)
+                        source.at<hfloat>(row, col) = hfloatFromBits(bits);
+                Mat wide, expected32f, expected, actual;
+                source.convertTo(wide, CV_32F);
+                const Mat kernel = getStructuringElement(shape, Size(3, 3));
+                morphologyEx(wide, expected32f, op, kernel);
+                expected32f.convertTo(expected, CV_16F);
+                morphologyEx(source, actual, op, kernel);
+                expectMorphologyEqual(expected, actual);
+            }
+}
+
+typedef testing::TestWithParam<tuple<int, int, int, int> > Imgproc_Morphology16f;
+
+TEST_P(Imgproc_Morphology16f, accuracy)
+{
+    const int op = get<0>(GetParam()), shape = get<1>(GetParam());
+    const int cn = get<2>(GetParam()), border = get<3>(GetParam());
+    const Rect roi(2, 2, 17, 13);
+    Mat values(roi.height + 4, roi.width + 4, CV_MAKETYPE(CV_32F, cn));
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, -100.f, 100.f);
+    Mat storage, wide;
+    values.convertTo(storage, CV_16F);
+    storage.convertTo(wide, CV_32F);
+    const Mat original = storage.clone();
+    const Mat kernel = getStructuringElement(shape, Size(3, 5));
+    Mat expected32f, expected, actual;
+    morphologyEx(wide(roi), expected32f, op, kernel, Point(-1, -1), 2, border);
+    expected32f.convertTo(expected, CV_16F);
+
+    Mat src = storage(roi);
+    morphologyEx(src, actual, op, kernel, Point(-1, -1), 2, border);
+    expectMorphologyEqual(expected, actual);
+    expectMorphologyEqual(original, storage);
+
+    Mat destination(storage.size(), storage.type());
+    destination.reshape(1).setTo(Scalar::all(-123));
+    Mat wideDestination(storage.size(), wide.type()), expectedStorage;
+    wideDestination.reshape(1).setTo(Scalar::all(-123));
+    Mat wideDestinationROI = wideDestination(roi);
+    morphologyEx(wide(roi), wideDestinationROI, op, kernel, Point(-1, -1), 2, border);
+    wideDestination.convertTo(expectedStorage, CV_16F);
+    actual = destination(roi);
+    morphologyEx(src, actual, op, kernel, Point(-1, -1), 2, border);
+    ASSERT_EQ(destination(roi).data, actual.data);
+    expectMorphologyEqual(expectedStorage, destination);
+    expectMorphologyEqual(original, storage);
+
+    Mat wideInPlace = wide.clone(), wideInPlaceROI = wideInPlace(roi);
+    morphologyEx(wideInPlaceROI, wideInPlaceROI, op, kernel, Point(-1, -1), 2, border);
+    wideInPlace.convertTo(expectedStorage, CV_16F);
+    morphologyEx(src, src, op, kernel, Point(-1, -1), 2, border);
+    expectMorphologyEqual(expectedStorage, storage);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Morphology16f, testing::Combine(
+    testing::Values(MORPH_ERODE, MORPH_DILATE, MORPH_OPEN, MORPH_CLOSE,
+                    MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT),
+    testing::Values(MORPH_RECT, MORPH_ELLIPSE),
+    testing::Values(1, 3, 5),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
+
+
+typedef testing::TestWithParam<tuple<int, int, int, int> > Imgproc_MorphologyParallel;
+
+TEST_P(Imgproc_MorphologyParallel, accuracy)
+{
+    const int op = get<0>(GetParam()), shape = get<1>(GetParam());
+    const int type = get<2>(GetParam()), border = get<3>(GetParam());
+    Mat values(1024, 1024, CV_MAKETYPE(CV_32F, CV_MAT_CN(type)));
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, op == MORPH_ERODE ? 1.f : -100.f,
+                                  op == MORPH_ERODE ? 100.f : -1.f);
+    Mat source, wide, expected32f, expected, actual;
+    values.convertTo(source, CV_MAT_DEPTH(type));
+    source.convertTo(wide, CV_32F);
+    const Mat kernel = getStructuringElement(shape, Size(3, 3));
+    ScopedThreadsGuard threadsGuard;
+    threadsGuard.set(1);
+    morphologyEx(wide, expected32f, op, kernel, Point(-1, -1), 1, border);
+    expected32f.convertTo(expected, CV_MAT_DEPTH(type));
+
+    threadsGuard.set(2);
+    morphologyEx(source, actual, op, kernel, Point(-1, -1), 1, border);
+    expectMorphologyEqual(expected, actual);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_MorphologyParallel, testing::Combine(
+    testing::Values(MORPH_ERODE, MORPH_DILATE),
+    testing::Values(MORPH_RECT, MORPH_ELLIPSE),
+    testing::Values(CV_16FC(5), CV_16FC(7), CV_32FC(5)),
+    testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)));
+
+
+
+enum Linear16fMethod
+{
+    HALF_FILTER2D, HALF_SEP_FILTER2D, HALF_BOX, HALF_BLUR, HALF_GAUSSIAN, HALF_BOX_SUM
+};
+
+static void applyLinear16f(int method, const Mat& source, Mat& destination, int kernelSize,
+                          int kernelDepth, int border, int ddepth = -1)
+{
+    const Size size(kernelSize, kernelSize + 2);
+    if (method == HALF_GAUSSIAN)
+    {
+        cv::GaussianBlur(source, destination, Size(kernelSize, kernelSize), 0.8, 1.1, border);
+        return;
+    }
+    if (method == HALF_BOX || method == HALF_BOX_SUM)
+    {
+        cv::boxFilter(source, destination, ddepth, size, Point(-1, -1), method == HALF_BOX, border);
+        return;
+    }
+    if (method == HALF_BLUR)
+    {
+        cv::blur(source, destination, size, Point(-1, -1), border);
+        return;
+    }
+    Mat kernelX(1, size.width, CV_64F), kernelY(size.height, 1, CV_64F);
+    for (int x = 0; x < size.width; ++x)
+        kernelX.at<double>(0, x) = (x + 1.) / (size.width * size.width);
+    for (int y = 0; y < size.height; ++y)
+        kernelY.at<double>(y, 0) = ((y % 3) - 1.) / 8.;
+    kernelX.convertTo(kernelX, kernelDepth);
+    kernelY.convertTo(kernelY, kernelDepth);
+    if (method == HALF_FILTER2D)
+        cv::filter2D(source, destination, ddepth, kernelY * kernelX, Point(-1, -1), 0.125, border);
+    else
+        cv::sepFilter2D(source, destination, ddepth, kernelX, kernelY, Point(-1, -1), 0.125, border);
+}
+
+static void expectLinear16fClose(const Mat& expected, const Mat& actual)
+{
+    ASSERT_EQ(expected.size(), actual.size());
+    ASSERT_EQ(CV_16F, expected.depth());
+    ASSERT_EQ(expected.type(), actual.type());
+    for (int row = 0; row < expected.rows; ++row)
+    {
+        const ushort* reference = expected.ptr<ushort>(row);
+        const ushort* observed = actual.ptr<ushort>(row);
+        for (int col = 0; col < expected.cols * expected.channels(); ++col)
+        {
+            const int left = (reference[col] & 0x8000) ? 0x8000 - (reference[col] & 0x7fff)
+                                                      : 0x8000 + reference[col];
+            const int right = (observed[col] & 0x8000) ? 0x8000 - (observed[col] & 0x7fff)
+                                                      : 0x8000 + observed[col];
+            const float expectedValue = float(hfloatFromBits(reference[col]));
+            const float actualValue = float(hfloatFromBits(observed[col]));
+            if (std::isnan(expectedValue))
+            {
+                ASSERT_TRUE(std::isnan(actualValue));
+                continue;
+            }
+            if (std::isinf(expectedValue))
+            {
+                ASSERT_EQ(expectedValue, actualValue);
+                continue;
+            }
+            ASSERT_TRUE(std::isfinite(actualValue));
+            const float difference = std::abs(expectedValue - actualValue);
+            ASSERT_TRUE(std::abs(left - right) <= 1 || difference <= 1e-5f)
+                << "row=" << row << " element=" << col << " difference=" << difference;
+        }
+    }
+}
+
+typedef tuple<int, int, int, int, int> Linear16fParams;
+
+static std::vector<Linear16fParams> linear16fCases()
+{
+    std::vector<Linear16fParams> cases;
+    const int channels[] = {1, 3, 5};
+    const int borders[] = {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101};
+    const int sizes[] = {3, 7, 13};
+    for (int method = HALF_FILTER2D; method <= HALF_BOX_SUM; ++method)
+        for (int cn : channels)
+            for (int border : borders)
+                for (int size : sizes)
+                {
+                    cases.push_back(Linear16fParams(method, cn, border, size, CV_32F));
+                    if (method == HALF_FILTER2D || method == HALF_SEP_FILTER2D)
+                        cases.push_back(Linear16fParams(method, cn, border, size, CV_64F));
+                }
+    return cases;
+}
+
+typedef testing::TestWithParam<Linear16fParams> Imgproc_Linear16f;
+
+TEST_P(Imgproc_Linear16f, accuracy)
+{
+    const int method = get<0>(GetParam()), cn = get<1>(GetParam()), border = get<2>(GetParam());
+    const int kernelSize = get<3>(GetParam()), kernelDepth = get<4>(GetParam());
+    const Rect roi(3, 4, 19, 17);
+    Mat values(27, 29, CV_MAKETYPE(CV_32F, cn));
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
+    Mat storage, wide, reference32, expected, actual;
+    values.convertTo(storage, CV_16F);
+    storage.convertTo(wide, CV_32F);
+    const Mat original = storage.clone();
+    applyLinear16f(method, wide(roi), reference32, kernelSize, kernelDepth, border);
+    reference32.convertTo(expected, CV_16F);
+    applyLinear16f(method, storage(roi), actual, kernelSize, kernelDepth, border);
+    expectLinear16fClose(expected, actual);
+    ASSERT_EQ(0, std::memcmp(original.data, storage.data, storage.total() * storage.elemSize()));
+
+    Mat destination(storage.size(), storage.type());
+    destination.reshape(1).setTo(Scalar::all(-123));
+    Mat referenceDestination(wide.size(), wide.type());
+    referenceDestination.reshape(1).setTo(Scalar::all(-123));
+    Mat referenceROI = referenceDestination(roi), destinationROI = destination(roi);
+    applyLinear16f(method, wide(roi), referenceROI, kernelSize, kernelDepth, border);
+    referenceDestination.convertTo(expected, CV_16F);
+    applyLinear16f(method, storage(roi), destinationROI, kernelSize, kernelDepth, border);
+    ASSERT_EQ(destination(roi).data, destinationROI.data);
+    expectLinear16fClose(expected, destination);
+    ASSERT_EQ(0, std::memcmp(original.data, storage.data, storage.total() * storage.elemSize()));
+
+    Mat referenceInPlace = wide.clone();
+    reference32.copyTo(referenceInPlace(roi));
+    referenceInPlace.convertTo(expected, CV_16F);
+    Mat sourceROI = storage(roi);
+    applyLinear16f(method, sourceROI, sourceROI, kernelSize, kernelDepth, border);
+    expectLinear16fClose(expected, storage);
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Linear16f, testing::ValuesIn(linear16fCases()));
+
+TEST(Imgproc_Linear16f, inferred_gaussian_kernel)
+{
+    Mat values(17, 19, CV_32FC3);
+    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    Mat source, wide, actual, reference, expected;
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+    cv::GaussianBlur(wide, reference, Size(), 1.1, 0.7);
+    reference.convertTo(expected, CV_16F);
+    cv::GaussianBlur(source, actual, Size(), 1.1, 0.7);
+    expectLinear16fClose(expected, actual);
+}
+
+TEST(Imgproc_Linear16f, large_full_image)
+{
+    Mat values(81, 83, CV_32FC(5));
+    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    Mat source, wide, actual, reference, expected;
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+    applyLinear16f(HALF_FILTER2D, wide, reference, 13, CV_32F, BORDER_REFLECT_101);
+    reference.convertTo(expected, CV_16F);
+    applyLinear16f(HALF_FILTER2D, source, actual, 13, CV_32F, BORDER_REFLECT_101);
+    expectLinear16fClose(expected, actual);
+}
+
+
+TEST(Imgproc_Linear16f, floating_output_depths)
+{
+    Mat values(17, 19, CV_32FC(5));
+    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    Mat source;
+    values.convertTo(source, CV_16F);
+    const int depths[] = {CV_32F, CV_64F};
+    const int methods[] = {HALF_FILTER2D, HALF_SEP_FILTER2D, HALF_BOX};
+    for (int depth : depths)
+        for (int method : methods)
+        {
+            Mat wide, actual, expected;
+            source.convertTo(wide, depth);
+            applyLinear16f(method, wide, expected, 3, depth, BORDER_REFLECT_101, depth);
+            applyLinear16f(method, source, actual, 3, depth, BORDER_REFLECT_101, depth);
+            ASSERT_EQ(expected.size(), actual.size());
+            ASSERT_EQ(expected.type(), actual.type());
+            EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), depth == CV_64F ? 1e-12 : 1e-6);
+        }
+}
+
+TEST(Imgproc_Linear16f, laplacian_kernel_depths)
+{
+    Mat values(17, 19, CV_32FC3), source, wide;
+    RNG rng(137);
+    rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+
+    for (int ksize : {1, 3})
+        for (int ddepth : {CV_16F, CV_32F, CV_64F})
+        {
+            const int referenceDepth = ddepth == CV_16F ? CV_32F : ddepth;
+            Mat reference, expected, actual;
+            cv::Laplacian(wide, reference, referenceDepth, ksize);
+            if (ddepth == CV_16F)
+                reference.convertTo(expected, CV_16F);
+            else
+                expected = reference;
+
+            cv::Laplacian(source, actual, ddepth, ksize);
+            if (ddepth == CV_16F)
+                expectLinear16fClose(expected, actual);
+            else
+                EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), ddepth == CV_64F ? 1e-12 : 1e-6);
+        }
+}
+
+TEST(Imgproc_Linear16f, parallel_five_channels)
+{
+    Mat values(1024, 1024, CV_32FC(5));
+    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    Mat source, wide, actual, reference, expected;
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+    ScopedThreadsGuard threadsGuard;
+    threadsGuard.set(1);
+    applyLinear16f(HALF_SEP_FILTER2D, wide, reference, 3, CV_32F, BORDER_CONSTANT);
+    reference.convertTo(expected, CV_16F);
+    threadsGuard.set(2);
+    applyLinear16f(HALF_SEP_FILTER2D, source, actual, 3, CV_32F, BORDER_CONSTANT);
+    expectLinear16fClose(expected, actual);
+}
+
+
+TEST(Imgproc_Linear16f, shifted_anchor_and_isolated_roi)
+{
+    Mat values(27, 29, CV_32FC(5)), source, wide;
+    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    values.convertTo(source, CV_16F);
+    source.convertTo(wide, CV_32F);
+    const Rect roi(0, 1, 19, 17);
+    const Point anchor(0, 1);
+    const Mat kernelX = Mat_<float>({1, 3}, {0.125f, -0.25f, 0.5f});
+    const Mat kernelY = Mat_<float>({5, 1}, {0.5f, -0.125f, 0.25f, 0.125f, -0.25f});
+    for (int isolated = 0; isolated < 2; ++isolated)
+        for (int method = HALF_FILTER2D; method <= HALF_BOX; ++method)
+        {
+            SCOPED_TRACE(testing::Message() << "method=" << method << " isolated=" << isolated);
+            const int border = BORDER_REFLECT_101 | (isolated ? BORDER_ISOLATED : 0);
+            Mat expected, actual, reference;
+            if (method == HALF_FILTER2D)
+            {
+                cv::filter2D(wide(roi), reference, -1, kernelY * kernelX, anchor, 0.125, border);
+                cv::filter2D(source(roi), actual, -1, kernelY * kernelX, anchor, 0.125, border);
+            }
+            else if (method == HALF_SEP_FILTER2D)
+            {
+                cv::sepFilter2D(wide(roi), reference, -1, kernelX, kernelY, anchor, 0.125, border);
+                cv::sepFilter2D(source(roi), actual, -1, kernelX, kernelY, anchor, 0.125, border);
+            }
+            else
+            {
+                cv::boxFilter(wide(roi), reference, -1, Size(3, 5), anchor, true, border);
+                cv::boxFilter(source(roi), actual, -1, Size(3, 5), anchor, true, border);
+            }
+            reference.convertTo(expected, CV_16F);
+            expectLinear16fClose(expected, actual);
+        }
+}
+
+
+TEST(Imgproc_Linear16f, identity_binary16_patterns)
+{
+    Mat source(256, 256, CV_16F);
+    for (int row = 0; row < source.rows; ++row)
+        for (int col = 0; col < source.cols; ++col)
+            source.ptr<ushort>(row)[col] = ushort(row * source.cols + col);
+    const Mat original = source.clone();
+    Mat wide;
+    source.convertTo(wide, CV_32F);
+    const Mat kernel = Mat::ones(1, 1, CV_32F);
+    for (int method = HALF_FILTER2D; method <= HALF_SEP_FILTER2D; ++method)
+    {
+        Mat reference, expected, actual;
+        if (method == HALF_FILTER2D)
+        {
+            cv::filter2D(wide, reference, -1, kernel);
+            cv::filter2D(source, actual, -1, kernel);
+        }
+        else
+        {
+            cv::sepFilter2D(wide, reference, -1, kernel, kernel);
+            cv::sepFilter2D(source, actual, -1, kernel, kernel);
+        }
+        reference.convertTo(expected, CV_16F);
+        for (int row = 0; row < source.rows; ++row)
+            for (int col = 0; col < source.cols; ++col)
+            {
+                const float expectedValue = float(expected.ptr<hfloat>(row)[col]);
+                const float actualValue = float(actual.ptr<hfloat>(row)[col]);
+                if (std::isnan(expectedValue))
+                    ASSERT_TRUE(std::isnan(actualValue));
+                else
+                    ASSERT_EQ(expectedValue, actualValue) << "pattern=" << row * source.cols + col;
+            }
+        ASSERT_EQ(0, std::memcmp(original.data, source.data, source.total() * source.elemSize()));
+    }
+}
 
 }} // namespace
