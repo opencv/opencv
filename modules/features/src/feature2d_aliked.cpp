@@ -101,6 +101,12 @@ void ALIKEDImpl::runNetwork(InputArray _image, std::vector<KeyPoint>& keypoints,
     Mat normKpts = outputs[0].reshape(0, N);   // Nx2
     Mat desc = outputs[1].reshape(0, N);       // Nx128
     Mat scr = outputs[2].reshape(0, N);        // Nx1
+    CV_CheckTypeEQ(normKpts.type(), CV_32FC1, "ALIKED keypoints output must be an Nx2 float tensor");
+    CV_CheckEQ(normKpts.cols, 2, "ALIKED keypoints output must be an Nx2 float tensor");
+    CV_CheckTypeEQ(scr.type(), CV_32FC1, "ALIKED scores output must be a float tensor");
+    CV_CheckEQ(scr.cols, 1, "ALIKED scores output must hold one score per keypoint");
+    CV_CheckTypeEQ(desc.type(), CV_32FC1, "ALIKED descriptors output must be an Nx128 float tensor");
+    CV_CheckEQ(desc.cols, descriptorSize(), "ALIKED descriptors output must be an Nx128 float tensor");
 
     // Store normalized keypoints for LightGlue context
     lastContext.normalizedKeypoints = normKpts.clone();
