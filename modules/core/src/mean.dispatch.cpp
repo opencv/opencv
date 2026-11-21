@@ -343,7 +343,7 @@ static void meanStdDev_(InputArray _src, OutputArray _mean, OutputArray _sdv, In
     double *s = _buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;
     bool partialSumIsInt = depth < CV_32S;
-    bool blockSum = partialSumIsInt || depth == CV_16F || depth == CV_16BF;
+    bool blockSum = partialSumIsInt || depth == CV_16BF;
     bool blockSqSum = depth <= CV_8S;
     size_t esz = 0;
 
