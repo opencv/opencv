@@ -4109,7 +4109,10 @@ OpenCV sample directory.
 
 @note Since OpenCV 4.14, when mode is #RETR_LIST and no hierarchy is requested, this function
 automatically uses the TRUCO parallel algorithm @cite TRUCO2026, a scalable lock-free method for
-contour extraction. In all other cases, the sequential @cite Suzuki85 algorithm is used.
+contour extraction. Since OpenCV 4.15, TRUCO is also used for 8-bit images in modes #RETR_LIST,
+#RETR_CCOMP and #RETR_TREE when the hierarchy is requested, with the same contours, order and
+hierarchy as @cite Suzuki85. Modes #RETR_EXTERNAL and #RETR_FLOODFILL, 32-bit label images and
+chain code output use the sequential @cite Suzuki85 algorithm.
 
 @note Since opencv 3.2 source image is not modified by this function.
 

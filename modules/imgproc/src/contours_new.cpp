@@ -626,6 +626,28 @@ bool ContourScanner_::findNext()
 
 //==============================================================================
 
+// adds the offset to every point of the contours returned by findTRUContours
+static void shiftContours(OutputArrayOfArrays _contours, Point offset)
+{
+    if (offset == Point())
+        return;
+    if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR && _contours.type() == CV_32SC2)
+    {
+        auto& vv = *reinterpret_cast<std::vector<std::vector<Point>>*>(_contours.getObj());
+        for (auto& c : vv)
+            for (auto& p : c)
+                p += offset;
+    }
+    else
+    {
+        // total(), not size().height: size() of a vector<Mat> is (number of contours) x 1
+        const Scalar shift(offset.x, offset.y);
+        const int n = (int)_contours.total();
+        for (int i = 0; i < n; i++)
+            _contours.getMat(i) += shift;
+    }
+}
+
 void cv::findContours(InputArray _image,
                       OutputArrayOfArrays _contours,
                       OutputArray _hierarchy,
@@ -645,32 +667,6 @@ void cv::findContours(InputArray _image,
         CV_CheckTrue(!_hierarchy.needed() || mode == RETR_CCOMP,
                      "LINK_RUNS mode supports only simplified hierarchy output (mode=RETR_CCOMP)");
         findContoursLinkRuns(_image, _contours, _hierarchy);
-        return;
-    }
-
-    // Fast path: RETR_LIST without hierarchy → findTRUContours (parallel contour extraction)
-    if (mode == RETR_LIST && !_hierarchy.needed() && _image.type() == CV_8UC1)
-    {
-        // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
-        // image in-place, avoiding an extra allocation (findContours accepts any non-zero value)
-        findTRUContours(_image, _contours, 0, true,method);
-        if (offset != Point())
-        {
-            if (_contours.kind() == _InputArray::STD_VECTOR_VECTOR)
-            {
-                auto& vv = *reinterpret_cast<std::vector<std::vector<Point>>*>(_contours.getObj());
-                for (auto& c : vv)
-                    for (auto& p : c)
-                        p += offset;
-            }
-            else
-            {
-                const Scalar shift(offset.x, offset.y);
-                const int n = (int)_contours.size().height;
-                for (int i = 0; i < n; i++)
-                    _contours.getMat(i) += shift;
-            }
-        }
         return;
     }
 
@@ -697,6 +693,19 @@ void cv::findContours(InputArray _image,
 
     if (_hierarchy.needed())
         _hierarchy.clear();
+
+    // TRUCO (parallel): same contours, order and hierarchy as the Suzuki-Abe implementation below.
+    // RETR_EXTERNAL stays with Suzuki-Abe, which skips the inner borders in that mode.
+    if (_image.type() == CV_8UC1 && !_image.empty() && method != 0 /*CV_CHAIN_CODE*/ &&
+        (mode == RETR_LIST || mode == RETR_CCOMP || mode == RETR_TREE))
+    {
+        findTRUContours(_image, _contours, _hierarchy, mode, method);
+        shiftContours(_contours, offset);
+        return;
+    }
+
+    // Suzuki-Abe: RETR_EXTERNAL, CV_CHAIN_CODE, CV_32SC1 label images (RETR_FLOODFILL / RETR_CCOMP)
+    // and empty images
 
     // preprocess
     Mat image;
