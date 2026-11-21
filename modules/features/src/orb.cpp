@@ -37,6 +37,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_features.hpp"
 #include <iterator>
+#include "opencv2/core/hal/intrin.hpp"
 
 #ifndef CV_IMPL_ADD
 #define CV_IMPL_ADD(x)
@@ -183,6 +184,13 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 {
     int step = (int)img.step1();
     size_t ptidx, ptsize = pts.size();
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const int lanes = VTraits<v_int32>::vlanes();
+    AutoBuffer<int> weights_buffer(2 * half_k + 1);
+    int* weights = weights_buffer.data() + half_k;
+    for (int u = -half_k; u <= half_k; ++u)
+        weights[u] = u;
+#endif
 
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
@@ -192,7 +200,16 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
         int m_01 = 0, m_10 = 0;
 
         // Treat the center line differently, v=0
-        for (int u = -half_k; u <= half_k; ++u)
+        int u = -half_k;
+#if CV_SIMD || CV_SIMD_SCALABLE
+        v_int32 vm_10 = vx_setzero_s32(), vm_01 = vx_setzero_s32();
+        for (; u <= half_k - lanes + 1; u += lanes)
+        {
+            v_int32 pixels = v_reinterpret_as_s32(vx_load_expand_q(center + u));
+            vm_10 = v_add(vm_10, v_mul(vx_load(weights + u), pixels));
+        }
+#endif
+        for (; u <= half_k; ++u)
             m_10 += u * center[u];
 
         // Go line by line in the circular patch
@@ -201,7 +218,18 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
             // Proceed over the two lines
             int v_sum = 0;
             int d = u_max[v];
-            for (int u = -d; u <= d; ++u)
+            u = -d;
+#if CV_SIMD || CV_SIMD_SCALABLE
+            const v_int32 row_weight = vx_setall_s32(v);
+            for (; u <= d - lanes + 1; u += lanes)
+            {
+                v_int32 plus = v_reinterpret_as_s32(vx_load_expand_q(center + u + v*step));
+                v_int32 minus = v_reinterpret_as_s32(vx_load_expand_q(center + u - v*step));
+                vm_10 = v_add(vm_10, v_mul(vx_load(weights + u), v_add(plus, minus)));
+                vm_01 = v_add(vm_01, v_mul(row_weight, v_sub(plus, minus)));
+            }
+#endif
+            for (; u <= d; ++u)
             {
                 int val_plus = center[u + v*step], val_minus = center[u - v*step];
                 v_sum += (val_plus - val_minus);
@@ -210,6 +238,10 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
             m_01 += v * v_sum;
         }
 
+#if CV_SIMD || CV_SIMD_SCALABLE
+        m_10 += v_reduce_sum(vm_10);
+        m_01 += v_reduce_sum(vm_01);
+#endif
         pts[ptidx].angle = fastAtan2((float)m_01, (float)m_10);
     }
 }
