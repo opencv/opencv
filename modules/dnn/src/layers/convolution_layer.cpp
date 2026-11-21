@@ -668,18 +668,22 @@ public:
         // recalculate pads in case of "SAME" padMode with odd pads
         // since in 'getConvPoolPaddings' pads are divided equally
         // leading to the loss of one pad
-        if (padMode == "SAME")
+        if (padMode == "SAME" || padMode == "SAME_UPPER" || padMode == "SAME_LOWER")
         {
             for (int i = 0; i < pads_begin.size(); i++) {
                 if (strides[i] <= kernel_size[i])
                 {
                     int pads_at_i = kernel_size[i] - 1 - (shape_x[i+2] - 1 + strides[i]) % strides[i];
-                    pads_begin[i] = pads_at_i / 2;
-                    // if odd, add extra padding to the end for SAME_UPPER
-                    // or to the beginning for SAME_LOWER. Since here we cannot
-                    // identity SAME_UPPER and SAME_LOWER, extra padding is always
-                    // added to the end.
-                    pads_end[i] = pads_at_i - pads_begin[i];
+                    if (padMode == "SAME_LOWER")
+                    {
+                        pads_begin[i] = pads_at_i - pads_at_i / 2;
+                        pads_end[i] = pads_at_i / 2;
+                    }
+                    else
+                    {
+                        pads_begin[i] = pads_at_i / 2;
+                        pads_end[i] = pads_at_i - pads_begin[i];
+                    }
                 }
             }
         }
@@ -776,7 +780,8 @@ public:
 
         ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID :
+                       (padMode == "SAME_LOWER" ? ov::op::PadType::SAME_LOWER : ov::op::PadType::SAME_UPPER);
 
         std::shared_ptr<ov::Node> conv_node;
         if (group != 1) {

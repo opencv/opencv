@@ -134,9 +134,25 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
     util::getParameter(params, "stride", "stride", strides, true, std::vector<size_t>(kernel_size, 1));
 
     padMode = "";
-    if (params.has("pad_mode"))
+    if (params.has("auto_pad"))
     {
-        padMode = params.get<String>("pad_mode");
+        String autoPad = params.get<String>("auto_pad");
+        if (autoPad == "SAME_LOWER")
+            padMode = "SAME_LOWER";
+        else if (autoPad == "SAME_UPPER")
+            padMode = "SAME";
+        else if (autoPad == "VALID")
+            padMode = "VALID";
+    }
+    if (padMode.empty() && params.has("pad_mode"))
+    {
+        String pm = params.get<String>("pad_mode");
+        if (pm == "SAME_LOWER")
+            padMode = "SAME_LOWER";
+        else if (pm == "SAME_UPPER" || pm == "SAME")
+            padMode = "SAME";
+        else if (pm == "VALID")
+            padMode = "VALID";
     }
 
     for (int i = 0; i < strides.size(); i++)
@@ -219,7 +235,7 @@ void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>
         for (int i = 0; i < inp.size(); i++)
             out.push_back((inp[i] - dilation[i] * (kernel[i] - 1) - 1 + stride[i]) / stride[i]);
     }
-    else if (padMode == "SAME")
+    else if (padMode == "SAME" || padMode == "SAME_UPPER" || padMode == "SAME_LOWER")
     {
         for (int i = 0; i < inp.size(); i++)
             out.push_back((inp[i] - 1 + stride[i]) / stride[i]);
@@ -234,7 +250,7 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
                          const std::vector<size_t>& strides, const String &padMode,
                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end)
 {
-    if (padMode == "SAME" || padMode == "VALID")
+    if (padMode == "SAME" || padMode == "SAME_UPPER" || padMode == "SAME_LOWER" || padMode == "VALID")
     {
         pads_begin.assign(kernel.size(), 0);
         pads_end.assign(kernel.size(), 0);
@@ -248,6 +264,26 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
             {
                 int pad = (kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i]) / 2;
                 pads_begin[i] = pads_end[i] = pad;
+            }
+        }
+    }
+    else if (padMode == "SAME_LOWER" || padMode == "SAME_UPPER")
+    {
+        CV_Assert_N(kernel.size() == strides.size(), kernel.size() == inp.size());
+        for (int i = 0; i < pads_begin.size(); i++) {
+            if (strides[i] <= kernel[i])
+            {
+                int total_pad = kernel[i] - 1 - (inp[i] - 1 + strides[i]) % strides[i];
+                if (padMode == "SAME_LOWER")
+                {
+                    pads_begin[i] = total_pad - total_pad / 2;
+                    pads_end[i] = total_pad / 2;
+                }
+                else
+                {
+                    pads_begin[i] = total_pad / 2;
+                    pads_end[i] = total_pad - pads_begin[i];
+                }
             }
         }
     }
