@@ -251,8 +251,10 @@ libraries). If you do not need the support for some of these, you can just freel
         @code{.bash}
         setx -m QTDIR D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3
         @endcode
-        Also, add the built binary files path to the system path by using the [PathEditor](http://www.redfernplace.com/software-projects/patheditor/). In our
-        case this is `D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`.
+        Also, add the built binary files path to the system **PATH** (open *Edit the system environment
+        variables* from the start menu, click *Environment Variables...*, select *Path* under *System
+        variables*, click *Edit...* and add a new entry). In our case this is
+        `D:/OpenCV/dep/qt/qt-everywhere-opensource-src-4.7.3/bin`.
 
         @note
         If you plan on doing Qt application development you can also install at this point the *Qt
@@ -395,17 +397,14 @@ However, to do this the operating system needs to know where they are. The syste
 a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know
 where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs
 right beside the applications executable file (*exe*) for the OS to find it, which is highly
-unpleasant if you work on many projects. To do this start up again the [PathEditor](http://www.redfernplace.com/software-projects/patheditor/) and add the
-following new entry (right click in the application to bring up the menu):
+unpleasant if you work on many projects. To do this open *Edit the system environment variables* from
+the start menu, click *Environment Variables...*, select *Path* under *System variables*, click
+*Edit...* and add the following new entry:
 @code
     %OPENCV_DIR%\bin
 @endcode
 
-![](images/PathEditorOpenCVInsertNew.png)
-
-![](images/PathEditorOpenCVSetPath.png)
-
-Save it to the registry and you are done. If you ever change the location of your build directories
+Confirm all the dialogs with *OK* and you are done. If you ever change the location of your build directories
 or want to try out your application with a different build, all you will need to do is to update the
 OPENCV_DIR variable via the *setx* command inside a command window.
 
