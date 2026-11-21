@@ -10,7 +10,7 @@
 //
 // Pattern (post-importer; bias has already been absorbed into MatMul.blobs[1]
 // by BiasedMatmulSubgraph when it was a const Add):
-//   A(any rank) -> MatMul[const B (2D), optional const bias [N] / scalar]
+//   A(any rank) -> MatMul[const B (2D), optional const bias]
 //
 // Replacement:
 //   A -> Gemm[transA=false, transB=mm.trans_b, alpha=mm.alpha, beta=mm.beta,
@@ -21,10 +21,11 @@
 //   - MatMul.trans_a must be false (ND-A flattening assumes row-major K is the
 //     last axis)
 //   - blobs.size() in {1, 2} and blobs[0] (B) is 2D float32
-//   - if a bias is present, it must be scalar (total==1) or 1D length-N. The
-//     Gemm flatten_a=false bias path tiles a per-row pattern, so 2D / per-row
-//     biases like [M, N] aren't supported by this rewriter (they would change
-//     value across the flattened rows).
+//   - if a bias is present, it must have 1 element, or N elements with last
+//     dimension N, and no more dimensions than A (requiring A's rank to be
+//     known when bias.dims > 1); higher-rank biases are reshaped to 1D before
+//     building Gemm. The Gemm flatten_a=false bias path tiles a per-row
+//     pattern, so per-row biases like [M, 1] or [M, N] aren't supported.
 //
 // A per-channel constant Mul/Add right after the MatMul (e.g. ViT LayerScale) is folded
 // into B and the bias, so it costs nothing at run time. Only done when alpha == beta == 1.
@@ -193,10 +194,22 @@ struct ModelFusionMatMulToGemm
                 const Mat& bias = layer->blobs[1];
                 if (bias.type() != CV_32F) continue;
                 int total = (int)bias.total();
-                if (total != 1 && total != N) continue;
+                if (total != 1 && (bias.dims < 1 || total != N || bias.size[bias.dims - 1] != N))
+                    continue;
+                // A bias with more dimensions than A would add leading axes to the output, which a Gemm
+                // cannot do, and A's rank is known here only for graph inputs.
+                const int a_dims = netimpl->argData(layer->inputs[0]).shape.dims;
+                if (bias.dims > 1 && (a_dims < 0 || bias.dims > a_dims))
+                    continue;
             }
 
-            Mat Bw = B, bias = have_bias ? layer->blobs[1] : Mat();
+            Mat Bw = B;
+            Mat bias;
+            if (have_bias) {
+                const Mat& raw_bias = layer->blobs[1];
+                Mat cont = raw_bias.isContinuous() ? raw_bias : raw_bias.clone();
+                bias = cont.reshape(1, std::vector<int>{(int)cont.total()});
+            }
             vector<Arg> outputs = layer->outputs;
             if (mm->alpha == 1.f && mm->beta == 1.f)
                 outputs = foldChannelAffine(newprog, layer, consumer, usecounts,

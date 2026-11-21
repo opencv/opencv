@@ -1113,6 +1113,53 @@ static Mat relu(const Mat& x)
     return cv::max(x, 0.0);
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Fusion_MatMulToGemm;
+TEST_P(Fusion_MatMulToGemm, HigherRankAndColumnBias)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("MatMul-to-Gemm fusion targets OpenCV and CUDA backends");
+
+    double l1, lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    // MatMul + Add models, and how many Gemm layers the rewrite must leave
+    const std::pair<std::string, int> cases[] = {
+        {"matmul_add_bias_nd", 1},               // [1, 1, N] bias on a 3-D input: reshaped to [N] and fused
+        {"matmul_add_bias_1d_rank_unknown", 1},  // [N] bias after Squeeze (rank not known): adds no axis, fused
+        {"matmul_add_bias_column", 0},           // [M, 1] bias with M == N: one value per row, not per column
+    };
+    for (const auto& c : cases)
+    {
+        const std::string& name = c.first;
+        Net net = readNetFromONNX(findDataFile("dnn/onnx/models/" + name + ".onnx"), ENGINE_OPENCV);
+        EXPECT_EQ(c.second, fusedCount(net, "Gemm")) << name;
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(blobFromNPY(findDataFile("dnn/onnx/data/input_" + name + ".npy")));
+        Mat out = net.forward();
+
+        Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_" + name + ".npy"));
+        ASSERT_EQ(ref.shape(), out.shape()) << name;
+        normAssert(ref, out, name.c_str(), l1, lInf);
+    }
+
+    // A [1, 1, N] bias on a 2-D input makes the output 3-D, which a Gemm cannot produce, so the rewrite must skip
+    // it, also when the input comes from another layer and its rank is not known. Only that decision is checked:
+    // the MatMul that keeps the bias does not broadcast it to 3-D on 5.x either.
+    const char* skippedRankModels[] = {
+        "matmul_add_bias_rank",
+        "matmul_add_bias_rank_after_relu",
+    };
+    for (const char* name : skippedRankModels)
+    {
+        Net rankNet = readNetFromONNX(findDataFile(std::string("dnn/onnx/models/") + name + ".onnx"), ENGINE_OPENCV);
+        EXPECT_EQ(0, fusedCount(rankNet, "Gemm")) << name;
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Fusion_MatMulToGemm, dnnBackendsAndTargets());
+
 // A patch embedding with 3 input channels reads the plain input, so it needs no layout conversion.
 // Other small convs, like this padded 5x5 one, keep block layout and the blocked kernel.
 TEST(Fusion, OnlyPatchEmbeddingConvSkipsBlockLayout)
