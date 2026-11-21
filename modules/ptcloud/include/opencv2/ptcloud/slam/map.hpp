@@ -49,6 +49,10 @@ public:
     void removeObservation(KeyFrame* kf, MapPoint* mp);
     void removeMapPoint(MapPoint* mp);
 
+    /** Merge @p oldMp into @p newMp: transfers all observations to newMp,
+        marks oldMp as bad, and deletes it.  Used by loop closure fusion. */
+    void replaceMapPoint(MapPoint* oldMp, MapPoint* newMp);
+
     // Reference / current keyframes
 
     void setRefKeyframe(KeyFrame* kf);
