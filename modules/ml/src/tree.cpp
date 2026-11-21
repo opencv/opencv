@@ -132,6 +132,7 @@ void DTreesImpl::clear()
     splits.clear();
     subsets.clear();
     classLabels.clear();
+    missingSubst.clear();
 
     w.release();
     _isClassifier = false;
@@ -1379,7 +1380,9 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
     AutoBuffer<int> buf(nclasses + catbufsize + 1);
     int* votes = buf.data();
     int* catbuf = votes + nclasses;
-    const int* cvidx = (flags & (COMPRESSED_INPUT|PREPROCESSED_INPUT)) == 0 && !varIdx.empty() ? &compVarIdx[0] : 0;
+    const bool rawMode = (flags & (COMPRESSED_INPUT|PREPROCESSED_INPUT)) == 0;
+    CV_Assert( varIdx.empty() || compVarIdx.size() == varType.size() );
+    const int* cvidx = !varIdx.empty() ? compVarIdx.data() : 0;
     const uchar* vtype = &varType[0];
     const Vec2i* cofs = !catOfs.empty() ? &catOfs[0] : 0;
     const int* cmap = !catMap.empty() ? &catMap[0] : 0;
@@ -1411,14 +1414,24 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
 
         for(;;)
         {
+            // a root or child index loaded from a model must name an existing node
+            CV_Assert( 0 <= nidx && (size_t)nidx < nodes.size() );
             prev = nidx;
             const Node& node = nodes[nidx];
             if( node.split < 0 )
                 break;
+            CV_Assert( (size_t)node.split < splits.size() );
             const Split& split = splits[node.split];
             int vi = split.varIdx;
+            // Splits use global variable indices; Boost training supplies only
+            // the active variables. Check each index in its own coordinate space.
+            CV_Assert( 0 <= vi && vi < getVarCount() );
+            CV_Assert( !cvidx || (size_t)vi < compVarIdx.size() );
             int ci = cvidx ? cvidx[vi] : vi;
-            float val = psample[ci*sstep];
+            CV_Assert( 0 <= ci && ci < nvars );
+            int sampleIdx = rawMode ? vi : ci;
+            CV_Assert( (size_t)sampleIdx < sample.total() );
+            float val = psample[sampleIdx*sstep];
             if( val == MISSED_VAL )
             {
                 if( !missingSubstPtr )
@@ -1426,6 +1439,7 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
                     nidx = node.defaultDir < 0 ? node.left : node.right;
                     continue;
                 }
+                CV_Assert( (size_t)vi < missingSubst.size() );
                 val = missingSubstPtr[vi];
             }
 
@@ -1768,9 +1782,11 @@ void DTreesImpl::readParams( const FileNode& fn )
         if (!varIdx.empty())
         {
             n = (int)varIdx.size();
+            CV_CheckLE(n, (int)varType.size(), "ML/DTrees: 'var_idx' has more entries than 'var_type'");
             for (; i < n; ++i)
             {
                 int var = varIdx[i];
+                CV_Assert(0 <= var && var < varAll);
                 extendedTypes[var] = varType[i];
             }
         }
@@ -1801,6 +1817,7 @@ void DTreesImpl::readParams( const FileNode& fn )
             Vec2i newOffsets(0, 0);
             if (varType[i] == VAR_CATEGORICAL) // only categorical vars are represented in catMap
             {
+                CV_Assert(j < counts.size());
                 newOffsets[0] = curShift;
                 curShift += counts[j];
                 newOffsets[1] = curShift;
@@ -1820,6 +1837,15 @@ void DTreesImpl::readParams( const FileNode& fn )
         fn["cat_ofs"] >> catOfs;
         fn["missing_subst"] >> missingSubst;
         fn["class_labels"] >> classLabels;
+    }
+
+    // predict() looks categorical values up in catMap through these offsets
+    for (size_t vi = 0; vi < catOfs.size(); ++vi)
+    {
+        const Vec2i& ofs = catOfs[vi];
+        CV_Assert(0 <= ofs[0] && ofs[0] <= ofs[1] && ofs[1] <= (int)catMap.size());
+        // a categorical variable has at least one category value; an empty range is only valid for an ordered one
+        CV_Assert(vi >= varType.size() || varType[vi] != VAR_CATEGORICAL || ofs[0] < ofs[1]);
     }
 
     // init var mapping for node reading (var indexes or varIdx indexes)
@@ -1843,6 +1869,9 @@ int DTreesImpl::readSplit( const FileNode& fn )
     vi = varMapping[vi]; // convert to varIdx if needed
     CV_Assert( 0 <= vi && vi < (int)varType.size() );
     split.varIdx = vi;
+    // predictTrees() replaces a missing value of this variable with missing_subst[vi]
+    if( !missingSubst.empty() && vi >= (int)missingSubst.size() )
+        CV_Error( Error::StsParseError, "ML/DTrees: 'missing_subst' is shorter than the split variable index" );
 
     if( varType[vi] == VAR_CATEGORICAL ) // split on categorical var
     {
@@ -1909,7 +1938,10 @@ int DTreesImpl::readNode( const FileNode& fn )
     node.value = (double)fn["value"];
 
     if( _isClassifier )
+    {
         node.classIdx = (int)fn["norm_class_idx"];
+        CV_Assert( 0 <= node.classIdx && node.classIdx < (int)classLabels.size() );
+    }
 
     FileNode sfn = fn["splits"];
     if( !sfn.empty() )
@@ -1936,10 +1968,14 @@ int DTreesImpl::readNode( const FileNode& fn )
 int DTreesImpl::readTree( const FileNode& fn )
 {
     int i, n = (int)fn.size(), root = -1, pidx = -1;
+    const size_t firstNode = nodes.size();
     FileNodeIterator it = fn.begin();
 
     for( i = 0; i < n; i++, ++it )
     {
+        // the nodes are stored depth first: once every split has both children the tree is
+        // complete, and a further node would silently replace the root
+        CV_Assert( i == 0 || pidx >= 0 );
         int nidx = readNode(*it);
         if( nidx < 0 )
             break;
@@ -1963,6 +1999,19 @@ int DTreesImpl::readTree( const FileNode& fn )
                 pidx = nodes[pidx].parent;
         }
     }
+
+    // predictTrees() follows left/right of every split node, so each of them needs both children
+    // (a list that ends early leaves the open splits with -1)
+    CV_Assert( root >= 0 );
+    for( size_t k = firstNode; k < nodes.size(); k++ )
+    {
+        const Node& nd = nodes[k];
+        if( nd.split < 0 )
+            continue;
+        CV_Assert( 0 <= nd.left && (size_t)nd.left < nodes.size() );
+        CV_Assert( 0 <= nd.right && (size_t)nd.right < nodes.size() );
+    }
+
     roots.push_back(root);
     return root;
 }
