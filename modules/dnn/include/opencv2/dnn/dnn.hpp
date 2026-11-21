@@ -1289,7 +1289,10 @@ CV__DNN_INLINE_NS_BEGIN
      *  tensor names refer to graph inputs/outputs, other nodes' outputs or
      *  initializer names in the safetensors file (the format produced by the
      *  export tool, see modules/dnn/src/safetensors_importer.cpp for the
-     *  exact schema).
+     *  exact schema). The interface dtype vocabulary is float32 (default
+     *  when omitted), float64, float16, bfloat16, int8..int64, uint8..uint64
+     *  and bool, mapped to the corresponding ONNX tensor types for both
+     *  inputs and outputs.
      *
      *  @param graphJsonPath path to the graph JSON file describing the topology.
      *  @param weightsPath path to the safetensors file with the trained weights.

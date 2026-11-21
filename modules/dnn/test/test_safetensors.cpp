@@ -375,4 +375,111 @@ TEST(Test_Safetensors, unsupported_dtype_raises)
     std::remove(weightsPath.c_str());
 }
 
+TEST(Test_Safetensors, int64_output_interface)
+{
+    const std::string graphPath = cv::tempfile("opencv_test_safetensors_i64_graph.json");
+    const std::string weightsPath = cv::tempfile("opencv_test_safetensors_i64.safetensors");
+
+    {
+        // empty weights file: header "{}" (8-byte aligned), no data section
+        std::string headerStr = "{}";
+        while (headerStr.size() % 8 != 0)
+            headerStr += ' ';
+        std::ofstream wf(weightsPath.c_str(), std::ios::binary);
+        ASSERT_TRUE(wf.is_open());
+        uint64_t headerLen = headerStr.size();
+        wf.write(reinterpret_cast<const char*>(&headerLen), 8);
+        wf.write(headerStr.data(), headerStr.size());
+    }
+    {
+        // F32 input -> Cast to INT64, declared with a non-F32 interface dtype
+        std::ofstream gf(graphPath.c_str(), std::ios::binary);
+        ASSERT_TRUE(gf.is_open());
+        gf << R"({
+  "model_name": "int64_interface_test",
+  "inputs":  [ {"name": "x", "shape": [1, 4], "dtype": "float32"} ],
+  "outputs": [ {"name": "y", "shape": [1, 4], "dtype": "int64"} ],
+  "nodes": [
+    {"name": "cast.0", "op_type": "Cast", "inputs": ["x"], "outputs": ["y"], "attrs": {"to": 7}}
+  ]
+})";
+    }
+
+    try
+    {
+        Net net = cv::dnn::readNetFromSafetensors(graphPath, weightsPath, cv::dnn::ENGINE_OPENCV);
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+
+        int sz[2] = {1, 4};
+        Mat x(2, sz, CV_32F);
+        const float vals[4] = {1.7f, 2.2f, -3.9f, 4.1f};
+        for (int i = 0; i < 4; ++i)
+            x.ptr<float>()[i] = vals[i];
+
+        net.setInput(x);
+        Mat out = net.forward();
+        ASSERT_EQ(out.total(), (size_t)4);
+        ASSERT_TRUE(out.depth() == CV_64S || out.depth() == CV_32S)
+            << "a non-F32 interface must produce an integer output Mat (depth=" << out.depth() << ")";
+
+        // values are truncated toward zero by Cast: 1, 2, -3, 4
+        const double expected[4] = {1.0, 2.0, -3.0, 4.0};
+        for (int i = 0; i < 4; ++i)
+        {
+            const double v = (out.depth() == CV_64S) ? (double)out.ptr<int64_t>()[i]
+                                                    : (double)out.ptr<int>()[i];
+            EXPECT_EQ(v, expected[i]) << "element " << i;
+        }
+    }
+    catch (const Exception& e)
+    {
+        if (missingProtobuf(e))
+            throw SkipTestException("OpenCV built without Protobuf");
+        throw;
+    }
+
+    std::remove(graphPath.c_str());
+    std::remove(weightsPath.c_str());
+}
+
+TEST(Test_Safetensors, unsupported_interface_dtype_raises)
+{
+    const std::string graphPath = cv::tempfile("opencv_test_safetensors_iface_graph.json");
+    const std::string weightsPath = cv::tempfile("opencv_test_safetensors_iface.safetensors");
+
+    {
+        std::string headerStr = "{}";
+        while (headerStr.size() % 8 != 0)
+            headerStr += ' ';
+        std::ofstream wf(weightsPath.c_str(), std::ios::binary);
+        uint64_t headerLen = headerStr.size();
+        wf.write(reinterpret_cast<const char*>(&headerLen), 8);
+        wf.write(headerStr.data(), headerStr.size());
+    }
+    {
+        // replace the input dtype with an unsupported value
+        std::string g = makeGraphJson();
+        size_t pos = g.find("\"dtype\": \"float32\"");
+        ASSERT_NE(pos, std::string::npos);
+        g.replace(pos, 18, "\"dtype\": \"complex128\"");
+        std::ofstream gf(graphPath.c_str(), std::ios::binary);
+        gf << g;
+    }
+
+    try
+    {
+        EXPECT_ANY_THROW(cv::dnn::readNetFromSafetensors(graphPath, weightsPath, cv::dnn::ENGINE_OPENCV));
+    }
+    catch (const Exception& e)
+    {
+        if (missingProtobuf(e))
+            throw SkipTestException("OpenCV built without Protobuf");
+        throw;
+    }
+
+    std::remove(graphPath.c_str());
+    std::remove(weightsPath.c_str());
+}
+
 }  // namespace opencv_test

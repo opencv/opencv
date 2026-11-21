@@ -14,8 +14,8 @@
 //   {
 //     "model_name": "name",                                  // optional
 //     "inputs":  [ { "name": "x", "shape": [1, 3, "H", "W"], // int or dynamic dim name
-//                   "dtype": "float32" }, ... ],
-//     "outputs": [ { "name": "y", "shape": [1, 2] }, ... ],
+//                   "dtype": "float32" }, ... ],              // interface dtype, see below
+//     "outputs": [ { "name": "y", "shape": [1, 2], "dtype": "int64" }, ... ],
 //     "nodes":   [ { "name": "conv.0", "op_type": "Conv",
 //                    "inputs":  ["x", "conv.weight", "conv.bias"],
 //                    "outputs": ["y"],
@@ -24,6 +24,9 @@
 // Tensor names in "nodes" refer either to graph inputs/outputs, to other
 // nodes' outputs, or to initializer names in the safetensors file. Node
 // attribute values follow ONNX attribute types (int/float/string or arrays).
+// The interface dtype vocabulary is: float32, float64, float16, bfloat16,
+// int8, int16, int32, int64, uint8, uint16, uint32, uint64 and bool
+// (defaulting to float32 when "dtype" is omitted).
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
@@ -319,6 +322,46 @@ static int dtypeStringToOnnx(const std::string& dtype)
     return 0;  // unknown dtype
 }
 
+// ===== graph.json interface dtype string -> ONNX TensorProto data type =====
+// The graph interface vocabulary (as written by the export tool) uses full
+// type names, unlike the safetensors dtype strings ("F32" etc.).
+// Returns 0 for unknown dtype strings (the caller must raise an error).
+static int graphDtypeStringToOnnx(const std::string& dtype)
+{
+    if (dtype == "float32")  return opencv_onnx::TensorProto_DataType_FLOAT;
+    if (dtype == "float64")  return opencv_onnx::TensorProto_DataType_DOUBLE;
+    if (dtype == "float16")  return opencv_onnx::TensorProto_DataType_FLOAT16;
+    if (dtype == "bfloat16") return opencv_onnx::TensorProto_DataType_BFLOAT16;
+    if (dtype == "int64")   return opencv_onnx::TensorProto_DataType_INT64;
+    if (dtype == "int32")   return opencv_onnx::TensorProto_DataType_INT32;
+    if (dtype == "int16")   return opencv_onnx::TensorProto_DataType_INT16;
+    if (dtype == "int8")    return opencv_onnx::TensorProto_DataType_INT8;
+    if (dtype == "uint64")  return opencv_onnx::TensorProto_DataType_UINT64;
+    if (dtype == "uint32")  return opencv_onnx::TensorProto_DataType_UINT32;
+    if (dtype == "uint16")  return opencv_onnx::TensorProto_DataType_UINT16;
+    if (dtype == "uint8")   return opencv_onnx::TensorProto_DataType_UINT8;
+    if (dtype == "bool")    return opencv_onnx::TensorProto_DataType_BOOL;
+    return 0;  // unknown dtype
+}
+
+// Resolve the interface dtype of a graph input/output entry.
+// Falls back to FLOAT when the entry omits "dtype" (the only interface type
+// the original export pipelines produced), raises on unknown dtype strings.
+static int resolveInterfaceDtype(const std::string& tensorName, const FileNode& dtypeNode)
+{
+    if (dtypeNode.empty())
+        return opencv_onnx::TensorProto_DataType_FLOAT;
+    const std::string dtype = (std::string)dtypeNode;
+    const int onnx_dtype = graphDtypeStringToOnnx(dtype);
+    if (onnx_dtype == 0)
+    {
+        CV_Error_(Error::StsError,
+                  ("DNN/Safetensors: interface tensor '%s' has unsupported dtype '%s'",
+                   tensorName.c_str(), dtype.c_str()));
+    }
+    return onnx_dtype;
+}
+
 // ===== Set ONNX attribute from a cv::FileNode =====
 static void setAttribute(opencv_onnx::AttributeProto* attr,
                           const std::string& name, const FileNode& val)
@@ -409,10 +452,11 @@ Net readNetFromSafetensors(const String& graphJsonPath,
     for (FileNodeIterator it = inputs.begin(); it != inputs.end(); ++it)
     {
         FileNode inp = *it;
+        const std::string in_name = (std::string)inp["name"];
         auto* vi = graph->add_input();
-        vi->set_name((std::string)inp["name"]);
+        vi->set_name(in_name);
         auto* ttype = vi->mutable_type()->mutable_tensor_type();
-        ttype->set_elem_type(opencv_onnx::TensorProto_DataType_FLOAT);
+        ttype->set_elem_type(resolveInterfaceDtype(in_name, inp["dtype"]));
         auto* shape = ttype->mutable_shape();
         FileNode shape_node = inp["shape"];
         for (FileNodeIterator s = shape_node.begin(); s != shape_node.end(); ++s)
@@ -434,10 +478,11 @@ Net readNetFromSafetensors(const String& graphJsonPath,
     for (FileNodeIterator it = outputs.begin(); it != outputs.end(); ++it)
     {
         FileNode out = *it;
+        const std::string out_name = (std::string)out["name"];
         auto* vi = graph->add_output();
-        vi->set_name((std::string)out["name"]);
+        vi->set_name(out_name);
         auto* ttype = vi->mutable_type()->mutable_tensor_type();
-        ttype->set_elem_type(opencv_onnx::TensorProto_DataType_FLOAT);
+        ttype->set_elem_type(resolveInterfaceDtype(out_name, out["dtype"]));
         auto* shape = ttype->mutable_shape();
         FileNode shape_node = out["shape"];
         for (FileNodeIterator s = shape_node.begin(); s != shape_node.end(); ++s)
