@@ -163,4 +163,53 @@ TEST(Photo_NPR_Stylization, regression)
 
 }
 
+// The filters work on 3-channel images. More channels used to overflow a heap buffer,
+// and an image with a zero width or height crashed.
+TEST(Photo_NPR, more_than_three_channels_throw)
+{
+    for (int cn = 4; cn <= 8; cn += 2)
+    {
+        Mat src = Mat::zeros(24, 24, CV_8UC(cn)), dst1, dst2;
+        EXPECT_THROW(edgePreservingFilter(src, dst1, RECURS_FILTER), cv::Exception) << "channels " << cn;
+        EXPECT_THROW(edgePreservingFilter(src, dst1, NORMCONV_FILTER), cv::Exception) << "channels " << cn;
+        EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception) << "channels " << cn;
+        EXPECT_THROW(stylization(src, dst1), cv::Exception) << "channels " << cn;
+    }
+}
+
+TEST(Photo_NPR, empty_input_throws)
+{
+    const Size sizes[] = {Size(0, 0), Size(0, 5), Size(5, 0)};
+    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
+    {
+        Mat src(sizes[i], CV_8UC3), dst1, dst2;
+        EXPECT_THROW(edgePreservingFilter(src, dst1), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
+        EXPECT_THROW(pencilSketch(src, dst1, dst2), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
+        EXPECT_THROW(stylization(src, dst1), cv::Exception) << "size " << sizes[i].width << "x" << sizes[i].height;
+    }
+}
+
+TEST(Photo_NPR, three_channel_input_still_works)
+{
+    Mat src(24, 24, CV_8UC3), dst1, dst2;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst1));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_NO_THROW(pencilSketch(src, dst1, dst2));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_EQ(src.size(), dst2.size());
+    EXPECT_NO_THROW(stylization(src, dst1));
+    EXPECT_EQ(src.size(), dst1.size());
+    EXPECT_EQ(CV_8UC3, dst1.type());
+}
+
+TEST(Photo_NPR, edge_preserving_filter_gray_input_still_works)
+{
+    Mat src(24, 24, CV_8UC1), dst;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+    EXPECT_NO_THROW(edgePreservingFilter(src, dst));
+    EXPECT_EQ(src.size(), dst.size());
+}
+
 }} // namespace
