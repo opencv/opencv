@@ -39,6 +39,19 @@ void LUT8u_( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, in
         int i = 0;
 #if CV_LUT8U_SIMD
         const int nlanes = VTraits<v_uint8>::vlanes();
+        if( total >= 512 && nlanes <= 256 )
+        {
+            uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) tab[256];
+            for( int j = 0; j < 256; j += nlanes )
+                v_store_aligned(tab + j, vx_load(lut + j));
+            for( ; i <= total - 2*nlanes; i += 2*nlanes )
+            {
+                v_uint8 r0 = v_lut(tab, vx_load(src + i));
+                v_uint8 r1 = v_lut(tab, vx_load(src + i + nlanes));
+                v_store(dst + i, r0);
+                v_store(dst + i + nlanes, r1);
+            }
+        }
         for( ; i <= total - nlanes; i += nlanes )
         {
             v_uint8 idx = vx_load(src + i);
