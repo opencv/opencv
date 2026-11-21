@@ -62,13 +62,11 @@ static void Canny_reference_follow( int x, int y, float lowThreshold, const Mat&
     }
 }
 
-static void Canny_reference( const Mat& src, Mat& dst,
-            double threshold1, double threshold2,
-            int aperture_size, bool use_true_gradient )
+// dx, dy: CV_32S Sobel derivatives of src (aperture_size, BORDER_REPLICATE)
+static void Canny_reference( const Mat& src, const Mat& dx, const Mat& dy, Mat& dst,
+            double threshold1, double threshold2, bool use_true_gradient )
 {
     dst.create(src.size(), src.type());
-    int m = aperture_size;
-    Point anchor(m/2, m/2);
     const double tan_pi_8 = tan(CV_PI/8.);
     const double tan_3pi_8 = tan(CV_PI*3/8);
     float lowThreshold = (float)MIN(threshold1, threshold2);
@@ -76,11 +74,7 @@ static void Canny_reference( const Mat& src, Mat& dst,
 
     int x, y, width = src.cols, height = src.rows;
 
-    Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
-    Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
-    Mat dx, dy, mag(height, width, CV_32F);
-    cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
-    cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
+    Mat mag(height, width, CV_32F);
 
     // calc gradient magnitude
     for( y = 0; y < height; y++ )
@@ -165,12 +159,12 @@ TEST_P(Canny_Modes, accuracy)
     const double range = aperture == 3 ? 300. : 1000.;
     RNG & rng = TS::ptr()->get_rng();
 
+    const std::string fname = cvtest::findDataFile("shared/fruits.png");
+    const Mat original = cv::imread(fname, IMREAD_GRAYSCALE);
+
     for (int ITER = 0; ITER < 20; ++ITER)
     {
         SCOPED_TRACE(cv::format("iteration %d", ITER));
-
-        const std::string fname = cvtest::findDataFile("shared/fruits.png");
-        const Mat original = cv::imread(fname, IMREAD_GRAYSCALE);
 
         const double thresh1 = rng.uniform(0., range);
         const double thresh2 = rng.uniform(0., range * 0.3);
@@ -199,20 +193,27 @@ TEST_P(Canny_Modes, accuracy)
             cv::Canny(img, result, thresh1, thresh2, aperture, trueGradient);
         }
 
-        // custom derivatives
-        Mat customResult;
+        // reference derivatives; exact integers (at most 96*255 for 5x5), so CV_16S holds them without loss
+        Mat dx32, dy32;
         {
             Mat dxkernel = cvtest::calcSobelKernel2D(1, 0, aperture, 0);
             Mat dykernel = cvtest::calcSobelKernel2D(0, 1, aperture, 0);
             Point anchor(aperture / 2, aperture / 2);
+            cvtest::filter2D(img, dx32, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
+            cvtest::filter2D(img, dy32, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
+        }
+
+        // custom derivatives
+        Mat customResult;
+        {
             cv::Mat dx, dy;
-            cvtest::filter2D(img, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
-            cvtest::filter2D(img, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+            dx32.convertTo(dx, CV_16S);
+            dy32.convertTo(dy, CV_16S);
             cv::Canny(dx, dy, customResult, thresh1, thresh2, trueGradient);
         }
 
         Mat reference;
-        Canny_reference(img, reference, thresh1, thresh2, aperture, trueGradient);
+        Canny_reference(img, dx32, dy32, reference, thresh1, thresh2, trueGradient);
 
         EXPECT_MAT_NEAR(result, reference, 0);
         EXPECT_MAT_NEAR(customResult, reference, 0);

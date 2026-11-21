@@ -96,7 +96,7 @@ namespace opencv_test { namespace {
         double sigma_color, double sigma_space, int borderType)
     {
         int cn = src.channels();
-        int i, j, k, maxk, radius;
+        int maxk, radius;
         double minValSrc = -1, maxValSrc = 1;
         const int kExpNumBinsPerChannel = 1 << 12;
         int kExpNumBins = 0;
@@ -156,7 +156,7 @@ namespace opencv_test { namespace {
         scale_index = kExpNumBins/len;
 
         // initialize the exp LUT
-        for( i = 0; i < kExpNumBins+2; i++ )
+        for( int i = 0; i < kExpNumBins+2; i++ )
         {
             if( lastExpVal > 0.f )
             {
@@ -169,8 +169,9 @@ namespace opencv_test { namespace {
         }
 
         // initialize space-related bilateral filter coefficients
-        for( i = -radius, maxk = 0; i <= radius; i++ )
-            for( j = -radius; j <= radius; j++ )
+        maxk = 0;
+        for( int i = -radius; i <= radius; i++ )
+            for( int j = -radius; j <= radius; j++ )
             {
                 double r = std::sqrt((double)i*i + (double)j*j);
                 if( r > radius )
@@ -179,8 +180,12 @@ namespace opencv_test { namespace {
                 space_ofs[maxk++] = (int)(i*(temp.step/sizeof(float)) + j*cn);
             }
 
-        for( i = 0; i < size.height; i++ )
+        // output rows are independent, so the reference runs them in parallel
+        auto rowBody = [&](const Range& rows)
         {
+        for( int i = rows.start; i < rows.end; i++ )
+        {
+            int j, k;
             const float* sptr = temp.ptr<float>(i+radius) + radius*cn;
             float* dptr = dst.ptr<float>(i);
 
@@ -230,6 +235,8 @@ namespace opencv_test { namespace {
                 }
             }
         }
+        };
+        parallel_for_(Range(0, size.height), rowBody);
     }
 
     int CV_BilateralFilterTest::prepare_test_case(int /* test_case_index */)

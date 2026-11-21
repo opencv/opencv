@@ -71,6 +71,7 @@ TEST(Resize_Bitexact, Linear8U)
         { CV_8UC1, Size(7168,5376) }  //    7        7
     };
 
+    Mat srcByCn[CV_CN_MAX + 1]; // the source depends only on the channel count
     for (int modeind = 0, _modecnt = sizeof(modes) / sizeof(modes[0]); modeind < _modecnt; ++modeind)
         {
             int type = modes[modeind].type, depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -82,7 +83,11 @@ TEST(Resize_Bitexact, Linear8U)
             softdouble scale_x = softdouble::one() / softdouble(inv_scale_x);
             softdouble scale_y = softdouble::one() / softdouble(inv_scale_y);
 
-            Mat src(rows, cols, type), refdst(drows, dcols, type), dst;
+            Mat refdst(drows, dcols, type), dst;
+            Mat& src = srcByCn[cn];
+            if (src.empty())
+            {
+            src.create(rows, cols, type);
             RNG rnd(0x123456789abcdefULL);
             for (int j = 0; j < rows; j++)
             {
@@ -106,6 +111,17 @@ TEST(Resize_Bitexact, Linear8U)
                             CV_Assert(0);
                     }
             }
+            }
+
+            std::vector<int> xofs(dcols);
+            std::vector<int64_t> xc0(dcols), xc1(dcols);
+            for (int i = 0; i < dcols; i++)
+            {
+                softdouble src_col_flt = scale_x*(softdouble(i) + softdouble(0.5)) - softdouble(0.5);
+                xofs[i] = cvFloor(src_col_flt);
+                xc1[i] = cvRound64((src_col_flt - softdouble(xofs[i]))*softdouble(fixedOne));
+                xc0[i] = fixedOne - xc1[i];
+            }
 
             for (int j = 0; j < drows; j++)
             {
@@ -116,10 +132,8 @@ TEST(Resize_Bitexact, Linear8U)
 
                 for (int i = 0; i < dcols; i++)
                 {
-                    softdouble src_col_flt = scale_x*(softdouble(i) + softdouble(0.5)) - softdouble(0.5);
-                    int src_col = cvFloor(src_col_flt);
-                    int64_t xcoeff1 = cvRound64((src_col_flt - softdouble(src_col))*softdouble(fixedOne));
-                    int64_t xcoeff0 = fixedOne - xcoeff1;
+                    int src_col = xofs[i];
+                    int64_t xcoeff1 = xc1[i], xcoeff0 = xc0[i];
 
                     uint8_t* dst_pt = refdst.ptr(j, i);
                     uint8_t* src_pt00 = src.ptr( src_row      < 0 ? 0 :  src_row      >= rows ? rows - 1 :  src_row     ,
