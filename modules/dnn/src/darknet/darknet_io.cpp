@@ -69,8 +69,14 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include <cerrno>
+#include <cfloat>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <istream>
 #include <sstream>
 
 #include "darknet_io.hpp"
@@ -661,6 +667,48 @@ namespace cv {
                 return dst;
             }
 
+            // Darknet accepts a numeric prefix in each comma-separated field.
+            static bool parseNumber(const char* token, int& value)
+            {
+                char* end;
+                errno = 0;
+                const long number = std::strtol(token, &end, 10);
+                if (end == token || errno == ERANGE || number < INT_MIN || number > INT_MAX)
+                    return false;
+                value = static_cast<int>(number);
+                return true;
+            }
+
+            static bool parseNumber(const char* token, float& value)
+            {
+                char* end;
+                errno = 0;
+                double number = std::strtod(token, &end);
+                bool parsed = end != token;
+                int parseErrno = errno;
+                if (*end == '.')
+                {
+                    // Same retry as FileStorage::Impl::strtod() in core persistence.cpp:
+                    // a comma-decimal LC_NUMERIC stops at '.', so parse again with ','.
+                    std::string retry(token);
+                    const size_t dot = end - token;
+                    retry[dot] = ',';
+                    char* retryEnd;
+                    errno = 0;
+                    const double retryNumber = std::strtod(retry.c_str(), &retryEnd);
+                    if (retryEnd > retry.c_str() + dot)
+                    {
+                        number = retryNumber;
+                        parsed = true;
+                        parseErrno = errno;
+                    }
+                }
+                if (!parsed || parseErrno == ERANGE || !std::isfinite(number) || std::fabs(number) > FLT_MAX)
+                    return false;
+                value = static_cast<float>(number);
+                return number == 0 || value != 0;
+            }
+
             template<typename T>
             std::vector<T> getNumbers(const std::string &src)
             {
@@ -668,12 +716,40 @@ namespace cv {
                 std::stringstream ss(src);
 
                 for (std::string str; std::getline(ss, str, ',');) {
-                    std::stringstream line(str);
                     T val;
-                    line >> val;
+                    if (!parseNumber(str.c_str(), val))
+                        CV_Error(cv::Error::StsParseError, "Invalid numeric value in list: " + src);
                     dst.push_back(val);
                 }
                 return dst;
+            }
+
+            static int getFromLayer(const std::map<std::string, std::string>& params,
+                                    int layers_counter)
+            {
+                const std::string value = getParam<std::string>(params, "from", "");
+                const std::vector<int> indices = getNumbers<int>(value);
+                if (indices.size() != 1)
+                    CV_Error(Error::StsParseError, "Invalid 'from' layer index: " + value);
+
+                int from = indices[0];
+                if (from < 0)
+                    from += layers_counter;
+                if (from < 0 || from >= layers_counter)
+                    CV_Error(Error::StsParseError, "'from' layer index is out of range: " + value);
+                return from;
+            }
+
+            static void updateSpatialShape(MatShape& shape, int kernel_size,
+                                           int stride, int64_t total_padding)
+            {
+                const int64_t outHeight =
+                    (static_cast<int64_t>(shape[1]) - kernel_size + total_padding) / stride + 1;
+                const int64_t outWidth =
+                    (static_cast<int64_t>(shape[2]) - kernel_size + total_padding) / stride + 1;
+                CV_Assert(outHeight > 0 && outHeight <= INT_MAX && outWidth > 0 && outWidth <= INT_MAX);
+                shape[1] = static_cast<int>(outHeight);
+                shape[2] = static_cast<int>(outWidth);
             }
 
             bool ReadDarknetFromCfgStream(std::istream &ifile, NetParameter *net)
@@ -719,8 +795,9 @@ namespace cv {
                     }
                 }
 
-                std::string anchors = net->layers_cfg[net->layers_cfg.size() - 1]["anchors"];
-                std::vector<float> vec = getNumbers<float>(anchors);
+                if (net->layers_cfg.empty())
+                    CV_Error(cv::Error::StsParseError, "Darknet cfg has no layers");
+
                 std::map<std::string, std::string> &net_params = net->net_cfg;
                 net->width = getParam(net_params, "width", 416);
                 net->height = getParam(net_params, "height", 416);
@@ -763,14 +840,13 @@ namespace cv {
                         CV_Assert(stride > 0);
                         CV_Assert(kernel_size > 0 && filters > 0);
                         CV_Assert(tensor_shape[0] > 0);
-                        CV_Assert(tensor_shape[0] % groups == 0);
+                        CV_Assert(groups > 0 && tensor_shape[0] % groups == 0);
 
                         setParams.setConvolution(kernel_size, padding, stride, filters, tensor_shape[0],
                             groups, batch_normalize);
 
                         tensor_shape[0] = filters;
-                        tensor_shape[1] = (tensor_shape[1] - kernel_size + 2 * padding) / stride + 1;
-                        tensor_shape[2] = (tensor_shape[2] - kernel_size + 2 * padding) / stride + 1;
+                        updateSpatialShape(tensor_shape, kernel_size, stride, int64_t(2) * padding);
                     }
                     else if (layer_type == "connected")
                     {
@@ -792,14 +868,14 @@ namespace cv {
                     {
                         int kernel_size = getParam<int>(layer_params, "size", 2);
                         int stride = getParam<int>(layer_params, "stride", 2);
+                        CV_Assert(kernel_size > 0);
                         int padding = getParam<int>(layer_params, "padding", kernel_size - 1);
                         // Cannot divide 0
                         CV_Assert(stride > 0);
 
                         setParams.setMaxpool(kernel_size, padding, stride);
 
-                        tensor_shape[1] = (tensor_shape[1] - kernel_size + padding) / stride + 1;
-                        tensor_shape[2] = (tensor_shape[2] - kernel_size + padding) / stride + 1;
+                        updateSpatialShape(tensor_shape, kernel_size, stride, padding);
                     }
                     else if (layer_type == "avgpool")
                     {
@@ -837,13 +913,18 @@ namespace cv {
                         tensor_shape[0] = 0;
                         for (size_t k = 0; k < layers_vec.size(); ++k) {
                             layers_vec[k] = layers_vec[k] >= 0 ? layers_vec[k] : (layers_vec[k] + layers_counter);
-                            CV_Assert(layers_vec[k] >= 0 && static_cast<size_t>(layers_vec[k]) < net->out_channels_vec.size());
-                            tensor_shape[0] += net->out_channels_vec[layers_vec[k]];
+                            // only the layers before this route exist when it is built
+                            if (layers_vec[k] < 0 || layers_vec[k] >= layers_counter)
+                                CV_Error(Error::StsParseError, "Route layer index is out of range: " + bottom_layers);
+                            const int outChannels = net->out_channels_vec[layers_vec[k]];
+                            CV_Assert(outChannels >= 0 && tensor_shape[0] <= INT_MAX - outChannels);
+                            tensor_shape[0] += outChannels;
                         }
 
                         if (groups > 1)
                         {
                             int group_id = getParam<int>(layer_params, "group_id", 0);
+                            CV_Assert(group_id >= 0 && group_id < groups);
                             tensor_shape[0] /= groups;
                             int split_size = tensor_shape[0] / layers_vec.size();
                             for (size_t k = 0; k < layers_vec.size(); ++k)
@@ -875,8 +956,10 @@ namespace cv {
                     {
                         int stride = getParam<int>(layer_params, "stride", 2);
                         // Cannot divide 0
-                        CV_Assert(stride > 0);
-                        tensor_shape[0] = tensor_shape[0] * (stride * stride);
+                        CV_Assert(stride > 0 && stride <= INT_MAX / stride);
+                        const int strideSquared = stride * stride;
+                        CV_Assert(tensor_shape[0] >= 0 && tensor_shape[0] <= INT_MAX / strideSquared);
+                        tensor_shape[0] *= strideSquared;
                         tensor_shape[1] = tensor_shape[1] / stride;
                         tensor_shape[2] = tensor_shape[2] / stride;
 
@@ -896,43 +979,36 @@ namespace cv {
                         CV_Assert(!anchors_values.empty());
                         std::vector<float> anchors_vec = getNumbers<float>(anchors_values);
 
-                        CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
+                        CV_Assert(classes > 0 && num_of_anchors > 0 && num_of_anchors <= INT_MAX / 2 && (num_of_anchors * 2) == anchors_vec.size());
 
                         setParams.setPermute(false);
                         setParams.setRegion(thresh, coords, classes, num_of_anchors, classfix, softmax, softmax_tree, anchors_vec.data());
                     }
                     else if (layer_type == "shortcut")
                     {
-                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
                         float alpha = getParam<float>(layer_params, "alpha", 1);
                         float beta = getParam<float>(layer_params, "beta", 0);
                         if (beta != 0)
                             CV_Error(Error::StsNotImplemented, "Non-zero beta");
-                        CV_Assert(!bottom_layer.empty());
-                        int from = std::atoi(bottom_layer.c_str());
-
-                        from = from < 0 ? from + layers_counter : from;
+                        const int from = getFromLayer(layer_params, layers_counter);
                         setParams.setShortcut(from, alpha);
                     }
                     else if (layer_type == "scale_channels")
                     {
-                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
-                        CV_Assert(!bottom_layer.empty());
-                        int from = std::atoi(bottom_layer.c_str());
-                        from = from < 0 ? from + layers_counter : from;
+                        const int from = getFromLayer(layer_params, layers_counter);
                         setParams.setScaleChannels(from);
                     }
                     else if (layer_type == "sam")
                     {
-                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
-                        CV_Assert(!bottom_layer.empty());
-                        int from = std::atoi(bottom_layer.c_str());
-                        from = from < 0 ? from + layers_counter : from;
+                        const int from = getFromLayer(layer_params, layers_counter);
                         setParams.setSAM(from);
                     }
                     else if (layer_type == "upsample")
                     {
                         int scaleFactor = getParam<int>(layer_params, "stride", 1);
+                        CV_Assert(scaleFactor > 0);
+                        CV_Assert(tensor_shape[1] > 0 && tensor_shape[2] > 0 &&
+                                  tensor_shape[1] <= INT_MAX / scaleFactor && tensor_shape[2] <= INT_MAX / scaleFactor);
                         setParams.setUpsample(scaleFactor);
                         tensor_shape[1] = tensor_shape[1] * scaleFactor;
                         tensor_shape[2] = tensor_shape[2] * scaleFactor;
@@ -954,7 +1030,7 @@ namespace cv {
                         CV_Assert(!mask_values.empty());
                         std::vector<int> mask_vec = getNumbers<int>(mask_values);
 
-                        CV_Assert(classes > 0 && num_of_anchors > 0 && (num_of_anchors * 2) == anchors_vec.size());
+                        CV_Assert(classes > 0 && num_of_anchors > 0 && num_of_anchors <= INT_MAX / 2 && (num_of_anchors * 2) == anchors_vec.size());
 
                         setParams.setPermute(false);
                         setParams.setYolo(classes, mask_vec, anchors_vec, thresh, nms_threshold, scale_x_y, new_coords);
@@ -979,9 +1055,11 @@ namespace cv {
                 ifile.read(reinterpret_cast<char *>(&major_ver), sizeof(int32_t));
                 ifile.read(reinterpret_cast<char *>(&minor_ver), sizeof(int32_t));
                 ifile.read(reinterpret_cast<char *>(&revision), sizeof(int32_t));
+                if (!ifile)
+                    return false;
 
                 uint64_t seen;
-                if ((major_ver * 10 + minor_ver) >= 2) {
+                if ((static_cast<int64_t>(major_ver) * 10 + minor_ver) >= 2) {
                     ifile.read(reinterpret_cast<char *>(&seen), sizeof(uint64_t));
                 }
                 else {
@@ -989,6 +1067,8 @@ namespace cv {
                     ifile.read(reinterpret_cast<char *>(&iseen), sizeof(int32_t));
                     seen = iseen;
                 }
+                if (!ifile)
+                    return false;
                 bool transpose = (major_ver > 1000) || (minor_ver > 1000);
                 if(transpose)
                     CV_Error(cv::Error::StsNotImplemented, "Transpose the weights (except for convolutional) is not implemented");
@@ -1023,7 +1103,7 @@ namespace cv {
 
                             CV_Assert(kernel_size > 0 && filters > 0);
                             CV_Assert(tensor_shape[0] > 0);
-                            CV_Assert(tensor_shape[0] % groups == 0);
+                            CV_Assert(groups > 0 && tensor_shape[0] % groups == 0);
 
                             int sizes_weights[] = { filters, tensor_shape[0] / groups, kernel_size, kernel_size };
                             weightsBlob.create(4, sizes_weights, CV_32F);
@@ -1052,6 +1132,8 @@ namespace cv {
                             ifile.read(reinterpret_cast<char *>(stdData_mat.ptr<float>()), sizeof(float)*filters);
                         }
                         ifile.read(reinterpret_cast<char *>(weightsBlob.ptr<float>()), sizeof(float)*weightsBlob.total());
+                        if (!ifile)
+                            return false;
 
                         // set conv/connected weights
                         std::vector<cv::Mat> layer_blobs;
