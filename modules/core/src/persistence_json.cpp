@@ -410,6 +410,65 @@ public:
         return ptr;
     }
 
+    uint32_t parseUnicodeEscape(char*& ptr)
+    {
+        uint32_t codepoint = 0;
+        for (int k = 0; k < 4; k++, ptr++) {
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            char hex = *ptr;
+            uint32_t digit = 0;
+            if      (hex >= '0' && hex <= '9') digit = (uint32_t)(hex - '0');
+            else if (hex >= 'a' && hex <= 'f') digit = (uint32_t)(hex - 'a') + 10u;
+            else if (hex >= 'A' && hex <= 'F') digit = (uint32_t)(hex - 'A') + 10u;
+            else CV_PARSE_ERROR_CPP("invalid \\uXXXX escape sequence");
+            codepoint = (codepoint << 4) | digit;
+        }
+        return codepoint;
+    }
+
+    static void appendUtf8(std::string& out, uint32_t codepoint)
+    {
+        if (codepoint < 0x80) {
+            out += (char)codepoint;
+        } else if (codepoint < 0x800) {
+            out += (char)(0xC0 | (codepoint >> 6));
+            out += (char)(0x80 | (codepoint & 0x3F));
+        } else if (codepoint < 0x10000) {
+            out += (char)(0xE0 | (codepoint >> 12));
+            out += (char)(0x80 | ((codepoint >> 6) & 0x3F));
+            out += (char)(0x80 | (codepoint & 0x3F));
+        } else {
+            out += (char)(0xF0 | (codepoint >> 18));
+            out += (char)(0x80 | ((codepoint >> 12) & 0x3F));
+            out += (char)(0x80 | ((codepoint >> 6) & 0x3F));
+            out += (char)(0x80 | (codepoint & 0x3F));
+        }
+    }
+
+    // A \uXXXX escape carries one UTF-16 code unit, so anything above the BMP arrives as a
+    // surrogate pair and has to be recombined here. Encoding the halves separately would
+    // emit three bytes each for code points that are not Unicode scalar values at all --
+    // CESU-8, which no UTF-8 reader accepts.
+    void parseUnicodeEscapeToUtf8(char*& ptr, std::string& out)
+    {
+        uint32_t codepoint = parseUnicodeEscape(ptr);
+        if (codepoint >= 0xD800 && codepoint <= 0xDBFF)
+        {
+            // ptr is just past the four hex digits; the low half must be its own escape.
+            // Short-circuits before ptr[1] when ptr[0] is the buffer's terminating NUL.
+            if (ptr[0] != '\\' || ptr[1] != 'u')
+                CV_PARSE_ERROR_CPP("high surrogate is not followed by a \\uXXXX low surrogate");
+            ptr += 2;
+            uint32_t low = parseUnicodeEscape(ptr);
+            if (low < 0xDC00 || low > 0xDFFF)
+                CV_PARSE_ERROR_CPP("high surrogate is not followed by a \\uXXXX low surrogate");
+            codepoint = 0x10000u + ((codepoint - 0xD800u) << 10) + (low - 0xDC00u);
+        }
+        else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF)
+            CV_PARSE_ERROR_CPP("unpaired \\uXXXX low surrogate");
+        appendUtf8(out, codepoint);
+    }
+
     char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder )
     {
         if (!ptr)
@@ -420,19 +479,33 @@ public:
 
         char * beg = ptr + 1;
         std::string key_name;
-        do {
-            if (*ptr == '\\') { // skip the next character if current is back slash
-                ++ptr;
+        ++ptr;
+        for (;;) {
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            char c = *ptr;
+            if (!cv_isprint(c) || c == '"')
+                break;
+            ++ptr;
+            if (c == '\\') { // decode the escape sequence, same as in string values
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                key_name += *ptr;
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            } else {
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+                c = *ptr++;
+                switch (c)
+                {
+                case '\\':
+                case '\"':
+                case '\'':
+                case '/': break;
+                case 'n': c = '\n'; break;
+                case 'r': c = '\r'; break;
+                case 't': c = '\t'; break;
+                case 'b': c = '\b'; break;
+                case 'f': c = '\f'; break;
+                case 'u': parseUnicodeEscapeToUtf8(ptr, key_name); continue;
+                default: CV_PARSE_ERROR_CPP( "Invalid escape character" );
+                }
             }
-        } while( cv_isprint(*ptr) && *ptr != '"' );
+            key_name += c;
+        }
 
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
@@ -522,13 +595,24 @@ public:
                             {
                             case '\\':
                             case '\"':
-                            case '\'': { buf[i++] = *ptr; break; }
+                            case '\'':
+                            case '/' : { buf[i++] = *ptr; break; }
                             case 'n' : { buf[i++] = '\n'; break; }
                             case 'r' : { buf[i++] = '\r'; break; }
                             case 't' : { buf[i++] = '\t'; break; }
                             case 'b' : { buf[i++] = '\b'; break; }
                             case 'f' : { buf[i++] = '\f'; break; }
-                            case 'u' : { CV_PARSE_ERROR_CPP( "'\\uXXXX' currently not supported" ); break; }
+                            case 'u' : {
+                                ptr++;
+                                std::string utf8;
+                                parseUnicodeEscapeToUtf8(ptr, utf8);
+                                if (i + (int)utf8.size() >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
+                                memcpy(buf + i, utf8.data(), utf8.size());
+                                i += (int)utf8.size();
+                                beg = ptr;
+                                continue;
+                            }
                             default  : { CV_PARSE_ERROR_CPP( "Invalid escape character" ); }
                             break;
                             }
