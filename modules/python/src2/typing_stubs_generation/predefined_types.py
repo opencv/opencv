@@ -28,6 +28,8 @@ _PREDEFINED_TYPES = (
     PrimitiveTypeNode.int_("uint32_t"),
     PrimitiveTypeNode.int_("size_t"),
     PrimitiveTypeNode.int_("int64_t"),
+    PrimitiveTypeNode.int_("uint64"),
+    PrimitiveTypeNode.int_("uint64_t"),
     PrimitiveTypeNode.int_("long long"),
     PrimitiveTypeNode.float_("float"),
     PrimitiveTypeNode.float_("double"),
