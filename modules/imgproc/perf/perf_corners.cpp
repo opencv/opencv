@@ -90,4 +90,42 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerMinEigenVal,
     SANITY_CHECK(dst, 2e-5, ERROR_RELATIVE);
 }
 
+typedef tuple<Size, int, bool> CornerROIPerfParams;
+typedef perf::TestBaseWithParam<CornerROIPerfParams> CornerROIPerf;
+
+PERF_TEST_P(CornerROIPerf, cornerHarrisROI,
+           testing::Combine(testing::Values(szVGA, sz1080p), testing::Values(3, 6), testing::Bool()))
+{
+    const Size size = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const bool isolated = get<2>(GetParam());
+    const int borderType = BORDER_REFLECT_101 | (isolated ? BORDER_ISOLATED : 0);
+    Mat parent(size + Size(32, 32), CV_8UC1);
+    RNG& rng = theRNG();
+    rng.fill(parent, RNG::UNIFORM, 0, 256);
+    Mat src = parent(Rect(16, 16, size.width, size.height)), dst;
+
+    TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef tuple<Size, int, BorderType> CornerWholeImagePerfParams;
+typedef perf::TestBaseWithParam<CornerWholeImagePerfParams> CornerWholeImagePerf;
+
+PERF_TEST_P(CornerWholeImagePerf, cornerHarrisEvenBlock,
+           testing::Combine(testing::Values(szVGA, sz1080p), testing::Values(2, 6),
+                            testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101)))
+{
+    const Size size = get<0>(GetParam());
+    const int blockSize = get<1>(GetParam());
+    const int borderType = get<2>(GetParam());
+    Mat src(size, CV_8UC1), dst;
+    theRNG().fill(src, RNG::UNIFORM, 0, 256);
+
+    TEST_CYCLE() cornerHarris(src, dst, blockSize, 3, 0.04, borderType);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
