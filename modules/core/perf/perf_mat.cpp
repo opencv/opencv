@@ -4,6 +4,22 @@ namespace opencv_test
 {
 using namespace perf;
 
+PERF_TEST_P(Size_MatType, CopyMakeBorder_Values,
+            testing::Combine(testing::Values(szVGA, sz1080p),
+                             testing::Values(CV_8UC(9), CV_32FC(9))))
+{
+    const Size size = get<0>(GetParam());
+    const int type = get<1>(GetParam());
+    Mat src(size, type), dst(size.height + 32, size.width + 32, type);
+    const Mat1d values({1, 9}, {0, 1, 2, 3, 4, 5, 6, 7, 8});
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE()
+        copyMakeBorderWithBorderValues(src, dst, 16, 16, 16, 16, BORDER_CONSTANT, values);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(Size_MatType, Mat_Eye,
             testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
                              testing::Values(TYPICAL_MAT_TYPES))

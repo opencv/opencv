@@ -331,6 +331,99 @@ TEST(Core_CopyMakeBorder, empty_src_and_overflow)
     EXPECT_THROW(cv::copyMakeBorder(src, dst, 0, 0, INT_MAX, 1, cv::BORDER_CONSTANT, cv::Scalar(0)), cv::Exception);
 }
 
+typedef testing::TestWithParam<testing::tuple<int, int, bool> > Core_CopyMakeBorderValues;
+
+TEST_P(Core_CopyMakeBorderValues, matches_scalar_per_channel)
+{
+    const int channels = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+    const bool stridedValues = get<2>(GetParam());
+    Mat1f sourceFloat(4, 7 * channels);
+    theRNG().fill(sourceFloat, RNG::UNIFORM, 0, 128);
+    Mat src;
+    sourceFloat.reshape(channels).convertTo(src, depth);
+
+    Mat1d storage(channels, 2);
+    for (int channel = 0; channel < channels; ++channel)
+        storage(channel, 0) = channel * 50.25 - 20.;
+    Mat values = storage.col(0);
+    if (!stridedValues)
+        values = values.t();
+
+    Mat dst;
+    copyMakeBorderWithBorderValues(src, dst, 1, 2, 2, 1, BORDER_CONSTANT, values);
+    ASSERT_EQ(Size(10, 7), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+
+    std::vector<Mat> planes;
+    split(src, planes);
+    for (int channel = 0; channel < channels; ++channel)
+        cv::copyMakeBorder(planes[channel], planes[channel], 1, 2, 2, 1,
+                           BORDER_CONSTANT, Scalar(storage(channel, 0)));
+    Mat expected, actualFloat, expectedFloat;
+    merge(planes, expected);
+    dst.convertTo(actualFloat, CV_32F);
+    expected.convertTo(expectedFloat, CV_32F);
+    EXPECT_EQ(0., cv::norm(actualFloat, expectedFloat, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CopyMakeBorderValues,
+                        testing::Combine(testing::Values(1, 3, 9),
+                                         testing::Values(CV_8U, CV_16F, CV_32F),
+                                         testing::Bool()));
+
+typedef testing::TestWithParam<bool> Core_CopyMakeBorderValuesROI;
+
+TEST_P(Core_CopyMakeBorderValuesROI, parent_pixels_and_preallocated_destination)
+{
+    const bool isolated = GetParam();
+    const int channels = 9;
+    const Mat1b values({1, channels}, {3, 6, 9, 12, 15, 18, 21, 24, 27});
+    Mat parent(4, 5, CV_8UC(channels));
+    theRNG().fill(parent, RNG::UNIFORM, 64, 128);
+    Mat roi = parent(Rect(1, 1, 3, 2));
+    Mat dstStorage(7, 8, parent.type());
+    Mat dst = dstStorage(Rect(1, 1, 6, 5));
+    uchar* const dstData = dst.data;
+
+    copyMakeBorderWithBorderValues(roi, dst, 2, 1, 2, 1,
+                                   BORDER_CONSTANT | (isolated ? BORDER_ISOLATED : 0), values);
+    EXPECT_EQ(dstData, dst.data);
+
+    Mat expected = repeat(values.reshape(channels), 5, 6);
+    if (isolated)
+        roi.copyTo(expected(Rect(2, 2, 3, 2)));
+    else
+        parent.copyTo(expected(Rect(1, 1, 5, 4)));
+    EXPECT_EQ(0., cv::norm(dst, expected, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CopyMakeBorderValuesROI, testing::Bool());
+
+TEST(Core_CopyMakeBorder, with_values_keeps_center_in_place)
+{
+    const Mat1b values({1, 9}, {0, 1, 2, 3, 4, 5, 6, 7, 8});
+    Mat dst(4, 5, CV_8UC(9));
+    Mat src = dst(Rect(1, 1, 3, 2));
+    theRNG().fill(src, RNG::UNIFORM, 32, 128);
+    Mat expected = repeat(values.reshape(9), 4, 5);
+    src.copyTo(expected(Rect(1, 1, 3, 2)));
+
+    copyMakeBorderWithBorderValues(src, dst, 1, 1, 1, 1, BORDER_CONSTANT | BORDER_ISOLATED, values);
+    EXPECT_EQ(0., cv::norm(dst, expected, NORM_INF));
+}
+
+TEST(Core_CopyMakeBorder, with_values_validates_vector_and_mode)
+{
+    Mat src(2, 3, CV_8UC(9)), dst;
+    Mat1d values(1, 9, 0.);
+    EXPECT_THROW(copyMakeBorderWithBorderValues(src, dst, 1, 1, 1, 1, BORDER_CONSTANT, values.colRange(0, 8)),
+                 cv::Exception);
+    EXPECT_THROW(copyMakeBorderWithBorderValues(src, dst, 1, 1, 1, 1, BORDER_CONSTANT, values.reshape(1, 3)),
+                 cv::Exception);
+    EXPECT_THROW(copyMakeBorderWithBorderValues(src, dst, 1, 1, 1, 1, BORDER_REPLICATE, values), cv::Exception);
+}
+
 TEST(Core_MixChannels, empty_and_mismatched_inputs)
 {
     Mat emptySrc, emptyDst;
