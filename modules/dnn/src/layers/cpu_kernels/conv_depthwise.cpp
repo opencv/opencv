@@ -172,7 +172,9 @@ void depthWiseBlockConv2D(const float* wptr,
             w00 = w01 = w02 = 0.f;
             imgptr0 = imgptr1;
         }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
+        // the bottom taps are zeroed independently of the top ones: with a small height the first
+        // and the last row of the kernel can both be outside of the input
+        if (in_i + dilation_h*(kernel_h-1) >= height)
         {
             w20 = w21 = w22 = 0.f;
             imgptr2 = imgptr1;
@@ -181,9 +183,23 @@ void depthWiseBlockConv2D(const float* wptr,
         float* outptr = outptr_ + out_i*outW;
         if (pad_l > 0)
         {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            // the kernel taps are at k*dilation_w - pad_l; the one at k = 0 is in the padding
+            // and the ones at k = 1, 2 can be beyond the right border for very narrow inputs
+            int in_j1 = dilation_w - pad_l, in_j2 = dilation_w*2 - pad_l;
+            float s1 = 1.f, s2 = 1.f;
+            if (in_j1 >= width)
+            {
+                in_j1 = 0;
+                s1 = 0.f;
+            }
+            if (in_j2 >= width)
+            {
+                in_j2 = 0;
+                s2 = 0.f;
+            }
+            out = imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
+                  imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
+                  imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
             if (fusedAdd)
                 out += outptr[0];
             if (relu)
@@ -340,7 +356,20 @@ void depthWiseBlockConv1D(const float* wptr,
 
     if (pad_l > 0)
     {
-        out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 + bias;
+        // the kernel taps are at k*dilation_w - pad_l (see depthWiseBlockConv2D)
+        int in_j1 = dilation_w - pad_l, in_j2 = dilation_w*2 - pad_l;
+        float s1 = 1.f, s2 = 1.f;
+        if (in_j1 >= width)
+        {
+            in_j1 = 0;
+            s1 = 0.f;
+        }
+        if (in_j2 >= width)
+        {
+            in_j2 = 0;
+            s2 = 0.f;
+        }
+        out = imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 + bias;
         if (fusedAdd)
             out += outptr[0];
         if (relu)
