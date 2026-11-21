@@ -105,16 +105,19 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
                                    {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
+    // NEAREST column kept 0 for all types: IPP's iwiWarpAffine rounds source coords at the
+    // half-pixel boundary unlike the native kernel, so its NN output is not bit-exact.
+    // Forces fallback to native. See https://github.com/opencv/opencv/issues/29279
     // Columns per type: { NEAREST, LINEAR, CUBIC }. Zeroed = IPP declines, OpenCV is used:
     // 16S LINEAR (diverges 94-99%), 64F/C2 (no IPP support), 8S/32S (not in cv::warpAffine),
     // CUBIC (handled by genericWarp before the HAL).
                                      /* C1         C2         C3         C4 */
-    char impl[CV_DEPTH_MAX][4][3]={{{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //8U
+    char impl[CV_DEPTH_MAX][4][3]={{{0, 1, 0}, {0, 0, 0}, {0, 1, 0}, {0, 1, 0}},   //8U
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                                   {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //16U
-                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
+                                   {{0, 1, 0}, {0, 0, 0}, {0, 1, 0}, {0, 1, 0}},   //16U
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //16S
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                                   {{1, 1, 0}, {0, 0, 0}, {1, 1, 0}, {1, 1, 0}},   //32F
+                                   {{0, 1, 0}, {0, 0, 0}, {0, 1, 0}, {0, 1, 0}},   //32F
                                    {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}};  //64F
 #endif
 
