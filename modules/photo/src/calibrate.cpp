@@ -232,18 +232,31 @@ public:
 
         dst.create(LDR_SIZE, 1, CV_32FCC);
         Mat response = dst.getMat();
-        response = linearResponse(3) / (static_cast<float>(LDR_SIZE) / 2.0f);
+        response = linearResponse(channels) / (static_cast<float>(LDR_SIZE) / 2.0f);
 
+        // Index the per-value tables by the real channel count: a fixed Vec3f
+        // overruns them for one- and two-channel images.
         Mat card = Mat::zeros(LDR_SIZE, 1, CV_32FCC);
+        float* card_ptr = card.ptr<float>();
+        const int width = images[0].cols * channels;
+        // Walk each row: an image may be a region of a larger one.
         for(size_t i = 0; i < images.size(); i++) {
-           uchar *ptr = images[i].ptr();
-           for(size_t pos = 0; pos < images[i].total(); pos++) {
-               for(int c = 0; c < channels; c++, ptr++) {
-                   card.at<Vec3f>(*ptr)[c] += 1;
-               }
-           }
+            for(int y = 0; y < images[i].rows; y++) {
+                const uchar* ptr = images[i].ptr<uchar>(y);
+                for(int x = 0; x < width; x++) {
+                    card_ptr[ptr[x] * channels + x % channels] += 1;
+                }
+            }
         }
-        card = 1.0 / card;
+        // A value that occurs in no image gives no equation for its response, and
+        // 1 / 0 would turn it into 0 * inf = NaN, which also keeps the convergence
+        // check below from passing. Such values get a zero response instead.
+        Mat seen = card > 0;
+        divide(1.0, card, card);
+        card.setTo(Scalar::all(0), ~seen);
+        // Unseen values are 0 in the starting curve too, so the result follows the
+        // same rule for any max_iter, including 0. Merging never reads them.
+        response.setTo(Scalar::all(0), ~seen);
 
         Ptr<MergeRobertson> merge = createMergeRobertson();
         for(int iter = 0; iter < max_iter; iter++) {
@@ -251,21 +264,49 @@ public:
             radiance = Mat::zeros(images[0].size(), CV_32FCC);
             merge->process(images, radiance, times, response);
 
-            Mat new_response = Mat::zeros(LDR_SIZE, 1, CV_32FC3);
+            Mat new_response = Mat::zeros(LDR_SIZE, 1, CV_32FCC);
+            float* new_ptr = new_response.ptr<float>();
             for(size_t i = 0; i < images.size(); i++) {
-                uchar *ptr = images[i].ptr();
-                float* rad_ptr = radiance.ptr<float>();
-                for(size_t pos = 0; pos < images[i].total(); pos++) {
-                    for(int c = 0; c < channels; c++, ptr++, rad_ptr++) {
-                        new_response.at<Vec3f>(*ptr)[c] += times.at<float>((int)i) * *rad_ptr;
+                const float t = times.at<float>((int)i);
+                for(int y = 0; y < images[i].rows; y++) {
+                    const uchar* ptr = images[i].ptr<uchar>(y);
+                    const float* rad_ptr = radiance.ptr<float>(y);
+                    for(int x = 0; x < width; x++) {
+                        new_ptr[ptr[x] * channels + x % channels] += t * rad_ptr[x];
                     }
                 }
             }
             new_response = new_response.mul(card);
-            for(int c = 0; c < 3; c++) {
-                float middle = new_response.at<Vec3f>(LDR_SIZE / 2)[c];
+            new_ptr = new_response.ptr<float>();
+            const float* old_ptr = response.ptr<float>();
+            const uchar* seen_ptr = seen.ptr<uchar>();
+            for(int c = 0; c < channels; c++) {
+                // The curve is scaled so that the middle value is 1. When the middle
+                // value has no usable estimate, scale by the nearest value that has
+                // one, so that it keeps its previous estimate; with no usable value at
+                // all, observed values keep their previous estimate and unseen ones 0.
+                int anchor = -1;
+                for(int d = 0; d < LDR_SIZE && anchor < 0; d++) {
+                    for(int k : {LDR_SIZE / 2 - d, LDR_SIZE / 2 + d}) {
+                        if(k >= 0 && k < LDR_SIZE && new_ptr[k * channels + c] > 0 &&
+                           std::isfinite(new_ptr[k * channels + c]) && old_ptr[k * channels + c] > 0) {
+                            anchor = k;
+                            break;
+                        }
+                    }
+                }
+                if(anchor < 0) {
+                    for(int i = 0; i < LDR_SIZE; i++) {
+                        int k = i * channels + c;
+                        new_ptr[k] = seen_ptr[k] ? old_ptr[k] : 0.f;
+                    }
+                    continue;
+                }
+                // Divide, as before, so that a seen middle value (old estimate 1)
+                // gives the same result as dividing by it directly.
+                float middle = new_ptr[anchor * channels + c] / old_ptr[anchor * channels + c];
                 for(int i = 0; i < LDR_SIZE; i++) {
-                    new_response.at<Vec3f>(i)[c] /= middle;
+                    new_ptr[i * channels + c] /= middle;
                 }
             }
             float diff = static_cast<float>(sum(sum(abs(new_response - response)))[0] / channels);
