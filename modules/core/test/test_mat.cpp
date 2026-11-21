@@ -1507,6 +1507,33 @@ TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
     EXPECT_EQ(0, cv::norm(src.col(2), dst(Rect(5,1,1,4))));
 }
 
+typedef testing::TestWithParam< tuple<int, Size> > Core_Mat_copyMakeBorder_empty;
+
+TEST_P(Core_Mat_copyMakeBorder_empty, border_types)
+{
+    const int borderType = get<0>(GetParam());
+    const Size srcSize = get<1>(GetParam());
+    Mat src(srcSize, CV_8UC1), dst;
+
+    if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
+    {
+        ASSERT_NO_THROW(cv::copyMakeBorder(src, dst, 2, 3, 4, 1, borderType, Scalar(7)));
+        EXPECT_EQ(Size(srcSize.width + 5, srcSize.height + 5), dst.size());
+        EXPECT_EQ(dst.total(), (size_t)countNonZero(dst == 7));
+    }
+    else
+    {
+        // nothing to replicate, reflect or wrap from a source without rows or columns
+        EXPECT_THROW(cv::copyMakeBorder(src, dst, 2, 3, 4, 1, borderType), cv::Exception);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_copyMakeBorder_empty, testing::Combine(
+    testing::Values(BORDER_CONSTANT, BORDER_CONSTANT | BORDER_ISOLATED, BORDER_REPLICATE,
+                    BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101),
+    testing::Values(Size(0, 0), Size(0, 5), Size(5, 0))
+));
+
 TEST(Core_Mat, zeros)
 {
   // Should not fail during linkage.

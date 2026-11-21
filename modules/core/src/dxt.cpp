@@ -3553,6 +3553,11 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 #endif
 
     Mat src0 = _src0.getMat(), src = src0;
+    if (src.empty())
+    {
+        _dst.release();
+        return;
+    }
     bool inv = (flags & DFT_INVERSE) != 0;
     int type = src.type();
     int depth = src.depth();
@@ -4464,6 +4469,11 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
     CV_INSTRUMENT_REGION();
 
     Mat src0 = _src0.getMat(), src = src0;
+    if (src.empty())
+    {
+        _dst.release();
+        return;
+    }
     int type = src.type(), depth = src.depth();
 
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );

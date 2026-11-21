@@ -937,6 +937,31 @@ TEST(Core_DFT, complex_output2)
     }
 }
 
+typedef testing::TestWithParam< tuple<int, Size> > Core_DXT_empty;
+
+TEST_P(Core_DXT_empty, dft_dct)
+{
+    const int depth = get<0>(GetParam());
+    const Size srcSize = get<1>(GetParam());
+    Mat dst(2, 2, CV_32FC1);
+
+    ASSERT_NO_THROW(dft(Mat(srcSize, CV_MAKETYPE(depth, 1)), dst, DFT_COMPLEX_OUTPUT));
+    EXPECT_TRUE(dst.empty());
+    ASSERT_NO_THROW(dft(Mat(srcSize, CV_MAKETYPE(depth, 1)), dst, DFT_INVERSE | DFT_ROWS));
+    EXPECT_TRUE(dst.empty());
+    ASSERT_NO_THROW(idft(Mat(srcSize, CV_MAKETYPE(depth, 2)), dst, DFT_REAL_OUTPUT));
+    EXPECT_TRUE(dst.empty());
+    ASSERT_NO_THROW(dct(Mat(srcSize, CV_MAKETYPE(depth, 1)), dst));
+    EXPECT_TRUE(dst.empty());
+    ASSERT_NO_THROW(idct(Mat(srcSize, CV_MAKETYPE(depth, 1)), dst));
+    EXPECT_TRUE(dst.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_DXT_empty, testing::Combine(
+    testing::Values(CV_32F, CV_64F),
+    testing::Values(Size(0, 0), Size(0, 5), Size(5, 0), Size(4, 0))
+));
+
 class Core_DXTReverseTest : public cvtest::BaseTest
 {
 public:
