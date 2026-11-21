@@ -40,6 +40,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             int end_ = end >= outDims ? outDims : end < 0 ? end + outDims : end;
             start_ = std::max(0, std::min(start_, outDims));
             end_ = std::max(0, std::min(end_, outDims));
+            // ONNX: start > end gives an empty output
+            end_ = std::max(end_, start_);
 
             std::int64_t shapeData[CV_MAX_DIM];
             if (inpShape.layout != DATA_LAYOUT_BLOCK)
@@ -71,6 +73,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output = csl::spanOf<std::int64_t>(outputs[0]);
             const std::size_t count = (std::size_t)(end_ - start_);
             CV_Assert(output.size() == count);
+            if (count == 0)
+                return;  // empty shape: nothing to copy, and csl::memcpy rejects a zero count
             // the values change only with the input shape, which resets a recorded CUDA Graph, so a replay copies device memory
             if (cachedShape.size() != count || !std::equal(shapeData, shapeData + count, cachedShape.begin())) {
                 cachedShape.assign(shapeData, shapeData + count);
