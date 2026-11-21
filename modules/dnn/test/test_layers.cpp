@@ -2117,6 +2117,161 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_MultiAxes, Values(
     ReduceSizesAxes(std::vector<int>{3, 3, 3, 2, 3}, std::vector<int>{0, 2, 3, 4})
 ));
 
+static Mat exactNormRef64F(const Mat& x, int outerCount, int innerSize, double eps,
+                           const Mat& scale = Mat(), const Mat& bias = Mat(),
+                           int channels = 0, int groupSize = 1)
+{
+    Mat out = x.clone();
+    const float* xp = x.ptr<const float>();
+    float* yp = out.ptr<float>();
+    const float* sp = scale.empty() ? nullptr : scale.ptr<const float>();
+    const float* bp = bias.empty() ? nullptr : bias.ptr<const float>();
+
+    for (int o = 0; o < outerCount; ++o)
+    {
+        const float* row = xp + (size_t)o * innerSize;
+        float* dst = yp + (size_t)o * innerSize;
+        double sum = 0.0;
+        for (int i = 0; i < innerSize; ++i)
+            sum += (double)row[i];
+        const double mean = sum / innerSize;
+        double sq = 0.0;
+        for (int i = 0; i < innerSize; ++i)
+        {
+            const double d = (double)row[i] - mean;
+            sq += d * d;
+        }
+        const double invStd = 1.0 / std::sqrt(sq / innerSize + eps);
+        for (int i = 0; i < innerSize; ++i)
+        {
+            double v = ((double)row[i] - mean) * invStd;
+            if (sp && bp)
+            {
+                int idx = i;
+                if (channels > 0)
+                {
+                    const int spatial = innerSize / groupSize;
+                    const int gSub = i / spatial;
+                    idx = ((o * groupSize + gSub) % channels);
+                }
+                v = v * (double)sp[idx] + (double)bp[idx];
+            }
+            dst[i] = (float)v;
+        }
+    }
+    return out;
+}
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_CUDA_Norm_LargeOffset;
+TEST_P(Layer_Test_CUDA_Norm_LargeOffset, CenteredVariance)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_CUDA || targetId != DNN_TARGET_CUDA)
+        throw SkipTestException("Tests FP32 centered variance in CUDA normalization kernels");
+
+    const float eps = 1e-5f;
+    Mat x4d({2, 4, 8, 8}, CV_32F);
+    randu(x4d, -0.5f, 0.5f);
+    x4d += 10000.f;
+
+    // 1. MVN
+    {
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "mvn_large_offset";
+        lp.set("norm_variance", true);
+        lp.set("eps", eps);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(x4d);
+        Mat out = net.forward();
+        ASSERT_TRUE(checkRange(out)) << "MVN produced NaN/Inf";
+        Mat ref = exactNormRef64F(x4d, 8, 64, eps);
+        normAssert(ref, out, "MVN", 5e-3, 2e-2);
+    }
+
+    // 2. LayerNormalization
+    {
+        Mat x3d = x4d.reshape(1, {2, 4, 64});
+        Mat scale(std::vector<int>{64}, CV_32F), bias(std::vector<int>{64}, CV_32F);
+        randu(scale, 0.5f, 1.5f);
+        randu(bias, -0.5f, 0.5f);
+
+        LayerParams lp;
+        lp.type = "LayerNormalization";
+        lp.name = "ln_large_offset";
+        lp.set("axis", 2);
+        lp.set("epsilon", eps);
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        net.setInputsNames({"X", "scale", "bias"});
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(x3d, "X");
+        net.setInput(scale, "scale");
+        net.setInput(bias, "bias");
+        Mat out = net.forward();
+        ASSERT_TRUE(checkRange(out)) << "LayerNormalization produced NaN/Inf";
+        Mat ref = exactNormRef64F(x3d, 8, 64, eps, scale, bias);
+        normAssert(ref, out, "LayerNormalization", 5e-3, 2e-2);
+    }
+
+    // 3. InstanceNormalization & 4. GroupNormalization
+    Mat cScale(std::vector<int>{4}, CV_32F), cBias(std::vector<int>{4}, CV_32F);
+    randu(cScale, 0.5f, 1.5f);
+    randu(cBias, -0.5f, 0.5f);
+    {
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "in_large_offset";
+        lp.set("epsilon", eps);
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        net.setInputsNames({"X", "scale", "bias"});
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(x4d, "X");
+        net.setInput(cScale, "scale");
+        net.setInput(cBias, "bias");
+        Mat out = net.forward();
+        ASSERT_TRUE(checkRange(out)) << "InstanceNormalization produced NaN/Inf";
+        Mat ref = exactNormRef64F(x4d, 8, 64, eps, cScale, cBias, 4, 1);
+        normAssert(ref, out, "InstanceNormalization", 5e-3, 2e-2);
+    }
+    {
+        LayerParams lp;
+        lp.type = "GroupNormalization";
+        lp.name = "gn_large_offset";
+        lp.set("epsilon", eps);
+        lp.set("num_groups", 2);
+        Net net;
+        int id = net.addLayer(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+        net.connect(0, 2, id, 2);
+        net.setInputsNames({"X", "scale", "bias"});
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(x4d, "X");
+        net.setInput(cScale, "scale");
+        net.setInput(cBias, "bias");
+        Mat out = net.forward();
+        ASSERT_TRUE(checkRange(out)) << "GroupNormalization produced NaN/Inf";
+        Mat ref = exactNormRef64F(x4d, 4, 128, eps, cScale, cBias, 4, 2);
+        normAssert(ref, out, "GroupNormalization", 5e-3, 2e-2);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_CUDA_Norm_LargeOffset, dnnBackendsAndTargets());
+
 TEST(Layer_Test_ReduceMean, accuracy_input_0)
 {
     vector<int> szData = { 2, 1, 2, 1 ,2 };
