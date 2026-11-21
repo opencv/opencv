@@ -9,6 +9,21 @@
 // to the standard ONNX importer.  This avoids the need for an intermediate
 // .onnx file on disk and removes the runtime dependency on the Python `onnx`
 // package (graph_to_onnx.py).
+//
+// Graph JSON schema (as produced by the export tool):
+//   {
+//     "model_name": "name",                                  // optional
+//     "inputs":  [ { "name": "x", "shape": [1, 3, "H", "W"], // int or dynamic dim name
+//                   "dtype": "float32" }, ... ],
+//     "outputs": [ { "name": "y", "shape": [1, 2] }, ... ],
+//     "nodes":   [ { "name": "conv.0", "op_type": "Conv",
+//                    "inputs":  ["x", "conv.weight", "conv.bias"],
+//                    "outputs": ["y"],
+//                    "attrs":   { "strides": [1, 1], "group": 1, ... } }, ... ]
+//   }
+// Tensor names in "nodes" refer either to graph inputs/outputs, to other
+// nodes' outputs, or to initializer names in the safetensors file. Node
+// attribute values follow ONNX attribute types (int/float/string or arrays).
 
 #include "precomp.hpp"
 #include "net_impl.hpp"
@@ -19,6 +34,7 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include <fstream>
+#include <cmath>
 #include <map>
 #include <set>
 #include <string>
@@ -123,6 +139,22 @@ static bool parseSafetensorsHeader(const std::string& header_json,
     return true;
 }
 
+// ===== dtype string -> element size in bytes (-1 for unknown) =====
+static int64_t dtypeElementSize(const std::string& dtype)
+{
+    if (dtype == "F32" || dtype == "I32" || dtype == "U32") return 4;
+    if (dtype == "F64" || dtype == "I64" || dtype == "U64") return 8;
+    if (dtype == "F16" || dtype == "BF16" || dtype == "I16" || dtype == "U16") return 2;
+    if (dtype == "I8"  || dtype == "U8"  || dtype == "BOOL") return 1;
+    return -1;
+}
+
+static bool isIntegerDtype(const std::string& dtype)
+{
+    return dtype == "I64" || dtype == "I32" || dtype == "I16" || dtype == "I8" ||
+           dtype == "U64" || dtype == "U32" || dtype == "U16" || dtype == "U8";
+}
+
 static bool parseSafetensorsFile(const String& path,
                                  std::map<std::string, SafetensorsTensorInfo>& out_info,
                                  std::vector<uchar>& out_data,
@@ -163,17 +195,43 @@ static bool parseSafetensorsFile(const String& path,
     if (!parseSafetensorsHeader(header_json, out_info))
         return false;
 
-    // Validate every tensor's data range fits into the data section
+    // Validate every tensor: known dtype, data range fits into the data
+    // section, and the declared shape matches the data span exactly.
     size_t data_size = file_bytes.size() - data_offset;
     for (const auto& kv : out_info)
     {
-        if (kv.second.data_end > (uint64_t)data_size ||
-            kv.second.data_start > kv.second.data_end)
+        const SafetensorsTensorInfo& t = kv.second;
+        if (t.data_end > (uint64_t)data_size || t.data_start > t.data_end)
         {
             CV_LOG_ERROR(NULL, "DNN/Safetensors: tensor '" << kv.first
-                         << "' data range [" << kv.second.data_start << ", "
-                         << kv.second.data_end << ") exceeds data section size "
-                         << data_size);
+                         << "' data range [" << t.data_start << ", " << t.data_end
+                         << ") exceeds data section size " << data_size);
+            return false;
+        }
+        const int64_t elem_size = dtypeElementSize(t.dtype);
+        if (elem_size < 0)
+        {
+            CV_LOG_ERROR(NULL, "DNN/Safetensors: tensor '" << kv.first
+                         << "' has unsupported dtype '" << t.dtype << "'");
+            return false;
+        }
+        uint64_t numel = 1;
+        bool bad_shape = false;
+        for (int64_t d : t.shape)
+        {
+            if (d < 0 || (d != 0 && numel > (((uint64_t)1) << 60) / (uint64_t)d))
+            {
+                bad_shape = true;
+                break;
+            }
+            numel *= (uint64_t)d;
+        }
+        if (bad_shape || numel * (uint64_t)elem_size != (uint64_t)(t.data_end - t.data_start))
+        {
+            CV_LOG_ERROR(NULL, "DNN/Safetensors: tensor '" << kv.first
+                         << "' declared shape does not match its data span ("
+                         << (t.data_end - t.data_start) << " bytes, dtype "
+                         << t.dtype << ")");
             return false;
         }
     }
@@ -242,6 +300,7 @@ static const std::map<std::string, std::set<int>>& getInt64Positions()
 }
 
 // ===== dtype string -> ONNX TensorProto data type =====
+// Returns 0 for unknown dtype strings (the caller must raise an error).
 static int dtypeStringToOnnx(const std::string& dtype)
 {
     if (dtype == "F32")  return opencv_onnx::TensorProto_DataType_FLOAT;
@@ -257,7 +316,7 @@ static int dtypeStringToOnnx(const std::string& dtype)
     if (dtype == "BOOL") return opencv_onnx::TensorProto_DataType_BOOL;
     if (dtype == "BF16") return opencv_onnx::TensorProto_DataType_BFLOAT16;
     if (dtype == "F16")  return opencv_onnx::TensorProto_DataType_FLOAT16;
-    return opencv_onnx::TensorProto_DataType_FLOAT;
+    return 0;  // unknown dtype
 }
 
 // ===== Set ONNX attribute from a cv::FileNode =====
@@ -431,16 +490,31 @@ Net readNetFromSafetensors(const String& graphJsonPath,
         size_t data_size = (size_t)(info.data_end - info.data_start);
         const uchar* raw_ptr = st_data.data() + st_data_offset + info.data_start;
 
-        if (needs_int64 && info.dtype == "F32")
+        if (needs_int64 && (info.dtype == "F32" || info.dtype == "F64"))
         {
-            // float32 -> int64 conversion: safetensors stores metadata tensors
-            // (Slice starts/ends, Reshape shape, ...) as float32, but they are
-            // actually integers and ONNX expects int64 data.
-            size_t num_elements = data_size / sizeof(float);
+            // float -> int64 conversion: safetensors stores metadata tensors
+            // (Slice starts/ends, Reshape shape, ...) as float32/float64, but
+            // they are actually integers and ONNX expects int64 data.  Reject
+            // anything that is not an exactly representable integer instead
+            // of silently truncating (out-of-range casts would be UB, and
+            // non-integral values would be lossy).
+            const size_t elem_size = (info.dtype == "F32") ? sizeof(float) : sizeof(double);
+            const size_t num_elements = data_size / elem_size;
             std::vector<int64_t> int64_buf(num_elements);
-            const float* fp = reinterpret_cast<const float*>(raw_ptr);
             for (size_t i = 0; i < num_elements; ++i)
-                int64_buf[i] = static_cast<int64_t>(fp[i]);
+            {
+                const double v = (info.dtype == "F32")
+                    ? (double)reinterpret_cast<const float*>(raw_ptr)[i]
+                    : reinterpret_cast<const double*>(raw_ptr)[i];
+                if (!std::isfinite(v) || v != std::trunc(v) ||
+                    v < -9223372036854775808.0 || v >= 9223372036854775808.0)
+                {
+                    CV_Error_(Error::StsError,
+                              ("DNN/Safetensors: tensor '%s' element %lld is not an exactly representable integer: %g",
+                               name.c_str(), (long long)i, v));
+                }
+                int64_buf[i] = static_cast<int64_t>(v);
+            }
             std::string raw;
             raw.resize(num_elements * sizeof(int64_t));
             if (!int64_buf.empty())
@@ -448,9 +522,20 @@ Net readNetFromSafetensors(const String& graphJsonPath,
             init->set_data_type(opencv_onnx::TensorProto_DataType_INT64);
             init->set_raw_data(raw);
         }
+        else if (needs_int64 && !isIntegerDtype(info.dtype))
+        {
+            CV_Error_(Error::StsError,
+                      ("DNN/Safetensors: tensor '%s' is used as an integer input but has dtype '%s'",
+                       name.c_str(), info.dtype.c_str()));
+        }
         else
         {
-            init->set_data_type(dtypeStringToOnnx(info.dtype));
+            const int onnx_dtype = dtypeStringToOnnx(info.dtype);
+            if (onnx_dtype == 0)
+                CV_Error_(Error::StsError,
+                          ("DNN/Safetensors: tensor '%s' has unsupported dtype '%s'",
+                           name.c_str(), info.dtype.c_str()));
+            init->set_data_type(onnx_dtype);
             std::string raw;
             raw.resize(data_size);
             if (data_size > 0)

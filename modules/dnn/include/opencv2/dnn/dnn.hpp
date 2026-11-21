@@ -1283,6 +1283,14 @@ CV__DNN_INLINE_NS_BEGIN
      *  ONNX model is constructed and forwarded to the standard ONNX importer,
      *  so all operators supported by OpenCV's ONNX backend are available.
      *
+     *  The graph JSON is a JSON object with optional "model_name" and
+     *  "inputs" / "outputs" / "nodes" arrays. Each node carries an ONNX
+     *  "op_type", its input/output tensor names and its ONNX attributes;
+     *  tensor names refer to graph inputs/outputs, other nodes' outputs or
+     *  initializer names in the safetensors file (the format produced by the
+     *  export tool, see modules/dnn/src/safetensors_importer.cpp for the
+     *  exact schema).
+     *
      *  @param graphJsonPath path to the graph JSON file describing the topology.
      *  @param weightsPath path to the safetensors file with the trained weights.
      *  @param engine select DNN engine to be used (ENGINE_OPENCV recommended).

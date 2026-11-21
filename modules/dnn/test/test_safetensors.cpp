@@ -296,4 +296,83 @@ TEST(Test_Safetensors, corrupted_file_raises)
     std::remove(weightsPath.c_str());
 }
 
+TEST(Test_Safetensors, shape_span_mismatch_raises)
+{
+    const std::string graphPath = cv::tempfile("opencv_test_safetensors_mismatch_graph.json");
+    const std::string weightsPath = cv::tempfile("opencv_test_safetensors_mismatch.safetensors");
+
+    {
+        // header declares 4 float32 elements (16 bytes) but the data span is 4 bytes
+        std::ostringstream header;
+        header << "{\"w\": {\"dtype\": \"F32\", \"shape\": [4], \"data_offsets\": [0, 4]}}";
+        std::string headerStr = header.str();
+        while (headerStr.size() % 8 != 0)
+            headerStr += ' ';
+        std::ofstream wf(weightsPath.c_str(), std::ios::binary);
+        ASSERT_TRUE(wf.is_open());
+        uint64_t headerLen = headerStr.size();
+        wf.write(reinterpret_cast<const char*>(&headerLen), 8);
+        wf.write(headerStr.data(), headerLen);
+        const float dummy = 1.f;
+        wf.write(reinterpret_cast<const char*>(&dummy), sizeof(dummy));
+    }
+    {
+        std::ofstream gf(graphPath.c_str(), std::ios::binary);
+        gf << makeGraphJson();
+    }
+
+    try
+    {
+        EXPECT_ANY_THROW(cv::dnn::readNetFromSafetensors(graphPath, weightsPath, cv::dnn::ENGINE_OPENCV));
+    }
+    catch (const Exception& e)
+    {
+        if (missingProtobuf(e))
+            throw SkipTestException("OpenCV built without Protobuf");
+        throw;
+    }
+
+    std::remove(graphPath.c_str());
+    std::remove(weightsPath.c_str());
+}
+
+TEST(Test_Safetensors, unsupported_dtype_raises)
+{
+    const std::string graphPath = cv::tempfile("opencv_test_safetensors_dtype_graph.json");
+    const std::string weightsPath = cv::tempfile("opencv_test_safetensors_dtype.safetensors");
+
+    {
+        std::ostringstream header;
+        header << "{\"w\": {\"dtype\": \"COMPLEX64\", \"shape\": [1], \"data_offsets\": [0, 8]}}";
+        std::string headerStr = header.str();
+        while (headerStr.size() % 8 != 0)
+            headerStr += ' ';
+        std::ofstream wf(weightsPath.c_str(), std::ios::binary);
+        ASSERT_TRUE(wf.is_open());
+        uint64_t headerLen = headerStr.size();
+        wf.write(reinterpret_cast<const char*>(&headerLen), 8);
+        wf.write(headerStr.data(), headerLen);
+        const uint64_t dummy = 0;
+        wf.write(reinterpret_cast<const char*>(&dummy), sizeof(dummy));
+    }
+    {
+        std::ofstream gf(graphPath.c_str(), std::ios::binary);
+        gf << makeGraphJson();
+    }
+
+    try
+    {
+        EXPECT_ANY_THROW(cv::dnn::readNetFromSafetensors(graphPath, weightsPath, cv::dnn::ENGINE_OPENCV));
+    }
+    catch (const Exception& e)
+    {
+        if (missingProtobuf(e))
+            throw SkipTestException("OpenCV built without Protobuf");
+        throw;
+    }
+
+    std::remove(graphPath.c_str());
+    std::remove(weightsPath.c_str());
+}
+
 }  // namespace opencv_test
