@@ -509,8 +509,12 @@ foreach(_v OPENCV_DNN_MLAS_ENABLED OPENCV_DNN_MLAS_SKIP_REASON
            MLAS_HAS_ASM MLAS_HAS_POWER10 MLAS_HAS_RISCV64_RVV)
   unset(${_v} CACHE)
 endforeach()
-if(NOT EMSCRIPTEN)
+# OFF builds dnn with its built-in fastGemm only, e.g. to compare it with MLAS.
+OCV_OPTION(OPENCV_DNN_MLAS "Use the vendored MLAS SGEMM in the DNN module" ON)
+if(NOT EMSCRIPTEN AND OPENCV_DNN_MLAS)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/mlas" "${CMAKE_BINARY_DIR}/3rdparty/mlas")
+elseif(NOT OPENCV_DNN_MLAS)
+  set(OPENCV_DNN_MLAS_SKIP_REASON "disabled by OPENCV_DNN_MLAS=OFF" CACHE INTERNAL "" FORCE)
 endif()
 if(HAVE_MLAS)
   if(MLAS_EXTERNAL_OBJECTS)
