@@ -44,6 +44,8 @@ static double typeMin(int depth)
         case CV_16S: return std::numeric_limits<short>::lowest();
         case CV_32S: return std::numeric_limits<int>::lowest();
         case CV_64S: return (double)std::numeric_limits<int64_t>::lowest();
+        case CV_32U: return std::numeric_limits<uint32_t>::lowest();
+        case CV_64U: return (double)std::numeric_limits<uint64_t>::lowest();
         case CV_32F: return -FLT_MAX;
         case CV_64F: return -DBL_MAX;
         default:     CV_Error(Error::StsUnsupportedFormat, "Clip: unsupported depth");
@@ -60,6 +62,8 @@ static double typeMax(int depth)
         case CV_16S: return std::numeric_limits<short>::max();
         case CV_32S: return std::numeric_limits<int>::max();
         case CV_64S: return std::nextafter((double)std::numeric_limits<int64_t>::max(), 0.0);
+        case CV_32U: return std::numeric_limits<uint32_t>::max();
+        case CV_64U: return (double)std::numeric_limits<uint64_t>::max();
         case CV_32F: return  FLT_MAX;
         case CV_64F: return  DBL_MAX;
         default:     CV_Error(Error::StsUnsupportedFormat, "Clip: unsupported depth");
