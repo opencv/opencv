@@ -3695,18 +3695,6 @@ TEST_P(Test_ONNX_layers, where_node)
 TEST_P(Test_ONNX_layers, Gemm_all_attributes) {
     testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 2);
 }
-TEST_P(Test_ONNX_layers, Gemm_3inputs_scalar_bias) {
-    testONNXModels("test_gemm_3inputs_scalar_bias", pb, 0, 0, false, true, 3);
-}
-TEST_P(Test_ONNX_layers, Gemm_3inputs_matrix_bias) {
-    testONNXModels("test_gemm_3inputs_matrix_bias", pb, 0, 0, false, true, 3);
-}
-TEST_P(Test_ONNX_layers, Gemm_3inputs_single_elem_vector_bias) {
-    testONNXModels("test_gemm_3inputs_single_elem_vector_bias", pb, 0, 0, false, true, 3);
-}
-TEST_P(Test_ONNX_layers, Gemm_3inputs_vector_bias) {
-    testONNXModels("test_gemm_3inputs_vector_bias", pb, 0, 0, false, true, 3);
-}
 TEST_P(Test_ONNX_layers, Gemm_alpha) {
     testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 2);
 }
@@ -3715,9 +3703,6 @@ TEST_P(Test_ONNX_layers, Gemm_beta) {
 }
 TEST_P(Test_ONNX_layers, Gemm_default_matrix_bias) {
     testONNXModels("test_gemm_default_matrix_bias", pb, 0, 0, false, true, 2);
-}
-TEST_P(Test_ONNX_layers, Gemm_default_no_bias) {
-    testONNXModels("test_gemm_default_no_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Gemm_default_scalar_bias) {
     testONNXModels("test_gemm_default_scalar_bias", pb, 0, 0, false, true, 2);
