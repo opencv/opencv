@@ -50,6 +50,9 @@
 #ifdef HAVE_INF_ENGINE
 #include <thread>
 #endif
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#endif
 
 namespace opencv_test { namespace {
 
@@ -4542,6 +4545,171 @@ TEST(Test_MatMul, NoBiasIgnoresOutputContents)
         normAssert(outputs[0], expected, "MatMul no-bias output mismatch", 1e-4, 1e-4);
     }
 }
+
+class Layer_Test_MatMul_CudaBroadcastBias : public testing::TestWithParam<tuple<Backend, Target> >
+{
+protected:
+    Backend backendId = DNN_BACKEND_DEFAULT;
+    Target targetId = DNN_TARGET_CPU;
+    double l1 = 0.0;
+    double lInf = 0.0;
+
+    void initBackendAndThresholds()
+    {
+        backendId = get<0>(GetParam());
+        targetId = get<1>(GetParam());
+        if (backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_CUDA)
+            throw SkipTestException("Tests MatMul broadcast and runtime bias on OpenCV and CUDA backends");
+
+        const bool fp16 = targetId == DNN_TARGET_CUDA_FP16 || targetId == DNN_TARGET_CPU_FP16 ||
+                          targetId == DNN_TARGET_OPENCL_FP16;
+        DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+        if (fp16)
+        {
+            l1 = 1.5e-2;
+            lInf = 6e-2;
+        }
+    }
+};
+
+TEST_P(Layer_Test_MatMul_CudaBroadcastBias, RuntimeBAndBiasAlphaBeta)
+{
+    initBackendAndThresholds();
+
+    const int B = 2, M = 5, K = 12, N = 16;
+    Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias(std::vector<int>{N}, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(W, -0.5f, 0.5f);
+    randu(bias, 1.f, 2.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_runtimeB_runtimeBias";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("alpha", 1.5f);
+    lp.set("beta", 0.5f);
+    lp.set("real_ndims_C", 1);
+
+    Net cpuNet;
+    int cid = cpuNet.addLayer(lp.name, lp.type, lp);
+    cpuNet.connect(0, 0, cid, 0);
+    cpuNet.connect(0, 1, cid, 1);
+    cpuNet.connect(0, 2, cid, 2);
+    cpuNet.setInputsNames({"A", "B", "bias"});
+    cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cpuNet.setPreferableTarget(DNN_TARGET_CPU);
+    cpuNet.setInput(A, "A");
+    cpuNet.setInput(W, "B");
+    cpuNet.setInput(bias, "bias");
+    Mat ref = cpuNet.forward().clone();
+
+    Net net;
+    int id = net.addLayer(lp.name, lp.type, lp);
+    net.connect(0, 0, id, 0);
+    net.connect(0, 1, id, 1);
+    net.connect(0, 2, id, 2);
+    net.setInputsNames({"A", "B", "bias"});
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    net.setInput(A, "A");
+    net.setInput(W, "B");
+    net.setInput(bias, "bias");
+    Mat out = net.forward();
+    normAssert(ref, out, "runtimeB_runtimeBias_alpha_beta", l1, lInf);
+}
+
+TEST_P(Layer_Test_MatMul_CudaBroadcastBias, ConstBAndBroadcastBias3D)
+{
+    initBackendAndThresholds();
+    // the OpenCL forward of MatMul does not apply alpha yet
+    if (backendId == DNN_BACKEND_OPENCV && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    const int B = 3, M = 7, K = 16, N = 24;
+    Mat A({B, M, K}, CV_32F), W({1, K, N}, CV_32F), bias({1, 1, N}, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(W, -0.5f, 0.5f);
+    randu(bias, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_constB_constBias3d";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("alpha", 0.75f);
+    lp.set("beta", 1.25f);
+    lp.set("real_ndims_C", 3);
+    lp.blobs.push_back(W);
+    lp.blobs.push_back(bias);
+
+    Net cpuNet;
+    cpuNet.addLayerToPrev(lp.name, lp.type, lp);
+    cpuNet.setPreferableBackend(DNN_BACKEND_OPENCV);
+    cpuNet.setPreferableTarget(DNN_TARGET_CPU);
+    cpuNet.setInput(A);
+    Mat ref = cpuNet.forward().clone();
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    net.setInput(A);
+    Mat out = net.forward();
+    normAssert(ref, out, "constB_constBias3d", l1, lInf);
+}
+
+TEST_P(Layer_Test_MatMul_CudaBroadcastBias, UnexpandedBiasDeviceMemory)
+{
+#ifndef HAVE_CUDA
+    throw SkipTestException("CUDA is required for device memory check");
+#else
+    const Backend bId = get<0>(GetParam());
+    const Target tId = get<1>(GetParam());
+    if (bId != DNN_BACKEND_CUDA || tId != DNN_TARGET_CUDA)
+        throw SkipTestException("Tests unexpanded FP32 bias VRAM allocation on CUDA");
+
+    Mat warmA({1, 4, 4}, CV_32F, Scalar(0)), warmB({1, 4, 4}, CV_32F, Scalar(0)), warmC(std::vector<int>{4}, CV_32F, Scalar(0));
+    {
+        LayerParams wlp;
+        wlp.type = "MatMul";
+        wlp.name = "warm";
+        wlp.set("real_ndims_C", 1);
+        wlp.blobs = {warmB, warmC};
+        Net warmNet;
+        warmNet.addLayerToPrev(wlp.name, wlp.type, wlp);
+        warmNet.setPreferableBackend(bId);
+        warmNet.setPreferableTarget(tId);
+        warmNet.setInput(warmA);
+        warmNet.forward();
+    }
+
+    const int B = 16, M = 1024, K = 128, N = 1024;
+    Mat A({B, M, K}, CV_32F, Scalar(0.1f));
+    Mat W({1, K, N}, CV_32F, Scalar(0.01f));
+    Mat bias(std::vector<int>{N}, CV_32F, Scalar(0.5f));
+
+    cv::cuda::DeviceInfo devInfo;
+    const size_t freeBefore = devInfo.freeMemory();
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_unexpanded_vram";
+    lp.set("real_ndims_C", 1);
+    lp.blobs = {W, bias};
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(bId);
+    net.setPreferableTarget(tId);
+    net.setInput(A);
+    Mat out = net.forward();
+    const size_t freeAfter = devInfo.freeMemory();
+    const size_t usedBytes = (freeBefore > freeAfter) ? (freeBefore - freeAfter) : 0;
+    // Input (8 MiB) + output (64 MiB) + W (0.5 MiB) + unexpanded bias (4 KiB) ~ 74 MiB; stock uses ~140 MiB
+    EXPECT_LT(usedBytes, size_t(104ULL * 1024 * 1024))
+        << "MatMul uploaded expanded broadcast bias to VRAM: used " << (usedBytes >> 20) << " MiB";
+#endif
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_MatMul_CudaBroadcastBias, dnnBackendsAndTargets());
 
 TEST(Test_SoftmaxCrossEntropyLoss, RejectMismatchedWeightsAndLabels)
 {
