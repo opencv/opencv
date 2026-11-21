@@ -45,7 +45,7 @@ OCL_PERF_TEST(Photo, DenoisingColored)
     SANITY_CHECK(result, 2);
 }
 
-OCL_PERF_TEST(Photo, DISABLED_DenoisingGrayscaleMulti)
+OCL_PERF_TEST(Photo, DenoisingGrayscaleMulti)
 {
     const int imgs_count = 3;
 
@@ -68,7 +68,7 @@ OCL_PERF_TEST(Photo, DISABLED_DenoisingGrayscaleMulti)
     SANITY_CHECK(result);
 }
 
-OCL_PERF_TEST(Photo, DISABLED_DenoisingColoredMulti)
+OCL_PERF_TEST(Photo, DenoisingColoredMulti)
 {
     const int imgs_count = 3;
 
@@ -89,7 +89,7 @@ OCL_PERF_TEST(Photo, DISABLED_DenoisingColoredMulti)
     OCL_TEST_CYCLE()
             cv::fastNlMeansDenoisingColoredMulti(original, result, imgs_count / 2, imgs_count, 10, 15);
 
-    SANITY_CHECK(result);
+    SANITY_CHECK(result, 2);
 }
 
 } } // namespace opencv_test::ocl
