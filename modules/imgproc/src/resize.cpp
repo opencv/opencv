@@ -2800,6 +2800,8 @@ public:
         WT *buf = _buffer.data(), *sum = buf + dsize.width;
         int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
 
+        int prev_sy = -1;
+
         for( dx = 0; dx < dsize.width; dx++ )
             sum[dx] = (WT)0;
 
@@ -2809,7 +2811,10 @@ public:
             int dy = ytab[j].di;
             int sy = ytab[j].si;
 
+            // Adjacent destination rows can share a horizontally filtered source row.
+            if( sy != prev_sy )
             {
+                prev_sy = sy;
                 const T* S = src->template ptr<T>(sy);
                 for( dx = 0; dx < dsize.width; dx++ )
                     buf[dx] = (WT)0;
