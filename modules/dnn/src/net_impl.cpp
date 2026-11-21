@@ -1654,28 +1654,136 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 }
 
 
+ConstWeightOwner::~ConstWeightOwner() {}
+
 Mat Net::Impl::getParam(int layer, int numParam) const
 {
-    std::vector<Mat>& layerBlobs = getLayer(layer)->blobs;
-    CV_Assert(numParam < (int)layerBlobs.size());
-    return layerBlobs[numParam];
+    Ptr<Layer> l = getLayer(layer);
+    std::vector<Mat>& layerBlobs = l->blobs;
+    if (numParam < (int)layerBlobs.size())
+        return layerBlobs[numParam];
+
+    // A constant handed over by setWeights() is not in blobs; read it from the layer.
+    if (const ConstWeightOwner* owner = dynamic_cast<const ConstWeightOwner*>(l.get())) {
+        if (numParam == 0 && !owner->constWeights().empty())
+            return owner->constWeights();
+        if (numParam == 1 && !owner->constBias().empty())
+            return owner->constBias();
+    }
+
+    // Until constArgs() hands them over they are still operands, and operand 0 is the data.
+    if (mainGraph && numParam + 1 < (int)l->inputs.size()) {
+        Arg operand = l->inputs[numParam + 1];
+        if (isConstArg(operand))
+            return argTensor(operand);
+    }
+
+    // setParam() installed this weight, so it is not in any file and the caller's Mat is it.
+    if (numParam == 0 && mainGraph) {
+        std::map<std::string, Mat>::const_iterator sp = setParamWeights.find(l->name);
+        if (sp != setParamWeights.end())
+            return sp->second;
+    }
+
+    // A released weight was never mapped, so the model file holds the only copy. A fused layer
+    // has no entry here: its weight never existed as one tensor.
+    if (numParam == 0 && mainGraph && modelFormat == DNN_MODEL_ONNX &&
+        dynamic_cast<const ConstWeightOwner*>(l.get()))
+    {
+        std::map<std::string, Arg>::const_iterator it = constWeightArgs.find(l->name);
+        if (it != constWeightArgs.end())
+        {
+            const std::string& tensorName = args[it->second.idx].name;
+            if (modelFileName.empty())
+                CV_Error_(Error::StsError,
+                          ("DNN: layer '%s' has packed its weight and the net was loaded from a "
+                           "buffer, so it cannot be read back", l->name.c_str()));
+            Mat w = readOnnxInitializer(modelFileName, tensorName);
+            if (w.empty())
+                CV_Error_(Error::StsError,
+                          ("DNN: cannot read '%s' back from '%s' for layer '%s'",
+                           tensorName.c_str(), modelFileName.c_str(), l->name.c_str()));
+            return w;
+        }
+    }
+
+    CV_Error_(Error::StsOutOfRange,
+              ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
 }
 
 // Bump only the epoch: the executor holding the packed weights may be another object.
-static void markLayerWeightsChanged(const Ptr<LayerInfo>& layer)
+static void markLayerWeightsChanged(Net::Impl* netimpl, const Ptr<LayerInfo>& layer, int numParam,
+                                    const Mat& blob)
 {
     layer->weightEpoch++;
+    if (numParam == 0) {
+        // The model file no longer describes this weight, but the caller's own Mat still does.
+        netimpl->constWeightArgs.erase(layer->name);
+        netimpl->setParamWeights[layer->name] = blob;
+    }
+#ifdef HAVE_CUDA
+    // A replayed graph keeps the old weights; re-finalizing inside a capture cannot allocate.
+    netimpl->cudaGraphReset();
+#endif
+}
+
+static bool setConstWeights(const Ptr<LayerInfo>& layer, int numParam, const Mat& blob,
+                            int c0, int accuracy)
+{
+    LayerInfo* l = layer.get();
+    if (ConstWeightOwner* owner = dynamic_cast<ConstWeightOwner*>(l)) {
+        // Parameter 0 is the weight and 1 the bias; the empty operand leaves the other alone.
+        if (numParam == 0)
+            owner->setWeights(blob, Mat());
+        else if (numParam == 1)
+            owner->setWeights(Mat(), blob);
+        else
+            return false;
+        return true;
+    }
+    // Conv and ConvTranspose pack the two together, so only the weight is reachable.
+    if (numParam != 0)
+        return false;
+    if (Conv2Layer* conv = dynamic_cast<Conv2Layer*>(l))
+        conv->setWeights(blob, Mat(), c0, accuracy);
+    else if (ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(l))
+        deconv->setWeights(blob, Mat(), c0, accuracy);
+    else
+        return false;
+    return true;
+}
+
+// A constant lives in blobs, in the graph, or on the layer; the write follows it.
+bool Net::Impl::writeParam(const Ptr<LayerInfo>& l, int numParam, const Mat& blob)
+{
+    std::vector<Mat>& layerBlobs = l->blobs;
+    if (numParam < (int)layerBlobs.size()) {
+        // we don't make strong checks, use this function carefully
+        layerBlobs[numParam] = blob;
+        return true;
+    }
+
+    // constArgs() hands this operand to the layer at the first forward, so writing it here is
+    // what survives. Operand 0 is the data, so parameter i is operand i + 1.
+    if (mainGraph && numParam + 1 < (int)l->inputs.size()) {
+        Arg operand = l->inputs[numParam + 1];
+        if (isConstArg(operand)) {
+            argTensor(operand) = blob;
+            return true;
+        }
+    }
+
+    return setConstWeights(l, numParam, blob, defaultC0, accuracy);
 }
 
 void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
     // FIXIT we should not modify "execution" instance
-    std::vector<Mat>& layerBlobs = getLayer(layer)->blobs;
-    CV_Assert(numParam < (int)layerBlobs.size());
-    // we don't make strong checks, use this function carefully
-    layerBlobs[numParam] = blob;
-    if (mainGraph)
-        markLayerWeightsChanged(getLayer(layer));
+    Ptr<Layer> l = getLayer(layer);
+    if (!writeParam(l, numParam, blob))
+        CV_Error_(Error::StsOutOfRange,
+                  ("DNN: layer '%s' has no parameter #%d", l->name.c_str(), numParam));
+    markLayerWeightsChanged(this, l, numParam, blob);
 }
 
 void Net::Impl::setParam(const std::string& outputTensorName, int numParam, const Mat& blob)
@@ -1707,23 +1815,8 @@ void Net::Impl::setParam(const std::string& outputTensorName, int numParam, cons
             if (!produces)
                 continue;
 
-            if (numParam < (int)layer->blobs.size()) {
-                layer->blobs[numParam] = blob;
-                markLayerWeightsChanged(layer);
-                return;
-            }
-
-            Conv2Layer* conv = dynamic_cast<Conv2Layer*>(layer.get());
-            if (conv && numParam == 0) {
-                conv->setWeights(blob, Mat(), defaultC0, accuracy);
-                markLayerWeightsChanged(layer);
-                return;
-            }
-
-            ConvTranspose2Layer* deconv = dynamic_cast<ConvTranspose2Layer*>(layer.get());
-            if (deconv && numParam == 0) {
-                deconv->setWeights(blob, Mat(), defaultC0, accuracy);
-                markLayerWeightsChanged(layer);
+            if (writeParam(layer, numParam, blob)) {
+                markLayerWeightsChanged(this, layer, numParam, blob);
                 return;
             }
 

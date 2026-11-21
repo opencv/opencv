@@ -12,6 +12,7 @@
 #include "../../precomp.hpp"
 #include "fast_gemm.hpp"
 #include "mlas_gemm.hpp"
+#include "../../mapped_file.hpp"
 
 #define CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "fast_gemm_kernels.simd.hpp"
@@ -178,6 +179,50 @@ size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt) {
     }
 }
 
+// Packs rows [k0, k1). A chunk's layout depends on its height, so both bounds must be multiples
+// of the K stride unless k1 is K.
+static void packBKernel(const char *B, char *packed_B, size_t N, size_t K, size_t ldb0, size_t ldb1,
+                        size_t esz, size_t k0, size_t k1, const FastGemmOpt &opt) {
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    } else
+#endif
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        opt_AVX2::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        opt_AVX::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    } else
+#endif
+    {
+        cpu_baseline::fastGemmPackBKernel(B, packed_B, N, K, ldb0, ldb1, esz, k0, k1);
+    }
+}
+
+// How many rows to pack before handing their pages back: whole multiples of unit, and enough of
+// them to span a page, since nothing smaller can be released. row_bytes is 0 when the rows are not
+// contiguous, which leaves nothing to release and so packs in one pass.
+static size_t bandRows(size_t unit, size_t row_bytes, size_t K) {
+    const size_t granule = mappingGranularity();
+    if (unit == 0 || row_bytes == 0 || granule == 0)
+        return K;
+    return unit * std::max<size_t>(1, (granule + unit * row_bytes - 1) / (unit * row_bytes));
+}
+
 void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
     CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
@@ -192,75 +237,24 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     const auto *b = B.ptr<const char>();
     int esz = B.elemSize();
 
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        size_t size_packed_B = opt_RVV::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
+    size_t size_packed_B = fastGemmPackBSize(N, K, opt);
+    packed_B.resize(size_packed_B * batch);
+    auto *packed_b = (char *)packed_B.data();
+
+    const size_t item_bytes = (size_t)N * (size_t)K * (size_t)esz;
+    // A transposed B walks a column strip, so a row band is not a contiguous range to release.
+    const size_t row_bytes = trans ? 0 : (size_t)N * (size_t)esz;
+    const size_t band = bandRows((size_t)fastGemmKC(opt), row_bytes, (size_t)K);
+
+    for (int i = 0; i < batch; i++) {
+        for (size_t k0 = 0; k0 < (size_t)K; k0 += band) {
+            size_t k1 = std::min(k0 + band, (size_t)K);
+            packBKernel(b, packed_b, N, K, ldb0, ldb1, esz, k0, k1, opt);
+            if (band < (size_t)K)
+                releaseMappedPages(B, i * item_bytes + k0 * row_bytes, (k1 - k0) * row_bytes);
         }
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        size_t size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        size_t size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        size_t size_packed_B = opt_AVX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        size_t size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
-    } else
-#endif
-    {
-        size_t size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
-        packed_B.resize(size_packed_B * batch);
-        auto *packed_b = (char*)packed_B.data();
-        for (int i = 0; i < batch; i++) {
-            cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += (size_t)N * (size_t)K * (size_t)esz;
-            packed_b += size_packed_B * (size_t)esz;
-        }
+        b += item_bytes;
+        packed_b += size_packed_B * (size_t)esz;
     }
 }
 
@@ -271,37 +265,7 @@ void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, f
         std::swap(ldb0, ldb1);
     }
 
-    const auto &b = (const char *)B;
-    auto *packed_b = (char *)packed_B;
-
-#if CV_TRY_RVV && CV_RVV
-    if (opt.use_rvv) {
-        opt_RVV::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_NEON
-    if (opt.use_neon) {
-        opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX2
-    if (opt.use_avx2) {
-        opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_AVX
-    if (opt.use_avx) {
-        opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-#if CV_TRY_LASX
-    if (opt.use_lasx) {
-        opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    } else
-#endif
-    {
-        cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, sizeof(float));
-    }
+    packBKernel((const char *)B, (char *)packed_B, N, K, ldb0, ldb1, sizeof(float), 0, K, opt);
 }
 
 static constexpr int FAST_GEMM_THIN_MAX_M = 12;
@@ -440,19 +404,35 @@ size_t fastGemmThinPackBSize(int N, int K) {
     return (size_t)n_strips * (size_t)NR * (size_t)K;
 }
 
-void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B) {
+void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B,
+                       int k0, int k1) {
     const int NR = fast_gemm_thin_lanes();
     const int n_strips = (N + NR - 1) / NR;
     for (int s = 0; s < n_strips; s++) {
         const int j0 = s * NR;
         const int nr = std::min(NR, N - j0);
         float* strip = packed_B + (size_t)s * NR * K;
-        for (int k = 0; k < K; k++) {
+        for (int k = k0; k < k1; k++) {
             float* out = strip + k * NR;
             int c = 0;
             for (; c < nr; c++) out[c] = B[k * ldb_K + (j0 + c) * ldb_N];
             for (; c < NR; c++) out[c] = 0.f;
         }
+    }
+}
+
+void fastGemmThinPackB(const Mat &B, int N, int K, size_t ldb_K, size_t ldb_N, float *packed_B) {
+    // Rows are a contiguous range only when ldb_K is the row stride; a transposed B leaves nothing
+    // to release and packs in one pass.
+    const size_t row_bytes = ldb_K == (size_t)N ? (size_t)N * sizeof(float) : 0;
+    const size_t band = bandRows(1, row_bytes, (size_t)K);
+    const float *b = B.ptr<const float>();
+
+    for (int k0 = 0; k0 < K; k0 += (int)band) {
+        const int k1 = std::min(k0 + (int)band, K);
+        fastGemmThinPackB(N, K, b, ldb_K, ldb_N, packed_B, k0, k1);
+        if (band < (size_t)K)
+            releaseMappedPages(B, (size_t)k0 * row_bytes, (size_t)(k1 - k0) * row_bytes);
     }
 }
 
@@ -503,7 +483,7 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
 
     if (fastGemmThinEligible(M, N, K)) {
         AutoBuffer<float> packed(fastGemmThinPackBSize(N, K));
-        fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data());
+        fastGemmThinPackB(N, K, B, (size_t)ldb, 1, packed.data(), 0, K);
         fastGemmThin(M, N, K, alpha, A, lda0, lda1, packed.data(), beta, C, ldc, multi_thread);
         return;
     }
