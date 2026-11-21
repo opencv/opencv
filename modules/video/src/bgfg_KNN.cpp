@@ -529,7 +529,8 @@ public:
                float _fTau,
                bool _bShadowDetection,
                uchar _nShadowDetection,
-               const Mat& _knownForegroundMask)
+               const Mat& _knownForegroundMask,
+               bool _updateModel)
             :  knownForegroundMask(_knownForegroundMask)
     {
         src = &_src;
@@ -550,6 +551,7 @@ public:
         m_nkNN = _nkNN;
         m_bShadowDetection = _bShadowDetection;
         m_nShadowDetection = _nShadowDetection;
+        updateModel = _updateModel;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -578,7 +580,8 @@ public:
                 int result= _cvCheckPixelBackgroundNP(data, nchannels,
                         m_nN, m_aModel, m_fTb,m_nkNN, m_fTau,m_bShadowDetection,include);
 
-                _cvUpdatePixelBackgroundNP(x,data,nchannels,
+                if (updateModel)
+                    _cvUpdatePixelBackgroundNP(x,data,nchannels,
                         m_nN, m_aModel,
                         m_nNextLongUpdate,
                         m_nNextMidUpdate,
@@ -642,6 +645,7 @@ public:
     bool m_bShadowDetection;
     uchar m_nShadowDetection;
     const Mat& knownForegroundMask;
+    bool updateModel;
 };
 
 #ifdef HAVE_OPENCL
@@ -661,13 +665,19 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
 
     UMat frame = _image.getUMat();
 
+    // A zero learning rate freezes the model: the kernel is told never to update a sample.
+    const bool updateModel = learningRate > 0;
+
     //recalculate update rates - in case alpha is changed
     // calculate update parameters (using alpha)
-    int Kshort,Kmid,Klong;
-    //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    int Kshort = 0, Kmid = 0, Klong = 0;
+    if (updateModel)
+    {
+        //approximate exponential learning curve
+        Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+        Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+        Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    }
 
     //refresh rates
     int nShortUpdate = (Kshort/nN)+1;
@@ -686,9 +696,10 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     idxArg = kernel_apply.set(idxArg, ocl::KernelArg::PtrReadWrite(u_sample));
     idxArg = kernel_apply.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(fgmask));
 
-    idxArg = kernel_apply.set(idxArg, nLongCounter);
-    idxArg = kernel_apply.set(idxArg, nMidCounter);
-    idxArg = kernel_apply.set(idxArg, nShortCounter);
+    // A counter outside [0, 255] never matches a stored update point, so the kernel skips all updates.
+    idxArg = kernel_apply.set(idxArg, updateModel ? nLongCounter : -1);
+    idxArg = kernel_apply.set(idxArg, updateModel ? nMidCounter : -1);
+    idxArg = kernel_apply.set(idxArg, updateModel ? nShortCounter : -1);
     idxArg = kernel_apply.set(idxArg, fTb);
     idxArg = kernel_apply.set(idxArg, nkNN);
     idxArg = kernel_apply.set(idxArg, fTau);
@@ -699,23 +710,26 @@ bool BackgroundSubtractorKNNImpl::ocl_apply(InputArray _image, OutputArray _fgma
     if(!kernel_apply.run(2, globalsize, NULL, true))
         return false;
 
-    nShortCounter++;//0,1,...,nShortUpdate-1
-    nMidCounter++;
-    nLongCounter++;
-    if (nShortCounter >= nShortUpdate)
+    if (updateModel)
     {
-        nShortCounter = 0;
-        randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
-    }
-    if (nMidCounter >= nMidUpdate)
-    {
-        nMidCounter = 0;
-        randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
-    }
-    if (nLongCounter >= nLongUpdate)
-    {
-        nLongCounter = 0;
-        randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        nShortCounter++;//0,1,...,nShortUpdate-1
+        nMidCounter++;
+        nLongCounter++;
+        if (nShortCounter >= nShortUpdate)
+        {
+            nShortCounter = 0;
+            randu(u_nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+        }
+        if (nMidCounter >= nMidUpdate)
+        {
+            nMidCounter = 0;
+            randu(u_nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+        }
+        if (nLongCounter >= nLongUpdate)
+        {
+            nLongCounter = 0;
+            randu(u_nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        }
     }
     return true;
 }
@@ -790,13 +804,19 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, InputArray _knownFore
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
+    // A zero learning rate freezes the model: it is still used to classify pixels, but never updated.
+    const bool updateModel = learningRate > 0;
+
     //recalculate update rates - in case alpha is changed
     // calculate update parameters (using alpha)
-    int Kshort,Kmid,Klong;
-    //approximate exponential learning curve
-    Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
-    Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
-    Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    int Kshort = 0, Kmid = 0, Klong = 0;
+    if (updateModel)
+    {
+        //approximate exponential learning curve
+        Kshort=(int)(log(0.7)/log(1-learningRate))+1;//Kshort
+        Kmid=(int)(log(0.4)/log(1-learningRate))-Kshort+1;//Kmid
+        Klong=(int)(log(0.1)/log(1-learningRate))-Kshort-Kmid+1;//Klong
+    }
 
     //refresh rates
     int nShortUpdate = (Kshort/nN)+1;
@@ -821,26 +841,30 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, InputArray _knownFore
                              fTau,
                              bShadowDetection,
                              nShadowDetection,
-                             knownForegroundMask),
+                             knownForegroundMask,
+                             updateModel),
                              image.total()/(double)(1 << 16));
 
-    nShortCounter++;//0,1,...,nShortUpdate-1
-    nMidCounter++;
-    nLongCounter++;
-    if (nShortCounter >= nShortUpdate)
+    if (updateModel)
     {
-        nShortCounter = 0;
-        randu(nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
-    }
-    if (nMidCounter >= nMidUpdate)
-    {
-        nMidCounter = 0;
-        randu(nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
-    }
-    if (nLongCounter >= nLongUpdate)
-    {
-        nLongCounter = 0;
-        randu(nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        nShortCounter++;//0,1,...,nShortUpdate-1
+        nMidCounter++;
+        nLongCounter++;
+        if (nShortCounter >= nShortUpdate)
+        {
+            nShortCounter = 0;
+            randu(nNextShortUpdate, Scalar::all(0),  Scalar::all(nShortUpdate));
+        }
+        if (nMidCounter >= nMidUpdate)
+        {
+            nMidCounter = 0;
+            randu(nNextMidUpdate, Scalar::all(0),  Scalar::all(nMidUpdate));
+        }
+        if (nLongCounter >= nLongUpdate)
+        {
+            nLongCounter = 0;
+            randu(nNextLongUpdate, Scalar::all(0),  Scalar::all(nLongUpdate));
+        }
     }
 }
 
