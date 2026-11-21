@@ -538,9 +538,8 @@ AKAZE_compute_mldb_descriptor_level(__global const float* keypoints_x,
     float kpt_y = keypoints_y[i];
     float kpt_size = keypoints_size[i];
 
-    // cvRound implementation: rounds to nearest, half away from zero
     float scale_f = 0.5f * kpt_size / octave_ratio;
-    int scale = (int)(scale_f + (scale_f >= 0 ? 0.5f : -0.5f));
+    int scale = convert_int_rte(scale_f);
 
     float xf = kpt_x / octave_ratio;
     float yf = kpt_y / octave_ratio;
@@ -583,9 +582,8 @@ AKAZE_compute_mldb_descriptor_level(__global const float* keypoints_x,
                         const float sample_y = yf + (l + j) * scale;
                         const float sample_x = xf + (k + i) * scale;
 
-                        // cvRound implementation for sampling coordinates
-                        const int y1 = (int)(sample_y + (sample_y >= 0 ? 0.5f : -0.5f));
-                        const int x1 = (int)(sample_x + (sample_x >= 0 ? 0.5f : -0.5f));
+                        const int y1 = convert_int_rte(sample_y);
+                        const int x1 = convert_int_rte(sample_x);
 
                         if (y1 < 0 || y1 >= rows || x1 < 0 || x1 >= cols)
                             continue; // Boundaries
