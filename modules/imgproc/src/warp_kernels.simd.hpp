@@ -112,59 +112,77 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 ImgWarpFunc getBicubicWarpFunc_(int type);
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double M[6], int border_type, const double border_value[4]);
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double M[6], int border_type, const double border_value[4]);
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double M[6], int border_type, const double border_value[4]);
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpAffineNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpAffineNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpAffineNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double M[6], int border_type, const double border_value[4]);
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double M[6], int border_type, const double border_value[4],
+                                    const Range& range);
 void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double M[9], int border_type, const double border_value[4]);
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double M[9], int border_type, const double border_value[4],
+                                         const Range& range);
 void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
@@ -203,80 +221,104 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
                                const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 
 void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                  const Range& range);
 void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                  const Range& range);
 void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                  const Range& range);
 void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double M[6], int border_type, const double border_value[4]);
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double M[6], int border_type, const double border_value[4],
+                                   const Range& range);
 // Approximate branch that uses FP16 intrinsics if possible
 void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[6], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[6], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[6], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[6], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[6], int border_type, const double border_value[4]);
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[6], int border_type, const double border_value[4],
+                                        const Range& range);
 
 void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double M[9], int border_type, const double border_value[4]);
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double M[9], int border_type, const double border_value[4],
+                                       const Range& range);
 void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double M[9], int border_type, const double border_value[4]);
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double M[9], int border_type, const double border_value[4],
+                                       const Range& range);
 void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double M[9], int border_type, const double border_value[4]);
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double M[9], int border_type, const double border_value[4],
+                                       const Range& range);
 void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double M[9], int border_type, const double border_value[4]);
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double M[9], int border_type, const double border_value[4],
+                                        const Range& range);
 // Approximate branch that uses FP16 intrinsics if possible
 void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double M[9], int border_type, const double border_value[4]);
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double M[9], int border_type, const double border_value[4],
+                                             const Range& range);
 void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double M[9], int border_type, const double border_value[4]);
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double M[9], int border_type, const double border_value[4],
+                                             const Range& range);
 void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double M[9], int border_type, const double border_value[4]);
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double M[9], int border_type, const double border_value[4],
+                                             const Range& range);
 
 void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
@@ -375,8 +417,9 @@ static inline int borderInterpolate_fast( int p, int len, int borderType )
 } // anonymous
 
 void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double dM[6], int border_type, const double border_value[4]) {
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -458,12 +501,13 @@ void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double dM[6], int border_type, const double border_value[4]) {
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -549,12 +593,13 @@ void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                   uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                   const double dM[6], int border_type, const double border_value[4]) {
+                                   uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                   const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -650,11 +695,12 @@ void warpAffineNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpAffineNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -738,12 +784,13 @@ void warpAffineNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, i
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -831,11 +878,12 @@ void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, i
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpAffineNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                    uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -929,11 +977,12 @@ void warpAffineNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, i
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpAffineNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1018,11 +1067,12 @@ void warpAffineNearestInvoker_32FC1(const float *src_data, size_t src_step, int 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1113,11 +1163,12 @@ void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpAffineNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                    float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                    const double dM[6], int border_type, const double border_value[4]) {
+                                    float *dst_data, size_t dst_step, int dst_cols,
+                                    const double dM[6], int border_type, const double border_value[4],
+                                    const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1217,12 +1268,13 @@ void warpAffineNearestInvoker_32FC4(const float *src_data, size_t src_step, int 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1305,11 +1357,12 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1396,11 +1449,12 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1502,11 +1556,12 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1589,11 +1644,12 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1680,11 +1736,12 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                         uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1779,11 +1836,12 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1867,11 +1925,12 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -1961,11 +2020,12 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                         float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                         const double dM[9], int border_type, const double border_value[4]) {
+                                         float *dst_data, size_t dst_step, int dst_cols,
+                                         const double dM[9], int border_type, const double border_value[4],
+                                         const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -2064,7 +2124,7 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -3061,8 +3121,9 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
 }
 
 void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                  const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3165,12 +3226,13 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                  const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3284,12 +3346,13 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
         }
     };
 
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                  const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3397,12 +3460,13 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3488,13 +3552,14 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 
 void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3584,13 +3649,14 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 
 void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                  uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3693,12 +3759,13 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3784,12 +3851,13 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3881,12 +3949,13 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                  float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                  const double dM[6], int border_type, const double border_value[4]) {
+                                  float *dst_data, size_t dst_step, int dst_cols,
+                                  const double dM[6], int border_type, const double border_value[4],
+                                   const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3993,12 +4062,13 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[6], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[6], int border_type, const double border_value[4],
+                                        const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -4083,17 +4153,18 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpAffineLinearInvoker_8UC1(src_data, src_step, src_rows, src_cols,
-                                 dst_data, dst_step, dst_rows, dst_cols,
-                                 dM, border_type, border_value);
+                                 dst_data, dst_step, dst_cols,
+                                 dM, border_type, border_value, range);
 #endif
 }
 
 void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[6], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[6], int border_type, const double border_value[4],
+                                        const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -4190,17 +4261,18 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
         }
 
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpAffineLinearInvoker_8UC3(src_data, src_step, src_rows, src_cols,
-                                 dst_data, dst_step, dst_rows, dst_cols,
-                                 dM, border_type, border_value);
+                                 dst_data, dst_step, dst_cols,
+                                 dM, border_type, border_value, range);
 #endif
 }
 
 void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[6], int border_type, const double border_value[4]) {
+                                        uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[6], int border_type, const double border_value[4],
+                                        const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -4302,17 +4374,18 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpAffineLinearInvoker_8UC4(src_data, src_step, src_rows, src_cols,
-                                 dst_data, dst_step, dst_rows, dst_cols,
-                                 dM, border_type, border_value);
+                                 dst_data, dst_step, dst_cols,
+                                 dM, border_type, border_value, range);
 #endif
 }
 
 void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double dM[9], int border_type, const double border_value[4]) {
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double dM[9], int border_type, const double border_value[4],
+                                       const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4416,12 +4489,13 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double dM[9], int border_type, const double border_value[4]) {
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double dM[9], int border_type, const double border_value[4],
+                                       const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4535,12 +4609,13 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                       uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                       const double dM[9], int border_type, const double border_value[4]) {
+                                       uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                       const double dM[9], int border_type, const double border_value[4],
+                                       const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4646,12 +4721,13 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4738,12 +4814,13 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4836,12 +4913,13 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                        uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        uint16_t *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -4945,12 +5023,13 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -5037,12 +5116,13 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -5137,12 +5217,13 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
-                                        float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                        const double dM[9], int border_type, const double border_value[4]) {
+                                        float *dst_data, size_t dst_step, int dst_cols,
+                                        const double dM[9], int border_type, const double border_value[4],
+                                        const Range& range) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -5249,12 +5330,13 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 }
 
 void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double dM[9], int border_type, const double border_value[4]) {
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double dM[9], int border_type, const double border_value[4],
+                                             const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -5340,17 +5422,18 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpPerspectiveLinearInvoker_8UC1(src_data, src_step, src_rows, src_cols,
-                                      dst_data, dst_step, dst_rows, dst_cols,
-                                      dM, border_type, border_value);
+                                      dst_data, dst_step, dst_cols,
+                                      dM, border_type, border_value, range);
 #endif
 }
 
 void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double dM[9], int border_type, const double border_value[4]) {
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double dM[9], int border_type, const double border_value[4],
+                                             const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -5446,17 +5529,18 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpPerspectiveLinearInvoker_8UC3(src_data, src_step, src_rows, src_cols,
-                                      dst_data, dst_step, dst_rows, dst_cols,
-                                      dM, border_type, border_value);
+                                      dst_data, dst_step, dst_cols,
+                                      dM, border_type, border_value, range);
 #endif
 }
 
 void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
-                                             uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
-                                             const double dM[9], int border_type, const double border_value[4]) {
+                                             uint8_t *dst_data, size_t dst_step, int dst_cols,
+                                             const double dM[9], int border_type, const double border_value[4],
+                                             const Range& range) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
@@ -5554,11 +5638,11 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
             }
         }
     };
-    parallel_for_(Range(0, dst_rows), worker);
+    worker(range);
 #else
     warpPerspectiveLinearInvoker_8UC4(src_data, src_step, src_rows, src_cols,
-                                      dst_data, dst_step, dst_rows, dst_cols,
-                                      dM, border_type, border_value);
+                                      dst_data, dst_step, dst_cols,
+                                      dM, border_type, border_value, range);
 #endif
 }
 
