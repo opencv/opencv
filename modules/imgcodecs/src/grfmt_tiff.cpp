@@ -324,6 +324,12 @@ public:
     }
 };
 
+static bool isOrientationTransposed(uint16_t orientation)
+{
+    return orientation == ORIENTATION_LEFTTOP || orientation == ORIENTATION_RIGHTTOP ||
+           orientation == ORIENTATION_RIGHTBOT || orientation == ORIENTATION_LEFTBOT;
+}
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
@@ -361,6 +367,8 @@ bool TiffDecoder::readHeader()
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &wdth));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &hght));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
+        uint16_t orientation = ORIENTATION_TOPLEFT;
+        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &orientation));
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
@@ -374,6 +382,8 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+            if (isOrientationTransposed(orientation))
+                std::swap(m_width, m_height);
             m_frame_count = TIFFNumberOfDirectories(tif);
             if (ncn == 3 && photometric == PHOTOMETRIC_LOGLUV)
             {
@@ -470,7 +480,7 @@ bool TiffDecoder::nextPage()
            readHeader();
 }
 
-static void fixOrientationPartial(Mat &img, uint16_t orientation)
+static void fixOrientationPartial(Mat &img, Mat &dst, uint16_t orientation)
 {
     switch(orientation) {
         case ORIENTATION_RIGHTTOP:
@@ -480,12 +490,12 @@ static void fixOrientationPartial(Mat &img, uint16_t orientation)
 
         case ORIENTATION_LEFTTOP:
         case ORIENTATION_RIGHTBOT:
-            transpose(img, img);
+            transpose(img, dst);
             break;
     }
 }
 
-static void fixOrientationFull(Mat &img, int orientation)
+static void fixOrientationFull(Mat &img, Mat &dst, int orientation)
 {
     switch(orientation) {
         case ORIENTATION_TOPRIGHT:
@@ -501,22 +511,22 @@ static void fixOrientationFull(Mat &img, int orientation)
             break;
 
         case ORIENTATION_LEFTTOP:
-            transpose(img, img);
+            transpose(img, dst);
             break;
 
         case ORIENTATION_RIGHTTOP:
-            transpose(img, img);
-            flip(img, img, 1);
+            transpose(img, dst);
+            flip(dst, dst, 1);
             break;
 
         case ORIENTATION_RIGHTBOT:
-            transpose(img, img);
-            flip(img, img, -1);
+            transpose(img, dst);
+            flip(dst, dst, -1);
             break;
 
         case ORIENTATION_LEFTBOT:
-            transpose(img, img);
-            flip(img, img, 0);
+            transpose(img, dst);
+            flip(dst, dst, 0);
             break;
     }
 }
@@ -526,15 +536,15 @@ static void fixOrientationFull(Mat &img, int orientation)
  * For 8 bit some corrections are done by TIFFReadRGBAStrip/Tile already.
  * Not so for 16/32/64 bit.
  */
-static void fixOrientation(Mat &img, uint16_t orientation, bool isOrientationFull)
+static void fixOrientation(Mat &img, Mat &dst, uint16_t orientation, bool isOrientationFull)
 {
     if( isOrientationFull )
     {
-        fixOrientationFull(img, orientation);
+        fixOrientationFull(img, dst, orientation);
     }
     else
     {
-        fixOrientationPartial(img, orientation);
+        fixOrientationPartial(img, dst, orientation);
     }
 }
 
@@ -753,13 +763,26 @@ static void readSeparatePlanesBand(TIFF* tif, int band_x, int band_y, int rows,
     }
 }
 
-bool  TiffDecoder::readData( Mat& img )
+bool  TiffDecoder::readData( Mat& _img )
 {
-    int type = img.type();
+    int type = _img.type();
     int depth = CV_MAT_DEPTH(type);
 
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
+
+    uint16_t img_orientation = ORIENTATION_TOPLEFT;
+    CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
+    bool transposed = isOrientationTransposed(img_orientation);
+
+    uint32_t image_width = 0, image_height = 0;
+    // readHeader() reports the oriented size, decoding uses the stored one.
+    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &image_width));
+    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &image_height));
+    const int stored_width = (int)image_width;
+    const int stored_height = (int)image_height;
+
+    Mat img = transposed ? Mat(stored_height, stored_width, _img.type()) : _img;
 
     uint16_t photometric = (uint16_t)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
@@ -773,7 +796,7 @@ bool  TiffDecoder::readData( Mat& img )
 
     CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
 
-    if (m_width && m_height)
+    if (stored_width && stored_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
@@ -787,8 +810,6 @@ bool  TiffDecoder::readData( Mat& img )
         uint16_t planar_config = PLANARCONFIG_CONTIG;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planar_config));
         const bool is_planar = ncn > 1 && planar_config == PLANARCONFIG_SEPARATE;
-        uint16_t img_orientation = ORIENTATION_TOPLEFT;
-        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
         constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         bool vert_flip = dst_bpp == 8 &&
@@ -797,7 +818,7 @@ bool  TiffDecoder::readData( Mat& img )
         int wanted_channels = normalizeChannelsNumber(img.channels());
         bool doReadScanline = false;
 
-        uint32_t tile_width0 = m_width, tile_height0 = 0;
+        uint32_t tile_width0 = stored_width, tile_height0 = 0;
 
         if (is_tiled)
         {
@@ -812,11 +833,11 @@ bool  TiffDecoder::readData( Mat& img )
 
         {
             if (tile_width0 == 0)
-                tile_width0 = m_width;
+                tile_width0 = stored_width;
 
             if (tile_height0 == 0 ||
                     (!is_tiled && tile_height0 == std::numeric_limits<uint32_t>::max()) )
-                tile_height0 = m_height;
+                tile_height0 = stored_height;
 
             const int TILE_MAX_WIDTH = (1 << 24);
             const int TILE_MAX_HEIGHT = (1 << 24);
@@ -852,7 +873,7 @@ bool  TiffDecoder::readData( Mat& img )
                                      &&
                                      ( ( bpp == 8 ) || ( bpp == 16 ) )
                                      &&
-                                     (tile_height0 == (uint32_t) m_height) // single strip
+                                     (tile_height0 == (uint32_t) stored_height) // single strip
                                      &&
                                      (
                                          (photometric == PHOTOMETRIC_MINISWHITE)
@@ -908,7 +929,7 @@ bool  TiffDecoder::readData( Mat& img )
                                      &&
                                      ( ( bpp == 8 ) || ( bpp == 16 ) )
                                      &&
-                                     (tile_height0 == (uint32_t) m_height) // single strip
+                                     (tile_height0 == (uint32_t) stored_height) // single strip
                                      &&
                                      (
                                          (photometric == PHOTOMETRIC_MINISWHITE)
@@ -1014,15 +1035,15 @@ bool  TiffDecoder::readData( Mat& img )
             const int  convert_flag = MAKE_FLAG( ncn, wanted_channels );
             const bool isNeedConvert16to8 = ( doReadScanline ) && ( bpp == 16 ) && ( dst_bpp == 8);
 
-            for (int y = 0; y < m_height; y += (int)tile_height0)
+            for (int y = 0; y < stored_height; y += (int)tile_height0)
             {
-                int tile_height = std::min((int)tile_height0, m_height - y);
+                int tile_height = std::min((int)tile_height0, stored_height - y);
 
-                const int img_y = vert_flip ? m_height - y - tile_height : y;
+                const int img_y = vert_flip ? stored_height - y - tile_height : y;
 
-                for(int x = 0; x < m_width; x += (int)tile_width0, tileidx++)
+                for(int x = 0; x < stored_width; x += (int)tile_width0, tileidx++)
                 {
-                    int tile_width = std::min((int)tile_width0, m_width - x);
+                    int tile_width = std::min((int)tile_width0, stored_width - x);
 
                     switch (dst_bpp)
                     {
@@ -1315,7 +1336,7 @@ bool  TiffDecoder::readData( Mat& img )
 
         // If TIFFReadRGBA* function is used -> fixOrientationPartial().
         // Otherwise                         -> fixOrientationFull().
-        fixOrientation(img, img_orientation,
+        fixOrientation(img, _img, img_orientation,
                        ( ( dst_bpp != 8 ) && ( !doReadScanline ) ) );
     }
 
@@ -1323,9 +1344,9 @@ bool  TiffDecoder::readData( Mat& img )
     {
         CV_Assert(photometric == PHOTOMETRIC_LOGLUV);
         if (m_use_rgb)
-            cvtColor(img, img, COLOR_XYZ2RGB);
+            cvtColor(_img, _img, COLOR_XYZ2RGB);
         else
-            cvtColor(img, img, COLOR_XYZ2BGR);
+            cvtColor(_img, _img, COLOR_XYZ2BGR);
     }
     return true;
 }
