@@ -353,6 +353,10 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
 {
     feature_size_ = feature_size;
     initialize(subsignature_size);
+    if ((static_cast<size_t>(key_size_) + CHAR_BIT - 1) / CHAR_BIT > static_cast<size_t>(feature_size))
+    {
+        CV_Error(cv::Error::StsBadArg, cv::format("Invalid key_size (=%u). Valid values for feature_size=%u must not exceed feature_size * %d.", key_size_, feature_size, (int)CHAR_BIT));
+    }
     // Allocate the mask
     mask_ = std::vector<size_t>((feature_size * sizeof(char) + sizeof(size_t) - 1) / sizeof(size_t), 0);
 
@@ -397,29 +401,22 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
 template<>
 inline size_t LshTable<unsigned char>::getKey(const unsigned char* feature) const
 {
-    // no need to check if T is dividable by sizeof(size_t) like in the Hamming
-    // distance computation as we have a mask
-    // FIXIT: This is bad assumption, because we reading tail bytes after of the allocated features buffer
-    const size_t* feature_block_ptr = reinterpret_cast<const size_t*> ((const void*)feature);
-
     // Figure out the subsignature of the feature
     // Given the feature ABCDEF, and the mask 001011, the output will be
     // 000CEF
     size_t subsignature = 0;
     size_t bit_index = 1;
 
-    for (unsigned i = 0; i < feature_size_; i += sizeof(size_t)) {
+    for (size_t i = 0; i < feature_size_; i += sizeof(size_t)) {
         // get the mask and signature blocks
-        size_t feature_block;
-        if (i <= feature_size_ - sizeof(size_t))
+        size_t feature_block = 0;
+        if (feature_size_ - i >= sizeof(size_t))
         {
-            feature_block = *feature_block_ptr;
+            memcpy(&feature_block, feature + i, sizeof(size_t));
         }
         else
         {
-            size_t tmp = 0;
-            memcpy(&tmp, feature_block_ptr, feature_size_ - i); // preserve bytes order
-            feature_block = tmp;
+            memcpy(&feature_block, feature + i, feature_size_ - i); // preserve bytes order
         }
         size_t mask_block = mask_[i / sizeof(size_t)];
         while (mask_block) {
@@ -432,8 +429,6 @@ inline size_t LshTable<unsigned char>::getKey(const unsigned char* feature) cons
             // increment the bit index for the subsignature
             bit_index <<= 1;
         }
-        // Check the next feature block
-        ++feature_block_ptr;
     }
     return subsignature;
 }

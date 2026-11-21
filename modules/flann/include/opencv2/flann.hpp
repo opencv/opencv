@@ -355,7 +355,16 @@ GenericIndex<Distance>::GenericIndex(const Mat& dataset, const ::cvflann::IndexP
 
     FLANN_DISTANCE_CHECK
 
-    nnIndex->buildIndex();
+    try
+    {
+        nnIndex->buildIndex();
+    }
+    catch (...)
+    {
+        delete nnIndex;
+        nnIndex = NULL;
+        throw;
+    }
 }
 
 template <typename Distance>
