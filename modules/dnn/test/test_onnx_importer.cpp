@@ -2743,6 +2743,67 @@ TEST_P(Test_ONNX_layers, PriorBox_ONNX)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
+// FP16 models, with the target chosen after readNet() as an application would. DNN_TARGET_CPU
+// runs them widened to float, DNN_TARGET_CPU_FP16 keeps them in half; both return the model's
+// FP16 output. dnnBackendsAndTargets() lists CPU_FP16 only on ARM, so the targets are explicit.
+static Mat runFP16Model(const std::string& basename, int target, const Mat& inp)
+{
+    if (target == DNN_TARGET_CPU_FP16 && !checkHardwareSupport(CV_CPU_FP16))
+        throw SkipTestException("CPU has no FP16 support");
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    CV_Assert(!net.empty());
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(target);
+    net.setInput(inp);
+    return net.forward();
+}
+
+typedef testing::TestWithParam<tuple<std::string, int> > Test_ONNX_fp16;
+TEST_P(Test_ONNX_fp16, Accuracy)
+{
+    const std::string basename = get<0>(GetParam());
+    const int target = get<1>(GetParam());
+    Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    Mat out = runFP16Model(basename, target, inp);
+    ASSERT_EQ(CV_16F, out.depth());
+    out.convertTo(out, CV_32F);
+    normAssert(ref, out, basename.c_str(), 4e-3, 2e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_fp16, Combine(
+    Values("fp16_conv_relu_pools", "fp16_gemm", "fp16_gemm_transB",
+           "fp16_matmul", "fp16_layernorm_softmax"),
+    Values((int)DNN_TARGET_CPU, (int)DNN_TARGET_CPU_FP16)
+));
+
+// (x + 1024) - 1024 is exact in float but rounds x in half, so the values show which precision
+// actually ran; the output type cannot, since outputs come back in the model's declared type.
+TEST(Test_ONNX_fp16_target, set_after_readNet)
+{
+    const std::string basename = "fp16_add_sub_probe";
+    Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+
+    for (int target : {(int)DNN_TARGET_CPU, (int)DNN_TARGET_CPU_FP16})
+    {
+        SCOPED_TRACE(target == DNN_TARGET_CPU ? "DNN_TARGET_CPU" : "DNN_TARGET_CPU_FP16");
+        Mat out = runFP16Model(basename, target, inp);
+        ASSERT_EQ(CV_16F, out.depth());
+        out.convertTo(out, CV_32F);
+
+        Mat expected;
+        inp.convertTo(expected, CV_32F);
+        if (target == DNN_TARGET_CPU_FP16)
+        {
+            float* p = expected.ptr<float>();
+            for (size_t i = 0; i < expected.total(); i++)
+                p[i] = (float)hfloat(p[i] + 1024.f) - 1024.f;
+        }
+        EXPECT_EQ(0, cvtest::norm(expected, out, NORM_INF));
+    }
+}
+
 class Test_ONNX_nets : public Test_ONNX_layers
 {
 public:

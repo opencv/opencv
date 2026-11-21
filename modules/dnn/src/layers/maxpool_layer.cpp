@@ -332,9 +332,6 @@ static void maxPool64f(const void* inp_, void* out_, const ConvState& cs)
     maxPoolScalarT<double>(inp_, out_, cs);
 }
 
-// temporarily exclude fp16/bf16 versions,
-// since convolution and other layers don't support those types yet
-#if 0
 template<typename _Tp>
 static void maxPool16xf(const _Tp* inp_, _Tp* out_, const ConvState& cs)
 {
@@ -497,7 +494,6 @@ static void maxPool16bf(const void* inp_, void* out_, const ConvState& cs)
 {
     maxPool16xf((const bfloat*)inp_, (bfloat*)out_, cs);
 }
-#endif
 
 typedef void (*MaxPoolFunc)(const void* inp, void* out, const ConvState& cs);
 
@@ -837,8 +833,8 @@ public:
             inptype == CV_8S  ? maxPool8s :
             inptype == CV_8U  ? maxPool8u :
             inptype == CV_64F ? maxPool64f :
-            /*inptype == CV_16F ? maxPool16f :
-            inptype == CV_16BF ? maxPool16bf :*/
+            inptype == CV_16F ? maxPool16f :
+            inptype == CV_16BF ? maxPool16bf :
             nullptr;
 
         CV_Assert(func != nullptr && "MaxPool: unsupported data type");

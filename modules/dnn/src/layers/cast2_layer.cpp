@@ -215,6 +215,10 @@ public:
                         targetDepth = CV_MAT_DEPTH(ad.type);
                 }
             }
+            // An intermediate `like` has no ArgData type until the first forward; use the
+            // inferred one, as forward() does, so a CV_16F query does not yield a CV_32F mask.
+            if (targetDepth < 0 && inputs.size() >= 2 && inputs[1] >= 0)
+                targetDepth = CV_MAT_DEPTH(inputs[1]);
         }
 
         if (targetDepth < 0)

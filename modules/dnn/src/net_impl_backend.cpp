@@ -375,8 +375,29 @@ void Net::Impl::setPreferableTarget(int targetId)
 
     if (mainGraph)
     {
+        // DNN_TARGET_CPU_FP16 keeps fp16/bf16 tensors in half instead of widening them to float.
+        // It must be chosen before the first forward(): preparing the net widens half constants.
+        if (IS_DNN_CPU_TARGET(targetId))
+        {
+            bool fp16 = targetId == DNN_TARGET_CPU_FP16;
+            if (fp16 && !haveFP16) {
+                CV_LOG_WARNING(NULL, "DNN: fall back to DNN_TARGET_CPU. This CPU has no FP16 support.");
+                fp16 = false;
+            }
+            if (fp16 != enableFP16 && prepared) {
+                CV_LOG_WARNING(NULL, "DNN: DNN_TARGET_CPU_FP16 must be set before the first forward(); the target is not changed.");
+                return;
+            }
+            enableFP16 = fp16;
+            int target = fp16 ? DNN_TARGET_CPU_FP16 : DNN_TARGET_CPU;
+            if (preferableTarget != target) {
+                preferableTarget = target;
+                finalized = false;  // re-select per-op executors on next finalize()
+            }
+            return;
+        }
 #ifdef HAVE_CUDA
-        if (targetId == DNN_TARGET_CPU || IS_DNN_CUDA_TARGET(targetId))
+        if (IS_DNN_CUDA_TARGET(targetId))
         {
             if (preferableTarget != targetId) {
                 preferableTarget = targetId;

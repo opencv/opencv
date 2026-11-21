@@ -260,6 +260,47 @@ void Layer::forward_fallback(InputArrayOfArrays inputs_arr, OutputArrayOfArrays 
         internals_arr.assign(orig_internals);
         return;
     }
+    const int inpdepth = inputs_arr.depth();
+    if (inpdepth == CV_16F || inpdepth == CV_16BF)
+    {
+        // The CPU path below ends in the legacy forward(), which writes nothing, so widen
+        // half tensors, run the layer's float path and narrow the outputs back.
+        std::vector<Mat> orig_inputs, orig_outputs, orig_internals;
+        inputs_arr.getMatVector(orig_inputs);
+        outputs_arr.getMatVector(orig_outputs);
+        internals_arr.getMatVector(orig_internals);
+
+        auto isHalf = [](const Mat& m) { return m.depth() == CV_16F || m.depth() == CV_16BF; };
+        std::vector<Mat> inputs(orig_inputs.size()), outputs(orig_outputs.size()),
+                         internals(orig_internals.size());
+        for (size_t i = 0; i < orig_inputs.size(); i++) {
+            if (isHalf(orig_inputs[i]))
+                orig_inputs[i].convertTo(inputs[i], CV_32F);
+            else
+                inputs[i] = orig_inputs[i];
+        }
+        for (size_t i = 0; i < orig_outputs.size(); i++) {
+            if (isHalf(orig_outputs[i]))
+                outputs[i].fit(orig_outputs[i].shape(), CV_32F);
+            else
+                outputs[i] = orig_outputs[i];
+        }
+        for (size_t i = 0; i < orig_internals.size(); i++) {
+            if (isHalf(orig_internals[i]))
+                internals[i].fit(orig_internals[i].shape(), CV_32F);
+            else
+                internals[i] = orig_internals[i];
+        }
+
+        this->forward(inputs, outputs, internals);
+
+        for (size_t i = 0; i < orig_outputs.size(); i++) {
+            if (isHalf(orig_outputs[i]))
+                outputs[i].convertTo(orig_outputs[i], orig_outputs[i].depth());
+        }
+        outputs_arr.assign(orig_outputs);
+        return;
+    }
     std::vector<Mat> inpvec;
     std::vector<Mat> outputs;
     std::vector<Mat> internals;
