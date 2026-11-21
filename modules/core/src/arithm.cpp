@@ -781,7 +781,9 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
         sMask = p.addInput(pmask->depth());
     }
     const int sOut = p.addOutput(rdepth);               // output BEFORE emit -> moveToOutput drops the
-    const int r = p.emitBinary(op, a0, a1, rdepth, params);   // result temp (mask-free => none); scale
+    // cv::multiply/divide with a CV_64F dtype mean double(a) op b, so the result depth is the work depth
+    const bool computeInResult = (op == ew::OP_MUL || op == ew::OP_DIV) && rdepth == CV_64F;
+    const int r = p.emitBinary(op, a0, a1, rdepth, params, computeInResult);   // result temp (mask-free => none); scale
                                                         // rides params[0] (mul/div), {a,b,g} for addW
     if (haveMask)
         p.addInsn(ew::OP_SELECT, sMask, r, sOut, sOut);
