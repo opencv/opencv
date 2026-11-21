@@ -1917,6 +1917,78 @@ TEST(Calib3d_SolvePnP, refine)
     }
 }
 
+// EPnP alone is not reliable with exactly 4 points, so solvePnP also tries P3P with each point in turn
+// as the one that ranks its solutions, and keeps the pose with the smallest reprojection error.
+static void checkEpnpFourPointsInAnyOrder(const std::vector<Point3d>& points, const Vec3d& rvec_gt, const Vec3d& tvec_gt)
+{
+    const Matx33d K(600, 0, 320, 0, 600, 240, 0, 0, 1);
+    int order[4] = {0, 1, 2, 3};
+    do
+    {
+        std::vector<Point3d> object;
+        for (int i = 0; i < 4; i++)
+            object.push_back(points[order[i]]);
+        std::vector<Point2d> image;
+        projectPoints(object, rvec_gt, tvec_gt, K, noArray(), image);
+
+        Mat rvec, tvec;
+        ASSERT_TRUE(solvePnP(object, image, K, noArray(), rvec, tvec, false, SOLVEPNP_EPNP));
+        std::vector<Point2d> reprojected;
+        projectPoints(object, rvec, tvec, K, noArray(), reprojected);
+        EXPECT_LE(cv::norm(image, reprojected, NORM_INF), 1e-6)
+            << "order " << order[0] << order[1] << order[2] << order[3];
+    }
+    while (std::next_permutation(order, order + 4));
+}
+
+TEST(Calib3d_SolvePnP, epnp_four_points_regression)
+{
+    const Matx33d K(600, 0, 320, 0, 600, 240, 0, 0, 1);
+    const Vec3d rvec_gt(0.078, 0.013, -0.074), tvec_gt(0.012, -0.258, 4.721);
+    const std::vector<Point3d> object = {Point3d(0.277, 0.219, -0.808), Point3d(0.322, 0.264, 0.648),
+                                         Point3d(0.607, -0.346, 0.444), Point3d(0.735, 0.786, -0.677)};
+    std::vector<Point2d> image;
+    projectPoints(object, rvec_gt, tvec_gt, K, noArray(), image);
+
+    Mat rvec, tvec;
+    ASSERT_TRUE(solvePnP(object, image, K, noArray(), rvec, tvec, false, SOLVEPNP_EPNP));
+    EXPECT_LE(cvtest::norm(Mat(rvec_gt), rvec, NORM_INF), 1e-6);
+    EXPECT_LE(cvtest::norm(Mat(tvec_gt), tvec, NORM_INF), 1e-6);
+
+    checkEpnpFourPointsInAnyOrder(object, rvec_gt, tvec_gt);
+}
+
+// The first three points are collinear, so a P3P solution based on them is meaningless.
+TEST(Calib3d_SolvePnP, epnp_four_points_first_three_collinear)
+{
+    const Vec3d rvec_gt(-0.521, -0.401, -0.408), tvec_gt(-0.105, -0.694, 4.173);
+    const std::vector<Point3d> object = {Point3d(-0.124, -0.255, -0.786), Point3d(-0.145, -0.514, -1.029),
+                                         Point3d(-0.166, -0.773, -1.272), Point3d(-0.631, -0.612, 0.628)};
+    checkEpnpFourPointsInAnyOrder(object, rvec_gt, tvec_gt);
+}
+
+TEST(Calib3d_SolvePnP, epnp_four_points_random)
+{
+    const Matx33d K(600, 0, 320, 0, 600, 240, 0, 0, 1);
+    RNG& rng = theRNG();
+    for (int i = 0; i < 100; i++)
+    {
+        const Vec3d rvec_gt(rng.gaussian(0.3), rng.gaussian(0.3), rng.gaussian(0.3));
+        const Vec3d tvec_gt(rng.gaussian(0.3), rng.gaussian(0.3), rng.uniform(3., 6.));
+        std::vector<Point3d> object;
+        for (int j = 0; j < 4; j++)
+            object.push_back(Point3d(rng.uniform(-1., 1.), rng.uniform(-1., 1.), rng.uniform(-1., 1.)));
+        std::vector<Point2d> image;
+        projectPoints(object, rvec_gt, tvec_gt, K, noArray(), image);
+
+        Mat rvec, tvec;
+        ASSERT_TRUE(solvePnP(object, image, K, noArray(), rvec, tvec, false, SOLVEPNP_EPNP)) << "iteration " << i;
+        std::vector<Point2d> reprojected;
+        projectPoints(object, rvec, tvec, K, noArray(), reprojected);
+        EXPECT_LE(cv::norm(image, reprojected, NORM_INF), 1e-3) << "iteration " << i;
+    }
+}
+
 TEST(Calib3d_SolvePnPRansac, minPoints)
 {
     //https://github.com/opencv/opencv/issues/14423
