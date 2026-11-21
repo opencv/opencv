@@ -3790,6 +3790,23 @@ TEST(Core_MeanStdDev, regression_multichannel)
     }
 }
 
+TEST(Core_MeanStdDev, bool_input)
+{
+    uchar src_buf[] = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
+    Mat src(1, 6, CV_Bool, src_buf);
+
+    EXPECT_EQ(0.5, cv::mean(src)[0]);
+
+    Scalar m, sd;
+    meanStdDev(src, m, sd);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
+
+    Mat mask(1, 6, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
+    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
+}
+
 // Related issue : https://github.com/opencv/opencv/issues/26861
 TEST(Core_MeanStdDevTest, LargeImage)
 {
