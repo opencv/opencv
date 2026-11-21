@@ -5099,6 +5099,39 @@ TEST(Layer_Test_Clip, DynamicMinGreaterThanMax_Float64)
     testClipMinGreaterThanMax(CV_64F, true);
 }
 
+typedef testing::TestWithParam<tuple<int, MatDepth> > Layer_Test_Cast_Unsigned;
+TEST_P(Layer_Test_Cast_Unsigned, FloatTruncates)
+{
+    const int onnxType = get<0>(GetParam());
+    const int depth = get<1>(GetParam());
+
+    LayerParams lp;
+    lp.type = "Cast2";
+    lp.name = "test_cast";
+    lp.set("to", onnxType);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+
+    // ONNX Cast truncates toward zero: 2.7 -> 2 and 5.9 -> 5, not rounded up
+    const float inVals[]   = {0.f, 1.2f, 2.7f, 5.9f};
+    const double refVals[] = {0, 1, 2, 5};
+    Mat input(1, 4, CV_32F, (void*)inVals), ref;
+    Mat(1, 4, CV_64F, (void*)refVals).convertTo(ref, depth);
+
+    std::vector<Mat> inputs{input}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    EXPECT_EQ(depth, outputs[0].depth());
+    EXPECT_EQ(0, cvtest::norm(outputs[0], ref, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Cast_Unsigned, Values(
+    make_tuple(12, CV_32U),  // ONNX UINT32
+    make_tuple(13, CV_64U)   // ONNX UINT64
+));
+
 static Mat runOneHot(const Mat& values)
 {
     LayerParams lp;
