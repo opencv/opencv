@@ -653,4 +653,141 @@ Ptr<CovarianceAffineSolver> CovarianceAffineSolver::create (const Mat &points, c
 Ptr<CovarianceAffineSolver> CovarianceAffineSolver::create (const Mat &points) {
     return makePtr<CovarianceAffineSolverImpl>(points);
 }
+
+/*
+ * Weighted least-squares rigid / similarity transformation between two point sets
+ * by Umeyama, "Least-squares estimation of transformation parameters between two point patterns",
+ * IEEE TPAMI 13(4), 1991.
+ * points are stored per row as [x1 (dim), x2 (dim)], model is dim x (dim+1) matrix [sR | t].
+ */
+template<int dim>
+static int estimateUmeyama (const float * const points, const std::vector<int> &sample,
+        int sample_size, bool is_scale, bool is_rotation_only, const std::vector<double> &weights,
+        std::vector<Mat> &models) {
+    typedef Vec<double, dim> Vecd;
+    typedef Matx<double, dim, dim> Matxd;
+    Matxd cov_sum;
+    Vecd sum1, sum2;
+    double sq_sum1 = 0, total_weight = 0;
+    for (int i = 0; i < sample_size; i++) {
+        const double weight = weights.empty() ? 1. : weights[i];
+        if (weight < FLT_EPSILON) continue;
+        const float * const pt = points + 2 * dim * sample[i];
+        Vecd p1, p2;
+        for (int k = 0; k < dim; k++) {
+            p1[k] = pt[k];
+            p2[k] = pt[dim + k];
+        }
+        cov_sum += weight * (p2 * p1.t());
+        sum1 += weight * p1;
+        sum2 += weight * p2;
+        sq_sum1 += weight * p1.ddot(p1);
+        total_weight += weight;
+    }
+    if (total_weight < FLT_EPSILON)
+        return 0;
+
+    const double inv_weight = 1. / total_weight;
+    const Vecd mean1 = is_rotation_only ? Vecd() : Vecd(sum1 * inv_weight),
+               mean2 = is_rotation_only ? Vecd() : Vecd(sum2 * inv_weight);
+    const Matxd cov = cov_sum * inv_weight - mean2 * mean1.t();
+
+    Matxd u, vt;
+    Vecd d;
+    SVD::compute(cov, d, u, vt);
+    // the rotation is unique only if rank(cov) >= dim-1, e.g. 3D points must not be collinear
+    if (d[dim-2] <= 1e-6 * d[0] || d[0] <= DBL_EPSILON)
+        return 0;
+    // enforce det(R) = 1, i.e., no reflection
+    Matxd S = Matxd::eye();
+    if (determinant(u) * determinant(vt) < 0) {
+        S(dim-1, dim-1) = -1;
+        d[dim-1] = -d[dim-1];
+    }
+    Matxd R = u * S * vt;
+    if (is_scale) {
+        const double var1 = sq_sum1 * inv_weight - mean1.ddot(mean1);
+        if (var1 < FLT_EPSILON)
+            return 0;
+        R *= sum(d)[0] / var1;
+    }
+    const Vecd t = mean2 - R * mean1;
+
+    Mat model(dim, dim+1, CV_64F);
+    auto * const m = (double *) model.data;
+    for (int r = 0; r < dim; r++) {
+        for (int c = 0; c < dim; c++)
+            m[r * (dim+1) + c] = R(r, c);
+        m[r * (dim+1) + dim] = t[r];
+    }
+    models = std::vector<Mat>{ model };
+    return 1;
+}
+
+static int estimateUmeyama (int dim, const float * const points, const std::vector<int> &sample,
+        int sample_size, bool is_scale, bool is_rotation_only, const std::vector<double> &weights,
+        std::vector<Mat> &models) {
+    if (dim == 2)
+        return estimateUmeyama<2>(points, sample, sample_size, is_scale, is_rotation_only,
+                                  weights, models);
+    return estimateUmeyama<3>(points, sample, sample_size, is_scale, is_rotation_only,
+                              weights, models);
+}
+
+class PointSetRegistrationMinimalSolverImpl : public PointSetRegistrationMinimalSolver {
+private:
+    const Mat * points_mat;
+    const int dim;
+    const bool is_scale, is_rotation_only;
+public:
+    explicit PointSetRegistrationMinimalSolverImpl (const Mat &points_, int dim_,
+            bool is_scale_, bool is_rotation_only_) :
+        points_mat(&points_), dim(dim_), is_scale(is_scale_), is_rotation_only(is_rotation_only_) {
+        CV_Assert(dim == 2 || dim == 3);
+    }
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        return estimateUmeyama(dim, (float *) points_mat->data, sample, getSampleSize(),
+                is_scale, is_rotation_only, std::vector<double>(), models);
+    }
+    // (scaled) rotation about the origin: 1 point for 2D, 2 points for 3D;
+    // otherwise 2 points for 2D, 3 non-collinear points for 3D
+    int getSampleSize() const override { return is_rotation_only ? dim - 1 : dim; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+};
+Ptr<PointSetRegistrationMinimalSolver> PointSetRegistrationMinimalSolver::create(const Mat &points_,
+        int dim, bool is_scale, bool is_rotation_only) {
+    return makePtr<PointSetRegistrationMinimalSolverImpl>(points_, dim, is_scale, is_rotation_only);
+}
+
+class PointSetRegistrationNonMinimalSolverImpl : public PointSetRegistrationNonMinimalSolver {
+private:
+    const Mat * points_mat;
+    const int dim;
+    const bool is_scale, is_rotation_only;
+public:
+    explicit PointSetRegistrationNonMinimalSolverImpl (const Mat &points_, int dim_,
+            bool is_scale_, bool is_rotation_only_) :
+        points_mat(&points_), dim(dim_), is_scale(is_scale_), is_rotation_only(is_rotation_only_) {
+        CV_Assert(dim == 2 || dim == 3);
+    }
+    int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+            const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+        return estimateUmeyama(dim, (float *) points_mat->data, sample, sample_size,
+                is_scale, is_rotation_only, weights, models);
+    }
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
+    int getMinimumRequiredSampleSize() const override { return is_rotation_only ? dim - 1 : dim; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+};
+Ptr<PointSetRegistrationNonMinimalSolver> PointSetRegistrationNonMinimalSolver::create(
+        const Mat &points_, int dim, bool is_scale, bool is_rotation_only) {
+    return makePtr<PointSetRegistrationNonMinimalSolverImpl>(points_, dim, is_scale,
+                                                             is_rotation_only);
+}
 }}

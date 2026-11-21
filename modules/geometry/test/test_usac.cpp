@@ -6,7 +6,8 @@
 
 namespace opencv_test { namespace {
 
-enum TestSolver { Homogr, Fundam, Essen, PnP, Affine};
+enum TestSolver { Homogr, Fundam, Essen, PnP, Affine,
+                  SO2, SE2, SIM2, ScaledSO2, SO3, SE3, SIM3, ScaledSO3 };
 /*
 * rng -- reference to random generator
 * pts1 -- 2xN image points
@@ -110,15 +111,59 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
         rng.fill(noise, cv::RNG::NORMAL, 0, noise_std);
         pts1 += noise;
         return inl_size;
-    } else if (test_case == TestSolver::Affine) {
+    } else if (test_case == TestSolver::Affine ||
+               test_case == TestSolver::SO2 || test_case == TestSolver::SE2 ||
+               test_case == TestSolver::SIM2 || test_case == TestSolver::ScaledSO2 ||
+               test_case == TestSolver::SO3 || test_case == TestSolver::SE3 ||
+               test_case == TestSolver::SIM3 || test_case == TestSolver::ScaledSO3) {
     } else
         CV_Error(cv::Error::StsBadArg, "Unknown solver!");
 
     if (test_case != TestSolver::PnP) {
         // project 3D point on image plane
         // use two relative scenes. The first camera is P1 = K1 [I | 0], the second P2 = K2 [R | t]
-
-        if (test_case != TestSolver::Affine) {
+        if (test_case == TestSolver::SO2 || test_case == TestSolver::SE2 ||
+            test_case == TestSolver::SIM2 || test_case == TestSolver::ScaledSO2) {
+            pts1 = cv::Mat(2, inl_size, pts_type);
+            rng.fill(pts1, cv::RNG::UNIFORM, 0, 1000);
+            cv::Mat sc = cv::Mat::eye(3, 3, pts_type);
+            if (test_case == TestSolver::SIM2 || test_case == TestSolver::ScaledSO2) {
+                sc.at<double>(0,0) = sc.at<double>(1,1) = rng.uniform(1., 5.);
+            }
+            cv::Matx33d tr(1,0,rng.uniform(50., 500.),0,1,rng.uniform(50., 500.), 0, 0, 1);
+            if (test_case == TestSolver::SO2 || test_case == TestSolver::ScaledSO2)
+                tr = cv::Matx33d::eye();
+            const double phi = rng.uniform(0., CV_PI);
+            cv::Matx33d rot(cos(phi), -sin(phi),0, sin(phi), cos(phi),0, 0, 0, 1);
+            cv::Mat A = sc * tr * rot;
+            cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), points3d);
+            pts2 = A * points3d;
+            // get 2D points
+            pts1 = pts1.rowRange(0,2); pts2 = pts2.rowRange(0,2);
+        } else if (test_case == TestSolver::SO3 || test_case == TestSolver::SE3 ||
+                   test_case == TestSolver::SIM3 || test_case == TestSolver::ScaledSO3) {
+            pts1 = cv::Mat(3, inl_size, pts_type);
+            rng.fill(pts1, cv::RNG::UNIFORM, 0, 1000);
+            cv::Mat sc = cv::Mat::eye(4, 4, pts_type);
+            if (test_case == TestSolver::SIM3 || test_case == TestSolver::ScaledSO3) {
+                sc.at<double>(0,0) = sc.at<double>(1,1) = sc.at<double>(2,2) = rng.uniform(1., 5.);
+            }
+            cv::Matx44d tr(1,0,0,rng.uniform(50., 500.),
+                           0,1,0,rng.uniform(50., 500.),
+                           0,0,1,rng.uniform(50., 500.),
+                           0,0,0,1);
+            if (test_case == TestSolver::SO3 || test_case == TestSolver::ScaledSO3)
+                tr = cv::Matx44d::eye();
+            cv::Mat rot = cv::Mat::eye(4, 4, pts_type);
+            cv::Matx31d rvec(rng.uniform(0., CV_PI), rng.uniform(0., CV_PI),
+                             rng.uniform(0., CV_PI));
+            cv::Rodrigues(rvec, rot(cv::Rect(0,0,3,3)));
+            cv::Mat A = sc * tr * rot;
+            cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), points3d);
+            pts2 = A * points3d;
+            // get 3D points
+            pts1 = pts1.rowRange(0,3); pts2 = pts2.rowRange(0,3);
+        } else if (test_case != TestSolver::Affine) {
             updateTranslation(points3d, R, t);
 
             pts1 = K1 * points3d;
@@ -129,7 +174,10 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
             cv::divide(pts1.row(1), pts1.row(2), pts1.row(1));
             cv::divide(pts2.row(0), pts2.row(2), pts2.row(0));
             cv::divide(pts2.row(1), pts2.row(2), pts2.row(1));
+            // get 2D points
+            pts1 = pts1.rowRange(0,2); pts2 = pts2.rowRange(0,2);
         } else {
+            // TestSolver::Affine
             pts1 = cv::Mat(2, inl_size, pts_type);
             rng.fill(pts1, cv::RNG::UNIFORM, 0, 1000);
             cv::Matx33d sc(rng.uniform(1., 5.),0,0,rng.uniform(1., 4.),0,0, 0, 0, 1);
@@ -139,10 +187,9 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
             cv::Matx33d A = sc * tr * rot;
             cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), points3d);
             pts2 = A * points3d;
+            // get 2D points
+            pts1 = pts1.rowRange(0,2); pts2 = pts2.rowRange(0,2);
         }
-
-        // get 2D points
-        pts1 = pts1.rowRange(0,2); pts2 = pts2.rowRange(0,2);
 
         // generate random outliers as 2D image points
         cv::Mat pts1_outliers(pts1.rows, out_size, pts1.type()),
@@ -171,12 +218,12 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
     cv::Mat pt1 = pts1.col(pt_idx), pt2 = pts2.col(pt_idx);
     if (test_case == TestSolver::Homogr) { // reprojection error
         // compute Euclidean distance between given and reprojected points
-        cv::Mat est_pt2 = model * pt1; est_pt2 /= est_pt2.at<double>(2);
+        cv::Mat est_pt2 = model * pt1; est_pt2 /= est_pt2.at<double>(est_pt2.rows-1);
         if (false) {
-            cv::Mat est_pt1 = model.inv() * pt2; est_pt1 /= est_pt1.at<double>(2);
+            cv::Mat est_pt1 = model.inv() * pt2; est_pt1 /= est_pt1.at<double>(est_pt1.rows-1);
             return (cv::norm(est_pt1 - pt1) + cv::norm(est_pt2 - pt2)) / 2;
         }
-        return cv::norm(est_pt2 - pt2);
+        return cv::norm(est_pt2, pt2);
     } else
     if (test_case == TestSolver::Fundam || test_case == TestSolver::Essen) {
         cv::Mat l2 = model     * pt1;
@@ -411,6 +458,308 @@ TEST (usac_Affine2D, accuracy) {
     }
 }
 
+// UsacParams equivalent to the USAC_* flags (for overloads taking UsacParams only)
+static cv::UsacParams getUsacParams (int flag, double thr, int max_iters, double conf) {
+    cv::UsacParams params;
+    params.threshold = thr;
+    params.maxIterations = max_iters;
+    params.confidence = conf;
+    params.sampler = cv::SAMPLING_UNIFORM;
+    params.score = cv::SCORE_METHOD_MSAC;
+    switch (flag) {
+        case USAC_DEFAULT:
+            params.loMethod = cv::LOCAL_OPTIM_INNER_AND_ITER_LO; break;
+        case USAC_ACCURATE:
+            params.loMethod = cv::LOCAL_OPTIM_GC;
+            params.loSampleSize = 20; params.loIterations = 25; break;
+        case USAC_PROSAC:
+            params.sampler = cv::SAMPLING_PROSAC; params.loMethod = cv::LOCAL_OPTIM_INNER_LO; break;
+        case USAC_FAST:
+            params.loMethod = cv::LOCAL_OPTIM_INNER_AND_ITER_LO; params.loIterations = 5; break;
+        case USAC_MAGSAC:
+            params.score = cv::SCORE_METHOD_MAGSAC; params.loMethod = cv::LOCAL_OPTIM_SIGMA;
+            params.loSampleSize = 50; params.loIterations = 10; break;
+        default: CV_Error(cv::Error::StsBadArg, "Unknown flag");
+    }
+    return params;
+}
+
+static TestSolver getPointSetTestSolver (int dim, bool is_scale, bool is_translation) {
+    if (dim == 2)
+        return is_translation ? (is_scale ? TestSolver::SIM2 : TestSolver::SE2) :
+                                (is_scale ? TestSolver::ScaledSO2 : TestSolver::SO2);
+    return is_translation ? (is_scale ? TestSolver::SIM3 : TestSolver::SE3) :
+                            (is_scale ? TestSolver::ScaledSO3 : TestSolver::SO3);
+}
+
+// checks that M = [s*R | t] with R being rotation and s == 1 if not is_scale
+static void checkRigidOrSimilarity (const cv::Mat &M, bool is_scale) {
+    ASSERT_FALSE(M.empty());
+    const int dim = M.rows;
+    const cv::Mat sR = M.colRange(0, dim);
+    const double s = std::pow(cv::determinant(sR), 1. / dim);
+    ASSERT_GT(s, 0);
+    if (!is_scale) {
+        EXPECT_NEAR(s, 1., 1e-6);
+    }
+    const cv::Mat R = sR / s;
+    EXPECT_LE(cv::norm(R.t() * R, cv::Mat::eye(dim, dim, CV_64F), cv::NORM_INF), 1e-6);
+}
+
+TEST (usac_AffinePartial2D, accuracy) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 2000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
+    for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
+        int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                  pts_size, TestSolver ::SIM2, inl_ratio, 0.15 /*noise std*/, gt_inliers);
+        const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                log(1 - std::pow(inl_ratio, 2 /* sample size */));
+        for (auto flag : flags) {
+            cv::Mat mask, A = cv::estimateAffinePartial2D(pts1, pts2, mask, flag, thr,
+                                                          (size_t)max_iters, conf, 0);
+            checkRigidOrSimilarity(A, true);
+            cv::vconcat(A, cv::Mat(cv::Matx13d(0,0,1)), A);
+            checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr, pts1, pts2, A, mask);
+        }
+    }
+}
+
+TEST (usac_AffinePartial2D, rigid_and_similarity) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 2000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
+    for (bool is_scale : {false, true}) {
+        for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
+            int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                      pts_size, is_scale ? TestSolver::SIM2 : TestSolver::SE2, inl_ratio,
+                      0.15 /*noise std*/, gt_inliers);
+            const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                    log(1 - std::pow(inl_ratio, 2 /* sample size */));
+            for (auto flag : flags) {
+                cv::Mat mask, A = cv::estimateAffinePartial2D(pts1, pts2, mask,
+                        getUsacParams(flag, thr, (int)max_iters, conf), is_scale);
+                checkRigidOrSimilarity(A, is_scale);
+                cv::vconcat(A, cv::Mat(cv::Matx13d(0,0,1)), A);
+                checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr,
+                                 pts1, pts2, A, mask);
+            }
+        }
+    }
+}
+
+TEST (usac_Affine3D, rigid_and_similarity) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 2000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
+    for (bool is_scale : {false, true}) {
+        for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
+            int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                      pts_size, is_scale ? TestSolver::SIM3 : TestSolver::SE3, inl_ratio,
+                      0.15 /*noise std*/, gt_inliers);
+            const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                    log(1 - std::pow(inl_ratio, 3 /* sample size */));
+            for (auto flag : flags) {
+                cv::Mat mask, A = cv::estimateAffine3D(pts1, pts2, mask,
+                        getUsacParams(flag, thr, (int)max_iters, conf), is_scale);
+                checkRigidOrSimilarity(A, is_scale);
+                cv::vconcat(A, cv::Mat(cv::Matx14d(0,0,0,1)), A);
+                checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr,
+                                 pts1, pts2, A, mask);
+            }
+        }
+    }
+}
+
+TEST (usac_PointSetRegistration, rotation_without_translation) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 2000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
+    for (int dim : {2, 3}) for (bool is_scale : {false, true}) {
+        const TestSolver test_case = getPointSetTestSolver(dim, is_scale, false);
+        for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
+            int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                      pts_size, test_case, inl_ratio, 0.15 /*noise std*/, gt_inliers);
+            const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                    log(1 - std::pow(inl_ratio, dim - 1 /* sample size */));
+            for (auto flag : flags) {
+                cv::Mat mask, A;
+                const cv::UsacParams params = getUsacParams(flag, thr, (int)max_iters + 1, conf);
+                if (dim == 2)
+                    A = cv::estimateAffinePartial2D(pts1, pts2, mask, params, is_scale, false);
+                else A = cv::estimateAffine3D(pts1, pts2, mask, params, is_scale, false);
+                checkRigidOrSimilarity(A, is_scale);
+                EXPECT_EQ(cv::norm(A.col(dim)), 0.);
+                cv::Mat row = cv::Mat::zeros(1, dim+1, CV_64F); row.at<double>(dim) = 1;
+                cv::vconcat(A, row, A);
+                checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr,
+                                 pts1, pts2, A, mask);
+            }
+        }
+    }
+}
+
+TEST (usac_PointSetRegistration, samplers) {
+    // every transformation class with every sampler, also in parallel, scored by MAGSAC
+    std::vector<int> gt_inliers;
+    const int pts_size = 1000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<cv::SamplingMethod> samplers = {cv::SAMPLING_UNIFORM, cv::SAMPLING_PROSAC,
+            cv::SAMPLING_NAPSAC, cv::SAMPLING_PROGRESSIVE_NAPSAC};
+    for (int dim : {2, 3})
+    for (bool is_scale : {false, true})
+    for (bool is_translation : {false, true}) {
+        const TestSolver test_case = getPointSetTestSolver(dim, is_scale, is_translation);
+        const int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                  pts_size, test_case, 0.5, 0.15 /*noise std*/, gt_inliers);
+        for (auto sampler : samplers) for (bool is_parallel : {false, true}) {
+            cv::UsacParams params;
+            params.threshold = 2.;
+            params.sampler = sampler;
+            params.neighborsSearch = cv::NEIGH_FLANN_KNN;
+            params.score = cv::SCORE_METHOD_MAGSAC;
+            params.loMethod = cv::LOCAL_OPTIM_SIGMA;
+            params.isParallel = is_parallel;
+            cv::Mat mask, A;
+            if (dim == 2)
+                A = cv::estimateAffinePartial2D(pts1, pts2, mask, params, is_scale, is_translation);
+            else A = cv::estimateAffine3D(pts1, pts2, mask, params, is_scale, is_translation);
+            SCOPED_TRACE(cv::format("dim=%d scale=%d translation=%d sampler=%d parallel=%d",
+                                    dim, is_scale, is_translation, (int)sampler, is_parallel));
+            checkRigidOrSimilarity(A, is_scale);
+            cv::Mat row = cv::Mat::zeros(1, dim+1, CV_64F); row.at<double>(dim) = 1;
+            cv::vconcat(A, row, A);
+            checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, 2.,
+                             pts1, pts2, A, mask);
+        }
+    }
+}
+
+TEST (usac_PointSetRegistration, degenerate_input) {
+    // the rotation is not unique for collinear 3D points
+    // (and for collinear vectors without translation)
+    cv::RNG &rng = cv::theRNG();
+    const cv::Matx33d R = cv::Matx33d::eye();
+    for (bool is_translation : {true, false}) {
+        cv::Mat pts1(50, 3, CV_64F), pts2(50, 3, CV_64F);
+        for (int i = 0; i < pts1.rows; i++) {
+            const cv::Vec3d p = rng.uniform(-100., 100.) * cv::Vec3d(1, 2, 3) +
+                                (is_translation ? cv::Vec3d(5, 6, 7) : cv::Vec3d());
+            const cv::Vec3d q = R * p + (is_translation ? cv::Vec3d(10, 20, 30) : cv::Vec3d());
+            for (int k = 0; k < 3; k++) {
+                pts1.at<double>(i, k) = p[k];
+                pts2.at<double>(i, k) = q[k];
+            }
+        }
+        cv::Mat mask;
+        const cv::Mat A = cv::estimateAffine3D(pts1, pts2, mask, cv::UsacParams(), false,
+                                               is_translation);
+        EXPECT_TRUE(A.empty()) << "translation=" << is_translation;
+    }
+}
+
+TEST (usac_PointSetRegistration, small_3d_point_sets) {
+    // neighborhood graphs (GC, NAPSAC, Progressive NAPSAC) with fewer points than the default KNN
+    cv::RNG &rng = cv::theRNG();
+    cv::Matx33d R;
+    cv::Rodrigues(cv::Vec3d(0.3, -0.5, 1.0), R);
+    const cv::Vec3d t(10, 20, 30);
+    for (int n = 3; n <= 8; n++) {
+        cv::Mat pts1(n, 3, CV_64F), pts2(n, 3, CV_64F);
+        rng.fill(pts1, cv::RNG::UNIFORM, 0, 100);
+        for (int i = 0; i < n; i++) {
+            const cv::Vec3d q = R * cv::Vec3d(pts1.ptr<double>(i)) + t;
+            for (int k = 0; k < 3; k++)
+                pts2.at<double>(i, k) = q[k];
+        }
+        for (auto sampler : {cv::SAMPLING_UNIFORM, cv::SAMPLING_NAPSAC,
+                             cv::SAMPLING_PROGRESSIVE_NAPSAC}) {
+            cv::UsacParams params;
+            params.threshold = 1.;
+            params.sampler = sampler;
+            params.loMethod = cv::LOCAL_OPTIM_GC;
+            SCOPED_TRACE(cv::format("n=%d sampler=%d", n, (int)sampler));
+            cv::Mat mask, A;
+            ASSERT_NO_THROW(A = cv::estimateAffine3D(pts1, pts2, mask, params));
+            checkRigidOrSimilarity(A, false);
+            EXPECT_LE(cv::norm(A.colRange(0, 3), cv::Mat(R), cv::NORM_INF), 1e-6);
+            EXPECT_LE(cv::norm(A.col(3), cv::Mat(t), cv::NORM_INF), 1e-4);
+            EXPECT_EQ(n, cv::countNonZero(mask));
+        }
+    }
+}
+
+TEST (usac_PointSetRegistration, minimal_samples) {
+    // exactly the minimal number of points (stored as N x dim, also for N < dim)
+    cv::RNG &rng = cv::theRNG();
+    for (int dim : {2, 3})
+    for (bool is_scale : {false, true})
+    for (bool is_translation : {false, true}) {
+        const int n = is_translation ? dim : dim - 1;
+        const double s = is_scale ? 1.5 : 1.;
+        cv::Mat R = cv::Mat::eye(dim, dim, CV_64F), t = cv::Mat::zeros(dim, 1, CV_64F);
+        if (dim == 2) {
+            const double phi = 0.7;
+            R = cv::Mat(cv::Matx22d(cos(phi), -sin(phi), sin(phi), cos(phi)));
+        } else cv::Rodrigues(cv::Vec3d(0.3, -0.5, 1.0), R);
+        if (is_translation)
+            rng.fill(t, cv::RNG::UNIFORM, -50, 50);
+        cv::Mat pts1(n, dim, CV_64F), pts2;
+        rng.fill(pts1, cv::RNG::UNIFORM, 10, 100);
+        pts2 = (s * R * pts1.t() + cv::repeat(t, 1, n)).t();
+        SCOPED_TRACE(cv::format("dim=%d scale=%d translation=%d", dim, is_scale, is_translation));
+        cv::Mat mask, A;
+        if (dim == 2)
+            ASSERT_NO_THROW(A = cv::estimateAffinePartial2D(pts1, pts2, mask, cv::UsacParams(),
+                                                            is_scale, is_translation));
+        else ASSERT_NO_THROW(A = cv::estimateAffine3D(pts1, pts2, mask, cv::UsacParams(),
+                                                      is_scale, is_translation));
+        ASSERT_FALSE(A.empty());
+        EXPECT_LE(cv::norm(A.colRange(0, dim), s * R, cv::NORM_INF), 1e-4);
+        EXPECT_LE(cv::norm(A.col(dim), t, cv::NORM_INF), 1e-3);
+    }
+}
+
+TEST (usac_PointSetRegistration, progressive_napsac_coordinates) {
+    // Progressive NAPSAC with normalized and negative coordinates, in 2D and 3D
+    // (MSAC score: MAGSAC assumes a maximum noise level in pixels)
+    std::vector<int> gt_inliers;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    for (int dim : {2, 3})
+    for (double scale : {1e-3, 1.}) {
+        const double offset = scale < 1 ? 0. : -2000.;
+        const int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                1000, getPointSetTestSolver(dim, false, true), 0.5, 0.15 /*noise std*/, gt_inliers);
+        // pts1, pts2 are dim x N; map to [0, ~1] or to negative values
+        pts1 = pts1 * scale + offset;
+        pts2 = pts2 * scale + offset;
+        cv::UsacParams params;
+        params.threshold = 2. * scale;
+        params.sampler = cv::SAMPLING_PROGRESSIVE_NAPSAC;
+        params.neighborsSearch = cv::NEIGH_FLANN_KNN;
+        SCOPED_TRACE(cv::format("dim=%d scale=%g offset=%g", dim, scale, offset));
+        cv::Mat mask, A;
+        if (dim == 2)
+            ASSERT_NO_THROW(A = cv::estimateAffinePartial2D(pts1, pts2, mask, params, false));
+        else ASSERT_NO_THROW(A = cv::estimateAffine3D(pts1, pts2, mask, params));
+        checkRigidOrSimilarity(A, false);
+        cv::Mat row = cv::Mat::zeros(1, dim+1, CV_64F); row.at<double>(dim) = 1;
+        cv::vconcat(A, row, A);
+        checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, params.threshold,
+                         pts1, pts2, A, mask);
+    }
+}
+
 TEST(usac_testUsacParams, accuracy) {
     std::vector<int> gt_inliers;
     const int pts_size = 1500;
@@ -481,6 +830,34 @@ TEST(usac_testUsacParams, accuracy) {
     getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
     model = cv::estimateAffine2D(pts1, pts2, mask, usac_params);
     cv::vconcat(model, cv::Mat(cv::Matx13d(0,0,1)), model);
+    checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
+
+    // AffinePartial2D (similarity), with the same inlier ratio as for Affine2D
+    inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SIM2,
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    model = cv::estimateAffinePartial2D(pts1, pts2, mask, usac_params);
+    cv::vconcat(model, cv::Mat(cv::Matx13d(0,0,1)), model);
+    checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
+
+    // AffinePartial2D (rigid)
+    inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SE2,
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    model = cv::estimateAffinePartial2D(pts1, pts2, mask, usac_params, false);
+    cv::vconcat(model, cv::Mat(cv::Matx13d(0,0,1)), model);
+    checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
+
+    // Affine3D (rigid)
+    inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SE3,
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    model = cv::estimateAffine3D(pts1, pts2, mask, usac_params);
+    cv::vconcat(model, cv::Mat(cv::Matx14d(0,0,0,1)), model);
+    checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
+
+    // Affine3D (similarity)
+    inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SIM3,
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    model = cv::estimateAffine3D(pts1, pts2, mask, usac_params, true);
+    cv::vconcat(model, cv::Mat(cv::Matx14d(0,0,0,1)), model);
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 }
 
