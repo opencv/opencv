@@ -1893,6 +1893,29 @@ static std::string getExternalDataValue(const opencv_onnx::TensorProto& tensor_p
     return std::string();
 }
 
+// "location" is relative to the directory that holds the model. A rooted path, a drive prefix
+// or a ".." component would name a file outside it, so only a plain relative path is accepted.
+static bool isLocationInsideModelDir(const std::string& location)
+{
+    if (location[0] == '/' || location[0] == '\\')
+        return false;
+#ifdef _WIN32
+    if (location.size() >= 2 && location[1] == ':')
+        return false;
+#endif
+    size_t start = 0;
+    while (start <= location.size())
+    {
+        size_t end = location.find_first_of("/\\", start);
+        if (end == std::string::npos)
+            end = location.size();
+        if (end - start == 2 && location.compare(start, 2, "..") == 0)
+            return false;
+        start = end + 1;
+    }
+    return true;
+}
+
 // Resolves an external tensor's file path, byte offset and declared length. `length` is
 // size_t(-1) when unspecified, i.e. the payload runs to the end of the file; 0 is a real length.
 static bool resolveExternalData(const opencv_onnx::TensorProto& tensor_proto,
@@ -1902,6 +1925,10 @@ static bool resolveExternalData(const opencv_onnx::TensorProto& tensor_proto,
     std::string location_path = getExternalDataValue(tensor_proto, "location");
     if (location_path.empty())
         return false;
+    if (!isLocationInsideModelDir(location_path))
+        CV_Error(Error::StsBadArg, format("DNN/ONNX: external data location '%s' of tensor '%s' "
+                                          "must be a relative path inside the model directory",
+                                          location_path.c_str(), tensor_proto.name().c_str()));
     full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
     offset = 0;
     std::string offset_str = getExternalDataValue(tensor_proto, "offset");
