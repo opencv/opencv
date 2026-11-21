@@ -101,7 +101,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        // Exotic dtypes (FP8/FP4/INT4/UINT4) are handled on the CPU path only.
+        // Exotic dtypes (FP8/FP4/INT4/UINT4/INT2/UINT2) are handled on the CPU path only.
         if (onnx_dtype::isExotic(toOnnxType_))
             return backendId == DNN_BACKEND_OPENCV;
 #ifdef HAVE_CUDA
@@ -427,11 +427,23 @@ public:
             for (size_t i = 0; i < total; i++)
                 d[i] = onnx_dtype::f32ToInt4(CV_DNN_SRC_F(i));
         }
-        else // UINT4
+        else if (onnx_dtype::isUint4(onnxType))
         {
             uchar* d = dst.ptr<uchar>();
             for (size_t i = 0; i < total; i++)
                 d[i] = onnx_dtype::f32ToUint4(CV_DNN_SRC_F(i));
+        }
+        else if (onnx_dtype::isInt2(onnxType))
+        {
+            schar* d = dst.ptr<schar>();
+            for (size_t i = 0; i < total; i++)
+                d[i] = onnx_dtype::f32ToInt2(CV_DNN_SRC_F(i));
+        }
+        else // UINT2
+        {
+            uchar* d = dst.ptr<uchar>();
+            for (size_t i = 0; i < total; i++)
+                d[i] = onnx_dtype::f32ToUint2(CV_DNN_SRC_F(i));
         }
         #undef CV_DNN_SRC_F
     }
@@ -465,8 +477,8 @@ private:
         if (v == onnx_dtype::ONNX_FLOAT8E8M0) return CV_32F;                  // range exceeds FP16
         if (onnx_dtype::isFp8Native(v)) return onnx_dtype::fp8NativeDepth(v); // E4M3FN/E4M3FNUZ
         if (onnx_dtype::isExoticFloat(v)) return CV_16F;                     // E5M2/FP4
-        if (onnx_dtype::isInt4(v))        return CV_8S;
-        if (onnx_dtype::isUint4(v))       return CV_8U;
+        if (onnx_dtype::isInt4(v) || onnx_dtype::isInt2(v))   return CV_8S;
+        if (onnx_dtype::isUint4(v) || onnx_dtype::isUint2(v)) return CV_8U;
         switch (v)
         {
             case ONNX_DT_FLOAT:    return CV_32F;

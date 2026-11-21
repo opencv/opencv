@@ -221,11 +221,13 @@ enum TensorProto_DataType : int {
   TensorProto_DataType_FLOAT8E5M2FNUZ = 20,
   TensorProto_DataType_UINT4 = 21,
   TensorProto_DataType_INT4 = 22,
-  TensorProto_DataType_FLOAT4E2M1 = 23
+  TensorProto_DataType_FLOAT4E2M1 = 23,
+  TensorProto_DataType_UINT2 = 25,
+  TensorProto_DataType_INT2 = 26
 };
 bool TensorProto_DataType_IsValid(int value);
 constexpr TensorProto_DataType TensorProto_DataType_DataType_MIN = TensorProto_DataType_UNDEFINED;
-constexpr TensorProto_DataType TensorProto_DataType_DataType_MAX = TensorProto_DataType_FLOAT4E2M1;
+constexpr TensorProto_DataType TensorProto_DataType_DataType_MAX = TensorProto_DataType_INT2;
 constexpr int TensorProto_DataType_DataType_ARRAYSIZE = TensorProto_DataType_DataType_MAX + 1;
 
 const std::string& TensorProto_DataType_Name(TensorProto_DataType value);
@@ -4039,6 +4041,10 @@ class TensorProto final :
     TensorProto_DataType_INT4;
   static constexpr DataType FLOAT4E2M1 =
     TensorProto_DataType_FLOAT4E2M1;
+  static constexpr DataType UINT2 =
+    TensorProto_DataType_UINT2;
+  static constexpr DataType INT2 =
+    TensorProto_DataType_INT2;
   static inline bool DataType_IsValid(int value) {
     return TensorProto_DataType_IsValid(value);
   }

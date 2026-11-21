@@ -640,6 +640,10 @@ message TensorProto {
     // 4-bit floating point data types
     FLOAT4E2M1 = 23;
 
+    // 2-bit integer data types
+    UINT2 = 25;  // Unsigned integer in range [0, 3]
+    INT2 = 26;   // Signed integer in range [-2, 1], using two's-complement representation
+
     // Future extensions go here.
   }
 

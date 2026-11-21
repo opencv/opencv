@@ -592,13 +592,15 @@ bool TensorProto_DataType_IsValid(int value) {
     case 21:
     case 22:
     case 23:
+    case 25:
+    case 26:
       return true;
     default:
       return false;
   }
 }
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> TensorProto_DataType_strings[24] = {};
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> TensorProto_DataType_strings[26] = {};
 
 static const char TensorProto_DataType_names[] =
   "BFLOAT16"
@@ -614,12 +616,14 @@ static const char TensorProto_DataType_names[] =
   "FLOAT8E5M2"
   "FLOAT8E5M2FNUZ"
   "INT16"
+  "INT2"
   "INT32"
   "INT4"
   "INT64"
   "INT8"
   "STRING"
   "UINT16"
+  "UINT2"
   "UINT32"
   "UINT4"
   "UINT64"
@@ -640,34 +644,36 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry TensorProto_DataType_e
   { {TensorProto_DataType_names + 85, 10}, 19 },
   { {TensorProto_DataType_names + 95, 14}, 20 },
   { {TensorProto_DataType_names + 109, 5}, 5 },
-  { {TensorProto_DataType_names + 114, 5}, 6 },
-  { {TensorProto_DataType_names + 119, 4}, 22 },
-  { {TensorProto_DataType_names + 123, 5}, 7 },
-  { {TensorProto_DataType_names + 128, 4}, 3 },
-  { {TensorProto_DataType_names + 132, 6}, 8 },
-  { {TensorProto_DataType_names + 138, 6}, 4 },
-  { {TensorProto_DataType_names + 144, 6}, 12 },
-  { {TensorProto_DataType_names + 150, 5}, 21 },
-  { {TensorProto_DataType_names + 155, 6}, 13 },
-  { {TensorProto_DataType_names + 161, 5}, 2 },
-  { {TensorProto_DataType_names + 166, 9}, 0 },
+  { {TensorProto_DataType_names + 114, 4}, 26 },
+  { {TensorProto_DataType_names + 118, 5}, 6 },
+  { {TensorProto_DataType_names + 123, 4}, 22 },
+  { {TensorProto_DataType_names + 127, 5}, 7 },
+  { {TensorProto_DataType_names + 132, 4}, 3 },
+  { {TensorProto_DataType_names + 136, 6}, 8 },
+  { {TensorProto_DataType_names + 142, 6}, 4 },
+  { {TensorProto_DataType_names + 148, 5}, 25 },
+  { {TensorProto_DataType_names + 153, 6}, 12 },
+  { {TensorProto_DataType_names + 159, 5}, 21 },
+  { {TensorProto_DataType_names + 164, 6}, 13 },
+  { {TensorProto_DataType_names + 170, 5}, 2 },
+  { {TensorProto_DataType_names + 175, 9}, 0 },
 };
 
 static const int TensorProto_DataType_entries_by_number[] = {
-  23, // 0 -> UNDEFINED
+  25, // 0 -> UNDEFINED
   5, // 1 -> FLOAT
-  22, // 2 -> UINT8
-  16, // 3 -> INT8
-  18, // 4 -> UINT16
+  24, // 2 -> UINT8
+  17, // 3 -> INT8
+  19, // 4 -> UINT16
   12, // 5 -> INT16
-  13, // 6 -> INT32
-  15, // 7 -> INT64
-  17, // 8 -> STRING
+  14, // 6 -> INT32
+  16, // 7 -> INT64
+  18, // 8 -> STRING
   1, // 9 -> BOOL
   6, // 10 -> FLOAT16
   4, // 11 -> DOUBLE
-  19, // 12 -> UINT32
-  21, // 13 -> UINT64
+  21, // 12 -> UINT32
+  23, // 13 -> UINT64
   3, // 14 -> COMPLEX64
   2, // 15 -> COMPLEX128
   0, // 16 -> BFLOAT16
@@ -675,9 +681,11 @@ static const int TensorProto_DataType_entries_by_number[] = {
   9, // 18 -> FLOAT8E4M3FNUZ
   10, // 19 -> FLOAT8E5M2
   11, // 20 -> FLOAT8E5M2FNUZ
-  20, // 21 -> UINT4
-  14, // 22 -> INT4
+  22, // 21 -> UINT4
+  15, // 22 -> INT4
   7, // 23 -> FLOAT4E2M1
+  20, // 25 -> UINT2
+  13, // 26 -> INT2
 };
 
 const std::string& TensorProto_DataType_Name(
@@ -686,12 +694,12 @@ const std::string& TensorProto_DataType_Name(
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
           TensorProto_DataType_entries,
           TensorProto_DataType_entries_by_number,
-          24, TensorProto_DataType_strings);
+          26, TensorProto_DataType_strings);
   (void) dummy;
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
       TensorProto_DataType_entries,
       TensorProto_DataType_entries_by_number,
-      24, value);
+      26, value);
   return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
                      TensorProto_DataType_strings[idx].get();
 }
@@ -699,7 +707,7 @@ bool TensorProto_DataType_Parse(
     ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, TensorProto_DataType* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
-      TensorProto_DataType_entries, 24, name, &int_value);
+      TensorProto_DataType_entries, 26, name, &int_value);
   if (success) {
     *value = static_cast<TensorProto_DataType>(int_value);
   }
@@ -730,6 +738,8 @@ constexpr TensorProto_DataType TensorProto::FLOAT8E5M2FNUZ;
 constexpr TensorProto_DataType TensorProto::UINT4;
 constexpr TensorProto_DataType TensorProto::INT4;
 constexpr TensorProto_DataType TensorProto::FLOAT4E2M1;
+constexpr TensorProto_DataType TensorProto::UINT2;
+constexpr TensorProto_DataType TensorProto::INT2;
 constexpr TensorProto_DataType TensorProto::DataType_MIN;
 constexpr TensorProto_DataType TensorProto::DataType_MAX;
 constexpr int TensorProto::DataType_ARRAYSIZE;
