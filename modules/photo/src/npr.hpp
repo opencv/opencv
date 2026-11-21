@@ -254,7 +254,7 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
                 break;
             }
         }
-        for(int j=0;j<w;j++)
+        for(int j=0;j<=w;j++)
         {
             if(domain_row.at<float>(0,j) > upper_pos_row.at<float>(0,0))
             {
