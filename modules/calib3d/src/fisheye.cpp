@@ -91,6 +91,265 @@ static double normalizePoints(const Mat& points,
     return maximumCoordinate * standardDeviation;
 }
 
+//! Distorted angle @f$\theta_d = \theta (1 + k_1 \theta^2 + k_2 \theta^4 + k_3 \theta^6 + k_4 \theta^8)@f$.
+static double distortAngle(double theta, const Vec4d& k)
+{
+    const double theta2 = theta * theta;
+    return theta * (1 + theta2 * (k[0] + theta2 * (k[1] + theta2 * (k[2] + theta2 * k[3]))));
+}
+
+//! Derivative @f$d\theta_d / d\theta@f$ of the distorted angle.
+static double distortAngleSlope(double theta, const Vec4d& k)
+{
+    const double theta2 = theta * theta;
+    return 1 + theta2 * (3 * k[0] + theta2 * (5 * k[1] + theta2 * (7 * k[2] + theta2 * 9 * k[3])));
+}
+
+/**
+ * Returns the largest angle in @f$[0, \pi]@f$ up to which the distorted angle
+ * increases monotonically. The slope is positive at zero. The first sign change
+ * is located by sampling and refined by bisection.
+ */
+static double monotonicAngleLimit(const Vec4d& k)
+{
+    constexpr int numberOfSamples = 1024;
+    constexpr int maximumBisections = 64;
+    double previous = 0.0;
+    for (int sample = 1; sample <= numberOfSamples; ++sample)
+    {
+        const double theta = CV_PI * sample / numberOfSamples;
+        if (distortAngleSlope(theta, k) > 0.0)
+        {
+            previous = theta;
+            continue;
+        }
+        double lower = previous;
+        double upper = theta;
+        for (int bisection = 0; bisection < maximumBisections; ++bisection)
+        {
+            const double middle = lower + (upper - lower) / 2;
+            if (middle <= lower || middle >= upper)
+            {
+                break;
+            }
+            if (distortAngleSlope(middle, k) > 0.0)
+            {
+                lower = middle;
+            }
+            else
+            {
+                upper = middle;
+            }
+        }
+        return lower;
+    }
+    return CV_PI;
+}
+
+/**
+ * Inverts the distorted angle on @f$[0, \theta_{\max}]@f$, where it increases
+ * monotonically. Distorted angles beyond @f$\theta_d(\theta_{\max})@f$ have no
+ * preimage and are clamped to @f$\theta_{\max}@f$, which keeps the ray finite.
+ * Newton steps that leave the bracket fall back to bisection.
+ */
+static double undistortAngle(double distortedAngle, const Vec4d& k, double angleLimit)
+{
+    constexpr int maximumIterations = 100;
+    if (distortedAngle >= distortAngle(angleLimit, k))
+    {
+        return angleLimit;
+    }
+    double lower = 0.0;
+    double upper = angleLimit;
+    double theta = std::min(distortedAngle, angleLimit);
+    for (int iteration = 0; iteration < maximumIterations; ++iteration)
+    {
+        const double residual = distortAngle(theta, k) - distortedAngle;
+        if (residual < 0.0)
+        {
+            lower = theta;
+        }
+        else
+        {
+            upper = theta;
+        }
+        double next = theta - residual / distortAngleSlope(theta, k);
+        if (!(next > lower && next < upper))
+        {
+            next = lower + (upper - lower) / 2;
+        }
+        if (next == theta)
+        {
+            break;
+        }
+        theta = next;
+    }
+    return theta;
+}
+
+//! Minimum number of points that determine a homography.
+constexpr int minimumHomographyPoints = 4;
+
+/**
+ * Maps pixels to unit rays in camera coordinates. Rays are valid on the whole
+ * sphere, including at and beyond 90 degrees from the optical axis, where
+ * pinhole coordinates on the plane @f$z = 1@f$ do not exist.
+ *
+ * @param invertible Set to nonzero for pixels whose distorted angle the
+ * distortion reaches. The rays of the other pixels are clamped.
+ * @return A 3xN matrix of unit rays.
+ */
+static Mat pixelsToRays(const Mat& imagePoints, const internal::IntrinsicParams& param,
+                        std::vector<uchar>& invertible)
+{
+    CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
+    const Mat points = imagePoints.isContinuous() ? imagePoints : imagePoints.clone();
+    const int numberOfPoints = static_cast<int>(points.total());
+    const double angleLimit = monotonicAngleLimit(param.k);
+    const double reachableAngle = distortAngle(angleLimit, param.k);
+    const Vec2d* pixels = points.ptr<Vec2d>();
+    Mat rays(3, numberOfPoints, CV_64F);
+    invertible.assign(numberOfPoints, 1);
+    for (int i = 0; i < numberOfPoints; ++i)
+    {
+        const double y = (pixels[i][1] - param.c[1]) / param.f[1];
+        const double x = (pixels[i][0] - param.c[0]) / param.f[0] - param.alpha * y;
+        const double distortedAngle = std::hypot(x, y);
+        if (std::fpclassify(distortedAngle) == FP_ZERO)
+        {
+            rays.at<double>(0, i) = 0.0;
+            rays.at<double>(1, i) = 0.0;
+            rays.at<double>(2, i) = 1.0;
+            continue;
+        }
+        invertible[i] = distortedAngle < reachableAngle;
+        const double theta = undistortAngle(distortedAngle, param.k, angleLimit);
+        const double sinTheta = std::sin(theta);
+        rays.at<double>(0, i) = sinTheta * (x / distortedAngle);
+        rays.at<double>(1, i) = sinTheta * (y / distortedAngle);
+        rays.at<double>(2, i) = std::cos(theta);
+    }
+    return rays;
+}
+
+/**
+ * Estimates the homography that maps plane points @f$(X, Y, 1)@f$ to rays
+ * @f$b@f$ up to a positive scale using the constraint @f$b \times H X = 0@f$.
+ * Unlike a pinhole formulation, this never divides by the depth. The sign is
+ * chosen such that the points lie on the side of the camera their rays point to.
+ *
+ * @param rays 3xN unit rays.
+ * @param planePoints 2xN plane coordinates.
+ */
+static Mat computeRayHomography(const Mat& rays, const Mat& planePoints)
+{
+    constexpr int homogeneousDimension = 3;
+    const int numberOfPoints = rays.cols;
+    CV_CheckEQ(planePoints.cols, numberOfPoints, "Rays and plane points must correspond");
+    CV_CheckGE(numberOfPoints, minimumHomographyPoints, "Not enough points to estimate a homography");
+
+    // One two-channel element per point.
+    const Mat planeRows = Mat(planePoints.t()).reshape(2);
+    Mat planeMean;
+    Mat normalizedPlaneRows;
+    const double planeScale = normalizePoints(planeRows, normalizedPlaneRows, planeMean);
+    const Mat normalizedPlane = normalizedPlaneRows.reshape(1);
+    const double meanX = planeMean.at<double>(0, 0);
+    const double meanY = planeMean.at<double>(0, 1);
+
+    // Collinear plane points leave the second column of the homography
+    // undetermined, which would admit null vectors made up of that column alone.
+    // Estimate the remaining columns only if the centered plane points are
+    // numerically of rank one.
+    Mat planeSpread;
+    SVD::compute(normalizedPlane, planeSpread, SVD::NO_UV);
+    const double rankTolerance = std::max(numberOfPoints, homogeneousDimension - 1) *
+        std::numeric_limits<double>::epsilon() * planeSpread.at<double>(0);
+    const bool collinear = planeSpread.at<double>(1) <= rankTolerance;
+    std::vector<int> estimatedColumns{0, 2};
+    if (!collinear)
+    {
+        estimatedColumns.insert(estimatedColumns.begin() + 1, 1);
+    }
+    const int numberOfColumns = static_cast<int>(estimatedColumns.size());
+
+    // Homogeneous plane points restricted to the estimated columns, one row per point.
+    Mat homogeneousPlane;
+    hconcat(normalizedPlane, Mat::ones(numberOfPoints, 1, CV_64F), homogeneousPlane);
+    Mat estimatedPlane(numberOfPoints, numberOfColumns, CV_64F);
+    for (int k = 0; k < numberOfColumns; ++k)
+    {
+        homogeneousPlane.col(estimatedColumns[k]).copyTo(estimatedPlane.col(k));
+    }
+
+    // Row r of b x (H X) is sum_c [b]_x(r, c) (H X)_c, where [b]_x(r, c) is
+    // -b_m for c = r + 1 and b_m for c = r + 2 modulo 3, with m the remaining
+    // index. Stacking the rows by r instead of by point leaves the null vector
+    // unchanged and turns every block into an elementwise product.
+    const Mat raysByPoint = rays.t();
+    Mat system = Mat::zeros(homogeneousDimension * numberOfPoints,
+                            homogeneousDimension * numberOfColumns, CV_64F);
+    for (int row = 0; row < homogeneousDimension; ++row)
+    {
+        for (int offset = 1; offset < homogeneousDimension; ++offset)
+        {
+            const int column = (row + offset) % homogeneousDimension;
+            const int remaining = homogeneousDimension - row - column;
+            const double sign = offset == 1 ? -1.0 : 1.0;
+            const Mat coefficient = sign * raysByPoint.col(remaining) * Mat::ones(1, numberOfColumns, CV_64F);
+            Mat block = system(Rect(numberOfColumns * column, numberOfPoints * row,
+                                    numberOfColumns, numberOfPoints));
+            multiply(coefficient, estimatedPlane, block);
+        }
+    }
+    SVD svd(system, SVD::FULL_UV);
+    const Mat estimated = svd.vt.row(svd.vt.rows - 1).reshape(1, homogeneousDimension);
+    Mat H = Mat::zeros(homogeneousDimension, homogeneousDimension, CV_64F);
+    for (int k = 0; k < numberOfColumns; ++k)
+    {
+        estimated.col(k).copyTo(H.col(estimatedColumns[k]));
+    }
+
+    // Undo the plane normalization: H = Hn * [1/s 0 -mx/s; 0 1/s -my/s; 0 0 1].
+    H.col(0) /= planeScale;
+    H.col(1) /= planeScale;
+    H.col(2) -= H.col(0) * meanX + H.col(1) * meanY;
+
+    Mat homogeneousPoints;
+    vconcat(planePoints, Mat::ones(1, numberOfPoints, CV_64F), homogeneousPoints);
+    if (sum(rays.mul(H * homogeneousPoints))[0] < 0.0)
+    {
+        H = -H;
+    }
+    return H;
+}
+
+//! Sum of squared reprojection errors over all views, or infinity if it is not finite.
+static double reprojectionCost(const std::vector<Mat>& objectPoints, InputArrayOfArrays imagePoints,
+                               const internal::IntrinsicParams& param,
+                               const std::vector<Vec3d>& rotations,
+                               const std::vector<Vec3d>& translations)
+{
+    double cost = 0.0;
+    for (size_t view = 0; view < objectPoints.size(); ++view)
+    {
+        std::vector<Vec2d> projected;
+        internal::projectPoints(objectPoints[view], projected, Mat(rotations[view]),
+                                Mat(translations[view]), param, noArray());
+        Mat observed;
+        imagePoints.getMat(static_cast<int>(view)).convertTo(observed, CV_64FC2);
+        CV_CheckEQ(static_cast<int>(observed.total()), static_cast<int>(projected.size()),
+                   "Each image point must correspond to an object point");
+        const Vec2d* observedPoints = observed.ptr<Vec2d>();
+        for (size_t i = 0; i < projected.size(); ++i)
+        {
+            const Vec2d difference = projected[i] - observedPoints[i];
+            cost += difference.dot(difference);
+        }
+    }
+    return std::isfinite(cost) ? cost : std::numeric_limits<double>::infinity();
+}
+
 class ExtrinsicsCallback : public LMSolver::Callback
 {
 public:
@@ -218,25 +477,21 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
     {
         Vec3d Xi = objectPoints.depth() == CV_32F ? (Vec3d)Xf[i] : Xd[i];
         Vec3d Y = aff*Xi;
-        if (fabs(Y[2]) < DBL_MIN)
-            Y[2] = 1;
-        Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
-
-        double r2 = x.dot(x);
-        double r = std::sqrt(r2);
-
-        // Angle of the incoming ray:
-        double theta = atan(r);
-
-        double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
-                theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
-
-        double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-
-        double inv_r = r > 1e-8 ? 1.0/r : 1;
-        double cdist = r > 1e-8 ? theta_d * inv_r : 1;
-
-        Vec2d xd1 = x * cdist;
+        const double radius = std::hypot(Y[0], Y[1]);
+        const double theta = std::atan2(radius, Y[2]);
+        const double theta2 = theta * theta;
+        const double theta3 = theta2 * theta;
+        const double theta4 = theta2 * theta2;
+        const double theta5 = theta4 * theta;
+        const double theta6 = theta4 * theta2;
+        const double theta7 = theta6 * theta;
+        const double theta8 = theta4 * theta4;
+        const double theta9 = theta8 * theta;
+        const double theta_d = theta + k[0] * theta3 + k[1] * theta5 +
+                               k[2] * theta7 + k[3] * theta9;
+        const bool onAxis = std::fpclassify(radius) == FP_ZERO;
+        const double cdist = onAxis ? (Y[2] > 0 ? 1.0 / Y[2] : 0.0) : theta_d / radius;
+        const Vec2d xd1(Y[0] * cdist, Y[1] * cdist);
         Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
         Vec2d final_point(xd3[0] * f[0] + c[0], xd3[1] * f[1] + c[1]);
 
@@ -254,66 +509,51 @@ void cv::fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints
                               0, 0, 0, 0, 0, 0, Xi[0], Xi[1], Xi[2] };
 
             Matx33d dYdom_data = Matx<double, 3, 9>(dYdR) * dRdom.t();
-            const Vec3d *dYdom = (Vec3d*)dYdom_data.val;
 
-            Matx33d dYdT_data = Matx33d::eye();
-            const Vec3d *dYdT = (Vec3d*)dYdT_data.val;
-
-            //Vec2d x(Y[0]/Y[2], Y[1]/Y[2]);
-            Vec3d dxdom[2];
-            dxdom[0] = (1.0/Y[2]) * dYdom[0] - x[0]/Y[2] * dYdom[2];
-            dxdom[1] = (1.0/Y[2]) * dYdom[1] - x[1]/Y[2] * dYdom[2];
-
-            Vec3d dxdT[2];
-            dxdT[0]  = (1.0/Y[2]) * dYdT[0] - x[0]/Y[2] * dYdT[2];
-            dxdT[1]  = (1.0/Y[2]) * dYdT[1] - x[1]/Y[2] * dYdT[2];
-
-            //double r2 = x.dot(x);
-            Vec3d dr2dom = 2 * x[0] * dxdom[0] + 2 * x[1] * dxdom[1];
-            Vec3d dr2dT  = 2 * x[0] *  dxdT[0] + 2 * x[1] *  dxdT[1];
-
-            //double r = std::sqrt(r2);
-            double drdr2 = r > 1e-8 ? 1.0/(2*r) : 1;
-            Vec3d drdom = drdr2 * dr2dom;
-            Vec3d drdT  = drdr2 * dr2dT;
-
-            // Angle of the incoming ray:
-            //double theta = atan(r);
-            double dthetadr = 1.0/(1+r2);
-            Vec3d dthetadom = dthetadr * drdom;
-            Vec3d dthetadT  = dthetadr *  drdT;
-
-            //double theta_d = theta + k[0]*theta3 + k[1]*theta5 + k[2]*theta7 + k[3]*theta9;
-            double dtheta_ddtheta = 1 + 3*k[0]*theta2 + 5*k[1]*theta4 + 7*k[2]*theta6 + 9*k[3]*theta8;
-            Vec3d dtheta_ddom = dtheta_ddtheta * dthetadom;
-            Vec3d dtheta_ddT  = dtheta_ddtheta * dthetadT;
-            Vec4d dtheta_ddk  = Vec4d(theta3, theta5, theta7, theta9);
-
-            //double inv_r = r > 1e-8 ? 1.0/r : 1;
-            //double cdist = r > 1e-8 ? theta_d / r : 1;
-            Vec3d dcdistdom = inv_r * (dtheta_ddom - cdist*drdom);
-            Vec3d dcdistdT  = inv_r * (dtheta_ddT  - cdist*drdT);
-            Vec4d dcdistdk  = inv_r *  dtheta_ddk;
-
-            //Vec2d xd1 = x * cdist;
-            Vec4d dxd1dk[2];
-            Vec3d dxd1dom[2], dxd1dT[2];
-            dxd1dom[0] = x[0] * dcdistdom + cdist * dxdom[0];
-            dxd1dom[1] = x[1] * dcdistdom + cdist * dxdom[1];
-            dxd1dT[0]  = x[0] * dcdistdT  + cdist * dxdT[0];
-            dxd1dT[1]  = x[1] * dcdistdT  + cdist * dxdT[1];
-            dxd1dk[0]  = x[0] * dcdistdk;
-            dxd1dk[1]  = x[1] * dcdistdk;
-
-            //Vec2d xd3(xd1[0] + alpha*xd1[1], xd1[1]);
+            Matx23d dxd1dY = Matx23d::zeros();
+            Vec4d dxd1dk[2] = {Vec4d::all(0), Vec4d::all(0)};
+            if (onAxis)
+            {
+                dxd1dY(0, 0) = cdist;
+                dxd1dY(1, 1) = cdist;
+            }
+            else
+            {
+                const double length = std::hypot(radius, Y[2]);
+                const Vec3d drdY(Y[0] / radius, Y[1] / radius, 0);
+                const Vec3d dthetadY((Y[2] / length) * drdY[0] / length,
+                                    (Y[2] / length) * drdY[1] / length,
+                                    -(radius / length) / length);
+                const double dtheta_ddtheta = 1 + 3 * k[0] * theta2 +
+                    5 * k[1] * theta4 + 7 * k[2] * theta6 + 9 * k[3] * theta8;
+                // Y[i] * dcdist/dY equals drdY[i] * radius * dcdist/dY. Factoring
+                // out the radius avoids dividing by it twice, which overflows
+                // for points close to the camera center.
+                const Vec3d radiusTimesDcdistdY = dtheta_ddtheta * dthetadY - cdist * drdY;
+                for (int coordinate = 0; coordinate < 3; ++coordinate)
+                {
+                    dxd1dY(0, coordinate) = drdY[0] * radiusTimesDcdistdY[coordinate];
+                    dxd1dY(1, coordinate) = drdY[1] * radiusTimesDcdistdY[coordinate];
+                }
+                dxd1dY(0, 0) += cdist;
+                dxd1dY(1, 1) += cdist;
+                const Vec4d dtheta_ddk(theta3, theta5, theta7, theta9);
+                dxd1dk[0] = drdY[0] * dtheta_ddk;
+                dxd1dk[1] = drdY[1] * dtheta_ddk;
+            }
+            const Matx23d dxd1dom = dxd1dY * dYdom_data;
+            Vec3d dxd3dom[2];
+            Vec3d dxd3dT[2];
             Vec4d dxd3dk[2];
-            Vec3d dxd3dom[2], dxd3dT[2];
-            dxd3dom[0] = dxd1dom[0] + alpha * dxd1dom[1];
-            dxd3dom[1] = dxd1dom[1];
-            dxd3dT[0]  = dxd1dT[0]  + alpha * dxd1dT[1];
-            dxd3dT[1]  = dxd1dT[1];
-            dxd3dk[0]  = dxd1dk[0]  + alpha * dxd1dk[1];
-            dxd3dk[1]  = dxd1dk[1];
+            for (int coordinate = 0; coordinate < 3; ++coordinate)
+            {
+                dxd3dom[0][coordinate] = dxd1dom(0, coordinate) + alpha * dxd1dom(1, coordinate);
+                dxd3dom[1][coordinate] = dxd1dom(1, coordinate);
+                dxd3dT[0][coordinate] = dxd1dY(0, coordinate) + alpha * dxd1dY(1, coordinate);
+                dxd3dT[1][coordinate] = dxd1dY(1, coordinate);
+            }
+            dxd3dk[0] = dxd1dk[0] + alpha * dxd1dk[1];
+            dxd3dk[1] = dxd1dk[1];
 
             Vec2d dxd3dalpha(xd1[1], 0);
 
@@ -923,19 +1163,60 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 
         Mat G;
         solve(JJ2, ex3, G);
-        currentParam = finalParam + alpha_smooth2*G;
+
+        // Undamped Gauss-Newton steps can overshoot and diverge. Accept the
+        // smoothed step only if the resulting poses do not increase the
+        // reprojection cost, and halve it otherwise.
+        constexpr int maximumStepHalvings = 10;
+        constexpr int poseSize = 6;
+        constexpr int rotationSize = 3;
+        const int numberOfIntrinsics = countNonZero(finalParam.isEstimate);
+        const double cost = reprojectionCost(normalizedObjectPoints, imagePoints,
+                                             finalParam, omc, Tc);
+        double stepFraction = alpha_smooth2;
+        bool accepted = false;
+        for (int halving = 0; halving <= maximumStepHalvings; ++halving)
+        {
+            currentParam = finalParam + stepFraction * G;
+            std::vector<Vec3d> candidateOmc = omc;
+            std::vector<Vec3d> candidateTc = Tc;
+            if (recompute_extrinsic)
+            {
+                CalibrateExtrinsics(normalizedObjectPoints, imagePoints, currentParam,
+                                    check_cond, thresh_cond, candidateOmc, candidateTc);
+            }
+            else
+            {
+                for (size_t view = 0; view < numberOfViews; ++view)
+                {
+                    const int offset = numberOfIntrinsics + poseSize * static_cast<int>(view);
+                    for (int coordinate = 0; coordinate < rotationSize; ++coordinate)
+                    {
+                        candidateOmc[view][coordinate] += stepFraction * G.at<double>(offset + coordinate);
+                        candidateTc[view][coordinate] += stepFraction * G.at<double>(offset + rotationSize + coordinate);
+                    }
+                }
+            }
+            if (reprojectionCost(normalizedObjectPoints, imagePoints, currentParam,
+                                 candidateOmc, candidateTc) <= cost)
+            {
+                omc = candidateOmc;
+                Tc = candidateTc;
+                accepted = true;
+                break;
+            }
+            stepFraction /= 2;
+        }
+        if (!accepted)
+        {
+            break;
+        }
 
         change = norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]) -
                 Vec4d(finalParam.f[0], finalParam.f[1], finalParam.c[0], finalParam.c[1]))
                 / norm(Vec4d(currentParam.f[0], currentParam.f[1], currentParam.c[0], currentParam.c[1]));
 
         finalParam = currentParam;
-
-        if (recompute_extrinsic)
-        {
-            CalibrateExtrinsics(normalizedObjectPoints, imagePoints, finalParam,
-                                check_cond, thresh_cond, omc, Tc);
-        }
     }
 
     //-------------------------------Validation
@@ -1422,135 +1703,36 @@ void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& obj
     callback->compute(extrinsics, noArray(), J);
 }
 
-cv::Mat cv::internal::ComputeHomography(Mat m, Mat M)
-{
-    CV_INSTRUMENT_REGION();
-
-    int Np = m.cols;
-
-    if (m.rows < 3)
-    {
-        vconcat(m, Mat::ones(1, Np, CV_64FC1), m);
-    }
-    if (M.rows < 3)
-    {
-        vconcat(M, Mat::ones(1, Np, CV_64FC1), M);
-    }
-
-    divide(m, Mat::ones(3, 1, CV_64FC1) * m.row(2), m);
-    divide(M, Mat::ones(3, 1, CV_64FC1) * M.row(2), M);
-
-    Mat ax = m.row(0).clone();
-    Mat ay = m.row(1).clone();
-
-    double mxx = mean(ax)[0];
-    double myy = mean(ay)[0];
-
-    ax = ax - mxx;
-    ay = ay - myy;
-
-    double scxx = mean(abs(ax))[0];
-    double scyy = mean(abs(ay))[0];
-
-    Mat Hnorm (Matx33d( 1/scxx,        0.0,     -mxx/scxx,
-                         0.0,     1/scyy,     -myy/scyy,
-                         0.0,        0.0,           1.0 ));
-
-    Mat inv_Hnorm (Matx33d( scxx,     0,   mxx,
-                                    0,  scyy,   myy,
-                                    0,     0,     1 ));
-    Mat mn =  Hnorm * m;
-
-    Mat L = Mat::zeros(2*Np, 9, CV_64FC1);
-
-    for (int i = 0; i < Np; ++i)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            L.at<double>(2 * i, j) = M.at<double>(j, i);
-            L.at<double>(2 * i + 1, j + 3) = M.at<double>(j, i);
-            L.at<double>(2 * i, j + 6) = -mn.at<double>(0,i) * M.at<double>(j, i);
-            L.at<double>(2 * i + 1, j + 6) = -mn.at<double>(1,i) * M.at<double>(j, i);
-        }
-    }
-
-    if (Np > 4) L = L.t() * L;
-    SVD svd(L);
-    Mat hh = svd.vt.row(8) / svd.vt.row(8).at<double>(8);
-    Mat Hrem = hh.reshape(1, 3);
-    Mat H = inv_Hnorm * Hrem;
-
-    if (Np > 4)
-    {
-        Mat hhv = H.reshape(1, 9)(Rect(0, 0, 1, 8)).clone();
-        for (int iter = 0; iter < 10; iter++)
-        {
-            Mat mrep = H * M;
-            Mat J = Mat::zeros(2 * Np, 8, CV_64FC1);
-            Mat MMM;
-            divide(M, Mat::ones(3, 1, CV_64FC1) * mrep(Rect(0, 2, mrep.cols, 1)), MMM);
-            divide(mrep, Mat::ones(3, 1, CV_64FC1) * mrep(Rect(0, 2, mrep.cols, 1)), mrep);
-            Mat m_err = m(Rect(0,0, m.cols, 2)) - mrep(Rect(0,0, mrep.cols, 2));
-            m_err = Mat(m_err.t()).reshape(1, m_err.cols * m_err.rows);
-            Mat MMM2, MMM3;
-            multiply(Mat::ones(3, 1, CV_64FC1) * mrep(Rect(0, 0, mrep.cols, 1)), MMM, MMM2);
-            multiply(Mat::ones(3, 1, CV_64FC1) * mrep(Rect(0, 1, mrep.cols, 1)), MMM, MMM3);
-
-            for (int i = 0; i < Np; ++i)
-            {
-                for (int j = 0; j < 3; ++j)
-                {
-                    J.at<double>(2 * i, j)         = -MMM.at<double>(j, i);
-                    J.at<double>(2 * i + 1, j + 3) = -MMM.at<double>(j, i);
-                }
-
-                for (int j = 0; j < 2; ++j)
-                {
-                    J.at<double>(2 * i, j + 6)     = MMM2.at<double>(j, i);
-                    J.at<double>(2 * i + 1, j + 6) = MMM3.at<double>(j, i);
-                }
-            }
-            divide(M, Mat::ones(3, 1, CV_64FC1) * mrep(Rect(0,2,mrep.cols,1)), MMM);
-            Mat hh_innov = (J.t() * J).inv() * (J.t()) * m_err;
-            Mat hhv_up = hhv - hh_innov;
-            Mat tmp;
-            vconcat(hhv_up, Mat::ones(1,1,CV_64FC1), tmp);
-            Mat H_up = tmp.reshape(1,3);
-            hhv = hhv_up;
-            H = H_up;
-        }
-    }
-    return H;
-}
-
-cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param)
-{
-    CV_INSTRUMENT_REGION();
-
-    CV_Assert(!imagePoints.empty() && imagePoints.type() == CV_64FC2);
-
-    Mat distorted((int)imagePoints.total(), 1, CV_64FC2), undistorted;
-    const Vec2d* ptr   = imagePoints.ptr<Vec2d>();
-    Vec2d* ptr_d = distorted.ptr<Vec2d>();
-    for (size_t i = 0; i < imagePoints.total(); ++i)
-    {
-        ptr_d[i] = (ptr[i] - param.c).mul(Vec2d(1.0 / param.f[0], 1.0 / param.f[1]));
-        ptr_d[i][0] -= param.alpha * ptr_d[i][1];
-    }
-    cv::fisheye::undistortPoints(distorted, undistorted, Matx33d::eye(), param.k);
-    return undistorted;
-}
-
 void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoints, const IntrinsicParams& param, Mat& omckk, Mat& Tckk)
 {
     CV_Assert(!_objectPoints.empty() && _objectPoints.type() == CV_64FC3);
     CV_Assert(!_imagePoints.empty() && _imagePoints.type() == CV_64FC2);
 
-    Mat imagePointsNormalized = NormalizePixels(_imagePoints, param).reshape(1).t();
+    std::vector<uchar> invertible;
+    Mat rays = pixelsToRays(_imagePoints, param, invertible);
     Mat objectPoints = _objectPoints.reshape(1).t();
+    // The clamped rays of pixels beyond the reach of the distortion act as
+    // outliers. Exclude them as long as enough points remain.
+    const int numberOfInvertible = countNonZero(invertible);
+    if (numberOfInvertible >= minimumHomographyPoints && numberOfInvertible < rays.cols)
+    {
+        Mat invertibleRays(rays.rows, numberOfInvertible, CV_64F);
+        Mat invertibleObjectPoints(objectPoints.rows, numberOfInvertible, CV_64F);
+        for (int i = 0, j = 0; i < rays.cols; ++i)
+        {
+            if (invertible[i])
+            {
+                rays.col(i).copyTo(invertibleRays.col(j));
+                objectPoints.col(i).copyTo(invertibleObjectPoints.col(j));
+                ++j;
+            }
+        }
+        rays = invertibleRays;
+        objectPoints = invertibleObjectPoints;
+    }
     Mat objectPointsMean, covObjectPoints;
     Mat Rckk;
-    int Np = imagePointsNormalized.cols;
+    int Np = rays.cols;
     calcCovarMatrix(objectPoints, covObjectPoints, objectPointsMean, COVAR_NORMAL | COVAR_COLS);
     SVD svd(covObjectPoints);
     Mat R(svd.vt);
@@ -1560,7 +1742,7 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
         R = -R;
     Mat T = -R * objectPointsMean;
     Mat X_new = R * objectPoints + T * Mat::ones(1, Np, CV_64FC1);
-    Mat H = ComputeHomography(imagePointsNormalized, X_new(Rect(0,0,X_new.cols,2)));
+    Mat H = computeRayHomography(rays, X_new.rowRange(0, 2));
     double sc = .5 * (norm(H.col(0)) + norm(H.col(1)));
     H = H / sc;
     Mat u1 = H.col(0).clone();
@@ -1569,7 +1751,20 @@ void cv::internal::InitExtrinsics(const Mat& _imagePoints, const Mat& _objectPoi
     u1  = u1 / norm_u1;
     Mat u2 = H.col(1).clone() - u1.dot(H.col(1).clone()) * u1;
     double norm_u2 = norm(u2);
-    CV_Assert(fabs(norm_u2) > 0);
+    if (std::fpclassify(norm_u2) == FP_ZERO)
+    {
+        // Collinear board points leave the rotation about their line
+        // undetermined and the second column of the homography arbitrary.
+        // Take the scale from the first column alone and complete the basis by
+        // the coordinate axis least aligned with u1.
+        H = H / norm_u1;
+        Point leastAligned;
+        minMaxLoc(abs(u1), nullptr, nullptr, &leastAligned);
+        const int axis = leastAligned.y;
+        u2 = -u1.at<double>(axis) * u1;
+        u2.at<double>(axis) += 1.0;
+        norm_u2 = norm(u2);
+    }
     u2 = u2 / norm_u2;
     Mat u3 = u1.cross(u2);
     Mat RRR;

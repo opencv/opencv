@@ -15,6 +15,69 @@ from tests_common import NewOpenCVTests
 
 class calibration_test(NewOpenCVTests):
 
+    def test_fisheye_calibration_applies_joint_pose_update(self):
+        camera_matrix = np.array([[600.0, 0.0, 320.0],
+                                  [0.0, 610.0, 240.0],
+                                  [0.0, 0.0, 1.0]])
+        distortion = np.zeros((4, 1), dtype=np.float64)
+        points = np.zeros((25, 3), dtype=np.float64)
+        points[:, :2] = np.indices((5, 5)).T.reshape(-1, 2) * 0.2
+        points -= points.mean(axis=0)
+        rotations = [[0.15, -0.1, 0.08], [-0.1, 0.12, -0.06],
+                     [0.3, 0.2, -0.1], [-0.2, -0.3, 0.15]]
+        translations = [[0.2, -0.15, 3.0], [-0.3, 0.1, 2.5],
+                        [0.1, 0.2, 2.0], [-0.2, -0.1, 2.8]]
+        objects = [points.reshape(1, -1, 3).copy() for _ in rotations]
+        images = [cv.fisheye.projectPoints(obj, np.array(r), np.array(t),
+                                          camera_matrix, distortion)[0]
+                  for obj, r, t in zip(objects, rotations, translations)]
+        guess = camera_matrix.copy()
+        guess[0, 0] -= 20.0
+        guess[1, 1] -= 20.0
+        flags = (cv.fisheye.CALIB_USE_INTRINSIC_GUESS |
+                 cv.fisheye.CALIB_FIX_PRINCIPAL_POINT |
+                 cv.fisheye.CALIB_FIX_SKEW | cv.fisheye.CALIB_FIX_K1 |
+                 cv.fisheye.CALIB_FIX_K2 | cv.fisheye.CALIB_FIX_K3 |
+                 cv.fisheye.CALIB_FIX_K4)
+
+        def calibrate(iterations):
+            return cv.fisheye.calibrate(
+                objects, images, (640, 480), guess.copy(), distortion.copy(),
+                flags=flags, criteria=(cv.TERM_CRITERIA_COUNT, iterations, 0.0))
+
+        initial = calibrate(0)
+        updated = calibrate(1)
+        scale = np.linalg.norm(points, axis=1).mean() / np.sqrt(3.0)
+        normalized = (points / scale).reshape(1, -1, 3)
+        pose_size = 6
+        intrinsic_size = 2
+        system = []
+        residuals = []
+        for view, (image, rotation, translation) in enumerate(
+                zip(images, initial[3], initial[4])):
+            projected, jacobian = cv.fisheye.projectPoints(
+                normalized, rotation, translation / scale, initial[1], initial[2])
+            block = np.zeros((jacobian.shape[0], intrinsic_size +
+                              pose_size * len(objects)))
+            block[:, :intrinsic_size] = jacobian[:, :intrinsic_size]
+            start = intrinsic_size + pose_size * view
+            block[:, start:start + pose_size] = jacobian[:, 8:14]
+            system.append(block)
+            residuals.append((image - projected).ravel())
+        step = np.linalg.lstsq(np.vstack(system), np.concatenate(residuals),
+                               rcond=None)[0]
+        step_fraction = 0.4
+        tolerance = 1e-7
+        for view, (rotation, translation) in enumerate(zip(initial[3], initial[4])):
+            start = intrinsic_size + pose_size * view
+            expected_rotation = rotation.ravel() + step_fraction * step[start:start + 3]
+            expected_translation = translation.ravel() + scale * step_fraction * step[start + 3:start + pose_size]
+            np.testing.assert_allclose(updated[3][view].ravel(), expected_rotation,
+                                       rtol=0.0, atol=tolerance)
+            np.testing.assert_allclose(updated[4][view].ravel(), expected_translation,
+                                       rtol=0.0, atol=tolerance)
+        self.assertLess(updated[0], initial[0])
+
     def test_calibration(self):
         img_names = []
         for i in range(1, 15):
