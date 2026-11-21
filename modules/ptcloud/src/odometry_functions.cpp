@@ -1412,7 +1412,7 @@ bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const 
     // local memory should keep upperTriangles for all threads in group for reduce
     const size_t ltsz = UTSIZE * sizeof(float);
     const size_t lcols = 32;
-    size_t lrows = min(memSize / ltsz, wgsLimit) / lcols;
+    size_t lrows = std::min(memSize / ltsz, wgsLimit) / lcols;
     // round lrows down to 2^n
     lrows = roundDownPow2(lrows);
     size_t localSize[2] = { lcols, lrows };

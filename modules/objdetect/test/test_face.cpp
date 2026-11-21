@@ -126,7 +126,7 @@ TEST(Objdetect_face_detection, regression)
                     float gtY = item.second.at<float>(j, 4 + 2 * lmIdx + 1);
                     float resX = faces.at<float>(i, 4 + 2 * lmIdx);
                     float resY = faces.at<float>(i, 4 + 2 * lmIdx + 1);
-                    float l2dis = cv::sqrt((gtX - resX) * (gtX - resX) + (gtY - resY) * (gtY - resY));
+                    float l2dis = std::sqrt((gtX - resX) * (gtX - resX) + (gtY - resY) * (gtY - resY));
 
                     if (l2dis <= l2disThreshold)
                     {

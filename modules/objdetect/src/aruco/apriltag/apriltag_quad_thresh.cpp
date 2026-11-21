@@ -330,7 +330,7 @@ int quad_segment_maxima(const DetectorParameters &td, int sz, struct line_fit_pt
 
         // XXX Tunable (though not super useful to change)
         double cutoff = 0.05;
-        int fsz = cvFloor(sqrt(-log(cutoff)*2*sigma*sigma)) + 1;
+        int fsz = cvFloor(std::sqrt(-std::log(cutoff)*2*sigma*sigma)) + 1;
         fsz = 2*fsz + 1;
 
         // For default values of cutoff = 0.05, sigma = 3,
@@ -339,7 +339,7 @@ int quad_segment_maxima(const DetectorParameters &td, int sz, struct line_fit_pt
 
         for (int i = 0; i < fsz; i++) {
             int j = i - fsz / 2;
-            f[i] = (float)exp(-j*j/(2*sigma*sigma));
+            f[i] = (float)std::exp(-j*j/(2*sigma*sigma));
         }
 
         for (int iy = 0; iy < sz; iy++) {
@@ -793,7 +793,7 @@ int fit_quad(const DetectorParameters &_params, const Mat im, zarray_t *cluster,
                         im.data[(iy-1) * im.cols + ix];
 
                 // XXX Tunable. How to shape the gradient magnitude?
-                W = sqrt(grad_x*grad_x + grad_y*grad_y) + 1;
+                W = std::sqrt(grad_x*grad_x + grad_y*grad_y) + 1;
             }
 
             double fx = x, fy = y;
@@ -936,11 +936,11 @@ int fit_quad(const DetectorParameters &_params, const Mat im, zarray_t *cluster,
             sq1 = sq1 * sq1;
             double sq2 = quad->p[idxb][1] - quad->p[idxa][1];
             sq2 = sq2 * sq2;
-            length[i] = sqrt(sq1 + sq2);
+            length[i] = std::sqrt(sq1 + sq2);
         }
         p = (length[0] + length[1] + length[2]) / 2;
 
-        area += sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
+        area += std::sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
 
         // get area of triangle formed by points 2, 3, 0, 2
         for (int i = 0; i < 3; i++) {
@@ -954,11 +954,11 @@ int fit_quad(const DetectorParameters &_params, const Mat im, zarray_t *cluster,
             sq1 = sq1 * sq1;
             double sq2 = quad->p[idxb][1] - quad->p[idxa][1];
             sq2 = sq2 * sq2;
-            length[i] = sqrt(sq1 + sq2);
+            length[i] = std::sqrt(sq1 + sq2);
         }
         p = (length[0] + length[1] + length[2]) / 2;
 
-        area += sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
+        area += std::sqrt(p*(p-length[0])*(p-length[1])*(p-length[2]));
 
         // we don't actually know the family yet (quad detection is generic.)
         // This threshold is based on a 6x6 tag (which is actually 8x8)

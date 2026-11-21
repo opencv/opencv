@@ -933,7 +933,7 @@ unsigned getNumberOfCPUsCFSv2()
     if (ss_cpu_max.fail() || cfs_quota < 1 || cfs_period < 1) /* values must not be 0 or negative */
         return 0;
 
-    return (unsigned)max(1, cfs_quota/cfs_period);
+    return (unsigned)std::max(1, cfs_quota/cfs_period);
 }
 
 static inline
@@ -957,7 +957,7 @@ unsigned getNumberOfCPUsCFSv1()
             return 0;
     }
 
-    return (unsigned)max(1, cfs_quota/cfs_period);
+    return (unsigned)std::max(1, cfs_quota/cfs_period);
 }
 #endif
 

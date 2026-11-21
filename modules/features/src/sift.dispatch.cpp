@@ -834,7 +834,7 @@ static bool ocl_computeSIFTDescriptors(
         const UMat& packed = gauss_packs[o];
         int img_cols = packed.cols;
         int img_rows = packed.rows / levelsPerOctave;
-        float diag = sqrt((float)img_cols * img_cols + (float)img_rows * img_rows);
+        float diag = std::sqrt((float)img_cols * img_cols + (float)img_rows * img_rows);
 
         UMat kpts_roi = kpts_buf.rowRange(groups[o].start,
                                           groups[o].start + nGroup);

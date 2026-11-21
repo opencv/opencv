@@ -619,7 +619,7 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
     int v = idst - 1;
     int len = (width - offset) * cn;
     int x = offset * cn;
-    int maxRow = min((ito - vOffset),height-vOffset);
+    int maxRow = std::min((ito - vOffset),height-vOffset);
     if (v >= maxRow) return;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -714,7 +714,7 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
     int v = idst - 2;
     int len = (width - offset) * cn;
     int x = offset * cn;
-    int maxRow = min((ito - vOffset),height-vOffset);
+    int maxRow = std::min((ito - vOffset),height-vOffset);
     if (v >= maxRow) return;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -1284,7 +1284,7 @@ void hlineSmooth(const ET* src, int cn, const FT* m, int n, FT* dst, int len, in
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
     int i = 0;
-    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    for (; i < std::min(pre_shift, len); i++, dst += cn) // Points that fall left from border
     {
         for (int k = 0; k < cn; k++)
             dst[k] = m[pre_shift-i] * src[k];
@@ -1296,7 +1296,7 @@ void hlineSmooth(const ET* src, int cn, const FT* m, int n, FT* dst, int len, in
                     dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
             }
         int j, mid;
-        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+        for (j = 1, mid = pre_shift - i + 1; j < std::min(i + post_shift, len); j++, mid++)
             for (int k = 0; k < cn; k++)
                 dst[k] = dst[k] + m[mid] * src[j*cn + k];
         if (borderType != BORDER_CONSTANT)
@@ -1338,7 +1338,7 @@ void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixe
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
     int i = 0;
-    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    for (; i < std::min(pre_shift, len); i++, dst += cn) // Points that fall left from border
     {
         for (int k = 0; k < cn; k++)
             dst[k] = m[pre_shift - i] * src[k];
@@ -1350,7 +1350,7 @@ void hlineSmooth<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufixe
                     dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
             }
         int j, mid;
-        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+        for (j = 1, mid = pre_shift - i + 1; j < std::min(i + post_shift, len); j++, mid++)
             for (int k = 0; k < cn; k++)
                 dst[k] = dst[k] + m[mid] * src[j*cn + k];
         if (borderType != BORDER_CONSTANT)
@@ -1403,7 +1403,7 @@ void hlineSmoothONa_yzy_a(const ET* src, int cn, const FT* m, int n, FT* dst, in
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
     int i = 0;
-    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    for (; i < std::min(pre_shift, len); i++, dst += cn) // Points that fall left from border
     {
         for (int k = 0; k < cn; k++)
             dst[k] = m[pre_shift - i] * src[k];
@@ -1415,7 +1415,7 @@ void hlineSmoothONa_yzy_a(const ET* src, int cn, const FT* m, int n, FT* dst, in
                     dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
             }
         int j, mid;
-        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+        for (j = 1, mid = pre_shift - i + 1; j < std::min(i + post_shift, len); j++, mid++)
             for (int k = 0; k < cn; k++)
                 dst[k] = dst[k] + m[mid] * src[j*cn + k];
         if (borderType != BORDER_CONSTANT)
@@ -1457,7 +1457,7 @@ void hlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, co
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
     int i = 0;
-    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    for (; i < std::min(pre_shift, len); i++, dst += cn) // Points that fall left from border
     {
         for (int k = 0; k < cn; k++)
             dst[k] = m[pre_shift - i] * src[k];
@@ -1469,7 +1469,7 @@ void hlineSmoothONa_yzy_a<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, co
                     dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
             }
         int j, mid;
-        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+        for (j = 1, mid = pre_shift - i + 1; j < std::min(i + post_shift, len); j++, mid++)
             for (int k = 0; k < cn; k++)
                 dst[k] = dst[k] + m[mid] * src[j*cn + k];
         if (borderType != BORDER_CONSTANT)
@@ -1522,7 +1522,7 @@ void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, 
     int pre_shift = n / 2;
     int post_shift = n - pre_shift;
     int i = 0;
-    for (; i < min(pre_shift, len); i++, dst += cn) // Points that fall left from border
+    for (; i < std::min(pre_shift, len); i++, dst += cn) // Points that fall left from border
     {
         for (int k = 0; k < cn; k++)
             dst[k] = m[pre_shift - i] * src[k];
@@ -1534,7 +1534,7 @@ void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, 
                     dst[k] = dst[k] + m[mid] * src[src_idx*cn + k];
             }
         int j, mid;
-        for (j = 1, mid = pre_shift - i + 1; j < min(i + post_shift, len); j++, mid++)
+        for (j = 1, mid = pre_shift - i + 1; j < std::min(i + post_shift, len); j++, mid++)
             for (int k = 0; k < cn; k++)
                 dst[k] = dst[k] + m[mid] * src[j*cn + k];
         if (borderType != BORDER_CONSTANT)
@@ -1669,7 +1669,7 @@ void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
         std::memcpy(&val01, m, sizeof(val01));
         v_int16 v_mul01 = v_reinterpret_as_s16(vx_setall_u32(val01));
         v_int16 v_mul2 = v_reinterpret_as_s16(vx_setall_u16(*((uint16_t*)(m + 2))));
-        for (; i <= min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
+        for (; i <= std::min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
         {
             v_int16 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
             v_int16 v_tmp0, v_tmp1;
@@ -1762,7 +1762,7 @@ void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, 
     {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VECSZ = VTraits<v_uint16>::vlanes();
-        for (; i <= min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
+        for (; i <= std::min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
         {
             v_uint32 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
             v_expand(vx_load((uint16_t*)(src[0]) + i), v_src00, v_src01);
@@ -1792,7 +1792,7 @@ void vlineSmooth3N121<uint16_t, ufixedpoint32>(const ufixedpoint32* const * src,
     {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VECSZ = VTraits<v_uint32>::vlanes();
-        for (; i <= min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
+        for (; i <= std::min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
         {
             v_uint64 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
             v_expand(vx_load((uint32_t*)(src[0]) + i), v_src00, v_src01);
@@ -1847,7 +1847,7 @@ void vlineSmooth5N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
             v_int16 v_mul01 = v_reinterpret_as_s16(vx_setall_u32(*((uint32_t*)m)));
             v_int16 v_mul23 = v_reinterpret_as_s16(vx_setall_u32(*((uint32_t*)(m + 2))));
             v_int16 v_mul4 = v_reinterpret_as_s16(vx_setall_u16(*((uint16_t*)(m + 4))));
-            for (; i <= min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
+            for (; i <= std::min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
             {
                 v_int16 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
                 v_int16 v_tmp0, v_tmp1;
@@ -1967,7 +1967,7 @@ void vlineSmooth5N14641<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         v_uint32 v_6 = vx_setall_u32(6);
         const int VECSZ = VTraits<v_uint16>::vlanes();
-        for (; i <= min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
+        for (; i <= std::min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
         {
             v_uint32 v_src00, v_src10, v_src20, v_src30, v_src40;
             v_uint32 v_src01, v_src11, v_src21, v_src31, v_src41;
@@ -2011,7 +2011,7 @@ void vlineSmooth5N14641<uint16_t, ufixedpoint32>(const ufixedpoint32* const * sr
     {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VECSZ = VTraits<v_uint32>::vlanes();
-        for (; i <= min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
+        for (; i <= std::min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
         {
             v_uint64 v_src00, v_src10, v_src20, v_src30, v_src40;
             v_uint64 v_src01, v_src11, v_src21, v_src31, v_src41;
@@ -2108,7 +2108,7 @@ void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const
             ufixedpoint32 val[] = { msum * ufixedpoint16((uint8_t)128) };
             v_128_4 = vx_setall_s32(*((int32_t*)val));
         }
-        for (; i <= min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
+        for (; i <= std::min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
         {
             v_int16 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
             v_int16 v_tmp0, v_tmp1;
@@ -2537,11 +2537,11 @@ public:
             int post_shift = kylen - pre_shift - 1;
             // First line evaluation
             int idst = range.start;
-            int ifrom = max(0, idst - pre_shift);
+            int ifrom = std::max(0, idst - pre_shift);
             int ito = idst + post_shift + 1;
             int i = ifrom;
             int bufline = 0;
-            for (; i < min(ito, height); i++, bufline++)
+            for (; i < std::min(ito, height); i++, bufline++)
             {
                 ptrs[bufline+kylen] = ptrs[bufline] = buf + bufline * width*cn;
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, true);
@@ -2576,8 +2576,8 @@ public:
 
             // border mode dependent part evaluation
             // i points to last src row to evaluate in convolution
-            bufline %= kylen; ito = min(height, range.end + post_shift);
-            for (; i < min(kylen, ito); i++, idst++)
+            bufline %= kylen; ito = std::min(height, range.end + post_shift);
+            for (; i < std::min(kylen, ito); i++, idst++)
             {
                 ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, true);
@@ -2606,8 +2606,8 @@ public:
             // First line evaluation
             int idst = range.start;
             int ifrom = idst - pre_shift;
-            int ito = min(idst + post_shift + 1, height);
-            int i = max(0, ifrom);
+            int ito = std::min(idst + post_shift + 1, height);
+            int i = std::max(0, ifrom);
             int bufline = 0;
             for (; i < ito; i++, bufline++)
             {
@@ -2616,19 +2616,19 @@ public:
             }
 
             if (bufline == 1)
-                vlineSmooth1N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
+                vlineSmooth1N(ptrs, ky - std::min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
             else if (bufline == 3)
-                vlineSmooth3N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
+                vlineSmooth3N(ptrs, ky - std::min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
             else if (bufline == 5)
-                vlineSmooth5N(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
+                vlineSmooth5N(ptrs, ky - std::min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
             else
-                vlineSmooth(ptrs, ky - min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
+                vlineSmooth(ptrs, ky - std::min(ifrom, 0), bufline, dst + idst*dst_stride, width*cn, cn, true);
             idst++;
 
             // border mode dependent part evaluation
             // i points to last src row to evaluate in convolution
-            bufline %= kylen; ito = min(height, range.end + post_shift);
-            for (; i < min(kylen, ito); i++, idst++)
+            bufline %= kylen; ito = std::min(height, range.end + post_shift);
+            for (; i < std::min(kylen, ito); i++, idst++)
             {
                 ptrs[bufline + kylen] = ptrs[bufline] = buf + bufline * width*cn;
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, true);
@@ -2642,7 +2642,7 @@ public:
                 bufline %= kylen;
             }
             // Points inside the border
-            if (i - max(0, ifrom) >= kylen)
+            if (i - std::max(0, ifrom) >= kylen)
             {
                 computeInnerRegion(idst, i, ito, bufline, ptrs);
 
@@ -2660,7 +2660,7 @@ public:
             else
             {
                 // i points to first src row to evaluate in convolution
-                for (i = idst - pre_shift; i < min(range.end - pre_shift, 0); i++, idst++)
+                for (i = idst - pre_shift; i < std::min(range.end - pre_shift, 0); i++, idst++)
                     if (height == 3)
                         vlineSmooth3N(ptrs, ky - i, height, dst + idst*dst_stride, width*cn, cn, true);
                     else if (height == 5)
@@ -2669,11 +2669,11 @@ public:
                         vlineSmooth(ptrs, ky - i, height, dst + idst*dst_stride, width*cn, cn, true);
                 for (; i < range.end - pre_shift; i++, idst++)
                     if (height - i == 3)
-                        vlineSmooth3N(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
+                        vlineSmooth3N(ptrs + i - std::max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
                     else if (height - i == 5)
-                        vlineSmooth5N(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
+                        vlineSmooth5N(ptrs + i - std::max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
                     else
-                        vlineSmooth(ptrs + i - max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
+                        vlineSmooth(ptrs + i - std::max(0, ifrom), ky, height - i, dst + idst*dst_stride, width*cn, cn, true);
             }
         }
     }

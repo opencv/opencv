@@ -193,7 +193,7 @@ public:
             stored_complete_gamma_values (gamma_generator->getCompleteGammaValues()),
             stored_lower_incomplete_gamma_values (gamma_generator->getIncompleteGammaValues()) {
         previous_best_loss = std::numeric_limits<double>::max();
-        const auto maximum_sigma = (float)sqrt(maximum_threshold_sqr) / sigma_quantile;
+        const auto maximum_sigma = (float)std::sqrt(maximum_threshold_sqr) / sigma_quantile;
         const auto maximum_sigma_2 = (float) (maximum_sigma * maximum_sigma);
         maximum_sigma_2_per_2 = maximum_sigma_2 / 2.f;
         const auto maximum_sigma_2_times_2 = maximum_sigma_2 * 2.f;
@@ -560,20 +560,20 @@ private:
         complement_delta_to_complement_epsilon = (1 - delta) / (1 - epsilon);
 
         if (IS_ADAPTIVE) {
-            avg_num_checked_pts = std::min((log(current_A) / C) * one_over_complement_alpha, (double)points_size);
+            avg_num_checked_pts = std::min((std::log(current_A) / C) * one_over_complement_alpha, (double)points_size);
             do_sprt = time_ver_corr_sprt * avg_num_checked_pts < time_ver_corr * points_size;
         }
         return true;
     }
     std::pair<double,double> estimateThresholdA (double epsilon, double delta) {
-        const double C = (1 - delta) * log ((1 - delta) / (1 - epsilon)) + delta * log (delta / epsilon);
+        const double C = (1 - delta) * std::log ((1 - delta) / (1 - epsilon)) + delta * std::log (delta / epsilon);
         // K = K1/K2 + 1 = (t_M / P_g) / (m_S / (C * P_g)) + 1 = (t_M * C)/m_S + 1
         const double K = t_M * C / m_S + 1;
         double An, An_1 = K;
         // compute A using a recursive relation
         // A* = lim(n->inf)(An), the series typically converges within 4 iterations
         for (int i = 0; i < 10; i++) {
-            An = K + log(An_1);
+            An = K + std::log(An_1);
             if (fabs(An - An_1) < FLT_EPSILON)
                 break;
             An_1 = An;

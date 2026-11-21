@@ -180,7 +180,7 @@ void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints
     for (int i = 0; i < 3; i++) {
         const double k_inv_u = ipoints.at<double>(i, 0);
         const double k_inv_v = ipoints.at<double>(i, 1);
-        double x_norm = 1.0 / sqrt(k_inv_u*k_inv_u + k_inv_v*k_inv_v + 1);
+        double x_norm = 1.0 / std::sqrt(k_inv_u*k_inv_u + k_inv_v*k_inv_v + 1);
         x_copy[i](0) = k_inv_u * x_norm;
         x_copy[i](1) = k_inv_v * x_norm;
         x_copy[i](2) =           x_norm;

@@ -68,14 +68,7 @@ namespace cv
     inline unsigned abs(unsigned a) { return a; }
     inline uint64 abs(uint64 a) { return a; }
 
-    using std::min;
-    using std::max;
     using std::abs;
-    using std::swap;
-    using std::sqrt;
-    using std::exp;
-    using std::pow;
-    using std::log;
 }
 
 #include "cvstd_wrapper.hpp"
@@ -135,7 +128,7 @@ public:
     void construct(pointer p, const _Tp& v) { new(static_cast<void*>(p)) _Tp(v); }
     void destroy(pointer p) { p->~_Tp(); }
 
-    size_type max_size() const { return cv::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
+    size_type max_size() const { return std::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
 };
 
 //! @} core_utils

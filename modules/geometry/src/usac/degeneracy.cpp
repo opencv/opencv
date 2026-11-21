@@ -201,7 +201,7 @@ private:
     Ptr<UniformRandomGenerator> random_gen_H;
     const EpipolarGeometryDegeneracyImpl ep_deg;
     // threshold to find inliers for homography model
-    const double homography_threshold, log_conf = log(0.05), H_SAMPLE_THR_SQR = 49/*7^2*/, MAX_H_THR = 225/*15^2*/;
+    const double homography_threshold, log_conf = std::log(0.05), H_SAMPLE_THR_SQR = 49/*7^2*/, MAX_H_THR = 225/*15^2*/;
     double f_threshold_sqr, best_focal = -1;
     // points (1-7) to verify in sample
     std::vector<std::vector<int>> h_sample {{0,1,2},{3,4,5},{0,1,6},{3,4,6},{2,5,6}};
@@ -435,7 +435,7 @@ public:
             const int num_f_inliers_of_h_outliers = getNonPlanarSupport(Mat(F), num_models_used_so_far >= MAX_MODELS_TO_TEST, non_planar_support);
             if (non_planar_support < num_f_inliers_of_h_outliers) {
                 non_planar_support = num_f_inliers_of_h_outliers;
-                const double predicted_iters = log_conf / log(1 - std::pow(static_cast<double>
+                const double predicted_iters = log_conf / std::log(1 - std::pow(static_cast<double>
                     (getNonPlanarSupport(Mat(F), non_planar_pts, num_non_planar_pts)) / num_non_planar_pts, 2));
                 if (use_preemptive && ! std::isinf(predicted_iters) && predicted_iters < max_iters)
                     max_iters = static_cast<int>(predicted_iters);

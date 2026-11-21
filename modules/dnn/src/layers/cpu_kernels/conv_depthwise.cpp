@@ -156,7 +156,7 @@ void depthWiseBlockConv2D(const float* wptr,
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
             w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
             w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    const int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+    const int outW1 = std::min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
     float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
 
     for (int out_i = 0; out_i < outH; out_i++)
@@ -330,7 +330,7 @@ void depthWiseBlockConv1D(const float* wptr,
                                  int out_d, int outW, bool fusedAdd)
 {
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2];
-    const int outW1 = min(outW, (width - dilation_w * (kernel_w - 1) + pad_l)/stride_w);
+    const int outW1 = std::min(outW, (width - dilation_w * (kernel_w - 1) + pad_l)/stride_w);
     float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
 
     int out_j = 0;

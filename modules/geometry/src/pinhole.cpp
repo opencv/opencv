@@ -285,7 +285,7 @@ static void undistortPointsInternal( const Mat& _src, Mat& _dst, const Mat& _cam
                     double x_proj = xd*fx + cx;
                     double y_proj = yd*fy + cy;
 
-                    error = sqrt( std::pow(x_proj - u, 2) + std::pow(y_proj - v, 2) );
+                    error = std::sqrt( std::pow(x_proj - u, 2) + std::pow(y_proj - v, 2) );
                 }
                 if (error > prevError) {
                     alpha *= .5;

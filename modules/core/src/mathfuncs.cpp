@@ -1517,8 +1517,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
         if( d > 0 )
         {
-            double theta = acos(R / sqrt(Qcubed));
-            double sqrtQ = sqrt(Q);
+            double theta = acos(R / std::sqrt(Qcubed));
+            double sqrtQ = std::sqrt(Q);
             double t0 = -2 * sqrtQ;
             double t1 = theta * (1./3);
             double t2 = a1 * (1./3);
@@ -1538,7 +1538,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         else
         {
             double e;
-            d = sqrt(-d);
+            d = std::sqrt(-d);
             e = std::cbrt(d + fabs(R));
             if( R > 0 )
                 e = -e;
@@ -1619,9 +1619,9 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
         if( coeff > DBL_EPSILON )
         {
             if( i != n )
-                u.at<double>(i) = 2.0 * pow(coeff / absCoeffs.at<double>(n), 1.0 / (n - i));
+                u.at<double>(i) = 2.0 * std::pow(coeff / absCoeffs.at<double>(n), 1.0 / (n - i));
             if( i != 0 )
-                v.at<double>(i - 1) = 0.5 * pow(absCoeffs.at<double>(0) / coeff, 1.0 / i);
+                v.at<double>(i - 1) = 0.5 * std::pow(absCoeffs.at<double>(0) / coeff, 1.0 / i);
             nonZeroCoeffs++;
         }
     }
@@ -1674,14 +1674,14 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                 for( j = 0; j < square_root_times; j++)
                 {
                     num.re = old_num_re*old_num_re + old_num_im*old_num_im;
-                    num.re = sqrt(num.re);
+                    num.re = std::sqrt(num.re);
                     num.re += old_num_re;
                     num.im = num.re - old_num_re;
                     num.re /= 2;
-                    num.re = sqrt(num.re);
+                    num.re = std::sqrt(num.re);
 
                     num.im /= 2;
-                    num.im = sqrt(num.im);
+                    num.im = std::sqrt(num.im);
                     if( old_num_re < 0 ) num.im = -num.im;
                 }
 
@@ -1695,7 +1695,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
                     solveCubic(cube_coefs, cube_roots);
 
                     num.re = std::cbrt(cube_roots.at<double>(0));
-                    num.im = sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
+                    num.im = std::sqrt(std::pow(num.re, 2) / 3 - old_num_re / (3*num.re));
                 }
             }
             roots[i] = p - num;

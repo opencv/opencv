@@ -79,7 +79,7 @@ void epnp::choose_control_points(void)
   transpose(UCt, UCt);
 
   for(int i = 1; i < 4; i++) {
-    double k = sqrt(dc[i - 1] / number_of_correspondences);
+    double k = std::sqrt(dc[i - 1] / number_of_correspondences);
     for(int j = 0; j < 3; j++)
       cws[i][j] = cws[0][j] + k * uct[3 * (i - 1) + j];
   }
@@ -320,7 +320,7 @@ double epnp::reprojection_error(const double R[3][3], const double t[3])
     double ve = vc + fv * Yc * inv_Zc;
     double u = us[2 * i], v = us[2 * i + 1];
 
-    sum2 += sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );
+    sum2 += std::sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );
   }
 
   return sum2 / number_of_correspondences;
@@ -346,12 +346,12 @@ void epnp::find_betas_approx_1(const Mat& L_6x10, const Mat& Rho, double* betas)
   CV_Assert(B4.ptr<double>() == b4);
 
   if (b4[0] < 0) {
-    betas[0] = sqrt(-b4[0]);
+    betas[0] = std::sqrt(-b4[0]);
     betas[1] = -b4[1] / betas[0];
     betas[2] = -b4[2] / betas[0];
     betas[3] = -b4[3] / betas[0];
   } else {
-    betas[0] = sqrt(b4[0]);
+    betas[0] = std::sqrt(b4[0]);
     betas[1] = b4[1] / betas[0];
     betas[2] = b4[2] / betas[0];
     betas[3] = b4[3] / betas[0];
@@ -377,11 +377,11 @@ void epnp::find_betas_approx_2(const Mat& L_6x10, const Mat& Rho, double* betas)
   CV_Assert(B3.ptr<double>() == b3);
 
   if (b3[0] < 0) {
-    betas[0] = sqrt(-b3[0]);
-    betas[1] = (b3[2] < 0) ? sqrt(-b3[2]) : 0.0;
+    betas[0] = std::sqrt(-b3[0]);
+    betas[1] = (b3[2] < 0) ? std::sqrt(-b3[2]) : 0.0;
   } else {
-    betas[0] = sqrt(b3[0]);
-    betas[1] = (b3[2] > 0) ? sqrt(b3[2]) : 0.0;
+    betas[0] = std::sqrt(b3[0]);
+    betas[1] = (b3[2] > 0) ? std::sqrt(b3[2]) : 0.0;
   }
 
   if (b3[1] < 0) betas[0] = -betas[0];
@@ -410,11 +410,11 @@ void epnp::find_betas_approx_3(const Mat& L_6x10, const Mat& Rho, double * betas
   CV_Assert(B5.ptr<double>() == b5);
 
   if (b5[0] < 0) {
-    betas[0] = sqrt(-b5[0]);
-    betas[1] = (b5[2] < 0) ? sqrt(-b5[2]) : 0.0;
+    betas[0] = std::sqrt(-b5[0]);
+    betas[1] = (b5[2] < 0) ? std::sqrt(-b5[2]) : 0.0;
   } else {
-    betas[0] = sqrt(b5[0]);
-    betas[1] = (b5[2] > 0) ? sqrt(b5[2]) : 0.0;
+    betas[0] = std::sqrt(b5[0]);
+    betas[1] = (b5[2] > 0) ? std::sqrt(b5[2]) : 0.0;
   }
   if (b5[1] < 0) betas[0] = -betas[0];
   betas[2] = b5[3] / betas[0];
@@ -563,7 +563,7 @@ void epnp::qr_solve(Mat& A, Mat& b, Mat& X)
         sum2 += *ppAik2 * *ppAik2;
         ppAik2 += nc;
       }
-      double sigma = sqrt(sum2);
+      double sigma = std::sqrt(sum2);
       if (*ppAkk < 0)
       sigma = -sigma;
       *ppAkk += sigma;

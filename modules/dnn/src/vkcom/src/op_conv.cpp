@@ -24,7 +24,7 @@ OpConv::OpConv(const Mat& weightBlob, const std::vector<float>& biasvec, int _ac
     type_ = kOpTypeConv;
     CV_Assert(!weightBlob.empty());
 
-    Kg = K/ngroups, Cg = max(C/ngroups, 1);
+    Kg = K/ngroups, Cg = std::max(C/ngroups, 1);
     ksize = Hk * Wk;
     CgHkWk = Cg * ksize;
     fast_1x1 = ksize == 1 && stride_w == 1 && stride_h == 1 && pad_top == 0 && pad_left == 0;

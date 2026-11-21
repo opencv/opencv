@@ -407,8 +407,8 @@ int FramebufferBackend::fbOpenAndGetInfo()
     fbBitsPerPixel = varInfo.bits_per_pixel;
     fbLineLength = fixInfo.line_length;
 
-    fbScreenSize = max(varInfo.xres, varInfo.xres_virtual) *
-    max(varInfo.yres, varInfo.yres_virtual) *
+    fbScreenSize = std::max(varInfo.xres, varInfo.xres_virtual) *
+    std::max(varInfo.yres, varInfo.yres_virtual) *
     fbBitsPerPixel / 8;
 
     fbPointer = (unsigned char*)

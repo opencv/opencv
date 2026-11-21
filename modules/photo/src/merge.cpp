@@ -254,7 +254,7 @@ public:
             }
         });
 
-        int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
+        int maxlevel = static_cast<int>(std::log2(static_cast<float>(std::min(size.width, size.height))));
         std::vector<Mat> res_pyr(maxlevel + 1);
         std::vector<Mutex> res_pyr_mutexes(maxlevel + 1);
 

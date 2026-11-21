@@ -153,7 +153,7 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     Vec2f vecs[2];
     vecs[0] = Vec2f(_point1 - _point2);
     vecs[1] = Vec2f(_point2 - _point3);
-    double x = std::max(norm(_point1), std::max(norm(_point2), norm(_point3)));
+    double x = std::max({norm(_point1), norm(_point2), norm(_point3)});
     double a = std::min(norm(vecs[0]), norm(vecs[1]));
     // check that given sides are perpendicular
     CV_Assert( std::fabs(vecs[0].ddot(vecs[1])) * a <= FLT_EPSILON * 9 * x * (norm(vecs[0]) * norm(vecs[1])) );
@@ -202,10 +202,10 @@ Rect RotatedRect::boundingRect() const
 {
     Point2f pt[4];
     points(pt);
-    Rect r(cvFloor(std::min(std::min(std::min(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
-           cvFloor(std::min(std::min(std::min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
-           cvCeil(std::max(std::max(std::max(pt[0].x, pt[1].x), pt[2].x), pt[3].x)),
-           cvCeil(std::max(std::max(std::max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
+    Rect r(cvFloor(std::min({pt[0].x, pt[1].x, pt[2].x, pt[3].x})),
+           cvFloor(std::min({pt[0].y, pt[1].y, pt[2].y, pt[3].y})),
+           cvCeil(std::max({pt[0].x, pt[1].x, pt[2].x, pt[3].x})),
+           cvCeil(std::max({pt[0].y, pt[1].y, pt[2].y, pt[3].y})));
     r.width -= r.x - 1;
     r.height -= r.y - 1;
     return r;
@@ -216,8 +216,8 @@ Rect_<float> RotatedRect::boundingRect2f() const
 {
     Point2f pt[4];
     points(pt);
-    Rect_<float> r(Point_<float>(min(min(min(pt[0].x, pt[1].x), pt[2].x), pt[3].x), min(min(min(pt[0].y, pt[1].y), pt[2].y), pt[3].y)),
-                   Point_<float>(max(max(max(pt[0].x, pt[1].x), pt[2].x), pt[3].x), max(max(max(pt[0].y, pt[1].y), pt[2].y), pt[3].y)));
+    Rect_<float> r(Point_<float>(std::min({pt[0].x, pt[1].x, pt[2].x, pt[3].x}), std::min({pt[0].y, pt[1].y, pt[2].y, pt[3].y})),
+                   Point_<float>(std::max({pt[0].x, pt[1].x, pt[2].x, pt[3].x}), std::max({pt[0].y, pt[1].y, pt[2].y, pt[3].y})));
     return r;
 }
 

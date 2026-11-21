@@ -791,7 +791,7 @@ TEST_P(CharucoBoard, testWrongSizeDetection)
     Mat boardImage;
     board.generateImage(boardSize*40, boardImage);
 
-    swap(boardSize.width, boardSize.height);
+    std::swap(boardSize.width, boardSize.height);
     aruco::CharucoDetector detector(aruco::CharucoBoard(boardSize, 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50)));
     // try detect board with wrong size
     for(int i: {0, 1}) {

@@ -840,7 +840,7 @@ static void printNodeRec(cv::instr::InstrNode *pNode, cv::instr::InstrNode *pRoo
             {
                 if(pNode->m_childs[i-1]->m_payload.m_funName == pNode->m_childs[j]->m_payload.m_funName )
                 {
-                    cv::swap(pNode->m_childs[i], pNode->m_childs[j]);
+                    std::swap(pNode->m_childs[i], pNode->m_childs[j]);
                     i++;
                 }
             }
@@ -1037,7 +1037,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         printf("No such strategy: %s\n", perf_strategy.c_str());
         exit(1);
     }
-    param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
+    param_max_outliers  = std::clamp(args.get<double>("perf_max_outliers"), 0., 100.);
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
     param_seed          = args.get<unsigned int>("perf_seed");

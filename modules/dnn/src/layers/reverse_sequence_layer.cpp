@@ -53,7 +53,7 @@ public:
         CV_Assert(inputs.size()==2);
         CV_CheckType(inputs[1], inputs[1]==CV_32S||inputs[1]==CV_64S,
                      "ReverseSequence: sequence_lens must be int64 or int32");
-        outputs.assign(max(1, requiredOutputs), inputs[0]);
+        outputs.assign(std::max(1, requiredOutputs), inputs[0]);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,

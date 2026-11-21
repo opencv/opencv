@@ -298,7 +298,7 @@ int SubmapManager<MatType>::estimateConstraint(int fromSubmapId, int toSubmapId,
         float rAbs = abs(residual);
         if (rAbs < thresh)
             return 1.0;
-        float numerator = sqrt(2 * thresh * rAbs - thresh * thresh);
+        float numerator = std::sqrt(2 * thresh * rAbs - thresh * thresh);
         return numerator / rAbs;
     };
 
@@ -379,7 +379,7 @@ int SubmapManager<MatType>::estimateConstraint(int fromSubmapId, int toSubmapId,
                 inlierConstraint += DualQuatf::createFromMat(fromSubmapData.constraints[i].matrix);
         }
     }
-    inlierConstraint = inlierConstraint * 1.0f/float(max(localInliers, 1));
+    inlierConstraint = inlierConstraint * 1.0f/float(std::max(localInliers, 1));
     inlierPose = inlierConstraint.toAffine3();
     inliers    = localInliers;
 
