@@ -844,16 +844,19 @@ def _write_namespace_stub(ns: dict, out_dir: pathlib.Path,
                 spec = m["name"]
             else:
                 spec = qualified
-            rendered.append((spec, directive))
+            rendered.append((spec, directive, m['id']))
         if not rendered:
             continue
         lines.append(f"## {_MEMBER_DETAIL_SECTION[section_title]}")
         lines.append("")
-        for spec, dname in rendered:
+        for spec, dname, member_id in rendered:
             short = spec.split("(")[0].split("::")[-1]
             suffix = "()" if dname == "doxygenfunction" else ""
-            lines += [f"### {short}{suffix}", "",
-                      f"```{{{dname}}} {spec}", ":project: opencv", "```", ""]
+            # The group/class detail owns the C++ declaration. Namespace pages
+            # repeat its documentation with a local target, without registering
+            # the same Breathe targets a second time.
+            lines += [f"({member_id})=", f"### {short}{suffix}", "",
+                      f"```{{{dname}}} {spec}", ":project: opencv", ":no-link:", "```", ""]
 
     _stub_write(out_dir / fname, "\n".join(lines) + "\n")
     return anchor, fname
@@ -1925,6 +1928,7 @@ def _write_class_stub(cls: dict, out_dir: pathlib.Path,
             "",
             f"```{{{_directive}}} {qualified}",
             ":project: opencv",
+            ":no-link:",
             "```",
             "",
         ]
@@ -2689,6 +2693,11 @@ def _generate_api_stubs(modules, xml_dir, out_dir,
     # Hidden toctree drives nav/sidebar; the visible list shows "folder. Title".
     root_lines += ["```{toctree}", ":hidden:", ":maxdepth: 1", ""]
     root_lines += [stem for _m, stem, _t in module_rows]
+    # Optional API groups still need a navigation parent even when they are
+    # intentionally omitted from the visible module directory listing.
+    root_lines += [tree["name"] for tree in trees
+                   if tree["name"] not in {stem for _m, stem, _t in module_rows}
+                   and tree is not _gapi_tree]
     root_lines += ["```", ""]
     for _m, stem, title in module_rows:
         root_lines.append(f"- {_m}. [{title}]({stem}.md)")

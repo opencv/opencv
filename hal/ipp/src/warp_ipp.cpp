@@ -246,16 +246,15 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #else // IPP_CALLS_ENFORCED is not defined, results are strictly aligned to OpenCV implementation
     // Columns per type: { NEAREST, LINEAR }. Zeroed = IPP declines, OpenCV is used:
-    // 16S LINEAR (IPP diverges from OpenCV); NEAREST for 8U/16U and 32F C3/C4 (IPP rounds the .5
-    // boundary opposite cvRound); C2/8S/32S/64F unsupported. NEAREST is enabled for 16S (all
-    // channels) and 32F C1.
+    // 16S LINEAR (IPP diverges from OpenCV); NEAREST for 8U/16U/32F (IPP rounds half coordinates
+    // differently from cvRound); C2/8S/32S/64F unsupported. NEAREST is enabled for 16S.
                                     /* C1      C2      C3      C4 */
     char impl[CV_DEPTH_MAX][4][2]={{{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //8U
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //8S
                                    {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //16U
                                    {{1, 0}, {0, 0}, {1, 0}, {1, 0}},   //16S
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}},   //32S
-                                   {{1, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
+                                   {{0, 1}, {0, 0}, {0, 1}, {0, 1}},   //32F
                                    {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};  //64F
 #endif
 

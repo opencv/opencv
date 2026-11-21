@@ -666,11 +666,11 @@ double calibrateMultiview(
     // process input and count all visible frames and points
 
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
-    const auto * const detection_mask_ptr = detection_mask_.data;
     for (int c = 0; c < NUM_CAMERAS; c++) {
+        const uchar* detection_mask_ptr = detection_mask_.ptr<uchar>(c);
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
-            detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f] != 0;
+            detection_mask_mat[c][f] = detection_mask_ptr[f] != 0;
             if (detection_mask_mat[c][f]) {
                 num_visible_frames++;
                 valid_frames[f] = true; // if frame is visible by at least one camera then count is as a valid one

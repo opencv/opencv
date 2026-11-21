@@ -649,8 +649,17 @@ public:
         | Y3 |   | x3 y3 1 |   | f |
         */
 
-        double d = 1. / ( x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2) );
-
+        const double denom = x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2);
+        // denom is twice the signed area of the (x1,y1),(x2,y2),(x3,y3) triangle.
+        // If the 3 points are (nearly) collinear, the affine transform is not
+        // uniquely determined; reject instead of dividing by a near-zero value.
+        // The tolerance is measured against the triangle's own edges, so it
+        // does not depend on where the points are in the plane.
+        const double len12 = fabs(x2-x1) + fabs(y2-y1);
+        const double len13 = fabs(x3-x1) + fabs(y3-y1);
+        if (fabs(denom) <= 10 * FLT_EPSILON * len12 * len13)
+            return 0;
+        double d = 1. / denom;
         M[0] = d * ( X1*(y2-y3) + X2*(y3-y1) + X3*(y1-y2) );
         M[1] = d * ( X1*(x3-x2) + X2*(x1-x3) + X3*(x2-x1) );
         M[2] = d * ( X1*(x2*y3 - x3*y2) + X2*(x3*y1 - x1*y3) + X3*(x1*y2 - x2*y1) );
@@ -743,8 +752,12 @@ public:
         B = (X1, Y1, X2, Y2).t()
         we solve that analytically
         */
-        double d = 1./((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
-
+        const double sq_dist = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
+        // Only coincident points leave the transform undetermined; any other
+        // separation, however small, still determines it.
+        if (sq_dist == 0)
+            return 0;
+        double d = 1./sq_dist;
         // solution vector
         double S0 = d * ( (X1-X2)*(x1-x2) + (Y1-Y2)*(y1-y2) );
         double S1 = d * ( (Y1-Y2)*(x1-x2) - (X1-X2)*(y1-y2) );

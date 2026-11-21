@@ -2198,6 +2198,31 @@ TEST(Core_CheckRange_INT_MAX, accuracy)
     ASSERT_TRUE( cv::checkRange(m) );
 }
 
+TEST(Core_MagnitudePhase, nd_input)
+{
+    const int sz[] = {2, 3, 4};
+    for (int depth : {CV_32F, CV_64F})
+    {
+        SCOPED_TRACE(depth);
+        Mat x(3, sz, depth), y(3, sz, depth);
+        randu(x, -10, 10);
+        randu(y, -10, 10);
+        Mat x2d = x.reshape(1, 6), y2d = y.reshape(1, 6);
+
+        Mat mag, mag2d;
+        ASSERT_NO_THROW(magnitude(x, y, mag));
+        magnitude(x2d, y2d, mag2d);
+        EXPECT_EQ(x.size, mag.size);
+        EXPECT_EQ(0, cvtest::norm(mag.reshape(1, 6), mag2d, NORM_INF));
+
+        Mat angle, angle2d;
+        ASSERT_NO_THROW(phase(x, y, angle, true));
+        phase(x2d, y2d, angle2d, true);
+        EXPECT_EQ(x.size, angle.size);
+        EXPECT_EQ(0, cvtest::norm(angle.reshape(1, 6), angle2d, NORM_INF));
+    }
+}
+
 TEST(Core_CheckRange_INT_MAX1, accuracy)
 {
     cv::Mat m(3, 3, CV_32SC1, cv::Scalar(INT_MAX));
@@ -2547,6 +2572,24 @@ TEST(Core_Transform, accuracy) { Core_TransformTest test; test.safe_run(); }
 TEST(Core_TransformLarge, accuracy) { Core_TransformLargeTest test; test.safe_run(); }
 TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; test.safe_run(); }
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
+
+using Core_PowZero = testing::TestWithParam<int>;
+
+TEST_P(Core_PowZero, fills_all_channels)
+{
+    const int channels = GetParam();
+    Mat src(3, 7, CV_MAKETYPE(CV_32F, channels));
+    src.reshape(1).setTo(-2.0);
+    Mat dst;
+
+    cv::pow(src, 0, dst);
+
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    EXPECT_EQ(0, countNonZero(dst.reshape(1) != 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_PowZero, testing::Values(1, 4, 5, 9));
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }

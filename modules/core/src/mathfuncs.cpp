@@ -152,7 +152,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     CV_INSTRUMENT_REGION();
 
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
-    CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( src1.sameSize(src2) && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
     CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
                ocl_math_op(src1, src2, dst, OCL_OP_MAG))
@@ -188,7 +188,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     CV_INSTRUMENT_REGION();
 
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
-    CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( src1.sameSize(src2) && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
     CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
                ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS))
@@ -998,7 +998,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
         {
         case 0:
             _dst.createSameSize(_src, type);
-            _dst.setTo(Scalar::all(1));
+            if (cn > 4 && !_dst.isGpuMat())
+                _dst.setTo(1.0);
+            else
+                _dst.setTo(Scalar::all(1));
             return;
         case 1:
             _src.copyTo(_dst);

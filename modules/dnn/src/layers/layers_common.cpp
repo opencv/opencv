@@ -402,9 +402,9 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     if (type0 == CV_8U)
         iv = *tensor.ptr<uint8_t>();
     else if (type0 == CV_8S)
-        iv = *tensor.ptr<uint8_t>();
+        iv = *tensor.ptr<int8_t>();
     else if (type0 == CV_16U)
-        iv = *tensor.ptr<uint8_t>();
+        iv = *tensor.ptr<uint16_t>();
     else if (type0 == CV_16S)
         iv = *tensor.ptr<int16_t>();
     else if (type0 == CV_32U)

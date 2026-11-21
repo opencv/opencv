@@ -2487,6 +2487,20 @@ TEST(Core_FindNonZero, wide_rows_8u)
     EXPECT_EQ(expected, pts);
 }
 
+TEST(Core_FindNonZero, mat_1d)
+{
+    int sz[] = {7};
+    Mat src(1, sz, CV_8U, Scalar(0));
+    src.at<uchar>(2) = 5;
+    src.at<uchar>(6) = 1;
+
+    std::vector<Point> pts;
+    findNonZero(src, pts);
+
+    std::vector<Point> expected = { Point(2, 0), Point(6, 0) };
+    EXPECT_EQ(expected, pts);
+}
+
 TEST(Core_BoolVector, support)
 {
     std::vector<bool> test;
@@ -3737,6 +3751,27 @@ TEST(Core_ConvertTo, regression_12121)
         EXPECT_EQ(65535, dst.at<ushort>(0, 0)) << "src=" << src.at<int>(0, 0);
     }
 }
+
+// convertTo(CV_Bool) must treat -0.0 as zero for every floating-point depth
+typedef testing::TestWithParam<perf::MatDepth> Core_ConvertTo_NegativeZeroToBool;
+
+TEST_P(Core_ConvertTo_NegativeZeroToBool, accuracy)
+{
+    const int depth = GetParam();
+    const float vals[] = { -0.f, 0.f, 1.f, -1.f, 0.5f, -0.5f };
+    const uchar expected[] = { 0, 0, 1, 1, 1, 1 };
+    Mat src32f(1, 6, CV_32F, (void*)vals);
+
+    Mat src, dst;
+    src32f.convertTo(src, depth);
+    src.convertTo(dst, CV_Bool);
+    ASSERT_EQ(CV_Bool, dst.type());
+    for (int i = 0; i < 6; i++)
+        EXPECT_EQ(expected[i], dst.at<uchar>(i)) << "i=" << i;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ConvertTo_NegativeZeroToBool,
+    testing::Values(perf::MatDepth(CV_32F), CV_64F, CV_16F, CV_16BF, CV_8F_E4M3FN, CV_8F_E4M3FNUZ));
 
 TEST(Core_MeanStdDev, regression_multichannel)
 {
@@ -5337,5 +5372,68 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
         EXPECT_EQ(a.at<double>(64), big64);
     }
 }
+
+// cv::compare had no CV_Bool kernel for the matrix/matrix form, so every comparison of two
+// CV_Bool matrices threw "no kernel for this op/type combination" while the matrix/scalar
+// overload of the same function worked. CV_Bool is logical: a byte is true when it is non-zero,
+// which is how countNonZero, norm and the scalar overload already read it. A matrix wrapping an
+// external buffer is never converted, so bytes other than 0 and 1 are reachable through the
+// public API and must not compare as integers.
+typedef testing::TestWithParam<int> Core_CompareBool_canonical;
+typedef testing::TestWithParam<int> Core_CompareBool_nonCanonical;
+typedef testing::TestWithParam<int> Core_CompareBool_scalarAgreement;
+
+// Canonical 0/1 operands: the result must match the same comparison done on CV_8U.
+TEST_P(Core_CompareBool_canonical, matches_CV_8U)
+{
+    const int op = GetParam();
+    uchar abytes[4] = { 0, 0, 1, 1 };
+    uchar bbytes[4] = { 0, 1, 0, 1 };
+    const Mat ab(1, 4, CV_Bool, abytes), bb(1, 4, CV_Bool, bbytes);
+    const Mat au(1, 4, CV_8U, abytes), bu(1, 4, CV_8U, bbytes);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(ab, bb, got, op));
+    cv::compare(au, bu, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF));
+}
+
+// Non-canonical bytes: 1, 2 and 255 all mean true, so each must compare exactly as 1 does.
+TEST_P(Core_CompareBool_nonCanonical, true_bytes_compare_as_one)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    uchar one[4] = { 0, 1, 1, 1 };
+    const Mat a(1, 4, CV_Bool, raw), canonical(1, 4, CV_Bool, one);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(a, rhs, got, op));
+    cv::compare(canonical, rhs, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF)) << "non-canonical bytes must compare logically";
+}
+
+// The matrix/matrix form must agree with the matrix/scalar form, which already worked.
+TEST_P(Core_CompareBool_scalarAgreement, matrix_matrix_matches_matrix_scalar)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    const Mat a(1, 4, CV_Bool, raw);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat fromMat, fromScalar;
+    cv::compare(a, rhs, fromMat, op);
+    cv::compare(a, Scalar(1), fromScalar, op);
+    EXPECT_EQ(0, cv::norm(fromMat, fromScalar, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_canonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_nonCanonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_scalarAgreement,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
 
 }} // namespace

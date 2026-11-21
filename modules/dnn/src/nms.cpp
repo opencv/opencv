@@ -65,7 +65,7 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
                                        const float score_threshold, const float nms_threshold,
                                        std::vector<int>& indices, const float eta, const int top_k)
 {
-    double x1, y1, x2, y2, max_coord = 0;
+    double x1, y1, x2, y2, max_coord = 0, min_coord = 0;
     for (int i = 0; i < bboxes.size(); i++)
     {
         x1 = bboxes[i].x;
@@ -77,6 +77,10 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
         max_coord = std::max(y1, max_coord);
         max_coord = std::max(x2, max_coord);
         max_coord = std::max(y2, max_coord);
+        min_coord = std::min(x1, min_coord);
+        min_coord = std::min(y1, min_coord);
+        min_coord = std::min(x2, min_coord);
+        min_coord = std::min(y2, min_coord);
     }
 
     // calculate offset and add offset to each bbox
@@ -84,7 +88,7 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
     double offset;
     for (int i = 0; i < bboxes.size(); i++)
     {
-        offset = class_ids[i] * (max_coord + 1);
+        offset = class_ids[i] * (max_coord - min_coord + 1);
         bboxes_offset.push_back(
             Rect_t(bboxes[i].x + offset, bboxes[i].y + offset,
                    bboxes[i].width, bboxes[i].height)
