@@ -1099,6 +1099,9 @@ struct RemapLanczos4VecC1<T, float>
     }
 };
 
+using RemapLanczos4RGBFn = void (*)(const float*, size_t, const float*, float*);
+RemapLanczos4RGBFn remapLanczos4RGB_fn();
+
 template<class CastOp, typename AT, int ONE, bool isRelative>
 static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                            const Mat& _fxy, const void* _wtab,
@@ -1120,6 +1123,16 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
     int borderType1 = borderType != BORDER_TRANSPARENT ? borderType : BORDER_REFLECT_101;
 
     unsigned width1 = std::max(ssize.width-7, 0), height1 = std::max(ssize.height-7, 0);
+
+    RemapLanczos4RGBFn rgbFn = nullptr;
+    if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
+    {
+        if (cn == 3)
+        {
+            static const RemapLanczos4RGBFn fn = remapLanczos4RGB_fn();
+            rgbFn = fn;
+        }
+    }
 
     if( _dst.isContinuous() && _xy.isContinuous() && _fxy.isContinuous() && !isRelative )
     {
@@ -1147,6 +1160,14 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
                 const T* S = S0 + sy*sstep + sx*cn;
+                if constexpr (std::is_same_v<T, float> && std::is_same_v<AT, float>)
+                {
+                    if (rgbFn)
+                    {
+                        rgbFn(S, sstep, w, D);
+                        continue;
+                    }
+                }
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
