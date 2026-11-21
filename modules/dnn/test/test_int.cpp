@@ -838,6 +838,8 @@ TEST_P(Test_GatherElements_Int, random)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO carries a tensor type for 8-bit, signed 32/64-bit and float depths only
     if (backend == DNN_BACKEND_CUDA && wideIntType)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // The CUDA wrapper carries a tensor type for 8-bit, signed 32/64-bit and float depths only
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && matType == CV_64S)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // There is a problem with OpenVINO and custom int64 layers. After model compilation the output tensor type changes from int64 to int32
 
     std::vector<int> inShape{2, 3, 4, 5};
     Mat input(inShape, matType);
@@ -901,6 +903,58 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_GatherElements_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
+
+static Net makeTwoInputNet(const LayerParams& lp, std::vector<String>& inpNames)
+{
+    Net net;
+    LayerParams params = lp;
+    int id = net.addLayerToPrev(params.name, params.type, params);
+    net.connect(0, 1, id, 1);
+    net.setInputsNames(inpNames);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    return net;
+}
+
+typedef testing::TestWithParam<int> Layer_GatherElements_Range;
+TEST_P(Layer_GatherElements_Range, out_of_range_index)
+{
+    // axis 0 runs the strided branch, axis 1 the innermost-axis branch.
+    const int axis = GetParam();
+    std::vector<int> inShape{3, 4};
+    Mat input(inShape, CV_32S);
+    cv::randu(input, -100, 100);
+    const int axis_dim = input.size[axis];
+
+    LayerParams lp;
+    lp.type = "GatherElements";
+    lp.name = "testLayer";
+    lp.set("axis", axis);
+    std::vector<String> inpNames{"gather_input", "gather_indices"};
+    Net net = makeTwoInputNet(lp, inpNames);
+
+    std::vector<int> idxShape = inShape;
+    idxShape[axis] = 1;
+    Mat indices(idxShape, CV_64S);
+
+    // A negative index counts from the end.
+    indices.setTo(-1);
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    Mat re = net.forward();
+    Mat ref = axis == 0 ? input.row(axis_dim - 1) : input.col(axis_dim - 1);
+    ASSERT_EQ(re.total(), ref.total());
+    EXPECT_EQ(0, cvtest::norm(re.reshape(1, ref.rows), ref, NORM_INF));
+
+    for (int64_t bad : {(int64_t)axis_dim, (int64_t)-axis_dim - 1, (int64_t)-1000000})
+    {
+        indices.setTo(Scalar::all((double)bad));
+        net.setInput(input, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        EXPECT_ANY_THROW(net.forward()) << "index=" << bad;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements_Range, testing::Values(0, 1));
 
 typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_Gather_Int;
 TEST_P(Test_Gather_Int, random)
@@ -1629,5 +1683,98 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_GatherND_Int, Combine(
     testing::Values(CV_32S, CV_64S),
     dnnBackendsAndTargets()
 ));
+
+TEST(Layer_GatherND, out_of_range_index)
+{
+    std::vector<int> inShape{4, 5};
+    Mat input(inShape, CV_32S);
+    cv::randu(input, -100, 100);
+
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    std::vector<String> inpNames{"gathernd_input", "gathernd_indices"};
+    Net net = makeTwoInputNet(lp, inpNames);
+
+    std::vector<int> idxShape{1, 1};
+    Mat indices(idxShape, CV_64S);
+
+    // A negative index counts from the end.
+    indices.ptr<int64_t>()[0] = -1;
+    net.setInput(input, inpNames[0]);
+    net.setInput(indices, inpNames[1]);
+    Mat re = net.forward();
+    ASSERT_EQ(re.total(), (size_t)input.size[1]);
+    EXPECT_EQ(0, cvtest::norm(re.reshape(1, 1), input.row(3), NORM_INF));
+
+    for (int64_t bad : {(int64_t)4, (int64_t)-5, (int64_t)1000000})
+    {
+        indices.ptr<int64_t>()[0] = bad;
+        net.setInput(input, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        EXPECT_ANY_THROW(net.forward()) << "index=" << bad;
+    }
+}
+
+TEST(Layer_GatherND, batch_dims)
+{
+    std::vector<int> inShape{2, 3, 4};
+    Mat input(inShape, CV_32S);
+    cv::randu(input, -100, 100);
+
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    std::vector<String> inpNames{"gathernd_input", "gathernd_indices"};
+
+    // Valid batch_dims = 1: indices [2, 1] pick row idx[b] from batch b.
+    {
+        lp.set("batch_dims", 1);
+        Net net = makeTwoInputNet(lp, inpNames);
+        std::vector<int> idxShape{2, 1};
+        Mat indices(idxShape, CV_64S);
+        indices.ptr<int64_t>()[0] = 2;
+        indices.ptr<int64_t>()[1] = -3;
+        net.setInput(input, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        Mat re = net.forward();
+        ASSERT_EQ(re.total(), (size_t)(2 * 4));
+        for (int b = 0; b < 2; ++b)
+        {
+            int row = b == 0 ? 2 : 0;
+            for (int k = 0; k < 4; ++k)
+                EXPECT_EQ(input.at<int>(b, row, k), re.ptr<int>()[b * 4 + k]) << "b=" << b << " k=" << k;
+        }
+    }
+
+    struct BadCase { int batch_dims; std::vector<int> dataShape, idxShape; };
+    const BadCase bad[] = {
+        {-1, {2, 3, 4}, {2, 1}},  // negative batch_dims
+        {1, {2, 3, 4}, {1, 1}},   // leading dimension of indices doesn't match data
+        {2, {2, 1, 4}, {2, 1}},   // batch_dims == min(q, r)
+    };
+    for (const BadCase& c : bad)
+    {
+        lp.set("batch_dims", c.batch_dims);
+        Net net = makeTwoInputNet(lp, inpNames);
+        Mat data(c.dataShape, CV_32S, Scalar::all(0));
+        Mat indices(c.idxShape, CV_64S, Scalar::all(0));
+        net.setInput(data, inpNames[0]);
+        net.setInput(indices, inpNames[1]);
+        EXPECT_ANY_THROW(net.forward()) << "batch_dims=" << c.batch_dims;
+    }
+}
+
+TEST(Layer_GatherND, scalar_indices)
+{
+    // Rank-0 indices must be rejected before the last indices dimension is read.
+    LayerParams lp;
+    lp.type = "GatherND";
+    lp.name = "testLayer";
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_FALSE(layer.empty());
+    std::vector<MatShape> inputs{MatShape{4, 5}, MatShape::scalar()}, outputs, internals;
+    EXPECT_ANY_THROW(layer->getMemoryShapes(inputs, 1, outputs, internals));
+}
 
 }} // namespace
