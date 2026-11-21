@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 #include "cpu_kernels/fast_attn.hpp"
 
 #include "layers_common.hpp"
@@ -13,6 +13,106 @@
 #include <cmath>
 
 namespace cv { namespace dnn {
+
+// Mat-level checks around core's paged-attention GEMMs (the KV cache stores K and V as
+// fastGemm-packed pages).
+static void pagedAttnQKGemm(
+    const Mat& Q,const std::vector<Mat> &K, Mat& A,
+    int T_q, int Nq, int N_k, int T_s, int D, size_t T_k,
+    float sm_scale, const FastGemmOpt &opt
+) {
+    size_t esz = Q.elemSize();
+
+    for (size_t s = 0; s < K.size(); s++){
+        CV_CheckTypeEQ(Q.type(), K[s].type(), "pagedAttnQKGemmKernel: Q and K should have the same type");
+        CV_CheckTrue(esz == K[s].elemSize(), "pagedAttnQKGemmKernel: Q and K should have the same element size");
+    }
+    CV_CheckTypeEQ(Q.type(), A.type(), "pagedAttnQKGemmKernel: Q and A should have the same type");
+
+    CV_CheckTrue(
+        T_s % hal::fastGemmNR(opt) == 0,
+        "pagedAttnQKGemmKernel: T_s should be divisible by the macro tile size"
+    );
+
+    const auto shape_q = shape(Q);
+    CV_CheckTrue(
+        ((shape_q.size() == 3) || (shape_q.size() == 4)),
+        "pagedAttnQKGemmKernel: Q must be 3D or 4D (T_q x Nq x D) or (kq_groups x T_q x Nq x D)"
+    );
+    const auto shape_a = shape(A);
+    CV_CheckTrue( shape_a.size() == 4, "pagedAttnQKGemmKernel: A must be 4D (B x N_q x T_q x D)" );
+
+    const int B = shape_a[0];
+    for (size_t s = 0; s < K.size(); s++) {
+        const auto shape_k = shape(K[s]);
+        CV_CheckTrue(
+            shape_k.size() == 3,
+            "pagedAttnQKGemmKernel: each K must be 4D (B x N_k x T_s x D)"
+        );
+        CV_CheckEQ(shape_k[0], B, "pagedAttnQKGemmKernel: the batch size of K should be the same as A");
+        CV_CheckEQ(shape_k[1], N_k, "pagedAttnQKGemmKernel: the number of heads in K should match that of Q");
+        CV_Assert(shape_k[2] == D * T_s);
+    }
+
+    std::vector<const char*> packed_K;
+    for (size_t s = 0; s < K.size(); s++){
+        packed_K.push_back(K[s].ptr<const char>());
+    }
+
+    char*a = A.ptr<char>();
+    bool isQ3D = shape_q.size() == 3;
+    hal::fastGemmPagedQK(Q.ptr<const char>(), packed_K, a,
+                         B, T_q, Nq, N_k, T_s, D, T_k,
+                         sm_scale, esz, isQ3D, opt);
+}
+
+static void pagedAttnAVGemm(
+    const Mat& A,const std::vector<Mat> &V, Mat& Out,
+    int T_q, int Nq, int N_k, int T_s, int D, int T_v,
+    const FastGemmOpt &opt
+) {
+    size_t esz = A.elemSize();
+
+    for (size_t s = 0; s < V.size(); s++) {
+        CV_CheckTypeEQ(A.type(), V[s].type(), "pagedAttnAVGemmKernel: A and V should have the same type");
+        CV_CheckTrue(esz == V[s].elemSize(), "pagedAttnAVGemmKernel: A and V should have the same element size");
+    }
+    CV_CheckTypeEQ(A.type(), Out.type(), "pagedAttnAVGemmKernel: A and Out should have the same type");
+
+    CV_CheckTrue(
+        T_s % hal::fastGemmKC(opt) == 0,
+        "pagedAttnAVGemmKernel: T_s should be divisible by the macro tile size"
+    );
+
+    const auto shape_a = shape(A);
+    CV_CheckTrue(
+        shape_a.size() == 4,
+        "pagedAttnAVGemmKernel: A must be 4D (B x n_q x T_q x D)"
+    );
+
+    const int B = shape_a[0];
+    for (size_t s = 0; s < V.size(); s++) {
+        const auto shape_v = shape(V[s]);
+        CV_CheckTrue(
+            shape_v.size() == 3,
+            "pagedAttnAVGemmKernel: each V must be 3D (B x N_k x (T_s * D))"
+        );
+        CV_CheckEQ(shape_v[0], B, "pagedAttnAVGemmKernel: the batch size of V should be the same as A");
+        CV_CheckEQ(shape_v[1], N_k, "pagedAttnAVGemmKernel: the number of heads in V should match that of A");
+        CV_CheckEQ(shape_v[2], (int)hal::fastGemmPackBSize(D, T_s, opt),
+                    "pagedAttnAVGemmKernel: the last dimension of V-pages should be be equal to packed D x T_s Mat size");
+    }
+
+    std::vector<const char*> packed_V;
+    for (size_t s = 0; s < V.size(); s++){
+        packed_V.push_back(V[s].ptr<const char>());
+    }
+
+    bool canonical_layout = shape(Out).size() == 3;
+    hal::fastGemmPagedAV(A.ptr<const char>(), packed_V, Out.ptr<char>(),
+                         B, T_q, Nq, N_k, T_s, D, T_v,
+                         esz, canonical_layout, hal::fastGemmPackBSize(D, T_s, opt), opt);
+}
 
 // Operator spec: https://onnx.ai/onnx/operators/onnx__Attention.html#attention-23
 // Also backs com.microsoft MultiHeadAttention and GroupQueryAttention.
@@ -574,7 +674,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
         const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
 
-        fastGemmBatch(
+        dispatchGemmBatch(
             batch_size * nhq,
             _q_offsets.data(), _k_offsets.data(), _a_offsets.data(),
             seq_len_q, total_seq_kv, qk_head_size , scale,
@@ -636,7 +736,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
         const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
 
-        fastGemmBatch(
+        dispatchGemmBatch(
             batch_size * nhq,
             _a_offsets.data(), _v_offsets.data(), _o_offsets.data(),
             seq_len_q, v_head_size, total_seq_kv, 1.f,

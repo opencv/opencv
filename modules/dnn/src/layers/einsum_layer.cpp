@@ -7,7 +7,7 @@
 #include "../precomp.hpp"
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
-#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/gemm_dispatch.hpp"
 
 namespace cv
 {
@@ -1471,7 +1471,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         b = b.reshape(1, input2ShapeOverride);
         a = a.reshape(1, input1ShapeOverride);
 
-        fastGemmBatch(false, false, 1.0, a, b, 0.0, output, opt);
+        dispatchGemmBatch(false, false, 1.0, a, b, 0.0, output, opt);
     } else {
 
         // input1 should of size MxK
@@ -1498,7 +1498,7 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         {
             output = a.mul(b); // fastGemm does not support 0D * 0D multiplication
         } else {
-            fastGemm(false, false, 1.0, a, b, 0.0, output, opt);
+            dispatchGemm(false, false, 1.0, a, b, 0.0, output, opt);
         }
 
         output = output.reshape(1, {1, M, N});

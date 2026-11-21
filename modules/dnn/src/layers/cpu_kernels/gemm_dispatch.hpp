@@ -2,52 +2,18 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/runtime/ficus/impl/gemm.impl.h).
-// Here is the original license:
-/*
-    This file is a part of ficus language project.
-    See ficus/LICENSE for the licensing terms
-*/
+// The FP32 GEMM entry points of the dnn layers: MLAS when the build has it and accepts the
+// operands, core's fastGemm (opencv2/core/private/fast_gemm.hpp) otherwise. The fastGemm
+// kernels themselves live in core; calls that never go to MLAS (pre-packed B, the few-row
+// paths, the packing functions) use cv::hal::fastGemm* directly.
 
-#ifndef OPENCV_DNN_FAST_GEMM_HPP
-#define OPENCV_DNN_FAST_GEMM_HPP
+#ifndef OPENCV_DNN_GEMM_DISPATCH_HPP
+#define OPENCV_DNN_GEMM_DISPATCH_HPP
 
-#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/private/fast_gemm.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
-
-struct FastGemmOpt {
-    bool use_avx;
-    bool use_avx2;
-    bool use_neon;
-    bool use_lasx;
-    bool use_rvv;
-    bool multi_thread;
-
-    FastGemmOpt() {
-        use_avx = false;
-        use_avx2 = false;
-        use_neon = false;
-        use_lasx = false;
-        use_rvv = false;
-        multi_thread = false;
-    }
-
-    void init() {
-        use_avx = checkHardwareSupport(CPU_AVX);
-        use_avx2 = checkHardwareSupport(CPU_AVX2);
-        use_neon = checkHardwareSupport(CPU_NEON);
-        use_lasx = checkHardwareSupport(CPU_LASX);
-        use_rvv = checkHardwareSupport(CPU_RVV);
-        multi_thread = true;
-    }
-
-    bool all() {
-        return use_avx || use_avx2 || use_neon || use_lasx || use_rvv;
-    }
-
-};
 
 struct MatMulHelper {
     std::vector<size_t> A_offsets;
@@ -214,61 +180,26 @@ inline void matmulShapes(const MatShape& rawA, const MatShape& rawB, bool trans_
     if (!b1d) out.push_back(N);
 }
 
-size_t fastGemmPackBSize(size_t N, size_t K, const FastGemmOpt &opt);
+// Packs every 2D slice of B (the last two dims) in fastGemm's layout, one after another.
+void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
-void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+// C = alpha * op(A) * op(B) + beta * C with A and B given by two strides each.
+CV_EXPORTS void dispatchGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+                             float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
+                             float beta, float *C, int ldc, FastGemmOpt &opt);
+// 2D Mat version of the above.
+void dispatchGemm(bool trans_a, bool trans_b,
+                  float alpha, const Mat &A, const Mat &B,
+                  float beta, Mat &C, FastGemmOpt &opt);
 
-int fastGemmMC(const FastGemmOpt &opt);
-int fastGemmNC(const FastGemmOpt &opt);
-int fastGemmKC(const FastGemmOpt &opt);
-int fastGemmNR(const FastGemmOpt &opt);
-
-void fastGemmPackB(bool trans, size_t N, size_t K, const float *B, size_t ldb, float *packed_B, const FastGemmOpt &opt);
-
-void fastGemm(bool trans_a, int M, int N, int K,
-              float alpha, const float *A, int lda,
-              const float *packed_B, float beta,
-              float *C, int ldc, FastGemmOpt &opt);
-void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
-              float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
-              float beta, float *C, int ldc, FastGemmOpt &opt);
-void fastGemm(bool trans_a, bool trans_b,
-              float alpha, const Mat &A, const Mat &B,
-              float beta, Mat &C, FastGemmOpt &opt);
-
-void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
-                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
-                   const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt);
-void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
-                   int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
-                   const float *packed_B, float beta, float *C, int ldc, FastGemmOpt &opt);
-void fastGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
-                   const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
-void fastGemmBatch(size_t batch,
-                   const std::vector<size_t> &A_offsets, const std::vector<size_t> &B_offsets, const std::vector<size_t> &C_offsets,
-                   int M, int N, int K, float alpha, const Mat&A, int lda0, int lda1,
-                   const Mat&B, int ldb0, int ldb1, float beta, Mat&C, int ldc, FastGemmOpt &opt);
-
-bool fastGemmThinEligible(int M, int N, int K);
-size_t fastGemmThinPackBSize(int N, int K);
-void fastGemmThinPackB(int N, int K, const float* B, size_t ldb_K, size_t ldb_N, float* packed_B);
-void fastGemmThin(int M, int N, int K, float alpha,
-                  const float* A, int lda0, int lda1,
-                  const float* packed_B, float beta,
-                  float* C, int ldc, bool multi_thread);
-
-void pagedAttnQKGemm(
-    const Mat& Q, const std::vector<Mat> &K, Mat& A,
-    int T_q, int Nq, int N_k, int T_s, int D, size_t T_k,
-    float sm_scale, const FastGemmOpt &opts
-);
-void pagedAttnAVGemm(
-    const Mat& A,const std::vector<Mat> &V, Mat& Out,
-    int T_q, int Nq, int N_k, int T_s, int D, int T_v,
-    const FastGemmOpt &opt
-);
-
+// The same product for `batch` matrices placed at the given element offsets.
+CV_EXPORTS void dispatchGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offsets, const size_t *C_offsets,
+                                  int M, int N, int K, float alpha, const float *A, int lda0, int lda1,
+                                  const float *B, int ldb0, int ldb1, float beta, float *C, int ldc, FastGemmOpt &opt);
+// N-D Mat version: the leading dims are broadcast as in MatMul.
+void dispatchGemmBatch(bool trans_a, bool trans_b, float alpha, const Mat &A,
+                       const Mat &B, float beta, Mat &C, FastGemmOpt &opt);
 
 }} // cv::dnn
 
-#endif // OPENCV_DNN_FAST_GEMM_HPP
+#endif // OPENCV_DNN_GEMM_DISPATCH_HPP
