@@ -221,6 +221,9 @@ void TFLiteImporter::populateNet()
     for (size_t i = 0; i < subgraph_inputs_size; ++i)
     {
         int idx = subgraph_inputs->Get(i);
+        CV_CheckGE(idx, 0, "DNN/TFLite: subgraph input tensor index must be non-negative");
+        CV_CheckLT(static_cast<size_t>(idx), static_cast<size_t>(modelTensors->size()),
+                   "DNN/TFLite: subgraph input tensor index out of range");
         layerIds[idx] = std::make_pair(0, i);
         const auto tensor = modelTensors->Get(idx);
         if (!tensor)
@@ -228,7 +231,9 @@ void TFLiteImporter::populateNet()
         layouts[idx] = estimateLayout(*tensor);
 
         // Keep info about origin inputs names and shapes
-        inputsNames[i] = tensor->name()->str();
+        const auto inputName = tensor->name();
+        CV_Assert(inputName);
+        inputsNames[i] = inputName->str();
         std::vector<int> shape(tensor->shape()->begin(), tensor->shape()->end());
         if (layouts[idx] == DNN_LAYOUT_NHWC) {
             CV_CheckEQ(shape.size(), (size_t)4, "");
@@ -254,14 +259,43 @@ void TFLiteImporter::populateNet()
         CV_Assert(op_inputs);
         const auto op_outputs = op->outputs();
         CV_Assert(op_outputs);
-        int idx = op->opcode_index();
+        CV_CheckGT(static_cast<size_t>(op_outputs->size()), size_t(0),
+                   "DNN/TFLite: operator has no outputs");
+        // Every output is registered as a layer output, and an operator that consumes it
+        // indexes the layout table with it, so all of them must be valid tensor indexes.
+        for (const int tensorIndex : *op_outputs)
+        {
+            CV_CheckGE(tensorIndex, 0, "DNN/TFLite: operator output tensor index must be non-negative");
+            CV_CheckLT(static_cast<size_t>(tensorIndex), static_cast<size_t>(modelTensors->size()),
+                       "DNN/TFLite: operator output tensor index out of range");
+        }
+        // -1 marks an omitted optional input.
+        for (const int tensorIndex : *op_inputs)
+        {
+            if (tensorIndex == -1)
+                continue;
+            CV_CheckGE(tensorIndex, 0, "DNN/TFLite: operator input tensor index must be non-negative or -1");
+            CV_CheckLT(static_cast<size_t>(tensorIndex), static_cast<size_t>(modelTensors->size()),
+                       "DNN/TFLite: operator input tensor index out of range");
+        }
+        const int outputIndex = op_outputs->Get(0);
+        const auto outputTensor = modelTensors->Get(outputIndex);
+        CV_Assert(outputTensor);
+        const auto outputName = outputTensor->name();
+        CV_Assert(outputName);
+        CV_CheckLT(static_cast<size_t>(op->opcode_index()), static_cast<size_t>(opCodes->size()),
+                   "DNN/TFLite: operator opcode_index out of range");
+        const auto opCode = opCodes->Get(op->opcode_index());
+        CV_Assert(opCode);
 
         LayerParams layerParams;
-        layerParams.name = modelTensors->Get(op_outputs->Get(0))->name()->str();
+        layerParams.name = outputName->str();
 
-        std::string type = EnumNameBuiltinOperator(BuiltinOperator(opCodes->Get(idx)->deprecated_builtin_code()));
+        std::string type = EnumNameBuiltinOperator(BuiltinOperator(opCode->deprecated_builtin_code()));
         if (type == "CUSTOM") {
-            type = opCodes->Get(idx)->custom_code()->str();
+            const auto customCode = opCode->custom_code();
+            CV_Assert(customCode);
+            type = customCode->str();
         }
 
         CV_LOG_DEBUG(NULL, "DNN/TFLite: processing operator (" << op_idx << "/" << all_operators_size << ") with " << op_inputs->size() << " inputs: "
@@ -270,6 +304,9 @@ void TFLiteImporter::populateNet()
         try
         {
             if (type == "DEQUANTIZE") {
+                CV_CheckGE(static_cast<size_t>(op_inputs->size()), size_t(1),
+                           "DNN/TFLite: DEQUANTIZE operator requires an input");
+                CV_CheckNE(op_inputs->Get(0), -1, "DNN/TFLite: DEQUANTIZE input must not be omitted");
                 // Convert from FP16 to FP32
                 Mat data = allTensors[op_inputs->Get(0)];
                 if (!data.empty()) {
@@ -685,7 +722,12 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
-    auto options = reinterpret_cast<const Pool2DOptions*>(op.builtin_options());
+    auto options = op.builtin_options_as_Pool2DOptions();
+    CV_Assert(options);
+    CV_CheckGT(options->stride_w(), 0, "DNN/TFLite: pooling stride_w must be positive");
+    CV_CheckGT(options->stride_h(), 0, "DNN/TFLite: pooling stride_h must be positive");
+    CV_CheckGT(options->filter_width(), 0, "DNN/TFLite: pooling filter_w must be positive");
+    CV_CheckGT(options->filter_height(), 0, "DNN/TFLite: pooling filter_h must be positive");
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -701,11 +743,26 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
     parseFusedActivation(op, options->fused_activation_function());
 }
 
+static const TfLitePoolParams* getValidatedPoolParams(const Operator& op)
+{
+    // MediaPipe MaxPoolingWithArgmax2D / MaxUnpooling2D serialize the fields up to and
+    // including TfLitePoolParams::activation, without the trailing `computed` struct.
+    CV_Assert(op.custom_options() != nullptr);
+    CV_CheckGE(static_cast<size_t>(op.custom_options()->size()),
+               offsetof(TfLitePoolParams, activation) + sizeof(TfLiteFusedActivation),
+               "DNN/TFLite: custom_options too small for TfLitePoolParams");
+    const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    CV_CheckGT(params->stride_width, 0, "DNN/TFLite: pooling stride_w must be positive");
+    CV_CheckGT(params->stride_height, 0, "DNN/TFLite: pooling stride_h must be positive");
+    CV_CheckGT(params->filter_width, 0, "DNN/TFLite: pooling filter_w must be positive");
+    CV_CheckGT(params->filter_height, 0, "DNN/TFLite: pooling filter_h must be positive");
+    return params;
+}
+
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
-    const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    const auto* params = getValidatedPoolParams(op);
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Argmax pooling with fused activation");
     }
@@ -722,8 +779,7 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
 void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "MaxUnpool";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
-    const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    const auto* params = getValidatedPoolParams(op);
     if (params->activation != kTfLiteActNone) {
         CV_Error(Error::StsNotImplemented, "Unpooling with fused activation");
     }
@@ -987,8 +1043,12 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Deconvolution";
 
-    CV_CheckLE(op.custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
+    CV_Assert(op.custom_options() != nullptr);
+    CV_CheckGE(static_cast<size_t>(op.custom_options()->size()), sizeof(TfLiteTransposeConvParams),
+               "DNN/TFLite: custom_options too small for TfLiteTransposeConvParams");
     const auto* params = reinterpret_cast<const TfLiteTransposeConvParams*>(op.custom_options()->Data());
+    CV_CheckGT(params->stride_width, 0, "DNN/TFLite: transpose convolution stride_w must be positive");
+    CV_CheckGT(params->stride_height, 0, "DNN/TFLite: transpose convolution stride_h must be positive");
     if (params->padding != kTfLitePaddingUnknown)
         layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
     layerParams.set("stride_w", params->stride_width);

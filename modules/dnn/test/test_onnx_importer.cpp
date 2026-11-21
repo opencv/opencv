@@ -3515,6 +3515,232 @@ TEST(Test_ONNX_Importer, ConcatPaddingRankBounds)
 }
 #endif
 
+// OpenCV 5.x imports QuantizeLinear through ONNXImporter2. Keep this test on the 4.x path.
+#if CV_VERSION_MAJOR < 5
+namespace onnx_fixture {
+
+// A minimal protobuf encoder for the ONNX messages these models need. Field numbers follow
+// ONNX's ModelProto, GraphProto, NodeProto, TensorProto, ValueInfoProto and OperatorSetIdProto.
+enum { FLOAT = 1, INT8 = 3 };
+
+static std::string varint(uint64_t value)
+{
+    std::string out;
+    while (value > 127)
+    {
+        out.push_back((char)((value & 0x7f) | 0x80));
+        value >>= 7;
+    }
+    out.push_back((char)value);
+    return out;
+}
+
+static std::string varintField(int number, int64_t value)
+{
+    return varint((uint64_t)number << 3) + varint((uint64_t)value);
+}
+
+static std::string bytesField(int number, const std::string& value)
+{
+    return varint(((uint64_t)number << 3) | 2) + varint(value.size()) + value;
+}
+
+static std::string floats(const std::vector<float>& values)
+{
+    std::string out;
+    for (size_t i = 0; i < values.size(); i++)
+    {
+        uint32_t bits;
+        std::memcpy(&bits, &values[i], sizeof(bits));
+        for (int b = 0; b < 4; b++)
+            out.push_back((char)((bits >> (8 * b)) & 0xff));
+    }
+    return out;
+}
+
+static std::string bytes(std::initializer_list<int> values)
+{
+    std::string out;
+    for (std::initializer_list<int>::const_iterator it = values.begin(); it != values.end(); ++it)
+        out.push_back((char)*it);
+    return out;
+}
+
+// TensorProto: dims=1, data_type=2, name=8, raw_data=9.
+static std::string tensor(const std::string& name, const std::vector<int>& dims, int type, const std::string& raw)
+{
+    std::string out;
+    for (size_t i = 0; i < dims.size(); i++)
+        out += varintField(1, dims[i]);
+    return out + varintField(2, type) + bytesField(8, name) + bytesField(9, raw);
+}
+
+static std::string valueInfo(const std::string& name, int type, const std::vector<int>& dims)
+{
+    std::string shape;
+    for (size_t i = 0; i < dims.size(); i++)
+        shape += bytesField(1, varintField(1, dims[i]));
+    const std::string tensorType = varintField(1, type) + bytesField(2, shape);
+    return bytesField(1, name) + bytesField(2, bytesField(1, tensorType));
+}
+
+struct Model
+{
+    std::string opType, domain, graphName;
+    std::vector<std::string> nodeInputs;                      // an empty name is an omitted optional input
+    std::vector<std::pair<std::string, std::string> > initializers;  // name -> serialized TensorProto
+    std::string inputName, outputName;
+    int inputType, outputType;
+    std::vector<int> inputDims, outputDims;
+};
+
+static std::string serialize(const Model& m)
+{
+    std::string node;
+    for (size_t i = 0; i < m.nodeInputs.size(); i++)
+        node += bytesField(1, m.nodeInputs[i]);
+    node += bytesField(2, m.outputName) + bytesField(3, "node") + bytesField(4, m.opType);
+    if (!m.domain.empty())
+        node += bytesField(7, m.domain);
+
+    std::string graph = bytesField(1, node) + bytesField(2, m.graphName);
+    for (size_t i = 0; i < m.initializers.size(); i++)
+        graph += bytesField(5, m.initializers[i].second);
+    graph += bytesField(11, valueInfo(m.inputName, m.inputType, m.inputDims));
+    graph += bytesField(12, valueInfo(m.outputName, m.outputType, m.outputDims));
+
+    std::string model = varintField(1, 8) + bytesField(7, graph) + bytesField(8, varintField(2, 13));
+    if (!m.domain.empty())
+        model += bytesField(8, bytesField(1, m.domain) + varintField(2, 1));
+    return model;
+}
+
+static Model quantizeLinear(int scaleType, const std::string& scaleRaw, const std::vector<int>& scaleDims,
+                            int zeroPointType, const std::string& zeroPointRaw)
+{
+    Model m;
+    m.opType = "QuantizeLinear";
+    m.graphName = "quantize";
+    m.nodeInputs = {"x", "y_scale", "y_zero_point"};
+    m.initializers.push_back(std::make_pair("y_scale", tensor("y_scale", scaleDims, scaleType, scaleRaw)));
+    m.initializers.push_back(std::make_pair("y_zero_point",
+                                            tensor("y_zero_point", scaleDims, zeroPointType, zeroPointRaw)));
+    const std::vector<int> dims = scaleDims.empty() ? std::vector<int>{1, 4} : std::vector<int>{1, scaleDims[0]};
+    m.inputName = "x"; m.outputName = "y";
+    m.inputType = FLOAT; m.outputType = INT8;
+    m.inputDims = m.outputDims = dims;
+    return m;
+}
+
+static std::string scalarFloat(const std::string& name, float v)
+{
+    return tensor(name, std::vector<int>(), FLOAT, floats(std::vector<float>(1, v)));
+}
+
+static std::string scalarInt8(const std::string& name)
+{
+    return tensor(name, std::vector<int>(), INT8, bytes({0}));
+}
+
+// QLinearConv with a 2-output-channel 1x1 kernel. `inputScale` is the raw x_scale initializer.
+static Model qlinearConv(int weightScaleType, const std::string& weightScaleRaw, const std::string& inputScale)
+{
+    Model m;
+    m.opType = "QLinearConv";
+    m.graphName = "qlinearconv";
+    m.nodeInputs = {"x", "x_scale", "x_zero_point", "weights", "w_scale", "w_zero_point", "y_scale", "y_zero_point"};
+    m.initializers.push_back(std::make_pair("x_scale", inputScale));
+    m.initializers.push_back(std::make_pair("x_zero_point", scalarInt8("x_zero_point")));
+    m.initializers.push_back(std::make_pair("weights", tensor("weights", {2, 1, 1, 1}, INT8, bytes({1, 2}))));
+    m.initializers.push_back(std::make_pair("w_scale", tensor("w_scale", {2}, weightScaleType, weightScaleRaw)));
+    m.initializers.push_back(std::make_pair("w_zero_point", tensor("w_zero_point", {2}, INT8, bytes({0, 0}))));
+    m.initializers.push_back(std::make_pair("y_scale", scalarFloat("y_scale", 0.25f)));
+    m.initializers.push_back(std::make_pair("y_zero_point", scalarInt8("y_zero_point")));
+    m.inputName = "x"; m.outputName = "y";
+    m.inputType = INT8; m.outputType = INT8;
+    m.inputDims = {1, 1, 1, 1};
+    m.outputDims = {1, 2, 1, 1};
+    return m;
+}
+
+// QLinearMatMul (domain empty) or QGemm (domain com.microsoft) with a 2x2 weight matrix.
+static Model qMatrix(bool gemm, int weightScaleType, const std::string& weightScaleRaw)
+{
+    Model m;
+    m.opType = gemm ? "QGemm" : "QLinearMatMul";
+    m.domain = gemm ? "com.microsoft" : "";
+    m.graphName = "qmatrix";
+    m.nodeInputs = {"a", "a_scale", "a_zero_point", "b", "b_scale", "b_zero_point"};
+    if (gemm)
+        m.nodeInputs.push_back("");  // omitted C
+    m.nodeInputs.push_back("y_scale");
+    m.nodeInputs.push_back("y_zero_point");
+    m.initializers.push_back(std::make_pair("a_scale", scalarFloat("a_scale", 0.5f)));
+    m.initializers.push_back(std::make_pair("a_zero_point", scalarInt8("a_zero_point")));
+    m.initializers.push_back(std::make_pair("b", tensor("b", {2, 2}, INT8, bytes({1, 2, 3, 4}))));
+    m.initializers.push_back(std::make_pair("b_scale", tensor("b_scale", {2}, weightScaleType, weightScaleRaw)));
+    m.initializers.push_back(std::make_pair("b_zero_point", tensor("b_zero_point", {2}, INT8, bytes({0, 0}))));
+    m.initializers.push_back(std::make_pair("y_scale", scalarFloat("y_scale", 0.25f)));
+    m.initializers.push_back(std::make_pair("y_zero_point", scalarInt8("y_zero_point")));
+    m.inputName = "a"; m.outputName = "y";
+    m.inputType = INT8; m.outputType = INT8;
+    m.inputDims = m.outputDims = std::vector<int>{1, 2};
+    return m;
+}
+
+}  // namespace onnx_fixture
+
+static void expectONNXAccepted(const onnx_fixture::Model& model)
+{
+    const std::string data = onnx_fixture::serialize(model);
+    EXPECT_NO_THROW(readNetFromONNX(data.data(), data.size()));
+}
+
+static void expectONNXScaleImportRejected(const onnx_fixture::Model& model, const char* reason)
+{
+    SCOPED_TRACE(reason);
+    const std::string data = onnx_fixture::serialize(model);
+    try
+    {
+        (void)readNetFromONNX(data.data(), data.size());
+        FAIL() << "ONNX model with an invalid scalar or scale tensor was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_NE(std::string(e.what()).find(reason), std::string::npos) << e.what();
+    }
+}
+
+TEST(Test_ONNX_Importer, QuantizationScaleTypes)
+{
+    using namespace onnx_fixture;
+    const char* scaleType = "scale tensor type must be CV_32F";
+    const std::string halfScale = floats(std::vector<float>(1, 0.5f));
+
+    expectONNXAccepted(quantizeLinear(FLOAT, halfScale, std::vector<int>(), INT8, bytes({0})));
+    expectONNXScaleImportRejected(quantizeLinear(INT8, bytes({2}), std::vector<int>(), INT8, bytes({0})), scaleType);
+    expectONNXScaleImportRejected(quantizeLinear(INT8, bytes({2, 3}), {2}, INT8, bytes({0, 0})), scaleType);
+    expectONNXScaleImportRejected(qlinearConv(INT8, bytes({2, 3}), scalarFloat("x_scale", 0.5f)), scaleType);
+    expectONNXAccepted(qMatrix(false, FLOAT, floats({0.25f, 0.5f})));
+    expectONNXScaleImportRejected(qMatrix(false, INT8, bytes({2, 3})), scaleType);
+    expectONNXAccepted(qMatrix(true, FLOAT, floats({0.25f, 0.5f})));
+    expectONNXScaleImportRejected(qMatrix(true, INT8, bytes({2, 3})), scaleType);
+}
+
+TEST(Test_ONNX_Importer, QuantizationScalarHelper)
+{
+    using namespace onnx_fixture;
+    // A zero point of the wrong element type reaches getScalarFromMat<int8_t> as a CV_32F Mat.
+    expectONNXScaleImportRejected(
+        quantizeLinear(FLOAT, floats({0.5f}), std::vector<int>(), FLOAT, floats({0.f})),
+        "scalar Mat type mismatch");
+    // An input scale with two elements reaches getScalarFromMat<float> and fails its cardinality check.
+    expectONNXScaleImportRejected(
+        qlinearConv(FLOAT, floats({0.25f, 0.5f}), tensor("x_scale", {2}, FLOAT, floats({0.5f, 0.5f}))),
+        "m.total() == 1");
+}
+#endif
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
