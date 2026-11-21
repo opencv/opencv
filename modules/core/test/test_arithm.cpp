@@ -5373,4 +5373,67 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
     }
 }
 
+// cv::compare had no CV_Bool kernel for the matrix/matrix form, so every comparison of two
+// CV_Bool matrices threw "no kernel for this op/type combination" while the matrix/scalar
+// overload of the same function worked. CV_Bool is logical: a byte is true when it is non-zero,
+// which is how countNonZero, norm and the scalar overload already read it. A matrix wrapping an
+// external buffer is never converted, so bytes other than 0 and 1 are reachable through the
+// public API and must not compare as integers.
+typedef testing::TestWithParam<int> Core_CompareBool_canonical;
+typedef testing::TestWithParam<int> Core_CompareBool_nonCanonical;
+typedef testing::TestWithParam<int> Core_CompareBool_scalarAgreement;
+
+// Canonical 0/1 operands: the result must match the same comparison done on CV_8U.
+TEST_P(Core_CompareBool_canonical, matches_CV_8U)
+{
+    const int op = GetParam();
+    uchar abytes[4] = { 0, 0, 1, 1 };
+    uchar bbytes[4] = { 0, 1, 0, 1 };
+    const Mat ab(1, 4, CV_Bool, abytes), bb(1, 4, CV_Bool, bbytes);
+    const Mat au(1, 4, CV_8U, abytes), bu(1, 4, CV_8U, bbytes);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(ab, bb, got, op));
+    cv::compare(au, bu, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF));
+}
+
+// Non-canonical bytes: 1, 2 and 255 all mean true, so each must compare exactly as 1 does.
+TEST_P(Core_CompareBool_nonCanonical, true_bytes_compare_as_one)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    uchar one[4] = { 0, 1, 1, 1 };
+    const Mat a(1, 4, CV_Bool, raw), canonical(1, 4, CV_Bool, one);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(a, rhs, got, op));
+    cv::compare(canonical, rhs, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF)) << "non-canonical bytes must compare logically";
+}
+
+// The matrix/matrix form must agree with the matrix/scalar form, which already worked.
+TEST_P(Core_CompareBool_scalarAgreement, matrix_matrix_matches_matrix_scalar)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    const Mat a(1, 4, CV_Bool, raw);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat fromMat, fromScalar;
+    cv::compare(a, rhs, fromMat, op);
+    cv::compare(a, Scalar(1), fromScalar, op);
+    EXPECT_EQ(0, cv::norm(fromMat, fromScalar, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_canonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_nonCanonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_scalarAgreement,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+
 }} // namespace
