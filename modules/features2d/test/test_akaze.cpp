@@ -25,6 +25,64 @@ TEST(Features2d_AKAZE, detect_and_compute_split)
         ASSERT_EQ(detKps[i].hash(), detAndCompKps[i].hash());
 }
 
+TEST(Features2d_AKAZE, compute_preserves_given_keypoints_with_max_points)
+{
+    Mat img(160, 160, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 20, 90);
+    for (int r = 0; r < 8; ++r)
+        for (int c = 0; c < 8; ++c)
+            if ((r + c) % 2 == 0)
+                img(Rect(c * 20 + 3, r * 20 + 3, 14, 14)).setTo(Scalar(220));
+
+    Ptr<AKAZE> unlimited = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.0005f, 2, 2);
+    std::vector<KeyPoint> detected;
+    unlimited->detect(img, detected);
+    ASSERT_GT(detected.size(), 25u);
+
+    // Order ascending by response (opposite of max_points descending sort) so reordering is caught
+    std::sort(detected.begin(), detected.end(),
+              [](const KeyPoint& a, const KeyPoint& b) {
+                  if (a.response != b.response) return a.response < b.response;
+                  return a.pt.x < b.pt.x;
+              });
+
+    std::vector<KeyPoint> refKps = detected;
+    Mat refDesc;
+    unlimited->compute(img, refKps, refDesc);
+    ASSERT_EQ(detected.size(), refKps.size());
+    ASSERT_EQ(static_cast<int>(detected.size()), refDesc.rows);
+
+    const int kLimit = 10;
+    Ptr<AKAZE> limited = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.0005f, 2, 2);
+    limited->setMaxPoints(kLimit);
+
+    std::vector<KeyPoint> kpCompute = detected;
+    Mat descCompute;
+    limited->compute(img, kpCompute, descCompute);
+    ASSERT_EQ(detected.size(), kpCompute.size());
+    ASSERT_EQ(static_cast<int>(detected.size()), descCompute.rows);
+    for (size_t i = 0; i < detected.size(); ++i)
+    {
+        EXPECT_EQ(detected[i].pt, kpCompute[i].pt) << "i=" << i;
+        EXPECT_EQ(0.0, cvtest::norm(descCompute.row(static_cast<int>(i)), refDesc.row(static_cast<int>(i)), NORM_HAMMING)) << "i=" << i;
+    }
+
+    std::vector<KeyPoint> kpProvided = detected;
+    Mat descProvided;
+    limited->detectAndCompute(img, noArray(), kpProvided, descProvided, true);
+    ASSERT_EQ(detected.size(), kpProvided.size());
+    EXPECT_EQ(0.0, cvtest::norm(descProvided, refDesc, NORM_HAMMING));
+
+    // Detection without provided keypoints must still honor max_points
+    std::vector<KeyPoint> kpDetect, kpDac;
+    Mat descDac;
+    limited->detect(img, kpDetect);
+    EXPECT_EQ(static_cast<size_t>(kLimit), kpDetect.size());
+    limited->detectAndCompute(img, noArray(), kpDac, descDac, false);
+    EXPECT_EQ(static_cast<size_t>(kLimit), kpDac.size());
+    EXPECT_EQ(kLimit, descDac.rows);
+}
+
 /**
  * This test is here to guard propagation of NaNs that happens on this image. NaNs are guarded
  * by debug asserts in AKAZE, which should fire for you if you are lucky.
