@@ -41,7 +41,8 @@ def _clean_stale_stubs_dirs(stubs_root: Path) -> None:
             shutil.rmtree(item)
 
 
-def generate_typing_stubs(root: NamespaceNode, output_path: Path):
+def generate_typing_stubs(root: NamespaceNode, output_path: Path,
+                          preprocessor_definitions: Dict[str, int]):
     """Generates typing stubs for the AST with root `root` and outputs
     created files tree to directory pointed by `output_path`.
 
@@ -111,7 +112,7 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
     # build persist and propagate through the copy/install steps, causing
     # type-checker errors for stubs referencing unavailable modules.
     _clean_stale_stubs_dirs(Path(output_path) / root.export_name)
-    _generate_typing_module(root, output_path)
+    _generate_typing_module(root, output_path, preprocessor_definitions)
     _populate_reexported_symbols(root)
     _generate_typing_stubs(root, output_path)
 
@@ -719,7 +720,8 @@ def _write_required_imports(required_imports: Collection[str],
         output_stream.write("\n\n")
 
 
-def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
+def _generate_typing_module(root: NamespaceNode, output_path: Path,
+                            preprocessor_definitions: Dict[str, int]) -> None:
     """Generates stub file for typings module.
     Actual module doesn't exist, but it is an appropriate place to define
     all widely-used aliases.
@@ -728,10 +730,13 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         root (NamespaceNode): AST root node used for type nodes resolution.
         output_path (Path): Path to typing module directory, where __init__.pyi
             will be written.
+        preprocessor_definitions (Dict[str, int]): definitions of the build,
+            used to skip types whose modules are not built.
     """
 
     def has_all_required_modules(type_node: TypeNode) -> bool:
-        return all(em in root.namespaces for em in type_node.required_modules)
+        return all(f"HAVE_OPENCV_{em.upper()}" in preprocessor_definitions
+                   for em in type_node.required_modules)
 
     def register_alias_links_from_aggregated_type(type_node: TypeNode) -> None:
         assert isinstance(type_node, AggregatedTypeNode), \
