@@ -164,8 +164,8 @@ namespace cv
                 {
                     impl.Compute_Descriptors_UMat(keypoints, descriptors, uPyr);
 
-                    CV_Assert((!descriptors.empty() || descriptors.cols() == descriptorSize()));
-                    CV_Assert((!descriptors.empty() || (descriptors.type() == descriptorType())));
+                    CV_Assert((descriptors.empty() || descriptors.cols() == descriptorSize()));
+                    CV_Assert((descriptors.empty() || (descriptors.type() == descriptorType())));
                 }
                 return;
             }
@@ -211,6 +211,9 @@ namespace cv
 
             if( descriptors.needed() )
             {
+                // Feature_Detection() computes the derivatives when it runs; the descriptors need only Lx and Ly
+                if (useProvidedKeypoints && !keypoints.empty())
+                    impl.Compute_Multiscale_Derivatives(false);
                 Mat desc;
                 impl.Feature_Description(keypoints, desc);
                 desc.copyTo(descriptors);

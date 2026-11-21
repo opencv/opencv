@@ -198,7 +198,8 @@ void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
 class MultiscaleDerivativesKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev) : evolution_(&ev)
+    explicit MultiscaleDerivativesKAZEInvoker(TPyramid& ev, bool second_order = true)
+        : evolution_(&ev), second_order_(second_order)
     {
     }
 
@@ -209,30 +210,35 @@ public:
         {
             compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Lx, 1, 0, evolution[i].sigma_size);
             compute_scharr_derivatives(evolution[i].Lsmooth, evolution[i].Ly, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
-            compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+            if (second_order_)
+            {
+                compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxx, 1, 0, evolution[i].sigma_size);
+                compute_scharr_derivatives(evolution[i].Ly, evolution[i].Lyy, 0, 1, evolution[i].sigma_size);
+                compute_scharr_derivatives(evolution[i].Lx, evolution[i].Lxy, 0, 1, evolution[i].sigma_size);
+
+                evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+                evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+                evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
+            }
 
             evolution[i].Lx = evolution[i].Lx*((evolution[i].sigma_size));
             evolution[i].Ly = evolution[i].Ly*((evolution[i].sigma_size));
-            evolution[i].Lxx = evolution[i].Lxx*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lxy = evolution[i].Lxy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
-            evolution[i].Lyy = evolution[i].Lyy*((evolution[i].sigma_size)*(evolution[i].sigma_size));
         }
     }
 
 private:
     std::vector<TEvolution>*  evolution_;
+    bool second_order_;
 };
 
 /* ************************************************************************* */
 /**
  * @brief This method computes the multiscale derivatives for the nonlinear scale space
  */
-void KAZEFeatures::Compute_Multiscale_Derivatives(void)
+void KAZEFeatures::Compute_Multiscale_Derivatives(bool second_order)
 {
     parallel_for_(Range(0, (int)evolution_.size()),
-                                        MultiscaleDerivativesKAZEInvoker(evolution_));
+                                        MultiscaleDerivativesKAZEInvoker(evolution_, second_order));
 }
 
 
@@ -1398,25 +1404,13 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
     for (size_t i = 0; i < kpts.size(); i++)
     {
         int lv = kpts[i].class_id;
-        if (lv >= 0 && lv < (int)uPyr.size())
-            kpts_by_level[lv].push_back((int)i);
+        CV_Assert(0 <= lv && lv < (int)uPyr.size());
+        kpts_by_level[lv].push_back((int)i);
     }
 
-    // Pre-allocate output matrix; we'll write into row-ranges per level
+    // Pre-allocate output matrix; we'll write into rows by original keypoint index
     desc.create((int)kpts.size(), descriptor_size, CV_32F);
     Mat out_mat = desc.getMat();
-
-    // Track the keypoint ordering as we iterate levels
-    // (kpts_by_level iterates in ascending level order, matching kpts order after sorting)
-    // We use a small vector to map global keypoint index -> descriptor row
-    std::vector<int> kpt_to_row(kpts.size(), -1);
-    {
-        // Determine final output row for each keypoint based on iteration order
-        int row = 0;
-        for (size_t lv = 0; lv < uPyr.size(); lv++)
-            for (int ki : kpts_by_level[lv])
-                kpt_to_row[ki] = row++;
-    }
 
     for (size_t lv = 0; lv < uPyr.size(); lv++)
     {
@@ -1452,6 +1446,12 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
         if (!ok)
         {
             // GPU failed — fall back to full CPU path
+            out_mat.release();
+            for (size_t j = 0; j < uPyr.size(); j++)
+            {
+                uPyr[j].Lx.copyTo(evolution_[j].Lx);
+                uPyr[j].Ly.copyTo(evolution_[j].Ly);
+            }
             Mat cpu_desc;
             Feature_Description(kpts, cpu_desc);
             cpu_desc.copyTo(desc);
@@ -1462,8 +1462,7 @@ void KAZEFeatures::Compute_Descriptors_UMat(std::vector<KeyPoint>& kpts, OutputA
         Mat level_mat = desc_level.getMat(ACCESS_READ);
         for (int i = 0; i < n; i++)
         {
-            int row = kpt_to_row[indices[i]];
-            level_mat.row(i).copyTo(out_mat.row(row));
+            level_mat.row(i).copyTo(out_mat.row(indices[i]));
         }
     }
 }

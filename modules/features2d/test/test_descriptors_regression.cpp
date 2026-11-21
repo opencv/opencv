@@ -54,6 +54,32 @@ TEST( Features2d_DescriptorExtractor_KAZE, regression )
     test.safe_run();
 }
 
+TEST( Features2d_DescriptorExtractor_KAZE, compute_after_detect )
+{
+    Mat img(240, 320, CV_8UC1);
+    theRNG().fill(img, RNG::UNIFORM, 0, 256);
+    GaussianBlur(img, img, Size(9, 9), 2.0);
+    rectangle(img, Point(40, 40), Point(160, 140), Scalar(245), FILLED);
+    rectangle(img, Point(120, 90), Point(260, 200), Scalar(15), FILLED);
+    GaussianBlur(img, img, Size(5, 5), 1.0);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const bool extended = (i & 1) != 0, upright = (i & 2) != 0;
+        Ptr<KAZE> kaze = KAZE::create(extended, upright);
+
+        // compute() on the detected keypoints, in reverse order, gives the detectAndCompute() rows in reverse order
+        vector<KeyPoint> kp;
+        Mat desc_dc, desc;
+        kaze->detectAndCompute(img, noArray(), kp, desc_dc);
+        ASSERT_FALSE(kp.empty());
+        vector<KeyPoint> kp_rev(kp.rbegin(), kp.rend());
+        kaze->compute(img, kp_rev, desc);
+        flip(desc, desc, 0);
+        EXPECT_EQ(0.0, cvtest::norm(desc_dc, desc, NORM_INF)) << "extended=" << extended << " upright=" << upright;
+    }
+}
+
 TEST( Features2d_DescriptorExtractor_AKAZE, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-akaze",
