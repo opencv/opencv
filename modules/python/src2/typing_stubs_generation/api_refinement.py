@@ -404,6 +404,8 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
                 if arg_idx is None:
                     continue
 
+                found_overload_with_arg = True
+
                 current_type = overload.arguments[arg_idx].type_node
 
                 # Check if it's already a union or if it already includes Scalar
@@ -417,7 +419,7 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
                         continue
                     # Add Scalar to existing union
                     scalar_ref = AliasRefTypeNode("Scalar")
-                    current_type.items = current_type.items + (scalar_ref,)
+                    current_type.items = current_type.items + [scalar_ref]
                 else:
                     # Create a union of current type and Scalar
                     scalar_ref = AliasRefTypeNode("Scalar")
@@ -425,8 +427,6 @@ def make_matlike_or_scalar_arg(*arg_names: str) -> Callable[[NamespaceNode, Symb
                         f"{arg_name}_type",
                         (cast(TypeNode, current_type), scalar_ref)
                     )
-
-                found_overload_with_arg = True
 
             if not found_overload_with_arg:
                 raise RuntimeError(
