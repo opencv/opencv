@@ -8,6 +8,7 @@
 #include "math.hpp"
 #include "types.hpp"
 #include "atomics.hpp"
+#include "block_stride_range.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
 
@@ -16,6 +17,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <algorithm>
 #include <cstddef>
 
 using namespace cv::dnn::cuda4dnn::csl;
@@ -34,51 +36,63 @@ namespace raw {
 
     constexpr int MEAN_SQR_SUM_BLOCK_SIZE = 256;
 
-    // one block per row: a warp-shuffle and shared-memory reduction, no per-element atomics
-    template <class T>
-    __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
-        __shared__ float warp_sums[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
-        __shared__ float warp_sqrs[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
-
-        const index_type outer_idx = blockIdx.x;
-        const index_type row_start = outer_idx * inner_size;
-        float sum = 0.f, sqr = 0.f;
-        for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
-            const auto x = static_cast<float>(input[row_start + i]);
-            sum += x;
-            sqr += x * x;
-        }
-
-        for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2) {
-            sum += WARP_SHFL_XOR(sum, offset);
-            sqr += WARP_SHFL_XOR(sqr, offset);
-        }
-        const int warp = threadIdx.x / GPU_WARP_SIZE, lane = threadIdx.x % GPU_WARP_SIZE;
-        if (lane == 0) {
-            warp_sums[warp] = sum;
-            warp_sqrs[warp] = sqr;
-        }
+    template <int NUM_WARPS>
+    __device__ __forceinline__ float block_reduce_sum(float (&warp_vals)[NUM_WARPS], float val) {
+        static_assert(NUM_WARPS > 0 && NUM_WARPS <= GPU_WARP_SIZE, "NUM_WARPS must fit in one warp");
+        for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2)
+            val += WARP_SHFL_XOR(val, offset);
+        const int warp = threadIdx.x / GPU_WARP_SIZE;
+        const int lane = threadIdx.x % GPU_WARP_SIZE;
+        if (lane == 0)
+            warp_vals[warp] = val;
         __syncthreads();
 
         if (warp == 0) {
-            const int num_warps = blockDim.x / GPU_WARP_SIZE;
-            sum = lane < num_warps ? warp_sums[lane] : 0.f;
-            sqr = lane < num_warps ? warp_sqrs[lane] : 0.f;
-            for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2) {
-                sum += WARP_SHFL_XOR(sum, offset);
-                sqr += WARP_SHFL_XOR(sqr, offset);
+            val = lane < NUM_WARPS ? warp_vals[lane] : 0.f;
+            for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2)
+                val += WARP_SHFL_XOR(val, offset);
+            if (lane == 0)
+                warp_vals[0] = val;
+        }
+        __syncthreads();
+        const float total = warp_vals[0];
+        __syncthreads();
+        return total;
+    }
+
+    // one block per row (grid-strided): two-pass centered reduction avoids E[x^2] - mean^2 cancellation
+    template <class T>
+    __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
+        __shared__ float warp_vals[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
+
+        const size_type outer_size = means.size();
+        for (index_type outer_idx = blockIdx.x; outer_idx < outer_size; outer_idx += gridDim.x) {
+            const index_type row_start = outer_idx * inner_size;
+
+            float sum = 0.f;
+            for (auto i : block_stride_range<MEAN_SQR_SUM_BLOCK_SIZE>(inner_size))
+                sum += static_cast<float>(input[row_start + i]);
+
+            const float mean = block_reduce_sum(warp_vals, sum) / inner_size;
+            if (threadIdx.x == 0)
+                means[outer_idx] = mean;
+
+            float sqr = 0.f;
+            for (auto i : block_stride_range<MEAN_SQR_SUM_BLOCK_SIZE>(inner_size)) {
+                const float diff = static_cast<float>(input[row_start + i]) - mean;
+                sqr += diff * diff;
             }
-            if (lane == 0) {
-                means[outer_idx] = sum / inner_size;
-                sum_sqrs[outer_idx] = sqr;
-            }
+
+            const float sqr_sum = block_reduce_sum(warp_vals, sqr);
+            if (threadIdx.x == 0)
+                sum_sqrs[outer_idx] = sqr_sum;
         }
     }
 
     __global__ void compute_normalization_scale(Span<float> scale, View<float> means, View<float> sums_sqr, size_type inner_size, float eps) {
+        (void)means;
         for (auto idx : grid_stride_range(scale.size())) {
-            auto mean = means[idx];
-            auto var = sums_sqr[idx] / inner_size - mean * mean;
+            auto var = sums_sqr[idx] / inner_size;
             using device::rsqrt;
             scale[idx] = rsqrt(eps + var);
         }
@@ -170,9 +184,8 @@ void reduce_mean_sqr_sum(const Stream& stream, Span<float> means, Span<float> su
         return;
 
     auto kernel = raw::reduce_mean_sqr_sum<T>;
-    // one block per row
-    auto policy = execution_policy(dim3(static_cast<unsigned int>(means.size())),
-                                   dim3(raw::MEAN_SQR_SUM_BLOCK_SIZE), 0, stream);
+    const unsigned int grid_size = static_cast<unsigned int>(std::min<std::size_t>(means.size(), 2147483647ULL));
+    auto policy = execution_policy(dim3(grid_size), dim3(raw::MEAN_SQR_SUM_BLOCK_SIZE), 0, stream);
     launch_kernel(kernel, policy, means, sum_sqrs, input, inner_size);
 }
 
