@@ -471,6 +471,7 @@ Cv64suf;
 #define CV_WRAP_DEFAULT(val)
 /* Indicates that the function parameter has filesystem path semantic */
 #define CV_WRAP_FILE_PATH
+#define CV_WRAP_PRESERVE_DTYPE // Skip implicit NumPy dtype narrowing
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *

@@ -24,6 +24,25 @@ class nd_transform_test(NewOpenCVTests):
         np.testing.assert_array_equal(cv.transpose(b, [2, 0, 1]), expected)
         np.testing.assert_array_equal(cv.transposeND(b, [2, 0, 1]), expected)
 
+    def test_transpose_and_rotate_preserve_64bit_integer_dtype(self):
+        for dtype, offset in ((np.int64, 0), (np.int64, 2**40), (np.uint64, 2**63)):
+            src = np.array([[offset, offset + 1, offset + 2],
+                            [offset + 3, offset + 4, offset + 5]], dtype=dtype)
+            for operation, args, expected in (
+                (cv.transpose, (), src.T),
+                (cv.transpose, ([1, 0],), src.T),
+                (cv.transposeND, ([1, 0],), src.T),
+                (cv.rotate, (cv.ROTATE_90_CLOCKWISE,), np.rot90(src, -1)),
+            ):
+                with self.subTest(operation=operation.__name__, args=args, dtype=dtype, offset=offset):
+                    result = operation(src, *args)
+                    self.assertEqual(result.dtype, src.dtype)
+                    np.testing.assert_array_equal(result, expected)
+
+                    dst = np.zeros(expected.shape, dtype=dtype)
+                    operation(src, *args, dst=dst)
+                    np.testing.assert_array_equal(dst, expected)
+
     def test_split(self):
         img = np.arange(24, dtype=np.uint8).reshape(2, 4, 3)
         channels = cv.split(img)

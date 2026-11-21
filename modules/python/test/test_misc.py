@@ -308,6 +308,12 @@ class Arguments(NewOpenCVTests):
             a = np.array(values, dtype=np.int64)
             self.assertIn("type(-1)=CV_64SC1", cv.utils.dumpInputArray(a))
 
+    def test_OutputArray_int64(self):
+        src = np.array([[1, 2**40], [-3, 4]], dtype=np.int64)
+        dst = np.zeros_like(src)
+        cv.copyTo(src, None, dst)
+        np.testing.assert_array_equal(dst, src)
+
     def test_InputArrayOfArrays(self):
         res1 = cv.utils.dumpInputArrayOfArrays(None)
         # self.assertEqual(res1, "InputArray: noArray()")  # not supported
