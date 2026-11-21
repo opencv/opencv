@@ -51,9 +51,9 @@ static void detectLightGluePair(int type, Mat images[2], std::vector<KeyPoint> k
         detector = ALIKED::create(cvtest::findDataFile("dnn/onnx/models/aliked-n16rot-top1k-640.onnx", false));
     else
     {
-        Ptr<DISK> disk = DISK::create(cvtest::findDataFile("dnn/disk.onnx", false));
-        disk->setMaxKeypoints(1024);
-        detector = disk;
+        // The normalization paths under test do not depend on the detector resolution; 512x384
+        // still yields 1024 keypoints per image, 5x cheaper than the default 1024x1024 input.
+        detector = DISK::create(cvtest::findDataFile("dnn/disk.onnx", false), 1024, 0.0f, Size(512, 384));
     }
     images[0] = imread(cvtest::findDataFile("shared/box.png"));
     images[1] = imread(cvtest::findDataFile("shared/box_in_scene.png"));

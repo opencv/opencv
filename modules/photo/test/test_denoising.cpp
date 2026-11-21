@@ -52,6 +52,11 @@ namespace opencv_test { namespace {
 #  define DUMP(image, path)
 #endif
 
+// NL-means output depends only on input within searchWindowSize/2 + templateWindowSize/2 = 13 px, so a crop
+// anchored at the origin reproduces the full-image reference except in a 13 px band along the cut edges
+static const Rect kDenoiseCrop(0, 0, 256, 256);
+static const Rect kDenoiseCheck(0, 0, 256 - 13, 256 - 13);
+
 
 TEST(Photo_DenoisingGrayscale, regression)
 {
@@ -66,11 +71,11 @@ TEST(Photo_DenoisingGrayscale, regression)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     Mat result;
-    fastNlMeansDenoising(original, result, 10);
+    fastNlMeansDenoising(original(kDenoiseCrop).clone(), result, 10);
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(result(kDenoiseCheck), expected(kDenoiseCheck), NORM_L2));
 }
 
 TEST(Photo_DenoisingColored, regression)
@@ -86,11 +91,11 @@ TEST(Photo_DenoisingColored, regression)
     ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
     Mat result;
-    fastNlMeansDenoisingColored(original, result, 10, 10);
+    fastNlMeansDenoisingColored(original(kDenoiseCrop).clone(), result, 10, 10);
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(result(kDenoiseCheck), expected(kDenoiseCheck), NORM_L2));
 }
 
 TEST(Photo_DenoisingGrayscaleMulti, regression)
@@ -108,6 +113,7 @@ TEST(Photo_DenoisingGrayscaleMulti, regression)
         string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
         original[i] = imread(original_path, IMREAD_GRAYSCALE);
         ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
+        original[i] = original[i](kDenoiseCrop).clone();
     }
 
     Mat result;
@@ -115,7 +121,7 @@ TEST(Photo_DenoisingGrayscaleMulti, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(result(kDenoiseCheck), expected(kDenoiseCheck), NORM_L2));
 }
 
 TEST(Photo_DenoisingColoredMulti, regression)
@@ -133,6 +139,7 @@ TEST(Photo_DenoisingColoredMulti, regression)
         string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
         original[i] = imread(original_path, IMREAD_COLOR);
         ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
+        original[i] = original[i](kDenoiseCrop).clone();
     }
 
     Mat result;
@@ -140,7 +147,7 @@ TEST(Photo_DenoisingColoredMulti, regression)
 
     DUMP(result, expected_path + ".res.png");
 
-    ASSERT_EQ(0, cvtest::norm(result, expected, NORM_L2));
+    ASSERT_EQ(0, cvtest::norm(result(kDenoiseCheck), expected(kDenoiseCheck), NORM_L2));
 }
 
 TEST(Photo_White, issue_2646)
@@ -167,6 +174,7 @@ TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
         string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
         original_8u[i] = imread(original_path, IMREAD_GRAYSCALE);
         ASSERT_FALSE(original_8u[i].empty()) << "Could not load input image " << original_path;
+        original_8u[i] = original_8u[i](kDenoiseCrop).clone();
         original_8u[i].convertTo(original_16u[i], CV_16U);
     }
 

@@ -47,7 +47,7 @@ namespace opencv_test { namespace {
 inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
-    EXPECT_EQ(-1, waitKey(200));
+    EXPECT_EQ(-1, waitKey(1));
 
     // see https://github.com/opencv/opencv/issues/25550
     // Wayland backend is not supported getWindowImageRect().
@@ -58,8 +58,15 @@ inline void verify_size(const std::string &nm, const cv::Mat &img)
        return;
     }
 
+    // Poll instead of a fixed delay: up to ~2 s, which also covers window managers that apply the resize late.
     Rect rc;
-    EXPECT_NO_THROW(rc = getWindowImageRect(nm));
+    for (int attempt = 0; attempt < 200; ++attempt)
+    {
+        EXPECT_NO_THROW(rc = getWindowImageRect(nm));
+        if (rc.size() == img.size())
+            break;
+        EXPECT_EQ(-1, waitKey(10));
+    }
     EXPECT_EQ(rc.size(), img.size());
 }
 

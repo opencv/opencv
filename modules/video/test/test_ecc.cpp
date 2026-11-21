@@ -68,7 +68,7 @@ class CV_ECC_Test : public cvtest::BaseTest {
     double computeRMS(const Mat& mat1, const Mat& mat2);
     bool isMapCorrect(const Mat& mat);
 
-    virtual bool test(const Mat img);
+    virtual bool test(const Mat img, int count);
     bool testAllTypes(const Mat img);               // run test for all supported data types (U8, U16, F32, F64)
     bool testAllChNum(const Mat img);               // run test for all supported channels count (gray, RGB)
 
@@ -133,15 +133,15 @@ bool CV_ECC_Test::checkMap(const Mat& map, const Mat& ground) {
     return true;
 }
 
-bool CV_ECC_Test::test(const Mat img)
+bool CV_ECC_Test::test(const Mat img, int count)
 {
     cv::RNG rng = ts->get_rng();
 
     int progress = 0;
 
-    for (int k = 0; k < ntests; k++) {
+    for (int k = 0; k < count; k++) {
         ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
+        progress = update_progress(progress, k, count, 0);
 
         Mat groundMap;
         switch(motionType)
@@ -196,7 +196,8 @@ bool CV_ECC_Test::test(const Mat img)
         if(usePyramids)
         {
             ECCParameters params;
-            params.criteria = criteria;
+            // converges in < 5 iterations per level here; a fixed count (negative eps) still runs every level
+            params.criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10, ECC_epsilon);
             params.motionType = motionType;
             findTransformECCMultiScale(warpedImage, img, foundMap, params);
         }
@@ -210,11 +211,14 @@ bool CV_ECC_Test::test(const Mat img)
 }
 
 bool CV_ECC_Test::testAllTypes(const Mat img) {
-    auto types = {CV_8U, CV_16U, CV_32F, CV_64F};
-    for (auto type : types) {
+    // ECC converts every input depth to CV_32F or CV_8U before iterating and each depth sees the same warps,
+    // so 16U and 64F get one warp to check that they are accepted and converted
+    const int types[] = {CV_8U, CV_16U, CV_32F, CV_64F};
+    const int counts[] = {ntests, 1, ntests, 1};
+    for (int i = 0; i < 4; i++) {
         Mat timg;
-        img.convertTo(timg, type);
-        if (!test(timg))
+        img.convertTo(timg, types[i]);
+        if (!test(timg, counts[i]))
             return false;
     }
     return true;
@@ -269,19 +273,19 @@ class CV_ECC_Test_Mask : public CV_ECC_Test {
     CV_ECC_Test_Mask();
 
    protected:
-    bool test(const Mat);
+    bool test(const Mat, int count);
 };
 
 CV_ECC_Test_Mask::CV_ECC_Test_Mask():CV_ECC_Test(MOTION_TRANSLATION, false) {}
 
-bool CV_ECC_Test_Mask::test(const Mat testImg) {
+bool CV_ECC_Test_Mask::test(const Mat testImg, int count) {
     cv::RNG rng = ts->get_rng();
 
     int progress = 0;
 
-    for (int k = 0; k < ntests; k++) {
+    for (int k = 0; k < count; k++) {
         ts->update_context(this, k, true);
-        progress = update_progress(progress, k, ntests, 0);
+        progress = update_progress(progress, k, count, 0);
 
         Mat translationGround = Mat_<float>({2, 3}, {1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f))});
 

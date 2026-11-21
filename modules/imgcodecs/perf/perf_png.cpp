@@ -153,11 +153,24 @@ PERF_TEST(PNG, encode)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(PNG, params,
-    testing::Combine(
-        testing::Values(IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED),
-        testing::Values(IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS),
-        testing::Values(1, 6)))
+// zlib ignores the level for HUFFMAN_ONLY/RLE and ignores FILTERED below level 4,
+// so those combinations would encode byte-identical output to another instance.
+static std::vector<testing::tuple<PNGStrategy, PNGFilters, int> > pngParamsGrid()
+{
+    std::vector<testing::tuple<PNGStrategy, PNGFilters, int> > grid;
+    for (int strategy : { IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED })
+        for (int filter : { IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS })
+            for (int level : { 1, 6 })
+            {
+                const bool levelIgnored = strategy == IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY || strategy == IMWRITE_PNG_STRATEGY_RLE;
+                if ((levelIgnored && level != 1) || (strategy == IMWRITE_PNG_STRATEGY_FILTERED && level < 4))
+                    continue;
+                grid.push_back(testing::make_tuple(PNGStrategy(strategy), PNGFilters(filter), level));
+            }
+    return grid;
+}
+
+PERF_TEST_P(PNG, params, testing::ValuesIn(pngParamsGrid()))
 {
     String filename = getDataPath("perf/1920x1080.png");
     const int strategy = get<0>(GetParam());
