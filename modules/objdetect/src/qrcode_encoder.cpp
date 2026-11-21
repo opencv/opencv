@@ -176,6 +176,11 @@ class QRCodeEncoderImpl : public QRCodeEncoder
 public:
     QRCodeEncoderImpl(const QRCodeEncoder::Params& parameters) : params(parameters)
     {
+        CV_CheckGE(parameters.version, 0, "The QR code version must be in the range [0, 40], where 0 selects it automatically");
+        CV_CheckLE(parameters.version, MAX_VERSION, "The QR code version must be in the range [0, 40], where 0 selects it automatically");
+        CV_Check((int)parameters.correction_level,
+                 parameters.correction_level >= CORRECT_LEVEL_L && parameters.correction_level <= CORRECT_LEVEL_H,
+                 "Unknown error correction level");
         version_level = parameters.version;
         ecc_level = parameters.correction_level;
         mode_type = parameters.mode;
