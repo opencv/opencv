@@ -12,7 +12,7 @@ Transition guide {#tutorial_transition_guide}
 
 Changes overview {#tutorial_transition_overview}
 ================
-This document is intended to software developers who want to migrate their code to OpenCV 5.0.
+This document is intended to software developers who want to migrate their code to OpenCV 5.x.
 
 For the full list of breaking changes and porting notes, see
 [Learn more](https://github.com/opencv/opencv/wiki/OpenCV-4-to-5-migration).

@@ -81,6 +81,8 @@ public:
             case CV_16U: hardmaxApply<ushort>(src, dst, axis); break;
             case CV_16S: hardmaxApply<short>(src, dst, axis); break;
             case CV_32S: hardmaxApply<int>(src, dst, axis); break;
+            case CV_64S: hardmaxApply<int64_t>(src, dst, axis); break;
+            case CV_Bool: hardmaxApply<bool>(src, dst, axis); break;
             case CV_32F: hardmaxApply<float>(src, dst, axis); break;
             case CV_64F: hardmaxApply<double>(src, dst, axis); break;
             default:

@@ -20,7 +20,7 @@ The engine performs automatic attention fusion: the `MatMul` → `Softmax` → `
 
 `ENGINE_OPENCV` also introduces native support for Large Language Models and Vision-Language Models. Built-in tokenizers, attention layers, decoding blocks, and KV-caching allow models such as Qwen, Gemma, and PaliGemma to run end-to-end through the standard `Net` API, with no external runtime required.
 
-In OpenCV 5.0, `ENGINE_OPENCV` runs on CPU only. Support for CUDA and other non-CPU backends is planned for a subsequent release. Users requiring GPU acceleration should use `ENGINE_ORT`.
+OpenCV 5.1 introduces initial GPU support for `ENGINE_OPENCV` through a CUDA backend. This work is still in progress: layer coverage and performance are being extended, and layers without a CUDA implementation run on CPU. In OpenCV 5.0 the new engine (then `ENGINE_NEW`) was CPU-only, and CUDA inference required the classic engine, which has since been removed. The CUDA backend is built when OpenCV is configured with CUDA, cuBLAS and either cuDNN (`WITH_CUDNN`) or the cuDNN graph API (`WITH_CUDNNJIT`). To try it, call `net.setPreferableBackend(DNN_BACKEND_CUDA)` and `net.setPreferableTarget(DNN_TARGET_CUDA)` or `DNN_TARGET_CUDA_FP16`.
 
 @note The Darknet, Caffe and TensorFlow parsers have been removed in OpenCV 5; ONNX is the recommended format. TFLite models are still supported and are executed via `ENGINE_OPENCV`.
 
@@ -38,7 +38,7 @@ cmake -DWITH_ONNXRUNTIME=ON ..
 cmake -DWITH_ONNXRUNTIME=ON -DDOWNLOAD_ONNXRUNTIME_GPU=ON ..
 ```
 
-ORT execution providers are supported, including CUDA for NVIDIA hardware. This makes `ENGINE_ORT` the recommended choice for GPU-accelerated inference while native GPU support for `ENGINE_OPENCV` is still in development.
+ORT execution providers are supported, including CUDA for NVIDIA hardware. This makes `ENGINE_ORT` the recommended choice for GPU-accelerated inference while GPU support for `ENGINE_OPENCV` is still in development.
 
 ### Selecting an Engine
 

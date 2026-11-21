@@ -85,6 +85,7 @@ performing mathematical computations, and managing memory efficiently within the
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
     @defgroup core_opencl OpenCL support
+    @defgroup core_accel Accelerators (non-CPU HAL)
     @defgroup core_va_intel Intel VA-API/OpenCL (CL-VA) interoperability
     @defgroup core_hal Hardware Acceleration Layer
     @{
@@ -1897,8 +1898,8 @@ if aTa=true, and
 otherwise. The function is used to calculate the covariance matrix. With
 zero delta, it can be used as a faster substitute for general matrix
 product A\*B when B=A'
-@param src input single-channel matrix. Note that unlike gemm, the
-function can multiply not only floating-point matrices.
+@param src input single-channel matrix of depth CV_8U, CV_16U, CV_16S, CV_32F
+or CV_64F.
 @param dst output square matrix.
 @param aTa Flag specifying the multiplication ordering. See the
 description below.
@@ -1906,13 +1907,14 @@ description below.
 multiplication. When the matrix is empty ( delta=noArray() ), it is
 assumed to be zero, that is, nothing is subtracted. If it has the same
 size as src, it is simply subtracted. Otherwise, it is "repeated" (see
-repeat ) to cover the full src and then subtracted. Type of the delta
-matrix, when it is not empty, must be the same as the type of created
-output matrix. See the dtype parameter description below.
+repeat ) to cover the full src and then subtracted. When delta is not
+empty, it is converted to the type of the output matrix, and a CV_64F
+delta makes the output CV_64F. See the dtype parameter description below.
 @param scale Optional scale factor for the matrix product.
-@param dtype Optional type of the output matrix. When it is negative,
-the output matrix will have the same type as src . Otherwise, it will be
-type=CV_MAT_DEPTH(dtype) that should be either CV_32F or CV_64F .
+@param dtype Optional depth of the output matrix, either CV_32F or CV_64F.
+When it is negative, the depth of src is used instead. The output is CV_64F
+if this depth or the depth of delta is CV_64F, and CV_32F otherwise, so an
+integer src gives a CV_32F output by default.
 @sa calcCovarMatrix, gemm, repeat, reduce
 */
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
@@ -2215,7 +2217,9 @@ the set of input vectors.
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrix; it equals 'CV_64F' by default.
+@param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
+default). When it is negative, the depth of the samples is used instead. A
+non-empty CV_64F mean also makes the output CV_64F.
 @sa PCA, mulTransposed, Mahalanobis
 @todo InputArrayOfArrays
 */
@@ -2228,7 +2232,10 @@ CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, M
 @param covar output covariance matrix of the type ctype and square size.
 @param mean input or output (depending on the flags) array as the average value of the input vectors.
 @param flags operation flags as a combination of #CovarFlags
-@param ctype type of the matrix; it equals 'CV_64F' by default.
+@param ctype depth of the output covariance matrix, CV_32F or CV_64F (the
+default). When it is negative, the depth of the samples is used instead. A
+non-empty CV_64F mean also makes the output CV_64F (for a single samples
+matrix, only with #COVAR_USE_AVG).
 */
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
                                    InputOutputArray mean, int flags, int ctype = CV_64F);
