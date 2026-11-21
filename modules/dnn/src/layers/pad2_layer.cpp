@@ -6,6 +6,11 @@
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
 
+#ifdef HAVE_CUDA
+#include "../op_cuda.hpp"
+#include "../cuda4dnn/primitives/padding.hpp"
+#endif
+
 namespace cv
 {
 namespace dnn
@@ -537,8 +542,65 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || this->inputs.empty() || this->inputs.size() > 4)
+                return false;
+            // initCUDA reads the pad value on the host
+            if (this->inputs.size() >= 3 && !this->inputs[2].empty() && !netimpl_->isConstArg(this->inputs[2]))
+                return false;
+            // an intermediate arg has no type or shape until the first forward; refuse only a known unsupported one
+            const ArgData& inp = netimpl_->argData(this->inputs[0]);
+            if (inp.shape.dims > CSL_MAX_TENSOR_RANK)
+                return false;
+            const int t = inp.type;
+            return t < 0 || isCudaNodeType(t);
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_, InputArrayOfArrays inputs_arr, InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        Net::Impl* netimpl_ = getNetImpl(this);
+
+        std::vector<int> pads;
+        const int ndims = inputs_arr.shape(0).dims;
+        if (!getConstSemanticPads(pads)) {
+            // dynamic pads: the engine has downloaded this forward's values, and rebuilds the node each forward
+            Mat axesTensor = this->inputs.size() >= 4 ? netimpl_->argTensor(this->inputs[3]) : Mat();
+            getPads(ndims, netimpl_->argTensor(this->inputs[1]), axesTensor, pads);
+        }
+        CV_CheckEQ((int)pads.size(), ndims*2, "Pad2: pads must cover every axis");
+        std::vector<int> pads_begin(pads.begin(), pads.begin() + ndims);
+
+        cuda4dnn::kernels::PadMode padMode = cuda4dnn::kernels::PadMode::CONSTANT;
+        if (mode == BORDER_REFLECT101)
+            padMode = cuda4dnn::kernels::PadMode::REFLECT101;
+        else if (mode == BORDER_REPLICATE)
+            padMode = cuda4dnn::kernels::PadMode::REPLICATE;
+        else if (mode == BORDER_WRAP)
+            padMode = cuda4dnn::kernels::PadMode::WRAP;
+
+        // same value source as forward(); stored in the element type the node computes in
+        const int depth = inputs_arr.depth(0);
+        const int valueType = (depth == CV_32F && preferableTarget == DNN_TARGET_CUDA_FP16) ? CV_16F : depth;
+        Mat value(1, 1, CV_32F, &value0);
+        if (this->inputs.size() >= 3)
+            value = this->inputs[2].empty() ? Mat() : netimpl_->argTensor(this->inputs[2]);
+        double buf = 0;
+        if (!value.empty())
+            tensorToScalar(value, valueType, &buf);
+
+        if (depth == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::Pad2Op>(std::move(context->stream), pads_begin, padMode, &buf);
+        return make_cuda_node_with_type<cuda4dnn::Pad2Op>(preferableTarget, depth, std::move(context->stream),
+                                                          pads_begin, padMode, &buf);
+    }
+#endif
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
@@ -708,8 +770,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!dynamicOutputShapes());
-
+        // dynamic pads are read below from the host copies the engine downloads before a CUDA forward
         size_t ninputs = inputs.size();
         CV_Assert(1 <= ninputs && ninputs <= 4);
         Net::Impl* netimpl_ = getNetImpl(this);

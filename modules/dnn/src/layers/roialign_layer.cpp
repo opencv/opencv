@@ -6,6 +6,11 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/roi_align.hpp"
+#endif
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv {
@@ -269,8 +274,48 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // the kernel reads the rois as float32, which the FP16 target stores as half
+            if (!netimpl_ || this->inputs.size() != 3 || netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
+            const int dims = netimpl_->argData(this->inputs[0]).shape.dims;
+            if (dims >= 0 && dims != 4)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int rt = netimpl_->argData(this->inputs[1]).type;
+            if (rt >= 0 && rt != CV_32F)
+                return false;
+            const int bt = netimpl_->argData(this->inputs[2]).type;
+            if (bt >= 0 && bt != CV_32S && bt != CV_64S)
+                return false;
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        CV_CheckDepthEQ(inputs_arr.depth(1), CV_32F, "RoiAlign: CUDA reads the rois as float");
+        cuda4dnn::kernels::RoiAlignParams params;
+        params.output_height = output_height;
+        params.output_width = output_width;
+        params.sampling_ratio = sampling_ratio;
+        params.spatial_scale = spatial_scale;
+        params.offset = (coord_mode_ == CoordTransformMode::HALF_PIXEL) ? 0.5f : 0.0f;
+        params.clamp_malformed_roi = (coord_mode_ != CoordTransformMode::HALF_PIXEL);
+        params.max_mode = (mode_ == RoiAlignMode::MAX);
+        return make_cuda_node_with_type<cuda4dnn::RoiAlignOp>(preferableTarget, inputs_arr.type(0),
+                                                              std::move(context->stream), params);
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int /*requiredOutputs*/,

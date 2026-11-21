@@ -355,6 +355,30 @@ public:
                     return isBool(types[0]) && isBool(types[1]);
                 return isCudaType(types[0]) && isCudaType(types[1]);
             }
+            if (op == OPERATION::BITWISE_AND || op == OPERATION::BITWISE_OR || op == OPERATION::BITWISE_XOR ||
+                op == OPERATION::PRELU || op == OPERATION::MEAN) {
+                // EltwiseOp reads every input as one element type
+                Net::Impl* netimpl_ = getNetImpl(this);
+                if (!netimpl_ || inputs.size() < 2 || (op != OPERATION::MEAN && inputs.size() != 2))
+                    return false;
+                int t0 = -1;
+                for (const Arg& a : inputs) {
+                    const int t = netimpl_->argData(a).type;
+                    if (t < 0)
+                        continue;
+                    if (t0 >= 0 && t != t0)
+                        return false;
+                    t0 = t;
+                }
+                if (t0 < 0)
+                    return true;
+                if (op == OPERATION::MEAN)
+                    return t0 == CV_32F || t0 == CV_16F;  // integer 1/n weights would truncate to 0
+                const bool isInt = t0 == CV_8S || t0 == CV_8U || t0 == CV_32S || t0 == CV_64S;
+                if (op == OPERATION::PRELU)
+                    return isInt || t0 == CV_32F || t0 == CV_16F;
+                return isInt;
+            }
             if (op == OPERATION::POW) {
                 // EltwiseOp reads base and exponent as one float type
                 Net::Impl* netimpl_ = getNetImpl(this);
@@ -1696,10 +1720,29 @@ public:
             case OPERATION::POW:
                 op_ = cuda4dnn::EltwiseOpType::POW;
                 break;
+            case OPERATION::PRELU:
+                op_ = cuda4dnn::EltwiseOpType::PRELU;
+                break;
+            case OPERATION::BITWISE_AND:
+                op_ = cuda4dnn::EltwiseOpType::BIT_AND;
+                break;
+            case OPERATION::BITWISE_OR:
+                op_ = cuda4dnn::EltwiseOpType::BIT_OR;
+                break;
+            case OPERATION::BITWISE_XOR:
+                op_ = cuda4dnn::EltwiseOpType::BIT_XOR;
+                break;
+            case OPERATION::MEAN:
+                op_ = cuda4dnn::EltwiseOpType::SUM;
+                break;
             default: return Ptr<BackendNode>(); // return empty cuda_node if the EltwiseOpType is unsupported type.
         };
 
-        return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, CV_MAT_DEPTH(inputs[0].type()), std::move(context->stream), op_, std::vector<float>());
+        // Mean is a sum weighted by 1/n
+        std::vector<float> coeffs;
+        if (op == OPERATION::MEAN)
+            coeffs.assign(inputs.size(), 1.f / (float)inputs.size());
+        return make_cuda_node_with_type<cuda4dnn::EltwiseOp>(preferableTarget, CV_MAT_DEPTH(inputs[0].type()), std::move(context->stream), op_, coeffs);
     }
 #endif
 

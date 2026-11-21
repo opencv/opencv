@@ -17,6 +17,7 @@
 #include <opencv2/core.hpp>
 
 #include <cstddef>
+#include <cstring>
 #include <vector>
 #include <algorithm>
 #include <utility>
@@ -111,6 +112,37 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         T value;
 
         std::vector<cv::Range> dstRanges;
+    };
+
+    // ONNX Pad: any rank, constant/reflect/edge/wrap, negative pads crop
+    template <class T>
+    class Pad2Op final : public CUDABackendNode {
+    public:
+        // value_bits holds the pad value already converted to the tensor's element type
+        Pad2Op(csl::Stream stream_, std::vector<int> pads_begin_, kernels::PadMode mode_, const void* value_bits)
+            : stream(std::move(stream_)), pads_begin(std::move(pads_begin_)), mode(mode_)
+        {
+            std::memcpy(&value, value_bits, sizeof(T));
+        }
+
+        void forward(
+            const std::vector<UMat>& inputs,
+            const std::vector<UMat>& outputs,
+            csl::Workspace& workspace) override
+        {
+            CV_UNUSED(workspace);
+            CV_Assert(!inputs.empty() && outputs.size() == 1);
+
+            auto input = csl::viewOf<T>(inputs[0]);
+            auto output = csl::spanOf<T>(outputs[0]);
+            kernels::pad_nd<T>(stream, output, input, pads_begin, mode, value);
+        }
+
+    private:
+        csl::Stream stream;
+        std::vector<int> pads_begin;
+        kernels::PadMode mode;
+        T value;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

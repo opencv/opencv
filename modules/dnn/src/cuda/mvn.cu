@@ -34,20 +34,10 @@ namespace raw {
 
     constexpr int MEAN_SQR_SUM_BLOCK_SIZE = 256;
 
-    // one block per row: a warp-shuffle and shared-memory reduction, no per-element atomics
-    template <class T>
-    __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
+    // sums sum and sqr over the block with warp shuffles and shared memory; the totals land in thread 0
+    __device__ void block_sum2(float& sum, float& sqr) {
         __shared__ float warp_sums[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
         __shared__ float warp_sqrs[MEAN_SQR_SUM_BLOCK_SIZE / GPU_WARP_SIZE];
-
-        const index_type outer_idx = blockIdx.x;
-        const index_type row_start = outer_idx * inner_size;
-        float sum = 0.f, sqr = 0.f;
-        for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
-            const auto x = static_cast<float>(input[row_start + i]);
-            sum += x;
-            sqr += x * x;
-        }
 
         for (int offset = GPU_WARP_SIZE / 2; offset > 0; offset /= 2) {
             sum += WARP_SHFL_XOR(sum, offset);
@@ -68,10 +58,59 @@ namespace raw {
                 sum += WARP_SHFL_XOR(sum, offset);
                 sqr += WARP_SHFL_XOR(sqr, offset);
             }
-            if (lane == 0) {
-                means[outer_idx] = sum / inner_size;
-                sum_sqrs[outer_idx] = sqr;
+        }
+    }
+
+    // one block per row: a warp-shuffle and shared-memory reduction, no per-element atomics
+    template <class T>
+    __global__ void reduce_mean_sqr_sum(Span<float> means, Span<float> sum_sqrs, View<T> input, size_type inner_size) {
+        const index_type outer_idx = blockIdx.x;
+        const index_type row_start = outer_idx * inner_size;
+        float sum = 0.f, sqr = 0.f;
+        for (index_type i = threadIdx.x; i < inner_size; i += blockDim.x) {
+            const auto x = static_cast<float>(input[row_start + i]);
+            sum += x;
+            sqr += x * x;
+        }
+        block_sum2(sum, sqr);
+        if (threadIdx.x == 0) {
+            means[outer_idx] = sum / inner_size;
+            sum_sqrs[outer_idx] = sqr;
+        }
+    }
+
+    // a long row split over `splits` blocks: each writes the partial sums of its chunk
+    template <class T>
+    __global__ void reduce_mean_sqr_sum_partial(Span<float> part_sums, Span<float> part_sqrs, View<T> input,
+                                                size_type inner_size, size_type chunk, size_type splits) {
+        const index_type row = blockIdx.x / splits, split = blockIdx.x % splits;
+        const index_type row_start = row * inner_size;
+        const index_type begin = split * chunk;
+        const index_type end = begin + chunk < inner_size ? begin + chunk : inner_size;
+        float sum = 0.f, sqr = 0.f;
+        for (index_type i = begin + threadIdx.x; i < end; i += blockDim.x) {
+            const auto x = static_cast<float>(input[row_start + i]);
+            sum += x;
+            sqr += x * x;
+        }
+        block_sum2(sum, sqr);
+        if (threadIdx.x == 0) {
+            part_sums[row * splits + split] = sum;
+            part_sqrs[row * splits + split] = sqr;
+        }
+    }
+
+    // one thread per row adds the partials in split order, so the result does not depend on scheduling
+    __global__ void reduce_mean_sqr_sum_combine(Span<float> means, Span<float> sum_sqrs, View<float> part_sums,
+                                                View<float> part_sqrs, size_type splits, size_type inner_size) {
+        for (auto row : grid_stride_range(means.size())) {
+            float sum = 0.f, sqr = 0.f;
+            for (index_type s = 0; s < splits; s++) {
+                sum += part_sums[row * splits + s];
+                sqr += part_sqrs[row * splits + s];
             }
+            means[row] = sum / inner_size;
+            sum_sqrs[row] = sqr;
         }
     }
 
@@ -180,6 +219,56 @@ void reduce_mean_sqr_sum(const Stream& stream, Span<float> means, Span<float> su
 template void reduce_mean_sqr_sum(const Stream&, Span<float>, Span<float>, View<__half>, std::size_t);
 #endif
 template void reduce_mean_sqr_sum(const Stream&, Span<float>, Span<float>, View<float>, std::size_t);
+
+namespace {
+    // 64 loads per thread: enough work per block to hide memory latency, small enough to fill the GPU
+    constexpr std::size_t MEAN_SQR_SUM_CHUNK = raw::MEAN_SQR_SUM_BLOCK_SIZE * 64;
+
+    // a row gains from splitting only once it fills two chunks; short rows (LayerNorm) keep one block
+    std::size_t meanSqrSumSplits(std::size_t inner_size)
+    {
+        if (inner_size < 2 * MEAN_SQR_SUM_CHUNK)
+            return 1;
+        return (inner_size + MEAN_SQR_SUM_CHUNK - 1) / MEAN_SQR_SUM_CHUNK;
+    }
+}
+
+std::size_t reduce_mean_sqr_sum_scratch(std::size_t rows, std::size_t inner_size)
+{
+    const std::size_t splits = meanSqrSumSplits(inner_size);
+    return splits > 1 ? 2 * rows * splits : 0;
+}
+
+template <class T>
+void reduce_mean_sqr_sum(const Stream& stream, Span<float> means, Span<float> sum_sqrs, View<T> input,
+                         std::size_t inner_size, Span<float> scratch)
+{
+    const std::size_t rows = means.size();
+    const std::size_t splits = meanSqrSumSplits(inner_size);
+    if (splits == 1 || scratch.size() < 2 * rows * splits) {
+        reduce_mean_sqr_sum<T>(stream, means, sum_sqrs, input, inner_size);
+        return;
+    }
+    CV_Assert(input.size() / inner_size == rows && sum_sqrs.size() == rows);
+
+    const std::size_t chunk = (inner_size + splits - 1) / splits;
+    Span<float> part_sums(scratch.data(), rows * splits);
+    Span<float> part_sqrs(scratch.data() + rows * splits, rows * splits);
+
+    auto partial = raw::reduce_mean_sqr_sum_partial<T>;
+    launch_kernel(partial, execution_policy(dim3(static_cast<unsigned int>(rows * splits)),
+                                            dim3(raw::MEAN_SQR_SUM_BLOCK_SIZE), 0, stream),
+                  part_sums, part_sqrs, input, inner_size, chunk, splits);
+
+    auto combine = raw::reduce_mean_sqr_sum_combine;
+    auto policy = make_policy(combine, rows, 0, stream);
+    launch_kernel(combine, policy, means, sum_sqrs, View<float>(part_sums), View<float>(part_sqrs), splits, inner_size);
+}
+
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+template void reduce_mean_sqr_sum(const Stream&, Span<float>, Span<float>, View<__half>, std::size_t, Span<float>);
+#endif
+template void reduce_mean_sqr_sum(const Stream&, Span<float>, Span<float>, View<float>, std::size_t, Span<float>);
 
 void compute_normalization_scale(const Stream& stream, Span<float> scale, View<float> means, View<float> sum_sqrs, std::size_t inner_size, float eps)
 {

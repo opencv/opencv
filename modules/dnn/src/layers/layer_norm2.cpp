@@ -37,10 +37,19 @@ public:
     {
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA) {
-            // LayerNormOp writes Y only; the optional Mean/InvStdDev outputs stay on CPU
+            // LayerNormOp copies its float Mean/InvStdDev scratch to the optional outputs
             Net::Impl* netimpl_ = getNetImpl(this);
-            if (!netimpl_ || inputs.empty() || outputs.size() != 1)
+            if (!netimpl_ || inputs.empty() || outputs.empty() || outputs.size() > 3)
                 return false;
+            if (outputs.size() > 1) {
+                if (netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                    return false;
+                for (size_t k = 1; k < outputs.size(); k++) {
+                    const int ot = outputs[k].empty() ? -1 : netimpl_->argData(outputs[k]).type;
+                    if (ot >= 0 && ot != CV_32F)
+                        return false;
+                }
+            }
             // weights are either all constant blobs or all runtime inputs
             const bool constWeights = inputs.size() == 1 && (blobs.size() == 1 || blobs.size() == 2);
             const bool inputWeights = blobs.empty() && (inputs.size() == 2 || inputs.size() == 3);

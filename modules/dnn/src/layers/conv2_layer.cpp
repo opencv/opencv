@@ -16,6 +16,7 @@
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_EXEC_CLASS
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
+#include "fusion_cuda.hpp"  // FusedPostOpNode and the activation ops
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -545,6 +546,20 @@ public:
     bool absorbMath(const Ptr<AdjacencyGraph>& expr)
     {
         return absorbAffine(expr) || absorbKernel(expr);
+    }
+
+    //! The kernel activations ConvolutionOp applies itself.
+    static bool cudaConvKernel(ActivationFunc fn)
+    {
+        return fn == getActivationFunc(ACTIV_SIGMOID) || fn == getActivationFunc(ACTIV_SWISH) ||
+               fn == getActivationFunc(ACTIV_MISH) || fn == getActivationFunc(ACTIV_TANH);
+    }
+
+    //! Kernel activations the CUDA path runs as a separate op after the convolution.
+    static bool cudaPostKernel(ActivationFunc fn)
+    {
+        return fn == getActivationFunc(ACTIV_HARDSWISH) || fn == getActivationFunc(ACTIV_GELU) ||
+               fn == getActivationFunc(ACTIV_GELU_APPROX) || fn == getActivationFunc(ACTIV_EXP);
     }
 
     //! Takes an expression the layer has a kernel for. Only a one-layer chain carries
@@ -1199,13 +1214,12 @@ public:
             return false;
         if (!activ.empty())
             return false;
-        // a fused kernel activation runs on CUDA only if ConvolutionOp has the same one
-        if (activationFunc != nullptr &&
-            activationFunc != getActivationFunc(ACTIV_SIGMOID) && activationFunc != getActivationFunc(ACTIV_SWISH) &&
-            activationFunc != getActivationFunc(ACTIV_MISH) && activationFunc != getActivationFunc(ACTIV_TANH))
+        // a fused kernel activation runs on CUDA inside ConvolutionOp or as a post-op after it
+        if (activationFunc != nullptr && !cudaConvKernel(activationFunc) && !cudaPostKernel(activationFunc))
             return false;
         if (fastActivation != FAST_ACTIV_NONE && fastActivation != FAST_ACTIV_RELU &&
-            fastActivation != FAST_ACTIV_LEAKY_RELU && fastActivation != FAST_ACTIV_CLIP)
+            fastActivation != FAST_ACTIV_LEAKY_RELU && fastActivation != FAST_ACTIV_CLIP &&
+            fastActivation != FAST_ACTIV_PRELU)
             return false;
         return true;
     }
@@ -1256,11 +1270,28 @@ public:
             biasMat = fusedBias;  // already b*scale + bn_bias
         }
 
+        // activations ConvolutionOp lacks run as their own op on the convolution's output
+        Ptr<BackendNode> post;
+        if (fastActivation == FAST_ACTIV_PRELU) {
+            Mat slope(1, (int)activParams.size(), CV_32F, activParams.data());
+            post = make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(targetId, context.stream, slope.clone());
+        } else if (activationFunc == getActivationFunc(ACTIV_HARDSWISH)) {
+            post = make_cuda_node<cuda4dnn::HardSwishOp>(targetId, context.stream);
+        } else if (activationFunc == getActivationFunc(ACTIV_GELU)) {
+            post = make_cuda_node<cuda4dnn::GeluOp>(targetId, context.stream);
+        } else if (activationFunc == getActivationFunc(ACTIV_GELU_APPROX)) {
+            post = make_cuda_node<cuda4dnn::GeluApproximationOp>(targetId, context.stream);
+        } else if (activationFunc == getActivationFunc(ACTIV_EXP)) {
+            const float scale = activParams.size() > 0 ? activParams[0] : 1.f;
+            const float shift = activParams.size() > 1 ? activParams[1] : 0.f;
+            post = make_cuda_node<cuda4dnn::ExpOp>(targetId, context.stream, scale, shift);
+        }
+
         config.activation_type = ConvolutionConfiguration::ActivationType::IDENTITY;
         config.relu_negative_slope = 0.f;
         config.crelu_floor = 0.f; config.crelu_ceil = 0.f;
         config.power_exp = 1.f; config.power_scale = 1.f; config.power_shift = 0.f;
-        bool hasAct = fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr;
+        bool hasAct = (fastActivation != FAST_ACTIV_NONE || activationFunc != nullptr) && post.empty();
         if (activationFunc == getActivationFunc(ACTIV_SIGMOID)) {
             config.activation_type = ConvolutionConfiguration::ActivationType::SIGMOID;
         } else if (activationFunc == getActivationFunc(ACTIV_SWISH)) {
@@ -1289,9 +1320,12 @@ public:
         else
             config.fusion_mode = ConvolutionConfiguration::FusionMode::NONE;
 
-        return make_cuda_node<cuda4dnn::ConvolutionOp>(
+        Ptr<BackendNode> convNode = make_cuda_node<cuda4dnn::ConvolutionOp>(
             targetId, std::move(context.stream), std::move(context.cudnn_handle),
             config, filters, biasMat);
+        if (post.empty())
+            return convNode;
+        return makePtr<FusedPostOpNode>(convNode.dynamicCast<CUDABackendNode>(), post.dynamicCast<CUDABackendNode>());
     }
 #endif
 
