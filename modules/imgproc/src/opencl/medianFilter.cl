@@ -238,32 +238,25 @@ __kernel void medianFilter5_u(__global const uchar* srcptr, int srcStep, int src
 
         T4 mid;
 
-        OP(p1, p2); OP(p0, p1); OP(p1, p2); OP(p4, p5); OP(p3, p4);
-        OP(p4, p5); OP(p0, p3); OP(p2, p5); OP(p2, p3); OP(p1, p4);
-        OP(p1, p2); OP(p3, p4); OP(p7, p8); OP(p6, p7); OP(p7, p8);
-        OP(p10, p11); OP(p9, p10); OP(p10, p11); OP(p6, p9); OP(p8, p11);
-        OP(p8, p9); OP(p7, p10); OP(p7, p8); OP(p9, p10); OP(p0, p6);
-
-        OP(p4, p10); OP(p4, p6); OP(p2, p8); OP(p2, p4); OP(p6, p8);
-        OP(p1, p7); OP(p5, p11); OP(p5, p7); OP(p3, p9); OP(p3, p5);
-        OP(p7, p9); OP(p1, p2); OP(p3, p4); OP(p5, p6); OP(p7, p8);
-        OP(p9, p10); OP(p13, p14); OP(p12, p13); OP(p13, p14); OP(p16, p17);
-        OP(p15, p16); OP(p16, p17); OP(p12, p15); OP(p14, p17); OP(p14, p15);
-
-        OP(p13, p16); OP(p13, p14); OP(p15, p16); OP(p19, p20); OP(p18, p19);
-        OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p21, p23); OP(p22, p24);
-        OP(p22, p23); OP(p18, p21); OP(p20, p23); OP(p20, p21); OP(p19, p22);
-        OP(p22, p24); OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p12, p18);
-        OP(p16, p22); OP(p16, p18); OP(p14, p20); OP(p20, p24); OP(p14, p16);
-
-        OP(p18, p20); OP(p22, p24); OP(p13, p19); OP(p17, p23); OP(p17, p19);
-        OP(p15, p21); OP(p15, p17); OP(p19, p21); OP(p13, p14); OP(p15, p16);
-        OP(p17, p18); OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p0, p12);
-        OP(p8, p20);  OP(p8, p12); OP(p4, p16); OP(p16, p24); OP(p12, p16);
-        OP(p2, p14);  OP(p10, p22); OP(p10, p14); OP(p6, p18); OP(p6, p10);
-        OP(p10, p12); OP(p1, p13); OP(p9, p21); OP(p9, p13); OP(p5, p17);
-        OP(p13, p17); OP(p3, p15); OP(p11, p23); OP(p11, p15); OP(p7, p19);
-        OP(p7, p11);  OP(p11, p13); OP(p11, p12);
+        // median of 25: 85 compare-exchanges, 146 min/max once unused halves are dropped (B. Dobbelaere's
+        // median network list, https://bertdobbelaere.github.io/median_networks.html), reordered to reduce register pressure
+        OP(p12, p13); OP(p6, p7); OP(p0, p1); OP(p14, p15); OP(p13, p15);
+        OP(p2, p3); OP(p4, p5); OP(p4, p6); OP(p1, p3); OP(p0, p2);
+        OP(p10, p11); OP(p5, p7); OP(p12, p14); OP(p3, p7); OP(p8, p9);
+        OP(p9, p11); OP(p11, p15); OP(p7, p15); OP(p8, p10); OP(p10, p14);
+        OP(p2, p6); OP(p3, p11); OP(p8, p12); OP(p1, p5); OP(p0, p4);
+        OP(p9, p13); OP(p4, p12); OP(p1, p9); OP(p0, p8); OP(p18, p19);
+        OP(p16, p17); OP(p16, p18); OP(p17, p19); OP(p20, p21); OP(p22, p23);
+        OP(p20, p22); OP(p16, p20); OP(p8, p16); OP(p12, p20); OP(p1, p12);
+        OP(p21, p23); OP(p19, p23); OP(p7, p23); OP(p6, p14); OP(p3, p19);
+        OP(p14, p19); OP(p18, p22); OP(p5, p13); OP(p6, p22); OP(p13, p22);
+        OP(p17, p21); OP(p5, p21); OP(p11, p21); OP(p11, p13); OP(p7, p13);
+        OP(p2, p10); OP(p11, p14); OP(p9, p17); OP(p10, p18); OP(p3, p5);
+        OP(p4, p10); OP(p2, p9); OP(p9, p10); OP(p5, p11); OP(p10, p12);
+        OP(p18, p20); OP(p10, p16); OP(p9, p16); OP(p11, p20); OP(p11, p17);
+        OP(p12, p18); OP(p3, p12); OP(p11, p24); OP(p14, p18); OP(p7, p14);
+        OP(p5, p16); OP(p7, p16); OP(p6, p12); OP(p12, p17); OP(p7, p11);
+        OP(p16, p24); OP(p6, p11); OP(p12, p16); OP(p11, p12); OP(p12, p16);
 
         int dst_index = mad24( gy+k, dstStep, xdst);
 
@@ -362,29 +355,24 @@ __kernel void medianFilter5(__global const uchar * srcptr, int src_step, int src
     T p20 = data[y+4][x], p21 = data[y+4][x+1], p22 = data[y+4][x+2], p23 = data[y+4][x+3], p24 = data[y+4][x+4];
     T mid;
 
-    OP(p1, p2); OP(p0, p1); OP(p1, p2); OP(p4, p5); OP(p3, p4);
-    OP(p4, p5); OP(p0, p3); OP(p2, p5); OP(p2, p3); OP(p1, p4);
-    OP(p1, p2); OP(p3, p4); OP(p7, p8); OP(p6, p7); OP(p7, p8);
-    OP(p10, p11); OP(p9, p10); OP(p10, p11); OP(p6, p9); OP(p8, p11);
-    OP(p8, p9); OP(p7, p10); OP(p7, p8); OP(p9, p10); OP(p0, p6);
-    OP(p4, p10); OP(p4, p6); OP(p2, p8); OP(p2, p4); OP(p6, p8);
-    OP(p1, p7); OP(p5, p11); OP(p5, p7); OP(p3, p9); OP(p3, p5);
-    OP(p7, p9); OP(p1, p2); OP(p3, p4); OP(p5, p6); OP(p7, p8);
-    OP(p9, p10); OP(p13, p14); OP(p12, p13); OP(p13, p14); OP(p16, p17);
-    OP(p15, p16); OP(p16, p17); OP(p12, p15); OP(p14, p17); OP(p14, p15);
-    OP(p13, p16); OP(p13, p14); OP(p15, p16); OP(p19, p20); OP(p18, p19);
-    OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p21, p23); OP(p22, p24);
-    OP(p22, p23); OP(p18, p21); OP(p20, p23); OP(p20, p21); OP(p19, p22);
-    OP(p22, p24); OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p12, p18);
-    OP(p16, p22); OP(p16, p18); OP(p14, p20); OP(p20, p24); OP(p14, p16);
-    OP(p18, p20); OP(p22, p24); OP(p13, p19); OP(p17, p23); OP(p17, p19);
-    OP(p15, p21); OP(p15, p17); OP(p19, p21); OP(p13, p14); OP(p15, p16);
-    OP(p17, p18); OP(p19, p20); OP(p21, p22); OP(p23, p24); OP(p0, p12);
-    OP(p8, p20); OP(p8, p12); OP(p4, p16); OP(p16, p24); OP(p12, p16);
-    OP(p2, p14); OP(p10, p22); OP(p10, p14); OP(p6, p18); OP(p6, p10);
-    OP(p10, p12); OP(p1, p13); OP(p9, p21); OP(p9, p13); OP(p5, p17);
-    OP(p13, p17); OP(p3, p15); OP(p11, p23); OP(p11, p15); OP(p7, p19);
-    OP(p7, p11); OP(p11, p13); OP(p11, p12);
+    // same median-of-25 network as above
+    OP(p12, p13); OP(p6, p7); OP(p0, p1); OP(p14, p15); OP(p13, p15);
+    OP(p2, p3); OP(p4, p5); OP(p4, p6); OP(p1, p3); OP(p0, p2);
+    OP(p10, p11); OP(p5, p7); OP(p12, p14); OP(p3, p7); OP(p8, p9);
+    OP(p9, p11); OP(p11, p15); OP(p7, p15); OP(p8, p10); OP(p10, p14);
+    OP(p2, p6); OP(p3, p11); OP(p8, p12); OP(p1, p5); OP(p0, p4);
+    OP(p9, p13); OP(p4, p12); OP(p1, p9); OP(p0, p8); OP(p18, p19);
+    OP(p16, p17); OP(p16, p18); OP(p17, p19); OP(p20, p21); OP(p22, p23);
+    OP(p20, p22); OP(p16, p20); OP(p8, p16); OP(p12, p20); OP(p1, p12);
+    OP(p21, p23); OP(p19, p23); OP(p7, p23); OP(p6, p14); OP(p3, p19);
+    OP(p14, p19); OP(p18, p22); OP(p5, p13); OP(p6, p22); OP(p13, p22);
+    OP(p17, p21); OP(p5, p21); OP(p11, p21); OP(p11, p13); OP(p7, p13);
+    OP(p2, p10); OP(p11, p14); OP(p9, p17); OP(p10, p18); OP(p3, p5);
+    OP(p4, p10); OP(p2, p9); OP(p9, p10); OP(p5, p11); OP(p10, p12);
+    OP(p18, p20); OP(p10, p16); OP(p9, p16); OP(p11, p20); OP(p11, p17);
+    OP(p12, p18); OP(p3, p12); OP(p11, p24); OP(p14, p18); OP(p7, p14);
+    OP(p5, p16); OP(p7, p16); OP(p6, p12); OP(p12, p17); OP(p7, p11);
+    OP(p16, p24); OP(p6, p11); OP(p12, p16); OP(p11, p12); OP(p12, p16);
 
     int dst_index = mad24(gy, dst_step, mad24(gx, TSIZE, dst_offset));
 

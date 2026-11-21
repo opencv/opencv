@@ -100,11 +100,12 @@ static inline int medianBlurC1(int start, int end, const uchar* src_data, size_t
                         p20 = helper::vslide1up(p20, row4[0], vl);
                     }
                 }
-                p1 = helper::vslide1down(p0, row0[j + vl - 2], vl);
-                p6 = helper::vslide1down(p5, row1[j + vl - 2], vl);
-                p11 = helper::vslide1down(p10, row2[j + vl - 2], vl);
-                p16 = helper::vslide1down(p15, row3[j + vl - 2], vl);
-                p21 = helper::vslide1down(p20, row4[j + vl - 2], vl);
+                // width == 1 gives j + vl - 2 == -1; the replicated border is column 0
+                p1 = helper::vslide1down(p0, row0[std::max(j + vl - 2, 0)], vl);
+                p6 = helper::vslide1down(p5, row1[std::max(j + vl - 2, 0)], vl);
+                p11 = helper::vslide1down(p10, row2[std::max(j + vl - 2, 0)], vl);
+                p16 = helper::vslide1down(p15, row3[std::max(j + vl - 2, 0)], vl);
+                p21 = helper::vslide1down(p20, row4[std::max(j + vl - 2, 0)], vl);
                 p2 = helper::vslide1down(p1, row0[j + vl - 1], vl);
                 p7 = helper::vslide1down(p6, row1[j + vl - 1], vl);
                 p12 = helper::vslide1down(p11, row2[j + vl - 1], vl);
@@ -341,26 +342,27 @@ static inline int medianBlurC4(int start, int end, const uchar* src_data, size_t
                         slideup();
                     }
                 }
-                p01 = __riscv_vslide1down(p00, row0[(j + vl - 2) * 4    ], vl);
-                p11 = __riscv_vslide1down(p10, row0[(j + vl - 2) * 4 + 1], vl);
-                p21 = __riscv_vslide1down(p20, row0[(j + vl - 2) * 4 + 2], vl);
-                p31 = __riscv_vslide1down(p30, row0[(j + vl - 2) * 4 + 3], vl);
-                p06 = __riscv_vslide1down(p05, row1[(j + vl - 2) * 4    ], vl);
-                p16 = __riscv_vslide1down(p15, row1[(j + vl - 2) * 4 + 1], vl);
-                p26 = __riscv_vslide1down(p25, row1[(j + vl - 2) * 4 + 2], vl);
-                p36 = __riscv_vslide1down(p35, row1[(j + vl - 2) * 4 + 3], vl);
-                p011 = __riscv_vslide1down(p010, row2[(j + vl - 2) * 4    ], vl);
-                p111 = __riscv_vslide1down(p110, row2[(j + vl - 2) * 4 + 1], vl);
-                p211 = __riscv_vslide1down(p210, row2[(j + vl - 2) * 4 + 2], vl);
-                p311 = __riscv_vslide1down(p310, row2[(j + vl - 2) * 4 + 3], vl);
-                p016 = __riscv_vslide1down(p015, row3[(j + vl - 2) * 4    ], vl);
-                p116 = __riscv_vslide1down(p115, row3[(j + vl - 2) * 4 + 1], vl);
-                p216 = __riscv_vslide1down(p215, row3[(j + vl - 2) * 4 + 2], vl);
-                p316 = __riscv_vslide1down(p315, row3[(j + vl - 2) * 4 + 3], vl);
-                p021 = __riscv_vslide1down(p020, row4[(j + vl - 2) * 4    ], vl);
-                p121 = __riscv_vslide1down(p120, row4[(j + vl - 2) * 4 + 1], vl);
-                p221 = __riscv_vslide1down(p220, row4[(j + vl - 2) * 4 + 2], vl);
-                p321 = __riscv_vslide1down(p320, row4[(j + vl - 2) * 4 + 3], vl);
+                // width == 1 gives j + vl - 2 == -1; the replicated border is column 0
+                p01 = __riscv_vslide1down(p00, row0[std::max(j + vl - 2, 0) * 4    ], vl);
+                p11 = __riscv_vslide1down(p10, row0[std::max(j + vl - 2, 0) * 4 + 1], vl);
+                p21 = __riscv_vslide1down(p20, row0[std::max(j + vl - 2, 0) * 4 + 2], vl);
+                p31 = __riscv_vslide1down(p30, row0[std::max(j + vl - 2, 0) * 4 + 3], vl);
+                p06 = __riscv_vslide1down(p05, row1[std::max(j + vl - 2, 0) * 4    ], vl);
+                p16 = __riscv_vslide1down(p15, row1[std::max(j + vl - 2, 0) * 4 + 1], vl);
+                p26 = __riscv_vslide1down(p25, row1[std::max(j + vl - 2, 0) * 4 + 2], vl);
+                p36 = __riscv_vslide1down(p35, row1[std::max(j + vl - 2, 0) * 4 + 3], vl);
+                p011 = __riscv_vslide1down(p010, row2[std::max(j + vl - 2, 0) * 4    ], vl);
+                p111 = __riscv_vslide1down(p110, row2[std::max(j + vl - 2, 0) * 4 + 1], vl);
+                p211 = __riscv_vslide1down(p210, row2[std::max(j + vl - 2, 0) * 4 + 2], vl);
+                p311 = __riscv_vslide1down(p310, row2[std::max(j + vl - 2, 0) * 4 + 3], vl);
+                p016 = __riscv_vslide1down(p015, row3[std::max(j + vl - 2, 0) * 4    ], vl);
+                p116 = __riscv_vslide1down(p115, row3[std::max(j + vl - 2, 0) * 4 + 1], vl);
+                p216 = __riscv_vslide1down(p215, row3[std::max(j + vl - 2, 0) * 4 + 2], vl);
+                p316 = __riscv_vslide1down(p315, row3[std::max(j + vl - 2, 0) * 4 + 3], vl);
+                p021 = __riscv_vslide1down(p020, row4[std::max(j + vl - 2, 0) * 4    ], vl);
+                p121 = __riscv_vslide1down(p120, row4[std::max(j + vl - 2, 0) * 4 + 1], vl);
+                p221 = __riscv_vslide1down(p220, row4[std::max(j + vl - 2, 0) * 4 + 2], vl);
+                p321 = __riscv_vslide1down(p320, row4[std::max(j + vl - 2, 0) * 4 + 3], vl);
                 p02 = __riscv_vslide1down(p01, row0[(j + vl - 1) * 4    ], vl);
                 p12 = __riscv_vslide1down(p11, row0[(j + vl - 1) * 4 + 1], vl);
                 p22 = __riscv_vslide1down(p21, row0[(j + vl - 1) * 4 + 2], vl);
