@@ -3,6 +3,8 @@
 #include "opencv2/objdetect.hpp"
 
 typedef QRCodeEncoder::Params QRCodeEncoder_Params;
+typedef barcode::BarcodeEncoder::Params BarcodeEncoder_Params;
+typedef barcode::BarcodeEncoder::Params barcode_BarcodeEncoder_Params;
 typedef std::vector<cv::Ptr<mcc::CChecker>> vector_Ptr_CChecker;
 #ifdef HAVE_OPENCV_DNN
 typedef dnn::Net dnn_Net;
