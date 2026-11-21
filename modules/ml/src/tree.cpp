@@ -57,7 +57,8 @@ TreeParams::TreeParams()
     regressionAccuracy = 0.01f;
     useSurrogates = false;
     maxCategories = 10;
-    CVFolds = 10;
+    // #28941: cross-validation pruning is not implemented; setCVFolds(>1) throws.
+    CVFolds = 0;
     use1SERule = true;
     truncatePrunedTree = true;
     priors = Mat();
@@ -242,7 +243,8 @@ const vector<int>& DTreesImpl::getActiveVars()
 
 int DTreesImpl::addTree(const vector<int>& sidx )
 {
-    size_t n = (params.getMaxDepth() > 0 ? (1 << params.getMaxDepth()) : 1024) + w->wnodes.size();
+    int maxDepth = params.getMaxDepth();
+    size_t n = (maxDepth > 0 && maxDepth <= 25 ? (size_t)1 << maxDepth : 1024) + w->wnodes.size();
 
     w->wnodes.reserve(n);
     w->wsplits.reserve(n);
