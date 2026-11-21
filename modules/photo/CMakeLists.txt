@@ -1,4 +1,6 @@
 set(the_description "Computational Photography")
+ocv_add_dispatched_file(mertens_weight AVX512_ICL)
+ocv_add_dispatched_file(mertens_fuse AVX512_ICL)
 
 if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations -Wshadow)
