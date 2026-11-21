@@ -46,6 +46,21 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 #undef cv_hal_warpPerspective
 #define cv_hal_warpPerspective ipp_hal_warpPerspective
 
+#if IPP_VERSION_X100 >= 202610
+
+int ipp_hal_pyrdown(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                    uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
+                    int depth, int cn, int border_type);
+#undef cv_hal_pyrdown
+#define cv_hal_pyrdown ipp_hal_pyrdown
+
+int ipp_hal_pyrup(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                  uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
+                  int depth, int cn, int border_type);
+#undef cv_hal_pyrup
+#define cv_hal_pyrup ipp_hal_pyrup
+#endif // IPP_VERSION_X100 >= 202610
+
 #endif // IPP_VERSION_X100 >= 202600
 
 #if defined(HAVE_IPP_IW)
