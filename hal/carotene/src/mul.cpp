@@ -1104,10 +1104,15 @@ void mul(const Size2D &size,
                              T * dstBase, ptrdiff_t dstStride,
                              CONVERT_POLICY cpolicy);
 
+    // the largest absolute product is min() * min() for signed types and max() * max() for unsigned
+    // ones; results up to 0.5 round to 0 (to even, like saturate_cast). An exact 0.5 must not reach
+    // the shift kernels: CV_8S * 2^-15 would round up in the vector body (1 << 15 overflows s16).
+    const f64 maxOperand = std::numeric_limits<T>::is_signed ?
+        -static_cast<f64>(std::numeric_limits<T>::min()) :
+        static_cast<f64>(std::numeric_limits<T>::max());
     if (scale == 0.0f ||
         (std::numeric_limits<T>::is_integer &&
-         (scale * std::numeric_limits<T>::max() * std::numeric_limits<T>::max()) <  1.0f &&
-         (scale * std::numeric_limits<T>::max() * std::numeric_limits<T>::max()) > -1.0f))
+         std::fabs(static_cast<f64>(scale)) * maxOperand * maxOperand <= 0.5))
     {
         for (size_t y = 0; y < size.height; ++y)
         {
@@ -1119,8 +1124,10 @@ void mul(const Size2D &size,
 
     s32 iscale = static_cast<s32>(scale), exp = 0;
     f32 significand = frexp(scale, &exp);
+    // funcs[] below has 16 entries, indexed by -exp + 1 (exp is the frexp exponent, 0 for 2^-1):
+    // the shift kernels exist for scales down to 2^-15 (exp == -14), smaller ones use the float path
     bool is_integer_scale = isIntegerScale(scale),
-         is_power_of_2 = (significand == 0.5f) && (exp <= 0);
+         is_power_of_2 = (significand == 0.5f) && (exp <= 0) && (exp > -15);
     exp = -exp + 1;
 
     if (is_power_of_2)
@@ -1331,9 +1338,9 @@ void mul(const Size2D &size,
                              s32 * dstBase, ptrdiff_t dstStride,
                              CONVERT_POLICY cpolicy);
 
+    // the largest absolute product is INT_MIN * INT_MIN = 2^62; results below 0.5 round to 0
     if (!std::isnormal(scale) ||
-        ((scale * std::numeric_limits<s32>::max() * std::numeric_limits<s32>::max()) <  1.0f &&
-         (scale * std::numeric_limits<s32>::max() * std::numeric_limits<s32>::max()) > -1.0f))
+        std::fabs(scale) * 4611686018427387904.0 < 0.5)
     {
         for (size_t y = 0; y < size.height; ++y)
         {
@@ -1345,8 +1352,10 @@ void mul(const Size2D &size,
 
     s32 iscale = static_cast<s32>(scale), exp = 0;
     f64 significand = frexp(scale, &exp);
+    // funcs[] below has 16 entries, indexed by -exp + 1: the shift kernels exist for scales down to
+    // 2^-15 (exp == -14), smaller ones use the float path
     bool is_integer_scale = isIntegerScale(scale),
-         is_power_of_2 = (significand == 0.5) && (exp <= 0);
+         is_power_of_2 = (significand == 0.5) && (exp <= 0) && (exp > -15);
     exp = -exp + 1;
 
     if (is_power_of_2)
@@ -1425,7 +1434,7 @@ void mul(const Size2D &size,
             {
                 for (; j < size.width; j++)
                 {
-                    f64 fval = src0[j] * src1[j] * scale;
+                    f64 fval = (f64)src0[j] * src1[j] * scale;
                     dst[j] = internal::saturate_cast<s32>(fval);
                 }
             }
@@ -1463,7 +1472,7 @@ void mul(const Size2D &size,
             {
                 for (; j < size.width; j++)
                 {
-                    f64 fval = src0[j] * src1[j] * scale;
+                    f64 fval = (f64)src0[j] * src1[j] * scale;
                     dst[j] = (s32)trunc(fval);
                 }
             }
