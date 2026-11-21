@@ -1237,6 +1237,60 @@ TEST(Core_Reduce, int8_signed_extremes)
         EXPECT_EQ(-128, res.at<schar>(0, 0));
     }
 }
+// REDUCE_AVG sums before dividing, so an integer destination needs a wider accumulator.
+// CV_32S only serves the 8-bit depths: no 16- or 32-bit source has a kernel writing CV_32S,
+// so dtype = -1 threw "Unsupported combination" for CV_16U, CV_16S and CV_32S.
+typedef testing::TestWithParam<std::tuple<int, int> > Core_ReduceAvgDepth;
+
+TEST_P(Core_ReduceAvgDepth, default_dtype_keeps_the_source_depth)
+{
+    const int dim = std::get<0>(GetParam());
+    const int depth = std::get<1>(GetParam());
+    const int n = 64;
+    const double v = 100;   // every element equal, so the average is v for any length
+    const Mat src = dim == 0 ? Mat(n, 1, CV_MAKETYPE(depth, 1), Scalar(v))
+                             : Mat(1, n, CV_MAKETYPE(depth, 1), Scalar(v));
+    Mat res;
+    ASSERT_NO_THROW(cv::reduce(src, res, dim, cv::REDUCE_AVG, -1));
+    ASSERT_EQ(depth, res.depth());
+
+    Mat as64;
+    res.convertTo(as64, CV_64F);
+    EXPECT_NEAR(v, as64.at<double>(0, 0), depth == CV_32F ? 1e-3 : 1e-9);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceAvgDepth,
+    testing::Combine(testing::Values(0, 1),
+                     testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
+
+// The accumulator has to be wide enough as well as present: a CV_32S one would wrap here
+// before the division.
+typedef testing::TestWithParam<std::tuple<int, int> > Core_ReduceAvgWide;
+
+TEST_P(Core_ReduceAvgWide, accumulator_does_not_wrap)
+{
+    const int dim = std::get<0>(GetParam());
+    const int depth = std::get<1>(GetParam());
+    // 65537, not 65536: for CV_16S, -32768 * 65536 is exactly INT_MIN, which a 32-bit signed
+    // accumulator still holds, so at that length the signed cases pass without proving the
+    // accumulator was widened at all. One more element puts both depths outside the int range,
+    // 65535 * 65537 above INT_MAX and -32768 * 65537 below INT_MIN, so these keep their teeth
+    // if a CV_32S kernel is ever added for the 16-bit sources.
+    const int n = 65537;
+    const double v = depth == CV_16U ? 65535 : -32768;
+    const Mat src = dim == 0 ? Mat(n, 1, CV_MAKETYPE(depth, 1), Scalar(v))
+                             : Mat(1, n, CV_MAKETYPE(depth, 1), Scalar(v));
+    Mat res;
+    cv::reduce(src, res, dim, cv::REDUCE_AVG, -1);
+
+    Mat as64;
+    res.convertTo(as64, CV_64F);
+    EXPECT_EQ(v, as64.at<double>(0, 0));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceAvgWide,
+    testing::Combine(testing::Values(0, 1), testing::Values(CV_16U, CV_16S)));
+
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
 
 TEST(Core_Merge, shape_operations) { Core_MergeTest test; test.safe_run(); }
