@@ -1183,6 +1183,49 @@ protected:
 
 TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
 
+typedef testing::TestWithParam<testing::tuple<int, int, int> > Core_ReduceFP16;
+
+TEST_P(Core_ReduceFP16, matches_widened_reference)
+{
+    const int channels = get<0>(GetParam());
+    const int dim = get<1>(GetParam());
+    const int op = get<2>(GetParam());
+    Mat1f values(9, 11 * channels);
+    for (int row = 0; row < values.rows; ++row)
+        for (int col = 0; col < values.cols; ++col)
+            values(row, col) = ((row * 11 + col) % 49 - 24) * 0.0625f;
+    Mat storage;
+    values.reshape(channels).convertTo(storage, CV_16F);
+    Mat src = storage(Rect(1, 1, 9, 7));
+    const bool extrema = op == REDUCE_MIN || op == REDUCE_MAX;
+    const int dtype = extrema ? CV_16F : CV_64F;
+    Mat dst, wide, expected;
+    cv::reduce(src, dst, dim, op, dtype);
+    src.convertTo(wide, CV_64F);
+    cv::reduce(wide, expected, dim, op, CV_64F);
+    ASSERT_EQ(dst.size(), expected.size());
+    ASSERT_EQ(dst.type(), CV_MAKETYPE(dtype, channels));
+    dst.convertTo(dst, CV_64F);
+    EXPECT_LE(cvtest::norm(dst, expected, NORM_INF), 1e-12);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_ReduceFP16,
+                        testing::Combine(testing::Values(1, 3, 9), testing::Values(0, 1),
+                                         testing::Values(REDUCE_SUM, REDUCE_AVG, REDUCE_SUM2, REDUCE_MIN, REDUCE_MAX)));
+
+TEST(Core_Reduce, fp16_vector_keeps_matrix_output)
+{
+    const Mat1f values({4}, {1, 2, 3, 4});
+    Mat src, dst;
+    values.convertTo(src, CV_16F);
+    ASSERT_EQ(src.dims, 1);
+    cv::reduce(src, dst, 0, REDUCE_SUM, CV_32F);
+    ASSERT_EQ(dst.dims, 2);
+    ASSERT_EQ(dst.size(), Size(1, 1));
+    ASSERT_EQ(dst.type(), CV_32F);
+    EXPECT_EQ(dst.at<float>(0, 0), 10.f);
+}
+
 // Core_ReduceTest fills with randu(0, 100), so it never reaches the range where a 32-bit
 // accumulator would overflow. CV_32S reduces through a double accumulator for that reason.
 TEST(Core_Reduce, int32_accumulator_does_not_overflow)
