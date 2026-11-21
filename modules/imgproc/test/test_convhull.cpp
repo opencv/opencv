@@ -434,6 +434,141 @@ TEST(Imgproc_ConvexHull, overflow)
     ASSERT_EQ(hull, hullf);
 }
 
+// Float points on a grid of evenly spaced values are sorted the same way as int points.
+// They are an exact scaled copy of the int grid, so both hulls must be the same.
+TEST(Imgproc_ConvexHull, float_dense_grid)
+{
+    RNG& rng = TS::ptr()->get_rng();
+
+    // space between the float values, in FLT_EPSILON units; selects the sort
+    const std::vector<int> steps = {
+        1,          // counting sort
+        3,          // radix sort, 1 pass per coordinate
+        100,        // radix sort, 2 passes
+        20000,      // radix sort, 3 passes
+        1 << 20     // radix sort, 4 passes
+    };
+
+    for (int iter = 0; iter < 100; ++iter)
+    {
+        const int step = steps[iter % steps.size()];
+        const float scale = step * FLT_EPSILON; // sparsity (sortable range / total) is about step / 2
+        SCOPED_TRACE(cv::format("iteration %d, step %d", iter, step));
+
+        const int total = rng.uniform(128, 170); // below 128 float points go to std::sort; above 170 step 3 needs 2 radix passes
+        const int range = std::max(total / 2, 3);
+        const int sign = iter % 2 == 0 ? 1 : -1;
+
+        std::vector<Point> points;
+        std::vector<Point2f> pointsf;
+        Mat_<uchar> used(range, range, (uchar)0);
+        while ((int)points.size() < total)
+        {
+            const int x = rng.uniform(0, range), y = rng.uniform(0, range);
+            if (used(y, x))
+                continue; // keep the points distinct
+            used(y, x) = 1;
+
+            Point p(sign * x, sign * y);
+            Point2f scaled_p(sign * (1.f + x * scale), sign * (1.f + y * scale));
+            points.push_back(p);
+            pointsf.push_back(scaled_p);
+        }
+
+        for (int clockwise = 0; clockwise < 2; ++clockwise)
+        {
+            SCOPED_TRACE(cv::format("clockwise %d", clockwise));
+
+            std::vector<int> hull, hullf;
+            convexHull(points, hull, clockwise != 0, false);
+            convexHull(pointsf, hullf, clockwise != 0, false);
+            ASSERT_EQ(hull, hullf);
+
+            std::vector<Point2f> hullf_points;
+            convexHull(pointsf, hullf_points, clockwise != 0, true);
+            ASSERT_EQ(hullf.size(), hullf_points.size());
+            for (size_t i = 0; i < hullf.size(); ++i)
+                EXPECT_EQ(pointsf[hullf[i]], hullf_points[i]);
+        }
+    }
+}
+
+// The hull indices must stay the same when both coordinates are multiplied by a large factor.
+TEST(Imgproc_ConvexHull, scaled_points)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    const int SCALE = 1000;
+
+    for (int iter = 0; iter < 100; ++iter)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", iter));
+
+        // a flat or a tall grid, the points are dense along its short side
+        int long_side = rng.uniform(10, 200), short_side = rng.uniform(2, long_side);
+        int w = iter % 2 == 0 ? long_side : short_side;
+        int h = iter % 2 == 0 ? short_side : long_side;
+        int total = rng.uniform(short_side, 2 * short_side + 10);
+
+        std::vector<Point> points, scaled;
+        Mat_<uchar> used(h, w, (uchar)0);
+        while ((int)points.size() < total)
+        {
+            int x = rng.uniform(0, w), y = rng.uniform(0, h);
+            if (used(y, x))
+                continue; // keep the points distinct
+            used(y, x) = 1;
+            Point p(x - w / 2, y - h / 2);
+            points.push_back(p);
+            scaled.push_back(p * SCALE);
+        }
+
+        std::vector<int> hull, hull_scaled;
+        convexHull(points, hull, false, false);
+        convexHull(scaled, hull_scaled, false, false);
+        ASSERT_EQ(hull, hull_scaled) << "counter-clockwise";
+
+        convexHull(points, hull, true, false);
+        convexHull(scaled, hull_scaled, true, false);
+        ASSERT_EQ(hull, hull_scaled) << "clockwise";
+    }
+}
+
+// Points on the vertical line x = 0, where some of the zeros are negative, some positive.
+TEST(Imgproc_ConvexHull, float_signed_zero_x)
+{
+    const int total = 128; // fewer float points go to std::sort
+
+    std::vector<Point2f> points;
+    for (int i = 0; i < total; ++i)
+    {
+        const float zero = i % 2 == 0 ? 0.f : -0.f;
+        points.push_back(Point2f(zero, (float)(i + 1)));
+    }
+
+    std::vector<int> hull;
+    convexHull(points, hull, false, false);
+    std::sort(hull.begin(), hull.end());
+    EXPECT_EQ(std::vector<int>({0, total - 1}), hull);
+}
+
+// Points on the horizontal line y = 0, where some of the zeros are negative, some positive.
+TEST(Imgproc_ConvexHull, float_signed_zero_y)
+{
+    const int total = 128; // fewer float points go to std::sort
+
+    std::vector<Point2f> points;
+    for (int i = 0; i < total; ++i)
+    {
+        const float zero = i % 2 == 0 ? 0.f : -0.f;
+        points.push_back(Point2f((float)(i + 1), zero));
+    }
+
+    std::vector<int> hull;
+    convexHull(points, hull, false, false);
+    std::sort(hull.begin(), hull.end());
+    EXPECT_EQ(std::vector<int>({0, total - 1}), hull);
+}
+
 static
 bool checkMinAreaRect(const RotatedRect& rr, const Mat& c, double eps = 0.5f)
 {
