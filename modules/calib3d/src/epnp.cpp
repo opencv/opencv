@@ -541,12 +541,12 @@ void epnp::qr_solve(Mat& A, Mat& b, Mat& X)
   double * pA = A.ptr<double>(), * ppAkk = pA;
   for(int k = 0; k < nc; k++)
   {
-    double * ppAik1 = ppAkk, eta = fabs(*ppAik1);
+    double * ppAik1 = ppAkk;
+    double eta = std::fabs(*ppAik1);
     for(int i = k + 1; i < nr; i++)
     {
-      double elt = fabs(*ppAik1);
-      if (eta < elt) eta = elt;
       ppAik1 += nc;
+      eta = std::max(eta, std::fabs(*ppAik1));
     }
     if (eta == 0)
     {
