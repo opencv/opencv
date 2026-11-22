@@ -931,15 +931,20 @@ static void recalculation(std::vector<neighbours>& hull, int vertex_id, float& a
         next_edge = extra_vertex_2 - next_vertex;
 
     float cross = prev_edge.x * next_edge.y - prev_edge.y * next_edge.x;
-    if (abs(cross) < 1e-8)
+
+    // The lines of the previous and of the next edge have to meet beyond the contracted edge.
+    // They never do if the edges are parallel (e.g. opposite sides of a rectangle) or diverge,
+    // so such a vertex cannot be contracted.
+    float t = -1;
+    if (abs(cross) > 1e-6f * static_cast<float>(norm(prev_edge) * norm(next_edge)))
+        t = (curr_edge.x * next_edge.y - curr_edge.y * next_edge.x) / cross;
+    if (!(t >= 0))
     {
         area_ = FLT_MAX;
         x = -1;
         y = -1;
         return;
     }
-
-    float t = (curr_edge.x * next_edge.y - curr_edge.y * next_edge.x) / cross;
     cv::Point2f intersection = vertex + cv::Point2f(prev_edge.x * t, prev_edge.y * t);
 
     float area = 0.5f * abs((next_vertex.x - vertex.x) * (intersection.y - vertex.y)
@@ -1056,6 +1061,12 @@ void cv::approxPolyN(InputArray _curve, OutputArray _approxCurve,
         }
         else
         {
+            if (base.area == FLT_MAX)
+            {
+                // no vertex can be contracted any more, return the polygon as it is
+                break;
+            }
+
             if (epsilon_percentage != -1)
             {
                 extra_area += base.area;
