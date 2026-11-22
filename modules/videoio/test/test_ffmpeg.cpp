@@ -1272,6 +1272,46 @@ TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
     ASSERT_EQ(Size(8, 8), frame.size());
     EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
 }
+
+// Frames of HDR (HLG, PQ) video used to be converted to SDR BT.709 by sws_scale_frame() (swscale >= 8.12.100),
+// which clipped the highlights to 255 and changed the mid-tones. VideoCapture should return the decoded values
+// as they are, like with older swscale versions.
+// Samples video/hdr_{hlg,pq}_ramp_64x4.mkv (opencv_extra): 64x4 10-bit gray ramp from Y=64 to Y=800 in FFV1,
+// tagged as BT.2020 HLG or PQ, generated with (TRC=arib-std-b67 or smpte2084):
+//   ffmpeg -f lavfi -i color=black:size=64x4 -frames:v 1 \
+//          -vf "format=yuv420p10le,geq=lum='64+X*736/63':cb=512:cr=512,setparams=range=tv:colorspace=bt2020nc:color_primaries=bt2020:color_trc=$TRC" \
+//          -c:v ffv1 -fflags +bitexact -flags:v +bitexact -map_metadata -1 -f matroska - > hdr_..._ramp_64x4.mkv
+// related issue: https://github.com/opencv/opencv/issues/30955
+typedef testing::TestWithParam<std::string> videoio_ffmpeg_hdr;
+TEST_P(videoio_ffmpeg_hdr, keep_decoded_values_30955)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    VideoCapture cap(findDataFile("video/hdr_" + GetParam() + "_ramp_64x4.mkv"), CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("FFmpeg backend can not open the Matroska/FFV1 test stream");
+
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_EQ(Size(64, 4), frame.size());
+    ASSERT_EQ(CV_8UC3, frame.type());
+
+    // swscale dithers when it reduces 10-bit samples to 8 bits, so allow a few levels. Converted to SDR,
+    // the mid-tones move by 10 to 20 levels and the right part of the ramp is clipped to 255.
+    for (int x = 0; x < frame.cols; x++)
+    {
+        const int y10 = 64 + x * 736 / 63;  // limited range: 64 is black, 940 is white
+        const double expected = (y10 - 64) * 255.0 / 876.0;
+        for (int y = 0; y < frame.rows; y++)
+        {
+            const Vec3b px = frame.at<Vec3b>(y, x);
+            for (int c = 0; c < 3; c++)
+                ASSERT_NEAR(expected, px[c], 3.0) << "x=" << x << " y=" << y << " c=" << c;
+        }
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_hdr, testing::Values("hlg", "pq"));
 #endif
 
 }} // namespace
