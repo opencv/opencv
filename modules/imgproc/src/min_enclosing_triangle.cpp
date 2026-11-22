@@ -442,8 +442,14 @@ static void returnMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &p
 static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
                                  unsigned int nrOfPoints, unsigned int &b,
                                  unsigned int c) {
+    // b cannot go around the polygon more than once. For a nearly flat polygon all heights
+    // are equal within the tolerance, so stop instead of looping forever.
+    unsigned int steps = 0;
     while (greaterOrEqual(height(successor(b, nrOfPoints), polygon, nrOfPoints, c),
                           height(b, polygon, nrOfPoints, c))) {
+        if (++steps > nrOfPoints) {
+            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+        }
         advance(b, nrOfPoints);
     }
 }
@@ -463,7 +469,12 @@ static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
                                  unsigned int c) {
     cv::Point2f gammaOfA;
 
+    unsigned int steps = 0;
     while(height(b, polygon, nrOfPoints, c) > height(a, polygon, nrOfPoints, c)) {
+        // each step moves a or b by one vertex, and neither can go around the polygon more than once
+        if (++steps > 2 * nrOfPoints) {
+            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+        }
         if ((gamma(a, gammaOfA, polygon, nrOfPoints, a, c)) && (intersectsBelow(gammaOfA, b, polygon, nrOfPoints, c))) {
             advance(b, nrOfPoints);
         } else {
@@ -487,11 +498,15 @@ static void searchForBTangency(const std::vector<cv::Point2f> &polygon,
                                unsigned int c) {
     cv::Point2f gammaOfB;
 
+    unsigned int steps = 0;
     while (((gamma(b, gammaOfB, polygon, nrOfPoints, a, c)) &&
             (intersectsBelow(gammaOfB, b, polygon, nrOfPoints, c))) &&
            (greaterOrEqual(height(b, polygon, nrOfPoints, c),
                            height(predecessor(a, nrOfPoints), polygon, nrOfPoints, c)))
           ) {
+        if (++steps > nrOfPoints) {
+            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+        }
         advance(b, nrOfPoints);
     }
 }

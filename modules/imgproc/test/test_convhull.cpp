@@ -631,6 +631,31 @@ TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
     EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
 }
 
+// Nearly collinear float points used to send the algorithm into an endless loop.
+// It has no valid answer for them, so an error is expected instead of a hang.
+TEST(Imgproc_minEnclosingTriangle, nearly_collinear_points_do_not_hang)
+{
+    const vector<Point2f> points4 = {Point2f(45.4611397f, 127.84198f), Point2f(90.790451f, 263.829926f), Point2f(22.3418026f, 58.4839745f), Point2f(75.3010254f, 217.361633f)};
+    const vector<Point2f> points5 = {Point2f(45.1573868f, 130.187454f), Point2f(76.6496582f, 224.664261f), Point2f(26.0454617f, 72.8516769f), Point2f(16.5287418f, 44.3015137f), Point2f(29.6532612f, 83.6750717f)};
+    const vector<Point2f> points6 = {Point2f(83.5745926f, 53.0253334f), Point2f(77.1588211f, 49.8174477f), Point2f(48.8217621f, 35.6489182f), Point2f(33.4582901f, 27.9671803f), Point2f(65.8952713f, 44.1856728f), Point2f(20.3496151f, 21.4128437f)};
+    vector<Point2f> triangle;
+
+    EXPECT_THROW(minEnclosingTriangle(points4, triangle), cv::Exception);
+    EXPECT_THROW(minEnclosingTriangle(points5, triangle), cv::Exception);
+    EXPECT_THROW(minEnclosingTriangle(points6, triangle), cv::Exception);
+}
+
+TEST(Imgproc_minEnclosingTriangle, unit_square)
+{
+    const vector<Point2f> points = {Point2f(0, 0), Point2f(1, 0), Point2f(1, 1), Point2f(0, 1)};
+    vector<Point2f> triangle;
+
+    const double area = minEnclosingTriangle(points, triangle);
+
+    EXPECT_NEAR(2.0, area, 1e-5);
+    EXPECT_EQ(3u, triangle.size());
+}
+
 //==============================================================================
 
 typedef testing::TestWithParam<tuple<int, int>> fitLine_Modes;
