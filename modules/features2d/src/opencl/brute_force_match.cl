@@ -73,6 +73,7 @@
 #endif
 
 // dirty fix for non-template support
+#define BFM_CONVERT_TO_VALUE(x) (x)
 #if (DIST_TYPE == 2) // L1Dist
 #   ifdef T_FLOAT
         typedef float result_type;
@@ -122,7 +123,17 @@
         typedef int value_type;
 #   endif
     typedef int result_type;
-#   define DIST(x, y) result += popcount( (x) ^ (y) )
+#   undef BFM_CONVERT_TO_VALUE
+#   if (8 == kercn)
+#       define BFM_CONVERT_TO_VALUE(x) convert_int8(x)
+#       define DIST(x, y) { int8 d = popcount((x) ^ (y)); result += d.s0 + d.s1 + d.s2 + d.s3 + d.s4 + d.s5 + d.s6 + d.s7; }
+#   elif (4 == kercn)
+#       define BFM_CONVERT_TO_VALUE(x) convert_int4(x)
+#       define DIST(x, y) { int4 d = popcount((x) ^ (y)); result += d.s0 + d.s1 + d.s2 + d.s3; }
+#   else
+#       define BFM_CONVERT_TO_VALUE(x) convert_int(x)
+#       define DIST(x, y) result += popcount((x) ^ (y))
+#   endif
 #   define DIST_RES(x) (x)
 #endif
 
@@ -195,6 +206,7 @@ __kernel void BruteForceMatch_Match(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
@@ -206,7 +218,7 @@ __kernel void BruteForceMatch_Match(
     for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; i++)
     {
         const int loadx = mad24(BLOCK_SIZE, i, lidx);
-        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? query_vec[loadx] : 0;
+        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? BFM_CONVERT_TO_VALUE(query_vec[loadx]) : 0;
     }
 #else
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
@@ -230,7 +242,7 @@ __kernel void BruteForceMatch_Match(
         {
             //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
             const int loadx = mad24(BLOCK_SIZE, i, lidx);
-            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? train_vec[loadx] : 0;
+            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? BFM_CONVERT_TO_VALUE(train_vec[loadx]) : 0;
 
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -246,8 +258,8 @@ __kernel void BruteForceMatch_Match(
             //load query and train into local memory
             if (loadx < query_cols)
             {
-                s_query[s_query_i] = query_vec[loadx];
-                s_train[s_train_i] = train_vec[loadx];
+                s_query[s_query_i] = BFM_CONVERT_TO_VALUE(query_vec[loadx]);
+                s_train[s_train_i] = BFM_CONVERT_TO_VALUE(train_vec[loadx]);
             }
             else
             {
@@ -350,8 +362,8 @@ __kernel void BruteForceMatch_RadiusMatch(
 
         if (loadx < query_cols)
         {
-            s_query[s_query_i] = query_vec[loadx];
-            s_train[s_train_i] = train_vec[loadx];
+            s_query[s_query_i] = BFM_CONVERT_TO_VALUE(query_vec[loadx]);
+            s_train[s_train_i] = BFM_CONVERT_TO_VALUE(train_vec[loadx]);
         }
         else
         {
@@ -398,6 +410,7 @@ __kernel void BruteForceMatch_knnMatch(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
@@ -409,7 +422,7 @@ __kernel void BruteForceMatch_knnMatch(
     for (int i = 0 ;  i <  MAX_DESC_LEN / BLOCK_SIZE; i ++)
     {
         int loadx = mad24(BLOCK_SIZE, i, lidx);
-        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? query_vec[loadx] : 0;
+        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? BFM_CONVERT_TO_VALUE(query_vec[loadx]) : 0;
     }
 #else
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
@@ -434,7 +447,7 @@ __kernel void BruteForceMatch_knnMatch(
         {
             //load a BLOCK_SIZE * BLOCK_SIZE block into local train.
             const int loadx = mad24(BLOCK_SIZE, i, lidx);
-            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? train_vec[loadx] : 0;
+            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? BFM_CONVERT_TO_VALUE(train_vec[loadx]) : 0;
 
             //synchronize to make sure each elem for reduceIteration in share memory is written already.
             barrier(CLK_LOCAL_MEM_FENCE);
@@ -450,8 +463,8 @@ __kernel void BruteForceMatch_knnMatch(
             //load query and train into local memory
             if (loadx < query_cols)
             {
-                s_query[s_query_i] = query_vec[loadx];
-                s_train[s_train_i] = train_vec[loadx];
+                s_query[s_query_i] = BFM_CONVERT_TO_VALUE(query_vec[loadx]);
+                s_train[s_train_i] = BFM_CONVERT_TO_VALUE(train_vec[loadx]);
             }
             else
             {
@@ -583,6 +596,7 @@ __kernel void BruteForceMatch_CrossCheckMatch(
     const int queryOffset = min(queryIdx, query_rows - 1) * step;
     __global TN *query_vec = (__global TN *)(query + queryOffset);
     query_cols /= kercn;
+    train_cols /= kercn;
 
     __local float sharebuffer[SHARED_MEM_SZ];
     __local value_type *s_query = (__local value_type *)sharebuffer;
@@ -593,7 +607,7 @@ __kernel void BruteForceMatch_CrossCheckMatch(
     for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; i++)
     {
         const int loadx = mad24(BLOCK_SIZE, i, lidx);
-        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? query_vec[loadx] : 0;
+        s_query[mad24(MAX_DESC_LEN, lidy, loadx)] = loadx < query_cols ? BFM_CONVERT_TO_VALUE(query_vec[loadx]) : 0;
     }
 #else
     __local value_type *s_train = (__local value_type *)sharebuffer + BLOCK_SIZE_ODD * BLOCK_SIZE;
@@ -615,7 +629,7 @@ __kernel void BruteForceMatch_CrossCheckMatch(
         for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; i++)
         {
             const int loadx = mad24(BLOCK_SIZE, i, lidx);
-            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? train_vec[loadx] : 0;
+            s_train[mad24(BLOCK_SIZE, lidx, lidy)] = loadx < train_cols ? BFM_CONVERT_TO_VALUE(train_vec[loadx]) : 0;
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -629,8 +643,8 @@ __kernel void BruteForceMatch_CrossCheckMatch(
             const int loadx = mad24(BLOCK_SIZE, i, lidx);
             if (loadx < query_cols)
             {
-                s_query[s_query_i] = query_vec[loadx];
-                s_train[s_train_i] = train_vec[loadx];
+                s_query[s_query_i] = BFM_CONVERT_TO_VALUE(query_vec[loadx]);
+                s_train[s_train_i] = BFM_CONVERT_TO_VALUE(train_vec[loadx]);
             }
             else
             {
