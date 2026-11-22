@@ -465,4 +465,29 @@ TEST_F(ApproxPolyN, bad_args)
     ASSERT_ANY_THROW(approxPolyN(bad_contours, corners, 4));
 }
 
+// An open curve with a zero epsilon and an infinite coordinate used to send the algorithm into an
+// endless loop, because eps * segment_len_2 is NaN for an infinite segment and the slice was never split.
+TEST(Imgproc_ApproxPoly, infinite_coordinate_with_zero_epsilon_does_not_hang)
+{
+    const float inf = std::numeric_limits<float>::infinity();
+    const vector<Point2f> curve = {Point2f(10, 10), Point2f(20, inf), Point2f(30, 12), Point2f(40, 25), Point2f(50, 5)};
+    vector<Point2f> result;
+
+    EXPECT_NO_THROW(approxPolyDP(curve, result, 0.0, false));
+    EXPECT_FALSE(result.empty());
+}
+
+TEST(Imgproc_ApproxPoly, zero_epsilon_keeps_the_corners)
+{
+    const vector<Point2f> path = {Point2f(0, 0), Point2f(10, 0), Point2f(10, 10)};
+    const vector<Point2f> line = {Point2f(0, 0), Point2f(1, 1), Point2f(2, 2)};
+    vector<Point2f> result;
+
+    approxPolyDP(path, result, 0.0, false);
+    EXPECT_EQ(3u, result.size());
+
+    approxPolyDP(line, result, 0.0, false);
+    EXPECT_EQ(2u, result.size());
+}
+
 }} // namespace
