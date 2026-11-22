@@ -212,4 +212,22 @@ TEST(Photo_NPR, edge_preserving_filter_gray_input_still_works)
     EXPECT_EQ(src.size(), dst.size());
 }
 
+// The normalized convolution filter is written for exactly 3 channels and reads past the end of
+// a row for narrow 1 and 2 channel images, so it needs 3 channels. The recursive filter does not.
+TEST(Photo_NPR, normconv_filter_requires_three_channels)
+{
+    const Size sizes[] = {Size(24, 24), Size(1, 24), Size(2, 24), Size(24, 1)};
+    for (int cn = 1; cn <= 2; cn++)
+    {
+        for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
+        {
+            Mat src = Mat::zeros(sizes[i], CV_8UC(cn)), dst;
+            EXPECT_THROW(edgePreservingFilter(src, dst, NORMCONV_FILTER), cv::Exception)
+                << "channels " << cn << " size " << sizes[i].width << "x" << sizes[i].height;
+            EXPECT_NO_THROW(edgePreservingFilter(src, dst, RECURS_FILTER))
+                << "channels " << cn << " size " << sizes[i].width << "x" << sizes[i].height;
+        }
+    }
+}
+
 }} // namespace

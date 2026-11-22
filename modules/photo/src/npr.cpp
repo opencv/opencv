@@ -55,6 +55,7 @@ void cv::edgePreservingFilter(InputArray _src, OutputArray dst, int flags, float
 
     Mat I = _src.getMat();
     CV_Assert(!I.empty() && I.channels() <= 3);
+    CV_Assert(flags != NORMCONV_FILTER || I.channels() == 3);
 
     Domain_Filter obj;
 
