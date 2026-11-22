@@ -102,6 +102,9 @@
 
 namespace minEnclosingTriangle {
 
+//! Thrown by the loops that move the vertices of the triangle when they do not settle
+struct NoConvergence {};
+
 static void advance(unsigned int &index, unsigned int nrOfPoints);
 
 static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
@@ -149,6 +152,9 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
 
 static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                              std::vector<cv::Point2f> &triangle, double &area);
+
+static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
+                                                          std::vector<cv::Point2f> &triangle, double &area);
 
 static cv::Point2f findVertexCOnSideB(const std::vector<cv::Point2f> &polygon, unsigned int nrOfPoints,
                                       unsigned int a, unsigned int c,
@@ -339,10 +345,99 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     initialise(triangle, area);
 
     if (polygon.size() > 3) {
-        findMinimumAreaEnclosingTriangle(polygon, triangle, area);
+        try {
+            findMinimumAreaEnclosingTriangle(polygon, triangle, area);
+        } catch (const NoConvergence &) {
+            initialise(triangle, area);
+            findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area);
+        }
     } else {
         returnMinimumAreaEnclosingTriangle(polygon, triangle, area);
     }
+}
+
+//! Find the minimum area enclosing triangle for a polygon that is too thin for the tolerances
+/*!
+* The tolerances of the algorithm are absolute, so for a very thin polygon they treat all the
+* heights as equal and the vertices of the triangle never settle. The minimum area enclosing
+* triangle does not change under an affine map, which only scales all the areas by the same
+* factor. So the polygon is mapped to one with principal axes of equal length, the triangle is
+* found there and it is mapped back.
+*
+* @param polygon    The polygon representing the convex hull of the points
+* @param triangle   Minimum area triangle enclosing the given polygon
+* @param area       Area of the minimum area enclosing triangle
+*/
+static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
+                                                          std::vector<cv::Point2f> &triangle, double &area) {
+    const size_t nrOfPoints = polygon.size();
+
+    // Centre and principal axes of the vertices
+    double centerX = 0, centerY = 0;
+    for (size_t i = 0; i < nrOfPoints; i++) {
+        centerX += polygon[i].x;
+        centerY += polygon[i].y;
+    }
+    centerX /= nrOfPoints;
+    centerY /= nrOfPoints;
+
+    double sxx = 0, sxy = 0, syy = 0;
+    for (size_t i = 0; i < nrOfPoints; i++) {
+        const double dx = polygon[i].x - centerX;
+        const double dy = polygon[i].y - centerY;
+        sxx += dx * dx;
+        sxy += dx * dy;
+        syy += dy * dy;
+    }
+    const double angle = 0.5 * std::atan2(2.0 * sxy, sxx - syy);
+    const double ux = std::cos(angle), uy = std::sin(angle);
+
+    // Variances along the principal axes. They are measured by projecting the vertices, because
+    // computing the smaller one from sxx, sxy and syy loses all its digits for a thin polygon.
+    double longVariance = 0, shortVariance = 0;
+    for (size_t i = 0; i < nrOfPoints; i++) {
+        const double dx = polygon[i].x - centerX;
+        const double dy = polygon[i].y - centerY;
+        const double along = dx * ux + dy * uy;
+        const double across = -dx * uy + dy * ux;
+        longVariance += along * along;
+        shortVariance += across * across;
+    }
+    longVariance /= nrOfPoints;
+    shortVariance /= nrOfPoints;
+    if (!(shortVariance > 0)) {
+        CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are collinear");
+    }
+    const double longScale = std::sqrt(longVariance), shortScale = std::sqrt(shortVariance);
+
+    // Map to a polygon of equal extent along both axes
+    std::vector<cv::Point2f> normalisedPolygon(nrOfPoints);
+    for (size_t i = 0; i < nrOfPoints; i++) {
+        const double dx = polygon[i].x - centerX;
+        const double dy = polygon[i].y - centerY;
+        normalisedPolygon[i] = cv::Point2f((float)((dx * ux + dy * uy) / longScale),
+                                           (float)((-dx * uy + dy * ux) / shortScale));
+    }
+
+    std::vector<cv::Point2f> normalisedTriangle;
+    double normalisedArea;
+    initialise(normalisedTriangle, normalisedArea);
+    try {
+        findMinimumAreaEnclosingTriangle(normalisedPolygon, normalisedTriangle, normalisedArea);
+    } catch (const NoConvergence &) {
+        CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge");
+    }
+
+    // Map the triangle back
+    triangle.clear();
+    for (size_t i = 0; i < normalisedTriangle.size(); i++) {
+        const double x = normalisedTriangle[i].x * longScale;
+        const double y = normalisedTriangle[i].y * shortScale;
+        triangle.push_back(cv::Point2f((float)(centerX + x * ux - y * uy), (float)(centerY + x * uy + y * ux)));
+    }
+    // the area is scaled by the same factor as every other area, which is more precise than
+    // recomputing it from the rounded vertices of a very thin triangle
+    area = normalisedArea * longScale * shortScale;
 }
 
 //! Initialisation function
@@ -448,7 +543,7 @@ static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
     while (greaterOrEqual(height(successor(b, nrOfPoints), polygon, nrOfPoints, c),
                           height(b, polygon, nrOfPoints, c))) {
         if (++steps > nrOfPoints) {
-            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+            throw NoConvergence();
         }
         advance(b, nrOfPoints);
     }
@@ -473,7 +568,7 @@ static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
     while(height(b, polygon, nrOfPoints, c) > height(a, polygon, nrOfPoints, c)) {
         // each step moves a or b by one vertex, and neither can go around the polygon more than once
         if (++steps > 2 * nrOfPoints) {
-            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+            throw NoConvergence();
         }
         if ((gamma(a, gammaOfA, polygon, nrOfPoints, a, c)) && (intersectsBelow(gammaOfA, b, polygon, nrOfPoints, c))) {
             advance(b, nrOfPoints);
@@ -505,7 +600,7 @@ static void searchForBTangency(const std::vector<cv::Point2f> &polygon,
                            height(predecessor(a, nrOfPoints), polygon, nrOfPoints, c)))
           ) {
         if (++steps > nrOfPoints) {
-            CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are almost collinear");
+            throw NoConvergence();
         }
         advance(b, nrOfPoints);
     }
