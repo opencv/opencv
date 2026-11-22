@@ -24,7 +24,9 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "convert.hpp"          // typed vx_load_pair_as / v_store_pair_as helpers (cv::)
 #include "arithm_expr.hpp"      // the kernel contract: TOp / TKernel / KernelFunc
+#include "mathfuncs.hpp"
 #include <cmath>
+#include <type_traits>
 
 namespace cv {
 
@@ -66,12 +68,78 @@ struct MSqrt {
     template<typename V> static V vec(const V& x) { return v_sqrt(x); }
     template<typename W> static W scl(W x) { return std::sqrt(x); }
 };
+template<typename V> static inline V fastLog(const V& x) { return v_log(x); }
+template<typename V> static inline void fastLogPair(const V& x0, const V& x1, V& y0, V& y1,
+                                                   const float*)
+{
+    y0 = v_log(x0);
+    y1 = v_log(x1);
+}
+// Table reduction is used for normal FP32 lanes; exceptional values take the v_log fallback.
+static inline v_float32 tableLog32f(const v_float32& x, const float* table)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const v_int32 bits = v_reinterpret_as_s32(x);
+    const v_int32 exponent = v_and(v_shr<23>(bits), vx_setall_s32(255));
+    const v_int32 yi = v_sub(exponent, vx_setall_s32(127));
+    const v_int32 xi = v_or(v_and(bits, vx_setall_s32((1 << (23 - 8)) - 1)),
+                            vx_setall_s32(127 << 23));
+    const v_int32 index = v_and(v_shr<23 - 8 - 1>(bits), vx_setall_s32(510));
+    v_float32 y, reciprocal;
+    v_lut_deinterleave(table, index, y, reciprocal);
+    y = v_fma(v_cvt_f32(yi), vx_setall_f32(0.6931471805599453f), y);
+    const v_float32 delta = v_select(v_reinterpret_as_f32(v_eq(index, vx_setall_s32(510))),
+                                     vx_setall_f32(-1.f / 512.f), vx_setall_f32(0.f));
+    const v_float32 mantissa = v_reinterpret_as_f32(xi);
+    const v_float32 reduced = v_fma(v_sub(mantissa, vx_setall_f32(1.f)), reciprocal, delta);
+    v_float32 result = v_fma(reduced, vx_setall_f32(1.f / 3.f), vx_setall_f32(-0.5f));
+    result = v_fma(result, reduced, vx_setall_f32(1.f));
+    return v_fma(result, reduced, y);
+#else
+    return v_log(x);
+#endif
+}
+static inline v_int32 logExceptionalMask32f(const v_float32& x)
+{
+    const v_int32 bits = v_reinterpret_as_s32(x);
+    const v_int32 exponent = v_and(v_shr<23>(bits), vx_setall_s32(255));
+    return v_or(v_lt(bits, vx_setzero_s32()),
+                v_or(v_eq(exponent, vx_setzero_s32()), v_eq(exponent, vx_setall_s32(255))));
+}
+static inline v_int32 logSubnormalMask32f(const v_float32& x)
+{
+    const v_int32 exponent = v_and(v_shr<23>(v_reinterpret_as_s32(x)), vx_setall_s32(255));
+    return v_eq(exponent, vx_setzero_s32());
+}
+static inline void fastLogPair(const v_float32& x0, const v_float32& x1,
+                               v_float32& y0, v_float32& y1, const float* table)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (!table)
+    {
+        y0 = v_log(x0);
+        y1 = v_log(x1);
+        return;
+    }
+    if (v_check_any(v_or(logExceptionalMask32f(x0), logExceptionalMask32f(x1))))
+    {
+        y0 = v_log(x0);
+        y1 = v_log(x1);
+        return;
+    }
+    y0 = tableLog32f(x0, table);
+    y1 = tableLog32f(x1, table);
+#else
+    y0 = v_log(x0);
+    y1 = v_log(x1);
+#endif
+}
 struct MExp {
     template<typename V> static V vec(const V& x) { return v_exp(x); }
     template<typename W> static W scl(W x) { return std::exp(x); }
 };
 struct MLog {
-    template<typename V> static V vec(const V& x) { return v_log(x); }
+    template<typename V> static V vec(const V& x) { return fastLog(x); }
     template<typename W> static W scl(W x) { return std::log(x); }
 };
 struct MSin {
@@ -213,6 +281,96 @@ static int scalarUnaryKernel(const void* src0_, size_t s0y, size_t s0x,
     return 0;
 }
 
+static int log32fKernel(const void* src0_, size_t s0y, size_t s0x,
+                        const void*, size_t, size_t, const void*, size_t, size_t,
+                        void* dst_, size_t dsty, int width, int height,
+                        const double*, int, void* userdata)
+{
+    s0y /= sizeof(float);
+    dsty /= sizeof(float);
+    CV_Assert(s0x <= 1u);
+    const float* src0 = (const float*)src0_;
+    float* dst = (float*)dst_;
+    const float* table = (const float*)userdata;
+
+    if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width)
+    { width *= height; height = 1; }
+    const int urows = (s0y == 0 && height > 1) ? 1 : height;
+
+    for (int y = 0; y < urows; y++, src0 += s0y, dst += dsty)
+    {
+        if (s0x == 0)
+        {
+            const float value = std::log(src0[0]);
+            for (int x = 0; x < width; x++) dst[x] = value;
+            continue;
+        }
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vectorSize = VTraits<v_float32>::vlanes();
+        if (src0_ == dst_)
+        {
+            for (; x <= width - vectorSize*2; x += vectorSize*2)
+            {
+                v_float32 input0 = vx_load(src0 + x);
+                v_float32 input1 = vx_load(src0 + x + vectorSize);
+                if (v_check_any(v_or(logSubnormalMask32f(input0), logSubnormalMask32f(input1))))
+                {
+                    for (int i = 0; i < vectorSize*2; i++) dst[x + i] = std::log(src0[x + i]);
+                }
+                else
+                {
+                    fastLogPair(input0, input1, input0, input1, table);
+                    vx_store(dst + x, input0);
+                    vx_store(dst + x + vectorSize, input1);
+                }
+            }
+            if (x <= width - vectorSize)
+            {
+                const v_float32 input = vx_load(src0 + x);
+                v_float32 result;
+                if (v_check_any(logSubnormalMask32f(input)))
+                    for (int i = 0; i < vectorSize; i++) dst[x + i] = std::log(src0[x + i]);
+                else
+                {
+                    fastLogPair(input, input, result, result, table);
+                    vx_store(dst + x, result);
+                }
+                x += vectorSize;
+            }
+            for (; x < width; x++) dst[x] = std::log(src0[x]);
+            continue;
+        }
+        const int blockSize = vectorSize * 32;
+        const v_int32 zero = vx_setzero_s32();
+        const v_int32 minNormal = vx_setall_s32(0x00800000);
+        const v_int32 positiveInfinity = vx_setall_s32(0x7f800000);
+        for (; x < width; )
+        {
+            const int end = x + std::min(blockSize, width - x);
+            v_int32 invalid = zero;
+            int i = x;
+            for (; i <= end - vectorSize; i += vectorSize)
+            {
+                const v_int32 bits = vx_load((const int*)(src0 + i));
+                invalid = v_or(invalid, v_or(v_lt(bits, minNormal), v_ge(bits, positiveInfinity)));
+                vx_store(dst + i, tableLog32f(vx_load(src0 + i), table));
+            }
+            for (; i < end; i++) dst[i] = std::log(src0[i]);
+            if (v_check_any(invalid))
+                for (i = x; i < end; i++) dst[i] = std::log(src0[i]);
+            x = end;
+        }
+#else
+        for (; x < width; x++) dst[x] = std::log(src0[x]);
+#endif
+    }
+    dst = (float*)dst_;
+    for (int y = urows; y < height; y++)
+        memcpy(dst + (size_t)y*dsty, dst, (size_t)width*sizeof(float));
+    return 0;
+}
+
 // ===========================================================================
 // OP_POW: dst = pow(x, y), T x T -> T over the float depths. Exact std::pow semantics.
 //
@@ -263,7 +421,7 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                      const void* src1_, size_t s1y, size_t s1x,
                      const void*, size_t, size_t,
                      void* dst_, size_t dsty, int width, int height,
-                     const double*, int, void*)
+                     const double*, int, void* userdata)
 {
     s0y /= sizeof(T);
     s1y /= sizeof(T);
@@ -273,6 +431,7 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
     const T* src0 = (const T*)src0_;
     const T* src1 = (const T*)src1_;
     T* dst = (T*)dst_;
+    const float* logTable = (const float*)userdata;
     using WT = typename VTraits<Wvec>::lane_type;
 
     if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width && s1y == s1x*(size_t)width)
@@ -378,8 +537,7 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                                 dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], p));
                             continue;
                         }
-                        a0 = v_log(a0);
-                        a1 = v_log(a1);
+                        fastLogPair(a0, a1, a0, a1, logTable);
                         a0 = v_mul(vp, a0);
                         a1 = v_mul(vp, a1);
                         a0 = v_exp(a0);
@@ -411,8 +569,7 @@ static int powKernel(const void* src0_, size_t s0y, size_t s0x,
                         dst[x + i] = saturate_cast<T>(std::pow((WT)src0[x + i], (WT)src1[x + i]));
                     continue;
                 }
-                a0 = v_log(a0);
-                a1 = v_log(a1);
+                fastLogPair(a0, a1, a0, a1, logTable);
                 a0 = v_mul(b0, a0);
                 a1 = v_mul(b1, a1);
                 a0 = v_exp(a0);
@@ -447,7 +604,12 @@ TKernel getPowFunc_(int T, int R)
 #endif
     default: ;
     }
-    return {fptr, nullptr, 0};
+    void* userdata = nullptr;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (cv::getNumThreads() == 1 && T == CV_32F)
+        userdata = (void*)cv::details::getLogTab32f();
+#endif
+    return {fptr, userdata, 0};
 }
 
 // ===========================================================================
@@ -460,7 +622,11 @@ static KernelFunc mathByDepth(int T)
     {
     case CV_16F:  return vecUnaryKernel<hfloat, v_float32, Op>;
     case CV_16BF: return vecUnaryKernel<bfloat, v_float32, Op>;
-    case CV_32F:  return vecUnaryKernel<float,  v_float32, Op>;
+    case CV_32F:
+        if constexpr (std::is_same<Op, MLog>::value)
+            return log32fKernel;
+        else
+            return vecUnaryKernel<float, v_float32, Op>;
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     case CV_64F:  return vecUnaryKernel<double, v_float64, Op>;
 #else
@@ -485,7 +651,12 @@ TKernel getMathFunc_(TOp op, int T)
     case OP_ERF:  f = mathByDepth<MErf >(T); break;
     default: ;
     }
-    return {f, nullptr, 0};
+    void* userdata = nullptr;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (op == OP_LOG && T == CV_32F)
+        userdata = (void*)cv::details::getLogTab32f();
+#endif
+    return {f, userdata, 0};
 }
 
 

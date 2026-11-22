@@ -152,8 +152,7 @@ void exp32f(const float *src, float *dst, int n)
 
     CALL_HAL(exp32f, cv_hal_exp32f, src, dst, n);
 
-    ew::mathSpanEngine(ew::OP_EXP, CV_32F, src, dst, n);   // the engine's vector kernel (the old
-                                                       // table implementation is removed)
+    ew::mathSpanEngine(ew::OP_EXP, CV_32F, src, dst, n);
 }
 
 void exp64f(const double *src, double *dst, int n)
@@ -162,8 +161,7 @@ void exp64f(const double *src, double *dst, int n)
 
     CALL_HAL(exp64f, cv_hal_exp64f, src, dst, n);
 
-    ew::mathSpanEngine(ew::OP_EXP, CV_64F, src, dst, n);   // the engine's vector kernel (the old
-                                                       // table implementation is removed)
+    ew::mathSpanEngine(ew::OP_EXP, CV_64F, src, dst, n);
 }
 
 void log32f(const float *src, float *dst, int n)
@@ -172,8 +170,7 @@ void log32f(const float *src, float *dst, int n)
 
     CALL_HAL(log32f, cv_hal_log32f, src, dst, n);
 
-    ew::mathSpanEngine(ew::OP_LOG, CV_32F, src, dst, n);   // the engine's vector kernel (the old
-                                                       // table implementation is removed)
+    ew::mathSpanEngine(ew::OP_LOG, CV_32F, src, dst, n);
 }
 
 void log64f(const double *src, double *dst, int n)
@@ -182,8 +179,7 @@ void log64f(const double *src, double *dst, int n)
 
     CALL_HAL(log64f, cv_hal_log64f, src, dst, n);
 
-    ew::mathSpanEngine(ew::OP_LOG, CV_64F, src, dst, n);   // the engine's vector kernel (the old
-                                                       // table implementation is removed)
+    ew::mathSpanEngine(ew::OP_LOG, CV_64F, src, dst, n);
 }
 
 //=============================================================================

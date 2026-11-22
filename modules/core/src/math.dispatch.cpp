@@ -66,9 +66,7 @@ static TKernel probeHalUnary(HalFunc fn)
     return {};
 }
 
-// The engine's OWN kernel for (op, T) - v_exp/v_log & co, no HAL/IPP tiers. The final fallback of
-// getMathFunc, and what hal::exp32f & co use as THEIR built-in implementation (the former table
-// kernels are gone), via mathSpanEngine below.
+// CPU fallback for math operations without an installed HAL/IPP kernel.
 static TKernel getEngineMathFunc(TOp op, int T)
 {
     CV_CPU_DISPATCH(getMathFunc_,   (op, T),      CV_CPU_DISPATCH_MODES_ALL);

@@ -32,6 +32,42 @@ PERF_TEST_P(FractionalPow, positive,
     SANITY_CHECK_NOTHING();
 }
 
+typedef perf::TestBaseWithParam<std::tuple<Size, double>> FractionalPowFp32Rgb;
+
+PERF_TEST_P(FractionalPowFp32Rgb, positive,
+    testing::Combine(testing::Values(Size(160, 128), Size(320, 240), Size(1024, 768),
+                                    Size(640, 480), Size(1920, 1080)),
+                     testing::Values(1.7, 2.2)))
+{
+    const Size size = std::get<0>(GetParam());
+    const double exponent = std::get<1>(GetParam());
+    Mat source(size, CV_32FC3), destination(size, CV_32FC3);
+    RNG& rng = theRNG();
+    rng.fill(source, RNG::UNIFORM, Scalar::all(0.01), Scalar::all(1.0));
+    declare.in(source).out(destination);
+
+    TEST_CYCLE() cv::pow(source, exponent, destination);
+
+    SANITY_CHECK_NOTHING();
+}
+
+typedef perf::TestBaseWithParam<Size> LogFp32Rgb;
+
+PERF_TEST_P(LogFp32Rgb, positive,
+    testing::Values(Size(160, 128), Size(320, 240), Size(1024, 768),
+                    Size(640, 480), Size(1920, 1080)))
+{
+    const Size size = GetParam();
+    Mat source(size, CV_32FC3), destination(size, CV_32FC3);
+    RNG& rng = theRNG();
+    rng.fill(source, RNG::UNIFORM, Scalar::all(0.01), Scalar::all(1.0));
+    declare.in(source).out(destination);
+
+    TEST_CYCLE() cv::log(source, destination);
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef perf::TestBaseWithParam<size_t> VectorLength;
 
 PERF_TEST_P(VectorLength, phase32f, testing::Values(128, 1000, 128*1024, 512*1024, 1024*1024))

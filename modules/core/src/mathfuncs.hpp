@@ -5,7 +5,8 @@
 #ifndef OPENCV_CORE_SRC_MATHFUNCS_HPP
 #define OPENCV_CORE_SRC_MATHFUNCS_HPP
 
-// (the exp/log table kernels and their tables are gone - cv::hal::exp32f & co now fall back
-//  to the element-wise engine's vector kernels; see mathfuncs_core.dispatch.cpp)
+namespace cv { namespace details {
+const float* getLogTab32f();
+}} // namespace cv::details
 
 #endif // OPENCV_CORE_SRC_MATHFUNCS_HPP

@@ -45,6 +45,7 @@
 #include "opencl_kernels_core.hpp"
 #include <atomic>
 #include <limits>
+#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -55,6 +56,43 @@ namespace cv
 {
 
 typedef void (*MathFunc)(const void* src, void* dst, int len);
+
+namespace details {
+const float* getLogTab32f()
+{
+    struct LogTable
+    {
+        alignas(64) float values[512];
+        LogTable()
+        {
+            // Each bin stores log(base) and its reciprocal for the cubic correction.
+            for (int i = 0; i < 255; ++i)
+            {
+                const double base = 1.0 + i * (1.0 / 256.0);
+                values[2 * i] = (float)std::log(base);
+                values[2 * i + 1] = (float)(1.0 / base);
+            }
+            values[510] = 0.6931471805599453f;
+            values[511] = 0.5f;
+        }
+    };
+    static const LogTable table;
+    return table.values;
+}
+} // namespace details
+
+static bool overlaps(const Mat& a, const Mat& b)
+{
+    size_t aSpan = a.elemSize(), bSpan = b.elemSize();
+    for (int i = 0; i < a.dims; i++)
+        aSpan += (size_t)(a.size[i] - 1) * a.step[i];
+    for (int i = 0; i < b.dims; i++)
+        bSpan += (size_t)(b.size[i] - 1) * b.step[i];
+
+    const uintptr_t aStart = reinterpret_cast<uintptr_t>(a.data);
+    const uintptr_t bStart = reinterpret_cast<uintptr_t>(b.data);
+    return aStart <= bStart ? bStart - aStart < aSpan : aStart - bStart < bSpan;
+}
 
 #ifdef HAVE_OPENCL
 
@@ -437,14 +475,8 @@ void polarToCart( InputArray src1, InputArray src2,
 *                                          E X P                                         *
 \****************************************************************************************/
 
-// The master function of the unary math family (cv::exp/log/sqrt - the analogue of arithm_op):
-// same-shape same-type output over the four float depths, computed by the element-wise engine's
-// kernels (math.simd.hpp). Two tiers:
-//  - SMALL and continuous (a common pattern - exp() over one image row as a lookup substitute):
-//    call the kernel DIRECTLY over the flattened elements. No TExpr, no broadcastOp, no
-//    parallel_for machinery - their setup dominates at these sizes.
-//  - everything else (large arrays - worth parallelizing; ROIs - need real steps): the usual
-//    1-instruction program via compile()/exec().
+// The unary math family uses direct kernels for small contiguous inputs and TExpr for larger or
+// non-contiguous arrays. Single-thread contiguous CV_32F log uses a direct span kernel.
 enum { MATH_OP_SMALL = 100000 };     // elements; tune with a benchmark if the crossover moves
 
 static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
@@ -459,7 +491,28 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
         return;
 
     const size_t total = src.total() * src.channels();
-    if (src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL)
+    const bool log32f = op == ew::OP_LOG && depth == CV_32F;
+    const bool log32fContinuous = log32f && src.isContinuous() && dst.isContinuous();
+    const bool partialOverlap = log32f && src.data != dst.data && overlaps(src, dst);
+    if (log32fContinuous && getNumThreads() == 1 && !partialOverlap)
+    {
+        // One worker does not need TExpr's tile setup or parallel scheduling.
+        ew::TKernel k = ew::getMathFunc(op, depth);
+        CV_Assert(k.fptr);
+        static const double noparams[4] = {};
+        size_t offset = 0;
+        while (offset < total)
+        {
+            const int length = (int)std::min(total - offset,
+                (size_t)std::numeric_limits<int>::max());
+            k.fptr(src.data + offset * sizeof(float), 0, 1, nullptr, 0, 0, nullptr, 0, 0,
+                   dst.data + offset * sizeof(float), 0, length, 1, noparams,
+                   k.flags, k.userdata);
+            offset += (size_t)length;
+        }
+        return;
+    }
+    if (src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL && !partialOverlap)
     {
         ew::TKernel k = ew::getMathFunc(op, depth);
         CV_Assert(k.fptr);
@@ -474,7 +527,14 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
     const int out = p.addOutput(depth);
     p.moveToOutput(p.emitUnary(op, a, depth), out);
     p.compile();
-    const Mat* inputs[] = { &src };
+    Mat srcCopy;
+    const Mat* input = &src;
+    if (partialOverlap)
+    {
+        srcCopy = src.clone();
+        input = &srcCopy;
+    }
+    const Mat* inputs[] = { input };
     p.exec(inputs, &dst);
 }
 
@@ -1048,7 +1108,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
         return;
 
     const size_t total = src.total() * cn;
-    if (floatDepth && src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL)
+    const bool partialOverlap = src.data != dst.data && overlaps(src, dst);
+    const bool useDirectKernel = total <= (size_t)MATH_OP_SMALL ||
+        (depth == CV_32F && getNumThreads() == 1);
+    if (floatDepth && src.isContinuous() && dst.isContinuous() && useDirectKernel && !partialOverlap)
     {
         ew::TKernel k = ew::getPowFunc(depth, depth);
         if (k.fptr)
@@ -1075,7 +1138,14 @@ void pow( InputArray _src, double power, OutputArray _dst )
     const int out = prog.addOutput(depth);
     prog.moveToOutput(prog.emitBinary(ew::OP_POW, a, c, depth), out);
     prog.compile();
-    const Mat* inputs[] = { &src };
+    Mat srcCopy;
+    const Mat* input = &src;
+    if (partialOverlap)
+    {
+        srcCopy = src.clone();
+        input = &srcCopy;
+    }
+    const Mat* inputs[] = { input };
     prog.exec(inputs, &dst);
 }
 

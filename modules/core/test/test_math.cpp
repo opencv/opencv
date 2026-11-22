@@ -2989,6 +2989,50 @@ TEST(Core_Pow, special)
     }
 }
 
+TEST(Core_Log, cv32f_table_kernel)
+{
+    const int oldThreads = cv::getNumThreads();
+    cv::setNumThreads(0);
+    const auto verify = [](const Mat& input, const Mat& output)
+    {
+        for (int i = 0; i < input.cols; i++)
+        {
+            const float expected = std::log(input.at<float>(i));
+            const float actual = output.at<float>(i);
+            if (cvIsNaN(expected))
+                EXPECT_TRUE(cvIsNaN(actual));
+            else if (cvIsInf(expected))
+                EXPECT_EQ(expected, actual);
+            else
+                EXPECT_NEAR(expected, actual, 2e-6f);
+        }
+    };
+
+    Mat positive(1, 32, CV_32F);
+    for (int i = 0; i < positive.cols; i++)
+        positive.at<float>(i) = 0.01f + 0.03f * i;
+    Mat result;
+    cv::log(positive, result);
+    verify(positive, result);
+
+    const float specialValues[] = {
+        0.f, -0.f, std::numeric_limits<float>::denorm_min(),
+        -std::numeric_limits<float>::denorm_min(), -1.f,
+        std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN(), 1.f
+    };
+    Mat special(1, (int)(sizeof(specialValues) / sizeof(specialValues[0])), CV_32F,
+                (void*)specialValues);
+    cv::log(special, result);
+    verify(special, result);
+
+    Mat inplace = special.clone();
+    cv::log(inplace, inplace);
+    verify(special, inplace);
+
+    cv::setNumThreads(oldThreads);
+}
+
 TEST(Core_Cholesky, accuracy64f)
 {
     const int n = 5;
