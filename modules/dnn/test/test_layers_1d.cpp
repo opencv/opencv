@@ -1761,5 +1761,22 @@ TEST(Layer_TopK2, ZeroK)
     }
 }
 
+TEST(Layer_Range, ZeroDelta)
+{
+    LayerParams lp;
+    lp.type = "Range";
+    lp.name = "range";
+    Ptr<Layer> layer = RangeLayer::create(lp);
+
+    for (int type : {CV_32F, CV_32S, CV_64S})
+    {
+        SCOPED_TRACE(typeToString(type));
+        Mat start(MatShape{1}, type, Scalar(0));
+        Mat limit(MatShape{1}, type, Scalar(5));
+        Mat delta(MatShape{1}, type, Scalar(0));
+        std::vector<Mat> inputs{start, limit, delta}, outputs(1), internals;
+        EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
+    }
+}
 
 }}
