@@ -120,6 +120,23 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
     }
 };
 
+OCL_TEST(SepFilter2D, IsolatedOrigin)
+{
+    UMat src(97, 133, CV_8UC1, Scalar::all(255));
+    UMat roi = src(Rect(0, 0, 90, 72));
+    roi.setTo(Scalar::all(20));
+    const int borderType = BORDER_REPLICATE | BORDER_ISOLATED;
+    const Mat kernel = getGaussianKernel(5, 1);
+
+    UMat filtered;
+    cv::sepFilter2D(roi, filtered, CV_16S, kernel, kernel, Point(-1, -1), 0, borderType);
+    EXPECT_EQ(0, cv::countNonZero(filtered.getMat(ACCESS_READ) != 20));
+
+    UMat blurred;
+    cv::GaussianBlur(roi, blurred, Size(5, 5), 1, 1, borderType);
+    EXPECT_EQ(0, cv::countNonZero(blurred.getMat(ACCESS_READ) != 20));
+}
+
 OCL_TEST_P(SepFilter2D, Mat)
 {
     for (int j = 0; j < test_loop_times + 3; j++)

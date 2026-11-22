@@ -143,8 +143,9 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
         UMat dx, dy;
         if (!useCustomDeriv)
         {
-            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, scale, 0, BORDER_REPLICATE);
-            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, scale, 0, BORDER_REPLICATE);
+            const int borderType = _src.isSubmatrix() ? BORDER_REPLICATE | BORDER_ISOLATED : BORDER_REPLICATE;
+            Sobel(_src, dx, CV_16S, 1, 0, aperture_size, scale, 0, borderType);
+            Sobel(_src, dy, CV_16S, 0, 1, aperture_size, scale, 0, borderType);
         }
         else
         {
