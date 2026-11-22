@@ -555,6 +555,8 @@ HoughLinesProbabilistic( Mat& image,
 
     int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
+    if (numrho == 0)  // rho is larger than the image diagonal, the accumulator would have no rho bins at all
+        numrho = 1;
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
     CV_IPP_CHECK()

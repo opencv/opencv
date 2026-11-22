@@ -450,6 +450,26 @@ TEST(WeightedHoughLines, diagonal)
     EXPECT_NEAR(CV_PI*3/4, lines[1][1], CV_PI/180 + 1e-6);
 }
 
+// A rho larger than the image diagonal used to give an accumulator without rho bins, and HoughLinesP wrote into it.
+TEST(HoughLinesP, regression_large_rho)
+{
+    Mat image = Mat::zeros(64, 64, CV_8UC1);
+    line(image, Point(5, 5), Point(58, 58), Scalar(255), 1);
+    line(image, Point(5, 58), Point(58, 5), Scalar(255), 1);
+
+    const double rhos[] = {1000, 1e5, 1e9};
+    for (size_t i = 0; i < sizeof(rhos) / sizeof(rhos[0]); i++)
+    {
+        std::vector<Vec4i> lines;
+        EXPECT_NO_THROW(HoughLinesP(image, lines, rhos[i], CV_PI / 180, 10, 10, 5)) << "rho " << rhos[i];
+        for (size_t j = 0; j < lines.size(); j++)
+        {
+            EXPECT_TRUE(lines[j][0] >= 0 && lines[j][0] < image.cols && lines[j][2] >= 0 && lines[j][2] < image.cols) << "rho " << rhos[i];
+            EXPECT_TRUE(lines[j][1] >= 0 && lines[j][1] < image.rows && lines[j][3] >= 0 && lines[j][3] < image.rows) << "rho " << rhos[i];
+        }
+    }
+}
+
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
                                                                            testing::Values( 0.05, 0.1 ),
