@@ -3431,7 +3431,6 @@ CASE(test_xor_bcast4v3d)
     // no filter
 CASE(test_xor_bcast4v4d)
     // no filter
-CASE()
 CASE(test_attention_3d)
     SKIP;
 CASE(test_attention_3d_attn_mask)
