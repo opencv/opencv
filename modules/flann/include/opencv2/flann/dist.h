@@ -46,7 +46,7 @@ typedef unsigned __int64 uint64_t;
 #include "defines.h"
 
 #if defined _WIN32 && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
-# include <Intrin.h>
+# include <intrin.h>
 #endif
 
 #if defined(__ARM_NEON) && !defined(__CUDACC__)
@@ -564,7 +564,9 @@ struct Hamming
             const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
             const unsigned char* b2 = reinterpret_cast<const unsigned char*> (b);
             uint32x4_t bits = vmovq_n_u32(0);
-            for (size_t i = 0; i < size; i += 16) {
+            size_t i = 0;
+            // Process only full 16-byte blocks: loading a partial block would read past the end of the vectors
+            for (; i + 16 <= size; i += 16) {
                 uint8x16_t A_vec = vld1q_u8 (a2 + i);
                 uint8x16_t B_vec = vld1q_u8 (b2 + i);
                 uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
@@ -576,6 +578,12 @@ struct Hamming
             uint64x2_t bitSet2 = vpaddlq_u32 (bits);
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+
+            // Remaining 0..15 bytes
+            if (i < size) {
+                HammingLUT lut;
+                result += lut(a2 + i, b2 + i, size - i);
+            }
         }
 #elif defined(__GNUC__)
         {
@@ -615,7 +623,9 @@ struct Hamming
         {
             const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
             uint32x4_t bits = vmovq_n_u32(0);
-            for (size_t i = 0; i < size; i += 16) {
+            size_t i = 0;
+            // Process only full 16-byte blocks: loading a partial block would read past the end of the vector
+            for (; i + 16 <= size; i += 16) {
                 uint8x16_t A_vec = vld1q_u8 (a2 + i);
                 uint8x16_t bitsSet = vcntq_u8 (A_vec);
                 uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
@@ -625,6 +635,12 @@ struct Hamming
             uint64x2_t bitSet2 = vpaddlq_u32 (bits);
             result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
             result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
+
+            // Remaining 0..15 bytes
+            if (i < size) {
+                HammingLUT lut;
+                result += lut(a2 + i, b, size - i);
+            }
         }
 #elif defined(__GNUC__)
         {
