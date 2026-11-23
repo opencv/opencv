@@ -1126,8 +1126,16 @@ void pow( InputArray _src, double power, OutputArray _dst )
             default:      pvstore = power; break;
             }
             static const double noparams[4] = {};
-            k.fptr(src.data, 0, 1, pv, 0, 0, nullptr, 0, 0,
-                   dst.data, 0, (int)total, 1, noparams, k.flags, k.userdata);
+            const size_t esz = src.elemSize1();
+            size_t offset = 0;
+            while (offset < total)
+            {
+                const int length = (int)std::min(total - offset,
+                    (size_t)std::numeric_limits<int>::max());
+                k.fptr(src.data + offset * esz, 0, 1, pv, 0, 0, nullptr, 0, 0,
+                       dst.data + offset * esz, 0, length, 1, noparams, k.flags, k.userdata);
+                offset += (size_t)length;
+            }
             return;
         }
     }
