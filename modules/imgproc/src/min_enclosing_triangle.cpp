@@ -102,12 +102,9 @@
 
 namespace minEnclosingTriangle {
 
-//! Thrown by the loops that move the vertices of the triangle when they do not settle
-struct NoConvergence {};
-
 static void advance(unsigned int &index, unsigned int nrOfPoints);
 
-static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
+static bool advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
                                  unsigned int nrOfPoints, unsigned int &b,
                                  unsigned int c);
 
@@ -150,7 +147,7 @@ static void findMinEnclosingTriangle(cv::InputArray points,
 static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                      std::vector<cv::Point2f> &triangle, double &area);
 
-static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
+static bool findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                              std::vector<cv::Point2f> &triangle, double &area);
 
 static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
@@ -250,7 +247,7 @@ static bool middlePointOfSideB(cv::Point2f &middlePointOfSideB, const cv::Point2
                                const cv::Point2f &sideBEndVertex, const cv::Point2f &sideCStartVertex,
                                const cv::Point2f &sideCEndVertex);
 
-static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
+static bool moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
                                  unsigned int nrOfPoints, unsigned int &a, unsigned int &b,
                                  unsigned int c);
 
@@ -261,7 +258,7 @@ static unsigned int predecessor(unsigned int index, unsigned int nrOfPoints);
 static void returnMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                                std::vector<cv::Point2f> &triangle, double &area);
 
-static void searchForBTangency(const std::vector<cv::Point2f> &polygon,
+static bool searchForBTangency(const std::vector<cv::Point2f> &polygon,
                                unsigned int nrOfPoints, unsigned int a, unsigned int &b,
                                unsigned int c);
 
@@ -345,9 +342,7 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     initialise(triangle, area);
 
     if (polygon.size() > 3) {
-        try {
-            findMinimumAreaEnclosingTriangle(polygon, triangle, area);
-        } catch (const NoConvergence &) {
+        if (!findMinimumAreaEnclosingTriangle(polygon, triangle, area)) {
             initialise(triangle, area);
             findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area);
         }
@@ -422,9 +417,7 @@ static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::
     std::vector<cv::Point2f> normalisedTriangle;
     double normalisedArea;
     initialise(normalisedTriangle, normalisedArea);
-    try {
-        findMinimumAreaEnclosingTriangle(normalisedPolygon, normalisedTriangle, normalisedArea);
-    } catch (const NoConvergence &) {
+    if (!findMinimumAreaEnclosingTriangle(normalisedPolygon, normalisedTriangle, normalisedArea)) {
         CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge");
     }
 
@@ -457,8 +450,10 @@ static void initialise(std::vector<cv::Point2f> &triangle, double &area) {
 * @param polygon    The polygon representing the convex hull of the points
 * @param triangle   Minimum area triangle enclosing the given polygon
 * @param area       Area of the minimum area enclosing triangle
+* @return           False if the vertices of the triangle do not settle, which happens for a polygon
+*                   that is too thin for the tolerances, true otherwise
 */
-static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
+static bool findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                              std::vector<cv::Point2f> &triangle, double &area) {
     // Algorithm specific variables
 
@@ -483,9 +478,11 @@ static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &pol
     // Main algorithm steps
 
     for (c = 0; c < nrOfPoints; c++) {
-        advanceBToRightChain(polygon, nrOfPoints, b, c);
-        moveAIfLowAndBIfHigh(polygon, nrOfPoints, a, b, c);
-        searchForBTangency(polygon, nrOfPoints, a ,b, c);
+        if (!advanceBToRightChain(polygon, nrOfPoints, b, c) ||
+            !moveAIfLowAndBIfHigh(polygon, nrOfPoints, a, b, c) ||
+            !searchForBTangency(polygon, nrOfPoints, a ,b, c)) {
+            return false;
+        }
 
         updateSidesCA(polygon, nrOfPoints, a, c, sideAStartVertex, sideAEndVertex,
                       sideCStartVertex, sideCEndVertex);
@@ -506,6 +503,8 @@ static void findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &pol
             updateMinimumAreaEnclosingTriangle(triangle, area, vertexA, vertexB, vertexC);
         }
     }
+
+    return true;
 }
 
 //! Return the minimum area enclosing (pseudo-)triangle in case the convex polygon has at most three points
@@ -533,8 +532,9 @@ static void returnMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &p
 * @param nrOfPoints         Number of points defining the convex polygon
 * @param b                  Index b
 * @param c                  Index c
+* @return                   False if b does not settle, true otherwise
 */
-static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
+static bool advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
                                  unsigned int nrOfPoints, unsigned int &b,
                                  unsigned int c) {
     // b cannot go around the polygon more than once. For a nearly flat polygon all heights
@@ -543,10 +543,12 @@ static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
     while (greaterOrEqual(height(successor(b, nrOfPoints), polygon, nrOfPoints, c),
                           height(b, polygon, nrOfPoints, c))) {
         if (++steps > nrOfPoints) {
-            throw NoConvergence();
+            return false;
         }
         advance(b, nrOfPoints);
     }
+
+    return true;
 }
 
 //! Move "a" if it is low and "b" if it is high
@@ -558,8 +560,9 @@ static void advanceBToRightChain(const std::vector<cv::Point2f> &polygon,
 * @param a                  Index a
 * @param b                  Index b
 * @param c                  Index c
+* @return                   False if a and b do not settle, true otherwise
 */
-static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
+static bool moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
                                  unsigned int nrOfPoints, unsigned int &a, unsigned int &b,
                                  unsigned int c) {
     cv::Point2f gammaOfA;
@@ -568,7 +571,7 @@ static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
     while(height(b, polygon, nrOfPoints, c) > height(a, polygon, nrOfPoints, c)) {
         // each step moves a or b by one vertex, and neither can go around the polygon more than once
         if (++steps > 2 * nrOfPoints) {
-            throw NoConvergence();
+            return false;
         }
         if ((gamma(a, gammaOfA, polygon, nrOfPoints, a, c)) && (intersectsBelow(gammaOfA, b, polygon, nrOfPoints, c))) {
             advance(b, nrOfPoints);
@@ -576,6 +579,8 @@ static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
             advance(a, nrOfPoints);
         }
     }
+
+    return true;
 }
 
 //! Search for the tangency of side B
@@ -587,8 +592,9 @@ static void moveAIfLowAndBIfHigh(const std::vector<cv::Point2f> &polygon,
 * @param a                  Index a
 * @param b                  Index b
 * @param c                  Index c
+* @return                   False if b does not settle, true otherwise
 */
-static void searchForBTangency(const std::vector<cv::Point2f> &polygon,
+static bool searchForBTangency(const std::vector<cv::Point2f> &polygon,
                                unsigned int nrOfPoints, unsigned int a, unsigned int &b,
                                unsigned int c) {
     cv::Point2f gammaOfB;
@@ -600,10 +606,12 @@ static void searchForBTangency(const std::vector<cv::Point2f> &polygon,
                            height(predecessor(a, nrOfPoints), polygon, nrOfPoints, c)))
           ) {
         if (++steps > nrOfPoints) {
-            throw NoConvergence();
+            return false;
         }
         advance(b, nrOfPoints);
     }
+
+    return true;
 }
 
 //! Check if tangency for side B was not obtained
