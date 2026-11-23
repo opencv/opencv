@@ -966,6 +966,13 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     dimvalues.assign(nsymdims, -1);
     layersTimings.assign(totalLayers + 1, 0.);
 
+    // Before the run: forward-to-layer reads this run's temporaries afterwards.
+    if (replanBuffersBySize()) {
+#ifdef HAVE_CUDA
+        cudaGraphReset();
+#endif
+    }
+
     forwardGraph(mainGraph, inputs, outputs, true);
 
     // Feed present.* outputs back as past_key_values.* inputs for the next step (causal-lm-with-past).

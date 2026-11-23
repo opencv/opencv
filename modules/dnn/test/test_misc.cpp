@@ -1142,4 +1142,20 @@ TEST(Net, ShapeUtils_total_no_int32_overflow)
     EXPECT_EQ(t, 2839019520llu);
 }
 
+// Results must not change once the buffers are re-planned (160 MB -> 80 MB here).
+TEST(Net, BufferReplanKeepsResults)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/buffer_replan.onnx"));
+    ASSERT_FALSE(net.empty());
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_buffer_replan.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_buffer_replan.npy"));
+    for (int i = 0; i < 3; i++)
+    {
+        net.setInput(inp);
+        Mat out = net.forward();
+        normAssert(ref, out, cv::format("inference %d", i).c_str(), 1e-5, 1e-4);
+    }
+}
+
 }} // namespace

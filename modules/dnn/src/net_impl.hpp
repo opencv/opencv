@@ -137,6 +137,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> __tensors__;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
+    std::vector<size_t> sizePlanChecked;
     std::vector<Mat> scratchBufs;
     // interior tensors kept alive for forward-to-layer
     // See https://github.com/opencv/opencv/issues/26349
@@ -561,6 +562,8 @@ struct Net::Impl : public detail::NetImplBase
     void inferShapes(bool symbolic);
     // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
+    // Re-plans the temporaries by their recorded sizes when that saves enough memory.
+    bool replanBuffersBySize();
     void pinInteriorArgs(const std::vector<Arg>& neededPins);
     // collapse Reshape+InstanceNorm+Reshape+Mul+Add into InstanceNorm or GroupNormalization
     void fuseInstanceNormAffine();
