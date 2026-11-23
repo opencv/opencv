@@ -216,6 +216,24 @@ if(HAVE_OPENMP AND DEFINED OpenMP_CXX_LIBRARIES AND OpenMP_CXX_LIBRARIES)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${OpenMP_CXX_LIBRARIES}")
 endif()
 
+if(HAVE_HIP)
+  # setTo, convertTo and the imgproc operations of the HIP backend, and their kernel rules
+  set(_hip_hal "${OpenCV_SOURCE_DIR}/hal/accel/hip")
+  file(GLOB _hip_hal_srcs "${_hip_hal}/*/*.hip" "${_hip_hal}/*/*.cpp")
+  target_sources(${the_module} PRIVATE ${_hip_hal_srcs})
+  # dladdr: the imgproc operations read their rules from next to this library
+  ocv_target_link_libraries(${the_module} PRIVATE hip::host ${CMAKE_DL_LIBS})
+
+  # the rules are read at run time from opencv_hip_tuning/ next to the library, so they change
+  # without a rebuild; the build tree gets a copy, edit hal/accel/hip/tuning instead
+  file(GLOB _hip_rules "${_hip_hal}/tuning/*.yaml")
+  foreach(_f ${_hip_rules})
+    get_filename_component(_name "${_f}" NAME)
+    configure_file("${_f}" "${LIBRARY_OUTPUT_PATH}/opencv_hip_tuning/${_name}" COPYONLY)
+  endforeach()
+  install(FILES ${_hip_rules} DESTINATION "${OPENCV_LIB_INSTALL_PATH}/opencv_hip_tuning" COMPONENT libs)
+endif()
+
 set(test_libs "")
 if(HAVE_CUDA AND ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
   list(APPEND test_libs CUDA::cudart${CUDA_LIB_EXT})

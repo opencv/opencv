@@ -5,6 +5,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
+#include "opencv2/core/private/accel_backend.hpp"
+
 #include "convert.simd.hpp"
 #include "convert.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
@@ -211,6 +213,33 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     }
 }
 
+static bool accel_convertTo(const UMat& _src, OutputArray _dst, int dtype, double alpha, double beta)
+{
+    if (!_dst.isUMat() || _src.dims > 2)
+        return false;
+    const UMat src = _src;  // keeps the input alive when the output is this UMat
+    accel::Device device = accel::getDevice(src);
+    if (device.empty())
+        return false;
+
+    UMat& dst = _dst.getUMatRef();
+    if ((_dst.fixedSize() && dst.size() != src.size()) || (_dst.fixedType() && dst.type() != dtype))
+        return false;   // the CPU path reports the mismatch
+    // a region or fixed-size output elsewhere stays there; the CPU writes it
+    if (accel::getDevice(dst) != device && (_dst.fixedSize() || dst.isSubmatrix()))
+        return false;
+    // in place with another type: the CPU path, which keeps the input while it creates the output
+    if (dst.u == src.u && dst.type() != dtype)
+        return false;
+    dst.createOn(device, src.size(), dtype);
+
+    accel::CoreOps* ops = device.ops<accel::CoreOps>("core");
+    if (!ops)
+        return false;   // CPU fallback; the output is already on the device
+
+    return ops->convertTo(src, dst, alpha, beta, device.threadStream());
+}
+
 void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
@@ -220,6 +249,14 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         dst.release();
         dst.create(size(), type_ >= 0 ? type_ : type());
         return;
+    }
+
+    {
+        const int sdepth_ = depth();
+        int ddepth_ = type_ >= 0 ? CV_MAT_DEPTH(type_) : sdepth_;
+        const int dtype_ = CV_MAKETYPE(ddepth_, channels());
+        if (accel_convertTo(*this, dst, dtype_, alpha, beta))
+            return;
     }
 
 #ifdef HAVE_OPENCL

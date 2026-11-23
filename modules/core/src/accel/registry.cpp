@@ -21,6 +21,11 @@ Backend::~Backend() {}
 
 bool CoreOps::flip(const UMat&, UMat&, int, Stream&) { return false; }
 bool CoreOps::transpose(const UMat&, UMat&, Stream&) { return false; }
+bool CoreOps::setTo(UMat&, const Scalar&, Stream&) { return false; }
+bool CoreOps::convertTo(const UMat&, UMat&, double, double, Stream&) { return false; }
+
+bool ImgprocOps::boxFilter(const UMat&, UMat&, Size, Point, bool, int, Stream&) { return false; }
+bool ImgprocOps::cvtTwoPlaneYUVtoBGR(const UMat&, UMat&, int, bool, int, Stream&) { return false; }
 
 void* Backend::hostAddress(int, void*) { return 0; }
 Ops* Backend::ops(const char*) { return 0; }

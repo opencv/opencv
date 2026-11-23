@@ -106,6 +106,24 @@ public:
     virtual bool flip(const UMat& src, UMat& dst, int flipCode, Stream& stream);
     //! cv::transpose of a 2-D UMat
     virtual bool transpose(const UMat& src, UMat& dst, Stream& stream);
+    //! cv::UMat::setTo without a mask: every element of @p dst is written
+    virtual bool setTo(UMat& dst, const Scalar& value, Stream& stream);
+    //! cv::UMat::convertTo: dst = src * @p alpha + @p beta, saturated to the depth of @p dst
+    virtual bool convertTo(const UMat& src, UMat& dst, double alpha, double beta, Stream& stream);
+};
+
+/** @brief Operations of the imgproc module, under the same rules as CoreOps. */
+class CV_EXPORTS ImgprocOps : public Ops
+{
+public:
+    /** @brief cv::boxFilter of a 2-D @p src into @p dst of the same type. @p anchor is inside the
+    window and @p borderType has no BORDER_ISOLATED. */
+    virtual bool boxFilter(const UMat& src, UMat& dst, Size ksize, Point anchor, bool normalize,
+                           int borderType, Stream& stream);
+    /** @brief cv::cvtColor of NV12 (@p uIdx 0) or NV21 (1) in one 8-bit plane, Y rows then half as
+    many UV rows, to @p dcn channels (3, 4) in BGR order, RGB with @p swapBlue. */
+    virtual bool cvtTwoPlaneYUVtoBGR(const UMat& src, UMat& dst, int dcn, bool swapBlue, int uIdx,
+                                     Stream& stream);
 };
 
 /** @brief An accelerator runtime: its devices, their memory, streams and operations.

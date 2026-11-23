@@ -47,6 +47,7 @@
 #include <vector>
 
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 #include "opencl_kernels_imgproc.hpp"
 
 #include "box_filter.simd.hpp"
@@ -315,6 +316,44 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
 }
 
 
+static bool accel_boxFilter(InputArray _src, OutputArray _dst, int ddepth,
+                            Size ksize, Point anchor, bool normalize, int borderType)
+{
+    if (!_src.isUMat() || !_dst.isUMat() || _src.dims() > 2)
+        return false;
+    const UMat src = _src.getUMat();
+    if (ddepth >= 0 && ddepth != src.depth())
+        return false;
+    // the device sees only the region; the CPU reads the pixels around it unless isolated
+    if (src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0)
+        return false;
+    accel::Device device = accel::getDevice(src);
+    if (device.empty())
+        return false;
+
+    UMat& dst = _dst.getUMatRef();
+    if ((_dst.fixedSize() && dst.size() != src.size()) || (_dst.fixedType() && dst.type() != src.type()))
+        return false;   // the CPU path reports the mismatch
+    // a region or fixed-size output elsewhere stays there; the CPU writes it
+    if (accel::getDevice(dst) != device && (_dst.fixedSize() || dst.isSubmatrix()))
+        return false;
+    // in place: the window reads pixels the call writes, so the CPU path with its copy
+    if (dst.u == src.u)
+        return false;
+    dst.createOn(device, src.size(), src.type());
+
+    accel::ImgprocOps* ops = device.ops<accel::ImgprocOps>("imgproc");
+    if (!ops)
+        return false;   // CPU fallback; the output is already on the device
+
+    if (anchor.x < 0)
+        anchor.x = ksize.width / 2;
+    if (anchor.y < 0)
+        anchor.y = ksize.height / 2;
+    return ops->boxFilter(src, dst, ksize, anchor, normalize, borderType & ~BORDER_ISOLATED,
+                          device.threadStream());
+}
+
 void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
                Size ksize, Point anchor,
                bool normalize, int borderType)
@@ -323,6 +362,9 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 
     CV_Assert(!_src.empty());
     CV_Assert(ksize.width > 0 && ksize.height > 0);
+
+    if (accel_boxFilter(_src, _dst, ddepth, ksize, anchor, normalize, borderType))
+        return;
 
     CV_OCL_RUN(_dst.isUMat() &&
                (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||

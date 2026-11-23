@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_imgproc.hpp"
+#include "opencv2/core/private/accel_backend.hpp"
 #include "color.hpp"
 
 namespace cv
@@ -189,6 +190,49 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
 //                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
 
+static bool accel_cvtColor(InputArray _src, OutputArray _dst, int code, int dcn)
+{
+    switch (code)
+    {
+    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV21:
+    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV21:
+    {
+        if (!_src.isUMat() || !_dst.isUMat() || _src.dims() > 2)
+            return false;
+        const UMat src = _src.getUMat();
+        // the layout the CPU path asserts: one 8-bit plane, Y rows then half as many UV rows
+        if (src.type() != CV_8UC1 || src.cols % 2 != 0 || src.rows % 3 != 0 || (dcn != 3 && dcn != 4))
+            return false;
+        accel::Device device = accel::getDevice(src);
+        if (device.empty())
+            return false;
+
+        const Size dsz(src.cols, src.rows * 2 / 3);
+        const int dtype = CV_MAKETYPE(CV_8U, dcn);
+        UMat& dst = _dst.getUMatRef();
+        if ((_dst.fixedSize() && dst.size() != dsz) || (_dst.fixedType() && dst.type() != dtype))
+            return false;   // the CPU path reports the mismatch
+        // a region or fixed-size output elsewhere stays there; the CPU writes it
+        if (accel::getDevice(dst) != device && (_dst.fixedSize() || dst.isSubmatrix()))
+            return false;
+        // in place: the CPU path, which keeps the input while it creates the output
+        if (dst.u == src.u)
+            return false;
+        dst.createOn(device, dsz, dtype);
+
+        accel::ImgprocOps* ops = device.ops<accel::ImgprocOps>("imgproc");
+        if (!ops)
+            return false;   // CPU fallback; the output is already on the device
+
+        const int uidx = code == COLOR_YUV2RGBA_NV21 || code == COLOR_YUV2RGB_NV21 ||
+                         code == COLOR_YUV2BGRA_NV21 || code == COLOR_YUV2BGR_NV21 ? 1 : 0;
+        return ops->cvtTwoPlaneYUVtoBGR(src, dst, dcn, swapBlue(code), uidx, device.threadStream());
+    }
+    default:
+        return false;
+    }
+}
+
 void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
@@ -200,6 +244,9 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
 
     if(dcn <= 0)
             dcn = dstChannels(code);
+
+    if (accel_cvtColor(_src, _dst, code, dcn))
+        return;
 
     CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat() &&
                 !(CV_MAT_DEPTH(_src.type()) == CV_8U && (code == COLOR_Luv2BGR || code == COLOR_Luv2RGB)),

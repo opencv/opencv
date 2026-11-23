@@ -23,6 +23,10 @@
 #include <cuda.h>   // the types of a driver function reached through the runtime; libcuda is not linked
 #endif
 
+#ifdef CV_ACCEL_GPU_HIP
+#include "../hip/hip.hpp"   // the HIP operations in hal/accel/hip
+#endif
+
 namespace cv { namespace accel { namespace CV_GPU_NS {
 
 namespace {
@@ -221,6 +225,19 @@ public:
         stream.retain({ src, dst });
         return true;
     }
+
+#ifdef CV_ACCEL_GPU_HIP
+    // the HIP backend's setTo and convertTo live in hal/accel/hip
+    bool setTo(UMat& dst, const Scalar& value, Stream& stream) CV_OVERRIDE
+    {
+        return coreOps()->setTo(dst, value, stream);
+    }
+
+    bool convertTo(const UMat& src, UMat& dst, double alpha, double beta, Stream& stream) CV_OVERRIDE
+    {
+        return coreOps()->convertTo(src, dst, alpha, beta, stream);
+    }
+#endif
 };
 
 //! one device; a backend's constructor says whether the CPU addresses its memory (shared)
@@ -351,7 +368,13 @@ public:
 
     Ops* ops(const char* module) CV_OVERRIDE
     {
-        return strcmp(module, "core") == 0 ? &core_ : 0;
+        if (strcmp(module, "core") == 0)
+            return &core_;
+#ifdef CV_ACCEL_GPU_HIP
+        if (strcmp(module, "imgproc") == 0)
+            return imgprocOps();    // hal/accel/hip
+#endif
+        return 0;
     }
 
 protected:
@@ -432,6 +455,39 @@ private:
 };
 
 } // namespace
+
+#ifdef CV_ACCEL_GPU_HIP
+// what hal/accel/hip reaches of this backend (hip/hip.hpp); this header is compiled once per runtime
+
+void hipCheck(hipError_t e, const char* what)
+{
+    check(e, what);
+}
+
+HipDeviceGuard::HipDeviceGuard(int device) : prev_(-1)
+{
+    int current = -1;
+    hipCheck(hipGetDevice(&current), "hipGetDevice");
+    if (current != device)
+    {
+        hipCheck(hipSetDevice(device), "hipSetDevice");
+        prev_ = current;
+    }
+}
+
+HipDeviceGuard::~HipDeviceGuard()
+{
+    if (prev_ >= 0)
+        (void)hipSetDevice(prev_);
+}
+
+HipStreamRef hipStreamOf(Stream& stream)
+{
+    GpuStream& s = gpuStreamOf(stream);
+    HipStreamRef r = { s.device_, s.s_ };
+    return r;
+}
+#endif
 
 }}} // namespace cv::accel::CV_GPU_NS
 
