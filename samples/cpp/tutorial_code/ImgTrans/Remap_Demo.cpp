@@ -25,18 +25,18 @@ int main(int argc, const char** argv)
     /// Load the image
    std::string imagePath = samples::findFile(filename, false);
 
-if (imagePath.empty())
-{
-    std::cerr << "Cannot find image: " << filename << std::endl;
-    return -1;
-}
+    if (imagePath.empty())
+    {
+        std::cerr << "Cannot find image: " << filename << std::endl;
+        return -1;
+    }
 
-Mat src = imread(imagePath, IMREAD_COLOR);
+    Mat src = imread(imagePath, IMREAD_COLOR);
 
-if (src.empty())
-{
-    std::cerr << "Cannot read image: " << filename << std::endl;
-    return -1;
+    if (src.empty())
+    {
+        std::cerr << "Cannot read image: " << filename << std::endl;
+        return -1;
 }
     //! [Load]
 
