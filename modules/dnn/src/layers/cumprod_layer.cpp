@@ -90,6 +90,8 @@ public:
         const size_t outer_size = src_mat.total(0, axis);
         const size_t target_size = src_mat.size[axis];
         const size_t inner_size = src_mat.total(axis + 1);
+        if (target_size == 0)
+    return;
         const size_t outer_step_length = target_size * inner_size;
 
         const int target_start = reverse ? (int)target_size - 1 : 0;
