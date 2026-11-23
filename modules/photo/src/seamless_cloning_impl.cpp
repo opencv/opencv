@@ -109,7 +109,7 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
         float * tempLinePtr = temp.ptr<float>(j);
         const float * srcLinePtr = src.ptr<float>(j);
         int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             const int vl = VTraits<v_float32>::vlanes();
             for( ; i + vl <= src.cols ; i += vl)
@@ -141,7 +141,7 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
         float * tempLinePtr = temp.ptr<float>(j);
         const float * imagTLinePtr = imagT.ptr<float>(j);
         int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             const int vl = VTraits<v_float32>::vlanes();
             for( ; i + vl <= src.rows ; i += vl)
@@ -182,7 +182,7 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
     {
         float * resLinePtr = res.ptr<float>(j);
         int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             const int vl = VTraits<v_float32>::vlanes();
             const v_float32 vfy = vx_setall_f32(filter_Y[j]);
@@ -221,7 +221,7 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
         resLinePtr[0] = imgLinePtr[0];
 
         int i = 1;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             const int vl = VTraits<v_float32>::vlanes();
             const v_float32 vzero = vx_setzero_f32();
