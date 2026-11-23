@@ -20,7 +20,7 @@ enum CornerRefineMethod{
     CORNER_REFINE_APRILTAG, ///< Tag and corners detection based on the AprilTag 2 approach @cite wang2016iros
 };
 
-static constexpr float DEFAULT_VALID_BIT_ID_THRESHOLD{0.49f};
+static constexpr float DEFAULT_VALID_BIT_ID_THRESHOLD{0.50f};
 
 /** @brief struct DetectorParameters is used by ArucoDetector
  */
