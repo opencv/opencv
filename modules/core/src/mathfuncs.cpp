@@ -45,7 +45,6 @@
 #include "opencl_kernels_core.hpp"
 #include <atomic>
 #include <limits>
-#include <cstdint>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -80,19 +79,6 @@ const float* getLogTab32f()
     return table.values;
 }
 } // namespace details
-
-static bool overlaps(const Mat& a, const Mat& b)
-{
-    size_t aSpan = a.elemSize(), bSpan = b.elemSize();
-    for (int i = 0; i < a.dims; i++)
-        aSpan += (size_t)(a.size[i] - 1) * a.step[i];
-    for (int i = 0; i < b.dims; i++)
-        bSpan += (size_t)(b.size[i] - 1) * b.step[i];
-
-    const uintptr_t aStart = reinterpret_cast<uintptr_t>(a.data);
-    const uintptr_t bStart = reinterpret_cast<uintptr_t>(b.data);
-    return aStart <= bStart ? bStart - aStart < aSpan : aStart - bStart < bSpan;
-}
 
 #ifdef HAVE_OPENCL
 
@@ -493,8 +479,7 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
     const size_t total = src.total() * src.channels();
     const bool log32f = op == ew::OP_LOG && depth == CV_32F;
     const bool log32fContinuous = log32f && src.isContinuous() && dst.isContinuous();
-    const bool partialOverlap = log32f && src.data != dst.data && overlaps(src, dst);
-    if (log32fContinuous && getNumThreads() == 1 && !partialOverlap)
+    if (log32fContinuous && getNumThreads() == 1)
     {
         // One worker does not need TExpr's tile setup or parallel scheduling.
         ew::TKernel k = ew::getMathFunc(op, depth);
@@ -512,7 +497,7 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
         }
         return;
     }
-    if (src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL && !partialOverlap)
+    if (src.isContinuous() && dst.isContinuous() && total <= (size_t)MATH_OP_SMALL)
     {
         ew::TKernel k = ew::getMathFunc(op, depth);
         CV_Assert(k.fptr);
@@ -527,14 +512,7 @@ static void math_op(ew::TOp op, InputArray _src, OutputArray _dst)
     const int out = p.addOutput(depth);
     p.moveToOutput(p.emitUnary(op, a, depth), out);
     p.compile();
-    Mat srcCopy;
-    const Mat* input = &src;
-    if (partialOverlap)
-    {
-        srcCopy = src.clone();
-        input = &srcCopy;
-    }
-    const Mat* inputs[] = { input };
+    const Mat* inputs[] = { &src };
     p.exec(inputs, &dst);
 }
 
@@ -1108,10 +1086,9 @@ void pow( InputArray _src, double power, OutputArray _dst )
         return;
 
     const size_t total = src.total() * cn;
-    const bool partialOverlap = src.data != dst.data && overlaps(src, dst);
     const bool useDirectKernel = total <= (size_t)MATH_OP_SMALL ||
         (depth == CV_32F && getNumThreads() == 1);
-    if (floatDepth && src.isContinuous() && dst.isContinuous() && useDirectKernel && !partialOverlap)
+    if (floatDepth && src.isContinuous() && dst.isContinuous() && useDirectKernel)
     {
         ew::TKernel k = ew::getPowFunc(depth, depth);
         if (k.fptr)
@@ -1146,14 +1123,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     const int out = prog.addOutput(depth);
     prog.moveToOutput(prog.emitBinary(ew::OP_POW, a, c, depth), out);
     prog.compile();
-    Mat srcCopy;
-    const Mat* input = &src;
-    if (partialOverlap)
-    {
-        srcCopy = src.clone();
-        input = &srcCopy;
-    }
-    const Mat* inputs[] = { input };
+    const Mat* inputs[] = { &src };
     prog.exec(inputs, &dst);
 }
 

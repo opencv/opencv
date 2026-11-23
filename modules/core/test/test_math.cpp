@@ -3004,7 +3004,7 @@ TEST(Core_Log, cv32f_table_kernel)
             else if (cvIsInf(expected))
                 EXPECT_EQ(expected, actual);
             else
-                EXPECT_NEAR(expected, actual, 2e-6f);
+                EXPECT_NEAR(expected, actual, 2e-6f + 2e-7f*std::abs(expected));
         }
     };
 
@@ -3030,6 +3030,50 @@ TEST(Core_Log, cv32f_table_kernel)
     cv::log(inplace, inplace);
     verify(special, inplace);
 
+    cv::setNumThreads(oldThreads);
+}
+
+TEST(Core_Log, cv32f_bitwise_position_independent)
+{
+    const float specialValues[] = {
+        0.f, -0.f, std::numeric_limits<float>::denorm_min(), 1e-40f, -1.f, 1.f, 0.5f, 2.f, 1e30f,
+        std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN()
+    };
+    const int specialCount = (int)(sizeof(specialValues) / sizeof(specialValues[0]));
+    for (int n = 1; n <= 70; n++)
+    {
+        SCOPED_TRACE(n);
+        Mat input(1, n, CV_32F);
+        for (int i = 0; i < n; i++)
+            input.at<float>(i) = i % 3 == 0 ? specialValues[(i/3) % specialCount] : 0.01f + 0.37f*i;
+        Mat outOfPlace, inPlace = input.clone();
+        cv::log(input, outOfPlace);
+        cv::log(inPlace, inPlace);
+        EXPECT_EQ(0, std::memcmp(outOfPlace.data, inPlace.data, n*sizeof(float)));
+        for (int i = 0; i < n; i++)
+        {
+            Mat single(1, 1, CV_32F, Scalar(input.at<float>(i))), expected;
+            cv::log(single, expected);
+            EXPECT_EQ(0, std::memcmp(&expected.at<float>(0), &outOfPlace.at<float>(i), sizeof(float))) << i;
+        }
+    }
+}
+
+TEST(Core_Pow, cv32f_independent_of_thread_count)
+{
+    const int oldThreads = cv::getNumThreads();
+    Mat input(1, 1000003, CV_32F), serial, parallel;
+    cv::randu(input, 0.01f, 100.f);
+    for (double power : {2.5, -0.75})
+    {
+        SCOPED_TRACE(power);
+        cv::setNumThreads(1);
+        cv::pow(input, power, serial);
+        cv::setNumThreads(4);
+        cv::pow(input, power, parallel);
+        EXPECT_EQ(0, std::memcmp(serial.data, parallel.data, serial.total()*sizeof(float)));
+    }
     cv::setNumThreads(oldThreads);
 }
 

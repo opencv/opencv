@@ -26,6 +26,8 @@
 #include "arithm_expr.hpp"      // the kernel contract: TOp / TKernel / KernelFunc
 #include "mathfuncs.hpp"
 #include <cmath>
+#include <cstring>
+#include <limits>
 #include <type_traits>
 
 namespace cv {
@@ -75,8 +77,52 @@ template<typename V> static inline void fastLogPair(const V& x0, const V& x1, V&
     y0 = v_log(x0);
     y1 = v_log(x1);
 }
-// Table reduction is used for normal FP32 lanes; exceptional values take the v_log fallback.
-static inline v_float32 tableLog32f(const v_float32& x, const float* table)
+// FP32 log through a 256-bin table with a cubic correction. This version is defined for every
+// input (zero, negative, subnormal, infinity, NaN), so callers need no fallback path and the
+// output of a lane never depends on its neighbours or on where the lane sits in the array.
+static inline v_float32 tableLog32fAnyInput(const v_float32& x, const float* table)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const v_int32 zero = vx_setzero_s32();
+    const v_int32 sourceBits = v_reinterpret_as_s32(x);
+    const v_int32 absBits = v_and(sourceBits, vx_setall_s32(0x7fffffff));
+    // Subnormals are scaled by 2^23 into the normal range; the exponent is corrected below.
+    const v_int32 subnormal = v_and(v_lt(absBits, vx_setall_s32(0x00800000)), v_gt(absBits, zero));
+    const v_float32 scaled = v_select(v_reinterpret_as_f32(subnormal),
+                                      v_mul(x, vx_setall_f32(8388608.f)), x);
+    const v_int32 bits = v_reinterpret_as_s32(scaled);
+    const v_int32 exponent = v_and(v_shr<23>(bits), vx_setall_s32(255));
+    const v_int32 yi = v_sub(v_sub(exponent, vx_setall_s32(127)), v_and(subnormal, vx_setall_s32(23)));
+    const v_int32 xi = v_or(v_and(bits, vx_setall_s32((1 << (23 - 8)) - 1)),
+                            vx_setall_s32(127 << 23));
+    const v_int32 index = v_and(v_shr<23 - 8 - 1>(bits), vx_setall_s32(510));
+    v_float32 y, reciprocal;
+    v_lut_deinterleave(table, index, y, reciprocal);
+    y = v_fma(v_cvt_f32(yi), vx_setall_f32(0.6931471805599453f), y);
+    const v_float32 delta = v_select(v_reinterpret_as_f32(v_eq(index, vx_setall_s32(510))),
+                                     vx_setall_f32(-1.f / 512.f), vx_setall_f32(0.f));
+    const v_float32 mantissa = v_reinterpret_as_f32(xi);
+    const v_float32 reduced = v_fma(v_sub(mantissa, vx_setall_f32(1.f)), reciprocal, delta);
+    v_float32 result = v_fma(reduced, vx_setall_f32(1.f / 3.f), vx_setall_f32(-0.5f));
+    result = v_fma(result, reduced, vx_setall_f32(1.f));
+    result = v_fma(result, reduced, y);
+
+    const v_int32 isZero = v_eq(absBits, zero);
+    const v_int32 isInfinity = v_eq(sourceBits, vx_setall_s32(0x7f800000));
+    const v_int32 isInvalid = v_or(v_gt(absBits, vx_setall_s32(0x7f800000)),
+                                   v_and(v_lt(sourceBits, zero), v_gt(absBits, zero)));
+    result = v_select(v_reinterpret_as_f32(isZero),
+                      vx_setall_f32(-std::numeric_limits<float>::infinity()), result);
+    result = v_select(v_reinterpret_as_f32(isInfinity),
+                      vx_setall_f32(std::numeric_limits<float>::infinity()), result);
+    return v_select(v_reinterpret_as_f32(isInvalid),
+                    vx_setall_f32(std::numeric_limits<float>::quiet_NaN()), result);
+#else
+    return v_log(x);
+#endif
+}
+// Positive finite normal lanes only: the common case, without the special-value fix-ups.
+static inline v_float32 tableLogNormal32f(const v_float32& x, const float* table)
 {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const v_int32 bits = v_reinterpret_as_s32(x);
@@ -90,8 +136,8 @@ static inline v_float32 tableLog32f(const v_float32& x, const float* table)
     y = v_fma(v_cvt_f32(yi), vx_setall_f32(0.6931471805599453f), y);
     const v_float32 delta = v_select(v_reinterpret_as_f32(v_eq(index, vx_setall_s32(510))),
                                      vx_setall_f32(-1.f / 512.f), vx_setall_f32(0.f));
-    const v_float32 mantissa = v_reinterpret_as_f32(xi);
-    const v_float32 reduced = v_fma(v_sub(mantissa, vx_setall_f32(1.f)), reciprocal, delta);
+    const v_float32 reduced = v_fma(v_sub(v_reinterpret_as_f32(xi), vx_setall_f32(1.f)),
+                                    reciprocal, delta);
     v_float32 result = v_fma(reduced, vx_setall_f32(1.f / 3.f), vx_setall_f32(-0.5f));
     result = v_fma(result, reduced, vx_setall_f32(1.f));
     return v_fma(result, reduced, y);
@@ -99,40 +145,31 @@ static inline v_float32 tableLog32f(const v_float32& x, const float* table)
     return v_log(x);
 #endif
 }
-static inline v_int32 logExceptionalMask32f(const v_float32& x)
+// Lanes that take the fast path give bit-identical results on the any-input path, so the
+// output of a lane does not depend on what its neighbours hold.
+static inline v_float32 tableLog32f(const v_float32& x, const float* table)
 {
-    const v_int32 bits = v_reinterpret_as_s32(x);
-    const v_int32 exponent = v_and(v_shr<23>(bits), vx_setall_s32(255));
-    return v_or(v_lt(bits, vx_setzero_s32()),
-                v_or(v_eq(exponent, vx_setzero_s32()), v_eq(exponent, vx_setall_s32(255))));
-}
-static inline v_int32 logSubnormalMask32f(const v_float32& x)
-{
-    const v_int32 exponent = v_and(v_shr<23>(v_reinterpret_as_s32(x)), vx_setall_s32(255));
-    return v_eq(exponent, vx_setzero_s32());
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const v_uint32 normal = v_lt(v_sub(v_reinterpret_as_u32(x), vx_setall_u32(0x00800000)),
+                                 vx_setall_u32(0x7f000000));
+    if (v_check_all(normal))
+        return tableLogNormal32f(x, table);
+#endif
+    return tableLog32fAnyInput(x, table);
 }
 static inline void fastLogPair(const v_float32& x0, const v_float32& x1,
                                v_float32& y0, v_float32& y1, const float* table)
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    if (!table)
+    if (table)
+    {
+        y0 = tableLog32f(x0, table);
+        y1 = tableLog32f(x1, table);
+    }
+    else
     {
         y0 = v_log(x0);
         y1 = v_log(x1);
-        return;
     }
-    if (v_check_any(v_or(logExceptionalMask32f(x0), logExceptionalMask32f(x1))))
-    {
-        y0 = v_log(x0);
-        y1 = v_log(x1);
-        return;
-    }
-    y0 = tableLog32f(x0, table);
-    y1 = tableLog32f(x1, table);
-#else
-    y0 = v_log(x0);
-    y1 = v_log(x1);
-#endif
 }
 struct MExp {
     template<typename V> static V vec(const V& x) { return v_exp(x); }
@@ -291,78 +328,48 @@ static int log32fKernel(const void* src0_, size_t s0y, size_t s0x,
     CV_Assert(s0x <= 1u);
     const float* src0 = (const float*)src0_;
     float* dst = (float*)dst_;
-    const float* table = (const float*)userdata;
+    [[maybe_unused]] const float* table = (const float*)userdata;
 
     if (height > 1 && dsty == (size_t)width && s0y == s0x*(size_t)width)
     { width *= height; height = 1; }
     const int urows = (s0y == 0 && height > 1) ? 1 : height;
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    CV_DbgAssert(table);
+    const int vectorSize = VTraits<v_float32>::vlanes();
+    float inputTail[VTraits<v_float32>::max_nlanes], outputTail[VTraits<v_float32>::max_nlanes];
+#endif
     for (int y = 0; y < urows; y++, src0 += s0y, dst += dsty)
     {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        if (s0x == 0)
+        {
+            // Broadcast input: evaluate once, through the same lanes as the array path.
+            vx_store(outputTail, tableLog32f(vx_setall_f32(src0[0]), table));
+            for (int x = 0; x < width; x++) dst[x] = outputTail[0];
+            continue;
+        }
+        int x = 0;
+        for (; x <= width - vectorSize; x += vectorSize)
+            vx_store(dst + x, tableLog32f(vx_load(src0 + x), table));
+        if (x < width)
+        {
+            // The partial tail goes through the same SIMD path so a value's result does not
+            // depend on its position; in-place stays safe because the input is copied first.
+            const int rest = width - x;
+            std::fill(inputTail, inputTail + vectorSize, 1.f);
+            std::memcpy(inputTail, src0 + x, rest*sizeof(float));
+            vx_store(outputTail, tableLog32f(vx_load(inputTail), table));
+            std::memcpy(dst + x, outputTail, rest*sizeof(float));
+        }
+#else
         if (s0x == 0)
         {
             const float value = std::log(src0[0]);
             for (int x = 0; x < width; x++) dst[x] = value;
             continue;
         }
-        int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int vectorSize = VTraits<v_float32>::vlanes();
-        if (src0_ == dst_)
-        {
-            for (; x <= width - vectorSize*2; x += vectorSize*2)
-            {
-                v_float32 input0 = vx_load(src0 + x);
-                v_float32 input1 = vx_load(src0 + x + vectorSize);
-                if (v_check_any(v_or(logSubnormalMask32f(input0), logSubnormalMask32f(input1))))
-                {
-                    for (int i = 0; i < vectorSize*2; i++) dst[x + i] = std::log(src0[x + i]);
-                }
-                else
-                {
-                    fastLogPair(input0, input1, input0, input1, table);
-                    vx_store(dst + x, input0);
-                    vx_store(dst + x + vectorSize, input1);
-                }
-            }
-            if (x <= width - vectorSize)
-            {
-                const v_float32 input = vx_load(src0 + x);
-                v_float32 result;
-                if (v_check_any(logSubnormalMask32f(input)))
-                    for (int i = 0; i < vectorSize; i++) dst[x + i] = std::log(src0[x + i]);
-                else
-                {
-                    fastLogPair(input, input, result, result, table);
-                    vx_store(dst + x, result);
-                }
-                x += vectorSize;
-            }
-            for (; x < width; x++) dst[x] = std::log(src0[x]);
-            continue;
-        }
-        const int blockSize = vectorSize * 32;
-        const v_int32 zero = vx_setzero_s32();
-        const v_int32 minNormal = vx_setall_s32(0x00800000);
-        const v_int32 positiveInfinity = vx_setall_s32(0x7f800000);
-        for (; x < width; )
-        {
-            const int end = x + std::min(blockSize, width - x);
-            v_int32 invalid = zero;
-            int i = x;
-            for (; i <= end - vectorSize; i += vectorSize)
-            {
-                const v_int32 bits = vx_load((const int*)(src0 + i));
-                invalid = v_or(invalid, v_or(v_lt(bits, minNormal), v_ge(bits, positiveInfinity)));
-                vx_store(dst + i, tableLog32f(vx_load(src0 + i), table));
-            }
-            for (; i < end; i++) dst[i] = std::log(src0[i]);
-            if (v_check_any(invalid))
-                for (i = x; i < end; i++) dst[i] = std::log(src0[i]);
-            x = end;
-        }
-#else
-        for (; x < width; x++) dst[x] = std::log(src0[x]);
+        for (int x = 0; x < width; x++) dst[x] = std::log(src0[x]);
 #endif
     }
     dst = (float*)dst_;
@@ -606,7 +613,7 @@ TKernel getPowFunc_(int T, int R)
     }
     void* userdata = nullptr;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    if (cv::getNumThreads() == 1 && T == CV_32F)
+    if (T == CV_32F)
         userdata = (void*)cv::details::getLogTab32f();
 #endif
     return {fptr, userdata, 0};
