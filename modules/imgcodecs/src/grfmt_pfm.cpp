@@ -6,6 +6,7 @@
 #include "utils.hpp"
 #include "grfmt_pfm.hpp"
 #include <iostream>
+#include <locale>
 
 #ifdef HAVE_IMGCODEC_PFM
 
@@ -67,6 +68,7 @@ T read_number(cv::RLByteStream& strm)
 template<typename T> bool write_anything(cv::WLByteStream& strm, const T& t)
 {
   std::ostringstream ss;
+  ss.imbue(std::locale::classic());
   ss << t;
   return strm.putBytes(ss.str().c_str(), static_cast<int>(ss.str().size()));
 }

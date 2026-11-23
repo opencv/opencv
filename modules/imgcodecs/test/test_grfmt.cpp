@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <locale>
 
 namespace opencv_test { namespace {
 
@@ -617,6 +618,50 @@ TEST(Imgcodecs_Pam, decode_graya_as_gray)
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
+class PfmGroupedNumpunct : public std::numpunct<char>
+{
+protected:
+    char do_thousands_sep() const CV_OVERRIDE { return '.'; }
+    std::string do_grouping() const CV_OVERRIDE { return "\3"; }
+};
+
+class PfmLocaleGuard
+{
+public:
+    explicit PfmLocaleGuard(const std::locale& locale)
+        : previous(std::locale::global(locale)) {}
+    ~PfmLocaleGuard() { std::locale::global(previous); }
+private:
+    std::locale previous;
+};
+
+typedef testing::TestWithParam<tuple<Size, int> > Imgcodecs_Pfm_Locale;
+
+TEST_P(Imgcodecs_Pfm_Locale, encoding_ignores_numeric_grouping)
+{
+    const Size size = get<0>(GetParam());
+    const int channels = get<1>(GetParam());
+    Mat image(size, CV_MAKETYPE(CV_32F, channels));
+    theRNG().fill(image, RNG::UNIFORM, -10, 10);
+
+    vector<uchar> reference, encoded;
+    {
+        PfmLocaleGuard guard(std::locale::classic());
+        ASSERT_TRUE(imencode(".pfm", image, reference));
+        std::locale::global(std::locale(std::locale::classic(), new PfmGroupedNumpunct));
+        ASSERT_TRUE(imencode(".pfm", image, encoded));
+    }
+    EXPECT_EQ(reference, encoded);
+    Mat decoded = imdecode(encoded, IMREAD_UNCHANGED);
+    ASSERT_FALSE(decoded.empty());
+    ASSERT_EQ(image.size(), decoded.size());
+    ASSERT_EQ(image.type(), decoded.type());
+    EXPECT_EQ(0, cvtest::norm(image, decoded, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_Locale, testing::Combine(
+    testing::Values(Size(1234, 3), Size(3, 1234)), testing::Values(1, 3)));
+
 typedef testing::TestWithParam<tuple<int, int> > Imgcodecs_Pfm_ReadMode;
 
 TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
