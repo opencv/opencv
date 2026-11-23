@@ -673,7 +673,7 @@ endif()
 # --- HIP/ROCm Support ---
 OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP support" OFF)
 if(WITH_HIP AND CMAKE_VERSION VERSION_LESS "3.21")
-  message(WARNING "HIP: CMake 3.21 or newer is required, HIP support disabled.")
+  message(WARNING "HIP: CMake 3.21 or newer is required, found ${CMAKE_VERSION}. HIP support disabled.")
 elseif(WITH_HIP)
   include(CheckLanguage)
   check_language(HIP)
