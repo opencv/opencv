@@ -8645,21 +8645,18 @@ bicubic64fC4(const float* srcx, const float* srcy, int len,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 // LSX and LASX use a 16-byte load even when expanding fewer bytes.
 constexpr size_t BICUBIC_EXPAND_LOAD_BYTES = (CV_LSX || CV_LASX) ? 16 : VTraits<v_uint8>::max_nlanes;
-constexpr bool BICUBIC_EXPAND_LOAD_IS_EXACT = CV_SSE2 || CV_NEON || CV_RVV;
 
+// Near the end of the source, copy the channels into zero-padded scratch so the
+// expanding load cannot read past the buffer, whatever width the backend loads.
 template<typename T, size_t N>
-static inline const T* bicubicExpandInput(const T* src, [[maybe_unused]] const uchar* end,
-                                          [[maybe_unused]] int lanes, T (&scratch)[N])
+static inline const T* bicubicExpandInput(const T* src, const uchar* end, int lanes, T (&scratch)[N])
 {
-    if constexpr (!BICUBIC_EXPAND_LOAD_IS_EXACT)
+    const size_t bytes = lanes*sizeof(T);
+    if (bytes < sizeof(scratch) && size_t(end - reinterpret_cast<const uchar*>(src)) < sizeof(scratch))
     {
-        const size_t bytes = lanes*sizeof(T);
-        if (bytes < sizeof(scratch) && size_t(end - reinterpret_cast<const uchar*>(src)) < sizeof(scratch))
-        {
-            std::memcpy(scratch, src, bytes);
-            std::fill(scratch + lanes, scratch + N, T{});
-            return scratch;
-        }
+        std::memcpy(scratch, src, bytes);
+        std::fill(scratch + lanes, scratch + N, T{});
+        return scratch;
     }
     return src;
 }
