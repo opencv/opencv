@@ -89,6 +89,9 @@ public:
         // View data as [outer_size, target_size, inner_size] around the scan axis.
         const size_t outer_size = src_mat.total(0, axis);
         const size_t target_size = src_mat.size[axis];
+
+        if (target_size == 0)
+            return;
         const size_t inner_size = src_mat.total(axis + 1);
         const size_t outer_step_length = target_size * inner_size;
 
