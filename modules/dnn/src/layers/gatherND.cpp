@@ -119,44 +119,40 @@ public:
         size_t q = indices.dims;
         size_t last_indices_dim = indices.size[q - 1];
 
-        std::vector<int> data_strides(r);
+        std::vector<size_t> data_strides(r);
         data_strides[r - 1] = 1;
-        for (int i = r - 2; i >= 0; --i)
+        for (int i = (int)r - 2; i >= 0; --i)
             data_strides[i] = data_strides[i + 1] * data.size[i + 1];
-
-        std::vector<int> indices_strides(q);
-        indices_strides[q - 1] = 1;
-        for (int i = q - 2; i >= 0; --i)
-            indices_strides[i] = indices_strides[i + 1] * indices.size[i + 1];
 
         if (out.total() == 0)
             return;
 
-        const int outer_size = indices.total() / last_indices_dim;
-        const int inner_size = out.total() / outer_size;
-        const int nstripes =  outer_size * inner_size / 1024;
+        const size_t outer_size = indices.total() / last_indices_dim;
+        const size_t inner_size = out.total() / outer_size;
+        // About 64 KB of output per stripe.
+        const double nstripes = std::max(1.0, (double)out.total() * sizeof(dT) / 65536.0);
 
         size_t num_slices_per_batch = 1;
         for (int d = batch_dims; d < static_cast<int>(q) - 1; ++d)
             num_slices_per_batch *= indices.size[d];
+        const size_t batch_stride = batch_dims > 0 ? data_strides[batch_dims - 1] : 0;
+        const size_t* idx_strides = data_strides.data() + batch_dims;
+        const int* idx_dims = data.size.p + batch_dims;
 
-        parallel_for_(Range(0, outer_size), [&](const Range& range) {
-            for (size_t i = range.start; i < range.end; ++i)
+        parallel_for_(Range(0, (int)outer_size), [&](const Range& range) {
+            for (size_t i = range.start; i < (size_t)range.end; ++i)
             {
                 const iT* sliced_indices = indices_ptr + i * last_indices_dim;
 
-                size_t offset = 0;
+                size_t offset = (i / num_slices_per_batch) * batch_stride;
                 for (size_t j = 0; j < last_indices_dim; ++j)
                 {
-                    offset += sliced_indices[j] * data_strides[batch_dims + j];
+                    int64_t ix = (int64_t)sliced_indices[j];
+                    if (ix < 0)
+                        ix += idx_dims[j];  // ONNX allows negative indices
+                    CV_CheckLT((size_t)ix, (size_t)idx_dims[j], "DNN/GatherND: index out of range");
+                    offset += (size_t)ix * idx_strides[j];
                 }
-
-                if (batch_dims > 0)
-                {
-                    const int batch_idx = i / num_slices_per_batch;
-                    offset += (size_t)batch_idx * data_strides[batch_dims - 1];
-                }
-                // copy data from data to out
                 std::memcpy(out_ptr + i * inner_size, data_ptr + offset, inner_size * sizeof(dT));
             }
         }, nstripes);

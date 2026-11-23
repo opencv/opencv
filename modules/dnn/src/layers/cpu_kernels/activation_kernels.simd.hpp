@@ -353,6 +353,74 @@ void clampFloatChunk_(const float* src, float* dst, size_t n, float lo, float hi
         dst[i] = std::min(std::max(src[i], lo), hi);
 }
 
+// Softmax of one contiguous row.
+static void softmaxRow(const float* src, float* dst, int n, float scale)
+{
+    int j = 0;
+    float maxVal = -FLT_MAX;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int nl = VTraits<v_float32>::vlanes();
+    v_float32 m0 = vx_setall_f32(-FLT_MAX), m1 = m0, m2 = m0, m3 = m0;
+    for (; j <= n - 4 * nl; j += 4 * nl)
+    {
+        m0 = v_max(m0, vx_load(src + j));
+        m1 = v_max(m1, vx_load(src + j + nl));
+        m2 = v_max(m2, vx_load(src + j + 2 * nl));
+        m3 = v_max(m3, vx_load(src + j + 3 * nl));
+    }
+    for (; j <= n - nl; j += nl)
+        m0 = v_max(m0, vx_load(src + j));
+    maxVal = v_reduce_max(v_max(v_max(m0, m1), v_max(m2, m3)));
+#endif
+    for (; j < n; j++)
+        maxVal = std::max(maxVal, src[j]);
+
+    float s = 0.f;
+    j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    {
+        const v_float32 vmax = vx_setall_f32(maxVal), vscale = vx_setall_f32(scale);
+        v_float32 s0 = vx_setzero_f32(), s1 = s0;
+        for (; j <= n - 2 * nl; j += 2 * nl)
+        {
+            const v_float32 e0 = v_exp(v_mul(v_sub(vx_load(src + j), vmax), vscale));
+            const v_float32 e1 = v_exp(v_mul(v_sub(vx_load(src + j + nl), vmax), vscale));
+            v_store(dst + j, e0);
+            v_store(dst + j + nl, e1);
+            s0 = v_add(s0, e0);
+            s1 = v_add(s1, e1);
+        }
+        for (; j <= n - nl; j += nl)
+        {
+            const v_float32 e = v_exp(v_mul(v_sub(vx_load(src + j), vmax), vscale));
+            v_store(dst + j, e);
+            s0 = v_add(s0, e);
+        }
+        s = v_reduce_sum(v_add(s0, s1));
+    }
+#endif
+    for (; j < n; j++)
+    {
+        dst[j] = expf((src[j] - maxVal) * scale);
+        s += dst[j];
+    }
+
+    if (s == 0.f || cvIsInf(1.f / s))
+    {
+        std::fill(dst, dst + n, 0.f);
+        return;
+    }
+    const float r = 1.f / s;
+    j = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const v_float32 vr = vx_setall_f32(r);
+    for (; j <= n - nl; j += nl)
+        v_store(dst + j, v_mul(vx_load(dst + j), vr));
+#endif
+    for (; j < n; j++)
+        dst[j] *= r;
+}
+
 void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, float scale, bool logSoftmax) {
     CV_Assert(src.type() == CV_32F);
     CV_Assert(src.isContinuous() && dst.isContinuous());
@@ -367,6 +435,18 @@ void softmax_(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep, fl
 
     size_t outerStep = src.total(axis);
     size_t cnStep = src.total(axis + 1);
+
+    // Last axis: rows are contiguous.
+    if (!logSoftmax && innerSize == 1 && axisBias == 0 && (size_t)axisStep == outerStep)
+    {
+        const int n = axisStep;
+        const double nstripes = std::max(1.0, (double)outerSize * n / 32768.0);
+        parallel_for_(Range(0, (int)outerSize), [&](const Range& r) {
+            for (int i = r.start; i < r.end; i++)
+                softmaxRow(srcPtr + (size_t)i * n, dstPtr + (size_t)i * n, n, scale);
+        }, nstripes);
+        return;
+    }
 
     // multi-threads: weight by axisStep so axis=-1 with small outerSize*innerSize
     // (e.g. [4,256,13294] -> 1024 tasks of 13294 elems) still parallelizes.
