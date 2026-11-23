@@ -4884,6 +4884,32 @@ TEST_P(Core_LUT, accuracy_multi2)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, testing::Combine( LutIdxType::all(), LutMatType::all()));
 
+// A 0D Mat holds one element and has no rows. LUT must handle it, and the result stays 0D.
+TEST(Core_LUT_0D, regression)
+{
+    uchar v8 = 7;
+    const Mat src8(0, nullptr, CV_8U, &v8);
+    Mat lut8(1, 256, CV_8U);
+    for (int i = 0; i < 256; i++)
+        lut8.at<uchar>(i) = (uchar)(255 - i);
+    Mat dst8;
+    ASSERT_NO_THROW(cv::LUT(src8, lut8, dst8));
+    EXPECT_EQ(0, dst8.dims);
+    EXPECT_EQ(CV_8U, dst8.type());
+    EXPECT_EQ(255 - 7, (int)*dst8.ptr<uchar>());
+
+    ushort v16 = 1000;
+    const Mat src16(0, nullptr, CV_16U, &v16);
+    Mat lut16(1, 65536, CV_16U);
+    for (int i = 0; i < 65536; i++)
+        lut16.at<ushort>(i) = (ushort)(65535 - i);
+    Mat dst16;
+    ASSERT_NO_THROW(cv::LUT(src16, lut16, dst16));
+    EXPECT_EQ(0, dst16.dims);
+    EXPECT_EQ(CV_16U, dst16.type());
+    EXPECT_EQ(65535 - 1000, (int)*dst16.ptr<ushort>());
+}
+
 CV_ENUM(MaskType, CV_8U, CV_8S, CV_Bool)
 typedef testing::TestWithParam<MaskType> Core_MaskTypeTest;
 

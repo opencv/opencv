@@ -286,4 +286,52 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Unsupported_Depth,
     )
 );
 
+// A 0D Mat holds one element and has no rows. threshold must handle it like the same element as a 1x1 matrix.
+typedef testing::TestWithParam<perf::MatDepth> Imgproc_Threshold_0D;
+
+TEST_P(Imgproc_Threshold_0D, regression)
+{
+    const int depth = GetParam();
+    double v = 7;
+    const Mat v64(0, nullptr, CV_64F, &v);
+    Mat src;
+    v64.convertTo(src, depth);
+    ASSERT_EQ(0, src.dims);
+    const Mat src2d = src.reshape(0, 1);
+    ASSERT_EQ(2, src2d.dims);
+
+    for (int type : {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV})
+    {
+        for (double thresh : {5., 9.})
+        {
+            Mat dst, expected;
+            double t = 0;
+            ASSERT_NO_THROW(t = cv::threshold(src, dst, thresh, 10, type)) << "type=" << type << " thresh=" << thresh;
+            const double expectedT = cv::threshold(src2d, expected, thresh, 10, type);
+            EXPECT_EQ(expectedT, t);
+            EXPECT_EQ(0, cvtest::norm(dst, expected, NORM_INF)) << "type=" << type << " thresh=" << thresh;
+
+            uchar m = 255;
+            const Mat mask(0, nullptr, CV_8U, &m);
+            Mat dstMasked = Mat::zeros(1, 1, src.type());
+            ASSERT_NO_THROW(cv::thresholdWithMask(src, dstMasked, mask, thresh, 10, type)) << "type=" << type;
+            EXPECT_EQ(0, cvtest::norm(dstMasked, expected, NORM_INF)) << "masked, type=" << type << " thresh=" << thresh;
+        }
+    }
+
+    if (depth == CV_8U)
+    {
+        for (int autoType : {THRESH_OTSU, THRESH_TRIANGLE})
+        {
+            Mat dst, expected;
+            double t = 0;
+            ASSERT_NO_THROW(t = cv::threshold(src, dst, 0, 255, THRESH_BINARY | autoType)) << "auto=" << autoType;
+            EXPECT_EQ(cv::threshold(src2d, expected, 0, 255, THRESH_BINARY | autoType), t);
+            EXPECT_EQ(0, cvtest::norm(dst, expected, NORM_INF)) << "auto=" << autoType;
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_0D, testing::Values(CV_8U, CV_16S, CV_16U, CV_32F, CV_64F));
+
 }} // namespace
