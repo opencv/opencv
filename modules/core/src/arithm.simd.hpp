@@ -956,6 +956,7 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
     const bool use_tail_trick = width >= VECSZ*4 && src0_ != dst_ && src1_ != dst_;
     [[maybe_unused]] Wvec vscalar;
     vx_setall_as(&scalar, vscalar);
+    constexpr int SCBUF_SIZE = 4096 / sizeof(Wlane);
     if (height > 1 && width <= 4 &&
         ((s0y == 0 && s1y == width*s1x) ||
          (s1y == 0 && s0y == width*s0x)) &&
@@ -1002,38 +1003,38 @@ static int vecBinaryKernel(const void* src0_, size_t s0y, size_t s0x,
             }
         }
     }
-    else if (width > 4 && width <= 16 && s0x == 1 && s1x == 1 &&
+    else if (int ewidth = 0, dy = 0;
+             width > 4 && s0x == 1 && s1x == 1 &&
              ((s0y == 0 && s1y == (size_t)width && src0_ != dst_) ||
               (s1y == 0 && s0y == (size_t)width && src1_ != dst_)) &&
-             dsty == (size_t)width) {
-        const int ewidth = std::lcm(width, VECSZ*2);
-        const int dy = ewidth / width;
-        if (height >= dy) {
-            Wlane scbuf[VTraits<Wvec>::max_nlanes*2*16];
-            expandScalar(s0y == 0 ? src0 : src1, 1, width, scbuf, ewidth);
-            for (int x = 0; x < ewidth; x += VECSZ)
-                v_store(scbuf + x, Op::preproc(vx_load(scbuf + x), vscalar));
+             dsty == (size_t)width &&
+             width <= SCBUF_SIZE && 2*VECSZ <= SCBUF_SIZE &&
+             (ewidth = width * (2*VECSZ / std::gcd(width, 2*VECSZ))) <= SCBUF_SIZE &&
+             height >= (dy = ewidth / width)) {
+        Wlane scbuf[SCBUF_SIZE];
+        expandScalar(s0y == 0 ? src0 : src1, 1, width, scbuf, ewidth);
+        for (int x = 0; x < ewidth; x += VECSZ)
+            v_store(scbuf + x, Op::preproc(vx_load(scbuf + x), vscalar));
 
-            if (s0y == 0) {
-                for (; y + dy <= height; y += dy, src1 += s1y*dy, dst += dsty*dy) {
-                    for (int x = 0; x < ewidth; x += VECSZ*2) {
-                        Wvec a0, a1, b0, b1;
-                        vx_load_pair_as(scbuf + x, a0, a1);
-                        vx_load_pair_as(src1 + x, b0, b1);
-                        auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
-                        v_store_pair_as(dst + x, c0, c1);
-                    }
+        if (s0y == 0) {
+            for (; y + dy <= height; y += dy, src1 += s1y*dy, dst += dsty*dy) {
+                for (int x = 0; x < ewidth; x += VECSZ*2) {
+                    Wvec a0, a1, b0, b1;
+                    vx_load_pair_as(scbuf + x, a0, a1);
+                    vx_load_pair_as(src1 + x, b0, b1);
+                    auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
+                    v_store_pair_as(dst + x, c0, c1);
                 }
             }
-            else {
-                for (; y + dy <= height; y += dy, src0 += s0y*dy, dst += dsty*dy) {
-                    for (int x = 0; x < ewidth; x += VECSZ*2) {
-                        Wvec a0, a1, b0, b1;
-                        vx_load_pair_as(src0 + x, a0, a1);
-                        vx_load_pair_as(scbuf + x, b0, b1);
-                        auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
-                        v_store_pair_as(dst + x, c0, c1);
-                    }
+        }
+        else {
+            for (; y + dy <= height; y += dy, src0 += s0y*dy, dst += dsty*dy) {
+                for (int x = 0; x < ewidth; x += VECSZ*2) {
+                    Wvec a0, a1, b0, b1;
+                    vx_load_pair_as(src0 + x, a0, a1);
+                    vx_load_pair_as(scbuf + x, b0, b1);
+                    auto c0 = Op::vec(a0, b0, vscalar), c1 = Op::vec(a1, b1, vscalar);
+                    v_store_pair_as(dst + x, c0, c1);
                 }
             }
         }

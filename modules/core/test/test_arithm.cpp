@@ -5337,7 +5337,7 @@ TEST_P(Core_BinaryRow, matchesExpanded)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_BinaryRow,
-    testing::Combine(testing::Values(CV_8U, CV_16S, CV_16F), testing::Values(5, 9, 16),
+    testing::Combine(testing::Values(CV_8U, CV_16S, CV_16F), testing::Values(5, 9, 16, 17, 129),
                      testing::Values(Size(1, 1), Size(7, 1), Size(65, 33), Size(257, 257)),
                      testing::Bool(), testing::Bool(), testing::Bool(),
                      testing::Values(std::make_tuple(true, 1.0), std::make_tuple(true, -0.75),
@@ -5384,7 +5384,7 @@ TEST_P(Core_MultiplyHalfRow, bitExact)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_MultiplyHalfRow,
-    testing::Combine(testing::Values(5, 9, 16), testing::Bool(), testing::Bool(), testing::Values(1.0, -0.75)));
+    testing::Combine(testing::Values(5, 9, 16, 17), testing::Bool(), testing::Bool(), testing::Values(1.0, -0.75)));
 
 TEST(Core_Multiply, scale_simd_scalar_consistency)
 {
