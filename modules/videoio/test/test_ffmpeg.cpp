@@ -1273,14 +1273,8 @@ TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
     EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
 }
 
-// Frames of HDR (HLG, PQ) video used to be converted to SDR BT.709 by sws_scale_frame() (swscale >= 8.12.100),
-// which clipped the highlights to 255 and changed the mid-tones. VideoCapture should return the decoded values
-// as they are, like with older swscale versions.
-// Samples video/hdr_{hlg,pq}_ramp_64x4.mkv (opencv_extra): 64x4 10-bit gray ramp from Y=64 to Y=800 in FFV1,
-// tagged as BT.2020 HLG or PQ, generated with (TRC=arib-std-b67 or smpte2084):
-//   ffmpeg -f lavfi -i color=black:size=64x4 -frames:v 1 \
-//          -vf "format=yuv420p10le,geq=lum='64+X*736/63':cb=512:cr=512,setparams=range=tv:colorspace=bt2020nc:color_primaries=bt2020:color_trc=$TRC" \
-//          -c:v ffv1 -fflags +bitexact -flags:v +bitexact -map_metadata -1 -f matroska - > hdr_..._ramp_64x4.mkv
+// HLG/PQ frames must not be converted to SDR (swscale >= 8.12.100 clipped them).
+// Samples: 64x4 10-bit gray ramps (Y=64..800), see opencv_extra#1473 for the generation command.
 // related issue: https://github.com/opencv/opencv/issues/30955
 typedef testing::TestWithParam<std::string> videoio_ffmpeg_hdr;
 TEST_P(videoio_ffmpeg_hdr, keep_decoded_values_30955)
