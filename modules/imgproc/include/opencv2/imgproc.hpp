@@ -3463,6 +3463,86 @@ CV_EXPORTS int floodFill( InputOutputArray image,
                           Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                           int flags = 4 );
 
+//! @} imgproc_misc
+
+//! @addtogroup imgproc_segmentation
+//! @{
+
+/** @brief Computes a lambda-connected (fuzzy-connectedness) segmentation from a seed point.
+
+The function cv::lambdaConnected implements the max-min "bottleneck-path" (also called
+"widest-path") generalization of simple flood-fill region growing, following the
+lambda-connectedness formulation of fuzzy connectedness theory @cite Chen1994 @cite Chen1991 .
+
+Where cv::floodFill decides membership using a single, local pairwise test between a
+candidate pixel and an already-accepted neighbor, lambda-connectedness considers *all*
+paths between the seed and a pixel p and defines the connectivity strength as the maximum,
+over every path, of the minimum pairwise "degree of connectedness" along that path:
+
+\f[
+    B(\texttt{seed}, p) = \max_{\pi:\ \texttt{seed} \rightsquigarrow p}\ \
+                           \min_{(u, v)\ \in\ \pi} \ \mathrm{degree}(u, v)
+\f]
+
+where \f$\pi\f$ ranges over all 4- or 8-connected paths from the seed to p and
+\f$\mathrm{degree}(u, v) \in [0, 1]\f$ is a continuous measure of similarity between
+adjacent pixels u and v (1 meaning identical, 0 meaning maximally different -- see
+@p maxDist below). A pixel p belongs to the lambda-connected component of the seed if and
+only if \f$B(\texttt{seed}, p) \geq \lambda\f$.
+
+This is the classical single-source maximum-bottleneck-spanning-tree ("widest path")
+problem and is solved with a Prim's-algorithm-style procedure using a binary max-heap,
+in \f$O(N \log N)\f$ time for an N-pixel image under 4- or 8-connectivity. A single run
+computes \f$B(\texttt{seed}, p)\f$ for *every* pixel at once, so the optional
+@p connectivityMap can be thresholded at any number of different lambda values with no
+recomputation -- something cv::floodFill cannot offer, since it must be rerun from scratch
+for every new tolerance value.
+
+@note At any single, fixed lambda, thresholding the bottleneck-connectivity map is
+mathematically identical to ordinary BFS/flood-fill region growing using the equivalent
+per-edge test -- this is a standard property of bottleneck/widest-path problems (the same
+fact underlying Kruskal's maximum spanning forest construction), true regardless of whether
+the per-edge degree function is a hard threshold or continuous, and is not a limitation
+specific to this implementation. The practical advantages of this function over
+cv::floodFill are therefore: (1) computing the full continuous connectivity map once and
+thresholding it at arbitrarily many values of lambda for free, (2) a genuinely graded/fuzzy
+output usable for soft masking, matting-style alpha mattes, or visually inspecting how
+connectivity decays away from the seed, and (3) a degree function that can be adapted per
+image type -- in particular, the Euclidean color-distance degree used for CV_8UC3 inputs
+produces a spherical (not axis-aligned) decision boundary in color space, which is
+qualitatively different from floodFill's per-channel independent loDiff/upDiff range test.
+
+@param image Input image, CV_8UC1 (grayscale) or CV_8UC3 (BGR).
+@param mask Output CV_8UC1 mask, the same size as @p image: pixels with connectivity
+\f$\geq\f$ @p lambda are set to 255, all others to 0 (the same 0/255 convention
+cv::floodFill uses for its own mask output).
+@param seed Seed point; the pixel from which connectivity is measured.
+@param lambda Connectivity threshold, must satisfy \f$0 \leq \lambda \leq 1\f$. Note that
+@p lambda = 1 requires an exact-match path at every step, which degenerates to flood-filling
+with a zero tolerance.
+@param connectivity Pixel connectivity used to build the underlying graph: 4 (only
+edge-adjacent neighbors) or 8 (edge- and corner-adjacent neighbors).
+@param maxDist Normalization distance for the per-edge degree function: adjacent pixel
+pairs with zero intensity difference (grayscale) or zero Euclidean color distance (BGR)
+get degree 1, pairs at or beyond @p maxDist get degree 0, and values in between are
+linearly interpolated. Plays a role analogous to floodFill's loDiff/upDiff tolerance.
+@param connectivityMap Optional CV_32F output, the same size as @p image, holding the full
+continuous bottleneck-connectivity value \f$B(\texttt{seed}, p) \in [0, 1]\f$ for every
+pixel, before thresholding at @p lambda.
+
+@sa floodFill, watershed
+ */
+CV_EXPORTS_W void lambdaConnected( InputArray image, OutputArray mask,
+                                    Point seed, double lambda,
+                                    int connectivity = 4,
+                                    double maxDist = 255.0,
+                                    OutputArray connectivityMap = noArray() );
+
+//! @} imgproc_segmentation
+
+//! @addtogroup imgproc_misc
+//! @{
+
 //! Performs linear blending of two images:
 //! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
 //! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
