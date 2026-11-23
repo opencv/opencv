@@ -111,6 +111,100 @@ class filestorage_io_test(NewOpenCVTests):
     def test_json(self):
         self.run_fs_test(".json")
 
+    def test_write_int64_out_of_int32_range(self):
+        int32_max = 2**31 - 1
+        below_int32_min = -2**31 - 1
+        int64_max = 2**63 - 1
+        int64_min = -2**63
+        too_big = 2**64          # does not fit int64: written through the double overload
+        too_small = -2**63 - 1   # does not fit int64; double-rounds to -2**63
+        np_int64_value = np.int64(2**40)
+        np_uint64_value = np.uint64(2**40 + 7)
+
+        values = {
+            'int32_max': int32_max,
+            'int64_max': int64_max,
+            'int64_min': int64_min,
+            'below_int32_min': below_int32_min,
+            'np_int64': np_int64_value,
+            'np_uint64': np_uint64_value,
+            'too_big': too_big,
+            'too_small': too_small,
+            'bool_value': True,
+        }
+        expected = {
+            'int32_max': str(int32_max),
+            'int64_max': str(int64_max),
+            'int64_min': str(int64_min),
+            'below_int32_min': str(below_int32_min),
+            'np_int64': str(int(np_int64_value)),
+            'np_uint64': str(int(np_uint64_value)),
+            'too_big': '%.17g' % float(too_big),
+            'too_small': '%.17g' % float(too_small),
+        }
+        for ext in ('.yml', '.xml', '.json'):
+            fd, fname = tempfile.mkstemp(prefix='opencv_python_int64_filestorage', suffix=ext)
+            os.close(fd)
+            try:
+                fs = cv.FileStorage(fname, cv.FileStorage_WRITE)
+                for name, value in values.items():
+                    fs.write(name, value)
+                fs.release()
+
+                with open(fname) as f:
+                    text = f.read()
+
+                for name, want in expected.items():
+                    if ext == '.yml':
+                        entry = '{}: {}'.format(name, want)
+                    elif ext == '.xml':
+                        entry = '<{0}>{1}</{0}>'.format(name, want)
+                    else:
+                        entry = '"{}": {}'.format(name, want)
+                    self.assertIn(entry, text, '{} in {}'.format(name, ext))
+
+                if ext == '.yml':
+                    self.assertIn('bool_value: true', text)
+                elif ext == '.xml':
+                    self.assertIn('<bool_value>1</bool_value>', text)
+                else:
+                    self.assertIn('"bool_value": 1\n', text)
+            finally:
+                os.remove(fname)
+
+    def test_write_numpy_bool(self):
+        values = {
+            'bool_value': True,
+            'np_bool_true': np.bool_(True),
+            'np_bool_false': np.bool_(False),
+        }
+        for ext in ('.yml', '.xml', '.json'):
+            fd, fname = tempfile.mkstemp(prefix='opencv_python_numpy_bool_filestorage', suffix=ext)
+            os.close(fd)
+            try:
+                fs = cv.FileStorage(fname, cv.FileStorage_WRITE)
+                for name, value in values.items():
+                    fs.write(name, value)
+                fs.release()
+
+                with open(fname) as f:
+                    text = f.read()
+
+                if ext == '.yml':
+                    self.assertIn('bool_value: true', text)
+                    self.assertIn('np_bool_true: true', text)
+                    self.assertIn('np_bool_false: false', text)
+                elif ext == '.xml':
+                    self.assertIn('<bool_value>1</bool_value>', text)
+                    self.assertIn('<np_bool_true>1</np_bool_true>', text)
+                    self.assertIn('<np_bool_false>0</np_bool_false>', text)
+                else:
+                    self.assertRegex(text, r'"bool_value": 1[,}\s]')
+                    self.assertRegex(text, r'"np_bool_true": 1[,}\s]')
+                    self.assertRegex(text, r'"np_bool_false": 0[,}\s]')
+            finally:
+                os.remove(fname)
+
     def test_base64(self):
         fd, fname = tempfile.mkstemp(prefix="opencv_python_sample_filestorage_base64", suffix=".json")
         os.close(fd)
