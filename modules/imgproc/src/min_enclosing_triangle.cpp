@@ -150,7 +150,7 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
 static bool findMinimumAreaEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
                                              std::vector<cv::Point2f> &triangle, double &area);
 
-static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
+static bool findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
                                                           std::vector<cv::Point2f> &triangle, double &area);
 
 static cv::Point2f findVertexCOnSideB(const std::vector<cv::Point2f> &polygon, unsigned int nrOfPoints,
@@ -342,28 +342,34 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     initialise(triangle, area);
 
     if (polygon.size() > 3) {
-        if (!findMinimumAreaEnclosingTriangle(polygon, triangle, area)) {
+        const bool settled = findMinimumAreaEnclosingTriangle(polygon, triangle, area);
+        // The vertices of the triangle do not settle for a polygon that is too thin for the tolerances, and
+        // no triangle is found for a polygon that is too small for them. Try again on a normalised polygon.
+        if (!settled || triangle.empty()) {
             initialise(triangle, area);
-            findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area);
+            if (!findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area) && !settled) {
+                CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge");
+            }
         }
     } else {
         returnMinimumAreaEnclosingTriangle(polygon, triangle, area);
     }
 }
 
-//! Find the minimum area enclosing triangle for a polygon that is too thin for the tolerances
+//! Find the minimum area enclosing triangle for a polygon that is too thin or too small for the tolerances
 /*!
 * The tolerances of the algorithm are absolute, so for a very thin polygon they treat all the
-* heights as equal and the vertices of the triangle never settle. The minimum area enclosing
-* triangle does not change under an affine map, which only scales all the areas by the same
-* factor. So the polygon is mapped to one with principal axes of equal length, the triangle is
-* found there and it is mapped back.
+* heights as equal and the vertices of the triangle never settle, and for a very small polygon
+* no triangle is found. The minimum area enclosing triangle does not change under an affine map,
+* which only scales all the areas by the same factor. So the polygon is mapped to one with
+* principal axes of equal length, the triangle is found there and it is mapped back.
 *
 * @param polygon    The polygon representing the convex hull of the points
 * @param triangle   Minimum area triangle enclosing the given polygon
 * @param area       Area of the minimum area enclosing triangle
+* @return           False if no triangle was found, true otherwise
 */
-static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
+static bool findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::Point2f> &polygon,
                                                           std::vector<cv::Point2f> &triangle, double &area) {
     const size_t nrOfPoints = polygon.size();
 
@@ -401,7 +407,7 @@ static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::
     longVariance /= nrOfPoints;
     shortVariance /= nrOfPoints;
     if (!(shortVariance > 0)) {
-        CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge, the points are collinear");
+        return false;  // the points are collinear
     }
     const double longScale = std::sqrt(longVariance), shortScale = std::sqrt(shortVariance);
 
@@ -417,8 +423,9 @@ static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::
     std::vector<cv::Point2f> normalisedTriangle;
     double normalisedArea;
     initialise(normalisedTriangle, normalisedArea);
-    if (!findMinimumAreaEnclosingTriangle(normalisedPolygon, normalisedTriangle, normalisedArea)) {
-        CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge");
+    if (!findMinimumAreaEnclosingTriangle(normalisedPolygon, normalisedTriangle, normalisedArea) ||
+        normalisedTriangle.empty()) {
+        return false;
     }
 
     // Map the triangle back
@@ -431,6 +438,8 @@ static void findMinimumAreaEnclosingTriangleOfThinPolygon(const std::vector<cv::
     // the area is scaled by the same factor as every other area, which is more precise than
     // recomputing it from the rounded vertices of a very thin triangle
     area = normalisedArea * longScale * shortScale;
+
+    return true;
 }
 
 //! Initialisation function

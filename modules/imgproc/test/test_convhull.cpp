@@ -648,8 +648,13 @@ TEST(Imgproc_minEnclosingTriangle, nearly_collinear_points)
 
         ASSERT_NO_THROW(area = minEnclosingTriangle(sets[i], triangle)) << "set " << i;
         ASSERT_EQ(3u, triangle.size()) << "set " << i;
-        EXPECT_GT(area, 0.0) << "set " << i;
-        EXPECT_LT(area, 1.0) << "set " << i;
+        // the area of the minimum enclosing triangle of a convex polygon is between one and two times its area
+        vector<Point2f> hull;
+        convexHull(sets[i], hull);
+        const double hullArea = contourArea(hull);
+        ASSERT_GT(hullArea, 0.0) << "set " << i;
+        EXPECT_GE(area, hullArea) << "set " << i;
+        EXPECT_LE(area, 2 * hullArea) << "set " << i;
         for (size_t j = 0; j < sets[i].size(); j++)
             EXPECT_GE(pointPolygonTest(triangle, sets[i][j], true), -1e-3) << "set " << i << " point " << j;
     }
@@ -664,6 +669,24 @@ TEST(Imgproc_minEnclosingTriangle, unit_square)
 
     EXPECT_NEAR(2.0, area, 1e-5);
     EXPECT_EQ(3u, triangle.size());
+}
+
+// The tolerances of the algorithm are absolute. For a small polygon the first pass finds no triangle
+// (side 1e-3) or the vertices of the triangle never settle (side 1e-6), but the area is 2 * side^2 for any size.
+TEST(Imgproc_minEnclosingTriangle, tiny_squares)
+{
+    const float sides[] = {3e-3f, 1e-3f, 1e-4f, 1e-6f};
+    for (size_t i = 0; i < sizeof(sides) / sizeof(sides[0]); i++)
+    {
+        const double side = sides[i];
+        const vector<Point2f> square = {Point2f(0, 0), Point2f(sides[i], 0), Point2f(sides[i], sides[i]), Point2f(0, sides[i])};
+        vector<Point2f> triangle;
+        double area = -1;
+
+        ASSERT_NO_THROW(area = minEnclosingTriangle(square, triangle)) << "side " << side;
+        ASSERT_EQ(3u, triangle.size()) << "side " << side;
+        EXPECT_NEAR(2 * side * side, area, 2 * side * side * 1e-3) << "side " << side;
+    }
 }
 
 //==============================================================================
