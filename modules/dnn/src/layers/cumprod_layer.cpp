@@ -81,7 +81,7 @@ public:
         axis = normalize_axis(axis, src_mat.dims);
 
         // An empty input (e.g. an axis of length 0) has nothing to scan; the output is already empty.
-        if (src_mat.total() == 0)
+        if (src_mat.empty())
             return;
 
         Mat& dst_mat = outputs[0];
