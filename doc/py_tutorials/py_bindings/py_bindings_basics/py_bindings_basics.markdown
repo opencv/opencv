@@ -179,7 +179,7 @@ public:
     // You would need to provide `static bool cv_mappable_to(const Ptr<Mat>& src, Ptr<UMat>& dst)`
     CV_WRAP_MAPPABLE(Ptr<Mat>);
 
-    /! returns the OpenCL queue used by OpenCV UMat.
+    //! returns the OpenCL queue used by OpenCV UMat.
     // You would need to provide the method body in the binder code
     CV_WRAP_PHANTOM(static void* queue());
 
