@@ -49,10 +49,11 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
                         cmin = std::max(cmin, 0);
                         const int cmax = upperTri ? min(l + k -1, w-1) : w-1;
                         const int num_zeros = cmax - cmin + 1;
-                        size_t offset = (static_cast<size_t>(w) * h * i + (static_cast<size_t>(w) * l + cmin)) * elemSize;
-                        auto *cur_dst = dst + offset;
                         if (cmin < w && num_zeros > 0)
-                            std::memset(cur_dst, 0, elemSize * num_zeros);
+                        {
+                            size_t offset = (static_cast<size_t>(w) * h * i + (static_cast<size_t>(w) * l + cmin)) * elemSize;
+                            std::memset(dst + offset, 0, elemSize * num_zeros);
+                        }
                     }
                 }
             };

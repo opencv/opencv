@@ -985,6 +985,12 @@ TEST(Layer_Trilu, TallMatrix)
                                     5, 0,
                                     7, 8});
     normAssert(tril, runTrilu(false, -2));
+
+    Mat tril0 = Mat_<float>({4, 2}, {1, 0,
+                                     3, 4,
+                                     5, 6,
+                                     7, 8});
+    normAssert(tril0, runTrilu(false, 0));
 }
 
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Split_Test;
