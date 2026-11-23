@@ -5,8 +5,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 
-#include "opencv2/core/utils/accel_dispatch.private.hpp"
-
 #include "convert.simd.hpp"
 #include "convert.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
@@ -213,17 +211,6 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     }
 }
 
-static bool accel_convertTo(const UMat& src, OutputArray dst, int dtype, double alpha, double beta)
-{
-    // OpCall keeps pointers to its arguments, so the array must outlive run().
-    const _InputArray srcArr(src);
-    accel::detail::OpCall call("convertTo");
-    call.input(srcArr).output(dst, src.shape(), dtype);
-    return call.run<accel::CoreOps>([alpha, beta](accel::CoreOps& ops, std::vector<UMat>& a, accel::Stream& s) {
-        return ops.convertTo(a[0], a[1], alpha, beta, s);
-    });
-}
-
 void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();
@@ -233,13 +220,6 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
         dst.release();
         dst.create(size(), type_ >= 0 ? type_ : type());
         return;
-    }
-
-    {
-        const int sdepth_ = depth();
-        int ddepth_ = type_ >= 0 ? CV_MAT_DEPTH(type_) : sdepth_;
-        const int dtype_ = CV_MAKETYPE(ddepth_, channels());
-        CV_ACCEL_RUN(dims <= 2, accel_convertTo(*this, dst, dtype_, alpha, beta))
     }
 
 #ifdef HAVE_OPENCL

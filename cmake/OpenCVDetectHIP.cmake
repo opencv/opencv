@@ -4,13 +4,17 @@
 # Copyright (C) 2026, BigVision LLC, all rights reserved.
 # Third party copyrights are property of their respective owners.
 
-# Detection and reporting only. The HIP backend is a plugin (hal/accel/hip); no OpenCV module
-# compiles HIP, so nothing here may change flags or definitions for other targets.
+# Detection and reporting. With HAVE_HIP, opencv_core builds the HIP backend of the non-CPU HAL
+# (modules/core/CMakeLists.txt); nothing here may change flags or definitions for other targets.
 
-if(NOT CMAKE_HIP_COMPILER)
+# check_language() finds hipcc even when no GPU architecture was found and HIP was not enabled
+get_property(_ocv_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+if(NOT "HIP" IN_LIST _ocv_enabled_languages)
+  unset(_ocv_enabled_languages)
   message(STATUS "HIP: hipcc not enabled as a language, HIP support disabled.")
   return()
 endif()
+unset(_ocv_enabled_languages)
 
 find_package(hip QUIET
   HINTS "${ROCM_PATH}" ENV ROCM_PATH ENV HIP_PATH PATHS /opt/rocm

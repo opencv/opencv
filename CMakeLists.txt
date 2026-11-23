@@ -672,8 +672,6 @@ endif()
 
 # --- HIP/ROCm Support ---
 OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP support" OFF)
-OCV_OPTION(BUILD_PLUGIN_ACCEL_HIP "Build the HIP backend of the non-CPU HAL as a plugin" ON
-           VISIBLE_IF WITH_HIP)
 if(WITH_HIP)
   include(CheckLanguage)
   check_language(HIP)
@@ -1079,9 +1077,6 @@ ocv_add_modules_compiler_options()
 
 # OpenCV modules
 ocv_register_modules()
-
-# HIP backend of the non-CPU HAL, built as a plugin against the modules above
-include(cmake/OpenCVBuildAccelHip.cmake)
 
 # Generate targets for documentation
 add_subdirectory(doc)
@@ -1941,6 +1936,17 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   endif()
  endif()
+
+if(WITH_HIP OR HAVE_HIP)
+  status("")
+  if(HAVE_HIP)
+    status("  AMD HIP:" ROCM_FOUND THEN "YES (ROCm ${ROCM_VERSION}, HIP ${hip_VERSION})"
+                                   ELSE "YES (HIP ${hip_VERSION}, ROCm version unknown)")
+    status("    AMD GPU arch:"         ${CMAKE_HIP_ARCHITECTURES})
+  else()
+    status("  AMD HIP:" "NO")
+  endif()
+endif()
 
  if(WITH_CUDNN OR HAVE_CUDNN)
     status("")

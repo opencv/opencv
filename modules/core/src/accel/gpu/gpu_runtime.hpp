@@ -11,7 +11,7 @@
 // CV_GPU(X) is cudaX or hipX; names that differ by more than the prefix are spelled out here.
 
 #ifdef CV_ACCEL_GPU_HIP
-#  include <hip/hip_runtime_api.h>
+#  include <hip/hip_runtime.h>
 #  define CV_GPU(name) hip##name
 #  define CV_GPU_NS hip_impl
 #  define CV_GPU_RUNTIME "hip"
