@@ -168,14 +168,13 @@ if(PARALLEL_ENABLE_PLUGINS)
 endif()
 
 if(HAVE_CUDA)
-  # Real CUDA installation present — cudev module required.
   if(NOT HAVE_opencv_cudev)
     message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
   endif()
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-    list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
+   list(APPEND extra_libs CUDA::cudart${CUDA_LIB_EXT})
   endif()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
 if(CV_CLANG_CL AND AARCH64)
@@ -183,7 +182,6 @@ if(CV_CLANG_CL AND AARCH64)
 endif()
 
 ocv_create_module(${extra_libs})
-
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
@@ -197,7 +195,6 @@ ocv_target_link_libraries(${the_module} PRIVATE
 if(HAVE_HIP)
   # the HIP backend of the non-CPU HAL: the kernels are HIP, backend_hip.cpp is plain C++
   target_sources(${the_module} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src/hip/accel_kernels.hip")
-  set_target_properties(${the_module} PROPERTIES HIP_STANDARD 17 HIP_STANDARD_REQUIRED ON)
   ocv_target_link_libraries(${the_module} PRIVATE hip::host)
   # with the HIP language enabled, CMake treats ROCm's lib directory as implicit and leaves it out of RUNPATH
   set_property(TARGET ${the_module} APPEND PROPERTY BUILD_RPATH "${hip_LIB_INSTALL_DIR}")
