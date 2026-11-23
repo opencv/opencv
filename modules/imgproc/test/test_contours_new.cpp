@@ -500,4 +500,52 @@ TEST(Imgproc_FindContours, link_runs)
     }
 }
 
+TEST(Imgproc_FindContours, preBinarized)
+{
+    const Size sz {400, 400};
+    Mat img0255 = Mat::zeros(sz, CV_8UC1);
+
+    RNG& rng = TS::ptr()->get_rng();
+    for (int i = 0; i < 30; i++)
+    {
+        Point center(rng.uniform(20, sz.width - 20), rng.uniform(20, sz.height - 20));
+        int radius = rng.uniform(5, 25);
+        circle(img0255, center, radius, Scalar(255), FILLED);
+    }
+
+    Mat img01;
+    cv::threshold(img0255, img01, 0, 1, THRESH_BINARY);
+
+    const int modes[] = {RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE};
+    for (int mode : modes)
+    {
+        vector<vector<Point>> contoursRef, contoursPre;
+        vector<Vec4i> hierarchyRef, hierarchyPre;
+
+        findContours(img0255, contoursRef, hierarchyRef, mode, CHAIN_APPROX_SIMPLE);
+        findContours(img01, contoursPre, hierarchyPre, mode, CHAIN_APPROX_SIMPLE, Point(), true /*preBinarized*/);
+
+        ASSERT_EQ(contoursRef.size(), contoursPre.size());
+        for (size_t i = 0; i < contoursRef.size(); i++)
+            EXPECT_EQ(contoursRef[i], contoursPre[i]) << "mode=" << mode << " contour=" << i;
+        EXPECT_EQ(hierarchyRef, hierarchyPre) << "mode=" << mode;
+    }
+
+    // Overload without hierarchy output must honor the flag identically.
+    vector<vector<Point>> contoursRef2, contoursPre2;
+    findContours(img0255, contoursRef2, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(img01, contoursPre2, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(), true);
+    ASSERT_EQ(contoursRef2.size(), contoursPre2.size());
+    for (size_t i = 0; i < contoursRef2.size(); i++)
+        EXPECT_EQ(contoursRef2[i], contoursPre2[i]);
+
+    // Sanity: a strictly 0/1 image run through the default (preBinarized=false) path must give the
+    // same result too, since threshold(0,1,THRESH_BINARY) on an already-0/1 image is a no-op.
+    vector<vector<Point>> contoursTreeRef, contoursDefaultOn01;
+    vector<Vec4i> hierarchyTreeRef, hierarchyDefaultOn01;
+    findContours(img0255, contoursTreeRef, hierarchyTreeRef, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(img01, contoursDefaultOn01, hierarchyDefaultOn01, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contoursDefaultOn01.size(), contoursTreeRef.size());
+}
+
 }}  // namespace opencv_test

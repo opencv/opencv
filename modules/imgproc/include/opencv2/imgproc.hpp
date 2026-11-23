@@ -3886,14 +3886,25 @@ parent, or nested contours, the corresponding elements of hierarchy[i] will be n
 @param offset Optional offset by which every contour point is shifted. This is useful if the
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
+@param preBinarized If true, asserts that `image` already contains only the values 0 and 1
+(not, for example, 0 and 255), and skips the function's internal binarization pass. This can
+avoid a redundant full-image pass when the caller has already produced such an image (e.g. on
+a GPU, as part of an earlier processing step). If `image` contains any other non-zero value
+while this flag is set, the result is undefined. The default, false, preserves the original
+behavior described for the @p image parameter above, where any non-zero pixel is treated as 1
+via an internal call to #threshold. @note This flag has no effect in the special case of
+#RETR_LIST mode without a requested hierarchy on an 8-bit image (see the note above): that
+internal fast path always performs its own normalization regardless of this flag.
  */
 CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
-                              int method, Point offset = Point());
+                              int method, Point offset = Point(),
+                              bool preBinarized = false);
 
 /** @overload */
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
-                              int mode, int method, Point offset = Point());
+                              int mode, int method, Point offset = Point(),
+                              bool preBinarized = false);
 
 
 //! @brief Find contours using link runs algorithm
