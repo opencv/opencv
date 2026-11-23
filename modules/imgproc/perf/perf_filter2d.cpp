@@ -143,7 +143,8 @@ PERF_TEST_P( ImgProc_ParallelFilter_Perf, filter2D_parallel,
 typedef TestBaseWithParam< tuple<Vec3i, int, int> > ImgProc_SepFilter3D_Perf;
 
 PERF_TEST_P(ImgProc_SepFilter3D_Perf, volume,
-            Combine(Values(Vec3i(32, 256, 256), Vec3i(64, 128, 128)),
+            Combine(Values(Vec3i(32, 256, 256), Vec3i(64, 128, 128),
+                           Vec3i(1, 512, 512), Vec3i(4, 512, 512)),
                     Values(CV_8U, CV_16F, CV_32F), Values(1, 3, 9)))
 {
     const Vec3i shape = get<0>(GetParam());

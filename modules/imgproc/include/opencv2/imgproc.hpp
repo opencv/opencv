@@ -1517,7 +1517,8 @@ CV_CN_MAX.
 @param dst Volume with the same shape and type as src. Filtering uses float32 intermediates.
 CV_8U results are converted once at the end, as by Mat::convertTo: clamped to [0, 255] and
 rounded to the nearest integer, with halves rounded to even.
-@param kernelZ Float32 row or column vector of finite coefficients with odd positive length.
+@param kernelZ Single-channel row or column vector with odd positive length. Its coefficients
+are converted to float32 and must be finite after the conversion.
 @param kernelY Height kernel, with the same constraints as kernelZ.
 @param kernelX Width kernel, with the same constraints as kernelZ.
 @param borderType Extrapolation mode. BORDER_CONSTANT (zero), BORDER_REPLICATE,
