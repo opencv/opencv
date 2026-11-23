@@ -18,6 +18,11 @@ namespace cuda_impl {
 Ptr<Backend> createCudaBackend();
 }
 
+namespace hip_impl {
+//! the HIP backend (hal/gpu/src/backend_hip.cpp)
+Ptr<Backend> createHipBackend();
+}
+
 }} // namespace cv::accel
 
 #endif // OPENCV_HAL_GPU_ACCEL_GPU_HPP

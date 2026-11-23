@@ -618,6 +618,9 @@ include(cmake/OpenCVCompilerOptions.cmake)
 
 ocv_cmake_hook(POST_COMPILER_OPTIONS)
 
+# --- HIP/ROCm Support (detected after CUDA, see OpenCVFindLibsPerf below) ---
+OCV_OPTION(WITH_HIP "Include AMD ROCm/HIP support" OFF)
+
 # --- CUDA Support ---
 if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
   if(CMAKE_VERSION VERSION_LESS 3.18)
@@ -787,6 +790,14 @@ include(cmake/OpenCVFindHarfBuzz.cmake)
 include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
+if(WITH_HIP)
+  include(CheckLanguage)
+  check_language(HIP)
+  if(CMAKE_HIP_COMPILER)
+    enable_language(HIP)
+  endif()
+  include(cmake/OpenCVDetectHIP.cmake)
+endif()
 include(cmake/OpenCVFindLAPACK.cmake)
 if(WITH_LAPACK)
   ocv_assert(HAVE_LAPACK)  # Lapack is required for OpenCV 5.0+
@@ -1029,7 +1040,7 @@ unset(_hal_includes)
 # Non-CPU HAL: the GPU backends of cv::accel. Unlike the HAL above they are chosen at run time
 # and keep the devices, so only opencv_core links them (OPENCV_ACCEL_GPU_LIBRARIES).
 set(OPENCV_ACCEL_GPU_LIBRARIES "")
-if(HAVE_CUDA)
+if(HAVE_CUDA OR HAVE_HIP)
   add_subdirectory(hal/gpu)
 endif()
 

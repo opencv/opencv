@@ -11,7 +11,7 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/tls.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) || defined(HAVE_HIP)
 #include "accel_gpu.hpp"    // the backends of hal/gpu
 #endif
 
@@ -154,6 +154,18 @@ private:
         catch (const cv::Exception& e)
         {
             CV_LOG_WARNING(NULL, "accel: the CUDA backend is not available: " << e.what());
+        }
+#endif
+#ifdef HAVE_HIP
+        try
+        {
+            Ptr<Backend> hip = hip_impl::createHipBackend();
+            if (hip && hip->deviceCount() > 0)
+                add(hip);
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_WARNING(NULL, "accel: the HIP backend is not available: " << e.what());
         }
 #endif
         return true;

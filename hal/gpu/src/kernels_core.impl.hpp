@@ -4,8 +4,8 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the core kernels of the GPU backends, compiled once per runtime, for CUDA by
-// kernels.cu. Elements are moved as opaque groups of bytes, so one kernel serves every type of
+// Non-CPU HAL: the core kernels of the GPU backends, compiled once per runtime, by kernels.cu and
+// kernels.hip. Elements are moved as opaque groups of bytes, so one kernel serves every type of
 // the same element size.
 
 #include "device.hpp"

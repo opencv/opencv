@@ -163,6 +163,10 @@ theirs with `cv::accel::registerBackend()`.
   (`hal/gpu/src/`) are written once for the CUDA and HIP runtimes: per module an operations file
   (`ops_<module>.impl.hpp`) and a kernels file (`kernels_<module>.impl.hpp`), the kernels built
   from the device functions of `device.hpp` (border indices, saturation, launch geometry).
+* HIP (`hal/gpu`), built in with `WITH_HIP=ON` when ROCm is found. It is the same code as the
+  CUDA backend, compiled for HIP: device memory from a pool on discrete GPUs, pinned host memory
+  mapped into the GPU on APUs, and the same operations. The kernels are built for
+  `CMAKE_HIP_ARCHITECTURES`, or for the GPUs of the build machine when it is not set.
 
 Adding an operation
 -------------------

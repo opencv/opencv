@@ -5,7 +5,7 @@
 // Third party copyrights are property of their respective owners.
 
 // Non-CPU HAL: the imgproc kernels of the GPU backends, built from the device functions of
-// device.hpp and compiled once per runtime with the core ones (kernels.cu).
+// device.hpp and compiled once per runtime with the core ones (kernels.cu, kernels.hip).
 
 #include "device.hpp"
 #include "opencv2/core/hal/interface.h"
