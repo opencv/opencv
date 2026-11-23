@@ -61,6 +61,8 @@ namespace
             case CV_16S:  truncateToIntImpl<short>(src, dst);   break;
             case CV_32S:  truncateToIntImpl<int>(src, dst);     break;
             case CV_64S:  truncateToIntImpl<int64_t>(src, dst); break;
+            case CV_32U:  truncateToIntImpl<uint32_t>(src, dst); break;
+            case CV_64U:  truncateToIntImpl<uint64_t>(src, dst); break;
             default:      src.convertTo(dst, dst.depth());      break;
         }
     }
@@ -87,7 +89,8 @@ public:
         {
             const int v = params.get<int>("outputType");
             if (v == CV_Bool || v == CV_8U || v == CV_8S || v == CV_16U || v == CV_16S ||
-                v == CV_32S || v == CV_64S || v == CV_32F || v == CV_64F || v == CV_16F || v == CV_16BF)
+                v == CV_32S || v == CV_64S || v == CV_32U || v == CV_64U ||
+                v == CV_32F || v == CV_64F || v == CV_16F || v == CV_16BF)
             {
                 hasToParam = true;
                 toCvDepth_ = v;
@@ -457,6 +460,8 @@ private:
         ONNX_DT_BOOL     = 9,
         ONNX_DT_FLOAT16  = 10,
         ONNX_DT_DOUBLE   = 11,
+        ONNX_DT_UINT32   = 12,
+        ONNX_DT_UINT64   = 13,
         ONNX_DT_BFLOAT16 = 16
     };
 
@@ -479,6 +484,8 @@ private:
             case ONNX_DT_BOOL:     return CV_Bool;
             case ONNX_DT_FLOAT16:  return CV_16F;
             case ONNX_DT_DOUBLE:   return CV_64F;
+            case ONNX_DT_UINT32:   return CV_32U;
+            case ONNX_DT_UINT64:   return CV_64U;
             case ONNX_DT_BFLOAT16: return CV_16BF;
             default: break;
         }
