@@ -28,6 +28,9 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (depth == CV_64F && !doubleSupport)
         return false;
 
+    if (_src.total() > (size_t)INT_MAX)
+        return false; // let the generic code path report the overflow
+
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
