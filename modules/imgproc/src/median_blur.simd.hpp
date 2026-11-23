@@ -829,29 +829,20 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
         size.width *= cn;
         const bool useParallel = (_dst.total() >= (size_t)320*240);
-        if( useParallel )
+        auto rowLoop = [&](const Range& range)
         {
-            parallel_for_(Range(0, size.height), [&](const Range& range)
-            {
-                for( int i = range.start; i < range.end; i++ )
-                {
-                    const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
-                    const T* row1 = src + (size_t)i*sstep;
-                    const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
-                    medianBlur3Row(src, dst + (size_t)i*dstep, row0, row1, row2, cn, size.width, op, vop);
-                }
-            }, -1.);
-        }
-        else
-        {
-            for( int i = 0; i < size.height; i++, dst += dstep )
+            for( int i = range.start; i < range.end; i++ )
             {
                 const T* row0 = src + (size_t)std::max(i - 1, 0)*sstep;
                 const T* row1 = src + (size_t)i*sstep;
                 const T* row2 = src + (size_t)std::min(i + 1, size.height-1)*sstep;
-                medianBlur3Row(src, dst, row0, row1, row2, cn, size.width, op, vop);
+                medianBlur3Row(src, dst + (size_t)i*dstep, row0, row1, row2, cn, size.width, op, vop);
             }
-        }
+        };
+        if( useParallel )
+            parallel_for_(Range(0, size.height), rowLoop);
+        else
+            rowLoop(Range(0, size.height));
     }
     else if( m == 5 )
     {
@@ -880,25 +871,9 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
         size.width *= cn;
         const bool useParallel = (_dst.total() >= (size_t)64*64);
-        if( useParallel )
+        auto rowLoop = [&](const Range& range)
         {
-            parallel_for_(Range(0, size.height), [&](const Range& range)
-            {
-                for( int i = range.start; i < range.end; i++ )
-                {
-                    const T* row[5];
-                    row[0] = src + (size_t)std::max(i - 2, 0)*sstep;
-                    row[1] = src + (size_t)std::max(i - 1, 0)*sstep;
-                    row[2] = src + (size_t)i*sstep;
-                    row[3] = src + (size_t)std::min(i + 1, size.height-1)*sstep;
-                    row[4] = src + (size_t)std::min(i + 2, size.height-1)*sstep;
-                    medianBlur5Row(src, dst + (size_t)i*dstep, row, cn, size.width, op, vop);
-                }
-            }, -1.);
-        }
-        else
-        {
-            for( int i = 0; i < size.height; i++, dst += dstep )
+            for( int i = range.start; i < range.end; i++ )
             {
                 const T* row[5];
                 row[0] = src + (size_t)std::max(i - 2, 0)*sstep;
@@ -906,9 +881,13 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 row[2] = src + (size_t)i*sstep;
                 row[3] = src + (size_t)std::min(i + 1, size.height-1)*sstep;
                 row[4] = src + (size_t)std::min(i + 2, size.height-1)*sstep;
-                medianBlur5Row(src, dst, row, cn, size.width, op, vop);
+                medianBlur5Row(src, dst + (size_t)i*dstep, row, cn, size.width, op, vop);
             }
-        }
+        };
+        if( useParallel )
+            parallel_for_(Range(0, size.height), rowLoop);
+        else
+            rowLoop(Range(0, size.height));
     }
 }
 
