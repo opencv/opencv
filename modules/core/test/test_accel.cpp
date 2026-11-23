@@ -1033,25 +1033,29 @@ TEST_F(Core_Accel, mat_calls_are_not_affected)
     EXPECT_EQ(0u, emu().transferred());
 }
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) || defined(HAVE_HIP)
 
-accel::Device cudaDevice()
+accel::Device gpuDevice(const std::string& backend)
 {
-    accel::Device d = accel::Device::find("cuda:0");
+    accel::Device d = accel::Device::find(backend + ":0");
     if (d.empty())
-        throw SkipTestException("no CUDA device");
+        throw SkipTestException("no " + backend + " device");
     return d;
 }
 
-//! a kernel wrote @p m (UMat::handle(ACCESS_WRITE)); the CPU path leaves the host copy current
+//! a kernel wrote @p m (UMat::handle(ACCESS_WRITE)); the CPU path leaves the host copy current.
+//! The host copy is marked stale before the launch, so where the CPU addresses the memory in place,
+//! a kernel that falls back to the CPU still counts as written by the device.
 bool writtenByDevice(const UMat& m)
 {
     return m.u->hostCopyObsolete();
 }
 
-TEST(Core_Accel_CUDA, flip_and_transpose)
+typedef testing::TestWithParam<std::string> Core_Accel_GPU;
+
+TEST_P(Core_Accel_GPU, flip_and_transpose)
 {
-    const accel::Device d = cudaDevice();
+    const accel::Device d = gpuDevice(GetParam());
     const int types[] = { CV_8UC1, CV_8UC3, CV_16UC2, CV_32FC1, CV_32FC4, CV_64FC3 };
     for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
     {
@@ -1071,9 +1075,9 @@ TEST(Core_Accel_CUDA, flip_and_transpose)
     }
 }
 
-TEST(Core_Accel_CUDA, in_place)
+TEST_P(Core_Accel_GPU, in_place)
 {
-    const accel::Device d = cudaDevice();
+    const accel::Device d = gpuDevice(GetParam());
     const int types[] = { CV_8UC1, CV_8UC3, CV_32FC1, CV_64FC3 };
     for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
     {
@@ -1098,9 +1102,9 @@ TEST(Core_Accel_CUDA, in_place)
     }
 }
 
-TEST(Core_Accel_CUDA, unsupported_element_size_falls_back)
+TEST_P(Core_Accel_GPU, unsupported_element_size_falls_back)
 {
-    const accel::Device d = cudaDevice();
+    const accel::Device d = gpuDevice(GetParam());
     const Mat src = randomMat(Size(33, 21), CV_8UC(5));    // 5-byte elements: no kernel
     UMat u = src.upload(d), dst;
     cv::flip(u, dst, 1);
@@ -1111,9 +1115,9 @@ TEST(Core_Accel_CUDA, unsupported_element_size_falls_back)
     EXPECT_EQ(0, cvtest::norm(expected, toHost(dst), NORM_INF));
 }
 
-TEST(Core_Accel_CUDA, region_and_chain)
+TEST_P(Core_Accel_GPU, region_and_chain)
 {
-    const accel::Device d = cudaDevice();
+    const accel::Device d = gpuDevice(GetParam());
     const Mat src = randomMat(Size(640, 480), CV_8UC3);
     UMat u = src.upload(d), a, b;
     UMat big = Mat(Mat::zeros(500, 700, CV_8UC3)).upload(d);
@@ -1128,7 +1132,95 @@ TEST(Core_Accel_CUDA, region_and_chain)
     EXPECT_EQ(0, cvtest::norm(expected, toHost(big), NORM_INF));
 }
 
-#endif // HAVE_CUDA
+TEST_P(Core_Accel_GPU, unaligned_region)
+{
+    const accel::Device d = gpuDevice(GetParam());
+    const int types[] = { CV_8UC1, CV_8UC3, CV_16UC1, CV_32FC3, CV_64FC1 };
+    const Rect r(3, 1, 101, 67);    // odd offsets and sizes, partial tiles on every side
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+    {
+        const Mat src = randomMat(Size(109, 71), types[t]);
+        UMat u = src.upload(d), f, tr;
+        UMat big = Mat(Mat::zeros(src.size(), types[t])).upload(d);
+        cv::flip(u(r), f, -1);
+        cv::transpose(u(r), tr);
+        cv::flip(u(r), big(r), 1);
+        Mat ef, et, eb = Mat::zeros(src.size(), types[t]);
+        cv::flip(src(r), ef, -1);
+        cv::transpose(src(r), et);
+        cv::flip(src(r), eb(r), 1);
+        EXPECT_EQ(0, cvtest::norm(ef, toHost(f), NORM_INF)) << typeToString(types[t]);
+        EXPECT_EQ(0, cvtest::norm(et, toHost(tr), NORM_INF)) << typeToString(types[t]);
+        EXPECT_EQ(0, cvtest::norm(eb, toHost(big), NORM_INF)) << typeToString(types[t]);
+    }
+}
+
+TEST_P(Core_Accel_GPU, tall_image)
+{
+    const accel::Device d = gpuDevice(GetParam());
+    // taller than 65535 blocks of 8 rows, the most one launch covers without its loop over y
+    const Mat src = randomMat(Size(3, 65535 * 8 + 13), CV_8UC1);
+    UMat u = src.upload(d), f, tr;
+    cv::flip(u, f, 0);
+    cv::transpose(u, tr);
+    cv::flip(u, u, -1);
+    Mat ef, eu;
+    cv::flip(src, ef, 0);
+    cv::flip(src, eu, -1);
+    EXPECT_EQ(0, cvtest::norm(ef, toHost(f), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(src.t(), toHost(tr), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(eu, toHost(u), NORM_INF));
+}
+
+void flipOnDevice(const accel::Device& d, int seed, std::string& error, int& mismatches)
+{
+    try
+    {
+        const Mat src = randomMat(Size(517 + seed, 389), CV_8UC3);
+        UMat u = src.upload(d), a, b, tr;
+        for (int i = 0; i < 20; i++)
+        {
+            cv::flip(u, a, i % 3 - 1);
+            cv::flip(a, b, i % 3 - 1);
+            cv::transpose(b, tr);
+            if (cvtest::norm(src.t(), toHost(tr), NORM_INF) != 0)
+                mismatches++;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error = e.what();
+    }
+    catch (...)
+    {
+        error = "unknown exception";
+    }
+}
+
+TEST_P(Core_Accel_GPU, two_threads)
+{
+    const accel::Device d = gpuDevice(GetParam());
+    std::string errors[2];
+    int mismatches[2] = { 0, 0 };
+    std::thread t0(flipOnDevice, std::cref(d), 0, std::ref(errors[0]), std::ref(mismatches[0]));
+    std::thread t1(flipOnDevice, std::cref(d), 1, std::ref(errors[1]), std::ref(mismatches[1]));
+    t0.join();
+    t1.join();
+    for (int t = 0; t < 2; t++)
+    {
+        EXPECT_EQ(std::string(), errors[t]) << "thread " << t;
+        EXPECT_EQ(0, mismatches[t]) << "thread " << t;
+    }
+}
+
+#ifdef HAVE_CUDA
+INSTANTIATE_TEST_CASE_P(CUDA, Core_Accel_GPU, testing::Values(std::string("cuda")));
+#endif
+#ifdef HAVE_HIP
+INSTANTIATE_TEST_CASE_P(HIP, Core_Accel_GPU, testing::Values(std::string("hip")));
+#endif
+
+#endif // HAVE_CUDA || HAVE_HIP
 
 }} // namespace
 

@@ -158,6 +158,17 @@ public:
     const unsigned int eventFlags_;
 };
 
+//! the launch failed because the build has no code for this GPU; ROCm reports that in several ways
+bool noKernelImage(CV_GPU(Error_t) r)
+{
+#ifdef CV_ACCEL_GPU_HIP
+    return r == hipErrorNoBinaryForGpu || r == hipErrorInvalidImage ||
+           r == hipErrorInvalidKernelFile || r == hipErrorInvalidDeviceFunction;
+#else
+    return r == CV_GPU_ERROR_NO_KERNEL_IMAGE;
+#endif
+}
+
 GpuStream& gpuStreamOf(Stream& s)
 {
     GpuStream* gs = dynamic_cast<GpuStream*>(&s);
@@ -190,7 +201,7 @@ public:
         const CV_GPU(Error_t) r = src.u == dst.u
               ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
               : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_);
-        if (r == CV_GPU_ERROR_NO_KERNEL_IMAGE)
+        if (noKernelImage(r))
         {
             (void)CV_GPU(GetLastError)();
             return false;   // no code for this GPU in the build: nothing was queued, the CPU runs it
@@ -212,7 +223,7 @@ public:
         const CV_GPU(Error_t) r = src.u == dst.u
               ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
               : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_);
-        if (r == CV_GPU_ERROR_NO_KERNEL_IMAGE)
+        if (noKernelImage(r))
         {
             (void)CV_GPU(GetLastError)();
             return false;
