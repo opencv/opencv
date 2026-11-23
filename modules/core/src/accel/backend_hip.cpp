@@ -4,8 +4,9 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-
-#include "../precomp.hpp"
+// not precomp.hpp: in a build with CUDA too it brings in CUDA's runtime headers, whose vector
+// types clash with HIP's
+#include "cvconfig.h"
 #include "accel_impl.hpp"
 
 #ifdef HAVE_HIP
