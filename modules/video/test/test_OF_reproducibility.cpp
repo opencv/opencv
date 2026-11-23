@@ -222,7 +222,9 @@ TEST_P(DenseOpticalFlow_Farneback, MultithreadReproducibility)
     EXPECT_GT(cv::norm(resSingleThread, NORM_INF), 0.0);
 }
 
+static const Size szOddLarge(417, 333);
+
 INSTANTIATE_TEST_CASE_P(FullSet, DenseOpticalFlow_Farneback,
-    Combine(Values(szODD, szVGA), Values(5, 7), Values(0, (int)OPTFLOW_FARNEBACK_GAUSSIAN)));
+    Combine(Values(szODD, szOddLarge, szVGA), Values(5, 7), Values(0, (int)OPTFLOW_FARNEBACK_GAUSSIAN)));
 
 }} // namespace
