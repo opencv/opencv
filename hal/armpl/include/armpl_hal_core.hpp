@@ -142,6 +142,16 @@ int armpl_hal_SVBackSubst64f(const double* w, size_t wstep, const double* u, siz
 #undef  cv_hal_SVBackSubst64f
 #define cv_hal_SVBackSubst64f armpl_hal_SVBackSubst64f
 
+int armpl_hal_QR32f(float* src1, size_t src1_step, int m, int n, int k,
+                    float* src2, size_t src2_step, float* dst, int* info);
+int armpl_hal_QR64f(double* src1, size_t src1_step, int m, int n, int k,
+                    double* src2, size_t src2_step, double* dst, int* info);
+
+#undef  cv_hal_QR32f
+#define cv_hal_QR32f armpl_hal_QR32f
+#undef  cv_hal_QR64f
+#define cv_hal_QR64f armpl_hal_QR64f
+
 #endif  // HAVE_ARMPL
 
 #endif  // OPENCV_ARMPL_HAL_CORE_HPP
