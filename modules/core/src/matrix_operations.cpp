@@ -815,7 +815,17 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     }
 
     ReduceFunc func = 0;
-    if( dim == 0 )
+    if (op == REDUCE_SUM && sdepth == CV_8U && (ddepth == CV_32F || ddepth == CV_64F) &&
+        (dim == 0 ? src.rows : src.cols) > INT_MAX / UCHAR_MAX)
+    {
+        if (ddepth == CV_32F)
+            func = dim == 0 ? reduceR_<uchar, float, OpAdd<int64>, OpNop<int64> >
+                            : reduceC_<uchar, float, OpAdd<int64>, OpNop<int64> >;
+        else
+            func = dim == 0 ? reduceR_<uchar, double, OpAdd<int64>, OpNop<int64> >
+                            : reduceC_<uchar, double, OpAdd<int64>, OpNop<int64> >;
+    }
+    else if( dim == 0 )
     {
         if( op == REDUCE_SUM )
         {
