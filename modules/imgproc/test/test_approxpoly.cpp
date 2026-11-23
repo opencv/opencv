@@ -501,6 +501,49 @@ TEST(Imgproc_ApproxPolyN, octagon_with_parallel_sides)
     }
 }
 
+TEST(Imgproc_ApproxPolyN, nearly_parallel_sides)
+{
+    // The top and the bottom side are nearly, but not exactly, parallel. Their lines meet hundreds of millions
+    // of units away, which is no result for a polygon of size 100, so the contraction has to stop.
+    const vector<Point2f> quad = {Point2f(0, 0), Point2f(100, 0), Point2f(100, 100), Point2f(0, 100.0000229f)};
+    vector<Point2f> approx;
+
+    ASSERT_NO_THROW(approxPolyN(quad, approx, 3));
+    EXPECT_EQ(4u, approx.size());
+    checkBoundingPolygon(quad, approx);
+    for (size_t i = 0; i < approx.size(); ++i)
+    {
+        EXPECT_LT(std::abs(approx[i].x), 1000.f) << "vertex " << i;
+        EXPECT_LT(std::abs(approx[i].y), 1000.f) << "vertex " << i;
+    }
+}
+
+TEST(Imgproc_ApproxPolyN, rotated_regular_octagon)
+{
+    // The sides of a regular octagon computed with float arithmetic are only nearly parallel, how
+    // nearly depends on the rotation. The result has to stay bounded for all of them.
+    for (int k = 0; k < 16; k++)
+    {
+        const float rotation = 0.05f * k;
+        SCOPED_TRACE(cv::format("rotation %.2f", rotation));
+        vector<Point2f> octagon;
+        for (int i = 0; i < 8; i++)
+        {
+            const float angle = rotation + static_cast<float>(CV_PI) * i / 4;
+            octagon.push_back(Point2f(100.f * cosf(angle), 100.f * sinf(angle)));
+        }
+        vector<Point2f> approx;
+
+        ASSERT_NO_THROW(approxPolyN(octagon, approx, 3));
+        checkBoundingPolygon(octagon, approx);
+        for (size_t i = 0; i < approx.size(); ++i)
+        {
+            EXPECT_LT(std::abs(approx[i].x), 1000.f) << "vertex " << i;
+            EXPECT_LT(std::abs(approx[i].y), 1000.f) << "vertex " << i;
+        }
+    }
+}
+
 TEST(Imgproc_ApproxPolyN, trapezoid_to_triangle)
 {
     const vector<Point2f> trapezoid = {Point2f(0, 0), Point2f(10, 0), Point2f(8, 5), Point2f(2, 5)};
