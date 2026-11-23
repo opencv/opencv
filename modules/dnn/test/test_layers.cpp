@@ -2901,8 +2901,9 @@ TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
 
     const int64_t vals[] = {16777217, 123456789012LL};
     Mat inp(std::vector<int>{1, 1, 1, 2}, CV_64S);
-    inp.at<int64_t>(0) = vals[0];
-    inp.at<int64_t>(1) = vals[1];
+    int64_t* inpData = inp.ptr<int64_t>();
+    inpData[0] = vals[0];
+    inpData[1] = vals[1];
 
     LayerParams lp;
     lp.type = "Resize2";
@@ -2920,8 +2921,9 @@ TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
 
     ASSERT_EQ(CV_64S, out.depth());
     ASSERT_EQ(4, (int)out.total());
+    const int64_t* outData = out.ptr<int64_t>();
     for (int i = 0; i < 4; ++i)
-        EXPECT_EQ(vals[i / 2], out.at<int64_t>(i)) << "i=" << i;
+        EXPECT_EQ(vals[i / 2], outData[i]) << "i=" << i;
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
