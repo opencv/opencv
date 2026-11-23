@@ -33,4 +33,4 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * [Apply to be an OpenCV Volunteer](https://form.jotform.com/232745316792159) to help organize events and online campaigns as well as amplify them
 * [Follow OpenCV on Mastodon](https://mastodon.social/@opencv) in the Fediverse
 * [Follow OpenCV on X](https://x.com/opencvofficial)
-* [OpenCV.ai](https://opencv.ai): Computer Vision and AI development services from the OpenCV team.
+* [OpenCV.ai](https://opencv.ai): Official computer vision and AI development services provided by the OpenCV team.
