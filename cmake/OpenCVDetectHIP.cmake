@@ -29,6 +29,10 @@ endif()
 
 set(HAVE_HIP 1)
 
+# hal/gpu needs no device link: a HIP link of the libraries that take it in would drop ROCm from
+# their RPATH as an implicit directory, so they stay C++ links
+set(CMAKE_HIP_LINKER_PREFERENCE_PROPAGATES 0)
+
 set(CMAKE_HIP_STANDARD 17)
 set(CMAKE_HIP_STANDARD_REQUIRED ON)
 
