@@ -22,6 +22,12 @@
 #define CV_LUT8U_SIMD 0
 #endif
 
+#if CV_LUT8U_SIMD && !(defined(__GNUC__) && !defined(__clang__) && defined(__aarch64__))
+#define CV_LUT8U_LOCAL_TABLE 1
+#else
+#define CV_LUT8U_LOCAL_TABLE 0
+#endif
+
 namespace cv {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
@@ -39,6 +45,7 @@ void LUT8u_( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, in
         int i = 0;
 #if CV_LUT8U_SIMD
         const int nlanes = VTraits<v_uint8>::vlanes();
+#if CV_LUT8U_LOCAL_TABLE
         if( total >= 512 && nlanes <= 256 )
         {
             uchar CV_DECL_ALIGNED(CV_SIMD_WIDTH) tab[256];
@@ -52,6 +59,7 @@ void LUT8u_( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, in
                 v_store(dst + i + nlanes, r1);
             }
         }
+#endif
         for( ; i <= total - nlanes; i += nlanes )
         {
             v_uint8 idx = vx_load(src + i);

@@ -3157,7 +3157,7 @@ public:
 
     void operator()( const cv::Range& rowRange ) const CV_OVERRIDE
     {
-        int subHist[4][HIST_SZ] = {{0, }};
+        int subHist[4][HIST_SZ];
         const size_t sstep = src_.step;
         int width = src_.cols;
         int height = rowRange.end - rowRange.start;
@@ -3167,25 +3167,40 @@ public:
             width *= height;
             height = 1;
         }
+        const bool single = (size_t)width * height < (size_t)(1 << 14);
+        memset(subHist, 0, (single ? 1 : 4) * sizeof(subHist[0]));
 
         for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
         {
             int x = 0;
-            for (; x <= width - 16; x += 16)
+            if (single)
             {
-                uint64 lo, hi;
-                memcpy(&lo, ptr + x, sizeof(lo));
-                memcpy(&hi, ptr + x + 8, sizeof(hi));
-                for (int k = 0; k < 2; k++, lo >>= 32, hi >>= 32)
+                for (; x <= width - 4; x += 4)
                 {
-                    subHist[0][lo & 0xFF]++;
-                    subHist[1][(lo >> 8) & 0xFF]++;
-                    subHist[2][(lo >> 16) & 0xFF]++;
-                    subHist[3][(lo >> 24) & 0xFF]++;
-                    subHist[0][hi & 0xFF]++;
-                    subHist[1][(hi >> 8) & 0xFF]++;
-                    subHist[2][(hi >> 16) & 0xFF]++;
-                    subHist[3][(hi >> 24) & 0xFF]++;
+                    int t0 = ptr[x], t1 = ptr[x+1];
+                    subHist[0][t0]++; subHist[0][t1]++;
+                    t0 = ptr[x+2]; t1 = ptr[x+3];
+                    subHist[0][t0]++; subHist[0][t1]++;
+                }
+            }
+            else
+            {
+                for (; x <= width - 16; x += 16)
+                {
+                    uint64 lo, hi;
+                    memcpy(&lo, ptr + x, sizeof(lo));
+                    memcpy(&hi, ptr + x + 8, sizeof(hi));
+                    for (int k = 0; k < 2; k++, lo >>= 32, hi >>= 32)
+                    {
+                        subHist[0][lo & 0xFF]++;
+                        subHist[1][(lo >> 8) & 0xFF]++;
+                        subHist[2][(lo >> 16) & 0xFF]++;
+                        subHist[3][(lo >> 24) & 0xFF]++;
+                        subHist[0][hi & 0xFF]++;
+                        subHist[1][(hi >> 8) & 0xFF]++;
+                        subHist[2][(hi >> 16) & 0xFF]++;
+                        subHist[3][(hi >> 24) & 0xFF]++;
+                    }
                 }
             }
             for (; x < width; ++x)
@@ -3194,8 +3209,16 @@ public:
 
         cv::AutoLock lock(*histogramLock_);
 
-        for( int i = 0; i < HIST_SZ; i++ )
-            globalHistogram_[i] += subHist[0][i] + subHist[1][i] + subHist[2][i] + subHist[3][i];
+        if (single)
+        {
+            for( int i = 0; i < HIST_SZ; i++ )
+                globalHistogram_[i] += subHist[0][i];
+        }
+        else
+        {
+            for( int i = 0; i < HIST_SZ; i++ )
+                globalHistogram_[i] += subHist[0][i] + subHist[1][i] + subHist[2][i] + subHist[3][i];
+        }
     }
 
     static bool isWorthParallel( const cv::Mat& src )
