@@ -204,7 +204,7 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_16BF || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_32U || inputs[0] == CV_64U || inputs[0] == CV_16F || inputs[0] == CV_16BF || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool, "");
         outputs.assign(1, inputs[0]);
     }
 
