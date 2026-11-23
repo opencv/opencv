@@ -60,7 +60,25 @@ function(ocv_hip_detect_generic _out)
   if(_res EQUAL 0)
     ocv_hip_match_archs("${_out_txt}" "^gfx[0-9]+(-[0-9]+)?-generic$" _archs)
   endif()
-  set(${_out} "${_archs}" PARENT_SCOPE)
+  # the compiler lists targets whose device libraries this ROCm may not ship
+  # (ROCm 10.1: gfx13-generic), so keep only those a kernel can be built for
+  set(_buildable "")
+  if(_archs)
+    set(_probe_dir "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/ocv_hip_arch_probe")
+    file(WRITE "${_probe_dir}/probe.hip" "#include <hip/hip_runtime.h>\n__global__ void k(int* p) { *p = 1; }\n")
+    foreach(_a IN LISTS _archs)
+      execute_process(COMMAND "${CMAKE_HIP_COMPILER}" -x hip --offload-arch=${_a} --offload-device-only
+          -c "${_probe_dir}/probe.hip" -o "${_probe_dir}/probe-${_a}.o"
+        RESULT_VARIABLE _res OUTPUT_QUIET ERROR_QUIET)
+      if(_res EQUAL 0)
+        list(APPEND _buildable "${_a}")
+      else()
+        message(STATUS "HIP: skipping ${_a}, the toolchain cannot build for it")
+      endif()
+    endforeach()
+    file(REMOVE_RECURSE "${_probe_dir}")
+  endif()
+  set(${_out} "${_buildable}" PARENT_SCOPE)
 endfunction()
 
 # Sets CMAKE_HIP_ARCHITECTURES and OCV_HIP_ARCH_FOUND. Must run before enable_language(HIP),
