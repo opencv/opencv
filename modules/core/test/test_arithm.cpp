@@ -3802,9 +3802,12 @@ TEST(Core_MeanStdDev, bool_input)
     EXPECT_EQ(0.5, m[0]);
     EXPECT_EQ(0.5, sd[0]);
 
+    // an all-ones mask selects every element, so it must reproduce the unmasked result
     Mat mask(1, 6, CV_8U, Scalar(1));
-    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
-    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
+    EXPECT_EQ(0.5, cv::mean(src, mask)[0]);
+    meanStdDev(src, m, sd, mask);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
 }
 
 // Related issue : https://github.com/opencv/opencv/issues/26861

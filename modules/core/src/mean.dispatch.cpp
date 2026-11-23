@@ -113,11 +113,11 @@ Scalar mean(InputArray _src, InputArray _mask)
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
-    if (src.depth() == CV_Bool)
+    if (src.depth() == CV_Bool && mask.empty() && src.channels() == 1)
     {
-        // there is no sum kernel for CV_Bool; the mean is the fraction of non-zero elements
-        if (!mask.empty() || src.channels() != 1)
-            CV_Error(Error::StsNotImplemented, "mean: CV_Bool input is supported only with 1 channel and without a mask");
+        // the mean of logical data is the fraction of non-zero elements, and countNonZero is
+        // cheaper than the sum kernels for this case. Masked and multi-channel CV_Bool inputs
+        // fall through to the CV_Bool sum kernels below.
         double n = (double)src.total();
         return Scalar(n > 0 ? countNonZero(src) / n : 0.);
     }
@@ -454,11 +454,11 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
 {
     CV_INSTRUMENT_REGION();
 
-    if (_src.depth() == CV_Bool)
+    if (_src.depth() == CV_Bool && _mask.empty() && _src.channels() == 1)
     {
-        // there is no sum kernel for CV_Bool; for 0/1 data with p = mean, stddev = sqrt(p*(1-p))
-        if (!_mask.empty() || _src.channels() != 1)
-            CV_Error(Error::StsNotImplemented, "meanStdDev: CV_Bool input is supported only with 1 channel and without a mask");
+        // for single-channel 0/1 data with p = mean, stddev = sqrt(p*(1-p)), which countNonZero
+        // gives more cheaply than the sum kernels. Masked and multi-channel CV_Bool inputs fall
+        // through to the CV_Bool sum kernels below.
         double n = (double)_src.total();
         double p = n > 0 ? countNonZero(_src) / n : 0.;
         writeStatResult(_mean, 1, Scalar(p));
