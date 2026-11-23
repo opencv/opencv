@@ -180,6 +180,9 @@ static inline void prindent(std::ostream& strm, int indent)
         strm << ' ';
 }
 
+// Test hook: ops a new-engine net set to DNN_BACKEND_CUDA runs on the CPU, as "name (type)", after the first forward()
+CV_EXPORTS std::vector<std::string> cudaFallbackOps(const Net& net);
+
 CV__DNN_INLINE_NS_END
 
 namespace accessor {

@@ -111,13 +111,15 @@ public:
                 t = netimpl_->argData(inputs[0]).type;
             if (!const_B || trans_a || (t >= 0 && t != CV_32F))
                 return false;
-            // InnerProductOp computes A*B + C: no alpha/beta scaling, and C only as a constant length-N row
-            if (alpha != 1.f || inputs.size() > 1)
+            // InnerProductOp computes A*B + c; alpha/beta fold into the constant B and C in initCUDA
+            if (inputs.size() > 1)
                 return false;
+            // C must be a constant scalar or length-N row
             if (blobs.size() >= 2) {
                 const Mat& C = blobs[1];
                 const int N = trans_b ? blobs[0].size[0] : blobs[0].size[1];
-                if (beta != 1.f || C.dims < 1 || C.total() != (size_t)N || C.size[C.dims - 1] != N)
+                const bool row = C.dims >= 1 && C.total() == (size_t)N && C.size[C.dims - 1] == N;
+                if (C.total() != 1 && !row)
                     return false;
             }
             return true;
@@ -666,6 +668,19 @@ public:
 
         if (!trans_b)
             cv::transpose(B, B);
+        // alpha*A*B + beta*C == A*(alpha*B) + (beta*C); copy before scaling, blobs stay untouched
+        if (alpha != 1.f)
+            B = Mat(B * alpha);
+        if (!C.empty()) {
+            const int N = B.size[0];
+            if (C.total() == 1) {
+                Mat c32;
+                C.convertTo(c32, CV_32F);
+                C = Mat(1, N, CV_32F, Scalar::all(c32.at<float>(0)));
+            }
+            if (beta != 1.f)
+                C = Mat(C * beta);
+        }
         // flatten_a=false keeps A's leading dims as rows, as forward() does: only the last axis is K
         auto flatten_start_axis = flatten_a ? normalize_axis(1, inputs[0].dims) : inputs[0].dims - 1;
         // the fused activation runs on the same stream, right after the GEMM

@@ -14,6 +14,11 @@
 #undef CV_CPU_DISPATCH_MODES_ALL
 
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/grid_sample.hpp"
+#endif
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utility.hpp>
 
@@ -461,8 +466,43 @@ public:
     }
 
     bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            // the kernel reads the grid as float32, which the FP16 target stores as half
+            if (!netimpl_ || this->inputs.size() != 2 || netimpl_->preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
+            // the CUDA kernel is 2-D only; a 5-D volumetric sample stays on CPU
+            const int dims = netimpl_->argData(this->inputs[0]).shape.dims;
+            if (dims >= 0 && dims != 4)
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int gt = netimpl_->argData(this->inputs[1]).type;
+            if (gt >= 0 && gt != CV_32F)
+                return false;
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        CV_CheckDepthEQ(inputs_arr.depth(1), CV_32F, "GridSample: CUDA reads the grid as float");
+        cuda4dnn::kernels::GridSampleParams params;
+        params.mode = mode;
+        params.padding = padding;
+        params.align_corners = align_corners;
+        params.cubic_alpha = cubic_alpha;
+        return make_cuda_node_with_type<cuda4dnn::GridSampleOp>(preferableTarget, inputs_arr.type(0),
+                                                                std::move(context->stream), params);
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int requiredOutputs,

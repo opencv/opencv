@@ -6,6 +6,10 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/size.hpp"
+#endif
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv {
@@ -21,8 +25,22 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        return Ptr<BackendNode>(new cuda4dnn::SizeOp(std::move(context->stream)));
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int requiredOutputs,

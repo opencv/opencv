@@ -613,10 +613,20 @@ public:
                 t = netimpl_->argData(inputs[0]).type;
             if (t >= 0 && t != CV_32F)
                 return false;
-            if (kernel_shape.size() != 2 || outputs.size() != 1)
+            if (outputs.size() != 1)
                 return false;
+#if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
+            // the JIT build pools with a hand kernel that takes 1-D to 3-D windows
+            if (kernel_shape.size() < 1 || kernel_shape.size() > 3)
+                return false;
+#else
+            // cuDNN pooling descriptors need at least two spatial axes
+            if (kernel_shape.size() < 2 || kernel_shape.size() > 3)
+                return false;
+#endif
+            // neither pooling path takes a dilation; any auto_pad resolves to explicit pads in initCUDA
             for (int d : dilations) if (d != 1) return false;
-            return auto_pad == AUTO_PAD_NONE || auto_pad == AUTO_PAD_VALID;
+            return true;
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV;
@@ -638,14 +648,15 @@ public:
         config.window_size.assign(kernel_shape.begin(), kernel_shape.end());
         for (int i = 0; i < nspatial; i++)
             config.strides.push_back(strides.empty() ? 1 : (size_t)strides[i]);
-        config.padMode = (auto_pad == AUTO_PAD_VALID)
-            ? cuda4dnn::PoolingConfiguration::PaddingMode::VALID
-            : cuda4dnn::PoolingConfiguration::PaddingMode::MANUAL;
-        if (config.padMode == cuda4dnn::PoolingConfiguration::PaddingMode::MANUAL) {
-            for (int i = 0; i < nspatial; i++) {
-                config.pads_begin.push_back(pads.empty() ? 0 : (size_t)pads[i]);
-                config.pads_end.push_back(pads.empty() ? 0 : (size_t)pads[i + nspatial]);
-            }
+        // same pad resolution as the CPU path, SAME_UPPER/SAME_LOWER included
+        config.padMode = cuda4dnn::PoolingConfiguration::PaddingMode::MANUAL;
+        for (int i = 0; i < nspatial; i++) {
+            int pad0 = 0, pad1 = 0;
+            getPadding(pads, i, nspatial, auto_pad,
+                       {kernel_shape[i], inShape[i + 2], strides.empty() ? 1 : strides[i], 1},
+                       pad0, pad1);
+            config.pads_begin.push_back((size_t)pad0);
+            config.pads_end.push_back((size_t)pad1);
         }
         config.roundMode = ceil_mode ? cuda4dnn::PoolingConfiguration::RoundingMode::CEIL
                                      : cuda4dnn::PoolingConfiguration::RoundingMode::FLOOR;

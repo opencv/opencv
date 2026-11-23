@@ -12,6 +12,7 @@
 #include "../csl/tensor.hpp"
 
 #include "../kernels/average_pooling.hpp"
+#include "../kernels/reduce.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -58,11 +59,35 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             std::vector<std::int64_t> in_shape(inShape.begin(), inShape.end());
             std::vector<std::int64_t> out_shape(outShape.begin(), outShape.end());
 
+            // a window over every spatial axis without padding is a per-channel mean, which the
+            // reduction kernel spreads over a block per channel instead of one thread per output
+            if (isGlobal(in_shape)) {
+                std::vector<std::int64_t> axes;
+                for (std::size_t k = 2; k < in_shape.size(); k++)
+                    axes.push_back(static_cast<std::int64_t>(k));
+                kernels::reduce_mean<T>(stream, output, input, in_shape, axes);
+                return;
+            }
+
             kernels::average_pool<T>(stream, output, input,
                                      in_shape, out_shape, kernel_shape, strides, pads, dilations, count_include_pad);
         }
 
     private:
+        bool isGlobal(const std::vector<std::int64_t>& in_shape) const
+        {
+            const std::size_t nspatial = kernel_shape.size();
+            if (nspatial == 0 || in_shape.size() != nspatial + 2)
+                return false;
+            for (std::size_t i = 0; i < nspatial; i++)
+                if (kernel_shape[i] != in_shape[2 + i] || (!dilations.empty() && dilations[i] != 1))
+                    return false;
+            for (std::int64_t p : pads)
+                if (p != 0)
+                    return false;
+            return true;
+        }
+
         csl::Stream stream;
         std::vector<std::int64_t> kernel_shape, strides, pads, dilations;
         bool count_include_pad;

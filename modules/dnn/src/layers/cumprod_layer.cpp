@@ -6,6 +6,11 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
+#include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/cum_scan.hpp"
+#endif
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -29,7 +34,44 @@ public:
         setParamsFrom(params);
     }
 
-    bool supportBackend(int backendId) CV_OVERRIDE { return backendId == DNN_BACKEND_OPENCV; }
+    bool supportBackend(int backendId) CV_OVERRIDE
+    {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_ || this->inputs.empty())
+                return false;
+            // the axis is baked into the node, so it must be a constant
+            if (this->inputs.size() > 1 && !netimpl_->isConstArg(this->inputs[1]))
+                return false;
+            // an intermediate arg has no type until the first forward; refuse only a known unsupported one
+            const int t = netimpl_->argData(this->inputs[0]).type;
+            return t < 0 || t == CV_32F || t == CV_16F || t == CV_32S || t == CV_64S;
+        }
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void* context_,
+                              InputArrayOfArrays inputs_arr,
+                              InputArrayOfArrays) CV_OVERRIDE
+    {
+        auto context = reinterpret_cast<cuda4dnn::csl::CSLContext*>(context_);
+        int axis = axis_raw;
+        if (this->inputs.size() > 1) {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            CV_Assert(netimpl_ && netimpl_->isConstArg(this->inputs[1]));
+            std::vector<int> av;
+            tensorToIntVec(netimpl_->argTensor(this->inputs[1]), av);
+            CV_Assert(av.size() == 1);
+            axis = av[0];
+        }
+        return make_cuda_node_with_type<cuda4dnn::CumScanOp>(preferableTarget, inputs_arr.type(0),
+                                                             std::move(context->stream), axis, true,
+                                                             exclusive_raw == 1, reverse_raw == 1);
+    }
+#endif
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs, const int,
                          std::vector<MatShape>& outputs, std::vector<MatShape>&) const CV_OVERRIDE

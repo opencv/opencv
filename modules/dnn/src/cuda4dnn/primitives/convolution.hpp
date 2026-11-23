@@ -354,9 +354,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 builder.require<T>(sz);
             }
 #if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
-            // NHWC staging copies come from the shared workspace, taken before the conv scratchpad
-            builder.require<T>(std::accumulate(std::begin(jitInputShapeCL), std::end(jitInputShapeCL), std::size_t(1), std::multiplies<std::size_t>()));
-            builder.require<T>(std::accumulate(std::begin(jitOutputShapeCL), std::end(jitOutputShapeCL), std::size_t(1), std::multiplies<std::size_t>()));
+            if (!jitInputShapeCL.empty())
+            {
+                // NHWC staging copies come from the shared workspace, taken before the conv scratchpad
+                builder.require<T>(std::accumulate(std::begin(jitInputShapeCL), std::end(jitInputShapeCL), std::size_t(1), std::multiplies<std::size_t>()));
+                builder.require<T>(std::accumulate(std::begin(jitOutputShapeCL), std::end(jitOutputShapeCL), std::size_t(1), std::multiplies<std::size_t>()));
+            }
             builder.require(jitConvoluter.get_workspace_size());
 #else
             builder.require(convoluter.get_workspace_size());
@@ -386,8 +389,12 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             }
 
 #if defined(HAVE_CUDNNJIT) && !defined(HAVE_CUDNN)
-            auto jitInputNHWC  = allocator.get_tensor_span<T>(std::begin(jitInputShapeCL), std::end(jitInputShapeCL));
-            auto jitOutputNHWC = allocator.get_tensor_span<T>(std::begin(jitOutputShapeCL), std::end(jitOutputShapeCL));
+            csl::TensorSpan<T> jitInputNHWC, jitOutputNHWC;
+            if (!jitInputShapeCL.empty())
+            {
+                jitInputNHWC  = allocator.get_tensor_span<T>(std::begin(jitInputShapeCL), std::end(jitInputShapeCL));
+                jitOutputNHWC = allocator.get_tensor_span<T>(std::begin(jitOutputShapeCL), std::end(jitOutputShapeCL));
+            }
 #endif
             auto conv_scratchpad = allocator.get_instance();
 

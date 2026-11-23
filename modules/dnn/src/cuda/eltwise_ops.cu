@@ -355,6 +355,26 @@ void eltwise_pow_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
     eltwise_op<T, PowFunctor<T>>(stream, output, x, y);
 }
 
+template <class T>
+void eltwise_prelu_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> slope) {
+    eltwise_op<T, PReluFunctor<T>>(stream, output, x, slope);
+}
+
+template <class T>
+void eltwise_bitand_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, BitAndFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
+void eltwise_bitor_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, BitOrFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
+void eltwise_bitxor_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, BitXorFunctor<T>>(stream, output, x, y);
+}
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_mod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
@@ -422,5 +442,26 @@ void eltwise_pow_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
     template void eltwise_min_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
     template void eltwise_pow_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template void eltwise_prelu_2(const Stream&, TensorSpan<__half>, TensorView<__half>, TensorView<__half>);
+#endif
+    template void eltwise_prelu_2(const Stream&, TensorSpan<float>, TensorView<float>, TensorView<float>);
+    template void eltwise_prelu_2(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int8_t>);
+    template void eltwise_prelu_2(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<uint8_t>);
+    template void eltwise_prelu_2(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int32_t>);
+    template void eltwise_prelu_2(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int64_t>);
+
+    template void eltwise_bitand_2(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int8_t>);
+    template void eltwise_bitand_2(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<uint8_t>);
+    template void eltwise_bitand_2(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int32_t>);
+    template void eltwise_bitand_2(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int64_t>);
+    template void eltwise_bitor_2(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int8_t>);
+    template void eltwise_bitor_2(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<uint8_t>);
+    template void eltwise_bitor_2(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int32_t>);
+    template void eltwise_bitor_2(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int64_t>);
+    template void eltwise_bitxor_2(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, TensorView<int8_t>);
+    template void eltwise_bitxor_2(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, TensorView<uint8_t>);
+    template void eltwise_bitxor_2(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, TensorView<int32_t>);
+    template void eltwise_bitxor_2(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, TensorView<int64_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
