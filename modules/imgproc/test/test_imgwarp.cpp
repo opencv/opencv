@@ -1280,7 +1280,7 @@ TEST(Imgproc_Remap, bilinear_c1_16bit_fixed_map_sample_order)
     }
 }
 
-typedef testing::TestWithParam<tuple<int, int, Size, int, int> > Imgproc_WarpManyChannels;
+typedef testing::TestWithParam<tuple<int, int, Size, int, int, int> > Imgproc_WarpManyChannels;
 
 TEST_P(Imgproc_WarpManyChannels, cubic_lanczos_many_channels)
 {
@@ -1290,10 +1290,12 @@ TEST_P(Imgproc_WarpManyChannels, cubic_lanczos_many_channels)
     const Size size = get<2>(GetParam());
     const int interpolation = get<3>(GetParam());
     const int border = get<4>(GetParam());
+    const int operation = get<5>(GetParam());
     SCOPED_TRACE(depth);
     SCOPED_TRACE(channels);
     SCOPED_TRACE(interpolation);
     SCOPED_TRACE(border);
+    SCOPED_TRACE(operation);
     Mat storage(size.height + 4, size.width + 6, CV_MAKETYPE(depth, channels));
     const double low = depth == CV_16S ? -32768. : 0.;
     const double high = depth == CV_8U ? 256. : depth == CV_16U ? 65536. : depth == CV_16S ? 32768. : 64.;
@@ -1309,38 +1311,34 @@ TEST_P(Imgproc_WarpManyChannels, cubic_lanczos_many_channels)
     rng.fill(mapy, RNG::UNIFORM, -5.f, float(size.height + 5));
     convertMaps(mapx, mapy, fixed, fractions, CV_16SC2);
     const Scalar fill(3., 11., 29., 47.);
-    for (int operation = 0; operation < 5; ++operation)
+    const auto warp = [&](const Mat& input, Mat& output, const Scalar& value) {
+        if (operation == 0)
+            warpAffine(input, output, affine, outputSize, interpolation | WARP_INVERSE_MAP, border, value);
+        else if (operation == 1)
+            warpPerspective(input, output, perspective, outputSize, interpolation, border, value);
+        else if (operation == 2)
+            remap(input, output, mapx, mapy, interpolation, border, value);
+        else if (operation == 3)
+            remap(input, output, fixed, fractions, interpolation, border, value);
+        else
+            remap(input, output, mapx, mapy, interpolation | WARP_RELATIVE_MAP, border, value);
+    };
+    Mat resultStorage(outputSize.height + 3, outputSize.width + 4, src.type());
+    resultStorage.reshape(1).setTo(17.);
+    Mat result = resultStorage(Rect(1, 2, outputSize.width, outputSize.height));
+    warp(src, result, fill);
+    for (int channel = 0; channel < channels; ++channel)
     {
-        SCOPED_TRACE(operation);
-        const auto warp = [&](const Mat& input, Mat& output, const Scalar& value) {
-            if (operation == 0)
-                warpAffine(input, output, affine, outputSize, interpolation | WARP_INVERSE_MAP, border, value);
-            else if (operation == 1)
-                warpPerspective(input, output, perspective, outputSize, interpolation, border, value);
-            else if (operation == 2)
-                remap(input, output, mapx, mapy, interpolation, border, value);
-            else if (operation == 3)
-                remap(input, output, fixed, fractions, interpolation, border, value);
-            else
-                remap(input, output, mapx, mapy, interpolation | WARP_RELATIVE_MAP, border, value);
-        };
-        Mat resultStorage(outputSize.height + 3, outputSize.width + 4, src.type());
-        resultStorage.reshape(1).setTo(17.);
-        Mat result = resultStorage(Rect(1, 2, outputSize.width, outputSize.height));
-        warp(src, result, fill);
-        for (int channel = 0; channel < channels; ++channel)
-        {
-            Mat plane, referenceInput, expected(outputSize, CV_MAKETYPE(depth, 2), Scalar::all(17.));
-            extractChannel(src, plane, channel);
-            const Mat planes[] = {plane, plane};
-            merge(planes, 2, referenceInput);
-            warp(referenceInput, expected, Scalar::all(fill[channel & 3]));
-            Mat expectedPlane, actualPlane;
-            extractChannel(expected, expectedPlane, 0);
-            extractChannel(result, actualPlane, channel);
-            const double tolerance = depth == CV_32F || depth == CV_64F ? 3e-5 : 1.;
-            ASSERT_LE(cvtest::norm(expectedPlane, actualPlane, NORM_INF), tolerance) << "channel=" << channel;
-        }
+        Mat plane, referenceInput, expected(outputSize, CV_MAKETYPE(depth, 2), Scalar::all(17.));
+        extractChannel(src, plane, channel);
+        const Mat planes[] = {plane, plane};
+        merge(planes, 2, referenceInput);
+        warp(referenceInput, expected, Scalar::all(fill[channel & 3]));
+        Mat expectedPlane, actualPlane;
+        extractChannel(expected, expectedPlane, 0);
+        extractChannel(result, actualPlane, channel);
+        const double tolerance = depth == CV_32F || depth == CV_64F ? 3e-5 : 1.;
+        ASSERT_LE(cvtest::norm(expectedPlane, actualPlane, NORM_INF), tolerance) << "channel=" << channel;
     }
 }
 
@@ -1350,7 +1348,8 @@ INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_WarpManyChannels, testing::Combine(
     testing::Values(Size(1, 1), Size(17, 13)),
     testing::Values(INTER_CUBIC, INTER_LANCZOS4),
     testing::Values(BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_REFLECT_101,
-                    BORDER_WRAP, BORDER_TRANSPARENT)));
+                    BORDER_WRAP, BORDER_TRANSPARENT),
+    testing::Values(0, 1, 2, 3, 4)));
 
 typedef testing::TestWithParam<tuple<int, int>> Imgproc_CubicTightChannelStorage;
 
@@ -1429,72 +1428,78 @@ TEST_P(Imgproc_CubicChannelConsistency, near_rounding_tie)
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicChannelConsistency, testing::Values(5, 9, 12));
 
-typedef testing::TestWithParam<int> Imgproc_CubicPeriodicCoordinates;
+typedef testing::TestWithParam<tuple<int, Size, int>> Imgproc_CubicPeriodicCoordinates;
+
+static Mat makePeriodicSource(Size size, int type)
+{
+    Mat wide(size, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+    for (int y = 0; y < size.height; ++y)
+    for (int x = 0; x < size.width; ++x)
+    for (int channel = 0; channel < wide.channels(); ++channel)
+        wide.ptr<float>(y)[x*wide.channels() + channel] = float(y*8 + x + channel);
+    wide.convertTo(src, CV_MAT_DEPTH(type));
+    return src;
+}
 
 TEST_P(Imgproc_CubicPeriodicCoordinates, accuracy)
 {
-    const int type = GetParam();
+    const int type = get<0>(GetParam());
+    const Size size = get<1>(GetParam());
+    const int border = get<2>(GetParam());
     const float coordinates[] = {33.f, 33.25f, -33.f, -33.25f, 1048576.25f, -1048576.25f,
                                  2147483648.f, -2147483648.f, 1e10f, -1e10f,
                                  std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
-    for (Size size : {Size(4, 3), Size(1, 1)})
-    for (int border : {BORDER_WRAP, BORDER_REFLECT, BORDER_REFLECT_101})
+    SCOPED_TRACE(size);
+    SCOPED_TRACE(border);
+    const Mat src = makePeriodicSource(size, type);
+    const auto reduce = [border](float coordinate, int length) {
+        const int bigSize = std::max(length, 16);
+        const float minCoord = float(-bigSize);
+        const float maxCoord = float(bigSize*2);
+        coordinate = std::clamp(coordinate, minCoord, maxCoord);
+        if (length == 1)
+            return 0.f;
+        const double period = border == BORDER_WRAP ? double(length) :
+                              2.*(length - (border == BORDER_REFLECT_101));
+        return float(std::fmod(double(coordinate), period));
+    };
+    for (float coordinate : coordinates)
+    for (int axis = 0; axis < 2; ++axis)
     {
-        SCOPED_TRACE(size);
-        SCOPED_TRACE(border);
-        Mat wide(size, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
-        for (int y = 0; y < size.height; ++y)
-        for (int x = 0; x < size.width; ++x)
-        for (int channel = 0; channel < wide.channels(); ++channel)
-            wide.ptr<float>(y)[x*wide.channels() + channel] = float(y*8 + x + channel);
-        wide.convertTo(src, CV_MAT_DEPTH(type));
-        const auto reduce = [border](float coordinate, int length) {
-            const int bigSize = std::max(length, 16);
-            const float minCoord = float(-bigSize);
-            const float maxCoord = float(bigSize*2);
-            coordinate = std::clamp(coordinate, minCoord, maxCoord);
-            if (length == 1)
-                return 0.f;
-            const double period = border == BORDER_WRAP ? double(length) :
-                                  2.*(length - (border == BORDER_REFLECT_101));
-            return float(std::fmod(double(coordinate), period));
-        };
-        for (float coordinate : coordinates)
-        for (int axis = 0; axis < 2; ++axis)
+        SCOPED_TRACE(coordinate);
+        SCOPED_TRACE(axis);
+        const float x = axis == 0 ? coordinate : 1.25f;
+        const float y = axis == 1 ? coordinate : 1.25f;
+        Mat mapx(1, 1, CV_32F, Scalar(x)), mapy(1, 1, CV_32F, Scalar(y));
+        Mat expectedX(1, 1, CV_32F, Scalar(reduce(x, size.width)));
+        Mat expectedY(1, 1, CV_32F, Scalar(reduce(y, size.height)));
+        Mat expected;
+        remap(src, expected, expectedX, expectedY, INTER_CUBIC, border);
+        for (int operation = 0; operation < 3; ++operation)
         {
-            SCOPED_TRACE(coordinate);
-            SCOPED_TRACE(axis);
-            const float x = axis == 0 ? coordinate : 1.25f;
-            const float y = axis == 1 ? coordinate : 1.25f;
-            Mat mapx(1, 1, CV_32F, Scalar(x)), mapy(1, 1, CV_32F, Scalar(y));
-            Mat expectedX(1, 1, CV_32F, Scalar(reduce(x, size.width)));
-            Mat expectedY(1, 1, CV_32F, Scalar(reduce(y, size.height)));
-            Mat expected;
-            remap(src, expected, expectedX, expectedY, INTER_CUBIC, border);
-            for (int operation = 0; operation < 3; ++operation)
+            SCOPED_TRACE(operation);
+            Mat actual;
+            if (operation == 0)
+                remap(src, actual, mapx, mapy, INTER_CUBIC, border);
+            else if (operation == 1)
             {
-                SCOPED_TRACE(operation);
-                Mat actual;
-                if (operation == 0)
-                    remap(src, actual, mapx, mapy, INTER_CUBIC, border);
-                else if (operation == 1)
-                {
-                    Mat transform = Mat_<double>({2, 3}, {1., 0., x, 0., 1., y});
-                    warpAffine(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
-                }
-                else
-                {
-                    Mat transform = Mat_<double>({3, 3}, {1., 0., x, 0., 1., y, 0., 0., 1.});
-                    warpPerspective(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
-                }
-                EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-5);
+                Mat transform = Mat_<double>({2, 3}, {1., 0., x, 0., 1., y});
+                warpAffine(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
             }
+            else
+            {
+                Mat transform = Mat_<double>({3, 3}, {1., 0., x, 0., 1., y, 0., 0., 1.});
+                warpPerspective(src, actual, transform, Size(1, 1), INTER_CUBIC | WARP_INVERSE_MAP, border);
+            }
+            EXPECT_LE(cvtest::norm(expected, actual, NORM_INF), 1e-5);
         }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicPeriodicCoordinates, testing::Values(
-    CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9)));
+INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_CubicPeriodicCoordinates, testing::Combine(
+    testing::Values(CV_8UC(5), CV_16UC(5), CV_16SC(5), CV_32FC(5), CV_64FC(5), CV_32FC(9)),
+    testing::Values(Size(4, 3), Size(1, 1)),
+    testing::Values(BORDER_WRAP, BORDER_REFLECT, BORDER_REFLECT_101)));
 
 typedef testing::TestWithParam<int> Imgproc_CubicOutsideSource;
 
