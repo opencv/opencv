@@ -12,6 +12,7 @@
 
 #include "opencv2/core/utils/logger.hpp"
 #include "ops_core.impl.hpp"
+#include "ops_imgproc.impl.hpp"
 
 #include <memory>
 #include <mutex>
@@ -150,7 +151,9 @@ public:
 
     Ops* ops(const char* module) CV_OVERRIDE
     {
-        return strcmp(module, "core") == 0 ? &core_ : 0;
+        if (strcmp(module, "core") == 0)
+            return &core_;
+        return strcmp(module, "imgproc") == 0 ? &imgproc_ : 0;
     }
 
 protected:
@@ -228,6 +231,7 @@ private:
 #endif
 
     GpuCoreOps core_;
+    GpuImgprocOps imgproc_;
 };
 
 } // namespace

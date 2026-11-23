@@ -108,6 +108,33 @@ public:
     virtual bool transpose(const UMat& src, UMat& dst, Stream& stream);
 };
 
+/** @brief Operations of the imgproc module, under the rules of CoreOps. */
+class CV_EXPORTS ImgprocOps : public Ops
+{
+public:
+    /** @brief cv::GaussianBlur of a 2-D UMat with the separable kernels GaussianBlur computes,
+    centred. For CV_8U and CV_16U input they are fixed-point, CV_16U with 8 and CV_32U with 16
+    fraction bits, and the result equals the CPU's bit-exact one; otherwise they are CV_32F.
+    @p borderType has no BORDER_ISOLATED: the input is never read beyond its edges. */
+    virtual bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kernelX, const Mat& kernelY,
+                              int borderType, Stream& stream);
+    /** @brief cv::warpAffine: dst(x, y) = src(M * (x, y, 1)), @p M maps the output to the input.
+    @p interpolation is one of InterpolationFlags, INTER_AREA already turned into INTER_LINEAR. */
+    virtual bool warpAffine(const UMat& src, UMat& dst, const Matx23d& M, int interpolation,
+                            int borderType, const Scalar& borderValue, Stream& stream);
+};
+
+/** @brief For the hooks of cv:: functions: whether the output @p dst of size @p size and type
+@p type may be created on @p device. A region or fixed-size array elsewhere stays where it is and
+the CPU writes it; one of the wrong size or type is left to the CPU code, which reports it. */
+inline bool outputUsable(OutputArray dst, const Device& device, Size size, int type)
+{
+    const UMat& u = dst.getUMatRef();
+    if ((dst.fixedSize() && u.size() != size) || (dst.fixedType() && u.type() != type))
+        return false;
+    return getDevice(u) == device || !(dst.fixedSize() || u.isSubmatrix());
+}
+
 /** @brief An accelerator runtime: its devices, their memory, streams and operations.
 
 OpenCV calls a backend from any thread, so its methods must be thread-safe. */

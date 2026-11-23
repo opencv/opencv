@@ -8,7 +8,7 @@
 // kernels.cu. Elements are moved as opaque groups of bytes, so one kernel serves every type of
 // the same element size.
 
-#include "kernels.hpp"
+#include "device.hpp"
 
 namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 
@@ -24,11 +24,7 @@ template<int N> struct alignas(elemAlign(N)) Elem { unsigned char b[N]; };
 // the same bytes at any alignment, for rows whose start or step is not a multiple of that
 template<int N> struct Bytes { unsigned char b[N]; };
 
-const int BLOCK_X = 32, BLOCK_Y = 8;
 const int TILE = 32;
-
-// gridDim.y is at most 65535: taller images are covered by a loop over y
-const unsigned MAX_GRID_Y = 65535;
 
 inline bool aligned(const void* src, size_t sstep, const void* dst, size_t dstep, size_t a)
 {
@@ -108,12 +104,6 @@ __global__ void transposeInplaceKernel(unsigned char* data, size_t step, int n)
         *a = *b;
         *b = t;
     }
-}
-
-static inline dim3 grid(int rows, int cols, int bx, int by)
-{
-    const unsigned gy = (unsigned)((rows + by - 1) / by);
-    return dim3((unsigned)((cols + bx - 1) / bx), gy < MAX_GRID_Y ? gy : MAX_GRID_Y);
 }
 
 // LaunchKernel returns the status of this launch, where GetLastError() after <<<>>> would

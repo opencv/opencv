@@ -480,15 +480,6 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
-// a region or fixed-size output elsewhere stays there; the CPU writes it
-static bool accelOutputUsable(OutputArray _dst, const accel::Device& device, Size size, int type)
-{
-    const UMat& dst = _dst.getUMatRef();
-    if ((_dst.fixedSize() && dst.size() != size) || (_dst.fixedType() && dst.type() != type))
-        return false;   // the CPU path reports the mismatch
-    return accel::getDevice(dst) == device || !(_dst.fixedSize() || dst.isSubmatrix());
-}
-
 static bool accel_transpose(InputArray _src, OutputArray _dst)
 {
     if (!_src.isUMat() || !_dst.isUMat() || _src.empty())
@@ -496,7 +487,7 @@ static bool accel_transpose(InputArray _src, OutputArray _dst)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputUsable(_dst, device, Size(src.rows, src.cols), src.type()))
+    if (device.empty() || !accel::outputUsable(_dst, device, Size(src.rows, src.cols), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();
@@ -1070,7 +1061,7 @@ static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputUsable(_dst, device, src.size(), src.type()))
+    if (device.empty() || !accel::outputUsable(_dst, device, src.size(), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();

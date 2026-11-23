@@ -2,8 +2,9 @@ Non-CPU HAL: accelerators behind cv:: functions {#non_cpu_hal}
 ===============================================
 
 UMat data can be placed on an accelerator, such as a discrete GPU, an integrated GPU or an NPU.
-A cv:: function with an accelerator hook (cv::flip and cv::transpose in this version) runs on the
-device of its input UMat if the device's backend implements it, and on the CPU otherwise. Either
+A cv:: function with an accelerator hook (cv::flip, cv::transpose, cv::GaussianBlur and
+cv::warpAffine in this version) runs on the device of its input UMat if the device's backend
+implements it, and on the CPU otherwise. Either
 way its output is created on the device, so a pipeline of such functions stays where its data
 is. Functions without a hook run on the CPU and create regular UMats for their outputs.
 
@@ -157,14 +158,17 @@ theirs with `cv::accel::registerBackend()`.
   device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
-  and `transpose`, in place too. Its kernels and runtime calls (`hal/gpu/src/`) are written
-  once for the CUDA and HIP runtimes.
+  and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
+  and 16U) and `warpAffine` with nearest and linear interpolation. Its kernels and runtime calls
+  (`hal/gpu/src/`) are written once for the CUDA and HIP runtimes: per module an operations file
+  (`ops_<module>.impl.hpp`) and a kernels file (`kernels_<module>.impl.hpp`), the kernels built
+  from the device functions of `device.hpp` (border indices, saturation, launch geometry).
 
 Adding an operation
 -------------------
 
 1. Add a virtual method, returning false by default, to the module's interface (`CoreOps` for
-   core).
+   core, `ImgprocOps` for imgproc).
 2. Add the hook to the function, before `CV_OCL_RUN`:
 
 ```cpp
@@ -175,7 +179,7 @@ static bool accel_flip(InputArray _src, OutputArray _dst, int flipCode)
 
     const UMat src = _src.getUMat();
     accel::Device device = accel::getDevice(src);
-    if (device.empty() || !accelOutputUsable(_dst, device, src.size(), src.type()))
+    if (device.empty() || !accel::outputUsable(_dst, device, src.size(), src.type()))
         return false;
 
     UMat& dst = _dst.getUMatRef();
@@ -210,4 +214,6 @@ addresses the CPU cannot use, memory the CPU addresses, and a second device of t
 transfers between devices. Its streams run work on a thread of their own, after an optional
 delay, so a missing wait shows up as wrong data, and work on freed memory or on another device's
 memory is counted. The `Core_Accel_CUDA` tests run when a CUDA device is present, and
-`perf_accel.cpp` measures flip and transpose there.
+`perf_accel.cpp` measures flip and transpose there. The `Imgproc_Accel` tests compare GaussianBlur
+and warpAffine with the CPU on every device of the build, and imgproc's `perf_accel.cpp` measures
+them on the first one.

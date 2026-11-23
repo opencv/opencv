@@ -25,6 +25,8 @@ Backend::~Backend() {}
 
 bool CoreOps::flip(const UMat&, UMat&, int, Stream&) { return false; }
 bool CoreOps::transpose(const UMat&, UMat&, Stream&) { return false; }
+bool ImgprocOps::gaussianBlur(const UMat&, UMat&, const Mat&, const Mat&, int, Stream&) { return false; }
+bool ImgprocOps::warpAffine(const UMat&, UMat&, const Matx23d&, int, int, const Scalar&, Stream&) { return false; }
 
 void* Backend::hostAddress(int, void*) { return 0; }
 Ops* Backend::ops(const char*) { return 0; }

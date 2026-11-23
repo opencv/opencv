@@ -6,3 +6,4 @@
 
 // Non-CPU HAL: the kernels of the CUDA backend, the same source as HIP's.
 #include "kernels_core.impl.hpp"
+#include "kernels_imgproc.impl.hpp"
