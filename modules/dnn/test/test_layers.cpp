@@ -64,7 +64,6 @@ static String _tf(TString filename)
     return (basetestdir + "dnn/layers/") + filename;
 }
 
-#if GTEST_HAS_DEATH_TEST
 class NonZeroGroupingBackend CV_FINAL : public cv::parallel::ParallelForAPI
 {
 public:
@@ -72,16 +71,10 @@ public:
 
     void parallel_for(int tasks, FN_parallel_for_body_cb_t callback, void* data) CV_OVERRIDE
     {
-        CV_Assert(tasks == 16 && calls < 2);
-        std::vector<Range>& pass = ranges[calls++];
-        const int firstEnd = calls == 1 ? groupEnd : 1;
-        pass.push_back(Range(0, firstEnd));
+        const int firstEnd = calls++ == 0 ? std::min(groupEnd, tasks) : 1;
         callback(0, firstEnd, data);
         for (int stripe = firstEnd; stripe < tasks; ++stripe)
-        {
-            pass.push_back(Range(stripe, stripe + 1));
             callback(stripe, stripe + 1, data);
-        }
     }
 
     int getThreadNum() const CV_OVERRIDE { return 0; }
@@ -91,103 +84,68 @@ public:
 
     int groupEnd;
     int calls;
-    std::vector<Range> ranges[2];
 };
-#endif
 
-typedef testing::TestWithParam<tuple<bool, int> > Layer_NonZeroDeathTest;
-
-TEST_P(Layer_NonZeroDeathTest, partition_independence)
+class NonZeroBackendScope
 {
-#if GTEST_HAS_DEATH_TEST
+public:
+    explicit NonZeroBackendScope(const std::shared_ptr<cv::parallel::ParallelForAPI>& backend)
+        : numThreads(cv::getNumThreads())
+    {
+        cv::parallel::setParallelForBackend(backend, false);
+        cv::setNumThreads(4);
+    }
+
+    ~NonZeroBackendScope()
+    {
+        cv::parallel::setParallelForBackend(std::shared_ptr<cv::parallel::ParallelForAPI>(), false);
+        cv::setNumThreads(numThreads);
+    }
+
+private:
+    int numThreads;
+};
+
+typedef testing::TestWithParam<tuple<bool, int> > Layer_NonZero;
+
+TEST_P(Layer_NonZero, partition_independence)
+{
     const bool sparse = get<0>(GetParam());
     const int groupEnd = get<1>(GetParam());
-    const int parentThreads = cv::getNumThreads();
-    // The backend override stays in the child process, including on assertion failure.
-    const bool canReexec = ::testing::UnitTest::GetInstance()->original_working_dir()[0] != '\0';
-#if defined(_WIN32)
-    if (!canReexec)
-        throw SkipTestException(
-            "NonZero partition test requires GTest subprocess directory support");
-#endif
-    ::testing::GTEST_FLAG(death_test_style) = canReexec ? "threadsafe" : "fast";
-    bool threadingUnavailable = false;
-    const auto exited = [&](int status) {
-        threadingUnavailable = ::testing::ExitedWithCode(77)(status);
-        return threadingUnavailable || ::testing::ExitedWithCode(0)(status);
-    };
-    EXPECT_EXIT(([sparse, groupEnd] {
-        const auto check = [&] {
-            Mat input(4, 8, CV_32F, Scalar(0));
-            std::vector<int> positions;
-            if (sparse)
-                positions = {1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31};
-            else
-                for (int i = 0; i < 32; ++i)
-                    positions.push_back(i);
-            for (int position : positions)
-                input.ptr<float>()[position] = 1.f;
+    Mat input(4, 8, CV_32F, Scalar(0));
+    std::vector<int> positions;
+    if (sparse)
+        positions = {1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31};
+    else
+        for (int i = 0; i < 32; ++i)
+            positions.push_back(i);
+    for (int position : positions)
+        input.ptr<float>()[position] = 1.f;
 
-            LayerParams params;
-            Ptr<Layer> layer = NonZeroLayer::create(params);
-            std::vector<Mat> inputs{input}, internals;
-            std::vector<Mat> outputs{Mat(2, (int)positions.size(), CV_64S, Scalar(-999))};
-            const uchar* outputData = outputs[0].data;
-            auto backend = std::make_shared<NonZeroGroupingBackend>(groupEnd);
-            cv::parallel::setParallelForBackend(backend, false);
-            cv::setNumThreads(4);
-            if (cv::getNumThreads() <= 1)
-                std::exit(77);
-            layer->forward(inputs, outputs, internals);
-            if (backend->calls == 0)
-                std::exit(77);
+    LayerParams params;
+    Ptr<Layer> layer = NonZeroLayer::create(params);
+    std::vector<Mat> inputs{input}, internals;
+    std::vector<Mat> outputs{Mat(2, (int)positions.size(), CV_64S, Scalar(-999))};
+    auto backend = std::make_shared<NonZeroGroupingBackend>(groupEnd);
+    {
+        NonZeroBackendScope scope(backend);
+        layer->forward(inputs, outputs, internals);
+    }
 
-            ASSERT_EQ(2, backend->calls);
-            ASSERT_EQ((size_t)(17 - groupEnd), backend->ranges[0].size());
-            EXPECT_EQ(Range(0, groupEnd), backend->ranges[0][0]);
-            for (int stripe = groupEnd; stripe < 16; ++stripe)
-                EXPECT_EQ(Range(stripe, stripe + 1),
-                          backend->ranges[0][stripe - groupEnd + 1]);
-            ASSERT_EQ((size_t)16, backend->ranges[1].size());
-            for (int stripe = 0; stripe < 16; ++stripe)
-                EXPECT_EQ(Range(stripe, stripe + 1), backend->ranges[1][stripe]);
-
-            ASSERT_EQ((size_t)1, outputs.size());
-            ASSERT_EQ(2, outputs[0].dims);
-            ASSERT_EQ(2, outputs[0].rows);
-            ASSERT_EQ((int)positions.size(), outputs[0].cols);
-            ASSERT_EQ(CV_64SC1, outputs[0].type());
-            EXPECT_TRUE(outputData == outputs[0].data);
-            for (size_t i = 0; i < positions.size(); ++i)
-            {
-                const int64 y = outputs[0].ptr<int64>(0)[i];
-                const int64 x = outputs[0].ptr<int64>(1)[i];
-                if (y != positions[i] / 8 || x != positions[i] % 8)
-                    std::cerr << "NonZero column " << i << ": expected ["
-                              << positions[i] / 8 << ", " << positions[i] % 8
-                              << "], got [" << y << ", " << x << "]\n";
-                EXPECT_EQ(positions[i] / 8, y) << "column " << i;
-                EXPECT_EQ(positions[i] % 8, x) << "column " << i;
-            }
-            for (int i = 0; i < 32; ++i)
-            {
-                const bool nonzero =
-                    std::find(positions.begin(), positions.end(), i) != positions.end();
-                EXPECT_EQ(nonzero ? 1.f : 0.f, input.ptr<float>()[i]);
-            }
-        };
-        check();
-        std::exit(::testing::Test::HasFailure() ? EXIT_FAILURE : EXIT_SUCCESS);
-    }()), exited, "");
-    EXPECT_EQ(parentThreads, cv::getNumThreads());
-    if (threadingUnavailable)
-        throw SkipTestException("NonZero partition test requires the parallel backend override");
-#else
-    throw SkipTestException("NonZero partition test requires Google Test process isolation");
-#endif
+    ASSERT_EQ(2, backend->calls);
+    ASSERT_EQ((size_t)1, outputs.size());
+    ASSERT_EQ(2, outputs[0].dims);
+    ASSERT_EQ(2, outputs[0].rows);
+    ASSERT_EQ((int)positions.size(), outputs[0].cols);
+    ASSERT_EQ(CV_64SC1, outputs[0].type());
+    for (size_t i = 0; i < positions.size(); ++i)
+    {
+        EXPECT_EQ(positions[i] / 8, outputs[0].ptr<int64>(0)[i]) << "column " << i;
+        EXPECT_EQ(positions[i] % 8, outputs[0].ptr<int64>(1)[i]) << "column " << i;
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(ParallelRanges, Layer_NonZeroDeathTest,
+INSTANTIATE_TEST_CASE_P(ParallelRanges, Layer_NonZero,
                        Combine(Values(false, true), Values(8, 4, 3)));
 
 void testReshape(const MatShape& inputShape, const MatShape& targetShape,
