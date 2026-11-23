@@ -29,18 +29,6 @@ void filterDepth16f(const Mat& src, Mat& dst, const Mat& kernel, const std::vect
     CV_CPU_DISPATCH(filterDepth16f, (src, dst, kernel, planes), CV_CPU_DISPATCH_MODES_ALL);
 }
 
-void roundToUint8(const Mat& src, Mat& dst)
-{
-    const int rowSize = src.cols * src.channels();
-    for (int y = 0; y < src.rows; ++y)
-    {
-        const float* in = src.ptr<float>(y);
-        uchar* out = dst.ptr<uchar>(y);
-        for (int i = 0; i < rowSize; ++i)
-            out[i] = static_cast<uchar>(std::min(std::max(0.f, in[i]), 255.f) + 0.5f);
-    }
-}
-
 bool isIdentity(const Mat& kernel)
 {
     return kernel.total() == 1 && kernel.ptr<float>()[0] == 1.f;
@@ -126,10 +114,8 @@ void sepFilter3D(InputArray _src, OutputArray _dst,
                             borderType | BORDER_ISOLATED);
             }
 
-            if (depth == CV_8U)
-                roundToUint8(work, out);
-            else if (depth == CV_16F)
-                work.convertTo(out, CV_16F);
+            if (depth != CV_32F)
+                work.convertTo(out, depth);
         }
     });
 }

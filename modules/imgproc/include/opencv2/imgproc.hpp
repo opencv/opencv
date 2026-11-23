@@ -1515,7 +1515,8 @@ dimensions (D, H, W), or a single-channel 4-dimensional Mat with dimensions (D, 
 In Python, plain NumPy arrays of either shape are accepted. The channel count must not exceed
 CV_CN_MAX.
 @param dst Volume with the same shape and type as src. Filtering uses float32 intermediates.
-CV_8U results are clamped to [0, 255] and rounded to the nearest integer, with halves rounded up.
+CV_8U results are converted once at the end, as by Mat::convertTo: clamped to [0, 255] and
+rounded to the nearest integer, with halves rounded to even.
 @param kernelZ Float32 row or column vector of finite coefficients with odd positive length.
 @param kernelY Height kernel, with the same constraints as kernelZ.
 @param kernelX Width kernel, with the same constraints as kernelZ.

@@ -89,7 +89,7 @@ TEST_P(Imgproc_SepFilter3D, independentKernels)
                                                 input.ptr<uchar>(iz, iy)[ix * cn + c];
                             }
                     if (depth == CV_8U)
-                        expected = std::floor(std::min(std::max(0., expected), 255.) + 0.5);
+                        expected = saturate_cast<uchar>(expected);
                     else if (depth == CV_16F)
                         expected = static_cast<float>(hfloat(static_cast<float>(expected)));
                     EXPECT_EQ(static_cast<float>(expected), actual.ptr<float>(z, y)[x * cn + c]);
@@ -103,16 +103,19 @@ INSTANTIATE_TEST_CASE_P(, Imgproc_SepFilter3D,
 
 TEST(Imgproc_SepFilter3D_Uint8, roundsAfterAllPasses)
 {
-    const int shape[] = {1, 1, 3};
-    uchar values[] = {1, 17, 255};
+    const int shape[] = {1, 1, 5};
+    uchar values[] = {1, 2, 3, 6, 255};
     Mat src(3, shape, CV_8U, values);
     const Mat1f half(1, 1, 0.5f), twice(1, 1, 2.f);
 
     sepFilter3D(src, src, half, half, twice);
 
-    EXPECT_EQ(1, values[0]);
-    EXPECT_EQ(9, values[1]);
-    EXPECT_EQ(128, values[2]);
+    // Rounding after each pass would give {0, 0, 2, 4, 128}.
+    EXPECT_EQ(0, values[0]);
+    EXPECT_EQ(1, values[1]);
+    EXPECT_EQ(2, values[2]);
+    EXPECT_EQ(3, values[3]);
+    EXPECT_EQ(128, values[4]);
 }
 
 class CV_FilterBaseTest : public cvtest::ArrayTest
