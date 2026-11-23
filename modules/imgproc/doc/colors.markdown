@@ -13,7 +13,7 @@ order, conversion to/from 16-bit RGB color (R5:G6:B5 or R5:G5:B5), as well as co
 to/from grayscale using:
 \f[\text{RGB[A] to Gray:} \quad Y  \leftarrow 0.299  \cdot R + 0.587  \cdot G + 0.114  \cdot B\f]
 and
-\f[\text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow \max (ChannelRange)\f]
+\f[\text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow \max(\mathit{ChannelRange})\f]
 The conversion from a RGB image to gray is done with:
 @code
     cvtColor(src, bwsrc, cv::COLOR_RGB2GRAY);
