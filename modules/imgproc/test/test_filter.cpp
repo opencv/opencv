@@ -43,6 +43,78 @@
 
 namespace opencv_test { namespace {
 
+typedef testing::TestWithParam<tuple<int, int, bool, int> > Imgproc_SepFilter3D;
+
+TEST_P(Imgproc_SepFilter3D, independentKernels)
+{
+    const int depth = get<0>(GetParam());
+    const int cn = get<1>(GetParam());
+    const bool explicitChannels = get<2>(GetParam());
+    const int borderType = get<3>(GetParam());
+    const int shape[] = {4, 2, 5, cn};
+    const int dims = explicitChannels ? 4 : 3;
+    const int channels = explicitChannels ? 1 : cn;
+    Mat input(dims, shape, CV_MAKETYPE(CV_8U, channels));
+    theRNG().fill(input, RNG::UNIFORM, 0, 24);
+
+    Mat src;
+    input.convertTo(src, depth);
+    const Mat1f kernelZ({1, 5}, {0.0625f, 0.125f, 0.25f, 0.5f, 0.0625f});
+    const Mat1f kernelY({3, 1}, {0.25f, 0.25f, 0.5f});
+    const Mat1f kernelX({1, 3}, {-0.5f, 1.f, 0.5f});
+
+    Mat result;
+    sepFilter3D(src, result, kernelZ, kernelY, kernelX, borderType);
+    ASSERT_EQ(result.type(), src.type());
+    ASSERT_TRUE(result.size == src.size);
+
+    Mat actual;
+    result.convertTo(actual, CV_32F);
+    for (int z = 0; z < shape[0]; ++z)
+        for (int y = 0; y < shape[1]; ++y)
+            for (int x = 0; x < shape[2]; ++x)
+                for (int c = 0; c < cn; ++c)
+                {
+                    double expected = 0.;
+                    for (int kz = 0; kz < 5; ++kz)
+                        for (int ky = 0; ky < 3; ++ky)
+                            for (int kx = 0; kx < 3; ++kx)
+                            {
+                                const int iz = borderInterpolate(z + kz - 2, shape[0], borderType);
+                                const int iy = borderInterpolate(y + ky - 1, shape[1], borderType);
+                                const int ix = borderInterpolate(x + kx - 1, shape[2], borderType);
+                                if (iz >= 0 && iy >= 0 && ix >= 0)
+                                    expected += static_cast<double>(kernelZ(0, kz)) *
+                                                kernelY(ky, 0) * kernelX(0, kx) *
+                                                input.ptr<uchar>(iz, iy)[ix * cn + c];
+                            }
+                    if (depth == CV_8U)
+                        expected = std::floor(std::min(std::max(0., expected), 255.) + 0.5);
+                    else if (depth == CV_16F)
+                        expected = static_cast<float>(hfloat(static_cast<float>(expected)));
+                    EXPECT_EQ(static_cast<float>(expected), actual.ptr<float>(z, y)[x * cn + c]);
+                }
+}
+
+INSTANTIATE_TEST_CASE_P(, Imgproc_SepFilter3D,
+    testing::Combine(testing::Values(CV_8U, CV_16F, CV_32F), testing::Values(1, 3, 9),
+                     testing::Bool(), testing::Values(BORDER_CONSTANT, BORDER_REPLICATE,
+                                                       BORDER_REFLECT, BORDER_REFLECT_101)));
+
+TEST(Imgproc_SepFilter3D_Uint8, roundsAfterAllPasses)
+{
+    const int shape[] = {1, 1, 3};
+    uchar values[] = {1, 17, 255};
+    Mat src(3, shape, CV_8U, values);
+    const Mat1f half(1, 1, 0.5f), twice(1, 1, 2.f);
+
+    sepFilter3D(src, src, half, half, twice);
+
+    EXPECT_EQ(1, values[0]);
+    EXPECT_EQ(9, values[1]);
+    EXPECT_EQ(128, values[2]);
+}
+
 class CV_FilterBaseTest : public cvtest::ArrayTest
 {
 public:

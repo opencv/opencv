@@ -1503,6 +1503,30 @@ CV_EXPORTS_W void sepFilter2D( InputArray src, OutputArray dst, int ddepth,
                                Point anchor = Point(-1,-1),
                                double delta = 0, int borderType = BORDER_DEFAULT );
 
+/** @brief Applies a separable linear filter along the depth, height and width of a volume.
+
+Each channel is filtered independently. The centered kernels are used for correlation without
+reversing their coefficients. A kernel containing only 1 leaves its axis unchanged. Volumes
+that share storage with the destination are supported. Borders are extrapolated from the
+supplied volume, even when it is a submatrix.
+
+@param src Volume of depth CV_8U, CV_16F or CV_32F. Pass a 3-dimensional Mat with
+dimensions (D, H, W), or a single-channel 4-dimensional Mat with dimensions (D, H, W, C).
+In Python, plain NumPy arrays of either shape are accepted. The channel count must not exceed
+CV_CN_MAX.
+@param dst Volume with the same shape and type as src. Filtering uses float32 intermediates.
+CV_8U results are clamped to [0, 255] and rounded to the nearest integer, with halves rounded up.
+@param kernelZ Float32 row or column vector of finite coefficients with odd positive length.
+@param kernelY Height kernel, with the same constraints as kernelZ.
+@param kernelX Width kernel, with the same constraints as kernelZ.
+@param borderType Extrapolation mode. BORDER_CONSTANT (zero), BORDER_REPLICATE,
+BORDER_REFLECT and BORDER_REFLECT_101 are supported.
+@sa sepFilter2D, getGaussianKernel
+ */
+CV_EXPORTS_W void sepFilter3D( CV_ND InputArray src, CV_ND OutputArray dst,
+                              InputArray kernelZ, InputArray kernelY, InputArray kernelX,
+                              int borderType = BORDER_DEFAULT );
+
 /** @example samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 Sample code using Sobel and/or Scharr OpenCV functions to make a simple Edge Detector
 ![Sample screenshot](Sobel_Derivatives_Tutorial_Result.jpg)
