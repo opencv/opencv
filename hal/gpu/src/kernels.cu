@@ -5,4 +5,4 @@
 // Third party copyrights are property of their respective owners.
 
 // Non-CPU HAL: the kernels of the CUDA backend, the same source as HIP's.
-#include "../accel/gpu/gpu_kernels.impl.hpp"
+#include "kernels_core.impl.hpp"

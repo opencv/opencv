@@ -1026,6 +1026,13 @@ endforeach()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/custom_hal.hpp" @ONLY)
 unset(_hal_includes)
 
+# Non-CPU HAL: the GPU backends of cv::accel. Unlike the HAL above they are chosen at run time
+# and keep the devices, so only opencv_core links them (OPENCV_ACCEL_GPU_LIBRARIES).
+set(OPENCV_ACCEL_GPU_LIBRARIES "")
+if(HAVE_CUDA)
+  add_subdirectory(hal/gpu)
+endif()
+
 
 # ----------------------------------------------------------------------------
 # Code trace support

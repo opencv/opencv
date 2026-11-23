@@ -11,6 +11,10 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/tls.hpp"
 
+#ifdef HAVE_CUDA
+#include "accel_gpu.hpp"    // the backends of hal/gpu
+#endif
+
 #include <deque>
 
 namespace cv { namespace accel {

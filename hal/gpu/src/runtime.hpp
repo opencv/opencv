@@ -4,8 +4,8 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_CORE_SRC_ACCEL_GPU_RUNTIME_HPP
-#define OPENCV_CORE_SRC_ACCEL_GPU_RUNTIME_HPP
+#ifndef OPENCV_HAL_GPU_RUNTIME_HPP
+#define OPENCV_HAL_GPU_RUNTIME_HPP
 
 // CUDA and HIP backends are one source: HIP when CV_ACCEL_GPU_HIP is defined, CUDA otherwise.
 // CV_GPU(X) is cudaX or hipX; names that differ by more than the prefix are spelled out here.
@@ -45,4 +45,4 @@ typedef cudaDeviceAttr cvGpuDeviceAttr;
 #  define CV_ACCEL_GPU_HAVE_POOLS 1
 #endif
 
-#endif // OPENCV_CORE_SRC_ACCEL_GPU_RUNTIME_HPP
+#endif // OPENCV_HAL_GPU_RUNTIME_HPP

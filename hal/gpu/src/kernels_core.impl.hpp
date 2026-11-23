@@ -4,11 +4,11 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: kernels of the GPU backends (core operations), compiled once per runtime, for
-// CUDA by src/cuda/accel_kernels.cu. Elements are moved as opaque
-// groups of bytes, so one kernel serves every type of the same element size.
+// Non-CPU HAL: the core kernels of the GPU backends, compiled once per runtime, for CUDA by
+// kernels.cu. Elements are moved as opaque groups of bytes, so one kernel serves every type of
+// the same element size.
 
-#include "gpu_kernels.hpp"
+#include "kernels.hpp"
 
 namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 

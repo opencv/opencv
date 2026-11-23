@@ -4,13 +4,13 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_CORE_SRC_ACCEL_GPU_KERNELS_HPP
-#define OPENCV_CORE_SRC_ACCEL_GPU_KERNELS_HPP
+#ifndef OPENCV_HAL_GPU_KERNELS_HPP
+#define OPENCV_HAL_GPU_KERNELS_HPP
 
-#include "gpu_runtime.hpp"
+#include "runtime.hpp"
 #include <stddef.h>
 
-// Kernels of the CUDA and HIP backends (gpu_kernels.impl.hpp), launched on @p s. Elements are
+// Kernels of the CUDA and HIP backends (kernels_*.impl.hpp), launched on @p s. Elements are
 // @p esz bytes (supportedElementSize), rows are @p sstep / @p dstep / @p step bytes apart.
 namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 
@@ -29,4 +29,4 @@ CV_GPU(Error_t) transposeInplace(unsigned char* data, size_t step, int n, int es
 
 }}}} // namespace cv::accel::CV_GPU_NS::kernels
 
-#endif // OPENCV_CORE_SRC_ACCEL_GPU_KERNELS_HPP
+#endif // OPENCV_HAL_GPU_KERNELS_HPP

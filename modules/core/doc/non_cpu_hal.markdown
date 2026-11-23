@@ -145,16 +145,19 @@ The rules:
   have finished when it returns; device-to-device copies may still run.
 * Methods are called from any thread.
 
-A built-in backend registers itself in `registry.cpp`; tests register theirs with
-`cv::accel::registerBackend()`.
+A built-in backend lives in `hal/<name>/`, as the CPU HAL's implementations do, and is built as
+a static library that opencv_core links: unlike the CPU HAL, which is chosen at build time and
+linked into every module, a backend is picked at run time and keeps the devices, so the other
+modules reach it through core. Core's `registry.cpp` creates the built-in backends; tests register
+theirs with `cv::accel::registerBackend()`.
 
 ### Backends in OpenCV
 
-* CUDA (`src/accel/backend_cuda.cpp`), built in when OpenCV is built with CUDA. Discrete GPUs use
+* CUDA (`hal/gpu`), built in when OpenCV is built with CUDA. Discrete GPUs use
   device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
-  and `transpose`, in place too. Its kernels and runtime calls (`src/accel/gpu/`) are written
+  and `transpose`, in place too. Its kernels and runtime calls (`hal/gpu/src/`) are written
   once for the CUDA and HIP runtimes.
 
 Adding an operation

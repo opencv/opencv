@@ -181,6 +181,12 @@ if(CV_CLANG_CL AND AARCH64)
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/persistence.cpp" PROPERTIES COMPILE_OPTIONS "/O1")
 endif()
 
+# the GPU backends of the non-CPU HAL (hal/gpu), linked into core alone: it keeps the devices
+if(OPENCV_ACCEL_GPU_LIBRARIES)
+  ocv_module_include_directories("${OpenCV_SOURCE_DIR}/hal/gpu/include")
+  list(APPEND extra_libs ${OPENCV_ACCEL_GPU_LIBRARIES})
+endif()
+
 ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
