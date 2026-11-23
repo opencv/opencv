@@ -627,8 +627,9 @@ TEST(Objdetect_QRCode_Encode_Decode_Long_Text, regression_issue27183)
     EXPECT_EQ(input, decoded_msg);
 }
 
+// These tests are not in Objdetect_QRCode_Encode, because that test case uses TEST_P and the two macros cannot be mixed.
 // The version must be in [0, 40], and larger values used to crash or hang the encoder.
-TEST(Objdetect_QRCode_Encode, invalid_version_throws)
+TEST(Objdetect_QRCode_Encode_Params, invalid_version_throws)
 {
     for (int version : {-1, 41, 100, 255})
     {
@@ -638,7 +639,7 @@ TEST(Objdetect_QRCode_Encode, invalid_version_throws)
     }
 }
 
-TEST(Objdetect_QRCode_Encode, invalid_correction_level_throws)
+TEST(Objdetect_QRCode_Encode_Params, invalid_correction_level_throws)
 {
     for (int level : {-1, 4, 100})
     {
@@ -648,7 +649,7 @@ TEST(Objdetect_QRCode_Encode, invalid_correction_level_throws)
     }
 }
 
-TEST(Objdetect_QRCode_Encode, valid_parameter_limits)
+TEST(Objdetect_QRCode_Encode_Params, valid_parameter_limits)
 {
     const QRCodeEncoder::CorrectionLevel levels[] = {QRCodeEncoder::CORRECT_LEVEL_L, QRCodeEncoder::CORRECT_LEVEL_M,
                                                      QRCodeEncoder::CORRECT_LEVEL_Q, QRCodeEncoder::CORRECT_LEVEL_H};
