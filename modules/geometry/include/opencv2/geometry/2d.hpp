@@ -507,6 +507,10 @@ CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
 /** @overload
+ * @param contour1 First contour or grayscale image.
+ * @param contour2 Second contour or grayscale image.
+ * @param method Comparison method, see #ShapeMatchModes
+ * @param parameter Reserved for method-specific use. Currently ignored.
  * @param eps Finite, non-negative threshold on the absolute Hu moments. Use zero to
  * include every pair for which both moments are nonzero.
  */
