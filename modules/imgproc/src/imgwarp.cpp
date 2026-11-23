@@ -3440,24 +3440,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         else
         {
             double Kmag = maxRadius / dsize.width;
-            rho = 0;
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-            {
-                const v_float64 vK = vx_setall_f64(Kmag);
-                const int vl32 = VTraits<v_float32>::vlanes();
-                const int vl64 = VTraits<v_float64>::vlanes();
-                double idx[VTraits<v_float32>::max_nlanes];
-                for (; rho <= dsize.width - vl32; rho += vl32)
-                {
-                    for (int i = 0; i < vl32; i++)
-                        idx[i] = (double)(rho + i);
-                    const v_float64 a = v_mul(vx_load(idx), vK);
-                    const v_float64 b = v_mul(vx_load(idx + vl64), vK);
-                    v_store(bufRhos + rho, v_cvt_f32(a, b));
-                }
-            }
-#endif
-            for (; rho < dsize.width; rho++)
+            for (rho = 0; rho < dsize.width; rho++)
                 bufRhos[rho] = (float)(rho * Kmag);
         }
 
@@ -3493,6 +3476,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                         v_store(mx + col, v_cvt_f32(xlo, xhi));
                         v_store(my + col, v_cvt_f32(ylo, yhi));
                     }
+                    vx_cleanup();
                 }
 #endif
                 for (; col < mapCols; col++)
