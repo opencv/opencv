@@ -2194,7 +2194,7 @@ The sample below illustrates how to calculate a DFT-based convolution of two 2D 
     void convolveDFT(InputArray A, InputArray B, OutputArray C)
     {
         // reallocate the output array if needed
-        C.create(abs(A.rows - B.rows)+1, abs(A.cols - B.cols)+1, A.type());
+        C.create(A.rows + B.rows - 1, A.cols + B.cols - 1, A.type());
         Size dftSize;
         // calculate the size of DFT transform
         dftSize.width = getOptimalDFTSize(A.cols + B.cols - 1);

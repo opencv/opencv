@@ -289,6 +289,56 @@ TEST(Layer_Test_Reshape, Accuracy)
     }
 }
 
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_LogSoftmax;
+TEST_P(Layer_Test_LogSoftmax, DoesNotUnderflow)
+{
+    const int backendId = get<0>(GetParam());
+    const int targetId = get<1>(GetParam());
+
+    // log(softmax(x)) is -inf once x is about 104 below the maximum, where exp underflows.
+    // The 17-element row also goes through the SIMD loops.
+    std::vector<float> data = {1000.f, 1001.f, 1002.f, -1000.f, 0.f, 1000.f};
+    for (int i = 0; i < 17; i++)
+        data.push_back(100.f * i - 800.f);
+
+    for (int len : {3, 17})
+    {
+        SCOPED_TRACE(len);
+        const int rows = len == 3 ? 2 : 1;
+        Mat input(rows, len, CV_32F, data.data() + (len == 3 ? 0 : 6));
+
+        LayerParams lp;
+        lp.type = "Softmax";
+        lp.name = "logSoftmax";
+        lp.set("axis", 1);
+        lp.set("log_softmax", true);
+        Net net;
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        net.setPreferableBackend(backendId);
+        net.setPreferableTarget(targetId);
+        net.setInput(input);
+        Mat out = net.forward();
+
+        Mat ref(rows, len, CV_32F);
+        for (int r = 0; r < rows; r++)
+        {
+            const float* x = input.ptr<float>(r);
+            double maxVal = *std::max_element(x, x + len), sum = 0;
+            for (int c = 0; c < len; c++)
+                sum += std::exp(x[c] - maxVal);
+            for (int c = 0; c < len; c++)
+                ref.at<float>(r, c) = static_cast<float>(x[c] - maxVal - std::log(sum));
+        }
+        double l1 = 1e-4, lInf = 1e-4;
+        if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16)
+            DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+        normAssert(ref, out.reshape(1, rows), "", l1, lInf);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_LogSoftmax,
+    dnnBackendsAndTargets(false, false, true, false, false, false, false, false));
+
 static Mat runGatherElementsLayer(const Mat& data, const Mat& indices, int axis)
 {
     LayerParams params;
@@ -1787,6 +1837,45 @@ TEST_P(Test_Caffe_layers, Interp)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
 
+// A constant weight whose leading dims broadcast against the activations: B has more than
+// one batch slice, but fewer than the output batch. The packed-B stride has to be derived
+// from the number of slices actually stored in B, not from the (broadcast) output batch.
+TEST(Layer_Test_MatMul, PackedBroadcastMultipleSlices)
+{
+    const int A0 = 2, A1 = 1, M = 3, K = 4;
+    const int B0 = 1, B1 = 5, N = 6;
+    Mat A({A0, A1, M, K}, CV_32F);
+    Mat B({B0, B1, K, N}, CV_32F);
+    randu(A, -1.f, 1.f);
+    randu(B, -1.f, 1.f);
+
+    LayerParams lp;
+    lp.type = "MatMul";
+    lp.name = "matmul_packed_broadcast_multi_slice";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.blobs.push_back(B);
+
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+    ASSERT_TRUE(layer);
+    std::vector<Mat> inputs = {A}, outputs;
+    runLayer(layer, inputs, outputs);
+    ASSERT_EQ(outputs.size(), (size_t)1);
+
+    Mat expected({A0, B1, M, N}, CV_32F);
+    for (int i = 0; i < A0; i++)
+    {
+        for (int j = 0; j < B1; j++)
+        {
+            Mat a2d(M, K, CV_32F, A.ptr<float>(i, 0));
+            Mat b2d(K, N, CV_32F, B.ptr<float>(0, j));
+            Mat c2d(M, N, CV_32F, expected.ptr<float>(i, j));
+            gemm(a2d, b2d, 1., noArray(), 0., c2d);
+        }
+    }
+    normAssert(outputs[0], expected, "MatMul packed broadcast multi-slice mismatch", 1e-4, 1e-4);
+}
+
 TEST(Layer_Test_PoolingIndices, Accuracy)
 {
     Net net;
@@ -1828,6 +1917,92 @@ TEST(Layer_Test_PoolingIndices, Accuracy)
     net.forward(outputs, lp.name);
     normAssert(maxValues, outputs[0].reshape(1, 5));
     normAssert(indices, outputs[1].reshape(1, 5));
+}
+
+// Normalization of rows whose mean is large against their spread. E[x^2] - E[x]^2 in float loses
+// the variance there; each layer is compared with an FP64 computation from the same input.
+static Mat normRowsRef64F(const Mat& x, int rows, int len, double eps)
+{
+    CV_Assert(x.type() == CV_32F && x.isContinuous() && x.total() == (size_t)rows * len);
+    Mat ref(x.dims, x.size.p, CV_32F);
+    for (int r = 0; r < rows; r++)
+    {
+        const float* xr = x.ptr<float>() + (size_t)r * len;
+        float* yr = ref.ptr<float>() + (size_t)r * len;
+        double mean = 0, var = 0;
+        for (int i = 0; i < len; i++)
+            mean += xr[i];
+        mean /= len;
+        for (int i = 0; i < len; i++)
+            var += (xr[i] - mean) * (xr[i] - mean);
+        const double invStd = 1. / std::sqrt(var / len + eps);
+        for (int i = 0; i < len; i++)
+            yr[i] = (float)((xr[i] - mean) * invStd);
+    }
+    return ref;
+}
+
+static Mat runNormLayer(LayerParams& lp, std::vector<Mat> inputs)
+{
+    std::vector<Mat> outputs;
+    runLayer(LayerFactory::createLayerInstance(lp.type, lp), inputs, outputs);
+    return outputs[0];
+}
+
+TEST(Layer_Test_Norm_LargeOffset, Accuracy_CPU)
+{
+    const float eps = 1e-5f;
+    // float holds a mean of 10000 to half an ulp, 2^-11; over the standard deviation 1/sqrt(12),
+    // that moves the outputs by 1.7e-3
+    const double l1 = 2.5e-3, lInf = 2.5e-3;
+    // values around 10000 with a spread of +-0.5: the mean is about 35000 standard deviations
+    Mat x(std::vector<int>{2, 4, 8, 8}, CV_32F);
+    randu(x, -0.5f, 0.5f);
+    x += Scalar(10000);
+    const Mat x3d = x.reshape(1, std::vector<int>{2, 4, 64});
+    const Mat ones64(std::vector<int>{64}, CV_32F, Scalar(1)), zeros64(std::vector<int>{64}, CV_32F, Scalar(0));
+    const Mat ones4(std::vector<int>{4}, CV_32F, Scalar(1)), zeros4(std::vector<int>{4}, CV_32F, Scalar(0));
+    // MVN, LayerNormalization over the last axis and InstanceNormalization all normalize the 64 values of each (n, c)
+    const Mat ref = normRowsRef64F(x, 8, 64, eps);
+    const Mat ref3d = ref.reshape(1, std::vector<int>{2, 4, 64});
+    {
+        LayerParams lp;
+        lp.type = "MVN";
+        lp.name = "mvn";
+        lp.set("normalize_variance", true);
+        lp.set("eps", eps);
+        normAssert(ref, runNormLayer(lp, {x}), "MVN", l1, lInf);
+        // a 1024 x 1024 plane: on long rows the float sums also drop digits of the mean
+        Mat xl(std::vector<int>{1, 1, 1024, 1024}, CV_32F);
+        randu(xl, -0.5f, 0.5f);
+        xl += Scalar(10000);
+        normAssert(normRowsRef64F(xl, 1, 1024 * 1024, eps), runNormLayer(lp, {xl}), "MVN, 1024 x 1024", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "LayerNormalization";
+        lp.name = "ln";
+        lp.set("axis", 2);
+        lp.set("epsilon", eps);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64, zeros64}), "LayerNormalization", l1, lInf);
+        normAssert(ref3d, runNormLayer(lp, {x3d, ones64}), "LayerNormalization without bias", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "InstanceNormalization";
+        lp.name = "in";
+        lp.set("epsilon", eps);
+        normAssert(ref, runNormLayer(lp, {x, ones4, zeros4}), "InstanceNormalization", l1, lInf);
+    }
+    {
+        LayerParams lp;
+        lp.type = "GroupNormalization";
+        lp.name = "gn";
+        lp.set("epsilon", eps);
+        lp.set("num_groups", 2);
+        normAssert(normRowsRef64F(x, 4, 128, eps), runNormLayer(lp, {x, ones4, zeros4}), "GroupNormalization",
+                   l1, lInf);
+    }
 }
 
 typedef testing::TestWithParam<tuple<Vec4i, int, tuple<Backend, Target> > > Layer_Test_ShuffleChannel;
@@ -1880,6 +2055,66 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ShuffleChannel, Combine(
 /*input shape*/  Values(Vec4i(1, 6, 5, 7), Vec4i(3, 12, 1, 4)),
 /*group*/        Values(1, 2, 3, 6), dnnBackendsAndTargets(/*with IE*/ false)
+));
+
+typedef tuple<std::vector<int>, std::vector<int> > ReduceSizesAxes;
+typedef testing::TestWithParam<ReduceSizesAxes> Layer_Test_Reduce_MultiAxes;
+TEST_P(Layer_Test_Reduce_MultiAxes, Accuracy)
+{
+    // Reducing three or more axes walks the reduced block with an odometer. A carry into an outer
+    // reduced axis used to use the step of the wrong axis, so outputs were wrong as soon as an
+    // outer reduced axis had three or more elements.
+    const std::vector<int>& sizes = get<0>(GetParam());
+    const std::vector<int>& axes = get<1>(GetParam());
+    const int ndims = (int)sizes.size();
+    Mat input(sizes, CV_32F);
+    randu(input, -1, 1);
+
+    std::vector<int> outShape(ndims, 1);
+    for (int d = 0; d < ndims; d++)
+    {
+        if (std::find(axes.begin(), axes.end(), d) == axes.end())
+            outShape[d] = sizes[d];
+    }
+
+    Mat expected(outShape, CV_32F, Scalar(0));
+    for (size_t i = 0; i < input.total(); i++)
+    {
+        int rem = (int)i, dst = 0;
+        std::vector<int> idx(ndims);
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d] = rem % sizes[d];
+            rem /= sizes[d];
+        }
+        for (int d = 0; d < ndims; d++)
+            dst = dst * outShape[d] + (outShape[d] == 1 ? 0 : idx[d]);
+        expected.ptr<float>()[dst] += input.ptr<float>()[i];
+    }
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Reduce";
+    lp.name = "testReduceMultiAxes";
+    lp.set("reduce", "SUM");
+    lp.set("keepdims", true);
+    lp.set("axes", DictValue::arrayInt(axes.data(), (int)axes.size()));
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+
+    Mat output = net.forward();
+    ASSERT_EQ(shape(expected), shape(output));
+    normAssert(expected, output, "", 1e-5, 1e-5);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Reduce_MultiAxes, Values(
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 2, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 1, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{1, 2, 3}),
+    ReduceSizesAxes(std::vector<int>{4, 3, 5, 4}, std::vector<int>{0, 1, 2}),
+    ReduceSizesAxes(std::vector<int>{2, 3, 2, 3, 2}, std::vector<int>{0, 1, 2, 4}),
+    ReduceSizesAxes(std::vector<int>{3, 3, 3, 2, 3}, std::vector<int>{0, 2, 3, 4})
 ));
 
 TEST(Layer_Test_ReduceMean, accuracy_input_0)
@@ -1956,6 +2191,151 @@ TEST(Layer_Test_Convolution, relu_fusion)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat output = net.forward("testConv");
     normAssert(input, output);
+}
+
+// SAME padding depends on the input size: after a reshape to another size, a convolution
+// must match a fresh Net across 1D, 2D (both sides of the 12 px Winograd cutoff and with
+// Winograd off), depthwise, and 3D inputs.
+TEST(Layer_Test_Convolution, same_padding_after_reshape)
+{
+    auto makeParams = [](int spatialDims, int strideVal, int inChannels = 3, int outChannels = 4, int group = 1) {
+        LayerParams lp;
+        lp.type = "Convolution";
+        lp.name = "testConv";
+        lp.set("num_output", outChannels);
+        lp.set("group", group);
+        lp.set("pad_mode", "SAME");
+        lp.set("bias_term", true);
+        if (spatialDims == 3)
+        {
+            int ks[] = {3, 3, 3};
+            int st[] = {strideVal, strideVal, strideVal};
+            lp.set("kernel_size", DictValue::arrayInt(ks, 3));
+            lp.set("stride", DictValue::arrayInt(st, 3));
+        }
+        else
+        {
+            lp.set("kernel_size", 3);
+            lp.set("stride", strideVal);
+        }
+
+        std::vector<int> weightShape = {outChannels, inChannels / group};
+        weightShape.insert(weightShape.end(), spatialDims, 3);
+        Mat weights(weightShape, CV_32F);
+        randu(weights, -1.0f, 1.0f);
+        lp.blobs.push_back(weights);
+
+        Mat bias(1, outChannels, CV_32F);
+        randu(bias, -1.0f, 1.0f);
+        lp.blobs.push_back(bias);
+        return lp;
+    };
+
+    auto checkPair = [](LayerParams& lp, const std::vector<int>& shapeA,
+                        const std::vector<int>& shapeB, bool winograd = true) {
+        const std::vector<int> dirs[][2] = {{shapeA, shapeB}, {shapeB, shapeA}};
+        for (const auto& dir : dirs)
+        {
+            Mat input0(dir[0], CV_32F), input1(dir[1], CV_32F);
+            randu(input0, -1.0f, 1.0f);
+            randu(input1, -1.0f, 1.0f);
+
+            Net net;
+            net.addLayerToPrev(lp.name, lp.type, lp);
+            net.setPreferableBackend(DNN_BACKEND_OPENCV);
+            net.enableWinograd(winograd);
+            net.setInput(input0);
+            net.forward();
+            net.setInput(input1);
+            Mat output = net.forward();
+
+            Net fresh;
+            fresh.addLayerToPrev(lp.name, lp.type, lp);
+            fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
+            fresh.enableWinograd(winograd);
+            fresh.setInput(input1);
+            Mat reference = fresh.forward();
+
+            ASSERT_EQ(shape(reference), shape(output));
+            EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF))
+                << toString(dir[0]) << " -> " << toString(dir[1])
+                << " (winograd=" << winograd << ")";
+        }
+    };
+
+    LayerParams lp1d = makeParams(1, 2);
+    checkPair(lp1d, {1, 3, 10}, {1, 3, 9});
+
+    LayerParams lp2d = makeParams(2, 2);
+    checkPair(lp2d, {1, 3, 10, 10}, {1, 3, 9, 9});
+    checkPair(lp2d, {1, 3, 10, 9}, {1, 3, 9, 10});
+    checkPair(lp2d, {1, 3, 14, 14}, {1, 3, 11, 11});
+    checkPair(lp2d, {1, 3, 16, 16}, {1, 3, 15, 15}, false);
+
+    LayerParams lp2dWino = makeParams(2, 1);
+    checkPair(lp2dWino, {1, 3, 14, 14}, {1, 3, 11, 11});
+
+    LayerParams lp2dDw = makeParams(2, 2, 4, 4, 4);
+    checkPair(lp2dDw, {1, 4, 10, 10}, {1, 4, 9, 9});
+
+    LayerParams lp3d = makeParams(3, 2);
+    checkPair(lp3d, {1, 3, 6, 6, 6}, {1, 3, 5, 5, 5});
+}
+
+// BatchNorm is folded into the packed convolution; after enableFusion(false) the same Net
+// must match a fresh unfused Net, for Winograd (stride 1) and generic (stride 2) packing.
+TEST(Layer_Test_Convolution, repack_after_fusion_change)
+{
+    for (int strideVal = 1; strideVal <= 2; strideVal++)
+    {
+        LayerParams conv;
+        conv.type = "Convolution";
+        conv.name = "testConv";
+        conv.set("num_output", 4);
+        conv.set("kernel_size", 3);
+        conv.set("stride", strideVal);
+        conv.set("pad", 1);
+        conv.set("bias_term", true);
+        Mat weights({4, 3, 3, 3}, CV_32F), bias(1, 4, CV_32F);
+        randu(weights, -1.0f, 1.0f);
+        randu(bias, -1.0f, 1.0f);
+        conv.blobs.push_back(weights);
+        conv.blobs.push_back(bias);
+
+        LayerParams bn;
+        bn.type = "BatchNorm";
+        bn.name = "testBN";
+        Mat mean(1, 4, CV_32F), var(1, 4, CV_32F);
+        randu(mean, -1.0f, 1.0f);
+        randu(var, 0.5f, 2.0f);
+        bn.blobs.push_back(mean);
+        bn.blobs.push_back(var);
+
+        Mat input({1, 3, 16, 16}, CV_32F);
+        randu(input, -1.0f, 1.0f);
+
+        Net net;
+        net.addLayerToPrev(conv.name, conv.type, conv);
+        net.addLayerToPrev(bn.name, bn.type, bn);
+        net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(DNN_TARGET_CPU);
+        net.setInput(input);
+        net.forward();
+        net.enableFusion(false);
+        net.setInput(input);
+        Mat output = net.forward();
+
+        Net fresh;
+        fresh.addLayerToPrev(conv.name, conv.type, conv);
+        fresh.addLayerToPrev(bn.name, bn.type, bn);
+        fresh.setPreferableBackend(DNN_BACKEND_OPENCV);
+        fresh.setPreferableTarget(DNN_TARGET_CPU);
+        fresh.enableFusion(false);
+        fresh.setInput(input);
+        Mat reference = fresh.forward();
+
+        EXPECT_EQ(0, cvtest::norm(output, reference, NORM_INF)) << "stride " << strideVal;
+    }
 }
 
 typedef testing::TestWithParam<tuple<bool, tuple<Backend, Target> > > Layer_Test_Eltwise_unequal;

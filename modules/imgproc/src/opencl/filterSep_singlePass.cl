@@ -198,13 +198,19 @@ __kernel void sep_filter(__global uchar* Src, int src_step, int srcOffsetX, int 
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
-        for (int i = liy * BLK_X + lix; i < (RADIUSY*2) * (BLK_X+(RADIUSX*2)); i += BLK_X * BLK_Y)
+        // Move the last 2*RADIUSY rows to the top, BLK_Y rows at a time. When 2*RADIUSY > BLK_Y
+        // a row can be both copied and overwritten; the barrier after each step keeps the read first.
+        for (int top = 0; top < 2*RADIUSY; top += BLK_Y)
         {
-            int clocX = i % (BLK_X+(RADIUSX*2));
-            int clocY = i / (BLK_X+(RADIUSX*2));
-            lsmem[clocY][clocX] = lsmem[clocY + BLK_Y][clocX];
+            int rows = min(2*RADIUSY - top, BLK_Y);
+            for (int i = liy * BLK_X + lix; i < rows * (BLK_X+(RADIUSX*2)); i += BLK_X * BLK_Y)
+            {
+                int clocX = i % (BLK_X+(RADIUSX*2));
+                int clocY = top + i / (BLK_X+(RADIUSX*2));
+                lsmem[clocY][clocX] = lsmem[clocY + BLK_Y][clocX];
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
-        barrier(CLK_LOCAL_MEM_FENCE);
 
         int yb = y + liy + BLK_Y + srcOffsetY + RADIUSY;
         EXTRAPOLATE(yb, (height));

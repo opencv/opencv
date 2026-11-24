@@ -441,6 +441,12 @@ struct RGB2YCrCb_i<uchar>
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
         const int descaleShift = 1 << (shift-1);
+#if CV_NEON
+       const v_int16 vc0 = vx_setall_s16((short)C0), vc1 = vx_setall_s16((short)C1), vc2 = vx_setall_s16((short)C2);
+        const v_int16 vc3 = vx_setall_s16((short)C3), vc4 = vx_setall_s16((short)C4);
+        const v_int32 vdescale32 = vx_setall_s32(descaleShift);
+        const v_int32 vcdelta32 = vx_setall_s32(descaleShift*(ColorChannel<uchar>::half()*2+1));
+#else
         v_int16 bg2y;
         v_int16 r12y;
         v_int16 dummy;
@@ -454,6 +460,7 @@ struct RGB2YCrCb_i<uchar>
         v_zip(vx_setall_s16((short)C4), vx_setall_s16(h21), c4h, dummy);
 
         v_int16 vdescale = vx_setall_s16(descaleShift);
+#endif
 
         for( ; i < n;
              i += vsize, src += scn*vsize, dst += 3*vsize)
@@ -490,6 +497,21 @@ struct RGB2YCrCb_i<uchar>
             sb0 = v_reinterpret_as_s16(b0); sb1 = v_reinterpret_as_s16(b1);
 
             v_uint32 y00, y01, y10, y11;
+#if CV_NEON
+            {
+                v_int32 pb00, pb01, pb10, pb11, pg00, pg01, pg10, pg11, pr00, pr01, pr10, pr11;
+                v_mul_expand(sb0, vc0, pb00, pb01);
+                v_mul_expand(sb1, vc0, pb10, pb11);
+                v_mul_expand(sg0, vc1, pg00, pg01);
+                v_mul_expand(sg1, vc1, pg10, pg11);
+                v_mul_expand(sr0, vc2, pr00, pr01);
+                v_mul_expand(sr1, vc2, pr10, pr11);
+                y00 = v_shr(v_reinterpret_as_u32(v_add(v_add(pb00, pg00), v_add(pr00, vdescale32))), shift);
+                y01 = v_shr(v_reinterpret_as_u32(v_add(v_add(pb01, pg01), v_add(pr01, vdescale32))), shift);
+                y10 = v_shr(v_reinterpret_as_u32(v_add(v_add(pb10, pg10), v_add(pr10, vdescale32))), shift);
+                y11 = v_shr(v_reinterpret_as_u32(v_add(v_add(pb11, pg11), v_add(pr11, vdescale32))), shift);
+            }
+#else
             {
                 v_int16 bg00, bg01, bg10, bg11;
                 v_int16 rd00, rd01, rd10, rd11;
@@ -503,6 +525,7 @@ struct RGB2YCrCb_i<uchar>
                 y10 = v_shr(v_reinterpret_as_u32(v_add(v_dotprod(bg10, bg2y), v_dotprod(rd10, r12y))), shift);
                 y11 = v_shr(v_reinterpret_as_u32(v_add(v_dotprod(bg11, bg2y), v_dotprod(rd11, r12y))), shift);
             }
+#endif
 
             v_uint16 y0, y1;
             y0 = v_pack(y00, y01);
@@ -528,6 +551,16 @@ struct RGB2YCrCb_i<uchar>
             v_int32 cr00, cr01, cr10, cr11;
             v_int32 cb00, cb01, cb10, cb11;
 
+#if CV_NEON
+            v_mul_expand(sr0, vc3, cr00, cr01);
+            v_mul_expand(sr1, vc3, cr10, cr11);
+            v_mul_expand(sb0, vc4, cb00, cb01);
+            v_mul_expand(sb1, vc4, cb10, cb11);
+            cr00 = v_add(cr00, vcdelta32); cr01 = v_add(cr01, vcdelta32);
+            cr10 = v_add(cr10, vcdelta32); cr11 = v_add(cr11, vcdelta32);
+            cb00 = v_add(cb00, vcdelta32); cb01 = v_add(cb01, vcdelta32);
+            cb10 = v_add(cb10, vcdelta32); cb11 = v_add(cb11, vcdelta32);
+#else
             // delta + descaleShift == descaleShift*(half*2+1)
             {
                 v_int16 rd00, rd01, rd10, rd11;
@@ -549,6 +582,7 @@ struct RGB2YCrCb_i<uchar>
                 cb10 = v_dotprod(bd10, c4h);
                 cb11 = v_dotprod(bd11, c4h);
             }
+#endif
 
             v_uint8 cr, cb;
 

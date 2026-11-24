@@ -7,6 +7,25 @@
 
 namespace cv { namespace dnn {
 
+// mean and var come from one pass, as E[x] and E[x^2] - E[x]^2 in float. The subtraction multiplies the rounding
+// error of the sums by 1 + mean^2 / var: once the mean is about a thousand standard deviations nothing of var is
+// left, and long rows also lose digits of the mean in the sum. Such rows are measured again from d = x - mean in
+// double: mean += E[d], var = E[d^2] - E[d]^2. Rows with mean^2 <= 64 * var magnify the error at most 65 times
+// (6 bits) and keep their one-pass values.
+static inline void normRefineMeanVar(const float* x, size_t n, float& mean, float& var) {
+    if (mean * mean <= 64.f * var)
+        return;
+    double sum = 0., sqsum = 0.;
+    for (size_t j = 0; j < n; j++) {
+        double d = (double)x[j] - mean;
+        sum += d;
+        sqsum += d * d;
+    }
+    const double dmean = sum / (double)n;
+    mean = (float)(mean + dmean);
+    var = (float)std::max(0., sqsum / (double)n - dmean * dmean);
+}
+
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis, bool normalize_variance) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
@@ -30,8 +49,9 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = normalize_variance ? 1.f / mean_square : 1.f;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = normalize_variance ? 1.f / std::sqrt(var + epsilon) : 1.f;
 
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = (x[j] - mean) * inv_stdev;
@@ -66,8 +86,9 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev;
@@ -104,8 +125,9 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             for (size_t j = 0; j < norm_size; j++) {
                 y[j] = scale_data[j] * (x[j] - mean) * inv_stdev + bias_data[j];
@@ -144,8 +166,9 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t c = i % C;
             float s = scale_data[c] * inv_stdev, b = bias_data[c];
@@ -189,8 +212,9 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
             }
 
             mean *= inv_norm_size;
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size - mean * mean) + epsilon);
-            float inv_stdev = 1.f / mean_square;
+            float var = std::max(0.f, mean_square * inv_norm_size - mean * mean);
+            normRefineMeanVar(x, norm_size, mean, var);
+            float inv_stdev = 1.f / std::sqrt(var + epsilon);
 
             size_t group_idx = i % num_groups * channels_per_group;
             for (size_t j = 0; j < norm_size; j++) {

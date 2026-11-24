@@ -5922,10 +5922,12 @@ public:
                 if (!u->deviceMemMapped())
                 {
                     CV_Assert(u->refcount == 1);
-                    CV_Assert(u->mapcount++ == 0);
+                    CV_Assert(u->mapcount == 0);
                     u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                          (CL_MAP_READ | CL_MAP_WRITE),
                                                          0, u->size, 0, 0, 0, &retval);
+                    if (u->data && retval == CL_SUCCESS)
+                        ++u->mapcount;
                     CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, u->data).c_str());
                 }
                 if (u->data && retval == CL_SUCCESS)
@@ -6004,8 +6006,10 @@ public:
 #endif
             if (u->refcount == 0)
             {
-                CV_Assert(u->mapcount-- == 1);
+                CV_Assert(u->mapcount == 1);
                 retval = clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0);
+                if (retval == CL_SUCCESS)
+                    --u->mapcount;
                 CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueUnmapMemObject(handle=%p, data=%p, [sz=%lld])", (void*)u->handle, u->data, (long long int)u->size).c_str());
                 if (Device::getDefault().isAMD())
                 {

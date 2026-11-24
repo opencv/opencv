@@ -293,7 +293,7 @@ struct Sum_SIMD<float, double>
 #endif
 #endif
 
-template<typename T, typename ST>
+template<typename T, typename ST, typename WT=T>
 static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 {
     const T* src = src0;
@@ -309,7 +309,7 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
             #if CV_ENABLE_UNROLLED
             for(; i <= len - 4; i += 4, src += cn*4 )
-                s0 += src[0] + src[cn] + src[cn*2] + src[cn*3];
+                s0 += (WT)src[0] + (WT)src[cn] + (WT)src[cn*2] + (WT)src[cn*3];
             #endif
             for( ; i < len; i++, src += cn )
                 s0 += src[0];
@@ -412,7 +412,52 @@ static int sum_(const T* src0, const uchar* mask, ST* dst, int len, int cn )
 
 
 static int sum8u( const uchar* src, const uchar* mask, int* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{
+    CV_INSTRUMENT_REGION();
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (mask && cn >= 1 && cn <= 4)
+    {
+        int i = 0;
+        const v_uint8 zero = vx_setzero_u8(), one = vx_setall_u8(1);
+        v_uint32 s0 = vx_setzero_u32(), s1 = s0, s2 = s0, s3 = s0, count = s0;
+        for (; i <= len - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
+        {
+            v_uint8 m = v_ne(vx_load(mask + i), zero);
+            if (!v_check_any(m))
+                continue;
+            count = v_dotprod_expand(v_and(m, one), one, count);
+            v_uint8 a, b, c, d = zero;
+            if (cn == 1)
+                a = vx_load(src + i);
+            else if (cn == 2)
+                v_load_deinterleave(src + i * cn, a, b);
+            else if (cn == 3)
+                v_load_deinterleave(src + i * cn, a, b, c);
+            else
+                v_load_deinterleave(src + i * cn, a, b, c, d);
+            s0 = v_dotprod_expand(v_and(a, m), one, s0);
+            if (cn >= 2)
+                s1 = v_dotprod_expand(v_and(b, m), one, s1);
+            if (cn >= 3)
+                s2 = v_dotprod_expand(v_and(c, m), one, s2);
+            if (cn == 4)
+                s3 = v_dotprod_expand(v_and(d, m), one, s3);
+        }
+        // The caller limits each byte block to 2^23 pixels, so the sums fit in int.
+        dst[0] += v_reduce_sum(s0);
+        if (cn >= 2)
+            dst[1] += v_reduce_sum(s1);
+        if (cn >= 3)
+            dst[2] += v_reduce_sum(s2);
+        if (cn == 4)
+            dst[3] += v_reduce_sum(s3);
+        int nz = (int)v_reduce_sum(count);
+        v_cleanup();
+        return nz + sum_(src + i * cn, mask + i, dst, len - i, cn);
+    }
+#endif
+    return sum_(src, mask, dst, len, cn);
+}
 
 static int sum8s( const schar* src, const uchar* mask, int* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
@@ -424,7 +469,7 @@ static int sum16s( const short* src, const uchar* mask, int* dst, int len, int c
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
 
 static int sum32s( const int* src, const uchar* mask, double* dst, int len, int cn )
-{ CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }
+{ CV_INSTRUMENT_REGION(); return sum_<int, double, int64>(src, mask, dst, len, cn); }
 
 static int sum32f( const float* src, const uchar* mask, double* dst, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sum_(src, mask, dst, len, cn); }

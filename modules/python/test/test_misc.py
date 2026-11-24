@@ -1009,5 +1009,46 @@ class AlgorithmImplHit(NewOpenCVTests):
         res = cv.getDefaultAlgorithmHint()
         self.assertTrue(res is not None)
 
+class LoaderFailure_test(NewOpenCVTests):
+    def test_failed_native_import_restores_sys_path(self):
+        # https://github.com/opencv/opencv/issues/28766
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+        import os, shutil, subprocess, tempfile, textwrap
+
+        loader_dir = os.path.dirname(os.path.abspath(cv.__file__))
+        if not os.path.exists(os.path.join(loader_dir, 'load_config_py3.py')):
+            raise unittest.SkipTest('cv2 is not imported through the Python loader')
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # Loader package whose native module fails to load
+            pkg = os.path.join(tmp, 'cv2')
+            os.mkdir(pkg)
+            for name in ('__init__.py', 'load_config_py3.py'):
+                shutil.copy(os.path.join(loader_dir, name), pkg)
+            with open(os.path.join(pkg, 'config.py'), 'w') as f:
+                f.write('PYTHON_EXTENSIONS_PATHS = [LOADER_DIR]\n')
+            open(os.path.join(pkg, 'config-3.py'), 'w').close()
+            with open(os.path.join(pkg, 'cv2.py'), 'w') as f:
+                f.write("raise ImportError('simulated native load failure')\n")
+
+            code = textwrap.dedent("""
+                import sys
+                before = list(sys.path)
+                try:
+                    import cv2
+                except ImportError as e:
+                    assert 'simulated native load failure' in str(e), e
+                else:
+                    raise SystemExit('import unexpectedly succeeded')
+                assert sys.path == before, [p for p in sys.path if p not in before]
+                assert not hasattr(sys, 'OpenCV_LOADER')
+            """)
+            env = dict(os.environ, PYTHONPATH=tmp)
+            p = subprocess.Popen([sys.executable, '-c', code], env=env,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+            out, _ = p.communicate()
+            self.assertEqual(p.returncode, 0, out)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

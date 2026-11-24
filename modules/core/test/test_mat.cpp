@@ -1530,6 +1530,59 @@ TEST(Core_Matx, from_initializer_list)
     ASSERT_EQ( cvtest::norm(c, b, NORM_INF), 0.);
 }
 
+template<typename T, int m, int n>
+static void checkMatxL2Norms(const Matx<T, m, n>& src)
+{
+    long double expectedSquared = 0;
+    for (int i = 0; i < m * n; i++)
+    {
+        const long double value = src.val[i];
+        expectedSquared += value * value;
+    }
+    EXPECT_DOUBLE_EQ(static_cast<double>(expectedSquared), cv::norm(src, NORM_L2SQR));
+    EXPECT_DOUBLE_EQ(static_cast<double>(std::sqrt(expectedSquared)), cv::norm(src, NORM_L2));
+    EXPECT_DOUBLE_EQ(cv::norm(src), cv::norm(src, NORM_L2));
+}
+
+TEST(Core_Matx, norm_l2_integer_accumulation)
+{
+    checkMatxL2Norms(Matx<ushort, 1, 1>(USHRT_MAX));
+    checkMatxL2Norms(Vec3i(50000, -50000, 0));
+    checkMatxL2Norms(Matx<short, 2, 2>(SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN));
+    checkMatxL2Norms(Matx<int, 1, 5>(INT_MIN, INT_MAX, 1, -1, 0));
+}
+
+TEST(Core_Matx, norm_l2_float_range)
+{
+    const float scales[] = {1e20f, -1e20f, 1e-30f, -1e-30f};
+    for (size_t i = 0; i < sizeof(scales) / sizeof(scales[0]); i++)
+    {
+        const float value = scales[i];
+        checkMatxL2Norms(Vec3f(value, value, value));
+        checkMatxL2Norms(Matx<float, 2, 2>(value, -value, value, -value));
+        checkMatxL2Norms(Matx<float, 1, 5>(value, -value, 0, value, -value));
+    }
+}
+
+TEST(Core_Matx, norm_l1_integer_accumulation)
+{
+    EXPECT_DOUBLE_EQ(2.0 * INT_MAX, cv::norm(Vec2i(INT_MAX, -INT_MAX), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * INT_MAX,
+                    cv::norm(Matx<int, 2, 2>(INT_MAX, -INT_MAX, INT_MAX, -INT_MAX), NORM_L1));
+    EXPECT_DOUBLE_EQ(2.0 * INT_MAX + 2,
+                    cv::norm(Matx<int, 1, 5>(INT_MAX, -INT_MAX, 1, -1, 0), NORM_L1));
+}
+
+TEST(Core_Matx, norm_l1_float_accumulation)
+{
+    const float value = FLT_MAX / 2;
+    EXPECT_DOUBLE_EQ(3.0 * value, cv::norm(Vec3f(value, -value, value), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * value,
+                    cv::norm(Matx<float, 2, 2>(value, -value, value, -value), NORM_L1));
+    EXPECT_DOUBLE_EQ(4.0 * value,
+                    cv::norm(Matx<float, 1, 5>(value, -value, 0, value, -value), NORM_L1));
+}
+
 TEST(Core_Mat, regression_9507)
 {
     cv::Mat m = Mat::zeros(5, 5, CV_8UC3);

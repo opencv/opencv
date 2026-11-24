@@ -619,7 +619,9 @@ approxPolyDP_( const Point_<T>* src_contour, int count0, Point_<T>* dst_contour,
                 }
             }
 
-            le_eps = max_dist_2_mul_segment_len_2 <= eps * segment_len_2;
+            // written so that a NaN counts as within the tolerance: for an infinite segment and a zero
+            // epsilon eps * segment_len_2 is NaN, and the slice would never be split into smaller ones
+            le_eps = !(max_dist_2_mul_segment_len_2 > eps * segment_len_2);
         }
         else
         {

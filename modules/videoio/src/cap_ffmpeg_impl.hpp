@@ -1287,7 +1287,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
                     return result;
                 } catch (...) {
                     CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::read(" << buf_size << ") failed");
-                    return 0;
+                    return AVERROR(EIO);
                 }
             },
             NULL,
@@ -2045,6 +2045,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     const int field_flags = AV_FRAME_FLAG_INTERLACED | AV_FRAME_FLAG_TOP_FIELD_FIRST;
     rgb_picture.flags = (rgb_picture.flags & ~field_flags) | (sw_picture->flags & field_flags);
 #endif
+    // sws_scale_frame() converts between the colour spaces of both frames. Keep the source primaries and
+    // transfer on the output, so HDR (HLG, PQ) video is not tone-mapped to SDR BT.709 with clipped highlights
+    // and the decoded values are returned as they are, like with the older sws_scale() path.
+    rgb_picture.color_primaries = sw_picture->color_primaries;
+    rgb_picture.color_trc = sw_picture->color_trc;
     int sws_ret = sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
     if (sws_ret < 0)
     {

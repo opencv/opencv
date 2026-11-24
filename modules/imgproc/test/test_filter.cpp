@@ -2467,6 +2467,24 @@ TEST(Imgproc_MedianBlur, regression_28385)
     ASSERT_EQ(out.size(), Size(100, 50000));
 }
 
+// Regression test for https://github.com/opencv/opencv/issues/26407
+// The O(1) 8-bit median filter keeps 16-bit histogram counters, which overflow once the
+// window holds more than 65535 pixels (ksize >= 257). That used to give wrong results or
+// throw "k < 16".
+TEST(Imgproc_MedianBlur, large_ksize_overflow_26407)
+{
+    // A vertical step edge at x = 200. With ksize = 257 (replicated border) the window at
+    // x < 200 holds more 0 than 220 pixels, and at x >= 200 more 220 than 0, so the median
+    // filter must reproduce the input exactly.
+    Mat src(4, 300, CV_8UC1, Scalar(0));
+    src.colRange(200, src.cols).setTo(Scalar(220));
+
+    Mat dst;
+    ASSERT_NO_THROW(medianBlur(src, dst, 257));
+    ASSERT_EQ(src.size(), dst.size());
+    EXPECT_EQ(0., cvtest::norm(dst, src, NORM_INF));
+}
+
 // Regression test for https://github.com/opencv/opencv/issues/29592
 // medianBlur used to reject CV_8U images with channel counts other than
 // 1, 3 or 4 whenever the large-kernel path was needed (ksize >= 7, or

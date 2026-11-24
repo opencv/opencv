@@ -1256,13 +1256,21 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
     _dst.create( n, nb, type );
     Mat dst = _dst.getMat();
     if( type == CV_32F )
+    {
+        CALL_HAL(SVBackSubst32f, cv_hal_SVBackSubst32f, w.ptr<float>(), wstep, u.ptr<float>(), u.step,
+                 vt.ptr<float>(), vt.step, rhs.ptr<float>(), rhs.step, dst.ptr<float>(), dst.step, m, n, nb)
         SVBkSb(m, n, w.ptr<float>(), wstep, u.ptr<float>(), u.step, false,
                vt.ptr<float>(), vt.step, true, rhs.ptr<float>(), rhs.step, nb,
                dst.ptr<float>(), dst.step, buffer.data());
+    }
     else if( type == CV_64F )
+    {
+        CALL_HAL(SVBackSubst64f, cv_hal_SVBackSubst64f, w.ptr<double>(), wstep, u.ptr<double>(), u.step,
+                 vt.ptr<double>(), vt.step, rhs.ptr<double>(), rhs.step, dst.ptr<double>(), dst.step, m, n, nb)
         SVBkSb(m, n, w.ptr<double>(), wstep, u.ptr<double>(), u.step, false,
                vt.ptr<double>(), vt.step, true, rhs.ptr<double>(), rhs.step, nb,
                dst.ptr<double>(), dst.step, buffer.data());
+    }
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 }

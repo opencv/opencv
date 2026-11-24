@@ -501,15 +501,15 @@ BRISK_Impl::generateKernel(const std::vector<float> &radiusList,
   noLongPairs_ = 0;
 
   // fill indexChange with 0..n if empty
-  unsigned int indSize = (unsigned int)indexChange.size();
-  if (indSize == 0)
+  if (indexChange.empty())
   {
     indexChange.resize(points_ * (points_ - 1) / 2);
-    indSize = (unsigned int)indexChange.size();
 
-    for (unsigned int i = 0; i < indSize; i++)
+    for (unsigned int i = 0; i < (unsigned int)indexChange.size(); i++)
       indexChange[i] = i;
   }
+  unsigned int indSize = (unsigned int)indexChange.size();
+
   const float dMin_sq = dMin_ * dMin_;
   const float dMax_sq = dMax_ * dMax_;
   for (unsigned int i = 1; i < points_; i++)
@@ -561,6 +561,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   const int x = int(xf);
   const int y = int(yf);
   const int& imagecols = image.cols;
+  const ptrdiff_t imagestep = (ptrdiff_t)image.step;
 
   // get the sigma:
   const float sigma_half = briskPoint.sigma;
@@ -623,12 +624,12 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   if (dx + dy > 2)
   {
     // now the calculation:
-    const uchar* ptr = image.ptr() + x_left + imagecols * y_top;
+    const uchar* ptr = image.ptr() + x_left + imagestep * y_top;
     // first the corners:
     ret_val = A * int(*ptr);
     ptr += dx + 1;
     ret_val += B * int(*ptr);
-    ptr += (dy + 1) * imagecols;
+    ptr += (dy + 1) * imagestep;
     ret_val += C * int(*ptr);
     ptr -= dx + 1;
     ret_val += D * int(*ptr);
@@ -671,7 +672,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   }
 
   // now the calculation:
-  const uchar* ptr = image.ptr() + x_left + imagecols * y_top;
+  const uchar* ptr = image.ptr() + x_left + imagestep * y_top;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -682,9 +683,9 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
   }
   ret_val += B * int(*ptr);
   // middle ones:
-  ptr += imagecols - dx - 1;
-  const uchar* end_j = ptr + dy * imagecols;
-  for (; ptr < end_j; ptr += imagecols - dx - 1)
+  ptr += imagestep - dx - 1;
+  const uchar* end_j = ptr + dy * imagestep;
+  for (; ptr < end_j; ptr += imagestep - dx - 1)
   {
     ret_val += r_x_1_i * int(*ptr);
     ptr++;

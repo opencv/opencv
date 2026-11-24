@@ -25,6 +25,25 @@ PERF_TEST_P(Size_MatType, sum, testing::Combine( testing::Values( TYPICAL_MAT_SI
     SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
 }
 
+// CV_32S is not in TYPICAL_MAT_TYPES_STAT; it is the depth whose scalar accumulation
+// step is widened.
+PERF_TEST_P(Size_MatType, sum_wide,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
+                             testing::Values(CV_32SC1, CV_32SC3)))
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+
+    Mat arr(sz, type);
+    Scalar s;
+
+    declare.in(arr, WARMUP_RNG).out(s);
+
+    TEST_CYCLE() s = sum(arr);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST_P(Size_MatType, mean, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),
                 testing::Values( TYPICAL_MAT_TYPES_STAT ) ))
 {
@@ -56,6 +75,25 @@ PERF_TEST_P(Size_MatType, mean_mask, testing::Combine( testing::Values( TYPICAL_
     TEST_CYCLE() s = cv::mean(src, mask);
 
     SANITY_CHECK(s, 5e-5);
+}
+
+typedef TestBaseWithParam<tuple<Size, MatType, int> > Size_MatType_MaskDensity;
+
+PERF_TEST_P(Size_MatType_MaskDensity, mean_mask_density,
+           testing::Combine(testing::Values(szVGA, sz720p, sz1080p),
+                            testing::Values(CV_8UC1, CV_8UC3, CV_8UC4),
+                            testing::Values(0, 25, 50, 100)))
+{
+    const Size sz = get<0>(GetParam());
+    Mat src(sz, get<1>(GetParam())), mask(sz, CV_8U);
+    randu(mask, 0, 100);
+    cv::compare(mask, get<2>(GetParam()), mask, CMP_LT);
+    Scalar s;
+    declare.in(src, WARMUP_RNG).in(mask).out(s);
+
+    TEST_CYCLE() s = cv::mean(src, mask);
+
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_MatType, meanStdDev, testing::Combine( testing::Values( TYPICAL_MAT_SIZES ),

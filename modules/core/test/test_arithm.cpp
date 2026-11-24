@@ -2393,6 +2393,65 @@ TEST(MinMaxLoc, regression_4955_nans)
     cv::minMaxLoc(nan_mat, NULL, NULL, NULL, NULL);
 }
 
+typedef testing::TestWithParam<int> Core_MinMaxIdx_empty;
+
+TEST_P(Core_MinMaxIdx_empty, no_data)
+{
+    const int depth = GetParam();
+    const Size sizes[] = { Size(0, 0), Size(0, 5), Size(5, 0) };
+    for (const Size& sz : sizes)
+    {
+        SCOPED_TRACE(cv::format("depth=%d size=%dx%d", depth, sz.width, sz.height));
+        Mat src(sz, CV_MAKETYPE(depth, 1));
+
+        double minVal = -1, maxVal = -1;
+        int minIdx[2] = { 7, 7 }, maxIdx[2] = { 7, 7 };
+        ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx));
+        EXPECT_EQ(0., minVal);
+        EXPECT_EQ(0., maxVal);
+        EXPECT_EQ(-1, minIdx[0]);
+        EXPECT_EQ(-1, minIdx[1]);
+        EXPECT_EQ(-1, maxIdx[0]);
+        EXPECT_EQ(-1, maxIdx[1]);
+
+        minVal = maxVal = -1;
+        Point minLoc(7, 7), maxLoc(7, 7);
+        ASSERT_NO_THROW(cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc));
+        EXPECT_EQ(0., minVal);
+        EXPECT_EQ(0., maxVal);
+        EXPECT_EQ(Point(-1, -1), minLoc);
+        EXPECT_EQ(Point(-1, -1), maxLoc);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_MinMaxIdx_empty,
+    testing::Values((int)CV_8U, (int)CV_8S, (int)CV_16U, (int)CV_16S, (int)CV_32S, (int)CV_32F,
+                    (int)CV_64F));
+
+// a default constructed Mat has dims == 0, unlike the 0x0, 0x5 and 5x0 matrices above
+TEST(Core_MinMaxIdx_default_mat, empty)
+{
+    Mat src;
+    ASSERT_EQ(0, src.dims);
+
+    double minVal = -1, maxVal = -1;
+    ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+
+    int minIdx[2] = { 7, 7 }, maxIdx[2] = { 7, 7 };
+    minVal = maxVal = -1;
+    ASSERT_NO_THROW(cv::minMaxIdx(src, &minVal, &maxVal, minIdx, maxIdx));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+
+    minVal = maxVal = -1;
+    Point minLoc(7, 7), maxLoc(7, 7);
+    ASSERT_NO_THROW(cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc));
+    EXPECT_EQ(0., minVal);
+    EXPECT_EQ(0., maxVal);
+}
+
 TEST(Subtract, scalarc1_matc3)
 {
     int scalar = 255;
@@ -3004,6 +3063,30 @@ TEST(Core_AbsDiff, regression_29639_integer_overflow)
     }
 }
 
+// cv::sum() returns doubles, so a CV_32S array whose total exceeds the 32-bit range must still
+// come back exact. The scalar step of the accumulation added four elements to each other as int
+// before reaching the double accumulator, so large values wrapped (signed overflow).
+typedef testing::TestWithParam< tuple<int, int> > Core_SumWide;
+
+TEST_P(Core_SumWide, no_32bit_wraparound)
+{
+    const int cn  = get<0>(GetParam());
+    const int len = get<1>(GetParam());
+    const double value = 2147483647.0;
+
+    Mat flat(1, len * cn, CV_32S, Scalar(value));
+    Mat src = flat.reshape(cn);
+
+    const Scalar got = cv::sum(src);
+    const double expected = (double)len * value;
+    for (int c = 0; c < cn; c++)
+        EXPECT_DOUBLE_EQ(expected, got[c])
+            << "channels " << cn << ", length " << len << ", channel " << c;
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_SumWide,
+    testing::Combine(testing::Values(1, 2, 3, 4), testing::Values(4, 7, 127)));
+
 TEST(Core_MeanStdDev, regression_multichannel)
 {
     {
@@ -3358,6 +3441,35 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace,
     )
 );
 
+typedef testing::TestWithParam<int> Core_CartToPolar_inplace_mag;
+
+// only the magnitude overwrites an input, so the last elements must not be processed twice.
+// CV_64F is not tested: it works on separate float buffers, so it can't hit this.
+TEST_P(Core_CartToPolar_inplace_mag, accuracy)
+{
+    const int len = GetParam();
+    cv::Mat x(1, len, CV_32F), y(1, len, CV_32F);
+    cv::randu(x, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+    cv::randu(y, cv::Scalar::all(-1000), cv::Scalar::all(1000));
+
+    cv::Mat expectedMag, expectedAngle;
+    cv::cartToPolar(x, y, expectedMag, expectedAngle);
+
+    // magnitude into x
+    cv::Mat x1 = x.clone(), angle1;
+    cv::cartToPolar(x1, y, x1, angle1);
+    EXPECT_MAT_NEAR(expectedMag, x1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle1, 1e-2);
+
+    // magnitude into y
+    cv::Mat y1 = y.clone(), angle2;
+    cv::cartToPolar(x, y1, y1, angle2);
+    EXPECT_MAT_NEAR(expectedMag, y1, 1e-2);
+    EXPECT_MAT_NEAR(expectedAngle, angle2, 1e-2);
+}
+
+INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_CartToPolar_inplace_mag, testing::Range(1, 40));
+
 PARAM_TEST_CASE(Core_PolarToCart_inplace, int, bool, bool)
 {
     int  depth;
@@ -3589,6 +3701,13 @@ TEST(Core_Arithm, mul_overflow_28557)
     {
         EXPECT_EQ(65535, res.at<uint16_t>(0, i));
     }
+}
+
+TEST(Core_InRange, unsupported_depth_throws)
+{
+    Mat src(1, 4, CV_16F, Scalar(1)), lower(1, 4, CV_16F, Scalar(0)), upper(1, 4, CV_16F, Scalar(2)), dst;
+    EXPECT_THROW(cv::inRange(src, Scalar(0), Scalar(2), dst), cv::Exception);
+    EXPECT_THROW(cv::inRange(src, lower, upper, dst), cv::Exception);
 }
 
 TEST(Core_Set, multi_channel_mat_value)

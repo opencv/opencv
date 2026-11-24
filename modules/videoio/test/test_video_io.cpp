@@ -1241,6 +1241,50 @@ inline static std::string stream_capture_ffmpeg_name_printer(const testing::Test
 
 INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"), stream_capture_ffmpeg_name_printer);
 
+TEST(Videoio, stream_capture_ffmpeg_read_exception)
+{
+    VideoCaptureAPIs apiPref = CAP_FFMPEG;
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
+    class ThrowingStream : public IStreamReader
+    {
+    public:
+        bool readCalled = false;
+
+        long long read(char*, long long) CV_OVERRIDE
+        {
+            readCalled = true;
+            CV_Error(Error::StsError, "stream read failed");
+        }
+
+        long long seek(long long, int) CV_OVERRIDE
+        {
+            return -1;
+        }
+    };
+
+    Ptr<ThrowingStream> stream = makePtr<ThrowingStream>();
+    VideoCapture cap;
+    bool opened = true;
+    EXPECT_NO_THROW(opened = cap.open(stream, apiPref, {}));
+    EXPECT_TRUE(stream->readCalled);
+    EXPECT_FALSE(opened);
+    EXPECT_FALSE(cap.isOpened());
+}
+
 // Seek by frame index must be accurate on non-integer frame rates.
 typedef testing::TestWithParam<VideoCaptureAPIs> PreciseSeekingTest;
 

@@ -57,7 +57,7 @@ namespace detail {
  */
 struct CV_EXPORTS_W_SIMPLE CameraParams
 {
-    CameraParams();
+    CV_WRAP CameraParams();
     CameraParams(const CameraParams& other);
     CameraParams& operator =(const CameraParams& other);
     CV_WRAP Mat K() const;

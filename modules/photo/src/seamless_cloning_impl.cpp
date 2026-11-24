@@ -40,6 +40,7 @@
 //M*/
 
 #include "seamless_cloning.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 using namespace cv;
 using namespace std;
@@ -107,7 +108,18 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
     {
         float * tempLinePtr = temp.ptr<float>(j);
         const float * srcLinePtr = src.ptr<float>(j);
-        for(int i = 0 ; i < src.cols ; ++i)
+        int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        {
+            const int vl = VTraits<v_float32>::vlanes();
+            for( ; i + vl <= src.cols ; i += vl)
+            {
+                v_float32 v = v_reverse(vx_load(srcLinePtr + src.cols - vl - i));
+                v_store(tempLinePtr + src.cols + 2 + i, v_sub(vx_setzero_f32(), v));
+            }
+        }
+#endif
+        for( ; i < src.cols ; ++i)
         {
             tempLinePtr[src.cols + 2 + i] = - srcLinePtr[src.cols - 1 - i];
         }
@@ -121,12 +133,28 @@ void Cloning::dst(const Mat& src, Mat& dest, bool invert)
     split(complex, planes);
     temp = Mat::zeros(src.cols, 2 * src.rows + 2, CV_32F);
 
+    Mat imagT;
+    transpose(planes[1](Rect(1, 0, src.cols, src.rows)), imagT);
+
     for(int j = 0 ; j < src.cols ; ++j)
     {
         float * tempLinePtr = temp.ptr<float>(j);
-        for(int i = 0 ; i < src.rows ; ++i)
+        const float * imagTLinePtr = imagT.ptr<float>(j);
+        int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
-            float val = planes[1].ptr<float>(i)[j + 1];
+            const int vl = VTraits<v_float32>::vlanes();
+            for( ; i + vl <= src.rows ; i += vl)
+            {
+                v_float32 v = vx_load(imagTLinePtr + i);
+                v_store(tempLinePtr + i + 1, v);
+                v_store(tempLinePtr + temp.cols - vl - i, v_reverse(v_sub(vx_setzero_f32(), v)));
+            }
+        }
+#endif
+        for( ; i < src.rows ; ++i)
+        {
+            float val = imagTLinePtr[i];
             tempLinePtr[i + 1] = val;
             tempLinePtr[temp.cols - 1 - i] = - val;
         }
@@ -153,7 +181,21 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
     for(int j = 0 ; j < h-2; j++)
     {
         float * resLinePtr = res.ptr<float>(j);
-        for(int i = 0 ; i < w-2; i++)
+        int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        {
+            const int vl = VTraits<v_float32>::vlanes();
+            const v_float32 vfy = vx_setall_f32(filter_Y[j]);
+            const v_float32 v4  = vx_setall_f32(4.0f);
+            const float * fx = &filter_X[0];
+            for( ; i + vl <= w-2; i += vl)
+            {
+                v_float32 d = v_sub(v_add(vx_load(fx + i), vfy), v4);
+                v_store(resLinePtr + i, v_div(vx_load(resLinePtr + i), d));
+            }
+        }
+#endif
+        for( ; i < w-2; i++)
         {
             resLinePtr[i] /= (filter_X[i] + filter_Y[j] - 4);
         }
@@ -178,7 +220,21 @@ void Cloning::solve(const Mat &img, Mat& mod_diff, Mat &result)
         //first row
         resLinePtr[0] = imgLinePtr[0];
 
-        for(int i = 1 ; i < w-1 ; ++i)
+        int i = 1;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        {
+            const int vl = VTraits<v_float32>::vlanes();
+            const v_float32 vzero = vx_setzero_f32();
+            const v_float32 vmax  = vx_setall_f32(255.0f);
+            for( ; i + 2*vl <= w-1 ; i += 2*vl)
+            {
+                v_int32 a = v_trunc(v_min(v_max(vx_load(interpLinePtr + i - 1), vzero), vmax));
+                v_int32 b = v_trunc(v_min(v_max(vx_load(interpLinePtr + i - 1 + vl), vzero), vmax));
+                v_pack_store(resLinePtr + i, v_pack_u(a, b));
+            }
+        }
+#endif
+        for( ; i < w-1 ; ++i)
         {
             //saturate cast is not used here, because it behaves differently from the previous implementation
             //most notable, saturate_cast rounds before truncating, here it's the opposite.
@@ -300,10 +356,11 @@ void Cloning::poisson(const Mat &destination)
 
     split(destination,output);
 
-    for(int chan = 0 ; chan < 3 ; ++chan)
+    parallel_for_(Range(0, 3), [&](const Range& range)
     {
-        poissonSolver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
-    }
+        for(int chan = range.start ; chan < range.end ; ++chan)
+            poissonSolver(output[chan], rgbx_channel[chan], rgby_channel[chan], output[chan]);
+}, 3);
 }
 
 void Cloning::evaluate(const Mat &I, Mat &wmask, const Mat &cloned)

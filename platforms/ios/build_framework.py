@@ -103,7 +103,8 @@ class Builder:
 
         xcode_ver = get_xcode_major()
         xcode_supports_ios_32bit_arch = xcode_ver <= 13
-        self.build_docs = xcode_ver >= 13
+        # docc flags used in getDocBuildCommand (--emit-lmdb-index, --ide-console-output) need Xcode 15+
+        self.build_docs = xcode_ver >= 15
 
         # build each architecture separately
         alltargets = []

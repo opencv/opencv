@@ -132,7 +132,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
 
         if (!blobs.empty()) {
             fastGemmPackB(blobs[0], packed_input_B, trans_b, opt);
-            helper.updatePackedBOffsets(packed_input_B.size());
+            helper.updatePackedBOffsets(fastGemmPackBSize(helper.N, helper.K, opt));
         }
 
         // broadcast bias if needed

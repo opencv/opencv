@@ -94,6 +94,50 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Resize,
             )
         );
 
+// Decoders without native downscaling resize after decoding. A dimension smaller than the
+// reduction factor must become 1 pixel instead of 0.
+TEST(Imgcodecs_Image, imread_reduce_flags_small_image)
+{
+    struct Case { Size src; int flags; Size expected; int type; };
+    const Case cases[] = {
+        { Size(9, 7),  IMREAD_REDUCED_COLOR_8,     Size(1, 1), CV_8UC3 },  // both dimensions clamped
+        { Size(17, 3), IMREAD_REDUCED_COLOR_4,     Size(4, 1), CV_8UC3 },  // only the height clamped
+        { Size(17, 3), IMREAD_REDUCED_GRAYSCALE_8, Size(2, 1), CV_8UC1 },
+        { Size(1, 1),  IMREAD_REDUCED_COLOR_2,     Size(1, 1), CV_8UC3 },
+    };
+    std::vector<string> exts;
+    exts.push_back(".bmp");
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
+    exts.push_back(".png");
+#endif
+#ifdef HAVE_TIFF
+    exts.push_back(".tiff");
+#endif
+    for (const string& ext : exts)
+    {
+        for (const Case& c : cases)
+        {
+            SCOPED_TRACE(ext + " " + cv::format("%dx%d flags=%d", c.src.width, c.src.height, c.flags));
+            const Mat src(c.src, CV_8UC3, Scalar(10, 20, 30));
+
+            std::vector<uchar> buf;
+            ASSERT_TRUE(imencode(ext, src, buf));
+            Mat img;
+            EXPECT_NO_THROW(img = imdecode(buf, c.flags));
+            EXPECT_EQ(c.expected, img.size());
+            EXPECT_EQ(c.type, img.type());
+
+            const string filename = cv::tempfile(ext.c_str());
+            ASSERT_TRUE(imwrite(filename, src));
+            img.release();
+            EXPECT_NO_THROW(img = imread(filename, c.flags));
+            EXPECT_EQ(0, remove(filename.c_str()));
+            EXPECT_EQ(c.expected, img.size());
+            EXPECT_EQ(c.type, img.type());
+        }
+    }
+}
+
 //==================================================================================================
 
 TEST(Imgcodecs_Image, read_write_bmp)

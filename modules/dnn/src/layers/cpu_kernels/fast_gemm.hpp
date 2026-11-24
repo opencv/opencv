@@ -142,8 +142,10 @@ struct MatMulHelper {
     }
 
     // only run after compute
-    void updatePackedBOffsets(size_t packed_B_size) {
-        size_t packed_B_inner_size = packed_B_size / batch;
+    // packed_B_inner_size is the size of one packed (N, K) slice of B (see fastGemmPackBSize).
+    // It is used as the stride directly: when B is broadcast over the output batch, packed B
+    // holds fewer slices than `batch`, so it cannot be derived from the total packed size.
+    void updatePackedBOffsets(size_t packed_B_inner_size) {
         packed_B_offsets.resize(B_offsets.size());
         for (size_t i = 0; i < packed_B_offsets.size(); i++) {
             packed_B_offsets[i] = (B_offsets[i] / (N * K)) * packed_B_inner_size;

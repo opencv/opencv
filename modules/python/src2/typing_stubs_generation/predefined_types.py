@@ -143,7 +143,10 @@ _PREDEFINED_TYPES = (
     NDArrayTypeNode("vector_uchar", dtype="numpy.uint8"),
 
     # DNN, optional
-    AliasTypeNode.class_("LayerId", "DictValue", required_modules=("dnn",)),
+    AliasTypeNode.union_("LayerId",
+                         items=(PrimitiveTypeNode.int_(),
+                                PrimitiveTypeNode.str_()),
+                         required_modules=("dnn",)),
     AliasTypeNode.dict_("LayerParams",
                         key_type=PrimitiveTypeNode.str_(),
                         value_type=UnionTypeNode("DictValue", items=(

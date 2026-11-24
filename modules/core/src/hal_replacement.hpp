@@ -922,6 +922,33 @@ inline int hal_ni_SVD64f(double* src, size_t src_step, double* w, double* u, siz
 //! @}
 
 /**
+Solves matrix equation \f$A*X=B\f$ using a precomputed SVD \f$A = U*\Sigma*V^T\f$, i.e. computes
+\f$X = V*\Sigma^{+}*U^T*B\f$, where \f$\Sigma^{+}\f$ is the pseudoinverse of the diagonal matrix of
+singular values (singular values not exceeding the machine-epsilon-scaled threshold are treated as zero).
+@param w pointer to array of \f$NM = \min(M,N)\f$ singular values of \f$A\f$.
+@param wstep number of bytes between two consequent singular values.
+@param u pointer to \f$M\times NM\f$ (or \f$M\times M\f$) matrix \f$U\f$ stored in row major order.
+@param ustep number of bytes between two consequent rows of matrix \f$U\f$.
+@param vt pointer to \f$NM\times N\f$ (or \f$N\times N\f$) matrix \f$V^T\f$ stored in row major order.
+@param vstep number of bytes between two consequent rows of matrix \f$V^T\f$.
+@param rhs pointer to \f$M\times NB\f$ matrix \f$B\f$ stored in row major order, or NULL if \f$B\f$ is
+the identity (in which case NB = M and the result is the pseudoinverse of \f$A\f$).
+@param rhs_step number of bytes between two consequent rows of matrix \f$B\f$. Ignored if rhs is NULL.
+@param dst pointer to output \f$N\times NB\f$ matrix \f$X\f$ stored in row major order.
+@param dst_step number of bytes between two consequent rows of matrix \f$X\f$.
+@param m number of rows in matrix \f$U\f$ (and in \f$A\f$).
+@param n number of columns in matrix \f$V^T\f$ (and in \f$A\f$).
+@param nb number of columns in matrices \f$B\f$ and \f$X\f$.
+ */
+//! @addtogroup core_hal_interface_decomp_svd Singular value matrix decomposition
+//! @{
+inline int hal_ni_SVBackSubst32f(const float* w, size_t wstep, const float* u, size_t ustep, const float* vt, size_t vstep,
+                                  const float* rhs, size_t rhs_step, float* dst, size_t dst_step, int m, int n, int nb) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_SVBackSubst64f(const double* w, size_t wstep, const double* u, size_t ustep, const double* vt, size_t vstep,
+                                  const double* rhs, size_t rhs_step, double* dst, size_t dst_step, int m, int n, int nb) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+/**
 Performs QR decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = Q*R\f$ and solves matrix equation \f$A*X=B\f$.
 @param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains upper triangular \f$N\times N\f$ matrix \f$R\f$.
 Lower triangle of src1 will be filled with vectors of elementary reflectors. See @cite VandLec and Lapack's DGEQRF documentation for details.
@@ -951,6 +978,8 @@ inline int hal_ni_QR64f(double* src1, size_t src1_step, int m, int n, int k, dou
 #define cv_hal_Cholesky64f hal_ni_Cholesky64f
 #define cv_hal_SVD32f hal_ni_SVD32f
 #define cv_hal_SVD64f hal_ni_SVD64f
+#define cv_hal_SVBackSubst32f hal_ni_SVBackSubst32f
+#define cv_hal_SVBackSubst64f hal_ni_SVBackSubst64f
 #define cv_hal_QR32f hal_ni_QR32f
 #define cv_hal_QR64f hal_ni_QR64f
 //! @endcond

@@ -125,7 +125,10 @@ focal length.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method requires coplanar object points.
 -   cv::SOLVEPNP_IPPE_SQUARE Method is based on the paper of Toby Collins and Adrien Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method is suitable for marker pose estimation.
-It requires 4 coplanar object points defined in the following order:
+It requires 4 coplanar object points defined in the following order. The image points must be given in the same order
+(imagePoints[i] is the projection of objectPoints[i]). The order is defined on the marker itself: it starts at the
+marker's own top-left corner and goes clockwise, wherever that corner ends up in the image. This is the same corner order
+returned by cv::aruco::ArucoDetector::detectMarkers, so it stays valid when the marker is rotated in-plane:
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -146,7 +149,8 @@ coordinate frame to the camera coordinate frame, using different methods:
 - P3P methods (cv::SOLVEPNP_P3P, cv::SOLVEPNP_AP3P): need 4 input points to return a unique solution.
 - cv::SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
 - cv::SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
-Number of input points must be 4. Object points must be defined in the following order:
+Number of input points must be 4. Object points must be defined in the following order,
+and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]

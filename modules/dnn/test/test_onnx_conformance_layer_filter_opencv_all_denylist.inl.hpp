@@ -34,8 +34,6 @@
 "test_argmin_no_keepdims_random",
 "test_argmin_no_keepdims_random_select_last_index",
 #endif
-"test_averagepool_2d_pads_count_include_pad",
-"test_averagepool_2d_precomputed_pads_count_include_pad",
 "test_averagepool_2d_same_lower",
 "test_cast_FLOAT_to_STRING",
 "test_cast_STRING_to_FLOAT",

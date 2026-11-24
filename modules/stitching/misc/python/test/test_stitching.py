@@ -177,5 +177,47 @@ class stitching_seam_finder_graph_cuts(NewOpenCVTests):
         self.assertIsNotNone(masks_warped)
 
 
+class stitching_detail_default_construct_test(NewOpenCVTests):
+
+    def test_image_features(self):
+        features = cv.detail_ImageFeatures()
+        self.assertEqual(features.img_idx, 0)
+        self.assertEqual(features.keypoints, ())
+        self.assertIsInstance(features.descriptors, cv.UMat)
+
+    def test_camera_params(self):
+        camera = cv.detail_CameraParams()
+        self.assertEqual(camera.focal, 1)
+        self.assertEqual(camera.aspect, 1)
+        np.testing.assert_array_equal(camera.R, np.eye(3))
+
+    def test_matches_info(self):
+        matches_info = cv.detail_MatchesInfo()
+        self.assertEqual(matches_info.src_img_idx, -1)
+        self.assertEqual(matches_info.dst_img_idx, -1)
+
+    def test_matcher_apply(self):
+        orb = cv.ORB_create()
+        features = []
+        for idx, name in enumerate(('stitching/a1.png', 'stitching/a2.png')):
+            img = self.get_sample(name)
+            keypoints, descriptors = orb.detectAndCompute(img, None)
+            feat = cv.detail_ImageFeatures()
+            feat.img_idx = idx
+            feat.img_size = (img.shape[1], img.shape[0])
+            feat.keypoints = keypoints
+            feat.descriptors = cv.UMat(descriptors)
+            features.append(feat)
+
+        matcher = cv.detail_BestOf2NearestMatcher()
+        matches_info = matcher.apply(features[0], features[1])
+
+        self.assertGreater(len(matches_info.matches), 0)
+        self.assertGreater(matches_info.num_inliers, 0)
+        self.assertLessEqual(matches_info.num_inliers, len(matches_info.matches))
+        self.assertEqual(matches_info.H.shape, (3, 3))
+        self.assertGreater(matches_info.confidence, 0)
+
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

@@ -44,7 +44,7 @@ class houghcircles_test(NewOpenCVTests):
         img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
         img = cv.medianBlur(img, 5)
 
-        circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)[0]
+        circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 20)[0]
 
         testCircles = [[38, 181, 17.6],
         [99.7, 166, 13.12],
@@ -90,9 +90,10 @@ class houghcircles_test(NewOpenCVTests):
             minRadius=1,
             maxRadius=30)
 
-        self.assertEqual(circles_acc.shape, (1, 2, 4))
+        self.assertEqual(circles_acc.shape, (1, 3, 4))
         self.assertEqual(circles_acc[0, 0, 3], 66.)
         self.assertEqual(circles_acc[0, 1, 3], 62.)
+        self.assertEqual(circles_acc[0, 2, 3], 52.)
 
     def test_houghcircles_alt(self):
 

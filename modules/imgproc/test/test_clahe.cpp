@@ -17,16 +17,18 @@ TEST_P(CLAHE_Padding, reflected_border)
     const bool useRoi = testing::get<4>(GetParam());
     const Size size(grid.width * 5 + extra.width, grid.height * 5 + extra.height);
 
-    // The ROI ends at the parent's bottom-right corner so border extrapolation
-    // uses the same pixels as a standalone image, while preserving a row stride.
-    Mat storage(size.height + 2, size.width + 3, type);
+    // The ROI sits inside the parent with more than a tile of parent pixels to its right and
+    // bottom, so the internal padding must not read them (it would if it did not isolate the ROI).
+    Mat storage(size.height + 2 + 8, size.width + 3 + 8, type);
+    theRNG().fill(storage, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
     Mat src = useRoi ? storage(Rect(3, 2, size.width, size.height)) : Mat(size, type);
-    theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
+    if (!useRoi)
+        theRNG().fill(src, RNG::UNIFORM, 0, type == CV_8UC1 ? 256 : 65536);
 
     const int bottom = (grid.height - size.height % grid.height) % grid.height;
     const int right = (grid.width - size.width % grid.width) % grid.width;
     Mat padded, expected, actual;
-    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101);
+    cv::copyMakeBorder(src, padded, 0, bottom, 0, right, BORDER_REFLECT_101 | BORDER_ISOLATED);
 
     Ptr<CLAHE> clahe = cv::createCLAHE(clipLimit, grid);
     clahe->apply(padded, expected);
@@ -46,5 +48,35 @@ INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE_Padding, testing::Combine(
     testing::Values(Size(0, 0), Size(1, 0), Size(0, 1), Size(1, 1)),
     testing::Values(0.0, 2.0),
     testing::Bool()));
+
+// The numbers of tiles are used as divisors, so a tile grid with a zero in it used to end in a division by zero
+// and a crash. A negative size used to be rejected only by accident, when a matrix of negative size was created.
+TEST(Imgproc_CLAHE, regression_invalid_tile_grid)
+{
+    const Size grids[] = {Size(0, 0), Size(0, 8), Size(8, 0), Size(-1, -1), Size(-8, 8), Size(8, -8)};
+    const int types[] = {CV_8UC1, CV_16UC1};
+
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); t++)
+    {
+        Mat src(64, 64, types[t], Scalar(7)), dst;
+
+        for (size_t g = 0; g < sizeof(grids) / sizeof(grids[0]); g++)
+        {
+            SCOPED_TRACE(cv::format("type %d, grid %d x %d", types[t], grids[g].width, grids[g].height));
+
+            Ptr<CLAHE> created = cv::createCLAHE(2.0, grids[g]);
+            EXPECT_THROW(created->apply(src, dst), cv::Exception);
+
+            Ptr<CLAHE> changed = cv::createCLAHE(2.0, Size(8, 8));
+            changed->setTilesGridSize(grids[g]);
+            EXPECT_THROW(changed->apply(src, dst), cv::Exception);
+
+            // a valid grid works again
+            changed->setTilesGridSize(Size(8, 8));
+            EXPECT_NO_THROW(changed->apply(src, dst));
+            EXPECT_EQ(src.size(), dst.size());
+        }
+    }
+}
 
 }} // namespace

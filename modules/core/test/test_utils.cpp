@@ -259,6 +259,18 @@ TEST(CommandLineParser, positional_regression_5074_equal_sign)
     EXPECT_TRUE(parser.check());
 }
 
+TEST(CommandLineParser, testKeysMissingFields)
+{
+    const char* argv[] = {"<bin>", "-h"};
+    const int argc = 2;
+    EXPECT_THROW(cv::CommandLineParser(argc, argv, "{help h}"), cv::Exception);
+    EXPECT_THROW(cv::CommandLineParser(argc, argv, "{help h|}"), cv::Exception);
+
+    cv::CommandLineParser parser(argc, argv, "{help h||}");
+    EXPECT_TRUE(parser.has("help"));
+    EXPECT_TRUE(parser.check());
+}
+
 
 TEST(AutoBuffer, allocate_test)
 {

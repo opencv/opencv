@@ -1272,6 +1272,40 @@ TEST(videoio_ffmpeg, interlaced_frame_conversion_30299)
     ASSERT_EQ(Size(8, 8), frame.size());
     EXPECT_EQ(Scalar(7037, 7037, 7037), cv::sum(frame));
 }
+
+// HLG/PQ frames must not be converted to SDR (swscale >= 8.12.100 clipped them).
+// Samples: 64x4 10-bit gray ramps (Y=64..800), see opencv_extra#1473 for the generation command.
+// related issue: https://github.com/opencv/opencv/issues/30955
+typedef testing::TestWithParam<std::string> videoio_ffmpeg_hdr;
+TEST_P(videoio_ffmpeg_hdr, keep_decoded_values_30955)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    VideoCapture cap(findDataFile("video/hdr_" + GetParam() + "_ramp_64x4.mkv"), CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("FFmpeg backend can not open the Matroska/FFV1 test stream");
+
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_EQ(Size(64, 4), frame.size());
+    ASSERT_EQ(CV_8UC3, frame.type());
+
+    // swscale dithers when it reduces 10-bit samples to 8 bits, so allow a few levels. Converted to SDR,
+    // the mid-tones move by 10 to 20 levels and the right part of the ramp is clipped to 255.
+    for (int x = 0; x < frame.cols; x++)
+    {
+        const int y10 = 64 + x * 736 / 63;  // limited range: 64 is black, 940 is white
+        const double expected = (y10 - 64) * 255.0 / 876.0;
+        for (int y = 0; y < frame.rows; y++)
+        {
+            const Vec3b px = frame.at<Vec3b>(y, x);
+            for (int c = 0; c < 3; c++)
+                ASSERT_NEAR(expected, px[c], 3.0) << "x=" << x << " y=" << y << " c=" << c;
+        }
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_hdr, testing::Values("hlg", "pq"));
 #endif
 
 }} // namespace

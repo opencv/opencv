@@ -800,12 +800,17 @@ struct RGB2Gray<uchar>
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint8>::vlanes();
+#if CV_NEON
+        const v_int16 vcb = vx_setall_s16(cb), vcg = vx_setall_s16(cg), vcr = vx_setall_s16(cr);
+        const v_int32 vdelta32 = vx_setall_s32(1 << (shift-1));
+#else
         v_int16 bg2y;
         v_int16 r12y;
         v_int16 dummy;
         v_zip(vx_setall_s16(cb), vx_setall_s16(cg), bg2y, dummy);
         v_zip(vx_setall_s16(cr), vx_setall_s16( 1), r12y, dummy);
         v_int16 delta = vx_setall_s16(1 << (shift-1));
+#endif
 
         for( ; i < n;
              i += vsize, src += scn*vsize, dst += vsize)
@@ -836,6 +841,22 @@ struct RGB2Gray<uchar>
             v_expand(g, g0, g1);
             v_expand(b, b0, b1);
 
+            v_uint32 y00, y01, y10, y11;
+#if CV_NEON
+            {
+                v_int32 pb00, pb01, pb10, pb11, pg00, pg01, pg10, pg11, pr00, pr01, pr10, pr11;
+                v_mul_expand(v_reinterpret_as_s16(b0), vcb, pb00, pb01);
+                v_mul_expand(v_reinterpret_as_s16(b1), vcb, pb10, pb11);
+                v_mul_expand(v_reinterpret_as_s16(g0), vcg, pg00, pg01);
+                v_mul_expand(v_reinterpret_as_s16(g1), vcg, pg10, pg11);
+                v_mul_expand(v_reinterpret_as_s16(r0), vcr, pr00, pr01);
+                v_mul_expand(v_reinterpret_as_s16(r1), vcr, pr10, pr11);
+                y00 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(pb00, pg00), v_add(pr00, vdelta32))));
+                y01 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(pb01, pg01), v_add(pr01, vdelta32))));
+                y10 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(pb10, pg10), v_add(pr10, vdelta32))));
+                y11 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(pb11, pg11), v_add(pr11, vdelta32))));
+            }
+#else
             v_int16 bg00, bg01, bg10, bg11;
             v_int16 rd00, rd01, rd10, rd11;
             v_zip(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(g0), bg00, bg01);
@@ -843,11 +864,11 @@ struct RGB2Gray<uchar>
             v_zip(v_reinterpret_as_s16(r0), delta, rd00, rd01);
             v_zip(v_reinterpret_as_s16(r1), delta, rd10, rd11);
 
-            v_uint32 y00, y01, y10, y11;
             y00 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg00, bg2y), v_dotprod(rd00, r12y))));
             y01 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg01, bg2y), v_dotprod(rd01, r12y))));
             y10 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg10, bg2y), v_dotprod(rd10, r12y))));
             y11 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg11, bg2y), v_dotprod(rd11, r12y))));
+#endif
 
             v_uint16 y0, y1;
             y0 = v_pack(y00, y01);
@@ -902,6 +923,43 @@ struct RGB2Gray<ushort>
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int vsize = VTraits<v_uint16>::vlanes();
+
+#if CV_NEON
+       if (cb >= 0 && cg >= 0 && cr >= 0)
+        {
+            const v_uint16 vcb = vx_setall_u16((ushort)cb), vcg = vx_setall_u16((ushort)cg), vcr = vx_setall_u16((ushort)cr);
+            const v_uint32 vdelta32 = vx_setall_u32(1u << (shift-1));
+            for( ; i < n;
+                 i += vsize, src += scn*vsize, dst += vsize)
+            {
+                if ( i > n - vsize ) {
+                    if (i == 0 || src == dst) {
+                        break;
+                    }
+                    int backup = i - (n - vsize);
+                    i = n - vsize;
+                    src -= backup * scn;
+                    dst -= backup;
+                }
+                v_uint16 r, g, b, a;
+                if(scn == 3)
+                {
+                    v_load_deinterleave(src, b, g, r);
+                }
+                else
+                {
+                    v_load_deinterleave(src, b, g, r, a);
+                }
+                v_uint32 pb0, pb1, pg0, pg1, pr0, pr1;
+                v_mul_expand(b, vcb, pb0, pb1);
+                v_mul_expand(g, vcg, pg0, pg1);
+                v_mul_expand(r, vcr, pr0, pr1);
+                v_uint32 y0 = v_shr<shift>(v_add(v_add(pb0, pg0), v_add(pr0, vdelta32)));
+                v_uint32 y1 = v_shr<shift>(v_add(v_add(pb1, pg1), v_add(pr1, vdelta32)));
+                v_store(dst, v_pack(y0, y1));
+            }
+        }
+#endif
 
         v_int16 b2y = vx_setall_s16(cb);
         v_int16 g2y = vx_setall_s16(cg);

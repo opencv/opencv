@@ -818,6 +818,8 @@ public:
                     }
                     else if( first )
                         break;
+                    else
+                        CV_PARSE_ERROR_CPP( "The YAML streams must start with '---', except the first one" );
                 }
                 else if( cv_isalnum(*ptr) || *ptr=='_')
                 {
