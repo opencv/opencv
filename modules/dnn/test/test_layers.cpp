@@ -3348,4 +3348,33 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
+// subscripts may use uppercase letters as well as lowercase ones
+TEST(Layer_Test_Einsum, UppercaseSubscripts)
+{
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "uppercase_subscripts";
+    lp.set("equation", "Ij,jK->IK");
+    lp.set("outputSize", 1);
+    lp.set("inputSize", 2);
+    const int aShape[] = {2, 3}, bShape[] = {3, 2};
+    lp.set("inputShapes0", DictValue::arrayInt(aShape, 2));
+    lp.set("inputShapes1", DictValue::arrayInt(bShape, 2));
+    Ptr<Layer> layer = EinsumLayer::create(lp);
+
+    float aData[] = {1, 2, 3,
+                     4, 5, 6};
+    float bData[] = {1, 0,
+                     0, 1,
+                     1, 1};
+    float expectedData[] = {4, 5,
+                            10, 11};
+    Mat a(2, 3, CV_32F, aData), b(3, 2, CV_32F, bData), expected(2, 2, CV_32F, expectedData);
+    std::vector<Mat> inputs{a, b}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    normAssert(outputs[0], expected);
+}
+
 }} // namespace
