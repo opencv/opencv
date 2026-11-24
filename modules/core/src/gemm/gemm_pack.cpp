@@ -6,7 +6,7 @@
 
 #include "../precomp.hpp"
 #include "gemm_engine.hpp"
-#include "gemm_kernels.simd.hpp"
+#include "gemm_kernels.hpp"
 
 namespace cv { namespace gemm_engine {
 
@@ -36,8 +36,7 @@ void packB(int n, int k, const float* B, size_t ldb0, size_t ldb1, void* packedB
     const int W = packedPanelWidth(), nPanels = (n + W - 1) / W;
     auto pack = [&](const Range& r) {
         const int j0 = r.start * W;
-        CV_CPU_OPTIMIZATION_NAMESPACE::packBPanels(std::min(r.end * W, n) - j0, k, B + j0 * ldb1, ldb0, ldb1, W,
-                                                   dst + (size_t)j0 * k);
+        packBPanels(std::min(r.end * W, n) - j0, k, B + j0 * ldb1, ldb0, ldb1, W, dst + (size_t)j0 * k);
     };
     if (multiThread)
         parallel_for_(Range(0, nPanels), pack, (double)n * k * (1.0 / 65536));

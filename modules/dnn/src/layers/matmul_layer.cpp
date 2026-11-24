@@ -238,7 +238,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             engine_B.release();
 
             if (!blobs.empty() && B_mat->type() == CV_32F && B_mat->isContinuous() &&
-                gemmUseEngine(helper.M, helper.N, helper.K, true)) {
+                gemmUseEngine(helper.M, true)) {
                 // One engine pack per stored B slice; rows of B are its last dim.
                 const int ldb = B_mat->size[B_mat->dims - 1];
                 engine_B.pack(B_mat->ptr<const float>(), (size_t)ldb * sizeof(float), helper.N, helper.K, trans_b,
@@ -428,7 +428,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
             const auto *b = B.ptr<const float>();
             bool done = false;
             if (mlasAvailable() && !opt.use_rvv && helper.M > 0 && helper.N > 0 && helper.K > 0 &&
-                !gemmUseEngine(helper.M, helper.N, helper.K, false)) {
+                !gemmUseEngine(helper.M, false)) {
                 const auto A_shape = shape(A);
                 const auto B_shape = shape(B);
                 const int lda_mem = A_shape.back();

@@ -19,7 +19,6 @@
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 #include "fast_gemm_kernels.default.hpp"
 #include "opencv2/core/hal/hal.hpp"
-#include "gemm_select.hpp"
 
 namespace cv { namespace dnn {
 
@@ -629,7 +628,7 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 
 #if CV_NEON && CV_NEON_AARCH64
     const size_t zero_offset = 0;
-    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+    if (opt.use_neon &&
         fastGemmBatchArm(1, &zero_offset, &zero_offset, &zero_offset, M, N, K, alpha,
                          A, lda0, lda1, B, ldb0, ldb1, beta, C, ldc, opt.multi_thread))
         return;
@@ -731,7 +730,7 @@ void fastGemmBatch(size_t batch, const size_t *A_offsets, const size_t *B_offset
     char *c = (char *)C;
 
 #if CV_NEON && CV_NEON_AARCH64
-    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+    if (opt.use_neon &&
         fastGemmBatchArm(batch, A_offsets, B_offsets, C_offsets, M, N, K, alpha,
                          A, lda0, lda1, B, ldb0, ldb1, beta, C, ldc, opt.multi_thread))
         return;
@@ -886,7 +885,7 @@ void fastGemmBatch(size_t batch,
     char *c = (char *)C.ptr<float>();
 
 #if CV_NEON && CV_NEON_AARCH64
-    if (opt.use_neon && gemmUseEngine(M, N, K, false) &&
+    if (opt.use_neon &&
         fastGemmBatchArm(batch, A_offsets.data(), B_offsets.data(), C_offsets.data(), M, N, K, alpha,
                          (const float *)a, lda0, lda1, (const float *)b, ldb0, ldb1,
                          beta, (float *)c, ldc, opt.multi_thread))

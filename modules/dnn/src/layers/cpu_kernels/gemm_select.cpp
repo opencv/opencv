@@ -30,10 +30,9 @@ GemmPath gemmPath()
     return path;
 }
 
-bool gemmUseEngine(int M, int N, int K, bool constB)
+bool gemmUseEngine(int M, bool constB)
 {
 #if CV_NEON && CV_NEON_AARCH64
-    CV_UNUSED(N); CV_UNUSED(K);
     const GemmPath path = gemmPath();
     if (path != GEMM_PATH_AUTO)
         return path == GEMM_PATH_ENGINE;
@@ -45,7 +44,7 @@ bool gemmUseEngine(int M, int N, int K, bool constB)
         return constB || M > 1;             // MLAS keeps only the unpacked GEMV
     return constB || (M >= 2 && M <= 32);   // MLAS keeps the unpacked GEMV and large unpacked products
 #else
-    CV_UNUSED(M); CV_UNUSED(N); CV_UNUSED(K); CV_UNUSED(constB);
+    CV_UNUSED(M); CV_UNUSED(constB);
     return false;
 #endif
 }

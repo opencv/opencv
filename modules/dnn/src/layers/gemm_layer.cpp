@@ -355,7 +355,7 @@ public:
                 const int K = trans_a ? ma : na;
                 const int rows = flatten_a ? (shape_Y.size() >= 2 ? shape_Y[shape_Y.size() - 2] : 1)
                                            : (int)(outputs[0].total() / (size_t)N);
-                if (gemmUseEngine(rows, N, K, true))
+                if (gemmUseEngine(rows, true))
                     engine_B.pack(blobs[0].ptr<const float>(), blobs[0].step[0], N, K, trans_b);
             }
 

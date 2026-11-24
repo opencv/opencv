@@ -16,7 +16,11 @@ struct GemmShape { int m, n, k; };
 static const GemmShape gemmShapes[] = {
     { 1, 1, 1 }, { 3, 5, 7 }, { 1, 40, 33 }, { 2, 70, 37 }, { 8, 12, 64 }, { 9, 13, 65 },
     { 17, 25, 3 }, { 24, 50, 40 }, { 32, 33, 300 }, { 50, 100, 200 }, { 145, 73, 130 },
-    { 200, 150, 1300 }, { 300, 290, 1700 }, { 12, 20, 9000 }, { 30, 30, 5000 }
+#if defined(__aarch64__) || defined(_M_ARM64)
+    // Large blocks for the AArch64 engine; elsewhere they only make the suite slow.
+    { 200, 150, 1300 }, { 300, 290, 1700 },
+#endif
+    { 12, 20, 9000 }, { 30, 30, 5000 }
 };
 
 static const float alphaBeta[][2] = { { 1.f, 0.f }, { 0.5f, 1.f }, { -1.5f, 0.25f } };

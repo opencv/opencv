@@ -11,14 +11,14 @@
 
 namespace cv { namespace dnn {
 
-// GEMM implementation for fp32 layers, from OPENCV_DNN_GEMM_PATH=engine|mlas|auto (read once).
-// "mlas" keeps the previous dnn behaviour: MLAS where it is built, the dnn kernels elsewhere.
+// MLAS or the core engine for the Gemm and MatMul layers, from OPENCV_DNN_GEMM_PATH=engine|mlas|auto
+// (read once). fastGemm always uses the engine on AArch64.
 enum GemmPath { GEMM_PATH_AUTO, GEMM_PATH_ENGINE, GEMM_PATH_MLAS };
 GemmPath gemmPath();
 
-// True when an M x N x K product should run on the core GEMM engine (cv::hal::gemm32f*).
+// True when a product with M rows of A should run on the core GEMM engine (cv::hal::gemm32f*).
 // constB: B is a constant packed once. Always false off AArch64, so other platforms keep their paths.
-bool gemmUseEngine(int M, int N, int K, bool constB);
+bool gemmUseEngine(int M, bool constB);
 
 // True when the engine should replace the dnn kernels (no MLAS involved): AArch64 unless the path is "mlas".
 bool gemmEngineEnabled();

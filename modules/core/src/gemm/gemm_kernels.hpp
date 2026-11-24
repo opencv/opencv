@@ -12,11 +12,13 @@
     See ficus/LICENSE for the licensing terms
 */
 
+#ifndef OPENCV_CORE_SRC_GEMM_KERNELS_HPP
+#define OPENCV_CORE_SRC_GEMM_KERNELS_HPP
+
 #include "opencv2/core/hal/intrin.hpp"
 #include "gemm_engine.hpp"
 
 namespace cv { namespace gemm_engine {
-CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 #if CV_NEON && CV_NEON_AARCH64
 
@@ -421,5 +423,6 @@ static inline void dotBlockRows(int mr, int k, const float* A, size_t lda, const
 
 #endif // CV_NEON && CV_NEON_AARCH64
 
-CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // cv::gemm_engine
+
+#endif // OPENCV_CORE_SRC_GEMM_KERNELS_HPP

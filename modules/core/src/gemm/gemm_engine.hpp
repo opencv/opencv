@@ -22,7 +22,6 @@ enum
     GEMM_MR = 8,
     GEMM_NR = 12,
     GEMM_MC = 144,
-    GEMM_NC = 72,
     GEMM_KC = 384,
     GEMM_TASK_MACS = 1 << 17,   // smallest useful amount of work per task
     GEMM_SMALL_TASK_MACS = 1 << 16

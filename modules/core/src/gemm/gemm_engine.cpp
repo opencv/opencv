@@ -7,7 +7,7 @@
 #include "../precomp.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
 #include "gemm_engine.hpp"
-#include "gemm_kernels.simd.hpp"
+#include "gemm_kernels.hpp"
 #include "gemm_sme.hpp"
 
 namespace cv {
@@ -52,8 +52,6 @@ int smeVectorLength()
 }
 
 #if CV_GEMM_ENGINE_NEON
-using namespace CV_CPU_OPTIMIZATION_NAMESPACE;
-
 // Path limits, measured on Apple M5 against MLAS.
 enum
 {
