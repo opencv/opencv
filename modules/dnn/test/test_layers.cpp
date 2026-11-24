@@ -2890,6 +2890,42 @@ TEST_P(Layer_Test_Resize, align_corners_downscale)
     normAssert(out2d, ref, "", 5e-5, 1e-4);
 }
 
+// Nearest only copies values, so CV_64S input must come out unchanged.
+// It used to go through CV_32F, which rounds values above 2^24.
+TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int64_t vals[] = {16777217, 123456789012LL};
+    Mat inp(std::vector<int>{1, 1, 1, 2}, CV_64S);
+    int64_t* inpData = inp.ptr<int64_t>();
+    inpData[0] = vals[0];
+    inpData[1] = vals[1];
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", 1);
+    lp.set("zoom_factor_x", 2);
+    lp.set("interpolation", "nearest");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    ASSERT_EQ(CV_64S, out.depth());
+    ASSERT_EQ(4, (int)out.total());
+    const int64_t* outData = out.ptr<int64_t>();
+    for (int i = 0; i < 4; ++i)
+        EXPECT_EQ(vals[i / 2], outData[i]) << "i=" << i;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
