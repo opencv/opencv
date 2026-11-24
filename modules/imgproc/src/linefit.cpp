@@ -154,7 +154,6 @@ static void mergeLineFit3D(LineFit3DSummary& left, const LineFit3DSummary& right
 static LineFit3DSummary accumulateLineFit3D(const Point3f* points, int count)
 {
     constexpr int blockSize = 256;
-    double x[blockSize], y[blockSize], z[blockSize];
     LineFit3DSummary total;
     for (int base = 0; base < count;)
     {
@@ -164,16 +163,13 @@ static LineFit3DSummary accumulateLineFit3D(const Point3f* points, int count)
         for (int i = 0; i < block.count; ++i)
         {
             const Point3d p = Point3d(points[base + i]) - block.origin;
-            x[i] = p.x;
-            y[i] = p.y;
-            z[i] = p.z;
             block.mean += p;
         }
-        // Center the staged coordinates before forming any products.
+        // Reread the input and center each point before forming products.
         block.mean *= 1.0 / block.count;
         for (int i = 0; i < block.count; ++i)
         {
-            const Point3d p(x[i] - block.mean.x, y[i] - block.mean.y, z[i] - block.mean.z);
+            const Point3d p = (Point3d(points[base + i]) - block.origin) - block.mean;
             block.scatter.add(p);
         }
         mergeLineFit3D(total, block);
@@ -183,12 +179,6 @@ static LineFit3DSummary accumulateLineFit3D(const Point3f* points, int count)
 }
 } // namespace
 
-// Keep the L2 staging frame out of the shared robust dispatcher.
-#if defined(__GNUC__) || defined(__clang__)
-__attribute__((noinline))
-#elif defined(_MSC_VER)
-__declspec(noinline)
-#endif
 static void fitLine3D_L2(const Point3f* points, int count, float* line)
 {
     CV_Assert(count > 0);
