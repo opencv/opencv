@@ -477,7 +477,7 @@ struct AnchorFreeLayout
     int B = 0;                // number of samples
     int N = 0;                // number of anchors
     int C = 0;                // channels per anchor
-    bool transposed = false;  // true for the [B, C, N] layout
+    Mat rows;                 // the head as [B, N, C], so one anchor is one contiguous row
 
     static AnchorFreeLayout from(const Mat& out)
     {
@@ -488,31 +488,31 @@ struct AnchorFreeLayout
         int d1 = out.size[1], d2 = out.size[2];
         CV_Check(d1, d1 != d2, "Anchor-free head: a square output gives no way to tell the anchor "
                                "axis from the channel axis");
-        layout.transposed = d1 <= d2;
-        layout.C = layout.transposed ? d1 : d2;
-        layout.N = layout.transposed ? d2 : d1;
+        const bool transposed = d1 <= d2;
+        layout.C = transposed ? d1 : d2;
+        layout.N = transposed ? d2 : d1;
         // 4 box channels plus at least one score; every predicate below reads channel 4.
         CV_CheckGE(layout.C, 5, "Anchor-free head: too few channels for a box and a score");
+        // Every pass below walks whole anchors, so the anchor axis is kept last.
+        if (transposed)
+            transpose(out, {0, 2, 1}, layout.rows);
+        else
+            layout.rows = out;
+        // at() indexes a row by arithmetic rather than through the step array.
+        CV_Assert(layout.rows.isContinuous());
         return layout;
     }
 
     // One channel of one anchor, for callers that do not need the whole row.
-    float at(const Mat& out, int b, int i, int c) const
+    float at(int b, int i, int c) const
     {
-        const float* base = out.ptr<float>(b);
-        return transposed ? base[(size_t)c * N + i] : base[(size_t)i * C + c];
+        return rows.ptr<float>(b)[(size_t)i * C + c];
     }
 
-    // Returns anchor i of sample b contiguously, copying into buf if transposed.
-    const float* anchor(const Mat& out, int b, int i, std::vector<float>& buf) const
+    // Anchor i of sample b, contiguous.
+    const float* anchor(int b, int i) const
     {
-        if (!transposed)
-            return out.ptr<float>(b, i);
-        buf.resize(C);
-        const float* base = out.ptr<float>(b);
-        for (int c = 0; c < C; c++)
-            buf[c] = base[(size_t)c * N + i];
-        return buf.data();
+        return rows.ptr<float>(b, i);
     }
 };
 
@@ -525,19 +525,17 @@ struct AnchorDetection
 };
 
 // Only a 6-wide row is ambiguous; a class index is cast from an integer, a class score is not.
-bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int nm)
+bool lastChannelIsClassIndex(const AnchorFreeLayout& layout, int nm)
 {
     if (layout.C - nm != 6)
         return false;
 
     const int channel = layout.C - nm - 1;
-    const size_t offset = layout.transposed ? (size_t)channel * layout.N : (size_t)channel;
-    const int step = layout.transposed ? 1 : layout.C;
 
     for (int b = 0; b < layout.B; b++)
     {
-        const float* p = out.ptr<float>(b) + offset;
-        for (int i = 0; i < layout.N; i++, p += step)
+        const float* p = layout.rows.ptr<float>(b) + channel;
+        for (int i = 0; i < layout.N; i++, p += layout.C)
         {
             if (*p < 0.f || *p != std::floor(*p))
                 return false;
@@ -548,19 +546,19 @@ bool lastChannelIsClassIndex(const Mat& out, const AnchorFreeLayout& layout, int
 
 // Channel 4 alone is class 0 in a score-block row, so activity needs every class. Rows below
 // the decode threshold are padding, whose degenerate boxes must not decide the layout.
-bool rowIsActive(const Mat& out, const AnchorFreeLayout& layout, int b, int i, int lastScore,
+bool rowIsActive(const AnchorFreeLayout& layout, int b, int i, int lastScore,
                  float confThreshold)
 {
     for (int c = 4; c <= lastScore; c++)
     {
-        if (layout.at(out, b, i, c) >= confThreshold)
+        if (layout.at(b, i, c) >= confThreshold)
             return true;
     }
     return false;
 }
 
 // Only active rows carry coordinates; padding would otherwise read as normalized.
-bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int lastScore,
+bool boxesAreNormalized(const AnchorFreeLayout& layout, int lastScore,
                         float confThreshold)
 {
     bool any = false;
@@ -568,11 +566,11 @@ bool boxesAreNormalized(const Mat& out, const AnchorFreeLayout& layout, int last
     {
         for (int i = 0; i < layout.N; i++)
         {
-            if (!rowIsActive(out, layout, b, i, lastScore, confThreshold))
+            if (!rowIsActive(layout, b, i, lastScore, confThreshold))
                 continue;
             for (int c = 0; c < 4; c++)
             {
-                if (std::abs(layout.at(out, b, i, c)) > 2.f)
+                if (std::abs(layout.at(b, i, c)) > 2.f)
                     return false;
             }
             any = true;
@@ -650,7 +648,7 @@ bool mergeSplitOutputs(const std::vector<Mat>& outs, Mat& merged, ScoreActivatio
 }
 
 // Centre rows fail this: w would have to exceed cx on every detection.
-bool boxesAreCorners(const Mat& out, const AnchorFreeLayout& layout, int lastScore,
+bool boxesAreCorners(const AnchorFreeLayout& layout, int lastScore,
                      float confThreshold)
 {
     bool any = false;
@@ -658,10 +656,10 @@ bool boxesAreCorners(const Mat& out, const AnchorFreeLayout& layout, int lastSco
     {
         for (int i = 0; i < layout.N; i++)
         {
-            if (!rowIsActive(out, layout, b, i, lastScore, confThreshold))
+            if (!rowIsActive(layout, b, i, lastScore, confThreshold))
                 continue;
-            if (layout.at(out, b, i, 2) <= layout.at(out, b, i, 0)
-                || layout.at(out, b, i, 3) <= layout.at(out, b, i, 1))
+            if (layout.at(b, i, 2) <= layout.at(b, i, 0)
+                || layout.at(b, i, 3) <= layout.at(b, i, 1))
                 return false;
             any = true;
         }
@@ -676,12 +674,12 @@ struct HeadLayout
     bool normalized = false;     // box values are fractions of the blob, not pixels
     bool cornerBox = false;      // x1, y1, x2, y2 rather than cx, cy, w, h
 
-    static HeadLayout from(const Mat& out, const AnchorFreeLayout& layout, int nm,
+    static HeadLayout from(const AnchorFreeLayout& layout, int nm,
                            const DetectionOutputParams& params, float confThreshold)
     {
         HeadLayout head;
         head.explicitClass = params.classForm == DNN_CLS_AUTO
-                           ? lastChannelIsClassIndex(out, layout, nm)
+                           ? lastChannelIsClassIndex(layout, nm)
                            : params.classForm == DNN_CLS_INDEX;
         if (head.explicitClass)
             CV_CheckEQ(layout.C - nm, 6, "a class-index row is "
@@ -689,10 +687,10 @@ struct HeadLayout
 
         const int lastScore = head.explicitClass ? 4 : layout.C - nm - 1;
         head.normalized = params.coordSpace == DNN_COORD_AUTO
-                        ? boxesAreNormalized(out, layout, lastScore, confThreshold)
+                        ? boxesAreNormalized(layout, lastScore, confThreshold)
                         : params.coordSpace == DNN_COORD_NORMALIZED;
         head.cornerBox = params.boxForm == DNN_BOX_AUTO
-                       ? boxesAreCorners(out, layout, lastScore, confThreshold)
+                       ? boxesAreCorners(layout, lastScore, confThreshold)
                        : params.boxForm == DNN_BOX_CORNER;
         return head;
     }
@@ -701,7 +699,7 @@ struct HeadLayout
     int tailOffset(int numClasses) const { return explicitClass ? 6 : 4 + numClasses; }
 };
 
-void decodeRows(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout& head, int b,
+void decodeRows(const AnchorFreeLayout& layout, const HeadLayout& head, int b,
                  int numClasses, float confThreshold, const Size& blobSize,
                  std::vector<AnchorDetection>& detections)
 {
@@ -710,10 +708,9 @@ void decodeRows(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout
     const float sx = head.normalized ? (float)blobSize.width : 1.f;
     const float sy = head.normalized ? (float)blobSize.height : 1.f;
 
-    std::vector<float> buf;
     for (int i = 0; i < layout.N; i++)
     {
-        const float* r = layout.anchor(out, b, i, buf);
+        const float* r = layout.anchor(b, i);
 
         int bestCls;
         float bestScore;
@@ -804,7 +801,7 @@ void nmsAnchorDetections(const std::vector<AnchorDetection>& detections,
 }
 
 
-SampleDecode decodeSample(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout& head,
+SampleDecode decodeSample(const AnchorFreeLayout& layout, const HeadLayout& head,
                            int b, int nm, const Size& blobSize, ImagePaddingMode paddingMode,
                            const Size& frameSize, float confThreshold, float nmsThreshold,
                            bool acrossClasses)
@@ -814,7 +811,7 @@ SampleDecode decodeSample(const Mat& out, const AnchorFreeLayout& layout, const 
     CV_Check(r.numClasses, r.numClasses >= 1,
              "Anchor-free head: too few channels to hold a box and a class");
 
-    decodeRows(out, layout, head, b, r.numClasses, confThreshold, blobSize, r.dets);
+    decodeRows(layout, head, b, r.numClasses, confThreshold, blobSize, r.dets);
     nmsAnchorDetections(r.dets, confThreshold, nmsThreshold, acrossClasses, r.keep);
 
     std::vector<Rect> blobBoxes;
@@ -853,19 +850,19 @@ int poseKeypointCount(const AnchorFreeLayout& layout, int detWidth)
     return (layout.C - detWidth) / 3;
 }
 
-int poseDetWidth(const Mat& out, const AnchorFreeLayout& layout,
+int poseDetWidth(const AnchorFreeLayout& layout,
                  const DetectionOutputParams& params)
 {
     if (params.classForm != DNN_CLS_AUTO)
         return params.classForm == DNN_CLS_INDEX ? 6 : 5;
     if ((layout.C - 6) % 3 == 0 && layout.C >= 9
-        && lastChannelIsClassIndex(out, layout, /*nm=*/layout.C - 6))
+        && lastChannelIsClassIndex(layout, /*nm=*/layout.C - 6))
         return 6;
     return 5;
 }
 
 // Appends; the caller clears once and accumulates over the batch.
-void posesFromSample(const Mat& out, const AnchorFreeLayout& layout, const HeadLayout& head,
+void posesFromSample(const AnchorFreeLayout& layout, const HeadLayout& head,
                      int b, int detWidth, int numKeypoints, const Size& blobSize,
                      ImagePaddingMode paddingMode, const Size& frameSize, float confThreshold,
                      float nmsThreshold, std::vector<std::vector<Point3f> >& keypoints,
@@ -873,7 +870,7 @@ void posesFromSample(const Mat& out, const AnchorFreeLayout& layout, const HeadL
 {
     // The keypoint triples are trailing channels, so the class part is what remains after them.
     CV_DbgAssert(layout.C == detWidth + 3 * numKeypoints);
-    SampleDecode d = decodeSample(out, layout, head, b, /*nm=*/3 * numKeypoints, blobSize,
+    SampleDecode d = decodeSample(layout, head, b, /*nm=*/3 * numKeypoints, blobSize,
                                    paddingMode, frameSize, confThreshold, nmsThreshold,
                                    /*acrossClasses=*/false);
 
@@ -885,10 +882,9 @@ void posesFromSample(const Mat& out, const AnchorFreeLayout& layout, const HeadL
     const float sx = head.normalized ? (float)blobSize.width : 1.f;
     const float sy = head.normalized ? (float)blobSize.height : 1.f;
 
-    std::vector<float> buf;
     for (size_t i = 0; i < d.keep.size(); i++)
     {
-        const float* kp = layout.anchor(out, b, d.dets[d.keep[i]].anchorIndex, buf) + detWidth;
+        const float* kp = layout.anchor(b, d.dets[d.keep[i]].anchorIndex) + detWidth;
 
         std::vector<Point2f> blobPts(numKeypoints);
         std::vector<float> vis(numKeypoints);
@@ -939,14 +935,14 @@ void splitSegOutputs(const std::vector<Mat>& outs, Mat& det, Mat& proto)
 }
 
 // Appends; the caller clears once and accumulates over the batch.
-void instancesFromSample(const Mat& det, const Mat& proto, const AnchorFreeLayout& layout,
+void instancesFromSample(const Mat& proto, const AnchorFreeLayout& layout,
                          const HeadLayout& head, int b, const Size& blobSize,
                          ImagePaddingMode paddingMode, const Size& frameSize, float confThreshold,
                          float nmsThreshold, std::vector<Mat>& masks, std::vector<int>& classIds,
                          std::vector<float>& confidences, std::vector<Rect>& boxes)
 {
-    const int nm = proto.size[1], maskH = proto.size[2];
-    SampleDecode d = decodeSample(det, layout, head, b, nm, blobSize, paddingMode, frameSize,
+    const int nm = proto.size[1], maskH = proto.size[2], maskW = proto.size[3];
+    SampleDecode d = decodeSample(layout, head, b, nm, blobSize, paddingMode, frameSize,
                                    confThreshold, nmsThreshold, /*acrossClasses=*/false);
     const int coeffOffset = head.tailOffset(d.numClasses);
     const Rect blobRect(0, 0, blobSize.width, blobSize.height);
@@ -956,11 +952,10 @@ void instancesFromSample(const Mat& det, const Mat& proto, const AnchorFreeLayou
     param.size = blobSize;
     param.paddingmode = paddingMode;
 
-    std::vector<float> buf;
     for (size_t i = 0; i < d.keep.size(); i++)
     {
         const int width = d.boxes[i].width, height = d.boxes[i].height;
-        const float* r = layout.anchor(det, b, d.dets[d.keep[i]].anchorIndex, buf);
+        const float* r = layout.anchor(b, d.dets[d.keep[i]].anchorIndex);
         const float* coeffs = r + coeffOffset;
 
         // mask = sigmoid(coeffs * prototypes), at prototype resolution.
@@ -970,16 +965,31 @@ void instancesFromSample(const Mat& det, const Mat& proto, const AnchorFreeLayou
         cv::exp(-maskProto, negExp);
         Mat sigmoidMask = 1.0 / (1.0 + negExp);
 
-        Mat fullBlobMask;
-        cv::resize(sigmoidMask, fullBlobMask, blobSize, 0, 0, INTER_LINEAR);
-
         // The crop must cover the same region as the box it is resized into, so map the box
         // back; clipping in blob space would keep letterbox padding the box no longer covers.
         Rect blobBox = imageRectToBlobRect(param, d.boxes[i], frameSize) & blobRect;
         Mat instanceMask;
         if (blobBox.width > 0 && blobBox.height > 0)
-            cv::resize(fullBlobMask(blobBox), instanceMask, Size(width, height), 0, 0,
-                       INTER_LINEAR);
+        {
+            // Bilinear interpolation reads one pixel past the crop, so protoBox carries a margin.
+            const double fx = (double)maskW / blobSize.width;
+            const double fy = (double)maskH / blobSize.height;
+            Rect protoBox(cvFloor(blobBox.x * fx) - 1, cvFloor(blobBox.y * fy) - 1, 0, 0);
+            protoBox.width = cvCeil(blobBox.br().x * fx) + 1 - protoBox.x;
+            protoBox.height = cvCeil(blobBox.br().y * fy) + 1 - protoBox.y;
+            protoBox &= Rect(0, 0, maskW, maskH);
+
+            const int ex = cvFloor(protoBox.x / fx), ey = cvFloor(protoBox.y / fy);
+            const Size upSize(cvCeil(protoBox.br().x / fx) - ex,
+                              cvCeil(protoBox.br().y / fy) - ey);
+            const Rect sub = blobBox - Point(ex, ey);
+            CV_DbgAssert(Rect(Point(0, 0), upSize).contains(sub.tl())
+                         && Rect(Point(0, 0), upSize).contains(sub.br() - Point(1, 1)));
+
+            Mat upscaled;
+            cv::resize(sigmoidMask(protoBox), upscaled, upSize, 0, 0, INTER_LINEAR);
+            cv::resize(upscaled(sub), instanceMask, Size(width, height), 0, 0, INTER_LINEAR);
+        }
         else
             instanceMask = Mat::zeros(height, width, CV_32F);
 
@@ -1003,9 +1013,9 @@ void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const 
     AnchorFreeLayout layout = AnchorFreeLayout::from(out);
     CV_CheckEQ(layout.B, (int)frameSizes.size(),
                "estimatePoses: the net returned a different number of samples");
-    const int detWidth = poseDetWidth(out, layout, params);
+    const int detWidth = poseDetWidth(layout, params);
     const int numKeypoints = poseKeypointCount(layout, detWidth);
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/3 * numKeypoints, params,
+    const HeadLayout head = HeadLayout::from(layout, /*nm=*/3 * numKeypoints, params,
                                              confThreshold);
 
     keypoints.clear();
@@ -1018,7 +1028,7 @@ void posesFromOutput(const Mat& out, const std::vector<Size>& frameSizes, const 
     {
         // Keypoints map back through the size of the frame that sample came from, not a shared one.
         const size_t before = boxes.size();
-        posesFromSample(out, layout, head, b, detWidth, numKeypoints, blobSize, paddingMode,
+        posesFromSample(layout, head, b, detWidth, numKeypoints, blobSize, paddingMode,
                         frameSizes[b], confThreshold, nmsThreshold, keypoints, boxes, confidences);
         if (frameIds)
             frameIds->insert(frameIds->end(), boxes.size() - before, b);
@@ -1039,7 +1049,7 @@ void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Si
                "segmentInstances: the net returned a different number of samples");
     CV_CheckEQ(proto.size[0], (int)frameSizes.size(),
                "segmentInstances: the prototypes hold a different number of samples");
-    const HeadLayout head = HeadLayout::from(det, layout, /*nm=*/proto.size[1], params,
+    const HeadLayout head = HeadLayout::from(layout, /*nm=*/proto.size[1], params,
                                              confThreshold);
 
     masks.clear();
@@ -1053,7 +1063,7 @@ void instancesFromOutputs(const Mat& det, const Mat& proto, const std::vector<Si
     {
         // Masks and boxes map back through the size of the frame that sample came from.
         const size_t before = boxes.size();
-        instancesFromSample(det, proto, layout, head, b, blobSize, paddingMode, frameSizes[b],
+        instancesFromSample(proto, layout, head, b, blobSize, paddingMode, frameSizes[b],
                             confThreshold, nmsThreshold, masks, classIds, confidences, boxes);
         if (frameIds)
             frameIds->insert(frameIds->end(), boxes.size() - before, b);
@@ -1518,9 +1528,9 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
         const Mat& out = detections[0];
         AnchorFreeLayout layout = AnchorFreeLayout::from(out);
         CV_CheckEQ(layout.B, 1, "detect: the net returned more than one sample for one image");
-        const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams,
+        const HeadLayout head = HeadLayout::from(layout, /*nm=*/0, impl->outputParams,
                                                  confThreshold);
-        SampleDecode d = decodeSample(out, layout, head, /*b=*/0, /*nm=*/0, impl->size,
+        SampleDecode d = decodeSample(layout, head, /*b=*/0, /*nm=*/0, impl->size,
                                        impl->paddingMode, Size(frameWidth, frameHeight),
                                        confThreshold, nmsThreshold, getNmsAcrossClasses());
         for (int idx : d.keep)
@@ -1559,7 +1569,7 @@ void DetectionModel::detect(InputArrayOfArrays frames,
     AnchorFreeLayout layout = AnchorFreeLayout::from(out);
     CV_CheckEQ(layout.B, (int)sizes.size(),
                "batched detect: the net returned a different number of samples");
-    const HeadLayout head = HeadLayout::from(out, layout, /*nm=*/0, impl->outputParams,
+    const HeadLayout head = HeadLayout::from(layout, /*nm=*/0, impl->outputParams,
                                              confThreshold);
 
     classIds.clear();
@@ -1570,7 +1580,7 @@ void DetectionModel::detect(InputArrayOfArrays frames,
     for (int b = 0; b < layout.B; b++)
     {
         // Boxes map back through the size of the frame that sample came from, not a shared one.
-        SampleDecode d = decodeSample(out, layout, head, b, /*nm=*/0, impl->size,
+        SampleDecode d = decodeSample(layout, head, b, /*nm=*/0, impl->size,
                                        impl->paddingMode, sizes[b],
                                        confThreshold, nmsThreshold, getNmsAcrossClasses());
         for (size_t i = 0; i < d.keep.size(); i++)
