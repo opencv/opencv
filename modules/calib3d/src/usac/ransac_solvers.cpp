@@ -89,23 +89,6 @@ Ptr<RansacOutput> RansacOutput::create(const cv::Mat &model_, const std::vector<
             number_iterations_, conf, errors_);
 }
 
-double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
-        int sample_size, bool is_independent, int &min_non_random_inliers) {
-    std::sort(supports.begin(), supports.end());
-    double lambda = supports.size() % 2 ? (supports[supports.size()/2] + supports[supports.size()/2+1])*0.5 : supports[supports.size()/2];
-    const double cdf = lambda + cdf_thr*sqrt(lambda * (1 - lambda / (is_independent ? points_size - sample_size : points_size)));
-    int lower_than_cdf = 0; lambda = 0;
-    for (const auto &inl : supports)
-        if (inl < cdf) {
-            lambda += inl; lower_than_cdf++;
-        } else break; // list is sorted
-    lambda /= lower_than_cdf;
-    if (lambda < 1 || lower_than_cdf == 0) lambda = 1;
-    // use 0.9999 quantile https://keisan.casio.com/exec/system/14060745333941
-    if (! is_independent) // do not calculate it for all inliers
-        min_non_random_inliers = (int)(lambda + 2.32*sqrt(lambda * (1 - lambda / points_size))) + 1;
-    return lambda;
-}
 
 class Ransac {
 public:

@@ -5,6 +5,10 @@
 #ifndef OPENCV_USAC_USAC_HPP
 #define OPENCV_USAC_USAC_HPP
 
+#include <vector>
+#include <algorithm>
+#include <cmath>
+
 namespace cv { namespace usac {
 enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3, AFFINE=4, P3P=5, P6P=6};
 enum VerificationMethod { NULL_VERIFIER=0, SPRT_VERIFIER=1, ASPRT=2 };
@@ -937,8 +941,38 @@ public:
          double confidence_=0.95, int max_iterations_=5000, ScoreMethod score_ =ScoreMethod::SCORE_METHOD_MSAC);
 };
 
-double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
-      int sample_size, bool is_indendent_inliers, int &min_non_random_inliers);
+inline double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
+        int sample_size, bool is_independent, int &min_non_random_inliers) {
+    if (supports.empty()) {
+        min_non_random_inliers = 1;
+        return 1.0;
+    }
+    std::sort(supports.begin(), supports.end());
+    const size_t sz = supports.size();
+    double lambda = (sz % 2 == 0)
+        ? (supports[sz / 2 - 1] + supports[sz / 2]) * 0.5
+        : (double)supports[sz / 2];
+    const int denom = std::max(1, is_independent ? (points_size - sample_size) : points_size);
+    const double cdf = lambda + cdf_thr * sqrt(std::max(0.0, lambda * (1.0 - lambda / denom)));
+    int lower_than_cdf = 0;
+    lambda = 0;
+    for (const auto &inl : supports) {
+        if (inl < cdf) {
+            lambda += inl;
+            lower_than_cdf++;
+        } else {
+            break; // list is sorted
+        }
+    }
+    lambda = lower_than_cdf > 0 ? (lambda / lower_than_cdf) : 1.0;
+    if (lambda < 1.0) lambda = 1.0;
+    // use 0.9999 quantile https://keisan.casio.com/exec/system/14060745333941
+    if (!is_independent) { // do not calculate it for all inliers
+        const int pts_denom = std::max(1, points_size);
+        min_non_random_inliers = (int)(lambda + 2.32 * sqrt(std::max(0.0, lambda * (1.0 - lambda / pts_denom)))) + 1;
+    }
+    return lambda;
+}
 
 Mat findHomography(InputArray srcPoints, InputArray dstPoints, int method,
                    double ransacReprojThreshold, OutputArray mask,
