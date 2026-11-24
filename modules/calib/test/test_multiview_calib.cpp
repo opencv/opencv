@@ -96,12 +96,14 @@ TEST(Multiview_VisibilityMask, nonContinuousMaskMatchesClone)
     }
 }
 
-TEST(Multiview_ObjectPoints, equivalentLayouts)
+static void checkEquivalentObjectPointLayouts(uchar model)
 {
     const int cameras = 2, npoints = 12;
     const cv::Matx33d K(900, 0, 640, 0, 910, 480, 0, 0, 1);
     const double angle = 0.24;
-    const cv::Matx33d boardRotation(cos(angle), 0, sin(angle), 0, 1, 0, -sin(angle), 0, cos(angle));
+    const cv::Vec3d boardRotation(0, angle, 0);
+    const bool fisheye = model == cv::CALIB_MODEL_FISHEYE;
+    const cv::Mat coefficients = cv::Mat::zeros(fisheye ? 4 : 5, 1, CV_64F);
     cv::Mat_<float> points(npoints, 3);
     std::vector<std::vector<cv::Mat>> imagePoints(cameras, std::vector<cv::Mat>(1));
 
@@ -111,22 +113,24 @@ TEST(Multiview_ObjectPoints, equivalentLayouts)
         points(p, 1) = (p / 4) / 16.f;
         points(p, 2) = 0;
     }
+    const cv::Mat pointVectors = points.reshape(3);
+    const auto project = [&](const cv::Mat& rvec, const cv::Mat& tvec, cv::Mat& projected)
+    {
+        if (fisheye)
+            cv::fisheye::projectPoints(pointVectors, projected, rvec, tvec, K, coefficients);
+        else
+            cv::projectPoints(pointVectors, rvec, tvec, K, coefficients, projected);
+    };
     for (int c = 0; c < cameras; ++c)
     {
-        cv::Mat_<cv::Vec2f> image(npoints, 1);
-        for (int p = 0; p < npoints; ++p)
-        {
-            const cv::Vec3d x(points(p, 0), points(p, 1), points(p, 2));
-            const cv::Vec3d q = boardRotation * x + cv::Vec3d(0.16 * c - 0.1, -0.075, 1.5);
-            ASSERT_GT(q[2], 0.);
-            image(p, 0) = cv::Vec2f((float)(900 * q[0] / q[2] + 640),
-                                    (float)(910 * q[1] / q[2] + 480));
-        }
-        imagePoints[c][0] = image;
+        const cv::Vec3d translation(0.16 * c - 0.1, -0.075, 1.5);
+        project(cv::Mat(boardRotation), cv::Mat(translation), imagePoints[c][0]);
     }
+    // Keep the residual large enough to detect an incorrect RMS divisor.
+    imagePoints[0][0].at<cv::Vec2f>(0, 0)[0] += 0.25f;
 
-    const cv::Mat layouts[] = {points, points.t(), points.reshape(3, 1), points.reshape(3)};
-    const char* names[] = {"Nx3 CV_32F", "3xN CV_32F", "1xN CV_32FC3", "Nx1 CV_32FC3"};
+    const cv::Mat layouts[] = {points, points.reshape(3, 1), points.t(), pointVectors};
+    const char* names[] = {"Nx3 CV_32F", "1xN CV_32FC3", "3xN CV_32F", "Nx1 CV_32FC3"};
 
     double referenceRMS = 0;
     std::vector<cv::Mat> referenceR, referenceT, referenceBoardR, referenceBoardT;
@@ -139,15 +143,15 @@ TEST(Multiview_ObjectPoints, equivalentLayouts)
         for (int c = 0; c < cameras; ++c)
         {
             intrinsics.emplace_back(K);
-            distortion.push_back(cv::Mat::zeros(5, 1, CV_64F));
+            distortion.push_back(coefficients.clone());
         }
         cv::Mat pairs, errors;
         double rms = 0;
         ASSERT_NO_THROW(rms = cv::calibrateMultiview(std::vector<cv::Mat>{layouts[i]}, imagePoints,
                 std::vector<cv::Size>(cameras, cv::Size(1280, 960)), cv::Mat::ones(cameras, 1, CV_8U),
-                std::vector<uchar>(cameras, cv::CALIB_MODEL_PINHOLE), intrinsics, distortion,
+                std::vector<uchar>(cameras, model), intrinsics, distortion,
                 rvecs, tvecs, pairs, boardR, boardT, errors, cv::noArray(), cv::CALIB_USE_INTRINSIC_GUESS));
-        ASSERT_LT(rms, 1e-3);
+        EXPECT_LT(rms, 0.1);
 
         if (i == 0)
         {
@@ -164,13 +168,32 @@ TEST(Multiview_ObjectPoints, equivalentLayouts)
         EXPECT_MAT_NEAR(referenceErrors, errors, 1e-4);
         EXPECT_MAT_NEAR(referenceBoardR[0], boardR[0], 1e-6);
         EXPECT_MAT_NEAR(referenceBoardT[0], boardT[0], 1e-6);
+        double sumSquaredErrors = 0;
         for (int c = 0; c < cameras; ++c)
         {
+            cv::Mat rotation, translation, projected;
+            cv::composeRT(boardR[0], boardT[0], rvecs[c], tvecs[c], rotation, translation);
+            project(rotation, translation, projected);
+            const double squaredError = cv::norm(projected, imagePoints[c][0], cv::NORM_L2SQR);
+            EXPECT_NEAR(std::sqrt(squaredError / npoints), errors.at<double>(c, 0), 1e-4);
+            sumSquaredErrors += squaredError;
+
             EXPECT_MAT_NEAR(cv::Mat(K), intrinsics[c], 1e-12);
             EXPECT_MAT_NEAR(referenceR[c], rvecs[c], 1e-6);
             EXPECT_MAT_NEAR(referenceT[c], tvecs[c], 1e-6);
         }
+        EXPECT_NEAR(std::sqrt(sumSquaredErrors / (cameras * npoints)), rms, 1e-4);
     }
+}
+
+TEST(Multiview_ObjectPoints, equivalentLayouts)
+{
+    checkEquivalentObjectPointLayouts(cv::CALIB_MODEL_PINHOLE);
+}
+
+TEST(Multiview_ObjectPoints, equivalentLayoutsFisheye)
+{
+    checkEquivalentObjectPointLayouts(cv::CALIB_MODEL_FISHEYE);
 }
 
 TEST(multiview_calibration, accuracy) {
