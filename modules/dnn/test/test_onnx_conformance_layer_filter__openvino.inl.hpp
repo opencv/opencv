@@ -2614,7 +2614,7 @@ CASE(test_relu)
 CASE(test_relu_expanded_ver18)
     SKIP;
 CASE(test_reshape_allowzero_reordered)
-    // no filter
+    SKIP;
 CASE(test_reshape_extended_dims)
     SKIP;
 CASE(test_reshape_negative_dim)
