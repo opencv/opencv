@@ -636,6 +636,593 @@ INSTANTIATE_TEST_CASE_P(RGBD_Normals, RenderedNormals, ::testing::Combine(::test
     NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_CROSS_PRODUCT, {  57.9832,  2531}}),
                                                                           ::testing::Values(true, false)));
 
+const Scalar kSentinelVal(11.0, 22.0, 33.0, 44.0);
+
+template<typename T>
+void expectNormalsExactT(const Mat& expected, const Mat& actual, const char* label)
+{
+    if (expected.size() != actual.size())
+    {
+        ADD_FAILURE() << label << " size mismatch: expected " << expected.size()
+                      << ", actual " << actual.size();
+        return;
+    }
+    if (expected.type() != actual.type())
+    {
+        ADD_FAILURE() << label << " type mismatch: expected " << expected.type()
+                      << ", actual " << actual.type();
+        return;
+    }
+    const int ch = expected.channels();
+    for (int y = 0; y < expected.rows; ++y)
+    {
+        const T* ep = expected.ptr<T>(y);
+        const T* ap = actual.ptr<T>(y);
+        for (int i = 0; i < expected.cols * ch; ++i)
+        {
+            if (cvIsNaN(ep[i]) || cvIsNaN(ap[i]))
+            {
+                if (!(cvIsNaN(ep[i]) && cvIsNaN(ap[i])))
+                {
+                    ADD_FAILURE() << label << " NaN mismatch at row=" << y << " idx=" << i
+                                  << " expected=" << ep[i] << " actual=" << ap[i];
+                    return;
+                }
+            }
+            else if (ep[i] != ap[i])
+            {
+                ADD_FAILURE() << label << " value mismatch at row=" << y << " idx=" << i
+                              << " expected=" << ep[i] << " actual=" << ap[i];
+                return;
+            }
+        }
+    }
+}
+
+void expectNormalsExact(const Mat& expected, const Mat& actual, const char* label)
+{
+    if (expected.depth() == CV_32F)
+        expectNormalsExactT<float>(expected, actual, label);
+    else if (expected.depth() == CV_64F)
+        expectNormalsExactT<double>(expected, actual, label);
+    else
+        ADD_FAILURE() << label << " unsupported depth: " << expected.depth();
+}
+
+template<typename T>
+void expectBorderSentinelT(const Mat& canvas, const Rect& roi, const Vec<T, 4>& sentinel, const char* label)
+{
+    if (canvas.dims != 2 || canvas.channels() != 4 ||
+        roi.x < 0 || roi.y < 0 || roi.width < 0 || roi.height < 0 ||
+        roi.x + roi.width > canvas.cols || roi.y + roi.height > canvas.rows)
+    {
+        ADD_FAILURE() << label << " invalid canvas/roi shape: dims=" << canvas.dims
+                      << " ch=" << canvas.channels() << " size=" << canvas.size() << " roi=" << roi;
+        return;
+    }
+    for (int y = 0; y < canvas.rows; ++y)
+    {
+        const Vec<T, 4>* row = canvas.ptr<Vec<T, 4>>(y);
+        for (int x = 0; x < canvas.cols; ++x)
+        {
+            if (x >= roi.x && x < roi.x + roi.width && y >= roi.y && y < roi.y + roi.height)
+                continue;
+            if (row[x] != sentinel)
+            {
+                ADD_FAILURE() << label << " wrote outside ROI at (" << x << ", " << y
+                              << "): expected=" << sentinel << " actual=" << row[x];
+                return;
+            }
+        }
+    }
+}
+
+void expectBorderSentinel(const Mat& canvas, const Rect& roi, const char* label)
+{
+    if (canvas.depth() == CV_32F)
+    {
+        expectBorderSentinelT<float>(canvas, roi,
+            Vec4f(float(kSentinelVal[0]), float(kSentinelVal[1]), float(kSentinelVal[2]), float(kSentinelVal[3])),
+            label);
+    }
+    else if (canvas.depth() == CV_64F)
+    {
+        expectBorderSentinelT<double>(canvas, roi,
+            Vec4d(kSentinelVal[0], kSentinelVal[1], kSentinelVal[2], kSentinelVal[3]),
+            label);
+    }
+    else
+    {
+        ADD_FAILURE() << label << " unsupported depth: " << canvas.depth();
+    }
+}
+
+template<typename T>
+int countFiniteUnitNormalsT(const Mat& m)
+{
+    int count = 0;
+    for (int y = 0; y < m.rows; ++y)
+    {
+        const Vec<T, 4>* row = m.ptr<Vec<T, 4>>(y);
+        for (int x = 0; x < m.cols; ++x)
+        {
+            const Vec<T, 4>& v = row[x];
+            if (cvIsNaN(v[0]) || cvIsNaN(v[1]) || cvIsNaN(v[2]) ||
+                cvIsInf(v[0]) || cvIsInf(v[1]) || cvIsInf(v[2]))
+                continue;
+            const double x0 = double(v[0]), y0 = double(v[1]), z0 = double(v[2]);
+            const double sq = x0 * x0 + y0 * y0 + z0 * z0;
+            if (std::abs(sq - 1.0) < 1e-4 && v[3] == T(0))
+                ++count;
+        }
+    }
+    return count;
+}
+
+int countFiniteUnitNormals(const Mat& m)
+{
+    if (m.dims != 2 || m.channels() != 4)
+        return -1;
+    if (m.depth() == CV_32F)
+        return countFiniteUnitNormalsT<float>(m);
+    if (m.depth() == CV_64F)
+        return countFiniteUnitNormalsT<double>(m);
+    return -1;
+}
+
+template<typename T>
+void expectOutsideRectMatchesT(const Mat& before, const Mat& after, const Rect& skip, const char* label)
+{
+    if (before.size() != after.size() || before.type() != after.type())
+    {
+        ADD_FAILURE() << label << " canvas size/type changed";
+        return;
+    }
+    const int ch = before.channels();
+    for (int y = 0; y < before.rows; ++y)
+    {
+        const T* bp = before.ptr<T>(y);
+        const T* ap = after.ptr<T>(y);
+        for (int x = 0; x < before.cols; ++x)
+        {
+            if (x >= skip.x && x < skip.x + skip.width && y >= skip.y && y < skip.y + skip.height)
+                continue;
+            for (int c = 0; c < ch; ++c)
+            {
+                const int idx = x * ch + c;
+                if (cvIsNaN(bp[idx]) || cvIsNaN(ap[idx]))
+                {
+                    if (!(cvIsNaN(bp[idx]) && cvIsNaN(ap[idx])))
+                    {
+                        ADD_FAILURE() << label << " corrupted NaN outside ROI at (" << x << ", " << y << ")";
+                        return;
+                    }
+                }
+                else if (bp[idx] != ap[idx])
+                {
+                    ADD_FAILURE() << label << " modified pixel outside ROI at (" << x << ", " << y << ")";
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void expectOutsideRectMatches(const Mat& before, const Mat& after, const Rect& skip, const char* label)
+{
+    if (before.depth() == CV_32F)
+        expectOutsideRectMatchesT<float>(before, after, skip, label);
+    else if (before.depth() == CV_64F)
+        expectOutsideRectMatchesT<double>(before, after, skip, label);
+    else
+        ADD_FAILURE() << label << " unsupported depth: " << before.depth();
+}
+
+typedef ::testing::TestWithParam<std::tuple<MatDepth, NormalComputers>> NormalsInputSize;
+
+TEST_P(NormalsInputSize, rejects_mismatched_input_size)
+{
+    const int depth = std::get<0>(GetParam());
+    const RgbdNormals::RgbdNormalsMethod method = static_cast<RgbdNormals::RgbdNormalsMethod>(int(std::get<1>(GetParam())));
+    const int cfgRows = 48, cfgCols = 64;
+    const int type4 = CV_MAKETYPE(depth, 4);
+    Mat intr(Matx33d(262.5, 0.0, 31.5, 0.0, 262.5, 23.5, 0.0, 0.0, 1.0));
+
+    auto makePoints4 = [&](int r, int c) -> Mat {
+        if (r == 0 || c == 0)
+            return Mat(r, c, type4);
+        Mat depth32(r, c, CV_32FC1);
+        theRNG().fill(depth32, RNG::UNIFORM, 1.5, 3.0);
+        Mat pts;
+        depthTo3d(depth32, intr, pts);
+        if (depth == CV_64F)
+            pts.convertTo(pts, CV_64F);
+        return pts;
+    };
+
+    Ptr<RgbdNormals> comp = RgbdNormals::create(cfgRows, cfgCols, depth, intr, 5, 50.f, method);
+
+    const Mat ptsOk = makePoints4(cfgRows, cfgCols);
+    Mat okOut;
+    ASSERT_NO_THROW(comp->apply(ptsOk, okOut));
+    EXPECT_EQ(Size(cfgCols, cfgRows), okOut.size());
+    EXPECT_EQ(type4, okOut.type());
+    EXPECT_GT(countFiniteUnitNormals(okOut), 0);
+
+    // setRows() and setCols() must reject non-positive values without corrupting prior state or cache
+    for (int badDim : { 0, -1, -17 })
+    {
+        SCOPED_TRACE(cv::format("badDim=%d", badDim));
+        EXPECT_THROW(comp->setRows(badDim), cv::Exception);
+        EXPECT_EQ(cfgRows, comp->getRows());
+        EXPECT_THROW(comp->setCols(badDim), cv::Exception);
+        EXPECT_EQ(cfgCols, comp->getCols());
+    }
+    if (method == RgbdNormals::RGBD_NORMALS_METHOD_SRI)
+    {
+        // SRI::cache() requires at least 2x2 grids (cols/2 - 1 index & rows-1/cols-1 divisors)
+        EXPECT_THROW(RgbdNormals::create(1, cfgCols, depth, intr, 5, 50.f, method), cv::Exception);
+        EXPECT_THROW(RgbdNormals::create(cfgRows, 1, depth, intr, 5, 50.f, method), cv::Exception);
+        EXPECT_THROW(comp->setRows(1), cv::Exception);
+        EXPECT_EQ(cfgRows, comp->getRows());
+        EXPECT_THROW(comp->setCols(1), cv::Exception);
+        EXPECT_EQ(cfgCols, comp->getCols());
+    }
+    Mat afterBadSetter;
+    ASSERT_NO_THROW(comp->apply(ptsOk, afterBadSetter));
+    expectNormalsExact(okOut, afterBadSetter, "after_bad_setter");
+
+    // Empty 0-D Mat, 3-D Mat, wrong channels/depth, and overlapping-row broadcast step[0] == 0
+    {
+        Mat empty0d;
+        Mat sentinel(1, 1, type4, kSentinelVal);
+        const uchar* sPtr = sentinel.data;
+        EXPECT_THROW(comp->apply(empty0d, sentinel), cv::Exception);
+        EXPECT_EQ(sPtr, sentinel.data);
+
+        const int sz3d[3] = { 2, cfgRows, cfgCols };
+        Mat pts3d(3, sz3d, type4, Scalar::all(1.0));
+        EXPECT_THROW(comp->apply(pts3d, sentinel), cv::Exception);
+        EXPECT_EQ(sPtr, sentinel.data);
+
+        Mat wrongCh(cfgRows, cfgCols, CV_MAKETYPE(depth, 3), Scalar::all(1.0));
+        EXPECT_THROW(comp->apply(wrongCh, sentinel), cv::Exception);
+        EXPECT_EQ(sPtr, sentinel.data);
+
+        Mat wrongDepth(cfgRows, cfgCols, CV_8UC4, Scalar::all(1));
+        EXPECT_THROW(comp->apply(wrongDepth, sentinel), cv::Exception);
+        EXPECT_EQ(sPtr, sentinel.data);
+
+        Mat rowBuf(1, cfgCols, type4, Scalar::all(1.0));
+        const int sz2d[2] = { cfgRows, cfgCols };
+        const size_t zeroSteps[2] = { 0, rowBuf.elemSize() };
+        Mat broadcastIn(2, sz2d, type4, rowBuf.data, zeroSteps);
+        EXPECT_THROW(comp->apply(broadcastIn, sentinel), cv::Exception);
+        EXPECT_EQ(sPtr, sentinel.data);
+        Mat broadcastOut(2, sz2d, type4, rowBuf.data, zeroSteps);
+        EXPECT_THROW(comp->apply(ptsOk, broadcastOut), cv::Exception);
+        expectNormalsExact(Mat(1, 1, type4, kSentinelVal), sentinel, "sentinel_misc_bad");
+    }
+
+    const Size badSizes[7] = {
+        Size(32, 24),          // both smaller
+        Size(96, 72),          // both larger
+        Size(cfgCols, 24),     // height mismatch only
+        Size(32, cfgRows),     // width mismatch only
+        Size(cfgCols, 0),      // zero height
+        Size(0, cfgRows),      // zero width
+        Size(0, 0)             // both zero (2-D typed empty)
+    };
+    for (const Size& sz : badSizes)
+    {
+        SCOPED_TRACE(cv::format("badSize=%dx%d", sz.width, sz.height));
+        const Mat badPts = makePoints4(sz.height, sz.width);
+
+        Mat sentinel(1, 1, type4, kSentinelVal);
+        const uchar* sPtr = sentinel.data;
+        EXPECT_THROW(comp->apply(badPts, sentinel), cv::Exception);
+        EXPECT_EQ(Size(1, 1), sentinel.size());
+        EXPECT_EQ(sPtr, sentinel.data);
+        expectNormalsExact(Mat(1, 1, type4, kSentinelVal), sentinel, "sentinel_scalar");
+
+        Mat canvas(cfgRows + 8, cfgCols + 12, type4, kSentinelVal);
+        Mat roiOut = canvas(Rect(6, 4, cfgCols, cfgRows));
+        const uchar* rPtr = roiOut.data;
+        EXPECT_THROW(comp->apply(badPts, roiOut), cv::Exception);
+        EXPECT_EQ(Size(cfgCols, cfgRows), roiOut.size());
+        EXPECT_EQ(rPtr, roiOut.data);
+        expectNormalsExact(Mat(canvas.size(), canvas.type(), kSentinelVal), canvas, "sentinel_roi");
+    }
+
+    if (method == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
+    {
+        for (int dDepth : { CV_16U, CV_32F, CV_64F })
+        {
+            for (const Size& sz : badSizes)
+            {
+                SCOPED_TRACE(cv::format("LINEMOD dDepth=%d badSize=%dx%d", dDepth, sz.width, sz.height));
+                const Mat badDepth(sz.height, sz.width, CV_MAKETYPE(dDepth, 1), Scalar::all(2000));
+                Mat out(1, 1, type4, kSentinelVal);
+                const uchar* oPtr = out.data;
+                EXPECT_THROW(comp->apply(badDepth, out), cv::Exception);
+                EXPECT_EQ(oPtr, out.data);
+                expectNormalsExact(Mat(1, 1, type4, kSentinelVal), out, "linemod_sentinel");
+            }
+        }
+    }
+
+    // setRows() and setCols() change the accepted input size
+    comp->setRows(24);
+    comp->setCols(32);
+    Mat outResized;
+    EXPECT_THROW(comp->apply(ptsOk, outResized), cv::Exception);
+    EXPECT_TRUE(outResized.empty());
+    const Mat ptsResized = makePoints4(24, 32);
+    ASSERT_NO_THROW(comp->apply(ptsResized, outResized));
+    EXPECT_EQ(Size(32, 24), outResized.size());
+    EXPECT_EQ(type4, outResized.type());
+
+    // 1-D-shaped grids (1xN and Nx1) must run safely for FALS, LINEMOD (including rows>=12, cols==1), and CrossProduct;
+    // SRI accepts a minimum 2x2 grid.
+    if (method == RgbdNormals::RGBD_NORMALS_METHOD_SRI)
+    {
+        const Mat pts2x2 = makePoints4(2, 2);
+        comp->setRows(2);
+        comp->setCols(2);
+        Mat out2x2;
+        ASSERT_NO_THROW(comp->apply(pts2x2, out2x2));
+        EXPECT_EQ(Size(2, 2), out2x2.size());
+        EXPECT_EQ(type4, out2x2.type());
+    }
+    else
+    {
+        const Mat ptsRow = makePoints4(1, 20);
+        comp->setRows(1);
+        comp->setCols(20);
+        Mat outRow;
+        ASSERT_NO_THROW(comp->apply(ptsRow, outRow));
+        EXPECT_EQ(Size(20, 1), outRow.size());
+
+        const Mat ptsCol = makePoints4(20, 1);
+        comp->setRows(20);
+        comp->setCols(1);
+        Mat outCol;
+        ASSERT_NO_THROW(comp->apply(ptsCol, outCol));
+        EXPECT_EQ(Size(1, 20), outCol.size());
+
+        // 1-D OutputArray wrappers (std::vector<Vec4f/d>, _OutputArray(raw, n)) for 20x1 and 1x20
+        if (depth == CV_32F)
+        {
+            const Vec4f sent(static_cast<float>(kSentinelVal[0]), static_cast<float>(kSentinelVal[1]),
+                             static_cast<float>(kSentinelVal[2]), static_cast<float>(kSentinelVal[3]));
+            std::vector<Vec4f> vec(20, sent);
+            comp->apply(ptsCol, vec);
+            expectNormalsExact(outCol, Mat(20, 1, type4, vec.data()), "vector_out_32f");
+            ptsCol.copyTo(Mat(20, 1, type4, vec.data()));
+            comp->apply(Mat(20, 1, type4, vec.data()), vec);
+            expectNormalsExact(outCol, Mat(20, 1, type4, vec.data()), "vector_inplace_32f");
+
+            Vec4f rawBuf[20];
+            std::fill_n(rawBuf, 20, sent);
+            comp->apply(ptsCol, _OutputArray(rawBuf, 20));
+            expectNormalsExact(outCol, Mat(20, 1, type4, rawBuf), "raw_ptr_out_32f");
+
+            comp->setRows(1);
+            comp->setCols(20);
+            std::fill(vec.begin(), vec.end(), sent);
+            comp->apply(ptsRow, vec);
+            expectNormalsExact(outRow, Mat(1, 20, type4, vec.data()), "vector_row_32f");
+        }
+        else
+        {
+            const Vec4d sent(kSentinelVal[0], kSentinelVal[1], kSentinelVal[2], kSentinelVal[3]);
+            std::vector<Vec4d> vec(20, sent);
+            comp->apply(ptsCol, vec);
+            expectNormalsExact(outCol, Mat(20, 1, type4, vec.data()), "vector_out_64f");
+            ptsCol.copyTo(Mat(20, 1, type4, vec.data()));
+            comp->apply(Mat(20, 1, type4, vec.data()), vec);
+            expectNormalsExact(outCol, Mat(20, 1, type4, vec.data()), "vector_inplace_64f");
+
+            Vec4d rawBuf[20];
+            std::fill_n(rawBuf, 20, sent);
+            comp->apply(ptsCol, _OutputArray(rawBuf, 20));
+            expectNormalsExact(outCol, Mat(20, 1, type4, rawBuf), "raw_ptr_out_64f");
+
+            comp->setRows(1);
+            comp->setCols(20);
+            std::fill(vec.begin(), vec.end(), sent);
+            comp->apply(ptsRow, vec);
+            expectNormalsExact(outRow, Mat(1, 20, type4, vec.data()), "vector_row_64f");
+        }
+    }
+}
+
+TEST_P(NormalsInputSize, roi_input_and_output)
+{
+    const int depth = std::get<0>(GetParam());
+    const RgbdNormals::RgbdNormalsMethod method = static_cast<RgbdNormals::RgbdNormalsMethod>(int(std::get<1>(GetParam())));
+    const int cfgRows = 32, cfgCols = 40;
+    const int type4 = CV_MAKETYPE(depth, 4);
+    Mat intr(Matx33d(262.5, 0.0, 19.5, 0.0, 262.5, 15.5, 0.0, 0.0, 1.0));
+
+    // Build non-uniform synthetic depth so any stride bug shifts values measurably
+    Mat depthBase(cfgRows, cfgCols, CV_32FC1);
+    theRNG().fill(depthBase, RNG::UNIFORM, 1.0, 4.0);
+    Mat ptsRef;
+    depthTo3d(depthBase, intr, ptsRef);
+    if (depth == CV_64F)
+        ptsRef.convertTo(ptsRef, CV_64F);
+    ASSERT_TRUE(ptsRef.isContinuous());
+
+    Ptr<RgbdNormals> comp = RgbdNormals::create(cfgRows, cfgCols, depth, intr, 5, 50.f, method);
+
+    Mat refOut;
+    comp->apply(ptsRef, refOut);
+    ASSERT_EQ(Size(cfgCols, cfgRows), refOut.size());
+    ASSERT_EQ(type4, refOut.type());
+    ASSERT_GT(countFiniteUnitNormals(refOut), 0);
+
+    // 1. Preallocated non-continuous output ROI (both lvalue header and direct submatrix rvalue)
+    const Rect outRect(11, 7, cfgCols, cfgRows);
+    Mat outCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    Mat outRoi = outCanvas(outRect);
+    const uchar* outRoiPtr = outRoi.data;
+    ASSERT_FALSE(outRoi.isContinuous());
+    comp->apply(ptsRef, outRoi);
+    EXPECT_EQ(outRoiPtr, outRoi.data);
+    expectBorderSentinel(outCanvas, outRect, "lvalue_roi_out");
+    expectNormalsExact(refOut, outCanvas(outRect), "lvalue_roi_out");
+
+    Mat outCanvasRv(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    comp->apply(ptsRef, outCanvasRv(outRect));
+    expectBorderSentinel(outCanvasRv, outRect, "rvalue_roi_out");
+    expectNormalsExact(refOut, outCanvasRv(outRect), "rvalue_roi_out");
+
+    // 2. Non-continuous 4-channel input ROI surrounded by NaNs -> non-continuous output ROI
+    const Rect inRect(9, 5, cfgCols, cfgRows);
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    Mat inCanvas(cfgRows + 14, cfgCols + 21, type4, Scalar::all(qnan));
+    ptsRef.copyTo(inCanvas(inRect));
+    Mat inRoi = inCanvas(inRect);
+    ASSERT_FALSE(inRoi.isContinuous());
+
+    Mat bothCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    Mat bothOutRoi = bothCanvas(outRect);
+    comp->apply(inRoi, bothOutRoi);
+    expectBorderSentinel(bothCanvas, outRect, "both_roi_4ch");
+    expectNormalsExact(refOut, bothCanvas(outRect), "both_roi_4ch");
+
+    // 2b. Cross-depth 4-channel ROI input (CV_64FC4 into CV_32F computer and CV_32FC4 into CV_64F computer)
+    const int otherDepth = (depth == CV_32F) ? CV_64F : CV_32F;
+    const int otherType4 = CV_MAKETYPE(otherDepth, 4);
+    Mat ptsOtherRef;
+    ptsRef.convertTo(ptsOtherRef, otherDepth);
+    Mat refOtherOut;
+    comp->apply(ptsOtherRef, refOtherOut);
+    ASSERT_EQ(Size(cfgCols, cfgRows), refOtherOut.size());
+    ASSERT_EQ(type4, refOtherOut.type());
+    ASSERT_GT(countFiniteUnitNormals(refOtherOut), 0);
+
+    Mat otherInCanvas(cfgRows + 14, cfgCols + 21, otherType4, Scalar::all(qnan));
+    ptsOtherRef.copyTo(otherInCanvas(inRect));
+    Mat otherInRoi = otherInCanvas(inRect);
+    ASSERT_FALSE(otherInRoi.isContinuous());
+    Mat otherOutCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    Mat otherOutRoi = otherOutCanvas(outRect);
+    comp->apply(otherInRoi, otherOutRoi);
+    expectBorderSentinel(otherOutCanvas, outRect, "cross_depth_roi_4ch");
+    expectNormalsExact(refOtherOut, otherOutCanvas(outRect), "cross_depth_roi_4ch");
+
+    // 3. Row-padded external buffer (not a submatrix, non-continuous step)
+    const int paddedCols = cfgCols + 13;
+    Mat paddedBacking(cfgRows, paddedCols, type4, kSentinelVal);
+    Mat paddedOut(cfgRows, cfgCols, type4, paddedBacking.data, paddedBacking.step[0]);
+    ASSERT_FALSE(paddedOut.isContinuous());
+    comp->apply(ptsRef, paddedOut);
+    EXPECT_EQ(paddedBacking.data, paddedOut.data);
+    expectBorderSentinel(paddedBacking, Rect(0, 0, cfgCols, cfgRows), "padded_step_out");
+    expectNormalsExact(refOut, paddedBacking(Rect(0, 0, cfgCols, cfgRows)), "padded_step_out");
+
+    // 4. Non-continuous UMat input and output ROI
+    UMat uInCanvas(cfgRows + 14, cfgCols + 21, type4, Scalar::all(qnan));
+    ptsRef.copyTo(uInCanvas(inRect));
+    UMat uInRoi = uInCanvas(inRect);
+    ASSERT_FALSE(uInRoi.isContinuous());
+    UMat uCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    UMat uRoi = uCanvas(outRect);
+    ASSERT_FALSE(uRoi.isContinuous());
+    comp->apply(uInRoi, uRoi);
+    Mat uGot;
+    uCanvas.copyTo(uGot);
+    expectBorderSentinel(uGot, outRect, "umat_roi_out");
+    expectNormalsExact(refOut, uGot(outRect), "umat_roi_out");
+
+    // 5. Same-canvas overlapping ROIs (shifted ROI, forward/reverse continuous rowRange, and in-place)
+    Mat sharedCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+    ptsRef.copyTo(sharedCanvas(Rect(8, 5, cfgCols, cfgRows)));
+    const Mat sharedBefore = sharedCanvas.clone();
+    const Rect shiftedOut(9, 6, cfgCols, cfgRows);
+    Mat sharedSrc = sharedCanvas(Rect(8, 5, cfgCols, cfgRows));
+    Mat sharedDst = sharedCanvas(shiftedOut);
+    comp->apply(sharedSrc, sharedDst);
+    expectOutsideRectMatches(sharedBefore, sharedCanvas, shiftedOut, "overlapping_roi_border");
+    expectNormalsExact(refOut, sharedCanvas(shiftedOut), "overlapping_roi");
+
+    Mat vertCanvas(cfgRows + 4, cfgCols, type4, kSentinelVal);
+    ptsRef.copyTo(vertCanvas.rowRange(0, cfgRows));
+    const Mat vertBefore = vertCanvas.clone();
+    Mat vertSrc = vertCanvas.rowRange(0, cfgRows);
+    Mat vertDst = vertCanvas.rowRange(1, cfgRows + 1);
+    ASSERT_TRUE(vertSrc.isContinuous() && vertDst.isContinuous());
+    comp->apply(vertSrc, vertDst);
+    expectOutsideRectMatches(vertBefore, vertCanvas, Rect(0, 1, cfgCols, cfgRows), "overlapping_rowrange_fwd_border");
+    expectNormalsExact(refOut, vertCanvas.rowRange(1, cfgRows + 1), "overlapping_rowrange_fwd");
+
+    Mat vertRevCanvas(cfgRows + 4, cfgCols, type4, kSentinelVal);
+    ptsRef.copyTo(vertRevCanvas.rowRange(1, cfgRows + 1));
+    const Mat vertRevBefore = vertRevCanvas.clone();
+    Mat vertRevSrc = vertRevCanvas.rowRange(1, cfgRows + 1);
+    Mat vertRevDst = vertRevCanvas.rowRange(0, cfgRows);
+    ASSERT_TRUE(vertRevSrc.isContinuous() && vertRevDst.isContinuous());
+    comp->apply(vertRevSrc, vertRevDst);
+    expectOutsideRectMatches(vertRevBefore, vertRevCanvas, Rect(0, 0, cfgCols, cfgRows), "overlapping_rowrange_rev_border");
+    expectNormalsExact(refOut, vertRevCanvas.rowRange(0, cfgRows), "overlapping_rowrange_rev");
+
+    Mat inplace = ptsRef.clone();
+    const uchar* inplacePtr = inplace.data;
+    comp->apply(inplace, inplace);
+    EXPECT_EQ(inplacePtr, inplace.data);
+    expectNormalsExact(refOut, inplace, "inplace");
+
+    // 6. LINEMOD non-continuous & overlapping continuous 1-channel depth across CV_16U, CV_32F, CV_64F
+    if (method == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
+    {
+        const int expectedInterior = (cfgRows - 2 * 5 - 1) * (cfgCols - 2 * 5 - 1);
+        for (int dDepth : { CV_16U, CV_32F, CV_64F })
+        {
+            SCOPED_TRACE(cv::format("LINEMOD dDepth=%d", dDepth));
+            Mat dCont;
+            if (dDepth == CV_16U)
+                depthBase.convertTo(dCont, CV_16U, 1000.0);
+            else
+                depthBase.convertTo(dCont, dDepth);
+            ASSERT_TRUE(dCont.isContinuous());
+
+            Mat refDepthOut;
+            comp->apply(dCont, refDepthOut);
+            ASSERT_EQ(Size(cfgCols, cfgRows), refDepthOut.size());
+            ASSERT_EQ(type4, refDepthOut.type());
+            ASSERT_EQ(expectedInterior, countFiniteUnitNormals(refDepthOut));
+
+            // Keep border padding below differenceThreshold (50 / 50000) so stray reads perturb gradients
+            Mat dCanvas(cfgRows + 18, cfgCols + 29, dDepth);
+            theRNG().fill(dCanvas, RNG::UNIFORM, dDepth == CV_16U ? 5000.0 : 10.0,
+                          dDepth == CV_16U ? 45000.0 : 40.0);
+            const Rect dRect(13, 9, cfgCols, cfgRows);
+            dCont.copyTo(dCanvas(dRect));
+            Mat dRoi = dCanvas(dRect);
+            ASSERT_FALSE(dRoi.isContinuous());
+
+            Mat dOutCanvas(cfgRows + 16, cfgCols + 25, type4, kSentinelVal);
+            Mat dOutRoi = dOutCanvas(outRect);
+            comp->apply(dRoi, dOutRoi);
+            expectBorderSentinel(dOutCanvas, outRect, "linemod_depth_roi");
+            expectNormalsExact(refDepthOut, dOutCanvas(outRect), "linemod_depth_roi");
+
+            // Continuous 1-channel depth overlapping the output 4-channel normals buffer
+            Mat overlapBuf(cfgRows, cfgCols, type4, kSentinelVal);
+            Mat dAlias(cfgRows, cfgCols, dDepth, overlapBuf.data);
+            dCont.copyTo(dAlias);
+            ASSERT_TRUE(dAlias.isContinuous() && overlapBuf.isContinuous());
+            comp->apply(dAlias, overlapBuf);
+            expectNormalsExact(refDepthOut, overlapBuf, "linemod_depth_overlap");
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(RGBD_Normals, NormalsInputSize, ::testing::Combine(::testing::Values(CV_32F, CV_64F),
+                                                                           NormalComputers::all()));
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class RgbdPlaneGenerate : public ::testing::TestWithParam<std::tuple<int, bool, int>>
