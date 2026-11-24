@@ -462,8 +462,8 @@ enum ContourApproximationModes {
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4,
     /** Uses the link-runs contour extraction algorithm. Prefer cv::findContoursLinkRuns() for
-    new code: using this mode through cv::findContours() is deprecated. It supports only the
-    two-level hierarchy produced by `RETR_CCOMP` and `CHAIN_APPROX_SIMPLE` output. */
+    new code: using this mode through cv::findContours() is deprecated. If hierarchy is
+    requested, `mode` must be `RETR_CCOMP`; otherwise, `mode` is ignored. `offset` is ignored. */
     LINK_RUNS              = 5
 };
 
