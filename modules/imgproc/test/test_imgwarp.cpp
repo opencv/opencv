@@ -1206,7 +1206,7 @@ TEST(Imgproc_WarpAffine, IntegerTranslation)
 {
     const Scalar border(13, 57, 131, 231);
     const Rect dstRoi(2, 3, 39, 25);
-    RNG rng(137);
+    RNG& rng = theRNG();
 
     for (int channels = 1; channels <= CV_CN_MAX; ++channels)
     for (const Size& srcSize : {Size(37, 29), Size(49, 35), Size(1, 1)})
