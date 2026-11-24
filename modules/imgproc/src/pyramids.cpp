@@ -1499,112 +1499,6 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
 }
 
 
-#ifdef HAVE_IPP
-namespace cv
-{
-static bool ipp_buildpyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_VERSION_X100 > 900 && !IPP_DISABLE_PYRAMIDS_BUILD
-    Mat src = _src.getMat();
-    _dst.create( maxlevel + 1, 1, 0 );
-    _dst.getMatRef(0) = src;
-
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-    if (borderTypeNI != BORDER_DEFAULT || (src.isSubmatrix() && !isolated))
-        return false;
-
-    typedef IppStatus (CV_STDCALL * ippiPyramidLayerDownGetSize)(IppiSize srcRoi, Ipp32f rate, int kerSize, int* pStateSize, int* pBufSize);
-    typedef IppStatus (CV_STDCALL * ippiPyramidLayerDownInit)(void** ppState, IppiSize srcRoi, Ipp32f rate, void* pKernel, int kerSize, int mode, Ipp8u* pStateBuf, Ipp8u* pBuffer);
-    typedef IppStatus (CV_STDCALL * ippiPyramidLayerDown)(const void* pSrc, int srcStep, IppiSize srcRoiSize, void* pDst, int dstStep, IppiSize dstRoiSize, void* pState);
-
-    int type = src.type();
-    int depth = src.depth();
-    ippiPyramidLayerDownGetSize pyrGetSizeFunc = 0;
-    ippiPyramidLayerDownInit pyrInitFunc = 0;
-    ippiPyramidLayerDown pyrDownFunc = 0;
-
-    if (type == CV_8UC1)
-    {
-        pyrGetSizeFunc = (ippiPyramidLayerDownGetSize) ippiPyramidLayerDownGetSize_8u_C1R;
-        pyrInitFunc = (ippiPyramidLayerDownInit) ippiPyramidLayerDownInit_8u_C1R;
-        pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C1R;
-    }
-    else if (type == CV_8UC3)
-    {
-        pyrGetSizeFunc = (ippiPyramidLayerDownGetSize) ippiPyramidLayerDownGetSize_8u_C3R;
-        pyrInitFunc = (ippiPyramidLayerDownInit) ippiPyramidLayerDownInit_8u_C3R;
-        pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_8u_C3R;
-    }
-    else if (type == CV_32FC1)
-    {
-        pyrGetSizeFunc = (ippiPyramidLayerDownGetSize) ippiPyramidLayerDownGetSize_32f_C1R;
-        pyrInitFunc = (ippiPyramidLayerDownInit) ippiPyramidLayerDownInit_32f_C1R;
-        pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C1R;
-    }
-    else if (type == CV_32FC3)
-    {
-        pyrGetSizeFunc = (ippiPyramidLayerDownGetSize) ippiPyramidLayerDownGetSize_32f_C3R;
-        pyrInitFunc = (ippiPyramidLayerDownInit) ippiPyramidLayerDownInit_32f_C3R;
-        pyrDownFunc = (ippiPyramidLayerDown) ippiPyramidLayerDown_32f_C3R;
-    }
-
-    if (!pyrGetSizeFunc || !pyrInitFunc || !pyrDownFunc)
-        return false;
-
-    const float rate = 2.f;
-    const int kerSize = 5;
-    IppiSize srcRoi = { src.cols, src.rows };
-    Ipp16s iKernel[kerSize] = { 1, 4, 6, 4, 1 };
-    Ipp32f fKernel[kerSize] = { 1.f, 4.f, 6.f, 4.f, 1.f };
-    void* kernel = depth >= CV_32F ? (void*) fKernel : (void*) iKernel;
-
-    int stateSize = 0, bufSize = 0;
-    IppStatus ok = pyrGetSizeFunc(srcRoi, rate, kerSize, &stateSize, &bufSize);
-    if (ok < 0)
-        return false;
-
-    Ipp8u* pStateBuf = (Ipp8u*) CV_IPP_MALLOC(stateSize);
-    Ipp8u* pBuffer = (Ipp8u*) CV_IPP_MALLOC(bufSize);
-    void* pState = 0;
-    if (pStateBuf && pBuffer)
-        ok = pyrInitFunc(&pState, srcRoi, rate, kernel, kerSize, IPPI_INTER_LINEAR | IPPI_OCV_ALIGNMENT, pStateBuf, pBuffer);
-    else
-        ok = ippStsMemAllocErr;
-
-    for (int i = 1; ok >= 0 && i <= maxlevel; i++)
-    {
-        const Mat& prev = _dst.getMatRef(i-1);
-        IppiSize prevRoi = { prev.cols, prev.rows };
-        IppiSize dstRoi;
-        ok = ippiGetPyramidDownROI(prevRoi, &dstRoi, rate);
-        if (ok < 0)
-            break;
-
-        Mat& dst = _dst.getMatRef(i);
-        dst.create(Size(dstRoi.width, dstRoi.height), type);
-        ok = CV_INSTRUMENT_FUN_IPP(pyrDownFunc, prev.ptr(), (int) prev.step, prevRoi,
-                                   dst.ptr(), (int) dst.step, dstRoi, pState);
-    }
-
-    if (pBuffer) ippFree(pBuffer);
-    if (pStateBuf) ippFree(pStateBuf);
-
-    if (ok < 0)
-        return false;
-
-    CV_IMPL_ADD(CV_IMPL_IPP);
-    return true;
-#else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(maxlevel); CV_UNUSED(borderType);
-#endif
-    return false;
-}
-}
-#endif
-
 void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, int borderType )
 {
     CV_INSTRUMENT_REGION();
@@ -1625,11 +1519,6 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
     _dst.create( maxlevel + 1, 1, 0 );
     _dst.getMatRef(0) = src;
 
-    int i=1;
-
-    CV_IPP_RUN(((IPP_VERSION_X100 > 900) && ((borderType & ~BORDER_ISOLATED) == BORDER_DEFAULT && (!_src.isSubmatrix() || ((borderType & BORDER_ISOLATED) != 0)))),
-        ipp_buildpyramid( _src,  _dst,  maxlevel,  borderType));
-
-    for( ; i <= maxlevel; i++ )
+    for( int i = 1; i <= maxlevel; i++ )
         pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i), Size(), borderType );
 }
