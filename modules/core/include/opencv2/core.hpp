@@ -701,11 +701,35 @@ and MSE is the mean squared error between the two arrays.
   */
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2, double R=255.);
 
-/** @brief naive nearest neighbor finder
+/** @brief Computes distances between two batches of row vectors.
 
-see http://en.wikipedia.org/wiki/Nearest_neighbor_search
-@todo document
-  */
+Each row of `src1` and `src2` is treated as one vector. The inputs must have the same type and
+number of columns; supported input types are `CV_8U` and `CV_32F`.
+
+When `K` is zero, `dist` contains every pairwise distance and has size `src1.rows` by
+`src2.rows`. When `K` is positive, `dist` contains the `K` smallest distances for each row of
+`src1`, in ascending order, and `nidx` contains the corresponding row indices in `src2`.
+
+@param src1 first batch of row vectors.
+@param src2 second batch of row vectors. It must have the same type and number of columns as
+            `src1`.
+@param dist output distance matrix. Its type is `dtype`; its size is `src1.rows` by
+            (`K > 0 ? K : src2.rows`).
+@param dtype output type. Pass -1 to select `CV_32S` for Hamming distances and `CV_32F` for
+             other supported norms.
+@param nidx output indices of the selected rows in `src2`. It is required when `K > 0` and has
+            the same size as `dist`.
+@param normType norm used to measure vector distances. Supported combinations depend on the
+                input and output types.
+@param K number of nearest vectors to retain for each row of `src1`. Pass 0 to return all
+         pairwise distances.
+@param mask optional `src1.rows` by `src2.rows` mask. A non-zero entry permits the corresponding
+            pairwise comparison; a zero entry excludes it.
+@param update index offset added to entries in `nidx`. It lets callers accumulate nearest
+              neighbours across consecutive `src2` batches.
+@param crosscheck enables mutual nearest-neighbour matching. It requires `K == 1`, `update == 0`,
+                  and an empty mask; unmatched rows receive an index of -1.
+ */
 CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
                                 OutputArray dist, int dtype, OutputArray nidx,
                                 int normType = NORM_L2, int K = 0,
