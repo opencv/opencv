@@ -87,7 +87,7 @@ Code
         skin area) you can check the [improved
         demo](https://github.com/opencv/opencv/tree/5.x/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/5.x/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/blob/5.x/samples/cpp/snippets/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
@@ -103,7 +103,7 @@ Code
         skin area) you can check the [improved
         demo](https://github.com/opencv/opencv/tree/5.x/samples/java/tutorial_code/Histograms_Matching/back_projection/CalcBackProjectDemo2.java)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/5.x/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/blob/5.x/samples/cpp/snippets/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
@@ -119,7 +119,7 @@ Code
         skin area) you can check the [improved
         demo](https://github.com/opencv/opencv/tree/5.x/samples/python/tutorial_code/Histograms_Matching/back_projection/calcBackProject_Demo2.py)
     -   ...or you can always check out the classical
-        [camshiftdemo](https://github.com/opencv/opencv/tree/5.x/samples/cpp/camshiftdemo.cpp)
+        [camshiftdemo](https://github.com/opencv/opencv/blob/5.x/samples/cpp/snippets/camshiftdemo.cpp)
         in samples.
 
 -   **Code at glance:**
