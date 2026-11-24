@@ -421,6 +421,85 @@ TEST(Layer_Test_GatherElements, RejectsOversizedNonAxisDimension)
     EXPECT_THROW(runGatherElementsLayer(data, indices, 2), cv::Exception);
 }
 
+typedef testing::TestWithParam<tuple<int, String> > Layer_Test_Scatter;
+
+TEST_P(Layer_Test_Scatter, updates_exceed_axis_extent)
+{
+    const int axis = get<0>(GetParam());
+    const String reduction = get<1>(GetParam());
+    const bool rowVector = axis == 1 || axis == -1;
+    Mat data = (Mat_<float>(rowVector ? 1 : 3, rowVector ? 3 : 1) << 10, 20, 30);
+    Mat indices = (Mat_<float>(rowVector ? 1 : 4, rowVector ? 4 : 1) << 0, 1, 1, 2);
+    Mat updates = (Mat_<float>(rowVector ? 1 : 4, rowVector ? 4 : 1) << 1, 2, 3, 4);
+    LayerParams params;
+    params.set("axis", axis);
+    params.set("reduction", reduction);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Scatter", params);
+    std::vector<Mat> inputs{data, indices, updates}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(1u, outputs.size());
+    const Mat& output = outputs[0];
+    ASSERT_EQ(rowVector ? shape(1, 3) : shape(3, 1), shape(output));
+    ASSERT_EQ(CV_32F, output.type());
+    const float expectedAdd[] = {11, 25, 34};
+    const float expectedMul[] = {10, 120, 120};
+    const float* expected = reduction == "add" ? expectedAdd : expectedMul;
+    for (int i = 0; i < 3; ++i)
+        EXPECT_EQ(expected[i], output.ptr<float>()[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Scatter,
+    Combine(Values(1, 0, -1, -2), Values("add", "mul")));
+
+TEST(Layer_Scatter, rejects_invalid_shapes)
+{
+    LayerParams params;
+    params.set("axis", 1);
+    params.set("reduction", "add");
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Scatter", params);
+    std::vector<MatShape> outputs, internals;
+    std::vector<MatShape> inputs{shape(1, 3), shape(2, 4), shape(2, 4)};
+    EXPECT_THROW(layer->getMemoryShapes(inputs, 0, outputs, internals), cv::Exception);
+
+    inputs = {shape(1, 3), shape(1, 4), shape(1, 3)};
+    EXPECT_THROW(layer->getMemoryShapes(inputs, 0, outputs, internals), cv::Exception);
+    inputs = {shape(1, 3), shape(1, 1, 2), shape(1, 2)};
+    EXPECT_THROW(layer->getMemoryShapes(inputs, 0, outputs, internals), cv::Exception);
+    inputs = {shape(1, 3), shape(1, 2), shape(1, 1, 2)};
+    EXPECT_THROW(layer->getMemoryShapes(inputs, 0, outputs, internals), cv::Exception);
+
+    params.set("axis", 0);
+    layer = LayerFactory::createLayerInstance("Scatter", params);
+    inputs = {shape(3, 1), shape(4, 2), shape(4, 2)};
+    EXPECT_THROW(layer->getMemoryShapes(inputs, 0, outputs, internals), cv::Exception);
+}
+
+typedef testing::TestWithParam<int> Layer_Test_ScatterUniqueIndices;
+
+TEST_P(Layer_Test_ScatterUniqueIndices, unique_indices)
+{
+    Mat data = (Mat_<float>(1, 3) << 10, 20, 30);
+    Mat indices = (Mat_<float>(1, 2) << 0, GetParam());
+    Mat updates = (Mat_<float>(1, 2) << 1, 4);
+    LayerParams params;
+    params.set("axis", 1);
+    params.set("reduction", "none");
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Scatter", params);
+    std::vector<Mat> inputs{data, indices, updates}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(1u, outputs.size());
+    const Mat& output = outputs[0];
+    ASSERT_EQ(shape(1, 3), shape(output));
+    ASSERT_EQ(CV_32F, output.type());
+    const float expected[] = {1, 20, 4};
+    for (int i = 0; i < 3; ++i)
+        EXPECT_EQ(expected[i], output.ptr<float>()[i]);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_ScatterUniqueIndices, Values(2, -1));
+
 TEST_P(Test_Caffe_layers, BatchNorm)
 {
     testLayerUsingCaffeModels("layer_batch_norm", true);

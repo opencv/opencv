@@ -57,9 +57,13 @@ public:
         CV_CheckEQ(inputs.size(), 3ull, "Scatter: require three inputs.");
         CV_CheckEQ(inputs[0].size(), inputs[1].size(), "Scatter: input data should have the same ndim with indices.");
         CV_CheckEQ(inputs[0].size(), inputs[2].size(), "Scatter: input data should have the same ndim with updates.");
+        const size_t normalized_axis = normalize_axis(axis, inputs[0]);
         for (size_t i = 0; i < inputs[0].size(); i++)
         {
-            CV_CheckGE(inputs[0][i], inputs[1][i], "Scatter: each dim of input data should be greater than (or equal to) indices'.");
+            if (i != normalized_axis)
+                CV_CheckGE(inputs[0][i], inputs[1][i],
+                           "Scatter: each dim of input data should be greater than "
+                           "(or equal to) indices'.");
             CV_CheckEQ(inputs[1][i], inputs[2][i], "Scatter: each dim of indices should be equal to updates'.");
         }
         outputs.assign(1, inputs[0]);
@@ -93,6 +97,7 @@ public:
         input_mat.copyTo(output_mat);
 
         const int ndims = input_mat.dims;
+        const int axis = normalize_axis(this->axis, ndims);
 
         const auto &input_mat_shape = shape(input_mat);
         std::vector<size_t> input_mat_step(ndims);
