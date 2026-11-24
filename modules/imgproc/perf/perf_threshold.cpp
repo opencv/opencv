@@ -37,6 +37,69 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
     SANITY_CHECK(dst);
 }
 
+// values in [0, 1) keep fp16 away from its overflow range
+static Mat halfThresholdSrc(Size sz, int type)
+{
+    Mat src32(sz, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+    randu(src32, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, type);
+    return src;
+}
+
+// the fp32 rows are the reference for the half rows
+PERF_TEST_P(Size_MatType_ThreshType, threshold_half,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3),
+                ThreshType::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    ThreshType threshType = get<2>(GetParam());
+
+    Mat src = halfThresholdSrc(sz, type);
+    Mat dst(sz, type);
+
+    declare.in(src).out(dst);
+
+    int runs = (sz.width <= 640) ? 40 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cv::threshold(src, dst, 0.5, 1.0, threshType);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// convert to fp32, threshold, convert back: the route available without native
+// half support, so the native half path has to beat it
+PERF_TEST_P(Size_MatType_ThreshType, threshold_half_via_fp32,
+            testing::Combine(
+                testing::Values(TYPICAL_MAT_SIZES),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3),
+                ThreshType::all()
+                )
+            )
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    ThreshType threshType = get<2>(GetParam());
+
+    Mat src = halfThresholdSrc(sz, type);
+    Mat dst(sz, type), src32, dst32;
+
+    declare.in(src).out(dst);
+
+    int runs = (sz.width <= 640) ? 40 : 1;
+    TEST_CYCLE_MULTIRUN(runs)
+    {
+        src.convertTo(src32, CV_32F);
+        cv::threshold(src32, dst32, 0.5, 1.0, threshType);
+        dst32.convertTo(dst, CV_MAT_DEPTH(type));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 typedef perf::TestBaseWithParam<Size> Size_Only;
 
 PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
