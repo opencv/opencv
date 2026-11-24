@@ -1823,4 +1823,25 @@ TEST(Layer_CumProd, EmptyAxis)
     }
 }
 
+TEST(Layer_Det, EmptyMatrices)
+{
+    // shape [3, 0, 0]: three 0x0 matrices
+    Mat input(MatShape{3, 0, 0}, CV_32F);
+
+    LayerParams lp;
+    lp.type = "Det";
+    lp.name = "det";
+    Ptr<Layer> layer = DetLayer::create(lp);
+
+    std::vector<Mat> inputs{input}, outputs(1), internals;
+    outputs[0].create(MatShape{3}, CV_32F);
+    outputs[0].setTo(Scalar(7));  // any value but 1, so the test sees whether forward() wrote it
+    layer->forward(inputs, outputs, internals);
+
+    // the determinant of a 0x0 matrix is 1
+    Mat expected(MatShape{3}, CV_32F, Scalar(1));
+    EXPECT_EQ(shape(outputs[0]), MatShape({3}));
+    normAssert(expected, outputs[0]);
+}
+
 }}
