@@ -12,6 +12,9 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
 #include <numeric>
+#ifndef _WIN32
+#include <unistd.h>  // symlink()
+#endif
 namespace opencv_test { namespace {
 
 void yoloPostProcessing(
@@ -4248,9 +4251,9 @@ static void writeTestFile(const std::string& path, const std::string& data)
 }
 
 // An external tensor's "location" is relative to the model directory. It was joined onto
-// that directory as given, so "../x" read files outside it, and an in-memory model or a
-// single tensor file (no directory at all) read any absolute path, which Identity then
-// returned from forward().
+// that directory as given, so "../x" or a symlinked component read files outside it, and an
+// in-memory model or a single tensor file read against the process directory, which Identity
+// then returned from forward().
 TEST(Test_ONNX_importer, external_data_outside_model_dir)
 {
     if (ortEngineForced())
@@ -4272,21 +4275,53 @@ TEST(Test_ONNX_importer, external_data_outside_model_dir)
     Mat out = net.forward();
     EXPECT_EQ("weights", std::string(out.ptr<char>(), out.total()));
 
+    // A single tensor file resolves its location against its own directory, not the process one.
+    const std::string okTensorPath = utils::fs::join(modelDir, "ok.pb");
+    writeTestFile(okTensorPath, externalTensorProto("data/w.bin", 7));
+    const Mat w = readTensorFromONNX(okTensorPath);
+    EXPECT_EQ("weights", std::string(w.ptr<char>(), w.total()));
+
     const std::string escapePath = utils::fs::join(modelDir, "escape.onnx");
-    for (const std::string location : { "../secret.bin", "data/../../secret.bin" })
+    const std::string escapeTensorPath = utils::fs::join(modelDir, "escape.pb");
+    const std::string escapes[] = { "../secret.bin", "data/../../secret.bin", secretPath };
+    for (const std::string& location : escapes)
+    {
+        SCOPED_TRACE(location);
+        writeTestFile(escapePath, externalDataModel(location, secret.size()));
+        for (bool mapExternalData : { true, false })
+            EXPECT_THROW(readNetFromONNX(escapePath, ENGINE_AUTO, mapExternalData), cv::Exception);
+        writeTestFile(escapeTensorPath, externalTensorProto(location, secret.size()));
+        EXPECT_THROW(readTensorFromONNX(escapeTensorPath), cv::Exception);
+    }
+
+    // An in-memory model has no directory to be relative to, so it carries no external data:
+    // a plain relative location would otherwise be read from the process directory.
+    const std::string relatives[] = { "secret.bin", "data/w.bin", secretPath };
+    for (const std::string& location : relatives)
+    {
+        SCOPED_TRACE(location);
+        const std::string buffer = externalDataModel(location, secret.size());
+        EXPECT_THROW(readNetFromONNX(buffer.data(), buffer.size()), cv::Exception);
+    }
+
+#ifndef _WIN32
+    // A symlink leaves the model directory with no ".." in the location at all: once as the
+    // final component of the path, once as a parent of it.
+    const std::string finalLink = utils::fs::join(modelDir, "w.bin");
+    const std::string parentLink = utils::fs::join(modelDir, "up");
+    ASSERT_EQ(0, symlink("../secret.bin", finalLink.c_str()));
+    ASSERT_EQ(0, symlink("..", parentLink.c_str()));
+    for (const std::string& location : { "w.bin", "up/secret.bin" })
     {
         SCOPED_TRACE(location);
         writeTestFile(escapePath, externalDataModel(location, secret.size()));
         for (bool mapExternalData : { true, false })
             EXPECT_THROW(readNetFromONNX(escapePath, ENGINE_AUTO, mapExternalData), cv::Exception);
     }
-
-    const std::string absModel = externalDataModel(secretPath, secret.size());
-    EXPECT_THROW(readNetFromONNX(absModel.data(), absModel.size()), cv::Exception);
-
-    const std::string tensorPath = utils::fs::join(modelDir, "w.pb");
-    writeTestFile(tensorPath, externalTensorProto(secretPath, secret.size()));
-    EXPECT_THROW(readTensorFromONNX(tensorPath), cv::Exception);
+    // remove_all() would follow 'up' back out of the model directory.
+    EXPECT_EQ(0, remove(parentLink.c_str()));
+    EXPECT_EQ(0, remove(finalLink.c_str()));
+#endif
 
     utils::fs::remove_all(root);
 }

@@ -150,7 +150,7 @@ Mat readTensorFromONNX(const String& path)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX data: %s", path.c_str()));
     }
-    Mat mat = getMatFromTensor(tensor_proto, false);
+    Mat mat = getMatFromTensor(tensor_proto, false, getExternalDataBasePath(path));
     int dims = (int)tensor_proto.dims_size();
     if (dims > 0 && mat.total() == 0) {
         int cv_type = onnxDataTypeToCvDepth(tensor_proto.data_type());

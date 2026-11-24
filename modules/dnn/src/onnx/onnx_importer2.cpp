@@ -382,7 +382,7 @@ Net ONNXImporter2::parseFile(const char *onnxFilename_, bool mapExternalData)
     onnxFilename = onnxFilename_;
     externalData.mappingEnabled = resolveExternalDataMapping(mapExternalData);
 
-    onnxBasePath = utils::fs::getParent(onnxFilename_);
+    onnxBasePath = getExternalDataBasePath(onnxFilename_);
 
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFilename);
 
