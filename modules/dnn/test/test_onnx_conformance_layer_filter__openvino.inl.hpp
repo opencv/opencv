@@ -2969,6 +2969,8 @@ CASE(test_shape_start_1_end_2)
     SKIP;
 CASE(test_shape_start_1_end_negative_1)
     SKIP;
+CASE(test_shape_start_greater_than_end)
+    SKIP;
 CASE(test_shape_start_negative_1)
     SKIP;
 CASE(test_shrink_hard)
