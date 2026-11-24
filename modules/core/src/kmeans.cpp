@@ -50,7 +50,54 @@
 namespace cv
 {
 
-static int CV_KMEANS_PARALLEL_GRANULARITY = (int)utils::getConfigurationParameterSizeT("OPENCV_KMEANS_PARALLEL_GRANULARITY", 1000);
+namespace {
+
+struct KMeansParallelParams
+{
+    size_t granularity;
+    size_t serialBelow;
+    size_t minStripes;
+    size_t spreadWork;
+};
+
+static KMeansParallelParams initKMeansParallelParams()
+{
+    KMeansParallelParams p = { 1000, 0, 1, 0 };
+    const char* framework = currentParallelFramework();
+    const std::string name = framework ? framework : std::string();
+    if (name == "ms-concurrency" || name == "winrt-concurrency")
+    {
+        p.granularity = 4000;
+        p.serialBelow = 2000;
+        p.minStripes = 3;
+        p.spreadWork = 1000;
+    }
+    const size_t user = utils::getConfigurationParameterSizeT("OPENCV_KMEANS_PARALLEL_GRANULARITY", 0);
+    if (user > 0)
+    {
+        p.granularity = user;
+        p.serialBelow = 0;
+        p.minStripes = 1;
+        p.spreadWork = 0;
+    }
+    return p;
+}
+
+} // namespace
+
+static double kmeansStripes(size_t work, bool spreadOverThreads = false)
+{
+    static const KMeansParallelParams p = initKMeansParallelParams();
+    if (work < p.serialBelow)
+        return 1.0;
+    size_t stripes = std::max((work + p.granularity - 1) / p.granularity, p.minStripes);
+    if (spreadOverThreads && p.spreadWork > 0)
+    {
+        const size_t byWork = (work + p.spreadWork - 1) / p.spreadWork;
+        stripes = std::max(stripes, std::min((size_t)std::max(getNumThreads(), 1), byWork));
+    }
+    return (double)stripes;
+}
 
 static void generateRandomCenter(int dims, const Vec2f* box, float* center, RNG& rng)
 {
@@ -129,7 +176,7 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
 
             parallel_for_(Range(0, N),
                           KMeansPPDistanceComputer(tdist2, data, dist, ci),
-                          (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
+                          kmeansStripes((size_t)dims * N));
             double s = 0;
             int i = 0;
         #if CV_ENABLE_UNROLLED
@@ -440,14 +487,14 @@ double cv::kmeans( InputArray _data, int K,
             if (isLastIter)
             {
                 // don't re-assign labels to avoid creation of empty clusters
-                parallel_for_(Range(0, N), KMeansDistanceComputer<true>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
+                parallel_for_(Range(0, N), KMeansDistanceComputer<true>(dists.data(), labels, data, centers), kmeansStripes((size_t)dims * N));
                 compactness = sum(Mat(Size(N, 1), CV_64F, &dists[0]))[0];
                 break;
             }
             else
             {
                 // assign labels
-                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists.data(), labels, data, centers), (double)divUp((size_t)(dims * N * K), CV_KMEANS_PARALLEL_GRANULARITY));
+                parallel_for_(Range(0, N), KMeansDistanceComputer<false>(dists.data(), labels, data, centers), kmeansStripes((size_t)dims * N * K, true));
             }
         }
 
