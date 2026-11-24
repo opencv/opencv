@@ -68,11 +68,7 @@ if(NOT ROCM_VERSION)
   return()
 endif()
 
-string(REGEX MATCH "^[0-9]+" ROCM_VERSION_MAJOR "${ROCM_VERSION}")
-string(REGEX REPLACE "^[0-9]+\\.([0-9]+).*" "\\1" ROCM_VERSION_MINOR "${ROCM_VERSION}")
-
 set(ROCM_FOUND TRUE)
-set(ROCM_ROOT_DIR "${_rocm_root}")
 
 unset(_rocm_root)
 unset(_hip_root)
