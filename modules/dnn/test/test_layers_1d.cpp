@@ -955,6 +955,44 @@ TEST(Layer_Reshape_Test, Accuracy_1D)
     normAssert(output_ref, outputs[0]);
 }
 
+TEST(Layer_Trilu, TallMatrix)
+{
+    Mat input = Mat_<float>({4, 2}, {1, 2,
+                                     3, 4,
+                                     5, 6,
+                                     7, 8});
+
+    auto runTrilu = [&](bool upper, int64_t k) {
+        LayerParams lp;
+        lp.type = "Trilu";
+        lp.name = "trilu";
+        lp.set("upper", upper);
+        Ptr<Layer> layer = TriluLayer::create(lp);
+
+        std::vector<Mat> inputs{input, Mat(MatShape{1}, CV_64S, Scalar(k))}, outputs;
+        runLayer(layer, inputs, outputs);
+        return outputs[0];
+    };
+
+    Mat triu = Mat_<float>({4, 2}, {1, 2,
+                                    0, 4,
+                                    0, 0,
+                                    0, 0});
+    normAssert(triu, runTrilu(true, 0));
+
+    Mat tril = Mat_<float>({4, 2}, {0, 0,
+                                    0, 0,
+                                    5, 0,
+                                    7, 8});
+    normAssert(tril, runTrilu(false, -2));
+
+    Mat tril0 = Mat_<float>({4, 2}, {1, 0,
+                                     3, 4,
+                                     5, 6,
+                                     7, 8});
+    normAssert(tril0, runTrilu(false, 0));
+}
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Split_Test;
 TEST_P(Layer_Split_Test, Accuracy_01D)
 {
