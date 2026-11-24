@@ -308,8 +308,11 @@ class Arguments(NewOpenCVTests):
             a = np.array(values, dtype=np.int64)
             self.assertIn("type(-1)=CV_64SC1", cv.utils.dumpInputArray(a))
 
-    def test_OutputArray_int64(self):
-        src = np.array([[1, 2**40], [-3, 4]], dtype=np.int64)
+    def test_InputArray_int64_exact_dtypes(self):
+        self.addCleanup(cv.setUseExactNumpyDtypes, cv.useExactNumpyDtypes())
+        cv.setUseExactNumpyDtypes(True)
+        src = np.array([[1, 2], [3, 4]], dtype=np.int64)
+        self.assertIn("type(-1)=CV_64SC1", cv.utils.dumpInputArray(src))
         dst = np.zeros_like(src)
         cv.copyTo(src, None, dst)
         np.testing.assert_array_equal(dst, src)

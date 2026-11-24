@@ -25,6 +25,8 @@ class nd_transform_test(NewOpenCVTests):
         np.testing.assert_array_equal(cv.transposeND(b, [2, 0, 1]), expected)
 
     def test_transpose_and_rotate_preserve_64bit_integer_dtype(self):
+        self.addCleanup(cv.setUseExactNumpyDtypes, cv.useExactNumpyDtypes())
+        cv.setUseExactNumpyDtypes(True)
         for dtype, offset in ((np.int64, 0), (np.int64, 2**40), (np.uint64, 2**63)):
             src = np.array([[offset, offset + 1, offset + 2],
                             [offset + 3, offset + 4, offset + 5]], dtype=dtype)
