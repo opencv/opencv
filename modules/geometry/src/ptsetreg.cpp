@@ -950,6 +950,38 @@ Mat    estimateAffine3D(InputArray _from, InputArray _to,
     return transform;
 }
 
+// USAC estimator of rotation / rigid / similarity transformation in 2D or 3D for a MotionModel
+static usac::EstimationMethod getPointSetRegistrationMethod(int dim, MotionModel model)
+{
+    const bool is2D = dim == 2;
+    switch (model)
+    {
+    case MOTION_DEFAULT:
+        return is2D ? usac::EstimationMethod::SIM2 : usac::EstimationMethod::SE3;
+    case MOTION_EUCLIDEAN:
+        return is2D ? usac::EstimationMethod::SE2 : usac::EstimationMethod::SE3;
+    case MOTION_SIMILARITY:
+        return is2D ? usac::EstimationMethod::SIM2 : usac::EstimationMethod::SIM3;
+    case MOTION_ROTATION:
+        return is2D ? usac::EstimationMethod::SO2 : usac::EstimationMethod::SO3;
+    case MOTION_SCALED_ROTATION:
+        return is2D ? usac::EstimationMethod::SCALED_SO2 : usac::EstimationMethod::SCALED_SO3;
+    default:
+        CV_Error(Error::StsBadArg, is2D ? "Unsupported motion model: use estimateTranslation2D(), "
+                                          "estimateAffine2D() or findHomography()"
+                                        : "Unsupported motion model: use estimateTranslation3D() "
+                                          "or estimateAffine3D() with RANSAC");
+    }
+}
+
+Mat estimateAffine3D(InputArray _src, InputArray _dst, OutputArray _inliers,
+                     const UsacParams &params)
+{
+    CV_INSTRUMENT_REGION();
+    return usac::estimatePointSetRegistration(_src, _dst, _inliers,
+        getPointSetRegistrationMethod(3, params.model), params);
+}
+
 bool estimateTranslation3D(InputArray _from, InputArray _to,
                            OutputArray _out, OutputArray _inliers,
                            double ransacThreshold, double confidence)
@@ -1123,6 +1155,10 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
                             const size_t maxIters, const double confidence,
                             const size_t refineIters)
 {
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return usac::estimatePointSetRegistration(_from, _to, _inliers,
+            usac::EstimationMethod::SIM2, method, ransacReprojThreshold, (int)maxIters, confidence);
+
     Mat from = _from.getMat(), to = _to.getMat();
     const int count = from.checkVector(2);
     bool result = false;
@@ -1254,6 +1290,14 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     }
 
     return H;
+}
+
+Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,
+                            const UsacParams &params)
+{
+    CV_INSTRUMENT_REGION();
+    return usac::estimatePointSetRegistration(_from, _to, _inliers,
+        getPointSetRegistrationMethod(2, params.model), params);
 }
 
 Vec2d estimateTranslation2D(InputArray _from, InputArray _to,

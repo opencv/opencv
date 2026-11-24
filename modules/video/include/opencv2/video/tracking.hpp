@@ -46,6 +46,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/geometry/3d.hpp"
 #ifdef HAVE_OPENCV_DNN
 # include "opencv2/dnn.hpp"
 #endif
@@ -272,13 +273,8 @@ estimateAffine2D, estimateAffinePartial2D, getAffineTransform, getPerspectiveTra
  */
 CV_DEPRECATED CV_EXPORTS Mat estimateRigidTransform( InputArray src, InputArray dst, bool fullAffine );
 
-enum
-{
-    MOTION_TRANSLATION = 0,
-    MOTION_EUCLIDEAN   = 1,
-    MOTION_AFFINE      = 2,
-    MOTION_HOMOGRAPHY  = 3
-};
+// MOTION_TRANSLATION, MOTION_EUCLIDEAN, MOTION_AFFINE and MOTION_HOMOGRAPHY are defined by
+// cv::MotionModel in opencv2/geometry/3d.hpp
 
 /**
 @brief Computes the Enhanced Correlation Coefficient (ECC) value between two images

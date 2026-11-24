@@ -110,6 +110,24 @@ public:
                 1.72250366e-03, 1.44640449e-03, 1.21427410e-03, 1.01916714e-03,
                 8.55224023e-04, 7.17503448e-04, 6.01840372e-04, 5.04725511e-04,
                 4.23203257e-04, 3.54478559e-04};
+        } else if (DoF == 3) {
+            // For n = 3 the anchors have closed forms: the upper incomplete gamma function
+            // Gamma((n-1)/2, x) = Gamma(1, x) = exp(-x) for complete and gamma values, and
+            // the lower incomplete gamma function gamma((n+1)/2, x) = gamma(2, x)
+            // = 1 - (1+x) exp(-x) for incomplete values, sampled as the tables for n = 2, 4.
+            const double max_thr = 7.5, gamma_quantile = 3.36821;
+            scale_complete_values = max_size_table_ / max_thr;
+            scale_gamma_values = gamma_quantile * max_size_table_ / max_thr ;
+            gamma_complete_anchor.resize(number_of_anchor_points);
+            gamma_incomplete_anchor.resize(number_of_anchor_points);
+            gamma_anchor.resize(number_of_anchor_points);
+            for (int i = 0; i < number_of_anchor_points; i++) {
+                const double x = max_thr * i / (number_of_anchor_points - 1);
+                const double x_gamma = gamma_quantile * x;
+                gamma_complete_anchor[i] = std::exp(-x);
+                gamma_incomplete_anchor[i] = 1 - (1 + x) * std::exp(-x);
+                gamma_anchor[i] = std::exp(-x_gamma);
+            }
         } else CV_Error(cv::Error::StsNotImplemented, "Not implemented for specific DoF!");
         // allocate tables
         gamma_complete = std::vector<double>(max_size_table);
