@@ -1570,7 +1570,7 @@ TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
 
 TEST(Imgproc_Warp, float16_interpolation)
 {
-    RNG rng(137);
+    RNG& rng = theRNG();
     for (int channels : {1, 2, 3, 4, 5, 9, 20, 33, CV_CN_MAX})
     for (Size size : {Size(1, 1), Size(71, 53)})
     for (int interpolation : {INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
