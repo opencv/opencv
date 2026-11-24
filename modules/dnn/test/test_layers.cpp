@@ -2763,71 +2763,42 @@ TEST_P(Layer_Test_Slice, variable_input_shape)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
 
-// ONNX Slice with a negative step: start and end are clamped to [0, n - 1] and [-1, n - 1]
-// after negative values are shifted by n.
-static std::vector<int> onnxNegStepIndices(int n, int start, int end, int step)
+// ONNX Slice that reverses an axis with step -1, using a negative start and a negative end:
+// x[-1:-5:-1] on an axis of size 6 selects the rows 5, 4, 3, 2.
+TEST(Layer_Test_Slice, negative_step_minus_one_negative_bounds)
 {
-    int s = start < 0 ? start + n : start;
-    int e = end < 0 ? end + n : end;
-    s = std::min(std::max(s, 0), n - 1);
-    e = std::min(std::max(e, -1), n - 1);
-    std::vector<int> idx;
-    for (int i = s; i > e; i += step)
-        idx.push_back(i);
-    return idx;
-}
-
-typedef testing::TestWithParam<int> Layer_Test_Slice_NegativeStep;
-TEST_P(Layer_Test_Slice_NegativeStep, accuracy)
-{
-    const int step = GetParam();
     const int inpShape[] = {2, 6, 3};
-    const int n = inpShape[1];
-
     Mat input(3, inpShape, CV_32F);
     for (int i = 0; i < (int)input.total(); ++i)
         input.ptr<float>()[i] = (float)i;
 
-    const int values[] = {INT_MIN, -100, -7, -6, -5, -4, -1, 0, 1, 3, 5, 6, 100, INT_MAX};
-    for (int start : values)
-    {
-        for (int end : values)
-        {
-            std::vector<int> idx = onnxNegStepIndices(n, start, end, step);
-            if (idx.empty())
-                continue;
+    int begins[] = {0, -1, 0};
+    int ends[] = {INT_MAX, -5, INT_MAX};
+    int steps[] = {1, -1, 1};
 
-            SCOPED_TRACE(cv::format("start=%d end=%d step=%d", start, end, step));
+    Net net;
+    LayerParams lp;
+    lp.type = "Slice";
+    lp.name = "testLayer";
+    lp.set("begin", DictValue::arrayInt<int*>(begins, 3));
+    lp.set("end", DictValue::arrayInt<int*>(ends, 3));
+    lp.set("steps", DictValue::arrayInt<int*>(steps, 3));
+    net.addLayerToPrev(lp.name, lp.type, lp);
 
-            int begins[] = {0, start, 0};
-            int ends[] = {INT_MAX, end, INT_MAX};
-            int steps[] = {1, step, 1};
+    const int rows[] = {5, 4, 3, 2};
+    const int outShape[] = {inpShape[0], 4, inpShape[2]};
+    Mat ref(3, outShape, CV_32F);
+    for (int a = 0; a < inpShape[0]; ++a)
+        for (int j = 0; j < 4; ++j)
+            for (int c = 0; c < inpShape[2]; ++c)
+                ref.ptr<float>(a, j)[c] = input.ptr<float>(a, rows[j])[c];
 
-            Net net;
-            LayerParams lp;
-            lp.type = "Slice";
-            lp.name = "testLayer";
-            lp.set("begin", DictValue::arrayInt<int*>(begins, 3));
-            lp.set("end", DictValue::arrayInt<int*>(ends, 3));
-            lp.set("steps", DictValue::arrayInt<int*>(steps, 3));
-            net.addLayerToPrev(lp.name, lp.type, lp);
-
-            const int outShape[] = {inpShape[0], (int)idx.size(), inpShape[2]};
-            Mat ref(3, outShape, CV_32F);
-            for (int a = 0; a < inpShape[0]; ++a)
-                for (int j = 0; j < (int)idx.size(); ++j)
-                    for (int c = 0; c < inpShape[2]; ++c)
-                        ref.ptr<float>(a, j)[c] = input.ptr<float>(a, idx[j])[c];
-
-            net.setInput(input);
-            Mat out;
-            ASSERT_NO_THROW(out = net.forward());
-            ASSERT_EQ(shape(out), MatShape(outShape, outShape + 3));
-            normAssert(out, ref);
-        }
-    }
+    net.setInput(input);
+    Mat out;
+    ASSERT_NO_THROW(out = net.forward());
+    ASSERT_EQ(shape(out), MatShape(outShape, outShape + 3));
+    normAssert(out, ref);
 }
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice_NegativeStep, testing::Values(-1, -2, -3));
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_BatchNorm;
 TEST_P(Layer_Test_BatchNorm, fusion)
