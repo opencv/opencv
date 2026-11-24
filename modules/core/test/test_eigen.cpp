@@ -80,7 +80,7 @@ protected:
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, const cv::Mat& evectors, int low_index = -1, int high_index = -1);
     bool check_pairs_order(const cv::Mat& eigen_values);											// checking order of eigen values & vectors (it should be none up)
     bool check_orthogonality(const cv::Mat& U);												// checking is matrix of eigen vectors orthogonal
-    bool test_pairs(const cv::Mat& src);													// complex test for eigen with vectors
+    bool test_pairs(const cv::Mat& src, cv::Mat& eigen_values);											// complex test for eigen with vectors
 
     void print_information(const size_t norm_idx, const cv::Mat& src, double diff, double max_diff);
 };
@@ -272,12 +272,12 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
     return true;
 }
 
-bool Core_EigenTest::test_pairs(const cv::Mat& src)
+bool Core_EigenTest::test_pairs(const cv::Mat& src, cv::Mat& eigen_values)
 {
     int type = src.type();
     double eps_vec = type == CV_32FC1 ? eps_vec_32 : eps_vec_64;
 
-    cv::Mat eigen_values, eigen_vectors;
+    cv::Mat eigen_vectors;
 
     cv::eigen(src, eigen_values, eigen_vectors);
 
@@ -330,11 +330,10 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
     int type = src.type();
     double eps_val = type == CV_32FC1 ? eps_val_32 : eps_val_64;
 
-    cv::Mat eigen_values_1, eigen_values_2, eigen_vectors;
+    cv::Mat eigen_values_1, eigen_values_2;
 
-    if (!test_pairs(src)) return false;
+    if (!test_pairs(src, eigen_values_1)) return false;   // eigenvalues computed together with the vectors
 
-    cv::eigen(src, eigen_values_1, eigen_vectors);
     cv::eigen(src, eigen_values_2);
 
     if (!check_pair_count(src, eigen_values_2)) return false;

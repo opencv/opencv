@@ -35,7 +35,7 @@ namespace opencv_test { namespace {
     };
 
     template <typename T, int fixedShift>
-    T eval(Mat src, vector<int64_t> kernelx, vector<int64_t> kernely)
+    T eval(const Mat& src, const vector<int64_t>& kernelx, const vector<int64_t>& kernely)
     {
         static const int64_t fixedRound = ((1LL << (fixedShift * 2)) >> 1);
         int64_t val = 0;

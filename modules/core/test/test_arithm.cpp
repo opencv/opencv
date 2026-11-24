@@ -1946,9 +1946,8 @@ TEST_P(ArithmMixedTest, accuracy)
             mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        dst0 = cvtest::randomMat(rng, size, dstType, minval, maxval, false);
         dst = cvtest::randomMat(rng, size, dstType, minval, maxval, true);
-        cvtest::copy(dst, dst0);
+        cvtest::copy(dst, dst0);   // creates a continuous dst0 holding dst's initial content
 
         op->generateScalars(dstDepth, rng);
 

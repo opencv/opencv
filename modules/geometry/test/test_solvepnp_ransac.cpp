@@ -144,14 +144,14 @@ static void generatePose(const vector<Point3d>& points, Mat& rvec, Mat& tvec, RN
             tvec.at<double>(i,0) = (i == 2) ? rng.uniform(minVal*10, maxVal) : rng.uniform(-maxVal, maxVal);
         }
 
-        Mat R;
+        Matx33d R;
         cv::Rodrigues(rvec, R);
+        const Vec3d t(tvec.at<double>(0,0), tvec.at<double>(1,0), tvec.at<double>(2,0));
         bool positiveDepth = true;
         for (size_t i = 0; i < points.size() && positiveDepth; i++)
         {
-            Matx31d objPts(points[i].x, points[i].y, points[i].z);
-            Mat camPts = R*objPts + tvec;
-            if (camPts.at<double>(2,0) <= 0)
+            const Vec3d camPt = R * Vec3d(points[i].x, points[i].y, points[i].z) + t;
+            if (camPt[2] <= 0)
             {
                 positiveDepth = false;
             }
