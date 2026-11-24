@@ -1076,7 +1076,8 @@ TEST_P(Test_Model, DetectBatch)
 
 // Declaring what a model carries must reproduce what AUTO infers, on every axis.
 static void testOutputParams(const std::string& model, const std::string& image, int size,
-                             const DetectionOutputParams& declared, Target targetId)
+                             const DetectionOutputParams& declared, Target targetId,
+                             const DetectionOutputParams& baseline = DetectionOutputParams())
 {
     const std::string weights = _tf(model, false);
     Mat frame = imread(_tf(image));
@@ -1095,7 +1096,7 @@ static void testOutputParams(const std::string& model, const std::string& image,
         dm.detect(frame, classIds, confidences, boxes, 0.25f, 0.45f);
     };
 
-    detect(DetectionOutputParams());
+    detect(baseline);
     const std::vector<int> refClassIds = classIds;
     const std::vector<float> refConfs = confidences;
     const std::vector<Rect> refBoxes = boxes;
@@ -1155,17 +1156,14 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_OutputParams_RFDETR,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
 
 typedef testing::TestWithParam<Target> Test_OutputParams_YOLONas;
-TEST_P(Test_OutputParams_YOLONas, declared_matches_inferred)
-{
-    testOutputParams("onnx/models/yolo_nas_s.onnx", "dog416.png", 640,
-                     DetectionOutputParams(DNN_BOX_CORNER, DNN_CLS_SCORES, DNN_COORD_PIXELS,
-                                           DNN_ACT_NONE), GetParam());
-}
 TEST_P(Test_OutputParams_YOLONas, partial_declaration)
 {
-    // Declaring the box form alone must leave the other three axes inferred.
+    // Corner boxes with a score block are the one shape the row structure cannot resolve, so
+    // the box form is declared; the other three axes must still be inferred around it.
     testOutputParams("onnx/models/yolo_nas_s.onnx", "dog416.png", 640,
-                     DetectionOutputParams(DNN_BOX_CORNER), GetParam());
+                     DetectionOutputParams(DNN_BOX_CORNER), GetParam(),
+                     DetectionOutputParams(DNN_BOX_CORNER, DNN_CLS_SCORES, DNN_COORD_PIXELS,
+                                           DNN_ACT_NONE));
 }
 INSTANTIATE_TEST_CASE_P(/**/, Test_OutputParams_YOLONas,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
@@ -2042,16 +2040,17 @@ static void testDetectionModel(const std::string& model, const std::string& imag
                                 const std::vector<Rect2d>& refBoxes, Target targetId,
                                 float confThreshold = 0.25f,
                                 const DetectionOutputParams& declared = DetectionOutputParams(),
-                                bool nmsAcrossClasses = false)
+                                bool nmsAcrossClasses = false, bool inferable = true)
 {
     Net net = readNetFromONNX(_tf(model, false));
 
     Mat frame = imread(_tf(image));
     ASSERT_FALSE(frame.empty());
 
-    // The reference holds whether the encoding is inferred or declared.
+    // The reference holds whether the encoding is inferred or declared, unless the row shape
+    // cannot carry the box form, in which case only a declaration can reach it.
     const DetectionOutputParams passes[] = {DetectionOutputParams(), declared};
-    for (int p = 0; p < 2; p++)
+    for (int p = inferable ? 0 : 1; p < 2; p++)
     {
         SCOPED_TRACE(p == 0 ? "inferred" : "declared");
 
@@ -2202,7 +2201,8 @@ TEST_P(Test_DetectionModel_YOLONas, Accuracy)
     testDetectionModel("onnx/models/yolo_nas_s.onnx", "dog416.png", 640,
                        refClassIds, refScores, refBoxes, targetId, /*confThreshold=*/0.25f,
                        DetectionOutputParams(DNN_BOX_CORNER, DNN_CLS_SCORES, DNN_COORD_PIXELS,
-                                             DNN_ACT_NONE));
+                                             DNN_ACT_NONE),
+                       /*nmsAcrossClasses=*/false, /*inferable=*/false);
 }
 INSTANTIATE_TEST_CASE_P(/**/, Test_DetectionModel_YOLONas,
                         testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));

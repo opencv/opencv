@@ -1544,9 +1544,9 @@ CV__DNN_INLINE_NS_BEGIN
      */
     enum BoxForm
     {
-        DNN_BOX_AUTO = 0,   //!< Default. Infer from the values.
+        DNN_BOX_AUTO = 0,   //!< Default. Corners for an embedded-NMS row, centres otherwise.
         DNN_BOX_CENTER = 1, //!< cx, cy, w, h.
-        DNN_BOX_CORNER = 2, //!< x1, y1, x2, y2.
+        DNN_BOX_CORNER = 2, //!< x1, y1, x2, y2. A score-block head using these must say so.
     };
 
     /**

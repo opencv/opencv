@@ -647,26 +647,6 @@ bool mergeSplitOutputs(const std::vector<Mat>& outs, Mat& merged, ScoreActivatio
     return true;
 }
 
-// Centre rows fail this: w would have to exceed cx on every detection.
-bool boxesAreCorners(const AnchorFreeLayout& layout, int lastScore,
-                     float confThreshold)
-{
-    bool any = false;
-    for (int b = 0; b < layout.B; b++)
-    {
-        for (int i = 0; i < layout.N; i++)
-        {
-            if (!rowIsActive(layout, b, i, lastScore, confThreshold))
-                continue;
-            if (layout.at(b, i, 2) <= layout.at(b, i, 0)
-                || layout.at(b, i, 3) <= layout.at(b, i, 1))
-                return false;
-            any = true;
-        }
-    }
-    return any;
-}
-
 // What a row means.
 struct HeadLayout
 {
@@ -689,8 +669,11 @@ struct HeadLayout
         head.normalized = params.coordSpace == DNN_COORD_AUTO
                         ? boxesAreNormalized(layout, lastScore, confThreshold)
                         : params.coordSpace == DNN_COORD_NORMALIZED;
+        // An embedded-NMS row carries corners, a score-block row carries centres. The values
+        // cannot settle it: an object against the top-left edge makes every centre row satisfy
+        // w > cx and h > cy, which reads as corners.
         head.cornerBox = params.boxForm == DNN_BOX_AUTO
-                       ? boxesAreCorners(layout, lastScore, confThreshold)
+                       ? head.explicitClass
                        : params.boxForm == DNN_BOX_CORNER;
         return head;
     }
