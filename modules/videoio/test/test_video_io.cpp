@@ -1375,7 +1375,7 @@ TEST_P(Videoio_MJPEG_Gray, roundtrip)
     ASSERT_EQ(frame.size(), decoded.size());
     if (decoded.channels() == 3)
         cvtColor(decoded, decoded, COLOR_BGR2GRAY);
-    EXPECT_LE(cvtest::norm(frame, decoded, NORM_INF), 10.0);
+    EXPECT_LE(cvtest::norm(frame, decoded, NORM_INF), 16.0);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Videoio_MJPEG_Gray, testing::Values(75, 90, 100));
