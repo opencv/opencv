@@ -228,7 +228,11 @@ public:
         auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
-            cv::transpose(B, B);
+        {
+            Mat Bt;
+            cv::transpose(B, Bt);
+            B = Bt;
+        }
         auto flatten_start_axis = normalize_axis(1, wrapper_A->getRank());
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
     }
