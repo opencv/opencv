@@ -8,6 +8,22 @@ CV_ENUM(ROp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN, REDUCE_SUM2)
 typedef tuple<Size, MatType, ROp> Size_MatType_ROp_t;
 typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 
+typedef perf::TestBaseWithParam<tuple<Size, int> > Size_Axis;
+
+PERF_TEST_P(Size_Axis, reduce_fp16_sum,
+            testing::Combine(testing::Values(szVGA, sz1080p), testing::Values(0, 1)))
+{
+    const Size size = get<0>(GetParam());
+    const int dim = get<1>(GetParam());
+    Mat wide(size, CV_32FC(9)), src, dst;
+    randu(wide, 0, 1);
+    wide.convertTo(src, CV_16F);
+
+    TEST_CYCLE() cv::reduce(src, dst, dim, REDUCE_SUM, CV_64F);
+
+    SANITY_CHECK_NOTHING();
+}
+
 
 PERF_TEST_P(Size_MatType_ROp, reduceR,
             testing::Combine(

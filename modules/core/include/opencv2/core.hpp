@@ -895,6 +895,7 @@ obtained. For example, the function can be used to compute horizontal and vertic
 raster image. In case of #REDUCE_MAX and #REDUCE_MIN, the output image should have the same type as the source one.
 In case of #REDUCE_SUM, #REDUCE_SUM2 and #REDUCE_AVG, the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
+On the CPU, CV_16F inputs use the n-dimensional reduction kernels (see cv::ReduceParams).
 
 The following code demonstrates its usage for a single channel matrix.
 @snippet snippets/core_reduce.cpp example
