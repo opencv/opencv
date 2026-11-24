@@ -1900,18 +1900,18 @@ TEST(Imgproc_Linear16f, floating_output_depths)
 
 TEST(Imgproc_Linear16f, laplacian_kernel_depths)
 {
-    Mat values(17, 19, CV_32FC3), source, wide;
+    Mat values(17, 19, CV_32FC3), source;
     RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
     values.convertTo(source, CV_16F);
-    source.convertTo(wide, CV_32F);
 
     for (int ksize : {1, 3})
         for (int ddepth : {CV_16F, CV_32F, CV_64F})
         {
             const int referenceDepth = ddepth == CV_16F ? CV_32F : ddepth;
-            Mat reference, expected, actual;
-            cv::Laplacian(wide, reference, referenceDepth, ksize);
+            Mat referenceInput, reference, expected, actual;
+            source.convertTo(referenceInput, referenceDepth);
+            cv::Laplacian(referenceInput, reference, referenceDepth, ksize);
             if (ddepth == CV_16F)
                 reference.convertTo(expected, CV_16F);
             else
