@@ -60,7 +60,7 @@ typedef testing::TestWithParam<HalfColorParams> Imgproc_HalfColor;
 TEST_P(Imgproc_HalfColor, accuracy_and_storage)
 {
     const int width = std::get<0>(GetParam()), layout = std::get<1>(GetParam());
-    RNG rng(0x30361);
+    RNG& rng = theRNG();
     for (const HalfColorCase& c : halfColorCases())
     {
         SCOPED_TRACE(format("code=%d scn=%d dcn=%d", c.code, c.scn, c.dcn));
@@ -191,7 +191,7 @@ TEST(Imgproc_HalfColor, channel_copy_all_encodings)
 
 TEST(Imgproc_HalfColor, large_image_and_umat)
 {
-    RNG rng(0x30361);
+    RNG& rng = theRNG();
     for (const HalfColorCase& c : halfColorCases())
     {
         SCOPED_TRACE(format("code=%d scn=%d dcn=%d", c.code, c.scn, c.dcn));

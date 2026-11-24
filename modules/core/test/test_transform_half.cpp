@@ -14,7 +14,7 @@ TEST_P(Core_HalfTransform, accuracy_and_storage)
     const int scn = std::get<0>(GetParam()), dcn = std::get<1>(GetParam());
     const bool bias = std::get<2>(GetParam());
     const int matrixDepth = std::get<3>(GetParam());
-    RNG rng(0x30361);
+    RNG& rng = theRNG();
     for (int width : {1, 7, 17, 257})
     {
         for (int diagonal = 0; diagonal <= (scn == dcn); ++diagonal)
