@@ -68,9 +68,11 @@ public:
         end_ = std::max(0, std::min(end_, outDims));
 
         CV_Assert(0 <= start_);
+
+        if (start_ > end_)
+        end_ = start_;
         CV_Assert(start_ <= end_);
         CV_Assert(end_ <= outDims);
-
         return Range(start_, end_);
     }
 
