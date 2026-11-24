@@ -524,9 +524,8 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 {
     CV_INSTRUMENT_REGION();
 
-    const int TILE_SIZE = 32;
+    static constexpr int TILE_SIZE = 32;
     MomentsInTileFunc func = 0;
-    uchar nzbuf[TILE_SIZE*TILE_SIZE];
     Moments m;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     Size size = _src.size();
@@ -566,68 +565,95 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 
     Mat src0(mat);
 
-    for( int y = 0; y < size.height; y += TILE_SIZE )
+    const int ytiles = (size.height + TILE_SIZE - 1) / TILE_SIZE;
+    std::vector<double> rowMoments((size_t)ytiles * 10, 0.0);
+
+    parallel_for_(Range(0, ytiles), [&](const Range& range)
     {
-        Size tileSize;
-        tileSize.height = std::min(TILE_SIZE, size.height - y);
+        uchar nzbuf[TILE_SIZE*TILE_SIZE];
 
-        for( int x = 0; x < size.width; x += TILE_SIZE )
+        for( int ty = range.start; ty < range.end; ty++ )
         {
-            tileSize.width = std::min(TILE_SIZE, size.width - x);
-            Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
+            int y = ty * TILE_SIZE;
+            Size tileSize;
+            tileSize.height = std::min(TILE_SIZE, size.height - y);
 
-            if( binary )
+            double rmom[10] = {0,0,0,0,0,0,0,0,0,0};
+
+            for( int x = 0; x < size.width; x += TILE_SIZE )
             {
-                cv::Mat tmp(tileSize, CV_8U, nzbuf);
-                cv::compare( src, 0, tmp, cv::CMP_NE );
-                src = tmp;
+                tileSize.width = std::min(TILE_SIZE, size.width - x);
+                Mat src(src0, cv::Rect(x, y, tileSize.width, tileSize.height));
+
+                if( binary )
+                {
+                    cv::Mat tmp(tileSize, CV_8U, nzbuf);
+                    cv::compare( src, 0, tmp, cv::CMP_NE );
+                    src = tmp;
+                }
+
+                double mom[10];
+                func( src, mom );
+
+                if(binary)
+                {
+                    double s = 1./255;
+                    for( int k = 0; k < 10; k++ )
+                        mom[k] *= s;
+                }
+
+                double xm = x * mom[0], ym = y * mom[0];
+
+                // accumulate moments computed in each tile
+
+                // + m00 ( = m00' )
+                rmom[0] += mom[0];
+
+                // + m10 ( = m10' + x*m00' )
+                rmom[1] += mom[1] + xm;
+
+                // + m01 ( = m01' + y*m00' )
+                rmom[2] += mom[2] + ym;
+
+                // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
+                rmom[3] += mom[3] + x * (mom[1] * 2 + xm);
+
+                // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
+                rmom[4] += mom[4] + x * (mom[2] + ym) + y * mom[1];
+
+                // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
+                rmom[5] += mom[5] + y * (mom[2] * 2 + ym);
+
+                // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
+                rmom[6] += mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
+
+                // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
+                rmom[7] += mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
+
+                // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
+                rmom[8] += mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
+
+                // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
+                rmom[9] += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
             }
 
-            double mom[10];
-            func( src, mom );
-
-            if(binary)
-            {
-                double s = 1./255;
-                for( int k = 0; k < 10; k++ )
-                    mom[k] *= s;
-            }
-
-            double xm = x * mom[0], ym = y * mom[0];
-
-            // accumulate moments computed in each tile
-
-            // + m00 ( = m00' )
-            m.m00 += mom[0];
-
-            // + m10 ( = m10' + x*m00' )
-            m.m10 += mom[1] + xm;
-
-            // + m01 ( = m01' + y*m00' )
-            m.m01 += mom[2] + ym;
-
-            // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
-            m.m20 += mom[3] + x * (mom[1] * 2 + xm);
-
-            // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
-            m.m11 += mom[4] + x * (mom[2] + ym) + y * mom[1];
-
-            // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
-            m.m02 += mom[5] + y * (mom[2] * 2 + ym);
-
-            // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
-            m.m30 += mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
-
-            // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
-            m.m21 += mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
-
-            // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
-            m.m12 += mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
-
-            // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
-            m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
+            double* dstRow = &rowMoments[(size_t)ty * 10];
+            for( int k = 0; k < 10; k++ )
+                dstRow[k] = rmom[k];
         }
+    }, (size.width * (double)size.height) / (double)(1 << 16));
+
+    double M[10] = {0,0,0,0,0,0,0,0,0,0};
+    for( int ty = 0; ty < ytiles; ty++ )
+    {
+        const double* rm = &rowMoments[(size_t)ty * 10];
+        for( int k = 0; k < 10; k++ )
+            M[k] += rm[k];
     }
+
+    m.m00 = M[0]; m.m10 = M[1]; m.m01 = M[2];
+    m.m20 = M[3]; m.m11 = M[4]; m.m02 = M[5];
+    m.m30 = M[6]; m.m21 = M[7]; m.m12 = M[8]; m.m03 = M[9];
 
     completeMomentState( &m );
     return m;
