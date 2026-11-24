@@ -103,7 +103,8 @@ class Builder:
 
         xcode_ver = get_xcode_major()
         xcode_supports_ios_32bit_arch = xcode_ver <= 13
-        self.build_docs = xcode_ver >= 13
+        # docc flags used in getDocBuildCommand (--emit-lmdb-index, --ide-console-output) need Xcode 15+
+        self.build_docs = xcode_ver >= 15
 
         # build each architecture separately
         alltargets = []
@@ -272,6 +273,7 @@ class Builder:
             "xcrun",
             "docc",
             "convert",
+            "--emit-lmdb-index",
             "--fallback-display-name", self.framework_name,
             "--fallback-bundle-identifier", "org.opencv." + self.framework_name,
             "--fallback-bundle-version", "1",
@@ -284,13 +286,6 @@ class Builder:
 
         if self.hosting_base_path != "":
             doc_buildcmd += ["--hosting-base-path", self.hosting_base_path]
-
-        docc_help = check_output(
-            ["xcrun", "docc", "convert", "--help"],
-            universal_newlines=True,
-        )
-        if "--emit-lmdb-index" in docc_help:
-            doc_buildcmd.append("--emit-lmdb-index")
 
         return doc_buildcmd
 
