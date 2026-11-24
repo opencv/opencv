@@ -575,7 +575,8 @@ enum SolvePnPMethod {
                               //!< Object points must be coplanar.
     SOLVEPNP_IPPE_SQUARE = 7, //!< Infinitesimal Plane-Based Pose Estimation @cite Collins14 \n
                               //!< This is a special case suitable for marker pose estimation.\n
-                              //!< 4 coplanar object points must be defined in the following order:
+                              //!< 4 coplanar object points must be defined in the following order,
+                              //!< and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
                               //!<   - point 0: [-squareLength / 2,  squareLength / 2, 0]
                               //!<   - point 1: [ squareLength / 2,  squareLength / 2, 0]
                               //!<   - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -1023,7 +1024,8 @@ coordinate frame to the camera coordinate frame, using different methods:
 - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
 - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
 - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
-Number of input points must be 4. Object points must be defined in the following order:
+Number of input points must be 4. Object points must be defined in the following order,
+and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -1073,7 +1075,8 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
        solution quality assessment.
    -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
    -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
-       Number of input points must be 4. Object points must be defined in the following order:
+       Number of input points must be 4. Object points must be defined in the following order,
+       and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
          - point 0: [-squareLength / 2,  squareLength / 2, 0]
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -1253,7 +1256,8 @@ couple), depending on the number of input points and the chosen method:
 - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): 3 or 4 input points. Number of returned solutions can be between 0 and 4 with 3 input points.
 - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar. Returns 2 solutions.
 - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
-Number of input points must be 4 and 2 solutions are returned. Object points must be defined in the following order:
+Number of input points must be 4 and 2 solutions are returned. Object points must be defined in the following order,
+and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -1310,7 +1314,8 @@ More information is described in @ref calib3d_solvePnP
        global solution to converge.
    -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
    -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
-       Number of input points must be 4. Object points must be defined in the following order:
+       Number of input points must be 4. Object points must be defined in the following order,
+       and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
          - point 0: [-squareLength / 2,  squareLength / 2, 0]
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
@@ -4441,7 +4446,8 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
     - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
     - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
-    Number of input points must be 4. Object points must be defined in the following order:
+    Number of input points must be 4. Object points must be defined in the following order,
+    and image points must be given in the same order (imagePoints[i] is the projection of objectPoints[i]):
     - point 0: [-squareLength / 2,  squareLength / 2, 0]
     - point 1: [ squareLength / 2,  squareLength / 2, 0]
     - point 2: [ squareLength / 2, -squareLength / 2, 0]
