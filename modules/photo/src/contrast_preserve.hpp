@@ -47,6 +47,11 @@
 using namespace std;
 using namespace cv;
 
+static inline double decolorPow(double base, int e)
+{
+    return e == 2 ? base * base : (e == 1 ? base : 1.0);
+}
+
 class Decolor
 {
     private:
@@ -155,16 +160,26 @@ void Decolor::gradvector(const Mat &img, vector <double> &grad) const
     const int height = dest.size().width;
     const int width = dest.size().height;
 
+    Mat destT, dest1T;
+    transpose(dest, destT);
+    transpose(dest1, dest1T);
+
     grad.resize(width * height * 2);
 
     for(int i=0;i<height;i++)
+    {
+        const float* dRow = destT.ptr<float>(i);
         for(int j=0;j<width;j++)
-            grad[i*width + j] = dest.at<float>(j, i);
+            grad[i*width + j] = dRow[j];
+    }
 
     const int offset = width * height;
     for(int i=0;i<height;i++)
+    {
+        const float* dRow = dest1T.ptr<float>(i);
         for(int j=0;j<width;j++)
-            grad[offset + i * width + j] = dest1.at<float>(j, i);
+            grad[offset + i * width + j] = dRow[j];
+    }
 }
 
 void Decolor::colorGrad(const Mat &img, vector <double> &Cg) const
@@ -286,10 +301,15 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
                 {
                     add_vector(comb,idx,r,g,b);
                     for(int i = 0;i<h;i++)
+                    {
+                        const float* rRow = rgb_channel[2].ptr<float>(i);
+                        const float* gRow = rgb_channel[1].ptr<float>(i);
+                        const float* bRow = rgb_channel[0].ptr<float>(i);
+                        float* curRow = curIm.ptr<float>(i);
                         for(int j=0;j<w;j++)
-                            curIm.at<float>(i,j)=static_cast<float>(
-                                std::pow(rgb_channel[2].at<float>(i,j),r)*std::pow(rgb_channel[1].at<float>(i,j),g)*
-                                std::pow(rgb_channel[0].at<float>(i,j),b));
+                            curRow[j]=static_cast<float>(
+                                decolorPow(rRow[j],r)*decolorPow(gRow[j],g)*decolorPow(bRow[j],b));
+                    }
                     vector <double> curGrad;
                     gradvector(curIm,curGrad);
                     add_to_vector_poly(polyGrad,curGrad,idx1);
@@ -353,8 +373,10 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
     vector <Mat> rgb_channel;
     split(img,rgb_channel);
 
-    int kk =0;
+    struct PolyTerm { int r, g, b; float w; };
+    vector <PolyTerm> terms;
 
+    int kk =0;
     for(int r =0;r<=order;r++)
     {
         for(int g=0;g<=order;g++)
@@ -363,17 +385,31 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
             {
                 if((r + g + b) <=order && (r+g+b) > 0)
                 {
-                    for(int i = 0;i<h;i++)
-                        for(int j=0;j<w;j++)
-                            Gray.at<float>(i,j)=static_cast<float>(Gray.at<float>(i,j) +
-                                static_cast<float>(wei[kk])*std::pow(rgb_channel[2].at<float>(i,j),r)*std::pow(rgb_channel[1].at<float>(i,j),g)*
-                                std::pow(rgb_channel[0].at<float>(i,j),b));
-
+                    terms.push_back(PolyTerm{r, g, b, static_cast<float>(wei[kk])});
                     kk=kk+1;
                 }
             }
         }
     }
+
+    parallel_for_(Range(0, h), [&](const Range& range)
+    {
+        for(int i = range.start; i < range.end; i++)
+        {
+            const float* rRow = rgb_channel[2].ptr<float>(i);
+            const float* gRow = rgb_channel[1].ptr<float>(i);
+            const float* bRow = rgb_channel[0].ptr<float>(i);
+            float* grayRow = Gray.ptr<float>(i);
+            for(int j=0;j<w;j++)
+            {
+                float val = grayRow[j];
+                for(size_t t = 0; t < terms.size(); t++)
+                    val = static_cast<float>(val + terms[t].w *
+                        decolorPow(rRow[j],terms[t].r)*decolorPow(gRow[j],terms[t].g)*decolorPow(bRow[j],terms[t].b));
+                grayRow[j] = val;
+            }
+        }
+    }, (w * (double)h) / (double)(1 << 16));
 
     double minval, maxval;
     minMaxLoc(Gray, &minval, &maxval);
