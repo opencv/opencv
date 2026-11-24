@@ -2690,7 +2690,7 @@ TEST(Core_Arithm, add_rgb8_shared_float_field)
     Mat rgbParent(roi.height + 4, roi.width + 8, CV_8UC3);
     Mat fieldParent(roi.height + 4, roi.width + 12, CV_32FC1);
     Mat rgb = rgbParent(roi), field = fieldParent(roi);
-    RNG rng((uint64)ARITHM_RNG_SEED);
+    RNG& rng = theRNG();
     rng.fill(rgb, RNG::UNIFORM, Scalar::all(0), Scalar::all(256));
     rng.fill(field, RNG::UNIFORM, -400.f, 400.f);
 
