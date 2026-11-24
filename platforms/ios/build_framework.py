@@ -272,7 +272,6 @@ class Builder:
             "xcrun",
             "docc",
             "convert",
-            "--emit-lmdb-index",
             "--fallback-display-name", self.framework_name,
             "--fallback-bundle-identifier", "org.opencv." + self.framework_name,
             "--fallback-bundle-version", "1",
@@ -285,6 +284,13 @@ class Builder:
 
         if self.hosting_base_path != "":
             doc_buildcmd += ["--hosting-base-path", self.hosting_base_path]
+
+        docc_help = check_output(
+            ["xcrun", "docc", "convert", "--help"],
+            universal_newlines=True,
+        )
+        if "--emit-lmdb-index" in docc_help:
+            doc_buildcmd.append("--emit-lmdb-index")
 
         return doc_buildcmd
 
