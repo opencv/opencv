@@ -447,7 +447,8 @@ enum RetrievalModes {
 
 //! the contour approximation algorithm
 enum ContourApproximationModes {
-    /** TBD */
+    /** Outputs Freeman chain codes instead of contour points. The output uses `CV_8SC1` and is
+    experimental, so its representation may change in a future release. */
     CHAIN_CODE            = 0,
     /** stores absolutely all the contour points. That is, any 2 subsequent points (x1,y1) and
     (x2,y2) of the contour will be either horizontal, vertical or diagonal neighbors, that is,
@@ -460,7 +461,9 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4,
-    /** TBD */
+    /** Uses the link-runs contour extraction algorithm. Prefer cv::findContoursLinkRuns() for
+    new code: using this mode through cv::findContours() is deprecated. If hierarchy is
+    requested, `mode` must be `RETR_CCOMP`; otherwise, `mode` is ignored. `offset` is ignored. */
     LINK_RUNS              = 5
 };
 
