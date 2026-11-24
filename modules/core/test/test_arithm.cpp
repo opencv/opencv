@@ -3619,4 +3619,32 @@ TEST(Core_Set, multi_channel_mat_value)
     EXPECT_EQ(0.0, cv::norm(dst, Mat(2, 2, CV_8UC3, Scalar(2, 3, 4)), NORM_INF));
 }
 
+TEST(Core_Arithm, multi_channel_mat_scalar)
+{
+    const Mat src(3, 4, CV_8UC3, Scalar(12, 34, 56));
+    const Mat lower(1, 1, CV_8UC3, Scalar(10, 30, 50));
+    const Mat upper(1, 1, CV_8UC3, Scalar(15, 40, 60));
+    Mat actual, expected;
+    inRange(src, lower, upper, actual);
+    inRange(src, Scalar(10, 30, 50), Scalar(15, 40, 60), expected);
+    EXPECT_EQ(0.0, norm(actual, expected, NORM_INF));
+
+    Mat value(1, 1, CV_8UC3, Scalar(3, 5, 9));
+    bitwise_and(src, value, actual);
+    bitwise_and(src, Scalar(3, 5, 9), expected);
+    EXPECT_EQ(0.0, norm(actual, expected, NORM_INF));
+    bitwise_or(src, value, actual);
+    bitwise_or(src, Scalar(3, 5, 9), expected);
+    EXPECT_EQ(0.0, norm(actual, expected, NORM_INF));
+    bitwise_xor(src, value, actual);
+    bitwise_xor(src, Scalar(3, 5, 9), expected);
+    EXPECT_EQ(0.0, norm(actual, expected, NORM_INF));
+
+    Mat floatDst(3, 4, CV_32FC3, Scalar::all(0));
+    Mat floatValue(1, 1, CV_32FC3, Scalar(1.5, 2.5, 3.5));
+    Mat mask(3, 4, CV_8U, Scalar::all(1));
+    floatDst.setTo(floatValue, mask);
+    EXPECT_EQ(0.0, norm(floatDst, Mat(3, 4, CV_32FC3, Scalar(1.5, 2.5, 3.5)), NORM_INF));
+}
+
 }} // namespace
