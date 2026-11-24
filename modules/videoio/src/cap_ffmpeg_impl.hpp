@@ -2953,7 +2953,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         CV_Assert(false);
     }
 
-    if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
+    if ((width & -2) != frame_width || (height & -2) != frame_height)
+    {
+        CV_LOG_WARNING(NULL, "write frame failed - expected frame size " << frame_width << "x" << frame_height
+                             << " but got " << width << "x" << height);
+        return false;
+    }
+    if (!data)
         return false;
     width = frame_width;
     height = frame_height;
