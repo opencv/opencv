@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "../src/usac.hpp"
 
 namespace opencv_test { namespace {
 
@@ -363,6 +364,42 @@ TEST_P(usac_Essential, maxiters) {
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3d, usac_Essential, UsacMethod::all());
+
+// Regression test for https://github.com/opencv/opencv/issues/27487
+TEST(usac_getLambda, regression_27487) {
+    int min_non_random_inliers = 0;
+
+    // Empty vector: returns 1.0 and sets min_non_random_inliers = 1
+    std::vector<int> empty_supports;
+    double lambda_empty = cv::usac::getLambda(empty_supports, 2.32, 100, 4, false, min_non_random_inliers);
+    EXPECT_DOUBLE_EQ(lambda_empty, 1.0);
+    EXPECT_EQ(min_non_random_inliers, 1);
+
+    // Single-element vector (supports.size() == 1): evaluates without out-of-bounds access
+    std::vector<int> single_support = {10};
+    double lambda_single = cv::usac::getLambda(single_support, 2.32, 100, 4, false, min_non_random_inliers);
+    EXPECT_DOUBLE_EQ(lambda_single, 10.0);
+    EXPECT_EQ(min_non_random_inliers, 17);
+
+    // Even-sized vector (supports.size() == 4): tests two-middle-element median
+    std::vector<int> even_supports = {2, 4, 15, 20};
+    double lambda_even = cv::usac::getLambda(even_supports, 1.0, 50, 4, false, min_non_random_inliers);
+    EXPECT_NEAR(lambda_even, 3.0, 1e-6);
+    EXPECT_EQ(min_non_random_inliers, 7);
+
+    // Odd-sized vector (supports.size() == 3): tests middle-element median
+    std::vector<int> odd_supports = {1, 1, 2};
+    double lambda_odd = cv::usac::getLambda(odd_supports, 1.0, 50, 4, false, min_non_random_inliers);
+    EXPECT_NEAR(lambda_odd, 1.0, 1e-6);
+    EXPECT_EQ(min_non_random_inliers, 4);
+
+    // Independent inliers flag: verifies denominator uses points_size - sample_size
+    min_non_random_inliers = 42;
+    std::vector<int> indep_supports = {8, 10, 12};
+    double lambda_indep = cv::usac::getLambda(indep_supports, 1.0, 20, 4, true, min_non_random_inliers);
+    EXPECT_NEAR(lambda_indep, 9.0, 1e-6);
+    EXPECT_EQ(min_non_random_inliers, 42);
+}
 
 TEST(usac_P3P, accuracy) {
     std::vector<int> gt_inliers;
