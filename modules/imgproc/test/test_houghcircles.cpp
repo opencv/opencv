@@ -344,4 +344,27 @@ TEST(Imgproc_HoughCircles, regression_23423)
     }
     EXPECT_TRUE(foundOuterCircle) << "Detected circles: " << Mat(circles);
 }
+
+// NaN is neither positive nor smaller than 1, so the checks written as "x <= 0" and "x >= 1" let it through.
+// For HOUGH_GRADIENT_ALT a NaN dp even ended in an accumulator without columns on some platforms.
+TEST(Imgproc_HoughCircles, regression_nan_arguments)
+{
+    Mat src = Mat::zeros(64, 64, CV_8UC1);
+    circle(src, Point(32, 32), 15, Scalar(255), 2);
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    const int methods[] = {HOUGH_GRADIENT, HOUGH_GRADIENT_ALT};
+    for (int i = 0; i < 2; i++)
+    {
+        const int method = methods[i];
+        const double param2 = (method == HOUGH_GRADIENT) ? 30 : 0.8;
+        vector<Vec3f> circles;
+
+        EXPECT_NO_THROW(HoughCircles(src, circles, method, 1.5, 10, 100, param2, 0, 50)) << "method " << method;
+        EXPECT_THROW(HoughCircles(src, circles, method, nan, 10, 100, param2, 0, 50), cv::Exception) << "dp, method " << method;
+        EXPECT_THROW(HoughCircles(src, circles, method, 1.5, nan, 100, param2, 0, 50), cv::Exception) << "minDist, method " << method;
+        EXPECT_THROW(HoughCircles(src, circles, method, 1.5, 10, nan, param2, 0, 50), cv::Exception) << "param1, method " << method;
+        EXPECT_THROW(HoughCircles(src, circles, method, 1.5, 10, 100, nan, 0, 50), cv::Exception) << "param2, method " << method;
+    }
+}
 }} // namespace
