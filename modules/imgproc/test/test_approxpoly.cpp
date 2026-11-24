@@ -465,6 +465,100 @@ TEST_F(ApproxPolyN, bad_args)
     ASSERT_ANY_THROW(approxPolyN(bad_contours, corners, 4));
 }
 
+// The edges next to a contracted edge have to meet beyond it. Opposite sides of a rectangle are parallel,
+// so a rectangle cannot be contracted, and approxPolyN used to put the point (-1, -1) into the result.
+static void checkBoundingPolygon(const vector<Point2f>& input, const vector<Point2f>& approx)
+{
+    ASSERT_GE(approx.size(), 3u);
+    for (size_t i = 0; i < input.size(); ++i)
+        EXPECT_GE(pointPolygonTest(approx, input[i], true), -1e-2) << "input point " << i;
+}
+
+TEST(Imgproc_ApproxPolyN, rectangle_cannot_be_contracted)
+{
+    const vector<Point2f> rect = {Point2f(0, 0), Point2f(10, 0), Point2f(10, 6), Point2f(0, 6)};
+    vector<Point2f> approx;
+
+    ASSERT_NO_THROW(approxPolyN(rect, approx, 3));
+    EXPECT_EQ(4u, approx.size());
+    checkBoundingPolygon(rect, approx);
+}
+
+TEST(Imgproc_ApproxPolyN, octagon_with_parallel_sides)
+{
+    // opposite sides are parallel, so the contraction has to stop at four vertices
+    const vector<Point2f> octagon = {Point2f(3, 0), Point2f(7, 0), Point2f(10, 3), Point2f(10, 7),
+                                     Point2f(7, 10), Point2f(3, 10), Point2f(0, 7), Point2f(0, 3)};
+    vector<Point2f> approx;
+
+    ASSERT_NO_THROW(approxPolyN(octagon, approx, 3));
+    EXPECT_EQ(4u, approx.size());
+    checkBoundingPolygon(octagon, approx);
+    for (size_t i = 0; i < approx.size(); ++i)
+    {
+        EXPECT_LT(std::abs(approx[i].x), 50.f) << "vertex " << i;
+        EXPECT_LT(std::abs(approx[i].y), 50.f) << "vertex " << i;
+    }
+}
+
+TEST(Imgproc_ApproxPolyN, nearly_parallel_sides)
+{
+    // The top and the bottom side are nearly, but not exactly, parallel. Their lines meet hundreds of millions
+    // of units away, which is no result for a polygon of size 100, so the contraction has to stop.
+    const vector<Point2f> quad = {Point2f(0, 0), Point2f(100, 0), Point2f(100, 100), Point2f(0, 100.0000229f)};
+    vector<Point2f> approx;
+
+    ASSERT_NO_THROW(approxPolyN(quad, approx, 3));
+    EXPECT_EQ(4u, approx.size());
+    checkBoundingPolygon(quad, approx);
+    for (size_t i = 0; i < approx.size(); ++i)
+    {
+        EXPECT_LT(std::abs(approx[i].x), 1000.f) << "vertex " << i;
+        EXPECT_LT(std::abs(approx[i].y), 1000.f) << "vertex " << i;
+    }
+}
+
+TEST(Imgproc_ApproxPolyN, rotated_regular_octagon)
+{
+    // The sides of a regular octagon computed with float arithmetic are only nearly parallel, how
+    // nearly depends on the rotation. The result has to stay bounded for all of them.
+    for (int k = 0; k < 16; k++)
+    {
+        const float rotation = 0.05f * k;
+        SCOPED_TRACE(cv::format("rotation %.2f", rotation));
+        vector<Point2f> octagon;
+        for (int i = 0; i < 8; i++)
+        {
+            const float angle = rotation + static_cast<float>(CV_PI) * i / 4;
+            octagon.push_back(Point2f(100.f * cosf(angle), 100.f * sinf(angle)));
+        }
+        vector<Point2f> approx;
+
+        ASSERT_NO_THROW(approxPolyN(octagon, approx, 3));
+        checkBoundingPolygon(octagon, approx);
+        for (size_t i = 0; i < approx.size(); ++i)
+        {
+            EXPECT_LT(std::abs(approx[i].x), 1000.f) << "vertex " << i;
+            EXPECT_LT(std::abs(approx[i].y), 1000.f) << "vertex " << i;
+        }
+    }
+}
+
+TEST(Imgproc_ApproxPolyN, trapezoid_to_triangle)
+{
+    const vector<Point2f> trapezoid = {Point2f(0, 0), Point2f(10, 0), Point2f(8, 5), Point2f(2, 5)};
+    vector<Point2f> approx;
+
+    approxPolyN(trapezoid, approx, 3);
+    ASSERT_EQ(3u, approx.size());
+    checkBoundingPolygon(trapezoid, approx);
+    // the two legs of the trapezoid meet in (5, 12.5), which has to be one of the vertices
+    bool found = false;
+    for (size_t i = 0; i < approx.size(); ++i)
+        found = found || (std::abs(approx[i].x - 5.f) < 1e-3f && std::abs(approx[i].y - 12.5f) < 1e-3f);
+    EXPECT_TRUE(found);
+}
+
 // An open curve with a zero epsilon and an infinite coordinate used to send the algorithm into an
 // endless loop, because eps * segment_len_2 is NaN for an infinite segment and the slice was never split.
 TEST(Imgproc_ApproxPoly, infinite_coordinate_with_zero_epsilon_does_not_hang)

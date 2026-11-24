@@ -4179,6 +4179,8 @@ so that the difference between the contour area of the original contour and the 
 It uses a greedy algorithm for contracting two vertices into one in such a way that the additional area is minimal.
 Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
 Each vertex will lie either on the original contour or outside it.
+If the two edges next to an edge are parallel (for example, opposite sides of a rectangle), the edge cannot be contracted.
+If no edge can be contracted any more, the algorithm stops and returns more than nsides vertices.
 
 The algorithm based on the paper @cite LowIlie2003 .
 
