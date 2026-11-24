@@ -198,6 +198,7 @@ void Net::Impl::initCUDABackend()
 
         if (!layerInstance->supportBackend(DNN_BACKEND_CUDA))
         {
+            ld.backendNodes.erase(DNN_BACKEND_CUDA);
             std::ostringstream os;
             os << "CUDA backend will fallback to the CPU implementation for the layer \"" << ld.name
                << "\" of type " << ld.type << '\n';
