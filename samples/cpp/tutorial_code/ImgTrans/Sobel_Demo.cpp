@@ -43,7 +43,7 @@ int main( int argc, char** argv )
   //![load]
   String imageName = parser.get<String>("@input");
   // As usual we load our source image (src)
-  image = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
+  image = imread( samples::findFile( imageName, false ), IMREAD_COLOR ); // Load an image
 
   // Check if image is loaded fine
   if( image.empty() )
