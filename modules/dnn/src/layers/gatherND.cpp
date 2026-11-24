@@ -144,7 +144,7 @@ public:
             {
                 const iT* sliced_indices = indices_ptr + i * last_indices_dim;
 
-                size_t offset = (i / num_slices_per_batch) * batch_stride;
+                size_t offset = batch_dims > 0 ? (i / num_slices_per_batch) * batch_stride : 0;
                 for (size_t j = 0; j < last_indices_dim; ++j)
                 {
                     int64_t ix = (int64_t)sliced_indices[j];
