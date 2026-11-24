@@ -294,6 +294,16 @@ static double imageHessianProjECC(const Mat& map,
         int ystart = (hr * stripeIdx) / stripesAmount;
         ystart = roundUp(ystart, deltaY);
         int yend = (hr * (range.end)) / stripesAmount;
+        // Adjacent stripes' counters share a cache line, so these accumulate privately and
+        // are written back once per stripe rather than once per pixel.
+        double sampSumCache = 0;
+        double sampSqSumCache = 0;
+        double refSumCache = 0;
+        double refSqSumCache = 0;
+        double sampMaskedSumCache = 0;
+        double refMaskedSumCache = 0;
+        double correlationCache = 0;
+        int nzCache = 0;
         // we don't store intermediate jacobian; instead, we iteratively update Hessian, sampleProj and refProj
         for (int y = ystart; y < yend; y += deltaY) {
             const elemtype* refPtr = ref.ptr<elemtype>(y);
@@ -371,13 +381,13 @@ static double imageHessianProjECC(const Mat& map,
                 fVal *= float(refPtr[2 * x + 1]) == 0.f ? 0.f : 1.f;
                 sampleVal *= fVal;
                 refVal *= fVal;
-                sampSums[stripeIdx] += sampleVal;
-                sampSqSums[stripeIdx] += sampleVal * sampleVal;
-                refSums[stripeIdx] += refVal;
-                refSqSums[stripeIdx] += refVal * refVal;
-                nzs[stripeIdx] += (int)fVal;
-                sampMaskedSums[stripeIdx] += sampleVal;
-                refMaskedSums[stripeIdx] += refVal;
+                sampSumCache += sampleVal;
+                sampSqSumCache += sampleVal * sampleVal;
+                refSumCache += refVal;
+                refSqSumCache += refVal * refVal;
+                nzCache += (int)fVal;
+                sampMaskedSumCache += sampleVal;
+                refMaskedSumCache += refVal;
                 std::array<float, HESSIAN_PARAMS> jac = MotionTraits<motionType>::fillJacobian(x, y, sx, sy,
                                                                                         fVal, gx,
                                                                                         gy, (float)a00,
@@ -390,7 +400,7 @@ static double imageHessianProjECC(const Mat& map,
                     tprojCache[elem] += jac[elem] * refVal;
                     projSubCache[elem] += jac[elem] * fVal;
                 });
-                correlations[stripeIdx] += sampleVal * refVal;
+                correlationCache += sampleVal * refVal;
             }
 
             constexprForUpperTriangle<HESSIAN_PARAMS>([&](int row, int col) {
@@ -402,6 +412,14 @@ static double imageHessianProjECC(const Mat& map,
                 projSubs[stripeIdx][elem] += projSubCache[elem];
             });
         }
+        sampSums[stripeIdx] += sampSumCache;
+        sampSqSums[stripeIdx] += sampSqSumCache;
+        refSums[stripeIdx] += refSumCache;
+        refSqSums[stripeIdx] += refSqSumCache;
+        nzs[stripeIdx] += nzCache;
+        sampMaskedSums[stripeIdx] += sampMaskedSumCache;
+        refMaskedSums[stripeIdx] += refMaskedSumCache;
+        correlations[stripeIdx] += correlationCache;
     });
     double sampMaskedSum = 0;
     double refMaskedSum = 0;
