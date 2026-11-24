@@ -2992,7 +2992,7 @@ TEST(Core_Pow, special)
 TEST(Core_Log, cv32f_table_kernel)
 {
     const int oldThreads = cv::getNumThreads();
-    cv::setNumThreads(0);
+    cv::setNumThreads(1);
     const auto verify = [](const Mat& input, const Mat& output)
     {
         for (int i = 0; i < input.cols; i++)
