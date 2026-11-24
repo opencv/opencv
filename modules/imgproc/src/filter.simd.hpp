@@ -392,15 +392,26 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
 
         // The fused filter walks each column strip down all its rows. On wide rows that thrashes
         // the caches and hardware prefetchers, so it runs on bands of rows of about 256 KB.
+        // Bands are independent. Images with at least 1 MB of work per thread are split into
+        // one stripe per thread; smaller ones lose more to thread wake-up than they gain.
         const size_t rowBytes = (size_t)width*(esz + dsz);
-        const int band = std::max(8, (int)std::min((size_t)inner, ((size_t)256 << 10) / rowBytes));
-        for( int y = 0; y < inner; y += band )
+        const int nstripes = (int)std::max((size_t)1, std::min((size_t)std::max(1, getNumThreads()), rowBytes*inner >> 20));
+        int band = std::max(8, (int)std::min((size_t)inner, ((size_t)256 << 10) / rowBytes));
+        if( nstripes > 1 )
+            band = std::max(8, std::min(band, (inner + nstripes - 1) / nstripes));
+        const int nBands = (inner + band - 1) / band;
+        BaseRowColumnFilter& rowColumnFilter = *this_.rowColumnFilter;
+        const int roiY = this_.roi.y;
+        parallel_for_(Range(0, nBands), [&](const Range& r)
         {
-            const int yd = top + y;
-            const uchar* srcBand = src + (ptrdiff_t)(this_.roi.y + yd - kx - y0)*srcstep;
-            (*this_.rowColumnFilter)(srcBand, dst + (ptrdiff_t)yd*dststep, srcstep, dststep, width,
-                                     std::min(band, inner - y), this_.roi.y + yd, wholeHeight, cn);
-        }
+            for( int b = r.start; b < r.end; b++ )
+            {
+                const int yd = top + b*band;
+                const uchar* srcBand = src + (ptrdiff_t)(roiY + yd - kx - y0)*srcstep;
+                rowColumnFilter(srcBand, dst + (ptrdiff_t)yd*dststep, srcstep, dststep, width,
+                                std::min(band, inner - b*band), roiY + yd, wholeHeight, cn);
+            }
+        }, nstripes);
     }
     return height;
 }
@@ -436,7 +447,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
 
     // The fused path writes dst before it has finished reading src, so any overlap
     // (in-place calls on an ROI included) must take the row-buffered path.
-    const uchar* srcEnd = src + (ptrdiff_t)srcstep*(count - 1) + (ptrdiff_t)width1*esz;
+    const uchar* srcEnd = src + (ptrdiff_t)srcstep*(count - 1) + (ptrdiff_t)(width1 - _dx1 - _dx2)*esz;
     const uchar* dstEnd = dst + (ptrdiff_t)dststep*(this_.roi.height - 1) + (ptrdiff_t)width*getElemSize(this_.dstType);
     bool overlap = src < dstEnd && dst < srcEnd;
 
