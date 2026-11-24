@@ -133,7 +133,7 @@ int FilterEngine__start(FilterEngine& this_, const Size &_wholeSize, const Size 
             }
 
             if (this_.isSeparable())
-                (*this_.rowFilter)(&this_.srcRow[0], dst, this_.maxWidth, cn, true);
+                (*this_.rowFilter)(&this_.srcRow[0], dst, this_.maxWidth, cn);
         }
 
         int maxBufStep = bufElemSize*(int)alignSize(this_.maxWidth +
@@ -197,23 +197,12 @@ int FilterEngine__start(FilterEngine& this_, const Size &_wholeSize, const Size 
 }
 
 void inline fillRowData(uchar *row, const uchar *src, int width1, int _dx1, int _dx2,
-                int esz, bool makeBorder, const int *btab, int btab_esz, bool processInnerRegion)
+                int esz, bool makeBorder, const int *btab, int btab_esz)
 {
     int i;
     int len = (width1 - _dx2 - _dx1)*esz;
 
-    if(processInnerRegion)
-        memcpy( row + _dx1*esz, src, len );
-    else
-    {
-        int leftSize = (_dx1*2)*esz;
-        int leftOffset = _dx1*esz;
-        int rightSize = (_dx2*2)*esz;
-        for(int j = 0; j < leftSize; j++)
-            row[j+leftOffset] = src[j];
-        for(int j = 0; j < rightSize; j++)
-            row[j+leftOffset + len - rightSize] = src[len - rightSize + j];
-    }
+    memcpy( row + _dx1*esz, src, len );
 
     if( makeBorder )
     {
@@ -361,8 +350,8 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
                 continue;
             }
             uchar* brow = ringBuf + i*this_.bufStep;
-            fillRowData(srcRow, srcRowPtr(y), width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, true);
-            rowFilter(srcRow, brow, width, cn, true);
+            fillRowData(srcRow, srcRowPtr(y), width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
+            rowFilter(srcRow, brow, width, cn);
             brows[i] = brow;
         }
         columnFilter.reset();
@@ -389,7 +378,7 @@ static int proceedRowColumnSeparable(FilterEngine& this_, const uchar* src, int 
             for( int i = 0; i < nIn; i++ )
                 gatherRowEdges(edge + (size_t)i*2*seg*esz, srcRowPtr(this_.roi.y + top + y - kx + i), seg, width1,
                                _dx1, _dx2, esz, makeBorder, btab, btab_esz, constVal);
-            rowFilter(edge, edgeSum, nIn*2*seg - (k - 1), cn, true);
+            rowFilter(edge, edgeSum, nIn*2*seg - (k - 1), cn);
 
             uchar* dstChunk = dst + (ptrdiff_t)(top + y)*dststep;
             for( int side = 0; side < 2; side++ )
@@ -486,8 +475,8 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
                 int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
                 uchar* brow = ringBuf + bi*bufStep;
                 incrementRowCount(this_, bufRows);
-                fillRowData(srcRow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, true);
-                (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType), true);
+                fillRowData(srcRow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
+                (*this_.rowFilter)(srcRow, brow, width, CV_MAT_CN(this_.srcType));
             }
             fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
             if( i < kheight )
@@ -508,7 +497,7 @@ int FilterEngine__proceed(FilterEngine& this_, const uchar* src, int srcstep, in
                 int bi = (this_.startY - startY0 + this_.rowCount) % bufRows;
                 uchar* brow = ringBuf + bi*bufStep;
                 incrementRowCount(this_, bufRows);
-                fillRowData(brow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz, true);
+                fillRowData(brow, src, width1, _dx1, _dx2, esz, makeBorder, btab, btab_esz);
             }
             fillBrows(this_, brows, i, (this_.dstY + dy + this_.roi.y - ay),  bufRows, dy, kheight);
             if( i < kheight )
@@ -725,7 +714,7 @@ public:
 
                 uchar* hbuf = tls.hbuf.ptr();
                 for (int r = 0; r < tile_mat.rows; r++)
-                    (*fe.rowFilter)(tile_mat.ptr(r), hbuf + r * hstep, w, cn, true);
+                    (*fe.rowFilter)(tile_mat.ptr(r), hbuf + r * hstep, w, cn);
 
                 AutoBuffer<const uchar*> _brows(h + kheight - 1);
                 const uchar** brows = _brows.data();
@@ -826,7 +815,7 @@ struct RowNoVec
 {
     RowNoVec() {}
     RowNoVec(const Mat&) {}
-    int operator()(const uchar*, uchar*, int, int, bool) const { return 0; }
+    int operator()(const uchar*, uchar*, int, int) const { return 0; }
 };
 
 struct ColumnNoVec
@@ -840,7 +829,7 @@ struct SymmRowSmallNoVec
 {
     SymmRowSmallNoVec() {}
     SymmRowSmallNoVec(const Mat&, int) {}
-    int operator()(const uchar*, uchar*, int, int, bool) const { return 0; }
+    int operator()(const uchar*, uchar*, int, int) const { return 0; }
 };
 
 struct SymmColumnSmallNoVec
@@ -881,7 +870,7 @@ struct RowVec_8u32s
         }
     }
 
-    int operator()(const uchar* _src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -981,7 +970,7 @@ struct RowVec_8u32f
     RowVec_8u32f() {}
     RowVec_8u32f( const Mat& _kernel ) : kernel(_kernel) {}
 
-    int operator()(const uchar* _src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -1043,7 +1032,7 @@ struct SymmRowSmallVec_8u32s
         int16Sums = smallValues && absSum*UCHAR_MAX <= SHRT_MAX;
     }
 
-    int operator()(const uchar* src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2003,7 +1992,7 @@ struct RowVec_16s32f
         kernel = _kernel;
     }
 
-    int operator()(const uchar* _src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2213,7 +2202,7 @@ struct RowVec_32f
 #endif
     }
 
-    int operator()(const uchar* _src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -2357,7 +2346,7 @@ struct SymmRowSmallVec_32f
         symmetryType = _symmetryType;
     }
 
-    int operator()(const uchar* _src, uchar* _dst, int width, int cn, bool) const
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
         CV_INSTRUMENT_REGION();
 
@@ -3005,7 +2994,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) CV_OVERRIDE
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -3015,7 +3004,7 @@ template<typename ST, typename DT, class VecOp> struct RowFilter : public BaseRo
         DT* D = (DT*)dst;
         int i, k;
 
-        i = vecOp(src, dst, width, cn, processInnerRegion);
+        i = vecOp(src, dst, width, cn);
         width *= cn;
         #if CV_ENABLE_UNROLLED
         for( ; i <= width - 4; i += 4 )
@@ -3065,7 +3054,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 && this->ksize <= 5 );
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) CV_OVERRIDE
+    void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -3073,7 +3062,7 @@ template<typename ST, typename DT, class VecOp> struct SymmRowSmallFilter :
         const DT* kx = this->kernel.template ptr<DT>() + ksize2;
         bool symmetrical = (this->symmetryType & KERNEL_SYMMETRICAL) != 0;
         DT* D = (DT*)dst;
-        int i = this->vecOp(src, dst, width, cn, processInnerRegion), j, k;
+        int i = this->vecOp(src, dst, width, cn), j, k;
         const ST* S = (const ST*)src + i + ksize2n;
         width *= cn;
 

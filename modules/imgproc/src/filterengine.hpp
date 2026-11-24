@@ -73,7 +73,7 @@ public:
     //! the destructor
     virtual ~BaseRowFilter();
     //! the filtering operator. Must be overridden in the derived classes. The horizontal border interpolation is done outside of the class.
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) = 0;
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
     //! returns true if the filter holds no mutable state between calls (safe for concurrent tile-parallel invocation)
     virtual bool isStateless() const { return false; }
 

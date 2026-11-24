@@ -563,7 +563,7 @@ struct RowSum :
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -574,44 +574,16 @@ struct RowSum :
         int len = width*cn;
         if( ksize == 3 )
         {
-            if(processInnerRegion)
+            for(i = 0; i < len ; i++ )
             {
-                for(i = 0; i < len ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2];
-                }
-            }
-            else
-            {
-                for(i = 0; i < cn ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2];
-                }
-                for(i=len-cn; i < len ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2];
-                }
+                D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2];
             }
         }
         else if( ksize == 5 )
         {
-            if(processInnerRegion)
+            for(i = 0; i < len ; i++ )
             {
-                for(i = 0; i < len ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2] + (ST)s[i + cn*3] + (ST)s[i + cn*4];
-                }
-            }
-            else
-            {
-                for(i = 0; i < min(len,2*cn) ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2] + (ST)s[i + cn*3] + (ST)s[i + cn*4];
-                }
-                for(i = max(len-(2*cn),0); i < len ; i++ )
-                {
-                    D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2] + (ST)s[i + cn*3] + (ST)s[i + cn*4];
-                }
+                D[i] = (ST)s[i] + (ST)s[i+cn] + (ST)s[i+cn*2] + (ST)s[i + cn*3] + (ST)s[i + cn*4];
             }
         }
         else if( (cn == 1 || cn == 3 || cn == 4) &&
@@ -1494,7 +1466,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
             if(scale==1)
             {
                 // the separable path is faster for 8- and 16-bit sums on NEON (Apple M5)
-#if defined(__x86_64__) || defined(_M_X64)
+#if !CV_NEON
                 if( sdepth == CV_8U  )
                     return makePtr<Sum3x3<SKIP_SCALING, uchar, ushort, v_uint8, v_uint16> >(ksize, scale);
                 if( sdepth == CV_16U  )
@@ -1513,7 +1485,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
             }
             else
             {
-#if defined(__x86_64__) || defined(_M_X64)
+#if !CV_NEON
                 if( sdepth == CV_8U  )
                     return makePtr<Sum3x3_8u>(ksize, scale);
                 if( sdepth == CV_16U  )
@@ -1535,7 +1507,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
         {
             if(scale==1)
             {
-#if defined(__x86_64__) || defined(_M_X64)
+#if !CV_NEON
                 if( sdepth == CV_8U  )
                     return makePtr<Sum5x5<SKIP_SCALING, uchar, ushort, v_uint8, v_uint16> >(ksize, scale);
                 if( sdepth == CV_16U  )
@@ -1554,7 +1526,7 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
             }
             else
             {
-#if defined(__x86_64__) || defined(_M_X64)
+#if !CV_NEON
                 if( sdepth == CV_8U  )
                     return makePtr<Sum5x5_8u>(ksize, scale);
                 if( sdepth == CV_16U  )
@@ -1653,7 +1625,7 @@ struct SqrRowSum :
 
     bool isStateless() const CV_OVERRIDE { return true; }
 
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn, bool) CV_OVERRIDE
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
