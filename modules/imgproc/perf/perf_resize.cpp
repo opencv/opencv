@@ -276,4 +276,70 @@ PERF_TEST_P(MatInfo_Size_Scale_NN, ResizeNNExact,
     SANITY_CHECK_NOTHING();
 }
 
+// values in [0, 1) keep fp16 away from its overflow range
+static Mat halfResizeSrc(Size sz, int type)
+{
+    Mat src32(sz, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+    randu(src32, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, type);
+    return src;
+}
+
+CV_ENUM(HalfResizeInter, INTER_LINEAR, INTER_CUBIC, INTER_AREA, INTER_LANCZOS4)
+
+typedef TestBaseWithParam<tuple<MatType, Size, HalfResizeInter> > MatInfo_Size_HalfResizeInter;
+
+// the fp32 rows are the reference for the half rows; the 2/3 scale avoids the
+// integer-scale fast paths
+PERF_TEST_P(MatInfo_Size_HalfResizeInter, resizeHalf,
+    testing::Combine(
+        testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3),
+        testing::Values(TYPICAL_MAT_SIZES),
+        HalfResizeInter::all()
+    )
+)
+{
+    int matType = get<0>(GetParam());
+    Size from = get<1>(GetParam());
+    int inter = get<2>(GetParam());
+
+    Mat src = halfResizeSrc(from, matType);
+    Mat dst(Size(from.width * 2 / 3, from.height * 2 / 3), matType);
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, inter);
+
+    SANITY_CHECK_NOTHING();
+}
+
+// convert to fp32, resize, convert back: the route available without native
+// half support, so the native half path has to beat it
+PERF_TEST_P(MatInfo_Size_HalfResizeInter, resizeHalfViaFp32,
+    testing::Combine(
+        testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3),
+        testing::Values(TYPICAL_MAT_SIZES),
+        HalfResizeInter::all()
+    )
+)
+{
+    int matType = get<0>(GetParam());
+    Size from = get<1>(GetParam());
+    int inter = get<2>(GetParam());
+
+    Mat src = halfResizeSrc(from, matType);
+    Mat dst(Size(from.width * 2 / 3, from.height * 2 / 3), matType), src32, dst32;
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.convertTo(src32, CV_32F);
+        resize(src32, dst32, dst.size(), 0, 0, inter);
+        dst32.convertTo(dst, CV_MAT_DEPTH(matType));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
