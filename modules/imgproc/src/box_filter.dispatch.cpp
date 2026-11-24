@@ -60,7 +60,6 @@ namespace cv {
 static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth,
                                    Size ksize, Point anchor, int borderType, bool normalize )
 {
-    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     if (ddepth < 0)
@@ -71,7 +70,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     if (anchor.y < 0)
         anchor.y = ksize.height / 2;
 
-    if ( !(dev.isIntel() && (type == CV_8UC1) &&
+    if ( !(type == CV_8UC1 && ddepth == CV_8U && !_src.isSubmatrix() &&
          (_src.offset() == 0) && (_src.step() % 4 == 0) &&
          (_src.cols() % 16 == 0) && (_src.rows() % 2 == 0) &&
          (anchor.x == 1) && (anchor.y == 1) &&
@@ -159,7 +158,11 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     ocl::Kernel kernel;
 
-    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+    // Odd sizes select one pixel per work item inside filterSmall. That path was
+    // slower than the general kernel, so require an even width and height.
+    if ((dev.isIntel() || dev.isAMD() || dev.isNVidia()) &&
+        !(dev.type() & ocl::Device::TYPE_CPU) &&
+        (size.width % 2 == 0 && size.height % 2 == 0) &&
         ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
          (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
