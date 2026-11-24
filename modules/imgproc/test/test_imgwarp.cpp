@@ -1570,7 +1570,7 @@ TEST(Imgproc_Warp, cubic_nonfinite_coordinates)
 
 TEST(Imgproc_Warp, float16_interpolation)
 {
-    RNG rng(137);
+    RNG& rng = theRNG();
     for (int channels : {1, 2, 3, 4, 5, 9, 20, 33, CV_CN_MAX})
     for (Size size : {Size(1, 1), Size(71, 53)})
     for (int interpolation : {INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
@@ -1877,7 +1877,7 @@ TEST(Imgproc_Warp, float16_linear_extreme_coordinates)
 
 TEST(Imgproc_Warp, per_channel_border_values)
 {
-    RNG rng(137);
+    RNG& rng = theRNG();
     for (int depth : {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F, CV_16F})
     for (int channels : {1, 2, 3, 4, 5, 9, 20, CV_CN_MAX})
     for (int interpolation : {INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4})
@@ -2022,7 +2022,7 @@ TEST(Imgproc_Warp, border_values_with_isolated_flag)
 
 TEST(Imgproc_Warp, border_values_nonconstant)
 {
-    RNG rng(137);
+    RNG& rng = theRNG();
     Mat src(13, 17, CV_32FC(20)), values(1, 20, CV_64F);
     rng.fill(src, RNG::UNIFORM, 0.f, 1.f);
     rng.fill(values, RNG::UNIFORM, -1., 1.);
