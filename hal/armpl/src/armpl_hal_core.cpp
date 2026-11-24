@@ -3023,4 +3023,148 @@ int armpl_hal_dctFree2D(cvhalDFT *context)
     return CV_HAL_ERROR_OK;
 }
 
+static const int ARMPL_HAL_QR_MIN_SIZE = 50;
+
+template<typename T>
+static void armpl_reformat(const T* src, int src_ld, T* dst, int dst_ld, int rows, int cols)
+{
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < cols; j++)
+            dst[j * dst_ld + i] = src[i * src_ld + j];
+}
+
+template<typename T>
+static void armpl_reformat_square_inplace(T* a, int ld, int n)
+{
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++)
+            std::swap(a[i * ld + j], a[j * ld + i]);
+}
+
+static void armpl_gels(char* t, int* m, int* n, int* k,
+                       float* A, int* lda, float* B, int* ldb,
+                       float* work, int* lwork, int* info)
+{
+    *info = (int)LAPACKE_sgels_work(LAPACK_COL_MAJOR, *t, *m, *n, *k, A, *lda, B, *ldb, work, *lwork);
+}
+
+static void armpl_gels(char* t, int* m, int* n, int* k,
+                       double* A, int* lda, double* B, int* ldb,
+                       double* work, int* lwork, int* info)
+{
+    *info = (int)LAPACKE_dgels_work(LAPACK_COL_MAJOR, *t, *m, *n, *k, A, *lda, B, *ldb, work, *lwork);
+}
+
+static void armpl_geqrf(int* m, int* n, float* A, int* lda, float* tau,
+                        float* work, int* lwork, int* info)
+{
+    *info = (int)LAPACKE_sgeqrf_work(LAPACK_COL_MAJOR, *m, *n, A, *lda, tau, work, *lwork);
+}
+
+static void armpl_geqrf(int* m, int* n, double* A, int* lda, double* tau,
+                        double* work, int* lwork, int* info)
+{
+    *info = (int)LAPACKE_dgeqrf_work(LAPACK_COL_MAJOR, *m, *n, A, *lda, tau, work, *lwork);
+}
+
+template<typename T>
+static int armpl_qr_impl(T* a, size_t a_step, int m, int n, int k,
+                         T* b, size_t b_step, T* dst, int* info, T eps)
+{
+    if (m < n)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    int lda = (int)(a_step / sizeof(T));
+    int _m = m, _n = n, _k = k, lap_info = 0;
+
+    std::vector<T> tmpA_buf;
+    T* tmpA;
+    int ldtmpA;
+    if (m == n) {
+        armpl_reformat_square_inplace(a, lda, m);
+        tmpA   = a;
+        ldtmpA = lda;
+    } else {
+        tmpA_buf.resize((size_t)m * n);
+        tmpA   = tmpA_buf.data();
+        ldtmpA = m;
+        armpl_reformat(a, lda, tmpA, m, m, n);
+    }
+
+    if (b) {
+        char mode = 'N';
+        int ldb   = (int)(b_step / sizeof(T));
+        int lwork = -1;
+        T   work1 = T(0);
+
+        if (k == 1 && b_step == sizeof(T)) {
+            armpl_gels(&mode, &_m, &_n, &_k,
+                       tmpA, &ldtmpA, b, &_m, &work1, &lwork, &lap_info);
+            lwork = (int)work1;
+            std::vector<T> wbuf((size_t)lwork + 1);
+            lap_info = 0;
+            armpl_gels(&mode, &_m, &_n, &_k,
+                       tmpA, &ldtmpA, b, &_m, wbuf.data(), &lwork, &lap_info);
+        } else {
+            std::vector<T> tmpB_buf((size_t)m * k);
+            T* tmpB = tmpB_buf.data();
+            armpl_reformat(b, ldb, tmpB, m, m, k);
+            armpl_gels(&mode, &_m, &_n, &_k,
+                       tmpA, &ldtmpA, tmpB, &_m, &work1, &lwork, &lap_info);
+            lwork = (int)work1;
+            std::vector<T> wbuf((size_t)lwork + 1);
+            lap_info = 0;
+            armpl_gels(&mode, &_m, &_n, &_k,
+                       tmpA, &ldtmpA, tmpB, &_m, wbuf.data(), &lwork, &lap_info);
+            armpl_reformat(tmpB, m, b, ldb, k, m);
+        }
+    } else {
+        int lwork = -1;
+        T   work1 = T(0);
+        armpl_geqrf(&_m, &_n, tmpA, &ldtmpA, dst, &work1, &lwork, &lap_info);
+        lwork = (int)work1;
+        std::vector<T> wbuf((size_t)lwork + 1);
+        lap_info = 0;
+        armpl_geqrf(&_m, &_n, tmpA, &ldtmpA, dst, wbuf.data(), &lwork, &lap_info);
+    }
+
+    if (m == n)
+        armpl_reformat_square_inplace(a, lda, m);
+    else
+        armpl_reformat(tmpA, m, a, lda, n, m);
+
+    if (lap_info != 0) {
+        *info = 0;
+        return CV_HAL_ERROR_OK;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (std::fabs(a[i * lda + i]) < eps) {
+            *info = 0;
+            return CV_HAL_ERROR_OK;
+        }
+    }
+
+    *info = 1;
+    return CV_HAL_ERROR_OK;
+}
+
+int armpl_hal_QR32f(float* src1, size_t src1_step, int m, int n, int k,
+                    float* src2, size_t src2_step, float* dst, int* info)
+{
+    if (m < ARMPL_HAL_QR_MIN_SIZE)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_qr_impl(src1, src1_step, m, n, k,
+                         src2, src2_step, dst, info, FLT_EPSILON * 10.f);
+}
+
+int armpl_hal_QR64f(double* src1, size_t src1_step, int m, int n, int k,
+                    double* src2, size_t src2_step, double* dst, int* info)
+{
+    if (m < ARMPL_HAL_QR_MIN_SIZE)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return armpl_qr_impl(src1, src1_step, m, n, k,
+                         src2, src2_step, dst, info, DBL_EPSILON * 100.0);
+}
+
 #endif // HAVE_ARMPL
