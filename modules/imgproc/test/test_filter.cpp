@@ -1640,7 +1640,7 @@ TEST_P(Imgproc_Morphology16f, accuracy)
     const int cn = get<2>(GetParam()), border = get<3>(GetParam());
     const Rect roi(2, 2, 17, 13);
     Mat values(roi.height + 4, roi.width + 4, CV_MAKETYPE(CV_32F, cn));
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, -100.f, 100.f);
     Mat storage, wide;
     values.convertTo(storage, CV_16F);
@@ -1691,7 +1691,7 @@ TEST_P(Imgproc_MorphologyParallel, accuracy)
     const int op = get<0>(GetParam()), shape = get<1>(GetParam());
     const int type = get<2>(GetParam()), border = get<3>(GetParam());
     Mat values(1024, 1024, CV_MAKETYPE(CV_32F, CV_MAT_CN(type)));
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, op == MORPH_ERODE ? 1.f : -100.f,
                                   op == MORPH_ERODE ? 100.f : -1.f);
     Mat source, wide, expected32f, expected, actual;
@@ -1816,7 +1816,7 @@ TEST_P(Imgproc_Linear16f, accuracy)
     const int kernelSize = get<3>(GetParam()), kernelDepth = get<4>(GetParam());
     const Rect roi(3, 4, 19, 17);
     Mat values(27, 29, CV_MAKETYPE(CV_32F, cn));
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
     Mat storage, wide, reference32, expected, actual;
     values.convertTo(storage, CV_16F);
@@ -1853,7 +1853,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Imgproc_Linear16f, testing::ValuesIn(linear16fC
 TEST(Imgproc_Linear16f, inferred_gaussian_kernel)
 {
     Mat values(17, 19, CV_32FC3);
-    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    theRNG().fill(values, RNG::UNIFORM, -2.f, 2.f);
     Mat source, wide, actual, reference, expected;
     values.convertTo(source, CV_16F);
     source.convertTo(wide, CV_32F);
@@ -1866,7 +1866,7 @@ TEST(Imgproc_Linear16f, inferred_gaussian_kernel)
 TEST(Imgproc_Linear16f, large_full_image)
 {
     Mat values(81, 83, CV_32FC(5));
-    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    theRNG().fill(values, RNG::UNIFORM, -2.f, 2.f);
     Mat source, wide, actual, reference, expected;
     values.convertTo(source, CV_16F);
     source.convertTo(wide, CV_32F);
@@ -1880,7 +1880,7 @@ TEST(Imgproc_Linear16f, large_full_image)
 TEST(Imgproc_Linear16f, floating_output_depths)
 {
     Mat values(17, 19, CV_32FC(5));
-    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    theRNG().fill(values, RNG::UNIFORM, -2.f, 2.f);
     Mat source;
     values.convertTo(source, CV_16F);
     const int depths[] = {CV_32F, CV_64F};
@@ -1901,7 +1901,7 @@ TEST(Imgproc_Linear16f, floating_output_depths)
 TEST(Imgproc_Linear16f, laplacian_kernel_depths)
 {
     Mat values(17, 19, CV_32FC3), source, wide;
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, -2.f, 2.f);
     values.convertTo(source, CV_16F);
     source.convertTo(wide, CV_32F);
@@ -1928,7 +1928,7 @@ TEST(Imgproc_Linear16f, laplacian_kernel_depths)
 TEST(Imgproc_Linear16f, parallel_five_channels)
 {
     Mat values(1024, 1024, CV_32FC(5));
-    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    theRNG().fill(values, RNG::UNIFORM, -2.f, 2.f);
     Mat source, wide, actual, reference, expected;
     values.convertTo(source, CV_16F);
     source.convertTo(wide, CV_32F);
@@ -1945,7 +1945,7 @@ TEST(Imgproc_Linear16f, parallel_five_channels)
 TEST(Imgproc_Linear16f, shifted_anchor_and_isolated_roi)
 {
     Mat values(27, 29, CV_32FC(5)), source, wide;
-    RNG(137).fill(values, RNG::UNIFORM, -2.f, 2.f);
+    theRNG().fill(values, RNG::UNIFORM, -2.f, 2.f);
     values.convertTo(source, CV_16F);
     source.convertTo(wide, CV_32F);
     const Rect roi(0, 1, 19, 17);
