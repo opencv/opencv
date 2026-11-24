@@ -73,14 +73,9 @@ using std::string;
 
  The reallocation is done using Buffer.fit() function.
 
- That plan, made before any sizes are known, can add up to much more memory than is ever alive at once:
- a large tensor may land in (and grow) a buffer that only held small ones, while a large free buffer
- gets a small tensor. So once an inference has recorded every temporary's shape and type, the next
- one starts with replanBuffersBySize(), which runs the same assignment again with the sizes: a tensor
- now takes the smallest free buffer that already holds it (best fit), or else the largest free one,
- which grows the least. The new plan replaces the old one only when it saves at least a quarter of the
- memory and 64 MB, since switching drops the current buffers; and it is not recomputed while the sizes
- stay the same.
+ This plan ignores sizes, so it can need much more memory than is alive at once. Once the sizes are
+ known, replanBuffersBySize() repeats the assignment with them (best fit) for the largest size each
+ temporary has had, and switches when that saves at least a quarter of the memory and 64 MB.
  */
 
 struct BufferAllocator
@@ -477,7 +472,7 @@ void Net::Impl::assignBuffers()
 {
     BufferAllocator buf_allocator(this);
     buf_allocator.assign(true);
-    sizePlanChecked.clear();
+    tempSizeMax.clear();
 }
 
 bool Net::Impl::replanBuffersBySize()
@@ -488,15 +483,23 @@ bool Net::Impl::replanBuffersBySize()
     if (current == 0)
         return false;
 
-    std::vector<size_t> sizes(args.size(), 0);
+    // Largest size per temporary; symbolic shapes (e.g. an If branch that did not run) are unknown.
+    std::vector<size_t> sizes = tempSizeMax;
+    sizes.resize(args.size(), 0);
+    bool grew = false;
     for (size_t i = 0; i < args.size(); i++) {
         const ArgData& a = args[i];
-        if (a.kind == DNN_ARG_TEMP && a.type >= 0 && a.shape.dims >= 0)
-            sizes[i] = a.shape.total() * CV_ELEM_SIZE(a.type);
+        if (a.kind != DNN_ARG_TEMP || a.type < 0 || a.shape.dims < 0 || a.shape.hasSymbols())
+            continue;
+        const size_t s = a.shape.total() * CV_ELEM_SIZE(a.type);
+        if (s > sizes[i]) {
+            sizes[i] = s;
+            grew = true;
+        }
     }
-    if (sizes == sizePlanChecked)
+    if (!grew)
         return false;
-    sizePlanChecked = sizes;
+    tempSizeMax = sizes;
 
     BufferAllocator planner(this);
     planner.argSizes = &sizes;

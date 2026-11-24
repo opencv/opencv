@@ -969,6 +969,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     // Before the run: forward-to-layer reads this run's temporaries afterwards.
     if (replanBuffersBySize()) {
 #ifdef HAVE_CUDA
+        cudaTempBuffers.clear();
         cudaGraphReset();
 #endif
     }

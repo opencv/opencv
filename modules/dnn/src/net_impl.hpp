@@ -137,7 +137,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> __tensors__;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
-    std::vector<size_t> sizePlanChecked;
+    std::vector<size_t> tempSizeMax;  // largest bytes per temporary
     std::vector<Mat> scratchBufs;
     // interior tensors kept alive for forward-to-layer
     // See https://github.com/opencv/opencv/issues/26349
