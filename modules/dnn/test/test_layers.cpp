@@ -2765,7 +2765,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Slice, dnnBackendsAndTargets());
 
 // ONNX Slice that reverses an axis with step -1, using a negative start and a negative end:
 // x[-1:-5:-1] on an axis of size 6 selects the rows 5, 4, 3, 2.
-TEST(Layer_Test_Slice, negative_step_minus_one_negative_bounds)
+TEST(Layer_Test_Slice_NegativeStep, minus_one_negative_bounds)
 {
     const int inpShape[] = {2, 6, 3};
     Mat input(3, inpShape, CV_32F);
