@@ -2686,17 +2686,24 @@ static void conv16xfC8(const void* inp__, const void* residual__, void* out__,
     // The vector path stores all K0 lanes, so it needs a K0-aligned group base and a full
     // block (k0end == K0); otherwise it would write into the next group's channels.
     const bool vec_ok = (nlanes <= K0) && (K0 % nlanes == 0);
-#else
-    const bool vec_ok = false;
 #endif
 
-    parallel_for_(Range(0, N*ngroups*Kblk), [&](const Range& r) {
+    // A batch-1 layer with few output channels has only a handful of (n, g, kblk) blocks,
+    // so the output plane is split too, the same way conv32fC8 does it.
+    const int nblocks = N*ngroups*Kblk;
+    const int planeblocks = D*H*W;
+    const int nSpatChunks = computeSpatChunks(nblocks, planeblocks, convBlockMacsPerPixel(cs));
+
+    parallel_for_(Range(0, nblocks*nSpatChunks), [&](const Range& r) {
         std::vector<float> coefbuf(K0*3);
         float* scvec = coefbuf.data();
         float* bvec  = scvec + K0;
         float* avec  = bvec + K0;
 
-        for (int task = r.start; task < r.end; task++) {
+        for (int t = r.start; t < r.end; t++) {
+            const int task = t / nSpatChunks, chunk = t - task*nSpatChunks;
+            const int p0 = chunk*planeblocks/nSpatChunks;
+            const int p1 = (chunk + 1)*planeblocks/nSpatChunks;
             const int n = task / (ngroups*Kblk);
             const int rem = task - n*(ngroups*Kblk);
             const int g = rem / Kblk;
@@ -2717,97 +2724,97 @@ static void conv16xfC8(const void* inp__, const void* residual__, void* out__,
                 avec[k0]  = valid ? (fastActivation == FAST_ACTIV_PRELU ? activParams[k] : defaultAlpha) : 0.f;
             }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             const bool contiguous_k = (kbase % K0) == 0 && k0end == K0;
+#endif
 
-            for (int z0 = 0; z0 < D; z0++) {
+            for (int p = p0; p < p1; p++) {
+                const int z0 = p / (H*W), yx = p - z0*(H*W);
+                const int y0 = yx / W, x0 = yx - y0*W;
                 const int zi_ = z0*SZ - padZ0;
-                for (int y0 = 0; y0 < H; y0++) {
-                    const int yi_ = y0*SY - padY0;
-                    for (int x0 = 0; x0 < W; x0++) {
-                        const int xi_ = x0*SX - padX0;
-                        const size_t spatofs = (size_t)((z0*H + y0)*W + x0)*K0;
+                const int yi_ = y0*SY - padY0;
+                const int xi_ = x0*SX - padX0;
+                const size_t spatofs = (size_t)p*K0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-                        if (vec_ok && contiguous_k) {
-                            const size_t outbase =
-                                ((size_t)n*K1 + kbase/K0)*outplane + spatofs;
-                            for (int ko = 0; ko < K0; ko += nlanes) {
-                                v_float32 acc = vx_setzero_f32();
-                                for (int i = 0; i < ksize; i++) {
-                                    const int zi = zi_ + coordtab[i*ConvState::MAX_CONV_DIMS];
-                                    const int yi = yi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 1];
-                                    const int xi = xi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 2];
-                                    if ((unsigned)zi >= (unsigned)Di ||
-                                        (unsigned)yi >= (unsigned)Hi ||
-                                        (unsigned)xi >= (unsigned)Wi)
-                                        continue;
+                if (vec_ok && contiguous_k) {
+                    const size_t outbase =
+                        ((size_t)n*K1 + kbase/K0)*outplane + spatofs;
+                    for (int ko = 0; ko < K0; ko += nlanes) {
+                        v_float32 acc = vx_setzero_f32();
+                        for (int i = 0; i < ksize; i++) {
+                            const int zi = zi_ + coordtab[i*ConvState::MAX_CONV_DIMS];
+                            const int yi = yi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 1];
+                            const int xi = xi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 2];
+                            if ((unsigned)zi >= (unsigned)Di ||
+                                (unsigned)yi >= (unsigned)Hi ||
+                                (unsigned)xi >= (unsigned)Wi)
+                                continue;
 
-                                    const size_t spat = (size_t)((zi*Hi + yi)*Wi + xi)*C0;
-                                    const _Tp* wi = wblk + (size_t)i*C1Max*C0*K0;
+                            const size_t spat = (size_t)((zi*Hi + yi)*Wi + xi)*C0;
+                            const _Tp* wi = wblk + (size_t)i*C1Max*C0*K0;
 
-                                    for (int c = 0; c < Cg; c++) {
-                                        const int ch = c00 + c;
-                                        const int c1w = ch / C0, c0w = ch & (C0 - 1);
-                                        const float av =
-                                            (float)inp[((size_t)n*C1 + c1base + c1w)*inpplane + spat + c0w];
-                                        const _Tp* w = wi + (size_t)c1w*C0*K0 + (size_t)c0w*K0 + ko;
-                                        acc = v_fma(vx_setall_f32(av), vx_load_expand(w), acc);
-                                    }
-                                }
-
-                                acc = v_fma(acc, vx_load(scvec + ko), vx_load(bvec + ko));
-                                if (res) {
-                                    v_float32 rv = vx_load_expand(res + outbase + ko);
-                                    acc = v_add(acc, rv);
-                                }
-                                v_float32 z = vx_setzero_f32();
-                                v_float32 alpha = vx_load(avec + ko);
-                                acc = v_min(v_select(v_ge(acc, z), acc, v_mul(acc, alpha)),
-                                            vx_setall_f32(maxval));
-                                v_pack_store(out + outbase + ko, acc);
+                            for (int c = 0; c < Cg; c++) {
+                                const int ch = c00 + c;
+                                const int c1w = ch / C0, c0w = ch & (C0 - 1);
+                                const float av =
+                                    (float)inp[((size_t)n*C1 + c1base + c1w)*inpplane + spat + c0w];
+                                const _Tp* w = wi + (size_t)c1w*C0*K0 + (size_t)c0w*K0 + ko;
+                                acc = v_fma(vx_setall_f32(av), vx_load_expand(w), acc);
                             }
-                            continue;
                         }
+
+                        acc = v_fma(acc, vx_load(scvec + ko), vx_load(bvec + ko));
+                        if (res) {
+                            v_float32 rv = vx_load_expand(res + outbase + ko);
+                            acc = v_add(acc, rv);
+                        }
+                        v_float32 z = vx_setzero_f32();
+                        v_float32 alpha = vx_load(avec + ko);
+                        acc = v_min(v_select(v_ge(acc, z), acc, v_mul(acc, alpha)),
+                                    vx_setall_f32(maxval));
+                        v_pack_store(out + outbase + ko, acc);
+                    }
+                    continue;
+                }
 #endif
-                        {
-                            float accbuf[8];
+                {
+                    float accbuf[8];
+                    for (int k0 = 0; k0 < K0; k0++)
+                        accbuf[k0] = 0.f;
+
+                    for (int i = 0; i < ksize; i++) {
+                        const int zi = zi_ + coordtab[i*ConvState::MAX_CONV_DIMS];
+                        const int yi = yi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 1];
+                        const int xi = xi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 2];
+                        if ((unsigned)zi >= (unsigned)Di ||
+                            (unsigned)yi >= (unsigned)Hi ||
+                            (unsigned)xi >= (unsigned)Wi)
+                            continue;
+
+                        const size_t spat = (size_t)((zi*Hi + yi)*Wi + xi)*C0;
+                        const _Tp* wi = wblk + (size_t)i*C1Max*C0*K0;
+
+                        for (int c = 0; c < Cg; c++) {
+                            const int ch = c00 + c;
+                            const int c1w = ch / C0, c0w = ch & (C0 - 1);
+                            const float av =
+                                (float)inp[((size_t)n*C1 + c1base + c1w)*inpplane + spat + c0w];
+                            const _Tp* w = wi + (size_t)c1w*C0*K0 + (size_t)c0w*K0;
                             for (int k0 = 0; k0 < K0; k0++)
-                                accbuf[k0] = 0.f;
-
-                            for (int i = 0; i < ksize; i++) {
-                                const int zi = zi_ + coordtab[i*ConvState::MAX_CONV_DIMS];
-                                const int yi = yi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 1];
-                                const int xi = xi_ + coordtab[i*ConvState::MAX_CONV_DIMS + 2];
-                                if ((unsigned)zi >= (unsigned)Di ||
-                                    (unsigned)yi >= (unsigned)Hi ||
-                                    (unsigned)xi >= (unsigned)Wi)
-                                    continue;
-
-                                const size_t spat = (size_t)((zi*Hi + yi)*Wi + xi)*C0;
-                                const _Tp* wi = wblk + (size_t)i*C1Max*C0*K0;
-
-                                for (int c = 0; c < Cg; c++) {
-                                    const int ch = c00 + c;
-                                    const int c1w = ch / C0, c0w = ch & (C0 - 1);
-                                    const float av =
-                                        (float)inp[((size_t)n*C1 + c1base + c1w)*inpplane + spat + c0w];
-                                    const _Tp* w = wi + (size_t)c1w*C0*K0 + (size_t)c0w*K0;
-                                    for (int k0 = 0; k0 < K0; k0++)
-                                        accbuf[k0] += av*(float)w[k0];
-                                }
-                            }
-
-                            for (int k0 = 0; k0 < k0end; k0++) {
-                                const int k = kbase + k0;
-                                const size_t outofs =
-                                    ((size_t)n*K1 + k/K0)*outplane + (k % K0) + spatofs;
-                                float acc = accbuf[k0]*scvec[k0] + bvec[k0];
-                                if (res)
-                                    acc += (float)res[outofs];
-                                acc = acc >= 0.f ? acc : acc*avec[k0];
-                                out[outofs] = _Tp(std::min(acc, maxval));
-                            }
+                                accbuf[k0] += av*(float)w[k0];
                         }
+                    }
+
+                    for (int k0 = 0; k0 < k0end; k0++) {
+                        const int k = kbase + k0;
+                        const size_t outofs =
+                            ((size_t)n*K1 + k/K0)*outplane + (k % K0) + spatofs;
+                        float acc = accbuf[k0]*scvec[k0] + bvec[k0];
+                        if (res)
+                            acc += (float)res[outofs];
+                        acc = acc >= 0.f ? acc : acc*avec[k0];
+                        out[outofs] = _Tp(std::min(acc, maxval));
                     }
                 }
             }

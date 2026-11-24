@@ -268,6 +268,12 @@ void pagedAttnAVGemm(
     const FastGemmOpt &opt
 );
 
+// One output row of a CV_16F/CV_16BF GEMM, accumulated in FP32:
+// acc[n] = sum_k A[k*a_ks] * B[k*b_ks + n*b_ns], strides in elements.
+void fastGemmHalfRow(int depth, int N, int K, const void* A, size_t a_ks,
+                     const void* B, size_t b_ks, size_t b_ns, float* acc,
+                     const FastGemmOpt &opt);
+
 
 }} // cv::dnn
 

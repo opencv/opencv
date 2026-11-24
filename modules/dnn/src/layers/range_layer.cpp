@@ -51,6 +51,10 @@ static void makeRange(_Tp start, _Tp limit, _Tp delta, Mat& out)
         IMPL_RANGE(float);
     } else if (type == CV_64F) {
         IMPL_RANGE(double);
+    } else if (type == CV_16F) {
+        IMPL_RANGE(hfloat);
+    } else if (type == CV_16BF) {
+        IMPL_RANGE(bfloat);
     } else if (type == CV_32S) {
         IMPL_RANGE(int32_t);
     } else if (type == CV_64S) {

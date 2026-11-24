@@ -525,26 +525,7 @@ class MatMulLayerImpl CV_FINAL : public MatMulLayer {
                 T* yRow = yptr0 + helper.C_offsets[bi] + (size_t)m * ldc;
                 const T* biasRow = haveBias ? biasPtr0 + helper.C_offsets[bi] + (size_t)m * ldc : nullptr;
 
-                if (ldb1 == 1) {
-                    // Rows of B are contiguous: accumulate a whole output row, k outer, n inner.
-                    for (int n = 0; n < N; n++)
-                        sum[n] = 0.f;
-                    for (int k = 0; k < K; k++) {
-                        float av = (float)aRow[(size_t)k * lda1];
-                        const T* bRow = bBase + (size_t)k * ldb0;
-                        for (int n = 0; n < N; n++)
-                            sum[n] += av * (float)bRow[n];
-                    }
-                } else {
-                    // Transposed B is contiguous along k, so the dot-product order reads it linearly.
-                    for (int n = 0; n < N; n++) {
-                        const T* bCol = bBase + (size_t)n * ldb1;
-                        float s = 0.f;
-                        for (int k = 0; k < K; k++)
-                            s += (float)aRow[(size_t)k * lda1] * (float)bCol[(size_t)k * ldb0];
-                        sum[n] = s;
-                    }
-                }
+                fastGemmHalfRow(A.depth(), N, K, aRow, lda1, bBase, ldb0, ldb1, sum, opt);
 
                 for (int n = 0; n < N; n++) {
                     float result = sum[n] * alpha;

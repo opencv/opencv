@@ -159,6 +159,9 @@ void pagedAttnAVGemmKernel(
     size_t esz, bool canonical_layout, size_t packed_stride
 );
 
+void fastGemmHalfRowKernel(int depth, int N, int K, const char* A, size_t a_ks,
+                           const char* B, size_t b_ks, size_t b_ns, float* acc);
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 /*
@@ -1277,6 +1280,63 @@ void pagedAttnAVGemmKernel(
     int cost_per_thread = static_cast<int>((T_v / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
     double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
+}
+
+// One output row of a half-precision GEMM, accumulated in FP32:
+// acc[n] = sum_k A[k*a_ks] * B[k*b_ks + n*b_ns], strides in elements.
+template<typename T>
+static void fastGemmHalfRowImpl(int N, int K, const T* A, size_t a_ks,
+                                const T* B, size_t b_ks, size_t b_ns, float* acc)
+{
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int nlanes = VTraits<v_float32>::vlanes();
+#endif
+    if (b_ns == 1) {
+        // Rows of B are contiguous: k outer, n inner, so B is read once and linearly.
+        for (int n = 0; n < N; n++)
+            acc[n] = 0.f;
+        for (int k = 0; k < K; k++) {
+            const float av = (float)A[(size_t)k*a_ks];
+            const T* bp = B + (size_t)k*b_ks;
+            int n = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            const v_float32 va = vx_setall_f32(av);
+            for (; n <= N - nlanes; n += nlanes)
+                v_store(acc + n, v_fma(va, vx_load_expand(bp + n), vx_load(acc + n)));
+#endif
+            for (; n < N; n++)
+                acc[n] += av*(float)bp[n];
+        }
+    } else {
+        // Transposed B is contiguous along k, so each output is a dot product read linearly.
+        for (int n = 0; n < N; n++) {
+            const T* bp = B + (size_t)n*b_ns;
+            float s = 0.f;
+            int k = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            if (a_ks == 1 && b_ks == 1) {
+                v_float32 vs = vx_setzero_f32();
+                for (; k <= K - nlanes; k += nlanes)
+                    vs = v_fma(vx_load_expand(A + k), vx_load_expand(bp + k), vs);
+                s = v_reduce_sum(vs);
+            }
+#endif
+            for (; k < K; k++)
+                s += (float)A[(size_t)k*a_ks]*(float)bp[(size_t)k*b_ks];
+            acc[n] = s;
+        }
+    }
+}
+
+void fastGemmHalfRowKernel(int depth, int N, int K, const char* A, size_t a_ks,
+                           const char* B, size_t b_ks, size_t b_ns, float* acc)
+{
+    if (depth == CV_16F)
+        fastGemmHalfRowImpl(N, K, (const hfloat*)A, a_ks, (const hfloat*)B, b_ks, b_ns, acc);
+    else {
+        CV_Assert(depth == CV_16BF);
+        fastGemmHalfRowImpl(N, K, (const bfloat*)A, a_ks, (const bfloat*)B, b_ks, b_ns, acc);
+    }
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY

@@ -685,26 +685,7 @@ public:
             float* acc = accbuf.data();
             for (int m = r.start; m < r.end; m++) {
                 const _Tp* ap = aptr + (size_t)m*a_ms;
-                if (!trans_b) {
-                    // Rows of B are contiguous: accumulate a whole output row, k outer, n inner.
-                    for (int n = 0; n < N; n++)
-                        acc[n] = 0.f;
-                    for (int k = 0; k < K; k++) {
-                        float av = (float)ap[(size_t)k*a_ks];
-                        const _Tp* bp = bptr + (size_t)k*b_ks;
-                        for (int n = 0; n < N; n++)
-                            acc[n] += av*(float)bp[n];
-                    }
-                } else {
-                    // Transposed B is contiguous along k, so the dot-product order reads it linearly.
-                    for (int n = 0; n < N; n++) {
-                        const _Tp* bp = bptr + (size_t)n*b_ns;
-                        float s = 0.f;
-                        for (int k = 0; k < K; k++)
-                            s += (float)ap[(size_t)k*a_ks]*(float)bp[k];
-                        acc[n] = s;
-                    }
-                }
+                fastGemmHalfRow(A.depth(), N, K, ap, a_ks, bptr, b_ks, b_ns, acc, opt);
 
                 _Tp* yp = yptr + (size_t)m*N;
                 const _Tp* cp = cptr ? cptr + (size_t)m*c_ms : nullptr;

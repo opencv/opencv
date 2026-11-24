@@ -1098,8 +1098,8 @@ public:
     {
         CV_Assert(inputs.size());
         for (auto input : inputs)
-            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U ||
-                                input == CV_64S || input == CV_32S, "");
+            CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_16F || input == CV_16BF ||
+                                input == CV_8S || input == CV_8U || input == CV_64S || input == CV_32S, "");
 
         outputs.assign(requiredOutputs, inputs[0]);
         internals.assign(requiredInternals, inputs[0]);

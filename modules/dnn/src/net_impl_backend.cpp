@@ -388,6 +388,23 @@ void Net::Impl::setPreferableTarget(int targetId)
                 CV_LOG_WARNING(NULL, "DNN: DNN_TARGET_CPU_FP16 must be set before the first forward(); the target is not changed.");
                 return;
             }
+            if (fp16 != enableFP16) {
+                // setInput() may already have stored half inputs for the old setting: widened
+                // to float with FP16 off, kept in half with it on. Bring them to the new one.
+                for (const Arg& inp : mainGraph->inputs()) {
+                    const int atype = argData(inp).type;
+                    Mat& t = argTensor(inp);
+                    if ((atype != CV_16F && atype != CV_16BF) || t.empty())
+                        continue;
+                    const int want = fp16 ? atype : CV_32F;
+                    if (t.type() != want) {
+                        Mat converted;
+                        converted.fit(t.shape(), want);
+                        t.convertTo(converted, want);
+                        t = converted;
+                    }
+                }
+            }
             enableFP16 = fp16;
             int target = fp16 ? DNN_TARGET_CPU_FP16 : DNN_TARGET_CPU;
             if (preferableTarget != target) {

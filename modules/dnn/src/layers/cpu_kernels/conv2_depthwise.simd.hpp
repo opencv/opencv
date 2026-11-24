@@ -432,8 +432,9 @@ static void depthwiseConv16xf(const void* inp__, const void* residual__, void* o
                               const ConvState& cs, const void* weights__,
                               const float* scale__, const float* bias__)
 {
-    constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
-    constexpr int C0 = 8;
+    // static, so the lambda below does not capture them: MSVC then rejects C0 as an array bound
+    static constexpr int MAX_CONV_DIMS = ConvState::MAX_CONV_DIMS;
+    static constexpr int C0 = 8;
 
     CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
     CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
@@ -477,8 +478,6 @@ static void depthwiseConv16xf(const void* inp__, const void* residual__, void* o
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     const int nlanes = VTraits<v_float32>::vlanes();
     const bool vec_ok = (nlanes <= C0) && (C0 % nlanes == 0);
-#else
-    const bool vec_ok = false;
 #endif
 
     parallel_for_(Range(0, NC1), [&](const Range& range) {

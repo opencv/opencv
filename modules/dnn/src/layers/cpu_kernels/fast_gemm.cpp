@@ -1085,4 +1085,41 @@ void pagedAttnAVGemm(
 
 }
 
+void fastGemmHalfRow(int depth, int N, int K, const void* A, size_t a_ks,
+                     const void* B, size_t b_ks, size_t b_ns, float* acc,
+                     const FastGemmOpt &opt)
+{
+    const char* a = (const char*)A;
+    const char* b = (const char*)B;
+
+#if CV_TRY_RVV && CV_RVV
+    if (opt.use_rvv) {
+        opt_RVV::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    } else
+#endif
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    } else
+#endif
+#if CV_TRY_AVX2
+    if (opt.use_avx2) {
+        opt_AVX2::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    } else
+#endif
+#if CV_TRY_AVX
+    if (opt.use_avx) {
+        opt_AVX::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    } else
+#endif
+    {
+        cpu_baseline::fastGemmHalfRowKernel(depth, N, K, a, a_ks, b, b_ks, b_ns, acc);
+    }
+}
+
 }} // cv::dnn

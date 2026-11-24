@@ -556,6 +556,32 @@ Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>&
     return graph;
 }
 
+// The importer copies constant weights (Gemm/MatMul B, norm scale/bias) into layer blobs, so
+// widening the arg tensors alone leaves those blobs half, and the fusions that only take
+// CV_32F weights (MatMul to Gemm, shared-input Gemm) skip them.
+static void widenHalfBlobs(const Ptr<Graph>& graph, int accuracy)
+{
+    for (const Ptr<LayerInfo>& layer : graph->prog()) {
+        bool changed = false;
+        for (Mat& blob : layer->blobs) {
+            if (blob.type() != CV_16F && blob.type() != CV_16BF)
+                continue;
+            Mat widened;
+            widened.fit(blob.shape(), accuracy);
+            blob.convertTo(widened, accuracy);
+            blob = widened;
+            changed = true;
+        }
+        if (changed)
+            layer->weightEpoch++;
+        const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        if (subgraphs) {
+            for (const Ptr<Graph>& subgraph : *subgraphs)
+                widenHalfBlobs(subgraph, accuracy);
+        }
+    }
+}
+
 // When FP16 is off, half constants are widened just as setGraphInput() widens inputs.
 void Net::Impl::widenHalfConstants()
 {
@@ -577,6 +603,8 @@ void Net::Impl::widenHalfConstants()
         }
         adata.type = accuracy;
     }
+    if (mainGraph)
+        widenHalfBlobs(mainGraph, accuracy);
 }
 
 // Nets with fp16/bf16 tensors are prepared on the first forward(), once the FP16 target is known.
