@@ -29,11 +29,12 @@ int main( int argc, char** argv )
     /// Load source image
     CommandLineParser parser( argc, argv, "{@input | stuff.jpg | input image}" );
     const String filename = samples::findFile( parser.get<String>( "@input" ), false );
-Mat src;
-if( !filename.empty() )
-{
-    src = imread( filename );
-}
+    Mat src;
+    if( !filename.empty() )
+    {
+        src = imread( filename );
+    }
+
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;
