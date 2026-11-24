@@ -1375,8 +1375,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
     DictValue kernel_shape = layerParams.get("kernel_size");
     CV_Assert(kernel_shape.size() == 2);
-    layerParams.set("pool_k_w", kernel_shape.get<int>(0));
-    layerParams.set("pool_k_h", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_w", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_h", kernel_shape.get<int>(0));
 
     int pool_pad_w = 0, pool_pad_h = 0;
     if (layerParams.has("pad"))
@@ -1395,8 +1395,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
     {
         DictValue strides = layerParams.get("stride");
         CV_CheckEQ(strides.size(), 2, "");
-        pool_stride_w = strides.get<int>(0);
-        pool_stride_h = strides.get<int>(1);
+        pool_stride_w = strides.get<int>(1);
+        pool_stride_h = strides.get<int>(0);
     }
     layerParams.set("pool_stride_w", pool_stride_w);
     layerParams.set("pool_stride_h", pool_stride_h);

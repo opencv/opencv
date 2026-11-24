@@ -319,6 +319,12 @@ TEST_P(Test_ONNX_layers, MaxPooling_double)
     testONNXModels("maxpool_2d_double", npy, 0, 0, false, false);
 }
 
+// kernel_shape and strides are [H, W]; a non-square kernel catches swapped axes.
+TEST_P(Test_ONNX_layers, MaxUnpool_non_square)
+{
+    testONNXModels("maxunpool_non_square", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
