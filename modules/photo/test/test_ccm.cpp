@@ -372,6 +372,7 @@ TEST_P(Photo_ColorCorrection_Polyfit, read_rejects_inconsistent_polyfit)
         Mat(1, 1, CV_64F, Scalar(0.5)),                     // fewer coefficients than deg + 1
         Mat(4, 1, CV_32F, Scalar(0.5)),                     // coefficients are not double
         Mat(1, 4, CV_64F, Scalar(0.5)),                     // row vector, fromEW indexes (d, 0)
+        Mat(4, 2, CV_64F, Scalar(0.5)),                     // deg + 1 rows but more than one column
         Mat(std::vector<int>{1, 1, 4}, CV_64F, Scalar(0.5)), // N-D layout with the right total
         Mat()                                               // empty coefficient Mat
     };
