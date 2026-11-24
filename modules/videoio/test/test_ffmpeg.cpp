@@ -1306,16 +1306,17 @@ TEST(videoio_ffmpeg, seek_raw_mode_bframes_keyframe)
         throw SkipTestException("The encoder produced a single GOP");
 
     const int key = keyPackets[1];  // closed GOP: decode index of the key frame equals its display index
-    for (int target : {key, key + 1})
+    for (int target : {0, key, key + 1})
     {
         SCOPED_TRACE(cv::format("target=%d", target));
+        const Mat& expected = packets[target == 0 ? 0 : key];
         VideoCapture cap(filename, CAP_FFMPEG, { CAP_PROP_FORMAT, -1 });
         ASSERT_TRUE(cap.isOpened());
         ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, target));
         Mat pkt;
         ASSERT_TRUE(cap.read(pkt));
-        ASSERT_EQ(packets[key].total(), pkt.total());
-        EXPECT_EQ(0, cvtest::norm(pkt, packets[key], NORM_INF));
+        ASSERT_EQ(expected.total(), pkt.total());
+        EXPECT_EQ(0, cvtest::norm(pkt, expected, NORM_INF));
     }
     remove(filename.c_str());
 }
