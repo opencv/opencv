@@ -358,6 +358,9 @@ namespace
         CV_INSTRUMENT_REGION();
 
         CV_Assert( _src.type() == CV_8UC1 || _src.type() == CV_16UC1 );
+        // the numbers of tiles are divisors below
+        CV_CheckGT(tilesX_, 0, "The tile grid must have at least one tile along x");
+        CV_CheckGT(tilesY_, 0, "The tile grid must have at least one tile along y");
 
 #ifdef HAVE_OPENCL
         bool useOpenCL = cv::ocl::isOpenCLActivated() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
