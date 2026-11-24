@@ -977,27 +977,30 @@ int cv::borderInterpolate( int p, int len, int borderType )
         p = p < 0 ? 0 : len - 1;
     else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
     {
-        int delta = borderType == BORDER_REFLECT_101;
+        const int delta = borderType == BORDER_REFLECT_101;
         if( len == 1 )
             return 0;
-        do
-        {
-            if( p < 0 )
-                p = -p - 1 + delta;
-            else
-                p = len - 1 - (p - len) - delta;
-        }
-#ifdef CV_STATIC_ANALYSIS
-        while(p < 0 || p >= len);
-#else
-        while( (unsigned)p >= (unsigned)len );
-#endif
+
+        const int64_t len64 = len;
+        const int64_t p64 = p;
+        // Fast path: single reflection without division for small deviations.
+        if( -len64 + delta <= p64 && p64 < 2 * len64 - delta )
+            return (int)(p64 < 0 ? -p64 - 1 + delta : 2 * len64 - 1 - delta - p64);
+        // Bounded fallback: O(1) modulo for large |p|
+        CV_Assert(len > 0);  // To not trigger % 0 below.
+        const int64_t period = 2 * (len64 - delta);
+        int64_t r64 = p64 % period;
+        if( r64 < 0 )
+            r64 += period;
+        if( r64 >= len64 )
+            r64 = period - r64 - 1 + delta;
+        p = (int)r64;
     }
     else if( borderType == BORDER_WRAP )
     {
-        CV_Assert(len > 0);
         if( p < 0 || p >= len )
         {
+            CV_Assert(len > 0);
             int64_t p64 = p;
             p64 %= (int64_t)len;
             if( p64 < 0 )

@@ -187,6 +187,13 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
+    // A 0D Mat holds one element but has no rows to split. Give src and dst 1x1 headers so the
+    // row-based HAL and parallel paths below see an ordinary 2D matrix; dst itself stays 0D.
+    if (src.dims == 0)
+    {
+        src = src.reshape(0, 1);
+        dst = dst.reshape(0, 1);
+    }
 
     if(lut_size == 256)
     {

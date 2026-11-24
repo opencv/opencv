@@ -822,6 +822,17 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         src.convertTo(_dst, dtype);
         return;
     }
+    if (sdepth == CV_16F)
+    {
+        if (src.dims <= 1)
+        {
+            CV_CheckEQ(dim, 0, "1D input can only be reduced along dim 0");
+            src = src.reshape(cn, {1, src.cols});
+            dim = 1;
+        }
+        cv::reduce(src, _dst, cv::ReduceParams(op, {dim}, true, ddepth));
+        return;
+    }
     if (src.dims <= 1) {
         CV_Assert(dim == 0);
         dim = 1;

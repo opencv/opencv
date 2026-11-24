@@ -72,11 +72,7 @@ static Mat projectCharucoBoard(aruco::CharucoBoard& board, Mat cameraMatrix, dou
         projectChessboard(board.getChessboardSize().width, board.getChessboardSize().height,
                           board.getSquareLength(), imageSize, cameraMatrix, rvec, tvec, board.getLegacyPattern());
 
-    for(unsigned int i = 0; i < chessboard.total(); i++) {
-        if(chessboard.ptr< unsigned char >()[i] == 0) {
-            img.ptr< unsigned char >()[i] = 0;
-        }
-    }
+    img.setTo(Scalar::all(0), chessboard == 0);
 
     return img;
 }

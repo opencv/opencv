@@ -319,6 +319,12 @@ TEST_P(Test_ONNX_layers, MaxPooling_double)
     testONNXModels("maxpool_2d_double", npy, 0, 0, false, false);
 }
 
+// kernel_shape and strides are [H, W]; a non-square kernel catches swapped axes.
+TEST_P(Test_ONNX_layers, MaxUnpool_non_square)
+{
+    testONNXModels("maxunpool_non_square", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
@@ -1491,6 +1497,32 @@ TEST_P(Test_ONNX_layers, ReduceL2)
     testONNXModels("reduceL2_subgraph");
     testONNXModels("reduceL2_subgraph_2");
     testONNXModels("reduceL2_subgraph2_2");
+}
+
+// com.microsoft Attention with the spec's int32 [B, S] 0/1 mask_index as a graph input and as a
+// constant, without a bias or with empty optional inputs (#30919), and decomposed attention
+// written as Add(mask, scores), which must fuse with the mask rather than the scores.
+TEST_P(Test_ONNX_layers, Attention_MaskAndCommutativeFusion)
+{
+    const bool fp16 = target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16 ||
+                      target == DNN_TARGET_OPENCL_FP16;
+    const double l1 = fp16 ? 1e-2 : 0, lInf = fp16 ? 5e-2 : 0;
+
+    testONNXModels("attention_mask_input", npy, l1, lInf, false, true, 2);
+    testONNXModels("attention_mask_const", npy, l1, lInf);
+    testONNXModels("attention_no_bias_mask", npy, l1, lInf, false, true, 2);
+    testONNXModels("attention_trailing_empty_mask", npy, l1, lInf);
+    testONNXModels("attention_no_bias", npy, l1, lInf);
+    testONNXModels("attention_empty_bias", npy, l1, lInf);
+    testONNXModels("attention_bert_mask_add_first", npy, l1, lInf, false, true, 2);
+
+    Net net = readNetFromONNX(_tf("models/attention_bert_mask_add_first.onnx"));
+    ASSERT_TRUE(net.getMainGraph());
+    int attnCount = 0;
+    for (const auto& l : net.getMainGraph()->prog())
+        if (l && l->type == "Attention")
+            ++attnCount;
+    EXPECT_EQ(1, attnCount) << "decomposed attention with Add(mask, scores) should fuse into Attention";
 }
 
 TEST_P(Test_ONNX_layers, Split)

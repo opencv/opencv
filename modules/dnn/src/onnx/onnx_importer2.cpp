@@ -215,6 +215,7 @@ protected:
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCompress             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCol2Im               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLoop                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScan                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -267,6 +268,7 @@ protected:
     void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEyeLike              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseReverseSequence      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBlackmanWindow       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHannWindow           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseHammingWindow        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -510,7 +512,14 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "strides")
             {
-                CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_CheckGE(attribute_proto.ints_size(), 2, "Col2Im: strides must have at least 2 entries");
+                }
+                else
+                {
+                    CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                }
                 lp.set("stride", parse(attribute_proto.ints()));
             }
             else if(attribute_name == "pads")
@@ -530,6 +539,12 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
                         paddings.push_back(attribute_proto.ints(dims + i));
                     }
                     lp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+                }
+                else if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_Assert(attribute_proto.ints_size() % 2 == 0);
+                    CV_CheckGE(attribute_proto.ints_size(), 4, "Col2Im: pads must have at least 4 entries (2 per spatial axis)");
+                    lp.set("pad", parse(attribute_proto.ints()));
                 }
                 else
                 {
@@ -551,7 +566,14 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if(attribute_name == "dilations")
             {
-                CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                if (node_proto.op_type() == "Col2Im")
+                {
+                    CV_CheckGE(attribute_proto.ints_size(), 2, "Col2Im: dilations must have at least 2 entries");
+                }
+                else
+                {
+                    CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
+                }
                 lp.set("dilation", parse(attribute_proto.ints()));
             }
             else if(attribute_name == "activations" &&
@@ -1353,8 +1375,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
     DictValue kernel_shape = layerParams.get("kernel_size");
     CV_Assert(kernel_shape.size() == 2);
-    layerParams.set("pool_k_w", kernel_shape.get<int>(0));
-    layerParams.set("pool_k_h", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_w", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_h", kernel_shape.get<int>(0));
 
     int pool_pad_w = 0, pool_pad_h = 0;
     if (layerParams.has("pad"))
@@ -1373,8 +1395,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
     {
         DictValue strides = layerParams.get("stride");
         CV_CheckEQ(strides.size(), 2, "");
-        pool_stride_w = strides.get<int>(0);
-        pool_stride_h = strides.get<int>(1);
+        pool_stride_w = strides.get<int>(1);
+        pool_stride_h = strides.get<int>(0);
     }
     layerParams.set("pool_stride_w", pool_stride_w);
     layerParams.set("pool_stride_h", pool_stride_h);
@@ -2344,6 +2366,12 @@ void ONNXImporter2::parseEyeLike(LayerParams& layerParams, const opencv_onnx::No
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseReverseSequence(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "ReverseSequence";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseBlackmanWindow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "BlackmanWindow";
@@ -2463,6 +2491,14 @@ void ONNXImporter2::parseCompress(LayerParams& layerParams, const opencv_onnx::N
     layerParams.type = "Compress";
     CV_CheckEQ(node_proto.input_size(), 2, "Compress: two inputs are required");
     CV_CheckEQ(node_proto.output_size(), 1, "Compress: one output is required");
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseCol2Im(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Col2Im";
+    CV_CheckEQ(node_proto.input_size(), 3, "Col2Im: three inputs are required");
+    CV_CheckEQ(node_proto.output_size(), 1, "Col2Im: one output is required");
     addLayer(layerParams, node_proto);
 }
 
@@ -3084,24 +3120,53 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 }
 
 void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    int i, n_inputs = node_proto.input_size();
+    int n_inputs = node_proto.input_size();
+    CV_CheckGE(n_inputs, 2, "ONNXImporter2/parseAttention: at least 2 inputs (input, weights) are required");
+    for (int k = 4; k < n_inputs; k++) {
+        CV_CheckTrue(node_proto.input(k).empty(),
+                     "ONNXImporter2/parseAttention: inputs beyond mask_index are not supported");
+    }
     CV_CheckTrue(params.has("num_heads"), "ONNXImporter2/parseAttention: num_heads is required but missing");
     CV_CheckTrue(params.has("qkv_hidden_sizes"), "ONNXImporter2/parseAttention: qkv_hidden_sizes is required but missing");
 
     auto param_qkv_hidden_sizes = params.get("qkv_hidden_sizes");
     CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "ONNXImporter2/parseAttention: qkv_hidden_sizes is must and only have three elements");
 
-    for (i = 1; i < n_inputs; i++) {
-        if (!net.isConstArg(node_inputs[i]))
-            break;
+    const bool has_bias = n_inputs >= 3 && !node_proto.input(2).empty();
+    const bool has_mask = n_inputs >= 4 && !node_proto.input(3).empty();
+    const bool const_weight = net.isConstArg(node_inputs[1]);
+    const bool const_bias = !has_bias || net.isConstArg(node_inputs[2]);
+
+    // mask_index is an int32 0/1 key padding mask, not an additive bias: lower it the same way
+    // parseMultiHeadAttention does. addKeyPaddingMaskBias() calls addLayer(), which overwrites
+    // node_inputs/node_outputs, so save and restore them around it.
+    if (has_mask) {
+        const std::vector<Arg> orig_node_inputs = node_inputs, orig_node_outputs = node_outputs;
+        const float mask_filter_value = params.get<float>("mask_filter_value", -10000.f);
+        Arg mask = addKeyPaddingMaskBias(params.name, node_proto, orig_node_inputs[3],
+                                         orig_node_inputs[0], mask_filter_value);
+        node_inputs = orig_node_inputs;
+        node_outputs = orig_node_outputs;
+        node_inputs[3] = mask;
     }
 
-    if (i == n_inputs) {
-        for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
-            params.blobs.push_back(blob);
+    if (const_weight && const_bias) {
+        Mat W = net.argTensor(node_inputs[1]);
+        CV_CheckEQ(W.dims, 2, "ONNXImporter2/parseAttention: weights must be 2D");
+        Mat B = has_bias ? net.argTensor(node_inputs[2])
+                         : Mat(std::vector<int>{W.size[1]}, W.type(), Scalar::all(0));
+        params.blobs.push_back(W);
+        params.blobs.push_back(B);
+        if (has_mask) {
+            node_inputs = {node_inputs[0], node_inputs[3]};
+            n_inputs = 2;
+        } else {
+            node_inputs = {node_inputs[0]};
+            n_inputs = 1;
         }
-        n_inputs = 1;
+    } else {
+        CV_CheckTrue(has_bias, "ONNXImporter2/parseAttention: dynamic weights require an explicit bias input");
+        n_inputs = has_mask ? 4 : 3;
     }
 
     addLayer(params, node_proto, n_inputs);
@@ -3643,6 +3708,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
     dispatch["Compress"] = &ONNXImporter2::parseCompress;
+    dispatch["Col2Im"] = &ONNXImporter2::parseCol2Im;
     dispatch["Unique"] = &ONNXImporter2::parseUnique;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
@@ -3653,6 +3719,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["BitCast"] = &ONNXImporter2::parseBitCast;
     dispatch["EyeLike"] = &ONNXImporter2::parseEyeLike;
+    dispatch["ReverseSequence"] = &ONNXImporter2::parseReverseSequence;
     dispatch["BlackmanWindow"] = &ONNXImporter2::parseBlackmanWindow;
     dispatch["HannWindow"] = &ONNXImporter2::parseHannWindow;
     dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;

@@ -87,13 +87,21 @@ TEST_P(Imgproc_FindContours_Modes1, rectangle)
     {
         SCOPED_TRACE(cv::format("i=%zu", i));
         const Size sz(rng.uniform(640, 1920), rng.uniform(480, 1080));
-        Mat img(sz, CV_8UC1, Scalar::all(0));
-        Mat img32s(sz, CV_32SC1, Scalar::all(0));
         const Rect r(Point(rng.uniform(1, sz.width / 2 - 1), rng.uniform(1, sz.height / 2)),
                      Point(rng.uniform(sz.width / 2 - 1, sz.width - 1),
                            rng.uniform(sz.height / 2 - 1, sz.height - 1)));
-        rectangle(img, r, Scalar::all(255));
-        rectangle(img32s, r, Scalar::all(255), FILLED);
+        // only RETR_FLOODFILL reads the 32-bit label image
+        Mat img, img32s;
+        if (mode == RETR_FLOODFILL)
+        {
+            img32s = Mat(sz, CV_32SC1, Scalar::all(0));
+            rectangle(img32s, r, Scalar::all(255), FILLED);
+        }
+        else
+        {
+            img = Mat(sz, CV_8UC1, Scalar::all(0));
+            rectangle(img, r, Scalar::all(255));
+        }
 
         const vector<Point> ext_ref {r.tl(),
                                      r.tl() + Point(0, r.height - 1),
@@ -209,16 +217,21 @@ TEST_P(Imgproc_FindContours_Modes1, small)
     const Size sz(DIM, DIM);
     const int num = (DIM / 10) * (DIM / 10);  // number of 10x10 squares
 
-    Mat img(sz, CV_8UC1, Scalar::all(0));
-    Mat img32s(sz, CV_32SC1, Scalar::all(0));
+    Mat img, img32s;
+    if (mode == RETR_FLOODFILL)
+        img32s = Mat(sz, CV_32SC1, Scalar::all(0));
+    else
+        img = Mat(sz, CV_8UC1, Scalar::all(0));
     vector<Point> pts;
     int extra_contours_32s = 0;
     for (int j = 0; j < num; ++j)
     {
         const int kind = j % 9;
         Point pt {(j % 100) * 10 + 4, (j / 100) * 10 + 4};
-        drawSmallContour<uchar>(img, pt, kind, 255);
-        drawSmallContour<int>(img32s, pt, kind, j + 1);
+        if (mode == RETR_FLOODFILL)
+            drawSmallContour<int>(img32s, pt, kind, j + 1);
+        else
+            drawSmallContour<uchar>(img, pt, kind, 255);
         pts.push_back(pt);
         // NOTE: for some reason these small diagonal contours (NW, SE)
         //       result in 2 external contours for FLOODFILL mode
@@ -270,13 +283,18 @@ TEST_P(Imgproc_FindContours_Modes1, deep)
     const size_t DIM = 1000;
     const Size sz(DIM, DIM);
     const size_t NUM = 249U;
-    Mat img(sz, CV_8UC1, Scalar::all(0));
-    Mat img32s(sz, CV_32SC1, Scalar::all(0));
+    Mat img, img32s;
+    if (mode == RETR_FLOODFILL)
+        img32s = Mat(sz, CV_32SC1, Scalar::all(0));
+    else
+        img = Mat(sz, CV_8UC1, Scalar::all(0));
     Rect rect(1, 1, 998, 998);
     for (size_t i = 0; i < NUM; ++i)
     {
-        rectangle(img, rect, Scalar::all(255));
-        rectangle(img32s, rect, Scalar::all((double)i + 1), FILLED);
+        if (mode == RETR_FLOODFILL)
+            rectangle(img32s, rect, Scalar::all((double)i + 1), FILLED);
+        else
+            rectangle(img, rect, Scalar::all(255));
         rect.x += 2;
         rect.y += 2;
         rect.width -= 4;

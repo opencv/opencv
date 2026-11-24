@@ -48,6 +48,8 @@ public:
 
         // Both reference passes run before the tested net is loaded, so netDefault can be
         // released first. Keeping both alive doubles peak memory on large models.
+        // OCV/CPU is the reference configuration itself, so it reruns netDefault instead of importing again.
+        const bool isReference = backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU;
         Mat outDefault1, outDefault2;
         {
             Net netDefault = readNet(weights, proto);
@@ -65,9 +67,12 @@ public:
                 outDefault2 = netDefault.forward().clone();
             else
                 outDefault2 = netDefault.forward(outputLayer).clone();
+            if (isReference)
+                net = netDefault;
         }
 
-        net = readNet(weights, proto);
+        if (!isReference)
+            net = readNet(weights, proto);
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);

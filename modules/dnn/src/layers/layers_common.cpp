@@ -389,12 +389,54 @@ MatShape tensorToShape(const Mat& shapeTensor)
     return MatShape(shapeSpecVec);
 }
 
+template<typename _Ts>
+static void storeScalar(_Ts v, int depth, void* value)
+{
+    if (depth == CV_8U)
+        *reinterpret_cast<uint8_t*>(value) = saturate_cast<uint8_t>(v);
+    else if (depth == CV_8S)
+        *reinterpret_cast<int8_t*>(value) = saturate_cast<int8_t>(v);
+    else if (depth == CV_16U)
+        *reinterpret_cast<uint16_t*>(value) = saturate_cast<uint16_t>(v);
+    else if (depth == CV_16S)
+        *reinterpret_cast<int16_t*>(value) = saturate_cast<int16_t>(v);
+    else if (depth == CV_32U)
+        *reinterpret_cast<uint32_t*>(value) = saturate_cast<uint32_t>(v);
+    else if (depth == CV_32S)
+        *reinterpret_cast<int32_t*>(value) = saturate_cast<int32_t>(v);
+    else if (depth == CV_64U)
+        *reinterpret_cast<uint64_t*>(value) = saturate_cast<uint64_t>(v);
+    else if (depth == CV_64S)
+        *reinterpret_cast<int64_t*>(value) = saturate_cast<int64_t>(v);
+    else if (depth == CV_32F)
+        *reinterpret_cast<float*>(value) = saturate_cast<float>(v);
+    else if (depth == CV_64F)
+        *reinterpret_cast<double*>(value) = saturate_cast<double>(v);
+    else if (depth == CV_16F)
+        *reinterpret_cast<hfloat*>(value) = saturate_cast<hfloat>(v);
+    else if (depth == CV_16BF)
+        *reinterpret_cast<bfloat*>(value) = saturate_cast<bfloat>(v);
+    else if (depth == CV_Bool)
+        *reinterpret_cast<uint8_t*>(value) = (uint8_t)(v != 0);
+    else {
+        CV_Error_(Error::StsNotImplemented, ("type %s is not supported", typeToString(depth).c_str()));
+    }
+}
+
 void tensorToScalar(const Mat& tensor, int type, void* value)
 {
     CV_Assert(tensor.total() == 1);
     int type0 = tensor.type();
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn == 1);
+
+    // uint64 values above INT64_MAX do not fit in int64, so read them separately
+    if (type0 == CV_64U)
+    {
+        storeScalar(*tensor.ptr<uint64_t>(), depth, value);
+        return;
+    }
+
     double v = 0;
     int64_t iv = 0;
     bool isflt = type0 == CV_32F || type0 == CV_64F || type0 == CV_16F || type0 == CV_16BF;
@@ -402,9 +444,9 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     if (type0 == CV_8U)
         iv = *tensor.ptr<uint8_t>();
     else if (type0 == CV_8S)
-        iv = *tensor.ptr<uint8_t>();
+        iv = *tensor.ptr<int8_t>();
     else if (type0 == CV_16U)
-        iv = *tensor.ptr<uint8_t>();
+        iv = *tensor.ptr<uint16_t>();
     else if (type0 == CV_16S)
         iv = *tensor.ptr<int16_t>();
     else if (type0 == CV_32U)
@@ -427,35 +469,10 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
         CV_Error_(Error::StsNotImplemented, ("type %s is not supported", typeToString(type0).c_str()));
     }
 
-    if (depth == CV_8U)
-        *reinterpret_cast<uint8_t*>(value) = isflt ? saturate_cast<uint8_t>(v) : saturate_cast<uint8_t>(iv);
-    else if (depth == CV_8S)
-        *reinterpret_cast<int8_t*>(value) = isflt ? saturate_cast<int8_t>(v) : saturate_cast<int8_t>(iv);
-    else if (depth == CV_16U)
-        *reinterpret_cast<uint16_t*>(value) = isflt ? saturate_cast<uint16_t>(v) : saturate_cast<uint16_t>(iv);
-    else if (depth == CV_16S)
-        *reinterpret_cast<int16_t*>(value) = isflt ? saturate_cast<int16_t>(v) : saturate_cast<int16_t>(iv);
-    else if (depth == CV_32U)
-        *reinterpret_cast<uint32_t*>(value) = isflt ? saturate_cast<uint32_t>(v) : saturate_cast<uint32_t>(iv);
-    else if (depth == CV_32S)
-        *reinterpret_cast<int32_t*>(value) = isflt ? saturate_cast<int32_t>(v) : saturate_cast<int32_t>(iv);
-    else if (depth == CV_64U)
-        *reinterpret_cast<uint64_t*>(value) = isflt ? saturate_cast<uint64_t>(v) : saturate_cast<uint64_t>(iv);
-    else if (depth == CV_64S)
-        *reinterpret_cast<int64_t*>(value) = isflt ? saturate_cast<int64_t>(v) : iv;
-    else if (depth == CV_32F)
-        *reinterpret_cast<float*>(value) = isflt ? (float)v : saturate_cast<float>(iv);
-    else if (depth == CV_64F)
-        *reinterpret_cast<double*>(value) = isflt ? v : saturate_cast<double>(iv);
-    else if (depth == CV_16F)
-        *reinterpret_cast<hfloat*>(value) = isflt ? saturate_cast<hfloat>(v) : saturate_cast<hfloat>(iv);
-    else if (depth == CV_16BF)
-        *reinterpret_cast<bfloat*>(value) = isflt ? saturate_cast<bfloat>(v) : saturate_cast<bfloat>(iv);
-    else if (depth == CV_Bool)
-        *reinterpret_cast<uint8_t*>(value) = isflt ? (uint8_t)(v != 0) : (uint8_t)(iv != 0);
-    else {
-        CV_Error_(Error::StsNotImplemented, ("type %s is not supported", typeToString(depth).c_str()));
-    }
+    if (isflt)
+        storeScalar(v, depth, value);
+    else
+        storeScalar(iv, depth, value);
 }
 
 }

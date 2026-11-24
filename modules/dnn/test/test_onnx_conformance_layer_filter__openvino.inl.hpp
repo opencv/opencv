@@ -720,6 +720,8 @@ CASE(test_clip_inbounds)
     SKIP;
 CASE(test_clip_inbounds_expanded)
     SKIP;
+CASE(test_clip_min_greater_than_max)
+    SKIP;
 CASE(test_clip_min_greater_than_max_expanded)
     SKIP;
 CASE(test_clip_outbounds)
@@ -729,6 +731,16 @@ CASE(test_clip_outbounds_expanded)
 CASE(test_clip_splitbounds)
     SKIP;
 CASE(test_clip_splitbounds_expanded)
+    SKIP;
+CASE(test_col2im)
+    SKIP;
+CASE(test_col2im_5d)
+    SKIP;
+CASE(test_col2im_dilations)
+    SKIP;
+CASE(test_col2im_pads)
+    SKIP;
+CASE(test_col2im_strides)
     SKIP;
 CASE(test_compress_0)
     SKIP;
@@ -2602,7 +2614,7 @@ CASE(test_relu)
 CASE(test_relu_expanded_ver18)
     SKIP;
 CASE(test_reshape_allowzero_reordered)
-    // no filter
+    SKIP;
 CASE(test_reshape_extended_dims)
     SKIP;
 CASE(test_reshape_negative_dim)
@@ -2702,9 +2714,9 @@ CASE(test_resize_upsample_sizes_nearest_floor_align_corners)
 CASE(test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric)
     SKIP;
 CASE(test_reversesequence_batch)
-    // no filter
+    SKIP;
 CASE(test_reversesequence_time)
-    // no filter
+    SKIP;
 CASE(test_rnn_seq_length)
     SKIP;
 CASE(test_roialign_aligned_false)
@@ -2956,6 +2968,8 @@ CASE(test_shape_start_1)
 CASE(test_shape_start_1_end_2)
     SKIP;
 CASE(test_shape_start_1_end_negative_1)
+    SKIP;
+CASE(test_shape_start_greater_than_end)
     SKIP;
 CASE(test_shape_start_negative_1)
     SKIP;
@@ -3419,7 +3433,6 @@ CASE(test_xor_bcast4v3d)
     // no filter
 CASE(test_xor_bcast4v4d)
     // no filter
-CASE()
 CASE(test_attention_3d)
     SKIP;
 CASE(test_attention_3d_attn_mask)

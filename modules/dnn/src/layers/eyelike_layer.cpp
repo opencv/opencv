@@ -92,6 +92,8 @@ public:
         case CV_8S:   fillDiag<int8_t>  (Y, iStart, jStart, diagLen, 1);            break;
         case CV_16U:  fillDiag<uint16_t>(Y, iStart, jStart, diagLen, 1);            break;
         case CV_16S:  fillDiag<int16_t> (Y, iStart, jStart, diagLen, 1);            break;
+        case CV_32U:  fillDiag<uint32_t>(Y, iStart, jStart, diagLen, 1);            break;
+        case CV_64U:  fillDiag<uint64_t>(Y, iStart, jStart, diagLen, 1);            break;
         case CV_16F:  fillDiag<hfloat>  (Y, iStart, jStart, diagLen, hfloat(1.0f)); break;
         case CV_16BF: fillDiag<bfloat>  (Y, iStart, jStart, diagLen, bfloat(1.0f)); break;
         case CV_Bool: fillDiag<bool>    (Y, iStart, jStart, diagLen, true);         break;

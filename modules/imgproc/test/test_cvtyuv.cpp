@@ -608,49 +608,63 @@ YUVwriter* YUVwriter::getWriter(int code)
     };
 }
 
+// The reference converters below process rows in parallel: every output element is written by exactly
+// one (row, col), and the 4:2:0/4:2:2 chroma samples shared by neighbouring pixels stay within one row.
 template<class convertor>
 void referenceYUV2RGB(const Mat& yuv, Mat& rgb, YUVreader* yuvReader, RGBwriter* rgbWriter)
 {
-    convertor cvt;
-
-    for(int row = 0; row < rgb.rows; ++row)
-        for(int col = 0; col < rgb.cols; ++col)
-            rgbWriter->write(rgb, row, col, cvt.convert(yuvReader->read(yuv, row, col)));
+    auto body = [&](const Range& rows)
+    {
+        convertor cvt;
+        for(int row = rows.start; row < rows.end; ++row)
+            for(int col = 0; col < rgb.cols; ++col)
+                rgbWriter->write(rgb, row, col, cvt.convert(yuvReader->read(yuv, row, col)));
+    };
+    parallel_for_(Range(0, rgb.rows), body);
 }
 
 template<class convertor>
 void referenceYUV2GRAY(const Mat& yuv, Mat& rgb, YUVreader* yuvReader, GRAYwriter* grayWriter)
 {
-    convertor cvt;
-
-    for(int row = 0; row < rgb.rows; ++row)
-        for(int col = 0; col < rgb.cols; ++col)
-            grayWriter->write(rgb, row, col, cvt.convert(yuvReader->read(yuv, row, col)));
+    auto body = [&](const Range& rows)
+    {
+        convertor cvt;
+        for(int row = rows.start; row < rows.end; ++row)
+            for(int col = 0; col < rgb.cols; ++col)
+                grayWriter->write(rgb, row, col, cvt.convert(yuvReader->read(yuv, row, col)));
+    };
+    parallel_for_(Range(0, rgb.rows), body);
 }
 
 template<class convertor>
 void referenceRGB2YUV(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter* yuvWriter)
 {
-    convertor cvt;
-
-    for(int row = 0; row < rgb.rows; ++row)
-        for(int col = 0; col < rgb.cols; ++col)
-            yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col)));
+    auto body = [&](const Range& rows)
+    {
+        convertor cvt;
+        for(int row = rows.start; row < rows.end; ++row)
+            for(int col = 0; col < rgb.cols; ++col)
+                yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col)));
+    };
+    parallel_for_(Range(0, rgb.rows), body);
 }
 
 template<class convertor>
 void referenceRGB2YUV422(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter* yuvWriter)
 {
-    convertor cvt;
-
-    for(int row = 0; row < rgb.rows; ++row)
+    auto body = [&](const Range& rows)
     {
+        convertor cvt;
+        for(int row = rows.start; row < rows.end; ++row)
+        {
             for(int col = 0; col < rgb.cols; col+=2)
             {
                 yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 0));
                 yuvWriter->write(yuv, row, col+1, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 1));
             }
-    }
+        }
+    };
+    parallel_for_(Range(0, rgb.rows), body);
 }
 
 struct ConversionYUV

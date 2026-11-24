@@ -24,7 +24,7 @@ In this tutorial you will learn how to:
 Code
 ----
 @add_toggle_cpp
-This tutorial's code is shown in the lines below. You can download it from [here](https://github.com/opencv/opencv/tree/5.x/samples/cpp/stitching.cpp).
+This tutorial's code is shown in the lines below. You can download it from [here](https://github.com/opencv/opencv/blob/5.x/samples/cpp/snippets/stitching.cpp).
 
 Note: The C++ version includes additional options such as image division (--d3) and more detailed error handling, which are not present in the Python example.
 
@@ -33,7 +33,7 @@ Note: The C++ version includes additional options such as image division (--d3) 
 @end_toggle
 
 @add_toggle_python
-This tutorial's code is shown in the lines below. You can download it from [here](https://github.com/opencv/opencv/blob/5.x/samples/python/stitching.py).
+This tutorial's code is shown in the lines below. You can download it from [here](https://github.com/opencv/opencv/blob/5.x/samples/python/snippets/stitching.py).
 
 Note: The C++ version includes additional options such as image division (--d3) and more detailed error handling, which are not present in the Python example.
 

@@ -2572,6 +2572,24 @@ TEST(Core_Transform, accuracy) { Core_TransformTest test; test.safe_run(); }
 TEST(Core_TransformLarge, accuracy) { Core_TransformLargeTest test; test.safe_run(); }
 TEST(Core_PerspectiveTransform, accuracy) { Core_PerspectiveTransformTest test; test.safe_run(); }
 TEST(Core_Pow, accuracy) { Core_PowTest test; test.safe_run(); }
+
+using Core_PowZero = testing::TestWithParam<int>;
+
+TEST_P(Core_PowZero, fills_all_channels)
+{
+    const int channels = GetParam();
+    Mat src(3, 7, CV_MAKETYPE(CV_32F, channels));
+    src.reshape(1).setTo(-2.0);
+    Mat dst;
+
+    cv::pow(src, 0, dst);
+
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+    EXPECT_EQ(0, countNonZero(dst.reshape(1) != 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_PowZero, testing::Values(1, 4, 5, 9));
 TEST(Core_SolveLinearSystem, accuracy) { Core_SolveTest test; test.safe_run(); }
 TEST(Core_Trace, accuracy) { Core_TraceTest test; test.safe_run(); }
 TEST(Core_SolvePoly, accuracy) { Core_SolvePolyTest test; test.safe_run(); }

@@ -998,7 +998,10 @@ void pow( InputArray _src, double power, OutputArray _dst )
         {
         case 0:
             _dst.createSameSize(_src, type);
-            _dst.setTo(Scalar::all(1));
+            if (cn > 4 && !_dst.isGpuMat())
+                _dst.setTo(1.0);
+            else
+                _dst.setTo(Scalar::all(1));
             return;
         case 1:
             _src.copyTo(_dst);

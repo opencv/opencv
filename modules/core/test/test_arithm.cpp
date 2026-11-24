@@ -1946,9 +1946,8 @@ TEST_P(ArithmMixedTest, accuracy)
             mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        dst0 = cvtest::randomMat(rng, size, dstType, minval, maxval, false);
         dst = cvtest::randomMat(rng, size, dstType, minval, maxval, true);
-        cvtest::copy(dst, dst0);
+        cvtest::copy(dst, dst0);   // creates a continuous dst0 holding dst's initial content
 
         op->generateScalars(dstDepth, rng);
 
@@ -2484,6 +2483,20 @@ TEST(Core_FindNonZero, wide_rows_8u)
 
     std::vector<Point> pts;
     findNonZero(src, pts);
+    EXPECT_EQ(expected, pts);
+}
+
+TEST(Core_FindNonZero, mat_1d)
+{
+    int sz[] = {7};
+    Mat src(1, sz, CV_8U, Scalar(0));
+    src.at<uchar>(2) = 5;
+    src.at<uchar>(6) = 1;
+
+    std::vector<Point> pts;
+    findNonZero(src, pts);
+
+    std::vector<Point> expected = { Point(2, 0), Point(6, 0) };
     EXPECT_EQ(expected, pts);
 }
 
@@ -3776,6 +3789,23 @@ TEST(Core_MeanStdDev, regression_multichannel)
     }
 }
 
+TEST(Core_MeanStdDev, bool_input)
+{
+    uchar src_buf[] = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
+    Mat src(1, 6, CV_Bool, src_buf);
+
+    EXPECT_EQ(0.5, cv::mean(src)[0]);
+
+    Scalar m, sd;
+    meanStdDev(src, m, sd);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
+
+    Mat mask(1, 6, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
+    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
+}
+
 // Related issue : https://github.com/opencv/opencv/issues/26861
 TEST(Core_MeanStdDevTest, LargeImage)
 {
@@ -4870,6 +4900,32 @@ TEST_P(Core_LUT, accuracy_multi2)
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, testing::Combine( LutIdxType::all(), LutMatType::all()));
 
+// A 0D Mat holds one element and has no rows. LUT must handle it, and the result stays 0D.
+TEST(Core_LUT_0D, regression)
+{
+    uchar v8 = 7;
+    const Mat src8(0, nullptr, CV_8U, &v8);
+    Mat lut8(1, 256, CV_8U);
+    for (int i = 0; i < 256; i++)
+        lut8.at<uchar>(i) = (uchar)(255 - i);
+    Mat dst8;
+    ASSERT_NO_THROW(cv::LUT(src8, lut8, dst8));
+    EXPECT_EQ(0, dst8.dims);
+    EXPECT_EQ(CV_8U, dst8.type());
+    EXPECT_EQ(255 - 7, (int)*dst8.ptr<uchar>());
+
+    ushort v16 = 1000;
+    const Mat src16(0, nullptr, CV_16U, &v16);
+    Mat lut16(1, 65536, CV_16U);
+    for (int i = 0; i < 65536; i++)
+        lut16.at<ushort>(i) = (ushort)(65535 - i);
+    Mat dst16;
+    ASSERT_NO_THROW(cv::LUT(src16, lut16, dst16));
+    EXPECT_EQ(0, dst16.dims);
+    EXPECT_EQ(CV_16U, dst16.type());
+    EXPECT_EQ(65535 - 1000, (int)*dst16.ptr<ushort>());
+}
+
 CV_ENUM(MaskType, CV_8U, CV_8S, CV_Bool)
 typedef testing::TestWithParam<MaskType> Core_MaskTypeTest;
 
@@ -5358,5 +5414,68 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
         EXPECT_EQ(a.at<double>(64), big64);
     }
 }
+
+// cv::compare had no CV_Bool kernel for the matrix/matrix form, so every comparison of two
+// CV_Bool matrices threw "no kernel for this op/type combination" while the matrix/scalar
+// overload of the same function worked. CV_Bool is logical: a byte is true when it is non-zero,
+// which is how countNonZero, norm and the scalar overload already read it. A matrix wrapping an
+// external buffer is never converted, so bytes other than 0 and 1 are reachable through the
+// public API and must not compare as integers.
+typedef testing::TestWithParam<int> Core_CompareBool_canonical;
+typedef testing::TestWithParam<int> Core_CompareBool_nonCanonical;
+typedef testing::TestWithParam<int> Core_CompareBool_scalarAgreement;
+
+// Canonical 0/1 operands: the result must match the same comparison done on CV_8U.
+TEST_P(Core_CompareBool_canonical, matches_CV_8U)
+{
+    const int op = GetParam();
+    uchar abytes[4] = { 0, 0, 1, 1 };
+    uchar bbytes[4] = { 0, 1, 0, 1 };
+    const Mat ab(1, 4, CV_Bool, abytes), bb(1, 4, CV_Bool, bbytes);
+    const Mat au(1, 4, CV_8U, abytes), bu(1, 4, CV_8U, bbytes);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(ab, bb, got, op));
+    cv::compare(au, bu, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF));
+}
+
+// Non-canonical bytes: 1, 2 and 255 all mean true, so each must compare exactly as 1 does.
+TEST_P(Core_CompareBool_nonCanonical, true_bytes_compare_as_one)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    uchar one[4] = { 0, 1, 1, 1 };
+    const Mat a(1, 4, CV_Bool, raw), canonical(1, 4, CV_Bool, one);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat got, want;
+    ASSERT_NO_THROW(cv::compare(a, rhs, got, op));
+    cv::compare(canonical, rhs, want, op);
+    EXPECT_EQ(0, cv::norm(got, want, NORM_INF)) << "non-canonical bytes must compare logically";
+}
+
+// The matrix/matrix form must agree with the matrix/scalar form, which already worked.
+TEST_P(Core_CompareBool_scalarAgreement, matrix_matrix_matches_matrix_scalar)
+{
+    const int op = GetParam();
+    uchar raw[4] = { 0, 1, 2, 255 };
+    const Mat a(1, 4, CV_Bool, raw);
+    uchar ones[4] = { 1, 1, 1, 1 };
+    const Mat rhs(1, 4, CV_Bool, ones);
+
+    Mat fromMat, fromScalar;
+    cv::compare(a, rhs, fromMat, op);
+    cv::compare(a, Scalar(1), fromScalar, op);
+    EXPECT_EQ(0, cv::norm(fromMat, fromScalar, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_canonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_nonCanonical,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
+INSTANTIATE_TEST_CASE_P(/**/, Core_CompareBool_scalarAgreement,
+    testing::Values(CMP_EQ, CMP_NE, CMP_GT, CMP_GE, CMP_LT, CMP_LE));
 
 }} // namespace

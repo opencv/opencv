@@ -447,7 +447,8 @@ enum RetrievalModes {
 
 //! the contour approximation algorithm
 enum ContourApproximationModes {
-    /** TBD */
+    /** Outputs Freeman chain codes instead of contour points. The output uses `CV_8SC1` and is
+    experimental, so its representation may change in a future release. */
     CHAIN_CODE            = 0,
     /** stores absolutely all the contour points. That is, any 2 subsequent points (x1,y1) and
     (x2,y2) of the contour will be either horizontal, vertical or diagonal neighbors, that is,
@@ -460,7 +461,9 @@ enum ContourApproximationModes {
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_KCOS = 4,
-    /** TBD */
+    /** Uses the link-runs contour extraction algorithm. Prefer cv::findContoursLinkRuns() for
+    new code: using this mode through cv::findContours() is deprecated. If hierarchy is
+    requested, `mode` must be `RETR_CCOMP`; otherwise, `mode` is ignored. `offset` is ignored. */
     LINK_RUNS              = 5
 };
 
@@ -2669,21 +2672,42 @@ up-right or rotated rectangular region of the image in a constant time, for exam
 It makes possible to do a fast blurring or fast block correlation with a variable window size, for
 example. In case of multi-channel images, sums for each channel are accumulated independently.
 
+@anchor integral_depths
+Supported depth combinations:
+Input depth (src.depth()) | sdepth    | sqdepth
+--------------------------|-----------|---------------------------
+CV_8U                     | -1/CV_32S | -1/CV_32S/CV_32F/CV_64F
+CV_8U                     | CV_32F    | -1/CV_32F/CV_64F
+CV_8U                     | CV_64F    | -1/CV_64F
+CV_16U/CV_16S             | -1/CV_64F | -1/CV_64F
+CV_32F                    | CV_32F    | -1/CV_32F/CV_64F
+CV_32F                    | -1/CV_64F | -1/CV_64F
+CV_64F                    | -1/CV_64F | -1/CV_64F
+
+When sdepth is -1, it means CV_32S for CV_8U input and CV_64F otherwise. When sqdepth is -1, it
+means CV_64F. Other combinations raise an error, except in the OpenCL case below.
+
+@note When src is CV_8UC1, sum is a UMat, OpenCL is used and tilted is not requested, any sdepth and
+sqdepth from CV_32S, CV_32F and CV_64F are accepted (CV_64F needs a device with double precision
+support). Without OpenCL, the combinations missing from the table raise an error, so portable
+code should stick to the table.
+
 As a practical example, the next figure shows the calculation of the integral of a straight
 rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
 original image are shown, as well as the relative pixels in the integral images sum and tilted .
 
 ![integral calculation example](pics/integral.png)
 
-@param src input image as \f$W \times H\f$, 8-bit or floating-point (32f or 64f).
+@param src input image as \f$W \times H\f$, 8-bit, 16-bit or floating-point (32f or 64f).
 @param sum integral image as \f$(W+1)\times (H+1)\f$ , 32-bit integer or floating-point (32f or 64f).
-@param sqsum integral image for squared pixel values; it is \f$(W+1)\times (H+1)\f$, double-precision
-floating-point (64f) array.
+@param sqsum integral image for squared pixel values; it is \f$(W+1)\times (H+1)\f$ array of depth
+sqdepth (double-precision floating-point (64f) by default).
 @param tilted integral for the image rotated by 45 degrees; it is \f$(W+1)\times (H+1)\f$ array with
 the same data type as sum.
 @param sdepth desired depth of the integral and the tilted integral images, CV_32S, CV_32F, or
-CV_64F.
-@param sqdepth desired depth of the integral image of squared pixel values, CV_32F or CV_64F.
+CV_64F; see @ref integral_depths "combinations".
+@param sqdepth desired depth of the integral image of squared pixel values, CV_32S, CV_32F or
+CV_64F; see @ref integral_depths "combinations".
  */
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
@@ -2893,7 +2917,7 @@ CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
 If the mask is not empty, dst *must* be of the same size and type as src, so that
 outliers pixels are left as-is
 
-@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
 @param dst output array of the same size  and type and the same number of channels as src.
 @param mask optional mask (same size as src, 8-bit).
 @param thresh threshold value.
