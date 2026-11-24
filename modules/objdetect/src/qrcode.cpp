@@ -1023,11 +1023,22 @@ bool ImplContour::detect(InputArray in, OutputArray points) const
     if (!checkQRInputImage(in, inarr))
         return false;
 
-    QRDetect qrdet;
-    qrdet.init(inarr, epsX, epsY);
-    if (!qrdet.localization()) { return false; }
-    if (!qrdet.computeTransformationPoints()) { return false; }
-    vector<Point2f> pnts2f = qrdet.getTransformationPoints();
+    auto detectQRCode = [&](const Mat& image, vector<Point2f>& detected_points) {
+        QRDetect qrdet;
+        qrdet.init(image, epsX, epsY);
+        if (!qrdet.localization()) { return false; }
+        if (!qrdet.computeTransformationPoints()) { return false; }
+        detected_points = qrdet.getTransformationPoints();
+        return true;
+    };
+
+    vector<Point2f> pnts2f;
+    if (!detectQRCode(inarr, pnts2f)) {
+        Mat inverted;
+        bitwise_not(inarr, inverted);
+        if (!detectQRCode(inverted, pnts2f))
+            return false;
+    }
     updatePointsResult(points, pnts2f);
     return true;
 }
@@ -2957,20 +2968,31 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
     qrdec.init(inarr, src_points);
     bool ok = qrdec.straightDecodingProcess();
 
-    std::string decoded_info = qrdec.getDecodeInformation();
+    QRDecode* decoded_qr = &qrdec;
+    Ptr<QRDecode> inverted_qrdec;
+    if (!ok) {
+        Mat inverted;
+        bitwise_not(inarr, inverted);
+        inverted_qrdec = makePtr<QRDecode>(useAlignmentMarkers);
+        inverted_qrdec->init(inverted, src_points);
+        ok = inverted_qrdec->straightDecodingProcess();
+        decoded_qr = inverted_qrdec.get();
+    }
+
+    std::string decoded_info = decoded_qr->getDecodeInformation();
     if (!ok && straight_qrcode.needed())
     {
         straight_qrcode.release();
     }
     else if (straight_qrcode.needed())
     {
-        qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
+        decoded_qr->getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
     if (ok && !decoded_info.empty()) {
-        alignmentMarkers = {qrdec.alignment_coords};
-        updateQrCorners = qrdec.getOriginalPoints();
+        alignmentMarkers = {decoded_qr->alignment_coords};
+        updateQrCorners = decoded_qr->getOriginalPoints();
     }
-    encodings.resize(1, qrdec.eci);
+    encodings.resize(1, decoded_qr->eci);
     return ok ? decoded_info : std::string();
 }
 
@@ -4646,25 +4668,34 @@ struct PimplQRAruco : public ImplContour {
             points.release();
             return false;
         }
-        vector<Point2f> result;
-        vector<vector<Point2f> > corners;
-        vector<int> ids;
-        arucoDetector.detectMarkers(gray, corners, ids);
-        if (corners.size() >= 3ull) {
-            vector<QRCode> qrCodes = analyzeFinderPatterns(corners, gray.clone(), qrParams);
-            if (qrCodes.size() == 0ull)
-                return false;
-            for (auto& qr : qrCodes) {
-                for (Point2f& corner : qr.getQRCorners()) {
-                    result.push_back(corner);
+
+        auto detectQRCodes = [&](const Mat& image, vector<Point2f>& result) {
+            vector<vector<Point2f> > corners;
+            vector<int> ids;
+            arucoDetector.detectMarkers(image, corners, ids);
+            if (corners.size() >= 3ull) {
+                vector<QRCode> qrCodes = analyzeFinderPatterns(corners, image.clone(), qrParams);
+                if (qrCodes.size() == 0ull)
+                    return false;
+                for (auto& qr : qrCodes) {
+                    for (Point2f& corner : qr.getQRCorners()) {
+                        result.push_back(corner);
+                    }
                 }
             }
+            return result.size() >= 4;
+        };
+
+        vector<Point2f> result;
+        if (!detectQRCodes(gray, result)) {
+            Mat inverted;
+            bitwise_not(gray, inverted);
+            result.clear();
+            if (!detectQRCodes(inverted, result))
+                return false;
         }
-        if (result.size() >= 4) {
-            updatePointsResult(points, result);
-            return true;
-        }
-        return false;
+        updatePointsResult(points, result);
+        return true;
     }
 
     bool detect(InputArray img, OutputArray points) const override {

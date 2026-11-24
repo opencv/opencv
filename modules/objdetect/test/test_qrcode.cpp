@@ -546,6 +546,80 @@ TEST(Objdetect_QRCode_decode, decode_regression_21929)
     EXPECT_EQ(expect_msg, decoded_msg);
 }
 
+TEST(Objdetect_QRCode_30588, regression)
+{
+    const String payload = "OpenCV-30588";
+    QRCodeEncoder::Params params;
+    params.version = 2;
+    params.correction_level = QRCodeEncoder::CORRECT_LEVEL_M;
+    params.mode = QRCodeEncoder::MODE_AUTO;
+
+    Mat modules;
+    Ptr<QRCodeEncoder> encoder = QRCodeEncoder::create(params);
+    encoder->encode(payload, modules);
+    ASSERT_FALSE(modules.empty());
+    ASSERT_EQ(CV_8UC1, modules.type());
+
+    Mat normal;
+    resize(modules, normal, Size(), 10, 10, INTER_NEAREST);
+    Mat inverted;
+    bitwise_not(normal, inverted);
+
+    {
+        QRCodeDetector qrcode;
+        std::vector<Point2f> normal_points;
+        ASSERT_TRUE(qrcode.detect(normal, normal_points));
+        ASSERT_EQ(4u, normal_points.size());
+
+        std::vector<Point2f> points;
+        Mat normal_straight;
+        EXPECT_EQ(payload, qrcode.detectAndDecode(normal, points, normal_straight));
+        EXPECT_EQ(4u, points.size());
+        EXPECT_FALSE(normal_straight.empty());
+
+        Mat original = inverted.clone();
+        points.clear();
+        EXPECT_TRUE(qrcode.detect(inverted, points));
+        EXPECT_EQ(4u, points.size());
+        Mat inverted_straight;
+        EXPECT_EQ(payload, qrcode.decode(inverted, normal_points, inverted_straight));
+        EXPECT_FALSE(inverted_straight.empty());
+        points.clear();
+        Mat inverted_combined_straight;
+        EXPECT_EQ(payload, qrcode.detectAndDecode(inverted, points, inverted_combined_straight));
+        EXPECT_EQ(4u, points.size());
+        EXPECT_FALSE(inverted_combined_straight.empty());
+        EXPECT_EQ(0., cv::norm(original, inverted, NORM_INF));
+    }
+
+    {
+        QRCodeDetectorAruco qrcode;
+        std::vector<Point2f> normal_points;
+        ASSERT_TRUE(qrcode.detect(normal, normal_points));
+        ASSERT_EQ(4u, normal_points.size());
+
+        std::vector<Point2f> points;
+        Mat normal_straight;
+        EXPECT_EQ(payload, qrcode.detectAndDecode(normal, points, normal_straight));
+        EXPECT_EQ(4u, points.size());
+        EXPECT_FALSE(normal_straight.empty());
+
+        Mat original = inverted.clone();
+        points.clear();
+        EXPECT_TRUE(qrcode.detect(inverted, points));
+        EXPECT_EQ(4u, points.size());
+        Mat inverted_straight;
+        EXPECT_EQ(payload, qrcode.decode(inverted, normal_points, inverted_straight));
+        EXPECT_FALSE(inverted_straight.empty());
+        points.clear();
+        Mat inverted_combined_straight;
+        EXPECT_EQ(payload, qrcode.detectAndDecode(inverted, points, inverted_combined_straight));
+        EXPECT_EQ(4u, points.size());
+        EXPECT_FALSE(inverted_combined_straight.empty());
+        EXPECT_EQ(0., cv::norm(original, inverted, NORM_INF));
+    }
+}
+
 TEST(Objdetect_QRCode_decode, decode_regression_version_25)
 {
     const cv::String expect_msg = "OpenCV";
