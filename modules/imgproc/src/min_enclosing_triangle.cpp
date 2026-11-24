@@ -342,12 +342,11 @@ static void findMinEnclosingTriangle(const std::vector<cv::Point2f> &polygon,
     initialise(triangle, area);
 
     if (polygon.size() > 3) {
-        const bool settled = findMinimumAreaEnclosingTriangle(polygon, triangle, area);
         // The vertices of the triangle do not settle for a polygon that is too thin for the tolerances, and
         // no triangle is found for a polygon that is too small for them. Try again on a normalised polygon.
-        if (!settled || triangle.empty()) {
+        if (!findMinimumAreaEnclosingTriangle(polygon, triangle, area) || triangle.empty()) {
             initialise(triangle, area);
-            if (!findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area) && !settled) {
+            if (!findMinimumAreaEnclosingTriangleOfThinPolygon(polygon, triangle, area)) {
                 CV_Error(cv::Error::StsInternal, "minEnclosingTriangle did not converge");
             }
         }
