@@ -1779,4 +1779,26 @@ TEST(Layer_Range, ZeroDelta)
     }
 }
 
+TEST(Layer_CumProd, EmptyAxis)
+{
+    // shape [2, 0]: two rows with no elements, so the scan axis (axis 1) has length 0
+    Mat input(MatShape{2, 0}, CV_32F);
+
+    for (int reverse = 0; reverse <= 1; reverse++)
+    {
+        LayerParams lp;
+        lp.type = "CumProd";
+        lp.name = "cumprod";
+        lp.set("axis", 1);
+        lp.set("reverse", reverse);
+        Ptr<Layer> layer = CumProdLayer::create(lp);
+
+        std::vector<Mat> inputs{input}, outputs(1), internals;
+        outputs[0].create(MatShape{2, 0}, CV_32F);
+        layer->forward(inputs, outputs, internals);
+
+        EXPECT_EQ(shape(outputs[0]), MatShape({2, 0}));
+    }
+}
+
 }}
