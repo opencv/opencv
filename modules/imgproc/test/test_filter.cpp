@@ -1637,7 +1637,7 @@ TEST_P(Imgproc_Morphology16f, accuracy)
     const int cn = get<2>(GetParam()), border = get<3>(GetParam());
     const Rect roi(2, 2, 17, 13);
     Mat values(roi.height + 4, roi.width + 4, CV_MAKETYPE(CV_32F, cn));
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, -100.f, 100.f);
     Mat storage, wide;
     values.convertTo(storage, CV_16F);
@@ -1688,7 +1688,7 @@ TEST_P(Imgproc_MorphologyParallel, accuracy)
     const int op = get<0>(GetParam()), shape = get<1>(GetParam());
     const int type = get<2>(GetParam()), border = get<3>(GetParam());
     Mat values(1024, 1024, CV_MAKETYPE(CV_32F, CV_MAT_CN(type)));
-    RNG rng(137);
+    RNG& rng = theRNG();
     rng.fill(values, RNG::UNIFORM, op == MORPH_ERODE ? 1.f : -100.f,
                                   op == MORPH_ERODE ? 100.f : -1.f);
     Mat source, wide, expected32f, expected, actual;
