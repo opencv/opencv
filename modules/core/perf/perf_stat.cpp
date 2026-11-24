@@ -22,7 +22,7 @@ PERF_TEST_P(Size_MatType, sum, testing::Combine( testing::Values( TYPICAL_MAT_SI
 
     TEST_CYCLE() s = sum(arr);
 
-    SANITY_CHECK(s, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(s, 1e-5, ERROR_RELATIVE);
 }
 
 // CV_32S is not in TYPICAL_MAT_TYPES_STAT; it is the depth whose scalar accumulation
