@@ -4940,6 +4940,17 @@ TEST(Layer_Test_LinearAttention, RejectMismatchedInputShapes)
     EXPECT_THROW(run({q, k, v, past, decay, rnd({1, T, 1})}), cv::Exception);
     EXPECT_THROW(run({q, k, v, past, decay, rnd({B, T, 2})}), cv::Exception);
 
+    // a rank-0 optional tensor holds one element, so shape inference must see it too
+    const Mat scalarIn(MatShape::scalar(), CV_32F, Scalar(0.5));
+    EXPECT_THROW(run({q, k, v, scalarIn}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, scalarIn, beta}), cv::Exception);
+    EXPECT_THROW(run({q, k, v, past, decay, scalarIn}), cv::Exception);
+
+    // head_size comes from an exact division by the head count
+    EXPECT_THROW(run({rnd({B, T, H * D + 1}), k, v}), cv::Exception);
+    EXPECT_THROW(run({q, rnd({B, T, H * D + 1}), v}), cv::Exception);
+    EXPECT_THROW(run({q, k, rnd({B, T, H * D + 1})}), cv::Exception);
+
     // every input is read as float after the fp16 conversion
     EXPECT_THROW(run({q, rnd({B, T, H * D}, CV_8U), v}), cv::Exception);
     EXPECT_THROW(run({q, k, v, rnd({B, H, D, D}, CV_8U)}), cv::Exception);

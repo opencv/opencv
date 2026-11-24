@@ -58,8 +58,9 @@ public:
     }
 
     // Optional inputs arrive as empty Mats in fixed slots: 3=past_state, 4=decay, 5=beta.
-    static bool present(const std::vector<MatShape>& in, size_t i) { return in.size() > i && in[i].dims > 0; }
-    static bool present(const std::vector<Mat>& in, size_t i)      { return in.size() > i && !in[i].empty(); }
+    // One predicate for shapes and Mats, so a rank-0 tensor is present in both.
+    template<typename T>
+    static bool present(const std::vector<T>& in, size_t i) { return in.size() > i && !in[i].empty(); }
 
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
@@ -88,6 +89,10 @@ public:
 
         const int batch = inputs[0][0];
         const int seq   = inputs[0][1];
+        // head_size comes from an exact division, so reject widths that do not split evenly
+        CV_CheckEQ(inputs[0][2] % q_num_heads, 0, "LinearAttention: query last dimension must be a multiple of q_num_heads");
+        CV_CheckEQ(inputs[1][2] % kv_num_heads, 0, "LinearAttention: key last dimension must be a multiple of kv_num_heads");
+        CV_CheckEQ(inputs[2][2] % kv_num_heads, 0, "LinearAttention: value last dimension must be a multiple of kv_num_heads");
         const int dk    = inputs[0][2] / q_num_heads;
         const int dv    = inputs[2][2] / kv_num_heads;
         CV_CheckEQ(inputs[1][2] / kv_num_heads, dk, "LinearAttention: key head_size must equal query head_size");
@@ -99,24 +104,27 @@ public:
         if (present(inputs, 3))
         {
             CV_CheckEQ(inputs[3].dims, 4, "LinearAttention: past_state must be [batch, kv_num_heads, head_size, v_head_size]");
-            CV_CheckTrue(inputs[3][0] == batch && inputs[3][1] == kv_num_heads &&
-                         inputs[3][2] == dk && inputs[3][3] == dv,
-                         "LinearAttention: past_state must be [batch, kv_num_heads, head_size, v_head_size]");
+            CV_CheckEQ(inputs[3][0], batch, "LinearAttention: past_state must have the query batch size");
+            CV_CheckEQ(inputs[3][1], kv_num_heads, "LinearAttention: past_state must have kv_num_heads heads");
+            CV_CheckEQ(inputs[3][2], dk, "LinearAttention: past_state head_size must equal query head_size");
+            CV_CheckEQ(inputs[3][3], dv, "LinearAttention: past_state v_head_size must equal value head_size");
         }
         // decay and beta are only read by the update rules that use them
         if (use_decay && present(inputs, 4))
         {
             CV_CheckEQ(inputs[4].dims, 3, "LinearAttention: decay must be 3D");
-            CV_CheckTrue(inputs[4][0] == batch && inputs[4][1] == seq &&
-                         (inputs[4][2] == kv_num_heads * dk || inputs[4][2] == kv_num_heads),
-                         "LinearAttention: decay must be [batch, seq, kv_num_heads*head_size] or [batch, seq, kv_num_heads]");
+            CV_CheckEQ(inputs[4][0], batch, "LinearAttention: decay must have the query batch size");
+            CV_CheckEQ(inputs[4][1], seq, "LinearAttention: decay must have the query sequence length");
+            CV_CheckTrue(inputs[4][2] == kv_num_heads * dk || inputs[4][2] == kv_num_heads,
+                         "LinearAttention: decay last dimension must be kv_num_heads*head_size or kv_num_heads");
         }
         if (use_delta && present(inputs, 5))
         {
             CV_CheckEQ(inputs[5].dims, 3, "LinearAttention: beta must be 3D");
-            CV_CheckTrue(inputs[5][0] == batch && inputs[5][1] == seq &&
-                         (inputs[5][2] == kv_num_heads || inputs[5][2] == 1),
-                         "LinearAttention: beta must be [batch, seq, kv_num_heads] or [batch, seq, 1]");
+            CV_CheckEQ(inputs[5][0], batch, "LinearAttention: beta must have the query batch size");
+            CV_CheckEQ(inputs[5][1], seq, "LinearAttention: beta must have the query sequence length");
+            CV_CheckTrue(inputs[5][2] == kv_num_heads || inputs[5][2] == 1,
+                         "LinearAttention: beta last dimension must be kv_num_heads or 1");
         }
 
         const MatShape stateShape{batch, kv_num_heads, dk, dv};
