@@ -631,8 +631,7 @@ void cv::findContours(InputArray _image,
                       OutputArray _hierarchy,
                       int mode,
                       int method,
-                      Point offset,
-                      bool preBinarized)
+                      Point offset)
 {
     CV_INSTRUMENT_REGION();
 
@@ -652,10 +651,8 @@ void cv::findContours(InputArray _image,
     // Fast path: RETR_LIST without hierarchy → findTRUContours (parallel contour extraction)
     if (mode == RETR_LIST && !_hierarchy.needed() && _image.type() == CV_8UC1)
     {
-        // findTRUContours requires FOREGROUND=255; binarize=true thresholds the padded
-        // image in-place, avoiding an extra allocation (findContours accepts any non-zero value).
-        // preBinarized is intentionally not honored here: it only asserts values are 0/1, which
-        // doesn't satisfy this path's 0/255 requirement, so this threshold always runs.
+        // findTRUContours requires FOREGROUND=255; binarize=true binarizes directly into the
+        // padded buffer it allocates internally (findContours accepts any non-zero value).
         findTRUContours(_image, _contours, 0, true,method);
         if (offset != Point())
         {
@@ -701,14 +698,31 @@ void cv::findContours(InputArray _image,
     if (_hierarchy.needed())
         _hierarchy.clear();
 
-    // preprocess
+    // preprocess: build a padded copy of the image with a 1-pixel zero border, binarizing
+    // directly into the interior instead of first copying the whole image (copyMakeBorder)
+    // and then thresholding it (a second full-image pass). The border is zeroed separately,
+    // an O(width+height) cost, so this does a single full-image-sized pass instead of two.
     Mat image;
     if (_image.empty())
+    {
         image = Mat::zeros(2, 2, _image.type());
+    }
     else
-        copyMakeBorder(_image, image, 1, 1, 1, 1, BORDER_CONSTANT | BORDER_ISOLATED, Scalar(0));
-    if (image.type() != CV_32SC1 && !preBinarized)
-        threshold(image, image, 0, 1, THRESH_BINARY);
+    {
+        const Size sz = _image.size();
+        const int type = _image.type();
+        image.create(sz.height + 2, sz.width + 2, type);
+        image.row(0).setTo(Scalar::all(0));
+        image.row(image.rows - 1).setTo(Scalar::all(0));
+        image.col(0).setTo(Scalar::all(0));
+        image.col(image.cols - 1).setTo(Scalar::all(0));
+
+        Mat interior = image(Rect(1, 1, sz.width, sz.height));
+        if (type != CV_32SC1)
+            threshold(_image, interior, 0, 1, THRESH_BINARY);
+        else
+            _image.getMat().copyTo(interior);
+    }
 
     // find contours
     ContourPointsStorage::storage_t pointsStorage;
@@ -725,9 +739,8 @@ void cv::findContours(InputArray _image,
                       OutputArrayOfArrays _contours,
                       int mode,
                       int method,
-                      Point offset,
-                      bool preBinarized)
+                      Point offset)
 {
     CV_INSTRUMENT_REGION();
-    findContours(_image, _contours, noArray(), mode, method, offset, preBinarized);
+    findContours(_image, _contours, noArray(), mode, method, offset);
 }

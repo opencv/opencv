@@ -500,52 +500,63 @@ TEST(Imgproc_FindContours, link_runs)
     }
 }
 
-TEST(Imgproc_FindContours, preBinarized)
+// The internal preprocessing binarizes directly into a freshly allocated, zero-bordered
+// buffer instead of copying the image and then thresholding it as a separate pass (see
+// contours_new.cpp and contours_truco.cpp). This checks that a 0/1 image, a 0/255 image
+// and a non-contiguous ROI view all produce byte-identical contours and hierarchy, across
+// every retrieval mode and method this fixture is instantiated with -- including RETR_LIST,
+// which (when no hierarchy is requested) dispatches to the separate TRUCO fast path.
+TEST_P(Imgproc_FindContours_Modes2, binarization_equivalence)
 {
-    const Size sz {400, 400};
+    const int mode = get<0>(GetParam());
+    const int method = get<1>(GetParam());
+
+    const Size sz {300, 300};
     Mat img0255 = Mat::zeros(sz, CV_8UC1);
 
     RNG& rng = TS::ptr()->get_rng();
-    for (int i = 0; i < 30; i++)
+    for (int i = 0; i < 20; i++)
     {
         Point center(rng.uniform(20, sz.width - 20), rng.uniform(20, sz.height - 20));
-        int radius = rng.uniform(5, 25);
+        int radius = rng.uniform(5, 20);
         circle(img0255, center, radius, Scalar(255), FILLED);
     }
 
     Mat img01;
     cv::threshold(img0255, img01, 0, 1, THRESH_BINARY);
 
-    const int modes[] = {RETR_EXTERNAL, RETR_LIST, RETR_CCOMP, RETR_TREE};
-    for (int mode : modes)
-    {
-        vector<vector<Point>> contoursRef, contoursPre;
-        vector<Vec4i> hierarchyRef, hierarchyPre;
+    // Reference: documented contract is that any non-zero pixel is treated as 1, so a
+    // 0/255 and a 0/1 image must produce the same result, with and without hierarchy output.
+    vector<vector<Point>> cRef, cGray01, cNoHier255, cNoHier01;
+    vector<Vec4i> hRef, hGray01;
+    findContours(img0255, cRef, hRef, mode, method);
+    findContours(img01, cGray01, hGray01, mode, method);
+    findContours(img0255, cNoHier255, mode, method);
+    findContours(img01, cNoHier01, mode, method);
 
-        findContours(img0255, contoursRef, hierarchyRef, mode, CHAIN_APPROX_SIMPLE);
-        findContours(img01, contoursPre, hierarchyPre, mode, CHAIN_APPROX_SIMPLE, Point(), true /*preBinarized*/);
+    ASSERT_EQ(cRef.size(), cGray01.size());
+    for (size_t i = 0; i < cRef.size(); i++)
+        EXPECT_EQ(cRef[i], cGray01[i]);
+    EXPECT_EQ(hRef, hGray01);
 
-        ASSERT_EQ(contoursRef.size(), contoursPre.size());
-        for (size_t i = 0; i < contoursRef.size(); i++)
-            EXPECT_EQ(contoursRef[i], contoursPre[i]) << "mode=" << mode << " contour=" << i;
-        EXPECT_EQ(hierarchyRef, hierarchyPre) << "mode=" << mode;
-    }
+    ASSERT_EQ(cNoHier255.size(), cNoHier01.size());
+    for (size_t i = 0; i < cNoHier255.size(); i++)
+        EXPECT_EQ(cNoHier255[i], cNoHier01[i]);
 
-    // Overload without hierarchy output must honor the flag identically.
-    vector<vector<Point>> contoursRef2, contoursPre2;
-    findContours(img0255, contoursRef2, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    findContours(img01, contoursPre2, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(), true);
-    ASSERT_EQ(contoursRef2.size(), contoursPre2.size());
-    for (size_t i = 0; i < contoursRef2.size(); i++)
-        EXPECT_EQ(contoursRef2[i], contoursPre2[i]);
+    // A non-contiguous ROI view (offset within a larger Mat) must match the equivalent
+    // standalone image exactly -- the padded buffer is built from the image's own pixel
+    // data, not from whatever happens to sit around it in the parent Mat.
+    Mat big0255 = Mat::zeros(sz.height + 40, sz.width + 40, CV_8UC1);
+    img0255.copyTo(big0255(Rect(20, 20, sz.width, sz.height)));
+    Mat roi0255 = big0255(Rect(20, 20, sz.width, sz.height));
 
-    // Sanity: a strictly 0/1 image run through the default (preBinarized=false) path must give the
-    // same result too, since threshold(0,1,THRESH_BINARY) on an already-0/1 image is a no-op.
-    vector<vector<Point>> contoursTreeRef, contoursDefaultOn01;
-    vector<Vec4i> hierarchyTreeRef, hierarchyDefaultOn01;
-    findContours(img0255, contoursTreeRef, hierarchyTreeRef, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    findContours(img01, contoursDefaultOn01, hierarchyDefaultOn01, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    ASSERT_EQ(contoursDefaultOn01.size(), contoursTreeRef.size());
+    vector<vector<Point>> cRoi;
+    vector<Vec4i> hRoi;
+    findContours(roi0255, cRoi, hRoi, mode, method);
+    ASSERT_EQ(cRef.size(), cRoi.size());
+    for (size_t i = 0; i < cRef.size(); i++)
+        EXPECT_EQ(cRef[i], cRoi[i]);
+    EXPECT_EQ(hRef, hRoi);
 }
 
 }}  // namespace opencv_test
