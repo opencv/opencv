@@ -10,10 +10,6 @@
 
 // Disabled in https://github.com/opencv/opencv/pull/13085 due large binary size
 #define DISABLE_IPP_BOX_FILTER 1
-// IPP filter2D integration is disabled in main OpenCV; kept behind a macro like box filter.
-#define DISABLE_IPP_FILTER2D 1
-// Too big difference compared to OpenCV FFT-based convolution, different results on masks > 7x7
-#define IPP_DISABLE_FILTER2D_BIG_MASK 1
 
 #if IPP_VERSION_X100 >= 810
 
@@ -73,7 +69,7 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
 #undef cv_hal_remap32f
 #define cv_hal_remap32f ipp_hal_remap32f
 
-#if defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
+#if defined(HAVE_IPP_IW)
 int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
                      uchar * dst_data, size_t dst_step, int dst_type,
                      int width, int height, int full_width, int full_height,
@@ -84,7 +80,7 @@ int ipp_hal_filter2D(const uchar * src_data, size_t src_step, int src_type,
                      bool isSubmatrix, bool allowInplace);
 #undef cv_hal_filter_stateless
 #define cv_hal_filter_stateless ipp_hal_filter2D
-#endif // defined(HAVE_IPP_IW) && !DISABLE_IPP_FILTER2D
+#endif // defined(HAVE_IPP_IW)
 
 #if defined(HAVE_IPP_IW)
 int ipp_hal_bilateralFilter_offset(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,

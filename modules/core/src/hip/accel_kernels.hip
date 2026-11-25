@@ -4,6 +4,6 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the kernels of the CUDA backend, the same source as HIP's.
-#include "kernels_core.impl.hpp"
-#include "kernels_imgproc.impl.hpp"
+// Non-CPU HAL: the kernels of the HIP backend, the same source as CUDA's.
+#define CV_ACCEL_GPU_HIP
+#include "../accel/gpu/gpu_kernels.impl.hpp"

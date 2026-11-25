@@ -181,12 +181,6 @@ if(CV_CLANG_CL AND AARCH64)
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/persistence.cpp" PROPERTIES COMPILE_OPTIONS "/O1")
 endif()
 
-# the GPU backends of the non-CPU HAL (hal/gpu), linked into core alone: it keeps the devices
-if(OPENCV_ACCEL_GPU_LIBRARIES)
-  ocv_module_include_directories("${OpenCV_SOURCE_DIR}/hal/gpu/include")
-  list(APPEND extra_libs ${OPENCV_ACCEL_GPU_LIBRARIES})
-endif()
-
 ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
@@ -197,6 +191,17 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
 )
+
+if(HAVE_HIP)
+  # the HIP backend of the non-CPU HAL: the kernels are HIP, backend_hip.cpp is plain C++
+  target_sources(${the_module} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src/hip/accel_kernels.hip")
+  # the precompiled header would force-include precomp.hpp, and with it CUDA's runtime headers
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/accel/backend_hip.cpp"
+    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+  ocv_target_link_libraries(${the_module} PRIVATE hip::host)
+  # with the HIP language enabled, CMake treats ROCm's lib directory as implicit and leaves it out of RUNPATH
+  set_property(TARGET ${the_module} APPEND PROPERTY BUILD_RPATH "${hip_LIB_INSTALL_DIR}")
+endif()
 
 if(OPENCV_DISABLE_THREAD_SUPPORT)
   ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")

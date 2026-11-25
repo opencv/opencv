@@ -294,10 +294,13 @@ TEST(Layer_Test_Reshape, Accuracy)
 }
 
 // Legacy models spell a flatten-to-(1, total) as a 2D shape whose second element is wrong.
-static MatShape reshape2OutShape(const MatShape& inpShape, const std::vector<int>& spec)
+static MatShape reshape2OutShape(const MatShape& inpShape, const std::vector<int>& spec,
+                                 bool allowZero = false)
 {
     LayerParams params;
     params.set("shape", DictValue::arrayInt<const int*>(spec.data(), spec.size()));
+    if (allowZero)
+        params.set("allowzero", 1);
     Ptr<Layer> layer = LayerFactory::createLayerInstance("Reshape2", params);
 
     std::vector<MatShape> outputs, internals;
@@ -315,6 +318,37 @@ TEST(Layer_Test_Reshape2, legacy_shape_spec)
     EXPECT_EQ(MatShape({1, 7}), reshape2OutShape(MatShape({7}), {1, 7}));
     EXPECT_EQ(MatShape({1, 24}), reshape2OutShape(MatShape({1, 2, 3, 4}), {0, -1}));
     EXPECT_EQ(MatShape({2, 12}), reshape2OutShape(MatShape({2, 3, 4}), {0, -1}));
+}
+
+// ONNX allowzero: a 0 in the shape is a zero-size axis instead of "copy this axis from the input"
+TEST(Layer_Test_Reshape2, allowzero)
+{
+    // 2D legacy path: without allowzero, (0, 5) on a (1, 0) input would be taken for the
+    // legacy (1, total) spelling; with allowzero the 0 must stay a real zero-size axis
+    EXPECT_EQ(MatShape({0, 5}), reshape2OutShape(MatShape({1, 0}), {0, 5}, true));
+    EXPECT_EQ(MatShape({3, 0}), reshape2OutShape(MatShape({0, 3}), {3, 0}, true));
+    // without allowzero, 0 still copies the input axis
+    EXPECT_EQ(MatShape({2, 3}), reshape2OutShape(MatShape({2, 3}), {0, 3}));
+    // N-D path (test_reshape_allowzero_reordered)
+    EXPECT_EQ(MatShape({3, 4, 0}), reshape2OutShape(MatShape({0, 3, 4}), {3, 4, 0}, true));
+}
+
+TEST(Layer_Test_Reshape2, allowzero_block_layout)
+{
+    // a 0 in the channel position keeps the block layout only when it means "copy C";
+    // with allowzero it is a zero-size channel axis, so the layer must fall back to NCHW
+    const int spec[] = {1, 0, 4, 4};
+    LayerParams params;
+    params.set("shape", DictValue::arrayInt<const int*>(spec, 4));
+    params.set("allowzero", 1);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance("Reshape2", params);
+
+    std::vector<DataLayout> desiredInputs, outputs;
+    layer->getLayouts(std::vector<DataLayout>(1, DATA_LAYOUT_BLOCK), desiredInputs, 1, outputs);
+    ASSERT_EQ(1u, desiredInputs.size());
+    ASSERT_EQ(1u, outputs.size());
+    EXPECT_EQ(DATA_LAYOUT_NCHW, desiredInputs[0]);
+    EXPECT_EQ(DATA_LAYOUT_UNKNOWN, outputs[0]);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
@@ -1139,6 +1173,88 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     runLayer(layer, inputs, outputs);
     Mat h_t_reference = blobFromNPY(_tf("mha_rope.output.npy"));
     normAssert(h_t_reference, outputs[0]);
+}
+
+static void runRotaryEmbedding(int64_t pos0, int64_t pos1, int dim_head, int cache_width,
+                               std::vector<Mat>& outputs, int input_type = CV_32F)
+{
+    const int B = 1, S = 2, num_heads = 1, seq_len_max = 8;
+
+    Mat input(std::vector<int>{B, S, num_heads * dim_head}, input_type, Scalar(1.f));
+    Mat cos_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{seq_len_max, cache_width}, CV_32F, Scalar(0.5f));
+    Mat pos(std::vector<int>{B, S}, CV_64S);
+    pos.at<int64_t>(0, 0) = pos0;
+    pos.at<int64_t>(0, 1) = pos1;
+
+    LayerParams lp;
+    lp.set("num_heads", num_heads);
+    std::vector<Mat> inputs{input, cos_cache, sin_cache, pos};
+    runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs);
+}
+
+TEST(Layer_RotaryEmbedding, gather_position_ids)
+{
+    std::vector<Mat> outputs;
+    runRotaryEmbedding(0, 1, 4, 2, outputs);
+    ASSERT_EQ(1u, outputs.size());
+    // real = 1*0.5 - 1*0.5, imag = 1*0.5 + 1*0.5
+    Mat ref(std::vector<int>{1, 2, 4}, CV_32F);
+    float* r = ref.ptr<float>();
+    for (int t = 0; t < 2; ++t)
+    {
+        r[t * 4 + 0] = r[t * 4 + 1] = 0.f;
+        r[t * 4 + 2] = r[t * 4 + 3] = 1.f;
+    }
+    normAssert(ref, outputs[0]);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_negative_position_id)
+{
+    std::vector<Mat> outputs;
+    try
+    {
+        runRotaryEmbedding(-1, 0, 4, 2, outputs);
+        FAIL() << "negative position id was accepted";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_EQ(cv::Error::StsOutOfRange, e.code);
+    }
+}
+
+TEST(Layer_RotaryEmbedding, rejects_cache_width_mismatch)
+{
+    std::vector<Mat> outputs;
+    // the cache rows are strided by rotary_dim / 2, so their width must be exactly that:
+    // dim_head 8 needs width 4, and a wider cache would be read with the wrong stride
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 8, 2, outputs), cv::Exception);
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 4, 4, outputs), cv::Exception);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_fp16_input)
+{
+    // the kernels compute in float32; a 2-byte input must not be reinterpreted as float32
+    std::vector<Mat> outputs;
+    EXPECT_THROW(runRotaryEmbedding(0, 1, 4, 2, outputs, CV_16F), cv::Exception);
+}
+
+TEST(Layer_RotaryEmbedding, rejects_num_heads_mismatch_4d)
+{
+    const int B = 1, H = 2, S = 2, D = 4;
+    Mat input(std::vector<int>{B, H, S, D}, CV_32F, Scalar(1.f));
+    Mat cos_cache(std::vector<int>{B, S, D / 2}, CV_32F, Scalar(0.5f));
+    Mat sin_cache(std::vector<int>{B, S, D / 2}, CV_32F, Scalar(0.5f));
+    std::vector<Mat> inputs{input, cos_cache, sin_cache};
+    std::vector<Mat> outputs;
+
+    LayerParams lp;
+    runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs);
+    ASSERT_EQ(1u, outputs.size());
+
+    // 4d input defines the head count; a larger num_heads attribute would index past the tensor
+    lp.set("num_heads", H + 1);
+    EXPECT_THROW(runLayer(RotaryEmbeddingLayer::create(lp), inputs, outputs), cv::Exception);
 }
 
 TEST(Layer_Attention, rank4_input_matches_rank3)
@@ -2890,6 +3006,42 @@ TEST_P(Layer_Test_Resize, align_corners_downscale)
     normAssert(out2d, ref, "", 5e-5, 1e-4);
 }
 
+// Nearest only copies values, so CV_64S input must come out unchanged.
+// It used to go through CV_32F, which rounds values above 2^24.
+TEST_P(Layer_Test_Resize, nearest_int64_keeps_precision)
+{
+    int backendId = get<0>(GetParam());
+    int targetId = get<1>(GetParam());
+    if (backendId != DNN_BACKEND_OPENCV)
+        throw SkipTestException("Resize2 layer is implemented for the OpenCV backend only");
+
+    const int64_t vals[] = {16777217, 123456789012LL};
+    Mat inp(std::vector<int>{1, 1, 1, 2}, CV_64S);
+    int64_t* inpData = inp.ptr<int64_t>();
+    inpData[0] = vals[0];
+    inpData[1] = vals[1];
+
+    LayerParams lp;
+    lp.type = "Resize2";
+    lp.name = "testLayer";
+    lp.set("zoom_factor_y", 1);
+    lp.set("zoom_factor_x", 2);
+    lp.set("interpolation", "nearest");
+
+    Net net;
+    net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setInput(inp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    ASSERT_EQ(CV_64S, out.depth());
+    ASSERT_EQ(4, (int)out.total());
+    const int64_t* outData = out.ptr<int64_t>();
+    for (int i = 0; i < 4; ++i)
+        EXPECT_EQ(vals[i / 2], outData[i]) << "i=" << i;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Resize, dnnBackendsAndTargets());
 
 struct Layer_Test_Slice : public testing::TestWithParam<tuple<Backend, Target> >
@@ -4100,6 +4252,59 @@ TEST(Layer_Test_Softmax, NoNaN_AllNegInf)
         EXPECT_EQ(val, 0.f) << "Expected 0 at index " << i;
     }
 }
+
+typedef testing::TestWithParam<tuple<Backend, Target> > Layer_Test_Gemm_SquareTranspose;
+TEST_P(Layer_Test_Gemm_SquareTranspose, ReshapeBatch)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    const int K = 16;
+    Mat B(K, K, CV_32F), C(std::vector<int>{K}, CV_32F);
+    randu(B, -1.f, 1.f);
+    B.at<float>(0, 1) += 1.f;
+    B.at<float>(1, 0) -= 1.f;
+    randu(C, -0.5f, 0.5f);
+    const Mat B_orig = B.clone();
+
+    LayerParams lp;
+    lp.type = "Gemm";
+    lp.name = "gemm_square_notrans";
+    lp.set("transA", false);
+    lp.set("transB", false);
+    lp.set("constB", true);
+    lp.set("constC", true);
+    lp.set("have_bias", true);
+    lp.set("real_ndims_C", 1);
+    lp.blobs.push_back(B);
+    lp.blobs.push_back(C);
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    double l1, lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+
+    const int batches[] = {1, 3, 1};
+    for (size_t step = 0; step < sizeof(batches) / sizeof(batches[0]); ++step)
+    {
+        const int M = batches[step];
+        Mat A(M, K, CV_32F);
+        randu(A, -1.f, 1.f);
+
+        Mat ref = A * B_orig;
+        for (int r = 0; r < M; ++r)
+            ref.row(r) += C.reshape(1, 1);
+
+        net.setInput(A);
+        Mat out = net.forward();
+        normAssert(ref, out, format("step=%zu M=%d", step, M).c_str(), l1, lInf);
+        EXPECT_EQ(0.0, cvtest::norm(net.getParam(id, 0), B_orig, NORM_INF));
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Test_Gemm_SquareTranspose, dnnBackendsAndTargets());
 
 TEST(Test_Gemm, FastGemmBlockedTails)
 {

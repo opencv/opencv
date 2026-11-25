@@ -146,27 +146,25 @@ The rules:
   have finished when it returns; device-to-device copies may still run.
 * Methods are called from any thread.
 
-A built-in backend lives in `hal/<name>/`, as the CPU HAL's implementations do, and is built as
-a static library that opencv_core links: unlike the CPU HAL, which is chosen at build time and
-linked into every module, a backend is picked at run time and keeps the devices, so the other
-modules reach it through core. Core's `registry.cpp` creates the built-in backends; tests register
-theirs with `cv::accel::registerBackend()`.
+A built-in backend registers itself in `registry.cpp`; tests register theirs with
+`cv::accel::registerBackend()`.
 
 ### Backends in OpenCV
 
-* CUDA (`hal/gpu`), built in when OpenCV is built with CUDA. Discrete GPUs use
+* CUDA (`src/accel/backend_cuda.cpp`), built in when OpenCV is built with CUDA. Discrete GPUs use
   device memory from a stream-ordered pool of the backend's own, which keeps freed memory for reuse
   while the pool holds less than a quarter of the device's memory; integrated GPUs from Xavier on
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
   and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
   and 16U) and `warpAffine` with nearest and linear interpolation. Its kernels and runtime calls
-  (`hal/gpu/src/`) are written once for the CUDA and HIP runtimes: per module an operations file
-  (`ops_<module>.impl.hpp`) and a kernels file (`kernels_<module>.impl.hpp`), the kernels built
-  from the device functions of `device.hpp` (border indices, saturation, launch geometry).
-* HIP (`hal/gpu`), built in with `WITH_HIP=ON` when ROCm is found. It is the same code as the
-  CUDA backend, compiled for HIP: device memory from a pool on discrete GPUs, pinned host memory
-  mapped into the GPU on APUs, and the same operations. The kernels are built for
-  `CMAKE_HIP_ARCHITECTURES`, or for the GPUs of the build machine when it is not set.
+  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes, the kernels from shared
+  device functions (border indices, saturation, pixel reads).
+* HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
+  needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
+  wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
+  default the kernels are built for the generic target of each GPU family (`gfx11-generic` and
+  the like); `CMAKE_HIP_ARCHITECTURES=native` builds them only for the GPUs of the build machine.
+  On a GPU the build has no code for, operations run on the CPU.
 
 Adding an operation
 -------------------
@@ -217,7 +215,8 @@ Tests
 addresses the CPU cannot use, memory the CPU addresses, and a second device of the first kind for
 transfers between devices. Its streams run work on a thread of their own, after an optional
 delay, so a missing wait shows up as wrong data, and work on freed memory or on another device's
-memory is counted. The `Core_Accel_CUDA` tests run when a CUDA device is present, and
-`perf_accel.cpp` measures flip and transpose there. The `Imgproc_Accel` tests compare GaussianBlur
-and warpAffine with the CPU on every device of the build, and imgproc's `perf_accel.cpp` measures
-them on the first one.
+memory is counted. The `Core_Accel_GPU` tests run once for each GPU backend of the build (CUDA,
+HIP), on its first device when one is present, and `perf_accel.cpp` measures flip and transpose
+on the first CUDA or HIP device. The `Imgproc_Accel` tests compare GaussianBlur and warpAffine
+with the CPU on every device of the build, and imgproc's `perf_accel.cpp` measures them on the
+first one.

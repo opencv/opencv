@@ -188,7 +188,13 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
         ctype = a.depth();
     ctype = CV_MAKETYPE(CV_MAT_DEPTH(ctype), a.channels());
     c.create(a.size, ctype);
-    const Mat *arrays[] = {&a, &b, &c, 0};
+    // ROI inputs give one NAryMatIterator plane per row; iterate continuous copies instead
+    if( !a.isContinuous() )
+        a = a.clone();
+    if( !b.empty() && !b.isContinuous() )
+        b = b.clone();
+    Mat cc = c.isContinuous() ? c : Mat(c.dims, c.size.p, c.type());
+    const Mat *arrays[] = {&a, &b, &cc, 0};
     Mat planes[3], buf[3];
 
     NAryMatIterator it(arrays, planes);
@@ -238,6 +244,8 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
             apart.convertTo(cpart0, cpart0.type(), 1, 0);
         }
     }
+    if( cc.data != c.data )
+        cc.copyTo(c);
 }
 
 
@@ -883,19 +891,23 @@ filter2D_(const Mat& src, Mat& dst, const vector<int>& ofsvec, const vector<doub
     const double* coeff = &coeffvec[0];
     int width = dst.cols*dst.channels(), ncoeffs = (int)ofsvec.size();
 
-    for( int y = 0; y < dst.rows; y++ )
+    // rows are independent; the result is identical to a serial loop
+    parallel_for_(Range(0, dst.rows), [&](const Range& rows)
     {
-        const _Tp* sptr = src.ptr<_Tp>(y);
-        double* dptr = dst.ptr<double>(y);
-
-        for( int x = 0; x < width; x++ )
+        for( int y = rows.start; y < rows.end; y++ )
         {
-            double s = 0;
-            for( int i = 0; i < ncoeffs; i++ )
-                s += sptr[x + ofs[i]]*coeff[i];
-            dptr[x] = s;
+            const _Tp* sptr = src.ptr<_Tp>(y);
+            double* dptr = dst.ptr<double>(y);
+
+            for( int x = 0; x < width; x++ )
+            {
+                double s = 0;
+                for( int i = 0; i < ncoeffs; i++ )
+                    s += sptr[x + ofs[i]]*coeff[i];
+                dptr[x] = s;
+            }
         }
-    }
+    });
 }
 
 

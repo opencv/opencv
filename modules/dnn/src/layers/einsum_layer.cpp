@@ -300,7 +300,7 @@ int letterToIndex(const char ch) {
     }
 
     if (ch >= 'A' && ch <= 'Z') {
-        return static_cast<int>('z') + static_cast<int>(ch) - 'A';
+        return 26 + static_cast<int>(ch) - 'A';
     }
     // invalid character - return error value
     return -1;

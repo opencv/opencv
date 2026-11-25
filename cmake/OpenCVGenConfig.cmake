@@ -19,6 +19,10 @@ if(HAVE_CUDA)
   endif()
 endif()
 
+if(HAVE_HIP AND NOT BUILD_SHARED_LIBS)
+  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-HIP.cmake.in" HIP_CONFIGCMAKE @ONLY)
+endif()
+
 if(ANDROID)
   if(NOT ANDROID_NATIVE_API_LEVEL)
     set(OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE 0)

@@ -13,6 +13,20 @@ namespace cv { namespace accel {
 
 namespace detail { class BackendAllocator; }
 
+#ifdef HAVE_CUDA
+namespace cuda_impl {
+//! the built-in CUDA backend (backend_cuda.cpp)
+Ptr<Backend> createCudaBackend();
+}
+#endif
+
+#ifdef HAVE_HIP
+namespace hip_impl {
+//! the built-in HIP backend (backend_hip.cpp)
+Ptr<Backend> createHipBackend();
+}
+#endif
+
 struct Device::Impl
 {
     Impl(const Ptr<Backend>& b, int i, int id_, detail::BackendAllocator* a);

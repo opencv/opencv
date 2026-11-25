@@ -42,6 +42,9 @@ class Reshape2LayerImpl CV_FINAL : public Reshape2Layer
 {
 public:
     bool dynamicShapeSpec;
+    // ONNX 'allowzero' (opsets 14 to 23): when set, a 0 in the shape means a zero-size axis
+    // instead of "copy this axis from the input"
+    bool allowZero;
 
     static bool sameDims(const MatShape& a, const MatShape& b)
     {
@@ -103,6 +106,7 @@ public:
     {
         dynamicShapeSpec = true;
         setParamsFrom(params);
+        allowZero = params.get<int>("allowzero", 0) != 0;
         if (params.has("shape"))
         {
             dynamicShapeSpec = false;
@@ -168,8 +172,8 @@ public:
         // that the (0, k) spelling is recognized too
         if (shapeSpec.dims == 2)
         {
-            int d0 = shapeSpec[0] == 0 && inpShape.dims > 0 ? inpShape[0] : shapeSpec[0];
-            int d1 = shapeSpec[1] == 0 && inpShape.dims > 1 ? inpShape[1] : shapeSpec[1];
+            int d0 = shapeSpec[0] == 0 && !allowZero && inpShape.dims > 0 ? inpShape[0] : shapeSpec[0];
+            int d1 = shapeSpec[1] == 0 && !allowZero && inpShape.dims > 1 ? inpShape[1] : shapeSpec[1];
             const int64_t inpTotal = (int64_t)inpShape.total();
             if (d0 == 1 && d1 > 0 && (int64_t)d1 != inpTotal)
             {
@@ -177,7 +181,7 @@ public:
                 return MatShape({1, (int)inpTotal});
             }
         }
-        return inpShape.reshape(shapeSpec);
+        return inpShape.reshape(shapeSpec, allowZero);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -240,7 +244,7 @@ public:
             if (getConstShapeSpec(shapeSpec)) {
                 DataLayout origLayout = getOriginalLayout();
                 int cAxis = (origLayout == DATA_LAYOUT_NCHW) ? 1 : 3;
-                if (shapeSpec.dims == 4 && cAxis < shapeSpec.dims && shapeSpec[cAxis] == 0)
+                if (!allowZero && shapeSpec.dims == 4 && cAxis < shapeSpec.dims && shapeSpec[cAxis] == 0)
                     canUseBlock = true;
             }
             if (!canUseBlock) {

@@ -1946,9 +1946,8 @@ TEST_P(ArithmMixedTest, accuracy)
             mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        dst0 = cvtest::randomMat(rng, size, dstType, minval, maxval, false);
         dst = cvtest::randomMat(rng, size, dstType, minval, maxval, true);
-        cvtest::copy(dst, dst0);
+        cvtest::copy(dst, dst0);   // creates a continuous dst0 holding dst's initial content
 
         op->generateScalars(dstDepth, rng);
 
@@ -3788,6 +3787,23 @@ TEST(Core_MeanStdDev, regression_multichannel)
         EXPECT_EQ(0, cv::norm(dst_m, ref_m, NORM_L1));
         EXPECT_EQ(0, cv::norm(dst_sd, ref_sd, NORM_L1));
     }
+}
+
+TEST(Core_MeanStdDev, bool_input)
+{
+    uchar src_buf[] = { 0, 1, 0, 255, 1, 0 };   // any non-zero byte means true
+    Mat src(1, 6, CV_Bool, src_buf);
+
+    EXPECT_EQ(0.5, cv::mean(src)[0]);
+
+    Scalar m, sd;
+    meanStdDev(src, m, sd);
+    EXPECT_EQ(0.5, m[0]);
+    EXPECT_EQ(0.5, sd[0]);
+
+    Mat mask(1, 6, CV_8U, Scalar(1));
+    EXPECT_THROW(cv::mean(src, mask), cv::Exception);
+    EXPECT_THROW(meanStdDev(src, m, sd, mask), cv::Exception);
 }
 
 // Related issue : https://github.com/opencv/opencv/issues/26861

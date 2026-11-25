@@ -344,18 +344,22 @@ class ReduceR_Invoker : public ParallelLoopBody
 {
 public:
   ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
-                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit),buffer(srcmat.size().width*srcmat.channels())
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit)
   {
   }
   void operator()(const Range& range) const CV_OVERRIDE
   {
-    const T* src = srcmat.ptr<T>();
+    const int len = range.end - range.start;
+    const T* src = srcmat.ptr<T>() + range.start;
     const size_t srcstep = srcmat.step/sizeof(src[0]);
+    // Private to this call: one accumulator shared between stripes puts two threads on the
+    // same cache line wherever a stripe boundary falls mid-line, once per source row.
+    AutoBuffer<WT> buffer(len);
     WT* buf = buffer.data();
-    ST* dst = dstmat.ptr<ST>();
+    ST* dst = dstmat.ptr<ST>() + range.start;
     int i = 0;
 
-    for( i = range.start ; i < range.end; i++ )
+    for( i = 0 ; i < len; i++ )
         buf[i] = opInit(src[i]);
 
     int height = srcmat.size().height;
@@ -363,9 +367,9 @@ public:
     {
         src += srcstep;
         ReduceR_SIMD<T, WT, Op> simd_op;
-        i = simd_op(src, range.start, range.end, buf, op);
+        i = simd_op(src, 0, len, buf, op);
         #if CV_ENABLE_UNROLLED
-        for(; i <= range.end - 4; i += 4 )
+        for(; i <= len - 4; i += 4 )
         {
             WT s0, s1;
             s0 = op(buf[i], (WT)src[i]);
@@ -377,11 +381,11 @@ public:
             buf[i+2] = s0; buf[i+3] = s1;
         }
         #endif
-        for( ; i < range.end; i++ )
+        for( ; i < len; i++ )
             buf[i] = op(buf[i], (WT)src[i]);
     }
 
-    for( i = range.start ; i < range.end; i++ )
+    for( i = 0 ; i < len; i++ )
         dst[i] = (ST)buf[i];
   }
 private:
@@ -389,7 +393,6 @@ private:
   Mat& dstmat;
   Op& op;
   OpInit& opInit;
-  mutable AutoBuffer<WT> buffer;
 };
 
 template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
@@ -820,6 +823,17 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     Mat src = _src.getMat();
     if (src.empty()) {
         src.convertTo(_dst, dtype);
+        return;
+    }
+    if (sdepth == CV_16F)
+    {
+        if (src.dims <= 1)
+        {
+            CV_CheckEQ(dim, 0, "1D input can only be reduced along dim 0");
+            src = src.reshape(cn, {1, src.cols});
+            dim = 1;
+        }
+        cv::reduce(src, _dst, cv::ReduceParams(op, {dim}, true, ddepth));
         return;
     }
     if (src.dims <= 1) {

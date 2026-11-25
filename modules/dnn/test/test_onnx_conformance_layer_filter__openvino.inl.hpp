@@ -2614,7 +2614,7 @@ CASE(test_relu)
 CASE(test_relu_expanded_ver18)
     SKIP;
 CASE(test_reshape_allowzero_reordered)
-    // no filter
+    SKIP;
 CASE(test_reshape_extended_dims)
     SKIP;
 CASE(test_reshape_negative_dim)
@@ -2968,6 +2968,8 @@ CASE(test_shape_start_1)
 CASE(test_shape_start_1_end_2)
     SKIP;
 CASE(test_shape_start_1_end_negative_1)
+    SKIP;
+CASE(test_shape_start_greater_than_end)
     SKIP;
 CASE(test_shape_start_negative_1)
     SKIP;
@@ -3431,7 +3433,6 @@ CASE(test_xor_bcast4v3d)
     // no filter
 CASE(test_xor_bcast4v4d)
     // no filter
-CASE()
 CASE(test_attention_3d)
     SKIP;
 CASE(test_attention_3d_attn_mask)

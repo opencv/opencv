@@ -192,9 +192,13 @@ OCL_TEST_P(EqualizeHist, Mat)
 struct CornerTestBase :
         public ImgprocTestBase
 {
+    Mat srcImage;  // decoded once per test; random_roi() runs on every loop iteration
+
     void random_roi()
     {
-        Mat image = readImageType("../gpu/stereobm/aloe-L.png", type);
+        if (srcImage.empty())
+            srcImage = readImageType("../gpu/stereobm/aloe-L.png", type);
+        Mat image = srcImage.clone();
         ASSERT_FALSE(image.empty());
 
         bool isFP = CV_MAT_DEPTH(type) >= CV_32F;

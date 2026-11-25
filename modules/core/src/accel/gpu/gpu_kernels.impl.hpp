@@ -4,16 +4,273 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the imgproc kernels of the GPU backends, built from the device functions of
-// device.hpp and compiled once per runtime with the core ones (kernels.cu, kernels.hip).
+// Non-CPU HAL: kernels of the GPU backends (core and imgproc operations), compiled once per
+// runtime, for CUDA by src/cuda/accel_kernels.cu and for HIP by src/hip/accel_kernels.hip. flip
+// and transpose move elements as opaque groups of bytes, so one kernel serves every type of the
+// same element size.
 
-#include "device.hpp"
+#include "gpu_kernels.hpp"
 #include "opencv2/core/hal/interface.h"
 #include <string.h>
 
 namespace cv { namespace accel { namespace CV_GPU_NS { namespace kernels {
 
 namespace {
+
+//! the largest power of two dividing @p n, up to 16
+constexpr int elemAlign(int n)
+{
+    return n % 16 == 0 ? 16 : n % 8 == 0 ? 8 : n % 4 == 0 ? 4 : n % 2 == 0 ? 2 : 1;
+}
+// one element of N bytes, aligned as far as N allows, so a copy is one wide load and store
+template<int N> struct alignas(elemAlign(N)) Elem { unsigned char b[N]; };
+// the same bytes at any alignment, for rows whose start or step is not a multiple of that
+template<int N> struct Bytes { unsigned char b[N]; };
+
+const int BLOCK_X = 32, BLOCK_Y = 8;
+const int TILE = 32;
+
+// gridDim.y is at most 65535: taller images are covered by a loop over y
+const unsigned MAX_GRID_Y = 65535;
+
+inline bool aligned(const void* src, size_t sstep, const void* dst, size_t dstep, size_t a)
+{
+    return (((size_t)src | sstep | (size_t)dst | dstep) & (a - 1)) == 0;
+}
+
+template<typename T>
+__global__ void flipKernel(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                           int rows, int cols, bool flipRows, bool flipCols)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= cols)
+        return;
+    const int sx = flipCols ? cols - 1 - x : x;
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    {
+        const unsigned sy = flipRows ? (unsigned)rows - 1 - y : y;
+        ((T*)(dst + (size_t)y * dstep))[x] = ((const T*)(src + (size_t)sy * sstep))[sx];
+    }
+}
+
+// each mirrored pair is swapped once, by the thread of its first element
+template<typename T>
+__global__ void flipInplaceKernel(unsigned char* data, size_t step, int rows, int cols, bool flipRows, bool flipCols)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= cols)
+        return;
+    const int mx = flipCols ? cols - 1 - x : x;
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)rows; y += gridDim.y * blockDim.y)
+    {
+        const unsigned my = flipRows ? (unsigned)rows - 1 - y : y;
+        if (y > my || (y == my && x >= mx))
+            continue;
+        T* a = (T*)(data + (size_t)y * step) + x;
+        T* b = (T*)(data + (size_t)my * step) + mx;
+        const T t = *a;
+        *a = *b;
+        *b = t;
+    }
+}
+
+// a TILE x TILE block goes through shared memory, so both the reads and the writes walk along rows
+template<typename T>
+__global__ void transposeKernel(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                                int rows, int cols)
+{
+    __shared__ T tile[TILE][TILE + 1];
+    const int x0 = blockIdx.x * TILE;
+    for (int y0 = blockIdx.y * TILE; y0 < rows; y0 += gridDim.y * TILE)
+    {
+        const int x = x0 + threadIdx.x;
+        for (int j = threadIdx.y; j < TILE; j += BLOCK_Y)
+            if (x < cols && y0 + j < rows)
+                tile[j][threadIdx.x] = ((const T*)(src + (size_t)(y0 + j) * sstep))[x];
+        __syncthreads();
+        const int ox = y0 + threadIdx.x;
+        for (int j = threadIdx.y; j < TILE; j += BLOCK_Y)
+            if (ox < rows && x0 + j < cols)
+                ((T*)(dst + (size_t)(x0 + j) * dstep))[ox] = tile[threadIdx.x][j];
+        __syncthreads();
+    }
+}
+
+// each element above the diagonal is swapped with its counterpart below it
+template<typename T>
+__global__ void transposeInplaceKernel(unsigned char* data, size_t step, int n)
+{
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= n)
+        return;
+    for (unsigned y = blockIdx.y * blockDim.y + threadIdx.y; y < (unsigned)x; y += gridDim.y * blockDim.y)
+    {
+        T* a = (T*)(data + (size_t)y * step) + x;
+        T* b = (T*)(data + (size_t)x * step) + y;
+        const T t = *a;
+        *a = *b;
+        *b = t;
+    }
+}
+
+static inline dim3 grid(int rows, int cols, int bx, int by)
+{
+    const unsigned gy = (unsigned)((rows + by - 1) / by);
+    return dim3((unsigned)((cols + bx - 1) / bx), gy < MAX_GRID_Y ? gy : MAX_GRID_Y);
+}
+
+// LaunchKernel returns the status of this launch, where GetLastError() after <<<>>> would
+// return the oldest error left on the thread by any earlier call
+
+template<int N>
+CV_GPU(Error_t) flipN(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                      int rows, int cols, int mode, CV_GPU(Stream_t) s)
+{
+    // OpenCV's codes: 0 around the x axis (rows), > 0 around the y axis (columns), < 0 both
+    bool flipRows = mode <= 0, flipCols = mode != 0;
+    void* args[] = { &src, &sstep, &dst, &dstep, &rows, &cols, &flipRows, &flipCols };
+    const bool wide = aligned(src, sstep, dst, dstep, alignof(Elem<N>));
+    const void* k = wide ? (const void*)flipKernel<Elem<N> > : (const void*)flipKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(rows, cols, BLOCK_X, BLOCK_Y), dim3(BLOCK_X, BLOCK_Y),
+                                args, 0, s);
+}
+
+template<int N>
+CV_GPU(Error_t) flipInplaceN(unsigned char* data, size_t step, int rows, int cols, int mode, CV_GPU(Stream_t) s)
+{
+    bool flipRows = mode <= 0, flipCols = mode != 0;
+    void* args[] = { &data, &step, &rows, &cols, &flipRows, &flipCols };
+    const bool wide = aligned(data, step, data, step, alignof(Elem<N>));
+    const void* k = wide ? (const void*)flipInplaceKernel<Elem<N> > : (const void*)flipInplaceKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(rows, cols, BLOCK_X, BLOCK_Y), dim3(BLOCK_X, BLOCK_Y),
+                                args, 0, s);
+}
+
+template<int N>
+CV_GPU(Error_t) transposeN(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                           int rows, int cols, CV_GPU(Stream_t) s)
+{
+    void* args[] = { &src, &sstep, &dst, &dstep, &rows, &cols };
+    const bool wide = aligned(src, sstep, dst, dstep, alignof(Elem<N>));
+    const void* k = wide ? (const void*)transposeKernel<Elem<N> >
+                         : (const void*)transposeKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(rows, cols, TILE, TILE), dim3(TILE, BLOCK_Y), args, 0, s);
+}
+
+template<int N>
+CV_GPU(Error_t) transposeInplaceN(unsigned char* data, size_t step, int n, CV_GPU(Stream_t) s)
+{
+    void* args[] = { &data, &step, &n };
+    const bool wide = aligned(data, step, data, step, alignof(Elem<N>));
+    const void* k = wide ? (const void*)transposeInplaceKernel<Elem<N> >
+                         : (const void*)transposeInplaceKernel<Bytes<N> >;
+    return CV_GPU(LaunchKernel)(k, grid(n, n, BLOCK_X, BLOCK_Y), dim3(BLOCK_X, BLOCK_Y), args, 0, s);
+}
+
+} // namespace
+
+bool supportedElementSize(int esz)
+{
+    switch (esz)
+    {
+    case 1: case 2: case 3: case 4: case 6: case 8: case 12: case 16: case 24: case 32:
+        return true;
+    default:
+        return false;
+    }
+}
+
+#define CV_ACCEL_GPU_BY_SIZE(fn, ...) \
+    switch (esz) \
+    { \
+    case 1: return fn<1>(__VA_ARGS__); \
+    case 2: return fn<2>(__VA_ARGS__); \
+    case 3: return fn<3>(__VA_ARGS__); \
+    case 4: return fn<4>(__VA_ARGS__); \
+    case 6: return fn<6>(__VA_ARGS__); \
+    case 8: return fn<8>(__VA_ARGS__); \
+    case 12: return fn<12>(__VA_ARGS__); \
+    case 16: return fn<16>(__VA_ARGS__); \
+    case 24: return fn<24>(__VA_ARGS__); \
+    case 32: return fn<32>(__VA_ARGS__); \
+    default: return CV_GPU(ErrorInvalidValue); \
+    }
+
+CV_GPU(Error_t) flip(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                     int rows, int cols, int esz, int mode, CV_GPU(Stream_t) s)
+{
+    if (rows <= 0 || cols <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(flipN, src, sstep, dst, dstep, rows, cols, mode, s)
+}
+
+CV_GPU(Error_t) flipInplace(unsigned char* data, size_t step, int rows, int cols, int esz, int mode,
+                            CV_GPU(Stream_t) s)
+{
+    if (rows <= 0 || cols <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(flipInplaceN, data, step, rows, cols, mode, s)
+}
+
+CV_GPU(Error_t) transpose(const unsigned char* src, size_t sstep, unsigned char* dst, size_t dstep,
+                          int rows, int cols, int esz, CV_GPU(Stream_t) s)
+{
+    if (rows <= 0 || cols <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(transposeN, src, sstep, dst, dstep, rows, cols, s)
+}
+
+CV_GPU(Error_t) transposeInplace(unsigned char* data, size_t step, int n, int esz, CV_GPU(Stream_t) s)
+{
+    if (n <= 0)
+        return CV_GPU(Success);
+    CV_ACCEL_GPU_BY_SIZE(transposeInplaceN, data, step, n, s)
+}
+
+#undef CV_ACCEL_GPU_BY_SIZE
+
+// imgproc: the kernels are built from the device functions below, which future ones reuse
+
+namespace {
+
+// cv::BorderTypes; this file does not include core's C++ headers
+enum { BORDER_CONSTANT = 0, BORDER_REPLICATE = 1, BORDER_REFLECT = 2, BORDER_WRAP = 3, BORDER_REFLECT_101 = 4 };
+
+//! cv::borderInterpolate in O(1): the index position @p p of a line of @p len reads, -1 for BORDER_CONSTANT
+__device__ inline int borderIndex(int p, int len, int border)
+{
+    if ((unsigned)p < (unsigned)len)
+        return p;
+    if (border == BORDER_REPLICATE)
+        return p < 0 ? 0 : len - 1;
+    if (border == BORDER_WRAP)
+    {
+        const long long r = (long long)p % len;
+        return (int)(r < 0 ? r + len : r);
+    }
+    if (border == BORDER_REFLECT || border == BORDER_REFLECT_101)
+    {
+        if (len == 1)
+            return 0;
+        const int delta = border == BORDER_REFLECT_101;
+        const long long period = 2 * ((long long)len - delta);
+        long long r = (long long)p % period;
+        if (r < 0)
+            r += period;
+        return (int)(r < len ? r : period - 1 + delta - r);
+    }
+    return -1;
+}
+
+//! saturate_cast<T>(v): rounded half to even as cvRound, clamped to the range of T
+template<typename T> __device__ inline T saturate(float v);
+template<> __device__ inline float saturate<float>(float v) { return v; }
+template<> __device__ inline unsigned char saturate<unsigned char>(float v)
+{ return (unsigned char)fminf(fmaxf(rintf(v), 0.f), 255.f); }
+template<> __device__ inline unsigned short saturate<unsigned short>(float v)
+{ return (unsigned short)fminf(fmaxf(rintf(v), 0.f), 65535.f); }
+template<> __device__ inline short saturate<short>(float v)
+{ return (short)fminf(fmaxf(rintf(v), -32768.f), 32767.f); }
 
 // GaussianBlur's arithmetic per depth: taps K, row results W (the buffer), column sums A. For 8U
 // and 16U it is the CPU's fixed point (smooth.simd.hpp): exact integer sums rounded once at the end

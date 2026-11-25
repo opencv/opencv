@@ -4,14 +4,15 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the HIP backend (AMD GPUs); all but the choice of memory is shared with CUDA.
-//
-// Discrete GPUs use device memory from a stream-ordered pool; APUs use pinned host memory mapped
-// into the GPU, which the CPU uses without copies.
+// not precomp.hpp: in a build with CUDA too it brings in CUDA's runtime headers, whose vector
+// types clash with HIP's
+#include "cvconfig.h"
+#include "accel_impl.hpp"
+
+#ifdef HAVE_HIP
 
 #define CV_ACCEL_GPU_HIP
-#include "accel_gpu.hpp"
-#include "backend.impl.hpp"
+#include "gpu/gpu_backend.impl.hpp"
 
 namespace cv { namespace accel { namespace hip_impl {
 
@@ -40,3 +41,5 @@ Ptr<Backend> createHipBackend()
 }
 
 }}} // namespace cv::accel::hip_impl
+
+#endif // HAVE_HIP

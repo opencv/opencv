@@ -1375,8 +1375,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
 
     DictValue kernel_shape = layerParams.get("kernel_size");
     CV_Assert(kernel_shape.size() == 2);
-    layerParams.set("pool_k_w", kernel_shape.get<int>(0));
-    layerParams.set("pool_k_h", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_w", kernel_shape.get<int>(1));
+    layerParams.set("pool_k_h", kernel_shape.get<int>(0));
 
     int pool_pad_w = 0, pool_pad_h = 0;
     if (layerParams.has("pad"))
@@ -1395,8 +1395,8 @@ void ONNXImporter2::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::
     {
         DictValue strides = layerParams.get("stride");
         CV_CheckEQ(strides.size(), 2, "");
-        pool_stride_w = strides.get<int>(0);
-        pool_stride_h = strides.get<int>(1);
+        pool_stride_w = strides.get<int>(1);
+        pool_stride_h = strides.get<int>(0);
     }
     layerParams.set("pool_stride_w", pool_stride_w);
     layerParams.set("pool_stride_h", pool_stride_h);
@@ -3120,24 +3120,53 @@ void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx:
 }
 
 void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
-    int i, n_inputs = node_proto.input_size();
+    int n_inputs = node_proto.input_size();
+    CV_CheckGE(n_inputs, 2, "ONNXImporter2/parseAttention: at least 2 inputs (input, weights) are required");
+    for (int k = 4; k < n_inputs; k++) {
+        CV_CheckTrue(node_proto.input(k).empty(),
+                     "ONNXImporter2/parseAttention: inputs beyond mask_index are not supported");
+    }
     CV_CheckTrue(params.has("num_heads"), "ONNXImporter2/parseAttention: num_heads is required but missing");
     CV_CheckTrue(params.has("qkv_hidden_sizes"), "ONNXImporter2/parseAttention: qkv_hidden_sizes is required but missing");
 
     auto param_qkv_hidden_sizes = params.get("qkv_hidden_sizes");
     CV_CheckEQ(param_qkv_hidden_sizes.size(), 3, "ONNXImporter2/parseAttention: qkv_hidden_sizes is must and only have three elements");
 
-    for (i = 1; i < n_inputs; i++) {
-        if (!net.isConstArg(node_inputs[i]))
-            break;
+    const bool has_bias = n_inputs >= 3 && !node_proto.input(2).empty();
+    const bool has_mask = n_inputs >= 4 && !node_proto.input(3).empty();
+    const bool const_weight = net.isConstArg(node_inputs[1]);
+    const bool const_bias = !has_bias || net.isConstArg(node_inputs[2]);
+
+    // mask_index is an int32 0/1 key padding mask, not an additive bias: lower it the same way
+    // parseMultiHeadAttention does. addKeyPaddingMaskBias() calls addLayer(), which overwrites
+    // node_inputs/node_outputs, so save and restore them around it.
+    if (has_mask) {
+        const std::vector<Arg> orig_node_inputs = node_inputs, orig_node_outputs = node_outputs;
+        const float mask_filter_value = params.get<float>("mask_filter_value", -10000.f);
+        Arg mask = addKeyPaddingMaskBias(params.name, node_proto, orig_node_inputs[3],
+                                         orig_node_inputs[0], mask_filter_value);
+        node_inputs = orig_node_inputs;
+        node_outputs = orig_node_outputs;
+        node_inputs[3] = mask;
     }
 
-    if (i == n_inputs) {
-        for (i = 1; i < n_inputs; i++) {
-            Mat blob = net.argTensor(node_inputs[i]);
-            params.blobs.push_back(blob);
+    if (const_weight && const_bias) {
+        Mat W = net.argTensor(node_inputs[1]);
+        CV_CheckEQ(W.dims, 2, "ONNXImporter2/parseAttention: weights must be 2D");
+        Mat B = has_bias ? net.argTensor(node_inputs[2])
+                         : Mat(std::vector<int>{W.size[1]}, W.type(), Scalar::all(0));
+        params.blobs.push_back(W);
+        params.blobs.push_back(B);
+        if (has_mask) {
+            node_inputs = {node_inputs[0], node_inputs[3]};
+            n_inputs = 2;
+        } else {
+            node_inputs = {node_inputs[0]};
+            n_inputs = 1;
         }
-        n_inputs = 1;
+    } else {
+        CV_CheckTrue(has_bias, "ONNXImporter2/parseAttention: dynamic weights require an explicit bias input");
+        n_inputs = has_mask ? 4 : 3;
     }
 
     addLayer(params, node_proto, n_inputs);

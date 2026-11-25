@@ -18,53 +18,50 @@ struct CvNThreadScope{
     }
 };
 
-// Order-independent contour-set comparison
-static bool trucoContoursMatch(const vector<vector<Point>>& cont1, const vector<vector<Point>>& cont2)
+// order-sensitive FNV-1a 64-bit hash of a contour (size, then the bytes of every x and y)
+static uint64_t contourHash(const std::vector<cv::Point>& contour)
 {
-        //order senstive hash
-    auto Hash=[](const std::vector<cv::Point>& contour) {
-        // FNV-1a 64-bit hash constants
-        constexpr uint64_t FNV_OFFSET = 1469598103934665603ULL;
-        constexpr uint64_t FNV_PRIME  = 1099511628211ULL;
+    constexpr uint64_t FNV_OFFSET = 1469598103934665603ULL;
+    constexpr uint64_t FNV_PRIME  = 1099511628211ULL;
 
-        uint64_t hash = FNV_OFFSET;
-
-        // Mix in the size so that contours with different lengths
-        // but same prefix produce different hashes
-        uint64_t size = static_cast<uint64_t>(contour.size());
-        for (int i = 0; i < 8; ++i) {
-            hash ^= (size >> (i * 8)) & 0xFF;
+    uint64_t hash = FNV_OFFSET;
+    uint64_t size = static_cast<uint64_t>(contour.size());
+    for (int i = 0; i < 8; ++i) {
+        hash ^= (size >> (i * 8)) & 0xFF;
+        hash *= FNV_PRIME;
+    }
+    for (const cv::Point& p : contour) {
+        uint32_t x = static_cast<uint32_t>(p.x);
+        uint32_t y = static_cast<uint32_t>(p.y);
+        for (int i = 0; i < 4; ++i) {
+            hash ^= (x >> (i * 8)) & 0xFF;
             hash *= FNV_PRIME;
         }
-
-        // Mix in each point's x and y coordinates byte by byte
-        for (const cv::Point& p : contour) {
-            uint32_t x = static_cast<uint32_t>(p.x);
-            uint32_t y = static_cast<uint32_t>(p.y);
-
-            for (int i = 0; i < 4; ++i) {
-                hash ^= (x >> (i * 8)) & 0xFF;
-                hash *= FNV_PRIME;
-            }
-            for (int i = 0; i < 4; ++i) {
-                hash ^= (y >> (i * 8)) & 0xFF;
-                hash *= FNV_PRIME;
-            }
+        for (int i = 0; i < 4; ++i) {
+            hash ^= (y >> (i * 8)) & 0xFF;
+            hash *= FNV_PRIME;
         }
-        return hash;
-    };
-    std::set<uint64> hashes1,hashes2;
-    for(auto &contour:cont1){
-        hashes1.insert( Hash(contour));
     }
-    for(auto &contour:cont2){
-        hashes2.insert( Hash(contour));
-    }
+    return hash;
+}
 
-    for(auto &h1:hashes1){//element in cont and not in cont2
-        if( hashes2.find(h1) ==hashes2.end()) return false;
-    }
-    return true;
+// sorted, de-duplicated contour hashes
+static std::vector<uint64_t> contourHashes(const vector<vector<Point>>& contours)
+{
+    std::vector<uint64_t> h;
+    h.reserve(contours.size());
+    for (const auto& c : contours)
+        h.push_back(contourHash(c));
+    std::sort(h.begin(), h.end());
+    h.erase(std::unique(h.begin(), h.end()), h.end());
+    return h;
+}
+
+// true if every reference contour is present in cont2 (order-independent)
+static bool trucoContoursMatch(const std::vector<uint64_t>& refHashes, const vector<vector<Point>>& cont2)
+{
+    const std::vector<uint64_t> h2 = contourHashes(cont2);
+    return std::includes(h2.begin(), h2.end(), refHashes.begin(), refHashes.end());
 }
 
 typedef testing::TestWithParam<ContourApproximationModes> Imgproc_FindTRUContours;
@@ -87,6 +84,7 @@ TEST_P(Imgproc_FindTRUContours, nthreads_consistency)
         CvNThreadScope nt(1);
         findContours(img, ref_contours, RETR_LIST, method);
     }
+    const std::vector<uint64_t> refHashes = contourHashes(ref_contours);
 
     std::vector<int> thread_counts;
     for(int i=2;i<40;i++) thread_counts.push_back(i);
@@ -96,7 +94,7 @@ TEST_P(Imgproc_FindTRUContours, nthreads_consistency)
         CvNThreadScope nt(t);
         vector<vector<Point>> contours;
         findContours(img, contours, RETR_LIST, method); //will use TRUCO because NOT using hierarchy AND RETR_LIST
-        auto match=trucoContoursMatch(ref_contours, contours);
+        auto match=trucoContoursMatch(refHashes, contours);
         EXPECT_TRUE(match);
     }
 }
@@ -129,7 +127,8 @@ TEST_P(Imgproc_FindTRUContours, circles_vs_standard)
         EXPECT_TRUE(!hierarchy.empty());
         vector<vector<Point>> truco_contours;
         findContours(binary, truco_contours, RETR_LIST, method);
-        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours)); //will use TRUCO because NOT using hierarchy AND RETR_LIST
+        const std::vector<uint64_t> refHashes = contourHashes(ref_contours);
+        EXPECT_TRUE(trucoContoursMatch(refHashes, truco_contours)); //will use TRUCO because NOT using hierarchy AND RETR_LIST
     }
 }
 
@@ -159,11 +158,12 @@ TEST_P(Imgproc_FindTRUContours, noise_threshold)
             vector<Vec4i> hierarchy;
             findContours(binary, ref_contours, hierarchy, RETR_LIST, method);//will call suzuki&abe because using hierarchy
             EXPECT_TRUE(!hierarchy.empty());
+            const std::vector<uint64_t> refHashes = contourHashes(ref_contours);
             for(auto nt: thread_counts){
                 CvNThreadScope ts(nt);
                 vector<vector<Point>> truco_contours;
                 findContours(binary, truco_contours,  RETR_LIST, method);//will call TRUCO abe because NOT using hierarchy
-                EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));
+                EXPECT_TRUE(trucoContoursMatch(refHashes, truco_contours));
             }
         }
     }
@@ -196,7 +196,7 @@ TEST_P(Imgproc_FindTRUContours, nested_rectangles)
     vector<vector<Point>> truco_contours;
     findContours(img, truco_contours, RETR_LIST, method);//will use TRUCO because NOT using hierarchy AND RETR_LIST
 
-    EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));
+    EXPECT_TRUE(trucoContoursMatch(contourHashes(ref_contours), truco_contours));
 }
 
 TEST_P(Imgproc_FindTRUContours, mixed_figures)
@@ -244,7 +244,7 @@ TEST_P(Imgproc_FindTRUContours, mixed_figures)
         vector<vector<Point>> truco_contours;
         findContours(img, truco_contours, RETR_LIST, method);//will use TRUCO because NOT using hierarchy AND RETR_LIST
 
-        EXPECT_TRUE(trucoContoursMatch(ref_contours, truco_contours));
+        EXPECT_TRUE(trucoContoursMatch(contourHashes(ref_contours), truco_contours));
     }
 }
 

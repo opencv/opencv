@@ -4,13 +4,17 @@
 // Copyright (C) 2026, BigVision LLC, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-// Non-CPU HAL: the CUDA backend; all but the choice of memory is shared with HIP.
+// Non-CPU HAL: the CUDA backend; all but the choice of memory lives in gpu/.
 //
 // Discrete GPUs use device memory from a stream-ordered pool; integrated GPUs from Xavier on use
 // pinned memory mapped into the GPU, which the CPU uses without copies.
 
-#include "accel_gpu.hpp"
-#include "backend.impl.hpp"
+#include "../precomp.hpp"
+#include "accel_impl.hpp"
+
+#ifdef HAVE_CUDA
+
+#include "gpu/gpu_backend.impl.hpp"
 
 namespace cv { namespace accel { namespace cuda_impl {
 
@@ -41,3 +45,5 @@ Ptr<Backend> createCudaBackend()
 }
 
 }}} // namespace cv::accel::cuda_impl
+
+#endif // HAVE_CUDA

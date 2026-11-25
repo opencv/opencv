@@ -1,0 +1,5 @@
+# a static opencv_core links hip::host, which the consumer has to resolve
+if(NOT TARGET hip::host)
+  include(CMakeFindDependencyMacro)
+  find_dependency(hip HINTS "@hip_DIR@" "$ENV{ROCM_PATH}" PATHS /opt/rocm)
+endif()

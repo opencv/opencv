@@ -955,6 +955,44 @@ TEST(Layer_Reshape_Test, Accuracy_1D)
     normAssert(output_ref, outputs[0]);
 }
 
+TEST(Layer_Trilu, TallMatrix)
+{
+    Mat input = Mat_<float>({4, 2}, {1, 2,
+                                     3, 4,
+                                     5, 6,
+                                     7, 8});
+
+    auto runTrilu = [&](bool upper, int64_t k) {
+        LayerParams lp;
+        lp.type = "Trilu";
+        lp.name = "trilu";
+        lp.set("upper", upper);
+        Ptr<Layer> layer = TriluLayer::create(lp);
+
+        std::vector<Mat> inputs{input, Mat(MatShape{1}, CV_64S, Scalar(k))}, outputs;
+        runLayer(layer, inputs, outputs);
+        return outputs[0];
+    };
+
+    Mat triu = Mat_<float>({4, 2}, {1, 2,
+                                    0, 4,
+                                    0, 0,
+                                    0, 0});
+    normAssert(triu, runTrilu(true, 0));
+
+    Mat tril = Mat_<float>({4, 2}, {0, 0,
+                                    0, 0,
+                                    5, 0,
+                                    7, 8});
+    normAssert(tril, runTrilu(false, -2));
+
+    Mat tril0 = Mat_<float>({4, 2}, {1, 0,
+                                     3, 4,
+                                     5, 6,
+                                     7, 8});
+    normAssert(tril0, runTrilu(false, 0));
+}
+
 typedef testing::TestWithParam<tuple<std::vector<int>>> Layer_Split_Test;
 TEST_P(Layer_Split_Test, Accuracy_01D)
 {
@@ -1070,6 +1108,28 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
     //std::vector<int>({}),
     std::vector<int>({1})
 ));
+
+TEST(Layer_CumSum, EmptyAxis)
+{
+    // shape [2, 0, 3]: the scan axis (axis 1) has length 0
+    Mat input(MatShape{2, 0, 3}, CV_32F);
+
+    for (int reverse = 0; reverse <= 1; reverse++)
+    {
+        LayerParams lp;
+        lp.type = "CumSum";
+        lp.name = "cumsum";
+        lp.set("axis", 1);
+        lp.set("reverse", reverse);
+        Ptr<Layer> layer = CumSumLayer::create(lp);
+
+        std::vector<Mat> inputs{input}, outputs(1), internals;
+        outputs[0].create(MatShape{2, 0, 3}, CV_32F);
+        layer->forward(inputs, outputs, internals);
+
+        EXPECT_EQ(shape(outputs[0]), MatShape({2, 0, 3}));
+    }
+}
 
 typedef testing::TestWithParam<tuple<std::vector<int>, int>> Layer_Softmax_Test;
 TEST_P(Layer_Softmax_Test, Accuracy_01D) {
@@ -1719,6 +1779,30 @@ TEST(Layer_Einsum, DynamicLeadingDimensionReusesLayer)
     }
 }
 
+// subscripts may use uppercase letters as well as lowercase ones
+TEST(Layer_Einsum, UppercaseSubscripts)
+{
+    LayerParams lp;
+    lp.type = "Einsum";
+    lp.name = "uppercase_subscripts";
+    lp.set("equation", "Ij,jK->IK");
+    Ptr<Layer> layer = EinsumLayer::create(lp);
+
+    float aData[] = {1, 2, 3,
+                     4, 5, 6};
+    float bData[] = {1, 0,
+                     0, 1,
+                     1, 1};
+    float expectedData[] = {4, 5,
+                            10, 11};
+    Mat a(2, 3, CV_32F, aData), b(3, 2, CV_32F, bData), expected(2, 2, CV_32F, expectedData);
+    std::vector<Mat> inputs{a, b}, outputs;
+    runLayer(layer, inputs, outputs);
+
+    ASSERT_EQ(outputs.size(), (size_t)1);
+    normAssert(outputs[0], expected);
+}
+
 TEST(Layer_TopK2, ZeroK)
 {
     Mat input(MatShape{2, 5}, CV_32F);
@@ -1777,6 +1861,49 @@ TEST(Layer_Range, ZeroDelta)
         std::vector<Mat> inputs{start, limit, delta}, outputs(1), internals;
         EXPECT_THROW(layer->forward(inputs, outputs, internals), cv::Exception);
     }
+}
+
+TEST(Layer_CumProd, EmptyAxis)
+{
+    // shape [2, 0]: two rows with no elements, so the scan axis (axis 1) has length 0
+    Mat input(MatShape{2, 0}, CV_32F);
+
+    for (int reverse = 0; reverse <= 1; reverse++)
+    {
+        LayerParams lp;
+        lp.type = "CumProd";
+        lp.name = "cumprod";
+        lp.set("axis", 1);
+        lp.set("reverse", reverse);
+        Ptr<Layer> layer = CumProdLayer::create(lp);
+
+        std::vector<Mat> inputs{input}, outputs(1), internals;
+        outputs[0].create(MatShape{2, 0}, CV_32F);
+        layer->forward(inputs, outputs, internals);
+
+        EXPECT_EQ(shape(outputs[0]), MatShape({2, 0}));
+    }
+}
+
+TEST(Layer_Det, EmptyMatrices)
+{
+    // shape [3, 0, 0]: three 0x0 matrices
+    Mat input(MatShape{3, 0, 0}, CV_32F);
+
+    LayerParams lp;
+    lp.type = "Det";
+    lp.name = "det";
+    Ptr<Layer> layer = DetLayer::create(lp);
+
+    std::vector<Mat> inputs{input}, outputs(1), internals;
+    outputs[0].create(MatShape{3}, CV_32F);
+    outputs[0].setTo(Scalar(7));  // any value but 1, so the test sees whether forward() wrote it
+    layer->forward(inputs, outputs, internals);
+
+    // the determinant of a 0x0 matrix is 1
+    Mat expected(MatShape{3}, CV_32F, Scalar(1));
+    EXPECT_EQ(shape(outputs[0]), MatShape({3}));
+    normAssert(expected, outputs[0]);
 }
 
 }}

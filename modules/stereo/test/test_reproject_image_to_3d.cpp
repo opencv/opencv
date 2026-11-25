@@ -124,21 +124,16 @@ protected:
 
         reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
 
+        const Matx44d Qx = Q;
         for(int y = 0; y < disp.rows; ++y)
             for(int x = 0; x < disp.cols; ++x)
             {
                 InT d = disp(y, x);
 
-                double from[4] = {
-                    static_cast<double>(x),
-                    static_cast<double>(y),
-                    static_cast<double>(d),
-                    1.0,
-                };
-                Mat_<double> res = Q * Mat_<double>(4, 1, from);
-                res /= res(3, 0);
+                Vec4d res = Qx * Vec4d(static_cast<double>(x), static_cast<double>(y), static_cast<double>(d), 1.0);
+                res *= 1.0 / res[3];
 
-                out3d_t pixel_exp = *res.ptr<Vec3d>();
+                out3d_t pixel_exp = Vec3d(res[0], res[1], res[2]);
                 out3d_t pixel_out = _3dImg(y, x);
 
                 const int largeZValue = 10000; /* see documentation */
@@ -158,7 +153,7 @@ protected:
                     if ( err > t )
                     {
                         ts->printf(cvtest::TS::LOG, "case %d. too big error at (%d, %d): %g vs expected %g: res = (%g, %g, %g, w=%g) vs pixel_out = (%g, %g, %g)\n",
-                            caseId, x, y, err, t, res(0,0), res(1,0), res(2,0), res(3,0),
+                            caseId, x, y, err, t, res[0], res[1], res[2], res[3],
                             (double)pixel_out[0], (double)pixel_out[1], (double)pixel_out[2]);
                         ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
                         return;

@@ -65,7 +65,6 @@
 "test_regex_full_match_basic",
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",
-"test_reshape_allowzero_reordered",  // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 // Scan edge cases beyond the opset-9+ dataflow the new engine supports:
 "test_scan_sum",  // opset-8 Scan (leading batch dim + sequence_lens, different semantics)
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
@@ -82,7 +81,6 @@
 "test_sequence_map_identity_1_sequence_expanded",
 "test_sequence_map_identity_2_sequences",
 "test_sequence_map_identity_2_sequences_expanded",
-"test_shape_start_greater_than_end",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",

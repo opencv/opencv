@@ -112,6 +112,15 @@ Scalar mean(InputArray _src, InputArray _mask)
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
+    if (src.depth() == CV_Bool)
+    {
+        // there is no sum kernel for CV_Bool; the mean is the fraction of non-zero elements
+        if (!mask.empty() || src.channels() != 1)
+            CV_Error(Error::StsNotImplemented, "mean: CV_Bool input is supported only with 1 channel and without a mask");
+        double n = (double)src.total();
+        return Scalar(n > 0 ? countNonZero(src) / n : 0.);
+    }
+
     std::vector<StatChunk> chunks;
     if (src.channels() > 4 || !splitForParallelStat(src, mask, chunks))
         return mean_(src, mask);
@@ -442,6 +451,18 @@ static void writeStatResult(OutputArray _dst, int cn, const Scalar& v)
 void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask)
 {
     CV_INSTRUMENT_REGION();
+
+    if (_src.depth() == CV_Bool)
+    {
+        // there is no sum kernel for CV_Bool; for 0/1 data with p = mean, stddev = sqrt(p*(1-p))
+        if (!_mask.empty() || _src.channels() != 1)
+            CV_Error(Error::StsNotImplemented, "meanStdDev: CV_Bool input is supported only with 1 channel and without a mask");
+        double n = (double)_src.total();
+        double p = n > 0 ? countNonZero(_src) / n : 0.;
+        writeStatResult(_mean, 1, Scalar(p));
+        writeStatResult(_sdv, 1, Scalar(std::sqrt(p * (1 - p))));
+        return;
+    }
 
     std::vector<StatChunk> chunks;
     if (!_src.isUMat() && !_src.empty())

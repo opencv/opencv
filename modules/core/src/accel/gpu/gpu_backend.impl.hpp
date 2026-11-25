@@ -1,0 +1,533 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2026, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
+
+#ifndef OPENCV_CORE_SRC_ACCEL_GPU_BACKEND_IMPL_HPP
+#define OPENCV_CORE_SRC_ACCEL_GPU_BACKEND_IMPL_HPP
+
+// Non-CPU HAL: what the CUDA and HIP backends share. Their handles are addresses, so a handle plus
+// an offset is an address too.
+
+#include "opencv2/core/private/accel_backend.hpp"
+#include "opencv2/core/utils/logger.hpp"
+#include "gpu_kernels.hpp"
+
+#include <memory>
+#include <mutex>
+#include <string.h>
+#include <vector>
+
+#if !defined(CV_ACCEL_GPU_HIP) && CUDART_VERSION >= 12000
+#include <cuda.h>   // the types of a driver function reached through the runtime; libcuda is not linked
+#endif
+
+namespace cv { namespace accel { namespace CV_GPU_NS {
+
+namespace {
+
+void check(CV_GPU(Error_t) e, const char* what)
+{
+    if (e == CV_GPU(Success))
+        return;
+    (void)CV_GPU(GetLastError)();   // a non-sticky error must not reach the thread's next call
+    CV_Error_(Error::GpuApiCallError, ("accel(" CV_GPU_RUNTIME "): %s failed: %s", what, CV_GPU(GetErrorString)(e)));
+}
+
+#if !defined(CV_ACCEL_GPU_HIP) && CUDART_VERSION >= 12000
+typedef CUresult (CUDAAPI *FN_cuDevicePrimaryCtxGetState)(CUdevice, unsigned int*, int*);
+
+FN_cuDevicePrimaryCtxGetState loadPrimaryCtxGetState()
+{
+    void* fn = 0;
+    cudaDriverEntryPointQueryResult found = cudaDriverEntryPointSymbolNotFound;
+#if CUDART_VERSION >= 12050
+    const cudaError_t r = cudaGetDriverEntryPointByVersion("cuDevicePrimaryCtxGetState", &fn, 12000,
+                                                           cudaEnableDefault, &found);
+#else
+    const cudaError_t r = cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn, cudaEnableDefault, &found);
+#endif
+    if (r != cudaSuccess || found != cudaDriverEntryPointSuccess)
+    {
+        (void)cudaGetLastError();
+        return 0;
+    }
+    return (FN_cuDevicePrimaryCtxGetState)fn;
+}
+#endif
+
+// whether making @p device current costs nothing: since CUDA 12 SetDevice creates a primary
+// context, which takes memory on a GPU the process may never use
+bool hasContext(int device)
+{
+#if !defined(CV_ACCEL_GPU_HIP) && CUDART_VERSION >= 12000
+    static const FN_cuDevicePrimaryCtxGetState getState = loadPrimaryCtxGetState();
+    if (!getState)
+        return true;    // cannot tell: go back, as before CUDA 12
+    unsigned int flags = 0;
+    int active = 0;
+    return getState((CUdevice)device, &flags, &active) == CUDA_SUCCESS && active != 0;
+#else
+    CV_UNUSED(device);
+    return true;
+#endif
+}
+
+/* Makes @p device current for the calling thread while it lives. The previous device is made
+   current again only when that is free (hasContext); otherwise the thread stays on @p device. */
+class DeviceGuard
+{
+public:
+    explicit DeviceGuard(int device) : prev_(-1)
+    {
+        int current = -1;
+        check(CV_GPU(GetDevice)(&current), "GetDevice");
+        if (current != device)
+        {
+            check(CV_GPU(SetDevice)(device), "SetDevice");
+            prev_ = hasContext(current) ? current : -1;
+        }
+    }
+    ~DeviceGuard()
+    {
+        if (prev_ >= 0)
+            (void)CV_GPU(SetDevice)(prev_);
+    }
+private:
+    int prev_;
+};
+
+class GpuEvent CV_FINAL : public Event
+{
+public:
+    explicit GpuEvent(CV_GPU(Event_t) e) : e_(e) {}
+    ~GpuEvent() { (void)CV_GPU(EventDestroy)(e_); }
+
+    bool query() CV_OVERRIDE
+    {
+        const CV_GPU(Error_t) r = CV_GPU(EventQuery)(e_);
+        if (r == CV_GPU(ErrorNotReady))
+        {
+            (void)CV_GPU(GetLastError)();
+            return false;
+        }
+        check(r, "EventQuery");
+        return true;
+    }
+
+    void wait() CV_OVERRIDE
+    {
+        check(CV_GPU(EventSynchronize)(e_), "EventSynchronize");
+    }
+
+    CV_GPU(Event_t) e_;
+};
+
+class GpuStream CV_FINAL : public Stream
+{
+public:
+    GpuStream(int device, unsigned int eventFlags) : device_(device), s_(0), eventFlags_(eventFlags)
+    {
+        DeviceGuard g(device);
+        check(CV_GPU(StreamCreateWithFlags)(&s_, CV_GPU(StreamNonBlocking)), "StreamCreateWithFlags");
+    }
+    ~GpuStream() { (void)CV_GPU(StreamDestroy)(s_); }   // queued work still completes
+
+    Ptr<Event> record() CV_OVERRIDE
+    {
+        DeviceGuard g(device_);
+        CV_GPU(Event_t) e = 0;
+        check(CV_GPU(EventCreateWithFlags)(&e, eventFlags_), "EventCreateWithFlags");
+        const CV_GPU(Error_t) r = CV_GPU(EventRecord)(e, s_);
+        if (r != CV_GPU(Success))
+        {
+            (void)CV_GPU(EventDestroy)(e);
+            check(r, "EventRecord");
+        }
+        return makePtr<GpuEvent>(e);
+    }
+
+    void synchronize() CV_OVERRIDE
+    {
+        check(CV_GPU(StreamSynchronize)(s_), "StreamSynchronize");
+    }
+
+    const int device_;
+    CV_GPU(Stream_t) s_;
+    const unsigned int eventFlags_;
+};
+
+//! the launch failed because the build has no code for this GPU; ROCm reports that in several ways
+bool noKernelImage(CV_GPU(Error_t) r)
+{
+#ifdef CV_ACCEL_GPU_HIP
+    return r == hipErrorNoBinaryForGpu || r == hipErrorInvalidImage ||
+           r == hipErrorInvalidKernelFile || r == hipErrorInvalidDeviceFunction;
+#else
+    return r == CV_GPU_ERROR_NO_KERNEL_IMAGE;
+#endif
+}
+
+GpuStream& gpuStreamOf(Stream& s)
+{
+    GpuStream* gs = dynamic_cast<GpuStream*>(&s);
+    CV_Assert(gs && "accel(" CV_GPU_RUNTIME "): the stream belongs to another backend");
+    return *gs;
+}
+
+/* Whether the kernels can run on @p src and @p dst: 2-D, an element size they move, no Mat view
+   alive (UMat::handle() needs that), and either separate buffers or the same view (in place).
+   Other views of one buffer may overlap, which the kernels do not handle. */
+bool runnable(const UMat& src, const UMat& dst)
+{
+    return src.dims == 2 && kernels::supportedElementSize((int)src.elemSize()) &&
+           src.u->refcount == 0 && dst.u->refcount == 0 &&
+           (src.u != dst.u || (src.offset == dst.offset && src.step[0] == dst.step[0]));
+}
+
+class GpuCoreOps CV_FINAL : public CoreOps
+{
+public:
+    bool flip(const UMat& src, UMat& dst, int flipCode, Stream& stream) CV_OVERRIDE
+    {
+        if (!runnable(src, dst))
+            return false;
+        GpuStream& s = gpuStreamOf(stream);
+        DeviceGuard g(s.device_);
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        const int esz = (int)src.elemSize();
+        const CV_GPU(Error_t) r = src.u == dst.u
+              ? kernels::flipInplace(dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_)
+              : kernels::flip(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, flipCode, s.s_);
+        if (noKernelImage(r))
+        {
+            (void)CV_GPU(GetLastError)();
+            return false;   // no code for this GPU in the build: nothing was queued, the CPU runs it
+        }
+        check(r, "flip");
+        stream.retain({ src, dst });
+        return true;
+    }
+
+    bool transpose(const UMat& src, UMat& dst, Stream& stream) CV_OVERRIDE
+    {
+        if (!runnable(src, dst) || (src.u == dst.u && src.rows != src.cols))
+            return false;
+        GpuStream& s = gpuStreamOf(stream);
+        DeviceGuard g(s.device_);
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        const int esz = (int)src.elemSize();
+        const CV_GPU(Error_t) r = src.u == dst.u
+              ? kernels::transposeInplace(dp, dst.step[0], src.rows, esz, s.s_)
+              : kernels::transpose(sp, src.step[0], dp, dst.step[0], src.rows, src.cols, esz, s.s_);
+        if (noKernelImage(r))
+        {
+            (void)CV_GPU(GetLastError)();
+            return false;
+        }
+        check(r, "transpose");
+        stream.retain({ src, dst });
+        return true;
+    }
+};
+
+//! a 2-D image of up to 4 channels and no Mat view alive (UMat::handle() needs that)
+bool usableImage(const UMat& m)
+{
+    return m.dims == 2 && m.channels() <= 4 && m.u->refcount == 0;
+}
+
+//! true when the kernels ran; false when nothing was queued because the build has no code for this GPU
+bool launched(CV_GPU(Error_t) r, const char* what)
+{
+    if (noKernelImage(r))
+    {
+        (void)CV_GPU(GetLastError)();
+        return false;
+    }
+    check(r, what);
+    return true;
+}
+
+class GpuImgprocOps CV_FINAL : public ImgprocOps
+{
+public:
+    // two passes through a buffer, so the output may alias the input in any way; BORDER_WRAP is
+    // left to the CPU, whose floating-point filters reject it
+    bool gaussianBlur(const UMat& src, UMat& dst, const Mat& kx, const Mat& ky, int borderType,
+                      Stream& stream) CV_OVERRIDE
+    {
+        const int depth = src.depth();
+        const int tapType = depth == CV_8U ? CV_16U : depth == CV_16U ? CV_32U : CV_32F;
+        if (!usableImage(src) || !usableImage(dst) || borderType == BORDER_WRAP || borderType > BORDER_REFLECT_101 ||
+            (depth != CV_8U && depth != CV_16U && depth != CV_16S && depth != CV_32F) ||
+            !validTaps(kx, tapType) || !validTaps(ky, tapType))
+            return false;
+        GpuStream& s = gpuStreamOf(stream);
+        UMat buf;
+        buf.createOn(getDevice(src), src.size(), CV_MAKETYPE(tapType, src.channels()));
+        DeviceGuard g(s.device_);
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* bp = (unsigned char*)buf.handle(ACCESS_WRITE);
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        if (!launched(kernels::gaussianBlur(sp, src.step[0], bp, buf.step[0], dp, dst.step[0], src.rows, src.cols,
+                                            depth, src.channels(), kx.ptr(), (int)kx.total(), ky.ptr(), (int)ky.total(),
+                                            borderType, s.s_), "GaussianBlur"))
+            return false;
+        stream.retain({ src, buf, dst });
+        return true;
+    }
+
+    // the types the CPU warps in floating point (warp_kernels.simd.hpp), which the GPU follows
+    bool warpAffine(const UMat& src, UMat& dst, const Matx23d& M, int interpolation, int borderType,
+                    const Scalar& borderValue, Stream& stream) CV_OVERRIDE
+    {
+        const int depth = src.depth(), cn = src.channels();
+        if (!usableImage(src) || !usableImage(dst) || src.u == dst.u || cn == 2 ||
+            (depth != CV_8U && depth != CV_16U && depth != CV_32F) ||
+            (interpolation != kernels::INTER_NEAREST && interpolation != kernels::INTER_LINEAR) || borderType > BORDER_REFLECT_101)
+            return false;
+        float m[6], bval[4];
+        for (int i = 0; i < 6; i++)
+            m[i] = (float)M.val[i];
+        for (int c = 0; c < 4; c++)
+            bval[c] = depth == CV_8U ? saturate_cast<uchar>(borderValue[c])
+                    : depth == CV_16U ? saturate_cast<ushort>(borderValue[c]) : (float)borderValue[c];
+        GpuStream& s = gpuStreamOf(stream);
+        DeviceGuard g(s.device_);
+        const unsigned char* sp = (const unsigned char*)src.handle(ACCESS_READ) + src.offset;
+        unsigned char* dp = (unsigned char*)dst.handle(ACCESS_WRITE) + dst.offset;
+        if (!launched(kernels::warpAffine(sp, src.step[0], src.rows, src.cols, dp, dst.step[0], dst.rows, dst.cols,
+                                          depth, cn, m, interpolation, borderType, bval, s.s_), "warpAffine"))
+            return false;
+        stream.retain({ src, dst });
+        return true;
+    }
+
+private:
+    static bool validTaps(const Mat& k, int type)
+    {
+        const int n = (int)k.total();
+        return k.type() == type && k.isContinuous() && n % 2 == 1 && n <= kernels::GAUSSIAN_MAX_TAPS;
+    }
+};
+
+//! one device; a backend's constructor says whether the CPU addresses its memory (shared)
+struct GpuDevice
+{
+    cvGpuDeviceProp prop;
+    bool shared = false;                // memory is host memory mapped into the GPU
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+    bool poolsSupported = false;
+    std::once_flag poolOnce;
+    CV_GPU(MemPool_t) pool = 0;         // the backend's own pool for device memory, 0 without one
+    CV_GPU(Stream_t) allocStream = 0;   // where pool memory is allocated and freed
+#endif
+};
+
+/* Devices, streams, copies, memory and the core operations. Device memory comes from a
+   stream-ordered pool where the device has pools; shared devices get mapped host memory. */
+class GpuBackend : public Backend
+{
+public:
+    GpuBackend()
+    {
+        int n = 0;
+        if (CV_GPU(GetDeviceCount)(&n) != CV_GPU(Success))
+        {
+            (void)CV_GPU(GetLastError)();   // no driver or no device
+            n = 0;
+        }
+        for (int i = 0; i < n; i++)
+        {
+            std::unique_ptr<GpuDevice> d(new GpuDevice());
+            check(CV_GPU(GetDeviceProperties)(&d->prop, i), "GetDeviceProperties");
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+            d->poolsSupported = attr(CV_GPU_ATTR_MEMORY_POOLS, i) != 0;
+#endif
+            devs_.push_back(std::move(d));
+        }
+    }
+
+    int deviceCount() const CV_OVERRIDE { return (int)devs_.size(); }
+    String deviceDescription(int device) const CV_OVERRIDE { return devs_[device]->prop.name; }
+
+    void* allocate(int device, size_t size) CV_OVERRIDE
+    {
+        GpuDevice& d = *devs_[device];
+        DeviceGuard g(device);
+        void* p = 0;
+        CV_GPU(Error_t) r;
+        if (d.shared)
+            r = CV_GPU_HOST_ALLOC(&p, size, CV_GPU_HOST_ALLOC_MAPPED | CV_GPU_HOST_ALLOC_PORTABLE);  // one address for CPU and GPU
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+        else if (usesPool(device))
+            r = allocateFromPool(d, size, &p);
+#endif
+        else
+            r = CV_GPU(Malloc)(&p, size);
+        if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
+        {
+            (void)CV_GPU(GetLastError)();
+            return 0;
+        }
+        check(r, "allocate");
+        return p;
+    }
+
+    void deallocate(int device, void* handle) CV_OVERRIDE
+    {
+        // called while UMats are released: report failures, never throw
+        try
+        {
+            GpuDevice& d = *devs_[device];
+            DeviceGuard g(device);
+            CV_GPU(Error_t) r;
+            if (d.shared)
+                r = CV_GPU_HOST_FREE(handle);
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+            else if (usesPool(device))
+            {
+                // allocStream only allocates and frees, so this returns at once and gives what the
+                // pool keeps above its release threshold back to the driver
+                r = CV_GPU(FreeAsync)(handle, d.allocStream);
+                if (r == CV_GPU(Success))
+                    r = CV_GPU(StreamSynchronize)(d.allocStream);
+            }
+#endif
+            else
+                r = CV_GPU(Free)(handle);
+            if (r != CV_GPU(Success))
+            {
+                (void)CV_GPU(GetLastError)();
+                CV_LOG_WARNING(NULL, "accel(" CV_GPU_RUNTIME "): freeing device memory failed: " << CV_GPU(GetErrorString)(r));
+            }
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_WARNING(NULL, "accel(" CV_GPU_RUNTIME "): freeing device memory failed: " << e.what());
+        }
+    }
+
+    void* hostAddress(int device, void* handle) CV_OVERRIDE
+    {
+        return devs_[device]->shared ? handle : 0;
+    }
+
+    void copy(int device, CopyKind kind, DeviceRef dst, size_t dstStep, DeviceRef src, size_t srcStep,
+              size_t widthBytes, size_t rows, Stream& stream) CV_OVERRIDE
+    {
+        void* d = (uchar*)dst.handle + dst.offset;
+        const void* sp = (const uchar*)src.handle + src.offset;
+        GpuStream& s = gpuStreamOf(stream);
+        DeviceGuard g(device);
+        // a contiguous region goes as one span: Memcpy2D refuses a pitch above cudaDevAttrMaxPitch
+        // (2 GiB), and map() passes a whole buffer as one row of its full size
+        if (rows == 1 || (dstStep == widthBytes && srcStep == widthBytes))
+            check(CV_GPU(MemcpyAsync)(d, sp, widthBytes * rows, CV_GPU(MemcpyDefault), s.s_),
+                  "MemcpyAsync");
+        else
+            check(CV_GPU(Memcpy2DAsync)(d, dstStep, sp, srcStep, widthBytes, rows,
+                                        CV_GPU(MemcpyDefault), s.s_), "Memcpy2DAsync");
+        if (kind != COPY_DEVICE_TO_DEVICE)
+            s.synchronize();
+    }
+
+    Ptr<Stream> createStream(int device) CV_OVERRIDE
+    {
+        return makePtr<GpuStream>(device, eventFlags(device));
+    }
+
+    Ops* ops(const char* module) CV_OVERRIDE
+    {
+        if (strcmp(module, "core") == 0)
+            return &core_;
+        return strcmp(module, "imgproc") == 0 ? &imgproc_ : 0;
+    }
+
+protected:
+    //! the flags of the events a stream of @p device records
+    virtual unsigned int eventFlags(int /*device*/) const { return CV_GPU(EventDisableTiming); }
+
+    //! a device attribute, 0 when the runtime will not tell
+    static int attr(cvGpuDeviceAttr a, int device)
+    {
+        int v = 0;
+        if (CV_GPU(DeviceGetAttribute)(&v, a, device) != CV_GPU(Success))
+        {
+            (void)CV_GPU(GetLastError)();
+            return 0;
+        }
+        return v;
+    }
+
+    std::vector<std::unique_ptr<GpuDevice> > devs_;
+
+private:
+#ifdef CV_ACCEL_GPU_HAVE_POOLS
+    //! device memory of @p device comes from the backend's pool; creates the pool on first use
+    bool usesPool(int device)
+    {
+        GpuDevice& d = *devs_[device];
+        if (d.shared || !d.poolsSupported)
+            return false;
+        std::call_once(d.poolOnce, &GpuBackend::createPool, this, device);
+        return d.pool != 0;
+    }
+
+    // a pool of our own: its release threshold and the memory it keeps stay away from other users
+    void createPool(int device)
+    {
+        GpuDevice& d = *devs_[device];
+        DeviceGuard g(device);
+        // first: when this throws nothing has been created, and call_once tries again next time
+        check(CV_GPU(StreamCreateWithFlags)(&d.allocStream, CV_GPU(StreamNonBlocking)), "StreamCreateWithFlags");
+        CV_GPU(MemPoolProps) props;
+        memset(&props, 0, sizeof(props));
+        props.allocType = CV_GPU(MemAllocationTypePinned);
+        props.location.type = CV_GPU(MemLocationTypeDevice);
+        props.location.id = device;
+        if (CV_GPU(MemPoolCreate)(&d.pool, &props) != CV_GPU(Success))
+        {
+            (void)CV_GPU(GetLastError)();
+            d.pool = 0;
+            return;
+        }
+        // what the pool may hold, in use and kept for reuse together; freed memory above it goes back
+        uint64_t threshold = (uint64_t)d.prop.totalGlobalMem / 4;
+        if (CV_GPU(MemPoolSetAttribute)(d.pool, CV_GPU(MemPoolAttrReleaseThreshold), &threshold) != CV_GPU(Success))
+            (void)CV_GPU(GetLastError)();
+    }
+
+    CV_GPU(Error_t) allocateFromPool(GpuDevice& d, size_t size, void** p)
+    {
+        CV_GPU(Error_t) r = CV_GPU(MallocFromPoolAsync)(p, size, d.pool, d.allocStream);
+        if (r == CV_GPU_ERROR_OUT_OF_MEMORY)
+        {
+            // what the pool keeps in blocks of other sizes goes back to the driver, then once more;
+            // blocks freed on allocStream can be trimmed only once the stream has reached the frees
+            (void)CV_GPU(GetLastError)();
+            (void)CV_GPU(StreamSynchronize)(d.allocStream);
+            (void)CV_GPU(MemPoolTrimTo)(d.pool, 0);
+            r = CV_GPU(MallocFromPoolAsync)(p, size, d.pool, d.allocStream);
+            if (r != CV_GPU(Success))
+                (void)CV_GPU(MemPoolTrimTo)(d.pool, 0);    // a failed attempt may leave memory reserved
+        }
+        if (r == CV_GPU(Success))
+            r = CV_GPU(StreamSynchronize)(d.allocStream);   // from now on usable on every stream
+        return r;
+    }
+#endif
+
+    GpuCoreOps core_;
+    GpuImgprocOps imgproc_;
+};
+
+} // namespace
+
+}}} // namespace cv::accel::CV_GPU_NS
+
+#endif // OPENCV_CORE_SRC_ACCEL_GPU_BACKEND_IMPL_HPP
