@@ -8,7 +8,7 @@ on:
 jobs:
 
   Android-SDK:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yamlas/android_ndk_30
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@as/android_ndk_30
 
   docs:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
