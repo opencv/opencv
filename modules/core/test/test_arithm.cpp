@@ -5250,6 +5250,52 @@ TEST(Core_Arithm, addWeighted_8u_8s_uses_fp32_intermediate)
     }
 }
 
+TEST(Core_Arithm, dst_reuse_vector_exp_large)
+{
+    const int lengths[] = {100001, 200000};
+
+    for (int N : lengths)
+    {
+        std::vector<float> data(N, 0.f);
+        Mat dst = dstReuseVecMat(data);
+        Mat src(1, N, CV_32F, Scalar(1.f));
+
+        const uchar* p = dst.data;
+
+        cv::exp(src, dst);
+
+        EXPECT_EQ(p, dst.data);
+        EXPECT_NEAR(std::exp(1.f), data.front(), 1e-6f);
+        EXPECT_NEAR(std::exp(1.f), data.back(), 1e-6f);
+    }
+}
+
+TEST(Core_Arithm, dst_reuse_umat_vector_vs_1xN)
+{
+    const int N = 128;
+    int sizes[] = {N};
+
+    UMat dst(1, sizes, CV_32F);
+    dst.setTo(Scalar(10.f));
+
+    UMat original = dst;
+    const UMatData* originalData = original.u;
+
+    Mat offsets(1, N, CV_32F, Scalar(2.f));
+
+    cv::subtract(dst, offsets, dst);
+    ASSERT_EQ(2, dst.dims);
+    EXPECT_EQ(1, dst.size[0]);
+    EXPECT_EQ(N, dst.size[1]);
+
+    EXPECT_EQ(originalData, dst.u);
+
+    Mat result = dst.getMat(ACCESS_READ);
+
+    for (int i = 0; i < N; i++)
+        EXPECT_FLOAT_EQ(8.f, result.ptr<float>()[i]);
+}
+
 // patchNaNs replaces every NaN (either sign) and keeps numbers and infinities, including the 16-bit float depths
 typedef testing::TestWithParam<int> Core_PatchNaNs;
 

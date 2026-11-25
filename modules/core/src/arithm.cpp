@@ -633,9 +633,8 @@ static bool reshapeDstInPlace(OutputArray dst, const MatShape& oshape, int otype
     if (dst.kind() != _InputArray::MAT)
         return false;
     Mat* d = (Mat*)dst.getObj();
-    // common case first: same dims, 0-dim result, empty or different-type dst -> nothing to do
-    if (d->dims == (int)oshape.size() || oshape.size() == 0 || d->empty() ||
-        d->type() != otype || !d->isContinuous())
+    // Exact shape/type match, scalar result, empty or different-type dst -> nothing to do
+    if (outArrayMatches(dst, oshape, otype) || oshape.size() == 0 || d->empty() || d->type() != otype || !d->isContinuous())
         return false;
     int sz[MatShape::MAX_DIMS];
     int nd = dst.sizend(sz);
@@ -643,7 +642,7 @@ static bool reshapeDstInPlace(OutputArray dst, const MatShape& oshape, int otype
         return false;
 
     Mat reshaped = d->reshape(CV_MAT_CN(otype), oshape);
-    if (dst.fixedSize() || dst.fixedType())
+    if (dst.fixedSize())
         dstView = reshaped;                       // preserve the fixed output's header
     else
         *d = reshaped;                            // header only, same data pointer
@@ -787,7 +786,7 @@ static void arithm_op(ew::TOp op, InputArray src1, InputArray src2, OutputArray 
             const MatShape directShape = src1.shape();
             reshapeDstInPlace(dst, directShape, pm1->type(), dstView);
             if (dstView.empty())
-                dst.createSameSize(src1, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
+                dst.create(directShape, pm1->type());   // whole-shape transfer, not piecemeal dims+sizes
             Mat dloc;
             Mat* pd = !dstView.empty() ? &dstView :
                       (dst.kind() == _InputArray::MAT ? (Mat*)dst.getObj() : &(dloc = dst.getMat()));
