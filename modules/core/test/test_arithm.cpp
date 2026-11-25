@@ -5423,29 +5423,99 @@ TEST(Core_Multiply, scale_simd_scalar_consistency)
 // data, so sum and mean contradicted their own siblings. Lengths 1..3 took the plain tail loop and
 // were already correct; a length the vectorized path consumes whole was correct too, since that
 // path accumulates in double.
-TEST(Core_SumF32, large_values_do_not_overflow_the_work_type)
-{
-    const float v = 3.0e38f;            // just under FLT_MAX; 4*v is not representable in float
-    for (int len : {1, 2, 3, 4, 5, 7, 8, 16, 17, 24, 27, 64, 1000})
-        for (int cn = 1; cn <= 4; cn++)
-        {
-            SCOPED_TRACE(cv::format("len=%d cn=%d", len, cn));
-            const cv::Mat m(1, len, CV_MAKETYPE(CV_32F, cn), cv::Scalar::all(v));
-            const cv::Scalar s = cv::sum(m);
-            const double expected = (double)v * len;
-            for (int k = 0; k < cn; k++)
-            {
-                ASSERT_TRUE(!cvIsInf((float)(s[k] / expected))) << "channel " << k << " overflowed";
-                EXPECT_NEAR(expected, s[k], expected * 1e-12) << "channel " << k;
-            }
+typedef testing::TestWithParam<std::tuple<int, int>> Core_SumF32;
 
-            // mean must agree with meanStdDev, which accumulates in the wide type already
-            cv::Scalar mu, sd;
-            cv::meanStdDev(m, mu, sd);
-            const cv::Scalar mn = cv::mean(m);
-            for (int k = 0; k < cn; k++)
-                EXPECT_DOUBLE_EQ(mu[k], mn[k]) << "mean disagrees with meanStdDev, channel " << k;
+// lengths straddle the boundaries that decide which loop runs: 1..3 take the plain tail, 4 and up
+// reach the four-element unrolled step, and a length the vectorized path consumes whole (24, 27)
+// is correct either way - without the others a test over only those would look thorough and prove
+// nothing. cn stops at 4 because cv::sum returns a Scalar.
+INSTANTIATE_TEST_CASE_P(/**/, Core_SumF32, testing::Combine(
+    testing::Values(1, 2, 3, 4, 5, 7, 8, 16, 17, 24, 27, 64, 1000),
+    testing::Values(1, 2, 3, 4)));
+
+TEST_P(Core_SumF32, large_values_do_not_overflow_the_work_type)
+{
+    const int len = std::get<0>(GetParam()), cn = std::get<1>(GetParam());
+    const float v = 3.0e38f;            // just under FLT_MAX; 4*v is not representable in float
+
+    const cv::Mat m(1, len, CV_MAKETYPE(CV_32F, cn), cv::Scalar::all(v));
+    const cv::Scalar s = cv::sum(m);
+    const double expected = (double)v * len;
+    for (int k = 0; k < cn; k++)
+    {
+        ASSERT_TRUE(!cvIsInf((float)(s[k] / expected))) << "channel " << k << " overflowed";
+        EXPECT_NEAR(expected, s[k], expected * 1e-12) << "channel " << k;
+    }
+
+    // mean must agree with meanStdDev, which accumulates in the wide type already
+    cv::Scalar mu, sd;
+    cv::meanStdDev(m, mu, sd);
+    const cv::Scalar mn = cv::mean(m);
+    for (int k = 0; k < cn; k++)
+        EXPECT_DOUBLE_EQ(mu[k], mn[k]) << "mean disagrees with meanStdDev, channel " << k;
+}
+
+// Overflow is not the only way the narrow work type fails. Four values that overflow to +inf
+// followed by four that overflow to -inf leave inf + -inf = NaN, where the true sum is zero. A
+// check that only looked for inf would pass this while the answer is still wrong, so the signs
+// alternate in groups of four - alternating every element would cancel within the unrolled step
+// and never overflow at all.
+TEST_P(Core_SumF32, cancelling_values_do_not_leave_nan)
+{
+    const int len = std::get<0>(GetParam()), cn = std::get<1>(GetParam());
+    const float v = 3.0e38f;
+
+    cv::Mat m(1, len, CV_MAKETYPE(CV_32F, cn));
+    std::vector<double> expected(cn, 0.0);
+    for (int i = 0; i < len; i++)
+    {
+        const float x = ((i / 4) % 2 == 0) ? v : -v;
+        float* p = m.ptr<float>(0) + i * cn;
+        for (int k = 0; k < cn; k++)
+        {
+            p[k] = x;
+            expected[k] += (double)x;   // exact: same magnitude, so no rounding in double
         }
+    }
+
+    const cv::Scalar s = cv::sum(m);
+    for (int k = 0; k < cn; k++)
+    {
+        ASSERT_FALSE(cvIsNaN(s[k])) << "channel " << k << " left NaN";
+        EXPECT_NEAR(expected[k], s[k], std::abs(expected[k]) * 1e-12 + 1.0) << "channel " << k;
+    }
+}
+
+// cv::sum has no mask, but cv::mean does, and a masked sum runs the scalar loop for its whole
+// length - Sum_SIMD::operator() returns 0 as soon as a mask is set. So this is the path the
+// narrow work type reaches most, and it has to agree with meanStdDev on the same data.
+TEST_P(Core_SumF32, masked_mean_matches_meanStdDev)
+{
+    const int len = std::get<0>(GetParam()), cn = std::get<1>(GetParam());
+    const float v = 3.0e38f;
+
+    const cv::Mat m(1, len, CV_MAKETYPE(CV_32F, cn), cv::Scalar::all(v));
+    const cv::Mat mask(1, len, CV_8U, cv::Scalar(1));   // selects everything
+
+    cv::Scalar mu, sd;
+    cv::meanStdDev(m, mu, sd, mask);
+    const cv::Scalar mn = cv::mean(m, mask);
+    for (int k = 0; k < cn; k++)
+    {
+        ASSERT_TRUE(!cvIsInf((float)(mn[k] / (double)v))) << "channel " << k << " overflowed";
+        EXPECT_DOUBLE_EQ(mu[k], mn[k]) << "channel " << k;
+    }
+}
+
+// The fallback must not launder genuine non-finite input: inf in, inf out.
+TEST(Core_SumF32_nonFinite, infinite_input_stays_infinite)
+{
+    cv::Mat m(1, 64, CV_32F, cv::Scalar(1.0f));
+    m.at<float>(0, 7) = std::numeric_limits<float>::infinity();
+    EXPECT_TRUE(cvIsInf((float)cv::sum(m)[0]));
+
+    m.at<float>(0, 7) = std::numeric_limits<float>::quiet_NaN();
+    EXPECT_TRUE(cvIsNaN((float)cv::sum(m)[0]));
 }
 
 // cv::compare had no CV_Bool kernel for the matrix/matrix form, so every comparison of two
