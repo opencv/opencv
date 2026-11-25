@@ -2393,6 +2393,9 @@ void ONNXImporter2::parseHammingWindow(LayerParams& layerParams, const opencv_on
 void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "DFT";
+    int onnx_opset = onnx_opset_map.count(str_domain_ai_onnx) ? onnx_opset_map.at(str_domain_ai_onnx) : 17;
+    if (onnx_opset >= 20 && !layerParams.has("axis"))
+        layerParams.set("axis", -2);
     addLayer(layerParams, node_proto);
 }
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
