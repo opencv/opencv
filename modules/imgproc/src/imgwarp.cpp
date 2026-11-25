@@ -2012,6 +2012,13 @@ public:
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, y1;
 
+        float fM[6];
+        if( interpolation == INTER_NEAREST )
+        {
+            for( int i = 0; i < 6; i++ )
+                fM[i] = static_cast<float>(M[i]);
+        }
+
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, dst.cols);
         bh0 = std::min(BLOCK_SZ*BLOCK_SZ/bw0, dst.rows);
@@ -2033,7 +2040,21 @@ public:
                     int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
 
                     if( interpolation == INTER_NEAREST )
-                        hal::warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);
+                    {
+                        int hal_res = cv_hal_warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);
+                        if( hal_res == CV_HAL_ERROR_OK )
+                            continue;
+
+                        float M_x = static_cast<float>(y + y1) * fM[1] + fM[2];
+                        float M_y = static_cast<float>(y + y1) * fM[4] + fM[5];
+                        for( int dx = 0; dx < bw; dx++ )
+                        {
+                            float sx = std::fma(static_cast<float>(x + dx), fM[0], M_x);
+                            float sy = std::fma(static_cast<float>(x + dx), fM[3], M_y);
+                            xy[dx * 2] = saturate_cast<short>(cvRound(sx));
+                            xy[dx * 2 + 1] = saturate_cast<short>(cvRound(sy));
+                        }
+                    }
                     else
                         hal::warpAffineBlockline(adelta + x, bdelta + x, xy, A + y1*bw, X0, Y0, bw);
                 }

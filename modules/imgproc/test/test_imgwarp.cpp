@@ -1429,23 +1429,38 @@ typedef testing::TestWithParam<int> Imgproc_WarpAffine_Regression_30459;
 
 TEST_P(Imgproc_WarpAffine_Regression_30459, accuracy)
 {
-    const int depth = GetParam();
+    const int type = GetParam();
+    const int cn = CV_MAT_CN(type);
+
     Mat base(480, 640, CV_8UC1);
     randu(base, 0, 120);
     double m[] = { 0.877, 0.2025, -1.5, -0.2025, 0.877, 6.2 };
     Mat M(2, 3, CV_64F, m), ref;
     warpAffine(base, ref, M, base.size(), INTER_NEAREST);
 
-    Mat src, dst, dst8u;
-    base.convertTo(src, depth);
+    std::vector<Mat> planes(cn, base);
+    Mat baseMulti;
+    merge(planes, baseMulti);
+
+    Mat src, dst;
+    baseMulti.convertTo(src, type);
     warpAffine(src, dst, M, base.size(), INTER_NEAREST);
-    dst.convertTo(dst8u, CV_8U);
-    EXPECT_EQ(0, countNonZero(dst8u != ref))
-        << "Failed for depth " << typeToString(src.type());
+
+    std::vector<Mat> dstPlanes;
+    split(dst, dstPlanes);
+    for (int c = 0; c < cn; c++)
+    {
+        Mat dst8u;
+        dstPlanes[c].convertTo(dst8u, CV_8U);
+        EXPECT_EQ(0, countNonZero(dst8u != ref))
+            << "Failed for type " << typeToString(src.type()) << " channel " << c;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_WarpAffine_Regression_30459, testing::Values(
-    CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F));
+    CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1,
+    CV_64FC1, CV_64FC2, CV_64FC3, CV_64FC4,
+    CV_MAKETYPE(CV_8U, 5), CV_MAKETYPE(CV_32F, 5), CV_MAKETYPE(CV_64F, 5)));
 
 typedef testing::TestWithParam<testing::tuple<int, int> > Imgproc_WarpAffine_NearestConsistency;
 
@@ -1486,8 +1501,8 @@ TEST_P(Imgproc_WarpAffine_NearestConsistency, accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Imgproc_WarpAffine_NearestConsistency, testing::Combine(
-    testing::Values(1, 2, 3, 4),
-    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_64F)));
+    testing::Values(1, 2, 3, 4, 5),
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)));
 
 }} // namespace
 /* End of file. */
