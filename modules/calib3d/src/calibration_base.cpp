@@ -1650,32 +1650,15 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
     }
     if( validPixROI )
     {
-        // This tolerance defines how incomplete a pixel can be to still be considered complete.
-        // It has been chosen to get Calib3d_GetOptimalNewCameraMatrixNoDistortion.accuracy to pass.
-        constexpr double kTolerance = 1e-12;
-        Point p1, p2;
-        if( std::abs(inner.x-cvRound(inner.x))<kTolerance ) {
-            p1.x = cvRound(inner.x);
-        } else {
-            p1.x = cvCeil(inner.x);
-        }
-        if( std::abs(inner.y-cvRound(inner.y))<kTolerance ) {
-            p1.y = cvRound(inner.y);
-        } else {
-            p1.y = cvCeil(inner.y);
-        }
-        if( std::abs(inner.x+inner.width-cvRound(inner.x+inner.width))<kTolerance ) {
-            p2.x = cvRound(inner.x+inner.width);
-        } else {
-            p2.x = cvFloor(inner.x+inner.width);
-        }
-        if( std::abs(inner.y+inner.height-cvRound(inner.y+inner.height))<kTolerance ) {
-            p2.y = cvRound(inner.y+inner.height);
-        } else {
-            p2.y = cvCeil(inner.y+inner.height);
-        }
-        // +1 to make sure p2 is included.
-        Rect r(p1, p2+Point(1,1));
+        // Account for CV_64F floating-point roundoff in the projection/unprojection of boundary
+        // pixel centers when edges land on exact integer coordinates (e.g., alpha == 0 or zero distortion).
+        const double epsX = 64 * DBL_EPSILON * std::max({1.0, (double)newImgSize.width, std::abs(M.at<double>(0, 2)),
+                                                         std::abs(inner.x), std::abs(inner.x + inner.width)});
+        const double epsY = 64 * DBL_EPSILON * std::max({1.0, (double)newImgSize.height, std::abs(M.at<double>(1, 2)),
+                                                         std::abs(inner.y), std::abs(inner.y + inner.height)});
+        const Point p1(cvCeil(inner.x - epsX), cvCeil(inner.y - epsY));
+        const Point p2(cvFloor(inner.x + inner.width + epsX), cvFloor(inner.y + inner.height + epsY));
+        Rect r = (p2.x >= p1.x && p2.y >= p1.y) ? Rect(p1, p2 + Point(1, 1)) : Rect();
         r &= Rect(0, 0, newImgSize.width, newImgSize.height);
         *validPixROI = r;
     }

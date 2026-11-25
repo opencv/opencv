@@ -2034,4 +2034,91 @@ TEST(Calib3d_initInverseRectificationMap, regression_20165)
     EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
+TEST(Calib3d_GetOptimalNewCameraMatrix, validPixROI_regression_24831)
+{
+    // 1. Zero distortion on large image dimensions (where 1 ULP > 1e-12)
+    {
+        const Size largeSize(16384, 12288);
+        const Mat K = (Mat_<float>(3, 3) << 18500.f, 0.f, (largeSize.width - 1) * 0.5f,
+                                            0.f, 18500.f, (largeSize.height - 1) * 0.5f,
+                                            0.f, 0.f, 1.f);
+        const Mat zeroDist = Mat::zeros(1, 5, CV_32F);
+        for (bool centerPP : {false, true})
+        {
+            for (double alpha : {0.0, 0.37, 1.0})
+            {
+                Rect roi;
+                getOptimalNewCameraMatrix(K, zeroDist, largeSize, alpha, largeSize, &roi, centerPP);
+                EXPECT_EQ(roi, Rect(0, 0, largeSize.width, largeSize.height))
+                    << "centerPP=" << centerPP << " alpha=" << alpha;
+            }
+        }
+    }
+
+    // 2. Non-zero distortion: verify ROI bounds are strictly valid (inward-rounded on both axes) and tight
+    {
+        const Size imgSize(640, 480);
+        const Mat K = (Mat_<double>(3, 3) << 520.0, 0.0, 315.2,
+                                             0.0, 525.0, 242.7,
+                                             0.0, 0.0, 1.0);
+        // Pincushion distortion produces fractional inscribed rectangle boundaries on all four sides
+        const Mat dist = (Mat_<double>(1, 5) << 0.22, 0.05, 0.001, -0.002, 0.0);
+
+        // alpha == 0 with centerPrincipalPoint == false maps the inscribed rectangle to the full viewport
+        {
+            Rect roi;
+            getOptimalNewCameraMatrix(K, dist, imgSize, 0.0, imgSize, &roi, false);
+            EXPECT_EQ(roi, Rect(0, 0, imgSize.width, imgSize.height));
+        }
+
+        // alpha == 1 retains all source pixels; validPixROI must contain only pixels mapping inside source bounds,
+        // and stepping 1 pixel outside validPixROI on any side must leave the source bounds.
+        for (bool centerPP : {false, true})
+        {
+            Rect roi;
+            Mat newK = getOptimalNewCameraMatrix(K, dist, imgSize, 1.0, imgSize, &roi, centerPP);
+            ASSERT_GT(roi.width, 0);
+            ASSERT_GT(roi.height, 0);
+            ASSERT_GT(roi.x, 0);
+            ASSERT_GT(roi.y, 0);
+            ASSERT_LT(roi.x + roi.width, imgSize.width);
+            ASSERT_LT(roi.y + roi.height, imgSize.height);
+
+            Mat mapx, mapy;
+            initUndistortRectifyMap(K, dist, noArray(), newK, imgSize, CV_32FC1, mapx, mapy);
+
+            const float tol = 1e-3f;
+            for (int y = roi.y; y < roi.y + roi.height; ++y)
+            {
+                for (int x = roi.x; x < roi.x + roi.width; ++x)
+                {
+                    const float sx = mapx.at<float>(y, x);
+                    const float sy = mapy.at<float>(y, x);
+                    EXPECT_GE(sx, -tol) << "x=" << x << " y=" << y << " centerPP=" << centerPP;
+                    EXPECT_LE(sx, imgSize.width - 1 + tol) << "x=" << x << " y=" << y << " centerPP=" << centerPP;
+                    EXPECT_GE(sy, -tol) << "x=" << x << " y=" << y << " centerPP=" << centerPP;
+                    EXPECT_LE(sy, imgSize.height - 1 + tol) << "x=" << x << " y=" << y << " centerPP=" << centerPP;
+                }
+            }
+
+            // Check tightness: the row/column immediately outside each edge of roi has at least one out-of-bounds pixel
+            bool leftOut = false, rightOut = false, topOut = false, bottomOut = false;
+            for (int y = 0; y < imgSize.height; ++y)
+            {
+                if (mapx.at<float>(y, roi.x - 1) < -tol) leftOut = true;
+                if (mapx.at<float>(y, roi.x + roi.width) > imgSize.width - 1 + tol) rightOut = true;
+            }
+            for (int x = 0; x < imgSize.width; ++x)
+            {
+                if (mapy.at<float>(roi.y - 1, x) < -tol) topOut = true;
+                if (mapy.at<float>(roi.y + roi.height, x) > imgSize.height - 1 + tol) bottomOut = true;
+            }
+            EXPECT_TRUE(leftOut) << "centerPP=" << centerPP;
+            EXPECT_TRUE(rightOut) << "centerPP=" << centerPP;
+            EXPECT_TRUE(topOut) << "centerPP=" << centerPP;
+            EXPECT_TRUE(bottomOut) << "centerPP=" << centerPP;
+        }
+    }
+}
+
 }} // namespace
