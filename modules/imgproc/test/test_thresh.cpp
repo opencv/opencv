@@ -341,21 +341,24 @@ TEST_P(Threshold_HalfFloat, vs_fp32)
     const int depth = GetParam();
     const int types[] = { THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC,
                           THRESH_TOZERO, THRESH_TOZERO_INV };
-    cv::RNG rng(71);
+    cv::RNG& rng = cv::theRNG();
 
     for (int cn = 1; cn <= 4; cn++)
     {
-        Mat s32(Size(48, 40), CV_MAKETYPE(CV_32F, cn)), src, wid;
-        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(0), Scalar::all(1));
-        s32.convertTo(src, CV_MAKETYPE(depth, cn));
+        Mat s32(Size(53, 40), CV_MAKETYPE(CV_32F, cn)), full, wid;
+        rng.fill(s32, cv::RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
+        s32.convertTo(full, CV_MAKETYPE(depth, cn));
+        // non-continuous with an odd width, so the per-row tail runs
+        Mat src = full(Rect(3, 0, 47, 40));
         src.convertTo(wid, CV_MAKETYPE(CV_32F, cn));
 
         // 0.5 is exact; 0.3 rounds up on both depths; 0.1 rounds down on fp16
         // and up on bf16, so both directions get exercised
-        const double threshes[] = { 0.5, 0.3, 0.1 };
+        const double threshes[] = { 0.5, 0.3, 0.1, 0.0, -0.3 };
+        const int nthresh = (int)(sizeof(threshes)/sizeof(threshes[0]));
 
         for (int i = 0; i < 5; i++)
-            for (int t = 0; t < 3; t++)
+            for (int t = 0; t < nthresh; t++)
             {
                 SCOPED_TRACE(cv::format("depth=%d cn=%d type=%d thresh=%g",
                                         depth, cn, types[i], threshes[t]));
@@ -398,6 +401,58 @@ TEST_P(Threshold_HalfFloat, threshold_is_not_quantized)
 
     // rounded > thresh, so the pixel is above the threshold and takes maxval
     EXPECT_EQ(1.f, dst32.at<float>(0, 0));
+}
+
+TEST_P(Threshold_HalfFloat, special_values)
+{
+    const int depth = GetParam();
+    const float inf = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float vals[] = { -inf, -1e4f, -1.f, -0.25f, -0.f, 0.f, 0.25f, 1.f, 1e4f, inf, nan };
+    const int nvals = (int)(sizeof(vals)/sizeof(vals[0]));
+    const int types[] = { THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC,
+                          THRESH_TOZERO, THRESH_TOZERO_INV };
+    const double threshes[] = { 0.0, -0.0, 0.3, -0.3, 1e10, -1e10 };
+
+    // long enough to go through the vector loop on every SIMD width
+    Mat s32(1, nvals * 8, CV_32FC1), src, x;
+    for (int j = 0; j < s32.cols; j++)
+        s32.at<float>(0, j) = vals[j % nvals];
+    s32.convertTo(src, depth);
+    src.convertTo(x, CV_32F);
+
+    for (double thresh : threshes)
+    {
+        Mat t32(1, 1, CV_32FC1, Scalar::all((float)thresh)), tq;
+        t32.convertTo(tq, depth);
+        tq.convertTo(t32, CV_32F);
+        const float tr = t32.at<float>(0, 0), t = (float)thresh;
+
+        for (int type : types)
+        {
+            SCOPED_TRACE(cv::format("depth=%d type=%d thresh=%g", depth, type, thresh));
+
+            Mat dst, d32;
+            cv::threshold(src, dst, thresh, 1.0, type);
+            dst.convertTo(d32, CV_32F);
+
+            for (int j = 0; j < x.cols; j++)
+            {
+                const float v = x.at<float>(0, j);
+                const bool gt = v > t, le = v <= t;
+                float expected = type == THRESH_BINARY     ? (gt ? 1.f : 0.f) :
+                                 type == THRESH_BINARY_INV ? (le ? 1.f : 0.f) :
+                                 type == THRESH_TRUNC      ? (gt ? tr : v) :
+                                 type == THRESH_TOZERO     ? (gt ? v : 0.f) :
+                                                             (le ? v : 0.f);
+                const float got = d32.at<float>(0, j);
+                if (cvIsNaN(expected))
+                    EXPECT_TRUE(cvIsNaN(got)) << "src=" << v;
+                else
+                    EXPECT_EQ(expected, got) << "src=" << v;
+            }
+        }
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_HalfFloat, testing::Values(CV_16F, CV_16BF));
