@@ -602,15 +602,16 @@ static bool isPrefetchSupported(const Ptr<IVideoCapture>& cap)
     const int api = cap->getCaptureDomain();
     switch (api)
     {
-        case CAP_MSMF:
-        case CAP_DSHOW:
-        case CAP_OBSENSOR:
-        case CAP_AVFOUNDATION:
+        case CAP_FFMPEG:
+        case CAP_GSTREAMER:
+        case CAP_V4L2:
+        case CAP_IMAGES:
+        case CAP_OPENCV_MJPEG:
+            break;
+        default:
             CV_LOG_WARNING(NULL, "VIDEOIO: CAP_PROP_PREFETCH_FRAMES is not supported by backend "
                                  << videoio_registry::getBackendName((VideoCaptureAPIs)api));
             return false;
-        default:
-            break;
     }
     if (cap->getProperty(CAP_PROP_HW_ACCELERATION) > VIDEO_ACCELERATION_NONE)
     {

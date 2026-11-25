@@ -304,7 +304,16 @@ public:
             return false;
         }
 
-        image.assign(current.mat);
+        if (image.isMat())
+        {
+            Mat& dst = image.getMatRef();
+            if (dst.empty() || (dst.u && !dst.isSubmatrix()))
+            {
+                dst = current.mat;
+                return true;
+            }
+        }
+        current.mat.copyTo(image);
         return true;
     }
 
