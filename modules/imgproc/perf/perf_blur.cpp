@@ -310,5 +310,114 @@ PERF_TEST_P(Size_MatType, stackblur101x101,
     SANITY_CHECK_NOTHING();
 }
 
+// values in [0, 1) keep fp16 away from its overflow range
+static Mat halfBlurSrc(Size sz, int type)
+{
+    Mat src32(sz, CV_MAKETYPE(CV_32F, CV_MAT_CN(type))), src;
+    randu(src32, Scalar::all(0), Scalar::all(1));
+    src32.convertTo(src, type);
+    return src;
+}
+
+// the fp32 rows are the reference for the half rows
+PERF_TEST_P(Size_MatType_kSize, box_half,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3),
+                testing::Values(3, 5, 21)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src = halfBlurSrc(size, type);
+    Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() blur(src, dst, Size(ksize, ksize));
+
+    SANITY_CHECK_NOTHING();
+}
+
+// convert to fp32, blur, convert back: the route the half path has to beat
+PERF_TEST_P(Size_MatType_kSize, box_half_via_fp32,
+            testing::Combine(
+                testing::Values(szVGA, sz720p, sz1080p),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3),
+                testing::Values(3, 5, 21)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src = halfBlurSrc(size, type);
+    Mat dst(size, type), src32, dst32;
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.convertTo(src32, CV_32F);
+        blur(src32, dst32, Size(ksize, ksize));
+        dst32.convertTo(dst, CV_MAT_DEPTH(type));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType_kSize, stackblur_half,
+            testing::Combine(
+                testing::Values(sz720p, sz1080p),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3, CV_32FC1, CV_32FC3),
+                testing::Values(3, 101)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src = halfBlurSrc(size, type);
+    Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() stackBlur(src, dst, Size(ksize, ksize));
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType_kSize, stackblur_half_via_fp32,
+            testing::Combine(
+                testing::Values(sz720p, sz1080p),
+                testing::Values(CV_16FC1, CV_16FC3, CV_16BFC1, CV_16BFC3),
+                testing::Values(3, 101)
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    int ksize = get<2>(GetParam());
+
+    Mat src = halfBlurSrc(size, type);
+    Mat dst(size, type), src32, dst32;
+
+    declare.in(src).out(dst);
+
+    TEST_CYCLE()
+    {
+        src.convertTo(src32, CV_32F);
+        stackBlur(src32, dst32, Size(ksize, ksize));
+        dst32.convertTo(dst, CV_MAT_DEPTH(type));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 
 } // namespace

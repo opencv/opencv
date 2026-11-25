@@ -350,6 +350,77 @@ struct ColumnSum :
 };
 
 
+template<typename T>
+inline void halfToFloatRow(const T* src, float* dst, int len)
+{
+    int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    for( ; i <= len - VECSZ; i += VECSZ )
+        v_store(dst + i, vx_load_expand(src + i));
+#endif
+    for( ; i < len; i++ )
+        dst[i] = (float)src[i];
+}
+
+template<typename T>
+inline void floatToHalfRow(const float* src, T* dst, int len)
+{
+    int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    for( ; i <= len - VECSZ; i += VECSZ )
+        v_pack_store(dst + i, vx_load(src + i));
+#endif
+    for( ; i < len; i++ )
+        dst[i] = T(src[i]);
+}
+
+// half rows are widened once on fetch, then summed by the float kernel
+template<typename T, class Base>
+struct HalfRowSum :
+        public Base
+{
+    HalfRowSum( int _ksize, int _anchor ) : Base(_ksize, _anchor) {}
+
+    bool isStateless() const CV_OVERRIDE { return false; }
+
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+
+        int len = (width + this->ksize - 1)*cn;
+        buf.resize(len);
+        halfToFloatRow((const T*)src, buf.data(), len);
+        Base::operator()((const uchar*)buf.data(), dst, width, cn);
+    }
+
+    std::vector<float> buf;
+};
+
+// sums one row at a time into a float row, then narrows it on store
+template<typename T>
+struct ColumnSumHalf :
+        public ColumnSum<double, float>
+{
+    ColumnSumHalf( int _ksize, int _anchor, double _scale ) : ColumnSum<double, float>(_ksize, _anchor, _scale) {}
+
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width) CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION();
+
+        rowBuf.resize(width);
+        for( int r = 0; r < count; r++, dst += dststep )
+        {
+            ColumnSum<double, float>::operator()(src + r, (uchar*)rowBuf.data(), 0, 1, width);
+            floatToHalfRow(rowBuf.data(), (T*)dst, width);
+        }
+    }
+
+    std::vector<float> rowBuf;
+};
+
+
 template<>
 struct ColumnSum<int, uchar> :
         public BaseColumnFilter
@@ -1657,6 +1728,10 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
         return makePtr<RowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowSum<double, double> >(ksize, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<HalfRowSum<hfloat, RowSum<float, double> > >(ksize, anchor);
+    if( sdepth == CV_16BF && ddepth == CV_64F )
+        return makePtr<HalfRowSum<bfloat, RowSum<float, double> > >(ksize, anchor);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
@@ -1698,6 +1773,10 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
         return makePtr<ColumnSum<int, double> >(ksize, anchor, scale);
     if( ddepth == CV_64F && sdepth == CV_64F )
         return makePtr<ColumnSum<double, double> >(ksize, anchor, scale);
+    if( ddepth == CV_16F && sdepth == CV_64F )
+        return makePtr<ColumnSumHalf<hfloat> >(ksize, anchor, scale);
+    if( ddepth == CV_16BF && sdepth == CV_64F )
+        return makePtr<ColumnSumHalf<bfloat> >(ksize, anchor, scale);
 
     CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of sum format (=%d), and destination format (=%d)",
@@ -1826,6 +1905,10 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
         return makePtr<SqrRowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<SqrRowSum<double, double> >(ksize, anchor);
+    if( sdepth == CV_16F && ddepth == CV_64F )
+        return makePtr<HalfRowSum<hfloat, SqrRowSum<float, double> > >(ksize, anchor);
+    if( sdepth == CV_16BF && ddepth == CV_64F )
+        return makePtr<HalfRowSum<bfloat, SqrRowSum<float, double> > >(ksize, anchor);
 
     CV_Error_( cv::Error::StsNotImplemented,
               ("Unsupported combination of source format (=%d), and buffer format (=%d)",

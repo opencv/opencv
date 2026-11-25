@@ -112,6 +112,11 @@ namespace cv {
 CV_EXPORTS
 cv::Mutex& getInitializationMutex();  // defined in core module
 
+static inline bool isHalfFloat(int depth)
+{
+    return depth == CV_16F || depth == CV_16BF;
+}
+
 }  // namespace cv
 
 #endif /*__OPENCV_PRECOMP_H__*/
