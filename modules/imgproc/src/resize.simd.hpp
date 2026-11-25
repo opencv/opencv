@@ -122,6 +122,27 @@ static CV_ALWAYS_INLINE void resizeNN_row_u16(uchar* D, const uchar* S, const in
         D16[x] = *(const ushort*)(S + x_ofs[x]);
 }
 
+static CV_ALWAYS_INLINE void resizeNN_row_px3(uchar* D, const uchar* S, const int* x_ofs, int width)
+{
+    int x = 0;
+    for (; x <= width - 4; x += 4, D += 12)
+    {
+        const uchar* s0 = S + x_ofs[x];
+        const uchar* s1 = S + x_ofs[x + 1];
+        const uchar* s2 = S + x_ofs[x + 2];
+        const uchar* s3 = S + x_ofs[x + 3];
+        D[0] = s0[0]; D[1] = s0[1]; D[2] = s0[2];
+        D[3] = s1[0]; D[4] = s1[1]; D[5] = s1[2];
+        D[6] = s2[0]; D[7] = s2[1]; D[8] = s2[2];
+        D[9] = s3[0]; D[10] = s3[1]; D[11] = s3[2];
+    }
+    for (; x < width; x++, D += 3)
+    {
+        const uchar* s0 = S + x_ofs[x];
+        D[0] = s0[0]; D[1] = s0[1]; D[2] = s0[2];
+    }
+}
+
 static CV_ALWAYS_INLINE void resizeNN_row_u32(uchar* D, const uchar* S, const int* x_ofs, int width)
 {
     uint32_t* D32 = (uint32_t*)D;
@@ -306,11 +327,7 @@ public:
                 resizeNN_row_u16(D, S, x_ofs, width, vend);
                 break;
             case 3:
-                for( ; x < width; x++, D += 3 )
-                {
-                    const uchar* _tS = S + x_ofs[x];
-                    D[0] = _tS[0]; D[1] = _tS[1]; D[2] = _tS[2];
-                }
+                resizeNN_row_px3(D, S, x_ofs, width);
                 break;
             case 4:
                 resizeNN_row_u32(D, S, x_ofs, width);
@@ -386,28 +403,10 @@ static inline void nn_bitexact_fixed_coefs(int src_sz, int dst_sz, int& ifc, int
     ifc0 = ifc / 2 - src_sz % 2;
 }
 
-enum NNBitexactMode { GENERIC = 0, UP_2X = 1, DOWN_2X = 2, DOWN_4X = 3 };
-
-static inline NNBitexactMode detect_h_mode(int sw, int dw, int ifx, int ifx0)
+// The fixed-point mapping of an exact 2x upscale is sx = x >> 1 along this axis.
+static inline bool is_up2x(int ssz, int dsz, int ifc, int ifc0)
 {
-    if (dw == 2 * sw && sw > 0 && ifx == (1 << 15) && ifx0 == (1 << 14) - sw % 2)
-        return UP_2X;
-    if (dw * 2 == sw && sw % 2 == 0 && ifx == (2 << 16) && ifx0 == (1 << 16))
-        return DOWN_2X;
-    if (dw * 4 == sw && sw % 2 == 0 && ifx == (4 << 16) && ifx0 == (2 << 16))
-        return DOWN_4X;
-    return GENERIC;
-}
-
-static inline NNBitexactMode detect_v_mode(int sh, int dh, int ify, int ify0)
-{
-    if (dh == 2 * sh && sh > 0 && ify == (1 << 15) && ify0 == (1 << 14) - sh % 2)
-        return UP_2X;
-    if (dh * 2 == sh && sh % 2 == 0 && ify == (2 << 16) && ify0 == (1 << 16))
-        return DOWN_2X;
-    if (dh * 4 == sh && sh % 2 == 0 && ify == (4 << 16) && ify0 == (2 << 16))
-        return DOWN_4X;
-    return GENERIC;
+    return dsz == 2 * ssz && ssz > 0 && ifc == (1 << 15) && ifc0 == (1 << 14) - ssz % 2;
 }
 
 static inline void nn_bitexact_row_cn3_up2(uchar* D, const uchar* S, int sw)
@@ -424,28 +423,6 @@ static inline void nn_bitexact_row_cn3_up2(uchar* D, const uchar* S, int sw)
     {
         D[0] = S[0]; D[1] = S[1]; D[2] = S[2];
         D[3] = S[0]; D[4] = S[1]; D[5] = S[2];
-    }
-}
-
-static inline void nn_bitexact_row_cn3_down(uchar* D, const uchar* S, int dw, int sx_mul, int sx_add, int sw)
-{
-    const int smax = sw - 1;
-    int x = 0;
-    for (; x <= dw - 4; x += 4, D += 12)
-    {
-        const int o0 = std::min(sx_mul * x + sx_add, smax) * 3;
-        const int o1 = std::min(sx_mul * (x + 1) + sx_add, smax) * 3;
-        const int o2 = std::min(sx_mul * (x + 2) + sx_add, smax) * 3;
-        const int o3 = std::min(sx_mul * (x + 3) + sx_add, smax) * 3;
-        D[0] = S[o0]; D[1] = S[o0 + 1]; D[2] = S[o0 + 2];
-        D[3] = S[o1]; D[4] = S[o1 + 1]; D[5] = S[o1 + 2];
-        D[6] = S[o2]; D[7] = S[o2 + 1]; D[8] = S[o2 + 2];
-        D[9] = S[o3]; D[10] = S[o3 + 1]; D[11] = S[o3 + 2];
-    }
-    for (; x < dw; ++x, D += 3)
-    {
-        const int off = std::min(sx_mul * x + sx_add, smax) * 3;
-        D[0] = S[off]; D[1] = S[off + 1]; D[2] = S[off + 2];
     }
 }
 
@@ -527,61 +504,6 @@ private:
     const int* sx_ofs;
 };
 
-class resizeNN_bitexactArithDownInvoker_ : public ParallelLoopBody
-{
-public:
-    resizeNN_bitexactArithDownInvoker_(const Mat& _src, Mat& _dst, const int* _x_ofs,
-                                       int _sx_mul, int _sx_add, int _sy_mul, int _sy_add) :
-        src(_src), dst(_dst), x_ofs(_x_ofs),
-        sx_mul(_sx_mul), sx_add(_sx_add), sy_mul(_sy_mul), sy_add(_sy_add) {}
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        Size ssize = src.size(), dsize = dst.size();
-        const int pix_size = (int)src.elemSize();
-        const int sh = ssize.height;
-        const int row_bytes = ssize.width * pix_size;
-        const int vend = resizeNN_vec_end_for(x_ofs, dsize.width, row_bytes, pix_size);
-
-        for (int y = range.start; y < range.end; y++)
-        {
-            const int sy = std::min(sy_mul * y + sy_add, sh - 1);
-            uchar* D = dst.ptr(y);
-            const uchar* S = src.ptr(sy);
-            int x = 0;
-
-            switch (pix_size)
-            {
-            case 1:
-                resizeNN_row_u8(D, S, x_ofs, dsize.width, row_bytes, vend);
-                break;
-            case 2:
-                resizeNN_row_u16(D, S, x_ofs, dsize.width, vend);
-                break;
-            case 3:
-                nn_bitexact_row_cn3_down(D, S, dsize.width, sx_mul, sx_add, ssize.width);
-                break;
-            case 4:
-                resizeNN_row_u32(D, S, x_ofs, dsize.width);
-                break;
-            default:
-                for (; x < dsize.width; x++, D += pix_size)
-                {
-                    const uchar* _tS = S + x_ofs[x];
-                    for (int k = 0; k < pix_size; k++)
-                        D[k] = _tS[k];
-                }
-            }
-        }
-    }
-
-private:
-    const Mat& src;
-    Mat& dst;
-    const int* x_ofs;
-    int sx_mul, sx_add, sy_mul, sy_add;
-};
-
 static void resizeNN_bitexact2xUp_(const Mat& src, Mat& dst)
 {
     const int dw = dst.cols;
@@ -592,23 +514,6 @@ static void resizeNN_bitexact2xUp_(const Mat& src, Mat& dst)
 
     Range range(0, dst.rows);
     resizeNN_bitexact2xUpInvoker_ invoker(src, dst, sx_ofs);
-    parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
-}
-
-static void resizeNN_bitexactArithDown_(const Mat& src, Mat& dst, int sx_mul, int sx_add, int sy_mul, int sy_add)
-{
-    const int dw = dst.cols, sw = src.cols, pix_size = (int)src.elemSize();
-    const int smax = sw - 1;
-    AutoBuffer<int> _x_ofs(dw);
-    int* x_ofs = _x_ofs.data();
-    for (int x = 0; x < dw; x++)
-    {
-        const int sx = std::min(sx_mul * x + sx_add, smax);
-        x_ofs[x] = sx * pix_size;
-    }
-
-    Range range(0, dst.rows);
-    resizeNN_bitexactArithDownInvoker_ invoker(src, dst, x_ofs, sx_mul, sx_add, sy_mul, sy_add);
     parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
 }
 
@@ -643,11 +548,7 @@ public:
                 resizeNN_row_u16(D, S, x_ofs, dsize.width, vend);
                 break;
             case 3:
-                for( ; x < dsize.width; x++, D += 3 )
-                {
-                    const uchar* _tS = S + x_ofs[x];
-                    D[0] = _tS[0]; D[1] = _tS[1]; D[2] = _tS[2];
-                }
+                resizeNN_row_px3(D, S, x_ofs, dsize.width);
                 break;
             case 4:
                 resizeNN_row_u32(D, S, x_ofs, dsize.width);
@@ -692,24 +593,11 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
     nn_bitexact_detail::nn_bitexact_fixed_coefs(ssize.width, dsize.width, ifx, ifx0);
     nn_bitexact_detail::nn_bitexact_fixed_coefs(ssize.height, dsize.height, ify, ify0);
 
-    const nn_bitexact_detail::NNBitexactMode hmode =
-        nn_bitexact_detail::detect_h_mode(ssize.width, dsize.width, ifx, ifx0);
-    const nn_bitexact_detail::NNBitexactMode vmode =
-        nn_bitexact_detail::detect_v_mode(ssize.height, dsize.height, ify, ify0);
-
-    if (hmode == nn_bitexact_detail::UP_2X && vmode == nn_bitexact_detail::UP_2X && pix_size <= 4)
+    if (pix_size <= 4 &&
+        nn_bitexact_detail::is_up2x(ssize.width, dsize.width, ifx, ifx0) &&
+        nn_bitexact_detail::is_up2x(ssize.height, dsize.height, ify, ify0))
     {
         nn_bitexact_detail::resizeNN_bitexact2xUp_(src, dst);
-        return;
-    }
-    if (hmode == nn_bitexact_detail::DOWN_2X && vmode == nn_bitexact_detail::DOWN_2X)
-    {
-        nn_bitexact_detail::resizeNN_bitexactArithDown_(src, dst, 2, 1, 2, 1);
-        return;
-    }
-    if (hmode == nn_bitexact_detail::DOWN_4X && vmode == nn_bitexact_detail::DOWN_4X)
-    {
-        nn_bitexact_detail::resizeNN_bitexactArithDown_(src, dst, 4, 2, 4, 2);
         return;
     }
 
