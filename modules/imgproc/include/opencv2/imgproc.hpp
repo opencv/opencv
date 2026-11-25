@@ -2158,7 +2158,7 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 @param borderMode pixel extrapolation method (see #BorderTypes); when
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
-@param borderValue value used in case of a constant border; by default, it is 0.
+@param borderValue value used in case of a constant border; by default, it is 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
@@ -2197,7 +2197,7 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 @param borderMode pixel extrapolation method (see #BorderTypes); when
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
-@param borderValue value used in case of a constant border; by default, it equals 0.
+@param borderValue value used in case of a constant border; by default, it equals 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
@@ -2248,7 +2248,7 @@ The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
-@param borderValue Value used in case of a constant border. By default, it is 0.
+@param borderValue Value used in case of a constant border. By default, it is 0. With more than four channels, channel k uses borderValue[k % 4].
 @param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 @note

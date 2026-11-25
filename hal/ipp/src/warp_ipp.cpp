@@ -438,7 +438,7 @@ int ipp_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int s
 #endif
     const char type_size[CV_DEPTH_MAX] = {1,1,2,2,4,4,8};
 
-    if (impl[CV_TYPE(src_type)][CV_MAT_CN(src_type) - 1][interpolation] == 0)
+    if (CV_MAT_CN(src_type) > 4 || impl[CV_TYPE(src_type)][CV_MAT_CN(src_type) - 1][interpolation] == 0)
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
