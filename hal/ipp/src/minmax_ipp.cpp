@@ -174,6 +174,10 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 #endif
 
+    // ippiMinMaxIndx_32f_C1MR (AVX2) over-reads the mask buffer, see #30804 and #31143
+    if (mask && depth == CV_32F && cv::ipp::getIppTopFeatures() == ippCPUID_AVX2)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
     IppStatus   status;
     IppDataType dataType = ippiGetDataType(depth);
     float       minVal = 0;

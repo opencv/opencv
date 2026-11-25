@@ -24,17 +24,27 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         #if (!IPP_DISABLE_NORM_INF_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_16u_C1MR :
         #endif
+        #if (!IPP_DISABLE_NORM_INF_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_Inf_32f_C1MR :
+        #endif
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_8u_C1MR :
+        #if (!IPP_DISABLE_NORM_L1_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_16u_C1MR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L1_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L1_32f_C1MR :
+        #endif
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (type == CV_8UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_8u_C1MR :
+        #if (!IPP_DISABLE_NORM_L2_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_16u_C1MR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L2_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormFuncC1)ippiNorm_L2_32f_C1MR :
+        #endif
         0) : 0;
         if( ippiNorm_C1MR )
         {
@@ -56,13 +66,21 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_8u_C3CMR :
+        #if (!IPP_DISABLE_NORM_L1_16U_C3CMR)
         type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_16u_C3CMR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L1_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L1_32f_C3CMR :
+        #endif
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (type == CV_8UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_8u_C3CMR :
+        #if (!IPP_DISABLE_NORM_L2_16U_C3CMR)
         type == CV_16UC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_16u_C3CMR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L2_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormFuncC3)ippiNorm_L2_32f_C3CMR :
+        #endif
         0) : 0;
         if( ippiNorm_C3CMR )
         {
@@ -150,17 +168,27 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
             #if (!IPP_DISABLE_NORM_INF_16U_C1MR)
             type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_Inf_16u_C1MR :
             #endif
+            #if (!IPP_DISABLE_NORM_INF_32F_C1MR)
             type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_Inf_32f_C1MR :
+            #endif
             0) :
             norm_type == cv::NORM_L1 ?
             (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L1_8u_C1MR :
+            #if (!IPP_DISABLE_NORM_L1_16U_C1MR)
             type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L1_16u_C1MR :
+            #endif
+            #if (!IPP_DISABLE_NORM_L1_32F_C1MR)
             type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L1_32f_C1MR :
+            #endif
             0) :
             norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
             (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L2_8u_C1MR :
+            #if (!IPP_DISABLE_NORM_L2_16U_C1MR)
             type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L2_16u_C1MR :
+            #endif
+            #if (!IPP_DISABLE_NORM_L2_32F_C1MR)
             type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormRel_L2_32f_C1MR :
+            #endif
             0) : 0;
             if( ippiNormRel_C1MR )
             {
@@ -241,17 +269,27 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
         #if (!IPP_DISABLE_NORM_INF_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_16u_C1MR :
         #endif
+        #if (!IPP_DISABLE_NORM_INF_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_Inf_32f_C1MR :
+        #endif
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_8u_C1MR :
+        #if (!IPP_DISABLE_NORM_L1_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_16u_C1MR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L1_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L1_32f_C1MR :
+        #endif
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (type == CV_8UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_8u_C1MR :
+        #if (!IPP_DISABLE_NORM_L2_16U_C1MR)
         type == CV_16UC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_16u_C1MR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L2_32F_C1MR)
         type == CV_32FC1 ? (ippiMaskNormDiffFuncC1)ippiNormDiff_L2_32f_C1MR :
+        #endif
         0) : 0;
         if( ippiNormDiff_C1MR )
         {
@@ -273,13 +311,21 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
         0) :
         norm_type == cv::NORM_L1 ?
         (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_8u_C3CMR :
+        #if (!IPP_DISABLE_NORM_L1_16U_C3CMR)
         type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_16u_C3CMR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L1_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L1_32f_C3CMR :
+        #endif
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (type == CV_8UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_8u_C3CMR :
+        #if (!IPP_DISABLE_NORM_L2_16U_C3CMR)
         type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
+        #endif
+        #if (!IPP_DISABLE_NORM_L2_32F_C3CMR)
         type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
+        #endif
         0) : 0;
         if( ippiNormDiff_C3CMR )
         {
