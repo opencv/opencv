@@ -352,6 +352,7 @@ private:
 struct CalibWeights
 {
     bool active = false;
+    bool huber = false;
     cv::Mat w;
     double scale = 1.0;
 };
@@ -359,28 +360,27 @@ struct CalibWeights
 static double pointWeight(const CalibWeights& cw, int idx, double ex, double ey,
                           double& wx, double& wy, bool variance)
 {
+    wx = wy = 1.0;
     if (!cw.w.empty())
     {
         const cv::Vec2d& w = cw.w.at<cv::Vec2d>(idx);
         wx = w[0];
         wy = w[1];
-        return wx * ex * ex + wy * ey * ey;
     }
+    double cost = wx * ex * ex + wy * ey * ey;
     double r2 = ex * ex + ey * ey, s = cw.scale;
-    if (r2 <= s * s)
-    {
-        wx = wy = 1.0;
-        return r2;
-    }
-    double r = std::sqrt(r2);
-    wx = wy = s / r;
-    return variance ? s * r : 2 * s * r - s * s;
+    if (!cw.huber || r2 <= s * s)
+        return cost;
+    double r = std::sqrt(r2), h = s / r;
+    wx *= h;
+    wy *= h;
+    return cost / r2 * (variance ? s * r : 2 * s * r - s * s);
 }
 
 static double weightedError(const CalibWeights& cw, int pos, const cv::Mat& errors, bool variance = false)
 {
     int n = (int)(errors.total() * errors.channels() / 2);
-    if (!cw.w.empty())
+    if (!cw.w.empty() && !cw.huber)
     {
         // Scale the residuals by sqrt(w) and reuse norm(), so unit weights give exactly the
         // same cost as the unweighted path (multiplying by sqrt(1) is exact).
@@ -3020,6 +3020,12 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize)
     return distCoeffs;
 }
 
+CalibrationLossParams::CalibrationLossParams()
+{
+    lossType = DIST_L2;
+    lossScale = 1.0;
+}
+
 double calibrateCamera( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints,
                         Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
@@ -3038,13 +3044,13 @@ double calibrateCamera(InputArrayOfArrays _objectPoints,
                        OutputArray stdDeviationsIntrinsics,
                        OutputArray stdDeviationsExtrinsics,
                        OutputArray _perViewErrors, int flags, TermCriteria criteria,
-                       CalibrationWeightMode weightMode, InputArrayOfArrays _weights, double lossScale )
+                       InputArrayOfArrays _weights, const CalibrationLossParams& lossParams )
 {
     CV_INSTRUMENT_REGION();
 
     return calibrateCameraRO(_objectPoints, _imagePoints, imageSize, -1, _cameraMatrix, _distCoeffs,
                              _rvecs, _tvecs, noArray(), stdDeviationsIntrinsics, stdDeviationsExtrinsics,
-                             noArray(), _perViewErrors, flags, criteria, weightMode, _weights, lossScale);
+                             noArray(), _perViewErrors, flags, criteria, _weights, lossParams);
 }
 
 double calibrateCameraRO(InputArrayOfArrays _objectPoints,
@@ -3071,19 +3077,30 @@ static Mat collectCalibrationWeights(InputArrayOfArrays weights, const Mat& npoi
     {
         int ni = npoints.at<int>(i);
         Mat wi = weights.getMat(i);
-        int n = wi.checkVector(2, CV_32F);
-        if (n < 0)
-            n = wi.checkVector(2, CV_64F);
+        int cn = 2;
+        int n = std::max(wi.checkVector(2, CV_32F, false), wi.checkVector(2, CV_64F, false));
         if (n != ni)
-            CV_Error_(Error::StsBadArg, ("weights of view #%d must be 2-channel float with one value per point", i));
+        {
+            cn = 1;
+            n = std::max(wi.checkVector(1, CV_32F, false), wi.checkVector(1, CV_64F, false));
+        }
+        if (n != ni)
+            CV_Error_(Error::StsBadArg, ("weights of view #%d must be float, one 1- or 2-channel value per point", i));
+        if (!wi.isContinuous())
+            wi = wi.clone();
+        Mat src(1, ni, CV_MAKETYPE(wi.depth(), cn), wi.ptr());
         Mat wv = w.colRange(pos, pos + ni);
-        wi.reshape(2, 1).convertTo(wv, CV_64F);
-        if (!checkRange(wv))
-            CV_Error_(Error::StsBadArg, ("weights of view #%d must be finite", i));
-        double minVal = 0;
-        minMaxLoc(wv.reshape(1), &minVal);
-        if (minVal < 0)
-            CV_Error_(Error::StsBadArg, ("weights of view #%d must be non-negative", i));
+        if (cn == 2)
+            src.convertTo(wv, CV_64F);
+        else
+        {
+            Mat w1;
+            src.convertTo(w1, CV_64F);
+            Mat xy[] = { w1, w1 };
+            merge(xy, 2, wv);
+        }
+        if (!checkRange(wv, true, nullptr, 0, DBL_MAX))
+            CV_Error_(Error::StsBadArg, ("weights of view #%d must be finite and non-negative", i));
         pos += ni;
     }
     return w;
@@ -3139,7 +3156,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
                          OutputArray stdDeviationsExtrinsics,
                          OutputArray stdDeviationsObjPoints,
                          OutputArray _perViewErrors, int flags, TermCriteria criteria,
-                         CalibrationWeightMode weightMode, InputArrayOfArrays _weights, double lossScale )
+                         InputArrayOfArrays _weights, const CalibrationLossParams& lossParams )
 {
     CV_INSTRUMENT_REGION();
 
@@ -3203,25 +3220,22 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
     bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints.at<int>(0) - 1;
 
     CalibWeights weights;
-    if( weightMode == CALIB_WEIGHTED )
+    if( !_weights.empty() )
     {
-        weights.active = true;
-        if( !_weights.empty() )
-        {
-            weights.w = collectCalibrationWeights(_weights, npoints);
-            dropZeroWeightPoints(objPt, imgPt, npoints, weights.w, releaseObject);
-        }
-        else
-        {
-            CV_CheckGT(lossScale, 0.0, "lossScale must be positive");
-            weights.scale = lossScale;
-        }
+        weights.w = collectCalibrationWeights(_weights, npoints);
+        dropZeroWeightPoints(objPt, imgPt, npoints, weights.w, releaseObject);
+    }
+    if( lossParams.lossType == DIST_HUBER )
+    {
+        CV_CheckGT(lossParams.lossScale, 0.0, "lossScale must be positive");
+        weights.huber = true;
+        weights.scale = lossParams.lossScale;
     }
     else
     {
-        CV_CheckEQ((int)weightMode, (int)CALIB_WEIGHT_NONE, "Unknown weightMode");
-        CV_Assert( _weights.empty() && "weights are given but weightMode is CALIB_WEIGHT_NONE" );
+        CV_CheckEQ(lossParams.lossType, (int)DIST_L2, "lossType must be DIST_L2 or DIST_HUBER");
     }
+    weights.active = !weights.w.empty() || weights.huber;
 
     newobj_needed = newobj_needed && releaseObject;
     int np = npoints.at<int>( 0 );

@@ -2314,8 +2314,9 @@ static std::vector<std::pair<int, int>> addWeightedCalibOutliers(std::vector<std
 
 static double calibrateWeighted(const std::vector<std::vector<cv::Point3f>>& objectPoints,
                                 const std::vector<std::vector<cv::Point2f>>& imagePoints,
-                                int flags, cv::CalibrationWeightMode mode, cv::InputArrayOfArrays weights,
-                                cv::Matx33d& K, cv::Mat& stdDevs)
+                                int flags, cv::InputArrayOfArrays weights,
+                                cv::Matx33d& K, cv::Mat& stdDevs,
+                                const cv::CalibrationLossParams& loss = cv::CalibrationLossParams())
 {
     cv::Mat D;
     std::vector<cv::Mat> rvecs, tvecs;
@@ -2323,7 +2324,7 @@ static double calibrateWeighted(const std::vector<std::vector<cv::Point3f>>& obj
     return cv::calibrateCamera(objectPoints, imagePoints, cv::Size(640, 480), K, D, rvecs, tvecs,
                                stdDevs, cv::noArray(), cv::noArray(), flags | cv::CALIB_FIX_K3,
                                cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 500, DBL_EPSILON),
-                               mode, weights);
+                               weights, loss);
 }
 
 typedef testing::TestWithParam<int> Calib_CalibrateCameraWeighted;
@@ -2342,8 +2343,7 @@ TEST_P(Calib_CalibrateCameraWeighted, noneMatchesDefault)
     K0 = cv::Matx33d::eye();
     double rms0 = cv::calibrateCamera(objectPoints, imagePoints, cv::Size(640, 480), K0, D0, rvecs, tvecs,
                                       s0, cv::noArray(), cv::noArray(), GetParam() | cv::CALIB_FIX_K3);
-    double rms1 = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE,
-                                    cv::noArray(), K1, s1);
+    double rms1 = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(), K1, s1);
     cv::setNumThreads(nthreads);
 
     EXPECT_EQ(rms0, rms1);
@@ -2363,8 +2363,8 @@ TEST_P(Calib_CalibrateCameraWeighted, unitWeightsMatchDefault)
 
     cv::Matx33d K0, K1;
     cv::Mat s0, s1;
-    double rms0 = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), K0, s0);
-    double rms1 = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, weights, K1, s1);
+    double rms0 = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),K0, s0);
+    double rms1 = calibrateWeighted(objectPoints, imagePoints, GetParam(), weights,K1, s1);
 
     EXPECT_NEAR(rms0, rms1, 1e-9);
     EXPECT_LE(cv::norm(K0, K1, NORM_INF), 1e-6);
@@ -2378,7 +2378,7 @@ TEST_P(Calib_CalibrateCameraWeighted, zeroWeightsIgnoreOutliers)
     makeWeightedCalibViews(objectPoints, imagePoints);
     cv::Matx33d Kclean;
     cv::Mat sclean;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kclean, sclean);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kclean, sclean);
     std::vector<std::pair<int, int>> outliers = addWeightedCalibOutliers(imagePoints);
 
     std::vector<std::vector<cv::Point2f>> weights(imagePoints.size());
@@ -2389,8 +2389,8 @@ TEST_P(Calib_CalibrateCameraWeighted, zeroWeightsIgnoreOutliers)
 
     cv::Matx33d Kplain, Kw;
     cv::Mat splain, sw;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kplain, splain);
-    double rms = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, weights, Kw, sw);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kplain, splain);
+    double rms = calibrateWeighted(objectPoints, imagePoints, GetParam(), weights,Kw, sw);
 
     double errPlain = cv::norm(Kplain, Kclean, NORM_INF);
     double errWeighted = cv::norm(Kw, Kclean, NORM_INF);
@@ -2412,7 +2412,7 @@ TEST_P(Calib_CalibrateCameraWeighted, zeroWeightsIgnoreOutliers)
         imagePoints[o.first][o.second] = cv::Point2f(nan, nan);
     cv::Matx33d Knan;
     cv::Mat snan;
-    double rmsNan = calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, weights, Knan, snan);
+    double rmsNan = calibrateWeighted(objectPoints, imagePoints, GetParam(), weights,Knan, snan);
     EXPECT_NEAR(rmsNan, rms, 1e-9);
     EXPECT_LE(cv::norm(Knan, Kw, NORM_INF), 1e-6);
 }
@@ -2427,7 +2427,7 @@ TEST_P(Calib_CalibrateCameraWeighted, releaseObjectUnitWeights)
     for (size_t i = 0; i < imagePoints.size(); i++)
         weights[i].assign(imagePoints[i].size(), cv::Point2f(1.f, 1.f));
 
-    auto runRO = [&](cv::CalibrationWeightMode mode, cv::InputArrayOfArrays w,
+    auto runRO = [&](cv::InputArrayOfArrays w,
                      cv::Matx33d& K, cv::Mat& newObj, cv::Mat& stdObj)
     {
         cv::Mat D;
@@ -2437,13 +2437,13 @@ TEST_P(Calib_CalibrateCameraWeighted, releaseObjectUnitWeights)
                                      newObj, cv::noArray(), cv::noArray(), stdObj, cv::noArray(),
                                      GetParam() | cv::CALIB_FIX_K3,
                                      cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 500, DBL_EPSILON),
-                                     mode, w);
+                                     w);
     };
 
     cv::Matx33d K0, K1;
     cv::Mat obj0, obj1, sobj0, sobj1;
-    double rms0 = runRO(cv::CALIB_WEIGHT_NONE, cv::noArray(), K0, obj0, sobj0);
-    double rms1 = runRO(cv::CALIB_WEIGHTED, weights, K1, obj1, sobj1);
+    double rms0 = runRO(cv::noArray(),K0, obj0, sobj0);
+    double rms1 = runRO(weights,K1, obj1, sobj1);
 
     EXPECT_NEAR(rms0, rms1, 1e-9);
     EXPECT_LE(cv::norm(K0, K1, NORM_INF), 1e-6);
@@ -2452,7 +2452,7 @@ TEST_P(Calib_CalibrateCameraWeighted, releaseObjectUnitWeights)
     EXPECT_LE(cv::norm(sobj0, sobj1, NORM_INF), 1e-6);
 
     weights[2][5] = cv::Point2f(0.f, 0.f);
-    EXPECT_THROW(runRO(cv::CALIB_WEIGHTED, weights, K1, obj1, sobj1), cv::Exception);
+    EXPECT_THROW(runRO(weights,K1, obj1, sobj1), cv::Exception);
 }
 
 TEST_P(Calib_CalibrateCameraWeighted, robustLossRejectsOutliers)
@@ -2462,13 +2462,15 @@ TEST_P(Calib_CalibrateCameraWeighted, robustLossRejectsOutliers)
     makeWeightedCalibViews(objectPoints, imagePoints);
     cv::Matx33d Kclean;
     cv::Mat sclean;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kclean, sclean);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kclean, sclean);
     addWeightedCalibOutliers(imagePoints);
 
     cv::Matx33d Kplain, Krobust;
     cv::Mat splain, srobust;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kplain, splain);
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, cv::noArray(), Krobust, srobust);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kplain, splain);
+    cv::CalibrationLossParams huber;
+    huber.lossType = cv::DIST_HUBER;
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(), Krobust, srobust, huber);
 
     double errPlain = cv::norm(Kplain, Kclean, NORM_INF);
     double errRobust = cv::norm(Krobust, Kclean, NORM_INF);
@@ -2493,24 +2495,20 @@ TEST_P(Calib_CalibrateCameraWeighted, badWeights)
     std::vector<std::vector<cv::Point2f>> w;
 
     w = good; w.pop_back();
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, w, K, s), cv::Exception);
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), w, K, s), cv::Exception);
     w = good; w[1].pop_back();
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, w, K, s), cv::Exception);
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), w, K, s), cv::Exception);
     w = good; w[2][5].x = -1.f;
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, w, K, s), cv::Exception);
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), w, K, s), cv::Exception);
     w = good; w[3][0].y = std::numeric_limits<float>::quiet_NaN();
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, w, K, s), cv::Exception);
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), w, K, s), cv::Exception);
     w = good; w[4].assign(w[4].size(), cv::Point2f(0.f, 0.f));
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, w, K, s), cv::Exception);
-    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, good, K, s), cv::Exception);
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), w, K, s), cv::Exception);
 
-    cv::Mat D;
-    std::vector<cv::Mat> rvecs, tvecs;
-    K = cv::Matx33d::eye();
-    EXPECT_THROW(cv::calibrateCamera(objectPoints, imagePoints, cv::Size(640, 480), K, D, rvecs, tvecs,
-                                     cv::noArray(), cv::noArray(), cv::noArray(), GetParam(),
-                                     cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 500, DBL_EPSILON),
-                                     cv::CALIB_WEIGHTED, cv::noArray(), 0.0), cv::Exception);
+    cv::CalibrationLossParams huber;
+    huber.lossType = cv::DIST_HUBER;
+    huber.lossScale = 0.0;
+    EXPECT_THROW(calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(), K, s, huber), cv::Exception);
 }
 
 TEST_P(Calib_CalibrateCameraWeighted, nonUnitWeightsSuppressOutliers)
@@ -2520,7 +2518,7 @@ TEST_P(Calib_CalibrateCameraWeighted, nonUnitWeightsSuppressOutliers)
     makeWeightedCalibViews(objectPoints, imagePoints);
     cv::Matx33d Kclean;
     cv::Mat sclean;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kclean, sclean);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kclean, sclean);
     std::vector<std::pair<int, int>> outliers = addWeightedCalibOutliers(imagePoints);
 
     std::vector<std::vector<cv::Point2f>> weights(imagePoints.size());
@@ -2535,8 +2533,8 @@ TEST_P(Calib_CalibrateCameraWeighted, nonUnitWeightsSuppressOutliers)
 
     cv::Matx33d Kplain, Kw;
     cv::Mat splain, sw;
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHT_NONE, cv::noArray(), Kplain, splain);
-    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::CALIB_WEIGHTED, weights, Kw, sw);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), cv::noArray(),Kplain, splain);
+    calibrateWeighted(objectPoints, imagePoints, GetParam(), weights,Kw, sw);
 
     double errPlain = cv::norm(Kplain, Kclean, NORM_INF);
     double errWeighted = cv::norm(Kw, Kclean, NORM_INF);
