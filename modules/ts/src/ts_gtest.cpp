@@ -36,7 +36,6 @@
 // This line ensures that gtest.h can be compiled on its own, even
 // when it's fused.
 #include "precomp.hpp"
-#include "opencv2/core/utils/filesystem.private.hpp"
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"

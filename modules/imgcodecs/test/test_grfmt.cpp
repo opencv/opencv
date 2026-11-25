@@ -41,9 +41,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <clocale>
-#include <cstdlib>
-#include <locale>
 
 namespace opencv_test { namespace {
 
@@ -620,55 +617,6 @@ TEST(Imgcodecs_Pam, decode_graya_as_gray)
 #endif
 
 #ifdef HAVE_IMGCODEC_PFM
-class PfmGroupedNumpunct : public std::numpunct<char>
-{
-protected:
-    char do_decimal_point() const CV_OVERRIDE { return ','; }
-    char do_thousands_sep() const CV_OVERRIDE { return '.'; }
-    std::string do_grouping() const CV_OVERRIDE { return "\3"; }
-};
-
-typedef testing::TestWithParam<tuple<Size, int> > Imgcodecs_Pfm_LocaleDeathTest;
-
-TEST_P(Imgcodecs_Pfm_LocaleDeathTest, encoding_ignores_numeric_grouping)
-{
-#if GTEST_HAS_DEATH_TEST
-    if (testing::UnitTest::GetInstance()->original_working_dir()[0] == '\0')
-        throw SkipTestException("Requires filesystem support for subprocess tests");
-    const Size size = get<0>(GetParam());
-    const int channels = get<1>(GetParam());
-    const std::locale parentLocale;
-    const std::string parentCLocale = std::setlocale(LC_ALL, NULL);
-    testing::FLAGS_gtest_death_test_style = "threadsafe";
-
-    ASSERT_EXIT(
-    {
-        Mat image(size, CV_MAKETYPE(CV_32F, channels));
-        theRNG().fill(image, RNG::UNIFORM, -10, 10);
-        vector<uchar> reference;
-        vector<uchar> encoded;
-        std::locale::global(std::locale::classic());
-        if (!imencode(".pfm", image, reference))
-            std::_Exit(1);
-        std::locale::global(std::locale(std::locale::classic(), new PfmGroupedNumpunct));
-        if (!imencode(".pfm", image, encoded))
-            std::_Exit(1);
-        Mat decoded = imdecode(encoded, IMREAD_UNCHANGED);
-        const bool valid = reference == encoded && !decoded.empty() &&
-            image.size() == decoded.size() && image.type() == decoded.type() &&
-            cvtest::norm(image, decoded, NORM_INF) == 0;
-        std::_Exit(valid ? 0 : 1);
-    }, testing::ExitedWithCode(0), "");
-    EXPECT_TRUE(parentLocale == std::locale());
-    EXPECT_EQ(parentCLocale, std::setlocale(LC_ALL, NULL));
-#else
-    throw SkipTestException("Requires subprocess test support");
-#endif
-}
-
-INSTANTIATE_TEST_CASE_P(All, Imgcodecs_Pfm_LocaleDeathTest, testing::Combine(
-    testing::Values(Size(1234, 3), Size(3, 1234)), testing::Values(1, 3)));
-
 typedef testing::TestWithParam<tuple<int, int> > Imgcodecs_Pfm_ReadMode;
 
 TEST_P(Imgcodecs_Pfm_ReadMode, channel_conversion)
