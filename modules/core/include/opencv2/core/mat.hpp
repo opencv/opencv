@@ -1637,6 +1637,9 @@ public:
     single-row vectors, the top-to-bottom left-to-right scan ordering is used to treat them as 1D
     vectors. The vectors must have the same size and type. If the matrices have more than one channel,
     the dot products from all the channels are summed together.
+    For #CV_Bool, any non-zero byte counts as true, so the result is the number of positions where
+    both operands are non-zero. #CV_16F, #CV_16BF, #CV_8F_E4M3FN and #CV_8F_E4M3FNUZ are multiplied
+    and summed in float32, so values or products outside the float32 range overflow or underflow.
     @param m another dot-product operand.
      */
     double dot(InputArray m) const;
