@@ -194,4 +194,138 @@ TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
     EXPECT_MAT_NEAR(result_16u, expected, 1);
 }
 
+static void checkDenoiseSubmatrixROI(int type, int norm_type, float h_val, bool use_umat)
+{
+    const Size roi_size(32, 32);
+    const int pad = 16;
+    const int template_window_size = 5;
+    const int search_window_size = 11;
+    const Rect roi_rect(pad, pad, roi_size.width, roi_size.height);
+    const Size parent_size(roi_size.width + 2 * pad, roi_size.height + 2 * pad);
+
+    const bool is_16u = (CV_MAT_DEPTH(type) == CV_16U);
+    const double min_val = is_16u ? 10000.0 : 40.0;
+    const double max_val = is_16u ? 50000.0 : 200.0;
+    const double high_border_val = is_16u ? 65000.0 : 255.0;
+
+    Mat isolated(roi_size, type);
+    RNG rng(2025);
+    rng.fill(isolated, RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
+
+    Mat parent_low(parent_size, type, Scalar::all(0));
+    Mat parent_high(parent_size, type, Scalar::all(high_border_val));
+    isolated.copyTo(parent_low(roi_rect));
+    isolated.copyTo(parent_high(roi_rect));
+
+    const std::vector<float> h(1, h_val);
+    Mat dst_isolated, dst_low, dst_high;
+
+    if (use_umat)
+    {
+        UMat u_isolated, u_parent_low, u_parent_high;
+        isolated.copyTo(u_isolated);
+        parent_low.copyTo(u_parent_low);
+        parent_high.copyTo(u_parent_high);
+
+        UMat u_dst_isolated, u_dst_low, u_dst_high;
+        fastNlMeansDenoising(u_isolated, u_dst_isolated, h, template_window_size, search_window_size, norm_type);
+        fastNlMeansDenoising(u_parent_low(roi_rect), u_dst_low, h, template_window_size, search_window_size, norm_type);
+        fastNlMeansDenoising(u_parent_high(roi_rect), u_dst_high, h, template_window_size, search_window_size, norm_type);
+
+        u_dst_isolated.copyTo(dst_isolated);
+        u_dst_low.copyTo(dst_low);
+        u_dst_high.copyTo(dst_high);
+    }
+    else
+    {
+        fastNlMeansDenoising(isolated, dst_isolated, h, template_window_size, search_window_size, norm_type);
+        fastNlMeansDenoising(parent_low(roi_rect), dst_low, h, template_window_size, search_window_size, norm_type);
+        fastNlMeansDenoising(parent_high(roi_rect), dst_high, h, template_window_size, search_window_size, norm_type);
+    }
+
+    ASSERT_EQ(isolated.size(), dst_isolated.size());
+    ASSERT_EQ(isolated.type(), dst_isolated.type());
+    ASSERT_GT(cvtest::norm(dst_isolated, isolated, NORM_L1), 0.0);
+    EXPECT_EQ(0.0, cvtest::norm(dst_low, dst_isolated, NORM_INF));
+    EXPECT_EQ(0.0, cvtest::norm(dst_high, dst_isolated, NORM_INF));
+}
+
+TEST(Photo_DenoisingGrayscale, submatrix_roi)
+{
+    checkDenoiseSubmatrixROI(CV_8UC1, NORM_L2, 50.0f, false);
+    checkDenoiseSubmatrixROI(CV_8UC3, NORM_L2, 50.0f, false);
+    checkDenoiseSubmatrixROI(CV_16UC1, NORM_L1, 4000.0f, false);
+
+    checkDenoiseSubmatrixROI(CV_8UC1, NORM_L2, 50.0f, true);
+    checkDenoiseSubmatrixROI(CV_8UC2, NORM_L2, 50.0f, true);
+    checkDenoiseSubmatrixROI(CV_8UC3, NORM_L2, 50.0f, true);
+}
+
+TEST(Photo_DenoisingGrayscaleMulti, submatrix_roi)
+{
+    const Size roi_size(32, 32);
+    const int pad = 16;
+    const int temporal_window_size = 3;
+    const int template_window_size = 5;
+    const int search_window_size = 11;
+    const Rect roi_rect(pad, pad, roi_size.width, roi_size.height);
+    const Size parent_size(roi_size.width + 2 * pad, roi_size.height + 2 * pad);
+
+    struct MultiCase
+    {
+        int type;
+        int norm_type;
+        float h_val;
+    };
+    const MultiCase cases[] = {
+        { CV_8UC1, NORM_L2, 50.0f },
+        { CV_16UC1, NORM_L1, 4000.0f }
+    };
+
+    RNG rng(2026);
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+    {
+        const int type = cases[c].type;
+        const bool is_16u = (CV_MAT_DEPTH(type) == CV_16U);
+        const double min_val = is_16u ? 10000.0 : 40.0;
+        const double max_val = is_16u ? 50000.0 : 200.0;
+        const double high_border_val = is_16u ? 65000.0 : 255.0;
+
+        std::vector<Mat> isolated_frames(temporal_window_size);
+        std::vector<Mat> parent_low_frames(temporal_window_size);
+        std::vector<Mat> parent_high_frames(temporal_window_size);
+        std::vector<Mat> low_rois(temporal_window_size);
+        std::vector<Mat> high_rois(temporal_window_size);
+
+        for (int i = 0; i < temporal_window_size; ++i)
+        {
+            isolated_frames[i].create(roi_size, type);
+            rng.fill(isolated_frames[i], RNG::UNIFORM, Scalar::all(min_val), Scalar::all(max_val));
+
+            parent_low_frames[i] = Mat(parent_size, type, Scalar::all(0));
+            parent_high_frames[i] = Mat(parent_size, type, Scalar::all(high_border_val));
+            isolated_frames[i].copyTo(parent_low_frames[i](roi_rect));
+            isolated_frames[i].copyTo(parent_high_frames[i](roi_rect));
+
+            low_rois[i] = parent_low_frames[i](roi_rect);
+            high_rois[i] = parent_high_frames[i](roi_rect);
+        }
+
+        const std::vector<float> h(1, cases[c].h_val);
+        Mat dst_isolated, dst_low, dst_high;
+        fastNlMeansDenoisingMulti(isolated_frames, dst_isolated, 1, temporal_window_size, h,
+                                  template_window_size, search_window_size, cases[c].norm_type);
+        fastNlMeansDenoisingMulti(low_rois, dst_low, 1, temporal_window_size, h,
+                                  template_window_size, search_window_size, cases[c].norm_type);
+        fastNlMeansDenoisingMulti(high_rois, dst_high, 1, temporal_window_size, h,
+                                  template_window_size, search_window_size, cases[c].norm_type);
+
+        ASSERT_EQ(isolated_frames[1].size(), dst_isolated.size());
+        ASSERT_EQ(isolated_frames[1].type(), dst_isolated.type());
+        ASSERT_GT(cvtest::norm(dst_isolated, isolated_frames[1], NORM_L1), 0.0);
+        EXPECT_EQ(0.0, cvtest::norm(dst_low, dst_isolated, NORM_INF));
+        EXPECT_EQ(0.0, cvtest::norm(dst_high, dst_isolated, NORM_INF));
+    }
+}
+
 }} // namespace
