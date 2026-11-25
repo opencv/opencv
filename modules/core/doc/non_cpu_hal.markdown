@@ -157,8 +157,14 @@ A built-in backend registers itself in `registry.cpp`; tests register theirs wit
   use pinned host memory mapped into the GPU, which the CPU uses in place. It implements `flip`
   and `transpose`, in place too, and for imgproc `GaussianBlur` (bit-exact with the CPU for 8U
   and 16U) and `warpAffine` with nearest and linear interpolation. Its kernels and runtime calls
-  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes, the kernels from shared
-  device functions (border indices, saturation, pixel reads).
+  (`src/accel/gpu/`) are written once for the CUDA and HIP runtimes. The imgproc operations and
+  kernels live in `non_cpu_hal/gpu/imgproc/`, laid out like the CPU HAL in `hal/ipp/`:
+  `include/gpu_hal_imgproc.hpp` declares the kernels and lists the operations,
+  `src/<family>.impl.hpp` holds one family (`smooth`, `warp`) with both its kernels and the
+  operations that launch them, and `src/precomp.hpp` what the families share (border indices,
+  saturation, launch checks) followed by the list of families. They are compiled into the same
+  backends: core includes `src/precomp.hpp` once with `CV_ACCEL_GPU_KERNELS` for the kernels
+  and once for the operations.
 * HIP (`src/accel/backend_hip.cpp`), built in when OpenCV is configured with `WITH_HIP=ON`, which
   needs CMake 3.21 or newer. `opencv_core` then links `libamdhip64`, so ROCm must be installed
   wherever that build runs. It has the operations of the CUDA backend, from the same sources. By
@@ -198,7 +204,10 @@ if (accel_flip(_src, _dst, flip_mode))
     return;
 ```
 
-3. Implement it in the backends that can.
+3. Implement it in the backends that can. For the GPU backends and an imgproc operation: declare the
+   kernel and the operation in `non_cpu_hal/gpu/imgproc/include/gpu_hal_imgproc.hpp`, and write
+   both in the family's `src/<family>.impl.hpp` (a new family file is added at the end of
+   `src/precomp.hpp`).
 
 Not in this version
 -------------------
